@@ -573,7 +573,7 @@ ExprDependence clang::computeDependence(RecoveryExpr *E) {
   //   - type-dependent if we don't know the type (fallback to an opaque
   //     dependent type), or the type is known and dependent, or it has
   //     type-dependent subexpressions.
-  auto D = toExprDependenceForImpliedType(E->getType()->getDependence()) |
+  auto D = toExprDependenceAsWritten(E->getType()->getDependence()) |
            ExprDependence::ErrorDependent;
   // FIXME: remove the type-dependent bit from subexpressions, if the
   // RecoveryExpr has a non-dependent type.
@@ -594,7 +594,7 @@ ExprDependence clang::computeDependence(PredefinedExpr *E) {
 ExprDependence clang::computeDependence(CallExpr *E,
                                         llvm::ArrayRef<Expr *> PreArgs) {
   auto D = E->getCallee()->getDependence();
-  for (auto *A : llvm::makeArrayRef(E->getArgs(), E->getNumArgs())) {
+  for (auto *A : llvm::ArrayRef(E->getArgs(), E->getNumArgs())) {
     if (A)
       D |= A->getDependence();
   }
@@ -642,7 +642,7 @@ ExprDependence clang::computeDependence(InitListExpr *E) {
 
 ExprDependence clang::computeDependence(ShuffleVectorExpr *E) {
   auto D = toExprDependenceForImpliedType(E->getType()->getDependence());
-  for (auto *C : llvm::makeArrayRef(E->getSubExprs(), E->getNumSubExprs()))
+  for (auto *C : llvm::ArrayRef(E->getSubExprs(), E->getNumSubExprs()))
     D |= C->getDependence();
   return D;
 }
@@ -663,7 +663,7 @@ ExprDependence clang::computeDependence(GenericSelectionExpr *E,
 
 ExprDependence clang::computeDependence(DesignatedInitExpr *E) {
   auto Deps = E->getInit()->getDependence();
-  for (auto D : E->designators()) {
+  for (const auto &D : E->designators()) {
     auto DesignatorDeps = ExprDependence::None;
     if (D.isArrayDesignator())
       DesignatorDeps |= E->getArrayIndex(D)->getDependence();
@@ -686,7 +686,7 @@ ExprDependence clang::computeDependence(PseudoObjectExpr *O) {
 
 ExprDependence clang::computeDependence(AtomicExpr *A) {
   auto D = ExprDependence::None;
-  for (auto *E : llvm::makeArrayRef(A->getSubExprs(), A->getNumSubExprs()))
+  for (auto *E : llvm::ArrayRef(A->getSubExprs(), A->getNumSubExprs()))
     D |= E->getDependence();
   return D;
 }
@@ -696,7 +696,7 @@ ExprDependence clang::computeDependence(CXXNewExpr *E) {
       E->getAllocatedTypeSourceInfo()->getType()->getDependence());
   D |= toExprDependenceForImpliedType(E->getAllocatedType()->getDependence());
   auto Size = E->getArraySize();
-  if (Size.hasValue() && *Size)
+  if (Size && *Size)
     D |= turnTypeToValueDependence((*Size)->getDependence());
   if (auto *I = E->getInitializer())
     D |= turnTypeToValueDependence(I->getDependence());
@@ -750,7 +750,7 @@ clang::computeDependence(OverloadExpr *E, bool KnownDependent,
   // If we have explicit template arguments, check for dependent
   // template arguments and whether they contain any unexpanded pack
   // expansions.
-  for (auto A : E->template_arguments())
+  for (const auto &A : E->template_arguments())
     Deps |= toExprDependence(A.getArgument().getDependence());
   return Deps;
 }
@@ -760,7 +760,7 @@ ExprDependence clang::computeDependence(DependentScopeDeclRefExpr *E) {
   D |= getDependenceInExpr(E->getNameInfo());
   if (auto *Q = E->getQualifier())
     D |= toExprDependence(Q->getDependence());
-  for (auto A : E->template_arguments())
+  for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;
 }
@@ -813,7 +813,7 @@ ExprDependence clang::computeDependence(CXXDependentScopeMemberExpr *E) {
   if (auto *Q = E->getQualifier())
     D |= toExprDependence(Q->getDependence());
   D |= getDependenceInExpr(E->getMemberNameInfo());
-  for (auto A : E->template_arguments())
+  for (const auto &A : E->template_arguments())
     D |= toExprDependence(A.getArgument().getDependence());
   return D;
 }
@@ -828,6 +828,13 @@ ExprDependence clang::computeDependence(CXXFoldExpr *E) {
     if (C)
       D |= C->getDependence() & ~ExprDependence::UnexpandedPack;
   }
+  return D;
+}
+
+ExprDependence clang::computeDependence(CXXParenListInitExpr *E) {
+  auto D = ExprDependence::None;
+  for (const auto *A : E->getInitExprs())
+    D |= A->getDependence();
   return D;
 }
 
@@ -853,7 +860,10 @@ ExprDependence clang::computeDependence(ConceptSpecializationExpr *E,
 
   ExprDependence D =
       ValueDependent ? ExprDependence::Value : ExprDependence::None;
-  return D | toExprDependence(TA);
+  auto Res = D | toExprDependence(TA);
+  if(!ValueDependent && E->getSatisfaction().ContainsErrors)
+    Res |= ExprDependence::Error;
+  return Res;
 }
 
 ExprDependence clang::computeDependence(ObjCArrayLiteral *E) {

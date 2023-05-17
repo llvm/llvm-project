@@ -40,11 +40,11 @@
 // CHECK-NEXT:      "range": {
 // CHECK-NEXT:        "end": {
 // CHECK-NEXT:          "character": 12,
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "line": 1
 // CHECK-NEXT:        },
 // CHECK-NEXT:        "start": {
 // CHECK-NEXT:          "character": 6,
-// CHECK-NEXT:          "line": 4
+// CHECK-NEXT:          "line": 1
 // CHECK-NEXT:        }
 // CHECK-NEXT:      },
 // CHECK-NEXT:      "uri": "{{.*}}/foo.td"

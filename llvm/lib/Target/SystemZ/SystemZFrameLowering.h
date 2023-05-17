@@ -134,6 +134,8 @@ public:
 
   void processFunctionBeforeFrameFinalized(MachineFunction &MF,
                                            RegScavenger *RS) const override;
+
+  void determineFrameLayout(MachineFunction &MF) const;
 };
 } // end namespace llvm
 

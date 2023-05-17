@@ -2,21 +2,25 @@
 add_mlir_library(MLIRTestAnalysis
   TestAliasAnalysis.cpp
   TestCallGraph.cpp
-  TestDataFlow.cpp
+  TestDataFlowFramework.cpp
   TestLiveness.cpp
+  TestCFGLoopInfo.cpp
   TestMatchReduction.cpp
   TestMemRefBoundCheck.cpp
   TestMemRefDependenceCheck.cpp
   TestMemRefStrideCalculation.cpp
   TestSlice.cpp
 
+  DataFlow/TestDeadCodeAnalysis.cpp
+  DataFlow/TestDenseDataFlowAnalysis.cpp
+  DataFlow/TestBackwardDataFlowAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRAnalysis
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
   MLIRTestDialect
   )

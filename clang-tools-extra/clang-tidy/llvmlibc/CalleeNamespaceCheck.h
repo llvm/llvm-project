@@ -11,14 +11,12 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace llvm_libc {
+namespace clang::tidy::llvm_libc {
 
 /// Checks all calls resolve to functions within __llvm_libc namespace.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc-callee-namespace.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvmlibc/callee-namespace.html
 class CalleeNamespaceCheck : public ClangTidyCheck {
 public:
   CalleeNamespaceCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,8 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace llvm_libc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_libc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVMLIBC_CALLEENAMESPACECHECK_H

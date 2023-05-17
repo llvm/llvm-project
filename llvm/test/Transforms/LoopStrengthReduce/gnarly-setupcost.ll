@@ -7,11 +7,11 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 ; being processed many times. I will also naturally have a setupcost of
 ; 0xffffffff, which LSR will treat as invalid.
 ; CHECK-LABEL: func
-; CHECK: load i32, i32* %gep
+; CHECK: load i32, ptr %gep
 
-define i32 @func(i32* %in) {
+define i32 @func(ptr %in) {
 entry:
-  %load = load i32, i32* %in, align 4
+  %load = load i32, ptr %in, align 4
   %a1 = add i32 %load, 1
   %m1 = mul i32 %a1, %load
   %a2 = add i32 %m1, 1
@@ -79,9 +79,9 @@ entry:
 loop:
   %lp = phi i32 [ %m31, %entry ], [ %linc, %loop ]
   %0 = sext i32 %lp to i64
-  %gep = getelementptr inbounds i32, i32* %in, i64 %0
-  %loopload = load i32, i32* %gep, align 4
-  store i32 0, i32* %gep, align 4
+  %gep = getelementptr inbounds i32, ptr %in, i64 %0
+  %loopload = load i32, ptr %gep, align 4
+  store i32 0, ptr %gep, align 4
   %linc = add i32 %lp, 1
   %lcmp = icmp eq i32 %linc, 100
   br i1 %lcmp, label %exit, label %loop

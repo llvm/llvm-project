@@ -2,15 +2,15 @@
 ## compliant to the DWARFv5 standard.
 
 # RUN: llvm-mc -triple x86_64-unknown-linux %s -filetype=obj -o - | \
-# RUN:   llvm-dwarfdump -debug-tu-index - | \
-# RUN:   FileCheck %s
+# RUN:   llvm-dwarfdump -debug-tu-index - 2>&1 | \
+# RUN:   FileCheck %s --implicit-check-not "could not find unit with signature"
 
 # CHECK:      .debug_tu_index contents:
 # CHECK-NEXT: version = 5, units = 1, slots = 2
 # CHECK-EMPTY:
-# CHECK-NEXT: Index Signature          INFO                     ABBREV                   LINE                     STR_OFFSETS
-# CHECK-NEXT: ----- ------------------ ------------------------ ------------------------ ------------------------ ------------------------
-# CHECK-NEXT:     1 0x1100001122222222 [0x00001000, 0x00001010) [0x00002000, 0x00002020) [0x00003000, 0x00003030) [0x00004000, 0x00004040)
+# CHECK-NEXT: Index Signature          INFO                                     ABBREV                   LINE                     STR_OFFSETS
+# CHECK-NEXT: ----- ------------------ ---------------------------------------- ------------------------ ------------------------ ------------------------
+# CHECK-NEXT:     1 0x1100001122222222 [0x0000000000001000, 0x0000000000001010) [0x00002000, 0x00002020) [0x00003000, 0x00003030) [0x00004000, 0x00004040)
 
     .section .debug_tu_index, "", @progbits
 ## Header:

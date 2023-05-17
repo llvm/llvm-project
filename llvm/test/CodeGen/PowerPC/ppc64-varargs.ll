@@ -50,10 +50,9 @@ define i32 @f1(...) nounwind {
 ; LE-NEXT:    std r4, -8(r1)
 ; LE-NEXT:    blr
 entry:
-  %va = alloca i8*, align 8
-  %va.cast = bitcast i8** %va to i8*
-  call void @llvm.va_start(i8* %va.cast)
+  %va = alloca ptr, align 8
+  call void @llvm.va_start(ptr %va)
   ret i32 0
 }
 
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind

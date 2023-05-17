@@ -39,7 +39,9 @@ public:
   }
   bool operator!=(const SymbolID &Sym) const { return !(*this == Sym); }
   bool operator<(const SymbolID &Sym) const {
-    return HashValue < Sym.HashValue;
+    // Avoid lexicographic compare which requires swapping bytes or even memcmp!
+    return llvm::bit_cast<IntTy>(HashValue) <
+           llvm::bit_cast<IntTy>(Sym.HashValue);
   }
 
   // The stored hash is truncated to RawSize bytes.
@@ -56,6 +58,8 @@ public:
   explicit operator bool() const { return !isNull(); }
 
 private:
+  using IntTy = uint64_t;
+  static_assert(sizeof(IntTy) == RawSize);
   std::array<uint8_t, RawSize> HashValue{};
 };
 

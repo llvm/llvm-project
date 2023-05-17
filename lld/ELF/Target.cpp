@@ -93,15 +93,15 @@ TargetInfo *elf::getTarget() {
 
 ErrorPlace elf::getErrorPlace(const uint8_t *loc) {
   assert(loc != nullptr);
-  for (InputSectionBase *d : inputSections) {
-    auto *isec = cast<InputSection>(d);
-    if (!isec->getParent() || (isec->type & SHT_NOBITS))
+  for (InputSectionBase *d : ctx.inputSections) {
+    auto *isec = dyn_cast<InputSection>(d);
+    if (!isec || !isec->getParent() || (isec->type & SHT_NOBITS))
       continue;
 
     const uint8_t *isecLoc =
         Out::bufferStart
             ? (Out::bufferStart + isec->getParent()->offset + isec->outSecOff)
-            : isec->data().data();
+            : isec->contentMaybeDecompress().data();
     if (isecLoc == nullptr) {
       assert(isa<SyntheticSection>(isec) && "No data but not synthetic?");
       continue;
@@ -152,29 +152,20 @@ RelExpr TargetInfo::adjustGotPcExpr(RelType type, int64_t addend,
   return R_GOT_PC;
 }
 
-void TargetInfo::relaxGot(uint8_t *loc, const Relocation &rel,
-                          uint64_t val) const {
-  llvm_unreachable("Should not have claimed to be relaxable");
-}
-
-void TargetInfo::relaxTlsGdToLe(uint8_t *loc, const Relocation &rel,
-                                uint64_t val) const {
-  llvm_unreachable("Should not have claimed to be relaxable");
-}
-
-void TargetInfo::relaxTlsGdToIe(uint8_t *loc, const Relocation &rel,
-                                uint64_t val) const {
-  llvm_unreachable("Should not have claimed to be relaxable");
-}
-
-void TargetInfo::relaxTlsIeToLe(uint8_t *loc, const Relocation &rel,
-                                uint64_t val) const {
-  llvm_unreachable("Should not have claimed to be relaxable");
-}
-
-void TargetInfo::relaxTlsLdToLe(uint8_t *loc, const Relocation &rel,
-                                uint64_t val) const {
-  llvm_unreachable("Should not have claimed to be relaxable");
+void TargetInfo::relocateAlloc(InputSectionBase &sec, uint8_t *buf) const {
+  const unsigned bits = config->is64 ? 64 : 32;
+  uint64_t secAddr = sec.getOutputSection()->addr;
+  if (auto *s = dyn_cast<InputSection>(&sec))
+    secAddr += s->outSecOff;
+  for (const Relocation &rel : sec.relocs()) {
+    uint8_t *loc = buf + rel.offset;
+    const uint64_t val = SignExtend64(
+        sec.getRelocTargetVA(sec.file, rel.type, rel.addend,
+                             secAddr + rel.offset, *rel.sym, rel.expr),
+        bits);
+    if (rel.expr != R_RELAX_HINT)
+      relocate(loc, rel, val);
+  }
 }
 
 uint64_t TargetInfo::getImageBase() const {

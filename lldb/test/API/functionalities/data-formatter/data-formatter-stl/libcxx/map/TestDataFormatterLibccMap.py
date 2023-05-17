@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class LibcxxMapDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         ns = 'ndk' if lldbplatformutil.target_is_android() else ''
@@ -92,7 +90,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
 
         lldbutil.continue_to_breakpoint(self.process(), bkpt)
 
-        self.expect("p ii",
+        self.expect("expression ii",
                     substrs=['%s::map' % ns, 'size=8',
                              '[5] = ',
                              'first = 5',
@@ -117,6 +115,16 @@ class LibcxxMapDataFormatterTestCase(TestBase):
         self.expect("frame variable ii[3]",
                     substrs=['first =',
                              'second ='])
+
+        # (Non-)const key/val iterators
+        self.expect_expr("it", result_children=[
+            ValueCheck(name="first", value="0"),
+            ValueCheck(name="second", value="0")
+        ])
+        self.expect_expr("const_it", result_children=[
+            ValueCheck(name="first", value="0"),
+            ValueCheck(name="second", value="0")
+        ])
 
         # check that MightHaveChildren() gets it right
         self.assertTrue(
@@ -163,7 +171,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
             ])
 
         self.expect(
-            "p si",
+            "expression si",
             substrs=[
                 '%s::map' % ns,
                 'size=4',
@@ -217,7 +225,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
             ])
 
         self.expect(
-            "p is",
+            "expression is",
             substrs=[
                 '%s::map' % ns,
                 'size=4',
@@ -270,7 +278,7 @@ class LibcxxMapDataFormatterTestCase(TestBase):
             ])
 
         self.expect(
-            "p ss",
+            "expression ss",
             substrs=[
                 '%s::map' % ns,
                 'size=3',

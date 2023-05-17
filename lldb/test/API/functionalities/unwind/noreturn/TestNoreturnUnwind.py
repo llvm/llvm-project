@@ -2,9 +2,6 @@
 Test that we can backtrace correctly with 'noreturn' functions on the stack
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,7 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class NoreturnUnwind(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows  # clang-cl does not support gcc style attributes.
     # clang does not preserve LR in noreturn functions, making unwinding impossible

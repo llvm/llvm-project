@@ -185,6 +185,8 @@ class MockGDBServerResponder:
             return self.qsProcessInfo()
         if packet.startswith("qfProcessInfo"):
             return self.qfProcessInfo(packet)
+        if packet.startswith("jGetLoadedDynamicLibrariesInfos"):
+            return self.jGetLoadedDynamicLibrariesInfos(packet)
         if packet.startswith("qPathComplete:"):
             return self.qPathComplete()
         if packet.startswith("vFile:"):
@@ -210,6 +212,9 @@ class MockGDBServerResponder:
 
     def qfProcessInfo(self, packet):
         return "E04"
+
+    def jGetLoadedDynamicLibrariesInfos(self, packet):
+        return ""
 
     def qGetWorkingDir(self):
         return "2f"

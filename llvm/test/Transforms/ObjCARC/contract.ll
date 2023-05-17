@@ -1,74 +1,73 @@
-; RUN: opt -objc-arc-contract -S < %s | FileCheck %s
 ; RUN: opt -passes=objc-arc-contract -S < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64"
 
-declare i8* @llvm.objc.retain(i8*)
-declare void @llvm.objc.release(i8*)
-declare i8* @llvm.objc.autorelease(i8*)
-declare i8* @llvm.objc.autoreleaseReturnValue(i8*)
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
+declare ptr @llvm.objc.retain(ptr)
+declare void @llvm.objc.release(ptr)
+declare ptr @llvm.objc.autorelease(ptr)
+declare ptr @llvm.objc.autoreleaseReturnValue(ptr)
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)
 
-declare void @use_pointer(i8*)
-declare i8* @returner()
+declare void @use_pointer(ptr)
+declare ptr @returner()
 declare void @callee()
 
 ; CHECK-LABEL: define void @test0(
-; CHECK: call void @use_pointer(i8* %0)
+; CHECK: call void @use_pointer(ptr %0)
 ; CHECK: }
-define void @test0(i8* %x) nounwind {
+define void @test0(ptr %x) nounwind {
 entry:
-  %0 = call i8* @llvm.objc.retain(i8* %x) nounwind
-  call void @use_pointer(i8* %x)
+  %0 = call ptr @llvm.objc.retain(ptr %x) nounwind
+  call void @use_pointer(ptr %x)
   ret void
 }
 
 ; CHECK-LABEL: define void @test1(
-; CHECK: call void @use_pointer(i8* %0)
+; CHECK: call void @use_pointer(ptr %0)
 ; CHECK: }
-define void @test1(i8* %x) nounwind {
+define void @test1(ptr %x) nounwind {
 entry:
-  %0 = call i8* @llvm.objc.autorelease(i8* %x) nounwind
-  call void @use_pointer(i8* %x)
+  %0 = call ptr @llvm.objc.autorelease(ptr %x) nounwind
+  call void @use_pointer(ptr %x)
   ret void
 }
 
 ; Merge objc_retain and objc_autorelease into objc_retainAutorelease.
 
 ; CHECK-LABEL: define void @test2(
-; CHECK: tail call i8* @llvm.objc.retainAutorelease(i8* %x) [[NUW:#[0-9]+]]
+; CHECK: tail call ptr @llvm.objc.retainAutorelease(ptr %x) [[NUW:#[0-9]+]]
 ; CHECK: }
-define void @test2(i8* %x) nounwind {
+define void @test2(ptr %x) nounwind {
 entry:
-  %0 = tail call i8* @llvm.objc.retain(i8* %x) nounwind
-  call i8* @llvm.objc.autorelease(i8* %0) nounwind
-  call void @use_pointer(i8* %x)
+  %0 = tail call ptr @llvm.objc.retain(ptr %x) nounwind
+  call ptr @llvm.objc.autorelease(ptr %0) nounwind
+  call void @use_pointer(ptr %x)
   ret void
 }
 
 ; Same as test2 but the value is returned. Do an RV optimization.
 
-; CHECK-LABEL: define i8* @test2b(
-; CHECK: tail call i8* @llvm.objc.retainAutoreleaseReturnValue(i8* %x) [[NUW]]
+; CHECK-LABEL: define ptr @test2b(
+; CHECK: tail call ptr @llvm.objc.retainAutoreleaseReturnValue(ptr %x) [[NUW]]
 ; CHECK: }
-define i8* @test2b(i8* %x) nounwind {
+define ptr @test2b(ptr %x) nounwind {
 entry:
-  %0 = tail call i8* @llvm.objc.retain(i8* %x) nounwind
-  tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %0) nounwind
-  ret i8* %x
+  %0 = tail call ptr @llvm.objc.retain(ptr %x) nounwind
+  tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %0) nounwind
+  ret ptr %x
 }
 
 ; Merge a retain,autorelease pair around a call.
 
 ; CHECK-LABEL: define void @test3(
-; CHECK: tail call i8* @llvm.objc.retainAutorelease(i8* %x) [[NUW]]
-; CHECK: @use_pointer(i8* %0)
+; CHECK: tail call ptr @llvm.objc.retainAutorelease(ptr %x) [[NUW]]
+; CHECK: @use_pointer(ptr %0)
 ; CHECK: }
-define void @test3(i8* %x, i64 %n) {
+define void @test3(ptr %x, i64 %n) {
 entry:
-  tail call i8* @llvm.objc.retain(i8* %x) nounwind
-  call void @use_pointer(i8* %x)
-  call i8* @llvm.objc.autorelease(i8* %x) nounwind
+  tail call ptr @llvm.objc.retain(ptr %x) nounwind
+  call void @use_pointer(ptr %x)
+  call ptr @llvm.objc.autorelease(ptr %x) nounwind
   ret void
 }
 
@@ -77,35 +76,35 @@ entry:
 
 ; CHECK-LABEL: define void @test4(
 ; CHECK-NEXT: entry:
-; CHECK-NEXT: @llvm.objc.retainAutorelease(i8* %x) [[NUW]]
+; CHECK-NEXT: @llvm.objc.retainAutorelease(ptr %x) [[NUW]]
 ; CHECK-NEXT: @use_pointer
 ; CHECK-NEXT: @llvm.objc.release
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
-define void @test4(i8* %x, i64 %n) {
+define void @test4(ptr %x, i64 %n) {
 entry:
-  tail call i8* @llvm.objc.retain(i8* %x) nounwind
-  call void @use_pointer(i8* %x)
-  call i8* @llvm.objc.autorelease(i8* %x) nounwind
-  tail call void @llvm.objc.release(i8* %x) nounwind
+  tail call ptr @llvm.objc.retain(ptr %x) nounwind
+  call void @use_pointer(ptr %x)
+  call ptr @llvm.objc.autorelease(ptr %x) nounwind
+  tail call void @llvm.objc.release(ptr %x) nounwind
   ret void
 }
 
 ; Don't merge retain and autorelease if they're not control-equivalent.
 
 ; CHECK-LABEL: define void @test5(
-; CHECK: tail call i8* @llvm.objc.retain(i8* %p) [[NUW]]
+; CHECK: tail call ptr @llvm.objc.retain(ptr %p) [[NUW]]
 ; CHECK: true:
-; CHECK: call i8* @llvm.objc.autorelease(i8* %0) [[NUW]]
+; CHECK: call ptr @llvm.objc.autorelease(ptr %0) [[NUW]]
 ; CHECK: }
-define void @test5(i8* %p, i1 %a) {
+define void @test5(ptr %p, i1 %a) {
 entry:
-  tail call i8* @llvm.objc.retain(i8* %p) nounwind
+  tail call ptr @llvm.objc.retain(ptr %p) nounwind
   br i1 %a, label %true, label %false
 
 true:
-  call i8* @llvm.objc.autorelease(i8* %p) nounwind
-  call void @use_pointer(i8* %p)
+  call ptr @llvm.objc.autorelease(ptr %p) nounwind
+  call void @use_pointer(ptr %p)
   ret void
 
 false:
@@ -120,57 +119,57 @@ false:
 ; into objc_retainAutoreleasedReturnValueAutoreleaseReturnValue?
 ; Those entrypoints don't exist yet though.
 
-; CHECK-LABEL: define i8* @test6(
-; CHECK: call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %p) [[NUW]]
-; CHECK: %t = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %1) [[NUW]]
+; CHECK-LABEL: define ptr @test6(
+; CHECK: call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %p) [[NUW]]
+; CHECK: %t = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %1) [[NUW]]
 ; CHECK: }
-define i8* @test6() {
-  %p = call i8* @returner()
-  tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %p) nounwind
-  %t = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %p) nounwind
-  call void @use_pointer(i8* %t)
-  ret i8* %t
+define ptr @test6() {
+  %p = call ptr @returner()
+  tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %p) nounwind
+  %t = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %p) nounwind
+  call void @use_pointer(ptr %t)
+  ret ptr %t
 }
 
 ; Don't spoil the RV optimization.
 
-; CHECK: define i8* @test7(i8* %p)
-; CHECK: tail call i8* @llvm.objc.retain(i8* %p)
-; CHECK: call void @use_pointer(i8* %1)
-; CHECK: tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %1)
-; CHECK: ret i8* %2
+; CHECK: define ptr @test7(ptr %p)
+; CHECK: tail call ptr @llvm.objc.retain(ptr %p)
+; CHECK: call void @use_pointer(ptr %1)
+; CHECK: tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %1)
+; CHECK: ret ptr %2
 ; CHECK-NEXT: }
-define i8* @test7(i8* %p) {
-  %1 = tail call i8* @llvm.objc.retain(i8* %p)
-  call void @use_pointer(i8* %p)
-  %2 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %p)
-  ret i8* %p
+define ptr @test7(ptr %p) {
+  %1 = tail call ptr @llvm.objc.retain(ptr %p)
+  call void @use_pointer(ptr %p)
+  %2 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %p)
+  ret ptr %p
 }
 
 ; Do the return value substitution for PHI nodes too.
 
-; CHECK-LABEL: define i8* @test8(
-; CHECK: %retval = phi i8* [ %p, %if.then ], [ null, %entry ]
+; CHECK-LABEL: define ptr @test8(
+; CHECK: %retval = phi ptr [ %p, %if.then ], [ null, %entry ]
 ; CHECK: }
-define i8* @test8(i1 %x, i8* %c) {
+define ptr @test8(i1 %x, ptr %c) {
 entry:
   br i1 %x, label %return, label %if.then
 
 if.then:                                          ; preds = %entry
-  %p = call i8* @llvm.objc.retain(i8* %c) nounwind
+  %p = call ptr @llvm.objc.retain(ptr %c) nounwind
   br label %return
 
 return:                                           ; preds = %if.then, %entry
-  %retval = phi i8* [ %c, %if.then ], [ null, %entry ]
-  ret i8* %retval
+  %retval = phi ptr [ %c, %if.then ], [ null, %entry ]
+  ret ptr %retval
 }
 
 ; Kill calls to @llvm.objc.clang.arc.use(...)
 ; CHECK-LABEL: define void @test9(
 ; CHECK-NOT: clang.arc.use
 ; CHECK: }
-define void @test9(i8* %a, i8* %b) {
-  call void (...) @llvm.objc.clang.arc.use(i8* %a, i8* %b) nounwind
+define void @test9(ptr %a, ptr %b) {
+  call void (...) @llvm.objc.clang.arc.use(ptr %a, ptr %b) nounwind
   ret void
 }
 
@@ -179,10 +178,10 @@ define void @test9(i8* %a, i8* %b) {
 ; is a return value.
 
 ; CHECK: define void @test10()
-; CHECK: tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %p)
+; CHECK: tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %p)
 define void @test10() {
-  %p = call i8* @returner()
-  tail call i8* @llvm.objc.retain(i8* %p) nounwind
+  %p = call ptr @returner()
+  tail call ptr @llvm.objc.retain(ptr %p) nounwind
   ret void
 }
 
@@ -190,12 +189,12 @@ define void @test10() {
 ; argument is a return value.
 
 ; CHECK-LABEL: define void @test11(
-; CHECK-NEXT: %y = call i8* @returner()
-; CHECK-NEXT: tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %y) [[NUW]]
+; CHECK-NEXT: %y = call ptr @returner()
+; CHECK-NEXT: tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %y) [[NUW]]
 ; CHECK-NEXT: ret void
 define void @test11() {
-  %y = call i8* @returner()
-  tail call i8* @llvm.objc.retain(i8* %y) nounwind
+  %y = call ptr @returner()
+  tail call ptr @llvm.objc.retain(ptr %y) nounwind
   ret void
 }
 
@@ -203,11 +202,11 @@ define void @test11() {
 ; argument is not a return value.
 
 ; CHECK-LABEL: define void @test12(
-; CHECK-NEXT: tail call i8* @llvm.objc.retain(i8* %y) [[NUW]]
+; CHECK-NEXT: tail call ptr @llvm.objc.retain(ptr %y) [[NUW]]
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
-define void @test12(i8* %y) {
-  tail call i8* @llvm.objc.retain(i8* %y) nounwind
+define void @test12(ptr %y) {
+  tail call ptr @llvm.objc.retain(ptr %y) nounwind
   ret void
 }
 
@@ -215,23 +214,23 @@ define void @test12(i8* %y) {
 ; isn't next to the call providing its return value.
 
 ; CHECK-LABEL: define void @test13(
-; CHECK-NEXT: %y = call i8* @returner()
+; CHECK-NEXT: %y = call ptr @returner()
 ; CHECK-NEXT: call void @callee()
-; CHECK-NEXT: tail call i8* @llvm.objc.retain(i8* %y) [[NUW]]
+; CHECK-NEXT: tail call ptr @llvm.objc.retain(ptr %y) [[NUW]]
 ; CHECK-NEXT: ret void
 ; CHECK-NEXT: }
 define void @test13() {
-  %y = call i8* @returner()
+  %y = call ptr @returner()
   call void @callee()
-  tail call i8* @llvm.objc.retain(i8* %y) nounwind
+  tail call ptr @llvm.objc.retain(ptr %y) nounwind
   ret void
 }
 
 ; CHECK-LABEL: define void @test14(
 ; CHECK-NOT: clang.arc.noop.use
 ; CHECK: ret void
-define void @test14(i8* %a, i8* %b) {
-  call void (...) @llvm.objc.clang.arc.noop.use(i8* %a, i8* %b) nounwind
+define void @test14(ptr %a, ptr %b) {
+  call void (...) @llvm.objc.clang.arc.noop.use(ptr %a, ptr %b) nounwind
   ret void
 }
 

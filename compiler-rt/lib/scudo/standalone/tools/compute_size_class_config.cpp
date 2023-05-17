@@ -140,7 +140,7 @@ struct MySizeClassConfig {
   static const uptr MinSizeLog = %zu;
   static const uptr MidSizeLog = %zu;
   static const uptr MaxSizeLog = %zu;
-  static const u32 MaxNumCachedHint = 14;
+  static const u16 MaxNumCachedHint = 14;
   static const uptr MaxBytesCachedLog = 14;
 
   static constexpr u32 Classes[] = {)",

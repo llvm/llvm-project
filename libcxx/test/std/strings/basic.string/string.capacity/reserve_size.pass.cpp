@@ -6,15 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // void reserve(size_type res_arg); // constexpr since C++20
 
 // This test relies on https://llvm.org/PR45368 being fixed, which isn't in
 // older Apple dylibs
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx{{10.9|10.10|10.11|10.12|10.13|10.14|10.15|11.0}}
 
 #include <string>
 #include <stdexcept>
@@ -64,40 +62,27 @@ test(typename S::size_type min_cap, typename S::size_type erased_index, typename
 #endif
 }
 
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  {
+    test<S>(0, 0, 5);
+    test<S>(0, 0, 10);
+    test<S>(0, 0, 50);
+  }
+  {
+    test<S>(100, 50, 5);
+    test<S>(100, 50, 10);
+    test<S>(100, 50, 50);
+    test<S>(100, 50, 100);
+    test<S>(100, 50, 1000);
+    test<S>(100, 50, S::npos);
+  }
+}
+
 TEST_CONSTEXPR_CXX20 bool test() {
-  {
-    typedef std::string S;
-    {
-      test<S>(0, 0, 5);
-      test<S>(0, 0, 10);
-      test<S>(0, 0, 50);
-    }
-    {
-      test<S>(100, 50, 5);
-      test<S>(100, 50, 10);
-      test<S>(100, 50, 50);
-      test<S>(100, 50, 100);
-      test<S>(100, 50, 1000);
-      test<S>(100, 50, S::npos);
-    }
-  }
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    {
-      test<S>(0, 0, 5);
-      test<S>(0, 0, 10);
-      test<S>(0, 0, 50);
-    }
-    {
-      test<S>(100, 50, 5);
-      test<S>(100, 50, 10);
-      test<S>(100, 50, 50);
-      test<S>(100, 50, 100);
-      test<S>(100, 50, 1000);
-      test<S>(100, 50, S::npos);
-    }
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
 
   return true;

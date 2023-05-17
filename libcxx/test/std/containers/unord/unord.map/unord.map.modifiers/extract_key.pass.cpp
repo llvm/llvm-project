@@ -14,7 +14,9 @@
 
 // node_type extract(key_type const&);
 
+#include <iterator>
 #include <unordered_map>
+
 #include "test_macros.h"
 #include "min_allocator.h"
 #include "Counter.h"
@@ -22,8 +24,8 @@
 template <class Container, class KeyTypeIter>
 void test(Container& c, KeyTypeIter first, KeyTypeIter last)
 {
-    size_t sz = c.size();
-    assert((size_t)std::distance(first, last) == sz);
+    std::size_t sz = c.size();
+    assert((std::size_t)std::distance(first, last) == sz);
 
     for (KeyTypeIter copy = first; copy != last; ++copy)
     {

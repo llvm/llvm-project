@@ -1,5 +1,5 @@
 ; RUN: llc -mtriple=i686-linux -pre-RA-sched=source < %s | FileCheck %s
-; RUN: opt -disable-output -debugify < %s
+; RUN: opt -disable-output -passes=debugify < %s
 
 declare void @error(i32 %i, i32 %a, i32 %b)
 

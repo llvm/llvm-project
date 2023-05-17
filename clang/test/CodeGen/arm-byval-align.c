@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple=armv7-none-eabi < %s -S -emit-llvm | FileCheck %s
+// RUN: %clang_cc1 -triple=armv7-none-eabi < %s -S -emit-llvm | FileCheck %s
 
 struct foo {
   long long a;
@@ -7,7 +7,7 @@ struct foo {
   int d[16];
 };
 
-// CHECK: %struct.foo* noundef byval(%struct.foo) align 8 %z
+// CHECK: ptr noundef byval(%struct.foo) align 8 %z
 long long bar(int a, int b, int c, int d, int e,
               struct foo z) {
   return z.a;

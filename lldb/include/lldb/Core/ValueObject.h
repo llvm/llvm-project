@@ -26,7 +26,6 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 
@@ -34,6 +33,7 @@
 #include <initializer_list>
 #include <map>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -357,7 +357,7 @@ public:
   virtual bool CanProvideValue();
 
   // Subclasses must implement the functions below.
-  virtual llvm::Optional<uint64_t> GetByteSize() = 0;
+  virtual std::optional<uint64_t> GetByteSize() = 0;
 
   virtual lldb::ValueType GetValueType() const = 0;
 
@@ -795,7 +795,7 @@ protected:
 
   class ChildrenManager {
   public:
-    ChildrenManager() {}
+    ChildrenManager() = default;
 
     bool HasChildAtIndex(size_t idx) {
       std::lock_guard<std::recursive_mutex> guard(m_mutex);

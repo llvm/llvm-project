@@ -1,5 +1,5 @@
-# RUN: llc -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
-# RUN: llc -debugify-and-strip-all-safe -mtriple=aarch64-none-linux-gnu -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -mtriple=aarch64-none-linux-gnu -mattr=+mte -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
+# RUN: llc -debugify-and-strip-all-safe -mtriple=aarch64-none-linux-gnu -mattr=+mte -run-pass aarch64-ldst-opt  -verify-machineinstrs  -o - %s | FileCheck %s
 ---
 
 ### STG and its offset limits
@@ -11,7 +11,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGOffset $x0, $x0, 0
+    STGi $x0, $x0, 0
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -23,20 +23,20 @@ body: |
   bb.0.entry:
     liveins: $x0, $x1
 
-    STGOffset $x1, $x0, 0
+    STGi $x1, $x0, 0
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
 
 # CHECK-LABEL: name: test_STG_post_unaligned
-# CHECK:      STGOffset $x0, $x0, 0
+# CHECK:      STGi $x0, $x0, 0
 # CHECK-NEXT: ADDXri $x0, 8, 0
 name: test_STG_post_unaligned
 body: |
   bb.0.entry:
     liveins: $x0
 
-    STGOffset $x0, $x0, 0
+    STGi $x0, $x0, 0
     $x0 = ADDXri $x0, 8, 0
     RET_ReallyLR implicit $x0
 ...
@@ -48,20 +48,20 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGOffset $x0, $x0, 0
+    STGi $x0, $x0, 0
     $x0 = SUBXri $x0, 4096, 0
     RET_ReallyLR implicit $x0
 ...
 
 # CHECK-LABEL: name: test_STG_post3
-# CHECK:      STGOffset $x0, $x0, 0
+# CHECK:      STGi $x0, $x0, 0
 # CHECK-NEXT: SUBXri $x0, 4112, 0
 name: test_STG_post3
 body: |
   bb.0.entry:
     liveins: $x0
 
-    STGOffset $x0, $x0, 0
+    STGi $x0, $x0, 0
     $x0 = SUBXri $x0, 4112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -73,20 +73,20 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGOffset $x0, $x0, 0
+    STGi $x0, $x0, 0
     $x0 = ADDXri $x0, 4080, 0
     RET_ReallyLR implicit $x0
 ...
 
 # CHECK-LABEL: name: test_STG_post5
-# CHECK:      STGOffset $x0, $x0, 0
+# CHECK:      STGi $x0, $x0, 0
 # CHECK-NEXT: ADDXri $x0, 4096, 0
 name: test_STG_post5
 body: |
   bb.0.entry:
     liveins: $x0
 
-    STGOffset $x0, $x0, 0
+    STGi $x0, $x0, 0
     $x0 = ADDXri $x0, 4096, 0
     RET_ReallyLR implicit $x0
 ...
@@ -100,7 +100,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STZGOffset $x0, $x0, 0
+    STZGi $x0, $x0, 0
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -112,7 +112,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    ST2GOffset $x0, $x0, 0
+    ST2Gi $x0, $x0, 0
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -124,7 +124,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STZ2GOffset $x0, $x0, 0
+    STZ2Gi $x0, $x0, 0
     $x0 = ADDXri $x0, 112, 0
     RET_ReallyLR implicit $x0
 ...
@@ -202,7 +202,7 @@ body: |
   bb.0.entry:
     liveins: $x0
 
-    STGOffset $x0, $x0, 10
+    STGi $x0, $x0, 10
     $x0 = ADDXri $x0, 160, 0
     RET_ReallyLR implicit $x0
 ...
@@ -229,7 +229,7 @@ body: |
     liveins: $x0
 
     $x0 = ADDXri $x0, 32, 0
-    STGOffset $x0, $x0, 0
+    STGi $x0, $x0, 0
     RET_ReallyLR implicit $x0
 ...
 

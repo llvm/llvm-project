@@ -3,7 +3,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu -mcpu=pwr7 -mattr=+vsx | FileCheck -check-prefix=CHECK-VSX %s
 target datalayout = "E-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f128:64:128-n32"
 
-define void @foo1(i16* %p, i16* %r) nounwind {
+define void @foo1(ptr %p, ptr %r) nounwind {
 ; CHECK-LABEL: foo1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lhz 3, 0(3)
@@ -16,14 +16,14 @@ define void @foo1(i16* %p, i16* %r) nounwind {
 ; CHECK-VSX-NEXT:    sth 3, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
-  %v = load i16, i16* %p, align 1
-  store i16 %v, i16* %r, align 1
+  %v = load i16, ptr %p, align 1
+  store i16 %v, ptr %r, align 1
   ret void
 
 
 }
 
-define void @foo2(i32* %p, i32* %r) nounwind {
+define void @foo2(ptr %p, ptr %r) nounwind {
 ; CHECK-LABEL: foo2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(3)
@@ -36,14 +36,14 @@ define void @foo2(i32* %p, i32* %r) nounwind {
 ; CHECK-VSX-NEXT:    stw 3, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
-  %v = load i32, i32* %p, align 1
-  store i32 %v, i32* %r, align 1
+  %v = load i32, ptr %p, align 1
+  store i32 %v, ptr %r, align 1
   ret void
 
 
 }
 
-define void @foo3(i64* %p, i64* %r) nounwind {
+define void @foo3(ptr %p, ptr %r) nounwind {
 ; CHECK-LABEL: foo3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld 3, 0(3)
@@ -56,14 +56,14 @@ define void @foo3(i64* %p, i64* %r) nounwind {
 ; CHECK-VSX-NEXT:    std 3, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
-  %v = load i64, i64* %p, align 1
-  store i64 %v, i64* %r, align 1
+  %v = load i64, ptr %p, align 1
+  store i64 %v, ptr %r, align 1
   ret void
 
 
 }
 
-define void @foo4(float* %p, float* %r) nounwind {
+define void @foo4(ptr %p, ptr %r) nounwind {
 ; CHECK-LABEL: foo4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz 3, 0(3)
@@ -76,14 +76,14 @@ define void @foo4(float* %p, float* %r) nounwind {
 ; CHECK-VSX-NEXT:    stw 3, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
-  %v = load float, float* %p, align 1
-  store float %v, float* %r, align 1
+  %v = load float, ptr %p, align 1
+  store float %v, ptr %r, align 1
   ret void
 
 
 }
 
-define void @foo5(double* %p, double* %r) nounwind {
+define void @foo5(ptr %p, ptr %r) nounwind {
 ; CHECK-LABEL: foo5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld 3, 0(3)
@@ -96,14 +96,14 @@ define void @foo5(double* %p, double* %r) nounwind {
 ; CHECK-VSX-NEXT:    std 3, 0(4)
 ; CHECK-VSX-NEXT:    blr
 entry:
-  %v = load double, double* %p, align 1
-  store double %v, double* %r, align 1
+  %v = load double, ptr %p, align 1
+  store double %v, ptr %r, align 1
   ret void
 
 
 }
 
-define void @foo6(<4 x float>* %p, <4 x float>* %r) nounwind {
+define void @foo6(ptr %p, ptr %r) nounwind {
 ; These loads and stores are legalized into aligned loads and stores
 ; using aligned stack slots.
 ; CHECK-LABEL: foo6:
@@ -134,8 +134,8 @@ define void @foo6(<4 x float>* %p, <4 x float>* %r) nounwind {
 ; stack slots, but lvsl/vperm is better still.  (On P8 lxvw4x is preferable.)
 ; Using unaligned stxvw4x is preferable on both machines.
 entry:
-  %v = load <4 x float>, <4 x float>* %p, align 1
-  store <4 x float> %v, <4 x float>* %r, align 1
+  %v = load <4 x float>, ptr %p, align 1
+  store <4 x float> %v, ptr %r, align 1
   ret void
 }
 

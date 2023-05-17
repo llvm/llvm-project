@@ -8,6 +8,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <thread>
 
@@ -46,8 +47,8 @@ public:
   /// \param[in] prev_event
   ///   Previous event if this one is an update. If \b nullptr, then a start
   ///   event will be created.
-  static llvm::Optional<ProgressEvent>
-  Create(uint64_t progress_id, llvm::Optional<llvm::StringRef> message,
+  static std::optional<ProgressEvent>
+  Create(uint64_t progress_id, std::optional<llvm::StringRef> message,
          uint64_t completed, uint64_t total,
          const ProgressEvent *prev_event = nullptr);
 
@@ -70,14 +71,14 @@ public:
   bool Reported() const;
 
 private:
-  ProgressEvent(uint64_t progress_id, llvm::Optional<llvm::StringRef> message,
+  ProgressEvent(uint64_t progress_id, std::optional<llvm::StringRef> message,
                 uint64_t completed, uint64_t total,
                 const ProgressEvent *prev_event);
 
   uint64_t m_progress_id;
   std::string m_message;
   ProgressEventType m_event_type;
-  llvm::Optional<uint32_t> m_percentage;
+  std::optional<uint32_t> m_percentage;
   std::chrono::duration<double> m_creation_time =
       std::chrono::system_clock::now().time_since_epoch();
   std::chrono::duration<double> m_minimum_allowed_report_time;
@@ -112,7 +113,7 @@ public:
 
 private:
   ProgressEvent m_start_event;
-  llvm::Optional<ProgressEvent> m_last_update_event;
+  std::optional<ProgressEvent> m_last_update_event;
   bool m_finished;
   ProgressEventReportCallback m_report_callback;
 };

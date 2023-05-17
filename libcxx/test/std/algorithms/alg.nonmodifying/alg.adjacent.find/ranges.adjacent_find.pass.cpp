@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<forward_iterator I, sentinel_for<I> S, class Proj = identity,
 //          indirect_binary_predicate<projected<I, Proj>,
@@ -52,13 +51,13 @@ static_assert(!HasAdjacentFindR<ForwardRangeNotSentinelSemiregular>);
 static_assert(!HasAdjacentFindR<ForwardRangeNotSentinelEqualityComparableWith>);
 static_assert(!HasAdjacentFindR<UncheckedRange<NotComparable>>);
 
-template <size_t N>
+template <std::size_t N>
 struct Data {
   std::array<int, N> input;
   int expected;
 };
 
-template <class Iter, class Sent, size_t N>
+template <class Iter, class Sent, std::size_t N>
 constexpr void test(Data<N> d) {
   {
     std::same_as<Iter> decltype(auto) ret =

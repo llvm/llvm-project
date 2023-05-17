@@ -49,6 +49,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     FunctionRef<Type<TypeCategory::Real, KIND>> &&funcRef) {
   using T = Type<TypeCategory::Real, KIND>;
   using ComplexT = Type<TypeCategory::Complex, KIND>;
+  using Int4 = Type<TypeCategory::Integer, 4>;
   ActualArguments &args{funcRef.arguments()};
   auto *intrinsic{std::get_if<SpecificIntrinsic>(&funcRef.proc().u)};
   CHECK(intrinsic);
@@ -86,7 +87,6 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "bessel_jn" || name == "bessel_yn") {
     if (args.size() == 2) { // elemental
       // runtime functions use int arg
-      using Int4 = Type<TypeCategory::Integer, 4>;
       if (auto callable{GetHostRuntimeWrapper<T, Int4, T>(name)}) {
         return FoldElementalIntrinsic<T, Int4, T>(
             context, std::move(funcRef), *callable);
@@ -105,8 +105,14 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           context, std::move(funcRef), &Scalar<T>::ABS);
     } else if (auto *z{UnwrapExpr<Expr<SomeComplex>>(args[0])}) {
       return FoldElementalIntrinsic<T, ComplexT>(context, std::move(funcRef),
-          ScalarFunc<T, ComplexT>([](const Scalar<ComplexT> &z) -> Scalar<T> {
-            return z.ABS().value;
+          ScalarFunc<T, ComplexT>([&name, &context](
+                                      const Scalar<ComplexT> &z) -> Scalar<T> {
+            ValueWithRealFlags<Scalar<T>> y{z.ABS()};
+            if (y.flags.test(RealFlag::Overflow)) {
+              context.messages().Say(
+                  "complex ABS intrinsic folding overflow"_warn_en_US, name);
+            }
+            return y.value;
           }));
     } else {
       common::die(" unexpected argument type inside abs");
@@ -121,21 +127,27 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
             ? common::RoundingMode::ToZero
             : common::RoundingMode::TiesAwayFromZero};
     return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
-        ScalarFunc<T, T>([&name, &context, mode](
-                             const Scalar<T> &x) -> Scalar<T> {
-          ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
-          if (y.flags.test(RealFlag::Overflow)) {
-            context.messages().Say(
-                "%s intrinsic folding overflow"_warn_en_US, name);
-          }
-          return y.value;
-        }));
+        ScalarFunc<T, T>(
+            [&name, &context, mode](const Scalar<T> &x) -> Scalar<T> {
+              ValueWithRealFlags<Scalar<T>> y{x.ToWholeNumber(mode)};
+              if (y.flags.test(RealFlag::Overflow)) {
+                context.messages().Say(
+                    "%s intrinsic folding overflow"_warn_en_US, name);
+              }
+              return y.value;
+            }));
   } else if (name == "dim") {
     return FoldElementalIntrinsic<T, T, T>(context, std::move(funcRef),
-        ScalarFunc<T, T, T>(
-            [](const Scalar<T> &x, const Scalar<T> &y) -> Scalar<T> {
-              return x.DIM(y).value;
-            }));
+        ScalarFunc<T, T, T>([&context](const Scalar<T> &x,
+                                const Scalar<T> &y) -> Scalar<T> {
+          ValueWithRealFlags<Scalar<T>> result{x.DIM(y)};
+          if (result.flags.test(RealFlag::Overflow)) {
+            context.messages().Say("DIM intrinsic folding overflow"_warn_en_US);
+          }
+          return result.value;
+        }));
+  } else if (name == "dot_product") {
+    return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dprod") {
     if (auto scalars{GetScalarConstantArguments<T, T>(context, args)}) {
       return Fold(context,
@@ -144,6 +156,10 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
     }
   } else if (name == "epsilon") {
     return Expr<T>{Scalar<T>::EPSILON()};
+  } else if (name == "fraction") {
+    return FoldElementalIntrinsic<T, T>(context, std::move(funcRef),
+        ScalarFunc<T, T>(
+            [](const Scalar<T> &x) -> Scalar<T> { return x.FRACTION(); }));
   } else if (name == "huge") {
     return Expr<T>{Scalar<T>::HUGE()};
   } else if (name == "hypot") {
@@ -250,6 +266,19 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           },
           byExpr->u);
     }
+  } else if (name == "set_exponent") {
+    if (const auto *iExpr{UnwrapExpr<Expr<SomeInteger>>(args[1])}) {
+      return common::visit(
+          [&](const auto &iVal) {
+            using TY = ResultType<decltype(iVal)>;
+            return FoldElementalIntrinsic<T, T, TY>(context, std::move(funcRef),
+                ScalarFunc<T, T, TY>(
+                    [&](const Scalar<T> &x, const Scalar<TY> &i) -> Scalar<T> {
+                      return x.SET_EXPONENT(i.ToInt64());
+                    }));
+          },
+          iExpr->u);
+    }
   } else if (name == "sign") {
     return FoldElementalIntrinsic<T, T, T>(
         context, std::move(funcRef), &Scalar<T>::SIGN);
@@ -315,7 +344,7 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   }
-  // TODO: dot_product, fraction, matmul, norm2, set_exponent, transfer
+  // TODO: dot_product, matmul, norm2
   return Expr<T>{std::move(funcRef)};
 }
 

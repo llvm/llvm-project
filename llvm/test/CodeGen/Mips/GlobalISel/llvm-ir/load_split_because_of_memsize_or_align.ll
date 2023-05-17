@@ -28,7 +28,7 @@
 @i64_align4 = common global i64 0, align 4
 @i64_align8 = common global i64 0, align 8
 
-define i32 @load3align1(%struct.MemSize3_Align1* %S) {
+define i32 @load3align1(ptr %S) {
 ; MIPS32-LABEL: load3align1:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $at
@@ -48,13 +48,12 @@ define i32 @load3align1(%struct.MemSize3_Align1* %S) {
 ; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize3_Align1* %S to i24*
-  %bf.load = load i24, i24* %0, align 1
+  %bf.load = load i24, ptr %S, align 1
   %bf.cast = zext i24 %bf.load to i32
   ret i32 %bf.cast
 }
 
-define i32 @load3align2(%struct.MemSize3_Align2* %S) {
+define i32 @load3align2(ptr %S) {
 ; MIPS32-LABEL: load3align2:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $at
@@ -74,13 +73,12 @@ define i32 @load3align2(%struct.MemSize3_Align2* %S) {
 ; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize3_Align2* %S to i24*
-  %bf.load = load i24, i24* %0, align 2
+  %bf.load = load i24, ptr %S, align 2
   %bf.cast = zext i24 %bf.load to i32
   ret i32 %bf.cast
 }
 
-define i32 @load3align4(%struct.MemSize3_Align4* %S, i32 signext %a) {
+define i32 @load3align4(ptr %S, i32 signext %a) {
 ; MIPS32-LABEL: load3align4:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $1, 0($4)
@@ -98,13 +96,12 @@ define i32 @load3align4(%struct.MemSize3_Align4* %S, i32 signext %a) {
 ; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize3_Align4* %S to i24*
-  %bf.load = load i24, i24* %0, align 4
+  %bf.load = load i24, ptr %S, align 4
   %bf.cast = zext i24 %bf.load to i32
   ret i32 %bf.cast
 }
 
-define i32 @load3align8(%struct.MemSize3_Align8* %S, i32 signext %a) {
+define i32 @load3align8(ptr %S, i32 signext %a) {
 ; MIPS32-LABEL: load3align8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $1, 0($4)
@@ -122,13 +119,12 @@ define i32 @load3align8(%struct.MemSize3_Align8* %S, i32 signext %a) {
 ; MIPS32R6-NEXT:    and $2, $1, $2
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize3_Align8* %S to i24*
-  %bf.load = load i24, i24* %0, align 8
+  %bf.load = load i24, ptr %S, align 8
   %bf.cast = zext i24 %bf.load to i32
   ret i32 %bf.cast
 }
 
-define i64 @load5align1(%struct.MemSize5_Align1* %S) {
+define i64 @load5align1(ptr %S) {
 ; MIPS32-LABEL: load5align1:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $v0
@@ -150,13 +146,12 @@ define i64 @load5align1(%struct.MemSize5_Align1* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 255
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize5_Align1* %S to i40*
-  %bf.load = load i40, i40* %0, align 1
+  %bf.load = load i40, ptr %S, align 1
   %bf.cast = zext i40 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load5align2(%struct.MemSize5_Align2* %S) {
+define i64 @load5align2(ptr %S) {
 ; MIPS32-LABEL: load5align2:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $v0
@@ -178,13 +173,12 @@ define i64 @load5align2(%struct.MemSize5_Align2* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 255
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize5_Align2* %S to i40*
-  %bf.load = load i40, i40* %0, align 2
+  %bf.load = load i40, ptr %S, align 2
   %bf.cast = zext i40 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load5align4(%struct.MemSize5_Align4* %S) {
+define i64 @load5align4(ptr %S) {
 ; MIPS32-LABEL: load5align4:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($4)
@@ -204,13 +198,12 @@ define i64 @load5align4(%struct.MemSize5_Align4* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 255
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize5_Align4* %S to i40*
-  %bf.load = load i40, i40* %0, align 4
+  %bf.load = load i40, ptr %S, align 4
   %bf.cast = zext i40 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load5align8(%struct.MemSize5_Align8* %S) {
+define i64 @load5align8(ptr %S) {
 ; MIPS32-LABEL: load5align8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($4)
@@ -230,13 +223,12 @@ define i64 @load5align8(%struct.MemSize5_Align8* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 255
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize5_Align8* %S to i40*
-  %bf.load = load i40, i40* %0, align 8
+  %bf.load = load i40, ptr %S, align 8
   %bf.cast = zext i40 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load6align1(%struct.MemSize6_Align1* %S) {
+define i64 @load6align1(ptr %S) {
 ; MIPS32-LABEL: load6align1:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $v0
@@ -260,13 +252,12 @@ define i64 @load6align1(%struct.MemSize6_Align1* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 65535
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize6_Align1* %S to i48*
-  %bf.load = load i48, i48* %0, align 1
+  %bf.load = load i48, ptr %S, align 1
   %bf.cast = zext i48 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load6align2(%struct.MemSize6_Align2* %S) {
+define i64 @load6align2(ptr %S) {
 ; MIPS32-LABEL: load6align2:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $v0
@@ -288,13 +279,12 @@ define i64 @load6align2(%struct.MemSize6_Align2* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 65535
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize6_Align2* %S to i48*
-  %bf.load = load i48, i48* %0, align 2
+  %bf.load = load i48, ptr %S, align 2
   %bf.cast = zext i48 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load6align4(%struct.MemSize6_Align4* %S) {
+define i64 @load6align4(ptr %S) {
 ; MIPS32-LABEL: load6align4:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($4)
@@ -314,13 +304,12 @@ define i64 @load6align4(%struct.MemSize6_Align4* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 65535
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize6_Align4* %S to i48*
-  %bf.load = load i48, i48* %0, align 4
+  %bf.load = load i48, ptr %S, align 4
   %bf.cast = zext i48 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load6align8(%struct.MemSize6_Align8* %S) {
+define i64 @load6align8(ptr %S) {
 ; MIPS32-LABEL: load6align8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($4)
@@ -340,13 +329,12 @@ define i64 @load6align8(%struct.MemSize6_Align8* %S) {
 ; MIPS32R6-NEXT:    andi $3, $1, 65535
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize6_Align8* %S to i48*
-  %bf.load = load i48, i48* %0, align 8
+  %bf.load = load i48, ptr %S, align 8
   %bf.cast = zext i48 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load7align1(%struct.MemSize7_Align1* %S) {
+define i64 @load7align1(ptr %S) {
 ; MIPS32-LABEL: load7align1:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $v0
@@ -374,13 +362,12 @@ define i64 @load7align1(%struct.MemSize7_Align1* %S) {
 ; MIPS32R6-NEXT:    and $3, $1, $3
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize7_Align1* %S to i56*
-  %bf.load = load i56, i56* %0, align 1
+  %bf.load = load i56, ptr %S, align 1
   %bf.cast = zext i56 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load7align2(%struct.MemSize7_Align2* %S) {
+define i64 @load7align2(ptr %S) {
 ; MIPS32-LABEL: load7align2:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    # implicit-def: $v0
@@ -408,13 +395,12 @@ define i64 @load7align2(%struct.MemSize7_Align2* %S) {
 ; MIPS32R6-NEXT:    and $3, $1, $3
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize7_Align2* %S to i56*
-  %bf.load = load i56, i56* %0, align 2
+  %bf.load = load i56, ptr %S, align 2
   %bf.cast = zext i56 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load7align4(%struct.MemSize7_Align4* %S) {
+define i64 @load7align4(ptr %S) {
 ; MIPS32-LABEL: load7align4:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($4)
@@ -438,13 +424,12 @@ define i64 @load7align4(%struct.MemSize7_Align4* %S) {
 ; MIPS32R6-NEXT:    and $3, $1, $3
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize7_Align4* %S to i56*
-  %bf.load = load i56, i56* %0, align 4
+  %bf.load = load i56, ptr %S, align 4
   %bf.cast = zext i56 %bf.load to i64
   ret i64 %bf.cast
 }
 
-define i64 @load7align8(%struct.MemSize7_Align8* %S) {
+define i64 @load7align8(ptr %S) {
 ; MIPS32-LABEL: load7align8:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    lw $2, 0($4)
@@ -468,8 +453,7 @@ define i64 @load7align8(%struct.MemSize7_Align8* %S) {
 ; MIPS32R6-NEXT:    and $3, $1, $3
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = bitcast %struct.MemSize7_Align8* %S to i56*
-  %bf.load = load i56, i56* %0, align 8
+  %bf.load = load i56, ptr %S, align 8
   %bf.cast = zext i56 %bf.load to i64
   ret i64 %bf.cast
 }
@@ -497,7 +481,7 @@ define double @load_double_align1() {
 ; MIPS32R6-NEXT:    ldc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load double, double* @double_align1, align 1
+  %0 = load double, ptr @double_align1, align 1
   ret double %0
 }
 
@@ -524,7 +508,7 @@ define double @load_double_align2() {
 ; MIPS32R6-NEXT:    ldc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load double, double* @double_align2, align 2
+  %0 = load double, ptr @double_align2, align 2
   ret double %0
 }
 
@@ -547,7 +531,7 @@ define double @load_double_align4() {
 ; MIPS32R6-NEXT:    ldc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load double, double* @double_align4, align 4
+  %0 = load double, ptr @double_align4, align 4
   ret double %0
 }
 
@@ -567,7 +551,7 @@ define double @load_double_align8() {
 ; MIPS32R6-NEXT:    ldc1 $f0, 0($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load double, double* @double_align8, align 8
+  %0 = load double, ptr @double_align8, align 8
   ret double %0
 }
 
@@ -593,7 +577,7 @@ define i64 @load_i64_align1() {
 ; MIPS32R6-NEXT:    lw $3, 4($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i64, i64* @i64_align1, align 1
+  %0 = load i64, ptr @i64_align1, align 1
   ret i64 %0
 }
 
@@ -619,7 +603,7 @@ define i64 @load_i64_align2() {
 ; MIPS32R6-NEXT:    lw $3, 4($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i64, i64* @i64_align2, align 2
+  %0 = load i64, ptr @i64_align2, align 2
   ret i64 %0
 }
 
@@ -641,7 +625,7 @@ define i64 @load_i64_align4() {
 ; MIPS32R6-NEXT:    lw $3, 4($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i64, i64* @i64_align4, align 4
+  %0 = load i64, ptr @i64_align4, align 4
   ret i64 %0
 }
 
@@ -663,6 +647,6 @@ define i64 @load_i64_align8() {
 ; MIPS32R6-NEXT:    lw $3, 4($1)
 ; MIPS32R6-NEXT:    jrc $ra
 entry:
-  %0 = load i64, i64* @i64_align8, align 8
+  %0 = load i64, ptr @i64_align8, align 8
   ret i64 %0
 }

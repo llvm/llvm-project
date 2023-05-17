@@ -1,4 +1,4 @@
-; RUN: opt -mem2reg %s -S -o - | FileCheck %s
+; RUN: opt -passes=mem2reg %s -S -o - | FileCheck %s
 
 ;; Check that mem2reg removes dbg.value(%local, DIExpression(DW_OP_deref...))
 ;; that instcombine LowerDbgDeclare inserted before the call to 'esc' when
@@ -36,41 +36,37 @@
 
 define dso_local void @fun() !dbg !14 {
 entry:
-  %e.addr.i = alloca i64*, align 8
+  %e.addr.i = alloca ptr, align 8
   %local = alloca i64, align 8
-  %0 = bitcast i64* %local to i8*, !dbg !19
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0), !dbg !19
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %local), !dbg !19
   call void @llvm.dbg.value(metadata i64 0, metadata !18, metadata !DIExpression()), !dbg !20
-  store i64 0, i64* %local, align 8, !dbg !21
-  call void @llvm.dbg.value(metadata i64* %local, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !20
-  %1 = bitcast i64** %e.addr.i to i8*, !dbg !26
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* %1), !dbg !26
-  call void @llvm.dbg.value(metadata i64* %local, metadata !32, metadata !DIExpression()), !dbg !26
-  store i64* %local, i64** %e.addr.i, align 8
-  %2 = load i64, i64* @a, align 8, !dbg !36
-  call void @llvm.dbg.value(metadata i64* %local, metadata !32, metadata !DIExpression()), !dbg !26
-  store i64 %2, i64* %local, align 8, !dbg !37
+  store i64 0, ptr %local, align 8, !dbg !21
+  call void @llvm.dbg.value(metadata ptr %local, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !20
+  call void @llvm.lifetime.start.p0(i64 8, ptr %e.addr.i), !dbg !26
+  call void @llvm.dbg.value(metadata ptr %local, metadata !32, metadata !DIExpression()), !dbg !26
+  store ptr %local, ptr %e.addr.i, align 8
+  %0 = load i64, ptr @a, align 8, !dbg !36
+  call void @llvm.dbg.value(metadata ptr %local, metadata !32, metadata !DIExpression()), !dbg !26
+  store i64 %0, ptr %local, align 8, !dbg !37
   call void (...) @c(), !dbg !38
-  %3 = load i32, i32* @b, align 4, !dbg !39
-  %tobool.not.i = icmp eq i32 %3, 0, !dbg !39
+  %1 = load i32, ptr @b, align 4, !dbg !39
+  %tobool.not.i = icmp eq i32 %1, 0, !dbg !39
   br i1 %tobool.not.i, label %esc.exit, label %if.then.i, !dbg !43
 
 if.then.i:                                        ; preds = %entry
-  %4 = load i64*, i64** %e.addr.i, align 8, !dbg !44
-  call void @llvm.dbg.value(metadata i64* %4, metadata !32, metadata !DIExpression()), !dbg !26
-  store i64 0, i64* %4, align 8, !dbg !45
+  %2 = load ptr, ptr %e.addr.i, align 8, !dbg !44
+  call void @llvm.dbg.value(metadata ptr %2, metadata !32, metadata !DIExpression()), !dbg !26
+  store i64 0, ptr %2, align 8, !dbg !45
   br label %esc.exit, !dbg !46
 
 esc.exit:                                         ; preds = %entry, %if.then.i
-  %5 = bitcast i64** %e.addr.i to i8*, !dbg !47
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* %5), !dbg !47
-  %6 = bitcast i64* %local to i8*, !dbg !48
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %6), !dbg !48
+  call void @llvm.lifetime.end.p0(i64 8, ptr %e.addr.i), !dbg !47
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %local), !dbg !48
   ret void, !dbg !48
 }
 
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare !dbg !49 dso_local void @c(...)
 

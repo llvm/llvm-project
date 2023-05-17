@@ -79,7 +79,7 @@
   ; Function Attrs: nounwind
   declare void @llvm.stackprotector(i8*, i8**) #0
 
-  attributes #0 = { nounwind }
+  attributes #0 = { nounwind  "target-features"="+v8m" }
   attributes #1 = { nounwind readnone speculatable }
   attributes #2 = { nounwind readnone }
 

@@ -182,6 +182,8 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::macho_dsym_companion;
     case 11:
       return file_magic::macho_kext_bundle;
+    case 12:
+      return file_magic::macho_file_set;
     }
     break;
   }
@@ -192,13 +194,13 @@ file_magic llvm::identify_magic(StringRef Magic) {
   case 0x50: // mc68K
     if (startswith(Magic, "\x50\xed\x55\xba"))
       return file_magic::cuda_fatbinary;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case 0x4c: // 80386 Windows
   case 0xc4: // ARMNT Windows
     if (Magic[1] == 0x01)
       return file_magic::coff_object;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
 
   case 0x90: // PA-RISC Windows
   case 0x68: // mc68K Windows
@@ -226,14 +228,27 @@ file_magic llvm::identify_magic(StringRef Magic) {
       return file_magic::coff_object;
     break;
 
-  case 0x2d: // YAML '-'
+  case 0x2d: // YAML '-' MachO TBD.
     if (startswith(Magic, "--- !tapi") || startswith(Magic, "---\narchs:"))
       return file_magic::tapi_file;
     break;
-  
+  case 0x7b: // JSON '{' MachO TBD.
+    return file_magic::tapi_file;
+    break;
+
   case 'D': // DirectX container file - DXBC
     if (startswith(Magic, "DXBC"))
       return file_magic::dxcontainer_object;
+    break;
+
+  case 0x41: // ARM64EC windows
+    if (Magic[1] == char(0xA6))
+      return file_magic::coff_object;
+    break;
+
+  case 0x4e: // ARM64X windows
+    if (Magic[1] == char(0xA6))
+      return file_magic::coff_object;
     break;
 
   default:

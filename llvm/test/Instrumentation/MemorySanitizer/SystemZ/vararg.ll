@@ -3,15 +3,14 @@
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64"
 target triple = "s390x-unknown-linux-gnu"
 
-%struct.__va_list = type { i64, i64, i8*, i8* }
+%struct.__va_list = type { i64, i64, ptr, ptr }
 
 define i64 @foo(i64 %guard, ...) {
   %vl = alloca %struct.__va_list, align 8
-  %1 = bitcast %struct.__va_list* %vl to i8*
-  call void @llvm.lifetime.start.p0i8(i64 32, i8* %1)
-  call void @llvm.va_start(i8* %1)
-  call void @llvm.va_end(i8* %1)
-  call void @llvm.lifetime.end.p0i8(i64 32, i8* %1)
+  call void @llvm.lifetime.start.p0(i64 32, ptr %vl)
+  call void @llvm.va_start(ptr %vl)
+  call void @llvm.va_end(ptr %vl)
+  call void @llvm.lifetime.end.p0(i64 32, ptr %vl)
   ret i64 0
 }
 
@@ -26,13 +25,13 @@ define i64 @foo(i64 %guard, ...) {
 ; We expect two memcpy operations: one for the register save area, and one for
 ; the overflow arg area.
 
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 {{%.*}}, i8* align 8 {{%.*}}, i64 160, i1 false)
-; CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 {{%.*}}, i8* align 8 {{%.*}}, i64 [[A]], i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{%.*}}, ptr align 8 {{%.*}}, i64 160, i1 false)
+; CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{%.*}}, ptr align 8 {{%.*}}, i64 [[A]], i1 false)
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
-declare void @llvm.va_start(i8*) #2
-declare void @llvm.va_end(i8*) #2
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
+declare void @llvm.va_start(ptr) #2
+declare void @llvm.va_end(ptr) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 declare i32 @random_i32()
 declare i64 @random_i64()
@@ -119,8 +118,8 @@ entry:
 
 ; If the size of __msan_va_arg_tls changes the second argument of `add` must also be changed.
 ; CHECK-LABEL: @many_args
-; CHECK: i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 792)
-; CHECK-NOT: i64 add (i64 ptrtoint ([100 x i64]* @__msan_va_arg_tls to i64), i64 800)
+; CHECK: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 792)
+; CHECK-NOT: i64 add (i64 ptrtoint (ptr @__msan_va_arg_tls to i64), i64 800)
 
 declare i64 @sum(i64 %n, ...)
 
@@ -189,3 +188,25 @@ define i64 @bar_128() {
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 24
 ; CHECK: store {{.*}} @__msan_va_arg_tls {{.*}} 32
 ; CHECK: store {{.*}} 0, {{.*}} @__msan_va_arg_overflow_size_tls
+
+; CHECK: declare void @__msan_maybe_warning_1(i8 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_1(i8 zeroext, ptr, i32 zeroext)
+; CHECK: declare void @__msan_maybe_warning_2(i16 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_2(i16 zeroext, ptr, i32 zeroext)
+; CHECK: declare void @__msan_maybe_warning_4(i32 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_4(i32 zeroext, ptr, i32 zeroext)
+; CHECK: declare void @__msan_maybe_warning_8(i64 zeroext, i32 zeroext)
+; CHECK: declare void @__msan_maybe_store_origin_8(i64 zeroext, ptr, i32 zeroext)
+
+; Test vararg function pointers.
+;
+; void (*ptr)(int, ...);
+; void call_ptr(void) { ptr(0); }
+
+@ptr = dso_local global ptr null, align 8
+
+define dso_local void @call_ptr() {
+  %1 = load ptr, ptr @ptr, align 8
+  call void (i32, ...) %1(i32 noundef signext 0)
+  ret void
+}

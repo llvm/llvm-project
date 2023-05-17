@@ -11,6 +11,6 @@
 ; Fixed by delaying binding of variable names until _after_ the method symtab is
 ; created.
 ;
-@X = global i32 4		; <i32*> [#uses=0]
+@X = global i32 4		; <ptr> [#uses=0]
 
-declare i32 @xxx(i32*)
+declare i32 @xxx(ptr)

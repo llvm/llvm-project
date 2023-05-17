@@ -1,12 +1,12 @@
 # RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t.o %s
-# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t2.o %S/Inputs/sig_mismatch.s
+# RUN: llvm-mc -filetype=obj -triple=wasm32-unknown-unknown -o %t2.o %S/Inputs/sig-mismatch.s
 # RUN: wasm-ld --relocatable %t.o %t2.o -o %t.wasm
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # Regression test for handling of signature mismatches (variant function
 # symbols) and relocatable output.  This issue only occurred when the undefined
 # function was seen first and the defined function was referenced within the
-# the defining file (see %S/Inputs/sig_mismatch.s).
+# the defining file (see %S/Inputs/sig-mismatch.s).
 
 .functype foo (i32, i64, i32) -> (i32)
 

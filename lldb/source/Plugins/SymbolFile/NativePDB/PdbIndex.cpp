@@ -22,6 +22,7 @@
 
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/lldb-defines.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::npdb;
@@ -60,15 +61,11 @@ PdbIndex::create(llvm::pdb::PDBFile *file) {
 
 lldb::addr_t PdbIndex::MakeVirtualAddress(uint16_t segment,
                                           uint32_t offset) const {
-  // Segment indices are 1-based.
-  lldbassert(segment > 0);
-
   uint32_t max_section = dbi().getSectionHeaders().size();
-  lldbassert(segment <= max_section + 1);
-
+  // Segment indices are 1-based.
   // If this is an absolute symbol, it's indicated by the magic section index
   // |max_section+1|.  In this case, the offset is meaningless, so just return.
-  if (segment == max_section + 1)
+  if (segment == 0 || segment > max_section)
     return LLDB_INVALID_ADDRESS;
 
   const llvm::object::coff_section &cs = dbi().getSectionHeaders()[segment - 1];
@@ -76,19 +73,15 @@ lldb::addr_t PdbIndex::MakeVirtualAddress(uint16_t segment,
          static_cast<lldb::addr_t>(offset);
 }
 
-lldb::addr_t PdbIndex::MakeVirtualAddress(const SegmentOffset &so) const {
-  return MakeVirtualAddress(so.segment, so.offset);
-}
-
-llvm::Optional<uint16_t>
-PdbIndex::GetModuleIndexForAddr(uint16_t segment, uint32_t offset) const {
+std::optional<uint16_t> PdbIndex::GetModuleIndexForAddr(uint16_t segment,
+                                                        uint32_t offset) const {
   return GetModuleIndexForVa(MakeVirtualAddress(segment, offset));
 }
 
-llvm::Optional<uint16_t> PdbIndex::GetModuleIndexForVa(lldb::addr_t va) const {
+std::optional<uint16_t> PdbIndex::GetModuleIndexForVa(lldb::addr_t va) const {
   auto iter = m_va_to_modi.find(va);
   if (iter == m_va_to_modi.end())
-    return llvm::None;
+    return std::nullopt;
 
   return iter.value();
 }
@@ -107,6 +100,8 @@ void PdbIndex::ParseSectionContribs() {
         return;
 
       uint64_t va = m_ctx.MakeVirtualAddress(C.ISect, C.Off);
+      if (va == LLDB_INVALID_ADDRESS)
+        return;
       uint64_t end = va + C.Size;
       // IntervalMap's start and end represent a closed range, not a half-open
       // range, so we have to subtract 1.
@@ -128,7 +123,9 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
       continue;
 
     SegmentOffset so = GetSegmentAndOffset(*iter);
-    lldb::addr_t va = MakeVirtualAddress(so);
+    lldb::addr_t va = MakeVirtualAddress(so.segment, so.offset);
+    if (va == LLDB_INVALID_ADDRESS)
+      continue;
 
     PdbCompilandSymId cu_sym_id(modi, iter.offset());
 
@@ -141,7 +138,7 @@ void PdbIndex::BuildAddrToSymbolMap(CompilandIndexItem &cci) {
 std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
   std::vector<SymbolAndUid> result;
 
-  llvm::Optional<uint16_t> modi = GetModuleIndexForVa(va);
+  std::optional<uint16_t> modi = GetModuleIndexForVa(va);
   if (!modi)
     return result;
 
@@ -175,7 +172,10 @@ std::vector<SymbolAndUid> PdbIndex::FindSymbolsByVa(lldb::addr_t va) {
     else
       sol.so = GetSegmentAndOffset(sym);
 
-    lldb::addr_t start = MakeVirtualAddress(sol.so);
+    lldb::addr_t start = MakeVirtualAddress(sol.so.segment, sol.so.offset);
+    if (start == LLDB_INVALID_ADDRESS)
+      continue;
+
     lldb::addr_t end = start + sol.length;
     if (va >= start && va < end)
       result.push_back({std::move(sym), iter->second});

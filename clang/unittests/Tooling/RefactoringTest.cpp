@@ -29,6 +29,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace tooling {
@@ -104,8 +105,8 @@ TEST_F(ReplacementTest, ReturnsInvalidPath) {
 // error code, expected new replacement, and expected existing replacement.
 static bool checkReplacementError(llvm::Error &&Error,
                                   replacement_error ExpectedErr,
-                                  llvm::Optional<Replacement> ExpectedExisting,
-                                  llvm::Optional<Replacement> ExpectedNew) {
+                                  std::optional<Replacement> ExpectedExisting,
+                                  std::optional<Replacement> ExpectedNew) {
   if (!Error) {
     llvm::errs() << "Error is a success.";
     return false;
@@ -118,18 +119,18 @@ static bool checkReplacementError(llvm::Error &&Error,
       OS << "Unexpected error code: " << int(RE.get()) << "\n";
     if (ExpectedExisting != RE.getExistingReplacement()) {
       OS << "Expected Existing != Actual Existing.\n";
-      if (ExpectedExisting.hasValue())
+      if (ExpectedExisting)
         OS << "Expected existing replacement: " << ExpectedExisting->toString()
            << "\n";
-      if (RE.getExistingReplacement().hasValue())
+      if (RE.getExistingReplacement())
         OS << "Actual existing replacement: "
            << RE.getExistingReplacement()->toString() << "\n";
     }
     if (ExpectedNew != RE.getNewReplacement()) {
       OS << "Expected New != Actual New.\n";
-      if (ExpectedNew.hasValue())
+      if (ExpectedNew)
         OS << "Expected new replacement: " << ExpectedNew->toString() << "\n";
-      if (RE.getNewReplacement().hasValue())
+      if (RE.getNewReplacement())
         OS << "Actual new replacement: " << RE.getNewReplacement()->toString()
            << "\n";
     }
@@ -1288,13 +1289,13 @@ TEST_F(AtomicChangeTest, InsertAfterWithInvalidLocation) {
 TEST_F(AtomicChangeTest, Metadata) {
   AtomicChange Change(Context.Sources, DefaultLoc, 17);
   const llvm::Any &Metadata = Change.getMetadata();
-  ASSERT_TRUE(llvm::any_isa<int>(Metadata));
+  ASSERT_TRUE(llvm::any_cast<int>(&Metadata));
   EXPECT_EQ(llvm::any_cast<int>(Metadata), 17);
 }
 
 TEST_F(AtomicChangeTest, NoMetadata) {
   AtomicChange Change(Context.Sources, DefaultLoc);
-  EXPECT_FALSE(Change.getMetadata().hasValue());
+  EXPECT_FALSE(Change.getMetadata().has_value());
 }
 
 class ApplyAtomicChangesTest : public ::testing::Test {

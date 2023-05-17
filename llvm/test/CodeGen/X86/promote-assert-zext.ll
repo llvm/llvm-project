@@ -9,9 +9,9 @@ target triple = "x86_64-apple-darwin11"
 ; CHECK: movzbl  (%rdi), %eax
 ; CHECK: movzwl  %ax, %eax
 
-define i64 @_ZL5matchPKtPKhiR9MatchData(i8* %tmp13) nounwind {
+define i64 @_ZL5matchPKtPKhiR9MatchData(ptr %tmp13) nounwind {
 entry:
-  %tmp14 = load i8, i8* %tmp13, align 1
+  %tmp14 = load i8, ptr %tmp13, align 1
   %tmp17 = zext i8 %tmp14 to i16
   br label %bb341
 

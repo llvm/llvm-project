@@ -12,22 +12,22 @@ define i32 @main() #0 !dbg !11 {
   ; There is a debug value in the middle of this section, make sure debug values are ignored.
   ; CHECK: callq
   ; CHECK-SAME: OUTLINED_FUNCTION_0
-  store i32 1, i32* %2, align 4
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4
+  store i32 1, ptr %2, align 4
+  store i32 2, ptr %3, align 4
+  store i32 3, ptr %4, align 4
   call void @llvm.dbg.value(metadata i32 10, i64 0, metadata !15, metadata !16), !dbg !17
-  store i32 4, i32* %5, align 4
-  store i32 0, i32* @x, align 4, !dbg !24
+  store i32 4, ptr %5, align 4
+  store i32 0, ptr @x, align 4, !dbg !24
   call void asm sideeffect "", "~{memory},~{dirflag},~{fpsr},~{flags}"()
   ; This is the same sequence of instructions without a debug value. It should be outlined
   ; in the same way.
   ; CHECK: callq
   ; CHECK-SAME: OUTLINED_FUNCTION_0
-  store i32 1, i32* %2, align 4
-  store i32 2, i32* %3, align 4
-  store i32 3, i32* %4, align 4
-  store i32 4, i32* %5, align 4
-  store i32 1, i32* @x, align 4, !dbg !14
+  store i32 1, ptr %2, align 4
+  store i32 2, ptr %3, align 4
+  store i32 3, ptr %4, align 4
+  store i32 4, ptr %5, align 4
+  store i32 1, ptr @x, align 4, !dbg !14
   ret i32 0, !dbg !25
 }
 

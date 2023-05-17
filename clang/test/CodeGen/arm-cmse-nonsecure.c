@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.base-unknown-unknown-eabi   -emit-llvm -mrelocation-model static -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbebv8m.base-unknown-unknown-eabi -emit-llvm -mrelocation-model static -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbv8m.base-unknown-unknown-eabi   -emit-llvm -mrelocation-model static -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple thumbebv8m.base-unknown-unknown-eabi -emit-llvm -mrelocation-model static -o - %s | FileCheck %s
 
 #include <arm_cmse.h>
 
@@ -27,7 +27,7 @@ unsigned test_cmse_primitives(void *p) {
 }
 
 void *test_address_range(void *p) {
-// CHECK: define {{.*}} i8* @test_address_range
+// CHECK: define {{.*}} ptr @test_address_range
   return cmse_check_address_range(p, 128, CMSE_MPU_UNPRIV
                                         | CMSE_MPU_READWRITE
                                         | CMSE_MPU_READ);
@@ -42,7 +42,7 @@ typedef struct {
 } Point;
 
 void *test_pointed_object(void *p) {
-// CHECK: define {{.*}} i8* @test_pointed_object
+// CHECK: define {{.*}} ptr @test_pointed_object
   Point *pt = (Point *)p;
   cmse_check_pointed_object(pt, CMSE_MPU_READ);
 // CHECK: call i32 @llvm.arm.cmse.tt

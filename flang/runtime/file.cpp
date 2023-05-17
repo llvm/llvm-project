@@ -134,7 +134,7 @@ void OpenFile::Open(OpenStatus status, std::optional<Action> action,
   if (position == Position::Append && !RawSeekToEnd()) {
     handler.SignalError(IostatOpenBadAppend);
   }
-  isTerminal_ = ::isatty(fd_) == 1;
+  isTerminal_ = IsATerminal(fd_) == 1;
   mayRead_ = *action != Action::Write;
   mayWrite_ = *action != Action::Read;
   if (status == OpenStatus::Old || status == OpenStatus::Unknown) {
@@ -163,6 +163,7 @@ void OpenFile::Predefine(int fd) {
   knownSize_.reset();
   nextId_ = 0;
   pending_.reset();
+  isTerminal_ = IsATerminal(fd_) == 1;
   mayRead_ = fd == 0;
   mayWrite_ = fd != 0;
   mayPosition_ = false;
@@ -425,10 +426,12 @@ void OpenFile::CloseFd(IoErrorHandler &handler) {
 
 bool IsATerminal(int fd) { return ::isatty(fd); }
 
-#ifdef WIN32
+#if defined(_WIN32) && !defined(F_OK)
 // Access flags are normally defined in unistd.h, which unavailable under
 // Windows. Instead, define the flags as documented at
 // https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/access-waccess
+// On Mingw, io.h does define these same constants - so check whether they
+// already are defined before defining these.
 #define F_OK 00
 #define W_OK 02
 #define R_OK 04

@@ -5,19 +5,15 @@
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-darwin %t/refs2.s -o %t/refs2.o
 # RUN: %lld -lSystem -dylib %t/defs.o -o %t/libdefs.dylib
 # RUN: %lld -lSystem -dylib --icf=all %t/refs1.o %t/refs2.o %t/libdefs.dylib -o %t/out
-# RUN: llvm-objdump --macho --section-headers --bind %t/out | FileCheck %s \
-# RUN:   --implicit-check-not __objc_classrefs
+# RUN: llvm-otool -o %t/out | FileCheck %s
 
-## Check that we only have 3 (unique) entries
-# CHECK:      Sections:
-# CHECK-NEXT: Idx Name             Size
-# CHECK:          __objc_classrefs 00000018
-
-## And only two binds
-# CHECK:       Bind table:
-# CHECK-NEXT:  segment  section           address  type     addend dylib    symbol
-# CHECK-DAG:   __DATA   __objc_classrefs  {{.*}}   pointer       0 libdefs  _OBJC_CLASS_$_Bar
-# CHECK-DAG:   __DATA   __objc_classrefs  {{.*}}   pointer       0 libdefs  _OBJC_CLASS_$_Foo
+## Check that we only have 3 (unique) entries, of which two are bound at runtime
+## (i.e. they are entries that have a static value of 0x0).
+# CHECK:       Contents of (__DATA,__objc_classrefs) section
+# CHECK-NEXT:  0000000000001008 0x0    _OBJC_CLASS_$_Foo
+# CHECK-NEXT:  0000000000001010 0x0    _OBJC_CLASS_$_Bar
+# CHECK-NEXT:  0000000000001018 0x1000 _OBJC_CLASS_$_Baz
+# CHECK-EMPTY:
 
 #--- defs.s
 .globl _OBJC_CLASS_$_Foo, _OBJC_CLASS_$_Bar

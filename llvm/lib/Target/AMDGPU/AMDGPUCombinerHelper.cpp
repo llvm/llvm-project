@@ -150,7 +150,7 @@ static bool isInv2Pi(const APFloat &APF) {
 // additional cost to negate them.
 static bool isConstantCostlierToNegate(MachineInstr &MI, Register Reg,
                                        MachineRegisterInfo &MRI) {
-  Optional<FPValueAndVReg> FPValReg;
+  std::optional<FPValueAndVReg> FPValReg;
   if (mi_match(Reg, MRI, m_GFCstOrSplat(FPValReg))) {
     if (FPValReg->Value.isZero() && !FPValReg->Value.isNegative())
       return true;

@@ -11,8 +11,8 @@
 
 #include "lldb/Core/Declaration.h"
 #include "lldb/lldb-defines.h"
-#include "llvm/ADT/Optional.h"
 
+#include <optional>
 #include <string>
 
 namespace lldb_private {
@@ -29,7 +29,7 @@ public:
   /// Constructor.
   ///
   /// Takes a \a file_spec with a \a line number and a \a column number. If
-  /// \a column is null or not provided, it is set to llvm::None.
+  /// \a column is null or not provided, it is set to std::nullopt.
   ///
   /// \param[in] file_spec
   ///     The full or partial path to a file.
@@ -47,7 +47,7 @@ public:
   ///     Whether to look for an exact match.
   ///
   explicit SourceLocationSpec(FileSpec file_spec, uint32_t line,
-                              llvm::Optional<uint16_t> column = llvm::None,
+                              std::optional<uint16_t> column = std::nullopt,
                               bool check_inlines = false,
                               bool exact_match = false);
 
@@ -165,9 +165,9 @@ public:
 
   FileSpec GetFileSpec() const { return m_declaration.GetFile(); }
 
-  llvm::Optional<uint32_t> GetLine() const;
+  std::optional<uint32_t> GetLine() const;
 
-  llvm::Optional<uint16_t> GetColumn() const;
+  std::optional<uint16_t> GetColumn() const;
 
   bool GetCheckInlines() const { return m_check_inlines; }
 

@@ -14,10 +14,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 int clangTidyMain(int argc, const char **argv);
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

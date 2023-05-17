@@ -10,7 +10,7 @@
 
 @x = external thread_local global i32, align 4
 
-define nonnull i32* @GeneralDynamicAddressLoad() {
+define nonnull ptr @GeneralDynamicAddressLoad() {
   ; CHECK-S-LABEL: GeneralDynamicAddressLoad:
   ; CHECK-S:         paddi r3, 0, x@got@tlsgd@pcrel, 1
   ; CHECK-S-NEXT:    bl __tls_get_addr@notoc(x@tlsgd)
@@ -25,7 +25,7 @@ define nonnull i32* @GeneralDynamicAddressLoad() {
   ; CHECK-O-NEXT:    0000000000000014:  R_PPC64_TLSGD        x
   ; CHECK-O-NEXT:    0000000000000014:  R_PPC64_REL24_NOTOC  __tls_get_addr
   entry:
-    ret i32* @x
+    ret ptr @x
 }
 
 define i32 @GeneralDynamicValueLoad() {
@@ -48,6 +48,6 @@ define i32 @GeneralDynamicValueLoad() {
   ; CHECK-SYM-LABEL: Symbol table '.symtab' contains 7 entries
   ; CHECK-SYM:       0000000000000000     0 TLS     GLOBAL DEFAULT  UND x
   entry:
-    %0 = load i32, i32* @x, align 4
+    %0 = load i32, ptr @x, align 4
     ret i32 %0
 }

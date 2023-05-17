@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class FoundationTestCaseNSArray(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_NSArray_expr_commands(self):
         """Test expression commands for NSArray."""
         self.build()

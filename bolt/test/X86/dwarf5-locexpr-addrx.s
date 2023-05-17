@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -o %tmain.o
 # RUN: %clang %cflags -dwarf-5 %tmain.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt | FileCheck --check-prefix=POSTCHECK %s
 
@@ -18,10 +18,10 @@
 
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_TAG_variable
-# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
+# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x2)
 # POSTCHECK-EMPTY:
 # POSTCHECK: DW_TAG_variable
-# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x4)
+# POSTCHECK: DW_AT_location [DW_FORM_exprloc]  (DW_OP_addrx 0x3)
 # POSTCHECK-EMPTY:
 
 # clang++ main.cpp -g -O2

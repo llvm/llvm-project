@@ -38,17 +38,12 @@ FmtContext &FmtContext::withBuilder(Twine subst) {
   return *this;
 }
 
-FmtContext &FmtContext::withOp(Twine subst) {
-  builtinSubstMap[PHKind::Op] = subst.str();
-  return *this;
-}
-
 FmtContext &FmtContext::withSelf(Twine subst) {
   builtinSubstMap[PHKind::Self] = subst.str();
   return *this;
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   if (placeholder == FmtContext::PHKind::None ||
       placeholder == FmtContext::PHKind::Custom)
@@ -59,7 +54,7 @@ FmtContext::getSubstFor(FmtContext::PHKind placeholder) const {
   return StringRef(it->second);
 }
 
-Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
+std::optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
   auto it = customSubstMap.find(placeholder);
   if (it == customSubstMap.end())
     return {};
@@ -69,7 +64,6 @@ Optional<StringRef> FmtContext::getSubstFor(StringRef placeholder) const {
 FmtContext::PHKind FmtContext::getPlaceHolderKind(StringRef str) {
   return StringSwitch<FmtContext::PHKind>(str)
       .Case("_builder", FmtContext::PHKind::Builder)
-      .Case("_op", FmtContext::PHKind::Op)
       .Case("_self", FmtContext::PHKind::Self)
       .Case("", FmtContext::PHKind::None)
       .Default(FmtContext::PHKind::Custom);
@@ -165,7 +159,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
         // We need the context to replace special placeholders.
         s << repl.spec << kMarkerForNoSubst;
       } else {
-        Optional<StringRef> subst;
+        std::optional<StringRef> subst;
         if (repl.placeholder == FmtContext::PHKind::Custom) {
           // Skip the leading '$' sign for the custom placeholder
           subst = context->getSubstFor(repl.spec.substr(1));
@@ -185,7 +179,7 @@ void FmtObjectBase::format(raw_ostream &s) const {
         s << repl.spec << kMarkerForNoSubst;
         continue;
       }
-      auto range = llvm::makeArrayRef(adapters);
+      auto range = llvm::ArrayRef(adapters);
       range = range.drop_front(repl.index);
       if (repl.end != FmtReplacement::kUnset)
         range = range.drop_back(adapters.size() - repl.end);

@@ -7,6 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "SymbolIndexManager.h"
+
+#include <cmath>
+
 #include "find-all-symbols/SymbolInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
@@ -59,7 +62,7 @@ static void rank(std::vector<SymbolAndSignals> &Symbols,
   }
   // Sort by the gathered scores. Use file name as a tie breaker so we can
   // deduplicate.
-  llvm::sort(Symbols.begin(), Symbols.end(),
+  llvm::sort(Symbols,
              [&](const SymbolAndSignals &A, const SymbolAndSignals &B) {
                auto AS = Score[A.Symbol.getFilePath()];
                auto BS = Score[B.Symbol.getFilePath()];

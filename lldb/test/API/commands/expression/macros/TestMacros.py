@@ -8,8 +8,7 @@ from lldbsuite.test import lldbutil
 
 class TestMacros(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
+    @skipIf(compiler="clang", compiler_version=['<', '9.0'])
     @expectedFailureAll(
         compiler="clang",
         bugnumber="clang does not emit .debug_macro[.dwo] sections.")
@@ -131,3 +130,9 @@ class TestMacros(TestBase):
         result = frame.EvaluateExpression("MACRO_2")
         self.assertTrue(result.GetError().Fail(),
                         "Printing MACRO_2 fails in the header file")
+
+        # Check that the macro definitions do not trigger bogus Clang
+        # diagnostics about macro redefinitions.
+        result = frame.EvaluateExpression("does_not_parse")
+        self.assertNotIn("macro redefined", str(result.GetError()))
+        self.assertNotIn("redefining builtin macro", str(result.GetError()))

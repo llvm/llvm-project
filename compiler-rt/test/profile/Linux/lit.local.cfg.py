@@ -38,3 +38,6 @@ root = getRoot(config)
 
 if root.host_os not in ['Linux'] or not is_gold_linker_available():
   config.unsupported = True
+
+if config.have_curl:
+    config.available_features.add('curl')

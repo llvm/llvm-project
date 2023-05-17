@@ -2,6 +2,6 @@
 
 ; CHECK: @foo = constant i32 6
 ; CHECK: @bar = constant i32 6
-@foo = constant i32 6           ; <i32*> [#uses=0]
-@bar = constant i32 6           ; <i32*> [#uses=0]
+@foo = constant i32 6           ; <ptr> [#uses=0]
+@bar = constant i32 6           ; <ptr> [#uses=0]
 

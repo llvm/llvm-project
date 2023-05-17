@@ -18,7 +18,6 @@
 #define LLVM_CODEGEN_LIVERANGEEDIT_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -32,7 +31,6 @@
 
 namespace llvm {
 
-class AAResults;
 class LiveIntervals;
 class MachineInstr;
 class MachineOperand;
@@ -93,7 +91,7 @@ private:
   SmallPtrSet<const VNInfo *, 4> Rematted;
 
   /// scanRemattable - Identify the Parent values that may rematerialize.
-  void scanRemattable(AAResults *aa);
+  void scanRemattable();
 
   /// foldAsLoad - If LI has a single use and a single def that can be folded as
   /// a load, eliminate the register by folding the def into the use.
@@ -103,8 +101,7 @@ private:
                                 SmallPtrSet<LiveInterval *, 8>>;
 
   /// Helper for eliminateDeadDefs.
-  void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink,
-                        AAResults *AA);
+  void eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink);
 
   /// MachineRegisterInfo callback to notify when new virtual
   /// registers are created.
@@ -136,7 +133,7 @@ public:
       : Parent(parent), NewRegs(newRegs), MRI(MF.getRegInfo()), LIS(lis),
         VRM(vrm), TII(*MF.getSubtarget().getInstrInfo()), TheDelegate(delegate),
         FirstNew(newRegs.size()), DeadRemats(deadRemats) {
-    MRI.setDelegate(this);
+    MRI.addDelegate(this);
   }
 
   ~LiveRangeEdit() override { MRI.resetDelegate(this); }
@@ -166,9 +163,7 @@ public:
   /// we want to drop it from the NewRegs set.
   void pop_back() { NewRegs.pop_back(); }
 
-  ArrayRef<Register> regs() const {
-    return makeArrayRef(NewRegs).slice(FirstNew);
-  }
+  ArrayRef<Register> regs() const { return ArrayRef(NewRegs).slice(FirstNew); }
 
   /// createFrom - Create a new virtual register based on OldReg.
   Register createFrom(Register OldReg);
@@ -184,12 +179,11 @@ public:
   /// anyRematerializable - Return true if any parent values may be
   /// rematerializable.
   /// This function must be called before any rematerialization is attempted.
-  bool anyRematerializable(AAResults *);
+  bool anyRematerializable();
 
   /// checkRematerializable - Manually add VNI to the list of rematerializable
   /// values if DefMI may be rematerializable.
-  bool checkRematerializable(VNInfo *VNI, const MachineInstr *DefMI,
-                             AAResults *);
+  bool checkRematerializable(VNInfo *VNI, const MachineInstr *DefMI);
 
   /// Remat - Information needed to rematerialize at a specific location.
   struct Remat {
@@ -213,12 +207,14 @@ public:
 
   /// rematerializeAt - Rematerialize RM.ParentVNI into DestReg by inserting an
   /// instruction into MBB before MI. The new instruction is mapped, but
-  /// liveness is not updated.
+  /// liveness is not updated. If ReplaceIndexMI is not null it will be replaced
+  /// by new MI in the index map.
   /// Return the SlotIndex of the new instruction.
   SlotIndex rematerializeAt(MachineBasicBlock &MBB,
-                            MachineBasicBlock::iterator MI, unsigned DestReg,
+                            MachineBasicBlock::iterator MI, Register DestReg,
                             const Remat &RM, const TargetRegisterInfo &,
-                            bool Late = false);
+                            bool Late = false, unsigned SubIdx = 0,
+                            MachineInstr *ReplaceIndexMI = nullptr);
 
   /// markRematerialized - explicitly mark a value as rematerialized after doing
   /// it manually.
@@ -242,8 +238,7 @@ public:
   /// allocator.  These registers should not be split into new intervals
   /// as currently those new intervals are not guaranteed to spill.
   void eliminateDeadDefs(SmallVectorImpl<MachineInstr *> &Dead,
-                         ArrayRef<Register> RegsBeingSpilled = None,
-                         AAResults *AA = nullptr);
+                         ArrayRef<Register> RegsBeingSpilled = std::nullopt);
 
   /// calculateRegClassAndHint - Recompute register class and hint for each new
   /// register.

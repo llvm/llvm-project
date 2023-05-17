@@ -43,10 +43,10 @@ define zeroext i1 @foo(x86_fp80 %x, x86_fp80 %y) noinline optnone {
 entry:
   %x.addr = alloca x86_fp80, align 16
   %y.addr = alloca x86_fp80, align 16
-  store x86_fp80 %x, x86_fp80* %x.addr, align 16
-  store x86_fp80 %y, x86_fp80* %y.addr, align 16
-  %0 = load x86_fp80, x86_fp80* %x.addr, align 16
-  %1 = load x86_fp80, x86_fp80* %y.addr, align 16
+  store x86_fp80 %x, ptr %x.addr, align 16
+  store x86_fp80 %y, ptr %y.addr, align 16
+  %0 = load x86_fp80, ptr %x.addr, align 16
+  %1 = load x86_fp80, ptr %y.addr, align 16
   %cmp = fcmp oeq x86_fp80 %0, %1
 
 ; Test 1
@@ -64,7 +64,7 @@ entry:
   br i1 %cmp, label %lor.end, label %lor.rhs
 
 lor.rhs:                                          ; preds = %entry
-  %2 = load x86_fp80, x86_fp80* %x.addr, align 16
+  %2 = load x86_fp80, ptr %x.addr, align 16
   %call = call zeroext i1 @bar(x86_fp80 %2)
   br label %lor.end
 
@@ -81,25 +81,21 @@ entry:
   %v = alloca %struct.FVector, align 4
   %ref.tmp = alloca %struct.FVector, align 4
   %tmp = alloca { <2 x float>, float }, align 8
-  store i32 0, i32* %retval, align 4
-  %0 = bitcast %struct.FVector* %v to i8*
-  call void @llvm.lifetime.start.p0i8(i64 12, i8* %0) nounwind
-  %x.i = getelementptr inbounds %struct.FVector, %struct.FVector* %v, i64 0, i32 0
-  store float 1.000000e+00, float* %x.i, align 4
-  %y.i = getelementptr inbounds %struct.FVector, %struct.FVector* %v, i64 0, i32 1
-  store float 1.000000e+00, float* %y.i, align 4
-  %z.i = getelementptr inbounds %struct.FVector, %struct.FVector* %v, i64 0, i32 2
-  store float 1.000000e+00, float* %z.i, align 4
-  %x.i.1 = getelementptr inbounds %struct.FVector, %struct.FVector* %v, i64 0, i32 0
-  %1 = load float, float* %x.i.1, align 4
-  %cmp.i = fcmp oeq float %1, 1.000000e+00
+  store i32 0, ptr %retval, align 4
+  call void @llvm.lifetime.start.p0(i64 12, ptr %v) nounwind
+  store float 1.000000e+00, ptr %v, align 4
+  %y.i = getelementptr inbounds %struct.FVector, ptr %v, i64 0, i32 1
+  store float 1.000000e+00, ptr %y.i, align 4
+  %z.i = getelementptr inbounds %struct.FVector, ptr %v, i64 0, i32 2
+  store float 1.000000e+00, ptr %z.i, align 4
+  %0 = load float, ptr %v, align 4
+  %cmp.i = fcmp oeq float %0, 1.000000e+00
   br i1 %cmp.i, label %if.then.i, label %if.else.i
 
 if.then.i:                                        ; preds = %entry
-  %retval.sroa.0.0..sroa_cast.i = bitcast %struct.FVector* %v to <2 x float>*
-  %retval.sroa.0.0.copyload.i = load <2 x float>, <2 x float>* %retval.sroa.0.0..sroa_cast.i, align 4
-  %retval.sroa.6.0..sroa_idx16.i = getelementptr inbounds %struct.FVector, %struct.FVector* %v, i64 0, i32 2
-  %retval.sroa.6.0.copyload.i = load float, float* %retval.sroa.6.0..sroa_idx16.i, align 4
+  %retval.sroa.0.0.copyload.i = load <2 x float>, ptr %v, align 4
+  %retval.sroa.6.0..sroa_idx16.i = getelementptr inbounds %struct.FVector, ptr %v, i64 0, i32 2
+  %retval.sroa.6.0.copyload.i = load float, ptr %retval.sroa.6.0..sroa_idx16.i, align 4
   br label %func.exit
 
 if.else.i:                                        ; preds = %entry
@@ -115,33 +111,28 @@ if.else.i:                                        ; preds = %entry
 ; CHECK-NOT:   xorps [[REG]], [[REG]]
 ; CHECK-LABEL: .LBB1_3:
 
-  %cmp3.i = fcmp olt float %1, 0x3E45798EE0000000
+  %cmp3.i = fcmp olt float %0, 0x3E45798EE0000000
   br i1 %cmp3.i, label %func.exit, label %if.end.5.i
 
 if.end.5.i:                                       ; preds = %if.else.i
-  %retval.sroa.0.0.vec.insert13.i = insertelement <2 x float> undef, float %1, i32 0
-  %retval.sroa.0.4.vec.insert15.i = insertelement <2 x float> %retval.sroa.0.0.vec.insert13.i, float %1, i32 1
+  %retval.sroa.0.0.vec.insert13.i = insertelement <2 x float> undef, float %0, i32 0
+  %retval.sroa.0.4.vec.insert15.i = insertelement <2 x float> %retval.sroa.0.0.vec.insert13.i, float %0, i32 1
   br label %func.exit
 
 func.exit:                         ; preds = %if.then.i, %if.else.i, %if.end.5.i
-  %retval.sroa.6.0.i = phi float [ %retval.sroa.6.0.copyload.i, %if.then.i ], [ %1, %if.end.5.i ], [ 0.000000e+00, %if.else.i ]
+  %retval.sroa.6.0.i = phi float [ %retval.sroa.6.0.copyload.i, %if.then.i ], [ %0, %if.end.5.i ], [ 0.000000e+00, %if.else.i ]
   %retval.sroa.0.0.i = phi <2 x float> [ %retval.sroa.0.0.copyload.i, %if.then.i ], [ %retval.sroa.0.4.vec.insert15.i, %if.end.5.i ], [ zeroinitializer, %if.else.i ]
   %.fca.0.insert.i = insertvalue { <2 x float>, float } undef, <2 x float> %retval.sroa.0.0.i, 0
   %.fca.1.insert.i = insertvalue { <2 x float>, float } %.fca.0.insert.i, float %retval.sroa.6.0.i, 1
-  store { <2 x float>, float } %.fca.1.insert.i, { <2 x float>, float }* %tmp, align 8
-  %2 = bitcast { <2 x float>, float }* %tmp to i8*
-  %3 = bitcast %struct.FVector* %ref.tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %3, i8* align 4 %2, i64 12, i1 false)
-  %4 = bitcast %struct.FVector* %v to i8*
-  %5 = bitcast %struct.FVector* %ref.tmp to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 %4, i8* align 4 %5, i64 12, i1 false)
-  %6 = bitcast %struct.FVector* %v to i8*
-  call void @llvm.lifetime.end.p0i8(i64 12, i8* %6) nounwind
+  store { <2 x float>, float } %.fca.1.insert.i, ptr %tmp, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %ref.tmp, ptr align 4 %tmp, i64 12, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr align 4 %v, ptr align 4 %ref.tmp, i64 12, i1 false)
+  call void @llvm.lifetime.end.p0(i64 12, ptr %v) nounwind
   ret i32 0
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) argmemonly nounwind
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) argmemonly nounwind
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture readonly, i64, i1) argmemonly nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1) argmemonly nounwind
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) argmemonly nounwind
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) argmemonly nounwind

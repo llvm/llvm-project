@@ -11,15 +11,13 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 /// Warn about unusual array index syntax (`index[array]` instead of
 /// `array[index]`).
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/readability-misplaced-array-index.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/readability/misplaced-array-index.html
 class MisplacedArrayIndexCheck : public ClangTidyCheck {
 public:
   MisplacedArrayIndexCheck(StringRef Name, ClangTidyContext *Context)
@@ -28,8 +26,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_READABILITY_MISPLACED_ARRAY_INDEX_H

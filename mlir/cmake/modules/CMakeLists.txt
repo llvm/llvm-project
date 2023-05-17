@@ -1,3 +1,4 @@
+include(GNUInstallPackageDir)
 include(ExtendPath)
 include(LLVMDistributionSupport)
 include(FindPrefixFromConfig)
@@ -5,12 +6,17 @@ include(FindPrefixFromConfig)
 # Generate a list of CMake library targets so that other CMake projects can
 # link against them. LLVM calls its version of this file LLVMExports.cmake, but
 # the usual CMake convention seems to be ${Project}Targets.cmake.
-set(MLIR_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/mlir)
-set(mlir_cmake_builddir "${CMAKE_BINARY_DIR}/${MLIR_INSTALL_PACKAGE_DIR}")
+set(MLIR_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/mlir" CACHE STRING
+  "Path for CMake subdirectory for Polly (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/polly')")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+set(mlir_cmake_builddir "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/mlir")
 
 # Keep this in sync with llvm/cmake/CMakeLists.txt!
-set(LLVM_INSTALL_PACKAGE_DIR lib${LLVM_LIBDIR_SUFFIX}/cmake/llvm)
-set(llvm_cmake_builddir "${LLVM_BINARY_DIR}/${LLVM_INSTALL_PACKAGE_DIR}")
+set(LLVM_INSTALL_PACKAGE_DIR "${CMAKE_INSTALL_PACKAGEDIR}/llvm" CACHE STRING
+  "Path for CMake subdirectory for LLVM (defaults to '${CMAKE_INSTALL_PACKAGEDIR}/llvm')")
+# CMAKE_INSTALL_PACKAGEDIR might be absolute, so don't reuse below.
+string(REPLACE "${CMAKE_CFG_INTDIR}" "." llvm_cmake_builddir "${LLVM_LIBRARY_DIR}")
+set(llvm_cmake_builddir "${llvm_cmake_builddir}/cmake/llvm")
 
 get_property(MLIR_EXPORTS GLOBAL PROPERTY MLIR_EXPORTS)
 export(TARGETS ${MLIR_EXPORTS} FILE ${mlir_cmake_builddir}/MLIRTargets.cmake)
@@ -36,23 +42,30 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${mlir_cmake_builddir}/MLIRConfig.cmake
   @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfigVersion.cmake.in
+  ${mlir_cmake_builddir}/MLIRConfigVersion.cmake
+  @ONLY)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
 set(MLIR_CONFIG_INCLUDE_DIRS)
 
 # For compatibility with projects that include(MLIRConfig)
 # via CMAKE_MODULE_PATH, place API modules next to it.
+# Copy without source permissions because the source could be read-only,
+# but we need to write into the copied folder.
 # This should be removed in the future.
 file(COPY .
   DESTINATION ${mlir_cmake_builddir}
+  NO_SOURCE_PERMISSIONS
   FILES_MATCHING PATTERN *.cmake
   PATTERN CMakeFiles EXCLUDE
   )
 
 # Generate MLIRConfig.cmake for the install tree.
 find_prefix_from_config(MLIR_CONFIG_CODE MLIR_INSTALL_PREFIX "${MLIR_INSTALL_PACKAGE_DIR}")
-set(MLIR_CONFIG_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}/${MLIR_INSTALL_PACKAGE_DIR}")
-set(MLIR_CONFIG_LLVM_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}/${LLVM_INSTALL_PACKAGE_DIR}")
+extend_path(MLIR_CONFIG_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}" "${MLIR_INSTALL_PACKAGE_DIR}")
+extend_path(MLIR_CONFIG_LLVM_CMAKE_DIR "\${MLIR_INSTALL_PREFIX}" "${LLVM_INSTALL_PACKAGE_DIR}")
 get_config_exports_includes(MLIR MLIR_CONFIG_INCLUDE_EXPORTS)
 extend_path(base_includedir "\${MLIR_INSTALL_PREFIX}" "${CMAKE_INSTALL_INCLUDEDIR}")
 set(MLIR_CONFIG_INCLUDE_DIRS
@@ -67,6 +80,10 @@ configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfig.cmake.in
   ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
   @ONLY)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/MLIRConfigVersion.cmake.in
+  ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
+  @ONLY)
 set(MLIR_CONFIG_CODE)
 set(MLIR_CONFIG_CMAKE_DIR)
 set(MLIR_CONFIG_LLVM_CMAKE_DIR)
@@ -79,6 +96,7 @@ if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY)
 
   install(FILES
     ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfig.cmake
+    ${CMAKE_CURRENT_BINARY_DIR}/CMakeFiles/MLIRConfigVersion.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIR.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/AddMLIRPython.cmake
     ${CMAKE_CURRENT_SOURCE_DIR}/MLIRDetectPythonEnv.cmake

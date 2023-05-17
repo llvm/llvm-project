@@ -4,11 +4,11 @@
 
 declare signext i32 @f()
 
-define signext i32 @test(i32* %ptr) {
+define signext i32 @test(ptr %ptr) {
 ; CHECK-NOT: ipm
 
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %tobool = icmp eq i32 %0, 0
   %call = tail call signext i32 @f()
   %1 = icmp slt i32 %call, 40

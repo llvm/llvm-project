@@ -40,18 +40,18 @@ source_filename = "test/DebugInfo/X86/inline-member-function.ll"
 ; Function Attrs: uwtable
 define i32 @main() #0 !dbg !17 {
 entry:
-  %this.addr.i = alloca %struct.foo*, align 8
+  %this.addr.i = alloca ptr, align 8
   %x.addr.i = alloca i32, align 4
   %retval = alloca i32, align 4
   %tmp = alloca %struct.foo, align 1
-  store i32 0, i32* %retval
-  %0 = load i32, i32* @i, align 4, !dbg !20
-  store %struct.foo* %tmp, %struct.foo** %this.addr.i, align 8
-  call void @llvm.dbg.declare(metadata %struct.foo** %this.addr.i, metadata !21, metadata !24), !dbg !25
-  store i32 %0, i32* %x.addr.i, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr.i, metadata !26, metadata !24), !dbg !27
-  %this1.i = load %struct.foo*, %struct.foo** %this.addr.i
-  %1 = load i32, i32* %x.addr.i, align 4, !dbg !27
+  store i32 0, ptr %retval
+  %0 = load i32, ptr @i, align 4, !dbg !20
+  store ptr %tmp, ptr %this.addr.i, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr.i, metadata !21, metadata !24), !dbg !25
+  store i32 %0, ptr %x.addr.i, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr.i, metadata !26, metadata !24), !dbg !27
+  %this1.i = load ptr, ptr %this.addr.i
+  %1 = load i32, ptr %x.addr.i, align 4, !dbg !27
   %add.i = add nsw i32 %1, 2, !dbg !27
   ret i32 %add.i, !dbg !20
 }

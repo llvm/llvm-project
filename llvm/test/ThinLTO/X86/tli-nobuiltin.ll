@@ -28,7 +28,7 @@
 target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
-declare i32 @fprintf(%FILE*, i8*, ...)
+declare i32 @fprintf(ptr, ptr, ...)
 
 %FILE = type { }
 
@@ -37,10 +37,8 @@ declare i32 @fprintf(%FILE*, i8*, ...)
 
 ; Check fprintf(fp, "%s", str) -> fwrite(str, fp) only when builtins are enabled
 
-define void @foo(%FILE* %fp) {
-  %fmt = getelementptr [3 x i8], [3 x i8]* @percent_s, i32 0, i32 0
-  %str = getelementptr [13 x i8], [13 x i8]* @hello_world, i32 0, i32 0
-  call i32 (%FILE*, i8*, ...) @fprintf(%FILE* %fp, i8* %fmt, i8* %str)
+define void @foo(ptr %fp) {
+  call i32 (ptr, ptr, ...) @fprintf(ptr %fp, ptr @percent_s, ptr @hello_world)
   ret void
 }
 

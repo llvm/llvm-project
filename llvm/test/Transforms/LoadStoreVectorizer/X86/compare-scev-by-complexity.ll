@@ -1,4 +1,4 @@
-; RUN: opt -load-store-vectorizer %s -S | FileCheck %s
+; RUN: opt -passes=load-store-vectorizer %s -S | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' %s -S | FileCheck %s
 
 ; Check that setting wrapping flags after a SCEV node is created
@@ -20,12 +20,11 @@ target triple = "x86_64--"
 ; Function Attrs: nounwind
 define void @main() local_unnamed_addr #0 {
 ; CHECK-LABEL: @main()
-; CHECK: [[PTR:%[0-9]+]] = bitcast float* %preheader.load0.address to <2 x float>*
-; CHECK:  = load <2 x float>, <2 x float>* [[PTR]]
+; CHECK:  = load <2 x float>, ptr %preheader.load0.address
 ; CHECK-LABEL: for.body23:
 entry:
-  %tmp = load i32, i32* @global_value0, !range !0
-  %tmp2 = load i32, i32* @global_value1
+  %tmp = load i32, ptr @global_value0, !range !0
+  %tmp2 = load i32, ptr @global_value1
   %and.i.i = and i32 %tmp2, 2
   %add.nuw.nsw.i.i = add nuw nsw i32 %and.i.i, 0
   %mul.i.i = shl nuw nsw i32 %add.nuw.nsw.i.i, 1
@@ -38,29 +37,29 @@ entry:
   %add7.i.7 = add nuw nsw i32 %reass.mul347.7, 0
   %preheader.address0.idx = add nuw nsw i32 %add7.i.7, %mul.i.i
   %preheader.address0.idx.zext = zext i32 %preheader.address0.idx to i64
-  %preheader.load0.address = getelementptr inbounds float, float* @other_value, i64 %preheader.address0.idx.zext
-  %preheader.load0. = load float, float* %preheader.load0.address, align 4, !tbaa !1
+  %preheader.load0.address = getelementptr inbounds float, ptr @other_value, i64 %preheader.address0.idx.zext
+  %preheader.load0. = load float, ptr %preheader.load0.address, align 4, !tbaa !1
   %common.address.idx = add nuw nsw i32 %add7.i.7, %conv3.i42.i
   %preheader.header.common.address.idx.zext = zext i32 %common.address.idx to i64
-  %preheader.load1.address = getelementptr inbounds float, float* @other_value, i64 %preheader.header.common.address.idx.zext
-  %preheader.load1. = load float, float* %preheader.load1.address, align 4, !tbaa !1
+  %preheader.load1.address = getelementptr inbounds float, ptr @other_value, i64 %preheader.header.common.address.idx.zext
+  %preheader.load1. = load float, ptr %preheader.load1.address, align 4, !tbaa !1
   br label %for.body23
 
 for.body23:                                       ; preds = %for.body23, %entry
-  %loop.header.load0.address = getelementptr inbounds float, float* @other_value, i64 %preheader.header.common.address.idx.zext
-  %loop.header.load0. = load float, float* %loop.header.load0.address, align 4, !tbaa !1
+  %loop.header.load0.address = getelementptr inbounds float, ptr @other_value, i64 %preheader.header.common.address.idx.zext
+  %loop.header.load0. = load float, ptr %loop.header.load0.address, align 4, !tbaa !1
   %reass.mul343.7 = mul nuw nsw i32 %reass.add346.7, 72
   %add7.i286.7.7 = add nuw nsw i32 %reass.mul343.7, 56
   %add9.i288.7.7 = add nuw nsw i32 %add7.i286.7.7, %mul.i.i
   %loop.header.address1.idx = add nuw nsw i32 %add9.i288.7.7, 1
   %loop.header.address1.idx.zext = zext i32 %loop.header.address1.idx to i64
-  %loop.header.load1.address = getelementptr inbounds float, float* @other_value, i64 %loop.header.address1.idx.zext
-  %loop.header.load1. = load float, float* %loop.header.load1.address, align 4, !tbaa !1
-  store float %preheader.load0., float* @a, align 4, !tbaa !1
-  store float %preheader.load1., float* @b, align 4, !tbaa !1
-  store float %loop.header.load0., float* @c, align 4, !tbaa !1
-  store float %loop.header.load1., float* @d, align 4, !tbaa !1
-  %loaded.cnd = load i8, i8* @cnd
+  %loop.header.load1.address = getelementptr inbounds float, ptr @other_value, i64 %loop.header.address1.idx.zext
+  %loop.header.load1. = load float, ptr %loop.header.load1.address, align 4, !tbaa !1
+  store float %preheader.load0., ptr @a, align 4, !tbaa !1
+  store float %preheader.load1., ptr @b, align 4, !tbaa !1
+  store float %loop.header.load0., ptr @c, align 4, !tbaa !1
+  store float %loop.header.load1., ptr @d, align 4, !tbaa !1
+  %loaded.cnd = load i8, ptr @cnd
   %condition = trunc i8 %loaded.cnd to i1
   br i1 %condition, label %for.body23, label %exit
 

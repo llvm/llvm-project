@@ -12,10 +12,9 @@ entry:
 ; CHECK-DAG: stwx [[T1]], 1, [[T2]]
 ; CHECK-DAG: addi 3, 1, 28
 ; CHECK: bl bar
-  %x = alloca [100000 x i8]                       ; <[100000 x i8]*> [#uses=1]
+  %x = alloca [100000 x i8]                       ; <ptr> [#uses=1]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  %x1 = bitcast [100000 x i8]* %x to i8*          ; <i8*> [#uses=1]
-  call void @bar(i8* %x1) nounwind
+  call void @bar(ptr %x) nounwind
   call void asm sideeffect "", "~{cr2},~{cr3}"() nounwind
   br label %return
 
@@ -27,4 +26,4 @@ return:                                           ; preds = %entry
   ret void
 }
 
-declare void @bar(i8*)
+declare void @bar(ptr)

@@ -8,12 +8,23 @@
 
 # RUN: lld-link /debug /out:%t.exe /entry:main %t.obj %p/Inputs/std64.lib
 # RUN: llvm-readobj --symbols %t.exe | FileCheck -check-prefix=NO %s
+# RUN: lld-link /debug /merge:.blank=.debug_info /out:%t.exe /entry:main %t.obj %p/Inputs/std64.lib
+# RUN: llvm-readobj --symbols %t.exe | FileCheck %s
 
 # CHECK:      Symbols [
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: MessageBoxA
 # CHECK-NEXT:     Value: 80
 # CHECK-NEXT:     Section: .text (1)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Function (0x2)
+# CHECK-NEXT:     StorageClass: External (0x2)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __imp_MessageBoxA
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Section: .rdata (2)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: External (0x2)
@@ -23,6 +34,15 @@
 # CHECK-NEXT:     Name: ExitProcess
 # CHECK-NEXT:     Value: 64
 # CHECK-NEXT:     Section: .text (1)
+# CHECK-NEXT:     BaseType: Null (0x0)
+# CHECK-NEXT:     ComplexType: Function (0x2)
+# CHECK-NEXT:     StorageClass: External (0x2)
+# CHECK-NEXT:     AuxSymbolCount: 0
+# CHECK-NEXT:   }
+# CHECK-NEXT:   Symbol {
+# CHECK-NEXT:     Name: __imp_ExitProcess
+# CHECK-NEXT:     Value:
+# CHECK-NEXT:     Section: .rdata (2)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
 # CHECK-NEXT:     StorageClass: External (0x2)
@@ -57,7 +77,7 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT:   Symbol {
 # CHECK-NEXT:     Name: abs_symbol
-# CHECK-NEXT:     Value: 2662186735
+# CHECK-NEXT:     Value: 3735928559
 # CHECK-NEXT:     Section: IMAGE_SYM_ABSOLUTE (-1)
 # CHECK-NEXT:     BaseType: Null (0x0)
 # CHECK-NEXT:     ComplexType: Null (0x0)
@@ -66,7 +86,8 @@
 # CHECK-NEXT:   }
 # CHECK-NEXT: ]
 
-# NO: Symbols [
+# NO:       Symbols [
+# NO-NEXT:  ]
 
 --- !COFF
 header:
@@ -123,6 +144,10 @@ sections:
     Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
     Alignment:       4
     SectionData:     48656C6C6F0048656C6C6F20576F726C6400
+  - Name:            .blank
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_DISCARDABLE, IMAGE_SCN_MEM_READ ]
+    Alignment:       1
+    SectionData:     0000
 symbols:
   - Name:            "@comp.id"
     Value:           10394907

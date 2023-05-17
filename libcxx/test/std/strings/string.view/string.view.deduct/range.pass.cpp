@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <string_view>
 
@@ -44,7 +43,7 @@ void test() {
     contiguous_iterator<const char16_t*> begin() const { return contiguous_iterator<const char16_t*>(data_); }
     contiguous_iterator<const char16_t*> end() const { return contiguous_iterator<const char16_t*>(data_ + 3); }
   };
-  std::basic_string_view bsv = Widget();
+  std::basic_string_view bsv = std::basic_string_view(Widget());
   ASSERT_SAME_TYPE(decltype(bsv), std::basic_string_view<char16_t>);
 }
 

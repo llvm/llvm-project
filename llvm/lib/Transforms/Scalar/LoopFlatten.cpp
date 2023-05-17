@@ -65,16 +65,14 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
 #include "llvm/Transforms/Utils/SimplifyIndVar.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -99,6 +97,7 @@ static cl::opt<bool>
             cl::desc("Widen the loop induction variables, if possible, so "
                      "overflow checks won't reject flattening"));
 
+namespace {
 // We require all uses of both induction variables to match this pattern:
 //
 //   (OuterPHI * InnerTripCount) + InnerPHI
@@ -139,7 +138,7 @@ struct FlattenInfo {
 
   PHINode *NarrowInnerInductionPHI = nullptr; // Holds the old/narrow induction
   PHINode *NarrowOuterInductionPHI = nullptr; // phis, i.e. the Phis before IV
-                                              // has been apllied. Used to skip
+                                              // has been applied. Used to skip
                                               // checks on phi nodes.
 
   FlattenInfo(Loop *OL, Loop *IL) : OuterLoop(OL), InnerLoop(IL){};
@@ -191,7 +190,7 @@ struct FlattenInfo {
 
   bool matchLinearIVUser(User *U, Value *InnerTripCount,
                          SmallPtrSet<Value *, 4> &ValidOuterPHIUses) {
-    LLVM_DEBUG(dbgs() << "Found use of inner induction variable: "; U->dump());
+    LLVM_DEBUG(dbgs() << "Checking linear i*M+j expression for: "; U->dump());
     Value *MatchedMul = nullptr;
     Value *MatchedItCount = nullptr;
 
@@ -211,6 +210,18 @@ struct FlattenInfo {
     if (!MatchedItCount)
       return false;
 
+    LLVM_DEBUG(dbgs() << "Matched multiplication: "; MatchedMul->dump());
+    LLVM_DEBUG(dbgs() << "Matched iteration count: "; MatchedItCount->dump());
+
+    // The mul should not have any other uses. Widening may leave trivially dead
+    // uses, which can be ignored.
+    if (count_if(MatchedMul->users(), [](User *U) {
+          return !isInstructionTriviallyDead(cast<Instruction>(U));
+        }) > 1) {
+      LLVM_DEBUG(dbgs() << "Multiply has more than one use\n");
+      return false;
+    }
+
     // Look through extends if the IV has been widened. Don't look through
     // extends if we already looked through a trunc.
     if (Widened && IsAdd &&
@@ -222,8 +233,11 @@ struct FlattenInfo {
                            : dyn_cast<ZExtInst>(MatchedItCount)->getOperand(0);
     }
 
+    LLVM_DEBUG(dbgs() << "Looking for inner trip count: ";
+               InnerTripCount->dump());
+
     if ((IsAdd || IsAddTrunc) && MatchedItCount == InnerTripCount) {
-      LLVM_DEBUG(dbgs() << "Use is optimisable\n");
+      LLVM_DEBUG(dbgs() << "Found. This sse is optimisable\n");
       ValidOuterPHIUses.insert(MatchedMul);
       LinearIVUses.insert(U);
       return true;
@@ -240,8 +254,11 @@ struct FlattenInfo {
       SExtInnerTripCount = cast<Instruction>(InnerTripCount)->getOperand(0);
 
     for (User *U : InnerInductionPHI->users()) {
-      if (isInnerLoopIncrement(U))
+      LLVM_DEBUG(dbgs() << "Checking User: "; U->dump());
+      if (isInnerLoopIncrement(U)) {
+        LLVM_DEBUG(dbgs() << "Use is inner loop increment, continuing\n");
         continue;
+      }
 
       // After widening the IVs, a trunc instruction might have been introduced,
       // so look through truncs.
@@ -255,15 +272,21 @@ struct FlattenInfo {
       // branch) then the compare has been altered by another transformation e.g
       // icmp ult %inc, tripcount -> icmp ult %j, tripcount-1, where tripcount is
       // a constant. Ignore this use as the compare gets removed later anyway.
-      if (isInnerLoopTest(U))
+      if (isInnerLoopTest(U)) {
+        LLVM_DEBUG(dbgs() << "Use is the inner loop test, continuing\n");
         continue;
+      }
 
-      if (!matchLinearIVUser(U, SExtInnerTripCount, ValidOuterPHIUses))
+      if (!matchLinearIVUser(U, SExtInnerTripCount, ValidOuterPHIUses)) {
+        LLVM_DEBUG(dbgs() << "Not a linear IV user\n");
         return false;
+      }
+      LLVM_DEBUG(dbgs() << "Linear IV users found!\n");
     }
     return true;
   }
 };
+} // namespace
 
 static bool
 setLoopComponents(Value *&TC, Value *&TripCount, BinaryOperator *&Increment,
@@ -292,12 +315,12 @@ static bool verifyTripCount(Value *RHS, Loop *L,
     return false;
   }
 
-  // The Extend=false flag is used for getTripCountFromExitCount as we want
-  // to verify and match it with the pattern matched tripcount. Please note
-  // that overflow checks are performed in checkOverflow, but are first tried
-  // to avoid by widening the IV.
+  // Evaluating in the trip count's type can not overflow here as the overflow
+  // checks are performed in checkOverflow, but are first tried to avoid by
+  // widening the IV.
   const SCEV *SCEVTripCount =
-      SE->getTripCountFromExitCount(BackedgeTakenCount, /*Extend=*/false);
+    SE->getTripCountFromExitCount(BackedgeTakenCount,
+                                  BackedgeTakenCount->getType(), L);
 
   const SCEV *SCEVRHS = SE->getSCEV(RHS);
   if (SCEVRHS == SCEVTripCount)
@@ -310,7 +333,8 @@ static bool verifyTripCount(Value *RHS, Loop *L,
       // Find the extended backedge taken count and extended trip count using
       // SCEV. One of these should now match the RHS of the compare.
       BackedgeTCExt = SE->getZeroExtendExpr(BackedgeTakenCount, RHS->getType());
-      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt, false);
+      SCEVTripCountExt = SE->getTripCountFromExitCount(BackedgeTCExt,
+                                                       RHS->getType(), L);
       if (SCEVRHS != BackedgeTCExt && SCEVRHS != SCEVTripCountExt) {
         LLVM_DEBUG(dbgs() << "Could not find valid trip count\n");
         return false;
@@ -413,7 +437,8 @@ static bool findLoopComponents(
   // increment variable.
   Increment =
       cast<BinaryOperator>(InductionPHI->getIncomingValueForBlock(Latch));
-  if (Increment->hasNUsesOrMore(3)) {
+  if ((Compare->getOperand(0) != Increment || !Increment->hasNUses(2)) &&
+      !Increment->hasNUses(1)) {
     LLVM_DEBUG(dbgs() << "Could not find valid increment\n");
     return false;
   }
@@ -540,7 +565,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
       // they make a net difference of zero.
       if (IterationInstructions.count(&I))
         continue;
-      // The uncoditional branch to the inner loop's header will turn into
+      // The unconditional branch to the inner loop's header will turn into
       // a fall-through, so adds no cost.
       BranchInst *Br = dyn_cast<BranchInst>(&I);
       if (Br && Br->isUnconditional() &&
@@ -552,7 +577,7 @@ checkOuterLoopInsts(FlattenInfo &FI,
                             m_Specific(FI.InnerTripCount))))
         continue;
       InstructionCost Cost =
-          TTI->getUserCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+          TTI->getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
       LLVM_DEBUG(dbgs() << "Cost " << Cost << ": "; I.dump());
       RepeatedInstrCost += Cost;
     }
@@ -759,9 +784,9 @@ static bool DoFlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   }
 
   // Tell LoopInfo, SCEV and the pass manager that the inner loop has been
-  // deleted, and any information that have about the outer loop invalidated.
+  // deleted, and invalidate any outer loop information.
   SE->forgetLoop(FI.OuterLoop);
-  SE->forgetLoop(FI.InnerLoop);
+  SE->forgetBlockAndLoopDispositions();
   if (U)
     U->markLoopAsDeleted(*FI.InnerLoop, FI.InnerLoop->getName());
   LI->erase(FI.InnerLoop);
@@ -891,27 +916,13 @@ static bool FlattenLoopPair(FlattenInfo &FI, DominatorTree *DT, LoopInfo *LI,
   return DoFlattenLoopPair(FI, DT, LI, SE, AC, TTI, U, MSSAU);
 }
 
-bool Flatten(LoopNest &LN, DominatorTree *DT, LoopInfo *LI, ScalarEvolution *SE,
-             AssumptionCache *AC, TargetTransformInfo *TTI, LPMUpdater *U,
-             MemorySSAUpdater *MSSAU) {
-  bool Changed = false;
-  for (Loop *InnerLoop : LN.getLoops()) {
-    auto *OuterLoop = InnerLoop->getParentLoop();
-    if (!OuterLoop)
-      continue;
-    FlattenInfo FI(OuterLoop, InnerLoop);
-    Changed |= FlattenLoopPair(FI, DT, LI, SE, AC, TTI, U, MSSAU);
-  }
-  return Changed;
-}
-
 PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
                                        LoopStandardAnalysisResults &AR,
                                        LPMUpdater &U) {
 
   bool Changed = false;
 
-  Optional<MemorySSAUpdater> MSSAU;
+  std::optional<MemorySSAUpdater> MSSAU;
   if (AR.MSSA) {
     MSSAU = MemorySSAUpdater(AR.MSSA);
     if (VerifyMemorySSA)
@@ -922,8 +933,14 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   // in simplified form, and also needs LCSSA. Running
   // this pass will simplify all loops that contain inner loops,
   // regardless of whether anything ends up being flattened.
-  Changed |= Flatten(LN, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
-                     MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
+  for (Loop *InnerLoop : LN.getLoops()) {
+    auto *OuterLoop = InnerLoop->getParentLoop();
+    if (!OuterLoop)
+      continue;
+    FlattenInfo FI(OuterLoop, InnerLoop);
+    Changed |= FlattenLoopPair(FI, &AR.DT, &AR.LI, &AR.SE, &AR.AC, &AR.TTI, &U,
+                               MSSAU ? &*MSSAU : nullptr);
+  }
 
   if (!Changed)
     return PreservedAnalyses::all();
@@ -935,61 +952,4 @@ PreservedAnalyses LoopFlattenPass::run(LoopNest &LN, LoopAnalysisManager &LAM,
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
-}
-
-namespace {
-class LoopFlattenLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass ID, replacement for typeid
-  LoopFlattenLegacyPass() : FunctionPass(ID) {
-    initializeLoopFlattenLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  // Possibly flatten loop L into its child.
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    getLoopAnalysisUsage(AU);
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addPreserved<TargetTransformInfoWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addPreserved<AssumptionCacheTracker>();
-    AU.addPreserved<MemorySSAWrapperPass>();
-  }
-};
-} // namespace
-
-char LoopFlattenLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LoopFlattenLegacyPass, "loop-flatten", "Flattens loops",
-                      false, false)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_END(LoopFlattenLegacyPass, "loop-flatten", "Flattens loops",
-                    false, false)
-
-FunctionPass *llvm::createLoopFlattenPass() {
-  return new LoopFlattenLegacyPass();
-}
-
-bool LoopFlattenLegacyPass::runOnFunction(Function &F) {
-  ScalarEvolution *SE = &getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  LoopInfo *LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  DominatorTree *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  auto &TTIP = getAnalysis<TargetTransformInfoWrapperPass>();
-  auto *TTI = &TTIP.getTTI(F);
-  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto *MSSA = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-
-  Optional<MemorySSAUpdater> MSSAU;
-  if (MSSA)
-    MSSAU = MemorySSAUpdater(&MSSA->getMSSA());
-
-  bool Changed = false;
-  for (Loop *L : *LI) {
-    auto LN = LoopNest::getLoopNest(*L, *SE);
-    Changed |= Flatten(*LN, DT, LI, SE, AC, TTI, nullptr,
-                       MSSAU.hasValue() ? MSSAU.getPointer() : nullptr);
-  }
-  return Changed;
 }

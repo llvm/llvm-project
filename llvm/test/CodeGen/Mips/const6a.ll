@@ -11,7 +11,7 @@ target triple = "mips--linux-gnu"
 ; Function Attrs: nounwind
 define void @t() #0 {
 entry:
-  store i32 -559023410, i32* @i, align 4
+  store i32 -559023410, ptr @i, align 4
 ; load-relax-NOT: 	lw	${{[0-9]+}}, $CPI0_0 # 16 bit inst
 ; load-relax1: lw	${{[0-9]+}}, $CPI0_0
 ; load-relax:	jrc	 $ra

@@ -2,11 +2,11 @@
 ; RUN: llc  -O0 -mtriple=mipsel-linux-gnu -global-isel  -verify-machineinstrs %s -o -| FileCheck %s -check-prefixes=MIPS32
 
 @.str = private unnamed_addr constant [11 x i8] c"string %s\0A\00", align 1
-declare void @llvm.va_start(i8*)
-declare void @llvm.va_copy(i8*, i8*)
-declare i32 @printf(i8*, ...)
+declare void @llvm.va_start(ptr)
+declare void @llvm.va_copy(ptr, ptr)
+declare i32 @printf(ptr, ...)
 
-define void @testVaCopyArg(i8* %fmt, ...) {
+define void @testVaCopyArg(ptr %fmt, ...) {
 ; MIPS32-LABEL: testVaCopyArg:
 ; MIPS32:       # %bb.0: # %entry
 ; MIPS32-NEXT:    addiu $sp, $sp, -40
@@ -45,23 +45,19 @@ define void @testVaCopyArg(i8* %fmt, ...) {
 ; MIPS32-NEXT:    jr $ra
 ; MIPS32-NEXT:    nop
 entry:
-  %fmt.addr = alloca i8*, align 4
-  %ap = alloca i8*, align 4
-  %aq = alloca i8*, align 4
-  %s = alloca i8*, align 4
-  store i8* %fmt, i8** %fmt.addr, align 4
-  %ap1 = bitcast i8** %ap to i8*
-  call void @llvm.va_start(i8* %ap1)
-  %0 = bitcast i8** %aq to i8*
-  %1 = bitcast i8** %ap to i8*
-  call void @llvm.va_copy(i8* %0, i8* %1)
-  %argp.cur = load i8*, i8** %aq, align 4
-  %argp.next = getelementptr inbounds i8, i8* %argp.cur, i32 4
-  store i8* %argp.next, i8** %aq, align 4
-  %2 = bitcast i8* %argp.cur to i8**
-  %3 = load i8*, i8** %2, align 4
-  store i8* %3, i8** %s, align 4
-  %4 = load i8*, i8** %s, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i8* %4)
+  %fmt.addr = alloca ptr, align 4
+  %ap = alloca ptr, align 4
+  %aq = alloca ptr, align 4
+  %s = alloca ptr, align 4
+  store ptr %fmt, ptr %fmt.addr, align 4
+  call void @llvm.va_start(ptr %ap)
+  call void @llvm.va_copy(ptr %aq, ptr %ap)
+  %argp.cur = load ptr, ptr %aq, align 4
+  %argp.next = getelementptr inbounds i8, ptr %argp.cur, i32 4
+  store ptr %argp.next, ptr %aq, align 4
+  %0 = load ptr, ptr %argp.cur, align 4
+  store ptr %0, ptr %s, align 4
+  %1 = load ptr, ptr %s, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @.str, ptr %1)
   ret void
 }

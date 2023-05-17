@@ -74,10 +74,10 @@ body:             |
     liveins: $x0, $x1, $d0, $d1, $d10, $d11, $d8, $d9, $x27, $x28, $x25, $x26, $x23, $x24, $x21, $x22, $x19, $x20
 
     $x19 = ADDXrr $x0, killed $x1
-    $d8 = FADDDrr killed $d0, $d1
-    $d9 = FADDDrr $d8, $d1
-    $d10 = FADDDrr $d9, $d8
-    $d11 = FADDDrr killed $d9, $d10
+    $d8 = FADDDrr killed $d0, $d1, implicit $fpcr
+    $d9 = FADDDrr $d8, $d1, implicit $fpcr
+    $d10 = FADDDrr $d9, $d8, implicit $fpcr
+    $d11 = FADDDrr killed $d9, $d10, implicit $fpcr
     $x20 = ADDXrr $x19, killed $x0
     $x21 = ADDXrr $x20, killed $x19
     $x22 = ADDXrr $x21, killed $x20

@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("LLVMExegesisX86Tests") {
   deps = [
@@ -21,7 +21,6 @@ unittest("LLVMExegesisX86Tests") {
     "//llvm/tools/llvm-exegesis/lib",
   ]
   sources = [
-    "AssemblerTest.cpp",
     "BenchmarkResultTest.cpp",
     "RegisterAliasingTest.cpp",
     "SchedClassResolutionTest.cpp",

@@ -8,10 +8,10 @@ declare void @llvm.nvvm.barrier0()
 ; Load a value, then syncthreads.  Branch, and use the loaded value only on one
 ; side of the branch.  The load shouldn't be sunk beneath the call, because
 ; syncthreads is modeled as maystore.
-define i32 @f(i32 %x, i32* %ptr, i1 %cond) {
+define i32 @f(i32 %x, ptr %ptr, i1 %cond) {
 Start:
   ; CHECK: ld.u32
-  %ptr_val = load i32, i32* %ptr
+  %ptr_val = load i32, ptr %ptr
   ; CHECK: bar.sync
   call void @llvm.nvvm.barrier0()
   br i1 %cond, label %L1, label %L2

@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -convert-func-to-llvm -verify-diagnostics -split-input-file
+// RUN: mlir-opt %s -convert-func-to-llvm='use-opaque-pointers=1' -verify-diagnostics -split-input-file
 
 // Should not crash on unsupported types in function signatures.
 func.func private @unsupported_signature() -> tensor<10 x i32>

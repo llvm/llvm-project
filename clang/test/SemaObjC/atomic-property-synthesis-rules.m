@@ -108,7 +108,7 @@
 // read-write - might warn
 @property int GetSet;
 @property int Get;	// expected-note {{property declared here}} \
-                        // expected-note {{setter and getter must both be synthesized}}
+                        // expected-note {{setter and getter must both be synthesized, or both be user defined, or the property must be nonatomic}}
 @property int Set;	// expected-note {{property declared here}} \
                         // expected-note {{setter and getter must both be synthesized}}
 @property int None;

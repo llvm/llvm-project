@@ -16,9 +16,7 @@
 
 struct S {};
 
-int main(int, char**) {
+void f() {
   std::to_underlying(125); // expected-error {{no matching function for call}}
   std::to_underlying(S{}); // expected-error {{no matching function for call}}
-
-  return 0;
 }

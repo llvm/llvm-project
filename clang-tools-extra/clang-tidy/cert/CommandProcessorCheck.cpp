@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 void CommandProcessorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -38,6 +36,4 @@ void CommandProcessorCheck::check(const MatchFinder::MatchResult &Result) {
   diag(E->getExprLoc(), "calling %0 uses a command processor") << Fn;
 }
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert

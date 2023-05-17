@@ -1,2 +1,2 @@
-define i32* @foo(i32 %x) { ret i32* @baz }
+define ptr @foo(i32 %x) { ret ptr @baz }
 @baz = external global i32

@@ -7,16 +7,16 @@
 target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f32:32:32-f64:64:64-v32:32:32-v64:64:64-v512:512:512-v1024:1024:1024-v2048:2048:2048"
 target triple = "hexagon"
 
-@g0 = external dllexport local_unnamed_addr global i32 (i32, i32, i8*)*, align 4
+@g0 = external dllexport local_unnamed_addr global ptr, align 4
 
 ; Function Attrs: noinline
-define dso_local fastcc void @f0(i8* %a0, i32 %a1) unnamed_addr #0 {
+define dso_local fastcc void @f0(ptr %a0, i32 %a1) unnamed_addr #0 {
 b0:
   br i1 undef, label %b2, label %b1
 
 b1:                                               ; preds = %b0
   %v0 = add nsw <8 x i32> zeroinitializer, <i32 -22, i32 -22, i32 -22, i32 -22, i32 -22, i32 -22, i32 -22, i32 -22>
-  %v1 = load <8 x i32>, <8 x i32>* undef, align 32
+  %v1 = load <8 x i32>, ptr undef, align 32
   %v2 = shl <8 x i32> %v1, <i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24>
   %v3 = ashr exact <8 x i32> %v2, <i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24, i32 24>
   %v4 = add nsw <8 x i32> %v3, <i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128>
@@ -43,7 +43,7 @@ b1:                                               ; preds = %b0
   %v25 = fptosi <8 x float> %v24 to <8 x i8>
   %v26 = sext <8 x i8> %v25 to <8 x i32>
   %v27 = add nsw <8 x i32> %v26, <i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128, i32 128>
-  %v28 = load <8 x i32>, <8 x i32>* undef, align 16
+  %v28 = load <8 x i32>, ptr undef, align 16
   %v29 = mul nsw <8 x i32> %v27, %v28
   %v30 = sext <8 x i32> %v29 to <8 x i64>
   %v31 = mul nsw <8 x i64> %v30, <i64 1077952632, i64 1077952632, i64 1077952632, i64 1077952632, i64 1077952632, i64 1077952632, i64 1077952632, i64 1077952632>
@@ -78,11 +78,10 @@ b1:                                               ; preds = %b0
   %v60 = call <8 x i32> @llvm.smax.v8i32(<8 x i32> %v59, <8 x i32> <i32 -186, i32 -186, i32 -186, i32 -186, i32 -186, i32 -186, i32 -186, i32 -186>)
   %v61 = trunc <8 x i32> %v60 to <8 x i8>
   %v62 = add <8 x i8> %v61, <i8 58, i8 58, i8 58, i8 58, i8 58, i8 58, i8 58, i8 58>
-  %v63 = getelementptr inbounds i8, i8* %a0, i32 undef
-  %v64 = bitcast i8* %v63 to <8 x i8>*
-  store <8 x i8> %v62, <8 x i8>* %v64, align 8
-  %v65 = load i32 (i32, i32, i8*)*, i32 (i32, i32, i8*)** @g0, align 4
-  %v66 = tail call i32 %v65(i32 14, i32 %a1, i8* nonnull undef)
+  %v63 = getelementptr inbounds i8, ptr %a0, i32 undef
+  store <8 x i8> %v62, ptr %v63, align 8
+  %v65 = load ptr, ptr @g0, align 4
+  %v66 = tail call i32 %v65(i32 14, i32 %a1, ptr nonnull undef)
   unreachable
 
 b2:                                               ; preds = %b0

@@ -90,7 +90,7 @@ return:                                           ; preds = %entry, %sw.bb5, %sw
   ret i32 %retval.0
 }
 
-define i32 @test_addr(i32 %a, i8* nocapture readonly %b) {
+define i32 @test_addr(i32 %a, ptr nocapture readonly %b) {
 ; CHECK-V6M-LABEL: test_addr:
 ; CHECK-V6M:         mov r2, r0
 ; CHECK-V6M-NEXT:    movs r0, #19
@@ -165,8 +165,8 @@ sw.bb7:                                           ; preds = %entry
 
 return.sink.split:                                ; preds = %entry, %sw.bb1, %sw.bb4, %sw.bb7
   %.sink = phi i32 [ 307, %sw.bb7 ], [ 306, %sw.bb4 ], [ 305, %sw.bb1 ], [ 304, %entry ]
-  %arrayidx8 = getelementptr inbounds i8, i8* %b, i32 %.sink
-  %0 = load i8, i8* %arrayidx8, align 1
+  %arrayidx8 = getelementptr inbounds i8, ptr %b, i32 %.sink
+  %0 = load i8, ptr %arrayidx8, align 1
   %phitmp = zext i8 %0 to i32
   br label %return
 

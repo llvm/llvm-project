@@ -12,53 +12,37 @@ module asm "\09.ident\09\22GCC: (GNU) 4.5.2 20100914 (prerelease) LLVM: 114628\2
 %int = type i32
 %"long unsigned int" = type i64
 
-define void @swizzle(i8* %a, %0* %b, %0* %c) nounwind {
+define void @swizzle(ptr %a, ptr %b, ptr %c) nounwind {
 entry:
-  %a_addr = alloca i8*
-  %b_addr = alloca %0*
-  %c_addr = alloca %0*
+  %a_addr = alloca ptr
+  %b_addr = alloca ptr
+  %c_addr = alloca ptr
   %"alloca point" = bitcast i32 0 to i32
-  store i8* %a, i8** %a_addr
-  store %0* %b, %0** %b_addr
-  store %0* %c, %0** %c_addr
-  %0 = load i8*, i8** %a_addr, align 64
-  %1 = load %0*, %0** %b_addr, align 64
-  %2 = load %0*, %0** %c_addr, align 64
+  store ptr %a, ptr %a_addr
+  store ptr %b, ptr %b_addr
+  store ptr %c, ptr %c_addr
+  %0 = load ptr, ptr %a_addr, align 64
+  %1 = load ptr, ptr %b_addr, align 64
+  %2 = load ptr, ptr %c_addr, align 64
   %"ssa point" = bitcast i32 0 to i32
   br label %"2"
 
 "2":                                              ; preds = %entry
-  %3 = bitcast i8* %0 to <2 x i32>*
-  %4 = getelementptr inbounds %0, %0* %1, i32 0, i32 0
-  %5 = bitcast %"int[]"* %4 to <4 x float>*
-  %6 = load <4 x float>, <4 x float>* %5, align 16
-  %7 = bitcast <2 x i32>* %3 to <2 x float>*
-  %8 = bitcast <2 x float>* %7 to double*
-  %9 = load double, double* %8
-  %10 = insertelement <2 x double> undef, double %9, i32 0
-  %11 = insertelement <2 x double> %10, double undef, i32 1
-  %12 = bitcast <2 x double> %11 to <4 x float>
-  %13 = shufflevector <4 x float> %6, <4 x float> %12, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-  %14 = getelementptr inbounds %0, %0* %1, i32 0, i32 0
-  %15 = bitcast %"int[]"* %14 to <4 x float>*
-  store <4 x float> %13, <4 x float>* %15, align 16
-  %16 = bitcast i8* %0 to <2 x i32>*
-  %17 = bitcast <2 x i32>* %16 to i8*
-  %18 = getelementptr i8, i8* %17, i64 8
-  %19 = bitcast i8* %18 to <2 x i32>*
-  %20 = getelementptr inbounds %0, %0* %2, i32 0, i32 0
-  %21 = bitcast %"int[]"* %20 to <4 x float>*
-  %22 = load <4 x float>, <4 x float>* %21, align 16
-  %23 = bitcast <2 x i32>* %19 to <2 x float>*
-  %24 = bitcast <2 x float>* %23 to double*
-  %25 = load double, double* %24
-  %26 = insertelement <2 x double> undef, double %25, i32 0
-  %27 = insertelement <2 x double> %26, double undef, i32 1
-  %28 = bitcast <2 x double> %27 to <4 x float>
-  %29 = shufflevector <4 x float> %22, <4 x float> %28, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
-  %30 = getelementptr inbounds %0, %0* %2, i32 0, i32 0
-  %31 = bitcast %"int[]"* %30 to <4 x float>*
-  store <4 x float> %29, <4 x float>* %31, align 16
+  %3 = load <4 x float>, ptr %1, align 16
+  %4 = load double, ptr %0
+  %5 = insertelement <2 x double> undef, double %4, i32 0
+  %6 = insertelement <2 x double> %5, double undef, i32 1
+  %7 = bitcast <2 x double> %6 to <4 x float>
+  %8 = shufflevector <4 x float> %3, <4 x float> %7, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  store <4 x float> %8, ptr %1, align 16
+  %9 = getelementptr i8, ptr %0, i64 8
+  %10 = load <4 x float>, ptr %2, align 16
+  %11 = load double, ptr %9
+  %12 = insertelement <2 x double> undef, double %11, i32 0
+  %13 = insertelement <2 x double> %12, double undef, i32 1
+  %14 = bitcast <2 x double> %13 to <4 x float>
+  %15 = shufflevector <4 x float> %10, <4 x float> %14, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
+  store <4 x float> %15, ptr %2, align 16
   br label %return
 
 return:                                           ; preds = %"2"

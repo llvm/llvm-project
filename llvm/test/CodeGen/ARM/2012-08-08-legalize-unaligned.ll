@@ -6,7 +6,7 @@ target triple = "armv7-none-linux-gnueabi"
 
 define void @test_hi_char8() noinline {
 entry:
-  %0 = load <4 x i8>, <4 x i8>* undef, align 1
-  store <4 x i8> %0, <4 x i8>* null, align 4
+  %0 = load <4 x i8>, ptr undef, align 1
+  store <4 x i8> %0, ptr null, align 4
   ret void
 }

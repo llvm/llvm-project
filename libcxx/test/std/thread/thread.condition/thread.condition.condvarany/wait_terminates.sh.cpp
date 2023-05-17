@@ -55,13 +55,14 @@
 //     that terminate has been called)
 
 
-#include <condition_variable>
 #include <atomic>
-#include <thread>
-#include <chrono>
-#include <string>
-#include <cstdlib>
 #include <cassert>
+#include <chrono>
+#include <condition_variable>
+#include <cstdlib>
+#include <exception>
+#include <string>
+#include <thread>
 
 #include "make_test_thread.h"
 

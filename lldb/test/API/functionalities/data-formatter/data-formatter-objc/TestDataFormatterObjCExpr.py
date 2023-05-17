@@ -27,6 +27,8 @@ class ObjCDataFormatterExpr(ObjCDataFormatterTestCase):
             STOPPED_DUE_TO_BREAKPOINT,
             substrs=['stopped', 'stop reason = breakpoint'])
 
+        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
+
         # This is the function to remove the custom formats in order to have a
         # clean slate for the next test case.
         def cleanup():

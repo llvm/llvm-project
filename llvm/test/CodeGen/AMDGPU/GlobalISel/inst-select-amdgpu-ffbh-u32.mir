@@ -14,9 +14,10 @@ body: |
 
     ; CHECK-LABEL: name: ffbh_u32_s32_s_s
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[S_FLBIT_I32_B32_:%[0-9]+]]:sreg_32 = S_FLBIT_I32_B32 [[COPY]]
-    ; CHECK: S_ENDPGM 0, implicit [[S_FLBIT_I32_B32_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[S_FLBIT_I32_B32_:%[0-9]+]]:sreg_32 = S_FLBIT_I32_B32 [[COPY]]
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[S_FLBIT_I32_B32_]]
   %0:sgpr(s32) = COPY $sgpr0
   %1:sgpr(s32) = G_AMDGPU_FFBH_U32 %0
   S_ENDPGM 0, implicit %1
@@ -36,9 +37,10 @@ body: |
 
     ; CHECK-LABEL: name: ffbh_u32_s32_v_v
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
-    ; CHECK: [[V_FFBH_U32_e64_:%[0-9]+]]:vgpr_32 = V_FFBH_U32_e64 [[COPY]], implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_FFBH_U32_e64_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY $vgpr0
+    ; CHECK-NEXT: [[V_FFBH_U32_e64_:%[0-9]+]]:vgpr_32 = V_FFBH_U32_e64 [[COPY]], implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_FFBH_U32_e64_]]
   %0:vgpr(s32) = COPY $vgpr0
   %1:vgpr(s32) = G_AMDGPU_FFBH_U32 %0
   S_ENDPGM 0, implicit %1
@@ -58,9 +60,10 @@ body: |
 
     ; CHECK-LABEL: name: ffbh_u32_v_s
     ; CHECK: liveins: $sgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[V_FFBH_U32_e64_:%[0-9]+]]:vgpr_32 = V_FFBH_U32_e64 [[COPY]], implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_FFBH_U32_e64_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[V_FFBH_U32_e64_:%[0-9]+]]:vgpr_32 = V_FFBH_U32_e64 [[COPY]], implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_FFBH_U32_e64_]]
   %0:sgpr(s32) = COPY $sgpr0
   %1:vgpr(s32) = G_AMDGPU_FFBH_U32 %0
   S_ENDPGM 0, implicit %1

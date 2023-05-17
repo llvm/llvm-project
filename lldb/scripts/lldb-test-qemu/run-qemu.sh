@@ -109,8 +109,12 @@ elif [[ "$ARCH" == "arm64" ]]; then
   QEMU_SVE_MAX_VQ=4
   QEMU_CPU="cortex-a53"
 
+  if [[ $SVE ]] || [[ $MTE ]]; then
+    QEMU_CPU="max"
+  fi
+
   if [[ $SVE ]]; then
-    QEMU_CPU="max,sve-max-vq=$QEMU_SVE_MAX_VQ"
+    QEMU_CPU="$QEMU_CPU,sve-max-vq=$QEMU_SVE_MAX_VQ"
   fi
   if [[ $MTE ]]; then
     QEMU_MACHINE="$QEMU_MACHINE,mte=on"

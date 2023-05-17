@@ -1,4 +1,4 @@
-; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
+; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s | FileCheck %s
 
 ; Source:
 ;
@@ -27,14 +27,14 @@ target triple = "x86_64-apple-macosx10.14.0"
 define void @_Z3fooii(i32, i32) {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
-  store i32 %0, i32* %3, align 4
-  store i32 %1, i32* %4, align 4
-  %5 = load i32, i32* %3, align 4
+  store i32 %0, ptr %3, align 4
+  store i32 %1, ptr %4, align 4
+  %5 = load i32, ptr %3, align 4
   %6 = icmp ne i32 %5, 0
   br i1 %6, label %7, label %12
 
 ; <label>:7:                                      ; preds = %2
-  %8 = load i32, i32* %4, align 4
+  %8 = load i32, ptr %4, align 4
   %9 = icmp ne i32 %8, 0
   br i1 %9, label %10, label %11
 

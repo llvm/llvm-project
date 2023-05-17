@@ -47,25 +47,28 @@ void AMDGPUAAWrapperPass::getAnalysisUsage(AnalysisUsage &AU) const {
 }
 
 static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
-  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 7, "Addr space out of range");
+  static_assert(AMDGPUAS::MAX_AMDGPU_ADDRESS <= 8, "Addr space out of range");
 
   if (AS1 > AMDGPUAS::MAX_AMDGPU_ADDRESS || AS2 > AMDGPUAS::MAX_AMDGPU_ADDRESS)
     return AliasResult::MayAlias;
 
 #define ASMay AliasResult::MayAlias
 #define ASNo AliasResult::NoAlias
-  // This array is indexed by address space value enum elements 0 ... to 7
-  static const AliasResult ASAliasRules[8][8] = {
-    /*                    Flat    Global Region Group  Constant Private Const32 Buf Fat Ptr */
-    /* Flat     */        {ASMay, ASMay, ASNo,  ASMay, ASMay,   ASMay,  ASMay,  ASMay},
-    /* Global   */        {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay},
-    /* Region   */        {ASNo,  ASNo,  ASMay, ASNo,  ASNo,    ASNo,   ASNo,   ASNo},
-    /* Group    */        {ASMay, ASNo,  ASNo,  ASMay, ASNo,    ASNo,   ASNo,   ASNo},
-    /* Constant */        {ASMay, ASMay, ASNo,  ASNo,  ASNo,    ASNo,   ASMay,  ASMay},
-    /* Private  */        {ASMay, ASNo,  ASNo,  ASNo,  ASNo,    ASMay,  ASNo,   ASNo},
-    /* Constant 32-bit */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASNo,   ASMay},
-    /* Buffer Fat Ptr  */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay}
+  // This array is indexed by address space value enum elements 0 ... to 8
+  // clang-format off
+  static const AliasResult ASAliasRules[9][9] = {
+    /*                    Flat    Global Region Group  Constant Private Const32 BufFatPtr BufRsrc */
+    /* Flat     */        {ASMay, ASMay, ASNo,  ASMay, ASMay,   ASMay,  ASMay,  ASMay,    ASMay},
+    /* Global   */        {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay,    ASMay},
+    /* Region   */        {ASNo,  ASNo,  ASMay, ASNo,  ASNo,    ASNo,   ASNo,   ASNo,     ASNo},
+    /* Group    */        {ASMay, ASNo,  ASNo,  ASMay, ASNo,    ASNo,   ASNo,   ASNo,     ASNo},
+    /* Constant */        {ASMay, ASMay, ASNo,  ASNo,  ASNo,    ASNo,   ASMay,  ASMay,    ASMay},
+    /* Private  */        {ASMay, ASNo,  ASNo,  ASNo,  ASNo,    ASMay,  ASNo,   ASNo,     ASNo},
+    /* Constant 32-bit */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASNo,   ASMay,    ASMay},
+    /* Buffer Fat Ptr  */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay,    ASMay},
+    /* Buffer Resource */ {ASMay, ASMay, ASNo,  ASNo,  ASMay,   ASNo,   ASMay,  ASMay,    ASMay},
   };
+  // clang-format on
 #undef ASMay
 #undef ASNo
 
@@ -73,8 +76,8 @@ static AliasResult getAliasResult(unsigned AS1, unsigned AS2) {
 }
 
 AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
-                                  const MemoryLocation &LocB,
-                                  AAQueryInfo &AAQI) {
+                                  const MemoryLocation &LocB, AAQueryInfo &AAQI,
+                                  const Instruction *) {
   unsigned asA = LocA.Ptr->getType()->getPointerAddressSpace();
   unsigned asB = LocB.Ptr->getType()->getPointerAddressSpace();
 
@@ -121,57 +124,22 @@ AliasResult AMDGPUAAResult::alias(const MemoryLocation &LocA,
   }
 
   // Forward the query to the next alias analysis.
-  return AAResultBase::alias(LocA, LocB, AAQI);
+  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 }
 
-bool AMDGPUAAResult::pointsToConstantMemory(const MemoryLocation &Loc,
-                                            AAQueryInfo &AAQI, bool OrLocal) {
+ModRefInfo AMDGPUAAResult::getModRefInfoMask(const MemoryLocation &Loc,
+                                             AAQueryInfo &AAQI,
+                                             bool IgnoreLocals) {
   unsigned AS = Loc.Ptr->getType()->getPointerAddressSpace();
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
-    return true;
+    return ModRefInfo::NoModRef;
 
   const Value *Base = getUnderlyingObject(Loc.Ptr);
   AS = Base->getType()->getPointerAddressSpace();
   if (AS == AMDGPUAS::CONSTANT_ADDRESS ||
       AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT)
-    return true;
+    return ModRefInfo::NoModRef;
 
-  if (const GlobalVariable *GV = dyn_cast<GlobalVariable>(Base)) {
-    if (GV->isConstant())
-      return true;
-  } else if (const Argument *Arg = dyn_cast<Argument>(Base)) {
-    const Function *F = Arg->getParent();
-
-    // Only assume constant memory for arguments on kernels.
-    switch (F->getCallingConv()) {
-    default:
-      return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
-    case CallingConv::AMDGPU_LS:
-    case CallingConv::AMDGPU_HS:
-    case CallingConv::AMDGPU_ES:
-    case CallingConv::AMDGPU_GS:
-    case CallingConv::AMDGPU_VS:
-    case CallingConv::AMDGPU_PS:
-    case CallingConv::AMDGPU_CS:
-    case CallingConv::AMDGPU_KERNEL:
-    case CallingConv::SPIR_KERNEL:
-      break;
-    }
-
-    unsigned ArgNo = Arg->getArgNo();
-    /* On an argument, ReadOnly attribute indicates that the function does
-       not write through this pointer argument, even though it may write
-       to the memory that the pointer points to.
-       On an argument, ReadNone attribute indicates that the function does
-       not dereference that pointer argument, even though it may read or write
-       the memory that the pointer points to if accessed through other pointers.
-     */
-    if (F->hasParamAttribute(ArgNo, Attribute::NoAlias) &&
-        (F->hasParamAttribute(ArgNo, Attribute::ReadNone) ||
-         F->hasParamAttribute(ArgNo, Attribute::ReadOnly))) {
-      return true;
-    }
-  }
-  return AAResultBase::pointsToConstantMemory(Loc, AAQI, OrLocal);
+  return AAResultBase::getModRefInfoMask(Loc, AAQI, IgnoreLocals);
 }

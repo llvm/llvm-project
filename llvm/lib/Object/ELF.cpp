@@ -173,6 +173,13 @@ StringRef llvm::object::getELFRelocationTypeName(uint32_t Machine,
       break;
     }
     break;
+  case ELF::EM_XTENSA:
+    switch (Type) {
+#include "llvm/BinaryFormat/ELFRelocs/Xtensa.def"
+    default:
+      break;
+    }
+    break;
   default:
     break;
   }
@@ -223,6 +230,8 @@ uint32_t llvm::object::getELFRelativeRelocationType(uint32_t Machine) {
     break;
   case ELF::EM_BPF:
     break;
+  case ELF::EM_LOONGARCH:
+    return ELF::R_LARCH_RELATIVE;
   default:
     break;
   }
@@ -261,6 +270,11 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
   case ELF::EM_RISCV:
     switch (Type) { STRINGIFY_ENUM_CASE(ELF, SHT_RISCV_ATTRIBUTES); }
     break;
+  case ELF::EM_AARCH64:
+    switch (Type) {
+      STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_MEMTAG_GLOBALS_DYNAMIC);
+      STRINGIFY_ENUM_CASE(ELF, SHT_AARCH64_MEMTAG_GLOBALS_STATIC);
+    }
   default:
     break;
   }
@@ -295,7 +309,9 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_SYMPART);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_EHDR);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_PART_PHDR);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP_V0);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);
@@ -538,9 +554,8 @@ Expected<typename ELFT::DynRange> ELFFile<ELFT>::dynamicEntries() const {
 
   for (const Elf_Phdr &Phdr : *ProgramHeadersOrError) {
     if (Phdr.p_type == ELF::PT_DYNAMIC) {
-      Dyn = makeArrayRef(
-          reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
-          Phdr.p_filesz / sizeof(Elf_Dyn));
+      Dyn = ArrayRef(reinterpret_cast<const Elf_Dyn *>(base() + Phdr.p_offset),
+                     Phdr.p_filesz / sizeof(Elf_Dyn));
       break;
     }
   }
@@ -630,7 +645,26 @@ ELFFile<ELFT>::toMappedAddr(uint64_t VAddr, WarningHandler WarnHandler) const {
 
 template <class ELFT>
 Expected<std::vector<BBAddrMap>>
-ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
+ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec,
+                               const Elf_Shdr *RelaSec) const {
+  bool IsRelocatable = getHeader().e_type == ELF::ET_REL;
+
+  // This DenseMap maps the offset of each function (the location of the
+  // reference to the function in the SHT_LLVM_BB_ADDR_MAP section) to the
+  // addend (the location of the function in the text section).
+  llvm::DenseMap<uint64_t, uint64_t> FunctionOffsetTranslations;
+  if (IsRelocatable && RelaSec) {
+    assert(RelaSec &&
+           "Can't read a SHT_LLVM_BB_ADDR_MAP section in a relocatable "
+           "object file without providing a relocation section.");
+    Expected<Elf_Rela_Range> Relas = this->relas(*RelaSec);
+    if (!Relas)
+      return createError("unable to read relocations for section " +
+                         describe(*this, Sec) + ": " +
+                         toString(Relas.takeError()));
+    for (Elf_Rela Rela : *Relas)
+      FunctionOffsetTranslations[Rela.r_offset] = Rela.r_addend;
+  }
   Expected<ArrayRef<uint8_t>> ContentsOrErr = getSectionContents(Sec);
   if (!ContentsOrErr)
     return ContentsOrErr.takeError();
@@ -640,7 +674,7 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
 
   DataExtractor::Cursor Cur(0);
   Error ULEBSizeErr = Error::success();
-
+  Error MetadataDecodeErr = Error::success();
   // Helper to extract and decode the next ULEB128 value as uint32_t.
   // Returns zero and sets ULEBSizeErr if the ULEB128 value exceeds the uint32_t
   // limit.
@@ -660,24 +694,107 @@ ELFFile<ELFT>::decodeBBAddrMap(const Elf_Shdr &Sec) const {
     return static_cast<uint32_t>(Value);
   };
 
-  while (!ULEBSizeErr && Cur && Cur.tell() < Content.size()) {
+  uint8_t Version = 0;
+  while (!ULEBSizeErr && !MetadataDecodeErr && Cur &&
+         Cur.tell() < Content.size()) {
+    if (Sec.sh_type == ELF::SHT_LLVM_BB_ADDR_MAP) {
+      Version = Data.getU8(Cur);
+      if (!Cur)
+        break;
+      if (Version > 2)
+        return createError("unsupported SHT_LLVM_BB_ADDR_MAP version: " +
+                           Twine(static_cast<int>(Version)));
+      Data.getU8(Cur); // Feature byte
+    }
+    uint64_t SectionOffset = Cur.tell();
     uintX_t Address = static_cast<uintX_t>(Data.getAddress(Cur));
+    if (!Cur)
+      return Cur.takeError();
+    if (IsRelocatable) {
+      assert(Address == 0);
+      auto FOTIterator = FunctionOffsetTranslations.find(SectionOffset);
+      if (FOTIterator == FunctionOffsetTranslations.end()) {
+        return createError("failed to get relocation data for offset: " +
+                           Twine::utohexstr(SectionOffset) + " in section " +
+                           describe(*this, Sec));
+      }
+      Address = FOTIterator->second;
+    }
     uint32_t NumBlocks = ReadULEB128AsUInt32();
     std::vector<BBAddrMap::BBEntry> BBEntries;
-    for (uint32_t BlockID = 0; !ULEBSizeErr && Cur && (BlockID < NumBlocks);
-         ++BlockID) {
+    uint32_t PrevBBEndOffset = 0;
+    for (uint32_t BlockIndex = 0;
+         !MetadataDecodeErr && !ULEBSizeErr && Cur && (BlockIndex < NumBlocks);
+         ++BlockIndex) {
+      uint32_t ID = Version >= 2 ? ReadULEB128AsUInt32() : BlockIndex;
       uint32_t Offset = ReadULEB128AsUInt32();
       uint32_t Size = ReadULEB128AsUInt32();
-      uint32_t Metadata = ReadULEB128AsUInt32();
-      BBEntries.push_back({Offset, Size, Metadata});
+      uint32_t MD = ReadULEB128AsUInt32();
+      if (Version >= 1) {
+        // Offset is calculated relative to the end of the previous BB.
+        Offset += PrevBBEndOffset;
+        PrevBBEndOffset = Offset + Size;
+      }
+      Expected<BBAddrMap::BBEntry::Metadata> MetadataOrErr =
+          BBAddrMap::BBEntry::Metadata::decode(MD);
+      if (!MetadataOrErr) {
+        MetadataDecodeErr = MetadataOrErr.takeError();
+        break;
+      }
+      BBEntries.push_back({ID, Offset, Size, *MetadataOrErr});
     }
-    FunctionEntries.push_back({Address, BBEntries});
+    FunctionEntries.push_back({Address, std::move(BBEntries)});
   }
-  // Either Cur is in the error state, or ULEBSizeError is set (not both), but
-  // we join the two errors here to be safe.
-  if (!Cur || ULEBSizeErr)
-    return joinErrors(Cur.takeError(), std::move(ULEBSizeErr));
+  // Either Cur is in the error state, or we have an error in ULEBSizeErr or
+  // MetadataDecodeErr (but not both), but we join all errors here to be safe.
+  if (!Cur || ULEBSizeErr || MetadataDecodeErr)
+    return joinErrors(joinErrors(Cur.takeError(), std::move(ULEBSizeErr)),
+                      std::move(MetadataDecodeErr));
   return FunctionEntries;
+}
+
+template <class ELFT>
+Expected<
+    MapVector<const typename ELFT::Shdr *, const typename ELFT::Shdr *>>
+ELFFile<ELFT>::getSectionAndRelocations(
+    std::function<Expected<bool>(const Elf_Shdr &)> IsMatch) const {
+  MapVector<const Elf_Shdr *, const Elf_Shdr *> SecToRelocMap;
+  Error Errors = Error::success();
+  for (const Elf_Shdr &Sec : cantFail(this->sections())) {
+    Expected<bool> DoesSectionMatch = IsMatch(Sec);
+    if (!DoesSectionMatch) {
+      Errors = joinErrors(std::move(Errors), DoesSectionMatch.takeError());
+      continue;
+    }
+    if (*DoesSectionMatch) {
+      if (SecToRelocMap.insert(std::make_pair(&Sec, (const Elf_Shdr *)nullptr))
+              .second)
+        continue;
+    }
+
+    if (Sec.sh_type != ELF::SHT_RELA && Sec.sh_type != ELF::SHT_REL)
+      continue;
+
+    Expected<const Elf_Shdr *> RelSecOrErr = this->getSection(Sec.sh_info);
+    if (!RelSecOrErr) {
+      Errors = joinErrors(std::move(Errors),
+                          createError(describe(*this, Sec) +
+                                      ": failed to get a relocated section: " +
+                                      toString(RelSecOrErr.takeError())));
+      continue;
+    }
+    const Elf_Shdr *ContentsSec = *RelSecOrErr;
+    Expected<bool> DoesRelTargetMatch = IsMatch(*ContentsSec);
+    if (!DoesRelTargetMatch) {
+      Errors = joinErrors(std::move(Errors), DoesRelTargetMatch.takeError());
+      continue;
+    }
+    if (*DoesRelTargetMatch)
+      SecToRelocMap[ContentsSec] = &Sec;
+  }
+  if(Errors)
+    return std::move(Errors);
+  return SecToRelocMap;
 }
 
 template class llvm::object::ELFFile<ELF32LE>;

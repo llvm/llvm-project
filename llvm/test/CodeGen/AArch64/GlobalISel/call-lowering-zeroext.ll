@@ -116,3 +116,45 @@ define i8 @s8_assert_zext_stack(i64 %a, i64 %b, i64 %c, i64 %d, i64 %e,
                                         i8 zeroext %j) {
   ret i8 %j
 }
+
+define i32 @callee_zeroext_i1(i1 zeroext %0) {
+  ; CHECK-LABEL: name: callee_zeroext_i1
+  ; CHECK: bb.1 (%ir-block.1):
+  ; CHECK-NEXT:   liveins: $w0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY]], 1
+  ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ASSERT_ZEXT]](s32)
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[TRUNC]](s1)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %r = zext i1 %0 to i32
+  ret i32 %r
+}
+
+define i32 @caller_zeroext_i1() {
+  ; CHECK-LABEL: name: caller_zeroext_i1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s8) = G_ZEXT [[C]](s1)
+  ; CHECK-NEXT:   [[ZEXT1:%[0-9]+]]:_(s32) = G_ZEXT [[ZEXT]](s8)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT1]](s32)
+  ; CHECK-NEXT:   BL @callee_zeroext_i1, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $w0, implicit-def $w0
+  ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $w0
+  ; CHECK-NEXT:   $w0 = COPY [[COPY]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  %r = call i32 @callee_zeroext_i1(i1 zeroext true)
+  ret i32 %r
+}
+
+define zeroext i1 @ret_zeroext_i1() {
+  ; CHECK-LABEL: name: ret_zeroext_i1
+  ; CHECK: bb.1 (%ir-block.0):
+  ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s1) = G_CONSTANT i1 true
+  ; CHECK-NEXT:   [[ZEXT:%[0-9]+]]:_(s32) = G_ZEXT [[C]](s1)
+  ; CHECK-NEXT:   $w0 = COPY [[ZEXT]](s32)
+  ; CHECK-NEXT:   RET_ReallyLR implicit $w0
+  ret i1 true
+}

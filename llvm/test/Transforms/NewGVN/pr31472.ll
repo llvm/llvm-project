@@ -6,14 +6,14 @@ target triple = "x86_64-apple-macosx10.12.0"
 ;; Ensure the invoke does not accidentally get deleted as unused, just because the value is not used.
 
 ; Function Attrs: norecurse ssp uwtable
-define i32 @main() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*){
+define i32 @main() personality ptr @__gxx_personality_v0{
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:    [[TMP1:%.*]] = invoke i32 @foo()
 ; CHECK-NEXT:    to label %good unwind label %bad
 ; CHECK:       good:
 ; CHECK-NEXT:    ret i32 5
 ; CHECK:       bad:
-; CHECK-NEXT:    [[TMP2:%.*]] = landingpad { i8*, i32
+; CHECK-NEXT:    [[TMP2:%.*]] = landingpad { ptr, i32
 ;
   %1 = invoke i32 @foo()
   to label %good unwind label %bad
@@ -25,9 +25,9 @@ good:
 
 bad:
 ; <label>:20:                                     ; preds = %15, %.preheader
-  %2 = landingpad { i8*, i32 }
+  %2 = landingpad { ptr, i32 }
   cleanup
-  resume { i8*, i32 } %2
+  resume { ptr, i32 } %2
 }
 
 declare i32 @foo()

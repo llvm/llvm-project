@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class StaticInitializers(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(archs="aarch64", oslist=["freebsd", "linux"],
                         bugnumber="https://bugs.llvm.org/show_bug.cgi?id=44053")
     def test(self):

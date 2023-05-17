@@ -10,6 +10,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/idioms.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/expression.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Semantics/symbol.h"
@@ -119,7 +120,7 @@ const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
   if (const Symbol * symbol{GetSymbol()}) {
     const Symbol &ultimate{symbol->GetUltimate()};
     if (const auto *proc{ultimate.detailsIf<semantics::ProcEntityDetails>()}) {
-      return proc->interface().symbol();
+      return proc->procInterface();
     } else if (const auto *binding{
                    ultimate.detailsIf<semantics::ProcBindingDetails>()}) {
       return &binding->symbol();
@@ -132,14 +133,28 @@ const Symbol *ProcedureDesignator::GetInterfaceSymbol() const {
 
 bool ProcedureDesignator::IsElemental() const {
   if (const Symbol * interface{GetInterfaceSymbol()}) {
-    return interface->attrs().test(semantics::Attr::ELEMENTAL);
+    return IsElementalProcedure(*interface);
   } else if (const Symbol * symbol{GetSymbol()}) {
-    return symbol->attrs().test(semantics::Attr::ELEMENTAL);
+    return IsElementalProcedure(*symbol);
   } else if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
     return intrinsic->characteristics.value().attrs.test(
         characteristics::Procedure::Attr::Elemental);
   } else {
     DIE("ProcedureDesignator::IsElemental(): no case");
+  }
+  return false;
+}
+
+bool ProcedureDesignator::IsPure() const {
+  if (const Symbol * interface{GetInterfaceSymbol()}) {
+    return IsPureProcedure(*interface);
+  } else if (const Symbol * symbol{GetSymbol()}) {
+    return IsPureProcedure(*symbol);
+  } else if (const auto *intrinsic{std::get_if<SpecificIntrinsic>(&u)}) {
+    return intrinsic->characteristics.value().attrs.test(
+        characteristics::Procedure::Attr::Pure);
+  } else {
+    DIE("ProcedureDesignator::IsPure(): no case");
   }
   return false;
 }
@@ -166,6 +181,10 @@ const Symbol *ProcedureDesignator::GetSymbol() const {
           [](const auto &) -> const Symbol * { return nullptr; },
       },
       u);
+}
+
+const SymbolRef *ProcedureDesignator::UnwrapSymbolRef() const {
+  return std::get_if<SymbolRef>(&u);
 }
 
 std::string ProcedureDesignator::GetName() const {
@@ -199,7 +218,15 @@ std::optional<Expr<SubscriptInteger>> ProcedureRef::LEN() const {
     // ProcedureDesignator::LEN() because they're independent of the
     // lengths of the actual arguments.
   }
-  return proc_.LEN();
+  if (auto len{proc_.LEN()}) {
+    if (IsActuallyConstant(*len)) {
+      return len;
+    }
+    // TODO: Handle cases where the length of a function result is a
+    // safe expression in terms of actual argument values, after substituting
+    // actual argument expressions for INTENT(IN)/VALUE dummy arguments.
+  }
+  return std::nullopt;
 }
 
 int ProcedureRef::Rank() const {

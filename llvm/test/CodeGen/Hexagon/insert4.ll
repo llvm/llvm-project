@@ -10,10 +10,9 @@ target triple = "hexagon"
 
 %struct.a = type { i16 }
 
-define i32 @fun(%struct.a* nocapture %pData, i64 %c, i64* nocapture %d, i64* nocapture %e, i64* nocapture %f) #0 {
+define i32 @fun(ptr nocapture %pData, i64 %c, ptr nocapture %d, ptr nocapture %e, ptr nocapture %f) #0 {
 entry:
-  %g = getelementptr inbounds %struct.a, %struct.a* %pData, i32 0, i32 0
-  %0 = load i16, i16* %g, align 2, !tbaa !0
+  %0 = load i16, ptr %pData, align 2, !tbaa !0
   %conv185 = sext i16 %0 to i32
   %shr86 = ashr i32 %conv185, 2
   %cmp87 = icmp sgt i32 %shr86, 0
@@ -35,11 +34,11 @@ for.body.lr.ph:                                   ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
-  %arrayidx.phi = phi i64* [ %d, %for.body.lr.ph ], [ %arrayidx.inc, %for.body ]
-  %arrayidx30.phi = phi i64* [ %f, %for.body.lr.ph ], [ %arrayidx30.inc, %for.body ]
-  %arrayidx60.phi = phi i64* [ %e, %for.body.lr.ph ], [ %arrayidx60.inc, %for.body ]
+  %arrayidx.phi = phi ptr [ %d, %for.body.lr.ph ], [ %arrayidx.inc, %for.body ]
+  %arrayidx30.phi = phi ptr [ %f, %for.body.lr.ph ], [ %arrayidx30.inc, %for.body ]
+  %arrayidx60.phi = phi ptr [ %e, %for.body.lr.ph ], [ %arrayidx60.inc, %for.body ]
   %j.088.pmt = phi i32 [ 0, %for.body.lr.ph ], [ %inc.pmt, %for.body ]
-  %1 = load i64, i64* %arrayidx.phi, align 8, !tbaa !1
+  %1 = load i64, ptr %arrayidx.phi, align 8, !tbaa !1
   %n_union3.sroa.0.0.extract.trunc = trunc i64 %1 to i32
   %n_union3.sroa.1.4.extract.shift = lshr i64 %1, 32
   %2 = tail call i64 @llvm.hexagon.M2.dpmpyss.s0(i32 %n_union3.sroa.0.0.extract.trunc, i32 %conv8)
@@ -51,7 +50,7 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %6 = tail call i64 @llvm.hexagon.S2.asl.r.p(i64 %5, i32 -25)
   %conv24 = trunc i64 %6 to i32
   %7 = tail call i32 @llvm.hexagon.A2.sath(i32 %conv24)
-  %8 = load i64, i64* %arrayidx30.phi, align 8, !tbaa !1
+  %8 = load i64, ptr %arrayidx30.phi, align 8, !tbaa !1
   %n_union28.sroa.0.0.extract.trunc = trunc i64 %8 to i32
   %n_union28.sroa.1.4.extract.shift = lshr i64 %8, 32
   %9 = tail call i64 @llvm.hexagon.M2.dpmpyss.s0(i32 %n_union28.sroa.0.0.extract.trunc, i32 %conv38)
@@ -76,17 +75,17 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %n_union.sroa.2.4.insert.insert = or i64 %n_union.sroa.1.2.insert.shift, %n_union.sroa.0.0.insert.ext
   %n_union.sroa.1.2.insert.insert = or i64 %n_union.sroa.2.4.insert.insert, %n_union.sroa.2.4.insert.shift
   %n_union.sroa.0.0.insert.insert = or i64 %n_union.sroa.1.2.insert.insert, %n_union.sroa.3.6.insert.shift
-  %15 = load i64, i64* %arrayidx60.phi, align 8, !tbaa !1
+  %15 = load i64, ptr %arrayidx60.phi, align 8, !tbaa !1
   %16 = tail call i64 @llvm.hexagon.A2.vaddhs(i64 %15, i64 %n_union.sroa.0.0.insert.insert)
-  store i64 %16, i64* %arrayidx60.phi, align 8, !tbaa !1
+  store i64 %16, ptr %arrayidx60.phi, align 8, !tbaa !1
   %inc.pmt = add i32 %j.088.pmt, 1
-  %17 = load i16, i16* %g, align 2, !tbaa !0
+  %17 = load i16, ptr %pData, align 2, !tbaa !0
   %conv1 = sext i16 %17 to i32
   %shr = ashr i32 %conv1, 2
   %cmp = icmp slt i32 %inc.pmt, %shr
-  %arrayidx.inc = getelementptr i64, i64* %arrayidx.phi, i32 1
-  %arrayidx30.inc = getelementptr i64, i64* %arrayidx30.phi, i32 1
-  %arrayidx60.inc = getelementptr i64, i64* %arrayidx60.phi, i32 1
+  %arrayidx.inc = getelementptr i64, ptr %arrayidx.phi, i32 1
+  %arrayidx30.inc = getelementptr i64, ptr %arrayidx30.phi, i32 1
+  %arrayidx60.inc = getelementptr i64, ptr %arrayidx60.phi, i32 1
   br i1 %cmp, label %for.body, label %for.end.loopexit
 
 for.end.loopexit:                                 ; preds = %for.body

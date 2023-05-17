@@ -43,10 +43,10 @@
 # ERROR-NEXT: >>> referenced by
 
 # INVAL-WARNING: error: '-undefined warning' only valid with '-flat_namespace'
-# INVAL-WARNING-NEXT: error: undefined symbol: _bar
+# INVAL-WARNING-NOT: error: undefined symbol: _bar
 
 # INVAL-SUPPRESS: error: '-undefined suppress' only valid with '-flat_namespace'
-# INVAL-SUPPRESS-NEXT: error: undefined symbol: _bar
+# INVAL-SUPPRESS-NOT: error: undefined symbol: _bar
 
 # WARNING: warning: undefined symbol: _bar
 # WARNING-NEXT: >>> referenced by

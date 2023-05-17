@@ -12,20 +12,25 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanTransforms.h"
+#include "VPlanDominatorTree.h"
+#include "VPRecipeBuilder.h"
+#include "VPlanCFG.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
+#include "llvm/Analysis/VectorUtils.h"
+#include "llvm/IR/Intrinsics.h"
 
 using namespace llvm;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
-    Loop *OrigLoop, VPlanPtr &Plan,
+    VPlanPtr &Plan,
     function_ref<const InductionDescriptor *(PHINode *)>
         GetIntOrFpInductionDescriptor,
-    SmallPtrSetImpl<Instruction *> &DeadInstructions, ScalarEvolution &SE) {
+    ScalarEvolution &SE, const TargetLibraryInfo &TLI) {
 
-  ReversePostOrderTraversal<VPBlockRecursiveTraversalWrapper<VPBlockBase *>>
-      RPOT(Plan->getEntry());
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
     VPRecipeBase *Term = VPBB->getTerminator();
     auto EndIter = Term ? Term->getIterator() : VPBB->end();
@@ -35,22 +40,15 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
 
       VPValue *VPV = Ingredient.getVPSingleValue();
       Instruction *Inst = cast<Instruction>(VPV->getUnderlyingValue());
-      if (DeadInstructions.count(Inst)) {
-        VPValue DummyValue;
-        VPV->replaceAllUsesWith(&DummyValue);
-        Ingredient.eraseFromParent();
-        continue;
-      }
 
       VPRecipeBase *NewRecipe = nullptr;
       if (auto *VPPhi = dyn_cast<VPWidenPHIRecipe>(&Ingredient)) {
         auto *Phi = cast<PHINode>(VPPhi->getUnderlyingValue());
         if (const auto *II = GetIntOrFpInductionDescriptor(Phi)) {
-          VPValue *Start = Plan->getOrAddVPValue(II->getStartValue());
+          VPValue *Start = Plan->getVPValueOrAddLiveIn(II->getStartValue());
           VPValue *Step =
               vputils::getOrCreateVPValueForSCEVExpr(*Plan, II->getStep(), SE);
-          NewRecipe =
-              new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II, true);
+          NewRecipe = new VPWidenIntOrFpInductionRecipe(Phi, Start, Step, *II);
         } else {
           Plan->addVPValue(Phi, VPPhi);
           continue;
@@ -62,27 +60,25 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         // Create VPWidenMemoryInstructionRecipe for loads and stores.
         if (LoadInst *Load = dyn_cast<LoadInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
-              *Load, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
-              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
+              *Load, Ingredient.getOperand(0), nullptr /*Mask*/,
+              false /*Consecutive*/, false /*Reverse*/);
         } else if (StoreInst *Store = dyn_cast<StoreInst>(Inst)) {
           NewRecipe = new VPWidenMemoryInstructionRecipe(
-              *Store, Plan->getOrAddVPValue(getLoadStorePointerOperand(Inst)),
-              Plan->getOrAddVPValue(Store->getValueOperand()), nullptr /*Mask*/,
-              false /*Consecutive*/, false /*Reverse*/);
+              *Store, Ingredient.getOperand(1), Ingredient.getOperand(0),
+              nullptr /*Mask*/, false /*Consecutive*/, false /*Reverse*/);
         } else if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(Inst)) {
-          NewRecipe = new VPWidenGEPRecipe(
-              GEP, Plan->mapToVPValues(GEP->operands()), OrigLoop);
+          NewRecipe = new VPWidenGEPRecipe(GEP, Ingredient.operands());
         } else if (CallInst *CI = dyn_cast<CallInst>(Inst)) {
           NewRecipe =
-              new VPWidenCallRecipe(*CI, Plan->mapToVPValues(CI->args()));
+              new VPWidenCallRecipe(*CI, drop_end(Ingredient.operands()),
+                                    getVectorIntrinsicIDForCall(CI, &TLI));
         } else if (SelectInst *SI = dyn_cast<SelectInst>(Inst)) {
-          bool InvariantCond =
-              SE.isLoopInvariant(SE.getSCEV(SI->getOperand(0)), OrigLoop);
-          NewRecipe = new VPWidenSelectRecipe(
-              *SI, Plan->mapToVPValues(SI->operands()), InvariantCond);
+          NewRecipe = new VPWidenSelectRecipe(*SI, Ingredient.operands());
+        } else if (auto *CI = dyn_cast<CastInst>(Inst)) {
+          NewRecipe = new VPWidenCastRecipe(
+              CI->getOpcode(), Ingredient.getOperand(0), CI->getType(), CI);
         } else {
-          NewRecipe =
-              new VPWidenRecipe(*Inst, Plan->mapToVPValues(Inst->operands()));
+          NewRecipe = new VPWidenRecipe(*Inst, Ingredient.operands());
         }
       }
 
@@ -93,49 +89,51 @@ void VPlanTransforms::VPInstructionsToVPRecipes(
         assert(NewRecipe->getNumDefinedValues() == 0 &&
                "Only recpies with zero or one defined values expected");
       Ingredient.eraseFromParent();
-      Plan->removeVPValueFor(Inst);
-      for (auto *Def : NewRecipe->definedValues()) {
-        Plan->addVPValue(Inst, Def);
-      }
     }
   }
 }
 
-bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
-  auto Iter = depth_first(
-      VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry()));
+static bool sinkScalarOperands(VPlan &Plan) {
+  auto Iter = vp_depth_first_deep(Plan.getEntry());
   bool Changed = false;
-  // First, collect the operands of all predicated replicate recipes as seeds
-  // for sinking.
-  SetVector<std::pair<VPBasicBlock *, VPValue *>> WorkList;
-  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
+  // First, collect the operands of all recipes in replicate blocks as seeds for
+  // sinking.
+  SetVector<std::pair<VPBasicBlock *, VPRecipeBase *>> WorkList;
+  for (VPRegionBlock *VPR : VPBlockUtils::blocksOnly<VPRegionBlock>(Iter)) {
+    VPBasicBlock *EntryVPBB = VPR->getEntryBasicBlock();
+    if (!VPR->isReplicator() || EntryVPBB->getSuccessors().size() != 2)
+      continue;
+    VPBasicBlock *VPBB = dyn_cast<VPBasicBlock>(EntryVPBB->getSuccessors()[0]);
+    if (!VPBB || VPBB->getSingleSuccessor() != VPR->getExitingBasicBlock())
+      continue;
     for (auto &Recipe : *VPBB) {
-      auto *RepR = dyn_cast<VPReplicateRecipe>(&Recipe);
-      if (!RepR || !RepR->isPredicated())
-        continue;
-      for (VPValue *Op : RepR->operands())
-        WorkList.insert(std::make_pair(RepR->getParent(), Op));
+      for (VPValue *Op : Recipe.operands())
+        if (auto *Def = Op->getDefiningRecipe())
+          WorkList.insert(std::make_pair(VPBB, Def));
     }
   }
 
-  // Try to sink each replicate recipe in the worklist.
-  while (!WorkList.empty()) {
+  bool ScalarVFOnly = Plan.hasScalarVFOnly();
+  // Try to sink each replicate or scalar IV steps recipe in the worklist.
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
     VPBasicBlock *SinkTo;
-    VPValue *C;
-    std::tie(SinkTo, C) = WorkList.pop_back_val();
-    auto *SinkCandidate = dyn_cast_or_null<VPReplicateRecipe>(C->Def);
-    if (!SinkCandidate || SinkCandidate->isUniform() ||
-        SinkCandidate->getParent() == SinkTo ||
+    VPRecipeBase *SinkCandidate;
+    std::tie(SinkTo, SinkCandidate) = WorkList[I];
+    if (SinkCandidate->getParent() == SinkTo ||
         SinkCandidate->mayHaveSideEffects() ||
         SinkCandidate->mayReadOrWriteMemory())
+      continue;
+    if (auto *RepR = dyn_cast<VPReplicateRecipe>(SinkCandidate)) {
+      if (!ScalarVFOnly && RepR->isUniform())
+        continue;
+    } else if (!isa<VPScalarIVStepsRecipe>(SinkCandidate))
       continue;
 
     bool NeedsDuplicating = false;
     // All recipe users of the sink candidate must be in the same block SinkTo
     // or all users outside of SinkTo must be uniform-after-vectorization (
     // i.e., only first lane is used) . In the latter case, we need to duplicate
-    // SinkCandidate. At the moment, we identify such UAV's by looking for the
-    // address operands of widened memory recipes.
+    // SinkCandidate.
     auto CanSinkWithUser = [SinkTo, &NeedsDuplicating,
                             SinkCandidate](VPUser *U) {
       auto *UI = dyn_cast<VPRecipeBase>(U);
@@ -143,31 +141,30 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
         return false;
       if (UI->getParent() == SinkTo)
         return true;
-      auto *WidenI = dyn_cast<VPWidenMemoryInstructionRecipe>(UI);
-      if (WidenI && WidenI->getAddr() == SinkCandidate) {
-        NeedsDuplicating = true;
-        return true;
-      }
-      return false;
+      NeedsDuplicating =
+          UI->onlyFirstLaneUsed(SinkCandidate->getVPSingleValue());
+      // We only know how to duplicate VPRecipeRecipes for now.
+      return NeedsDuplicating && isa<VPReplicateRecipe>(SinkCandidate);
     };
-    if (!all_of(SinkCandidate->users(), CanSinkWithUser))
+    if (!all_of(SinkCandidate->getVPSingleValue()->users(), CanSinkWithUser))
       continue;
 
     if (NeedsDuplicating) {
-      Instruction *I = cast<Instruction>(SinkCandidate->getUnderlyingValue());
-      auto *Clone =
-          new VPReplicateRecipe(I, SinkCandidate->operands(), true, false);
+      if (ScalarVFOnly)
+        continue;
+      Instruction *I = cast<Instruction>(
+          cast<VPReplicateRecipe>(SinkCandidate)->getUnderlyingValue());
+      auto *Clone = new VPReplicateRecipe(I, SinkCandidate->operands(), true);
       // TODO: add ".cloned" suffix to name of Clone's VPValue.
 
       Clone->insertBefore(SinkCandidate);
-      SmallVector<VPUser *, 4> Users(SinkCandidate->users());
-      for (auto *U : Users) {
+      for (auto *U : to_vector(SinkCandidate->getVPSingleValue()->users())) {
         auto *UI = cast<VPRecipeBase>(U);
         if (UI->getParent() == SinkTo)
           continue;
 
         for (unsigned Idx = 0; Idx != UI->getNumOperands(); Idx++) {
-          if (UI->getOperand(Idx) != SinkCandidate)
+          if (UI->getOperand(Idx) != SinkCandidate->getVPSingleValue())
             continue;
           UI->setOperand(Idx, Clone);
         }
@@ -175,7 +172,8 @@ bool VPlanTransforms::sinkScalarOperands(VPlan &Plan) {
     }
     SinkCandidate->moveBefore(*SinkTo, SinkTo->getFirstNonPhi());
     for (VPValue *Op : SinkCandidate->operands())
-      WorkList.insert(std::make_pair(SinkTo, Op));
+      if (auto *Def = Op->getDefiningRecipe())
+        WorkList.insert(std::make_pair(SinkTo, Def));
     Changed = true;
   }
   return Changed;
@@ -212,21 +210,19 @@ static VPBasicBlock *getPredicatedThenBlock(VPRegionBlock *R) {
   return nullptr;
 }
 
-bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
+// Merge replicate regions in their successor region, if a replicate region
+// is connected to a successor replicate region with the same predicate by a
+// single, empty VPBasicBlock.
+static bool mergeReplicateRegionsIntoSuccessors(VPlan &Plan) {
   SetVector<VPRegionBlock *> DeletedRegions;
-  bool Changed = false;
 
-  // Collect region blocks to process up-front, to avoid iterator invalidation
-  // issues while merging regions.
-  SmallVector<VPRegionBlock *, 8> CandidateRegions(
-      VPBlockUtils::blocksOnly<VPRegionBlock>(depth_first(
-          VPBlockRecursiveTraversalWrapper<VPBlockBase *>(Plan.getEntry()))));
-
-  // Check if Base is a predicated triangle, followed by an empty block,
-  // followed by another predicate triangle. If that's the case, move the
-  // recipes from the first to the second triangle.
-  for (VPRegionBlock *Region1 : CandidateRegions) {
-    if (DeletedRegions.contains(Region1))
+  // Collect replicate regions followed by an empty block, followed by another
+  // replicate region with matching masks to process front. This is to avoid
+  // iterator invalidation issues while merging regions.
+  SmallVector<VPRegionBlock *, 8> WorkList;
+  for (VPRegionBlock *Region1 : VPBlockUtils::blocksOnly<VPRegionBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    if (!Region1->isReplicator())
       continue;
     auto *MiddleBasicBlock =
         dyn_cast_or_null<VPBasicBlock>(Region1->getSingleSuccessor());
@@ -235,19 +231,29 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
 
     auto *Region2 =
         dyn_cast_or_null<VPRegionBlock>(MiddleBasicBlock->getSingleSuccessor());
-    if (!Region2)
+    if (!Region2 || !Region2->isReplicator())
       continue;
 
     VPValue *Mask1 = getPredicatedMask(Region1);
     VPValue *Mask2 = getPredicatedMask(Region2);
     if (!Mask1 || Mask1 != Mask2)
       continue;
+
+    assert(Mask1 && Mask2 && "both region must have conditions");
+    WorkList.push_back(Region1);
+  }
+
+  // Move recipes from Region1 to its successor region, if both are triangles.
+  for (VPRegionBlock *Region1 : WorkList) {
+    if (DeletedRegions.contains(Region1))
+      continue;
+    auto *MiddleBasicBlock = cast<VPBasicBlock>(Region1->getSingleSuccessor());
+    auto *Region2 = cast<VPRegionBlock>(MiddleBasicBlock->getSingleSuccessor());
+
     VPBasicBlock *Then1 = getPredicatedThenBlock(Region1);
     VPBasicBlock *Then2 = getPredicatedThenBlock(Region2);
     if (!Then1 || !Then2)
       continue;
-
-    assert(Mask1 && Mask2 && "both region must have conditions");
 
     // Note: No fusion-preventing memory dependencies are expected in either
     // region. Such dependencies should be rejected during earlier dependence
@@ -267,8 +273,7 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
       VPValue *PredInst1 =
           cast<VPPredInstPHIRecipe>(&Phi1ToMove)->getOperand(0);
       VPValue *Phi1ToMoveV = Phi1ToMove.getVPSingleValue();
-      SmallVector<VPUser *> Users(Phi1ToMoveV->users());
-      for (VPUser *U : Users) {
+      for (VPUser *U : to_vector(Phi1ToMoveV->users())) {
         auto *UI = dyn_cast<VPRecipeBase>(U);
         if (!UI || UI->getParent() != Then2)
           continue;
@@ -293,7 +298,109 @@ bool VPlanTransforms::mergeReplicateRegions(VPlan &Plan) {
 
   for (VPRegionBlock *ToDelete : DeletedRegions)
     delete ToDelete;
-  return Changed;
+  return !DeletedRegions.empty();
+}
+
+static VPRegionBlock *createReplicateRegion(VPReplicateRecipe *PredRecipe,
+                                            VPlan &Plan) {
+  Instruction *Instr = PredRecipe->getUnderlyingInstr();
+  // Build the triangular if-then region.
+  std::string RegionName = (Twine("pred.") + Instr->getOpcodeName()).str();
+  assert(Instr->getParent() && "Predicated instruction not in any basic block");
+  auto *BlockInMask = PredRecipe->getMask();
+  auto *BOMRecipe = new VPBranchOnMaskRecipe(BlockInMask);
+  auto *Entry = new VPBasicBlock(Twine(RegionName) + ".entry", BOMRecipe);
+
+  // Replace predicated replicate recipe with a replicate recipe without a
+  // mask but in the replicate region.
+  auto *RecipeWithoutMask = new VPReplicateRecipe(
+      PredRecipe->getUnderlyingInstr(),
+      make_range(PredRecipe->op_begin(), std::prev(PredRecipe->op_end())),
+      PredRecipe->isUniform());
+  auto *Pred = new VPBasicBlock(Twine(RegionName) + ".if", RecipeWithoutMask);
+
+  VPPredInstPHIRecipe *PHIRecipe = nullptr;
+  if (PredRecipe->getNumUsers() != 0) {
+    PHIRecipe = new VPPredInstPHIRecipe(RecipeWithoutMask);
+    PredRecipe->replaceAllUsesWith(PHIRecipe);
+    PHIRecipe->setOperand(0, RecipeWithoutMask);
+  }
+  PredRecipe->eraseFromParent();
+  auto *Exiting = new VPBasicBlock(Twine(RegionName) + ".continue", PHIRecipe);
+  VPRegionBlock *Region = new VPRegionBlock(Entry, Exiting, RegionName, true);
+
+  // Note: first set Entry as region entry and then connect successors starting
+  // from it in order, to propagate the "parent" of each VPBasicBlock.
+  VPBlockUtils::insertTwoBlocksAfter(Pred, Exiting, Entry);
+  VPBlockUtils::connectBlocks(Pred, Exiting);
+
+  return Region;
+}
+
+static void addReplicateRegions(VPlan &Plan) {
+  SmallVector<VPReplicateRecipe *> WorkList;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    for (VPRecipeBase &R : *VPBB)
+      if (auto *RepR = dyn_cast<VPReplicateRecipe>(&R)) {
+        if (RepR->isPredicated())
+          WorkList.push_back(RepR);
+      }
+  }
+
+  unsigned BBNum = 0;
+  for (VPReplicateRecipe *RepR : WorkList) {
+    VPBasicBlock *CurrentBlock = RepR->getParent();
+    VPBasicBlock *SplitBlock = CurrentBlock->splitAt(RepR->getIterator());
+
+    BasicBlock *OrigBB = RepR->getUnderlyingInstr()->getParent();
+    SplitBlock->setName(
+        OrigBB->hasName() ? OrigBB->getName() + "." + Twine(BBNum++) : "");
+    // Record predicated instructions for above packing optimizations.
+    VPBlockBase *Region = createReplicateRegion(RepR, Plan);
+    Region->setParent(CurrentBlock->getParent());
+    VPBlockUtils::disconnectBlocks(CurrentBlock, SplitBlock);
+    VPBlockUtils::connectBlocks(CurrentBlock, Region);
+    VPBlockUtils::connectBlocks(Region, SplitBlock);
+  }
+}
+
+void VPlanTransforms::createAndOptimizeReplicateRegions(VPlan &Plan) {
+  // Convert masked VPReplicateRecipes to if-then region blocks.
+  addReplicateRegions(Plan);
+
+  bool ShouldSimplify = true;
+  while (ShouldSimplify) {
+    ShouldSimplify = sinkScalarOperands(Plan);
+    ShouldSimplify |= mergeReplicateRegionsIntoSuccessors(Plan);
+    ShouldSimplify |= VPlanTransforms::mergeBlocksIntoPredecessors(Plan);
+  }
+}
+bool VPlanTransforms::mergeBlocksIntoPredecessors(VPlan &Plan) {
+  SmallVector<VPBasicBlock *> WorkList;
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_deep(Plan.getEntry()))) {
+    auto *PredVPBB =
+        dyn_cast_or_null<VPBasicBlock>(VPBB->getSinglePredecessor());
+    if (PredVPBB && PredVPBB->getNumSuccessors() == 1)
+      WorkList.push_back(VPBB);
+  }
+
+  for (VPBasicBlock *VPBB : WorkList) {
+    VPBasicBlock *PredVPBB = cast<VPBasicBlock>(VPBB->getSinglePredecessor());
+    for (VPRecipeBase &R : make_early_inc_range(*VPBB))
+      R.moveBefore(*PredVPBB, PredVPBB->end());
+    VPBlockUtils::disconnectBlocks(PredVPBB, VPBB);
+    auto *ParentRegion = cast_or_null<VPRegionBlock>(VPBB->getParent());
+    if (ParentRegion && ParentRegion->getExiting() == VPBB)
+      ParentRegion->setExiting(PredVPBB);
+    for (auto *Succ : to_vector(VPBB->successors())) {
+      VPBlockUtils::disconnectBlocks(VPBB, Succ);
+      VPBlockUtils::connectBlocks(PredVPBB, Succ);
+    }
+    delete VPBB;
+  }
+  return !WorkList.empty();
 }
 
 void VPlanTransforms::removeRedundantInductionCasts(VPlan &Plan) {
@@ -352,7 +459,10 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
     // everything WidenNewIV's users need. That is, WidenOriginalIV will
     // generate a vector phi or all users of WidenNewIV demand the first lane
     // only.
-    if (WidenOriginalIV->needsVectorIV() ||
+    if (any_of(WidenOriginalIV->users(),
+               [WidenOriginalIV](VPUser *U) {
+                 return !U->usesScalars(WidenOriginalIV);
+               }) ||
         vputils::onlyFirstLaneUsed(WidenNewIV)) {
       WidenNewIV->replaceAllUsesWith(WidenOriginalIV);
       WidenNewIV->eraseFromParent();
@@ -361,46 +471,63 @@ void VPlanTransforms::removeRedundantCanonicalIVs(VPlan &Plan) {
   }
 }
 
-void VPlanTransforms::removeDeadRecipes(VPlan &Plan, Loop &OrigLoop) {
-  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
-  // Remove dead recipes in header block. The recipes in the block are processed
-  // in reverse order, to catch chains of dead recipes.
-  // TODO: Remove dead recipes across whole plan.
-  for (VPRecipeBase &R : make_early_inc_range(reverse(*Header))) {
-    if (R.mayHaveSideEffects() || any_of(R.definedValues(), [](VPValue *V) {
-          return V->getNumUsers() > 0;
-        }))
-      continue;
-    R.eraseFromParent();
+void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+
+  for (VPBasicBlock *VPBB : reverse(VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT))) {
+    // The recipes in the block are processed in reverse order, to catch chains
+    // of dead recipes.
+    for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
+      if (R.mayHaveSideEffects() || any_of(R.definedValues(), [](VPValue *V) {
+            return V->getNumUsers() > 0;
+          }))
+        continue;
+      R.eraseFromParent();
+    }
   }
 }
 
 void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
   SmallVector<VPRecipeBase *> ToRemove;
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  bool HasOnlyVectorVFs = !Plan.hasVF(ElementCount::getFixed(1));
   for (VPRecipeBase &Phi : HeaderVPBB->phis()) {
-    auto *IV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
-    if (!IV ||
-        all_of(IV->users(), [IV](VPUser *U) { return !U->usesScalars(IV); }))
+    auto *WideIV = dyn_cast<VPWidenIntOrFpInductionRecipe>(&Phi);
+    if (!WideIV)
+      continue;
+    if (HasOnlyVectorVFs && none_of(WideIV->users(), [WideIV](VPUser *U) {
+          return U->usesScalars(WideIV);
+        }))
       continue;
 
-    const InductionDescriptor &ID = IV->getInductionDescriptor();
+    auto IP = HeaderVPBB->getFirstNonPhi();
+    VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
+    Type *ResultTy = WideIV->getPHINode()->getType();
+    if (Instruction *TruncI = WideIV->getTruncInst())
+      ResultTy = TruncI->getType();
+    const InductionDescriptor &ID = WideIV->getInductionDescriptor();
     VPValue *Step =
         vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
-    Instruction *TruncI = IV->getTruncInst();
-    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(
-        IV->getPHINode()->getType(), ID, Plan.getCanonicalIV(),
-        IV->getStartValue(), Step, TruncI ? TruncI->getType() : nullptr);
-    HeaderVPBB->insert(Steps, HeaderVPBB->getFirstNonPhi());
+    VPValue *BaseIV = CanonicalIV;
+    if (!CanonicalIV->isCanonical(ID.getKind(), WideIV->getStartValue(), Step,
+                                  ResultTy)) {
+      BaseIV = new VPDerivedIVRecipe(ID, WideIV->getStartValue(), CanonicalIV,
+                                     Step, ResultTy);
+      HeaderVPBB->insert(BaseIV->getDefiningRecipe(), IP);
+    }
+
+    VPScalarIVStepsRecipe *Steps = new VPScalarIVStepsRecipe(ID, BaseIV, Step);
+    HeaderVPBB->insert(Steps, IP);
 
     // Update scalar users of IV to use Step instead. Use SetVector to ensure
     // the list of users doesn't contain duplicates.
-    SetVector<VPUser *> Users(IV->user_begin(), IV->user_end());
+    SetVector<VPUser *> Users(WideIV->user_begin(), WideIV->user_end());
     for (VPUser *U : Users) {
-      if (!U->usesScalars(IV))
+      if (HasOnlyVectorVFs && !U->usesScalars(WideIV))
         continue;
       for (unsigned I = 0, E = U->getNumOperands(); I != E; I++) {
-        if (U->getOperand(I) != IV)
+        if (U->getOperand(I) != WideIV)
           continue;
         U->setOperand(I, Steps);
       }
@@ -423,4 +550,196 @@ void VPlanTransforms::removeRedundantExpandSCEVRecipes(VPlan &Plan) {
     ExpR->replaceAllUsesWith(I.first->second);
     ExpR->eraseFromParent();
   }
+}
+
+static bool canSimplifyBranchOnCond(VPInstruction *Term) {
+  VPInstruction *Not = dyn_cast<VPInstruction>(Term->getOperand(0));
+  if (!Not || Not->getOpcode() != VPInstruction::Not)
+    return false;
+
+  VPInstruction *ALM = dyn_cast<VPInstruction>(Not->getOperand(0));
+  return ALM && ALM->getOpcode() == VPInstruction::ActiveLaneMask;
+}
+
+void VPlanTransforms::optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                         unsigned BestUF,
+                                         PredicatedScalarEvolution &PSE) {
+  assert(Plan.hasVF(BestVF) && "BestVF is not available in Plan");
+  assert(Plan.hasUF(BestUF) && "BestUF is not available in Plan");
+  VPBasicBlock *ExitingVPBB =
+      Plan.getVectorLoopRegion()->getExitingBasicBlock();
+  auto *Term = dyn_cast<VPInstruction>(&ExitingVPBB->back());
+  // Try to simplify the branch condition if TC <= VF * UF when preparing to
+  // execute the plan for the main vector loop. We only do this if the
+  // terminator is:
+  //  1. BranchOnCount, or
+  //  2. BranchOnCond where the input is Not(ActiveLaneMask).
+  if (!Term || (Term->getOpcode() != VPInstruction::BranchOnCount &&
+                (Term->getOpcode() != VPInstruction::BranchOnCond ||
+                 !canSimplifyBranchOnCond(Term))))
+    return;
+
+  Type *IdxTy =
+      Plan.getCanonicalIV()->getStartValue()->getLiveInIRValue()->getType();
+  const SCEV *TripCount = createTripCountSCEV(IdxTy, PSE);
+  ScalarEvolution &SE = *PSE.getSE();
+  const SCEV *C =
+      SE.getConstant(TripCount->getType(), BestVF.getKnownMinValue() * BestUF);
+  if (TripCount->isZero() ||
+      !SE.isKnownPredicate(CmpInst::ICMP_ULE, TripCount, C))
+    return;
+
+  LLVMContext &Ctx = SE.getContext();
+  auto *BOC = new VPInstruction(
+      VPInstruction::BranchOnCond,
+      {Plan.getVPValueOrAddLiveIn(ConstantInt::getTrue(Ctx))});
+  Term->eraseFromParent();
+  ExitingVPBB->appendRecipe(BOC);
+  Plan.setVF(BestVF);
+  Plan.setUF(BestUF);
+  // TODO: Further simplifications are possible
+  //      1. Replace inductions with constants.
+  //      2. Replace vector loop region with VPBasicBlock.
+}
+
+#ifndef NDEBUG
+static VPRegionBlock *GetReplicateRegion(VPRecipeBase *R) {
+  auto *Region = dyn_cast_or_null<VPRegionBlock>(R->getParent()->getParent());
+  if (Region && Region->isReplicator()) {
+    assert(Region->getNumSuccessors() == 1 &&
+           Region->getNumPredecessors() == 1 && "Expected SESE region!");
+    assert(R->getParent()->size() == 1 &&
+           "A recipe in an original replicator region must be the only "
+           "recipe in its block");
+    return Region;
+  }
+  return nullptr;
+}
+#endif
+
+static bool properlyDominates(const VPRecipeBase *A, const VPRecipeBase *B,
+                              VPDominatorTree &VPDT) {
+  if (A == B)
+    return false;
+
+  auto LocalComesBefore = [](const VPRecipeBase *A, const VPRecipeBase *B) {
+    for (auto &R : *A->getParent()) {
+      if (&R == A)
+        return true;
+      if (&R == B)
+        return false;
+    }
+    llvm_unreachable("recipe not found");
+  };
+  const VPBlockBase *ParentA = A->getParent();
+  const VPBlockBase *ParentB = B->getParent();
+  if (ParentA == ParentB)
+    return LocalComesBefore(A, B);
+
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(A)) &&
+         "No replicate regions expected at this point");
+  assert(!GetReplicateRegion(const_cast<VPRecipeBase *>(B)) &&
+         "No replicate regions expected at this point");
+  return VPDT.properlyDominates(ParentA, ParentB);
+}
+
+/// Sink users of \p FOR after the recipe defining the previous value \p
+/// Previous of the recurrence. \returns true if all users of \p FOR could be
+/// re-arranged as needed or false if it is not possible.
+static bool
+sinkRecurrenceUsersAfterPrevious(VPFirstOrderRecurrencePHIRecipe *FOR,
+                                 VPRecipeBase *Previous,
+                                 VPDominatorTree &VPDT) {
+  // Collect recipes that need sinking.
+  SmallVector<VPRecipeBase *> WorkList;
+  SmallPtrSet<VPRecipeBase *, 8> Seen;
+  Seen.insert(Previous);
+  auto TryToPushSinkCandidate = [&](VPRecipeBase *SinkCandidate) {
+    // The previous value must not depend on the users of the recurrence phi. In
+    // that case, FOR is not a fixed order recurrence.
+    if (SinkCandidate == Previous)
+      return false;
+
+    if (isa<VPHeaderPHIRecipe>(SinkCandidate) ||
+        !Seen.insert(SinkCandidate).second ||
+        properlyDominates(Previous, SinkCandidate, VPDT))
+      return true;
+
+    WorkList.push_back(SinkCandidate);
+    return true;
+  };
+
+  // Recursively sink users of FOR after Previous.
+  WorkList.push_back(FOR);
+  for (unsigned I = 0; I != WorkList.size(); ++I) {
+    VPRecipeBase *Current = WorkList[I];
+    assert(Current->getNumDefinedValues() == 1 &&
+           "only recipes with a single defined value expected");
+    for (VPUser *User : Current->getVPSingleValue()->users()) {
+      if (auto *R = dyn_cast<VPRecipeBase>(User))
+        if (!TryToPushSinkCandidate(R))
+          return false;
+    }
+  }
+
+  // Keep recipes to sink ordered by dominance so earlier instructions are
+  // processed first.
+  sort(WorkList, [&VPDT](const VPRecipeBase *A, const VPRecipeBase *B) {
+    return properlyDominates(A, B, VPDT);
+  });
+
+  for (VPRecipeBase *SinkCandidate : WorkList) {
+    if (SinkCandidate == FOR)
+      continue;
+
+    SinkCandidate->moveAfter(Previous);
+    Previous = SinkCandidate;
+  }
+  return true;
+}
+
+bool VPlanTransforms::adjustFixedOrderRecurrences(VPlan &Plan,
+                                                  VPBuilder &Builder) {
+  VPDominatorTree VPDT;
+  VPDT.recalculate(Plan);
+
+  SmallVector<VPFirstOrderRecurrencePHIRecipe *> RecurrencePhis;
+  for (VPRecipeBase &R :
+       Plan.getVectorLoopRegion()->getEntry()->getEntryBasicBlock()->phis())
+    if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R))
+      RecurrencePhis.push_back(FOR);
+
+  for (VPFirstOrderRecurrencePHIRecipe *FOR : RecurrencePhis) {
+    SmallPtrSet<VPFirstOrderRecurrencePHIRecipe *, 4> SeenPhis;
+    VPRecipeBase *Previous = FOR->getBackedgeValue()->getDefiningRecipe();
+    // Fixed-order recurrences do not contain cycles, so this loop is guaranteed
+    // to terminate.
+    while (auto *PrevPhi =
+               dyn_cast_or_null<VPFirstOrderRecurrencePHIRecipe>(Previous)) {
+      assert(PrevPhi->getParent() == FOR->getParent());
+      assert(SeenPhis.insert(PrevPhi).second);
+      Previous = PrevPhi->getBackedgeValue()->getDefiningRecipe();
+    }
+
+    if (!sinkRecurrenceUsersAfterPrevious(FOR, Previous, VPDT))
+      return false;
+
+    // Introduce a recipe to combine the incoming and previous values of a
+    // fixed-order recurrence.
+    VPBasicBlock *InsertBlock = Previous->getParent();
+    if (isa<VPHeaderPHIRecipe>(Previous))
+      Builder.setInsertPoint(InsertBlock, InsertBlock->getFirstNonPhi());
+    else
+      Builder.setInsertPoint(InsertBlock, std::next(Previous->getIterator()));
+
+    auto *RecurSplice = cast<VPInstruction>(
+        Builder.createNaryOp(VPInstruction::FirstOrderRecurrenceSplice,
+                             {FOR, FOR->getBackedgeValue()}));
+
+    FOR->replaceAllUsesWith(RecurSplice);
+    // Set the first operand of RecurSplice to FOR again, after replacing
+    // all users.
+    RecurSplice->setOperand(0, FOR);
+  }
+  return true;
 }

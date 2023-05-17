@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
 using namespace mlir::vector;
@@ -20,7 +21,7 @@ using namespace mlir::vector;
 // Helper that picks the proper sequence for inserting.
 static Value insertOne(PatternRewriter &rewriter, Location loc, Value from,
                        Value into, int64_t offset) {
-  auto vectorType = into.getType().cast<VectorType>();
+  auto vectorType = cast<VectorType>(into.getType());
   if (vectorType.getRank() > 1)
     return rewriter.create<InsertOp>(loc, from, into, offset);
   return rewriter.create<vector::InsertElementOp>(
@@ -31,7 +32,7 @@ static Value insertOne(PatternRewriter &rewriter, Location loc, Value from,
 // Helper that picks the proper sequence for extracting.
 static Value extractOne(PatternRewriter &rewriter, Location loc, Value vector,
                         int64_t offset) {
-  auto vectorType = vector.getType().cast<VectorType>();
+  auto vectorType = cast<VectorType>(vector.getType());
   if (vectorType.getRank() > 1)
     return rewriter.create<ExtractOp>(loc, vector, offset);
   return rewriter.create<vector::ExtractElementOp>(
@@ -133,10 +134,10 @@ public:
     }
 
     int64_t offset =
-        op.getOffsets().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
     int64_t size = srcType.getShape().front();
     int64_t stride =
-        op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
 
     auto loc = op.getLoc();
     Value res = op.getDest();
@@ -173,7 +174,7 @@ public:
          off += stride, ++idx) {
       // 1. extract the proper subvector (or element) from source
       Value extractedSource = extractOne(rewriter, loc, op.getSource(), idx);
-      if (extractedSource.getType().isa<VectorType>()) {
+      if (isa<VectorType>(extractedSource.getType())) {
         // 2. If we have a vector, extract the proper subvector from destination
         // Otherwise we are at the element level and no need to recurse.
         Value extractedDest = extractOne(rewriter, loc, op.getDest(), off);
@@ -207,11 +208,10 @@ public:
     assert(!op.getOffsets().getValue().empty() && "Unexpected empty offsets");
 
     int64_t offset =
-        op.getOffsets().getValue().front().cast<IntegerAttr>().getInt();
-    int64_t size =
-        op.getSizes().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
+    int64_t size = cast<IntegerAttr>(op.getSizes().getValue().front()).getInt();
     int64_t stride =
-        op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
 
     assert(dstType.getElementType().isSignlessIntOrIndexOrFloat());
 
@@ -229,6 +229,52 @@ public:
                                            rewriter.getI64ArrayAttr(offsets));
     return success();
   }
+};
+
+/// For a 1-D ExtractStridedSlice, breaks it down into a chain of Extract ops
+/// to extract each element from the source, and then a chain of Insert ops
+/// to insert to the target vector.
+class Convert1DExtractStridedSliceIntoExtractInsertChain final
+    : public OpRewritePattern<ExtractStridedSliceOp> {
+public:
+  Convert1DExtractStridedSliceIntoExtractInsertChain(
+      MLIRContext *context,
+      std::function<bool(ExtractStridedSliceOp)> controlFn,
+      PatternBenefit benefit)
+      : OpRewritePattern(context, benefit), controlFn(std::move(controlFn)) {}
+
+  LogicalResult matchAndRewrite(ExtractStridedSliceOp op,
+                                PatternRewriter &rewriter) const override {
+    if (controlFn && !controlFn(op))
+      return failure();
+
+    // Only handle 1-D cases.
+    if (op.getOffsets().getValue().size() != 1)
+      return failure();
+
+    int64_t offset =
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
+    int64_t size = cast<IntegerAttr>(op.getSizes().getValue().front()).getInt();
+    int64_t stride =
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
+
+    Location loc = op.getLoc();
+    SmallVector<Value> elements;
+    elements.reserve(size);
+    for (int64_t i = offset, e = offset + size * stride; i < e; i += stride)
+      elements.push_back(rewriter.create<ExtractOp>(loc, op.getVector(), i));
+
+    Value result = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getZeroAttr(op.getType()));
+    for (int64_t i = 0; i < size; ++i)
+      result = rewriter.create<InsertOp>(loc, elements[i], result, i);
+
+    rewriter.replaceOp(op, result);
+    return success();
+  }
+
+private:
+  std::function<bool(ExtractStridedSliceOp)> controlFn;
 };
 
 /// RewritePattern for ExtractStridedSliceOp where the source vector is n-D.
@@ -252,11 +298,10 @@ public:
     assert(!op.getOffsets().getValue().empty() && "Unexpected empty offsets");
 
     int64_t offset =
-        op.getOffsets().getValue().front().cast<IntegerAttr>().getInt();
-    int64_t size =
-        op.getSizes().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getOffsets().getValue().front()).getInt();
+    int64_t size = cast<IntegerAttr>(op.getSizes().getValue().front()).getInt();
     int64_t stride =
-        op.getStrides().getValue().front().cast<IntegerAttr>().getInt();
+        cast<IntegerAttr>(op.getStrides().getValue().front()).getInt();
 
     auto loc = op.getLoc();
     auto elemType = dstType.getElementType();
@@ -285,16 +330,26 @@ public:
   }
 };
 
-void mlir::vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
-    RewritePatternSet &patterns) {
+void vector::populateVectorInsertExtractStridedSliceDecompositionPatterns(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
   patterns.add<DecomposeDifferentRankInsertStridedSlice,
-               DecomposeNDExtractStridedSlice>(patterns.getContext());
+               DecomposeNDExtractStridedSlice>(patterns.getContext(), benefit);
+}
+
+void vector::populateVectorExtractStridedSliceToExtractInsertChainPatterns(
+    RewritePatternSet &patterns,
+    std::function<bool(ExtractStridedSliceOp)> controlFn,
+    PatternBenefit benefit) {
+  patterns.add<Convert1DExtractStridedSliceIntoExtractInsertChain>(
+      patterns.getContext(), std::move(controlFn), benefit);
 }
 
 /// Populate the given list with patterns that convert from Vector to LLVM.
-void mlir::vector::populateVectorInsertExtractStridedSliceTransforms(
-    RewritePatternSet &patterns) {
-  populateVectorInsertExtractStridedSliceDecompositionPatterns(patterns);
+void vector::populateVectorInsertExtractStridedSliceTransforms(
+    RewritePatternSet &patterns, PatternBenefit benefit) {
+  populateVectorInsertExtractStridedSliceDecompositionPatterns(patterns,
+                                                               benefit);
   patterns.add<ConvertSameRankInsertStridedSliceIntoShuffle,
-               Convert1DExtractStridedSliceIntoShuffle>(patterns.getContext());
+               Convert1DExtractStridedSliceIntoShuffle>(patterns.getContext(),
+                                                        benefit);
 }

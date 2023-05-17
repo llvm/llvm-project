@@ -21,11 +21,6 @@ inline clang::DeclarationName getDeclarationName(TypeSystemClang &ast,
   return ast.getASTContext().DeclarationNames.getIdentifier(&II);
 }
 
-inline std::unique_ptr<TypeSystemClang> createAST() {
-  return std::make_unique<TypeSystemClang>("test ASTContext",
-                                           HostInfo::GetTargetTriple());
-}
-
 inline CompilerType createRecord(TypeSystemClang &ast, llvm::StringRef name) {
   return ast.CreateRecordType(ast.getASTContext().getTranslationUnitDecl(),
                               OptionalClangModuleID(),
@@ -49,16 +44,28 @@ inline CompilerType createRecordWithField(TypeSystemClang &ast,
   return t;
 }
 
+/// Simulates a Clang type system owned by a TypeSystemMap.
+class TypeSystemClangHolder {
+  std::shared_ptr<TypeSystemClang> m_ast;
+public:
+  TypeSystemClangHolder(const char *name)
+      : m_ast(std::make_shared<TypeSystemClang>(name,
+                                                HostInfo::GetTargetTriple())) {}
+  TypeSystemClang *GetAST() const { return m_ast.get(); }
+};
+  
 /// Constructs a TypeSystemClang that contains a single RecordDecl that contains
 /// a single FieldDecl. Utility class as this setup is a common starting point
 /// for unit test that exercise the ASTImporter.
 struct SourceASTWithRecord {
-  std::unique_ptr<TypeSystemClang> ast;
+  std::unique_ptr<TypeSystemClangHolder> holder;
+  TypeSystemClang *ast;
   CompilerType record_type;
   clang::RecordDecl *record_decl = nullptr;
   clang::FieldDecl *field_decl = nullptr;
   SourceASTWithRecord() {
-    ast = createAST();
+    holder = std::make_unique<TypeSystemClangHolder>("test ASTContext");
+    ast = holder->GetAST();
     record_type = createRecordWithField(
         *ast, "Source", ast->GetBasicType(lldb::BasicType::eBasicTypeChar),
         "a_field");

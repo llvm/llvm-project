@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 import gdbremote_testcase
 import random
 import select
@@ -125,8 +123,6 @@ else:
 
 
 class TestGdbRemoteConnection(gdbremote_testcase.GdbRemoteTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfRemote  # reverse connect is not a supported use case for now
     def test_reverse_connect(self):

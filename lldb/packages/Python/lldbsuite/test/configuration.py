@@ -51,8 +51,7 @@ sdkroot = None
 dwarf_version = 0
 
 # Any overridden settings.
-# Always disable default dynamic types for testing purposes.
-settings = [('target.prefer-dynamic-value', 'no-dynamic-values')]
+settings = []
 
 # Path to the FileCheck testing tool. Not optional.
 filecheck = None
@@ -123,6 +122,10 @@ all_tests = set()
 
 # LLDB library directory.
 lldb_libs_dir = None
+
+libcxx_include_dir = None
+libcxx_include_target_dir = None
+libcxx_library_dir = None
 
 # A plugin whose tests will be enabled, like intel-pt.
 enabled_plugins = []

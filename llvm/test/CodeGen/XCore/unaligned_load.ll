@@ -3,9 +3,9 @@
 ; Byte aligned load.
 ; CHECK: align1
 ; CHECK: bl __misaligned_load
-define i32 @align1(i32* %p) nounwind {
+define i32 @align1(ptr %p) nounwind {
 entry:
-	%0 = load i32, i32* %p, align 1		; <i32> [#uses=1]
+	%0 = load i32, ptr %p, align 1		; <i32> [#uses=1]
 	ret i32 %0
 }
 
@@ -14,9 +14,9 @@ entry:
 ; CHECK: ld16s
 ; CHECK: ld16s
 ; CHECK: or
-define i32 @align2(i32* %p) nounwind {
+define i32 @align2(ptr %p) nounwind {
 entry:
-	%0 = load i32, i32* %p, align 2		; <i32> [#uses=1]
+	%0 = load i32, ptr %p, align 2		; <i32> [#uses=1]
 	ret i32 %0
 }
 
@@ -29,6 +29,6 @@ entry:
 ; CHECK: or
 define i32 @align3() nounwind {
 entry:
-	%0 = load i32, i32* bitcast (i8* getelementptr ([5 x i8], [5 x i8]* @a, i32 0, i32 1) to i32*), align 1
+	%0 = load i32, ptr getelementptr ([5 x i8], ptr @a, i32 0, i32 1), align 1
 	ret i32 %0
 }

@@ -474,15 +474,15 @@ define i32 @lshr_sub(i32 %x, i32 %y) {
 
 ; negative test - one-use
 
-define i32 @lshr_sub_nsw_extra_use(i32 %x, i32 %y, i32* %p) {
+define i32 @lshr_sub_nsw_extra_use(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @lshr_sub_nsw_extra_use(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %sub = sub nsw i32 %x, %y
-  store i32 %sub, i32* %p
+  store i32 %sub, ptr %p
   %shr = lshr i32 %sub, 31
   ret i32 %shr
 }
@@ -548,15 +548,15 @@ define i32 @ashr_sub(i32 %x, i32 %y) {
 
 ; negative test - one-use
 
-define i32 @ashr_sub_nsw_extra_use(i32 %x, i32 %y, i32* %p) {
+define i32 @ashr_sub_nsw_extra_use(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @ashr_sub_nsw_extra_use(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[SUB]], 31
 ; CHECK-NEXT:    ret i32 [[SHR]]
 ;
   %sub = sub nsw i32 %x, %y
-  store i32 %sub, i32* %p
+  store i32 %sub, ptr %p
   %shr = ashr i32 %sub, 31
   ret i32 %shr
 }
@@ -581,4 +581,26 @@ define <3 x i43> @ashr_sub_nsw_splat_undef(<3 x i43> %x, <3 x i43> %y) {
   %sub = sub nsw <3 x i43> %x, %y
   %shr = ashr <3 x i43> %sub, <i43 42, i43 undef, i43 42>
   ret <3 x i43> %shr
+}
+
+define i8 @ashr_known_pos_exact(i8 %x, i8 %y) {
+; CHECK-LABEL: @ashr_known_pos_exact(
+; CHECK-NEXT:    [[P:%.*]] = and i8 [[X:%.*]], 127
+; CHECK-NEXT:    [[R:%.*]] = lshr exact i8 [[P]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %p = and i8 %x, 127
+  %r = ashr exact i8 %p, %y
+  ret i8 %r
+}
+
+define <2 x i8> @ashr_known_pos_exact_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @ashr_known_pos_exact_vec(
+; CHECK-NEXT:    [[P:%.*]] = mul nsw <2 x i8> [[X:%.*]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = lshr exact <2 x i8> [[P]], [[Y:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %p = mul nsw <2 x i8> %x, %x
+  %r = ashr exact <2 x i8> %p, %y
+  ret <2 x i8> %r
 }

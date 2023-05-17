@@ -323,11 +323,11 @@ static const CGFunctionInfo &getFunctionInfo(CodeGenModule &CGM,
 template <size_t N, size_t... Ints>
 static std::array<Address, N> getParamAddrs(std::index_sequence<Ints...> IntSeq,
                                             std::array<CharUnits, N> Alignments,
-                                            FunctionArgList Args,
+                                            const FunctionArgList &Args,
                                             CodeGenFunction *CGF) {
   return std::array<Address, N>{
       {Address(CGF->Builder.CreateLoad(CGF->GetAddrOfLocalVar(Args[Ints])),
-               CGF->VoidPtrTy, Alignments[Ints])...}};
+               CGF->VoidPtrTy, Alignments[Ints], KnownNonNull)...}};
 }
 
 // Template classes that are used as bases for classes that emit special
@@ -522,7 +522,8 @@ struct GenBinaryFunc : CopyStructVisitor<Derived, IsMove>,
     Address SrcAddr = this->getAddrWithOffset(Addrs[SrcIdx], this->Start);
 
     // Emit memcpy.
-    if (Size.getQuantity() >= 16 || !llvm::isPowerOf2_32(Size.getQuantity())) {
+    if (Size.getQuantity() >= 16 ||
+        !llvm::has_single_bit<uint32_t>(Size.getQuantity())) {
       llvm::Value *SizeVal =
           llvm::ConstantInt::get(this->CGF->SizeTy, Size.getQuantity());
       DstAddr =

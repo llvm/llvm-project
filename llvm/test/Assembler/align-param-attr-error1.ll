@@ -2,6 +2,6 @@
 ; Test parse errors when using form of align attribute with parentheses
 
 ; CHECK:  <stdin>:[[@LINE+1]]:42: error: expected '{' in function body
-define void @missing_Lparen(i8* align 4) %ptr) {
+define void @missing_Lparen(ptr align 4) %ptr) {
   ret void
 }

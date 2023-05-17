@@ -2,314 +2,475 @@
 ; RUN: opt -S -passes=instcombine < %s | FileCheck %s --check-prefixes=CHECK,LITTLE
 ; RUN: opt -S -passes=instcombine -data-layout="E" < %s | FileCheck %s --check-prefixes=CHECK,BIG
 
-define i8 @load_smaller_int(i16* %p) {
+define i8 @load_smaller_int(ptr %p) {
 ; LITTLE-LABEL: @load_smaller_int(
-; LITTLE-NEXT:    store i16 258, i16* [[P:%.*]], align 2
+; LITTLE-NEXT:    store i16 258, ptr [[P:%.*]], align 2
 ; LITTLE-NEXT:    ret i8 2
 ;
 ; BIG-LABEL: @load_smaller_int(
-; BIG-NEXT:    store i16 258, i16* [[P:%.*]], align 2
+; BIG-NEXT:    store i16 258, ptr [[P:%.*]], align 2
 ; BIG-NEXT:    ret i8 1
 ;
-  store i16 258, i16* %p
-  %p2 = bitcast i16* %p to i8*
-  %load = load i8, i8* %p2
+  store i16 258, ptr %p
+  %load = load i8, ptr %p
   ret i8 %load
 }
 
 ; This case can *not* be forwarded, as we only see part of the stored value.
-define i32 @load_larger_int(i16* %p) {
+define i32 @load_larger_int(ptr %p) {
 ; CHECK-LABEL: @load_larger_int(
-; CHECK-NEXT:    store i16 258, i16* [[P:%.*]], align 2
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i16* [[P]] to i32*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P2]], align 4
+; CHECK-NEXT:    store i16 258, ptr [[P:%.*]], align 2
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  store i16 258, i16* %p
-  %p2 = bitcast i16* %p to i32*
-  %load = load i32, i32* %p2
+  store i16 258, ptr %p
+  %load = load i32, ptr %p
   ret i32 %load
 }
 
-define i32 @vec_store_load_first(i32* %p) {
+define i32 @vec_store_load_first(ptr %p) {
 ; CHECK-LABEL: @vec_store_load_first(
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, <2 x i32>* [[P2]], align 8
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    ret i32 1
 ;
-  %p2 = bitcast i32* %p to <2 x i32>*
-  store <2 x i32> <i32 1, i32 2>, <2 x i32>* %p2
-  %load = load i32, i32* %p
+  store <2 x i32> <i32 1, i32 2>, ptr %p
+  %load = load i32, ptr %p
   ret i32 %load
 }
 
-define i17 @vec_store_load_first_odd_size(i17* %p) {
+define i17 @vec_store_load_first_odd_size(ptr %p) {
 ; CHECK-LABEL: @vec_store_load_first_odd_size(
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i17* [[P:%.*]] to <2 x i17>*
-; CHECK-NEXT:    store <2 x i17> <i17 1, i17 2>, <2 x i17>* [[P2]], align 8
-; CHECK-NEXT:    [[LOAD:%.*]] = load i17, i17* [[P]], align 4
+; CHECK-NEXT:    store <2 x i17> <i17 1, i17 2>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i17, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i17 [[LOAD]]
 ;
-  %p2 = bitcast i17* %p to <2 x i17>*
-  store <2 x i17> <i17 1, i17 2>, <2 x i17>* %p2
-  %load = load i17, i17* %p
+  store <2 x i17> <i17 1, i17 2>, ptr %p
+  %load = load i17, ptr %p
   ret i17 %load
 }
 
-define i32 @vec_store_load_first_constexpr(i32* %p) {
+define i32 @vec_store_load_first_constexpr(ptr %p) {
 ; CHECK-LABEL: @vec_store_load_first_constexpr(
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> bitcast (i64 ptrtoint (i32 (i32*)* @vec_store_load_first to i64) to <2 x i32>), <2 x i32>* [[P2]], align 8
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P]], align 4
+; CHECK-NEXT:    store <2 x i32> bitcast (i64 ptrtoint (ptr @vec_store_load_first to i64) to <2 x i32>), ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  %p2 = bitcast i32* %p to <2 x i32>*
-  store <2 x i32> bitcast (i64 ptrtoint (i32 (i32*)* @vec_store_load_first to i64) to <2 x i32>), <2 x i32>* %p2, align 8
-  %load = load i32, i32* %p, align 4
+  store <2 x i32> bitcast (i64 ptrtoint (ptr @vec_store_load_first to i64) to <2 x i32>), ptr %p, align 8
+  %load = load i32, ptr %p, align 4
   ret i32 %load
 }
 
-define i32 @vec_store_load_second(i32* %p) {
+define i32 @vec_store_load_second(ptr %p) {
 ; CHECK-LABEL: @vec_store_load_second(
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, <2 x i32>* [[P2]], align 8
-; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, i32* [[P]], i64 1
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P3]], align 4
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[P3:%.*]] = getelementptr i32, ptr [[P]], i64 1
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P3]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  %p2 = bitcast i32* %p to <2 x i32>*
-  store <2 x i32> <i32 1, i32 2>, <2 x i32>* %p2
-  %p3 = getelementptr i32, i32* %p, i64 1
-  %load = load i32, i32* %p3
+  store <2 x i32> <i32 1, i32 2>, ptr %p
+  %p3 = getelementptr i32, ptr %p, i64 1
+  %load = load i32, ptr %p3
   ret i32 %load
 }
 
-define i64 @vec_store_load_whole(i32* %p) {
+define i64 @vec_store_load_whole(ptr %p) {
 ; LITTLE-LABEL: @vec_store_load_whole(
-; LITTLE-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
-; LITTLE-NEXT:    store <2 x i32> <i32 1, i32 2>, <2 x i32>* [[P2]], align 8
+; LITTLE-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[P:%.*]], align 8
 ; LITTLE-NEXT:    ret i64 8589934593
 ;
 ; BIG-LABEL: @vec_store_load_whole(
-; BIG-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
-; BIG-NEXT:    store <2 x i32> <i32 1, i32 2>, <2 x i32>* [[P2]], align 8
+; BIG-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[P:%.*]], align 8
 ; BIG-NEXT:    ret i64 4294967298
 ;
-  %p2 = bitcast i32* %p to <2 x i32>*
-  store <2 x i32> <i32 1, i32 2>, <2 x i32>* %p2
-  %p3 = bitcast i32* %p to i64*
-  %load = load i64, i64* %p3
+  store <2 x i32> <i32 1, i32 2>, ptr %p
+  %load = load i64, ptr %p
   ret i64 %load
 }
 
-define i32 @vec_store_load_overlap(i32* %p) {
+define i32 @vec_store_load_overlap(ptr %p) {
 ; CHECK-LABEL: @vec_store_load_overlap(
-; CHECK-NEXT:    [[P2:%.*]] = bitcast i32* [[P:%.*]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, <2 x i32>* [[P2]], align 8
-; CHECK-NEXT:    [[P3:%.*]] = bitcast i32* [[P]] to i8*
-; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, i8* [[P3]], i64 2
-; CHECK-NEXT:    [[P5:%.*]] = bitcast i8* [[P4]] to i32*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[P5]], align 2
+; CHECK-NEXT:    store <2 x i32> <i32 1, i32 2>, ptr [[P:%.*]], align 8
+; CHECK-NEXT:    [[P4:%.*]] = getelementptr i8, ptr [[P]], i64 2
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[P4]], align 2
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
-  %p2 = bitcast i32* %p to <2 x i32>*
-  store <2 x i32> <i32 1, i32 2>, <2 x i32>* %p2
-  %p3 = bitcast i32* %p to i8*
-  %p4 = getelementptr i8, i8* %p3, i64 2
-  %p5 = bitcast i8* %p4 to i32*
-  %load = load i32, i32* %p5, align 2
+  store <2 x i32> <i32 1, i32 2>, ptr %p
+  %p4 = getelementptr i8, ptr %p, i64 2
+  %load = load i32, ptr %p4, align 2
   ret i32 %load
 }
 
-define i32 @load_i32_store_nxv4i32(i32* %a) {
+define i32 @load_i32_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i32_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A:%.*]] to <vscale x 4 x i32>*
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load i32, i32* [[A]], align 4
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[TMP0]]
 ;
 entry:
-  %0 = bitcast i32* %a to <vscale x 4 x i32>*
-  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* %0, align 16
-  %1 = load i32, i32* %a, align 4
-  ret i32 %1
+  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %0 = load i32, ptr %a, align 4
+  ret i32 %0
 }
 
-define i64 @load_i64_store_nxv8i8(i8* %a) {
+define i64 @load_i64_store_nxv8i8(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv8i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[A:%.*]] to <vscale x 8 x i8>*
-; CHECK-NEXT:    store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), <vscale x 8 x i8>* [[TMP0]], align 16
-; CHECK-NEXT:    [[A2:%.*]] = bitcast i8* [[A]] to i64*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, i64* [[A2]], align 8
+; CHECK-NEXT:    store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
 entry:
-  %0 = bitcast i8* %a to <vscale x 8 x i8>*
-  store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), <vscale x 8 x i8>* %0, align 16
-  %a2 = bitcast i8* %a to i64*
-  %load = load i64, i64* %a2, align 8
+  store <vscale x 8 x i8> shufflevector (<vscale x 8 x i8> insertelement (<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer), ptr %a, align 16
+  %load = load i64, ptr %a, align 8
   ret i64 %load
 }
 
-define i64 @load_i64_store_nxv4i32(i32* %a) {
+define i64 @load_i64_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A:%.*]] to <vscale x 4 x i32>*
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* [[TMP0]], align 16
-; CHECK-NEXT:    [[A2:%.*]] = bitcast i32* [[A]] to i64*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, i64* [[A2]], align 8
+; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
 entry:
-  %0 = bitcast i32* %a to <vscale x 4 x i32>*
-  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* %0, align 16
-  %a2 = bitcast i32* %a to i64*
-  %load = load i64, i64* %a2, align 8
+  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %load = load i64, ptr %a, align 8
   ret i64 %load
 }
 
-define i8 @load_i8_store_nxv4i32(i32* %a) {
+define i8 @load_i8_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_i8_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A:%.*]] to <vscale x 4 x i32>*
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* [[TMP0]], align 16
-; CHECK-NEXT:    [[A2:%.*]] = bitcast i32* [[A]] to i8*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i8, i8* [[A2]], align 1
+; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[LOAD]]
 ;
 entry:
-  %0 = bitcast i32* %a to <vscale x 4 x i32>*
-  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* %0, align 16
-  %a2 = bitcast i32* %a to i8*
-  %load = load i8, i8* %a2, align 1
+  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %load = load i8, ptr %a, align 1
   ret i8 %load
 }
 
-define float @load_f32_store_nxv4f32(float* %a) {
+define float @load_f32_store_nxv4f32(ptr %a) {
 ; CHECK-LABEL: @load_f32_store_nxv4f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A:%.*]] to <vscale x 4 x float>*
-; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float>* [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = load float, float* [[A]], align 4
-; CHECK-NEXT:    ret float [[TMP1]]
+; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[A]], align 4
+; CHECK-NEXT:    ret float [[TMP0]]
 ;
 entry:
-  %0 = bitcast float* %a to <vscale x 4 x float>*
-  store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.0, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float>* %0, align 16
-  %1 = load float, float* %a, align 4
-  ret float %1
+  store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.0, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %0 = load float, ptr %a, align 4
+  ret float %0
 }
 
-define i32 @load_i32_store_nxv4f32(float* %a) {
+define i32 @load_i32_store_nxv4f32(ptr %a) {
 ; CHECK-LABEL: @load_i32_store_nxv4f32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast float* [[A:%.*]] to <vscale x 4 x float>*
-; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float>* [[TMP0]], align 16
-; CHECK-NEXT:    [[A2:%.*]] = bitcast float* [[A]] to i32*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i32, i32* [[A2]], align 4
+; CHECK-NEXT:    store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.000000e+00, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load i32, ptr [[A]], align 4
 ; CHECK-NEXT:    ret i32 [[LOAD]]
 ;
 entry:
-  %0 = bitcast float* %a to <vscale x 4 x float>*
-  store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.0, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x float>* %0, align 16
-  %a2 = bitcast float* %a to i32*
-  %load = load i32, i32* %a2, align 4
+  store <vscale x 4 x float> shufflevector (<vscale x 4 x float> insertelement (<vscale x 4 x float> poison, float 1.0, i64 0), <vscale x 4 x float> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %load = load i32, ptr %a, align 4
   ret i32 %load
 }
 
-define <4 x i32> @load_v4i32_store_nxv4i32(i32* %a) {
+define <4 x i32> @load_v4i32_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_v4i32_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A:%.*]] to <vscale x 4 x i32>*
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to <4 x i32>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i32>, <4 x i32>* [[TMP1]], align 16
-; CHECK-NEXT:    ret <4 x i32> [[TMP2]]
+; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[A]], align 16
+; CHECK-NEXT:    ret <4 x i32> [[TMP0]]
 ;
 entry:
-  %0 = bitcast i32* %a to <vscale x 4 x i32>*
-  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* %0, align 16
-  %1 = bitcast i32* %a to <4 x i32>*
-  %2 = load <4 x i32>, <4 x i32>* %1, align 16
-  ret <4 x i32> %2
+  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %0 = load <4 x i32>, ptr %a, align 16
+  ret <4 x i32> %0
 }
 
-define <4 x i16> @load_v4i16_store_nxv4i32(i32* %a) {
+define <4 x i16> @load_v4i16_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_v4i16_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A:%.*]] to <vscale x 4 x i32>*
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to <4 x i16>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i16>, <4 x i16>* [[TMP1]], align 16
-; CHECK-NEXT:    ret <4 x i16> [[TMP2]]
+; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr [[A]], align 16
+; CHECK-NEXT:    ret <4 x i16> [[TMP0]]
 ;
 entry:
-  %0 = bitcast i32* %a to <vscale x 4 x i32>*
-  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* %0, align 16
-  %1 = bitcast i32* %a to <4 x i16>*
-  %2 = load <4 x i16>, <4 x i16>* %1, align 16
-  ret <4 x i16> %2
+  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %0 = load <4 x i16>, ptr %a, align 16
+  ret <4 x i16> %0
 }
 
 ; Loaded data type exceeds the known minimum size of the store.
-define i64 @load_i64_store_nxv4i8(i8* %a) {
+define i64 @load_i64_store_nxv4i8(ptr %a) {
 ; CHECK-LABEL: @load_i64_store_nxv4i8(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i8* [[A:%.*]] to <vscale x 4 x i8>*
-; CHECK-NEXT:    store <vscale x 4 x i8> shufflevector (<vscale x 4 x i8> insertelement (<vscale x 4 x i8> poison, i8 1, i32 0), <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i8>* [[TMP0]], align 16
-; CHECK-NEXT:    [[A2:%.*]] = bitcast i8* [[A]] to i64*
-; CHECK-NEXT:    [[LOAD:%.*]] = load i64, i64* [[A2]], align 8
+; CHECK-NEXT:    store <vscale x 4 x i8> shufflevector (<vscale x 4 x i8> insertelement (<vscale x 4 x i8> poison, i8 1, i32 0), <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[LOAD:%.*]] = load i64, ptr [[A]], align 8
 ; CHECK-NEXT:    ret i64 [[LOAD]]
 ;
 entry:
-  %0 = bitcast i8* %a to <vscale x 4 x i8>*
-  store <vscale x 4 x i8> shufflevector (<vscale x 4 x i8> insertelement (<vscale x 4 x i8> poison, i8 1, i32 0), <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i8>* %0, align 16
-  %a2 = bitcast i8* %a to i64*
-  %load = load i64, i64* %a2, align 8
+  store <vscale x 4 x i8> shufflevector (<vscale x 4 x i8> insertelement (<vscale x 4 x i8> poison, i8 1, i32 0), <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %load = load i64, ptr %a, align 8
   ret i64 %load
 }
 
 ; Loaded data size is unknown - we cannot guarantee it won't
 ; exceed the store size.
-define <vscale x 4 x i8> @load_nxv4i8_store_nxv4i32(i32* %a) {
+define <vscale x 4 x i8> @load_nxv4i8_store_nxv4i32(ptr %a) {
 ; CHECK-LABEL: @load_nxv4i8_store_nxv4i32(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast i32* [[A:%.*]] to <vscale x 4 x i32>*
-; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* [[TMP0]], align 16
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[A]] to <vscale x 4 x i8>*
-; CHECK-NEXT:    [[TMP2:%.*]] = load <vscale x 4 x i8>, <vscale x 4 x i8>* [[TMP1]], align 16
-; CHECK-NEXT:    ret <vscale x 4 x i8> [[TMP2]]
+; CHECK-NEXT:    store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr [[A:%.*]], align 16
+; CHECK-NEXT:    [[TMP0:%.*]] = load <vscale x 4 x i8>, ptr [[A]], align 16
+; CHECK-NEXT:    ret <vscale x 4 x i8> [[TMP0]]
 ;
 entry:
-  %0 = bitcast i32* %a to <vscale x 4 x i32>*
-  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), <vscale x 4 x i32>* %0, align 16
-  %1 = bitcast i32* %a to <vscale x 4 x i8>*
-  %2 = load <vscale x 4 x i8>, <vscale x 4 x i8>* %1, align 16
-  ret <vscale x 4 x i8> %2
+  store <vscale x 4 x i32> shufflevector (<vscale x 4 x i32> insertelement (<vscale x 4 x i32> poison, i32 1, i64 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer), ptr %a, align 16
+  %0 = load <vscale x 4 x i8>, ptr %a, align 16
+  ret <vscale x 4 x i8> %0
 }
 
-define i8 @load_i8_store_i1(i1* %a) {
+define i8 @load_i8_store_i1(ptr %a) {
 ; CHECK-LABEL: @load_i8_store_i1(
-; CHECK-NEXT:    store i1 true, i1* [[A:%.*]], align 1
-; CHECK-NEXT:    [[A_I8:%.*]] = bitcast i1* [[A]] to i8*
-; CHECK-NEXT:    [[V:%.*]] = load i8, i8* [[A_I8]], align 1
+; CHECK-NEXT:    store i1 true, ptr [[A:%.*]], align 1
+; CHECK-NEXT:    [[V:%.*]] = load i8, ptr [[A]], align 1
 ; CHECK-NEXT:    ret i8 [[V]]
 ;
-  store i1 true, i1* %a
-  %a.i8 = bitcast i1* %a to i8*
-  %v = load i8, i8* %a.i8
+  store i1 true, ptr %a
+  %v = load i8, ptr %a
   ret i8 %v
 }
 
-define i1 @load_i1_store_i8(i8* %a) {
+define i1 @load_i1_store_i8(ptr %a) {
 ; CHECK-LABEL: @load_i1_store_i8(
-; CHECK-NEXT:    store i8 1, i8* [[A:%.*]], align 1
+; CHECK-NEXT:    store i8 1, ptr [[A:%.*]], align 1
 ; CHECK-NEXT:    ret i1 true
 ;
-  store i8 1, i8* %a
-  %a.i1 = bitcast i8* %a to i1*
-  %v = load i1, i1* %a.i1
+  store i8 1, ptr %a
+  %v = load i1, ptr %a
   ret i1 %v
 }
+
+define i32 @load_after_memset_0(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret i32 0
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load i32, ptr %a
+  ret i32 %v
+}
+
+define float @load_after_memset_0_float(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_float(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret float 0.000000e+00
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load float, ptr %a
+  ret float %v
+}
+
+define i27 @load_after_memset_0_non_byte_sized(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_non_byte_sized(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret i27 0
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load i27, ptr %a
+  ret i27 %v
+}
+
+define i1 @load_after_memset_0_i1(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_i1(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret i1 false
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load i1, ptr %a
+  ret i1 %v
+}
+
+define <4 x i8> @load_after_memset_0_vec(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_vec(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    ret <4 x i8> zeroinitializer
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load <4 x i8>, ptr %a
+  ret <4 x i8> %v
+}
+
+define i32 @load_after_memset_1(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    ret i32 16843009
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load i32, ptr %a
+  ret i32 %v
+}
+
+define float @load_after_memset_1_float(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_float(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    ret float 0x3820202020000000
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load float, ptr %a
+  ret float %v
+}
+
+define i27 @load_after_memset_1_non_byte_sized(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_non_byte_sized(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    ret i27 16843009
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load i27, ptr %a
+  ret i27 %v
+}
+
+define i1 @load_after_memset_1_i1(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_i1(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    ret i1 true
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load i1, ptr %a
+  ret i1 %v
+}
+
+define <4 x i8> @load_after_memset_1_vec(ptr %a) {
+; CHECK-LABEL: @load_after_memset_1_vec(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 1, i64 16, i1 false)
+; CHECK-NEXT:    ret <4 x i8> <i8 1, i8 1, i8 1, i8 1>
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 1, i64 16, i1 false)
+  %v = load <4 x i8>, ptr %a
+  ret <4 x i8> %v
+}
+
+define i32 @load_after_memset_unknown(ptr %a, i8 %byte) {
+; CHECK-LABEL: @load_after_memset_unknown(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 [[BYTE:%.*]], i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 %byte, i64 16, i1 false)
+  %v = load i32, ptr %a
+  ret i32 %v
+}
+
+; TODO: Handle load at offset.
+define i32 @load_after_memset_0_offset(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_offset(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %gep = getelementptr i8, ptr %a, i64 4
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define i32 @load_after_memset_0_offset_too_large(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_offset_too_large(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 13
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %gep = getelementptr i8, ptr %a, i64 13
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define i32 @load_after_memset_0_offset_negative(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_offset_negative(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[A]], i64 -1
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %gep = getelementptr i8, ptr %a, i64 -1
+  %v = load i32, ptr %gep
+  ret i32 %v
+}
+
+define i32 @load_after_memset_0_clobber(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_clobber(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    store i8 1, ptr [[A]], align 1
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  store i8 1, ptr %a
+  %v = load i32, ptr %a
+  ret i32 %v
+}
+
+define i256 @load_after_memset_0_too_small(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_too_small(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i256, ptr [[A]], align 4
+; CHECK-NEXT:    ret i256 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load i256, ptr %a
+  ret i256 %v
+}
+
+define i129 @load_after_memset_0_too_small_by_one_bit(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_too_small_by_one_bit(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i129, ptr [[A]], align 4
+; CHECK-NEXT:    ret i129 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load i129, ptr %a
+  ret i129 %v
+}
+
+define i32 @load_after_memset_0_unknown_length(ptr %a, i64 %len) {
+; CHECK-LABEL: @load_after_memset_0_unknown_length(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[A:%.*]], i8 0, i64 [[LEN:%.*]], i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[A]], align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 %len, i1 false)
+  %v = load i32, ptr %a
+  ret i32 %v
+}
+
+define i32 @load_after_memset_0_atomic(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_atomic(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load atomic i32, ptr [[A]] seq_cst, align 4
+; CHECK-NEXT:    ret i32 [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load atomic i32, ptr %a seq_cst, align 4
+  ret i32 %v
+}
+
+define <vscale x 1 x i32> @load_after_memset_0_scalable(ptr %a) {
+; CHECK-LABEL: @load_after_memset_0_scalable(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr noundef nonnull align 1 dereferenceable(16) [[A:%.*]], i8 0, i64 16, i1 false)
+; CHECK-NEXT:    [[V:%.*]] = load <vscale x 1 x i32>, ptr [[A]], align 4
+; CHECK-NEXT:    ret <vscale x 1 x i32> [[V]]
+;
+  call void @llvm.memset.p0.i64(ptr %a, i8 0, i64 16, i1 false)
+  %v = load <vscale x 1 x i32>, ptr %a
+  ret <vscale x 1 x i32> %v
+}
+
+declare void @llvm.memset.p0.i64(ptr, i8, i64, i1)

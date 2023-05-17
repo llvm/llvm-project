@@ -41,7 +41,7 @@
 // RUN:   %run %t strndup 2>&1 | FileCheck %s --check-prefix=CHECK-NULL
 
 // win32 is disabled due to failing errno tests.
-// UNSUPPORTED: ubsan, windows-msvc
+// UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
 #include <assert.h>
 #include <errno.h>

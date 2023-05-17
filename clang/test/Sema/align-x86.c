@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c11 -triple i386-apple-darwin9 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 #define STATIC_ASSERT(cond) _Static_assert(cond, #cond)
 
@@ -38,10 +37,10 @@ typedef ALIGNED(2) struct {
 } aligned_before_struct;
 
 STATIC_ASSERT(sizeof(aligned_before_struct)       == 3);
-STATIC_ASSERT(sizeof(aligned_before_struct[1])    == 4);
-STATIC_ASSERT(sizeof(aligned_before_struct[2])    == 6);
-STATIC_ASSERT(sizeof(aligned_before_struct[2][1]) == 8);
-STATIC_ASSERT(sizeof(aligned_before_struct[1][2]) == 6);
+STATIC_ASSERT(sizeof(aligned_before_struct[1])    == 4); // expected-error {{size of array element}}
+STATIC_ASSERT(sizeof(aligned_before_struct[2])    == 6); // expected-error {{size of array element}}
+STATIC_ASSERT(sizeof(aligned_before_struct[2][1]) == 8); // expected-error {{size of array element}}
+STATIC_ASSERT(sizeof(aligned_before_struct[1][2]) == 6); // expected-error {{size of array element}}
 
 typedef struct ALIGNED(2) {
   char a[3];

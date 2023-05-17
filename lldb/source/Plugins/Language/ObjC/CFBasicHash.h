@@ -68,7 +68,7 @@ private:
   ExecutionContextRef m_exe_ctx_ref;
   bool m_mutable = true;
   bool m_multi = false;
-  HashType m_type;
+  HashType m_type = HashType::set;
 };
 
 } // namespace lldb_private

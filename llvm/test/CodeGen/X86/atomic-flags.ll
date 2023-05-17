@@ -4,7 +4,7 @@
 
 ; Make sure that flags are properly preserved despite atomic optimizations.
 
-define i32 @atomic_and_flags_1(i8* %p, i32 %a, i32 %b) {
+define i32 @atomic_and_flags_1(ptr %p, i32 %a, i32 %b) {
 ; X64-LABEL: atomic_and_flags_1:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl %edx, %esi
@@ -49,9 +49,9 @@ define i32 @atomic_and_flags_1(i8* %p, i32 %a, i32 %b) {
 
 L1:
   ; The following pattern will get folded.
-  %1 = load atomic i8, i8* %p seq_cst, align 1
+  %1 = load atomic i8, ptr %p seq_cst, align 1
   %2 = add i8 %1, 1 ; This forces the INC instruction to be generated.
-  store atomic i8 %2, i8* %p release, align 1
+  store atomic i8 %2, ptr %p release, align 1
 
   ; Use the comparison result again. We need to rematerialize the comparison
   ; somehow. This test checks that cmpl gets emitted again, but any
@@ -70,7 +70,7 @@ L4:
 }
 
 ; Same as above, but using 2 as immediate to avoid the INC instruction.
-define i32 @atomic_and_flags_2(i8* %p, i32 %a, i32 %b) {
+define i32 @atomic_and_flags_2(ptr %p, i32 %a, i32 %b) {
 ; X64-LABEL: atomic_and_flags_2:
 ; X64:       # %bb.0:
 ; X64-NEXT:    cmpl %edx, %esi
@@ -112,9 +112,9 @@ define i32 @atomic_and_flags_2(i8* %p, i32 %a, i32 %b) {
   %cmp = icmp eq i32 %a, %b
   br i1 %cmp, label %L1, label %L2
 L1:
-  %1 = load atomic i8, i8* %p seq_cst, align 1
+  %1 = load atomic i8, ptr %p seq_cst, align 1
   %2 = add i8 %1, 2
-  store atomic i8 %2, i8* %p release, align 1
+  store atomic i8 %2, ptr %p release, align 1
   br i1 %cmp, label %L3, label %L4
 L2:
   ret i32 2
@@ -128,7 +128,7 @@ L4:
 ; the flags are set for the result of the add result (the value stored to memory),
 ; not the value returned by the atomicrmw add.
 
-define zeroext i1 @xadd_cmp0_i64(i64* %x) nounwind {
+define zeroext i1 @xadd_cmp0_i64(ptr %x) nounwind {
 ; X64-LABEL: xadd_cmp0_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $1, %eax
@@ -159,12 +159,12 @@ define zeroext i1 @xadd_cmp0_i64(i64* %x) nounwind {
 ; X86-NEXT:    popl %esi
 ; X86-NEXT:    popl %ebx
 ; X86-NEXT:    retl
-  %add = atomicrmw add i64* %x, i64 1 seq_cst
+  %add = atomicrmw add ptr %x, i64 1 seq_cst
   %cmp = icmp eq i64 %add, 0
   ret i1 %cmp
 }
 
-define zeroext i1 @xadd_cmp0_i32(i32* %x) nounwind {
+define zeroext i1 @xadd_cmp0_i32(ptr %x) nounwind {
 ; X64-LABEL: xadd_cmp0_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movl $1, %eax
@@ -181,12 +181,12 @@ define zeroext i1 @xadd_cmp0_i32(i32* %x) nounwind {
 ; X86-NEXT:    testl %ecx, %ecx
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
-  %add = atomicrmw add i32* %x, i32 1 seq_cst
+  %add = atomicrmw add ptr %x, i32 1 seq_cst
   %cmp = icmp ne i32 %add, 0
   ret i1 %cmp
 }
 
-define zeroext i1 @xadd_cmp0_i16(i16* %x) nounwind {
+define zeroext i1 @xadd_cmp0_i16(ptr %x) nounwind {
 ; X64-LABEL: xadd_cmp0_i16:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movw $1, %ax
@@ -203,12 +203,12 @@ define zeroext i1 @xadd_cmp0_i16(i16* %x) nounwind {
 ; X86-NEXT:    testw %cx, %cx
 ; X86-NEXT:    sete %al
 ; X86-NEXT:    retl
-  %add = atomicrmw add i16* %x, i16 1 seq_cst
+  %add = atomicrmw add ptr %x, i16 1 seq_cst
   %cmp = icmp eq i16 %add, 0
   ret i1 %cmp
 }
 
-define zeroext i1 @xadd_cmp0_i8(i8* %x) nounwind {
+define zeroext i1 @xadd_cmp0_i8(ptr %x) nounwind {
 ; X64-LABEL: xadd_cmp0_i8:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movb $1, %al
@@ -225,7 +225,7 @@ define zeroext i1 @xadd_cmp0_i8(i8* %x) nounwind {
 ; X86-NEXT:    testb %cl, %cl
 ; X86-NEXT:    setne %al
 ; X86-NEXT:    retl
-  %add = atomicrmw add i8* %x, i8 1 seq_cst
+  %add = atomicrmw add ptr %x, i8 1 seq_cst
   %cmp = icmp ne i8 %add, 0
   ret i1 %cmp
 }

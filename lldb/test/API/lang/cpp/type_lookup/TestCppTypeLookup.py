@@ -11,8 +11,6 @@ from lldbsuite.test import decorators
 
 class TestCppTypeLookup(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_value(self, value, ivar_name, ivar_value):
         self.assertSuccess(value.GetError(), "Invalid valobj")
         ivar = value.GetChildMemberWithName(ivar_name)

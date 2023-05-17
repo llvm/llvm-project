@@ -16,3 +16,11 @@
 # RUN: grep -v UTC_ARGS %t.c > %t-no-args.c
 # RUN: %update_cc_test_checks %t-no-args.c
 # RUN: diff -u %t-no-args.c %S/Inputs/mangled_names.c.expected
+## Also try --version 2
+# RUN: %update_cc_test_checks %t.c --function-signature --version 2
+# RUN: diff -u %t.c %S/Inputs/mangled_names.c.funcsig.v2.expected
+## Restore the original file without --function-signature and check that
+## --version 2 will implicitly enable it.
+# RUN: cp -f %S/Inputs/mangled_names.c %t.c
+# RUN: %update_cc_test_checks %t.c --version 2
+# RUN: diff -u %t.c %S/Inputs/mangled_names.c.v2.expected

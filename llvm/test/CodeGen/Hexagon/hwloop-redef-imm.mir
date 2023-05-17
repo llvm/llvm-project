@@ -10,7 +10,7 @@
 # CHECK:  [[R0:%[0-9]+]]:intregs = A2_tfrsi 1920
 # CHECK:  J2_loop0r %bb.1, [[R0]]
 #
-# CHECK: bb.1.b1 (address-taken):
+# CHECK: bb.1.b1 (machine-block-address-taken):
 # CHECK:   ENDLOOP0 %bb.1
 
 

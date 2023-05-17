@@ -17,17 +17,17 @@
 ;;	     zero should not be added before it!
 ;;
         %FileType = type { i32, [256 x i8], i32, i32, i32, i32 }
-@OutputFiles = external global [16 x %FileType]         ; <[16 x %FileType]*> [#uses=1]
-@Output = internal global %FileType* null               ; <%FileType**> [#uses=1]
+@OutputFiles = external global [16 x %FileType]         ; <ptr> [#uses=1]
+@Output = internal global ptr null               ; <ptr> [#uses=1]
 
-define internal i32 @OpenOutput(i8* %filename.1) {
+define internal i32 @OpenOutput(ptr %filename.1) {
 entry:
-        %tmp.0 = load %FileType*, %FileType** @Output               ; <%FileType*> [#uses=1]
-        %tmp.4 = getelementptr %FileType, %FileType* %tmp.0, i64 1         ; <%FileType*> [#uses=1]
-        %addrOfGlobal = getelementptr [16 x %FileType], [16 x %FileType]* @OutputFiles, i64 0             ; <[16 x %FileType]*> [#uses=1]
-        %constantGEP = getelementptr [16 x %FileType], [16 x %FileType]* %addrOfGlobal, i64 1             ; <[16 x %FileType]*> [#uses=1]
-        %constantGEP.upgrd.1 = getelementptr [16 x %FileType], [16 x %FileType]* %constantGEP, i64 0, i64 0               ; <%FileType*> [#uses=1]
-        %tmp.10 = icmp eq %FileType* %tmp.4, %constantGEP.upgrd.1               ; <i1> [#uses=1]
+        %tmp.0 = load ptr, ptr @Output               ; <ptr> [#uses=1]
+        %tmp.4 = getelementptr %FileType, ptr %tmp.0, i64 1         ; <ptr> [#uses=1]
+        %addrOfGlobal = getelementptr [16 x %FileType], ptr @OutputFiles, i64 0             ; <ptr> [#uses=1]
+        %constantGEP = getelementptr [16 x %FileType], ptr %addrOfGlobal, i64 1             ; <ptr> [#uses=1]
+        %constantGEP.upgrd.1 = getelementptr [16 x %FileType], ptr %constantGEP, i64 0, i64 0               ; <ptr> [#uses=1]
+        %tmp.10 = icmp eq ptr %tmp.4, %constantGEP.upgrd.1               ; <i1> [#uses=1]
         br i1 %tmp.10, label %return, label %endif.0
 
 endif.0:                ; preds = %entry

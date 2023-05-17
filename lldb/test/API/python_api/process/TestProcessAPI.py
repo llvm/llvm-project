@@ -2,18 +2,14 @@
 Test SBProcess APIs, including ReadMemory(), WriteMemory(), and others.
 """
 
-from __future__ import print_function
-
-
 import lldb
+import sys
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.lldbutil import get_stopped_thread, state_type_to_str
 
 
 class ProcessAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -22,6 +18,18 @@ class ProcessAPITestCase(TestBase):
         self.line = line_number(
             "main.cpp",
             "// Set break point at this line and check variable 'my_char'.")
+
+    def test_scripted_implementation(self):
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+
+        (target, process, _, _) = \
+            lldbutil.run_to_source_breakpoint(self, "Set break point",
+                                              lldb.SBFileSpec("main.cpp"))
+
+        self.assertTrue(process, PROCESS_IS_VALID)
+        self.assertEqual(process.GetScriptedImplementation(), None)
+
 
     def test_read_memory(self):
         """Test Python SBProcess.ReadMemory() API."""
@@ -177,6 +185,32 @@ class ProcessAPITestCase(TestBase):
             "Result from SBProcess.ReadMemory() matches our expected output: 'a'",
             exe=False,
             startstr=b'a')
+
+        # Get the SBValue for the global variable 'my_cstring'.
+        val = frame.FindValue("my_cstring", lldb.eValueTypeVariableGlobal)
+        self.DebugSBValue(val)
+
+        addr = val.AddressOf().GetValueAsUnsigned()
+
+        # Write an empty string to memory
+        bytes_written = process.WriteMemoryAsCString(addr, "", error)
+        self.assertEqual(bytes_written, 0)
+        if not error.Success():
+            self.fail("SBProcess.WriteMemoryAsCString() failed")
+
+        message = "Hello!"
+        bytes_written = process.WriteMemoryAsCString(addr, message, error)
+        self.assertEqual(bytes_written, len(message) + 1)
+        if not error.Success():
+            self.fail("SBProcess.WriteMemoryAsCString() failed")
+
+        cstring = process.ReadCStringFromMemory(
+            val.AddressOf().GetValueAsUnsigned(), 256, error)
+        if not error.Success():
+            self.fail("SBProcess.ReadCStringFromMemory() failed")
+
+        self.assertEqual(cstring, message)
+
 
     def test_access_my_int(self):
         """Test access 'my_int' using Python SBProcess.GetByteOrder() and other APIs."""

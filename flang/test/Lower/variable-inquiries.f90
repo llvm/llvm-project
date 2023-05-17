@@ -16,6 +16,6 @@ subroutine issue844()
   ! CHECK: %[[box_load:.*]] = fir.load %[[a]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf64>>>>
   ! CHECK: %[[dim:.*]]:3 = fir.box_dims %[[box_load]], %c0{{.*}} : (!fir.box<!fir.heap<!fir.array<?xf64>>>, index) -> (index, index, index)
   ! CHECK: %[[cast:.*]] = fir.convert %[[dim]]#1 : (index) -> i64
-  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %[[cast]]) : (!fir.ref<i8>, i64) -> i1
+  ! CHECK: fir.call @_FortranAioOutputInteger64(%{{.*}}, %[[cast]]) {{.*}}: (!fir.ref<i8>, i64) -> i1
   print *, size(a, kind=8)
 end subroutine

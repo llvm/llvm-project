@@ -52,7 +52,7 @@ define i64 @t1_64(i64 %alignment) nounwind {
 
 ; Extra use test
 
-define i32 @t2_extrause(i32 %alignment, i32* %mask_storage) nounwind {
+define i32 @t2_extrause(i32 %alignment, ptr %mask_storage) nounwind {
 ; X86-LABEL: t2_extrause:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -71,7 +71,7 @@ define i32 @t2_extrause(i32 %alignment, i32* %mask_storage) nounwind {
 ; X64-NEXT:    # kill: def $eax killed $eax killed $rax
 ; X64-NEXT:    retq
   %mask = add i32 %alignment, -1
-  store i32 %mask, i32* %mask_storage
+  store i32 %mask, ptr %mask_storage
   %invmask = xor i32 %mask, -1
   ret i32 %invmask
 }

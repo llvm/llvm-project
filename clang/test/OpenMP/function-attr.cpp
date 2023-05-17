@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp -x c++ -triple x86_64-apple-darwin10  -stack-protector 2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -fopenmp -x c++ -triple x86_64-apple-darwin10  -stack-protector 2 -emit-llvm -o - %s | FileCheck %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -fopenmp-simd -x c++ -triple x86_64-apple-darwin10  -stack-protector 2 -emit-llvm -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
+// RUN: %clang_cc1 -fopenmp-simd -x c++ -triple x86_64-apple-darwin10  -stack-protector 2 -emit-llvm -o - %s | FileCheck --check-prefix SIMD-ONLY0 %s
 // SIMD-ONLY0-NOT: {{__kmpc|__tgt}}
 
 // Check that function attributes are added to the OpenMP runtime functions.
@@ -14,7 +14,7 @@ struct S {
   ~S() {}
 };
 
-// CHECK: define internal void @.omp.copyprivate.copy_func(i8* noundef %0, i8* noundef %1) [[ATTR0:#[0-9]+]] {
+// CHECK: define internal void @.omp.copyprivate.copy_func(ptr noundef %0, ptr noundef %1) [[ATTR0:#[0-9]+]] {
 
 void foo0();
 
@@ -41,7 +41,7 @@ int foo2() {
   return 0;
 }
 
-// CHECK: define internal void @.omp.reduction.reduction_func(i8* noundef %0, i8* noundef %1) [[ATTR0]] {
+// CHECK: define internal void @_Z4foo3iPfS_.omp_outlined.omp.reduction.reduction_func(ptr noundef %0, ptr noundef %1) [[ATTR0]] {
 
 float foo3(int n, float *a, float *b) {
   int i;

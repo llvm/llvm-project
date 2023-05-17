@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/MSF/MSFError.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 #include <string>
 
 using namespace llvm;
@@ -44,13 +43,17 @@ public:
       return "The data is in an unexpected format.";
     case msf_error_code::block_in_use:
       return "The block is already in use.";
+    case msf_error_code::stream_directory_overflow:
+      return "PDB stream directory too large.";
     }
     llvm_unreachable("Unrecognized msf_error_code");
   }
 };
 } // namespace
 
-static llvm::ManagedStatic<MSFErrorCategory> MSFCategory;
-const std::error_category &llvm::msf::MSFErrCategory() { return *MSFCategory; }
+const std::error_category &llvm::msf::MSFErrCategory() {
+  static MSFErrorCategory MSFCategory;
+  return MSFCategory;
+}
 
 char MSFError::ID;

@@ -9,16 +9,16 @@
 ; CHECK: fn2 Clobbered Registers: {{.*}} $r0h
 
 @h = external dso_local global [0 x i32], align 4
-@n = external dso_local global i32*, align 8
+@n = external dso_local global ptr, align 8
 
 define void @fn1() {
 bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
-  %tmp = getelementptr inbounds [0 x i32], [0 x i32]* @h, i64 0, i64 undef
-  %tmp2 = load i32, i32* %tmp
-  store i32 %tmp2, i32* undef
+  %tmp = getelementptr inbounds [0 x i32], ptr @h, i64 0, i64 undef
+  %tmp2 = load i32, ptr %tmp
+  store i32 %tmp2, ptr undef
   br label %bb1
 }
 
@@ -30,7 +30,7 @@ bb1:                                              ; preds = %bb
   br i1 undef, label %bb2, label %bb3
 
 bb2:                                              ; preds = %bb1
-  store i32* null, i32** @n
+  store ptr null, ptr @n
   unreachable
 
 bb3:                                              ; preds = %bb1

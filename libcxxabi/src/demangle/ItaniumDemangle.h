@@ -19,6 +19,7 @@
 #include "DemangleConfig.h"
 #include "StringView.h"
 #include "Utility.h"
+#include <__cxxabi_config.h>
 #include <algorithm>
 #include <cassert>
 #include <cctype>
@@ -26,7 +27,14 @@
 #include <cstdlib>
 #include <cstring>
 #include <limits>
+#include <new>
+#include <type_traits>
 #include <utility>
+
+#ifdef _LIBCXXABI_COMPILER_CLANG
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-template"
+#endif
 
 DEMANGLE_NAMESPACE_BEGIN
 
@@ -369,6 +377,10 @@ public:
   VendorExtQualType(const Node *Ty_, StringView Ext_, const Node *TA_)
       : Node(KVendorExtQualType), Ty(Ty_), Ext(Ext_), TA(TA_) {}
 
+  const Node *getTy() const { return Ty; }
+  StringView getExt() const { return Ext; }
+  const Node *getTA() const { return TA; }
+
   template <typename Fn> void match(Fn F) const { F(Ty, Ext, TA); }
 
   void printLeft(OutputBuffer &OB) const override {
@@ -416,6 +428,9 @@ public:
       : Node(KQualType, Child_->RHSComponentCache,
              Child_->ArrayCache, Child_->FunctionCache),
         Quals(Quals_), Child(Child_) {}
+
+  Qualifiers getQuals() const { return Quals; }
+  const Node *getChild() const { return Child; }
 
   template<typename Fn> void match(Fn F) const { F(Child, Quals); }
 
@@ -529,6 +544,8 @@ struct AbiTagAttr : Node {
 
   template<typename Fn> void match(Fn F) const { F(Base, Tag); }
 
+  StringView getBaseName() const override { return Base->getBaseName(); }
+
   void printLeft(OutputBuffer &OB) const override {
     Base->printLeft(OB);
     OB += "[abi:";
@@ -584,6 +601,8 @@ public:
   PointerType(const Node *Pointee_)
       : Node(KPointerType, Pointee_->RHSComponentCache),
         Pointee(Pointee_) {}
+
+  const Node *getPointee() const { return Pointee; }
 
   template<typename Fn> void match(Fn F) const { F(Pointee); }
 
@@ -1069,6 +1088,9 @@ class VectorType final : public Node {
 public:
   VectorType(const Node *BaseType_, const Node *Dimension_)
       : Node(KVectorType), BaseType(BaseType_), Dimension(Dimension_) {}
+
+  const Node *getBaseType() const { return BaseType; }
+  const Node *getDimension() const { return Dimension; }
 
   template<typename Fn> void match(Fn F) const { F(BaseType, Dimension); }
 
@@ -3019,14 +3041,21 @@ AbstractManglingParser<Derived, Alloc>::parseOperatorEncoding() {
   if (numLeft() < 2)
     return nullptr;
 
-  auto Op = std::lower_bound(
-      &Ops[0], &Ops[NumOps], First,
-      [](const OperatorInfo &Op_, const char *Enc_) { return Op_ < Enc_; });
-  if (Op == &Ops[NumOps] || *Op != First)
+  // We can't use lower_bound as that can link to symbols in the C++ library,
+  // and this must remain independant of that.
+  size_t lower = 0u, upper = NumOps - 1; // Inclusive bounds.
+  while (upper != lower) {
+    size_t middle = (upper + lower) / 2;
+    if (Ops[middle] < First)
+      lower = middle + 1;
+    else
+      upper = middle;
+  }
+  if (Ops[lower] != First)
     return nullptr;
 
   First += 2;
-  return Op;
+  return &Ops[lower];
 }
 
 //   <operator-name> ::= See parseOperatorEncoding()
@@ -5099,7 +5128,7 @@ template <>
 struct FloatData<long double>
 {
 #if defined(__mips__) && defined(__mips_n64) || defined(__aarch64__) || \
-    defined(__wasm__) || defined(__riscv)
+    defined(__wasm__) || defined(__riscv) || defined(__loongarch__)
     static const size_t mangled_size = 32;
 #elif defined(__arm__) || defined(__mips__) || defined(__hexagon__)
     static const size_t mangled_size = 16;
@@ -5476,5 +5505,9 @@ struct ManglingParser : AbstractManglingParser<ManglingParser<Alloc>, Alloc> {
 };
 
 DEMANGLE_NAMESPACE_END
+
+#ifdef _LIBCXXABI_COMPILER_CLANG
+#pragma clang diagnostic pop
+#endif
 
 #endif // DEMANGLE_ITANIUMDEMANGLE_H

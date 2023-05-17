@@ -3,7 +3,7 @@
 
 %struct.Foo = type { i32, %struct.Bar }
 %struct.Bar = type { i32, %struct.Buffer, i32 }
-%struct.Buffer = type { i8*, i32 }
+%struct.Buffer = type { ptr, i32 }
 
 ; This test checks that the load of store %2 is not dropped.
 ;
@@ -31,14 +31,12 @@ define i32 @pr34088() local_unnamed_addr {
 ; CHECK-NEXT:    retl
 entry:
   %foo = alloca %struct.Foo, align 4
-  %0 = bitcast %struct.Foo* %foo to i8*
-  call void @llvm.memset.p0i8.i32(i8* align 4 nonnull %0, i8 0, i32 20, i1 false)
-  %buffer1 = getelementptr inbounds %struct.Foo, %struct.Foo* %foo, i32 0, i32 1, i32 1
-  %1 = bitcast %struct.Buffer* %buffer1 to i64*
-  %2 = load i64, i64* %1, align 4
-  call void @llvm.memset.p0i8.i32(i8* align 4 nonnull %0, i8 -51, i32 20, i1 false)
-  store i64 %2, i64* %1, align 4
+  call void @llvm.memset.p0.i32(ptr align 4 nonnull %foo, i8 0, i32 20, i1 false)
+  %buffer1 = getelementptr inbounds %struct.Foo, ptr %foo, i32 0, i32 1, i32 1
+  %0 = load i64, ptr %buffer1, align 4
+  call void @llvm.memset.p0.i32(ptr align 4 nonnull %foo, i8 -51, i32 20, i1 false)
+  store i64 %0, ptr %buffer1, align 4
   ret i32 0
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1)

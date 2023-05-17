@@ -86,15 +86,13 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
   KernArgSegment->addRetAttr(
       Attribute::getWithDereferenceableBytes(Ctx, TotalKernArgSize));
 
-  unsigned AS = KernArgSegment->getType()->getPointerAddressSpace();
   uint64_t ExplicitArgOffset = 0;
 
   for (Argument &Arg : F.args()) {
     const bool IsByRef = Arg.hasByRefAttr();
     Type *ArgTy = IsByRef ? Arg.getParamByRefType() : Arg.getType();
-    MaybeAlign ABITypeAlign = IsByRef ? Arg.getParamAlign() : None;
-    if (!ABITypeAlign)
-      ABITypeAlign = DL.getABITypeAlign(ArgTy);
+    MaybeAlign ParamAlign = IsByRef ? Arg.getParamAlign() : std::nullopt;
+    Align ABITypeAlign = DL.getValueOrABITypeAlignment(ParamAlign, ArgTy);
 
     uint64_t Size = DL.getTypeSizeInBits(ArgTy);
     uint64_t AllocSize = DL.getTypeAllocSize(ArgTy);
@@ -112,8 +110,8 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
           Builder.getInt8Ty(), KernArgSegment, EltOffset,
           Arg.getName() + ".byval.kernarg.offset");
 
-      Value *CastOffsetPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          ArgOffsetPtr, Arg.getType());
+      Value *CastOffsetPtr =
+          Builder.CreateAddrSpaceCast(ArgOffsetPtr, Arg.getType());
       Arg.replaceAllUsesWith(CastOffsetPtr);
       continue;
     }
@@ -171,8 +169,6 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
       AdjustedArgTy = V4Ty;
     }
 
-    ArgPtr = Builder.CreateBitCast(ArgPtr, AdjustedArgTy->getPointerTo(AS),
-                                   ArgPtr->getName() + ".cast");
     LoadInst *Load =
         Builder.CreateAlignedLoad(AdjustedArgTy, ArgPtr, AdjustedAlign);
     Load->setMetadata(LLVMContext::MD_invariant_load, MDNode::get(Ctx, {}));
@@ -201,13 +197,11 @@ bool AMDGPULowerKernelArguments::runOnFunction(Function &F) {
                                                           DerefOrNullBytes))));
       }
 
-      unsigned ParamAlign = Arg.getParamAlignment();
-      if (ParamAlign != 0) {
+      if (MaybeAlign ParamAlign = Arg.getParamAlign()) {
         Load->setMetadata(
-          LLVMContext::MD_align,
-          MDNode::get(Ctx,
-                      MDB.createConstant(ConstantInt::get(Builder.getInt64Ty(),
-                                                          ParamAlign))));
+            LLVMContext::MD_align,
+            MDNode::get(Ctx, MDB.createConstant(ConstantInt::get(
+                                 Builder.getInt64Ty(), ParamAlign->value()))));
       }
     }
 

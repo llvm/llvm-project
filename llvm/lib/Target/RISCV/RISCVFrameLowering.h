@@ -1,4 +1,4 @@
-//===-- RISCVFrameLowering.h - Define frame lowering for RISCV -*- C++ -*--===//
+//===-- RISCVFrameLowering.h - Define frame lowering for RISC-V -*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This class implements RISCV-specific bits of TargetFrameLowering class.
+// This class implements RISC-V specific bits of TargetFrameLowering class.
 //
 //===----------------------------------------------------------------------===//
 
@@ -24,7 +24,8 @@ public:
   explicit RISCVFrameLowering(const RISCVSubtarget &STI)
       : TargetFrameLowering(StackGrowsDown,
                             /*StackAlignment=*/Align(16),
-                            /*LocalAreaOffset=*/0),
+                            /*LocalAreaOffset=*/0,
+                            /*TransientStackAlignment=*/Align(16)),
         STI(STI) {}
 
   void emitPrologue(MachineFunction &MF, MachineBasicBlock &MBB) const override;
@@ -67,22 +68,27 @@ public:
   bool canUseAsPrologue(const MachineBasicBlock &MBB) const override;
   bool canUseAsEpilogue(const MachineBasicBlock &MBB) const override;
 
+  bool enableShrinkWrapping(const MachineFunction &MF) const override;
+
   bool isSupportedStackID(TargetStackID::Value ID) const override;
   TargetStackID::Value getStackIDForScalableVectors() const override;
+
+  bool isStackIdSafeForLocalArea(unsigned StackId) const override {
+    // We don't support putting RISC-V Vector objects into the pre-allocated
+    // local frame block at the moment.
+    return StackId != TargetStackID::ScalableVector;
+  }
 
 protected:
   const RISCVSubtarget &STI;
 
 private:
   void determineFrameLayout(MachineFunction &MF) const;
-  void adjustReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                 const DebugLoc &DL, Register DestReg, Register SrcReg,
-                 int64_t Val, MachineInstr::MIFlag Flag) const;
   void adjustStackForRVV(MachineFunction &MF, MachineBasicBlock &MBB,
                          MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
                          int64_t Amount, MachineInstr::MIFlag Flag) const;
   std::pair<int64_t, Align>
-  assignRVVStackObjectOffsets(MachineFrameInfo &MFI) const;
+  assignRVVStackObjectOffsets(MachineFunction &MF) const;
 };
-}
+} // namespace llvm
 #endif

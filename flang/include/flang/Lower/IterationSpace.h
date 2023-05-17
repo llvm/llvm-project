@@ -17,6 +17,7 @@
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include <optional>
 
 namespace llvm {
 class raw_ostream;
@@ -36,29 +37,8 @@ using FrontEndSymbol = const semantics::Symbol *;
 
 class AbstractConverter;
 
-unsigned getHashValue(FrontEndExpr x);
-bool isEqual(FrontEndExpr x, FrontEndExpr y);
 } // namespace lower
 } // namespace Fortran
-
-namespace llvm {
-template <>
-struct DenseMapInfo<Fortran::lower::FrontEndExpr> {
-  static inline Fortran::lower::FrontEndExpr getEmptyKey() {
-    return reinterpret_cast<Fortran::lower::FrontEndExpr>(~0);
-  }
-  static inline Fortran::lower::FrontEndExpr getTombstoneKey() {
-    return reinterpret_cast<Fortran::lower::FrontEndExpr>(~0 - 1);
-  }
-  static unsigned getHashValue(Fortran::lower::FrontEndExpr v) {
-    return Fortran::lower::getHashValue(v);
-  }
-  static bool isEqual(Fortran::lower::FrontEndExpr lhs,
-                      Fortran::lower::FrontEndExpr rhs) {
-    return Fortran::lower::isEqual(lhs, rhs);
-  }
-};
-} // namespace llvm
 
 namespace Fortran::lower {
 
@@ -190,7 +170,7 @@ protected:
     assert(!empty());
     stack.pop_back();
     if (empty()) {
-      stmtCtx.finalize();
+      stmtCtx.finalizeAndReset();
       vmap.clear();
     }
   }
@@ -443,10 +423,12 @@ public:
     return loadBindings.lookup(base);
   }
 
-  /// `load` must be a LHS array_load. Returns `llvm::None` on error.
-  llvm::Optional<size_t> findArgPosition(fir::ArrayLoadOp load);
+  /// `load` must be a LHS array_load. Returns `std::nullopt` on error.
+  std::optional<size_t> findArgPosition(fir::ArrayLoadOp load);
 
-  bool isLHS(fir::ArrayLoadOp load) { return findArgPosition(load).hasValue(); }
+  bool isLHS(fir::ArrayLoadOp load) {
+    return findArgPosition(load).has_value();
+  }
 
   /// `load` must be a LHS array_load. Determine the threaded inner argument
   /// corresponding to this load.
@@ -463,17 +445,17 @@ public:
     llvm_unreachable("inner argument value was not found");
   }
 
-  llvm::Optional<fir::ArrayLoadOp> getLhsLoad(size_t i) {
+  std::optional<fir::ArrayLoadOp> getLhsLoad(size_t i) {
     assert(i < lhsBases.size());
-    if (lhsBases[counter].hasValue())
-      return findBinding(lhsBases[counter].getValue());
-    return llvm::None;
+    if (lhsBases[counter])
+      return findBinding(*lhsBases[counter]);
+    return std::nullopt;
   }
 
   /// Return the outermost loop in this FORALL nest.
   fir::DoLoopOp getOuterLoop() {
-    assert(outerLoop.hasValue());
-    return outerLoop.getValue();
+    assert(outerLoop.has_value());
+    return *outerLoop;
   }
 
   /// Return the statement context for the entire, outermost FORALL construct.
@@ -500,11 +482,11 @@ public:
   }
 
   void attachLoopCleanup(std::function<void(fir::FirOpBuilder &builder)> fn) {
-    if (!loopCleanup.hasValue()) {
+    if (!loopCleanup) {
       loopCleanup = fn;
       return;
     }
-    std::function<void(fir::FirOpBuilder &)> oldFn = loopCleanup.getValue();
+    std::function<void(fir::FirOpBuilder &)> oldFn = *loopCleanup;
     loopCleanup = [=](fir::FirOpBuilder &builder) {
       oldFn(builder);
       fn(builder);
@@ -519,7 +501,7 @@ public:
                                        const ExplicitIterSpace &);
 
   /// Finalize the current body statement context.
-  void finalizeContext() { stmtCtx.finalize(); }
+  void finalizeContext() { stmtCtx.finalizeAndReset(); }
 
   void appendLoops(const llvm::SmallVector<fir::DoLoopOp> &loops) {
     loopStack.push_back(loops);
@@ -539,7 +521,7 @@ private:
 
   // A stack of lists of front-end symbols.
   llvm::SmallVector<llvm::SmallVector<FrontEndSymbol>> symbolStack;
-  llvm::SmallVector<llvm::Optional<ArrayBases>> lhsBases;
+  llvm::SmallVector<std::optional<ArrayBases>> lhsBases;
   llvm::SmallVector<llvm::SmallVector<ArrayBases>> rhsBases;
   llvm::DenseMap<ArrayBases, fir::ArrayLoadOp> loadBindings;
 
@@ -550,9 +532,9 @@ private:
   StatementContext stmtCtx;
   llvm::SmallVector<mlir::Value> innerArgs;
   llvm::SmallVector<mlir::Value> initialArgs;
-  llvm::Optional<fir::DoLoopOp> outerLoop;
+  std::optional<fir::DoLoopOp> outerLoop;
   llvm::SmallVector<llvm::SmallVector<fir::DoLoopOp>> loopStack;
-  llvm::Optional<std::function<void(fir::FirOpBuilder &)>> loopCleanup;
+  std::optional<std::function<void(fir::FirOpBuilder &)>> loopCleanup;
   std::size_t forallContextOpen = 0;
   std::size_t counter = 0;
 };
@@ -563,7 +545,7 @@ template <typename A>
 bool symbolSetsIntersect(llvm::ArrayRef<FrontEndSymbol> ctrlSet,
                          const A &exprSyms) {
   for (const auto &sym : exprSyms)
-    if (std::find(ctrlSet.begin(), ctrlSet.end(), &sym.get()) != ctrlSet.end())
+    if (llvm::is_contained(ctrlSet, &sym.get()))
       return true;
   return false;
 }

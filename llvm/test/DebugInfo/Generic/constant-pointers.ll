@@ -4,7 +4,7 @@
 ; these could be signless data (dataN).
 
 ; Built with Clang from:
-; template <void *V, void (*F)(), int i>
+; template <ptr V, void (*F)(), int i>
 ; void func() {}
 ; template void func<nullptr, nullptr, 42>();
 

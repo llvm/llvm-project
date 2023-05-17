@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -std=c++2b -verify=expected,cxx20_2b,cxx2b    -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98_20,cxx20_2b -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -verify=expected,cxx20_23,cxx23    -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -verify=expected,cxx98_20,cxx20_23 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++17 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++14 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++11 -verify=expected,cxx98_17,cxx98_20 -triple %itanium_abi_triple %s -fexceptions -fcxx-exceptions -pedantic-errors
@@ -20,8 +20,8 @@ namespace dr301 { // dr301: yes
   void f() {
     bool a = (void(*)(S, S))operator+<S> < // expected-warning {{ordered comparison of function pointers}}
              (void(*)(S, S))operator+<S>;
-    bool b = (void(*)(S, S))operator- < // cxx20_2b-note {{to match this '<'}} cxx98_17-warning {{ordered comparison of function pointers}}
-             (void(*)(S, S))operator-; // cxx20_2b-error {{expected '>'}}
+    bool b = (void(*)(S, S))operator- < // cxx20_23-note {{to match this '<'}} cxx98_17-warning {{ordered comparison of function pointers}}
+             (void(*)(S, S))operator-; // cxx20_23-error {{expected '>'}}
     bool c = (void(*)(S, S))operator+ < // expected-note {{to match this '<'}}
              (void(*)(S, S))operator-; // expected-error {{expected '>'}}
   }
@@ -30,7 +30,7 @@ namespace dr301 { // dr301: yes
     typename T::template operator+<int> a; // expected-error {{typename specifier refers to a non-type template}} expected-error +{{}}
     // FIXME: This shouldn't say (null).
     class T::template operator+<int> b; // expected-error {{identifier followed by '<' indicates a class template specialization but (null) refers to a function template}}
-    enum T::template operator+<int> c; // expected-error {{expected identifier}} expected-error {{does not declare anything}}
+    enum T::template operator+<int> c; // expected-error {{expected identifier}}
     enum T::template operator+<int>::E d; // expected-error {{qualified name refers into a specialization of function template 'T::template operator +'}} expected-error {{forward reference}}
     enum T::template X<int>::E e;
     T::template operator+<int>::foobar(); // expected-error {{qualified name refers into a specialization of function template 'T::template operator +'}}
@@ -161,11 +161,20 @@ namespace dr308 { // dr308: yes
   struct C : A {};
   struct D : B, C {};
   void f() {
+    // NB: the warning here is correct despite being the opposite of the
+    // comments in the catch handlers. The "unreachable" comment is correct
+    // because there is an ambiguous base path to A from the D that is thrown.
+    // The warnings generated are also correct because the handlers handle
+    // const B& and const A& and we don't check to see if other derived classes
+    // exist that would cause an ambiguous base path. We issue the diagnostic
+    // despite the potential for a false positive because users are not
+    // expected to have ambiguous base paths all that often, so the false
+    // positive rate should be acceptably low.
     try {
       throw D();
-    } catch (const A&) { // expected-note {{for type 'const dr308::A &'}}
+    } catch (const A&) { // expected-note {{for type 'const A &'}}
       // unreachable
-    } catch (const B&) { // expected-warning {{exception of type 'const dr308::B &' will be caught by earlier handler}}
+    } catch (const B&) { // expected-warning {{exception of type 'const B &' will be caught by earlier handler}}
       // get here instead
     }
   }
@@ -450,10 +459,10 @@ namespace dr331 { // dr331: yes
 
 namespace dr332 { // dr332: dup 577
   void f(volatile void); // expected-error {{'void' as parameter must not have type qualifiers}}
-  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20_23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
   void g(const void); // expected-error {{'void' as parameter must not have type qualifiers}}
   void h(int n, volatile void); // expected-error {{'void' must be the first and only parameter}}
-  // cxx20_2b-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
+  // cxx20_23-warning@-1 {{volatile-qualified parameter type 'volatile void' is deprecated}}
 }
 
 namespace dr333 { // dr333: yes
@@ -638,7 +647,7 @@ namespace dr349 { // dr349: no
     template <class T> operator T ***() {
       int ***p = 0;
       return p; // cxx98_20-error {{cannot initialize return object of type 'const int ***' with an lvalue of type 'int ***'}}
-      // cxx2b-error@-1 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
+      // cxx23-error@-1 {{cannot initialize return object of type 'const int ***' with an rvalue of type 'int ***'}}
     }
   };
 
@@ -890,6 +899,33 @@ namespace dr359 { // dr359: yes
   };
 }
 
+namespace dr360 { // dr360: yes
+struct A {
+  int foo();
+  int bar();
+
+protected:
+  int baz();
+};
+
+struct B : A {
+private:
+  using A::foo; // #dr360-foo-using-decl
+protected:
+  using A::bar; // #dr360-bar-using-decl
+public:
+  using A::baz;
+};
+
+int main() {
+  int foo = B().foo(); // expected-error {{is a private member}}
+  // expected-note@#dr360-foo-using-decl {{declared private here}}
+  int bar = B().bar(); // expected-error {{is a protected member}}
+  // expected-note@#dr360-bar-using-decl {{declared protected here}}
+  int baz = B().baz();
+}
+} // namespace dr360
+
 // dr362: na
 // dr363: na
 
@@ -924,13 +960,13 @@ namespace dr367 { // dr367: yes
 namespace dr368 { // dr368: yes
   template<typename T, T> struct S {}; // expected-note {{here}}
   template<typename T> int f(S<T, T()> *); // expected-error {{function type}}
-  template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'dr368::X'}}
-  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
-  template<typename T> int g(S<T, true ? T() : T()> *); // cxx98_17-note {{type 'dr368::X'}}
-  // cxx20_2b-note@-1 {{candidate function [with T = dr368::X]}}
+  template<typename T> int g(S<T, (T())> *); // cxx98_17-note {{type 'X'}}
+  // cxx20_23-note@-1 {{candidate function [with T = dr368::X]}}
+  template<typename T> int g(S<T, true ? T() : T()> *); // cxx98_17-note {{type 'X'}}
+  // cxx20_23-note@-1 {{candidate function [with T = dr368::X]}}
   struct X {};
   int n = g<X>(0); // cxx98_17-error {{no matching}}
-  // cxx20_2b-error@-1 {{call to 'g' is ambiguous}}
+  // cxx20_23-error@-1 {{call to 'g' is ambiguous}}
 }
 
 // dr370: na

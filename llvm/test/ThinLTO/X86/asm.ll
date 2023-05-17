@@ -15,10 +15,10 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i8* @ref() {
+define ptr @ref() {
 entry:
-  %0 = tail call i8* asm sideeffect "lea ff_h264_cabac_tables(%rip), $0", "=&r,~{dirflag},~{fpsr},~{flags}"()
-  ret i8* %0
+  %0 = tail call ptr asm sideeffect "lea ff_h264_cabac_tables(%rip), $0", "=&r,~{dirflag},~{fpsr},~{flags}"()
+  ret ptr %0
 }
 
 ;--- b.s
@@ -31,4 +31,4 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: @ff_h264_cabac_tables = dso_local constant [1 x i8] c"\09"
 @ff_h264_cabac_tables = dso_local constant [1 x i8] c"\09"
 
-@llvm.compiler.used = appending global [1 x i8*] [i8* bitcast ([1 x i8]* @ff_h264_cabac_tables to i8*)], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @ff_h264_cabac_tables], section "llvm.metadata"

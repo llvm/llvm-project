@@ -11,15 +11,15 @@ entry:
   br i1 %tobool, label %if.else, label %if.then, !prof !30
 
 if.then:
-  %0 = load i32, i32* @odd, align 4
+  %0 = load i32, ptr @odd, align 4
   %inc = add i32 %0, 1
-  store i32 %inc, i32* @odd, align 4
+  store i32 %inc, ptr @odd, align 4
   br label %if.end
 
 if.else:
-  %1 = load i32, i32* @even, align 4
+  %1 = load i32, ptr @even, align 4
   %inc1 = add i32 %1, 1
-  store i32 %inc1, i32* @even, align 4
+  store i32 %inc1, ptr @even, align 4
   br label %if.end
 
 if.end:

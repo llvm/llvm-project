@@ -71,7 +71,6 @@ bool index::isFunctionLocalSymbol(const Decl *D) {
         return true;
       case VisibleNoLinkage:
       case UniqueExternalLinkage:
-      case ModuleInternalLinkage:
         llvm_unreachable("Not a sema linkage");
       case ModuleLinkage:
       case ExternalLinkage:

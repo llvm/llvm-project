@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 
 ; These tests ensure that we can compute the trip count of various forms of
 ; loops.  If the trip count of the loop is computable, then we will know what

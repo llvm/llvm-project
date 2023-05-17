@@ -11,14 +11,12 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 // Find potential incorrect uses of integer division of absl::Duration objects.
 //
 // For the user-facing documentation see: 
-// http://clang.llvm.org/extra/clang-tidy/checks/abseil-duration-division.html
+// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-division.html
 
 class DurationDivisionCheck : public ClangTidyCheck {
 public:
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONDIVISIONCHECK_H_

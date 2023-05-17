@@ -2,7 +2,7 @@
 
         %struct._Unwind_Context = type {  }
 
-define i32 @execute_stack_op(i8* %op_ptr, i8* %op_end, %struct._Unwind_Context* %context, i64 %initial) {
+define i32 @execute_stack_op(ptr %op_ptr, ptr %op_end, ptr %context, i64 %initial) {
 entry:
         br i1 false, label %bb, label %return
 
@@ -10,8 +10,8 @@ bb:             ; preds = %bb31, %entry
         br i1 false, label %bb6, label %bb31
 
 bb6:            ; preds = %bb
-        %tmp10 = load i64, i64* null, align 8                ; <i64> [#uses=1]
-        %tmp16 = load i64, i64* null, align 8                ; <i64> [#uses=1]
+        %tmp10 = load i64, ptr null, align 8                ; <i64> [#uses=1]
+        %tmp16 = load i64, ptr null, align 8                ; <i64> [#uses=1]
         br i1 false, label %bb23, label %bb31
 
 bb23:           ; preds = %bb6

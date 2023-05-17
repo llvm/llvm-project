@@ -7,7 +7,7 @@
 ; But if the target does have a single div/rem operation,
 ; the opposite transform is likely beneficial.
 
-define i8 @scalar_i8(i8 %x, i8 %y, i8* %divdst) nounwind {
+define i8 @scalar_i8(i8 %x, i8 %y, ptr %divdst) nounwind {
 ; ALL-LABEL: scalar_i8:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    and w8, w1, #0xff
@@ -17,13 +17,13 @@ define i8 @scalar_i8(i8 %x, i8 %y, i8* %divdst) nounwind {
 ; ALL-NEXT:    strb w8, [x2]
 ; ALL-NEXT:    ret
   %div = udiv i8 %x, %y
-  store i8 %div, i8* %divdst, align 4
+  store i8 %div, ptr %divdst, align 4
   %t1 = mul i8 %div, %y
   %t2 = sub i8 %x, %t1
   ret i8 %t2
 }
 
-define i16 @scalar_i16(i16 %x, i16 %y, i16* %divdst) nounwind {
+define i16 @scalar_i16(i16 %x, i16 %y, ptr %divdst) nounwind {
 ; ALL-LABEL: scalar_i16:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    and w8, w1, #0xffff
@@ -33,13 +33,13 @@ define i16 @scalar_i16(i16 %x, i16 %y, i16* %divdst) nounwind {
 ; ALL-NEXT:    strh w8, [x2]
 ; ALL-NEXT:    ret
   %div = udiv i16 %x, %y
-  store i16 %div, i16* %divdst, align 4
+  store i16 %div, ptr %divdst, align 4
   %t1 = mul i16 %div, %y
   %t2 = sub i16 %x, %t1
   ret i16 %t2
 }
 
-define i32 @scalar_i32(i32 %x, i32 %y, i32* %divdst) nounwind {
+define i32 @scalar_i32(i32 %x, i32 %y, ptr %divdst) nounwind {
 ; ALL-LABEL: scalar_i32:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    udiv w8, w0, w1
@@ -47,13 +47,13 @@ define i32 @scalar_i32(i32 %x, i32 %y, i32* %divdst) nounwind {
 ; ALL-NEXT:    str w8, [x2]
 ; ALL-NEXT:    ret
   %div = udiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %y
   %t2 = sub i32 %x, %t1
   ret i32 %t2
 }
 
-define i64 @scalar_i64(i64 %x, i64 %y, i64* %divdst) nounwind {
+define i64 @scalar_i64(i64 %x, i64 %y, ptr %divdst) nounwind {
 ; ALL-LABEL: scalar_i64:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    udiv x8, x0, x1
@@ -61,13 +61,13 @@ define i64 @scalar_i64(i64 %x, i64 %y, i64* %divdst) nounwind {
 ; ALL-NEXT:    str x8, [x2]
 ; ALL-NEXT:    ret
   %div = udiv i64 %x, %y
-  store i64 %div, i64* %divdst, align 4
+  store i64 %div, ptr %divdst, align 4
   %t1 = mul i64 %div, %y
   %t2 = sub i64 %x, %t1
   ret i64 %t2
 }
 
-define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, <16 x i8>* %divdst) nounwind {
+define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, ptr %divdst) nounwind {
 ; ALL-LABEL: vector_i128_i8:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    umov w8, v1.b[1]
@@ -138,13 +138,13 @@ define <16 x i8> @vector_i128_i8(<16 x i8> %x, <16 x i8> %y, <16 x i8>* %divdst)
 ; ALL-NEXT:    str q2, [x0]
 ; ALL-NEXT:    ret
   %div = udiv <16 x i8> %x, %y
-  store <16 x i8> %div, <16 x i8>* %divdst, align 16
+  store <16 x i8> %div, ptr %divdst, align 16
   %t1 = mul <16 x i8> %div, %y
   %t2 = sub <16 x i8> %x, %t1
   ret <16 x i8> %t2
 }
 
-define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, <8 x i16>* %divdst) nounwind {
+define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, ptr %divdst) nounwind {
 ; ALL-LABEL: vector_i128_i16:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    umov w8, v1.h[1]
@@ -183,13 +183,13 @@ define <8 x i16> @vector_i128_i16(<8 x i16> %x, <8 x i16> %y, <8 x i16>* %divdst
 ; ALL-NEXT:    str q2, [x0]
 ; ALL-NEXT:    ret
   %div = udiv <8 x i16> %x, %y
-  store <8 x i16> %div, <8 x i16>* %divdst, align 16
+  store <8 x i16> %div, ptr %divdst, align 16
   %t1 = mul <8 x i16> %div, %y
   %t2 = sub <8 x i16> %x, %t1
   ret <8 x i16> %t2
 }
 
-define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %divdst) nounwind {
+define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, ptr %divdst) nounwind {
 ; ALL-LABEL: vector_i128_i32:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    mov w8, v1.s[1]
@@ -212,13 +212,13 @@ define <4 x i32> @vector_i128_i32(<4 x i32> %x, <4 x i32> %y, <4 x i32>* %divdst
 ; ALL-NEXT:    str q2, [x0]
 ; ALL-NEXT:    ret
   %div = udiv <4 x i32> %x, %y
-  store <4 x i32> %div, <4 x i32>* %divdst, align 16
+  store <4 x i32> %div, ptr %divdst, align 16
   %t1 = mul <4 x i32> %div, %y
   %t2 = sub <4 x i32> %x, %t1
   ret <4 x i32> %t2
 }
 
-define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst) nounwind {
+define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, ptr %divdst) nounwind {
 ; ALL-LABEL: vector_i128_i64:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    fmov x8, d1
@@ -237,7 +237,7 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 ; ALL-NEXT:    sub v0.2d, v0.2d, v1.2d
 ; ALL-NEXT:    ret
   %div = udiv <2 x i64> %x, %y
-  store <2 x i64> %div, <2 x i64>* %divdst, align 16
+  store <2 x i64> %div, ptr %divdst, align 16
   %t1 = mul <2 x i64> %div, %y
   %t2 = sub <2 x i64> %x, %t1
   ret <2 x i64> %t2
@@ -245,7 +245,7 @@ define <2 x i64> @vector_i128_i64(<2 x i64> %x, <2 x i64> %y, <2 x i64>* %divdst
 
 ; Special tests.
 
-define i32 @scalar_i32_commutative(i32 %x, i32* %ysrc, i32* %divdst) nounwind {
+define i32 @scalar_i32_commutative(i32 %x, ptr %ysrc, ptr %divdst) nounwind {
 ; ALL-LABEL: scalar_i32_commutative:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    ldr w8, [x1]
@@ -253,16 +253,16 @@ define i32 @scalar_i32_commutative(i32 %x, i32* %ysrc, i32* %divdst) nounwind {
 ; ALL-NEXT:    msub w0, w8, w9, w0
 ; ALL-NEXT:    str w9, [x2]
 ; ALL-NEXT:    ret
-  %y = load i32, i32* %ysrc, align 4
+  %y = load i32, ptr %ysrc, align 4
   %div = udiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %y, %div ; commutative
   %t2 = sub i32 %x, %t1
   ret i32 %t2
 }
 
 ; We do not care about extra uses.
-define i32 @extrause(i32 %x, i32 %y, i32* %divdst, i32* %t1dst) nounwind {
+define i32 @extrause(i32 %x, i32 %y, ptr %divdst, ptr %t1dst) nounwind {
 ; ALL-LABEL: extrause:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    udiv w8, w0, w1
@@ -272,15 +272,15 @@ define i32 @extrause(i32 %x, i32 %y, i32* %divdst, i32* %t1dst) nounwind {
 ; ALL-NEXT:    str w9, [x3]
 ; ALL-NEXT:    ret
   %div = udiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %y
-  store i32 %t1, i32* %t1dst, align 4
+  store i32 %t1, ptr %t1dst, align 4
   %t2 = sub i32 %x, %t1
   ret i32 %t2
 }
 
 ; 'rem' should appear next to 'div'.
-define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_urem, i32* %uremdst) nounwind {
+define i32 @multiple_bb(i32 %x, i32 %y, ptr %divdst, i1 zeroext %store_urem, ptr %uremdst) nounwind {
 ; ALL-LABEL: multiple_bb:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    mov w8, w0
@@ -293,18 +293,18 @@ define i32 @multiple_bb(i32 %x, i32 %y, i32* %divdst, i1 zeroext %store_urem, i3
 ; ALL-NEXT:  .LBB10_2: // %end
 ; ALL-NEXT:    ret
   %div = udiv i32 %x, %y
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   br i1 %store_urem, label %do_urem, label %end
 do_urem:
   %t1 = mul i32 %div, %y
   %t2 = sub i32 %x, %t1
-  store i32 %t2, i32* %uremdst, align 4
+  store i32 %t2, ptr %uremdst, align 4
   br label %end
 end:
   ret i32 %div
 }
 
-define i32 @negative_different_x(i32 %x0, i32 %x1, i32 %y, i32* %divdst) nounwind {
+define i32 @negative_different_x(i32 %x0, i32 %x1, i32 %y, ptr %divdst) nounwind {
 ; ALL-LABEL: negative_different_x:
 ; ALL:       // %bb.0:
 ; ALL-NEXT:    udiv w8, w0, w2
@@ -312,7 +312,7 @@ define i32 @negative_different_x(i32 %x0, i32 %x1, i32 %y, i32* %divdst) nounwin
 ; ALL-NEXT:    str w8, [x3]
 ; ALL-NEXT:    ret
   %div = udiv i32 %x0, %y ; not %x1
-  store i32 %div, i32* %divdst, align 4
+  store i32 %div, ptr %divdst, align 4
   %t1 = mul i32 %div, %y
   %t2 = sub i32 %x1, %t1 ; not %x0
   ret i32 %t2

@@ -6,10 +6,10 @@
 
 target triple = "wasm32"
 
-@test1.targets = constant [4 x i8*] [i8* blockaddress(@test1, %bb0),
-                                     i8* blockaddress(@test1, %bb1),
-                                     i8* blockaddress(@test1, %bb2),
-                                     i8* blockaddress(@test1, %bb3)]
+@test1.targets = constant [4 x ptr] [ptr blockaddress(@test1, %bb0),
+                                     ptr blockaddress(@test1, %bb1),
+                                     ptr blockaddress(@test1, %bb2),
+                                     ptr blockaddress(@test1, %bb3)]
 
 ; Just check the barest skeleton of the structure
 ; CHECK-LABEL: test1:
@@ -34,36 +34,36 @@ target triple = "wasm32"
 ; CHECK-NEXT: .int32
 ; CHECK-NEXT: .int32
 
-define void @test1(i32* readonly %p, i32* %sink) #0 {
+define void @test1(ptr readonly %p, ptr %sink) #0 {
 
 entry:
-  %i0 = load i32, i32* %p
-  %target.i0 = getelementptr [4 x i8*], [4 x i8*]* @test1.targets, i32 0, i32 %i0
-  %target0 = load i8*, i8** %target.i0
+  %i0 = load i32, ptr %p
+  %target.i0 = getelementptr [4 x ptr], ptr @test1.targets, i32 0, i32 %i0
+  %target0 = load ptr, ptr %target.i0
   ; Only a subset of blocks are viable successors here.
-  indirectbr i8* %target0, [label %bb0, label %bb1]
+  indirectbr ptr %target0, [label %bb0, label %bb1]
 
 
 bb0:
-  store volatile i32 0, i32* %sink
+  store volatile i32 0, ptr %sink
   br label %latch
 
 bb1:
-  store volatile i32 1, i32* %sink
+  store volatile i32 1, ptr %sink
   br label %latch
 
 bb2:
-  store volatile i32 2, i32* %sink
+  store volatile i32 2, ptr %sink
   br label %latch
 
 bb3:
-  store volatile i32 3, i32* %sink
+  store volatile i32 3, ptr %sink
   br label %latch
 
 latch:
-  %i.next = load i32, i32* %p
-  %target.i.next = getelementptr [4 x i8*], [4 x i8*]* @test1.targets, i32 0, i32 %i.next
-  %target.next = load i8*, i8** %target.i.next
+  %i.next = load i32, ptr %p
+  %target.i.next = getelementptr [4 x ptr], ptr @test1.targets, i32 0, i32 %i.next
+  %target.next = load ptr, ptr %target.i.next
   ; A different subset of blocks are viable successors here.
-  indirectbr i8* %target.next, [label %bb1, label %bb2]
+  indirectbr ptr %target.next, [label %bb1, label %bb2]
 }

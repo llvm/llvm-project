@@ -28,4 +28,5 @@ class Op<bits<16> Opcode, dag outs, dag ins, string asmstr, list<dag> pattern = 
 // Pseudo instructions
 class Pseudo<dag outs, dag ins> : Op<0, outs, ins, ""> {
   let isPseudo = 1;
+  let hasSideEffects = 0;
 }

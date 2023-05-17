@@ -27,12 +27,19 @@
 // function argument, it is also considered equivalent. A cast is inserted at
 // the call site in that case.
 
-#include "PassDetail.h"
 #include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Pass/Pass.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_DROPEQUIVALENTBUFFERRESULTS
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 
@@ -75,12 +82,12 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
     SmallVector<Value> newReturnValues;
     BitVector erasedResultIndices(funcOp.getFunctionType().getNumResults());
     DenseMap<int64_t, int64_t> resultToArgs;
-    for (const auto &it : llvm::enumerate(returnOp.operands())) {
+    for (const auto &it : llvm::enumerate(returnOp.getOperands())) {
       bool erased = false;
       for (BlockArgument bbArg : funcOp.getArguments()) {
         Value val = it.value();
         while (auto castOp = val.getDefiningOp<memref::CastOp>())
-          val = castOp.source();
+          val = castOp.getSource();
 
         if (val == bbArg) {
           resultToArgs[it.index()] = bbArg.getArgNumber();
@@ -98,7 +105,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
     // Update function.
     funcOp.eraseResults(erasedResultIndices);
-    returnOp.operandsMutable().assign(newReturnValues);
+    returnOp.getOperandsMutable().assign(newReturnValues);
 
     // Update function calls.
     module.walk([&](func::CallOp callOp) {
@@ -107,7 +114,7 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
       rewriter.setInsertionPoint(callOp);
       auto newCallOp = rewriter.create<func::CallOp>(callOp.getLoc(), funcOp,
-                                                     callOp.operands());
+                                                     callOp.getOperands());
       SmallVector<Value> newResults;
       int64_t nextResult = 0;
       for (int64_t i = 0; i < callOp.getNumResults(); ++i) {
@@ -137,7 +144,8 @@ mlir::bufferization::dropEquivalentBufferResults(ModuleOp module) {
 
 namespace {
 struct DropEquivalentBufferResultsPass
-    : DropEquivalentBufferResultsBase<DropEquivalentBufferResultsPass> {
+    : bufferization::impl::DropEquivalentBufferResultsBase<
+          DropEquivalentBufferResultsPass> {
   void runOnOperation() override {
     if (failed(bufferization::dropEquivalentBufferResults(getOperation())))
       return signalPassFailure();

@@ -3,8 +3,8 @@
 
 ; Based on the debuginfo-tests/sret.cpp code.
 
-; CHECK-DWO: DW_AT_GNU_dwo_id (0xa58a336e896549f1)
-; CHECK-DWO: DW_AT_GNU_dwo_id (0xa58a336e896549f1)
+; CHECK-DWO: DW_AT_GNU_dwo_id (0x7db1cc8453a47c44)
+; CHECK-DWO: DW_AT_GNU_dwo_id (0x7db1cc8453a47c44)
 
 ; RUN: llc -O0 -fast-isel=true -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,FASTISEL %s
 ; RUN: llc -O0 -fast-isel=false -mtriple=x86_64-apple-darwin -filetype=obj -o - %s | llvm-dwarfdump -debug-info - | FileCheck -check-prefixes=CHECK,SDAG %s
@@ -18,32 +18,31 @@
 ; SDAG-NEXT:     [{{.*}}, {{.*}}): DW_OP_breg6 RBP-32, DW_OP_deref)
 ; CHECK-NEXT:   DW_AT_name {{.*}}"a"
 
-%class.A = type { i32 (...)**, i32 }
+%class.A = type { ptr, i32 }
 %class.B = type { i8 }
 
-@_ZTV1A = linkonce_odr unnamed_addr constant [4 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* bitcast (void (%class.A*)* @_ZN1AD2Ev to i8*), i8* bitcast (void (%class.A*)* @_ZN1AD0Ev to i8*)]
-@_ZTVN10__cxxabiv117__class_type_infoE = external global i8*
+@_ZTV1A = linkonce_odr unnamed_addr constant [4 x ptr] [ptr null, ptr @_ZTI1A, ptr @_ZN1AD2Ev, ptr @_ZN1AD0Ev]
+@_ZTVN10__cxxabiv117__class_type_infoE = external global ptr
 @_ZTS1A = linkonce_odr constant [3 x i8] c"1A\00"
-@_ZTI1A = linkonce_odr constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZTS1A, i32 0, i32 0) }
+@_ZTI1A = linkonce_odr constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1A }
 
-@_ZN1AC1Ei = alias void (%class.A*, i32), void (%class.A*, i32)* @_ZN1AC2Ei
-@_ZN1AC1ERKS_ = alias void (%class.A*, %class.A*), void (%class.A*, %class.A*)* @_ZN1AC2ERKS_
+@_ZN1AC1Ei = alias void (ptr, i32), ptr @_ZN1AC2Ei
+@_ZN1AC1ERKS_ = alias void (ptr, ptr), ptr @_ZN1AC2ERKS_
 
 ; Function Attrs: nounwind uwtable
-define void @_ZN1AC2Ei(%class.A* %this, i32 %i) unnamed_addr #0 align 2 !dbg !49 {
+define void @_ZN1AC2Ei(ptr %this, i32 %i) unnamed_addr #0 align 2 !dbg !49 {
 entry:
-  %this.addr = alloca %class.A*, align 8
+  %this.addr = alloca ptr, align 8
   %i.addr = alloca i32, align 4
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !67, metadata !DIExpression()), !dbg !69
-  store i32 %i, i32* %i.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %i.addr, metadata !70, metadata !DIExpression()), !dbg !71
-  %this1 = load %class.A*, %class.A** %this.addr
-  %0 = bitcast %class.A* %this1 to i8***, !dbg !72
-  store i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1A, i64 0, i64 2), i8*** %0, !dbg !72
-  %m_int = getelementptr inbounds %class.A, %class.A* %this1, i32 0, i32 1, !dbg !72
-  %1 = load i32, i32* %i.addr, align 4, !dbg !72
-  store i32 %1, i32* %m_int, align 4, !dbg !72
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !67, metadata !DIExpression()), !dbg !69
+  store i32 %i, ptr %i.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %i.addr, metadata !70, metadata !DIExpression()), !dbg !71
+  %this1 = load ptr, ptr %this.addr
+  store ptr getelementptr inbounds ([4 x ptr], ptr @_ZTV1A, i64 0, i64 2), ptr %this1, !dbg !72
+  %m_int = getelementptr inbounds %class.A, ptr %this1, i32 0, i32 1, !dbg !72
+  %0 = load i32, ptr %i.addr, align 4, !dbg !72
+  store i32 %0, ptr %m_int, align 4, !dbg !72
   ret void, !dbg !73
 }
 
@@ -51,74 +50,73 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind uwtable
-define void @_ZN1AC2ERKS_(%class.A* %this, %class.A* %rhs) unnamed_addr #0 align 2 !dbg !50 {
+define void @_ZN1AC2ERKS_(ptr %this, ptr %rhs) unnamed_addr #0 align 2 !dbg !50 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  %rhs.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !74, metadata !DIExpression()), !dbg !75
-  store %class.A* %rhs, %class.A** %rhs.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %rhs.addr, metadata !76, metadata !DIExpression()), !dbg !77
-  %this1 = load %class.A*, %class.A** %this.addr
-  %0 = bitcast %class.A* %this1 to i8***, !dbg !78
-  store i8** getelementptr inbounds ([4 x i8*], [4 x i8*]* @_ZTV1A, i64 0, i64 2), i8*** %0, !dbg !78
-  %m_int = getelementptr inbounds %class.A, %class.A* %this1, i32 0, i32 1, !dbg !78
-  %1 = load %class.A*, %class.A** %rhs.addr, align 8, !dbg !78
-  %m_int2 = getelementptr inbounds %class.A, %class.A* %1, i32 0, i32 1, !dbg !78
-  %2 = load i32, i32* %m_int2, align 4, !dbg !78
-  store i32 %2, i32* %m_int, align 4, !dbg !78
+  %this.addr = alloca ptr, align 8
+  %rhs.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !74, metadata !DIExpression()), !dbg !75
+  store ptr %rhs, ptr %rhs.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %rhs.addr, metadata !76, metadata !DIExpression()), !dbg !77
+  %this1 = load ptr, ptr %this.addr
+  store ptr getelementptr inbounds ([4 x ptr], ptr @_ZTV1A, i64 0, i64 2), ptr %this1, !dbg !78
+  %m_int = getelementptr inbounds %class.A, ptr %this1, i32 0, i32 1, !dbg !78
+  %0 = load ptr, ptr %rhs.addr, align 8, !dbg !78
+  %m_int2 = getelementptr inbounds %class.A, ptr %0, i32 0, i32 1, !dbg !78
+  %1 = load i32, ptr %m_int2, align 4, !dbg !78
+  store i32 %1, ptr %m_int, align 4, !dbg !78
   ret void, !dbg !79
 }
 
 ; Function Attrs: nounwind uwtable
-define %class.A* @_ZN1AaSERKS_(%class.A* %this, %class.A* %rhs) #0 align 2 !dbg !51 {
+define ptr @_ZN1AaSERKS_(ptr %this, ptr %rhs) #0 align 2 !dbg !51 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  %rhs.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !80, metadata !DIExpression()), !dbg !81
-  store %class.A* %rhs, %class.A** %rhs.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %rhs.addr, metadata !82, metadata !DIExpression()), !dbg !83
-  %this1 = load %class.A*, %class.A** %this.addr
-  %0 = load %class.A*, %class.A** %rhs.addr, align 8, !dbg !84
-  %m_int = getelementptr inbounds %class.A, %class.A* %0, i32 0, i32 1, !dbg !84
-  %1 = load i32, i32* %m_int, align 4, !dbg !84
-  %m_int2 = getelementptr inbounds %class.A, %class.A* %this1, i32 0, i32 1, !dbg !84
-  store i32 %1, i32* %m_int2, align 4, !dbg !84
-  ret %class.A* %this1, !dbg !85
+  %this.addr = alloca ptr, align 8
+  %rhs.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !80, metadata !DIExpression()), !dbg !81
+  store ptr %rhs, ptr %rhs.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %rhs.addr, metadata !82, metadata !DIExpression()), !dbg !83
+  %this1 = load ptr, ptr %this.addr
+  %0 = load ptr, ptr %rhs.addr, align 8, !dbg !84
+  %m_int = getelementptr inbounds %class.A, ptr %0, i32 0, i32 1, !dbg !84
+  %1 = load i32, ptr %m_int, align 4, !dbg !84
+  %m_int2 = getelementptr inbounds %class.A, ptr %this1, i32 0, i32 1, !dbg !84
+  store i32 %1, ptr %m_int2, align 4, !dbg !84
+  ret ptr %this1, !dbg !85
 }
 
 ; Function Attrs: nounwind uwtable
-define i32 @_ZN1A7get_intEv(%class.A* %this) #0 align 2 !dbg !52 {
+define i32 @_ZN1A7get_intEv(ptr %this) #0 align 2 !dbg !52 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !86, metadata !DIExpression()), !dbg !87
-  %this1 = load %class.A*, %class.A** %this.addr
-  %m_int = getelementptr inbounds %class.A, %class.A* %this1, i32 0, i32 1, !dbg !88
-  %0 = load i32, i32* %m_int, align 4, !dbg !88
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !86, metadata !DIExpression()), !dbg !87
+  %this1 = load ptr, ptr %this.addr
+  %m_int = getelementptr inbounds %class.A, ptr %this1, i32 0, i32 1, !dbg !88
+  %0 = load i32, ptr %m_int, align 4, !dbg !88
   ret i32 %0, !dbg !88
 }
 
 ; Function Attrs: uwtable
-define void @_ZN1B9AInstanceEv(%class.A* noalias sret(%class.A) %agg.result, %class.B* %this) #2 align 2 !dbg !53 {
+define void @_ZN1B9AInstanceEv(ptr noalias sret(%class.A) %agg.result, ptr %this) #2 align 2 !dbg !53 {
 entry:
-  %this.addr = alloca %class.B*, align 8
-  %nrvo = alloca i1
+  %this.addr = alloca ptr, align 8
+  %nrvo = alloca i1, align 1
   %cleanup.dest.slot = alloca i32
-  store %class.B* %this, %class.B** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.B** %this.addr, metadata !89, metadata !DIExpression()), !dbg !91
-  %this1 = load %class.B*, %class.B** %this.addr
-  store i1 false, i1* %nrvo, !dbg !92
-  call void @llvm.dbg.declare(metadata %class.A* %agg.result, metadata !93, metadata !DIExpression()), !dbg !92
-  call void @_ZN1AC1Ei(%class.A* %agg.result, i32 12), !dbg !92
-  store i1 true, i1* %nrvo, !dbg !94
-  store i32 1, i32* %cleanup.dest.slot
-  %nrvo.val = load i1, i1* %nrvo, !dbg !95
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !89, metadata !DIExpression()), !dbg !91
+  %this1 = load ptr, ptr %this.addr
+  store i1 false, ptr %nrvo, !dbg !92
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !93, metadata !DIExpression()), !dbg !92
+  call void @_ZN1AC1Ei(ptr %agg.result, i32 12), !dbg !92
+  store i1 true, ptr %nrvo, !dbg !94
+  store i32 1, ptr %cleanup.dest.slot
+  %nrvo.val = load i1, ptr %nrvo, !dbg !95
   br i1 %nrvo.val, label %nrvo.skipdtor, label %nrvo.unused, !dbg !95
 
 nrvo.unused:                                      ; preds = %entry
-  call void @_ZN1AD2Ev(%class.A* %agg.result), !dbg !96
+  call void @_ZN1AD2Ev(ptr %agg.result), !dbg !96
   br label %nrvo.skipdtor, !dbg !96
 
 nrvo.skipdtor:                                    ; preds = %nrvo.unused, %entry
@@ -126,141 +124,139 @@ nrvo.skipdtor:                                    ; preds = %nrvo.unused, %entry
 }
 
 ; Function Attrs: nounwind uwtable
-define linkonce_odr void @_ZN1AD2Ev(%class.A* %this) unnamed_addr #0 align 2 !dbg !63 {
+define linkonce_odr void @_ZN1AD2Ev(ptr %this) unnamed_addr #0 align 2 !dbg !63 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !101, metadata !DIExpression()), !dbg !102
-  %this1 = load %class.A*, %class.A** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !101, metadata !DIExpression()), !dbg !102
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !103
 }
 
 ; Function Attrs: uwtable
-define i32 @main(i32 %argc, i8** %argv) #2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !54 {
+define i32 @main(i32 %argc, ptr %argv) #2 personality ptr @__gxx_personality_v0 !dbg !54 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
-  %b = alloca %class.B, align 1
+  %argv.addr = alloca ptr, align 8
+  %b = alloca %class.B, align 8
   %return_val = alloca i32, align 4
   %temp.lvalue = alloca %class.A, align 8
-  %exn.slot = alloca i8*
+  %exn.slot = alloca ptr
   %ehselector.slot = alloca i32
   %a = alloca %class.A, align 8
   %cleanup.dest.slot = alloca i32
-  store i32 0, i32* %retval
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !104, metadata !DIExpression()), !dbg !105
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !106, metadata !DIExpression()), !dbg !105
-  call void @llvm.dbg.declare(metadata %class.B* %b, metadata !107, metadata !DIExpression()), !dbg !108
-  call void @_ZN1BC2Ev(%class.B* %b), !dbg !108
-  call void @llvm.dbg.declare(metadata i32* %return_val, metadata !109, metadata !DIExpression()), !dbg !110
-  call void @_ZN1B9AInstanceEv(%class.A* sret(%class.A) %temp.lvalue, %class.B* %b), !dbg !110
-  %call = invoke i32 @_ZN1A7get_intEv(%class.A* %temp.lvalue)
+  store i32 0, ptr %retval
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !104, metadata !DIExpression()), !dbg !105
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !106, metadata !DIExpression()), !dbg !105
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !107, metadata !DIExpression()), !dbg !108
+  call void @_ZN1BC2Ev(ptr %b), !dbg !108
+  call void @llvm.dbg.declare(metadata ptr %return_val, metadata !109, metadata !DIExpression()), !dbg !110
+  call void @_ZN1B9AInstanceEv(ptr sret(%class.A) %temp.lvalue, ptr %b), !dbg !110
+  %call = invoke i32 @_ZN1A7get_intEv(ptr %temp.lvalue)
           to label %invoke.cont unwind label %lpad, !dbg !110
 
 invoke.cont:                                      ; preds = %entry
-  call void @_ZN1AD2Ev(%class.A* %temp.lvalue), !dbg !111
-  store i32 %call, i32* %return_val, align 4, !dbg !111
-  call void @llvm.dbg.declare(metadata %class.A* %a, metadata !113, metadata !DIExpression()), !dbg !114
-  call void @_ZN1B9AInstanceEv(%class.A* sret(%class.A) %a, %class.B* %b), !dbg !114
-  %0 = load i32, i32* %return_val, align 4, !dbg !115
-  store i32 %0, i32* %retval, !dbg !115
-  store i32 1, i32* %cleanup.dest.slot
-  call void @_ZN1AD2Ev(%class.A* %a), !dbg !116
-  %1 = load i32, i32* %retval, !dbg !116
+  call void @_ZN1AD2Ev(ptr %temp.lvalue), !dbg !111
+  store i32 %call, ptr %return_val, align 4, !dbg !111
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !113, metadata !DIExpression()), !dbg !114
+  call void @_ZN1B9AInstanceEv(ptr sret(%class.A) %a, ptr %b), !dbg !114
+  %0 = load i32, ptr %return_val, align 4, !dbg !115
+  store i32 %0, ptr %retval, !dbg !115
+  store i32 1, ptr %cleanup.dest.slot
+  call void @_ZN1AD2Ev(ptr %a), !dbg !116
+  %1 = load i32, ptr %retval, !dbg !116
   ret i32 %1, !dbg !116
 
 lpad:                                             ; preds = %entry
-  %2 = landingpad { i8*, i32 }
+  %2 = landingpad { ptr, i32 }
           cleanup, !dbg !116
-  %3 = extractvalue { i8*, i32 } %2, 0, !dbg !116
-  store i8* %3, i8** %exn.slot, !dbg !116
-  %4 = extractvalue { i8*, i32 } %2, 1, !dbg !116
-  store i32 %4, i32* %ehselector.slot, !dbg !116
-  invoke void @_ZN1AD2Ev(%class.A* %temp.lvalue)
+  %3 = extractvalue { ptr, i32 } %2, 0, !dbg !116
+  store ptr %3, ptr %exn.slot, !dbg !116
+  %4 = extractvalue { ptr, i32 } %2, 1, !dbg !116
+  store i32 %4, ptr %ehselector.slot, !dbg !116
+  invoke void @_ZN1AD2Ev(ptr %temp.lvalue)
           to label %invoke.cont1 unwind label %terminate.lpad, !dbg !116
 
 invoke.cont1:                                     ; preds = %lpad
   br label %eh.resume, !dbg !117
 
 eh.resume:                                        ; preds = %invoke.cont1
-  %exn = load i8*, i8** %exn.slot, !dbg !119
-  %sel = load i32, i32* %ehselector.slot, !dbg !119
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn, 0, !dbg !119
-  %lpad.val2 = insertvalue { i8*, i32 } %lpad.val, i32 %sel, 1, !dbg !119
-  resume { i8*, i32 } %lpad.val2, !dbg !119
+  %exn = load ptr, ptr %exn.slot, !dbg !119
+  %sel = load i32, ptr %ehselector.slot, !dbg !119
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn, 0, !dbg !119
+  %lpad.val2 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1, !dbg !119
+  resume { ptr, i32 } %lpad.val2, !dbg !119
 
 terminate.lpad:                                   ; preds = %lpad
-  %5 = landingpad { i8*, i32 }
-          catch i8* null, !dbg !121
-  %6 = extractvalue { i8*, i32 } %5, 0, !dbg !121
-  call void @__clang_call_terminate(i8* %6) #5, !dbg !121
+  %5 = landingpad { ptr, i32 }
+          catch ptr null, !dbg !121
+  %6 = extractvalue { ptr, i32 } %5, 0, !dbg !121
+  call void @__clang_call_terminate(ptr %6) #5, !dbg !121
   unreachable, !dbg !121
 }
 
 ; Function Attrs: nounwind uwtable
-define linkonce_odr void @_ZN1BC2Ev(%class.B* %this) unnamed_addr #0 align 2 !dbg !62 {
+define linkonce_odr void @_ZN1BC2Ev(ptr %this) unnamed_addr #0 align 2 !dbg !62 {
 entry:
-  %this.addr = alloca %class.B*, align 8
-  store %class.B* %this, %class.B** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.B** %this.addr, metadata !123, metadata !DIExpression()), !dbg !124
-  %this1 = load %class.B*, %class.B** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !123, metadata !DIExpression()), !dbg !124
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !125
 }
 
 declare i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: noinline noreturn nounwind
-define linkonce_odr hidden void @__clang_call_terminate(i8*) #3 {
-  %2 = call i8* @__cxa_begin_catch(i8* %0) #6
+define linkonce_odr hidden void @__clang_call_terminate(ptr) #3 {
+  %2 = call ptr @__cxa_begin_catch(ptr %0) #6
   call void @_ZSt9terminatev() #5
   unreachable
 }
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @_ZSt9terminatev()
 
 ; Function Attrs: uwtable
-define linkonce_odr void @_ZN1AD0Ev(%class.A* %this) unnamed_addr #2 align 2 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !61 {
+define linkonce_odr void @_ZN1AD0Ev(ptr %this) unnamed_addr #2 align 2 personality ptr @__gxx_personality_v0 !dbg !61 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  %exn.slot = alloca i8*
-  %ehselector.slot = alloca i32
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !126, metadata !DIExpression()), !dbg !127
-  %this1 = load %class.A*, %class.A** %this.addr
-  invoke void @_ZN1AD2Ev(%class.A* %this1)
+  %this.addr = alloca ptr, align 8
+  %exn.slot = alloca ptr
+  %ehselector.slot = alloca i32, align 4
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !126, metadata !DIExpression()), !dbg !127
+  %this1 = load ptr, ptr %this.addr
+  invoke void @_ZN1AD2Ev(ptr %this1)
           to label %invoke.cont unwind label %lpad, !dbg !128
 
 invoke.cont:                                      ; preds = %entry
-  %0 = bitcast %class.A* %this1 to i8*, !dbg !129
-  call void @_ZdlPv(i8* %0) #7, !dbg !129
+  call void @_ZdlPv(ptr %this1) #7, !dbg !129
   ret void, !dbg !129
 
 lpad:                                             ; preds = %entry
-  %1 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup, !dbg !131
-  %2 = extractvalue { i8*, i32 } %1, 0, !dbg !131
-  store i8* %2, i8** %exn.slot, !dbg !131
-  %3 = extractvalue { i8*, i32 } %1, 1, !dbg !131
-  store i32 %3, i32* %ehselector.slot, !dbg !131
-  %4 = bitcast %class.A* %this1 to i8*, !dbg !131
-  call void @_ZdlPv(i8* %4) #7, !dbg !131
+  %1 = extractvalue { ptr, i32 } %0, 0, !dbg !131
+  store ptr %1, ptr %exn.slot, !dbg !131
+  %2 = extractvalue { ptr, i32 } %0, 1, !dbg !131
+  store i32 %2, ptr %ehselector.slot, !dbg !131
+  call void @_ZdlPv(ptr %this1) #7, !dbg !131
   br label %eh.resume, !dbg !131
 
 eh.resume:                                        ; preds = %lpad
-  %exn = load i8*, i8** %exn.slot, !dbg !133
-  %sel = load i32, i32* %ehselector.slot, !dbg !133
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn, 0, !dbg !133
-  %lpad.val2 = insertvalue { i8*, i32 } %lpad.val, i32 %sel, 1, !dbg !133
-  resume { i8*, i32 } %lpad.val2, !dbg !133
+  %exn = load ptr, ptr %exn.slot, !dbg !133
+  %sel = load i32, ptr %ehselector.slot, !dbg !133
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn, 0, !dbg !133
+  %lpad.val2 = insertvalue { ptr, i32 } %lpad.val, i32 %sel, 1, !dbg !133
+  resume { ptr, i32 } %lpad.val2, !dbg !133
 }
 
 ; Function Attrs: nobuiltin nounwind
-declare void @_ZdlPv(i8*) #4
+declare void @_ZdlPv(ptr) #4
 
 attributes #0 = { nounwind uwtable "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone }

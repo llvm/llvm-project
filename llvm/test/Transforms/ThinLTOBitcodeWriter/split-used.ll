@@ -19,12 +19,12 @@
 @g3 = global i8 42
 @g4 = global i8 42
 
-; M0: @llvm.used = appending global [2 x i8*] [i8* @g1, i8* @g3]
-; M0: @llvm.compiler.used = appending global [2 x i8*] [i8* @g2, i8* @g4]
-; M1: @llvm.used = appending global [1 x i8*] [i8* @g1]
-; M1: @llvm.compiler.used = appending global [1 x i8*] [i8* @g2]
-@llvm.used = appending global [2 x i8*] [ i8* @g1, i8* @g3]
-@llvm.compiler.used = appending global [2 x i8*] [ i8* @g2, i8* @g4]
+; M0: @llvm.used = appending global [2 x ptr] [ptr @g1, ptr @g3]
+; M0: @llvm.compiler.used = appending global [2 x ptr] [ptr @g2, ptr @g4]
+; M1: @llvm.used = appending global [1 x ptr] [ptr @g1]
+; M1: @llvm.compiler.used = appending global [1 x ptr] [ptr @g2]
+@llvm.used = appending global [2 x ptr] [ ptr @g1, ptr @g3]
+@llvm.compiler.used = appending global [2 x ptr] [ ptr @g2, ptr @g4]
 
 ; M1: !0 = !{i32 0, !"typeid"}
 !0 = !{i32 0, !"typeid"}

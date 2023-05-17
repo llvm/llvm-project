@@ -11,7 +11,7 @@
 #define _LIBCPP___BIT_BIT_CAST_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/is_trivially_copyable.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -19,19 +19,17 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
-template<class _ToType, class _FromType, class = enable_if_t<
-  sizeof(_ToType) == sizeof(_FromType) &&
-  is_trivially_copyable_v<_ToType> &&
-  is_trivially_copyable_v<_FromType>
->>
-_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
-constexpr _ToType bit_cast(_FromType const& __from) noexcept {
-    return __builtin_bit_cast(_ToType, __from);
+template <class _ToType, class _FromType>
+  requires(sizeof(_ToType) == sizeof(_FromType) &&
+           is_trivially_copyable_v<_ToType> &&
+           is_trivially_copyable_v<_FromType>)
+_LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr _ToType bit_cast(const _FromType& __from) noexcept {
+  return __builtin_bit_cast(_ToType, __from);
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

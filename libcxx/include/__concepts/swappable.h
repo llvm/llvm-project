@@ -14,10 +14,15 @@
 #include <__concepts/common_reference_with.h>
 #include <__concepts/constructible.h>
 #include <__config>
+#include <__type_traits/extent.h>
+#include <__type_traits/is_nothrow_move_assignable.h>
+#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/exchange.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <type_traits>
+#include <__utility/swap.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -25,7 +30,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.swappable]
 
@@ -63,7 +68,7 @@ namespace __swap {
     // *The name `swap` is used here unqualified.
     template<class _Tp, class _Up>
       requires __unqualified_swappable_with<_Tp, _Up>
-    constexpr void operator()(_Tp&& __t, _Up&& __u) const
+    _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Tp&& __t, _Up&& __u) const
       noexcept(noexcept(swap(_VSTD::forward<_Tp>(__t), _VSTD::forward<_Up>(__u))))
     {
       swap(_VSTD::forward<_Tp>(__t), _VSTD::forward<_Up>(__u));
@@ -72,7 +77,7 @@ namespace __swap {
     // 2.2   Otherwise, if `E1` and `E2` are lvalues of array types with equal extent and...
     template<class _Tp, class _Up, size_t _Size>
       requires __swappable_arrays<_Tp, _Up, _Size>
-    constexpr void operator()(_Tp(& __t)[_Size], _Up(& __u)[_Size]) const
+    _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Tp(& __t)[_Size], _Up(& __u)[_Size]) const
       noexcept(noexcept((*this)(*__t, *__u)))
     {
       // TODO(cjdb): replace with `ranges::swap_ranges`.
@@ -83,7 +88,7 @@ namespace __swap {
 
     // 2.3   Otherwise, if `E1` and `E2` are lvalues of the same type `T` that models...
     template<__exchangeable _Tp>
-    constexpr void operator()(_Tp& __x, _Tp& __y) const
+    _LIBCPP_HIDE_FROM_ABI constexpr void operator()(_Tp& __x, _Tp& __y) const
       noexcept(is_nothrow_move_constructible_v<_Tp> && is_nothrow_move_assignable_v<_Tp>)
     {
       __y = _VSTD::exchange(__x, _VSTD::move(__y));
@@ -109,7 +114,7 @@ concept swappable_with =
     ranges::swap(_VSTD::forward<_Up>(__u), _VSTD::forward<_Tp>(__t));
   };
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

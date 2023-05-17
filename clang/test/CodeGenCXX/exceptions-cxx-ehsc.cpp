@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 -fexceptions -fcxx-exceptions -fexternc-nounwind | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm %s -o - -triple=i386-pc-win32 -fexceptions -fcxx-exceptions -fexternc-nounwind -Wno-dynamic-exception-spec %std_cxx98- | FileCheck %s
 
 namespace test1 {
 struct Cleanup { ~Cleanup(); };

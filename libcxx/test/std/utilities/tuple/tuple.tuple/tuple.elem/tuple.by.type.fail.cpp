@@ -10,6 +10,8 @@
 
 #include <tuple>
 #include <string>
+#include <memory>
+
 #include "test_macros.h"
 
 struct UserType {};

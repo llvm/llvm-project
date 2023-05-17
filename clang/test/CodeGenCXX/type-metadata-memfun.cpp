@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility hidden -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -flto -flto-unit -triple x86_64-unknown-linux -fvisibility=hidden -emit-llvm -o - %s | FileCheck %s
 
 struct S1 {
   S1();

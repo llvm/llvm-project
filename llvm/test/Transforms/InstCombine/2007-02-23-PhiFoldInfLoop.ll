@@ -3,12 +3,12 @@
 
 target datalayout = "e-p:32:32"
 target triple = "i686-pc-linux-gnu"
-	%struct.termbox = type { %struct.termbox*, i32, i32, i32, i32, i32 }
+	%struct.termbox = type { ptr, i32, i32, i32, i32, i32 }
 
 
 define void @ggenorien() {
 entry:
-	%tmp68 = icmp eq %struct.termbox* null, null		; <i1> [#uses=1]
+	%tmp68 = icmp eq ptr null, null		; <i1> [#uses=1]
 	br i1 %tmp68, label %cond_next448, label %bb80
 
 bb80:		; preds = %entry

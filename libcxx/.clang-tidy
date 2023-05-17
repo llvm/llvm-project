@@ -1,26 +1,31 @@
-InheritParentConfig: true
 Checks: >
   bugprone-copy-constructor-init,
   bugprone-dangling-handle,
   bugprone-infinite-loop,
+  bugprone-stringview-nullptr,
+  bugprone-use-after-move,
 
-  -llvm-else-after-return,
-  -llvm-header-guard,
-  -llvm-qualified-auto,
+  llvm-include-order,
+  llvm-namespace-comment,
 
-  -misc-unconventional-assign-operator,
+  misc-definitions-in-headers,
+  misc-misplaced-const,
+  misc-non-copyable-objects,
+  misc-uniqueptr-reset-release,
 
   modernize-loop-convert,
   modernize-redundant-void-arg,
+  modernize-use-override,
 
   readability-duplicate-include,
+  readability-identifier-naming,
   readability-function-cognitive-complexity,
   readability-function-size,
-  -readability-identifier-naming,
   readability-misplaced-array-index,
   readability-redundant-control-flow,
   readability-redundant-function-ptr-dereference,
   readability-redundant-preprocessor,
+  readability-simplify-boolean-expr,
   readability-simplify-subscript-expr,
   readability-uniqueptr-delete-release,
 
@@ -29,17 +34,33 @@ CheckOptions:
     value: 143 # TODO: bring that number down
   - key:   readability-function-size.LineThreshold
     value: 194 # TODO: bring that number down
+  - key:   readability-identifier-naming.GetConfigPerFile
+    value: false
+  - key:   readability-identifier-naming.ParameterCase
+    value: lower_case
+  - key:   readability-identifier-naming.ParameterPrefix
+    value: __
+  - key:   readability-identifier-naming.PrivateMemberCase
+    value: lower_case
+  - key:   readability-identifier-naming.PrivateMemberPrefix
+    value: __
+  - key:   readability-identifier-naming.PrivateMemberSuffix
+    value: _
+  - key:   readability-identifier-naming.LocalVariableCase
+    value: lower_case
+  - key:   readability-identifier-naming.LocalVariablePrefix
+    value: __
 
 # TODO: investigate these checks
 # bugprone-branch-clone,
 # bugprone-macro-parentheses,
 # cppcoreguidelines-prefer-member-initializer,
+# misc-unused-parameters,
 # modernize-use-bool-literals,
 # modernize-use-default-member-init,
 # modernize-use-equals-default,
 # modernize-use-equals-delete,
 # modernize-use-nullptr,
-# modernize-use-override,
 # portability-restrict-system-includes,
 # readability-function-cognitive-complexity,
 # readability-implicit-bool-conversion,
@@ -47,4 +68,4 @@ CheckOptions:
 # readability-redundant-access-specifiers,
 # readability-redundant-declaration,
 # readability-redundant-member-init,
-# readability-simplify-boolean-expr,
+#

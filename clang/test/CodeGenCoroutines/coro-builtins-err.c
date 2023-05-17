@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc18.0.0 -fcoroutines-ts -emit-llvm %s -o - -verify
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc18.0.0 -fcoroutines -emit-llvm %s -o - -verify
 
 void f(void) {
   __builtin_coro_alloc(); // expected-error {{this builtin expect that __builtin_coro_id}}

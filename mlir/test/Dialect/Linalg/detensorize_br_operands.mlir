@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="func.func(linalg-detensorize)" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -allow-unregistered-dialect -pass-pipeline="builtin.module(func.func(linalg-detensorize))" | FileCheck %s
 
 // TODO: Detensoring breaks if %arg0 or %arg1 are passed directly as tensors. Fix that.
 func.func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
@@ -6,12 +6,12 @@ func.func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
   %arg1_t = tensor.from_elements %arg1 : tensor<i32>
 
   %cst = arith.constant dense<10> : tensor<i32>
-  %2 = linalg.init_tensor [] : tensor<i8>
+  %2 = tensor.empty() : tensor<i8>
   %3 = linalg.generic
     {indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>], iterator_types = []}
     ins(%arg0_t : tensor<i1>)
     outs(%2 : tensor<i8>) {
-  ^bb0(%arg2: i1, %arg3: i8):  
+  ^bb0(%arg2: i1, %arg3: i8):
     %10 = arith.extui %arg2 : i1 to i8
     linalg.yield %10 : i8
   } -> tensor<i8>
@@ -19,12 +19,12 @@ func.func @if_true_test(%arg0: i1, %arg1: i32) -> tensor<i32> attributes {} {
   %5 = arith.trunci %4 : i8 to i1
   cf.cond_br %5, ^bb1, ^bb2(%arg1_t : tensor<i32>)
 ^bb1:
-  %6 = linalg.init_tensor [] : tensor<i32>
+  %6 = tensor.empty() : tensor<i32>
   %7 = linalg.generic
     {indexing_maps = [affine_map<() -> ()>, affine_map<() -> ()>, affine_map<() -> ()>], iterator_types = []}
     ins(%arg1_t, %cst : tensor<i32>, tensor<i32>)
     outs(%6 : tensor<i32>) {
-  ^bb0(%arg2: i32, %arg3: i32, %arg4: i32):  
+  ^bb0(%arg2: i32, %arg3: i32, %arg4: i32):
     %10 = arith.addi %arg2, %arg3 : i32
     linalg.yield %10 : i32
   } -> tensor<i32>

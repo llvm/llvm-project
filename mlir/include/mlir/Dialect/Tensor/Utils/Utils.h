@@ -21,12 +21,26 @@ namespace tensor {
 PadOp createPadHighOp(RankedTensorType type, Value source, Value pad,
                       bool nofold, Location loc, OpBuilder &builder);
 
-// Return a PadOp that pads `source to `type` size with `pad` value.
-// I.e., a block will be created and the `pad` value will be yielded
-// directly. If the type passed is nullptr, it is inferred.
-PadOp createPadScalarOp(Type type, Value source, Value pad,
-                        ArrayRef<OpFoldResult> low, ArrayRef<OpFoldResult> high,
-                        bool nofold, Location loc, OpBuilder &builder);
+// Creates dim ops for each dynamic dimension of the ranked tensor argument and
+// returns these as values.
+SmallVector<Value> createDynamicDimValues(OpBuilder &b, Location loc,
+                                          Value rankedTensor);
+
+// Returns the tensor extent along dimension `dim` if `rankedTensor` is of
+// `RankedTensorType`. Returns `failure()` otherwise.
+FailureOr<OpFoldResult> createDimValue(OpBuilder &b, Location loc,
+                                       Value rankedTensor, int64_t dim);
+
+// Creates dim ops or constant ops for each dimension of the ranked tensor
+// argument and returns these as values.
+SmallVector<OpFoldResult> createDimValues(OpBuilder &b, Location loc,
+                                          Value rankedTensor);
+
+/// Returns the transposed `rankedTensorType` if `transposeVector` is non-empty.
+/// Fail if `transposeVector` is not a permutation matching the tensor rank.
+FailureOr<RankedTensorType>
+computeTransposedType(RankedTensorType rankedTensorType,
+                      ArrayRef<int64_t> transposeVector);
 
 } // namespace tensor
 } // namespace mlir

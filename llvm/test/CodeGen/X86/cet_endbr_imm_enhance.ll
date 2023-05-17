@@ -22,7 +22,7 @@
 ; ~0x000123F32E0F1EFA == -321002333478651 (0XFFFEDC0CD1F0E105)
 
 ; test for MOV64ri
-define dso_local i64 @foo(i64* %azx) #0 {
+define dso_local i64 @foo(ptr %azx) #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    endbr64
@@ -34,15 +34,15 @@ define dso_local i64 @foo(i64* %azx) #0 {
 ; CHECK-NEXT:    movq (%rax), %rax
 ; CHECK-NEXT:    retq
 entry:
-  %azx.addr = alloca i64*, align 8
-  store i64* %azx, i64** %azx.addr, align 8
-  %0 = load i64*, i64** %azx.addr, align 8
-  %1 = load i64, i64* %0, align 8
+  %azx.addr = alloca ptr, align 8
+  store ptr %azx, ptr %azx.addr, align 8
+  %0 = load ptr, ptr %azx.addr, align 8
+  %1 = load i64, ptr %0, align 8
   %and = and i64 %1, 321002333478650
-  %2 = load i64*, i64** %azx.addr, align 8
-  store i64 %and, i64* %2, align 8
-  %3 = load i64*, i64** %azx.addr, align 8
-  %4 = load i64, i64* %3, align 8
+  %2 = load ptr, ptr %azx.addr, align 8
+  store i64 %and, ptr %2, align 8
+  %3 = load ptr, ptr %azx.addr, align 8
+  %4 = load i64, ptr %3, align 8
   ret i64 %4
 }
 
@@ -60,7 +60,7 @@ define dso_local i32 @foo2() local_unnamed_addr #0 {
 ; CHECK-NEXT:    andl %ecx, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i32, i32* @bzx, align 4
+  %0 = load i32, ptr @bzx, align 4
   %mul = shl nsw i32 %0, 1
   %and = and i32 %mul, -217112838
   ret i32 %and
@@ -70,7 +70,7 @@ entry:
 @czx = dso_local global i32 -217112837, align 4
 
 ; test for AND32mi
-define dso_local nonnull i32* @foo3() local_unnamed_addr #0 {
+define dso_local nonnull ptr @foo3() local_unnamed_addr #0 {
 ; CHECK-LABEL: foo3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    endbr64
@@ -80,10 +80,10 @@ define dso_local nonnull i32* @foo3() local_unnamed_addr #0 {
 ; CHECK-NEXT:    movl $czx, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i32, i32* @czx, align 4
+  %0 = load i32, ptr @czx, align 4
   %and = and i32 %0, -217112838
-  store i32 %and, i32* @czx, align 4
-  ret i32* @czx
+  store i32 %and, ptr @czx, align 4
+  ret ptr @czx
 }
 
 ; test for MOV32mi
@@ -97,8 +97,8 @@ define dso_local i32 @foo4() #0 {
 ; CHECK-NEXT:    retq
 entry:
   %dzx = alloca i32, align 4
-  store i32 -217112838, i32* %dzx, align 4
-  %0 = load i32, i32* %dzx, align 4
+  store i32 -217112838, ptr %dzx, align 4
+  %0 = load i32, ptr %dzx, align 4
   ret i32 %0
 }
 
@@ -112,7 +112,7 @@ define dso_local i64 @foo5() #0 {
 ; CHECK-NEXT:    retq
 entry:
   %ezx = alloca i64, align 8
-  store i64 4077854458, i64* %ezx, align 8
-  %0 = load i64, i64* %ezx, align 8
+  store i64 4077854458, ptr %ezx, align 8
+  %0 = load i64, ptr %ezx, align 8
   ret i64 %0
 }

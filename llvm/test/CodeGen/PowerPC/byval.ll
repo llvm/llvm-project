@@ -6,8 +6,8 @@ target triple = "powerpc64le-unknown-linux-gnu"
 
 %struct = type { [4 x i32], [20 x i8] }
 
-declare dso_local i32 @foo1(%struct* byval(%struct) %var)
-declare dso_local void @foo(%struct* %var)
+declare dso_local i32 @foo1(ptr byval(%struct) %var)
+declare dso_local void @foo(ptr %var)
 
 ; check that 36bytes byval parameter is passed all in registers.
 
@@ -15,8 +15,8 @@ define dso_local i32 @bar() {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    std 0, 16(1)
 ; CHECK-NEXT:    stdu 1, -80(1)
+; CHECK-NEXT:    std 0, 96(1)
 ; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset lr, 16
 ; CHECK-NEXT:    addi 3, 1, 40
@@ -34,8 +34,8 @@ define dso_local i32 @bar() {
 ; CHECK-NEXT:    mtlr 0
 ; CHECK-NEXT:    blr
 entry:
-  %x = alloca %struct, align 4
-  call void @foo(%struct* %x)
-  %r = call i32 @foo1(%struct* byval(%struct) %x)
+  %x = alloca %struct, align 8
+  call void @foo(ptr %x)
+  %r = call i32 @foo1(ptr byval(%struct) %x)
   ret i32 %r
 }

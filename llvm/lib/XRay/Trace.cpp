@@ -30,8 +30,6 @@ using namespace llvm::xray;
 using llvm::yaml::Input;
 
 namespace {
-using XRayRecordStorage =
-    std::aligned_storage<sizeof(XRayRecord), alignof(XRayRecord)>::type;
 
 Error loadNaiveFormatLog(StringRef Data, bool IsLittleEndian,
                          XRayFileHeader &FileHeader,

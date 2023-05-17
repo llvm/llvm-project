@@ -1,4 +1,4 @@
-; RUN: opt < %s  -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 -S | FileCheck %s
 
 ; Make sure that we don't vectorize functions with 'noimplicitfloat' attributes.
 
@@ -14,9 +14,9 @@ define void @example12() noimplicitfloat { ;           <--------- "noimplicitflo
 
 ; <label>:1                                       ; preds = %1, %0
   %indvars.iv = phi i64 [ 0, %0 ], [ %indvars.iv.next, %1 ]
-  %2 = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 %indvars.iv
+  %2 = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %indvars.iv
   %3 = trunc i64 %indvars.iv to i32
-  store i32 %3, i32* %2, align 4
+  store i32 %3, ptr %2, align 4
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32
   %exitcond = icmp eq i32 %lftr.wideiv, 1024

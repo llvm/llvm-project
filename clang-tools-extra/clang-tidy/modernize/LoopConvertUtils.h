@@ -22,9 +22,7 @@
 #include <string>
 #include <utility>
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 enum LoopFixerKind {
   LFK_Array,
@@ -464,8 +462,6 @@ private:
   bool declarationExists(llvm::StringRef Symbol);
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_LOOP_CONVERT_UTILS_H

@@ -7,32 +7,32 @@
 ; prefetch in %for.body.
 ;
 ; CHECK-LABEL: for.body
-; CHECK: call void @llvm.prefetch.p0i8(i8* {{.*}}, i32 0
-; CHECK: call void @llvm.prefetch.p0i8(i8* {{.*}}, i32 1
+; CHECK: call void @llvm.prefetch.p0(ptr {{.*}}, i32 0
+; CHECK: call void @llvm.prefetch.p0(ptr {{.*}}, i32 1
 ; CHECK-LABEL: true
 ; CHECK-LABEL: false
 ; CHECK-LABEL: latch
 
-define void @fun(i32* nocapture %Src, i32* nocapture readonly %Dst) {
+define void @fun(ptr nocapture %Src, ptr nocapture readonly %Dst) {
 entry:
   br label %for.body
 
 for.body:
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next.9, %latch ]
-  %arrayidx = getelementptr inbounds i32, i32* %Dst, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %Dst, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp = icmp sgt i32 %0, 0
   br i1 %cmp, label %true, label %false
 
 true:  
-  %arrayidx2 = getelementptr inbounds i32, i32* %Src, i64 %indvars.iv
-  store i32 %0, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %Src, i64 %indvars.iv
+  store i32 %0, ptr %arrayidx2, align 4
   br label %latch
 
 false:
   %a = add i64 %indvars.iv, 8
-  %arrayidx3 = getelementptr inbounds i32, i32* %Src, i64 %a
-  store i32 %0, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %Src, i64 %a
+  store i32 %0, ptr %arrayidx3, align 4
   br label %latch
 
 latch:

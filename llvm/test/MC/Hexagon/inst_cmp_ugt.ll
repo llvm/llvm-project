@@ -1,5 +1,5 @@
 ;; RUN: llc -mtriple=hexagon-unknown-elf -filetype=obj %s -o - \
-;; RUN: | llvm-objdump -d - | FileCheck %s
+;; RUN: | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 define i1 @f0(i32 %a0, i32 %a1) {
   %v0 = icmp ugt i32 %a0, %a1

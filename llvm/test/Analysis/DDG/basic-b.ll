@@ -30,21 +30,21 @@
 
 ; CHECK: Node Address:[[N6]]:single-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds float, float* %a, i64 %i.02
+; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds float, ptr %a, i64 %i.02
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
 
 ; CHECK: Node Address:[[N5]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %sub1 = add i64 %i.02, -1
-; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, float* %a, i64 %sub1
+; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %sub1
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N8]]
 
 ; CHECK: Node Address:[[N4]]:multi-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
-; CHECK-NEXT:    %0 = load float, float* %arrayidx, align 4
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, ptr %b, i64 %i.02
+; CHECK-NEXT:    %0 = load float, ptr %arrayidx, align 4
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N8]]
 
@@ -52,7 +52,7 @@
 ; CHECK-NEXT: --- start of nodes in pi-block ---
 ; CHECK: Node Address:[[N9:0x[0-9a-f]*]]:single-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %1 = load float, float* %arrayidx2, align 4
+; CHECK-NEXT:    %1 = load float, ptr %arrayidx2, align 4
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N10:0x[0-9a-f]*]]
 
@@ -64,7 +64,7 @@
 
 ; CHECK: Node Address:[[N11]]:single-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    store float %add, float* %arrayidx3, align 4
+; CHECK-NEXT:    store float %add, ptr %arrayidx3, align 4
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [memory] to [[N9]]
 ; CHECK-NEXT:--- end of nodes in pi-block ---
@@ -74,12 +74,12 @@
 
 ;; Loop-carried dependence requiring edge-reversal to expose a cycle
 ;; in the graph.
-;; void test(unsigned long n, float * restrict a, float * restrict b) {
+;; void test(unsigned long n, ptr restrict a, ptr restrict b) {
 ;;  for (unsigned long i = 1; i < n-1; i++)
 ;;    a[i] = b[i] + a[i-1];
 ;; }
 
-define void @test1(i64 %n, float* noalias %a, float* noalias %b) {
+define void @test1(i64 %n, ptr noalias %a, ptr noalias %b) {
 entry:
   %sub = add i64 %n, -1
   %cmp1 = icmp ult i64 1, %sub
@@ -87,14 +87,14 @@ entry:
 
 test1.for.body:                                         ; preds = %entry, %test1.for.body
   %i.02 = phi i64 [ %inc, %test1.for.body ], [ 1, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %b, i64 %i.02
+  %0 = load float, ptr %arrayidx, align 4
   %sub1 = add i64 %i.02, -1
-  %arrayidx2 = getelementptr inbounds float, float* %a, i64 %sub1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %sub1
+  %1 = load float, ptr %arrayidx2, align 4
   %add = fadd float %0, %1
-  %arrayidx3 = getelementptr inbounds float, float* %a, i64 %i.02
-  store float %add, float* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %a, i64 %i.02
+  store float %add, ptr %arrayidx3, align 4
   %inc = add i64 %i.02, 1
   %cmp = icmp ult i64 %inc, %sub
   br i1 %cmp, label %test1.for.body, label %for.end
@@ -134,23 +134,23 @@ for.end:                                          ; preds = %test1.for.body, %en
 
 ; CHECK: Node Address:[[N6]]:single-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds float, float* %a, i64 %i.02
+; CHECK-NEXT:    %arrayidx3 = getelementptr inbounds float, ptr %a, i64 %i.02
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N8:0x[0-9a-f]*]]
 
 ; CHECK: Node Address:[[N5]]:multi-instruction
 ; CHECK-NEXT: Instructions:
 ; CHECK-NEXT:    %add1 = add i64 %i.02, 1
-; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, float* %a, i64 %add1
-; CHECK-NEXT:    %1 = load float, float* %arrayidx2, align 4
+; CHECK-NEXT:    %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %add1
+; CHECK-NEXT:    %1 = load float, ptr %arrayidx2, align 4
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N9:0x[0-9a-f]*]]
 ; CHECK-NEXT:  [memory] to [[N8]]
 
 ; CHECK: Node Address:[[N4]]:multi-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
-; CHECK-NEXT:    %0 = load float, float* %arrayidx, align 4
+; CHECK-NEXT:    %arrayidx = getelementptr inbounds float, ptr %b, i64 %i.02
+; CHECK-NEXT:    %0 = load float, ptr %arrayidx, align 4
 ; CHECK-NEXT: Edges:
 ; CHECK-NEXT:  [def-use] to [[N9]]
 
@@ -162,17 +162,17 @@ for.end:                                          ; preds = %test1.for.body, %en
 
 ; CHECK: Node Address:[[N8]]:single-instruction
 ; CHECK-NEXT: Instructions:
-; CHECK-NEXT:    store float %add, float* %arrayidx3, align 4
+; CHECK-NEXT:    store float %add, ptr %arrayidx3, align 4
 ; CHECK-NEXT: Edges:none!
 
 
 ;; Forward loop-carried dependence *not* causing a cycle.
-;; void test2(unsigned long n, float * restrict a, float * restrict b) {
+;; void test2(unsigned long n, ptr restrict a, ptr restrict b) {
 ;;  for (unsigned long i = 1; i < n-1; i++)
 ;;    a[i] = b[i] + a[i+1];
 ;; }
 
-define void @test2(i64 %n, float* noalias %a, float* noalias %b) {
+define void @test2(i64 %n, ptr noalias %a, ptr noalias %b) {
 entry:
   %sub = add i64 %n, -1
   %cmp1 = icmp ult i64 1, %sub
@@ -180,14 +180,14 @@ entry:
 
 test2.for.body:                                         ; preds = %entry, %test2.for.body
   %i.02 = phi i64 [ %inc, %test2.for.body ], [ 1, %entry ]
-  %arrayidx = getelementptr inbounds float, float* %b, i64 %i.02
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %b, i64 %i.02
+  %0 = load float, ptr %arrayidx, align 4
   %add1 = add i64 %i.02, 1
-  %arrayidx2 = getelementptr inbounds float, float* %a, i64 %add1
-  %1 = load float, float* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds float, ptr %a, i64 %add1
+  %1 = load float, ptr %arrayidx2, align 4
   %add = fadd float %0, %1
-  %arrayidx3 = getelementptr inbounds float, float* %a, i64 %i.02
-  store float %add, float* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds float, ptr %a, i64 %i.02
+  store float %add, ptr %arrayidx3, align 4
   %inc = add i64 %i.02, 1
   %cmp = icmp ult i64 %inc, %sub
   br i1 %cmp, label %test2.for.body, label %for.end

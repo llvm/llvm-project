@@ -67,25 +67,24 @@ declare i32 @f6()
 ; rdar://11958338
 %0 = type opaque
 
-declare i8* @bar(i8*) uwtable optsize noinline ssp
+declare ptr @bar(ptr) uwtable optsize noinline ssp
 
-define hidden %0* @thingWithValue(i8* %self) uwtable ssp {
+define hidden ptr @thingWithValue(ptr %self) uwtable ssp {
 entry:
 ; CHECK-LABEL: thingWithValue:
-; CHECK: jmp _bar
+; CHECK: je _bar
   br i1 undef, label %if.then.i, label %if.else.i
 
 if.then.i:                                        ; preds = %entry
   br label %someThingWithValue.exit
 
 if.else.i:                                        ; preds = %entry
-  %call4.i = tail call i8* @bar(i8* undef) optsize
+  %call4.i = tail call ptr @bar(ptr undef) optsize
   br label %someThingWithValue.exit
 
 someThingWithValue.exit:                          ; preds = %if.else.i, %if.then.i
-  %retval.0.in.i = phi i8* [ undef, %if.then.i ], [ %call4.i, %if.else.i ]
-  %retval.0.i = bitcast i8* %retval.0.in.i to %0*
-  ret %0* %retval.0.i
+  %retval.0.in.i = phi ptr [ undef, %if.then.i ], [ %call4.i, %if.else.i ]
+  ret ptr %retval.0.in.i
 }
 
 
@@ -93,7 +92,7 @@ someThingWithValue.exit:                          ; preds = %if.else.i, %if.then
 declare zeroext i1 @foo_i1()
 
 ; CHECK-LABEL: zext_i1
-; CHECK: jmp _foo_i1
+; CHECK: je _foo_i1
 define zeroext i1 @zext_i1(i1 %k) {
 entry:
   br i1 %k, label %land.end, label %land.rhs
@@ -109,38 +108,34 @@ land.end:                                         ; preds = %entry, %land.rhs
 
 ; We need to look through bitcasts when looking for tail calls in phi incoming
 ; values.
-declare i32* @g_ret32()
-define i8* @f_ret8(i8* %obj) nounwind {
+declare ptr @g_ret32()
+define ptr @f_ret8(ptr %obj) nounwind {
 ; OPT-LABEL: @f_ret8(
 ; OPT-NEXT:  entry:
-; OPT-NEXT:    [[CMP:%.*]] = icmp eq i8* [[OBJ:%.*]], null
+; OPT-NEXT:    [[CMP:%.*]] = icmp eq ptr [[OBJ:%.*]], null
 ; OPT-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_THEN:%.*]]
 ; OPT:       if.then:
-; OPT-NEXT:    [[PTR:%.*]] = tail call i32* @g_ret32()
-; OPT-NEXT:    [[CASTED:%.*]] = bitcast i32* [[PTR]] to i8*
-; OPT-NEXT:    ret i8* [[CASTED]]
+; OPT-NEXT:    [[PTR:%.*]] = tail call ptr @g_ret32()
+; OPT-NEXT:    ret ptr [[PTR]]
 ; OPT:       return:
-; OPT-NEXT:    ret i8* [[OBJ]]
+; OPT-NEXT:    ret ptr [[OBJ]]
 ;
 ; CHECK-LABEL: f_ret8:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    testq %rdi, %rdi
-; CHECK-NEXT:    je LBB3_1
-; CHECK-NEXT:  ## %bb.2: ## %if.then
-; CHECK-NEXT:    jmp _g_ret32 ## TAILCALL
-; CHECK-NEXT:  LBB3_1: ## %return
+; CHECK-NEXT:    jne _g_ret32 ## TAILCALL
+; CHECK-NEXT:  ## %bb.1: ## %return
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
 entry:
-  %cmp = icmp eq i8* %obj, null
+  %cmp = icmp eq ptr %obj, null
   br i1 %cmp, label %return, label %if.then
 
 if.then:
-  %ptr = tail call i32* @g_ret32()
-  %casted = bitcast i32* %ptr to i8*
+  %ptr = tail call ptr @g_ret32()
   br label %return
 
 return:
-  %retval = phi i8* [ %casted, %if.then ], [ %obj, %entry ]
-  ret i8* %retval
+  %retval = phi ptr [ %ptr, %if.then ], [ %obj, %entry ]
+  ret ptr %retval
 }

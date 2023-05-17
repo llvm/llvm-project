@@ -13,6 +13,7 @@
 #include "flang/Lower/BoxAnalyzer.h"
 #include "flang/Lower/CallInterface.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/ConvertVariable.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/SymbolMap.h"
 #include "flang/Optimizer/Builder/Character.h"
@@ -22,6 +23,7 @@
 #include "flang/Semantics/tools.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-host-assoc"
 
@@ -57,6 +59,30 @@
 // should be added to handle it, and `walkCaptureCategories` should be updated
 // to dispatch this new kind of variable to this new class.
 
+/// Is \p sym a derived type entity with length parameters ?
+static bool isDerivedWithLenParameters(const Fortran::semantics::Symbol &sym) {
+  if (const auto *declTy = sym.GetType())
+    if (const auto *derived = declTy->AsDerived())
+      return Fortran::semantics::CountLenParameters(*derived) != 0;
+  return false;
+}
+
+/// Map the extracted fir::ExtendedValue for a host associated variable inside
+/// and internal procedure to its symbol. Generates an hlfir.declare in HLFIR.
+static void bindCapturedSymbol(const Fortran::semantics::Symbol &sym,
+                               fir::ExtendedValue val,
+                               Fortran::lower::AbstractConverter &converter,
+                               Fortran::lower::SymMap &symMap) {
+  if (converter.getLoweringOptions().getLowerToHighLevelFIR()) {
+    // TODO: add an indication that this is a host variable in the declare to
+    // allow alias analysis to detect this case.
+    Fortran::lower::genDeclareSymbol(converter, symMap, sym, val);
+  } else {
+    symMap.addSymbol(sym, val);
+  }
+}
+
+namespace {
 /// Struct to be used as argument in walkCaptureCategories when building the
 /// tuple element type for a host associated variable.
 struct GetTypeInTuple {
@@ -144,10 +170,10 @@ public:
   }
 
   static void getFromTuple(const GetFromTuple &args,
-                           Fortran::lower::AbstractConverter &,
+                           Fortran::lower::AbstractConverter &converter,
                            const Fortran::semantics::Symbol &sym,
                            const Fortran::lower::BoxAnalyzer &) {
-    args.symMap.addSymbol(sym, args.valueInTuple);
+    bindCapturedSymbol(sym, args.valueInTuple, converter, args.symMap);
   }
 };
 
@@ -175,10 +201,10 @@ public:
   }
 
   static void getFromTuple(const GetFromTuple &args,
-                           Fortran::lower::AbstractConverter &,
+                           Fortran::lower::AbstractConverter &converter,
                            const Fortran::semantics::Symbol &sym,
                            const Fortran::lower::BoxAnalyzer &) {
-    args.symMap.addSymbol(sym, args.valueInTuple);
+    bindCapturedSymbol(sym, args.valueInTuple, converter, args.symMap);
   }
 };
 
@@ -217,18 +243,37 @@ public:
                                                args.loc);
     std::pair<mlir::Value, mlir::Value> unboxchar =
         charHelp.createUnboxChar(args.valueInTuple);
-    args.symMap.addCharSymbol(sym, unboxchar.first, unboxchar.second);
+    bindCapturedSymbol(sym,
+                       fir::CharBoxValue{unboxchar.first, unboxchar.second},
+                       converter, args.symMap);
   }
 };
 
-/// Is \p sym a derived type entity with length parameters ?
-static bool
-isDerivedWithLengthParameters(const Fortran::semantics::Symbol &sym) {
-  if (const auto *declTy = sym.GetType())
-    if (const auto *derived = declTy->AsDerived())
-      return Fortran::semantics::CountLenParameters(*derived) != 0;
-  return false;
-}
+/// Class defining how polymorphic entities are captured in internal procedures.
+/// Polymorphic entities are always boxed as a fir.class box.
+class CapturedPolymorphic : public CapturedSymbols<CapturedPolymorphic> {
+public:
+  static mlir::Type getType(Fortran::lower::AbstractConverter &converter,
+                            const Fortran::semantics::Symbol &sym) {
+    return converter.genType(sym);
+  }
+  static void instantiateHostTuple(const InstantiateHostTuple &args,
+                                   Fortran::lower::AbstractConverter &converter,
+                                   const Fortran::semantics::Symbol &) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    mlir::Type typeInTuple = fir::dyn_cast_ptrEleTy(args.addrInTuple.getType());
+    assert(typeInTuple && "addrInTuple must be an address");
+    mlir::Value castBox = builder.createConvert(args.loc, typeInTuple,
+                                                fir::getBase(args.hostValue));
+    builder.create<fir::StoreOp>(args.loc, castBox, args.addrInTuple);
+  }
+  static void getFromTuple(const GetFromTuple &args,
+                           Fortran::lower::AbstractConverter &converter,
+                           const Fortran::semantics::Symbol &sym,
+                           const Fortran::lower::BoxAnalyzer &ba) {
+    bindCapturedSymbol(sym, args.valueInTuple, converter, args.symMap);
+  }
+};
 
 /// Class defining how allocatable and pointers entities are captured in
 /// internal procedures. Allocatable and pointers are simply captured by placing
@@ -266,47 +311,22 @@ public:
     llvm::SmallVector<mlir::Value> nonDeferredLenParams;
     if (ba.isChar()) {
       mlir::IndexType idxTy = builder.getIndexType();
-      if (llvm::Optional<int64_t> len = ba.getCharLenConst()) {
+      if (std::optional<int64_t> len = ba.getCharLenConst()) {
         nonDeferredLenParams.push_back(
             builder.createIntegerConstant(loc, idxTy, *len));
       } else if (Fortran::semantics::IsAssumedLengthCharacter(sym) ||
                  ba.getCharLenExpr()) {
-        // Read length from fir.box (explicit expr cannot safely be re-evaluated
-        // here).
-        auto readLength = [&]() {
-          fir::BoxValue boxLoad =
-              builder.create<fir::LoadOp>(loc, fir::getBase(args.valueInTuple))
-                  .getResult();
-          return fir::factory::readCharLen(builder, loc, boxLoad);
-        };
-        if (Fortran::semantics::IsOptional(sym)) {
-          // It is not safe to unconditionally read boxes of optionals in case
-          // they are absents. According to 15.5.2.12 3 (9), it is illegal to
-          // inquire the length of absent optional, even if non deferred, so
-          // it's fine to use undefOp in this case.
-          auto isPresent = builder.create<fir::IsPresentOp>(
-              loc, builder.getI1Type(), fir::getBase(args.valueInTuple));
-          mlir::Value len =
-              builder.genIfOp(loc, {idxTy}, isPresent, true)
-                  .genThen([&]() {
-                    builder.create<fir::ResultOp>(loc, readLength());
-                  })
-                  .genElse([&]() {
-                    auto undef = builder.create<fir::UndefOp>(loc, idxTy);
-                    builder.create<fir::ResultOp>(loc, undef.getResult());
-                  })
-                  .getResults()[0];
-          nonDeferredLenParams.push_back(len);
-        } else {
-          nonDeferredLenParams.push_back(readLength());
-        }
+        nonDeferredLenParams.push_back(
+            Fortran::lower::getAssumedCharAllocatableOrPointerLen(
+                builder, loc, sym, args.valueInTuple));
       }
-    } else if (isDerivedWithLengthParameters(sym)) {
+    } else if (isDerivedWithLenParameters(sym)) {
       TODO(loc, "host associated derived type allocatable or pointer with "
                 "length parameters");
     }
-    args.symMap.addSymbol(
-        sym, fir::MutableBoxValue(args.valueInTuple, nonDeferredLenParams, {}));
+    bindCapturedSymbol(
+        sym, fir::MutableBoxValue(args.valueInTuple, nonDeferredLenParams, {}),
+        converter, args.symMap);
   }
 };
 
@@ -348,15 +368,15 @@ public:
           .genThen([&]() {
             fir::factory::associateMutableBox(builder, loc, boxInTuple,
                                               args.hostValue,
-                                              /*lbounds=*/llvm::None);
+                                              /*lbounds=*/std::nullopt);
           })
           .genElse([&]() {
             fir::factory::disassociateMutableBox(builder, loc, boxInTuple);
           })
           .end();
     } else {
-      fir::factory::associateMutableBox(builder, loc, boxInTuple,
-                                        args.hostValue, /*lbounds=*/llvm::None);
+      fir::factory::associateMutableBox(
+          builder, loc, boxInTuple, args.hostValue, /*lbounds=*/std::nullopt);
     }
   }
 
@@ -387,9 +407,10 @@ public:
     }
 
     if (canReadCapturedBoxValue(converter, sym)) {
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/llvm::None);
-      args.symMap.addSymbol(sym,
-                            fir::factory::readBoxValue(builder, loc, boxValue));
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
+      bindCapturedSymbol(sym,
+                         fir::factory::readBoxValue(builder, loc, boxValue),
+                         converter, args.symMap);
     } else {
       // Keep variable as a fir.box.
       // If this is an optional that is absent, the fir.box needs to be an
@@ -402,13 +423,13 @@ public:
         if (!fir::isa_ref_type(eleTy))
           eleTy = builder.getRefType(eleTy);
         auto addr = builder.create<fir::BoxAddrOp>(loc, eleTy, box);
-        mlir::Value isPresent = builder.genIsNotNull(loc, addr);
+        mlir::Value isPresent = builder.genIsNotNullAddr(loc, addr);
         auto absentBox = builder.create<fir::AbsentOp>(loc, boxTy);
         box = builder.create<mlir::arith::SelectOp>(loc, isPresent, box,
                                                     absentBox);
       }
-      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/llvm::None);
-      args.symMap.addSymbol(sym, boxValue);
+      fir::BoxValue boxValue(box, lbounds, /*explicitParams=*/std::nullopt);
+      bindCapturedSymbol(sym, boxValue, converter, args.symMap);
     }
   }
 
@@ -426,19 +447,20 @@ private:
     const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
     bool isPolymorphic = type && type->IsPolymorphic();
     return isScalarOrContiguous && !isPolymorphic &&
-           !isDerivedWithLengthParameters(sym);
+           !isDerivedWithLenParameters(sym);
   }
 };
+} // namespace
 
 /// Dispatch \p visitor to the CapturedSymbols which is handling how host
 /// association is implemented for this kind of symbols. This ensures the same
 /// dispatch decision is taken when building the tuple type, when creating the
 /// tuple, and when instantiating host associated variables from it.
 template <typename T>
-typename T::Result
+static typename T::Result
 walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
                       const Fortran::semantics::Symbol &sym) {
-  if (isDerivedWithLengthParameters(sym))
+  if (isDerivedWithLenParameters(sym))
     // Should be boxed.
     TODO(converter.genLocation(sym.name()),
          "host associated derived type with length parameters");
@@ -448,8 +470,14 @@ walkCaptureCategories(T visitor, Fortran::lower::AbstractConverter &converter,
   if (Fortran::semantics::IsProcedure(sym))
     return CapturedProcedure::visit(visitor, converter, sym, ba);
   ba.analyze(sym);
-  if (Fortran::evaluate::IsAllocatableOrPointer(sym))
+  if (Fortran::semantics::IsAllocatableOrPointer(sym))
     return CapturedAllocatableAndPointer::visit(visitor, converter, sym, ba);
+  if (Fortran::semantics::IsPolymorphic(sym)) {
+    if (ba.isArray() && !ba.lboundIsAllOnes())
+      TODO(converter.genLocation(sym.name()),
+           "polymorphic array with non default lower bound");
+    return CapturedPolymorphic::visit(visitor, converter, sym, ba);
+  }
   if (ba.isArray())
     return CapturedArrays::visit(visitor, converter, sym, ba);
   if (ba.isChar())
@@ -475,10 +503,25 @@ static mlir::Value genTupleCoor(fir::FirOpBuilder &builder, mlir::Location loc,
   return builder.create<fir::CoordinateOp>(loc, ty, tupleArg, offset);
 }
 
+void Fortran::lower::HostAssociations::addSymbolsToBind(
+    const llvm::SetVector<const Fortran::semantics::Symbol *> &symbols,
+    const Fortran::semantics::Scope &hostScope) {
+  assert(tupleSymbols.empty() && globalSymbols.empty() &&
+         "must be initially empty");
+  this->hostScope = &hostScope;
+  for (const auto *s : symbols)
+    if (Fortran::lower::symbolIsGlobal(*s))
+      // The ultimate symbol is stored here so that global symbols from the
+      // host scope can later be searched in this set.
+      globalSymbols.insert(&s->GetUltimate());
+    else
+      tupleSymbols.insert(s);
+}
+
 void Fortran::lower::HostAssociations::hostProcedureBindings(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap) {
-  if (symbols.empty())
+  if (tupleSymbols.empty())
     return;
 
   // Create the tuple variable.
@@ -488,14 +531,14 @@ void Fortran::lower::HostAssociations::hostProcedureBindings(
   auto hostTuple = builder.create<fir::AllocaOp>(loc, tupTy);
   mlir::IntegerType offTy = builder.getIntegerType(32);
 
-  // Walk the list of symbols and update the pointers in the tuple.
-  for (auto s : llvm::enumerate(symbols)) {
+  // Walk the list of tupleSymbols and update the pointers in the tuple.
+  for (auto s : llvm::enumerate(tupleSymbols)) {
     auto indexInTuple = s.index();
     mlir::Value off = builder.createIntegerConstant(loc, offTy, indexInTuple);
     mlir::Type varTy = tupTy.getType(indexInTuple);
     mlir::Value eleOff = genTupleCoor(builder, loc, varTy, hostTuple, off);
     InstantiateHostTuple instantiateHostTuple{
-        symMap.lookupSymbol(s.value()).toExtendedValue(), eleOff, loc};
+        converter.getSymbolExtendedValue(*s.value(), &symMap), eleOff, loc};
     walkCaptureCategories(instantiateHostTuple, converter, *s.value());
   }
 
@@ -505,7 +548,20 @@ void Fortran::lower::HostAssociations::hostProcedureBindings(
 void Fortran::lower::HostAssociations::internalProcedureBindings(
     Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap) {
-  if (symbols.empty())
+  if (!globalSymbols.empty()) {
+    assert(hostScope && "host scope must have been set");
+    Fortran::lower::AggregateStoreMap storeMap;
+    // The host scope variable list is required to deal with host variables
+    // that are equivalenced and requires instantiating the right global
+    // AggregateStore.
+    for (auto &hostVariable : pft::getScopeVariableList(*hostScope))
+      if ((hostVariable.isAggregateStore() && hostVariable.isGlobal()) ||
+          (hostVariable.hasSymbol() &&
+           globalSymbols.contains(&hostVariable.getSymbol().GetUltimate())))
+        Fortran::lower::instantiateVariable(converter, hostVariable, symMap,
+                                            storeMap);
+  }
+  if (tupleSymbols.empty())
     return;
 
   // Find the argument with the tuple type. The argument ought to be appended.
@@ -529,7 +585,7 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
   mlir::IntegerType offTy = builder.getIntegerType(32);
 
   // Walk the list and add the bindings to the symbol table.
-  for (auto s : llvm::enumerate(symbols)) {
+  for (auto s : llvm::enumerate(tupleSymbols)) {
     mlir::Value off = builder.createIntegerConstant(loc, offTy, s.index());
     mlir::Type varTy = tupTy.getType(s.index());
     mlir::Value eleOff = genTupleCoor(builder, loc, varTy, tupleArg, off);
@@ -541,7 +597,7 @@ void Fortran::lower::HostAssociations::internalProcedureBindings(
 
 mlir::Type Fortran::lower::HostAssociations::getArgumentType(
     Fortran::lower::AbstractConverter &converter) {
-  if (symbols.empty())
+  if (tupleSymbols.empty())
     return {};
   if (argType)
     return argType;
@@ -550,7 +606,7 @@ mlir::Type Fortran::lower::HostAssociations::getArgumentType(
   // to a tuple.
   mlir::MLIRContext *ctxt = &converter.getMLIRContext();
   llvm::SmallVector<mlir::Type> tupleTys;
-  for (const Fortran::semantics::Symbol *sym : symbols)
+  for (const Fortran::semantics::Symbol *sym : tupleSymbols)
     tupleTys.emplace_back(
         walkCaptureCategories(GetTypeInTuple{}, converter, *sym));
   argType = fir::ReferenceType::get(mlir::TupleType::get(ctxt, tupleTys));

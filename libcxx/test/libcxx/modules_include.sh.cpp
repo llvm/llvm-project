@@ -10,19 +10,15 @@
 // This is important notably because the LLDB data formatters use
 // libc++ headers with modules enabled.
 
-// The system-provided <uchar.h> seems to be broken on AIX
-// XFAIL: LIBCXX-AIX-FIXME
-
 // GCC doesn't support -fcxx-modules
 // UNSUPPORTED: gcc
 
 // The Windows headers don't appear to be compatible with modules
 // UNSUPPORTED: windows
+// UNSUPPORTED: buildhost=windows
 
-// Prevent <ext/hash_map> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#    undef __DEPRECATED
-#endif
+// The Android headers don't appear to be compatible with modules yet
+// XFAIL: LIBCXX-ANDROID-FIXME
 
 #include <__config>
 
@@ -30,7 +26,10 @@
 BEGIN-SCRIPT
 
 for i, header in enumerate(public_headers):
-  print("// {}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fsyntax-only -DTEST_{}".format('RUN', i))
+  print("// {}: echo '%{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_{} &' >> %t.sh".format('RUN', i))
+  print("// {}: echo 'TEST_{}=$!' >> %t.sh".format('RUN', i))
+  if i >= 16:
+    print("// {}: echo \"wait $TEST_{}\" >> %t.sh".format('RUN', i - 16))
   if header in header_restrictions:
     print("#if defined(TEST_{}) && {}".format(i, header_restrictions[header]))
   else:
@@ -38,569 +37,853 @@ for i, header in enumerate(public_headers):
   print("#include <{}>".format(header))
   print("#endif")
 
+for i in range(len(public_headers))[-16:]:
+  print("// {}: echo \"wait $TEST_{}\" >> %t.sh".format('RUN', i))
+
+print("// {}: bash %t.sh".format('RUN'))
+
 END-SCRIPT
 */
 
+// RUN: echo "" > %t.sh
+// RUN: rm -rf %t
+// RUN: mkdir %t
+
 // DO NOT MANUALLY EDIT ANYTHING BETWEEN THE MARKERS BELOW
 // GENERATED-MARKER
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_0
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_0 &' >> %t.sh
+// RUN: echo 'TEST_0=$!' >> %t.sh
 #if defined(TEST_0)
 #include <algorithm>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_1
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_1 &' >> %t.sh
+// RUN: echo 'TEST_1=$!' >> %t.sh
 #if defined(TEST_1)
 #include <any>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_2
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_2 &' >> %t.sh
+// RUN: echo 'TEST_2=$!' >> %t.sh
 #if defined(TEST_2)
 #include <array>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_3
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_3 &' >> %t.sh
+// RUN: echo 'TEST_3=$!' >> %t.sh
 #if defined(TEST_3)
 #include <atomic>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_4
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_4 &' >> %t.sh
+// RUN: echo 'TEST_4=$!' >> %t.sh
 #if defined(TEST_4) && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <barrier>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_5
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_5 &' >> %t.sh
+// RUN: echo 'TEST_5=$!' >> %t.sh
 #if defined(TEST_5)
 #include <bit>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_6
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_6 &' >> %t.sh
+// RUN: echo 'TEST_6=$!' >> %t.sh
 #if defined(TEST_6)
 #include <bitset>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_7
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_7 &' >> %t.sh
+// RUN: echo 'TEST_7=$!' >> %t.sh
 #if defined(TEST_7)
 #include <cassert>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_8
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_8 &' >> %t.sh
+// RUN: echo 'TEST_8=$!' >> %t.sh
 #if defined(TEST_8)
 #include <ccomplex>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_9
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_9 &' >> %t.sh
+// RUN: echo 'TEST_9=$!' >> %t.sh
 #if defined(TEST_9)
 #include <cctype>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_10
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_10 &' >> %t.sh
+// RUN: echo 'TEST_10=$!' >> %t.sh
 #if defined(TEST_10)
 #include <cerrno>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_11
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_11 &' >> %t.sh
+// RUN: echo 'TEST_11=$!' >> %t.sh
 #if defined(TEST_11)
 #include <cfenv>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_12
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_12 &' >> %t.sh
+// RUN: echo 'TEST_12=$!' >> %t.sh
 #if defined(TEST_12)
 #include <cfloat>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_13
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_13 &' >> %t.sh
+// RUN: echo 'TEST_13=$!' >> %t.sh
 #if defined(TEST_13)
 #include <charconv>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_14
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_14 &' >> %t.sh
+// RUN: echo 'TEST_14=$!' >> %t.sh
 #if defined(TEST_14)
 #include <chrono>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_15
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_15 &' >> %t.sh
+// RUN: echo 'TEST_15=$!' >> %t.sh
 #if defined(TEST_15)
 #include <cinttypes>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_16
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_16 &' >> %t.sh
+// RUN: echo 'TEST_16=$!' >> %t.sh
+// RUN: echo "wait $TEST_0" >> %t.sh
 #if defined(TEST_16)
 #include <ciso646>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_17
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_17 &' >> %t.sh
+// RUN: echo 'TEST_17=$!' >> %t.sh
+// RUN: echo "wait $TEST_1" >> %t.sh
 #if defined(TEST_17)
 #include <climits>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_18
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_18 &' >> %t.sh
+// RUN: echo 'TEST_18=$!' >> %t.sh
+// RUN: echo "wait $TEST_2" >> %t.sh
 #if defined(TEST_18) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <clocale>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_19
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_19 &' >> %t.sh
+// RUN: echo 'TEST_19=$!' >> %t.sh
+// RUN: echo "wait $TEST_3" >> %t.sh
 #if defined(TEST_19)
 #include <cmath>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_20
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_20 &' >> %t.sh
+// RUN: echo 'TEST_20=$!' >> %t.sh
+// RUN: echo "wait $TEST_4" >> %t.sh
 #if defined(TEST_20) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <codecvt>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_21
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_21 &' >> %t.sh
+// RUN: echo 'TEST_21=$!' >> %t.sh
+// RUN: echo "wait $TEST_5" >> %t.sh
 #if defined(TEST_21)
 #include <compare>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_22
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_22 &' >> %t.sh
+// RUN: echo 'TEST_22=$!' >> %t.sh
+// RUN: echo "wait $TEST_6" >> %t.sh
 #if defined(TEST_22)
 #include <complex>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_23
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_23 &' >> %t.sh
+// RUN: echo 'TEST_23=$!' >> %t.sh
+// RUN: echo "wait $TEST_7" >> %t.sh
 #if defined(TEST_23)
 #include <complex.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_24
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_24 &' >> %t.sh
+// RUN: echo 'TEST_24=$!' >> %t.sh
+// RUN: echo "wait $TEST_8" >> %t.sh
 #if defined(TEST_24)
 #include <concepts>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_25
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_25 &' >> %t.sh
+// RUN: echo 'TEST_25=$!' >> %t.sh
+// RUN: echo "wait $TEST_9" >> %t.sh
 #if defined(TEST_25)
 #include <condition_variable>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_26
-#if defined(TEST_26)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_26 &' >> %t.sh
+// RUN: echo 'TEST_26=$!' >> %t.sh
+// RUN: echo "wait $TEST_10" >> %t.sh
+#if defined(TEST_26) && (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
 #include <coroutine>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_27
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_27 &' >> %t.sh
+// RUN: echo 'TEST_27=$!' >> %t.sh
+// RUN: echo "wait $TEST_11" >> %t.sh
 #if defined(TEST_27)
 #include <csetjmp>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_28
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_28 &' >> %t.sh
+// RUN: echo 'TEST_28=$!' >> %t.sh
+// RUN: echo "wait $TEST_12" >> %t.sh
 #if defined(TEST_28)
 #include <csignal>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_29
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_29 &' >> %t.sh
+// RUN: echo 'TEST_29=$!' >> %t.sh
+// RUN: echo "wait $TEST_13" >> %t.sh
 #if defined(TEST_29)
 #include <cstdarg>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_30
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_30 &' >> %t.sh
+// RUN: echo 'TEST_30=$!' >> %t.sh
+// RUN: echo "wait $TEST_14" >> %t.sh
 #if defined(TEST_30)
 #include <cstdbool>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_31
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_31 &' >> %t.sh
+// RUN: echo 'TEST_31=$!' >> %t.sh
+// RUN: echo "wait $TEST_15" >> %t.sh
 #if defined(TEST_31)
 #include <cstddef>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_32
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_32 &' >> %t.sh
+// RUN: echo 'TEST_32=$!' >> %t.sh
+// RUN: echo "wait $TEST_16" >> %t.sh
 #if defined(TEST_32)
 #include <cstdint>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_33
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_33 &' >> %t.sh
+// RUN: echo 'TEST_33=$!' >> %t.sh
+// RUN: echo "wait $TEST_17" >> %t.sh
 #if defined(TEST_33)
 #include <cstdio>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_34
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_34 &' >> %t.sh
+// RUN: echo 'TEST_34=$!' >> %t.sh
+// RUN: echo "wait $TEST_18" >> %t.sh
 #if defined(TEST_34)
 #include <cstdlib>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_35
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_35 &' >> %t.sh
+// RUN: echo 'TEST_35=$!' >> %t.sh
+// RUN: echo "wait $TEST_19" >> %t.sh
 #if defined(TEST_35)
 #include <cstring>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_36
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_36 &' >> %t.sh
+// RUN: echo 'TEST_36=$!' >> %t.sh
+// RUN: echo "wait $TEST_20" >> %t.sh
 #if defined(TEST_36)
 #include <ctgmath>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_37
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_37 &' >> %t.sh
+// RUN: echo 'TEST_37=$!' >> %t.sh
+// RUN: echo "wait $TEST_21" >> %t.sh
 #if defined(TEST_37)
 #include <ctime>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_38
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_38 &' >> %t.sh
+// RUN: echo 'TEST_38=$!' >> %t.sh
+// RUN: echo "wait $TEST_22" >> %t.sh
 #if defined(TEST_38)
 #include <ctype.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_39
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_39 &' >> %t.sh
+// RUN: echo 'TEST_39=$!' >> %t.sh
+// RUN: echo "wait $TEST_23" >> %t.sh
 #if defined(TEST_39)
 #include <cuchar>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_40
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_40 &' >> %t.sh
+// RUN: echo 'TEST_40=$!' >> %t.sh
+// RUN: echo "wait $TEST_24" >> %t.sh
 #if defined(TEST_40) && !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #include <cwchar>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_41
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_41 &' >> %t.sh
+// RUN: echo 'TEST_41=$!' >> %t.sh
+// RUN: echo "wait $TEST_25" >> %t.sh
 #if defined(TEST_41) && !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #include <cwctype>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_42
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_42 &' >> %t.sh
+// RUN: echo 'TEST_42=$!' >> %t.sh
+// RUN: echo "wait $TEST_26" >> %t.sh
 #if defined(TEST_42)
 #include <deque>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_43
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_43 &' >> %t.sh
+// RUN: echo 'TEST_43=$!' >> %t.sh
+// RUN: echo "wait $TEST_27" >> %t.sh
 #if defined(TEST_43)
 #include <errno.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_44
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_44 &' >> %t.sh
+// RUN: echo 'TEST_44=$!' >> %t.sh
+// RUN: echo "wait $TEST_28" >> %t.sh
 #if defined(TEST_44)
 #include <exception>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_45
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_45 &' >> %t.sh
+// RUN: echo 'TEST_45=$!' >> %t.sh
+// RUN: echo "wait $TEST_29" >> %t.sh
 #if defined(TEST_45)
 #include <execution>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_46
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_46 &' >> %t.sh
+// RUN: echo 'TEST_46=$!' >> %t.sh
+// RUN: echo "wait $TEST_30" >> %t.sh
 #if defined(TEST_46)
+#include <expected>
+#endif
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_47 &' >> %t.sh
+// RUN: echo 'TEST_47=$!' >> %t.sh
+// RUN: echo "wait $TEST_31" >> %t.sh
+#if defined(TEST_47)
 #include <fenv.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_47
-#if defined(TEST_47) && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_48 &' >> %t.sh
+// RUN: echo 'TEST_48=$!' >> %t.sh
+// RUN: echo "wait $TEST_32" >> %t.sh
+#if defined(TEST_48) && !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
 #include <filesystem>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_48
-#if defined(TEST_48)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_49 &' >> %t.sh
+// RUN: echo 'TEST_49=$!' >> %t.sh
+// RUN: echo "wait $TEST_33" >> %t.sh
+#if defined(TEST_49)
 #include <float.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_49
-#if defined(TEST_49)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_50 &' >> %t.sh
+// RUN: echo 'TEST_50=$!' >> %t.sh
+// RUN: echo "wait $TEST_34" >> %t.sh
+#if defined(TEST_50)
 #include <format>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_50
-#if defined(TEST_50)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_51 &' >> %t.sh
+// RUN: echo 'TEST_51=$!' >> %t.sh
+// RUN: echo "wait $TEST_35" >> %t.sh
+#if defined(TEST_51)
 #include <forward_list>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_51
-#if defined(TEST_51) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_52 &' >> %t.sh
+// RUN: echo 'TEST_52=$!' >> %t.sh
+// RUN: echo "wait $TEST_36" >> %t.sh
+#if defined(TEST_52) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #include <fstream>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_52
-#if defined(TEST_52)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_53 &' >> %t.sh
+// RUN: echo 'TEST_53=$!' >> %t.sh
+// RUN: echo "wait $TEST_37" >> %t.sh
+#if defined(TEST_53)
 #include <functional>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_53
-#if defined(TEST_53) && !defined(_LIBCPP_HAS_NO_THREADS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_54 &' >> %t.sh
+// RUN: echo 'TEST_54=$!' >> %t.sh
+// RUN: echo "wait $TEST_38" >> %t.sh
+#if defined(TEST_54) && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <future>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_54
-#if defined(TEST_54)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_55 &' >> %t.sh
+// RUN: echo 'TEST_55=$!' >> %t.sh
+// RUN: echo "wait $TEST_39" >> %t.sh
+#if defined(TEST_55)
 #include <initializer_list>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_55
-#if defined(TEST_55)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_56 &' >> %t.sh
+// RUN: echo 'TEST_56=$!' >> %t.sh
+// RUN: echo "wait $TEST_40" >> %t.sh
+#if defined(TEST_56)
 #include <inttypes.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_56
-#if defined(TEST_56) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_57 &' >> %t.sh
+// RUN: echo 'TEST_57=$!' >> %t.sh
+// RUN: echo "wait $TEST_41" >> %t.sh
+#if defined(TEST_57) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <iomanip>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_57
-#if defined(TEST_57) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_58 &' >> %t.sh
+// RUN: echo 'TEST_58=$!' >> %t.sh
+// RUN: echo "wait $TEST_42" >> %t.sh
+#if defined(TEST_58) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <ios>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_58
-#if defined(TEST_58)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_59 &' >> %t.sh
+// RUN: echo 'TEST_59=$!' >> %t.sh
+// RUN: echo "wait $TEST_43" >> %t.sh
+#if defined(TEST_59)
 #include <iosfwd>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_59
-#if defined(TEST_59) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_60 &' >> %t.sh
+// RUN: echo 'TEST_60=$!' >> %t.sh
+// RUN: echo "wait $TEST_44" >> %t.sh
+#if defined(TEST_60) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <iostream>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_60
-#if defined(TEST_60) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_61 &' >> %t.sh
+// RUN: echo 'TEST_61=$!' >> %t.sh
+// RUN: echo "wait $TEST_45" >> %t.sh
+#if defined(TEST_61) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <istream>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_61
-#if defined(TEST_61)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_62 &' >> %t.sh
+// RUN: echo 'TEST_62=$!' >> %t.sh
+// RUN: echo "wait $TEST_46" >> %t.sh
+#if defined(TEST_62)
 #include <iterator>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_62
-#if defined(TEST_62) && !defined(_LIBCPP_HAS_NO_THREADS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_63 &' >> %t.sh
+// RUN: echo 'TEST_63=$!' >> %t.sh
+// RUN: echo "wait $TEST_47" >> %t.sh
+#if defined(TEST_63) && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <latch>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_63
-#if defined(TEST_63)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_64 &' >> %t.sh
+// RUN: echo 'TEST_64=$!' >> %t.sh
+// RUN: echo "wait $TEST_48" >> %t.sh
+#if defined(TEST_64)
 #include <limits>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_64
-#if defined(TEST_64)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_65 &' >> %t.sh
+// RUN: echo 'TEST_65=$!' >> %t.sh
+// RUN: echo "wait $TEST_49" >> %t.sh
+#if defined(TEST_65)
 #include <limits.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_65
-#if defined(TEST_65)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_66 &' >> %t.sh
+// RUN: echo 'TEST_66=$!' >> %t.sh
+// RUN: echo "wait $TEST_50" >> %t.sh
+#if defined(TEST_66)
 #include <list>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_66
-#if defined(TEST_66) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_67 &' >> %t.sh
+// RUN: echo 'TEST_67=$!' >> %t.sh
+// RUN: echo "wait $TEST_51" >> %t.sh
+#if defined(TEST_67) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <locale>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_67
-#if defined(TEST_67) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_68 &' >> %t.sh
+// RUN: echo 'TEST_68=$!' >> %t.sh
+// RUN: echo "wait $TEST_52" >> %t.sh
+#if defined(TEST_68) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <locale.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_68
-#if defined(TEST_68)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_69 &' >> %t.sh
+// RUN: echo 'TEST_69=$!' >> %t.sh
+// RUN: echo "wait $TEST_53" >> %t.sh
+#if defined(TEST_69)
 #include <map>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_69
-#if defined(TEST_69)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_70 &' >> %t.sh
+// RUN: echo 'TEST_70=$!' >> %t.sh
+// RUN: echo "wait $TEST_54" >> %t.sh
+#if defined(TEST_70)
 #include <math.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_70
-#if defined(TEST_70)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_71 &' >> %t.sh
+// RUN: echo 'TEST_71=$!' >> %t.sh
+// RUN: echo "wait $TEST_55" >> %t.sh
+#if defined(TEST_71)
+#include <mdspan>
+#endif
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_72 &' >> %t.sh
+// RUN: echo 'TEST_72=$!' >> %t.sh
+// RUN: echo "wait $TEST_56" >> %t.sh
+#if defined(TEST_72)
 #include <memory>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_71
-#if defined(TEST_71) && !defined(_LIBCPP_HAS_NO_THREADS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_73 &' >> %t.sh
+// RUN: echo 'TEST_73=$!' >> %t.sh
+// RUN: echo "wait $TEST_57" >> %t.sh
+#if defined(TEST_73)
+#include <memory_resource>
+#endif
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_74 &' >> %t.sh
+// RUN: echo 'TEST_74=$!' >> %t.sh
+// RUN: echo "wait $TEST_58" >> %t.sh
+#if defined(TEST_74) && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <mutex>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_72
-#if defined(TEST_72)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_75 &' >> %t.sh
+// RUN: echo 'TEST_75=$!' >> %t.sh
+// RUN: echo "wait $TEST_59" >> %t.sh
+#if defined(TEST_75)
 #include <new>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_73
-#if defined(TEST_73)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_76 &' >> %t.sh
+// RUN: echo 'TEST_76=$!' >> %t.sh
+// RUN: echo "wait $TEST_60" >> %t.sh
+#if defined(TEST_76)
 #include <numbers>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_74
-#if defined(TEST_74)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_77 &' >> %t.sh
+// RUN: echo 'TEST_77=$!' >> %t.sh
+// RUN: echo "wait $TEST_61" >> %t.sh
+#if defined(TEST_77)
 #include <numeric>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_75
-#if defined(TEST_75)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_78 &' >> %t.sh
+// RUN: echo 'TEST_78=$!' >> %t.sh
+// RUN: echo "wait $TEST_62" >> %t.sh
+#if defined(TEST_78)
 #include <optional>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_76
-#if defined(TEST_76) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_79 &' >> %t.sh
+// RUN: echo 'TEST_79=$!' >> %t.sh
+// RUN: echo "wait $TEST_63" >> %t.sh
+#if defined(TEST_79) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <ostream>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_77
-#if defined(TEST_77)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_80 &' >> %t.sh
+// RUN: echo 'TEST_80=$!' >> %t.sh
+// RUN: echo "wait $TEST_64" >> %t.sh
+#if defined(TEST_80)
 #include <queue>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_78
-#if defined(TEST_78)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_81 &' >> %t.sh
+// RUN: echo 'TEST_81=$!' >> %t.sh
+// RUN: echo "wait $TEST_65" >> %t.sh
+#if defined(TEST_81)
 #include <random>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_79
-#if defined(TEST_79)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_82 &' >> %t.sh
+// RUN: echo 'TEST_82=$!' >> %t.sh
+// RUN: echo "wait $TEST_66" >> %t.sh
+#if defined(TEST_82)
 #include <ranges>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_80
-#if defined(TEST_80)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_83 &' >> %t.sh
+// RUN: echo 'TEST_83=$!' >> %t.sh
+// RUN: echo "wait $TEST_67" >> %t.sh
+#if defined(TEST_83)
 #include <ratio>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_81
-#if defined(TEST_81) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_84 &' >> %t.sh
+// RUN: echo 'TEST_84=$!' >> %t.sh
+// RUN: echo "wait $TEST_68" >> %t.sh
+#if defined(TEST_84) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <regex>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_82
-#if defined(TEST_82)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_85 &' >> %t.sh
+// RUN: echo 'TEST_85=$!' >> %t.sh
+// RUN: echo "wait $TEST_69" >> %t.sh
+#if defined(TEST_85)
 #include <scoped_allocator>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_83
-#if defined(TEST_83) && !defined(_LIBCPP_HAS_NO_THREADS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_86 &' >> %t.sh
+// RUN: echo 'TEST_86=$!' >> %t.sh
+// RUN: echo "wait $TEST_70" >> %t.sh
+#if defined(TEST_86) && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <semaphore>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_84
-#if defined(TEST_84)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_87 &' >> %t.sh
+// RUN: echo 'TEST_87=$!' >> %t.sh
+// RUN: echo "wait $TEST_71" >> %t.sh
+#if defined(TEST_87)
 #include <set>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_85
-#if defined(TEST_85)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_88 &' >> %t.sh
+// RUN: echo 'TEST_88=$!' >> %t.sh
+// RUN: echo "wait $TEST_72" >> %t.sh
+#if defined(TEST_88)
 #include <setjmp.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_86
-#if defined(TEST_86) && !defined(_LIBCPP_HAS_NO_THREADS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_89 &' >> %t.sh
+// RUN: echo 'TEST_89=$!' >> %t.sh
+// RUN: echo "wait $TEST_73" >> %t.sh
+#if defined(TEST_89) && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <shared_mutex>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_87
-#if defined(TEST_87)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_90 &' >> %t.sh
+// RUN: echo 'TEST_90=$!' >> %t.sh
+// RUN: echo "wait $TEST_74" >> %t.sh
+#if defined(TEST_90)
+#include <source_location>
+#endif
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_91 &' >> %t.sh
+// RUN: echo 'TEST_91=$!' >> %t.sh
+// RUN: echo "wait $TEST_75" >> %t.sh
+#if defined(TEST_91)
 #include <span>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_88
-#if defined(TEST_88) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_92 &' >> %t.sh
+// RUN: echo 'TEST_92=$!' >> %t.sh
+// RUN: echo "wait $TEST_76" >> %t.sh
+#if defined(TEST_92) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <sstream>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_89
-#if defined(TEST_89)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_93 &' >> %t.sh
+// RUN: echo 'TEST_93=$!' >> %t.sh
+// RUN: echo "wait $TEST_77" >> %t.sh
+#if defined(TEST_93)
 #include <stack>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_90
-#if defined(TEST_90) && __cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_94 &' >> %t.sh
+// RUN: echo 'TEST_94=$!' >> %t.sh
+// RUN: echo "wait $TEST_78" >> %t.sh
+#if defined(TEST_94) && __cplusplus > 202002L && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <stdatomic.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_91
-#if defined(TEST_91)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_95 &' >> %t.sh
+// RUN: echo 'TEST_95=$!' >> %t.sh
+// RUN: echo "wait $TEST_79" >> %t.sh
+#if defined(TEST_95)
 #include <stdbool.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_92
-#if defined(TEST_92)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_96 &' >> %t.sh
+// RUN: echo 'TEST_96=$!' >> %t.sh
+// RUN: echo "wait $TEST_80" >> %t.sh
+#if defined(TEST_96)
 #include <stddef.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_93
-#if defined(TEST_93)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_97 &' >> %t.sh
+// RUN: echo 'TEST_97=$!' >> %t.sh
+// RUN: echo "wait $TEST_81" >> %t.sh
+#if defined(TEST_97)
 #include <stdexcept>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_94
-#if defined(TEST_94)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_98 &' >> %t.sh
+// RUN: echo 'TEST_98=$!' >> %t.sh
+// RUN: echo "wait $TEST_82" >> %t.sh
+#if defined(TEST_98)
 #include <stdint.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_95
-#if defined(TEST_95)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_99 &' >> %t.sh
+// RUN: echo 'TEST_99=$!' >> %t.sh
+// RUN: echo "wait $TEST_83" >> %t.sh
+#if defined(TEST_99)
 #include <stdio.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_96
-#if defined(TEST_96)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_100 &' >> %t.sh
+// RUN: echo 'TEST_100=$!' >> %t.sh
+// RUN: echo "wait $TEST_84" >> %t.sh
+#if defined(TEST_100)
 #include <stdlib.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_97
-#if defined(TEST_97) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_101 &' >> %t.sh
+// RUN: echo 'TEST_101=$!' >> %t.sh
+// RUN: echo "wait $TEST_85" >> %t.sh
+#if defined(TEST_101) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <streambuf>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_98
-#if defined(TEST_98)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_102 &' >> %t.sh
+// RUN: echo 'TEST_102=$!' >> %t.sh
+// RUN: echo "wait $TEST_86" >> %t.sh
+#if defined(TEST_102)
 #include <string>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_99
-#if defined(TEST_99)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_103 &' >> %t.sh
+// RUN: echo 'TEST_103=$!' >> %t.sh
+// RUN: echo "wait $TEST_87" >> %t.sh
+#if defined(TEST_103)
 #include <string.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_100
-#if defined(TEST_100)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_104 &' >> %t.sh
+// RUN: echo 'TEST_104=$!' >> %t.sh
+// RUN: echo "wait $TEST_88" >> %t.sh
+#if defined(TEST_104)
 #include <string_view>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_101
-#if defined(TEST_101) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_105 &' >> %t.sh
+// RUN: echo 'TEST_105=$!' >> %t.sh
+// RUN: echo "wait $TEST_89" >> %t.sh
+#if defined(TEST_105) && !defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #include <strstream>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_102
-#if defined(TEST_102)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_106 &' >> %t.sh
+// RUN: echo 'TEST_106=$!' >> %t.sh
+// RUN: echo "wait $TEST_90" >> %t.sh
+#if defined(TEST_106)
 #include <system_error>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_103
-#if defined(TEST_103)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_107 &' >> %t.sh
+// RUN: echo 'TEST_107=$!' >> %t.sh
+// RUN: echo "wait $TEST_91" >> %t.sh
+#if defined(TEST_107)
 #include <tgmath.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_104
-#if defined(TEST_104) && !defined(_LIBCPP_HAS_NO_THREADS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_108 &' >> %t.sh
+// RUN: echo 'TEST_108=$!' >> %t.sh
+// RUN: echo "wait $TEST_92" >> %t.sh
+#if defined(TEST_108) && !defined(_LIBCPP_HAS_NO_THREADS)
 #include <thread>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_105
-#if defined(TEST_105)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_109 &' >> %t.sh
+// RUN: echo 'TEST_109=$!' >> %t.sh
+// RUN: echo "wait $TEST_93" >> %t.sh
+#if defined(TEST_109)
 #include <tuple>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_106
-#if defined(TEST_106)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_110 &' >> %t.sh
+// RUN: echo 'TEST_110=$!' >> %t.sh
+// RUN: echo "wait $TEST_94" >> %t.sh
+#if defined(TEST_110)
 #include <type_traits>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_107
-#if defined(TEST_107)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_111 &' >> %t.sh
+// RUN: echo 'TEST_111=$!' >> %t.sh
+// RUN: echo "wait $TEST_95" >> %t.sh
+#if defined(TEST_111)
 #include <typeindex>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_108
-#if defined(TEST_108)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_112 &' >> %t.sh
+// RUN: echo 'TEST_112=$!' >> %t.sh
+// RUN: echo "wait $TEST_96" >> %t.sh
+#if defined(TEST_112)
 #include <typeinfo>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_109
-#if defined(TEST_109)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_113 &' >> %t.sh
+// RUN: echo 'TEST_113=$!' >> %t.sh
+// RUN: echo "wait $TEST_97" >> %t.sh
+#if defined(TEST_113)
 #include <uchar.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_110
-#if defined(TEST_110)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_114 &' >> %t.sh
+// RUN: echo 'TEST_114=$!' >> %t.sh
+// RUN: echo "wait $TEST_98" >> %t.sh
+#if defined(TEST_114)
 #include <unordered_map>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_111
-#if defined(TEST_111)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_115 &' >> %t.sh
+// RUN: echo 'TEST_115=$!' >> %t.sh
+// RUN: echo "wait $TEST_99" >> %t.sh
+#if defined(TEST_115)
 #include <unordered_set>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_112
-#if defined(TEST_112)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_116 &' >> %t.sh
+// RUN: echo 'TEST_116=$!' >> %t.sh
+// RUN: echo "wait $TEST_100" >> %t.sh
+#if defined(TEST_116)
 #include <utility>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_113
-#if defined(TEST_113)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_117 &' >> %t.sh
+// RUN: echo 'TEST_117=$!' >> %t.sh
+// RUN: echo "wait $TEST_101" >> %t.sh
+#if defined(TEST_117)
 #include <valarray>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_114
-#if defined(TEST_114)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_118 &' >> %t.sh
+// RUN: echo 'TEST_118=$!' >> %t.sh
+// RUN: echo "wait $TEST_102" >> %t.sh
+#if defined(TEST_118)
 #include <variant>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_115
-#if defined(TEST_115)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_119 &' >> %t.sh
+// RUN: echo 'TEST_119=$!' >> %t.sh
+// RUN: echo "wait $TEST_103" >> %t.sh
+#if defined(TEST_119)
 #include <vector>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_116
-#if defined(TEST_116)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_120 &' >> %t.sh
+// RUN: echo 'TEST_120=$!' >> %t.sh
+// RUN: echo "wait $TEST_104" >> %t.sh
+#if defined(TEST_120)
 #include <version>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_117
-#if defined(TEST_117) && !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_121 &' >> %t.sh
+// RUN: echo 'TEST_121=$!' >> %t.sh
+// RUN: echo "wait $TEST_105" >> %t.sh
+#if defined(TEST_121) && !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #include <wchar.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_118
-#if defined(TEST_118) && !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_122 &' >> %t.sh
+// RUN: echo 'TEST_122=$!' >> %t.sh
+// RUN: echo "wait $TEST_106" >> %t.sh
+#if defined(TEST_122) && !defined(_LIBCPP_HAS_NO_WIDE_CHARACTERS)
 #include <wctype.h>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_119
-#if defined(TEST_119) && __cplusplus >= 201103L
-#include <experimental/algorithm>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_120
-#if defined(TEST_120) && __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
-#include <experimental/coroutine>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_121
-#if defined(TEST_121) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_123 &' >> %t.sh
+// RUN: echo 'TEST_123=$!' >> %t.sh
+// RUN: echo "wait $TEST_107" >> %t.sh
+#if defined(TEST_123) && __cplusplus >= 201103L
 #include <experimental/deque>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_122
-#if defined(TEST_122) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_124 &' >> %t.sh
+// RUN: echo 'TEST_124=$!' >> %t.sh
+// RUN: echo "wait $TEST_108" >> %t.sh
+#if defined(TEST_124) && __cplusplus >= 201103L
 #include <experimental/forward_list>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_123
-#if defined(TEST_123) && __cplusplus >= 201103L
-#include <experimental/functional>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_124
-#if defined(TEST_124) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_125 &' >> %t.sh
+// RUN: echo 'TEST_125=$!' >> %t.sh
+// RUN: echo "wait $TEST_109" >> %t.sh
+#if defined(TEST_125) && __cplusplus >= 201103L
 #include <experimental/iterator>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_125
-#if defined(TEST_125) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_126 &' >> %t.sh
+// RUN: echo 'TEST_126=$!' >> %t.sh
+// RUN: echo "wait $TEST_110" >> %t.sh
+#if defined(TEST_126) && __cplusplus >= 201103L
 #include <experimental/list>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_126
-#if defined(TEST_126) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_127 &' >> %t.sh
+// RUN: echo 'TEST_127=$!' >> %t.sh
+// RUN: echo "wait $TEST_111" >> %t.sh
+#if defined(TEST_127) && __cplusplus >= 201103L
 #include <experimental/map>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_127
-#if defined(TEST_127) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_128 &' >> %t.sh
+// RUN: echo 'TEST_128=$!' >> %t.sh
+// RUN: echo "wait $TEST_112" >> %t.sh
+#if defined(TEST_128) && __cplusplus >= 201103L
 #include <experimental/memory_resource>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_128
-#if defined(TEST_128) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_129 &' >> %t.sh
+// RUN: echo 'TEST_129=$!' >> %t.sh
+// RUN: echo "wait $TEST_113" >> %t.sh
+#if defined(TEST_129) && __cplusplus >= 201103L
 #include <experimental/propagate_const>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_129
-#if defined(TEST_129) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_130 &' >> %t.sh
+// RUN: echo 'TEST_130=$!' >> %t.sh
+// RUN: echo "wait $TEST_114" >> %t.sh
+#if defined(TEST_130) && !defined(_LIBCPP_HAS_NO_LOCALIZATION) && __cplusplus >= 201103L
 #include <experimental/regex>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_130
-#if defined(TEST_130) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_131 &' >> %t.sh
+// RUN: echo 'TEST_131=$!' >> %t.sh
+// RUN: echo "wait $TEST_115" >> %t.sh
+#if defined(TEST_131) && __cplusplus >= 201103L
 #include <experimental/set>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_131
-#if defined(TEST_131) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_132 &' >> %t.sh
+// RUN: echo 'TEST_132=$!' >> %t.sh
+// RUN: echo "wait $TEST_116" >> %t.sh
+#if defined(TEST_132) && __cplusplus >= 201103L
 #include <experimental/simd>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_132
-#if defined(TEST_132) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_133 &' >> %t.sh
+// RUN: echo 'TEST_133=$!' >> %t.sh
+// RUN: echo "wait $TEST_117" >> %t.sh
+#if defined(TEST_133) && __cplusplus >= 201103L
 #include <experimental/string>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_133
-#if defined(TEST_133) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_134 &' >> %t.sh
+// RUN: echo 'TEST_134=$!' >> %t.sh
+// RUN: echo "wait $TEST_118" >> %t.sh
+#if defined(TEST_134) && __cplusplus >= 201103L
 #include <experimental/type_traits>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_134
-#if defined(TEST_134) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_135 &' >> %t.sh
+// RUN: echo 'TEST_135=$!' >> %t.sh
+// RUN: echo "wait $TEST_119" >> %t.sh
+#if defined(TEST_135) && __cplusplus >= 201103L
 #include <experimental/unordered_map>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_135
-#if defined(TEST_135) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_136 &' >> %t.sh
+// RUN: echo 'TEST_136=$!' >> %t.sh
+// RUN: echo "wait $TEST_120" >> %t.sh
+#if defined(TEST_136) && __cplusplus >= 201103L
 #include <experimental/unordered_set>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_136
-#if defined(TEST_136) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_137 &' >> %t.sh
+// RUN: echo 'TEST_137=$!' >> %t.sh
+// RUN: echo "wait $TEST_121" >> %t.sh
+#if defined(TEST_137) && __cplusplus >= 201103L
 #include <experimental/utility>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_137
-#if defined(TEST_137) && __cplusplus >= 201103L
+// RUN: echo '%{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only -DTEST_138 &' >> %t.sh
+// RUN: echo 'TEST_138=$!' >> %t.sh
+// RUN: echo "wait $TEST_122" >> %t.sh
+#if defined(TEST_138) && __cplusplus >= 201103L
 #include <experimental/vector>
 #endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_138
-#if defined(TEST_138)
-#include <ext/hash_map>
-#endif
-// RUN: %{cxx} %s %{flags} %{compile_flags} -fmodules -fcxx-modules -fsyntax-only -DTEST_139
-#if defined(TEST_139)
-#include <ext/hash_set>
-#endif
+// RUN: echo "wait $TEST_123" >> %t.sh
+// RUN: echo "wait $TEST_124" >> %t.sh
+// RUN: echo "wait $TEST_125" >> %t.sh
+// RUN: echo "wait $TEST_126" >> %t.sh
+// RUN: echo "wait $TEST_127" >> %t.sh
+// RUN: echo "wait $TEST_128" >> %t.sh
+// RUN: echo "wait $TEST_129" >> %t.sh
+// RUN: echo "wait $TEST_130" >> %t.sh
+// RUN: echo "wait $TEST_131" >> %t.sh
+// RUN: echo "wait $TEST_132" >> %t.sh
+// RUN: echo "wait $TEST_133" >> %t.sh
+// RUN: echo "wait $TEST_134" >> %t.sh
+// RUN: echo "wait $TEST_135" >> %t.sh
+// RUN: echo "wait $TEST_136" >> %t.sh
+// RUN: echo "wait $TEST_137" >> %t.sh
+// RUN: echo "wait $TEST_138" >> %t.sh
+// RUN: bash %t.sh
 // GENERATED-MARKER

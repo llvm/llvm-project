@@ -21,7 +21,7 @@ define i1 @i64_ExtLoad_i1() {
 ; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
+  %0 = load i1, ptr @GlobLd1, align 1
   ret i1 %0
 }
 
@@ -37,7 +37,7 @@ define zeroext i1 @i64_ZextLoad_i1() {
 ; CHECK-BE-NEXT:    lbz r3, GlobLd1@toc@l(r3)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
+  %0 = load i1, ptr @GlobLd1, align 1
   ret i1 %0
 }
 
@@ -58,15 +58,15 @@ define void @i32_ZextLoad_i1() {
 ; CHECK-BE-NEXT:    stb r3, GlobSt1@toc@l(r4)
 ; CHECK-BE-NEXT:    blr
 entry:
-  %0 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
-  store i1 %0, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobSt1, i64 0, i64 0), align 1
+  %0 = load i1, ptr @GlobLd1, align 1
+  store i1 %0, ptr @GlobSt1, align 1
   ret void
 }
 
 %1 = type { i64 }
 @Glob1 = external dso_local global %1, align 8
 @Glob2 = external dso_local unnamed_addr constant [11 x i8], align 1
-declare i32 @Decl(%1*, i8*) local_unnamed_addr #0
+declare i32 @Decl(ptr, ptr) local_unnamed_addr #0
 
 define dso_local i1 @i32_ExtLoad_i1() local_unnamed_addr #0 {
 ; CHECK-LE-LABEL: i32_ExtLoad_i1:
@@ -113,9 +113,9 @@ define dso_local i1 @i32_ExtLoad_i1() local_unnamed_addr #0 {
 ; CHECK-BE-NEXT:    mtlr r0
 ; CHECK-BE-NEXT:    blr
 bb:
-  %i = call signext i32 @Decl(%1* nonnull dereferenceable(32) @Glob1, i8* getelementptr inbounds ([11 x i8], [11 x i8]* @Glob2, i64 0, i64 0)) #1
+  %i = call signext i32 @Decl(ptr nonnull dereferenceable(32) @Glob1, ptr @Glob2) #1
   %i1 = icmp eq i32 %i, 0
-  %i2 = load i1, i1* getelementptr inbounds ([20 x i1], [20 x i1]* @GlobLd1, i64 0, i64 0), align 1
+  %i2 = load i1, ptr @GlobLd1, align 1
   %i3 = select i1 %i1, i1 false, i1 %i2
   ret i1 %i3
 }

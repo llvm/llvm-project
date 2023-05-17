@@ -46,7 +46,7 @@ foreach(dir ${LLVM_COVERAGE_SOURCE_DIRS})
 endforeach()
 
 # Utility target to clear out profile data.
-# This isn't connected to any dependencies because it is a bit finacky to get
+# This isn't connected to any dependencies because it is a bit finicky to get
 # working exactly how a user might want.
 add_custom_target(clear-profile-data
                   COMMAND ${CMAKE_COMMAND} -E

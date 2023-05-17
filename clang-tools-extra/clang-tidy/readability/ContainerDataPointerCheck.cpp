@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 constexpr llvm::StringLiteral ContainerExprName = "container-expr";
 constexpr llvm::StringLiteral DerefContainerExprName = "deref-container-expr";
@@ -98,7 +96,8 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
       Lexer::getSourceText(CharSourceRange::getTokenRange(SrcRange),
                            *Result.SourceManager, getLangOpts())};
 
-  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr>(CE))
+  if (!isa<DeclRefExpr, ArraySubscriptExpr, CXXOperatorCallExpr, CallExpr,
+           MemberExpr>(CE))
     ReplacementText = "(" + ReplacementText + ")";
 
   if (CE->getType()->isPointerType())
@@ -113,6 +112,4 @@ void ContainerDataPointerCheck::check(const MatchFinder::MatchResult &Result) {
        "the address of the 0-th element")
       << Hint;
 }
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

@@ -14,12 +14,12 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 @arr_18 = external dso_local local_unnamed_addr global [0 x i16], align 2
 
-define void @func(i64 %b, i8* %c) {
+define void @func(i64 %b, ptr %c) {
 entry:
   %conv1 = trunc i64 %b to i32
   %sext = shl i32 %conv1, 24
   %conv2 = ashr exact i32 %sext, 24
-  %arrayidx = getelementptr inbounds i8, i8* %c, i64 %b
+  %arrayidx = getelementptr inbounds i8, ptr %c, i64 %b
   %tobool19.not = icmp eq i64 %b, 0
   br label %for.cond3.preheader
 
@@ -32,9 +32,9 @@ for.cond8.preheader:
   br label %for.body13
 
 for.cond.cleanup6:
-  %arrayidx16 = getelementptr inbounds [0 x i16], [0 x i16]* @arr_18, i64 0, i64 %idxprom
+  %arrayidx16 = getelementptr inbounds [0 x i16], ptr @arr_18, i64 0, i64 %idxprom
   %0 = zext i8 %1 to i16
-  store i16 %0, i16* %arrayidx16, align 2
+  store i16 %0, ptr %arrayidx16, align 2
   %inc = add i16 %d.039, 1
   %conv = sext i16 %inc to i32
   %cmp = icmp sgt i32 %conv2, %conv
@@ -44,7 +44,7 @@ for.cond.cleanup12:
   br i1 false, label %for.cond8.preheader, label %for.cond.cleanup6
 
 for.body13:
-  %1 = load i8, i8* %arrayidx, align 1
+  %1 = load i8, ptr %arrayidx, align 1
   br i1 %tobool19.not, label %for.body13, label %for.cond.cleanup12
 
 for.cond.cleanup:

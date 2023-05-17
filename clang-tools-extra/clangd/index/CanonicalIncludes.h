@@ -39,10 +39,14 @@ public:
   /// Adds a file-to-string mapping from \p ID to \p CanonicalPath.
   void addMapping(FileEntryRef Header, llvm::StringRef CanonicalPath);
 
-  /// Returns the overridden include for symbol with \p QualifiedName, or "".
-  llvm::StringRef mapSymbol(llvm::StringRef QualifiedName) const;
+  /// Returns the overridden include for a qualified symbol with, or "".
+  /// \p Scope and \p Name concatenation forms the fully qualified name.
+  /// \p Scope is the qualifier with the trailing "::" (e.g. "std::") or empty
+  /// (for global namespace).
+  llvm::StringRef mapSymbol(llvm::StringRef Scope, llvm::StringRef Name,
+                            const LangOptions &L) const;
 
-  /// Returns the overridden include for for files in \p Header, or "".
+  /// Returns the overridden include for files in \p Header, or "".
   llvm::StringRef mapHeader(FileEntryRef Header) const;
 
   /// Adds mapping for system headers and some special symbols (e.g. STL symbols
@@ -61,9 +65,6 @@ private:
   /// A map from a suffix (one or components of a path) to a canonical path.
   /// Used only for mapping standard headers.
   const llvm::StringMap<llvm::StringRef> *StdSuffixHeaderMapping = nullptr;
-  /// A map from fully qualified symbol names to header names.
-  /// Used only for mapping standard symbols.
-  const llvm::StringMap<llvm::StringRef> *StdSymbolMapping = nullptr;
 };
 
 /// Returns a CommentHandler that parses pragma comment on include files to
@@ -78,7 +79,7 @@ private:
 /// - export: this is common and potentially interesting, there are three cases:
 ///    * Points to a public header (common): we can suppress include2 if you
 ///      already have include1. Only marginally useful.
-///    * Points to a private header annotated with `private` (somewhat commmon):
+///    * Points to a private header annotated with `private` (somewhat common):
 ///      Not incrementally useful as we support private.
 ///    * Points to a private header without pragmas (rare). This is a reversed
 ///      private pragma, and is valuable but too rare to be worthwhile.

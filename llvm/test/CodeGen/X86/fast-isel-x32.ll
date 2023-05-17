@@ -3,12 +3,12 @@
 
 ; Test that alloca addresses are materialized with the right size instruction.
 
-declare void @bar(i32* %arg)
+declare void @bar(ptr %arg)
 
 ; CHECK-LABEL: @foo
 define void @foo() {
   %a = alloca i32
 ; CHECK: leal {{.*}}, %edi
-  call void @bar(i32* %a)
+  call void @bar(ptr %a)
   ret void
 }

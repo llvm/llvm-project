@@ -22,7 +22,7 @@
 ; CHECK-LINKED1: define void @f1() !attach !0 {
 define void @f1() !attach !0 {
   call void @f2()
-  store i32 0, i32* @g2
+  store i32 0, ptr @g2
   ret void
 }
 

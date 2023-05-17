@@ -15,7 +15,7 @@ define void @t1() nounwind {
 ; CHECK-NEXT:    retq
 entry:
   %call = call <1 x i64> @return_v1di()		; <<1 x i64>> [#uses=0]
-  store <1 x i64> %call, <1 x i64>* @g_v1di
+  store <1 x i64> %call, ptr @g_v1di
   ret void
 }
 

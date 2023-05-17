@@ -4,7 +4,7 @@
 ; Make sure that we are zeroing one memory location at a time using xorl and
 ; not both using XMM registers.
 
-define i32 @foo (i64* %so) nounwind uwtable ssp {
+define i32 @foo (ptr %so) nounwind uwtable ssp {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -19,11 +19,11 @@ define i32 @foo (i64* %so) nounwind uwtable ssp {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    negl %eax
 ; CHECK-NEXT:    retl
-  %used = getelementptr inbounds i64, i64* %so, i32 3
-  store i64 0, i64* %used, align 8
-  %fill = getelementptr inbounds i64, i64* %so, i32 2
-  %L = load i64, i64* %fill, align 8
-  store i64 0, i64* %fill, align 8
+  %used = getelementptr inbounds i64, ptr %so, i32 3
+  store i64 0, ptr %used, align 8
+  %fill = getelementptr inbounds i64, ptr %so, i32 2
+  %L = load i64, ptr %fill, align 8
+  store i64 0, ptr %fill, align 8
   %cmp28 = icmp sgt i64 %L, 0
   %R = sext i1 %cmp28 to i32
   ret i32 %R

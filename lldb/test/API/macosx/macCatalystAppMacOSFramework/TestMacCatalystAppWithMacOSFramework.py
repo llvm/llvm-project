@@ -3,12 +3,9 @@ from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
 import lldbsuite.test.lldbutil as lldbutil
 import os
-import unittest2
 
 
 class TestMacCatalystAppWithMacOSFramework(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(macos_version=["<", "10.15"])
     @skipUnlessDarwin
@@ -27,7 +24,7 @@ class TestMacCatalystAppWithMacOSFramework(TestBase):
                     patterns=[arch + r'.*-apple-ios.*-macabi a\.out',
                               arch + r'.*-apple-macosx.* libfoo.dylib[^(]'])
         self.expect("fr v s", "Hello macCatalyst")
-        self.expect("p s", "Hello macCatalyst")
+        self.expect("expression s", "Hello macCatalyst")
         self.check_debugserver(log)
 
     def check_debugserver(self, log):

@@ -12,9 +12,7 @@
 #include "../ClangTidyCheck.h"
 #include "clang/AST/Decl.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 // The check detects local variable declarations that are copy initialized with
 // the const reference of a function call or the const reference of a method
@@ -46,8 +44,6 @@ private:
   const std::vector<StringRef> ExcludedContainerTypes;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_COPY_INITIALIZATION_H

@@ -54,7 +54,7 @@ struct DwarfRelocationApplicationInfo {
 
 bool generateUniversalBinary(SmallVectorImpl<ArchAndFile> &ArchFiles,
                              StringRef OutputFileName, const LinkOptions &,
-                             StringRef SDKPath);
+                             StringRef SDKPath, bool Fat64 = false);
 bool generateDsymCompanion(
     llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS, const DebugMap &DM,
     SymbolMapTranslator &Translator, MCStreamer &MS, raw_fd_ostream &OutFile,

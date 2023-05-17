@@ -1,4 +1,4 @@
-; RUN: opt -indvars -loop-vectorize -force-vector-width=2 -force-vector-interleave=1 -S < %s | FileCheck %s
+; RUN: opt -passes='loop(indvars),loop-vectorize' -force-vector-width=2 -force-vector-interleave=1 -S < %s | FileCheck %s
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -15,10 +15,10 @@ entry:
   %n = alloca i32, align 4
   %k7 = alloca i32, align 4
   %nf = alloca i32, align 4
-  %0 = load i32, i32* %k7, align 4
+  %0 = load i32, ptr %k7, align 4
   %.neg1 = sub i32 0, %0
-  %n.promoted = load i32, i32* %n, align 4
-  %nf.promoted = load i32, i32* %nf, align 4
+  %n.promoted = load i32, ptr %n, align 4
+  %nf.promoted = load i32, ptr %nf, align 4
   br label %for.body
 
 for.body:
@@ -36,6 +36,6 @@ for.body:
 
 for.end:
   %add5.lcssa = phi i32 [ %add5, %for.body ]
-  store i32 %add5.lcssa, i32* %n, align 4
+  store i32 %add5.lcssa, ptr %n, align 4
   ret void
 }

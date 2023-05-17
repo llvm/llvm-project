@@ -24,44 +24,44 @@ define i32 @test_efpc() {
 }
 
 ; LFPC.
-define void @test_lfpc1(i32 *%ptr) {
+define void @test_lfpc1(ptr %ptr) {
 ; CHECK-LABEL: test_lfpc1:
 ; CHECK: lfpc 0(%r2)
 ; CHECK: br %r14
-  %fpc = load i32, i32 *%ptr
+  %fpc = load i32, ptr %ptr
   call void @llvm.s390.sfpc(i32 %fpc)
   ret void
 }
 
 ; LFPC with offset.
-define void @test_lfpc2(i32 *%ptr) {
+define void @test_lfpc2(ptr %ptr) {
 ; CHECK-LABEL: test_lfpc2:
 ; CHECK: lfpc 4092(%r2)
 ; CHECK: br %r14
-  %ptr1 = getelementptr i32, i32 *%ptr, i32 1023
-  %fpc = load i32, i32 *%ptr1
+  %ptr1 = getelementptr i32, ptr %ptr, i32 1023
+  %fpc = load i32, ptr %ptr1
   call void @llvm.s390.sfpc(i32 %fpc)
   ret void
 }
 
 ; STFPC.
-define void @test_stfpc1(i32 *%ptr) {
+define void @test_stfpc1(ptr %ptr) {
 ; CHECK-LABEL: test_stfpc1:
 ; CHECK: stfpc 0(%r2)
 ; CHECK: br %r14
   %fpc = call i32 @llvm.s390.efpc()
-  store i32 %fpc, i32 *%ptr
+  store i32 %fpc, ptr %ptr
   ret void
 }
 
 ; STFPC with offset.
-define void @test_stfpc2(i32 *%ptr) {
+define void @test_stfpc2(ptr %ptr) {
 ; CHECK-LABEL: test_stfpc2:
 ; CHECK: stfpc 4092(%r2)
 ; CHECK: br %r14
   %fpc = call i32 @llvm.s390.efpc()
-  %ptr1 = getelementptr i32, i32 *%ptr, i32 1023
-  store i32 %fpc, i32 *%ptr1
+  %ptr1 = getelementptr i32, ptr %ptr, i32 1023
+  store i32 %fpc, ptr %ptr1
   ret void
 }
 

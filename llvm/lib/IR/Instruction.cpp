@@ -17,6 +17,7 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 using namespace llvm;
 
@@ -28,7 +29,7 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
   if (InsertBefore) {
     BasicBlock *BB = InsertBefore->getParent();
     assert(BB && "Instruction to insert before is not in a basic block!");
-    BB->getInstList().insert(InsertBefore->getIterator(), this);
+    insertInto(BB, InsertBefore->getIterator());
   }
 }
 
@@ -38,7 +39,7 @@ Instruction::Instruction(Type *ty, unsigned it, Use *Ops, unsigned NumOps,
 
   // append this instruction into the basic block
   assert(InsertAtEnd && "Basic block to append to may not be NULL!");
-  InsertAtEnd->getInstList().push_back(this);
+  insertInto(InsertAtEnd, InsertAtEnd->end());
 }
 
 Instruction::~Instruction() {
@@ -55,6 +56,10 @@ Instruction::~Instruction() {
   //   instructions in a BasicBlock are deleted).
   if (isUsedByMetadata())
     ValueAsMetadata::handleRAUW(this, UndefValue::get(getType()));
+
+  // Explicitly remove DIAssignID metadata to clear up ID -> Instruction(s)
+  // mapping in LLVMContext.
+  setMetadata(LLVMContext::MD_DIAssignID, nullptr);
 }
 
 
@@ -81,14 +86,21 @@ iplist<Instruction>::iterator Instruction::eraseFromParent() {
 /// Insert an unlinked instruction into a basic block immediately before the
 /// specified instruction.
 void Instruction::insertBefore(Instruction *InsertPos) {
-  InsertPos->getParent()->getInstList().insert(InsertPos->getIterator(), this);
+  insertInto(InsertPos->getParent(), InsertPos->getIterator());
 }
 
 /// Insert an unlinked instruction into a basic block immediately after the
 /// specified instruction.
 void Instruction::insertAfter(Instruction *InsertPos) {
-  InsertPos->getParent()->getInstList().insertAfter(InsertPos->getIterator(),
-                                                    this);
+  insertInto(InsertPos->getParent(), std::next(InsertPos->getIterator()));
+}
+
+BasicBlock::iterator Instruction::insertInto(BasicBlock *ParentBB,
+                                             BasicBlock::iterator It) {
+  assert(getParent() == nullptr && "Expected detached instruction");
+  assert((It == ParentBB->end() || It->getParent() == ParentBB) &&
+         "It not in ParentBB");
+  return ParentBB->getInstList().insert(It, this);
 }
 
 /// Unlink this instruction from its current basic block and insert it into the
@@ -104,7 +116,7 @@ void Instruction::moveAfter(Instruction *MovePos) {
 void Instruction::moveBefore(BasicBlock &BB,
                              SymbolTableList<Instruction>::iterator I) {
   assert(I == BB.end() || I->getParent() == &BB);
-  BB.getInstList().splice(I, getParent()->getInstList(), getIterator());
+  BB.splice(I, getParent(), getIterator());
 }
 
 bool Instruction::comesBefore(const Instruction *Other) const {
@@ -114,6 +126,33 @@ bool Instruction::comesBefore(const Instruction *Other) const {
   if (!Parent->isInstrOrderValid())
     Parent->renumberInstructions();
   return Order < Other->Order;
+}
+
+Instruction *Instruction::getInsertionPointAfterDef() {
+  assert(!getType()->isVoidTy() && "Instruction must define result");
+  BasicBlock *InsertBB;
+  BasicBlock::iterator InsertPt;
+  if (auto *PN = dyn_cast<PHINode>(this)) {
+    InsertBB = PN->getParent();
+    InsertPt = InsertBB->getFirstInsertionPt();
+  } else if (auto *II = dyn_cast<InvokeInst>(this)) {
+    InsertBB = II->getNormalDest();
+    InsertPt = InsertBB->getFirstInsertionPt();
+  } else if (isa<CallBrInst>(this)) {
+    // Def is available in multiple successors, there's no single dominating
+    // insertion point.
+    return nullptr;
+  } else {
+    assert(!isTerminator() && "Only invoke/callbr terminators return value");
+    InsertBB = getParent();
+    InsertPt = std::next(getIterator());
+  }
+
+  // catchswitch blocks don't have any legal insertion point (because they
+  // are both an exception pad and a terminator).
+  if (InsertPt == InsertBB->end())
+    return nullptr;
+  return &*InsertPt;
 }
 
 bool Instruction::isOnlyUserOfAnyOperand() {
@@ -173,7 +212,19 @@ void Instruction::dropPoisonGeneratingFlags() {
   assert(!hasPoisonGeneratingFlags() && "must be kept in sync");
 }
 
-void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
+bool Instruction::hasPoisonGeneratingMetadata() const {
+  return hasMetadata(LLVMContext::MD_range) ||
+         hasMetadata(LLVMContext::MD_nonnull) ||
+         hasMetadata(LLVMContext::MD_align);
+}
+
+void Instruction::dropPoisonGeneratingMetadata() {
+  eraseMetadata(LLVMContext::MD_range);
+  eraseMetadata(LLVMContext::MD_nonnull);
+  eraseMetadata(LLVMContext::MD_align);
+}
+
+void Instruction::dropUBImplyingAttrsAndUnknownMetadata(
     ArrayRef<unsigned> KnownIDs) {
   dropUnknownNonDebugMetadata(KnownIDs);
   auto *CB = dyn_cast<CallBase>(this);
@@ -190,6 +241,16 @@ void Instruction::dropUndefImplyingAttrsAndUnknownMetadata(
   for (unsigned ArgNo = 0; ArgNo < CB->arg_size(); ArgNo++)
     CB->removeParamAttrs(ArgNo, UBImplyingAttributes);
   CB->removeRetAttrs(UBImplyingAttributes);
+}
+
+void Instruction::dropUBImplyingAttrsAndMetadata() {
+  // !annotation metadata does not impact semantics.
+  // !range, !nonnull and !align produce poison, so they are safe to speculate.
+  // !noundef and various AA metadata must be dropped, as it generally produces
+  // immediate undefined behavior.
+  unsigned KnownIDs[] = {LLVMContext::MD_annotation, LLVMContext::MD_range,
+                         LLVMContext::MD_nonnull, LLVMContext::MD_align};
+  dropUBImplyingAttrsAndUnknownMetadata(KnownIDs);
 }
 
 bool Instruction::isExact() const {
@@ -429,11 +490,11 @@ const char *Instruction::getOpcodeName(unsigned OpCode) {
   }
 }
 
-/// Return true if both instructions have the same special state. This must be
-/// kept in sync with FunctionComparator::cmpOperations in
+/// This must be kept in sync with FunctionComparator::cmpOperations in
 /// lib/Transforms/IPO/MergeFunctions.cpp.
-static bool haveSameSpecialState(const Instruction *I1, const Instruction *I2,
-                                 bool IgnoreAlignment = false) {
+bool Instruction::hasSameSpecialState(const Instruction *I2,
+                                      bool IgnoreAlignment) const {
+  auto I1 = this;
   assert(I1->getOpcode() == I2->getOpcode() &&
          "Can not compare special state of different instructions");
 
@@ -512,7 +573,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
 
   // If both instructions have no operands, they are identical.
   if (getNumOperands() == 0 && I->getNumOperands() == 0)
-    return haveSameSpecialState(this, I);
+    return this->hasSameSpecialState(I);
 
   // We have two instructions of identical opcode and #operands.  Check to see
   // if all operands are the same.
@@ -526,7 +587,7 @@ bool Instruction::isIdenticalToWhenDefined(const Instruction *I) const {
                       otherPHI->block_begin());
   }
 
-  return haveSameSpecialState(this, I);
+  return this->hasSameSpecialState(I);
 }
 
 // Keep this in sync with FunctionComparator::cmpOperations in
@@ -552,7 +613,7 @@ bool Instruction::isSameOperationAs(const Instruction *I,
         getOperand(i)->getType() != I->getOperand(i)->getType())
       return false;
 
-  return haveSameSpecialState(this, I, IgnoreAlignment);
+  return this->hasSameSpecialState(I, IgnoreAlignment);
 }
 
 bool Instruction::isUsedOutsideOfBlock(const BasicBlock *BB) const {
@@ -682,14 +743,53 @@ bool Instruction::isVolatile() const {
   }
 }
 
-bool Instruction::mayThrow() const {
-  if (const CallInst *CI = dyn_cast<CallInst>(this))
-    return !CI->doesNotThrow();
-  if (const auto *CRI = dyn_cast<CleanupReturnInst>(this))
-    return CRI->unwindsToCaller();
-  if (const auto *CatchSwitch = dyn_cast<CatchSwitchInst>(this))
-    return CatchSwitch->unwindsToCaller();
-  return isa<ResumeInst>(this);
+static bool canUnwindPastLandingPad(const LandingPadInst *LP,
+                                    bool IncludePhaseOneUnwind) {
+  // Because phase one unwinding skips cleanup landingpads, we effectively
+  // unwind past this frame, and callers need to have valid unwind info.
+  if (LP->isCleanup())
+    return IncludePhaseOneUnwind;
+
+  for (unsigned I = 0; I < LP->getNumClauses(); ++I) {
+    Constant *Clause = LP->getClause(I);
+    // catch ptr null catches all exceptions.
+    if (LP->isCatch(I) && isa<ConstantPointerNull>(Clause))
+      return false;
+    // filter [0 x ptr] catches all exceptions.
+    if (LP->isFilter(I) && Clause->getType()->getArrayNumElements() == 0)
+      return false;
+  }
+
+  // May catch only some subset of exceptions, in which case other exceptions
+  // will continue unwinding.
+  return true;
+}
+
+bool Instruction::mayThrow(bool IncludePhaseOneUnwind) const {
+  switch (getOpcode()) {
+  case Instruction::Call:
+    return !cast<CallInst>(this)->doesNotThrow();
+  case Instruction::CleanupRet:
+    return cast<CleanupReturnInst>(this)->unwindsToCaller();
+  case Instruction::CatchSwitch:
+    return cast<CatchSwitchInst>(this)->unwindsToCaller();
+  case Instruction::Resume:
+    return true;
+  case Instruction::Invoke: {
+    // Landingpads themselves don't unwind -- however, an invoke of a skipped
+    // landingpad may continue unwinding.
+    BasicBlock *UnwindDest = cast<InvokeInst>(this)->getUnwindDest();
+    Instruction *Pad = UnwindDest->getFirstNonPHI();
+    if (auto *LP = dyn_cast<LandingPadInst>(Pad))
+      return canUnwindPastLandingPad(LP, IncludePhaseOneUnwind);
+    return false;
+  }
+  case Instruction::CleanupPad:
+    // Treat the same as cleanup landingpad.
+    return IncludePhaseOneUnwind;
+  default:
+    return false;
+  }
 }
 
 bool Instruction::mayHaveSideEffects() const {
@@ -707,11 +807,7 @@ bool Instruction::willReturn() const {
     return !SI->isVolatile();
 
   if (const auto *CB = dyn_cast<CallBase>(this))
-    // FIXME: Temporarily assume that all side-effect free intrinsics will
-    // return. Remove this workaround once all intrinsics are appropriately
-    // annotated.
-    return CB->hasFnAttr(Attribute::WillReturn) ||
-           (isa<IntrinsicInst>(CB) && CB->onlyReadsMemory());
+    return CB->hasFnAttr(Attribute::WillReturn);
   return true;
 }
 
@@ -822,13 +918,8 @@ Instruction *Instruction::cloneImpl() const {
 }
 
 void Instruction::swapProfMetadata() {
-  MDNode *ProfileData = getMetadata(LLVMContext::MD_prof);
-  if (!ProfileData || ProfileData->getNumOperands() != 3 ||
-      !isa<MDString>(ProfileData->getOperand(0)))
-    return;
-
-  MDString *MDName = cast<MDString>(ProfileData->getOperand(0));
-  if (MDName->getString() != "branch_weights")
+  MDNode *ProfileData = getBranchWeightMDNode(*this);
+  if (!ProfileData || ProfileData->getNumOperands() != 3)
     return;
 
   // The first operand is the name. Fetch them backwards and build a new one.

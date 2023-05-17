@@ -137,13 +137,13 @@ define i64 @mul_neg_one(i64 %x) {
   ret i64 %r
 }
 
-define i32 @PR36689(i32*) {
+define i32 @PR36689(ptr) {
 ; CHECK-LABEL: PR36689:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movzwl (%rdi), %eax
 ; CHECK-NEXT:    orl $255, %eax
 ; CHECK-NEXT:    retq
-  %2 = load i32, i32* %0
+  %2 = load i32, ptr %0
   %3 = and i32 %2, 65280
   %4 = or i32 %3, 255
   ret i32 %4

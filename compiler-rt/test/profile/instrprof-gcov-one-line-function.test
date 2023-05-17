@@ -1,4 +1,3 @@
-XFAIL: aix
 RUN: mkdir -p %t.d
 RUN: cd %t.d
 

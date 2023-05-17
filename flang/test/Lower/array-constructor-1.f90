@@ -9,10 +9,10 @@ contains
     integer :: u
     integer :: i
     is_preconnected_unit = .true.
-    !do i = lbound(preconnected_unit,1), ubound(preconnected_unit,1)
+    do i = lbound(preconnected_unit,1), ubound(preconnected_unit,1)
       ! CHECK: fir.coordinate_of [[units_ssa]]
       if (preconnected_unit(i) == u) return
-    !end do
+    end do
     is_preconnected_unit = .false.
   end function
 end module units
@@ -20,16 +20,16 @@ end module units
 ! CHECK-LABEL: _QPcheck_units
 subroutine check_units
   use units
-  !do i=-1,8
+  do i=-1,8
     if (is_preconnected_unit(i)) print*, i
-  !enddo
+  enddo
 end
 
 ! CHECK-LABEL: _QPzero
 subroutine zero
   complex, parameter :: a(0) = [(((k,k=1,10),j=-2,2,-1),i=2,-2,-2)]
   complex, parameter :: b(0) = [(7,i=3,-3)]
-  ! CHECK: fir.address_of(@_QQro.0xz4.null) : !fir.ref<!fir.array<0x!fir.complex<4>>>
+  ! CHECK: fir.address_of(@_QQro.0xz4.null.0) : !fir.ref<!fir.array<0x!fir.complex<4>>>
   ! CHECK-NOT: _QQro
   print*, '>', a, '<'
   print*, '>', b, '<'

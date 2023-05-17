@@ -6,25 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/creat.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
-
-#include <errno.h>
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcCreatTest, CreatAndOpen) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/creat.test";
   int fd = __llvm_libc::creat(TEST_FILE, S_IRWXU);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
 
   fd = __llvm_libc::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));
 

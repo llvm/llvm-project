@@ -29,17 +29,17 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store (s32), align 8, addrspace 5)
-  ; CHECK-NEXT:   dead %6:vgpr_32 = DS_READ_B32_gfx9 undef %7:vgpr_32, 0, 0, implicit $exec
-  ; CHECK-NEXT:   dead %8:vreg_64 = DS_READ_B64_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec
-  ; CHECK-NEXT:   dead %9:vreg_128 = DS_READ_B128_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32), align 8, addrspace 5)
+  ; CHECK-NEXT:   dead [[DS_READ_B32_gfx9_:%[0-9]+]]:vgpr_32 = DS_READ_B32_gfx9 undef %7:vgpr_32, 0, 0, implicit $exec
+  ; CHECK-NEXT:   dead [[DS_READ_B64_gfx9_:%[0-9]+]]:vreg_64 = DS_READ_B64_gfx9 [[V_MOV_B32_e32_]], 0, 0, implicit $exec
+  ; CHECK-NEXT:   dead [[DS_READ_B128_gfx9_:%[0-9]+]]:vreg_128 = DS_READ_B128_gfx9 [[V_ADD_U32_e32_]], 0, 0, implicit $exec
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[COPY]].sub0
   ; CHECK-NEXT:   undef %11.sub1:vreg_512 = COPY [[COPY]].sub1
-  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_LO16 */, def dead [[COPY1]], 851978 /* regdef:VGPR_LO16 */, def dead [[COPY]].sub1, 2147483657 /* reguse tiedto:$0 */, [[COPY1]], 2147549193 /* reguse tiedto:$1 */, [[COPY]].sub1
+  ; CHECK-NEXT:   INLINEASM &"", 1 /* sideeffect attdialect */, 851978 /* regdef:VGPR_HI16 */, def dead [[COPY1]], 851978 /* regdef:VGPR_HI16 */, def dead [[COPY]].sub1, 2147483657 /* reguse tiedto:$0 */, [[COPY1]], 2147549193 /* reguse tiedto:$1 */, [[COPY]].sub1
   ; CHECK-NEXT:   %11.sub0:vreg_512 = COPY [[COPY]].sub0
   ; CHECK-NEXT:   %11.sub3:vreg_512 = COPY [[COPY]].sub3
   ; CHECK-NEXT:   [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK-NEXT:   dead %10:vgpr_32 = V_ADD_CO_U32_e32 4, [[V_MOV_B32_e32_1]], implicit-def dead $vcc, implicit $exec
+  ; CHECK-NEXT:   dead [[V_ADD_CO_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_CO_U32_e32 4, [[V_MOV_B32_e32_1]], implicit-def dead $vcc, implicit $exec
   ; CHECK-NEXT:   %11.sub2:vreg_512 = COPY undef [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   %11.sub5:vreg_512 = COPY undef [[V_MOV_B32_e32_]]
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:vreg_512 = COPY %11
@@ -54,7 +54,7 @@ body:             |
     %4:vreg_512 = COPY %0
 
   bb.1:
-    BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, 0, implicit $exec :: (store (s32), align 8, addrspace 5)
+    BUFFER_STORE_DWORD_OFFEN %0.sub3, undef %5:vgpr_32, $sgpr24_sgpr25_sgpr26_sgpr27, $sgpr32, 0, 0, 0, implicit $exec :: (store (s32), align 8, addrspace 5)
     %6:vgpr_32 = DS_READ_B32_gfx9 undef %7:vgpr_32, 0, 0, implicit $exec
     %8:vreg_64 = DS_READ_B64_gfx9 %1, 0, 0, implicit $exec
     %9:vreg_128 = DS_READ_B128_gfx9 %2, 0, 0, implicit $exec

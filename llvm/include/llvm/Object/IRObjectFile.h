@@ -13,12 +13,12 @@
 #ifndef LLVM_OBJECT_IROBJECTFILE_H
 #define LLVM_OBJECT_IROBJECTFILE_H
 
+#include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/Object/IRSymtab.h"
 #include "llvm/Object/ModuleSymbolTable.h"
 #include "llvm/Object/SymbolicFile.h"
 
 namespace llvm {
-class BitcodeModule;
 class Module;
 
 namespace object {
@@ -37,7 +37,9 @@ public:
   Expected<uint32_t> getSymbolFlags(DataRefImpl Symb) const override;
   basic_symbol_iterator symbol_begin() const override;
   basic_symbol_iterator symbol_end() const override;
-
+  bool is64Bit() const override {
+    return Triple(getTargetTriple()).isArch64Bit();
+  }
   StringRef getTargetTriple() const;
 
   static bool classof(const Binary *v) {
@@ -82,6 +84,6 @@ Expected<IRSymtabFile> readIRSymtab(MemoryBufferRef MBRef);
 
 }
 
-}
+} // namespace llvm
 
 #endif

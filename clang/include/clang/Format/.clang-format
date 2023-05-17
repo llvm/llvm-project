@@ -1,0 +1,4 @@
+BasedOnStyle: LLVM
+InsertBraces: true
+LineEnding: LF
+RemoveBracesLLVM: true

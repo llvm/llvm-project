@@ -12,7 +12,8 @@
 #include <__concepts/boolean_testable.h>
 #include <__concepts/equality_comparable.h>
 #include <__config>
-#include <type_traits>
+#include <__type_traits/common_reference.h>
+#include <__type_traits/make_const_lvalue_ref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.totallyordered]
 
@@ -50,7 +51,7 @@ concept totally_ordered_with =
       __make_const_lvalue_ref<_Up>>> &&
   __partially_ordered_with<_Tp, _Up>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

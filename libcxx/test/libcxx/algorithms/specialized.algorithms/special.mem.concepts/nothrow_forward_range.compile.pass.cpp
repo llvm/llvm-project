@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class R>
 // concept __nothrow_forward_range;
@@ -16,18 +15,6 @@
 
 #include "test_iterators.h"
 #include "test_range.h"
-
-// Has to be a template to work with `test_range`.
-template <typename>
-struct ForwardProxyIterator {
-  using value_type = int;
-  using difference_type = int;
-  ForwardProxyIterator& operator++();
-  ForwardProxyIterator operator++(int);
-  bool operator==(const ForwardProxyIterator&) const;
-
-  int operator*() const;
-};
 
 static_assert(std::ranges::__nothrow_forward_range<test_range<forward_iterator>>);
 static_assert(!std::ranges::__nothrow_forward_range<test_range<cpp20_input_iterator>>);

@@ -475,7 +475,8 @@ formats.  This wrapper format is useful for accommodating LTO in compilation
 pipelines where intermediate objects must be native object files which contain
 metadata in other sections.
 
-Not all tools support this format.
+Not all tools support this format.  For example, lld and the gold plugin will
+ignore these sections when linking object files.
 
 .. _encoding of LLVM IR:
 
@@ -1336,6 +1337,21 @@ TYPE_CODE_X86_AMX Record
 ``[X86_AMX]``
 
 The ``X86_AMX`` record (code 24) adds an ``x86_amx`` type to the type table.
+
+TYPE_CODE_TARGET_TYPE Record
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+``[TARGET_TYPE, num_tys, ...ty_params..., ...int_params... ]``
+
+The ``TARGET_TYPE`` record (code 26) adds a target extension type to the type
+table, with a name defined by a previously encountered ``STRUCT_NAME`` record.
+The operand fields are
+
+* *num_tys*: The number of parameters that are types (as opposed to integers)
+
+* *ty_params*: Type indices that represent type parameters
+
+* *int_params*: Numbers that correspond to the integer parameters.
 
 .. _CONSTANTS_BLOCK:
 

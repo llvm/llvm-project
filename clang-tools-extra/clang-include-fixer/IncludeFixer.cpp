@@ -27,13 +27,14 @@ namespace {
 class Action : public clang::ASTFrontendAction {
 public:
   explicit Action(SymbolIndexManager &SymbolIndexMgr, bool MinimizeIncludePaths)
-      : SemaSource(SymbolIndexMgr, MinimizeIncludePaths,
-                   /*GenerateDiagnostics=*/false) {}
+      : SemaSource(new IncludeFixerSemaSource(SymbolIndexMgr,
+                                              MinimizeIncludePaths,
+                                              /*GenerateDiagnostics=*/false)) {}
 
   std::unique_ptr<clang::ASTConsumer>
   CreateASTConsumer(clang::CompilerInstance &Compiler,
                     StringRef InFile) override {
-    SemaSource.setFilePath(InFile);
+    SemaSource->setFilePath(InFile);
     return std::make_unique<clang::ASTConsumer>();
   }
 
@@ -51,8 +52,8 @@ public:
       CompletionConsumer = &Compiler->getCodeCompletionConsumer();
 
     Compiler->createSema(getTranslationUnitKind(), CompletionConsumer);
-    SemaSource.setCompilerInstance(Compiler);
-    Compiler->getSema().addExternalSource(&SemaSource);
+    SemaSource->setCompilerInstance(Compiler);
+    Compiler->getSema().addExternalSource(SemaSource.get());
 
     clang::ParseAST(Compiler->getSema(), Compiler->getFrontendOpts().ShowStats,
                     Compiler->getFrontendOpts().SkipFunctionBodies);
@@ -61,12 +62,12 @@ public:
   IncludeFixerContext
   getIncludeFixerContext(const clang::SourceManager &SourceManager,
                          clang::HeaderSearch &HeaderSearch) const {
-    return SemaSource.getIncludeFixerContext(SourceManager, HeaderSearch,
-                                             SemaSource.getMatchedSymbols());
+    return SemaSource->getIncludeFixerContext(SourceManager, HeaderSearch,
+                                              SemaSource->getMatchedSymbols());
   }
 
 private:
-  IncludeFixerSemaSource SemaSource;
+  IntrusiveRefCntPtr<IncludeFixerSemaSource> SemaSource;
 };
 
 } // namespace

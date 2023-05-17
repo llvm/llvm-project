@@ -17,10 +17,10 @@
 ; CHECK-NEXT: smulbb  r0, r0, r1
 ; CHECK-NEXT: mul     r0, r0, r1
 ; CHECK-NEXT: bx      lr
-define i32 @f_i16_i32(i16* %a, i16* %b) {
-  %1 = load i16, i16* %a, align 2
+define i32 @f_i16_i32(ptr %a, ptr %b) {
+  %1 = load i16, ptr %a, align 2
   %sext.1 = sext i16 %1 to i32
-  %2 = load i16, i16* %b, align 2
+  %2 = load i16, ptr %b, align 2
   %sext.2 = sext i16 %2 to i32
   %masked = and i32 %sext.2, 65535
   %mul = mul nsw i32 %sext.2, %sext.1

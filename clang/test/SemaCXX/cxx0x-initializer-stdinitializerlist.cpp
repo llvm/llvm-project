@@ -327,7 +327,7 @@ namespace update_rbrace_loc_crash {
   struct A {};
   template <typename T, typename F, int... I>
   std::initializer_list<T> ExplodeImpl(F p1, A<int, I...>) {
-    // expected-error@+1 {{reference to incomplete type 'const update_rbrace_loc_crash::Incomplete' could not bind to an rvalue of type 'void'}}
+    // expected-error@+1 {{reference to incomplete type 'const Incomplete' could not bind to an rvalue of type 'void'}}
     return {p1(I)...};
   }
   template <typename T, int N, typename F>
@@ -374,7 +374,7 @@ namespace weird_initlist {
   // We don't check the struct layout in Sema.
   auto x = {weird{}, weird{}, weird{}, weird{}, weird{}};
   // ... but we do in constant evaluation.
-  constexpr auto y = {weird{}, weird{}, weird{}, weird{}, weird{}}; // expected-error {{constant}} expected-note {{type 'const std::initializer_list<weird_initlist::weird>' has unexpected layout}}
+  constexpr auto y = {weird{}, weird{}, weird{}, weird{}, weird{}}; // expected-error {{constant}} expected-note {{type 'const std::initializer_list<weird>' has unexpected layout}}
 }
 
 auto v = std::initializer_list<int>{1,2,3}; // expected-warning {{array backing local initializer list 'v' will be destroyed at the end of the full-expression}}

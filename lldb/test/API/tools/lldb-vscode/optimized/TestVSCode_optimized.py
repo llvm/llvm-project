@@ -2,9 +2,6 @@
 Test lldb-vscode variables/stackTrace request for optimized code
 """
 
-from __future__ import print_function
-
-import unittest2
 import vscode
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,7 +10,6 @@ import lldbvscode_testcase
 
 
 class TestVSCode_optimized(lldbvscode_testcase.VSCodeTestCaseBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
     @skipIfRemote
@@ -49,6 +45,6 @@ class TestVSCode_optimized(lldbvscode_testcase.VSCodeTestCaseBase):
         self.assertEqual(len(breakpoint_ids), len(lines),
                         "expect correct number of breakpoints")
         self.continue_to_breakpoints(breakpoint_ids)
-        optimized_variable = self.vscode.get_local_variable('optimized')
+        optimized_variable = self.vscode.get_local_variable('argc')
 
         self.assertTrue(optimized_variable['value'].startswith('<error:'))

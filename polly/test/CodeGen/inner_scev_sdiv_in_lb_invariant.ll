@@ -12,7 +12,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %N) {
+define void @f(ptr %A, i32 %N) {
 bb:
   %tmp = sdiv i32 %N, 4
   %tmp2 = sext i32 %tmp to i64
@@ -25,12 +25,12 @@ bb1:                                              ; preds = %bb11, %bb
 
 bb4:                                              ; preds = %bb1
   %tmp5 = add nsw i64 %indvars.iv, -1
-  %tmp6 = getelementptr inbounds i32, i32* %A, i64 %tmp5
-  %tmp7 = load i32, i32* %tmp6, align 4
-  %tmp8 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp9 = load i32, i32* %tmp8, align 4
+  %tmp6 = getelementptr inbounds i32, ptr %A, i64 %tmp5
+  %tmp7 = load i32, ptr %tmp6, align 4
+  %tmp8 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp9 = load i32, ptr %tmp8, align 4
   %tmp10 = add nsw i32 %tmp9, %tmp7
-  store i32 %tmp10, i32* %tmp8, align 4
+  store i32 %tmp10, ptr %tmp8, align 4
   br label %bb11
 
 bb11:                                             ; preds = %bb4

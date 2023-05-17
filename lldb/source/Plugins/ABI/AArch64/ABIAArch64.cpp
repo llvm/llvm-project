@@ -14,6 +14,7 @@
 #include "lldb/Target/Process.h"
 
 #include <bitset>
+#include <optional>
 
 LLDB_PLUGIN_DEFINE(ABIAArch64)
 
@@ -75,13 +76,12 @@ uint32_t ABIAArch64::GetGenericNum(llvm::StringRef name) {
 
 static void addPartialRegisters(
     std::vector<lldb_private::DynamicRegisterInfo::Register> &regs,
-    llvm::ArrayRef<llvm::Optional<uint32_t>> full_reg_indices,
+    llvm::ArrayRef<std::optional<uint32_t>> full_reg_indices,
     uint32_t full_reg_size, const char *partial_reg_format,
     uint32_t partial_reg_size, lldb::Encoding encoding, lldb::Format format) {
   for (auto it : llvm::enumerate(full_reg_indices)) {
-    llvm::Optional<uint32_t> full_reg_index = it.value();
-    if (!full_reg_index ||
-        regs[full_reg_index.getValue()].byte_size != full_reg_size)
+    std::optional<uint32_t> full_reg_index = it.value();
+    if (!full_reg_index || regs[*full_reg_index].byte_size != full_reg_size)
       return;
 
     lldb_private::DynamicRegisterInfo::Register partial_reg{
@@ -97,7 +97,7 @@ static void addPartialRegisters(
         LLDB_INVALID_REGNUM,
         LLDB_INVALID_REGNUM,
         LLDB_INVALID_REGNUM,
-        {full_reg_index.getValue()},
+        {*full_reg_index},
         {}};
     addSupplementaryRegister(regs, partial_reg);
   }
@@ -109,8 +109,8 @@ void ABIAArch64::AugmentRegisterInfo(
 
   lldb_private::ConstString sp_string{"sp"};
 
-  std::array<llvm::Optional<uint32_t>, 32> x_regs;
-  std::array<llvm::Optional<uint32_t>, 32> v_regs;
+  std::array<std::optional<uint32_t>, 32> x_regs;
+  std::array<std::optional<uint32_t>, 32> v_regs;
 
   for (auto it : llvm::enumerate(regs)) {
     lldb_private::DynamicRegisterInfo::Register &info = it.value();

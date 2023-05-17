@@ -4,208 +4,208 @@
 ; CHECK-LABEL: Function: test
 ; CHECK: NoAlias:      i8 addrspace(5)* %p, i8 addrspace(1)* %p1
 
-define void @test(i8 addrspace(5)* %p, i8 addrspace(1)* %p1) {
-  load i8, i8 addrspace(5)* %p
-  load i8, i8 addrspace(1)* %p1
+define void @test(ptr addrspace(5) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(5) %p
+  load i8, ptr addrspace(1) %p1
   ret void
 }
 
 ; CHECK-LABEL: Function: test_constant_vs_global
 ; CHECK: MayAlias:      i8 addrspace(4)* %p, i8 addrspace(1)* %p1
 
-define void @test_constant_vs_global(i8 addrspace(4)* %p, i8 addrspace(1)* %p1) {
-  load i8, i8 addrspace(4)* %p
-  load i8, i8 addrspace(1)* %p1
+define void @test_constant_vs_global(ptr addrspace(4) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(4) %p
+  load i8, ptr addrspace(1) %p1
   ret void
 }
 
 ; CHECK: MayAlias:      i8 addrspace(1)* %p, i8 addrspace(4)* %p1
 
-define void @test_global_vs_constant(i8 addrspace(1)* %p, i8 addrspace(4)* %p1) {
-  load i8, i8 addrspace(1)* %p
-  load i8, i8 addrspace(4)* %p1
+define void @test_global_vs_constant(ptr addrspace(1) %p, ptr addrspace(4) %p1) {
+  load i8, ptr addrspace(1) %p
+  load i8, ptr addrspace(4) %p1
   ret void
 }
 
 ; CHECK: MayAlias:      i8 addrspace(6)* %p, i8 addrspace(1)* %p1
 
-define void @test_constant_32bit_vs_global(i8 addrspace(6)* %p, i8 addrspace(1)* %p1) {
-  load i8, i8 addrspace(6)* %p
-  load i8, i8 addrspace(1)* %p1
+define void @test_constant_32bit_vs_global(ptr addrspace(6) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(6) %p
+  load i8, ptr addrspace(1) %p1
   ret void
 }
 
 ; CHECK: MayAlias:      i8 addrspace(6)* %p, i8 addrspace(4)* %p1
 
-define void @test_constant_32bit_vs_constant(i8 addrspace(6)* %p, i8 addrspace(4)* %p1) {
-  load i8, i8 addrspace(6)* %p
-  load i8, i8 addrspace(4)* %p1
+define void @test_constant_32bit_vs_constant(ptr addrspace(6) %p, ptr addrspace(4) %p1) {
+  load i8, ptr addrspace(6) %p
+  load i8, ptr addrspace(4) %p1
   ret void
 }
 
 ; CHECK: MayAlias:	i8* %p, i8 addrspace(999)* %p0
-define void @test_0_999(i8 addrspace(0)* %p, i8 addrspace(999)* %p0) {
-  load i8, i8 addrspace(0)* %p
-  load i8, i8 addrspace(999)* %p0
+define void @test_0_999(ptr addrspace(0) %p, ptr addrspace(999) %p0) {
+  load i8, ptr addrspace(0) %p
+  load i8, ptr addrspace(999) %p0
   ret void
 }
 
 ; CHECK: MayAlias:	i8 addrspace(999)* %p, i8* %p1
-define void @test_999_0(i8 addrspace(999)* %p, i8 addrspace(0)* %p1) {
-  load i8, i8 addrspace(999)* %p
-  load i8, i8 addrspace(0)* %p1
+define void @test_999_0(ptr addrspace(999) %p, ptr addrspace(0) %p1) {
+  load i8, ptr addrspace(999) %p
+  load i8, ptr addrspace(0) %p1
   ret void
 }
 
 ; CHECK: MayAlias:	i8 addrspace(1)* %p, i8 addrspace(999)* %p1
-define void @test_1_999(i8 addrspace(1)* %p, i8 addrspace(999)* %p1) {
-  load i8, i8 addrspace(1)* %p
-  load i8, i8 addrspace(999)* %p1
+define void @test_1_999(ptr addrspace(1) %p, ptr addrspace(999) %p1) {
+  load i8, ptr addrspace(1) %p
+  load i8, ptr addrspace(999) %p1
   ret void
 }
 
 ; CHECK: MayAlias:	i8 addrspace(999)* %p, i8 addrspace(1)* %p1
-define void @test_999_1(i8 addrspace(999)* %p, i8 addrspace(1)* %p1) {
-  load i8, i8 addrspace(999)* %p
-  load i8, i8 addrspace(1)* %p1
+define void @test_999_1(ptr addrspace(999) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(999) %p
+  load i8, ptr addrspace(1) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(2)* %p, i8* %p1
-define void @test_region_vs_flat(i8 addrspace(2)* %p, i8 addrspace(0)* %p1) {
-  load i8, i8 addrspace(2)* %p
-  load i8, i8 addrspace(0)* %p1
+define void @test_region_vs_flat(ptr addrspace(2) %p, ptr addrspace(0) %p1) {
+  load i8, ptr addrspace(2) %p
+  load i8, ptr addrspace(0) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(2)* %p, i8 addrspace(1)* %p1
-define void @test_region_vs_global(i8 addrspace(2)* %p, i8 addrspace(1)* %p1) {
-  load i8, i8 addrspace(2)* %p
-  load i8, i8 addrspace(1)* %p1
+define void @test_region_vs_global(ptr addrspace(2) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(2) %p
+  load i8, ptr addrspace(1) %p1
   ret void
 }
 
 ; CHECK: MayAlias: i8 addrspace(2)* %p, i8 addrspace(2)* %p1
-define void @test_region(i8 addrspace(2)* %p, i8 addrspace(2)* %p1) {
-  load i8, i8 addrspace(2)* %p
-  load i8, i8 addrspace(2)* %p1
+define void @test_region(ptr addrspace(2) %p, ptr addrspace(2) %p1) {
+  load i8, ptr addrspace(2) %p
+  load i8, ptr addrspace(2) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(2)* %p, i8 addrspace(3)* %p1
-define void @test_region_vs_group(i8 addrspace(2)* %p, i8 addrspace(3)* %p1) {
-  load i8, i8 addrspace(2)* %p
-  load i8, i8 addrspace(3)* %p1
+define void @test_region_vs_group(ptr addrspace(2) %p, ptr addrspace(3) %p1) {
+  load i8, ptr addrspace(2) %p
+  load i8, ptr addrspace(3) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(2)* %p, i8 addrspace(4)* %p1
-define void @test_region_vs_constant(i8 addrspace(2)* %p, i8 addrspace(4)* %p1) {
-  load i8, i8 addrspace(2)* %p
-  load i8, i8 addrspace(4)* %p1
+define void @test_region_vs_constant(ptr addrspace(2) %p, ptr addrspace(4) %p1) {
+  load i8, ptr addrspace(2) %p
+  load i8, ptr addrspace(4) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(2)* %p, i8 addrspace(5)* %p1
-define void @test_region_vs_private(i8 addrspace(2)* %p, i8 addrspace(5)* %p1) {
-  load i8, i8 addrspace(2)* %p
-  load i8, i8 addrspace(5)* %p1
+define void @test_region_vs_private(ptr addrspace(2) %p, ptr addrspace(5) %p1) {
+  load i8, ptr addrspace(2) %p
+  load i8, ptr addrspace(5) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(2)* %p, i8 addrspace(6)* %p1
-define void @test_region_vs_const32(i8 addrspace(2)* %p, i8 addrspace(6)* %p1) {
-  load i8, i8 addrspace(2)* %p
-  load i8, i8 addrspace(6)* %p1
+define void @test_region_vs_const32(ptr addrspace(2) %p, ptr addrspace(6) %p1) {
+  load i8, ptr addrspace(2) %p
+  load i8, ptr addrspace(6) %p1
   ret void
 }
 
 ; CHECK: MayAlias:  i8 addrspace(7)* %p, i8* %p1
-define void @test_7_0(i8 addrspace(7)* %p, i8 addrspace(0)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(0)* %p1
+define void @test_7_0(ptr addrspace(7) %p, ptr addrspace(0) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(0) %p1
   ret void
 }
 
 ; CHECK: MayAlias:  i8 addrspace(7)* %p, i8 addrspace(1)* %p1
-define void @test_7_1(i8 addrspace(7)* %p, i8 addrspace(1)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(1)* %p1
+define void @test_7_1(ptr addrspace(7) %p, ptr addrspace(1) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(1) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(7)* %p, i8 addrspace(2)* %p1
-define void @test_7_2(i8 addrspace(7)* %p, i8 addrspace(2)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(2)* %p1
+define void @test_7_2(ptr addrspace(7) %p, ptr addrspace(2) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(2) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(7)* %p, i8 addrspace(3)* %p1
-define void @test_7_3(i8 addrspace(7)* %p, i8 addrspace(3)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(3)* %p1
+define void @test_7_3(ptr addrspace(7) %p, ptr addrspace(3) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(3) %p1
   ret void
 }
 
 ; CHECK: MayAlias:  i8 addrspace(7)* %p, i8 addrspace(4)* %p1
-define void @test_7_4(i8 addrspace(7)* %p, i8 addrspace(4)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(4)* %p1
+define void @test_7_4(ptr addrspace(7) %p, ptr addrspace(4) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(4) %p1
   ret void
 }
 
 ; CHECK: NoAlias:  i8 addrspace(7)* %p, i8 addrspace(5)* %p1
-define void @test_7_5(i8 addrspace(7)* %p, i8 addrspace(5)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(5)* %p1
+define void @test_7_5(ptr addrspace(7) %p, ptr addrspace(5) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(5) %p1
   ret void
 }
 
 ; CHECK: MayAlias:  i8 addrspace(7)* %p, i8 addrspace(6)* %p1
-define void @test_7_6(i8 addrspace(7)* %p, i8 addrspace(6)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(6)* %p1
+define void @test_7_6(ptr addrspace(7) %p, ptr addrspace(6) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(6) %p1
   ret void
 }
 
 ; CHECK: MayAlias:  i8 addrspace(7)* %p, i8 addrspace(7)* %p1
-define void @test_7_7(i8 addrspace(7)* %p, i8 addrspace(7)* %p1) {
-  load i8, i8 addrspace(7)* %p
-  load i8, i8 addrspace(7)* %p1
+define void @test_7_7(ptr addrspace(7) %p, ptr addrspace(7) %p1) {
+  load i8, ptr addrspace(7) %p
+  load i8, ptr addrspace(7) %p1
   ret void
 }
 
-@cst = internal addrspace(4) global i8* undef, align 4
+@cst = internal addrspace(4) global ptr undef, align 4
 
 ; CHECK-LABEL: Function: test_8_0
 ; CHECK-DAG: NoAlias:   i8 addrspace(3)* %p, i8* %p1
-; CHECK-DAG: NoAlias:   i8 addrspace(3)* %p, i8* addrspace(4)* @cst
-; CHECK-DAG: MayAlias:  i8* %p1, i8* addrspace(4)* @cst
-define void @test_8_0(i8 addrspace(3)* %p) {
-  %p1 = load i8*, i8* addrspace(4)* @cst
-  load i8, i8 addrspace(3)* %p
-  load i8, i8* %p1
+; CHECK-DAG: NoAlias:   i8 addrspace(3)* %p, ptr addrspace(4)* @cst
+; CHECK-DAG: MayAlias:  i8* %p1, ptr addrspace(4)* @cst
+define void @test_8_0(ptr addrspace(3) %p) {
+  %p1 = load ptr, ptr addrspace(4) @cst
+  load i8, ptr addrspace(3) %p
+  load i8, ptr %p1
   ret void
 }
 
 ; CHECK-LABEL: Function: test_8_1
 ; CHECK-DAG: NoAlias:   i8 addrspace(5)* %p, i8* %p1
-; CHECK-DAG: NoAlias:   i8 addrspace(5)* %p, i8* addrspace(4)* @cst
-; CHECK-DAG: MayAlias:  i8* %p1, i8* addrspace(4)* @cst
-define void @test_8_1(i8 addrspace(5)* %p) {
-  %p1 = load i8*, i8* addrspace(4)* @cst
-  load i8, i8 addrspace(5)* %p
-  load i8, i8* %p1
+; CHECK-DAG: NoAlias:   i8 addrspace(5)* %p, ptr addrspace(4)* @cst
+; CHECK-DAG: MayAlias:  i8* %p1, ptr addrspace(4)* @cst
+define void @test_8_1(ptr addrspace(5) %p) {
+  %p1 = load ptr, ptr addrspace(4) @cst
+  load i8, ptr addrspace(5) %p
+  load i8, ptr %p1
   ret void
 }
 
 ; CHECK-LABEL: Function: test_8_2
 ; CHECK: NoAlias:   i8* %p, i8 addrspace(5)* %p1
-define amdgpu_kernel void @test_8_2(i8* %p) {
+define amdgpu_kernel void @test_8_2(ptr %p) {
   %p1 = alloca i8, align 1, addrspace(5)
-  load i8, i8* %p
-  load i8, i8 addrspace(5)* %p1
+  load i8, ptr %p
+  load i8, ptr addrspace(5) %p1
   ret void
 }
 
@@ -213,24 +213,24 @@ define amdgpu_kernel void @test_8_2(i8* %p) {
 ; CHECK: MayAlias:  i8* %p, i8 addrspace(5)* %p1
 ; TODO: So far, %p1 may still alias to %p. As it's not captured at all, it
 ; should be NoAlias.
-define void @test_8_3(i8* %p) {
+define void @test_8_3(ptr %p) {
   %p1 = alloca i8, align 1, addrspace(5)
-  load i8, i8* %p
-  load i8, i8 addrspace(5)* %p1
+  load i8, ptr %p
+  load i8, ptr addrspace(5) %p1
   ret void
 }
 
-@shm = internal addrspace(3) global i8 undef, align 4
+@shm = internal addrspace(3) global [2 x i8] undef, align 4
 
 ; CHECK-LABEL: Function: test_8_4
 ; CHECK: NoAlias:   i8* %p, i8 addrspace(3)* %p1
 ; CHECK: NoAlias:   i8* %p, i8 addrspace(3)* @shm
 ; CHECK: MayAlias:  i8 addrspace(3)* %p1, i8 addrspace(3)* @shm
-define amdgpu_kernel void @test_8_4(i8* %p) {
-  %p1 = getelementptr i8, i8 addrspace(3)* @shm, i32 0
-  load i8, i8* %p
-  load i8, i8 addrspace(3)* %p1
-  load i8, i8 addrspace(3)* @shm
+define amdgpu_kernel void @test_8_4(ptr %p) {
+  %p1 = getelementptr [2 x i8], ptr addrspace(3) @shm, i32 0, i32 1
+  load i8, ptr %p
+  load i8, ptr addrspace(3) %p1
+  load i8, ptr addrspace(3) @shm
   ret void
 }
 
@@ -238,12 +238,13 @@ define amdgpu_kernel void @test_8_4(i8* %p) {
 ; CHECK: MayAlias:  i8* %p, i8 addrspace(3)* %p1
 ; CHECK: MayAlias:  i8* %p, i8 addrspace(3)* @shm
 ; CHECK: MayAlias:  i8 addrspace(3)* %p1, i8 addrspace(3)* @shm
-; TODO: So far, %p1 may still alias to %p. As it's not captured at all, it
+
+; TODO: So far, @shm may still alias to %p. As it's not captured at all, it
 ; should be NoAlias.
-define void @test_8_5(i8* %p) {
-  %p1 = getelementptr i8, i8 addrspace(3)* @shm, i32 0
-  load i8, i8* %p
-  load i8, i8 addrspace(3)* %p1
-  load i8, i8 addrspace(3)* @shm
+define void @test_8_5(ptr %p) {
+  %p1 = getelementptr [2 x i8], ptr addrspace(3) @shm, i32 0, i32 1
+  load i8, ptr %p
+  load i8, ptr addrspace(3) %p1
+  load i8, ptr addrspace(3) @shm
   ret void
 }

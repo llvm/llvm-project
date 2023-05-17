@@ -4,19 +4,17 @@ source_filename = "test/CodeGen/X86/2010-05-26-DotDebugLoc.ll"
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 target triple = "x86_64-apple-darwin10"
 
-%struct.a = type { i32, %struct.a* }
+%struct.a = type { i32, ptr }
 
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i8* (%struct.a*)* @bar to i8*)], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @bar], section "llvm.metadata"
 
 ; Function Attrs: noinline nounwind optsize ssp
-define i8* @bar(%struct.a* %myvar) #0 !dbg !8 {
+define ptr @bar(ptr %myvar) #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.a* %myvar, i64 0, metadata !18, metadata !19), !dbg !20
-  %0 = getelementptr inbounds %struct.a, %struct.a* %myvar, i64 0, i32 0, !dbg !21
-  %1 = load i32, i32* %0, align 8, !dbg !21
-  tail call void @foo(i32 %1) #0, !dbg !21
-  %2 = bitcast %struct.a* %myvar to i8*, !dbg !23
-  ret i8* %2, !dbg !23
+  tail call void @llvm.dbg.value(metadata ptr %myvar, i64 0, metadata !18, metadata !19), !dbg !20
+  %0 = load i32, ptr %myvar, align 8, !dbg !21
+  tail call void @foo(i32 %0) #0, !dbg !21
+  ret ptr %myvar, !dbg !23
 }
 
 ; Function Attrs: noinline nounwind optsize ssp

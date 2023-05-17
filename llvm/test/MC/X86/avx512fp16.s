@@ -1,4 +1,7 @@
 // RUN: llvm-mc -triple x86_64-unknown-unknown --show-encoding < %s  | FileCheck %s
+// RUN: llvm-mc -triple x86_64-unknown-unknown < %s 2>&1 | FileCheck %s --check-prefix=CHECK-NO-WARN
+
+// CHECK-NO-WARN-NOT: warning
 
 // CHECK: vmovsh %xmm28, %xmm29, %xmm30
 // CHECK: encoding: [0x62,0x05,0x16,0x00,0x10,0xf4]

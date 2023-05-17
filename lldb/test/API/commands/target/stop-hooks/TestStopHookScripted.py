@@ -11,8 +11,6 @@ from lldbsuite.test.decorators import *
 
 class TestStopHooks(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # If your test case doesn't stress debug info, then
     # set this to true.  That way it won't be run once for
     # each debug info format.
@@ -85,7 +83,7 @@ class TestStopHooks(TestBase):
           command = "target stop-hook add -G 1 -P stop_hook.stop_handler -k increment -v 5 -n step_out_of_me"
             
         self.interp.HandleCommand(command, result)
-        self.assertTrue(result.Succeeded, "Set the target stop hook")
+        self.assertTrue(result.Succeeded(), "Set the target stop hook")
 
         # First run to main.  If we go straight to the first stop hook hit,
         # run_to_source_breakpoint will fail because we aren't at original breakpoint
@@ -133,7 +131,7 @@ class TestStopHooks(TestBase):
             command += specifier
         
         self.interp.HandleCommand(command, result)
-        self.assertTrue(result.Succeeded, "Set the target stop hook")
+        self.assertTrue(result.Succeeded(), "Set the target stop hook")
         (target, process, thread, bkpt) = lldbutil.run_to_source_breakpoint(self,
                                    "Set a breakpoint here", self.main_source_file)
         # At this point we've hit our stop hook so we should have run our expression,

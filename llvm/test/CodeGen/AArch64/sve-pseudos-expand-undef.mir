@@ -20,3 +20,23 @@ body:             |
     RET_ReallyLR
 
 ...
+
+# CHECK: {{.*}} MSB_ZPmZZ_B {{.*}}
+---
+name: expand_mls_to_msb
+body:             |
+  bb.0:
+    renamable $p0 = PTRUE_B 31
+    renamable $z0 = MLS_ZPZZZ_UNDEF_B killed renamable $p0, killed renamable $z2, killed renamable $z0, killed renamable $z1
+    RET_ReallyLR implicit $z0
+...
+
+# CHECK: {{.*}} MAD_ZPmZZ_B {{.*}}
+---
+name: expand_mla_to_mad
+body:             |
+  bb.0:
+    renamable $p0 = PTRUE_B 31
+    renamable $z0 = MLA_ZPZZZ_UNDEF_B killed renamable $p0, killed renamable $z2, killed renamable $z0, killed renamable $z1
+    RET_ReallyLR implicit $z0
+...

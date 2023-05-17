@@ -21,23 +21,22 @@ namespace {
 /// Information pertaining to a specific statistic.
 struct Statistic {
   const char *name, *desc;
-  unsigned value;
+  uint64_t value;
 };
 } // namespace
 
 /// Utility to print a pass entry in the statistics output.
 static void printPassEntry(raw_ostream &os, unsigned indent, StringRef pass,
-                           MutableArrayRef<Statistic> stats = llvm::None) {
+                           MutableArrayRef<Statistic> stats = std::nullopt) {
   os.indent(indent) << pass << "\n";
   if (stats.empty())
     return;
 
   // Make sure to sort the statistics by name.
-  llvm::array_pod_sort(stats.begin(), stats.end(),
-                       [](const auto *lhs, const auto *rhs) {
-                         return llvm::array_pod_sort_comparator<const char *>(
-                             &lhs->name, &rhs->name);
-                       });
+  llvm::array_pod_sort(
+      stats.begin(), stats.end(), [](const auto *lhs, const auto *rhs) {
+        return StringRef{lhs->name}.compare(StringRef{rhs->name});
+      });
 
   // Collect the largest name and value length from each of the statistics.
   size_t largestName = 0, largestValue = 0;
@@ -74,8 +73,8 @@ static void printResultsAsList(raw_ostream &os, OpPassManager &pm) {
         for (Pass::Statistic *it : pass->getStatistics())
           passEntry.push_back({it->getName(), it->getDesc(), it->getValue()});
       } else {
-        for (auto &it : llvm::enumerate(pass->getStatistics()))
-          passEntry[it.index()].value += it.value()->getValue();
+        for (auto [idx, statistic] : llvm::enumerate(pass->getStatistics()))
+          passEntry[idx].value += statistic->getValue();
       }
 #endif
       return;
@@ -227,10 +226,12 @@ static void prepareStatistics(OpPassManager &pm) {
     MutableArrayRef<OpPassManager> nestedPms = adaptor->getPassManagers();
 
     // Merge the statistics from the async pass managers into the main nested
-    // pass managers.
+    // pass managers.  Prepare recursively before merging.
     for (auto &asyncPM : adaptor->getParallelPassManagers()) {
-      for (unsigned i = 0, e = asyncPM.size(); i != e; ++i)
+      for (unsigned i = 0, e = asyncPM.size(); i != e; ++i) {
+        prepareStatistics(asyncPM[i]);
         asyncPM[i].mergeStatisticsInto(nestedPms[i]);
+      }
     }
 
     // Prepare the statistics of each of the nested passes.

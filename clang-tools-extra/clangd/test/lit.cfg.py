@@ -36,3 +36,8 @@ if config.clangd_tidy_checks:
 
 if config.have_zlib:
   config.available_features.add('zlib')
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

@@ -158,6 +158,7 @@ void DWARFMappedHash::Prologue::AppendAtom(AtomType type, dw_form_t form) {
   atoms.push_back({type, form});
   atom_mask |= 1u << type;
   switch (form) {
+  default:
   case DW_FORM_indirect:
   case DW_FORM_exprloc:
   case DW_FORM_flag_present:
@@ -174,7 +175,7 @@ void DWARFMappedHash::Prologue::AppendAtom(AtomType type, dw_form_t form) {
   case DW_FORM_GNU_addr_index:
   case DW_FORM_GNU_str_index:
     hash_data_has_fixed_byte_size = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DW_FORM_flag:
   case DW_FORM_data1:
   case DW_FORM_ref1:
@@ -184,7 +185,7 @@ void DWARFMappedHash::Prologue::AppendAtom(AtomType type, dw_form_t form) {
 
   case DW_FORM_block2:
     hash_data_has_fixed_byte_size = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DW_FORM_data2:
   case DW_FORM_ref2:
     min_hash_data_byte_size += 2;
@@ -192,7 +193,7 @@ void DWARFMappedHash::Prologue::AppendAtom(AtomType type, dw_form_t form) {
 
   case DW_FORM_block4:
     hash_data_has_fixed_byte_size = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DW_FORM_data4:
   case DW_FORM_ref4:
   case DW_FORM_addr:
@@ -227,7 +228,7 @@ DWARFMappedHash::Prologue::Read(const lldb_private::DataExtractor &data,
   } else {
     for (uint32_t i = 0; i < atom_count; ++i) {
       AtomType type = (AtomType)data.GetU16(&offset);
-      dw_form_t form = (dw_form_t)data.GetU16(&offset);
+      auto form = static_cast<dw_form_t>(data.GetU16(&offset));
       AppendAtom(type, form);
     }
   }

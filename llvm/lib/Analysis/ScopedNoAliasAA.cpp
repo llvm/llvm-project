@@ -53,9 +53,10 @@ static cl::opt<bool> EnableScopedNoAlias("enable-scoped-noalias",
 
 AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
                                          const MemoryLocation &LocB,
-                                         AAQueryInfo &AAQI) {
+                                         AAQueryInfo &AAQI,
+                                         const Instruction *) {
   if (!EnableScopedNoAlias)
-    return AAResultBase::alias(LocA, LocB, AAQI);
+    return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 
   // Get the attached MDNodes.
   const MDNode *AScopes = LocA.AATags.Scope, *BScopes = LocB.AATags.Scope;
@@ -69,7 +70,7 @@ AliasResult ScopedNoAliasAAResult::alias(const MemoryLocation &LocA,
     return AliasResult::NoAlias;
 
   // If they may alias, chain to the next AliasAnalysis.
-  return AAResultBase::alias(LocA, LocB, AAQI);
+  return AAResultBase::alias(LocA, LocB, AAQI, nullptr);
 }
 
 ModRefInfo ScopedNoAliasAAResult::getModRefInfo(const CallBase *Call,

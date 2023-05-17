@@ -281,7 +281,7 @@ uint32_t ICallPromotionFunc::tryToPromote(
     uint64_t &TotalCount) {
   uint32_t NumPromoted = 0;
 
-  for (auto &C : Candidates) {
+  for (const auto &C : Candidates) {
     uint64_t Count = C.Count;
     pgo::promoteIndirectCall(CB, C.TargetFunction, Count, TotalCount, SamplePGO,
                              &ORE);

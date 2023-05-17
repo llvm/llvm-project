@@ -29,7 +29,7 @@ define void @insert_crash() nounwind {
 ; CHECK-NEXT:    vminpd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vminsd %xmm0, %xmm0, %xmm0
 ; CHECK-NEXT:    vcvtsd2ss %xmm0, %xmm0, %xmm0
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,0,0]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,0,0]
 ; CHECK-NEXT:    vmovups %xmm0, (%rax)
 ; CHECK-NEXT:    retq
 allocas:
@@ -41,7 +41,7 @@ allocas:
   %double2float = fptrunc double %ret.i1.i.i464 to float
   %smearinsert50 = insertelement <4 x float> undef, float %double2float, i32 3
   %blendAsInt.i503 = bitcast <4 x float> %smearinsert50 to <4 x i32>
-  store <4 x i32> %blendAsInt.i503, <4 x i32>* undef, align 4
+  store <4 x i32> %blendAsInt.i503, ptr undef, align 4
   ret void
 }
 
@@ -59,13 +59,13 @@ define <4 x i32> @DAGCombineA(<4 x i32> %v1) nounwind readonly {
 define <8 x i32> @DAGCombineB(<8 x i32> %v1, <8 x i32> %v2) nounwind readonly {
 ; CHECK-LABEL: DAGCombineB:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm2
+; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vextractf128 $1, %ymm1, %xmm1
 ; CHECK-NEXT:    vextractf128 $1, %ymm0, %xmm3
-; CHECK-NEXT:    vpaddd %xmm3, %xmm2, %xmm2
-; CHECK-NEXT:    vpaddd %xmm2, %xmm3, %xmm2
-; CHECK-NEXT:    vpaddd %xmm0, %xmm1, %xmm1
-; CHECK-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
-; CHECK-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddd %xmm1, %xmm3, %xmm1
+; CHECK-NEXT:    vpaddd %xmm3, %xmm1, %xmm1
+; CHECK-NEXT:    vpaddd %xmm0, %xmm2, %xmm0
+; CHECK-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
   %t1 = add <8 x i32> %v1, %v2
   %t2 = add <8 x i32> %t1, %v1
@@ -103,27 +103,25 @@ ret <8 x i32> %res
 declare <8 x i32> @llvm.x86.avx.vinsertf128.si.256(<8 x i32>, <4 x i32>, i8) nounwind readnone
 
 ; rdar://10643481
-define <8 x float> @vinsertf128_combine(float* nocapture %f) nounwind uwtable readonly ssp {
+define <8 x float> @vinsertf128_combine(ptr nocapture %f) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: vinsertf128_combine:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %add.ptr = getelementptr inbounds float, float* %f, i64 4
-  %t0 = bitcast float* %add.ptr to <4 x float>*
-  %t1 = load <4 x float>, <4 x float>* %t0, align 16
+  %add.ptr = getelementptr inbounds float, ptr %f, i64 4
+  %t1 = load <4 x float>, ptr %add.ptr, align 16
   %t2 = tail call <8 x float> @llvm.x86.avx.vinsertf128.ps.256(<8 x float> undef, <4 x float> %t1, i8 1)
   ret <8 x float> %t2
 }
 
 ; rdar://11076953
-define <8 x float> @vinsertf128_ucombine(float* nocapture %f) nounwind uwtable readonly ssp {
+define <8 x float> @vinsertf128_ucombine(ptr nocapture %f) nounwind uwtable readonly ssp {
 ; CHECK-LABEL: vinsertf128_ucombine:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vinsertf128 $1, 16(%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %add.ptr = getelementptr inbounds float, float* %f, i64 4
-  %t0 = bitcast float* %add.ptr to <4 x float>*
-  %t1 = load <4 x float>, <4 x float>* %t0, align 8
+  %add.ptr = getelementptr inbounds float, ptr %f, i64 4
+  %t1 = load <4 x float>, ptr %add.ptr, align 8
   %t2 = tail call <8 x float> @llvm.x86.avx.vinsertf128.ps.256(<8 x float> undef, <4 x float> %t1, i8 1)
   ret <8 x float> %t2
 }

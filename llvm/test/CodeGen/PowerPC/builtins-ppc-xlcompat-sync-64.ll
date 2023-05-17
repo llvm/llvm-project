@@ -72,9 +72,9 @@ define dso_local void @test_builtin_ppc_icbt() {
 ; CHECK-NEXT:    icbt 0, 0, r3
 ; CHECK-NEXT:    blr
 entry:
-  %a = alloca i8*, align 8
-  %0 = load i8*, i8** %a, align 8
-  call void @llvm.ppc.icbt(i8* %0)
+  %a = alloca ptr, align 8
+  %0 = load ptr, ptr %a, align 8
+  call void @llvm.ppc.icbt(ptr %0)
   ret void
 }
-declare void @llvm.ppc.icbt(i8*)
+declare void @llvm.ppc.icbt(ptr)

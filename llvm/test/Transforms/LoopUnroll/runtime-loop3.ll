@@ -1,12 +1,12 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -disable-output -stats -loop-unroll -unroll-runtime -unroll-partial-threshold=200 -unroll-threshold=400 -info-output-file - | FileCheck %s --check-prefix=STATS
+; RUN: opt < %s -disable-output -stats -passes=loop-unroll -unroll-runtime -unroll-partial-threshold=200 -unroll-threshold=400 -info-output-file - | FileCheck %s --check-prefix=STATS
 ; RUN: opt < %s -disable-output -stats -passes='require<opt-remark-emit>,loop-unroll' -unroll-runtime -unroll-partial-threshold=200 -unroll-threshold=400 -info-output-file - | FileCheck %s --check-prefix=STATS
 
 ; Test that nested loops can be unrolled.  We need to increase threshold to do it
 
 ; STATS: 2 loop-unroll - Number of loops unrolled (completely or otherwise)
 
-define i32 @nested(i32* nocapture %a, i32 %n, i32 %m) nounwind uwtable readonly {
+define i32 @nested(ptr nocapture %a, i32 %n, i32 %m) nounwind uwtable readonly {
 entry:
   %cmp11 = icmp sgt i32 %n, 0
   br i1 %cmp11, label %for.cond1.preheader.lr.ph, label %for.end7
@@ -24,8 +24,8 @@ for.body3:                                        ; preds = %for.cond1.preheader
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body3 ], [ 0, %for.cond1.preheader ]
   %sum.19 = phi i32 [ %add4, %for.body3 ], [ %sum.012, %for.cond1.preheader ]
   %0 = add nsw i64 %indvars.iv, %indvars.iv16
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %0
-  %1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %0
+  %1 = load i32, ptr %arrayidx, align 4
   %add4 = add nsw i32 %1, %sum.19
   %indvars.iv.next = add i64 %indvars.iv, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32

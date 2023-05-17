@@ -17,6 +17,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMapEntry.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace mlir {
 
@@ -43,7 +44,7 @@ class DefaultTimingManagerImpl;
 /// This is a POD type with pointer size, so it should be passed around by
 /// value. The underlying data is owned by the `TimingManager`.
 class TimingIdentifier {
-  using EntryType = llvm::StringMapEntry<llvm::NoneType>;
+  using EntryType = llvm::StringMapEntry<std::nullopt_t>;
 
 public:
   TimingIdentifier(const TimingIdentifier &) = default;
@@ -136,11 +137,11 @@ protected:
   //
   // See the corresponding functions in `Timer` for additional details.
 
-  /// Return the root timer. Implementations should return `llvm::None` if the
+  /// Return the root timer. Implementations should return `std::nullopt` if the
   /// collection of timing samples is disabled. This will cause the timers
   /// constructed from the manager to be tombstones which can be skipped
   /// quickly.
-  virtual Optional<void *> rootTimer() = 0;
+  virtual std::optional<void *> rootTimer() = 0;
 
   /// Start the timer with the given handle.
   virtual void startTimer(void *handle) = 0;
@@ -270,7 +271,7 @@ private:
 /// started and stopped.
 class TimingScope {
 public:
-  TimingScope() : timer() {}
+  TimingScope() {}
   TimingScope(const Timer &other) : timer(other) {
     if (timer)
       timer.start();
@@ -398,7 +399,7 @@ public:
 
 protected:
   // `TimingManager` callbacks
-  Optional<void *> rootTimer() override;
+  std::optional<void *> rootTimer() override;
   void startTimer(void *handle) override;
   void stopTimer(void *handle) override;
   void *nestTimer(void *handle, const void *id,

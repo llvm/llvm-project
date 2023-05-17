@@ -7,12 +7,11 @@ import json
 
 parser = crashlog.JSONCrashLogParser("", "", False)
 
-process_info_json = json.loads('{"pid" : 287, "procName" : "mediaserverd", "procPath" : "\/usr\/sbin\/mediaserverd"}')
+process_info_json = json.loads('{"pid" : 287, "procName" : "mediaserverd"}')
 parser.parse_process_info(process_info_json)
 
 assert parser.crashlog.process_id == 287
 assert parser.crashlog.process_identifier == "mediaserverd"
-assert parser.crashlog.process_path == "/usr/sbin/mediaserverd"
 
 crash_reason_json = json.loads('{"type" : "EXC_BAD_ACCESS", "signal" : "SIGSEGV", "subtype" : "KERN_INVALID_ADDRESS"}')
 assert parser.parse_crash_reason(crash_reason_json) == "EXC_BAD_ACCESS (SIGSEGV) (KERN_INVALID_ADDRESS)"

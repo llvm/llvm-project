@@ -14,10 +14,10 @@
 @valInt = external global i32, align 4
 @valUnsigned = external local_unnamed_addr global i32, align 4
 @valLong = external local_unnamed_addr global i64, align 8
-@ptr = external local_unnamed_addr global i32*, align 8
+@ptr = external local_unnamed_addr global ptr, align 8
 @array = external local_unnamed_addr global [10 x i32], align 4
 @structure = external local_unnamed_addr global %struct.Struct, align 4
-@ptrfunc = external local_unnamed_addr global void (...)*, align 8
+@ptrfunc = external local_unnamed_addr global ptr, align 8
 
 define dso_local signext i32 @ReadGlobalVarChar() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalVarChar:
@@ -36,7 +36,7 @@ define dso_local signext i32 @ReadGlobalVarChar() local_unnamed_addr  {
 ; BE-NEXT:    lbz r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i8, i8* @valChar, align 1
+  %0 = load i8, ptr @valChar, align 1
   %conv = zext i8 %0 to i32
   ret i32 %conv
 }
@@ -56,7 +56,7 @@ define dso_local void @WriteGlobalVarChar() local_unnamed_addr  {
 ; BE-NEXT:    stb r4, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  store i8 3, i8* @valChar, align 1
+  store i8 3, ptr @valChar, align 1
   ret void
 }
 
@@ -77,7 +77,7 @@ define dso_local signext i32 @ReadGlobalVarShort() local_unnamed_addr  {
 ; BE-NEXT:    lha r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i16, i16* @valShort, align 2
+  %0 = load i16, ptr @valShort, align 2
   %conv = sext i16 %0 to i32
   ret i32 %conv
 }
@@ -97,7 +97,7 @@ define dso_local void @WriteGlobalVarShort() local_unnamed_addr  {
 ; BE-NEXT:    sth r4, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  store i16 3, i16* @valShort, align 2
+  store i16 3, ptr @valShort, align 2
   ret void
 }
 
@@ -118,7 +118,7 @@ define dso_local signext i32 @ReadGlobalVarInt() local_unnamed_addr  {
 ; BE-NEXT:    lwa r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i32, i32* @valInt, align 4
+  %0 = load i32, ptr @valInt, align 4
   ret i32 %0
 }
 
@@ -137,7 +137,7 @@ define dso_local void @WriteGlobalVarInt() local_unnamed_addr  {
 ; BE-NEXT:    stw r4, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  store i32 33, i32* @valInt, align 4
+  store i32 33, ptr @valInt, align 4
   ret void
 }
 
@@ -158,7 +158,7 @@ define dso_local signext i32 @ReadGlobalVarUnsigned() local_unnamed_addr  {
 ; BE-NEXT:    lwa r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i32, i32* @valUnsigned, align 4
+  %0 = load i32, ptr @valUnsigned, align 4
   ret i32 %0
 }
 
@@ -177,7 +177,7 @@ define dso_local void @WriteGlobalVarUnsigned() local_unnamed_addr  {
 ; BE-NEXT:    stw r4, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  store i32 33, i32* @valUnsigned, align 4
+  store i32 33, ptr @valUnsigned, align 4
   ret void
 }
 
@@ -198,7 +198,7 @@ define dso_local signext i32 @ReadGlobalVarLong() local_unnamed_addr  {
 ; BE-NEXT:    lwa r3, 4(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i64, i64* @valLong, align 8
+  %0 = load i64, ptr @valLong, align 8
   %conv = trunc i64 %0 to i32
   ret i32 %conv
 }
@@ -218,11 +218,11 @@ define dso_local void @WriteGlobalVarLong() local_unnamed_addr  {
 ; BE-NEXT:    std r4, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  store i64 3333, i64* @valLong, align 8
+  store i64 3333, ptr @valLong, align 8
   ret void
 }
 
-define dso_local i32* @ReadGlobalPtr() local_unnamed_addr  {
+define dso_local ptr @ReadGlobalPtr() local_unnamed_addr  {
 ; LE-LABEL: ReadGlobalPtr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, ptr@got@pcrel(0), 1
@@ -239,8 +239,8 @@ define dso_local i32* @ReadGlobalPtr() local_unnamed_addr  {
 ; BE-NEXT:    ld r3, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i32*, i32** @ptr, align 8
-  ret i32* %0
+  %0 = load ptr, ptr @ptr, align 8
+  ret ptr %0
 }
 
 define dso_local void @WriteGlobalPtr() local_unnamed_addr  {
@@ -264,12 +264,12 @@ define dso_local void @WriteGlobalPtr() local_unnamed_addr  {
 ; BE-NEXT:    stw r4, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i32*, i32** @ptr, align 8
-  store i32 3, i32* %0, align 4
+  %0 = load ptr, ptr @ptr, align 8
+  store i32 3, ptr %0, align 4
   ret void
 }
 
-define dso_local nonnull i32* @GlobalVarAddr() local_unnamed_addr  {
+define dso_local nonnull ptr @GlobalVarAddr() local_unnamed_addr  {
 ; LE-LABEL: GlobalVarAddr:
 ; LE:       # %bb.0: # %entry
 ; LE-NEXT:    pld r3, valInt@got@pcrel(0), 1
@@ -280,7 +280,7 @@ define dso_local nonnull i32* @GlobalVarAddr() local_unnamed_addr  {
 ; BE-NEXT:    pld r3, valInt@got@pcrel(0), 1
 ; BE-NEXT:    blr
 entry:
-  ret i32* @valInt
+  ret ptr @valInt
 }
 
 define dso_local signext i32 @ReadGlobalArray() local_unnamed_addr  {
@@ -300,7 +300,7 @@ define dso_local signext i32 @ReadGlobalArray() local_unnamed_addr  {
 ; BE-NEXT:    lwa r3, 12(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @array, i64 0, i64 3), align 4
+  %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @array, i64 0, i64 3), align 4
   ret i32 %0
 }
 
@@ -319,7 +319,7 @@ define dso_local void @WriteGlobalArray() local_unnamed_addr  {
 ; BE-NEXT:    stw r4, 12(r3)
 ; BE-NEXT:    blr
 entry:
-  store i32 5, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @array, i64 0, i64 3), align 4
+  store i32 5, ptr getelementptr inbounds ([10 x i32], ptr @array, i64 0, i64 3), align 4
   ret void
 }
 
@@ -340,7 +340,7 @@ define dso_local signext i32 @ReadGlobalStruct() local_unnamed_addr  {
 ; BE-NEXT:    lwa r3, 4(r3)
 ; BE-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.Struct, %struct.Struct* @structure, i64 0, i32 2), align 4
+  %0 = load i32, ptr getelementptr inbounds (%struct.Struct, ptr @structure, i64 0, i32 2), align 4
   ret i32 %0
 }
 
@@ -359,7 +359,7 @@ define dso_local void @WriteGlobalStruct() local_unnamed_addr  {
 ; BE-NEXT:    stw r4, 4(r3)
 ; BE-NEXT:    blr
 entry:
-  store i32 3, i32* getelementptr inbounds (%struct.Struct, %struct.Struct* @structure, i64 0, i32 2), align 4
+  store i32 3, ptr getelementptr inbounds (%struct.Struct, ptr @structure, i64 0, i32 2), align 4
   ret void
 }
 
@@ -386,7 +386,7 @@ define dso_local void @ReadFuncPtr() local_unnamed_addr  {
 ; BE-NEXT:    bctr
 ; BE-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %0 = load void ()*, void ()** bitcast (void (...)** @ptrfunc to void ()**), align 8
+  %0 = load ptr, ptr @ptrfunc, align 8
   tail call void %0()
   ret void
 }
@@ -406,7 +406,7 @@ define dso_local void @WriteFuncPtr() local_unnamed_addr  {
 ; BE-NEXT:    std r4, 0(r3)
 ; BE-NEXT:    blr
 entry:
-  store void (...)* @function, void (...)** @ptrfunc, align 8
+  store ptr @function, ptr @ptrfunc, align 8
   ret void
 }
 

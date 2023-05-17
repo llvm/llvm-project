@@ -43,7 +43,9 @@ machineFunctionInfo:
 body: |
   bb.0:
     ; GCN-LABEL: name: test_workitem_id_x_unpacked
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; GCN-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 8
     ; GCN-NEXT: S_ENDPGM 0, implicit [[ASSERT_ZEXT]](s32)
@@ -62,7 +64,9 @@ machineFunctionInfo:
 body: |
   bb.0:
     ; GCN-LABEL: name: test_workitem_id_y_unpacked
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
+    ; GCN: liveins: $vgpr1
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr1
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; GCN-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 3
     ; GCN-NEXT: S_ENDPGM 0, implicit [[ASSERT_ZEXT]](s32)
@@ -81,7 +85,9 @@ machineFunctionInfo:
 body: |
   bb.0:
     ; GCN-LABEL: name: test_workitem_id_z_unpacked
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
+    ; GCN: liveins: $vgpr2
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr2
     ; GCN-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY [[COPY]](s32)
     ; GCN-NEXT: [[ASSERT_ZEXT:%[0-9]+]]:_(s32) = G_ASSERT_ZEXT [[COPY1]], 2
     ; GCN-NEXT: S_ENDPGM 0, implicit [[ASSERT_ZEXT]](s32)
@@ -99,7 +105,9 @@ machineFunctionInfo:
 body: |
   bb.0:
     ; GCN-LABEL: name: test_workitem_id_x_packed
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
     ; GCN-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[COPY]], [[C]]
     ; GCN-NEXT: S_ENDPGM 0, implicit [[AND]](s32)
@@ -117,7 +125,9 @@ machineFunctionInfo:
 body: |
   bb.0:
     ; GCN-LABEL: name: test_workitem_id_y_packed
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 10
     ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023
@@ -137,7 +147,9 @@ machineFunctionInfo:
 body: |
   bb.0:
     ; GCN-LABEL: name: test_workitem_id_z_packed
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
+    ; GCN: liveins: $vgpr0
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32(s32) = COPY $vgpr0
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 20
     ; GCN-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
     ; GCN-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1023

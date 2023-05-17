@@ -10,7 +10,7 @@
 # RUN:   | llvm-objdump --triple=riscv64 -d -M no-aliases - \
 # RUN:   | FileCheck -check-prefix=CHECK-INST %s
 
-.attribute arch, "rv64i2p0_m2p0_a2p0_f2p0_d2p0_c2p0"
+.attribute arch, "rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0"
 
 # CHECK-INST: lr.w t0, (t1)
 lr.w t0, (t1)

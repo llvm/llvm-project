@@ -162,6 +162,20 @@ SBAddress SBSymbol::GetEndAddress() {
   return addr;
 }
 
+uint64_t SBSymbol::GetValue() {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_ptr)
+    return m_opaque_ptr->GetRawValue();
+  return 0;
+}
+
+uint64_t SBSymbol::GetSize() {
+  LLDB_INSTRUMENT_VA(this);
+  if (m_opaque_ptr && m_opaque_ptr->GetByteSizeIsValid())
+    return m_opaque_ptr->GetByteSize();
+  return 0;
+}
+
 uint32_t SBSymbol::GetPrologueByteSize() {
   LLDB_INSTRUMENT_VA(this);
 

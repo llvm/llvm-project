@@ -42,14 +42,16 @@ with tempfile.TemporaryDirectory() as tmpdir:
 
 # Cleans up the output from the compilation process to be easier to process
 for line in log.split('\n'):
-    m = re.search(r"[^:]*:(\d+:).*(?:error:)(.*)", line)
+    m = re.search(r"[^:]*:(\d+:).*(?:error|warning|portability|because):(.*)", line)
     if m:
+        if re.search(r"warning: .*fold.*host", line):
+            continue # ignore host-dependent folding warnings
         actual += m.expand(r"\1\2\n")
 
-# Gets the expected errors and their line number
+# Gets the expected errors and their line numbers
 errors = []
 for i, line in enumerate(src, 1):
-    m = re.search(r"(?:^\s*!\s*ERROR: )(.*)", line)
+    m = re.search(r"(?:^\s*!\s*(?:ERROR|WARNING|PORTABILITY|BECAUSE): )(.*)", line)
     if m:
         errors.append(m.group(1))
         continue
@@ -72,4 +74,3 @@ if diffs != "":
 else:
     print()
     print("PASS")
-

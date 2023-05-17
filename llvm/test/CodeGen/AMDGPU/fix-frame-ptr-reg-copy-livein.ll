@@ -7,7 +7,7 @@
 
 %struct.Data = type { [20 x i32] }
 
-define i32 @fp_save_restore_in_temp_sgpr(%struct.Data addrspace(5)* nocapture readonly byval(%struct.Data) align 4 %arg) #0 {
+define i32 @fp_save_restore_in_temp_sgpr(ptr addrspace(5) nocapture readonly byval(%struct.Data) align 4 %arg) #0 {
   ; GCN-LABEL: name: fp_save_restore_in_temp_sgpr
   ; GCN: bb.0.begin:
   ; GCN:   liveins: $sgpr11
@@ -32,8 +32,8 @@ lp_end:                                                ; preds = %lp_begin
 
 lp_begin:                                                ; preds = %lp_end, %begin
   %idx = phi i32 [ 0, %begin ], [ %cur_idx, %lp_end ]
-  %ptr = getelementptr inbounds %struct.Data, %struct.Data addrspace(5)* %arg, i32 0, i32 0, i32 %idx
-  %data = load i32, i32 addrspace(5)* %ptr, align 4
+  %ptr = getelementptr inbounds %struct.Data, ptr addrspace(5) %arg, i32 0, i32 0, i32 %idx
+  %data = load i32, ptr addrspace(5) %ptr, align 4
   %data_cmp = icmp eq i32 %data, %idx
   br i1 %data_cmp, label %lp_end, label %end
 

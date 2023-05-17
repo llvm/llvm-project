@@ -91,6 +91,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$edi', virtual-reg: '%3' }
   - { reg: '$esi', virtual-reg: '%4' }
@@ -144,7 +145,7 @@ body:             |
   bb.2.if.end:
     %2:gr16 = PHI %11, %bb.0, %17, %bb.1, debug-instr-number 1, debug-location !13
   ; CHECK:              DBG_PHI $bp, 1
-    DBG_INSTR_REF 1, 0, !12, !DIExpression(), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !13
     %31:gr32 = MOVSX32rr16 %6, debug-location !13
     %30:gr32 = MOVSX32rr16 killed %2, debug-location !13
     %29:gr32 = ADD32rr killed %30, killed %31, implicit-def $eflags, debug-location !13

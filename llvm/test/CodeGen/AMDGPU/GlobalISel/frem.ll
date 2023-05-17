@@ -2,7 +2,7 @@
 ; RUN:  llc -global-isel -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=bonaire -verify-machineinstrs < %s | FileCheck --check-prefix=CI %s
 ; RUN:  llc -global-isel -amdgpu-scalarize-global-loads=false -enable-misched=0 -march=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefix=VI %s
 
-define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* %in1, half addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -56,15 +56,15 @@ define amdgpu_kernel void @frem_f16(half addrspace(1)* %out, half addrspace(1)* 
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
-   %r0 = load half, half addrspace(1)* %in1, align 4
-   %r1 = load half, half addrspace(1)* %gep2, align 4
+   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
+   %r0 = load half, ptr addrspace(1) %in1, align 4
+   %r1 = load half, ptr addrspace(1) %gep2, align 4
    %r2 = frem half %r0, %r1
-   store half %r2, half addrspace(1)* %out, align 4
+   store half %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @fast_frem_f16(half addrspace(1)* %out, half addrspace(1)* %in1, half addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: fast_frem_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -102,15 +102,15 @@ define amdgpu_kernel void @fast_frem_f16(half addrspace(1)* %out, half addrspace
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
-   %r0 = load half, half addrspace(1)* %in1, align 4
-   %r1 = load half, half addrspace(1)* %gep2, align 4
+   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
+   %r0 = load half, ptr addrspace(1) %in1, align 4
+   %r1 = load half, ptr addrspace(1) %gep2, align 4
    %r2 = frem fast half %r0, %r1
-   store half %r2, half addrspace(1)* %out, align 4
+   store half %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @unsafe_frem_f16(half addrspace(1)* %out, half addrspace(1)* %in1, half addrspace(1)* %in2) #1 {
+define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #1 {
 ; CI-LABEL: unsafe_frem_f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -148,15 +148,15 @@ define amdgpu_kernel void @unsafe_frem_f16(half addrspace(1)* %out, half addrspa
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_short v[0:1], v2
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr half, half addrspace(1)* %in2, i32 4
-   %r0 = load half, half addrspace(1)* %in1, align 4
-   %r1 = load half, half addrspace(1)* %gep2, align 4
+   %gep2 = getelementptr half, ptr addrspace(1) %in2, i32 4
+   %r0 = load half, ptr addrspace(1) %in1, align 4
+   %r1 = load half, ptr addrspace(1) %gep2, align 4
    %r2 = frem half %r0, %r1
-   store half %r2, half addrspace(1)* %out, align 4
+   store half %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1, float addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -214,15 +214,15 @@ define amdgpu_kernel void @frem_f32(float addrspace(1)* %out, float addrspace(1)
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
-   %r0 = load float, float addrspace(1)* %in1, align 4
-   %r1 = load float, float addrspace(1)* %gep2, align 4
+   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
+   %r0 = load float, ptr addrspace(1) %in1, align 4
+   %r1 = load float, ptr addrspace(1) %gep2, align 4
    %r2 = frem float %r0, %r1
-   store float %r2, float addrspace(1)* %out, align 4
+   store float %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @fast_frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1, float addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: fast_frem_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -258,15 +258,15 @@ define amdgpu_kernel void @fast_frem_f32(float addrspace(1)* %out, float addrspa
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
-   %r0 = load float, float addrspace(1)* %in1, align 4
-   %r1 = load float, float addrspace(1)* %gep2, align 4
+   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
+   %r0 = load float, ptr addrspace(1) %in1, align 4
+   %r1 = load float, ptr addrspace(1) %gep2, align 4
    %r2 = frem fast float %r0, %r1
-   store float %r2, float addrspace(1)* %out, align 4
+   store float %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @unsafe_frem_f32(float addrspace(1)* %out, float addrspace(1)* %in1, float addrspace(1)* %in2) #1 {
+define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #1 {
 ; CI-LABEL: unsafe_frem_f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -302,15 +302,15 @@ define amdgpu_kernel void @unsafe_frem_f32(float addrspace(1)* %out, float addrs
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr float, float addrspace(1)* %in2, i32 4
-   %r0 = load float, float addrspace(1)* %in1, align 4
-   %r1 = load float, float addrspace(1)* %gep2, align 4
+   %gep2 = getelementptr float, ptr addrspace(1) %in2, i32 4
+   %r0 = load float, ptr addrspace(1) %in1, align 4
+   %r1 = load float, ptr addrspace(1) %gep2, align 4
    %r2 = frem float %r0, %r1
-   store float %r2, float addrspace(1)* %out, align 4
+   store float %r2, ptr addrspace(1) %out, align 4
    ret void
 }
 
-define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1, double addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -366,14 +366,14 @@ define amdgpu_kernel void @frem_f64(double addrspace(1)* %out, double addrspace(
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-   %r0 = load double, double addrspace(1)* %in1, align 8
-   %r1 = load double, double addrspace(1)* %in2, align 8
+   %r0 = load double, ptr addrspace(1) %in1, align 8
+   %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem double %r0, %r1
-   store double %r2, double addrspace(1)* %out, align 8
+   store double %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1, double addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: fast_frem_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -423,14 +423,14 @@ define amdgpu_kernel void @fast_frem_f64(double addrspace(1)* %out, double addrs
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-   %r0 = load double, double addrspace(1)* %in1, align 8
-   %r1 = load double, double addrspace(1)* %in2, align 8
+   %r0 = load double, ptr addrspace(1) %in1, align 8
+   %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem fast double %r0, %r1
-   store double %r2, double addrspace(1)* %out, align 8
+   store double %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @unsafe_frem_f64(double addrspace(1)* %out, double addrspace(1)* %in1,
+define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1,
 ; CI-LABEL: unsafe_frem_f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -480,15 +480,15 @@ define amdgpu_kernel void @unsafe_frem_f64(double addrspace(1)* %out, double add
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-                             double addrspace(1)* %in2) #1 {
-   %r0 = load double, double addrspace(1)* %in1, align 8
-   %r1 = load double, double addrspace(1)* %in2, align 8
+                             ptr addrspace(1) %in2) #1 {
+   %r0 = load double, ptr addrspace(1) %in1, align 8
+   %r1 = load double, ptr addrspace(1) %in2, align 8
    %r2 = frem double %r0, %r1
-   store double %r2, double addrspace(1)* %out, align 8
+   store double %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in1, <2 x half> addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_v2f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -532,12 +532,10 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; CI-NEXT:    v_fma_f32 v3, -v3, v6, v4
 ; CI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; CI-NEXT:    v_div_fmas_f32 v3, v3, v5, v6
-; CI-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; CI-NEXT:    v_div_fixup_f32 v3, v3, v2, v1
 ; CI-NEXT:    v_trunc_f32_e32 v3, v3
 ; CI-NEXT:    v_fma_f32 v1, -v3, v2, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_bfe_u32 v1, v1, 0, 16
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    v_or_b32_e32 v2, v0, v1
 ; CI-NEXT:    v_mov_b32_e32 v0, s4
@@ -573,22 +571,21 @@ define amdgpu_kernel void @frem_v2f16(<2 x half> addrspace(1)* %out, <2 x half> 
 ; VI-NEXT:    v_div_fixup_f16 v1, v1, v2, s1
 ; VI-NEXT:    v_trunc_f16_e32 v1, v1
 ; VI-NEXT:    v_fma_f16 v1, -v1, v2, s1
-; VI-NEXT:    v_mov_b32_e32 v2, 16
-; VI-NEXT:    v_lshlrev_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_or_b32_sdwa v2, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; VI-NEXT:    v_or_b32_e32 v2, v0, v1
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr <2 x half>, <2 x half> addrspace(1)* %in2, i32 4
-   %r0 = load <2 x half>, <2 x half> addrspace(1)* %in1, align 8
-   %r1 = load <2 x half>, <2 x half> addrspace(1)* %gep2, align 8
+   %gep2 = getelementptr <2 x half>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <2 x half>, ptr addrspace(1) %in1, align 8
+   %r1 = load <2 x half>, ptr addrspace(1) %gep2, align 8
    %r2 = frem <2 x half> %r0, %r1
-   store <2 x half> %r2, <2 x half> addrspace(1)* %out, align 8
+   store <2 x half> %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> addrspace(1)* %in1, <4 x half> addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_v4f16:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -670,18 +667,14 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; CI-NEXT:    v_fma_f32 v5, -v5, v8, v6
 ; CI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
 ; CI-NEXT:    v_div_fmas_f32 v5, v5, v7, v8
-; CI-NEXT:    v_bfe_u32 v1, v1, 0, 16
-; CI-NEXT:    v_bfe_u32 v0, v0, 0, 16
 ; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
 ; CI-NEXT:    v_or_b32_e32 v0, v0, v1
-; CI-NEXT:    v_bfe_u32 v1, v2, 0, 16
 ; CI-NEXT:    v_div_fixup_f32 v5, v5, v4, v3
 ; CI-NEXT:    v_trunc_f32_e32 v5, v5
 ; CI-NEXT:    v_fma_f32 v3, -v5, v4, v3
 ; CI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; CI-NEXT:    v_bfe_u32 v2, v3, 0, 16
-; CI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; CI-NEXT:    v_or_b32_e32 v1, v1, v2
+; CI-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
+; CI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; CI-NEXT:    v_mov_b32_e32 v2, s4
 ; CI-NEXT:    v_mov_b32_e32 v3, s5
 ; CI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
@@ -723,6 +716,8 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; VI-NEXT:    v_trunc_f16_e32 v1, v1
 ; VI-NEXT:    v_fma_f16 v1, -v1, v2, s6
 ; VI-NEXT:    v_cvt_f32_f16_e32 v2, s3
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; VI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; VI-NEXT:    v_mul_f32_e32 v2, v2, v4
 ; VI-NEXT:    v_cvt_f16_f32_e32 v2, v2
 ; VI-NEXT:    v_mov_b32_e32 v4, s9
@@ -735,24 +730,21 @@ define amdgpu_kernel void @frem_v4f16(<4 x half> addrspace(1)* %out, <4 x half> 
 ; VI-NEXT:    v_div_fixup_f16 v3, v3, v4, s7
 ; VI-NEXT:    v_trunc_f16_e32 v3, v3
 ; VI-NEXT:    v_fma_f16 v3, -v3, v4, s7
-; VI-NEXT:    v_mov_b32_e32 v4, 16
-; VI-NEXT:    v_lshlrev_b32_sdwa v1, v4, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_or_b32_sdwa v0, v0, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; VI-NEXT:    v_lshlrev_b32_sdwa v1, v4, v3 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_0
-; VI-NEXT:    v_or_b32_sdwa v1, v2, v1 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
+; VI-NEXT:    v_lshlrev_b32_e32 v1, 16, v3
+; VI-NEXT:    v_or_b32_e32 v1, v2, v1
 ; VI-NEXT:    v_mov_b32_e32 v2, s4
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr <4 x half>, <4 x half> addrspace(1)* %in2, i32 4
-   %r0 = load <4 x half>, <4 x half> addrspace(1)* %in1, align 16
-   %r1 = load <4 x half>, <4 x half> addrspace(1)* %gep2, align 16
+   %gep2 = getelementptr <4 x half>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <4 x half>, ptr addrspace(1) %in1, align 16
+   %r1 = load <4 x half>, ptr addrspace(1) %gep2, align 16
    %r2 = frem <4 x half> %r0, %r1
-   store <4 x half> %r2, <4 x half> addrspace(1)* %out, align 16
+   store <4 x half> %r2, ptr addrspace(1) %out, align 16
    ret void
 }
 
-define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in1, <2 x float> addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_v2f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -842,15 +834,15 @@ define amdgpu_kernel void @frem_v2f32(<2 x float> addrspace(1)* %out, <2 x float
 ; VI-NEXT:    v_mov_b32_e32 v3, s5
 ; VI-NEXT:    flat_store_dwordx2 v[2:3], v[0:1]
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr <2 x float>, <2 x float> addrspace(1)* %in2, i32 4
-   %r0 = load <2 x float>, <2 x float> addrspace(1)* %in1, align 8
-   %r1 = load <2 x float>, <2 x float> addrspace(1)* %gep2, align 8
+   %gep2 = getelementptr <2 x float>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <2 x float>, ptr addrspace(1) %in1, align 8
+   %r1 = load <2 x float>, ptr addrspace(1) %gep2, align 8
    %r2 = frem <2 x float> %r0, %r1
-   store <2 x float> %r2, <2 x float> addrspace(1)* %out, align 8
+   store <2 x float> %r2, ptr addrspace(1) %out, align 8
    ret void
 }
 
-define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float> addrspace(1)* %in1, <4 x float> addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_v4f32:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1004,15 +996,15 @@ define amdgpu_kernel void @frem_v4f32(<4 x float> addrspace(1)* %out, <4 x float
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr <4 x float>, <4 x float> addrspace(1)* %in2, i32 4
-   %r0 = load <4 x float>, <4 x float> addrspace(1)* %in1, align 16
-   %r1 = load <4 x float>, <4 x float> addrspace(1)* %gep2, align 16
+   %gep2 = getelementptr <4 x float>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <4 x float>, ptr addrspace(1) %in1, align 16
+   %r1 = load <4 x float>, ptr addrspace(1) %gep2, align 16
    %r2 = frem <4 x float> %r0, %r1
-   store <4 x float> %r2, <4 x float> addrspace(1)* %out, align 16
+   store <4 x float> %r2, ptr addrspace(1) %out, align 16
    ret void
 }
 
-define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x double> addrspace(1)* %in1, <2 x double> addrspace(1)* %in2) #0 {
+define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %in1, ptr addrspace(1) %in2) #0 {
 ; CI-LABEL: frem_v2f64:
 ; CI:       ; %bb.0:
 ; CI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -1098,11 +1090,11 @@ define amdgpu_kernel void @frem_v2f64(<2 x double> addrspace(1)* %out, <2 x doub
 ; VI-NEXT:    v_mov_b32_e32 v5, s5
 ; VI-NEXT:    flat_store_dwordx4 v[4:5], v[0:3]
 ; VI-NEXT:    s_endpgm
-   %gep2 = getelementptr <2 x double>, <2 x double> addrspace(1)* %in2, i32 4
-   %r0 = load <2 x double>, <2 x double> addrspace(1)* %in1, align 16
-   %r1 = load <2 x double>, <2 x double> addrspace(1)* %gep2, align 16
+   %gep2 = getelementptr <2 x double>, ptr addrspace(1) %in2, i32 4
+   %r0 = load <2 x double>, ptr addrspace(1) %in1, align 16
+   %r1 = load <2 x double>, ptr addrspace(1) %gep2, align 16
    %r2 = frem <2 x double> %r0, %r1
-   store <2 x double> %r2, <2 x double> addrspace(1)* %out, align 16
+   store <2 x double> %r2, ptr addrspace(1) %out, align 16
    ret void
 }
 

@@ -99,8 +99,8 @@ define signext i16 @func16(i16 signext %x, i16 signext %y) nounwind {
 define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 ; X86-LABEL: func8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %dl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    xorl %ecx, %ecx
 ; X86-NEXT:    cmpb %dl, %al
 ; X86-NEXT:    setns %cl
@@ -129,7 +129,7 @@ define signext i8 @func8(i8 signext %x, i8 signext %y) nounwind {
 define signext i4 @func3(i4 signext %x, i4 signext %y) nounwind {
 ; X86-LABEL: func3:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    subb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    movzbl %al, %ecx
 ; X86-NEXT:    cmpb $7, %al

@@ -10,6 +10,7 @@ static_library("Serialization") {
     "//clang/lib/Sema",
     "//llvm/lib/Bitcode/Reader",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ASTCommon.cpp",

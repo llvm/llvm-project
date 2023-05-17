@@ -48,6 +48,7 @@ end
 module m2
   type :: t
   end type
+  !ERROR: Generic 'assignment(=)' may not have specific procedures 's3' and 's4' as their interfaces are not distinguishable
   interface assignment(=)
     !ERROR: In defined assignment subroutine 's1', dummy argument 'y' may not be OPTIONAL
     subroutine s1(x, y)
@@ -64,6 +65,18 @@ module m2
         subroutine y()
         end
       end interface
+    end
+    !ERROR: In defined assignment subroutine 's3', second dummy argument 'y' must not be a pointer
+    subroutine s3(x, y)
+      import t
+      type(t), intent(out) :: x
+      type(t), intent(in), pointer :: y
+    end
+    !ERROR: In defined assignment subroutine 's4', second dummy argument 'y' must not be an allocatable
+    subroutine s4(x, y)
+      import t
+      type(t), intent(out) :: x
+      type(t), intent(in), allocatable :: y
     end
   end interface
 end

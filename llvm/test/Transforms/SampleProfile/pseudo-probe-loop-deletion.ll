@@ -8,7 +8,7 @@
 %class.Domain.67 = type { %class.DomainBase.68 }
 %class.DomainBase.68 = type { i32 }
 
-define dso_local void @foo(%class.Loc.95* %0) {
+define dso_local void @foo(ptr %0) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:    br label [[foo:%.*]]
 ; CHECK:       foo.exit:
@@ -17,13 +17,13 @@ define dso_local void @foo(%class.Loc.95* %0) {
   br label %2
 
 2:                                                ; preds = %4, %1
-  %.0.i.i = phi %class.Loc.95* [ undef, %1 ], [ %5, %4 ]
-  %3 = icmp ne %class.Loc.95* %.0.i.i, %0
+  %.0.i.i = phi ptr [ undef, %1 ], [ %5, %4 ]
+  %3 = icmp ne ptr %.0.i.i, %0
   br i1 %3, label %4, label %foo.exit
 
 4:                                                ; preds = %2
   call void @llvm.pseudoprobe(i64 6878943695821059507, i64 9, i32 0, i64 -1)
-  %5 = getelementptr inbounds %class.Loc.95, %class.Loc.95* %.0.i.i, i32 1
+  %5 = getelementptr inbounds %class.Loc.95, ptr %.0.i.i, i32 1
   br label %2
 
 foo.exit:            ; preds = %2

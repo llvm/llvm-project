@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin8
 ; PR3561
 
-define hidden void @__mulxc3({ x86_fp80, x86_fp80 }* noalias nocapture sret({ x86_fp80, x86_fp80 }) %agg.result, x86_fp80 %a, x86_fp80 %b, x86_fp80 %c, x86_fp80 %d) nounwind {
+define hidden void @__mulxc3(ptr noalias nocapture sret({ x86_fp80, x86_fp80 }) %agg.result, x86_fp80 %a, x86_fp80 %b, x86_fp80 %c, x86_fp80 %d) nounwind {
 entry:
 	%0 = fmul x86_fp80 %b, %d		; <x86_fp80> [#uses=1]
 	%1 = fsub x86_fp80 0xK00000000000000000000, %0		; <x86_fp80> [#uses=1]

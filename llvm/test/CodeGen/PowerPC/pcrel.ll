@@ -33,7 +33,7 @@ define dso_local signext i32 @ReadLocalVarInt() local_unnamed_addr  {
 ; CHECK-O-NEXT:    R_PPC64_PCREL34 valIntLoc
 ; CHECK-O-NEXT:    blr
 entry:
-  %0 = load i32, i32* @valIntLoc, align 4
+  %0 = load i32, ptr @valIntLoc, align 4
   ret i32 %0
 }
 
@@ -54,6 +54,6 @@ define dso_local signext i32 @ReadGlobalVarInt() local_unnamed_addr  {
 ; CHECK-O-NEXT:    lwa 3, 0(3)
 ; CHECK-O-NEXT:    blr
 entry:
-  %0 = load i32, i32* @valIntGlob, align 4
+  %0 = load i32, ptr @valIntGlob, align 4
   ret i32 %0
 }

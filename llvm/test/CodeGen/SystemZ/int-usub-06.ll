@@ -5,7 +5,7 @@
 declare i32 @foo(i32, i32, i32)
 
 ; Check SLRK.
-define i32 @f1(i32 %dummy, i32 %a, i32 %b, i32 *%flag) {
+define i32 @f1(i32 %dummy, i32 %a, i32 %b, ptr %flag) {
 ; CHECK-LABEL: f1:
 ; CHECK: slrk %r2, %r3, %r4
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -17,7 +17,7 @@ define i32 @f1(i32 %dummy, i32 %a, i32 %b, i32 *%flag) {
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
   %ext = zext i1 %obit to i32
-  store i32 %ext, i32 *%flag
+  store i32 %ext, ptr %flag
   ret i32 %val
 }
 
@@ -62,7 +62,7 @@ exit:
 }
 
 ; Check that we can still use SLR in obvious cases.
-define i32 @f4(i32 %a, i32 %b, i32 *%flag) {
+define i32 @f4(i32 %a, i32 %b, ptr %flag) {
 ; CHECK-LABEL: f4:
 ; CHECK: slr %r2, %r3
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -74,7 +74,7 @@ define i32 @f4(i32 %a, i32 %b, i32 *%flag) {
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
   %ext = zext i1 %obit to i32
-  store i32 %ext, i32 *%flag
+  store i32 %ext, ptr %flag
   ret i32 %val
 }
 

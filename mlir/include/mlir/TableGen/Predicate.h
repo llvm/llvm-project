@@ -67,6 +67,9 @@ public:
     return llvm::hash_value(pred.def);
   }
 
+  /// Return the underlying def.
+  const llvm::Record &getDef() const { return *def; }
+
 protected:
   // The TableGen definition of this predicate.
   const llvm::Record *def{nullptr};

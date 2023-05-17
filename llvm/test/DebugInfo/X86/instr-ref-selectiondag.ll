@@ -26,8 +26,10 @@
 
 ; NORMAL:      %[[REG0:[0-9]+]]:gr32 = ADD32rr
 ; NORMAL-NEXT: DBG_VALUE %[[REG0]]
+; NORMAL-NEXT: DBG_VALUE_LIST {{.+}}, %[[REG0]], 2
 ; NORMAL-NEXT: %[[REG1:[0-9]+]]:gr32 = ADD32rr
 ; NORMAL-NEXT: DBG_VALUE %[[REG1]]
+; NORMAL-NEXT: DBG_VALUE_LIST {{.+}}, %[[REG1]], %[[REG0]]
 
 ; Note that I'm baking in an assumption of one-based ordering here. We could
 ; capture and check for the instruction numbers, we'd rely on machine verifier
@@ -37,21 +39,26 @@
 
 ; INSTRREF:      ADD32rr
 ; INSTRREF-SAME: debug-instr-number 1
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0), 2
 ; INSTRREF-NEXT: ADD32rr
 ; INSTRREF-SAME: debug-instr-number 2
-; INSTRREF-NEXT: DBG_INSTR_REF 2, 0
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0), dbg-instr-ref(1, 0)
 
-; Test that fast-isel will produce DBG_INSTR_REFs too.
+; Test that fast-isel will produce DBG_INSTR_REFs too, except for debug values
+; using DIArgList, which is not supported in FastIsel.
 
 ; FASTISEL-INSTRREF-LABEL: name: foo
 
 ; FASTISEL-INSTRREF:      ADD32rr
 ; FASTISEL-INSTRREF-SAME: debug-instr-number 1
-; FASTISEL-INSTRREF-NEXT: DBG_INSTR_REF 1, 0
+; FASTISEL-INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+; FASTISEL-INSTRREF-NEXT: DBG_VALUE $noreg, {{.+}}
 ; FASTISEL-INSTRREF-NEXT: ADD32rr
 ; FASTISEL-INSTRREF-SAME: debug-instr-number 2
-; FASTISEL-INSTRREF-NEXT: DBG_INSTR_REF 2, 0
+; FASTISEL-INSTRREF-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; FASTISEL-INSTRREF-NEXT: DBG_VALUE $noreg, {{.+}}
 
 @glob32 = global i32 0
 @glob16 = global i16 0
@@ -64,8 +71,10 @@ define i32 @foo(i32 %bar, i32 %baz, i32 %qux) !dbg !7 {
 entry:
   %0 = add i32 %bar, %baz, !dbg !14
   call void @llvm.dbg.value(metadata i32 %0, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata !DIArgList(i32 %0, i32 2), metadata !13, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)), !dbg !14
   %1 = add i32 %0, %qux
   call void @llvm.dbg.value(metadata i32 %1, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata !DIArgList(i32 %1, i32 %0), metadata !13, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_stack_value)), !dbg !14
   ret i32 %1, !dbg !14
 }
 
@@ -107,9 +116,9 @@ entry:
 ;; Don't test the location of these instr-refs, only that the three non-argument
 ;; dbg.values become DBG_INSTR_REFs. We previously checked that these numbers
 ;; get substituted, with appropriate subregister qualifiers.
-; INSTRREF:      DBG_INSTR_REF 2, 0
-; INSTRREF:      DBG_INSTR_REF 4, 0
-; INSTRREF:      DBG_INSTR_REF 6, 0
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(4, 0)
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(6, 0)
 
 ;; In fast-isel, we get four DBG_INSTR_REFs (compared to three and one
 ;; DBG_VALUE with normal isel). We get additional substitutions as a result:
@@ -129,23 +138,23 @@ entry:
 ; FASTISEL-INSTRREF-NEXT: DBG_PHI $rdi, 2
 ; FASTISEL-INSTRREF-NEXT: DBG_PHI $rdi, 1
 
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 1, 0
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 3, 0
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 6, 0
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 10, 0
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(3, 0)
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(6, 0)
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(10, 0)
 
 define i32 @bar(i64 %bar) !dbg !20 {
 entry:
   call void @llvm.dbg.value(metadata i64 %bar, metadata !21, metadata !DIExpression()), !dbg !22
   %0 = trunc i64 %bar to i32, !dbg !22
   call void @llvm.dbg.value(metadata i32 %0, metadata !21, metadata !DIExpression()), !dbg !22
-  store i32 %0, i32 *@glob32, !dbg !22
+  store i32 %0, ptr @glob32, !dbg !22
   %1 = trunc i32 %0 to i16, !dbg !22
   call void @llvm.dbg.value(metadata i16 %1, metadata !21, metadata !DIExpression()), !dbg !22
-  store i16 %1, i16 *@glob16, !dbg !22
+  store i16 %1, ptr @glob16, !dbg !22
   %2 = trunc i16 %1 to i8, !dbg !22
   call void @llvm.dbg.value(metadata i8 %2, metadata !21, metadata !DIExpression()), !dbg !22
-  store i8 %2, i8 *@glob8, !dbg !22
+  store i8 %2, ptr @glob8, !dbg !22
   ret i32 0, !dbg !22
 }
 
@@ -172,7 +181,7 @@ entry:
 ; INSTRREF-NEXT:  - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 6, subreg: 4 }
 
 ; INSTRREF:      CALL64pcrel32 target-flags(x86-plt) @xyzzy, csr_64, implicit $rsp, implicit $ssp, implicit-def $rsp, implicit-def $ssp, implicit-def $rax, debug-instr-number 1
-; INSTRREF:      DBG_INSTR_REF 2, 0
+; INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
 
 ;; Fast-isel produces the same arrangement, a DBG_INSTR_REF pointing back to
 ;; the call instruction. However: the operand numbers are different (6 for
@@ -186,7 +195,7 @@ entry:
 ; FASTISEL-INSTRREF-NEXT:  - { srcinst: 2, srcop: 0, dstinst: 1, dstop: 4, subreg: 4 }
 
 ; FASTISEL-INSTRREF:      CALL64pcrel32 target-flags(x86-plt) @xyzzy, csr_64, implicit $rsp, implicit $ssp, implicit-def $rax, debug-instr-number 1
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 2, 0
+; FASTISEL-INSTRREF:      DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
 
 declare i64 @xyzzy()
 
@@ -197,7 +206,7 @@ entry:
 
 slippers:
   call void @llvm.dbg.value(metadata i16 %moo, metadata !31, metadata !DIExpression()), !dbg !32
-  store i16 %moo, i16 *@glob16, !dbg !32
+  store i16 %moo, ptr @glob16, !dbg !32
   ret i32 0, !dbg !32
 
 shoes:
@@ -208,7 +217,7 @@ shoes:
 ;; Test for dbg.declare of non-stack-slot Values. These turn up with NRVO and 
 ;; other ABI scenarios where something is technically in memory, but we don't
 ;; refer to it relative to the stack pointer. We refer to these either with an
-;; indirect DBG_VAUE, or a DBG_INSTR_REF with DW_OP_deref prepended.
+;; indirect DBG_VALUE, or a DBG_INSTR_REF with DW_OP_deref prepended.
 ;;
 ;; Test an inlined dbg.declare in a different scope + block, to test behaviours
 ;; where the debug intrinsic isn't in the first block. The normal-mode DBG_VALUE
@@ -231,27 +240,27 @@ shoes:
 ; INSTRREF:      DBG_PHI $rdi, 1
 ; INSTRREF-NEXT: DBG_VALUE $rdi, 0, ![[SOCKS]], !DIExpression(),
 ; INSTRREF-NEXT: %0:gr64 = COPY $rdi
-; INSTRREF-NEXT: DBG_INSTR_REF 1, 0, ![[KNEES]], !DIExpression(DW_OP_deref),
+; INSTRREF-NEXT: DBG_INSTR_REF ![[KNEES]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(1, 0),
 
 ; In fast-isel mode, neither variable are hoisted or forwarded to a physreg.
 
 ; FASTISEL-INSTRREF-LABEL: name: qux
 
 ; FASTISEL-INSTRREF:      DBG_PHI $rdi, 1
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 1, 0, ![[SOCKS]], !DIExpression(DW_OP_deref),
+; FASTISEL-INSTRREF:      DBG_INSTR_REF ![[SOCKS]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(1, 0),
 
 ; FASTISEL-INSTRREF-LABEL: bb.1.lala:
-; FASTISEL-INSTRREF:      DBG_INSTR_REF 1, 0, ![[KNEES]], !DIExpression(DW_OP_deref),
-declare i64 @cheddar(i32 *%arg)
+; FASTISEL-INSTRREF:      DBG_INSTR_REF ![[KNEES]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_deref), dbg-instr-ref(1, 0),
+declare i64 @cheddar(ptr %arg)
 
-define void @qux(i32* noalias sret(i32) %agg.result) !dbg !40 {
+define void @qux(ptr noalias sret(i32) %agg.result) !dbg !40 {
 entry:
-  call void @llvm.dbg.declare(metadata i32 *%agg.result, metadata !41, metadata !DIExpression()), !dbg !42
-  %foo = call i64 @cheddar(i32 *%agg.result), !dbg !42
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !41, metadata !DIExpression()), !dbg !42
+  %foo = call i64 @cheddar(ptr %agg.result), !dbg !42
   br label %lala
 
 lala:
-  call void @llvm.dbg.declare(metadata i32 *%agg.result, metadata !45, metadata !DIExpression()), !dbg !44
+  call void @llvm.dbg.declare(metadata ptr %agg.result, metadata !45, metadata !DIExpression()), !dbg !44
   ret void, !dbg !44
 }
 

@@ -82,7 +82,7 @@ public:
     }
   };
 
-  static_assert(sizeof(uint64_t) == sizeof(LocalVarDef), "");
+  static_assert(sizeof(uint64_t) == sizeof(LocalVarDef));
 
 private:
   MCStreamer &OS;
@@ -104,6 +104,7 @@ private:
               SmallVector<std::pair<const MCSymbol *, const MCSymbol *>, 1>>
         DefRanges;
     bool UseReferenceType = false;
+    std::optional<APSInt> ConstantValue;
   };
 
   struct CVGlobalVariable {
@@ -190,6 +191,8 @@ private:
     bool HasStackRealignment = false;
 
     bool HaveLineInfo = false;
+
+    bool HasFramePointer = false;
   };
   FunctionInfo *CurFn = nullptr;
 

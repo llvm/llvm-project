@@ -3,7 +3,6 @@ Test lldb-vscode setBreakpoints request
 """
 
 
-import unittest2
 import vscode
 import shutil
 from lldbsuite.test.decorators import *
@@ -14,8 +13,6 @@ import os
 
 
 class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         lldbvscode_testcase.VSCodeTestCaseBase.setUp(self)
@@ -302,7 +299,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
         # Update the condition on our breakpoint
         new_breakpoint_ids = self.set_source_breakpoints(self.main_path,
                                                          [loop_line],
-                                                         condition="i==4")
+                                                         [{'condition': "i==4"}])
         self.assertEquals(breakpoint_ids, new_breakpoint_ids,
                         "existing breakpoint should have its condition "
                         "updated")
@@ -314,7 +311,7 @@ class TestVSCode_setBreakpoints(lldbvscode_testcase.VSCodeTestCaseBase):
 
         new_breakpoint_ids = self.set_source_breakpoints(self.main_path,
                                                          [loop_line],
-                                                         hitCondition="2")
+                                                         [{'hitCondition':"2"}])
 
         self.assertEquals(breakpoint_ids, new_breakpoint_ids,
                         "existing breakpoint should have its condition "

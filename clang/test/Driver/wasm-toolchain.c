@@ -3,7 +3,7 @@
 
 // RUN: %clang -### %s --target=wasm32-unknown-unknown 2>&1 \
 // RUN:   | FileCheck -check-prefix=CC1 %s
-// CC1: "-cc1" "-triple" "wasm32-unknown-unknown" {{.*}} "-fvisibility" "hidden" {{.*}}
+// CC1: "-cc1" "-triple" "wasm32-unknown-unknown" {{.*}} "-fvisibility=hidden" {{.*}}
 
 // Ditto, but ensure that a user -fvisibility=default disables the default
 // -fvisibility=hidden.

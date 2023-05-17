@@ -234,7 +234,8 @@ template <> struct CustomMappingTraits<GlobalValueSummaryMapTy> {
           std::move(FSum.TypeCheckedLoadVCalls),
           std::move(FSum.TypeTestAssumeConstVCalls),
           std::move(FSum.TypeCheckedLoadConstVCalls),
-          ArrayRef<FunctionSummary::ParamAccess>{}));
+          ArrayRef<FunctionSummary::ParamAccess>{}, ArrayRef<CallsiteInfo>{},
+          ArrayRef<AllocInfo>{}));
     }
   }
   static void output(IO &io, GlobalValueSummaryMapTy &V) {
@@ -270,8 +271,8 @@ template <> struct CustomMappingTraits<TypeIdSummaryMapTy> {
     V.insert({GlobalValue::getGUID(Key), {std::string(Key), TId}});
   }
   static void output(IO &io, TypeIdSummaryMapTy &V) {
-    for (auto TidIter = V.begin(); TidIter != V.end(); TidIter++)
-      io.mapRequired(TidIter->second.first.c_str(), TidIter->second.second);
+    for (auto &TidIter : V)
+      io.mapRequired(TidIter.second.first.c_str(), TidIter.second.second);
   }
 };
 

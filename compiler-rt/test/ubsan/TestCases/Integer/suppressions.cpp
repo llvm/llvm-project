@@ -5,7 +5,7 @@
 // REQUIRES: can-symbolize
 // UNSUPPORTED: android
 // Output differs on OpenBSD longer by displaying the values.
-// XFAIL: openbsd
+// XFAIL: target={{.*openbsd.*}}
 
 // Fails without any suppression.
 // RUN: %env_ubsan_opts=halt_on_error=1 not %run %t 2>&1 | FileCheck %s

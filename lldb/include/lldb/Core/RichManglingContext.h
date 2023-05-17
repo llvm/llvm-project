@@ -86,9 +86,9 @@ private:
   /// trait to deduce \a ParserT from a given InfoProvider, but unfortunately we
   /// can't access CPlusPlusLanguage::MethodName from within the header.
   template <class ParserT> static ParserT *get(llvm::Any parser) {
-    assert(parser.hasValue());
-    assert(llvm::any_isa<ParserT *>(parser));
-    return llvm::any_cast<ParserT *>(parser);
+    assert(parser.has_value());
+    assert(llvm::any_cast<ParserT *>(&parser));
+    return *llvm::any_cast<ParserT *>(&parser);
   }
 };
 

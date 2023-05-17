@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple=armv7 -filetype=obj %s | llvm-objdump --triple=armv7 -d - | FileCheck %s
+// RUN: llvm-mc -triple=armv7 -filetype=obj %s | llvm-objdump --no-print-imm-hex --triple=armv7 -d - | FileCheck %s
 // RUN: not llvm-mc -triple=armv7 -filetype=obj --defsym=ERR=1 < %s -o /dev/null 2>&1 | FileCheck --check-prefix=ERR %s
 
     .syntax unified
@@ -21,5 +21,5 @@ foo:
 // CHECK-NEXT: strb r0, [r1, #1024]
 .ifdef ERR
     str r0, [r1, 1b]
-// ERR:[[#@LINE-1]]:5: error: unsupported relocation on symbol
+// ERR:[[#@LINE-1]]:5: error: unsupported relocation type
 .endif

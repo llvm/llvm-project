@@ -1,4 +1,4 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/inline-act.prof
+; RUN: opt %s -passes=sample-profile -sample-profile-file=%S/Inputs/inline-act.prof
 
 ; Sample profile should have non-empty ACT passed to inliner
 
@@ -46,9 +46,9 @@ define void @_Z3bari(i32) #0 !dbg !9 {
   br i1 %2, label %3, label %6, !dbg !10
 
 ; <label>:3:                                      ; preds = %1
-  %4 = load i32, i32* @t, align 4
+  %4 = load i32, ptr @t, align 4
   %5 = shl nsw i32 %4, 1
-  store i32 %5, i32* @t, align 4
+  store i32 %5, ptr @t, align 4
   br label %6
 
 ; <label>:6:                                      ; preds = %3, %1

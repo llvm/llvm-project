@@ -7,16 +7,14 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @hello = constant [6 x i8] c"hello\00"
 @hell = constant [5 x i8] c"hell\00"
 
-declare i16 @strncmp(i8*, i8*, i32)
+declare i16 @strncmp(ptr, ptr, i32)
 
 define i16 @test_nosimplify() {
 ; CHECK-LABEL: @test_nosimplify(
-; CHECK-NEXT:    [[TEMP1:%.*]] = call i16 @strncmp(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i32 10)
+; CHECK-NEXT:    [[TEMP1:%.*]] = call i16 @strncmp(ptr nonnull @hell, ptr nonnull @hello, i32 10)
 ; CHECK-NEXT:    ret i16 [[TEMP1]]
 ;
 
-  %str1 = getelementptr inbounds [5 x i8], [5 x i8]* @hell, i32 0, i32 0
-  %str2 = getelementptr inbounds [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %temp1 = call i16 @strncmp(i8* %str1, i8* %str2, i32 10)
+  %temp1 = call i16 @strncmp(ptr @hell, ptr @hello, i32 10)
   ret i16 %temp1
 }

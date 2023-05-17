@@ -77,11 +77,11 @@ namespace test1 {
     void foo(int n, const char *s, int t, ...); // expected-note {{candidate function not viable: requires at least 3 arguments, but 2 were provided}}
     void foo(int n, const char *s, int t, int u = 0); // expected-note {{candidate function not viable: requires at least 3 arguments, but 2 were provided}}
 
-    void bar(double d); //expected-note {{candidate function not viable: 'this' argument has type 'const test1::A', but method is not marked const}}
-    void bar(int i); //expected-note {{candidate function not viable: 'this' argument has type 'const test1::A', but method is not marked const}}
+    void bar(double d); //expected-note {{candidate function not viable: 'this' argument has type 'const A', but method is not marked const}}
+    void bar(int i); //expected-note {{candidate function not viable: 'this' argument has type 'const A', but method is not marked const}}
 
-    void baz(A &d); // expected-note {{candidate function not viable: 1st argument ('const test1::A') would lose const qualifier}}
-    void baz(int i); // expected-note {{candidate function not viable: no known conversion from 'const test1::A' to 'int' for 1st argument}} 
+    void baz(A &d); // expected-note {{candidate function not viable: 1st argument ('const A') would lose const qualifier}}
+    void baz(int i); // expected-note {{candidate function not viable: no known conversion from 'const A' to 'int' for 1st argument}} 
 
     void ref() &&;   // expected-note {{expects an rvalue for object argument}} expected-note {{requires 0 arguments, but 1 was provided}}
     void ref(int) &; // expected-note {{expects an lvalue for object argument}} expected-note {{requires 1 argument, but 0 were provided}}
@@ -114,7 +114,7 @@ namespace test1 {
 
 namespace b7398190 {
   struct S {
-    int f(); // expected-note {{'this' argument has type 'const b7398190::S', but method is not marked const}}
+    int f(); // expected-note {{'this' argument has type 'const S', but method is not marked const}}
     void f(int); // expected-note {{requires 1 argument, but 0 were provided}}
   };
   const S *p;

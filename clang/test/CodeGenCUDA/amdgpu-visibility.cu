@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility default -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DEFAULT %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility protected -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-PROTECTED %s
-// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility hidden -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-HIDDEN %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=default -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-DEFAULT %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=protected -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-PROTECTED %s
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -fapply-global-visibility-to-externs -fvisibility=hidden -emit-llvm -o - %s | FileCheck --check-prefix=CHECK-HIDDEN %s
 
 #include "Inputs/cuda.h"
 

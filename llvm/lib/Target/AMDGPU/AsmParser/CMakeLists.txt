@@ -2,12 +2,14 @@ add_llvm_component_library(LLVMAMDGPUAsmParser
   AMDGPUAsmParser.cpp
 
   LINK_COMPONENTS
-  MC
-  MCParser
   AMDGPUDesc
   AMDGPUInfo
   AMDGPUUtils
+  CodeGenTypes
+  MC
+  MCParser
   Support
+  TargetParser
 
   ADD_TO_COMPONENT
   AMDGPU

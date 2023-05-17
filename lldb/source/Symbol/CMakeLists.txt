@@ -6,7 +6,7 @@ if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
     )
 endif()
 
-add_lldb_library(lldbSymbol
+add_lldb_library(lldbSymbol NO_PLUGIN_DEPENDENCIES
   ArmUnwindInfo.cpp
   Block.cpp
   CompactUnwindInfo.cpp
@@ -22,6 +22,7 @@ add_lldb_library(lldbSymbol
   LineEntry.cpp
   LineTable.cpp
   LocateSymbolFile.cpp
+  ObjectContainer.cpp
   ObjectFile.cpp
   PostfixExpression.cpp
   Symbol.cpp

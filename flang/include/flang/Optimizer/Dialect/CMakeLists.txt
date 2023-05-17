@@ -1,12 +1,22 @@
 # This replicates part of the add_mlir_dialect cmake function from MLIR that
 # cannot be used her because it expects to be run inside MLIR directory which
 # is not the case for FIR.
+set(LLVM_TARGET_DEFINITIONS FIRAttr.td)
+mlir_tablegen(FIREnumAttr.h.inc -gen-enum-decls)
+mlir_tablegen(FIREnumAttr.cpp.inc -gen-enum-defs)
+mlir_tablegen(FIRAttr.h.inc --gen-attrdef-decls)
+mlir_tablegen(FIRAttr.cpp.inc -gen-attrdef-defs)
+
 set(LLVM_TARGET_DEFINITIONS FIROps.td)
 mlir_tablegen(FIROps.h.inc -gen-op-decls)
 mlir_tablegen(FIROps.cpp.inc -gen-op-defs)
 mlir_tablegen(FIROpsTypes.h.inc --gen-typedef-decls)
 mlir_tablegen(FIROpsTypes.cpp.inc --gen-typedef-defs)
 add_public_tablegen_target(FIROpsIncGen)
+
+set(LLVM_TARGET_DEFINITIONS FortranVariableInterface.td)
+mlir_tablegen(FortranVariableInterface.h.inc -gen-op-interface-decls)
+mlir_tablegen(FortranVariableInterface.cpp.inc -gen-op-interface-defs)
 
 set(LLVM_TARGET_DEFINITIONS CanonicalizationPatterns.td)
 mlir_tablegen(CanonicalizationPatterns.inc -gen-rewriters)
@@ -16,7 +26,7 @@ add_custom_target(flang-doc)
 set(dialect_doc_filename "FIRLangRef")
 
 set(LLVM_TARGET_DEFINITIONS FIROps.td)
-tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc "-I${MLIR_MAIN_SRC_DIR}" "-I${MLIR_INCLUDE_DIR}")
+tablegen(MLIR ${dialect_doc_filename}.md -gen-op-doc "-I${MLIR_INCLUDE_DIR}")
 set(GEN_DOC_FILE ${FLANG_BINARY_DIR}/docs/Dialect/${dialect_doc_filename}.md)
 add_custom_command(
         OUTPUT ${GEN_DOC_FILE}

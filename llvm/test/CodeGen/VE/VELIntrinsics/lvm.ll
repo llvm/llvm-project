@@ -6,7 +6,7 @@
 ;;;   We test LVMir_m, LVMyir_y, SVMmi, and SVMyi instructions.
 
 ; Function Attrs: nounwind readnone
-define i64 @lvm_mmss(i8* nocapture readnone %0, i64 %1) {
+define i64 @lvm_mmss(ptr nocapture readnone %0, i64 %1) {
 ; CHECK-LABEL: lvm_mmss:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lvm %vm1, 3, %s1
@@ -24,7 +24,7 @@ declare <256 x i1> @llvm.ve.vl.lvm.mmss(<256 x i1>, i64, i64)
 declare i64 @llvm.ve.vl.svm.sms(<256 x i1>, i64)
 
 ; Function Attrs: nounwind readnone
-define i64 @lvml_MMss(i8* nocapture readnone %0, i64 %1) {
+define i64 @lvml_MMss(ptr nocapture readnone %0, i64 %1) {
 ; CHECK-LABEL: lvml_MMss:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lvm %vm2, 1, %s1

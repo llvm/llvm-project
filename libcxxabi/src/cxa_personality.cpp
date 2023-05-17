@@ -622,7 +622,7 @@ static void scan_eh_tab(scan_results &results, _Unwind_Action actions,
         results.reason = _URC_FATAL_PHASE1_ERROR;
         return;
     }
-    // Start scan by getting exception table address
+    // Start scan by getting exception table address.
     const uint8_t *lsda = (const uint8_t *)_Unwind_GetLanguageSpecificData(context);
     if (lsda == 0)
     {
@@ -912,6 +912,8 @@ static _Unwind_Reason_Code __gxx_personality_imp
 _LIBCXXABI_FUNC_VIS _Unwind_Reason_Code
 #ifdef __USING_SJLJ_EXCEPTIONS__
 __gxx_personality_sj0
+#elif defined(__MVS__)
+__zos_cxx_personality_v2
 #else
 __gxx_personality_v0
 #endif
@@ -1121,7 +1123,7 @@ __gxx_personality_v0(_Unwind_State state,
         }
 
         // Either we didn't do a phase 1 search (due to forced unwinding), or
-        //  phase 1 reported no catching-handlers.
+        // phase 1 reported no catching-handlers.
         // Search for a (non-catching) cleanup
         if (is_force_unwinding)
           scan_eh_tab(

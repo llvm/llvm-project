@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strdup.h"
+#include "src/errno/libc_errno.h"
+#include "src/string/allocating_string_utils.h"
 #include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/string_utils.h"
 
 #include "src/__support/common.h"
 
@@ -17,16 +18,12 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(char *, strdup, (const char *src)) {
-  if (src == nullptr) {
-    return nullptr;
-  }
-  size_t len = internal::string_length(src) + 1;
-  char *dest = reinterpret_cast<char *>(::malloc(len));
-  if (dest == nullptr) {
-    return nullptr;
-  }
-  inline_memcpy(dest, src, len);
-  return dest;
+  auto dup = internal::strdup(src);
+  if (dup)
+    return *dup;
+  if (src != nullptr)
+    libc_errno = ENOMEM;
+  return nullptr;
 }
 
 } // namespace __llvm_libc

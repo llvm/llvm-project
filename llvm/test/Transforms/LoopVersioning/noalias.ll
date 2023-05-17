@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -loop-versioning -S < %s | FileCheck %s
+; RUN: opt -passes=loop-versioning -S < %s | FileCheck %s
 
 ; A very simple case.  After versioning the %loadA and %loadB can't alias with
 ; the store.
@@ -11,7 +11,7 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %a, i32* %b, i32* %c) {
+define void @f(ptr %a, ptr %b, ptr %c) {
 entry:
   br label %for.body
 
@@ -20,22 +20,22 @@ entry:
 for.body:                                         ; preds = %for.body, %entry
   %ind = phi i64 [ 0, %entry ], [ %add, %for.body ]
 
-  %arrayidxA = getelementptr inbounds i32, i32* %a, i64 %ind
+  %arrayidxA = getelementptr inbounds i32, ptr %a, i64 %ind
 ; CHECK: %loadA = {{.*}} !alias.scope !0
 ; A's scope: !0 -> { 1(2) }
-  %loadA = load i32, i32* %arrayidxA, align 4
+  %loadA = load i32, ptr %arrayidxA, align 4
 
-  %arrayidxB = getelementptr inbounds i32, i32* %b, i64 %ind
+  %arrayidxB = getelementptr inbounds i32, ptr %b, i64 %ind
 ; CHECK: %loadB = {{.*}} !alias.scope !3
 ; B's scope: !3 -> { 4(2) }
-  %loadB = load i32, i32* %arrayidxB, align 4
+  %loadB = load i32, ptr %arrayidxB, align 4
 
   %mulC = mul i32 %loadA, %loadB
 
-  %arrayidxC = getelementptr inbounds i32, i32* %c, i64 %ind
+  %arrayidxC = getelementptr inbounds i32, ptr %c, i64 %ind
 ; CHECK: store {{.*}} !alias.scope !5, !noalias !7
 ; C noalias A and B: !7 -> { 1(2), 4(2) }
-  store i32 %mulC, i32* %arrayidxC, align 4
+  store i32 %mulC, ptr %arrayidxC, align 4
 
   %add = add nuw nsw i64 %ind, 1
   %exitcond = icmp eq i64 %add, 20

@@ -13,7 +13,7 @@ define <2 x i64> @test_extrqi(<2 x i64> %x) nounwind uwtable ssp {
   ret <2 x i64> %1
 }
 
-define <2 x i64> @test_extrqi_domain(<2 x i64> *%p) nounwind uwtable ssp {
+define <2 x i64> @test_extrqi_domain(ptr%p) nounwind uwtable ssp {
 ; X86-SSE-LABEL: test_extrqi_domain:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -39,7 +39,7 @@ define <2 x i64> @test_extrqi_domain(<2 x i64> *%p) nounwind uwtable ssp {
 ; X64-AVX-NEXT:    vmovdqa (%rdi), %xmm0 # encoding: [0xc5,0xf9,0x6f,0x07]
 ; X64-AVX-NEXT:    extrq $2, $3, %xmm0 # encoding: [0x66,0x0f,0x78,0xc0,0x03,0x02]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
-  %1 = load <2 x i64>, <2 x i64> *%p
+  %1 = load <2 x i64>, ptr%p
   %2 = tail call <2 x i64> @llvm.x86.sse4a.extrqi(<2 x i64> %1, i8 3, i8 2)
   ret <2 x i64> %2
 }
@@ -56,7 +56,7 @@ define <2 x i64> @test_extrq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp {
   ret <2 x i64> %2
 }
 
-define <2 x i64> @test_extrq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtable ssp {
+define <2 x i64> @test_extrq_domain(ptr%p, <2 x i64> %y) nounwind uwtable ssp {
 ; X86-SSE-LABEL: test_extrq_domain:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -86,7 +86,7 @@ define <2 x i64> @test_extrq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtabl
 ; X64-AVX-NEXT:    extrq %xmm0, %xmm1 # encoding: [0x66,0x0f,0x79,0xc8]
 ; X64-AVX-NEXT:    vmovdqa %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
-  %1 = load <2 x i64>, <2 x i64> *%p
+  %1 = load <2 x i64>, ptr%p
   %2 = bitcast <2 x i64> %y to <16 x i8>
   %3 = tail call <2 x i64> @llvm.x86.sse4a.extrq(<2 x i64> %1, <16 x i8> %2) nounwind
   ret <2 x i64> %3
@@ -103,7 +103,7 @@ define <2 x i64> @test_insertqi(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp
   ret <2 x i64> %1
 }
 
-define <2 x i64> @test_insertqi_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtable ssp {
+define <2 x i64> @test_insertqi_domain(ptr%p, <2 x i64> %y) nounwind uwtable ssp {
 ; X86-SSE-LABEL: test_insertqi_domain:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -133,7 +133,7 @@ define <2 x i64> @test_insertqi_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwt
 ; X64-AVX-NEXT:    insertq $6, $5, %xmm0, %xmm1 # encoding: [0xf2,0x0f,0x78,0xc8,0x05,0x06]
 ; X64-AVX-NEXT:    vmovdqa %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
-  %1 = load <2 x i64>, <2 x i64> *%p
+  %1 = load <2 x i64>, ptr%p
   %2 = tail call <2 x i64> @llvm.x86.sse4a.insertqi(<2 x i64> %1, <2 x i64> %y, i8 5, i8 6)
   ret <2 x i64> %2
 }
@@ -149,7 +149,7 @@ define <2 x i64> @test_insertq(<2 x i64> %x, <2 x i64> %y) nounwind uwtable ssp 
   ret <2 x i64> %1
 }
 
-define <2 x i64> @test_insertq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwtable ssp {
+define <2 x i64> @test_insertq_domain(ptr%p, <2 x i64> %y) nounwind uwtable ssp {
 ; X86-SSE-LABEL: test_insertq_domain:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -179,7 +179,7 @@ define <2 x i64> @test_insertq_domain(<2 x i64> *%p, <2 x i64> %y) nounwind uwta
 ; X64-AVX-NEXT:    insertq %xmm0, %xmm1 # encoding: [0xf2,0x0f,0x79,0xc8]
 ; X64-AVX-NEXT:    vmovdqa %xmm1, %xmm0 # encoding: [0xc5,0xf9,0x6f,0xc1]
 ; X64-AVX-NEXT:    retq # encoding: [0xc3]
-  %1 = load <2 x i64>, <2 x i64> *%p
+  %1 = load <2 x i64>, ptr%p
   %2 = tail call <2 x i64> @llvm.x86.sse4a.insertq(<2 x i64> %1, <2 x i64> %y) nounwind
   ret <2 x i64> %2
 }

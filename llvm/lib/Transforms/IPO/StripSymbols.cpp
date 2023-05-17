@@ -24,113 +24,17 @@
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/TypeFinder.h"
 #include "llvm/IR/ValueSymbolTable.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/StripSymbols.h"
 #include "llvm/Transforms/Utils/Local.h"
 
 using namespace llvm;
-
-namespace {
-  class StripSymbols : public ModulePass {
-    bool OnlyDebugInfo;
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    explicit StripSymbols(bool ODI = false)
-      : ModulePass(ID), OnlyDebugInfo(ODI) {
-        initializeStripSymbolsPass(*PassRegistry::getPassRegistry());
-      }
-
-    bool runOnModule(Module &M) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
-  };
-
-  class StripNonDebugSymbols : public ModulePass {
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    explicit StripNonDebugSymbols()
-      : ModulePass(ID) {
-        initializeStripNonDebugSymbolsPass(*PassRegistry::getPassRegistry());
-      }
-
-    bool runOnModule(Module &M) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
-  };
-
-  class StripDebugDeclare : public ModulePass {
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    explicit StripDebugDeclare()
-      : ModulePass(ID) {
-        initializeStripDebugDeclarePass(*PassRegistry::getPassRegistry());
-      }
-
-    bool runOnModule(Module &M) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
-  };
-
-  class StripDeadDebugInfo : public ModulePass {
-  public:
-    static char ID; // Pass identification, replacement for typeid
-    explicit StripDeadDebugInfo()
-      : ModulePass(ID) {
-        initializeStripDeadDebugInfoPass(*PassRegistry::getPassRegistry());
-      }
-
-    bool runOnModule(Module &M) override;
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.setPreservesAll();
-    }
-  };
-}
-
-char StripSymbols::ID = 0;
-INITIALIZE_PASS(StripSymbols, "strip",
-                "Strip all symbols from a module", false, false)
-
-ModulePass *llvm::createStripSymbolsPass(bool OnlyDebugInfo) {
-  return new StripSymbols(OnlyDebugInfo);
-}
-
-char StripNonDebugSymbols::ID = 0;
-INITIALIZE_PASS(StripNonDebugSymbols, "strip-nondebug",
-                "Strip all symbols, except dbg symbols, from a module",
-                false, false)
-
-ModulePass *llvm::createStripNonDebugSymbolsPass() {
-  return new StripNonDebugSymbols();
-}
-
-char StripDebugDeclare::ID = 0;
-INITIALIZE_PASS(StripDebugDeclare, "strip-debug-declare",
-                "Strip all llvm.dbg.declare intrinsics", false, false)
-
-ModulePass *llvm::createStripDebugDeclarePass() {
-  return new StripDebugDeclare();
-}
-
-char StripDeadDebugInfo::ID = 0;
-INITIALIZE_PASS(StripDeadDebugInfo, "strip-dead-debug-info",
-                "Strip debug info for unused symbols", false, false)
-
-ModulePass *llvm::createStripDeadDebugInfoPass() {
-  return new StripDeadDebugInfo();
-}
 
 /// OnlyUsedBy - Return true if V is only used by Usr.
 static bool OnlyUsedBy(Value *V, Value *Usr) {
@@ -181,8 +85,7 @@ static void StripTypeNames(Module &M, bool PreserveDbgInfo) {
   TypeFinder StructTypes;
   StructTypes.run(M, false);
 
-  for (unsigned i = 0, e = StructTypes.size(); i != e; ++i) {
-    StructType *STy = StructTypes[i];
+  for (StructType *STy : StructTypes) {
     if (STy->isLiteral() || STy->getName().empty()) continue;
 
     if (PreserveDbgInfo && STy->getName().startswith("llvm.dbg"))
@@ -233,24 +136,6 @@ static bool StripSymbolNames(Module &M, bool PreserveDbgInfo) {
   return true;
 }
 
-bool StripSymbols::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  bool Changed = false;
-  Changed |= StripDebugInfo(M);
-  if (!OnlyDebugInfo)
-    Changed |= StripSymbolNames(M, false);
-  return Changed;
-}
-
-bool StripNonDebugSymbols::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-
-  return StripSymbolNames(M, true);
-}
-
 static bool stripDebugDeclareImpl(Module &M) {
 
   Function *Declare = M.getFunction("llvm.dbg.declare");
@@ -289,12 +174,6 @@ static bool stripDebugDeclareImpl(Module &M) {
   return true;
 }
 
-bool StripDebugDeclare::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-  return stripDebugDeclareImpl(M);
-}
-
 static bool stripDeadDebugInfoImpl(Module &M) {
   bool Changed = false;
 
@@ -322,11 +201,15 @@ static bool stripDeadDebugInfoImpl(Module &M) {
   }
 
   std::set<DICompileUnit *> LiveCUs;
-  // Any CU referenced from a subprogram is live.
-  for (DISubprogram *SP : F.subprograms()) {
-    if (SP->getUnit())
-      LiveCUs.insert(SP->getUnit());
+  DebugInfoFinder LiveCUFinder;
+  for (const Function &F : M.functions()) {
+    if (auto *SP = cast_or_null<DISubprogram>(F.getSubprogram()))
+      LiveCUFinder.processSubprogram(SP);
+    for (const Instruction &I : instructions(F))
+      LiveCUFinder.processInstruction(M, I);
   }
+  auto FoundCUs = LiveCUFinder.compile_units();
+  LiveCUs.insert(FoundCUs.begin(), FoundCUs.end());
 
   bool HasDeadCUs = false;
   for (DICompileUnit *DIC : F.compile_units()) {
@@ -377,39 +260,34 @@ static bool stripDeadDebugInfoImpl(Module &M) {
   return Changed;
 }
 
-/// Remove any debug info for global variables/functions in the given module for
-/// which said global variable/function no longer exists (i.e. is null).
-///
-/// Debugging information is encoded in llvm IR using metadata. This is designed
-/// such a way that debug info for symbols preserved even if symbols are
-/// optimized away by the optimizer. This special pass removes debug info for
-/// such symbols.
-bool StripDeadDebugInfo::runOnModule(Module &M) {
-  if (skipModule(M))
-    return false;
-  return stripDeadDebugInfoImpl(M);
-}
-
 PreservedAnalyses StripSymbolsPass::run(Module &M, ModuleAnalysisManager &AM) {
   StripDebugInfo(M);
   StripSymbolNames(M, false);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripNonDebugSymbolsPass::run(Module &M,
                                                 ModuleAnalysisManager &AM) {
   StripSymbolNames(M, true);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripDebugDeclarePass::run(Module &M,
                                              ModuleAnalysisManager &AM) {
   stripDebugDeclareImpl(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }
 
 PreservedAnalyses StripDeadDebugInfoPass::run(Module &M,
                                               ModuleAnalysisManager &AM) {
   stripDeadDebugInfoImpl(M);
-  return PreservedAnalyses::all();
+  PreservedAnalyses PA;
+  PA.preserveSet<CFGAnalyses>();
+  return PA;
 }

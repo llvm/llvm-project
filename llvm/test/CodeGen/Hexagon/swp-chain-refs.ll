@@ -33,11 +33,11 @@ b6:                                               ; preds = %b5
 
 b7:                                               ; preds = %b7, %b1
   %v0 = phi i32 [ 0, %b1 ], [ %v4, %b7 ]
-  %v1 = load i16, i16* undef, align 8, !tbaa !0
+  %v1 = load i16, ptr undef, align 8, !tbaa !0
   %v2 = icmp sgt i16 %v1, undef
   %v3 = select i1 %v2, i16 4, i16 undef
-  store i16 %v3, i16* undef, align 2, !tbaa !0
-  store i16 -32768, i16* undef, align 2, !tbaa !0
+  store i16 %v3, ptr undef, align 2, !tbaa !0
+  store i16 -32768, ptr undef, align 2, !tbaa !0
   %v4 = add i32 %v0, 1
   %v5 = icmp eq i32 %v4, 5
   br i1 %v5, label %b8, label %b7

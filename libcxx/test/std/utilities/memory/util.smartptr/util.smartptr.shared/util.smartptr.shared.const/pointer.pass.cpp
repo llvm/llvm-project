@@ -10,8 +10,9 @@
 
 // template<class Y> explicit shared_ptr(Y* p);
 
-#include <memory>
 #include <cassert>
+#include <memory>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -25,6 +26,25 @@ struct A
 };
 
 int A::count = 0;
+
+struct Derived : A {};
+
+// https://llvm.org/PR60258
+// Invalid constructor SFINAE for std::shared_ptr's array ctors
+static_assert( std::is_constructible<std::shared_ptr<int>,  int*>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<A>,  Derived*>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<A>,  int*>::value, "");
+
+#if TEST_STD_VER >= 17
+static_assert( std::is_constructible<std::shared_ptr<int[]>,  int*>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,  int(*)[]>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[5]>, int*>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>, int(*)[5]>::value, "");
+#endif
+
+// Test explicit
+static_assert(std::is_constructible<std::shared_ptr<int>, int*>::value, "");
+static_assert(!std::is_convertible<int*, std::shared_ptr<int> >::value, "");
 
 int main(int, char**)
 {
@@ -71,10 +91,17 @@ int main(int, char**)
     }
 
     {
-          assert(A::count == 0);
+        assert(A::count == 0);
         std::shared_ptr<const A[]> pA(new A[8]);
         assert(pA.use_count() == 1);
         assert(A::count == 8);
+    }
+
+    {
+        assert(A::count == 0);
+        std::shared_ptr<A> pA(new Derived);
+        assert(pA.use_count() == 1);
+        assert(A::count == 1);
     }
 #endif
 

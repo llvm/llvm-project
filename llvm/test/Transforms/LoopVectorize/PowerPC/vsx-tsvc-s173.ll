@@ -1,4 +1,4 @@
-; RUN: opt < %s -mcpu=pwr7 -mattr=+vsx -loop-vectorize -instcombine -S | FileCheck %s
+; RUN: opt < %s -mcpu=pwr7 -mattr=+vsx -passes=loop-vectorize,instcombine -S | FileCheck %s
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64-unknown-linux-gnu"
 
@@ -9,7 +9,7 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define signext i32 @s173() #0 {
 entry:
-  %0 = load i32, i32* @ntimes, align 4
+  %0 = load i32, ptr @ntimes, align 4
   %cmp21 = icmp sgt i32 %0, 0
   br i1 %cmp21, label %for.cond1.preheader, label %for.end12
 
@@ -19,21 +19,21 @@ for.cond1.preheader:                              ; preds = %for.end, %entry
 
 for.body3:                                        ; preds = %for.body3, %for.cond1.preheader
   %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx = getelementptr inbounds %struct.GlobalData, %struct.GlobalData* @global_data, i64 0, i32 0, i64 %indvars.iv
-  %1 = load float, float* %arrayidx, align 4
-  %arrayidx5 = getelementptr inbounds %struct.GlobalData, %struct.GlobalData* @global_data, i64 0, i32 3, i64 %indvars.iv
-  %2 = load float, float* %arrayidx5, align 4
+  %arrayidx = getelementptr inbounds %struct.GlobalData, ptr @global_data, i64 0, i32 0, i64 %indvars.iv
+  %1 = load float, ptr %arrayidx, align 4
+  %arrayidx5 = getelementptr inbounds %struct.GlobalData, ptr @global_data, i64 0, i32 3, i64 %indvars.iv
+  %2 = load float, ptr %arrayidx5, align 4
   %add = fadd float %1, %2
   %3 = add nsw i64 %indvars.iv, 16000
-  %arrayidx8 = getelementptr inbounds %struct.GlobalData, %struct.GlobalData* @global_data, i64 0, i32 0, i64 %3
-  store float %add, float* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds %struct.GlobalData, ptr @global_data, i64 0, i32 0, i64 %3
+  store float %add, ptr %arrayidx8, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, 16000
   br i1 %exitcond, label %for.end, label %for.body3
 
 for.end:                                          ; preds = %for.body3
   %inc11 = add nsw i32 %nl.022, 1
-  %4 = load i32, i32* @ntimes, align 4
+  %4 = load i32, ptr @ntimes, align 4
   %mul = mul nsw i32 %4, 10
   %cmp = icmp slt i32 %inc11, %mul
   br i1 %cmp, label %for.cond1.preheader, label %for.end12
@@ -42,7 +42,7 @@ for.end12:                                        ; preds = %for.end, %entry
   ret i32 0
 
 ; CHECK-LABEL: @s173
-; CHECK: load <4 x float>, <4 x float>*
+; CHECK: load <4 x float>, ptr
 ; CHECK: add nsw i64 %index, 16000
 ; CHECK: ret i32 0
 }

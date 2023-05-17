@@ -27,7 +27,7 @@ CodeEmitter::EncodingInfo CodeEmitter::getOrCreateEncodingInfo(unsigned MCID) {
     MAB.relaxInstruction(Relaxed, STI);
 
   EI.first = Code.size();
-  MCE.encodeInstruction(Relaxed, VecOS, Fixups, STI);
+  MCE.encodeInstruction(Relaxed, Code, Fixups, STI);
   EI.second = Code.size() - EI.first;
   return EI;
 }

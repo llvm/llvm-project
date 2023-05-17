@@ -13,6 +13,7 @@
 #include "X86InstrRelaxTables.h"
 #include "X86InstrInfo.h"
 #include "llvm/ADT/STLExtras.h"
+#include <atomic>
 
 using namespace llvm;
 
@@ -119,7 +120,7 @@ const X86InstrRelaxTableEntry *llvm::lookupRelaxTable(unsigned ShortOp) {
 namespace {
 
 // This class stores the short form tables. It is instantiated as a
-// ManagedStatic to lazily init the short form table.
+// function scope static variable to lazily init the short form table.
 struct X86ShortFormTable {
   // Stores relaxation table entries sorted by relaxed form opcode.
   SmallVector<X86InstrRelaxTableEntry, 0> Table;
@@ -137,10 +138,9 @@ struct X86ShortFormTable {
 };
 } // namespace
 
-static ManagedStatic<X86ShortFormTable> ShortTable;
-
 const X86InstrRelaxTableEntry *llvm::lookupShortTable(unsigned RelaxOp) {
-  auto &Table = ShortTable->Table;
+  static X86ShortFormTable ShortTable;
+  auto &Table = ShortTable.Table;
   auto I = llvm::lower_bound(Table, RelaxOp);
   if (I != Table.end() && I->KeyOp == RelaxOp)
     return &*I;

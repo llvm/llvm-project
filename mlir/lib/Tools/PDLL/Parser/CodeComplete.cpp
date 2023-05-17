@@ -24,5 +24,5 @@ void CodeCompleteContext::codeCompleteOperationMemberAccess(
     ast::OperationType opType) {}
 
 void CodeCompleteContext::codeCompleteConstraintName(
-    ast::Type currentType, bool allowNonCoreConstraints,
-    bool allowInlineTypeConstraints, const ast::DeclScope *scope) {}
+    ast::Type currentType, bool allowInlineTypeConstraints,
+    const ast::DeclScope *scope) {}

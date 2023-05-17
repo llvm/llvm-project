@@ -7,7 +7,8 @@
 NEAR:
 
 # INSTR:           c.beqz    a0, 0x0 <NEAR>
-# RELAX-INSTR:     beq    a0, zero, 0x0 <NEAR>
+# RELAX-INSTR:     c.bnez    a0, 0x6
+# RELAX-INSTR-NEXT:jal       zero, 0x0 <NEAR>
 c.beqz a0, NEAR
 
 # INSTR:           c.j    0x0 <NEAR>

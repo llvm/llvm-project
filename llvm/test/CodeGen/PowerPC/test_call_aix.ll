@@ -23,7 +23,7 @@ entry:
 ; CHECK: bl .foo
 ; CHECK-NEXT: nop
 
-  call void bitcast (void (...)* @foo to void ()*)()
+  call void @foo()
   ret void
 }
 

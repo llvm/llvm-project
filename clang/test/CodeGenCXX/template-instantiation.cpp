@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
+// RUN: %clang_cc1 %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -O1 -disable-llvm-passes -triple=x86_64-apple-darwin10 -std=c++11 -emit-llvm -o - | FileCheck %s --check-prefix=CHECK2
 
 // Instantiation order varies on different C++ dialects (IE, between C++98 and C++11).
 // CHECK-DAG: @_ZN7PR100011xE ={{.*}} global
@@ -18,7 +18,7 @@
 // CHECK2-NOT: _ZTVN5test31SIiEE
 // CHECK2-NOT: _ZTSN5test31SIiEE
 
-// CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiEC1Ev(%"class.test2::C"* {{[^,]*}} %this) unnamed_addr
+// CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiEC1Ev(ptr {{[^,]*}} %this) unnamed_addr
 // CHECK-LABEL: define linkonce_odr void @_ZN5test21CIiE6foobarIdEEvT_(
 // CHECK-LABEL: define available_externally void @_ZN5test21CIiE6zedbarEd(
 

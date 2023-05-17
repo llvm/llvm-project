@@ -12,17 +12,15 @@ target triple = "hexagon"
 define void @foo() #0 {
 entry:
   %t = alloca [4 x [2 x i32]], align 8
-  %0 = bitcast [4 x [2 x i32]]* %t to i8*
-  call void @llvm.memset.p0i8.i32(i8* align 8 %0, i8 0, i32 32, i1 false)
-  %arraydecay = getelementptr inbounds [4 x [2 x i32]], [4 x [2 x i32]]* %t, i32 0, i32 0
-  call void @bar([2 x i32]* %arraydecay) #1
+  call void @llvm.memset.p0.i32(ptr align 8 %t, i8 0, i32 32, i1 false)
+  call void @bar(ptr %t) #1
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture, i8, i32, i1) #1
+declare void @llvm.memset.p0.i32(ptr nocapture, i8, i32, i1) #1
 
-declare void @bar([2 x i32]*) #2
+declare void @bar(ptr) #2
 
 attributes #0 = { nounwind "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind }

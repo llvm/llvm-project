@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-from __future__ import print_function
 
 import lldb
 import optparse
@@ -10,7 +9,7 @@ import sys
 
 class DumpLineTables:
     command_name = "dump-line-tables"
-    short_decription = "Dumps full paths to compile unit files and optionally all line table files."
+    short_description = "Dumps full paths to compile unit files and optionally all line table files."
     description = 'Dumps all line tables from all compile units for any modules specified as arguments. Specifying the --verbose flag will output address ranges for each line entry.'
     usage = "usage: %prog [options] MODULE1 [MODULE2 ...]"
     def create_options(self):
@@ -28,7 +27,7 @@ class DumpLineTables:
             default=False)
 
     def get_short_help(self):
-        return self.short_decription
+        return self.short_description
 
     def get_long_help(self):
         return self.help_string
@@ -184,9 +183,9 @@ def __lldb_init_module(debugger, dict):
 
     # Add any commands contained in this module to LLDB
     debugger.HandleCommand(
-        'command script add -c %s.DumpLineTables %s' % (__name__,
+        'command script add -o -c %s.DumpLineTables %s' % (__name__,
                                                         DumpLineTables.command_name))
     debugger.HandleCommand(
-        'command script add -c %s.DumpFiles %s' % (__name__, DumpFiles.command_name))
+        'command script add -o -c %s.DumpFiles %s' % (__name__, DumpFiles.command_name))
     print('The "%s" and "%s" commands have been installed.' % (DumpLineTables.command_name,
                                                                DumpFiles.command_name))

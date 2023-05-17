@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/fcntl/openat.h"
 #include "src/unistd/close.h"
 #include "src/unistd/read.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <fcntl.h>
 
 TEST(LlvmLibcUniStd, OpenAndReadTest) {
@@ -22,13 +21,13 @@ TEST(LlvmLibcUniStd, OpenAndReadTest) {
   constexpr const char *TEST_DIR = "testdata";
   constexpr const char *TEST_FILE = "openat.test";
   int dir_fd = __llvm_libc::open(TEST_DIR, O_DIRECTORY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(dir_fd, 0);
   constexpr const char TEST_MSG[] = "openat test";
   constexpr int TEST_MSG_SIZE = sizeof(TEST_MSG) - 1;
 
   int read_fd = __llvm_libc::openat(dir_fd, TEST_FILE, O_RDONLY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(read_fd, 0);
   char read_buf[TEST_MSG_SIZE];
   ASSERT_THAT(__llvm_libc::read(read_fd, read_buf, TEST_MSG_SIZE),

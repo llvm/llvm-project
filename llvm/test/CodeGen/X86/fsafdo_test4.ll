@@ -1,24 +1,25 @@
-; RUN: llc -enable-fs-discriminator < %s | FileCheck %s
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=false < %s | FileCheck %s
+; RUN: llc -enable-fs-discriminator -improved-fs-discriminator=true < %s | FileCheck %s
 ;
 ; Check that fs-afdo discriminators are NOT generated, as debugInfoForProfiling is false (not set).
 ; CHECK: .loc    1 7 3 is_stmt 0 discriminator 2 # foo.c:7:3
 ; CHECK: .loc    1 9 5 is_stmt 1 discriminator 2 # foo.c:9:5
-; CHECK-NOT: .loc    1 9 5 is_stmt 0 discriminator 11266 # foo.c:9:5
-; CHECK-NOT: .loc    1 7 3 is_stmt 1 discriminator 11266 # foo.c:7:3
+; CHECK-NOT: .loc    1 9 5 is_stmt 0 discriminator
+; CHECK-NOT: .loc    1 7 3 is_stmt 1 discriminator
 ; Check that variable __llvm_fs_discriminator__ is NOT generated.
 ; CHECK-NOT: __llvm_fs_discriminator__:
 
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.Node = type { %struct.Node* }
+%struct.Node = type { ptr }
 
-define i32 @foo(%struct.Node* readonly %node, %struct.Node* readnone %root) !dbg !6 {
+define i32 @foo(ptr readonly %node, ptr readnone %root) !dbg !6 {
 entry:
-  %cmp = icmp eq %struct.Node* %node, %root, !dbg !8
+  %cmp = icmp eq ptr %node, %root, !dbg !8
   br i1 %cmp, label %while.end4, label %while.cond1.preheader.lr.ph, !dbg !10
 
 while.cond1.preheader.lr.ph:
-  %tobool = icmp eq %struct.Node* %node, null
+  %tobool = icmp eq ptr %node, null
   br i1 %tobool, label %while.cond1.preheader.us.preheader, label %while.body2.preheader, !dbg !11
 
 while.body2.preheader:

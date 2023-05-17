@@ -31,8 +31,11 @@ void CGOpenCLRuntime::EmitWorkGroupLocalVarDecl(CodeGenFunction &CGF,
 }
 
 llvm::Type *CGOpenCLRuntime::convertOpenCLSpecificType(const Type *T) {
-  assert(T->isOpenCLSpecificType() &&
-         "Not an OpenCL specific type!");
+  assert(T->isOpenCLSpecificType() && "Not an OpenCL specific type!");
+
+  // Check if the target has a specific translation for this type first.
+  if (llvm::Type *TransTy = CGM.getTargetCodeGenInfo().getOpenCLType(CGM, T))
+    return TransTy;
 
   switch (cast<BuiltinType>(T)->getKind()) {
   default:
@@ -75,6 +78,9 @@ llvm::PointerType *CGOpenCLRuntime::getPointerType(const Type *T,
 }
 
 llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T) {
+  if (llvm::Type *PipeTy = CGM.getTargetCodeGenInfo().getOpenCLType(CGM, T))
+    return PipeTy;
+
   if (T->isReadOnly())
     return getPipeType(T, "opencl.pipe_ro_t", PipeROTy);
   else
@@ -91,12 +97,18 @@ llvm::Type *CGOpenCLRuntime::getPipeType(const PipeType *T, StringRef Name,
   return PipeTy;
 }
 
-llvm::PointerType *CGOpenCLRuntime::getSamplerType(const Type *T) {
-  if (!SamplerTy)
-    SamplerTy = llvm::PointerType::get(llvm::StructType::create(
-      CGM.getLLVMContext(), "opencl.sampler_t"),
-      CGM.getContext().getTargetAddressSpace(
-          CGM.getContext().getOpenCLTypeAddrSpace(T)));
+llvm::Type *CGOpenCLRuntime::getSamplerType(const Type *T) {
+  if (SamplerTy)
+    return SamplerTy;
+
+  if (llvm::Type *TransTy = CGM.getTargetCodeGenInfo().getOpenCLType(
+          CGM, CGM.getContext().OCLSamplerTy.getTypePtr()))
+    SamplerTy = TransTy;
+  else
+    SamplerTy = llvm::PointerType::get(
+        llvm::StructType::create(CGM.getLLVMContext(), "opencl.sampler_t"),
+        CGM.getContext().getTargetAddressSpace(
+            CGM.getContext().getOpenCLTypeAddrSpace(T)));
   return SamplerTy;
 }
 
@@ -149,14 +161,13 @@ static const BlockExpr *getBlockExpr(const Expr *E) {
 void CGOpenCLRuntime::recordBlockInfo(const BlockExpr *E,
                                       llvm::Function *InvokeF,
                                       llvm::Value *Block, llvm::Type *BlockTy) {
-  assert(EnqueuedBlockMap.find(E) == EnqueuedBlockMap.end() &&
-         "Block expression emitted twice");
+  assert(!EnqueuedBlockMap.contains(E) && "Block expression emitted twice");
   assert(isa<llvm::Function>(InvokeF) && "Invalid invoke function");
   assert(Block->getType()->isPointerTy() && "Invalid block literal type");
   EnqueuedBlockMap[E].InvokeFunc = InvokeF;
   EnqueuedBlockMap[E].BlockArg = Block;
   EnqueuedBlockMap[E].BlockTy = BlockTy;
-  EnqueuedBlockMap[E].Kernel = nullptr;
+  EnqueuedBlockMap[E].KernelHandle = nullptr;
 }
 
 llvm::Function *CGOpenCLRuntime::getInvokeFunction(const Expr *E) {
@@ -171,11 +182,10 @@ CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
   // to get the block literal.
   const BlockExpr *Block = getBlockExpr(E);
 
-  assert(EnqueuedBlockMap.find(Block) != EnqueuedBlockMap.end() &&
-         "Block expression not emitted");
+  assert(EnqueuedBlockMap.contains(Block) && "Block expression not emitted");
 
   // Do not emit the block wrapper again if it has been emitted.
-  if (EnqueuedBlockMap[Block].Kernel) {
+  if (EnqueuedBlockMap[Block].KernelHandle) {
     return EnqueuedBlockMap[Block];
   }
 
@@ -183,9 +193,6 @@ CGOpenCLRuntime::emitOpenCLEnqueuedBlock(CodeGenFunction &CGF, const Expr *E) {
       CGF, EnqueuedBlockMap[Block].InvokeFunc, EnqueuedBlockMap[Block].BlockTy);
 
   // The common part of the post-processing of the kernel goes here.
-  F->addFnAttr(llvm::Attribute::NoUnwind);
-  F->setCallingConv(
-      CGF.getTypes().ClangCallConvToLLVMCallConv(CallingConv::CC_OpenCLKernel));
-  EnqueuedBlockMap[Block].Kernel = F;
+  EnqueuedBlockMap[Block].KernelHandle = F;
   return EnqueuedBlockMap[Block];
 }

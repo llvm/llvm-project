@@ -29,14 +29,13 @@ public:
   TestModuleCombinerPass() = default;
   TestModuleCombinerPass(const TestModuleCombinerPass &) {}
   void runOnOperation() override;
-
-private:
-  OwningOpRef<spirv::ModuleOp> combinedModule;
 };
 } // namespace
 
 void TestModuleCombinerPass::runOnOperation() {
   auto modules = llvm::to_vector<4>(getOperation().getOps<spirv::ModuleOp>());
+  if (modules.empty())
+    return;
 
   OpBuilder combinedModuleBuilder(modules[0]);
 
@@ -46,10 +45,12 @@ void TestModuleCombinerPass::runOnOperation() {
                  << " -> " << newSymbol << "\n";
   };
 
-  combinedModule = spirv::combine(modules, combinedModuleBuilder, listener);
+  OwningOpRef<spirv::ModuleOp> combinedModule =
+      spirv::combine(modules, combinedModuleBuilder, listener);
 
   for (spirv::ModuleOp module : modules)
     module.erase();
+  combinedModule.release();
 }
 
 namespace mlir {

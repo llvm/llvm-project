@@ -11,8 +11,7 @@
 #include "../ClangTidyModuleRegistry.h"
 #include "MustCheckErrsCheck.h"
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 namespace linuxkernel {
 
 /// This module is for checks specific to the Linux kernel.
@@ -33,5 +32,4 @@ static ClangTidyModuleRegistry::Add<LinuxKernelModule>
 // and thus register the LinuxKernelModule.
 volatile int LinuxKernelModuleAnchorSource = 0;
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

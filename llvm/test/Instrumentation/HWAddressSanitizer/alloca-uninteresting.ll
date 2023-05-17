@@ -7,21 +7,21 @@
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-android10000"
 
-declare void @use32(i32*)
+declare void @use32(ptr)
 
 define void @test_dyn_alloca(i32 %n) sanitize_hwaddress !dbg !15 {
 ; CHECK-LABEL: @test_dyn_alloca(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[X:%.*]] = alloca i32, i32 [[N:%.*]], align 4
-; CHECK-NEXT:    call void @llvm.dbg.value(metadata !DIArgList(i32* [[X]], i32* [[X]]), metadata [[META10:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg [[DBG12:![0-9]+]]
-; CHECK-NEXT:    call void @use32(i32* nonnull [[X]]), !dbg [[DBG13:![0-9]+]]
+; CHECK-NEXT:    call void @llvm.dbg.value(metadata !DIArgList(ptr [[X]], ptr [[X]]), metadata [[META10:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg [[DBG12:![0-9]+]]
+; CHECK-NEXT:    call void @use32(ptr nonnull [[X]]), !dbg [[DBG13:![0-9]+]]
 ; CHECK-NEXT:    ret void, !dbg [[DBG14:![0-9]+]]
 ;
 
 entry:
   %x = alloca i32, i32 %n, align 4
-  call void @llvm.dbg.value(metadata !DIArgList(i32* %x, i32* %x), metadata !22, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg !21
-  call void @use32(i32* nonnull %x), !dbg !23
+  call void @llvm.dbg.value(metadata !DIArgList(ptr %x, ptr %x), metadata !22, metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_plus, DW_OP_deref)), !dbg !21
+  call void @use32(ptr nonnull %x), !dbg !23
   ret void, !dbg !24
 }
 

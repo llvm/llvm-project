@@ -5,7 +5,7 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i1 @test1(i32 %X) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 %X, 12
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], 12
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = bitcast i32 %X to i32
@@ -16,7 +16,7 @@ define i1 @test1(i32 %X) {
 
 define i1 @test2(i32 %X, i32 %Y) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 %X, %Y
+; CHECK-NEXT:    [[C:%.*]] = icmp ne i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
   %A = bitcast i32 %X to i32
@@ -28,7 +28,7 @@ define i1 @test2(i32 %X, i32 %Y) {
 
 define i32 @test4(i32 %A) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[C:%.*]] = shl i32 %A, 2
+; CHECK-NEXT:    [[C:%.*]] = shl i32 [[A:%.*]], 2
 ; CHECK-NEXT:    ret i32 [[C]]
 ;
   %B = bitcast i32 %A to i32
@@ -39,8 +39,8 @@ define i32 @test4(i32 %A) {
 
 define i16 @test5(i16 %A) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[C:%.*]] = and i16 %A, 15
-; CHECK-NEXT:    ret i16 [[C]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i16 [[A:%.*]], 15
+; CHECK-NEXT:    ret i16 [[TMP1]]
 ;
   %B = sext i16 %A to i32
   %C = and i32 %B, 15
@@ -50,7 +50,7 @@ define i16 @test5(i16 %A) {
 
 define i1 @test6(i1 %A) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    ret i1 %A
+; CHECK-NEXT:    ret i1 [[A:%.*]]
 ;
   %B = zext i1 %A to i32
   %C = icmp ne i32 %B, 0
@@ -66,12 +66,11 @@ define i1 @test6a(i1 %A) {
   ret i1 %C
 }
 
-define i1 @test7(i8* %A) {
+define i1 @test7(ptr %A) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[C:%.*]] = icmp eq i8* %A, null
+; CHECK-NEXT:    [[C:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    ret i1 [[C]]
 ;
-  %B = bitcast i8* %A to i32*
-  %C = icmp eq i32* %B, null
+  %C = icmp eq ptr %A, null
   ret i1 %C
 }

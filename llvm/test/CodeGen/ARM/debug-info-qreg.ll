@@ -17,7 +17,7 @@ target triple = "thumbv7-apple-macosx10.6.7"
 
 declare <4 x float> @test0001(float) nounwind readnone ssp
 
-define i32 @main(i32 %argc, i8** nocapture %argv, <4 x float> %x, <4 x float> %y) nounwind ssp !dbg !10 {
+define i32 @main(i32 %argc, ptr nocapture %argv, <4 x float> %x, <4 x float> %y) nounwind ssp !dbg !10 {
 entry:
   br label %for.body9
 
@@ -29,11 +29,11 @@ for.end54:                                        ; preds = %for.body9
   tail call void @llvm.dbg.value(metadata <4 x float> %add19, metadata !27, metadata !DIExpression()), !dbg !39
   %tmp115 = extractelement <4 x float> %add19, i32 1
   %conv6.i75 = fpext float %tmp115 to double, !dbg !45
-  %call.i82 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str, i32 0, i32 0), double undef, double %conv6.i75, double undef, double undef) nounwind, !dbg !45
+  %call.i82 = tail call i32 (ptr, ...) @printf(ptr @.str, double undef, double %conv6.i75, double undef, double undef) nounwind, !dbg !45
   ret i32 0, !dbg !49
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 

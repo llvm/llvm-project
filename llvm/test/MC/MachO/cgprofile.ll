@@ -23,10 +23,10 @@ B:
 
 !0 = !{i32 5, !"CG Profile", !1}
 !1 = !{!2, !3, !4, !5}
-!2 = !{void ()* @a, void ()* @b, i64 32}
-!3 = !{void (i1)* @freq, void ()* @a, i64 11}
-!4 = !{void (i1)* @freq, void ()* @b, i64 20}
-!5 = !{void (i1)* @freq, null, i64 20}
+!2 = !{ptr @a, ptr @b, i64 32}
+!3 = !{ptr @freq, ptr @a, i64 11}
+!4 = !{ptr @freq, ptr @b, i64 20}
+!5 = !{ptr @freq, null, i64 20}
 
 ; CHECK: .cg_profile _a, _b, 32
 ; CHECK: .cg_profile _freq, _a, 11

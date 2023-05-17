@@ -1,6 +1,7 @@
 # Check llvm-bolt processes binaries compiled from sources that use indirect goto.
 RUN: %clang %cflags -no-pie %S/Inputs/indirect_goto.c -Wl,-q -o %t
-RUN: llvm-bolt %t -o /dev/null -relocs=1 -print-cfg -print-only=main -strict \
+RUN: llvm-bolt %t -o /dev/null --relocs=1 --print-cfg --print-only=main \
+RUN:   --strict \
 RUN:   2>&1 | FileCheck %s
 
 # Check that all possible destinations are included as successors.

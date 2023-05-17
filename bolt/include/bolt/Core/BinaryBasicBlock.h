@@ -15,6 +15,7 @@
 #ifndef BOLT_CORE_BINARY_BASIC_BLOCK_H
 #define BOLT_CORE_BINARY_BASIC_BLOCK_H
 
+#include "bolt/Core/FunctionLayout.h"
 #include "bolt/Core/MCPlus.h"
 #include "llvm/ADT/GraphTraits.h"
 #include "llvm/ADT/StringRef.h"
@@ -132,9 +133,9 @@ private:
   /// CFI state at the entry to this basic block.
   int32_t CFIState{-1};
 
-  /// In cases where the parent function has been split, IsCold == true means
-  /// this BB will be allocated outside its parent function.
-  bool IsCold{false};
+  /// In cases where the parent function has been split, FragmentNum > 0 means
+  /// this BB will be allocated in a fragment outside its parent function.
+  FragmentNum Fragment;
 
   /// Indicates if the block could be outlined.
   bool CanOutline{true};
@@ -143,6 +144,9 @@ private:
   /// blocks may contain out of date or incorrect information.
   bool IsValid{true};
 
+  /// Last computed hash value.
+  mutable uint64_t Hash{0};
+
 private:
   BinaryBasicBlock() = delete;
   BinaryBasicBlock(const BinaryBasicBlock &) = delete;
@@ -150,11 +154,9 @@ private:
   BinaryBasicBlock &operator=(const BinaryBasicBlock &) = delete;
   BinaryBasicBlock &operator=(const BinaryBasicBlock &&) = delete;
 
-  explicit BinaryBasicBlock(BinaryFunction *Function, MCSymbol *Label,
-                            uint32_t Offset = INVALID_OFFSET)
+  explicit BinaryBasicBlock(BinaryFunction *Function, MCSymbol *Label)
       : Function(Function), Label(Label) {
     assert(Function && "Function must be non-null");
-    InputRange.first = Offset;
   }
 
   // Exclusively managed by BinaryFunction.
@@ -425,9 +427,8 @@ public:
   /// Return branch info corresponding to an edge going to \p Succ basic block.
   BinaryBranchInfo &getBranchInfo(const BinaryBasicBlock &Succ);
 
-  /// Return branch info corresponding to an edge going to a basic block with
-  /// label \p Label.
-  BinaryBranchInfo &getBranchInfo(const MCSymbol *Label);
+  /// Return branch info corresponding to an edge going to \p Succ basic block.
+  const BinaryBranchInfo &getBranchInfo(const BinaryBasicBlock &Succ) const;
 
   /// Set branch information for the outgoing edge to block \p Succ.
   void setSuccessorBranchInfo(const BinaryBasicBlock &Succ, uint64_t Count,
@@ -561,7 +562,14 @@ public:
   /// Set minimum alignment for the basic block.
   void setAlignment(uint32_t Align) { Alignment = Align; }
 
+  /// Set alignment of the block based on the alignment of its offset.
+  void setDerivedAlignment() {
+    const uint64_t DerivedAlignment = getOffset() & (1 + ~getOffset());
+    Alignment = std::min(DerivedAlignment, uint64_t(32));
+  }
+
   /// Return required alignment for the block.
+  Align getAlign() const { return Align(Alignment); }
   uint32_t getAlignment() const { return Alignment; }
 
   /// Set the maximum number of bytes to use for the block alignment.
@@ -630,14 +638,12 @@ public:
 
   /// Test if BB is a predecessor of this block.
   bool isPredecessor(const BinaryBasicBlock *BB) const {
-    auto Itr = std::find(Predecessors.begin(), Predecessors.end(), BB);
-    return Itr != Predecessors.end();
+    return llvm::is_contained(Predecessors, BB);
   }
 
   /// Test if BB is a successor of this block.
   bool isSuccessor(const BinaryBasicBlock *BB) const {
-    auto Itr = std::find(Successors.begin(), Successors.end(), BB);
-    return Itr != Successors.end();
+    return llvm::is_contained(Successors, BB);
   }
 
   /// Test if this BB has a valid execution count.
@@ -669,9 +675,21 @@ public:
 
   void markValid(const bool Valid) { IsValid = Valid; }
 
-  bool isCold() const { return IsCold; }
+  FragmentNum getFragmentNum() const { return Fragment; }
 
-  void setIsCold(const bool Flag) { IsCold = Flag; }
+  void setFragmentNum(const FragmentNum Value) { Fragment = Value; }
+
+  bool isSplit() const { return Fragment != FragmentNum::main(); }
+
+  bool isCold() const {
+    assert(Fragment.get() < 2 &&
+           "Function is split into more than two (hot/cold)-fragments");
+    return isSplit();
+  }
+
+  void setIsCold(const bool Flag) {
+    Fragment = Flag ? FragmentNum::cold() : FragmentNum::main();
+  }
 
   /// Return true if the block can be outlined. At the moment we disallow
   /// outlining of blocks that can potentially throw exceptions or are
@@ -786,6 +804,9 @@ public:
   /// Return the new basic block that starts with the instruction
   /// at the split point.
   BinaryBasicBlock *splitAt(iterator II);
+
+  /// Set start offset of this basic block in the input binary.
+  void setOffset(uint32_t Offset) { InputRange.first = Offset; };
 
   /// Sets address of the basic block in the output.
   void setOutputStartAddress(uint64_t Address) {
@@ -921,6 +942,9 @@ public:
   /// Check if the block has a jump table instruction.
   bool hasJumpTable() const { return getJumpTable() != nullptr; }
 
+  /// Returns the last computed hash value of the block.
+  uint64_t getHash() const { return Hash; }
+
 private:
   void adjustNumPseudos(const MCInst &Inst, int Sign);
 
@@ -945,6 +969,9 @@ private:
   /// Set the index of this basic block.
   void setIndex(unsigned I) { Index = I; }
 
+  /// Sets the hash value of the basic block.
+  void setHash(uint64_t Value) const { Hash = Value; }
+
   template <typename T> void clearList(T &List) {
     T TempList;
     TempList.swap(List);
@@ -964,7 +991,7 @@ private:
 #if defined(LLVM_ON_UNIX)
 /// Keep the size of the BinaryBasicBlock within a reasonable size class
 /// (jemalloc bucket) on Linux
-static_assert(sizeof(BinaryBasicBlock) <= 256, "");
+static_assert(sizeof(BinaryBasicBlock) <= 256);
 #endif
 
 bool operator<(const BinaryBasicBlock &LHS, const BinaryBasicBlock &RHS);

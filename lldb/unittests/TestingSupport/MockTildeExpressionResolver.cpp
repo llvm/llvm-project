@@ -21,7 +21,7 @@ MockTildeExpressionResolver::MockTildeExpressionResolver(StringRef CurrentUser,
 
 void MockTildeExpressionResolver::AddKnownUser(StringRef User,
                                                StringRef HomeDir) {
-  assert(UserDirectories.find(User) == UserDirectories.end());
+  assert(!UserDirectories.contains(User));
   UserDirectories.insert(std::make_pair(User, HomeDir));
 }
 
@@ -31,7 +31,7 @@ void MockTildeExpressionResolver::Clear() {
 }
 
 void MockTildeExpressionResolver::SetCurrentUser(StringRef User) {
-  assert(UserDirectories.find(User) != UserDirectories.end());
+  assert(UserDirectories.contains(User));
   CurrentUser = User;
 }
 

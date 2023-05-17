@@ -454,7 +454,9 @@ public:
       llvm::SMTExprRef OperandExp =
           getSymExpr(Solver, Ctx, USE->getOperand(), &OperandTy, hasComparison);
       llvm::SMTExprRef UnaryExp =
-          fromUnOp(Solver, USE->getOpcode(), OperandExp);
+          OperandTy->isRealFloatingType()
+              ? fromFloatUnOp(Solver, USE->getOpcode(), OperandExp)
+              : fromUnOp(Solver, USE->getOpcode(), OperandExp);
 
       // Currently, without the `support-symbolic-integer-casts=true` option,
       // we do not emit `SymbolCast`s for implicit casts.
@@ -676,14 +678,14 @@ public:
     assert(!LTy.isNull() && !RTy.isNull() && "Input type is null!");
     // Always perform integer promotion before checking type equality.
     // Otherwise, e.g. (bool) a + (bool) b could trigger a backend assertion
-    if (LTy->isPromotableIntegerType()) {
+    if (Ctx.isPromotableIntegerType(LTy)) {
       QualType NewTy = Ctx.getPromotedIntegerType(LTy);
       uint64_t NewBitWidth = Ctx.getTypeSize(NewTy);
       LHS = (*doCast)(Solver, LHS, NewTy, NewBitWidth, LTy, LBitWidth);
       LTy = NewTy;
       LBitWidth = NewBitWidth;
     }
-    if (RTy->isPromotableIntegerType()) {
+    if (Ctx.isPromotableIntegerType(RTy)) {
       QualType NewTy = Ctx.getPromotedIntegerType(RTy);
       uint64_t NewBitWidth = Ctx.getTypeSize(NewTy);
       RHS = (*doCast)(Solver, RHS, NewTy, NewBitWidth, RTy, RBitWidth);

@@ -1,8 +1,5 @@
 """Test lldb's response time for 'frame variable' command."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test import configuration
@@ -12,8 +9,6 @@ from lldbsuite.test.lldbbench import *
 
 
 class FrameVariableResponseBench(BenchBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         BenchBase.setUp(self)

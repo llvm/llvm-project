@@ -128,12 +128,10 @@ public:
   }
 
   /// Check if the list is empty in constant time.
-  LLVM_NODISCARD bool empty() const { return Sentinel.empty(); }
+  [[nodiscard]] bool empty() const { return Sentinel.empty(); }
 
   /// Calculate the size of the list in linear time.
-  LLVM_NODISCARD size_type size() const {
-    return std::distance(begin(), end());
-  }
+  [[nodiscard]] size_type size() const { return std::distance(begin(), end()); }
 
   reference front() { return *begin(); }
   const_reference front() const { return *begin(); }

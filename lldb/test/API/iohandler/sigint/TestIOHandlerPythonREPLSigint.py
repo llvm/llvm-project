@@ -11,8 +11,6 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 
 class TestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def start_python_repl(self):
         """ Starts up the embedded Python REPL."""
         self.launch()

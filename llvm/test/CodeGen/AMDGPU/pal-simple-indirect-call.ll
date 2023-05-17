@@ -14,14 +14,14 @@ target datalayout = "A5"
 define amdgpu_cs void @test_simple_indirect_call() {
 ; AKF_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call() {
 ; AKF_GCN-NEXT:    [[PC:%.*]] = call i64 @llvm.amdgcn.s.getpc()
-; AKF_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to void ()*
+; AKF_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to ptr
 ; AKF_GCN-NEXT:    call amdgpu_gfx void [[FUN]]()
 ; AKF_GCN-NEXT:    ret void
 ;
 ; ATTRIBUTOR_GCN-LABEL: define {{[^@]+}}@test_simple_indirect_call
 ; ATTRIBUTOR_GCN-SAME: () #[[ATTR0:[0-9]+]] {
 ; ATTRIBUTOR_GCN-NEXT:    [[PC:%.*]] = call i64 @llvm.amdgcn.s.getpc()
-; ATTRIBUTOR_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to void ()*
+; ATTRIBUTOR_GCN-NEXT:    [[FUN:%.*]] = inttoptr i64 [[PC]] to ptr
 ; ATTRIBUTOR_GCN-NEXT:    call amdgpu_gfx void [[FUN]]()
 ; ATTRIBUTOR_GCN-NEXT:    ret void
 ;
@@ -40,7 +40,6 @@ define amdgpu_cs void @test_simple_indirect_call() {
 ; GFX9-NEXT:    s_mov_b64 s[2:3], s[10:11]
 ; GFX9-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; GFX9-NEXT:    s_endpgm
-;
 ; GFX10-LABEL: test_simple_indirect_call:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_getpc_b64 s[8:9]
@@ -59,7 +58,7 @@ define amdgpu_cs void @test_simple_indirect_call() {
 
 
   %pc = call i64 @llvm.amdgcn.s.getpc()
-  %fun = inttoptr i64 %pc to void()*
+  %fun = inttoptr i64 %pc to ptr
   call amdgpu_gfx void %fun()
   ret void
 }
@@ -69,8 +68,8 @@ declare i64 @llvm.amdgcn.s.getpc() #0
 
 attributes #0 = { nounwind readnone speculatable willreturn }
 ;.
-; AKF_GCN: attributes #[[ATTR0:[0-9]+]] = { nounwind readnone speculatable willreturn }
+; AKF_GCN: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.
 ; ATTRIBUTOR_GCN: attributes #[[ATTR0]] = { "uniform-work-group-size"="false" }
-; ATTRIBUTOR_GCN: attributes #[[ATTR1:[0-9]+]] = { nounwind readnone speculatable willreturn }
+; ATTRIBUTOR_GCN: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 ;.

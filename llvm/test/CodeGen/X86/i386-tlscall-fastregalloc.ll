@@ -3,7 +3,7 @@ target datalayout = "e-m:o-p:32:32-f64:32:64-f80:128-n8:16:32-S128"
 target triple = "i386-apple-macosx10.10"
 
 @c = external global i8, align 1
-@p = thread_local global i8* null, align 4
+@p = thread_local global ptr null, align 4
 
 ; Check that regalloc fast correctly preserves EAX that is set by the TLS call
 ; until the actual use.
@@ -26,6 +26,6 @@ target triple = "i386-apple-macosx10.10"
 ; CHECK-NEXT: movl [[C_ADDR_RELOADED]], (%eax)
 define void @f() #0 {
 entry:
-  store i8* @c, i8** @p, align 4
+  store ptr @c, ptr @p, align 4
   ret void
 }

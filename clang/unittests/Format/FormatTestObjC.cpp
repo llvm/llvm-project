@@ -6,61 +6,23 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "clang/Format/Format.h"
+#include "FormatTestBase.h"
 
-#include "../Tooling/ReplacementTest.h"
-#include "FormatTestUtils.h"
-
-#include "llvm/Support/Debug.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "gtest/gtest.h"
-
-#define DEBUG_TYPE "format-test"
-
-using testing::ScopedTrace;
+#define DEBUG_TYPE "format-test-objc"
 
 namespace clang {
 namespace format {
+namespace test {
 namespace {
 
-class FormatTestObjC : public ::testing::Test {
+class FormatTestObjC : public FormatTestBase {
 protected:
   FormatTestObjC() {
     Style = getLLVMStyle();
     Style.Language = FormatStyle::LK_ObjC;
   }
 
-  enum StatusCheck { SC_ExpectComplete, SC_ExpectIncomplete, SC_DoNotCheck };
-
-  std::string format(llvm::StringRef Code,
-                     StatusCheck CheckComplete = SC_ExpectComplete) {
-    LLVM_DEBUG(llvm::errs() << "---\n");
-    LLVM_DEBUG(llvm::errs() << Code << "\n\n");
-    std::vector<tooling::Range> Ranges(1, tooling::Range(0, Code.size()));
-    FormattingAttemptStatus Status;
-    tooling::Replacements Replaces =
-        reformat(Style, Code, Ranges, "<stdin>", &Status);
-    if (CheckComplete != SC_DoNotCheck) {
-      bool ExpectedCompleteFormat = CheckComplete == SC_ExpectComplete;
-      EXPECT_EQ(ExpectedCompleteFormat, Status.FormatComplete)
-          << Code << "\n\n";
-    }
-    auto Result = applyAllReplacements(Code, Replaces);
-    EXPECT_TRUE(static_cast<bool>(Result));
-    LLVM_DEBUG(llvm::errs() << "\n" << *Result << "\n\n");
-    return *Result;
-  }
-
-  void _verifyFormat(const char *File, int Line, StringRef Code) {
-    ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    EXPECT_EQ(Code.str(), format(Code)) << "Expected code is not stable";
-    EXPECT_EQ(Code.str(), format(test::messUp(Code)));
-  }
-
-  void _verifyIncompleteFormat(const char *File, int Line, StringRef Code) {
-    ScopedTrace t(File, Line, ::testing::Message() << Code.str());
-    EXPECT_EQ(Code.str(), format(test::messUp(Code), SC_ExpectIncomplete));
-  }
+  FormatStyle getDefaultStyle() const override { return Style; }
 
   FormatStyle Style;
 };
@@ -124,6 +86,11 @@ TEST(FormatTestObjCStyle, DetectsObjCInHeaders) {
 
   Style =
       getStyle("{}", "a.h", "none", "typedef NS_CLOSED_ENUM(int, Foo) {};\n");
+  ASSERT_TRUE((bool)Style);
+  EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
+
+  Style =
+      getStyle("{}", "a.h", "none", "typedef NS_ERROR_ENUM(int, Foo) {};\n");
   ASSERT_TRUE((bool)Style);
   EXPECT_EQ(FormatStyle::LK_ObjC, Style->Language);
 
@@ -1539,5 +1506,6 @@ TEST_F(FormatTestObjC, Attributes) {
 }
 
 } // end namespace
+} // namespace test
 } // end namespace format
 } // end namespace clang

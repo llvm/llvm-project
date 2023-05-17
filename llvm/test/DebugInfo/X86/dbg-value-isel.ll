@@ -4,16 +4,16 @@ target triple = "x86_64-apple-darwin10.0.0"
 ; PR 9879
 
 ; CHECK: ##DEBUG_VALUE: tid <-
-%0 = type { i8*, i8*, i8*, i8*, i32 }
+%0 = type { ptr, ptr, ptr, ptr, i32 }
 
 @sgv = internal addrspace(2) constant [1 x i8] zeroinitializer
 @fgv = internal addrspace(2) constant [1 x i8] zeroinitializer
-@lvgv = internal constant [0 x i8*] zeroinitializer
-@llvm.global.annotations = appending global [1 x %0] [%0 { i8* bitcast (void (i32 addrspace(1)*)* @__OpenCL_nbt02_kernel to i8*), i8* addrspacecast ([1 x i8] addrspace(2)* @sgv to i8*), i8* addrspacecast ([1 x i8] addrspace(2)* @fgv to i8*), i8* bitcast ([0 x i8*]* @lvgv to i8*), i32 0 }], section "llvm.metadata"
+@lvgv = internal constant [0 x ptr] zeroinitializer
+@llvm.global.annotations = appending global [1 x %0] [%0 { ptr @__OpenCL_nbt02_kernel, ptr addrspacecast (ptr addrspace(2) @sgv to ptr), ptr addrspacecast (ptr addrspace(2) @fgv to ptr), ptr @lvgv, i32 0 }], section "llvm.metadata"
 
-define void @__OpenCL_nbt02_kernel(i32 addrspace(1)* %ip) nounwind !dbg !0 {
+define void @__OpenCL_nbt02_kernel(ptr addrspace(1) %ip) nounwind !dbg !0 {
 entry:
-  call void @llvm.dbg.value(metadata i32 addrspace(1)* %ip, metadata !8, metadata !DIExpression()), !dbg !9
+  call void @llvm.dbg.value(metadata ptr addrspace(1) %ip, metadata !8, metadata !DIExpression()), !dbg !9
   %0 = call <4 x i32> @__amdil_get_local_id_int() nounwind
   %1 = extractelement <4 x i32> %0, i32 0
   br label %2
@@ -61,7 +61,7 @@ get_local_size.exit:                              ; preds = %18
   call void @llvm.dbg.value(metadata i32 %20, metadata !15, metadata !DIExpression()), !dbg !16
   %tmp5 = add i32 %6, %13, !dbg !17
   %tmp7 = add i32 %tmp5, %20, !dbg !17
-  store i32 %tmp7, i32 addrspace(1)* %ip, align 4, !dbg !17
+  store i32 %tmp7, ptr addrspace(1) %ip, align 4, !dbg !17
   br label %return, !dbg !17
 
 return:                                           ; preds = %get_local_size.exit

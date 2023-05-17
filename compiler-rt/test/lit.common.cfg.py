@@ -6,20 +6,12 @@
 import os
 import platform
 import re
+import shlex
 import subprocess
 import json
 
 import lit.formats
 import lit.util
-
-# Get shlex.quote if available (added in 3.3), and fall back to pipes.quote if
-# it's not available.
-try:
-  import shlex
-  sh_quote = shlex.quote
-except:
-  import pipes
-  sh_quote = pipes.quote
 
 def find_compiler_libdir():
   """
@@ -102,17 +94,19 @@ config.test_format = lit.formats.ShTest(execute_external)
 if execute_external:
   config.available_features.add('shell')
 
+target_is_msvc = bool(re.match(r'.*-windows-msvc$', config.target_triple))
+
 compiler_id = getattr(config, 'compiler_id', None)
 if compiler_id == "Clang":
-  if platform.system() != 'Windows':
+  if not (platform.system() == 'Windows' and target_is_msvc):
     config.cxx_mode_flags = ["--driver-mode=g++"]
   else:
     config.cxx_mode_flags = []
   # We assume that sanitizers should provide good enough error
   # reports and stack traces even with minimal debug info.
   config.debug_info_flags = ["-gline-tables-only"]
-  if platform.system() == 'Windows':
-    # On Windows, use CodeView with column info instead of DWARF. Both VS and
+  if platform.system() == 'Windows' and target_is_msvc:
+    # On MSVC, use CodeView with column info instead of DWARF. Both VS and
     # windbg do not behave well when column info is enabled, but users have
     # requested it because it makes ASan reports more precise.
     config.debug_info_flags.append("-gcodeview")
@@ -172,11 +166,9 @@ if config.asan_shadow_scale != '':
 if config.memprof_shadow_scale != '':
   config.target_cflags += " -mllvm -memprof-mapping-scale=" + config.memprof_shadow_scale
 
-config.environment = dict(os.environ)
-
 # Clear some environment variables that might affect Clang.
-possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
-                               'MSAN_OPTIONS', 'UBSAN_OPTIONS',
+possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'HWASAN_OPTIONS',
+                               'LSAN_OPTIONS', 'MSAN_OPTIONS', 'UBSAN_OPTIONS',
                                'COMPILER_PATH', 'RC_DEBUG_OPTIONS',
                                'CINDEXTEST_PREAMBLE_FILE', 'LIBRARY_PATH',
                                'CPATH', 'C_INCLUDE_PATH', 'CPLUS_INCLUDE_PATH',
@@ -187,8 +179,8 @@ possibly_dangerous_env_vars = ['ASAN_OPTIONS', 'DFSAN_OPTIONS', 'LSAN_OPTIONS',
                                'LIBCLANG_RESOURCE_USAGE',
                                'LIBCLANG_CODE_COMPLETION_LOGGING',
                                'XRAY_OPTIONS']
-# Clang/Win32 may refer to %INCLUDE%. vsvarsall.bat sets it.
-if platform.system() != 'Windows':
+# Clang/MSVC may refer to %INCLUDE%. vsvarsall.bat sets it.
+if not (platform.system() == 'Windows' and target_is_msvc):
     possibly_dangerous_env_vars.append('INCLUDE')
 for name in possibly_dangerous_env_vars:
   if name in config.environment:
@@ -202,7 +194,7 @@ config.environment['PATH'] = path
 
 # Help MSVS link.exe find the standard libraries.
 # Make sure we only try to use it when targetting Windows.
-if platform.system() == 'Windows' and '-win' in config.target_triple:
+if platform.system() == 'Windows' and target_is_msvc:
   config.environment['LIB'] = os.environ['LIB']
 
 config.available_features.add(config.host_os.lower())
@@ -403,8 +395,8 @@ if config.host_os == 'Darwin':
     if osx_version >= (10, 11):
       config.available_features.add('osx-autointerception')
       config.available_features.add('osx-ld64-live_support')
-    if osx_version >= (10, 15):
-      config.available_features.add('osx-swift-runtime')
+    if osx_version >= (13, 1):
+      config.available_features.add('jit-compatible-osx-swift-runtime')
   except subprocess.CalledProcessError:
     pass
 
@@ -455,7 +447,11 @@ if config.host_os == 'Darwin':
   for vers in min_macos_deployment_target_substitutions:
     flag = config.apple_platform_min_deployment_target_flag
     major, minor = get_macos_aligned_version(vers)
-    config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '{}={}.{}'.format(flag, major, minor)) )
+    if 'mtargetos' in flag:
+      sim = '-simulator' if 'sim' in config.apple_platform else ''
+      config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '{}{}.{}{}'.format(flag, major, minor, sim)) )
+    else:
+      config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '{}={}.{}'.format(flag, major, minor)) )
 else:
   for vers in min_macos_deployment_target_substitutions:
     config.substitutions.append( ('%%min_macos_deployment_target=%s.%s' % vers, '') )
@@ -514,9 +510,13 @@ if config.host_os == 'Linux':
   if not config.android and len(ver_lines) and ver_lines[0].startswith(b"ldd "):
     from distutils.version import LooseVersion
     ver = LooseVersion(ver_lines[0].split()[-1].decode())
-    for required in ["2.27", "2.30", "2.34"]:
+    any_glibc = False
+    for required in ["2.19", "2.27", "2.30", "2.34", "2.37"]:
       if ver >= LooseVersion(required):
         config.available_features.add("glibc-" + required)
+        any_glibc = True
+      if any_glibc:
+        config.available_features.add("glibc")
 
 sancovcc_path = os.path.join(config.llvm_tools_dir, "sancov")
 if os.path.exists(sancovcc_path):
@@ -536,15 +536,20 @@ def is_binutils_lto_supported():
   # We require both ld.bfd and ld.gold exist and support plugins. They are in
   # the same repository 'binutils-gdb' and usually built together.
   for exe in (config.gnu_ld_executable, config.gold_executable):
-    ld_cmd = subprocess.Popen([exe, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
-    ld_out = ld_cmd.stdout.read().decode()
-    ld_cmd.wait()
+    try:
+      ld_cmd = subprocess.Popen([exe, '--help'], stdout=subprocess.PIPE, env={'LANG': 'C'})
+      ld_out = ld_cmd.stdout.read().decode()
+      ld_cmd.wait()
+    except OSError:
+      return False
     if not '-plugin' in ld_out:
       return False
 
   return True
 
 def is_windows_lto_supported():
+  if not target_is_msvc:
+    return True
   return os.path.exists(os.path.join(config.llvm_tools_dir, 'lld-link.exe'))
 
 if config.host_os == 'Darwin' and is_darwin_lto_supported():
@@ -717,14 +722,21 @@ if config.host_os == 'Darwin':
   config.substitutions.append((
     "%get_pid_from_output",
     "{} {}/get_pid_from_output.py".format(
-      sh_quote(config.python_executable),
-      sh_quote(get_ios_commands_dir())
+      shlex.quote(config.python_executable),
+      shlex.quote(get_ios_commands_dir())
     ))
   )
   config.substitutions.append(
     ("%print_crashreport_for_pid",
     "{} {}/print_crashreport_for_pid.py".format(
-      sh_quote(config.python_executable),
-      sh_quote(get_ios_commands_dir())
+      shlex.quote(config.python_executable),
+      shlex.quote(get_ios_commands_dir())
     ))
   )
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs. In particular, anything hardening
+# related is likely to cause issues with sanitizer tests, because it may
+# preempt something we're looking to trap (e.g. _FORTIFY_SOURCE vs our ASAN).
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

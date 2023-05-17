@@ -100,32 +100,32 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_27
 ; CHECK-NEXT:  # %bb.1: # %if.end19
-; CHECK-NEXT:    movl %esi, %r13d
-; CHECK-NEXT:    movq %rdi, %r12
-; CHECK-NEXT:    movl (%rax), %ebp
-; CHECK-NEXT:    leal (,%rbp,4), %r14d
-; CHECK-NEXT:    movl %r14d, %r15d
+; CHECK-NEXT:    movl %esi, %ebp
+; CHECK-NEXT:    movq %rdi, %r15
+; CHECK-NEXT:    movl (%rax), %r13d
+; CHECK-NEXT:    leal (,%r13,4), %ebx
+; CHECK-NEXT:    movl %ebx, %r12d
 ; CHECK-NEXT:    movl $1, %esi
-; CHECK-NEXT:    movq %r15, %rdi
+; CHECK-NEXT:    movq %r12, %rdi
 ; CHECK-NEXT:    callq cli_calloc@PLT
-; CHECK-NEXT:    testl %r13d, %r13d
-; CHECK-NEXT:    je .LBB1_26
-; CHECK-NEXT:  # %bb.2: # %if.end19
 ; CHECK-NEXT:    testl %ebp, %ebp
 ; CHECK-NEXT:    je .LBB1_26
+; CHECK-NEXT:  # %bb.2: # %if.end19
+; CHECK-NEXT:    testl %r13d, %r13d
+; CHECK-NEXT:    je .LBB1_26
 ; CHECK-NEXT:  # %bb.3: # %if.end19
-; CHECK-NEXT:    movq %rax, %rbx
+; CHECK-NEXT:    movq %rax, %r14
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_26
 ; CHECK-NEXT:  # %bb.4: # %if.end19
-; CHECK-NEXT:    cmpq %r12, %rbx
+; CHECK-NEXT:    cmpq %r15, %r14
 ; CHECK-NEXT:    jb .LBB1_26
 ; CHECK-NEXT:  # %bb.5: # %if.end50
-; CHECK-NEXT:    movq %rbx, %rdi
-; CHECK-NEXT:    movq %r15, %rdx
+; CHECK-NEXT:    movq %r14, %rdi
+; CHECK-NEXT:    movq %r12, %rdx
 ; CHECK-NEXT:    callq memcpy@PLT
-; CHECK-NEXT:    cmpl $4, %r14d
+; CHECK-NEXT:    cmpl $4, %ebx
 ; CHECK-NEXT:    jb .LBB1_29
 ; CHECK-NEXT:  # %bb.6: # %shared_preheader
 ; CHECK-NEXT:    movb $32, %dl
@@ -146,13 +146,13 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:  .LBB1_9: # %outer_loop_header
 ; CHECK-NEXT:    # =>This Loop Header: Depth=1
 ; CHECK-NEXT:    # Child Loop BB1_10 Depth 2
-; CHECK-NEXT:    testl %ebp, %ebp
+; CHECK-NEXT:    testl %r13d, %r13d
 ; CHECK-NEXT:    je .LBB1_19
 ; CHECK-NEXT:    .p2align 4, 0x90
 ; CHECK-NEXT:  .LBB1_10: # %shared_loop_header
 ; CHECK-NEXT:    # Parent Loop BB1_9 Depth=1
 ; CHECK-NEXT:    # => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    testq %rbx, %rbx
+; CHECK-NEXT:    testq %r14, %r14
 ; CHECK-NEXT:    jne .LBB1_28
 ; CHECK-NEXT:  # %bb.11: # %inner_loop_body
 ; CHECK-NEXT:    # in Loop: Header=BB1_10 Depth=2
@@ -160,12 +160,12 @@ define i32 @loop_shared_header(i8* %exe, i32 %exesz, i32 %headsize, i32 %min, i3
 ; CHECK-NEXT:    jns .LBB1_10
 ; CHECK-NEXT:  # %bb.12: # %if.end96.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
-; CHECK-NEXT:    cmpl $3, %ebp
+; CHECK-NEXT:    cmpl $3, %r13d
 ; CHECK-NEXT:    jae .LBB1_23
 ; CHECK-NEXT:  # %bb.13: # %if.end287.i
 ; CHECK-NEXT:    # in Loop: Header=BB1_9 Depth=1
 ; CHECK-NEXT:    xorl %esi, %esi
-; CHECK-NEXT:    cmpl $1, %ebp
+; CHECK-NEXT:    cmpl $1, %r13d
 ; CHECK-NEXT:    setne %dl
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB1_17

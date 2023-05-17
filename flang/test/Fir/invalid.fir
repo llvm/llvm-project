@@ -12,7 +12,7 @@
 
 // -----
 
-// expected-error@+1{{'fir.string_lit' op values in list must be integers}}
+// expected-error@+1{{'fir.string_lit' op values in initializer must be integers}}
 %2 = fir.string_lit [158, 2.0](2) : !fir.char<2>
 
 // -----
@@ -20,7 +20,7 @@
 func.func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  // expected-error@+1{{op operand #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?x?xf32>>'}}
+  // expected-error@+1{{op operand #0 must be box or class, but got '!fir.ref<!fir.array<?x?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
   return
 }
@@ -30,7 +30,7 @@ func.func @bad_rebox_1(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
 func.func @bad_rebox_2(%arg0: !fir.box<!fir.array<?x?xf32>>) {
   %c10 = arith.constant 10 : index
   %0 = fir.shape %c10 : (index) -> !fir.shape<1>
-  // expected-error@+1{{op result #0 must be The type of a Fortran descriptor, but got '!fir.ref<!fir.array<?xf32>>'}}
+  // expected-error@+1{{op result #0 must be box or class, but got '!fir.ref<!fir.array<?xf32>>'}}
   %1 = fir.rebox %arg0(%0) : (!fir.box<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?xf32>>
   return
 }
@@ -287,17 +287,17 @@ func.func @test_coordinate_of(%arr : !fir.ref<!fir.array<*:f32>>) {
 
 func.func @test_coordinate_of(%arr : !fir.ref<!fir.char<10>>) {
   %1 = arith.constant 10 : i32
-  // expected-error@+1 {{'fir.coordinate_of' op cannot apply coordinate_of to this type}}
-  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10>>, i32) -> !fir.ref<f32>
+  // expected-error@+1 {{'fir.coordinate_of' op cannot apply to this element type}}
+  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10>>, i32) -> !fir.ref<!fir.char<10>>
   return
 }
 
 // -----
 
-func.func @test_coordinate_of(%arr : !fir.ref<!fir.char<10, 1>>) {
+func.func @test_coordinate_of(%arr : !fir.ref<!fir.char<10, 2>>) {
   %1 = arith.constant 10 : i32
-  // expected-error@+1 {{'fir.coordinate_of' op cannot apply coordinate_of to this type}}
-  %2 = fir.coordinate_of %arr, %1 : (!fir.ref<!fir.char<10, 1>>, i32) -> !fir.ref<f32>
+  // expected-error@+1 {{'fir.coordinate_of' op cannot apply to character singleton}}
+  %2 = fir.coordinate_of %arr, %1, %1 : (!fir.ref<!fir.char<10, 2>>, i32, i32) -> !fir.ref<!fir.char<10>>
   return
 }
 
@@ -341,6 +341,35 @@ func.func @fun(%0 : !fir.ref<i32>) {
   %1 = fir.slice %c_100, %c_100, %c_100 : (index, index, index) -> !fir.slice<1>
   // expected-error@+1 {{'fir.embox' op slice must not be provided for a scalar}}
   %2 = fir.embox %0[%1] : (!fir.ref<i32>, !fir.slice<1>) -> !fir.box<i32>
+}
+
+// -----
+
+func.func @embox_tdesc(%arg0: !fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>) {
+  %0 = fir.alloca i32
+  %c1_i32 = arith.constant 1 : i32
+  %1 = fir.convert %c1_i32 : (i32) -> index
+  %c10_i32 = arith.constant 10 : i32
+  %2 = fir.convert %c10_i32 : (i32) -> index
+  %c1 = arith.constant 1 : index
+  %3 = fir.convert %1 : (index) -> i32
+  %4:2 = fir.do_loop %arg2 = %1 to %2 step %c1 iter_args(%arg3 = %3) -> (index, i32) {
+    fir.store %arg3 to %0 : !fir.ref<i32>
+    %9 = fir.load %0 : !fir.ref<i32>
+    %10 = fir.convert %9 : (i32) -> i64
+    %c1_i64 = arith.constant 1 : i64
+    %11 = arith.subi %10, %c1_i64 : i64
+    %12 = fir.coordinate_of %arg0, %11 : (!fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>, i64) -> !fir.ref<!fir.type<derived{a:i32,b:i32}>>
+    // expected-error@+1 {{'fir.embox' op source_box must be used with fir.class result type}}
+    %13 = fir.embox %12 source_box %arg0 : (!fir.ref<!fir.type<derived{a:i32,b:i32}>>, !fir.class<!fir.array<10x!fir.type<derived{a:i32,b:i32}>>>) -> !fir.box<!fir.type<derived{a:i32,b:i32}>>
+    %14 = arith.addi %arg2, %c1 : index
+    %15 = fir.convert %c1 : (index) -> i32
+    %16 = fir.load %0 : !fir.ref<i32>
+    %17 = arith.addi %16, %15 : i32
+    fir.result %14, %17 : index, i32
+  }
+  fir.store %4#1 to %0 : !fir.ref<i32>
+  return
 }
 
 // -----
@@ -756,3 +785,164 @@ func.func @foo(%arg0: !fir.ref<!fir.array<30x!fir.type<t{c:!fir.array<20xi32>}>>
   return
 }
 func.func private @ifoo(!fir.ref<f32>) -> i32
+
+// -----
+
+func.func private @dispatch(%arg0: !fir.class<!fir.type<derived{a:i32,b:i32}>>) -> () {
+  // expected-error@+1 {{'fir.dispatch' op pass_arg_pos must be smaller than the number of operands}}
+  fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<derived{a:i32,b:i32}>>) (%arg0 : !fir.class<!fir.type<derived{a:i32,b:i32}>>) {pass_arg_pos = 1 : i32}
+  return
+}
+
+// -----
+
+func.func private @dispatch(%arg0: !fir.class<!fir.type<derived{a:i32,b:i32}>>, %arg1: i32) -> () {
+  // expected-error@+1 {{'fir.dispatch' op pass_arg_pos must be a polymorphic operand}}
+  fir.dispatch "proc1"(%arg0 : !fir.class<!fir.type<derived{a:i32,b:i32}>>) (%arg0, %arg1 : !fir.class<!fir.type<derived{a:i32,b:i32}>>, i32) {pass_arg_pos = 1 : i32}
+  return
+}
+
+// -----
+func.func @test_fortran_var_attrs() {
+  // expected-error@+1 {{Unknown fortran variable attribute: volatypo}}
+  %0 = fir.alloca f32 {fortran_attrs = #fir.var_attrs<volatypo>}
+}
+
+// -----
+func.func @bad_numeric_declare(%arg0: !fir.ref<f32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op requires attribute 'uniq_name'}}
+  %0 = fir.declare %arg0 typeparams %c1 {uniq_typo = "x"} : (!fir.ref<f32>, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+func.func @bad_numeric_declare(%arg0: !fir.ref<f32>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op of numeric, logical, or assumed type entity must not have length parameters}}
+  %0 = fir.declare %arg0 typeparams %c1 {uniq_name = "x"} : (!fir.ref<f32>, index) -> !fir.ref<f32>
+  return
+}
+
+// -----
+func.func @bad_char_declare(%arg0: !fir.boxchar<1> ) {
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  // expected-error@+1 {{'fir.declare' op must be provided exactly one type parameter when its base is a character that is not a box}}
+  %1 = fir.declare %0#0 {uniq_name = "c"} : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<!fir.char<1,?>>
+  return
+}
+
+// -----
+func.func @bad_char_declare(%arg0: !fir.boxchar<1> ) {
+  %0:2 = fir.unboxchar %arg0 : (!fir.boxchar<1>) -> (!fir.ref<!fir.char<1,?>>, index)
+  // expected-error@+1 {{'fir.declare' op of character entity must have at most one length parameter}}
+  %1 = fir.declare %0#0 typeparams %0#1, %0#1 {uniq_name = "c"} : (!fir.ref<!fir.char<1,?>>, index, index) -> !fir.ref<!fir.char<1,?>>
+  return
+}
+
+// -----
+func.func @bad_derived_declare(%arg0: !fir.ref<!fir.type<t{field:i32}>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op has too many length parameters}}
+  %0 = fir.declare %arg0 typeparams %c1 {uniq_name = "x"} : (!fir.ref<!fir.type<t{field:i32}>>, index) -> !fir.ref<!fir.type<t{field:i32}>>
+  return
+}
+
+// -----
+func.func @bad_pdt_declare(%arg0: !fir.ref<!fir.type<pdt(param:i32){field:i32}>>) {
+  // expected-error@+1 {{'fir.declare' op must be provided all the derived type length parameters when the base is not a box}}
+  %0 = fir.declare %arg0 {uniq_name = "x"} : (!fir.ref<!fir.type<pdt(param:i32){field:i32}>>) -> !fir.ref<!fir.type<pdt(param:i32){field:i32}>>
+  return
+}
+
+// -----
+func.func @bad_pdt_declare_2(%arg0: !fir.ref<!fir.type<pdt(param:i32){field:i32}>>) {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{'fir.declare' op has too many length parameters}}
+  %0 = fir.declare %arg0 typeparams %c1, %c1 {uniq_name = "x"} : (!fir.ref<!fir.type<pdt(param:i32){field:i32}>>, index, index) -> !fir.ref<!fir.type<pdt(param:i32){field:i32}>>
+  return
+}
+
+
+// -----
+func.func @bad_array_declare(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  // expected-error@+1 {{'fir.declare' op of array entity with a raw address base must have a shape operand that is a shape or shapeshift}}
+  %0 = fir.declare %arg0 {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_2(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %shift = fir.shift %c1, %c2 : (index, index) -> !fir.shift<2>
+  // expected-error@+1 {{'fir.declare' op of array entity with a raw address base must have a shape operand that is a shape or shapeshift}}
+  %0 = fir.declare %arg0(%shift) {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_3(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shape %c1 : (index) -> !fir.shape<1>
+  // expected-error@+1 {{'fir.declare' op has conflicting shape and base operand ranks}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<1>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_4(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shape_shift %c1, %c1 : (index, index) -> !fir.shapeshift<1>
+  // expected-error@+1 {{'fir.declare' op has conflicting shape and base operand ranks}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<1>) -> !fir.ref<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_box(%arg0: !fir.box<!fir.array<?x?xf32>>) {
+  %c1 = arith.constant 1 : index
+  %shape = fir.shift %c1 : (index) -> !fir.shift<1>
+  // expected-error@+1 {{'fir.declare' op has conflicting shape and base operand ranks}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<1>) -> !fir.box<!fir.array<?x?xf32>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_char_boxaddr(%arg0: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %shape = fir.shift %c1, %c2 : (index, index) -> !fir.shift<2>
+  // expected-error@+1 {{'fir.declare' op for box address must not have a shape operand}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>>, !fir.shift<2>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?x!fir.char<1,?>>>>>
+  return
+}
+
+// -----
+func.func @bad_array_declare_unlimited_polymorphic_boxaddr(%arg0: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %shape = fir.shift %c1, %c2 : (index, index) -> !fir.shift<2>
+  // expected-error@+1 {{'fir.declare' op for box address must not have a shape operand}}
+  %0 = fir.declare %arg0(%shape) {uniq_name = "x"} : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>, !fir.shift<2>) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x?xnone>>>>
+  return
+}
+
+// -----
+
+func.func @invalid_selector(%arg : !fir.box<!fir.ref<i32>>) -> i32 {
+  %0 = arith.constant 1 : i32
+  %2 = arith.constant 3 : i32
+  // expected-error@+1{{'fir.select_type' op selector must be polymorphic}}
+  fir.select_type %arg : !fir.box<!fir.ref<i32>> [
+    #fir.type_is<!fir.int<4>>,^bb1(%0:i32),
+    #fir.type_is<!fir.int<8>>,^bb2(%2:i32),
+    unit,^bb5 ]
+^bb1(%a : i32) :
+  return %a : i32
+^bb2(%b : i32) :
+  return %b : i32
+^bb5 :
+  %zero = arith.constant 0 : i32
+  return %zero : i32
+}

@@ -15,7 +15,9 @@
 //     discrete_distribution(InputIterator firstW, InputIterator lastW);
 
 #include <random>
+
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 

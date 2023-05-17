@@ -1,32 +1,32 @@
-; RUN: not opt -verify %s 2>&1 | FileCheck %s
+; RUN: not opt -passes=verify %s 2>&1 | FileCheck %s
 
 declare swifttailcc void @simple()
 
-define swifttailcc void @inreg(i8* inreg) {
+define swifttailcc void @inreg(ptr inreg) {
 ; CHECK: inreg attribute not allowed in swifttailcc musttail caller
   musttail call swifttailcc void @simple()
   ret void
 }
 
-define swifttailcc void @inalloca(i8* inalloca(i8)) {
+define swifttailcc void @inalloca(ptr inalloca(i8)) {
 ; CHECK: inalloca attribute not allowed in swifttailcc musttail caller
   musttail call swifttailcc void @simple()
   ret void
 }
 
-define swifttailcc void @swifterror(i8** swifterror) {
+define swifttailcc void @swifterror(ptr swifterror) {
 ; CHECK: swifterror attribute not allowed in swifttailcc musttail caller
   musttail call swifttailcc void @simple()
   ret void
 }
 
-define swifttailcc void @preallocated(i8* preallocated(i8)) {
+define swifttailcc void @preallocated(ptr preallocated(i8)) {
 ; CHECK: preallocated attribute not allowed in swifttailcc musttail caller
   musttail call swifttailcc void @simple()
   ret void
 }
 
-define swifttailcc void @byref(i8* byref(i8)) {
+define swifttailcc void @byref(ptr byref(i8)) {
 ; CHECK: byref attribute not allowed in swifttailcc musttail caller
   musttail call swifttailcc void @simple()
   ret void
@@ -34,32 +34,32 @@ define swifttailcc void @byref(i8* byref(i8)) {
 
 define swifttailcc void @call_inreg() {
 ; CHECK: inreg attribute not allowed in swifttailcc musttail callee
-  musttail call swifttailcc void @inreg(i8* inreg undef)
+  musttail call swifttailcc void @inreg(ptr inreg undef)
   ret void
 }
 
 define swifttailcc void @call_inalloca() {
 ; CHECK: inalloca attribute not allowed in swifttailcc musttail callee
-  musttail call swifttailcc void @inalloca(i8* inalloca(i8) undef)
+  musttail call swifttailcc void @inalloca(ptr inalloca(i8) undef)
   ret void
 }
 
 define swifttailcc void @call_swifterror() {
 ; CHECK: swifterror attribute not allowed in swifttailcc musttail callee
-  %err = alloca swifterror i8*
-  musttail call swifttailcc void @swifterror(i8** swifterror %err)
+  %err = alloca swifterror ptr
+  musttail call swifttailcc void @swifterror(ptr swifterror %err)
   ret void
 }
 
 define swifttailcc void @call_preallocated() {
 ; CHECK: preallocated attribute not allowed in swifttailcc musttail callee
-  musttail call swifttailcc void @preallocated(i8* preallocated(i8) undef)
+  musttail call swifttailcc void @preallocated(ptr preallocated(i8) undef)
   ret void
 }
 
 define swifttailcc void @call_byref() {
 ; CHECK: byref attribute not allowed in swifttailcc musttail callee
-  musttail call swifttailcc void @byref(i8* byref(i8) undef)
+  musttail call swifttailcc void @byref(ptr byref(i8) undef)
   ret void
 }
 

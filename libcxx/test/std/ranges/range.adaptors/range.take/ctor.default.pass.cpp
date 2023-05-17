@@ -7,12 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // take_view() requires default_initializable<V> = default;
 
-#include <ranges>
 #include <cassert>
+#include <ranges>
+#include <type_traits>
 
 int buff[8] = {1, 2, 3, 4, 5, 6, 7, 8};
 

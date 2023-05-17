@@ -29,7 +29,7 @@ define void @variadic_foo(i8, ...) {
 ; CHECK: .cfi_offset d9, -40
 ; CHECK: .cfi_offset d8, -48
   call void asm sideeffect "", "~{d8},~{d9},~{d11}"()
-  call void @llvm.va_start(i8* null)
+  call void @llvm.va_start(ptr null)
   call void @bar()
   ret void
 }
@@ -45,4 +45,4 @@ define void @test_maintain_stack_align() {
 }
 
 declare void @bar()
-declare void @llvm.va_start(i8*) nounwind
+declare void @llvm.va_start(ptr) nounwind

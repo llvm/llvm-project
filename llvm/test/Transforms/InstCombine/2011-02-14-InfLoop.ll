@@ -7,7 +7,7 @@
 
 target triple = "x86_64-unknown-linux-gnu"
 
-define <4 x float> @m_387(i8* noalias nocapture %A, i8* nocapture %B, <4 x i1> %C) nounwind {
+define <4 x float> @m_387(ptr noalias nocapture %A, ptr nocapture %B, <4 x i1> %C) nounwind {
 entry:
   %movcsext20 = sext <4 x i1> %C to <4 x i32>
   %tmp2389 = xor <4 x i32> %movcsext20, <i32 -1, i32 -1, i32 -1, i32 -1>

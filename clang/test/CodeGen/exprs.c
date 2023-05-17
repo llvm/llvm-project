@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown %s -Wno-strict-prototypes -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -Wno-strict-prototypes -emit-llvm -o - | FileCheck %s
 
 // PR1895
 // sizeof function
@@ -128,9 +128,9 @@ int f11(long X) {
 
 // CHECK: [[Xaddr:%[^ ]+]] = alloca i64, align 8
 // CHECK: [[A:%.*]] = alloca [100 x i32], align
-// CHECK: [[X:%.*]] = load {{.*}}, {{.*}}* [[Xaddr]]
-// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [100 x i32], [100 x i32]* [[A]], i64 0, i64 [[X]]
-// CHECK-NEXT: load i32, i32* [[T0]], align 4
+// CHECK: [[X:%.*]] = load {{.*}}, ptr [[Xaddr]]
+// CHECK-NEXT: [[T0:%.*]] = getelementptr inbounds [100 x i32], ptr [[A]], i64 0, i64 [[X]]
+// CHECK-NEXT: load i32, ptr [[T0]], align 4
 }
 
 int f12(void) {
@@ -203,6 +203,6 @@ int f19(void) {
 }
 // CHECK-LABEL: define{{.*}} i32 @f19()
 // CHECK: [[T:%.*]] = alloca i32
-// CHECK: store i32 4, i32* [[T]]
-// CHECK: [[L:%.*]] = load i32, i32* [[T]]
+// CHECK: store i32 4, ptr [[T]]
+// CHECK: [[L:%.*]] = load i32, ptr [[T]]
 // CHECK: ret i32 [[L]]

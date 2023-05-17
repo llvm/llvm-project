@@ -2,21 +2,22 @@
 // RUN: split-file %s %t
 // RUN: sed -e "s@INPUT_DIR@%{/t:regex_replacement}@g" \
 // RUN: %t/reference.output.json.in >> %t/reference.output.json
-// RUN: %clang -extract-api --product-name=TypedefChain -target arm64-apple-macosx \
-// RUN: -x objective-c-header %t/input.h -o %t/output.json | FileCheck -allow-empty %s
+// RUN: %clang_cc1 -extract-api --product-name=TypedefChain -triple arm64-apple-macosx \
+// RUN:   -x c-header %t/input.h -o %t/output.json -verify
 
 // Generator version is not consistent across test runs, normalize it.
 // RUN: sed -e "s@\"generator\": \".*\"@\"generator\": \"?\"@g" \
 // RUN: %t/output.json >> %t/output-normalized.json
 // RUN: diff %t/reference.output.json %t/output-normalized.json
 
-// CHECK-NOT: error:
-// CHECK-NOT: warning:
-
 //--- input.h
 typedef struct { } MyStruct;
 typedef MyStruct MyStructStruct;
 typedef MyStructStruct MyStructStructStruct;
+typedef enum { Case } MyEnum;
+typedef MyEnum MyEnumEnum;
+typedef MyEnumEnum MyEnumEnumEnum;
+// expected-no-diagnostics
 
 //--- reference.output.json.in
 {
@@ -43,8 +44,114 @@ typedef MyStructStruct MyStructStructStruct;
       "vendor": "apple"
     }
   },
-  "relationships": [],
+  "relationships": [
+    {
+      "kind": "memberOf",
+      "source": "c:@EA@MyEnum@Case",
+      "target": "c:@EA@MyEnum",
+      "targetFallback": "MyEnum"
+    }
+  ],
   "symbols": [
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "typedef"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "keyword",
+          "spelling": "enum"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "MyEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "c",
+        "precise": "c:@EA@MyEnum"
+      },
+      "kind": {
+        "displayName": "Enumeration",
+        "identifier": "c.enum"
+      },
+      "location": {
+        "position": {
+          "character": 9,
+          "line": 4
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyEnum"
+          }
+        ],
+        "title": "MyEnum"
+      },
+      "pathComponents": [
+        "MyEnum"
+      ]
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "identifier",
+          "spelling": "Case"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "c",
+        "precise": "c:@EA@MyEnum@Case"
+      },
+      "kind": {
+        "displayName": "Enumeration Case",
+        "identifier": "c.enum.case"
+      },
+      "location": {
+        "position": {
+          "character": 16,
+          "line": 4
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "Case"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "Case"
+          }
+        ],
+        "title": "Case"
+      },
+      "pathComponents": [
+        "MyEnum",
+        "Case"
+      ]
+    },
     {
       "accessLevel": "public",
       "declarationFragments": [
@@ -67,15 +174,19 @@ typedef MyStructStruct MyStructStructStruct;
         {
           "kind": "identifier",
           "spelling": "MyStruct"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
-        "interfaceLanguage": "objective-c",
+        "interfaceLanguage": "c",
         "precise": "c:@SA@MyStruct"
       },
       "kind": {
         "displayName": "Structure",
-        "identifier": "objective-c.struct"
+        "identifier": "c.struct"
       },
       "location": {
         "position": {
@@ -120,15 +231,19 @@ typedef MyStructStruct MyStructStructStruct;
         {
           "kind": "identifier",
           "spelling": "MyStructStruct"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
-        "interfaceLanguage": "objective-c",
+        "interfaceLanguage": "c",
         "precise": "c:input.h@T@MyStructStruct"
       },
       "kind": {
         "displayName": "Type Alias",
-        "identifier": "objective-c.typealias"
+        "identifier": "c.typealias"
       },
       "location": {
         "position": {
@@ -180,15 +295,19 @@ typedef MyStructStruct MyStructStructStruct;
         {
           "kind": "identifier",
           "spelling": "MyStructStructStruct"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
-        "interfaceLanguage": "objective-c",
+        "interfaceLanguage": "c",
         "precise": "c:input.h@T@MyStructStructStruct"
       },
       "kind": {
         "displayName": "Type Alias",
-        "identifier": "objective-c.typealias"
+        "identifier": "c.typealias"
       },
       "location": {
         "position": {
@@ -216,6 +335,134 @@ typedef MyStructStruct MyStructStructStruct;
         "MyStructStructStruct"
       ],
       "type": "c:input.h@T@MyStructStruct"
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "typedef"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:@EA@MyEnum",
+          "spelling": "MyEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "MyEnumEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "c",
+        "precise": "c:input.h@T@MyEnumEnum"
+      },
+      "kind": {
+        "displayName": "Type Alias",
+        "identifier": "c.typealias"
+      },
+      "location": {
+        "position": {
+          "character": 16,
+          "line": 5
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyEnumEnum"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "MyEnumEnum"
+          }
+        ],
+        "title": "MyEnumEnum"
+      },
+      "pathComponents": [
+        "MyEnumEnum"
+      ],
+      "type": "c:@EA@MyEnum"
+    },
+    {
+      "accessLevel": "public",
+      "declarationFragments": [
+        {
+          "kind": "keyword",
+          "spelling": "typedef"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "typeIdentifier",
+          "preciseIdentifier": "c:input.h@T@MyEnumEnum",
+          "spelling": "MyEnumEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": " "
+        },
+        {
+          "kind": "identifier",
+          "spelling": "MyEnumEnumEnum"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
+        }
+      ],
+      "identifier": {
+        "interfaceLanguage": "c",
+        "precise": "c:input.h@T@MyEnumEnumEnum"
+      },
+      "kind": {
+        "displayName": "Type Alias",
+        "identifier": "c.typealias"
+      },
+      "location": {
+        "position": {
+          "character": 20,
+          "line": 6
+        },
+        "uri": "file://INPUT_DIR/input.h"
+      },
+      "names": {
+        "navigator": [
+          {
+            "kind": "identifier",
+            "spelling": "MyEnumEnumEnum"
+          }
+        ],
+        "subHeading": [
+          {
+            "kind": "identifier",
+            "spelling": "MyEnumEnumEnum"
+          }
+        ],
+        "title": "MyEnumEnumEnum"
+      },
+      "pathComponents": [
+        "MyEnumEnumEnum"
+      ],
+      "type": "c:input.h@T@MyEnumEnum"
     }
   ]
 }

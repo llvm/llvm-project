@@ -159,7 +159,7 @@ struct RequireAnalysisPass<AnalysisT, LazyCallGraph::SCC, CGSCCAnalysisManager,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     auto ClassName = AnalysisT::name();
     auto PassName = MapClassName2PassName(ClassName);
-    OS << "require<" << PassName << ">";
+    OS << "require<" << PassName << '>';
   }
 };
 
@@ -357,7 +357,7 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "cgscc(";
     Pass->printPipeline(OS, MapClassName2PassName);
-    OS << ")";
+    OS << ')';
   }
 
   static bool isRequired() { return true; }
@@ -487,11 +487,19 @@ public:
   void printPipeline(raw_ostream &OS,
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "function";
-    if (EagerlyInvalidate)
-      OS << "<eager-inv>";
-    OS << "(";
+    if (EagerlyInvalidate || NoRerun) {
+      OS << "<";
+      if (EagerlyInvalidate)
+        OS << "eager-inv";
+      if (EagerlyInvalidate && NoRerun)
+        OS << ";";
+      if (NoRerun)
+        OS << "no-rerun";
+      OS << ">";
+    }
+    OS << '(';
     Pass->printPipeline(OS, MapClassName2PassName);
-    OS << ")";
+    OS << ')';
   }
 
   static bool isRequired() { return true; }
@@ -567,7 +575,7 @@ public:
                      function_ref<StringRef(StringRef)> MapClassName2PassName) {
     OS << "devirt<" << MaxIterations << ">(";
     Pass->printPipeline(OS, MapClassName2PassName);
-    OS << ")";
+    OS << ')';
   }
 
 private:

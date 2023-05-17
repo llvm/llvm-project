@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr decltype(auto) iter_move(const inner-iterator& i)
 //   noexcept(noexcept(ranges::iter_move(i.i_.<current>)));
@@ -24,7 +23,7 @@ namespace adl {
 template <bool IsNoexcept = false>
 struct MaybeNoexceptIterator {
   using value_type = int;
-  using difference_type = ptrdiff_t;
+  using difference_type = std::ptrdiff_t;
 
   value_type* ptr_ = nullptr;
   int* iter_move_invocations_ = nullptr;

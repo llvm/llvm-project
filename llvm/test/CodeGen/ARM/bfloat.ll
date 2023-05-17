@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv8.6a-arm-none-eabi"
 
-define bfloat @load_scalar_bf(bfloat* %addr) {
+define bfloat @load_scalar_bf(ptr %addr) {
 ; HARD-LABEL: load_scalar_bf:
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vldr.16 s0, [r0]
@@ -17,11 +17,11 @@ define bfloat @load_scalar_bf(bfloat* %addr) {
 ; SOFT-NEXT:    vmov r0, s0
 ; SOFT-NEXT:    bx lr
 entry:
-  %0 = load bfloat, bfloat* %addr, align 2
+  %0 = load bfloat, ptr %addr, align 2
   ret bfloat %0
 }
 
-define void @store_scalar_bf(bfloat %v, bfloat* %addr) {
+define void @store_scalar_bf(bfloat %v, ptr %addr) {
 ; HARD-LABEL: store_scalar_bf:
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vstr.16 s0, [r0]
@@ -33,11 +33,11 @@ define void @store_scalar_bf(bfloat %v, bfloat* %addr) {
 ; SOFT-NEXT:    vstr.16 s0, [r1]
 ; SOFT-NEXT:    bx lr
 entry:
-  store bfloat %v, bfloat* %addr, align 2
+  store bfloat %v, ptr %addr, align 2
   ret void
 }
 
-define <4 x bfloat> @load_vector4_bf(<4 x bfloat>* %addr) {
+define <4 x bfloat> @load_vector4_bf(ptr %addr) {
 ; HARD-LABEL: load_vector4_bf:
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vldr d0, [r0]
@@ -49,11 +49,11 @@ define <4 x bfloat> @load_vector4_bf(<4 x bfloat>* %addr) {
 ; SOFT-NEXT:    vmov r0, r1, d16
 ; SOFT-NEXT:    bx lr
 entry:
-  %0 = load <4 x bfloat>, <4 x bfloat>* %addr, align 8
+  %0 = load <4 x bfloat>, ptr %addr, align 8
   ret <4 x bfloat> %0
 }
 
-define void @store_vector4_bf(<4 x bfloat> %v, <4 x bfloat>* %addr) {
+define void @store_vector4_bf(<4 x bfloat> %v, ptr %addr) {
 ; HARD-LABEL: store_vector4_bf:
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vstr d0, [r0]
@@ -64,11 +64,11 @@ define void @store_vector4_bf(<4 x bfloat> %v, <4 x bfloat>* %addr) {
 ; SOFT-NEXT:    strd r0, r1, [r2]
 ; SOFT-NEXT:    bx lr
 entry:
-  store <4 x bfloat> %v, <4 x bfloat>* %addr, align 8
+  store <4 x bfloat> %v, ptr %addr, align 8
   ret void
 }
 
-define <8 x bfloat> @load_vector8_bf(<8 x bfloat>* %addr) {
+define <8 x bfloat> @load_vector8_bf(ptr %addr) {
 ; HARD-LABEL: load_vector8_bf:
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vld1.64 {d0, d1}, [r0]
@@ -81,11 +81,11 @@ define <8 x bfloat> @load_vector8_bf(<8 x bfloat>* %addr) {
 ; SOFT-NEXT:    vmov r2, r3, d17
 ; SOFT-NEXT:    bx lr
 entry:
-  %0 = load <8 x bfloat>, <8 x bfloat>* %addr, align 8
+  %0 = load <8 x bfloat>, ptr %addr, align 8
   ret <8 x bfloat> %0
 }
 
-define void @store_vector8_bf(<8 x bfloat> %v, <8 x bfloat>* %addr) {
+define void @store_vector8_bf(<8 x bfloat> %v, ptr %addr) {
 ; HARD-LABEL: store_vector8_bf:
 ; HARD:       @ %bb.0: @ %entry
 ; HARD-NEXT:    vst1.64 {d0, d1}, [r0]
@@ -99,7 +99,7 @@ define void @store_vector8_bf(<8 x bfloat> %v, <8 x bfloat>* %addr) {
 ; SOFT-NEXT:    vst1.64 {d16, d17}, [r12]
 ; SOFT-NEXT:    bx lr
 entry:
-  store <8 x bfloat> %v, <8 x bfloat>* %addr, align 8
+  store <8 x bfloat> %v, ptr %addr, align 8
   ret void
 }
 

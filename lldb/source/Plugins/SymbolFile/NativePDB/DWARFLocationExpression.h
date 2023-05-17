@@ -26,6 +26,12 @@ class TpiStream;
 } // namespace llvm
 namespace lldb_private {
 namespace npdb {
+struct MemberValLocation {
+  uint16_t reg_id;
+  uint16_t reg_offset;
+  bool is_at_reg = true;
+};
+
 DWARFExpression
 MakeEnregisteredLocationExpression(llvm::codeview::RegisterId reg,
                                    lldb::ModuleSP module);
@@ -41,9 +47,9 @@ DWARFExpression MakeGlobalLocationExpression(uint16_t section, uint32_t offset,
 DWARFExpression MakeConstantLocationExpression(
     llvm::codeview::TypeIndex underlying_ti, llvm::pdb::TpiStream &tpi,
     const llvm::APSInt &constant, lldb::ModuleSP module);
-DWARFExpression MakeEnregisteredLocationExpressionForClass(
-    std::map<uint64_t, std::pair<llvm::codeview::RegisterId, uint32_t>>
-        &members_info,
+DWARFExpression MakeEnregisteredLocationExpressionForComposite(
+    const std::map<uint64_t, MemberValLocation> &offset_to_location,
+    std::map<uint64_t, size_t> &offset_to_size, size_t total_size,
     lldb::ModuleSP module);
 } // namespace npdb
 } // namespace lldb_private

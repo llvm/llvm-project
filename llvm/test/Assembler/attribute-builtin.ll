@@ -10,15 +10,15 @@
 ; RUN: llvm-dis | \
 ; RUN: FileCheck -check-prefix=CHECK-ASSEMBLES %s
 
-; CHECK-ASSEMBLES: declare i8* @foo(i8*) [[NOBUILTIN:#[0-9]+]]
-; CHECK-ASSEMBLES: call i8* @foo(i8* %x) [[BUILTIN:#[0-9]+]]
+; CHECK-ASSEMBLES: declare ptr @foo(ptr) [[NOBUILTIN:#[0-9]+]]
+; CHECK-ASSEMBLES: call ptr @foo(ptr %x) [[BUILTIN:#[0-9]+]]
 ; CHECK-ASSEMBLES: attributes [[NOBUILTIN]] = { nobuiltin }
 ; CHECK-ASSEMBLES: attributes [[BUILTIN]] = { builtin }
 
-declare i8* @foo(i8*) #1
-define i8* @bar(i8* %x) {
-  %y = call i8* @foo(i8* %x) #0
-  ret i8* %y
+declare ptr @foo(ptr) #1
+define ptr @bar(ptr %x) {
+  %y = call ptr @foo(ptr %x) #0
+  ret ptr %y
 }
 
 ; Make sure that we do not accept the 'builtin' attribute on function
@@ -29,22 +29,22 @@ define i8* @bar(i8* %x) {
 ; RUN: not llvm-as <%s 2>&1  | FileCheck -check-prefix=CHECK-BAD %s
 
 ; CHECK-BAD: Attribute 'builtin' can only be applied to a callsite.
-; CHECK-BAD-NEXT: i8* (i8*)* @car
+; CHECK-BAD-NEXT: ptr @car
 ; CHECK-BAD: Attribute 'builtin' can only be applied to a callsite.
-; CHECK-BAD-NEXT: i8* (i8*)* @mar
+; CHECK-BAD-NEXT: ptr @mar
 
-declare i8* @lar(i8*)
+declare ptr @lar(ptr)
 
-define i8* @har(i8* %x) {
-  %y = call i8* @lar(i8* %x) #0
-  ret i8* %y
+define ptr @har(ptr %x) {
+  %y = call ptr @lar(ptr %x) #0
+  ret ptr %y
 }
 
-define i8* @car(i8* %x) #0 {
-  ret i8* %x
+define ptr @car(ptr %x) #0 {
+  ret ptr %x
 }
 
-declare i8* @mar(i8*) #0
+declare ptr @mar(ptr) #0
 
 attributes #0 = { builtin }
 attributes #1 = { nobuiltin }

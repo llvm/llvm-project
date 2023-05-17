@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/string>
 
 // namespace std { namespace experimental { namespace pmr {
@@ -21,6 +23,8 @@
 // typedef ... wstring
 //
 // }}} // namespace std::experimental::pmr
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/string>
 #include <experimental/memory_resource>

@@ -9,9 +9,9 @@ target triple = "x86_64-apple-macosx10.8.0"
 
 @.memset_pattern = internal unnamed_addr constant i128 or (i128 zext (i64 bitcast (<2 x float> <float 1.000000e+00, float 1.000000e+00> to i64) to i128), i128 shl (i128 zext (i64 bitcast (<2 x float> <float 1.000000e+00, float 1.000000e+00> to i64) to i128), i128 64)), align 16
 
-define void @foo(i8* %a, i64 %b) {
-  call void @memset_pattern16(i8* %a, i8* bitcast (i128* @.memset_pattern to i8*), i64 %b)
+define void @foo(ptr %a, i64 %b) {
+  call void @memset_pattern16(ptr %a, ptr @.memset_pattern, i64 %b)
   ret void
 }
 
-declare void @memset_pattern16(i8*, i8*, i64)
+declare void @memset_pattern16(ptr, ptr, i64)

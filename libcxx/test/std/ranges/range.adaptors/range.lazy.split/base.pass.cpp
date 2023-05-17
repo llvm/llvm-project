@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr View base() const& requires copy_constructible<_View>;
 // constexpr View base() &&;
@@ -26,8 +25,8 @@ struct MoveOnlyView : std::ranges::view_base {
   constexpr MoveOnlyView(std::string_view v) : view_(v) {}
   constexpr MoveOnlyView(MoveOnlyView&&) = default;
   constexpr MoveOnlyView& operator=(MoveOnlyView&&) = default;
-  constexpr const char* begin() const { return view_.begin(); }
-  constexpr const char* end() const { return view_.end(); }
+  constexpr std::string_view::const_iterator begin() const { return view_.begin(); }
+  constexpr std::string_view::const_iterator end() const { return view_.end(); }
   constexpr bool operator==(MoveOnlyView rhs) const { return view_ == rhs.view_; }
 };
 static_assert( std::ranges::view<MoveOnlyView>);

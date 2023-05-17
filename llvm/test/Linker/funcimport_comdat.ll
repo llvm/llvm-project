@@ -22,7 +22,7 @@ define void @comdat1_func1() comdat($comdat1) {
 }
 
 $comdat2 = comdat any
-@comdat2_alias = alias void (), void ()* @comdat2_func1
+@comdat2_alias = alias void (), ptr @comdat2_func1
 define internal void @comdat2_func1() comdat($comdat2) {
   ret void
 }

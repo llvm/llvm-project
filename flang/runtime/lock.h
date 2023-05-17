@@ -23,6 +23,10 @@
 
 #if USE_PTHREADS
 #include <pthread.h>
+#elif defined(_WIN32)
+// Do not define macros for "min" and "max"
+#define NOMINMAX
+#include <windows.h>
 #else
 #include <mutex>
 #endif
@@ -37,9 +41,30 @@ public:
   void Take() {
     while (pthread_mutex_lock(&mutex_)) {
     }
+    holder_ = pthread_self();
+    isBusy_ = true;
+  }
+  bool TakeIfNoDeadlock() {
+    if (isBusy_) {
+      auto thisThread{pthread_self()};
+      if (pthread_equal(thisThread, holder_)) {
+        return false;
+      }
+    }
+    Take();
+    return true;
   }
   bool Try() { return pthread_mutex_trylock(&mutex_) == 0; }
-  void Drop() { pthread_mutex_unlock(&mutex_); }
+  void Drop() {
+    isBusy_ = false;
+    pthread_mutex_unlock(&mutex_);
+  }
+#elif defined(_WIN32)
+  Lock() { InitializeCriticalSection(&cs_); }
+  ~Lock() { DeleteCriticalSection(&cs_); }
+  void Take() { EnterCriticalSection(&cs_); }
+  bool Try() { return TryEnterCriticalSection(&cs_); }
+  void Drop() { LeaveCriticalSection(&cs_); }
 #else
   void Take() { mutex_.lock(); }
   bool Try() { return mutex_.try_lock(); }
@@ -56,6 +81,10 @@ public:
 private:
 #if USE_PTHREADS
   pthread_mutex_t mutex_{};
+  volatile bool isBusy_{false};
+  volatile pthread_t holder_;
+#elif defined(_WIN32)
+  CRITICAL_SECTION cs_;
 #else
   std::mutex mutex_;
 #endif

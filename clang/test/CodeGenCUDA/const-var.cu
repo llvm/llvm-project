@@ -1,12 +1,12 @@
 // REQUIRES: amdgpu-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -emit-llvm -o - | FileCheck -check-prefix=DEV %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-linux-gnu -x hip %s \
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -x hip %s \
 // RUN:   -emit-llvm -o - | FileCheck -check-prefix=HOST %s
 
 // Negative tests.
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
+// RUN: %clang_cc1 -triple amdgcn-amd-amdhsa -fcuda-is-device -x hip %s \
 // RUN:   -emit-llvm -o - | FileCheck -check-prefix=DEV-NEG %s
 
 #include "Inputs/cuda.h"
@@ -15,12 +15,12 @@
 // Both are promoted to device side.
 
 // DEV-DAG: @_ZN5Test1L1aE = internal addrspace(4) constant i32 1
-// DEV-DAG: @_ZN5Test11B2p1E = addrspace(4) externally_initialized constant i32* addrspacecast (i32 addrspace(4)* @_ZN5Test1L1aE to i32*)
-// DEV-DAG: @_ZN5Test11B2p2E = addrspace(4) externally_initialized constant i32* addrspacecast (i32 addrspace(4)* @_ZN5Test1L1aE to i32*)
+// DEV-DAG: @_ZN5Test11B2p1E = addrspace(4) externally_initialized constant ptr addrspacecast (ptr addrspace(4) @_ZN5Test1L1aE to ptr)
+// DEV-DAG: @_ZN5Test11B2p2E = addrspace(4) externally_initialized constant ptr addrspacecast (ptr addrspace(4) @_ZN5Test1L1aE to ptr)
 // DEV-DAG: @_ZN5Test12b2E = addrspace(1) externally_initialized global i32 1
 // HOST-DAG: @_ZN5Test1L1aE = internal constant i32 1
-// HOST-DAG: @_ZN5Test11B2p1E = constant i32* @_ZN5Test1L1aE
-// HOST-DAG: @_ZN5Test11B2p2E = internal constant i32* undef
+// HOST-DAG: @_ZN5Test11B2p1E = constant ptr @_ZN5Test1L1aE
+// HOST-DAG: @_ZN5Test11B2p2E = internal constant ptr undef
 // HOST-DAG: @_ZN5Test12b1E = global i32 1
 // HOST-DAG: @_ZN5Test12b2E = internal global i32 undef
 namespace Test1 {
@@ -42,7 +42,7 @@ __device__ int b2 = B::p1 == B::p2;
 // DEV-NEG-NOT: @_ZN5Test2L1aE
 // DEV-NEG-NOT: @_ZN5Test21B1pE
 // HOST-DAG: @_ZN5Test21aE = global i32 1
-// HOST-DAG: @_ZN5Test21B1pE = constant i32* @_ZN5Test21aE
+// HOST-DAG: @_ZN5Test21B1pE = constant ptr @_ZN5Test21aE
 
 namespace Test2 {
 int a = 1;

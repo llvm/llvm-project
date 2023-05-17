@@ -27,7 +27,7 @@ CHECK-ONE-DAG: Function{[[UID1]]}, mangled = ?Func_arg_void@@YAXXZ, demangled = 
 CHECK-ONE-DAG: Function{[[UID2]]}, mangled = ?Func_arg_none@@YAXXZ, demangled = {{.*}}, type = [[TY2]]
 CHECK-ONE-DAG: Function{[[UID3]]}, mangled = ?Func_varargs@@YAXZZ, demangled = {{.*}}, type = [[TY3]]
 CHECK-ONE-DAG: Function{[[UID4]]}, mangled = ?Func@NS@@YAXDH@Z, demangled = {{.*}}, type = [[TY4]]
-CHECK-ONE-DAG: Function{[[UID5]]}, mangled = _main, demangled = {{.*}}, type = [[TY5]]
+CHECK-ONE-DAG: Function{[[UID5]]}, mangled = {{_?}}main, demangled = {{.*}}, type = [[TY5]]
 CHECK-ONE-DAG: Function{[[UID6]]}, demangled = {{.*}}`anonymous namespace'::Func{{.*}}, type = [[TY6]]
 CHECK-ONE-DAG: Function{[[UID7]]}, demangled = {{.*}}StaticFunction{{.*}}, type = [[TY7]]
 CHECK-ONE-DAG: Function{[[UID8]]}, mangled = ?Func@A@MemberTest@@QAAHHZZ, demangled = {{.*}}, type = [[TY8]]

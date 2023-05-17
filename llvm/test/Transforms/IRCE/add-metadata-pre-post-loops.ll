@@ -1,4 +1,4 @@
-; RUN: opt -irce -S < %s 2>&1 | FileCheck %s
+; RUN: opt -passes=irce -S < %s 2>&1 | FileCheck %s
 ; RUN: opt -passes='require<branch-prob>,irce' -S < %s 2>&1 | FileCheck %s
 
 ; test that the pre and post loops have loop metadata which disables any further
@@ -6,13 +6,13 @@
 
 ; generates a post loop, which should have metadata !llvm.loop !2
 ; Function Attrs: alwaysinline
-define void @inner_loop(i32* %arr, i32* %a_len_ptr, i32 %n) #0 {
+define void @inner_loop(ptr %arr, ptr %a_len_ptr, i32 %n) #0 {
 ; CHECK-LABEL: inner_loop(
 ; CHECK-LABEL: in.bounds.postloop
 ; CHECK: br i1 %next.postloop, label %loop.postloop, label %exit.loopexit.loopexit, !llvm.loop !2, !irce.loop.clone !7
 
 entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -23,8 +23,8 @@ loop:                                             ; preds = %in.bounds, %entry
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
 in.bounds:                                        ; preds = %loop
-  %addr = getelementptr i32, i32* %arr, i32 %idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 
@@ -36,14 +36,14 @@ exit:                                             ; preds = %in.bounds, %entry
 }
 
 ; add loop metadata for pre and post loops
-define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 %offset) {
+define void @single_access_with_preloop(ptr %arr, ptr %a_len_ptr, i32 %n, i32 %offset) {
 ; CHECK-LABEL: @single_access_with_preloop(
 ; CHECK-LABEL: in.bounds.preloop
 ; CHECK: br i1 [[COND:%[^ ]+]], label %loop.preloop, label %preloop.exit.selector, !llvm.loop !8, !irce.loop.clone !7
 ; CHECK-LABEL: in.bounds.postloop
 ; CHECK: br i1 %next.postloop, label %loop.postloop, label %exit.loopexit.loopexit, !llvm.loop !9, !irce.loop.clone !7
  entry:
-  %len = load i32, i32* %a_len_ptr, !range !0
+  %len = load i32, ptr %a_len_ptr, !range !0
   %first.itr.check = icmp sgt i32 %n, 0
   br i1 %first.itr.check, label %loop, label %exit
 
@@ -57,8 +57,8 @@ define void @single_access_with_preloop(i32 *%arr, i32 *%a_len_ptr, i32 %n, i32 
   br i1 %abc, label %in.bounds, label %out.of.bounds, !prof !1
 
  in.bounds:
-  %addr = getelementptr i32, i32* %arr, i32 %array.idx
-  store i32 0, i32* %addr
+  %addr = getelementptr i32, ptr %arr, i32 %array.idx
+  store i32 0, ptr %addr
   %next = icmp slt i32 %idx.next, %n
   br i1 %next, label %loop, label %exit
 

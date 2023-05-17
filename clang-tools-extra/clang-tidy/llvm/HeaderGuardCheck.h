@@ -11,13 +11,11 @@
 
 #include "../utils/HeaderGuard.h"
 
-namespace clang {
-namespace tidy {
-namespace llvm_check {
+namespace clang::tidy::llvm_check {
 
 /// Finds and fixes header guards that do not adhere to LLVM style.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/llvm-header-guard.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/llvm/header-guard.html
 /// The check supports these options:
 ///   - `HeaderFileExtensions`: a semicolon-separated list of filename
 ///     extensions of header files (The filename extension should not contain
@@ -33,8 +31,6 @@ public:
   std::string getHeaderGuard(StringRef Filename, StringRef OldGuard) override;
 };
 
-} // namespace llvm_check
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_check
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_LLVM_HEADERGUARDCHECK_H

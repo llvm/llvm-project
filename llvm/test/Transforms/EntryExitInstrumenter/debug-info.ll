@@ -6,14 +6,14 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @f(i32 %x) #0 !dbg !7 {
 entry:
   %x.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
   ret i32 42, !dbg !12
 
 ; CHECK-LABEL: define i32 @f(i32 %x)
-; CHECK: call i8* @llvm.returnaddress(i32 0), !dbg ![[ENTRYLOC:[0-9]+]]
+; CHECK: call ptr @llvm.returnaddress(i32 0), !dbg ![[ENTRYLOC:[0-9]+]]
 ; CHECK: call void @__cyg_profile_func_enter{{.*}}, !dbg ![[ENTRYLOC]]
 
-; CHECK: call i8* @llvm.returnaddress(i32 0), !dbg ![[EXITLOC:[0-9]+]]
+; CHECK: call ptr @llvm.returnaddress(i32 0), !dbg ![[EXITLOC:[0-9]+]]
 ; CHECK: call void @__cyg_profile_func_exit{{.*}}, !dbg ![[EXITLOC]]
 ; CHECK: ret i32 42, !dbg ![[EXITLOC]]
 }

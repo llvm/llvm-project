@@ -15,14 +15,14 @@
 
 #include "test_macros.h"
 
-void write_c_str(char *buf, int size) {
+TEST_CONSTEXPR_CXX20 void write_c_str(char *buf, int size) {
   for (int i=0; i < size; ++i) {
     buf[i] = 'a';
   }
   buf[size] = '\0';
 }
 
-void test_buffer_usage()
+TEST_CONSTEXPR_CXX20 void test_buffer_usage()
 {
   {
     unsigned buff_size = 125;
@@ -31,7 +31,7 @@ void test_buffer_usage()
     s.__resize_default_init(buff_size);
     write_c_str(&s[0], used_size);
     assert(s.size() == buff_size);
-    assert(strlen(s.data()) == used_size);
+    assert(std::char_traits<char>().length(s.data()) == used_size);
     s.__resize_default_init(used_size);
     assert(s.size() == used_size);
     assert(s.data()[used_size] == '\0');
@@ -41,7 +41,7 @@ void test_buffer_usage()
   }
 }
 
-void test_basic() {
+TEST_CONSTEXPR_CXX20 void test_basic() {
   {
     std::string s;
     s.__resize_default_init(3);
@@ -56,9 +56,18 @@ void test_basic() {
   }
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool test() {
   test_basic();
   test_buffer_usage();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
 
   return 0;
 }

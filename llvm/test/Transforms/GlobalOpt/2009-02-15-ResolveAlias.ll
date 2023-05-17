@@ -6,14 +6,14 @@ define internal void @f() {
 	ret void
 }
 
-@a = dso_local alias void (), void ()* @f
+@a = dso_local alias void (), ptr @f
 
 define hidden void @g() {
 	call void() @a()
 	ret void
 }
 
-@b = internal alias  void (),  void ()* @g
+@b = internal alias  void (),  ptr @g
 ; CHECK-NOT: @b
 
 define void @h() {

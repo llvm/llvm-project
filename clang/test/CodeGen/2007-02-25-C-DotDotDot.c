@@ -3,7 +3,7 @@
 // Make sure the call to foo is compiled as:
 //  call float @foo()
 // not
-//  call float (...) bitcast (float ()* @foo to float (...)*)( )
+//  call float (...) @foo( )
 
 static float foo() { return 0.0; }
 // CHECK: call float @foo

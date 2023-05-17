@@ -22,7 +22,7 @@ define i64 @bra(i32 %zed) nounwind {
  ret i64 %t2
 }
 
-define void @foo(i64 %zed, i64* %x) nounwind {
+define void @foo(i64 %zed, ptr %x) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x0c]
@@ -42,7 +42,7 @@ define void @foo(i64 %zed, i64* %x) nounwind {
 ; X64-NEXT:    retq # encoding: [0xc3]
   %t1 = and i64 %zed, -4
   %t2 = or i64 %t1, 2
-  store i64 %t2, i64* %x, align 8
+  store i64 %t2, ptr %x, align 8
   ret void
 }
 

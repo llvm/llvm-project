@@ -15,12 +15,12 @@
 #include "polly/Options.h"
 #include "polly/ScheduleTreeTransform.h"
 #include "polly/Support/ScopHelper.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
+#include <optional>
 
 #define DEBUG_TYPE "polly-opt-manual"
 
@@ -40,10 +40,10 @@ static TransformationMode hasUnrollTransformation(MDNode *LoopID) {
   if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.disable"))
     return TM_SuppressedByUser;
 
-  Optional<int> Count =
+  std::optional<int> Count =
       getOptionalIntLoopAttribute(LoopID, "llvm.loop.unroll.count");
-  if (Count.hasValue())
-    return Count.getValue() == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
+  if (Count)
+    return *Count == 1 ? TM_SuppressedByUser : TM_ForcedByUser;
 
   if (getBooleanLoopAttribute(LoopID, "llvm.loop.unroll.enable"))
     return TM_ForcedByUser;
@@ -96,8 +96,8 @@ static isl::schedule applyLoopUnroll(MDNode *LoopMD,
   // unrolled loop could be input of another loop transformation which expects
   // the explicit schedule nodes. That is, we would need this explicit expansion
   // anyway and using the ISL codegen option is a compile-time optimization.
-  int64_t Factor = getOptionalIntLoopAttribute(LoopMD, "llvm.loop.unroll.count")
-                       .getValueOr(0);
+  int64_t Factor =
+      getOptionalIntLoopAttribute(LoopMD, "llvm.loop.unroll.count").value_or(0);
   bool Full = getBooleanLoopAttribute(LoopMD, "llvm.loop.unroll.full");
   assert((!Full || !(Factor > 0)) &&
          "Cannot unroll fully and partially at the same time");
@@ -189,7 +189,7 @@ private:
     }
 
     // If illegal, revert and remove the transformation to not risk re-trying
-    // indefintely.
+    // indefinitely.
     MDNode *NewLoopMD =
         makePostTransformationMetadata(Ctx, LoopMD, {TransPrefix}, {});
     BandAttr *Attr = getBandAttr(OrigBand);

@@ -7,6 +7,7 @@ static_library("Breakpad") {
     "//lldb/source/Symbol",
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Reaches into Plugins/Process/Utility.

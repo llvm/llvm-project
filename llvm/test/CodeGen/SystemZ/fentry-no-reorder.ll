@@ -5,11 +5,11 @@
 
 define dso_local void @clear_pawn_tt() local_unnamed_addr #0 {
 entry:
-  call void @llvm.memset.p0i8.i64(i8* nonnull align 2 dereferenceable(2048) getelementptr inbounds ([2048 x i8], [2048 x i8]* @PawnTT, i64 0, i64 0), i8 0, i64 2048, i1 false)
+  call void @llvm.memset.p0.i64(ptr nonnull align 2 dereferenceable(2048) @PawnTT, i8 0, i64 2048, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg) #1
 
 attributes #0 = { nofree nounwind writeonly "fentry-call"="true" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn writeonly }

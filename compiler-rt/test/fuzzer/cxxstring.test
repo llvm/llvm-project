@@ -1,4 +1,4 @@
-UNSUPPORTED: freebsd
+UNSUPPORTED: target={{.*freebsd.*}}
 
 RUN: %cpp_compiler %S/CxxStringEqTest.cpp -o %t-CxxStringEqTest
 

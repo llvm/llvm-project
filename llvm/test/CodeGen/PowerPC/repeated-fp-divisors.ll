@@ -8,12 +8,13 @@ define <4 x float> @repeated_fp_divisor_noest(float %a, <4 x float> %b) {
 ; CHECK-NEXT:    xscvdpspn 0, 1
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_1@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 1, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
 ; CHECK-NEXT:    xxspltw 0, 0, 0
-; CHECK-NEXT:    xvdivsp 0, 35, 0
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    xvdivsp 0, 1, 0
+; CHECK-NEXT:    lxvd2x 1, 0, 3
+; CHECK-NEXT:    xxswapd 35, 1
 ; CHECK-NEXT:    xvmulsp 1, 34, 35
 ; CHECK-NEXT:    xvmulsp 34, 1, 0
 ; CHECK-NEXT:    blr
@@ -30,15 +31,16 @@ define <4 x float> @repeated_fp_divisor(float %a, <4 x float> %b) {
 ; CHECK-NEXT:    xscvdpspn 0, 1
 ; CHECK-NEXT:    addis 3, 2, .LCPI1_0@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI1_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 2, 0, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI1_1@toc@ha
 ; CHECK-NEXT:    addi 3, 3, .LCPI1_1@toc@l
-; CHECK-NEXT:    lvx 4, 0, 3
 ; CHECK-NEXT:    xxspltw 0, 0, 0
 ; CHECK-NEXT:    xvresp 1, 0
-; CHECK-NEXT:    xvmaddasp 35, 0, 1
-; CHECK-NEXT:    xvmulsp 0, 34, 36
-; CHECK-NEXT:    xvnmsubasp 1, 1, 35
+; CHECK-NEXT:    xvmaddasp 2, 0, 1
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
+; CHECK-NEXT:    xvnmsubasp 1, 1, 2
+; CHECK-NEXT:    xvmulsp 0, 34, 35
 ; CHECK-NEXT:    xvmulsp 34, 0, 1
 ; CHECK-NEXT:    blr
   %ins = insertelement <4 x float> undef, float %a, i32 0

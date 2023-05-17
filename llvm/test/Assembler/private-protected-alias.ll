@@ -2,5 +2,5 @@
 
 @global = global i32 0
 
-@alias = private protected alias i32, i32* @global
+@alias = private protected alias i32, ptr @global
 ; CHECK: symbol with local linkage must have default visibility

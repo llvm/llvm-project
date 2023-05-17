@@ -2,7 +2,7 @@
 # RUN:  | FileCheck %s -check-prefix=CHECK-ENC
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s \
-# RUN:  | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-INSTR
+# RUN:  | llvm-objdump --no-print-imm-hex -d - | FileCheck %s --check-prefix=CHECK-INSTR
 
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux %s \
 # RUN:  | llvm-readobj -r - | FileCheck %s -check-prefix=CHECK-REL

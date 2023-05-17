@@ -53,30 +53,30 @@ target triple = "aarch64-unknown-linux"
 @array = dso_local local_unnamed_addr global [256 x i32] zeroinitializer, align 4, !dbg !0
 
 ; Function Attrs: norecurse
-define dso_local i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 !dbg !14 {
+define dso_local i32 @main(i32 %argc, ptr nocapture readnone %argv) local_unnamed_addr #0 !dbg !14 {
 entry:
   call void @llvm.dbg.value(metadata i32 %argc, metadata !21, metadata !DIExpression()), !dbg !36
-  call void @llvm.dbg.value(metadata i8** %argv, metadata !22, metadata !DIExpression()), !dbg !36
+  call void @llvm.dbg.value(metadata ptr %argv, metadata !22, metadata !DIExpression()), !dbg !36
   call void @llvm.dbg.value(metadata i32 56, metadata !23, metadata !DIExpression()), !dbg !36
-  %0 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 1), align 4, !dbg !37
+  %0 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 1), align 4, !dbg !37
   call void @llvm.dbg.value(metadata i32 %0, metadata !24, metadata !DIExpression()), !dbg !36
-  %1 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 2), align 4, !dbg !42
+  %1 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 2), align 4, !dbg !42
   call void @llvm.dbg.value(metadata i32 %1, metadata !25, metadata !DIExpression()), !dbg !36
-  %2 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 3), align 4, !dbg !43
+  %2 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 3), align 4, !dbg !43
   call void @llvm.dbg.value(metadata i32 %2, metadata !26, metadata !DIExpression()), !dbg !36
-  %3 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 4), align 4, !dbg !44
+  %3 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 4), align 4, !dbg !44
   call void @llvm.dbg.value(metadata i32 %3, metadata !27, metadata !DIExpression()), !dbg !36
-  %4 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 5), align 4, !dbg !45
+  %4 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 5), align 4, !dbg !45
   call void @llvm.dbg.value(metadata i32 %4, metadata !28, metadata !DIExpression()), !dbg !36
-  %5 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 6), align 4, !dbg !46
+  %5 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 6), align 4, !dbg !46
   call void @llvm.dbg.value(metadata i32 %5, metadata !29, metadata !DIExpression()), !dbg !36
-  %6 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 7), align 4, !dbg !47
+  %6 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 7), align 4, !dbg !47
   call void @llvm.dbg.value(metadata i32 %6, metadata !30, metadata !DIExpression()), !dbg !36
-  %7 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 8), align 4, !dbg !48
+  %7 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 8), align 4, !dbg !48
   call void @llvm.dbg.value(metadata i32 %7, metadata !31, metadata !DIExpression()), !dbg !36
-  %8 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 9), align 4, !dbg !49
+  %8 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 9), align 4, !dbg !49
   call void @llvm.dbg.value(metadata i32 %8, metadata !32, metadata !DIExpression()), !dbg !36
-  %9 = load i32, i32* getelementptr inbounds ([256 x i32], [256 x i32]* @array, i64 0, i64 10), align 4, !dbg !50
+  %9 = load i32, ptr getelementptr inbounds ([256 x i32], ptr @array, i64 0, i64 10), align 4, !dbg !50
   call void @llvm.dbg.value(metadata i32 %9, metadata !33, metadata !DIExpression()), !dbg !36
   call void @llvm.dbg.value(metadata i32 0, metadata !34, metadata !DIExpression()), !dbg !51
   br label %for.body, !dbg !52
@@ -87,8 +87,8 @@ for.cond.cleanup:                                 ; preds = %for.body
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   call void @llvm.dbg.value(metadata i64 %indvars.iv, metadata !34, metadata !DIExpression()), !dbg !51
-  %arrayidx = getelementptr inbounds [256 x i32], [256 x i32]* @array, i64 0, i64 %indvars.iv, !dbg !54
-  store i32 56, i32* %arrayidx, align 4, !dbg !57
+  %arrayidx = getelementptr inbounds [256 x i32], ptr @array, i64 0, i64 %indvars.iv, !dbg !54
+  store i32 56, ptr %arrayidx, align 4, !dbg !57
   %10 = trunc i64 %indvars.iv to i32, !dbg !58
   tail call void (i32, ...) @_Z4funciz(i32 0, i32 %10, i32 %0, i32 %1, i32 %2, i32 %3, i32 %4, i32 %5, i32 %6, i32 %7, i32 %8, i32 %9), !dbg !58
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !59

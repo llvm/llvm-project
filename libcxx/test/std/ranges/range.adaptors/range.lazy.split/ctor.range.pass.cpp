@@ -7,20 +7,21 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template <input_range Range>
 //   requires constructible_from<View, views::all_t<Range>> &&
 //             constructible_from<Pattern, single_view<range_value_t<Range>>>
-// constexpr lazy_split_view(Range&& r, range_value_t<Range> e);
+// constexpr lazy_split_view(Range&& r, range_value_t<Range> e); // explicit since C++23
 
 #include <ranges>
 
 #include <cassert>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <utility>
-#include "small_string.h"
+
+#include "test_convertible.h"
 #include "types.h"
 
 struct ElementWithCounting {
@@ -72,39 +73,46 @@ struct RangeWithCounting {
 static_assert( std::ranges::forward_range<RangeWithCounting>);
 static_assert(!std::ranges::view<RangeWithCounting>);
 
-struct StrRange {
-  SmallString buffer_;
-  constexpr explicit StrRange() = default;
-  constexpr StrRange(const char* ptr) : buffer_(ptr) {}
-  constexpr const char* begin() const { return buffer_.begin(); }
-  constexpr const char* end() const { return buffer_.end(); }
-  constexpr bool operator==(const StrRange& rhs) const { return buffer_ == rhs.buffer_; }
-};
-static_assert( std::ranges::random_access_range<StrRange>);
-static_assert(!std::ranges::view<StrRange>);
-static_assert( std::is_copy_constructible_v<StrRange>);
-
 struct StrView : std::ranges::view_base {
-  SmallString buffer_;
+  std::string_view buffer_;
   constexpr explicit StrView() = default;
   constexpr StrView(const char* ptr) : buffer_(ptr) {}
+  // Intentionally don't forward to range constructor for std::string_view since
+  // this test needs to work on C++20 as well and the range constructor is only for
+  // C++23 and later.
   template <std::ranges::range R>
-  constexpr StrView(R&& r) : buffer_(std::forward<R>(r)) {}
-  constexpr const char* begin() const { return buffer_.begin(); }
-  constexpr const char* end() const { return buffer_.end(); }
+  constexpr StrView(R&& r) : buffer_(r.begin(), r.end()) {}
+  constexpr std::string_view::const_iterator begin() const { return buffer_.begin(); }
+  constexpr std::string_view::const_iterator end() const { return buffer_.end(); }
   constexpr bool operator==(const StrView& rhs) const { return buffer_ == rhs.buffer_; }
 };
 static_assert( std::ranges::random_access_range<StrView>);
 static_assert( std::ranges::view<StrView>);
 static_assert( std::is_copy_constructible_v<StrView>);
 
+// SFINAE tests.
+
+#if TEST_STD_VER >= 23
+
+static_assert(
+    !test_convertible<std::ranges::lazy_split_view<StrView, StrView>, StrView, std::ranges::range_value_t<StrView>>(),
+    "This constructor must be explicit");
+
+#else
+
+static_assert(
+    test_convertible<std::ranges::lazy_split_view<StrView, StrView>, StrView, std::ranges::range_value_t<StrView>>(),
+    "This constructor must not be explicit");
+
+#endif // TEST_STD_VER >= 23
+
 constexpr bool test() {
   {
     using V = std::ranges::lazy_split_view<StrView, StrView>;
 
-    // Calling the constructor with `(StrRange, range_value_t)`.
+    // Calling the constructor with `(std::string, range_value_t)`.
     {
-      StrRange input;
+      std::string input;
       V v(input, ' ');
       assert(v.base() == input);
     }

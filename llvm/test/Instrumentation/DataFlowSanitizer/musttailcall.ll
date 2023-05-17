@@ -1,5 +1,5 @@
-; RUN: opt < %s -dfsan -S | FileCheck %s
-; RUN: opt < %s -dfsan -dfsan-track-origins=1 -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN
+; RUN: opt < %s -passes=dfsan -S | FileCheck %s
+; RUN: opt < %s -passes=dfsan -dfsan-track-origins=1 -S | FileCheck %s --check-prefixes=CHECK,CHECK_ORIGIN
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
@@ -45,15 +45,13 @@ define i32 @outer_caller() {
   ret i32 %r
 }
 
-declare i32* @mismatching_callee(i32)
+declare ptr @mismatching_callee(i32)
 
-; CHECK-LABEL: define i8* @mismatching_musttail_call.dfsan
-define i8* @mismatching_musttail_call(i32) {
-  %r = musttail call i32* @mismatching_callee(i32 %0)
-  ; CHECK: musttail call i32* @mismatching_callee.dfsan
+; CHECK-LABEL: define ptr @mismatching_musttail_call.dfsan
+define ptr @mismatching_musttail_call(i32) {
+  %r = musttail call ptr @mismatching_callee(i32 %0)
+  ; CHECK: musttail call ptr @mismatching_callee.dfsan
   ; COMM: No instrumentation between call and ret.
-  ; CHECK-NEXT: bitcast i32* {{.*}} to i8*
-  %c = bitcast i32* %r to i8*
-  ; CHECK-NEXT: ret i8*
-  ret i8* %c
+  ; CHECK-NEXT: ret ptr
+  ret ptr %r
 }

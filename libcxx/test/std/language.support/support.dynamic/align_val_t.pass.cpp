@@ -15,6 +15,7 @@
 // UNSUPPORTED: target={{.+}}-zos{{.*}}
 
 #include <new>
+#include <type_traits>
 
 #include "test_macros.h"
 

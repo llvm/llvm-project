@@ -2,54 +2,54 @@
 
 ; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/inline-callee-update.prof -S | FileCheck %s
 
-@y = global i32* ()* null, align 8
-@z = global i32* ()* null, align 8
+@y = global ptr null, align 8
+@z = global ptr null, align 8
 
-; CHECK: define i32* @sample_loader_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
-define i32* @sample_loader_inlinee() #0 !dbg !3 {
+; CHECK: define ptr @sample_loader_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
+define ptr @sample_loader_inlinee() #0 !dbg !3 {
 bb:
-  %tmp = call i32* @direct_leaf_func(i32* null), !dbg !4
-  %cmp = icmp ne i32* %tmp, null
+  %tmp = call ptr @direct_leaf_func(ptr null), !dbg !4
+  %cmp = icmp ne ptr %tmp, null
   br i1 %cmp, label %then, label %else
 
 then:                                             ; preds = %bb
-  %tmp1 = load i32* ()*, i32* ()** @z, align 8, !dbg !5
-  %tmp2 = call i32* %tmp1(), !dbg !5
-  ret i32* %tmp2
+  %tmp1 = load ptr, ptr @z, align 8, !dbg !5
+  %tmp2 = call ptr %tmp1(), !dbg !5
+  ret ptr %tmp2
 
 else:                                             ; preds = %bb
-  ret i32* null
+  ret ptr null
 }
 
-; CHECK: define i32* @cgscc_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
-define i32* @cgscc_inlinee() #0 !dbg !6 {
+; CHECK: define ptr @cgscc_inlinee() {{.*}} !prof ![[ENTRY:[0-9]+]]
+define ptr @cgscc_inlinee() #0 !dbg !6 {
 bb:
-  %tmp = call i32* @direct_leaf_func(i32* null), !dbg !7
-  %cmp = icmp ne i32* %tmp, null
+  %tmp = call ptr @direct_leaf_func(ptr null), !dbg !7
+  %cmp = icmp ne ptr %tmp, null
   br i1 %cmp, label %then, label %else
 
 then:                                             ; preds = %bb
-  %tmp1 = load i32* ()*, i32* ()** @y, align 8, !dbg !8
-  %tmp2 = call i32* %tmp1(), !dbg !8
-  ret i32* %tmp2
+  %tmp1 = load ptr, ptr @y, align 8, !dbg !8
+  %tmp2 = call ptr %tmp1(), !dbg !8
+  ret ptr %tmp2
 
 else:                                             ; preds = %bb
-  ret i32* null
+  ret ptr null
 }
 
-define i32* @test_sample_loader_inline(void ()* %arg) #0 !dbg !9 {
+define ptr @test_sample_loader_inline(ptr %arg) #0 !dbg !9 {
 bb:
-  %tmp = call i32* @sample_loader_inlinee(), !dbg !10
-  ret i32* %tmp
+  %tmp = call ptr @sample_loader_inlinee(), !dbg !10
+  ret ptr %tmp
 }
 
-define i32* @test_cgscc_inline(void ()* %arg) #0 !dbg !11 {
+define ptr @test_cgscc_inline(ptr %arg) #0 !dbg !11 {
 bb:
-  %tmp = call i32* @cgscc_inlinee(), !dbg !12
-  ret i32* %tmp
+  %tmp = call ptr @cgscc_inlinee(), !dbg !12
+  ret ptr %tmp
 }
 
-declare i32* @direct_leaf_func(i32*)
+declare ptr @direct_leaf_func(ptr)
 
 attributes #0 = {"use-sample-profile"}
 

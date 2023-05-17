@@ -79,14 +79,13 @@ TEST(MachineInstructionDoubleWidthResult, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -236,14 +235,13 @@ TEST(MachineInstructionHorizontalReduction, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -336,14 +334,13 @@ TEST(MachineInstructionRetainsPreviousHalfElement, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -583,18 +580,12 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
     case MVE_VRMLALDAVHu32:
     case MVE_VRMLSLDAVHas32:
     case MVE_VRMLSLDAVHs32:
-    case MVE_VMLAS_qr_s16:
-    case MVE_VMLAS_qr_s32:
-    case MVE_VMLAS_qr_s8:
-    case MVE_VMLAS_qr_u16:
-    case MVE_VMLAS_qr_u32:
-    case MVE_VMLAS_qr_u8:
-    case MVE_VMLA_qr_s16:
-    case MVE_VMLA_qr_s32:
-    case MVE_VMLA_qr_s8:
-    case MVE_VMLA_qr_u16:
-    case MVE_VMLA_qr_u32:
-    case MVE_VMLA_qr_u8:
+    case MVE_VMLAS_qr_i16:
+    case MVE_VMLAS_qr_i32:
+    case MVE_VMLAS_qr_i8:
+    case MVE_VMLA_qr_i16:
+    case MVE_VMLA_qr_i32:
+    case MVE_VMLA_qr_i8:
     case MVE_VHADD_qr_s16:
     case MVE_VHADD_qr_s32:
     case MVE_VHADD_qr_s8:
@@ -1049,14 +1040,13 @@ TEST(MachineInstrValidTailPredication, IsCorrect) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -1191,13 +1181,13 @@ TEST(MachineInstr, HasSideEffects) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-      static_cast<LLVMTargetMachine *>(T->createTargetMachine(
-          TT, "generic", "", Options, None, None, CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);
@@ -1311,10 +1301,8 @@ TEST(MachineInstr, MVEVecSize) {
     case MVE_VMLADAVs8:
     case MVE_VMLADAVu8:
     case MVE_VMLADAVxs8:
-    case MVE_VMLAS_qr_s8:
-    case MVE_VMLAS_qr_u8:
-    case MVE_VMLA_qr_s8:
-    case MVE_VMLA_qr_u8:
+    case MVE_VMLAS_qr_i8:
+    case MVE_VMLA_qr_i8:
     case MVE_VMLSDAVas8:
     case MVE_VMLSDAVaxs8:
     case MVE_VMLSDAVs8:
@@ -1542,10 +1530,8 @@ TEST(MachineInstr, MVEVecSize) {
     case MVE_VMLALDAVs16:
     case MVE_VMLALDAVu16:
     case MVE_VMLALDAVxs16:
-    case MVE_VMLAS_qr_s16:
-    case MVE_VMLAS_qr_u16:
-    case MVE_VMLA_qr_s16:
-    case MVE_VMLA_qr_u16:
+    case MVE_VMLAS_qr_i16:
+    case MVE_VMLA_qr_i16:
     case MVE_VMLSDAVas16:
     case MVE_VMLSDAVaxs16:
     case MVE_VMLSDAVs16:
@@ -1856,10 +1842,8 @@ TEST(MachineInstr, MVEVecSize) {
     case MVE_VMLALDAVs32:
     case MVE_VMLALDAVu32:
     case MVE_VMLALDAVxs32:
-    case MVE_VMLAS_qr_s32:
-    case MVE_VMLAS_qr_u32:
-    case MVE_VMLA_qr_s32:
-    case MVE_VMLA_qr_u32:
+    case MVE_VMLAS_qr_i32:
+    case MVE_VMLA_qr_i32:
     case MVE_VMLSDAVas32:
     case MVE_VMLSDAVaxs32:
     case MVE_VMLSDAVs32:
@@ -2077,14 +2061,13 @@ TEST(MachineInstr, MVEVecSize) {
   const Target *T = TargetRegistry::lookupTarget(TT, Error);
   if (!T) {
     dbgs() << Error;
-    return;
+    GTEST_SKIP();
   }
 
   TargetOptions Options;
-  auto TM = std::unique_ptr<LLVMTargetMachine>(
-    static_cast<LLVMTargetMachine*>(
-      T->createTargetMachine(TT, "generic", "", Options, None, None,
-                             CodeGenOpt::Default)));
+  auto TM = std::unique_ptr<LLVMTargetMachine>(static_cast<LLVMTargetMachine *>(
+      T->createTargetMachine(TT, "generic", "", Options, std::nullopt,
+                             std::nullopt, CodeGenOpt::Default)));
   ARMSubtarget ST(TM->getTargetTriple(), std::string(TM->getTargetCPU()),
                   std::string(TM->getTargetFeatureString()),
                   *static_cast<const ARMBaseTargetMachine *>(TM.get()), false);

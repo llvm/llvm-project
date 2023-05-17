@@ -14,7 +14,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-using llvm::None;
 
 class TestSignals : public UnixSignals {
 public:
@@ -24,6 +23,10 @@ public:
     AddSignal(4, "SIG4", true, false, true, "DESC4");
     AddSignal(8, "SIG8", true, true, true, "DESC8");
     AddSignal(16, "SIG16", true, false, false, "DESC16");
+    AddSignalCode(16, 1, "a specific type of SIG16");
+    AddSignalCode(16, 2, "SIG16 with a fault address",
+                  SignalCodePrintOption::Address);
+    AddSignalCode(16, 3, "bounds violation", SignalCodePrintOption::Bounds);
   }
 };
 
@@ -94,6 +97,50 @@ TEST(UnixSignalsTest, GetInfo) {
   EXPECT_EQ(name, signals.GetSignalAsCString(signo));
 }
 
+TEST(UnixSignalsTest, GetAsCString) {
+  TestSignals signals;
+
+  ASSERT_EQ(nullptr, signals.GetSignalAsCString(100));
+  std::string name = signals.GetSignalAsCString(16);
+  ASSERT_EQ("SIG16", name);
+}
+
+TEST(UnixSignalsTest, GetAsString) {
+  TestSignals signals;
+
+  ASSERT_EQ("", signals.GetSignalDescription(100, std::nullopt));
+  ASSERT_EQ("SIG16", signals.GetSignalDescription(16, std::nullopt));
+  ASSERT_EQ("", signals.GetSignalDescription(100, 100));
+  ASSERT_EQ("SIG16", signals.GetSignalDescription(16, 100));
+  ASSERT_EQ("SIG16: a specific type of SIG16",
+            signals.GetSignalDescription(16, 1));
+
+  // Unknown code, won't use the address.
+  ASSERT_EQ("SIG16", signals.GetSignalDescription(16, 100, 0xCAFEF00D));
+  // Known code, that shouldn't print fault address.
+  ASSERT_EQ("SIG16: a specific type of SIG16",
+            signals.GetSignalDescription(16, 1, 0xCAFEF00D));
+  // Known code that should.
+  ASSERT_EQ("SIG16: SIG16 with a fault address (fault address: 0xcafef00d)",
+            signals.GetSignalDescription(16, 2, 0xCAFEF00D));
+  // No address given just print the code description.
+  ASSERT_EQ("SIG16: SIG16 with a fault address",
+            signals.GetSignalDescription(16, 2));
+
+  const char *expected = "SIG16: bounds violation";
+  // Must pass all needed info to get full output.
+  ASSERT_EQ(expected, signals.GetSignalDescription(16, 3));
+  ASSERT_EQ(expected, signals.GetSignalDescription(16, 3, 0xcafef00d));
+  ASSERT_EQ(expected, signals.GetSignalDescription(16, 3, 0xcafef00d, 0x1234));
+
+  ASSERT_EQ("SIG16: upper bound violation (fault address: 0x5679, lower bound: "
+            "0x1234, upper bound: 0x5678)",
+            signals.GetSignalDescription(16, 3, 0x5679, 0x1234, 0x5678));
+  ASSERT_EQ("SIG16: lower bound violation (fault address: 0x1233, lower bound: "
+            "0x1234, upper bound: 0x5678)",
+            signals.GetSignalDescription(16, 3, 0x1233, 0x1234, 0x5678));
+}
+
 TEST(UnixSignalsTest, VersionChange) {
   TestSignals signals;
 
@@ -128,31 +175,35 @@ TEST(UnixSignalsTest, VersionChange) {
 TEST(UnixSignalsTest, GetFilteredSignals) {
   TestSignals signals;
 
-  auto all_signals = signals.GetFilteredSignals(None, None, None);
+  auto all_signals =
+      signals.GetFilteredSignals(std::nullopt, std::nullopt, std::nullopt);
   std::vector<int32_t> expected = {2, 4, 8, 16};
   EXPECT_EQ_ARRAYS(expected, all_signals);
 
-  auto supressed = signals.GetFilteredSignals(true, None, None);
+  auto supressed = signals.GetFilteredSignals(true, std::nullopt, std::nullopt);
   expected = {4, 8, 16};
   EXPECT_EQ_ARRAYS(expected, supressed);
 
-  auto not_supressed = signals.GetFilteredSignals(false, None, None);
+  auto not_supressed =
+      signals.GetFilteredSignals(false, std::nullopt, std::nullopt);
   expected = {2};
   EXPECT_EQ_ARRAYS(expected, not_supressed);
 
-  auto stopped = signals.GetFilteredSignals(None, true, None);
+  auto stopped = signals.GetFilteredSignals(std::nullopt, true, std::nullopt);
   expected = {2, 8};
   EXPECT_EQ_ARRAYS(expected, stopped);
 
-  auto not_stopped = signals.GetFilteredSignals(None, false, None);
+  auto not_stopped =
+      signals.GetFilteredSignals(std::nullopt, false, std::nullopt);
   expected = {4, 16};
   EXPECT_EQ_ARRAYS(expected, not_stopped);
 
-  auto notified = signals.GetFilteredSignals(None, None, true);
+  auto notified = signals.GetFilteredSignals(std::nullopt, std::nullopt, true);
   expected = {2, 4, 8};
   EXPECT_EQ_ARRAYS(expected, notified);
 
-  auto not_notified = signals.GetFilteredSignals(None, None, false);
+  auto not_notified =
+      signals.GetFilteredSignals(std::nullopt, std::nullopt, false);
   expected = {16};
   EXPECT_EQ_ARRAYS(expected, not_notified);
 

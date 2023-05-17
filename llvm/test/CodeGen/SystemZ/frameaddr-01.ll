@@ -2,18 +2,18 @@
 
 ; The current function's frame address is the address of
 ; the optional back chain slot.
-define i8* @fp0() nounwind {
+define ptr @fp0() nounwind {
 entry:
 ; CHECK-LABEL: fp0:
 ; CHECK: la   %r2, 0(%r15)
 ; CHECK: br   %r14
-  %0 = tail call i8* @llvm.frameaddress(i32 0)
-  ret i8* %0
+  %0 = tail call ptr @llvm.frameaddress(i32 0)
+  ret ptr %0
 }
 
 ; Check that the frame address is correct in a presence
 ; of a stack frame.
-define i8* @fp0f() nounwind {
+define ptr @fp0f() nounwind {
 entry:
 ; CHECK-LABEL: fp0f:
 ; CHECK: aghi %r15, -168
@@ -21,8 +21,8 @@ entry:
 ; CHECK: aghi %r15, 168
 ; CHECK: br   %r14
   %0 = alloca i64, align 8
-  %1 = tail call i8* @llvm.frameaddress(i32 0)
-  ret i8* %1
+  %1 = tail call ptr @llvm.frameaddress(i32 0)
+  ret ptr %1
 }
 
-declare i8* @llvm.frameaddress(i32) nounwind readnone
+declare ptr @llvm.frameaddress(i32) nounwind readnone

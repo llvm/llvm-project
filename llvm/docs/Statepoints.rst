@@ -556,9 +556,9 @@ relocations.  To do this, it replaces all calls or invokes of functions which
 might contain a safepoint poll with a ``gc.statepoint`` and associated full
 relocation sequence, including all required ``gc.relocates``.
 
-Note that by default, this pass only runs for the "statepoint-example" or
-"core-clr" gc strategies.  You will need to add your custom strategy to this
-list or use one of the predefined ones.
+This pass only applies to GCStrategy instances where the ``UseRS4GC`` flag
+is set. The two builtin GC strategies with this set are the
+"statepoint-example" and "coreclr" strategies.
 
 As an example, given this code:
 
@@ -583,8 +583,11 @@ The pass would produce this IR:
 
 In the above examples, the addrspace(1) marker on the pointers is the mechanism
 that the ``statepoint-example`` GC strategy uses to distinguish references from
-non references.  The pass assumes that all addrspace(1) pointers are non-integral
-pointer types.  Address space 1 is not globally reserved for this purpose.
+non references.  This is controlled via GCStrategy::isGCManagedPointer. The
+``statepoint-example`` and ``coreclr`` strategies (the only two default
+strategies that support statepoints) both use addrspace(1) to determine which
+pointers are references, however custom strategies don't have to follow this
+convention.
 
 This pass can be used an utility function by a language frontend that doesn't
 want to manually reason about liveness, base pointers, or relocation when

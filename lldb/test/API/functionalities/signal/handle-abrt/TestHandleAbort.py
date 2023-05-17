@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class HandleAbortTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows  # signals do not exist on Windows
@@ -66,5 +64,5 @@ class HandleAbortTestCase(TestBase):
 
         # Continue until we exit.
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         self.assertEqual(process.GetExitStatus(), 0)

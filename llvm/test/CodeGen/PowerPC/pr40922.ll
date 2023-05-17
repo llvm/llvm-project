@@ -6,8 +6,8 @@
 
 define i32 @a() {
 entry:
-  %call = tail call i32 bitcast (i32 (...)* @d to i32 ()*)()
-  %0 = load i32, i32* @a.b, align 4
+  %call = tail call i32 @d()
+  %0 = load i32, ptr @a.b, align 4
   %conv = zext i32 %0 to i64
   %add = add nuw nsw i64 %conv, 6
   %and = and i64 %add, 8589934575
@@ -15,11 +15,11 @@ entry:
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:                                          ; preds = %entry
-  %call3 = tail call i32 bitcast (i32 (...)* @e to i32 ()*)()
+  %call3 = tail call i32 @e()
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry
-  store i32 %call, i32* @a.b, align 4
+  store i32 %call, ptr @a.b, align 4
   ret i32 undef
 }
 

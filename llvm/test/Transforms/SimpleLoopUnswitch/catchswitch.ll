@@ -1,4 +1,4 @@
-; RUN: opt -passes=simple-loop-unswitch -enable-nontrivial-unswitch < %s -S | FileCheck %s
+; RUN: opt -passes='simple-loop-unswitch<nontrivial>' < %s -S | FileCheck %s
 
 ; CHECK: if.end{{.*}}:
 ; CHECK-NOT: if.end{{.*}}:
@@ -6,7 +6,7 @@ declare i32 @__gxx_wasm_personality_v0(...)
 
 declare void @foo()
 
-define void @test(i1 %arg) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test(i1 %arg) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   br label %while.body
 
@@ -24,7 +24,7 @@ catch.dispatch:                                   ; preds = %invoke.cont, %if.en
   %0 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
+  %1 = catchpad within %0 [ptr null]
   unreachable
 
 cleanup:                                          ; preds = %invoke.cont

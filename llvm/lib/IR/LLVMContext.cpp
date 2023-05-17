@@ -87,6 +87,11 @@ LLVMContext::LLVMContext() : pImpl(new LLVMContextImpl(*this)) {
          "ptrauth operand bundle id drifted!");
   (void)PtrauthEntry;
 
+  auto *KCFIEntry = pImpl->getOrInsertBundleTag("kcfi");
+  assert(KCFIEntry->second == LLVMContext::OB_kcfi &&
+         "kcfi operand bundle id drifted!");
+  (void)KCFIEntry;
+
   SyncScope::ID SingleThreadSSID =
       pImpl->getOrInsertSyncScopeID("singlethread");
   assert(SingleThreadSSID == SyncScope::SingleThread &&
@@ -135,7 +140,7 @@ bool LLVMContext::getDiagnosticsHotnessRequested() const {
   return pImpl->DiagnosticsHotnessRequested;
 }
 
-void LLVMContext::setDiagnosticsHotnessThreshold(Optional<uint64_t> Threshold) {
+void LLVMContext::setDiagnosticsHotnessThreshold(std::optional<uint64_t> Threshold) {
   pImpl->DiagnosticsHotnessThreshold = Threshold;
 }
 void LLVMContext::setMisExpectWarningRequested(bool Requested) {
@@ -145,18 +150,18 @@ bool LLVMContext::getMisExpectWarningRequested() const {
   return pImpl->MisExpectWarningRequested;
 }
 uint64_t LLVMContext::getDiagnosticsHotnessThreshold() const {
-  return pImpl->DiagnosticsHotnessThreshold.getValueOr(UINT64_MAX);
+  return pImpl->DiagnosticsHotnessThreshold.value_or(UINT64_MAX);
 }
 void LLVMContext::setDiagnosticsMisExpectTolerance(
-    Optional<uint64_t> Tolerance) {
+    std::optional<uint32_t> Tolerance) {
   pImpl->DiagnosticsMisExpectTolerance = Tolerance;
 }
-uint64_t LLVMContext::getDiagnosticsMisExpectTolerance() const {
-  return pImpl->DiagnosticsMisExpectTolerance.getValueOr(0);
+uint32_t LLVMContext::getDiagnosticsMisExpectTolerance() const {
+  return pImpl->DiagnosticsMisExpectTolerance.value_or(0);
 }
 
 bool LLVMContext::isDiagnosticsHotnessThresholdSetFromPSI() const {
-  return !pImpl->DiagnosticsHotnessThreshold.hasValue();
+  return !pImpl->DiagnosticsHotnessThreshold.has_value();
 }
 
 remarks::RemarkStreamer *LLVMContext::getMainRemarkStreamer() {
@@ -363,18 +368,10 @@ std::unique_ptr<DiagnosticHandler> LLVMContext::getDiagnosticHandler() {
   return std::move(pImpl->DiagHandler);
 }
 
-bool LLVMContext::hasSetOpaquePointersValue() const {
-  return pImpl->hasOpaquePointersValue();
-}
-
 void LLVMContext::setOpaquePointers(bool Enable) const {
   pImpl->setOpaquePointers(Enable);
 }
 
 bool LLVMContext::supportsTypedPointers() const {
   return !pImpl->getOpaquePointers();
-}
-
-Any &LLVMContext::getTargetData() const {
-  return pImpl->TargetDataStorage;
 }

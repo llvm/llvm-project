@@ -19,16 +19,26 @@ def get_required_attr(config, attr_name):
 # Setup source root.
 config.test_source_root = os.path.dirname(__file__)
 
-# Choose between standalone and LSan+ASan modes.
+# Choose between standalone and LSan+(ASan|HWAsan) modes.
 lsan_lit_test_mode = get_required_attr(config, 'lsan_lit_test_mode')
+target_arch = getattr(config, 'target_arch', None)
 
 if lsan_lit_test_mode == "Standalone":
   config.name = "LeakSanitizer-Standalone"
   lsan_cflags = ["-fsanitize=leak"]
+  config.available_features.add('lsan-standalone')
 elif lsan_lit_test_mode == "AddressSanitizer":
   config.name = "LeakSanitizer-AddressSanitizer"
   lsan_cflags = ["-fsanitize=address"]
   config.available_features.add('asan')
+  if config.host_os == 'NetBSD':
+    config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
+elif lsan_lit_test_mode == "HWAddressSanitizer":
+  config.name = "LeakSanitizer-HWAddressSanitizer"
+  lsan_cflags = ["-fsanitize=hwaddress", "-fuse-ld=lld"]
+  if target_arch == "x86_64":
+    lsan_cflags = lsan_cflags + [ '-fsanitize-hwaddress-experimental-aliasing']
+  config.available_features.add('hwasan')
   if config.host_os == 'NetBSD':
     config.substitutions.insert(0, ('%run', config.netbsd_noaslr_prefix))
 else:
@@ -72,11 +82,14 @@ config.substitutions.append( ("%clang ", build_invocation(clang_cflags)) )
 config.substitutions.append( ("%clangxx ", build_invocation(clang_cxxflags)) )
 config.substitutions.append( ("%clang_lsan ", build_invocation(clang_lsan_cflags)) )
 config.substitutions.append( ("%clangxx_lsan ", build_invocation(clang_lsan_cxxflags)) )
+config.substitutions.append( ("%clang_hwasan ", build_invocation(clang_lsan_cflags)) )
+config.substitutions.append( ("%clangxx_hwasan ", build_invocation(clang_lsan_cxxflags)) )
+
 
 # LeakSanitizer tests are currently supported on
-# Android{aarch64, x86, x86_64}, x86-64 Linux, PowerPC64 Linux, arm Linux, mips64 Linux, s390x Linux and x86_64 Darwin.
+# Android{aarch64, x86, x86_64}, x86-64 Linux, PowerPC64 Linux, arm Linux, mips64 Linux, s390x Linux, loongarch64 Linux and x86_64 Darwin.
 supported_android = config.android and config.target_arch in ['x86_64', 'i386', 'aarch64'] and 'android-thread-properties-api' in config.available_features
-supported_linux = (not config.android) and config.host_os == 'Linux' and config.host_arch in ['aarch64', 'x86_64', 'ppc64', 'ppc64le', 'mips64', 'riscv64', 'arm', 'armhf', 'armv7l', 's390x']
+supported_linux = (not config.android) and config.host_os == 'Linux' and config.host_arch in ['aarch64', 'x86_64', 'ppc64', 'ppc64le', 'mips64', 'riscv64', 'arm', 'armhf', 'armv7l', 's390x', 'loongarch64']
 supported_darwin = config.host_os == 'Darwin' and config.target_arch in ['x86_64']
 supported_netbsd = config.host_os == 'NetBSD' and config.target_arch in ['x86_64', 'i386']
 if not (supported_android or supported_linux or supported_darwin or supported_netbsd):
@@ -84,6 +97,11 @@ if not (supported_android or supported_linux or supported_darwin or supported_ne
 
 # Don't support Thumb due to broken fast unwinder
 if re.search('mthumb', config.target_cflags) is not None:
+  config.unsupported = True
+
+# HWASAN tests require lld because without D65857, ld.bfd and ld.gold would
+# generate a corrupted binary. Mark them unsupported if lld is not available.
+if 'hwasan' in config.available_features and not config.has_lld:
   config.unsupported = True
 
 config.suffixes = ['.c', '.cpp', '.mm']

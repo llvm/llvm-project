@@ -20,17 +20,20 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_function
-    : public _BoolConstant<
-#ifdef __clang__
-    __is_function(_Tp)
+#if __has_builtin(__is_function)
+
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_function : integral_constant<bool, __is_function(_Tp)> {};
+
 #else
- !(is_reference<_Tp>::value || is_const<const _Tp>::value)
-#endif
-    > {};
 
+template <class _Tp>
+struct _LIBCPP_TEMPLATE_VIS is_function
+    : public integral_constant<bool, !(is_reference<_Tp>::value || is_const<const _Tp>::value)> {};
 
-#if _LIBCPP_STD_VER > 14
+#endif // __has_builtin(__is_function)
+
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_function_v = is_function<_Tp>::value;
 #endif

@@ -8,15 +8,21 @@
 
 #include "mlir/Conversion/MathToLibm/MathToLibm.h"
 
-#include "../PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Utils/VectorUtils.h"
 #include "mlir/IR/BuiltinDialect.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
+#include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTMATHTOLIBM
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -45,8 +51,8 @@ struct ScalarOpToLibmCall : public OpRewritePattern<Op> {
 public:
   using OpRewritePattern<Op>::OpRewritePattern;
   ScalarOpToLibmCall<Op>(MLIRContext *context, StringRef floatFunc,
-                         StringRef doubleFunc, PatternBenefit benefit)
-      : OpRewritePattern<Op>(context, benefit), floatFunc(floatFunc),
+                         StringRef doubleFunc)
+      : OpRewritePattern<Op>(context), floatFunc(floatFunc),
         doubleFunc(doubleFunc){};
 
   LogicalResult matchAndRewrite(Op op, PatternRewriter &rewriter) const final;
@@ -54,6 +60,14 @@ public:
 private:
   std::string floatFunc, doubleFunc;
 };
+
+template <typename OpTy>
+void populatePatternsForOp(RewritePatternSet &patterns, MLIRContext *ctx,
+                           StringRef floatFunc, StringRef doubleFunc) {
+  patterns.add<VecOpToScalarOp<OpTy>, PromoteOpToF32<OpTy>>(ctx);
+  patterns.add<ScalarOpToLibmCall<OpTy>>(ctx, floatFunc, doubleFunc);
+}
+
 } // namespace
 
 template <typename Op>
@@ -61,7 +75,7 @@ LogicalResult
 VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto opType = op.getType();
   auto loc = op.getLoc();
-  auto vecType = opType.template dyn_cast<VectorType>();
+  auto vecType = dyn_cast<VectorType>(opType);
 
   if (!vecType)
     return failure();
@@ -73,10 +87,9 @@ VecOpToScalarOp<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   Value result = rewriter.create<arith::ConstantOp>(
       loc, DenseElementsAttr::get(
                vecType, FloatAttr::get(vecType.getElementType(), 0.0)));
-  SmallVector<int64_t> ones(shape.size(), 1);
-  SmallVector<int64_t> strides = computeStrides(shape, ones);
+  SmallVector<int64_t> strides = computeStrides(shape);
   for (auto linearIndex = 0; linearIndex < numElements; ++linearIndex) {
-    SmallVector<int64_t> positions = delinearize(strides, linearIndex);
+    SmallVector<int64_t> positions = delinearize(linearIndex, strides);
     SmallVector<Value> operands;
     for (auto input : op->getOperands())
       operands.push_back(
@@ -94,7 +107,7 @@ template <typename Op>
 LogicalResult
 PromoteOpToF32<Op>::matchAndRewrite(Op op, PatternRewriter &rewriter) const {
   auto opType = op.getType();
-  if (!opType.template isa<Float16Type, BFloat16Type>())
+  if (!isa<Float16Type, BFloat16Type>(opType))
     return failure();
 
   auto loc = op.getLoc();
@@ -114,7 +127,7 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
                                         PatternRewriter &rewriter) const {
   auto module = SymbolTable::getNearestSymbolTable(op);
   auto type = op.getType();
-  if (!type.template isa<Float32Type, Float64Type>())
+  if (!isa<Float32Type, Float64Type>(type))
     return failure();
 
   auto name = type.getIntOrFloatBitWidth() == 64 ? doubleFunc : floatFunc;
@@ -129,6 +142,14 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
     opFunc = rewriter.create<func::FuncOp>(rewriter.getUnknownLoc(), name,
                                            opFunctionTy);
     opFunc.setPrivate();
+
+    // By definition Math dialect operations imply LLVM's "readnone"
+    // function attribute, so we can set it here to provide more
+    // optimization opportunities (e.g. LICM) for backends targeting LLVM IR.
+    // This will have to be changed, when strict FP behavior is supported
+    // by Math dialect.
+    opFunc->setAttr(LLVM::LLVMDialect::getReadnoneAttrName(),
+                    UnitAttr::get(rewriter.getContext()));
   }
   assert(isa<FunctionOpInterface>(SymbolTable::lookupSymbolIn(module, name)));
 
@@ -138,27 +159,30 @@ ScalarOpToLibmCall<Op>::matchAndRewrite(Op op,
   return success();
 }
 
-void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns,
-                                                PatternBenefit benefit) {
-  patterns.add<VecOpToScalarOp<math::Atan2Op>, VecOpToScalarOp<math::ExpM1Op>,
-               VecOpToScalarOp<math::TanhOp>>(patterns.getContext(), benefit);
-  patterns.add<PromoteOpToF32<math::Atan2Op>, PromoteOpToF32<math::ExpM1Op>,
-               PromoteOpToF32<math::TanhOp>>(patterns.getContext(), benefit);
-  patterns.add<ScalarOpToLibmCall<math::Atan2Op>>(patterns.getContext(),
-                                                  "atan2f", "atan2", benefit);
-  patterns.add<ScalarOpToLibmCall<math::ErfOp>>(patterns.getContext(), "erff",
-                                                "erf", benefit);
-  patterns.add<ScalarOpToLibmCall<math::ExpM1Op>>(patterns.getContext(),
-                                                  "expm1f", "expm1", benefit);
-  patterns.add<ScalarOpToLibmCall<math::TanhOp>>(patterns.getContext(), "tanhf",
-                                                 "tanh", benefit);
-  patterns.add<ScalarOpToLibmCall<math::RoundOp>>(patterns.getContext(),
-                                                  "roundf", "round", benefit);
+void mlir::populateMathToLibmConversionPatterns(RewritePatternSet &patterns) {
+  MLIRContext *ctx = patterns.getContext();
+
+  populatePatternsForOp<math::Atan2Op>(patterns, ctx, "atan2f", "atan2");
+  populatePatternsForOp<math::AtanOp>(patterns, ctx, "atanf", "atan");
+  populatePatternsForOp<math::CbrtOp>(patterns, ctx, "cbrtf", "cbrt");
+  populatePatternsForOp<math::CeilOp>(patterns, ctx, "ceilf", "ceil");
+  populatePatternsForOp<math::CosOp>(patterns, ctx, "cosf", "cos");
+  populatePatternsForOp<math::ErfOp>(patterns, ctx, "erff", "erf");
+  populatePatternsForOp<math::ExpM1Op>(patterns, ctx, "expm1f", "expm1");
+  populatePatternsForOp<math::FloorOp>(patterns, ctx, "floorf", "floor");
+  populatePatternsForOp<math::Log1pOp>(patterns, ctx, "log1pf", "log1p");
+  populatePatternsForOp<math::RoundEvenOp>(patterns, ctx, "roundevenf",
+                                           "roundeven");
+  populatePatternsForOp<math::RoundOp>(patterns, ctx, "roundf", "round");
+  populatePatternsForOp<math::SinOp>(patterns, ctx, "sinf", "sin");
+  populatePatternsForOp<math::TanOp>(patterns, ctx, "tanf", "tan");
+  populatePatternsForOp<math::TanhOp>(patterns, ctx, "tanhf", "tanh");
+  populatePatternsForOp<math::TruncOp>(patterns, ctx, "truncf", "trunc");
 }
 
 namespace {
 struct ConvertMathToLibmPass
-    : public ConvertMathToLibmBase<ConvertMathToLibmPass> {
+    : public impl::ConvertMathToLibmBase<ConvertMathToLibmPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -167,11 +191,11 @@ void ConvertMathToLibmPass::runOnOperation() {
   auto module = getOperation();
 
   RewritePatternSet patterns(&getContext());
-  populateMathToLibmConversionPatterns(patterns, /*benefit=*/1);
+  populateMathToLibmConversionPatterns(patterns);
 
   ConversionTarget target(getContext());
-  target.addLegalDialect<arith::ArithmeticDialect, BuiltinDialect,
-                         func::FuncDialect, vector::VectorDialect>();
+  target.addLegalDialect<arith::ArithDialect, BuiltinDialect, func::FuncDialect,
+                         vector::VectorDialect>();
   target.addIllegalDialect<math::MathDialect>();
   if (failed(applyPartialConversion(module, target, std::move(patterns))))
     signalPassFailure();

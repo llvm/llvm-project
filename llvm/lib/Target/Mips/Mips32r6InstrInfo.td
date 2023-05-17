@@ -841,6 +841,7 @@ class GINV_DESC_BASE<string instr_asm, RegisterOperand GPROpnd,
 }
 
 class GINVI_DESC : GINV_DESC_BASE<"ginvi", GPR32Opnd, II_GINVI> {
+  bits<2> type_ = 0b00;
   dag InOperandList = (ins GPR32Opnd:$rs);
   string AsmString = "ginvi\t$rs";
 }

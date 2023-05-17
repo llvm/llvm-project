@@ -3,10 +3,10 @@ source_filename = "b.cpp"
 target datalayout = "e-m:w-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.21.27702"
 
-%struct.S = type { i32 (...)** }
+%struct.S = type { ptr }
 
 ; Function Attrs: norecurse nounwind readnone sspstrong uwtable
-define dso_local void @"?foo@S@@UEAAXXZ"(%struct.S* nocapture %this) unnamed_addr #0 align 2 {
+define dso_local void @"?foo@S@@UEAAXXZ"(ptr nocapture %this) unnamed_addr #0 align 2 {
 entry:
   ret void
 }

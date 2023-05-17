@@ -8,14 +8,14 @@
 
 declare i64 @llvm.vector.reduce.or.v2i64(<2 x i64>)
 
-define i1 @parseHeaders(i64 * %ptr) nounwind {
+define i1 @parseHeaders(ptr %ptr) nounwind {
 ; SSE2-LABEL: parseHeaders:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
-; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -32,21 +32,20 @@ define i1 @parseHeaders(i64 * %ptr) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %vptr = bitcast i64 * %ptr to <2 x i64> *
-  %vload = load <2 x i64>, <2 x i64> * %vptr, align 8
+  %vload = load <2 x i64>, ptr %ptr, align 8
   %vreduce = call i64 @llvm.vector.reduce.or.v2i64(<2 x i64> %vload)
   %vcheck = icmp eq i64 %vreduce, 0
   ret i1 %vcheck
 }
 
-define i1 @parseHeaders2_scalar_or(i64 * %ptr) nounwind {
+define i1 @parseHeaders2_scalar_or(ptr %ptr) nounwind {
 ; SSE2-LABEL: parseHeaders2_scalar_or:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
 ; SSE2-NEXT:    pxor %xmm1, %xmm1
-; SSE2-NEXT:    pcmpeqb %xmm0, %xmm1
-; SSE2-NEXT:    pmovmskb %xmm1, %eax
-; SSE2-NEXT:    cmpl $65535, %eax # imm = 0xFFFF
+; SSE2-NEXT:    pcmpeqd %xmm0, %xmm1
+; SSE2-NEXT:    movmskps %xmm1, %eax
+; SSE2-NEXT:    xorl $15, %eax
 ; SSE2-NEXT:    sete %al
 ; SSE2-NEXT:    retq
 ;
@@ -63,8 +62,7 @@ define i1 @parseHeaders2_scalar_or(i64 * %ptr) nounwind {
 ; AVX-NEXT:    vptest %xmm0, %xmm0
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %vptr = bitcast i64 * %ptr to <2 x i64> *
-  %vload = load <2 x i64>, <2 x i64> * %vptr, align 8
+  %vload = load <2 x i64>, ptr %ptr, align 8
   %v1 = extractelement <2 x i64> %vload, i32 0
   %v2 = extractelement <2 x i64> %vload, i32 1
   %vreduce = or i64 %v1, %v2
@@ -72,7 +70,7 @@ define i1 @parseHeaders2_scalar_or(i64 * %ptr) nounwind {
   ret i1 %vcheck
 }
 
-define i1 @parseHeaders2_scalar_and(i64 * %ptr) nounwind {
+define i1 @parseHeaders2_scalar_and(ptr %ptr) nounwind {
 ; SSE2-LABEL: parseHeaders2_scalar_and:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqu (%rdi), %xmm0
@@ -95,8 +93,7 @@ define i1 @parseHeaders2_scalar_and(i64 * %ptr) nounwind {
 ; AVX-NEXT:    testq %rax, 8(%rdi)
 ; AVX-NEXT:    sete %al
 ; AVX-NEXT:    retq
-  %vptr = bitcast i64 * %ptr to <2 x i64> *
-  %vload = load <2 x i64>, <2 x i64> * %vptr, align 8
+  %vload = load <2 x i64>, ptr %ptr, align 8
   %v1 = extractelement <2 x i64> %vload, i32 0
   %v2 = extractelement <2 x i64> %vload, i32 1
   %vreduce = and i64 %v1, %v2

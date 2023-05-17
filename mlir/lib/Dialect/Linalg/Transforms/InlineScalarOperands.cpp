@@ -12,14 +12,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Passes.h"
+
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_LINALGINLINESCALAROPERANDS
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -35,9 +41,9 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     SmallVector<size_t> scalarOperands;
     SmallVector<AffineMap> newIndexingMaps;
     SmallVector<Value> newOperands;
-    for (OpOperand *opOperand : genericOp.getInputOperands()) {
-      AffineMap map = genericOp.getTiedIndexingMap(opOperand);
-      if (genericOp.isInputTensor(opOperand) && map.isConstant()) {
+    for (OpOperand *opOperand : genericOp.getDpsInputOperands()) {
+      AffineMap map = genericOp.getMatchingIndexingMap(opOperand);
+      if (genericOp.isDpsInput(opOperand) && map.isConstant()) {
         scalarOperands.emplace_back(opOperand->getOperandNumber());
       } else {
         newIndexingMaps.emplace_back(map);
@@ -48,26 +54,24 @@ struct InlineScalarOperands : public OpRewritePattern<GenericOp> {
     if (scalarOperands.empty())
       return failure();
 
-    for (OpOperand *opOperand : genericOp.getOutputOperands())
-      newIndexingMaps.emplace_back(genericOp.getTiedIndexingMap(opOperand));
+    for (OpOperand *opOperand : genericOp.getDpsInitOperands())
+      newIndexingMaps.emplace_back(genericOp.getMatchingIndexingMap(opOperand));
 
     Location loc = genericOp->getLoc();
-    SmallVector<Value> outputOperands = genericOp.getOutputOperands();
+    SmallVector<Value> outputOperands = genericOp.getOutputs();
     auto newOp = rewriter.create<GenericOp>(
         loc, genericOp->getResultTypes(), newOperands, outputOperands,
-        newIndexingMaps,
-        llvm::to_vector<4>(
-            genericOp.iterator_types().template getAsValueRange<StringAttr>()));
-    rewriter.cloneRegionBefore(genericOp.region(), newOp.region(),
-                               newOp.region().begin());
+        newIndexingMaps, genericOp.getIteratorTypesArray());
+    rewriter.cloneRegionBefore(genericOp.getRegion(), newOp.getRegion(),
+                               newOp.getRegion().begin());
 
     Block *body = newOp.getBody();
     PatternRewriter::InsertionGuard guard(rewriter);
     rewriter.setInsertionPointToStart(body);
 
     for (auto idx : llvm::reverse(scalarOperands)) {
-      OpOperand *opOperand = genericOp.getInputOperand(idx);
-      AffineMap map = genericOp.getTiedIndexingMap(opOperand);
+      OpOperand *opOperand = genericOp.getDpsInputOperand(idx);
+      AffineMap map = genericOp.getMatchingIndexingMap(opOperand);
       SmallVector<int64_t> indices = map.getConstantResults();
       SmallVector<Value> indicesValues;
       for (auto idx : indices)
@@ -96,7 +100,8 @@ void mlir::linalg::populateInlineConstantOperandsPatterns(
 namespace {
 /// Pass that removes unit-extent dims within generic ops.
 struct LinalgInlineScalarOperandsPass
-    : public LinalgInlineScalarOperandsBase<LinalgInlineScalarOperandsPass> {
+    : public impl::LinalgInlineScalarOperandsBase<
+          LinalgInlineScalarOperandsPass> {
   void runOnOperation() override {
     func::FuncOp funcOp = getOperation();
     MLIRContext *context = funcOp.getContext();

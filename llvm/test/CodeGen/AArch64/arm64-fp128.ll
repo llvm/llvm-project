@@ -13,8 +13,8 @@ define fp128 @test_add() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __addtf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fadd fp128 %lhs, %rhs
   ret fp128 %val
@@ -29,8 +29,8 @@ define fp128 @test_sub() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __subtf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fsub fp128 %lhs, %rhs
   ret fp128 %val
@@ -45,8 +45,8 @@ define fp128 @test_mul() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __multf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fmul fp128 %lhs, %rhs
   ret fp128 %val
@@ -61,8 +61,8 @@ define fp128 @test_div() {
 ; CHECK-NEXT:    ldr q1, [x8, :lo12:rhs]
 ; CHECK-NEXT:    b __divtf3
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fdiv fp128 %lhs, %rhs
   ret fp128 %val
@@ -91,13 +91,13 @@ define dso_local void @test_fptosi() {
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
   %val32 = fptosi fp128 %val to i32
-  store i32 %val32, i32* @var32
+  store i32 %val32, ptr @var32
 
   %val64 = fptosi fp128 %val to i64
-  store i64 %val64, i64* @var64
+  store i64 %val64, ptr @var64
 
   ret void
 }
@@ -122,13 +122,13 @@ define dso_local void @test_fptoui() {
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
   %val32 = fptoui fp128 %val to i32
-  store i32 %val32, i32* @var32
+  store i32 %val32, ptr @var32
 
   %val64 = fptoui fp128 %val to i64
-  store i64 %val64, i64* @var64
+  store i64 %val64, ptr @var64
 
   ret void
 }
@@ -152,13 +152,13 @@ define dso_local void @test_sitofp() {
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %src32 = load i32, i32* @var32
+  %src32 = load i32, ptr @var32
   %val32 = sitofp i32 %src32 to fp128
-  store volatile fp128 %val32, fp128* @lhs
+  store volatile fp128 %val32, ptr @lhs
 
-  %src64 = load i64, i64* @var64
+  %src64 = load i64, ptr @var64
   %val64 = sitofp i64 %src64 to fp128
-  store volatile fp128 %val64, fp128* @lhs
+  store volatile fp128 %val64, ptr @lhs
 
   ret void
 }
@@ -182,13 +182,13 @@ define dso_local void @test_uitofp() {
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %src32 = load i32, i32* @var32
+  %src32 = load i32, ptr @var32
   %val32 = uitofp i32 %src32 to fp128
-  store volatile fp128 %val32, fp128* @lhs
+  store volatile fp128 %val32, ptr @lhs
 
-  %src64 = load i64, i64* @var64
+  %src64 = load i64, ptr @var64
   %val64 = uitofp i64 %src64 to fp128
-  store volatile fp128 %val64, fp128* @lhs
+  store volatile fp128 %val64, ptr @lhs
 
   ret void
 }
@@ -209,8 +209,8 @@ define dso_local i1 @test_setcc1() {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
 ; Technically, everything after the call to __letf2 is redundant, but we'll let
 ; LLVM have its fun for now.
@@ -235,8 +235,8 @@ define dso_local i1 @test_setcc2() {
 ; CHECK-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fcmp ugt fp128 %lhs, %rhs
 
@@ -267,8 +267,8 @@ define dso_local i1 @test_setcc3() {
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   %val = fcmp ueq fp128 %lhs, %rhs
 
@@ -304,8 +304,8 @@ define dso_local i32 @test_br_cc() uwtable {
 ; CHECK-NEXT:    .cfi_restore w30
 ; CHECK-NEXT:    ret
 
-  %lhs = load fp128, fp128* @lhs, align 16
-  %rhs = load fp128, fp128* @rhs, align 16
+  %lhs = load fp128, ptr @lhs, align 16
+  %rhs = load fp128, ptr @rhs, align 16
 
   ; olt == !uge, which LLVM optimizes this to.
   %cond = fcmp olt fp128 %lhs, %rhs
@@ -330,7 +330,7 @@ define dso_local void @test_select(i1 %cond, fp128 %lhs, fp128 %rhs) {
 ; CHECK-NEXT:    ret
 
   %val = select i1 %cond, fp128 %lhs, fp128 %rhs
-  store fp128 %val, fp128* @lhs, align 16
+  store fp128 %val, ptr @lhs, align 16
   ret void
 }
 
@@ -363,16 +363,16 @@ define dso_local void @test_round() {
 ; CHECK-NEXT:    add sp, sp, #32
 ; CHECK-NEXT:    ret
 
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
   %half = fptrunc fp128 %val to half
-  store half %half, half* @varhalf, align 2
+  store half %half, ptr @varhalf, align 2
 
   %float = fptrunc fp128 %val to float
-  store float %float, float* @varfloat, align 4
+  store float %float, ptr @varfloat, align 4
 
   %double = fptrunc fp128 %val to double
-  store double %double, double* @vardouble, align 8
+  store double %double, ptr @vardouble, align 8
 
   ret void
 }
@@ -400,19 +400,19 @@ define dso_local void @test_extend() {
 ; CHECK-NEXT:    ldp x30, x19, [sp], #16 // 16-byte Folded Reload
 ; CHECK-NEXT:    ret
 
-  %val = load fp128, fp128* @lhs, align 16
+  %val = load fp128, ptr @lhs, align 16
 
-  %half = load half, half* @varhalf
+  %half = load half, ptr @varhalf
   %fromhalf = fpext half %half to fp128
-  store volatile fp128 %fromhalf, fp128* @lhs, align 16
+  store volatile fp128 %fromhalf, ptr @lhs, align 16
 
-  %float = load float, float* @varfloat
+  %float = load float, ptr @varfloat
   %fromfloat = fpext float %float to fp128
-  store volatile fp128 %fromfloat, fp128* @lhs, align 16
+  store volatile fp128 %fromfloat, ptr @lhs, align 16
 
-  %double = load double, double* @vardouble
+  %double = load double, ptr @vardouble
   %fromdouble = fpext double %double to fp128
-  store volatile fp128 %fromdouble, fp128* @lhs, align 16
+  store volatile fp128 %fromdouble, ptr @lhs, align 16
 
   ret void
 }

@@ -47,6 +47,13 @@ public:
   fir::CharBoxValue createSubstring(const fir::CharBoxValue &str,
                                     llvm::ArrayRef<mlir::Value> bounds);
 
+  /// Compute substring base address given the raw address (not fir.boxchar) of
+  /// a scalar string, a substring / lower bound, and the substring type.
+  mlir::Value genSubstringBase(mlir::Value stringRawAddr,
+                               mlir::Value lowerBound,
+                               mlir::Type substringAddrType,
+                               mlir::Value one = {});
+
   /// Return blank character of given \p type !fir.char<kind>
   mlir::Value createBlankConstant(fir::CharacterType type);
 
@@ -176,6 +183,9 @@ public:
   /// to the number of characters per the Fortran KIND.
   mlir::Value readLengthFromBox(mlir::Value box);
 
+  /// Same as readLengthFromBox but the CharacterType is provided.
+  mlir::Value readLengthFromBox(mlir::Value box, fir::CharacterType charTy);
+
 private:
   /// FIXME: the implementation also needs a clean-up now that
   /// CharBoxValue are better propagated.
@@ -214,9 +224,11 @@ mlir::Value createCharacterProcedureTuple(fir::FirOpBuilder &builder,
 
 /// Given a tuple containing a character function address and its result length,
 /// extract the tuple into a pair of value <function address, result length>.
+/// If openBoxProc is true, the function address is extracted from the
+/// fir.boxproc, otherwise, the returned function address is the fir.boxproc.
 std::pair<mlir::Value, mlir::Value>
 extractCharacterProcedureTuple(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::Value tuple);
+                               mlir::Value tuple, bool openBoxProc = true);
 
 } // namespace fir::factory
 

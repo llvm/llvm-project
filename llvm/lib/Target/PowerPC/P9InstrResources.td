@@ -195,6 +195,7 @@ def : InstRW<[P9_ALU_2C, IP_EXEC_1C, DISP_3SLOTS_1C],
     XSIEXPDP,
     FMR,
     CREQV,
+    CRNOT,
     CRXOR,
     TRECLAIM,
     TSR,
@@ -1429,5 +1430,8 @@ def : InstRW<[],
   DCCCI,
   ICCCI,
   ADDEX,
-  ADDEX8
+  ADDEX8,
+  CDTBCD, CDTBCD8,
+  CBCDTD, CBCDTD8,
+  ADDG6S, ADDG6S8
 )> { let Unsupported = 1; }

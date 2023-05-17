@@ -7,7 +7,7 @@
 ; RUN: llc < %s -mtriple=armv6 | FileCheck %s -check-prefix=ARMV6
 ; RUN: llc < %s -mtriple=thumbv7m | FileCheck %s -check-prefix=THUMBM
 
-define void @test1(i32* %ptr, i32 %val1) {
+define void @test1(ptr %ptr, i32 %val1) {
 ; ARM-LABEL: test1:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    dmb ish
@@ -57,11 +57,11 @@ define void @test1(i32* %ptr, i32 %val1) {
 ; THUMBM-NEXT:    str r1, [r0]
 ; THUMBM-NEXT:    dmb sy
 ; THUMBM-NEXT:    bx lr
-  store atomic i32 %val1, i32* %ptr seq_cst, align 4
+  store atomic i32 %val1, ptr %ptr seq_cst, align 4
   ret void
 }
 
-define i32 @test2(i32* %ptr) {
+define i32 @test2(ptr %ptr) {
 ; ARM-LABEL: test2:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldr r0, [r0]
@@ -108,11 +108,11 @@ define i32 @test2(i32* %ptr) {
 ; THUMBM-NEXT:    ldr r0, [r0]
 ; THUMBM-NEXT:    dmb sy
 ; THUMBM-NEXT:    bx lr
-  %val = load atomic i32, i32* %ptr seq_cst, align 4
+  %val = load atomic i32, ptr %ptr seq_cst, align 4
   ret i32 %val
 }
 
-define void @test3(i8* %ptr1, i8* %ptr2) {
+define void @test3(ptr %ptr1, ptr %ptr2) {
 ; ARM-LABEL: test3:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -164,12 +164,12 @@ define void @test3(i8* %ptr1, i8* %ptr2) {
 
 
 
-  %val = load atomic i8, i8* %ptr1 unordered, align 1
-  store atomic i8 %val, i8* %ptr2 unordered, align 1
+  %val = load atomic i8, ptr %ptr1 unordered, align 1
+  store atomic i8 %val, ptr %ptr2 unordered, align 1
   ret void
 }
 
-define void @test4(i8* %ptr1, i8* %ptr2) {
+define void @test4(ptr %ptr1, ptr %ptr2) {
 ; ARM-LABEL: test4:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrb r0, [r0]
@@ -239,12 +239,12 @@ define void @test4(i8* %ptr1, i8* %ptr2) {
 ; THUMBM-NEXT:    strb r0, [r1]
 ; THUMBM-NEXT:    dmb sy
 ; THUMBM-NEXT:    bx lr
-  %val = load atomic i8, i8* %ptr1 seq_cst, align 1
-  store atomic i8 %val, i8* %ptr2 seq_cst, align 1
+  %val = load atomic i8, ptr %ptr1 seq_cst, align 1
+  store atomic i8 %val, ptr %ptr2 seq_cst, align 1
   ret void
 }
 
-define i64 @test_old_load_64bit(i64* %p) {
+define i64 @test_old_load_64bit(ptr %p) {
 ; ARM-LABEL: test_old_load_64bit:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    ldrexd r0, r1, [r0]
@@ -301,11 +301,11 @@ define i64 @test_old_load_64bit(i64* %p) {
 ; THUMBM-NEXT:    movs r1, #5
 ; THUMBM-NEXT:    bl __atomic_load_8
 ; THUMBM-NEXT:    pop {r7, pc}
-  %1 = load atomic i64, i64* %p seq_cst, align 8
+  %1 = load atomic i64, ptr %p seq_cst, align 8
   ret i64 %1
 }
 
-define void @test_old_store_64bit(i64* %p, i64 %v) {
+define void @test_old_store_64bit(ptr %p, i64 %v) {
 ; ARM-LABEL: test_old_store_64bit:
 ; ARM:       @ %bb.0:
 ; ARM-NEXT:    push {r4, r5, lr}
@@ -436,6 +436,6 @@ define void @test_old_store_64bit(i64* %p, i64 %v) {
 ; THUMBM-NEXT:    bl __atomic_store_8
 ; THUMBM-NEXT:    add sp, #8
 ; THUMBM-NEXT:    pop {r7, pc}
-  store atomic i64 %v, i64* %p seq_cst, align 8
+  store atomic i64 %v, ptr %p seq_cst, align 8
   ret void
 }

@@ -11,7 +11,7 @@ bb.nph:
   br label %while.cond
 
 while.cond:                                       ; preds = %while.cond, %bb.nph
-  %tmp6 = load i32, i32* undef, align 4
+  %tmp6 = load i32, ptr undef, align 4
   %and = or i64 undef, undef
   %conv11 = zext i32 undef to i64
   %conv14 = zext i32 %tmp6 to i64
@@ -20,10 +20,10 @@ while.cond:                                       ; preds = %while.cond, %bb.nph
   %and17 = or i64 %shl15.masked, %conv11
   %add = add i64 %and17, 1
   %xor = xor i64 %add, %and
-  %tmp20 = load i64, i64* undef, align 8
+  %tmp20 = load i64, ptr undef, align 8
   %add21 = add i64 %xor, %tmp20
   %conv22 = trunc i64 %add21 to i32
-  store i32 %conv22, i32* undef, align 4
+  store i32 %conv22, ptr undef, align 4
   br i1 false, label %while.end, label %while.cond
 
 while.end:                                        ; preds = %while.cond
@@ -32,9 +32,9 @@ while.end:                                        ; preds = %while.cond
 
 ; DAG Combiner can't fold this into a load of the 1'th byte.
 ; PR8757
-define i32 @test3(i32 *%P) nounwind ssp {
-  store volatile i32 128, i32* %P
-  %tmp4.pre = load i32, i32* %P
+define i32 @test3(ptr%P) nounwind ssp {
+  store volatile i32 128, ptr %P
+  %tmp4.pre = load i32, ptr %P
   %phitmp = trunc i32 %tmp4.pre to i16
   %phitmp13 = shl i16 %phitmp, 8
   %phitmp14 = ashr i16 %phitmp13, 8

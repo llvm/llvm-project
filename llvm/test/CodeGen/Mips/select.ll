@@ -984,8 +984,8 @@ define i32 @f64_fcmp_oeq_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    or $2, $1, $2
 entry:
-  %tmp = load double, double* @d2, align 8
-  %tmp1 = load double, double* @d3, align 8
+  %tmp = load double, ptr @d2, align 8
+  %tmp1 = load double, ptr @d3, align 8
   %cmp = fcmp oeq double %tmp, %tmp1
   %cond = select i1 %cmp, i32 %f0, i32 %f1
   ret i32 %cond
@@ -1082,8 +1082,8 @@ define i32 @f64_fcmp_olt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    or $2, $1, $2
 entry:
-  %tmp = load double, double* @d2, align 8
-  %tmp1 = load double, double* @d3, align 8
+  %tmp = load double, ptr @d2, align 8
+  %tmp1 = load double, ptr @d3, align 8
   %cmp = fcmp olt double %tmp, %tmp1
   %cond = select i1 %cmp, i32 %f0, i32 %f1
   ret i32 %cond
@@ -1180,8 +1180,8 @@ define i32 @f64_fcmp_ogt_i32_val(i32 signext %f0, i32 signext %f1) nounwind read
 ; 64R6-NEXT:    jr $ra
 ; 64R6-NEXT:    or $2, $1, $2
 entry:
-  %tmp = load double, double* @d2, align 8
-  %tmp1 = load double, double* @d3, align 8
+  %tmp = load double, ptr @d2, align 8
+  %tmp1 = load double, ptr @d3, align 8
   %cmp = fcmp ogt double %tmp, %tmp1
   %cond = select i1 %cmp, i32 %f0, i32 %f1
   ret i32 %cond

@@ -1,10 +1,10 @@
-; RUN: opt < %s -S -loop-flatten -verify-loop-info -verify-dom-info -verify-scev -verify | FileCheck %s
+; RUN: opt < %s -S -passes='loop(loop-flatten),verify' -verify-loop-info -verify-dom-info -verify-scev | FileCheck %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
 ; CHECK-LABEL: test1
 ; Simple loop where the IV's is constant
-define i32 @test1(i32 %val, i16* nocapture %A) {
+define i32 @test1(i32 %val, ptr nocapture %A) {
 entry:
   br label %for.body
 ; CHECK: entry:
@@ -23,24 +23,24 @@ for.body:                                         ; preds = %entry, %for.inc6
 for.body3:                                        ; preds = %for.body, %for.body3
   %j.017 = phi i32 [ 0, %for.body ], [ %inc, %for.body3 ]
   %add = add nuw nsw i32 %j.017, %mul
-  %arrayidx = getelementptr inbounds i16, i16* %A, i32 %add
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %A, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
   %conv16 = zext i16 %0 to i32
   %add4 = add i32 %conv16, %val
   %conv5 = trunc i32 %add4 to i16
-  store i16 %conv5, i16* %arrayidx, align 2
+  store i16 %conv5, ptr %arrayidx, align 2
   %inc = add nuw nsw i32 %j.017, 1
   %exitcond = icmp ne i32 %inc, 20
   br i1 %exitcond, label %for.body3, label %for.inc6
 ; CHECK: for.body3:
 ; CHECK:   %j.017 = phi i32 [ 0, %for.body ]
 ; CHECK:   %add = add nuw nsw i32 %j.017, %mul
-; CHECK:   %arrayidx = getelementptr inbounds i16, i16* %A, i32 %i.018
-; CHECK:   %0 = load i16, i16* %arrayidx, align 2
+; CHECK:   %arrayidx = getelementptr inbounds i16, ptr %A, i32 %i.018
+; CHECK:   %0 = load i16, ptr %arrayidx, align 2
 ; CHECK:   %conv16 = zext i16 %0 to i32
 ; CHECK:   %add4 = add i32 %conv16, %val
 ; CHECK:   %conv5 = trunc i32 %add4 to i16
-; CHECK:   store i16 %conv5, i16* %arrayidx, align 2
+; CHECK:   store i16 %conv5, ptr %arrayidx, align 2
 ; CHECK:   %inc = add nuw nsw i32 %j.017, 1
 ; CHECK:   %exitcond = icmp ne i32 %inc, 20
 ; CHECK:   br label %for.inc6
@@ -61,7 +61,7 @@ for.end8:                                         ; preds = %for.inc6
 
 ; CHECK-LABEL: test2
 ; Same as above but non constant IV (which still cannot overflow)
-define i32 @test2(i8 zeroext %I, i32 %val, i16* nocapture %A) {
+define i32 @test2(i8 zeroext %I, i32 %val, ptr nocapture %A) {
 entry:
   %conv = zext i8 %I to i32
   %cmp26 = icmp eq i8 %I, 0
@@ -85,24 +85,24 @@ for.body.us:                                      ; preds = %for.cond2.for.inc11
 for.body6.us:                                     ; preds = %for.body.us, %for.body6.us
   %j.025.us = phi i32 [ 0, %for.body.us ], [ %inc.us, %for.body6.us ]
   %add.us = add nuw nsw i32 %j.025.us, %mul.us
-  %arrayidx.us = getelementptr inbounds i16, i16* %A, i32 %add.us
-  %0 = load i16, i16* %arrayidx.us, align 2
+  %arrayidx.us = getelementptr inbounds i16, ptr %A, i32 %add.us
+  %0 = load i16, ptr %arrayidx.us, align 2
   %conv823.us = zext i16 %0 to i32
   %add9.us = add i32 %conv823.us, %val
   %conv10.us = trunc i32 %add9.us to i16
-  store i16 %conv10.us, i16* %arrayidx.us, align 2
+  store i16 %conv10.us, ptr %arrayidx.us, align 2
   %inc.us = add nuw nsw i32 %j.025.us, 1
   %exitcond = icmp ne i32 %inc.us, %conv
   br i1 %exitcond, label %for.body6.us, label %for.cond2.for.inc11_crit_edge.us
 ; CHECK: for.body6.us:
 ; CHECK:   %j.025.us = phi i32 [ 0, %for.body.us ]
 ; CHECK:   %add.us = add nuw nsw i32 %j.025.us, %mul.us
-; CHECK:   %arrayidx.us = getelementptr inbounds i16, i16* %A, i32 %i.027.us
-; CHECK:   %0 = load i16, i16* %arrayidx.us, align 2
+; CHECK:   %arrayidx.us = getelementptr inbounds i16, ptr %A, i32 %i.027.us
+; CHECK:   %0 = load i16, ptr %arrayidx.us, align 2
 ; CHECK:   %conv823.us = zext i16 %0 to i32
 ; CHECK:   %add9.us = add i32 %conv823.us, %val
 ; CHECK:   %conv10.us = trunc i32 %add9.us to i16
-; CHECK:   store i16 %conv10.us, i16* %arrayidx.us, align 2
+; CHECK:   store i16 %conv10.us, ptr %arrayidx.us, align 2
 ; CHECK:   %inc.us = add nuw nsw i32 %j.025.us, 1
 ; CHECK:   %exitcond = icmp ne i32 %inc.us, %conv
 ; CHECK:   br label %for.cond2.for.inc11_crit_edge.us
@@ -127,7 +127,7 @@ for.end13:                                        ; preds = %for.end13.loopexit,
 
 ; CHECK-LABEL: test3
 ; Same as above, uses load to determine it can't overflow
-define i32 @test3(i32 %N, i32 %val, i16* nocapture %A) local_unnamed_addr #0 {
+define i32 @test3(i32 %N, i32 %val, ptr nocapture %A) local_unnamed_addr #0 {
 entry:
   %cmp21 = icmp eq i32 %N, 0
   br i1 %cmp21, label %for.end8, label %for.body.lr.ph.split.us
@@ -150,24 +150,24 @@ for.body.us:                                      ; preds = %for.cond1.for.inc6_
 for.body3.us:                                     ; preds = %for.body.us, %for.body3.us
   %j.020.us = phi i32 [ 0, %for.body.us ], [ %inc.us, %for.body3.us ]
   %add.us = add i32 %j.020.us, %mul.us
-  %arrayidx.us = getelementptr inbounds i16, i16* %A, i32 %add.us
-  %0 = load i16, i16* %arrayidx.us, align 2
+  %arrayidx.us = getelementptr inbounds i16, ptr %A, i32 %add.us
+  %0 = load i16, ptr %arrayidx.us, align 2
   %conv18.us = zext i16 %0 to i32
   %add4.us = add i32 %conv18.us, %val
   %conv5.us = trunc i32 %add4.us to i16
-  store i16 %conv5.us, i16* %arrayidx.us, align 2
+  store i16 %conv5.us, ptr %arrayidx.us, align 2
   %inc.us = add nuw i32 %j.020.us, 1
   %exitcond = icmp ne i32 %inc.us, %N
   br i1 %exitcond, label %for.body3.us, label %for.cond1.for.inc6_crit_edge.us
 ; CHECK: for.body3.us:
 ; CHECK:   %j.020.us = phi i32 [ 0, %for.body.us ]
 ; CHECK:   %add.us = add i32 %j.020.us, %mul.us
-; CHECK:   %arrayidx.us = getelementptr inbounds i16, i16* %A, i32 %i.022.us
-; CHECK:   %0 = load i16, i16* %arrayidx.us, align 2
+; CHECK:   %arrayidx.us = getelementptr inbounds i16, ptr %A, i32 %i.022.us
+; CHECK:   %0 = load i16, ptr %arrayidx.us, align 2
 ; CHECK:   %conv18.us = zext i16 %0 to i32
 ; CHECK:   %add4.us = add i32 %conv18.us, %val
 ; CHECK:   %conv5.us = trunc i32 %add4.us to i16
-; CHECK:   store i16 %conv5.us, i16* %arrayidx.us, align 2
+; CHECK:   store i16 %conv5.us, ptr %arrayidx.us, align 2
 ; CHECK:   %inc.us = add nuw i32 %j.020.us, 1
 ; CHECK:   %exitcond = icmp ne i32 %inc.us, %N
 ; CHECK:   br label %for.cond1.for.inc6_crit_edge.us
@@ -192,7 +192,7 @@ for.end8:                                         ; preds = %for.end8.loopexit, 
 
 ; CHECK-LABEL: test4
 ; Multiplication cannot overflow, so we can replace the original loop.
-define void @test4(i16 zeroext %N, i32* nocapture %C, i32* nocapture readonly %A, i32 %scale) {
+define void @test4(i16 zeroext %N, ptr nocapture %C, ptr nocapture readonly %A, i32 %scale) {
 entry:
   %conv = zext i16 %N to i32
   %cmp30 = icmp eq i16 %N, 0
@@ -219,13 +219,13 @@ for.body7.us:                                     ; preds = %for.body.us, %for.b
 ; CHECK: for.body7.us:
   %j.029.us = phi i32 [ 0, %for.body.us ], [ %inc.us, %for.body7.us ]
   %add.us = add nuw nsw i32 %j.029.us, %mul.us
-  %arrayidx.us = getelementptr inbounds i32, i32* %A, i32 %add.us
-; CHECK: getelementptr inbounds i32, i32* %A, i32 %[[OUTER_IV]]
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %A, i32 %add.us
+; CHECK: getelementptr inbounds i32, ptr %A, i32 %[[OUTER_IV]]
+  %0 = load i32, ptr %arrayidx.us, align 4
   %mul9.us = mul nsw i32 %0, %scale
-; CHECK: getelementptr inbounds i32, i32* %C, i32 %[[OUTER_IV]]
-  %arrayidx13.us = getelementptr inbounds i32, i32* %C, i32 %add.us
-  store i32 %mul9.us, i32* %arrayidx13.us, align 4
+; CHECK: getelementptr inbounds i32, ptr %C, i32 %[[OUTER_IV]]
+  %arrayidx13.us = getelementptr inbounds i32, ptr %C, i32 %add.us
+  store i32 %mul9.us, ptr %arrayidx13.us, align 4
   %inc.us = add nuw nsw i32 %j.029.us, 1
   %exitcond = icmp ne i32 %inc.us, %conv
   br i1 %exitcond, label %for.body7.us, label %for.cond2.for.cond.cleanup6_crit_edge.us
@@ -417,7 +417,7 @@ for.body:                                         ; preds = %for.body.lr.ph.spli
 
 ; CHECK-LABEL: test7
 ; Various inner phis and conditions which we can still work with
-define signext i16 @test7(i32 %I, i32 %J, i32* nocapture readonly %C, i16 signext %limit) {
+define signext i16 @test7(i32 %I, i32 %J, ptr nocapture readonly %C, i16 signext %limit) {
 entry:
   %cmp43 = icmp eq i32 %J, 0
   br i1 %cmp43, label %for.end17, label %for.body.lr.ph
@@ -451,8 +451,8 @@ for.body3.us:                                     ; preds = %for.body.us, %if.en
   %prev.138.us = phi i32 [ %prev.045.us, %for.body.us ], [ %0, %if.end.us ]
   %tmp.137.us = phi i32 [ %tmp.044.us, %for.body.us ], [ %tmp.2.us, %if.end.us ]
   %add.us = add i32 %j.040.us, %mul.us
-  %arrayidx.us = getelementptr inbounds i32, i32* %C, i32 %add.us
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %C, i32 %add.us
+  %0 = load i32, ptr %arrayidx.us, align 4
   %add4.us = add nsw i32 %0, %tmp.137.us
   %cmp5.us = icmp sgt i32 %add4.us, %conv
   br i1 %cmp5.us, label %if.then.us, label %if.else.us
@@ -462,8 +462,8 @@ for.body3.us:                                     ; preds = %for.body.us, %if.en
 ; CHECK:   %prev.138.us = phi i32 [ %prev.045.us, %for.body.us ]
 ; CHECK:   %tmp.137.us = phi i32 [ %tmp.044.us, %for.body.us ]
 ; CHECK:   %add.us = add i32 %j.040.us, %mul.us
-; CHECK:   %arrayidx.us = getelementptr inbounds i32, i32* %C, i32 %i.047.us
-; CHECK:   %0 = load i32, i32* %arrayidx.us, align 4
+; CHECK:   %arrayidx.us = getelementptr inbounds i32, ptr %C, i32 %i.047.us
+; CHECK:   %0 = load i32, ptr %arrayidx.us, align 4
 ; CHECK:   %add4.us = add nsw i32 %0, %tmp.137.us
 ; CHECK:   %cmp5.us = icmp sgt i32 %add4.us, %conv
 ; CHECK:   br i1 %cmp5.us, label %if.then.us, label %if.else.us
@@ -532,7 +532,7 @@ for.end17:                                        ; preds = %for.end17.loopexit,
 ; CHECK-LABEL: test8
 ; Same as test1, but with different continue block order
 ; (uses icmp eq and loops on false)
-define i32 @test8(i32 %val, i16* nocapture %A) {
+define i32 @test8(i32 %val, ptr nocapture %A) {
 entry:
   br label %for.body
 ; CHECK: entry:
@@ -551,24 +551,24 @@ for.body:                                         ; preds = %entry, %for.inc6
 for.body3:                                        ; preds = %for.body, %for.body3
   %j.017 = phi i32 [ 0, %for.body ], [ %inc, %for.body3 ]
   %add = add nuw nsw i32 %j.017, %mul
-  %arrayidx = getelementptr inbounds i16, i16* %A, i32 %add
-  %0 = load i16, i16* %arrayidx, align 2
+  %arrayidx = getelementptr inbounds i16, ptr %A, i32 %add
+  %0 = load i16, ptr %arrayidx, align 2
   %conv16 = zext i16 %0 to i32
   %add4 = add i32 %conv16, %val
   %conv5 = trunc i32 %add4 to i16
-  store i16 %conv5, i16* %arrayidx, align 2
+  store i16 %conv5, ptr %arrayidx, align 2
   %inc = add nuw nsw i32 %j.017, 1
   %exitcond = icmp eq i32 %inc, 20
   br i1 %exitcond, label %for.inc6, label %for.body3
 ; CHECK: for.body3:
 ; CHECK:   %j.017 = phi i32 [ 0, %for.body ]
 ; CHECK:   %add = add nuw nsw i32 %j.017, %mul
-; CHECK:   %arrayidx = getelementptr inbounds i16, i16* %A, i32 %i.018
-; CHECK:   %0 = load i16, i16* %arrayidx, align 2
+; CHECK:   %arrayidx = getelementptr inbounds i16, ptr %A, i32 %i.018
+; CHECK:   %0 = load i16, ptr %arrayidx, align 2
 ; CHECK:   %conv16 = zext i16 %0 to i32
 ; CHECK:   %add4 = add i32 %conv16, %val
 ; CHECK:   %conv5 = trunc i32 %add4 to i16
-; CHECK:   store i16 %conv5, i16* %arrayidx, align 2
+; CHECK:   store i16 %conv5, ptr %arrayidx, align 2
 ; CHECK:   %inc = add nuw nsw i32 %j.017, 1
 ; CHECK:   %exitcond = icmp eq i32 %inc, 20
 ; CHECK:   br label %for.inc6
@@ -592,7 +592,7 @@ for.end8:                                         ; preds = %for.inc6
 ; match the pattern (OuterPHI * InnerTripCount) + InnerPHI but
 ; we should still flatten the loop as the compare is removed
 ; later anyway.
-define i32 @test9(i32* nocapture %A) {
+define i32 @test9(ptr nocapture %A) {
 entry:
   br label %for.cond1.preheader
 ; CHECK-LABEL: test9
@@ -621,22 +621,22 @@ for.cond.cleanup3:
 for.body4:
   %j.016 = phi i32 [ 0, %for.cond1.preheader ], [ %inc, %for.body4 ]
   %add = add i32 %j.016, %mul
-  %arrayidx = getelementptr inbounds i32, i32* %A, i32 %add
-  store i32 30, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i32 %add
+  store i32 30, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %j.016, 1
   %cmp2 = icmp ult i32 %j.016, 19
   br i1 %cmp2, label %for.body4, label %for.cond.cleanup3
 ; CHECK: for.body4
 ; CHECK:   %j.016 = phi i32 [ 0, %for.cond1.preheader ]
 ; CHECK:   %add = add i32 %j.016, %mul
-; CHECK:   %arrayidx = getelementptr inbounds i32, i32* %A, i32 %i.017
-; CHECK:   store i32 30, i32* %arrayidx, align 4
+; CHECK:   %arrayidx = getelementptr inbounds i32, ptr %A, i32 %i.017
+; CHECK:   store i32 30, ptr %arrayidx, align 4
 ; CHECK:   %inc = add nuw nsw i32 %j.016, 1
 ; CHECK:   %cmp2 = icmp ult i32 %j.016, 19
 ; CHECK:   br label %for.cond.cleanup3
 
 for.cond.cleanup:
-  %0 = load i32, i32* %A, align 4
+  %0 = load i32, ptr %A, align 4
   ret i32 %0
 }
 

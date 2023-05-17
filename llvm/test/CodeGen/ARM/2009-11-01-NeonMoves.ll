@@ -5,12 +5,12 @@ target triple = "armv7-eabi"
 
 %foo = type { <4 x float> }
 
-define arm_aapcs_vfpcc void @bar(%foo* noalias sret(%foo) %agg.result, <4 x float> %quat.0) nounwind {
+define arm_aapcs_vfpcc void @bar(ptr noalias sret(%foo) %agg.result, <4 x float> %quat.0) nounwind {
 entry:
-  %quat_addr = alloca %foo, align 16              ; <%foo*> [#uses=2]
-  %0 = getelementptr inbounds %foo, %foo* %quat_addr, i32 0, i32 0 ; <<4 x float>*> [#uses=1]
-  store <4 x float> %quat.0, <4 x float>* %0
-  %1 = call arm_aapcs_vfpcc  <4 x float> @quux(%foo* %quat_addr) nounwind ; <<4 x float>> [#uses=3]
+  %quat_addr = alloca %foo, align 16              ; <ptr> [#uses=2]
+  %0 = getelementptr inbounds %foo, ptr %quat_addr, i32 0, i32 0 ; <ptr> [#uses=1]
+  store <4 x float> %quat.0, ptr %0
+  %1 = call arm_aapcs_vfpcc  <4 x float> @quux(ptr %quat_addr) nounwind ; <<4 x float>> [#uses=3]
   %2 = fmul <4 x float> %1, %1                    ; <<4 x float>> [#uses=2]
   %3 = shufflevector <4 x float> %2, <4 x float> undef, <2 x i32> <i32 0, i32 1> ; <<2 x float>> [#uses=1]
   %4 = shufflevector <4 x float> %2, <4 x float> undef, <2 x i32> <i32 2, i32 3> ; <<2 x float>> [#uses=1]
@@ -25,13 +25,13 @@ entry:
   %10 = call <4 x float> @llvm.arm.neon.vrsqrts.v4f32(<4 x float> %9, <4 x float> %7) nounwind ; <<4 x float>> [#uses=1]
   %11 = fmul <4 x float> %10, %8                  ; <<4 x float>> [#uses=1]
   %12 = fmul <4 x float> %11, %1                  ; <<4 x float>> [#uses=1]
-  %13 = call arm_aapcs_vfpcc  %foo* @baz(%foo* %agg.result, <4 x float> %12) nounwind ; <%foo*> [#uses=0]
+  %13 = call arm_aapcs_vfpcc  ptr @baz(ptr %agg.result, <4 x float> %12) nounwind ; <ptr> [#uses=0]
   ret void
 }
 
-declare arm_aapcs_vfpcc %foo* @baz(%foo*, <4 x float>) nounwind
+declare arm_aapcs_vfpcc ptr @baz(ptr, <4 x float>) nounwind
 
-declare arm_aapcs_vfpcc <4 x float> @quux(%foo* nocapture) nounwind readonly
+declare arm_aapcs_vfpcc <4 x float> @quux(ptr nocapture) nounwind readonly
 
 declare <2 x float> @llvm.arm.neon.vpadd.v2f32(<2 x float>, <2 x float>) nounwind readnone
 

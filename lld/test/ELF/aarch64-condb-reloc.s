@@ -2,9 +2,9 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %p/Inputs/aarch64-condb-reloc.s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t2.o
 # RUN: ld.lld %t1.o %t2.o -o %t
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 # RUN: ld.lld -shared %t1.o %t2.o -o %t.so
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck --check-prefix=DSO %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck --check-prefix=DSO %s
 # RUN: llvm-readobj -S -r %t.so | FileCheck -check-prefix=DSOREL %s
 
 # 0x11024 - 36 = 0x11000

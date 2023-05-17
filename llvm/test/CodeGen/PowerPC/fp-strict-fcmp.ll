@@ -1485,8 +1485,8 @@ define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_olt_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1506,8 +1506,8 @@ define i32 @fcmp_olt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_olt_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1524,8 +1524,8 @@ define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_ole_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -1540,19 +1540,16 @@ define i32 @fcmp_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmp_ole_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpuqp cr0, v2, v3
-; P9-NEXT:    xscmpuqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, gt, 4*cr1+gt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_ole_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -1572,8 +1569,8 @@ define i32 @fcmp_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_ogt_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -1595,8 +1592,8 @@ define i32 @fcmp_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_ogt_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -1615,8 +1612,8 @@ define i32 @fcmp_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_oge_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1629,19 +1626,16 @@ define i32 @fcmp_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmp_oge_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpuqp cr0, v2, v3
-; P9-NEXT:    xscmpuqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, lt, 4*cr1+lt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmp_oge_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1659,8 +1653,8 @@ define i32 @fcmp_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_oeq_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    cntlzw r3, r3
@@ -1681,8 +1675,8 @@ define i32 @fcmp_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_oeq_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
@@ -1700,9 +1694,9 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_one_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -176(r1)
 ; P8-NEXT:    li r3, 128
+; P8-NEXT:    std r0, 192(r1)
 ; P8-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 144
@@ -1734,11 +1728,8 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmp_one_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpuqp cr0, v2, v3
-; P9-NEXT:    xscmpuqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, eq, 4*cr1+eq
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -1750,8 +1741,8 @@ define i32 @fcmp_one_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -80(r1)
+; NOVSX-NEXT:    std r0, 96(r1)
 ; NOVSX-NEXT:    mr r30, r6
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
@@ -1788,8 +1779,8 @@ define i32 @fcmp_ult_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_ult_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1809,8 +1800,8 @@ define i32 @fcmp_ult_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_ult_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1827,8 +1818,8 @@ define i32 @fcmp_ule_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_ule_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -1850,8 +1841,8 @@ define i32 @fcmp_ule_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_ule_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -1871,8 +1862,8 @@ define i32 @fcmp_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_ugt_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -1894,8 +1885,8 @@ define i32 @fcmp_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_ugt_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -1914,8 +1905,8 @@ define i32 @fcmp_uge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_uge_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1935,8 +1926,8 @@ define i32 @fcmp_uge_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_uge_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -1954,9 +1945,9 @@ define i32 @fcmp_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_ueq_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -176(r1)
 ; P8-NEXT:    li r3, 128
+; P8-NEXT:    std r0, 192(r1)
 ; P8-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 144
@@ -2001,8 +1992,8 @@ define i32 @fcmp_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -80(r1)
+; NOVSX-NEXT:    std r0, 96(r1)
 ; NOVSX-NEXT:    mr r30, r6
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
@@ -2039,8 +2030,8 @@ define i32 @fcmp_une_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmp_une_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __nekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    cntlzw r3, r3
@@ -2061,8 +2052,8 @@ define i32 @fcmp_une_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmp_une_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __nekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
@@ -2081,8 +2072,8 @@ define i32 @fcmps_olt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_olt_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2102,8 +2093,8 @@ define i32 @fcmps_olt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_olt_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2120,8 +2111,8 @@ define i32 @fcmps_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_ole_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -2136,19 +2127,16 @@ define i32 @fcmps_ole_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmps_ole_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpoqp cr0, v2, v3
-; P9-NEXT:    xscmpoqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, gt, 4*cr1+gt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, gt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmps_ole_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -2168,8 +2156,8 @@ define i32 @fcmps_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_ogt_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -2191,8 +2179,8 @@ define i32 @fcmps_ogt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_ogt_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -2211,8 +2199,8 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_oge_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2225,19 +2213,16 @@ define i32 @fcmps_oge_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmps_oge_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpoqp cr0, v2, v3
-; P9-NEXT:    xscmpoqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, lt, 4*cr1+lt
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, lt
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
 ; NOVSX-LABEL: fcmps_oge_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2255,8 +2240,8 @@ define i32 @fcmps_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_oeq_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __eqkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    cntlzw r3, r3
@@ -2277,8 +2262,8 @@ define i32 @fcmps_oeq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_oeq_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __eqkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3
@@ -2296,9 +2281,9 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_one_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -176(r1)
 ; P8-NEXT:    li r3, 128
+; P8-NEXT:    std r0, 192(r1)
 ; P8-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 144
@@ -2330,11 +2315,8 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; P9-LABEL: fcmps_one_f128:
 ; P9:       # %bb.0:
 ; P9-NEXT:    xscmpoqp cr0, v2, v3
-; P9-NEXT:    xscmpoqp cr1, v2, v3
 ; P9-NEXT:    li r3, 1
-; P9-NEXT:    crnor 4*cr5+lt, un, 4*cr1+un
-; P9-NEXT:    crnor 4*cr5+gt, eq, 4*cr1+eq
-; P9-NEXT:    crnand 4*cr5+lt, 4*cr5+gt, 4*cr5+lt
+; P9-NEXT:    cror 4*cr5+lt, un, eq
 ; P9-NEXT:    isel r3, 0, r3, 4*cr5+lt
 ; P9-NEXT:    blr
 ;
@@ -2346,8 +2328,8 @@ define i32 @fcmps_one_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -80(r1)
+; NOVSX-NEXT:    std r0, 96(r1)
 ; NOVSX-NEXT:    mr r30, r6
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
@@ -2384,8 +2366,8 @@ define i32 @fcmps_ult_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_ult_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2405,8 +2387,8 @@ define i32 @fcmps_ult_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_ult_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2423,8 +2405,8 @@ define i32 @fcmps_ule_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_ule_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __gtkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -2446,8 +2428,8 @@ define i32 @fcmps_ule_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_ule_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __gtkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -2467,8 +2449,8 @@ define i32 @fcmps_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_ugt_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __lekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    extsw r3, r3
@@ -2490,8 +2472,8 @@ define i32 @fcmps_ugt_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_ugt_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __lekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    extsw r3, r3
@@ -2510,8 +2492,8 @@ define i32 @fcmps_uge_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_uge_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __ltkf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2531,8 +2513,8 @@ define i32 @fcmps_uge_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_uge_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __ltkf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    rlwinm r3, r3, 1, 31, 31
@@ -2550,9 +2532,9 @@ define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_ueq_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -176(r1)
 ; P8-NEXT:    li r3, 128
+; P8-NEXT:    std r0, 192(r1)
 ; P8-NEXT:    std r30, 160(r1) # 8-byte Folded Spill
 ; P8-NEXT:    stxvd2x v30, r1, r3 # 16-byte Folded Spill
 ; P8-NEXT:    li r3, 144
@@ -2597,8 +2579,8 @@ define i32 @fcmps_ueq_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-NEXT:    std r28, -32(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r29, -24(r1) # 8-byte Folded Spill
 ; NOVSX-NEXT:    std r30, -16(r1) # 8-byte Folded Spill
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -80(r1)
+; NOVSX-NEXT:    std r0, 96(r1)
 ; NOVSX-NEXT:    mr r30, r6
 ; NOVSX-NEXT:    mr r29, r5
 ; NOVSX-NEXT:    mr r28, r4
@@ -2635,8 +2617,8 @@ define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
 ; P8-LABEL: fcmps_une_f128:
 ; P8:       # %bb.0:
 ; P8-NEXT:    mflr r0
-; P8-NEXT:    std r0, 16(r1)
 ; P8-NEXT:    stdu r1, -112(r1)
+; P8-NEXT:    std r0, 128(r1)
 ; P8-NEXT:    bl __nekf2
 ; P8-NEXT:    nop
 ; P8-NEXT:    cntlzw r3, r3
@@ -2657,8 +2639,8 @@ define i32 @fcmps_une_f128(fp128 %a, fp128 %b) #0 {
 ; NOVSX-LABEL: fcmps_une_f128:
 ; NOVSX:       # %bb.0:
 ; NOVSX-NEXT:    mflr r0
-; NOVSX-NEXT:    std r0, 16(r1)
 ; NOVSX-NEXT:    stdu r1, -32(r1)
+; NOVSX-NEXT:    std r0, 48(r1)
 ; NOVSX-NEXT:    bl __nekf2
 ; NOVSX-NEXT:    nop
 ; NOVSX-NEXT:    cntlzw r3, r3

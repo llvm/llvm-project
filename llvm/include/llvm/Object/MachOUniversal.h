@@ -13,11 +13,11 @@
 #ifndef LLVM_OBJECT_MACHOUNIVERSAL_H
 #define LLVM_OBJECT_MACHOUNIVERSAL_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/MachO.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 class StringRef;

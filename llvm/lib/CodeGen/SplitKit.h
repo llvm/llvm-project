@@ -32,7 +32,6 @@
 
 namespace llvm {
 
-class AAResults;
 class LiveInterval;
 class LiveRange;
 class LiveIntervals;
@@ -152,13 +151,13 @@ private:
 
   /// NumGapBlocks - Number of duplicate entries in UseBlocks for blocks where
   /// the live range has a gap.
-  unsigned NumGapBlocks;
+  unsigned NumGapBlocks = 0u;
 
   /// ThroughBlocks - Block numbers where CurLI is live through without uses.
   BitVector ThroughBlocks;
 
   /// NumThroughBlocks - Number of live-through blocks.
-  unsigned NumThroughBlocks;
+  unsigned NumThroughBlocks = 0u;
 
   // Sumarize statistics by counting instructions using CurLI.
   void analyzeUses();
@@ -257,7 +256,6 @@ public:
 ///
 class LLVM_LIBRARY_VISIBILITY SplitEditor {
   SplitAnalysis &SA;
-  AAResults &AA;
   LiveIntervals &LIS;
   VirtRegMap &VRM;
   MachineRegisterInfo &MRI;
@@ -436,9 +434,9 @@ private:
 public:
   /// Create a new SplitEditor for editing the LiveInterval analyzed by SA.
   /// Newly created intervals will be appended to newIntervals.
-  SplitEditor(SplitAnalysis &SA, AAResults &AA, LiveIntervals &LIS,
-              VirtRegMap &VRM, MachineDominatorTree &MDT,
-              MachineBlockFrequencyInfo &MBFI, VirtRegAuxInfo &VRAI);
+  SplitEditor(SplitAnalysis &SA, LiveIntervals &LIS, VirtRegMap &VRM,
+              MachineDominatorTree &MDT, MachineBlockFrequencyInfo &MBFI,
+              VirtRegAuxInfo &VRAI);
 
   /// reset - Prepare for a new split.
   void reset(LiveRangeEdit&, ComplementSpillMode = SM_Partition);
@@ -489,7 +487,7 @@ public:
 
   /// overlapIntv - Indicate that all instructions in range should use the open
   /// interval if End does not have tied-def usage of the register and in this
-  /// case compliment interval is used. Let the complement interval be live.
+  /// case complement interval is used. Let the complement interval be live.
   ///
   /// This doubles the register pressure, but is sometimes required to deal with
   /// register uses after the last valid split point.

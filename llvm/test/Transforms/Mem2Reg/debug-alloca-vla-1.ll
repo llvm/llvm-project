@@ -27,13 +27,13 @@ define void @scan() #0 !dbg !4 {
 ;
 entry:
   %vla1 = alloca i32, i32 1, align 8
-  call void @llvm.dbg.declare(metadata i32* %vla1, metadata !10, metadata !DIExpression()), !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %vla1, metadata !10, metadata !DIExpression()), !dbg !18
   br label %for.cond, !dbg !18
 
 for.cond:                                         ; preds = %for.cond, %entry
-  %entryN = load i32, i32* %vla1, align 8, !dbg !18
+  %entryN = load i32, ptr %vla1, align 8, !dbg !18
   %t0 = add i32 %entryN, 1
-  store i32 %t0, i32* %vla1, align 8, !dbg !18
+  store i32 %t0, ptr %vla1, align 8, !dbg !18
   br label %for.cond, !dbg !18
 }
 

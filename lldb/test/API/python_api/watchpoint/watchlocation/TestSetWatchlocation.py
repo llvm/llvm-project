@@ -2,10 +2,6 @@
 Use lldb Python SBValue.WatchPointee() API to create a watchpoint for write of '*g_char_ptr'.
 """
 
-from __future__ import print_function
-
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class SetWatchlocationAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -69,6 +63,15 @@ class SetWatchlocationAPITestCase(TestBase):
                         "Successfully found the pointer and set a watchpoint")
         self.DebugSBValue(value)
         self.DebugSBValue(pointee)
+
+        # Check some API calls return expected values
+        self.assertEqual(watchpoint.GetWatchValueKind(),
+                         lldb.eWatchPointValueKindExpression)
+        # FIXME: The spec should probably be 'g_char_ptr'
+        self.assertEqual(watchpoint.GetWatchSpec(), None)
+        self.assertEqual(watchpoint.GetType().GetDisplayTypeName(), 'char')
+        self.assertFalse(watchpoint.IsWatchingReads())
+        self.assertTrue(watchpoint.IsWatchingWrites())
 
         # Hide stdout if not running with '-t' option.
         if not self.TraceOn():

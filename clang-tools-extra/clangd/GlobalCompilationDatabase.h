@@ -15,10 +15,11 @@
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/ArgumentsAdjusters.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -36,12 +37,12 @@ public:
   virtual ~GlobalCompilationDatabase() = default;
 
   /// If there are any known-good commands for building this file, returns one.
-  virtual llvm::Optional<tooling::CompileCommand>
+  virtual std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const = 0;
 
   /// Finds the closest project to \p File.
-  virtual llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const {
-    return llvm::None;
+  virtual std::optional<ProjectInfo> getProjectInfo(PathRef File) const {
+    return std::nullopt;
   }
 
   /// Makes a guess at how to build a file.
@@ -70,10 +71,10 @@ public:
   DelegatingCDB(const GlobalCompilationDatabase *Base);
   DelegatingCDB(std::unique_ptr<GlobalCompilationDatabase> Base);
 
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+  std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
@@ -105,7 +106,7 @@ public:
     std::function<Context(llvm::StringRef)> ContextProvider;
     // Only look for a compilation database in this one fixed directory.
     // FIXME: fold this into config/context mechanism.
-    llvm::Optional<Path> CompileCommandsDir;
+    std::optional<Path> CompileCommandsDir;
   };
 
   DirectoryBasedGlobalCompilationDatabase(const Options &Opts);
@@ -114,12 +115,12 @@ public:
   /// Scans File's parents looking for compilation databases.
   /// Any extra flags will be added.
   /// Might trigger OnCommandChanged, if CDB wasn't broadcasted yet.
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
 
   /// Returns the path to first directory containing a compilation database in
   /// \p File's parents.
-  llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override;
+  std::optional<ProjectInfo> getProjectInfo(PathRef File) const override;
 
   bool blockUntilIdle(Deadline Timeout) const override;
 
@@ -148,7 +149,7 @@ private:
     std::shared_ptr<const tooling::CompilationDatabase> CDB;
     ProjectInfo PI;
   };
-  llvm::Optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
+  std::optional<CDBLookupResult> lookupCDB(CDBLookupRequest Request) const;
 
   class BroadcastThread;
   std::unique_ptr<BroadcastThread> Broadcaster;
@@ -161,36 +162,42 @@ private:
 };
 
 /// Extracts system include search path from drivers matching QueryDriverGlobs
-/// and adds them to the compile flags. Base may not be nullptr.
-/// Returns Base when \p QueryDriverGlobs is empty.
-std::unique_ptr<GlobalCompilationDatabase>
-getQueryDriverDatabase(llvm::ArrayRef<std::string> QueryDriverGlobs,
-                       std::unique_ptr<GlobalCompilationDatabase> Base);
+/// and adds them to the compile flags.
+/// Returns null when \p QueryDriverGlobs is empty.
+using SystemIncludeExtractorFn = llvm::unique_function<void(
+    tooling::CompileCommand &, llvm::StringRef) const>;
+SystemIncludeExtractorFn
+getSystemIncludeExtractor(llvm::ArrayRef<std::string> QueryDriverGlobs);
 
 /// Wraps another compilation database, and supports overriding the commands
 /// using an in-memory mapping.
 class OverlayCDB : public DelegatingCDB {
 public:
+  // Makes adjustments to a tooling::CompileCommand which will be used to
+  // process a file (possibly different from the one in the command).
+  using CommandMangler = llvm::unique_function<void(tooling::CompileCommand &,
+                                                    StringRef File) const>;
+
   // Base may be null, in which case no entries are inherited.
   // FallbackFlags are added to the fallback compile command.
   // Adjuster is applied to all commands, fallback or not.
   OverlayCDB(const GlobalCompilationDatabase *Base,
              std::vector<std::string> FallbackFlags = {},
-             tooling::ArgumentsAdjuster Adjuster = nullptr);
+             CommandMangler Mangler = nullptr);
 
-  llvm::Optional<tooling::CompileCommand>
+  std::optional<tooling::CompileCommand>
   getCompileCommand(PathRef File) const override;
   tooling::CompileCommand getFallbackCommand(PathRef File) const override;
 
   /// Sets or clears the compilation command for a particular file.
   void
   setCompileCommand(PathRef File,
-                    llvm::Optional<tooling::CompileCommand> CompilationCommand);
+                    std::optional<tooling::CompileCommand> CompilationCommand);
 
 private:
   mutable std::mutex Mutex;
   llvm::StringMap<tooling::CompileCommand> Commands; /* GUARDED_BY(Mut) */
-  tooling::ArgumentsAdjuster ArgsAdjuster;
+  CommandMangler Mangler;
   std::vector<std::string> FallbackFlags;
 };
 

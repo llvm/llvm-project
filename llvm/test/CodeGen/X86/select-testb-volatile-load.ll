@@ -4,7 +4,7 @@
 ; This test checks that we don't try to narrow the volatile load by selecting
 ; the pattern below into a testb instruction.
 
-define void @testb_volatile(i32 **%ptrptr) {
+define void @testb_volatile(ptr%ptrptr) {
 ; CHECK-LABEL: testb_volatile:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -17,17 +17,17 @@ define void @testb_volatile(i32 **%ptrptr) {
 ; CHECK-NEXT:    movl $0, (%rax)
 ; CHECK-NEXT:    retq
 entry:
-  %ptr = load i32*, i32** %ptrptr, align 8
-  %vol_load = load volatile i32, i32* %ptr, align 4
+  %ptr = load ptr, ptr %ptrptr, align 8
+  %vol_load = load volatile i32, ptr %ptr, align 4
   %and = and i32 %vol_load, 1
   %cmp = icmp eq i32 %and, 0
   br i1 %cmp, label %exit, label %bb2
 
 bb2:
-  store i32 0, i32 *%ptr, align 4
+  store i32 0, ptr%ptr, align 4
   ret void
 
 exit:
-  store i32 1, i32 *%ptr, align 4
+  store i32 1, ptr%ptr, align 4
   ret void
 }

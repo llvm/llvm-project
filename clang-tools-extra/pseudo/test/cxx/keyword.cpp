@@ -1,4 +1,4 @@
-// RUN: clang-pseudo -grammar=%cxx-bnf-file -source=%s --print-forest | FileCheck %s
+// RUN: clang-pseudo -grammar=cxx -source=%s --print-forest | FileCheck %s
 bool operator<();
 // CHECK:      translation-unit~simple-declaration := decl-specifier-seq init-declarator-list ;
 // CHECK-NEXT: ├─decl-specifier-seq~BOOL

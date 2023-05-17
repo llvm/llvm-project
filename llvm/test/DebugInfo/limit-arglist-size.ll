@@ -1,10 +1,10 @@
-; RUN: opt -S -instcombine %s -o - | FileCheck %s
+; RUN: opt -S -passes=instcombine %s -o - | FileCheck %s
 
 ; For performance reasons, we currently limit the number of values that can be
 ; referenced by a dbg.value to 16. This test checks that we do not exceed this
 ; limit during salvaging.
 
-; CHECK: DIArgList(i32 undef
+; CHECK: DIArgList(i32 poison
 ; CHECK-NOT: DW_OP_LLVM_arg, 16
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

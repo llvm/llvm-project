@@ -50,14 +50,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
 
 #include "mlir/Dialect/Bufferization/IR/AllocationOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/BufferUtils.h"
-#include "mlir/Dialect/Bufferization/Transforms/Passes.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "llvm/ADT/SetOperations.h"
+
+namespace mlir {
+namespace bufferization {
+#define GEN_PASS_DEF_BUFFERDEALLOCATION
+#include "mlir/Dialect/Bufferization/Transforms/Passes.h.inc"
+} // namespace bufferization
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -225,12 +232,12 @@ public:
       aliasToAllocations[alloc] = allocationInterface;
 
       // Get the alias information for the current allocation node.
-      llvm::for_each(aliases.resolve(alloc), [&](Value alias) {
+      for (Value alias : aliases.resolve(alloc)) {
         // TODO: check for incompatible implementations of the
         // AllocationOpInterface. This could be realized by promoting the
         // AllocationOpInterface to a DialectInterface.
         aliasToAllocations[alias] = allocationInterface;
-      });
+      }
     }
     return success();
   }
@@ -252,7 +259,7 @@ private:
     // Initialize the set of values that require a dedicated memory free
     // operation since their operands cannot be safely deallocated in a post
     // dominator.
-    SmallPtrSet<Value, 8> valuesToFree;
+    SetVector<Value> valuesToFree;
     llvm::SmallDenseSet<std::tuple<Value, Block *>> visitedValues;
     SmallVector<std::tuple<Value, Block *>, 8> toProcess;
 
@@ -273,7 +280,7 @@ private:
         // defined in a non-dominated block or it is defined in the same block
         // but the current value is not dominated by the source value.
         if (!dominators.dominates(definingBlock, parentBlock) ||
-            (definingBlock == parentBlock && value.isa<BlockArgument>())) {
+            (definingBlock == parentBlock && isa<BlockArgument>(value))) {
           toProcess.emplace_back(value, parentBlock);
           valuesToFree.insert(value);
         } else if (visitedValues.insert(std::make_tuple(value, definingBlock))
@@ -300,8 +307,8 @@ private:
 
     // Add new allocs and additional clone operations.
     for (Value value : valuesToFree) {
-      if (failed(value.isa<BlockArgument>()
-                     ? introduceBlockArgCopy(value.cast<BlockArgument>())
+      if (failed(isa<BlockArgument>(value)
+                     ? introduceBlockArgCopy(cast<BlockArgument>(value))
                      : introduceValueCopyForRegionResult(value)))
         return failure();
 
@@ -364,7 +371,8 @@ private:
     // parent operation. In this case, we have to introduce an additional clone
     // for buffer that is passed to the argument.
     SmallVector<RegionSuccessor, 2> successorRegions;
-    regionInterface.getSuccessorRegions(/*index=*/llvm::None, successorRegions);
+    regionInterface.getSuccessorRegions(/*index=*/std::nullopt,
+                                        successorRegions);
     auto *it =
         llvm::find_if(successorRegions, [&](RegionSuccessor &successorRegion) {
           return successorRegion.getSuccessor() == argRegion;
@@ -620,20 +628,33 @@ private:
 struct DefaultAllocationInterface
     : public bufferization::AllocationOpInterface::ExternalModel<
           DefaultAllocationInterface, memref::AllocOp> {
-  static Optional<Operation *> buildDealloc(OpBuilder &builder, Value alloc) {
+  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
+                                                 Value alloc) {
     return builder.create<memref::DeallocOp>(alloc.getLoc(), alloc)
         .getOperation();
   }
-  static Optional<Value> buildClone(OpBuilder &builder, Value alloc) {
+  static std::optional<Value> buildClone(OpBuilder &builder, Value alloc) {
     return builder.create<bufferization::CloneOp>(alloc.getLoc(), alloc)
         .getResult();
+  }
+};
+
+struct DefaultReallocationInterface
+    : public bufferization::AllocationOpInterface::ExternalModel<
+          DefaultAllocationInterface, memref::ReallocOp> {
+  static std::optional<Operation *> buildDealloc(OpBuilder &builder,
+                                                 Value realloc) {
+    return builder.create<memref::DeallocOp>(realloc.getLoc(), realloc)
+        .getOperation();
   }
 };
 
 /// The actual buffer deallocation pass that inserts and moves dealloc nodes
 /// into the right positions. Furthermore, it inserts additional clones if
 /// necessary. It uses the algorithm described at the top of the file.
-struct BufferDeallocationPass : BufferDeallocationBase<BufferDeallocationPass> {
+struct BufferDeallocationPass
+    : public bufferization::impl::BufferDeallocationBase<
+          BufferDeallocationPass> {
   void getDependentDialects(DialectRegistry &registry) const override {
     registry.insert<bufferization::BufferizationDialect>();
     registry.insert<memref::MemRefDialect>();
@@ -692,6 +713,7 @@ void bufferization::registerAllocationOpInterfaceExternalModels(
     DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
     memref::AllocOp::attachInterface<DefaultAllocationInterface>(*ctx);
+    memref::ReallocOp::attachInterface<DefaultReallocationInterface>(*ctx);
   });
 }
 

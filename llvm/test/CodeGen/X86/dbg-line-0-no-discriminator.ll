@@ -29,7 +29,7 @@ declare void @_Z3foov()
 ; Look at the lengths. We can't verify the line-number-program size
 ; directly, but the difference in the two lengths should not change
 ; unexpectedly.
-; CHECK:    total_length: 0x00000044
+; CHECK:    total_length: 0x00000045
 ; CHECK: prologue_length: 0x0000001f
 ;
 ; Verify that we see a line entry with a discriminator, and the next entry

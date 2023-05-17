@@ -31,6 +31,7 @@
 ---
 name: test
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$rdi', virtual-reg: '' }
 debugValueSubstitutions:
@@ -71,39 +72,39 @@ body:  |
   liveins: $rdi, $rax
     CALL64pcrel32 @ext, csr_64, implicit $rsp, implicit $ssp, implicit $edi, implicit-def $rax, debug-instr-number 4, debug-location !12
     ; CHECK:      CALL64pcrel32
-    DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK-NEXT: DBG_INSTR_REF 1, 0
-    ; CHECK-NEXT: DBG_VALUE $al
-    DBG_INSTR_REF 5, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK-NEXT: DBG_INSTR_REF 5, 0
-    ; CHECK-NEXT: DBG_VALUE $ah
-    DBG_INSTR_REF 8, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK-NEXT: DBG_INSTR_REF 8, 0
-    ; CHECK-NEXT: DBG_VALUE $ah
-    DBG_INSTR_REF 13, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK-NEXT: DBG_INSTR_REF 13, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $al
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(5, 0), debug-location !12
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(5, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $ah
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(8, 0), debug-location !12
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(8, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $ah
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(13, 0), debug-location !12
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(13, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
     MOV64mr $rsp, 1, $noreg, 16, $noreg, $rax :: (store 8 into %stack.0)
     $rax = MOV64ri 0, debug-location !12
     ; CHECK:      $rax = MOV64ri 0
     ; The value is now located in a spill slot, as a subregister within the
     ; slot, which InstrRefBasedLDV should be able to find.
-    DBG_INSTR_REF 1, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK-NEXT: DBG_INSTR_REF 1, 0
-    ; CHECK-NEXT: DBG_VALUE $rsp, 0, !{{[0-9]*}}, !DIExpression(DW_OP_constu, 8, DW_OP_minus)
-    DBG_INSTR_REF 5, 0, !11, !DIExpression(), debug-location !12
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !12
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST !{{[0-9]*}}, !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_constu, 8, DW_OP_minus, DW_OP_deref), $rsp
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(5, 0), debug-location !12
     ; This and the next DBG_INSTR_REF refer to a value that is on the stack, but
     ; is located at a non-zero offset from the start of the slot -- $ah within
     ; $rax is 8 bits in. Today, InstrRefBasedLDV can't express this. It also
     ; doesn't seem likely to be profitable.
-    ; CHECK-NEXT: DBG_INSTR_REF 5, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
-    DBG_INSTR_REF 8, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK-NEXT: DBG_INSTR_REF 8, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
-    DBG_INSTR_REF 13, 0, !11, !DIExpression(), debug-location !12
-    ; CHECK-NEXT: DBG_INSTR_REF 13, 0
-    ; CHECK-NEXT: DBG_VALUE $noreg
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(5, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(8, 0), debug-location !12
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(8, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
+    DBG_INSTR_REF !11, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(13, 0), debug-location !12
+    ; CHECK-NEXT: DBG_INSTR_REF {{.+}}, dbg-instr-ref(13, 0)
+    ; CHECK-NEXT: DBG_VALUE_LIST {{.+}}, $noreg
     $rax = MOV64rm $rsp, 1, $noreg, 8, $noreg :: (load 8 from %stack.0)
     RET64 $rax, debug-location !12
 ...

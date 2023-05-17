@@ -7,7 +7,7 @@
 ; CHECK: .short  197
 ; CHECK: .byte   0
 ; CHECK: .byte   241 * Mark Type C'1'
-; CHECK: .long   128 * DSA Size 0x80
+; CHECK: .long   0 * DSA Size 0x0
 ; CHECK: * Entry Flags
 ; CHECK: *   Bit 2: 0 = Does not use alloca
 ; CHECK: @@func_end0:
@@ -15,7 +15,7 @@
 ; CHECK: @@PPA1_void_test_0:                     * PPA1
 ; CHECK:        .byte   2                               * Version
 ; CHECK:        .byte   206                             * LE Signature X'CE'
-; CHECK:        .short  768                             * Saved GPR Mask
+; CHECK:        .short  0                               * Saved GPR Mask
 ; CHECK:        .byte   128                             * PPA1 Flags 1
 ; CHECK:                                        *   Bit 0: 1 = 64-bit DSA
 ; CHECK:        .byte   128                             * PPA1 Flags 2

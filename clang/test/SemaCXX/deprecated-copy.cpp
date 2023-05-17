@@ -1,5 +1,7 @@
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated -verify -fms-compatibility
 // RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy -verify
+// RUN: %clang_cc1 -std=c++11 %s -Wdeprecated-copy -verify -fms-compatibility
 
 struct A {
     A& operator=(const A&) = default; // expected-warning {{definition of implicit copy constructor for 'A' is deprecated because it has a user-declared copy assignment operator}}

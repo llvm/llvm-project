@@ -144,8 +144,6 @@ public:
   int32_t dataExchange(int32_t SrcDevId, void *SrcPtr, int32_t DstDevId,
                        void *DstPtr, int64_t Size);
 
-  int32_t runTargetRegion(int32_t DeviceId, void *TgtEntryPtr, void **TgtArgs,
-                          ptrdiff_t *TgtOffsets, int32_t ArgNum);
   int32_t runTargetTeamRegion(int32_t DeviceId, void *TgtEntryPtr,
                               void **TgtArgs, ptrdiff_t *TgtOffsets,
                               int32_t ArgNum, int32_t TeamNum,

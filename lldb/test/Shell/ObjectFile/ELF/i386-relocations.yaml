@@ -1,0 +1,57 @@
+# RUN: yaml2obj %s -o %t
+# RUN: lldb-test object-file --contents %t | FileCheck %s
+#
+# CHECK-LABEL:  Name: .debug_info
+# CHECK:        Data: (
+# CHECK-NEXT:     0000: 22222222
+#
+# CHECK-LABEL:  Name: .debug_lines
+# CHECK:        Data: (
+# CHECK-NEXT:     0000: 33333333
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS32
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_386
+Sections:
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x20
+  - Name:            .debug_info
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         11111111
+  - Name:            .debug_lines
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+    Content:         99999999
+  - Name:            .rel.debug_info
+    Type:            SHT_REL
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x0
+    Info:            .debug_info
+    Relocations:
+      - Offset:          0x0
+        Symbol:          var
+        Type:            R_386_32
+  - Name:            .rela.debug_lines
+    Type:            SHT_RELA
+    Link:            .symtab
+    AddressAlign:    0x4
+    Info:            .debug_lines
+    Relocations:
+      - Offset:          0x0
+        Addend:          0x22222222
+        Symbol:          var
+        Type:            R_386_32
+Symbols:
+  - Name:            var
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Value:           0x11111111
+    Size:            0x5
+...

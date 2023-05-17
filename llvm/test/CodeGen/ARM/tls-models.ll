@@ -22,9 +22,9 @@
 
 ; ----- no model specified -----
 
-define i32* @f1() {
+define ptr @f1() {
 entry:
-  ret i32* @external_gd
+  ret ptr @external_gd
 
   ; COMMON-LABEL:   f1:
   ; Non-PIC code can use initial-exec, PIC code has to use general dynamic.
@@ -33,9 +33,9 @@ entry:
   ; EMU:            __emutls_get_address
 }
 
-define i32* @f2() {
+define ptr @f2() {
 entry:
-  ret i32* @internal_gd
+  ret ptr @internal_gd
 
   ; COMMON-LABEL:   f2:
   ; Non-PIC code can use local exec, PIC code can use local dynamic,
@@ -48,9 +48,9 @@ entry:
 
 ; ----- localdynamic specified -----
 
-define i32* @f3() {
+define ptr @f3() {
 entry:
-  ret i32* @external_ld
+  ret ptr @external_ld
 
   ; COMMON-LABEL:   f3:
   ; Non-PIC code can use initial exec, PIC should use local dynamic,
@@ -60,9 +60,9 @@ entry:
   ; EMU:            __emutls_get_address
 }
 
-define i32* @f4() {
+define ptr @f4() {
 entry:
-  ret i32* @internal_ld
+  ret ptr @internal_ld
 
   ; COMMON-LABEL:   f4:
   ; Non-PIC code can use local exec, PIC code can use local dynamic,
@@ -75,9 +75,9 @@ entry:
 
 ; ----- initialexec specified -----
 
-define i32* @f5() {
+define ptr @f5() {
 entry:
-  ret i32* @external_ie
+  ret ptr @external_ie
 
   ; COMMON-LABEL:   f5:
   ; Non-PIC and PIC code will use initial exec as specified.
@@ -86,9 +86,9 @@ entry:
   ; EMU:            __emutls_get_address
 }
 
-define i32* @f6() {
+define ptr @f6() {
 entry:
-  ret i32* @internal_ie
+  ret ptr @internal_ie
 
   ; COMMON-LABEL:   f6:
   ; Non-PIC code can use local exec, PIC code use initial exec as specified.
@@ -100,9 +100,9 @@ entry:
 
 ; ----- localexec specified -----
 
-define i32* @f7() {
+define ptr @f7() {
 entry:
-  ret i32* @external_le
+  ret ptr @external_le
 
   ; COMMON-LABEL:   f7:
   ; Non-PIC and PIC code will use local exec as specified.
@@ -111,9 +111,9 @@ entry:
   ; EMU:            __emutls_get_address
 }
 
-define i32* @f8() {
+define ptr @f8() {
 entry:
-  ret i32* @internal_le
+  ret ptr @internal_le
 
   ; COMMON-LABEL:   f8:
   ; Non-PIC and PIC code will use local exec as specified.

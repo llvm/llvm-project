@@ -5,7 +5,7 @@ class A { };
 class B : private A { }; // expected-note {{declared private here}}
 
 void f(B* b) {
-  A *a = b; // expected-error{{cannot cast 'T1::B' to its private base class 'T1::A'}}
+  A *a = b; // expected-error{{cannot cast 'B' to its private base class 'A'}}
 }
 
 }
@@ -16,7 +16,7 @@ class A { };
 class B : A { }; // expected-note {{implicitly declared private here}}
 
 void f(B* b) {
-  A *a = b; // expected-error {{cannot cast 'T2::B' to its private base class 'T2::A'}}
+  A *a = b; // expected-error {{cannot cast 'B' to its private base class 'A'}}
 }
 
 }
@@ -69,7 +69,7 @@ namespace T6 {
   
   class C : public B { 
     void f(C *c) {
-      A* a = c; // expected-error {{cannot cast 'T6::C' to its private base class 'T6::A'}} \
+      A* a = c; // expected-error {{cannot cast 'C' to its private base class 'A'}} \
                 // expected-error {{'A' is a private member of 'T6::A'}}
     }
   };
@@ -96,22 +96,22 @@ struct flag {
 };
 
 template <class T>
-struct trait : flag<sizeof(T)> {};
+struct trait : flag<sizeof(T)> {}; // expected-note 2{{here}}
 
-template <class T, bool Inferred = trait<T>::value>
+template <class T, bool Inferred = trait<T>::value> // expected-note {{here}}
 struct a {};
 
 template <class T>
 class b {
-  a<T> x;
+  a<T> x; // expected-note {{here}}
   using U = a<T>;
 };
 
 template <int>
 struct Impossible {
-  static_assert(false, ""); // expected-error {{static_assert failed}}
+  static_assert(false, ""); // expected-error {{static assertion failed}}
 };
 
 // verify "no member named 'value'" bogus diagnostic is not emitted.
-trait<b<Impossible<0>>>::value;
+trait<b<Impossible<0>>>::value; // expected-note {{here}}
 } // namespace T8

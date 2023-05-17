@@ -12,15 +12,13 @@
 #include "../ClangTidyCheck.h"
 #include "../utils/TransformerClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 /// Finds s.find(...) == string::npos comparisons (for various string-like
 /// types) and suggests replacing with absl::StrContains.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-string-find-str-contains.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/string-find-str-contains.html
 class StringFindStrContainsCheck : public utils::TransformerClangTidyCheck {
 public:
   StringFindStrContainsCheck(StringRef Name, ClangTidyContext *Context);
@@ -32,8 +30,6 @@ private:
   const StringRef AbseilStringsMatchHeaderOption;
 };
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_STRINGFINDSTRCONTAINSCHECK_H

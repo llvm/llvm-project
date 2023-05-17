@@ -153,7 +153,7 @@ public:
 
   /// Constructs a CheckerManager without requiring an AST. No checker
   /// registration will take place. Only useful when one needs to print the
-  /// help flags through CheckerRegistryData, and the AST is unavalaible.
+  /// help flags through CheckerRegistryData, and the AST is unavailable.
   CheckerManager(AnalyzerOptions &AOptions, const LangOptions &LangOpts,
                  DiagnosticsEngine &Diags, ArrayRef<std::string> plugins);
 

@@ -31,10 +31,11 @@ public:
 
   /// Allocate a memory of size \p Size . \p HstPtr is used to assist the
   /// allocation.
-  virtual void *allocate(size_t Size, void *HstPtr, TargetAllocTy Kind) = 0;
+  virtual void *allocate(size_t Size, void *HstPtr,
+                         TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 
   /// Delete the pointer \p TgtPtr on the device
-  virtual int free(void *TgtPtr) = 0;
+  virtual int free(void *TgtPtr, TargetAllocTy Kind = TARGET_ALLOC_DEFAULT) = 0;
 };
 
 /// Class of memory manager. The memory manager is per-device by using

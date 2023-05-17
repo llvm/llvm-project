@@ -77,7 +77,7 @@ define i16 @parity_16(i16 %x) {
   ret i16 %2
 }
 
-define i16 @parity_16_load(i16* %x) {
+define i16 @parity_16_load(ptr %x) {
 ; X86-NOPOPCNT-LABEL: parity_16_load:
 ; X86-NOPOPCNT:       # %bb.0:
 ; X86-NOPOPCNT-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -113,7 +113,7 @@ define i16 @parity_16_load(i16* %x) {
 ; X64-POPCNT-NEXT:    andl $1, %eax
 ; X64-POPCNT-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-POPCNT-NEXT:    retq
-  %1 = load i16, i16* %x
+  %1 = load i16, ptr %x
   %2 = tail call i16 @llvm.ctpop.i16(i16 %1)
   %3 = and i16 %2, 1
   ret i16 %3

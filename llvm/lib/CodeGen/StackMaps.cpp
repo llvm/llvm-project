@@ -146,6 +146,23 @@ unsigned StatepointOpers::getGCPointerMap(
   return GCMapSize;
 }
 
+bool StatepointOpers::isFoldableReg(Register Reg) const {
+  unsigned FoldableAreaStart = getVarIdx();
+  for (const MachineOperand &MO : MI->uses()) {
+    if (MO.getOperandNo() >= FoldableAreaStart)
+      break;
+    if (MO.isReg() && MO.getReg() == Reg)
+      return false;
+  }
+  return true;
+}
+
+bool StatepointOpers::isFoldableReg(const MachineInstr *MI, Register Reg) {
+  if (MI->getOpcode() != TargetOpcode::STATEPOINT)
+    return false;
+  return StatepointOpers(MI).isFoldableReg(Reg);
+}
+
 StackMaps::StackMaps(AsmPrinter &AP) : AP(AP) {
   if (StackMapVersion != 3)
     llvm_unreachable("Unsupported stackmap version!");
@@ -176,9 +193,12 @@ unsigned StackMaps::getNextMetaArgIdx(const MachineInstr *MI, unsigned CurIdx) {
 
 /// Go up the super-register chain until we hit a valid dwarf register number.
 static unsigned getDwarfRegNum(unsigned Reg, const TargetRegisterInfo *TRI) {
-  int RegNum = TRI->getDwarfRegNum(Reg, false);
-  for (MCSuperRegIterator SR(Reg, TRI); SR.isValid() && RegNum < 0; ++SR)
-    RegNum = TRI->getDwarfRegNum(*SR, false);
+  int RegNum;
+  for (MCPhysReg SR : TRI->superregs_inclusive(Reg)) {
+    RegNum = TRI->getDwarfRegNum(SR, false);
+    if (RegNum >= 0)
+      break;
+  }
 
   assert(RegNum >= 0 && "Invalid Dwarf register number.");
   return (unsigned)RegNum;
@@ -240,7 +260,7 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       return ++MOI;
     }
 
-    assert(Register::isPhysicalRegister(MOI->getReg()) &&
+    assert(MOI->getReg().isPhysical() &&
            "Virtreg operands should have been rewritten before now.");
     const TargetRegisterClass *RC = TRI->getMinimalPhysRegClass(MOI->getReg());
     assert(!MOI->getSubReg() && "Physical subreg still around.");
@@ -365,7 +385,7 @@ StackMaps::parseRegisterLiveOutMask(const uint32_t *Mask) const {
   });
 
   for (auto I = LiveOuts.begin(), E = LiveOuts.end(); I != E; ++I) {
-    for (auto II = std::next(I); II != E; ++II) {
+    for (auto *II = std::next(I); II != E; ++II) {
       if (I->DwarfRegNum != II->DwarfRegNum) {
         // Skip all the now invalid entries.
         I = --II;
@@ -688,7 +708,7 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
     }
 
     // Emit alignment to 8 byte.
-    OS.emitValueToAlignment(8);
+    OS.emitValueToAlignment(Align(8));
 
     // Num live-out registers and padding to align to 4 byte.
     OS.emitInt16(0);
@@ -700,7 +720,7 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
       OS.emitIntValue(LO.Size, 1);
     }
     // Emit alignment to 8 byte.
-    OS.emitValueToAlignment(8);
+    OS.emitValueToAlignment(Align(8));
   }
 }
 
@@ -721,7 +741,7 @@ void StackMaps::serializeToStackMapSection() {
   // Create the section.
   MCSection *StackMapSection =
       OutContext.getObjectFileInfo()->getStackMapSection();
-  OS.SwitchSection(StackMapSection);
+  OS.switchSection(StackMapSection);
 
   // Emit a dummy symbol to force section inclusion.
   OS.emitLabel(OutContext.getOrCreateSymbol(Twine("__LLVM_StackMaps")));

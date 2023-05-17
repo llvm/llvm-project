@@ -26,5 +26,5 @@ for.end:                                          ; preds = %for.cond
 
 ; CHECK-LABEL: @test1
 ; CHECK: Loop %for.cond: backedge-taken count is 2
-; CHECK: Loop %for.cond: max backedge-taken count is 2
+; CHECK: Loop %for.cond: constant max backedge-taken count is 2
 }

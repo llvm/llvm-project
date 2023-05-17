@@ -26,7 +26,7 @@ struct SymbolUsesPass
   WalkResult operateOnSymbol(Operation *symbol, ModuleOp module,
                              SmallVectorImpl<func::FuncOp> &deadFunctions) {
     // Test computing uses on a non symboltable op.
-    Optional<SymbolTable::UseRange> symbolUses =
+    std::optional<SymbolTable::UseRange> symbolUses =
         SymbolTable::getSymbolUses(symbol);
 
     // Test the conservative failure case.
@@ -52,7 +52,7 @@ struct SymbolUsesPass
 
     // Test the functionality of getSymbolUses.
     symbolUses = SymbolTable::getSymbolUses(symbol, &module.getBodyRegion());
-    assert(symbolUses.hasValue() && "expected no unknown operations");
+    assert(symbolUses && "expected no unknown operations");
     for (SymbolTable::SymbolUse symbolUse : *symbolUses) {
       // Check that we can resolve back to our symbol.
       if (SymbolTable::lookupNearestSymbolFrom(

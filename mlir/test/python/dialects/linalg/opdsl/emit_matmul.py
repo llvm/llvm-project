@@ -4,6 +4,7 @@ from mlir.ir import *
 from mlir.dialects import builtin
 from mlir.dialects import func
 from mlir.dialects import linalg
+from mlir.dialects import tensor
 
 from mlir.dialects.linalg.opdsl.lang import *
 
@@ -50,7 +51,7 @@ with Context() as ctx, Location.unknown():
     # CHECK-LABEL: func @test_matmul_mono
     # CHECK-SAME:  %[[A:.+]]: tensor<4x16xf32>
     # CHECK-SAME:  %[[B:.+]]: tensor<16x8xf32>
-    # CHECK: %[[INITC:.+]] = linalg.init_tensor [4, 8] : tensor<4x8xf32>
+    # CHECK: %[[INITC:.+]] = tensor.empty() : tensor<4x8xf32>
     # CHECK: linalg.generic
     # CHECK-SAME: indexing_maps = [#[[$MUL_MAP_A]], #[[$MUL_MAP_B]], #[[$MUL_MAP_C]]]
     # CHECK-SAME: iterator_types = ["parallel", "parallel", "reduction"]
@@ -59,7 +60,7 @@ with Context() as ctx, Location.unknown():
     @func.FuncOp.from_py_func(
         RankedTensorType.get((4, 16), f32), RankedTensorType.get((16, 8), f32))
     def test_matmul_mono(lhs, rhs):
-      init_result = linalg.InitTensorOp([4, 8], f32)
+      init_result = tensor.EmptyOp([4, 8], f32)
       return matmul_mono(lhs, rhs, outs=[init_result.result])
 
     # CHECK-LABEL: @test_i8i8i32_matmul

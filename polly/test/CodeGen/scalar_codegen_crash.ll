@@ -17,9 +17,9 @@ for.body:                                         ; preds = %for.body, %entry
   br i1 undef, label %for.end.310, label %for.body
 
 for.end.310:                                      ; preds = %for.body
-  store i32 undef, i32* @endposition, align 4
+  store i32 undef, ptr @endposition, align 4
   %sub325 = sub i32 33, 0
-  %0 = load i32, i32* getelementptr inbounds ([0 x i32], [0 x i32]* @Init, i64 0, i64 0), align 4
+  %0 = load i32, ptr @Init, align 4
   br i1 false, label %for.cond.347.preheader, label %for.body.328.lr.ph
 
 for.body.328.lr.ph:                               ; preds = %for.end.310
@@ -29,8 +29,8 @@ for.body.328.lr.ph:                               ; preds = %for.end.310
 for.body.328:                                     ; preds = %for.body.328, %for.body.328.lr.ph
   %indvars.iv546 = phi i64 [ %indvars.iv.next547, %for.body.328 ], [ 1, %for.body.328.lr.ph ]
   %2 = phi i32 [ %or331, %for.body.328 ], [ %0, %for.body.328.lr.ph ]
-  %arrayidx330 = getelementptr inbounds [0 x i32], [0 x i32]* @Bit, i64 0, i64 %indvars.iv546
-  %3 = load i32, i32* %arrayidx330, align 4
+  %arrayidx330 = getelementptr inbounds [0 x i32], ptr @Bit, i64 0, i64 %indvars.iv546
+  %3 = load i32, ptr %arrayidx330, align 4
   %or331 = or i32 %3, %2
   %indvars.iv.next547 = add nuw nsw i64 %indvars.iv546, 1
   %lftr.wideiv = trunc i64 %indvars.iv.next547 to i32

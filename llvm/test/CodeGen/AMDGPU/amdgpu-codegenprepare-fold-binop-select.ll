@@ -86,7 +86,7 @@ define <2 x i32> @select_sdiv_rhs_const_v2i32(i1 %cond) {
 
 define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; IR-LABEL: @select_sdiv_lhs_opaque_const0_i32(
-; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 ptrtoint (i32 addrspace(1)* @gv to i32), i32 5
+; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 ptrtoint (ptr addrspace(1) @gv to i32), i32 5
 ; IR-NEXT:    [[TMP1:%.*]] = ashr i32 [[SELECT]], 31
 ; IR-NEXT:    [[TMP2:%.*]] = xor i32 0, [[TMP1]]
 ; IR-NEXT:    [[TMP3:%.*]] = add i32 [[SELECT]], [[TMP1]]
@@ -161,14 +161,14 @@ define i32 @select_sdiv_lhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_sub_u32_e32 v0, vcc, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %select = select i1 %cond, i32 ptrtoint (i32 addrspace(1)* @gv to i32), i32 5
+  %select = select i1 %cond, i32 ptrtoint (ptr addrspace(1) @gv to i32), i32 5
   %op = sdiv i32 1000000, %select
   ret i32 %op
 }
 
 define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; IR-LABEL: @select_sdiv_lhs_opaque_const1_i32(
-; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 5, i32 ptrtoint (i32 addrspace(1)* @gv to i32)
+; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 5, i32 ptrtoint (ptr addrspace(1) @gv to i32)
 ; IR-NEXT:    [[TMP1:%.*]] = ashr i32 [[SELECT]], 31
 ; IR-NEXT:    [[TMP2:%.*]] = xor i32 0, [[TMP1]]
 ; IR-NEXT:    [[TMP3:%.*]] = add i32 [[SELECT]], [[TMP1]]
@@ -243,14 +243,14 @@ define i32 @select_sdiv_lhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GCN-NEXT:    v_sub_u32_e32 v0, vcc, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %select = select i1 %cond, i32 5, i32 ptrtoint (i32 addrspace(1)* @gv to i32)
+  %select = select i1 %cond, i32 5, i32 ptrtoint (ptr addrspace(1) @gv to i32)
   %op = sdiv i32 1000000, %select
   ret i32 %op
 }
 
 define i32 @select_sdiv_rhs_opaque_const0_i32(i1 %cond) {
 ; IR-LABEL: @select_sdiv_rhs_opaque_const0_i32(
-; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 ptrtoint (i32 addrspace(1)* @gv to i32), i32 234234
+; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 ptrtoint (ptr addrspace(1) @gv to i32), i32 234234
 ; IR-NEXT:    [[OP:%.*]] = sdiv i32 [[SELECT]], 42
 ; IR-NEXT:    ret i32 [[OP]]
 ;
@@ -273,14 +273,14 @@ define i32 @select_sdiv_rhs_opaque_const0_i32(i1 %cond) {
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 3, v0
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %select = select i1 %cond, i32 ptrtoint (i32 addrspace(1)* @gv to i32), i32 234234
+  %select = select i1 %cond, i32 ptrtoint (ptr addrspace(1) @gv to i32), i32 234234
   %op = sdiv i32 %select, 42
   ret i32 %op
 }
 
 define i32 @select_sdiv_rhs_opaque_const1_i32(i1 %cond) {
 ; IR-LABEL: @select_sdiv_rhs_opaque_const1_i32(
-; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 42000, i32 ptrtoint (i32 addrspace(1)* @gv to i32)
+; IR-NEXT:    [[SELECT:%.*]] = select i1 [[COND:%.*]], i32 42000, i32 ptrtoint (ptr addrspace(1) @gv to i32)
 ; IR-NEXT:    [[OP:%.*]] = sdiv i32 [[SELECT]], 42
 ; IR-NEXT:    ret i32 [[OP]]
 ;
@@ -303,7 +303,7 @@ define i32 @select_sdiv_rhs_opaque_const1_i32(i1 %cond) {
 ; GCN-NEXT:    v_ashrrev_i32_e32 v0, 3, v0
 ; GCN-NEXT:    v_add_u32_e32 v0, vcc, v0, v1
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %select = select i1 %cond, i32 42000, i32 ptrtoint (i32 addrspace(1)* @gv to i32)
+  %select = select i1 %cond, i32 42000, i32 ptrtoint (ptr addrspace(1) @gv to i32)
   %op = sdiv i32 %select, 42
   ret i32 %op
 }
@@ -387,7 +387,7 @@ define i32 @select_mul_rhs_const_i32(i1 %cond) {
 define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; IR-LABEL: @select_add_lhs_const_i16(
 ; IR-NEXT:    [[OP:%.*]] = select i1 [[COND:%.*]], i16 128, i16 131
-; IR-NEXT:    store i16 [[OP]], i16 addrspace(1)* undef, align 2
+; IR-NEXT:    store i16 [[OP]], ptr addrspace(1) undef, align 2
 ; IR-NEXT:    ret void
 ;
 ; GCN-LABEL: select_add_lhs_const_i16:
@@ -403,7 +403,7 @@ define amdgpu_kernel void @select_add_lhs_const_i16(i1 %cond) {
 ; GCN-NEXT:    s_endpgm
   %select = select i1 %cond, i16 5, i16 8
   %op = add i16 %select, 123
-  store i16 %op, i16 addrspace(1)* undef
+  store i16 %op, ptr addrspace(1) undef
   ret void
 }
 

@@ -4,7 +4,7 @@
 ; The inner loop should require only one add (and no leas either).
 ; rdar://8100380
 
-@flags = external dso_local global [8192 x i8], align 16 ; <[8192 x i8]*> [#uses=1]
+@flags = external dso_local global [8192 x i8], align 16 ; <ptr> [#uses=1]
 
 define void @foo() nounwind {
 ; CHECK-LABEL: foo:
@@ -45,8 +45,8 @@ bb10:                                             ; preds = %bb7
 
 bb11:                                             ; preds = %bb10, %bb11
   %tmp12 = phi i64 [ %tmp14, %bb11 ], [ 2, %bb10 ] ; <i64> [#uses=2]
-  %tmp13 = getelementptr inbounds [8192 x i8], [8192 x i8]* @flags, i64 0, i64 %tmp12 ; <i8*> [#uses=1]
-  store i8 0, i8* %tmp13, align 1
+  %tmp13 = getelementptr inbounds [8192 x i8], ptr @flags, i64 0, i64 %tmp12 ; <ptr> [#uses=1]
+  store i8 0, ptr %tmp13, align 1
   %tmp14 = add nsw i64 %tmp12, %tmp8              ; <i64> [#uses=2]
   %tmp15 = icmp slt i64 %tmp14, 8192              ; <i1> [#uses=1]
   br i1 %tmp15, label %bb11, label %bb16

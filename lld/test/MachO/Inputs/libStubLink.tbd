@@ -22,3 +22,4 @@ current-version: 1.0.0
 exports:
   - targets:         [ arm64-ios-simulator ]
     symbols:         [ _arm64_sim_only ]
+...

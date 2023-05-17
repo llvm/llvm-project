@@ -77,8 +77,8 @@ define float @fcmp_select_fp_constants(float %x) nounwind readnone {
 ; X64-AVX2-LABEL: fcmp_select_fp_constants:
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vcmpneqss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
-; X64-AVX2-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X64-AVX2-NEXT:    vmovss {{.*#+}} xmm2 = mem[0],zero,zero,zero
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm1 = [4.2E+1,4.2E+1,4.2E+1,4.2E+1]
+; X64-AVX2-NEXT:    vbroadcastss {{.*#+}} xmm2 = [2.3E+1,2.3E+1,2.3E+1,2.3E+1]
 ; X64-AVX2-NEXT:    vblendvps %xmm0, %xmm1, %xmm2, %xmm0
 ; X64-AVX2-NEXT:    retq
 ;

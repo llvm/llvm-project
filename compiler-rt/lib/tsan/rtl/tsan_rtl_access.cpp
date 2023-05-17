@@ -145,15 +145,6 @@ void TraceTime(ThreadState* thr) {
   TraceEvent(thr, ev);
 }
 
-ALWAYS_INLINE RawShadow LoadShadow(RawShadow* p) {
-  return static_cast<RawShadow>(
-      atomic_load((atomic_uint32_t*)p, memory_order_relaxed));
-}
-
-ALWAYS_INLINE void StoreShadow(RawShadow* sp, RawShadow s) {
-  atomic_store((atomic_uint32_t*)sp, static_cast<u32>(s), memory_order_relaxed);
-}
-
 NOINLINE void DoReportRace(ThreadState* thr, RawShadow* shadow_mem, Shadow cur,
                            Shadow old,
                            AccessType typ) SANITIZER_NO_THREAD_SAFETY_ANALYSIS {

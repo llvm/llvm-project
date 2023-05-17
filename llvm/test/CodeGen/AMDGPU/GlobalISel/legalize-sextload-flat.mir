@@ -8,11 +8,15 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; SI-LABEL: name: test_sextload_flat_i32_i8
-    ; SI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; SI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; VI-LABEL: name: test_sextload_flat_i32_i8
-    ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; VI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $vgpr0_vgpr1
@@ -26,11 +30,15 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; SI-LABEL: name: test_sextload_flat_i32_i16
-    ; SI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
     ; SI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; VI-LABEL: name: test_sextload_flat_i32_i16
-    ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
     ; VI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
      %0:_(p0) = COPY $vgpr0_vgpr1
@@ -44,11 +52,15 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; SI-LABEL: name: test_sextload_flat_i31_i8
-    ; SI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; SI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     ; VI-LABEL: name: test_sextload_flat_i31_i8
-    ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; VI-NEXT: $vgpr0 = COPY [[SEXTLOAD]](s32)
     %0:_(p0) = COPY $vgpr0_vgpr1
@@ -63,12 +75,16 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; SI-LABEL: name: test_sextload_flat_i64_i8
-    ; SI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; VI-LABEL: name: test_sextload_flat_i64_i8
-    ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s8))
     ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
@@ -83,12 +99,16 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; SI-LABEL: name: test_sextload_flat_i64_i16
-    ; SI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
     ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; VI-LABEL: name: test_sextload_flat_i64_i16
-    ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[SEXTLOAD:%[0-9]+]]:_(s32) = G_SEXTLOAD [[COPY]](p0) :: (load (s16))
     ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[SEXTLOAD]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
@@ -103,12 +123,16 @@ body: |
     liveins: $vgpr0_vgpr1
 
     ; SI-LABEL: name: test_sextload_flat_i64_i32
-    ; SI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; SI: liveins: $vgpr0_vgpr1
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; SI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
     ; SI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
     ; SI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)
     ; VI-LABEL: name: test_sextload_flat_i64_i32
-    ; VI: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
+    ; VI: liveins: $vgpr0_vgpr1
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $vgpr0_vgpr1
     ; VI-NEXT: [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[COPY]](p0) :: (load (s32))
     ; VI-NEXT: [[SEXT:%[0-9]+]]:_(s64) = G_SEXT [[LOAD]](s32)
     ; VI-NEXT: $vgpr0_vgpr1 = COPY [[SEXT]](s64)

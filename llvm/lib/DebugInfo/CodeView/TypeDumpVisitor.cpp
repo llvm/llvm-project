@@ -27,7 +27,7 @@ static const EnumEntry<TypeLeafKind> LeafTypeNames[] = {
 };
 
 #define ENUM_ENTRY(enum_class, enum)                                           \
-  { #enum, std::underlying_type < enum_class > ::type(enum_class::enum) }
+  { #enum, std::underlying_type_t<enum_class>(enum_class::enum) }
 
 static const EnumEntry<uint16_t> ClassOptionNames[] = {
     ENUM_ENTRY(ClassOptions, Packed),
@@ -177,7 +177,7 @@ Error TypeDumpVisitor::visitTypeBegin(CVType &Record, TypeIndex Index) {
   W->getOStream() << " {\n";
   W->indent();
   W->printEnum("TypeLeafKind", unsigned(Record.kind()),
-               makeArrayRef(LeafTypeNames));
+               ArrayRef(LeafTypeNames));
   return Error::success();
 }
 
@@ -194,8 +194,7 @@ Error TypeDumpVisitor::visitMemberBegin(CVMemberRecord &Record) {
   W->startLine() << getLeafTypeName(Record.Kind);
   W->getOStream() << " {\n";
   W->indent();
-  W->printEnum("TypeLeafKind", unsigned(Record.Kind),
-               makeArrayRef(LeafTypeNames));
+  W->printEnum("TypeLeafKind", unsigned(Record.Kind), ArrayRef(LeafTypeNames));
   return Error::success();
 }
 
@@ -247,7 +246,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, StringListRecord &Strs) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ClassRecord &Class) {
   uint16_t Props = static_cast<uint16_t>(Class.getOptions());
   W->printNumber("MemberCount", Class.getMemberCount());
-  W->printFlags("Properties", Props, makeArrayRef(ClassOptionNames));
+  W->printFlags("Properties", Props, ArrayRef(ClassOptionNames));
   printTypeIndex("FieldList", Class.getFieldList());
   printTypeIndex("DerivedFrom", Class.getDerivationList());
   printTypeIndex("VShape", Class.getVTableShape());
@@ -261,7 +260,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ClassRecord &Class) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, UnionRecord &Union) {
   uint16_t Props = static_cast<uint16_t>(Union.getOptions());
   W->printNumber("MemberCount", Union.getMemberCount());
-  W->printFlags("Properties", Props, makeArrayRef(ClassOptionNames));
+  W->printFlags("Properties", Props, ArrayRef(ClassOptionNames));
   printTypeIndex("FieldList", Union.getFieldList());
   W->printNumber("SizeOf", Union.getSize());
   W->printString("Name", Union.getName());
@@ -274,7 +273,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, EnumRecord &Enum) {
   uint16_t Props = static_cast<uint16_t>(Enum.getOptions());
   W->printNumber("NumEnumerators", Enum.getMemberCount());
   W->printFlags("Properties", uint16_t(Enum.getOptions()),
-                makeArrayRef(ClassOptionNames));
+                ArrayRef(ClassOptionNames));
   printTypeIndex("UnderlyingType", Enum.getUnderlyingType());
   printTypeIndex("FieldListType", Enum.getFieldList());
   W->printString("Name", Enum.getName());
@@ -311,9 +310,9 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, MemberFuncIdRecord &Id) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ProcedureRecord &Proc) {
   printTypeIndex("ReturnType", Proc.getReturnType());
   W->printEnum("CallingConvention", uint8_t(Proc.getCallConv()),
-               makeArrayRef(CallingConventions));
+               ArrayRef(CallingConventions));
   W->printFlags("FunctionOptions", uint8_t(Proc.getOptions()),
-                makeArrayRef(FunctionOptionEnum));
+                ArrayRef(FunctionOptionEnum));
   W->printNumber("NumParameters", Proc.getParameterCount());
   printTypeIndex("ArgListType", Proc.getArgumentList());
   return Error::success();
@@ -324,9 +323,9 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, MemberFunctionRecord &MF) {
   printTypeIndex("ClassType", MF.getClassType());
   printTypeIndex("ThisType", MF.getThisType());
   W->printEnum("CallingConvention", uint8_t(MF.getCallConv()),
-               makeArrayRef(CallingConventions));
+               ArrayRef(CallingConventions));
   W->printFlags("FunctionOptions", uint8_t(MF.getOptions()),
-                makeArrayRef(FunctionOptionEnum));
+                ArrayRef(FunctionOptionEnum));
   W->printNumber("NumParameters", MF.getParameterCount());
   printTypeIndex("ArgListType", MF.getArgumentList());
   W->printNumber("ThisAdjustment", MF.getThisPointerAdjustment());
@@ -335,7 +334,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, MemberFunctionRecord &MF) {
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR,
                                         MethodOverloadListRecord &MethodList) {
-  for (auto &M : MethodList.getMethods()) {
+  for (const auto &M : MethodList.getMethods()) {
     ListScope S(*W, "Method");
     printMemberAttributes(M.getAccess(), M.getMethodKind(), M.getOptions());
     printTypeIndex("Type", M.getType());
@@ -362,8 +361,8 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, TypeServer2Record &TS) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
   printTypeIndex("PointeeType", Ptr.getReferentType());
   W->printEnum("PtrType", unsigned(Ptr.getPointerKind()),
-               makeArrayRef(PtrKindNames));
-  W->printEnum("PtrMode", unsigned(Ptr.getMode()), makeArrayRef(PtrModeNames));
+               ArrayRef(PtrKindNames));
+  W->printEnum("PtrMode", unsigned(Ptr.getMode()), ArrayRef(PtrModeNames));
 
   W->printNumber("IsFlat", Ptr.isFlat());
   W->printNumber("IsConst", Ptr.isConst());
@@ -379,7 +378,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
 
     printTypeIndex("ClassType", MI.getContainingType());
     W->printEnum("Representation", uint16_t(MI.getRepresentation()),
-                 makeArrayRef(PtrMemberRepNames));
+                 ArrayRef(PtrMemberRepNames));
   }
 
   return Error::success();
@@ -388,7 +387,7 @@ Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, PointerRecord &Ptr) {
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, ModifierRecord &Mod) {
   uint16_t Mods = static_cast<uint16_t>(Mod.getModifiers());
   printTypeIndex("ModifiedType", Mod.getModifiedType());
-  W->printFlags("Modifiers", Mods, makeArrayRef(TypeModifierNames));
+  W->printFlags("Modifiers", Mods, ArrayRef(TypeModifierNames));
 
   return Error::success();
 }
@@ -441,14 +440,13 @@ void TypeDumpVisitor::printMemberAttributes(MemberAttributes Attrs) {
 void TypeDumpVisitor::printMemberAttributes(MemberAccess Access,
                                             MethodKind Kind,
                                             MethodOptions Options) {
-  W->printEnum("AccessSpecifier", uint8_t(Access),
-               makeArrayRef(MemberAccessNames));
+  W->printEnum("AccessSpecifier", uint8_t(Access), ArrayRef(MemberAccessNames));
   // Data members will be vanilla. Don't try to print a method kind for them.
   if (Kind != MethodKind::Vanilla)
-    W->printEnum("MethodKind", unsigned(Kind), makeArrayRef(MemberKindNames));
+    W->printEnum("MethodKind", unsigned(Kind), ArrayRef(MemberKindNames));
   if (Options != MethodOptions::None) {
     W->printFlags("MethodOptions", unsigned(Options),
-                  makeArrayRef(MethodOptionNames));
+                  ArrayRef(MethodOptionNames));
   }
 }
 
@@ -458,7 +456,7 @@ Error TypeDumpVisitor::visitUnknownMember(CVMemberRecord &Record) {
 }
 
 Error TypeDumpVisitor::visitUnknownType(CVType &Record) {
-  W->printEnum("Kind", uint16_t(Record.kind()), makeArrayRef(LeafTypeNames));
+  W->printEnum("Kind", uint16_t(Record.kind()), ArrayRef(LeafTypeNames));
   W->printNumber("Length", uint32_t(Record.content().size()));
   return Error::success();
 }
@@ -551,7 +549,7 @@ Error TypeDumpVisitor::visitKnownMember(CVMemberRecord &CVR,
 }
 
 Error TypeDumpVisitor::visitKnownRecord(CVType &CVR, LabelRecord &LR) {
-  W->printEnum("Mode", uint16_t(LR.Mode), makeArrayRef(LabelTypeEnum));
+  W->printEnum("Mode", uint16_t(LR.Mode), ArrayRef(LabelTypeEnum));
   return Error::success();
 }
 

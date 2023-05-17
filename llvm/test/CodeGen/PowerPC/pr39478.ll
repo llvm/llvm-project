@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=powerpc64-unknown-unknown -verify-machineinstrs | FileCheck %s --check-prefix=CHECKBE
 ; RUN: llc < %s -mtriple=powerpc64-ibm-aix-xcoff -verify-machineinstrs | FileCheck %s --check-prefix=CHECKBE
 
-define void @pr39478(i64* %p64, i32* %p32) {
+define void @pr39478(ptr %p64, ptr %p32) {
 ; CHECKLE-LABEL: pr39478:
 ; CHECKLE:       # %bb.0: # %entry
 ; CHECKLE-NEXT:    lbz 3, 4(3)
@@ -16,15 +16,15 @@ define void @pr39478(i64* %p64, i32* %p32) {
 ; CHECKBE-NEXT:    stb 3, 3(4)
 ; CHECKBE-NEXT:    blr
 entry:
-  %tmp32 = load i64, i64* %p64, align 8
-  %tmp33 = load i32, i32* %p32, align 4
+  %tmp32 = load i64, ptr %p64, align 8
+  %tmp33 = load i32, ptr %p32, align 4
   %tmp34 = and i32 %tmp33, -256
   %tmp35 = lshr i64 %tmp32, 32
   %tmp36 = shl nuw nsw i64 %tmp35, 24
   %tmp37 = trunc i64 %tmp36 to i32
   %tmp38 = call i32 @llvm.bswap.i32(i32 %tmp37)
   %tmp39 = or i32 %tmp38, %tmp34
-  store i32 %tmp39, i32* %p32, align 4
+  store i32 %tmp39, ptr %p32, align 4
   ret void
 }
 

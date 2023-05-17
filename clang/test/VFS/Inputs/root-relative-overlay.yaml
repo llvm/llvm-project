@@ -1,0 +1,11 @@
+{
+  'version': 0,
+  'case-sensitive': false,
+  'overlay-relative': OVERLAY_DIR,
+  'root-relative': 'overlay-dir',
+  'roots': [
+    { 'name': 'not_real.h', 'type': 'file',
+      'external-contents': 'EXTERNAL_DIR/actual_header.h'
+    },
+  ]
+}

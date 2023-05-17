@@ -5,12 +5,12 @@
 @var_double2 = dso_local global <2 x double> <double 0.0, double 0.0>
 
 define dso_local void @ldst_double() {
-  %valf = load volatile float, float* @var_float
+  %valf = load volatile float, ptr @var_float
   %vale = fpext float %valf to double
-  %vald = load volatile double, double* @var_double
+  %vald = load volatile double, ptr @var_double
   %vald1 = insertelement <2 x double> undef, double %vald, i32 0
   %vald2 = insertelement <2 x double> %vald1, double %vale, i32 1
-  store volatile <2 x double> %vald2, <2 x double>* @var_double2
+  store volatile <2 x double> %vald2, ptr @var_double2
   ret void
 
 ; CHECK-LABEL: ldst_double:
@@ -21,12 +21,12 @@ define dso_local void @ldst_double() {
 }
 
 define dso_local void @ldst_double_tune_a53() #0 {
-  %valf = load volatile float, float* @var_float
+  %valf = load volatile float, ptr @var_float
   %vale = fpext float %valf to double
-  %vald = load volatile double, double* @var_double
+  %vald = load volatile double, ptr @var_double
   %vald1 = insertelement <2 x double> undef, double %vald, i32 0
   %vald2 = insertelement <2 x double> %vald1, double %vale, i32 1
-  store volatile <2 x double> %vald2, <2 x double>* @var_double2
+  store volatile <2 x double> %vald2, ptr @var_double2
   ret void
 
 ; CHECK-LABEL: ldst_double_tune_a53:

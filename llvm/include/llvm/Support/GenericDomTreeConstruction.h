@@ -44,6 +44,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/GenericDomTree.h"
+#include <optional>
 #include <queue>
 
 #define DEBUG_TYPE "dom-tree-builder"
@@ -403,7 +404,7 @@ struct SemiNCAInfo {
       // immune to swap successors transformation (e.g. canonicalizing branch
       // predicates). SuccOrder is initialized lazily only for successors of
       // reverse unreachable nodes.
-      Optional<NodeOrderMap> SuccOrder;
+      std::optional<NodeOrderMap> SuccOrder;
       auto InitSuccOrderOnce = [&]() {
         SuccOrder = NodeOrderMap();
         for (const auto Node : nodes(DT.Parent))
@@ -712,7 +713,7 @@ struct SemiNCAInfo {
     assert(IsPostDom && "This function is only for postdominators");
 
     // The tree has only trivial roots -- nothing to update.
-    if (std::none_of(DT.Roots.begin(), DT.Roots.end(), [BUI](const NodePtr N) {
+    if (llvm::none_of(DT.Roots, [BUI](const NodePtr N) {
           return HasForwardSuccessors(N, BUI);
         }))
       return;

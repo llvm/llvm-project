@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd May 12, 2019
+.Dd Feb 9, 2023
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -130,16 +130,22 @@ Alias for
 .Fl -color-diagnostics Ns = Ns Cm auto .
 .It Fl -compress-debug-sections Ns = Ns Ar value
 Compress DWARF debug sections.
-.Ar value
+.Cm value
 may be
-.Cm none
-or
-.Cm zlib .
+.Pp
+.Bl -tag -width 2n -compact
+.It Cm none
+No compression.
+.It Cm zlib
 The default compression level is 1 (fastest) as the debug info usually
-compresses well at that level, but if you want to compress it more,
+compresses well at that level. If you want to compress it more,
 you can specify
 .Fl O2
 to set the compression level to 6.
+.It Cm zstd
+The compression level is 5.
+.El
+.Pp
 .It Fl -cref
 Output cross reference table. If
 .Fl Map
@@ -346,12 +352,15 @@ Do not set the text data sections to be writable, page align sections.
 Disable target-specific relaxations. For x86-64 this disables R_X86_64_GOTPCRELX and R_X86_64_REX_GOTPCRELX GOT optimization.
 .It Fl -no-rosegment
 Do not put read-only non-executable sections in their own segment.
-.It Fl -no-undefined-version
-Report version scripts that refer undefined symbols.
+.It Fl -undefined-version
+Do not report version scripts that refer to undefined symbols.
 .It Fl -no-undefined
 Report unresolved symbols even if the linker is creating a shared library.
 .It Fl -no-warn-symbol-ordering
 Do not warn about problems with the symbol ordering file or call graph profile.
+.It Fl -no-warnings , Fl w
+Suppress warnings and cancel
+.Cm --fatal-warnings.
 .It Fl -no-whole-archive
 Restores the default behavior of loading archive members.
 .It Fl -no-pie , Fl -no-pic-executable
@@ -484,8 +493,25 @@ and
 .It Fl -pop-state
 Restore the states saved by
 .Fl -push-state.
+.It Fl --relax-gp
+Enable global pointer relaxation for RISC-V.
 .It Fl -relocatable , Fl r
 Create relocatable object file.
+.It Fl -remap-inputs Ns = Ns Ar from-glob=to-file
+Input files matching
+.Cm from-glob
+are mapped to
+.Cm to-file.
+Use
+.Cm /dev/null
+to ignore an input file.
+.It Fl -remap-inputs-file Ns = Ns Ar file
+Remap input files based on patterns in
+.Ar file .
+Each line in the remap file is of the format
+.Cm from-glob=to-file
+or a comment starting with
+.Cm # .
 .It Fl -reproduce Ns = Ns Ar path
 Write a tar file to
 .Ar path,
@@ -631,10 +657,10 @@ Creates a separate output section for every orphan input section.
 Determine how to handle unresolved symbols.
 .It Fl -use-android-relr-tags
 Use SHT_ANDROID_RELR / DT_ANDROID_RELR* tags instead of SHT_RELR / DT_RELR*.
-.It Fl v
+.It Fl v , Fl V
 Display the version number and proceed with linking if object files are
 specified.
-.It Fl V , Fl -version
+.It Fl -version
 Display the version number and exit.
 .It Fl -verbose
 Verbose mode.
@@ -868,6 +894,22 @@ Create a
 segment.
 .El
 .El
+
+.Sh ENVIRONMENT VARIABLES
+.Bl -tag -width LC_CTYPE
+.It Ev LLD_REPRODUCE
+Create a reproduce tarball with the specified filename. If
+.Fl -reproduce
+is specified,
+.Fl -reproduce
+takes precedence.
+.It Ev LLD_VERSION
+ld.lld creates a section named
+.Cm .comment
+containing the LLD version string. The version string can be overridden by this environment variable,
+which is useful to eliminate differences in the binary caused by LLD version number differences.
+.El
+
 .Sh IMPLEMENTATION NOTES
 .Nm Ap s
 handing of archive files (those with a

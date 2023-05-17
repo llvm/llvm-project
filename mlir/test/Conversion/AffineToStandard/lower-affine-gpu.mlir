@@ -1,4 +1,4 @@
-// RUN: mlir-opt -pass-pipeline="gpu.module(lower-affine)" %s | FileCheck %s
+// RUN: mlir-opt -pass-pipeline="builtin.module(gpu.module(lower-affine))" %s | FileCheck %s
 
 #map0gpufunc = affine_map<(d0) -> (d0)>
 gpu.module @kernels {

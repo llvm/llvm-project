@@ -1,19 +1,18 @@
-; RUN: opt -tbaa -newgvn -S < %s | FileCheck %s
+; RUN: opt -passes=newgvn -S < %s | FileCheck %s
 
-%struct.t = type { i32* }
+%struct.t = type { ptr }
 
 ; The loaded address and the location of the address itself are not aliased,
 ; so the second reload is not necessary. Check that it can be eliminated.
 ; CHECK-LABEL: test1
 ; CHECK: load
 ; CHECK-NOT: load
-define void @test1(%struct.t* nocapture readonly %p, i32 %v) #0 {
+define void @test1(ptr nocapture readonly %p, i32 %v) #0 {
 entry:
-  %m = getelementptr inbounds %struct.t, %struct.t* %p, i32 0, i32 0
-  %0 = load i32*, i32** %m, align 4, !tbaa !1
-  store volatile i32 %v, i32* %0, align 4, !tbaa !6
-  %1 = load i32*, i32** %m, align 4, !tbaa !1
-  store volatile i32 %v, i32* %1, align 4, !tbaa !6
+  %0 = load ptr, ptr %p, align 4, !tbaa !1
+  store volatile i32 %v, ptr %0, align 4, !tbaa !6
+  %1 = load ptr, ptr %p, align 4, !tbaa !1
+  store volatile i32 %v, ptr %1, align 4, !tbaa !6
   ret void
 }
 
@@ -23,13 +22,12 @@ entry:
 ; CHECK: load
 ; CHECK: store
 ; CHECK: load
-define void @test2(%struct.t* nocapture readonly %p, i32 %v) #0 {
+define void @test2(ptr nocapture readonly %p, i32 %v) #0 {
 entry:
-  %m = getelementptr inbounds %struct.t, %struct.t* %p, i32 0, i32 0
-  %0 = load i32*, i32** %m, align 4, !tbaa !1
-  store volatile i32 %v, i32* %0, align 4, !tbaa !1
-  %1 = load i32*, i32** %m, align 4, !tbaa !1
-  store volatile i32 %v, i32* %1, align 4, !tbaa !1
+  %0 = load ptr, ptr %p, align 4, !tbaa !1
+  store volatile i32 %v, ptr %0, align 4, !tbaa !1
+  %1 = load ptr, ptr %p, align 4, !tbaa !1
+  store volatile i32 %v, ptr %1, align 4, !tbaa !1
   ret void
 }
 
@@ -39,13 +37,12 @@ entry:
 ; CHECK: load
 ; CHECK: store
 ; CHECK: load
-define void @test3(%struct.t* nocapture readonly %p, i32 %v) #0 {
+define void @test3(ptr nocapture readonly %p, i32 %v) #0 {
 entry:
-  %m = getelementptr inbounds %struct.t, %struct.t* %p, i32 0, i32 0
-  %0 = load atomic i32*, i32** %m acquire, align 4, !tbaa !1
-  store volatile i32 %v, i32* %0, align 4, !tbaa !6
-  %1 = load atomic i32*, i32** %m acquire, align 4, !tbaa !1
-  store volatile i32 %v, i32* %1, align 4, !tbaa !6
+  %0 = load atomic ptr, ptr %p acquire, align 4, !tbaa !1
+  store volatile i32 %v, ptr %0, align 4, !tbaa !6
+  %1 = load atomic ptr, ptr %p acquire, align 4, !tbaa !1
+  store volatile i32 %v, ptr %1, align 4, !tbaa !6
   ret void
 }
 

@@ -18,10 +18,22 @@ namespace dr1305 { // dr1305: yes
 struct Incomplete; // expected-note {{forward declaration of 'dr1305::Incomplete'}}
 struct Complete {};
 
-int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'dr1305::Incomplete'}}
+int incomplete = alignof(Incomplete(&)[]); // expected-error {{invalid application of 'alignof' to an incomplete type 'Incomplete'}}
 int complete = alignof(Complete(&)[]);
 }
 #endif
+
+namespace dr1307 { // dr1307: 14
+#if __cplusplus >= 201103L
+void f(int const (&)[2]);
+void f(int const (&)[3]);
+
+void caller() {
+  // This should not be ambiguous, the 2nd overload is better.
+  f({1, 2, 3});
+}
+#endif // __cplusplus >= 201103L
+} // namespace dr1307
 
 namespace dr1310 { // dr1310: 5
   struct S {} * sp = new S::S; // expected-error {{qualified reference to 'S' is a constructor name}}
@@ -457,6 +469,17 @@ Incomplete f(Incomplete) = delete; // well-formed
 #endif
 }
 
+namespace dr1395 { // dr1395: 16
+#if __cplusplus >= 201103L
+  template <typename T, typename... U> void f(T, U...);
+  template <typename T> void f(T);
+  void h(int i) {
+    // This is made ambiguous by dr692, but made valid again by dr1395.
+    f(&i);
+  }
+#endif
+}
+
 namespace dr1399 { // dr1399: dup 1388
   template<typename ...T> void f(T..., int, T...) {} // expected-note {{candidate}} expected-error 0-1{{C++11}}
   void g() {
@@ -465,15 +488,3 @@ namespace dr1399 { // dr1399: dup 1388
     f(0, 0, 0); // expected-error {{no match}}
   }
 }
-
-namespace dr1307 { // dr1307: 14
-#if __cplusplus >= 201103L
-void f(int const (&)[2]);
-void f(int const (&)[3]);
-
-void caller() {
-  // This should not be ambiguous, the 2nd overload is better.
-  f({1, 2, 3});
-}
-#endif // __cplusplus >= 201103L
-} // namespace dr1307

@@ -556,9 +556,6 @@ public:
   /// Return true if there is metadata referencing this value.
   bool isUsedByMetadata() const { return IsUsedByMD; }
 
-  // Return true if this value is only transitively referenced by metadata.
-  bool isTransitiveUsedByMetadataOnly() const;
-
 protected:
   /// Get the current metadata attachments for the given kind, if any.
   ///
@@ -746,6 +743,11 @@ public:
     return const_cast<Value *>(
         static_cast<const Value *>(this)->stripInBoundsOffsets(Func));
   }
+
+  /// If this ptr is provably equal to \p Other plus a constant offset, return
+  /// that offset in bytes. Essentially `ptr this` subtract `ptr Other`.
+  std::optional<int64_t> getPointerOffsetFrom(const Value *Other,
+                                              const DataLayout &DL) const;
 
   /// Return true if the memory object referred to by V can by freed in the
   /// scope for which the SSA value defining the allocation is statically

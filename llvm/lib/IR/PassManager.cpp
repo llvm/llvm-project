@@ -8,8 +8,8 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/PassManagerImpl.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -54,7 +54,7 @@ bool FunctionAnalysisManagerModuleProxy::Result::invalidate(
   // Now walk all the functions to see if any inner analysis invalidation is
   // necessary.
   for (Function &F : M) {
-    Optional<PreservedAnalyses> FunctionPA;
+    std::optional<PreservedAnalyses> FunctionPA;
 
     // Check to see whether the preserved set needs to be pruned based on
     // module-level analysis invalidation that triggers deferred invalidation
@@ -96,9 +96,9 @@ void ModuleToFunctionPassAdaptor::printPipeline(
   OS << "function";
   if (EagerlyInvalidate)
     OS << "<eager-inv>";
-  OS << "(";
+  OS << '(';
   Pass->printPipeline(OS, MapClassName2PassName);
-  OS << ")";
+  OS << ')';
 }
 
 PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
@@ -121,18 +121,14 @@ PreservedAnalyses ModuleToFunctionPassAdaptor::run(Module &M,
     if (!PI.runBeforePass<Function>(*Pass, F))
       continue;
 
-    PreservedAnalyses PassPA;
-    {
-      TimeTraceScope TimeScope(Pass->name(), F.getName());
-      PassPA = Pass->run(F, FAM);
-    }
-
-    PI.runAfterPass(*Pass, F, PassPA);
+    PreservedAnalyses PassPA = Pass->run(F, FAM);
 
     // We know that the function pass couldn't have invalidated any other
     // function's analyses (that's the contract of a function pass), so
     // directly handle the function analysis manager's invalidation here.
     FAM.invalidate(F, EagerlyInvalidate ? PreservedAnalyses::none() : PassPA);
+
+    PI.runAfterPass(*Pass, F, PassPA);
 
     // Then intersect the preserved set so that invalidation of module
     // analyses will eventually occur when the module pass completes.

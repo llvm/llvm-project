@@ -21,6 +21,7 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_SEMANTICHIGHLIGHTING_H
 
 #include "Protocol.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -48,6 +49,9 @@ enum class HighlightingKind {
   Concept,
   Primitive,
   Macro,
+  Modifier,
+  Operator,
+  Bracket,
 
   // This one is different from the other kinds as it's a line style
   // rather than a token style.
@@ -60,7 +64,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, HighlightingKind K);
 
 enum class HighlightingModifier {
   Declaration,
-  // FIXME: Definition (needs findExplicitReferences support)
+  Definition,
   Deprecated,
   Deduced,
   Readonly,
@@ -70,6 +74,9 @@ enum class HighlightingModifier {
   DependentName,
   DefaultLibrary,
   UsedAsMutableReference,
+  UsedAsMutablePointer,
+  ConstructorOrDestructor,
+  UserDefined,
 
   FunctionScope,
   ClassScope,
@@ -99,9 +106,11 @@ bool operator<(const HighlightingToken &L, const HighlightingToken &R);
 
 // Returns all HighlightingTokens from an AST. Only generates highlights for the
 // main AST.
-std::vector<HighlightingToken> getSemanticHighlightings(ParsedAST &AST);
+std::vector<HighlightingToken>
+getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens);
 
-std::vector<SemanticToken> toSemanticTokens(llvm::ArrayRef<HighlightingToken>);
+std::vector<SemanticToken> toSemanticTokens(llvm::ArrayRef<HighlightingToken>,
+                                            llvm::StringRef Code);
 llvm::StringRef toSemanticTokenType(HighlightingKind Kind);
 llvm::StringRef toSemanticTokenModifier(HighlightingModifier Modifier);
 std::vector<SemanticTokensEdit> diffTokens(llvm::ArrayRef<SemanticToken> Before,

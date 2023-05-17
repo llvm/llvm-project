@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::views::zip
 
@@ -64,7 +63,11 @@ constexpr bool test() {
         std::ranges::zip_view<std::ranges::zip_view<SizedRandomAccessView, SizedRandomAccessView>>> decltype(auto) v2 =
         std::views::zip(v);
 
+#ifdef _LIBCPP_VERSION // libc++ doesn't implement P2165R4 yet
     static_assert(std::is_same_v<std::ranges::range_reference_t<decltype(v2)>, std::tuple<std::pair<int&, int&>>>);
+#else
+    static_assert(std::is_same_v<std::ranges::range_reference_t<decltype(v2)>, std::tuple<std::tuple<int&, int&>>>);
+#endif
   }
   return true;
 }

@@ -18,12 +18,11 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Core/Replacement.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -40,12 +39,12 @@ static std::string getTypeStr(const QualType &OrigT, const Decl &D,
   QualType T = OrigT;
   PrintingPolicy Policy(D.getASTContext().getLangOpts());
   Policy.SuppressStrongLifetime = true;
-  std::string Prefix = "";
+  std::string Prefix;
   // If the nullability is specified via a property attribute, use the shorter
   // `nullable` form for the method parameter.
   if (PropertyAttributes & ObjCPropertyAttribute::kind_nullability) {
     if (auto Kind = AttributedType::stripOuterNullability(T)) {
-      switch (Kind.getValue()) {
+      switch (*Kind) {
       case NullabilityKind::Nullable:
         Prefix = "nullable ";
         break;
@@ -90,13 +89,13 @@ struct MethodParameter {
     else // Could be a dynamic property or a property in a header.
       Assignee = ("self." + Name).str();
   }
-  static llvm::Optional<MethodParameter> parameterFor(const Decl &D) {
+  static std::optional<MethodParameter> parameterFor(const Decl &D) {
     if (const auto *ID = dyn_cast<ObjCIvarDecl>(&D))
       return MethodParameter(*ID);
     if (const auto *PD = dyn_cast<ObjCPropertyDecl>(&D))
       if (PD->isInstanceProperty())
         return MethodParameter(*PD);
-    return llvm::None;
+    return std::nullopt;
   }
 };
 
@@ -145,8 +144,8 @@ initializerForParams(const SmallVector<MethodParameter, 8> &Params,
     Stream << llvm::formatv("- (instancetype)initWith{0}:({1}){2}",
                             capitalize(First.Name.trim().str()), First.Type,
                             First.Name);
-    for (auto It = Params.begin() + 1; It != Params.end(); ++It)
-      Stream << llvm::formatv(" {0}:({1}){0}", It->Name, It->Type);
+    for (const auto &It : llvm::drop_begin(Params))
+      Stream << llvm::formatv(" {0}:({1}){0}", It.Name, It.Type);
 
     if (GenerateImpl) {
       Stream <<
@@ -172,7 +171,7 @@ initializerForParams(const SmallVector<MethodParameter, 8> &Params,
 /// properties and instance variables.
 class ObjCMemberwiseInitializer : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
   llvm::StringLiteral kind() const override {
     return CodeAction::REFACTOR_KIND;
   }
@@ -238,7 +237,7 @@ ObjCMemberwiseInitializer::paramsForSelection(const SelectionTree::Node *N) {
   // Base case: selected a single ivar or property.
   if (const auto *D = N->ASTNode.get<Decl>()) {
     if (auto Param = MethodParameter::parameterFor(*D)) {
-      Params.push_back(Param.getValue());
+      Params.push_back(*Param);
       return Params;
     }
   }
@@ -256,7 +255,7 @@ ObjCMemberwiseInitializer::paramsForSelection(const SelectionTree::Node *N) {
       continue;
     if (auto P = MethodParameter::parameterFor(*D))
       if (Names.insert(P->Name).second)
-        Params.push_back(P.getValue());
+        Params.push_back(*P);
   }
   return Params;
 }

@@ -27,42 +27,62 @@ Context::Context(ASTContext &Ctx) : Ctx(Ctx), P(new Program(*this)) {}
 Context::~Context() {}
 
 bool Context::isPotentialConstantExpr(State &Parent, const FunctionDecl *FD) {
+  assert(Stk.empty());
   Function *Func = P->getFunction(FD);
-  if (!Func) {
+  if (!Func || !Func->hasBody()) {
     if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD)) {
       Func = *R;
     } else {
       handleAllErrors(R.takeError(), [&Parent](ByteCodeGenError &Err) {
-        Parent.FFDiag(Err.getLoc(), diag::err_experimental_clang_interp_failed);
+        Parent.FFDiag(Err.getRange().getBegin(),
+                      diag::err_experimental_clang_interp_failed)
+            << Err.getRange();
       });
       return false;
     }
   }
 
-  if (!Func->isConstexpr())
+  APValue DummyResult;
+  if (!Run(Parent, Func, DummyResult)) {
     return false;
+  }
 
-  APValue Dummy;
-  return Run(Parent, Func, Dummy);
+  return Func->isConstexpr();
 }
 
 bool Context::evaluateAsRValue(State &Parent, const Expr *E, APValue &Result) {
+  assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
-  return Check(Parent, C.interpretExpr(E));
+  if (Check(Parent, C.interpretExpr(E))) {
+    assert(Stk.empty());
+    return true;
+  }
+
+  Stk.clear();
+  return false;
 }
 
 bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
                                     APValue &Result) {
+  assert(Stk.empty());
   ByteCodeExprGen<EvalEmitter> C(*this, *P, Parent, Stk, Result);
-  return Check(Parent, C.interpretDecl(VD));
+  if (Check(Parent, C.interpretDecl(VD))) {
+    assert(Stk.empty());
+    return true;
+  }
+
+  Stk.clear();
+  return false;
 }
 
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
-llvm::Optional<PrimType> Context::classify(QualType T) {
-  if (T->isReferenceType() || T->isPointerType()) {
+std::optional<PrimType> Context::classify(QualType T) const {
+  if (T->isFunctionPointerType() || T->isFunctionReferenceType())
+    return PT_FnPtr;
+
+  if (T->isReferenceType() || T->isPointerType())
     return PT_Ptr;
-  }
 
   if (T->isBooleanType())
     return PT_Bool;
@@ -100,6 +120,9 @@ llvm::Optional<PrimType> Context::classify(QualType T) {
   if (T->isNullPtrType())
     return PT_Ptr;
 
+  if (T->isFloatingType())
+    return PT_Float;
+
   if (auto *AT = dyn_cast<AtomicType>(T))
     return classify(AT->getValueType());
 
@@ -110,9 +133,15 @@ unsigned Context::getCharBit() const {
   return Ctx.getTargetInfo().getCharWidth();
 }
 
+/// Simple wrapper around getFloatTypeSemantics() to make code a
+/// little shorter.
+const llvm::fltSemantics &Context::getFloatSemantics(QualType T) const {
+  return Ctx.getFloatTypeSemantics(T);
+}
+
 bool Context::Run(State &Parent, Function *Func, APValue &Result) {
   InterpState State(Parent, *P, Stk, *this);
-  State.Current = new InterpFrame(State, Func, nullptr, {}, {});
+  State.Current = new InterpFrame(State, Func, /*Caller=*/nullptr, {});
   if (Interpret(State, Result))
     return true;
   Stk.clear();
@@ -123,7 +152,9 @@ bool Context::Check(State &Parent, llvm::Expected<bool> &&Flag) {
   if (Flag)
     return *Flag;
   handleAllErrors(Flag.takeError(), [&Parent](ByteCodeGenError &Err) {
-    Parent.FFDiag(Err.getLoc(), diag::err_experimental_clang_interp_failed);
+    Parent.FFDiag(Err.getRange().getBegin(),
+                  diag::err_experimental_clang_interp_failed)
+        << Err.getRange();
   });
   return false;
 }

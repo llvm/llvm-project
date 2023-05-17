@@ -14,8 +14,8 @@
 // required.					      
 						      
 // CHECK1:  <__AArch64AbsLongThunk_need_thunk_after_patch>:
-// CHECK1-NEXT:    210000:       50 00 00 58     ldr     x16, 0x210008
-// CHECK1-NEXT:    210004:       00 02 1f d6     br      x16
+// CHECK1-NEXT:    210000:       58000050        ldr     x16, 0x210008
+// CHECK1-NEXT:    210004:       d61f0200        br      x16
 // CHECK1: <$d>:
 // CHECK1-NEXT:    210008:       0c 10 21 08     .word   0x0821100c
 
@@ -30,7 +30,7 @@ _start:
         .space 4096 - 12
 
 // CHECK2: <_start>:
-// CHECK2-NEXT:    211000:       00 fc ff 97     bl      0x210000
+// CHECK2-NEXT:    211000:       97fffc00        bl      0x210000
 
         // Expect patch on pass 1
         .section .text.03, "ax", %progbits
@@ -43,10 +43,10 @@ t3_ff8_ldr:
         ret
 
 // CHECK3: <t3_ff8_ldr>:
-// CHECK3-NEXT:    211ff8:       e0 00 04 f0     adrp    x0, 0x8230000
-// CHECK3-NEXT:    211ffc:       21 00 40 f9     ldr     x1, [x1]
-// CHECK3-NEXT:    212000:       02 08 80 15     b       0x6214008
-// CHECK3-NEXT:    212004:       c0 03 5f d6     ret
+// CHECK3-NEXT:    211ff8:       f00400e0        adrp    x0, 0x8230000
+// CHECK3-NEXT:    211ffc:       f9400021        ldr     x1, [x1]
+// CHECK3-NEXT:    212000:       15800802        b       0x6214008
+// CHECK3-NEXT:    212004:       d65f03c0        ret
 
         .section .text.04, "ax", %progbits
         .space 64 * 1024 * 1024
@@ -64,20 +64,20 @@ t3_ff8_str:
         ret
 
 // CHECK4: <t3_ff8_str>:
-// CHECK4-NEXT:  4213ff8:       e0 00 02 b0     adrp    x0, 0x8230000
-// CHECK4-NEXT:  4213ffc:       21 00 40 f9     ldr     x1, [x1]
-// CHECK4-NEXT:  4214000:       04 00 80 14     b       0x6214010
-// CHECK4-NEXT:  4214004:       c0 03 5f d6     ret
+// CHECK4-NEXT:  4213ff8:       b00200e0        adrp    x0, 0x8230000
+// CHECK4-NEXT:  4213ffc:       f9400021        ldr     x1, [x1]
+// CHECK4-NEXT:  4214000:       14800004        b       0x6214010
+// CHECK4-NEXT:  4214004:       d65f03c0        ret
 
         .section .text.06, "ax", %progbits
         .space 32 * 1024 * 1024
 
 // CHECK5: <__CortexA53843419_211000>:
-// CHECK5-NEXT:  6214008:       00 00 40 f9     ldr     x0, [x0]
-// CHECK5-NEXT:  621400c:       fe f7 7f 16     b       0x212004
+// CHECK5-NEXT:  6214008:       f9400000        ldr     x0, [x0]
+// CHECK5-NEXT:  621400c:       167ff7fe        b       0x212004
 // CHECK5: <__CortexA53843419_4213000>:
-// CHECK5-NEXT:  6214010:       00 00 00 f9     str     x0, [x0]
-// CHECK5-NEXT:  6214014:       fc ff 7f 17     b       0x4214004
+// CHECK5-NEXT:  6214010:       f9000000        str     x0, [x0]
+// CHECK5-NEXT:  6214014:       177ffffc        b       0x4214004
 
         .section .text.07, "ax", %progbits
         .space (32 * 1024 * 1024) - 12300
@@ -89,7 +89,7 @@ need_thunk_after_patch:
         ret
 
 // CHECK6: <need_thunk_after_patch>:
-// CHECK6-NEXT:  821100c:       c0 03 5f d6     ret
+// CHECK6-NEXT:  821100c:       d65f03c0        ret
 
         // Will need a patch on pass 2
         .section .text.09, "ax", %progbits
@@ -103,13 +103,13 @@ t3_ffc_ldr:
         ret
 
 // CHECK7: <t3_ffc_ldr>:
-// CHECK7-NEXT:  8211ffc:       e0 00 00 f0     adrp    x0, 0x8230000
-// CHECK7-NEXT:  8212000:       21 00 40 f9     ldr     x1, [x1]
-// CHECK7-NEXT:  8212004:       02 00 00 14     b       0x821200c
-// CHECK7-NEXT:  8212008:       c0 03 5f d6     ret
+// CHECK7-NEXT:  8211ffc:       f00000e0        adrp    x0, 0x8230000
+// CHECK7-NEXT:  8212000:       f9400021        ldr     x1, [x1]
+// CHECK7-NEXT:  8212004:       14000002        b       0x821200c
+// CHECK7-NEXT:  8212008:       d65f03c0        ret
 // CHECK7: <__CortexA53843419_8212004>:
-// CHECK7-NEXT:  821200c:       00 00 40 f9     ldr     x0, [x0]
-// CHECK7-NEXT:  8212010:       fe ff ff 17     b       0x8212008
+// CHECK7-NEXT:  821200c:       f9400000        ldr     x0, [x0]
+// CHECK7-NEXT:  8212010:       17fffffe        b       0x8212008
 
         .section .data
         .globl dat

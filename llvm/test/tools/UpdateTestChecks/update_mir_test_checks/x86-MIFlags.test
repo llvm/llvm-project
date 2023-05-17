@@ -1,0 +1,5 @@
+# REQUIRES: x86-registered-target
+## Check that update_mir_test_checks uses CHECK-NEXT directories
+
+# RUN: cp -f %S/Inputs/x86-MIFlags.mir %t.mir && %update_mir_test_checks %t.mir
+# RUN: diff -u %S/Inputs/x86-MIFlags.mir.expected %t.mir

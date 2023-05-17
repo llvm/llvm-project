@@ -14,6 +14,7 @@
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/Statistic.h"
+#include <optional>
 
 namespace mlir {
 namespace detail {
@@ -80,9 +81,9 @@ public:
   /// Return an empty string if one does not exist.
   virtual StringRef getDescription() const { return ""; }
 
-  /// Returns the name of the operation that this pass operates on, or None if
-  /// this is a generic OperationPass.
-  Optional<StringRef> getOpName() const { return opName; }
+  /// Returns the name of the operation that this pass operates on, or
+  /// std::nullopt if this is a generic OperationPass.
+  std::optional<StringRef> getOpName() const { return opName; }
 
   //===--------------------------------------------------------------------===//
   // Options
@@ -118,7 +119,7 @@ public:
   virtual LogicalResult initializeOptions(StringRef options);
 
   /// Prints out the pass in the textual representation of pipelines. If this is
-  /// an adaptor pass, print with the op_name(sub_pass,...) format.
+  /// an adaptor pass, print its pass managers.
   void printAsTextualPipeline(raw_ostream &os);
 
   //===--------------------------------------------------------------------===//
@@ -159,7 +160,7 @@ public:
   }
 
 protected:
-  explicit Pass(TypeID passID, Optional<StringRef> opName = llvm::None)
+  explicit Pass(TypeID passID, std::optional<StringRef> opName = std::nullopt)
       : passID(passID), opName(opName) {}
   Pass(const Pass &other) : Pass(other.passID, other.opName) {}
 
@@ -212,7 +213,8 @@ protected:
   void signalPassFailure() { getPassState().irAndPassFailed.setInt(true); }
 
   /// Query an analysis for the current ir unit.
-  template <typename AnalysisT> AnalysisT &getAnalysis() {
+  template <typename AnalysisT>
+  AnalysisT &getAnalysis() {
     return getAnalysisManager().getAnalysis<AnalysisT>();
   }
 
@@ -226,7 +228,7 @@ protected:
   /// Query a cached instance of an analysis for the current ir unit if one
   /// exists.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() {
+  std::optional<std::reference_wrapper<AnalysisT>> getCachedAnalysis() {
     return getAnalysisManager().getCachedAnalysis<AnalysisT>();
   }
 
@@ -236,7 +238,8 @@ protected:
   }
 
   /// Mark the provided analyses as preserved.
-  template <typename... AnalysesT> void markAnalysesPreserved() {
+  template <typename... AnalysesT>
+  void markAnalysesPreserved() {
     getPassState().preservedAnalyses.preserve<AnalysesT...>();
   }
   void markAnalysesPreserved(TypeID id) {
@@ -245,28 +248,29 @@ protected:
 
   /// Returns the analysis for the given parent operation if it exists.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>>
+  std::optional<std::reference_wrapper<AnalysisT>>
   getCachedParentAnalysis(Operation *parent) {
     return getAnalysisManager().getCachedParentAnalysis<AnalysisT>(parent);
   }
 
   /// Returns the analysis for the parent operation if it exists.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>> getCachedParentAnalysis() {
+  std::optional<std::reference_wrapper<AnalysisT>> getCachedParentAnalysis() {
     return getAnalysisManager().getCachedParentAnalysis<AnalysisT>(
         getOperation()->getParentOp());
   }
 
   /// Returns the analysis for the given child operation if it exists.
   template <typename AnalysisT>
-  Optional<std::reference_wrapper<AnalysisT>>
+  std::optional<std::reference_wrapper<AnalysisT>>
   getCachedChildAnalysis(Operation *child) {
     return getAnalysisManager().getCachedChildAnalysis<AnalysisT>(child);
   }
 
   /// Returns the analysis for the given child operation, or creates it if it
   /// doesn't exist.
-  template <typename AnalysisT> AnalysisT &getChildAnalysis(Operation *child) {
+  template <typename AnalysisT>
+  AnalysisT &getChildAnalysis(Operation *child) {
     return getAnalysisManager().getChildAnalysis<AnalysisT>(child);
   }
 
@@ -297,12 +301,12 @@ private:
   /// Represents a unique identifier for the pass.
   TypeID passID;
 
-  /// The name of the operation that this pass operates on, or None if this is a
-  /// generic OperationPass.
-  Optional<StringRef> opName;
+  /// The name of the operation that this pass operates on, or std::nullopt if
+  /// this is a generic OperationPass.
+  std::optional<StringRef> opName;
 
   /// The current execution state for the pass.
-  Optional<detail::PassExecutionState> passState;
+  std::optional<detail::PassExecutionState> passState;
 
   /// The set of statistics held by this pass.
   std::vector<Statistic *> statistics;
@@ -343,7 +347,8 @@ private:
 ///   - A 'void runOnOperation()' method.
 ///   - A 'StringRef getName() const' method.
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
-template <typename OpT = void> class OperationPass : public Pass {
+template <typename OpT = void>
+class OperationPass : public Pass {
 protected:
   OperationPass(TypeID passID) : Pass(passID, OpT::getOperationName()) {}
   OperationPass(const OperationPass &) = default;
@@ -381,7 +386,8 @@ protected:
 ///   - A 'void runOnOperation()' method.
 ///   - A 'StringRef getName() const' method.
 ///   - A 'std::unique_ptr<Pass> clonePass() const' method.
-template <> class OperationPass<void> : public Pass {
+template <>
+class OperationPass<void> : public Pass {
 protected:
   OperationPass(TypeID passID) : Pass(passID) {}
   OperationPass(const OperationPass &) = default;
@@ -431,7 +437,8 @@ protected:
 /// several necessary utility methods. This should only be used for passes that
 /// are not suitably represented using the declarative pass specification(i.e.
 /// tablegen backend).
-template <typename PassT, typename BaseT> class PassWrapper : public BaseT {
+template <typename PassT, typename BaseT>
+class PassWrapper : public BaseT {
 public:
   /// Support isa/dyn_cast functionality for the derived pass class.
   static bool classof(const Pass *pass) {

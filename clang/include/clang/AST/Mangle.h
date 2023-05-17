@@ -19,6 +19,7 @@
 #include "clang/Basic/ABI.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 namespace llvm {
   class raw_ostream;
@@ -61,6 +62,7 @@ private:
   llvm::DenseMap<const BlockDecl*, unsigned> GlobalBlockIds;
   llvm::DenseMap<const BlockDecl*, unsigned> LocalBlockIds;
   llvm::DenseMap<const NamedDecl*, uint64_t> AnonStructIds;
+  llvm::DenseMap<const FunctionDecl*, unsigned> FuncAnonStructSize;
 
 public:
   ManglerKind getKind() const { return Kind; }
@@ -87,9 +89,17 @@ public:
     return Result.first->second;
   }
 
-  uint64_t getAnonymousStructId(const NamedDecl *D) {
+  uint64_t getAnonymousStructId(const NamedDecl *D,
+                                const FunctionDecl *FD = nullptr) {
+    auto FindResult = AnonStructIds.find(D);
+    if (FindResult != AnonStructIds.end())
+      return FindResult->second;
+
+    // If FunctionDecl is passed in, the anonymous structID will be per-function
+    // based.
+    unsigned Id = FD ? FuncAnonStructSize[FD]++ : AnonStructIds.size();
     std::pair<llvm::DenseMap<const NamedDecl *, uint64_t>::iterator, bool>
-        Result = AnonStructIds.insert(std::make_pair(D, AnonStructIds.size()));
+        Result = AnonStructIds.insert(std::make_pair(D, Id));
     return Result.first->second;
   }
 
@@ -130,7 +140,8 @@ public:
                                         unsigned ManglingNumber,
                                         raw_ostream &) = 0;
   virtual void mangleCXXRTTI(QualType T, raw_ostream &) = 0;
-  virtual void mangleCXXRTTIName(QualType T, raw_ostream &) = 0;
+  virtual void mangleCXXRTTIName(QualType T, raw_ostream &,
+                                 bool NormalizeIntegers = false) = 0;
   virtual void mangleStringLiteral(const StringLiteral *SL, raw_ostream &) = 0;
   virtual void mangleMSGuidDecl(const MSGuidDecl *GD, raw_ostream&);
 
@@ -157,17 +168,18 @@ public:
   virtual void mangleDynamicAtExitDestructor(const VarDecl *D,
                                              raw_ostream &) = 0;
 
-  virtual void mangleSEHFilterExpression(const NamedDecl *EnclosingDecl,
+  virtual void mangleSEHFilterExpression(GlobalDecl EnclosingDecl,
                                          raw_ostream &Out) = 0;
 
-  virtual void mangleSEHFinallyBlock(const NamedDecl *EnclosingDecl,
+  virtual void mangleSEHFinallyBlock(GlobalDecl EnclosingDecl,
                                      raw_ostream &Out) = 0;
 
   /// Generates a unique string for an externally visible type for use with TBAA
   /// or type uniquing.
   /// TODO: Extend this to internal types by generating names that are unique
   /// across translation units so it can be used with LTO.
-  virtual void mangleTypeName(QualType T, raw_ostream &) = 0;
+  virtual void mangleTypeName(QualType T, raw_ostream &,
+                              bool NormalizeIntegers = false) = 0;
 
   /// @}
 };
@@ -175,7 +187,7 @@ public:
 class ItaniumMangleContext : public MangleContext {
 public:
   using DiscriminatorOverrideTy =
-      llvm::Optional<unsigned> (*)(ASTContext &, const NamedDecl *);
+      std::optional<unsigned> (*)(ASTContext &, const NamedDecl *);
   explicit ItaniumMangleContext(ASTContext &C, DiagnosticsEngine &D,
                                 bool IsAux = false)
       : MangleContext(C, D, MK_Itanium, IsAux) {}

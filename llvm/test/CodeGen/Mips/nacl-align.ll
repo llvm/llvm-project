@@ -61,14 +61,14 @@ default:
 
 ; This test tests that a block whose address is taken is bundle-aligned in NaCl.
 
-@bb_array = constant [2 x i8*] [i8* blockaddress(@test2, %bb1),
-                                i8* blockaddress(@test2, %bb2)], align 4
+@bb_array = constant [2 x ptr] [ptr blockaddress(@test2, %bb1),
+                                ptr blockaddress(@test2, %bb2)], align 4
 
 define i32 @test2(i32 %i) {
 entry:
-  %elementptr = getelementptr inbounds [2 x i8*], [2 x i8*]* @bb_array, i32 0, i32 %i
-  %0 = load i8*, i8** %elementptr, align 4
-  indirectbr i8* %0, [label %bb1, label %bb2]
+  %elementptr = getelementptr inbounds [2 x ptr], ptr @bb_array, i32 0, i32 %i
+  %0 = load ptr, ptr %elementptr, align 4
+  indirectbr ptr %0, [label %bb1, label %bb2]
 
 bb1:
   ret i32 111

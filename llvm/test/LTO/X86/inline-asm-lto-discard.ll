@@ -13,7 +13,7 @@
 ; RUN:  -r %t2,bar,pl
 ; RUN: llvm-dis < %to1.0.0.preopt.bc | FileCheck %s --check-prefix=ASM1
 ; RUN: llvm-nm %to1.0 | FileCheck %s --check-prefix=SYM
-; RUN: llvm-objdump -d --disassemble-symbols=foo %to1.0 \
+; RUN: llvm-objdump --no-print-imm-hex -d --disassemble-symbols=foo %to1.0 \
 ; RUN:   | FileCheck %s --check-prefix=DEF
 
 ; RUN: llvm-lto2 run -o %to2 -save-temps %t2 %t3 \
@@ -22,7 +22,7 @@
 ; RUN:  -r %t3,foo,px
 ; RUN: llvm-dis < %to2.0.0.preopt.bc | FileCheck %s --check-prefix=ASM2
 ; RUN: llvm-nm %to2.0 | FileCheck %s --check-prefix=SYM
-; RUN: llvm-objdump -d --disassemble-symbols=foo %to2.0 \
+; RUN: llvm-objdump --no-print-imm-hex -d --disassemble-symbols=foo %to2.0 \
 ; RUN:   | FileCheck %s --check-prefix=DEF
 
 ; Check that ".symver" is properly handled.
@@ -64,7 +64,7 @@ target triple = "x86_64-unknown-linux-gnu"
 module asm ".weak foo"
 module asm ".equ foo,bar"
 
-@llvm.compiler.used = appending global [1 x i8*] [i8* bitcast (i32 (i32)* @bar to i8*)], section "llvm.metadata"
+@llvm.compiler.used = appending global [1 x ptr] [ptr @bar], section "llvm.metadata"
 
 define internal i32 @bar(i32 %0) {
   %2 = add nsw i32 %0, 1

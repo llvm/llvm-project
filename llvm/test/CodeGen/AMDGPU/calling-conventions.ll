@@ -5,18 +5,18 @@
 
 ; GCN-LABEL: {{^}}kernel:
 ; GCN: s_endpgm
-define spir_kernel void @kernel(i32 addrspace(1)* %out) {
+define spir_kernel void @kernel(ptr addrspace(1) %out) {
 entry:
-  store i32 0, i32 addrspace(1)* %out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }
 
 ; FIXME: This is treated like a kernel
 ; XGCN-LABEL: {{^}}func:
 ; XGCN: s_endpgm
-; define spir_func void @func(i32 addrspace(1)* %out) {
+; define spir_func void @func(ptr addrspace(1) %out) {
 ; entry:
-;   store i32 0, i32 addrspace(1)* %out
+;   store i32 0, ptr addrspace(1) %out
 ;   ret void
 ; }
 
@@ -63,7 +63,7 @@ define coldcc float @coldcc(float %arg0) #0 {
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @call_coldcc() #0 {
   %val = call float @coldcc(float 1.0)
-  store float %val, float addrspace(1)* undef
+  store float %val, ptr addrspace(1) undef
   ret void
 }
 
@@ -72,7 +72,7 @@ define amdgpu_kernel void @call_coldcc() #0 {
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @call_fastcc() #0 {
   %val = call float @fastcc(float 1.0)
-  store float %val, float addrspace(1)* undef
+  store float %val, ptr addrspace(1) undef
   ret void
 }
 
@@ -176,7 +176,7 @@ define amdgpu_ps <2 x half> @ps_mesa_inreg_v2f16(<2 x half> inreg %arg0) {
 ; SI: v_add_i32_e32 v0, vcc, 0x10000, v0
 define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
   %add = add <2 x i16> %arg0, <i16 1, i16 1>
-  store <2 x i16> %add, <2 x i16> addrspace(1)* undef
+  store <2 x i16> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -195,7 +195,7 @@ define amdgpu_ps void @ps_mesa_v2i16(<2 x i16> %arg0) {
 ; SI: s_add_i32 s0, s0, 0x10000
 define amdgpu_ps void @ps_mesa_inreg_v2i16(<2 x i16> inreg %arg0) {
   %add = add <2 x i16> %arg0, <i16 1, i16 1>
-  store <2 x i16> %add, <2 x i16> addrspace(1)* undef
+  store <2 x i16> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -236,7 +236,7 @@ define amdgpu_ps <4 x half> @ps_mesa_inreg_v4f16(<4 x half> inreg %arg0) {
 ; GCN-DAG: s_add_i32 s{{[0-9]*}}, s2, 3
 define amdgpu_ps void @ps_mesa_inreg_v3i32(<3 x i32> inreg %arg0) {
   %add = add <3 x i32> %arg0, <i32 1, i32 2, i32 3>
-  store <3 x i32> %add, <3 x i32> addrspace(1)* undef
+  store <3 x i32> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -246,7 +246,7 @@ define amdgpu_ps void @ps_mesa_inreg_v3i32(<3 x i32> inreg %arg0) {
 ; GCN-DAG: v_add_f32{{.*}}, s2, 4.0
 define amdgpu_ps void @ps_mesa_inreg_v3f32(<3 x float> inreg %arg0) {
   %add = fadd <3 x float> %arg0, <float 1.0, float 2.0, float 4.0>
-  store <3 x float> %add, <3 x float> addrspace(1)* undef
+  store <3 x float> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -258,7 +258,7 @@ define amdgpu_ps void @ps_mesa_inreg_v3f32(<3 x float> inreg %arg0) {
 ; GCN-DAG: s_add_i32 s{{[0-9]*}}, s4, 5
 define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
   %add = add <5 x i32> %arg0, <i32 1, i32 2, i32 3, i32 4, i32 5>
-  store <5 x i32> %add, <5 x i32> addrspace(1)* undef
+  store <5 x i32> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -270,7 +270,7 @@ define amdgpu_ps void @ps_mesa_inreg_v5i32(<5 x i32> inreg %arg0) {
 ; GCN-DAG: v_add_f32{{.*}}, s4, 0.5
 define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
   %add = fadd <5 x float> %arg0, <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>
-  store <5 x float> %add, <5 x float> addrspace(1)* undef
+  store <5 x float> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -280,7 +280,7 @@ define amdgpu_ps void @ps_mesa_inreg_v5f32(<5 x float> inreg %arg0) {
 ; GCN-DAG: v_add_{{.*}}, 3, v2
 define amdgpu_ps void @ps_mesa_v3i32(<3 x i32> %arg0) {
   %add = add <3 x i32> %arg0, <i32 1, i32 2, i32 3>
-  store <3 x i32> %add, <3 x i32> addrspace(1)* undef
+  store <3 x i32> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -290,7 +290,7 @@ define amdgpu_ps void @ps_mesa_v3i32(<3 x i32> %arg0) {
 ; GCN-DAG: v_add_{{.*}}, 4.0, v2
 define amdgpu_ps void @ps_mesa_v3f32(<3 x float> %arg0) {
   %add = fadd <3 x float> %arg0, <float 1.0, float 2.0, float 4.0>
-  store <3 x float> %add, <3 x float> addrspace(1)* undef
+  store <3 x float> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -302,7 +302,7 @@ define amdgpu_ps void @ps_mesa_v3f32(<3 x float> %arg0) {
 ; GCN-DAG: v_add_{{.*}}, 5, v4
 define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
   %add = add <5 x i32> %arg0, <i32 1, i32 2, i32 3, i32 4, i32 5>
-  store <5 x i32> %add, <5 x i32> addrspace(1)* undef
+  store <5 x i32> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -314,7 +314,7 @@ define amdgpu_ps void @ps_mesa_v5i32(<5 x i32> %arg0) {
 ; GCN-DAG: v_add_f32{{.*}}, 0.5, v4
 define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
   %add = fadd <5 x float> %arg0, <float 1.0, float 2.0, float 4.0, float -1.0, float 0.5>
-  store <5 x float> %add, <5 x float> addrspace(1)* undef
+  store <5 x float> %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -323,7 +323,7 @@ define amdgpu_ps void @ps_mesa_v5f32(<5 x float> %arg0) {
 ; VI: v_add_u16_e32 v{{[0-9]+}}, v0, v0
 define amdgpu_ps void @ps_mesa_i16(i16 %arg0) {
   %add = add i16 %arg0, %arg0
-  store i16 %add, i16 addrspace(1)* undef
+  store i16 %add, ptr addrspace(1) undef
   ret void
 }
 
@@ -331,7 +331,7 @@ define amdgpu_ps void @ps_mesa_i16(i16 %arg0) {
 ; GCN: s_add_i32 s{{[0-9]+}}, s0, s0
 define amdgpu_ps void @ps_mesa_inreg_i16(i16 inreg %arg0) {
   %add = add i16 %arg0, %arg0
-  store i16 %add, i16 addrspace(1)* undef
+  store i16 %add, ptr addrspace(1) undef
   ret void
 }
 

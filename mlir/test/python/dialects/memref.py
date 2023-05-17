@@ -24,7 +24,7 @@ def testSubViewAccessors():
       %3 = arith.constant 3 : index
       %4 = arith.constant 4 : index
       %5 = arith.constant 5 : index
-      memref.subview %arg0[%0, %1][%2, %3][%4, %5] : memref<?x?xf32> to memref<?x?xf32, offset: ?, strides: [?, ?]>
+      memref.subview %arg0[%0, %1][%2, %3][%4, %5] : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
       return
     }
   """, ctx)

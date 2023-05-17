@@ -1,11 +1,11 @@
 ; RUN: not llvm-as -disable-output < %s -o /dev/null 2>&1 | FileCheck %s
 
-define void @test1(float* %a) {
+define void @test1(ptr %a) {
 entry:
 ; CHECK: annotation must have at least one operand
-  %a.addr = alloca float*, align 8, !annotation !0
+  %a.addr = alloca ptr, align 8, !annotation !0
 
-; CHECK-NEXT: operands must be strings
+; CHECK-NEXT: operands must be a string or a tuple of strings
   ret void, !annotation !1
 }
 

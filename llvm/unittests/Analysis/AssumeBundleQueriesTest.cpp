@@ -232,7 +232,8 @@ static bool FindExactlyAttributes(RetainedKnowledgeMap &Map, Value *WasOn,
        }) {
     bool ShouldHaveAttr = Reg.match(Attr, &Matches) && Matches[0] == Attr;
 
-    if (ShouldHaveAttr != (Map.find(RetainedKnowledgeKey{WasOn, Attribute::getAttrKindFromName(Attr)}) != Map.end()))
+    if (ShouldHaveAttr != (Map.contains(RetainedKnowledgeKey{
+                              WasOn, Attribute::getAttrKindFromName(Attr)})))
       return false;
   }
   return true;
@@ -429,7 +430,7 @@ static void RunRandTest(uint64_t Seed, int Size, int MinCount, int MaxCount,
   BasicBlock *BB = BasicBlock::Create(C);
   BB->insertInto(F);
   Instruction *Ret = ReturnInst::Create(C);
-  BB->getInstList().insert(BB->begin(), Ret);
+  Ret->insertInto(BB, BB->begin());
   Function *FnAssume = Intrinsic::getDeclaration(Mod.get(), Intrinsic::assume);
 
   std::vector<Argument *> ShuffledArgs;

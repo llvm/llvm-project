@@ -42,11 +42,11 @@ void PrettyStackTraceLoc::print(raw_ostream &OS) const {
 // SourceLocation
 //===----------------------------------------------------------------------===//
 
-static_assert(std::is_trivially_destructible<SourceLocation>::value,
+static_assert(std::is_trivially_destructible_v<SourceLocation>,
               "SourceLocation must be trivially destructible because it is "
               "used in unions");
 
-static_assert(std::is_trivially_destructible<SourceRange>::value,
+static_assert(std::is_trivially_destructible_v<SourceRange>,
               "SourceRange must be trivially destructible because it is "
               "used in unions");
 
@@ -164,6 +164,10 @@ FileID FullSourceLoc::getFileID() const {
 FullSourceLoc FullSourceLoc::getExpansionLoc() const {
   assert(isValid());
   return FullSourceLoc(SrcMgr->getExpansionLoc(*this), *SrcMgr);
+}
+
+std::pair<FileID, unsigned> FullSourceLoc::getDecomposedExpansionLoc() const {
+  return SrcMgr->getDecomposedExpansionLoc(*this);
 }
 
 FullSourceLoc FullSourceLoc::getSpellingLoc() const {

@@ -19,10 +19,21 @@
 struct A {
   std::unique_ptr<A> ptr_;
 
-  A() : ptr_(this) {}
-  void reset() { ptr_.reset(); }
+  TEST_CONSTEXPR_CXX23 A() : ptr_(this) {}
+  TEST_CONSTEXPR_CXX23 void reset() { ptr_.reset(); }
 };
 
-int main(int, char**) { (new A)->reset();
+TEST_CONSTEXPR_CXX23 bool test() {
+  (new A)->reset();
+
+  return true;
+}
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 23
+  static_assert(test());
+#endif
+
   return 0;
 }

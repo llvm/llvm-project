@@ -9,6 +9,7 @@
 #include "lldb/Symbol/UnwindTable.h"
 
 #include <cstdio>
+#include <optional>
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Section.h"
@@ -85,8 +86,8 @@ void UnwindTable::Initialize() {
 
 UnwindTable::~UnwindTable() = default;
 
-llvm::Optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
-                                                          SymbolContext &sc) {
+std::optional<AddressRange>
+UnwindTable::GetAddressRange(const Address &addr, const SymbolContext &sc) {
   AddressRange range;
 
   // First check the unwind info from the object file plugin
@@ -108,7 +109,7 @@ llvm::Optional<AddressRange> UnwindTable::GetAddressRange(const Address &addr,
   if (m_debug_frame_up && m_debug_frame_up->GetAddressRange(addr, range))
     return range;
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 FuncUnwindersSP
@@ -149,9 +150,8 @@ UnwindTable::GetFuncUnwindersContainingAddress(const Address &addr,
 // don't add it to the UnwindTable.  This is intended for use by target modules
 // show-unwind where we want to create new UnwindPlans, not re-use existing
 // ones.
-FuncUnwindersSP
-UnwindTable::GetUncachedFuncUnwindersContainingAddress(const Address &addr,
-                                                       SymbolContext &sc) {
+FuncUnwindersSP UnwindTable::GetUncachedFuncUnwindersContainingAddress(
+    const Address &addr, const SymbolContext &sc) {
   Initialize();
 
   auto range_or = GetAddressRange(addr, sc);

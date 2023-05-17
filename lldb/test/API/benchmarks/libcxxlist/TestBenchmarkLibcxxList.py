@@ -2,9 +2,6 @@
 Test lldb data formatter subsystem.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbbench import *
@@ -13,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestBenchmarkLibcxxList(BenchBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @benchmarks_test
     def test_run_command(self):

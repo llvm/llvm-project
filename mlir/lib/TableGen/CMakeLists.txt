@@ -14,14 +14,17 @@ llvm_add_library(MLIRTableGen STATIC
   AttrOrTypeDef.cpp
   Builder.cpp
   Class.cpp
+  CodeGenHelpers.cpp
   Constraint.cpp
   Dialect.cpp
   Format.cpp
+  GenInfo.cpp
   Interfaces.cpp
   Operator.cpp
   Pass.cpp
   Pattern.cpp
   Predicate.cpp
+  Property.cpp
   Region.cpp
   SideEffects.cpp
   Successor.cpp

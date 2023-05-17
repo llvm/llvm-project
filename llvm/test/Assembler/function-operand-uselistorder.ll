@@ -2,10 +2,10 @@
 
 @g = global i8 0
 
-define void @f1() prefix i8* @g prologue i8* @g personality i8* @g {
+define void @f1() prefix ptr @g prologue ptr @g personality ptr @g {
   ret void
 }
 
-define void @f2() prefix i8* @g prologue i8* @g personality i8* @g {
+define void @f2() prefix ptr @g prologue ptr @g personality ptr @g {
   ret void
 }

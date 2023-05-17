@@ -72,8 +72,8 @@ void testMergedMerged() {
 // Test merging when using anonymous namespaces, which does not
 // actually perform any merging.
 void testAnonymousNotMerged() {
-  N11::consumeFoo(N11::getFoo()); // expected-error{{cannot initialize a parameter of type 'N11::(anonymous namespace)::Foo *' with an rvalue of type 'N11::(anonymous namespace)::Foo *'}}
-  N12::consumeFoo(N12::getFoo()); // expected-error{{cannot initialize a parameter of type 'N12::(anonymous namespace)::Foo *' with an rvalue of type 'N12::(anonymous namespace)::Foo *'}}
+  N11::consumeFoo(N11::getFoo()); // expected-error{{cannot initialize a parameter of type 'Foo *' with an rvalue of type 'Foo *'}}
+  N12::consumeFoo(N12::getFoo()); // expected-error{{cannot initialize a parameter of type 'Foo *' with an rvalue of type 'Foo *'}}
 }
 
 // expected-note@Inputs/namespaces-right.h:60 {{passing argument to parameter here}}

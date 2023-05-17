@@ -565,6 +565,7 @@ def is_numeric_type(basic_type):
     if basic_type == eBasicTypeUnsignedWChar: return (True,False)
     if basic_type == eBasicTypeChar16: return (True,False)
     if basic_type == eBasicTypeChar32: return (True,False)
+    if basic_type == eBasicTypeChar8: return (True,False)
     if basic_type == eBasicTypeShort: return (True,True)
     if basic_type == eBasicTypeUnsignedShort: return (True,False)
     if basic_type == eBasicTypeInt: return (True,True)

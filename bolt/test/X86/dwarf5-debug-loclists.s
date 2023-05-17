@@ -2,7 +2,7 @@
 
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
 # RUN: %clang %cflags -dwarf-5 %t1.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
@@ -20,9 +20,8 @@
 
 # POSTCHECK: Addrs: [
 # POSTCHECK-NEXT: 0x
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR:]]
 # POSTCHECK-NEXT: 0x
-# POSTCHECK-NEXT: 0x[[#%.16x,ADDR2:]]
+# POSTCHECK-NEXT: 0x[[#%.16x,ADDR:]]
 # POSTCHECK: version = 0x0005
 # POSTCHECK: DW_AT_loclists_base [DW_FORM_sec_offset]	(0x0000000c)
 # POSTCHECK: DW_AT_rnglists_base [DW_FORM_sec_offset]	(0x0000000c)
@@ -31,9 +30,9 @@
 # POSTCHECK-SAME: indexed (0x0)
 # POSTCHECK-SAME: loclist = 0x00000010
 # POSTCHECK-NEXT: [0x[[#ADDR]]
-# POSTCHECK-SAME: 0x[[#ADDR + 3]]
-# POSTCHECK-NEXT: [0x[[#ADDR2]]
-# POSTCHECK-SAME: 0x[[#ADDR2 + 1]]
+# POSTCHECK-SAME: 0x[[#ADDR + 0x3]]
+# POSTCHECK-NEXT: [0x[[#ADDR + 0x3]]
+# POSTCHECK-SAME: 0x[[#ADDR + 0x4]]
 
 # clang++ main.cpp -g -O2 -S
 # void use(int * x) {

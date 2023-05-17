@@ -11,14 +11,15 @@ int main(int argc, char *argv[]) {
   for (int i = 0; i < 1024; ++i)
     data[i] = i;
 
-#pragma omp target map(tofrom: sum) map(to: data) depend(inout : data[0]) nowait
+#pragma omp target map(tofrom : sum) map(to : data) depend(inout : data[0])    \
+    nowait
   {
     for (int i = 0; i < 1024; ++i) {
       sum += data[i];
     }
   }
 
-#pragma omp target map(tofrom: sum) map(to: data) depend(inout : data[0])
+#pragma omp target map(tofrom : sum) map(to : data) depend(inout : data[0])
   {
     for (int i = 0; i < 1024; ++i) {
       sum += data[i];

@@ -9,9 +9,9 @@ entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   ; CHECK: ret void
   %a = alloca i32, align 4
-  %0 = ptrtoint i32* %a to i64
-  %1 = inttoptr i64 %0 to i64*
-  store i64 zeroinitializer, i64* %1
+  %0 = ptrtoint ptr %a to i64
+  %1 = inttoptr i64 %0 to ptr
+  store i64 zeroinitializer, ptr %1
   ret void
 }
 
@@ -21,8 +21,7 @@ entry:
   ; CHECK-NOT: __safestack_unsafe_stack_ptr
   ; CHECK: ret void
   %a = alloca i32, align 4
-  %0 = bitcast i32* %a to i8*
-  store i8 zeroinitializer, i8* %0
+  store i8 zeroinitializer, ptr %a
   ret void
 }
 
@@ -32,9 +31,8 @@ entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   ; CHECK: ret void
   %a = alloca i32, align 4
-  %0 = bitcast i32* %a to i8*
-  %1 = getelementptr i8, i8* %0, i32 4
-  store i8 zeroinitializer, i8* %1
+  %0 = getelementptr i8, ptr %a, i32 4
+  store i8 zeroinitializer, ptr %0
   ret void
 }
 
@@ -44,9 +42,8 @@ entry:
   ; CHECK: __safestack_unsafe_stack_ptr
   ; CHECK: ret void
   %a = alloca i32, align 4
-  %0 = bitcast i32* %a to i8*
-  %1 = getelementptr i8, i8* %0, i32 -1
-  store i8 zeroinitializer, i8* %1
+  %0 = getelementptr i8, ptr %a, i32 -1
+  store i8 zeroinitializer, ptr %0
   ret void
 }
 
@@ -56,8 +53,7 @@ entry:
   ; CHECK-NOT: __safestack_unsafe_stack_ptr
   ; CHECK: ret void
   %a = alloca i32, align 4
-  %0 = bitcast i32* %a to i8*
-  %1 = getelementptr i8, i8* %0, i32 3
-  store i8 zeroinitializer, i8* %1
+  %0 = getelementptr i8, ptr %a, i32 3
+  store i8 zeroinitializer, ptr %0
   ret void
 }

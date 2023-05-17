@@ -25,17 +25,18 @@
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mattr=+custom-cheap-as-move -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=thunderx3t110 -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=ampere1 -o - %s | FileCheck %s
+; RUN: llc -mtriple=aarch64-linux-gnuabi -mcpu=ampere1a -o - %s | FileCheck %s
 
 %X = type { i64, i64, i64 }
-declare void @f(%X*)
+declare void @f(ptr)
 define void @t() {
 entry:
   %tmp = alloca %X
-  call void @f(%X* %tmp)
+  call void @f(ptr %tmp)
 ; CHECK: add x0, sp, #8
 ; CHECK-NOT: mov
 ; CHECK-NEXT: bl f
-  call void @f(%X* %tmp)
+  call void @f(ptr %tmp)
 ; CHECK: add x0, sp, #8
 ; CHECK-NOT: mov
 ; CHECK-NEXT: bl f

@@ -9,10 +9,10 @@
 
 ; GCN: flat_store_dword
 ; GCN: s_endpgm
-define amdgpu_kernel void @test_debug_value(i32 addrspace(1)* nocapture %globalptr_arg) #0 !dbg !4 {
+define amdgpu_kernel void @test_debug_value(ptr addrspace(1) nocapture %globalptr_arg) #0 !dbg !4 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32 addrspace(1)* %globalptr_arg, metadata !10, metadata !13), !dbg !14
-  store i32 123, i32 addrspace(1)* %globalptr_arg, align 4
+  tail call void @llvm.dbg.value(metadata ptr addrspace(1) %globalptr_arg, metadata !10, metadata !13), !dbg !14
+  store i32 123, ptr addrspace(1) %globalptr_arg, align 4
   ret void
 }
 
@@ -20,7 +20,7 @@ entry:
 ; SIOptimizeExecMaskingPreRA (somehow related to undef argument).
 
 ; GCN-LABEL: {{^}}only_undef_dbg_value:
-; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef] undef
+; NOOPT: ;DEBUG_VALUE: test_debug_value:globalptr_arg <- undef
 ; NOOPT-NEXT: s_endpgm
 
 ; OPT: s_endpgm

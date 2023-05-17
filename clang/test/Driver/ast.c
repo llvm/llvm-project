@@ -25,3 +25,15 @@
 // FIXME: There is a problem with compiling AST's in that the input language is
 // not available for use by other tools (for example, to automatically add
 // -lstdc++). We may need -x [objective-]c++-ast and all that goodness. :(
+
+// Also check clang-cl since the driver is slightly different
+// RUN: %clang_cl -ccc-print-phases -emit-ast -- %s 2> %t
+// RUN: echo 'END' >> %t
+// RUN: FileCheck -check-prefix EMIT-AST-PHASES-CLANGCL -input-file %t %s
+
+// EMIT-AST-PHASES-CLANGCL: 0: input,
+// EMIT-AST-PHASES-CLANGCL: , c
+// EMIT-AST-PHASES-CLANGCL: 1: preprocessor, {0}, cpp-output
+// EMIT-AST-PHASES-CLANGCL: 2: compiler, {1}, ast
+// EMIT-AST-PHASES-CLANGCL-NOT: 3:
+// EMIT-AST-PHASES-CLANGCL: END

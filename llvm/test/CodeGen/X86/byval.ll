@@ -5,7 +5,7 @@
 
 %struct.s = type { i64, i64, i64 }
 
-define i64 @f(%struct.s* byval(%struct.s) %a) {
+define i64 @f(ptr byval(%struct.s) %a) {
 ; X64-LABEL: f:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq {{[0-9]+}}(%rsp), %rax
@@ -17,7 +17,6 @@ define i64 @f(%struct.s* byval(%struct.s) %a) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-NEXT:    retl
 entry:
-	%tmp2 = getelementptr %struct.s, %struct.s* %a, i32 0, i32 0
-	%tmp3 = load i64, i64* %tmp2, align 8
+	%tmp3 = load i64, ptr %a, align 8
 	ret i64 %tmp3
 }

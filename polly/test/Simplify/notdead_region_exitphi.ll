@@ -3,7 +3,7 @@
 ;
 ; Do not remove dependencies of a phi node in a region's exit block.
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double %alpha) {
+define void @func(i32 %n, ptr noalias nonnull %A, double %alpha) {
 entry:
   br label %for
 
@@ -26,7 +26,7 @@ for:
 
     region_exit:
       %phi = phi double [%val, %region_true], [0.0, %region_entry]
-      store double %phi, double* %A
+      store double %phi, ptr %A
       br label %inc
 
 

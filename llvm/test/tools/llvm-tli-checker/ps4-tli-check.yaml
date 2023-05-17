@@ -1,11 +1,12 @@
 # REQUIRES: x86-registered-target
 #
-## This produces the object that matches expectations for PS4.
-# RUN: yaml2obj %s -DZDAPV=_ZdaPv -o=%t1
+## This produces a static object that matches expectations for PS4/PS5.
+# RUN: yaml2obj %s -DTYPE=ET_REL -DLABEL=Symbols -DZDAPV=_ZdaPv -o=%t1
 # RUN: llvm-tli-checker --triple=x86_64-scei-ps4 %t1 | FileCheck %s
+# RUN: llvm-tli-checker --triple=x86_64-sie-ps5 %t1 | FileCheck %s
 #
-## This produces an object that has _ZdaPvj instead of _ZdaPv.
-# RUN: yaml2obj %s -DZDAPV=_ZdaPvj -o=%t2
+## This produces a dynamic object that has _ZdaPvj instead of _ZdaPv.
+# RUN: yaml2obj %s -DTYPE=ET_DYN -DLABEL=DynamicSymbols -DZDAPV=_ZdaPvj -o=%t2
 # RUN: llvm-tli-checker --triple x86_64-scei-ps4 %t2 | \
 # RUN:     FileCheck %s --check-prefixes=WRONG_SUMMARY,WRONG_DETAIL \
 # RUN:    --implicit-check-not="==" --implicit-check-not="<<" --implicit-check-not=">>"
@@ -31,13 +32,14 @@
 # RUN: FileCheck %s --check-prefix=AVAIL --input-file %t3.txt
 # RUN: FileCheck %s --check-prefix=UNAVAIL --input-file %t3.txt
 #
-# CHECK: << Total TLI yes SDK no:  0
+# CHECK: << Total TLI yes SDK no:  8
 # CHECK: >> Total TLI no  SDK yes: 0
 # CHECK: == Total TLI yes SDK yes: 235
 #
 # WRONG_DETAIL: << TLI yes SDK no : '_ZdaPv' aka operator delete[](void*)
 # WRONG_DETAIL: >> TLI no  SDK yes: '_ZdaPvj' aka operator delete[](void*, unsigned int)
-# WRONG_SUMMARY: << Total TLI yes SDK no:  1{{$}}
+# WRONG_DETAIL-COUNT-8: << TLI yes SDK no : {{.*}}__hot_cold_t
+# WRONG_SUMMARY: << Total TLI yes SDK no:  9{{$}}
 # WRONG_SUMMARY: >> Total TLI no  SDK yes: 1{{$}}
 # WRONG_SUMMARY: == Total TLI yes SDK yes: 234
 #
@@ -45,8 +47,8 @@
 ## the exact count first; the two directives should add up to that.
 ## Yes, this means additions to TLI will fail this test, but the argument
 ## to -COUNT can't be an expression.
-# AVAIL: TLI knows 468 symbols, 235 available
-# AVAIL-COUNT-235: {{^}} available
+# AVAIL: TLI knows 476 symbols, 243 available
+# AVAIL-COUNT-243: {{^}} available
 # AVAIL-NOT:       {{^}} available
 # UNAVAIL-COUNT-233: not available
 # UNAVAIL-NOT:       not available

@@ -4,7 +4,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux -o %t.o %s
 # RUN: ld.lld -r -o %t %t.o %t.o
-# RUN: llvm-objdump -d -r --no-show-raw-insn %t | FileCheck --check-prefix=OBJ %s
+# RUN: llvm-objdump --no-print-imm-hex -d -r --no-show-raw-insn %t | FileCheck --check-prefix=OBJ %s
 # RUN: ld.lld -shared -o %t.so %t
 # RUN: llvm-objdump -d -t --print-imm-hex --no-show-raw-insn %t.so \
 # RUN:   | FileCheck -check-prefix=SO %s

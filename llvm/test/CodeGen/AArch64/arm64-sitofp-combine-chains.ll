@@ -14,8 +14,8 @@ define dso_local float @foo() {
 ; CHECK: ldr [[SREG:s[0-9]+]], [x[[VARBASE]],
 ; CHECK: str wzr, [x[[VARBASE]],
 
-  %val = load i32, i32* @var, align 4
-  store i32 0, i32* @var, align 4
+  %val = load i32, ptr @var, align 4
+  store i32 0, ptr @var, align 4
 
   %fltval = sitofp i32 %val to float
   ret float %fltval

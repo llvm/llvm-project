@@ -5,6 +5,6 @@
 
 define float @foo() {
 ; CHECK: ld.const.f32
-  %val = load float, float addrspace(4)* @one_f
+  %val = load float, ptr addrspace(4) @one_f
   ret float %val
 }

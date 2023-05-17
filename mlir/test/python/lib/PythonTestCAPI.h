@@ -9,7 +9,7 @@
 #ifndef MLIR_TEST_PYTHON_LIB_PYTHONTESTCAPI_H
 #define MLIR_TEST_PYTHON_LIB_PYTHONTESTCAPI_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -26,6 +26,8 @@ mlirPythonTestTestAttributeGet(MlirContext context);
 MLIR_CAPI_EXPORTED bool mlirTypeIsAPythonTestTestType(MlirType type);
 
 MLIR_CAPI_EXPORTED MlirType mlirPythonTestTestTypeGet(MlirContext context);
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsAPythonTestTestTensorValue(MlirValue value);
 
 #ifdef __cplusplus
 }

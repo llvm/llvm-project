@@ -13,6 +13,8 @@
 // the child_thread. This test ensures sigretrun is handled correctly (see:
 // UnwindCursor<A, R>::setInfoForSigReturn).
 
+#include <cstdlib> // defines __BIONIC__
+
 // Android/Bionic does not support pthread_cancel.
 #ifdef __BIONIC__
 int main() {

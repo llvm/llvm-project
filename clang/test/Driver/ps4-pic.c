@@ -1,5 +1,3 @@
-// REQUIRES: x86-registered-target
-
 // Test the driver's control over the PIC behavior for PS4 compiler.
 // These consist of tests of the relocation model flags and the
 // pic level flags passed to CC1.

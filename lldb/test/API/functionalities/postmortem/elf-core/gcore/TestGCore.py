@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 class GCoreTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    mydir = TestBase.compute_mydir(__file__)
-
     _i386_pid = 5586
     _x86_64_pid = 5669
 
@@ -39,7 +37,7 @@ class GCoreTestCase(TestBase):
 
         for thread in process:
             reason = thread.GetStopReason()
-            self.assertEqual(reason, lldb.eStopReasonSignal)
+            self.assertStopReason(reason, lldb.eStopReasonSignal)
             signal = thread.GetStopReasonDataAtIndex(1)
             # Check we got signal 19 (SIGSTOP)
             self.assertEqual(signal, 19)

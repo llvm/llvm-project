@@ -14,18 +14,19 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/MLIRContext.h"
-#include "mlir/Parser/Parser.h"
 #include "mlir/Support/FileUtilities.h"
 #include "mlir/Support/LLVM.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <optional>
 
 using namespace mlir;
 
@@ -51,7 +52,7 @@ struct LinalgYAMLContext {
 struct LinalgOpMetadata {
   std::string name;
   std::string cppClassName;
-  Optional<std::string> doc;
+  std::optional<std::string> doc;
   SmallVector<std::string> implements;
   SmallVector<std::string> defines;
 };
@@ -75,11 +76,11 @@ enum class LinalgOperandDefKind {
 struct LinalgOperandDef {
   std::string name;
   LinalgOperandDefKind kind;
-  Optional<std::string> typeVar;
-  Optional<SerializedAffineMap> shapeMap;
-  Optional<SerializedAffineMap> indexAttrMap;
-  Optional<SmallVector<int64_t>> defaultIndices;
-  Optional<std::string> defaultFn;
+  std::optional<std::string> typeVar;
+  std::optional<SerializedAffineMap> shapeMap;
+  std::optional<SerializedAffineMap> indexAttrMap;
+  std::optional<SmallVector<int64_t>> defaultIndices;
+  std::optional<std::string> defaultFn;
 };
 
 enum class LinalgIteratorTypeDef {
@@ -88,7 +89,7 @@ enum class LinalgIteratorTypeDef {
 };
 
 struct LinalgIndexingMapsConfig {
-  Optional<SmallVector<SerializedAffineMap>> staticIndexingMaps;
+  std::optional<SmallVector<SerializedAffineMap>> staticIndexingMaps;
 };
 
 struct ScalarExpression;
@@ -97,19 +98,19 @@ enum class ScalarFnKind { Unary, Binary, Type };
 
 struct ScalarFn {
   ScalarFnKind kind;
-  Optional<std::string> fnName;
-  Optional<std::string> attrName;
-  Optional<std::string> typeVar;
+  std::optional<std::string> fnName;
+  std::optional<std::string> attrName;
+  std::optional<std::string> typeVar;
   // NOTE: This must be of arity 1, but to break the self-referential cycle,
   // we use a heap allocated vector.
   std::vector<ScalarExpression> operands;
 };
 
 struct ScalarExpression {
-  Optional<std::string> arg;
-  Optional<std::string> constant;
-  Optional<int64_t> index;
-  Optional<ScalarFn> scalarFn;
+  std::optional<std::string> arg;
+  std::optional<std::string> constant;
+  std::optional<int64_t> index;
+  std::optional<ScalarFn> scalarFn;
 };
 
 struct ScalarAssign {
@@ -125,8 +126,8 @@ struct LinalgStructuredOpConfig {
 };
 
 struct LinalgOpConfig {
-  Optional<LinalgOpMetadata> metadata;
-  Optional<LinalgStructuredOpConfig> structuredOp;
+  std::optional<LinalgOpMetadata> metadata;
+  std::optional<LinalgStructuredOpConfig> structuredOp;
 };
 
 } // namespace
@@ -316,10 +317,10 @@ struct ScalarTraits<SerializedAffineMap> {
                          SerializedAffineMap &value) {
     assert(rawYamlContext);
     auto *yamlContext = static_cast<LinalgYAMLContext *>(rawYamlContext);
-    if (auto attr = mlir::parseAttribute(scalar, yamlContext->mlirContext)
-                        .dyn_cast_or_null<AffineMapAttr>())
+    if (auto attr = dyn_cast_or_null<AffineMapAttr>(
+            mlir::parseAttribute(scalar, yamlContext->mlirContext)))
       value.affineMapAttr = attr;
-    else if (!value.affineMapAttr || !value.affineMapAttr.isa<AffineMapAttr>())
+    else if (!value.affineMapAttr || !isa<AffineMapAttr>(value.affineMapAttr))
       return "could not parse as an affine map attribute";
     return StringRef();
   }
@@ -391,17 +392,17 @@ static std::string interleaveToString(Container &container,
   return result;
 }
 
-static Optional<int>
+static std::optional<int>
 findTensorDefArgIndex(StringRef name, SmallVectorImpl<LinalgOperandDef> &args) {
   for (const auto &it : llvm::enumerate(args)) {
     if (it.value().name == name)
       return it.index();
   }
-  return None;
+  return std::nullopt;
 }
 
 // Try to map the TypeVar to a predefined or an argument type.
-static Optional<std::string>
+static std::optional<std::string>
 findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
   // Handle all predefined types.
   if (typeVar == "I32")
@@ -419,12 +420,12 @@ findTypeValue(StringRef typeVar, SmallVectorImpl<LinalgOperandDef> &args) {
         it.value().kind != LinalgOperandDefKind::Scalar &&
         it.value().kind != LinalgOperandDefKind::OutputTensor)
       continue;
-    if (it.value().typeVar.getValue() == typeVar)
+    if (*it.value().typeVar == typeVar)
       return llvm::formatv("block.getArgument({0}).getType()", it.index())
           .str();
   }
 
-  return None;
+  return std::nullopt;
 }
 
 static ScalarAssign *findAssignment(StringRef name,
@@ -524,7 +525,7 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
       (ins "ValueRange":$inputs, "ValueRange":$outputs,
             CArg<"ArrayRef<NamedAttribute>", "{{}">:$attributes),
       [{{
-        buildStructuredOp($_builder, $_state, llvm::None, inputs, outputs,
+        buildStructuredOp($_builder, $_state, std::nullopt, inputs, outputs,
           attributes, {0}::getRegionBuilder());
       }]>,
       OpBuilder<
@@ -552,14 +553,19 @@ def {0} : LinalgStructuredBase_Op<"{1}", !listconcat([AttrSizedOperandSegments],
 
     let extraClassDeclaration = structuredOpsBaseDecls # [{{
       // Auto-generated.
-      ArrayAttr iterator_types();
-      ArrayAttr indexing_maps();
+      SmallVector<utils::IteratorType> getIteratorTypesArray();
+      ArrayAttr getIndexingMaps();
       static void regionBuilder(ImplicitLocOpBuilder &b,
                                 Block &block, ArrayRef<NamedAttribute> attrs);
       static std::function<void(ImplicitLocOpBuilder &,
                                 Block &, ArrayRef<NamedAttribute>)>
       getRegionBuilder() {{
         return regionBuilder;
+      }
+
+      std::pair<int64_t, int64_t> getDpsInitsPositionRange() {{
+        int64_t getNumOperands = this->getNumOperands();
+        return {{getNumOperands - 1, getNumOperands};
       }
 
       // Generic methods.
@@ -586,24 +592,24 @@ static const char structuredOpBuilderFormat[] = R"FMT(
   }]>
 )FMT";
 
-// The iterator_types() method for structured ops. Parameters:
+// The getIteratorTypesArray() method for structured ops. Parameters:
 // {0}: Class name
 // {1}: Comma interleaved iterator type names.
 static const char structuredOpIteratorTypesFormat[] =
     R"FMT(
-ArrayAttr {0}::iterator_types() {{
-  return Builder(getContext()).getStrArrayAttr(SmallVector<StringRef>{{ {1} });
+SmallVector<utils::IteratorType> {0}::getIteratorTypesArray() {{
+  return SmallVector<utils::IteratorType>{{ {1} };
 }
 )FMT";
 
-// The iterator_types() method for rank polymorphic structured ops. Parameters:
+// The getIteratorTypesArray() method for rank polymorphic structured ops.
+// Parameters:
 // {0}: Class name
 static const char rankPolyStructuredOpIteratorTypesFormat[] =
     R"FMT(
-ArrayAttr {0}::iterator_types() {{
-  int64_t rank = getRank(getOutputOperand(0));
-  return Builder(getContext()).getStrArrayAttr(
-    SmallVector<StringRef>(rank, getParallelIteratorTypeName()));
+SmallVector<utils::IteratorType> {0}::getIteratorTypesArray() {{
+  int64_t rank = getRank(getDpsInitOperand(0));
+  return SmallVector<utils::IteratorType>(rank, utils::IteratorType::parallel);
 }
 )FMT";
 
@@ -612,7 +618,7 @@ ArrayAttr {0}::iterator_types() {{
 // {1}: Comma-separated list of dimension variable names.
 // {2}: Statements
 static const char structuredOpIndexingMapsFormat[] = R"FMT(
-ArrayAttr {0}::indexing_maps() {{
+ArrayAttr {0}::getIndexingMaps() {{
   static const char memoizeAttr[] = "linalg.memoized_indexing_maps";
   ArrayAttr cached = getOperation()->getAttrOfType<ArrayAttr>(memoizeAttr);
   if (cached)
@@ -631,14 +637,14 @@ ArrayAttr {0}::indexing_maps() {{
 // The indexing_maps() method for rank polymorphic structured ops. Parameters:
 // {0}: Class name
 static const char rankPolyStructuredOpIndexingMapsFormat[] = R"FMT(
-ArrayAttr {0}::indexing_maps() {{
+ArrayAttr {0}::getIndexingMaps() {{
   MLIRContext *context = getContext();
   AffineMap scalarMap = AffineMap::get(getNumParallelLoops(), 0, context);
   AffineMap tensorMap = AffineMap::getMultiDimIdentityMap(
     getNumParallelLoops(), context);
   SmallVector<AffineMap> indexingMaps;
-  for (OpOperand *opOperand : getInputAndOutputOperands())
-    indexingMaps.push_back(getRank(opOperand) == 0 ? scalarMap : tensorMap);
+  for (OpOperand &opOperand : getOperation()->getOpOperands())
+    indexingMaps.push_back(getRank(&opOperand) == 0 ? scalarMap : tensorMap);
   return Builder(getContext()).getAffineMapArrayAttr(indexingMaps);
 }
 )FMT";
@@ -647,16 +653,15 @@ ArrayAttr {0}::indexing_maps() {{
 // Parameters:
 // {0}: Class name
 const char structuredOpFoldersFormat[] = R"FMT(
-LogicalResult {0}::fold(ArrayRef<Attribute>,
+LogicalResult {0}::fold(FoldAdaptor,
                         SmallVectorImpl<OpFoldResult> &) {{
-  return foldMemRefCast(*this);
+  return memref::foldMemRefCast(*this);
 }
 void {0}::getEffects(SmallVectorImpl<
     SideEffects::EffectInstance<MemoryEffects::Effect> >&effects) {{
-      SmallVector<Value> inputBuffers = getInputBufferOperands();
-      SmallVector<Value> outputBuffers = getOutputBufferOperands();
+      if (hasTensorSemantics()) return;
       getGenericEffectsImpl(effects,
-        getOperation()->getResults(), inputBuffers, outputBuffers);
+        getOperation()->getResults(), getDpsInputOperands(), getDpsInitOperands());
 }
 )FMT";
 
@@ -669,7 +674,7 @@ ParseResult {0}::parse(OpAsmParser &parser, OperationState &result) {{
     {0}::getNumRegionArgs(), {0}::getRegionBuilder());
 }
 void {0}::print(OpAsmPrinter &p) {{
-  ::printNamedStructuredOp(p, getOperation(), inputs(), outputs());
+  ::printNamedStructuredOp(p, getOperation(), getInputs(), getOutputs());
 }
 )FMT";
 
@@ -718,10 +723,11 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
       static const char stmtFmt[] = "$_state.addAttribute(\"{0}\", {0});";
       // Add the type conversion attributes to the op definition and builders.
       if (isFunctionAttribute(arg.kind)) {
-        assert(arg.defaultFn.hasValue());
+        assert(arg.defaultFn);
         std::string enumName = convertOperandKindToEnumName(arg.kind);
         static const char typeFmt[] = "{0}::{1}";
-        static const char defFmt[] = "DefaultValuedAttr<{0}, \"{1}\">:${2}";
+        static const char defFmt[] =
+            "DefaultValuedOptionalAttr<{0}, \"{1}\">:${2}";
         attrDefs.push_back(llvm::formatv(
             defFmt, llvm::formatv("{0}Attr", enumName),
             llvm::formatv(typeFmt, enumName, arg.defaultFn), arg.name));
@@ -730,16 +736,17 @@ static LogicalResult generateNamedGenericOpOds(LinalgOpConfig &opConfig,
       }
       // Add the index attributes to the op definition and builders.
       if (arg.kind == LinalgOperandDefKind::IndexAttr) {
-        assert(arg.indexAttrMap.hasValue());
-        assert(arg.defaultIndices.hasValue());
+        assert(arg.indexAttrMap.has_value());
+        assert(arg.defaultIndices.has_value());
         size_t size = arg.indexAttrMap->affineMap().getNumResults();
-        assert(arg.defaultIndices.getValue().size() == size);
+        assert(arg.defaultIndices->size() == size);
         static const char typeFmt[] = "RankedI64ElementsAttr<[{0}]>";
-        static const char defFmt[] = "DefaultValuedAttr<{0}, \"{ {1} }\">:${2}";
+        static const char defFmt[] =
+            "DefaultValuedOptionalAttr<{0}, \"{ {1} }\">:${2}";
         std::string defaultVals;
         llvm::raw_string_ostream ss(defaultVals);
         llvm::interleave(
-            arg.defaultIndices.getValue(), ss,
+            *arg.defaultIndices, ss,
             [&](int64_t val) { ss << "static_cast<int64_t>(" << val << ")"; },
             ", ");
         attrDefs.push_back(llvm::formatv(defFmt, llvm::formatv(typeFmt, size),
@@ -805,10 +812,10 @@ generateNamedGenericOpDefns(LinalgOpConfig &opConfig,
                           [&](LinalgIteratorTypeDef it) {
                             switch (it) {
                             case LinalgIteratorTypeDef::parallel:
-                              ss << "getParallelIteratorTypeName()";
+                              ss << "utils::IteratorType::parallel";
                               break;
                             case LinalgIteratorTypeDef::reduction:
-                              ss << "getReductionIteratorTypeName()";
+                              ss << "utils::IteratorType::reduction";
                               break;
                             }
                           });
@@ -819,7 +826,7 @@ generateNamedGenericOpDefns(LinalgOpConfig &opConfig,
     os << llvm::formatv(rankPolyStructuredOpIteratorTypesFormat, className);
   }
 
-  // Generating the indexing_maps() method.
+  // Generating the getIndexingMaps() method.
   if (auto &staticMaps =
           opConfig.structuredOp->indexingMaps.staticIndexingMaps) {
     if (staticMaps->empty())
@@ -854,20 +861,22 @@ static SmallVector<AffineExpr> getSymbolBindings({0} self) {
         // {1}: Symbol position
         // {2}: Attribute index
         static const char structuredOpAccessAttrFormat[] = R"FMT(
-int64_t cst{1} = self.{0}().getValues<int64_t>()[{2}];
+int64_t cst{1} = self.get{0}().getValues<int64_t>()[{2}];
 exprs.push_back(getAffineConstantExpr(cst{1}, context));
 )FMT";
         // Update all symbol bindings mapped to an attribute.
         for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
           if (arg.kind != LinalgOperandDefKind::IndexAttr)
             continue;
-          assert(arg.indexAttrMap.hasValue());
-          for (auto &en :
+          assert(arg.indexAttrMap);
+          for (auto [idx, result] :
                llvm::enumerate(arg.indexAttrMap->affineMap().getResults())) {
-            if (auto symbol = en.value().dyn_cast<AffineSymbolExpr>()) {
+            if (auto symbol = result.dyn_cast<AffineSymbolExpr>()) {
+              std::string argName = arg.name;
+              argName[0] = toupper(argName[0]);
               symbolBindings[symbol.getPosition()] =
-                  llvm::formatv(structuredOpAccessAttrFormat, arg.name,
-                                symbol.getPosition(), en.index());
+                  llvm::formatv(structuredOpAccessAttrFormat, argName,
+                                symbol.getPosition(), idx);
             }
           }
         }
@@ -958,7 +967,7 @@ std::string {0}::getLibraryCallName() {{
     for (LinalgOperandDef &arg : opConfig.structuredOp->args) {
       if (arg.kind != LinalgOperandDefKind::IndexAttr)
         continue;
-      assert(arg.indexAttrMap.hasValue());
+      assert(arg.indexAttrMap);
       // Verify index attribute. Paramters:
       // {0}: Attribute name
       // {1}: Attribute size
@@ -1046,16 +1055,17 @@ if ({1}Iter != attrs.end()) {{
       ++generatedAssignmentCount;
 
       // Recursively generate the expression.
-      std::function<Optional<std::string>(ScalarExpression &)>
+      std::function<std::optional<std::string>(ScalarExpression &)>
           generateExpression =
-              [&](ScalarExpression &expression) -> Optional<std::string> {
+              [&](ScalarExpression &expression) -> std::optional<std::string> {
         if (expression.arg) {
           // Argument reference.
-          Optional<int> argIndex = findTensorDefArgIndex(*expression.arg, args);
+          std::optional<int> argIndex =
+              findTensorDefArgIndex(*expression.arg, args);
           if (!argIndex) {
             emitError(genContext.getLoc())
                 << "scalar argument not defined on the op: " << *expression.arg;
-            return None;
+            return std::nullopt;
           }
           return std::string(
               llvm::formatv("block.getArgument({0})", *argIndex));
@@ -1088,11 +1098,10 @@ if ({1}Iter != attrs.end()) {{
           if (expression.scalarFn->attrName) {
             if (llvm::none_of(args, [&](LinalgOperandDef &arg) {
                   return isFunctionAttribute(arg.kind) &&
-                         arg.name == expression.scalarFn->attrName.getValue();
+                         arg.name == *expression.scalarFn->attrName;
                 })) {
-              emitError(genContext.getLoc())
-                  << "missing function attribute "
-                  << expression.scalarFn->attrName.getValue();
+              emitError(genContext.getLoc()) << "missing function attribute "
+                                             << *expression.scalarFn->attrName;
             }
             funcType = llvm::formatv("{0}Val", *expression.scalarFn->attrName);
           }
@@ -1101,24 +1110,24 @@ if ({1}Iter != attrs.end()) {{
           // Add the optional type parameter to the operands.
           SmallVector<std::string> operandCppValues;
           if (expression.scalarFn->kind == ScalarFnKind::Type) {
-            assert(expression.scalarFn->typeVar.hasValue());
-            Optional<std::string> typeCppValue =
-                findTypeValue(expression.scalarFn->typeVar.getValue(), args);
+            assert(expression.scalarFn->typeVar.has_value());
+            std::optional<std::string> typeCppValue =
+                findTypeValue(*expression.scalarFn->typeVar, args);
             if (!typeCppValue) {
               emitError(genContext.getLoc())
-                  << "type variable " << expression.scalarFn->typeVar.getValue()
+                  << "type variable " << *expression.scalarFn->typeVar
                   << ", used in a type conversion, must map to a predefined or "
                   << "an argument type but it does not";
-              return None;
+              return std::nullopt;
             }
-            operandCppValues.push_back(typeCppValue.getValue());
+            operandCppValues.push_back(*typeCppValue);
           }
 
           // Collect the scalar operands.
           for (ScalarExpression &operand : expression.scalarFn->operands) {
             auto operandCppValue = generateExpression(operand);
             if (!operandCppValue)
-              return None;
+              return std::nullopt;
             operandCppValues.push_back(*operandCppValue);
           }
 
@@ -1130,12 +1139,13 @@ if ({1}Iter != attrs.end()) {{
           return cppIdent;
         }
         emitError(genContext.getLoc()) << "unknown ScalarExpression type";
-        return None;
+        return std::nullopt;
       };
-      Optional<std::string> cppValue = generateExpression(assignment->value);
+      std::optional<std::string> cppValue =
+          generateExpression(assignment->value);
       if (!cppValue)
         return failure();
-      stmts.push_back(llvm::formatv("yields.push_back({0});", cppValue));
+      stmts.push_back(llvm::formatv("yields.push_back({0});", *cppValue));
     }
 
     if (generatedAssignmentCount != assignments.size())

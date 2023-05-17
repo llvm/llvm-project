@@ -246,22 +246,6 @@
 // CHECK-ARM64: "-L{{.*}}/lib/gcc/aarch64-linux-android/4.9/../../../../aarch64-linux-android/lib"
 //
 // RUN: %clang -### %s 2>&1 \
-// RUN:     --target=mipsel-linux-android21 \
-// RUN:     -mips32 \
-// RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
-// RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \
-// RUN:   | FileCheck --check-prefix=CHECK-MIPS %s
-// CHECK-MIPS: "-cc1"
-// CHECK-MIPS: "-internal-isystem" "{{.*}}/include/c++/v1"
-// CHECK-MIPS: "-internal-externc-isystem" "{{.*}}/sysroot/include"
-// CHECK-MIPS: "-internal-externc-isystem" "{{.*}}/sysroot/usr/include"
-// CHECK-MIPS: "{{.*}}ld{{(.exe)?}}" "--sysroot=[[SYSROOT:[^"]+]]"
-// CHECK-MIPS: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9"
-// CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib/mipsel-linux-android/21"
-// CHECK-MIPS: "-L{{.*}}/sysroot/usr/lib/mipsel-linux-android"
-// CHECK-MIPS: "-L{{.*}}/lib/gcc/mipsel-linux-android/4.9/../../../../mipsel-linux-android/lib"
-//
-// RUN: %clang -### %s 2>&1 \
 // RUN:     --target=i686-linux-android21 \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_ndk_tree \
 // RUN:     --sysroot=%S/Inputs/basic_android_ndk_tree/sysroot \

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto begin() requires (!simple-view<V>);
 // constexpr auto begin() const requires range<const V>;
@@ -23,7 +22,7 @@
 struct NonCommonSimpleView : std::ranges::view_base {
   int* begin() const;
   sentinel_wrapper<int*> end() const;
-  size_t size() { return 0; }  // deliberately non-const
+  std::size_t size() { return 0; }  // deliberately non-const
 };
 static_assert(std::ranges::sized_range<NonCommonSimpleView>);
 static_assert(!std::ranges::sized_range<const NonCommonSimpleView>);

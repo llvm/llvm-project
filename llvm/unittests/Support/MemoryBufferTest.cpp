@@ -161,6 +161,10 @@ TEST_F(MemoryBufferTest, copy) {
 
   // verify the two copies do not point to the same place
   EXPECT_NE(MBC1->getBufferStart(), MBC2->getBufferStart());
+
+  // check that copies from defaulted stringrefs don't trigger UB.
+  OwningBuffer MBC3(MemoryBuffer::getMemBufferCopy(StringRef{}));
+  EXPECT_NE(nullptr, MBC3.get());
 }
 
 #if LLVM_ENABLE_THREADS
@@ -224,6 +228,22 @@ TEST_F(MemoryBufferTest, make_new) {
   OwningBuffer Five(
       WritableMemoryBuffer::getNewUninitMemBuffer(SIZE_MAX, "huge"));
   EXPECT_EQ(nullptr, Five.get());
+}
+
+TEST_F(MemoryBufferTest, getNewAligned) {
+  auto CheckAlignment = [](size_t AlignmentValue) {
+    Align Alignment(AlignmentValue);
+    OwningBuffer AlignedBuffer =
+        WritableMemoryBuffer::getNewUninitMemBuffer(0, "", Alignment);
+    EXPECT_TRUE(isAddrAligned(Alignment, AlignedBuffer->getBufferStart()));
+  };
+
+  // Test allocation with different alignments.
+  CheckAlignment(16);
+  CheckAlignment(32);
+  CheckAlignment(64);
+  CheckAlignment(128);
+  CheckAlignment(256);
 }
 
 void MemoryBufferTest::testGetOpenFileSlice(bool Reopen) {

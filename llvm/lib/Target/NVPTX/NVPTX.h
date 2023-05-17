@@ -19,9 +19,10 @@
 #include "llvm/Support/CodeGen.h"
 
 namespace llvm {
-class NVPTXTargetMachine;
 class FunctionPass;
 class MachineFunctionPass;
+class NVPTXTargetMachine;
+class PassRegistry;
 
 namespace NVPTXCC {
 enum CondCodes {
@@ -37,13 +38,14 @@ enum CondCodes {
 FunctionPass *createNVPTXISelDag(NVPTXTargetMachine &TM,
                                  llvm::CodeGenOpt::Level OptLevel);
 ModulePass *createNVPTXAssignValidGlobalNamesPass();
-ModulePass *createGenericToNVVMPass();
+ModulePass *createGenericToNVVMLegacyPass();
+ModulePass *createNVPTXCtorDtorLoweringLegacyPass();
 FunctionPass *createNVVMIntrRangePass(unsigned int SmVersion);
 FunctionPass *createNVVMReflectPass(unsigned int SmVersion);
 MachineFunctionPass *createNVPTXPrologEpilogPass();
 MachineFunctionPass *createNVPTXReplaceImageHandlesPass();
 FunctionPass *createNVPTXImageOptimizerPass();
-FunctionPass *createNVPTXLowerArgsPass(const NVPTXTargetMachine *TM);
+FunctionPass *createNVPTXLowerArgsPass();
 FunctionPass *createNVPTXLowerAllocaPass();
 MachineFunctionPass *createNVPTXPeephole();
 MachineFunctionPass *createNVPTXProxyRegErasurePass();
@@ -64,6 +66,10 @@ struct NVVMReflectPass : PassInfoMixin<NVVMReflectPass> {
 
 private:
   unsigned SmVersion;
+};
+
+struct GenericToNVVMPass : PassInfoMixin<GenericToNVVMPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 namespace NVPTX {
@@ -174,7 +180,8 @@ enum CmpMode {
 };
 }
 }
-} // end namespace llvm;
+void initializeNVPTXDAGToDAGISelPass(PassRegistry &);
+} // namespace llvm
 
 // Defines symbolic names for NVPTX registers.  This defines a mapping from
 // register name to register number.
@@ -183,6 +190,7 @@ enum CmpMode {
 
 // Defines symbolic names for the NVPTX instructions.
 #define GET_INSTRINFO_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "NVPTXGenInstrInfo.inc"
 
 #endif

@@ -96,7 +96,11 @@ Expected<FileAnalysis> FileAnalysis::Create(StringRef Filename) {
   }
 
   Analysis.ObjectTriple = Analysis.Object->makeTriple();
-  Analysis.Features = Analysis.Object->getFeatures();
+  Expected<SubtargetFeatures> Features = Analysis.Object->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
+  Analysis.Features = *Features;
 
   // Init the rest of the object.
   if (auto InitResponse = Analysis.initialiseDisassemblyMembers())
@@ -365,7 +369,7 @@ uint64_t FileAnalysis::indirectCFOperandClobber(const GraphResult &Graph) const 
 
 void FileAnalysis::printInstruction(const Instr &InstrMeta,
                                     raw_ostream &OS) const {
-  Printer->printInst(&InstrMeta.Instruction, 0, "", *SubtargetInfo.get(), OS);
+  Printer->printInst(&InstrMeta.Instruction, 0, "", *SubtargetInfo, OS);
 }
 
 Error FileAnalysis::initialiseDisassemblyMembers() {
@@ -570,15 +574,15 @@ Error FileAnalysis::parseSymbolTable() {
     }
   }
   if (auto *ElfObject = dyn_cast<object::ELFObjectFileBase>(Object)) {
-    for (const auto &Addr : ElfObject->getPltAddresses()) {
-      if (!Addr.first)
+    for (const auto &Plt : ElfObject->getPltEntries()) {
+      if (!Plt.Symbol)
         continue;
-      object::SymbolRef Sym(*Addr.first, Object);
+      object::SymbolRef Sym(*Plt.Symbol, Object);
       auto SymNameOrErr = Sym.getName();
       if (!SymNameOrErr)
         consumeError(SymNameOrErr.takeError());
       else if (TrapOnFailFunctions.contains(*SymNameOrErr))
-        TrapOnFailFunctionAddresses.insert(Addr.second);
+        TrapOnFailFunctionAddresses.insert(Plt.Address);
     }
   }
   return Error::success();

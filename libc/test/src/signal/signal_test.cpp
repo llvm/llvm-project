@@ -6,20 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
 #include "include/signal.h"
-#include "src/errno/llvmlibc_errno.h"
+#include "src/errno/libc_errno.h"
 #include "src/signal/raise.h"
 #include "src/signal/signal.h"
 
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
 using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcSignal, Invalid) {
-  llvmlibc_errno = 0;
+  libc_errno = 0;
   __llvm_libc::sighandler_t valid = +[](int) {};
   EXPECT_THAT((void *)__llvm_libc::signal(0, valid),
               Fails(EINVAL, (void *)SIG_ERR));

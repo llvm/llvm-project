@@ -9,16 +9,16 @@ target triple = "mips--linux-gnu"
 ; Function Attrs: nounwind
 define void @foo() #0 {
 entry:
-  %0 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @i, align 4
   %tobool = icmp ne i32 %0, 0
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  call void bitcast (void (...)* @goo to void ()*)()
+  call void @goo()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  call void bitcast (void (...)* @hoo to void ()*)()
+  call void @hoo()
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

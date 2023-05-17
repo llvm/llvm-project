@@ -9,25 +9,29 @@
 // functionality has been integrated into SCCP.
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/IntRangeAnalysis.h"
+#include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
+#include "mlir/Analysis/DataFlow/IntegerRangeAnalysis.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassRegistry.h"
 #include "mlir/Support/TypeID.h"
 #include "mlir/Transforms/FoldUtils.h"
+#include <optional>
 
 using namespace mlir;
+using namespace mlir::dataflow;
 
 /// Patterned after SCCP
-static LogicalResult replaceWithConstant(IntRangeAnalysis &analysis,
-                                         OpBuilder &b, OperationFolder &folder,
-                                         Value value) {
-  Optional<ConstantIntRanges> maybeInferredRange = analysis.getResult(value);
-  if (!maybeInferredRange)
+static LogicalResult replaceWithConstant(DataFlowSolver &solver, OpBuilder &b,
+                                         OperationFolder &folder, Value value) {
+  auto *maybeInferredRange =
+      solver.lookupState<IntegerValueRangeLattice>(value);
+  if (!maybeInferredRange || maybeInferredRange->getValue().isUninitialized())
     return failure();
-  const ConstantIntRanges &inferredRange = maybeInferredRange.getValue();
-  Optional<APInt> maybeConstValue = inferredRange.getConstantValue();
-  if (!maybeConstValue.hasValue())
+  const ConstantIntRanges &inferredRange =
+      maybeInferredRange->getValue().getValue();
+  std::optional<APInt> maybeConstValue = inferredRange.getConstantValue();
+  if (!maybeConstValue.has_value())
     return failure();
 
   Operation *maybeDefiningOp = value.getDefiningOp();
@@ -35,8 +39,9 @@ static LogicalResult replaceWithConstant(IntRangeAnalysis &analysis,
       maybeDefiningOp ? maybeDefiningOp->getDialect()
                       : value.getParentRegion()->getParentOp()->getDialect();
   Attribute constAttr = b.getIntegerAttr(value.getType(), *maybeConstValue);
-  Value constant = folder.getOrCreateConstant(b, valueDialect, constAttr,
-                                              value.getType(), value.getLoc());
+  Value constant =
+      folder.getOrCreateConstant(b.getInsertionBlock(), valueDialect, constAttr,
+                                 value.getType(), value.getLoc());
   if (!constant)
     return failure();
 
@@ -44,7 +49,7 @@ static LogicalResult replaceWithConstant(IntRangeAnalysis &analysis,
   return success();
 }
 
-static void rewrite(IntRangeAnalysis &analysis, MLIRContext *context,
+static void rewrite(DataFlowSolver &solver, MLIRContext *context,
                     MutableArrayRef<Region> initialRegions) {
   SmallVector<Block *> worklist;
   auto addToWorklist = [&](MutableArrayRef<Region> regions) {
@@ -67,7 +72,7 @@ static void rewrite(IntRangeAnalysis &analysis, MLIRContext *context,
       bool replacedAll = op.getNumResults() != 0;
       for (Value res : op.getResults())
         replacedAll &=
-            succeeded(replaceWithConstant(analysis, builder, folder, res));
+            succeeded(replaceWithConstant(solver, builder, folder, res));
 
       // If all of the results of the operation were replaced, try to erase
       // the operation completely.
@@ -84,7 +89,7 @@ static void rewrite(IntRangeAnalysis &analysis, MLIRContext *context,
     // Replace any block arguments with constants.
     builder.setInsertionPointToStart(block);
     for (BlockArgument arg : block->getArguments())
-      (void)replaceWithConstant(analysis, builder, folder, arg);
+      (void)replaceWithConstant(solver, builder, folder, arg);
   }
 }
 
@@ -100,8 +105,12 @@ struct TestIntRangeInference
 
   void runOnOperation() override {
     Operation *op = getOperation();
-    IntRangeAnalysis analysis(op);
-    rewrite(analysis, op->getContext(), op->getRegions());
+    DataFlowSolver solver;
+    solver.load<DeadCodeAnalysis>();
+    solver.load<IntegerRangeAnalysis>();
+    if (failed(solver.initializeAndRun(op)))
+      return signalPassFailure();
+    rewrite(solver, op->getContext(), op->getRegions());
   }
 };
 } // end anonymous namespace

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// test bitset<N> operator&(const bitset<N>& lhs, const bitset<N>& rhs);
+// bitset<N> operator&(const bitset<N>& lhs, const bitset<N>& rhs); // constexpr since C++23
 
 #include <bitset>
 #include <cassert>
@@ -17,7 +17,7 @@
 #include "test_macros.h"
 
 template <std::size_t N>
-void test_op_and() {
+TEST_CONSTEXPR_CXX23 void test_op_and() {
     std::vector<std::bitset<N> > const cases = get_test_cases<N>();
     for (std::size_t c1 = 0; c1 != cases.size(); ++c1) {
         for (std::size_t c2 = 0; c2 != cases.size(); ++c2) {
@@ -29,16 +29,25 @@ void test_op_and() {
     }
 }
 
-int main(int, char**) {
-    test_op_and<0>();
-    test_op_and<1>();
-    test_op_and<31>();
-    test_op_and<32>();
-    test_op_and<33>();
-    test_op_and<63>();
-    test_op_and<64>();
-    test_op_and<65>();
-    test_op_and<1000>();
+TEST_CONSTEXPR_CXX23 bool test() {
+  test_op_and<0>();
+  test_op_and<1>();
+  test_op_and<31>();
+  test_op_and<32>();
+  test_op_and<33>();
+  test_op_and<63>();
+  test_op_and<64>();
+  test_op_and<65>();
 
-    return 0;
+  return true;
+}
+
+int main(int, char**) {
+  test();
+  test_op_and<1000>(); // not in constexpr because of constexpr evaluation step limits
+#if TEST_STD_VER > 20
+  static_assert(test());
+#endif
+
+  return 0;
 }

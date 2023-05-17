@@ -8,8 +8,9 @@
 
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 
 using namespace mlir;
@@ -37,10 +38,12 @@ getExpandedDimToCollapsedDimMap(ArrayRef<AffineMap> reassociation) {
 /// terms of shape of the `src`, when the reshape op is a collapsing
 /// operation. It is the product of the shape of the collapsed dimensions of the
 /// `src`.
-static OpFoldResult
-getCollapsedOutputDimFromInputShape(OpBuilder &builder, Location loc,
-                                    int64_t dimIndex, Value src,
-                                    ArrayRef<AffineMap> reassociationMap) {
+static OpFoldResult getCollapsedOutputDimFromInputShape(
+    OpBuilder &builder, Location loc, int64_t dimIndex, Value src,
+    ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociationMap) {
+  if (!ShapedType::isDynamic(dstStaticShape[dimIndex])) {
+    return builder.getIndexAttr(dstStaticShape[dimIndex]);
+  }
   AffineMap map = reassociationMap[dimIndex];
   unsigned startPos =
       map.getResults().front().cast<AffineDimExpr>().getPosition();
@@ -52,9 +55,9 @@ getCollapsedOutputDimFromInputShape(OpBuilder &builder, Location loc,
     AffineExpr currExpr = builder.getAffineSymbolExpr(dim - startPos);
     expr = (expr ? expr * currExpr : currExpr);
   }
-  return applyMapToValues(builder, loc,
-                          AffineMap::get(0, endPos - startPos + 1, expr),
-                          dynamicDims)[0];
+  return affine::applyMapToValues(
+      builder, loc, AffineMap::get(0, endPos - startPos + 1, expr),
+      dynamicDims)[0];
 }
 
 /// Given the `src` of a collapsing reshape op and its reassociation maps,
@@ -64,8 +67,8 @@ static SmallVector<OpFoldResult, 4> getCollapsedOutputShapeFromInputShape(
     ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation) {
   return llvm::to_vector<4>(llvm::map_range(
       llvm::seq<int64_t>(0, dstStaticShape.size()), [&](int64_t dim) {
-        return getCollapsedOutputDimFromInputShape(builder, loc, dim, src,
-                                                   reassociation);
+        return getCollapsedOutputDimFromInputShape(
+            builder, loc, dim, src, dstStaticShape, reassociation);
       }));
 }
 
@@ -76,7 +79,7 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
     ArrayRef<int64_t> dstStaticShape, ArrayRef<AffineMap> reassociation,
     llvm::DenseMap<int64_t, int64_t> &expandedDimToCollapsedDim) {
   if (!ShapedType::isDynamic(dstStaticShape[dimIndex])) {
-    return builder.getI64IntegerAttr(dstStaticShape[dimIndex]);
+    return builder.getIndexAttr(dstStaticShape[dimIndex]);
   }
   unsigned sourceDimPos = expandedDimToCollapsedDim[dimIndex];
   unsigned startPos = reassociation[sourceDimPos]
@@ -90,7 +93,7 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
                         .cast<AffineDimExpr>()
                         .getPosition();
   int64_t linearizedStaticDim = 1;
-  for (auto &d :
+  for (auto d :
        llvm::enumerate(dstStaticShape.slice(startPos, endPos - startPos + 1))) {
     if (d.index() + startPos == static_cast<unsigned>(dimIndex))
       continue;
@@ -100,7 +103,7 @@ static OpFoldResult getExpandedOutputDimFromInputShape(
     linearizedStaticDim *= d.value();
   }
   Value sourceDim = builder.create<tensor::DimOp>(loc, src, sourceDimPos);
-  return applyMapToValues(
+  return affine::applyMapToValues(
       builder, loc,
       AffineMap::get(
           0, 1, builder.getAffineSymbolExpr(0).floorDiv(linearizedStaticDim)),
@@ -127,21 +130,12 @@ getReshapeOutputShapeFromInputShape(OpBuilder &builder, Location loc, Value src,
                                     ArrayRef<int64_t> dstStaticShape,
                                     ArrayRef<AffineMap> reassocation) {
   return dstStaticShape.size() >
-                 static_cast<size_t>(src.getType().cast<ShapedType>().getRank())
+                 static_cast<size_t>(
+                     llvm::cast<ShapedType>(src.getType()).getRank())
              ? getExpandedOutputShapeFromInputShape(
                    builder, loc, src, dstStaticShape, reassocation)
              : getCollapsedOutputShapeFromInputShape(
                    builder, loc, src, dstStaticShape, reassocation);
-}
-
-/// Helper function to convert a vector of `OpFoldResult`s into a vector of
-/// `Value`s.
-static SmallVector<Value> getAsValues(OpBuilder &b, Location loc,
-                                      ArrayRef<OpFoldResult> valueOrAttrVec) {
-  return llvm::to_vector<4>(
-      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
-        return getValueOrCreateConstantIndexOp(b, loc, value);
-      }));
 }
 
 template <typename OpTy>
@@ -153,10 +147,9 @@ struct ReifyExpandOrCollapseShapeOp
                     ReifiedRankedShapedTypeDims &reifiedReturnShapes) const {
     auto loc = op->getLoc();
     auto reshapeOp = cast<OpTy>(op);
-    auto resultShape = getReshapeOutputShapeFromInputShape(
-        b, loc, reshapeOp.src(), reshapeOp.getResultType().getShape(),
-        reshapeOp.getReassociationMaps());
-    reifiedReturnShapes.push_back(getAsValues(b, loc, resultShape));
+    reifiedReturnShapes.push_back(getReshapeOutputShapeFromInputShape(
+        b, loc, reshapeOp.getSrc(), reshapeOp.getResultType().getShape(),
+        reshapeOp.getReassociationMaps()));
     return success();
   }
 };
@@ -173,12 +166,17 @@ struct ReifyPadOp
     Location loc = padOp.getLoc();
     auto lowPad = padOp.getMixedLowPad();
     auto highPad = padOp.getMixedHighPad();
-    SmallVector<Value> shapes;
+    SmallVector<OpFoldResult> shapes;
     for (auto dim : llvm::seq<int64_t>(0, padOp.getSourceType().getRank())) {
+      if (!padOp.getResultType().isDynamicDim(dim)) {
+        shapes.push_back(b.getIndexAttr(padOp.getResultType().getDimSize(dim)));
+        continue;
+      }
+
       // Shape along each dimension is source dim + low pad + high pad.
       SmallVector<Value> mapOperands;
       mapOperands.push_back(
-          b.createOrFold<tensor::DimOp>(loc, padOp.source(), dim));
+          b.createOrFold<tensor::DimOp>(loc, padOp.getSource(), dim));
       AffineExpr expr = b.getAffineDimExpr(0);
       unsigned numSymbols = 0;
       auto addOpFoldResult = [&](OpFoldResult valueOrAttr) {
@@ -188,12 +186,12 @@ struct ReifyPadOp
           return;
         }
         int64_t staticValue =
-            valueOrAttr.get<Attribute>().cast<IntegerAttr>().getInt();
+            llvm::cast<IntegerAttr>(valueOrAttr.get<Attribute>()).getInt();
         expr = expr + staticValue;
       };
       addOpFoldResult(lowPad[dim]);
       addOpFoldResult(highPad[dim]);
-      shapes.push_back(applyMapToValues(
+      shapes.push_back(affine::applyMapToValues(
           b, loc, AffineMap::get(1, numSymbols, expr), mapOperands)[0]);
     }
     reifiedReturnShapes.emplace_back(std::move(shapes));

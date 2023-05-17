@@ -1,4 +1,6 @@
 ; RUN: llvm-mc -triple avr -show-encoding < %s | FileCheck %s
+; RUN: llvm-mc -filetype=obj -triple avr < %s \
+; RUN:     | llvm-objdump -d - | FileCheck --check-prefix=INST %s
 
 
 foo:
@@ -17,6 +19,12 @@ foo:
 ; CHECK: brbs    1, baz                  ; encoding: [0bAAAAA001,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: baz, kind: fixup_7_pcrel
 
+; INST-LABEL: <foo>:
+; INST: breq .-18
+; INST: breq .-12
+; INST: breq .-18
+; INST: breq .+0
+
   ; BRNE
   brne .+10
   brne .+2
@@ -31,6 +39,11 @@ foo:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp5+10, kind: fixup_7_pcrel
 ; CHECK: brbc    1, bar                  ; encoding: [0bAAAAA001,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: bar, kind: fixup_7_pcrel
+
+; INST: brne .+10
+; INST: brne .+2
+; INST: brne .+10
+; INST: brne .+0
 
 bar:
   ; BRCS
@@ -48,6 +61,12 @@ bar:
 ; CHECK: brcs    end                     ; encoding: [0bAAAAA000,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: end, kind: fixup_7_pcrel
 
+; INST-LABEL: <bar>:
+; INST: brlo .+8
+; INST: brlo .+4
+; INST: brlo .+8
+; INST: brlo .+0
+
   ; BRCC
   brcc .+66
   brcc .-22
@@ -63,7 +82,12 @@ bar:
 ; CHECK: brcc    baz                     ; encoding: [0bAAAAA000,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: baz, kind: fixup_7_pcrel
 
-  ; BRSH
+; INST: brsh .+66
+; INST: brsh .-22
+; INST: brsh .+66
+; INST: brsh .+0
+
+; BRSH
   brsh .+32
   brsh .+70
   brsh car
@@ -74,6 +98,10 @@ bar:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp13+70, kind: fixup_7_pcrel
 ; CHECK: brsh    car                     ; encoding: [0bAAAAA000,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: car, kind: fixup_7_pcrel
+
+; INST: brsh .+32
+; INST: brsh .+70
+; INST: brsh .+0
 
 baz:
 
@@ -89,6 +117,11 @@ baz:
 ; CHECK: brlo    car                     ; encoding: [0bAAAAA000,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: car, kind: fixup_7_pcrel
 
+; INST-LABEL: <baz>:
+; INST: brlo .+12
+; INST: brlo .+28
+; INST: brlo .+0
+
   ; BRMI
   brmi .+66
   brmi .+58
@@ -100,6 +133,10 @@ baz:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp17+58, kind: fixup_7_pcrel
 ; CHECK: brmi    car                     ; encoding: [0bAAAAA010,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: car, kind: fixup_7_pcrel
+
+; INST: brmi .+66
+; INST: brmi .+58
+; INST: brmi .+0
 
   ; BRPL
   brpl .-12
@@ -113,7 +150,11 @@ baz:
 ; CHECK: brpl    car                     ; encoding: [0bAAAAA010,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: car, kind: fixup_7_pcrel
 
-  ; BRGE
+; INST: brpl .-12
+; INST: brpl .+18
+; INST: brpl .+0
+
+; BRGE
   brge .+50
   brge .+42
   brge car
@@ -124,6 +165,10 @@ baz:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp21+42, kind: fixup_7_pcrel
 ; CHECK: brge    car                     ; encoding: [0bAAAAA100,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: car, kind: fixup_7_pcrel
+
+; INST: brge .+50
+; INST: brge .+42
+; INST: brge .+0
 
 car:
   ; BRLT
@@ -138,6 +183,11 @@ car:
 ; CHECK: brlt    end                     ; encoding: [0bAAAAA100,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: end, kind: fixup_7_pcrel
 
+; INST-LABEL: <car>:
+; INST: brlt	.+16
+; INST: brlt	.+2
+; INST: brlt	.+0
+
   ; BRHS
   brhs .-66
   brhs .+14
@@ -149,6 +199,10 @@ car:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp25+14, kind: fixup_7_pcrel
 ; CHECK: brhs    just_another_label      ; encoding: [0bAAAAA101,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: just_another_label, kind: fixup_7_pcrel
+
+; INST: brhs	.-66
+; INST: brhs	.+14
+; INST: brhs	.+0
 
   ; BRHC
   brhc .+12
@@ -162,6 +216,10 @@ car:
 ; CHECK: brhc    just_another_label      ; encoding: [0bAAAAA101,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: just_another_label, kind: fixup_7_pcrel
 
+; INST: brhc	.+12
+; INST: brhc	.+14
+; INST: brhc	.+0
+
   ; BRTS
   brts .+18
   brts .+22
@@ -173,6 +231,10 @@ car:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp29+22, kind: fixup_7_pcrel
 ; CHECK: brts    just_another_label      ; encoding: [0bAAAAA110,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: just_another_label, kind: fixup_7_pcrel
+
+; INST: brts	.+18
+; INST: brts	.+22
+; INST: brts	.+0
 
 just_another_label:
   ; BRTC
@@ -187,6 +249,11 @@ just_another_label:
 ; CHECK: brtc    end                     ; encoding: [0bAAAAA110,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: end, kind: fixup_7_pcrel
 
+; INST-LABEL: <just_another_label>:
+; INST: brtc	.+52
+; INST: brtc	.+50
+; INST: brtc	.+0
+
   ; BRVS
   brvs .+18
   brvs .+32
@@ -198,6 +265,10 @@ just_another_label:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp33+32, kind: fixup_7_pcrel
 ; CHECK: brvs    end                     ; encoding: [0bAAAAA011,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: end, kind: fixup_7_pcrel
+
+; INST: brvs	.+18
+; INST: brvs	.+32
+; INST: brvs	.+0
 
   ; BRVC
   brvc .-28
@@ -211,6 +282,10 @@ just_another_label:
 ; CHECK: brvc    end                     ; encoding: [0bAAAAA011,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: end, kind: fixup_7_pcrel
 
+; INST: brvc	.-28
+; INST: brvc	.-62
+; INST: brvc	.+0
+
   ; BRIE
   brie .+20
   brie .+40
@@ -223,6 +298,10 @@ just_another_label:
 ; CHECK: brie    end                     ; encoding: [0bAAAAA111,0b111100AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: end, kind: fixup_7_pcrel
 
+; INST: brie	.+20
+; INST: brie	.+40
+; INST: brie	.+0
+
   ; BRID
   brid .+42
   brid .+62
@@ -234,5 +313,9 @@ just_another_label:
 ; CHECK:                                 ;   fixup A - offset: 0, value: .Ltmp39+62, kind: fixup_7_pcrel
 ; CHECK: brid    end                     ; encoding: [0bAAAAA111,0b111101AA]
 ; CHECK:                                 ;   fixup A - offset: 0, value: end, kind: fixup_7_pcrel
+
+; INST: brid	.+42
+; INST: brid	.+62
+; INST: brid	.+0
 
 end:

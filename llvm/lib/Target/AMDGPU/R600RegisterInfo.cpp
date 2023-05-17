@@ -29,7 +29,7 @@ unsigned R600RegisterInfo::getSubRegFromChannel(unsigned Channel) {
     R600::sub12, R600::sub13, R600::sub14, R600::sub15
   };
 
-  assert(Channel < array_lengthof(SubRegFromChannelTable));
+  assert(Channel < std::size(SubRegFromChannelTable));
   return SubRegFromChannelTable[Channel];
 }
 
@@ -103,7 +103,7 @@ bool R600RegisterInfo::isPhysRegLiveAcrossClauses(Register Reg) const {
   }
 }
 
-void R600RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
+bool R600RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator MI,
                                            int SPAdj,
                                            unsigned FIOperandNum,
                                            RegScavenger *RS) const {

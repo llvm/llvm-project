@@ -46,6 +46,7 @@ struct OnStartedArgs {
 };
 
 void ThreadContext::OnStarted(void *arg) {
+  ThreadContextLsanBase::OnStarted(arg);
   auto args = reinterpret_cast<const OnStartedArgs *>(arg);
   cache_begin_ = args->cache_begin;
   cache_end_ = args->cache_end;
@@ -68,7 +69,7 @@ void InitializeMainThread() {
 }
 
 void GetAllThreadAllocatorCachesLocked(InternalMmapVector<uptr> *caches) {
-  GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
+  GetLsanThreadRegistryLocked()->RunCallbackForEachThreadLocked(
       [](ThreadContextBase *tctx, void *arg) {
         auto ctx = static_cast<ThreadContext *>(tctx);
         static_cast<decltype(caches)>(arg)->push_back(ctx->cache_begin());
@@ -98,7 +99,7 @@ void *__sanitizer_before_thread_create_hook(thrd_t thread, bool detached,
   OnCreatedArgs args;
   args.stack_begin = reinterpret_cast<uptr>(stack_base);
   args.stack_end = args.stack_begin + stack_size;
-  u32 parent_tid = GetCurrentThread();
+  u32 parent_tid = GetCurrentThreadId();
   u32 tid = ThreadCreate(parent_tid, detached, &args);
   return reinterpret_cast<void *>(static_cast<uptr>(tid));
 }
@@ -110,7 +111,7 @@ void __sanitizer_thread_create_hook(void *hook, thrd_t thread, int error) {
   // On success, there is nothing to do here.
   if (error != thrd_success) {
     // Clean up the thread registry for the thread creation that didn't happen.
-    GetThreadRegistryLocked()->FinishThread(tid);
+    GetLsanThreadRegistryLocked()->FinishThread(tid);
   }
 }
 

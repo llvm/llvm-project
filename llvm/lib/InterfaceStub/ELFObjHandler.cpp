@@ -17,6 +17,7 @@
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include <optional>
 
 using llvm::object::ELFObjectFile;
 
@@ -31,13 +32,13 @@ namespace ifs {
 struct DynamicEntries {
   uint64_t StrTabAddr = 0;
   uint64_t StrSize = 0;
-  Optional<uint64_t> SONameOffset;
+  std::optional<uint64_t> SONameOffset;
   std::vector<uint64_t> NeededLibNames;
   // Symbol table:
   uint64_t DynSymAddr = 0;
   // Hash tables:
-  Optional<uint64_t> ElfHash;
-  Optional<uint64_t> GnuHash;
+  std::optional<uint64_t> ElfHash;
+  std::optional<uint64_t> GnuHash;
 };
 
 /// This initializes an ELF file header with information specific to a binary
@@ -194,7 +195,7 @@ public:
     for (const std::string &Lib : Stub.NeededLibs)
       DynStr.Content.add(Lib);
     if (Stub.SoName)
-      DynStr.Content.add(Stub.SoName.getValue());
+      DynStr.Content.add(*Stub.SoName);
 
     std::vector<OutputSection<ELFT> *> Sections = {&DynSym, &DynStr, &DynTab,
                                                    &ShStrTab};
@@ -217,7 +218,7 @@ public:
       // time as long as it is not SHN_UNDEF. Set shndx to 1, which
       // points to ".dynsym".
       uint16_t Shndx = Sym.Undefined ? SHN_UNDEF : 1;
-      uint64_t Size = Sym.Size ? *Sym.Size : 0;
+      uint64_t Size = Sym.Size.value_or(0);
       DynSym.Content.add(DynStr.Content.getOffset(Sym.Name), Size, Bind,
                          convertIFSSymbolTypeToELF(Sym.Type), 0, Shndx);
     }
@@ -231,7 +232,7 @@ public:
       DynTab.Content.addValue(DT_NEEDED, DynStr.Content.getOffset(Lib));
     if (Stub.SoName)
       DynTab.Content.addValue(DT_SONAME,
-                              DynStr.Content.getOffset(Stub.SoName.getValue()));
+                              DynStr.Content.getOffset(*Stub.SoName));
     DynTab.Size = DynTab.Content.getSize();
     // Calculate sections' addresses and offsets.
     uint64_t CurrentOffset = sizeof(Elf_Ehdr);
@@ -250,8 +251,7 @@ public:
     fillStrTabShdr(ShStrTab);
 
     // Finish initializing the ELF header.
-    initELFHeader<ELFT>(ElfHeader,
-                        static_cast<uint16_t>(Stub.Target.Arch.getValue()));
+    initELFHeader<ELFT>(ElfHeader, static_cast<uint16_t>(*Stub.Target.Arch));
     ElfHeader.e_shstrndx = ShStrTab.Index;
     ElfHeader.e_shnum = LastSection->Index + 1;
     ElfHeader.e_shoff =
@@ -493,7 +493,7 @@ static Error populateDynamic(DynamicEntries &Dyn,
     return createError(
         "Couldn't locate dynamic symbol table (no DT_SYMTAB entry)");
   }
-  if (Dyn.SONameOffset.hasValue() && *Dyn.SONameOffset >= Dyn.StrSize) {
+  if (Dyn.SONameOffset && *Dyn.SONameOffset >= Dyn.StrSize) {
     return createStringError(object_error::parse_failed,
                              "DT_SONAME string offset (0x%016" PRIx64
                              ") outside of dynamic string table",
@@ -608,7 +608,7 @@ buildStub(const ELFObjectFile<ELFT> &ElfObj) {
   DestStub->Target.ObjectFormat = "ELF";
 
   // Populate SoName from .dynamic entries and dynamic string table.
-  if (DynEnt.SONameOffset.hasValue()) {
+  if (DynEnt.SONameOffset) {
     Expected<StringRef> NameOrErr =
         terminatedSubstr(DynStr, *DynEnt.SONameOffset);
     if (!NameOrErr) {

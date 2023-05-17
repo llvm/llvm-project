@@ -112,9 +112,22 @@ subroutine len_test(a,b, c, d, e, n, m)
   external d
   integer, intent(in) :: n, m
   character(n), intent(in) :: e
+  character(5), parameter :: cparam = "abc  "
+  interface
+     function fun1(L)
+       character(L) :: fun1
+       integer :: L
+     end function fun1
+  end interface
+  interface
+     function mofun(L)
+       character(L) :: mofun
+       integer, intent(in) :: L
+     end function mofun
+  end interface
 
-  !CHECK: PRINT *, int(a%len,kind=8)
-  print *, len(a, kind=8)
+  !CHECK: PRINT *, int(int(a%len,kind=8),kind=4)
+  print *, len(a)
   !CHECK: PRINT *, 5_4
   print *, len(a(1:5))
   !CHECK: PRINT *, len(b(a))
@@ -139,6 +152,95 @@ subroutine len_test(a,b, c, d, e, n, m)
   print *, len(b(a(n:m)))
   !CHECK: PRINT *, int(max(0_8,max(0_8,int(n,kind=8))-4_8+1_8),kind=4)
   print *, len(e(4:))
+  !CHECK: PRINT *, len(fun1(n-m))
+  print *, len(fun1(n-m))
+  !CHECK: PRINT *, len(mofun(m+1_4))
+  print *, len(mofun(m+1))
+  !CHECK: PRINT *, 3_4
+  print *, len(trim(cparam))
+  !CHECK: PRINT *, len(trim(c))
+  print *, len(trim(c))
+  !CHECK: PRINT *, 40_4
+  print *, len(repeat(c, 4))
+  !CHECK: PRINT *, len(repeat(c,int(i,kind=8)))
+  print *, len(repeat(c, i))
 end subroutine len_test
+
+!CHECK-LABEL: associate_tests
+subroutine associate_tests(p)
+  real, pointer :: p(:)
+  real :: a(10:20)
+  interface
+    subroutine may_change_p_bounds(p)
+      real, pointer :: p(:)
+    end subroutine
+  end interface
+  associate(x => p)
+    call may_change_p_bounds(p)
+    !CHECK: PRINT *, lbound(x,dim=1,kind=8), size(x,dim=1,kind=8)+lbound(x,dim=1,kind=8)-1_8, size(x,dim=1,kind=8)
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+  associate(x => p+1)
+    call may_change_p_bounds(p)
+    !CHECK: PRINT *, 1_8, size(x,dim=1,kind=8), size(x,dim=1,kind=8)
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+  associate(x => a)
+    !CHECK: PRINT *, 10_8, 20_8, 11_8
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+  associate(x => a+42.)
+    !CHECK: PRINT *, 1_8, 11_8, 11_8
+    print *, lbound(x, 1, kind=8), ubound(x, 1, kind=8), size(x, 1, kind=8)
+  end associate
+end subroutine
+
+!CHECK-LABEL: array_constructor
+subroutine array_constructor(a, u, v, w, x, y, z)
+  real :: a(4)
+  integer :: u(:), v(1), w(2), x(4), y(4), z(2, 2)
+  interface
+    function return_allocatable()
+     real, allocatable :: return_allocatable(:)
+    end function
+  end interface
+  !CHECK: PRINT *, size([REAL(4)::return_allocatable(),return_allocatable()])
+  print *, size([return_allocatable(), return_allocatable()])
+  !CHECK: PRINT *, [INTEGER(4)::x+y]
+  print *, (/x/) + (/y/)
+  !CHECK: PRINT *, [INTEGER(4)::x]+[INTEGER(4)::z]
+  print *, (/x/) + (/z/)
+  !CHECK: PRINT *, [INTEGER(4)::x+y,x+y]
+  print *, (/x, x/) + (/y, y/)
+  !CHECK: PRINT *, [INTEGER(4)::x,x]+[INTEGER(4)::x,z]
+  print *, (/x, x/) + (/x, z/)
+  !CHECK: PRINT *, [INTEGER(4)::x,w,w]+[INTEGER(4)::w,w,x]
+  print *, (/x, w, w/) + (/w, w, x/)
+  !CHECK: PRINT *, [INTEGER(4)::x]+[INTEGER(4)::1_4,2_4,3_4,4_4]
+  print *, (/x/) + (/1, 2, 3, 4/)
+  !CHECK: PRINT *, [INTEGER(4)::v]+[INTEGER(4)::1_4]
+  print *, (/v/) + (/1/)
+  !CHECK: PRINT *, [INTEGER(4)::x]+[INTEGER(4)::u]
+  print *, (/x/) + (/u/)
+  !CHECK: PRINT *, [INTEGER(4)::u]+[INTEGER(4)::u]
+  print *, (/u/) + (/u/)
+  !CHECK: PRINT *, [REAL(4)::a**x]
+  print *, (/a/) ** (/x/)
+  !CHECK: PRINT *, [REAL(4)::a]**[INTEGER(4)::z]
+  print *, (/a/) ** (/z/)
+end subroutine
+
+!CHECK-LABEL: array_ctor_implied_do_index
+subroutine array_ctor_implied_do_index(x, j)
+  integer :: x(:)
+  integer(8) :: j
+  character(10) :: c
+  !CHECK: PRINT *, size([INTEGER(4)::(x(1_8:i:1_8),INTEGER(8)::i=1_8,2_8,1_8)])
+  print *, size([(x(1:i), integer(8)::i=1,2)])
+  !CHECK: PRINT *, int(0_8+2_8*(0_8+max((j-1_8+1_8)/1_8,0_8)),kind=4)
+  print *, size([(x(1:j), integer(8)::i=1,2)])
+  !CHECK: PRINT *, len([(c(i:i),INTEGER(8)::i=1_8,4_8,1_8)])
+  print *, len([(c(i:i), integer(8)::i = 1,4)])
+end subroutine
 
 end module

@@ -12,6 +12,7 @@ static_library("ARCMigrate") {
     "//clang/lib/Sema",
     "//clang/lib/Serialization",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ARCMT.cpp",

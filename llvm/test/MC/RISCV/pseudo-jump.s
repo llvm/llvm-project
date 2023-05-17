@@ -8,7 +8,7 @@
 .long foo
 
 jump foo, x31
-# RELOC: R_RISCV_CALL foo 0x0
+# RELOC: R_RISCV_CALL_PLT foo 0x0
 # INSTR: auipc t6, 0
 # INSTR: jr  t6
 # FIXUP: fixup A - offset: 0, value: foo, kind: fixup_riscv_call
@@ -16,7 +16,7 @@ jump foo, x31
 # Ensure that jumps to symbols whose names coincide with register names work.
 
 jump zero, x1
-# RELOC: R_RISCV_CALL zero 0x0
+# RELOC: R_RISCV_CALL_PLT zero 0x0
 # INSTR: auipc ra, 0
 # INSTR: ret
 # FIXUP: fixup A - offset: 0, value: zero, kind: fixup_riscv_call

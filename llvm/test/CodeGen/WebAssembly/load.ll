@@ -11,8 +11,8 @@
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i32 @ldi32(i32 *%p) {
-  %v = load i32, i32* %p
+define i32 @ldi32(ptr %p) {
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
@@ -22,8 +22,8 @@ define i32 @ldi32(i32 *%p) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i64.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define i64 @ldi64(i64 *%p) {
-  %v = load i64, i64* %p
+define i64 @ldi64(ptr %p) {
+  %v = load i64, ptr %p
   ret i64 %v
 }
 
@@ -33,8 +33,8 @@ define i64 @ldi64(i64 *%p) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: f32.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define float @ldf32(float *%p) {
-  %v = load float, float* %p
+define float @ldf32(ptr %p) {
+  %v = load float, ptr %p
   ret float %v
 }
 
@@ -44,7 +44,7 @@ define float @ldf32(float *%p) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: f64.load $push[[NUM:[0-9]+]]=, 0($pop[[L0]]){{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
-define double @ldf64(double *%p) {
-  %v = load double, double* %p
+define double @ldf64(ptr %p) {
+  %v = load double, ptr %p
   ret double %v
 }

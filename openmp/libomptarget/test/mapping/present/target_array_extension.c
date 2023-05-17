@@ -16,35 +16,38 @@
 // RUN: %libomptarget-run-fail-generic 2>&1 \
 // RUN: | %fcheck-generic
 
-
 // END.
 
 #include <stdio.h>
 
 #define BEFORE 0
-#define AFTER  1
+#define AFTER 1
 
 #define SIZE 100
 
 #if EXTENDS == BEFORE
-# define SMALL_BEG (SIZE-2)
-# define SMALL_END SIZE
-# define LARGE_BEG 0
-# define LARGE_END SIZE
+#define SMALL_BEG (SIZE - 2)
+#define SMALL_END SIZE
+#define LARGE_BEG 0
+#define LARGE_END SIZE
 #elif EXTENDS == AFTER
-# define SMALL_BEG 0
-# define SMALL_END 2
-# define LARGE_BEG 0
-# define LARGE_END SIZE
+#define SMALL_BEG 0
+#define SMALL_END 2
+#define LARGE_BEG 0
+#define LARGE_END SIZE
 #else
-# error EXTENDS undefined
+#error EXTENDS undefined
 #endif
 
-#define SMALL_SIZE (SMALL_END-SMALL_BEG)
-#define LARGE_SIZE (LARGE_END-LARGE_BEG)
+#define SMALL_SIZE (SMALL_END - SMALL_BEG)
+#define LARGE_SIZE (LARGE_END - LARGE_BEG)
 
-#define SMALL SMALL_BEG:SMALL_SIZE
-#define LARGE LARGE_BEG:LARGE_SIZE
+#define SMALL                                                                  \
+  SMALL_BEG:                                                                   \
+  SMALL_SIZE
+#define LARGE                                                                  \
+  LARGE_BEG:                                                                   \
+  LARGE_SIZE
 
 int main() {
   int arr[SIZE];
@@ -58,9 +61,9 @@ int main() {
           LARGE_SIZE * sizeof arr[0]);
 
   // CHECK-NOT: Libomptarget
-#pragma omp target data map(alloc: arr[LARGE])
+#pragma omp target data map(alloc : arr[LARGE])
   {
-#pragma omp target map(present, tofrom: arr[SMALL])
+#pragma omp target map(present, tofrom : arr[SMALL])
     ;
   }
 
@@ -73,9 +76,9 @@ int main() {
   // CHECK: Libomptarget error: Call to targetDataBegin failed, abort target.
   // CHECK: Libomptarget error: Failed to process data before launching the kernel.
   // CHECK: Libomptarget fatal error 1: failure of target construct while offloading is mandatory
-#pragma omp target data map(alloc: arr[SMALL])
+#pragma omp target data map(alloc : arr[SMALL])
   {
-#pragma omp target map(present, tofrom: arr[LARGE])
+#pragma omp target map(present, tofrom : arr[LARGE])
     ;
   }
 

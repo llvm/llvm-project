@@ -19,6 +19,7 @@
 #include "llvm/ProfileData/InstrProfReader.h"
 #include <array>
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace CodeGen {
@@ -59,12 +60,12 @@ public:
 
   /// Check if an execution count is known for a given statement. If so, return
   /// true and put the value in Count; else return false.
-  Optional<uint64_t> getStmtCount(const Stmt *S) const {
+  std::optional<uint64_t> getStmtCount(const Stmt *S) const {
     if (!StmtCountMap)
-      return None;
+      return std::nullopt;
     auto I = StmtCountMap->find(S);
     if (I == StmtCountMap->end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 
@@ -113,7 +114,12 @@ public:
       return 0;
     if (!haveRegionCounts())
       return 0;
-    return RegionCounts[(*RegionCounterMap)[S]];
+    // With profiles from a differing version of clang we can have mismatched
+    // decl counts. Don't crash in such a case.
+    auto Index = (*RegionCounterMap)[S];
+    if (Index >= RegionCounts.size())
+      return 0;
+    return RegionCounts[Index];
   }
 };
 

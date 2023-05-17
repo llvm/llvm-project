@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++11 -verify %s
+// RUN: %clang_cc1 -std=c++11 -verify %s -Wno-deprecated-builtins
 
 // rdar://12240916 stack overflow.
 namespace rdar12240916 {

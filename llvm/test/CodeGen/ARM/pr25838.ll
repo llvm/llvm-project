@@ -5,7 +5,7 @@ target triple = "armv7--linux-android"
 
 %0 = type { i32, i32 }
 
-define i32 @foo(%0* readonly) {
+define i32 @foo(ptr readonly) {
   br i1 undef, label %12, label %2
 
 ; <label>:2

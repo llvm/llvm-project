@@ -60,4 +60,41 @@ const char *AsFortran(RelationalOperator opr) {
   }
 }
 
+const char *AsFortran(DefinedIo x) {
+  switch (x) {
+    SWITCH_COVERS_ALL_CASES
+  case DefinedIo::ReadFormatted:
+    return "read(formatted)";
+  case DefinedIo::ReadUnformatted:
+    return "read(unformatted)";
+  case DefinedIo::WriteFormatted:
+    return "write(formatted)";
+  case DefinedIo::WriteUnformatted:
+    return "write(unformatted)";
+  }
+}
+
+std::string AsFortran(IgnoreTKRSet tkr) {
+  std::string result;
+  if (tkr.test(IgnoreTKR::Type)) {
+    result += 'T';
+  }
+  if (tkr.test(IgnoreTKR::Kind)) {
+    result += 'K';
+  }
+  if (tkr.test(IgnoreTKR::Rank)) {
+    result += 'R';
+  }
+  if (tkr.test(IgnoreTKR::Device)) {
+    result += 'D';
+  }
+  if (tkr.test(IgnoreTKR::Managed)) {
+    result += 'M';
+  }
+  if (tkr.test(IgnoreTKR::Contiguous)) {
+    result += 'C';
+  }
+  return result;
+}
+
 } // namespace Fortran::common

@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -ffreestanding -triple=i386-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s
+// RUN: %clang_cc1 %s -ffreestanding -triple=i386-unknown-unknown -target-feature +invpcid -emit-llvm -o - -Wall -Werror -pedantic | FileCheck %s
 
 #include <immintrin.h>
 
@@ -7,6 +7,6 @@
 
 void test_invpcid(uint32_t type, void *descriptor) {
   //CHECK-LABEL: @test_invpcid
-  //CHECK: call void @llvm.x86.invpcid(i32 %{{.*}}, i8* %{{.*}})
+  //CHECK: call void @llvm.x86.invpcid(i32 %{{.*}}, ptr %{{.*}})
   _invpcid(type, descriptor);
 }

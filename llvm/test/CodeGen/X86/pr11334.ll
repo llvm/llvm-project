@@ -97,8 +97,8 @@ define void @test_vector_creation() nounwind {
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX-NEXT:    retq
   %1 = insertelement <4 x double> undef, double 0.000000e+00, i32 2
-  %2 = load double, double addrspace(1)* null
+  %2 = load double, ptr addrspace(1) null
   %3 = insertelement <4 x double> %1, double %2, i32 3
-  store <4 x double> %3, <4 x double>* undef
+  store <4 x double> %3, ptr undef
   ret void
 }

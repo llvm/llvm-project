@@ -6,12 +6,12 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mcpu=knl       | FileCheck %s -check-prefix=LINUX-KNL
 ; RUN: llc < %s -mtriple=x86_64-unknown-linux-gnu -mattr=avx512bw | FileCheck %s -check-prefix=LINUX-AVX512BW
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
-declare void @llvm.memcpy.p256i8.p256i8.i64(i8 addrspace(256)* nocapture, i8 addrspace(256)* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p256.p256.i64(ptr addrspace(256) nocapture, ptr addrspace(256) nocapture, i64, i1) nounwind
 
 
 ; Variable memcpy's should lower to calls.
-define i8* @test1(i8* %a, i8* %b, i64 %n) nounwind {
+define ptr @test1(ptr %a, ptr %b, i64 %n) nounwind {
 ; DARWIN-LABEL: test1:
 ; DARWIN:       ## %bb.0: ## %entry
 ; DARWIN-NEXT:    jmp _memcpy ## TAILCALL
@@ -36,12 +36,12 @@ define i8* @test1(i8* %a, i8* %b, i64 %n) nounwind {
 ; LINUX-AVX512BW:       # %bb.0: # %entry
 ; LINUX-AVX512BW-NEXT:    jmp memcpy@PLT # TAILCALL
 entry:
-	tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %b, i64 %n, i1 0 )
-	ret i8* %a
+	tail call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 %n, i1 0 )
+	ret ptr %a
 }
 
 ; Variable memcpy's should lower to calls.
-define i8* @test2(i64* %a, i64* %b, i64 %n) nounwind {
+define ptr @test2(ptr %a, ptr %b, i64 %n) nounwind {
 ; DARWIN-LABEL: test2:
 ; DARWIN:       ## %bb.0: ## %entry
 ; DARWIN-NEXT:    jmp _memcpy ## TAILCALL
@@ -66,10 +66,8 @@ define i8* @test2(i64* %a, i64* %b, i64 %n) nounwind {
 ; LINUX-AVX512BW:       # %bb.0: # %entry
 ; LINUX-AVX512BW-NEXT:    jmp memcpy@PLT # TAILCALL
 entry:
-	%tmp14 = bitcast i64* %a to i8*
-	%tmp25 = bitcast i64* %b to i8*
-	tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %tmp14, i8* align 8 %tmp25, i64 %n, i1 0 )
-	ret i8* %tmp14
+	tail call void @llvm.memcpy.p0.p0.i64(ptr align 8 %a, ptr align 8 %b, i64 %n, i1 0 )
+	ret ptr %a
 }
 
 ; Large constant memcpy's should lower to a call when optimizing for size.
@@ -78,7 +76,7 @@ entry:
 ; On the other hand, Darwin's definition of -Os is optimizing for size without
 ; hurting performance so it should just ignore optsize when expanding memcpy.
 ; rdar://8821501
-define void @test3(i8* nocapture %A, i8* nocapture %B) nounwind optsize noredzone {
+define void @test3(ptr nocapture %A, ptr nocapture %B) nounwind optsize noredzone {
 ; DARWIN-LABEL: test3:
 ; DARWIN:       ## %bb.0: ## %entry
 ; DARWIN-NEXT:    movq 56(%rsi), %rax
@@ -135,11 +133,11 @@ define void @test3(i8* nocapture %A, i8* nocapture %B) nounwind optsize noredzon
 ; LINUX-AVX512BW-NEXT:    vzeroupper
 ; LINUX-AVX512BW-NEXT:    retq
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 64, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 64, i1 false)
   ret void
 }
 
-define void @test3_pgso(i8* nocapture %A, i8* nocapture %B) nounwind noredzone !prof !14 {
+define void @test3_pgso(ptr nocapture %A, ptr nocapture %B) nounwind noredzone !prof !14 {
 ; DARWIN-LABEL: test3_pgso:
 ; DARWIN:       ## %bb.0: ## %entry
 ; DARWIN-NEXT:    movq 56(%rsi), %rax
@@ -196,11 +194,11 @@ define void @test3_pgso(i8* nocapture %A, i8* nocapture %B) nounwind noredzone !
 ; LINUX-AVX512BW-NEXT:    vzeroupper
 ; LINUX-AVX512BW-NEXT:    retq
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 64, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 64, i1 false)
   ret void
 }
 
-define void @test3_minsize(i8* nocapture %A, i8* nocapture %B) nounwind minsize noredzone {
+define void @test3_minsize(ptr nocapture %A, ptr nocapture %B) nounwind minsize noredzone {
 ; DARWIN-LABEL: test3_minsize:
 ; DARWIN:       ## %bb.0:
 ; DARWIN-NEXT:    pushq $64
@@ -243,11 +241,11 @@ define void @test3_minsize(i8* nocapture %A, i8* nocapture %B) nounwind minsize 
 ; LINUX-AVX512BW-NEXT:    vmovups %zmm0, (%rdi)
 ; LINUX-AVX512BW-NEXT:    vzeroupper
 ; LINUX-AVX512BW-NEXT:    retq
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 64, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 64, i1 false)
   ret void
 }
 
-define void @test3_minsize_optsize(i8* nocapture %A, i8* nocapture %B) nounwind optsize minsize noredzone {
+define void @test3_minsize_optsize(ptr nocapture %A, ptr nocapture %B) nounwind optsize minsize noredzone {
 ; DARWIN-LABEL: test3_minsize_optsize:
 ; DARWIN:       ## %bb.0:
 ; DARWIN-NEXT:    pushq $64
@@ -290,12 +288,12 @@ define void @test3_minsize_optsize(i8* nocapture %A, i8* nocapture %B) nounwind 
 ; LINUX-AVX512BW-NEXT:    vmovups %zmm0, (%rdi)
 ; LINUX-AVX512BW-NEXT:    vzeroupper
 ; LINUX-AVX512BW-NEXT:    retq
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 64, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 64, i1 false)
   ret void
 }
 
 ; Large constant memcpy's should be inlined when not optimizing for size.
-define void @test4(i8* nocapture %A, i8* nocapture %B) nounwind noredzone {
+define void @test4(ptr nocapture %A, ptr nocapture %B) nounwind noredzone {
 ; DARWIN-LABEL: test4:
 ; DARWIN:       ## %bb.0: ## %entry
 ; DARWIN-NEXT:    movq 56(%rsi), %rax
@@ -367,14 +365,14 @@ define void @test4(i8* nocapture %A, i8* nocapture %B) nounwind noredzone {
 ; LINUX-AVX512BW-NEXT:    vzeroupper
 ; LINUX-AVX512BW-NEXT:    retq
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %A, i8* %B, i64 64, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %A, ptr %B, i64 64, i1 false)
   ret void
 }
 
 
 @.str = private unnamed_addr constant [30 x i8] c"\00aaaaaaaaaaaaaaaaaaaaaaaaaaaa\00", align 1
 
-define void @test5(i8* nocapture %C) nounwind uwtable ssp {
+define void @test5(ptr nocapture %C) nounwind uwtable ssp {
 ; DARWIN-LABEL: test5:
 ; DARWIN:       ## %bb.0: ## %entry
 ; DARWIN-NEXT:    movabsq $7016996765293437281, %rax ## imm = 0x6161616161616161
@@ -415,7 +413,7 @@ define void @test5(i8* nocapture %C) nounwind uwtable ssp {
 ; LINUX-AVX512BW-NEXT:    vmovups %xmm0, (%rdi)
 ; LINUX-AVX512BW-NEXT:    retq
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %C, i8* getelementptr inbounds ([30 x i8], [30 x i8]* @.str, i64 0, i64 0), i64 16, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %C, ptr @.str, i64 16, i1 false)
   ret void
 }
 
@@ -460,16 +458,16 @@ define void @test6() nounwind uwtable {
 ; LINUX-AVX512BW-NEXT:    movq $120, 0
 ; LINUX-AVX512BW-NEXT:    retq
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* null, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str2, i64 0, i64 0), i64 10, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr null, ptr @.str2, i64 10, i1 false)
   ret void
 }
 
-define void @PR15348(i8* %a, i8* %b) {
+define void @PR15348(ptr %a, ptr %b) {
 ; Ensure that alignment of '0' in an @llvm.memcpy intrinsic results in
 ; unaligned loads and stores.
 ; DARWIN-LABEL: PR15348:
 ; DARWIN:       ## %bb.0:
-; DARWIN-NEXT:    movb 16(%rsi), %al
+; DARWIN-NEXT:    movzbl 16(%rsi), %eax
 ; DARWIN-NEXT:    movb %al, 16(%rdi)
 ; DARWIN-NEXT:    movq (%rsi), %rax
 ; DARWIN-NEXT:    movq 8(%rsi), %rcx
@@ -479,7 +477,7 @@ define void @PR15348(i8* %a, i8* %b) {
 ;
 ; LINUX-LABEL: PR15348:
 ; LINUX:       # %bb.0:
-; LINUX-NEXT:    movb 16(%rsi), %al
+; LINUX-NEXT:    movzbl 16(%rsi), %eax
 ; LINUX-NEXT:    movb %al, 16(%rdi)
 ; LINUX-NEXT:    movq (%rsi), %rax
 ; LINUX-NEXT:    movq 8(%rsi), %rcx
@@ -489,7 +487,7 @@ define void @PR15348(i8* %a, i8* %b) {
 ;
 ; LINUX-SKL-LABEL: PR15348:
 ; LINUX-SKL:       # %bb.0:
-; LINUX-SKL-NEXT:    movb 16(%rsi), %al
+; LINUX-SKL-NEXT:    movzbl 16(%rsi), %eax
 ; LINUX-SKL-NEXT:    movb %al, 16(%rdi)
 ; LINUX-SKL-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-SKL-NEXT:    vmovups %xmm0, (%rdi)
@@ -497,7 +495,7 @@ define void @PR15348(i8* %a, i8* %b) {
 ;
 ; LINUX-SKX-LABEL: PR15348:
 ; LINUX-SKX:       # %bb.0:
-; LINUX-SKX-NEXT:    movb 16(%rsi), %al
+; LINUX-SKX-NEXT:    movzbl 16(%rsi), %eax
 ; LINUX-SKX-NEXT:    movb %al, 16(%rdi)
 ; LINUX-SKX-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-SKX-NEXT:    vmovups %xmm0, (%rdi)
@@ -505,7 +503,7 @@ define void @PR15348(i8* %a, i8* %b) {
 ;
 ; LINUX-KNL-LABEL: PR15348:
 ; LINUX-KNL:       # %bb.0:
-; LINUX-KNL-NEXT:    movb 16(%rsi), %al
+; LINUX-KNL-NEXT:    movzbl 16(%rsi), %eax
 ; LINUX-KNL-NEXT:    movb %al, 16(%rdi)
 ; LINUX-KNL-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-KNL-NEXT:    vmovups %xmm0, (%rdi)
@@ -513,18 +511,18 @@ define void @PR15348(i8* %a, i8* %b) {
 ;
 ; LINUX-AVX512BW-LABEL: PR15348:
 ; LINUX-AVX512BW:       # %bb.0:
-; LINUX-AVX512BW-NEXT:    movb 16(%rsi), %al
+; LINUX-AVX512BW-NEXT:    movzbl 16(%rsi), %eax
 ; LINUX-AVX512BW-NEXT:    movb %al, 16(%rdi)
 ; LINUX-AVX512BW-NEXT:    vmovups (%rsi), %xmm0
 ; LINUX-AVX512BW-NEXT:    vmovups %xmm0, (%rdi)
 ; LINUX-AVX512BW-NEXT:    retq
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %b, i64 17, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 17, i1 false)
   ret void
 }
 
 ; Memcpys from / to address space 256 should be lowered to appropriate loads /
 ; stores if small enough.
-define void @addrspace256(i8 addrspace(256)* %a, i8 addrspace(256)* %b) nounwind {
+define void @addrspace256(ptr addrspace(256) %a, ptr addrspace(256) %b) nounwind {
 ; DARWIN-LABEL: addrspace256:
 ; DARWIN:       ## %bb.0:
 ; DARWIN-NEXT:    movq %gs:(%rsi), %rax
@@ -564,7 +562,7 @@ define void @addrspace256(i8 addrspace(256)* %a, i8 addrspace(256)* %b) nounwind
 ; LINUX-AVX512BW-NEXT:    vmovups %gs:(%rsi), %xmm0
 ; LINUX-AVX512BW-NEXT:    vmovups %xmm0, %gs:(%rdi)
 ; LINUX-AVX512BW-NEXT:    retq
-  tail call void @llvm.memcpy.p256i8.p256i8.i64(i8 addrspace(256)* align 8 %a, i8 addrspace(256)* align 8 %b, i64 16, i1 false)
+  tail call void @llvm.memcpy.p256.p256.i64(ptr addrspace(256) align 8 %a, ptr addrspace(256) align 8 %b, i64 16, i1 false)
   ret void
 }
 

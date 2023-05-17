@@ -29,10 +29,10 @@ using namespace llvm;
 struct Status {
   // Mask is a bitmask where a '1' indicates the corresponding Mode bit has a
   // known value
-  unsigned Mask;
-  unsigned Mode;
+  unsigned Mask = 0;
+  unsigned Mode = 0;
 
-  Status() : Mask(0), Mode(0){};
+  Status() = default;
 
   Status(unsigned NewMask, unsigned NewMode) : Mask(NewMask), Mode(NewMode) {
     Mode &= Mask;
@@ -96,13 +96,13 @@ public:
 
   // In Phase 1 we record the first instruction that has a mode requirement,
   // which is used in Phase 3 if we need to insert a mode change.
-  MachineInstr *FirstInsertionPoint;
+  MachineInstr *FirstInsertionPoint = nullptr;
 
   // A flag to indicate whether an Exit value has been set (we can't tell by
   // examining the Exit value itself as all values may be valid results).
-  bool ExitSet;
+  bool ExitSet = false;
 
-  BlockData() : FirstInsertionPoint(nullptr), ExitSet(false){};
+  BlockData() = default;
 };
 
 namespace {
@@ -174,14 +174,36 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_ZERO));
     case AMDGPU::FPTRUNC_UPWARD_PSEUDO: {
-      // Replacing the pseudo by a real instruction
-      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      // Replacing the pseudo by a real instruction in place
+      if (TII->getSubtarget().hasTrue16BitInsts()) {
+        MachineBasicBlock &MBB = *MI.getParent();
+        MachineInstrBuilder B(*MBB.getParent(), MI);
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
+        MachineOperand Src0 = MI.getOperand(1);
+        MI.removeOperand(1);
+        B.addImm(0); // src0_modifiers
+        B.add(Src0); // re-add src0 operand
+        B.addImm(0); // clamp
+        B.addImm(0); // omod
+      } else
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_INF));
     }
     case AMDGPU::FPTRUNC_DOWNWARD_PSEUDO: {
-      // Replacing the pseudo by a real instruction
-      MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
+      // Replacing the pseudo by a real instruction in place
+      if (TII->getSubtarget().hasTrue16BitInsts()) {
+        MachineBasicBlock &MBB = *MI.getParent();
+        MachineInstrBuilder B(*MBB.getParent(), MI);
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_t16_e64));
+        MachineOperand Src0 = MI.getOperand(1);
+        MI.removeOperand(1);
+        B.addImm(0); // src0_modifiers
+        B.add(Src0); // re-add src0 operand
+        B.addImm(0); // clamp
+        B.addImm(0); // omod
+      } else
+        MI.setDesc(TII->get(AMDGPU::V_CVT_F16_F32_e32));
       return Status(FP_ROUND_MODE_DP(3),
                     FP_ROUND_MODE_DP(FP_ROUND_ROUND_TO_NEGINF));
     }
@@ -200,8 +222,8 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
 void SIModeRegister::insertSetreg(MachineBasicBlock &MBB, MachineInstr *MI,
                                   const SIInstrInfo *TII, Status InstrMode) {
   while (InstrMode.Mask) {
-    unsigned Offset = countTrailingZeros<unsigned>(InstrMode.Mask);
-    unsigned Width = countTrailingOnes<unsigned>(InstrMode.Mask >> Offset);
+    unsigned Offset = llvm::countr_zero<unsigned>(InstrMode.Mask);
+    unsigned Width = llvm::countr_one<unsigned>(InstrMode.Mask >> Offset);
     unsigned Value = (InstrMode.Mode >> Offset) & ((1 << Width) - 1);
     BuildMI(MBB, MI, nullptr, TII->get(AMDGPU::S_SETREG_IMM32_B32))
         .addImm(Value)

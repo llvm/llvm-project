@@ -6,7 +6,7 @@
 ; Function Attrs: nounwind
 define void @_Z3foov() #0 {
 entry:
-  %0 = load volatile i32, i32* @boo, align 4
+  %0 = load volatile i32, ptr @boo, align 4
   switch i32 %0, label %sw.epilog [
     i32 0, label %sw.bb
     i32 1, label %sw.bb1
@@ -14,7 +14,7 @@ entry:
   ]
 
 sw.bb:                                            ; preds = %entry
-  store volatile i32 1, i32* @boo, align 4
+  store volatile i32 1, ptr @boo, align 4
   br label %sw.epilog
 ; CHECK: beqzc
 ; CHECK-NEXT: nop
@@ -22,7 +22,7 @@ sw.bb:                                            ; preds = %entry
 ; CHECK-NEXT: j
 
 sw.bb1:                                           ; preds = %entry, %entry
-  store volatile i32 2, i32* @boo, align 4
+  store volatile i32 2, ptr @boo, align 4
   br label %sw.epilog
 ; CHECK: bnezc
 ; CHECK-NEXT: nop

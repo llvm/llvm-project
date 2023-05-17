@@ -11,7 +11,7 @@
 #define _LIBCPP___UTILITY_TO_UNDERLYING_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/underlying_type.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -27,7 +27,7 @@ __to_underlying(_Tp __val) noexcept {
 }
 #endif // !_LIBCPP_CXX03_LANG
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <class _Tp>
 _LIBCPP_NODISCARD_EXT _LIBCPP_INLINE_VISIBILITY constexpr underlying_type_t<_Tp>
 to_underlying(_Tp __val) noexcept {

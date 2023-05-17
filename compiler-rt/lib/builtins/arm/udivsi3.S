@@ -32,7 +32,8 @@ DEFINE_COMPILERRT_FUNCTION(__udivsi3)
 	bx  	lr
 
 LOCAL_LABEL(divby0):
-	mov     r0, #0
+	// Use movs for compatibility with v8-m.base.
+	movs    r0, #0
 #  ifdef __ARM_EABI__
 	b       __aeabi_idiv0
 #  else

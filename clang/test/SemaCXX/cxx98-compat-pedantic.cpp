@@ -67,10 +67,10 @@ namespace CopyCtorIssues {
     Private p; // expected-note {{implicitly deleted}}
   };
 
-  const Private &a = Private(); // expected-warning {{copying variable of type 'CopyCtorIssues::Private' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
-  const NoViable &b = NoViable(); // expected-warning {{copying variable of type 'CopyCtorIssues::NoViable' when binding a reference to a temporary would find no viable constructor in C++98}}
+  const Private &a = Private(); // expected-warning {{copying variable of type 'Private' when binding a reference to a temporary would invoke an inaccessible constructor in C++98}}
+  const NoViable &b = NoViable(); // expected-warning {{copying variable of type 'NoViable' when binding a reference to a temporary would find no viable constructor in C++98}}
 #if !CXX98
-  const Ambiguous &c = Ambiguous(); // expected-warning {{copying variable of type 'CopyCtorIssues::Ambiguous' when binding a reference to a temporary would find ambiguous constructors in C++98}}
+  const Ambiguous &c = Ambiguous(); // expected-warning {{copying variable of type 'Ambiguous' when binding a reference to a temporary would find ambiguous constructors in C++98}}
 #endif
-  const Deleted &d = Deleted(); // expected-warning {{copying variable of type 'CopyCtorIssues::Deleted' when binding a reference to a temporary would invoke a deleted constructor in C++98}}
+  const Deleted &d = Deleted(); // expected-warning {{copying variable of type 'Deleted' when binding a reference to a temporary would invoke a deleted constructor in C++98}}
 }

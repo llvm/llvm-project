@@ -40,9 +40,9 @@ define i8 @test_big_stack_frame() {
 entry:
   %s1 = alloca i8
   %buffer = alloca [65528 x i8], align 1
-  call void @foo(i8* %s1)
-  %load = load i8, i8* %s1
+  call void @foo(ptr %s1)
+  %load = load i8, ptr %s1
   ret i8 %load
 }
 
-declare void @foo(i8*)
+declare void @foo(ptr)

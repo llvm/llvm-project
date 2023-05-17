@@ -7,7 +7,7 @@
 # CHECK: mrs x0, MFAR_EL3
 # CHECK: mrs x0, GPCCR_EL3
 # CHECK: mrs x0, GPTBR_EL3
-# CHECK-NO-RME: mrs x0, S3_6_C6_C0_5
+# CHECK-NO-RME: mrs x0, MFAR_EL3
 # CHECK-NO-RME: mrs x0, S3_6_C2_C1_6
 # CHECK-NO-RME: mrs x0, S3_6_C2_C1_4
 

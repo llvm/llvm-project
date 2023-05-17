@@ -140,8 +140,8 @@ MCOperand WebAssemblyMCInstLower::lowerSymbolOperand(const MachineOperand &MO,
 }
 
 MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
-    SmallVector<wasm::ValType, 1> &&Returns,
-    SmallVector<wasm::ValType, 4> &&Params) const {
+    SmallVectorImpl<wasm::ValType> &&Returns,
+    SmallVectorImpl<wasm::ValType> &&Params) const {
   auto Signature = std::make_unique<wasm::WasmSignature>(std::move(Returns),
                                                          std::move(Params));
   MCSymbol *Sym = Printer.createTempSymbol("typeindex");
@@ -152,25 +152,6 @@ MCOperand WebAssemblyMCInstLower::lowerTypeIndexOperand(
   const MCExpr *Expr =
       MCSymbolRefExpr::create(WasmSym, MCSymbolRefExpr::VK_WASM_TYPEINDEX, Ctx);
   return MCOperand::createExpr(Expr);
-}
-
-// Return the WebAssembly type associated with the given register class.
-static wasm::ValType getType(const TargetRegisterClass *RC) {
-  if (RC == &WebAssembly::I32RegClass)
-    return wasm::ValType::I32;
-  if (RC == &WebAssembly::I64RegClass)
-    return wasm::ValType::I64;
-  if (RC == &WebAssembly::F32RegClass)
-    return wasm::ValType::F32;
-  if (RC == &WebAssembly::F64RegClass)
-    return wasm::ValType::F64;
-  if (RC == &WebAssembly::V128RegClass)
-    return wasm::ValType::V128;
-  if (RC == &WebAssembly::EXTERNREFRegClass)
-    return wasm::ValType::EXTERNREF;
-  if (RC == &WebAssembly::FUNCREFRegClass)
-    return wasm::ValType::FUNCREF;
-  llvm_unreachable("Unexpected register class");
 }
 
 static void getFunctionReturns(const MachineInstr *MI,
@@ -213,7 +194,7 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
     case MachineOperand::MO_Immediate: {
       unsigned DescIndex = I - NumVariadicDefs;
       if (DescIndex < Desc.NumOperands) {
-        const MCOperandInfo &Info = Desc.OpInfo[DescIndex];
+        const MCOperandInfo &Info = Desc.operands()[DescIndex];
         if (Info.OperandType == WebAssembly::OPERAND_TYPEINDEX) {
           SmallVector<wasm::ValType, 4> Returns;
           SmallVector<wasm::ValType, 4> Params;
@@ -221,10 +202,12 @@ void WebAssemblyMCInstLower::lower(const MachineInstr *MI,
           const MachineRegisterInfo &MRI =
               MI->getParent()->getParent()->getRegInfo();
           for (const MachineOperand &MO : MI->defs())
-            Returns.push_back(getType(MRI.getRegClass(MO.getReg())));
+            Returns.push_back(
+                WebAssembly::regClassToValType(MRI.getRegClass(MO.getReg())));
           for (const MachineOperand &MO : MI->explicit_uses())
             if (MO.isReg())
-              Params.push_back(getType(MRI.getRegClass(MO.getReg())));
+              Params.push_back(
+                  WebAssembly::regClassToValType(MRI.getRegClass(MO.getReg())));
 
           // call_indirect instructions have a callee operand at the end which
           // doesn't count as a param.

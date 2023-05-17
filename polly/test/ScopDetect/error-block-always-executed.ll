@@ -14,13 +14,13 @@ bb13:
   br i1 undef, label %bb14, label %bb19
 
 bb14:                                             ; preds = %bb13
-  %tmp = load i32, i32* undef, align 4, !tbaa !1
+  %tmp = load i32, ptr undef, align 4, !tbaa !1
   call void @quux() #2
   br i1 false, label %bb15, label %bb18
 
 bb15:                                             ; preds = %bb14
-  %tmp16 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp1, i64 0, i32 1
-  %tmp17 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp1, i64 0, i32 2
+  %tmp16 = getelementptr inbounds %struct.hoge, ptr %tmp1, i64 0, i32 1
+  %tmp17 = getelementptr inbounds %struct.hoge, ptr %tmp1, i64 0, i32 2
   br label %bb19
 
 bb18:                                             ; preds = %bb14

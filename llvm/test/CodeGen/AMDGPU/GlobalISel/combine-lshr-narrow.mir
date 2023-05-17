@@ -10,11 +10,12 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s64_32_s64amt
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV1]](s32), [[C]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV1]](s32), [[C]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s64) = G_CONSTANT i64 32
     %2:_(s64) = G_LSHR %0, %1
@@ -30,11 +31,12 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s64_32
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV1]](s32), [[C]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[UV1]](s32), [[C]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 32
     %2:_(s64) = G_LSHR %0, %1
@@ -50,13 +52,14 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s64_33
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LSHR]](s32), [[C1]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LSHR]](s32), [[C1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 33
     %2:_(s64) = G_LSHR %0, %1
@@ -72,10 +75,11 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s64_31
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[LSHR]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[LSHR]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 31
     %2:_(s64) = G_LSHR %0, %1
@@ -91,13 +95,14 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s64_63
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
-    ; CHECK: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LSHR]](s32), [[C1]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[MV]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](s64)
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 31
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV1]], [[C]](s32)
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+    ; CHECK-NEXT: [[MV:%[0-9]+]]:_(s64) = G_MERGE_VALUES [[LSHR]](s32), [[C1]](s32)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[MV]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 63
     %2:_(s64) = G_LSHR %0, %1
@@ -113,10 +118,9 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s64_64
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 64
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[LSHR]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[DEF]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 64
     %2:_(s64) = G_LSHR %0, %1
@@ -132,10 +136,9 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s64_65
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 65
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s64) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[LSHR]](s64)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[DEF:%[0-9]+]]:_(s64) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[DEF]](s64)
     %0:_(s64) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 65
     %2:_(s64) = G_LSHR %0, %1
@@ -151,10 +154,11 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s32_16
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[LSHR]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[LSHR]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 16
     %2:_(s32) = G_LSHR %0, %1
@@ -170,10 +174,11 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_s32_17
     ; CHECK: liveins: $vgpr0
-    ; CHECK: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
-    ; CHECK: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
-    ; CHECK: $vgpr0 = COPY [[LSHR]](s32)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[COPY]], [[C]](s32)
+    ; CHECK-NEXT: $vgpr0 = COPY [[LSHR]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = G_CONSTANT i32 17
     %2:_(s32) = G_LSHR %0, %1
@@ -189,11 +194,12 @@ body:             |
 
     ; CHECK-LABEL: name: narrow_lshr_v2s32_17
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
-    ; CHECK: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
-    ; CHECK: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
-    ; CHECK: [[LSHR:%[0-9]+]]:_(<2 x s32>) = G_LSHR [[COPY]], [[BUILD_VECTOR]](<2 x s32>)
-    ; CHECK: $vgpr0_vgpr1 = COPY [[LSHR]](<2 x s32>)
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x s32>) = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 17
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(<2 x s32>) = G_LSHR [[COPY]], [[BUILD_VECTOR]](<2 x s32>)
+    ; CHECK-NEXT: $vgpr0_vgpr1 = COPY [[LSHR]](<2 x s32>)
     %0:_(<2 x s32>) = COPY $vgpr0_vgpr1
     %1:_(s32) = G_CONSTANT i32 17
     %2:_(<2 x s32>) = G_BUILD_VECTOR %1, %1

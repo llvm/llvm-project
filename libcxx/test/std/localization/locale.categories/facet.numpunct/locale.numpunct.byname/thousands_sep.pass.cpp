@@ -10,6 +10,7 @@
 // XFAIL: netbsd
 
 // XFAIL: LIBCXX-AIX-FIXME
+// XFAIL: LIBCXX-FREEBSD-FIXME
 
 // REQUIRES: locale.en_US.UTF-8
 // REQUIRES: locale.fr_FR.UTF-8

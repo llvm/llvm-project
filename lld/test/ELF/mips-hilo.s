@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux %s -o %t.o
 # RUN: echo "SECTIONS { . = 0x20000; .text ALIGN(0x1000) : { *(.text) } }" > %t.script
 # RUN: ld.lld %t.o --script %t.script -o %t.exe
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.exe | FileCheck %s
 
   .text
   .globl  __start

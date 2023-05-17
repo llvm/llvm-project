@@ -60,7 +60,7 @@ end subroutine test9
 ! CHECK:           %[[VAL_42:.*]] = fir.convert %[[VAL_41]] : (i64) -> index
 ! CHECK:           %[[VAL_43:.*]] = arith.subi %[[VAL_42]], %[[VAL_39]] : index
 ! CHECK:           %[[VAL_44:.*]] = fir.array_fetch %[[VAL_28]], %[[VAL_43]] : (!fir.array<?xf32>, index) -> f32
-! CHECK:           %[[VAL_45:.*]] = arith.addf %[[VAL_38]], %[[VAL_44]] : f32
+! CHECK:           %[[VAL_45:.*]] = arith.addf %[[VAL_38]], %[[VAL_44]] {{.*}}: f32
 ! CHECK:           %[[VAL_46:.*]] = arith.constant 1 : index
 ! CHECK:           %[[VAL_47:.*]] = fir.load %[[VAL_3]] : !fir.ref<i32>
 ! CHECK:           %[[VAL_48:.*]] = arith.constant 1 : i32

@@ -2,11 +2,11 @@
 
 // CHECK: transform.sequence
 // CHECK: ^{{.+}}(%{{.+}}: !pdl.operation):
-transform.sequence {
+transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  // CHECK: sequence %{{.+}}
+  // CHECK: sequence %{{.+}} : !pdl.operation
   // CHECK: ^{{.+}}(%{{.+}}: !pdl.operation):
-  sequence %arg0 {
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
   }
 }
@@ -15,37 +15,85 @@ transform.sequence {
 // CHECK: ^{{.+}}(%[[ARG:.+]]: !pdl.operation):
 transform.with_pdl_patterns {
 ^bb0(%arg0: !pdl.operation):
-  // CHECK: sequence %[[ARG]]
-  sequence %arg0 {
-  ^bb1(%arg1: !pdl.operation):
-  }
-}
-
-// CHECK: transform.sequence
-// CHECK: ^{{.+}}(%[[ARG:.+]]: !pdl.operation):
-transform.sequence {
-^bb0(%arg0: !pdl.operation):
-  // CHECK: with_pdl_patterns %[[ARG]]
-  with_pdl_patterns %arg0 {
+  // CHECK: sequence %[[ARG]] : !pdl.operation
+  sequence %arg0 : !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
   }
 }
 
 // Using the same value multiple times without consuming it is fine.
 // CHECK: transform.sequence
-// CHECK: %[[V:.+]] = sequence
+// CHECK: %[[V:.+]] = sequence %{{.*}} : !pdl.operation -> !pdl.operation
 // CHECK: sequence %[[V]]
 // CHECK: sequence %[[V]]
-transform.sequence {
+transform.sequence failures(propagate) {
 ^bb0(%arg0: !pdl.operation):
-  %0 = transform.sequence %arg0 {
+  %0 = transform.sequence %arg0 : !pdl.operation -> !pdl.operation failures(propagate) {
   ^bb1(%arg1: !pdl.operation):
     yield %arg1 : !pdl.operation
-  } : !pdl.operation
-  transform.sequence %0 {
+  }
+  transform.sequence %0 : !pdl.operation failures(propagate) {
   ^bb2(%arg2: !pdl.operation):
   }
-  transform.sequence %0 {
+  transform.sequence %0 : !pdl.operation failures(propagate) {
   ^bb3(%arg3: !pdl.operation):
   }
+}
+
+// CHECK: transform.sequence failures(propagate)
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
+  // CHECK: sequence %{{.*}}, %{{.*}}, %{{.*}} : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate)
+  transform.sequence %arg0, %arg1, %arg2 : !transform.any_op, !transform.any_op, !transform.any_op failures(propagate) {
+  ^bb0(%arg3: !transform.any_op, %arg4: !transform.any_op, %arg5: !transform.any_op):
+  }
+}
+
+// CHECK: transform.sequence failures(propagate)
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
+  // CHECK: sequence %{{.*}}, %{{.*}}, %{{.*}} : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate)
+  transform.sequence %arg0, %arg1, %arg2 : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate) {
+  ^bb0(%arg3: !transform.any_op, %arg4: !transform.any_op, %arg5: !transform.any_op):
+  }
+}
+
+// CHECK: transform.sequence failures(propagate)
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op, %arg1: !transform.any_op, %arg2: !transform.any_op):
+  // CHECK: sequence %{{.*}}, %{{.*}}, %{{.*}} : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate)
+  transform.sequence %arg0, %arg1, %arg2 : (!transform.any_op, !transform.any_op, !transform.any_op) failures(propagate) {
+  ^bb0(%arg3: !transform.any_op, %arg4: !transform.any_op, %arg5: !transform.any_op):
+  }
+}
+
+// CHECK: transform.sequence
+// CHECK: foreach
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  transform.foreach %arg0 : !pdl.operation {
+  ^bb1(%arg1: !pdl.operation):
+  }
+}
+
+// CHECK: transform.sequence
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  // CHECK: cast %{{.*}} : !pdl.operation to !transform.any_op
+  %0 = cast %arg0: !pdl.operation to !transform.any_op
+  // CHECK: cast %{{.*}} : !transform.any_op to !transform.op<"builtin.module">
+  %1 = cast %0: !transform.any_op to !transform.op<"builtin.module">
+}
+
+// CHECK: transform.sequence
+// CHECK: print
+// CHECK: print
+// CHECK: print
+// CHECK: print
+transform.sequence failures(propagate) {
+^bb0(%arg0: !pdl.operation):
+  transform.print %arg0 : !pdl.operation
+  transform.print
+  transform.print %arg0 {name = "test"} : !pdl.operation
+  transform.print {name = "test"}
 }

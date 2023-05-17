@@ -59,6 +59,9 @@ struct TestTU {
   // Extra arguments for the compiler invocation.
   std::vector<std::string> ExtraArgs;
 
+  // Predefine macros such as __UINTPTR_TYPE__.
+  bool PredefineMacros = false;
+
   TidyProvider ClangTidyProvider = {};
   // Index to use when building AST.
   const SymbolIndex *ExternalIndex = nullptr;

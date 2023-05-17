@@ -39,6 +39,9 @@ class field_test {
     other.x = std::move(x);
     other.x = std::move(other.x);  // expected-warning{{explicitly moving}}
   }
+  void withSuggest(int x) {
+    x = std::move(x); // expected-warning{{explicitly moving variable of type 'int' to itself; did you mean to move to member 'x'?}}
+  }
 };
 
 struct A {};

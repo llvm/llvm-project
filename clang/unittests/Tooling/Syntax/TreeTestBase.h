@@ -17,11 +17,12 @@
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Testing/TestClangConfig.h"
 #include "clang/Tooling/Syntax/Nodes.h"
+#include "clang/Tooling/Syntax/TokenBufferTokenManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
 #include "clang/Tooling/Syntax/Tree.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -51,6 +52,7 @@ protected:
   std::shared_ptr<CompilerInvocation> Invocation;
   // Set after calling buildTree().
   std::unique_ptr<syntax::TokenBuffer> TB;
+  std::unique_ptr<syntax::TokenBufferTokenManager> TM;
   std::unique_ptr<syntax::Arena> Arena;
 };
 

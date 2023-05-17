@@ -191,9 +191,6 @@ used variables that control features of LLVM and enabled subprojects.
 
 **CMAKE_BUILD_TYPE**:STRING
   This configures the optimization level for ``make`` or ``ninja`` builds.
-  The default ``CMAKE_BUILD_TYPE`` is set to ``Debug`` but you should
-  carefully read the list below to figure out what configuration matches
-  your use case the best.
 
   Possible values:
 
@@ -278,7 +275,7 @@ manual, or execute ``cmake --help-variable VARIABLE_NAME``.
 
 **CMAKE_CXX_STANDARD**:STRING
   Sets the C++ standard to conform to when building LLVM.  Possible values are
-  14, 17, 20.  LLVM Requires C++ 14 or higher.  This defaults to 14.
+  17 and 20.  LLVM Requires C++ 17 or higher.  This defaults to 17.
 
 **CMAKE_INSTALL_BINDIR**:PATH
   The path to install executables, relative to the *CMAKE_INSTALL_PREFIX*.
@@ -466,7 +463,7 @@ enabled sub-projects. Nearly all of these variable names begin with
   is *Debug*.
 
 **LLVM_ENABLE_BINDINGS**:BOOL
-  If disabled, do not try to build the OCaml and go bindings.
+  If disabled, do not try to build the OCaml bindings.
 
 **LLVM_ENABLE_DIA_SDK**:BOOL
   Enable building with MSVC DIA SDK for PDB debugging support. Available
@@ -698,6 +695,13 @@ enabled sub-projects. Nearly all of these variable names begin with
   %PATH%, then you can set this variable to the GnuWin32 directory so that
   lit can find tools needed for tests in that directory.
 
+**LLVM_NATIVE_TOOL_DIR**:STRING
+  Full path to a directory containing executables for the build host
+  (containing binaries such as ``llvm-tblgen`` and ``clang-tblgen``). This is
+  intended for cross-compiling: if the user sets this variable and the
+  directory contains executables with the expected names, no separate
+  native versions of those executables will be built.
+
 **LLVM_OPTIMIZED_TABLEGEN**:BOOL
   If enabled and building a debug or asserts build the CMake build system will
   generate a Release build tree to build a fully optimized tablegen for use
@@ -739,6 +743,8 @@ enabled sub-projects. Nearly all of these variable names begin with
   Semicolon-separated list of targets to build, or *all* for building all
   targets. Case-sensitive. Defaults to *all*. Example:
   ``-DLLVM_TARGETS_TO_BUILD="X86;PowerPC"``.
+  The full list, as of March 2023, is:
+  ``AArch64;AMDGPU;ARM;AVR;BPF;Hexagon;Lanai;LoongArch;Mips;MSP430;NVPTX;PowerPC;RISCV;Sparc;SystemZ;VE;WebAssembly;X86;XCore``
 
 **LLVM_TEMPORARILY_ALLOW_OLD_TOOLCHAIN**:BOOL
   If enabled, the compiler version check will only warn when using a toolchain
@@ -941,9 +947,11 @@ the ``cmake`` command or by setting it directly in ``ccmake`` or ``cmake-gui``).
 
 This file is available in two different locations.
 
-* ``<INSTALL_PREFIX>/lib/cmake/llvm/LLVMConfig.cmake`` where
-  ``<INSTALL_PREFIX>`` is the install prefix of an installed version of LLVM.
-  On Linux typically this is ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
+* ``<LLVM_INSTALL_PACKAGE_DIR>/LLVMConfig.cmake`` where
+  ``<LLVM_INSTALL_PACKAGE_DIR>`` is the location where LLVM CMake modules are
+  installed as part of an installed version of LLVM. This is typically
+  ``cmake/llvm/`` within the lib directory. On Linux, this is typically
+  ``/usr/lib/cmake/llvm/LLVMConfig.cmake``.
 
 * ``<LLVM_BUILD_ROOT>/lib/cmake/llvm/LLVMConfig.cmake`` where
   ``<LLVM_BUILD_ROOT>`` is the root of the LLVM build tree. **Note: this is only
@@ -1066,10 +1074,25 @@ Compiler/Platform-specific topics
 
 Notes for specific compilers and/or platforms.
 
-Microsoft Visual C++
---------------------
+Windows
+-------
 
 **LLVM_COMPILER_JOBS**:STRING
   Specifies the maximum number of parallel compiler jobs to use per project
   when building with msbuild or Visual Studio. Only supported for the Visual
   Studio 2010 CMake generator. 0 means use all processors. Default is 0.
+
+**CMAKE_MT**:STRING
+  When compiling with clang-cl, recent CMake versions will default to selecting
+  `llvm-mt` as the Manifest Tool instead of Microsoft's `mt.exe`. This will
+  often cause errors like:
+
+  .. code-block:: console
+
+    -- Check for working C compiler: [...]clang-cl.exe - broken
+    [...]
+        MT: command [...] failed (exit code 0x1) with the following output:
+        llvm-mt: error: no libxml2
+        ninja: build stopped: subcommand failed.
+
+  To work around this error, set `CMAKE_MT=mt`.

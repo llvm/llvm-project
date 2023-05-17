@@ -1,8 +1,8 @@
-; RUN: opt -gvn-hoist -S < %s | FileCheck %s
+; RUN: opt -passes=gvn-hoist -S < %s | FileCheck %s
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@input = local_unnamed_addr global i32* null, align 8
+@input = local_unnamed_addr global ptr null, align 8
 
 ; Check that the load instruction is **not** hoisted
 ; CHECK-LABEL: @_Z3fooPii
@@ -12,13 +12,13 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK: load
 ; CHECK-LABEL: @main
 
-define i32 @_Z3fooPii(i32* %p, i32 %x) local_unnamed_addr  {
+define i32 @_Z3fooPii(ptr %p, i32 %x) local_unnamed_addr  {
 entry:
-  %cmp.not = icmp eq i32* %p, null
+  %cmp.not = icmp eq ptr %p, null
   br i1 %cmp.not, label %if.end3, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %p, align 4, !tbaa !3
+  %0 = load i32, ptr %p, align 4, !tbaa !3
   %add = add nsw i32 %0, %x
   %cmp1 = icmp eq i32 %add, 4
   br i1 %cmp1, label %if2, label %if.end3
@@ -31,7 +31,7 @@ if.end3:                                          ; preds = %entry, %if.then
 if2:                                              ; preds = %if.end3, %if.then
   %x.addr.1 = phi i32 [ 4, %if.then ], [ %x.addr.0, %if.end3 ]
   %y.0 = phi i32 [ 2, %if.then ], [ %add4, %if.end3 ]
-  %1 = load i32, i32* %p, align 4, !tbaa !3
+  %1 = load i32, ptr %p, align 4, !tbaa !3
   %add7 = add nsw i32 %x.addr.1, %1
   %cmp8 = icmp eq i32 %add7, 5
   br i1 %cmp8, label %end, label %if.end11
@@ -51,8 +51,8 @@ end:                                              ; preds = %if2, %if.end11
 
 define i32 @main() local_unnamed_addr  {
 entry:
-  %0 = load i32*, i32** @input, align 8, !tbaa !7
-  %call = call i32 @_Z3fooPii(i32* %0, i32 0)
+  %0 = load ptr, ptr @input, align 8, !tbaa !7
+  %call = call i32 @_Z3fooPii(ptr %0, i32 0)
   ret i32 %call
 }
 

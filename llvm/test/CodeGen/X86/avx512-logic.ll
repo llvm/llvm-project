@@ -129,7 +129,7 @@ define <8 x i64> @orq_broadcast(<8 x i64> %a) nounwind {
   ret <8 x i64> %b
 }
 
-define <16 x i32> @andd512fold(<16 x i32> %y, <16 x i32>* %x) {
+define <16 x i32> @andd512fold(<16 x i32> %y, ptr %x) {
 ; KNL-LABEL: andd512fold:
 ; KNL:       ## %bb.0: ## %entry
 ; KNL-NEXT:    vpandd (%rdi), %zmm0, %zmm0
@@ -140,12 +140,12 @@ define <16 x i32> @andd512fold(<16 x i32> %y, <16 x i32>* %x) {
 ; SKX-NEXT:    vandps (%rdi), %zmm0, %zmm0
 ; SKX-NEXT:    retq
 entry:
-  %a = load <16 x i32>, <16 x i32>* %x, align 4
+  %a = load <16 x i32>, ptr %x, align 4
   %b = and <16 x i32> %y, %a
   ret <16 x i32> %b
 }
 
-define <8 x i64> @andqbrst(<8 x i64> %p1, i64* %ap) {
+define <8 x i64> @andqbrst(<8 x i64> %p1, ptr %ap) {
 ; KNL-LABEL: andqbrst:
 ; KNL:       ## %bb.0: ## %entry
 ; KNL-NEXT:    vpandq (%rdi){1to8}, %zmm0, %zmm0
@@ -156,7 +156,7 @@ define <8 x i64> @andqbrst(<8 x i64> %p1, i64* %ap) {
 ; SKX-NEXT:    vandpd (%rdi){1to8}, %zmm0, %zmm0
 ; SKX-NEXT:    retq
 entry:
-  %a = load i64, i64* %ap, align 8
+  %a = load i64, ptr %ap, align 8
   %b = insertelement <8 x i64> undef, i64 %a, i32 0
   %c = shufflevector <8 x i64> %b, <8 x i64> undef, <8 x i32> zeroinitializer
   %d = and <8 x i64> %p1, %c

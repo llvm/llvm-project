@@ -30,9 +30,7 @@ body:             |
     ; CHECK-NEXT: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
     ; CHECK-NEXT: nofpexcept FCMPSri [[COPY]], implicit-def $nzcv
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[CSINCWr]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[CSINCWr]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[FMOVS0_]], [[COPY1]], 1, implicit $nzcv
     ; CHECK-NEXT: $w1 = COPY [[CSINCWr]]
     ; CHECK-NEXT: $s0 = COPY [[FCSELSrrr]]
@@ -41,9 +39,7 @@ body:             |
     %1:fpr(s32) = COPY $s1
     %2:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(oeq), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s32) = G_SELECT %6(s1), %2, %1
+    %4:fpr(s32) = G_SELECT %5, %2, %1
     $w1 = COPY %5(s32)
     $s0 = COPY %4(s32)
     RET_ReallyLR implicit $s0
@@ -76,10 +72,8 @@ body:             |
     %1:fpr(s32) = COPY $s1
     %2:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(oeq), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s32) = G_SELECT %6(s1), %2, %1
-    %7:fpr(s32) = G_SELECT %6(s1), %1, %2
+    %4:fpr(s32) = G_SELECT %5, %2, %1
+    %7:fpr(s32) = G_SELECT %5, %1, %2
     $s0 = COPY %4(s32)
     $s1 = COPY %7(s32)
     RET_ReallyLR implicit $s0
@@ -110,9 +104,7 @@ body:             |
     %2:gpr(s32) = G_CONSTANT i32 0
     %5:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %6:gpr(s32) = G_ICMP intpred(eq), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %6(s32)
-    %7:fpr(s1) = COPY %3(s1)
-    %4:fpr(s32) = G_SELECT %7(s1), %1, %5
+    %4:fpr(s32) = G_SELECT %6, %1, %5
     $s0 = COPY %4(s32)
     RET_ReallyLR implicit $s0
 
@@ -141,9 +133,7 @@ body:             |
     %1:fpr(s32) = COPY $s1
     %2:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(oeq), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s32) = G_SELECT %6(s1), %2, %1
+    %4:fpr(s32) = G_SELECT %5, %2, %1
     $s0 = COPY %4(s32)
     RET_ReallyLR implicit $s0
 
@@ -168,9 +158,7 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
     ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[ORRWrr]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[FMOVS0_]], [[COPY1]], 1, implicit $nzcv
     ; CHECK-NEXT: $s0 = COPY [[FCSELSrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
@@ -178,9 +166,7 @@ body:             |
     %1:fpr(s32) = COPY $s1
     %2:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(ueq), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s32) = G_SELECT %6(s1), %2, %1
+    %4:fpr(s32) = G_SELECT %5, %2, %1
     $s0 = COPY %4(s32)
     RET_ReallyLR implicit $s0
 
@@ -205,9 +191,7 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[ORRWrr]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY1]], [[FMOVS0_]], 1, implicit $nzcv
     ; CHECK-NEXT: $s0 = COPY [[FCSELSrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
@@ -215,9 +199,7 @@ body:             |
     %1:fpr(s32) = COPY $s1
     %2:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(one), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s32) = G_SELECT %6(s1), %1, %2
+    %4:fpr(s32) = G_SELECT %5, %1, %2
     $s0 = COPY %4(s32)
     RET_ReallyLR implicit $s0
 
@@ -246,9 +228,7 @@ body:             |
     %1:fpr(s32) = COPY $s1
     %2:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(une), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s32) = G_SELECT %6(s1), %1, %2
+    %4:fpr(s32) = G_SELECT %5, %1, %2
     $s0 = COPY %4(s32)
     RET_ReallyLR implicit $s0
 
@@ -277,9 +257,7 @@ body:             |
     %1:fpr(s64) = COPY $d1
     %2:fpr(s64) = G_FCONSTANT double 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(oeq), %0(s64), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s64) = G_SELECT %6(s1), %2, %1
+    %4:fpr(s64) = G_SELECT %5, %2, %1
     $d0 = COPY %4(s64)
     RET_ReallyLR implicit $d0
 
@@ -304,9 +282,7 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 7, implicit $nzcv
     ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[ORRWrr]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[FCSELDrrr:%[0-9]+]]:fpr64 = FCSELDrrr [[FMOVD0_]], [[COPY1]], 1, implicit $nzcv
     ; CHECK-NEXT: $d0 = COPY [[FCSELDrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -314,9 +290,7 @@ body:             |
     %1:fpr(s64) = COPY $d1
     %2:fpr(s64) = G_FCONSTANT double 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(ueq), %0(s64), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s64) = G_SELECT %6(s1), %2, %1
+    %4:fpr(s64) = G_SELECT %5, %2, %1
     $d0 = COPY %4(s64)
     RET_ReallyLR implicit $d0
 
@@ -341,9 +315,7 @@ body:             |
     ; CHECK-NEXT: [[CSINCWr:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 5, implicit $nzcv
     ; CHECK-NEXT: [[CSINCWr1:%[0-9]+]]:gpr32 = CSINCWr $wzr, $wzr, 13, implicit $nzcv
     ; CHECK-NEXT: [[ORRWrr:%[0-9]+]]:gpr32 = ORRWrr [[CSINCWr]], [[CSINCWr1]]
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:fpr32 = COPY [[ORRWrr]]
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:gpr32 = COPY [[COPY2]]
-    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY3]], 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[ORRWrr]], 0, implicit-def $nzcv
     ; CHECK-NEXT: [[FCSELDrrr:%[0-9]+]]:fpr64 = FCSELDrrr [[COPY1]], [[FMOVD0_]], 1, implicit $nzcv
     ; CHECK-NEXT: $d0 = COPY [[FCSELDrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $d0
@@ -351,9 +323,7 @@ body:             |
     %1:fpr(s64) = COPY $d1
     %2:fpr(s64) = G_FCONSTANT double 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(one), %0(s64), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s64) = G_SELECT %6(s1), %1, %2
+    %4:fpr(s64) = G_SELECT %5, %1, %2
     $d0 = COPY %4(s64)
     RET_ReallyLR implicit $d0
 
@@ -382,9 +352,7 @@ body:             |
     %1:fpr(s64) = COPY $d1
     %2:fpr(s64) = G_FCONSTANT double 0.000000e+00
     %5:gpr(s32) = G_FCMP floatpred(une), %0(s64), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %6:fpr(s1) = COPY %3(s1)
-    %4:fpr(s64) = G_SELECT %6(s1), %1, %2
+    %4:fpr(s64) = G_SELECT %5, %1, %2
     $d0 = COPY %4(s64)
     RET_ReallyLR implicit $d0
 
@@ -402,12 +370,12 @@ body:             |
     ; CHECK-LABEL: name: copy_from_physreg
     ; CHECK: liveins: $s0, $w0, $w1
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32 = COPY $w0
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:fpr32 = COPY $s0
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:fpr32 = COPY $s0
     ; CHECK-NEXT: [[FMOVS0_:%[0-9]+]]:fpr32 = FMOVS0
     ; CHECK-NEXT: BL @copy_from_physreg, implicit-def $w0
-    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY]], 0, implicit-def $nzcv
-    ; CHECK-NEXT: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY1]], [[FMOVS0_]], 1, implicit $nzcv
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gpr32 = COPY [[FMOVS0_]]
+    ; CHECK-NEXT: [[ANDSWri:%[0-9]+]]:gpr32 = ANDSWri [[COPY1]], 0, implicit-def $nzcv
+    ; CHECK-NEXT: [[FCSELSrrr:%[0-9]+]]:fpr32 = FCSELSrrr [[COPY]], [[FMOVS0_]], 1, implicit $nzcv
     ; CHECK-NEXT: BL @copy_from_physreg, implicit-def $w0
     ; CHECK-NEXT: $s0 = COPY [[FCSELSrrr]]
     ; CHECK-NEXT: RET_ReallyLR implicit $s0
@@ -415,8 +383,7 @@ body:             |
     %1:fpr(s32) = COPY $s0
     %5:fpr(s32) = G_FCONSTANT float 0.000000e+00
     BL @copy_from_physreg, implicit-def $w0
-    %3:gpr(s1) = G_TRUNC %0(s32)
-    %4:fpr(s32) = G_SELECT %3(s1), %1, %5
+    %4:fpr(s32) = G_SELECT %5, %1, %5
     BL @copy_from_physreg, implicit-def $w0
     $s0 = COPY %4(s32)
     RET_ReallyLR implicit $s0

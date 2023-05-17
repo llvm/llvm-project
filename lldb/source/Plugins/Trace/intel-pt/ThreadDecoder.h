@@ -9,12 +9,12 @@
 #ifndef LLDB_SOURCE_PLUGINS_TRACE_THREAD_DECODER_H
 #define LLDB_SOURCE_PLUGINS_TRACE_THREAD_DECODER_H
 
-#include "intel-pt.h"
-
 #include "DecodedThread.h"
 #include "forward-declarations.h"
+#include "intel-pt.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Utility/FileSpec.h"
+#include <optional>
 
 namespace lldb_private {
 namespace trace_intel_pt {
@@ -23,7 +23,7 @@ namespace trace_intel_pt {
 class ThreadDecoder {
 public:
   /// \param[in] thread_sp
-  ///     The thread whose trace buffer will be decoded.
+  ///     The thread whose intel pt trace buffer will be decoded.
   ///
   /// \param[in] trace
   ///     The main Trace object who owns this decoder and its data.
@@ -34,17 +34,23 @@ public:
   ///
   /// \return
   ///     A \a DecodedThread instance.
-  DecodedThreadSP Decode();
+  llvm::Expected<DecodedThreadSP> Decode();
+
+  /// \return
+  ///     The lowest TSC value in this trace if available, \a std::nullopt if
+  ///     the trace is empty or the trace contains no timing information, or an
+  ///     \a llvm::Error if it was not possible to set up the decoder.
+  llvm::Expected<std::optional<uint64_t>> FindLowestTSC();
 
   ThreadDecoder(const ThreadDecoder &other) = delete;
   ThreadDecoder &operator=(const ThreadDecoder &other) = delete;
 
 private:
-  DecodedThreadSP DoDecode();
+  llvm::Expected<DecodedThreadSP> DoDecode();
 
   lldb::ThreadSP m_thread_sp;
   TraceIntelPT &m_trace;
-  llvm::Optional<DecodedThreadSP> m_decoded_thread;
+  std::optional<DecodedThreadSP> m_decoded_thread;
 };
 
 } // namespace trace_intel_pt

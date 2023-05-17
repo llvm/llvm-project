@@ -14,9 +14,9 @@
 #ifndef LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 #define LLVM_LIB_TARGET_AMDGPU_AMDGPUSUBTARGET_H
 
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/Support/Alignment.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace llvm {
 
@@ -61,8 +61,10 @@ protected:
   bool HasFminFmaxLegacy = true;
   bool EnablePromoteAlloca = false;
   bool HasTrigReducedRange = false;
+  unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
+  unsigned AddressableLocalMemorySize = 0;
   char WavefrontSizeLog2 = 0;
 
 public:
@@ -208,6 +210,15 @@ public:
   unsigned getLocalMemorySize() const {
     return LocalMemorySize;
   }
+
+  unsigned getAddressableLocalMemorySize() const {
+    return AddressableLocalMemorySize;
+  }
+
+  /// Number of SIMDs/EUs (execution units) per "CU" ("compute unit"), where the
+  /// "CU" is the unit onto which workgroups are mapped. This takes WGP mode vs.
+  /// CU mode into account.
+  unsigned getEUsPerCU() const { return EUsPerCU; }
 
   Align getAlignmentForImplicitArgPtr() const {
     return isAmdHsaOS() ? Align(8) : Align(4);

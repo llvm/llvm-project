@@ -1,4 +1,4 @@
-//=- RISCVMachineFunctionInfo.cpp - RISCV machine function info ---*- C++ -*-=//
+//=- RISCVMachineFunctionInfo.cpp - RISC-V machine function info --*- C++ -*-=//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -34,4 +34,12 @@ void RISCVMachineFunctionInfo::initializeBaseYamlFields(
     const yaml::RISCVMachineFunctionInfo &YamlMFI) {
   VarArgsFrameIndex = YamlMFI.VarArgsFrameIndex;
   VarArgsSaveSize = YamlMFI.VarArgsSaveSize;
+}
+
+void RISCVMachineFunctionInfo::addSExt32Register(Register Reg) {
+  SExt32Registers.push_back(Reg);
+}
+
+bool RISCVMachineFunctionInfo::isSExt32Register(Register Reg) const {
+  return is_contained(SExt32Registers, Reg);
 }

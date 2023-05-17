@@ -2,6 +2,12 @@ include(ExternalProject)
 include(CompilerRTUtils)
 include(HandleCompilerRT)
 
+# CMP0114: ExternalProject step targets fully adopt their steps.
+# New in CMake 3.19: https://cmake.org/cmake/help/latest/policy/CMP0114.html
+if(POLICY CMP0114)
+  cmake_policy(SET CMP0114 OLD)
+endif()
+
 function(set_target_output_directories target output_dir)
   # For RUNTIME_OUTPUT_DIRECTORY variable, Multi-configuration generators
   # append a per-configuration subdirectory to the specified directory.
@@ -83,8 +89,7 @@ function(add_compiler_rt_object_libraries name)
         "${libname}" MATCHES ".*\.osx.*")
       foreach(arch ${LIB_ARCHS_${libname}})
         list(APPEND target_flags
-          -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
-          -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+          "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
       endforeach()
     endif()
 
@@ -251,11 +256,9 @@ function(add_compiler_rt_runtime name type)
           "${os}" MATCHES "^(osx)$")
         foreach(arch ${LIB_ARCHS_${libname}})
           list(APPEND extra_cflags_${libname}
-            -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
-            -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+            "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
           list(APPEND extra_link_flags_${libname}
-            -target ${arch}-apple-macos${DARWIN_osx_MIN_VER}
-            -darwin-target-variant ${arch}-apple-ios13.1-macabi)
+            "SHELL:-target ${arch}-apple-macos${DARWIN_osx_MIN_VER} -darwin-target-variant ${arch}-apple-ios13.1-macabi")
         endforeach()
       endif()
     endforeach()
@@ -389,8 +392,8 @@ function(add_compiler_rt_runtime name type)
       target_link_libraries(${libname} PRIVATE ${builtins_${libname}})
     endif()
     if(${type} STREQUAL "SHARED")
-      if(COMMAND llvm_setup_rpath)
-        llvm_setup_rpath(${libname})
+      if(APPLE OR WIN32)
+        set_property(TARGET ${libname} PROPERTY BUILD_WITH_INSTALL_RPATH ON)
       endif()
       if(WIN32 AND NOT CYGWIN AND NOT MINGW)
         set_target_properties(${libname} PROPERTIES IMPORT_PREFIX "")
@@ -505,7 +508,7 @@ function(add_compiler_rt_test test_suite test_name arch)
   set(output_dir "${output_dir}/${CMAKE_CFG_INTDIR}")
   file(MAKE_DIRECTORY "${output_dir}")
   set(output_bin "${output_dir}/${test_name}")
-  if(MSVC)
+  if(WIN32)
     set(output_bin "${output_bin}.exe")
   endif()
 
@@ -646,8 +649,10 @@ macro(add_custom_libcxx name prefix)
     CMAKE_READELF
     CMAKE_SYSROOT
     LIBCXX_HAS_MUSL_LIBC
+    LIBCXX_HAS_GCC_S_LIB
     LIBCXX_HAS_PTHREAD_LIB
     LIBCXX_HAS_RT_LIB
+    LIBCXX_USE_COMPILER_RT
     LIBCXXABI_HAS_PTHREAD_LIB
     PYTHON_EXECUTABLE
     Python3_EXECUTABLE
@@ -686,7 +691,6 @@ macro(add_custom_libcxx name prefix)
                -DLIBCXXABI_HERMETIC_STATIC_LIBRARY=ON
                -DLIBCXXABI_INCLUDE_TESTS=OFF
                -DLIBCXX_CXX_ABI=libcxxabi
-               -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
                -DLIBCXX_ENABLE_SHARED=OFF
                -DLIBCXX_HERMETIC_STATIC_LIBRARY=ON
                -DLIBCXX_INCLUDE_BENCHMARKS=OFF

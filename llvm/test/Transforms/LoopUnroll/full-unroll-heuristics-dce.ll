@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-max-iteration-count-to-analyze=100 -unroll-threshold=12 -unroll-max-percent-threshold-boost=400 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-max-iteration-count-to-analyze=100 -unroll-threshold=12 -unroll-max-percent-threshold-boost=400 | FileCheck %s
 ; RUN: opt < %s -S -passes='require<opt-remark-emit>,loop(loop-unroll-full)' -unroll-max-iteration-count-to-analyze=100 -unroll-threshold=12 -unroll-max-percent-threshold-boost=400 | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -10,24 +10,24 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 ; instruction is simplified, the other operand might become dead.
 ; In this test we have::
 ; for i in 1..10:
-;   r += A[i] * B[i]
+;   r += Aptr B[i]
 ; A[i] is 0 almost at every iteration, so there is no need in loading B[i] at
 ; all.
 
 
 ; CHECK-LABEL: @unroll_dce
 ; CHECK-NOT:   br i1 %exitcond, label %for.end, label %for.body
-define i32 @unroll_dce(i32* noalias nocapture readonly %b) {
+define i32 @unroll_dce(ptr noalias nocapture readonly %b) {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %iv.0 = phi i64 [ 0, %entry ], [ %iv.1, %for.body ]
   %r.0 = phi i32 [ 0, %entry ], [ %r.1, %for.body ]
-  %arrayidx1 = getelementptr inbounds [10 x i32], [10 x i32]* @known_constant, i64 0, i64 %iv.0
-  %x1 = load i32, i32* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv.0
-  %x2 = load i32, i32* %arrayidx2, align 4
+  %arrayidx1 = getelementptr inbounds [10 x i32], ptr @known_constant, i64 0, i64 %iv.0
+  %x1 = load i32, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv.0
+  %x2 = load i32, ptr %arrayidx2, align 4
   %mul = mul i32 %x1, %x2
   %r.1 = add i32 %mul, %r.0
   %iv.1 = add nuw nsw i64 %iv.0, 1

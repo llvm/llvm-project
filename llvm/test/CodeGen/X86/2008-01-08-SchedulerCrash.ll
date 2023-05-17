@@ -8,7 +8,7 @@
 ; CHECK-NOT: cmp
 ; CHECK: cmov
 
-	%struct.indexentry = type { i32, i8*, i8*, i8*, i8*, i8* }
+	%struct.indexentry = type { i32, ptr, ptr, ptr, ptr, ptr }
 
 define i32 @_bfd_stab_section_find_nearest_line(i32 %offset, i1 %cond) nounwind  {
 entry:
@@ -20,14 +20,14 @@ bb917:		; preds = %entry
 
 bb951:		; preds = %bb986, %entry
 	%tmp955 = sdiv i32 %offset, 2		; <i32> [#uses=3]
-	%tmp961 = getelementptr %struct.indexentry, %struct.indexentry* null, i32 %tmp955, i32 0		; <i32*> [#uses=1]
+	%tmp961 = getelementptr %struct.indexentry, ptr null, i32 %tmp955, i32 0		; <ptr> [#uses=1]
 	br i1 %cond, label %bb986, label %bb967
 
 bb967:		; preds = %bb951
 	ret i32 0
 
 bb986:		; preds = %bb951
-	%tmp993 = load i32, i32* %tmp961, align 4		; <i32> [#uses=1]
+	%tmp993 = load i32, ptr %tmp961, align 4		; <i32> [#uses=1]
 	%tmp995 = icmp ugt i32 %tmp993, %tmp910		; <i1> [#uses=2]
 	%tmp1002 = add i32 %tmp955, 1		; <i32> [#uses=1]
 	%low.0 = select i1 %tmp995, i32 0, i32 %tmp1002		; <i32> [#uses=1]

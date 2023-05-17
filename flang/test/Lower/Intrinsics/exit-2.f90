@@ -14,7 +14,7 @@ subroutine exit_opt_dummy(status)
 ! CHECK:    %[[VAL_4:.*]] = arith.constant 0 : i32
 ! CHECK:    fir.result %[[VAL_4]] : i32
 ! CHECK:  }
-! CHECK:  %[[VAL_5:.*]] = fir.call @_FortranAExit(%[[VAL_6:.*]]) : (i32) -> none
+! CHECK:  %[[VAL_5:.*]] = fir.call @_FortranAExit(%[[VAL_6:.*]]) {{.*}}: (i32) -> none
 end subroutine
 
 ! CHECK-LABEL: func @_QPexit_pointer(
@@ -36,5 +36,5 @@ subroutine exit_pointer(status)
 ! CHECK:    %[[VAL_10:.*]] = arith.constant 0 : i32
 ! CHECK:    fir.result %[[VAL_10]] : i32
 ! CHECK:  }
-! CHECK:  %[[VAL_11:.*]] = fir.call @_FortranAExit(%[[VAL_12:.*]]) : (i32) -> none
+! CHECK:  %[[VAL_11:.*]] = fir.call @_FortranAExit(%[[VAL_12:.*]]) {{.*}}: (i32) -> none
 end subroutine

@@ -4,7 +4,7 @@
 // RUN: %clangxx_asan -O0 %s -o %t
 // On OSX and Windows, alloc_dealloc_mismatch=1 isn't 100% reliable, so it's
 // off by default. It's safe for these tests, though, so we turn it on.
-// RUN: export %env_asan_opts=detect_stack_use_after_return=1:handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
+// RUN: export %env_asan_opts=symbolize=0:detect_stack_use_after_return=1:handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
 // Make sure the stack is limited (may not be the default under GNU make)
 // RUN: ulimit -s 4096
 // RUN: not %run %t  1 2>&1 | FileCheck %s --check-prefix=CHECK1
@@ -39,7 +39,7 @@
 // RUN: %clangxx_asan -O0 %s -o %t -fsanitize-address-use-after-return=always
 // On OSX and Windows, alloc_dealloc_mismatch=1 isn't 100% reliable, so it's
 // off by default. It's safe for these tests, though, so we turn it on.
-// RUN: export %env_asan_opts=handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
+// RUN: export %env_asan_opts=symbolize=0:handle_abort=1:print_scariness=1:alloc_dealloc_mismatch=1
 // Make sure the stack is limited (may not be the default under GNU make)
 // RUN: ulimit -s 4096
 // RUN: not %run %t  1 2>&1 | FileCheck %s --check-prefix=CHECK1

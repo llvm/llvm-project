@@ -17,7 +17,7 @@
 
 #include "test_macros.h"
 
-#if defined(__cpp_lib_char8_t) && __cpp_lib_char8_t >= 201811L
+#ifndef TEST_HAS_NO_CHAR8_T
 constexpr bool test_constexpr()
 {
     char8_t c = u'1';

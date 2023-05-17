@@ -6,7 +6,7 @@ declare void @some_func() noreturn
 
 ; NOTRIVIAL-NOT: split
 ; TRIVIAL: split
-define i32 @test1(i32* %var, i1 %cond1, i1 %cond2) {
+define i32 @test1(ptr %var, i1 %cond1, i1 %cond2) {
 entry:
   br label %loop_begin
 
@@ -14,7 +14,7 @@ loop_begin:
   br i1 %cond1, label %continue, label %loop_exit	; first trivial condition
 
 continue:
-  %var_val = load i32, i32* %var
+  %var_val = load i32, ptr %var
   br i1 %cond2, label %do_something, label %loop_exit	; second trivial condition
 
 do_something:

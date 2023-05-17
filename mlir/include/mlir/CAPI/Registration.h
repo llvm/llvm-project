@@ -10,7 +10,6 @@
 #define MLIR_CAPI_REGISTRATION_H
 
 #include "mlir-c/IR.h"
-#include "mlir-c/Registration.h"
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 

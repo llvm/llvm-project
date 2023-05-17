@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class TestCorefileExceptionReason(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfOutOfTreeDebugserver  # newer debugserver required for these qMemoryRegionInfo types
     @no_debug_info_test
     @skipUnlessDarwin
@@ -41,4 +39,4 @@ class TestCorefileExceptionReason(TestBase):
             self.runCmd("bt")
             self.runCmd("fr v")
 
-        self.assertTrue(thread.GetStopDescription(256) == "ESR_EC_DABORT_EL0 (fault address: 0x0)")
+        self.assertEqual(thread.GetStopDescription(256), "ESR_EC_DABORT_EL0 (fault address: 0x0)")

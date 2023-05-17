@@ -1,4 +1,4 @@
-; RUN: opt -reassociate -S < %s | FileCheck %s
+; RUN: opt -passes=reassociate -S < %s | FileCheck %s
 
 declare void @use(float)
 

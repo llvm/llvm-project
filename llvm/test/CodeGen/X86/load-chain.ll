@@ -4,7 +4,7 @@
 ; PR46195 - https://bugs.llvm.org/show_bug.cgi?id=46195
 ; It is not safe to sink the load after the call.
 
-define void @translate(i16* %ptr) nounwind {
+define void @translate(ptr %ptr) nounwind {
 ; CHECK-LABEL: translate:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushq %rbp
@@ -20,12 +20,12 @@ define void @translate(i16* %ptr) nounwind {
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    popq %rbp
 ; CHECK-NEXT:    retq
-  %i0 = load i16, i16* %ptr, align 4
-  call void @maybe_mutate(i16* %ptr)
+  %i0 = load i16, ptr %ptr, align 4
+  call void @maybe_mutate(ptr %ptr)
   %i1 = and i16 %i0, -32707
   %i2 = or i16 %i1, 514
-  store i16 %i2, i16* %ptr, align 4
+  store i16 %i2, ptr %ptr, align 4
   ret void
 }
 
-declare void @maybe_mutate(i16*)
+declare void @maybe_mutate(ptr)

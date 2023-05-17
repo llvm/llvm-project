@@ -51,7 +51,7 @@ std::string RightOOBReadMessage(OOBKind oob_kind, int oob_distance) {
 }  // namespace
 
 // Input to a test is a zero-terminated string str with given length
-// Accesses to the bytes to the left and to the right of str
+// Accesses to the bytes before and after str
 // are presumed to produce OOB errors
 void StrLenOOBTestTemplate(char *str, size_t length, OOBKind oob_kind) {
   // Normal strlen calls
@@ -62,7 +62,7 @@ void StrLenOOBTestTemplate(char *str, size_t length, OOBKind oob_kind) {
   }
   // Arg of strlen is not malloced, OOB access
   if (oob_kind != OOBKind::Global) {
-    // We don't insert RedZones to the left of global variables
+    // We don't insert RedZones before global variables
     EXPECT_DEATH(Ident(strlen(str - 1)), LeftOOBReadMessage(oob_kind, 1));
     EXPECT_DEATH(Ident(strlen(str - 5)), LeftOOBReadMessage(oob_kind, 5));
   }
@@ -110,8 +110,16 @@ TEST(AddressSanitizer, WcsLenTest) {
 }
 #endif
 
+// This test fails on MinGW-w64 because it still ships a static copy of strnlen
+// despite it being available from UCRT.
+#if defined(__MINGW32__)
+#  define MAYBE_StrNLenOOBTest DISABLED_StrNLenOOBTest
+#else
+#  define MAYBE_StrNLenOOBTest StrNLenOOBTest
+#endif
+
 #if SANITIZER_TEST_HAS_STRNLEN
-TEST(AddressSanitizer, StrNLenOOBTest) {
+TEST(AddressSanitizer, MAYBE_StrNLenOOBTest) {
   size_t size = Ident(123);
   char *str = MallocAndMemsetString(size);
   // Normal strnlen calls.
@@ -132,10 +140,10 @@ TEST(AddressSanitizer, StrNLenOOBTest) {
 
 // This test fails with the WinASan dynamic runtime because we fail to intercept
 // strdup.
-#if defined(_MSC_VER) && defined(_DLL)
-#define MAYBE_StrDupOOBTest DISABLED_StrDupOOBTest
+#if (defined(_MSC_VER) && defined(_DLL)) || defined(__MINGW32__)
+#  define MAYBE_StrDupOOBTest DISABLED_StrDupOOBTest
 #else
-#define MAYBE_StrDupOOBTest StrDupOOBTest
+#  define MAYBE_StrDupOOBTest StrDupOOBTest
 #endif
 
 TEST(AddressSanitizer, MAYBE_StrDupOOBTest) {

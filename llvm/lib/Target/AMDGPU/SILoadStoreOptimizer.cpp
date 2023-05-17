@@ -74,6 +74,8 @@ enum InstClassEnum {
   DS_READ,
   DS_WRITE,
   S_BUFFER_LOAD_IMM,
+  S_BUFFER_LOAD_SGPR_IMM,
+  S_LOAD_IMM,
   BUFFER_LOAD,
   BUFFER_STORE,
   MIMG,
@@ -120,7 +122,11 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
     unsigned NumAddresses;
     unsigned Order;
 
-    bool hasSameBaseAddress(const MachineInstr &MI) {
+    bool hasSameBaseAddress(const CombineInfo &CI) {
+      if (NumAddresses != CI.NumAddresses)
+        return false;
+
+      const MachineInstr &MI = *CI.I;
       for (unsigned i = 0; i < NumAddresses; i++) {
         const MachineOperand &AddrRegNext = MI.getOperand(AddrIdx[i]);
 
@@ -159,7 +165,7 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
         if (AddrOp->getReg().isPhysical())
           return false;
 
-        // If an address has only one use then there will be on other
+        // If an address has only one use then there will be no other
         // instructions with the same address, so we can't merge this one.
         if (MRI.hasOneNonDBGUse(AddrOp->getReg()))
           return false;
@@ -232,8 +238,8 @@ private:
   mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
                  MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
-  mergeSBufferLoadImmPair(CombineInfo &CI, CombineInfo &Paired,
-                          MachineBasicBlock::iterator InsertBefore);
+  mergeSMemLoadImmPair(CombineInfo &CI, CombineInfo &Paired,
+                       MachineBasicBlock::iterator InsertBefore);
   MachineBasicBlock::iterator
   mergeBufferLoadPair(CombineInfo &CI, CombineInfo &Paired,
                       MachineBasicBlock::iterator InsertBefore);
@@ -257,7 +263,7 @@ private:
                            int32_t NewOffset) const;
   Register computeBase(MachineInstr &MI, const MemAddress &Addr) const;
   MachineOperand createRegOrImm(int32_t Val, MachineInstr &MI) const;
-  Optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
+  std::optional<int32_t> extractConstOffset(const MachineOperand &Op) const;
   void processBaseWithConstOffset(const MachineOperand &Base, MemAddress &Addr) const;
   /// Promotes constant offset to the immediate by adjusting the base. It
   /// tries to use a base from the nearby instructions that allows it to have
@@ -317,7 +323,7 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   if (TII.isMIMG(MI)) {
     uint64_t DMaskImm =
         TII.getNamedOperand(MI, AMDGPU::OpName::dmask)->getImm();
-    return countPopulation(DMaskImm);
+    return llvm::popcount(DMaskImm);
   }
   if (TII.isMTBUF(Opc)) {
     return AMDGPU::getMTBUFElements(Opc);
@@ -325,6 +331,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
 
   switch (Opc) {
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
+  case AMDGPU::S_LOAD_DWORD_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORD_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORD:
@@ -333,6 +341,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::FLAT_STORE_DWORD:
     return 1;
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX2_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX2:
@@ -348,6 +358,8 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::FLAT_STORE_DWORDX3:
     return 3;
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
   case AMDGPU::GLOBAL_LOAD_DWORDX4:
   case AMDGPU::GLOBAL_LOAD_DWORDX4_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4:
@@ -356,15 +368,17 @@ static unsigned getOpcodeWidth(const MachineInstr &MI, const SIInstrInfo &TII) {
   case AMDGPU::FLAT_STORE_DWORDX4:
     return 4;
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
     return 8;
-  case AMDGPU::DS_READ_B32:      LLVM_FALLTHROUGH;
-  case AMDGPU::DS_READ_B32_gfx9: LLVM_FALLTHROUGH;
-  case AMDGPU::DS_WRITE_B32:     LLVM_FALLTHROUGH;
+  case AMDGPU::DS_READ_B32:      [[fallthrough]];
+  case AMDGPU::DS_READ_B32_gfx9: [[fallthrough]];
+  case AMDGPU::DS_WRITE_B32:     [[fallthrough]];
   case AMDGPU::DS_WRITE_B32_gfx9:
     return 1;
-  case AMDGPU::DS_READ_B64:      LLVM_FALLTHROUGH;
-  case AMDGPU::DS_READ_B64_gfx9: LLVM_FALLTHROUGH;
-  case AMDGPU::DS_WRITE_B64:     LLVM_FALLTHROUGH;
+  case AMDGPU::DS_READ_B64:      [[fallthrough]];
+  case AMDGPU::DS_READ_B64_gfx9: [[fallthrough]];
+  case AMDGPU::DS_WRITE_B64:     [[fallthrough]];
   case AMDGPU::DS_WRITE_B64_gfx9:
     return 2;
   default:
@@ -394,8 +408,8 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
     }
     if (TII.isMIMG(Opc)) {
       // Ignore instructions encoded without vaddr.
-      if (AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr) == -1 &&
-          AMDGPU::getNamedOperandIdx(Opc, AMDGPU::OpName::vaddr0) == -1)
+      if (!AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
+          !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr0))
         return UNKNOWN;
       // Ignore BVH instructions
       if (AMDGPU::getMIMGBaseOpcode(Opc)->BVH)
@@ -414,6 +428,10 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFEN_exact:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFSET:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFSET_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:
         return TBUFFER_LOAD;
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN_exact:
@@ -428,6 +446,16 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return S_BUFFER_LOAD_IMM;
+  case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+    return S_BUFFER_LOAD_SGPR_IMM;
+  case AMDGPU::S_LOAD_DWORD_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
+    return S_LOAD_IMM;
   case AMDGPU::DS_READ_B32:
   case AMDGPU::DS_READ_B32_gfx9:
   case AMDGPU::DS_READ_B64:
@@ -499,6 +527,16 @@ static unsigned getInstSubclass(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
     return AMDGPU::S_BUFFER_LOAD_DWORD_IMM;
+  case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+    return AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM;
+  case AMDGPU::S_LOAD_DWORD_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
+    return AMDGPU::S_LOAD_DWORD_IMM;
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
@@ -591,10 +629,20 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   switch (Opc) {
   default:
     return Result;
+  case AMDGPU::S_BUFFER_LOAD_DWORD_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM:
+  case AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM:
+    Result.SOffset = true;
+    [[fallthrough]];
   case AMDGPU::S_BUFFER_LOAD_DWORD_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX2_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX4_IMM:
   case AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM:
+  case AMDGPU::S_LOAD_DWORD_IMM:
+  case AMDGPU::S_LOAD_DWORDX2_IMM:
+  case AMDGPU::S_LOAD_DWORDX4_IMM:
+  case AMDGPU::S_LOAD_DWORDX8_IMM:
     Result.SBase = true;
     return Result;
   case AMDGPU::DS_READ_B32:
@@ -616,7 +664,7 @@ static AddressRegs getRegs(unsigned Opc, const SIInstrInfo &TII) {
   case AMDGPU::GLOBAL_STORE_DWORDX3_SADDR:
   case AMDGPU::GLOBAL_STORE_DWORDX4_SADDR:
     Result.SAddr = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AMDGPU::GLOBAL_LOAD_DWORD:
   case AMDGPU::GLOBAL_LOAD_DWORDX2:
   case AMDGPU::GLOBAL_LOAD_DWORDX3:
@@ -661,6 +709,8 @@ void SILoadStoreOptimizer::CombineInfo::setMI(MachineBasicBlock::iterator MI,
                                                                             : 4;
     break;
   case S_BUFFER_LOAD_IMM:
+  case S_BUFFER_LOAD_SGPR_IMM:
+  case S_LOAD_IMM:
     EltSize = AMDGPU::convertSMRDOffsetUnits(*LSO.STM, 4);
     break;
   default:
@@ -821,7 +871,7 @@ bool SILoadStoreOptimizer::dmasksCanBeCombined(const CombineInfo &CI,
   unsigned MaxMask = std::max(CI.DMask, Paired.DMask);
   unsigned MinMask = std::min(CI.DMask, Paired.DMask);
 
-  unsigned AllowedBitsForMin = llvm::countTrailingZeros(MaxMask);
+  unsigned AllowedBitsForMin = llvm::countr_zero(MaxMask);
   if ((1u << AllowedBitsForMin) <= MinMask)
     return false;
 
@@ -860,7 +910,7 @@ static unsigned getBufferFormatWithCompCount(unsigned OldFormat,
 // - if Lo == 0, return 0 (even though the "- 1" below underflows
 // - if Lo > Hi, return 0 (as if the range wrapped around)
 static uint32_t mostAlignedValueInRange(uint32_t Lo, uint32_t Hi) {
-  return Hi & maskLeadingOnes<uint32_t>(countLeadingZeros((Lo - 1) ^ Hi) + 1);
+  return Hi & maskLeadingOnes<uint32_t>(llvm::countl_zero((Lo - 1) ^ Hi) + 1);
 }
 
 bool SILoadStoreOptimizer::offsetsCanBeCombined(CombineInfo &CI,
@@ -981,6 +1031,8 @@ bool SILoadStoreOptimizer::widthsFit(const GCNSubtarget &STM,
   default:
     return (Width <= 4) && (STM.hasDwordx3LoadStores() || (Width != 3));
   case S_BUFFER_LOAD_IMM:
+  case S_BUFFER_LOAD_SGPR_IMM:
+  case S_LOAD_IMM:
     switch (Width) {
     default:
       return false;
@@ -1293,7 +1345,7 @@ SILoadStoreOptimizer::mergeImagePair(CombineInfo &CI, CombineInfo &Paired,
   return New;
 }
 
-MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
+MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSMemLoadImmPair(
     CombineInfo &CI, CombineInfo &Paired,
     MachineBasicBlock::iterator InsertBefore) {
   MachineBasicBlock *MBB = CI.I->getParent();
@@ -1310,12 +1362,13 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeSBufferLoadImmPair(
   // will return true if this is the case.
   assert(CI.I->hasOneMemOperand() && Paired.I->hasOneMemOperand());
 
-  MachineInstr *New =
+  MachineInstrBuilder New =
       BuildMI(*MBB, InsertBefore, DL, TII->get(Opcode), DestReg)
-          .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::sbase))
-          .addImm(MergedOffset) // offset
-          .addImm(CI.CPol)      // cpol
-          .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
+          .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::sbase));
+  if (CI.InstClass == S_BUFFER_LOAD_SGPR_IMM)
+    New.add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset));
+  New.addImm(MergedOffset);
+  New.addImm(CI.CPol).addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
   std::pair<unsigned, unsigned> SubRegIdx = getSubRegIdxs(CI, Paired);
   const unsigned SubRegIdx0 = std::get<0>(SubRegIdx);
@@ -1369,7 +1422,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferLoadPair(
         .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
         .addImm(MergedOffset) // offset
         .addImm(CI.CPol)      // cpol
-        .addImm(0)            // tfe
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
@@ -1429,7 +1481,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferLoadPair(
           .addImm(MergedOffset) // offset
           .addImm(JoinedFormat) // format
           .addImm(CI.CPol)      // cpol
-          .addImm(0)            // tfe
           .addImm(0)            // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
@@ -1501,7 +1552,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeTBufferStorePair(
           .addImm(std::min(CI.Offset, Paired.Offset)) // offset
           .addImm(JoinedFormat)                     // format
           .addImm(CI.CPol)                          // cpol
-          .addImm(0)                                // tfe
           .addImm(0)                                // swz
           .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
@@ -1623,6 +1673,28 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
     case 8:
       return AMDGPU::S_BUFFER_LOAD_DWORDX8_IMM;
     }
+  case S_BUFFER_LOAD_SGPR_IMM:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::S_BUFFER_LOAD_DWORDX2_SGPR_IMM;
+    case 4:
+      return AMDGPU::S_BUFFER_LOAD_DWORDX4_SGPR_IMM;
+    case 8:
+      return AMDGPU::S_BUFFER_LOAD_DWORDX8_SGPR_IMM;
+    }
+  case S_LOAD_IMM:
+    switch (Width) {
+    default:
+      return 0;
+    case 2:
+      return AMDGPU::S_LOAD_DWORDX2_IMM;
+    case 4:
+      return AMDGPU::S_LOAD_DWORDX4_IMM;
+    case 8:
+      return AMDGPU::S_LOAD_DWORDX8_IMM;
+    }
   case GLOBAL_LOAD:
     switch (Width) {
     default:
@@ -1690,7 +1762,7 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
       return AMDGPU::FLAT_STORE_DWORDX4;
     }
   case MIMG:
-    assert((countPopulation(CI.DMask | Paired.DMask) == Width) &&
+    assert(((unsigned)llvm::popcount(CI.DMask | Paired.DMask) == Width) &&
            "No overlaps");
     return AMDGPU::getMaskedMIMGOp(CI.I->getOpcode(), Width);
   }
@@ -1699,8 +1771,9 @@ unsigned SILoadStoreOptimizer::getNewOpcode(const CombineInfo &CI,
 std::pair<unsigned, unsigned>
 SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
                                     const CombineInfo &Paired) {
-  assert((CI.InstClass != MIMG || (countPopulation(CI.DMask | Paired.DMask) ==
-                                   CI.Width + Paired.Width)) &&
+  assert((CI.InstClass != MIMG ||
+          ((unsigned)llvm::popcount(CI.DMask | Paired.DMask) ==
+           CI.Width + Paired.Width)) &&
          "No overlaps");
 
   unsigned Idx0;
@@ -1725,13 +1798,14 @@ SILoadStoreOptimizer::getSubRegIdxs(const CombineInfo &CI,
     Idx1 = Idxs[CI.Width][Paired.Width - 1];
   }
 
-  return std::make_pair(Idx0, Idx1);
+  return std::pair(Idx0, Idx1);
 }
 
 const TargetRegisterClass *
 SILoadStoreOptimizer::getTargetRegisterClass(const CombineInfo &CI,
                                              const CombineInfo &Paired) {
-  if (CI.InstClass == S_BUFFER_LOAD_IMM) {
+  if (CI.InstClass == S_BUFFER_LOAD_IMM ||
+      CI.InstClass == S_BUFFER_LOAD_SGPR_IMM || CI.InstClass == S_LOAD_IMM) {
     switch (CI.Width + Paired.Width) {
     default:
       return nullptr;
@@ -1796,7 +1870,6 @@ MachineBasicBlock::iterator SILoadStoreOptimizer::mergeBufferStorePair(
         .add(*TII->getNamedOperand(*CI.I, AMDGPU::OpName::soffset))
         .addImm(std::min(CI.Offset, Paired.Offset)) // offset
         .addImm(CI.CPol)      // cpol
-        .addImm(0)            // tfe
         .addImm(0)            // swz
         .addMemOperand(combineKnownAdjacentMMOs(CI, Paired));
 
@@ -1889,18 +1962,18 @@ void SILoadStoreOptimizer::updateBaseAndOffset(MachineInstr &MI,
   TII->getNamedOperand(MI, AMDGPU::OpName::offset)->setImm(NewOffset);
 }
 
-Optional<int32_t>
+std::optional<int32_t>
 SILoadStoreOptimizer::extractConstOffset(const MachineOperand &Op) const {
   if (Op.isImm())
     return Op.getImm();
 
   if (!Op.isReg())
-    return None;
+    return std::nullopt;
 
   MachineInstr *Def = MRI->getUniqueVRegDef(Op.getReg());
   if (!Def || Def->getOpcode() != AMDGPU::S_MOV_B32 ||
       !Def->getOperand(1).isImm())
-    return None;
+    return std::nullopt;
 
   return Def->getOperand(1).getImm();
 }
@@ -1997,7 +2070,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
   // Step1: Find the base-registers and a 64bit constant offset.
   MachineOperand &Base = *TII->getNamedOperand(MI, AMDGPU::OpName::vaddr);
   MemAddress MAddr;
-  if (Visited.find(&MI) == Visited.end()) {
+  if (!Visited.contains(&MI)) {
     processBaseWithConstOffset(Base, MAddr);
     Visited[&MI] = MAddr;
   } else
@@ -2060,7 +2133,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
     const MachineOperand &BaseNext =
       *TII->getNamedOperand(MINext, AMDGPU::OpName::vaddr);
     MemAddress MAddrNext;
-    if (Visited.find(&MINext) == Visited.end()) {
+    if (!Visited.contains(&MINext)) {
       processBaseWithConstOffset(BaseNext, MAddrNext);
       Visited[&MINext] = MAddrNext;
     } else
@@ -2072,7 +2145,7 @@ bool SILoadStoreOptimizer::promoteConstantOffsetToImm(
         MAddrNext.Base.HiSubReg != MAddr.Base.HiSubReg)
       continue;
 
-    InstsWCommonBase.push_back(std::make_pair(&MINext, MAddrNext.Offset));
+    InstsWCommonBase.push_back(std::pair(&MINext, MAddrNext.Offset));
 
     int64_t Dist = MAddr.Offset - MAddrNext.Offset;
     TargetLoweringBase::AddrMode AM;
@@ -2123,7 +2196,7 @@ void SILoadStoreOptimizer::addInstToMergeableList(const CombineInfo &CI,
   for (std::list<CombineInfo> &AddrList : MergeableInsts) {
     if (AddrList.front().InstClass == CI.InstClass &&
         AddrList.front().IsAGPR == CI.IsAGPR &&
-        AddrList.front().hasSameBaseAddress(*CI.I)) {
+        AddrList.front().hasSameBaseAddress(CI)) {
       AddrList.emplace_back(CI);
       return;
     }
@@ -2222,7 +2295,7 @@ SILoadStoreOptimizer::collectMergeableInsts(
     ++I;
   }
 
-  return std::make_pair(BlockI, Modified);
+  return std::pair(BlockI, Modified);
 }
 
 // Scan through looking for adjacent LDS operations with constant offsets from
@@ -2300,7 +2373,9 @@ SILoadStoreOptimizer::optimizeInstsWithSameBaseAddr(
       NewMI = mergeWrite2Pair(CI, Paired, Where->I);
       break;
     case S_BUFFER_LOAD_IMM:
-      NewMI = mergeSBufferLoadImmPair(CI, Paired, Where->I);
+    case S_BUFFER_LOAD_SGPR_IMM:
+    case S_LOAD_IMM:
+      NewMI = mergeSMemLoadImmPair(CI, Paired, Where->I);
       OptimizeListAgain |= CI.Width + Paired.Width < 8;
       break;
     case BUFFER_LOAD:

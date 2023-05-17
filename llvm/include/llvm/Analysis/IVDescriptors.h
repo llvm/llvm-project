@@ -180,17 +180,17 @@ public:
                  DemandedBits *DB = nullptr, AssumptionCache *AC = nullptr,
                  DominatorTree *DT = nullptr, ScalarEvolution *SE = nullptr);
 
-  /// Returns true if Phi is a first-order recurrence. A first-order recurrence
+  /// Returns true if Phi is a fixed-order recurrence. A fixed-order recurrence
   /// is a non-reduction recurrence relation in which the value of the
-  /// recurrence in the current loop iteration equals a value defined in the
-  /// previous iteration. \p SinkAfter includes pairs of instructions where the
-  /// first will be rescheduled to appear after the second if/when the loop is
-  /// vectorized. It may be augmented with additional pairs if needed in order
-  /// to handle Phi as a first-order recurrence.
-  static bool
-  isFirstOrderRecurrence(PHINode *Phi, Loop *TheLoop,
-                         MapVector<Instruction *, Instruction *> &SinkAfter,
-                         DominatorTree *DT);
+  /// recurrence in the current loop iteration equals a value defined in a
+  /// previous iteration (e.g. if the value is defined in the previous
+  /// iteration, we refer to it as first-order recurrence, if it is defined in
+  /// the iteration before the previous, we refer to it as second-order
+  /// recurrence and so on). Note that this function optimistically assumes that
+  /// uses of the recurrence can be re-ordered if necessary and users need to
+  /// check and perform the re-ordering.
+  static bool isFixedOrderRecurrence(PHINode *Phi, Loop *TheLoop,
+                                     DominatorTree *DT);
 
   RecurKind getRecurrenceKind() const { return Kind; }
 
@@ -214,9 +214,6 @@ public:
 
   /// Returns true if the recurrence kind is a floating point kind.
   static bool isFloatingPointRecurrenceKind(RecurKind Kind);
-
-  /// Returns true if the recurrence kind is an arithmetic kind.
-  static bool isArithmeticRecurrenceKind(RecurKind Kind);
 
   /// Returns true if the recurrence kind is an integer min/max kind.
   static bool isIntMinMaxRecurrenceKind(RecurKind Kind) {
@@ -325,7 +322,9 @@ public:
 
   /// Returns true if \p Phi is an induction in the loop \p L. If \p Phi is an
   /// induction, the induction descriptor \p D will contain the data describing
-  /// this induction. If by some other means the caller has a better SCEV
+  /// this induction. Since Induction Phis can only be present inside loop
+  /// headers, the function will assert if it is passed a Phi whose parent is
+  /// not the loop header. If by some other means the caller has a better SCEV
   /// expression for \p Phi than the one returned by the ScalarEvolution
   /// analysis, it can be passed through \p Expr. If the def-use chain
   /// associated with the phi includes casts (that we know we can ignore

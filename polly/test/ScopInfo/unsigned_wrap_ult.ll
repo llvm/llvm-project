@@ -7,7 +7,7 @@
 ;     A[i] = 42;
 
 
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -21,8 +21,8 @@ entry:
   br i1 %inbounds, label %ifinbounds, label %ifoutbounds
 
   ifinbounds:
-  %A_idx = getelementptr inbounds double, double* %A, i32 %j
-  store double 42.0, double* %A_idx
+  %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+  store double 42.0, ptr %A_idx
   br label %inc
 
   ifoutbounds:

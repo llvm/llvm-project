@@ -230,6 +230,8 @@ def : SourceOfDivergence<int_amdgcn_interp_p1>;
 def : SourceOfDivergence<int_amdgcn_interp_p2>;
 def : SourceOfDivergence<int_amdgcn_interp_p1_f16>;
 def : SourceOfDivergence<int_amdgcn_interp_p2_f16>;
+def : SourceOfDivergence<int_amdgcn_lds_direct_load>;
+def : SourceOfDivergence<int_amdgcn_lds_param_load>;
 def : SourceOfDivergence<int_amdgcn_mbcnt_hi>;
 def : SourceOfDivergence<int_amdgcn_mbcnt_lo>;
 def : SourceOfDivergence<int_r600_read_tidig_x>;
@@ -338,12 +340,34 @@ def : SourceOfDivergence<int_amdgcn_mfma_i32_16x16x32_i8>;
 def : SourceOfDivergence<int_amdgcn_mfma_i32_32x32x16_i8>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_16x16x8_xf32>;
 def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x4_xf32>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_16x16x32_bf8_bf8>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_16x16x32_bf8_fp8>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_16x16x32_fp8_bf8>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_16x16x32_fp8_fp8>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x16_bf8_bf8>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x16_bf8_fp8>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x16_fp8_bf8>;
+def : SourceOfDivergence<int_amdgcn_mfma_f32_32x32x16_fp8_fp8>;
 def : SourceOfDivergence<int_amdgcn_smfmac_f32_16x16x32_f16>;
 def : SourceOfDivergence<int_amdgcn_smfmac_f32_32x32x16_f16>;
 def : SourceOfDivergence<int_amdgcn_smfmac_f32_16x16x32_bf16>;
 def : SourceOfDivergence<int_amdgcn_smfmac_f32_32x32x16_bf16>;
 def : SourceOfDivergence<int_amdgcn_smfmac_i32_16x16x64_i8>;
 def : SourceOfDivergence<int_amdgcn_smfmac_i32_32x32x32_i8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_16x16x64_bf8_bf8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_16x16x64_bf8_fp8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_16x16x64_fp8_bf8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_16x16x64_fp8_fp8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_32x32x32_bf8_bf8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_32x32x32_bf8_fp8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_32x32x32_fp8_bf8>;
+def : SourceOfDivergence<int_amdgcn_smfmac_f32_32x32x32_fp8_fp8>;
+def : SourceOfDivergence<int_amdgcn_wmma_f32_16x16x16_f16>;
+def : SourceOfDivergence<int_amdgcn_wmma_f32_16x16x16_bf16>;
+def : SourceOfDivergence<int_amdgcn_wmma_f16_16x16x16_f16>;
+def : SourceOfDivergence<int_amdgcn_wmma_bf16_16x16x16_bf16>;
+def : SourceOfDivergence<int_amdgcn_wmma_i32_16x16x16_iu8>;
+def : SourceOfDivergence<int_amdgcn_wmma_i32_16x16x16_iu4>;
 
 // The dummy boolean output is divergent from the IR's perspective,
 // but the mask results are uniform. These produce a divergent and
@@ -352,6 +376,26 @@ def : SourceOfDivergence<int_amdgcn_smfmac_i32_32x32x32_i8>;
 def : SourceOfDivergence<int_amdgcn_if>;
 def : SourceOfDivergence<int_amdgcn_else>;
 def : SourceOfDivergence<int_amdgcn_loop>;
+def : SourceOfDivergence<int_amdgcn_inverse_ballot>;
 
 foreach intr = AMDGPUImageDimAtomicIntrinsics in
 def : SourceOfDivergence<intr>;
+
+class AlwaysUniform<Intrinsic intr> {
+  Intrinsic Intr = intr;
+}
+
+def UniformIntrinsics : GenericTable {
+  let FilterClass = "AlwaysUniform";
+  let Fields = ["Intr"];
+
+  let PrimaryKey = ["Intr"];
+  let PrimaryKeyName = "lookupAlwaysUniform";
+}
+
+def : AlwaysUniform<int_amdgcn_readfirstlane>;
+def : AlwaysUniform<int_amdgcn_readlane>;
+def : AlwaysUniform<int_amdgcn_icmp>;
+def : AlwaysUniform<int_amdgcn_fcmp>;
+def : AlwaysUniform<int_amdgcn_ballot>;
+def : AlwaysUniform<int_amdgcn_if_break>;

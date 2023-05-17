@@ -7,7 +7,7 @@
 ; CHECK: s_add_u32 s{{[0-9]+}}, s{{[0-9]+}}, __unnamed_1
 ; CHECK: s_endpgm
 define amdgpu_kernel void @test() {
-  store i32 1, i32 addrspace(1)* @0
+  store i32 1, ptr addrspace(1) @0
   ret void
 }
 

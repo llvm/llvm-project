@@ -30,13 +30,11 @@
 //   operator/(const day& d, int m) noexcept;
 // Returns: month(m) / d.
 
-
 #include <chrono>
 #include <type_traits>
 #include <cassert>
 
 #include "test_macros.h"
-#include "test_comparisons.h"
 
 int main(int, char**)
 {

@@ -8,12 +8,16 @@
 
 #include "mlir/Dialect/Linalg/Passes.h"
 
-#include "PassDetail.h"
-#include "mlir/Dialect/Arithmetic/Utils/Utils.h"
+#include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTELEMENTWISETOLINALG
+#include "mlir/Dialect/Linalg/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -24,7 +28,7 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
   // TODO: The conversion pattern can be made to work for `any_of` here, but
   // it's more complex as it requires tracking which operands are scalars.
   return llvm::all_of(op->getOperandTypes(),
-                      [](Type type) { return type.isa<RankedTensorType>(); });
+                      [](Type type) { return isa<RankedTensorType>(type); });
 }
 
 /// Given `op` assumed `isElementwiseMappableOpOnRankedTensors`, iterate over
@@ -33,7 +37,7 @@ static bool isElementwiseMappableOpOnRankedTensors(Operation *op) {
 ///   1. `v.getType() == t`
 ///   2. If an operand of `op` has type `t`, let `operand_first` be the first
 ///      such operand. Then`v == operand_first`.
-///   3. Otherwise, v is a newly created `linalg::InitTensorOp` with:
+///   3. Otherwise, v is a newly created `tensor::EmptyOp` with:
 ///        a. Static and dynamic dims extracted from the first operand of `op`.
 ///        b. Elemental type equal to the elemental type of `t`.
 ///
@@ -63,12 +67,12 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
 
     // Extract static / dynamic shape mix from the first operand.
     Value firstOperand = operands.front();
-    auto rankedTensorType = t.cast<RankedTensorType>();
+    auto rankedTensorType = cast<RankedTensorType>(t);
     auto staticShape = llvm::to_vector<4>(rankedTensorType.getShape());
-    auto dynamicShape = linalg::getDynOperands(loc, firstOperand, b);
+    auto dynamicShape = linalg::createDynamicDimensions(b, loc, firstOperand);
 
-    res.push_back(b.create<linalg::InitTensorOp>(
-        loc, dynamicShape, staticShape, rankedTensorType.getElementType()));
+    res.push_back(b.create<tensor::EmptyOp>(
+        loc, staticShape, rankedTensorType.getElementType(), dynamicShape));
   }
   return res;
 }
@@ -83,12 +87,12 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
       return rewriter.notifyMatchFailure(
           op, "requires elementwise op on ranked tensors");
 
-    auto rank = op->getResult(0).getType().cast<RankedTensorType>().getRank();
+    auto rank = cast<RankedTensorType>(op->getResult(0).getType()).getRank();
     SmallVector<AffineMap, 3> indexingMaps(
         op->getNumResults() + op->getNumOperands(),
         rewriter.getMultiDimIdentityMap(rank));
-    SmallVector<StringRef, 6> iteratorTypes(rank,
-                                            getParallelIteratorTypeName());
+    SmallVector<utils::IteratorType, 6> iteratorTypes(
+        rank, utils::IteratorType::parallel);
     auto outputs = getOrCreateOperandsMatchingResultTypes(rewriter, op);
     rewriter.replaceOpWithNewOp<linalg::GenericOp>(
         op, /*resultTensorTypes=*/op->getResultTypes(),
@@ -100,7 +104,7 @@ struct ConvertAnyElementwiseMappableOpOnRankedTensors : public RewritePattern {
         [&](OpBuilder &builder, Location loc, ValueRange regionArgs) {
           auto resultTypes = llvm::to_vector<6>(
               llvm::map_range(op->getResultTypes(), [](Type type) {
-                return type.cast<TensorType>().getElementType();
+                return cast<TensorType>(type).getElementType();
               }));
           auto *scalarOp =
               builder.create(loc, op->getName().getIdentifier(),
@@ -121,7 +125,8 @@ void mlir::linalg::populateElementwiseToLinalgConversionPatterns(
 
 namespace {
 class ConvertElementwiseToLinalgPass
-    : public ConvertElementwiseToLinalgBase<ConvertElementwiseToLinalgPass> {
+    : public impl::ConvertElementwiseToLinalgBase<
+          ConvertElementwiseToLinalgPass> {
 
   void runOnOperation() final {
     auto *func = getOperation();

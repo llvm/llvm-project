@@ -1,4 +1,14 @@
+if (NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
+  set (atomic_lib atomic)
+endif()
+
+if( CMAKE_HOST_UNIX AND HAVE_LIBRT )
+  set(rt_lib rt)
+endif()
+
 add_llvm_component_library(LLVMOrcJIT
+  COFFVCRuntimeSupport.cpp
+  COFFPlatform.cpp
   CompileOnDemandLayer.cpp
   CompileUtils.cpp
   Core.cpp
@@ -23,6 +33,8 @@ add_llvm_component_library(LLVMOrcJIT
   LookupAndRecordAddrs.cpp
   LLJIT.cpp
   MachOPlatform.cpp
+  MapperJITLinkMemoryManager.cpp
+  MemoryMapper.cpp
   ELFNixPlatform.cpp
   Mangling.cpp
   ObjectLinkingLayer.cpp
@@ -44,6 +56,8 @@ add_llvm_component_library(LLVMOrcJIT
 
   LINK_LIBS
   ${LLVM_PTHREAD_LIB}
+  ${rt_lib}
+  ${atomic_lib}
 
   LINK_COMPONENTS
   Core
@@ -52,12 +66,13 @@ add_llvm_component_library(LLVMOrcJIT
   Object
   OrcShared
   OrcTargetProcess
+  WindowsDriver
   MC
-  MCDisassembler
   Passes
   RuntimeDyld
   Support
   Target
+  TargetParser
   TransformUtils
   )
 

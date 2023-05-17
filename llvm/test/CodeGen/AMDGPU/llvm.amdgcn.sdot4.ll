@@ -10,18 +10,18 @@ declare i32 @llvm.amdgcn.sdot4(i32 %a, i32 %b, i32 %c, i1 %clamp)
 ; GFX906: v_dot4_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 ; GFX10:  v_dot4_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_sdot4_clamp(
-    i32 addrspace(1)* %r,
-    <4 x i8> addrspace(1)* %a,
-    <4 x i8> addrspace(1)* %b,
-    i32 addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <4 x i8>, <4 x i8> addrspace(1)* %a
-  %b.val = load <4 x i8>, <4 x i8> addrspace(1)* %b
+  %a.val = load <4 x i8>, ptr addrspace(1) %a
+  %b.val = load <4 x i8>, ptr addrspace(1) %b
   %a.val.cast = bitcast <4 x i8> %a.val to i32
   %b.val.cast = bitcast <4 x i8> %b.val to i32
-  %c.val = load i32, i32 addrspace(1)* %c
+  %c.val = load i32, ptr addrspace(1) %c
   %r.val = call i32 @llvm.amdgcn.sdot4(i32 %a.val.cast, i32 %b.val.cast, i32 %c.val, i1 1)
-  store i32 %r.val, i32 addrspace(1)* %r
+  store i32 %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -29,17 +29,17 @@ entry:
 ; GFX906: v_dot4_i32_i8 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX10:  v_dot4c_i32_i8_e32 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_sdot4_no_clamp(
-    i32 addrspace(1)* %r,
-    <4 x i8> addrspace(1)* %a,
-    <4 x i8> addrspace(1)* %b,
-    i32 addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <4 x i8>, <4 x i8> addrspace(1)* %a
-  %b.val = load <4 x i8>, <4 x i8> addrspace(1)* %b
+  %a.val = load <4 x i8>, ptr addrspace(1) %a
+  %b.val = load <4 x i8>, ptr addrspace(1) %b
   %a.val.cast = bitcast <4 x i8> %a.val to i32
   %b.val.cast = bitcast <4 x i8> %b.val to i32
-  %c.val = load i32, i32 addrspace(1)* %c
+  %c.val = load i32, ptr addrspace(1) %c
   %r.val = call i32 @llvm.amdgcn.sdot4(i32 %a.val.cast, i32 %b.val.cast, i32 %c.val, i1 0)
-  store i32 %r.val, i32 addrspace(1)* %r
+  store i32 %r.val, ptr addrspace(1) %r
   ret void
 }

@@ -7,5 +7,5 @@
 # 1 "preprocessed-input.c" 2
 
 // RUN: %clang -g -c -S -emit-llvm -o - %s | FileCheck %s
-// CHECK: !DICompileUnit(language: DW_LANG_C99, file: ![[FILE:[0-9]+]] 
+// CHECK: !DICompileUnit(language: DW_LANG_C{{.*}}, file: ![[FILE:[0-9]+]]
 // CHECK: ![[FILE]] = !DIFile(filename: "/foo/bar/preprocessed-input.c"

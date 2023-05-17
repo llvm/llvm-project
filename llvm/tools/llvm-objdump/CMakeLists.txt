@@ -4,7 +4,6 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsInfos
   BinaryFormat
   DebugInfoDWARF
-  DebugInfoPDB
   Demangle
   MC
   MCDisassembler
@@ -12,6 +11,7 @@ set(LLVM_LINK_COMPONENTS
   Option
   Support
   Symbolize
+  TargetParser
   )
 
 set(LLVM_TARGET_DEFINITIONS ObjdumpOpts.td)
@@ -28,12 +28,15 @@ add_llvm_tool(llvm-objdump
   COFFDump.cpp
   ELFDump.cpp
   MachODump.cpp
+  OffloadDump.cpp
   WasmDump.cpp
   XCOFFDump.cpp
   DEPENDS
   ObjdumpOptsTableGen
   OtoolOptsTableGen
   )
+
+target_link_libraries(llvm-objdump PRIVATE LLVMDebuginfod)
 
 if(LLVM_HAVE_LIBXAR)
   target_link_libraries(llvm-objdump PRIVATE ${XAR_LIB})

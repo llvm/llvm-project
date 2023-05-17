@@ -1,13 +1,8 @@
-=============================
-StdIO Functions in LLVM-libc
-=============================
+===============
+StdIO Functions
+===============
 
--------
-Summary
--------
-
-This document tracks the status of the implementation of stdio functions in LLVM
-Libc.
+.. include:: check.rst
 
 ---------------
 Source location
@@ -28,10 +23,10 @@ convert either to or from those arguments. These functions are the current focus
 (owner: michaelrj).
 
 =============  =========
-Function_Name  Available
+Function Name  Available
 =============  =========
-\*printf       WIP
-\*scanf
+\*printf       Mostly
+\*scanf        |check|
 =============  =========
 
 ``FILE`` Access
@@ -42,25 +37,25 @@ I/O stream, often used to represent a file on the host's hard drive. Currently
 the ``FILE`` object is only available on linux.
 
 =============  =========
-Function_Name  Available
+Function Name  Available
 =============  =========
-fopen          YES
+fopen          |check|
 freopen
-fclose         YES
-fflush         YES
-setbuf
-setvbuf
-ftell
+fclose         |check|
+fflush         |check|
+setbuf         |check|
+setvbuf        |check|
+ftell          |check|
 fgetpos
-fseek          YES
+fseek          |check|
 fsetpos
 rewind
 tmpfile
-clearerr       YES
-feof           YES
-ferror         YES
-flockfile      YES
-funlockfile    YES
+clearerr       |check|
+feof           |check|
+ferror         |check|
+flockfile      |check|
+funlockfile    |check|
 =============  =========
 
 Operations on system files
@@ -72,7 +67,7 @@ These functions operate on files on the host's system, without using the
 =============  =========
 Function_Name  Available
 =============  =========
-remove
+remove         |check|
 rename
 tmpnam
 =============  =========
@@ -84,15 +79,15 @@ The ``gets`` function was removed in C11 for having no bounds checking and
 therefor being impossible to use safely.
 
 =============  =========
-Function_Name  Available
+Function Name  Available
 =============  =========
-(f)getc
-fgets
-getchar
-fread          YES
-(f)putc
-(f)puts
-putchar
-fwrite         YES
-ungetc
+(f)getc        |check|
+fgets          |check|
+getchar        |check|
+fread          |check|
+(f)putc        |check|
+(f)puts        |check|
+putchar        |check|
+fwrite         |check|
+ungetc         |check|
 =============  =========

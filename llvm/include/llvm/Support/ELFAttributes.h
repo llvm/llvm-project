@@ -11,6 +11,7 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 
 namespace llvm {
 
@@ -27,7 +28,7 @@ enum AttrType : unsigned { File = 1, Section = 2, Symbol = 3 };
 
 StringRef attrTypeAsString(unsigned attr, TagNameMap tagNameMap,
                            bool hasTagPrefix = true);
-Optional<unsigned> attrTypeFromString(StringRef tag, TagNameMap tagNameMap);
+std::optional<unsigned> attrTypeFromString(StringRef tag, TagNameMap tagNameMap);
 
 // Magic numbers for ELF attributes.
 enum AttrMagic { Format_Version = 0x41 };

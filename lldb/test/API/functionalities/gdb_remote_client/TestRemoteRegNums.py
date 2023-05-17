@@ -1,4 +1,3 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -16,8 +15,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 # that correct registers are accessed in all of above mentioned cases.
 
 class TestRemoteRegNums(GDBRemoteTestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfXmlSupportMissing
     def test(self):

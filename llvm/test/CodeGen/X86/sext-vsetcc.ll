@@ -6,7 +6,7 @@
 declare void @use_v8i1(<8 x i1>)
 declare void @use_v8i8(<8 x i8>)
 
-define <8 x i16> @cmp_ne_load_const(<8 x i8>* %x) nounwind {
+define <8 x i16> @cmp_ne_load_const(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ne_load_const:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -24,7 +24,7 @@ define <8 x i16> @cmp_ne_load_const(<8 x i8>* %x) nounwind {
 ; AVX-NEXT:    vpxor %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %loadx = load <8 x i8>, <8 x i8>* %x
+  %loadx = load <8 x i8>, ptr %x
   %icmp = icmp ne <8 x i8> %loadx, zeroinitializer
   %sext = sext <8 x i1> %icmp to <8 x i16>
   ret <8 x i16> %sext
@@ -32,7 +32,7 @@ define <8 x i16> @cmp_ne_load_const(<8 x i8>* %x) nounwind {
 
 ; negative test - simple loads only
 
-define <8 x i16> @cmp_ne_load_const_volatile(<8 x i8>* %x) nounwind {
+define <8 x i16> @cmp_ne_load_const_volatile(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ne_load_const_volatile:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -63,7 +63,7 @@ define <8 x i16> @cmp_ne_load_const_volatile(<8 x i8>* %x) nounwind {
 ; AVX512-NEXT:    vpmovsxbw %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %loadx = load volatile <8 x i8>, <8 x i8>* %x
+  %loadx = load volatile <8 x i8>, ptr %x
   %icmp = icmp ne <8 x i8> %loadx, zeroinitializer
   %sext = sext <8 x i1> %icmp to <8 x i16>
   ret <8 x i16> %sext
@@ -71,7 +71,7 @@ define <8 x i16> @cmp_ne_load_const_volatile(<8 x i8>* %x) nounwind {
 
 ; negative test - don't create extra load
 
-define <8 x i16> @cmp_ne_load_const_extra_use1(<8 x i8>* %x) nounwind {
+define <8 x i16> @cmp_ne_load_const_extra_use1(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ne_load_const_extra_use1:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
@@ -114,7 +114,7 @@ define <8 x i16> @cmp_ne_load_const_extra_use1(<8 x i8>* %x) nounwind {
 ; AVX512-NEXT:    addq $24, %rsp
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %loadx = load <8 x i8>, <8 x i8>* %x
+  %loadx = load <8 x i8>, ptr %x
   call void @use_v8i8(<8 x i8> %loadx)
   %icmp = icmp ne <8 x i8> %loadx, zeroinitializer
   %sext = sext <8 x i1> %icmp to <8 x i16>
@@ -123,7 +123,7 @@ define <8 x i16> @cmp_ne_load_const_extra_use1(<8 x i8>* %x) nounwind {
 
 ; negative test - don't create extra compare
 
-define <8 x i16> @cmp_ne_load_const_extra_use2(<8 x i8>* %x) nounwind {
+define <8 x i16> @cmp_ne_load_const_extra_use2(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ne_load_const_extra_use2:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    subq $24, %rsp
@@ -170,7 +170,7 @@ define <8 x i16> @cmp_ne_load_const_extra_use2(<8 x i8>* %x) nounwind {
 ; AVX512-NEXT:    vpmovsxbw (%rsp), %xmm0 # 16-byte Folded Reload
 ; AVX512-NEXT:    addq $72, %rsp
 ; AVX512-NEXT:    retq
-  %loadx = load <8 x i8>, <8 x i8>* %x
+  %loadx = load <8 x i8>, ptr %x
   %icmp = icmp ne <8 x i8> %loadx, zeroinitializer
   call void @use_v8i1(<8 x i1> %icmp)
   %sext = sext <8 x i1> %icmp to <8 x i16>
@@ -216,7 +216,7 @@ define <8 x i16> @cmp_ne_no_load_const(i64 %x) nounwind {
   ret <8 x i16> %sext
 }
 
-define <4 x i32> @cmp_ult_load_const(<4 x i8>* %x) nounwind {
+define <4 x i32> @cmp_ult_load_const(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ult_load_const:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -236,7 +236,7 @@ define <4 x i32> @cmp_ult_load_const(<4 x i8>* %x) nounwind {
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,214,0,255]
 ; AVX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
-  %loadx = load <4 x i8>, <4 x i8>* %x
+  %loadx = load <4 x i8>, ptr %x
   %icmp = icmp ult <4 x i8> %loadx, <i8 42, i8 -42, i8 0, i8 -1>
   %sext = sext <4 x i1> %icmp to <4 x i32>
   ret <4 x i32> %sext
@@ -244,7 +244,7 @@ define <4 x i32> @cmp_ult_load_const(<4 x i8>* %x) nounwind {
 
 ; negative test - type must be legal
 
-define <3 x i32> @cmp_ult_load_const_bad_type(<3 x i8>* %x) nounwind {
+define <3 x i32> @cmp_ult_load_const_bad_type(ptr %x) nounwind {
 ; SSE-LABEL: cmp_ult_load_const_bad_type:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -277,7 +277,7 @@ define <3 x i32> @cmp_ult_load_const_bad_type(<3 x i8>* %x) nounwind {
 ; AVX512-NEXT:    vpmovsxbd %xmm0, %xmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %loadx = load <3 x i8>, <3 x i8>* %x
+  %loadx = load <3 x i8>, ptr %x
   %icmp = icmp ult <3 x i8> %loadx, <i8 42, i8 -42, i8 0>
   %sext = sext <3 x i1> %icmp to <3 x i32>
   ret <3 x i32> %sext
@@ -285,7 +285,7 @@ define <3 x i32> @cmp_ult_load_const_bad_type(<3 x i8>* %x) nounwind {
 
 ; Signed compare needs signed extend.
 
-define <4 x i32> @cmp_slt_load_const(<4 x i8>* %x) nounwind {
+define <4 x i32> @cmp_slt_load_const(ptr %x) nounwind {
 ; SSE-LABEL: cmp_slt_load_const:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
@@ -302,13 +302,13 @@ define <4 x i32> @cmp_slt_load_const(<4 x i8>* %x) nounwind {
 ; AVX-NEXT:    vmovdqa {{.*#+}} xmm1 = [42,4294967254,0,4294967295]
 ; AVX-NEXT:    vpcmpgtd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    retq
-  %loadx = load <4 x i8>, <4 x i8>* %x
+  %loadx = load <4 x i8>, ptr %x
   %icmp = icmp slt <4 x i8> %loadx, <i8 42, i8 -42, i8 0, i8 -1>
   %sext = sext <4 x i1> %icmp to <4 x i32>
   ret <4 x i32> %sext
 }
 
-define <2 x i64> @cmp_ne_zextload(<2 x i32>* %x, <2 x i32>* %y) nounwind {
+define <2 x i64> @cmp_ne_zextload(ptr %x, ptr %y) nounwind {
 ; SSE-LABEL: cmp_ne_zextload:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -339,14 +339,14 @@ define <2 x i64> @cmp_ne_zextload(<2 x i32>* %x, <2 x i32>* %y) nounwind {
 ; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 killed $zmm0
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
-  %loadx = load <2 x i32>, <2 x i32>* %x
-  %loady = load <2 x i32>, <2 x i32>* %y
+  %loadx = load <2 x i32>, ptr %x
+  %loady = load <2 x i32>, ptr %y
   %icmp = icmp ne <2 x i32> %loadx, %loady
   %sext = sext <2 x i1> %icmp to <2 x i64>
   ret <2 x i64> %sext
 }
 
-define <8 x i16> @cmp_ugt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
+define <8 x i16> @cmp_ugt_zextload(ptr %x, ptr %y) nounwind {
 ; SSE-LABEL: cmp_ugt_zextload:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -365,8 +365,8 @@ define <8 x i16> @cmp_ugt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
 ; AVX-NEXT:    vpmovzxbw {{.*#+}} xmm1 = mem[0],zero,mem[1],zero,mem[2],zero,mem[3],zero,mem[4],zero,mem[5],zero,mem[6],zero,mem[7],zero
 ; AVX-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %loadx = load <8 x i8>, <8 x i8>* %x
-  %loady = load <8 x i8>, <8 x i8>* %y
+  %loadx = load <8 x i8>, ptr %x
+  %loady = load <8 x i8>, ptr %y
   %icmp = icmp ugt <8 x i8> %loadx, %loady
   %sext = sext <8 x i1> %icmp to <8 x i16>
   ret <8 x i16> %sext
@@ -374,7 +374,7 @@ define <8 x i16> @cmp_ugt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
 
 ; Signed compare needs signed extends.
 
-define <8 x i16> @cmp_sgt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
+define <8 x i16> @cmp_sgt_zextload(ptr %x, ptr %y) nounwind {
 ; SSE-LABEL: cmp_sgt_zextload:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
@@ -390,8 +390,8 @@ define <8 x i16> @cmp_sgt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
 ; AVX-NEXT:    vpmovsxbw (%rsi), %xmm1
 ; AVX-NEXT:    vpcmpgtw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    retq
-  %loadx = load <8 x i8>, <8 x i8>* %x
-  %loady = load <8 x i8>, <8 x i8>* %y
+  %loadx = load <8 x i8>, ptr %x
+  %loady = load <8 x i8>, ptr %y
   %icmp = icmp sgt <8 x i8> %loadx, %loady
   %sext = sext <8 x i1> %icmp to <8 x i16>
   ret <8 x i16> %sext
@@ -400,7 +400,7 @@ define <8 x i16> @cmp_sgt_zextload(<8 x i8>* %x, <8 x i8>* %y) nounwind {
 ; negative test - don't change a legal op
 ; TODO: Or should we? We can eliminate the vpmovsxwd at the cost of a 256-bit ymm vpcmpeqw.
 
-define <8 x i32> @cmp_ne_zextload_from_legal_op(<8 x i16>* %x, <8 x i16>* %y) {
+define <8 x i32> @cmp_ne_zextload_from_legal_op(ptr %x, ptr %y) {
 ; SSE-LABEL: cmp_ne_zextload_from_legal_op:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
@@ -429,8 +429,8 @@ define <8 x i32> @cmp_ne_zextload_from_legal_op(<8 x i16>* %x, <8 x i16>* %y) {
 ; AVX512-NEXT:    vpternlogq $15, %zmm0, %zmm0, %zmm0
 ; AVX512-NEXT:    vpmovsxwd %xmm0, %ymm0
 ; AVX512-NEXT:    retq
-  %loadx = load <8 x i16>, <8 x i16>* %x
-  %loady = load <8 x i16>, <8 x i16>* %y
+  %loadx = load <8 x i16>, ptr %x
+  %loady = load <8 x i16>, ptr %y
   %icmp = icmp ne <8 x i16> %loadx, %loady
   %sext = sext <8 x i1> %icmp to <8 x i32>
   ret <8 x i32> %sext
@@ -438,7 +438,7 @@ define <8 x i32> @cmp_ne_zextload_from_legal_op(<8 x i16>* %x, <8 x i16>* %y) {
 
 ; Both uses of the load can be absorbed by the zext-load, so we eliminate the explicit casts.
 
-define <8 x i32> @PR50055(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
+define <8 x i32> @PR50055(ptr %src, ptr %dst) nounwind {
 ; SSE-LABEL: PR50055:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
@@ -467,17 +467,17 @@ define <8 x i32> @PR50055(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
 ; AVX-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm1
 ; AVX-NEXT:    vmovdqa %ymm1, (%rsi)
 ; AVX-NEXT:    retq
-  %load = load <8 x i8>, <8 x i8>* %src
+  %load = load <8 x i8>, ptr %src
   %zext = zext <8 x i8> %load to <8 x i32>
   %icmp = icmp ne <8 x i8> %load, zeroinitializer
   %sext = sext <8 x i1> %icmp to <8 x i32>
-  store <8 x i32> %sext, <8 x i32>* %dst
+  store <8 x i32> %sext, ptr %dst
   ret <8 x i32> %zext
 }
 
 ; negative test - extra uses must be absorbable by a zext-load.
 
-define <8 x i16> @multi_use_narrower_size(<8 x i8>* %src, <8 x i32>* %dst) nounwind {
+define <8 x i16> @multi_use_narrower_size(ptr %src, ptr %dst) nounwind {
 ; SSE-LABEL: multi_use_narrower_size:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm1 = mem[0],zero
@@ -504,17 +504,17 @@ define <8 x i16> @multi_use_narrower_size(<8 x i8>* %src, <8 x i32>* %dst) nounw
 ; AVX-NEXT:    vmovdqa %ymm1, (%rsi)
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
-  %load = load <8 x i8>, <8 x i8>* %src
+  %load = load <8 x i8>, ptr %src
   %zext = zext <8 x i8> %load to <8 x i16>
   %icmp = icmp eq <8 x i8> %load, zeroinitializer
   %sext = sext <8 x i1> %icmp to <8 x i32>
-  store <8 x i32> %sext, <8 x i32>* %dst
+  store <8 x i32> %sext, ptr %dst
   ret <8 x i16> %zext
 }
 
 ; negative test - extra uses must be absorbable by a zext-load.
 
-define <8 x i32> @multi_use_wider_size(<8 x i8>* %src, <8 x i16>* %dst) nounwind {
+define <8 x i32> @multi_use_wider_size(ptr %src, ptr %dst) nounwind {
 ; SSE-LABEL: multi_use_wider_size:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
@@ -539,15 +539,15 @@ define <8 x i32> @multi_use_wider_size(<8 x i8>* %src, <8 x i16>* %dst) nounwind
 ; AVX-NEXT:    vpmovsxbw %xmm1, %xmm1
 ; AVX-NEXT:    vmovdqa %xmm1, (%rsi)
 ; AVX-NEXT:    retq
-  %load = load <8 x i8>, <8 x i8>* %src
+  %load = load <8 x i8>, ptr %src
   %zext = zext <8 x i8> %load to <8 x i32>
   %icmp = icmp eq <8 x i8> %load, zeroinitializer
   %sext = sext <8 x i1> %icmp to <8 x i16>
-  store <8 x i16> %sext, <8 x i16>* %dst
+  store <8 x i16> %sext, ptr %dst
   ret <8 x i32> %zext
 }
 
-define <4 x i64> @PR50055_signed(<2 x i64>* %src, <4 x i64>* %dst) {
+define <4 x i64> @PR50055_signed(ptr %src, ptr %dst) {
 ; SSE-LABEL: PR50055_signed:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movq {{.*#+}} xmm2 = mem[0],zero
@@ -574,13 +574,11 @@ define <4 x i64> @PR50055_signed(<2 x i64>* %src, <4 x i64>* %dst) {
 ; AVX-NEXT:    vpcmpgtd %ymm1, %ymm0, %ymm1
 ; AVX-NEXT:    vmovdqa %ymm1, (%rsi)
 ; AVX-NEXT:    retq
-  %t0 = bitcast <2 x i64>* %src to <8 x i8>*
-  %t1 = load <8 x i8>, <8 x i8>* %t0, align 1
+  %t1 = load <8 x i8>, ptr %src, align 1
   %conv = sext <8 x i8> %t1 to <8 x i32>
   %t2 = bitcast <8 x i32> %conv to <4 x i64>
   %cmp = icmp sgt <8 x i8> %t1, zeroinitializer
   %sext = sext <8 x i1> %cmp to <8 x i32>
-  %t3 = bitcast <4 x i64>* %dst to <8 x i32>*
-  store <8 x i32> %sext, <8 x i32>* %t3, align 32
+  store <8 x i32> %sext, ptr %dst, align 32
   ret <4 x i64> %t2
 }

@@ -10,18 +10,18 @@ $foo = comdat largest
 ; CHECK-DAG: @foo = global i64 43, comdat
 
 ; RM-NOT: @alias =
-@alias = alias i32, i32* @foo
+@alias = alias i32, ptr @foo
 
 ; We should arguably reject an out of comdat reference to int_alias. Given that
 ; the verifier accepts it, test that we at least produce an output that passes
 ; the verifier.
 ; CHECK-DAG: @int_alias = external global i32
-@int_alias = internal alias i32, i32* @foo
-@bar = global i32* @int_alias
+@int_alias = internal alias i32, ptr @foo
+@bar = global ptr @int_alias
 
-@func_alias = alias void (), void ()* @func
-@zed = global void()* @func_alias
-; CHECK-DAG: @zed = global void ()* @func_alias
+@func_alias = alias void (), ptr @func
+@zed = global ptr @func_alias
+; CHECK-DAG: @zed = global ptr @func_alias
 ; CHECK-DAG: declare void @func_alias()
 
 ; RM-NOT: @func()

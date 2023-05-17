@@ -55,8 +55,6 @@ namespace WrongScope {
   }
   using N::NamedNS1;
   NamedNS1(int) -> NamedNS1<int>; // expected-error {{deduction guide must be declared in the same scope as template}}
-  // FIXME: remove the following bogus diagnostic
-  // expected-error@-2{{deduction guide is not written as a specialization of template 'NamedNS1'}}
 
   using namespace N;
   NamedNS2(int) -> NamedNS2<int>; // expected-error {{deduction guide must be declared in the same scope as template}}

@@ -85,4 +85,4 @@ void testUnresolved(Foo* f) {
 // CHECK-CC8: ObjCInstanceMethodDecl:{ResultType id}{TypedText method7:}{Placeholder ^int(int x, int y)b} (35)
 
 // RUN: c-index-test -code-completion-at=%s:59:6 %s | FileCheck -check-prefix=CHECK-CC9 %s
-// CHECK-CC9: ObjCInstanceMethodDecl:{ResultType void}{TypedText foo:}{Placeholder ^int *(int)arg} (35)
+// CHECK-CC9: ObjCInstanceMethodDecl:{ResultType void}{TypedText foo:}{Placeholder ^int *(float)arg} (35)

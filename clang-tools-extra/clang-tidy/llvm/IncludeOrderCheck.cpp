@@ -10,12 +10,11 @@
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/STLExtras.h"
 
 #include <map>
 
-namespace clang {
-namespace tidy {
-namespace llvm_check {
+namespace clang::tidy::llvm_check {
 
 namespace {
 class IncludeOrderPPCallbacks : public PPCallbacks {
@@ -27,7 +26,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
@@ -81,7 +80,7 @@ static int getPriority(StringRef Filename, bool IsAngled, bool IsMainModule) {
 
 void IncludeOrderPPCallbacks::InclusionDirective(
     SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
-    bool IsAngled, CharSourceRange FilenameRange, Optional<FileEntryRef> File,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
     StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // We recognize the first include as a special main module header and want
@@ -125,20 +124,20 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
 
     // Sort the includes. We first sort by priority, then lexicographically.
     for (unsigned BI = 0, BE = Blocks.size() - 1; BI != BE; ++BI)
-      std::sort(IncludeIndices.begin() + Blocks[BI],
-                IncludeIndices.begin() + Blocks[BI + 1],
-                [&FileDirectives](unsigned LHSI, unsigned RHSI) {
-                  IncludeDirective &LHS = FileDirectives[LHSI];
-                  IncludeDirective &RHS = FileDirectives[RHSI];
+      llvm::sort(IncludeIndices.begin() + Blocks[BI],
+                 IncludeIndices.begin() + Blocks[BI + 1],
+                 [&FileDirectives](unsigned LHSI, unsigned RHSI) {
+                   IncludeDirective &LHS = FileDirectives[LHSI];
+                   IncludeDirective &RHS = FileDirectives[RHSI];
 
-                  int PriorityLHS =
-                      getPriority(LHS.Filename, LHS.IsAngled, LHS.IsMainModule);
-                  int PriorityRHS =
-                      getPriority(RHS.Filename, RHS.IsAngled, RHS.IsMainModule);
+                   int PriorityLHS = getPriority(LHS.Filename, LHS.IsAngled,
+                                                 LHS.IsMainModule);
+                   int PriorityRHS = getPriority(RHS.Filename, RHS.IsAngled,
+                                                 RHS.IsMainModule);
 
-                  return std::tie(PriorityLHS, LHS.Filename) <
-                         std::tie(PriorityRHS, RHS.Filename);
-                });
+                   return std::tie(PriorityLHS, LHS.Filename) <
+                          std::tie(PriorityRHS, RHS.Filename);
+                 });
 
     // Emit a warning for each block and fixits for all changes within that
     // block.
@@ -182,6 +181,4 @@ void IncludeOrderPPCallbacks::EndOfMainFile() {
   IncludeDirectives.clear();
 }
 
-} // namespace llvm_check
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_check

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "asan_interceptors.h"
+
 #include "asan_allocator.h"
 #include "asan_internal.h"
 #include "asan_mapping.h"
@@ -20,7 +21,9 @@
 #include "asan_stack.h"
 #include "asan_stats.h"
 #include "asan_suppressions.h"
+#include "asan_thread.h"
 #include "lsan/lsan_common.h"
+#include "sanitizer_common/sanitizer_internal_defs.h"
 #include "sanitizer_common/sanitizer_libc.h"
 
 // There is no general interception at all on Fuchsia.
@@ -234,24 +237,80 @@ INTERCEPTOR(int, pthread_create, void *thread,
   return result;
 }
 
-INTERCEPTOR(int, pthread_join, void *t, void **arg) {
-  return real_pthread_join(t, arg);
+INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
+  return REAL(pthread_join)(thread, retval);
 }
+
+INTERCEPTOR(int, pthread_detach, void *thread) {
+  return REAL(pthread_detach)(thread);
+}
+
+INTERCEPTOR(int, pthread_exit, void *retval) {
+  return REAL(pthread_exit)(retval);
+}
+
+#    if ASAN_INTERCEPT_TRYJOIN
+INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **ret) {
+  return REAL(pthread_tryjoin_np)(thread, ret);
+}
+#    endif
+
+#    if ASAN_INTERCEPT_TIMEDJOIN
+INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **ret,
+            const struct timespec *abstime) {
+  return REAL(pthread_timedjoin_np)(thread, ret, abstime);
+}
+#    endif
 
 DEFINE_REAL_PTHREAD_FUNCTIONS
 #endif  // ASAN_INTERCEPT_PTHREAD_CREATE
 
 #if ASAN_INTERCEPT_SWAPCONTEXT
 static void ClearShadowMemoryForContextStack(uptr stack, uptr ssize) {
+  // Only clear if we know the stack. This should be true only for contexts
+  // created with makecontext().
+  if (!ssize)
+    return;
   // Align to page size.
   uptr PageSize = GetPageSizeCached();
-  uptr bottom = stack & ~(PageSize - 1);
+  uptr bottom = RoundDownTo(stack, PageSize);
+  if (!AddrIsInMem(bottom))
+    return;
   ssize += stack - bottom;
   ssize = RoundUpTo(ssize, PageSize);
-  static const uptr kMaxSaneContextStackSize = 1 << 22;  // 4 Mb
-  if (AddrIsInMem(bottom) && ssize && ssize <= kMaxSaneContextStackSize) {
-    PoisonShadow(bottom, ssize, 0);
-  }
+  PoisonShadow(bottom, ssize, 0);
+}
+
+INTERCEPTOR(void, makecontext, struct ucontext_t *ucp, void (*func)(), int argc,
+            ...) {
+  va_list ap;
+  uptr args[64];
+  // We don't know a better way to forward ... into REAL function. We can
+  // increase args size if neccecary.
+  CHECK_LE(argc, ARRAY_SIZE(args));
+  internal_memset(args, 0, sizeof(args));
+  va_start(ap, argc);
+  for (int i = 0; i < argc; ++i) args[i] = va_arg(ap, uptr);
+  va_end(ap);
+
+#    define ENUMERATE_ARRAY_4(start) \
+      args[start], args[start + 1], args[start + 2], args[start + 3]
+#    define ENUMERATE_ARRAY_16(start)                         \
+      ENUMERATE_ARRAY_4(start), ENUMERATE_ARRAY_4(start + 4), \
+          ENUMERATE_ARRAY_4(start + 8), ENUMERATE_ARRAY_4(start + 12)
+#    define ENUMERATE_ARRAY_64()                                             \
+      ENUMERATE_ARRAY_16(0), ENUMERATE_ARRAY_16(16), ENUMERATE_ARRAY_16(32), \
+          ENUMERATE_ARRAY_16(48)
+
+  REAL(makecontext)
+  ((struct ucontext_t *)ucp, func, argc, ENUMERATE_ARRAY_64());
+
+#    undef ENUMERATE_ARRAY_4
+#    undef ENUMERATE_ARRAY_16
+#    undef ENUMERATE_ARRAY_64
+
+  // Sign the stack so we can identify it for unpoisoning.
+  SignContextStack(ucp);
 }
 
 INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
@@ -267,15 +326,15 @@ INTERCEPTOR(int, swapcontext, struct ucontext_t *oucp,
   uptr stack, ssize;
   ReadContextStack(ucp, &stack, &ssize);
   ClearShadowMemoryForContextStack(stack, ssize);
-#if __has_attribute(__indirect_return__) && \
-    (defined(__x86_64__) || defined(__i386__))
+
+#    if __has_attribute(__indirect_return__) && \
+        (defined(__x86_64__) || defined(__i386__))
   int (*real_swapcontext)(struct ucontext_t *, struct ucontext_t *)
-    __attribute__((__indirect_return__))
-    = REAL(swapcontext);
+      __attribute__((__indirect_return__)) = REAL(swapcontext);
   int res = real_swapcontext(oucp, ucp);
-#else
+#    else
   int res = REAL(swapcontext)(oucp, ucp);
-#endif
+#    endif
   // swapcontext technically does not return, but program may swap context to
   // "oucp" later, that would look as if swapcontext() returned 0.
   // We need to clear shadow for ucp once again, as it may be in arbitrary
@@ -439,7 +498,9 @@ INTERCEPTOR(char*, strdup, const char *s) {
   }
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
-  REAL(memcpy)(new_mem, s, length + 1);
+  if (new_mem) {
+    REAL(memcpy)(new_mem, s, length + 1);
+  }
   return reinterpret_cast<char*>(new_mem);
 }
 
@@ -455,7 +516,9 @@ INTERCEPTOR(char*, __strdup, const char *s) {
   }
   GET_STACK_TRACE_MALLOC;
   void *new_mem = asan_malloc(length + 1, &stack);
-  REAL(memcpy)(new_mem, s, length + 1);
+  if (new_mem) {
+    REAL(memcpy)(new_mem, s, length + 1);
+  }
   return reinterpret_cast<char*>(new_mem);
 }
 #endif // ASAN_INTERCEPT___STRDUP
@@ -617,6 +680,7 @@ void InitializeAsanInterceptors() {
   static bool was_called_once;
   CHECK(!was_called_once);
   was_called_once = true;
+  InitializePlatformInterceptors();
   InitializeCommonInterceptors();
   InitializeSignalInterceptors();
 
@@ -644,10 +708,11 @@ void InitializeAsanInterceptors() {
   // Intecept jump-related functions.
   ASAN_INTERCEPT_FUNC(longjmp);
 
-#if ASAN_INTERCEPT_SWAPCONTEXT
+#  if ASAN_INTERCEPT_SWAPCONTEXT
   ASAN_INTERCEPT_FUNC(swapcontext);
-#endif
-#if ASAN_INTERCEPT__LONGJMP
+  ASAN_INTERCEPT_FUNC(makecontext);
+#  endif
+#  if ASAN_INTERCEPT__LONGJMP
   ASAN_INTERCEPT_FUNC(_longjmp);
 #endif
 #if ASAN_INTERCEPT___LONGJMP_CHK
@@ -666,11 +731,11 @@ void InitializeAsanInterceptors() {
 #endif
   // Indirectly intercept std::rethrow_exception.
 #if ASAN_INTERCEPT__UNWIND_RAISEEXCEPTION
-  INTERCEPT_FUNCTION(_Unwind_RaiseException);
+  ASAN_INTERCEPT_FUNC(_Unwind_RaiseException);
 #endif
   // Indirectly intercept std::rethrow_exception.
 #if ASAN_INTERCEPT__UNWIND_SJLJ_RAISEEXCEPTION
-  INTERCEPT_FUNCTION(_Unwind_SjLj_RaiseException);
+  ASAN_INTERCEPT_FUNC(_Unwind_SjLj_RaiseException);
 #endif
 
   // Intercept threading-related functions
@@ -682,6 +747,16 @@ void InitializeAsanInterceptors() {
   ASAN_INTERCEPT_FUNC(pthread_create);
 #endif
   ASAN_INTERCEPT_FUNC(pthread_join);
+  ASAN_INTERCEPT_FUNC(pthread_detach);
+  ASAN_INTERCEPT_FUNC(pthread_exit);
+#  endif
+
+#  if ASAN_INTERCEPT_TIMEDJOIN
+  ASAN_INTERCEPT_FUNC(pthread_timedjoin_np);
+#endif
+
+#if ASAN_INTERCEPT_TRYJOIN
+  ASAN_INTERCEPT_FUNC(pthread_tryjoin_np);
 #endif
 
   // Intercept atexit function.
@@ -700,8 +775,6 @@ void InitializeAsanInterceptors() {
 #if ASAN_INTERCEPT_VFORK
   ASAN_INTERCEPT_FUNC(vfork);
 #endif
-
-  InitializePlatformInterceptors();
 
   VReport(1, "AddressSanitizer: libc interceptors initialized\n");
 }

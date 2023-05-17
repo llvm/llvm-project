@@ -25,12 +25,12 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState_Fwd.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -139,7 +139,7 @@ bool ExplodedGraph::shouldCollect(const ExplodedNode *node) {
 
   // Condition 10.
   const ProgramPoint SuccLoc = succ->getLocation();
-  if (Optional<StmtPoint> SP = SuccLoc.getAs<StmtPoint>())
+  if (std::optional<StmtPoint> SP = SuccLoc.getAs<StmtPoint>())
     if (CallEvent::isCallStmt(SP->getStmt()))
       return false;
 
@@ -488,7 +488,7 @@ ExplodedGraph::trim(ArrayRef<const NodeTy *> Sinks,
     const ExplodedNode *N = WL2.pop_back_val();
 
     // Skip this node if we have already processed it.
-    if (Pass2.find(N) != Pass2.end())
+    if (Pass2.contains(N))
       continue;
 
     // Create the corresponding node in the new graph and record the mapping

@@ -27,29 +27,29 @@ int main(int, char**)
         assert(std::stod("-10") == -10);
         assert(std::stod(" 10") == 10);
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::stod("10g", &idx) == 10);
             assert(idx == 2);
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::stod("1.e60", &idx) == 1.e60);
             assert(idx == 5);
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::stod("INF", &idx) == INFINITY);
             assert(idx == 3);
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::isnan(std::stod("NAN", &idx)));
             assert(idx == 3);
         }
 
 #ifndef TEST_HAS_NO_EXCEPTIONS
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
                 assert(std::stod("1.e360", &idx) == INFINITY);
                 assert(false);
@@ -58,27 +58,27 @@ int main(int, char**)
             }
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
-                std::stod("", &idx);
+                (void)std::stod("", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
             }
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
-                std::stod("  - 8", &idx);
+                (void)std::stod("  - 8", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
             }
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
-                std::stod("a1", &idx);
+                (void)std::stod("a1", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
@@ -95,28 +95,28 @@ int main(int, char**)
         assert(std::stod(L"-10.5") == -10.5);
         assert(std::stod(L" 10") == 10);
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::stod(L"10g", &idx) == 10);
             assert(idx == 2);
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::stod(L"1.e60", &idx) == 1.e60);
             assert(idx == 5);
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::stod(L"INF", &idx) == INFINITY);
             assert(idx == 3);
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             assert(std::isnan(std::stod(L"NAN", &idx)));
             assert(idx == 3);
         }
 #ifndef TEST_HAS_NO_EXCEPTIONS
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
                 assert(std::stod(L"1.e360", &idx) == INFINITY);
                 assert(false);
@@ -125,27 +125,27 @@ int main(int, char**)
             }
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
-                std::stod(L"", &idx);
+                (void)std::stod(L"", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
             }
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
-                std::stod(L"  - 8", &idx);
+                (void)std::stod(L"  - 8", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);
             }
         }
         {
-            size_t idx = 0;
+            std::size_t idx = 0;
             try {
-                std::stod(L"a1", &idx);
+                (void)std::stod(L"a1", &idx);
                 assert(false);
             } catch (const std::invalid_argument&) {
                 assert(idx == 0);

@@ -9,8 +9,7 @@ add_subdirectory(mlir-translate)
 add_subdirectory(mlir-vulkan-runner)
 add_subdirectory(tblgen-lsp-server)
 
-# mlir-cpu-runner requires ExecutionEngine which is only built
-# when the native target is configured in.
-if(TARGET ${LLVM_NATIVE_ARCH})
+# mlir-cpu-runner requires ExecutionEngine.
+if(MLIR_ENABLE_EXECUTION_ENGINE)
   add_subdirectory(mlir-cpu-runner)
 endif()

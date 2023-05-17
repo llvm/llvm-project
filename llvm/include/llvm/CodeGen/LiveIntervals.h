@@ -39,7 +39,6 @@ namespace llvm {
 
 extern cl::opt<bool> UseSegmentSetForPhysRegs;
 
-class AAResults;
 class BitVector;
 class LiveIntervalCalc;
 class MachineBlockFrequencyInfo;
@@ -52,12 +51,11 @@ class TargetInstrInfo;
 class VirtRegMap;
 
   class LiveIntervals : public MachineFunctionPass {
-    MachineFunction* MF;
-    MachineRegisterInfo* MRI;
-    const TargetRegisterInfo* TRI;
-    const TargetInstrInfo* TII;
-    AAResults *AA;
-    SlotIndexes* Indexes;
+    MachineFunction *MF = nullptr;
+    MachineRegisterInfo *MRI = nullptr;
+    const TargetRegisterInfo *TRI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    SlotIndexes *Indexes = nullptr;
     MachineDominatorTree *DomTree = nullptr;
     LiveIntervalCalc *LICalc = nullptr;
 
@@ -210,10 +208,6 @@ class VirtRegMap;
 
     SlotIndexes *getSlotIndexes() const {
       return Indexes;
-    }
-
-    AAResults *getAliasAnalysis() const {
-      return AA;
     }
 
     /// Returns true if the specified machine instr has been removed or was

@@ -7,6 +7,8 @@ declare <2 x float> @llvm.fabs.v2f32(<2 x float>)
 declare double @llvm.copysign.f64(double, double)
 declare <2 x double> @llvm.copysign.v2f64(<2 x double>, <2 x double>)
 
+declare void @use(float)
+
 define i1 @fpext_fpext(float %x, float %y) {
 ; CHECK-LABEL: @fpext_fpext(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp nnan ogt float [[X:%.*]], [[Y:%.*]]
@@ -437,7 +439,7 @@ define <2 x i1> @fabs_uno(<2 x float> %a) {
 }
 
 ; Don't crash.
-define i32 @test17(double %a, double (double)* %p) {
+define i32 @test17(double %a, ptr %p) {
 ; CHECK-LABEL: @test17(
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call double [[P:%.*]](double [[A:%.*]])
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ueq double [[CALL]], 0.000000e+00
@@ -686,15 +688,15 @@ define i1 @is_signbit_clear_3(double %x) {
 
 ; Negative test - uses
 
-define i1 @is_signbit_set_extra_use(double %x, double* %p) {
+define i1 @is_signbit_set_extra_use(double %x, ptr %p) {
 ; CHECK-LABEL: @is_signbit_set_extra_use(
 ; CHECK-NEXT:    [[S:%.*]] = call double @llvm.copysign.f64(double 1.000000e+00, double [[X:%.*]])
-; CHECK-NEXT:    store double [[S]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[S]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp olt double [[S]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %s = call double @llvm.copysign.f64(double 1.0, double %x)
-  store double %s, double* %p
+  store double %s, ptr %p
   %r = fcmp olt double %s, 0.0
   ret i1 %r
 }
@@ -747,15 +749,15 @@ define <2 x i1> @lossy_oeq(<2 x float> %x) {
   ret <2 x i1> %r
 }
 
-define i1 @lossy_one(float %x, double* %p) {
+define i1 @lossy_one(float %x, ptr %p) {
 ; CHECK-LABEL: @lossy_one(
 ; CHECK-NEXT:    [[E:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    store double [[E]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[E]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp ord float [[X]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext float %x to double
-  store double %e, double* %p
+  store double %e, ptr %p
   %r = fcmp one double %e, 0.1
   ret i1 %r
 }
@@ -790,15 +792,15 @@ define <2 x i1> @lossy_ogt(<2 x float> %x) {
   ret <2 x i1> %r
 }
 
-define i1 @lossy_oge(float %x, double* %p) {
+define i1 @lossy_oge(float %x, ptr %p) {
 ; CHECK-LABEL: @lossy_oge(
 ; CHECK-NEXT:    [[E:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    store double [[E]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[E]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp oge double [[E]], 1.000000e-01
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext float %x to double
-  store double %e, double* %p
+  store double %e, ptr %p
   %r = fcmp oge double %e, 0.1
   ret i1 %r
 }
@@ -836,15 +838,15 @@ define <2 x i1> @lossy_ugt(<2 x float> %x) {
   ret <2 x i1> %r
 }
 
-define i1 @lossy_uge(float %x, double* %p) {
+define i1 @lossy_uge(float %x, ptr %p) {
 ; CHECK-LABEL: @lossy_uge(
 ; CHECK-NEXT:    [[E:%.*]] = fpext float [[X:%.*]] to double
-; CHECK-NEXT:    store double [[E]], double* [[P:%.*]], align 8
+; CHECK-NEXT:    store double [[E]], ptr [[P:%.*]], align 8
 ; CHECK-NEXT:    [[R:%.*]] = fcmp uge double [[E]], 1.000000e-01
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %e = fpext float %x to double
-  store double %e, double* %p
+  store double %e, ptr %p
   %r = fcmp uge double %e, 0.1
   ret i1 %r
 }
@@ -921,15 +923,15 @@ define <2 x i1> @fneg_oge(<2 x float> %a) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_olt(float %a, float* %q) {
+define i1 @fneg_olt(float %a, ptr %q) {
 ; CHECK-LABEL: @fneg_olt(
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ogt float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp olt float %fneg, %a
   ret i1 %cmp
 }
@@ -994,15 +996,15 @@ define <2 x i1> @fneg_ugt(<2 x float> %a) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_uge(float %a, float* %q) {
+define i1 @fneg_uge(float %a, ptr %q) {
 ; CHECK-LABEL: @fneg_uge(
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A:%.*]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp ule float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp uge float %fneg, %a
   ret i1 %cmp
 }
@@ -1073,17 +1075,17 @@ define <2 x i1> @fneg_oge_swap(<2 x float> %p) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_olt_swap(float %p, float* %q) {
+define i1 @fneg_olt_swap(float %p, ptr %q) {
 ; CHECK-LABEL: @fneg_olt_swap(
 ; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = fadd float %p, %p ; thwart complexity-based canonicalization
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp olt float %a, %fneg
   ret i1 %cmp
 }
@@ -1160,17 +1162,17 @@ define <2 x i1> @fneg_ugt_swap(<2 x float> %p) {
   ret <2 x i1> %cmp
 }
 
-define i1 @fneg_uge_swap(float %p, float* %q) {
+define i1 @fneg_uge_swap(float %p, ptr %q) {
 ; CHECK-LABEL: @fneg_uge_swap(
 ; CHECK-NEXT:    [[A:%.*]] = fadd float [[P:%.*]], [[P]]
 ; CHECK-NEXT:    [[FNEG:%.*]] = fneg float [[A]]
-; CHECK-NEXT:    store float [[FNEG]], float* [[Q:%.*]], align 4
+; CHECK-NEXT:    store float [[FNEG]], ptr [[Q:%.*]], align 4
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp uge float [[A]], 0.000000e+00
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %a = fadd float %p, %p ; thwart complexity-based canonicalization
   %fneg = fneg float %a
-  store float %fneg, float* %q
+  store float %fneg, ptr %q
   %cmp = fcmp uge float %a, %fneg
   ret i1 %cmp
 }
@@ -1209,4 +1211,80 @@ define i1 @fneg_une_swap(float %p) {
   %fneg = fneg float %a
   %cmp = fcmp ninf une float %a, %fneg
   ret i1 %cmp
+}
+
+define i1 @bitcast_eq0(i32 %x) {
+; CHECK-LABEL: @bitcast_eq0(
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+define <2 x i1> @bitcast_ne0(<2 x i32> %x) {
+; CHECK-LABEL: @bitcast_ne0(
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[X:%.*]], <i32 2147483647, i32 2147483647>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
+; CHECK-NEXT:    ret <2 x i1> [[R]]
+;
+  %f = bitcast <2 x i32> %x to <2 x float>
+  %r = fcmp une <2 x float> %f, <float 0.0, float 0.0>
+  ret <2 x i1> %r
+}
+
+; negative test - extra use
+
+define i1 @bitcast_eq0_use(i32 %x) {
+; CHECK-LABEL: @bitcast_eq0_use(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    call void @use(float [[F]])
+; CHECK-NEXT:    [[R:%.*]] = fcmp oeq float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  call void @use(float %f)
+  %r = fcmp oeq float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - this could be transformed, but requires a new bitcast
+
+define i1 @bitcast_nonint_eq0(<2 x i16> %x) {
+; CHECK-LABEL: @bitcast_nonint_eq0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast <2 x i16> [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast <2 x i16> %x to float
+  %r = fcmp ogt float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - wrong predicate
+
+define i1 @bitcast_gt0(i32 %x) {
+; CHECK-LABEL: @bitcast_gt0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to float
+; CHECK-NEXT:    [[R:%.*]] = fcmp ogt float [[F]], 0.000000e+00
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %f = bitcast i32 %x to float
+  %r = fcmp ogt float %f, 0.0
+  ret i1 %r
+}
+
+; negative test - this could be transformed, but requires a new bitcast
+
+define <1 x i1> @bitcast_1vec_eq0(i32 %x) {
+; CHECK-LABEL: @bitcast_1vec_eq0(
+; CHECK-NEXT:    [[F:%.*]] = bitcast i32 [[X:%.*]] to <1 x float>
+; CHECK-NEXT:    [[CMP:%.*]] = fcmp oeq <1 x float> [[F]], zeroinitializer
+; CHECK-NEXT:    ret <1 x i1> [[CMP]]
+;
+  %f = bitcast i32 %x to <1 x float>
+  %cmp = fcmp oeq <1 x float> %f, zeroinitializer
+  ret <1 x i1> %cmp
 }

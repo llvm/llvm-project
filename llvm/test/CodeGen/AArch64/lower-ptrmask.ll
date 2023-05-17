@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple=arm64-apple-iphoneos -stop-after=finalize-isel %s -o - | FileCheck %s
 
-declare i8* @llvm.ptrmask.p0i8.i64(i8* , i64)
+declare ptr @llvm.ptrmask.p0.i64(ptr , i64)
 
 ; CHECK-LABEL: name: test1
 ; CHECK:         %0:gpr64 = COPY $x0
@@ -8,12 +8,12 @@ declare i8* @llvm.ptrmask.p0i8.i64(i8* , i64)
 ; CHECK-NEXT:    $x0 = COPY %1
 ; CHECK-NEXT:    RET_ReallyLR implicit $x0
 
-define i8* @test1(i8* %src) {
-  %ptr = call i8* @llvm.ptrmask.p0i8.i64(i8* %src, i64 72057594037927928)
-  ret i8* %ptr
+define ptr @test1(ptr %src) {
+  %ptr = call ptr @llvm.ptrmask.p0.i64(ptr %src, i64 72057594037927928)
+  ret ptr %ptr
 }
 
-declare i8* @llvm.ptrmask.p0i8.i32(i8*, i32)
+declare ptr @llvm.ptrmask.p0.i32(ptr, i32)
 
 ; CHECK-LABEL: name: test2
 ; CHECK:         %0:gpr64 = COPY $x0
@@ -23,7 +23,7 @@ declare i8* @llvm.ptrmask.p0i8.i32(i8*, i32)
 ; CHECK-NEXT:    $x0 = COPY %3
 ; CHECK-NEXT:    RET_ReallyLR implicit $x0
 
-define i8* @test2(i8* %src) {
-  %ptr = call i8* @llvm.ptrmask.p0i8.i32(i8* %src, i32 10000)
-  ret i8* %ptr
+define ptr @test2(ptr %src) {
+  %ptr = call ptr @llvm.ptrmask.p0.i32(ptr %src, i32 10000)
+  ret ptr %ptr
 }

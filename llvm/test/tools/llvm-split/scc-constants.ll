@@ -24,15 +24,15 @@
 
 define internal i32 @foo() {
 entry:
-  store i64 5, i64* getelementptr inbounds (%struct.anon, %struct.anon* @bla, i32 0, i32 0), align 8
-  store i32 -1, i32* bitcast (i64* getelementptr inbounds (%struct.anon, %struct.anon* @bla2, i32 0, i32 1) to i32*), align 8
+  store i64 5, ptr @bla, align 8
+  store i32 -1, ptr getelementptr inbounds (%struct.anon, ptr @bla2, i32 0, i32 1), align 8
   ret i32 0
 }
 
 define internal i32 @baz() {
 entry:
-  store i64 5, i64* getelementptr inbounds (%struct.anon, %struct.anon* @bla, i32 0, i32 0), align 8
-  store i32 -1, i32* bitcast (i64* getelementptr inbounds (%struct.anon, %struct.anon* @bla2, i32 0, i32 1) to i32*), align 8
+  store i64 5, ptr @bla, align 8
+  store i32 -1, ptr getelementptr inbounds (%struct.anon, ptr @bla2, i32 0, i32 1), align 8
   ret i32 0
 }
 

@@ -1,107 +1,107 @@
-; RUN: opt -objc-arc -S < %s | FileCheck %s
+; RUN: opt -passes=objc-arc -S < %s | FileCheck %s
 
-declare void @llvm.objc.release(i8* %x)
-declare i8* @llvm.objc.retain(i8* %x)
-declare i8* @llvm.objc.autorelease(i8* %x)
-declare i8* @llvm.objc.autoreleaseReturnValue(i8* %x)
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %x)
-declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %x)
-declare i8* @tmp(i8*)
+declare void @llvm.objc.release(ptr %x)
+declare ptr @llvm.objc.retain(ptr %x)
+declare ptr @llvm.objc.autorelease(ptr %x)
+declare ptr @llvm.objc.autoreleaseReturnValue(ptr %x)
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %x)
+declare ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr %x)
+declare ptr @tmp(ptr)
 
 ; Never tail call objc_autorelease.
 
-; CHECK: define i8* @test0(i8* %x) [[NUW:#[0-9]+]] {
-; CHECK: %tmp0 = call i8* @llvm.objc.autorelease(i8* %x) [[NUW]]
-; CHECK: %tmp1 = call i8* @llvm.objc.autorelease(i8* %x) [[NUW]]
+; CHECK: define ptr @test0(ptr %x) [[NUW:#[0-9]+]] {
+; CHECK: %tmp0 = call ptr @llvm.objc.autorelease(ptr %x) [[NUW]]
+; CHECK: %tmp1 = call ptr @llvm.objc.autorelease(ptr %x) [[NUW]]
 ; CHECK: }
-define i8* @test0(i8* %x) nounwind {
+define ptr @test0(ptr %x) nounwind {
 entry:
-  %tmp0 = call i8* @llvm.objc.autorelease(i8* %x)
-  %tmp1 = tail call i8* @llvm.objc.autorelease(i8* %x)
+  %tmp0 = call ptr @llvm.objc.autorelease(ptr %x)
+  %tmp1 = tail call ptr @llvm.objc.autorelease(ptr %x)
 
-  ret i8* %x
+  ret ptr %x
 }
 
 ; Always tail call autoreleaseReturnValue.
 
-; CHECK: define i8* @test1(i8* %x) [[NUW]] {
-; CHECK: %tmp0 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %x) [[NUW]]
-; CHECK: %tmp1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %x) [[NUW]]
+; CHECK: define ptr @test1(ptr %x) [[NUW]] {
+; CHECK: %tmp0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %x) [[NUW]]
+; CHECK: %tmp1 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %x) [[NUW]]
 ; CHECK: }
-define i8* @test1(i8* %x) nounwind {
+define ptr @test1(ptr %x) nounwind {
 entry:
-  %tmp0 = call i8* @llvm.objc.autoreleaseReturnValue(i8* %x)
-  %tmp1 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %x)
-  ret i8* %x
+  %tmp0 = call ptr @llvm.objc.autoreleaseReturnValue(ptr %x)
+  %tmp1 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %x)
+  ret ptr %x
 }
 
 ; Always tail call objc_retain.
 
-; CHECK: define i8* @test2(i8* %x) [[NUW]] {
-; CHECK: %tmp0 = tail call i8* @llvm.objc.retain(i8* %x) [[NUW]]
-; CHECK: %tmp1 = tail call i8* @llvm.objc.retain(i8* %x) [[NUW]]
+; CHECK: define ptr @test2(ptr %x) [[NUW]] {
+; CHECK: %tmp0 = tail call ptr @llvm.objc.retain(ptr %x) [[NUW]]
+; CHECK: %tmp1 = tail call ptr @llvm.objc.retain(ptr %x) [[NUW]]
 ; CHECK: }
-define i8* @test2(i8* %x) nounwind {
+define ptr @test2(ptr %x) nounwind {
 entry:
-  %tmp0 = call i8* @llvm.objc.retain(i8* %x)
-  %tmp1 = tail call i8* @llvm.objc.retain(i8* %x)
-  ret i8* %x
+  %tmp0 = call ptr @llvm.objc.retain(ptr %x)
+  %tmp1 = tail call ptr @llvm.objc.retain(ptr %x)
+  ret ptr %x
 }
 
 ; Always tail call objc_retainAutoreleasedReturnValue unless it's annotated with
 ; notail.
-; CHECK: define i8* @test3(i8* %x) [[NUW]] {
-; CHECK: %tmp0 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %y) [[NUW]]
-; CHECK: %tmp1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z) [[NUW]]
-; CHECK: %tmp2 = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z2) [[NUW]]
+; CHECK: define ptr @test3(ptr %x) [[NUW]] {
+; CHECK: %tmp0 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %y) [[NUW]]
+; CHECK: %tmp1 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %z) [[NUW]]
+; CHECK: %tmp2 = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %z2) [[NUW]]
 ; CHECK: }
-define i8* @test3(i8* %x) nounwind {
+define ptr @test3(ptr %x) nounwind {
 entry:
-  %y = call i8* @tmp(i8* %x)
-  %tmp0 = call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %y)
-  %z = call i8* @tmp(i8* %x)
-  %tmp1 = tail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z)
-  %z2 = call i8* @tmp(i8* %x)
-  %tmp2 = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %z2)
-  ret i8* %x
+  %y = call ptr @tmp(ptr %x)
+  %tmp0 = call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %y)
+  %z = call ptr @tmp(ptr %x)
+  %tmp1 = tail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %z)
+  %z2 = call ptr @tmp(ptr %x)
+  %tmp2 = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %z2)
+  ret ptr %x
 }
 
 ; By itself, we should never change whether or not objc_release is tail called.
 
-; CHECK: define void @test4(i8* %x) [[NUW]] {
-; CHECK: call void @llvm.objc.release(i8* %x) [[NUW]]
-; CHECK: tail call void @llvm.objc.release(i8* %x) [[NUW]]
+; CHECK: define void @test4(ptr %x) [[NUW]] {
+; CHECK: call void @llvm.objc.release(ptr %x) [[NUW]]
+; CHECK: tail call void @llvm.objc.release(ptr %x) [[NUW]]
 ; CHECK: }
-define void @test4(i8* %x) nounwind {
+define void @test4(ptr %x) nounwind {
 entry:
-  call void @llvm.objc.release(i8* %x)
-  tail call void @llvm.objc.release(i8* %x)
+  call void @llvm.objc.release(ptr %x)
+  tail call void @llvm.objc.release(ptr %x)
   ret void
 }
 
 ; If we convert a tail called @llvm.objc.autoreleaseReturnValue to an
 ; @llvm.objc.autorelease, ensure that the tail call is removed.
-; CHECK: define i8* @test5(i8* %x) [[NUW]] {
-; CHECK: %tmp0 = call i8* @llvm.objc.autorelease(i8* %x) [[NUW]]
+; CHECK: define ptr @test5(ptr %x) [[NUW]] {
+; CHECK: %tmp0 = call ptr @llvm.objc.autorelease(ptr %x) [[NUW]]
 ; CHECK: }
-define i8* @test5(i8* %x) nounwind {
+define ptr @test5(ptr %x) nounwind {
 entry:
-  %tmp0 = tail call i8* @llvm.objc.autoreleaseReturnValue(i8* %x)
-  ret i8* %tmp0
+  %tmp0 = tail call ptr @llvm.objc.autoreleaseReturnValue(ptr %x)
+  ret ptr %tmp0
 }
 
 ; Always tail call llvm.objc.unsafeClaimAutoreleasedReturnValue.
-; CHECK: define i8* @test6(i8* %x) [[NUW]] {
-; CHECK: %tmp0 = tail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %y) [[NUW]]
-; CHECK: %tmp1 = tail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %z) [[NUW]]
+; CHECK: define ptr @test6(ptr %x) [[NUW]] {
+; CHECK: %tmp0 = tail call ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr %y) [[NUW]]
+; CHECK: %tmp1 = tail call ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr %z) [[NUW]]
 ; CHECK: }
-define i8* @test6(i8* %x) nounwind {
+define ptr @test6(ptr %x) nounwind {
 entry:
-  %y = call i8* @tmp(i8* %x)
-  %tmp0 = call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %y)
-  %z = call i8* @tmp(i8* %x)
-  %tmp1 = tail call i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8* %z)
-  ret i8* %x
+  %y = call ptr @tmp(ptr %x)
+  %tmp0 = call ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr %y)
+  %z = call ptr @tmp(ptr %x)
+  %tmp1 = tail call ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr %z)
+  ret ptr %x
 }
 
 ; CHECK: attributes [[NUW]] = { nounwind }

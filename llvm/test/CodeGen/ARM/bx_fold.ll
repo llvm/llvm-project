@@ -1,13 +1,13 @@
 ; RUN: llc < %s -mtriple=armv5t-apple-darwin | FileCheck %s
 
-define void @test(i32 %Ptr, i8* %L) {
+define void @test(i32 %Ptr, ptr %L) {
 entry:
 	br label %bb1
 
 bb:		; preds = %bb1
 	%gep.upgrd.1 = zext i32 %indvar to i64		; <i64> [#uses=1]
-	%tmp7 = getelementptr i8, i8* %L, i64 %gep.upgrd.1		; <i8*> [#uses=1]
-	store i8 0, i8* %tmp7
+	%tmp7 = getelementptr i8, ptr %L, i64 %gep.upgrd.1		; <ptr> [#uses=1]
+	store i8 0, ptr %tmp7
 	%indvar.next = add i32 %indvar, 1		; <i32> [#uses=1]
 	br label %bb1
 

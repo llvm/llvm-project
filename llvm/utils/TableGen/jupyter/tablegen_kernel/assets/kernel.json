@@ -1,0 +1,14 @@
+{
+    "argv": [
+        "python3", "-m", "tablegen_kernel", "-f", "{connection_file}"
+    ],
+    "display_name": "LLVM TableGen",
+    "language": "tablegen",
+    "language_info": {
+        "name": "tablegen",
+        "codemirror_mode": "tablegen",
+        "mimetype": "text/x-tablegen",
+        "file_extension": ".td",
+        "pygments_lexer": "text"
+    }
+}

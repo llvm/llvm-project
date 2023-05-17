@@ -23,6 +23,7 @@
 #include "llvm/IR/PassTimingInfo.h"
 #include "llvm/IR/ValueHandle.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Transforms/IPO/SampleProfileProbe.h"
 
 #include <string>
@@ -73,9 +74,12 @@ private:
   bool shouldRun(StringRef PassID, Any IR);
 };
 
-class OptBisectInstrumentation {
+class OptPassGateInstrumentation {
+  LLVMContext &Context;
+  bool HasWrittenIR = false;
 public:
-  OptBisectInstrumentation() = default;
+  OptPassGateInstrumentation(LLVMContext &Context) : Context(Context) {}
+  bool shouldRun(StringRef PassName, Any IR);
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
 };
 
@@ -123,7 +127,7 @@ public:
   // in the Graph (BBGuard). That is if any of the block is deleted or RAUWed
   // then the CFG is treated poisoned and no block pointer of the Graph is used.
   struct CFG {
-    Optional<DenseMap<intptr_t, BBGuard>> BBGuards;
+    std::optional<DenseMap<intptr_t, BBGuard>> BBGuards;
     DenseMap<const BasicBlock *, DenseMap<const BasicBlock *, unsigned>> Graph;
 
     CFG(const Function *F, bool TrackBBLifetime);
@@ -133,9 +137,9 @@ public:
     }
 
     bool isPoisoned() const {
-      return BBGuards &&
-             std::any_of(BBGuards->begin(), BBGuards->end(),
-                         [](const auto &BB) { return BB.second.isPoisoned(); });
+      return BBGuards && llvm::any_of(*BBGuards, [](const auto &BB) {
+               return BB.second.isPoisoned();
+             });
     }
 
     static void printDiff(raw_ostream &out, const CFG &Before,
@@ -148,9 +152,8 @@ public:
   SmallVector<StringRef, 8> PassStack;
 #endif
 
-  static cl::opt<bool> VerifyPreservedCFG;
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         FunctionAnalysisManager &FAM);
+                         ModuleAnalysisManager &MAM);
 };
 
 // Base class for classes that report changes to the IR.
@@ -177,9 +180,9 @@ public:
 
   // Determine if this pass/IR is interesting and if so, save the IR
   // otherwise it is left on the stack without data.
-  void saveIRBeforePass(Any IR, StringRef PassID);
+  void saveIRBeforePass(Any IR, StringRef PassID, StringRef PassName);
   // Compare the IR from before the pass after the pass.
-  void handleIRAfterPass(Any IR, StringRef PassID);
+  void handleIRAfterPass(Any IR, StringRef PassID, StringRef PassName);
   // Handle the situation where a pass is invalidated.
   void handleInvalidatedPass(StringRef PassID);
 
@@ -253,6 +256,32 @@ protected:
   void generateIRRepresentation(Any IR, StringRef PassID,
                                 std::string &Output) override;
   // Called when an interesting IR has changed.
+  void handleAfter(StringRef PassID, std::string &Name,
+                   const std::string &Before, const std::string &After,
+                   Any) override;
+};
+
+class IRChangedTester : public IRChangedPrinter {
+public:
+  IRChangedTester() : IRChangedPrinter(true) {}
+  ~IRChangedTester() override;
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+protected:
+  void handleIR(const std::string &IR, StringRef PassID);
+
+  // Check initial IR
+  void handleInitialIR(Any IR) override;
+  // Do nothing.
+  void omitAfter(StringRef PassID, std::string &Name) override;
+  // Do nothing.
+  void handleInvalidated(StringRef PassID) override;
+  // Do nothing.
+  void handleFiltered(StringRef PassID, std::string &Name) override;
+  // Do nothing.
+  void handleIgnored(StringRef PassID, std::string &Name) override;
+
+  // Call test as interesting IR has changed.
   void handleAfter(StringRef PassID, std::string &Name,
                    const std::string &Before, const std::string &After,
                    Any) override;
@@ -381,13 +410,13 @@ public:
 
 protected:
   // Create a representation of the IR.
-  virtual void generateIRRepresentation(Any IR, StringRef PassID,
-                                        IRDataT<EmptyData> &Output) override;
+  void generateIRRepresentation(Any IR, StringRef PassID,
+                                IRDataT<EmptyData> &Output) override;
 
   // Called when an interesting IR has changed.
-  virtual void handleAfter(StringRef PassID, std::string &Name,
-                           const IRDataT<EmptyData> &Before,
-                           const IRDataT<EmptyData> &After, Any) override;
+  void handleAfter(StringRef PassID, std::string &Name,
+                   const IRDataT<EmptyData> &Before,
+                   const IRDataT<EmptyData> &After, Any) override;
 
   void handleFunctionCompare(StringRef Name, StringRef Prefix, StringRef PassID,
                              StringRef Divider, bool InModule, unsigned Minor,
@@ -403,6 +432,24 @@ class VerifyInstrumentation {
 public:
   VerifyInstrumentation(bool DebugLogging) : DebugLogging(DebugLogging) {}
   void registerCallbacks(PassInstrumentationCallbacks &PIC);
+};
+
+/// This class implements --time-trace functionality for new pass manager.
+/// It provides the pass-instrumentation callbacks that measure the pass
+/// execution time. They collect time tracing info by TimeProfiler.
+class TimeProfilingPassesHandler {
+public:
+  TimeProfilingPassesHandler();
+  // We intend this to be unique per-compilation, thus no copies.
+  TimeProfilingPassesHandler(const TimeProfilingPassesHandler &) = delete;
+  void operator=(const TimeProfilingPassesHandler &) = delete;
+
+  void registerCallbacks(PassInstrumentationCallbacks &PIC);
+
+private:
+  // Implementation of pass instrumentation callbacks.
+  void runBeforePass(StringRef PassID, Any IR);
+  void runAfterPass();
 };
 
 // Class that holds transitions between basic blocks.  The transitions
@@ -505,26 +552,29 @@ class StandardInstrumentations {
   PrintIRInstrumentation PrintIR;
   PrintPassInstrumentation PrintPass;
   TimePassesHandler TimePasses;
+  TimeProfilingPassesHandler TimeProfilingPasses;
   OptNoneInstrumentation OptNone;
-  OptBisectInstrumentation OptBisect;
+  OptPassGateInstrumentation OptPassGate;
   PreservedCFGCheckerInstrumentation PreservedCFGChecker;
   IRChangedPrinter PrintChangedIR;
   PseudoProbeVerifier PseudoProbeVerification;
   InLineChangePrinter PrintChangedDiff;
   DotCfgChangeReporter WebsiteChangeReporter;
   PrintCrashIRInstrumentation PrintCrashIR;
+  IRChangedTester ChangeTester;
   VerifyInstrumentation Verify;
 
   bool VerifyEach;
 
 public:
-  StandardInstrumentations(bool DebugLogging, bool VerifyEach = false,
+  StandardInstrumentations(LLVMContext &Context, bool DebugLogging,
+                           bool VerifyEach = false,
                            PrintPassOptions PrintPassOpts = PrintPassOptions());
 
   // Register all the standard instrumentation callbacks. If \p FAM is nullptr
   // then PreservedCFGChecker is not enabled.
   void registerCallbacks(PassInstrumentationCallbacks &PIC,
-                         FunctionAnalysisManager *FAM = nullptr);
+                         ModuleAnalysisManager *MAM = nullptr);
 
   TimePassesHandler &getTimePasses() { return TimePasses; }
 };

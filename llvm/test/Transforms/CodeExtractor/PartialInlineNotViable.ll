@@ -1,11 +1,11 @@
-; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck %s
+; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -S | FileCheck %s
 ;
 
 define i32 @callee_indr_branch(i32 %v) {
 entry:
   %cmp = icmp sgt i32 %v, 2000
-  %addr = select i1 %cmp, i8* blockaddress(@callee_indr_branch, %if.then), i8* blockaddress(@callee_indr_branch, %if.end)
-  indirectbr i8* %addr, [ label %if.then, label %if.end]
+  %addr = select i1 %cmp, ptr blockaddress(@callee_indr_branch, %if.then), ptr blockaddress(@callee_indr_branch, %if.end)
+  indirectbr ptr %addr, [ label %if.then, label %if.end]
 
 if.then:                                          ; preds = %entry
   %mul = mul nsw i32 %v, 10
@@ -21,17 +21,17 @@ if.end:                                           ; preds = %if.then, %entry
   ret i32 %add
 }
 
-declare void @use_fp(i8 *)
+declare void @use_fp(ptr)
 declare void @llvm.localescape(...)
-declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.localrecover(i8*, i8*, i32)
+declare ptr @llvm.frameaddress(i32)
+declare ptr @llvm.localrecover(ptr, ptr, i32)
 
 
 
 define i32 @callee_frameescape(i32 %v) {
 entry:
   %a = alloca i32
-  call void (...) @llvm.localescape(i32* %a)
+  call void (...) @llvm.localescape(ptr %a)
   %cmp = icmp sgt i32 %v, 2000
   br i1 %cmp, label %if.then, label %if.end
 

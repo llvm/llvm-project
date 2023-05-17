@@ -1,12 +1,12 @@
-;; RUN: opt -S < %s -indvars | FileCheck %s
+;; RUN: opt -S < %s -passes=indvars | FileCheck %s
 
 ;; Check if IndVarSimplify understands !range metadata.
 
 declare void @abort()
 
-define i1 @iterate(i32* nocapture readonly %buffer) {
+define i1 @iterate(ptr nocapture readonly %buffer) {
 entry:
-  %length = load i32, i32* %buffer, !range !0
+  %length = load i32, ptr %buffer, !range !0
   br label %loop.preheader
 
 loop.preheader:

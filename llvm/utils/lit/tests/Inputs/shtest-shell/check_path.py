@@ -15,10 +15,10 @@ def check_path(argv):
     paths = argv[2:]
     exit_code = 0
 
-    if type == 'dir':
+    if type == "dir":
         for idx, dir in enumerate(paths):
             print(os.path.isdir(dir))
-    elif type == 'file':
+    elif type == "file":
         for idx, file in enumerate(paths):
             print(os.path.isfile(file))
     else:
@@ -26,5 +26,6 @@ def check_path(argv):
         exit_code = 1
     return exit_code
 
-if __name__ == '__main__':
-    sys.exit (check_path (sys.argv))
+
+if __name__ == "__main__":
+    sys.exit(check_path(sys.argv))

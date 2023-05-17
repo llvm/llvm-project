@@ -11,22 +11,51 @@
 #ifndef FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
 #define FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_
 
+#include "emit-encoded.h"
 #include "format.h"
 #include "io-stmt.h"
+#include "memory.h"
 #include "flang/Common/format.h"
 #include "flang/Decimal/decimal.h"
 #include "flang/Runtime/main.h"
 #include <algorithm>
+#include <cstring>
 #include <limits>
 
 namespace Fortran::runtime::io {
 
 template <typename CONTEXT>
 FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
-    const CharType *format, std::size_t formatLength, int maxHeight)
+    const CharType *format, std::size_t formatLength,
+    const Descriptor *formatDescriptor, int maxHeight)
     : maxHeight_{static_cast<std::uint8_t>(maxHeight)}, format_{format},
       formatLength_{static_cast<int>(formatLength)} {
   RUNTIME_CHECK(terminator, maxHeight == maxHeight_);
+  if (!format && formatDescriptor) {
+    // The format is a character array passed via a descriptor.
+    std::size_t elements{formatDescriptor->Elements()};
+    std::size_t elementBytes{formatDescriptor->ElementBytes()};
+    formatLength = elements * elementBytes / sizeof(CharType);
+    formatLength_ = static_cast<int>(formatLength);
+    if (formatDescriptor->IsContiguous()) {
+      // Treat the contiguous array as a single character value.
+      format_ = const_cast<const CharType *>(
+          reinterpret_cast<CharType *>(formatDescriptor->raw().base_addr));
+    } else {
+      // Concatenate its elements into a temporary array.
+      char *p{reinterpret_cast<char *>(
+          AllocateMemoryOrCrash(terminator, formatLength * sizeof(CharType)))};
+      format_ = p;
+      SubscriptValue at[maxRank];
+      formatDescriptor->GetLowerBounds(at);
+      for (std::size_t j{0}; j < elements; ++j) {
+        std::memcpy(p, formatDescriptor->Element<char>(at), elementBytes);
+        p += elementBytes;
+        formatDescriptor->IncrementSubscripts(at);
+      }
+      freeFormat_ = true;
+    }
+  }
   RUNTIME_CHECK(
       terminator, formatLength == static_cast<std::size_t>(formatLength_));
   stack_[0].start = offset_;
@@ -35,11 +64,14 @@ FormatControl<CONTEXT>::FormatControl(const Terminator &terminator,
 
 template <typename CONTEXT>
 int FormatControl<CONTEXT>::GetIntField(
-    IoErrorHandler &handler, CharType firstCh) {
+    IoErrorHandler &handler, CharType firstCh, bool *hadError) {
   CharType ch{firstCh ? firstCh : PeekNext()};
   if (ch != '-' && ch != '+' && (ch < '0' || ch > '9')) {
     handler.SignalError(IostatErrorInFormat,
         "Invalid FORMAT: integer expected at '%c'", static_cast<char>(ch));
+    if (hadError) {
+      *hadError = true;
+    }
     return 0;
   }
   int result{0};
@@ -57,6 +89,9 @@ int FormatControl<CONTEXT>::GetIntField(
         std::numeric_limits<int>::max() / 10 - (static_cast<int>(ch) - '0')) {
       handler.SignalError(
           IostatErrorInFormat, "FORMAT integer field out of range");
+      if (hadError) {
+        *hadError = true;
+      }
       return result;
     }
     result = 10 * result + ch - '0';
@@ -70,6 +105,9 @@ int FormatControl<CONTEXT>::GetIntField(
   if (negate && (result *= -1) > 0) {
     handler.SignalError(
         IostatErrorInFormat, "FORMAT integer field out of range");
+    if (hadError) {
+      *hadError = true;
+    }
   }
   return result;
 }
@@ -130,6 +168,10 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'X':
     if (!next) {
+      ConnectionState &connection{context.GetConnectionState()};
+      if (connection.internalIoCharKind > 1) {
+        n *= connection.internalIoCharKind;
+      }
       context.HandleRelativePosition(n);
       return;
     }
@@ -146,7 +188,14 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
     break;
   case 'T': {
     if (!next) { // Tn
-      context.HandleAbsolutePosition(n - 1); // convert 1-based to 0-based
+      --n; // convert 1-based to 0-based
+    }
+    ConnectionState &connection{context.GetConnectionState()};
+    if (connection.internalIoCharKind > 1) {
+      n *= connection.internalIoCharKind;
+    }
+    if (!next) { // Tn
+      context.HandleAbsolutePosition(n);
       return;
     }
     if (next == 'L' || next == 'R') { // TLn & TRn
@@ -172,7 +221,7 @@ static void HandleControl(CONTEXT &context, char ch, char next, int n) {
 // format validator gauntlet.
 template <typename CONTEXT>
 int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
-  int unlimitedLoopCheck{-1};
+  bool hitUnlimitedLoopEnd{false};
   // Do repetitions remain on an unparenthesized data edit?
   while (height_ > 1 && format_[stack_[height_ - 1].start] != '(') {
     offset_ = stack_[height_ - 1].start;
@@ -227,7 +276,6 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       RUNTIME_CHECK(context, format_[stack_[height_].start] == '(');
       if (unlimited || height_ == 0) {
         stack_[height_].remaining = Iteration::unlimited;
-        unlimitedLoopCheck = offset_ - 1;
       } else if (repeat) {
         if (*repeat <= 0) {
           *repeat = 1; // error recovery
@@ -265,12 +313,13 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
               restart);
           return 0;
         }
-        if (offset_ == unlimitedLoopCheck) {
+        if (hitUnlimitedLoopEnd) {
           ReportBadFormat(context,
               "Unlimited repetition in FORMAT lacks data edit descriptors",
               restart);
           return 0;
         }
+        hitUnlimitedLoopEnd = true;
         offset_ = restart;
       } else if (stack_[height_ - 1].remaining-- > 0) {
         offset_ = restart;
@@ -293,14 +342,14 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
       ++offset_;
       std::size_t chars{
           static_cast<std::size_t>(&format_[offset_] - &format_[start])};
-      if (PeekNext() == quote) {
+      if (offset_ < formatLength_ && format_[offset_] == quote) {
         // subtle: handle doubled quote character in a literal by including
         // the first in the output, then treating the second as the start
         // of another character literal.
       } else {
         --chars;
       }
-      context.Emit(format_ + start, chars);
+      EmitAscii(context, format_ + start, chars);
     } else if (ch == 'H') {
       // 9HHOLLERITH
       if (!repeat || *repeat < 1 || offset_ + *repeat > formatLength_) {
@@ -308,7 +357,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
             maybeReversionPoint);
         return 0;
       }
-      context.Emit(format_ + offset_, static_cast<std::size_t>(*repeat));
+      EmitAscii(context, format_ + offset_, static_cast<std::size_t>(*repeat));
       offset_ += *repeat;
     } else if (ch >= 'A' && ch <= 'Z') {
       int start{offset_ - 1};
@@ -350,7 +399,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
     } else if (ch == '\t' || ch == '\v') {
       // Tabs (extension)
       // TODO: any other raw characters?
-      context.Emit(format_ + offset_ - 1, 1);
+      EmitAscii(context, format_ + offset_ - 1, 1);
     } else {
       ReportBadFormat(
           context, "Invalid character in FORMAT", maybeReversionPoint);
@@ -361,7 +410,7 @@ int FormatControl<CONTEXT>::CueUpNextDataEdit(Context &context, bool stop) {
 
 // Returns the next data edit descriptor
 template <typename CONTEXT>
-DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
+std::optional<DataEdit> FormatControl<CONTEXT>::GetNextDataEdit(
     Context &context, int maxRepeat) {
   int repeat{CueUpNextDataEdit(context)};
   auto start{offset_};
@@ -374,13 +423,13 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
       ++offset_;
     }
   } else if (edit.descriptor == 'D' && Capitalize(PeekNext()) == 'T') {
-    // DT['iotype'][(v_list)] user-defined derived type I/O
+    // DT['iotype'][(v_list)] defined I/O
     edit.descriptor = DataEdit::DefinedDerivedType;
     ++offset_;
     if (auto quote{static_cast<char>(PeekNext())};
         quote == '\'' || quote == '"') {
       // Capture the quoted 'iotype'
-      bool ok{false}, tooLong{false};
+      bool ok{false};
       for (++offset_; offset_ < formatLength_;) {
         auto ch{static_cast<char>(format_[offset_++])};
         if (ch == quote &&
@@ -388,31 +437,36 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
                 static_cast<char>(format_[offset_]) != quote)) {
           ok = true;
           break; // that was terminating quote
-        } else if (edit.ioTypeChars >= edit.maxIoTypeChars) {
-          tooLong = true;
-        } else {
-          edit.ioType[edit.ioTypeChars++] = ch;
-          if (ch == quote) {
-            ++offset_;
-          }
+        }
+        if (edit.ioTypeChars >= edit.maxIoTypeChars) {
+          ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
+          return std::nullopt;
+        }
+        edit.ioType[edit.ioTypeChars++] = ch;
+        if (ch == quote) {
+          ++offset_;
         }
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT'iotype' in FORMAT", start);
-      } else if (tooLong) {
-        ReportBadFormat(context, "Excessive DT'iotype' in FORMAT", start);
+        return std::nullopt;
       }
     }
     if (PeekNext() == '(') {
       // Capture the v_list arguments
-      bool ok{false}, tooLong{false};
+      bool ok{false};
       for (++offset_; offset_ < formatLength_;) {
-        int n{GetIntField(context)};
-        if (edit.vListEntries >= edit.maxVListEntries) {
-          tooLong = true;
-        } else {
-          edit.vList[edit.vListEntries++] = n;
+        bool hadError{false};
+        int n{GetIntField(context, '\0', &hadError)};
+        if (hadError) {
+          ok = false;
+          break;
         }
+        if (edit.vListEntries >= edit.maxVListEntries) {
+          ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
+          return std::nullopt;
+        }
+        edit.vList[edit.vListEntries++] = n;
         auto ch{static_cast<char>(GetNextChar(context))};
         if (ch != ',') {
           ok = ch == ')';
@@ -421,12 +475,12 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
       }
       if (!ok) {
         ReportBadFormat(context, "Unclosed DT(v_list) in FORMAT", start);
-      } else if (tooLong) {
-        ReportBadFormat(context, "Excessive DT(v_list) in FORMAT", start);
+        return std::nullopt;
       }
     }
   }
-  if (edit.descriptor == 'A') { // width is optional for A[w]
+  if (edit.descriptor == 'A' || edit.descriptor == 'L') {
+    // width is optional for A[w] or L[w]
     auto ch{PeekNext()};
     if (ch >= '0' && ch <= '9') {
       edit.width = GetIntField(context);
@@ -462,6 +516,9 @@ DataEdit FormatControl<CONTEXT>::GetNextDataEdit(
 template <typename CONTEXT>
 void FormatControl<CONTEXT>::Finish(Context &context) {
   CueUpNextDataEdit(context, true /* stop at colon or end of FORMAT */);
+  if (freeFormat_) {
+    FreeMemory(const_cast<CharType *>(format_));
+  }
 }
 } // namespace Fortran::runtime::io
 #endif // FORTRAN_RUNTIME_FORMAT_IMPLEMENTATION_H_

@@ -8,6 +8,7 @@
 
 #include "support/FileCache.h"
 #include "llvm/ADT/ScopeExit.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -29,7 +30,7 @@ FileCache::FileCache(llvm::StringRef Path)
 
 void FileCache::read(
     const ThreadsafeFS &TFS, std::chrono::steady_clock::time_point FreshTime,
-    llvm::function_ref<void(llvm::Optional<llvm::StringRef>)> Parse,
+    llvm::function_ref<void(std::optional<llvm::StringRef>)> Parse,
     llvm::function_ref<void()> Read) const {
 
   std::lock_guard<std::mutex> Lock(Mu);
@@ -47,11 +48,11 @@ void FileCache::read(
 
   // stat is cheaper than opening the file. It's usually unchanged.
   assert(llvm::sys::path::is_absolute(Path));
-  auto FS = TFS.view(/*CWD=*/llvm::None);
+  auto FS = TFS.view(/*CWD=*/std::nullopt);
   auto Stat = FS->status(Path);
   if (!Stat || !Stat->isRegularFile()) {
     if (Size != FileNotFound) // Allow "not found" value to be cached.
-      Parse(llvm::None);
+      Parse(std::nullopt);
     // Ensure the cache key won't match any future stat().
     Size = FileNotFound;
     return;

@@ -1,8 +1,8 @@
 ; RUN: llc -mtriple powerpc-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s
 ; RUN: llc -mtriple powerpc64-ibm-aix-xcoff -verify-machineinstrs < %s | FileCheck %s
 
-@llvm.global_ctors = appending global [5 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 0, void ()* bitcast (i32 (i32)* @cf1 to void ()*), i8* null }, { i32, void ()*, i8* } { i32 21, void ()* @cf2, i8* null }, { i32, void ()*, i8* } { i32 81, void ()* @cf3, i8* null }, { i32, void ()*, i8* } { i32 1125, void ()* @cf4, i8* null }, { i32, void ()*, i8* } { i32 64512, void ()* @cf5, i8* null }]
-@llvm.global_dtors = appending global [5 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 20, void ()* bitcast (i32 (i32)* @df1 to void ()*), i8* null }, { i32, void ()*, i8* } { i32 80, void ()* @df2, i8* null }, { i32, void ()*, i8* } { i32 1124, void ()* @df3, i8* null }, { i32, void ()*, i8* } { i32 64511, void ()* @df4, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @df5, i8* null }]
+@llvm.global_ctors = appending global [5 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 0, ptr @cf1, ptr null }, { i32, ptr, ptr } { i32 21, ptr @cf2, ptr null }, { i32, ptr, ptr } { i32 81, ptr @cf3, ptr null }, { i32, ptr, ptr } { i32 1125, ptr @cf4, ptr null }, { i32, ptr, ptr } { i32 64512, ptr @cf5, ptr null }]
+@llvm.global_dtors = appending global [5 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 20, ptr @df1, ptr null }, { i32, ptr, ptr } { i32 80, ptr @df2, ptr null }, { i32, ptr, ptr } { i32 1124, ptr @df3, ptr null }, { i32, ptr, ptr } { i32 64511, ptr @df4, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @df5, ptr null }]
 
 define i32 @cf1(i32 %a) {
   ret i32 %a

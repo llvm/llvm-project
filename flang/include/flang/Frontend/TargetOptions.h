@@ -19,21 +19,22 @@
 #define FORTRAN_FRONTEND_TARGETOPTIONS_H
 
 #include <string>
+#include <vector>
 
 namespace Fortran::frontend {
 
-/// Options for controlling the target. Currently this is just a placeholder.
-/// In the future, we will use this to specify various target options that
-/// will affect the generated code e.g.:
-///   * CPU to tune the code for
-///   * available CPU/hardware extensions
-///   * target specific features to enable/disable
-///   * options for accelerators (e.g. GPUs)
-///   * (...)
+/// Options for controlling the target.
 class TargetOptions {
 public:
   /// The name of the target triple to compile for.
   std::string triple;
+
+  /// If given, the name of the target CPU to generate code for.
+  std::string cpu;
+
+  /// The list of target specific features to enable or disable, as written on
+  /// the command line.
+  std::vector<std::string> featuresAsWritten;
 };
 
 } // end namespace Fortran::frontend

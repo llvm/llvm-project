@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @f_fu(float* %ret, float*  %aa, float %b) {
+define void @f_fu(ptr %ret, ptr  %aa, float %b) {
 ; CHECK-LABEL: f_fu:
 ; CHECK:       ## %bb.0: ## %allocas
 ; CHECK-NEXT:    vcvttss2si %xmm0, %eax
@@ -22,8 +22,7 @@ define void @f_fu(float* %ret, float*  %aa, float %b) {
 ; CHECK-NEXT:    vmovups %zmm0, (%rdi)
 ; CHECK-NEXT:    retq
 allocas:
-  %ptr_cast_for_load = bitcast float* %aa to <16 x float>*
-  %ptr_masked_load.39 = load <16 x float>, <16 x float>* %ptr_cast_for_load, align 4
+  %ptr_masked_load.39 = load <16 x float>, ptr %aa, align 4
   %b_load_to_int32 = fptosi float %b to i32
   %b_load_to_int32_broadcast_init = insertelement <16 x i32> undef, i32 %b_load_to_int32, i32 0
   %b_load_to_int32_broadcast = shufflevector <16 x i32> %b_load_to_int32_broadcast_init, <16 x i32> undef, <16 x i32> zeroinitializer
@@ -42,7 +41,6 @@ allocas:
   %add_struct_offset_y_struct_offset33_x = add <16 x i32> %foo_test, %v1.i
 
   %val = sitofp <16 x i32> %add_struct_offset_y_struct_offset33_x to <16 x float>
-  %ptrcast = bitcast float* %ret to <16 x float>*
-  store <16 x float> %val, <16 x float>* %ptrcast, align 4
+  store <16 x float> %val, ptr %ret, align 4
   ret void
 }

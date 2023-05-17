@@ -284,7 +284,7 @@ define arm_aapcs_vfpcc <2 x i32> @vabd_v2u32(<2 x i32> %src1, <2 x i32> %src2) {
   ret <2 x i32> %result
 }
 
-define void @vabd_loop_s8(i8* nocapture readonly %x, i8* nocapture readonly %y, i8* noalias nocapture %z, i32 %n) {
+define void @vabd_loop_s8(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vabd_loop_s8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -304,31 +304,28 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i8, i8* %x, i32 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 1
-  %2 = sext <16 x i8> %wide.load to <16 x i32>
-  %3 = getelementptr inbounds i8, i8* %y, i32 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load22 = load <16 x i8>, <16 x i8>* %4, align 1
-  %5 = sext <16 x i8> %wide.load22 to <16 x i32>
-  %6 = sub nsw <16 x i32> %2, %5
-  %7 = icmp slt <16 x i32> %6, zeroinitializer
-  %8 = sub nsw <16 x i32> zeroinitializer, %6
-  %9 = select <16 x i1> %7, <16 x i32> %8, <16 x i32> %6
-  %10 = trunc <16 x i32> %9 to <16 x i8>
-  %11 = getelementptr inbounds i8, i8* %z, i32 %index
-  %12 = bitcast i8* %11 to <16 x i8>*
-  store <16 x i8> %10, <16 x i8>* %12, align 1
+  %0 = getelementptr inbounds i8, ptr %x, i32 %index
+  %wide.load = load <16 x i8>, ptr %0, align 1
+  %1 = sext <16 x i8> %wide.load to <16 x i32>
+  %2 = getelementptr inbounds i8, ptr %y, i32 %index
+  %wide.load22 = load <16 x i8>, ptr %2, align 1
+  %3 = sext <16 x i8> %wide.load22 to <16 x i32>
+  %4 = sub nsw <16 x i32> %1, %3
+  %5 = icmp slt <16 x i32> %4, zeroinitializer
+  %6 = sub nsw <16 x i32> zeroinitializer, %4
+  %7 = select <16 x i1> %5, <16 x i32> %6, <16 x i32> %4
+  %8 = trunc <16 x i32> %7 to <16 x i8>
+  %9 = getelementptr inbounds i8, ptr %z, i32 %index
+  store <16 x i8> %8, ptr %9, align 1
   %index.next = add i32 %index, 16
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vabd_loop_s16(i16* nocapture readonly %x, i16* nocapture readonly %y, i16* noalias nocapture %z, i32 %n) {
+define void @vabd_loop_s16(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vabd_loop_s16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -348,31 +345,28 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i16, i16* %x, i32 %index
-  %1 = bitcast i16* %0 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %1, align 2
-  %2 = sext <8 x i16> %wide.load to <8 x i32>
-  %3 = getelementptr inbounds i16, i16* %y, i32 %index
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.load22 = load <8 x i16>, <8 x i16>* %4, align 2
-  %5 = sext <8 x i16> %wide.load22 to <8 x i32>
-  %6 = sub nsw <8 x i32> %2, %5
-  %7 = icmp slt <8 x i32> %6, zeroinitializer
-  %8 = sub nsw <8 x i32> zeroinitializer, %6
-  %9 = select <8 x i1> %7, <8 x i32> %8, <8 x i32> %6
-  %10 = trunc <8 x i32> %9 to <8 x i16>
-  %11 = getelementptr inbounds i16, i16* %z, i32 %index
-  %12 = bitcast i16* %11 to <8 x i16>*
-  store <8 x i16> %10, <8 x i16>* %12, align 2
+  %0 = getelementptr inbounds i16, ptr %x, i32 %index
+  %wide.load = load <8 x i16>, ptr %0, align 2
+  %1 = sext <8 x i16> %wide.load to <8 x i32>
+  %2 = getelementptr inbounds i16, ptr %y, i32 %index
+  %wide.load22 = load <8 x i16>, ptr %2, align 2
+  %3 = sext <8 x i16> %wide.load22 to <8 x i32>
+  %4 = sub nsw <8 x i32> %1, %3
+  %5 = icmp slt <8 x i32> %4, zeroinitializer
+  %6 = sub nsw <8 x i32> zeroinitializer, %4
+  %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
+  %8 = trunc <8 x i32> %7 to <8 x i16>
+  %9 = getelementptr inbounds i16, ptr %z, i32 %index
+  store <8 x i16> %8, ptr %9, align 2
   %index.next = add i32 %index, 8
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vabd_loop_s32(i32* nocapture readonly %x, i32* nocapture readonly %y, i32* noalias nocapture %z, i32 %n) {
+define void @vabd_loop_s32(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vabd_loop_s32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
@@ -401,26 +395,26 @@ define void @vabd_loop_s32(i32* nocapture readonly %x, i32* nocapture readonly %
 ; CHECK-NEXT:    subs r4, r4, r6
 ; CHECK-NEXT:    sbc.w r9, r3, r6, asr #31
 ; CHECK-NEXT:    vmov r6, s8
+; CHECK-NEXT:    vmov r3, s6
 ; CHECK-NEXT:    subs r5, r7, r6
+; CHECK-NEXT:    asr.w r7, r7, #31
 ; CHECK-NEXT:    vmov q2[2], q2[0], r5, r8
-; CHECK-NEXT:    asr.w r5, r7, #31
-; CHECK-NEXT:    sbc.w r5, r5, r6, asr #31
-; CHECK-NEXT:    vmov r6, s14
-; CHECK-NEXT:    vmov r7, s6
-; CHECK-NEXT:    subs r3, r7, r6
-; CHECK-NEXT:    vmov q2[3], q2[1], r4, r3
-; CHECK-NEXT:    asr.w r3, r5, #31
-; CHECK-NEXT:    mov.w r4, #0
-; CHECK-NEXT:    bfi r4, r3, #0, #4
-; CHECK-NEXT:    asr.w r3, r9, #31
-; CHECK-NEXT:    bfi r4, r3, #4, #4
-; CHECK-NEXT:    asr.w r3, r12, #31
-; CHECK-NEXT:    bfi r4, r3, #8, #4
-; CHECK-NEXT:    asr.w r3, r7, #31
-; CHECK-NEXT:    sbc.w r3, r3, r6, asr #31
+; CHECK-NEXT:    vmov r5, s14
+; CHECK-NEXT:    sbc.w r6, r7, r6, asr #31
+; CHECK-NEXT:    asrs r6, r6, #31
+; CHECK-NEXT:    subs r7, r3, r5
+; CHECK-NEXT:    asr.w r3, r3, #31
+; CHECK-NEXT:    vmov q2[3], q2[1], r4, r7
+; CHECK-NEXT:    mov.w r7, #0
+; CHECK-NEXT:    sbc.w r3, r3, r5, asr #31
+; CHECK-NEXT:    bfi r7, r6, #0, #4
+; CHECK-NEXT:    asr.w r4, r9, #31
+; CHECK-NEXT:    asr.w r6, r12, #31
+; CHECK-NEXT:    bfi r7, r4, #4, #4
 ; CHECK-NEXT:    asrs r3, r3, #31
-; CHECK-NEXT:    bfi r4, r3, #12, #4
-; CHECK-NEXT:    vmsr p0, r4
+; CHECK-NEXT:    bfi r7, r6, #8, #4
+; CHECK-NEXT:    bfi r7, r3, #12, #4
+; CHECK-NEXT:    vmsr p0, r7
 ; CHECK-NEXT:    vpst
 ; CHECK-NEXT:    vsubt.i32 q2, q0, q2
 ; CHECK-NEXT:    vstrb.8 q2, [r2], #16
@@ -432,31 +426,28 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %x, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = sext <4 x i32> %wide.load to <4 x i64>
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load23 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = sext <4 x i32> %wide.load23 to <4 x i64>
-  %6 = sub nsw <4 x i64> %2, %5
-  %7 = icmp slt <4 x i64> %6, zeroinitializer
-  %8 = trunc <4 x i64> %6 to <4 x i32>
-  %9 = sub <4 x i32> zeroinitializer, %8
-  %10 = select <4 x i1> %7, <4 x i32> %9, <4 x i32> %8
-  %11 = getelementptr inbounds i32, i32* %z, i32 %index
-  %12 = bitcast i32* %11 to <4 x i32>*
-  store <4 x i32> %10, <4 x i32>* %12, align 4
+  %0 = getelementptr inbounds i32, ptr %x, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = sext <4 x i32> %wide.load to <4 x i64>
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  %wide.load23 = load <4 x i32>, ptr %2, align 4
+  %3 = sext <4 x i32> %wide.load23 to <4 x i64>
+  %4 = sub nsw <4 x i64> %1, %3
+  %5 = icmp slt <4 x i64> %4, zeroinitializer
+  %6 = trunc <4 x i64> %4 to <4 x i32>
+  %7 = sub <4 x i32> zeroinitializer, %6
+  %8 = select <4 x i1> %5, <4 x i32> %7, <4 x i32> %6
+  %9 = getelementptr inbounds i32, ptr %z, i32 %index
+  store <4 x i32> %8, ptr %9, align 4
   %index.next = add i32 %index, 4
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vabd_loop_u8(i8* nocapture readonly %x, i8* nocapture readonly %y, i8* noalias nocapture %z, i32 %n) {
+define void @vabd_loop_u8(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vabd_loop_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -476,31 +467,28 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i8, i8* %x, i32 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 1
-  %2 = zext <16 x i8> %wide.load to <16 x i32>
-  %3 = getelementptr inbounds i8, i8* %y, i32 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load22 = load <16 x i8>, <16 x i8>* %4, align 1
-  %5 = zext <16 x i8> %wide.load22 to <16 x i32>
-  %6 = sub nsw <16 x i32> %2, %5
-  %7 = icmp slt <16 x i32> %6, zeroinitializer
-  %8 = sub nsw <16 x i32> zeroinitializer, %6
-  %9 = select <16 x i1> %7, <16 x i32> %8, <16 x i32> %6
-  %10 = trunc <16 x i32> %9 to <16 x i8>
-  %11 = getelementptr inbounds i8, i8* %z, i32 %index
-  %12 = bitcast i8* %11 to <16 x i8>*
-  store <16 x i8> %10, <16 x i8>* %12, align 1
+  %0 = getelementptr inbounds i8, ptr %x, i32 %index
+  %wide.load = load <16 x i8>, ptr %0, align 1
+  %1 = zext <16 x i8> %wide.load to <16 x i32>
+  %2 = getelementptr inbounds i8, ptr %y, i32 %index
+  %wide.load22 = load <16 x i8>, ptr %2, align 1
+  %3 = zext <16 x i8> %wide.load22 to <16 x i32>
+  %4 = sub nsw <16 x i32> %1, %3
+  %5 = icmp slt <16 x i32> %4, zeroinitializer
+  %6 = sub nsw <16 x i32> zeroinitializer, %4
+  %7 = select <16 x i1> %5, <16 x i32> %6, <16 x i32> %4
+  %8 = trunc <16 x i32> %7 to <16 x i8>
+  %9 = getelementptr inbounds i8, ptr %z, i32 %index
+  store <16 x i8> %8, ptr %9, align 1
   %index.next = add i32 %index, 16
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vabd_loop_u16(i16* nocapture readonly %x, i16* nocapture readonly %y, i16* noalias nocapture %z, i32 %n) {
+define void @vabd_loop_u16(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vabd_loop_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -520,31 +508,28 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i16, i16* %x, i32 %index
-  %1 = bitcast i16* %0 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %1, align 2
-  %2 = zext <8 x i16> %wide.load to <8 x i32>
-  %3 = getelementptr inbounds i16, i16* %y, i32 %index
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.load22 = load <8 x i16>, <8 x i16>* %4, align 2
-  %5 = zext <8 x i16> %wide.load22 to <8 x i32>
-  %6 = sub nsw <8 x i32> %2, %5
-  %7 = icmp slt <8 x i32> %6, zeroinitializer
-  %8 = sub nsw <8 x i32> zeroinitializer, %6
-  %9 = select <8 x i1> %7, <8 x i32> %8, <8 x i32> %6
-  %10 = trunc <8 x i32> %9 to <8 x i16>
-  %11 = getelementptr inbounds i16, i16* %z, i32 %index
-  %12 = bitcast i16* %11 to <8 x i16>*
-  store <8 x i16> %10, <8 x i16>* %12, align 2
+  %0 = getelementptr inbounds i16, ptr %x, i32 %index
+  %wide.load = load <8 x i16>, ptr %0, align 2
+  %1 = zext <8 x i16> %wide.load to <8 x i32>
+  %2 = getelementptr inbounds i16, ptr %y, i32 %index
+  %wide.load22 = load <8 x i16>, ptr %2, align 2
+  %3 = zext <8 x i16> %wide.load22 to <8 x i32>
+  %4 = sub nsw <8 x i32> %1, %3
+  %5 = icmp slt <8 x i32> %4, zeroinitializer
+  %6 = sub nsw <8 x i32> zeroinitializer, %4
+  %7 = select <8 x i1> %5, <8 x i32> %6, <8 x i32> %4
+  %8 = trunc <8 x i32> %7 to <8 x i16>
+  %9 = getelementptr inbounds i16, ptr %z, i32 %index
+  store <8 x i16> %8, ptr %9, align 2
   %index.next = add i32 %index, 8
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vabd_loop_u32(i32* nocapture readonly %x, i32* nocapture readonly %y, i32* noalias nocapture %z, i32 %n) {
+define void @vabd_loop_u32(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vabd_loop_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, r8, r9, r10, lr}
@@ -608,26 +593,105 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %x, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = zext <4 x i32> %wide.load to <4 x i64>
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load23 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = zext <4 x i32> %wide.load23 to <4 x i64>
-  %6 = sub nsw <4 x i64> %2, %5
-  %7 = icmp slt <4 x i64> %6, zeroinitializer
-  %8 = trunc <4 x i64> %6 to <4 x i32>
-  %9 = sub <4 x i32> zeroinitializer, %8
-  %10 = select <4 x i1> %7, <4 x i32> %9, <4 x i32> %8
-  %11 = getelementptr inbounds i32, i32* %z, i32 %index
-  %12 = bitcast i32* %11 to <4 x i32>*
-  store <4 x i32> %10, <4 x i32>* %12, align 4
+  %0 = getelementptr inbounds i32, ptr %x, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = zext <4 x i32> %wide.load to <4 x i64>
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  %wide.load23 = load <4 x i32>, ptr %2, align 4
+  %3 = zext <4 x i32> %wide.load23 to <4 x i64>
+  %4 = sub nsw <4 x i64> %1, %3
+  %5 = icmp slt <4 x i64> %4, zeroinitializer
+  %6 = trunc <4 x i64> %4 to <4 x i32>
+  %7 = sub <4 x i32> zeroinitializer, %6
+  %8 = select <4 x i1> %5, <4 x i32> %7, <4 x i32> %6
+  %9 = getelementptr inbounds i32, ptr %z, i32 %index
+  store <4 x i32> %8, ptr %9, align 4
   %index.next = add i32 %index, 4
-  %13 = icmp eq i32 %index.next, 1024
-  br i1 %13, label %for.cond.cleanup, label %vector.body
+  %10 = icmp eq i32 %index.next, 1024
+  br i1 %10, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
+
+define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_commutative(<4 x i32> %src1, <4 x i32> %src2) {
+; CHECK-LABEL: vabd_v4u32_commutative:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vabd.u32 q0, q1, q0
+; CHECK-NEXT:    vadd.i32 q0, q0, q0
+; CHECK-NEXT:    bx lr
+  %azextsrc1 = zext <4 x i32> %src1 to <4 x i64>
+  %azextsrc2 = zext <4 x i32> %src2 to <4 x i64>
+  %aadd1 = sub <4 x i64> %azextsrc1, %azextsrc2
+  %aadd2 = sub <4 x i64> zeroinitializer, %aadd1
+  %ac = icmp sge <4 x i64> %aadd1, zeroinitializer
+  %as = select <4 x i1> %ac, <4 x i64> %aadd1, <4 x i64> %aadd2
+  %aresult = trunc <4 x i64> %as to <4 x i32>
+  %bzextsrc1 = zext <4 x i32> %src2 to <4 x i64>
+  %bzextsrc2 = zext <4 x i32> %src1 to <4 x i64>
+  %badd1 = sub <4 x i64> %bzextsrc1, %bzextsrc2
+  %badd2 = sub <4 x i64> zeroinitializer, %badd1
+  %bc = icmp sge <4 x i64> %badd1, zeroinitializer
+  %bs = select <4 x i1> %bc, <4 x i64> %badd1, <4 x i64> %badd2
+  %bresult = trunc <4 x i64> %bs to <4 x i32>
+  %r = add <4 x i32> %aresult, %bresult
+  ret <4 x i32> %r
+}
+
+define arm_aapcs_vfpcc <4 x i32> @vabd_v4u32_shuffle(<4 x i32> %src1, <4 x i32> %src2) {
+; CHECK-LABEL: vabd_v4u32_shuffle:
+; CHECK:       @ %bb.0:
+; CHECK-NEXT:    vabd.u32 q1, q0, q1
+; CHECK-NEXT:    vmov.f32 s0, s7
+; CHECK-NEXT:    vmov.f32 s1, s6
+; CHECK-NEXT:    vmov.f32 s2, s5
+; CHECK-NEXT:    vmov.f32 s3, s4
+; CHECK-NEXT:    bx lr
+  %s1 = shufflevector <4 x i32> %src1, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %s2 = shufflevector <4 x i32> %src2, <4 x i32> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+  %azextsrc1 = zext <4 x i32> %s1 to <4 x i64>
+  %azextsrc2 = zext <4 x i32> %s2 to <4 x i64>
+  %aadd1 = sub <4 x i64> %azextsrc1, %azextsrc2
+  %aadd2 = sub <4 x i64> zeroinitializer, %aadd1
+  %ac = icmp sge <4 x i64> %aadd1, zeroinitializer
+  %as = select <4 x i1> %ac, <4 x i64> %aadd1, <4 x i64> %aadd2
+  %aresult = trunc <4 x i64> %as to <4 x i32>
+  ret <4 x i32> %aresult
+}
+
+
+define arm_aapcs_vfpcc i16 @vabds_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vabds_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vabd.s8 q0, q0, q1
+; CHECK-NEXT:    vaddv.u8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %sextsrc1 = sext <16 x i8> %s0 to <16 x i16>
+  %sextsrc2 = sext <16 x i8> %s1 to <16 x i16>
+  %add1 = sub <16 x i16> %sextsrc1, %sextsrc2
+  %add2 = sub <16 x i16> zeroinitializer, %add1
+  %c = icmp sge <16 x i16> %add1, zeroinitializer
+  %s = select <16 x i1> %c, <16 x i16> %add1, <16 x i16> %add2
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+define arm_aapcs_vfpcc i16 @vabdu_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vabdu_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vabd.u8 q0, q0, q1
+; CHECK-NEXT:    vaddv.u8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %sextsrc1 = zext <16 x i8> %s0 to <16 x i16>
+  %sextsrc2 = zext <16 x i8> %s1 to <16 x i16>
+  %add1 = sub <16 x i16> %sextsrc1, %sextsrc2
+  %add2 = sub <16 x i16> zeroinitializer, %add1
+  %c = icmp sge <16 x i16> %add1, zeroinitializer
+  %s = select <16 x i1> %c, <16 x i16> %add1, <16 x i16> %add2
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)

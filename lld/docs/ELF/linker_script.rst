@@ -61,13 +61,16 @@ In the case where no linker script has been provided or every ``SECTIONS``
 command is followed by ``INSERT``, LLD applies built-in rules which are similar
 to GNU ld's internal linker scripts.
 
-- Align the first section in a ``PT_LOAD`` segment according to ``-z noseparate-code``,
-  ``-z separate-code``, or ``-z separate-loadable-segments``
-- Define ``__bss_start``, ``end``, ``_end``, ``etext``, ``_etext``, ``edata``, ``_edata``
-- Sort ``.ctors.*``/``.dtors.*``/``.init_array.*``/``.fini_array.*`` and PowerPC64 specific ``.toc``
+- Align the first section in a ``PT_LOAD`` segment according to
+  ``-z noseparate-code``, ``-z separate-code``, or
+  ``-z separate-loadable-segments``
+- Define ``__bss_start``, ``end``, ``_end``, ``etext``, ``_etext``, ``edata``,
+  ``_edata``
+- Sort ``.ctors.*``/``.dtors.*``/``.init_array.*``/``.fini_array.*`` and
+  PowerPC64 specific ``.toc``
 - Place input ``.text.*`` into output ``.text``, and handle certain variants
-  (``.text.hot.``, ``.text.unknown.``, ``.text.unlikely.``, etc) in the precense of
-  ``-z keep-text-section-prefix``.
+  (``.text.hot.``, ``.text.unknown.``, ``.text.unlikely.``, etc) in the
+  presence of ``-z keep-text-section-prefix``.
 
 Output section description
 ~~~~~~~~~~~~~~~~~~~~~~~~~~

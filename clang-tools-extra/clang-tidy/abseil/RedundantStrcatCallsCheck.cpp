@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 // TODO: Features to add to the check:
 //  - Make it work if num_args > 26.
@@ -134,6 +132,4 @@ void RedundantStrcatCallsCheck::check(const MatchFinder::MatchResult& Result) {
       << CheckResult.Hints;
 }
 
-}  // namespace abseil
-}  // namespace tidy
-}  // namespace clang
+} // namespace clang::tidy::abseil

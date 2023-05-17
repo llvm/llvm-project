@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -speculative-execution \
+; RUN: opt < %s -S -mtriple=amdgcn-unknown-amdhsa -passes=speculative-execution \
 ; RUN:   -spec-exec-max-speculation-cost 1 -spec-exec-max-not-hoisted 1 \
 ; RUN:   | FileCheck %s
 
@@ -19,10 +19,10 @@ b:
 ; CHECK-LABEL: @ifThen_addrspacecast(
 ; CHECK: addrspacecast
 ; CHECK: br i1 true
-define void @ifThen_addrspacecast(i32* %y) {
+define void @ifThen_addrspacecast(ptr %y) {
   br i1 true, label %a, label %b
 a:
-  %x = addrspacecast i32* %y to i32 addrspace(1)*
+  %x = addrspacecast ptr %y to ptr addrspace(1)
   br label %b
 
 b:

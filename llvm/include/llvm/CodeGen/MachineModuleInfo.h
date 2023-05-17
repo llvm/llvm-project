@@ -34,6 +34,7 @@
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/MC/MCContext.h"
+#include "llvm/MC/MCSymbol.h"
 #include "llvm/Pass.h"
 #include <memory>
 #include <utility>
@@ -41,12 +42,10 @@
 
 namespace llvm {
 
-class BasicBlock;
 class Function;
 class LLVMTargetMachine;
 class MachineFunction;
 class Module;
-class MCSymbol;
 
 //===----------------------------------------------------------------------===//
 /// This class can be derived from and used by targets to hold private
@@ -85,7 +84,7 @@ class MachineModuleInfo {
   MCContext *ExternalContext = nullptr;
 
   /// This is the LLVM Module being worked on.
-  const Module *TheModule;
+  const Module *TheModule = nullptr;
 
   /// This is the object-file-format-specific implementation of
   /// MachineModuleInfoImpl, which lets targets accumulate whatever info they
@@ -95,12 +94,8 @@ class MachineModuleInfo {
   /// \name Exception Handling
   /// \{
 
-  /// Vector of all personality functions ever seen. Used to emit common EH
-  /// frames.
-  std::vector<const Function *> Personalities;
-
   /// The current call site index being processed, if any. 0 if none.
-  unsigned CurCallSite;
+  unsigned CurCallSite = 0;
 
   /// \}
 
@@ -111,11 +106,11 @@ class MachineModuleInfo {
   // go into .eh_frame only, while others go into .debug_frame only.
 
   /// True if debugging information is available in this module.
-  bool DbgInfoAvailable;
+  bool DbgInfoAvailable = false;
 
   /// True if this module is being built for windows/msvc, and uses floating
   /// point.  This is used to emit an undefined reference to _fltused.
-  bool UsesMSVCFloatingPoint;
+  bool UsesMSVCFloatingPoint = false;
 
   /// Maps IR Functions to their corresponding MachineFunctions.
   DenseMap<const Function*, std::unique_ptr<MachineFunction>> MachineFunctions;
@@ -196,13 +191,6 @@ public:
   /// none.
   unsigned getCurrentCallSite() { return CurCallSite; }
 
-  /// Provide the personality function for the exception information.
-  void addPersonality(const Function *Personality);
-
-  /// Return array of personality functions ever seen.
-  const std::vector<const Function *>& getPersonalities() const {
-    return Personalities;
-  }
   /// \}
 
   // MMI owes MCContext. It should never be invalidated.

@@ -29,7 +29,7 @@ b3:                                               ; preds = %b3, %b2
   %v6 = tail call <128 x i1> @llvm.hexagon.V6.vgtub.128B(<32 x i32> %v5, <32 x i32> undef) #2
   %v7 = tail call <128 x i1> @llvm.hexagon.V6.pred.or.128B(<128 x i1> %v6, <128 x i1> undef) #2
   %v8 = tail call <32 x i32> @llvm.hexagon.V6.vmux.128B(<128 x i1> %v7, <32 x i32> undef, <32 x i32> undef) #2
-  tail call void asm sideeffect "if($0) vmem($1)=$2;", "q,r,v,~{memory}"(<128 x i1> undef, <32 x i32>* undef, <32 x i32> %v8) #2
+  tail call void asm sideeffect "if($0) vmem($1)=$2;", "q,r,v,~{memory}"(<128 x i1> undef, ptr undef, <32 x i32> %v8) #2
   br label %b3
 }
 

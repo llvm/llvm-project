@@ -167,6 +167,18 @@ public:
     const Constant *constant = dyn_cast<Constant>(value);
 
     if (constant) {
+      if (constant->getValueID() == Value::ConstantFPVal) {
+        if (auto *cfp = dyn_cast<ConstantFP>(constant)) {
+          if (cfp->getType()->isDoubleTy())
+            scalar = cfp->getValueAPF().convertToDouble();
+          else if (cfp->getType()->isFloatTy())
+            scalar = cfp->getValueAPF().convertToFloat();
+          else
+            return false;
+          return true;
+        }
+        return false;
+      }
       APInt value_apint;
 
       if (!ResolveConstantValue(value_apint, constant))
@@ -189,9 +201,18 @@ public:
 
     lldb::offset_t offset = 0;
     if (value_size <= 8) {
-      uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
-      return AssignToMatchType(scalar, llvm::APInt(64, u64value),
-                               value->getType());
+      Type *ty = value->getType();
+      if (ty->isDoubleTy()) {
+        scalar = value_extractor.GetDouble(&offset);
+        return true;
+      } else if (ty->isFloatTy()) {
+        scalar = value_extractor.GetFloat(&offset);
+        return true;
+      } else {
+        uint64_t u64value = value_extractor.GetMaxU64(&offset, value_size);
+        return AssignToMatchType(scalar, llvm::APInt(64, u64value),
+                                 value->getType());
+      }
     }
 
     return false;
@@ -205,11 +226,15 @@ public:
       return false;
 
     lldb_private::Scalar cast_scalar;
-
-    scalar.MakeUnsigned();
-    if (!AssignToMatchType(cast_scalar, scalar.UInt128(llvm::APInt()),
-                           value->getType()))
-      return false;
+    Type *vty = value->getType();
+    if (vty->isFloatTy() || vty->isDoubleTy()) {
+      cast_scalar = scalar;
+    } else {
+      scalar.MakeUnsigned();
+      if (!AssignToMatchType(cast_scalar, scalar.UInt128(llvm::APInt()),
+                             value->getType()))
+        return false;
+    }
 
     size_t value_byte_size = m_target_data.getTypeStoreSize(value->getType());
 
@@ -383,7 +408,7 @@ public:
     lldb_private::Status alloc_error;
 
     return Malloc(m_target_data.getTypeAllocSize(type),
-                  m_target_data.getPrefTypeAlignment(type));
+                  m_target_data.getPrefTypeAlign(type).value());
   }
 
   std::string PrintData(lldb::addr_t addr, llvm::Type *type) {
@@ -506,6 +531,7 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
       saw_function_with_body = true;
+      LLDB_LOGF(log, "Saw function with body: %s", f.getName().str().c_str());
     }
   }
 
@@ -543,16 +569,17 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       } break;
       case Instruction::GetElementPtr:
         break;
+      case Instruction::FCmp:
       case Instruction::ICmp: {
-        ICmpInst *icmp_inst = dyn_cast<ICmpInst>(&ii);
+        CmpInst *cmp_inst = dyn_cast<CmpInst>(&ii);
 
-        if (!icmp_inst) {
+        if (!cmp_inst) {
           error.SetErrorToGenericError();
           error.SetErrorString(interpreter_internal_error);
           return false;
         }
 
-        switch (icmp_inst->getPredicate()) {
+        switch (cmp_inst->getPredicate()) {
         default: {
           LLDB_LOGF(log, "Unsupported ICmp predicate: %s",
                     PrintValue(&ii).c_str());
@@ -561,11 +588,17 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
           error.SetErrorString(unsupported_opcode_error);
           return false;
         }
+        case CmpInst::FCMP_OEQ:
         case CmpInst::ICMP_EQ:
+        case CmpInst::FCMP_UNE:
         case CmpInst::ICMP_NE:
+        case CmpInst::FCMP_OGT:
         case CmpInst::ICMP_UGT:
+        case CmpInst::FCMP_OGE:
         case CmpInst::ICMP_UGE:
+        case CmpInst::FCMP_OLT:
         case CmpInst::ICMP_ULT:
+        case CmpInst::FCMP_OLE:
         case CmpInst::ICMP_ULE:
         case CmpInst::ICMP_SGT:
         case CmpInst::ICMP_SGE:
@@ -594,6 +627,11 @@ bool IRInterpreter::CanInterpret(llvm::Module &module, llvm::Function &function,
       case Instruction::URem:
       case Instruction::Xor:
       case Instruction::ZExt:
+        break;
+      case Instruction::FAdd:
+      case Instruction::FSub:
+      case Instruction::FMul:
+      case Instruction::FDiv:
         break;
       }
 
@@ -709,7 +747,11 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     case Instruction::AShr:
     case Instruction::And:
     case Instruction::Or:
-    case Instruction::Xor: {
+    case Instruction::Xor:
+    case Instruction::FAdd:
+    case Instruction::FSub:
+    case Instruction::FMul:
+    case Instruction::FDiv: {
       const BinaryOperator *bin_op = dyn_cast<BinaryOperator>(inst);
 
       if (!bin_op) {
@@ -748,12 +790,15 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       default:
         break;
       case Instruction::Add:
+      case Instruction::FAdd:
         result = L + R;
         break;
       case Instruction::Mul:
+      case Instruction::FMul:
         result = L * R;
         break;
       case Instruction::Sub:
+      case Instruction::FSub:
         result = L - R;
         break;
       case Instruction::SDiv:
@@ -764,6 +809,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       case Instruction::UDiv:
         L.MakeUnsigned();
         R.MakeUnsigned();
+        result = L / R;
+        break;
+      case Instruction::FDiv:
         result = L / R;
         break;
       case Instruction::SRem:
@@ -1028,8 +1076,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         LLDB_LOGF(log, "  Poffset : %s", frame.SummarizeValue(inst).c_str());
       }
     } break;
+    case Instruction::FCmp:
     case Instruction::ICmp: {
-      const ICmpInst *icmp_inst = cast<ICmpInst>(inst);
+      const CmpInst *icmp_inst = cast<CmpInst>(inst);
 
       CmpInst::Predicate predicate = icmp_inst->getPredicate();
 
@@ -1059,9 +1108,11 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       default:
         return false;
       case CmpInst::ICMP_EQ:
+      case CmpInst::FCMP_OEQ:
         result = (L == R);
         break;
       case CmpInst::ICMP_NE:
+      case CmpInst::FCMP_UNE:
         result = (L != R);
         break;
       case CmpInst::ICMP_UGT:
@@ -1074,14 +1125,26 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         R.MakeUnsigned();
         result = (L >= R);
         break;
+      case CmpInst::FCMP_OGE:
+        result = (L >= R);
+        break;
+      case CmpInst::FCMP_OGT:
+        result = (L > R);
+        break;
       case CmpInst::ICMP_ULT:
         L.MakeUnsigned();
         R.MakeUnsigned();
         result = (L < R);
         break;
+      case CmpInst::FCMP_OLT:
+        result = (L < R);
+        break;
       case CmpInst::ICMP_ULE:
         L.MakeUnsigned();
         R.MakeUnsigned();
+        result = (L <= R);
+        break;
+      case CmpInst::FCMP_OLE:
         result = (L <= R);
         break;
       case CmpInst::ICMP_SGT:

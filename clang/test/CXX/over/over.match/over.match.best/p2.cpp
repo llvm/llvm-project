@@ -7,7 +7,11 @@ namespace PR44761 {
     bool operator<(const A&) const & requires X<T>; // #1
     int operator<=>(const A&) const & requires X<T> && X<int> = delete; // #2
   };
-  bool k1 = A<int>() < A<int>(); // not ordered by constraints: prefer non-rewritten form
+  bool k1 = A<int>() < A<int>(); // prefer more-constrained 'operator<=>'
+  // expected-error@-1 {{deleted}}
+  // expected-note@#1 {{candidate}}
+  // expected-note@#2 {{candidate function has been explicitly deleted}}
+  // expected-note@#2 {{candidate function (with reversed parameter order) has been explicitly deleted}}
   bool k2 = A<float>() < A<float>(); // prefer more-constrained 'operator<=>'
   // expected-error@-1 {{deleted}}
   // expected-note@#1 {{candidate}}

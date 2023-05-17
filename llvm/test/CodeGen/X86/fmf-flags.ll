@@ -69,7 +69,7 @@ define dso_local double @not_so_fast_mul_add(double %x) {
 ; X86-NEXT:    retl
   %m = fmul double %x, 4.2
   %a = fadd fast double %m, %x
-  store double %m, double* @mul1, align 4
+  store double %m, ptr @mul1, align 4
   ret double %a
 }
 
@@ -101,7 +101,7 @@ define dso_local float @not_so_fast_recip_sqrt(float %x) {
 ; X86-NEXT:    retl
   %y = call float @llvm.sqrt.f32(float %x)
   %z = fdiv fast float 1.0, %y
-  store float %y, float* @sqrt1, align 4
+  store float %y, ptr @sqrt1, align 4
   %ret = fadd float %z , 14.5
   ret float %z
 }
@@ -111,14 +111,12 @@ define dso_local float @div_arcp_by_const(half %x) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    pushq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 16
-; X64-NEXT:    movzwl %di, %edi
-; X64-NEXT:    callq __gnu_h2f_ieee@PLT
+; X64-NEXT:    callq __extendhfsf2@PLT
 ; X64-NEXT:    mulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; X64-NEXT:    callq __gnu_f2h_ieee@PLT
-; X64-NEXT:    movzwl %ax, %edi
+; X64-NEXT:    callq __truncsfhf2@PLT
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    .cfi_def_cfa_offset 8
-; X64-NEXT:    jmp __gnu_h2f_ieee@PLT # TAILCALL
+; X64-NEXT:    jmp __extendhfsf2@PLT # TAILCALL
 ;
 ; X86-LABEL: div_arcp_by_const:
 ; X86:       # %bb.0:

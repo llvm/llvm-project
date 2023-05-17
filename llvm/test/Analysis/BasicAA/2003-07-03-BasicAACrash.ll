@@ -4,7 +4,7 @@
 %struct..RefRect = type { %struct..RefPoint, %struct..RefPoint }
 
 define i32 @BMT_CommitPartDrawObj() {
-	%tmp.19111 = getelementptr %struct..RefRect, %struct..RefRect* null, i64 0, i32 0, i32 1, i32 2
-	%tmp.20311 = getelementptr %struct..RefRect, %struct..RefRect* null, i64 0, i32 1, i32 1, i32 2
+	%tmp.19111 = getelementptr %struct..RefRect, ptr null, i64 0, i32 0, i32 1, i32 2
+	%tmp.20311 = getelementptr %struct..RefRect, ptr null, i64 0, i32 1, i32 1, i32 2
 	ret i32 0
 }

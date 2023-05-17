@@ -1,7 +1,7 @@
-; RUN: opt -S -verify -iroutliner -o /dev/null \ 
+; RUN: opt -S -passes=verify,iroutliner -o /dev/null \
 ; RUN: -pass-remarks=iroutliner -pass-remarks-missed=iroutliner < %s  \
 ; RUN: 2>&1 | FileCheck -check-prefix=CHECK %s
-; RUN: opt -S -verify -iroutliner -o /dev/null  \
+; RUN: opt -S -passes=verify,iroutliner -o /dev/null  \
 ; RUN:  -pass-remarks-output=%t < %s
 ; RUN: cat %t | FileCheck -check-prefix=YAML %s
 
@@ -328,16 +328,16 @@ entry:
   %b = alloca i32, align 4
   %output = alloca i32, align 4
   %result = alloca i32, align 4
-  store i32 2, i32* %a, align 4
-  store i32 3, i32* %b, align 4
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  store i32 2, ptr %a, align 4
+  store i32 3, ptr %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %add = add i32 %0, %1
-  store i32 %add, i32* %output, align 4
-  %2 = load i32, i32* %output, align 4
-  %3 = load i32, i32* %output, align 4
+  store i32 %add, ptr %output, align 4
+  %2 = load i32, ptr %output, align 4
+  %3 = load i32, ptr %output, align 4
   %mul = mul i32 %2, %add
-  store i32 %mul, i32* %result, align 4
+  store i32 %mul, ptr %result, align 4
   ret void
 }
 
@@ -347,16 +347,16 @@ entry:
   %b = alloca i32, align 4
   %output = alloca i32, align 4
   %result = alloca i32, align 4
-  store i32 2, i32* %a, align 4
-  store i32 3, i32* %b, align 4
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  store i32 2, ptr %a, align 4
+  store i32 3, ptr %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %add = add i32 %0, %1
-  store i32 %add, i32* %output, align 4
-  %2 = load i32, i32* %output, align 4
-  %3 = load i32, i32* %output, align 4
+  store i32 %add, ptr %output, align 4
+  %2 = load i32, ptr %output, align 4
+  %3 = load i32, ptr %output, align 4
   %mul = mul i32 %2, %add
-  store i32 %mul, i32* %result, align 4
+  store i32 %mul, ptr %result, align 4
   ret void
 }
 
@@ -364,8 +364,8 @@ define void @function3() #0 {
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %add = add i32 %0, %1
   %mul = mul i32 %0, %1
   %sub = sub i32 %0, %1
@@ -386,8 +386,8 @@ define void @function4() #0 {
 entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
-  %0 = load i32, i32* %a, align 4
-  %1 = load i32, i32* %b, align 4
+  %0 = load i32, ptr %a, align 4
+  %1 = load i32, ptr %b, align 4
   %add = add i32 %0, %1
   %mul = mul i32 %0, %1
   %sub = sub i32 %0, %1

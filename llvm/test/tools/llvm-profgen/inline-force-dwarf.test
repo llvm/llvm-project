@@ -8,10 +8,9 @@
 ; CHECK-NEXT:  2: 14
 ; CHECK-NEXT:  3: 15
 ; CHECK-NEXT:  4: 0
-; CHECK-NEXT:  65526: 14
-; CHECK-NEXT:  3: bar:224
+; CHECK-NEXT:  65525: 14
+; CHECK-NEXT:  3: bar:196
 ; CHECK-NEXT:   1: 14
-; CHECK-NEXT:   65533: 14
 
 
 ; clang -O3 -fuse-ld=lld -fpseudo-probe-for-profiling

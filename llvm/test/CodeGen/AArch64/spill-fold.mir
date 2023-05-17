@@ -5,6 +5,7 @@
   define i64 @test_subreg_spill_fold3() { ret i64 0 }
   define i64 @test_subreg_fill_fold() { ret i64 0 }
   define double @test_subreg_fill_fold2() { ret double 0.0 }
+  define i64 @test_nzcv_spill_fold() { ret i64 0 }
 ...
 ---
 # CHECK-LABEL: name: test_subreg_spill_fold
@@ -79,4 +80,19 @@ body:             |
     undef %1.ssub = COPY %0
     $d0 = COPY %1
     RET_ReallyLR implicit $d0
+...
+---
+# CHECK-LABEL: name: test_nzcv_spill_fold
+# Ensure that nzcv COPY cannot be folded.
+name:            test_nzcv_spill_fold
+registers:
+  - { id: 0, class: gpr64 }
+body:             |
+  bb.0:
+    ; CHECK: %1:gpr64 = COPY $nzcv
+    ; CHECK: STRXui %1, %stack.0, 0 :: (store (s64) into %stack.0)
+    %0 = COPY $nzcv
+    INLINEASM &nop, 1, 12, implicit-def dead $x0, 12, implicit-def dead $x1, 12, implicit-def dead $x2, 12, implicit-def dead $x3, 12, implicit-def dead $x4, 12, implicit-def dead $x5, 12, implicit-def dead $x6, 12, implicit-def dead $x7, 12, implicit-def dead $x8, 12, implicit-def dead $x9, 12, implicit-def dead $x10, 12, implicit-def dead $x11, 12, implicit-def dead $x12, 12, implicit-def dead $x13, 12, implicit-def dead $x14, 12, implicit-def dead $x15, 12, implicit-def dead $x16, 12, implicit-def dead $x17, 12, implicit-def dead $x18, 12, implicit-def dead $x19, 12, implicit-def dead $x20, 12, implicit-def dead $x21, 12, implicit-def dead $x22, 12, implicit-def dead $x23, 12, implicit-def dead $x24, 12, implicit-def dead $x25, 12, implicit-def dead $x26, 12, implicit-def dead $x27, 12, implicit-def dead $x28, 12, implicit-def dead $fp, 12, implicit-def dead $lr, 12, implicit-def $sp
+    $x0 = COPY %0
+    RET_ReallyLR implicit $x0
 ...

@@ -1,7 +1,7 @@
 # RUN: llc -march=hexagon -run-pass prologepilog %s -o - | FileCheck %s
 
-# Check that the spill of $q0 uses unaligned store instruction.
-# CHECK: V6_vS32Ub_ai $r30, -128, killed $v0
+# Check that the spill of $q0 no longer uses unaligned store instruction.
+# CHECK: V6_vS32b_ai $r16, -256, killed $v0
 
 ---
 name:            test
@@ -12,5 +12,6 @@ stack:
 body: |
   bb.0:
     liveins: $q0
+    $r16 = PS_aligna 128, implicit $r30
     PS_vstorerq_ai %stack.1, 0, $q0
 ...

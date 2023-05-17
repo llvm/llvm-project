@@ -41,6 +41,7 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <string>
 #include <type_traits>
 #include <utility>
@@ -361,11 +362,14 @@ int64_t Stmt::getID(const ASTContext &Context) const {
   return Context.getAllocator().identifyKnownAlignedObject<Stmt>(this);
 }
 
-CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB,
-                           SourceLocation RB)
+CompoundStmt::CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
+                           SourceLocation LB, SourceLocation RB)
     : Stmt(CompoundStmtClass), LBraceLoc(LB), RBraceLoc(RB) {
   CompoundStmtBits.NumStmts = Stmts.size();
+  CompoundStmtBits.HasFPFeatures = FPFeatures.requiresTrailingStorage();
   setStmts(Stmts);
+  if (hasStoredFPFeatures())
+    setStoredFPFeatures(FPFeatures);
 }
 
 void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
@@ -376,18 +380,23 @@ void CompoundStmt::setStmts(ArrayRef<Stmt *> Stmts) {
 }
 
 CompoundStmt *CompoundStmt::Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
+                                   FPOptionsOverride FPFeatures,
                                    SourceLocation LB, SourceLocation RB) {
   void *Mem =
-      C.Allocate(totalSizeToAlloc<Stmt *>(Stmts.size()), alignof(CompoundStmt));
-  return new (Mem) CompoundStmt(Stmts, LB, RB);
+      C.Allocate(totalSizeToAlloc<Stmt *, FPOptionsOverride>(
+                     Stmts.size(), FPFeatures.requiresTrailingStorage()),
+                 alignof(CompoundStmt));
+  return new (Mem) CompoundStmt(Stmts, FPFeatures, LB, RB);
 }
 
-CompoundStmt *CompoundStmt::CreateEmpty(const ASTContext &C,
-                                        unsigned NumStmts) {
-  void *Mem =
-      C.Allocate(totalSizeToAlloc<Stmt *>(NumStmts), alignof(CompoundStmt));
+CompoundStmt *CompoundStmt::CreateEmpty(const ASTContext &C, unsigned NumStmts,
+                                        bool HasFPFeatures) {
+  void *Mem = C.Allocate(
+      totalSizeToAlloc<Stmt *, FPOptionsOverride>(NumStmts, HasFPFeatures),
+      alignof(CompoundStmt));
   CompoundStmt *New = new (Mem) CompoundStmt(EmptyShell());
   New->CompoundStmtBits.NumStmts = NumStmts;
+  New->CompoundStmtBits.HasFPFeatures = HasFPFeatures;
   return New;
 }
 
@@ -993,18 +1002,18 @@ bool IfStmt::isObjCAvailabilityCheck() const {
   return isa<ObjCAvailabilityCheckExpr>(getCond());
 }
 
-Optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
+std::optional<Stmt *> IfStmt::getNondiscardedCase(const ASTContext &Ctx) {
   if (!isConstexpr() || getCond()->isValueDependent())
-    return None;
+    return std::nullopt;
   return !getCond()->EvaluateKnownConstInt(Ctx) ? getElse() : getThen();
 }
 
-Optional<const Stmt *>
+std::optional<const Stmt *>
 IfStmt::getNondiscardedCase(const ASTContext &Ctx) const {
-  if (Optional<Stmt *> Result =
+  if (std::optional<Stmt *> Result =
           const_cast<IfStmt *>(this)->getNondiscardedCase(Ctx))
     return *Result;
-  return None;
+  return std::nullopt;
 }
 
 ForStmt::ForStmt(const ASTContext &C, Stmt *Init, Expr *Cond, VarDecl *condVar,

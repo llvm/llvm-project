@@ -9,10 +9,9 @@ from lldbsuite.test import lldbutil
 
 class TestBoolVector(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
+    @skipIf(bugnumber="rdar://100741983")
     def test(self):
         self.build()
 
@@ -21,7 +20,7 @@ class TestBoolVector(TestBase):
                                           lldb.SBFileSpec("main.cpp"))
 
         vector_type = "std::vector<bool>"
-        size_type = vector_type + "::size_type"
+        size_type = "size_type"
 
         self.runCmd("settings set target.import-std-module true")
 

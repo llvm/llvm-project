@@ -1,6 +1,6 @@
-; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -hardware-loops %s -o - | FileCheck %s
+; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -passes=hardware-loops %s -o - | FileCheck %s
 
-@g = common local_unnamed_addr global i32* null, align 4
+@g = common local_unnamed_addr global ptr null, align 4
 
 ; CHECK-LABEL: counter_too_large
 ; CHECK-NOT: call void @llvm.set.loop.iterations
@@ -12,15 +12,15 @@ entry:
   br i1 %cmp7, label %while.end, label %while.body.lr.ph
 
 while.body.lr.ph:
-  %0 = load i32*, i32** @g, align 4
+  %0 = load ptr, ptr @g, align 4
   br label %while.body
 
 while.body:
   %i.09 = phi i64 [ 0, %while.body.lr.ph ], [ %inc1, %while.body ]
   %res.08 = phi i32 [ 0, %while.body.lr.ph ], [ %add, %while.body ]
   %idxprom = trunc i64 %i.09 to i32
-  %arrayidx = getelementptr inbounds i32, i32* %0, i32 %idxprom
-  %1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %0, i32 %idxprom
+  %1 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %1, %res.08
   %inc1 = add nuw i64 %i.09, 1
   %cmp = icmp ult i64 %inc1, %n

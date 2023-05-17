@@ -6,6 +6,9 @@ int f1() __attribute__((no_sanitize)); // expected-error{{'no_sanitize' attribut
 
 int f2() __attribute__((no_sanitize(1))); // expected-error{{'no_sanitize' attribute requires a string}}
 
+__attribute__((no_sanitize("all"))) int global; // expected-warning{{'no_sanitize' attribute argument 'all' not supported on a global variable}}
+__attribute__((no_sanitize("unknown"))) int global2; // expected-warning{{unknown sanitizer 'unknown' ignored}}
+
 // DUMP-LABEL: FunctionDecl {{.*}} f3
 // DUMP: NoSanitizeAttr {{.*}} address
 // PRINT: int f3() __attribute__((no_sanitize("address")))

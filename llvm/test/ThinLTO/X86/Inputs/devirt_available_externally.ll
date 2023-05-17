@@ -1,11 +1,11 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%struct.D = type { i32 (...)** }
+%struct.D = type { ptr }
 
-@_ZTV1D = constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.D*, i32)* @_ZN1D1mEi to i8*)] }, !type !3
+@_ZTV1D = constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr undef, ptr @_ZN1D1mEi] }, !type !3
 
-define i32 @_ZN1D1mEi(%struct.D* %this, i32 %a) #0 {
+define i32 @_ZN1D1mEi(ptr %this, i32 %a) #0 {
    ret i32 0;
 }
 

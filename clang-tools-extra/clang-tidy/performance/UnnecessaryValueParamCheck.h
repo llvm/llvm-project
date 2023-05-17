@@ -13,15 +13,13 @@
 #include "../utils/IncludeInserter.h"
 #include "clang/Analysis/Analyses/ExprMutationAnalyzer.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// A check that flags value parameters of expensive to copy types that
 /// can safely be converted to const references.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-unnecessary-value-param.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/unnecessary-value-param.html
 class UnnecessaryValueParamCheck : public ClangTidyCheck {
 public:
   UnnecessaryValueParamCheck(StringRef Name, ClangTidyContext *Context);
@@ -45,8 +43,6 @@ private:
   const std::vector<StringRef> AllowedTypes;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_UNNECESSARY_VALUE_PARAM_H

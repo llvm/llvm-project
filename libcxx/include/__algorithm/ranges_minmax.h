@@ -13,23 +13,31 @@
 #include <__algorithm/minmax_element.h>
 #include <__assert>
 #include <__concepts/copyable.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
 #include <__functional/ranges_operations.h>
 #include <__iterator/concepts.h>
+#include <__iterator/next.h>
 #include <__iterator/projected.h>
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER >= 20
+
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -41,8 +49,11 @@ namespace __minmax {
 struct __fn {
   template <class _Type, class _Proj = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<const _Type&>
-  operator()(const _Type& __a, const _Type& __b, _Comp __comp = {}, _Proj __proj = {}) const {
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr ranges::minmax_result<const _Type&>
+  operator()(_LIBCPP_LIFETIMEBOUND const _Type& __a,
+             _LIBCPP_LIFETIMEBOUND const _Type& __b,
+             _Comp __comp = {},
+             _Proj __proj = {}) const {
     if (std::invoke(__comp, std::invoke(__proj, __b), std::invoke(__proj, __a)))
       return {__b, __a};
     return {__a, __b};
@@ -50,7 +61,7 @@ struct __fn {
 
   template <copyable _Type, class _Proj = identity,
             indirect_strict_weak_order<projected<const _Type*, _Proj>> _Comp = ranges::less>
-  _LIBCPP_HIDE_FROM_ABI constexpr
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
   ranges::minmax_result<_Type> operator()(initializer_list<_Type> __il, _Comp __comp = {}, _Proj __proj = {}) const {
     _LIBCPP_ASSERT(__il.begin() != __il.end(), "initializer_list has to contain at least one element");
     auto __iters = std::__minmax_element_impl(__il.begin(), __il.end(), __comp, __proj);
@@ -60,7 +71,7 @@ struct __fn {
   template <input_range _Range, class _Proj = identity,
             indirect_strict_weak_order<projected<iterator_t<_Range>, _Proj>> _Comp = ranges::less>
     requires indirectly_copyable_storable<iterator_t<_Range>, range_value_t<_Range>*>
-  _LIBCPP_HIDE_FROM_ABI constexpr
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr
   ranges::minmax_result<range_value_t<_Range>> operator()(_Range&& __r, _Comp __comp = {}, _Proj __proj = {}) const {
     auto __first = ranges::begin(__r);
     auto __last = ranges::end(__r);
@@ -69,6 +80,18 @@ struct __fn {
     _LIBCPP_ASSERT(__first != __last, "range has to contain at least one element");
 
     if constexpr (forward_range<_Range>) {
+      // Special-case the one element case. Avoid repeatedly initializing objects from the result of an iterator
+      // dereference when doing so might not be idempotent. The `if constexpr` avoids the extra branch in cases where
+      // it's not needed.
+      if constexpr (!same_as<remove_cvref_t<range_reference_t<_Range>>, _ValueT> ||
+                    is_rvalue_reference_v<range_reference_t<_Range>>) {
+        if (ranges::next(__first) == __last) {
+          // During initialization, members are allowed to refer to already initialized members
+          // (see http://eel.is/c++draft/dcl.init.aggr#6)
+          minmax_result<_ValueT> __result = {*__first, __result.min};
+          return __result;
+        }
+      }
       auto __result = std::__minmax_element_impl(__first, __last, __comp, __proj);
       return {*__result.first, *__result.second};
     } else {
@@ -79,6 +102,8 @@ struct __fn {
                                    std::invoke(__proj, std::forward<decltype(__b)>(__b)));
       };
 
+      // During initialization, members are allowed to refer to already initialized members
+      // (see http://eel.is/c++draft/dcl.init.aggr#6)
       ranges::minmax_result<_ValueT> __result = {*__first, __result.min};
       if (__first == __last || ++__first == __last)
         return __result;
@@ -123,6 +148,8 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+_LIBCPP_POP_MACROS
+
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_RANGES_MINMAX_H

@@ -115,7 +115,7 @@ TEST_CONSTEXPR_CXX20 void test() {
     int const n_ints = sizeof(ints)/sizeof(int);
     int zeros[n_ints] = {0};
 
-    const size_t N = 2;
+    const std::size_t N = 2;
     const auto middle = std::begin(ints) + N;
     auto it = std::rotate_copy(std::begin(ints), middle, std::end(ints), std::begin(zeros));
     assert(std::distance(std::begin(zeros), it) == n_ints);

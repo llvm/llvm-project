@@ -29,9 +29,9 @@ extern cl::opt<unsigned> Verbosity;
 
 bolt::JumpTable::JumpTable(MCSymbol &Symbol, uint64_t Address, size_t EntrySize,
                            JumpTableType Type, LabelMapType &&Labels,
-                           BinaryFunction &BF, BinarySection &Section)
+                           BinarySection &Section)
     : BinaryData(Symbol, Address, 0, EntrySize, Section), EntrySize(EntrySize),
-      OutputEntrySize(EntrySize), Type(Type), Labels(Labels), Parent(&BF) {}
+      OutputEntrySize(EntrySize), Type(Type), Labels(Labels) {}
 
 std::pair<size_t, size_t>
 bolt::JumpTable::getEntriesForAddress(const uint64_t Addr) const {
@@ -70,12 +70,10 @@ bool bolt::JumpTable::replaceDestination(uint64_t JTAddress,
                                          MCSymbol *NewDest) {
   bool Patched = false;
   const std::pair<size_t, size_t> Range = getEntriesForAddress(JTAddress);
-  for (auto I = &Entries[Range.first], E = &Entries[Range.second]; I != E;
-       ++I) {
-    MCSymbol *&Entry = *I;
-    if (Entry == OldDest) {
+  for (auto I = Range.first; I != Range.second; ++I) {
+    if (Entries[I] == OldDest) {
       Patched = true;
-      Entry = NewDest;
+      Entries[I] = NewDest;
     }
   }
   return Patched;
@@ -103,11 +101,15 @@ void bolt::JumpTable::print(raw_ostream &OS) const {
   uint64_t Offset = 0;
   if (Type == JTT_PIC)
     OS << "PIC ";
-  OS << "Jump table " << getName() << " for function " << *Parent << " at 0x"
-     << Twine::utohexstr(getAddress()) << " with a total count of " << Count
-     << ":\n";
-  for (const uint64_t EntryOffset : OffsetEntries)
-    OS << "  0x" << Twine::utohexstr(EntryOffset) << '\n';
+  ListSeparator LS;
+
+  OS << "Jump table " << getName() << " for function ";
+  for (BinaryFunction *Frag : Parents)
+    OS << LS << *Frag;
+  OS << " at 0x" << Twine::utohexstr(getAddress()) << " with a total count of "
+     << Count << ":\n";
+  for (const uint64_t EntryAddress : EntriesAsAddress)
+    OS << "  absolute offset: 0x" << Twine::utohexstr(EntryAddress) << '\n';
   for (const MCSymbol *Entry : Entries) {
     auto LI = Labels.find(Offset);
     if (Offset && LI != Labels.end()) {

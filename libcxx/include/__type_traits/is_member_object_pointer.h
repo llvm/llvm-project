@@ -18,28 +18,28 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if __has_keyword(__is_member_object_pointer)
+#if __has_builtin(__is_member_object_pointer)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_member_object_pointer
     : _BoolConstant<__is_member_object_pointer(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_member_object_pointer_v = __is_member_object_pointer(_Tp);
 #endif
 
-#else // __has_keyword(__is_member_object_pointer)
+#else // __has_builtin(__is_member_object_pointer)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_member_object_pointer
-    : public _BoolConstant< __libcpp_is_member_pointer<typename remove_cv<_Tp>::type>::__is_obj >  {};
+    : public _BoolConstant< __libcpp_is_member_pointer<__remove_cv_t<_Tp> >::__is_obj >  {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_member_object_pointer_v = is_member_object_pointer<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_member_object_pointer)
+#endif // __has_builtin(__is_member_object_pointer)
 
 _LIBCPP_END_NAMESPACE_STD
 

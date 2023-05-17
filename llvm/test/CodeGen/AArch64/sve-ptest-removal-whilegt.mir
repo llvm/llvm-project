@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve2 -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
 
 # Test instruction sequences where PTEST is redundant and thus gets removed.
 ---
@@ -462,7 +462,7 @@ body:             |
     liveins: $w0, $w1
 
     ; CHECK-LABEL: name: whilegt_b8_s32_ptest_with_matching_operands
-    ; CHECK-NOT: PTEST
+    ; CHECK: PTEST
     %1:gpr32 = COPY $w1
     %0:gpr32 = COPY $w0
     %2:ppr = WHILEGT_PWW_B %0, %1, implicit-def dead $nzcv

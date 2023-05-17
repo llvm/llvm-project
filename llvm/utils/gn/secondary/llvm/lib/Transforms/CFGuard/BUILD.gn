@@ -3,6 +3,7 @@ static_library("CFGuard") {
   deps = [
     "//llvm/lib/IR",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "CFGuard.cpp" ]
 }

@@ -46,6 +46,7 @@ struct Edit {
   EditKind Kind = EditKind::Range;
   CharSourceRange Range;
   std::string Replacement;
+  std::string Note;
   llvm::Any Metadata;
 };
 
@@ -137,6 +138,10 @@ inline EditGenerator noEdits() { return editList({}); }
 /// specified range. A `noopEdit` may be preferred over `noEdits` to associate a
 /// diagnostic `Explanation` with the rule.
 EditGenerator noopEdit(RangeSelector Anchor);
+
+/// Generates a single, no-op edit with the associated note anchored at the
+/// start location of the specified range.
+ASTEdit note(RangeSelector Anchor, TextGenerator Note);
 
 /// Version of `ifBound` specialized to `ASTEdit`.
 inline EditGenerator ifBound(std::string ID, ASTEdit TrueEdit,
@@ -423,13 +428,13 @@ RewriteRuleWith<void> applyFirst(ArrayRef<RewriteRuleWith<void>> Rules);
 template <typename MetadataT>
 RewriteRuleWith<MetadataT>
 applyFirst(const std::vector<RewriteRuleWith<MetadataT>> &Rules) {
-  return applyFirst(llvm::makeArrayRef(Rules));
+  return applyFirst(llvm::ArrayRef(Rules));
 }
 
 template <typename MetadataT>
 RewriteRuleWith<MetadataT>
 applyFirst(std::initializer_list<RewriteRuleWith<MetadataT>> Rules) {
-  return applyFirst(llvm::makeArrayRef(Rules.begin(), Rules.end()));
+  return applyFirst(llvm::ArrayRef(Rules.begin(), Rules.end()));
 }
 /// @}
 

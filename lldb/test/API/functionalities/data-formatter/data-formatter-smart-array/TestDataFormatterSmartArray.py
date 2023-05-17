@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class SmartArrayDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_with_run_command(self):
         """Test data formatter commands."""
         self.build()
@@ -78,11 +76,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['arr = \"',
                              'Nested Hello world!'])
 
-        self.expect("p strarr",
+        self.expect("expression strarr",
                     substrs=['arr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strarr",
+        self.expect("expression other.strarr",
                     substrs=['arr = \"',
                              'Nested Hello world!'])
 
@@ -98,11 +96,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
-        self.expect("p strptr",
+        self.expect("expression strptr",
                     substrs=['ptr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strptr",
+        self.expect("expression other.strptr",
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
@@ -117,11 +115,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['arr = \"',
                              'Nested Hello world!'])
 
-        self.expect("p strarr",
+        self.expect("expression strarr",
                     substrs=['arr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strarr",
+        self.expect("expression other.strarr",
                     substrs=['arr = \"',
                              'Nested Hello world!'])
 
@@ -137,11 +135,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['arr = ',
                              'Nested Hello world!'])
 
-        self.expect("p strarr",
+        self.expect("expression strarr",
                     substrs=['arr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strarr",
+        self.expect("expression other.strarr",
                     substrs=['arr = ',
                              'Nested Hello world!'])
 
@@ -156,11 +154,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
-        self.expect("p strptr",
+        self.expect("expression strptr",
                     substrs=['ptr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strptr",
+        self.expect("expression other.strptr",
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
@@ -176,11 +174,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['arr = ',
                              'Nested Hello world!'])
 
-        self.expect("p strarr",
+        self.expect("expression strarr",
                     substrs=['arr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strarr",
+        self.expect("expression other.strarr",
                     substrs=['arr = ',
                              'Nested Hello world!'])
 
@@ -195,11 +193,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
-        self.expect("p strptr",
+        self.expect("expression strptr",
                     substrs=['ptr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strptr",
+        self.expect("expression other.strptr",
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
@@ -216,11 +214,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
-        self.expect("p strptr", matching=False,
+        self.expect("expression strptr", matching=False,
                     substrs=['ptr = \"',
                              'Hello world!'])
 
-        self.expect("p other.strptr", matching=False,
+        self.expect("expression other.strptr", matching=False,
                     substrs=['ptr = \"',
                              'Nested Hello world!'])
 
@@ -236,11 +234,11 @@ class SmartArrayDataFormatterTestCase(TestBase):
                     substrs=['ptr = ',
                              '[{N},{e}]'])
 
-        self.expect("p strptr",
+        self.expect("expression strptr",
                     substrs=['ptr = ',
                              '[{H},{e}]'])
 
-        self.expect("p other.strptr",
+        self.expect("expression other.strptr",
                     substrs=['ptr = ',
                              '[{N},{e}]'])
 

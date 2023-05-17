@@ -13,6 +13,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Profile/ProfileYAMLMapping.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
@@ -256,8 +257,7 @@ bool isYAML(const StringRef Filename) {
 
 void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
   errs() << "Using legacy profile format.\n";
-  bool BoltedCollection = false;
-  bool First = true;
+  std::optional<bool> BoltedCollection;
   StringMap<uint64_t> Entries;
   for (const std::string &Filename : Filenames) {
     if (isYAML(Filename))
@@ -271,17 +271,18 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
     StringRef Buf = MB.get()->getBuffer();
     // Check if the string "boltedcollection" is in the first line
     if (Buf.startswith("boltedcollection\n")) {
-      if (!First && !BoltedCollection)
+      if (!BoltedCollection.value_or(true))
         report_error(
             Filename,
             "cannot mix profile collected in BOLT and non-BOLT deployments");
       BoltedCollection = true;
       Buf = Buf.drop_front(17);
     } else {
-      if (BoltedCollection)
+      if (BoltedCollection.value_or(false))
         report_error(
             Filename,
             "cannot mix profile collected in BOLT and non-BOLT deployments");
+      BoltedCollection = false;
     }
 
     SmallVector<StringRef> Lines;
@@ -297,7 +298,6 @@ void mergeLegacyProfiles(const SmallVectorImpl<std::string> &Filenames) {
       Count += Entries.lookup(Signature);
       Entries.insert_or_assign(Signature, Count);
     }
-    First = false;
   }
 
   if (BoltedCollection)
@@ -398,14 +398,13 @@ int main(int argc, char **argv) {
     BinaryProfile MergedProfile;
     MergedProfile.Header = MergedHeader;
     MergedProfile.Functions.resize(MergedBFs.size());
-    std::transform(
-        MergedBFs.begin(), MergedBFs.end(), MergedProfile.Functions.begin(),
-        [](StringMapEntry<BinaryFunctionProfile> &V) { return V.second; });
+    llvm::copy(llvm::make_second_range(MergedBFs),
+               MergedProfile.Functions.begin());
 
     // For consistency, sort functions by their IDs.
-    std::sort(MergedProfile.Functions.begin(), MergedProfile.Functions.end(),
-              [](const BinaryFunctionProfile &A,
-                 const BinaryFunctionProfile &B) { return A.Id < B.Id; });
+    llvm::sort(MergedProfile.Functions,
+               [](const BinaryFunctionProfile &A,
+                  const BinaryFunctionProfile &B) { return A.Id < B.Id; });
 
     YamlOut << MergedProfile;
   }
@@ -435,9 +434,8 @@ int main(int argc, char **argv) {
     CountFuncType CountFunc = (opts::PrintFunctionList == opts::ST_EXEC_COUNT)
                                   ? ExecCountFunc
                                   : BranchCountFunc;
-    std::transform(MergedBFs.begin(), MergedBFs.end(), FunctionList.begin(),
-                   CountFunc);
-    std::stable_sort(FunctionList.rbegin(), FunctionList.rend());
+    llvm::transform(MergedBFs, FunctionList.begin(), CountFunc);
+    llvm::stable_sort(reverse(FunctionList));
     errs() << "Functions sorted by "
            << (opts::PrintFunctionList == opts::ST_EXEC_COUNT ? "execution"
                                                               : "total branch")

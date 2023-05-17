@@ -43,7 +43,7 @@
 
 # RUN: not llvm-objcopy --set-section-alignment=.foo=bar %t /dev/null 2>&1 | \
 # RUN:   FileCheck --check-prefix=INVALID-ALIGN %s
-# INVALID-ALIGN:   error: invalid alignment for --set-section-alignment: 'bar'
+# INVALID-ALIGN:   error: invalid value for --set-section-alignment: 'bar'
 
 !ELF
 FileHeader:

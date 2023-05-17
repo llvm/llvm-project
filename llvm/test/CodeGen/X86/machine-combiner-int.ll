@@ -13,8 +13,8 @@ define i16 @reassociate_muls_i16(i16 %x0, i16 %x1, i16 %x2, i16 %x3) {
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    leal   (%rdi,%rsi), %eax
+; CHECK-NEXT:    imull  %ecx, %edx
 ; CHECK-NEXT:    imull  %edx, %eax
-; CHECK-NEXT:    imull  %ecx, %eax
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %t0 = add i16 %x0, %x1
@@ -29,8 +29,8 @@ define i32 @reassociate_muls_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    leal   (%rdi,%rsi), %eax
+; CHECK-NEXT:    imull  %ecx, %edx
 ; CHECK-NEXT:    imull  %edx, %eax
-; CHECK-NEXT:    imull  %ecx, %eax
 ; CHECK-NEXT:    retq
 
 ; DEAD:       ADD32rr
@@ -47,8 +47,8 @@ define i64 @reassociate_muls_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 ; CHECK-LABEL: reassociate_muls_i64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    leaq   (%rdi,%rsi), %rax
+; CHECK-NEXT:    imulq  %rcx, %rdx
 ; CHECK-NEXT:    imulq  %rdx, %rax
-; CHECK-NEXT:    imulq  %rcx, %rax
 ; CHECK-NEXT:    retq
   %t0 = add i64 %x0, %x1
   %t1 = mul i64 %x2, %t0
@@ -62,10 +62,10 @@ define i64 @reassociate_muls_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 define i8 @reassociate_ands_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 ; CHECK-LABEL: reassociate_ands_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl  %edi, %eax
-; CHECK-NEXT:    subb  %sil, %al
-; CHECK-NEXT:    andb  %dl, %al
+; CHECK-NEXT:    movl  %edx, %eax
+; CHECK-NEXT:    subb  %sil, %dil
 ; CHECK-NEXT:    andb  %cl, %al
+; CHECK-NEXT:    andb  %dil, %al
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %t0 = sub i8 %x0, %x1
@@ -79,10 +79,10 @@ define i8 @reassociate_ands_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 define i32 @reassociate_ands_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: reassociate_ands_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl  %edi, %eax
-; CHECK-NEXT:    subl  %esi, %eax
-; CHECK-NEXT:    andl  %edx, %eax
+; CHECK-NEXT:    movl  %edx, %eax
+; CHECK-NEXT:    subl  %esi, %edi
 ; CHECK-NEXT:    andl  %ecx, %eax
+; CHECK-NEXT:    andl  %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i32 %x0, %x1
   %t1 = and i32 %x2, %t0
@@ -93,10 +93,10 @@ define i32 @reassociate_ands_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 define i64 @reassociate_ands_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 ; CHECK-LABEL: reassociate_ands_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq  %rdi, %rax
-; CHECK-NEXT:    subq  %rsi, %rax
-; CHECK-NEXT:    andq  %rdx, %rax
+; CHECK-NEXT:    movq  %rdx, %rax
+; CHECK-NEXT:    subq  %rsi, %rdi
 ; CHECK-NEXT:    andq  %rcx, %rax
+; CHECK-NEXT:    andq  %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = sub i64 %x0, %x1
   %t1 = and i64 %x2, %t0
@@ -110,10 +110,10 @@ define i64 @reassociate_ands_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 define i8 @reassociate_ors_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 ; CHECK-LABEL: reassociate_ors_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl  %edi, %eax
-; CHECK-NEXT:    subb  %sil, %al
-; CHECK-NEXT:    orb   %dl, %al
+; CHECK-NEXT:    movl  %edx, %eax
+; CHECK-NEXT:    subb  %sil, %dil
 ; CHECK-NEXT:    orb   %cl, %al
+; CHECK-NEXT:    orb   %dil, %al
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %t0 = sub i8 %x0, %x1
@@ -127,10 +127,10 @@ define i8 @reassociate_ors_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 define i32 @reassociate_ors_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: reassociate_ors_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl  %edi, %eax
-; CHECK-NEXT:    subl  %esi, %eax
-; CHECK-NEXT:    orl   %edx, %eax
+; CHECK-NEXT:    movl  %edx, %eax
+; CHECK-NEXT:    subl  %esi, %edi
 ; CHECK-NEXT:    orl   %ecx, %eax
+; CHECK-NEXT:    orl   %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i32 %x0, %x1
   %t1 = or i32 %x2, %t0
@@ -141,10 +141,10 @@ define i32 @reassociate_ors_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 define i64 @reassociate_ors_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 ; CHECK-LABEL: reassociate_ors_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq  %rdi, %rax
-; CHECK-NEXT:    subq  %rsi, %rax
-; CHECK-NEXT:    orq   %rdx, %rax
+; CHECK-NEXT:    movq  %rdx, %rax
+; CHECK-NEXT:    subq  %rsi, %rdi
 ; CHECK-NEXT:    orq   %rcx, %rax
+; CHECK-NEXT:    orq   %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = sub i64 %x0, %x1
   %t1 = or i64 %x2, %t0
@@ -158,10 +158,10 @@ define i64 @reassociate_ors_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 define i8 @reassociate_xors_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 ; CHECK-LABEL: reassociate_xors_i8:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl  %edi, %eax
-; CHECK-NEXT:    subb  %sil, %al
-; CHECK-NEXT:    xorb  %dl, %al
+; CHECK-NEXT:    movl  %edx, %eax
+; CHECK-NEXT:    subb  %sil, %dil
 ; CHECK-NEXT:    xorb  %cl, %al
+; CHECK-NEXT:    xorb  %dil, %al
 ; CHECK-NEXT:    # kill
 ; CHECK-NEXT:    retq
   %t0 = sub i8 %x0, %x1
@@ -175,10 +175,10 @@ define i8 @reassociate_xors_i8(i8 %x0, i8 %x1, i8 %x2, i8 %x3) {
 define i32 @reassociate_xors_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 ; CHECK-LABEL: reassociate_xors_i32:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl  %edi, %eax
-; CHECK-NEXT:    subl  %esi, %eax
-; CHECK-NEXT:    xorl  %edx, %eax
+; CHECK-NEXT:    movl  %edx, %eax
+; CHECK-NEXT:    subl  %esi, %edi
 ; CHECK-NEXT:    xorl  %ecx, %eax
+; CHECK-NEXT:    xorl  %edi, %eax
 ; CHECK-NEXT:    retq
   %t0 = sub i32 %x0, %x1
   %t1 = xor i32 %x2, %t0
@@ -189,10 +189,10 @@ define i32 @reassociate_xors_i32(i32 %x0, i32 %x1, i32 %x2, i32 %x3) {
 define i64 @reassociate_xors_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3) {
 ; CHECK-LABEL: reassociate_xors_i64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movq  %rdi, %rax
-; CHECK-NEXT:    subq  %rsi, %rax
-; CHECK-NEXT:    xorq  %rdx, %rax
+; CHECK-NEXT:    movq  %rdx, %rax
+; CHECK-NEXT:    subq  %rsi, %rdi
 ; CHECK-NEXT:    xorq  %rcx, %rax
+; CHECK-NEXT:    xorq  %rdi, %rax
 ; CHECK-NEXT:    retq
   %t0 = sub i64 %x0, %x1
   %t1 = xor i64 %x2, %t0

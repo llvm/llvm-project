@@ -8,14 +8,24 @@
 // BLOCKS:#define __BLOCKS__ 1
 // BLOCKS:#define __block __attribute__((__blocks__(byref)))
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++26 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX26 %s
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX26 %s
 //
+// CXX26:#define __GNUG__ 4
+// CXX26:#define __GXX_EXPERIMENTAL_CXX0X__ 1
+// CXX26:#define __GXX_RTTI 1
+// CXX26:#define __GXX_WEAK__ 1
+// CXX26:#define __cplusplus 202400L
+// CXX26:#define __private_extern__ extern
+//
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++23 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2B %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++2b -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2B %s
 //
 // CXX2B:#define __GNUG__ 4
 // CXX2B:#define __GXX_EXPERIMENTAL_CXX0X__ 1
 // CXX2B:#define __GXX_RTTI 1
 // CXX2B:#define __GXX_WEAK__ 1
-// CXX2B:#define __cplusplus 202101L
+// CXX2B:#define __cplusplus 202302L
 // CXX2B:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=c++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix CXX2A %s
@@ -133,11 +143,20 @@
 // RUN: %clang_cc1 -ffreestanding -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix FREESTANDING %s
 // FREESTANDING:#define __STDC_HOSTED__ 0
 //
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++26 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX26 %s
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2c -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX26 %s
+//
+// GXX26:#define __GNUG__ 4
+// GXX26:#define __GXX_WEAK__ 1
+// GXX26:#define __cplusplus 202400L
+// GXX26:#define __private_extern__ extern
+//
+// RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++23 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2B %s
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++2b -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2B %s
 //
 // GXX2B:#define __GNUG__ 4
 // GXX2B:#define __GXX_WEAK__ 1
-// GXX2B:#define __cplusplus 202101L
+// GXX2B:#define __cplusplus 202302L
 // GXX2B:#define __private_extern__ extern
 //
 // RUN: %clang_cc1 -x c++ -fgnuc-version=4.2.1 -std=gnu++20 -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GXX2A %s
@@ -1342,7 +1361,8 @@
 // PS4:#define __SSE2__ 1
 // PS4:#define __SSE_MATH__ 1
 // PS4:#define __SSE__ 1
-// PS4:#define __STDC_VERSION__ 199901L
+// PS4ONLY:#define __STDC_VERSION__ 199901L
+// PS5ONLY:#define __STDC_VERSION__ 201710L
 // PS4:#define __UINTMAX_TYPE__ long unsigned int
 // PS4:#define __USER_LABEL_PREFIX__
 // PS4:#define __WCHAR_MAX__ 65535
@@ -1363,9 +1383,12 @@
 // RUN: %clang_cc1 -x c++ -E -dM -ffreestanding -triple=x86_64-sie-ps5 < /dev/null | FileCheck --match-full-lines --check-prefix PS4-CXX %s
 // PS4-CXX:#define __STDCPP_DEFAULT_NEW_ALIGNMENT__ 32UL
 //
-// RUN: %clang_cc1 -E -dM -triple=x86_64-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
-// RUN: %clang_cc1 -E -dM -fms-extensions -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC %s
-// X86-64-DECLSPEC: #define __declspec{{.*}}
+// RUN: %clang_cc1 -E -dM -triple=x86_64-pc-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC-GNU %s
+// X86-64-DECLSPEC-GNU: #define __declspec{{.*}} __attribute__{{.*}}
+//
+// RUN: %clang_cc1 -E -dM -fms-extensions -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC-MS %s
+// RUN: %clang_cc1 -E -dM -fdeclspec -triple=x86_64-unknown-mingw32 < /dev/null | FileCheck -match-full-lines -check-prefix X86-64-DECLSPEC-MS %s
+// X86-64-DECLSPEC-MS: #define __declspec{{.*}} __declspec{{.*}}
 //
 // RUN: %clang_cc1 -E -dM -ffreestanding -triple=sparc64-none-none < /dev/null | FileCheck -match-full-lines -check-prefix SPARCV9 %s
 // SPARCV9:#define __BIGGEST_ALIGNMENT__ 16
@@ -1386,13 +1409,13 @@
 // SPARC64-OBSD:#define __UINTMAX_C_SUFFIX__ ULL
 // SPARC64-OBSD:#define __UINTMAX_TYPE__ long long unsigned int
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSD-DEFINE %s
-// KFREEBSD-DEFINE:#define __FreeBSD_kernel__ 1
-// KFREEBSD-DEFINE:#define __GLIBC__ 1
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=x86_64-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSD-DEF %s
+// KFREEBSD-DEF:#define __FreeBSD_kernel__ 1
+// KFREEBSD-DEF:#define __GLIBC__ 1
 //
-// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i686-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSDI686-DEFINE %s
-// KFREEBSDI686-DEFINE:#define __FreeBSD_kernel__ 1
-// KFREEBSDI686-DEFINE:#define __GLIBC__ 1
+// RUN: %clang_cc1 -E -dM -ffreestanding -triple=i686-pc-kfreebsd-gnu < /dev/null | FileCheck -match-full-lines -check-prefix KFREEBSDI686-DEF %s
+// KFREEBSDI686-DEF:#define __FreeBSD_kernel__ 1
+// KFREEBSDI686-DEF:#define __GLIBC__ 1
 //
 // RUN: %clang_cc1 -x c++ -triple i686-pc-linux-gnu -fobjc-runtime=gcc -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GNUSOURCE %s
 // RUN: %clang_cc1 -x c++ -triple sparc-rtems-elf -E -dM < /dev/null | FileCheck -match-full-lines -check-prefix GNUSOURCE %s
@@ -1593,6 +1616,10 @@
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_SHORT_LOCK_FREE 2
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_TEST_AND_SET_TRUEVAL 1
 // WEBASSEMBLY-NEXT:#define __GCC_ATOMIC_WCHAR_T_LOCK_FREE 2
+// WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_1 1
+// WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_2 1
+// WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_4 1
+// WEBASSEMBLY-NEXT:#define __GCC_HAVE_SYNC_COMPARE_AND_SWAP_8 1
 // WEBASSEMBLY-NEXT:#define __GNUC_MINOR__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __GNUC_PATCHLEVEL__ {{.*}}
 // WEBASSEMBLY-NEXT:#define __GNUC_STDC_INLINE__ 1

@@ -10,7 +10,7 @@
 @addr = external global i8
 
 define void @frob() {
-  store i32 1, i32* getelementptr inbounds ([3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 ptrtoint (i8* @addr to i64)), align 4
+  store i32 1, ptr getelementptr inbounds ([3 x %struct.X], ptr @Y, i64 0, i64 0, i32 0, i64 ptrtoint (ptr @addr to i64)), align 4
   ret void
 }
 
@@ -19,10 +19,9 @@ define void @frob() {
 ; CHECK: %b = load
 ; CHECK: add i32 %a, %b
 define i32 @borf(i64 %i, i64 %j) {
-  %p = getelementptr inbounds [3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 0, i64 0
-  %a = load i32, i32* %p
-  %q = getelementptr inbounds [3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 0, i32 1, i64 0
-  %b = load i32, i32* %q
+  %a = load i32, ptr @Y
+  %q = getelementptr inbounds [3 x %struct.X], ptr @Y, i64 0, i64 0, i32 1, i64 0
+  %b = load i32, ptr %q
   %c = add i32 %a, %b
   ret i32 %c
 }
@@ -32,10 +31,10 @@ define i32 @borf(i64 %i, i64 %j) {
 ; CHECK: %b = load
 ; CHECK: add i32 %a, %b
 define i32 @borg(i64 %i, i64 %j) {
-  %p = getelementptr inbounds [3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 0, i64 1
-  %a = load i32, i32* %p
-  %q = getelementptr inbounds [3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 1, i32 1, i64 1
-  %b = load i32, i32* %q
+  %p = getelementptr inbounds [3 x %struct.X], ptr @Y, i64 0, i64 1, i32 0, i64 1
+  %a = load i32, ptr %p
+  %q = getelementptr inbounds [3 x %struct.X], ptr @Y, i64 0, i64 1, i32 1, i64 1
+  %b = load i32, ptr %q
   %c = add i32 %a, %b
   ret i32 %c
 }
@@ -45,10 +44,10 @@ define i32 @borg(i64 %i, i64 %j) {
 ; CHECK: %b = load
 ; CHECK: add i32 %a, %b
 define i32 @borh(i64 %i, i64 %j) {
-  %p = getelementptr inbounds [3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 0, i64 2
-  %a = load i32, i32* %p
-  %q = getelementptr inbounds [3 x %struct.X], [3 x %struct.X]* @Y, i64 0, i64 2, i32 1, i64 2
-  %b = load i32, i32* %q
+  %p = getelementptr inbounds [3 x %struct.X], ptr @Y, i64 0, i64 2, i32 0, i64 2
+  %a = load i32, ptr %p
+  %q = getelementptr inbounds [3 x %struct.X], ptr @Y, i64 0, i64 2, i32 1, i64 2
+  %b = load i32, ptr %q
   %c = add i32 %a, %b
   ret i32 %c
 }

@@ -64,11 +64,10 @@ template("compiled_action") {
                              "visibility",
                            ])
     host_tool = invoker.tool + "($host_toolchain)"
-    host_executable = get_label_info(host_tool, "root_out_dir") +
-                      "/bin/" + get_label_info(host_tool, "name")
+    host_executable = get_label_info(host_tool, "root_out_dir") + "/bin/" +
+                      get_label_info(host_tool, "name")
     deps = [ host_tool ]
     script = "//llvm/utils/gn/build/run_built_binary.py"
     args = [ rebase_path(host_executable, root_build_dir) ] + invoker.args
   }
 }
-

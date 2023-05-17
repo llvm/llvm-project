@@ -14,10 +14,10 @@
 #define LLVM_REMARKS_REMARK_H
 
 #include "llvm-c/Remarks.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/CBindingWrapping.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -44,7 +44,7 @@ struct Argument {
   // FIXME: We might want to be able to store other types than strings here.
   StringRef Val;
   // If set, the debug location corresponding to the value.
-  Optional<RemarkLocation> Loc;
+  std::optional<RemarkLocation> Loc;
 };
 
 // Create wrappers for C Binding types (see CBindingWrapping.h).
@@ -80,11 +80,11 @@ struct Remark {
   StringRef FunctionName;
 
   /// The location in the source file of the remark.
-  Optional<RemarkLocation> Loc;
+  std::optional<RemarkLocation> Loc;
 
   /// If profile information is available, this is the number of times the
   /// corresponding code was executed in a profile instrumentation run.
-  Optional<uint64_t> Hotness;
+  std::optional<uint64_t> Hotness;
 
   /// Arguments collected via the streaming interface.
   SmallVector<Argument, 5> Args;
@@ -112,7 +112,7 @@ DEFINE_SIMPLE_CONVERSION_FUNCTIONS(Remark, LLVMRemarkEntryRef)
 /// Comparison operators for Remark objects and dependent objects.
 
 template <typename T>
-bool operator<(const Optional<T> &LHS, const Optional<T> &RHS) {
+bool operator<(const std::optional<T> &LHS, const std::optional<T> &RHS) {
   // Sorting based on optionals should result in all `None` entries to appear
   // before the valid entries. For example, remarks with no debug location will
   // appear first.

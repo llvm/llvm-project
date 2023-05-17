@@ -9,7 +9,7 @@ declare void @func()
 
 declare i32 @__gxx_personality_sj0(...)
 
-define void @test0() personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define void @test0() personality ptr @__gxx_personality_sj0 {
 entry:
   invoke void @func()
     to label %cont unwind label %lpad
@@ -18,9 +18,9 @@ cont:
   ret void
 
 lpad:
-  %exn = landingpad { i8*, i32 }
+  %exn = landingpad { ptr, i32 }
            cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
 ; IOS: __Unwind_SjLj_Resume

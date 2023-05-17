@@ -18,28 +18,28 @@
 @c = external global i16, align 2
 @globa = common global i32 0, align 4
 
-@ptr = internal global void (...)* null, align 4
+@ptr = internal global ptr null, align 4
 
 declare void @foo()
 
 define void @bar() {
-  %1 = alloca i8*, align 8
-  %2 = alloca i8*, align 8
-  store i32 0, i32* @a, align 4
-  store i64 0, i64* @b, align 8
-  store i16 0, i16* @c, align 2
-  store i32 0, i32* @globa, align 4
-  store void (...)* bitcast (void ()* @bar to void (...)*), void (...)** @ptr, align 4
-  store i8* bitcast (void ()* @foo to i8*), i8** %1, align 8
-  store i8* bitcast (void ()* @foobar to i8*), i8** %2, align 8
+  %1 = alloca ptr, align 8
+  %2 = alloca ptr, align 8
+  store i32 0, ptr @a, align 4
+  store i64 0, ptr @b, align 8
+  store i16 0, ptr @c, align 2
+  store i32 0, ptr @globa, align 4
+  store ptr @bar, ptr @ptr, align 4
+  store ptr @foo, ptr %1, align 8
+  store ptr @foobar, ptr %2, align 8
   ret void
 }
 
 ; We initialize a csect when we first reference an external global, so make sure we don't run into problems when we see it again.
 define void @bar2() {
-  store i32 0, i32* @a, align 4
-  store i64 0, i64* @b, align 8
-  store i16 0, i16* @c, align 2
+  store i32 0, ptr @a, align 4
+  store i64 0, ptr @b, align 8
+  store i16 0, ptr @c, align 2
   ret void
 }
 

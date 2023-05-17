@@ -2,9 +2,6 @@
 Test that you can set breakpoint commands successfully with the Python API's:
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +10,6 @@ import side_effect
 
 
 class PythonBreakpointCommandSettingTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])

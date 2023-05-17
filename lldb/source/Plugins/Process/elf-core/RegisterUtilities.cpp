@@ -8,10 +8,11 @@
 
 #include "Plugins/Process/elf-core/RegisterUtilities.h"
 #include "llvm/ADT/STLExtras.h"
+#include <optional>
 
 using namespace lldb_private;
 
-static llvm::Optional<uint32_t>
+static std::optional<uint32_t>
 getNoteType(const llvm::Triple &Triple,
             llvm::ArrayRef<RegsetDesc> RegsetDescs) {
   for (const auto &Entry : RegsetDescs) {
@@ -22,7 +23,7 @@ getNoteType(const llvm::Triple &Triple,
       continue;
     return Entry.Note;
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 DataExtractor lldb_private::getRegset(llvm::ArrayRef<CoreNote> Notes,

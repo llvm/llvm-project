@@ -10,9 +10,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void BoolPointerImplicitConversionCheck::registerMatchers(MatchFinder *Finder) {
   // Look for ifs that have an implicit bool* to bool conversion in the
@@ -84,6 +82,4 @@ void BoolPointerImplicitConversionCheck::check(
   }
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -126,5 +126,3 @@ static_assert(!std::semiregular<has_non_default_initializable>);
 static_assert(!std::semiregular<deleted_default_ctor>);
 static_assert(!std::semiregular<derived_from_deleted_default_ctor>);
 static_assert(!std::semiregular<has_deleted_default_ctor>);
-
-int main(int, char**) { return 0; }

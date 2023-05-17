@@ -111,9 +111,15 @@ Error HTTPClient::perform(const HTTPRequest &Request,
   curl_easy_setopt(Curl, CURLOPT_URL, Url.c_str());
   curl_easy_setopt(Curl, CURLOPT_FOLLOWLOCATION, Request.FollowRedirects);
 
+  curl_slist *Headers = nullptr;
+  for (const std::string &Header : Request.Headers)
+    Headers = curl_slist_append(Headers, Header.c_str());
+  curl_easy_setopt(Curl, CURLOPT_HTTPHEADER, Headers);
+
   CurlHTTPRequest CurlRequest(Handler);
   curl_easy_setopt(Curl, CURLOPT_WRITEDATA, &CurlRequest);
   CURLcode CurlRes = curl_easy_perform(Curl);
+  curl_slist_free_all(Headers);
   if (CurlRes != CURLE_OK)
     return joinErrors(std::move(CurlRequest.ErrorState),
                       createStringError(errc::io_error,

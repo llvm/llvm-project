@@ -80,7 +80,7 @@ define weak void @weak_func_prevailing() {
 ; Make @weak_func_nonprevailing an aliasee to ensure it is still marked
 ; live and kept as a definition even when non-prevailing. We want to ensure
 ; this definition is not internalized.
-@alias1 = hidden alias void (), void ()* @weak_func_nonprevailing
+@alias1 = hidden alias void (), ptr @weak_func_nonprevailing
 define weak void @weak_func_nonprevailing() {
     ret void
 }

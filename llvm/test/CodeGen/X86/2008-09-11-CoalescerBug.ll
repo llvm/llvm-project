@@ -1,12 +1,12 @@
 ; RUN: llc < %s -mtriple=i686--
 ; PR2783
 
-@g_15 = external dso_local global i16		; <i16*> [#uses=2]
+@g_15 = external dso_local global i16		; <ptr> [#uses=2]
 
 define i32 @func_3(i32 %p_5) nounwind {
 entry:
 	%0 = srem i32 1, 0		; <i32> [#uses=2]
-	%1 = load i16, i16* @g_15, align 2		; <i16> [#uses=1]
+	%1 = load i16, ptr @g_15, align 2		; <i16> [#uses=1]
 	%2 = zext i16 %1 to i32		; <i32> [#uses=1]
 	%3 = and i32 %2, 1		; <i32> [#uses=1]
 	%4 = tail call i32 (...) @rshift_u_s( i32 1 ) nounwind		; <i32> [#uses=1]
@@ -14,7 +14,7 @@ entry:
 	%6 = zext i1 %5 to i32		; <i32> [#uses=1]
 	%7 = icmp sge i32 %3, %6		; <i1> [#uses=1]
 	%8 = zext i1 %7 to i32		; <i32> [#uses=1]
-	%9 = load i16, i16* @g_15, align 2		; <i16> [#uses=1]
+	%9 = load i16, ptr @g_15, align 2		; <i16> [#uses=1]
 	%10 = icmp eq i16 %9, 0		; <i1> [#uses=1]
 	%11 = zext i1 %10 to i32		; <i32> [#uses=1]
 	%12 = tail call i32 (...) @func_20( i32 1 ) nounwind		; <i32> [#uses=1]

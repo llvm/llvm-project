@@ -46,6 +46,7 @@ public:
 
     bool show_mixed; // Show mixed source/assembly
     bool show_bytes;
+    bool show_control_flow_kind;
     uint32_t num_lines_context = 0;
     uint32_t num_instructions = 0;
     bool raw;

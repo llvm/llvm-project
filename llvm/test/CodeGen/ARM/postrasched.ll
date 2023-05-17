@@ -10,10 +10,10 @@
 ; CHECK:  t2LDRi12
 ; CHECK:  Latency            : 2
 
-define i32 @test_misched(i32* %ptr) "target-cpu"="cortex-m33" {
+define i32 @test_misched(ptr %ptr) "target-cpu"="cortex-m33" {
 entry:
-  %l = load i32, i32* %ptr
-  store i32 0, i32* %ptr
+  %l = load i32, ptr %ptr
+  store i32 0, ptr %ptr
   ret i32 %l
 }
 
@@ -21,10 +21,10 @@ entry:
 ; CHECK: Subtarget disables post-MI-sched.
 ; CHECK: ********** List Scheduling **********
 
-define i32 @test_rasched(i32* %ptr) {
+define i32 @test_rasched(ptr %ptr) {
 entry:
-  %l = load i32, i32* %ptr
-  store i32 0, i32* %ptr
+  %l = load i32, ptr %ptr
+  store i32 0, ptr %ptr
   ret i32 %l
 }
 

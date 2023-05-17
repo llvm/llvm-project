@@ -770,7 +770,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd(<2 x double> %x0) {
   ret i8 %res1
 }
 
-define i8 @test_int_x86_avx512_mask_fpclass_sd_load(<2 x double>* %x0ptr) {
+define i8 @test_int_x86_avx512_mask_fpclass_sd_load(ptr %x0ptr) {
 ; X86-LABEL: test_int_x86_avx512_mask_fpclass_sd_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -785,7 +785,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_sd_load(<2 x double>* %x0ptr) {
 ; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <2 x double>, <2 x double>* %x0ptr
+  %x0 = load <2 x double>, ptr %x0ptr
   %res = call i8 @llvm.x86.avx512.mask.fpclass.sd(<2 x double> %x0, i32 4, i8 -1)
   ret i8 %res
 }
@@ -805,7 +805,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss(<4 x float> %x0) {
   ret i8 %res1
 }
 
-define i8 @test_int_x86_avx512_mask_fpclass_ss_load(<4 x float>* %x0ptr, i8 %x1) {
+define i8 @test_int_x86_avx512_mask_fpclass_ss_load(ptr %x0ptr, i8 %x1) {
 ; X86-LABEL: test_int_x86_avx512_mask_fpclass_ss_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -820,7 +820,7 @@ define i8 @test_int_x86_avx512_mask_fpclass_ss_load(<4 x float>* %x0ptr, i8 %x1)
 ; X64-NEXT:    kmovw %k0, %eax # encoding: [0xc5,0xf8,0x93,0xc0]
 ; X64-NEXT:    # kill: def $al killed $al killed $eax
 ; X64-NEXT:    retq # encoding: [0xc3]
-  %x0 = load <4 x float>, <4 x float>* %x0ptr
+  %x0 = load <4 x float>, ptr %x0ptr
   %res = call i8 @llvm.x86.avx512.mask.fpclass.ss(<4 x float> %x0, i32 4, i8 -1)
   ret i8 %res
 }

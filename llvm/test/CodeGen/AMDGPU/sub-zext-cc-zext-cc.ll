@@ -21,7 +21,7 @@
 define amdgpu_cs float @sub_zext_zext() {
 .entry:
 
-  %t519 = load float, float addrspace(3)* null
+  %t519 = load float, ptr addrspace(3) null
 
   %t524 = fcmp ogt float %t519, 0.000000e+00
   %t525 = fcmp olt float %t519, 0.000000e+00

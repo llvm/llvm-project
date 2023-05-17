@@ -1,7 +1,5 @@
 ; RUN: llc -dwarf-version=2 -mtriple x86_64-apple-macosx -O0 -filetype=obj -o %t_2_le.o %s
 ; RUN: llvm-dwarfdump -v -debug-info %t_2_le.o | FileCheck %s
-; RUN: llc -dwarf-version=4 -debugger-tune=gdb -mtriple x86_64-apple-macosx -O0 -filetype=obj -o %t_4_le.o %s
-; RUN: llvm-dwarfdump -v -debug-info %t_4_le.o | FileCheck %s
 
 ; Produced at -O0 from:
 ; struct {

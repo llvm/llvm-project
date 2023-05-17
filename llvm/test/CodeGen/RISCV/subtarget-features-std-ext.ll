@@ -9,8 +9,8 @@
 
 
 define float @foo(i32 %a) nounwind #0 {
-; RV32IF-ILP32: fcvt.s.w  ft0, a0
-; RV32IF-ILP32-NEXT: fmv.x.w a0, ft0
+; RV32IF-ILP32: fcvt.s.w  fa5, a0
+; RV32IF-ILP32-NEXT: fmv.x.w a0, fa5
 ; RV32IF-ILP32F: fcvt.s.w fa0, a0
 ; RV32IF-ILP32F-NEXT: ret
   %conv = sitofp i32 %a to float

@@ -9,8 +9,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestGDBRemoteClient(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     class gPacketResponder(MockGDBServerResponder):
         registers = [
             "name:rax;bitsize:64;offset:0;encoding:uint;format:hex;set:General Purpose Registers;ehframe:0;dwarf:0;",
@@ -88,7 +86,30 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
         error = lldb.SBError()
         target.Launch(lldb.SBListener(), None, None, None, None, None,
                 None, 0, True, error)
-        self.assertEquals("'A' packet returned an error: 71", error.GetCString())
+        self.assertRegex(error.GetCString(), "Cannot launch '.*a': Error 71")
+
+    def test_launch_rich_error(self):
+        class MyResponder(MockGDBServerResponder):
+            def qC(self):
+                return "E42"
+
+            def qfThreadInfo(self):
+                return "OK" # No threads.
+
+            # Then, when we are asked to attach, error out.
+            def vRun(self, packet):
+                return "Eff;" + seven.hexlify("I'm a teapot")
+
+        self.server.responder = MyResponder()
+
+        target = self.createTarget("a.yaml")
+        process = self.connect(target)
+        lldbutil.expect_state_changes(self, self.dbg.GetListener(), process, [lldb.eStateConnected])
+
+        error = lldb.SBError()
+        target.Launch(lldb.SBListener(), None, None, None, None, None,
+                None, 0, True, error)
+        self.assertRegex(error.GetCString(), "Cannot launch '.*a': I'm a teapot")
 
     def test_read_registers_using_g_packets(self):
         """Test reading registers using 'g' packets (default behavior)"""
@@ -317,11 +338,11 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                       lldb.SBError())  # error
 
         self.assertPacketLogContains([
-          "QEnvironment:PLAIN=foo",
-          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
-          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
           "QEnvironmentHexEncoded:4e45454453454e43333d66726f7d62",
           "QEnvironmentHexEncoded:4e45454453454e43343d6623726f62",
+          "QEnvironment:PLAIN=foo",
+          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
+          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
           "QEnvironment:EQUALS=foo=bar",
         ])
 
@@ -365,11 +386,11 @@ class TestGDBRemoteClient(GDBRemoteTestBase):
                       lldb.SBError())  # error
 
         self.assertPacketLogContains([
-          "QEnvironmentHexEncoded:504c41494e3d666f6f",
-          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
-          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
           "QEnvironmentHexEncoded:4e45454453454e43333d66726f7d62",
           "QEnvironmentHexEncoded:4e45454453454e43343d6623726f62",
+          "QEnvironmentHexEncoded:504c41494e3d666f6f",
+          "QEnvironmentHexEncoded:4e45454453454e43323d66722a6f62",
+          "QEnvironmentHexEncoded:4e45454453454e433d66726f6224",
           "QEnvironmentHexEncoded:455155414c533d666f6f3d626172",
         ])
 

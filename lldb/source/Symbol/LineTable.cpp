@@ -325,7 +325,7 @@ uint32_t LineTable::FindLineEntryIndexByFileIndex(
       start_idx, file_idx, src_location_spec, line_entry_ptr, file_idx_matcher);
 }
 
-size_t LineTable::FineLineEntriesForFileIndex(uint32_t file_idx, bool append,
+size_t LineTable::FindLineEntriesForFileIndex(uint32_t file_idx, bool append,
                                               SymbolContextList &sc_list) {
 
   if (!append)

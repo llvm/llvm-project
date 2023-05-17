@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips64-linux-gnu -S -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple mips64-linux-gnu -S -o - -emit-llvm %s | FileCheck %s
 //
 // Transparent unions are passed according to the calling convention rules of
 // the first member. In this case, it is as if it were a void pointer so we
@@ -22,6 +22,6 @@ void bar(void) {
 }
 
 // CHECK-LABEL: define{{.*}} void @bar()
-// CHECK:         call void @foo(i8* %{{[0-9]+}})
+// CHECK:         call void @foo(ptr %{{[0-9]+}})
 
-// CHECK: declare void @foo(i8*)
+// CHECK: declare void @foo(ptr)

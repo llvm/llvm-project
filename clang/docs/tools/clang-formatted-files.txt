@@ -116,7 +116,6 @@ clang/bindings/python/tests/cindex/INPUTS/header3.h
 clang/examples/Attribute/Attribute.cpp
 clang/examples/CallSuperAttribute/CallSuperAttrInfo.cpp
 clang/examples/PluginsOrder/PluginsOrder.cpp
-clang/include/clang/Analysis/AnalysisDiagnostic.h
 clang/include/clang/Analysis/BodyFarm.h
 clang/include/clang/Analysis/IssueHash.h
 clang/include/clang/Analysis/MacroExpansionContext.h
@@ -129,10 +128,12 @@ clang/include/clang/Analysis/FlowSensitive/DataflowAnalysisContext.h
 clang/include/clang/Analysis/FlowSensitive/DataflowEnvironment.h
 clang/include/clang/Analysis/FlowSensitive/DataflowLattice.h
 clang/include/clang/Analysis/FlowSensitive/DataflowWorklist.h
+clang/include/clang/Analysis/FlowSensitive/DebugSupport.h
 clang/include/clang/Analysis/FlowSensitive/MapLattice.h
 clang/include/clang/Analysis/FlowSensitive/MatchSwitch.h
+clang/include/clang/Analysis/FlowSensitive/NoopAnalysis.h
+clang/include/clang/Analysis/FlowSensitive/NoopLattice.h
 clang/include/clang/Analysis/FlowSensitive/Solver.h
-clang/include/clang/Analysis/FlowSensitive/SourceLocationsLattice.h
 clang/include/clang/Analysis/FlowSensitive/StorageLocation.h
 clang/include/clang/Analysis/FlowSensitive/Transfer.h
 clang/include/clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h
@@ -228,7 +229,6 @@ clang/include/clang/Sema/TemplateInstCallback.h
 clang/include/clang/Serialization/ASTBitCodes.h
 clang/include/clang/Serialization/InMemoryModuleCache.h
 clang/include/clang/Serialization/SerializationDiagnostic.h
-clang/include/clang/StaticAnalyzer/Checkers/LocalCheckers.h
 clang/include/clang/StaticAnalyzer/Core/CheckerRegistryData.h
 clang/include/clang/StaticAnalyzer/Core/BugReporter/CommonBugCategories.h
 clang/include/clang/StaticAnalyzer/Core/PathSensitive/DynamicCastInfo.h
@@ -309,7 +309,7 @@ clang/lib/Analysis/CodeInjector.cpp
 clang/lib/Analysis/FlowSensitive/ControlFlowContext.cpp
 clang/lib/Analysis/FlowSensitive/DataflowAnalysisContext.cpp
 clang/lib/Analysis/FlowSensitive/DataflowEnvironment.cpp
-clang/lib/Analysis/FlowSensitive/SourceLocationsLattice.cpp
+clang/lib/Analysis/FlowSensitive/DebugSupport.cpp
 clang/lib/Analysis/FlowSensitive/Transfer.cpp
 clang/lib/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.cpp
 clang/lib/Analysis/FlowSensitive/WatchedLiteralsSolver.cpp
@@ -608,8 +608,6 @@ clang/tools/clang-fuzzer/ExampleClangLoopProtoFuzzer.cpp
 clang/tools/clang-fuzzer/handle-llvm/handle_llvm.h
 clang/tools/clang-linker-wrapper/ClangLinkerWrapper.cpp
 clang/tools/clang-linker-wrapper/OffloadWrapper.cpp
-clang/tools/clang-nvlink-wrapper/ClangNvlinkWrapper.cpp
-clang/tools/clang-offload-wrapper/ClangOffloadWrapper.cpp
 clang/tools/clang-pseudo/ClangPseudo.cpp
 clang/tools/clang-refactor/ClangRefactor.cpp
 clang/tools/clang-refactor/TestSupport.cpp
@@ -633,10 +631,8 @@ clang/unittests/Analysis/FlowSensitive/DataflowEnvironmentTest.cpp
 clang/unittests/Analysis/FlowSensitive/MapLatticeTest.cpp
 clang/unittests/Analysis/FlowSensitive/MatchSwitchTest.cpp
 clang/unittests/Analysis/FlowSensitive/MultiVarConstantPropagationTest.cpp
-clang/unittests/Analysis/FlowSensitive/NoopAnalysis.h
 clang/unittests/Analysis/FlowSensitive/SingleVarConstantPropagationTest.cpp
 clang/unittests/Analysis/FlowSensitive/SolverTest.cpp
-clang/unittests/Analysis/FlowSensitive/SourceLocationsLatticeTest.cpp
 clang/unittests/Analysis/FlowSensitive/TestingSupport.cpp
 clang/unittests/Analysis/FlowSensitive/TestingSupport.h
 clang/unittests/Analysis/FlowSensitive/TestingSupportTest.cpp
@@ -1613,7 +1609,7 @@ clang-tools-extra/clangd/unittests/tweaks/DefineOutlineTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpASTTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpRecordLayoutTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/DumpSymbolTests.cpp
-clang-tools-extra/clangd/unittests/tweaks/ExpandAutoTypeTests.cpp
+clang-tools-extra/clangd/unittests/tweaks/ExpandDeducedTypeTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExpandMacroTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractFunctionTests.cpp
 clang-tools-extra/clangd/unittests/tweaks/ExtractVariableTests.cpp
@@ -1834,7 +1830,6 @@ compiler-rt/lib/sanitizer_common/sanitizer_fuchsia.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_leb128.h
 compiler-rt/lib/sanitizer_common/sanitizer_local_address_space_view.h
 compiler-rt/lib/sanitizer_common/sanitizer_lzw.h
-compiler-rt/lib/sanitizer_common/sanitizer_openbsd.cpp
 compiler-rt/lib/sanitizer_common/sanitizer_placement_new.h
 compiler-rt/lib/sanitizer_common/sanitizer_platform.h
 compiler-rt/lib/sanitizer_common/sanitizer_platform_limits_openbsd.cpp
@@ -2304,6 +2299,7 @@ flang/lib/Optimizer/Transforms/MemoryAllocation.cpp
 flang/lib/Optimizer/Transforms/MemRefDataFlowOpt.cpp
 flang/lib/Optimizer/Transforms/PassDetail.h
 flang/lib/Optimizer/Transforms/RewriteLoop.cpp
+flang/lib/Optimizer/Transforms/StackArrays.cpp
 flang/lib/Parser/basic-parsers.h
 flang/lib/Parser/char-block.cpp
 flang/lib/Parser/char-buffer.cpp
@@ -2598,6 +2594,7 @@ libc/include/llvm-libc-types/fexcept_t.h
 libc/include/llvm-libc-types/FILE.h
 libc/include/llvm-libc-types/float_t.h
 libc/include/llvm-libc-types/imaxdiv_t.h
+libc/include/llvm-libc-types/jmp_buf.h
 libc/include/llvm-libc-types/ldiv_t.h
 libc/include/llvm-libc-types/lldiv_t.h
 libc/include/llvm-libc-types/mode_t.h
@@ -3592,7 +3589,6 @@ lldb/examples/plugins/commands/fooplugin.cpp
 lldb/examples/synthetic/bitfield/program.cpp
 lldb/include/lldb/lldb-defines.h
 lldb/include/lldb/lldb-forward.h
-lldb/include/lldb/lldb-private-defines.h
 lldb/include/lldb/lldb-private.h
 lldb/include/lldb/lldb-public.h
 lldb/include/lldb/lldb-versioning.h
@@ -4182,6 +4178,8 @@ lldb/source/Plugins/Language/ClangCommon/ClangHighlighter.cpp
 lldb/source/Plugins/Language/ClangCommon/ClangHighlighter.h
 lldb/source/Plugins/Language/CPlusPlus/BlockPointer.cpp
 lldb/source/Plugins/Language/CPlusPlus/BlockPointer.h
+lldb/source/Plugins/Language/CPlusPlus/Coroutines.cpp
+lldb/source/Plugins/Language/CPlusPlus/Coroutines.h
 lldb/source/Plugins/Language/CPlusPlus/CPlusPlusLanguage.h
 lldb/source/Plugins/Language/CPlusPlus/CPlusPlusNameParser.h
 lldb/source/Plugins/Language/CPlusPlus/CxxStringTypes.h
@@ -4935,9 +4933,6 @@ lldb/utils/TableGen/LLDBTableGen.cpp
 lldb/utils/TableGen/LLDBTableGenBackends.h
 lldb/utils/TableGen/LLDBTableGenUtils.cpp
 lldb/utils/TableGen/LLDBTableGenUtils.h
-llvm/bindings/go/llvm/InstrumentationBindings.h
-llvm/bindings/go/llvm/SupportBindings.cpp
-llvm/bindings/go/llvm/SupportBindings.h
 llvm/bindings/ocaml/llvm/llvm_ocaml.h
 llvm/cmake/dummy.cpp
 llvm/cmake/unwind.h
@@ -4990,9 +4985,6 @@ llvm/include/llvm/ADT/STLForwardCompat.h
 llvm/include/llvm/ADT/StringSet.h
 llvm/include/llvm/ADT/TypeSwitch.h
 llvm/include/llvm/Analysis/BlockFrequencyInfo.h
-llvm/include/llvm/Analysis/CFLAliasAnalysisUtils.h
-llvm/include/llvm/Analysis/CFLAndersAliasAnalysis.h
-llvm/include/llvm/Analysis/CFLSteensAliasAnalysis.h
 llvm/include/llvm/Analysis/ConstraintSystem.h
 llvm/include/llvm/Analysis/CostModel.h
 llvm/include/llvm/Analysis/CycleAnalysis.h
@@ -5001,7 +4993,6 @@ llvm/include/llvm/Analysis/Delinearization.h
 llvm/include/llvm/Analysis/DependenceGraphBuilder.h
 llvm/include/llvm/Analysis/DivergenceAnalysis.h
 llvm/include/llvm/Analysis/DomTreeUpdater.h
-llvm/include/llvm/Analysis/EHPersonalities.h
 llvm/include/llvm/Analysis/FunctionPropertiesAnalysis.h
 llvm/include/llvm/Analysis/IndirectCallPromotionAnalysis.h
 llvm/include/llvm/Analysis/IndirectCallVisitor.h
@@ -5260,6 +5251,7 @@ llvm/include/llvm/Debuginfod/DIFetcher.h
 llvm/include/llvm/Debuginfod/HTTPClient.h
 llvm/include/llvm/Demangle/Demangle.h
 llvm/include/llvm/Demangle/StringView.h
+llvm/include/llvm/Demangle/StringViewExtras.h
 llvm/include/llvm/Demangle/Utility.h
 llvm/include/llvm/DWARFLinker/DWARFLinker.h
 llvm/include/llvm/DWARFLinker/DWARFLinkerCompileUnit.h
@@ -5340,6 +5332,7 @@ llvm/include/llvm/IR/DebugInfo.h
 llvm/include/llvm/IR/DebugInfoMetadata.h
 llvm/include/llvm/IR/DiagnosticHandler.h
 llvm/include/llvm/IR/DiagnosticPrinter.h
+llvm/include/llvm/IR/EHPersonalities.h
 llvm/include/llvm/IR/GlobalIFunc.h
 llvm/include/llvm/IR/GlobalObject.h
 llvm/include/llvm/IR/GVMaterializer.h
@@ -5454,8 +5447,10 @@ llvm/include/llvm/Passes/StandardInstrumentations.h
 llvm/include/llvm/ProfileData/GCOV.h
 llvm/include/llvm/ProfileData/InstrProfCorrelator.h
 llvm/include/llvm/ProfileData/InstrProfWriter.h
+llvm/include/llvm/ProfileData/ItaniumManglingCanonicalizer.h
 llvm/include/llvm/ProfileData/ProfileCommon.h
 llvm/include/llvm/ProfileData/RawMemProfReader.h
+llvm/include/llvm/ProfileData/SymbolRemappingReader.h
 llvm/include/llvm/ProfileData/Coverage/CoverageMappingReader.h
 llvm/include/llvm/ProfileData/Coverage/CoverageMappingWriter.h
 llvm/include/llvm/Remarks/BitstreamRemarkContainer.h
@@ -5491,7 +5486,7 @@ llvm/include/llvm/Support/CodeGenCoverage.h
 llvm/include/llvm/Support/CRC.h
 llvm/include/llvm/Support/CSKYAttributeParser.h
 llvm/include/llvm/Support/CSKYAttributes.h
-llvm/include/llvm/Support/CSKYTargetParser.h
+llvm/include/llvm/TargetParser/CSKYTargetParser.h
 llvm/include/llvm/Support/DataTypes.h
 llvm/include/llvm/Support/DebugCounter.h
 llvm/include/llvm/Support/Discriminator.h
@@ -5506,7 +5501,6 @@ llvm/include/llvm/Support/GenericIteratedDominanceFrontier.h
 llvm/include/llvm/Support/HashBuilder.h
 llvm/include/llvm/Support/InitLLVM.h
 llvm/include/llvm/Support/InstructionCost.h
-llvm/include/llvm/Support/ItaniumManglingCanonicalizer.h
 llvm/include/llvm/Support/MD5.h
 llvm/include/llvm/Support/MemAlloc.h
 llvm/include/llvm/Support/MemoryBufferRef.h
@@ -5518,7 +5512,7 @@ llvm/include/llvm/Support/PGOOptions.h
 llvm/include/llvm/Support/PointerLikeTypeTraits.h
 llvm/include/llvm/Support/RISCVAttributeParser.h
 llvm/include/llvm/Support/RISCVAttributes.h
-llvm/include/llvm/Support/RISCVISAInfo.h
+llvm/include/llvm/TargetParser/RISCVISAInfo.h
 llvm/include/llvm/Support/RWMutex.h
 llvm/include/llvm/Support/ScopedPrinter.h
 llvm/include/llvm/Support/SHA256.h
@@ -5528,9 +5522,8 @@ llvm/include/llvm/Support/SMLoc.h
 llvm/include/llvm/Support/SMTAPI.h
 llvm/include/llvm/Support/SourceMgr.h
 llvm/include/llvm/Support/SuffixTree.h
-llvm/include/llvm/Support/SymbolRemappingReader.h
 llvm/include/llvm/Support/SystemUtils.h
-llvm/include/llvm/Support/TargetParser.h
+llvm/include/llvm/TargetParser/TargetParser.h
 llvm/include/llvm/Support/TrailingObjects.h
 llvm/include/llvm/Support/Unicode.h
 llvm/include/llvm/Support/UnicodeCharRanges.h
@@ -5544,7 +5537,7 @@ llvm/include/llvm/TableGen/Parser.h
 llvm/include/llvm/TableGen/StringToOffsetTable.h
 llvm/include/llvm/Target/CGPassBuilderOption.h
 llvm/include/llvm/Target/CodeGenCWrappers.h
-llvm/include/llvm/Testing/Support/Annotations.h
+llvm/include/llvm/Testing/Annotations/Annotations.h
 llvm/include/llvm/Testing/Support/SupportHelpers.h
 llvm/include/llvm/TextAPI/Architecture.h
 llvm/include/llvm/TextAPI/ArchitectureSet.h
@@ -5715,18 +5708,12 @@ llvm/include/llvm-c/Comdat.h
 llvm/include/llvm-c/Error.h
 llvm/include/llvm-c/ErrorHandling.h
 llvm/include/llvm-c/ExternC.h
-llvm/include/llvm-c/Initialization.h
 llvm/include/llvm-c/IRReader.h
 llvm/include/llvm-c/LLJIT.h
 llvm/include/llvm-c/OrcEE.h
 llvm/include/llvm-c/Remarks.h
 llvm/include/llvm-c/Types.h
 llvm/include/llvm-c/Transforms/PassBuilder.h
-llvm/include/llvm-c/Transforms/Scalar.h
-llvm/include/llvm-c/Transforms/Vectorize.h
-llvm/lib/Analysis/CFLAndersAliasAnalysis.cpp
-llvm/lib/Analysis/CFLGraph.h
-llvm/lib/Analysis/CFLSteensAliasAnalysis.cpp
 llvm/lib/Analysis/CodeMetrics.cpp
 llvm/lib/Analysis/CycleAnalysis.cpp
 llvm/lib/Analysis/DDGPrinter.cpp
@@ -6850,7 +6837,7 @@ llvm/lib/Target/XCore/MCTargetDesc/XCoreMCAsmInfo.h
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.cpp
 llvm/lib/Target/XCore/MCTargetDesc/XCoreMCTargetDesc.h
 llvm/lib/Target/XCore/TargetInfo/XCoreTargetInfo.cpp
-llvm/lib/Testing/Support/Annotations.cpp
+llvm/lib/Testing/Annotations/Annotations.cpp
 llvm/lib/Testing/Support/Error.cpp
 llvm/lib/Testing/Support/SupportHelpers.cpp
 llvm/lib/TextAPI/ArchitectureSet.cpp
@@ -7321,6 +7308,7 @@ llvm/unittests/MC/AMDGPU/DwarfRegMappings.cpp
 llvm/unittests/MC/SystemZ/SystemZAsmLexerTest.cpp
 llvm/unittests/ObjCopy/ObjCopyTest.cpp
 llvm/unittests/Object/ArchiveTest.cpp
+llvm/unittests/Object/ELFObjectFileTest.cpp
 llvm/unittests/Object/ELFTest.cpp
 llvm/unittests/Object/ELFTypesTest.cpp
 llvm/unittests/Object/MinidumpTest.cpp
@@ -7337,6 +7325,7 @@ llvm/unittests/Passes/TestPlugin.cpp
 llvm/unittests/Passes/TestPlugin.h
 llvm/unittests/ProfileData/InstrProfDataTest.cpp
 llvm/unittests/ProfileData/MemProfTest.cpp
+llvm/unittests/ProfileData/SymbolRemappingReaderTest.cpp
 llvm/unittests/Remarks/BitstreamRemarksFormatTest.cpp
 llvm/unittests/Remarks/BitstreamRemarksParsingTest.cpp
 llvm/unittests/Remarks/RemarksLinkingTest.cpp
@@ -7369,7 +7358,6 @@ llvm/unittests/Support/ScaledNumberTest.cpp
 llvm/unittests/Support/ScopedPrinterTest.cpp
 llvm/unittests/Support/SHA256.cpp
 llvm/unittests/Support/SuffixTreeTest.cpp
-llvm/unittests/Support/SymbolRemappingReaderTest.cpp
 llvm/unittests/Support/TarWriterTest.cpp
 llvm/unittests/Support/ToolOutputFileTest.cpp
 llvm/unittests/Support/TypeTraitsTest.cpp
@@ -7430,6 +7418,8 @@ llvm/unittests/XRay/FDRRecordsTest.cpp
 llvm/unittests/XRay/FDRTraceWriterTest.cpp
 llvm/unittests/XRay/ProfileTest.cpp
 llvm/utils/not/not.cpp
+llvm/Utils/TableGen/CodeGenInstAlias.cpp
+llvm/Utils/TableGen/CodeGenInstAlias.h
 llvm/utils/TableGen/CodeBeadsGen.cpp
 llvm/utils/TableGen/CompressInstEmitter.cpp
 llvm/utils/TableGen/DFAEmitter.h
@@ -7630,7 +7620,6 @@ mlir/include/mlir/Conversion/TosaToSCF/TosaToSCF.h
 mlir/include/mlir/Conversion/TosaToStandard/TosaToStandard.h
 mlir/include/mlir/Conversion/VectorToGPU/VectorToGPU.h
 mlir/include/mlir/Conversion/VectorToLLVM/ConvertVectorToLLVM.h
-mlir/include/mlir/Conversion/VectorToROCDL/VectorToROCDL.h
 mlir/include/mlir/Conversion/VectorToSCF/VectorToSCF.h
 mlir/include/mlir/Conversion/VectorToSPIRV/VectorToSPIRV.h
 mlir/include/mlir/Conversion/VectorToSPIRV/VectorToSPIRVPass.h
@@ -8071,7 +8060,6 @@ mlir/lib/Conversion/TosaToStandard/TosaToStandard.cpp
 mlir/lib/Conversion/TosaToStandard/TosaToStandardPass.cpp
 mlir/lib/Conversion/VectorToLLVM/ConvertVectorToLLVM.cpp
 mlir/lib/Conversion/VectorToLLVM/ConvertVectorToLLVMPass.cpp
-mlir/lib/Conversion/VectorToROCDL/VectorToROCDL.cpp
 mlir/lib/Conversion/VectorToSCF/VectorToSCF.cpp
 mlir/lib/Conversion/VectorToSPIRV/VectorToSPIRVPass.cpp
 mlir/lib/Dialect/Traits.cpp
@@ -8262,7 +8250,6 @@ mlir/lib/Dialect/Tensor/IR/TensorTilingInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/BufferizableOpInterfaceImpl.cpp
 mlir/lib/Dialect/Tensor/Transforms/Bufferize.cpp
 mlir/lib/Dialect/Tensor/Transforms/PassDetail.h
-mlir/lib/Dialect/Tensor/Transforms/SplitPadding.cpp
 mlir/lib/Dialect/Tensor/Utils/Utils.cpp
 mlir/lib/Dialect/Tosa/IR/TosaOps.cpp
 mlir/lib/Dialect/Tosa/Transforms/TosaDecomposeConv2D.cpp

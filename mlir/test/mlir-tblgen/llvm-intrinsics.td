@@ -21,12 +21,12 @@
 // match the result type.
 // CHECK: [1]
 // It has no side effects.
-// CHECK: [NoSideEffect]
+// CHECK: [NoMemoryEffect]
 // It has a result.
 // CHECK: 1,
-// It does not require an access group.
+// It does not implement the access group interface.
 // CHECK: 0,
-// It does not require alias scopes.
+// It does not implement the alias analysis interface.
 // CHECK: 0>
 // CHECK: Arguments<(ins LLVM_Type, LLVM_Type
 
@@ -42,38 +42,39 @@
 // GROUPS-LABEL: def LLVM_ptrmask
 // GROUPS: LLVM_IntrOp<"ptrmask
 // It has no side effects.
-// GROUPS: [NoSideEffect]
+// GROUPS: [NoMemoryEffect]
 // It has a result.
 // GROUPS: 1,
-// It requires generation of an access group LLVM metadata.
+// It implements the access group interface.
 // GROUPS: 1,
-// It does not require alias scopes.
+// It does not implement the alias analysis interface.
 // GROUPS: 0>
 // It has an access group attribute.
 // GROUPS: OptionalAttr<SymbolRefArrayAttr>:$access_groups
 
 //---------------------------------------------------------------------------//
 
-// This checks that we can define an op that takes in alias scopes metadata.
+// This checks that we can define an op that takes in alias analysis metadata.
 //
 // RUN: cat %S/../../../llvm/include/llvm/IR/Intrinsics.td \
 // RUN: | grep -v "llvm/IR/Intrinsics" \
-// RUN: | mlir-tblgen -gen-llvmir-intrinsics -I %S/../../../llvm/include/ --llvmir-intrinsics-filter=ptrmask --llvmir-intrinsics-alias-scopes-regexp=ptrmask \
+// RUN: | mlir-tblgen -gen-llvmir-intrinsics -I %S/../../../llvm/include/ --llvmir-intrinsics-filter=ptrmask --llvmir-intrinsics-alias-analysis-regexp=ptrmask \
 // RUN: | FileCheck --check-prefix=ALIAS %s
 
 // ALIAS-LABEL: def LLVM_ptrmask
 // ALIAS: LLVM_IntrOp<"ptrmask
 // It has no side effects.
-// ALIAS: [NoSideEffect]
+// ALIAS: [NoMemoryEffect]
 // It has a result.
 // ALIAS: 1,
-// It does not require an access group.
+// It does not implement the access group interface.
 // ALIAS: 0,
-// It requires generation of alias scopes LLVM metadata.
+// It implements the alias analysis interface.
 // ALIAS: 1>
-// It has alias scopes and noalias.
+// It has alias scopes, noalias, and tbaa.
 // ALIAS: OptionalAttr<SymbolRefArrayAttr>:$alias_scopes
 // ALIAS: OptionalAttr<SymbolRefArrayAttr>:$noalias_scopes
+// ALIAS: OptionalAttr<SymbolRefArrayAttr>:$tbaa
 
 //---------------------------------------------------------------------------//
 

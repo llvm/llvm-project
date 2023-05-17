@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64_32-apple-ios7.0 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64_32-apple-ios7.0 -emit-llvm -o - %s | FileCheck %s
 
 struct Foo {
   char a;
@@ -27,4 +27,4 @@ long double LongDoubleVar = 0.0;
 
 typedef float __attribute__((ext_vector_type(16))) v16f32;
 v16f32 func(v16f32 in) { return in; }
-// CHECK: define{{.*}} void @func(<16 x float>* noalias sret(<16 x float>) align 16 {{%.*}}, <16 x float> noundef {{%.*}})
+// CHECK: define{{.*}} void @func(ptr noalias sret(<16 x float>) align 16 {{%.*}}, <16 x float> noundef {{%.*}})

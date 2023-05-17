@@ -31,10 +31,9 @@ static const seconds kWakeupInterval(5);
 
 GDBRemoteClientBase::ContinueDelegate::~ContinueDelegate() = default;
 
-GDBRemoteClientBase::GDBRemoteClientBase(const char *comm_name,
-                                         const char *listener_name)
-    : GDBRemoteCommunication(comm_name, listener_name), m_async_count(0),
-      m_is_running(false), m_should_stop(false) {}
+GDBRemoteClientBase::GDBRemoteClientBase(const char *comm_name)
+    : GDBRemoteCommunication(), Broadcaster(nullptr, comm_name),
+      m_async_count(0), m_is_running(false), m_should_stop(false) {}
 
 StateType GDBRemoteClientBase::SendContinuePacketAndWaitForResponse(
     ContinueDelegate &delegate, const UnixSignals &signals,
@@ -193,6 +192,23 @@ GDBRemoteClientBase::SendPacketAndWaitForResponse(
   }
 
   return SendPacketAndWaitForResponseNoLock(payload, response);
+}
+
+GDBRemoteCommunication::PacketResult
+GDBRemoteClientBase::ReadPacketWithOutputSupport(
+    StringExtractorGDBRemote &response, Timeout<std::micro> timeout,
+    bool sync_on_timeout,
+    llvm::function_ref<void(llvm::StringRef)> output_callback) {
+  auto result = ReadPacket(response, timeout, sync_on_timeout);
+  while (result == PacketResult::Success && response.IsNormalResponse() &&
+         response.PeekChar() == 'O') {
+    response.GetChar();
+    std::string output;
+    if (response.GetHexByteString(output))
+      output_callback(output);
+    result = ReadPacket(response, timeout, sync_on_timeout);
+  }
+  return result;
 }
 
 GDBRemoteCommunication::PacketResult

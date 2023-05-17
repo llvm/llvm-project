@@ -9,7 +9,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_s32
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(s32) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s32))
     ; GCN-NEXT: S_ENDPGM 0, implicit [[AMDGPU_S_BUFFER_LOAD]](s32)
@@ -27,7 +29,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_v3s32
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
@@ -47,7 +51,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_v3p3
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
@@ -68,7 +74,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_v6s16
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
@@ -89,7 +97,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_v6s32
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<8 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s192), align 4)
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32), [[UV4:%[0-9]+]]:_(s32), [[UV5:%[0-9]+]]:_(s32), [[UV6:%[0-9]+]]:_(s32), [[UV7:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<8 x s32>)
@@ -109,7 +119,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_v3s64
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s64>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s192), align 4)
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s64), [[UV1:%[0-9]+]]:_(s64), [[UV2:%[0-9]+]]:_(s64), [[UV3:%[0-9]+]]:_(s64) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s64>)
@@ -129,7 +141,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_v12s8
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
@@ -193,7 +207,9 @@ body:             |
     liveins: $sgpr0_sgpr1_sgpr2_sgpr3
 
     ; GCN-LABEL: name: s_buffer_load_s96
-    ; GCN: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN: liveins: $sgpr0_sgpr1_sgpr2_sgpr3
+    ; GCN-NEXT: {{  $}}
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:_(<4 x s32>) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     ; GCN-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
     ; GCN-NEXT: [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:_(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[COPY]](<4 x s32>), [[C]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
     ; GCN-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)

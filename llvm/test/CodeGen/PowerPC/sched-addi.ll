@@ -9,7 +9,7 @@
 
 @scalars = common dso_local local_unnamed_addr global %_type_of_scalars zeroinitializer, align 16
 
-define dso_local void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_type_of_a]* %.a, i64* noalias %.n) {
+define dso_local void @test(ptr noalias %.x, ptr %.a, ptr noalias %.n) {
 ; CHECK-P9-LABEL: test:
 ; CHECK-P9:       # %bb.0: # %entry
 ; CHECK-P9-NEXT:    ld 5, 0(5)
@@ -88,10 +88,10 @@ define dso_local void @test([0 x %_elem_type_of_x]* noalias %.x, [0 x %_elem_typ
 ; CHECK-P9-NO-HEURISTIC-NEXT:  # %bb.2: # %return.block
 ; CHECK-P9-NO-HEURISTIC-NEXT:    blr
 entry:
-  %x_rvo_based_addr_3 = getelementptr inbounds [0 x %_elem_type_of_x], [0 x %_elem_type_of_x]* %.x, i64 0, i64 -1
-  %a_rvo_based_addr_5 = getelementptr inbounds [0 x %_elem_type_of_a], [0 x %_elem_type_of_a]* %.a, i64 0, i64 -1
-  %_val_n_ = load i64, i64* %.n, align 8
-  %_val_c1_ = load double, double* getelementptr inbounds (%_type_of_scalars, %_type_of_scalars* @scalars, i64 0, i32 1), align 16
+  %x_rvo_based_addr_3 = getelementptr inbounds [0 x %_elem_type_of_x], ptr %.x, i64 0, i64 -1
+  %a_rvo_based_addr_5 = getelementptr inbounds [0 x %_elem_type_of_a], ptr %.a, i64 0, i64 -1
+  %_val_n_ = load i64, ptr %.n, align 8
+  %_val_c1_ = load double, ptr getelementptr inbounds (%_type_of_scalars, ptr @scalars, i64 0, i32 1), align 16
   %n.vec = and i64 %_val_n_, -32
   %broadcast.splatinsert26 = insertelement <4 x double> undef, double %_val_c1_, i32 0
   %broadcast.splat27 = shufflevector <4 x double> %broadcast.splatinsert26, <4 x double> undef, <4 x i32> zeroinitializer
@@ -100,57 +100,41 @@ entry:
 vector.body:
   %index = phi i64 [ 0, %entry ], [ %index.next, %vector.body ]
    %offset.idx = or i64 %index, 1
-  %0 = getelementptr %_elem_type_of_x, %_elem_type_of_x* %x_rvo_based_addr_3, i64 %offset.idx, i32 0
-  %1 = getelementptr %_elem_type_of_a, %_elem_type_of_a* %a_rvo_based_addr_5, i64 %offset.idx, i32 0
-  %2 = bitcast double* %1 to <4 x double>*
-  %wide.load = load <4 x double>, <4 x double>* %2, align 8
-  %3 = getelementptr double, double* %1, i64 4
-  %4 = bitcast double* %3 to <4 x double>*
-  %wide.load19 = load <4 x double>, <4 x double>* %4, align 8
-  %5 = getelementptr double, double* %1, i64 8
-  %6 = bitcast double* %5 to <4 x double>*
-  %wide.load20 = load <4 x double>, <4 x double>* %6, align 8
-  %7 = getelementptr double, double* %1, i64 12
-  %8 = bitcast double* %7 to <4 x double>*
-  %wide.load21 = load <4 x double>, <4 x double>* %8, align 8
-  %9 = getelementptr double, double* %1, i64 16
-  %10 = bitcast double* %9 to <4 x double>*
-  %wide.load22 = load <4 x double>, <4 x double>* %10, align 8
-  %11 = getelementptr double, double* %1, i64 20
-  %12 = bitcast double* %11 to <4 x double>*
-  %wide.load23 = load <4 x double>, <4 x double>* %12, align 8
-  %13 = getelementptr double, double* %1, i64 24
-  %14 = bitcast double* %13 to <4 x double>*
-  %wide.load24 = load <4 x double>, <4 x double>* %14, align 8
-  %15 = getelementptr double, double* %1, i64 28
-  %16 = bitcast double* %15 to <4 x double>*
-  %wide.load25 = load <4 x double>, <4 x double>* %16, align 8
-  %17 = fmul fast <4 x double> %wide.load, %broadcast.splat27
-  %18 = fmul fast <4 x double> %wide.load19, %broadcast.splat27
-  %19 = fmul fast <4 x double> %wide.load20, %broadcast.splat27
-  %20 = fmul fast <4 x double> %wide.load21, %broadcast.splat27
-  %21 = fmul fast <4 x double> %wide.load22, %broadcast.splat27
-  %22 = fmul fast <4 x double> %wide.load23, %broadcast.splat27
-  %23 = fmul fast <4 x double> %wide.load24, %broadcast.splat27
-  %24 = fmul fast <4 x double> %wide.load25, %broadcast.splat27
-  %25 = bitcast double* %0 to <4 x double>*
-  store <4 x double> %17, <4 x double>* %25, align 8
-  %26 = getelementptr double, double* %0, i64 4
-  %27 = bitcast double* %26 to <4 x double>*
-  store <4 x double> %18, <4 x double>* %27, align 8
-  %28 = getelementptr double, double* %0, i64 8
-  %29 = bitcast double* %28 to <4 x double>*
-  %30 = getelementptr double, double* %0, i64 12
-  %31 = bitcast double* %30 to <4 x double>*
-  %32 = getelementptr double, double* %0, i64 16
-  %33 = bitcast double* %32 to <4 x double>*
-  %34 = getelementptr double, double* %0, i64 20
-  %35 = bitcast double* %34 to <4 x double>*
-  %36 = getelementptr double, double* %0, i64 24
-  %37 = bitcast double* %36 to <4 x double>*
-  %38 = getelementptr double, double* %0, i64 28
-  %39 = bitcast double* %38 to <4 x double>*
-  store <4 x double> %24, <4 x double>* %39, align 8
+  %0 = getelementptr %_elem_type_of_x, ptr %x_rvo_based_addr_3, i64 %offset.idx, i32 0
+  %1 = getelementptr %_elem_type_of_a, ptr %a_rvo_based_addr_5, i64 %offset.idx, i32 0
+  %wide.load = load <4 x double>, ptr %1, align 8
+  %2 = getelementptr double, ptr %1, i64 4
+  %wide.load19 = load <4 x double>, ptr %2, align 8
+  %3 = getelementptr double, ptr %1, i64 8
+  %wide.load20 = load <4 x double>, ptr %3, align 8
+  %4 = getelementptr double, ptr %1, i64 12
+  %wide.load21 = load <4 x double>, ptr %4, align 8
+  %5 = getelementptr double, ptr %1, i64 16
+  %wide.load22 = load <4 x double>, ptr %5, align 8
+  %6 = getelementptr double, ptr %1, i64 20
+  %wide.load23 = load <4 x double>, ptr %6, align 8
+  %7 = getelementptr double, ptr %1, i64 24
+  %wide.load24 = load <4 x double>, ptr %7, align 8
+  %8 = getelementptr double, ptr %1, i64 28
+  %wide.load25 = load <4 x double>, ptr %8, align 8
+  %9 = fmul fast <4 x double> %wide.load, %broadcast.splat27
+  %10 = fmul fast <4 x double> %wide.load19, %broadcast.splat27
+  %11 = fmul fast <4 x double> %wide.load20, %broadcast.splat27
+  %12 = fmul fast <4 x double> %wide.load21, %broadcast.splat27
+  %13 = fmul fast <4 x double> %wide.load22, %broadcast.splat27
+  %14 = fmul fast <4 x double> %wide.load23, %broadcast.splat27
+  %15 = fmul fast <4 x double> %wide.load24, %broadcast.splat27
+  %16 = fmul fast <4 x double> %wide.load25, %broadcast.splat27
+  store <4 x double> %9, ptr %0, align 8
+  %17 = getelementptr double, ptr %0, i64 4
+  store <4 x double> %10, ptr %17, align 8
+  %18 = getelementptr double, ptr %0, i64 8
+  %19 = getelementptr double, ptr %0, i64 12
+  %20 = getelementptr double, ptr %0, i64 16
+  %21 = getelementptr double, ptr %0, i64 20
+  %22 = getelementptr double, ptr %0, i64 24
+  %23 = getelementptr double, ptr %0, i64 28
+  store <4 x double> %16, ptr %23, align 8
   %index.next = add i64 %index, 32
   %cm = icmp eq i64 %index.next, %n.vec
   br i1 %cm, label %return.block, label %vector.body

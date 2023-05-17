@@ -3,7 +3,8 @@
 ; Usually MIPS hosts uses a legacy (non IEEE 754-2008) encoding for NaNs.
 ; Tests like `nan_f32` failed in attempt to compare hard-coded IEEE 754-2008
 ; NaN value and a legacy NaN value provided by a system.
-; XFAIL: mips-, mipsel-, mips64-, mips64el-
+; FIXME: This should be based on host not target, but there's no "system-mips" feature.
+; XFAIL: target={{(mips|mipsel|mips64|mips64el)-.*}}
 
 ; Test that basic immediates assemble as expected.
 

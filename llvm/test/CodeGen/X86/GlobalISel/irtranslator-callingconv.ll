@@ -72,9 +72,9 @@ define i8 @test_i8_args_8(i8 %arg1, i8 %arg2, i8 %arg3, i8 %arg4, i8 %arg5, i8 %
   ; X64-NEXT:   $al = COPY [[TRUNC]](s8)
   ; X64-NEXT:   RET 0, implicit $al
 entry:
-  store i8 %arg1, i8* @a1_8bit
-  store i8 %arg7, i8* @a7_8bit
-  store i8 %arg8, i8* @a8_8bit
+  store i8 %arg1, ptr @a1_8bit
+  store i8 %arg7, ptr @a7_8bit
+  store i8 %arg8, ptr @a8_8bit
   ret i8 %arg1
 }
 
@@ -132,9 +132,9 @@ define i32 @test_i32_args_8(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg
   ; X64-NEXT:   $eax = COPY [[COPY]](s32)
   ; X64-NEXT:   RET 0, implicit $eax
 entry:
-  store i32 %arg1, i32* @a1_32bit
-  store i32 %arg7, i32* @a7_32bit
-  store i32 %arg8, i32* @a8_32bit
+  store i32 %arg1, ptr @a1_32bit
+  store i32 %arg7, ptr @a7_32bit
+  store i32 %arg8, ptr @a8_32bit
   ret i32 %arg1
 }
 
@@ -219,9 +219,9 @@ define i64 @test_i64_args_8(i64 %arg1, i64 %arg2, i64 %arg3, i64 %arg4, i64 %arg
   ; X64-NEXT:   $rax = COPY [[COPY]](s64)
   ; X64-NEXT:   RET 0, implicit $rax
 entry:
-  store i64 %arg1, i64* @a1_64bit
-  store i64 %arg7, i64* @a7_64bit
-  store i64 %arg8, i64* @a8_64bit
+  store i64 %arg1, ptr @a1_64bit
+  store i64 %arg7, ptr @a7_64bit
+  store i64 %arg8, ptr @a8_64bit
   ret i64 %arg1
 }
 
@@ -322,7 +322,7 @@ entry:
   ret void
 }
 
-define i32 * @test_memop_i32(i32 * %p1) {
+define ptr @test_memop_i32(ptr %p1) {
   ; X86-LABEL: name: test_memop_i32
   ; X86: bb.1 (%ir-block.0):
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -336,7 +336,7 @@ define i32 * @test_memop_i32(i32 * %p1) {
   ; X64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
   ; X64-NEXT:   $rax = COPY [[COPY]](p0)
   ; X64-NEXT:   RET 0, implicit $rax
-  ret i32 * %p1;
+  ret ptr %p1;
 }
 
 declare void @trivial_callee()
@@ -550,7 +550,7 @@ define <8 x i32> @test_split_return_callee(<8 x i32> %arg1, <8 x i32> %arg2) {
   ret  <8 x i32> %r
 }
 
-define void @test_indirect_call(void()* %func) {
+define void @test_indirect_call(ptr %func) {
   ; X86-LABEL: name: test_indirect_call
   ; X86: bb.1 (%ir-block.0):
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -574,7 +574,7 @@ define void @test_indirect_call(void()* %func) {
 
 
 declare void @take_char(i8)
-define void @test_abi_exts_call(i8* %addr) {
+define void @test_abi_exts_call(ptr %addr) {
   ; X86-LABEL: name: test_abi_exts_call
   ; X86: bb.1 (%ir-block.0):
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
@@ -625,15 +625,15 @@ define void @test_abi_exts_call(i8* %addr) {
   ; X64-NEXT:   CALL64pcrel32 @take_char, csr_64, implicit $rsp, implicit $ssp, implicit $edi
   ; X64-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64-NEXT:   RET 0
-  %val = load i8, i8* %addr
+  %val = load i8, ptr %addr
   call void @take_char(i8 %val)
   call void @take_char(i8 signext %val)
   call void @take_char(i8 zeroext %val)
   ret void
 }
 
-declare void @variadic_callee(i8*, ...)
-define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
+declare void @variadic_callee(ptr, ...)
+define void @test_variadic_call_1(ptr %addr_ptr, ptr %val_ptr) {
   ; X86-LABEL: name: test_variadic_call_1
   ; X86: bb.1 (%ir-block.0):
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
@@ -669,13 +669,13 @@ define void @test_variadic_call_1(i8** %addr_ptr, i32* %val_ptr) {
   ; X64-NEXT:   CALL64pcrel32 @variadic_callee, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $esi, implicit $al
   ; X64-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64-NEXT:   RET 0
-  %addr = load i8*, i8** %addr_ptr
-  %val = load i32, i32* %val_ptr
-  call void (i8*, ...) @variadic_callee(i8* %addr, i32 %val)
+  %addr = load ptr, ptr %addr_ptr
+  %val = load i32, ptr %val_ptr
+  call void (ptr, ...) @variadic_callee(ptr %addr, i32 %val)
   ret void
 }
 
-define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
+define void @test_variadic_call_2(ptr %addr_ptr, ptr %val_ptr) {
   ; X86-LABEL: name: test_variadic_call_2
   ; X86: bb.1 (%ir-block.0):
   ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.1
@@ -711,8 +711,65 @@ define void @test_variadic_call_2(i8** %addr_ptr, double* %val_ptr) {
   ; X64-NEXT:   CALL64pcrel32 @variadic_callee, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit $xmm0, implicit $al
   ; X64-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
   ; X64-NEXT:   RET 0
-  %addr = load i8*, i8** %addr_ptr
-  %val = load double, double* %val_ptr
-  call void (i8*, ...) @variadic_callee(i8* %addr, double %val)
+  %addr = load ptr, ptr %addr_ptr
+  %val = load double, ptr %val_ptr
+  call void (ptr, ...) @variadic_callee(ptr %addr, double %val)
   ret void
+}
+
+; Return value is in memory unless subtarget is AVX or higher.
+define <32 x float> @test_return_v32f32() {
+  ; X86-LABEL: name: test_return_v32f32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %fixed-stack.0
+  ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(p0) = G_LOAD [[FRAME_INDEX]](p0) :: (invariant load (s32) from %fixed-stack.0, align 16)
+  ; X86-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+  ; X86-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+  ; X86-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[LOAD]](p0) :: (store (<32 x s32>))
+  ; X86-NEXT:   $eax = COPY [[LOAD]](p0)
+  ; X86-NEXT:   RET 0
+  ; X64-LABEL: name: test_return_v32f32
+  ; X64: bb.1 (%ir-block.0):
+  ; X64-NEXT:   liveins: $rdi
+  ; X64-NEXT: {{  $}}
+  ; X64-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $rdi
+  ; X64-NEXT:   [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0.000000e+00
+  ; X64-NEXT:   [[BUILD_VECTOR:%[0-9]+]]:_(<32 x s32>) = G_BUILD_VECTOR [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32), [[C]](s32)
+  ; X64-NEXT:   G_STORE [[BUILD_VECTOR]](<32 x s32>), [[COPY]](p0) :: (store (<32 x s32>))
+  ; X64-NEXT:   $rax = COPY [[COPY]](p0)
+  ; X64-NEXT:   RET 0
+  ret <32 x float> zeroinitializer
+}
+
+define float @test_call_v32f32() {
+  ; X86-LABEL: name: test_call_v32f32
+  ; X86: bb.1 (%ir-block.0):
+  ; X86-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 7
+  ; X86-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; X86-NEXT:   ADJCALLSTACKDOWN32 4, 0, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X86-NEXT:   [[COPY:%[0-9]+]]:_(p0) = COPY $esp
+  ; X86-NEXT:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
+  ; X86-NEXT:   [[PTR_ADD:%[0-9]+]]:_(p0) = G_PTR_ADD [[COPY]], [[C1]](s32)
+  ; X86-NEXT:   G_STORE [[FRAME_INDEX]](p0), [[PTR_ADD]](p0) :: (store (p0) into stack, align 1)
+  ; X86-NEXT:   CALLpcrel32 @test_return_v32f32, csr_32, implicit $esp, implicit $ssp
+  ; X86-NEXT:   ADJCALLSTACKUP32 4, 0, implicit-def $esp, implicit-def $eflags, implicit-def $ssp, implicit $esp, implicit $ssp
+  ; X86-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (load (<32 x s32>) from %stack.0)
+  ; X86-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<32 x s32>), [[C]](s32)
+  ; X86-NEXT:   $fp0 = COPY [[EVEC]](s32)
+  ; X86-NEXT:   RET 0, implicit $fp0
+  ; X64-LABEL: name: test_call_v32f32
+  ; X64: bb.1 (%ir-block.0):
+  ; X64-NEXT:   [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 7
+  ; X64-NEXT:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0
+  ; X64-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64-NEXT:   $rdi = COPY [[FRAME_INDEX]](p0)
+  ; X64-NEXT:   CALL64pcrel32 @test_return_v32f32, csr_64, implicit $rsp, implicit $ssp, implicit $rdi
+  ; X64-NEXT:   ADJCALLSTACKUP64 0, 0, implicit-def $rsp, implicit-def $eflags, implicit-def $ssp, implicit $rsp, implicit $ssp
+  ; X64-NEXT:   [[LOAD:%[0-9]+]]:_(<32 x s32>) = G_LOAD [[FRAME_INDEX]](p0) :: (load (<32 x s32>) from %stack.0)
+  ; X64-NEXT:   [[EVEC:%[0-9]+]]:_(s32) = G_EXTRACT_VECTOR_ELT [[LOAD]](<32 x s32>), [[C]](s64)
+  ; X64-NEXT:   $xmm0 = COPY [[EVEC]](s32)
+  ; X64-NEXT:   RET 0, implicit $xmm0
+  %vect = call <32 x float> @test_return_v32f32()
+  %elt = extractelement <32 x float> %vect, i32 7
+  ret float %elt
 }

@@ -13,7 +13,6 @@
 #include "Protocol.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -34,7 +33,7 @@ static bool mapOptOrNull(const llvm::json::Value &params,
 
   // Field is missing or null.
   auto *v = o->get(prop);
-  if (!v || v->getAsNull().hasValue())
+  if (!v || v->getAsNull())
     return true;
   return fromJSON(*v, out, path.field(prop));
 }
@@ -45,7 +44,7 @@ static bool mapOptOrNull(const llvm::json::Value &params,
 
 bool mlir::lsp::fromJSON(const llvm::json::Value &value,
                          PDLLViewOutputKind &result, llvm::json::Path path) {
-  if (Optional<StringRef> str = value.getAsString()) {
+  if (std::optional<StringRef> str = value.getAsString()) {
     if (*str == "ast") {
       result = PDLLViewOutputKind::AST;
       return true;

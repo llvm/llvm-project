@@ -1,7 +1,7 @@
 // This run stresses global reset happenning concurrently with everything else.
 // RUN: %clangxx_tsan -O1 %s -o %t && %env_tsan_opts=flush_memory_ms=1:flush_symbolizer_ms=1:memory_limit_mb=1 %run %t 2>&1 | FileCheck %s --check-prefix=CHECK-NORACE
 // This run stresses race reporting happenning concurrently with everything else.
-// RUN: %clangxx_tsan -O1 %s -DRACE=1 -o %t && %env_tsan_opts=suppress_equal_stacks=0:suppress_equal_addresses=0 %deflake %run %t | FileCheck %s --check-prefix=CHECK-RACE
+// RUN: %clangxx_tsan -O1 %s -DRACE=1 -o %t && %env_tsan_opts=suppress_equal_stacks=0 %deflake %run %t | FileCheck %s --check-prefix=CHECK-RACE
 #include "test.h"
 #include <fcntl.h>
 #include <string.h>

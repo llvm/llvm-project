@@ -174,7 +174,7 @@ define i64 @AtomicLoadAdd(i64 signext %incr) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    nop
 entry:
-  %0 = atomicrmw add i64* @x, i64 %incr monotonic
+  %0 = atomicrmw add ptr @x, i64 %incr monotonic
   ret i64 %0
 
 }
@@ -331,7 +331,7 @@ define i64 @AtomicLoadSub(i64 signext %incr) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    nop
 entry:
-  %0 = atomicrmw sub i64* @x, i64 %incr monotonic
+  %0 = atomicrmw sub ptr @x, i64 %incr monotonic
   ret i64 %0
 
 }
@@ -488,7 +488,7 @@ define i64 @AtomicLoadAnd(i64 signext %incr) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    nop
 entry:
-  %0 = atomicrmw and i64* @x, i64 %incr monotonic
+  %0 = atomicrmw and ptr @x, i64 %incr monotonic
   ret i64 %0
 
 }
@@ -645,7 +645,7 @@ define i64 @AtomicLoadOr(i64 signext %incr) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    nop
 entry:
-  %0 = atomicrmw or i64* @x, i64 %incr monotonic
+  %0 = atomicrmw or ptr @x, i64 %incr monotonic
   ret i64 %0
 
 }
@@ -802,7 +802,7 @@ define i64 @AtomicLoadXor(i64 signext %incr) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    nop
 entry:
-  %0 = atomicrmw xor i64* @x, i64 %incr monotonic
+  %0 = atomicrmw xor ptr @x, i64 %incr monotonic
   ret i64 %0
 
 }
@@ -968,7 +968,7 @@ define i64 @AtomicLoadNand(i64 signext %incr) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    nop
 entry:
-  %0 = atomicrmw nand i64* @x, i64 %incr monotonic
+  %0 = atomicrmw nand ptr @x, i64 %incr monotonic
   ret i64 %0
 
 }
@@ -1145,10 +1145,10 @@ define i64 @AtomicSwap64(i64 signext %newval) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    daddiu $sp, $sp, 16
 entry:
-  %newval.addr = alloca i64, align 4
-  store i64 %newval, i64* %newval.addr, align 4
-  %tmp = load i64, i64* %newval.addr, align 4
-  %0 = atomicrmw xchg i64* @x, i64 %tmp monotonic
+  %newval.addr = alloca i64, align 8
+  store i64 %newval, ptr %newval.addr, align 4
+  %tmp = load i64, ptr %newval.addr, align 4
+  %0 = atomicrmw xchg ptr @x, i64 %tmp monotonic
   ret i64 %0
 
 }
@@ -1359,10 +1359,10 @@ define i64 @AtomicCmpSwap64(i64 signext %oldval, i64 signext %newval) nounwind {
 ; MIPS64EB-NEXT:    jr $ra
 ; MIPS64EB-NEXT:    daddiu $sp, $sp, 16
 entry:
-  %newval.addr = alloca i64, align 4
-  store i64 %newval, i64* %newval.addr, align 4
-  %tmp = load i64, i64* %newval.addr, align 4
-  %0 = cmpxchg i64* @x, i64 %oldval, i64 %tmp monotonic monotonic
+  %newval.addr = alloca i64, align 8
+  store i64 %newval, ptr %newval.addr, align 4
+  %tmp = load i64, ptr %newval.addr, align 4
+  %0 = cmpxchg ptr @x, i64 %oldval, i64 %tmp monotonic monotonic
   %1 = extractvalue { i64, i1 } %0, 0
   ret i64 %1
 

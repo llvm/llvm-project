@@ -2,19 +2,19 @@
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+mte -stack-tagging-unchecked-ld-st=never | FileCheck %s --check-prefixes=NEVER,COMMON
 ; RUN: llc < %s -mtriple=aarch64 -mattr=+mte -stack-tagging-unchecked-ld-st=always | FileCheck %s --check-prefixes=ALWAYS,COMMON
 
-declare void @use8(i8*)
-declare void @use16(i16*)
-declare void @use32(i32*)
-declare void @use64(i64*)
-declare void @use2x64([2 x i64]*)
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @use8(ptr)
+declare void @use16(ptr)
+declare void @use32(ptr)
+declare void @use64(ptr)
+declare void @use2x64(ptr)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 define i64 @CallLd64() sanitize_memtag {
 entry:
   %x = alloca i64, align 4
-  call void @use64(i64* %x)
-  %a = load i64, i64* %x
+  call void @use64(ptr %x)
+  %a = load i64, ptr %x
   ret i64 %a
 }
 
@@ -31,8 +31,8 @@ entry:
 define i32 @CallLd32() sanitize_memtag {
 entry:
   %x = alloca i32, align 4
-  call void @use32(i32* %x)
-  %a = load i32, i32* %x
+  call void @use32(ptr %x)
+  %a = load i32, ptr %x
   ret i32 %a
 }
 
@@ -49,8 +49,8 @@ entry:
 define i16 @CallLd16() sanitize_memtag {
 entry:
   %x = alloca i16, align 4
-  call void @use16(i16* %x)
-  %a = load i16, i16* %x
+  call void @use16(ptr %x)
+  %a = load i16, ptr %x
   ret i16 %a
 }
 
@@ -67,8 +67,8 @@ entry:
 define i8 @CallLd8() sanitize_memtag {
 entry:
   %x = alloca i8, align 4
-  call void @use8(i8* %x)
-  %a = load i8, i8* %x
+  call void @use8(ptr %x)
+  %a = load i8, ptr %x
   ret i8 %a
 }
 
@@ -85,9 +85,9 @@ entry:
 define void @CallSt64Call() sanitize_memtag {
 entry:
   %x = alloca i64, align 4
-  call void @use64(i64* %x)
-  store i64 42, i64* %x
-  call void @use64(i64* %x)
+  call void @use64(ptr %x)
+  store i64 42, ptr %x
+  call void @use64(ptr %x)
   ret void
 }
 
@@ -105,9 +105,9 @@ entry:
 define void @CallSt32Call() sanitize_memtag {
 entry:
   %x = alloca i32, align 4
-  call void @use32(i32* %x)
-  store i32 42, i32* %x
-  call void @use32(i32* %x)
+  call void @use32(ptr %x)
+  store i32 42, ptr %x
+  call void @use32(ptr %x)
   ret void
 }
 
@@ -125,9 +125,9 @@ entry:
 define void @CallSt16Call() sanitize_memtag {
 entry:
   %x = alloca i16, align 4
-  call void @use16(i16* %x)
-  store i16 42, i16* %x
-  call void @use16(i16* %x)
+  call void @use16(ptr %x)
+  store i16 42, ptr %x
+  call void @use16(ptr %x)
   ret void
 }
 
@@ -146,9 +146,9 @@ entry:
 define void @CallSt8Call() sanitize_memtag {
 entry:
   %x = alloca i8, align 4
-  call void @use8(i8* %x)
-  store i8 42, i8* %x
-  call void @use8(i8* %x)
+  call void @use8(ptr %x)
+  store i8 42, ptr %x
+  call void @use8(ptr %x)
   ret void
 }
 
@@ -166,12 +166,11 @@ entry:
 define void @CallStPair(i64 %z) sanitize_memtag {
 entry:
   %x = alloca [2 x i64], align 8
-  call void @use2x64([2 x i64]* %x)
-  %x0 = getelementptr inbounds [2 x i64], [2 x i64]* %x, i64 0, i64 0
-  store i64 %z, i64* %x0, align 8
-  %x1 = getelementptr inbounds [2 x i64], [2 x i64]* %x, i64 0, i64 1
-  store i64 %z, i64* %x1, align 8
-  call void @use2x64([2 x i64]* %x)
+  call void @use2x64(ptr %x)
+  store i64 %z, ptr %x, align 8
+  %x1 = getelementptr inbounds [2 x i64], ptr %x, i64 0, i64 1
+  store i64 %z, ptr %x1, align 8
+  call void @use2x64(ptr %x)
   ret void
 }
 
@@ -190,13 +189,11 @@ define dso_local i8 @LargeFrame() sanitize_memtag {
 entry:
   %x = alloca [4096 x i8], align 4
   %y = alloca [4096 x i8], align 4
-  %0 = getelementptr inbounds [4096 x i8], [4096 x i8]* %x, i64 0, i64 0
-  %1 = getelementptr inbounds [4096 x i8], [4096 x i8]* %y, i64 0, i64 0
-  call void @use8(i8* %0)
-  call void @use8(i8* %1)
-  %2 = load i8, i8* %0, align 4
-  %3 = load i8, i8* %1, align 4
-  %add = add i8 %3, %2
+  call void @use8(ptr %x)
+  call void @use8(ptr %y)
+  %0 = load i8, ptr %x, align 4
+  %1 = load i8, ptr %y, align 4
+  %add = add i8 %1, %0
   ret i8 %add
 }
 
@@ -224,15 +221,12 @@ define i8 @FPOffset() "frame-pointer"="all" sanitize_memtag {
   %x = alloca [200 x i8], align 4
   %y = alloca [200 x i8], align 4
   %z = alloca [200 x i8], align 4
-  %x0 = getelementptr inbounds [200 x i8], [200 x i8]* %x, i64 0, i64 0
-  %y0 = getelementptr inbounds [200 x i8], [200 x i8]* %y, i64 0, i64 0
-  %z0 = getelementptr inbounds [200 x i8], [200 x i8]* %z, i64 0, i64 0
-  call void @use8(i8* %x0)
-  call void @use8(i8* %y0)
-  call void @use8(i8* %z0)
-  %x1 = load i8, i8* %x0, align 4
-  %y1 = load i8, i8* %y0, align 4
-  %z1 = load i8, i8* %z0, align 4
+  call void @use8(ptr %x)
+  call void @use8(ptr %y)
+  call void @use8(ptr %z)
+  %x1 = load i8, ptr %x, align 4
+  %y1 = load i8, ptr %y, align 4
+  %z1 = load i8, ptr %z, align 4
   %a = add i8 %x1, %y1
   %b = add i8 %a, %z1
   ret i8 %b

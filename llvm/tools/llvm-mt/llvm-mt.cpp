@@ -17,7 +17,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileOutputBuffer.h"
 #include "llvm/Support/InitLLVM.h"
-#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PrettyStackTrace.h"
@@ -42,11 +42,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr StringLiteral NAME##_init[] = VALUE;                        \
+  static constexpr ArrayRef<StringLiteral> NAME(NAME##_init,                   \
+                                                std::size(NAME##_init) - 1);
 #include "Opts.inc"
 #undef PREFIX
 
-const opt::OptTable::Info InfoTable[] = {
+static constexpr opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
 {                                                                              \
@@ -58,9 +61,9 @@ const opt::OptTable::Info InfoTable[] = {
 #undef OPTION
 };
 
-class CvtResOptTable : public opt::OptTable {
+class CvtResOptTable : public opt::GenericOptTable {
 public:
-  CvtResOptTable() : OptTable(InfoTable, true) {}
+  CvtResOptTable() : opt::GenericOptTable(InfoTable, true) {}
 };
 } // namespace
 
@@ -80,12 +83,12 @@ static void error(Error EC) {
     });
 }
 
-int main(int Argc, const char **Argv) {
+int llvm_mt_main(int Argc, char **Argv, const llvm::ToolContext &) {
   InitLLVM X(Argc, Argv);
 
   CvtResOptTable T;
   unsigned MAI, MAC;
-  ArrayRef<const char *> ArgsArr = makeArrayRef(Argv + 1, Argc - 1);
+  ArrayRef<const char *> ArgsArr = ArrayRef(Argv + 1, Argc - 1);
   opt::InputArgList InputArgs = T.ParseArgs(ArgsArr, MAI, MAC);
 
   for (auto *Arg : InputArgs.filtered(OPT_INPUT)) {
@@ -151,9 +154,9 @@ int main(int Argc, const char **Argv) {
     bool Same = false;
     if (OutBuffOrErr) {
       const std::unique_ptr<MemoryBuffer> &FileBuffer = *OutBuffOrErr;
-      Same = std::equal(OutputBuffer->getBufferStart(),
-                        OutputBuffer->getBufferEnd(),
-                        FileBuffer->getBufferStart());
+      Same = std::equal(
+          OutputBuffer->getBufferStart(), OutputBuffer->getBufferEnd(),
+          FileBuffer->getBufferStart(), FileBuffer->getBufferEnd());
     }
     if (!Same) {
 #if LLVM_ON_UNIX

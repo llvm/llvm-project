@@ -30,8 +30,8 @@
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/TargetParser/Host.h"
 
 #include <memory>
 #include <string>
@@ -84,18 +84,18 @@ public:
   TestDiagnosticConsumer()
       : Passthrough(std::make_unique<TextDiagnosticBuffer>()) {}
 
-  virtual void BeginSourceFile(const LangOptions &LangOpts,
-                               const Preprocessor *PP = nullptr) override {
+  void BeginSourceFile(const LangOptions &LangOpts,
+                       const Preprocessor *PP = nullptr) override {
     this->LangOpts = &LangOpts;
     return Passthrough->BeginSourceFile(LangOpts, PP);
   }
 
-  virtual void EndSourceFile() override {
+  void EndSourceFile() override {
     this->LangOpts = nullptr;
     Passthrough->EndSourceFile();
   }
 
-  virtual bool IncludeInDiagnosticCounts() const override {
+  bool IncludeInDiagnosticCounts() const override {
     return Passthrough->IncludeInDiagnosticCounts();
   }
 
@@ -130,8 +130,8 @@ private:
     llvm::errs() << '\n';
   }
 
-  virtual void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
-                                const Diagnostic &Info) override {
+  void HandleDiagnostic(DiagnosticsEngine::Level DiagLevel,
+                        const Diagnostic &Info) override {
     if (Info.hasSourceManager() && LangOpts) {
       SourceManager &SM = Info.getSourceManager();
 
@@ -200,7 +200,7 @@ std::unique_ptr<CompilerInstance> BuildCompilerInstance() {
   Inv->getLangOpts()->CXXExceptions = true;
   // Needed for testing dynamic_cast.
   Inv->getLangOpts()->RTTI = true;
-  Inv->getCodeGenOpts().setDebugInfo(codegenoptions::FullDebugInfo);
+  Inv->getCodeGenOpts().setDebugInfo(llvm::codegenoptions::FullDebugInfo);
   Inv->getTargetOpts().Triple = llvm::sys::getDefaultTargetTriple();
 
   Ins->setInvocation(std::move(Inv));
@@ -230,8 +230,9 @@ std::unique_ptr<CodeGenerator> BuildCodeGen(CompilerInstance &CI,
                                             llvm::LLVMContext &LLVMCtx) {
   StringRef ModuleName("$__module");
   return std::unique_ptr<CodeGenerator>(CreateLLVMCodeGen(
-      CI.getDiagnostics(), ModuleName, CI.getHeaderSearchOpts(),
-      CI.getPreprocessorOpts(), CI.getCodeGenOpts(), LLVMCtx));
+      CI.getDiagnostics(), ModuleName, &CI.getVirtualFileSystem(),
+      CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(), CI.getCodeGenOpts(),
+      LLVMCtx));
 }
 } // namespace init_convenience
 

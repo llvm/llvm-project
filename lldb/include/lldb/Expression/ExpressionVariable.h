@@ -10,6 +10,7 @@
 #define LLDB_EXPRESSION_EXPRESSIONVARIABLE_H
 
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/DenseMap.h"
@@ -28,11 +29,10 @@ public:
 
   LLVMCastKind getKind() const { return m_kind; }
 
-  ExpressionVariable(LLVMCastKind kind) : m_flags(0), m_kind(kind) {}
-
+  ExpressionVariable(LLVMCastKind kind);
   virtual ~ExpressionVariable();
 
-  llvm::Optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
+  std::optional<uint64_t> GetByteSize() { return m_frozen_sp->GetByteSize(); }
 
   ConstString GetName() { return m_frozen_sp->GetName(); }
 
@@ -207,8 +207,7 @@ public:
 
   LLVMCastKind getKind() const { return m_kind; }
 
-  PersistentExpressionState(LLVMCastKind kind) : m_kind(kind) {}
-
+  PersistentExpressionState(LLVMCastKind kind);
   virtual ~PersistentExpressionState();
 
   virtual lldb::ExpressionVariableSP
@@ -226,7 +225,7 @@ public:
   virtual void
   RemovePersistentVariable(lldb::ExpressionVariableSP variable) = 0;
 
-  virtual llvm::Optional<CompilerType>
+  virtual std::optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) = 0;
 
   virtual lldb::addr_t LookupSymbol(ConstString name);

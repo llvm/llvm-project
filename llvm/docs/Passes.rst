@@ -156,15 +156,15 @@ This pass, only available in ``opt``, prints the dominator tree into a ``.dot``
 graph, omitting the function bodies.  This graph can then be processed with the
 :program:`dot` tool to convert it to postscript or some other suitable format.
 
-``-dot-postdom``: Print postdominance tree of function to "dot" file
---------------------------------------------------------------------
+``-dot-post-dom``: Print postdominance tree of function to "dot" file
+---------------------------------------------------------------------
 
 This pass, only available in ``opt``, prints the post dominator tree into a
 ``.dot`` graph.  This graph can then be processed with the :program:`dot` tool
 to convert it to postscript or some other suitable format.
 
-``-dot-postdom-only``: Print postdominance tree of function to "dot" file (with no function bodies)
----------------------------------------------------------------------------------------------------
+``-dot-post-dom-only``: Print postdominance tree of function to "dot" file (with no function bodies)
+----------------------------------------------------------------------------------------------------
 
 This pass, only available in ``opt``, prints the post dominator tree into a
 ``.dot`` graph, omitting the function bodies.  This graph can then be processed
@@ -295,19 +295,6 @@ standard error in a human-readable form.
 
 This pass, only available in ``opt``, printsthe SCCs of each function CFG to
 standard error in a human-readable fom.
-
-``-print-dom-info``: Dominator Info Printer
--------------------------------------------
-
-Dominator Info Printer.
-
-``-print-externalfnconstants``: Print external fn callsites passed constants
-----------------------------------------------------------------------------
-
-This pass, only available in ``opt``, prints out call sites to external
-functions that are called with constant arguments.  This can be useful when
-looking for standard library functions we should constant fold or handle in
-alias analyses.
 
 ``-print-function``: Print function to stderr
 ---------------------------------------------

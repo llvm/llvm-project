@@ -31,18 +31,18 @@ define dso_local i32 @main() local_unnamed_addr !dbg !12 {
 entry:
 ; CHECK: call void @llvm.dbg.value(metadata i32 4, metadata [[VAR:![0-9]+]], metadata !DIExpression())
   call void @llvm.dbg.value(metadata i32 4, metadata !16, metadata !DIExpression()), !dbg !21
-  %0 = load volatile i32, i32* @v, align 4, !dbg !22, !tbaa !23
+  %0 = load volatile i32, ptr @v, align 4, !dbg !22, !tbaa !23
   %inc = add nsw i32 %0, 1, !dbg !22
-  store volatile i32 %inc, i32* @v, align 4, !dbg !22, !tbaa !23
+  store volatile i32 %inc, ptr @v, align 4, !dbg !22, !tbaa !23
 
 ; CHECK: call void @llvm.dbg.value(metadata i32 4, metadata [[PTR1:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_implicit_pointer))
   call void @llvm.dbg.value(metadata i32 4, metadata !17, metadata !DIExpression(DW_OP_LLVM_implicit_pointer)), !dbg !21
 
 ; CHECK: call void @llvm.dbg.value(metadata i32 4, metadata [[PTR2:![0-9]+]], metadata !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer))
   call void @llvm.dbg.value(metadata i32 4, metadata !19, metadata !DIExpression(DW_OP_LLVM_implicit_pointer, DW_OP_LLVM_implicit_pointer)), !dbg !21
-  %1 = load volatile i32, i32* @v, align 4, !dbg !27, !tbaa !23
+  %1 = load volatile i32, ptr @v, align 4, !dbg !27, !tbaa !23
   %inc1 = add nsw i32 %1, 1, !dbg !27
-  store volatile i32 %inc1, i32* @v, align 4, !dbg !27, !tbaa !23
+  store volatile i32 %inc1, ptr @v, align 4, !dbg !27, !tbaa !23
   ret i32 3, !dbg !28
 }
 

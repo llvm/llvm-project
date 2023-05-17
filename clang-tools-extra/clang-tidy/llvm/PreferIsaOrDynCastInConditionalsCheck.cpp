@@ -19,51 +19,46 @@ namespace ast_matchers {
 AST_MATCHER(Expr, isMacroID) { return Node.getExprLoc().isMacroID(); }
 } // namespace ast_matchers
 
-namespace tidy {
-namespace llvm_check {
+namespace tidy::llvm_check {
 
 void PreferIsaOrDynCastInConditionalsCheck::registerMatchers(
     MatchFinder *Finder) {
   auto Condition = hasCondition(implicitCastExpr(has(
-      callExpr(
-          allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-                anyOf(callee(namedDecl(hasName("cast"))),
-                      callee(namedDecl(hasName("dyn_cast")).bind("dyn_cast")))))
+      callExpr(unless(isMacroID()), unless(cxxMemberCallExpr()),
+               anyOf(callee(namedDecl(hasName("cast"))),
+                     callee(namedDecl(hasName("dyn_cast")).bind("dyn_cast"))))
           .bind("call"))));
 
   auto Any = anyOf(
       has(declStmt(containsDeclaration(
-          0,
-          varDecl(hasInitializer(
-              callExpr(allOf(unless(isMacroID()), unless(cxxMemberCallExpr()),
-                             callee(namedDecl(hasName("cast")))))
-                  .bind("assign")))))),
+          0, varDecl(hasInitializer(callExpr(unless(isMacroID()),
+                                             unless(cxxMemberCallExpr()),
+                                             callee(namedDecl(hasName("cast"))))
+                                        .bind("assign")))))),
       Condition);
 
   auto CallExpression =
       callExpr(
-          allOf(
-              unless(isMacroID()), unless(cxxMemberCallExpr()),
-              allOf(callee(namedDecl(hasAnyName("isa", "cast", "cast_or_null",
-                                                "dyn_cast", "dyn_cast_or_null"))
-                               .bind("func")),
-                    hasArgument(
-                        0,
-                        mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg")))))
+
+          unless(isMacroID()), unless(cxxMemberCallExpr()),
+          callee(namedDecl(hasAnyName("isa", "cast", "cast_or_null", "dyn_cast",
+                                      "dyn_cast_or_null"))
+                     .bind("func")),
+          hasArgument(0, mapAnyOf(declRefExpr, cxxMemberCallExpr).bind("arg")))
           .bind("rhs");
 
   Finder->addMatcher(
-      traverse(TK_AsIs,
-               stmt(anyOf(
-                   ifStmt(Any), whileStmt(Any), doStmt(Condition),
-                   binaryOperator(
-                       allOf(unless(isExpansionInFileMatching(
+      traverse(
+          TK_AsIs,
+          stmt(anyOf(
+              ifStmt(Any), whileStmt(Any), doStmt(Condition),
+              binaryOperator(unless(isExpansionInFileMatching(
                                  "llvm/include/llvm/Support/Casting.h")),
                              hasOperatorName("&&"),
                              hasLHS(implicitCastExpr().bind("lhs")),
                              hasRHS(anyOf(implicitCastExpr(has(CallExpression)),
-                                          CallExpression))))
-                       .bind("and")))),
+                                          CallExpression)))
+                  .bind("and")))),
       this);
 }
 
@@ -130,6 +125,5 @@ void PreferIsaOrDynCastInConditionalsCheck::check(
   }
 }
 
-} // namespace llvm_check
-} // namespace tidy
+} // namespace tidy::llvm_check
 } // namespace clang

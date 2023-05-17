@@ -21,14 +21,15 @@
 // RUN:   --sysroot=%S/Inputs/basic_riscv32_tree/riscv32-unknown-elf 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-BAREMETAL-ILP32 %s
 
-// C-RV32-BAREMETAL-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
+// C-RV32-BAREMETAL-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
 // C-RV32-BAREMETAL-ILP32: "--sysroot={{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf"
+// C-RV64-BAREMETAL-LP64-SAME: "-X"
 // C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf/lib{{/|\\\\}}crt0.o"
-// C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// C-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
+// C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// C-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1"
 // C-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf/lib"
 // C-RV32-BAREMETAL-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// C-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clang -### %s -fuse-ld= \
 // RUN:   --target=riscv32-unknown-elf --rtlib=platform \
@@ -36,13 +37,13 @@
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV32-BAREMETAL-NOSYSROOT-ILP32 %s
 
-// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
-// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-elf/lib{{/|\\\\}}crt0.o"
-// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
-// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-elf{{/|\\\\}}lib"
+// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
+// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-linux-gnu/lib{{/|\\\\}}crt0.o"
+// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1"
+// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-linux-gnu{{/|\\\\}}lib"
 // C-RV32-BAREMETAL-NOSYSROOT-ILP32: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// C-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
@@ -51,14 +52,14 @@
 // RUN:   | FileCheck -check-prefix=CXX-RV32-BAREMETAL-ILP32 %s
 
 // CXX-RV32-BAREMETAL-ILP32: "-internal-isystem" "{{.*}}Inputs/basic_riscv32_tree/riscv32-unknown-elf/include/c++{{/|\\\\}}8.0.1"
-// CXX-RV32-BAREMETAL-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
+// CXX-RV32-BAREMETAL-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
 // CXX-RV32-BAREMETAL-ILP32: "--sysroot={{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf"
 // CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf/lib{{/|\\\\}}crt0.o"
-// CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// CXX-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
+// CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// CXX-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1"
 // CXX-RV32-BAREMETAL-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/riscv32-unknown-elf/lib"
-// CXX-RV32-BAREMETAL-ILP32: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// CXX-RV32-BAREMETAL-ILP32: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV32-BAREMETAL-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv32-unknown-elf -stdlib=libstdc++ --rtlib=platform \
@@ -66,14 +67,14 @@
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV32-BAREMETAL-NOSYSROOT-ILP32 %s
 
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-internal-isystem" "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-elf/include/c++{{/|\\\\}}8.0.1"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-elf/lib{{/|\\\\}}crt0.o"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-elf/lib"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-internal-isystem" "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-linux-gnu/include/c++{{/|\\\\}}8.0.1"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv32-unknown-elf-ld"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-linux-gnu/lib{{/|\\\\}}crt0.o"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-L{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv32-unknown-linux-gnu/lib"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV32-BAREMETAL-NOSYSROOT-ILP32: "{{.*}}/Inputs/basic_riscv32_tree/lib/gcc/riscv32-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
 // RUN:   --target=riscv32-unknown-linux-gnu --rtlib=platform -mabi=ilp32 \
@@ -83,7 +84,7 @@
 
 // C-RV32-LINUX-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/bin{{/|\\\\}}ld"
 // C-RV32-LINUX-MULTI-ILP32: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
-// C-RV32-LINUX-MULTI-ILP32: "-m" "elf32lriscv"
+// C-RV32-LINUX-MULTI-ILP32: "-m" "elf32lriscv" "-X"
 // C-RV32-LINUX-MULTI-ILP32: "-dynamic-linker" "/lib/ld-linux-riscv32-ilp32.so.1"
 // C-RV32-LINUX-MULTI-ILP32: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32{{/|\\\\}}crtbegin.o"
 // C-RV32-LINUX-MULTI-ILP32: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib32/ilp32"
@@ -203,14 +204,14 @@
 // RUN:   -resource-dir=%s/Inputs/resource_dir 2>&1 \
 // RUN:   | FileCheck -check-prefix=RESOURCE-INC %s
 // RESOURCE-INC: "-internal-isystem" "{{.*}}/Inputs/resource_dir{{/|\\\\}}include"
-// RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv32_tree{{.*}}riscv32-unknown-elf{{/|\\\\}}include"
+// RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv32_tree{{.*}}riscv32-unknown-linux-gnu{{/|\\\\}}include"
 
 // RUN: %clang -### %s --target=riscv32 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir -nobuiltininc 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO-RESOURCE-INC %s
 // NO-RESOURCE-INC-NOT: "-internal-isystem" "{{.*}}/Inputs/resource_dir{{/|\\\\}}include"
-// NO-RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv32_tree/{{.*}}riscv32-unknown-elf{{/|\\\\}}include"
+// NO-RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv32_tree/{{.*}}riscv32-unknown-linux-gnu{{/|\\\\}}include"
 
 // RUN: %clang --target=riscv32 %s -emit-llvm -S -o - | FileCheck %s
 
@@ -247,6 +248,9 @@ int align_ll = __alignof(long long);
 // CHECK: @align_p = dso_local global i32 4
 int align_p = __alignof(void*);
 
+// CHECK: @align_f16 = dso_local global i32 2
+int align_f16 = __alignof(_Float16);
+
 // CHECK: @align_f = dso_local global i32 4
 int align_f = __alignof(float);
 
@@ -282,6 +286,9 @@ int align_a_ll = __alignof(_Atomic(long long));
 
 // CHECK: @align_a_p = dso_local global i32 4
 int align_a_p = __alignof(_Atomic(void*));
+
+// CHECK: @align_a_f16 = dso_local global i32 2
+int align_a_f16 = __alignof(_Atomic(_Float16));
 
 // CHECK: @align_a_f = dso_local global i32 4
 int align_a_f = __alignof(_Atomic(float));
@@ -331,6 +338,9 @@ int size_a_ll = sizeof(_Atomic(long long));
 // CHECK: @size_a_p = dso_local global i32 4
 int size_a_p = sizeof(_Atomic(void*));
 
+// CHECK: @size_a_f16 = dso_local global i32 2
+int size_a_f16 = sizeof(_Atomic(_Float16));
+
 // CHECK: @size_a_f = dso_local global i32 4
 int size_a_f = sizeof(_Atomic(float));
 
@@ -378,6 +388,9 @@ unsigned long long check_ulonglong(void) { return 0; }
 
 // CHECK: define dso_local i32 @check_size_t()
 size_t check_size_t(void) { return 0; }
+
+// CHECK: define dso_local half @check_float16()
+_Float16 check_float16(void) { return 0; }
 
 // CHECK: define dso_local float @check_float()
 float check_float(void) { return 0; }

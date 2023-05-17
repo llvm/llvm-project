@@ -41,11 +41,11 @@ if.then115:
   br i1 undef, label %if.else163, label %if.else145
 
 if.else145:
-  %call150 = call fastcc %struct.hc* @foo(%struct.hc* undef, i32 34865152) optsize
+  %call150 = call fastcc ptr @foo(ptr undef, i32 34865152) optsize
   br label %while.body172
 
 if.else163:
-  %call168 = call fastcc %struct.hc* @foo(%struct.hc* undef, i32 34078720) optsize
+  %call168 = call fastcc ptr @foo(ptr undef, i32 34078720) optsize
   br label %while.body172
 
 while.body172:
@@ -55,5 +55,5 @@ if.else173:
   ret i32 -1
 }
 
-declare hidden fastcc %struct.hc* @foo(%struct.hc* nocapture, i32) nounwind optsize
+declare hidden fastcc ptr @foo(ptr nocapture, i32) nounwind optsize
 

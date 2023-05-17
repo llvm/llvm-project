@@ -4,17 +4,17 @@ target triple="aarch64--"
 
 define void @f() sanitize_hwaddress !dbg !6 {
 entry:
-  %x = call i8* @g(i32 0)
+  %x = call ptr @g(i32 0)
   %a = alloca [128 x i8]
   %b = alloca [128 x i8]
   ; CHECK: DW_AT_location (DW_OP_fbreg
-  call void @llvm.dbg.declare(metadata [128 x i8]* %a, metadata !12, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression()), !dbg !14
   ; CHECK: DW_AT_location (DW_OP_fbreg
-  call void @llvm.dbg.declare(metadata [128 x i8]* %b, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !13, metadata !DIExpression()), !dbg !14
   ret void, !dbg !15
 }
 
-declare i8* @g(i32)
+declare ptr @g(i32)
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 

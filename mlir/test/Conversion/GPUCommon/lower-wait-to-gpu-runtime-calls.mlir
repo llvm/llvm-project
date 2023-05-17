@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --gpu-to-llvm | FileCheck %s
+// RUN: mlir-opt %s --gpu-to-llvm='use-opaque-pointers=1' | FileCheck %s
 
 module attributes {gpu.container_module} {
 

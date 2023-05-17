@@ -11,6 +11,8 @@
 // REQUIRES: locale.zh_CN.UTF-8
 // XFAIL: no-wide-characters
 
+// XFAIL: LIBCXX-FREEBSD-FIXME
+
 // <locale>
 
 // class time_get_byname<charT, InputIterator>

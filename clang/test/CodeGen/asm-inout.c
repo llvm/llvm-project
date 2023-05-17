@@ -1,20 +1,20 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 // PR3800
 int *foo(void);
 
 // CHECK: @test1
 void test1(void) {
-  // CHECK: [[REGCALLRESULT:%[a-zA-Z0-9\.]+]] = call i32* @foo()
-  // CHECK: call void asm "foobar", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) [[REGCALLRESULT]], i32* elementtype(i32) [[REGCALLRESULT]])
+  // CHECK: [[REGCALLRESULT:%[a-zA-Z0-9\.]+]] = call ptr @foo()
+  // CHECK: call void asm "foobar", "=*m,*m,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) [[REGCALLRESULT]], ptr elementtype(i32) [[REGCALLRESULT]])
   asm ("foobar" : "+m"(*foo()));
 }
 
 // CHECK: @test2
 void test2(void) {
-  // CHECK: [[REGCALLRESULT:%[a-zA-Z0-9\.]+]] = call i32* @foo()
-  // CHECK: load i32, i32* [[REGCALLRESULT]]
+  // CHECK: [[REGCALLRESULT:%[a-zA-Z0-9\.]+]] = call ptr @foo()
+  // CHECK: load i32, ptr [[REGCALLRESULT]]
   // CHECK: call i32 asm
-  // CHECK: store i32 {{%[a-zA-Z0-9\.]+}}, i32* [[REGCALLRESULT]]
+  // CHECK: store i32 {{%[a-zA-Z0-9\.]+}}, ptr [[REGCALLRESULT]]
   asm ("foobar" : "+r"(*foo()));
 }
 

@@ -1,4 +1,3 @@
-; RUN: opt -name-anon-globals -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; RUN: opt -passes=name-anon-globals -module-summary < %s | llvm-bcanalyzer -dump | FileCheck %s -check-prefix=BC
 ; Check for summary block/records.
 
@@ -25,13 +24,14 @@
 ; BC-NEXT: <PERMODULE {{.*}} op0=3 op1=7
 ; BC-NEXT: <PERMODULE {{.*}} op0=4 op1=0 op2=4 op3=0
 ; BC-NEXT: <ALIAS {{.*}} op0=6 op1=0 op2=3
-; BC-NEXT: <BLOCK_COUNT op0=5/>
 ; BC-NEXT: </GLOBALVAL_SUMMARY_BLOCK
 ; BC: <STRTAB_BLOCK
 ; BC-NEXT: blob data = 'hfoobaranon.{{................................}}.0variadicllvm.va_startf{{.*}}'
 
 
-; RUN: opt -name-anon-globals -module-summary < %s | llvm-dis | FileCheck %s
+; RUN: opt -passes=name-anon-globals -module-summary < %s | llvm-dis | FileCheck %s
+; RUN: opt -passes=name-anon-globals -module-summary -S < %s | FileCheck %s
+; RUN: opt -passes=name-anon-globals -module-summary -S < %s | llvm-as | llvm-dis | FileCheck %s
 ; Check that this round-trips correctly.
 
 ; ModuleID = '<stdin>'
@@ -59,8 +59,8 @@ entry:
 ; entries are committed.
 ; Check an anonymous function as well, since in that case only the alias
 ; ends up in the value symbol table and having a summary.
-@f = alias void (), void ()* @0   ; <void ()*> [#uses=0]
-@h = external global void ()*     ; <void ()*> [#uses=0]
+@f = alias void (), void ()* @0   ; <ptr> [#uses=0]
+@h = external global void ()*     ; <ptr> [#uses=0]
 
 define internal void @0() nounwind {
 entry:

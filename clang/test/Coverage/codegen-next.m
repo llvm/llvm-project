@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fobjc-exceptions -triple x86_64-apple-darwin -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -debug-info-kind=limited -emit-llvm -fobjc-exceptions -triple x86_64-apple-darwin -o %t %s
+// RUN: %clang_cc1 -emit-llvm -fobjc-exceptions -triple x86_64-apple-darwin -o %t %s
+// RUN: %clang_cc1 -debug-info-kind=limited -emit-llvm -fobjc-exceptions -triple x86_64-apple-darwin -o %t %s
 
 // An error could be seen for targeting x86_64-win32;
 //

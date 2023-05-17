@@ -17,9 +17,9 @@ target triple = "x86_64-apple-macosx"
 
 %struct.A = type { i8 }
 
-@p = global { i64, i64 } { i64 ptrtoint (void (%struct.A*)* @_ZN1A3fooEv to i64), i64 0 }, align 8, !dbg !0
+@p = global { i64, i64 } { i64 ptrtoint (ptr @_ZN1A3fooEv to i64), i64 0 }, align 8, !dbg !0
 
-declare void @_ZN1A3fooEv(%struct.A*)
+declare void @_ZN1A3fooEv(ptr)
 
 !llvm.dbg.cu = !{!10}
 !llvm.module.flags = !{!14, !15, !16}

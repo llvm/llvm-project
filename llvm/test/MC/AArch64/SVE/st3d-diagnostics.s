@@ -96,7 +96,7 @@ st3d { z0.d, z1.d, z2.b }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st3d { z0.d, z1.d, z3.d }, p0, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must have the same sequential stride
 // CHECK-NEXT: st3d { z0.d, z1.d, z3.d }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

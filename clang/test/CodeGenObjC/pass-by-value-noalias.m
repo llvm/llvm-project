@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fpass-by-value-is-noalias -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns -fobjc-runtime-has-weak -fobjc-arc -fobjc-dispatch-method=mixed %s -o - 2>&1 | FileCheck --check-prefix=WITH_NOALIAS %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns -fobjc-runtime-has-weak -fobjc-arc -fobjc-dispatch-method=mixed %s -o - 2>&1 | FileCheck --check-prefix=NO_NOALIAS %s
+// RUN: %clang_cc1 -fpass-by-value-is-noalias -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns -fobjc-runtime-has-weak -fobjc-arc -fobjc-dispatch-method=mixed %s -o - 2>&1 | FileCheck --check-prefix=WITH_NOALIAS %s
+// RUN: %clang_cc1 -triple arm64-apple-iphoneos -emit-llvm -disable-llvm-optzns -fobjc-runtime-has-weak -fobjc-arc -fobjc-dispatch-method=mixed %s -o - 2>&1 | FileCheck --check-prefix=NO_NOALIAS %s
 
 @interface Bar
 @property char value;
@@ -17,6 +17,6 @@ struct Foo {
   Bar *__weak f;
 };
 
-// WITH_NOALIAS: define{{.*}} void @take(%struct.Foo* noundef %arg)
-// NO_NOALIAS: define{{.*}} void @take(%struct.Foo* noundef %arg)
+// WITH_NOALIAS: define{{.*}} void @take(ptr noundef %arg)
+// NO_NOALIAS: define{{.*}} void @take(ptr noundef %arg)
 void take(struct Foo arg) {}

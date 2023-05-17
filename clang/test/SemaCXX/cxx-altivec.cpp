@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple=powerpc-apple-darwin8 -target-feature +altivec -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple=powerpc-ibm-aix -target-feature +altivec -fsyntax-only -verify %s
 
 struct Vector {
 	__vector float xyzw;

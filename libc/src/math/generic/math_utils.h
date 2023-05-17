@@ -9,35 +9,32 @@
 #ifndef LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 #define LLVM_LIBC_SRC_MATH_MATH_UTILS_H
 
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
 #include "src/__support/common.h"
-#include <errno.h>
+#include "src/errno/libc_errno.h"
+
 #include <math.h>
 
 #include <stdint.h>
 
 namespace __llvm_libc {
 
-static inline uint32_t as_uint32_bits(float x) {
-  return __llvm_libc::bit_cast<uint32_t>(x);
+LIBC_INLINE uint32_t as_uint32_bits(float x) {
+  return cpp::bit_cast<uint32_t>(x);
 }
 
-static inline uint64_t as_uint64_bits(double x) {
-  return __llvm_libc::bit_cast<uint64_t>(x);
+LIBC_INLINE uint64_t as_uint64_bits(double x) {
+  return cpp::bit_cast<uint64_t>(x);
 }
 
-static inline float as_float(uint32_t x) {
-  return __llvm_libc::bit_cast<float>(x);
-}
+LIBC_INLINE float as_float(uint32_t x) { return cpp::bit_cast<float>(x); }
 
-static inline double as_double(uint64_t x) {
-  return __llvm_libc::bit_cast<double>(x);
-}
+LIBC_INLINE double as_double(uint64_t x) { return cpp::bit_cast<double>(x); }
 
-static inline uint32_t top12_bits(float x) { return as_uint32_bits(x) >> 20; }
+LIBC_INLINE uint32_t top12_bits(float x) { return as_uint32_bits(x) >> 20; }
 
-static inline uint32_t top12_bits(double x) { return as_uint64_bits(x) >> 52; }
+LIBC_INLINE uint32_t top12_bits(double x) { return as_uint64_bits(x) >> 52; }
 
 // Values to trigger underflow and overflow.
 template <typename T> struct XFlowValues;
@@ -54,17 +51,17 @@ template <> struct XFlowValues<double> {
   static const double MAY_UNDERFLOW_VALUE;
 };
 
-template <typename T> static inline T with_errno(T x, int err) {
+template <typename T> LIBC_INLINE T with_errno(T x, int err) {
   if (math_errhandling & MATH_ERRNO)
-    errno = err;
+    libc_errno = err;
   return x;
 }
 
-template <typename T> static inline void force_eval(T x) {
-  volatile T y UNUSED = x;
+template <typename T> LIBC_INLINE void force_eval(T x) {
+  volatile T y LIBC_UNUSED = x;
 }
 
-template <typename T> static inline T opt_barrier(T x) {
+template <typename T> LIBC_INLINE T opt_barrier(T x) {
   volatile T y = x;
   return y;
 }
@@ -72,11 +69,11 @@ template <typename T> static inline T opt_barrier(T x) {
 template <typename T> struct IsFloatOrDouble {
   static constexpr bool
       Value = // NOLINT so that this Value can match the ones for IsSame
-      cpp::IsSame<T, float>::Value || cpp::IsSame<T, double>::Value;
+      cpp::is_same_v<T, float> || cpp::is_same_v<T, double>;
 };
 
 template <typename T>
-using EnableIfFloatOrDouble = cpp::EnableIfType<IsFloatOrDouble<T>::Value, int>;
+using EnableIfFloatOrDouble = cpp::enable_if_t<IsFloatOrDouble<T>::Value, int>;
 
 template <typename T, EnableIfFloatOrDouble<T> = 0>
 T xflow(uint32_t sign, T y) {
@@ -100,7 +97,7 @@ T may_underflow(uint32_t sign) {
 }
 
 template <typename T, EnableIfFloatOrDouble<T> = 0>
-static inline constexpr float invalid(T x) {
+LIBC_INLINE constexpr float invalid(T x) {
   T y = (x - x) / (x - x);
   return isnan(x) ? y : with_errno(y, EDOM);
 }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr auto begin()
 //   requires (!(simple-view<V> &&
@@ -38,7 +37,7 @@ struct MaybeSimpleView : std::ranges::view_base {
     return nullptr;
   }
   constexpr int* end() const { return nullptr; }
-  constexpr size_t size() const { return 0; }
+  constexpr std::size_t size() const { return 0; }
 };
 
 using SimpleView = MaybeSimpleView<true>;

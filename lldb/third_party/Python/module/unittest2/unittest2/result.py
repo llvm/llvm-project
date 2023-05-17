@@ -2,11 +2,10 @@
 
 import use_lldb_suite
 
+import io
 import sys
 import traceback
 import unittest
-
-from six import StringIO as SixStringIO
 
 from unittest2 import util
 from unittest2.compatibility import wraps
@@ -65,8 +64,8 @@ class TestResult(unittest.TestResult):
         self._mirrorOutput = False
         if self.buffer:
             if self._stderr_buffer is None:
-                self._stderr_buffer = SixStringIO()
-                self._stdout_buffer = SixStringIO()
+                self._stderr_buffer = io.StringIO()
+                self._stdout_buffer = io.StringIO()
             sys.stdout = self._stdout_buffer
             sys.stderr = self._stderr_buffer
 

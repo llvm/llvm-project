@@ -115,7 +115,8 @@ public:
   /// By default this will lookup for registered operations and return the
   /// `parse()` method registered on the RegisteredOperationName. Dialects can
   /// override this behavior and handle unregistered operations as well.
-  virtual Optional<ParseOpHook> getParseOperationHook(StringRef opName) const;
+  virtual std::optional<ParseOpHook>
+  getParseOperationHook(StringRef opName) const;
 
   /// Print an operation registered to this dialect.
   /// This hook is invoked for registered operation which don't override the
@@ -157,12 +158,13 @@ public:
 
   /// Lookup an interface for the given ID if one is registered, otherwise
   /// nullptr.
-  const DialectInterface *getRegisteredInterface(TypeID interfaceID) {
+  DialectInterface *getRegisteredInterface(TypeID interfaceID) {
     auto it = registeredInterfaces.find(interfaceID);
     return it != registeredInterfaces.end() ? it->getSecond().get() : nullptr;
   }
-  template <typename InterfaceT> const InterfaceT *getRegisteredInterface() {
-    return static_cast<const InterfaceT *>(
+  template <typename InterfaceT>
+  InterfaceT *getRegisteredInterface() {
+    return static_cast<InterfaceT *>(
         getRegisteredInterface(InterfaceT::getInterfaceID()));
   }
 
@@ -185,8 +187,13 @@ public:
   /// Register a set of dialect interfaces with this dialect instance.
   template <typename... Args>
   void addInterfaces() {
-    (void)std::initializer_list<int>{
-        0, (addInterface(std::make_unique<Args>(this)), 0)...};
+    (addInterface(std::make_unique<Args>(this)), ...);
+  }
+  template <typename InterfaceT, typename... Args>
+  InterfaceT &addInterface(Args &&...args) {
+    InterfaceT *interface = new InterfaceT(this, std::forward<Args>(args)...);
+    addInterface(std::unique_ptr<DialectInterface>(interface));
+    return *interface;
   }
 
 protected:
@@ -201,14 +208,20 @@ protected:
 
   /// This method is used by derived classes to add their operations to the set.
   ///
-  template <typename... Args> void addOperations() {
+  template <typename... Args>
+  void addOperations() {
+    // This initializer_list argument pack expansion is essentially equal to
+    // using a fold expression with a comma operator. Clang however, refuses
+    // to compile a fold expression with a depth of more than 256 by default.
+    // There seem to be no such limitations for initializer_list.
     (void)std::initializer_list<int>{
         0, (RegisteredOperationName::insert<Args>(*this), 0)...};
   }
 
   /// Register a set of type classes with this dialect.
-  template <typename... Args> void addTypes() {
-    (void)std::initializer_list<int>{0, (addType<Args>(), 0)...};
+  template <typename... Args>
+  void addTypes() {
+    (addType<Args>(), ...);
   }
 
   /// Register a type instance with this dialect.
@@ -217,8 +230,9 @@ protected:
   void addType(TypeID typeID, AbstractType &&typeInfo);
 
   /// Register a set of attribute classes with this dialect.
-  template <typename... Args> void addAttributes() {
-    (void)std::initializer_list<int>{0, (addAttribute<Args>(), 0)...};
+  template <typename... Args>
+  void addAttributes() {
+    (addAttribute<Args>(), ...);
   }
 
   /// Register an attribute instance with this dialect.
@@ -237,14 +251,16 @@ private:
   void operator=(Dialect &) = delete;
 
   /// Register an attribute instance with this dialect.
-  template <typename T> void addAttribute() {
+  template <typename T>
+  void addAttribute() {
     // Add this attribute to the dialect and register it with the uniquer.
     addAttribute(T::getTypeID(), AbstractAttribute::get<T>(*this));
     detail::AttributeUniquer::registerAttribute<T>(context);
   }
 
   /// Register a type instance with this dialect.
-  template <typename T> void addType() {
+  template <typename T>
+  void addType() {
     // Add this type to the dialect and register it with the uniquer.
     addType(T::getTypeID(), AbstractType::get<T>(*this));
     detail::TypeUniquer::registerType<T>(context);
@@ -299,15 +315,11 @@ struct isa_impl<
 };
 template <typename T>
 struct cast_retty_impl<T, ::mlir::Dialect *> {
-  using ret_type =
-      std::conditional_t<std::is_base_of<::mlir::Dialect, T>::value, T *,
-                         const T *>;
+  using ret_type = T *;
 };
 template <typename T>
 struct cast_retty_impl<T, ::mlir::Dialect> {
-  using ret_type =
-      std::conditional_t<std::is_base_of<::mlir::Dialect, T>::value, T &,
-                         const T &>;
+  using ret_type = T &;
 };
 
 template <typename T>
@@ -319,7 +331,7 @@ struct cast_convert_val<T, ::mlir::Dialect, ::mlir::Dialect> {
   }
   template <typename To>
   static std::enable_if_t<std::is_base_of<::mlir::DialectInterface, To>::value,
-                          const To &>
+                          To &>
   doitImpl(::mlir::Dialect &dialect) {
     return *dialect.getRegisteredInterface<To>();
   }

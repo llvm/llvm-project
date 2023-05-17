@@ -3,21 +3,21 @@
 
 declare void @use(<4 x i16>)
 
-define void @test(<16 x i8> %w, i32* %o1, float* %o2) {
+define void @test(<16 x i8> %w, ptr %o1, ptr %o2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:    [[V_BC:%.*]] = bitcast <16 x i8> [[W:%.*]] to <4 x i32>
 ; CHECK-NEXT:    [[V_EXTRACT:%.*]] = extractelement <4 x i32> [[V_BC]], i64 3
 ; CHECK-NEXT:    [[V_BC1:%.*]] = bitcast <16 x i8> [[W]] to <4 x float>
 ; CHECK-NEXT:    [[V_EXTRACT2:%.*]] = extractelement <4 x float> [[V_BC1]], i64 3
-; CHECK-NEXT:    store i32 [[V_EXTRACT]], i32* [[O1:%.*]], align 4
-; CHECK-NEXT:    store float [[V_EXTRACT2]], float* [[O2:%.*]], align 4
+; CHECK-NEXT:    store i32 [[V_EXTRACT]], ptr [[O1:%.*]], align 4
+; CHECK-NEXT:    store float [[V_EXTRACT2]], ptr [[O2:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %v = shufflevector <16 x i8> %w, <16 x i8> poison, <4 x i32> <i32 12, i32 13, i32 14, i32 15>
   %f = bitcast <4 x i8> %v to float
   %i = bitcast <4 x i8> %v to i32
-  store i32 %i, i32* %o1, align 4
-  store float %f, float* %o2, align 4
+  store i32 %i, ptr %o1, align 4
+  store float %f, ptr %o2, align 4
   ret void
 }
 
@@ -159,7 +159,7 @@ define <16 x i8> @shuf_bitcast_operand_cannot_widen_undef(<4 x i32> %x) {
 ; CHECK-LABEL: @shuf_bitcast_operand_cannot_widen_undef(
 ; CHECK-NEXT:    [[S1:%.*]] = shufflevector <4 x i32> [[X:%.*]], <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
 ; CHECK-NEXT:    [[BC:%.*]] = bitcast <4 x i32> [[S1]] to <16 x i8>
-; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[BC]], <16 x i8> poison, <16 x i32> <i32 12, i32 undef, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
+; CHECK-NEXT:    [[S2:%.*]] = shufflevector <16 x i8> [[BC]], <16 x i8> poison, <16 x i32> <i32 12, i32 poison, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 0, i32 1, i32 2, i32 3>
 ; CHECK-NEXT:    ret <16 x i8> [[S2]]
 ;
   %s1 = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>

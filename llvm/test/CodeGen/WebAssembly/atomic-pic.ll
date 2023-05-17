@@ -16,7 +16,7 @@ define i32 @rmw_add_external_global() {
 ; CHECK-NEXT:    i32.const $push[[L1:[0-9]+]]=, 42{{$}}
 ; CHECK-NEXT:    i32.atomic.rmw.add $push[[L2:[0-9]+]]=, 0($pop[[L0]]), $pop[[L1]]{{$}}
 ; CHECK-NEXT:    end_function
-  %1 = atomicrmw add i32* @external_global, i32 42 seq_cst
+  %1 = atomicrmw add ptr @external_global, i32 42 seq_cst
   ret i32 %1
 }
 
@@ -28,6 +28,6 @@ define i32 @rmw_add_hidden_global() {
 ; CHECK-NEXT:    i32.const $push[[L3:[0-9]+]]=, 42{{$}}
 ; CHECK-NEXT:    i32.atomic.rmw.add $push[[L4:[0-9]+]]=, 0($pop[[L2]]), $pop[[L3]]{{$}}
 ; CHECK-NEXT:    end_function
-  %1 = atomicrmw add i32* @hidden_global, i32 42 seq_cst
+  %1 = atomicrmw add ptr @hidden_global, i32 42 seq_cst
   ret i32 %1
 }

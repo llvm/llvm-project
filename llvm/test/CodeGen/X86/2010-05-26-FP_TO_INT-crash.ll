@@ -7,10 +7,10 @@ module asm "\09.ident\09\22GCC: (GNU) 4.5.1 20100510 (prerelease) LLVM: 104604:1
 
 define i32 @f2(double %x) nounwind {
 entry:
-  %0 = load double, double* undef, align 64               ; <double> [#uses=1]
+  %0 = load double, ptr undef, align 64               ; <double> [#uses=1]
   %1 = fptoui double %0 to i16                    ; <i16> [#uses=1]
   %2 = zext i16 %1 to i32                         ; <i32> [#uses=1]
   %3 = add nsw i32 0, %2                          ; <i32> [#uses=1]
-  store i32 %3, i32* undef, align 1
+  store i32 %3, ptr undef, align 1
   ret i32 0
 }

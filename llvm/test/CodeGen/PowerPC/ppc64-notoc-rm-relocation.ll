@@ -42,8 +42,8 @@ define dso_local signext i32 @main() #0 {
 ; LE-P9-LABEL: main:
 ; LE-P9:       # %bb.0: # %_main_entry
 ; LE-P9-NEXT:    mflr r0
-; LE-P9-NEXT:    std r0, 16(r1)
 ; LE-P9-NEXT:    stdu r1, -32(r1)
+; LE-P9-NEXT:    std r0, 48(r1)
 ; LE-P9-NEXT:    bl callee
 ; LE-P9-NEXT:    nop
 ; LE-P9-NEXT:    li r3, 0
@@ -55,8 +55,8 @@ define dso_local signext i32 @main() #0 {
 ; BE-P9-LABEL: main:
 ; BE-P9:       # %bb.0: # %_main_entry
 ; BE-P9-NEXT:    mflr r0
-; BE-P9-NEXT:    std r0, 16(r1)
 ; BE-P9-NEXT:    stdu r1, -112(r1)
+; BE-P9-NEXT:    std r0, 128(r1)
 ; BE-P9-NEXT:    bl callee
 ; BE-P9-NEXT:    nop
 ; BE-P9-NEXT:    li r3, 0

@@ -182,7 +182,7 @@ public:
       return false;
     };
 
-    if (std::any_of(RD->field_begin(), RD->field_end(), IsTrickyField))
+    if (llvm::any_of(RD->fields(), IsTrickyField))
       return true;
     return false;
   }
@@ -273,7 +273,7 @@ public:
     SmallVector<const FieldDecl *, 20> OptimalFieldsOrder;
     while (!Fields.empty()) {
       unsigned TrailingZeros =
-          llvm::countTrailingZeros((unsigned long long)NewOffset.getQuantity());
+          llvm::countr_zero((unsigned long long)NewOffset.getQuantity());
       // If NewOffset is zero, then countTrailingZeros will be 64. Shifting
       // 64 will overflow our unsigned long long. Shifting 63 will turn
       // our long long (and CharUnits internal type) negative. So shift 62.
@@ -332,10 +332,10 @@ public:
     }
 
     Os << " (" << BaselinePad.getQuantity() << " padding bytes, where "
-       << OptimalPad.getQuantity() << " is optimal). \n"
-       << "Optimal fields order: \n";
+       << OptimalPad.getQuantity() << " is optimal). "
+       << "Optimal fields order: ";
     for (const auto *FD : OptimalFieldsOrder)
-      Os << FD->getName() << ", \n";
+      Os << FD->getName() << ", ";
     Os << "consider reordering the fields or adding explicit padding "
           "members.";
 

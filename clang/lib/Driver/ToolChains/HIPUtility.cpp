@@ -10,8 +10,8 @@
 #include "CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;

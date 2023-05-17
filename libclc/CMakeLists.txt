@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.13.4)
 
-project( libclc VERSION 0.2.0 LANGUAGES CXX )
+project( libclc VERSION 0.2.0 LANGUAGES CXX C)
+
+set(CMAKE_CXX_STANDARD 17)
+
 include( GNUInstallDirs )
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
   amdgcn-amdhsa/lib/SOURCES;
@@ -40,20 +43,17 @@ set( LIBCLC_TARGETS_TO_BUILD "all"
 option( ENABLE_RUNTIME_SUBNORMAL "Enable runtime linking of subnormal support."
 OFF )
 
-if( NOT LLVM_CONFIG )
-	find_program( LLVM_CONFIG llvm-config )
-endif()
-execute_process( COMMAND ${LLVM_CONFIG} "--version"
-	         OUTPUT_VARIABLE LLVM_VERSION
-		 OUTPUT_STRIP_TRAILING_WHITESPACE )
-message( "LLVM version: ${LLVM_VERSION}" )
+find_package(LLVM REQUIRED HINTS "${LLVM_CMAKE_DIR}")
+include(AddLLVM)
 
-if( ${LLVM_VERSION} VERSION_LESS ${LIBCLC_MIN_LLVM} )
+message( "LLVM version: ${LLVM_PACKAGE_VERSION}" )
+
+if( ${LLVM_PACKAGE_VERSION} VERSION_LESS ${LIBCLC_MIN_LLVM} )
 	message( FATAL_ERROR "libclc needs at least LLVM ${LIBCLC_MIN_LLVM}" )
 endif()
 
 # mesa3d environment is only available since LLVM 4.0
-if( ${LLVM_VERSION} VERSION_GREATER "3.9.0" )
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "3.9.0" )
 	set( LIBCLC_TARGETS_ALL ${LIBCLC_TARGETS_ALL} amdgcn-mesa-mesa3d )
 endif()
 
@@ -61,45 +61,11 @@ if( LIBCLC_TARGETS_TO_BUILD STREQUAL "all" )
 	set( LIBCLC_TARGETS_TO_BUILD ${LIBCLC_TARGETS_ALL} )
 endif()
 
-execute_process( COMMAND ${LLVM_CONFIG} "--system-libs"
-	OUTPUT_VARIABLE LLVM_SYSTEM_LIBS
-	OUTPUT_STRIP_TRAILING_WHITESPACE )
-separate_arguments( LLVM_SYSTEM_LIBS )
-execute_process( COMMAND ${LLVM_CONFIG} "--libs" "core" "bitreader" "bitwriter"
-	OUTPUT_VARIABLE LLVM_LIBS
-	OUTPUT_STRIP_TRAILING_WHITESPACE )
-separate_arguments( LLVM_LIBS )
-execute_process( COMMAND ${LLVM_CONFIG} "--libdir"
-	OUTPUT_VARIABLE LLVM_LIBDIR
-	OUTPUT_STRIP_TRAILING_WHITESPACE )
-execute_process( COMMAND ${LLVM_CONFIG} "--ldflags"
-	OUTPUT_VARIABLE LLVM_LD_FLAGS
-	OUTPUT_STRIP_TRAILING_WHITESPACE )
-execute_process( COMMAND ${LLVM_CONFIG} "--cxxflags"
-	OUTPUT_VARIABLE LLVM_CXX_FLAGS
-	OUTPUT_STRIP_TRAILING_WHITESPACE )
-separate_arguments( LLVM_CXX_FLAGS )
-execute_process( COMMAND ${LLVM_CONFIG} "--bindir"
-	OUTPUT_VARIABLE LLVM_BINDIR
-	OUTPUT_STRIP_TRAILING_WHITESPACE )
-
-# These were not properly reported in early LLVM and we don't need them
-list( APPEND LLVM_CXX_FLAGS -fno-rtti -fno-exceptions )
-
-# Print LLVM variables
-message( "LLVM system libs: ${LLVM_SYSTEM_LIBS}" )
-message( "LLVM libs: ${LLVM_LIBS}" )
-message( "LLVM libdir: ${LLVM_LIBDIR}" )
-message( "LLVM bindir: ${LLVM_BINDIR}" )
-message( "LLVM ld flags: ${LLVM_LD_FLAGS}" )
-message( "LLVM cxx flags: ${LLVM_CXX_FLAGS}" )
-message( "" )
-
-find_program( LLVM_CLANG clang PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
-find_program( LLVM_AS llvm-as PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
-find_program( LLVM_LINK llvm-link PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
-find_program( LLVM_OPT opt PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
-find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_BINDIR} NO_DEFAULT_PATH )
+find_program( LLVM_CLANG clang PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+find_program( LLVM_AS llvm-as PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+find_program( LLVM_LINK llvm-link PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+find_program( LLVM_OPT opt PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
+find_program( LLVM_SPIRV llvm-spirv PATHS ${LLVM_TOOLS_BINARY_DIR} NO_DEFAULT_PATH )
 
 # Print toolchain
 message( "clang: ${LLVM_CLANG}" )
@@ -128,29 +94,32 @@ set( CMAKE_LLAsm_COMPILER ${LLVM_AS} )
 set( CMAKE_LLAsm_ARCHIVE ${LLVM_LINK} )
 
 # Construct LLVM version define
-string( REPLACE "." ";" LLVM_VERSION_LIST ${LLVM_VERSION} )
-list( GET LLVM_VERSION_LIST 0 LLVM_MAJOR )
-list( GET LLVM_VERSION_LIST 1 LLVM_MINOR )
-set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_MAJOR}0${LLVM_MINOR}" )
+set( LLVM_VERSION_DEFINE "-DHAVE_LLVM=0x${LLVM_VERSION_MAJOR}0${LLVM_VERSION_MINOR}" )
 
 
 # LLVM 13 enables standard includes by default
-if( ${LLVM_VERSION} VERSION_GREATER "12.99.99" )
-				set( CMAKE_LLAsm_FLAGS ${CMAKE_LLAsm_FLAGS} -cl-no-stdinc )
-				set( CMAKE_CLC_FLAGS ${CMAKE_CLC_FLAGS} -cl-no-stdinc )
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "12.99.99" )
+				set( CMAKE_LLAsm_FLAGS "${CMAKE_LLAsm_FLAGS} -cl-no-stdinc")
+				set( CMAKE_CLC_FLAGS "${CMAKE_CLC_FLAGS} -cl-no-stdinc")
 endif()
 
 enable_language( CLC LLAsm )
-
 # This needs to be set before any target that needs it
-link_directories( ${LLVM_LIBDIR} )
+# We need to use LLVM_INCLUDE_DIRS here, because if we are linking to an
+# llvm build directory, this includes $src/llvm/include which is where all the
+# headers are not $build/include/ which is what LLVM_INCLUDE_DIR is set to.
+include_directories( ${LLVM_INCLUDE_DIRS} )
 
 # Setup prepare_builtins tools
-add_executable( prepare_builtins utils/prepare-builtins.cpp )
-target_compile_options( prepare_builtins PRIVATE ${LLVM_CXX_FLAGS} )
+set(LLVM_LINK_COMPONENTS
+  BitReader
+  BitWriter
+  Core
+)
+add_llvm_executable( prepare_builtins utils/prepare-builtins.cpp )
 target_compile_definitions( prepare_builtins PRIVATE ${LLVM_VERSION_DEFINE} )
-target_link_libraries( prepare_builtins PRIVATE ${LLVM_LIBS} )
-target_link_libraries( prepare_builtins PRIVATE ${LLVM_SYSTEM_LIBS} )
+# These were not properly reported in early LLVM and we don't need them
+target_compile_options( prepare_builtins PRIVATE -fno-rtti -fno-exceptions )
 
 # Setup arch devices
 set( r600--_devices cedar cypress barts cayman )
@@ -175,12 +144,12 @@ set( tahiti_aliases pitcairn verde oland hainan bonaire kabini kaveri hawaii
 	mullins tonga iceland carrizo fiji stoney polaris10 polaris11 )
 
 # Support for gfx9 was added in LLVM 5.0 (r295554)
-if( ${LLVM_VERSION} VERSION_GREATER "4.99.99" )
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "4.99.99" )
 	set( tahiti_aliases ${tahiti_aliases} gfx900 gfx902 )
 endif()
 
 # Support for Vega12 and Vega20 was added in LLVM 7 (r331215)
-if( ${LLVM_VERSION} VERSION_GREATER "6.99.99" )
+if( ${LLVM_PACKAGE_VERSION} VERSION_GREATER "6.99.99" )
 	set( tahiti_aliases ${tahiti_aliases} gfx904 gfx906 )
 endif()
 
@@ -249,11 +218,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 
 	# Add the generated convert.cl here to prevent adding
 	# the one listed in SOURCES
-	if( NOT ${ARCH} STREQUAL "spirv" AND NOT ${ARCH} STREQUAL "spirv64" AND
-			NOT ${ARCH} STREQUAL "clspv" AND NOT ${ARCH} STREQUAL "clspv64" )
+	if( NOT ${ARCH} STREQUAL "spirv" AND NOT ${ARCH} STREQUAL "spirv64" )
 		set( rel_files convert.cl )
 		set( objects convert.cl )
-		if( NOT ENABLE_RUNTIME_SUBNORMAL )
+		if( NOT ENABLE_RUNTIME_SUBNORMAL AND NOT ${ARCH} STREQUAL "clspv" AND
+		    NOT ${ARCH} STREQUAL "clspv64" )
 			list( APPEND rel_files generic/lib/subnormal_use_default.ll )
 		endif()
 	else()
@@ -302,11 +271,11 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 			set( spvflags --spirv-max-version=1.1 )
 		elseif( ${ARCH} STREQUAL "clspv" )
 			set( t "spir--" )
-			set( build_flags )
+			set( build_flags "-Wno-unknown-assumption")
 			set( opt_flags -O3 )
 		elseif( ${ARCH} STREQUAL "clspv64" )
 			set( t "spir64--" )
-			set( build_flags )
+			set( build_flags "-Wno-unknown-assumption")
 			set( opt_flags -O3 )
 		else()
 			set( build_flags )
@@ -369,10 +338,8 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
 			# nvptx-- targets don't include workitem builtins
 			if( NOT ${t} MATCHES ".*ptx.*--$" )
 				add_test( NAME external-calls-${obj_suffix}
-					  COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix}
+   					  COMMAND ./check_external_calls.sh ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} ${LLVM_TOOLS_BINARY_DIR}
 					  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR} )
-				set_tests_properties( external-calls-${obj_suffix}
-					PROPERTIES ENVIRONMENT "LLVM_CONFIG=${LLVM_CONFIG}" )
 			endif()
 
 			install( FILES ${CMAKE_CURRENT_BINARY_DIR}/${obj_suffix} DESTINATION "${CMAKE_INSTALL_DATADIR}/clc" )

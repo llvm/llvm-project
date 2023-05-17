@@ -13,7 +13,7 @@
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/Value.h"
-#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Symbol/SymbolContext.h"
@@ -35,6 +35,7 @@
 
 #include <cassert>
 #include <memory>
+#include <optional>
 
 namespace lldb_private {
 class ExecutionContextScope;
@@ -105,7 +106,7 @@ size_t ValueObjectVariable::CalculateNumChildren(uint32_t max) {
   return child_count <= max ? child_count : max;
 }
 
-llvm::Optional<uint64_t> ValueObjectVariable::GetByteSize() {
+std::optional<uint64_t> ValueObjectVariable::GetByteSize() {
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   CompilerType type(GetCompilerType());
@@ -127,17 +128,16 @@ bool ValueObjectVariable::UpdateValue() {
   m_error.Clear();
 
   Variable *variable = m_variable_sp.get();
-  DWARFExpression &expr = variable->LocationExpression();
+  DWARFExpressionList &expr_list = variable->LocationExpressionList();
 
   if (variable->GetLocationIsConstantValueData()) {
     // expr doesn't contain DWARF bytes, it contains the constant variable
     // value bytes themselves...
-    if (expr.GetExpressionData(m_data)) {
-       if (m_data.GetDataStart() && m_data.GetByteSize())
+    if (expr_list.GetExpressionData(m_data)) {
+      if (m_data.GetDataStart() && m_data.GetByteSize())
         m_value.SetBytes(m_data.GetDataStart(), m_data.GetByteSize());
       m_value.SetContext(Value::ContextType::Variable, variable);
-    }
-    else
+    } else
       m_error.SetErrorString("empty constant data");
     // constant bytes can't be edited - sorry
     m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
@@ -151,7 +151,7 @@ bool ValueObjectVariable::UpdateValue() {
       m_data.SetAddressByteSize(target->GetArchitecture().GetAddressByteSize());
     }
 
-    if (expr.IsLocationList()) {
+    if (!expr_list.IsAlwaysValidSingleExpr()) {
       SymbolContext sc;
       variable->CalculateSymbolContext(&sc);
       if (sc.function)
@@ -160,8 +160,8 @@ bool ValueObjectVariable::UpdateValue() {
                 target);
     }
     Value old_value(m_value);
-    if (expr.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, nullptr,
-                      nullptr, m_value, &m_error)) {
+    if (expr_list.Evaluate(&exe_ctx, nullptr, loclist_base_load_addr, nullptr,
+                           nullptr, m_value, &m_error)) {
       m_resolved_value = m_value;
       m_value.SetContext(Value::ContextType::Variable, variable);
 
@@ -246,7 +246,7 @@ bool ValueObjectVariable::UpdateValue() {
       m_resolved_value.SetContext(Value::ContextType::Invalid, nullptr);
     }
   }
-  
+
   return m_error.Success();
 }
 
@@ -399,7 +399,7 @@ bool ValueObjectVariable::SetData(DataExtractor &data, Status &error) {
       error.SetErrorString("unable to retrieve register info");
       return false;
     }
-    error = reg_value.SetValueFromData(reg_info, data, 0, true);
+    error = reg_value.SetValueFromData(*reg_info, data, 0, true);
     if (error.Fail())
       return false;
     if (reg_ctx->WriteRegister(reg_info, reg_value)) {

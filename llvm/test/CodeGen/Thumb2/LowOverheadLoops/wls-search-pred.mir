@@ -5,7 +5,7 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main-none-unknown-eabihf"
 
-  define void @test_memset_preheader(i8* %x, i8* %y, i32 %n) {
+  define void @test_memset_preheader(ptr %x, ptr %y, i32 %n) {
   entry:
     %cmp6 = icmp ne i32 %n, 0
     %0 = call { i32, i1 } @llvm.test.start.loop.iterations.i32(i32 %n)
@@ -14,17 +14,17 @@
     br i1 %1, label %prehead, label %for.cond.cleanup
 
   prehead:                                          ; preds = %entry
-    call void @llvm.memset.p0i8.i32(i8* align 1 %x, i8 0, i32 %n, i1 false)
+    call void @llvm.memset.p0.i32(ptr align 1 %x, i8 0, i32 %n, i1 false)
     br label %for.body
 
   for.body:                                         ; preds = %for.body, %prehead
-    %x.addr.08 = phi i8* [ %add.ptr, %for.body ], [ %x, %prehead ]
-    %y.addr.07 = phi i8* [ %add.ptr1, %for.body ], [ %y, %prehead ]
+    %x.addr.08 = phi ptr [ %add.ptr, %for.body ], [ %x, %prehead ]
+    %y.addr.07 = phi ptr [ %add.ptr1, %for.body ], [ %y, %prehead ]
     %3 = phi i32 [ %2, %prehead ], [ %4, %for.body ]
-    %add.ptr = getelementptr inbounds i8, i8* %x.addr.08, i32 1
-    %add.ptr1 = getelementptr inbounds i8, i8* %y.addr.07, i32 1
-    %l = load i8, i8* %x.addr.08, align 1
-    store i8 %l, i8* %y.addr.07, align 1
+    %add.ptr = getelementptr inbounds i8, ptr %x.addr.08, i32 1
+    %add.ptr1 = getelementptr inbounds i8, ptr %y.addr.07, i32 1
+    %l = load i8, ptr %x.addr.08, align 1
+    store i8 %l, ptr %y.addr.07, align 1
     %4 = call i32 @llvm.loop.decrement.reg.i32(i32 %3, i32 1)
     %5 = icmp ne i32 %4, 0
     br i1 %5, label %for.body, label %for.cond.cleanup
@@ -33,7 +33,7 @@
     ret void
   }
 
-  declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+  declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
   declare { i32, i1 } @llvm.test.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32(i32, i32)
 

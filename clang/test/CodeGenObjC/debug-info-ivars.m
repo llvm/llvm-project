@@ -30,15 +30,15 @@ __attribute((objc_root_class)) @interface NSObject {
 // CHECK-SAME:           baseType: ![[UNSIGNED:[0-9]+]]
 // CHECK-SAME:           size: 9,
 // CHECK-NOT:            offset:
-// CHECK-SAME:           flags: DIFlagProtected
+// CHECK-SAME:           flags: DIFlagProtected | DIFlagBitField
 // CHECK: ![[UNSIGNED]] = !DIBasicType(name: "unsigned int"
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "flag_2"
 // CHECK-SAME:           line: 12
 // CHECK-SAME:           baseType: ![[UNSIGNED]]
 // CHECK-SAME:           size: 9, offset: 1,
-// CHECK-SAME:           flags: DIFlagProtected
+// CHECK-SAME:           flags: DIFlagProtected | DIFlagBitField
 // CHECK: !DIDerivedType(tag: DW_TAG_member, name: "flag_3"
 // CHECK-SAME:           line: 14
 // CHECK-SAME:           baseType: ![[UNSIGNED]]
 // CHECK-SAME:           size: 9, offset: 3,
-// CHECK-SAME:           flags: DIFlagProtected
+// CHECK-SAME:           flags: DIFlagProtected | DIFlagBitField

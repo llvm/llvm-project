@@ -22,15 +22,16 @@ namespace exegesis {
 class LatencyBenchmarkRunner : public BenchmarkRunner {
 public:
   LatencyBenchmarkRunner(
-      const LLVMState &State, InstructionBenchmark::ModeE Mode,
-      InstructionBenchmark::ResultAggregationModeE ResultAggMode);
+      const LLVMState &State, Benchmark::ModeE Mode,
+      BenchmarkPhaseSelectorE BenchmarkPhaseSelector,
+      Benchmark::ResultAggregationModeE ResultAggMode);
   ~LatencyBenchmarkRunner() override;
 
 private:
   Expected<std::vector<BenchmarkMeasure>>
   runMeasurements(const FunctionExecutor &Executor) const override;
 
-  InstructionBenchmark::ResultAggregationModeE ResultAggMode;
+  Benchmark::ResultAggregationModeE ResultAggMode;
 };
 } // namespace exegesis
 } // namespace llvm

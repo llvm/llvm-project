@@ -12,7 +12,7 @@ define i64 @f1() {
 ; CHECK: larl    %r2, a
 ; CHECK: agr     %r2, %r0
 ; CHECK: br      %r14
-  ret i64 add (i64 ptrtoint (i32* @a to i64), i64 3564822854692)
+  ret i64 add (i64 ptrtoint (ptr @a to i64), i64 3564822854692)
 }
 
 define signext i32 @f2() {
@@ -24,8 +24,8 @@ define signext i32 @f2() {
 ; CHECK: lgf     %r2, 0(%r1)
 ; CHECK: br      %r14
 entry:
-  %0 = load i32, i32* inttoptr (i64 add (i64 ptrtoint (i32* @a to i64),
-                                i64 3564822854692) to i32*)
+  %0 = load i32, ptr inttoptr (i64 add (i64 ptrtoint (ptr @a to i64),
+                                i64 3564822854692) to ptr)
   ret i32 %0
 }
 

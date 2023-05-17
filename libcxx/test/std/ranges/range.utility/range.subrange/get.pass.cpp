@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // class std::ranges::subrange;
 
@@ -17,7 +16,7 @@
 #include "test_macros.h"
 #include "test_iterators.h"
 
-template<size_t I, class S>
+template<std::size_t I, class S>
 concept HasGet = requires {
   std::get<I>(std::declval<S>());
 };

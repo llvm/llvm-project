@@ -257,10 +257,7 @@ define <2 x i32> @ins4s2(<4 x i32> %tmp1, <2 x i32> %tmp2) {
 define <1 x i64> @ins2d1(<2 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK-LABEL: ins2d1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov r0, r1, d0
-; CHECK-NEXT:    vmov.32 d2[0], r0
-; CHECK-NEXT:    vmov.32 d2[1], r1
-; CHECK-NEXT:    vorr d0, d2, d2
+; CHECK-NEXT:    @ kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bx lr
   %tmp3 = extractelement <2 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0
@@ -327,11 +324,6 @@ define <2 x i32> @ins2s2(<2 x i32> %tmp1, <2 x i32> %tmp2) {
 define <1 x i64> @ins1d1(<1 x i64> %tmp1, <1 x i64> %tmp2) {
 ; CHECK-LABEL: ins1d1:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov.32 r0, d0[0]
-; CHECK-NEXT:    vmov.32 r1, d0[1]
-; CHECK-NEXT:    vmov.32 d1[0], r0
-; CHECK-NEXT:    vmov.32 d1[1], r1
-; CHECK-NEXT:    vorr d0, d1, d1
 ; CHECK-NEXT:    bx lr
   %tmp3 = extractelement <1 x i64> %tmp1, i32 0
   %tmp4 = insertelement <1 x i64> %tmp2, i64 %tmp3, i32 0
@@ -620,11 +612,11 @@ define <8 x i8> @test_vcopy_lane_swap_s8(<8 x i8> %v1, <8 x i8> %v2) {
 define <16 x i8> @test_vcopyq_laneq_swap_s8(<16 x i8> %v1, <16 x i8> %v2) {
 ; CHECK-LABEL: test_vcopyq_laneq_swap_s8:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vorr q9, q1, q1
-; CHECK-NEXT:    vldr d20, .LCPI53_0
-; CHECK-NEXT:    vorr q8, q0, q0
-; CHECK-NEXT:    vtbl.8 d18, {d17, d18}, d20
-; CHECK-NEXT:    vorr q0, q9, q9
+; CHECK-NEXT:    @ kill: def $q1 killed $q1 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    vldr d16, .LCPI53_0
+; CHECK-NEXT:    @ kill: def $q0 killed $q0 killed $q0_q1 def $q0_q1
+; CHECK-NEXT:    vtbl.8 d2, {d1, d2}, d16
+; CHECK-NEXT:    vorr q0, q1, q1
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:    .p2align 3
 ; CHECK-NEXT:  @ %bb.1:

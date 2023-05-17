@@ -94,11 +94,11 @@ define dso_local void @foo(i64 %t) local_unnamed_addr #0 {
 ; CHECK-NOT: __stack_chk_guard
 entry:
   %vla = alloca i32, i64 %t, align 4
-  call void @baz(i32* nonnull %vla)
+  call void @baz(ptr nonnull %vla)
   ret void
 }
 
-declare void @baz(i32*)
+declare void @baz(ptr)
 
 ; CHECK-BAD-OFFSET: LLVM ERROR: Unable to encode Stack Protector Guard Offset
 

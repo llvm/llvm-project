@@ -17,7 +17,6 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/EndianStream.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -164,7 +163,7 @@ public:
     //
     // FIXME: Try computing a perfect hash function at this point.
     unsigned TargetNumBuckets =
-        NumEntries <= 2 ? 1 : NextPowerOf2(NumEntries * 4 / 3);
+        NumEntries <= 2 ? 1 : llvm::bit_ceil(NumEntries * 4 / 3 + 1);
     if (TargetNumBuckets != NumBuckets)
       resize(TargetNumBuckets);
 

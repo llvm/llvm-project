@@ -1,5 +1,5 @@
-; RUN: opt -mtriple=riscv32-unknown-elf -S -consthoist < %s | FileCheck %s
-; RUN: opt -mtriple=riscv64-unknown-elf -S -consthoist < %s | FileCheck %s
+; RUN: opt -mtriple=riscv32-unknown-elf -S -passes=consthoist < %s | FileCheck %s
+; RUN: opt -mtriple=riscv64-unknown-elf -S -passes=consthoist < %s | FileCheck %s
 
 ; Check that we don't hoist immediates with small values.
 define i64 @test1(i64 %a) nounwind {
@@ -65,10 +65,60 @@ define i64 @test7(i64 %a) nounwind {
 }
 
 ; Check that we don't hoist zext.w with Zba.
-define i64 @test8(i64 %a) nounwind "target-features"="+zbb" {
+define i64 @test8(i64 %a) nounwind "target-features"="+zba" {
 ; CHECK-LABEL: test8
 ; CHECK: and i64 %a, 4294967295
   %1 = and i64 %a, 4294967295
   %2 = and i64 %1, 4294967295
+  ret i64 %2
+}
+
+; Check that we don't hoist mul with negated power of 2.
+define i64 @test9(i64 %a) nounwind {
+; CHECK-LABEL: test9
+; CHECK: mul i64 %a, -4294967296
+  %1 = mul i64 %a, -4294967296
+  %2 = mul i64 %1, -4294967296
+  ret i64 %2
+}
+
+define i32 @test10(i32 %a, i32 %b) nounwind {
+; CHECK-LABEL: @test10(
+; CHECK: shl i32 %a, 8
+; CHECK: and i32 %1, 65280
+; CHECK: shl i32 %b, 8
+; CHECK: and i32 %3, 65280
+  %1 = shl i32 %a, 8
+  %2 = and i32 %1, 65280
+  %3 = shl i32 %b, 8
+  %4 = and i32 %3, 65280
+  %5 = mul i32 %2, %4
+  ret i32 %5
+}
+
+; bseti
+define i64 @test11(i64 %a) nounwind "target-features"="+zbs" {
+; CHECK-LABEL: test11
+; CHECK: or i64 %a, 8589934592
+  %1 = or i64 %a, 8589934592 ; 1 << 33
+  %2 = or i64 %1, 8589934592 ; 1 << 33
+  ret i64 %2
+}
+
+; binvi
+define i64 @test12(i64 %a) nounwind "target-features"="+zbs" {
+; CHECK-LABEL: test12
+; CHECK: xor i64 %a, -9223372036854775808
+  %1 = xor i64 %a, -9223372036854775808 ; 1 << 63
+  %2 = xor i64 %1, -9223372036854775808 ; 1 << 63
+  ret i64 %2
+}
+
+; bclri
+define i64 @test13(i64 %a) nounwind "target-features"="+zbs" {
+; CHECK-LABEL: test13
+; CHECK: and i64 %a, -281474976710657
+  %1 = and i64 %a, -281474976710657 ; ~(1 << 48)
+  %2 = and i64 %1, -281474976710657 ; ~(1 << 48)
   ret i64 %2
 }

@@ -305,7 +305,7 @@ bool createModuleMap(llvm::StringRef ModuleMapPath,
     loadModuleDescriptions(
       RootModuleName, HeaderFileNames, ProblemFileNames, Dependencies,
       HeaderPrefix));
-  if (!RootModule.get())
+  if (!RootModule)
     return false;
 
   // Write module map file.

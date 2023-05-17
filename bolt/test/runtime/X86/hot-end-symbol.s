@@ -11,8 +11,8 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe -relocs=1 -hot-text -reorder-functions=hfsort \
-# RUN:    -data %t.fdata -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --relocs=1 --hot-text --reorder-functions=hfsort \
+# RUN:    --data %t.fdata -o %t.out | FileCheck %s
 
 # RUN: %t.out 1
 

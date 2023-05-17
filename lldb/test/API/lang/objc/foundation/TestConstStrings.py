@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 
 class ConstStringTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     d = {'OBJC_SOURCES': 'const-strings.m'}
 
     def setUp(self):

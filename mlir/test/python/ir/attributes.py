@@ -1,7 +1,9 @@
 # RUN: %PYTHON %s | FileCheck %s
 
 import gc
+
 from mlir.ir import *
+
 
 def run(f):
   print("\nTEST:", f.__name__)
@@ -26,16 +28,17 @@ def testParsePrint():
 
 
 # CHECK-LABEL: TEST: testParseError
-# TODO: Hook the diagnostic manager to capture a more meaningful error
-# message.
 @run
 def testParseError():
   with Context():
     try:
       t = Attribute.parse("BAD_ATTR_DOES_NOT_EXIST")
-    except ValueError as e:
-      # CHECK: Unable to parse attribute: 'BAD_ATTR_DOES_NOT_EXIST'
-      print("testParseError:", e)
+    except MLIRError as e:
+      # CHECK: testParseError: <
+      # CHECK:   Unable to parse attribute:
+      # CHECK:   error: "BAD_ATTR_DOES_NOT_EXIST":1:1: expected attribute value
+      # CHECK: >
+      print(f"testParseError: <{e}>")
     else:
       print("Exception not produced")
 
@@ -178,8 +181,9 @@ def testFloatAttr():
     try:
       fattr_invalid = FloatAttr.get(
           IntegerType.get_signless(32), 42)
-    except ValueError as e:
-      # CHECK: invalid 'Type(i32)' and expected floating point type.
+    except MLIRError as e:
+      # CHECK: Invalid attribute:
+      # CHECK: error: unknown: expected floating point type
       print(e)
     else:
       print("Exception not produced")
@@ -244,11 +248,11 @@ def testOpaqueAttr():
     oattr = OpaqueAttr(Attribute.parse("#pytest_dummy.dummyattr<>"))
     # CHECK: oattr value: pytest_dummy
     print("oattr value:", oattr.dialect_namespace)
-    # CHECK: oattr value: dummyattr<>
+    # CHECK: oattr value: b'dummyattr<>'
     print("oattr value:", oattr.data)
 
     # Test factory methods.
-    # CHECK: default_get: #foobar<"123">
+    # CHECK: default_get: #foobar<123>
     print(
         "default_get:",
         OpaqueAttr.get("foobar", bytes("123", "utf-8"), NoneType.get()))
@@ -261,6 +265,8 @@ def testStringAttr():
     sattr = StringAttr(Attribute.parse('"stringattr"'))
     # CHECK: sattr value: stringattr
     print("sattr value:", sattr.value)
+    # CHECK: sattr value: b'stringattr'
+    print("sattr value:", sattr.value_bytes)
 
     # Test factory methods.
     # CHECK: default_get: "foobar"
@@ -317,6 +323,29 @@ def testDenseIntAttr():
 
     # CHECK: i1
     print(ShapedType(a.type).element_type)
+
+
+@run
+def testDenseArrayGetItem():
+  def print_item(AttrClass, attr_asm):
+    attr = AttrClass(Attribute.parse(attr_asm))
+    print(f"{len(attr)}: {attr[0]}, {attr[1]}")
+
+  with Context():
+    # CHECK: 2: 0, 1
+    print_item(DenseBoolArrayAttr, "array<i1: false, true>")
+    # CHECK: 2: 2, 3
+    print_item(DenseI8ArrayAttr, "array<i8: 2, 3>")
+    # CHECK: 2: 4, 5
+    print_item(DenseI16ArrayAttr, "array<i16: 4, 5>")
+    # CHECK: 2: 6, 7
+    print_item(DenseI32ArrayAttr, "array<i32: 6, 7>")
+    # CHECK: 2: 8, 9
+    print_item(DenseI64ArrayAttr, "array<i64: 8, 9>")
+    # CHECK: 2: 1.{{0+}}, 2.{{0+}}
+    print_item(DenseF32ArrayAttr, "array<f32: 1.0, 2.0>")
+    # CHECK: 2: 3.{{0+}}, 4.{{0+}}
+    print_item(DenseF64ArrayAttr, "array<f64: 3.0, 4.0>")
 
 
 # CHECK-LABEL: TEST: testDenseIntAttrGetItem
@@ -498,3 +527,33 @@ def testArrayAttr():
     array = array + [StringAttr.get("c")]
     # CHECK: concat: ["a", "b", "c"]
     print("concat: ", array)
+
+
+# CHECK-LABEL: TEST: testStridedLayoutAttr
+@run
+def testStridedLayoutAttr():
+  with Context():
+    attr = StridedLayoutAttr.get(42, [5, 7, 13])
+    # CHECK: strided<[5, 7, 13], offset: 42>
+    print(attr)
+    # CHECK: 42
+    print(attr.offset)
+    # CHECK: 3
+    print(len(attr.strides))
+    # CHECK: 5
+    print(attr.strides[0])
+    # CHECK: 7
+    print(attr.strides[1])
+    # CHECK: 13
+    print(attr.strides[2])
+
+    attr = StridedLayoutAttr.get_fully_dynamic(3)
+    dynamic = ShapedType.get_dynamic_stride_or_offset()
+    # CHECK: strided<[?, ?, ?], offset: ?>
+    print(attr)
+    # CHECK: offset is dynamic: True
+    print(f"offset is dynamic: {attr.offset == dynamic}")
+    # CHECK: rank: 3
+    print(f"rank: {len(attr.strides)}")
+    # CHECK: strides are dynamic: [True, True, True]
+    print(f"strides are dynamic: {[s == dynamic for s in attr.strides]}")

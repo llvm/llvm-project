@@ -8,10 +8,10 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 target triple = "x86_64-unknown-linux-gnu"
 
 define void @foo()  {
-  call void @bar(i8* null)
+  call void @bar(ptr null)
   ret void
 }
-declare void @bar(i8*)
+declare void @bar(ptr)
 
 ; CHECK:      define void @foo() {
 ; CHECK-NEXT:   call void @bar(ptr null)

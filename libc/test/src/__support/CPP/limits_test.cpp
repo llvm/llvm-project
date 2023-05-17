@@ -6,46 +6,40 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/CPP/Limits.h"
-#include "utils/UnitTest/Test.h"
+#include "src/__support/CPP/limits.h"
+#include "src/__support/UInt.h"
+#include "test/UnitTest/Test.h"
+
+namespace __llvm_libc {
 
 // This just checks against the C spec, almost all implementations will surpass
 // this.
 TEST(LlvmLibcLimitsTest, LimitsFollowSpec) {
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<int>::max(), INT_MAX);
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<int>::min(), INT_MIN);
+  ASSERT_EQ(cpp::numeric_limits<int>::max(), INT_MAX);
+  ASSERT_EQ(cpp::numeric_limits<int>::min(), INT_MIN);
 
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<unsigned int>::max(), UINT_MAX);
+  ASSERT_EQ(cpp::numeric_limits<unsigned int>::max(), UINT_MAX);
 
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<long>::max(), LONG_MAX);
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<long>::min(), LONG_MIN);
+  ASSERT_EQ(cpp::numeric_limits<long>::max(), LONG_MAX);
+  ASSERT_EQ(cpp::numeric_limits<long>::min(), LONG_MIN);
 
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<unsigned long>::max(), ULONG_MAX);
+  ASSERT_EQ(cpp::numeric_limits<unsigned long>::max(), ULONG_MAX);
 
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<long long>::max(), LLONG_MAX);
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<long long>::min(), LLONG_MIN);
+  ASSERT_EQ(cpp::numeric_limits<long long>::max(), LLONG_MAX);
+  ASSERT_EQ(cpp::numeric_limits<long long>::min(), LLONG_MIN);
 
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<unsigned long long>::max(),
-            ULLONG_MAX);
+  ASSERT_EQ(cpp::numeric_limits<unsigned long long>::max(), ULLONG_MAX);
 }
 
+TEST(LlvmLibcLimitsTest, UInt128Limits) {
+  auto umax128 = cpp::numeric_limits<__llvm_libc::cpp::UInt<128>>::max();
+  auto umax64 =
+      __llvm_libc::cpp::UInt<128>(cpp::numeric_limits<uint64_t>::max());
+  EXPECT_GT(umax128, umax64);
+  ASSERT_EQ(~__llvm_libc::cpp::UInt<128>(0), umax128);
 #ifdef __SIZEOF_INT128__
-// This checks that the current environment supports 128 bit integers.
-TEST(LlvmLibcLimitsTest, Int128Works) {
-  __int128_t max128 = ~__uint128_t(0) >> 1;
-  __int128_t min128 = (__int128_t(1) << 127);
-  EXPECT_GT(__llvm_libc::cpp::NumericLimits<__int128_t>::max(),
-            __int128_t(__llvm_libc::cpp::NumericLimits<long long>::max()));
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<__int128_t>::max(), max128);
-
-  EXPECT_LT(__llvm_libc::cpp::NumericLimits<__int128_t>::min(),
-            __int128_t(__llvm_libc::cpp::NumericLimits<long long>::min()));
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<__int128_t>::min(), min128);
-
-  __uint128_t umax128 = ~__uint128_t(0);
-  EXPECT_GT(
-      __llvm_libc::cpp::NumericLimits<__uint128_t>::max(),
-      __uint128_t(__llvm_libc::cpp::NumericLimits<unsigned long long>::max()));
-  ASSERT_EQ(__llvm_libc::cpp::NumericLimits<__uint128_t>::max(), umax128);
-}
+  ASSERT_EQ(~__uint128_t(0), cpp::numeric_limits<__uint128_t>::max());
 #endif
+}
+
+} // namespace __llvm_libc

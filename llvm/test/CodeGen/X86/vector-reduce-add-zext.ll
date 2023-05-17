@@ -594,9 +594,9 @@ define i16 @test_v64i16_v64i8(<64 x i8> %a0) {
 ; SSE-NEXT:    psadbw %xmm4, %xmm1
 ; SSE-NEXT:    paddq %xmm3, %xmm1
 ; SSE-NEXT:    psadbw %xmm4, %xmm2
-; SSE-NEXT:    paddq %xmm1, %xmm2
 ; SSE-NEXT:    psadbw %xmm4, %xmm0
 ; SSE-NEXT:    paddq %xmm2, %xmm0
+; SSE-NEXT:    paddq %xmm1, %xmm0
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; SSE-NEXT:    paddq %xmm0, %xmm1
 ; SSE-NEXT:    movd %xmm1, %eax
@@ -612,9 +612,9 @@ define i16 @test_v64i16_v64i8(<64 x i8> %a0) {
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm4, %xmm4
 ; AVX1-NEXT:    vpaddq %xmm2, %xmm4, %xmm2
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm1, %xmm1
-; AVX1-NEXT:    vpaddq %xmm2, %xmm1, %xmm1
 ; AVX1-NEXT:    vpsadbw %xmm3, %xmm0, %xmm0
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    vpaddq %xmm2, %xmm0, %xmm0
 ; AVX1-NEXT:    vpshufd {{.*#+}} xmm1 = xmm0[2,3,2,3]
 ; AVX1-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
 ; AVX1-NEXT:    vmovd %xmm0, %eax

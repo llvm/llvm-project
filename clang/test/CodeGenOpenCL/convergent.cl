@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - | opt -instnamer -S | FileCheck -enable-var-scope %s
+// RUN: %clang_cc1 -triple spir-unknown-unknown -emit-llvm %s -o - | FileCheck -enable-var-scope %s
 
 // This is initially assumed convergent, but can be deduced to not require it.
 
@@ -139,4 +139,5 @@ kernel void assume_convergent_asm()
 // CHECK: attributes #3 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }
 // CHECK: attributes #4 = { {{[^}]*}}convergent{{[^}]*}} }
 // CHECK: attributes #5 = { {{[^}]*}}convergent{{[^}]*}} }
-// CHECK: attributes #6 = { {{[^}]*}}convergent noduplicate{{[^}]*}} }
+// CHECK: attributes #6 = { {{[^}]*}}nounwind{{[^}]*}} }
+// CHECK: attributes #7 = { {{[^}]*}}convergent noduplicate nounwind{{[^}]*}} }

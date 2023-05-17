@@ -24,7 +24,7 @@ define double @f2(i32 %i) {
 }
 
 ; Check i32->f128.
-define void @f3(i32 %i, fp128 *%dst) {
+define void @f3(i32 %i, ptr %dst) {
 ; CHECK-LABEL: f3:
 ; CHECK: llgfr [[REGISTER:%r[0-5]]], %r2
 ; CHECK: cxgbr %f0, [[REGISTER]]
@@ -32,6 +32,6 @@ define void @f3(i32 %i, fp128 *%dst) {
 ; CHECK: std %f2, 8(%r3)
 ; CHECK: br %r14
   %conv = uitofp i32 %i to fp128
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }

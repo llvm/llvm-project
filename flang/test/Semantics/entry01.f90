@@ -59,8 +59,8 @@ subroutine subr(goodarg1)
   entry okargs(goodarg1, goodarg2)
   !ERROR: RESULT(br1) may appear only in a function
   entry badresult() result(br1) ! C1572
-  !ERROR: ENTRY dummy argument 'badarg2' is previously declared as an item that may not be used as a dummy argument
-  !ERROR: ENTRY dummy argument 'badarg4' is previously declared as an item that may not be used as a dummy argument
+  !ERROR: 'badarg2' is already declared in this scoping unit
+  !ERROR: 'badarg4' is already declared in this scoping unit
   entry badargs(badarg1,badarg2,badarg3,badarg4,badarg5)
 end subroutine
 
@@ -244,3 +244,14 @@ module m6
     external e
   end subroutine
 end module
+
+!ERROR: 'q' appears more than once as a dummy argument name in this subprogram
+subroutine s7(q,q)
+  !ERROR: Dummy argument 'x' may not be used before its ENTRY statement
+  call x
+  entry foo(x)
+  !ERROR: 's7' may not appear as a dummy argument name in this ENTRY statement
+  entry bar(s7)
+  !ERROR: 'z' appears more than once as a dummy argument name in this ENTRY statement
+  entry baz(z,z)
+end

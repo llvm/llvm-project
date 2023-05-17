@@ -4,7 +4,7 @@
 ; Test that DAGCombiner properly clears the NUW/NSW flags on the memoized add
 ; node.
 
-define void @fun(i64* %Src, i32* %Dst) {
+define void @fun(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    iilf %r0, 1303940520
@@ -15,7 +15,7 @@ define void @fun(i64* %Src, i32* %Dst) {
 ; CHECK-NEXT:    st %r1, 0(%r3)
 ; CHECK-NEXT:    br %r14
 entry:
-  %0 = load i64, i64* %Src, align 8
+  %0 = load i64, ptr %Src, align 8
   %1 = trunc i64 %0 to i32
   %conv = and i32 %1, 1303940520
   %xor11.i = or i32 %conv, -2147483648
@@ -23,7 +23,7 @@ entry:
   %cmp.i = icmp slt i32 %xor2.i, 0
   %sub3.i = add nuw nsw i32 %conv, 1628135358
   %cond.i = select i1 %cmp.i, i32 %conv, i32 %sub3.i
-  store i32 %cond.i, i32* %Dst
+  store i32 %cond.i, ptr %Dst
   ret void
 }
 

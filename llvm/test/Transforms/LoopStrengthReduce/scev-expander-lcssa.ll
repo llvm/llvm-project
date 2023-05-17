@@ -142,3 +142,47 @@ for.body45.preheader.i:                           ; preds = %if.else.i2488
 if.end107.i:                                      ; preds = %if.else.i2488, %for.cond.i2472
   unreachable
 }
+
+define void @test_pr58007(ptr %A) {
+; CHECK-LABEL: @test_pr58007(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[LOOP_1:%.*]]
+; CHECK:       loop.1:
+; CHECK-NEXT:    [[L:%.*]] = load i16, ptr [[A:%.*]], align 2
+; CHECK-NEXT:    br i1 false, label [[LOOP_1]], label [[LOOP_2_HEADER_PREHEADER:%.*]]
+; CHECK:       loop.2.header.preheader:
+; CHECK-NEXT:    [[L_LCSSA:%.*]] = phi i16 [ [[L]], [[LOOP_1]] ]
+; CHECK-NEXT:    br label [[LOOP_2_HEADER:%.*]]
+; CHECK:       loop.2.header:
+; CHECK-NEXT:    [[P:%.*]] = phi i16 [ 1, [[LOOP_2_LATCH:%.*]] ], [ 0, [[LOOP_2_HEADER_PREHEADER]] ]
+; CHECK-NEXT:    [[CMP3_I:%.*]] = icmp eq i16 [[P]], 0
+; CHECK-NEXT:    br i1 [[CMP3_I]], label [[LOOP_2_LATCH]], label [[EXIT:%.*]]
+; CHECK:       loop.2.latch:
+; CHECK-NEXT:    br label [[LOOP_2_HEADER]]
+; CHECK:       exit:
+; CHECK-NEXT:    store i16 [[L_LCSSA]], ptr [[A]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop.1
+
+loop.1:                                           ; preds = %loop.1, %entry
+  %l = load i16, ptr %A, align 2
+  %l.dec = add nsw i16 %l, -1
+  br i1 false, label %loop.1, label %loop.2.header
+
+loop.2.header:                                    ; preds = %loop.2.latch, %loop.1
+  %iv = phi i16 [ %l.dec, %loop.1 ], [ %iv.next, %loop.2.latch ]
+  %p = phi i16 [ 0, %loop.1 ], [ 1, %loop.2.latch ]
+  %cmp3.i = icmp eq i16 %p, 0
+  br i1 %cmp3.i, label %loop.2.latch, label %exit
+
+loop.2.latch:                                     ; preds = %loop.2.header
+  %iv.next = add nsw i16 %iv, 1
+  br label %loop.2.header
+
+exit:                                             ; preds = %loop.2.header
+  %iv.lcssa = phi i16 [ %iv, %loop.2.header ]
+  store i16 %iv.lcssa, ptr %A, align 2
+  ret void
+}

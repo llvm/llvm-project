@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin10.0 | FileCheck %s --check-prefix=CHECK-X86
 ; RUN: llc < %s -mtriple=x86_64-grtev4-linux-gnu | FileCheck %s --check-prefix=CHECK-X64
 
-@g_14 = dso_local global i8 -6, align 1                     ; <i8*> [#uses=1]
+@g_14 = dso_local global i8 -6, align 1                     ; <ptr> [#uses=1]
 
 declare i32 @func_16(i8 signext %p_19, i32 %p_20) nounwind
 
@@ -35,7 +35,7 @@ define dso_local i32 @func_35(i64 %p_38) nounwind ssp {
 ; CHECK-X64-NEXT:    popq %rcx
 ; CHECK-X64-NEXT:    retq
 entry:
-  %tmp = load i8, i8* @g_14                           ; <i8> [#uses=2]
+  %tmp = load i8, ptr @g_14                           ; <i8> [#uses=2]
   %conv = zext i8 %tmp to i32                     ; <i32> [#uses=1]
   %cmp = icmp sle i32 1, %conv                    ; <i1> [#uses=1]
   %conv2 = zext i1 %cmp to i32                    ; <i32> [#uses=1]

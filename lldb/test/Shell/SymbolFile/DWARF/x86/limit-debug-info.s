@@ -3,10 +3,10 @@
 # RUN: llvm-mc --triple=x86_64-pc-windows --filetype=obj --defsym EXE=0 %s >%t.exe.o
 # RUN: lld-link /OUT:%t.dll %t.dll.o /SUBSYSTEM:console /dll /noentry /debug
 # RUN: lld-link /OUT:%t.exe %t.exe.o /SUBSYSTEM:console /debug /force
-# RUN: %lldb %t.exe -o "target modules add %t.dll" -o "p var" \
+# RUN: %lldb %t.exe -o "target modules add %t.dll" -o "expression var" \
 # RUN:   -o exit 2>&1 | FileCheck %s
 
-# CHECK: (lldb) p var
+# CHECK: (lldb) expression var
 # CHECK: (A) $0 = (member = 47)
 
         .section        .debug_abbrev,"dr"

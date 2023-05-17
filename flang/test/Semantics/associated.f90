@@ -73,6 +73,9 @@ subroutine assoc()
     type(t1), target :: t1xtarget
     type(t2) :: t2x
     type(t2), target :: t2xtarget
+    integer, target :: targetIntArr(2)
+    integer, target :: targetIntCoarray[*]
+    integer, pointer :: intPointerArr(:)
 
     !ERROR: missing mandatory 'pointer=' argument
     lVar = associated()
@@ -81,10 +84,15 @@ subroutine assoc()
     lVar = associated(null(intAllocVar)) !OK
     lVar = associated(null()) !OK
     lVar = associated(null(intPointerVar1)) !OK
+    !PORTABILITY: POINTER= argument of ASSOCIATED() would not be a valid left-hand side of a pointer assignment statement
+    !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null()) !OK
     lVar = associated(intPointerVar1, null(intPointerVar2)) !OK
     lVar = associated(intPointerVar1, null()) !OK
+    !PORTABILITY: POINTER= argument of ASSOCIATED() would not be a valid left-hand side of a pointer assignment statement
+    !BECAUSE: 'NULL()' is a null pointer
     lVar = associated(null(), null(intPointerVar1)) !OK
+    !PORTABILITY: POINTER= argument of ASSOCIATED() should be a pointer
     lVar = associated(null(intPointerVar1), null()) !OK
     !ERROR: POINTER= argument of ASSOCIATED() must be a POINTER
     lVar = associated(intVar)
@@ -135,9 +143,10 @@ subroutine assoc()
     intprocPointer1 => intVar
     !ERROR: POINTER= argument 'intprocpointer1' is a procedure pointer but the TARGET= argument 'intvar' is not a procedure or procedure pointer
     lVar = associated(intprocPointer1, intVar)
-    !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc'
+    !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible procedure attributes: Elemental
     intProcPointer1 => elementalProc
-    !ERROR: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc'
+    !WARNING: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible procedure attributes: Elemental
+    !ERROR: Non-intrinsic ELEMENTAL procedure 'elementalproc' may not be passed as an actual argument
     lvar = associated(intProcPointer1, elementalProc)
     !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is a procedure designator
     lvar = associated (intPointerVar1, intFunc)
@@ -147,35 +156,39 @@ subroutine assoc()
     intProcPointer1 => targetIntVar1
     !ERROR: POINTER= argument 'intprocpointer1' is a procedure pointer but the TARGET= argument 'targetintvar1' is not a procedure or procedure pointer
     lvar = associated (intProcPointer1, targetIntVar1)
-    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer
+    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     intProcPointer1 => null(mold=realProcPointer1)
-    !ERROR: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer
+    !WARNING: Procedure pointer 'intprocpointer1' associated with result of reference to function 'null()' that is an incompatible procedure pointer: function results have distinct types: INTEGER(4) vs REAL(4)
     lvar = associated(intProcPointer1, null(mold=realProcPointer1))
     !ERROR: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     pureFuncPointer => intProc
-    !ERROR: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
+    !WARNING: PURE procedure pointer 'purefuncpointer' may not be associated with non-PURE procedure designator 'intproc'
     lvar = associated(pureFuncPointer, intProc)
-    !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc'
+    !ERROR: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have distinct types: REAL(4) vs INTEGER(4)
     realProcPointer1 => intProc
-    !ERROR: Procedure pointer 'realprocpointer1' associated with incompatible procedure designator 'intproc'
+    !WARNING: Function pointer 'realprocpointer1' associated with incompatible function designator 'intproc': function results have distinct types: REAL(4) vs INTEGER(4)
     lvar = associated(realProcPointer1, intProc)
     subProcPointer => externalProc ! OK to associate a procedure pointer  with an explicit interface to a procedure with an implicit interface
     lvar = associated(subProcPointer, externalProc) ! OK to associate a procedure pointer with an explicit interface to a procedure with an implicit interface
     !ERROR: Subroutine pointer 'subprocpointer' may not be associated with function designator 'intproc'
     subProcPointer => intProc
-    !ERROR: Subroutine pointer 'subprocpointer' may not be associated with function designator 'intproc'
+    !WARNING: Subroutine pointer 'subprocpointer' may not be associated with function designator 'intproc'
     lvar = associated(subProcPointer, intProc)
     !ERROR: Function pointer 'intprocpointer1' may not be associated with subroutine designator 'subproc'
     intProcPointer1 => subProc
-    !ERROR: Function pointer 'intprocpointer1' may not be associated with subroutine designator 'subproc'
+    !WARNING: Function pointer 'intprocpointer1' may not be associated with subroutine designator 'subproc'
     lvar = associated(intProcPointer1, subProc)
     implicitProcPointer => subr ! OK for an implicit point to point to an explicit proc
     lvar = associated(implicitProcPointer, subr) ! OK
-    !ERROR: Procedure pointer 'implicitprocpointer' with implicit interface may not be associated with procedure designator 'subrcannotbecalledfromimplicit' with explicit interface that cannot be called via an implicit interface
+    !WARNING: Procedure pointer 'implicitprocpointer' with implicit interface may not be associated with procedure designator 'subrcannotbecalledfromimplicit' with explicit interface that cannot be called via an implicit interface
     lvar = associated(implicitProcPointer, subrCannotBeCalledFromImplicit)
     !ERROR: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
     cannotBeCalledfromImplicitPointer => externalProc
-    !ERROR: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
+    !WARNING: Procedure pointer 'cannotbecalledfromimplicitpointer' with explicit interface that cannot be called via an implicit interface cannot be associated with procedure designator with an implicit interface
     lvar = associated(cannotBeCalledfromImplicitPointer, externalProc)
+    !ERROR: TARGET= argument 'targetintarr([INTEGER(8)::2_8,1_8])' may not have a vector subscript or coindexing
+    lvar = associated(intPointerArr, targetIntArr([2,1]))
+    !ERROR: TARGET= argument 'targetintcoarray[1_8]' may not have a vector subscript or coindexing
+    lvar = associated(intPointerVar1, targetIntCoarray[1])
   end subroutine test
 end subroutine assoc

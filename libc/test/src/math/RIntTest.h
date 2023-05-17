@@ -11,9 +11,9 @@
 
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
 
 #include <fenv.h>
 #include <math.h>
@@ -37,7 +37,7 @@ private:
   const T neg_zero = T(FPBits::neg_zero());
   const T inf = T(FPBits::inf());
   const T neg_inf = T(FPBits::neg_inf());
-  const T nan = T(FPBits::build_nan(1));
+  const T nan = T(FPBits::build_quiet_nan(1));
 
   static inline mpfr::RoundingMode to_mpfr_rounding_mode(int mode) {
     switch (mode) {

@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=arm-apple-darwin
 
-declare void @foo(i8*, i8*, i32, i32, i32, i32, i32, i32, i32)
+declare void @foo(ptr, ptr, i32, i32, i32, i32, i32, i32, i32)
 
 define void @t() nounwind  {
 	br label %1
@@ -29,7 +29,7 @@ bb4498.i:		; preds = %bb4411.i
 	]
 bb4501.i:		; preds = %bb4498.i
 	%sfComp4077.1.reg2mem.0.i = phi i32 [ %sfComp4077.1.i, %bb4498.i ]		; <i32> [#uses=1]
-	call void @foo( i8* null, i8* null, i32 %sfComp4077.1.reg2mem.0.i, i32 0, i32 8, i32 0, i32 0, i32 0, i32 0 ) nounwind 
+	call void @foo( ptr null, ptr null, i32 %sfComp4077.1.reg2mem.0.i, i32 0, i32 8, i32 0, i32 0, i32 0, i32 0 ) nounwind 
 	br i1 false, label %UnifiedReturnBlock.i, label %bb4517.i
 bb4517.i:		; preds = %bb4501.i
 	br label %t.exit

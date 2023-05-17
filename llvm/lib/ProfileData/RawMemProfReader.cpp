@@ -17,19 +17,27 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/Twine.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableObjectFile.h"
 #include "llvm/Object/Binary.h"
+#include "llvm/Object/BuildID.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/ProfileData/InstrProf.h"
 #include "llvm/ProfileData/MemProf.h"
 #include "llvm/ProfileData/MemProfData.inc"
 #include "llvm/ProfileData/RawMemProfReader.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/Endian.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 
 #define DEBUG_TYPE "memprof"
@@ -148,20 +156,22 @@ Error report(Error E, const StringRef Context) {
 }
 
 bool isRuntimePath(const StringRef Path) {
-  return StringRef(llvm::sys::path::convert_to_slash(Path))
-      .contains("memprof/memprof_");
+  const StringRef Filename = llvm::sys::path::filename(Path);
+  // This list should be updated in case new files with additional interceptors
+  // are added to the memprof runtime.
+  return Filename.equals("memprof_malloc_linux.cpp") ||
+         Filename.equals("memprof_interceptors.cpp") ||
+         Filename.equals("memprof_new_delete.cpp");
 }
 
 std::string getBuildIdString(const SegmentEntry &Entry) {
-  constexpr size_t Size = sizeof(Entry.BuildId) / sizeof(uint8_t);
-  constexpr uint8_t Zeros[Size] = {0};
   // If the build id is unset print a helpful string instead of all zeros.
-  if (memcmp(Entry.BuildId, Zeros, Size) == 0)
+  if (Entry.BuildIdSize == 0)
     return "<None>";
 
   std::string Str;
   raw_string_ostream OS(Str);
-  for (size_t I = 0; I < Size; I++) {
+  for (size_t I = 0; I < Entry.BuildIdSize; I++) {
     OS << format_hex_no_prefix(Entry.BuildId[I], 2);
   }
   return OS.str();
@@ -179,10 +189,20 @@ RawMemProfReader::create(const Twine &Path, const StringRef ProfiledBinary,
   if (Error E = checkBuffer(*Buffer))
     return report(std::move(E), Path.getSingleStringRef());
 
-  if (ProfiledBinary.empty())
+  if (ProfiledBinary.empty()) {
+    // Peek the build ids to print a helpful error message.
+    const std::vector<std::string> BuildIds = peekBuildIds(Buffer.get());
+    std::string ErrorMessage(
+        R"(Path to profiled binary is empty, expected binary with one of the following build ids:
+)");
+    for (const auto &Id : BuildIds) {
+      ErrorMessage += "\n BuildId: ";
+      ErrorMessage += Id;
+    }
     return report(
-        errorCodeToError(make_error_code(std::errc::invalid_argument)),
-        "Path to profiled binary is empty!");
+        make_error<StringError>(ErrorMessage, inconvertibleErrorCode()),
+        /*Context=*/"");
+  }
 
   auto BinaryOr = llvm::object::createBinary(ProfiledBinary);
   if (!BinaryOr) {
@@ -261,6 +281,44 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
                   FileName);
   }
 
+  // Check whether the profiled binary was built with position independent code
+  // (PIC). Perform sanity checks for assumptions we rely on to simplify
+  // symbolization.
+  auto* Elf64LEObject = llvm::cast<llvm::object::ELF64LEObjectFile>(ElfObject);
+  const llvm::object::ELF64LEFile& ElfFile = Elf64LEObject->getELFFile();
+  auto PHdrsOr = ElfFile.program_headers();
+  if (!PHdrsOr)
+    return report(
+        make_error<StringError>(Twine("Could not read program headers: "),
+                                inconvertibleErrorCode()),
+        FileName);
+
+  int NumExecutableSegments = 0;
+  for (const auto &Phdr : *PHdrsOr) {
+    if (Phdr.p_type == ELF::PT_LOAD) {
+      if (Phdr.p_flags & ELF::PF_X) {
+        // We assume only one text segment in the main binary for simplicity and
+        // reduce the overhead of checking multiple ranges during symbolization.
+        if (++NumExecutableSegments > 1) {
+          return report(
+              make_error<StringError>(
+                  "Expect only one executable load segment in the binary",
+                  inconvertibleErrorCode()),
+              FileName);
+        }
+        // Segment will always be loaded at a page boundary, expect it to be
+        // aligned already. Assume 4K pagesize for the machine from which the
+        // profile has been collected. This should be fine for now, in case we
+        // want to support other pagesizes it can be recorded in the raw profile
+        // during collection.
+        PreferredTextSegmentAddress = Phdr.p_vaddr;
+        assert(Phdr.p_vaddr == (Phdr.p_vaddr & ~(0x1000 - 1U)) &&
+               "Expect p_vaddr to always be page aligned");
+        assert(Phdr.p_offset == 0 && "Expect p_offset = 0 for symbolization.");
+      }
+    }
+  }
+
   auto Triple = ElfObject->makeTriple();
   if (!Triple.isX86())
     return report(make_error<StringError>(Twine("Unsupported target: ") +
@@ -278,7 +336,11 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
     return report(SOFOr.takeError(), FileName);
   Symbolizer = std::move(SOFOr.get());
 
+  // Process the raw profile.
   if (Error E = readRawProfile(std::move(DataBuffer)))
+    return E;
+
+  if (Error E = setupForSymbolization())
     return E;
 
   if (Error E = symbolizeAndFilterStackFrames())
@@ -287,12 +349,43 @@ Error RawMemProfReader::initialize(std::unique_ptr<MemoryBuffer> DataBuffer) {
   return mapRawProfileToRecords();
 }
 
+Error RawMemProfReader::setupForSymbolization() {
+  auto *Object = cast<object::ObjectFile>(Binary.getBinary());
+  object::BuildIDRef BinaryId = object::getBuildID(Object);
+  if (BinaryId.empty())
+    return make_error<StringError>(Twine("No build id found in binary ") +
+                                       Binary.getBinary()->getFileName(),
+                                   inconvertibleErrorCode());
+
+  int NumMatched = 0;
+  for (const auto &Entry : SegmentInfo) {
+    llvm::ArrayRef<uint8_t> SegmentId(Entry.BuildId, Entry.BuildIdSize);
+    if (BinaryId == SegmentId) {
+      // We assume only one text segment in the main binary for simplicity and
+      // reduce the overhead of checking multiple ranges during symbolization.
+      if (++NumMatched > 1) {
+        return make_error<StringError>(
+            "We expect only one executable segment in the profiled binary",
+            inconvertibleErrorCode());
+      }
+      ProfiledTextSegmentStart = Entry.Start;
+      ProfiledTextSegmentEnd = Entry.End;
+    }
+  }
+  assert(NumMatched != 0 && "No matching executable segments in segment info.");
+  assert((PreferredTextSegmentAddress == 0 ||
+          (PreferredTextSegmentAddress == ProfiledTextSegmentStart)) &&
+         "Expect text segment address to be 0 or equal to profiled text "
+         "segment start.");
+  return Error::success();
+}
+
 Error RawMemProfReader::mapRawProfileToRecords() {
   // Hold a mapping from function to each callsite location we encounter within
   // it that is part of some dynamic allocation context. The location is stored
   // as a pointer to a symbolized list of inline frames.
   using LocationPtr = const llvm::SmallVector<FrameId> *;
-  llvm::DenseMap<GlobalValue::GUID, llvm::SetVector<LocationPtr>>
+  llvm::MapVector<GlobalValue::GUID, llvm::SetVector<LocationPtr>>
       PerFunctionCallSites;
 
   // Convert the raw profile callstack data into memprof records. While doing so
@@ -353,14 +446,12 @@ Error RawMemProfReader::mapRawProfileToRecords() {
   }
 
   // Fill in the related callsites per function.
-  for (auto I = PerFunctionCallSites.begin(), E = PerFunctionCallSites.end();
-       I != E; I++) {
-    const GlobalValue::GUID Id = I->first;
+  for (const auto &[Id, Locs] : PerFunctionCallSites) {
     // Some functions may have only callsite data and no allocation data. Here
     // we insert a new entry for callsite data if we need to.
     auto Result = FunctionProfileData.insert({Id, IndexedMemProfRecord()});
     IndexedMemProfRecord &Record = Result.first->second;
-    for (LocationPtr Loc : I->getSecond()) {
+    for (LocationPtr Loc : Locs) {
       Record.CallSites.push_back(*Loc);
     }
   }
@@ -424,11 +515,9 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
     }
 
     auto &CallStack = Entry.getSecond();
-    CallStack.erase(std::remove_if(CallStack.begin(), CallStack.end(),
-                                   [&AllVAddrsToDiscard](const uint64_t A) {
-                                     return AllVAddrsToDiscard.contains(A);
-                                   }),
-                    CallStack.end());
+    llvm::erase_if(CallStack, [&AllVAddrsToDiscard](const uint64_t A) {
+      return AllVAddrsToDiscard.contains(A);
+    });
     if (CallStack.empty())
       EntriesToErase.push_back(Entry.getFirst());
   }
@@ -445,6 +534,36 @@ Error RawMemProfReader::symbolizeAndFilterStackFrames() {
         "no entries in callstack map after symbolization");
 
   return Error::success();
+}
+
+std::vector<std::string>
+RawMemProfReader::peekBuildIds(MemoryBuffer *DataBuffer) {
+  const char *Next = DataBuffer->getBufferStart();
+  // Use a set + vector since a profile file may contain multiple raw profile
+  // dumps, each with segment information. We want them unique and in order they
+  // were stored in the profile; the profiled binary should be the first entry.
+  // The runtime uses dl_iterate_phdr and the "... first object visited by
+  // callback is the main program."
+  // https://man7.org/linux/man-pages/man3/dl_iterate_phdr.3.html
+  std::vector<std::string> BuildIds;
+  llvm::SmallSet<StringRef, 4> BuildIdsSet;
+  while (Next < DataBuffer->getBufferEnd()) {
+    auto *Header = reinterpret_cast<const memprof::Header *>(Next);
+
+    const llvm::SmallVector<SegmentEntry> Entries =
+        readSegmentEntries(Next + Header->SegmentOffset);
+
+    for (const auto &Entry : Entries) {
+      const std::string Id = getBuildIdString(Entry);
+      if (BuildIdsSet.contains(Id))
+        continue;
+      BuildIds.push_back(Id);
+      BuildIdsSet.insert(BuildIds.back());
+    }
+
+    Next += Header->TotalSize;
+  }
+  return BuildIds;
 }
 
 Error RawMemProfReader::readRawProfile(
@@ -499,20 +618,19 @@ Error RawMemProfReader::readRawProfile(
 
 object::SectionedAddress
 RawMemProfReader::getModuleOffset(const uint64_t VirtualAddress) {
-  LLVM_DEBUG({
-  SegmentEntry *ContainingSegment = nullptr;
-  for (auto &SE : SegmentInfo) {
-    if (VirtualAddress > SE.Start && VirtualAddress <= SE.End) {
-      ContainingSegment = &SE;
-    }
+  if (VirtualAddress > ProfiledTextSegmentStart &&
+      VirtualAddress <= ProfiledTextSegmentEnd) {
+    // For PIE binaries, the preferred address is zero and we adjust the virtual
+    // address by start of the profiled segment assuming that the offset of the
+    // segment in the binary is zero. For non-PIE binaries the preferred and
+    // profiled segment addresses should be equal and this is a no-op.
+    const uint64_t AdjustedAddress =
+        VirtualAddress + PreferredTextSegmentAddress - ProfiledTextSegmentStart;
+    return object::SectionedAddress{AdjustedAddress};
   }
-
-  // Ensure that the virtual address is valid.
-  assert(ContainingSegment && "Could not find a segment entry");
-  });
-
-  // TODO: Compute the file offset based on the maps and program headers. For
-  // now this only works for non PIE binaries.
+  // Addresses which do not originate from the profiled text segment in the
+  // binary are not adjusted. These will fail symbolization and be filtered out
+  // during processing.
   return object::SectionedAddress{VirtualAddress};
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt -passes=print-access-info %s -disable-output 2>&1 | FileCheck %s
+; RUN: opt -passes='print<access-info>' %s -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
@@ -29,9 +29,9 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    Run-time memory checks:
 ; CHECK-NEXT:    Check 0:
 ; CHECK-NEXT:      Comparing group
-; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, i32* %a, i64 %idxprom
+; CHECK-NEXT:        %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom
 ; CHECK-NEXT:      Against group
-; CHECK-NEXT:        %arrayidx4 = getelementptr inbounds i32, i32* %b, i64 %conv11
+; CHECK-NEXT:        %arrayidx4 = getelementptr inbounds i32, ptr %b, i64 %conv11
 ; CHECK-NEXT:    Grouped accesses:
 ; CHECK-NEXT:      Group
 ; CHECK-NEXT:        (Low: (4 + %a) High: (4 + (4 * (1 umax %x)) + %a))
@@ -44,13 +44,13 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK-NEXT:    {1,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:    {0,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK:         Expressions re-written:
-; CHECK-NEXT:    [PSE]  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %idxprom:
+; CHECK-NEXT:    [PSE]  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom:
 ; CHECK-NEXT:      ((4 * (zext i32 {1,+,1}<%for.body> to i64))<nuw><nsw> + %a)<nuw>
 ; CHECK-NEXT:      --> {(4 + %a),+,4}<%for.body>
-; CHECK-NEXT:    [PSE]  %arrayidx4 = getelementptr inbounds i32, i32* %b, i64 %conv11:
+; CHECK-NEXT:    [PSE]  %arrayidx4 = getelementptr inbounds i32, ptr %b, i64 %conv11:
 ; CHECK-NEXT:      ((4 * (zext i32 {0,+,1}<%for.body> to i64))<nuw><nsw> + %b)<nuw>
 ; CHECK-NEXT:      --> {%b,+,4}<%for.body>
-define void @test1(i64 %x, i32* %a, i32* %b) {
+define void @test1(i64 %x, ptr %a, ptr %b) {
 entry:
   br label %for.body
 
@@ -59,11 +59,11 @@ for.body:                                         ; preds = %for.body.preheader,
   %i.010 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %add = add i32 %i.010, 1
   %idxprom = zext i32 %add to i64
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %idxprom
-  %ld = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %idxprom
+  %ld = load i32, ptr %arrayidx, align 4
   %add2 = add nsw i32 %ld, 1
-  %arrayidx4 = getelementptr inbounds i32, i32* %b, i64 %conv11
-  store i32 %add2, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %b, i64 %conv11
+  store i32 %add2, ptr %arrayidx4, align 4
   %conv = zext i32 %add to i64
   %cmp = icmp ult i64 %conv, %x
   br i1 %cmp, label %for.body, label %exit
@@ -86,17 +86,17 @@ exit:
 ; CHECK: SCEV assumptions:
 ; CHECK-NEXT:   {1,+,1}<%for.body> Added Flags: <nusw>
 ; CHECK-NEXT:   {0,+,1}<%for.body> Added Flags: <nusw>
- define void @test2(i64 %x, i32* %a) {
+ define void @test2(i64 %x, ptr %a) {
 entry:
   br label %for.body
 
 for.body:
   %conv11 = phi i64 [ %conv, %for.body ], [ 0, %entry ]
   %i.010 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %conv11
-  %ld = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %conv11
+  %ld = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %ld, 1
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   %inc = add i32 %i.010, 1
   %conv = zext i32 %inc to i64
   %cmp = icmp ult i64 %conv, %x

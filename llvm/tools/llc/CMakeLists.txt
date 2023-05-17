@@ -4,9 +4,9 @@ set(LLVM_LINK_COMPONENTS
   AllTargetsDescs
   AllTargetsInfos
   Analysis
-  AsmParser
   AsmPrinter
   CodeGen
+  CodeGenTypes
   Core
   IRReader
   MC
@@ -16,6 +16,7 @@ set(LLVM_LINK_COMPONENTS
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
   Vectorize
   )

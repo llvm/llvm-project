@@ -263,9 +263,9 @@ enum NodeType {
   /// These nodes take two operands of the same value type, and produce two
   /// results.  The first result is the normal add or sub result, the second
   /// result is the carry flag result.
-  /// FIXME: These nodes are deprecated in favor of ADDCARRY and SUBCARRY.
+  /// FIXME: These nodes are deprecated in favor of UADDO_CARRY and USUBO_CARRY.
   /// They are kept around for now to provide a smooth transition path
-  /// toward the use of ADDCARRY/SUBCARRY and will eventually be removed.
+  /// toward the use of UADDO_CARRY/USUBO_CARRY and will eventually be removed.
   ADDC,
   SUBC,
 
@@ -297,11 +297,11 @@ enum NodeType {
   /// it, as the carry is a regular value rather than a glue, which allows
   /// further optimisation.
   ///
-  /// These opcodes are different from [US]{ADD,SUB}O in that ADDCARRY/SUBCARRY
-  /// consume and produce a carry/borrow, whereas [US]{ADD,SUB}O produce an
-  /// overflow.
-  ADDCARRY,
-  SUBCARRY,
+  /// These opcodes are different from [US]{ADD,SUB}O in that
+  /// U{ADD,SUB}O_CARRY consume and produce a carry/borrow, whereas
+  /// [US]{ADD,SUB}O produce an overflow.
+  UADDO_CARRY,
+  USUBO_CARRY,
 
   /// Carry-using overflow-aware nodes for multiple precision addition and
   /// subtraction. These nodes take three operands: The first two are normal lhs
@@ -571,6 +571,19 @@ enum NodeType {
   /// vector, but not the other way around.
   EXTRACT_SUBVECTOR,
 
+  /// VECTOR_DEINTERLEAVE(VEC1, VEC2) - Returns two vectors with all input and
+  /// output vectors having the same type. The first output contains the even
+  /// indices from CONCAT_VECTORS(VEC1, VEC2), with the second output
+  /// containing the odd indices. The relative order of elements within an
+  /// output match that of the concatenated input.
+  VECTOR_DEINTERLEAVE,
+
+  /// VECTOR_INTERLEAVE(VEC1, VEC2) - Returns two vectors with all input and
+  /// output vectors having the same type. The first output contains the
+  /// result of interleaving the low half of CONCAT_VECTORS(VEC1, VEC2), with
+  /// the second output containing the result of interleaving the high half.
+  VECTOR_INTERLEAVE,
+
   /// VECTOR_REVERSE(VECTOR) - Returns a vector, of the same type as VECTOR,
   /// whose elements are shuffled using the following algorithm:
   ///   RESULT[i] = VECTOR[VECTOR.ElementCount - 1 - i]
@@ -739,7 +752,7 @@ enum NodeType {
   /// op #2 is a boolean indicating if there is an incoming carry. This
   /// operator checks the result of "LHS - RHS - Carry", and can be used to
   /// compare two wide integers:
-  /// (setcccarry lhshi rhshi (subcarry lhslo rhslo) cc).
+  /// (setcccarry lhshi rhshi (usubo_carry lhslo rhslo) cc).
   /// Only valid for integers.
   SETCCCARRY,
 
@@ -859,12 +872,11 @@ enum NodeType {
   ///  3 Round to -inf
   ///  4 Round to nearest, ties to zero
   /// Result is rounding mode and chain. Input is a chain.
-  /// TODO: Rename this node to GET_ROUNDING.
-  FLT_ROUNDS_,
+  GET_ROUNDING,
 
   /// Set rounding mode.
   /// The first operand is a chain pointer. The second specifies the required
-  /// rounding mode, encoded in the same way as used in '``FLT_ROUNDS_``'.
+  /// rounding mode, encoded in the same way as used in '``GET_ROUNDING``'.
   SET_ROUNDING,
 
   /// X = FP_EXTEND(Y) - Extend a smaller FP type into a larger FP type.
@@ -897,6 +909,13 @@ enum NodeType {
   FP_TO_FP16,
   STRICT_FP16_TO_FP,
   STRICT_FP_TO_FP16,
+
+  /// BF16_TO_FP, FP_TO_BF16 - These operators are used to perform promotions
+  /// and truncation for bfloat16. These nodes form a semi-softened interface
+  /// for dealing with bf16 (as an i16), which is often a storage-only type but
+  /// has native conversions.
+  BF16_TO_FP,
+  FP_TO_BF16,
 
   /// Perform various unary floating-point operations inspired by libm. For
   /// FPOWI, the result is undefined if if the integer operand doesn't fit into
@@ -1142,6 +1161,9 @@ enum NodeType {
   /// operand and output are the same floating type.
   ARITH_FENCE,
 
+  /// MEMBARRIER - Compiler barrier only; generate a no-op.
+  MEMBARRIER,
+
   /// OUTCHAIN = ATOMIC_FENCE(INCHAIN, ordering, scope)
   /// This corresponds to the fence instruction. It takes an input chain, and
   /// two integer constants: an AtomicOrdering and a SynchronizationScope.
@@ -1188,6 +1210,10 @@ enum NodeType {
   ATOMIC_LOAD_UMAX,
   ATOMIC_LOAD_FADD,
   ATOMIC_LOAD_FSUB,
+  ATOMIC_LOAD_FMAX,
+  ATOMIC_LOAD_FMIN,
+  ATOMIC_LOAD_UINC_WRAP,
+  ATOMIC_LOAD_UDEC_WRAP,
 
   // Masked load and store - consecutive vector load and store operations
   // with additional mask operand that prevents memory accesses to the
@@ -1278,6 +1304,17 @@ enum NodeType {
   VECREDUCE_UMAX,
   VECREDUCE_UMIN,
 
+  // The `llvm.experimental.stackmap` intrinsic.
+  // Operands: input chain, glue, <id>, <numShadowBytes>, [live0[, live1...]]
+  // Outputs: output chain, glue
+  STACKMAP,
+
+  // The `llvm.experimental.patchpoint.*` intrinsic.
+  // Operands: input chain, [glue], reg-mask, <id>, <numShadowBytes>, callee,
+  //   <numArgs>, cc, ...
+  // Outputs: [rv], output chain, glue
+  PATCHPOINT,
+
 // Vector Predication
 #define BEGIN_REGISTER_VP_SDNODE(VPSDID, ...) VPSDID,
 #include "llvm/IR/VPIntrinsics.def"
@@ -1317,10 +1354,16 @@ bool isVPBinaryOp(unsigned Opcode);
 bool isVPReduction(unsigned Opcode);
 
 /// The operand position of the vector mask.
-Optional<unsigned> getVPMaskIdx(unsigned Opcode);
+std::optional<unsigned> getVPMaskIdx(unsigned Opcode);
 
 /// The operand position of the explicit vector length parameter.
-Optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
+std::optional<unsigned> getVPExplicitVectorLengthIdx(unsigned Opcode);
+
+/// Translate this VP Opcode to its corresponding non-VP Opcode.
+std::optional<unsigned> getBaseOpcodeForVP(unsigned Opcode, bool hasFPExcept);
+
+/// Translate this non-VP Opcode to its corresponding VP Opcode.
+unsigned getVPForBaseOpcode(unsigned Opcode);
 
 //===--------------------------------------------------------------------===//
 /// MemIndexedMode enum - This enum defines the load / store indexed
@@ -1465,6 +1508,17 @@ inline unsigned getUnorderedFlavor(CondCode Cond) {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid
 /// SetCC operation.
 CondCode getSetCCInverse(CondCode Operation, EVT Type);
+
+inline bool isExtOpcode(unsigned Opcode) {
+  return Opcode == ISD::ANY_EXTEND || Opcode == ISD::ZERO_EXTEND ||
+         Opcode == ISD::SIGN_EXTEND;
+}
+
+inline bool isExtVecInRegOpcode(unsigned Opcode) {
+  return Opcode == ISD::ANY_EXTEND_VECTOR_INREG ||
+         Opcode == ISD::ZERO_EXTEND_VECTOR_INREG ||
+         Opcode == ISD::SIGN_EXTEND_VECTOR_INREG;
+}
 
 namespace GlobalISel {
 /// Return the operation corresponding to !(X op Y), where 'op' is a valid

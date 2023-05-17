@@ -8,7 +8,7 @@
 
 #include "LibcBenchmark.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace libc_benchmarks {

@@ -9,12 +9,12 @@
 define void @fence_singlethread() {
 ; LINUX-LABEL: fence_singlethread:
 ; LINUX-NOT: dmb
-; LINUX: // COMPILER BARRIER
+; LINUX: //MEMBARRIER
 ; LINUX-NOT: dmb
 
 ; IOS-LABEL: fence_singlethread:
 ; IOS-NOT: dmb
-; IOS: ; COMPILER BARRIER
+; IOS: ;MEMBARRIER
 ; IOS-NOT: dmb
 
   fence syncscope("singlethread") seq_cst

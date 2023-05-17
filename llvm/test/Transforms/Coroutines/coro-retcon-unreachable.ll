@@ -7,41 +7,41 @@ target datalayout = "E-p:64:64"
 %T4red215EmptyCollectionV = type opaque
 %TSi = type <{ i64 }>
 
-define hidden swiftcc { i8*, %swift.opaque* } @no_suspends(i8* %buffer, i64 %arg) #1 {
+define hidden swiftcc { ptr, ptr } @no_suspends(ptr %buffer, i64 %arg) #1 {
 ; CHECK-LABEL: @no_suspends(
 ; CHECK-NEXT:  AllocaSpillBB:
-; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.retcon.once(i32 32, i32 8, i8* [[BUFFER:%.*]], i8* bitcast (void (i8*, i1)* @prototype to i8*), i8* bitcast (i8* (i64)* @malloc to i8*), i8* bitcast (void (i8*)* @free to i8*))
+; CHECK-NEXT:    [[ID:%.*]] = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr [[BUFFER:%.*]], ptr @prototype, ptr @malloc, ptr @free)
 ; CHECK-NEXT:    call void @print(i64 [[ARG:%.*]])
 ; CHECK-NEXT:    call void @llvm.trap()
 ; CHECK-NEXT:    unreachable
 ;
-  %id = call token @llvm.coro.id.retcon.once(i32 32, i32 8, i8* %buffer, i8* bitcast (void (i8*, i1)* @prototype to i8*), i8* bitcast (i8* (i64)* @malloc to i8*), i8* bitcast (void (i8*)* @free to i8*))
-  %begin = call i8* @llvm.coro.begin(token %id, i8* null)
+  %id = call token @llvm.coro.id.retcon.once(i32 32, i32 8, ptr %buffer, ptr @prototype, ptr @malloc, ptr @free)
+  %begin = call ptr @llvm.coro.begin(token %id, ptr null)
   call void @print(i64 %arg)
   call void @llvm.trap()
   unreachable
 
 bb1:
   call void @print(i64 %arg)
-  call i1 @llvm.coro.end(i8* %begin, i1 false)
+  call i1 @llvm.coro.end(ptr %begin, i1 false)
   unreachable
 }
 
-declare swiftcc void @prototype(i8* noalias dereferenceable(32), i1)
+declare swiftcc void @prototype(ptr noalias dereferenceable(32), i1)
 declare void @print(i64)
 
-declare noalias i8* @malloc(i64) #5
-declare void @free(i8* nocapture) #5
+declare noalias ptr @malloc(i64) #5
+declare void @free(ptr nocapture) #5
 
-declare token @llvm.coro.id.retcon.once(i32, i32, i8*, i8*, i8*, i8*) #5
-declare i8* @llvm.coro.begin(token, i8* writeonly) #5
+declare token @llvm.coro.id.retcon.once(i32, i32, ptr, ptr, ptr, ptr) #5
+declare ptr @llvm.coro.begin(token, ptr writeonly) #5
 declare token @llvm.coro.alloca.alloc.i64(i64, i32) #5
-declare i8* @llvm.coro.alloca.get(token) #5
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #6
+declare ptr @llvm.coro.alloca.get(token) #5
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #6
 declare i1 @llvm.coro.suspend.retcon.i1(...) #5
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #6
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #6
 declare void @llvm.coro.alloca.free(token) #5
-declare i1 @llvm.coro.end(i8*, i1) #5
+declare i1 @llvm.coro.end(ptr, i1) #5
 
 declare void @llvm.trap()
 

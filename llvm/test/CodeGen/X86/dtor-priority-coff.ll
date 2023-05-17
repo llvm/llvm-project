@@ -28,36 +28,36 @@ $h = comdat any
 @str2 = private dso_local unnamed_addr constant [5 x i8] c"main\00", align 1
 @str3 = private dso_local unnamed_addr constant [8 x i8] c"default\00", align 1
 
-@llvm.global_dtors = appending global [4 x { i32, void ()*, i8* }] [
-  { i32, void ()*, i8* } { i32 12345, void ()* @g, i8* null },
-  { i32, void ()*, i8* } { i32 42, void ()* @f, i8* null },
-  { i32, void ()*, i8* } { i32 23456, void ()* @init_h, i8* @h },
-  { i32, void ()*, i8* } { i32 65535, void ()* @str3_dtor, i8* null }
+@llvm.global_dtors = appending global [4 x { i32, ptr, ptr }] [
+  { i32, ptr, ptr } { i32 12345, ptr @g, ptr null },
+  { i32, ptr, ptr } { i32 42, ptr @f, ptr null },
+  { i32, ptr, ptr } { i32 23456, ptr @init_h, ptr @h },
+  { i32, ptr, ptr } { i32 65535, ptr @str3_dtor, ptr null }
 ]
 
-declare dso_local i32 @puts(i8* nocapture readonly) local_unnamed_addr
+declare dso_local i32 @puts(ptr nocapture readonly) local_unnamed_addr
 
 define dso_local void @g() {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str0, i64 0, i64 0))
+  %call = tail call i32 @puts(ptr @str0)
   ret void
 }
 
 define dso_local void @f() {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @str1, i64 0, i64 0))
+  %call = tail call i32 @puts(ptr @str1)
   ret void
 }
 
 define dso_local void @str3_dtor() {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @str3, i64 0, i64 0))
+  %call = tail call i32 @puts(ptr @str3)
   ret void
 }
 
 define dso_local void @init_h() {
 entry:
-  store i8 42, i8* @h
+  store i8 42, ptr @h
   ret void
 }
 
@@ -65,6 +65,6 @@ entry:
 ; Function Attrs: nounwind uwtable
 define dso_local i32 @main() local_unnamed_addr {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @str2, i64 0, i64 0))
+  %call = tail call i32 @puts(ptr @str2)
   ret i32 0
 }

@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -mattr=+waitpkg | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i386-pc-linux -mattr=+waitpkg | FileCheck %s --check-prefix=X32
 
-define void @test_umonitor(i8* %address) {
+define void @test_umonitor(ptr %address) {
 ; X64-LABEL: test_umonitor:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    umonitor %rdi
@@ -14,7 +14,7 @@ define void @test_umonitor(i8* %address) {
 ; X32-NEXT:    umonitor %eax
 ; X32-NEXT:    retl
 entry:
-  call void @llvm.x86.umonitor(i8* %address)
+  call void @llvm.x86.umonitor(ptr %address)
   ret void
 }
 
@@ -62,6 +62,6 @@ entry:
   ret i8 %0
 }
 
-declare void @llvm.x86.umonitor(i8*)
+declare void @llvm.x86.umonitor(ptr)
 declare i8 @llvm.x86.umwait(i32, i32, i32)
 declare i8 @llvm.x86.tpause(i32, i32, i32)

@@ -152,9 +152,15 @@ public:
       T = AT->getValueType();
     }
 
-    assert(T->isIntegralOrEnumerationType() || Loc::isLocType(T));
-    return APSIntType(Ctx.getIntWidth(T),
-                      !T->isSignedIntegerOrEnumerationType());
+    if (T->isIntegralOrEnumerationType() || Loc::isLocType(T)) {
+      return APSIntType(Ctx.getIntWidth(T),
+                        !T->isSignedIntegerOrEnumerationType());
+    } else {
+      // implicitly handle case of T->isFixedPointType()
+      return APSIntType(Ctx.getIntWidth(T), T->isUnsignedFixedPointType());
+    }
+
+    llvm_unreachable("Unsupported type in getAPSIntType!");
   }
 
   /// Convert - Create a new persistent APSInt with the same value as 'From'

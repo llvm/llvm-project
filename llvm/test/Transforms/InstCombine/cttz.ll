@@ -8,8 +8,8 @@ declare void @use(i32)
 define i32 @cttz_zext_zero_undef(i16 %x) {
 ; CHECK-LABEL: @cttz_zext_zero_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0:![0-9]+]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TZ:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %z = zext i16 %x to i32
   %tz = call i32 @llvm.cttz.i32(i32 %z, i1 true)
@@ -42,9 +42,9 @@ define i32 @cttz_zext_zero_undef_extra_use(i16 %x) {
 
 define <2 x i64> @cttz_zext_zero_undef_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_zext_zero_undef_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %z = zext <2 x i32> %x to <2 x i64>
   %tz = tail call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %z, i1 true)
@@ -54,7 +54,7 @@ define <2 x i64> @cttz_zext_zero_undef_vec(<2 x i32> %x) {
 define <2 x i64> @cttz_zext_zero_def_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_zext_zero_def_vec(
 ; CHECK-NEXT:    [[Z:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TZ:%.*]] = tail call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[Z]], i1 false)
+; CHECK-NEXT:    [[TZ:%.*]] = tail call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[Z]], i1 false), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %z = zext <2 x i32> %x to <2 x i64>
@@ -65,8 +65,8 @@ define <2 x i64> @cttz_zext_zero_def_vec(<2 x i32> %x) {
 define i32 @cttz_sext_zero_undef(i16 %x) {
 ; CHECK-LABEL: @cttz_sext_zero_undef(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i16 [[TMP1]] to i32
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TZ:%.*]] = zext i16 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %s = sext i16 %x to i32
   %tz = call i32 @llvm.cttz.i32(i32 %s, i1 true)
@@ -76,8 +76,8 @@ define i32 @cttz_sext_zero_undef(i16 %x) {
 define i32 @cttz_sext_zero_def(i16 %x) {
 ; CHECK-LABEL: @cttz_sext_zero_def(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[X:%.*]] to i32
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP1]], i1 false), !range [[RNG1]]
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[TZ:%.*]] = call i32 @llvm.cttz.i32(i32 [[TMP1]], i1 false), !range [[RNG1]]
+; CHECK-NEXT:    ret i32 [[TZ]]
 ;
   %s = sext i16 %x to i32
   %tz = call i32 @llvm.cttz.i32(i32 %s, i1 false)
@@ -99,9 +99,9 @@ define i32 @cttz_sext_zero_undef_extra_use(i16 %x) {
 
 define <2 x i64> @cttz_sext_zero_undef_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_sext_zero_undef_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true)
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
-; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[X:%.*]], i1 true), !range [[RNG1]]
+; CHECK-NEXT:    [[TZ:%.*]] = zext <2 x i32> [[TMP1]] to <2 x i64>
+; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %s = sext <2 x i32> %x to <2 x i64>
   %tz = tail call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %s, i1 true)
@@ -111,8 +111,8 @@ define <2 x i64> @cttz_sext_zero_undef_vec(<2 x i32> %x) {
 define <2 x i64> @cttz_sext_zero_def_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @cttz_sext_zero_def_vec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = zext <2 x i32> [[X:%.*]] to <2 x i64>
-; CHECK-NEXT:    [[TMP2:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[TMP1]], i1 false)
-; CHECK-NEXT:    ret <2 x i64> [[TMP2]]
+; CHECK-NEXT:    [[TZ:%.*]] = call <2 x i64> @llvm.cttz.v2i64(<2 x i64> [[TMP1]], i1 false), !range [[RNG2]]
+; CHECK-NEXT:    ret <2 x i64> [[TZ]]
 ;
   %s = sext <2 x i32> %x to <2 x i64>
   %tz = tail call <2 x i64> @llvm.cttz.v2i64(<2 x i64> %s, i1 false)

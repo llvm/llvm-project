@@ -17,13 +17,13 @@
 
 using namespace llvm;
 
-Optional<RegOrConstant>
+std::optional<RegOrConstant>
 AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
                                          const MachineRegisterInfo &MRI) {
   if (auto Splat = getVectorSplat(MI, MRI))
     return Splat;
   if (MI.getOpcode() != AArch64::G_DUP)
-    return None;
+    return std::nullopt;
   Register Src = MI.getOperand(1).getReg();
   if (auto ValAndVReg =
           getAnyConstantVRegValWithLookThrough(MI.getOperand(1).getReg(), MRI))
@@ -31,12 +31,12 @@ AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
   return RegOrConstant(Src);
 }
 
-Optional<int64_t>
+std::optional<int64_t>
 AArch64GISelUtils::getAArch64VectorSplatScalar(const MachineInstr &MI,
                                                const MachineRegisterInfo &MRI) {
   auto Splat = getAArch64VectorSplat(MI, MRI);
   if (!Splat || Splat->isReg())
-    return None;
+    return std::nullopt;
   return Splat->getCst();
 }
 
@@ -161,7 +161,7 @@ void AArch64GISelUtils::changeVectorFCMPPredToAArch64CC(
     break;
   case CmpInst::FCMP_UNO:
     Invert = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case CmpInst::FCMP_ORD:
     CondCode = AArch64CC::MI;
     CondCode2 = AArch64CC::GE;

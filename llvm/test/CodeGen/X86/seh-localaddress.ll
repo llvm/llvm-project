@@ -21,10 +21,9 @@ entry:
 ; CHECK-NOT: movq  %rbp, %rdx
 
   %o = alloca %struct.S, align 32
-  call void (...) @llvm.localescape(%struct.S* %o)
-  %x = getelementptr inbounds %struct.S, %struct.S* %o, i32 0, i32 0
-  %0 = call i8* @llvm.localaddress()
-  call void @"?fin$0@0@foo@@"(i8 0, i8* %0)
+  call void (...) @llvm.localescape(ptr %o)
+  %0 = call ptr @llvm.localaddress()
+  call void @"?fin$0@0@foo@@"(i8 0, ptr %0)
   ret void
 }
 
@@ -41,37 +40,37 @@ entry:
 ;   }
 ; }
 
-define dso_local void @"?bar@@YAXXZ"() personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define dso_local void @"?bar@@YAXXZ"() personality ptr @__C_specific_handler {
 entry:
 ; CHECK-LABEL: bar
 ; CHECK: movq  %rbp, %rdx
 ; CHECK-NOT: movq  %rsp, %rdx
   %x = alloca i32, align 4
-  %fn = alloca void (i32)*, align 8
-  call void (...) @llvm.localescape(i32* %x)
-  store i32 1, i32* %x, align 4
-  %0 = load void (i32)*, void (i32)** %fn, align 8
-  %1 = load i32, i32* %x, align 4
+  %fn = alloca ptr, align 8
+  call void (...) @llvm.localescape(ptr %x)
+  store i32 1, ptr %x, align 4
+  %0 = load ptr, ptr %fn, align 8
+  %1 = load i32, ptr %x, align 4
   invoke void %0(i32 %1)
   to label %invoke.cont unwind label %ehcleanup
   invoke.cont:                                      ; preds = %entry
-  %2 = call i8* @llvm.localaddress()
-  call void @"?fin$0@0@bar@@"(i8 0, i8* %2)
+  %2 = call ptr @llvm.localaddress()
+  call void @"?fin$0@0@bar@@"(i8 0, ptr %2)
   ret void
   ehcleanup:                                        ; preds = %entry
   %3 = cleanuppad within none []
-  %4 = call i8* @llvm.localaddress()
-  call void @"?fin$0@0@bar@@"(i8 1, i8* %4) [ "funclet"(token %3) ]
+  %4 = call ptr @llvm.localaddress()
+  call void @"?fin$0@0@bar@@"(i8 1, ptr %4) [ "funclet"(token %3) ]
   cleanupret from %3 unwind to caller
 }
 
-declare void @"?fin$0@0@foo@@"(i8 %abnormal_termination, i8* %frame_pointer)
+declare void @"?fin$0@0@foo@@"(i8 %abnormal_termination, ptr %frame_pointer)
 
-declare void @"?fin$0@0@bar@@"(i8 %abnormal_termination, i8* %frame_pointer)
+declare void @"?fin$0@0@bar@@"(i8 %abnormal_termination, ptr %frame_pointer)
 
-declare i8* @llvm.localrecover(i8*, i8*, i32)
+declare ptr @llvm.localrecover(ptr, ptr, i32)
 
-declare i8* @llvm.localaddress()
+declare ptr @llvm.localaddress()
 
 declare void @llvm.localescape(...)
 

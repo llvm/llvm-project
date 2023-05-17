@@ -36,9 +36,17 @@ esb
 casa w5, w7, [x20]
 // CHECK: casa w5, w7, [x20]
 
+.arch_extension lse128
+swpp x0, x2, [x3]
+// CHECK: swpp x0, x2, [x3]
+
 .arch_extension predres
 cfp rctx, x0
 // CHECK: cfp rctx, x0
+
+.arch_extension predres2
+cosp rctx, x0
+// CHECK: cosp rctx, x0
 
 .arch_extension ccdp
 dc cvadp, x7
@@ -72,6 +80,10 @@ dc cvap, x7
 ldapr x0, [x1]
 // CHECK: ldapr x0, [x1]
 
+.arch_extension rcpc3
+stilp   w24, w0, [x16, #-8]!
+// CHECK: stilp   w24, w0, [x16, #-8]!
+
 .arch_extension ls64
 ld64b x0, [x13]
 // CHECK: ld64b x0, [x13]
@@ -92,3 +104,31 @@ lbl:
 .arch_extension mops
 cpyfp [x0]!, [x1]!, x2!
 // CHECK: cpyfp [x0]!, [x1]!, x2!
+
+.arch_extension the
+rcwswp x0, x1, [x2]
+// CHECK: rcwswp x0, x1, [x2]
+
+// This needs to come after `.arch_extension the` as it uses an instruction that
+// requires both the and d128
+.arch_extension d128
+sysp #0, c2, c0, #0, x0, x1
+rcwcasp   x0, x1, x6, x7, [x4]
+// CHECK: sysp #0, c2, c0, #0, x0, x1
+// CHECK: rcwcasp   x0, x1, x6, x7, [x4]
+
+.arch_extension rasv2
+mrs x0, ERXGSR_EL1
+// CHECK: mrs x0, ERXGSR_EL1
+
+.arch_extension ite
+trcit x0
+// CHECK: trcit x0
+
+.arch_extension cssc
+umax x0, x1, x2
+// CHECK: umax x0, x1, x2
+
+.arch_extension gcs
+gcspushm x0
+// CHECK: gcspushm x0

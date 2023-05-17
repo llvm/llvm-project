@@ -333,103 +333,107 @@ define i32 @select_x_or_y__noundef(i1 %c, i32 noundef %x, i32 noundef %y) {
 define i32 @select_x_or_constantexpr(i1 %c, i32 %x) {
 ; CHECK-LABEL: 'select_x_or_constantexpr'
 ; CHECK-NEXT:  Classifying expressions for: @select_x_or_constantexpr
-; CHECK-NEXT:    %r = select i1 %c, i32 %x, i32 ptrtoint (i8* @constant to i32)
+; CHECK-NEXT:    %r = select i1 %c, i32 %x, i32 ptrtoint (ptr @constant to i32)
 ; CHECK-NEXT:    --> %r U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_x_or_constantexpr
 ;
-  %r = select i1 %c, i32 %x, i32 ptrtoint (i8* @constant to i32)
+  %r = select i1 %c, i32 %x, i32 ptrtoint (ptr @constant to i32)
   ret i32 %r
 }
 
 define i32 @select_constantexpr_or_x(i1 %c, i32 %x) {
 ; CHECK-LABEL: 'select_constantexpr_or_x'
 ; CHECK-NEXT:  Classifying expressions for: @select_constantexpr_or_x
-; CHECK-NEXT:    %r = select i1 %c, i32 ptrtoint (i8* @constant to i32), i32 %x
+; CHECK-NEXT:    %r = select i1 %c, i32 ptrtoint (ptr @constant to i32), i32 %x
 ; CHECK-NEXT:    --> %r U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_constantexpr_or_x
 ;
-  %r = select i1 %c, i32 ptrtoint (i8* @constant to i32), i32 %x
+  %r = select i1 %c, i32 ptrtoint (ptr @constant to i32), i32 %x
   ret i32 %r
 }
 
-define i8* @select_x_or_nullptr(i1 %c, i8* %x) {
+define ptr @select_x_or_nullptr(i1 %c, ptr %x) {
 ; CHECK-LABEL: 'select_x_or_nullptr'
 ; CHECK-NEXT:  Classifying expressions for: @select_x_or_nullptr
-; CHECK-NEXT:    %r = select i1 %c, i8* %x, i8* null
+; CHECK-NEXT:    %r = select i1 %c, ptr %x, ptr null
 ; CHECK-NEXT:    --> %r U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_x_or_nullptr
 ;
-  %r = select i1 %c, i8* %x, i8* null
-  ret i8* %r
+  %r = select i1 %c, ptr %x, ptr null
+  ret ptr %r
 }
 
-define i8* @select_null_or_x(i1 %c, i8* %x) {
+define ptr @select_null_or_x(i1 %c, ptr %x) {
 ; CHECK-LABEL: 'select_null_or_x'
 ; CHECK-NEXT:  Classifying expressions for: @select_null_or_x
-; CHECK-NEXT:    %r = select i1 %c, i8* null, i8* %x
+; CHECK-NEXT:    %r = select i1 %c, ptr null, ptr %x
 ; CHECK-NEXT:    --> %r U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_null_or_x
 ;
-  %r = select i1 %c, i8* null, i8* %x
-  ret i8* %r
+  %r = select i1 %c, ptr null, ptr %x
+  ret ptr %r
 }
 
-define i8* @select_x_or_constantptr(i1 %c, i8* %x) {
+define ptr @select_x_or_constantptr(i1 %c, ptr %x) {
 ; CHECK-LABEL: 'select_x_or_constantptr'
 ; CHECK-NEXT:  Classifying expressions for: @select_x_or_constantptr
-; CHECK-NEXT:    %r = select i1 %c, i8* %x, i8* @constant
+; CHECK-NEXT:    %r = select i1 %c, ptr %x, ptr @constant
 ; CHECK-NEXT:    --> %r U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_x_or_constantptr
 ;
-  %r = select i1 %c, i8* %x, i8* @constant
-  ret i8* %r
+  %r = select i1 %c, ptr %x, ptr @constant
+  ret ptr %r
 }
 
-define i8* @select_constantptr_or_x(i1 %c, i8* %x) {
+define ptr @select_constantptr_or_x(i1 %c, ptr %x) {
 ; CHECK-LABEL: 'select_constantptr_or_x'
 ; CHECK-NEXT:  Classifying expressions for: @select_constantptr_or_x
-; CHECK-NEXT:    %r = select i1 %c, i8* @constant, i8* %x
+; CHECK-NEXT:    %r = select i1 %c, ptr @constant, ptr %x
 ; CHECK-NEXT:    --> %r U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @select_constantptr_or_x
 ;
-  %r = select i1 %c, i8* @constant, i8* %x
-  ret i8* %r
+  %r = select i1 %c, ptr @constant, ptr %x
+  ret ptr %r
 }
 
-define i8* @select_between_constantptrs(i1 %c, i8* %x) {
+define ptr @select_between_constantptrs(i1 %c, ptr %x) {
 ; CHECK-LABEL: 'select_between_constantptrs'
 ; CHECK-NEXT:  Classifying expressions for: @select_between_constantptrs
-; CHECK-NEXT:    %r = select i1 %c, i8* @constant, i8* @another_constant
+; CHECK-NEXT:    %r = select i1 %c, ptr @constant, ptr @another_constant
 ; CHECK-NEXT:    --> %r U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @select_between_constantptrs
 ;
-  %r = select i1 %c, i8* @constant, i8* @another_constant
-  ret i8* %r
+  %r = select i1 %c, ptr @constant, ptr @another_constant
+  ret ptr %r
 }
 
-define i8* @tautological_select() {
+define ptr @tautological_select() {
 ; CHECK-LABEL: 'tautological_select'
 ; CHECK-NEXT:  Classifying expressions for: @tautological_select
-; CHECK-NEXT:    %r = getelementptr i8, i8* @constant, i32 0
+; CHECK-NEXT:    %s = select i1 true, ptr @constant, ptr @another_constant
+; CHECK-NEXT:    --> @constant U: [0,-3) S: [-9223372036854775808,9223372036854775805)
+; CHECK-NEXT:    %r = getelementptr i8, ptr %s
 ; CHECK-NEXT:    --> @constant U: [0,-3) S: [-9223372036854775808,9223372036854775805)
 ; CHECK-NEXT:  Determining loop execution counts for: @tautological_select
 ;
-  %r = getelementptr i8, i8* select (i1 true, i8* @constant, i8* @another_constant), i32 0
-  ret i8* %r
+  %s = select i1 true, ptr @constant, ptr @another_constant
+  %r = getelementptr i8, ptr %s
+  ret ptr %r
 }
 
-define i8* @tautological_select_like_phi(i32 %tc) {
+define ptr @tautological_select_like_phi(i32 %tc) {
 ; CHECK-LABEL: 'tautological_select_like_phi'
 ; CHECK-NEXT:  Classifying expressions for: @tautological_select_like_phi
 ; CHECK-NEXT:    %iv = phi i32 [ 0, %entry ], [ %iv.next, %latch ]
-; CHECK-NEXT:    --> {0,+,1}<%loop> U: [0,101) S: [0,101) Exits: 100 LoopDispositions: { %loop: Computable }
-; CHECK-NEXT:    %r = phi i8* [ @constant, %truebb ], [ @another_constant, %falsebb ]
+; CHECK-NEXT:    --> {0,+,1}<nuw><nsw><%loop> U: [0,101) S: [0,101) Exits: 100 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    %r = phi ptr [ @constant, %truebb ], [ @another_constant, %falsebb ]
 ; CHECK-NEXT:    --> %r U: [0,-3) S: [-9223372036854775808,9223372036854775805) Exits: <<Unknown>> LoopDispositions: { %loop: Variant }
 ; CHECK-NEXT:    %iv.next = add i32 %iv, 1
-; CHECK-NEXT:    --> {1,+,1}<%loop> U: [1,102) S: [1,102) Exits: 101 LoopDispositions: { %loop: Computable }
+; CHECK-NEXT:    --> {1,+,1}<nuw><nsw><%loop> U: [1,102) S: [1,102) Exits: 101 LoopDispositions: { %loop: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @tautological_select_like_phi
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is 100
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is 100
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is 100
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is 100
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is 100
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 101
@@ -448,13 +452,13 @@ falsebb:
   br label %latch
 
 latch:
-  %r = phi i8* [ @constant, %truebb], [ @another_constant, %falsebb]
+  %r = phi ptr [ @constant, %truebb], [ @another_constant, %falsebb]
   %iv.next = add i32 %iv, 1
   %done = icmp eq i32 %iv, 100
   br i1 %done, label %end, label %loop
 
 end:
-  ret i8* %r
+  ret ptr %r
 }
 
 define i32 @umin_seq_x_y(i32 %x, i32 %y) {
@@ -706,9 +710,9 @@ define i32 @umin_seq_x_y_zext_of_umin(i8 %x, i8 %y) {
 ; CHECK-NEXT:    %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)
 ; CHECK-NEXT:    --> (%x umin %y) U: full-set S: full-set
 ; CHECK-NEXT:    %umin = zext i8 %umin.narrow to i32
-; CHECK-NEXT:    --> (zext i8 (%x umin %y) to i32) U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> ((zext i8 %x to i32) umin (zext i8 %y to i32)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:    %r = select i1 %x.is.zero, i32 0, i32 %umin
-; CHECK-NEXT:    --> ((zext i8 %x to i32) umin_seq (zext i8 (%x umin %y) to i32)) U: [0,256) S: [0,256)
+; CHECK-NEXT:    --> ((zext i8 %x to i32) umin_seq (zext i8 %y to i32)) U: [0,256) S: [0,256)
 ; CHECK-NEXT:  Determining loop execution counts for: @umin_seq_x_y_zext_of_umin
 ;
   %umin.narrow = call i8 @llvm.umin.i8(i8 %y, i8 %x)

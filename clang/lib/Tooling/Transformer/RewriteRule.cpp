@@ -13,7 +13,6 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Transformer/SourceCode.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
@@ -39,8 +38,8 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     Expected<CharSourceRange> Range = E.TargetRange(Result);
     if (!Range)
       return Range.takeError();
-    llvm::Optional<CharSourceRange> EditRange =
-        tooling::getRangeForEdit(*Range, *Result.Context);
+    std::optional<CharSourceRange> EditRange =
+        tooling::getFileRangeForEdit(*Range, *Result.Context);
     // FIXME: let user specify whether to treat this case as an error or ignore
     // it as is currently done. This behavior is problematic in that it hides
     // failures from bad ranges. Also, the behavior here differs from
@@ -50,17 +49,27 @@ translateEdits(const MatchResult &Result, ArrayRef<ASTEdit> ASTEdits) {
     // produces a bad range, whereas the latter will simply ignore A.
     if (!EditRange)
       return SmallVector<Edit, 0>();
-    auto Replacement = E.Replacement->eval(Result);
-    if (!Replacement)
-      return Replacement.takeError();
-    auto Metadata = E.Metadata(Result);
-    if (!Metadata)
-      return Metadata.takeError();
     transformer::Edit T;
     T.Kind = E.Kind;
     T.Range = *EditRange;
-    T.Replacement = std::move(*Replacement);
-    T.Metadata = std::move(*Metadata);
+    if (E.Replacement) {
+      auto Replacement = E.Replacement->eval(Result);
+      if (!Replacement)
+        return Replacement.takeError();
+      T.Replacement = std::move(*Replacement);
+    }
+    if (E.Note) {
+      auto Note = E.Note->eval(Result);
+      if (!Note)
+        return Note.takeError();
+      T.Note = std::move(*Note);
+    }
+    if (E.Metadata) {
+      auto Metadata = E.Metadata(Result);
+      if (!Metadata)
+        return Metadata.takeError();
+      T.Metadata = std::move(*Metadata);
+    }
     Edits.push_back(std::move(T));
   }
   return Edits;
@@ -118,6 +127,13 @@ ASTEdit transformer::changeTo(RangeSelector Target, TextGenerator Replacement) {
   ASTEdit E;
   E.TargetRange = std::move(Target);
   E.Replacement = std::move(Replacement);
+  return E;
+}
+
+ASTEdit transformer::note(RangeSelector Anchor, TextGenerator Note) {
+  ASTEdit E;
+  E.TargetRange = transformer::before(Anchor);
+  E.Note = std::move(Note);
   return E;
 }
 
@@ -433,7 +449,7 @@ SourceLocation transformer::detail::getRuleMatchLoc(const MatchResult &Result) {
   auto &NodesMap = Result.Nodes.getMap();
   auto Root = NodesMap.find(RootID);
   assert(Root != NodesMap.end() && "Transformation failed: missing root node.");
-  llvm::Optional<CharSourceRange> RootRange = tooling::getRangeForEdit(
+  std::optional<CharSourceRange> RootRange = tooling::getFileRangeForEdit(
       CharSourceRange::getTokenRange(Root->second.getSourceRange()),
       *Result.Context);
   if (RootRange)

@@ -20,7 +20,7 @@
 # CHECK-INST: .option norelax
 
 # CHECK-INST: call foo
-# CHECK-RELOC: R_RISCV_CALL foo 0x0
+# CHECK-RELOC: R_RISCV_CALL_PLT foo 0x0
 # CHECK-RELOC-NOT: R_RISCV_RELAX - 0x0
 call foo
 
@@ -37,7 +37,7 @@ beq s1, s1, .L1
 # CHECK-INST: .option relax
 
 # CHECK-INST: call bar
-# CHECK-RELOC-NEXT: R_RISCV_CALL bar 0x0
+# CHECK-RELOC-NEXT: R_RISCV_CALL_PLT bar 0x0
 # CHECK-RELOC-NEXT: R_RISCV_RELAX - 0x0
 call bar
 
@@ -53,7 +53,7 @@ beq s1, s1, .L1
 # CHECK-INST: .option norelax
 
 # CHECK-INST: call baz
-# CHECK-RELOC-NEXT: R_RISCV_CALL baz 0x0
+# CHECK-RELOC-NEXT: R_RISCV_CALL_PLT baz 0x0
 # CHECK-RELOC-NOT: R_RISCV_RELAX - 0x0
 call baz
 

@@ -10,9 +10,12 @@
 #ifndef _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
 #define _LIBCPP___FUNCTIONAL_RANGES_OPERATIONS_H
 
+#include <__concepts/equality_comparable.h>
+#include <__concepts/totally_ordered.h>
 #include <__config>
+#include <__type_traits/integral_constant.h>
+#include <__type_traits/predicate_traits.h>
 #include <__utility/forward.h>
-#include <concepts>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,14 +23,14 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
 
 struct equal_to {
   template <class _Tp, class _Up>
   requires equality_comparable_with<_Tp, _Up>
-  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
       noexcept(noexcept(bool(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u)))) {
     return _VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u);
   }
@@ -38,7 +41,7 @@ struct equal_to {
 struct not_equal_to {
   template <class _Tp, class _Up>
   requires equality_comparable_with<_Tp, _Up>
-  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
       noexcept(noexcept(bool(!(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u))))) {
     return !(_VSTD::forward<_Tp>(__t) == _VSTD::forward<_Up>(__u));
   }
@@ -49,7 +52,7 @@ struct not_equal_to {
 struct less {
   template <class _Tp, class _Up>
   requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
       noexcept(noexcept(bool(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u)))) {
     return _VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u);
   }
@@ -60,7 +63,7 @@ struct less {
 struct less_equal {
   template <class _Tp, class _Up>
   requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
       noexcept(noexcept(bool(!(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t))))) {
     return !(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t));
   }
@@ -71,7 +74,7 @@ struct less_equal {
 struct greater {
   template <class _Tp, class _Up>
   requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
       noexcept(noexcept(bool(_VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t)))) {
     return _VSTD::forward<_Up>(__u) < _VSTD::forward<_Tp>(__t);
   }
@@ -82,7 +85,7 @@ struct greater {
 struct greater_equal {
   template <class _Tp, class _Up>
   requires totally_ordered_with<_Tp, _Up>
-  [[nodiscard]] constexpr bool operator()(_Tp &&__t, _Up &&__u) const
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool operator()(_Tp &&__t, _Up &&__u) const
       noexcept(noexcept(bool(!(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u))))) {
     return !(_VSTD::forward<_Tp>(__t) < _VSTD::forward<_Up>(__u));
   }
@@ -92,7 +95,10 @@ struct greater_equal {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+template <class _Lhs, class _Rhs>
+struct __is_trivial_equality_predicate<ranges::equal_to, _Lhs, _Rhs> : true_type {};
+
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

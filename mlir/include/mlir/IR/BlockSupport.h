@@ -52,7 +52,6 @@ class PredecessorIterator final
   static Block *unwrap(BlockOperand &value);
 
 public:
-
   /// Initializes the operand type iterator to the specified operand iterator.
   PredecessorIterator(ValueUseIterator<BlockOperand> it)
       : llvm::mapped_iterator<ValueUseIterator<BlockOperand>,
@@ -107,11 +106,10 @@ class BlockRange final
           Block *, Block *, Block *> {
 public:
   using RangeBaseT::RangeBaseT;
-  BlockRange(ArrayRef<Block *> blocks = llvm::None);
+  BlockRange(ArrayRef<Block *> blocks = std::nullopt);
   BlockRange(SuccessorRange successors);
-  template <typename Arg,
-            typename = typename std::enable_if_t<
-                std::is_constructible<ArrayRef<Block *>, Arg>::value>>
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<Block *>, Arg>::value>>
   BlockRange(Arg &&arg)
       : BlockRange(ArrayRef<Block *>(std::forward<Arg>(arg))) {}
   BlockRange(std::initializer_list<Block *> blocks)
@@ -162,7 +160,6 @@ class op_iterator
   static OpT unwrap(Operation &op) { return cast<OpT>(op); }
 
 public:
-
   /// Initializes the iterator to the specified filter iterator.
   op_iterator(op_filter_iterator<OpT, IteratorT> it)
       : llvm::mapped_iterator<op_filter_iterator<OpT, IteratorT>,
@@ -225,7 +222,8 @@ protected:
 };
 } // namespace ilist_detail
 
-template <> struct ilist_traits<::mlir::Operation> {
+template <>
+struct ilist_traits<::mlir::Operation> {
   using Operation = ::mlir::Operation;
   using op_iterator = simple_ilist<Operation>::iterator;
 

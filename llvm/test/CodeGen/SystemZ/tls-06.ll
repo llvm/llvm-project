@@ -10,8 +10,8 @@
 @y = thread_local global i32 0
 
 define i32 @foo() {
-  %valx = load i32, i32* @x
-  %valy = load i32, i32* @y
+  %valx = load i32, ptr @x
+  %valy = load i32, ptr @y
   %add = add nsw i32 %valx, %valy
   ret i32 %add
 }

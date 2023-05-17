@@ -9,15 +9,13 @@
 #include "InconsistentDeclarationParameterNameCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "llvm/ADT/STLExtras.h"
 
-#include <algorithm>
 #include <functional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 
@@ -93,8 +91,8 @@ bool nameMatch(StringRef L, StringRef R, bool Strict) {
     return L.empty() || R.empty() || L == R;
   // We allow two names if one is a prefix/suffix of the other, ignoring case.
   // Important special case: this is true if either parameter has no name!
-  return L.startswith_insensitive(R) || R.startswith_insensitive(L) ||
-         L.endswith_insensitive(R) || R.endswith_insensitive(L);
+  return L.starts_with_insensitive(R) || R.starts_with_insensitive(L) ||
+         L.ends_with_insensitive(R) || R.ends_with_insensitive(L);
 }
 
 DifferingParamsContainer
@@ -158,12 +156,12 @@ findInconsistentDeclarations(const FunctionDecl *OriginalDeclaration,
 
   // Sort in order of appearance in translation unit to generate clear
   // diagnostics.
-  std::sort(InconsistentDeclarations.begin(), InconsistentDeclarations.end(),
-            [&SM](const InconsistentDeclarationInfo &Info1,
-                  const InconsistentDeclarationInfo &Info2) {
-              return SM.isBeforeInTranslationUnit(Info1.DeclarationLocation,
-                                                  Info2.DeclarationLocation);
-            });
+  llvm::sort(InconsistentDeclarations,
+             [&SM](const InconsistentDeclarationInfo &Info1,
+                   const InconsistentDeclarationInfo &Info2) {
+               return SM.isBeforeInTranslationUnit(Info1.DeclarationLocation,
+                                                   Info2.DeclarationLocation);
+             });
   return InconsistentDeclarations;
 }
 
@@ -350,6 +348,4 @@ void InconsistentDeclarationParameterNameCheck::markRedeclarationsAsVisited(
   }
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

@@ -2,6 +2,7 @@ import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
 import("//llvm/lib/Target/targets_with_disassemblers.gni")
+import("//llvm/lib/Target/targets_with_exegesis.gni")
 import("//llvm/lib/Target/targets_with_mcas.gni")
 import("//llvm/triples.gni")
 import("//llvm/utils/gn/build/buildflags.gni")
@@ -47,6 +48,9 @@ declare_args() {
 
   # Iterate unordered llvm containers in reverse.
   llvm_enable_reverse_iteration = false
+
+  # Force enable statistics.
+  llvm_force_enable_stats = false
 
   # glibc is at least 2.33 which has mallinfo2.
   # TODO: remove this once nobody using the gn build is building against an old glibc.
@@ -95,7 +99,6 @@ write_cmake_config("config") {
     "HAVE_LIBPSAPI=",
     "HAVE_MALLCTL=",
     "HAVE_SIGNAL_H=1",
-    "HAVE_STD_IS_TRIVIALLY_COPYABLE=1",
     "HAVE_STRERROR=1",
     "HAVE_SYS_STAT_H=1",
     "HAVE_SYS_TYPES_H=1",
@@ -139,7 +142,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_FUTIMENS=1",
       "HAVE_LINK_H=1",
-      "HAVE_LSEEK64=1",
       "HAVE_MALLINFO=1",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=1",
     ]
@@ -147,7 +149,6 @@ write_cmake_config("config") {
     values += [
       "HAVE_FUTIMENS=",
       "HAVE_LINK_H=",
-      "HAVE_LSEEK64=",
       "HAVE_MALLINFO=",
       "HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC=",
     ]
@@ -321,10 +322,11 @@ write_cmake_config("llvm-config") {
     "LLVM_BUILD_SHARED_LIBS=",
     "LLVM_DEFAULT_TARGET_TRIPLE=$llvm_target_triple",
     "LLVM_ENABLE_DUMP=",
-    "LLVM_FORCE_ENABLE_STATS=",
+    "LLVM_ENABLE_HTTPLIB=",
+    "LLVM_ENABLE_ZSTD=",
     "LLVM_FORCE_USE_OLD_TOOLCHAIN=",
     "LLVM_HAS_ATOMICS=1",
-    "LLVM_HAVE_TF_API=",
+    "LLVM_HAVE_TFLITE=",
     "LLVM_HOST_TRIPLE=$llvm_current_triple",
     "LLVM_NATIVE_ARCH=$native_target",
     "LLVM_UNREACHABLE_OPTIMIZE=1",
@@ -363,11 +365,13 @@ write_cmake_config("llvm-config") {
   if (current_os == "win") {
     values += [
       "HAVE_SYSEXITS_H=",
+      "LLVM_ENABLE_PLUGINS=",
       "LLVM_ON_UNIX=",
     ]
   } else {
     values += [
       "HAVE_SYSEXITS_H=1",
+      "LLVM_ENABLE_PLUGINS=1",
       "LLVM_ON_UNIX=1",
     ]
   }
@@ -400,6 +404,12 @@ write_cmake_config("llvm-config") {
     values += [ "LLVM_ENABLE_CURL=1" ]
   } else {
     values += [ "LLVM_ENABLE_CURL=" ]
+  }
+
+  if (llvm_force_enable_stats) {
+    values += [ "LLVM_FORCE_ENABLE_STATS=1" ]
+  } else {
+    values += [ "LLVM_FORCE_ENABLE_STATS=" ]
   }
 }
 
@@ -464,6 +474,12 @@ write_target_def_file("TargetMCAs.def") {
   all_targets = targets_with_mcas
 }
 
+write_target_def_file("TargetExegesis.def") {
+  key = "LLVM_ENUM_EXEGESIS"
+  value = "LLVM_EXEGESIS"
+  all_targets = targets_with_exegesis
+}
+
 group("write_target_def_files") {
   visibility = [
     "//llvm/lib/Support",
@@ -473,6 +489,7 @@ group("write_target_def_files") {
     ":AsmParsers.def",
     ":AsmPrinters.def",
     ":Disassemblers.def",
+    ":TargetExegesis.def",
     ":TargetMCAs.def",
     ":Targets.def",
   ]

@@ -1,10 +1,10 @@
 ; RUN: llc < %s -o /dev/null
 ; PR 5942
-define i8* @foo() nounwind {
+define ptr @foo() nounwind {
 entry:
-  %0 = load i32, i32* undef, align 4, !dbg !0          ; <i32> [#uses=1]
-  %1 = inttoptr i32 %0 to i8*, !dbg !0            ; <i8*> [#uses=1]
-  ret i8* %1, !dbg !10
+  %0 = load i32, ptr undef, align 4, !dbg !0          ; <i32> [#uses=1]
+  %1 = inttoptr i32 %0 to ptr, !dbg !0            ; <ptr> [#uses=1]
+  ret ptr %1, !dbg !10
 
 }
 

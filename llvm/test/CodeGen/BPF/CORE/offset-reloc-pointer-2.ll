@@ -16,12 +16,12 @@ target triple = "bpf"
 %struct.v3 = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(%struct.v3* %arg) local_unnamed_addr #0 !dbg !15 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !15 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.v3* %arg, metadata !19, metadata !DIExpression()), !dbg !20
-  %0 = tail call %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %arg, i32 0, i32 1), !dbg !21, !llvm.preserve.access.index !4
-  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3* elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !21, !llvm.preserve.access.index !6
-  %call = tail call i32 @get_value(i32* %1) #4, !dbg !22
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !19, metadata !DIExpression()), !dbg !20
+  %0 = tail call ptr @llvm.preserve.array.access.index.p0.v3s.p0.v3s(ptr elementtype(%struct.v3) %arg, i32 0, i32 1), !dbg !21, !llvm.preserve.access.index !4
+  %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr elementtype(%struct.v3) %0, i32 1, i32 1), !dbg !21, !llvm.preserve.access.index !6
+  %call = tail call i32 @get_value(ptr %1) #4, !dbg !22
   ret i32 %call, !dbg !23
 }
 
@@ -42,13 +42,13 @@ entry:
 ; CHECK-NEXT:         .long   32
 ; CHECK-NEXT:         .long   0
 
-declare dso_local i32 @get_value(i32*) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone
-declare %struct.v3* @llvm.preserve.array.access.index.p0s_struct.v3s.p0s_struct.v3s(%struct.v3*, i32, i32) #2
+declare ptr @llvm.preserve.array.access.index.p0.v3s.p0.v3s(ptr, i32, i32) #2
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.v3s(%struct.v3*, i32, i32) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.v3s(ptr, i32, i32) #2
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

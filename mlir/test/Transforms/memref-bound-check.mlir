@@ -201,7 +201,7 @@ func.func @out_of_bounds() {
 // This test case accesses within bounds. Without removal of a certain type of
 // trivially redundant constraints (those differing only in their constant
 // term), the number of constraints here explodes, and this would return out of
-// bounds errors conservatively due to FlatAffineConstraints::kExplosionFactor.
+// bounds errors conservatively due to IntegerRelation::kExplosionFactor.
 #map3 = affine_map<(d0, d1) -> ((d0 * 72 + d1) floordiv 2304 + ((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) floordiv 3)>
 #map4 = affine_map<(d0, d1) -> ((d0 * 72 + d1) mod 2304 - (((d0 * 72 + d1) mod 2304) floordiv 1152) * 1151 - ((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) * 9 - (((((d0 * 72 + d1) mod 2304) mod 1152) mod 9) floordiv 3) * 3)>
 #map5 = affine_map<(d0, d1) -> (((((d0 * 72 + d1) mod 2304) mod 1152) floordiv 9) floordiv 8)>
@@ -290,6 +290,17 @@ func.func @zero_d_memref() {
   %Z = memref.alloc() : memref<f32>
   affine.for %i = 0 to 100 {
     affine.load %Z[] : memref<f32>
+  }
+  return
+}
+
+// CHECK-LABEL: func @affine_parallel
+func.func @affine_parallel(%M: memref<2048x2048xf64>) {
+  affine.parallel (%i) = (0) to (3000) {
+    affine.for %j = 0 to 2048 {
+      affine.load %M[%i, %j] : memref<2048x2048xf64>
+      // expected-error@above {{'affine.load' op memref out of upper bound access along dimension #1}}
+    }
   }
   return
 }

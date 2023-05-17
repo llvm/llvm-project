@@ -9,30 +9,27 @@
 ; }
 ; Resulting assembly should share flags from single CMP instruction for both
 ; conditions!
-define void @decref(i32* %p) {
+define void @decref(ptr %p) {
 ; CHECK-LABEL: decref:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    pushq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movl (%rdi), %eax
 ; CHECK-NEXT:    cmpl $1, %eax
 ; CHECK-NEXT:    jne .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb_free
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    callq free_object@PLT
-; CHECK-NEXT:  .LBB0_4: # %end
-; CHECK-NEXT:    popq %rax
+; CHECK-NEXT:    addq $8, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:  .LBB0_4: # %end
 ; CHECK-NEXT:    retq
 ; CHECK-NEXT:  .LBB0_2: # %bb2
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    jle .LBB0_4
 ; CHECK-NEXT:  # %bb.3: # %bb_dec
 ; CHECK-NEXT:    decl %eax
 ; CHECK-NEXT:    movl %eax, (%rdi)
-; CHECK-NEXT:    popq %rax
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
-  %count = load i32, i32* %p, align 4
+  %count = load i32, ptr %p, align 4
   %cmp0 = icmp eq i32 %count, 1
   br i1 %cmp0, label %bb_free, label %bb2
 
@@ -42,7 +39,7 @@ bb2:
 
 bb_dec:
   %dec = add nsw i32 %count, -1
-  store i32 %dec, i32* %p, align 4
+  store i32 %dec, ptr %p, align 4
   br label %end
 
 bb_free:

@@ -43,8 +43,8 @@ target triple = "bpfel"
 ; Function Attrs: nounwind
 define dso_local i32 @foo() #0 !dbg !22 {
 entry:
-  %0 = call i512* @llvm.preserve.struct.access.index.p0i512.p0s_struct.t1s(%struct.t1* elementtype(%struct.t1) @g, i32 0, i32 0), !dbg !26, !llvm.preserve.access.index !5
-  %bf.load = load i512, i512* %0, align 4, !dbg !26
+  %0 = call ptr @llvm.preserve.struct.access.index.p0.p0.t1s(ptr elementtype(%struct.t1) @g, i32 0, i32 0), !dbg !26, !llvm.preserve.access.index !5
+  %bf.load = load i512, ptr %0, align 4, !dbg !26
   %bf.shl = shl i512 %bf.load, 511, !dbg !26
   %bf.ashr = ashr i512 %bf.shl, 511, !dbg !26
   %bf.cast = trunc i512 %bf.ashr to i32, !dbg !26
@@ -66,7 +66,7 @@ entry:
 ; CHECK:        .long   0
 
 ; Function Attrs: nofree nosync nounwind readnone willreturn
-declare i512* @llvm.preserve.struct.access.index.p0i512.p0s_struct.t1s(%struct.t1*, i32 immarg, i32 immarg) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.t1s(ptr, i32 immarg, i32 immarg) #1
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { nofree nosync nounwind readnone willreturn }

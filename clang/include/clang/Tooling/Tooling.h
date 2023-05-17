@@ -506,9 +506,15 @@ llvm::Expected<std::string> getAbsolutePath(llvm::vfs::FileSystem &FS,
 void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
                                     StringRef InvokedAs);
 
+/// Helper function that expands response files in command line.
+void addExpandedResponseFiles(std::vector<std::string> &CommandLine,
+                              llvm::StringRef WorkingDir,
+                              llvm::cl::TokenizerCallback Tokenizer,
+                              llvm::vfs::FileSystem &FS);
+
 /// Creates a \c CompilerInvocation.
 CompilerInvocation *newInvocation(DiagnosticsEngine *Diagnostics,
-                                  const llvm::opt::ArgStringList &CC1Args,
+                                  ArrayRef<const char *> CC1Args,
                                   const char *const BinaryName);
 
 } // namespace tooling

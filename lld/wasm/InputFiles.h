@@ -13,11 +13,12 @@
 #include "lld/Common/LLVM.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/Wasm.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/TargetParser/Triple.h"
+#include <optional>
 #include <vector>
 
 namespace llvm {
@@ -46,6 +47,7 @@ public:
     SharedKind,
     ArchiveKind,
     BitcodeKind,
+    StubKind,
   };
 
   virtual ~InputFile() {}
@@ -182,6 +184,18 @@ public:
   static bool doneLTO;
 };
 
+// Stub library (See docs/WebAssembly.rst)
+class StubFile : public InputFile {
+public:
+  explicit StubFile(MemoryBufferRef m) : InputFile(StubKind, m) {}
+
+  static bool classof(const InputFile *f) { return f->kind() == StubKind; }
+
+  void parse();
+
+  llvm::DenseMap<StringRef, std::vector<StringRef>> symbolDependencies;
+};
+
 inline bool isBitcode(MemoryBufferRef mb) {
   return identify_magic(mb.getBuffer()) == llvm::file_magic::bitcode;
 }
@@ -192,7 +206,7 @@ InputFile *createObjectFile(MemoryBufferRef mb, StringRef archiveName = "",
                             uint64_t offsetInArchive = 0);
 
 // Opens a given file.
-llvm::Optional<MemoryBufferRef> readFile(StringRef path);
+std::optional<MemoryBufferRef> readFile(StringRef path);
 
 } // namespace wasm
 

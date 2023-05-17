@@ -79,21 +79,24 @@ namespace {
 
     bool eliminateIdentitySCEV(Instruction *UseInst, Instruction *IVOperand);
     bool replaceIVUserWithLoopInvariant(Instruction *UseInst);
+    bool replaceFloatIVWithIntegerIV(Instruction *UseInst);
 
     bool eliminateOverflowIntrinsic(WithOverflowInst *WO);
     bool eliminateSaturatingIntrinsic(SaturatingInst *SI);
     bool eliminateTrunc(TruncInst *TI);
     bool eliminateIVUser(Instruction *UseInst, Instruction *IVOperand);
-    bool makeIVComparisonInvariant(ICmpInst *ICmp, Value *IVOperand);
-    void eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand);
-    void simplifyIVRemainder(BinaryOperator *Rem, Value *IVOperand,
+    bool makeIVComparisonInvariant(ICmpInst *ICmp, Instruction *IVOperand);
+    void eliminateIVComparison(ICmpInst *ICmp, Instruction *IVOperand);
+    void simplifyIVRemainder(BinaryOperator *Rem, Instruction *IVOperand,
                              bool IsSigned);
     void replaceRemWithNumerator(BinaryOperator *Rem);
     void replaceRemWithNumeratorOrZero(BinaryOperator *Rem);
     void replaceSRemWithURem(BinaryOperator *Rem);
     bool eliminateSDiv(BinaryOperator *SDiv);
-    bool strengthenOverflowingOperation(BinaryOperator *OBO, Value *IVOperand);
-    bool strengthenRightShift(BinaryOperator *BO, Value *IVOperand);
+    bool strengthenBinaryOp(BinaryOperator *BO, Instruction *IVOperand);
+    bool strengthenOverflowingOperation(BinaryOperator *OBO,
+                                        Instruction *IVOperand);
+    bool strengthenRightShift(BinaryOperator *BO, Instruction *IVOperand);
   };
 }
 
@@ -104,13 +107,8 @@ static Instruction *findCommonDominator(ArrayRef<Instruction *> Instructions,
                                         DominatorTree &DT) {
   Instruction *CommonDom = nullptr;
   for (auto *Insn : Instructions)
-    if (!CommonDom || DT.dominates(Insn, CommonDom))
-      CommonDom = Insn;
-    else if (!DT.dominates(CommonDom, Insn))
-      // If there is no dominance relation, use common dominator.
-      CommonDom =
-          DT.findNearestCommonDominator(CommonDom->getParent(),
-                                        Insn->getParent())->getTerminator();
+    CommonDom =
+        CommonDom ? DT.findNearestCommonDominator(CommonDom, Insn) : Insn;
   assert(CommonDom && "Common dominator not found?");
   return CommonDom;
 }
@@ -192,7 +190,10 @@ Value *SimplifyIndvar::foldIVUser(Instruction *UseInst, Instruction *IVOperand) 
 }
 
 bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
-                                               Value *IVOperand) {
+                                               Instruction *IVOperand) {
+  auto *Preheader = L->getLoopPreheader();
+  if (!Preheader)
+    return false;
   unsigned IVOperIdx = 0;
   ICmpInst::Predicate Pred = ICmp->getPredicate();
   if (IVOperand != ICmp->getOperand(0)) {
@@ -207,51 +208,22 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
   const Loop *ICmpLoop = LI->getLoopFor(ICmp->getParent());
   const SCEV *S = SE->getSCEVAtScope(ICmp->getOperand(IVOperIdx), ICmpLoop);
   const SCEV *X = SE->getSCEVAtScope(ICmp->getOperand(1 - IVOperIdx), ICmpLoop);
-
-  auto *PN = dyn_cast<PHINode>(IVOperand);
-  if (!PN)
-    return false;
-  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L);
+  auto LIP = SE->getLoopInvariantPredicate(Pred, S, X, L, ICmp);
   if (!LIP)
     return false;
   ICmpInst::Predicate InvariantPredicate = LIP->Pred;
   const SCEV *InvariantLHS = LIP->LHS;
   const SCEV *InvariantRHS = LIP->RHS;
 
-  // Rewrite the comparison to a loop invariant comparison if it can be done
-  // cheaply, where cheaply means "we don't need to emit any new
-  // instructions".
-
-  SmallDenseMap<const SCEV*, Value*> CheapExpansions;
-  CheapExpansions[S] = ICmp->getOperand(IVOperIdx);
-  CheapExpansions[X] = ICmp->getOperand(1 - IVOperIdx);
-
-  // TODO: Support multiple entry loops?  (We currently bail out of these in
-  // the IndVarSimplify pass)
-  if (auto *BB = L->getLoopPredecessor()) {
-    const int Idx = PN->getBasicBlockIndex(BB);
-    if (Idx >= 0) {
-      Value *Incoming = PN->getIncomingValue(Idx);
-      const SCEV *IncomingS = SE->getSCEV(Incoming);
-      CheapExpansions[IncomingS] = Incoming;
-    }
-  }
-  Value *NewLHS = CheapExpansions[InvariantLHS];
-  Value *NewRHS = CheapExpansions[InvariantRHS];
-
-  if (!NewLHS)
-    if (auto *ConstLHS = dyn_cast<SCEVConstant>(InvariantLHS))
-      NewLHS = ConstLHS->getValue();
-  if (!NewRHS)
-    if (auto *ConstRHS = dyn_cast<SCEVConstant>(InvariantRHS))
-      NewRHS = ConstRHS->getValue();
-
-  if (!NewLHS || !NewRHS)
-    // We could not find an existing value to replace either LHS or RHS.
-    // Generating new instructions has subtler tradeoffs, so avoid doing that
-    // for now.
+  // Do not generate something ridiculous.
+  auto *PHTerm = Preheader->getTerminator();
+  if (Rewriter.isHighCostExpansion({ InvariantLHS, InvariantRHS }, L,
+                                   2 * SCEVCheapExpansionBudget, TTI, PHTerm))
     return false;
-
+  auto *NewLHS =
+      Rewriter.expandCodeFor(InvariantLHS, IVOperand->getType(), PHTerm);
+  auto *NewRHS =
+      Rewriter.expandCodeFor(InvariantRHS, IVOperand->getType(), PHTerm);
   LLVM_DEBUG(dbgs() << "INDVARS: Simplified comparison: " << *ICmp << '\n');
   ICmp->setPredicate(InvariantPredicate);
   ICmp->setOperand(0, NewLHS);
@@ -261,7 +233,8 @@ bool SimplifyIndvar::makeIVComparisonInvariant(ICmpInst *ICmp,
 
 /// SimplifyIVUsers helper for eliminating useless
 /// comparisons against an induction variable.
-void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
+void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp,
+                                           Instruction *IVOperand) {
   unsigned IVOperIdx = 0;
   ICmpInst::Predicate Pred = ICmp->getPredicate();
   ICmpInst::Predicate OriginalPred = Pred;
@@ -285,6 +258,7 @@ void SimplifyIndvar::eliminateIVComparison(ICmpInst *ICmp, Value *IVOperand) {
     Users.push_back(cast<Instruction>(U));
   const Instruction *CtxI = findCommonDominator(Users, *DT);
   if (auto Ev = SE->evaluatePredicateAt(Pred, S, X, CtxI)) {
+    SE->forgetValue(ICmp);
     ICmp->replaceAllUsesWith(ConstantInt::getBool(ICmp->getContext(), *Ev));
     DeadInsts.emplace_back(ICmp);
     LLVM_DEBUG(dbgs() << "INDVARS: Eliminated comparison: " << *ICmp << '\n');
@@ -372,7 +346,8 @@ void SimplifyIndvar::replaceRemWithNumeratorOrZero(BinaryOperator *Rem) {
 
 /// SimplifyIVUsers helper for eliminating useless remainder operations
 /// operating on an induction variable or replacing srem by urem.
-void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem, Value *IVOperand,
+void SimplifyIndvar::simplifyIVRemainder(BinaryOperator *Rem,
+                                         Instruction *IVOperand,
                                          bool IsSigned) {
   auto *NValue = Rem->getOperand(0);
   auto *DValue = Rem->getOperand(1);
@@ -589,7 +564,7 @@ bool SimplifyIndvar::eliminateTrunc(TruncInst *TI) {
   }
 
   // Trunc no longer needed.
-  TI->replaceAllUsesWith(UndefValue::get(TI->getType()));
+  TI->replaceAllUsesWith(PoisonValue::get(TI->getType()));
   DeadInsts.emplace_back(TI);
   return true;
 }
@@ -656,7 +631,7 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
 
   auto *IP = GetLoopInvariantInsertPosition(L, I);
 
-  if (!isSafeToExpandAt(S, IP, *SE)) {
+  if (!Rewriter.isSafeToExpandAt(S, IP)) {
     LLVM_DEBUG(dbgs() << "INDVARS: Can not replace IV user: " << *I
                       << " with non-speculable loop invariant: " << *S << '\n');
     return false;
@@ -671,6 +646,63 @@ bool SimplifyIndvar::replaceIVUserWithLoopInvariant(Instruction *I) {
   Changed = true;
   DeadInsts.emplace_back(I);
   return true;
+}
+
+/// Eliminate redundant type cast between integer and float.
+bool SimplifyIndvar::replaceFloatIVWithIntegerIV(Instruction *UseInst) {
+  if (UseInst->getOpcode() != CastInst::SIToFP &&
+      UseInst->getOpcode() != CastInst::UIToFP)
+    return false;
+
+  Instruction *IVOperand = cast<Instruction>(UseInst->getOperand(0));
+  // Get the symbolic expression for this instruction.
+  const SCEV *IV = SE->getSCEV(IVOperand);
+  unsigned MaskBits;
+  if (UseInst->getOpcode() == CastInst::SIToFP)
+    MaskBits = SE->getSignedRange(IV).getMinSignedBits();
+  else
+    MaskBits = SE->getUnsignedRange(IV).getActiveBits();
+  unsigned DestNumSigBits = UseInst->getType()->getFPMantissaWidth();
+  if (MaskBits <= DestNumSigBits) {
+    for (User *U : UseInst->users()) {
+      // Match for fptosi/fptoui of sitofp and with same type.
+      auto *CI = dyn_cast<CastInst>(U);
+      if (!CI)
+        continue;
+
+      CastInst::CastOps Opcode = CI->getOpcode();
+      if (Opcode != CastInst::FPToSI && Opcode != CastInst::FPToUI)
+        continue;
+
+      Value *Conv = nullptr;
+      if (IVOperand->getType() != CI->getType()) {
+        IRBuilder<> Builder(CI);
+        StringRef Name = IVOperand->getName();
+        // To match InstCombine logic, we only need sext if both fptosi and
+        // sitofp are used. If one of them is unsigned, then we can use zext.
+        if (SE->getTypeSizeInBits(IVOperand->getType()) >
+            SE->getTypeSizeInBits(CI->getType())) {
+          Conv = Builder.CreateTrunc(IVOperand, CI->getType(), Name + ".trunc");
+        } else if (Opcode == CastInst::FPToUI ||
+                   UseInst->getOpcode() == CastInst::UIToFP) {
+          Conv = Builder.CreateZExt(IVOperand, CI->getType(), Name + ".zext");
+        } else {
+          Conv = Builder.CreateSExt(IVOperand, CI->getType(), Name + ".sext");
+        }
+      } else
+        Conv = IVOperand;
+
+      CI->replaceAllUsesWith(Conv);
+      DeadInsts.push_back(CI);
+      LLVM_DEBUG(dbgs() << "INDVARS: Replace IV user: " << *CI
+                        << " with: " << *Conv << '\n');
+
+      ++NumFoldedUser;
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
 
 /// Eliminate any operation that SCEV can prove is an identity function.
@@ -708,6 +740,7 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
 
   LLVM_DEBUG(dbgs() << "INDVARS: Eliminated identity: " << *UseInst << '\n');
 
+  SE->forgetValue(UseInst);
   UseInst->replaceAllUsesWith(IVOperand);
   ++NumElimIdentity;
   Changed = true;
@@ -715,21 +748,26 @@ bool SimplifyIndvar::eliminateIdentitySCEV(Instruction *UseInst,
   return true;
 }
 
+bool SimplifyIndvar::strengthenBinaryOp(BinaryOperator *BO,
+                                        Instruction *IVOperand) {
+  return (isa<OverflowingBinaryOperator>(BO) &&
+          strengthenOverflowingOperation(BO, IVOperand)) ||
+         (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand));
+}
+
 /// Annotate BO with nsw / nuw if it provably does not signed-overflow /
 /// unsigned-overflow.  Returns true if anything changed, false otherwise.
 bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
-                                                    Value *IVOperand) {
-  SCEV::NoWrapFlags Flags;
-  bool Deduced;
-  std::tie(Flags, Deduced) = SE->getStrengthenedNoWrapFlagsFromBinOp(
+                                                    Instruction *IVOperand) {
+  auto Flags = SE->getStrengthenedNoWrapFlagsFromBinOp(
       cast<OverflowingBinaryOperator>(BO));
 
-  if (!Deduced)
-    return Deduced;
+  if (!Flags)
+    return false;
 
-  BO->setHasNoUnsignedWrap(ScalarEvolution::maskFlags(Flags, SCEV::FlagNUW) ==
+  BO->setHasNoUnsignedWrap(ScalarEvolution::maskFlags(*Flags, SCEV::FlagNUW) ==
                            SCEV::FlagNUW);
-  BO->setHasNoSignedWrap(ScalarEvolution::maskFlags(Flags, SCEV::FlagNSW) ==
+  BO->setHasNoSignedWrap(ScalarEvolution::maskFlags(*Flags, SCEV::FlagNSW) ==
                          SCEV::FlagNSW);
 
   // The getStrengthenedNoWrapFlagsFromBinOp() check inferred additional nowrap
@@ -737,14 +775,14 @@ bool SimplifyIndvar::strengthenOverflowingOperation(BinaryOperator *BO,
   // forgetValue() here to make sure those flags also propagate to any other
   // SCEV expressions based on the addrec. However, this can have pathological
   // compile-time impact, see https://bugs.llvm.org/show_bug.cgi?id=50384.
-  return Deduced;
+  return true;
 }
 
 /// Annotate the Shr in (X << IVOperand) >> C as exact using the
 /// information from the IV's range. Returns true if anything changed, false
 /// otherwise.
 bool SimplifyIndvar::strengthenRightShift(BinaryOperator *BO,
-                                          Value *IVOperand) {
+                                          Instruction *IVOperand) {
   using namespace llvm::PatternMatch;
 
   if (BO->getOpcode() == Instruction::Shl) {
@@ -887,13 +925,18 @@ void SimplifyIndvar::simplifyUsers(PHINode *CurrIV, IVVisitor *V) {
     }
 
     if (BinaryOperator *BO = dyn_cast<BinaryOperator>(UseInst)) {
-      if ((isa<OverflowingBinaryOperator>(BO) &&
-           strengthenOverflowingOperation(BO, IVOperand)) ||
-          (isa<ShlOperator>(BO) && strengthenRightShift(BO, IVOperand))) {
+      if (strengthenBinaryOp(BO, IVOperand)) {
         // re-queue uses of the now modified binary operator and fall
         // through to the checks that remain.
         pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
       }
+    }
+
+    // Try to use integer induction for FPToSI of float induction directly.
+    if (replaceFloatIVWithIntegerIV(UseInst)) {
+      // Re-queue the potentially new direct uses of IVOperand.
+      pushIVUsers(IVOperand, L, Simplified, SimpleIVUsers);
+      continue;
     }
 
     CastInst *Cast = dyn_cast<CastInst>(UseInst);
@@ -977,7 +1020,7 @@ class WidenIV {
 
   SmallPtrSet<Instruction *,16> Widened;
 
-  enum ExtendKind { ZeroExtended, SignExtended, Unknown };
+  enum class ExtendKind { Zero, Sign, Unknown };
 
   // A map tracking the kind of extension used to widen each narrow IV
   // and narrow IV user.
@@ -993,13 +1036,13 @@ class WidenIV {
   // context.
   DenseMap<DefUserPair, ConstantRange> PostIncRangeInfos;
 
-  Optional<ConstantRange> getPostIncRangeInfo(Value *Def,
-                                              Instruction *UseI) {
+  std::optional<ConstantRange> getPostIncRangeInfo(Value *Def,
+                                                   Instruction *UseI) {
     DefUserPair Key(Def, UseI);
     auto It = PostIncRangeInfos.find(Key);
     return It == PostIncRangeInfos.end()
-               ? Optional<ConstantRange>(None)
-               : Optional<ConstantRange>(It->second);
+               ? std::optional<ConstantRange>(std::nullopt)
+               : std::optional<ConstantRange>(It->second);
   }
 
   void calculatePostIncRanges(PHINode *OrigPhi);
@@ -1134,7 +1177,7 @@ WidenIV::WidenIV(const WideIVInfo &WI, LoopInfo *LInfo, ScalarEvolution *SEv,
         HasGuards(HasGuards), UsePostIncrementRanges(UsePostIncrementRanges),
         DeadInsts(DI) {
     assert(L->getHeader() == OrigPhi->getParent() && "Phi must be an IV");
-    ExtendKindMap[OrigPhi] = WI.IsSigned ? SignExtended : ZeroExtended;
+    ExtendKindMap[OrigPhi] = WI.IsSigned ? ExtendKind::Sign : ExtendKind::Zero;
 }
 
 Value *WidenIV::createExtendInst(Value *NarrowOper, Type *WideType,
@@ -1187,7 +1230,7 @@ Instruction *WidenIV::cloneBitwiseIVUser(WidenIV::NarrowIVDefUse DU) {
   // about the narrow operand yet so must insert a [sz]ext. It is probably loop
   // invariant and will be folded or hoisted. If it actually comes from a
   // widened IV, it should be removed during a future call to widenIVUse.
-  bool IsSigned = getExtendKind(NarrowDef) == SignExtended;
+  bool IsSigned = getExtendKind(NarrowDef) == ExtendKind::Sign;
   Value *LHS = (NarrowUse->getOperand(0) == NarrowDef)
                    ? WideDef
                    : createExtendInst(NarrowUse->getOperand(0), WideType,
@@ -1252,7 +1295,7 @@ Instruction *WidenIV::cloneArithmeticIVUser(WidenIV::NarrowIVDefUse DU,
     return WideUse == WideAR;
   };
 
-  bool SignExtend = getExtendKind(NarrowDef) == SignExtended;
+  bool SignExtend = getExtendKind(NarrowDef) == ExtendKind::Sign;
   if (!GuessNonIVOperand(SignExtend)) {
     SignExtend = !SignExtend;
     if (!GuessNonIVOperand(SignExtend))
@@ -1312,7 +1355,7 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
   // Only Add/Sub/Mul instructions supported yet.
   if (OpCode != Instruction::Add && OpCode != Instruction::Sub &&
       OpCode != Instruction::Mul)
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   // One operand (NarrowDef) has already been extended to WideDef. Now determine
   // if extending the other will lead to a recurrence.
@@ -1324,14 +1367,14 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(DU.NarrowUse);
   ExtendKind ExtKind = getExtendKind(DU.NarrowDef);
-  if (ExtKind == SignExtended && OBO->hasNoSignedWrap())
+  if (ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap())
     ExtendOperExpr = SE->getSignExtendExpr(
       SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
-  else if(ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap())
+  else if (ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap())
     ExtendOperExpr = SE->getZeroExtendExpr(
       SE->getSCEV(DU.NarrowUse->getOperand(ExtendOperIdx)), WideType);
   else
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   // When creating this SCEV expr, don't apply the current operations NSW or NUW
   // flags. This instruction may be guarded by control flow that the no-wrap
@@ -1349,7 +1392,7 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
       dyn_cast<SCEVAddRecExpr>(getSCEVByOpCode(lhs, rhs, OpCode));
 
   if (!AddRec || AddRec->getLoop() != L)
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   return {AddRec, ExtKind};
 }
@@ -1358,17 +1401,17 @@ WidenIV::getExtendedOperandRecurrence(WidenIV::NarrowIVDefUse DU) {
 /// widening it's type? In other words, can the extend be safely hoisted out of
 /// the loop with SCEV reducing the value to a recurrence on the same loop. If
 /// so, return the extended recurrence and the kind of extension used. Otherwise
-/// return {nullptr, Unknown}.
+/// return {nullptr, ExtendKind::Unknown}.
 WidenIV::WidenedRecTy WidenIV::getWideRecurrence(WidenIV::NarrowIVDefUse DU) {
   if (!DU.NarrowUse->getType()->isIntegerTy())
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
 
   const SCEV *NarrowExpr = SE->getSCEV(DU.NarrowUse);
   if (SE->getTypeSizeInBits(NarrowExpr->getType()) >=
       SE->getTypeSizeInBits(WideType)) {
     // NarrowUse implicitly widens its operand. e.g. a gep with a narrow
     // index. So don't follow this use.
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
   }
 
   const SCEV *WideExpr;
@@ -1376,21 +1419,21 @@ WidenIV::WidenedRecTy WidenIV::getWideRecurrence(WidenIV::NarrowIVDefUse DU) {
   if (DU.NeverNegative) {
     WideExpr = SE->getSignExtendExpr(NarrowExpr, WideType);
     if (isa<SCEVAddRecExpr>(WideExpr))
-      ExtKind = SignExtended;
+      ExtKind = ExtendKind::Sign;
     else {
       WideExpr = SE->getZeroExtendExpr(NarrowExpr, WideType);
-      ExtKind = ZeroExtended;
+      ExtKind = ExtendKind::Zero;
     }
-  } else if (getExtendKind(DU.NarrowDef) == SignExtended) {
+  } else if (getExtendKind(DU.NarrowDef) == ExtendKind::Sign) {
     WideExpr = SE->getSignExtendExpr(NarrowExpr, WideType);
-    ExtKind = SignExtended;
+    ExtKind = ExtendKind::Sign;
   } else {
     WideExpr = SE->getZeroExtendExpr(NarrowExpr, WideType);
-    ExtKind = ZeroExtended;
+    ExtKind = ExtendKind::Zero;
   }
   const SCEVAddRecExpr *AddRec = dyn_cast<SCEVAddRecExpr>(WideExpr);
   if (!AddRec || AddRec->getLoop() != L)
-    return {nullptr, Unknown};
+    return {nullptr, ExtendKind::Unknown};
   return {AddRec, ExtKind};
 }
 
@@ -1430,7 +1473,7 @@ bool WidenIV::widenLoopCompare(WidenIV::NarrowIVDefUse DU) {
   //
   //      (A) == icmp slt i32 sext(%narrow), sext(%val)
   //          == icmp slt i32 zext(%narrow), sext(%val)
-  bool IsSigned = getExtendKind(DU.NarrowDef) == SignExtended;
+  bool IsSigned = getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
   if (!(DU.NeverNegative || IsSigned == Cmp->isSigned()))
     return false;
 
@@ -1495,8 +1538,8 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   const OverflowingBinaryOperator *OBO =
     cast<OverflowingBinaryOperator>(NarrowUse);
   ExtendKind ExtKind = getExtendKind(NarrowDef);
-  bool CanSignExtend = ExtKind == SignExtended && OBO->hasNoSignedWrap();
-  bool CanZeroExtend = ExtKind == ZeroExtended && OBO->hasNoUnsignedWrap();
+  bool CanSignExtend = ExtKind == ExtendKind::Sign && OBO->hasNoSignedWrap();
+  bool CanZeroExtend = ExtKind == ExtendKind::Zero && OBO->hasNoUnsignedWrap();
   auto AnotherOpExtKind = ExtKind;
 
   // Check that all uses are either:
@@ -1526,14 +1569,14 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       // predicates. For equality, it's legal to widen icmp for either sign and
       // zero extend. For sign extend, we can also do so for signed predicates,
       // likeweise for zero extend we can widen icmp for unsigned predicates.
-      if (ExtKind == ZeroExtended && ICmpInst::isSigned(Pred))
+      if (ExtKind == ExtendKind::Zero && ICmpInst::isSigned(Pred))
         return false;
-      if (ExtKind == SignExtended && ICmpInst::isUnsigned(Pred))
+      if (ExtKind == ExtendKind::Sign && ICmpInst::isUnsigned(Pred))
         return false;
       ICmpUsers.push_back(ICmp);
       continue;
     }
-    if (ExtKind == SignExtended)
+    if (ExtKind == ExtendKind::Sign)
       User = dyn_cast<SExtInst>(User);
     else
       User = dyn_cast<ZExtInst>(User);
@@ -1556,7 +1599,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     // will most likely not see it. Let's try to prove it.
     if (OpCode != Instruction::Add)
       return false;
-    if (ExtKind != ZeroExtended)
+    if (ExtKind != ExtendKind::Zero)
       return false;
     const SCEV *LHS = SE->getSCEV(OBO->getOperand(0));
     const SCEV *RHS = SE->getSCEV(OBO->getOperand(1));
@@ -1571,7 +1614,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
       return false;
     // In fact, our 'add' is 'sub nuw'. We will need to widen the 2nd operand as
     // neg(zext(neg(op))), which is basically sext(op).
-    AnotherOpExtKind = SignExtended;
+    AnotherOpExtKind = ExtendKind::Sign;
   }
 
   // Verifying that Defining operand is an AddRec
@@ -1583,14 +1626,16 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
   LLVM_DEBUG(dbgs() << "Cloning arithmetic IVUser: " << *NarrowUse << "\n");
 
   // Generating a widening use instruction.
-  Value *LHS = (NarrowUse->getOperand(0) == NarrowDef)
-                   ? WideDef
-                   : createExtendInst(NarrowUse->getOperand(0), WideType,
-                                      AnotherOpExtKind, NarrowUse);
-  Value *RHS = (NarrowUse->getOperand(1) == NarrowDef)
-                   ? WideDef
-                   : createExtendInst(NarrowUse->getOperand(1), WideType,
-                                      AnotherOpExtKind, NarrowUse);
+  Value *LHS =
+      (NarrowUse->getOperand(0) == NarrowDef)
+          ? WideDef
+          : createExtendInst(NarrowUse->getOperand(0), WideType,
+                             AnotherOpExtKind == ExtendKind::Sign, NarrowUse);
+  Value *RHS =
+      (NarrowUse->getOperand(1) == NarrowDef)
+          ? WideDef
+          : createExtendInst(NarrowUse->getOperand(1), WideType,
+                             AnotherOpExtKind == ExtendKind::Sign, NarrowUse);
 
   auto *NarrowBO = cast<BinaryOperator>(NarrowUse);
   auto *WideBO = BinaryOperator::Create(NarrowBO->getOpcode(), LHS, RHS,
@@ -1629,7 +1674,7 @@ bool WidenIV::widenWithVariantUse(WidenIV::NarrowIVDefUse DU) {
     auto ExtendedOp = [&](Value * V)->Value * {
       if (V == NarrowUse)
         return WideBO;
-      if (ExtKind == ZeroExtended)
+      if (ExtKind == ExtendKind::Zero)
         return Builder.CreateZExt(V, WideBO->getType());
       else
         return Builder.CreateSExt(V, WideBO->getType());
@@ -1685,10 +1730,10 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
   // This narrow use can be widened by a sext if it's non-negative or its narrow
   // def was widended by a sext. Same for zext.
   auto canWidenBySExt = [&]() {
-    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == SignExtended;
+    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Sign;
   };
   auto canWidenByZExt = [&]() {
-    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ZeroExtended;
+    return DU.NeverNegative || getExtendKind(DU.NarrowDef) == ExtendKind::Zero;
   };
 
   // Our raison d'etre! Eliminate sign and zero extension.
@@ -1736,7 +1781,8 @@ Instruction *WidenIV::widenIVUse(WidenIV::NarrowIVDefUse DU, SCEVExpander &Rewri
   if (!WideAddRec.first)
     WideAddRec = getWideRecurrence(DU);
 
-  assert((WideAddRec.first == nullptr) == (WideAddRec.second == Unknown));
+  assert((WideAddRec.first == nullptr) ==
+         (WideAddRec.second == ExtendKind::Unknown));
   if (!WideAddRec.first) {
     // If use is a loop condition, try to promote the condition instead of
     // truncating the IV first.
@@ -1831,7 +1877,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
     return nullptr;
 
   // Widen the induction variable expression.
-  const SCEV *WideIVExpr = getExtendKind(OrigPhi) == SignExtended
+  const SCEV *WideIVExpr = getExtendKind(OrigPhi) == ExtendKind::Sign
                                ? SE->getSignExtendExpr(AddRec, WideType)
                                : SE->getZeroExtendExpr(AddRec, WideType);
 

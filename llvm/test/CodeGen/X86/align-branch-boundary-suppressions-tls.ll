@@ -23,8 +23,8 @@ define i32 @tls_get_addr() {
 ; 64: leaq ld@TLSLD(%rip), %rdi
 ; 64: callq __tls_get_addr@PLT
 ; CHECK: #autopadding
-  %1 = load i32, i32* @gd
-  %2 = load i32, i32* @ld
+  %1 = load i32, ptr @gd
+  %2 = load i32, ptr @ld
   %3 = add i32 %1, %2
   ret i32 %3
 }

@@ -116,17 +116,17 @@ TEST_F(PPCParallelSnippetGeneratorTest, MemoryUse) {
   const unsigned Opcode = PPC::LDX;
   const auto CodeTemplates = checkAndGetCodeTemplates(Opcode);
   ASSERT_THAT(CodeTemplates, SizeIs(1));
-  const auto &CT = CodeTemplates[0];
-  EXPECT_THAT(CT.Info, HasSubstr("instruction has no tied variables picking "
-                                 "Uses different from defs"));
-  EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
-  ASSERT_THAT(CT.Instructions,
-              SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
-  const InstructionTemplate &IT = CT.Instructions[0];
-  EXPECT_THAT(IT.getOpcode(), Opcode);
-  ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
-  EXPECT_EQ(IT.getVariableValues()[1].getReg(), PPC::X1);
-  EXPECT_EQ(IT.getVariableValues()[2].getReg(), PPC::X13);
+  for (const auto &CT : CodeTemplates) {
+    EXPECT_THAT(CT.Info, HasSubstr("instruction has no tied variables"));
+    EXPECT_THAT(CT.Execution, ExecutionMode::UNKNOWN);
+    ASSERT_THAT(CT.Instructions,
+                SizeIs(ParallelSnippetGenerator::kMinNumDifferentAddresses));
+    const InstructionTemplate &IT = CT.Instructions[0];
+    EXPECT_THAT(IT.getOpcode(), Opcode);
+    ASSERT_THAT(IT.getVariableValues(), SizeIs(3));
+    EXPECT_EQ(IT.getVariableValues()[1].getReg(), PPC::X1);
+    EXPECT_EQ(IT.getVariableValues()[2].getReg(), PPC::X13);
+  }
 }
 
 } // namespace

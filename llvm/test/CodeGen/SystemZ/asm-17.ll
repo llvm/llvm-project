@@ -48,7 +48,7 @@ define double @f4() {
 }
 
 ; Test i128 FPRs.
-define void @f5(fp128 *%dest) {
+define void @f5(ptr %dest) {
 ; CHECK-LABEL: f5:
 ; CHECK: lzxr %f4
 ; CHECK: blah %f4
@@ -56,7 +56,7 @@ define void @f5(fp128 *%dest) {
 ; CHECK-DAG: std %f6, 8(%r2)
 ; CHECK: br %r14
   %ret = call fp128 asm "blah $0", "={f4},0" (fp128 0xL00000000000000000000000000000000)
-  store fp128 %ret, fp128 *%dest
+  store fp128 %ret, ptr %dest
   ret void
 }
 

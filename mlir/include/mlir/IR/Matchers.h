@@ -28,11 +28,10 @@ template <
     typename AttrClass,
     // Require AttrClass to be a derived class from Attribute and get its
     // value type
-    typename ValueType =
-        typename std::enable_if<std::is_base_of<Attribute, AttrClass>::value,
-                                AttrClass>::type::ValueType,
+    typename ValueType = typename std::enable_if_t<
+        std::is_base_of<Attribute, AttrClass>::value, AttrClass>::ValueType,
     // Require the ValueType is not void
-    typename = typename std::enable_if<!std::is_void<ValueType>::value>::type>
+    typename = std::enable_if_t<!std::is_void<ValueType>::value>>
 struct attr_value_binder {
   ValueType *bind_value;
 
@@ -40,7 +39,7 @@ struct attr_value_binder {
   attr_value_binder(ValueType *bv) : bind_value(bv) {}
 
   bool match(const Attribute &attr) {
-    if (auto intAttr = attr.dyn_cast<AttrClass>()) {
+    if (auto intAttr = llvm::dyn_cast<AttrClass>(attr)) {
       *bind_value = intAttr.getValue();
       return true;
     }
@@ -48,16 +47,25 @@ struct attr_value_binder {
   }
 };
 
-/// Check to see if the specified operation is ConstantLike.  This includes some
-/// quick filters to avoid a semi-expensive test in the common case.
-static bool isConstantLike(Operation *op) {
-  return op->getNumOperands() == 0 && op->getNumResults() == 1 &&
-         op->hasTrait<OpTrait::ConstantLike>();
-}
-
 /// The matcher that matches operations that have the `ConstantLike` trait.
 struct constant_op_matcher {
-  bool match(Operation *op) { return isConstantLike(op); }
+  bool match(Operation *op) { return op->hasTrait<OpTrait::ConstantLike>(); }
+};
+
+/// The matcher that matches operations that have the specified op name.
+struct NameOpMatcher {
+  NameOpMatcher(StringRef name) : name(name) {}
+  bool match(Operation *op) { return op->getName().getStringRef() == name; }
+
+  StringRef name;
+};
+
+/// The matcher that matches operations that have the specified attribute name.
+struct AttrOpMatcher {
+  AttrOpMatcher(StringRef attrName) : attrName(attrName) {}
+  bool match(Operation *op) { return op->hasAttr(attrName); }
+
+  StringRef attrName;
 };
 
 /// The matcher that matches operations that have the `ConstantLike` trait, and
@@ -73,22 +81,45 @@ struct constant_op_binder {
   constant_op_binder() : bind_value(nullptr) {}
 
   bool match(Operation *op) {
-    if (!isConstantLike(op))
+    if (!op->hasTrait<OpTrait::ConstantLike>())
       return false;
 
     // Fold the constant to an attribute.
     SmallVector<OpFoldResult, 1> foldedOp;
-    LogicalResult result = op->fold(/*operands=*/llvm::None, foldedOp);
+    LogicalResult result = op->fold(/*operands=*/std::nullopt, foldedOp);
     (void)result;
     assert(succeeded(result) && "expected ConstantLike op to be foldable");
 
-    if (auto attr = foldedOp.front().get<Attribute>().dyn_cast<AttrT>()) {
+    if (auto attr = llvm::dyn_cast<AttrT>(foldedOp.front().get<Attribute>())) {
       if (bind_value)
         *bind_value = attr;
       return true;
     }
     return false;
   }
+};
+
+/// The matcher that matches operations that have the specified attribute
+/// name, and binds the attribute value.
+template <typename AttrT>
+struct AttrOpBinder {
+  /// Creates a matcher instance that binds the attribute value to
+  /// bind_value if match succeeds.
+  AttrOpBinder(StringRef attrName, AttrT *bindValue)
+      : attrName(attrName), bindValue(bindValue) {}
+  /// Creates a matcher instance that doesn't bind if match succeeds.
+  AttrOpBinder(StringRef attrName) : attrName(attrName), bindValue(nullptr) {}
+
+  bool match(Operation *op) {
+    if (auto attr = op->getAttrOfType<AttrT>(attrName)) {
+      if (bindValue)
+        *bindValue = attr;
+      return true;
+    }
+    return false;
+  }
+  StringRef attrName;
+  AttrT *bindValue;
 };
 
 /// The matcher that matches a constant scalar / vector splat / tensor splat
@@ -105,10 +136,10 @@ struct constant_float_op_binder {
       return false;
     auto type = op->getResult(0).getType();
 
-    if (type.isa<FloatType>())
+    if (llvm::isa<FloatType>(type))
       return attr_value_binder<FloatAttr>(bind_value).match(attr);
-    if (type.isa<VectorType, RankedTensorType>()) {
-      if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
+    if (llvm::isa<VectorType, RankedTensorType>(type)) {
+      if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr)) {
         return attr_value_binder<FloatAttr>(bind_value)
             .match(splatAttr.getSplatValue<Attribute>());
       }
@@ -142,10 +173,10 @@ struct constant_int_op_binder {
       return false;
     auto type = op->getResult(0).getType();
 
-    if (type.isa<IntegerType, IndexType>())
+    if (llvm::isa<IntegerType, IndexType>(type))
       return attr_value_binder<IntegerAttr>(bind_value).match(attr);
-    if (type.isa<VectorType, RankedTensorType>()) {
-      if (auto splatAttr = attr.dyn_cast<SplatElementsAttr>()) {
+    if (llvm::isa<VectorType, RankedTensorType>(type)) {
+      if (auto splatAttr = llvm::dyn_cast<SplatElementsAttr>(attr)) {
         return attr_value_binder<IntegerAttr>(bind_value)
             .match(splatAttr.getSplatValue<Attribute>());
       }
@@ -179,20 +210,18 @@ using has_operation_or_value_matcher_t =
 
 /// Statically switch to a Value matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<
-    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
-                      Value>::value,
-    bool>
+std::enable_if_t<llvm::is_detected<detail::has_operation_or_value_matcher_t,
+                                   MatcherClass, Value>::value,
+                 bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   return matcher.match(op->getOperand(idx));
 }
 
 /// Statically switch to an Operation matcher.
 template <typename MatcherClass>
-typename std::enable_if_t<
-    llvm::is_detected<detail::has_operation_or_value_matcher_t, MatcherClass,
-                      Operation *>::value,
-    bool>
+std::enable_if_t<llvm::is_detected<detail::has_operation_or_value_matcher_t,
+                                   MatcherClass, Operation *>::value,
+                 bool>
 matchOperandOrValueAtIndex(Operation *op, unsigned idx, MatcherClass &matcher) {
   if (auto *defOp = op->getOperand(idx).getDefiningOp())
     return matcher.match(defOp);
@@ -224,10 +253,9 @@ struct PatternMatcherValue {
 template <typename TupleT, class CallbackT, std::size_t... Is>
 constexpr void enumerateImpl(TupleT &&tuple, CallbackT &&callback,
                              std::index_sequence<Is...>) {
-  (void)std::initializer_list<int>{
-      0,
-      (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
-       0)...};
+
+  (callback(std::integral_constant<std::size_t, Is>{}, std::get<Is>(tuple)),
+   ...);
 }
 
 template <typename... Tys, typename CallbackT>
@@ -260,11 +288,28 @@ inline detail::constant_op_matcher m_Constant() {
   return detail::constant_op_matcher();
 }
 
+/// Matches a named attribute operation.
+inline detail::AttrOpMatcher m_Attr(StringRef attrName) {
+  return detail::AttrOpMatcher(attrName);
+}
+
+/// Matches a named operation.
+inline detail::NameOpMatcher m_Op(StringRef opName) {
+  return detail::NameOpMatcher(opName);
+}
+
 /// Matches a value from a constant foldable operation and writes the value to
 /// bind_value.
 template <typename AttrT>
 inline detail::constant_op_binder<AttrT> m_Constant(AttrT *bind_value) {
   return detail::constant_op_binder<AttrT>(bind_value);
+}
+
+/// Matches a named attribute operation and writes the value to bind_value.
+template <typename AttrT>
+inline detail::AttrOpBinder<AttrT> m_Attr(StringRef attrName,
+                                          AttrT *bindValue) {
+  return detail::AttrOpBinder<AttrT>(attrName, bindValue);
 }
 
 /// Matches a constant scalar / vector splat / tensor splat float (both positive

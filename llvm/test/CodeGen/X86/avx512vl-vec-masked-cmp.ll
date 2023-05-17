@@ -26,7 +26,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqb_v16i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqb (%rdi), %xmm0, %k0
@@ -43,7 +43,7 @@ define zeroext i32 @test_vpcmpeqb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp eq <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -79,7 +79,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -98,7 +98,7 @@ define zeroext i32 @test_masked_vpcmpeqb_v16i1_v32i1_mask_mem(i16 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp eq <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -133,7 +133,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqb_v16i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqb (%rdi), %xmm0, %k0
@@ -150,7 +150,7 @@ define zeroext i64 @test_vpcmpeqb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp eq <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -186,7 +186,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -205,7 +205,7 @@ define zeroext i64 @test_masked_vpcmpeqb_v16i1_v64i1_mask_mem(i16 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp eq <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -247,7 +247,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqb_v32i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqb (%rdi), %ymm0, %k0
@@ -271,7 +271,7 @@ define zeroext i64 @test_vpcmpeqb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp eq <32 x i8> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -317,7 +317,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -346,7 +346,7 @@ define zeroext i64 @test_masked_vpcmpeqb_v32i1_v64i1_mask_mem(i32 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp eq <32 x i8> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -383,7 +383,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpeqw_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqw_v8i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqw_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqw (%rdi), %xmm0, %k0
@@ -402,7 +402,7 @@ define zeroext i16 @test_vpcmpeqw_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp eq <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -440,7 +440,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpeqw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqw_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -461,7 +461,7 @@ define zeroext i16 @test_masked_vpcmpeqw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp eq <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -496,7 +496,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqw_v8i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqw_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqw (%rdi), %xmm0, %k0
@@ -513,7 +513,7 @@ define zeroext i32 @test_vpcmpeqw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp eq <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -549,7 +549,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqw_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -568,7 +568,7 @@ define zeroext i32 @test_masked_vpcmpeqw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp eq <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -603,7 +603,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqw_v8i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqw_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqw (%rdi), %xmm0, %k0
@@ -620,7 +620,7 @@ define zeroext i64 @test_vpcmpeqw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp eq <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -656,7 +656,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqw_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -675,7 +675,7 @@ define zeroext i64 @test_masked_vpcmpeqw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp eq <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -711,7 +711,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqw_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqw_v16i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqw_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqw (%rdi), %ymm0, %k0
@@ -729,7 +729,7 @@ define zeroext i32 @test_vpcmpeqw_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp eq <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -766,7 +766,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqw_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqw_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqw_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -786,7 +786,7 @@ define zeroext i32 @test_masked_vpcmpeqw_v16i1_v32i1_mask_mem(i16 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp eq <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -822,7 +822,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqw_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqw_v16i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqw_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqw (%rdi), %ymm0, %k0
@@ -840,7 +840,7 @@ define zeroext i64 @test_vpcmpeqw_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp eq <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -877,7 +877,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqw_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqw_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqw_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -897,7 +897,7 @@ define zeroext i64 @test_masked_vpcmpeqw_v16i1_v64i1_mask_mem(i16 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp eq <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -941,7 +941,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqw_v32i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqw_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqw (%rdi), %zmm0, %k0
@@ -966,7 +966,7 @@ define zeroext i64 @test_vpcmpeqw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp eq <32 x i16> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -1014,7 +1014,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqw_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqw_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqw_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1044,7 +1044,7 @@ define zeroext i64 @test_masked_vpcmpeqw_v32i1_v64i1_mask_mem(i32 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp eq <32 x i16> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -1083,7 +1083,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpeqd_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpeqd_v4i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %xmm0, %k0
@@ -1104,7 +1104,7 @@ define zeroext i8 @test_vpcmpeqd_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -1145,7 +1145,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1168,7 +1168,7 @@ define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -1180,7 +1180,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpeqd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpeqd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to4}, %xmm0, %k0
@@ -1200,7 +1200,7 @@ define zeroext i8 @test_vpcmpeqd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b)
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1209,7 +1209,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1231,7 +1231,7 @@ define zeroext i8 @test_masked_vpcmpeqd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1272,7 +1272,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpeqd_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqd_v4i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %xmm0, %k0
@@ -1293,7 +1293,7 @@ define zeroext i16 @test_vpcmpeqd_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -1334,7 +1334,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1357,7 +1357,7 @@ define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -1369,7 +1369,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpeqd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to4}, %xmm0, %k0
@@ -1389,7 +1389,7 @@ define zeroext i16 @test_vpcmpeqd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1398,7 +1398,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1420,7 +1420,7 @@ define zeroext i16 @test_masked_vpcmpeqd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1459,7 +1459,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqd_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqd_v4i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %xmm0, %k0
@@ -1478,7 +1478,7 @@ define zeroext i32 @test_vpcmpeqd_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -1517,7 +1517,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1538,7 +1538,7 @@ define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -1550,7 +1550,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpeqd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to4}, %xmm0, %k0
@@ -1568,7 +1568,7 @@ define zeroext i32 @test_vpcmpeqd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1577,7 +1577,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1597,7 +1597,7 @@ define zeroext i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1606,6 +1606,37 @@ entry:
   %4 = and <4 x i1> %extract.i, %2
   %5 = shufflevector <4 x i1> %4, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
   %6 = bitcast <32 x i1> %5 to i32
+  ret i32 %6
+}
+
+
+define i32 @test_masked_vpcmpeqd_v4i1_v32i1_mask_i32(i32 %__u, <2 x i64> %__a, <2 x i64> %__b) local_unnamed_addr {
+; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_i32:
+; VLX:       # %bb.0: # %entry
+; VLX-NEXT:    kmovd %edi, %k1
+; VLX-NEXT:    vpcmpeqd %xmm1, %xmm0, %k0 {%k1}
+; VLX-NEXT:    kmovb %k0, %eax
+; VLX-NEXT:    retq
+;
+; NoVLX-LABEL: test_masked_vpcmpeqd_v4i1_v32i1_mask_i32:
+; NoVLX:       # %bb.0: # %entry
+; NoVLX-NEXT:    # kill: def $xmm1 killed $xmm1 def $zmm1
+; NoVLX-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
+; NoVLX-NEXT:    kmovw %edi, %k1
+; NoVLX-NEXT:    vpcmpeqd %zmm1, %zmm0, %k0 {%k1}
+; NoVLX-NEXT:    kmovw %k0, %eax
+; NoVLX-NEXT:    andl $15, %eax
+; NoVLX-NEXT:    vzeroupper
+; NoVLX-NEXT:    retq
+entry:
+  %0 = bitcast <2 x i64> %__a to <4 x i32>
+  %1 = bitcast <2 x i64> %__b to <4 x i32>
+  %2 = icmp eq <4 x i32> %0, %1
+  %3 = bitcast i32 %__u to <32 x i1>
+  %extract.i = shufflevector <32 x i1> %3, <32 x i1> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %4 = and <4 x i1> %2, %extract.i
+  %5 = bitcast <4 x i1> %4 to i4
+  %6 = zext i4 %5 to i32
   ret i32 %6
 }
 
@@ -1636,7 +1667,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %xmm0, %k0
@@ -1655,7 +1686,7 @@ define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -1694,7 +1725,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1715,7 +1746,7 @@ define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp eq <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -1727,7 +1758,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to4}, %xmm0, %k0
@@ -1745,7 +1776,7 @@ define zeroext i64 @test_vpcmpeqd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1754,7 +1785,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1774,7 +1805,7 @@ define zeroext i64 @test_masked_vpcmpeqd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i32> %0, %1
@@ -1816,7 +1847,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpeqd_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqd_v8i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %ymm0, %k0
@@ -1838,7 +1869,7 @@ define zeroext i16 @test_vpcmpeqd_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp eq <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -1879,7 +1910,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpeqd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1903,7 +1934,7 @@ define zeroext i16 @test_masked_vpcmpeqd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp eq <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -1914,7 +1945,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpeqd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to8}, %ymm0, %k0
@@ -1935,7 +1966,7 @@ define zeroext i16 @test_vpcmpeqd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i32> %0, %1
@@ -1944,7 +1975,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpeqd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -1967,7 +1998,7 @@ define zeroext i16 @test_masked_vpcmpeqd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i32> %0, %1
@@ -2006,7 +2037,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %ymm0, %k0
@@ -2026,7 +2057,7 @@ define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp eq <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -2065,7 +2096,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2087,7 +2118,7 @@ define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp eq <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -2098,7 +2129,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to8}, %ymm0, %k0
@@ -2117,7 +2148,7 @@ define zeroext i32 @test_vpcmpeqd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i32> %0, %1
@@ -2126,7 +2157,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2147,7 +2178,7 @@ define zeroext i32 @test_masked_vpcmpeqd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i32> %0, %1
@@ -2186,7 +2217,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %ymm0, %k0
@@ -2206,7 +2237,7 @@ define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp eq <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -2245,7 +2276,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2267,7 +2298,7 @@ define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp eq <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -2278,7 +2309,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to8}, %ymm0, %k0
@@ -2297,7 +2328,7 @@ define zeroext i64 @test_vpcmpeqd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i32> %0, %1
@@ -2306,7 +2337,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2327,7 +2358,7 @@ define zeroext i64 @test_masked_vpcmpeqd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i32> %0, %1
@@ -2362,7 +2393,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqd_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqd_v16i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %zmm0, %k0
@@ -2378,7 +2409,7 @@ define zeroext i32 @test_vpcmpeqd_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp eq <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -2413,7 +2444,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqd_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqd_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2431,7 +2462,7 @@ define zeroext i32 @test_masked_vpcmpeqd_v16i1_v32i1_mask_mem(i16 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp eq <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -2442,7 +2473,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpeqd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
@@ -2458,7 +2489,7 @@ define zeroext i32 @test_vpcmpeqd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <16 x i32> %0, %1
@@ -2467,7 +2498,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpeqd_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqd_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2485,7 +2516,7 @@ define zeroext i32 @test_masked_vpcmpeqd_v16i1_v32i1_mask_mem_b(i16 zeroext %__u
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <16 x i32> %0, %1
@@ -2520,7 +2551,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqd_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqd_v16i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi), %zmm0, %k0
@@ -2536,7 +2567,7 @@ define zeroext i64 @test_vpcmpeqd_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp eq <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
@@ -2571,7 +2602,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqd_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqd_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2589,7 +2620,7 @@ define zeroext i64 @test_masked_vpcmpeqd_v16i1_v64i1_mask_mem(i16 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp eq <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -2600,7 +2631,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpeqd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqd_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqd (%rdi){1to16}, %zmm0, %k0
@@ -2616,7 +2647,7 @@ define zeroext i64 @test_vpcmpeqd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <16 x i32> %0, %1
@@ -2625,7 +2656,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpeqd_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqd_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqd_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2643,7 +2674,7 @@ define zeroext i64 @test_masked_vpcmpeqd_v16i1_v64i1_mask_mem_b(i16 zeroext %__u
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <16 x i32> %0, %1
@@ -2681,7 +2712,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_vpcmpeqq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpeqq_v2i1_v4i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %xmm0, %k0
@@ -2700,7 +2731,7 @@ define zeroext i4 @test_vpcmpeqq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -2739,7 +2770,7 @@ entry:
   ret i4 %6
 }
 
-define zeroext i4 @test_masked_vpcmpeqq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpeqq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2760,7 +2791,7 @@ define zeroext i4 @test_masked_vpcmpeqq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -2772,7 +2803,7 @@ entry:
 }
 
 
-define zeroext i4 @test_vpcmpeqq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpeqq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to2}, %xmm0, %k0
@@ -2790,7 +2821,7 @@ define zeroext i4 @test_vpcmpeqq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b)
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -2799,7 +2830,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_masked_vpcmpeqq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpeqq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2819,7 +2850,7 @@ define zeroext i4 @test_masked_vpcmpeqq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -2860,7 +2891,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpeqq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpeqq_v2i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %xmm0, %k0
@@ -2881,7 +2912,7 @@ define zeroext i8 @test_vpcmpeqq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -2922,7 +2953,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpeqq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpeqq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -2945,7 +2976,7 @@ define zeroext i8 @test_masked_vpcmpeqq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -2957,7 +2988,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpeqq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpeqq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to2}, %xmm0, %k0
@@ -2977,7 +3008,7 @@ define zeroext i8 @test_vpcmpeqq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b)
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -2986,7 +3017,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpeqq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpeqq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3008,7 +3039,7 @@ define zeroext i8 @test_masked_vpcmpeqq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -3049,7 +3080,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpeqq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqq_v2i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %xmm0, %k0
@@ -3070,7 +3101,7 @@ define zeroext i16 @test_vpcmpeqq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -3111,7 +3142,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpeqq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3134,7 +3165,7 @@ define zeroext i16 @test_masked_vpcmpeqq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -3146,7 +3177,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpeqq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to2}, %xmm0, %k0
@@ -3166,7 +3197,7 @@ define zeroext i16 @test_vpcmpeqq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -3175,7 +3206,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpeqq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3197,7 +3228,7 @@ define zeroext i16 @test_masked_vpcmpeqq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -3236,7 +3267,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqq_v2i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %xmm0, %k0
@@ -3255,7 +3286,7 @@ define zeroext i32 @test_vpcmpeqq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -3294,7 +3325,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3315,7 +3346,7 @@ define zeroext i32 @test_masked_vpcmpeqq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -3327,7 +3358,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpeqq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to2}, %xmm0, %k0
@@ -3345,7 +3376,7 @@ define zeroext i32 @test_vpcmpeqq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -3354,7 +3385,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpeqq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3374,7 +3405,7 @@ define zeroext i32 @test_masked_vpcmpeqq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -3413,7 +3444,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqq_v2i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %xmm0, %k0
@@ -3432,7 +3463,7 @@ define zeroext i64 @test_vpcmpeqq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -3471,7 +3502,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3492,7 +3523,7 @@ define zeroext i64 @test_masked_vpcmpeqq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp eq <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -3504,7 +3535,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpeqq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to2}, %xmm0, %k0
@@ -3522,7 +3553,7 @@ define zeroext i64 @test_vpcmpeqq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -3531,7 +3562,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpeqq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3551,7 +3582,7 @@ define zeroext i64 @test_masked_vpcmpeqq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp eq <2 x i64> %0, %1
@@ -3593,7 +3624,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpeqq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpeqq_v4i1_v8i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %ymm0, %k0
@@ -3615,7 +3646,7 @@ define zeroext i8 @test_vpcmpeqq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -3657,7 +3688,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3681,7 +3712,7 @@ define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -3693,7 +3724,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpeqq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpeqq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to4}, %ymm0, %k0
@@ -3714,7 +3745,7 @@ define zeroext i8 @test_vpcmpeqq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b)
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -3723,7 +3754,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3746,7 +3777,7 @@ define zeroext i8 @test_masked_vpcmpeqq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -3788,7 +3819,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpeqq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqq_v4i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %ymm0, %k0
@@ -3810,7 +3841,7 @@ define zeroext i16 @test_vpcmpeqq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -3852,7 +3883,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3876,7 +3907,7 @@ define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -3888,7 +3919,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpeqq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to4}, %ymm0, %k0
@@ -3909,7 +3940,7 @@ define zeroext i16 @test_vpcmpeqq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -3918,7 +3949,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -3941,7 +3972,7 @@ define zeroext i16 @test_masked_vpcmpeqq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -3981,7 +4012,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqq_v4i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %ymm0, %k0
@@ -4001,7 +4032,7 @@ define zeroext i32 @test_vpcmpeqq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -4041,7 +4072,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4063,7 +4094,7 @@ define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -4075,7 +4106,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpeqq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to4}, %ymm0, %k0
@@ -4094,7 +4125,7 @@ define zeroext i32 @test_vpcmpeqq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -4103,7 +4134,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4124,7 +4155,7 @@ define zeroext i32 @test_masked_vpcmpeqq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -4164,7 +4195,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqq_v4i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %ymm0, %k0
@@ -4184,7 +4215,7 @@ define zeroext i64 @test_vpcmpeqq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -4224,7 +4255,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4246,7 +4277,7 @@ define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp eq <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -4258,7 +4289,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpeqq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to4}, %ymm0, %k0
@@ -4277,7 +4308,7 @@ define zeroext i64 @test_vpcmpeqq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -4286,7 +4317,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4307,7 +4338,7 @@ define zeroext i64 @test_masked_vpcmpeqq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <4 x i64> %0, %1
@@ -4345,7 +4376,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpeqq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqq_v8i1_v16i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %zmm0, %k0
@@ -4363,7 +4394,7 @@ define zeroext i16 @test_vpcmpeqq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp eq <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -4400,7 +4431,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpeqq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4420,7 +4451,7 @@ define zeroext i16 @test_masked_vpcmpeqq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp eq <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -4431,7 +4462,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpeqq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpeqq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
@@ -4449,7 +4480,7 @@ define zeroext i16 @test_vpcmpeqq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i64> %0, %1
@@ -4458,7 +4489,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpeqq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpeqq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4478,7 +4509,7 @@ define zeroext i16 @test_masked_vpcmpeqq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i64> %0, %1
@@ -4513,7 +4544,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %zmm0, %k0
@@ -4529,7 +4560,7 @@ define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp eq <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -4564,7 +4595,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4582,7 +4613,7 @@ define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp eq <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -4593,7 +4624,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
@@ -4609,7 +4640,7 @@ define zeroext i32 @test_vpcmpeqq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i64> %0, %1
@@ -4618,7 +4649,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4636,7 +4667,7 @@ define zeroext i32 @test_masked_vpcmpeqq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i64> %0, %1
@@ -4671,7 +4702,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi), %zmm0, %k0
@@ -4687,7 +4718,7 @@ define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp eq <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -4722,7 +4753,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4740,7 +4771,7 @@ define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp eq <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -4751,7 +4782,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpeqq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpeqq (%rdi){1to8}, %zmm0, %k0
@@ -4767,7 +4798,7 @@ define zeroext i64 @test_vpcmpeqq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i64> %0, %1
@@ -4776,7 +4807,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpeqq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4794,7 +4825,7 @@ define zeroext i64 @test_masked_vpcmpeqq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp eq <8 x i64> %0, %1
@@ -4830,7 +4861,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtb_v16i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtb (%rdi), %xmm0, %k0
@@ -4847,7 +4878,7 @@ define zeroext i32 @test_vpcmpsgtb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sgt <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -4883,7 +4914,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -4902,7 +4933,7 @@ define zeroext i32 @test_masked_vpcmpsgtb_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sgt <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -4937,7 +4968,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtb_v16i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtb (%rdi), %xmm0, %k0
@@ -4954,7 +4985,7 @@ define zeroext i64 @test_vpcmpsgtb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sgt <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -4990,7 +5021,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5009,7 +5040,7 @@ define zeroext i64 @test_masked_vpcmpsgtb_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sgt <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -5051,7 +5082,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtb_v32i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtb (%rdi), %ymm0, %k0
@@ -5075,7 +5106,7 @@ define zeroext i64 @test_vpcmpsgtb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp sgt <32 x i8> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -5121,7 +5152,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5150,7 +5181,7 @@ define zeroext i64 @test_masked_vpcmpsgtb_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp sgt <32 x i8> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -5187,7 +5218,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgtw_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtw_v8i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtw_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtw (%rdi), %xmm0, %k0
@@ -5206,7 +5237,7 @@ define zeroext i16 @test_vpcmpsgtw_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sgt <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -5244,7 +5275,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgtw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtw_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5265,7 +5296,7 @@ define zeroext i16 @test_masked_vpcmpsgtw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sgt <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -5300,7 +5331,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtw_v8i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtw_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtw (%rdi), %xmm0, %k0
@@ -5317,7 +5348,7 @@ define zeroext i32 @test_vpcmpsgtw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sgt <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -5353,7 +5384,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtw_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5372,7 +5403,7 @@ define zeroext i32 @test_masked_vpcmpsgtw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sgt <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -5407,7 +5438,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtw_v8i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtw_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtw (%rdi), %xmm0, %k0
@@ -5424,7 +5455,7 @@ define zeroext i64 @test_vpcmpsgtw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sgt <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -5460,7 +5491,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtw_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5479,7 +5510,7 @@ define zeroext i64 @test_masked_vpcmpsgtw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sgt <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -5515,7 +5546,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtw_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtw_v16i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtw_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtw (%rdi), %ymm0, %k0
@@ -5533,7 +5564,7 @@ define zeroext i32 @test_vpcmpsgtw_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sgt <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -5570,7 +5601,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtw_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtw_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtw_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5590,7 +5621,7 @@ define zeroext i32 @test_masked_vpcmpsgtw_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sgt <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -5626,7 +5657,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtw_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtw_v16i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtw_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtw (%rdi), %ymm0, %k0
@@ -5644,7 +5675,7 @@ define zeroext i64 @test_vpcmpsgtw_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sgt <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -5681,7 +5712,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtw_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtw_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtw_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5701,7 +5732,7 @@ define zeroext i64 @test_masked_vpcmpsgtw_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sgt <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -5745,7 +5776,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtw_v32i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtw_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtw (%rdi), %zmm0, %k0
@@ -5770,7 +5801,7 @@ define zeroext i64 @test_vpcmpsgtw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp sgt <32 x i16> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -5818,7 +5849,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtw_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtw_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtw_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5848,7 +5879,7 @@ define zeroext i64 @test_masked_vpcmpsgtw_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp sgt <32 x i16> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -5887,7 +5918,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpsgtd_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgtd_v4i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %xmm0, %k0
@@ -5908,7 +5939,7 @@ define zeroext i8 @test_vpcmpsgtd_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -5949,7 +5980,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -5972,7 +6003,7 @@ define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -5984,7 +6015,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpsgtd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgtd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to4}, %xmm0, %k0
@@ -6004,7 +6035,7 @@ define zeroext i8 @test_vpcmpsgtd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6013,7 +6044,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6035,7 +6066,7 @@ define zeroext i8 @test_masked_vpcmpsgtd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6076,7 +6107,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgtd_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtd_v4i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %xmm0, %k0
@@ -6097,7 +6128,7 @@ define zeroext i16 @test_vpcmpsgtd_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -6138,7 +6169,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6161,7 +6192,7 @@ define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -6173,7 +6204,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgtd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to4}, %xmm0, %k0
@@ -6193,7 +6224,7 @@ define zeroext i16 @test_vpcmpsgtd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6202,7 +6233,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6224,7 +6255,7 @@ define zeroext i16 @test_masked_vpcmpsgtd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6263,7 +6294,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtd_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtd_v4i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %xmm0, %k0
@@ -6282,7 +6313,7 @@ define zeroext i32 @test_vpcmpsgtd_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -6321,7 +6352,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6342,7 +6373,7 @@ define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -6354,7 +6385,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgtd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to4}, %xmm0, %k0
@@ -6372,7 +6403,7 @@ define zeroext i32 @test_vpcmpsgtd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6381,7 +6412,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6401,7 +6432,7 @@ define zeroext i32 @test_masked_vpcmpsgtd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6440,7 +6471,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtd_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtd_v4i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %xmm0, %k0
@@ -6459,7 +6490,7 @@ define zeroext i64 @test_vpcmpsgtd_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -6498,7 +6529,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6519,7 +6550,7 @@ define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sgt <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -6531,7 +6562,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgtd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to4}, %xmm0, %k0
@@ -6549,7 +6580,7 @@ define zeroext i64 @test_vpcmpsgtd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6558,7 +6589,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6578,7 +6609,7 @@ define zeroext i64 @test_masked_vpcmpsgtd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i32> %0, %1
@@ -6620,7 +6651,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgtd_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtd_v8i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %ymm0, %k0
@@ -6642,7 +6673,7 @@ define zeroext i16 @test_vpcmpsgtd_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sgt <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -6683,7 +6714,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6707,7 +6738,7 @@ define zeroext i16 @test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sgt <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -6718,7 +6749,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgtd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to8}, %ymm0, %k0
@@ -6739,7 +6770,7 @@ define zeroext i16 @test_vpcmpsgtd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i32> %0, %1
@@ -6748,7 +6779,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6771,7 +6802,7 @@ define zeroext i16 @test_masked_vpcmpsgtd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i32> %0, %1
@@ -6810,7 +6841,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %ymm0, %k0
@@ -6830,7 +6861,7 @@ define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sgt <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -6869,7 +6900,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6891,7 +6922,7 @@ define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sgt <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -6902,7 +6933,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to8}, %ymm0, %k0
@@ -6921,7 +6952,7 @@ define zeroext i32 @test_vpcmpsgtd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i32> %0, %1
@@ -6930,7 +6961,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -6951,7 +6982,7 @@ define zeroext i32 @test_masked_vpcmpsgtd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i32> %0, %1
@@ -6990,7 +7021,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %ymm0, %k0
@@ -7010,7 +7041,7 @@ define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sgt <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -7049,7 +7080,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7071,7 +7102,7 @@ define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sgt <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -7082,7 +7113,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to8}, %ymm0, %k0
@@ -7101,7 +7132,7 @@ define zeroext i64 @test_vpcmpsgtd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i32> %0, %1
@@ -7110,7 +7141,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7131,7 +7162,7 @@ define zeroext i64 @test_masked_vpcmpsgtd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i32> %0, %1
@@ -7166,7 +7197,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtd_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtd_v16i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %zmm0, %k0
@@ -7182,7 +7213,7 @@ define zeroext i32 @test_vpcmpsgtd_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sgt <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -7217,7 +7248,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7235,7 +7266,7 @@ define zeroext i32 @test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sgt <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -7246,7 +7277,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgtd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
@@ -7262,7 +7293,7 @@ define zeroext i32 @test_vpcmpsgtd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <16 x i32> %0, %1
@@ -7271,7 +7302,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7289,7 +7320,7 @@ define zeroext i32 @test_masked_vpcmpsgtd_v16i1_v32i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <16 x i32> %0, %1
@@ -7324,7 +7355,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtd_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtd_v16i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi), %zmm0, %k0
@@ -7340,7 +7371,7 @@ define zeroext i64 @test_vpcmpsgtd_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sgt <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
@@ -7375,7 +7406,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7393,7 +7424,7 @@ define zeroext i64 @test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sgt <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -7404,7 +7435,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgtd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtd_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtd (%rdi){1to16}, %zmm0, %k0
@@ -7420,7 +7451,7 @@ define zeroext i64 @test_vpcmpsgtd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <16 x i32> %0, %1
@@ -7429,7 +7460,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7447,7 +7478,7 @@ define zeroext i64 @test_masked_vpcmpsgtd_v16i1_v64i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <16 x i32> %0, %1
@@ -7485,7 +7516,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_vpcmpsgtq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpsgtq_v2i1_v4i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %xmm0, %k0
@@ -7504,7 +7535,7 @@ define zeroext i4 @test_vpcmpsgtq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -7543,7 +7574,7 @@ entry:
   ret i4 %6
 }
 
-define zeroext i4 @test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7564,7 +7595,7 @@ define zeroext i4 @test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -7576,7 +7607,7 @@ entry:
 }
 
 
-define zeroext i4 @test_vpcmpsgtq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpsgtq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to2}, %xmm0, %k0
@@ -7594,7 +7625,7 @@ define zeroext i4 @test_vpcmpsgtq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -7603,7 +7634,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7623,7 +7654,7 @@ define zeroext i4 @test_masked_vpcmpsgtq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -7664,7 +7695,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpsgtq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgtq_v2i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %xmm0, %k0
@@ -7685,7 +7716,7 @@ define zeroext i8 @test_vpcmpsgtq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -7726,7 +7757,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7749,7 +7780,7 @@ define zeroext i8 @test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -7761,7 +7792,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpsgtq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgtq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to2}, %xmm0, %k0
@@ -7781,7 +7812,7 @@ define zeroext i8 @test_vpcmpsgtq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -7790,7 +7821,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7812,7 +7843,7 @@ define zeroext i8 @test_masked_vpcmpsgtq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -7853,7 +7884,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgtq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtq_v2i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %xmm0, %k0
@@ -7874,7 +7905,7 @@ define zeroext i16 @test_vpcmpsgtq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -7915,7 +7946,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -7938,7 +7969,7 @@ define zeroext i16 @test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -7950,7 +7981,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgtq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to2}, %xmm0, %k0
@@ -7970,7 +8001,7 @@ define zeroext i16 @test_vpcmpsgtq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -7979,7 +8010,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8001,7 +8032,7 @@ define zeroext i16 @test_masked_vpcmpsgtq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -8040,7 +8071,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtq_v2i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %xmm0, %k0
@@ -8059,7 +8090,7 @@ define zeroext i32 @test_vpcmpsgtq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -8098,7 +8129,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8119,7 +8150,7 @@ define zeroext i32 @test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -8131,7 +8162,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgtq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to2}, %xmm0, %k0
@@ -8149,7 +8180,7 @@ define zeroext i32 @test_vpcmpsgtq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -8158,7 +8189,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8178,7 +8209,7 @@ define zeroext i32 @test_masked_vpcmpsgtq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -8217,7 +8248,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtq_v2i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %xmm0, %k0
@@ -8236,7 +8267,7 @@ define zeroext i64 @test_vpcmpsgtq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -8275,7 +8306,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8296,7 +8327,7 @@ define zeroext i64 @test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sgt <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -8308,7 +8339,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgtq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to2}, %xmm0, %k0
@@ -8326,7 +8357,7 @@ define zeroext i64 @test_vpcmpsgtq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -8335,7 +8366,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8355,7 +8386,7 @@ define zeroext i64 @test_masked_vpcmpsgtq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sgt <2 x i64> %0, %1
@@ -8397,7 +8428,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpsgtq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgtq_v4i1_v8i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %ymm0, %k0
@@ -8419,7 +8450,7 @@ define zeroext i8 @test_vpcmpsgtq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -8461,7 +8492,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8485,7 +8516,7 @@ define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -8497,7 +8528,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpsgtq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgtq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to4}, %ymm0, %k0
@@ -8518,7 +8549,7 @@ define zeroext i8 @test_vpcmpsgtq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -8527,7 +8558,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8550,7 +8581,7 @@ define zeroext i8 @test_masked_vpcmpsgtq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -8592,7 +8623,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgtq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtq_v4i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %ymm0, %k0
@@ -8614,7 +8645,7 @@ define zeroext i16 @test_vpcmpsgtq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -8656,7 +8687,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8680,7 +8711,7 @@ define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -8692,7 +8723,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgtq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to4}, %ymm0, %k0
@@ -8713,7 +8744,7 @@ define zeroext i16 @test_vpcmpsgtq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -8722,7 +8753,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8745,7 +8776,7 @@ define zeroext i16 @test_masked_vpcmpsgtq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -8785,7 +8816,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtq_v4i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %ymm0, %k0
@@ -8805,7 +8836,7 @@ define zeroext i32 @test_vpcmpsgtq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -8845,7 +8876,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8867,7 +8898,7 @@ define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -8879,7 +8910,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgtq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to4}, %ymm0, %k0
@@ -8898,7 +8929,7 @@ define zeroext i32 @test_vpcmpsgtq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -8907,7 +8938,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -8928,7 +8959,7 @@ define zeroext i32 @test_masked_vpcmpsgtq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -8968,7 +8999,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtq_v4i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %ymm0, %k0
@@ -8988,7 +9019,7 @@ define zeroext i64 @test_vpcmpsgtq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -9028,7 +9059,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9050,7 +9081,7 @@ define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sgt <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -9062,7 +9093,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgtq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to4}, %ymm0, %k0
@@ -9081,7 +9112,7 @@ define zeroext i64 @test_vpcmpsgtq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -9090,7 +9121,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9111,7 +9142,7 @@ define zeroext i64 @test_masked_vpcmpsgtq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <4 x i64> %0, %1
@@ -9149,7 +9180,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgtq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtq_v8i1_v16i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %zmm0, %k0
@@ -9167,7 +9198,7 @@ define zeroext i16 @test_vpcmpsgtq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sgt <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -9204,7 +9235,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9224,7 +9255,7 @@ define zeroext i16 @test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sgt <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -9235,7 +9266,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgtq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgtq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
@@ -9253,7 +9284,7 @@ define zeroext i16 @test_vpcmpsgtq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i64> %0, %1
@@ -9262,7 +9293,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9282,7 +9313,7 @@ define zeroext i16 @test_masked_vpcmpsgtq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i64> %0, %1
@@ -9317,7 +9348,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %zmm0, %k0
@@ -9333,7 +9364,7 @@ define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sgt <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -9368,7 +9399,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9386,7 +9417,7 @@ define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sgt <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -9397,7 +9428,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
@@ -9413,7 +9444,7 @@ define zeroext i32 @test_vpcmpsgtq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i64> %0, %1
@@ -9422,7 +9453,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9440,7 +9471,7 @@ define zeroext i32 @test_masked_vpcmpsgtq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i64> %0, %1
@@ -9475,7 +9506,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi), %zmm0, %k0
@@ -9491,7 +9522,7 @@ define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sgt <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -9526,7 +9557,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9544,7 +9575,7 @@ define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sgt <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -9555,7 +9586,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgtq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpgtq (%rdi){1to8}, %zmm0, %k0
@@ -9571,7 +9602,7 @@ define zeroext i64 @test_vpcmpsgtq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i64> %0, %1
@@ -9580,7 +9611,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9598,7 +9629,7 @@ define zeroext i64 @test_masked_vpcmpsgtq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sgt <8 x i64> %0, %1
@@ -9635,7 +9666,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgeb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgeb_v16i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltb (%rdi), %xmm0, %k0
@@ -9654,7 +9685,7 @@ define zeroext i32 @test_vpcmpsgeb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sge <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -9691,7 +9722,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgeb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgeb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9712,7 +9743,7 @@ define zeroext i32 @test_masked_vpcmpsgeb_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sge <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -9748,7 +9779,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgeb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeb_v16i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltb (%rdi), %xmm0, %k0
@@ -9767,7 +9798,7 @@ define zeroext i64 @test_vpcmpsgeb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sge <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -9804,7 +9835,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgeb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9825,7 +9856,7 @@ define zeroext i64 @test_masked_vpcmpsgeb_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp sge <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -9868,7 +9899,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgeb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeb_v32i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltb (%rdi), %ymm0, %k0
@@ -9894,7 +9925,7 @@ define zeroext i64 @test_vpcmpsgeb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp sge <32 x i8> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -9941,7 +9972,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgeb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -9972,7 +10003,7 @@ define zeroext i64 @test_masked_vpcmpsgeb_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp sge <32 x i8> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -10010,7 +10041,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgew_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgew_v8i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgew_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltw (%rdi), %xmm0, %k0
@@ -10031,7 +10062,7 @@ define zeroext i16 @test_vpcmpsgew_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sge <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -10070,7 +10101,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgew_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgew_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgew_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10093,7 +10124,7 @@ define zeroext i16 @test_masked_vpcmpsgew_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sge <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -10129,7 +10160,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgew_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgew_v8i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgew_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltw (%rdi), %xmm0, %k0
@@ -10148,7 +10179,7 @@ define zeroext i32 @test_vpcmpsgew_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sge <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -10185,7 +10216,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgew_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgew_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgew_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10206,7 +10237,7 @@ define zeroext i32 @test_masked_vpcmpsgew_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sge <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -10242,7 +10273,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgew_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgew_v8i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgew_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltw (%rdi), %xmm0, %k0
@@ -10261,7 +10292,7 @@ define zeroext i64 @test_vpcmpsgew_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sge <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -10298,7 +10329,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgew_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgew_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgew_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10319,7 +10350,7 @@ define zeroext i64 @test_masked_vpcmpsgew_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp sge <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -10356,7 +10387,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgew_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgew_v16i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgew_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltw (%rdi), %ymm0, %k0
@@ -10376,7 +10407,7 @@ define zeroext i32 @test_vpcmpsgew_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sge <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -10414,7 +10445,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgew_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgew_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgew_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10436,7 +10467,7 @@ define zeroext i32 @test_masked_vpcmpsgew_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sge <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -10473,7 +10504,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgew_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgew_v16i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgew_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltw (%rdi), %ymm0, %k0
@@ -10493,7 +10524,7 @@ define zeroext i64 @test_vpcmpsgew_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sge <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -10531,7 +10562,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgew_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgew_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgew_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10553,7 +10584,7 @@ define zeroext i64 @test_masked_vpcmpsgew_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp sge <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -10599,7 +10630,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgew_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgew_v32i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgew_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltw (%rdi), %zmm0, %k0
@@ -10628,7 +10659,7 @@ define zeroext i64 @test_vpcmpsgew_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp sge <32 x i16> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -10678,7 +10709,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgew_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgew_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgew_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10712,7 +10743,7 @@ define zeroext i64 @test_masked_vpcmpsgew_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp sge <32 x i16> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -10751,7 +10782,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpsged_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsged_v4i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %xmm0, %k0
@@ -10772,7 +10803,7 @@ define zeroext i8 @test_vpcmpsged_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -10813,7 +10844,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10836,7 +10867,7 @@ define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -10848,7 +10879,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpsged_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsged_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to4}, %xmm0, %k0
@@ -10868,7 +10899,7 @@ define zeroext i8 @test_vpcmpsged_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -10877,7 +10908,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -10899,7 +10930,7 @@ define zeroext i8 @test_masked_vpcmpsged_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -10940,7 +10971,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsged_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsged_v4i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %xmm0, %k0
@@ -10961,7 +10992,7 @@ define zeroext i16 @test_vpcmpsged_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -11002,7 +11033,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11025,7 +11056,7 @@ define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -11037,7 +11068,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsged_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsged_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to4}, %xmm0, %k0
@@ -11057,7 +11088,7 @@ define zeroext i16 @test_vpcmpsged_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -11066,7 +11097,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11088,7 +11119,7 @@ define zeroext i16 @test_masked_vpcmpsged_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -11127,7 +11158,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsged_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsged_v4i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %xmm0, %k0
@@ -11146,7 +11177,7 @@ define zeroext i32 @test_vpcmpsged_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -11185,7 +11216,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11206,7 +11237,7 @@ define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -11218,7 +11249,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsged_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsged_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to4}, %xmm0, %k0
@@ -11236,7 +11267,7 @@ define zeroext i32 @test_vpcmpsged_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -11245,7 +11276,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11265,7 +11296,7 @@ define zeroext i32 @test_masked_vpcmpsged_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -11304,7 +11335,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsged_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsged_v4i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %xmm0, %k0
@@ -11323,7 +11354,7 @@ define zeroext i64 @test_vpcmpsged_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -11362,7 +11393,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11383,7 +11414,7 @@ define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp sge <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -11395,7 +11426,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsged_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsged_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to4}, %xmm0, %k0
@@ -11413,7 +11444,7 @@ define zeroext i64 @test_vpcmpsged_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -11422,7 +11453,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11442,7 +11473,7 @@ define zeroext i64 @test_masked_vpcmpsged_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i32> %0, %1
@@ -11484,7 +11515,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsged_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsged_v8i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %ymm0, %k0
@@ -11506,7 +11537,7 @@ define zeroext i16 @test_vpcmpsged_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sge <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -11547,7 +11578,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsged_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsged_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11571,7 +11602,7 @@ define zeroext i16 @test_masked_vpcmpsged_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sge <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -11582,7 +11613,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsged_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsged_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to8}, %ymm0, %k0
@@ -11603,7 +11634,7 @@ define zeroext i16 @test_vpcmpsged_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i32> %0, %1
@@ -11612,7 +11643,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsged_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsged_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11635,7 +11666,7 @@ define zeroext i16 @test_masked_vpcmpsged_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i32> %0, %1
@@ -11674,7 +11705,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %ymm0, %k0
@@ -11694,7 +11725,7 @@ define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sge <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -11733,7 +11764,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11755,7 +11786,7 @@ define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sge <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -11766,7 +11797,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to8}, %ymm0, %k0
@@ -11785,7 +11816,7 @@ define zeroext i32 @test_vpcmpsged_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i32> %0, %1
@@ -11794,7 +11825,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11815,7 +11846,7 @@ define zeroext i32 @test_masked_vpcmpsged_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i32> %0, %1
@@ -11854,7 +11885,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %ymm0, %k0
@@ -11874,7 +11905,7 @@ define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sge <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -11913,7 +11944,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11935,7 +11966,7 @@ define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp sge <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -11946,7 +11977,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to8}, %ymm0, %k0
@@ -11965,7 +11996,7 @@ define zeroext i64 @test_vpcmpsged_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i32> %0, %1
@@ -11974,7 +12005,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -11995,7 +12026,7 @@ define zeroext i64 @test_masked_vpcmpsged_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i32> %0, %1
@@ -12030,7 +12061,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsged_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsged_v16i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %zmm0, %k0
@@ -12046,7 +12077,7 @@ define zeroext i32 @test_vpcmpsged_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sge <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -12081,7 +12112,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsged_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsged_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12099,7 +12130,7 @@ define zeroext i32 @test_masked_vpcmpsged_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sge <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -12110,7 +12141,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsged_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsged_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
@@ -12126,7 +12157,7 @@ define zeroext i32 @test_vpcmpsged_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <16 x i32> %0, %1
@@ -12135,7 +12166,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsged_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsged_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12153,7 +12184,7 @@ define zeroext i32 @test_masked_vpcmpsged_v16i1_v32i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <16 x i32> %0, %1
@@ -12188,7 +12219,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsged_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsged_v16i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi), %zmm0, %k0
@@ -12204,7 +12235,7 @@ define zeroext i64 @test_vpcmpsged_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sge <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
@@ -12239,7 +12270,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsged_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsged_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12257,7 +12288,7 @@ define zeroext i64 @test_masked_vpcmpsged_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp sge <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -12268,7 +12299,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsged_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsged_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsged_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltd (%rdi){1to16}, %zmm0, %k0
@@ -12284,7 +12315,7 @@ define zeroext i64 @test_vpcmpsged_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <16 x i32> %0, %1
@@ -12293,7 +12324,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsged_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsged_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsged_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12311,7 +12342,7 @@ define zeroext i64 @test_masked_vpcmpsged_v16i1_v64i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <16 x i32> %0, %1
@@ -12349,7 +12380,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_vpcmpsgeq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpsgeq_v2i1_v4i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %xmm0, %k0
@@ -12368,7 +12399,7 @@ define zeroext i4 @test_vpcmpsgeq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -12407,7 +12438,7 @@ entry:
   ret i4 %6
 }
 
-define zeroext i4 @test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12428,7 +12459,7 @@ define zeroext i4 @test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -12440,7 +12471,7 @@ entry:
 }
 
 
-define zeroext i4 @test_vpcmpsgeq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpsgeq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to2}, %xmm0, %k0
@@ -12458,7 +12489,7 @@ define zeroext i4 @test_vpcmpsgeq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -12467,7 +12498,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12487,7 +12518,7 @@ define zeroext i4 @test_masked_vpcmpsgeq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -12528,7 +12559,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpsgeq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgeq_v2i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %xmm0, %k0
@@ -12549,7 +12580,7 @@ define zeroext i8 @test_vpcmpsgeq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -12590,7 +12621,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12613,7 +12644,7 @@ define zeroext i8 @test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -12625,7 +12656,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpsgeq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgeq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to2}, %xmm0, %k0
@@ -12645,7 +12676,7 @@ define zeroext i8 @test_vpcmpsgeq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -12654,7 +12685,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12676,7 +12707,7 @@ define zeroext i8 @test_masked_vpcmpsgeq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -12717,7 +12748,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgeq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgeq_v2i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %xmm0, %k0
@@ -12738,7 +12769,7 @@ define zeroext i16 @test_vpcmpsgeq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -12779,7 +12810,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12802,7 +12833,7 @@ define zeroext i16 @test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -12814,7 +12845,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgeq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgeq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to2}, %xmm0, %k0
@@ -12834,7 +12865,7 @@ define zeroext i16 @test_vpcmpsgeq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -12843,7 +12874,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12865,7 +12896,7 @@ define zeroext i16 @test_masked_vpcmpsgeq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -12904,7 +12935,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgeq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgeq_v2i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %xmm0, %k0
@@ -12923,7 +12954,7 @@ define zeroext i32 @test_vpcmpsgeq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -12962,7 +12993,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -12983,7 +13014,7 @@ define zeroext i32 @test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -12995,7 +13026,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgeq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgeq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to2}, %xmm0, %k0
@@ -13013,7 +13044,7 @@ define zeroext i32 @test_vpcmpsgeq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -13022,7 +13053,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13042,7 +13073,7 @@ define zeroext i32 @test_masked_vpcmpsgeq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -13081,7 +13112,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgeq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeq_v2i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %xmm0, %k0
@@ -13100,7 +13131,7 @@ define zeroext i64 @test_vpcmpsgeq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -13139,7 +13170,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13160,7 +13191,7 @@ define zeroext i64 @test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp sge <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -13172,7 +13203,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgeq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to2}, %xmm0, %k0
@@ -13190,7 +13221,7 @@ define zeroext i64 @test_vpcmpsgeq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -13199,7 +13230,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13219,7 +13250,7 @@ define zeroext i64 @test_masked_vpcmpsgeq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp sge <2 x i64> %0, %1
@@ -13261,7 +13292,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpsgeq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgeq_v4i1_v8i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %ymm0, %k0
@@ -13283,7 +13314,7 @@ define zeroext i8 @test_vpcmpsgeq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -13325,7 +13356,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13349,7 +13380,7 @@ define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -13361,7 +13392,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpsgeq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpsgeq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to4}, %ymm0, %k0
@@ -13382,7 +13413,7 @@ define zeroext i8 @test_vpcmpsgeq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -13391,7 +13422,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13414,7 +13445,7 @@ define zeroext i8 @test_masked_vpcmpsgeq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -13456,7 +13487,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgeq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgeq_v4i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %ymm0, %k0
@@ -13478,7 +13509,7 @@ define zeroext i16 @test_vpcmpsgeq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -13520,7 +13551,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13544,7 +13575,7 @@ define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -13556,7 +13587,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgeq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgeq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to4}, %ymm0, %k0
@@ -13577,7 +13608,7 @@ define zeroext i16 @test_vpcmpsgeq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -13586,7 +13617,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13609,7 +13640,7 @@ define zeroext i16 @test_masked_vpcmpsgeq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -13649,7 +13680,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgeq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgeq_v4i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %ymm0, %k0
@@ -13669,7 +13700,7 @@ define zeroext i32 @test_vpcmpsgeq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -13709,7 +13740,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13731,7 +13762,7 @@ define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -13743,7 +13774,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgeq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgeq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to4}, %ymm0, %k0
@@ -13762,7 +13793,7 @@ define zeroext i32 @test_vpcmpsgeq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -13771,7 +13802,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13792,7 +13823,7 @@ define zeroext i32 @test_masked_vpcmpsgeq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -13832,7 +13863,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgeq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeq_v4i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %ymm0, %k0
@@ -13852,7 +13883,7 @@ define zeroext i64 @test_vpcmpsgeq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -13892,7 +13923,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13914,7 +13945,7 @@ define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp sge <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -13926,7 +13957,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgeq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to4}, %ymm0, %k0
@@ -13945,7 +13976,7 @@ define zeroext i64 @test_vpcmpsgeq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -13954,7 +13985,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -13975,7 +14006,7 @@ define zeroext i64 @test_masked_vpcmpsgeq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <4 x i64> %0, %1
@@ -14013,7 +14044,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpsgeq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgeq_v8i1_v16i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %zmm0, %k0
@@ -14031,7 +14062,7 @@ define zeroext i16 @test_vpcmpsgeq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sge <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -14068,7 +14099,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14088,7 +14119,7 @@ define zeroext i16 @test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sge <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -14099,7 +14130,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpsgeq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpsgeq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
@@ -14117,7 +14148,7 @@ define zeroext i16 @test_vpcmpsgeq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i64> %0, %1
@@ -14126,7 +14157,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14146,7 +14177,7 @@ define zeroext i16 @test_masked_vpcmpsgeq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i64> %0, %1
@@ -14181,7 +14212,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %zmm0, %k0
@@ -14197,7 +14228,7 @@ define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sge <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -14232,7 +14263,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14250,7 +14281,7 @@ define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sge <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -14261,7 +14292,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
@@ -14277,7 +14308,7 @@ define zeroext i32 @test_vpcmpsgeq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i64> %0, %1
@@ -14286,7 +14317,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14304,7 +14335,7 @@ define zeroext i32 @test_masked_vpcmpsgeq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i64> %0, %1
@@ -14339,7 +14370,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi), %zmm0, %k0
@@ -14355,7 +14386,7 @@ define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sge <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -14390,7 +14421,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14408,7 +14439,7 @@ define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp sge <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -14419,7 +14450,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpsgeq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpnltq (%rdi){1to8}, %zmm0, %k0
@@ -14435,7 +14466,7 @@ define zeroext i64 @test_vpcmpsgeq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i64> %0, %1
@@ -14444,7 +14475,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14462,7 +14493,7 @@ define zeroext i64 @test_masked_vpcmpsgeq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp sge <8 x i64> %0, %1
@@ -14500,7 +14531,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultb_v16i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltub (%rdi), %xmm0, %k0
@@ -14519,7 +14550,7 @@ define zeroext i32 @test_vpcmpultb_v16i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp ult <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -14557,7 +14588,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultb_v16i1_v32i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultb_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14578,7 +14609,7 @@ define zeroext i32 @test_masked_vpcmpultb_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp ult <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -14615,7 +14646,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultb_v16i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltub (%rdi), %xmm0, %k0
@@ -14634,7 +14665,7 @@ define zeroext i64 @test_vpcmpultb_v16i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp ult <16 x i8> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -14672,7 +14703,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultb_v16i1_v64i1_mask_mem(i16 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultb_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14693,7 +14724,7 @@ define zeroext i64 @test_masked_vpcmpultb_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <16 x i8>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <16 x i8>
   %2 = icmp ult <16 x i8> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -14737,7 +14768,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultb_v32i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltub (%rdi), %ymm0, %k0
@@ -14763,7 +14794,7 @@ define zeroext i64 @test_vpcmpultb_v32i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp ult <32 x i8> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -14811,7 +14842,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultb_v32i1_v64i1_mask_mem(i32 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultb_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14842,7 +14873,7 @@ define zeroext i64 @test_masked_vpcmpultb_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <32 x i8>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <32 x i8>
   %2 = icmp ult <32 x i8> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -14881,7 +14912,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpultw_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultw_v8i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultw_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuw (%rdi), %xmm0, %k0
@@ -14902,7 +14933,7 @@ define zeroext i16 @test_vpcmpultw_v8i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp ult <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -14942,7 +14973,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpultw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultw_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -14965,7 +14996,7 @@ define zeroext i16 @test_masked_vpcmpultw_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp ult <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -15002,7 +15033,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultw_v8i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultw_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuw (%rdi), %xmm0, %k0
@@ -15021,7 +15052,7 @@ define zeroext i32 @test_vpcmpultw_v8i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp ult <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -15059,7 +15090,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultw_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15080,7 +15111,7 @@ define zeroext i32 @test_masked_vpcmpultw_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp ult <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -15117,7 +15148,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultw_v8i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultw_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuw (%rdi), %xmm0, %k0
@@ -15136,7 +15167,7 @@ define zeroext i64 @test_vpcmpultw_v8i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp ult <8 x i16> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -15174,7 +15205,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultw_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15195,7 +15226,7 @@ define zeroext i64 @test_masked_vpcmpultw_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <8 x i16>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <8 x i16>
   %2 = icmp ult <8 x i16> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -15233,7 +15264,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultw_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultw_v16i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultw_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuw (%rdi), %ymm0, %k0
@@ -15253,7 +15284,7 @@ define zeroext i32 @test_vpcmpultw_v16i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp ult <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -15292,7 +15323,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultw_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultw_v16i1_v32i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultw_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15314,7 +15345,7 @@ define zeroext i32 @test_masked_vpcmpultw_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp ult <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -15352,7 +15383,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultw_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultw_v16i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultw_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuw (%rdi), %ymm0, %k0
@@ -15372,7 +15403,7 @@ define zeroext i64 @test_vpcmpultw_v16i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp ult <16 x i16> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -15411,7 +15442,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultw_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultw_v16i1_v64i1_mask_mem(i16 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultw_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15433,7 +15464,7 @@ define zeroext i64 @test_masked_vpcmpultw_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <16 x i16>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <16 x i16>
   %2 = icmp ult <16 x i16> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -15481,7 +15512,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultw_v32i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultw_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuw (%rdi), %zmm0, %k0
@@ -15510,7 +15541,7 @@ define zeroext i64 @test_vpcmpultw_v32i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp ult <32 x i16> %0, %1
   %3 = shufflevector <32 x i1> %2, <32 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31, i32 32, i32 33, i32 34, i32 35, i32 36, i32 37, i32 38, i32 39, i32 40, i32 41, i32 42, i32 43, i32 44, i32 45, i32 46, i32 47, i32 48, i32 49, i32 50, i32 51, i32 52, i32 53, i32 54, i32 55, i32 56, i32 57, i32 58, i32 59, i32 60, i32 61, i32 62, i32 63>
@@ -15562,7 +15593,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultw_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultw_v32i1_v64i1_mask_mem(i32 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultw_v32i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15596,7 +15627,7 @@ define zeroext i64 @test_masked_vpcmpultw_v32i1_v64i1_mask_mem(i32 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <32 x i16>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <32 x i16>
   %2 = icmp ult <32 x i16> %0, %1
   %3 = bitcast i32 %__u to <32 x i1>
@@ -15635,7 +15666,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpultd_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpultd_v4i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %xmm0, %k0
@@ -15656,7 +15687,7 @@ define zeroext i8 @test_vpcmpultd_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -15697,7 +15728,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15720,7 +15751,7 @@ define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -15732,7 +15763,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpultd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpultd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to4}, %xmm0, %k0
@@ -15752,7 +15783,7 @@ define zeroext i8 @test_vpcmpultd_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, i32* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -15761,7 +15792,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15783,7 +15814,7 @@ define zeroext i8 @test_masked_vpcmpultd_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -15824,7 +15855,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpultd_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultd_v4i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %xmm0, %k0
@@ -15845,7 +15876,7 @@ define zeroext i16 @test_vpcmpultd_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -15886,7 +15917,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15909,7 +15940,7 @@ define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -15921,7 +15952,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpultd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to4}, %xmm0, %k0
@@ -15941,7 +15972,7 @@ define zeroext i16 @test_vpcmpultd_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -15950,7 +15981,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -15972,7 +16003,7 @@ define zeroext i16 @test_masked_vpcmpultd_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -16011,7 +16042,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultd_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultd_v4i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %xmm0, %k0
@@ -16030,7 +16061,7 @@ define zeroext i32 @test_vpcmpultd_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -16069,7 +16100,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16090,7 +16121,7 @@ define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -16102,7 +16133,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpultd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to4}, %xmm0, %k0
@@ -16120,7 +16151,7 @@ define zeroext i32 @test_vpcmpultd_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -16129,7 +16160,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16149,7 +16180,7 @@ define zeroext i32 @test_masked_vpcmpultd_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -16188,7 +16219,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultd_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultd_v4i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %xmm0, %k0
@@ -16207,7 +16238,7 @@ define zeroext i64 @test_vpcmpultd_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -16246,7 +16277,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16267,7 +16298,7 @@ define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x i32>
   %2 = icmp ult <4 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -16279,7 +16310,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpultd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to4}, %xmm0, %k0
@@ -16297,7 +16328,7 @@ define zeroext i64 @test_vpcmpultd_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -16306,7 +16337,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16326,7 +16357,7 @@ define zeroext i64 @test_masked_vpcmpultd_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <4 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <4 x i32> %vec, <4 x i32> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i32> %0, %1
@@ -16368,7 +16399,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpultd_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultd_v8i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %ymm0, %k0
@@ -16390,7 +16421,7 @@ define zeroext i16 @test_vpcmpultd_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp ult <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -16431,7 +16462,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpultd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16455,7 +16486,7 @@ define zeroext i16 @test_masked_vpcmpultd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp ult <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -16466,7 +16497,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpultd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to8}, %ymm0, %k0
@@ -16487,7 +16518,7 @@ define zeroext i16 @test_vpcmpultd_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i32> %0, %1
@@ -16496,7 +16527,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpultd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16519,7 +16550,7 @@ define zeroext i16 @test_masked_vpcmpultd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i32> %0, %1
@@ -16558,7 +16589,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %ymm0, %k0
@@ -16578,7 +16609,7 @@ define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp ult <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -16617,7 +16648,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16639,7 +16670,7 @@ define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp ult <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -16650,7 +16681,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to8}, %ymm0, %k0
@@ -16669,7 +16700,7 @@ define zeroext i32 @test_vpcmpultd_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i32> %0, %1
@@ -16678,7 +16709,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16699,7 +16730,7 @@ define zeroext i32 @test_masked_vpcmpultd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i32> %0, %1
@@ -16738,7 +16769,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %ymm0, %k0
@@ -16758,7 +16789,7 @@ define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp ult <8 x i32> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -16797,7 +16828,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16819,7 +16850,7 @@ define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x i32>
   %2 = icmp ult <8 x i32> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -16830,7 +16861,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to8}, %ymm0, %k0
@@ -16849,7 +16880,7 @@ define zeroext i64 @test_vpcmpultd_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, i32* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i32> %0, %1
@@ -16858,7 +16889,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16879,7 +16910,7 @@ define zeroext i64 @test_masked_vpcmpultd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <8 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <8 x i32> %vec, <8 x i32> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i32> %0, %1
@@ -16914,7 +16945,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultd_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultd_v16i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %zmm0, %k0
@@ -16930,7 +16961,7 @@ define zeroext i32 @test_vpcmpultd_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp ult <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -16965,7 +16996,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultd_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultd_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -16983,7 +17014,7 @@ define zeroext i32 @test_masked_vpcmpultd_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp ult <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -16994,7 +17025,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpultd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
@@ -17010,7 +17041,7 @@ define zeroext i32 @test_vpcmpultd_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, i32* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <16 x i32> %0, %1
@@ -17019,7 +17050,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpultd_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultd_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17037,7 +17068,7 @@ define zeroext i32 @test_masked_vpcmpultd_v16i1_v32i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <16 x i32> %0, %1
@@ -17072,7 +17103,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultd_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultd_v16i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi), %zmm0, %k0
@@ -17088,7 +17119,7 @@ define zeroext i64 @test_vpcmpultd_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp ult <16 x i32> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
@@ -17123,7 +17154,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultd_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultd_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17141,7 +17172,7 @@ define zeroext i64 @test_masked_vpcmpultd_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x i32>
   %2 = icmp ult <16 x i32> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -17152,7 +17183,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpultd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultd_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltud (%rdi){1to16}, %zmm0, %k0
@@ -17168,7 +17199,7 @@ define zeroext i64 @test_vpcmpultd_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, i32* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <16 x i32> %0, %1
@@ -17177,7 +17208,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpultd_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, i32* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultd_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultd_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17195,7 +17226,7 @@ define zeroext i64 @test_masked_vpcmpultd_v16i1_v64i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x i32>
-  %load = load i32, i32* %__b
+  %load = load i32, ptr %__b
   %vec = insertelement <16 x i32> undef, i32 %load, i32 0
   %1 = shufflevector <16 x i32> %vec, <16 x i32> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <16 x i32> %0, %1
@@ -17233,7 +17264,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_vpcmpultq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpultq_v2i1_v4i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %xmm0, %k0
@@ -17252,7 +17283,7 @@ define zeroext i4 @test_vpcmpultq_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -17291,7 +17322,7 @@ entry:
   ret i4 %6
 }
 
-define zeroext i4 @test_masked_vpcmpultq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpultq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17312,7 +17343,7 @@ define zeroext i4 @test_masked_vpcmpultq_v2i1_v4i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -17324,7 +17355,7 @@ entry:
 }
 
 
-define zeroext i4 @test_vpcmpultq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_vpcmpultq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to2}, %xmm0, %k0
@@ -17342,7 +17373,7 @@ define zeroext i4 @test_vpcmpultq_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17351,7 +17382,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_masked_vpcmpultq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vpcmpultq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17371,7 +17402,7 @@ define zeroext i4 @test_masked_vpcmpultq_v2i1_v4i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17412,7 +17443,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpultq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpultq_v2i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %xmm0, %k0
@@ -17433,7 +17464,7 @@ define zeroext i8 @test_vpcmpultq_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -17474,7 +17505,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpultq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpultq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17497,7 +17528,7 @@ define zeroext i8 @test_masked_vpcmpultq_v2i1_v8i1_mask_mem(i8 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -17509,7 +17540,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpultq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpultq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to2}, %xmm0, %k0
@@ -17529,7 +17560,7 @@ define zeroext i8 @test_vpcmpultq_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17538,7 +17569,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpultq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpultq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17560,7 +17591,7 @@ define zeroext i8 @test_masked_vpcmpultq_v2i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17601,7 +17632,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpultq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultq_v2i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %xmm0, %k0
@@ -17622,7 +17653,7 @@ define zeroext i16 @test_vpcmpultq_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -17663,7 +17694,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpultq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17686,7 +17717,7 @@ define zeroext i16 @test_masked_vpcmpultq_v2i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -17698,7 +17729,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpultq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to2}, %xmm0, %k0
@@ -17718,7 +17749,7 @@ define zeroext i16 @test_vpcmpultq_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17727,7 +17758,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpultq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17749,7 +17780,7 @@ define zeroext i16 @test_masked_vpcmpultq_v2i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17788,7 +17819,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultq_v2i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %xmm0, %k0
@@ -17807,7 +17838,7 @@ define zeroext i32 @test_vpcmpultq_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -17846,7 +17877,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17867,7 +17898,7 @@ define zeroext i32 @test_masked_vpcmpultq_v2i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -17879,7 +17910,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpultq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to2}, %xmm0, %k0
@@ -17897,7 +17928,7 @@ define zeroext i32 @test_vpcmpultq_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17906,7 +17937,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpultq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -17926,7 +17957,7 @@ define zeroext i32 @test_masked_vpcmpultq_v2i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -17965,7 +17996,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultq_v2i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %xmm0, %k0
@@ -17984,7 +18015,7 @@ define zeroext i64 @test_vpcmpultq_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -18023,7 +18054,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18044,7 +18075,7 @@ define zeroext i64 @test_masked_vpcmpultq_v2i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x i64>
   %2 = icmp ult <2 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -18056,7 +18087,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpultq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to2}, %xmm0, %k0
@@ -18074,7 +18105,7 @@ define zeroext i64 @test_vpcmpultq_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -18083,7 +18114,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpultq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18103,7 +18134,7 @@ define zeroext i64 @test_masked_vpcmpultq_v2i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <2 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <2 x i64> %vec, <2 x i64> undef, <2 x i32> <i32 0, i32 0>
   %2 = icmp ult <2 x i64> %0, %1
@@ -18145,7 +18176,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vpcmpultq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpultq_v4i1_v8i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %ymm0, %k0
@@ -18167,7 +18198,7 @@ define zeroext i8 @test_vpcmpultq_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -18209,7 +18240,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18233,7 +18264,7 @@ define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem(i8 zeroext %__u, <4 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -18245,7 +18276,7 @@ entry:
 }
 
 
-define zeroext i8 @test_vpcmpultq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_vpcmpultq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to4}, %ymm0, %k0
@@ -18266,7 +18297,7 @@ define zeroext i8 @test_vpcmpultq_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, i64* %__b
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18275,7 +18306,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18298,7 +18329,7 @@ define zeroext i8 @test_masked_vpcmpultq_v4i1_v8i1_mask_mem_b(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18340,7 +18371,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpultq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultq_v4i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %ymm0, %k0
@@ -18362,7 +18393,7 @@ define zeroext i16 @test_vpcmpultq_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -18404,7 +18435,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18428,7 +18459,7 @@ define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -18440,7 +18471,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpultq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to4}, %ymm0, %k0
@@ -18461,7 +18492,7 @@ define zeroext i16 @test_vpcmpultq_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18470,7 +18501,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18493,7 +18524,7 @@ define zeroext i16 @test_masked_vpcmpultq_v4i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18533,7 +18564,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultq_v4i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %ymm0, %k0
@@ -18553,7 +18584,7 @@ define zeroext i32 @test_vpcmpultq_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -18593,7 +18624,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18615,7 +18646,7 @@ define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -18627,7 +18658,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpultq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to4}, %ymm0, %k0
@@ -18646,7 +18677,7 @@ define zeroext i32 @test_vpcmpultq_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18655,7 +18686,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18676,7 +18707,7 @@ define zeroext i32 @test_masked_vpcmpultq_v4i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18716,7 +18747,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultq_v4i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %ymm0, %k0
@@ -18736,7 +18767,7 @@ define zeroext i64 @test_vpcmpultq_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -18776,7 +18807,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18798,7 +18829,7 @@ define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x i64>
   %2 = icmp ult <4 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -18810,7 +18841,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpultq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to4}, %ymm0, %k0
@@ -18829,7 +18860,7 @@ define zeroext i64 @test_vpcmpultq_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18838,7 +18869,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18859,7 +18890,7 @@ define zeroext i64 @test_masked_vpcmpultq_v4i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <4 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <4 x i64> %vec, <4 x i64> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <4 x i64> %0, %1
@@ -18897,7 +18928,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vpcmpultq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultq_v8i1_v16i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %zmm0, %k0
@@ -18915,7 +18946,7 @@ define zeroext i16 @test_vpcmpultq_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp ult <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -18952,7 +18983,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vpcmpultq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -18972,7 +19003,7 @@ define zeroext i16 @test_masked_vpcmpultq_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp ult <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -18983,7 +19014,7 @@ entry:
 }
 
 
-define zeroext i16 @test_vpcmpultq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_vpcmpultq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
@@ -19001,7 +19032,7 @@ define zeroext i16 @test_vpcmpultq_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i64> %0, %1
@@ -19010,7 +19041,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_masked_vpcmpultq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vpcmpultq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19030,7 +19061,7 @@ define zeroext i16 @test_masked_vpcmpultq_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i64> %0, %1
@@ -19065,7 +19096,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %zmm0, %k0
@@ -19081,7 +19112,7 @@ define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp ult <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -19116,7 +19147,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19134,7 +19165,7 @@ define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp ult <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -19145,7 +19176,7 @@ entry:
 }
 
 
-define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
@@ -19161,7 +19192,7 @@ define zeroext i32 @test_vpcmpultq_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i64> %0, %1
@@ -19170,7 +19201,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19188,7 +19219,7 @@ define zeroext i32 @test_masked_vpcmpultq_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i64> %0, %1
@@ -19223,7 +19254,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi), %zmm0, %k0
@@ -19239,7 +19270,7 @@ define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp ult <8 x i64> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -19274,7 +19305,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19292,7 +19323,7 @@ define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x i64>
   %2 = icmp ult <8 x i64> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -19303,7 +19334,7 @@ entry:
 }
 
 
-define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vpcmpultq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vpcmpltuq (%rdi){1to8}, %zmm0, %k0
@@ -19319,7 +19350,7 @@ define zeroext i64 @test_vpcmpultq_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, i64* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i64> %0, %1
@@ -19328,7 +19359,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, i64* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vpcmpultq_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19346,7 +19377,7 @@ define zeroext i64 @test_masked_vpcmpultq_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x i64>
-  %load = load i64, i64* %__b
+  %load = load i64, ptr %__b
   %vec = insertelement <8 x i64> undef, i64 %load, i32 0
   %1 = shufflevector <8 x i64> %vec, <8 x i64> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = icmp ult <8 x i64> %0, %1
@@ -19387,7 +19418,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %xmm0, %k0
@@ -19408,7 +19439,7 @@ define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -19416,7 +19447,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to4}, %xmm0, %k0
@@ -19436,7 +19467,7 @@ define zeroext i8 @test_vcmpoeqps_v4i1_v8i1_mask_mem_b(<2 x i64> %__a, float* %_
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -19477,7 +19508,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19500,7 +19531,7 @@ define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem(i4 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -19510,7 +19541,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19532,7 +19563,7 @@ define zeroext i8 @test_masked_vcmpoeqps_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -19573,7 +19604,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %xmm0, %k0
@@ -19594,7 +19625,7 @@ define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -19602,7 +19633,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to4}, %xmm0, %k0
@@ -19622,7 +19653,7 @@ define zeroext i16 @test_vcmpoeqps_v4i1_v16i1_mask_mem_b(<2 x i64> %__a, float* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -19663,7 +19694,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19686,7 +19717,7 @@ define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -19696,7 +19727,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19718,7 +19749,7 @@ define zeroext i16 @test_masked_vcmpoeqps_v4i1_v16i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -19757,7 +19788,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %xmm0, %k0
@@ -19776,7 +19807,7 @@ define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -19784,7 +19815,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to4}, %xmm0, %k0
@@ -19802,7 +19833,7 @@ define zeroext i32 @test_vcmpoeqps_v4i1_v32i1_mask_mem_b(<2 x i64> %__a, float* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -19841,7 +19872,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19862,7 +19893,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -19872,7 +19903,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -19892,7 +19923,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v4i1_v32i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -19931,7 +19962,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %xmm0, %k0
@@ -19950,7 +19981,7 @@ define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -19958,7 +19989,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to4}, %xmm0, %k0
@@ -19976,7 +20007,7 @@ define zeroext i64 @test_vcmpoeqps_v4i1_v64i1_mask_mem_b(<2 x i64> %__a, float* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -20015,7 +20046,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20036,7 +20067,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <4 x float>
   %2 = fcmp oeq <4 x float> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -20046,7 +20077,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b(i4 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20066,7 +20097,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v4i1_v64i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <4 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <4 x float> undef, float %load, i32 0
   %1 = shufflevector <4 x float> %vec, <4 x float> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x float> %0, %1
@@ -20108,7 +20139,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %ymm0, %k0
@@ -20130,7 +20161,7 @@ define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x float>
   %2 = fcmp oeq <8 x float> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -20138,7 +20169,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to8}, %ymm0, %k0
@@ -20159,7 +20190,7 @@ define zeroext i16 @test_vcmpoeqps_v8i1_v16i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <8 x float> undef, float %load, i32 0
   %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x float> %0, %1
@@ -20201,7 +20232,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20225,7 +20256,7 @@ define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x float>
   %2 = fcmp oeq <8 x float> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -20235,7 +20266,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20258,7 +20289,7 @@ define zeroext i16 @test_masked_vcmpoeqps_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <8 x float> undef, float %load, i32 0
   %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x float> %0, %1
@@ -20298,7 +20329,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %ymm0, %k0
@@ -20318,7 +20349,7 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x float>
   %2 = fcmp oeq <8 x float> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -20326,7 +20357,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to8}, %ymm0, %k0
@@ -20345,7 +20376,7 @@ define zeroext i32 @test_vcmpoeqps_v8i1_v32i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <8 x float> undef, float %load, i32 0
   %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x float> %0, %1
@@ -20385,7 +20416,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20407,7 +20438,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x float>
   %2 = fcmp oeq <8 x float> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -20417,7 +20448,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20438,7 +20469,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <8 x float> undef, float %load, i32 0
   %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x float> %0, %1
@@ -20478,7 +20509,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %ymm0, %k0
@@ -20498,7 +20529,7 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x float>
   %2 = fcmp oeq <8 x float> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -20506,7 +20537,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to8}, %ymm0, %k0
@@ -20525,7 +20556,7 @@ define zeroext i64 @test_vcmpoeqps_v8i1_v64i1_mask_mem_b(<4 x i64> %__a, float* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <8 x float> undef, float %load, i32 0
   %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x float> %0, %1
@@ -20565,7 +20596,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20587,7 +20618,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <8 x float>
   %2 = fcmp oeq <8 x float> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -20597,7 +20628,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20618,7 +20649,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <8 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <8 x float> undef, float %load, i32 0
   %1 = shufflevector <8 x float> %vec, <8 x float> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x float> %0, %1
@@ -20654,7 +20685,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %zmm0, %k0
@@ -20670,7 +20701,7 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x float>
   %2 = fcmp oeq <16 x float> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
@@ -20678,7 +20709,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
@@ -20694,7 +20725,7 @@ define zeroext i32 @test_vcmpoeqps_v16i1_v32i1_mask_mem_b(<8 x i64> %__a, float*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <16 x float> undef, float %load, i32 0
   %1 = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <16 x float> %0, %1
@@ -20730,7 +20761,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20748,7 +20779,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x float>
   %2 = fcmp oeq <16 x float> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -20758,7 +20789,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20776,7 +20807,7 @@ define zeroext i32 @test_masked_vcmpoeqps_v16i1_v32i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <16 x float> undef, float %load, i32 0
   %1 = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <16 x float> %0, %1
@@ -20857,7 +20888,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi), %zmm0, %k0
@@ -20873,7 +20904,7 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x float>
   %2 = fcmp oeq <16 x float> %0, %1
   %3 = shufflevector <16 x i1> %2, <16 x i1> zeroinitializer, <64 x i32> <i32 0,i32 1,i32 2,i32 3,i32 4,i32 5,i32 6,i32 7,i32 8,i32 9,i32 10,i32 11,i32 12,i32 13,i32 14,i32 15,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31,i32 16,i32 17,i32 18,i32 19,i32 20,i32 21,i32 22,i32 23,i32 24,i32 25,i32 26,i32 27,i32 28,i32 29,i32 30,i32 31>
@@ -20881,7 +20912,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqps_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqps (%rdi){1to16}, %zmm0, %k0
@@ -20897,7 +20928,7 @@ define zeroext i64 @test_vcmpoeqps_v16i1_v64i1_mask_mem_b(<8 x i64> %__a, float*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <16 x float> undef, float %load, i32 0
   %1 = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <16 x float> %0, %1
@@ -20933,7 +20964,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20951,7 +20982,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem(i16 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <16 x float>
   %2 = fcmp oeq <16 x float> %0, %1
   %3 = bitcast i16 %__u to <16 x i1>
@@ -20961,7 +20992,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, float* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem_b(i16 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqps_v16i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -20979,7 +21010,7 @@ define zeroext i64 @test_masked_vcmpoeqps_v16i1_v64i1_mask_mem_b(i16 zeroext %__
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <16 x float>
-  %load = load float, float* %__b
+  %load = load float, ptr %__b
   %vec = insertelement <16 x float> undef, float %load, i32 0
   %1 = shufflevector <16 x float> %vec, <16 x float> undef, <16 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <16 x float> %0, %1
@@ -21064,7 +21095,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %xmm0, %k0
@@ -21083,7 +21114,7 @@ define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
@@ -21091,7 +21122,7 @@ entry:
   ret i4 %4
 }
 
-define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to2}, %xmm0, %k0
@@ -21109,7 +21140,7 @@ define zeroext i4 @test_vcmpoeqpd_v2i1_v4i1_mask_mem_b(<2 x i64> %__a, double* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21148,7 +21179,7 @@ entry:
   ret i4 %6
 }
 
-define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21169,7 +21200,7 @@ define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem(i2 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = bitcast i2 %__u to <2 x i1>
@@ -21179,7 +21210,7 @@ entry:
   ret i4 %6
 }
 
-define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21199,7 +21230,7 @@ define zeroext i4 @test_masked_vcmpoeqpd_v2i1_v4i1_mask_mem_b(i2 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21240,7 +21271,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %xmm0, %k0
@@ -21261,7 +21292,7 @@ define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask_mem(<2 x i64> %__a, <2 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -21269,7 +21300,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to2}, %xmm0, %k0
@@ -21289,7 +21320,7 @@ define zeroext i8 @test_vcmpoeqpd_v2i1_v8i1_mask_mem_b(<2 x i64> %__a, double* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21330,7 +21361,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21353,7 +21384,7 @@ define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem(i2 zeroext %__u, <2 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = bitcast i2 %__u to <2 x i1>
@@ -21363,7 +21394,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21385,7 +21416,7 @@ define zeroext i8 @test_masked_vcmpoeqpd_v2i1_v8i1_mask_mem_b(i2 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21426,7 +21457,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %xmm0, %k0
@@ -21447,7 +21478,7 @@ define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -21455,7 +21486,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to2}, %xmm0, %k0
@@ -21475,7 +21506,7 @@ define zeroext i16 @test_vcmpoeqpd_v2i1_v16i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21516,7 +21547,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21539,7 +21570,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem(i2 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = bitcast i2 %__u to <2 x i1>
@@ -21549,7 +21580,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21571,7 +21602,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v2i1_v16i1_mask_mem_b(i2 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21610,7 +21641,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %xmm0, %k0
@@ -21629,7 +21660,7 @@ define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -21637,7 +21668,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to2}, %xmm0, %k0
@@ -21655,7 +21686,7 @@ define zeroext i32 @test_vcmpoeqpd_v2i1_v32i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21694,7 +21725,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21715,7 +21746,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem(i2 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = bitcast i2 %__u to <2 x i1>
@@ -21725,7 +21756,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21745,7 +21776,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v2i1_v32i1_mask_mem_b(i2 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21784,7 +21815,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %xmm0, %k0
@@ -21803,7 +21834,7 @@ define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem(<2 x i64> %__a, <2 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = shufflevector <2 x i1> %2, <2 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3, i32 2, i32 3>
@@ -21811,7 +21842,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to2}, %xmm0, %k0
@@ -21829,7 +21860,7 @@ define zeroext i64 @test_vcmpoeqpd_v2i1_v64i1_mask_mem_b(<2 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21868,7 +21899,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, <2 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21889,7 +21920,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem(i2 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load <2 x i64>, <2 x i64>* %__b
+  %load = load <2 x i64>, ptr %__b
   %1 = bitcast <2 x i64> %load to <2 x double>
   %2 = fcmp oeq <2 x double> %0, %1
   %3 = bitcast i2 %__u to <2 x i1>
@@ -21899,7 +21930,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b(i2 zeroext %__u, <2 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -21919,7 +21950,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v2i1_v64i1_mask_mem_b(i2 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <2 x i64> %__a to <2 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <2 x double> undef, double %load, i32 0
   %1 = shufflevector <2 x double> %vec, <2 x double> undef, <2 x i32> <i32 0, i32 0>
   %2 = fcmp oeq <2 x double> %0, %1
@@ -21961,7 +21992,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %ymm0, %k0
@@ -21983,7 +22014,7 @@ define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask_mem(<4 x i64> %__a, <4 x i64>* 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
@@ -21991,7 +22022,7 @@ entry:
   ret i8 %4
 }
 
-define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to4}, %ymm0, %k0
@@ -22012,7 +22043,7 @@ define zeroext i8 @test_vcmpoeqpd_v4i1_v8i1_mask_mem_b(<4 x i64> %__a, double* %
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22054,7 +22085,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22078,7 +22109,7 @@ define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem(i4 zeroext %__u, <4 
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -22088,7 +22119,7 @@ entry:
   ret i8 %6
 }
 
-define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22111,7 +22142,7 @@ define zeroext i8 @test_masked_vcmpoeqpd_v4i1_v8i1_mask_mem_b(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22153,7 +22184,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %ymm0, %k0
@@ -22175,7 +22206,7 @@ define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -22183,7 +22214,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to4}, %ymm0, %k0
@@ -22204,7 +22235,7 @@ define zeroext i16 @test_vcmpoeqpd_v4i1_v16i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22246,7 +22277,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22270,7 +22301,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -22280,7 +22311,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22303,7 +22334,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v4i1_v16i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22343,7 +22374,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %ymm0, %k0
@@ -22363,7 +22394,7 @@ define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -22371,7 +22402,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to4}, %ymm0, %k0
@@ -22390,7 +22421,7 @@ define zeroext i32 @test_vcmpoeqpd_v4i1_v32i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22430,7 +22461,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22452,7 +22483,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -22462,7 +22493,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22483,7 +22514,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v4i1_v32i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22523,7 +22554,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %ymm0, %k0
@@ -22543,7 +22574,7 @@ define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem(<4 x i64> %__a, <4 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = shufflevector <4 x i1> %2, <4 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7, i32 4, i32 5, i32 6, i32 7>
@@ -22551,7 +22582,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to4}, %ymm0, %k0
@@ -22570,7 +22601,7 @@ define zeroext i64 @test_vcmpoeqpd_v4i1_v64i1_mask_mem_b(<4 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22610,7 +22641,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, <4 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22632,7 +22663,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem(i4 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load <4 x i64>, <4 x i64>* %__b
+  %load = load <4 x i64>, ptr %__b
   %1 = bitcast <4 x i64> %load to <4 x double>
   %2 = fcmp oeq <4 x double> %0, %1
   %3 = bitcast i4 %__u to <4 x i1>
@@ -22642,7 +22673,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b(i4 zeroext %__u, <4 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22663,7 +22694,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v4i1_v64i1_mask_mem_b(i4 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <4 x i64> %__a to <4 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <4 x double> undef, double %load, i32 0
   %1 = shufflevector <4 x double> %vec, <4 x double> undef, <4 x i32> <i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <4 x double> %0, %1
@@ -22701,7 +22732,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %zmm0, %k0
@@ -22719,7 +22750,7 @@ define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x double>
   %2 = fcmp oeq <8 x double> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -22727,7 +22758,7 @@ entry:
   ret i16 %4
 }
 
-define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
@@ -22745,7 +22776,7 @@ define zeroext i16 @test_vcmpoeqpd_v8i1_v16i1_mask_mem_b(<8 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <8 x double> undef, double %load, i32 0
   %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x double> %0, %1
@@ -22783,7 +22814,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22803,7 +22834,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x double>
   %2 = fcmp oeq <8 x double> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -22813,7 +22844,7 @@ entry:
   ret i16 %6
 }
 
-define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -22833,7 +22864,7 @@ define zeroext i16 @test_masked_vcmpoeqpd_v8i1_v16i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <8 x double> undef, double %load, i32 0
   %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x double> %0, %1
@@ -22929,7 +22960,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %zmm0, %k0
@@ -22945,7 +22976,7 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x double>
   %2 = fcmp oeq <8 x double> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -22953,7 +22984,7 @@ entry:
   ret i32 %4
 }
 
-define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
@@ -22969,7 +23000,7 @@ define zeroext i32 @test_vcmpoeqpd_v8i1_v32i1_mask_mem_b(<8 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <8 x double> undef, double %load, i32 0
   %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x double> %0, %1
@@ -23005,7 +23036,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -23023,7 +23054,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x double>
   %2 = fcmp oeq <8 x double> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -23033,7 +23064,7 @@ entry:
   ret i32 %6
 }
 
-define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -23051,7 +23082,7 @@ define zeroext i32 @test_masked_vcmpoeqpd_v8i1_v32i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <8 x double> undef, double %load, i32 0
   %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x double> %0, %1
@@ -23142,7 +23173,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi), %zmm0, %k0
@@ -23158,7 +23189,7 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem(<8 x i64> %__a, <8 x i64>
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x double>
   %2 = fcmp oeq <8 x double> %0, %1
   %3 = shufflevector <8 x i1> %2, <8 x i1> zeroinitializer, <64 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -23166,7 +23197,7 @@ entry:
   ret i64 %4
 }
 
-define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_vcmpoeqpd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    vcmpeqpd (%rdi){1to8}, %zmm0, %k0
@@ -23182,7 +23213,7 @@ define zeroext i64 @test_vcmpoeqpd_v8i1_v64i1_mask_mem_b(<8 x i64> %__a, double*
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <8 x double> undef, double %load, i32 0
   %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x double> %0, %1
@@ -23218,7 +23249,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, <8 x i64>* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -23236,7 +23267,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem(i8 zeroext %__u, <
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load <8 x i64>, <8 x i64>* %__b
+  %load = load <8 x i64>, ptr %__b
   %1 = bitcast <8 x i64> %load to <8 x double>
   %2 = fcmp oeq <8 x double> %0, %1
   %3 = bitcast i8 %__u to <8 x i1>
@@ -23246,7 +23277,7 @@ entry:
   ret i64 %6
 }
 
-define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, double* %__b) local_unnamed_addr {
+define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u, <8 x i64> %__a, ptr %__b) local_unnamed_addr {
 ; VLX-LABEL: test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b:
 ; VLX:       # %bb.0: # %entry
 ; VLX-NEXT:    kmovd %edi, %k1
@@ -23264,7 +23295,7 @@ define zeroext i64 @test_masked_vcmpoeqpd_v8i1_v64i1_mask_mem_b(i8 zeroext %__u,
 ; NoVLX-NEXT:    retq
 entry:
   %0 = bitcast <8 x i64> %__a to <8 x double>
-  %load = load double, double* %__b
+  %load = load double, ptr %__b
   %vec = insertelement <8 x double> undef, double %load, i32 0
   %1 = shufflevector <8 x double> %vec, <8 x double> undef, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   %2 = fcmp oeq <8 x double> %0, %1

@@ -170,11 +170,11 @@ template <size_t Requested, size_t Required> constexpr void verboseAssert() {
   }
 
 #define DLWRAP_IMPL(SYMBOL, ARITY)                                             \
-  DLWRAP_COMMON(SYMBOL, ARITY);                                                \
+  DLWRAP_COMMON(SYMBOL, ARITY)                                                 \
   DLWRAP_INSTANTIATE(SYMBOL, SYMBOL, ARITY)
 
 #define DLWRAP_INTERNAL_IMPL(SYMBOL, ARITY)                                    \
-  DLWRAP_COMMON(SYMBOL, ARITY);                                                \
+  DLWRAP_COMMON(SYMBOL, ARITY)                                                 \
   static DLWRAP_INSTANTIATE(dlwrap_##SYMBOL, SYMBOL, ARITY)
 
 #define DLWRAP_INSTANTIATE_0(SYM_DEF, SYM_USE, T)                              \

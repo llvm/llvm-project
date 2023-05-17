@@ -1,6 +1,6 @@
 // RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+sme < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+sme-f64 < %s | FileCheck %s
-// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+sme-i64 < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+sme-f64f64 < %s | FileCheck %s
+// RUN: llvm-mc -triple aarch64-none-linux-gnu -show-encoding -mattr=+sme-i16i64 < %s | FileCheck %s
 
 // Verify +sme flags imply streaming compatible SVE instructions.
 tbx z0.b, z1.b, z2.b

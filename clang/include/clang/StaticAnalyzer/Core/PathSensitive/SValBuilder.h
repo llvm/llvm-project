@@ -28,8 +28,8 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/ADT/ImmutableList.h"
-#include "llvm/ADT/Optional.h"
 #include <cstdint>
+#include <optional>
 
 namespace clang {
 
@@ -75,39 +75,6 @@ protected:
   /// The width of the scalar type used for array indices.
   const unsigned ArrayIndexWidth;
 
-  SVal evalCastKind(UndefinedVal V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastKind(UnknownVal V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastKind(Loc V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastKind(NonLoc V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastSubKind(loc::ConcreteInt V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(loc::GotoLabel V, QualType CastTy, QualType OriginalTy);
-  SVal evalCastSubKind(loc::MemRegionVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::CompoundVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::ConcreteInt V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::LazyCompoundVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::LocAsInteger V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::SymbolVal V, QualType CastTy,
-                       QualType OriginalTy);
-  SVal evalCastSubKind(nonloc::PointerToMember V, QualType CastTy,
-                       QualType OriginalTy);
-  /// Reduce cast expression by removing redundant intermediate casts.
-  /// E.g.
-  /// - (char)(short)(int x) -> (char)(int x)
-  /// - (int)(int x) -> int x
-  ///
-  /// \param V -- SymbolVal, which pressumably contains SymbolCast or any symbol
-  /// that is applicable for cast operation.
-  /// \param CastTy -- QualType, which `V` shall be cast to.
-  /// \return SVal with simplified cast expression.
-  /// \note: Currently only support integral casts.
-  nonloc::SymbolVal simplifySymbolCast(nonloc::SymbolVal V, QualType CastTy);
-
 public:
   SValBuilder(llvm::BumpPtrAllocator &alloc, ASTContext &context,
               ProgramStateManager &stateMgr);
@@ -120,9 +87,8 @@ public:
   SVal evalIntegralCast(ProgramStateRef state, SVal val, QualType castTy,
                         QualType originalType);
 
-  virtual SVal evalMinus(NonLoc val) = 0;
-
-  virtual SVal evalComplement(NonLoc val) = 0;
+  SVal evalMinus(NonLoc val);
+  SVal evalComplement(NonLoc val);
 
   /// Create a new value which represents a binary expression with two non-
   /// location operands.
@@ -269,8 +235,8 @@ public:
   /// Returns the value of \p E, if it can be determined in a non-path-sensitive
   /// manner.
   ///
-  /// If \p E is not a constant or cannot be modeled, returns \c None.
-  Optional<SVal> getConstantVal(const Expr *E);
+  /// If \p E is not a constant or cannot be modeled, returns \c std::nullopt.
+  std::optional<SVal> getConstantVal(const Expr *E);
 
   NonLoc makeCompoundVal(QualType type, llvm::ImmutableList<SVal> vals) {
     return nonloc::CompoundVal(BasicVals.getCompoundValData(type, vals));
@@ -403,9 +369,9 @@ public:
     return loc::ConcreteInt(BasicVals.getValue(integer));
   }
 
-  /// Return MemRegionVal on success cast, otherwise return None.
-  Optional<loc::MemRegionVal> getCastedMemRegionVal(const MemRegion *region,
-                                                    QualType type);
+  /// Return MemRegionVal on success cast, otherwise return std::nullopt.
+  std::optional<loc::MemRegionVal>
+  getCastedMemRegionVal(const MemRegion *region, QualType type);
 
   /// Make an SVal that represents the given symbol. This follows the convention
   /// of representing Loc-type symbols (symbolic pointers and references)

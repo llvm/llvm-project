@@ -16,28 +16,28 @@
 --- |
   target datalayout = "E-m:e-i8:8:32-i16:16:32-i64:64-n32:64-S128"
   target triple = "mips64-unknown-freebsd"
-  declare i8* @func_a(i64 zeroext)
-  declare i8* @func_b(i64 zeroext)
+  declare ptr @func_a(i64 zeroext)
+  declare ptr @func_b(i64 zeroext)
   ; Function Attrs: nounwind
-  define i8* @test(i64 zeroext %nbytes) local_unnamed_addr #0 {
+  define ptr @test(i64 zeroext %nbytes) local_unnamed_addr #0 {
   entry:
     %cmp = icmp eq i64 %nbytes, 0
     br i1 %cmp, label %if.else, label %if.then
 
   if.then:                                          ; preds = %entry
-    %call = tail call i8* @func_a(i64 zeroext %nbytes)
+    %call = tail call ptr @func_a(i64 zeroext %nbytes)
     br label %return
 
   if.else:                                          ; preds = %entry
-    %call1 = tail call i8* @func_b(i64 zeroext 0)
+    %call1 = tail call ptr @func_b(i64 zeroext 0)
     br label %return
 
   return:                                           ; preds = %if.else, %if.then
-    %retval.0 = phi i8* [ %call, %if.then ], [ %call1, %if.else ]
-    ret i8* %retval.0
+    %retval.0 = phi ptr [ %call, %if.then ], [ %call1, %if.else ]
+    ret ptr %retval.0
   }
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind }
 

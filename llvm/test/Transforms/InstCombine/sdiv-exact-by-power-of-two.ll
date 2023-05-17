@@ -15,6 +15,7 @@ define i8 @t0(i8 %x) {
   %div = sdiv exact i8 %x, 32
   ret i8 %div
 }
+
 define i8 @n1(i8 %x) {
 ; CHECK-LABEL: @n1(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], 32
@@ -23,6 +24,7 @@ define i8 @n1(i8 %x) {
   %div = sdiv i8 %x, 32 ; not exact
   ret i8 %div
 }
+
 define i8 @n2(i8 %x) {
 ; CHECK-LABEL: @n2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i8 [[X:%.*]], -128
@@ -58,6 +60,7 @@ define <2 x i8> @n5_vec_undef(<2 x i8> %x) {
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 undef>
   ret <2 x i8> %div
 }
+
 define <2 x i8> @n6_vec_negative(<2 x i8> %x) {
 ; CHECK-LABEL: @n6_vec_negative(
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact <2 x i8> [[X:%.*]], <i8 32, i8 -128>
@@ -65,4 +68,100 @@ define <2 x i8> @n6_vec_negative(<2 x i8> %x) {
 ;
   %div = sdiv exact <2 x i8> %x, <i8 32, i8 128> ; non-non-negative divisor
   ret <2 x i8> %div
+}
+
+; sdiv exact X, (1<<ShAmt) --> ashr exact X, ShAmt (if shl is non-negative)
+
+define i8 @shl1_nsw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nsw(
+; CHECK-NEXT:    [[DIV:%.*]] = ashr exact i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nsw i8 1, %y
+  %div = sdiv exact i8 %x, %shl
+  ret i8 %div
+}
+
+; negative test - must have nsw
+
+define i8 @shl1_nuw(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nuw(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv exact i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nuw i8 1, %y
+  %div = sdiv exact i8 %x, %shl
+  ret i8 %div
+}
+
+; negative test - must have exact
+
+define i8 @shl1_nsw_not_exact(i8 %x, i8 %y) {
+; CHECK-LABEL: @shl1_nsw_not_exact(
+; CHECK-NEXT:    [[SHL:%.*]] = shl nuw nsw i8 1, [[Y:%.*]]
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i8 [[X:%.*]], [[SHL]]
+; CHECK-NEXT:    ret i8 [[DIV]]
+;
+  %shl = shl nsw i8 1, %y
+  %div = sdiv i8 %x, %shl
+  ret i8 %div
+}
+
+define i8 @prove_exact_with_high_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 2
+; CHECK-NEXT:    [[D:%.*]] = and i8 [[A]], -2
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %a = and i8 %x, -8
+  %d = sdiv i8 %a, 4
+  ret i8 %d
+}
+
+define i8 @prove_exact_with_high_mask_limit(i8 %x, i8 %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask_limit(
+; CHECK-NEXT:    [[A:%.*]] = ashr i8 [[X:%.*]], 3
+; CHECK-NEXT:    ret i8 [[A]]
+;
+  %a = and i8 %x, -8
+  %d = sdiv i8 %a, 8
+  ret i8 %d
+}
+
+; negative test - not enough low zeros in dividend
+
+define i8 @not_prove_exact_with_high_mask(i8 %x, i8 %y) {
+; CHECK-LABEL: @not_prove_exact_with_high_mask(
+; CHECK-NEXT:    [[A:%.*]] = and i8 [[X:%.*]], -8
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[A]], 16
+; CHECK-NEXT:    ret i8 [[D]]
+;
+  %a = and i8 %x, -8
+  %d = sdiv i8 %a, 16
+  ret i8 %d
+}
+
+define <2 x i8> @prove_exact_with_high_mask_splat_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask_splat_vec(
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 3>
+; CHECK-NEXT:    [[D:%.*]] = ashr exact <2 x i8> [[A]], <i8 3, i8 3>
+; CHECK-NEXT:    ret <2 x i8> [[D]]
+;
+  %a = shl <2 x i8> %x, <i8 3, i8 3>
+  %d = sdiv <2 x i8> %a, <i8 8, i8 8>
+  ret <2 x i8> %d
+}
+
+; TODO: Needs knownbits to handle arbitrary vector constants.
+
+define <2 x i8> @prove_exact_with_high_mask_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @prove_exact_with_high_mask_vec(
+; CHECK-NEXT:    [[A:%.*]] = shl <2 x i8> [[X:%.*]], <i8 3, i8 2>
+; CHECK-NEXT:    [[D:%.*]] = sdiv <2 x i8> [[A]], <i8 8, i8 4>
+; CHECK-NEXT:    ret <2 x i8> [[D]]
+;
+  %a = shl <2 x i8> %x, <i8 3, i8 2>
+  %d = sdiv <2 x i8> %a, <i8 8, i8 4>
+  ret <2 x i8> %d
 }

@@ -9,7 +9,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; T2 is the non-opaque struct required to trigger the uniqued T2.0 and T3.0 to
 ; respectively T2 and T3 in the destination module.
-%"T2" = type { %"T3"* }
+%"T2" = type { ptr }
 %"T3" = type opaque
 
 ; Use/refer to T2 so it gets added as an IdentifiedStructType.
@@ -19,14 +19,14 @@ define void @c(%"T2") {
 
 ; The global declaration that causes the assertion when its type is mapped to
 ; itself incorrectly.
-declare void @d(%"T3"*)
+declare void @d(ptr)
 
 define void @b() {
 entry:
-  %f.addr = alloca %"T3"*load %"T3"*, %"T3"** %f.addr
+  %f.addr = alloca ptr load ptr, ptr %f.addr
 
   ; The call with the getCalledOperand() vs getCalledFunction() mismatch.
-  call void @d(%"T3"* %0)
+  call void @d(ptr %0)
   unreachable
 }
 
@@ -44,4 +44,4 @@ entry:
 !6 = !{!7}
 
 ; The reference to d and T3 that gets loaded into %t0.o
-!7 = !DITemplateValueParameter(value: void (%"T3"*)* @d)
+!7 = !DITemplateValueParameter(value: ptr @d)

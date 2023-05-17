@@ -10,7 +10,11 @@
 #define _LIBCPP___CONCEPTS_ARITHMETIC_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/is_floating_point.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_signed.h>
+#include <__type_traits/is_signed_integer.h>
+#include <__type_traits/is_unsigned_integer.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -18,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concepts.arithmetic], arithmetic concepts
 
@@ -41,7 +45,7 @@ concept __libcpp_unsigned_integer = __libcpp_is_unsigned_integer<_Tp>::value;
 template <class _Tp>
 concept __libcpp_signed_integer = __libcpp_is_signed_integer<_Tp>::value;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

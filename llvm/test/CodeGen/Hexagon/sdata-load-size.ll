@@ -9,7 +9,7 @@ target triple = "hexagon"
 
 define i32 @f0() #0 {
 entry:
-  %v0 = load i64, i64* @g0, align 8
+  %v0 = load i64, ptr @g0, align 8
   %v1 = trunc i64 %v0 to i8
   %v2 = zext i8 %v1 to i32
   ret i32 %v2

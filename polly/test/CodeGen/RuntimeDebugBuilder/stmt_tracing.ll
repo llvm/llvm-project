@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-codegen-trace-stmts -polly-codegen-trace-scalars -polly-codegen -S < %s | FileCheck %s
 ;
 
-define void @func(i32 %n, double* %A) {
+define void @func(i32 %n, ptr %A) {
 entry:
   br label %for
 
@@ -11,8 +11,8 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double 0.0, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double 0.0, ptr %A_idx
       br label %inc
 
 inc:
@@ -34,5 +34,5 @@ return:
 ; CHECK: @4 = private unnamed_addr constant [12 x i8] c"%s%s%ld%s%s\00"
 
 ; CHECK:      polly.stmt.body:
-; CHECK:        call i32 (...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @4, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([10 x i8], [10 x i8] addrspace(4)* @0, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @1, i32 0, i32 0), i64 %polly.indvar, i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @2, i32 0, i32 0), i8 addrspace(4)* getelementptr inbounds ([2 x i8], [2 x i8] addrspace(4)* @3, i32 0, i32 0))
-; CHECK-NEXT:   call i32 @fflush(i8* null)
+; CHECK:        call i32 (...) @printf(ptr @4, ptr addrspace(4) @0, ptr addrspace(4) @1, i64 %polly.indvar, ptr addrspace(4) @2, ptr addrspace(4) @3)
+; CHECK-NEXT:   call i32 @fflush(ptr null)

@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class TestExitDuringExpression(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows

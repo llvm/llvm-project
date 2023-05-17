@@ -21,13 +21,12 @@ def set_thread_name(test, thread, breakpoint):
     breakpoint.SetThreadName("main-thread")
 
 class ThreadSpecificBreakTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @add_test_categories(['pyapi'])
 
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'armv7k'], bugnumber='rdar://problem/34563920') # armv7 ios problem - breakpoint with tid qualifier isn't working
+    @skipIf(oslist=['windows'], archs=['aarch64']) # Flaky on buildbot
     def test_thread_id(self):
         self.do_test(set_thread_id)
 
@@ -37,6 +36,7 @@ class ThreadSpecificBreakTestCase(TestBase):
         self.do_test(set_thread_name)
 
     @expectedFailureAll(oslist=['ios', 'watchos', 'tvos', 'bridgeos'], archs=['armv7', 'armv7k'], bugnumber='rdar://problem/34563920') # armv7 ios problem - breakpoint with tid qualifier isn't working
+    @skipIf(oslist=['windows'], archs=['aarch64']) # Flaky on buildbot
     def test_current_token(self):
         self.do_test(using_current)
 

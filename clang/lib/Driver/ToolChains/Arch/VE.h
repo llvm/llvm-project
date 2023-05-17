@@ -24,7 +24,7 @@ void getVETargetFeatures(const Driver &D, const llvm::opt::ArgList &Args,
                          std::vector<llvm::StringRef> &Features);
 
 } // end namespace ve
-} // namespace tools
+} // end namespace tools
 } // end namespace driver
 } // end namespace clang
 

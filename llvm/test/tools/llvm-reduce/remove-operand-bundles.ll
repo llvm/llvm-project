@@ -10,7 +10,7 @@ declare void @f1()
 declare void @f2()
 declare void @f3()
 
-; CHECK-FINAL-LABEL: define void @interesting(i32 %arg0, i32 %arg1, i32 %arg2) {
+; CHECK-FINAL-LABEL: define void @interesting(i32 %arg0, i32 %arg2) {
 ; CHECK-FINAL-NEXT:  entry:
 ; CHECK-FINAL-NEXT:    call void @f1() [ "bundle0"(), "align"(i32 %arg0), "whatever0"() ]
 ; CHECK-FINAL-NEXT:    call void @f2()

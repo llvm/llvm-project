@@ -5,7 +5,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @globalvar = global i32 1, align 4
 
 define void @hot() {
-  store i32 0, i32* @globalvar, align 4
+  store i32 0, ptr @globalvar, align 4
   ret void
 }
 define void @critical() {

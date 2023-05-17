@@ -112,14 +112,13 @@
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
 #include "llvm/IR/ValueHandle.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
 #include "llvm/Transforms/Utils/FunctionComparator.h"
+#include "llvm/Transforms/Utils/ModuleUtils.h"
 #include <algorithm>
 #include <cassert>
 #include <iterator>
@@ -214,7 +213,7 @@ private:
       if (LHS.getHash() != RHS.getHash())
         return LHS.getHash() < RHS.getHash();
       FunctionComparator FCmp(LHS.getFunc(), RHS.getFunc(), GlobalNumbers);
-      return FCmp.compare() == -1;
+      return FCmp.compare() < 0;
     }
   };
   using FnTreeType = std::set<FunctionNode, FunctionNodeCmp>;
@@ -224,6 +223,9 @@ private:
   /// A work queue of functions that may have been modified and should be
   /// analyzed again.
   std::vector<WeakTrackingVH> Deferred;
+
+  /// Set of values marked as used in llvm.used and llvm.compiler.used.
+  SmallPtrSet<GlobalValue *, 4> Used;
 
 #ifndef NDEBUG
   /// Checks the rules of order relation introduced among functions set.
@@ -290,33 +292,7 @@ private:
   // there is exactly one mapping F -> FN for each FunctionNode FN in FnTree.
   DenseMap<AssertingVH<Function>, FnTreeType::iterator> FNodesInTree;
 };
-
-class MergeFunctionsLegacyPass : public ModulePass {
-public:
-  static char ID;
-
-  MergeFunctionsLegacyPass(): ModulePass(ID) {
-    initializeMergeFunctionsLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    MergeFunctions MF;
-    return MF.runOnModule(M);
-  }
-};
-
 } // end anonymous namespace
-
-char MergeFunctionsLegacyPass::ID = 0;
-INITIALIZE_PASS(MergeFunctionsLegacyPass, "mergefunc",
-                "Merge Functions", false, false)
-
-ModulePass *llvm::createMergeFunctionsPass() {
-  return new MergeFunctionsLegacyPass();
-}
 
 PreservedAnalyses MergeFunctionsPass::run(Module &M,
                                           ModuleAnalysisManager &AM) {
@@ -407,6 +383,11 @@ static bool isEligibleForMerging(Function &F) {
 bool MergeFunctions::runOnModule(Module &M) {
   bool Changed = false;
 
+  SmallVector<GlobalValue *, 4> UsedV;
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/false);
+  collectUsedGlobalVariables(M, UsedV, /*CompilerUsed=*/true);
+  Used.insert(UsedV.begin(), UsedV.end());
+
   // All functions in the module, ordered by hash. Functions with a unique
   // hash value are easily eliminated.
   std::vector<std::pair<FunctionComparator::FunctionHash, Function *>>
@@ -453,6 +434,7 @@ bool MergeFunctions::runOnModule(Module &M) {
   FnTree.clear();
   FNodesInTree.clear();
   GlobalNumbers.clear();
+  Used.clear();
 
   return Changed;
 }
@@ -481,14 +463,13 @@ static Value *createCast(IRBuilder<> &Builder, Value *V, Type *DestTy) {
   if (SrcTy->isStructTy()) {
     assert(DestTy->isStructTy());
     assert(SrcTy->getStructNumElements() == DestTy->getStructNumElements());
-    Value *Result = UndefValue::get(DestTy);
+    Value *Result = PoisonValue::get(DestTy);
     for (unsigned int I = 0, E = SrcTy->getStructNumElements(); I < E; ++I) {
-      Value *Element = createCast(
-          Builder, Builder.CreateExtractValue(V, makeArrayRef(I)),
-          DestTy->getStructElementType(I));
+      Value *Element =
+          createCast(Builder, Builder.CreateExtractValue(V, ArrayRef(I)),
+                     DestTy->getStructElementType(I));
 
-      Result =
-          Builder.CreateInsertValue(Result, Element, makeArrayRef(I));
+      Result = Builder.CreateInsertValue(Result, Element, ArrayRef(I));
     }
     return Result;
   }
@@ -765,7 +746,12 @@ void MergeFunctions::writeAlias(Function *F, Function *G) {
   auto *GA = GlobalAlias::create(G->getValueType(), PtrType->getAddressSpace(),
                                  G->getLinkage(), "", BitcastF, G->getParent());
 
-  F->setAlignment(MaybeAlign(std::max(F->getAlignment(), G->getAlignment())));
+  const MaybeAlign FAlign = F->getAlign();
+  const MaybeAlign GAlign = G->getAlign();
+  if (FAlign || GAlign)
+    F->setAlignment(std::max(FAlign.valueOrOne(), GAlign.valueOrOne()));
+  else
+    F->setAlignment(std::nullopt);
   GA->takeName(G);
   GA->setVisibility(G->getVisibility());
   GA->setUnnamedAddr(GlobalValue::UnnamedAddr::Global);
@@ -812,12 +798,18 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     removeUsers(F);
     F->replaceAllUsesWith(NewF);
 
-    MaybeAlign MaxAlignment(std::max(G->getAlignment(), NewF->getAlignment()));
+    // We collect alignment before writeThunkOrAlias that overwrites NewF and
+    // G's content.
+    const MaybeAlign NewFAlign = NewF->getAlign();
+    const MaybeAlign GAlign = G->getAlign();
 
     writeThunkOrAlias(F, G);
     writeThunkOrAlias(F, NewF);
 
-    F->setAlignment(MaxAlignment);
+    if (NewFAlign || GAlign)
+      F->setAlignment(std::max(NewFAlign.valueOrOne(), GAlign.valueOrOne()));
+    else
+      F->setAlignment(std::nullopt);
     F->setLinkage(GlobalValue::PrivateLinkage);
     ++NumDoubleWeak;
     ++NumFunctionsMerged;
@@ -825,7 +817,10 @@ void MergeFunctions::mergeTwoFunctions(Function *F, Function *G) {
     // For better debugability, under MergeFunctionsPDI, we do not modify G's
     // call sites to point to F even when within the same translation unit.
     if (!G->isInterposable() && !MergeFunctionsPDI) {
-      if (G->hasGlobalUnnamedAddr()) {
+      // Functions referred to by llvm.used/llvm.compiler.used are special:
+      // there are uses of the symbol name that are not visible to LLVM,
+      // usually from inline asm.
+      if (G->hasGlobalUnnamedAddr() && !Used.contains(G)) {
         // G might have been a key in our GlobalNumberState, and it's illegal
         // to replace a key in ValueMap<GlobalValue *> with a non-global.
         GlobalNumbers.erase(G);

@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=gfx900 -stop-after=amdgpu-isel < %s | FileCheck -check-prefixes=GCN,FP16 %s
 
 
-define amdgpu_kernel void @divergent_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
@@ -10,29 +10,29 @@ define amdgpu_kernel void @divergent_fneg_f32(float addrspace(1)* %out, float ad
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds float, float addrspace(1)* %in, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %val = load volatile float, float addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %val = load volatile float, ptr addrspace(1) %in.gep
   %fneg = fneg float %val
-  store float %fneg, float addrspace(1)* %out.gep
+  store float %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_f32(float addrspace(1)* %out, float addrspace(1)* %in, i64 %idx) {
+define amdgpu_kernel void @uniform_fneg_f32(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
 ; GCN: S_XOR_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %in.gep = getelementptr inbounds float, float addrspace(1)* %in, i64 %idx
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %idx
-  %val = load volatile float, float addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %idx
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %idx
+  %val = load volatile float, ptr addrspace(1) %in.gep
   %fneg = fneg float %val
-  store float %fneg, float addrspace(1)* %out.gep
+  store float %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @divergent_fabs_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fabs_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
@@ -40,29 +40,29 @@ define amdgpu_kernel void @divergent_fabs_f32(float addrspace(1)* %out, float ad
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds float, float addrspace(1)* %in, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %val = load volatile float, float addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %val = load volatile float, ptr addrspace(1) %in.gep
   %fabs = call float @llvm.fabs.f32(float %val)
-  store float %fabs, float addrspace(1)* %out.gep
+  store float %fabs, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @uniform_fabs_f32(float addrspace(1)* %out, float addrspace(1)* %in, i64 %idx) {
+define amdgpu_kernel void @uniform_fabs_f32(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
 ; GCN: S_AND_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %in.gep = getelementptr inbounds float, float addrspace(1)* %in, i64 %idx
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %idx
-  %val = load volatile float, float addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %idx
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %idx
+  %val = load volatile float, ptr addrspace(1) %in.gep
   %fabs = call float @llvm.fabs.f32(float %val)
-  store float %fabs, float addrspace(1)* %out.gep
+  store float %fabs, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_fabs_f32(float addrspace(1)* %out, float addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_fabs_f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
@@ -70,32 +70,32 @@ define amdgpu_kernel void @divergent_fneg_fabs_f32(float addrspace(1)* %out, flo
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds float, float addrspace(1)* %in, i64 %tid.ext
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %tid.ext
-  %val = load volatile float, float addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
+  %val = load volatile float, ptr addrspace(1) %in.gep
   %fabs = call float @llvm.fabs.f32(float %val)
   %fneg = fneg float %fabs
-  store float %fneg, float addrspace(1)* %out.gep
+  store float %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_fabs_f32(float addrspace(1)* %out, float addrspace(1)* %in, i64 %idx) {
+define amdgpu_kernel void @uniform_fneg_fabs_f32(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_fabs_f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
 ; GCN: S_OR_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %in.gep = getelementptr inbounds float, float addrspace(1)* %in, i64 %idx
-  %out.gep = getelementptr inbounds float, float addrspace(1)* %out, i64 %idx
-  %val = load volatile float, float addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds float, ptr addrspace(1) %in, i64 %idx
+  %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %idx
+  %val = load volatile float, ptr addrspace(1) %in.gep
   %fabs = call float @llvm.fabs.f32(float %val)
   %fneg = fneg float %fabs
-  store float %fneg, float addrspace(1)* %out.gep
+  store float %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 
 
-define amdgpu_kernel void @divergent_fabs_f16(half addrspace(1)* %in, half addrspace(1)* %out) {
+define amdgpu_kernel void @divergent_fabs_f16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: name:            divergent_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32767
@@ -103,27 +103,27 @@ define amdgpu_kernel void @divergent_fabs_f16(half addrspace(1)* %in, half addrs
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds half, half addrspace(1)* %in, i64 %tid.ext
-  %val = load volatile half, half addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %tid.ext
+  %val = load volatile half, ptr addrspace(1) %in.gep
   %fabs = call half @llvm.fabs.f16(half %val)
-  store half %fabs, half addrspace(1)* %out
+  store half %fabs, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fabs_f16(half addrspace(1)* %in, half addrspace(1)* %out, i64 %idx) {
+define amdgpu_kernel void @uniform_fabs_f16(ptr addrspace(1) %in, ptr addrspace(1) %out, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32767
 ; GCN: S_AND_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %in.gep = getelementptr inbounds half, half addrspace(1)* %in, i64 %idx
-  %val = load volatile half, half addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %idx
+  %val = load volatile half, ptr addrspace(1) %in.gep
   %fabs = call half @llvm.fabs.f16(half %val)
-  store half %fabs, half addrspace(1)* %out
+  store half %fabs, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_f16(half addrspace(1)* %in, half addrspace(1)* %out) {
+define amdgpu_kernel void @divergent_fneg_f16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: name:            divergent_fneg_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
@@ -131,27 +131,27 @@ define amdgpu_kernel void @divergent_fneg_f16(half addrspace(1)* %in, half addrs
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds half, half addrspace(1)* %in, i64 %tid.ext
-  %val = load volatile half, half addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %tid.ext
+  %val = load volatile half, ptr addrspace(1) %in.gep
   %fneg = fneg half %val
-  store half %fneg, half addrspace(1)* %out
+  store half %fneg, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_f16(half addrspace(1)* %in, half addrspace(1)* %out, i64 %idx) {
+define amdgpu_kernel void @uniform_fneg_f16(ptr addrspace(1) %in, ptr addrspace(1) %out, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
 ; GCN: S_XOR_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %in.gep = getelementptr inbounds half, half addrspace(1)* %in, i64 %idx
-  %val = load volatile half, half addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %idx
+  %val = load volatile half, ptr addrspace(1) %in.gep
   %fneg = fneg half %val
-  store half %fneg, half addrspace(1)* %out
+  store half %fneg, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_fabs_f16(half addrspace(1)* %in, half addrspace(1)* %out) {
+define amdgpu_kernel void @divergent_fneg_fabs_f16(ptr addrspace(1) %in, ptr addrspace(1) %out) {
 ; GCN-LABEL: name:            divergent_fneg_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
@@ -159,118 +159,118 @@ define amdgpu_kernel void @divergent_fneg_fabs_f16(half addrspace(1)* %in, half 
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds half, half addrspace(1)* %in, i64 %tid.ext
-  %val = load volatile half, half addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %tid.ext
+  %val = load volatile half, ptr addrspace(1) %in.gep
   %fabs = call half @llvm.fabs.f16(half %val)
   %fneg = fneg half %fabs
-  store half %fneg, half addrspace(1)* %out
+  store half %fneg, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_fabs_f16(half addrspace(1)* %in, half addrspace(1)* %out, i64 %idx) {
+define amdgpu_kernel void @uniform_fneg_fabs_f16(ptr addrspace(1) %in, ptr addrspace(1) %out, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_fabs_f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 32768
 ; GCN: S_OR_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %in.gep = getelementptr inbounds half, half addrspace(1)* %in, i64 %idx
-  %val = load volatile half, half addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds half, ptr addrspace(1) %in, i64 %idx
+  %val = load volatile half, ptr addrspace(1) %in.gep
   %fabs = call half @llvm.fabs.f16(half %val)
   %fneg = fneg half %fabs
-  store half %fneg, half addrspace(1)* %out
+  store half %fneg, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
 ; FP16: V_XOR_B32_e64 killed %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in, align 2
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep.in, align 2
   %fneg = fneg <2 x half> %val
-  store <2 x half> %fneg, <2 x half> addrspace(1)* %gep.out
+  store <2 x half> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in, i32 %idx) {
+define amdgpu_kernel void @uniform_fneg_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
 ; GCN: S_XOR_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %idx
-  %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %idx
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in, align 2
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
+  %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
+  %val = load <2 x half>, ptr addrspace(1) %gep.in, align 2
   %fneg = fneg <2 x half> %val
-  store <2 x half> %fneg, <2 x half> addrspace(1)* %gep.out
+  store <2 x half> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147450879
 ; FP16: V_AND_B32_e64 killed %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in, align 2
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep.in, align 2
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
-  store <2 x half> %fabs, <2 x half> addrspace(1)* %gep.out
+  store <2 x half> %fabs, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in, i32 %idx) {
+define amdgpu_kernel void @uniform_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: name:            uniform_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147450879
 ; GCN: S_AND_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %idx
-  %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %idx
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in, align 2
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
+  %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
+  %val = load <2 x half>, ptr addrspace(1) %gep.in, align 2
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
-  store <2 x half> %fabs, <2 x half> addrspace(1)* %gep.out
+  store <2 x half> %fabs, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; FP16: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
 ; FP16: V_OR_B32_e64 killed %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %tid
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in, align 2
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x half>, ptr addrspace(1) %gep.in, align 2
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %fneg = fneg <2 x half> %fabs
-  store <2 x half> %fneg, <2 x half> addrspace(1)* %gep.out
+  store <2 x half> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_fabs_v2f16(<2 x half> addrspace(1)* %out, <2 x half> addrspace(1)* %in, i32 %idx) {
+define amdgpu_kernel void @uniform_fneg_fabs_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_fabs_v2f16
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147450880
 ; GCN: S_OR_B32 killed %{{[0-9]+}}, killed %[[REG]]
 
-  %gep.in = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %idx
-  %gep.out = getelementptr inbounds <2 x half>, <2 x half> addrspace(1)* %in, i32 %idx
-  %val = load <2 x half>, <2 x half> addrspace(1)* %gep.in, align 2
+  %gep.in = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
+  %gep.out = getelementptr inbounds <2 x half>, ptr addrspace(1) %in, i32 %idx
+  %val = load <2 x half>, ptr addrspace(1) %gep.in, align 2
   %fabs = call <2 x half> @llvm.fabs.v2f16(<2 x half> %val)
   %fneg = fneg <2 x half> %fabs
-  store <2 x half> %fneg, <2 x half> addrspace(1)* %gep.out
+  store <2 x half> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
@@ -278,30 +278,30 @@ define amdgpu_kernel void @divergent_fneg_v2f32(<2 x float> addrspace(1)* %out, 
 ; GCN: V_XOR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
-  %val = load <2 x float>, <2 x float> addrspace(1)* %gep.in, align 4
+  %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x float>, ptr addrspace(1) %gep.in, align 4
   %fneg = fneg <2 x float> %val
-  store <2 x float> %fneg, <2 x float> addrspace(1)* %gep.out
+  store <2 x float> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in, i32 %idx) {
+define amdgpu_kernel void @uniform_fneg_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
 ; GCN: S_XOR_B32 killed %{{[0-9]+}}, %[[REG]]
 ; GCN: S_XOR_B32 killed %{{[0-9]+}}, %[[REG]]
 
-  %gep.in = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %idx
-  %gep.out = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %idx
-  %val = load <2 x float>, <2 x float> addrspace(1)* %gep.in, align 4
+  %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
+  %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
+  %val = load <2 x float>, ptr addrspace(1) %gep.in, align 4
   %fneg = fneg <2 x float> %val
-  store <2 x float> %fneg, <2 x float> addrspace(1)* %gep.out
+  store <2 x float> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fabs_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fabs_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
@@ -309,30 +309,30 @@ define amdgpu_kernel void @divergent_fabs_v2f32(<2 x float> addrspace(1)* %out, 
 ; GCN: V_AND_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
-  %val = load <2 x float>, <2 x float> addrspace(1)* %gep.in, align 4
+  %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x float>, ptr addrspace(1) %gep.in, align 4
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %val)
-  store <2 x float> %fabs, <2 x float> addrspace(1)* %gep.out
+  store <2 x float> %fabs, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in, i32 %idx) {
+define amdgpu_kernel void @uniform_fabs_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: name:            uniform_fabs_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 2147483647
 ; GCN: S_AND_B32 killed %{{[0-9]+}}, %[[REG]]
 ; GCN: S_AND_B32 killed %{{[0-9]+}}, %[[REG]]
 
-  %gep.in = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %idx
-  %gep.out = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %idx
-  %val = load <2 x float>, <2 x float> addrspace(1)* %gep.in, align 4
+  %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
+  %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
+  %val = load <2 x float>, ptr addrspace(1) %gep.in, align 4
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %val)
-  store <2 x float> %fabs, <2 x float> addrspace(1)* %gep.out
+  store <2 x float> %fabs, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_fabs_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_fabs_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
@@ -340,32 +340,32 @@ define amdgpu_kernel void @divergent_fneg_fabs_v2f32(<2 x float> addrspace(1)* %
 ; GCN: V_OR_B32_e64 %[[REG]]
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep.in = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %tid
-  %val = load <2 x float>, <2 x float> addrspace(1)* %gep.in, align 4
+  %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %tid
+  %val = load <2 x float>, ptr addrspace(1) %gep.in, align 4
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %val)
   %fneg = fneg <2 x float> %fabs
-  store <2 x float> %fneg, <2 x float> addrspace(1)* %gep.out
+  store <2 x float> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_fabs_v2f32(<2 x float> addrspace(1)* %out, <2 x float> addrspace(1)* %in, i32 %idx) {
+define amdgpu_kernel void @uniform_fneg_fabs_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %in, i32 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_fabs_v2f32
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; GCN: %[[REG:[0-9]+]]:sreg_32 = S_MOV_B32 -2147483648
 ; GCN: S_OR_B32 killed %{{[0-9]+}}, %[[REG]]
 ; GCN: S_OR_B32 killed %{{[0-9]+}}, %[[REG]]
 
-  %gep.in = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %idx
-  %gep.out = getelementptr inbounds <2 x float>, <2 x float> addrspace(1)* %in, i32 %idx
-  %val = load <2 x float>, <2 x float> addrspace(1)* %gep.in, align 4
+  %gep.in = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
+  %gep.out = getelementptr inbounds <2 x float>, ptr addrspace(1) %in, i32 %idx
+  %val = load <2 x float>, ptr addrspace(1) %gep.in, align 4
   %fabs = call <2 x float> @llvm.fabs.v2f32(<2 x float> %val)
   %fneg = fneg <2 x float> %fabs
-  store <2 x float> %fneg, <2 x float> addrspace(1)* %gep.out
+  store <2 x float> %fneg, ptr addrspace(1) %gep.out
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_f64(double addrspace(1)* %out, double addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_f64
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; SI: %[[VREG64:[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64
@@ -379,15 +379,15 @@ define amdgpu_kernel void @divergent_fneg_f64(double addrspace(1)* %out, double 
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds double, double addrspace(1)* %in, i64 %tid.ext
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i64 %tid.ext
-  %val = load volatile double, double addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %tid.ext
+  %val = load volatile double, ptr addrspace(1) %in.gep
   %fneg = fneg double %val
-  store double %fneg, double addrspace(1)* %out.gep
+  store double %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_f64(double addrspace(1)* %out, double addrspace(1)* %in, i64 %idx) {
+define amdgpu_kernel void @uniform_fneg_f64(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_f64
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; SI: %[[VREG64:[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64
@@ -399,15 +399,15 @@ define amdgpu_kernel void @uniform_fneg_f64(double addrspace(1)* %out, double ad
 ; GCN: %[[XOR_COPY:[0-9]+]]:sreg_32 = COPY %[[XOR]]
 ; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[XOR_COPY]], %subreg.sub1
 
-  %in.gep = getelementptr inbounds double, double addrspace(1)* %in, i64 %idx
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i64 %idx
-  %val = load volatile double, double addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %idx
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %idx
+  %val = load volatile double, ptr addrspace(1) %in.gep
   %fneg = fneg double %val
-  store double %fneg, double addrspace(1)* %out.gep
+  store double %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @divergent_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fabs_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fabs_f64
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; SI: %[[VREG64:[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64
@@ -421,15 +421,15 @@ define amdgpu_kernel void @divergent_fabs_f64(double addrspace(1)* %out, double 
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds double, double addrspace(1)* %in, i64 %tid.ext
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i64 %tid.ext
-  %val = load volatile double, double addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %tid.ext
+  %val = load volatile double, ptr addrspace(1) %in.gep
   %fabs = call double @llvm.fabs.f64(double %val)
-  store double %fabs, double addrspace(1)* %out.gep
+  store double %fabs, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @uniform_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in, i64 %idx) {
+define amdgpu_kernel void @uniform_fabs_f64(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fabs_f64
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; SI: %[[VREG64:[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64
@@ -442,15 +442,15 @@ define amdgpu_kernel void @uniform_fabs_f64(double addrspace(1)* %out, double ad
 ; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[AND_COPY]], %subreg.sub1
 
 
-  %in.gep = getelementptr inbounds double, double addrspace(1)* %in, i64 %idx
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i64 %idx
-  %val = load volatile double, double addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %idx
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %idx
+  %val = load volatile double, ptr addrspace(1) %in.gep
   %fabs = call double @llvm.fabs.f64(double %val)
-  store double %fabs, double addrspace(1)* %out.gep
+  store double %fabs, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @divergent_fneg_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in) {
+define amdgpu_kernel void @divergent_fneg_fabs_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; GCN-LABEL: name:            divergent_fneg_fabs_f64
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; SI: %[[VREG64:[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64
@@ -464,16 +464,16 @@ define amdgpu_kernel void @divergent_fneg_fabs_f64(double addrspace(1)* %out, do
 
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid.ext = sext i32 %tid to i64
-  %in.gep = getelementptr inbounds double, double addrspace(1)* %in, i64 %tid.ext
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i64 %tid.ext
-  %val = load volatile double, double addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %tid.ext
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %tid.ext
+  %val = load volatile double, ptr addrspace(1) %in.gep
   %fabs = call double @llvm.fabs.f64(double %val)
   %fneg = fneg double %fabs
-  store double %fneg, double addrspace(1)* %out.gep
+  store double %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 
-define amdgpu_kernel void @uniform_fneg_fabs_f64(double addrspace(1)* %out, double addrspace(1)* %in, i64 %idx) {
+define amdgpu_kernel void @uniform_fneg_fabs_f64(ptr addrspace(1) %out, ptr addrspace(1) %in, i64 %idx) {
 ; GCN-LABEL: name:            uniform_fneg_fabs_f64
 ; GCN-LABEL: bb.0 (%ir-block.0)
 ; SI: %[[VREG64:[0-9]+]]:vreg_64 = BUFFER_LOAD_DWORDX2_ADDR64
@@ -486,12 +486,12 @@ define amdgpu_kernel void @uniform_fneg_fabs_f64(double addrspace(1)* %out, doub
 ; GCN: REG_SEQUENCE killed %[[LO32]], %subreg.sub0, killed %[[OR_COPY]], %subreg.sub1
 
 
-  %in.gep = getelementptr inbounds double, double addrspace(1)* %in, i64 %idx
-  %out.gep = getelementptr inbounds double, double addrspace(1)* %out, i64 %idx
-  %val = load volatile double, double addrspace(1)* %in.gep
+  %in.gep = getelementptr inbounds double, ptr addrspace(1) %in, i64 %idx
+  %out.gep = getelementptr inbounds double, ptr addrspace(1) %out, i64 %idx
+  %val = load volatile double, ptr addrspace(1) %in.gep
   %fabs = call double @llvm.fabs.f64(double %val)
   %fneg = fneg double %fabs
-  store double %fneg, double addrspace(1)* %out.gep
+  store double %fneg, ptr addrspace(1) %out.gep
   ret void
 }
 

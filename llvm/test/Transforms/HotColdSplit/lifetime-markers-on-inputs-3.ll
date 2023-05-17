@@ -1,42 +1,38 @@
-; RUN: opt -S -hotcoldsplit -hotcoldsplit-threshold=0 < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=hotcoldsplit -hotcoldsplit-threshold=0 < %s 2>&1 | FileCheck %s
 
 %type1 = type opaque
 %type2 = type opaque
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
-declare void @use(%type1**, %type2**)
+declare void @use(ptr, ptr)
 
-declare void @use2(%type1**, %type2**) cold
+declare void @use2(ptr, ptr) cold
 
 ; CHECK-LABEL: define {{.*}}@foo(
 define void @foo() {
 entry:
-  %local1 = alloca %type1*
-  %local2 = alloca %type2*
-  %local1_cast = bitcast %type1** %local1 to i8*
-  %local2_cast = bitcast %type2** %local2 to i8*
+  %local1 = alloca ptr
+  %local2 = alloca ptr
   br i1 undef, label %normalPath, label %outlinedPath
 
 normalPath:
-  call void @use(%type1** %local1, %type2** %local2)
+  call void @use(ptr %local1, ptr %local2)
   ret void
 
 ; CHECK-LABEL: codeRepl:
-; CHECK: [[local1_cast:%.*]] = bitcast %type1** %local1 to i8*
-; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local1_cast]])
-; CHECK-NEXT: [[local2_cast:%.*]] = bitcast %type2** %local2 to i8*
-; CHECK-NEXT: call void @llvm.lifetime.start.p0i8(i64 -1, i8* [[local2_cast]])
-; CHECK-NEXT: call void @foo.cold.1(i8* %local1_cast, i8* %local2_cast
+; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 -1, ptr %local1)
+; CHECK-NEXT: call void @llvm.lifetime.start.p0(i64 -1, ptr %local2)
+; CHECK-NEXT: call void @foo.cold.1(ptr %local1, ptr %local2
 
 outlinedPath:
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %local1_cast)
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %local2_cast)
-  call void @use2(%type1** %local1, %type2** %local2)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %local1_cast)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %local2_cast)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %local1)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %local2)
+  call void @use2(ptr %local1, ptr %local2)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %local1)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %local2)
   br label %outlinedPathExit
 
 outlinedPathExit:

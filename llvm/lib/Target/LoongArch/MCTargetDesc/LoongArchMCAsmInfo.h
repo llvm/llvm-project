@@ -25,6 +25,6 @@ public:
   explicit LoongArchMCAsmInfo(const Triple &TargetTriple);
 };
 
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHMCASMINFO_H

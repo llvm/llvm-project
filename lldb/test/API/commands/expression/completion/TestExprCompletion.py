@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class CommandLineExprCompletionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_expr_completion(self):

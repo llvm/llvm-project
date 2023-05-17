@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef _LIBCPP___RANGES_TRANSFORM_VIEW_H
 #define _LIBCPP___RANGES_TRANSFORM_VIEW_H
 
@@ -30,10 +31,16 @@
 #include <__ranges/range_adaptor.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/is_object.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/maybe_const.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/forward.h>
 #include <__utility/in_place.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -41,7 +48,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
 
@@ -70,7 +77,7 @@ public:
     requires default_initializable<_View> && default_initializable<_Fn> = default;
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr transform_view(_View __base, _Fn __func)
+  constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 transform_view(_View __base, _Fn __func)
     : __func_(std::in_place, std::move(__func)), __base_(std::move(__base)) {}
 
   _LIBCPP_HIDE_FROM_ABI
@@ -144,7 +151,7 @@ struct __transform_view_iterator_category_base<_View, _Fn> {
   using _Cat = typename iterator_traits<iterator_t<_View>>::iterator_category;
 
   using iterator_category = conditional_t<
-    is_lvalue_reference_v<invoke_result_t<_Fn&, range_reference_t<_View>>>,
+    is_reference_v<invoke_result_t<_Fn&, range_reference_t<_View>>>,
     conditional_t<
       derived_from<_Cat, contiguous_iterator_tag>,
       random_access_iterator_tag,
@@ -433,7 +440,7 @@ inline namespace __cpo {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -16,6 +16,7 @@
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <vector>
 
@@ -137,7 +138,7 @@ protected:
   using OutgoingMethod = llvm::unique_function<void(const P &, Callback<R>)>;
 
 private:
-  llvm::Optional<Facilities> Fac;
+  std::optional<Facilities> Fac;
 };
 
 /// A FeatureModuleSet is a collection of feature modules installed in clangd.

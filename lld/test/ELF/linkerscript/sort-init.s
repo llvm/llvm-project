@@ -9,6 +9,14 @@
 # CHECK:      Hex dump of section '.init_array':
 # CHECK-NEXT: 0x00000001 00010203 04050607
 
+## Test REVERSE can be used to reverse the order of .init_array and .ctors
+
+# RUN: ld.lld -T %t/reverse.lds %t.o -o %t2.out
+# RUN: llvm-readelf -x .init_array %t2.out | FileCheck %s --check-prefix=CHECK2
+
+# CHECK2:      Hex dump of section '.init_array':
+# CHECK2-NEXT: 0x00000001 04030201 00050706
+
 #--- asm
 .globl _start
 _start:
@@ -39,5 +47,13 @@ SECTIONS {
   .init_array : {
     *(SORT_BY_INIT_PRIORITY(.init_array.* .ctors.*) SORT_BY_INIT_PRIORITY(foo*))
     *(.init_array .ctors)
+  }
+}
+
+#--- reverse.lds
+SECTIONS {
+  .init_array : {
+    *(REVERSE(SORT_BY_INIT_PRIORITY(.init_array.* .ctors.*)) SORT_BY_INIT_PRIORITY(foo*))
+    *(REVERSE(.init_array .ctors))
   }
 }

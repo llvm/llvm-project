@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -debug-only=loop-unroll -disable-output < %s
+; RUN: opt -passes=loop-unroll -debug-only=loop-unroll -disable-output < %s
 ; REQUIRES: asserts
 ; Compile this test with debug flag on to verify domtree right after loop unrolling.
 target datalayout = "E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64"

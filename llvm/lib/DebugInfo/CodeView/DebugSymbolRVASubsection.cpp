@@ -27,7 +27,7 @@ DebugSymbolRVASubsection::DebugSymbolRVASubsection()
     : DebugSubsection(DebugSubsectionKind::CoffSymbolRVA) {}
 
 Error DebugSymbolRVASubsection::commit(BinaryStreamWriter &Writer) const {
-  return Writer.writeArray(makeArrayRef(RVAs));
+  return Writer.writeArray(ArrayRef(RVAs));
 }
 
 uint32_t DebugSymbolRVASubsection::calculateSerializedSize() const {

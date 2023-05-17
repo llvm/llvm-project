@@ -9,14 +9,14 @@ declare void @clobber()
 
 ; Partial unswitching is possible, because the store in %noclobber does not
 ; alias the load of the condition.
-define i32 @partial_unswitch_true_successor_noclobber(i32* noalias %ptr.1, i32* noalias %ptr.2, i32 %N) {
+define i32 @partial_unswitch_true_successor_noclobber(ptr noalias %ptr.1, ptr noalias %ptr.2, i32 %N) {
 ; THRESHOLD-0-LABEL: @partial_unswitch_true_successor
 ; THRESHOLD-0: entry:
 ; THRESHOLD-0: br label %loop.header
 ;
 ; THRESHOLD-DEFAULT-LABEL: @partial_unswitch_true_successor
 ; THRESHOLD-DEFAULT-NEXT:  entry:
-; THRESHOLD-DEFAULT-NEXT:   [[LV:%[0-9]+]] = load i32, i32* %ptr.1, align 4
+; THRESHOLD-DEFAULT-NEXT:   [[LV:%[0-9]+]] = load i32, ptr %ptr.1, align 4
 ; THRESHOLD-DEFAULT-NEXT:   [[C:%[0-9]+]] = icmp eq i32 [[LV]], 100
 ; THRESHOLD-DEFAULT-NEXT:   br i1 [[C]]
 ;
@@ -25,13 +25,13 @@ entry:
 
 loop.header:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop.latch ]
-  %lv = load i32, i32* %ptr.1
+  %lv = load i32, ptr %ptr.1
   %sc = icmp eq i32 %lv, 100
   br i1 %sc, label %noclobber, label %clobber
 
 noclobber:
-  %gep.1 = getelementptr i32, i32* %ptr.2, i32 %iv
-  store i32 %lv, i32* %gep.1
+  %gep.1 = getelementptr i32, ptr %ptr.2, i32 %iv
+  store i32 %lv, ptr %gep.1
   br label %loop.latch
 
 clobber:

@@ -7,6 +7,7 @@ from clang.cindex import Cursor
 from clang.cindex import File
 from clang.cindex import SourceLocation
 from clang.cindex import SourceRange
+from clang.cindex import TranslationUnit
 from .util import get_cursor
 from .util import get_tu
 
@@ -103,3 +104,17 @@ class TestLocation(unittest.TestCase):
         location3 = SourceLocation.from_position(tu, file, 1, 6)
         range3 = SourceRange.from_locations(location1, location3)
         self.assertNotEqual(range1, range3)
+
+    def test_is_system_location(self):
+        header = os.path.normpath('./fake/fake.h')
+        tu = TranslationUnit.from_source('fake.c', [f'-isystem{os.path.dirname(header)}'], unsaved_files = [
+                ('fake.c', """
+#include <fake.h>
+int one;
+"""),
+                (header, "int two();")
+                ])
+        one = get_cursor(tu, 'one')
+        two = get_cursor(tu, 'two')
+        self.assertFalse(one.location.is_in_system_header)
+        self.assertTrue(two.location.is_in_system_header)

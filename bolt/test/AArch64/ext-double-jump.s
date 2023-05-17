@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple aarch64-unknown-unknown %s -o %t.o
 # RUN: %clang %cflags -nostartfiles -nodefaultlibs %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -peepholes=double-jumps
+# RUN: llvm-bolt %t.exe -o %t.bolt --peepholes=double-jumps
 
   .text
   .align 4

@@ -19,6 +19,7 @@
 #include <sys/wait.h>
 #endif
 #include <fstream>
+#include <optional>
 
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
@@ -77,10 +78,9 @@ static void signal_handler(int signo) {
   case SIGHUP:
     // Use SIGINT first, if that does not work, use SIGHUP as a last resort.
     // And we should not call exit() here because it results in the global
-    // destructors
-    // to be invoked and wreaking havoc on the threads still running.
-    Host::SystemLog(Host::eSystemLogWarning,
-                    "SIGHUP received, exiting lldb-server...\n");
+    // destructors to be invoked and wreaking havoc on the threads still
+    // running.
+    llvm::errs() << "SIGHUP received, exiting lldb-server...\n";
     abort();
     break;
   }
@@ -101,7 +101,7 @@ static Status save_socket_id_to_file(const std::string &socket_id,
   Status error(llvm::sys::fs::create_directory(temp_file_spec.GetPath()));
   if (error.Fail())
     return Status("Failed to create directory %s: %s",
-                  temp_file_spec.GetCString(), error.AsCString());
+                  temp_file_spec.GetPath().c_str(), error.AsCString());
 
   llvm::SmallString<64> temp_file_path;
   temp_file_spec.AppendPathComponent("port-file.%%%%%%");
@@ -353,7 +353,7 @@ int main_platform(int argc, char *argv[]) {
     if (platform.IsConnected()) {
       if (inferior_arguments.GetArgumentCount() > 0) {
         lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
-        llvm::Optional<uint16_t> port = 0;
+        std::optional<uint16_t> port = 0;
         std::string socket_name;
         Status error = platform.LaunchGDBServer(inferior_arguments,
                                                 "", // hostname
@@ -367,7 +367,7 @@ int main_platform(int argc, char *argv[]) {
       bool interrupt = false;
       bool done = false;
       while (!interrupt && !done) {
-        if (platform.GetPacketAndSendResponse(llvm::None, error, interrupt,
+        if (platform.GetPacketAndSendResponse(std::nullopt, error, interrupt,
                                               done) !=
             GDBRemoteCommunication::PacketResult::Success)
           break;

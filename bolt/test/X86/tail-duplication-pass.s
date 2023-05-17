@@ -4,8 +4,9 @@
 # RUN:   %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -data %t.fdata -reorder-blocks=ext-tsp -print-finalized \
-# RUN:    -tail-duplication=moderate -tail-duplication-minimum-offset=1 -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --data %t.fdata --reorder-blocks=ext-tsp \
+# RUN:    --print-finalized --tail-duplication=moderate \
+# RUN:    --tail-duplication-minimum-offset=1 -o %t.out | FileCheck %s
 
 # FDATA: 1 main 2 1 main #.BB2# 0 10
 # FDATA: 1 main 4 1 main #.BB2# 0 20

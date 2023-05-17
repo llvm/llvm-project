@@ -8,8 +8,8 @@ entry:
   br label %while.cond
 
 while.cond:
-  call void @llvm.dbg.value(metadata i64* %end, metadata !5, metadata !6), !dbg !7
-  %call = call i1 @fn(i64* %end, i64* %end, i64* null, i8* null, i64 0, i64* null, i32* null, i8* null), !dbg !7
+  call void @llvm.dbg.value(metadata ptr %end, metadata !5, metadata !6), !dbg !7
+  %call = call i1 @fn(ptr %end, ptr %end, ptr null, ptr null, i64 0, ptr null, ptr null, ptr null), !dbg !7
   br label %while.body
 
 while.body:
@@ -28,7 +28,7 @@ while.end:
 ; Note: A previous version of this test checked for `[DW_OP_plus_uconst 8] [$rsp+0]`,
 ; which is incorrect, because it adds the stack offset after dereferencing the stack pointer.
 
-declare i1 @fn(i64*, i64*, i64*, i8*, i64, i64*, i32*, i8*)
+declare i1 @fn(ptr, ptr, ptr, ptr, i64, ptr, ptr, ptr)
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

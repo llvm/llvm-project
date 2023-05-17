@@ -13,6 +13,7 @@
 #include "lldb/Host/HostThread.h"
 #include "lldb/Utility/Environment.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/Log.h"
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-private-forward.h"
 #include "lldb/lldb-private.h"
@@ -86,12 +87,8 @@ public:
   StartMonitoringChildProcess(const MonitorChildProcessCallback &callback,
                               lldb::pid_t pid);
 
-  enum SystemLogType { eSystemLogWarning, eSystemLogError };
-
-  static void SystemLog(SystemLogType type, const char *format, ...)
-      __attribute__((format(printf, 2, 3)));
-
-  static void SystemLog(SystemLogType type, const char *format, va_list args);
+  /// Emit the given message to the operating system log.
+  static void SystemLog(llvm::StringRef message);
 
   /// Get the process ID for the calling process.
   ///
@@ -239,8 +236,9 @@ public:
                                 bool run_in_shell = true,
                                 bool hide_stderr = false);
 
-  static bool OpenFileInExternalEditor(const FileSpec &file_spec,
-                                       uint32_t line_no);
+  static llvm::Error OpenFileInExternalEditor(llvm::StringRef editor,
+                                              const FileSpec &file_spec,
+                                              uint32_t line_no);
 
   /// Check if we're running in an interactive graphical session.
   ///
@@ -257,6 +255,19 @@ public:
 protected:
   static uint32_t FindProcessesImpl(const ProcessInstanceInfoMatch &match_info,
                                     ProcessInstanceInfoList &proc_infos);
+};
+
+/// Log handler that emits log messages to the operating system log.
+class SystemLogHandler : public LogHandler {
+public:
+  SystemLogHandler();
+  void Emit(llvm::StringRef message) override;
+
+  bool isA(const void *ClassID) const override { return ClassID == &ID; }
+  static bool classof(const LogHandler *obj) { return obj->isA(&ID); }
+
+private:
+  static char ID;
 };
 
 } // namespace lldb_private

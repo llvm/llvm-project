@@ -19,6 +19,7 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/ParentMap.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -32,7 +33,7 @@ constexpr static bool isOneOf() {
 /// rest of varargs.
 template <class T, class P, class... ToCompare>
 constexpr static bool isOneOf() {
-  return std::is_same<T, P>::value || isOneOf<T, ToCompare...>();
+  return std::is_same_v<T, P> || isOneOf<T, ToCompare...>();
 }
 
 namespace {
@@ -65,13 +66,13 @@ struct GeneralizedConsumedAttr {
 }
 
 template <class T>
-Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
-                                                            QualType QT) {
+std::optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
+                                                                 QualType QT) {
   ObjKind K;
   if (isOneOf<T, CFConsumedAttr, CFReturnsRetainedAttr,
               CFReturnsNotRetainedAttr>()) {
     if (!TrackObjCAndCFObjects)
-      return None;
+      return std::nullopt;
 
     K = ObjKind::CF;
   } else if (isOneOf<T, NSConsumedAttr, NSConsumesSelfAttr,
@@ -79,19 +80,19 @@ Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
                      NSReturnsNotRetainedAttr, NSConsumesSelfAttr>()) {
 
     if (!TrackObjCAndCFObjects)
-      return None;
+      return std::nullopt;
 
     if (isOneOf<T, NSReturnsRetainedAttr, NSReturnsAutoreleasedAttr,
                 NSReturnsNotRetainedAttr>() &&
         !cocoa::isCocoaObjectRef(QT))
-      return None;
+      return std::nullopt;
     K = ObjKind::ObjC;
   } else if (isOneOf<T, OSConsumedAttr, OSConsumesThisAttr,
                      OSReturnsNotRetainedAttr, OSReturnsRetainedAttr,
                      OSReturnsRetainedOnZeroAttr,
                      OSReturnsRetainedOnNonZeroAttr>()) {
     if (!TrackOSObjects)
-      return None;
+      return std::nullopt;
     K = ObjKind::OS;
   } else if (isOneOf<T, GeneralizedReturnsNotRetainedAttr,
                      GeneralizedReturnsRetainedAttr,
@@ -102,12 +103,12 @@ Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
   }
   if (D->hasAttr<T>())
     return K;
-  return None;
+  return std::nullopt;
 }
 
 template <class T1, class T2, class... Others>
-Optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
-                                                            QualType QT) {
+std::optional<ObjKind> RetainSummaryManager::hasAnyEnabledAttrOf(const Decl *D,
+                                                                 QualType QT) {
   if (auto Out = hasAnyEnabledAttrOf<T1>(D, QT))
     return Out;
   return hasAnyEnabledAttrOf<T2, Others...>(D, QT);
@@ -189,18 +190,18 @@ static bool hasRCAnnotation(const Decl *D, StringRef rcAnnotation) {
 }
 
 static bool isRetain(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_insensitive("retain") ||
-         FName.endswith_insensitive("retain");
+  return FName.starts_with_insensitive("retain") ||
+         FName.ends_with_insensitive("retain");
 }
 
 static bool isRelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_insensitive("release") ||
-         FName.endswith_insensitive("release");
+  return FName.starts_with_insensitive("release") ||
+         FName.ends_with_insensitive("release");
 }
 
 static bool isAutorelease(const FunctionDecl *FD, StringRef FName) {
-  return FName.startswith_insensitive("autorelease") ||
-         FName.endswith_insensitive("autorelease");
+  return FName.starts_with_insensitive("autorelease") ||
+         FName.ends_with_insensitive("autorelease");
 }
 
 static bool isMakeCollectable(StringRef FName) {
@@ -718,13 +719,13 @@ bool RetainSummaryManager::isTrustedReferenceCountImplementation(
   return hasRCAnnotation(FD, "rc_ownership_trusted_implementation");
 }
 
-Optional<RetainSummaryManager::BehaviorSummary>
+std::optional<RetainSummaryManager::BehaviorSummary>
 RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
                               bool &hasTrustedImplementationAnnotation) {
 
   IdentifierInfo *II = FD->getIdentifier();
   if (!II)
-    return None;
+    return std::nullopt;
 
   StringRef FName = II->getName();
   FName = FName.substr(FName.find_first_not_of('_'));
@@ -741,7 +742,7 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
         FName == "CMBufferQueueDequeueIfDataReadyAndRetain") {
       // Part of: <rdar://problem/39390714>.
       // These are not retain. They just return something and retain it.
-      return None;
+      return std::nullopt;
     }
     if (CE->getNumArgs() == 1 &&
         (cocoa::isRefType(ResultTy, "CF", FName) ||
@@ -781,7 +782,7 @@ RetainSummaryManager::canEval(const CallExpr *CE, const FunctionDecl *FD,
         return BehaviorSummary::NoOp;
   }
 
-  return None;
+  return std::nullopt;
 }
 
 const RetainSummary *
@@ -864,7 +865,7 @@ RetainSummaryManager::getCFSummaryGetRule(const FunctionDecl *FD) {
 // Summary creation for Selectors.
 //===----------------------------------------------------------------------===//
 
-Optional<RetEffect>
+std::optional<RetEffect>
 RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
                                                   const Decl *D) {
   if (hasAnyEnabledAttrOf<NSReturnsRetainedAttr>(D, RetTy))
@@ -885,14 +886,14 @@ RetainSummaryManager::getRetEffectFromAnnotations(QualType RetTy,
       if (auto RE = getRetEffectFromAnnotations(RetTy, PD))
         return RE;
 
-  return None;
+  return std::nullopt;
 }
 
 /// \return Whether the chain of typedefs starting from @c QT
 /// has a typedef with a given name @c Name.
 static bool hasTypedefNamed(QualType QT,
                             StringRef Name) {
-  while (auto *T = dyn_cast<TypedefType>(QT)) {
+  while (auto *T = QT->getAs<TypedefType>()) {
     const auto &Context = T->getDecl()->getASTContext();
     if (T->getDecl()->getIdentifier() == &Context.Idents.get(Name))
       return true;
@@ -990,7 +991,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
     applyParamAnnotationEffect(*pi, parm_idx, FD, Template);
 
   QualType RetTy = FD->getReturnType();
-  if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
+  if (std::optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, FD))
     Template->setRetEffect(*RetE);
 
   if (hasAnyEnabledAttrOf<OSConsumesThisAttr>(FD, RetTy))
@@ -1017,7 +1018,7 @@ RetainSummaryManager::updateSummaryFromAnnotations(const RetainSummary *&Summ,
     applyParamAnnotationEffect(*pi, parm_idx, MD, Template);
 
   QualType RetTy = MD->getReturnType();
-  if (Optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, MD))
+  if (std::optional<RetEffect> RetE = getRetEffectFromAnnotations(RetTy, MD))
     Template->setRetEffect(*RetE);
 }
 

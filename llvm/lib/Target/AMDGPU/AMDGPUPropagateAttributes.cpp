@@ -57,8 +57,7 @@ static constexpr const FeatureBitset TargetFeatures = {
 // TODO: Support conservative min/max merging instead of cloning.
 static constexpr const char *AttributeNames[] = {"amdgpu-waves-per-eu"};
 
-static constexpr unsigned NumAttr =
-  sizeof(AttributeNames) / sizeof(AttributeNames[0]);
+static constexpr unsigned NumAttr = std::size(AttributeNames);
 
 class AMDGPUPropagateAttributes {
 
@@ -92,7 +91,7 @@ class AMDGPUPropagateAttributes {
     }
 
     FeatureBitset Features;
-    Optional<Attribute> Attributes[NumAttr];
+    std::optional<Attribute> Attributes[NumAttr];
   };
 
   class Clone {
@@ -128,7 +127,8 @@ class AMDGPUPropagateAttributes {
   void setFeatures(Function &F, const FeatureBitset &NewFeatures);
 
   // Set new function's attributes in place.
-  void setAttributes(Function &F, const ArrayRef<Optional<Attribute>> NewAttrs);
+  void setAttributes(Function &F,
+                     const ArrayRef<std::optional<Attribute>> NewAttrs);
 
   std::string getFeatureString(const FeatureBitset &Features) const;
 
@@ -285,7 +285,7 @@ bool AMDGPUPropagateAttributes::process() {
           NewRoots.insert(NewF);
         }
 
-        ToReplace.push_back(std::make_pair(CI, NewF));
+        ToReplace.push_back(std::pair(CI, NewF));
         Replaced.insert(&F);
 
         Changed = true;
@@ -344,8 +344,8 @@ void AMDGPUPropagateAttributes::setFeatures(Function &F,
   F.addFnAttr("target-features", NewFeatureStr);
 }
 
-void AMDGPUPropagateAttributes::setAttributes(Function &F,
-    const ArrayRef<Optional<Attribute>> NewAttrs) {
+void AMDGPUPropagateAttributes::setAttributes(
+    Function &F, const ArrayRef<std::optional<Attribute>> NewAttrs) {
   LLVM_DEBUG(dbgs() << "Set attributes on " << F.getName() << ":\n");
   for (unsigned I = 0; I < NumAttr; ++I) {
     F.removeFnAttr(AttributeNames[I]);

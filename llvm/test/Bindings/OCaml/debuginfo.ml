@@ -183,7 +183,7 @@ let test_bbinstr fty f f_di file_di dibuilder =
       | Some file_of_f_di', Some file_of_scope' ->
           file_of_f_di' = file_di && file_of_scope' = file_di
       | _ -> false );
-    let foocall = Llvm.build_call2 fty foodecl [| arg0 |] "" builder in
+    let foocall = Llvm.build_call fty foodecl [| arg0 |] "" builder in
     let foocall_loc =
       Llvm_debuginfo.dibuild_create_debug_location context ~line:10 ~column:12
         ~scope
@@ -290,7 +290,7 @@ let test_variables f dibuilder file_di fun_di =
   *)
   let arg0 = (Llvm.params f).(0) in
   let arg_var = Llvm_debuginfo.dibuild_create_parameter_variable dibuilder ~scope:fun_di
-    ~name:"my_arg" ~argno:0 ~file:file_di ~line:10 ~ty
+    ~name:"my_arg" ~argno:1 ~file:file_di ~line:10 ~ty
     ~always_preserve:false flags_zero
   in
   let argdi = Llvm_debuginfo.dibuild_insert_declare_before dibuilder ~storage:arg0

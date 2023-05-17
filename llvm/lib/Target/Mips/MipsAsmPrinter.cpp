@@ -26,7 +26,6 @@
 #include "TargetInfo/MipsTargetInfo.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -58,6 +57,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
 #include <map>
@@ -181,6 +181,10 @@ static void emitDirectiveRelocJalr(const MachineInstr &MI,
 }
 
 void MipsAsmPrinter::emitInstruction(const MachineInstr *MI) {
+  // FIXME: Enable feature predicate checks once all the test pass.
+  // Mips_MC::verifyInstructionPredicates(MI->getOpcode(),
+  //                                      getSubtargetInfo().getFeatureBits());
+
   MipsTargetStreamer &TS = getTargetStreamer();
   unsigned Opc = MI->getOpcode();
   TS.forbidModuleDirective();
@@ -522,27 +526,27 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       // See if this is a generic print operand
       return AsmPrinter::PrintAsmOperand(MI, OpNum, ExtraCode, O);
     case 'X': // hex const int
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << "0x" << Twine::utohexstr(MO.getImm());
       return false;
     case 'x': // hex const int (low 16 bits)
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << "0x" << Twine::utohexstr(MO.getImm() & 0xffff);
       return false;
     case 'd': // decimal const int
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << MO.getImm();
       return false;
     case 'm': // decimal const int minus 1
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       O << MO.getImm() - 1;
       return false;
     case 'y': // exact log2
-      if ((MO.getType()) != MachineOperand::MO_Immediate)
+      if (!MO.isImm())
         return true;
       if (!isPowerOf2_64(MO.getImm()))
         return true;
@@ -550,7 +554,7 @@ bool MipsAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNum,
       return false;
     case 'z':
       // $0 if zero, regular printing otherwise
-      if (MO.getType() == MachineOperand::MO_Immediate && MO.getImm() == 0) {
+      if (MO.isImm() && MO.getImm() == 0) {
         O << "$0";
         return false;
       }
@@ -773,16 +777,20 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
   // around it by re-initializing the PIC state here.
   TS.setPic(OutContext.getObjectFileInfo()->isPositionIndependent());
 
+  // Try to get target-features from the first function.
+  StringRef FS = TM.getTargetFeatureString();
+  Module::iterator F = M.begin();
+  if (FS.empty() && M.size() && F->hasFnAttribute("target-features"))
+    FS = F->getFnAttribute("target-features").getValueAsString();
+
   // Compute MIPS architecture attributes based on the default subtarget
-  // that we'd have constructed. Module level directives aren't LTO
-  // clean anyhow.
+  // that we'd have constructed.
   // FIXME: For ifunc related functions we could iterate over and look
   // for a feature string that doesn't match the default one.
   const Triple &TT = TM.getTargetTriple();
   StringRef CPU = MIPS_MC::selectMipsCPU(TT, TM.getTargetCPU());
-  StringRef FS = TM.getTargetFeatureString();
   const MipsTargetMachine &MTM = static_cast<const MipsTargetMachine &>(TM);
-  const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM, None);
+  const MipsSubtarget STI(TT, CPU, FS, MTM.isLittleEndian(), MTM, std::nullopt);
 
   bool IsABICalls = STI.isABICalls();
   const MipsABIInfo &ABI = MTM.getABI();
@@ -798,7 +806,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
 
   // Tell the assembler which ABI we are using
   std::string SectionName = std::string(".mdebug.") + getCurrentABIString();
-  OutStreamer->SwitchSection(
+  OutStreamer->switchSection(
       OutContext.getELFSection(SectionName, ELF::SHT_PROGBITS, 0));
 
   // NaN: At the moment we only support:
@@ -825,7 +833,7 @@ void MipsAsmPrinter::emitStartOfAsmFile(Module &M) {
     TS.emitDirectiveModuleOddSPReg();
 
   // Switch to the .text section.
-  OutStreamer->SwitchSection(getObjFileLowering().getTextSection());
+  OutStreamer->switchSection(getObjFileLowering().getTextSection());
 }
 
 void MipsAsmPrinter::emitInlineAsmStart() const {
@@ -1045,11 +1053,11 @@ void MipsAsmPrinter::EmitFPCallStub(
   MCSectionELF *M = OutContext.getELFSection(
       ".mips16.call.fp." + std::string(Symbol), ELF::SHT_PROGBITS,
       ELF::SHF_ALLOC | ELF::SHF_EXECINSTR);
-  OutStreamer->SwitchSection(M, nullptr);
+  OutStreamer->switchSection(M, nullptr);
   //
   // .align 2
   //
-  OutStreamer->emitValueToAlignment(4);
+  OutStreamer->emitValueToAlignment(Align(4));
   MipsTargetStreamer &TS = getTargetStreamer();
   //
   // .set nomips16
@@ -1130,7 +1138,7 @@ void MipsAsmPrinter::emitEndOfAsmFile(Module &M) {
     EmitFPCallStub(Symbol, Signature);
   }
   // return to the text section
-  OutStreamer->SwitchSection(OutContext.getObjectFileInfo()->getTextSection());
+  OutStreamer->switchSection(OutContext.getObjectFileInfo()->getTextSection());
 }
 
 void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
@@ -1198,7 +1206,7 @@ void MipsAsmPrinter::EmitSled(const MachineInstr &MI, SledKind Kind) {
   //   LD       RA, 8(SP)
   //   DADDIU   SP, SP, 16
   //
-  OutStreamer->emitCodeAlignment(4, &getSubtargetInfo());
+  OutStreamer->emitCodeAlignment(Align(4), &getSubtargetInfo());
   auto CurSled = OutContext.createTempSymbol("xray_sled_", true);
   OutStreamer->emitLabel(CurSled);
   auto Target = OutContext.createTempSymbol();

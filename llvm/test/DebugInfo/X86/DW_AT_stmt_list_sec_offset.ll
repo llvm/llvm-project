@@ -21,7 +21,7 @@ target triple = "i686-pc-win32"
 define i32 @main() #0 !dbg !4 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   ret i32 0, !dbg !10
 }
 

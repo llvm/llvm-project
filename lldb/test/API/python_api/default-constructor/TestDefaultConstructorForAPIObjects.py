@@ -11,9 +11,6 @@ SBCommandReturnObject, SBStream, and SBSymbolContextList, are all valid objects
 after default construction.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -21,8 +18,6 @@ from lldbsuite.test import lldbutil
 
 
 class APIDefaultConstructorTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_SBAddress(self):

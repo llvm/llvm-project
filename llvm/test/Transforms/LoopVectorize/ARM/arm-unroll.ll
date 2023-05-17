@@ -1,6 +1,6 @@
-; RUN: opt < %s  -loop-vectorize -mtriple=thumbv7-apple-ios3.0.0 -S | FileCheck %s
-; RUN: opt < %s  -loop-vectorize -mtriple=thumbv7-apple-ios3.0.0 -mcpu=swift -S | FileCheck %s --check-prefix=SWIFT
-; RUN: opt < %s  -loop-vectorize -force-vector-width=1 -mtriple=thumbv7-apple-ios3.0.0 -mcpu=swift -S | FileCheck %s --check-prefix=SWIFTUNROLL
+; RUN: opt < %s -passes=loop-vectorize -mtriple=thumbv7-apple-ios3.0.0 -S | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -mtriple=thumbv7-apple-ios3.0.0 -mcpu=swift -S | FileCheck %s --check-prefix=SWIFT
+; RUN: opt < %s -passes=loop-vectorize -force-vector-width=1 -mtriple=thumbv7-apple-ios3.0.0 -mcpu=swift -S | FileCheck %s --check-prefix=SWIFTUNROLL
 
 target datalayout = "e-p:32:32:32-i1:8:32-i8:8:32-i16:16:32-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:32:64-v128:32:128-a0:0:32-n32-S32"
 target triple = "thumbv7-apple-ios3.0.0"
@@ -13,15 +13,15 @@ target triple = "thumbv7-apple-ios3.0.0"
 ;SWIFT: load <4 x i32>
 ;SWIFT: load <4 x i32>
 ;SWIFT: ret
-define i32 @foo(i32* nocapture %A, i32 %n) nounwind readonly ssp {
+define i32 @foo(ptr nocapture %A, i32 %n) nounwind readonly ssp {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
 .lr.ph:                                           ; preds = %0, %.lr.ph
   %i.02 = phi i32 [ %5, %.lr.ph ], [ 0, %0 ]
   %sum.01 = phi i32 [ %4, %.lr.ph ], [ 0, %0 ]
-  %2 = getelementptr inbounds i32, i32* %A, i32 %i.02
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %A, i32 %i.02
+  %3 = load i32, ptr %2, align 4
   %4 = add nsw i32 %3, %sum.01
   %5 = add nsw i32 %i.02, 1
   %exitcond = icmp eq i32 %5, %n
@@ -36,7 +36,7 @@ define i32 @foo(i32* nocapture %A, i32 %n) nounwind readonly ssp {
 ;SWIFTUNROLL-LABEL: @register_limit(
 ;SWIFTUNROLL: load i32
 ;SWIFTUNROLL-NOT: load i32
-define i32 @register_limit(i32* nocapture %A, i32 %n) {
+define i32 @register_limit(ptr nocapture %A, i32 %n) {
   %1 = icmp sgt i32 %n, 0
   br i1 %1, label %.lr.ph, label %._crit_edge
 
@@ -48,8 +48,8 @@ define i32 @register_limit(i32* nocapture %A, i32 %n) {
   %sum.04 = phi i32 [ %8, %.lr.ph ], [ 0, %0 ]
   %sum.05 = phi i32 [ %9, %.lr.ph ], [ 0, %0 ]
   %sum.06 = phi i32 [ %10, %.lr.ph ], [ 0, %0 ]
-  %2 = getelementptr inbounds i32, i32* %A, i32 %i.02
-  %3 = load i32, i32* %2, align 4
+  %2 = getelementptr inbounds i32, ptr %A, i32 %i.02
+  %3 = load i32, ptr %2, align 4
   %4 = add nsw i32 %3, %sum.01
   %5 = add nsw i32 %i.02, 1
   %6 = add nsw i32 %3, %sum.02

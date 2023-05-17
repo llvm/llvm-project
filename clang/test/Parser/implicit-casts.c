@@ -14,7 +14,7 @@ void test2(void) {
 }
 int test3(void) {
   int a[2];
-  a[0] = test3; // expected-warning{{incompatible pointer to integer conversion assigning to 'int' from 'int (void)'}}
+  a[0] = test3; // expected-error{{incompatible pointer to integer conversion assigning to 'int' from 'int (void)'}}
   return 0;
 }
 short x; void test4(char c) { x += c; }

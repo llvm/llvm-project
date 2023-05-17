@@ -65,7 +65,7 @@ define <8 x i32> @permd(<8 x i32> %a0, <8 x i32> %a1) {
   ret <8 x i32> %res
 }
 
-define <8 x i32> @permd_mem(<8 x i32>* %p0, <8 x i32> %a1) {
+define <8 x i32> @permd_mem(ptr %p0, <8 x i32> %a1) {
 ; ENABLE-ADL-LABEL: permd_mem:
 ; ENABLE-ADL:       # %bb.0:
 ; ENABLE-ADL-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
@@ -110,7 +110,7 @@ define <8 x i32> @permd_mem(<8 x i32>* %p0, <8 x i32> %a1) {
 ; DISABLE-SPR-NEXT:    vpaddd %ymm16, %ymm0, %ymm0
 ; DISABLE-SPR-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %a0 = load <8 x i32>, <8 x i32>* %p0, align 64
+  %a0 = load <8 x i32>, ptr %p0, align 64
   %2 = call <8 x i32> @llvm.x86.avx2.permd(<8 x i32> %a0, <8 x i32> %a1)
   %res = add <8 x i32> %2, %a1
   ret <8 x i32> %res
@@ -143,7 +143,7 @@ define <4 x i64> @permq(<4 x i64> %a0) {
   ret <4 x i64> %res
 }
 
-define <4 x i64> @permq_mem(<4 x i64>* %p0) {
+define <4 x i64> @permq_mem(ptr %p0) {
 ; ENABLE-LABEL: permq_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -161,7 +161,7 @@ define <4 x i64> @permq_mem(<4 x i64>* %p0) {
 ; DISABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[1,2,1,0]
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %a0 = load <4 x i64>, <4 x i64>* %p0, align 64
+  %a0 = load <4 x i64>, ptr %p0, align 64
   %2 = shufflevector <4 x i64> %a0, <4 x i64> undef, <4 x i32> <i32 1, i32 2, i32 1, i32 0>
   ret <4 x i64> %2
 }
@@ -226,7 +226,7 @@ define <8 x float> @permps(<8 x float> %a0, <8 x i32> %a1) {
   ret <8 x float> %res
 }
 
-define <8 x float> @permps_mem(<8 x float>* %p0, <8 x i32> %a1) {
+define <8 x float> @permps_mem(ptr %p0, <8 x i32> %a1) {
 ; ENABLE-LABEL: permps_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -248,7 +248,7 @@ define <8 x float> @permps_mem(<8 x float>* %p0, <8 x i32> %a1) {
 ; DISABLE-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %a0 = load <8 x float>, <8 x float>* %p0, align 64
+  %a0 = load <8 x float>, ptr %p0, align 64
   %2 = call <8 x float> @llvm.x86.avx2.permps(<8 x float> %a0, <8 x i32> %a1)
   %t = sitofp <8 x i32> %a1 to <8 x float>
   %res = fadd <8 x float> %2, %t
@@ -282,7 +282,7 @@ define <4 x double> @permpd(<4 x double> %a0) {
   ret <4 x double> %res
 }
 
-define <4 x double> @permpd_mem(<4 x double>* %p0) {
+define <4 x double> @permpd_mem(ptr %p0) {
 ; ENABLE-LABEL: permpd_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -300,7 +300,7 @@ define <4 x double> @permpd_mem(<4 x double>* %p0) {
 ; DISABLE-NEXT:    vpermpd {{.*#+}} ymm0 = mem[1,2,1,0]
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{flags}"()
-  %a0 = load <4 x double>, <4 x double>* %p0, align 64
+  %a0 = load <4 x double>, ptr %p0, align 64
   %2 = shufflevector <4 x double> %a0, <4 x double> undef, <4 x i32> <i32 1, i32 2, i32 1, i32 0>
   ret <4 x double> %2
 }

@@ -1,4 +1,5 @@
 #include <atomic>
+#include <cassert>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -223,6 +224,8 @@ int main(int argc, char **argv) {
   int return_value = 0;
 
 #if !defined(_WIN32)
+  bool is_child = false;
+
   // Set the signal handler.
   sig_t sig_result = signal(SIGALRM, signal_handler);
   if (sig_result == SIG_ERR) {
@@ -323,11 +326,32 @@ int main(int argc, char **argv) {
       func_p();
 #if !defined(_WIN32) && !defined(TARGET_OS_WATCH) && !defined(TARGET_OS_TV)
     } else if (arg == "fork") {
-      if (fork() == 0)
-        _exit(0);
+      pid_t fork_pid = fork();
+      assert(fork_pid != -1);
+      is_child = fork_pid == 0;
     } else if (arg == "vfork") {
       if (vfork() == 0)
         _exit(0);
+    } else if (consume_front(arg, "process:sync:")) {
+      // this is only valid after fork
+      const char *filenames[] = {"parent", "child"};
+      std::string my_file = arg + "." + filenames[is_child];
+      std::string other_file = arg + "." + filenames[!is_child];
+
+      // indicate that we're ready
+      FILE *f = fopen(my_file.c_str(), "w");
+      assert(f);
+      fclose(f);
+
+      // wait for the other process to be ready
+      for (int i = 0; i < 5; ++i) {
+        f = fopen(other_file.c_str(), "r");
+        if (f)
+          break;
+        std::this_thread::sleep_for(std::chrono::milliseconds(125 * (1<<i)));
+      }
+      assert(f);
+      fclose(f);
 #endif
     } else if (consume_front(arg, "thread:new")) {
       std::promise<void> promise;
@@ -353,6 +377,10 @@ int main(int argc, char **argv) {
       printf("%s\n", value ? value : "__unset__");
     } else if (consume_front(arg, "trap")) {
       trap();
+#if !defined(_WIN32)
+    } else if (arg == "stop") {
+      raise(SIGINT);
+#endif
     } else {
       // Treat the argument as text for stdout.
       printf("%s\n", argv[i]);

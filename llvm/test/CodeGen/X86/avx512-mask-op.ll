@@ -55,7 +55,7 @@ define i8 @mask8(i8 %x) {
 ;
 ; X86-LABEL: mask8:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    notb %al
 ; X86-NEXT:    retl
   %m0 = bitcast i8 %x to <8 x i1>
@@ -73,7 +73,7 @@ define i32 @mask8_zext(i8 %x) {
 ;
 ; X86-LABEL: mask8_zext:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    notb %al
 ; X86-NEXT:    movzbl %al, %eax
 ; X86-NEXT:    retl
@@ -84,7 +84,7 @@ define i32 @mask8_zext(i8 %x) {
   ret i32 %ret
 }
 
-define void @mask16_mem(i16* %ptr) {
+define void @mask16_mem(ptr %ptr) {
 ; CHECK-LABEL: mask16_mem:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovw (%rdi), %k0
@@ -99,15 +99,15 @@ define void @mask16_mem(i16* %ptr) {
 ; X86-NEXT:    knotw %k0, %k0
 ; X86-NEXT:    kmovw %k0, (%eax)
 ; X86-NEXT:    retl
-  %x = load i16, i16* %ptr, align 4
+  %x = load i16, ptr %ptr, align 4
   %m0 = bitcast i16 %x to <16 x i1>
   %m1 = xor <16 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %ret = bitcast <16 x i1> %m1 to i16
-  store i16 %ret, i16* %ptr, align 4
+  store i16 %ret, ptr %ptr, align 4
   ret void
 }
 
-define void @mask8_mem(i8* %ptr) {
+define void @mask8_mem(ptr %ptr) {
 ; KNL-LABEL: mask8_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    notb (%rdi)
@@ -139,11 +139,11 @@ define void @mask8_mem(i8* %ptr) {
 ; X86-NEXT:    knotb %k0, %k0
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
-  %x = load i8, i8* %ptr, align 4
+  %x = load i8, ptr %ptr, align 4
   %m0 = bitcast i8 %x to <8 x i1>
   %m1 = xor <8 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %ret = bitcast <8 x i1> %m1 to i8
-  store i8 %ret, i8* %ptr, align 4
+  store i8 %ret, ptr %ptr, align 4
   ret void
 }
 
@@ -151,21 +151,14 @@ define i16 @mand16(i16 %x, i16 %y) {
 ; CHECK-LABEL: mand16:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl %esi, %eax
-; CHECK-NEXT:    xorl %esi, %edi
-; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; CHECK-NEXT:    retq
 ;
 ; X86-LABEL: mand16:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
-; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movl %eax, %edx
-; X86-NEXT:    andl %ecx, %edx
-; X86-NEXT:    xorl %ecx, %eax
-; X86-NEXT:    orl %edx, %eax
-; X86-NEXT:    ## kill: def $ax killed $ax killed $eax
+; X86-NEXT:    movzwl {{[0-9]+}}(%esp), %eax
+; X86-NEXT:    orw {{[0-9]+}}(%esp), %ax
 ; X86-NEXT:    retl
   %ma = bitcast i16 %x to <16 x i1>
   %mb = bitcast i16 %y to <16 x i1>
@@ -176,14 +169,12 @@ define i16 @mand16(i16 %x, i16 %y) {
   ret i16 %ret
 }
 
-define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
+define i16 @mand16_mem(ptr %x, ptr %y) {
 ; KNL-LABEL: mand16_mem:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw (%rdi), %k0
 ; KNL-NEXT:    kmovw (%rsi), %k1
-; KNL-NEXT:    kandw %k1, %k0, %k2
-; KNL-NEXT:    kxorw %k1, %k0, %k0
-; KNL-NEXT:    korw %k0, %k2, %k0
+; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %k0, %eax
 ; KNL-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; KNL-NEXT:    retq
@@ -192,9 +183,7 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; SKX:       ## %bb.0:
 ; SKX-NEXT:    kmovw (%rdi), %k0
 ; SKX-NEXT:    kmovw (%rsi), %k1
-; SKX-NEXT:    kandw %k1, %k0, %k2
-; SKX-NEXT:    kxorw %k1, %k0, %k0
-; SKX-NEXT:    korw %k0, %k2, %k0
+; SKX-NEXT:    korw %k1, %k0, %k0
 ; SKX-NEXT:    kmovd %k0, %eax
 ; SKX-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; SKX-NEXT:    retq
@@ -203,9 +192,7 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovw (%rdi), %k0
 ; AVX512BW-NEXT:    kmovw (%rsi), %k1
-; AVX512BW-NEXT:    kandw %k1, %k0, %k2
-; AVX512BW-NEXT:    kxorw %k1, %k0, %k0
-; AVX512BW-NEXT:    korw %k0, %k2, %k0
+; AVX512BW-NEXT:    korw %k1, %k0, %k0
 ; AVX512BW-NEXT:    kmovd %k0, %eax
 ; AVX512BW-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; AVX512BW-NEXT:    retq
@@ -214,9 +201,7 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; AVX512DQ:       ## %bb.0:
 ; AVX512DQ-NEXT:    kmovw (%rdi), %k0
 ; AVX512DQ-NEXT:    kmovw (%rsi), %k1
-; AVX512DQ-NEXT:    kandw %k1, %k0, %k2
-; AVX512DQ-NEXT:    kxorw %k1, %k0, %k0
-; AVX512DQ-NEXT:    korw %k0, %k2, %k0
+; AVX512DQ-NEXT:    korw %k1, %k0, %k0
 ; AVX512DQ-NEXT:    kmovw %k0, %eax
 ; AVX512DQ-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; AVX512DQ-NEXT:    retq
@@ -227,14 +212,12 @@ define i16 @mand16_mem(<16 x i1>* %x, <16 x i1>* %y) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    kmovw (%ecx), %k0
 ; X86-NEXT:    kmovw (%eax), %k1
-; X86-NEXT:    kandw %k1, %k0, %k2
-; X86-NEXT:    kxorw %k1, %k0, %k0
-; X86-NEXT:    korw %k0, %k2, %k0
+; X86-NEXT:    korw %k1, %k0, %k0
 ; X86-NEXT:    kmovd %k0, %eax
 ; X86-NEXT:    ## kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
-  %ma = load <16 x i1>, <16 x i1>* %x
-  %mb = load <16 x i1>, <16 x i1>* %y
+  %ma = load <16 x i1>, ptr %x
+  %mb = load <16 x i1>, ptr %y
   %mc = and <16 x i1> %ma, %mb
   %md = xor <16 x i1> %ma, %mb
   %me = or <16 x i1> %mc, %md
@@ -277,7 +260,7 @@ define i8 @shuf_test1(i16 %v) nounwind {
 ;
 ; X86-LABEL: shuf_test1:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    retl
    %v1 = bitcast i16 %v to <16 x i1>
    %mask = shufflevector <16 x i1> %v1, <16 x i1> undef, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
@@ -448,7 +431,7 @@ define i8 @zext_test3(<16 x i32> %a, <16 x i32> %b) {
   ret i8 %res
 }
 
-define i8 @conv1(<8 x i1>* %R) {
+define i8 @conv1(ptr %R) {
 ; CHECK-LABEL: conv1:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movb $-1, (%rdi)
@@ -467,11 +450,11 @@ define i8 @conv1(<8 x i1>* %R) {
 ; X86-NEXT:    popl %ecx
 ; X86-NEXT:    retl
 entry:
-  store <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i1>* %R
+  store <8 x i1> <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, ptr %R
 
   %maskPtr = alloca <8 x i1>
-  store <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, <8 x i1>* %maskPtr
-  %mask = load <8 x i1>, <8 x i1>* %maskPtr
+  store <8 x i1> <i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>, ptr %maskPtr
+  %mask = load <8 x i1>, ptr %maskPtr
   %mask_convert = bitcast <8 x i1> %mask to i8
   ret i8 %mask_convert
 }
@@ -1256,12 +1239,12 @@ define <64 x i8> @test16(i64 %x) {
 ; X86-NEXT:    kshiftlq $6, %k1, %k1
 ; X86-NEXT:    kshiftlq $59, %k0, %k0
 ; X86-NEXT:    kshiftrq $59, %k0, %k0
-; X86-NEXT:    movb $1, %al
-; X86-NEXT:    kmovd %eax, %k2
-; X86-NEXT:    kshiftlq $63, %k2, %k2
-; X86-NEXT:    kshiftrq $58, %k2, %k2
-; X86-NEXT:    korq %k2, %k1, %k1
 ; X86-NEXT:    korq %k1, %k0, %k0
+; X86-NEXT:    movb $1, %al
+; X86-NEXT:    kmovd %eax, %k1
+; X86-NEXT:    kshiftlq $63, %k1, %k1
+; X86-NEXT:    kshiftrq $58, %k1, %k1
+; X86-NEXT:    korq %k0, %k1, %k0
 ; X86-NEXT:    vpmovm2b %k0, %zmm0
 ; X86-NEXT:    retl
   %a = bitcast i64 %x to <64 x i1>
@@ -1378,11 +1361,11 @@ define <64 x i8> @test17(i64 %x, i32 %y, i32 %z) {
 ; X86-NEXT:    kshiftlq $6, %k1, %k1
 ; X86-NEXT:    kshiftlq $59, %k0, %k0
 ; X86-NEXT:    kshiftrq $59, %k0, %k0
-; X86-NEXT:    kmovd %eax, %k2
-; X86-NEXT:    kshiftlq $63, %k2, %k2
-; X86-NEXT:    kshiftrq $58, %k2, %k2
-; X86-NEXT:    korq %k2, %k1, %k1
 ; X86-NEXT:    korq %k1, %k0, %k0
+; X86-NEXT:    kmovd %eax, %k1
+; X86-NEXT:    kshiftlq $63, %k1, %k1
+; X86-NEXT:    kshiftrq $58, %k1, %k1
+; X86-NEXT:    korq %k0, %k1, %k0
 ; X86-NEXT:    vpmovm2b %k0, %zmm0
 ; X86-NEXT:    retl
   %a = bitcast i64 %x to <64 x i1>
@@ -1549,7 +1532,7 @@ define <32 x i16> @test21(<32 x i16> %x , <32 x i1> %mask) nounwind readnone {
   ret <32 x i16> %ret
 }
 
-define void @test22(<4 x i1> %a, <4 x i1>* %addr) {
+define void @test22(<4 x i1> %a, ptr %addr) {
 ; KNL-LABEL: test22:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
@@ -1596,11 +1579,11 @@ define void @test22(<4 x i1> %a, <4 x i1>* %addr) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
-  store <4 x i1> %a, <4 x i1>* %addr
+  store <4 x i1> %a, ptr %addr
   ret void
 }
 
-define void @test23(<2 x i1> %a, <2 x i1>* %addr) {
+define void @test23(<2 x i1> %a, ptr %addr) {
 ; KNL-LABEL: test23:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
@@ -1647,11 +1630,11 @@ define void @test23(<2 x i1> %a, <2 x i1>* %addr) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
-  store <2 x i1> %a, <2 x i1>* %addr
+  store <2 x i1> %a, ptr %addr
   ret void
 }
 
-define void @store_v1i1(<1 x i1> %c , <1 x i1>* %ptr) {
+define void @store_v1i1(<1 x i1> %c , ptr %ptr) {
 ; KNL-LABEL: store_v1i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw %edi, %k0
@@ -1700,11 +1683,11 @@ define void @store_v1i1(<1 x i1> %c , <1 x i1>* %ptr) {
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <1 x i1> %c, <i1 1>
-  store <1 x i1> %x, <1 x i1>*  %ptr, align 4
+  store <1 x i1> %x, ptr  %ptr, align 4
   ret void
 }
 
-define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
+define void @store_v2i1(<2 x i1> %c , ptr %ptr) {
 ; KNL-LABEL: store_v2i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpsllq $63, %xmm0, %xmm0
@@ -1759,11 +1742,11 @@ define void @store_v2i1(<2 x i1> %c , <2 x i1>* %ptr) {
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <2 x i1> %c, <i1 1, i1 1>
-  store <2 x i1> %x, <2 x i1>*  %ptr, align 4
+  store <2 x i1> %x, ptr  %ptr, align 4
   ret void
 }
 
-define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
+define void @store_v4i1(<4 x i1> %c , ptr %ptr) {
 ; KNL-LABEL: store_v4i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
@@ -1818,11 +1801,11 @@ define void @store_v4i1(<4 x i1> %c , <4 x i1>* %ptr) {
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <4 x i1> %c, <i1 1, i1 1, i1 1, i1 1>
-  store <4 x i1> %x, <4 x i1>*  %ptr, align 4
+  store <4 x i1> %x, ptr  %ptr, align 4
   ret void
 }
 
-define void @store_v8i1(<8 x i1> %c , <8 x i1>* %ptr) {
+define void @store_v8i1(<8 x i1> %c , ptr %ptr) {
 ; KNL-LABEL: store_v8i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
@@ -1870,11 +1853,11 @@ define void @store_v8i1(<8 x i1> %c , <8 x i1>* %ptr) {
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <8 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
-  store <8 x i1> %x, <8 x i1>*  %ptr, align 4
+  store <8 x i1> %x, ptr  %ptr, align 4
   ret void
 }
 
-define void @store_v16i1(<16 x i1> %c , <16 x i1>* %ptr) {
+define void @store_v16i1(<16 x i1> %c , ptr %ptr) {
 ; KNL-LABEL: store_v16i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
@@ -1920,7 +1903,7 @@ define void @store_v16i1(<16 x i1> %c , <16 x i1>* %ptr) {
 ; X86-NEXT:    kmovw %k0, (%eax)
 ; X86-NEXT:    retl
   %x = xor <16 x i1> %c, <i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1>
-  store <16 x i1> %x, <16 x i1>*  %ptr, align 4
+  store <16 x i1> %x, ptr  %ptr, align 4
   ret void
 }
 
@@ -1957,9 +1940,9 @@ define void @f1(i32 %c) {
 ; X86-NEXT:    addl $12, %esp
 ; X86-NEXT:    retl
 entry:
-  %.b1 = load i1, i1* @f1.v, align 4
+  %.b1 = load i1, ptr @f1.v, align 4
   %not..b1 = xor i1 %.b1, true
-  store i1 %not..b1, i1* @f1.v, align 4
+  store i1 %not..b1, ptr @f1.v, align 4
   %0 = zext i1 %not..b1 to i32
   tail call void @f2(i32 %0) #2
   ret void
@@ -1967,7 +1950,7 @@ entry:
 
 declare void @f2(i32) #1
 
-define void @store_i16_i1(i16 %x, i1 *%y) {
+define void @store_i16_i1(i16 %x, ptr%y) {
 ; CHECK-LABEL: store_i16_i1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
@@ -1982,11 +1965,11 @@ define void @store_i16_i1(i16 %x, i1 *%y) {
 ; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
   %c = trunc i16 %x to i1
-  store i1 %c, i1* %y
+  store i1 %c, ptr %y
   ret void
 }
 
-define void @store_i8_i1(i8 %x, i1 *%y) {
+define void @store_i8_i1(i8 %x, ptr%y) {
 ; CHECK-LABEL: store_i8_i1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    andl $1, %edi
@@ -1996,12 +1979,12 @@ define void @store_i8_i1(i8 %x, i1 *%y) {
 ; X86-LABEL: store_i8_i1:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %cl
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    andb $1, %cl
 ; X86-NEXT:    movb %cl, (%eax)
 ; X86-NEXT:    retl
   %c = trunc i8 %x to i1
-  store i1 %c, i1* %y
+  store i1 %c, ptr %y
   ret void
 }
 
@@ -2133,7 +2116,7 @@ define <64 x i8> @test_build_vec_v64i1(<64 x i8> %x) {
   ret <64 x i8> %ret
 }
 
-define void @ktest_1(<8 x double> %in, double * %base) {
+define void @ktest_1(<8 x double> %in, ptr %base) {
 ; KNL-LABEL: ktest_1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vcmpgtpd (%rdi), %zmm0, %k1
@@ -2216,14 +2199,11 @@ define void @ktest_1(<8 x double> %in, double * %base) {
 ; X86-NEXT:    vmovapd %zmm0, 8(%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-  %addr1 = getelementptr double, double * %base, i64 0
-  %addr2 = getelementptr double, double * %base, i64 1
+  %addr2 = getelementptr double, ptr %base, i64 1
 
-  %vaddr1 = bitcast double* %addr1 to <8 x double>*
-  %vaddr2 = bitcast double* %addr2 to <8 x double>*
 
-  %val1 = load <8 x double>, <8 x double> *%vaddr1, align 1
-  %val2 = load <8 x double>, <8 x double> *%vaddr2, align 1
+  %val1 = load <8 x double>, ptr%base, align 1
+  %val2 = load <8 x double>, ptr%addr2, align 1
 
   %sel1 = fcmp ogt <8 x double>%in, %val1
   %val3 = select <8 x i1> %sel1, <8 x double> %val2, <8 x double> zeroinitializer
@@ -2234,16 +2214,16 @@ define void @ktest_1(<8 x double> %in, double * %base) {
   %res = icmp eq i8 %int_sel3, zeroinitializer
   br i1 %res, label %L2, label %L1
 L1:
-  store <8 x double> %in, <8 x double>* %vaddr1
+  store <8 x double> %in, ptr %base
   br label %End
 L2:
-  store <8 x double> %in, <8 x double>* %vaddr2
+  store <8 x double> %in, ptr %addr2
   br label %End
 End:
   ret void
 }
 
-define void @ktest_2(<32 x float> %in, float * %base) {
+define void @ktest_2(<32 x float> %in, ptr %base) {
 ;
 ; KNL-LABEL: ktest_2:
 ; KNL:       ## %bb.0:
@@ -2360,14 +2340,11 @@ define void @ktest_2(<32 x float> %in, float * %base) {
 ; X86-NEXT:    vmovaps %zmm1, 68(%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-  %addr1 = getelementptr float, float * %base, i64 0
-  %addr2 = getelementptr float, float * %base, i64 1
+  %addr2 = getelementptr float, ptr %base, i64 1
 
-  %vaddr1 = bitcast float* %addr1 to <32 x float>*
-  %vaddr2 = bitcast float* %addr2 to <32 x float>*
 
-  %val1 = load <32 x float>, <32 x float> *%vaddr1, align 1
-  %val2 = load <32 x float>, <32 x float> *%vaddr2, align 1
+  %val1 = load <32 x float>, ptr%base, align 1
+  %val2 = load <32 x float>, ptr%addr2, align 1
 
   %sel1 = fcmp ogt <32 x float>%in, %val1
   %val3 = select <32 x i1> %sel1, <32 x float> %val2, <32 x float> zeroinitializer
@@ -2378,16 +2355,16 @@ define void @ktest_2(<32 x float> %in, float * %base) {
   %res = icmp eq i32 %int_sel3, zeroinitializer
   br i1 %res, label %L2, label %L1
 L1:
-  store <32 x float> %in, <32 x float>* %vaddr1
+  store <32 x float> %in, ptr %base
   br label %End
 L2:
-  store <32 x float> %in, <32 x float>* %vaddr2
+  store <32 x float> %in, ptr %addr2
   br label %End
 End:
   ret void
 }
 
-define <8 x i64> @load_8i1(<8 x i1>* %a) {
+define <8 x i64> @load_8i1(ptr %a) {
 ; KNL-LABEL: load_8i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movzbl (%rdi), %eax
@@ -2420,12 +2397,12 @@ define <8 x i64> @load_8i1(<8 x i1>* %a) {
 ; X86-NEXT:    kmovb (%eax), %k0
 ; X86-NEXT:    vpmovm2q %k0, %zmm0
 ; X86-NEXT:    retl
-  %b = load <8 x i1>, <8 x i1>* %a
+  %b = load <8 x i1>, ptr %a
   %c = sext <8 x i1> %b to <8 x i64>
   ret <8 x i64> %c
 }
 
-define <16 x i32> @load_16i1(<16 x i1>* %a) {
+define <16 x i32> @load_16i1(ptr %a) {
 ; KNL-LABEL: load_16i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw (%rdi), %k1
@@ -2456,12 +2433,12 @@ define <16 x i32> @load_16i1(<16 x i1>* %a) {
 ; X86-NEXT:    kmovw (%eax), %k0
 ; X86-NEXT:    vpmovm2d %k0, %zmm0
 ; X86-NEXT:    retl
-  %b = load <16 x i1>, <16 x i1>* %a
+  %b = load <16 x i1>, ptr %a
   %c = sext <16 x i1> %b to <16 x i32>
   ret <16 x i32> %c
 }
 
-define <2 x i16> @load_2i1(<2 x i1>* %a) {
+define <2 x i16> @load_2i1(ptr %a) {
 ; KNL-LABEL: load_2i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movzbl (%rdi), %eax
@@ -2502,12 +2479,12 @@ define <2 x i16> @load_2i1(<2 x i1>* %a) {
 ; X86-NEXT:    kmovb (%eax), %k0
 ; X86-NEXT:    vpmovm2w %k0, %xmm0
 ; X86-NEXT:    retl
-  %b = load <2 x i1>, <2 x i1>* %a
+  %b = load <2 x i1>, ptr %a
   %c = sext <2 x i1> %b to <2 x i16>
   ret <2 x i16> %c
 }
 
-define <4 x i16> @load_4i1(<4 x i1>* %a) {
+define <4 x i16> @load_4i1(ptr %a) {
 ; KNL-LABEL: load_4i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    movzbl (%rdi), %eax
@@ -2548,12 +2525,12 @@ define <4 x i16> @load_4i1(<4 x i1>* %a) {
 ; X86-NEXT:    kmovb (%eax), %k0
 ; X86-NEXT:    vpmovm2w %k0, %xmm0
 ; X86-NEXT:    retl
-  %b = load <4 x i1>, <4 x i1>* %a
+  %b = load <4 x i1>, ptr %a
   %c = sext <4 x i1> %b to <4 x i16>
   ret <4 x i16> %c
 }
 
-define <32 x i16> @load_32i1(<32 x i1>* %a) {
+define <32 x i16> @load_32i1(ptr %a) {
 ; KNL-LABEL: load_32i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw (%rdi), %k1
@@ -2594,12 +2571,12 @@ define <32 x i16> @load_32i1(<32 x i1>* %a) {
 ; X86-NEXT:    kmovd (%eax), %k0
 ; X86-NEXT:    vpmovm2w %k0, %zmm0
 ; X86-NEXT:    retl
-  %b = load <32 x i1>, <32 x i1>* %a
+  %b = load <32 x i1>, ptr %a
   %c = sext <32 x i1> %b to <32 x i16>
   ret <32 x i16> %c
 }
 
-define <64 x i8> @load_64i1(<64 x i1>* %a) {
+define <64 x i8> @load_64i1(ptr %a) {
 ; KNL-LABEL: load_64i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    kmovw (%rdi), %k1
@@ -2656,12 +2633,12 @@ define <64 x i8> @load_64i1(<64 x i1>* %a) {
 ; X86-NEXT:    kmovq (%eax), %k0
 ; X86-NEXT:    vpmovm2b %k0, %zmm0
 ; X86-NEXT:    retl
-  %b = load <64 x i1>, <64 x i1>* %a
+  %b = load <64 x i1>, ptr %a
   %c = sext <64 x i1> %b to <64 x i8>
   ret <64 x i8> %c
 }
 
-define void @store_8i1(<8 x i1>* %a, <8 x i1> %v) {
+define void @store_8i1(ptr %a, <8 x i1> %v) {
 ; KNL-LABEL: store_8i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
@@ -2704,11 +2681,11 @@ define void @store_8i1(<8 x i1>* %a, <8 x i1> %v) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
-  store <8 x i1> %v, <8 x i1>* %a
+  store <8 x i1> %v, ptr %a
   ret void
 }
 
-define void @store_8i1_1(<8 x i1>* %a, <8 x i16> %v) {
+define void @store_8i1_1(ptr %a, <8 x i16> %v) {
 ; KNL-LABEL: store_8i1_1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxwq %xmm0, %zmm0
@@ -2752,11 +2729,11 @@ define void @store_8i1_1(<8 x i1>* %a, <8 x i16> %v) {
 ; X86-NEXT:    kmovb %k0, (%eax)
 ; X86-NEXT:    retl
   %v1 = trunc <8 x i16> %v to <8 x i1>
-  store <8 x i1> %v1, <8 x i1>* %a
+  store <8 x i1> %v1, ptr %a
   ret void
 }
 
-define void @store_16i1(<16 x i1>* %a, <16 x i1> %v) {
+define void @store_16i1(ptr %a, <16 x i1> %v) {
 ; KNL-LABEL: store_16i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm0
@@ -2797,11 +2774,11 @@ define void @store_16i1(<16 x i1>* %a, <16 x i1> %v) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    kmovw %k0, (%eax)
 ; X86-NEXT:    retl
-  store <16 x i1> %v, <16 x i1>* %a
+  store <16 x i1> %v, ptr %a
   ret void
 }
 
-define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
+define void @store_32i1(ptr %a, <32 x i1> %v) {
 ; KNL-LABEL: store_32i1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxbd %xmm0, %zmm1
@@ -2854,11 +2831,11 @@ define void @store_32i1(<32 x i1>* %a, <32 x i1> %v) {
 ; X86-NEXT:    kmovd %k0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-  store <32 x i1> %v, <32 x i1>* %a
+  store <32 x i1> %v, ptr %a
   ret void
 }
 
-define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
+define void @store_32i1_1(ptr %a, <32 x i16> %v) {
 ; KNL-LABEL: store_32i1_1:
 ; KNL:       ## %bb.0:
 ; KNL-NEXT:    vpmovsxwd %ymm0, %zmm1
@@ -2912,29 +2889,26 @@ define void @store_32i1_1(<32 x i1>* %a, <32 x i16> %v) {
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
   %v1 = trunc <32 x i16> %v to <32 x i1>
-  store <32 x i1> %v1, <32 x i1>* %a
+  store <32 x i1> %v1, ptr %a
   ret void
 }
 
 
-define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
+define void @store_64i1(ptr %a, <64 x i1> %v) {
 ;
 ; KNL-LABEL: store_64i1:
 ; KNL:       ## %bb.0:
-; KNL-NEXT:    movw $-3, %ax
-; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    andl $1, %esi
 ; KNL-NEXT:    kmovw %esi, %k0
-; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k1, %k2
-; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kmovw %edx, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $14, %k1, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    movw $-5, %ax
 ; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    kmovw %k1, %k7
+; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kmovw %ecx, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $13, %k1, %k1
@@ -2948,9 +2922,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kshiftrw $12, %k1, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    movw $-17, %ax
-; KNL-NEXT:    kmovw %eax, %k6
-; KNL-NEXT:    kandw %k6, %k0, %k0
-; KNL-NEXT:    kmovw %k6, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; KNL-NEXT:    kmovw %eax, %k1
+; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; KNL-NEXT:    kandw %k1, %k0, %k0
 ; KNL-NEXT:    kmovw %r9d, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $11, %k1, %k1
@@ -2958,9 +2932,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    movw $-33, %ax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k1, %k3
+; KNL-NEXT:    kmovw %k1, %k2
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $10, %k1, %k1
@@ -2969,7 +2943,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $9, %k1, %k1
@@ -2977,9 +2951,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    movw $-129, %ax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k1, %k4
+; KNL-NEXT:    kmovw %k1, %k3
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $8, %k1, %k1
@@ -2988,7 +2962,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $7, %k1, %k1
@@ -2996,9 +2970,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    movw $-513, %ax ## imm = 0xFDFF
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    kmovw %k1, %k5
+; KNL-NEXT:    kmovw %k1, %k4
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $6, %k1, %k1
@@ -3007,16 +2981,15 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $5, %k1, %k1
 ; KNL-NEXT:    korw %k1, %k0, %k0
 ; KNL-NEXT:    movw $-2049, %ax ## imm = 0xF7FF
-; KNL-NEXT:    kmovw %eax, %k1
-; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kmovw %eax, %k5
+; KNL-NEXT:    kandw %k5, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $4, %k1, %k1
@@ -3025,7 +2998,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $3, %k1, %k1
@@ -3034,7 +3007,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kshiftlw $15, %k1, %k1
 ; KNL-NEXT:    kshiftrw $2, %k1, %k1
@@ -3043,315 +3016,313 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; KNL-NEXT:    kmovw %eax, %k1
 ; KNL-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $14, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $14, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
 ; KNL-NEXT:    kshiftlw $1, %k0, %k0
 ; KNL-NEXT:    kshiftrw $1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k0
-; KNL-NEXT:    kandw %k2, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $14, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $13, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; KNL-NEXT:    kandw %k2, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $12, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k6, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $11, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k3, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $10, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
-; KNL-NEXT:    kandw %k6, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $9, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k4, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $8, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
-; KNL-NEXT:    kandw %k3, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $7, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k5, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $6, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 2-byte Reload
-; KNL-NEXT:    kandw %k4, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $5, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; KNL-NEXT:    kandw %k5, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $4, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; KNL-NEXT:    kandw %k7, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $3, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; KNL-NEXT:    kandw %k7, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $2, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; KNL-NEXT:    kandw %k7, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $14, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kshiftlw $1, %k0, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; KNL-NEXT:    kandw %k7, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $14, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $13, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k2, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $12, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $11, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; KNL-NEXT:    kandw %k2, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $10, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k6, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $9, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; KNL-NEXT:    kandw %k2, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $8, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k3, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $7, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
-; KNL-NEXT:    kandw %k3, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $6, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k4, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $5, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kandw %k5, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $4, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; KNL-NEXT:    kandw %k2, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $3, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; KNL-NEXT:    kandw %k5, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    kshiftrw $2, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; KNL-NEXT:    kandw %k5, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $14, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    kshiftlw $1, %k0, %k0
-; KNL-NEXT:    kshiftrw $1, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kshiftlw $15, %k7, %k7
-; KNL-NEXT:    korw %k7, %k0, %k0
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; KNL-NEXT:    kmovw %eax, %k7
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; KNL-NEXT:    kandw %k5, %k7, %k7
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k6
 ; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; KNL-NEXT:    kmovw %ecx, %k0
+; KNL-NEXT:    kshiftlw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $14, %k0, %k0
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    korw %k0, %k6, %k0
+; KNL-NEXT:    kandw %k7, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $13, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
+; KNL-NEXT:    kandw %k7, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $12, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $11, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k2, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $10, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; KNL-NEXT:    kandw %k2, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $9, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k3, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $8, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; KNL-NEXT:    kandw %k3, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $7, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k4, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $6, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 2-byte Reload
+; KNL-NEXT:    kandw %k4, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $5, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw %k5, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; KNL-NEXT:    kandw %k5, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $4, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; KNL-NEXT:    kandw %k6, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $3, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; KNL-NEXT:    kandw %k6, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $2, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; KNL-NEXT:    kandw %k6, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $14, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kshiftlw $1, %k0, %k0
+; KNL-NEXT:    kshiftrw $1, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; KNL-NEXT:    kmovw %ecx, %k0
+; KNL-NEXT:    kshiftlw $15, %k0, %k0
+; KNL-NEXT:    kshiftrw $14, %k0, %k0
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    korw %k0, %k6, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; KNL-NEXT:    kandw %k6, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $13, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k7, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $12, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $11, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $10, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k2, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $9, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $8, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k3, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $7, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; KNL-NEXT:    kandw %k3, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $6, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k4, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $5, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kandw %k5, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $4, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; KNL-NEXT:    kandw %k1, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $3, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; KNL-NEXT:    kandw %k2, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    kshiftrw $2, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; KNL-NEXT:    kandw %k5, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $14, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    kshiftlw $1, %k0, %k0
+; KNL-NEXT:    kshiftrw $1, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    kmovw %eax, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
+; KNL-NEXT:    korw %k6, %k0, %k0
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; KNL-NEXT:    andl $1, %eax
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; KNL-NEXT:    kmovw %ecx, %k6
+; KNL-NEXT:    kshiftlw $15, %k6, %k6
 ; KNL-NEXT:    kshiftrw $14, %k6, %k6
+; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    korw %k6, %k7, %k6
 ; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
 ; KNL-NEXT:    kandw %k5, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $13, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
 ; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
 ; KNL-NEXT:    kandw %k5, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $12, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
-; KNL-NEXT:    kandw %k1, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; KNL-NEXT:    kandw %k5, %k6, %k6
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $11, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; KNL-NEXT:    kandw %k5, %k6, %k6
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $10, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; KNL-NEXT:    kandw %k5, %k6, %k6
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $9, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; KNL-NEXT:    kandw %k5, %k6, %k6
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $8, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; KNL-NEXT:    kandw %k5, %k6, %k6
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $7, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
 ; KNL-NEXT:    kandw %k3, %k6, %k6
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k7
 ; KNL-NEXT:    kshiftlw $15, %k7, %k7
 ; KNL-NEXT:    kshiftrw $6, %k7, %k7
 ; KNL-NEXT:    korw %k7, %k6, %k6
 ; KNL-NEXT:    kandw %k4, %k6, %k5
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k6
 ; KNL-NEXT:    kshiftlw $15, %k6, %k6
 ; KNL-NEXT:    kshiftrw $5, %k6, %k6
 ; KNL-NEXT:    korw %k6, %k5, %k5
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k5, %k4
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; KNL-NEXT:    kandw %k3, %k5, %k4
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k5
 ; KNL-NEXT:    kshiftlw $15, %k5, %k5
 ; KNL-NEXT:    kshiftrw $4, %k5, %k5
 ; KNL-NEXT:    korw %k5, %k4, %k4
-; KNL-NEXT:    kandw %k2, %k4, %k3
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kandw %k1, %k4, %k3
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k4
 ; KNL-NEXT:    kshiftlw $15, %k4, %k4
 ; KNL-NEXT:    kshiftrw $3, %k4, %k4
 ; KNL-NEXT:    korw %k4, %k3, %k3
-; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; KNL-NEXT:    kandw %k1, %k3, %k2
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    kandw %k2, %k3, %k2
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k3
 ; KNL-NEXT:    kshiftlw $15, %k3, %k3
 ; KNL-NEXT:    kshiftrw $2, %k3, %k3
 ; KNL-NEXT:    korw %k3, %k2, %k2
 ; KNL-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
 ; KNL-NEXT:    kandw %k1, %k2, %k1
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k2
 ; KNL-NEXT:    kshiftlw $14, %k2, %k2
 ; KNL-NEXT:    korw %k2, %k1, %k1
 ; KNL-NEXT:    kshiftlw $1, %k1, %k1
 ; KNL-NEXT:    kshiftrw $1, %k1, %k1
-; KNL-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; KNL-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; KNL-NEXT:    kmovw %eax, %k2
 ; KNL-NEXT:    kshiftlw $15, %k2, %k2
 ; KNL-NEXT:    korw %k2, %k1, %k1
@@ -3381,20 +3352,17 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ;
 ; AVX512DQ-LABEL: store_64i1:
 ; AVX512DQ:       ## %bb.0:
-; AVX512DQ-NEXT:    movw $-3, %ax
-; AVX512DQ-NEXT:    kmovw %eax, %k1
+; AVX512DQ-NEXT:    andl $1, %esi
 ; AVX512DQ-NEXT:    kmovw %esi, %k0
-; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k1, %k2
-; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kmovw %edx, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $14, %k1, %k1
 ; AVX512DQ-NEXT:    korw %k1, %k0, %k0
 ; AVX512DQ-NEXT:    movw $-5, %ax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
-; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k1, %k7
+; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kmovw %ecx, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $13, %k1, %k1
@@ -3408,9 +3376,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    kshiftrw $12, %k1, %k1
 ; AVX512DQ-NEXT:    korw %k1, %k0, %k0
 ; AVX512DQ-NEXT:    movw $-17, %ax
-; AVX512DQ-NEXT:    kmovw %eax, %k6
-; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k6, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; AVX512DQ-NEXT:    kmovw %eax, %k1
+; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
 ; AVX512DQ-NEXT:    kmovw %r9d, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $11, %k1, %k1
@@ -3418,9 +3386,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    movw $-33, %ax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k1, %k3
+; AVX512DQ-NEXT:    kmovw %k1, %k2
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $10, %k1, %k1
@@ -3429,7 +3397,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $9, %k1, %k1
@@ -3437,9 +3405,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    movw $-129, %ax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k1, %k4
+; AVX512DQ-NEXT:    kmovw %k1, %k3
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $8, %k1, %k1
@@ -3448,7 +3416,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $7, %k1, %k1
@@ -3456,9 +3424,9 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    movw $-513, %ax ## imm = 0xFDFF
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k1, %k5
+; AVX512DQ-NEXT:    kmovw %k1, %k4
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $6, %k1, %k1
@@ -3467,16 +3435,15 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $5, %k1, %k1
 ; AVX512DQ-NEXT:    korw %k1, %k0, %k0
 ; AVX512DQ-NEXT:    movw $-2049, %ax ## imm = 0xF7FF
-; AVX512DQ-NEXT:    kmovw %eax, %k1
-; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kmovw %eax, %k5
+; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $4, %k1, %k1
@@ -3485,7 +3452,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $3, %k1, %k1
@@ -3494,7 +3461,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kshiftlw $15, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $2, %k1, %k1
@@ -3503,315 +3470,313 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; AVX512DQ-NEXT:    kmovw %eax, %k1
 ; AVX512DQ-NEXT:    kmovw %k1, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
 ; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $14, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $14, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
 ; AVX512DQ-NEXT:    kshiftlw $1, %k0, %k0
 ; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k0
-; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $14, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $13, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $12, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $11, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $10, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $9, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k4, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $8, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $7, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $6, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k4, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $5, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $4, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k7, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $3, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k7, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $2, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k7, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $14, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kshiftlw $1, %k0, %k0
-; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k7, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $14, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $13, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $12, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $11, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $10, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $9, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $8, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $7, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $6, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k4, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $5, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $4, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $3, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    kshiftrw $2, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $14, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    kshiftlw $1, %k0, %k0
-; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
-; AVX512DQ-NEXT:    korw %k7, %k0, %k0
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
-; AVX512DQ-NEXT:    kmovw %eax, %k7
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k5, %k7, %k7
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k6
 ; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    andl $1, %eax
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; AVX512DQ-NEXT:    kmovw %ecx, %k0
+; AVX512DQ-NEXT:    kshiftlw $15, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrw $14, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    korw %k0, %k6, %k0
+; AVX512DQ-NEXT:    kandw %k7, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $13, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k7 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k7, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $12, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $11, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $10, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $9, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $8, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $7, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k4, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $6, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k4 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k4, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $5, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k5, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $4, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $3, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $2, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $14, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kshiftlw $1, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %k0, {{[-0-9]+}}(%r{{[sb]}}p) ## 2-byte Spill
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    andl $1, %eax
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; AVX512DQ-NEXT:    kmovw %ecx, %k0
+; AVX512DQ-NEXT:    kshiftlw $15, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrw $14, %k0, %k0
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    korw %k0, %k6, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k6 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k6, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $13, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k7, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $12, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $11, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $10, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $9, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $8, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $7, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k3, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $6, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k4, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $5, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $4, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k1, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $3, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k2 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k2, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    kshiftrw $2, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k5, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $14, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    kshiftlw $1, %k0, %k0
+; AVX512DQ-NEXT:    kshiftrw $1, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    kmovw %eax, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
+; AVX512DQ-NEXT:    korw %k6, %k0, %k0
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
+; AVX512DQ-NEXT:    andl $1, %eax
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %ecx
+; AVX512DQ-NEXT:    kmovw %ecx, %k6
+; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
 ; AVX512DQ-NEXT:    kshiftrw $14, %k6, %k6
+; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    korw %k6, %k7, %k6
 ; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
 ; AVX512DQ-NEXT:    kandw %k5, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $13, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
 ; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
 ; AVX512DQ-NEXT:    kandw %k5, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $12, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
-; AVX512DQ-NEXT:    kandw %k1, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k5, %k6, %k6
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $11, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k5, %k6, %k6
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $10, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k5, %k6, %k6
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $9, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k5, %k6, %k6
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $8, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k5 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k5, %k6, %k6
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $7, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
 ; AVX512DQ-NEXT:    kandw %k3, %k6, %k6
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k7
 ; AVX512DQ-NEXT:    kshiftlw $15, %k7, %k7
 ; AVX512DQ-NEXT:    kshiftrw $6, %k7, %k7
 ; AVX512DQ-NEXT:    korw %k7, %k6, %k6
 ; AVX512DQ-NEXT:    kandw %k4, %k6, %k5
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k6
 ; AVX512DQ-NEXT:    kshiftlw $15, %k6, %k6
 ; AVX512DQ-NEXT:    kshiftrw $5, %k6, %k6
 ; AVX512DQ-NEXT:    korw %k6, %k5, %k5
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k5, %k4
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k3 ## 2-byte Reload
+; AVX512DQ-NEXT:    kandw %k3, %k5, %k4
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k5
 ; AVX512DQ-NEXT:    kshiftlw $15, %k5, %k5
 ; AVX512DQ-NEXT:    kshiftrw $4, %k5, %k5
 ; AVX512DQ-NEXT:    korw %k5, %k4, %k4
-; AVX512DQ-NEXT:    kandw %k2, %k4, %k3
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kandw %k1, %k4, %k3
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k4
 ; AVX512DQ-NEXT:    kshiftlw $15, %k4, %k4
 ; AVX512DQ-NEXT:    kshiftrw $3, %k4, %k4
 ; AVX512DQ-NEXT:    korw %k4, %k3, %k3
-; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
-; AVX512DQ-NEXT:    kandw %k1, %k3, %k2
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    kandw %k2, %k3, %k2
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k3
 ; AVX512DQ-NEXT:    kshiftlw $15, %k3, %k3
 ; AVX512DQ-NEXT:    kshiftrw $2, %k3, %k3
 ; AVX512DQ-NEXT:    korw %k3, %k2, %k2
 ; AVX512DQ-NEXT:    kmovw {{[-0-9]+}}(%r{{[sb]}}p), %k1 ## 2-byte Reload
 ; AVX512DQ-NEXT:    kandw %k1, %k2, %k1
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k2
 ; AVX512DQ-NEXT:    kshiftlw $14, %k2, %k2
 ; AVX512DQ-NEXT:    korw %k2, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftlw $1, %k1, %k1
 ; AVX512DQ-NEXT:    kshiftrw $1, %k1, %k1
-; AVX512DQ-NEXT:    movb {{[0-9]+}}(%rsp), %al
+; AVX512DQ-NEXT:    movzbl {{[0-9]+}}(%rsp), %eax
 ; AVX512DQ-NEXT:    kmovw %eax, %k2
 ; AVX512DQ-NEXT:    kshiftlw $15, %k2, %k2
 ; AVX512DQ-NEXT:    korw %k2, %k1, %k1
@@ -3831,7 +3796,7 @@ define void @store_64i1(<64 x i1>* %a, <64 x i1> %v) {
 ; X86-NEXT:    kmovq %k0, (%eax)
 ; X86-NEXT:    vzeroupper
 ; X86-NEXT:    retl
-  store <64 x i1> %v, <64 x i1>* %a
+  store <64 x i1> %v, ptr %a
   ret void
 }
 
@@ -3978,7 +3943,7 @@ define i8 @test_v8i1_add(i8 %x, i8 %y) {
 ;
 ; X86-LABEL: test_v8i1_add:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %m0 = bitcast i8 %x to <8 x i1>
@@ -3998,7 +3963,7 @@ define i8 @test_v8i1_sub(i8 %x, i8 %y) {
 ;
 ; X86-LABEL: test_v8i1_sub:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %m0 = bitcast i8 %x to <8 x i1>
@@ -4018,7 +3983,7 @@ define i8 @test_v8i1_mul(i8 %x, i8 %y) {
 ;
 ; X86-LABEL: test_v8i1_mul:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %m0 = bitcast i8 %x to <8 x i1>
@@ -4133,14 +4098,14 @@ bb.2:
 }
 declare void @foo()
 
-; Make sure we can use the C flag from kortest to check for all ones.
+; Make sure we can use the ZF/CF flags from kortest to check for all ones.
 define void @ktest_allones(<16 x i32> %x, <16 x i32> %y) {
 ; CHECK-LABEL: ktest_allones:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpord %zmm1, %zmm0, %zmm0
-; CHECK-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; CHECK-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; CHECK-NEXT:    kortestw %k0, %k0
-; CHECK-NEXT:    jb LBB67_2
+; CHECK-NEXT:    je LBB67_2
 ; CHECK-NEXT:  ## %bb.1: ## %bb.1
 ; CHECK-NEXT:    pushq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
@@ -4154,9 +4119,9 @@ define void @ktest_allones(<16 x i32> %x, <16 x i32> %y) {
 ; X86-LABEL: ktest_allones:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    vpord %zmm1, %zmm0, %zmm0
-; X86-NEXT:    vptestnmd %zmm0, %zmm0, %k0
+; X86-NEXT:    vptestmd %zmm0, %zmm0, %k0
 ; X86-NEXT:    kortestw %k0, %k0
-; X86-NEXT:    jb LBB67_2
+; X86-NEXT:    je LBB67_2
 ; X86-NEXT:  ## %bb.1: ## %bb.1
 ; X86-NEXT:    subl $12, %esp
 ; X86-NEXT:    .cfi_def_cfa_offset 16
@@ -4246,7 +4211,7 @@ entry:
   ret <8 x i64> %8
 }
 
-define void @store_v128i1_constant(<128 x i1>* %R) {
+define void @store_v128i1_constant(ptr %R) {
 ; CHECK-LABEL: store_v128i1_constant:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movabsq $-4611686310485172227, %rax ## imm = 0xBFFFFFBBFFFFDFFD
@@ -4262,11 +4227,11 @@ define void @store_v128i1_constant(<128 x i1>* %R) {
 ; X86-NEXT:    vmovaps %xmm0, (%eax)
 ; X86-NEXT:    retl
 entry:
-  store <128 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, <128 x i1>* %R
+  store <128 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1>, ptr %R
   ret void
 }
 
-define void @store_v64i1_constant(<64 x i1>* %R) {
+define void @store_v64i1_constant(ptr %R) {
 ; CHECK-LABEL: store_v64i1_constant:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movabsq $-2305843576149381123, %rax ## imm = 0xDFFFFF7BFFFFEFFD
@@ -4280,11 +4245,11 @@ define void @store_v64i1_constant(<64 x i1>* %R) {
 ; X86-NEXT:    movl $-4099, (%eax) ## imm = 0xEFFD
 ; X86-NEXT:    retl
 entry:
-  store <64 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, <64 x i1>* %R
+  store <64 x i1> <i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 1, i1 0, i1 1, i1 1>, ptr %R
   ret void
 }
 
-define void @store_v2i1_constant(<2 x i1>* %R) {
+define void @store_v2i1_constant(ptr %R) {
 ; CHECK-LABEL: store_v2i1_constant:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movb $1, (%rdi)
@@ -4296,11 +4261,11 @@ define void @store_v2i1_constant(<2 x i1>* %R) {
 ; X86-NEXT:    movb $1, (%eax)
 ; X86-NEXT:    retl
 entry:
-  store <2 x i1> <i1 1, i1 0>, <2 x i1>* %R
+  store <2 x i1> <i1 1, i1 0>, ptr %R
   ret void
 }
 
-define void @store_v4i1_constant(<4 x i1>* %R) {
+define void @store_v4i1_constant(ptr %R) {
 ; CHECK-LABEL: store_v4i1_constant:
 ; CHECK:       ## %bb.0: ## %entry
 ; CHECK-NEXT:    movb $5, (%rdi)
@@ -4312,12 +4277,12 @@ define void @store_v4i1_constant(<4 x i1>* %R) {
 ; X86-NEXT:    movb $5, (%eax)
 ; X86-NEXT:    retl
 entry:
-  store <4 x i1> <i1 1, i1 0, i1 1, i1 0>, <4 x i1>* %R
+  store <4 x i1> <i1 1, i1 0, i1 1, i1 0>, ptr %R
   ret void
 }
 
 ; Make sure we bring the -1 constant into the mask domain.
-define void @mask_not_cast(i8*, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) {
+define void @mask_not_cast(ptr, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) {
 ; CHECK-LABEL: mask_not_cast:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vpcmpnleud %zmm3, %zmm2, %k1
@@ -4345,12 +4310,11 @@ define void @mask_not_cast(i8*, <8 x i64>, <8 x i64>, <8 x i64>, <8 x i64>) {
   %14 = xor i16 %13, -1
   %15 = and i16 %14, %9
   %16 = bitcast <8 x i64> %1 to <16 x i32>
-  %17 = bitcast i8* %0 to <16 x i32>*
-  %18 = bitcast i16 %15 to <16 x i1>
-  tail call void @llvm.masked.store.v16i32.p0v16i32(<16 x i32> %16, <16 x i32>* %17, i32 1, <16 x i1> %18) #2
+  %17 = bitcast i16 %15 to <16 x i1>
+  tail call void @llvm.masked.store.v16i32.p0(<16 x i32> %16, ptr %0, i32 1, <16 x i1> %17) #2
   ret void
 }
-declare void @llvm.masked.store.v16i32.p0v16i32(<16 x i32>, <16 x i32>*, i32, <16 x i1>)
+declare void @llvm.masked.store.v16i32.p0(<16 x i32>, ptr, i32, <16 x i1>)
 
 define void @ktest_3(<8 x i32> %w, <8 x i32> %x, <8 x i32> %y, <8 x i32> %z) {
 ; KNL-LABEL: ktest_3:
@@ -5151,7 +5115,7 @@ define i1 @test_v1i1_add(i1 %x, i1 %y) {
 ;
 ; X86-LABEL: test_v1i1_add:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %m0 = bitcast i1 %x to <1 x i1>
@@ -5171,7 +5135,7 @@ define i1 @test_v1i1_sub(i1 %x, i1 %y) {
 ;
 ; X86-LABEL: test_v1i1_sub:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %m0 = bitcast i1 %x to <1 x i1>
@@ -5191,7 +5155,7 @@ define i1 @test_v1i1_mul(i1 %x, i1 %y) {
 ;
 ; X86-LABEL: test_v1i1_mul:
 ; X86:       ## %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    andb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    retl
   %m0 = bitcast i1 %x to <1 x i1>

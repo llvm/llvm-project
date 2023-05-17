@@ -11,7 +11,7 @@ target triple = "x86_64-pc-linux-gnu"
 
 ; If we have autopadding enabled, make sure the label isn't separated from
 ; the mov.
-define i32 @implicit_null_check(i32* %x) {
+define i32 @implicit_null_check(ptr %x) {
 ; CHECK-LABEL: implicit_null_check:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    #noautopadding
@@ -25,19 +25,19 @@ define i32 @implicit_null_check(i32* %x) {
 ; CHECK-NEXT:    retq
 
  entry:
-  %c = icmp eq i32* %x, null
+  %c = icmp eq ptr %x, null
   br i1 %c, label %is_null, label %not_null, !make.implicit !{}
 
  is_null:
   ret i32 42
 
  not_null:
-  %t = load atomic i32, i32* %x unordered, align 4
+  %t = load atomic i32, ptr %x unordered, align 4
   ret i32 %t
 }
 
 ; Label must bind to call before
-define void @test_statepoint(i32 addrspace(1)* %ptr) gc "statepoint-example" {
+define void @test_statepoint(ptr addrspace(1) %ptr) gc "statepoint-example" {
 ; CHECK-LABEL: test_statepoint:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -50,12 +50,12 @@ define void @test_statepoint(i32 addrspace(1)* %ptr) gc "statepoint-example" {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
+  call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0)
   ret void
 }
 
 declare zeroext i1 @return_i1()
-declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64, i32, i1 ()*, i32, i32, ...)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
 
 
 ; Label must bind to following nop sequence
@@ -80,10 +80,10 @@ define void @patchpoint(i64 %a, i64 %b) {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 entry:
-  call void (i64, i32, i8*, i32, ...) @llvm.experimental.patchpoint.void(i64 4, i32 15, i8* null, i32 0, i64 %a, i64 %b)
+  call void (i64, i32, ptr, i32, ...) @llvm.experimental.patchpoint.void(i64 4, i32 15, ptr null, i32 0, i64 %a, i64 %b)
   ret void
 }
 
 
 declare void @llvm.experimental.stackmap(i64, i32, ...)
-declare void @llvm.experimental.patchpoint.void(i64, i32, i8*, i32, ...)
+declare void @llvm.experimental.patchpoint.void(i64, i32, ptr, i32, ...)

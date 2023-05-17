@@ -13,18 +13,17 @@
 #ifndef LLVM_ANALYSIS_BASICALIASANALYSIS_H
 #define LLVM_ANALYSIS_BASICALIASANALYSIS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace llvm {
 
 class AssumptionCache;
-class BasicBlock;
 class DataLayout;
 class DominatorTree;
 class Function;
@@ -41,35 +40,32 @@ class Value;
 /// While it does retain some storage, that is used as an optimization and not
 /// to preserve information from query to query. However it does retain handles
 /// to various other analyses and must be recomputed when those analyses are.
-class BasicAAResult : public AAResultBase<BasicAAResult> {
-  friend AAResultBase<BasicAAResult>;
-
+class BasicAAResult : public AAResultBase {
   const DataLayout &DL;
   const Function &F;
   const TargetLibraryInfo &TLI;
   AssumptionCache &AC;
   DominatorTree *DT;
-  PhiValues *PV;
 
 public:
   BasicAAResult(const DataLayout &DL, const Function &F,
                 const TargetLibraryInfo &TLI, AssumptionCache &AC,
-                DominatorTree *DT = nullptr, PhiValues *PV = nullptr)
-      : DL(DL), F(F), TLI(TLI), AC(AC), DT(DT), PV(PV) {}
+                DominatorTree *DT = nullptr)
+      : DL(DL), F(F), TLI(TLI), AC(AC), DT(DT) {}
 
   BasicAAResult(const BasicAAResult &Arg)
       : AAResultBase(Arg), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI), AC(Arg.AC),
-        DT(Arg.DT), PV(Arg.PV) {}
+        DT(Arg.DT) {}
   BasicAAResult(BasicAAResult &&Arg)
       : AAResultBase(std::move(Arg)), DL(Arg.DL), F(Arg.F), TLI(Arg.TLI),
-        AC(Arg.AC), DT(Arg.DT), PV(Arg.PV) {}
+        AC(Arg.AC), DT(Arg.DT) {}
 
   /// Handle invalidation events in the new pass manager.
   bool invalidate(Function &Fn, const PreservedAnalyses &PA,
                   FunctionAnalysisManager::Invalidator &Inv);
 
   AliasResult alias(const MemoryLocation &LocA, const MemoryLocation &LocB,
-                    AAQueryInfo &AAQI);
+                    AAQueryInfo &AAQI, const Instruction *CtxI);
 
   ModRefInfo getModRefInfo(const CallBase *Call, const MemoryLocation &Loc,
                            AAQueryInfo &AAQI);
@@ -77,38 +73,28 @@ public:
   ModRefInfo getModRefInfo(const CallBase *Call1, const CallBase *Call2,
                            AAQueryInfo &AAQI);
 
-  /// Chases pointers until we find a (constant global) or not.
-  bool pointsToConstantMemory(const MemoryLocation &Loc, AAQueryInfo &AAQI,
-                              bool OrLocal);
+  /// Returns a bitmask that should be unconditionally applied to the ModRef
+  /// info of a memory location. This allows us to eliminate Mod and/or Ref
+  /// from the ModRef info based on the knowledge that the memory location
+  /// points to constant and/or locally-invariant memory.
+  ///
+  /// If IgnoreLocals is true, then this method returns NoModRef for memory
+  /// that points to a local alloca.
+  ModRefInfo getModRefInfoMask(const MemoryLocation &Loc, AAQueryInfo &AAQI,
+                               bool IgnoreLocals = false);
 
   /// Get the location associated with a pointer argument of a callsite.
   ModRefInfo getArgModRefInfo(const CallBase *Call, unsigned ArgIdx);
 
   /// Returns the behavior when calling the given call site.
-  FunctionModRefBehavior getModRefBehavior(const CallBase *Call);
+  MemoryEffects getMemoryEffects(const CallBase *Call, AAQueryInfo &AAQI);
 
   /// Returns the behavior when calling the given function. For use when the
   /// call site is not known.
-  FunctionModRefBehavior getModRefBehavior(const Function *Fn);
+  MemoryEffects getMemoryEffects(const Function *Fn);
 
 private:
   struct DecomposedGEP;
-
-  /// Tracks phi nodes we have visited.
-  ///
-  /// When interpret "Value" pointer equality as value equality we need to make
-  /// sure that the "Value" is not part of a cycle. Otherwise, two uses could
-  /// come from different "iterations" of a cycle and see different values for
-  /// the same "Value" pointer.
-  ///
-  /// The following example shows the problem:
-  ///   %p = phi(%alloca1, %addr2)
-  ///   %l = load %ptr
-  ///   %addr1 = gep, %alloca2, 0, %l
-  ///   %addr2 = gep  %alloca2, 0, (%l + 1)
-  ///      alias(%p, %addr1) -> MayAlias !
-  ///   store %l, ...
-  SmallPtrSet<const BasicBlock *, 8> VisitedPhiBBs;
 
   /// Tracks instructions visited by pointsToConstantMemory.
   SmallPtrSet<const Value *, 16> Visited;
@@ -125,15 +111,16 @@ private:
   /// will therefore conservatively refuse to decompose these expressions.
   /// However, we know that, for all %x, zext(%x) != zext(%x + 1), even if
   /// the addition overflows.
-  bool
-  constantOffsetHeuristic(const DecomposedGEP &GEP, LocationSize V1Size,
-                          LocationSize V2Size, AssumptionCache *AC,
-                          DominatorTree *DT);
+  bool constantOffsetHeuristic(const DecomposedGEP &GEP, LocationSize V1Size,
+                               LocationSize V2Size, AssumptionCache *AC,
+                               DominatorTree *DT, const AAQueryInfo &AAQI);
 
-  bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2);
+  bool isValueEqualInPotentialCycles(const Value *V1, const Value *V2,
+                                     const AAQueryInfo &AAQI);
 
   void subtractDecomposedGEPs(DecomposedGEP &DestGEP,
-                              const DecomposedGEP &SrcGEP);
+                              const DecomposedGEP &SrcGEP,
+                              const AAQueryInfo &AAQI);
 
   AliasResult aliasGEP(const GEPOperator *V1, LocationSize V1Size,
                        const Value *V2, LocationSize V2Size,
@@ -147,9 +134,9 @@ private:
                           const Value *V2, LocationSize V2Size,
                           AAQueryInfo &AAQI);
 
-  AliasResult aliasCheck(const Value *V1, LocationSize V1Size,
-                         const Value *V2, LocationSize V2Size,
-                         AAQueryInfo &AAQI);
+  AliasResult aliasCheck(const Value *V1, LocationSize V1Size, const Value *V2,
+                         LocationSize V2Size, AAQueryInfo &AAQI,
+                         const Instruction *CtxI);
 
   AliasResult aliasCheckRecursive(const Value *V1, LocationSize V1Size,
                                   const Value *V2, LocationSize V2Size,
@@ -199,8 +186,8 @@ BasicAAResult createLegacyPMBasicAAResult(Pass &P, Function &F);
 /// they live long enough to be queried, but we re-use them each time.
 class LegacyAARGetter {
   Pass &P;
-  Optional<BasicAAResult> BAR;
-  Optional<AAResults> AAR;
+  std::optional<BasicAAResult> BAR;
+  std::optional<AAResults> AAR;
 
 public:
   LegacyAARGetter(Pass &P) : P(P) {}

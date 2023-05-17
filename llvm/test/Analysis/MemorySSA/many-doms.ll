@@ -4,7 +4,7 @@
 
 declare i1 @getBool() readnone
 
-define i32 @foo(i32* %p) {
+define i32 @foo(ptr %p) {
 entry:
   br label %loopbegin
 
@@ -23,41 +23,41 @@ loopbegin:
 sw.bb:
 ; CHECK: 1 = MemoryDef(8)
 ; CHECK-NEXT: store i32 1
-  store i32 1, i32* %m, align 4
+  store i32 1, ptr %m, align 4
   br label %sw.epilog
 
 sw.bb1:
 ; CHECK: 2 = MemoryDef(8)
 ; CHECK-NEXT: store i32 2
-  store i32 2, i32* %m, align 4
+  store i32 2, ptr %m, align 4
   br label %sw.epilog
 
 sw.bb2:
 ; CHECK: 3 = MemoryDef(8)
 ; CHECK-NEXT: store i32 3
-  store i32 3, i32* %m, align 4
+  store i32 3, ptr %m, align 4
   br label %sw.epilog
 
 sw.bb3:
 ; CHECK: 4 = MemoryDef(8)
 ; CHECK-NEXT: store i32 4
-  store i32 4, i32* %m, align 4
+  store i32 4, ptr %m, align 4
   br label %sw.epilog
 
 sw.default:
 ; CHECK: 5 = MemoryDef(8)
 ; CHECK-NEXT: store i32 5
-  store i32 5, i32* %m, align 4
+  store i32 5, ptr %m, align 4
   br label %sw.epilog
 
 sw.epilog:
 ; CHECK: 7 = MemoryPhi({sw.default,5},{sw.bb,1},{sw.bb1,2},{sw.bb2,3},{sw.bb3,4})
 ; CHECK-NEXT: MemoryUse(7)
 ; CHECK-NEXT: %0 =
-  %0 = load i32, i32* %m, align 4
+  %0 = load i32, ptr %m, align 4
 ; CHECK: 6 = MemoryDef(7)
 ; CHECK-NEXT: %1 =
-  %1 = load volatile i32, i32* %p, align 4
+  %1 = load volatile i32, ptr %p, align 4
   %2 = icmp eq i32 %0, %1
   br i1 %2, label %exit, label %loopbegin
 

@@ -20,13 +20,13 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info WebAssemblyTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define LIBBUILTIN(ID, TYPE, ATTRS, HEADER)                                    \
-  {#ID, TYPE, ATTRS, HEADER, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsWebAssembly.def"
 };
 
@@ -96,6 +96,11 @@ void WebAssemblyTargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__wasm_reference_types__");
   if (HasExtendedConst)
     Builder.defineMacro("__wasm_extended_const__");
+
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
 void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
@@ -104,10 +109,10 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
     switch (Level) {
     case RelaxedSIMD:
       Features["relaxed-simd"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case SIMD128:
       Features["simd128"] = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case NoSIMD:
       break;
     }
@@ -118,7 +123,7 @@ void WebAssemblyTargetInfo::setSIMDLevel(llvm::StringMap<bool> &Features,
   case NoSIMD:
   case SIMD128:
     Features["simd128"] = false;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case RelaxedSIMD:
     Features["relaxed-simd"] = false;
     break;
@@ -147,6 +152,9 @@ bool WebAssemblyTargetInfo::initFeatureMap(
     Features["mutable-globals"] = true;
     Features["tail-call"] = true;
     setSIMDLevel(Features, SIMD128, true);
+  } else if (CPU == "generic") {
+    Features["sign-ext"] = true;
+    Features["mutable-globals"] = true;
   }
 
   return TargetInfo::initFeatureMap(Features, Diags, CPU, FeaturesVec);
@@ -260,8 +268,8 @@ bool WebAssemblyTargetInfo::handleTargetFeatures(
 }
 
 ArrayRef<Builtin::Info> WebAssemblyTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::WebAssembly::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo, clang::WebAssembly::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }
 
 void WebAssemblyTargetInfo::adjust(DiagnosticsEngine &Diags,

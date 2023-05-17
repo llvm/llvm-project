@@ -11,14 +11,12 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace performance {
+namespace clang::tidy::performance {
 
 /// A check that detects copied loop variables and suggests using const
 /// references.
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/performance-for-range-copy.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/performance/for-range-copy.html
 class ForRangeCopyCheck : public ClangTidyCheck {
 public:
   ForRangeCopyCheck(StringRef Name, ClangTidyContext *Context);
@@ -45,8 +43,6 @@ private:
   const std::vector<StringRef> AllowedTypes;
 };
 
-} // namespace performance
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::performance
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PERFORMANCE_FORRANGECOPYCHECK_H

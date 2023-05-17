@@ -7,6 +7,6 @@ target triple = "i386-pc-linux-gnu"
 @.str1 = internal constant [4 x i8] c"\B5%8\00"
 
 define i32 @test() {
-  %rhsv = load i32, i32* bitcast ([4 x i8]* @.str1 to i32*), align 1
+  %rhsv = load i32, ptr @.str1, align 1
   ret i32 %rhsv
 }

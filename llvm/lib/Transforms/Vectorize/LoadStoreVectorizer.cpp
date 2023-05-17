@@ -78,7 +78,6 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/Local.h"
-#include "llvm/Transforms/Vectorize.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdlib>
@@ -186,8 +185,11 @@ private:
                       SmallPtrSet<Instruction *, 16> *InstructionsProcessed);
 
   /// Check if this load/store access is misaligned accesses.
+  /// Returns a \p RelativeSpeed of an operation if allowed suitable to
+  /// compare to another result for the same \p AddressSpace and potentially
+  /// different \p Alignment and \p SzInBytes.
   bool accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
-                          Align Alignment);
+                          Align Alignment, unsigned &RelativeSpeed);
 };
 
 class LoadStoreVectorizerLegacyPass : public FunctionPass {
@@ -320,17 +322,17 @@ bool Vectorizer::isConsecutiveAccess(Value *A, Value *B) {
           DL.getTypeStoreSize(PtrBTy->getScalarType()))
     return false;
 
-  unsigned PtrBitWidth = DL.getPointerSizeInBits(ASA);
-  APInt Size(PtrBitWidth, DL.getTypeStoreSize(PtrATy));
+  unsigned PtrOffsetWidth = DL.getIndexSizeInBits(ASA);
+  APInt Size(PtrOffsetWidth, DL.getTypeStoreSize(PtrATy));
 
   return areConsecutivePointers(PtrA, PtrB, Size);
 }
 
 bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
                                         APInt PtrDelta, unsigned Depth) const {
-  unsigned PtrBitWidth = DL.getPointerTypeSizeInBits(PtrA->getType());
-  APInt OffsetA(PtrBitWidth, 0);
-  APInt OffsetB(PtrBitWidth, 0);
+  unsigned OffsetBitWidth = DL.getIndexTypeSizeInBits(PtrA->getType());
+  APInt OffsetA(OffsetBitWidth, 0);
+  APInt OffsetB(OffsetBitWidth, 0);
   PtrA = PtrA->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetA);
   PtrB = PtrB->stripAndAccumulateInBoundsConstantOffsets(DL, OffsetB);
 
@@ -343,8 +345,8 @@ bool Vectorizer::areConsecutivePointers(Value *PtrA, Value *PtrB,
   // stripAndAccumulateInBoundsConstantOffsets should properly handle a
   // possible overflow and the value should fit into a smallest data type
   // used in the cast/gep chain.
-  assert(OffsetA.getMinSignedBits() <= NewPtrBitWidth &&
-         OffsetB.getMinSignedBits() <= NewPtrBitWidth);
+  assert(OffsetA.getSignificantBits() <= NewPtrBitWidth &&
+         OffsetB.getSignificantBits() <= NewPtrBitWidth);
 
   OffsetA = OffsetA.sextOrTrunc(NewPtrBitWidth);
   OffsetB = OffsetB.sextOrTrunc(NewPtrBitWidth);
@@ -663,14 +665,16 @@ Vectorizer::splitOddVectorElts(ArrayRef<Instruction *> Chain,
                                unsigned ElementSizeBits) {
   unsigned ElementSizeBytes = ElementSizeBits / 8;
   unsigned SizeBytes = ElementSizeBytes * Chain.size();
-  unsigned NumLeft = (SizeBytes - (SizeBytes % 4)) / ElementSizeBytes;
-  if (NumLeft == Chain.size()) {
-    if ((NumLeft & 1) == 0)
-      NumLeft /= 2; // Split even in half
-    else
-      --NumLeft;    // Split off last element
-  } else if (NumLeft == 0)
+  unsigned LeftBytes = (SizeBytes - (SizeBytes % 4));
+  // If we're already a multiple of 4 bytes or the whole chain is shorter than 4
+  // bytes, then try splitting down on power-of-2 boundary.
+  if (LeftBytes == SizeBytes || LeftBytes == 0)
+    LeftBytes = PowerOf2Ceil(SizeBytes) / 2;
+  unsigned NumLeft = LeftBytes / ElementSizeBytes;
+  if (NumLeft == 0)
     NumLeft = 1;
+  LLVM_DEBUG(dbgs() << "LSV: Splitting the chain into " << NumLeft << "+"
+                    << Chain.size() - NumLeft << " elements\n");
   return std::make_pair(Chain.slice(0, NumLeft), Chain.slice(NumLeft));
 }
 
@@ -1078,8 +1082,14 @@ bool Vectorizer::vectorizeStoreChain(
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
 
   // If the store is going to be misaligned, don't vectorize it.
-  if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
+  unsigned RelativeSpeed;
+  if (accessIsMisaligned(SzInBytes, AS, Alignment, RelativeSpeed)) {
     if (S0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
+      unsigned SpeedBefore;
+      accessIsMisaligned(EltSzInBytes, AS, Alignment, SpeedBefore);
+      if (SpeedBefore > RelativeSpeed)
+        return false;
+
       auto Chains = splitOddVectorElts(Chain, Sz);
       bool Vectorized = false;
       Vectorized |= vectorizeStoreChain(Chains.first, InstructionsProcessed);
@@ -1231,8 +1241,14 @@ bool Vectorizer::vectorizeLoadChain(
   InstructionsProcessed->insert(Chain.begin(), Chain.end());
 
   // If the load is going to be misaligned, don't vectorize it.
-  if (accessIsMisaligned(SzInBytes, AS, Alignment)) {
+  unsigned RelativeSpeed;
+  if (accessIsMisaligned(SzInBytes, AS, Alignment, RelativeSpeed)) {
     if (L0->getPointerAddressSpace() != DL.getAllocaAddrSpace()) {
+      unsigned SpeedBefore;
+      accessIsMisaligned(EltSzInBytes, AS, Alignment, SpeedBefore);
+      if (SpeedBefore > RelativeSpeed)
+        return false;
+
       auto Chains = splitOddVectorElts(Chain, Sz);
       bool Vectorized = false;
       Vectorized |= vectorizeLoadChain(Chains.first, InstructionsProcessed);
@@ -1316,15 +1332,15 @@ bool Vectorizer::vectorizeLoadChain(
 }
 
 bool Vectorizer::accessIsMisaligned(unsigned SzInBytes, unsigned AddressSpace,
-                                    Align Alignment) {
+                                    Align Alignment, unsigned &RelativeSpeed) {
+  RelativeSpeed = 0;
   if (Alignment.value() % SzInBytes == 0)
     return false;
 
-  bool Fast = false;
   bool Allows = TTI.allowsMisalignedMemoryAccesses(F.getParent()->getContext(),
                                                    SzInBytes * 8, AddressSpace,
-                                                   Alignment, &Fast);
+                                                   Alignment, &RelativeSpeed);
   LLVM_DEBUG(dbgs() << "LSV: Target said misaligned is allowed? " << Allows
-                    << " and fast? " << Fast << "\n";);
-  return !Allows || !Fast;
+                    << " with relative speed = " << RelativeSpeed << '\n';);
+  return !Allows || !RelativeSpeed;
 }

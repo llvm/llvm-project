@@ -27,9 +27,9 @@ define double @fdiv_strict_sin_strict_cos_reassoc(double %a) {
   ret double %div
 }
 
-define double @fdiv_reassoc_sin_strict_cos_strict(double %a, i32* dereferenceable(2) %dummy) {
+define double @fdiv_reassoc_sin_strict_cos_strict(double %a, ptr dereferenceable(2) %dummy) {
 ; CHECK-LABEL: @fdiv_reassoc_sin_strict_cos_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    ret double [[TAN]]
 ;
   %1 = call double @llvm.sin.f64(double %a)
@@ -40,7 +40,7 @@ define double @fdiv_reassoc_sin_strict_cos_strict(double %a, i32* dereferenceabl
 
 define double @fdiv_reassoc_sin_reassoc_cos_strict(double %a) {
 ; CHECK-LABEL: @fdiv_reassoc_sin_reassoc_cos_strict(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret double [[TAN]]
 ;
   %1 = call reassoc double @llvm.sin.f64(double %a)
@@ -66,7 +66,7 @@ define double @fdiv_sin_cos_reassoc_multiple_uses(double %a) {
 
 define double @fdiv_sin_cos_reassoc(double %a) {
 ; CHECK-LABEL: @fdiv_sin_cos_reassoc(
-; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #1
+; CHECK-NEXT:    [[TAN:%.*]] = call reassoc double @tan(double [[A:%.*]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret double [[TAN]]
 ;
   %1 = call reassoc double @llvm.sin.f64(double %a)
@@ -77,7 +77,7 @@ define double @fdiv_sin_cos_reassoc(double %a) {
 
 define float @fdiv_sinf_cosf_reassoc(float %a) {
 ; CHECK-LABEL: @fdiv_sinf_cosf_reassoc(
-; CHECK-NEXT:    [[TANF:%.*]] = call reassoc float @tanf(float [[A:%.*]]) #1
+; CHECK-NEXT:    [[TANF:%.*]] = call reassoc float @tanf(float [[A:%.*]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret float [[TANF]]
 ;
   %1 = call reassoc float @llvm.sin.f32(float %a)
@@ -88,7 +88,7 @@ define float @fdiv_sinf_cosf_reassoc(float %a) {
 
 define fp128 @fdiv_sinfp128_cosfp128_reassoc(fp128 %a) {
 ; CHECK-LABEL: @fdiv_sinfp128_cosfp128_reassoc(
-; CHECK-NEXT:    [[TANL:%.*]] = call reassoc fp128 @tanl(fp128 [[A:%.*]]) #1
+; CHECK-NEXT:    [[TANL:%.*]] = call reassoc fp128 @tanl(fp128 [[A:%.*]]) #[[ATTR1]]
 ; CHECK-NEXT:    ret fp128 [[TANL]]
 ;
   %1 = call reassoc fp128 @llvm.sin.fp128(fp128 %a)

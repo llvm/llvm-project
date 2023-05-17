@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o - -triple=i686-apple-darwin9 | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -o - -triple=i686-apple-darwin9 | FileCheck %s
 
 namespace PR11411 {
   template<typename _Tp> struct Ptr {
@@ -9,7 +9,7 @@ namespace PR11411 {
   // CHECK-NOT: ret
   template<typename _Tp> inline void Ptr<_Tp>::f() {
     int* _refcount;
-    // CHECK: atomicrmw add i32* {{.*}} seq_cst, align 4
+    // CHECK: atomicrmw add ptr {{.*}} seq_cst, align 4
     __sync_fetch_and_add(_refcount, 1);
     // CHECK-NEXT: ret void
   }

@@ -28,3 +28,22 @@ TEST(OpRewritePatternTest, GetGeneratedNames) {
   ASSERT_EQ(ops.front().getStringRef(), test::OpB::getOperationName());
 }
 } // end anonymous namespace
+
+namespace {
+LogicalResult anOpRewritePatternFunc(test::OpA op, PatternRewriter &rewriter) {
+  return failure();
+}
+TEST(AnOpRewritePatternTest, PatternFuncAttributes) {
+  MLIRContext context;
+  RewritePatternSet patterns(&context);
+
+  patterns.add(anOpRewritePatternFunc, /*benefit=*/3,
+               /*generatedNames=*/{test::OpB::getOperationName()});
+  ASSERT_EQ(patterns.getNativePatterns().size(), 1U);
+  auto &pattern = patterns.getNativePatterns().front();
+  ASSERT_EQ(pattern->getBenefit(), 3);
+  ASSERT_EQ(pattern->getGeneratedOps().size(), 1U);
+  ASSERT_EQ(pattern->getGeneratedOps().front().getStringRef(),
+            test::OpB::getOperationName());
+}
+} // end anonymous namespace

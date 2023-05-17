@@ -16,7 +16,7 @@ namespace {
 TEST_F(AArch64GISelMITest, TestCSE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s16{LLT::scalar(16)};
   LLT s32{LLT::scalar(32)};
@@ -75,6 +75,26 @@ TEST_F(AArch64GISelMITest, TestCSE) {
   auto MIBUnmerge2 = CSEB.buildUnmerge({s32, s32}, Copies[0]);
   EXPECT_TRUE(&*MIBUnmerge == &*MIBUnmerge2);
 
+  // Check G_BUILD_VECTOR
+  Register Reg1 = MRI->createGenericVirtualRegister(s32);
+  Register Reg2 = MRI->createGenericVirtualRegister(s32);
+  auto BuildVec1 =
+      CSEB.buildBuildVector(LLT::fixed_vector(4, 32), {Reg1, Reg2, Reg1, Reg2});
+  auto BuildVec2 =
+      CSEB.buildBuildVector(LLT::fixed_vector(4, 32), {Reg1, Reg2, Reg1, Reg2});
+  EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR, BuildVec1->getOpcode());
+  EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR, BuildVec2->getOpcode());
+  EXPECT_TRUE(&*BuildVec1 == &*BuildVec2);
+
+  // Check G_BUILD_VECTOR_TRUNC
+  auto BuildVecTrunc1 = CSEB.buildBuildVectorTrunc(LLT::fixed_vector(4, 16),
+                                                   {Reg1, Reg2, Reg1, Reg2});
+  auto BuildVecTrunc2 = CSEB.buildBuildVectorTrunc(LLT::fixed_vector(4, 16),
+                                                   {Reg1, Reg2, Reg1, Reg2});
+  EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR_TRUNC, BuildVecTrunc1->getOpcode());
+  EXPECT_EQ(TargetOpcode::G_BUILD_VECTOR_TRUNC, BuildVecTrunc2->getOpcode());
+  EXPECT_TRUE(&*BuildVecTrunc1 == &*BuildVecTrunc2);
+
   // Check G_IMPLICIT_DEF
   auto Undef0 = CSEB.buildUndef(s32);
   auto Undef1 = CSEB.buildUndef(s32);
@@ -107,12 +127,19 @@ TEST_F(AArch64GISelMITest, TestCSE) {
                                      {Copies[0], static_cast<uint64_t>(1)});
   EXPECT_EQ(&*ExtractMIB, &*ExtractMIB1);
   EXPECT_NE(&*ExtractMIB, &*ExtractMIB2);
+
+
+  auto SextInRegMIB = CSEB.buildSExtInReg(s16, Copies[0], 0);
+  auto SextInRegMIB1 = CSEB.buildSExtInReg(s16, Copies[0], 0);
+  auto SextInRegMIB2 = CSEB.buildSExtInReg(s16, Copies[0], 1);
+  EXPECT_EQ(&*SextInRegMIB, &*SextInRegMIB1);
+  EXPECT_NE(&*SextInRegMIB, &*SextInRegMIB2);
 }
 
 TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s16{LLT::scalar(16)};
   auto MIBInput = B.buildInstr(TargetOpcode::G_TRUNC, {s16}, {Copies[0]});
@@ -142,7 +169,7 @@ TEST_F(AArch64GISelMITest, TestCSEConstantConfig) {
 TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32{LLT::scalar(32)};
   // We want to check that when the CSE hit is on the next instruction, i.e. at
@@ -167,7 +194,7 @@ TEST_F(AArch64GISelMITest, TestCSEImmediateNextCSE) {
 TEST_F(AArch64GISelMITest, TestConstantFoldCTL) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32 = LLT::scalar(32);
 

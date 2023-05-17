@@ -43,7 +43,7 @@ define i64 @args_i64(i64 %x0, i64 %x1, i64 %x2, i64 %x3,
 }
 
 
-define i8* @args_ptrs(i8* %x0, i16* %x1, <2 x i8>* %x2, {i8, i16, i32}* %x3,
+define ptr @args_ptrs(ptr %x0, ptr %x1, ptr %x2, ptr %x3,
   ; CHECK-LABEL: name: args_ptrs
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4, $x5, $x6, $x7
@@ -58,8 +58,8 @@ define i8* @args_ptrs(i8* %x0, i16* %x1, <2 x i8>* %x2, {i8, i16, i32}* %x3,
   ; CHECK-NEXT:   [[COPY7:%[0-9]+]]:_(p0) = COPY $x7
   ; CHECK-NEXT:   $x0 = COPY [[COPY]](p0)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
-                      [3 x float]* %x4, double* %x5, i8* %x6, i8* %x7) {
-  ret i8* %x0
+                      ptr %x4, ptr %x5, ptr %x6, ptr %x7) {
+  ret ptr %x0
 }
 
 define [1 x double] @args_arr([1 x double] %d0) {
@@ -134,7 +134,7 @@ define void @test_stack_ext_needed() {
 }
 
 ; Check that we can lower incoming i128 types into constituent s64 gprs.
-define void @callee_s128(i128 %a, i128 %b, i128 *%ptr) {
+define void @callee_s128(i128 %a, i128 %b, ptr %ptr) {
   ; CHECK-LABEL: name: callee_s128
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0, $x1, $x2, $x3, $x4
@@ -148,12 +148,12 @@ define void @callee_s128(i128 %a, i128 %b, i128 *%ptr) {
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x4
   ; CHECK-NEXT:   G_STORE [[MV1]](s128), [[COPY4]](p0) :: (store (s128) into %ir.ptr)
   ; CHECK-NEXT:   RET_ReallyLR
-  store i128 %b, i128 *%ptr
+  store i128 %b, ptr %ptr
   ret void
 }
 
 ; Check we can lower outgoing s128 arguments into s64 gprs.
-define void @caller_s128(i128 *%ptr) {
+define void @caller_s128(ptr %ptr) {
   ; CHECK-LABEL: name: caller_s128
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   liveins: $x0
@@ -171,8 +171,8 @@ define void @caller_s128(i128 *%ptr) {
   ; CHECK-NEXT:   BL @callee_s128, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $x3, implicit $x4
   ; CHECK-NEXT:   ADJCALLSTACKUP 0, 0, implicit-def $sp, implicit $sp
   ; CHECK-NEXT:   RET_ReallyLR
-  %v = load i128, i128 *%ptr
-  call void @callee_s128(i128 %v, i128 %v, i128 *%ptr)
+  %v = load i128, ptr %ptr
+  call void @callee_s128(i128 %v, i128 %v, ptr %ptr)
   ret void
 }
 
@@ -219,8 +219,8 @@ define i32 @i8i16caller() nounwind readnone {
   ; CHECK-NEXT:   $x6 = COPY [[C6]](s64)
   ; CHECK-NEXT:   $x7 = COPY [[C7]](s64)
   ; CHECK-NEXT:   BL @i8i16callee, csr_aarch64_aapcs, implicit-def $lr, implicit $sp, implicit $x0, implicit $x1, implicit $x2, implicit $w3, implicit $w4, implicit $x5, implicit $x6, implicit $x7, implicit-def $x0
-  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK-NEXT:   ADJCALLSTACKUP 32, 0, implicit-def $sp, implicit $sp
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s64) = COPY $x0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(s32) = G_TRUNC [[COPY1]](s64)
   ; CHECK-NEXT:   $w0 = COPY [[TRUNC]](s32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
@@ -237,9 +237,9 @@ define void @arg_v2i64(<2 x i64> %arg) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s64>), [[DEF]](p0) :: (store (<2 x s64>) into `<2 x i64>* undef`)
+  ; CHECK-NEXT:   G_STORE [[COPY]](<2 x s64>), [[DEF]](p0) :: (store (<2 x s64>) into `ptr undef`)
   ; CHECK-NEXT:   RET_ReallyLR
-  store <2 x i64> %arg, <2 x i64>* undef
+  store <2 x i64> %arg, ptr undef
   ret void
 }
 
@@ -254,9 +254,9 @@ define void @arg_v8i64(<8 x i64> %arg) {
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<8 x s64>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>), [[COPY2]](<2 x s64>), [[COPY3]](<2 x s64>)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<8 x s64>), [[DEF]](p0) :: (store (<8 x s64>) into `<8 x i64>* undef`)
+  ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<8 x s64>), [[DEF]](p0) :: (store (<8 x s64>) into `ptr undef`)
   ; CHECK-NEXT:   RET_ReallyLR
-  store <8 x i64> %arg, <8 x i64>* undef
+  store <8 x i64> %arg, ptr undef
   ret void
 }
 
@@ -268,9 +268,9 @@ define void @arg_v4f32(<4 x float> %arg) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
   ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY]](<2 x s64>)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[BITCAST]](<4 x s32>), [[DEF]](p0) :: (store (<4 x s32>) into `<4 x float>* undef`)
+  ; CHECK-NEXT:   G_STORE [[BITCAST]](<4 x s32>), [[DEF]](p0) :: (store (<4 x s32>) into `ptr undef`)
   ; CHECK-NEXT:   RET_ReallyLR
-  store <4 x float> %arg, <4 x float>* undef
+  store <4 x float> %arg, ptr undef
   ret void
 }
 
@@ -289,8 +289,8 @@ define void @ret_arg_v16f32(<16 x float> %arg) {
   ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<4 x s32>) = G_BITCAST [[COPY3]](<2 x s64>)
   ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<16 x s32>) = G_CONCAT_VECTORS [[BITCAST]](<4 x s32>), [[BITCAST1]](<4 x s32>), [[BITCAST2]](<4 x s32>), [[BITCAST3]](<4 x s32>)
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(p0) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<16 x s32>), [[DEF]](p0) :: (store (<16 x s32>) into `<16 x float>* undef`)
+  ; CHECK-NEXT:   G_STORE [[CONCAT_VECTORS]](<16 x s32>), [[DEF]](p0) :: (store (<16 x s32>) into `ptr undef`)
   ; CHECK-NEXT:   RET_ReallyLR
-  store <16 x float> %arg, <16 x float>* undef
+  store <16 x float> %arg, ptr undef
   ret void
 }

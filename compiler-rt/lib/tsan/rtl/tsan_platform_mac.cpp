@@ -200,44 +200,26 @@ void WriteMemoryProfile(char *buf, uptr buf_size, u64 uptime_ns) {
 #  if !SANITIZER_GO
 void InitializeShadowMemoryPlatform() { }
 
-// On OS X, GCD worker threads are created without a call to pthread_create. We
-// need to properly register these threads with ThreadCreate and ThreadStart.
-// These threads don't have a parent thread, as they are created "spuriously".
-// We're using a libpthread API that notifies us about a newly created thread.
-// The `thread == pthread_self()` check indicates this is actually a worker
-// thread. If it's just a regular thread, this hook is called on the parent
-// thread.
-typedef void (*pthread_introspection_hook_t)(unsigned int event,
-                                             pthread_t thread, void *addr,
-                                             size_t size);
-extern "C" pthread_introspection_hook_t pthread_introspection_hook_install(
-    pthread_introspection_hook_t hook);
-static const uptr PTHREAD_INTROSPECTION_THREAD_CREATE = 1;
-static const uptr PTHREAD_INTROSPECTION_THREAD_TERMINATE = 3;
-static pthread_introspection_hook_t prev_pthread_introspection_hook;
-static void my_pthread_introspection_hook(unsigned int event, pthread_t thread,
-                                          void *addr, size_t size) {
-  if (event == PTHREAD_INTROSPECTION_THREAD_CREATE) {
-    if (thread == pthread_self()) {
-      // The current thread is a newly created GCD worker thread.
-      ThreadState *thr = cur_thread();
-      Processor *proc = ProcCreate();
-      ProcWire(proc, thr);
-      ThreadState *parent_thread_state = nullptr;  // No parent.
-      Tid tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
-      CHECK_NE(tid, kMainTid);
-      ThreadStart(thr, tid, GetTid(), ThreadType::Worker);
-    }
-  } else if (event == PTHREAD_INTROSPECTION_THREAD_TERMINATE) {
-    CHECK_EQ(thread, pthread_self());
+// Register GCD worker threads, which are created without an observable call to
+// pthread_create().
+static void ThreadCreateCallback(uptr thread, bool gcd_worker) {
+  if (gcd_worker) {
     ThreadState *thr = cur_thread();
-    if (thr->tctx) {
-      DestroyThreadState();
-    }
+    Processor *proc = ProcCreate();
+    ProcWire(proc, thr);
+    ThreadState *parent_thread_state = nullptr;  // No parent.
+    Tid tid = ThreadCreate(parent_thread_state, 0, (uptr)thread, true);
+    CHECK_NE(tid, kMainTid);
+    ThreadStart(thr, tid, GetTid(), ThreadType::Worker);
   }
+}
 
-  if (prev_pthread_introspection_hook != nullptr)
-    prev_pthread_introspection_hook(event, thread, addr, size);
+// Destroy thread state for *all* threads.
+static void ThreadTerminateCallback(uptr thread) {
+  ThreadState *thr = cur_thread();
+  if (thr->tctx) {
+    DestroyThreadState();
+  }
 }
 #endif
 
@@ -261,8 +243,11 @@ void InitializePlatform() {
 
   InitializeThreadStateStorage();
 
-  prev_pthread_introspection_hook =
-      pthread_introspection_hook_install(&my_pthread_introspection_hook);
+  ThreadEventCallbacks callbacks = {
+      .create = ThreadCreateCallback,
+      .terminate = ThreadTerminateCallback,
+  };
+  InstallPthreadIntrospectionHook(callbacks);
 #endif
 
   if (GetMacosAlignedVersion() >= MacosVersion(10, 14)) {

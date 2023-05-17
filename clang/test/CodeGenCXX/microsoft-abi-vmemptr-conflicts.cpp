@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -fno-rtti -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
+// RUN: %clang_cc1 -fno-rtti -emit-llvm -triple=i386-pc-win32 %s -o - | FileCheck %s
 
 // In each test case, we have two member pointers whose thunks have the same
 // vtable offset and same mangling, but their prototypes conflict.  The
@@ -19,12 +19,12 @@ void f(C *c) {
 }
 }
 
-// CHECK-LABEL: define dso_local void @"?f@num_params@@YAXPAUC@1@@Z"(%"struct.num_params::C"* noundef %c)
-// CHECK: call x86_thiscallcc void bitcast (void (%"struct.num_params::C"*, ...)* @"??_9C@num_params@@$BA@AE" to void (%"struct.num_params::C"*, i32)*)(%"struct.num_params::C"* {{[^,]*}} %{{.*}}, i32 noundef 0)
-// CHECK: call x86_thiscallcc void bitcast (void (%"struct.num_params::C"*, ...)* @"??_9C@num_params@@$BA@AE" to void (%"struct.num_params::C"*, i32, i32)*)(%"struct.num_params::C"* {{[^,]*}} %{{.*}}, i32 noundef 0, i32 noundef 0)
+// CHECK-LABEL: define dso_local void @"?f@num_params@@YAXPAUC@1@@Z"(ptr noundef %c)
+// CHECK: call x86_thiscallcc void @"??_9C@num_params@@$BA@AE"(ptr {{[^,]*}} %{{.*}}, i32 noundef 0)
+// CHECK: call x86_thiscallcc void @"??_9C@num_params@@$BA@AE"(ptr {{[^,]*}} %{{.*}}, i32 noundef 0, i32 noundef 0)
 
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@num_params@@$BA@AE"(%"struct.num_params::C"* noundef %this, ...) {{.*}} comdat
-// CHECK: musttail call x86_thiscallcc void (%"struct.num_params::C"*, ...) %{{.*}}(%"struct.num_params::C"* noundef %{{.*}}, ...)
+// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@num_params@@$BA@AE"(ptr noundef %this, ...) {{.*}} comdat
+// CHECK: musttail call x86_thiscallcc void (ptr, ...) %{{.*}}(ptr noundef %{{.*}}, ...)
 // CHECK-NEXT: ret void
 
 namespace i64_return {
@@ -41,12 +41,12 @@ long long f(C *c) {
 }
 }
 
-// CHECK-LABEL: define dso_local noundef i64 @"?f@i64_return@@YA_JPAUC@1@@Z"(%"struct.i64_return::C"* noundef %c)
-// CHECK: call x86_thiscallcc noundef i32 bitcast (void (%"struct.i64_return::C"*, ...)* @"??_9C@i64_return@@$BA@AE" to i32 (%"struct.i64_return::C"*)*)(%"struct.i64_return::C"* {{[^,]*}} %{{.*}})
-// CHECK: call x86_thiscallcc noundef i64 bitcast (void (%"struct.i64_return::C"*, ...)* @"??_9C@i64_return@@$BA@AE" to i64 (%"struct.i64_return::C"*)*)(%"struct.i64_return::C"* {{[^,]*}} %{{.*}})
+// CHECK-LABEL: define dso_local noundef i64 @"?f@i64_return@@YA_JPAUC@1@@Z"(ptr noundef %c)
+// CHECK: call x86_thiscallcc noundef i32 @"??_9C@i64_return@@$BA@AE"(ptr {{[^,]*}} %{{.*}})
+// CHECK: call x86_thiscallcc noundef i64 @"??_9C@i64_return@@$BA@AE"(ptr {{[^,]*}} %{{.*}})
 
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@i64_return@@$BA@AE"(%"struct.i64_return::C"* noundef %this, ...) {{.*}} comdat
-// CHECK: musttail call x86_thiscallcc void (%"struct.i64_return::C"*, ...) %{{.*}}(%"struct.i64_return::C"* noundef %{{.*}}, ...)
+// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@i64_return@@$BA@AE"(ptr noundef %this, ...) {{.*}} comdat
+// CHECK: musttail call x86_thiscallcc void (ptr, ...) %{{.*}}(ptr noundef %{{.*}}, ...)
 // CHECK-NEXT: ret void
 
 namespace sret {
@@ -63,12 +63,12 @@ void f(C *c) {
 }
 }
 
-// CHECK-LABEL: define dso_local void @"?f@sret@@YAXPAUC@1@@Z"(%"struct.sret::C"* noundef %c)
-// CHECK: call x86_thiscallcc noundef i32 bitcast (void (%"struct.sret::C"*, ...)* @"??_9C@sret@@$BA@AE" to i32 (%"struct.sret::C"*)*)(%"struct.sret::C"* {{[^,]*}} %{{.*}})
-// CHECK: call x86_thiscallcc void bitcast (void (%"struct.sret::C"*, ...)* @"??_9C@sret@@$BA@AE" to void (%"struct.sret::C"*, %"struct.sret::Big"*)*)(%"struct.sret::C"* {{[^,]*}} %{{.*}}, %"struct.sret::Big"* sret(%"struct.sret::Big") align 4 %{{.*}})
+// CHECK-LABEL: define dso_local void @"?f@sret@@YAXPAUC@1@@Z"(ptr noundef %c)
+// CHECK: call x86_thiscallcc noundef i32 @"??_9C@sret@@$BA@AE"(ptr {{[^,]*}} %{{.*}})
+// CHECK: call x86_thiscallcc void @"??_9C@sret@@$BA@AE"(ptr {{[^,]*}} %{{.*}}, ptr sret(%"struct.sret::Big") align 4 %{{.*}})
 
-// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@sret@@$BA@AE"(%"struct.sret::C"* noundef %this, ...) {{.*}} comdat
-// CHECK: musttail call x86_thiscallcc void (%"struct.sret::C"*, ...) %{{.*}}(%"struct.sret::C"* noundef %{{.*}}, ...)
+// CHECK-LABEL: define linkonce_odr x86_thiscallcc void @"??_9C@sret@@$BA@AE"(ptr noundef %this, ...) {{.*}} comdat
+// CHECK: musttail call x86_thiscallcc void (ptr, ...) %{{.*}}(ptr noundef %{{.*}}, ...)
 // CHECK-NEXT: ret void
 
 namespace cdecl_inalloca {
@@ -92,10 +92,10 @@ void f(C *c) {
 }
 }
 
-// CHECK-LABEL: define dso_local void @"?f@cdecl_inalloca@@YAXPAUC@1@@Z"(%"struct.cdecl_inalloca::C"* noundef %c)
-// CHECK: call void bitcast (void (%"struct.cdecl_inalloca::C"*, ...)* @"??_9C@cdecl_inalloca@@$BA@AA" to void (%"struct.cdecl_inalloca::C"*)*)(%"struct.cdecl_inalloca::C"* {{[^,]*}} %{{.*}})
-// CHECK: call void bitcast (void (%"struct.cdecl_inalloca::C"*, ...)* @"??_9C@cdecl_inalloca@@$BA@AA" to void (<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>*)*)(<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>* inalloca(<{ %"struct.cdecl_inalloca::C"*, %"struct.cdecl_inalloca::Big" }>) %{{.*}})
+// CHECK-LABEL: define dso_local void @"?f@cdecl_inalloca@@YAXPAUC@1@@Z"(ptr noundef %c)
+// CHECK: call void @"??_9C@cdecl_inalloca@@$BA@AA"(ptr {{[^,]*}} %{{.*}})
+// CHECK: call void @"??_9C@cdecl_inalloca@@$BA@AA"(ptr inalloca(<{ ptr, %"struct.cdecl_inalloca::Big" }>) %{{.*}})
 
-// CHECK-LABEL: define linkonce_odr void @"??_9C@cdecl_inalloca@@$BA@AA"(%"struct.cdecl_inalloca::C"* noundef %this, ...) {{.*}} comdat
-// CHECK: musttail call void (%"struct.cdecl_inalloca::C"*, ...) %{{.*}}(%"struct.cdecl_inalloca::C"* noundef %{{.*}}, ...)
+// CHECK-LABEL: define linkonce_odr void @"??_9C@cdecl_inalloca@@$BA@AA"(ptr noundef %this, ...) {{.*}} comdat
+// CHECK: musttail call void (ptr, ...) %{{.*}}(ptr noundef %{{.*}}, ...)
 // CHECK-NEXT: ret void

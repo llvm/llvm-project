@@ -8,8 +8,8 @@ define i32 @main() nounwind {
 entry:
 ; CHECK: if (cmp.gt(r{{[0-9]+}}.new,r{{[0-9]+}})) jump:{{[t|nt]}} .LBB{{[0-9]+}}_{{[0-9]+}}
   %Reg2 = alloca i32, align 4
-  %0 = load i32, i32* %Reg2, align 4
-  %1 = load i32, i32* @Reg, align 4
+  %0 = load i32, ptr %Reg2, align 4
+  %1 = load i32, ptr @Reg, align 4
   %tobool = icmp sle i32 %0, %1
   br i1 %tobool, label %if.then, label %if.else
 

@@ -1225,7 +1225,7 @@ was imported:
     - Imported `Type` constraints utilize the `cppClassName` field for native type translation.
 
   * `AttrInterface`/`OpInterface`/`TypeInterface` constraints
-    - Imported interfaces utilize the `cppClassName` field for native type translation.
+    - Imported interfaces utilize the `cppInterfaceName` field for native type translation.
 
 #### Defining Constraints Inline
 

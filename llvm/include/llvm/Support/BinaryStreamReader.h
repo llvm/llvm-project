@@ -66,7 +66,7 @@ public:
   /// \returns a success error code if the data was successfully read, otherwise
   /// returns an appropriate error code.
   template <typename T> Error readInteger(T &Dest) {
-    static_assert(std::is_integral<T>::value,
+    static_assert(std::is_integral_v<T>,
                   "Cannot call readInteger with non-integral value!");
 
     ArrayRef<uint8_t> Bytes;

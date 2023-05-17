@@ -4,10 +4,9 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; CHECK: polly.preload.begin:  ; preds = %polly.split_new_and_old
-; CHECK-NEXT:   %polly.access.cast.tmp2 = bitcast %struct.hoge* %tmp2 to i32*
-; CHECK-NEXT:   %polly.access.tmp2 = getelementptr i32, i32* %polly.access.cast.tmp2, i64 1
-; CHECK-NEXT:   %polly.access.tmp2.load = load i32, i32* %polly.access.tmp2, align 1
-; CHECK-NEXT:   store i32 %polly.access.tmp2.load, i32* %tmp.preload.s2a
+; CHECK-NEXT:   %polly.access.tmp2 = getelementptr i32, ptr %tmp2, i64 1
+; CHECK-NEXT:   %polly.access.tmp2.load = load i32, ptr %polly.access.tmp2, align 1
+; CHECK-NEXT:   store i32 %polly.access.tmp2.load, ptr %tmp.preload.s2a
 
 
 %struct.hoge = type { [4 x i8], i32, i32, i32, i32, i32, [16 x i8], [16 x i8], i64, i64, i64, i64, i64 }
@@ -19,15 +18,15 @@ bb:
   br label %bb3
 
 bb3:                                              ; preds = %bb
-  %tmp4 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp2, i64 0, i32 10
+  %tmp4 = getelementptr inbounds %struct.hoge, ptr %tmp2, i64 0, i32 10
   %tmp5 = add nsw i32 undef, 1
-  %tmp6 = getelementptr inbounds %struct.hoge, %struct.hoge* %tmp2, i64 0, i32 1
-  %tmp = load i32, i32* %tmp6, align 1, !tbaa !1
+  %tmp6 = getelementptr inbounds %struct.hoge, ptr %tmp2, i64 0, i32 1
+  %tmp = load i32, ptr %tmp6, align 1, !tbaa !1
   %tmp7 = icmp slt i32 %tmp, 3
   br i1 %tmp7, label %bb8, label %bb10
 
 bb8:                                              ; preds = %bb3
-  %tmp9 = load i64, i64* %tmp4, align 1, !tbaa !7
+  %tmp9 = load i64, ptr %tmp4, align 1, !tbaa !7
   br label %bb10
 
 bb10:                                             ; preds = %bb8, %bb3

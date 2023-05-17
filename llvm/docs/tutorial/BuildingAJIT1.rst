@@ -67,7 +67,7 @@ just two functions:
 
 1. ``Error addModule(std::unique_ptr<Module> M)``: Make the given IR module
    available for execution.
-2. ``Expected<JITEvaluatedSymbol> lookup()``: Search for pointers to
+2. ``Expected<ExecutorSymbolDef> lookup()``: Search for pointers to
    symbols (functions or variables) that have been added to the JIT.
 
 A basic use-case for this API, executing the 'main' function from a module,
@@ -110,7 +110,6 @@ usual include guards and #includes [2]_, we get to the definition of our class:
   #define LLVM_EXECUTIONENGINE_ORC_KALEIDOSCOPEJIT_H
 
   #include "llvm/ADT/StringRef.h"
-  #include "llvm/ExecutionEngine/JITSymbol.h"
   #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
   #include "llvm/ExecutionEngine/Orc/Core.h"
   #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -224,7 +223,7 @@ will build our IR modules.
                               ThreadSafeModule(std::move(M), Ctx)));
   }
 
-  Expected<JITEvaluatedSymbol> lookup(StringRef Name) {
+  Expected<ExecutorSymbolDef> lookup(StringRef Name) {
     return ES.lookup({&ES.getMainJITDylib()}, Mangle(Name.str()));
   }
 
@@ -295,9 +294,6 @@ Here is the code:
 .. [2] +-----------------------------+-----------------------------------------------+
        |         File                |               Reason for inclusion            |
        +=============================+===============================================+
-       |        JITSymbol.h          | Defines the lookup result type                |
-       |                             | JITEvaluatedSymbol                            |
-       +-----------------------------+-----------------------------------------------+
        |       CompileUtils.h        | Provides the SimpleCompiler class.            |
        +-----------------------------+-----------------------------------------------+
        |           Core.h            | Core utilities such as ExecutionSession and   |

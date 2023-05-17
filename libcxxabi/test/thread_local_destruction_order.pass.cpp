@@ -9,6 +9,15 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-threads
 
+// XFAIL: LIBCXX-FREEBSD-FIXME
+
+// TODO: This test does start working with newer updates of the mingw-w64
+// toolchain, when it includes the following commit:
+// https://github.com/mingw-w64/mingw-w64/commit/71eddccd746c56d9cde28bb5620d027d49259de9
+// Thus, remove this UNSUPPORTED marking after the next update of the CI
+// toolchain.
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 #include <cassert>
 #include <thread>
 

@@ -9,7 +9,7 @@
 ; - PhaseOrdering/fast-reassociate-gvn.ll
 ; - Reassociate/fast-basictest.ll
 ;
-; RUN: opt < %s -reassociate -gvn -S | FileCheck %s --check-prefixes=CHECK,REASSOC_AND_GVN --allow-unused-prefixes
+; RUN: opt < %s -passes=reassociate,gvn -S | FileCheck %s --check-prefixes=CHECK,REASSOC_AND_GVN --allow-unused-prefixes
 ; RUN: opt < %s -O2 -S | FileCheck %s --check-prefixes=CHECK,O2 --allow-unused-prefixes
 
 @fe = external global float
@@ -29,75 +29,75 @@
 
 define void @test3() {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[A:%.*]] = load float, float* @fa, align 4
-; CHECK-NEXT:    [[B:%.*]] = load float, float* @fb, align 4
-; CHECK-NEXT:    [[C:%.*]] = load float, float* @fc, align 4
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
 ; CHECK-NEXT:    [[T1:%.*]] = fadd fast float [[B]], [[A]]
 ; CHECK-NEXT:    [[T2:%.*]] = fadd fast float [[T1]], [[C]]
-; CHECK-NEXT:    store float [[T2]], float* @fe, align 4
-; CHECK-NEXT:    store float [[T2]], float* @ff, align 4
+; CHECK-NEXT:    store float [[T2]], ptr @fe, align 4
+; CHECK-NEXT:    store float [[T2]], ptr @ff, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %A = load float, float* @fa
-  %B = load float, float* @fb
-  %C = load float, float* @fc
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
   %t1 = fadd fast float %A, %B
   %t2 = fadd fast float %t1, %C
   %t3 = fadd fast float %A, %C
   %t4 = fadd fast float %t3, %B
   ; e = (a+b)+c;
-  store float %t2, float* @fe
+  store float %t2, ptr @fe
   ; f = (a+c)+b
-  store float %t4, float* @ff
+  store float %t4, ptr @ff
   ret void
 }
 
 define void @test4() {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[A:%.*]] = load float, float* @fa, align 4
-; CHECK-NEXT:    [[B:%.*]] = load float, float* @fb, align 4
-; CHECK-NEXT:    [[C:%.*]] = load float, float* @fc, align 4
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
 ; CHECK-NEXT:    [[T1:%.*]] = fadd fast float [[B]], [[A]]
 ; CHECK-NEXT:    [[T2:%.*]] = fadd fast float [[T1]], [[C]]
-; CHECK-NEXT:    store float [[T2]], float* @fe, align 4
-; CHECK-NEXT:    store float [[T2]], float* @ff, align 4
+; CHECK-NEXT:    store float [[T2]], ptr @fe, align 4
+; CHECK-NEXT:    store float [[T2]], ptr @ff, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %A = load float, float* @fa
-  %B = load float, float* @fb
-  %C = load float, float* @fc
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
   %t1 = fadd fast float %A, %B
   %t2 = fadd fast float %C, %t1
   %t3 = fadd fast float %C, %A
   %t4 = fadd fast float %t3, %B
   ; e = c+(a+b)
-  store float %t2, float* @fe
+  store float %t2, ptr @fe
   ; f = (c+a)+b
-  store float %t4, float* @ff
+  store float %t4, ptr @ff
   ret void
 }
 
 define void @test5() {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[A:%.*]] = load float, float* @fa, align 4
-; CHECK-NEXT:    [[B:%.*]] = load float, float* @fb, align 4
-; CHECK-NEXT:    [[C:%.*]] = load float, float* @fc, align 4
+; CHECK-NEXT:    [[A:%.*]] = load float, ptr @fa, align 4
+; CHECK-NEXT:    [[B:%.*]] = load float, ptr @fb, align 4
+; CHECK-NEXT:    [[C:%.*]] = load float, ptr @fc, align 4
 ; CHECK-NEXT:    [[T1:%.*]] = fadd fast float [[B]], [[A]]
 ; CHECK-NEXT:    [[T2:%.*]] = fadd fast float [[T1]], [[C]]
-; CHECK-NEXT:    store float [[T2]], float* @fe, align 4
-; CHECK-NEXT:    store float [[T2]], float* @ff, align 4
+; CHECK-NEXT:    store float [[T2]], ptr @fe, align 4
+; CHECK-NEXT:    store float [[T2]], ptr @ff, align 4
 ; CHECK-NEXT:    ret void
 ;
-  %A = load float, float* @fa
-  %B = load float, float* @fb
-  %C = load float, float* @fc
+  %A = load float, ptr @fa
+  %B = load float, ptr @fb
+  %C = load float, ptr @fc
   %t1 = fadd fast float %B, %A
   %t2 = fadd fast float %C, %t1
   %t3 = fadd fast float %C, %A
   %t4 = fadd fast float %t3, %B
   ; e = c+(b+a)
-  store float %t2, float* @fe
+  store float %t2, ptr @fe
   ; f = (c+a)+b
-  store float %t4, float* @ff
+  store float %t4, ptr @ff
   ret void
 }

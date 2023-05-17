@@ -1,13 +1,16 @@
 set(LLVM_LINK_COMPONENTS
+  CodeGenTypes
   Demangle
   Support
   TableGen
 )
 
 add_tablegen(mlir-tblgen MLIR
+  DESTINATION "${MLIR_TOOLS_INSTALL_DIR}"
+  EXPORT MLIR
   AttrOrTypeDefGen.cpp
   AttrOrTypeFormatGen.cpp
-  CodeGenHelpers.cpp
+  BytecodeDialectGen.cpp
   DialectGen.cpp
   DirectiveCommonGen.cpp
   EnumsGen.cpp
@@ -27,13 +30,12 @@ add_tablegen(mlir-tblgen MLIR
   PassGen.cpp
   RewriterGen.cpp
   SPIRVUtilsGen.cpp
-  StructsGen.cpp
   )
 
 set_target_properties(mlir-tblgen PROPERTIES FOLDER "Tablegenning")
 target_link_libraries(mlir-tblgen
   PRIVATE
   MLIRSupportIndentedOstream
-  MLIRTableGen)
+  MLIRTblgenLib)
 
 mlir_check_all_link_libraries(mlir-tblgen)

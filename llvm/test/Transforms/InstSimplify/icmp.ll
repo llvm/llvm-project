@@ -3,19 +3,19 @@
 
 target datalayout = "e-p:64:64:64-p1:16:16:16-p2:32:32:32-p3:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64"
 
-declare void @usei8ptr(i8* %ptr)
+declare void @usei8ptr(ptr %ptr)
 
 ; Ensure that we do not crash when looking at such a weird bitcast.
-define i1 @bitcast_from_single_element_pointer_vector_to_pointer(<1 x i8*> %ptr1vec, i8* %ptr2) {
+define i1 @bitcast_from_single_element_pointer_vector_to_pointer(<1 x ptr> %ptr1vec, ptr %ptr2) {
 ; CHECK-LABEL: @bitcast_from_single_element_pointer_vector_to_pointer(
-; CHECK-NEXT:    [[PTR1:%.*]] = bitcast <1 x i8*> [[PTR1VEC:%.*]] to i8*
-; CHECK-NEXT:    call void @usei8ptr(i8* [[PTR1]])
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8* [[PTR1]], [[PTR2:%.*]]
+; CHECK-NEXT:    [[PTR1:%.*]] = bitcast <1 x ptr> [[PTR1VEC:%.*]] to ptr
+; CHECK-NEXT:    call void @usei8ptr(ptr [[PTR1]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR1]], [[PTR2:%.*]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %ptr1 = bitcast <1 x i8*> %ptr1vec to i8*
-  call void @usei8ptr(i8* %ptr1)
-  %cmp = icmp eq i8* %ptr1, %ptr2
+  %ptr1 = bitcast <1 x ptr> %ptr1vec to ptr
+  call void @usei8ptr(ptr %ptr1)
+  %cmp = icmp eq ptr %ptr1, %ptr2
   ret i1 %cmp
 }
 
@@ -210,4 +210,51 @@ loop:
   %sub1 = sub i32 %p1, %p2
   %sub2 = sub i32 42, %p2
   br label %loop
+}
+
+define i1 @sub_false(i32 %x) {
+; CHECK-LABEL: @sub_false(
+; CHECK-NEXT:    ret i1 false
+;
+  %sub = sub i32 1, %x
+  %cmp = icmp eq i32 %sub, %x
+  ret i1 %cmp
+}
+
+define i1 @sub_swap(i8 %x) {
+; CHECK-LABEL: @sub_swap(
+; CHECK-NEXT:    ret i1 true
+;
+  %sub = sub i8 3, %x
+  %cmp = icmp ne i8 %x, %sub
+  ret i1 %cmp
+}
+
+define <2 x i1> @sub_odd(<2 x i8> %x) {
+; CHECK-LABEL: @sub_odd(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %sub = sub <2 x i8> <i8 3, i8 3>, %x
+  %cmp = icmp ne <2 x i8> %sub, %x
+  ret <2 x i1> %cmp
+}
+
+define <2 x i1> @sub_odd_poison(<2 x i8> %x) {
+; CHECK-LABEL: @sub_odd_poison(
+; CHECK-NEXT:    ret <2 x i1> <i1 true, i1 true>
+;
+  %sub = sub <2 x i8> <i8 poison, i8 1>, %x
+  %cmp = icmp ne <2 x i8> %sub, %x
+  ret <2 x i1> %cmp
+}
+
+define i1 @sub_even(i8 %x) {
+; CHECK-LABEL: @sub_even(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 2, [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[SUB]], [[X]]
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %sub = sub i8 2, %x
+  %cmp = icmp ne i8 %sub, %x
+  ret i1 %cmp
 }

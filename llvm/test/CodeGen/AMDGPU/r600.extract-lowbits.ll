@@ -16,7 +16,7 @@
 ; Pattern a. 32-bit
 ; ---------------------------------------------------------------------------- ;
 
-define amdgpu_kernel void @bzhi32_a0(i32 %val, i32 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_a0(i32 %val, i32 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_a0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -41,11 +41,11 @@ define amdgpu_kernel void @bzhi32_a0(i32 %val, i32 %numlowbits, i32 addrspace(1)
   %onebit = shl i32 1, %numlowbits
   %mask = add nsw i32 %onebit, -1
   %masked = and i32 %mask, %val
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bzhi32_a1_indexzext(i32 %val, i8 zeroext %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_a1_indexzext(i32 %val, i8 zeroext %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_a1_indexzext:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
@@ -87,11 +87,11 @@ define amdgpu_kernel void @bzhi32_a1_indexzext(i32 %val, i8 zeroext %numlowbits,
   %onebit = shl i32 1, %conv
   %mask = add nsw i32 %onebit, -1
   %masked = and i32 %mask, %val
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bzhi32_a4_commutative(i32 %val, i32 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_a4_commutative(i32 %val, i32 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_a4_commutative:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -116,7 +116,7 @@ define amdgpu_kernel void @bzhi32_a4_commutative(i32 %val, i32 %numlowbits, i32 
   %onebit = shl i32 1, %numlowbits
   %mask = add nsw i32 %onebit, -1
   %masked = and i32 %val, %mask ; swapped order
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
@@ -124,7 +124,7 @@ define amdgpu_kernel void @bzhi32_a4_commutative(i32 %val, i32 %numlowbits, i32 
 ; Pattern b. 32-bit
 ; ---------------------------------------------------------------------------- ;
 
-define amdgpu_kernel void @bzhi32_b0(i32 %val, i32 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_b0(i32 %val, i32 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_b0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -149,11 +149,11 @@ define amdgpu_kernel void @bzhi32_b0(i32 %val, i32 %numlowbits, i32 addrspace(1)
   %notmask = shl i32 -1, %numlowbits
   %mask = xor i32 %notmask, -1
   %masked = and i32 %mask, %val
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bzhi32_b1_indexzext(i32 %val, i8 zeroext %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_b1_indexzext(i32 %val, i8 zeroext %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_b1_indexzext:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
@@ -195,11 +195,11 @@ define amdgpu_kernel void @bzhi32_b1_indexzext(i32 %val, i8 zeroext %numlowbits,
   %notmask = shl i32 -1, %conv
   %mask = xor i32 %notmask, -1
   %masked = and i32 %mask, %val
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bzhi32_b4_commutative(i32 %val, i32 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_b4_commutative(i32 %val, i32 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_b4_commutative:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -224,7 +224,7 @@ define amdgpu_kernel void @bzhi32_b4_commutative(i32 %val, i32 %numlowbits, i32 
   %notmask = shl i32 -1, %numlowbits
   %mask = xor i32 %notmask, -1
   %masked = and i32 %val, %mask ; swapped order
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
@@ -232,7 +232,7 @@ define amdgpu_kernel void @bzhi32_b4_commutative(i32 %val, i32 %numlowbits, i32 
 ; Pattern c. 32-bit
 ; ---------------------------------------------------------------------------- ;
 
-define amdgpu_kernel void @bzhi32_c0(i32 %val, i32 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_c0(i32 %val, i32 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_c0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -257,11 +257,11 @@ define amdgpu_kernel void @bzhi32_c0(i32 %val, i32 %numlowbits, i32 addrspace(1)
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
   %masked = and i32 %mask, %val
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_c1_indexzext:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
@@ -311,11 +311,11 @@ define amdgpu_kernel void @bzhi32_c1_indexzext(i32 %val, i8 %numlowbits, i32 add
   %sh_prom = zext i8 %numhighbits to i32
   %mask = lshr i32 -1, %sh_prom
   %masked = and i32 %mask, %val
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bzhi32_c4_commutative(i32 %val, i32 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_c4_commutative(i32 %val, i32 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_c4_commutative:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -340,7 +340,7 @@ define amdgpu_kernel void @bzhi32_c4_commutative(i32 %val, i32 %numlowbits, i32 
   %numhighbits = sub i32 32, %numlowbits
   %mask = lshr i32 -1, %numhighbits
   %masked = and i32 %val, %mask ; swapped order
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
@@ -348,7 +348,7 @@ define amdgpu_kernel void @bzhi32_c4_commutative(i32 %val, i32 %numlowbits, i32 
 ; Pattern d. 32-bit.
 ; ---------------------------------------------------------------------------- ;
 
-define amdgpu_kernel void @bzhi32_d0(i32 %val, i32 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_d0(i32 %val, i32 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_d0:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 2, @4, KC0[CB0:0-32], KC1[]
@@ -373,11 +373,11 @@ define amdgpu_kernel void @bzhi32_d0(i32 %val, i32 %numlowbits, i32 addrspace(1)
   %numhighbits = sub i32 32, %numlowbits
   %highbitscleared = shl i32 %val, %numhighbits
   %masked = lshr i32 %highbitscleared, %numhighbits
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @bzhi32_d1_indexzext(i32 %val, i8 %numlowbits, i32 addrspace(1)* %out) {
+define amdgpu_kernel void @bzhi32_d1_indexzext(i32 %val, i8 %numlowbits, ptr addrspace(1) %out) {
 ; EG-LABEL: bzhi32_d1_indexzext:
 ; EG:       ; %bb.0:
 ; EG-NEXT:    ALU 0, @8, KC0[], KC1[]
@@ -425,6 +425,6 @@ define amdgpu_kernel void @bzhi32_d1_indexzext(i32 %val, i8 %numlowbits, i32 add
   %sh_prom = zext i8 %numhighbits to i32
   %highbitscleared = shl i32 %val, %sh_prom
   %masked = lshr i32 %highbitscleared, %sh_prom
-  store i32 %masked, i32 addrspace(1)* %out
+  store i32 %masked, ptr addrspace(1) %out
   ret void
 }

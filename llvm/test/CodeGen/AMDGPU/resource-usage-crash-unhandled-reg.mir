@@ -1,0 +1,22 @@
+# RUN: llc -march=amdgcn -mcpu=gfx90a -run-pass=amdgpu-resource-usage -verify-machineinstrs %s -o -
+
+# Checks that ResourceUsageAnalysis does not assert if it sees agpr_lo16, agpr_hi16 or TTMP regs.
+---
+
+name: test
+tracksRegLiveness: true
+frameInfo:
+  hasCalls: true
+body: |
+  bb.0:
+    liveins: $sgpr0_sgpr1, $ttmp0, $ttmp0_ttmp1, $ttmp0_ttmp1_ttmp2_ttmp3
+    $vgpr0 = COPY $ttmp0
+    $vgpr1_vgpr2 = COPY $ttmp0_ttmp1
+    $vgpr1_vgpr2_vgpr3_vgpr4 = COPY $ttmp0_ttmp1_ttmp2_ttmp3
+    $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8 = COPY $ttmp0_ttmp1_ttmp2_ttmp3_ttmp4_ttmp5_ttmp6_ttmp7
+    $vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7_vgpr8_vgpr9_vgpr10_vgpr11_vgpr12_vgpr13_vgpr14_vgpr15_vgpr16 = COPY $ttmp0_ttmp1_ttmp2_ttmp3_ttmp4_ttmp5_ttmp6_ttmp7_ttmp8_ttmp9_ttmp10_ttmp11_ttmp12_ttmp13_ttmp14_ttmp15
+    $agpr1_lo16 = IMPLICIT_DEF
+    $agpr1_hi16 = IMPLICIT_DEF
+    $sgpr2_sgpr3 = SI_CALL undef $sgpr0_sgpr1, 0, CustomRegMask()
+    S_ENDPGM 0
+...

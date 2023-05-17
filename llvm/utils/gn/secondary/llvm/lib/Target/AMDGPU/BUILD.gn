@@ -58,7 +58,11 @@ tablegen("AMDGPUGenMCPseudoLowering") {
 }
 
 tablegen("AMDGPUGenRegisterBank") {
-  visibility = [ ":LLVMAMDGPUCodeGen" ]
+  visibility = [
+    ":LLVMAMDGPUCodeGen",
+    "Utils",
+    "//llvm/unittests/Target/AMDGPU:AMDGPUTests",
+  ]
   args = [ "-gen-register-bank" ]
   td_file = "AMDGPU.td"
 }
@@ -115,6 +119,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/IPO",
     "//llvm/lib/Transforms/Scalar",
     "//llvm/lib/Transforms/Utils",
@@ -137,8 +142,10 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUFrameLowering.cpp",
     "AMDGPUGlobalISelUtils.cpp",
     "AMDGPUHSAMetadataStreamer.cpp",
+    "AMDGPUIGroupLP.cpp",
     "AMDGPUISelDAGToDAG.cpp",
     "AMDGPUISelLowering.cpp",
+    "AMDGPUInsertDelayAlu.cpp",
     "AMDGPUInstCombineIntrinsic.cpp",
     "AMDGPUInstrInfo.cpp",
     "AMDGPUInstructionSelector.cpp",
@@ -151,7 +158,6 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPULowerKernelAttributes.cpp",
     "AMDGPULowerModuleLDSPass.cpp",
     "AMDGPUMCInstLower.cpp",
-    "AMDGPUMFMAIGroupLP.cpp",
     "AMDGPUMIRFormatter.cpp",
     "AMDGPUMachineCFGStructurizer.cpp",
     "AMDGPUMachineFunction.cpp",
@@ -166,10 +172,13 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUPromoteKernelArguments.cpp",
     "AMDGPUPropagateAttributes.cpp",
     "AMDGPURegBankCombiner.cpp",
+    "AMDGPURegBankSelect.cpp",
     "AMDGPURegisterBankInfo.cpp",
-    "AMDGPUReplaceLDSUseWithPointer.cpp",
+    "AMDGPUReleaseVGPRs.cpp",
+    "AMDGPURemoveIncompatibleFunctions.cpp",
     "AMDGPUResourceUsageAnalysis.cpp",
     "AMDGPURewriteOutArguments.cpp",
+    "AMDGPURewriteUndefForPHI.cpp",
     "AMDGPUSetWavePriority.cpp",
     "AMDGPUSubtarget.cpp",
     "AMDGPUTargetMachine.cpp",
@@ -177,6 +186,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "AMDGPUTargetTransformInfo.cpp",
     "AMDGPUUnifyDivergentExitNodes.cpp",
     "AMDGPUUnifyMetadata.cpp",
+    "GCNCreateVOPD.cpp",
     "GCNDPPCombine.cpp",
     "GCNHazardRecognizer.cpp",
     "GCNILPSched.cpp",
@@ -186,6 +196,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "GCNPreRAOptimizations.cpp",
     "GCNRegPressure.cpp",
     "GCNSchedStrategy.cpp",
+    "GCNVOPDUtils.cpp",
     "R600AsmPrinter.cpp",
     "R600ClauseMergePass.cpp",
     "R600ControlFlowFinalizer.cpp",
@@ -225,6 +236,7 @@ static_library("LLVMAMDGPUCodeGen") {
     "SIMachineScheduler.cpp",
     "SIMemoryLegalizer.cpp",
     "SIModeRegister.cpp",
+    "SIModeRegisterDefaults.cpp",
     "SIOptimizeExecMasking.cpp",
     "SIOptimizeExecMaskingPreRA.cpp",
     "SIOptimizeVGPRLiveRange.cpp",

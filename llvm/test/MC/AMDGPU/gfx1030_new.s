@@ -84,16 +84,16 @@ v_fmac_legacy_f32 v0, |v1|, -v2
 v_fmac_legacy_f32 v0, s1, 2.0
 // GFX10: encoding: [0x00,0x00,0x06,0xd5,0x01,0xe8,0x01,0x00]
 
-image_bvh_intersect_ray v[4:7], v[9:24], s[4:7]
+image_bvh_intersect_ray v[4:7], v[9:19], s[4:7]
 // GFX10: encoding: [0x01,0x9f,0x98,0xf1,0x09,0x04,0x01,0x00]
 
 image_bvh_intersect_ray v[4:7], v[9:16], s[4:7] a16
 // GFX10: encoding: [0x01,0x9f,0x98,0xf1,0x09,0x04,0x01,0x40]
 
-image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7]
+image_bvh64_intersect_ray v[4:7], v[9:20], s[4:7]
 // GFX10: encoding: [0x01,0x9f,0x9c,0xf1,0x09,0x04,0x01,0x00]
 
-image_bvh64_intersect_ray v[4:7], v[9:24], s[4:7] a16
+image_bvh64_intersect_ray v[4:7], v[9:17], s[4:7] a16
 // GFX10: encoding: [0x01,0x9f,0x9c,0xf1,0x09,0x04,0x01,0x40]
 
 image_bvh_intersect_ray v[39:42], [v50, v46, v23, v17, v16, v15, v21, v20, v19, v37, v40], s[12:15]

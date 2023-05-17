@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -mtriple aarch64 -mcpu=cortex-a57 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -mtriple aarch64 -mcpu=cortex-a57 | FileCheck %s
 
 ; Partial unroll 8 times for this loop.
 define void @unroll1() nounwind {

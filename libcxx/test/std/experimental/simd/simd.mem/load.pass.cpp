@@ -39,17 +39,17 @@ void supported_load(...) = delete;
 
 void compile_load() {
   supported_load<int>((int*)nullptr, ex::element_aligned_tag());
-  supported_load<uint32_t>((int*)nullptr, ex::element_aligned_tag());
+  supported_load<std::uint32_t>((int*)nullptr, ex::element_aligned_tag());
   supported_load<double>((float*)nullptr, ex::element_aligned_tag());
-  supported_load<uint16_t>((unsigned int*)nullptr, ex::element_aligned_tag());
-  supported_load<uint32_t>((float*)nullptr, ex::element_aligned_tag());
+  supported_load<std::uint16_t>((unsigned int*)nullptr, ex::element_aligned_tag());
+  supported_load<std::uint32_t>((float*)nullptr, ex::element_aligned_tag());
 
   not_supported_load<int>((int*)nullptr, int());
 }
 
 template <typename SimdType>
 void test_load() {
-  alignas(32) int32_t buffer[] = {4, 3, 2, 1};
+  alignas(32) std::int32_t buffer[] = {4, 3, 2, 1};
   {
     SimdType a;
     a.copy_from(buffer, ex::element_aligned_tag());
@@ -114,11 +114,11 @@ void test_converting_load() {
 
 int main(int, char**) {
   // TODO: adjust the tests when this assertion fails.
-  assert(ex::native_simd<int32_t>::size() >= 4);
-  test_load<ex::native_simd<int32_t>>();
-  test_load<ex::fixed_size_simd<int32_t, 4>>();
-  test_converting_load<ex::native_simd<int32_t>>();
-  test_converting_load<ex::fixed_size_simd<int32_t, 4>>();
+  assert(ex::native_simd<std::int32_t>::size() >= 4);
+  test_load<ex::native_simd<std::int32_t>>();
+  test_load<ex::fixed_size_simd<std::int32_t, 4>>();
+  test_converting_load<ex::native_simd<std::int32_t>>();
+  test_converting_load<ex::fixed_size_simd<std::int32_t, 4>>();
 
   return 0;
 }

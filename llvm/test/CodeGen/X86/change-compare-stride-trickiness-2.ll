@@ -4,9 +4,9 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128"
 target triple = "x86_64-pc-linux-gnu"
 module asm ".ident\09\22$FreeBSD: head/sys/amd64/amd64/minidump_machdep.c 184499 2008-10-31 10:11:35Z kib $\22"
-	%struct.dumperinfo = type <{ i32 (i8*, i8*, i64, i64, i64)*, i8*, i32, i32, i64, i64 }>
+	%struct.dumperinfo = type <{ ptr, ptr, i32, i32, i64, i64 }>
 
-define void @minidumpsys(%struct.dumperinfo* %di) nounwind {
+define void @minidumpsys(ptr %di) nounwind {
 entry:
 	br label %if.end
 
@@ -32,7 +32,7 @@ if.end52:		; preds = %for.cond.i.preheader
 	br i1 %phitmp654, label %for.cond.i.preheader, label %if.end
 }
 
-define void @promote(%struct.dumperinfo* %di) nounwind {
+define void @promote(ptr %di) nounwind {
 entry:
 	br label %if.end
 

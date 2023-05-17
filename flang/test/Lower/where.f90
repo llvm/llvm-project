@@ -39,7 +39,7 @@
   ! CHECK:           %[[VAL_38:.*]] = fir.convert %[[VAL_37]] : (!fir.logical<4>) -> i1
   ! CHECK:           %[[VAL_39:.*]] = fir.if %[[VAL_38]] -> (!fir.array<10xf32>) {
   ! CHECK:             %[[VAL_40:.*]] = fir.array_fetch %[[VAL_27]], %[[VAL_32]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:             %[[VAL_41:.*]] = arith.negf %[[VAL_40]] : f32
+  ! CHECK:             %[[VAL_41:.*]] = arith.negf %[[VAL_40]] {{.*}}: f32
   ! CHECK:             %[[VAL_42:.*]] = fir.array_update %[[VAL_33]], %[[VAL_41]], %[[VAL_32]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
   ! CHECK:             fir.result %[[VAL_42]] : !fir.array<10xf32>
   ! CHECK:           } else {
@@ -48,7 +48,7 @@
   ! CHECK:           fir.result %[[VAL_43:.*]] : !fir.array<10xf32>
   ! CHECK:         }
   ! CHECK:         fir.array_merge_store %[[VAL_25]], %[[VAL_44:.*]] to %[[VAL_2]] : !fir.array<10xf32>, !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>
-  ! CHECK:         fir.freemem %[[VAL_9]]
+  ! CHECK:         fir.freemem %[[VAL_9]] : !fir.heap<!fir.array<10x!fir.logical<4>>>
   ! CHECK:         %[[VAL_46:.*]] = arith.constant 10 : index
   ! CHECK:         %[[VAL_47:.*]] = fir.shape %[[VAL_1]] : (index) -> !fir.shape<1>
   ! CHECK:         %[[VAL_48:.*]] = fir.array_load %[[VAL_0]](%[[VAL_47]]) : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>) -> !fir.array<10xf32>
@@ -84,7 +84,7 @@
   ! CHECK:           %[[VAL_80:.*]] = fir.convert %[[VAL_79]] : (!fir.logical<4>) -> i1
   ! CHECK:           %[[VAL_81:.*]] = fir.if %[[VAL_80]] -> (!fir.array<10xf32>) {
   ! CHECK:             %[[VAL_82:.*]] = fir.array_fetch %[[VAL_69]], %[[VAL_74]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:             %[[VAL_83:.*]] = arith.mulf %[[VAL_67]], %[[VAL_82]] : f32
+  ! CHECK:             %[[VAL_83:.*]] = arith.mulf %[[VAL_67]], %[[VAL_82]] {{.*}}: f32
   ! CHECK:             %[[VAL_84:.*]] = fir.array_update %[[VAL_75]], %[[VAL_83]], %[[VAL_74]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
   ! CHECK:             fir.result %[[VAL_84]] : !fir.array<10xf32>
   ! CHECK:           } else {
@@ -136,7 +136,7 @@
   ! CHECK:             %[[VAL_128:.*]] = fir.convert %[[VAL_127]] : (!fir.logical<4>) -> i1
   ! CHECK:             %[[VAL_129:.*]] = fir.if %[[VAL_128]] -> (!fir.array<10xf32>) {
   ! CHECK:               %[[VAL_130:.*]] = fir.array_fetch %[[VAL_111]], %[[VAL_116]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:               %[[VAL_131:.*]] = arith.addf %[[VAL_109]], %[[VAL_130]] : f32
+  ! CHECK:               %[[VAL_131:.*]] = arith.addf %[[VAL_109]], %[[VAL_130]] {{.*}}: f32
   ! CHECK:               %[[VAL_132:.*]] = fir.array_update %[[VAL_117]], %[[VAL_131]], %[[VAL_116]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
   ! CHECK:               fir.result %[[VAL_132]] : !fir.array<10xf32>
   ! CHECK:             } else {
@@ -171,7 +171,7 @@
   ! CHECK:             %[[VAL_157:.*]] = fir.convert %[[VAL_156]] : (!fir.logical<4>) -> i1
   ! CHECK:             %[[VAL_158:.*]] = fir.if %[[VAL_157]] -> (!fir.array<10xf32>) {
   ! CHECK:               %[[VAL_159:.*]] = fir.array_fetch %[[VAL_139]], %[[VAL_145]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:               %[[VAL_160:.*]] = arith.subf %[[VAL_159]], %[[VAL_140]] : f32
+  ! CHECK:               %[[VAL_160:.*]] = arith.subf %[[VAL_159]], %[[VAL_140]] {{.*}}: f32
   ! CHECK:               %[[VAL_161:.*]] = fir.array_update %[[VAL_146]], %[[VAL_160]], %[[VAL_145]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
   ! CHECK:               fir.result %[[VAL_161]] : !fir.array<10xf32>
   ! CHECK:             } else {
@@ -208,7 +208,7 @@
   ! CHECK:               fir.result %[[VAL_175]] : !fir.array<10xf32>
   ! CHECK:             } else {
   ! CHECK:               %[[VAL_188:.*]] = fir.array_fetch %[[VAL_168]], %[[VAL_174]] : (!fir.array<10xf32>, index) -> f32
-  ! CHECK:               %[[VAL_189:.*]] = arith.divf %[[VAL_188]], %[[VAL_169]] : f32
+  ! CHECK:               %[[VAL_189:.*]] = arith.divf %[[VAL_188]], %[[VAL_169]] {{.*}}: f32
   ! CHECK:               %[[VAL_190:.*]] = fir.array_update %[[VAL_175]], %[[VAL_189]], %[[VAL_174]] : (!fir.array<10xf32>, f32, index) -> !fir.array<10xf32>
   ! CHECK:               fir.result %[[VAL_190]] : !fir.array<10xf32>
   ! CHECK:             }
@@ -217,8 +217,8 @@
   ! CHECK:           fir.result %[[VAL_192:.*]] : !fir.array<10xf32>
   ! CHECK:         }
   ! CHECK:         fir.array_merge_store %[[VAL_166]], %[[VAL_193:.*]] to %[[VAL_0]] : !fir.array<10xf32>, !fir.array<10xf32>, !fir.ref<!fir.array<10xf32>>
-  ! CHECK:         fir.freemem %[[VAL_92]]
-  ! CHECK:         fir.freemem %[[VAL_50]]
+  ! CHECK:         fir.freemem %[[VAL_92]] : !fir.heap<!fir.array<10x!fir.logical<4>>>
+  ! CHECK:         fir.freemem %[[VAL_50]] : !fir.heap<!fir.array<10x!fir.logical<4>>>
   ! CHECK:         return
   ! CHECK:       }
 

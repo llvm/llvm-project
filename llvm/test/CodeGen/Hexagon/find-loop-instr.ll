@@ -54,7 +54,7 @@ b15:                                              ; preds = %b12
   br i1 undef, label %b16, label %b17
 
 b16:                                              ; preds = %b15
-  store i32 0, i32* undef, align 4
+  store i32 0, ptr undef, align 4
   br label %b21
 
 b17:                                              ; preds = %b15
@@ -67,7 +67,7 @@ b19:                                              ; preds = %b18
   br label %b21
 
 b20:                                              ; preds = %b18
-  store i32 0, i32* undef, align 4
+  store i32 0, ptr undef, align 4
   br label %b21
 
 b21:                                              ; preds = %b20, %b19, %b16, %b10

@@ -241,5 +241,26 @@ define float @repeated_div_fast_ftz_sel(i1 %pred, float %a, float %b, float %div
   ret float %w
 }
 
+; CHECK-LABEL: frem
+define float @frem(float %a, float %b) #0 {
+  ; CHECK-NOT: testp.infinite
+  %rem = frem float %a, %b
+  ret float %rem
+}
+
+; CHECK-LABEL: frem_ftz
+define float @frem_ftz(float %a, float %b) #0 #1 {
+  ; CHECK-NOT: testp.infinite
+  %rem = frem float %a, %b
+  ret float %rem
+}
+
+; CHECK-LABEL: frem_f64
+define double @frem_f64(double %a, double %b) #0 {
+  ; CHECK-NOT: testp.infinite
+  %rem = frem double %a, %b
+  ret double %rem
+}
+
 attributes #0 = { "unsafe-fp-math" = "true" }
 attributes #1 = { "denormal-fp-math-f32" = "preserve-sign" }

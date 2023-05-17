@@ -23,8 +23,8 @@ target triple = "armv7---eabihf"
 define void @foo() nounwind {
 ; CHECK-LABEL: foo:
 entry:
-  %0 = load i16, i16* @x, align 2
-  %1 = load i16, i16* @y, align 2
+  %0 = load i16, ptr @x, align 2
+  %1 = load i16, ptr @y, align 2
   %2 = tail call float @llvm.convert.from.fp16.f32(i16 %0)
 ; CHECK-HARDFLOAT-EABI: __aeabi_h2f
 ; CHECK-HARDFLOAT-GNU: __gnu_h2f_ieee
@@ -47,7 +47,7 @@ entry:
 ; CHECK-ARMV8: vcvtb.f16.f32
 ; CHECK-SOFTFLOAT-EABI: __aeabi_f2h
 ; CHECK-SOFTFLOAT-GNU: __gnu_f2h_ieee
-  store i16 %5, i16* @x, align 2
+  store i16 %5, ptr @x, align 2
   ret void
 }
 

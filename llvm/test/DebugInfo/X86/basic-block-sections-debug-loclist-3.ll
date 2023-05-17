@@ -34,7 +34,7 @@ entry:
   call void @llvm.dbg.value(metadata i32 %call, metadata !11, metadata !DIExpression()), !dbg !15
   call void @llvm.dbg.value(metadata i32 %call, metadata !13, metadata !DIExpression()), !dbg !15
   tail call void @_Z2f1v(), !dbg !16
-  store i32 %call, i32* @x, align 4, !dbg !17, !tbaa !18
+  store i32 %call, ptr @x, align 4, !dbg !17, !tbaa !18
   ret void, !dbg !22
 }
 

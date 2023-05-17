@@ -174,7 +174,20 @@ Where:
       ============= ==============================================================
 
 **target-triple**
-    The target triple of the code object.
+    The target triple of the code object. See `Target Triple
+    <https://clang.llvm.org/docs/CrossCompilation.html#target-triple>`_.
+
+    The bundler accepts target triples with or without the optional environment
+    field:
+
+    ``<arch><sub>-<vendor>-<sys>``, or
+    ``<arch><sub>-<vendor>-<sys>-<env>``
+
+    However, in order to standardize outputs for tools that consume bitcode
+    bundles, bundles written by the bundler internally use only the 4-field
+    target triple:
+
+    ``<arch><sub>-<vendor>-<sys>-<env>``
 
 **target-id**
   The canonical target ID of the code object. Present only if the target

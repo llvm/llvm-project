@@ -13,12 +13,12 @@ define weak i32 @hook_me() {
 ; Function Attrs: nounwind ssp uwtable
 define i32 @f() {
   %1 = alloca i32, align 4
-  store i32 4, i32* @a, align 4
+  store i32 4, ptr @a, align 4
   %2 = call i32 @hook_me()
-  ; CHECK: load i32, i32* @a, align 4
-  %3 = load i32, i32* @a, align 4
+  ; CHECK: load i32, ptr @a, align 4
+  %3 = load i32, ptr @a, align 4
   %4 = add nsw i32 %3, %2
-  store i32 %4, i32* @a, align 4
-  %5 = load i32, i32* %1
+  store i32 %4, ptr @a, align 4
+  %5 = load i32, ptr %1
   ret i32 %5
 }

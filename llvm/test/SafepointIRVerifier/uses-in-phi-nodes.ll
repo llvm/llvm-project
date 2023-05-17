@@ -1,4 +1,4 @@
-; RUN: opt -safepoint-ir-verifier-print-only -verify-safepoint-ir -S %s 2>&1 | FileCheck %s
+; RUN: opt -opaque-pointers=0 -safepoint-ir-verifier-print-only -verify-safepoint-ir -S %s 2>&1 | FileCheck %s
 
 define i8 addrspace(1)* @test.not.ok.0(i8 addrspace(1)* %arg) gc "statepoint-example" {
 ; CHECK-LABEL: Verifying gc pointers in function: test.not.ok.0

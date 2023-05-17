@@ -39,8 +39,9 @@ class BPFAsmParser : public MCTargetAsmParser {
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -252,6 +253,14 @@ public:
         .Case("ll", true)
         .Case("skb", true)
         .Case("s", true)
+        .Case("atomic_fetch_add", true)
+        .Case("atomic_fetch_and", true)
+        .Case("atomic_fetch_or", true)
+        .Case("atomic_fetch_xor", true)
+        .Case("xchg_64", true)
+        .Case("xchg32_32", true)
+        .Case("cmpxchg_64", true)
+        .Case("cmpxchg32_32", true)
         .Default(false);
   }
 };
@@ -323,14 +332,14 @@ bool BPFAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   llvm_unreachable("Unknown match type detected!");
 }
 
-bool BPFAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool BPFAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                  SMLoc &EndLoc) {
   if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
     return Error(StartLoc, "invalid register name");
   return false;
 }
 
-OperandMatchResultTy BPFAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy BPFAsmParser::tryParseRegister(MCRegister &RegNo,
                                                     SMLoc &StartLoc,
                                                     SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
@@ -368,7 +377,7 @@ BPFAsmParser::parseOperandAsOperator(OperandVector &Operands) {
   case AsmToken::Plus: {
     if (getLexer().peekTok().is(AsmToken::Integer))
       return MatchOperand_NoMatch;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
 
   case AsmToken::Equal:
@@ -481,6 +490,11 @@ bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
     // Attempt to parse token as register
     if (parseRegister(Operands) == MatchOperand_Success)
       continue;
+
+    if (getLexer().is(AsmToken::Comma)) {
+      getLexer().Lex();
+      continue;
+    }
 
     // Attempt to parse token as an immediate
     if (parseImmediate(Operands) != MatchOperand_Success) {

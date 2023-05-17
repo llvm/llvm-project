@@ -7,8 +7,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestPlatformKill(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfRemote
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr52451")
     def test_kill_different_platform(self):

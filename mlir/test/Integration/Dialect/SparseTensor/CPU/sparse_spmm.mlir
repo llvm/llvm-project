@@ -1,18 +1,32 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/wide.mtx" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
+// DEFINE: FileCheck %s
 //
-// Do the same run, but now with SIMDization as well. This should not change the outcome.
+// RUN: %{compile} | %{run}
 //
-// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=2 vl=2" | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/wide.mtx" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{compile} | %{run}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4  enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/wide.mtx" \
+// REDEFINE: %lli_host_or_aarch64_cmd \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 !Filename = !llvm.ptr<i8>
 
@@ -41,8 +55,8 @@ module {
   // into a dense matrix X.
   //
   func.func @kernel_spmm(%arga: tensor<?x?xf64, #SparseMatrix>,
-                    %argb: tensor<?x?xf64>,
-                    %argx: tensor<?x?xf64> {linalg.inplaceable = true}) -> tensor<?x?xf64> {
+                         %argb: tensor<?x?xf64>,
+                         %argx: tensor<?x?xf64>) -> tensor<?x?xf64> {
     %0 = linalg.generic #spmm
       ins(%arga, %argb: tensor<?x?xf64, #SparseMatrix>, tensor<?x?xf64>)
       outs(%argx: tensor<?x?xf64>) {
@@ -70,25 +84,20 @@ module {
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
     %a = sparse_tensor.new %fileName : !Filename to tensor<?x?xf64, #SparseMatrix>
 
-    // Initialize dense vectors.
-    %bdata = memref.alloc(%c256, %c4) : memref<?x?xf64>
-    %xdata = memref.alloc(%c4, %c4) : memref<?x?xf64>
-    scf.for %i = %c0 to %c256 step %c1 {
-      scf.for %j = %c0 to %c4 step %c1 {
-        %k0 = arith.muli %i, %c4 : index
-        %k1 = arith.addi %j, %k0 : index
-        %k2 = arith.index_cast %k1 : index to i32
-        %k = arith.sitofp %k2 : i32 to f64
-        memref.store %k, %bdata[%i, %j] : memref<?x?xf64>
-      }
-    }
-    scf.for %i = %c0 to %c4 step %c1 {
-      scf.for %j = %c0 to %c4 step %c1 {
-        memref.store %i0, %xdata[%i, %j] : memref<?x?xf64>
-      }
-    }
-    %b = bufferization.to_tensor %bdata : memref<?x?xf64>
-    %x = bufferization.to_tensor %xdata : memref<?x?xf64>
+    // Initialize dense tensors.
+    %b = tensor.generate %c256, %c4 {
+    ^bb0(%i : index, %j : index):
+      %k0 = arith.muli %i, %c4 : index
+      %k1 = arith.addi %j, %k0 : index
+      %k2 = arith.index_cast %k1 : index to i32
+      %k = arith.sitofp %k2 : i32 to f64
+      tensor.yield %k : f64
+    } : tensor<?x?xf64>
+
+    %x = tensor.generate %c4, %c4 {
+    ^bb0(%i : index, %j : index):
+      tensor.yield %i0 : f64
+    } : tensor<?x?xf64>
 
     // Call kernel.
     %0 = call @kernel_spmm(%a, %b, %x)
@@ -98,14 +107,12 @@ module {
     //
     // CHECK: ( ( 3548, 3550, 3552, 3554 ), ( 6052, 6053, 6054, 6055 ), ( -56, -63, -70, -77 ), ( -13704, -13709, -13714, -13719 ) )
     //
-    %m = bufferization.to_memref %0 : memref<?x?xf64>
-    %v = vector.transfer_read %m[%c0, %c0], %i0: memref<?x?xf64>, vector<4x4xf64>
+    %v = vector.transfer_read %0[%c0, %c0], %i0: tensor<?x?xf64>, vector<4x4xf64>
     vector.print %v : vector<4x4xf64>
 
     // Release the resources.
-    memref.dealloc %bdata : memref<?x?xf64>
-    memref.dealloc %xdata : memref<?x?xf64>
-    sparse_tensor.release %a : tensor<?x?xf64, #SparseMatrix>
+    bufferization.dealloc_tensor %a : tensor<?x?xf64, #SparseMatrix>
+
 
     return
   }

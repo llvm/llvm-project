@@ -9,7 +9,6 @@
 #ifndef LLVM_DEBUGINFO_PDB_NATIVE_INPUTFILE_H
 #define LLVM_DEBUGINFO_PDB_NATIVE_INPUTFILE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/iterator.h"
@@ -149,7 +148,7 @@ private:
   bool isEnd() const;
 
   uint32_t Index = 0;
-  Optional<object::section_iterator> SectionIter;
+  std::optional<object::section_iterator> SectionIter;
   SymbolGroup Value;
 };
 
@@ -181,7 +180,7 @@ Error iterateSymbolGroups(InputFile &Input, const PrintScope &HeaderScope,
 
   FilterOptions Filters = HeaderScope.P.getFilters();
   if (Filters.DumpModi) {
-    uint32_t Modi = Filters.DumpModi.getValue();
+    uint32_t Modi = *Filters.DumpModi;
     SymbolGroup SG(&Input, Modi);
     return iterateOneModule(Input, withLabelWidth(HeaderScope, NumDigits(Modi)),
                             SG, Modi, Callback);

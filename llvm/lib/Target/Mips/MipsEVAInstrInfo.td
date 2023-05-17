@@ -163,6 +163,10 @@ class TLBINVF_DESC : TLB_DESC_BASE<"tlbinvf", II_TLBINVF>;
 
 class CACHEE_DESC_BASE<string instr_asm, Operand MemOpnd,
                        InstrItinClass itin = NoItinerary> {
+  // CACHEE puts the "hint" immediate where the encoding would otherwise have "rt"
+  bits<5> hint;
+  bits<5> rt = hint;
+
   dag OutOperandList = (outs);
   dag InOperandList = (ins  MemOpnd:$addr, uimm5:$hint);
   string AsmString = !strconcat(instr_asm, "\t$hint, $addr");

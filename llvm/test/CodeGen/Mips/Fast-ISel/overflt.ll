@@ -4,7 +4,7 @@
 ; RUN:     < %s | FileCheck %s
 
 @x = common global [128000 x float] zeroinitializer, align 4
-@y = global float* getelementptr inbounds ([128000 x float], [128000 x float]* @x, i32 0, i32 0), align 4
+@y = global ptr @x, align 4
 @result = common global float 0.000000e+00, align 4
 @.str = private unnamed_addr constant [5 x i8] c"%f \0A\00", align 1
 
@@ -12,9 +12,9 @@
 define void @foo() {
 entry:
 ; CHECK-LABEL:   .ent  foo
-  %0 = load float*, float** @y, align 4
-  %arrayidx = getelementptr inbounds float, float* %0, i32 64000
-  store float 5.500000e+00, float* %arrayidx, align 4
+  %0 = load ptr, ptr @y, align 4
+  %arrayidx = getelementptr inbounds float, ptr %0, i32 64000
+  store float 5.500000e+00, ptr %arrayidx, align 4
 ; CHECK:        lw      $[[REG_Y_GOT:[0-9]+]], %got(y)(${{[0-9]+}})
 ; CHECK:        lw      $[[REG_Y:[0-9]+]], 0($[[REG_Y_GOT]])
 ; CHECK:        lui     $[[REG_FPCONST_INT:[0-9]+]], 16560
@@ -31,10 +31,10 @@ entry:
 define void @goo() {
 entry:
 ; CHECK-LABEL:   .ent  goo
-  %0 = load float*, float** @y, align 4
-  %arrayidx = getelementptr inbounds float, float* %0, i32 64000
-  %1 = load float, float* %arrayidx, align 4
-  store float %1, float* @result, align 4
+  %0 = load ptr, ptr @y, align 4
+  %arrayidx = getelementptr inbounds float, ptr %0, i32 64000
+  %1 = load float, ptr %arrayidx, align 4
+  store float %1, ptr @result, align 4
 ; CHECK-DAG:    lw      $[[REG_RESULT:[0-9]+]], %got(result)(${{[0-9]+}})
 ; CHECK-DAG:    lw      $[[REG_Y_GOT:[0-9]+]], %got(y)(${{[0-9]+}})
 ; CHECK-DAG:    lw      $[[REG_Y:[0-9]+]], 0($[[REG_Y_GOT]])
@@ -51,7 +51,7 @@ entry:
 ; Original C code for test.
 ;
 ;float x[128000];
-;float *y = x;
+;ptr y = x;
 ;float result;
 
 

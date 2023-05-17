@@ -13,6 +13,7 @@ import time
 from dex.debugger.DebuggerControllers.DebuggerControllerBase import DebuggerControllerBase
 from dex.debugger.DebuggerControllers.ControllerHelpers import in_source_file, update_step_watches
 from dex.utils.Exceptions import DebuggerException, LoadDebuggerException
+from dex.utils.Timeout import Timeout
 
 class EarlyExitCondition(object):
     def __init__(self, on_line, hit_count, expression, values):
@@ -81,12 +82,25 @@ class DefaultController(DebuggerControllerBase):
             self.watches.update(command_obj.get_watches())
         early_exit_conditions = self._get_early_exit_conditions()
 
+        timed_out = False
+        total_timeout = Timeout(self.context.options.timeout_total)
         max_steps = self.context.options.max_steps
         for _ in range(max_steps):
-            while self.debugger.is_running:
-                pass
 
-            if self.debugger.is_finished:
+            breakpoint_timeout = Timeout(self.context.options.timeout_breakpoint)
+            while self.debugger.is_running and not timed_out:
+                # Check to see whether we've timed out while we're waiting.
+                if total_timeout.timed_out():
+                    self.context.logger.error('Debugger session has been '
+                        f'running for {total_timeout.elapsed}s, timeout reached!')
+                    timed_out = True
+                if breakpoint_timeout.timed_out():
+                    self.context.logger.error(f'Debugger session has not '
+                        f'hit a breakpoint for {breakpoint_timeout.elapsed}s, timeout '
+                        'reached!')
+                    timed_out = True
+
+            if timed_out or self.debugger.is_finished:
                 break
 
             self.step_index += 1

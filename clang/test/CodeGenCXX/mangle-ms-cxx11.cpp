@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2015
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=18.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2013
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -gcodeview -debug-info-kind=limited | FileCheck %s --check-prefix=DBG
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=19.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2015
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -fms-compatibility-version=18.00 | FileCheck %s --check-prefix=CHECK --check-prefix=MSVC2013
+// RUN: %clang_cc1 -std=c++11 -fms-extensions -emit-llvm %s -o - -triple=i386-pc-win32 -gcodeview -debug-info-kind=limited | FileCheck %s --check-prefix=DBG
 
 namespace FTypeWithQuals {
 template <typename T>
@@ -323,13 +323,13 @@ void unaligned_foo8_S::unaligned_foo8() volatile __unaligned {}
 
 namespace PR31197 {
 struct A {
-  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc noundef i32* @"??R<lambda_1>@x@A@PR31197@@QBE@XZ"(
+  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??R<lambda_1>@x@A@PR31197@@QBE@XZ"(
   int *x = []() {
     static int white;
     // CHECK-DAG: @"?white@?1???R<lambda_1>@x@A@PR31197@@QBE@XZ@4HA"
     return &white;
   }();
-  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc noundef i32* @"??R<lambda_1>@y@A@PR31197@@QBE@XZ"(
+  // CHECK-DAG: define linkonce_odr dso_local x86_thiscallcc noundef ptr @"??R<lambda_1>@y@A@PR31197@@QBE@XZ"(
   int *y = []() {
     static int black;
     // CHECK-DAG: @"?black@?1???R<lambda_1>@y@A@PR31197@@QBE@XZ@4HA"

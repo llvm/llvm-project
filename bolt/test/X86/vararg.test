@@ -5,7 +5,7 @@
 REQUIRES: x86_64-linux
 
 RUN: %clangxx %cxxflags -no-pie %p/../Inputs/vararg.s -o %t -Wl,-q
-RUN: llvm-bolt %t -o /dev/null -print-cfg -print-only=.*printf.* |& FileCheck %s
+RUN: llvm-bolt %t -o /dev/null --print-cfg --print-only=.*printf.* |& FileCheck %s
 
 CHECK: IsSimple    : 0
 CHECK: Entry Point

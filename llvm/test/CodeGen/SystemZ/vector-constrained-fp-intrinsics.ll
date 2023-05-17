@@ -97,7 +97,7 @@ entry:
   ret <3 x float> %div
 }
 
-define void @constrained_vector_fdiv_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_fdiv_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_fdiv_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    larl %r1, .LCPI3_1
@@ -127,13 +127,13 @@ define void @constrained_vector_fdiv_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    vst %v0, 0(%r2), 4
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %div = call <3 x double> @llvm.experimental.constrained.fdiv.v3f64(
            <3 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>,
            <3 x double> %b,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
-  store <3 x double> %div, <3 x double>* %a
+  store <3 x double> %div, ptr %a
   ret void
 }
 
@@ -365,7 +365,7 @@ entry:
   ret <3 x float> %rem
 }
 
-define void @constrained_vector_frem_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_frem_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_frem_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -447,13 +447,13 @@ define void @constrained_vector_frem_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %rem = call <3 x double> @llvm.experimental.constrained.frem.v3f64(
            <3 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00>,
            <3 x double> %b,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
-  store <3 x double> %rem, <3 x double>* %a
+  store <3 x double> %rem, ptr %a
   ret void
 }
 
@@ -650,7 +650,7 @@ entry:
   ret <3 x float> %mul
 }
 
-define void @constrained_vector_fmul_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_fmul_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_fmul_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    larl %r1, .LCPI13_0
@@ -678,14 +678,14 @@ define void @constrained_vector_fmul_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %mul = call <3 x double> @llvm.experimental.constrained.fmul.v3f64(
            <3 x double> <double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF,
                         double 0x7FEFFFFFFFFFFFFF>,
            <3 x double> %b,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
-  store <3 x double> %mul, <3 x double>* %a
+  store <3 x double> %mul, ptr %a
   ret void
 }
 
@@ -820,7 +820,7 @@ entry:
   ret <3 x float> %add
 }
 
-define void @constrained_vector_fadd_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_fadd_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_fadd_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    larl %r1, .LCPI18_0
@@ -848,14 +848,14 @@ define void @constrained_vector_fadd_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %add = call <3 x double> @llvm.experimental.constrained.fadd.v3f64(
            <3 x double> <double 0x7FEFFFFFFFFFFFFF, double 0x7FEFFFFFFFFFFFFF,
                          double 0x7FEFFFFFFFFFFFFF>,
            <3 x double> %b,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
-  store <3 x double> %add, <3 x double>* %a
+  store <3 x double> %add, ptr %a
   ret void
 }
 
@@ -992,7 +992,7 @@ entry:
   ret <3 x float> %sub
 }
 
-define void @constrained_vector_fsub_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_fsub_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_fsub_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    larl %r1, .LCPI23_0
@@ -1018,14 +1018,14 @@ define void @constrained_vector_fsub_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f2, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %sub = call <3 x double> @llvm.experimental.constrained.fsub.v3f64(
            <3 x double> <double 0xFFEFFFFFFFFFFFFF, double 0xFFEFFFFFFFFFFFFF,
                          double 0xFFEFFFFFFFFFFFFF>,
            <3 x double> %b,
            metadata !"round.dynamic",
            metadata !"fpexcept.strict") #0
-  store <3 x double> %sub, <3 x double>* %a
+  store <3 x double> %sub, ptr %a
   ret void
 }
 
@@ -1143,7 +1143,7 @@ entry:
   ret <3 x float> %sqrt
 }
 
-define void @constrained_vector_sqrt_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_sqrt_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_sqrt_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    sqdb %f0, 0(%r2)
@@ -1163,12 +1163,12 @@ define void @constrained_vector_sqrt_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    vst %v0, 0(%r2), 4
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %sqrt = call <3 x double> @llvm.experimental.constrained.sqrt.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %sqrt, <3 x double>* %a
+  store <3 x double> %sqrt, ptr %a
   ret void
 }
 
@@ -1395,7 +1395,7 @@ entry:
   ret <3 x float> %pow
 }
 
-define void @constrained_vector_pow_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_pow_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_pow_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -1481,13 +1481,13 @@ define void @constrained_vector_pow_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 312(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %pow = call <3 x double> @llvm.experimental.constrained.pow.v3f64(
                           <3 x double> %b,
                           <3 x double> <double 3.0, double 3.0, double 3.0>,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %pow, <3 x double>* %a
+  store <3 x double> %pow, ptr %a
   ret void
 }
 
@@ -1764,7 +1764,7 @@ entry:
   ret <3 x float> %powi
 }
 
-define void @constrained_vector_powi_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_powi_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_powi_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -1835,13 +1835,13 @@ define void @constrained_vector_powi_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 280(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %powi = call <3 x double> @llvm.experimental.constrained.powi.v3f64(
                           <3 x double> <double 42.0, double 42.1, double 42.2>,
                           i32 3,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %powi, <3 x double>* %a
+  store <3 x double> %powi, ptr %a
   ret void
 }
 
@@ -2092,7 +2092,7 @@ entry:
   ret <3 x float> %sin
 }
 
-define void @constrained_vector_sin_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_sin_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_sin_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -2162,12 +2162,12 @@ define void @constrained_vector_sin_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %sin = call <3 x double> @llvm.experimental.constrained.sin.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %sin, <3 x double>* %a
+  store <3 x double> %sin, ptr %a
   ret void
 }
 
@@ -2409,7 +2409,7 @@ entry:
   ret <3 x float> %cos
 }
 
-define void @constrained_vector_cos_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_cos_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_cos_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -2479,12 +2479,12 @@ define void @constrained_vector_cos_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %cos = call <3 x double> @llvm.experimental.constrained.cos.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %cos, <3 x double>* %a
+  store <3 x double> %cos, ptr %a
   ret void
 }
 
@@ -2726,7 +2726,7 @@ entry:
   ret <3 x float> %exp
 }
 
-define void @constrained_vector_exp_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_exp_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_exp_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -2796,12 +2796,12 @@ define void @constrained_vector_exp_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %exp = call <3 x double> @llvm.experimental.constrained.exp.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %exp, <3 x double>* %a
+  store <3 x double> %exp, ptr %a
   ret void
 }
 
@@ -3043,7 +3043,7 @@ entry:
   ret <3 x float> %exp2
 }
 
-define void @constrained_vector_exp2_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_exp2_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_exp2_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -3113,12 +3113,12 @@ define void @constrained_vector_exp2_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %exp2 = call <3 x double> @llvm.experimental.constrained.exp2.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %exp2, <3 x double>* %a
+  store <3 x double> %exp2, ptr %a
   ret void
 }
 
@@ -3360,7 +3360,7 @@ entry:
   ret <3 x float> %log
 }
 
-define void @constrained_vector_log_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_log_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_log_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -3430,12 +3430,12 @@ define void @constrained_vector_log_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %log = call <3 x double> @llvm.experimental.constrained.log.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %log, <3 x double>* %a
+  store <3 x double> %log, ptr %a
   ret void
 }
 
@@ -3677,7 +3677,7 @@ entry:
   ret <3 x float> %log10
 }
 
-define void @constrained_vector_log10_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_log10_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_log10_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -3747,12 +3747,12 @@ define void @constrained_vector_log10_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %log10 = call <3 x double> @llvm.experimental.constrained.log10.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %log10, <3 x double>* %a
+  store <3 x double> %log10, ptr %a
   ret void
 }
 
@@ -3994,7 +3994,7 @@ entry:
   ret <3 x float> %log2
 }
 
-define void @constrained_vector_log2_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_log2_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_log2_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -4064,12 +4064,12 @@ define void @constrained_vector_log2_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %log2 = call <3 x double> @llvm.experimental.constrained.log2.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %log2, <3 x double>* %a
+  store <3 x double> %log2, ptr %a
   ret void
 }
 
@@ -4241,7 +4241,7 @@ define <3 x float> @constrained_vector_rint_v3f32() #0 {
   ret <3 x float> %rint
 }
 
-define void @constrained_vector_rint_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_rint_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_rint_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    ld %f0, 16(%r2)
@@ -4265,12 +4265,12 @@ define void @constrained_vector_rint_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %rint = call <3 x double> @llvm.experimental.constrained.rint.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %rint, <3 x double>* %a
+  store <3 x double> %rint, ptr %a
   ret void
 }
 
@@ -4430,7 +4430,7 @@ entry:
   ret <3 x float> %nearby
 }
 
-define void @constrained_vector_nearbyint_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_nearbyint_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_nearbyint_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -4475,12 +4475,12 @@ define void @constrained_vector_nearbyint_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %nearby = call <3 x double> @llvm.experimental.constrained.nearbyint.v3f64(
                           <3 x double> %b,
                           metadata !"round.dynamic",
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %nearby, <3 x double>* %a
+  store <3 x double> %nearby, ptr %a
   ret void
 }
 
@@ -4726,7 +4726,7 @@ entry:
   ret <3 x float> %max
 }
 
-define void @constrained_vector_log10_maxnum_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_log10_maxnum_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_log10_maxnum_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -4808,12 +4808,12 @@ define void @constrained_vector_log10_maxnum_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 304(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %max = call <3 x double> @llvm.experimental.constrained.maxnum.v3f64(
                           <3 x double> %b,
                           <3 x double> <double 40.0, double 41.0, double 42.0>,
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %max, <3 x double>* %a
+  store <3 x double> %max, ptr %a
   ret void
 }
 
@@ -5100,7 +5100,7 @@ entry:
   ret <3 x float> %min
 }
 
-define void @constrained_vector_minnum_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_minnum_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_minnum_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -5186,12 +5186,12 @@ define void @constrained_vector_minnum_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    lmg %r13, %r15, 312(%r15)
 ; SZ13-NEXT:    br %r14
 entry:
- %b = load <3 x double>, <3 x double>* %a
+ %b = load <3 x double>, ptr %a
  %min = call <3 x double> @llvm.experimental.constrained.minnum.v3f64(
                           <3 x double> %b,
                           <3 x double> <double 3.0, double 3.0, double 3.0>,
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %min, <3 x double>* %a
+  store <3 x double> %min, ptr %a
   ret void
 }
 
@@ -5347,7 +5347,7 @@ entry:
   ret <2 x float> %result
 }
 
-define void @constrained_vector_fptrunc_v3f64(<3 x double>* %src, <3 x float>* %dest) #0 {
+define void @constrained_vector_fptrunc_v3f64(ptr %src, ptr %dest) #0 {
 ; S390X-LABEL: constrained_vector_fptrunc_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    ld %f0, 0(%r2)
@@ -5378,12 +5378,12 @@ define void @constrained_vector_fptrunc_v3f64(<3 x double>* %src, <3 x float>* %
 ; SZ13-NEXT:    vsteg %v1, 0(%r3), 0
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %src
+  %b = load <3 x double>, ptr %src
   %result = call <3 x float> @llvm.experimental.constrained.fptrunc.v3f32.v3f64(
                                 <3 x double> %b,
                                 metadata !"round.dynamic",
                                 metadata !"fpexcept.strict") #0
-  store <3 x float> %result, <3 x float>* %dest
+  store <3 x float> %result, ptr %dest
   ret void
 }
 
@@ -5475,7 +5475,7 @@ entry:
   ret <2 x double> %result
 }
 
-define void @constrained_vector_fpext_v3f64(<3 x float>* %src, <3 x double>* %dest) #0 {
+define void @constrained_vector_fpext_v3f64(ptr %src, ptr %dest) #0 {
 ; S390X-LABEL: constrained_vector_fpext_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    lg %r0, 0(%r2)
@@ -5502,11 +5502,11 @@ define void @constrained_vector_fpext_v3f64(<3 x float>* %src, <3 x double>* %de
 ; SZ13-NEXT:    vst %v1, 0(%r3), 4
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x float>, <3 x float>* %src
+  %b = load <3 x float>, ptr %src
   %result = call <3 x double> @llvm.experimental.constrained.fpext.v3f64.v3f32(
                               <3 x float> %b,
                               metadata !"fpexcept.strict") #0
-  store <3 x double> %result, <3 x double>* %dest
+  store <3 x double> %result, ptr %dest
   ret void
 }
 
@@ -5660,7 +5660,7 @@ entry:
   ret <3 x float> %ceil
 }
 
-define void @constrained_vector_ceil_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_ceil_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_ceil_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -5705,11 +5705,11 @@ define void @constrained_vector_ceil_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %ceil = call <3 x double> @llvm.experimental.constrained.ceil.v3f64(
                           <3 x double> %b,
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %ceil, <3 x double>* %a
+  store <3 x double> %ceil, ptr %a
   ret void
 }
 
@@ -5830,7 +5830,7 @@ entry:
   ret <3 x float> %floor
 }
 
-define void @constrained_vector_floor_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_floor_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_floor_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -5875,11 +5875,11 @@ define void @constrained_vector_floor_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %floor = call <3 x double> @llvm.experimental.constrained.floor.v3f64(
                           <3 x double> %b,
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %floor, <3 x double>* %a
+  store <3 x double> %floor, ptr %a
   ret void
 }
 
@@ -6000,7 +6000,7 @@ entry:
 }
 
 
-define void @constrained_vector_round_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_round_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_round_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -6045,11 +6045,11 @@ define void @constrained_vector_round_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %round = call <3 x double> @llvm.experimental.constrained.round.v3f64(
                           <3 x double> %b,
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %round, <3 x double>* %a
+  store <3 x double> %round, ptr %a
   ret void
 }
 
@@ -6169,7 +6169,7 @@ entry:
   ret <3 x float> %trunc
 }
 
-define void @constrained_vector_trunc_v3f64(<3 x double>* %a) #0 {
+define void @constrained_vector_trunc_v3f64(ptr %a) #0 {
 ; S390X-LABEL: constrained_vector_trunc_v3f64:
 ; S390X:       # %bb.0: # %entry
 ; S390X-NEXT:    stmg %r13, %r15, 104(%r15)
@@ -6214,11 +6214,11 @@ define void @constrained_vector_trunc_v3f64(<3 x double>* %a) #0 {
 ; SZ13-NEXT:    std %f1, 16(%r2)
 ; SZ13-NEXT:    br %r14
 entry:
-  %b = load <3 x double>, <3 x double>* %a
+  %b = load <3 x double>, ptr %a
   %trunc = call <3 x double> @llvm.experimental.constrained.trunc.v3f64(
                           <3 x double> %b,
                           metadata !"fpexcept.strict") #0
-  store <3 x double> %trunc, <3 x double>* %a
+  store <3 x double> %trunc, ptr %a
   ret void
 }
 

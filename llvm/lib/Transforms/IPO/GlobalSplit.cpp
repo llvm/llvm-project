@@ -29,8 +29,6 @@
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/IPO.h"
 #include <cstdint>
@@ -134,9 +132,9 @@ static bool splitGlobal(GlobalVariable &GV) {
   }
 
   // Finally, remove the original global. Any remaining uses refer to invalid
-  // elements of the global, so replace with undef.
+  // elements of the global, so replace with poison.
   if (!GV.use_empty())
-    GV.replaceAllUsesWith(UndefValue::get(GV.getType()));
+    GV.replaceAllUsesWith(PoisonValue::get(GV.getType()));
   GV.eraseFromParent();
   return true;
 }
@@ -157,33 +155,6 @@ static bool splitGlobals(Module &M) {
   for (GlobalVariable &GV : llvm::make_early_inc_range(M.globals()))
     Changed |= splitGlobal(GV);
   return Changed;
-}
-
-namespace {
-
-struct GlobalSplit : public ModulePass {
-  static char ID;
-
-  GlobalSplit() : ModulePass(ID) {
-    initializeGlobalSplitPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    return splitGlobals(M);
-  }
-};
-
-} // end anonymous namespace
-
-char GlobalSplit::ID = 0;
-
-INITIALIZE_PASS(GlobalSplit, "globalsplit", "Global splitter", false, false)
-
-ModulePass *llvm::createGlobalSplitPass() {
-  return new GlobalSplit;
 }
 
 PreservedAnalyses GlobalSplitPass::run(Module &M, ModuleAnalysisManager &AM) {

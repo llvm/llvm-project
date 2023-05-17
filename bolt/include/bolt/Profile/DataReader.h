@@ -21,6 +21,7 @@
 #include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <map>
 #include <unordered_map>
 #include <vector>
 
@@ -268,18 +269,18 @@ public:
 
   bool isTrustedSource() const override { return false; }
 
-  virtual Error preprocessProfile(BinaryContext &BC) override;
+  Error preprocessProfile(BinaryContext &BC) override;
 
-  virtual Error readProfilePreCFG(BinaryContext &BC) override;
+  Error readProfilePreCFG(BinaryContext &BC) override;
 
-  virtual Error readProfile(BinaryContext &BC) override;
+  Error readProfile(BinaryContext &BC) override;
 
-  virtual bool hasLocalsWithFileName() const override;
+  bool hasLocalsWithFileName() const override;
 
-  virtual bool mayHaveProfileData(const BinaryFunction &BF) override;
+  bool mayHaveProfileData(const BinaryFunction &BF) override;
 
   /// Return all event names used to collect this profile
-  virtual StringSet<> getEventNames() const override { return EventNames; }
+  StringSet<> getEventNames() const override { return EventNames; }
 
 protected:
   /// Read profile information available for the function.
@@ -426,9 +427,9 @@ protected:
     FuncsToMemData[&BF] = FMD;
   }
 
-  using NamesToBranchesMapTy = StringMap<FuncBranchData>;
-  using NamesToSamplesMapTy = StringMap<FuncSampleData>;
-  using NamesToMemEventsMapTy = StringMap<FuncMemData>;
+  using NamesToBranchesMapTy = std::map<StringRef, FuncBranchData>;
+  using NamesToSamplesMapTy = std::map<StringRef, FuncSampleData>;
+  using NamesToMemEventsMapTy = std::map<StringRef, FuncMemData>;
   using FuncsToBranchesMapTy =
       std::unordered_map<const BinaryFunction *, FuncBranchData *>;
   using FuncsToMemDataMapTy =
@@ -449,7 +450,7 @@ protected:
   bool usesEvent(StringRef Name) const {
     for (auto I = EventNames.begin(), E = EventNames.end(); I != E; ++I) {
       StringRef Event = I->getKey();
-      if (Event.find(Name) != StringRef::npos)
+      if (Event.contains(Name))
         return true;
     }
     return false;
@@ -502,6 +503,9 @@ protected:
   /// Maps of common LTO names to possible matching profiles.
   StringMap<std::vector<FuncBranchData *>> LTOCommonNameMap;
   StringMap<std::vector<FuncMemData *>> LTOCommonNameMemMap;
+
+public:
+  void setParsingBuffer(StringRef Buffer) { ParsingBuf = Buffer; }
 };
 
 } // namespace bolt

@@ -10,9 +10,9 @@
 #ifndef _LIBCPP___RANGES_LAZY_SPLIT_VIEW_H
 #define _LIBCPP___RANGES_LAZY_SPLIT_VIEW_H
 
-#include <__algorithm/in_in_result.h>
 #include <__algorithm/ranges_find.h>
 #include <__algorithm/ranges_mismatch.h>
+#include <__assert>
 #include <__concepts/constructible.h>
 #include <__concepts/convertible_to.h>
 #include <__concepts/derived_from.h>
@@ -35,9 +35,13 @@
 #include <__ranges/single_view.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/maybe_const.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -45,7 +49,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
 
@@ -78,14 +82,14 @@ public:
     requires default_initializable<_View> && default_initializable<_Pattern> = default;
 
   _LIBCPP_HIDE_FROM_ABI
-  constexpr lazy_split_view(_View __base, _Pattern __pattern)
+  constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 lazy_split_view(_View __base, _Pattern __pattern)
     : __base_(std::move(__base)), __pattern_(std::move(__pattern)) {}
 
   template <input_range _Range>
     requires constructible_from<_View, views::all_t<_Range>> &&
              constructible_from<_Pattern, single_view<range_value_t<_Range>>>
   _LIBCPP_HIDE_FROM_ABI
-  constexpr lazy_split_view(_Range&& __r, range_value_t<_Range> __e)
+  constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 lazy_split_view(_Range&& __r, range_value_t<_Range> __e)
     : __base_(views::all(std::forward<_Range>(__r)))
     , __pattern_(views::single(std::move(__e))) {}
 
@@ -458,7 +462,7 @@ inline namespace __cpo {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

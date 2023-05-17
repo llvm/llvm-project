@@ -20,10 +20,10 @@
 #include "lldb/lldb-types.h"
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 
 #include <algorithm>
 #include <chrono>
+#include <optional>
 
 #include <cerrno>
 #if defined(_WIN32)
@@ -82,9 +82,9 @@ bool SelectHelper::FDIsSetError(lldb::socket_t fd) const {
     return false;
 }
 
-static void updateMaxFd(llvm::Optional<lldb::socket_t> &vold,
+static void updateMaxFd(std::optional<lldb::socket_t> &vold,
                         lldb::socket_t vnew) {
-  if (!vold.hasValue())
+  if (!vold)
     vold = vnew;
   else
     vold = std::max(*vold, vnew);
@@ -100,10 +100,10 @@ lldb_private::Status SelectHelper::Select() {
     return lldb_private::Status("Too many file descriptors for select()");
 #endif
 
-  llvm::Optional<lldb::socket_t> max_read_fd;
-  llvm::Optional<lldb::socket_t> max_write_fd;
-  llvm::Optional<lldb::socket_t> max_error_fd;
-  llvm::Optional<lldb::socket_t> max_fd;
+  std::optional<lldb::socket_t> max_read_fd;
+  std::optional<lldb::socket_t> max_write_fd;
+  std::optional<lldb::socket_t> max_error_fd;
+  std::optional<lldb::socket_t> max_fd;
   for (auto &pair : m_fd_map) {
     pair.second.PrepareForSelect();
     const lldb::socket_t fd = pair.first;
@@ -123,7 +123,7 @@ lldb_private::Status SelectHelper::Select() {
     updateMaxFd(max_fd, fd);
   }
 
-  if (!max_fd.hasValue()) {
+  if (!max_fd) {
     error.SetErrorString("no valid file descriptors");
     return error;
   }
@@ -138,15 +138,15 @@ lldb_private::Status SelectHelper::Select() {
   llvm::SmallVector<fd_set, 1> write_fdset;
   llvm::SmallVector<fd_set, 1> error_fdset;
 
-  if (max_read_fd.hasValue()) {
+  if (max_read_fd.has_value()) {
     read_fdset.resize((nfds / FD_SETSIZE) + 1);
     read_fdset_ptr = read_fdset.data();
   }
-  if (max_write_fd.hasValue()) {
+  if (max_write_fd.has_value()) {
     write_fdset.resize((nfds / FD_SETSIZE) + 1);
     write_fdset_ptr = write_fdset.data();
   }
-  if (max_error_fd.hasValue()) {
+  if (max_error_fd.has_value()) {
     error_fdset.resize((nfds / FD_SETSIZE) + 1);
     error_fdset_ptr = error_fdset.data();
   }
@@ -161,15 +161,15 @@ lldb_private::Status SelectHelper::Select() {
   fd_set write_fdset;
   fd_set error_fdset;
 
-  if (max_read_fd.hasValue()) {
+  if (max_read_fd) {
     FD_ZERO(&read_fdset);
     read_fdset_ptr = &read_fdset;
   }
-  if (max_write_fd.hasValue()) {
+  if (max_write_fd) {
     FD_ZERO(&write_fdset);
     write_fdset_ptr = &write_fdset;
   }
-  if (max_error_fd.hasValue()) {
+  if (max_error_fd) {
     FD_ZERO(&error_fdset);
     error_fdset_ptr = &error_fdset;
   }
@@ -195,10 +195,10 @@ lldb_private::Status SelectHelper::Select() {
   while (true) {
     using namespace std::chrono;
     // Setup out relative timeout based on the end time if we have one
-    if (m_end_time.hasValue()) {
+    if (m_end_time) {
       tv_ptr = &tv;
-      const auto remaining_dur = duration_cast<microseconds>(
-          m_end_time.getValue() - steady_clock::now());
+      const auto remaining_dur =
+          duration_cast<microseconds>(*m_end_time - steady_clock::now());
       if (remaining_dur.count() > 0) {
         // Wait for a specific amount of time
         const auto dur_secs = duration_cast<seconds>(remaining_dur);

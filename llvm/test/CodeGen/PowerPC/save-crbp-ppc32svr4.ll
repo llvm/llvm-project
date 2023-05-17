@@ -22,7 +22,7 @@ target triple = "powerpc-unknown-freebsd"
 define i64 @fred(double %a0) local_unnamed_addr #0 {
 b1:
   %v2 = alloca i64, align 128
-  store i64 0, i64* %v2
+  store i64 0, ptr %v2
   %a1 = tail call double asm "fadd $0, $1, $2", "=f,f,f,~{cr2}"(double %a0, double %a0)
   %v3 = fcmp olt double %a1, 0x43E0000000000000
   br i1 %v3, label %b4, label %b8
@@ -30,7 +30,7 @@ b1:
 b4:                                               ; preds = %b1
   %v5 = fcmp olt double %a0, 0xC3E0000000000000
   %v6 = fptosi double %a0 to i64
-  store i64 %v6, i64* %v2
+  store i64 %v6, ptr %v2
   %v7 = select i1 %v5, i64 -9223372036854775808, i64 %v6
   br label %b15
 
@@ -49,7 +49,7 @@ b12:                                              ; preds = %b8
 
 b15:                                              ; preds = %b12, %b10, %b4
   %v16 = phi i64 [ %v7, %b4 ], [ %v11, %b10 ], [ %v14, %b12 ]
-  %v17 = load i64, i64* %v2
+  %v17 = load i64, ptr %v2
   %v18 = add i64 %v17, %v16
   ret i64 %v18
 }

@@ -2,12 +2,12 @@
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 ## This test checks the LLD implementation of the Local Exec TLS model
 ## when using prefixed instructions like paddi.

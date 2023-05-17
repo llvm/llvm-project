@@ -96,7 +96,7 @@ st2h { z0.h, z1.s }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 st2h { z0.h, z2.h }, p0, [x0]
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: st2h { z0.h, z2.h }, p0, [x0]
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

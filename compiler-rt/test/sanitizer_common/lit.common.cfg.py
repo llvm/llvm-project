@@ -10,6 +10,14 @@ collect_stack_traces = ""
 if config.tool_name == "asan":
   tool_cflags = ["-fsanitize=address"]
   tool_options = "ASAN_OPTIONS"
+elif config.tool_name == "hwasan":
+  tool_cflags = ["-fsanitize=hwaddress", "-fuse-ld=lld"]
+  if config.target_arch == "x86_64":
+    tool_cflags += ["-fsanitize-hwaddress-experimental-aliasing"]
+    config.available_features.add("hwasan-aliasing")
+  tool_options = "HWASAN_OPTIONS"
+  if not config.has_lld:
+    config.unsupported = True
 elif config.tool_name == "tsan":
   tool_cflags = ["-fsanitize=thread"]
   tool_options = "TSAN_OPTIONS"
@@ -57,6 +65,7 @@ if config.host_os in ['Linux']:
   extra_link_flags += ["-ldl"]
 
 clang_cflags = config.debug_info_flags + tool_cflags + [config.target_cflags]
+clang_cflags += ["-I%s" % os.path.dirname(os.path.dirname(__file__))]
 clang_cflags += extra_link_flags
 clang_cxxflags = config.cxx_mode_flags + clang_cflags
 

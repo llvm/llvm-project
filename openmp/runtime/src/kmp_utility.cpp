@@ -370,7 +370,7 @@ void __kmp_expand_file_name(char *result, size_t rlen, char *pattern) {
         case 'I':
         case 'i': {
           pid_t id = getpid();
-#if KMP_ARCH_X86_64 && defined(__MINGW32__)
+#if (KMP_ARCH_X86_64 || KMP_ARCH_AARCH64) && defined(__MINGW32__)
           snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*lld", width, id);
 #else
           snp_result = KMP_SNPRINTF(pos, end - pos + 1, "%0*d", width, id);
@@ -403,3 +403,16 @@ void __kmp_expand_file_name(char *result, size_t rlen, char *pattern) {
 
   *pos = '\0';
 }
+
+#if !OMPT_SUPPORT
+extern "C" {
+typedef struct ompt_start_tool_result_t ompt_start_tool_result_t;
+// Define symbols expected by VERSION script
+ompt_start_tool_result_t *ompt_start_tool(unsigned int omp_version,
+                                          const char *runtime_version) {
+  return nullptr;
+}
+
+void ompt_libomp_connect(ompt_start_tool_result_t *result) { result = nullptr; }
+}
+#endif

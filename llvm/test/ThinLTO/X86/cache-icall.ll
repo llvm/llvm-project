@@ -32,11 +32,10 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i8* @_start(void ()* %p) !type !0 {
+define ptr @_start(ptr %p) !type !0 {
 entry:
-  %0 = bitcast void ()* %p to i8*
-  %1 = tail call i1 @llvm.type.test(i8* %0, metadata !"_ZTSFvvE")
-  br i1 %1, label %cont, label %trap
+  %0 = tail call i1 @llvm.type.test(ptr %p, metadata !"_ZTSFvvE")
+  br i1 %0, label %cont, label %trap
 
 trap:                                             ; preds = %entry
   tail call void @llvm.trap()
@@ -44,10 +43,10 @@ trap:                                             ; preds = %entry
 
 cont:                                             ; preds = %entry
   tail call void %p()
-  ret i8* bitcast (void ()* @f to i8*)
+  ret ptr @f
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.trap()
 declare !type !1 void @f()
 

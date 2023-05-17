@@ -4,12 +4,17 @@
 ; REQUIRES: arm-registered-target
 
 ; NVPTX cannot select BlockAddress
-; XFAIL: nvptx
+; XFAIL: target=nvptx{{.*}}
+
+; The behavior of this test is not well defined. On PowerPC the test may pass
+; or fail depending on the order in which the test functions are processed by
+; llc.
+; UNSUPPORTED: target=powerpc{{.*}}
 
 ;; Reference to a label that gets deleted.
-define i8* @test1() nounwind {
+define ptr @test1() nounwind {
 entry:
-	ret i8* blockaddress(@test1b, %test_label)
+	ret ptr blockaddress(@test1b, %test_label)
 }
 
 define i32 @test1b() nounwind {
@@ -25,16 +30,16 @@ ret:
 ; Issues with referring to a label that gets RAUW'd later.
 define i32 @test2a() nounwind {
 entry:
-        %target = bitcast i8* blockaddress(@test2b, %test_label) to i8*
+        %target = bitcast ptr blockaddress(@test2b, %test_label) to ptr
 
-        call i32 @test2b(i8* %target)
+        call i32 @test2b(ptr %target)
 
         ret i32 0
 }
 
-define i32 @test2b(i8* %target) nounwind {
+define i32 @test2b(ptr %target) nounwind {
 entry:
-        indirectbr i8* %target, [label %test_label]
+        indirectbr ptr %target, [label %test_label]
 
 test_label:
 ; assume some code here...
@@ -46,10 +51,10 @@ ret:
 
 ; Issues with a BB that gets RAUW'd to another one after references are
 ; generated.
-define void @test3(i8** %P, i8** %Q) nounwind {
+define void @test3(ptr %P, ptr %Q) nounwind {
 entry:
-  store i8* blockaddress(@test3b, %test_label), i8** %P
-  store i8* blockaddress(@test3b, %ret), i8** %Q
+  store ptr blockaddress(@test3b, %test_label), ptr %P
+  store ptr blockaddress(@test3b, %ret), ptr %Q
   ret void
 }
 
@@ -66,15 +71,15 @@ ret:
 ; PR6673
 
 define i64 @test4a() {
-	%target = bitcast i8* blockaddress(@test4b, %usermain) to i8*
-	%ret = call i64 @test4b(i8* %target)
+	%target = bitcast ptr blockaddress(@test4b, %usermain) to ptr
+	%ret = call i64 @test4b(ptr %target)
 
 	ret i64 %ret
 }
 
-define i64 @test4b(i8* %Code) {
+define i64 @test4b(ptr %Code) {
 entry:
-	indirectbr i8* %Code, [label %usermain]
+	indirectbr ptr %Code, [label %usermain]
 usermain:
 	br label %label_line_0
 
@@ -82,6 +87,6 @@ label_line_0:
 	br label %label_line_1
 
 label_line_1:
-	%target = ptrtoint i8* blockaddress(@test4b, %label_line_0) to i64
+	%target = ptrtoint ptr blockaddress(@test4b, %label_line_0) to i64
 	ret i64 %target
 }

@@ -15,9 +15,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
-#include "llvm/Transforms/Utils.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -34,9 +32,24 @@ static void insertCall(Function &CurFn, StringRef Func,
       Func == "__mcount" ||
       Func == "_mcount" ||
       Func == "__cyg_profile_func_enter_bare") {
-    FunctionCallee Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
-    CallInst *Call = CallInst::Create(Fn, "", InsertionPt);
-    Call->setDebugLoc(DL);
+    Triple TargetTriple(M.getTargetTriple());
+    if (TargetTriple.isOSAIX() && Func == "__mcount") {
+      Type *SizeTy = M.getDataLayout().getIntPtrType(C);
+      Type *SizePtrTy = SizeTy->getPointerTo();
+      GlobalVariable *GV = new GlobalVariable(M, SizeTy, /*isConstant=*/false,
+                                              GlobalValue::InternalLinkage,
+                                              ConstantInt::get(SizeTy, 0));
+      CallInst *Call = CallInst::Create(
+          M.getOrInsertFunction(Func,
+                                FunctionType::get(Type::getVoidTy(C), {SizePtrTy},
+                                                  /*isVarArg=*/false)),
+          {GV}, "", InsertionPt);
+      Call->setDebugLoc(DL);
+    } else {
+      FunctionCallee Fn = M.getOrInsertFunction(Func, Type::getVoidTy(C));
+      CallInst *Call = CallInst::Create(Fn, "", InsertionPt);
+      Call->setDebugLoc(DL);
+    }
     return;
   }
 
@@ -67,6 +80,13 @@ static void insertCall(Function &CurFn, StringRef Func,
 }
 
 static bool runOnFunction(Function &F, bool PostInlining) {
+  // The asm in a naked function may reasonably expect the argument registers
+  // and the return address register (if present) to be live. An inserted
+  // function call will clobber these registers. Simply skip naked functions for
+  // all targets.
+  if (F.hasFnAttribute(Attribute::Naked))
+    return false;
+
   StringRef EntryAttr = PostInlining ? "instrument-function-entry-inlined"
                                      : "instrument-function-entry";
 
@@ -117,65 +137,6 @@ static bool runOnFunction(Function &F, bool PostInlining) {
   return Changed;
 }
 
-namespace {
-struct EntryExitInstrumenter : public FunctionPass {
-  static char ID;
-  EntryExitInstrumenter() : FunctionPass(ID) {
-    initializeEntryExitInstrumenterPass(*PassRegistry::getPassRegistry());
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-  bool runOnFunction(Function &F) override { return ::runOnFunction(F, false); }
-};
-char EntryExitInstrumenter::ID = 0;
-
-struct PostInlineEntryExitInstrumenter : public FunctionPass {
-  static char ID;
-  PostInlineEntryExitInstrumenter() : FunctionPass(ID) {
-    initializePostInlineEntryExitInstrumenterPass(
-        *PassRegistry::getPassRegistry());
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<GlobalsAAWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-  }
-  bool runOnFunction(Function &F) override { return ::runOnFunction(F, true); }
-};
-char PostInlineEntryExitInstrumenter::ID = 0;
-}
-
-INITIALIZE_PASS_BEGIN(
-    EntryExitInstrumenter, "ee-instrument",
-    "Instrument function entry/exit with calls to e.g. mcount() (pre inlining)",
-    false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(
-    EntryExitInstrumenter, "ee-instrument",
-    "Instrument function entry/exit with calls to e.g. mcount() (pre inlining)",
-    false, false)
-
-INITIALIZE_PASS_BEGIN(
-    PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
-    "Instrument function entry/exit with calls to e.g. mcount() "
-    "(post inlining)",
-    false, false)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_END(
-    PostInlineEntryExitInstrumenter, "post-inline-ee-instrument",
-    "Instrument function entry/exit with calls to e.g. mcount() "
-    "(post inlining)",
-    false, false)
-
-FunctionPass *llvm::createEntryExitInstrumenterPass() {
-  return new EntryExitInstrumenter();
-}
-
-FunctionPass *llvm::createPostInlineEntryExitInstrumenterPass() {
-  return new PostInlineEntryExitInstrumenter();
-}
-
 PreservedAnalyses
 llvm::EntryExitInstrumenterPass::run(Function &F, FunctionAnalysisManager &AM) {
   runOnFunction(F, PostInlining);
@@ -188,8 +149,8 @@ void llvm::EntryExitInstrumenterPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<llvm::EntryExitInstrumenterPass> *>(this)
       ->printPipeline(OS, MapClassName2PassName);
-  OS << "<";
+  OS << '<';
   if (PostInlining)
     OS << "post-inline";
-  OS << ">";
+  OS << '>';
 }

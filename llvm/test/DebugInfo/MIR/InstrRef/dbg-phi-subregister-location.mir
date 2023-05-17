@@ -9,8 +9,8 @@
 #
 # CHECK-LABEL: name: foo
 # CHECK:       DBG_PHI $edi
-# CHECK-NEXT:  DBG_INSTR_REF 2, 0
-# CHECK-NEXT:  DBG_VALUE $dil
+# CHECK-NEXT:  DBG_INSTR_REF {{.+}}, dbg-instr-ref(2, 0)
+# CHECK-NEXT:  DBG_VALUE_LIST {{.+}} $dil
 --- |
   ; ModuleID = 'out.ll'
   source_filename = "out.ll"
@@ -50,6 +50,7 @@
 name:            foo
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 liveins:
   - { reg: '$edi' }
 frameInfo:
@@ -63,7 +64,7 @@ body:             |
     liveins: $edi
 
     DBG_PHI $edi, 1
-    DBG_INSTR_REF 2, 0, !12, !DIExpression(), debug-location !13
+    DBG_INSTR_REF !12, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !13
     renamable $rax = MOV64rm $rip, 1, $noreg, target-flags(x86-gotpcrel) @someglobal, $noreg, debug-location !13 :: (load (s64) from got)
     MOV8mr killed renamable $rax, 1, $noreg, 0, $noreg, renamable $dil, debug-location !13 :: (store (s8) into @someglobal)
     RET64 debug-location !13

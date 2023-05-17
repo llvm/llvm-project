@@ -13,22 +13,22 @@ target triple = "hexagon"
 ; Function Attrs: nounwind optsize
 define void @f0(i32 %a0) #0 {
 b0:
-  store i32 1, i32* @g0, align 4
+  store i32 1, ptr @g0, align 4
   ret void
 }
 
 ; Function Attrs: nounwind optsize
 define void @f1(i32 %a0) #0 {
 b0:
-  store i32 1, i32* @g0, align 4
-  store i32 2, i32* @g1, align 4
-  store i32 3, i32* @g2, align 4
-  store i32 4, i32* @g3, align 4
+  store i32 1, ptr @g0, align 4
+  store i32 2, ptr @g1, align 4
+  store i32 3, ptr @g2, align 4
+  store i32 4, ptr @g3, align 4
   ret void
 }
 
 ; Function Attrs: nounwind optsize readnone
-define i32 @f2(i32 %a0, i8** nocapture readnone %a1) #1 {
+define i32 @f2(i32 %a0, ptr nocapture readnone %a1) #1 {
 b0:
   ret i32 %a0
 }

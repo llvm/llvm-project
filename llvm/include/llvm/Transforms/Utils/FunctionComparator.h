@@ -332,7 +332,9 @@ private:
   int cmpOrderings(AtomicOrdering L, AtomicOrdering R) const;
   int cmpInlineAsm(const InlineAsm *L, const InlineAsm *R) const;
   int cmpAttrs(const AttributeList L, const AttributeList R) const;
-  int cmpRangeMetadata(const MDNode *L, const MDNode *R) const;
+  int cmpMDNode(const MDNode *L, const MDNode *R) const;
+  int cmpMetadata(const Metadata *L, const Metadata *R) const;
+  int cmpInstMetadata(Instruction const *L, Instruction const *R) const;
   int cmpOperandBundlesSchema(const CallBase &LCS, const CallBase &RCS) const;
 
   /// Compare two GEPs for equivalent pointer arithmetic.

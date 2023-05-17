@@ -25,6 +25,7 @@
 #include "llvm/ADT/StringRef.h"
 #include <list>
 #include <memory>
+#include <optional>
 #include <utility>
 
 namespace clang {
@@ -397,7 +398,7 @@ class TrackConstraintBRVisitor final : public BugReporterVisitor {
 public:
   TrackConstraintBRVisitor(DefinedSVal constraint, bool assumption)
       : Constraint(constraint), Assumption(assumption),
-        IsZeroCheck(!Assumption && Constraint.getAs<Loc>()) {}
+        IsZeroCheck(!Assumption && isa<Loc>(Constraint)) {}
 
   void Profile(llvm::FoldingSetNodeID &ID) const override;
 
@@ -502,13 +503,9 @@ public:
   bool printValue(const Expr *CondVarExpr, raw_ostream &Out,
                   const ExplodedNode *N, bool TookTrue, bool IsAssuming);
 
-  bool patternMatch(const Expr *Ex,
-                    const Expr *ParentEx,
-                    raw_ostream &Out,
-                    BugReporterContext &BRC,
-                    PathSensitiveBugReport &R,
-                    const ExplodedNode *N,
-                    Optional<bool> &prunable,
+  bool patternMatch(const Expr *Ex, const Expr *ParentEx, raw_ostream &Out,
+                    BugReporterContext &BRC, PathSensitiveBugReport &R,
+                    const ExplodedNode *N, std::optional<bool> &prunable,
                     bool IsSameFieldName);
 
   static bool isPieceMessageGeneric(const PathDiagnosticPiece *Piece);
@@ -731,7 +728,7 @@ public:
 
   PathDiagnosticPieceRef VisitNode(const ExplodedNode *N,
                                    BugReporterContext &BR,
-                                   PathSensitiveBugReport &R) override final;
+                                   PathSensitiveBugReport &R) final;
 };
 
 } // namespace ento

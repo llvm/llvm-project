@@ -11,11 +11,11 @@ define hidden void @foo() unnamed_addr #1 !dbg !230 {
   br i1 undef, label %bb4, label %bb5
 
 bb4:                                              ; preds = %bb3
-  %i = extractvalue { i8*, i64 } undef, 0
+  %i = extractvalue { ptr, i64 } undef, 0
   ret void
 
 bb5:                                              ; preds = %bb3
-  call void @llvm.dbg.value(metadata i8* %i, metadata !370, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !372
+  call void @llvm.dbg.value(metadata ptr %i, metadata !370, metadata !DIExpression(DW_OP_LLVM_fragment, 0, 64)), !dbg !372
   ret void
 }
 

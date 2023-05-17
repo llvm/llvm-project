@@ -101,7 +101,7 @@ public:
     // Create a mock function
     MCSection *Section = C.MOFI->getTextSection();
     Section->setHasInstructions(true);
-    TheStreamer->SwitchSection(Section);
+    TheStreamer->switchSection(Section);
     TheStreamer->emitCFIStartProc(true);
 
     // Create a mock dwarfloc
@@ -115,13 +115,13 @@ public:
     TheStreamer->emitCFIEndProc();
 
     // Start emission of .debug_line
-    TheStreamer->SwitchSection(C.MOFI->getDwarfLineSection());
+    TheStreamer->switchSection(C.MOFI->getDwarfLineSection());
     MCDwarfLineTableHeader Header;
     MCDwarfLineTableParams Params = Assembler.getDWARFLinetableParams();
-    Optional<MCDwarfLineStr> LineStr(None);
+    std::optional<MCDwarfLineStr> LineStr(std::nullopt);
     if (Ctx.getDwarfVersion() >= 5) {
-      LineStr = MCDwarfLineStr(Ctx);
-      Header.setRootFile("dir", "file", None, None);
+      LineStr.emplace(Ctx);
+      Header.setRootFile("dir", "file", std::nullopt, std::nullopt);
     }
     MCSymbol *LineEndSym = Header.Emit(TheStreamer, Params, LineStr).second;
 
@@ -133,7 +133,7 @@ public:
     TheStreamer->emitLabel(LineEndSym);
     if (LineStr) {
       SmallString<0> Data = LineStr->getFinalizedData();
-      TheStreamer->SwitchSection(TheStreamer->getContext()
+      TheStreamer->switchSection(TheStreamer->getContext()
                                      .getObjectFileInfo()
                                      ->getDwarfLineStrSection());
       TheStreamer->emitBinaryData(Data.str());
@@ -200,7 +200,7 @@ public:
 
 TEST_F(DwarfLineTableHeaders, TestDWARF4HeaderEmission) {
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   SmallString<0> EmittedBinContents;
   raw_svector_ostream VecOS(EmittedBinContents);
@@ -224,7 +224,7 @@ TEST_F(DwarfLineTableHeaders, TestDWARF4HeaderEmission) {
 
 TEST_F(DwarfLineTableHeaders, TestDWARF5HeaderEmission) {
   if (!MRI)
-    return;
+    GTEST_SKIP();
 
   SmallString<0> EmittedBinContents;
   raw_svector_ostream VecOS(EmittedBinContents);

@@ -3,9 +3,7 @@ include "mlir/Dialect/Shape/IR/ShapeOps.td"
 include "mlir/Dialect/Tensor/IR/TensorOps.td"
 
 def AllInputShapesEq : Constraint<CPred< [{
-  llvm::all_of($0, [&](mlir::Value val) {
-    return $0[0] == val;
-  })
+  llvm::all_equal($0)
 }]>>;
 
 def HasSingleElement : Constraint<CPred< [{
@@ -13,7 +11,7 @@ def HasSingleElement : Constraint<CPred< [{
 }]>>;
 
 def HasStaticShape : Constraint<CPred< [{
-  $0.getType().dyn_cast<ShapedType>().hasStaticShape()
+  ::llvm::dyn_cast<ShapedType>($0.getType()).hasStaticShape()
 }]>>;
 
 // Helper that takes the first element of a range.

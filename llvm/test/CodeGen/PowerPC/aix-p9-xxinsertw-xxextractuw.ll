@@ -715,7 +715,6 @@ entry:
 define double @conv2dlbTestuiVar(<4 x i32> %a, i32 zeroext %elem) {
 ; CHECK-64-LABEL: conv2dlbTestuiVar:
 ; CHECK-64:       # %bb.0: # %entry
-; CHECK-64-NEXT:    extsw 3, 3
 ; CHECK-64-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-64-NEXT:    vextuwlx 3, 3, 2
 ; CHECK-64-NEXT:    mtfprwz 0, 3
@@ -1448,15 +1447,15 @@ define <4 x float> @testSameVecEl0LE(<4 x float> %a) {
 ; CHECK-64-LABEL: testSameVecEl0LE:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C0(2) # %const.0
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testSameVecEl0LE:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C0(2) # %const.0
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 6, i32 1, i32 2, i32 3>
@@ -1466,15 +1465,15 @@ define <4 x float> @testSameVecEl1LE(<4 x float> %a) {
 ; CHECK-64-LABEL: testSameVecEl1LE:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C1(2) # %const.0
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testSameVecEl1LE:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C1(2) # %const.0
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 0, i32 6, i32 2, i32 3>
@@ -1484,15 +1483,15 @@ define <4 x float> @testSameVecEl3LE(<4 x float> %a) {
 ; CHECK-64-LABEL: testSameVecEl3LE:
 ; CHECK-64:       # %bb.0: # %entry
 ; CHECK-64-NEXT:    ld 3, L..C2(2) # %const.0
-; CHECK-64-NEXT:    lxv 35, 0(3)
-; CHECK-64-NEXT:    vperm 2, 2, 2, 3
+; CHECK-64-NEXT:    lxv 0, 0(3)
+; CHECK-64-NEXT:    xxperm 34, 34, 0
 ; CHECK-64-NEXT:    blr
 ;
 ; CHECK-32-LABEL: testSameVecEl3LE:
 ; CHECK-32:       # %bb.0: # %entry
 ; CHECK-32-NEXT:    lwz 3, L..C2(2) # %const.0
-; CHECK-32-NEXT:    lxv 35, 0(3)
-; CHECK-32-NEXT:    vperm 2, 2, 2, 3
+; CHECK-32-NEXT:    lxv 0, 0(3)
+; CHECK-32-NEXT:    xxperm 34, 34, 0
 ; CHECK-32-NEXT:    blr
 entry:
   %vecins = shufflevector <4 x float> %a, <4 x float> %a, <4 x i32> <i32 0, i32 1, i32 2, i32 6>

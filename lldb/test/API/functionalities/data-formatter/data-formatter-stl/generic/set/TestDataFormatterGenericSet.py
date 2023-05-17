@@ -14,8 +14,6 @@ USE_LIBCPP = "USE_LIBCPP"
 
 class GenericSetDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.namespace = 'std'
@@ -103,7 +101,7 @@ class GenericSetDataFormatterTestCase(TestBase):
                      '[2] = "b"',
                      '[3] = "c"'])
         self.expect(
-            "p ss",
+            "expression ss",
             substrs=["size=4",
                      '[0] = "a"',
                      '[1] = "a very long string is right here"',

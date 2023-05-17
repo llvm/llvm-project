@@ -1,4 +1,4 @@
-//===- GIMatchDagPredicate - Represent a predicate to check ---------------===//
+//===- GIMatchDagPredicate - Represent a predicate to check -----*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -96,7 +96,7 @@ public:
   void printDescription(raw_ostream &OS) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual LLVM_DUMP_METHOD void dump() const override { print(errs()); }
+  LLVM_DUMP_METHOD void dump() const override { print(errs()); }
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 };
 
@@ -119,7 +119,7 @@ public:
   void printDescription(raw_ostream &OS) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual LLVM_DUMP_METHOD void dump() const override { print(errs()); }
+  LLVM_DUMP_METHOD void dump() const override { print(errs()); }
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 };
 
@@ -134,7 +134,7 @@ public:
   void printDescription(raw_ostream &OS) const override;
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  virtual LLVM_DUMP_METHOD void dump() const override { print(errs()); }
+  LLVM_DUMP_METHOD void dump() const override { print(errs()); }
 #endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 };
 

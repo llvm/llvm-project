@@ -16,17 +16,13 @@
 
 #include <functional>
 
-#include "test_macros.h"
-
 struct Predicate {
     typedef int first_argument_type;
     typedef int second_argument_type;
     bool operator()(first_argument_type, second_argument_type) const { return true; }
 };
 
-int main(int, char**) {
+void test() {
     std::binary_negate<Predicate> f((Predicate())); // expected-warning {{'binary_negate<Predicate>' is deprecated}}
     (void)f;
-
-    return 0;
 }

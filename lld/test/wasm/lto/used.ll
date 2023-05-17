@@ -13,7 +13,7 @@ declare void @bar()
 @foo = external global i32
 
 define void @_start() {
-  %val = load i32, i32* @foo, align 4
+  %val = load i32, ptr @foo, align 4
   %tobool = icmp ne i32 %val, 0
   br i1 %tobool, label %callbar, label %return
 

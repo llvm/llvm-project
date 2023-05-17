@@ -14,7 +14,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/DebugInfo/Symbolize/SymbolizableModule.h"
 #include "llvm/DebugInfo/Symbolize/Symbolize.h"
@@ -57,6 +56,9 @@ public:
   static Expected<std::unique_ptr<RawMemProfReader>>
   create(const Twine &Path, const StringRef ProfiledBinary,
          bool KeepName = false);
+
+  // Returns a list of build ids recorded in the segment information.
+  static std::vector<std::string> peekBuildIds(MemoryBuffer *DataBuffer);
 
   using GuidMemProfRecordPair = std::pair<GlobalValue::GUID, MemProfRecord>;
   using Iterator = InstrProfIterator<GuidMemProfRecordPair, RawMemProfReader>;
@@ -107,6 +109,8 @@ private:
   Error initialize(std::unique_ptr<MemoryBuffer> DataBuffer);
   // Read and parse the contents of the `DataBuffer` as a binary format profile.
   Error readRawProfile(std::unique_ptr<MemoryBuffer> DataBuffer);
+  // Initialize the segment mapping information for symbolization.
+  Error setupForSymbolization();
   // Symbolize and cache all the virtual addresses we encounter in the
   // callstacks from the raw profile. Also prune callstack frames which we can't
   // symbolize or those that belong to the runtime. For profile entries where
@@ -126,11 +130,21 @@ private:
 
   object::SectionedAddress getModuleOffset(uint64_t VirtualAddress);
 
+  // The profiled binary.
   object::OwningBinary<object::Binary> Binary;
+  // A symbolizer to translate virtual addresses to code locations.
   std::unique_ptr<llvm::symbolize::SymbolizableModule> Symbolizer;
+  // The preferred load address of the executable segment.
+  uint64_t PreferredTextSegmentAddress = 0;
+  // The base address of the text segment in the process during profiling.
+  uint64_t ProfiledTextSegmentStart = 0;
+  // The limit address of the text segment in the process during profiling.
+  uint64_t ProfiledTextSegmentEnd = 0;
 
-  // The contents of the raw profile.
-  llvm::SmallVector<SegmentEntry, 16> SegmentInfo;
+  // The memory mapped segment information for all executable segments in the
+  // profiled binary (filtered from the raw profile using the build id).
+  llvm::SmallVector<SegmentEntry, 2> SegmentInfo;
+
   // A map from callstack id (same as key in CallStackMap below) to the heap
   // information recorded for that allocation context.
   llvm::MapVector<uint64_t, MemInfoBlock> CallstackProfileData;

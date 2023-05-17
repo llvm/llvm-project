@@ -9,7 +9,7 @@ target triple = "armv7--"
 define void @foo() #0 {
   %vsrc = alloca %struct.uint8x8x4_t, align 8
   %ptr = alloca i8;
-  %1 = call i8* asm sideeffect "vld4.u8 ${0:h}, [$1], $2", "=*w,=r,r,1"(%struct.uint8x8x4_t* elementtype(%struct.uint8x8x4_t) %vsrc, i32 0, i8* %ptr)
+  %1 = call ptr asm sideeffect "vld4.u8 ${0:h}, [$1], $2", "=*w,=r,r,1"(ptr elementtype(%struct.uint8x8x4_t) %vsrc, i32 0, ptr %ptr)
   ret void
 }
 

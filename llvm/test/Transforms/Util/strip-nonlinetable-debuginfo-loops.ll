@@ -1,4 +1,4 @@
-; RUN: opt -S -strip-nonlinetable-debuginfo %s -o %t
+; RUN: opt -S -passes=strip-nonlinetable-debuginfo %s -o %t
 ; RUN: cat %t | FileCheck %s
 ; RUN: cat %t | FileCheck %s --check-prefix=NEGATIVE
 ; void f(volatile int *i) {
@@ -8,15 +8,15 @@ source_filename = "/tmp/loop.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.12.0"
 
-define void @f(i32* %i) local_unnamed_addr #0 !dbg !7 {
+define void @f(ptr %i) local_unnamed_addr #0 !dbg !7 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %i, metadata !14, metadata !15), !dbg !16
+  tail call void @llvm.dbg.value(metadata ptr %i, metadata !14, metadata !15), !dbg !16
   br label %while.cond, !dbg !17
 
 while.cond:                                       ; preds = %while.cond, %entry
-  %0 = load volatile i32, i32* %i, align 4, !dbg !18, !tbaa !19
+  %0 = load volatile i32, ptr %i, align 4, !dbg !18, !tbaa !19
   %dec = add nsw i32 %0, -1, !dbg !18
-  store volatile i32 %dec, i32* %i, align 4, !dbg !18, !tbaa !19
+  store volatile i32 %dec, ptr %i, align 4, !dbg !18, !tbaa !19
   %tobool = icmp eq i32 %dec, 0, !dbg !17
   ; CHECK: !llvm.loop ![[LOOP:[0-9]+]]
   br i1 %tobool, label %while.end, label %while.cond, !dbg !17, !llvm.loop !23

@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 @b = common global i32 0, align 4
 
@@ -20,7 +20,7 @@ bb11:
   br i1 %y, label %bb1, label %bb13
 
 bb13:
-  store i32 %div, i32* @b, align 4
+  store i32 %div, ptr @b, align 4
   br label %bb14
 
 bb14:

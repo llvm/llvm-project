@@ -103,5 +103,14 @@ class G {
   void l(int x = C<int, C<int, int>::C1>().f()) {}
 
   // This isn't, but it shouldn't crash. The diagnostics don't matter much.
-  void m(int x = C<int, union int>().f()) {} // expected-error {{declaration of anonymous union must be a definition}} expected-error {{expected a type}} expected-error {{expected '>'}} expected-note {{to match}}
+  void m(int x = C<int, union int>().f()) {}
+  // expected-error@-1 {{declaration of anonymous union must be a definition}}
+  // expected-error@-2 {{type name requires a specifier or qualifier}}
+  // expected-error@-3 {{expected '>'}}
+  // expected-note@-4 {{to match this '<'}}
+
+  void n(int x = 1 ? 2) {}
+  // expected-error@-1 {{expected ':'}}
+  // expected-note@-2 {{to match this '?'}}
+  // expected-error@-3 {{expected expression}}
 };

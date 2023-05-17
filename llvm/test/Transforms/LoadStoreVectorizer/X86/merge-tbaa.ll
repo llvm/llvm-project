@@ -1,4 +1,4 @@
-; RUN: opt -mtriple=x86_64-unknown-linux-gnu -load-store-vectorizer -S < %s | \
+; RUN: opt -mtriple=x86_64-unknown-linux-gnu -passes=load-store-vectorizer -S < %s | \
 ; RUN:     FileCheck %s
 ; RUN: opt -mtriple=x86_64-unknown-linux-gnu -aa-pipeline=basic-aa -passes='function(load-store-vectorizer)' -S < %s | \
 ; RUN:     FileCheck %s
@@ -20,19 +20,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;   p->i -= 1;
 ;   return p->f;
 ; }
-define float @foo(%struct.S* %p) {
+define float @foo(ptr %p) {
 entry:
 ; CHECK-LABEL: foo
 ; CHECK: load <2 x i32>, {{.*}}, !tbaa [[TAG_char:!.*]]
 ; CHECK: store <2 x i32> {{.*}}, !tbaa [[TAG_char]]
-  %f = getelementptr inbounds %struct.S, %struct.S* %p, i64 0, i32 0
-  %0 = load float, float* %f, align 4, !tbaa !2
+  %0 = load float, ptr %p, align 4, !tbaa !2
   %sub = fadd float %0, -1.000000e+00
-  store float %sub, float* %f, align 4, !tbaa !2
-  %i = getelementptr inbounds %struct.S, %struct.S* %p, i64 0, i32 1
-  %1 = load i32, i32* %i, align 4, !tbaa !8
+  store float %sub, ptr %p, align 4, !tbaa !2
+  %i = getelementptr inbounds %struct.S, ptr %p, i64 0, i32 1
+  %1 = load i32, ptr %i, align 4, !tbaa !8
   %sub1 = add nsw i32 %1, -1
-  store i32 %sub1, i32* %i, align 4, !tbaa !8
+  store i32 %sub1, ptr %i, align 4, !tbaa !8
   ret float %sub
 }
 

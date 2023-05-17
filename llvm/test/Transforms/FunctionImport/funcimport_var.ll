@@ -18,10 +18,10 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define i32 @_Z4LinkPKcS0_(i8*, i8*) local_unnamed_addr  {
-  %3 = tail call i32 @link(i8* %0, i8* %1) #2
+define i32 @_Z4LinkPKcS0_(ptr, ptr) local_unnamed_addr  {
+  %3 = tail call i32 @link(ptr %0, ptr %1) #2
   ret i32 %3
 }
 
 ; Function Attrs: nounwind
-declare i32 @link(i8*, i8*) local_unnamed_addr 
+declare i32 @link(ptr, ptr) local_unnamed_addr 

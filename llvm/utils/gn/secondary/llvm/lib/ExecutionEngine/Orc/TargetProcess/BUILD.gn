@@ -3,8 +3,10 @@ static_library("TargetProcess") {
   deps = [
     "//llvm/lib/ExecutionEngine/Orc/Shared",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
+    "ExecutorSharedMemoryMapperService.cpp",
     "JITLoaderGDB.cpp",
     "OrcRTBootstrap.cpp",
     "RegisterEHFrames.cpp",
@@ -13,4 +15,7 @@ static_library("TargetProcess") {
     "SimpleRemoteEPCServer.cpp",
     "TargetExecutionUtils.cpp",
   ]
+  if (current_os == "linux") {
+    libs = [ "rt" ]
+  }
 }

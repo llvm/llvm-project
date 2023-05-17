@@ -9,10 +9,11 @@
 #include "lldb/Target/UnixSignals.h"
 #include "Plugins/Process/Utility/FreeBSDSignals.h"
 #include "Plugins/Process/Utility/LinuxSignals.h"
-#include "Plugins/Process/Utility/MipsLinuxSignals.h"
 #include "Plugins/Process/Utility/NetBSDSignals.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
+#include <optional>
+#include <sstream>
 
 using namespace lldb_private;
 using namespace llvm;
@@ -32,17 +33,8 @@ UnixSignals::Signal::Signal(const char *name, bool default_suppress,
 lldb::UnixSignalsSP UnixSignals::Create(const ArchSpec &arch) {
   const auto &triple = arch.GetTriple();
   switch (triple.getOS()) {
-  case llvm::Triple::Linux: {
-    switch (triple.getArch()) {
-    case llvm::Triple::mips:
-    case llvm::Triple::mipsel:
-    case llvm::Triple::mips64:
-    case llvm::Triple::mips64el:
-      return std::make_shared<MipsLinuxSignals>();
-    default:
-      return std::make_shared<LinuxSignals>();
-    }
-  }
+  case llvm::Triple::Linux:
+    return std::make_shared<LinuxSignals>();
   case llvm::Triple::FreeBSD:
   case llvm::Triple::OpenBSD:
     return std::make_shared<FreeBSDSignals>();
@@ -121,6 +113,16 @@ void UnixSignals::AddSignal(int signo, const char *name, bool default_suppress,
   ++m_version;
 }
 
+void UnixSignals::AddSignalCode(int signo, int code, const char *description,
+                                SignalCodePrintOption print_option) {
+  collection::iterator signal = m_signals.find(signo);
+  assert(signal != m_signals.end() &&
+         "Tried to add code to signal that does not exist.");
+  signal->second.m_codes.insert(
+      std::pair{code, SignalCode{ConstString(description), print_option}});
+  ++m_version;
+}
+
 void UnixSignals::RemoveSignal(int signo) {
   collection::iterator pos = m_signals.find(signo);
   if (pos != m_signals.end())
@@ -134,6 +136,58 @@ const char *UnixSignals::GetSignalAsCString(int signo) const {
     return nullptr;
   else
     return pos->second.m_name.GetCString();
+}
+
+std::string
+UnixSignals::GetSignalDescription(int32_t signo, std::optional<int32_t> code,
+                                  std::optional<lldb::addr_t> addr,
+                                  std::optional<lldb::addr_t> lower,
+                                  std::optional<lldb::addr_t> upper) const {
+  std::string str;
+
+  collection::const_iterator pos = m_signals.find(signo);
+  if (pos != m_signals.end()) {
+    str = pos->second.m_name.GetCString();
+
+    if (code) {
+      std::map<int, SignalCode>::const_iterator cpos =
+          pos->second.m_codes.find(*code);
+      if (cpos != pos->second.m_codes.end()) {
+        const SignalCode &sc = cpos->second;
+        str += ": ";
+        if (sc.m_print_option != SignalCodePrintOption::Bounds)
+          str += sc.m_description.GetCString();
+
+        std::stringstream strm;
+        switch (sc.m_print_option) {
+        case SignalCodePrintOption::None:
+          break;
+        case SignalCodePrintOption::Address:
+          if (addr)
+            strm << " (fault address: 0x" << std::hex << *addr << ")";
+          break;
+        case SignalCodePrintOption::Bounds:
+          if (lower && upper && addr) {
+            if ((unsigned long)(*addr) < *lower)
+              strm << "lower bound violation ";
+            else
+              strm << "upper bound violation ";
+
+            strm << "(fault address: 0x" << std::hex << *addr;
+            strm << ", lower bound: 0x" << std::hex << *lower;
+            strm << ", upper bound: 0x" << std::hex << *upper;
+            strm << ")";
+          } else
+            strm << sc.m_description.GetCString();
+
+          break;
+        }
+        str += strm.str();
+      }
+    }
+  }
+
+  return str;
 }
 
 bool UnixSignals::SignalIsValid(int32_t signo) const {
@@ -285,9 +339,9 @@ int32_t UnixSignals::GetSignalAtIndex(int32_t index) const {
 uint64_t UnixSignals::GetVersion() const { return m_version; }
 
 std::vector<int32_t>
-UnixSignals::GetFilteredSignals(llvm::Optional<bool> should_suppress,
-                                llvm::Optional<bool> should_stop,
-                                llvm::Optional<bool> should_notify) {
+UnixSignals::GetFilteredSignals(std::optional<bool> should_suppress,
+                                std::optional<bool> should_stop,
+                                std::optional<bool> should_notify) {
   std::vector<int32_t> result;
   for (int32_t signo = GetFirstSignalNumber();
        signo != LLDB_INVALID_SIGNAL_NUMBER;
@@ -300,14 +354,13 @@ UnixSignals::GetFilteredSignals(llvm::Optional<bool> should_suppress,
 
     // If any of filtering conditions are not met, we move on to the next
     // signal.
-    if (should_suppress.hasValue() &&
-        signal_suppress != should_suppress.getValue())
+    if (should_suppress && signal_suppress != *should_suppress)
       continue;
 
-    if (should_stop.hasValue() && signal_stop != should_stop.getValue())
+    if (should_stop && signal_stop != *should_stop)
       continue;
 
-    if (should_notify.hasValue() && signal_notify != should_notify.getValue())
+    if (should_notify && signal_notify != *should_notify)
       continue;
 
     result.push_back(signo);

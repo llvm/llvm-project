@@ -63,7 +63,7 @@ define void @nonThrowing() #0 {
 
 declare i32 @__gxx_personality_v0(...)
 
-define void @cleanupret() personality i32 (...)* @__gxx_personality_v0 {
+define void @cleanupret() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @nonThrowing()
           to label %exit unwind label %pad
@@ -74,7 +74,7 @@ exit:
   ret void
 }
 
-define void @catchret() personality i32 (...)* @__gxx_personality_v0 {
+define void @catchret() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @nonThrowing()
           to label %exit unwind label %pad
@@ -87,7 +87,7 @@ exit:
   ret void
 }
 
-define void @resume() uwtable optsize ssp personality i32 (...)* @__gxx_personality_v0 {
+define void @resume() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @nonThrowing()
           to label %try.cont unwind label %lpad
@@ -96,12 +96,12 @@ try.cont:                                         ; preds = %entry, %invoke.cont
   ret void
 
 lpad:                                             ; preds = %entry
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
            cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define void @cleanupret_nounwind() #0 personality i32 (...)* @__gxx_personality_v0 {
+define void @cleanupret_nounwind() #0 personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @nonThrowing()
           to label %exit unwind label %pad

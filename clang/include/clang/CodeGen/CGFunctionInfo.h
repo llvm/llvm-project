@@ -371,7 +371,7 @@ public:
           dyn_cast<llvm::StructType>(UnpaddedCoerceAndExpandType)) {
       return structTy->elements();
     } else {
-      return llvm::makeArrayRef(&UnpaddedCoerceAndExpandType, 1);
+      return llvm::ArrayRef(&UnpaddedCoerceAndExpandType, 1);
     }
   }
 
@@ -713,7 +713,7 @@ public:
 
   ArrayRef<ExtParameterInfo> getExtParameterInfos() const {
     if (!HasExtParameterInfos) return {};
-    return llvm::makeArrayRef(getExtParameterInfosBuffer(), NumArgs);
+    return llvm::ArrayRef(getExtParameterInfosBuffer(), NumArgs);
   }
   ExtParameterInfo getExtParameterInfo(unsigned argIndex) const {
     assert(argIndex <= NumArgs);
@@ -742,7 +742,7 @@ public:
   /// Set the maximum vector width in the arguments.
   void setMaxVectorWidth(unsigned Width) {
     assert(llvm::isPowerOf2_32(Width) && "Expected power of 2 vector");
-    MaxVectorWidth = llvm::countTrailingZeros(Width) + 1;
+    MaxVectorWidth = llvm::countr_zero(Width) + 1;
   }
 
   void Profile(llvm::FoldingSetNodeID &ID) {

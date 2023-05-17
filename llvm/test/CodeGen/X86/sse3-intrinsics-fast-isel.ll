@@ -98,7 +98,7 @@ define <4 x float> @test_mm_hsub_ps(<4 x float> %a0, <4 x float> %a1) {
 }
 declare <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float>, <4 x float>) nounwind readnone
 
-define <2 x i64> @test_mm_lddqu_si128(<2 x i64>* %a0) {
+define <2 x i64> @test_mm_lddqu_si128(ptr %a0) {
 ; X86-SSE-LABEL: test_mm_lddqu_si128:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -120,14 +120,13 @@ define <2 x i64> @test_mm_lddqu_si128(<2 x i64>* %a0) {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vlddqu (%rdi), %xmm0
 ; X64-AVX-NEXT:    retq
-  %bc = bitcast <2 x i64>* %a0 to i8*
-  %call = call <16 x i8> @llvm.x86.sse3.ldu.dq(i8* %bc)
+  %call = call <16 x i8> @llvm.x86.sse3.ldu.dq(ptr %a0)
   %res = bitcast <16 x i8> %call to <2 x i64>
   ret <2 x i64> %res
 }
-declare <16 x i8> @llvm.x86.sse3.ldu.dq(i8*) nounwind readonly
+declare <16 x i8> @llvm.x86.sse3.ldu.dq(ptr) nounwind readonly
 
-define <2 x double> @test_mm_loaddup_pd(double* %a0) {
+define <2 x double> @test_mm_loaddup_pd(ptr %a0) {
 ; X86-SSE-LABEL: test_mm_loaddup_pd:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -149,7 +148,7 @@ define <2 x double> @test_mm_loaddup_pd(double* %a0) {
 ; X64-AVX:       # %bb.0:
 ; X64-AVX-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-AVX-NEXT:    retq
-  %ld = load double, double* %a0
+  %ld = load double, ptr %a0
   %res0 = insertelement <2 x double> undef, double %ld, i32 0
   %res1 = insertelement <2 x double> %res0, double %ld, i32 1
   ret <2 x double> %res1

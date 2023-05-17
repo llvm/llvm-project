@@ -4,7 +4,7 @@ target triple = "s390x-ibm-linux"
 
 @g_248 = external dso_local local_unnamed_addr global i32, align 4
 @g_976 = external dso_local global i64, align 8
-@g_1087 = external dso_local global i32**, align 8
+@g_1087 = external dso_local global ptr, align 8
 
 ; CHECK-LABEL: @f1()
 ; CHECK: 5 = MemoryPhi(
@@ -45,7 +45,7 @@ label2:                                  ; preds = %._crit_edge5.i.us, %thread-p
   br label %.lr.ph8.i.us
 
 .lr.ph8.i.us:                                     ; preds = %.lr.ph8.i.us, %.lr.ph8.i.us.preheader
-  %tmp3 = load volatile i64, i64* @g_976, align 8
+  %tmp3 = load volatile i64, ptr @g_976, align 8
   br i1 undef, label %.lr.ph8.i.us, label %._crit_edge9.i.us
 
 ._crit_edge9.i.us:                                ; preds = %.lr.ph8.i.us
@@ -85,16 +85,16 @@ label6:                                      ; preds = %label6, %.lr.ph.i
   br label %.critedge1.i
 
 .critedge1.i:                                     ; preds = %._crit_edge5.i, %thread-pre-split.i
-  %tmp7 = load i32, i32* @g_248, align 4
+  %tmp7 = load i32, ptr @g_248, align 4
   %tmp8 = xor i32 %tmp7, 55987
-  store i32 %tmp8, i32* @g_248, align 4
+  store i32 %tmp8, ptr @g_248, align 4
   br i1 undef, label %thread-pre-split.i, label %f9.exit.loopexit
 
 f9.exit.loopexit:                                 ; preds = %.critedge1.i
   br label %f9.exit
 
 f9.exit:                                          ; preds = %f9.exit.loopexit, %.critedge1.i.us, %label4
-  %tmp9 = load volatile i32**, i32*** @g_1087, align 8
+  %tmp9 = load volatile ptr, ptr @g_1087, align 8
   ret void
 }
 

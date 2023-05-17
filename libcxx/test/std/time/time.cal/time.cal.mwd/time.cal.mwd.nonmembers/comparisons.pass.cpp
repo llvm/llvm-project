@@ -31,30 +31,30 @@ int main(int, char**)
     constexpr weekday Sunday = std::chrono::Sunday;
     constexpr weekday Monday = std::chrono::Monday;
 
-    AssertComparisons2AreNoexcept<month_weekday>();
-    AssertComparisons2ReturnBool<month_weekday>();
+    AssertEqualityAreNoexcept<month_weekday>();
+    AssertEqualityReturnBool<month_weekday>();
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         month_weekday{std::chrono::January, weekday_indexed{Sunday, 1}},
         month_weekday{std::chrono::January, weekday_indexed{Sunday, 1}},
         true), "");
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         month_weekday{std::chrono::January, weekday_indexed{Sunday, 1}},
         month_weekday{std::chrono::January, weekday_indexed{Sunday, 2}},
         false), "");
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         month_weekday{std::chrono::January,  weekday_indexed{Sunday, 1}},
         month_weekday{std::chrono::February, weekday_indexed{Sunday, 1}},
         false), "");
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         month_weekday{std::chrono::January, weekday_indexed{Monday, 1}},
         month_weekday{std::chrono::January, weekday_indexed{Sunday, 2}},
         false), "");
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         month_weekday{std::chrono::January,  weekday_indexed{Monday, 1}},
         month_weekday{std::chrono::February, weekday_indexed{Sunday, 1}},
         false), "");
@@ -62,7 +62,7 @@ int main(int, char**)
 //  same day, different months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
-            assert((testComparisons2(
+            assert((testEquality(
                 month_weekday{month{i}, weekday_indexed{Sunday, 1}},
                 month_weekday{month{j}, weekday_indexed{Sunday, 1}},
                 i == j)));
@@ -70,7 +70,7 @@ int main(int, char**)
 //  same month, different weeks
     for (unsigned i = 1; i < 5; ++i)
         for (unsigned j = 1; j < 5; ++j)
-            assert((testComparisons2(
+            assert((testEquality(
                 month_weekday{month{2}, weekday_indexed{Sunday, i}},
                 month_weekday{month{2}, weekday_indexed{Sunday, j}},
                 i == j)));
@@ -78,7 +78,7 @@ int main(int, char**)
 //  same month, different days
     for (unsigned i = 0; i < 6; ++i)
         for (unsigned j = 0; j < 6; ++j)
-            assert((testComparisons2(
+            assert((testEquality(
                 month_weekday{month{2}, weekday_indexed{weekday{i}, 2}},
                 month_weekday{month{2}, weekday_indexed{weekday{j}, 2}},
                 i == j)));

@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 static tok::TokenKind getTokenKind(SourceLocation Loc, const SourceManager &SM,
                                    const ASTContext *Context) {
@@ -131,6 +129,10 @@ void BracesAroundStatementsCheck::check(
       return;
     checkStmt(Result, S->getBody(), StartLoc);
   } else if (const auto *S = Result.Nodes.getNodeAs<IfStmt>("if")) {
+    // "if consteval" always has braces.
+    if (S->isConsteval())
+      return;
+
     SourceLocation StartLoc = findRParenLoc(S, SM, Context);
     if (StartLoc.isInvalid())
       return;
@@ -265,6 +267,4 @@ void BracesAroundStatementsCheck::onEndOfTranslationUnit() {
   ForceBracesStmts.clear();
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

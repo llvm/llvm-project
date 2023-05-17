@@ -73,10 +73,10 @@ define void @foo_i32() nounwind #0 {
 ; CHECK-RV32IFD-NEXT:    lw a1, 8(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 16
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load i32, i32* @a
-  %2 = load i32, i32* @b
+  %1 = load i32, ptr @a
+  %2 = load i32, ptr @b
   %add = add nsw i32 %2, %1
-  store i32 %add, i32* @c
+  store i32 %add, ptr @c
   ret void
 }
 
@@ -150,10 +150,10 @@ define void @foo_fp_i32() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    lw a1, 0(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 16
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load i32, i32* @a
-  %2 = load i32, i32* @b
+  %1 = load i32, ptr @a
+  %2 = load i32, ptr @b
   %add = add nsw i32 %2, %1
-  store i32 %add, i32* @c
+  store i32 %add, ptr @c
   ret void
 }
 
@@ -211,18 +211,18 @@ define void @foo_float() nounwind #0 {
 ; CHECK-RV32IF:       # %bb.0:
 ; CHECK-RV32IF-NEXT:    addi sp, sp, -16
 ; CHECK-RV32IF-NEXT:    sw a0, 12(sp) # 4-byte Folded Spill
-; CHECK-RV32IF-NEXT:    fsw ft0, 8(sp) # 4-byte Folded Spill
-; CHECK-RV32IF-NEXT:    fsw ft1, 4(sp) # 4-byte Folded Spill
+; CHECK-RV32IF-NEXT:    fsw fa4, 8(sp) # 4-byte Folded Spill
+; CHECK-RV32IF-NEXT:    fsw fa5, 4(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IF-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IF-NEXT:    flw fa5, %lo(e)(a0)
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IF-NEXT:    flw ft1, %lo(f)(a0)
-; CHECK-RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; CHECK-RV32IF-NEXT:    flw fa4, %lo(f)(a0)
+; CHECK-RV32IF-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(d)
-; CHECK-RV32IF-NEXT:    fsw ft0, %lo(d)(a0)
+; CHECK-RV32IF-NEXT:    fsw fa5, %lo(d)(a0)
 ; CHECK-RV32IF-NEXT:    lw a0, 12(sp) # 4-byte Folded Reload
-; CHECK-RV32IF-NEXT:    flw ft0, 8(sp) # 4-byte Folded Reload
-; CHECK-RV32IF-NEXT:    flw ft1, 4(sp) # 4-byte Folded Reload
+; CHECK-RV32IF-NEXT:    flw fa4, 8(sp) # 4-byte Folded Reload
+; CHECK-RV32IF-NEXT:    flw fa5, 4(sp) # 4-byte Folded Reload
 ; CHECK-RV32IF-NEXT:    addi sp, sp, 16
 ; CHECK-RV32IF-NEXT:    mret
 ;
@@ -230,24 +230,24 @@ define void @foo_float() nounwind #0 {
 ; CHECK-RV32IFD:       # %bb.0:
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, -32
 ; CHECK-RV32IFD-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft0, 16(sp) # 8-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft1, 8(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa4, 16(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IFD-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IFD-NEXT:    flw fa5, %lo(e)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IFD-NEXT:    flw ft1, %lo(f)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.s ft0, ft0, ft1
+; CHECK-RV32IFD-NEXT:    flw fa4, %lo(f)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(d)
-; CHECK-RV32IFD-NEXT:    fsw ft0, %lo(d)(a0)
+; CHECK-RV32IFD-NEXT:    fsw fa5, %lo(d)(a0)
 ; CHECK-RV32IFD-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft0, 16(sp) # 8-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa4, 16(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa5, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load float, float* @e
-  %2 = load float, float* @f
+  %1 = load float, ptr @e
+  %2 = load float, ptr @f
   %add = fadd float %1, %2
-  store float %add, float* @d
+  store float %add, ptr @d
   ret void
 }
 
@@ -309,21 +309,21 @@ define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32IF-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
-; CHECK-RV32IF-NEXT:    fsw ft0, 16(sp) # 4-byte Folded Spill
-; CHECK-RV32IF-NEXT:    fsw ft1, 12(sp) # 4-byte Folded Spill
+; CHECK-RV32IF-NEXT:    fsw fa4, 16(sp) # 4-byte Folded Spill
+; CHECK-RV32IF-NEXT:    fsw fa5, 12(sp) # 4-byte Folded Spill
 ; CHECK-RV32IF-NEXT:    addi s0, sp, 32
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IF-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IF-NEXT:    flw fa5, %lo(e)(a0)
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IF-NEXT:    flw ft1, %lo(f)(a0)
-; CHECK-RV32IF-NEXT:    fadd.s ft0, ft0, ft1
+; CHECK-RV32IF-NEXT:    flw fa4, %lo(f)(a0)
+; CHECK-RV32IF-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-RV32IF-NEXT:    lui a0, %hi(d)
-; CHECK-RV32IF-NEXT:    fsw ft0, %lo(d)(a0)
+; CHECK-RV32IF-NEXT:    fsw fa5, %lo(d)(a0)
 ; CHECK-RV32IF-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-RV32IF-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-RV32IF-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
-; CHECK-RV32IF-NEXT:    flw ft0, 16(sp) # 4-byte Folded Reload
-; CHECK-RV32IF-NEXT:    flw ft1, 12(sp) # 4-byte Folded Reload
+; CHECK-RV32IF-NEXT:    flw fa4, 16(sp) # 4-byte Folded Reload
+; CHECK-RV32IF-NEXT:    flw fa5, 12(sp) # 4-byte Folded Reload
 ; CHECK-RV32IF-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IF-NEXT:    mret
 ;
@@ -333,27 +333,27 @@ define void @foo_fp_float() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft1, 0(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa4, 8(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa5, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    addi s0, sp, 32
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(e)
-; CHECK-RV32IFD-NEXT:    flw ft0, %lo(e)(a0)
+; CHECK-RV32IFD-NEXT:    flw fa5, %lo(e)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(f)
-; CHECK-RV32IFD-NEXT:    flw ft1, %lo(f)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.s ft0, ft0, ft1
+; CHECK-RV32IFD-NEXT:    flw fa4, %lo(f)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.s fa5, fa5, fa4
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(d)
-; CHECK-RV32IFD-NEXT:    fsw ft0, %lo(d)(a0)
+; CHECK-RV32IFD-NEXT:    fsw fa5, %lo(d)(a0)
 ; CHECK-RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft0, 8(sp) # 8-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft1, 0(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa4, 8(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa5, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load float, float* @e
-  %2 = load float, float* @f
+  %1 = load float, ptr @e
+  %2 = load float, ptr @f
   %add = fadd float %1, %2
-  store float %add, float* @d
+  store float %add, ptr @d
   ret void
 }
 
@@ -526,24 +526,24 @@ define void @foo_double() nounwind #0 {
 ; CHECK-RV32IFD:       # %bb.0:
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, -32
 ; CHECK-RV32IFD-NEXT:    sw a0, 28(sp) # 4-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft0, 16(sp) # 8-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft1, 8(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa4, 16(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa5, 8(sp) # 8-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(h)
-; CHECK-RV32IFD-NEXT:    fld ft0, %lo(h)(a0)
+; CHECK-RV32IFD-NEXT:    fld fa5, %lo(h)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(i)
-; CHECK-RV32IFD-NEXT:    fld ft1, %lo(i)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
+; CHECK-RV32IFD-NEXT:    fld fa4, %lo(i)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.d fa5, fa5, fa4
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(g)
-; CHECK-RV32IFD-NEXT:    fsd ft0, %lo(g)(a0)
+; CHECK-RV32IFD-NEXT:    fsd fa5, %lo(g)(a0)
 ; CHECK-RV32IFD-NEXT:    lw a0, 28(sp) # 4-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft0, 16(sp) # 8-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft1, 8(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa4, 16(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa5, 8(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load double, double* @h
-  %2 = load double, double* @i
+  %1 = load double, ptr @h
+  %2 = load double, ptr @i
   %add = fadd double %1, %2
-  store double %add, double* @g
+  store double %add, ptr @g
   ret void
 }
 
@@ -723,27 +723,27 @@ define void @foo_fp_double() nounwind #1 {
 ; CHECK-RV32IFD-NEXT:    sw ra, 28(sp) # 4-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    sw s0, 24(sp) # 4-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    sw a0, 20(sp) # 4-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft0, 8(sp) # 8-byte Folded Spill
-; CHECK-RV32IFD-NEXT:    fsd ft1, 0(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa4, 8(sp) # 8-byte Folded Spill
+; CHECK-RV32IFD-NEXT:    fsd fa5, 0(sp) # 8-byte Folded Spill
 ; CHECK-RV32IFD-NEXT:    addi s0, sp, 32
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(h)
-; CHECK-RV32IFD-NEXT:    fld ft0, %lo(h)(a0)
+; CHECK-RV32IFD-NEXT:    fld fa5, %lo(h)(a0)
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(i)
-; CHECK-RV32IFD-NEXT:    fld ft1, %lo(i)(a0)
-; CHECK-RV32IFD-NEXT:    fadd.d ft0, ft0, ft1
+; CHECK-RV32IFD-NEXT:    fld fa4, %lo(i)(a0)
+; CHECK-RV32IFD-NEXT:    fadd.d fa5, fa5, fa4
 ; CHECK-RV32IFD-NEXT:    lui a0, %hi(g)
-; CHECK-RV32IFD-NEXT:    fsd ft0, %lo(g)(a0)
+; CHECK-RV32IFD-NEXT:    fsd fa5, %lo(g)(a0)
 ; CHECK-RV32IFD-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    lw a0, 20(sp) # 4-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft0, 8(sp) # 8-byte Folded Reload
-; CHECK-RV32IFD-NEXT:    fld ft1, 0(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa4, 8(sp) # 8-byte Folded Reload
+; CHECK-RV32IFD-NEXT:    fld fa5, 0(sp) # 8-byte Folded Reload
 ; CHECK-RV32IFD-NEXT:    addi sp, sp, 32
 ; CHECK-RV32IFD-NEXT:    mret
-  %1 = load double, double* @h
-  %2 = load double, double* @i
+  %1 = load double, ptr @h
+  %2 = load double, ptr @i
   %add = fadd double %1, %2
-  store double %add, double* @g
+  store double %add, ptr @g
   ret void
 }
 

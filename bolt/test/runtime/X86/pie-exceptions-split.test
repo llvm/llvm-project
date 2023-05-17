@@ -1,0 +1,28 @@
+## Check that BOLT successfully splits C++ exception-handling code for
+## PIEs or shared objects.
+
+REQUIRES: system-linux,bolt-runtime
+
+RUN: %clangxx %cxxflags -pie -fPIC %p/Inputs/exceptions_split.cpp -Wl,-q -o %t
+RUN: llvm-bolt %t -o %t.instr --instrument --instrumentation-file=%t.fdata
+
+## Record profile with invocation that does not throw exceptions.
+RUN: %t.instr
+
+RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp \
+RUN:   --split-functions --split-eh --print-after-lowering \
+RUN:   --print-only=main 2>&1 | FileCheck %s
+
+## All calls to printf() should be from exception handling code that was
+## recorded as cold during the profile collection run. Check that the calls
+## are placed after the split point.
+CHECK-NOT: callq printf
+CHECK: HOT-COLD SPLIT POINT
+CHECK:     callq printf
+
+## Verify the output still executes correctly when the exception path is being
+## taken.
+RUN: %t.bolt arg1 arg2 arg3 2>&1 | FileCheck --check-prefix=CHECK-BOLTED %s
+
+CHECK-BOLTED:      catch 2
+CHECK-BOLTED-NEXT: catch 1

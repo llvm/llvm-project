@@ -37,8 +37,8 @@
 #include "lldb/Utility/StreamString.h"
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <cstdint>
 #include <memory>
@@ -451,7 +451,7 @@ bool Address::Dump(Stream *s, ExecutionContextScope *exe_scope, DumpStyle style,
       else
         s->Printf("%s[", "<Unknown>");
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case DumpStyleFileAddress: {
     addr_t file_addr = GetFileAddress();
     if (file_addr == LLDB_INVALID_ADDRESS) {

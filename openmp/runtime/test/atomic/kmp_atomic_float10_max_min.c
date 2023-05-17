@@ -1,6 +1,6 @@
 // RUN: %libomp-compile -mlong-double-80 && %libomp-run
 // UNSUPPORTED: gcc
-// REQUIRES: x86-registered-target
+// REQUIRES: x86-target-arch
 
 #include <stdio.h>
 #include <omp.h>

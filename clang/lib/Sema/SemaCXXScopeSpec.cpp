@@ -99,34 +99,53 @@ DeclContext *Sema::computeDeclContext(const CXXScopeSpec &SS,
         if (ClassTemplateDecl *ClassTemplate
               = dyn_cast_or_null<ClassTemplateDecl>(
                             SpecType->getTemplateName().getAsTemplateDecl())) {
-          QualType ContextType
-            = Context.getCanonicalType(QualType(SpecType, 0));
+          QualType ContextType =
+              Context.getCanonicalType(QualType(SpecType, 0));
+
+          // FIXME: The fallback on the search of partial
+          // specialization using ContextType should be eventually removed since
+          // it doesn't handle the case of constrained template parameters
+          // correctly. Currently removing this fallback would change the
+          // diagnostic output for invalid code in a number of tests.
+          ClassTemplatePartialSpecializationDecl *PartialSpec = nullptr;
+          ArrayRef<TemplateParameterList *> TemplateParamLists =
+              SS.getTemplateParamLists();
+          if (!TemplateParamLists.empty()) {
+            unsigned Depth = ClassTemplate->getTemplateParameters()->getDepth();
+            auto L = find_if(TemplateParamLists,
+                             [Depth](TemplateParameterList *TPL) {
+                               return TPL->getDepth() == Depth;
+                             });
+            if (L != TemplateParamLists.end()) {
+              void *Pos = nullptr;
+              PartialSpec = ClassTemplate->findPartialSpecialization(
+                  SpecType->template_arguments(), *L, Pos);
+            }
+          } else {
+            PartialSpec = ClassTemplate->findPartialSpecialization(ContextType);
+          }
+
+          if (PartialSpec) {
+            // A declaration of the partial specialization must be visible.
+            // We can always recover here, because this only happens when we're
+            // entering the context, and that can't happen in a SFINAE context.
+            assert(!isSFINAEContext() && "partial specialization scope "
+                                         "specifier in SFINAE context?");
+            if (PartialSpec->hasDefinition() &&
+                !hasReachableDefinition(PartialSpec))
+              diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
+                                    MissingImportKind::PartialSpecialization,
+                                    true);
+            return PartialSpec;
+          }
 
           // If the type of the nested name specifier is the same as the
           // injected class name of the named class template, we're entering
           // into that class template definition.
-          QualType Injected
-            = ClassTemplate->getInjectedClassNameSpecialization();
+          QualType Injected =
+              ClassTemplate->getInjectedClassNameSpecialization();
           if (Context.hasSameType(Injected, ContextType))
             return ClassTemplate->getTemplatedDecl();
-
-          // If the type of the nested name specifier is the same as the
-          // type of one of the class template's class template partial
-          // specializations, we're entering into the definition of that
-          // class template partial specialization.
-          if (ClassTemplatePartialSpecializationDecl *PartialSpec
-                = ClassTemplate->findPartialSpecialization(ContextType)) {
-            // A declaration of the partial specialization must be visible.
-            // We can always recover here, because this only happens when we're
-            // entering the context, and that can't happen in a SFINAE context.
-            assert(!isSFINAEContext() &&
-                   "partial specialization scope specifier in SFINAE context?");
-            if (!hasVisibleDeclaration(PartialSpec))
-              diagnoseMissingImport(SS.getLastQualifierNameLoc(), PartialSpec,
-                                    MissingImportKind::PartialSpecialization,
-                                    /*Recover*/true);
-            return PartialSpec;
-          }
         }
       } else if (const RecordType *RecordT = NNSType->getAs<RecordType>()) {
         // The nested name specifier refers to a member of a class template.
@@ -243,8 +262,8 @@ bool Sema::RequireCompleteEnumDecl(EnumDecl *EnumD, SourceLocation L,
   if (EnumD->isCompleteDefinition()) {
     // If we know about the definition but it is not visible, complain.
     NamedDecl *SuggestedDef = nullptr;
-    if (!hasVisibleDefinition(EnumD, &SuggestedDef,
-                              /*OnlyNeedComplete*/false)) {
+    if (!hasReachableDefinition(EnumD, &SuggestedDef,
+                                /*OnlyNeedComplete*/ false)) {
       // If the user is going to see an error here, recover by making the
       // definition visible.
       bool TreatAsComplete = !isSFINAEContext();
@@ -292,6 +311,11 @@ bool Sema::ActOnCXXGlobalScopeSpecifier(SourceLocation CCLoc,
 bool Sema::ActOnSuperScopeSpecifier(SourceLocation SuperLoc,
                                     SourceLocation ColonColonLoc,
                                     CXXScopeSpec &SS) {
+  if (getCurLambda()) {
+    Diag(SuperLoc, diag::err_super_in_lambda_unsupported);
+    return true;
+  }
+
   CXXRecordDecl *RD = nullptr;
   for (Scope *S = getCurScope(); S; S = S->getParent()) {
     if (S->isFunctionScope()) {
@@ -307,9 +331,6 @@ bool Sema::ActOnSuperScopeSpecifier(SourceLocation SuperLoc,
 
   if (!RD) {
     Diag(SuperLoc, diag::err_invalid_super_scope);
-    return true;
-  } else if (RD->isLambda()) {
-    Diag(SuperLoc, diag::err_super_in_lambda_unsupported);
     return true;
   } else if (RD->getNumBases() == 0) {
     Diag(SuperLoc, diag::err_no_base_classes) << RD->getName();
@@ -828,10 +849,14 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
   }
 
   if (!Found.empty()) {
-    if (TypeDecl *TD = Found.getAsSingle<TypeDecl>())
+    if (TypeDecl *TD = Found.getAsSingle<TypeDecl>()) {
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
           << Context.getTypeDeclType(TD) << getLangOpts().CPlusPlus;
-    else {
+    } else if (Found.getAsSingle<TemplateDecl>()) {
+      ParsedType SuggestedType;
+      DiagnoseUnknownTypeName(IdInfo.Identifier, IdInfo.IdentifierLoc, S, &SS,
+                              SuggestedType);
+    } else {
       Diag(IdInfo.IdentifierLoc, diag::err_expected_class_or_namespace)
           << IdInfo.Identifier << getLangOpts().CPlusPlus;
       if (NamedDecl *ND = Found.getAsSingle<NamedDecl>())
@@ -850,7 +875,6 @@ bool Sema::BuildCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
 
 bool Sema::ActOnCXXNestedNameSpecifier(Scope *S, NestedNameSpecInfo &IdInfo,
                                        bool EnteringContext, CXXScopeSpec &SS,
-                                       bool ErrorRecoveryLookup,
                                        bool *IsCorrectedToColon,
                                        bool OnlyNamespace) {
   if (SS.isInvalid())
@@ -928,10 +952,9 @@ bool Sema::ActOnCXXNestedNameSpecifier(Scope *S,
     // Handle a dependent template specialization for which we cannot resolve
     // the template name.
     assert(DTN->getQualifier() == SS.getScopeRep());
-    QualType T = Context.getDependentTemplateSpecializationType(ETK_None,
-                                                          DTN->getQualifier(),
-                                                          DTN->getIdentifier(),
-                                                                TemplateArgs);
+    QualType T = Context.getDependentTemplateSpecializationType(
+        ETK_None, DTN->getQualifier(), DTN->getIdentifier(),
+        TemplateArgs.arguments());
 
     // Create source-location information for this type.
     TypeLocBuilder Builder;

@@ -8,6 +8,7 @@ include_directories(../..)
 set(MSAN_LIBCXX_CFLAGS
   -fsanitize=memory
   -fsanitize-memory-track-origins
+  -fno-sanitize-memory-param-retval  # unittests test mostly this mode.
   -Wno-pedantic
   -Xclang -fdepfile-entry=${COMPILER_RT_OUTPUT_DIR}/share/msan_ignorelist.txt
   )
@@ -41,6 +42,7 @@ set(MSAN_UNITTEST_COMMON_CFLAGS
   -Wno-uninitialized
   -Werror=sign-compare
   -Wno-gnu-zero-variadic-macro-arguments
+  -fno-sanitize-memory-param-retval  # unittests test mostly this mode.
 )
 # Remove -stdlib= which is unused when passing -nostdinc++.
 string(REGEX REPLACE "-stdlib=[a-zA-Z+]*" "" CMAKE_CXX_FLAGS ${CMAKE_CXX_FLAGS})
@@ -54,6 +56,7 @@ set(MSAN_UNITTEST_INSTRUMENTED_CFLAGS
 set(MSAN_UNITTEST_LINK_FLAGS
   -nostdlib++
   ${COMPILER_RT_UNITTEST_LINK_FLAGS}
+  ${COMPILER_RT_UNWINDER_LINK_LIBS}
   -fsanitize=memory
   # Don't need -stdlib=libc++ because we explicitly list libc++.a in the linker
   # inputs.

@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("MCTests") {
   deps = [
@@ -6,6 +6,7 @@ unittest("MCTests") {
     "//llvm/lib/MC/MCDisassembler",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "Disassembler.cpp",

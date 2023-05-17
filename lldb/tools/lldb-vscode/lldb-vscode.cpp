@@ -32,6 +32,10 @@
 #include <unistd.h>
 #endif
 
+#if defined(__linux__)
+#include <sys/prctl.h>
+#endif
+
 #include <algorithm>
 #include <chrono>
 #include <fstream>
@@ -79,11 +83,14 @@ enum ID {
 #undef OPTION
 };
 
-#define PREFIX(NAME, VALUE) const char *const NAME[] = VALUE;
+#define PREFIX(NAME, VALUE)                                                    \
+  static constexpr llvm::StringLiteral NAME##_init[] = VALUE;                  \
+  static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
+      NAME##_init, std::size(NAME##_init) - 1);
 #include "Options.inc"
 #undef PREFIX
 
-static const llvm::opt::OptTable::Info InfoTable[] = {
+static constexpr llvm::opt::OptTable::Info InfoTable[] = {
 #define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
                HELPTEXT, METAVAR, VALUES)                                      \
   {PREFIX,      NAME,      HELPTEXT,                                           \
@@ -93,9 +100,9 @@ static const llvm::opt::OptTable::Info InfoTable[] = {
 #include "Options.inc"
 #undef OPTION
 };
-class LLDBVSCodeOptTable : public llvm::opt::OptTable {
+class LLDBVSCodeOptTable : public llvm::opt::GenericOptTable {
 public:
-  LLDBVSCodeOptTable() : OptTable(InfoTable, true) {}
+  LLDBVSCodeOptTable() : llvm::opt::GenericOptTable(InfoTable, true) {}
 };
 
 typedef void (*RequestCallback)(const llvm::json::Object &command);
@@ -204,7 +211,7 @@ void SendTerminatedEvent() {
     g_vsc.sent_terminated_event = true;
     g_vsc.RunTerminateCommands();
     // Send a "terminated" event
-    llvm::json::Object event(CreateEventObject("terminated"));
+    llvm::json::Object event(CreateTerminatedEventObject());
     g_vsc.SendJSON(llvm::json::Value(std::move(event)));
   }
 }
@@ -451,7 +458,8 @@ void EventThreadFunction() {
             // manually send a stopped event in request_configurationDone(...)
             // so don't send any before then.
             if (g_vsc.configuration_done_sent) {
-              // Only report a stopped event if the process was not restarted.
+              // Only report a stopped event if the process was not
+              // automatically restarted.
               if (!lldb::SBProcess::GetRestartedFromEvent(event)) {
                 SendStdOutStdErr(process);
                 SendThreadStoppedEvent();
@@ -461,14 +469,22 @@ void EventThreadFunction() {
           case lldb::eStateRunning:
             g_vsc.WillContinue();
             break;
-          case lldb::eStateExited: {
-            // Run any exit LLDB commands the user specified in the
-            // launch.json
-            g_vsc.RunExitCommands();
-            SendProcessExitedEvent(process);
-            SendTerminatedEvent();
-            done = true;
-          } break;
+          case lldb::eStateExited:
+            // When restarting, we can get an "exited" event for the process we
+            // just killed with the old PID, or even with no PID. In that case
+            // we don't have to terminate the session.
+            if (process.GetProcessID() == LLDB_INVALID_PROCESS_ID ||
+                process.GetProcessID() == g_vsc.restarting_process_id) {
+              g_vsc.restarting_process_id = LLDB_INVALID_PROCESS_ID;
+            } else {
+              // Run any exit LLDB commands the user specified in the
+              // launch.json
+              g_vsc.RunExitCommands();
+              SendProcessExitedEvent(process);
+              SendTerminatedEvent();
+              done = true;
+            }
+            break;
           }
         } else if ((event_mask & lldb::SBProcess::eBroadcastBitSTDOUT) ||
                    (event_mask & lldb::SBProcess::eBroadcastBitSTDERR)) {
@@ -585,6 +601,7 @@ void SetSourceMapFromArguments(const llvm::json::Object &arguments) {
 // }
 void request_attach(const llvm::json::Object &request) {
   g_vsc.is_attach = true;
+  g_vsc.last_launch_or_attach_request = request;
   llvm::json::Object response;
   lldb::SBError error;
   FillResponse(request, response);
@@ -1062,8 +1079,9 @@ void request_completions(const llvm::json::Object &request) {
     text = text.substr(1);
     actual_column--;
   } else {
-    text = "p " + text;
-    actual_column += 2;
+    char command[] = "expression -- ";
+    text = command + text;
+    actual_column += strlen(command);
   }
   lldb::SBStringList matches;
   lldb::SBStringList descriptions;
@@ -1444,8 +1462,15 @@ void request_initialize(const llvm::json::Object &request) {
   auto log_cb = [](const char *buf, void *baton) -> void {
     g_vsc.SendOutput(OutputType::Console, llvm::StringRef{buf});
   };
+
+  auto arguments = request.getObject("arguments");
+  // sourceInitFile option is not from formal DAP specification. It is only
+  // used by unit tests to prevent sourcing .lldbinit files from environment
+  // which may affect the outcome of tests.
+  bool source_init_file = GetBoolean(arguments, "sourceInitFile", true);
+
   g_vsc.debugger =
-      lldb::SBDebugger::Create(true /*source_init_files*/, log_cb, nullptr);
+      lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
   // Start our event thread so we can receive events from the debugger, target,
@@ -1512,7 +1537,7 @@ void request_initialize(const llvm::json::Object &request) {
   // The debug adapter supports the RestartRequest. In this case a client
   // should not implement 'restart' by terminating and relaunching the adapter
   // but by calling the RestartRequest.
-  body.try_emplace("supportsRestartRequest", false);
+  body.try_emplace("supportsRestartRequest", true);
   // The debug adapter supports 'exceptionOptions' on the
   // setExceptionBreakpoints request.
   body.try_emplace("supportsExceptionOptions", true);
@@ -1532,6 +1557,8 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsLoadedSourcesRequest", false);
   // The debug adapter supports sending progress reporting events.
   body.try_emplace("supportsProgressReporting", true);
+  // The debug adapter supports 'logMessage' in breakpoint.
+  body.try_emplace("supportsLogPoints", true);
 
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
@@ -1549,8 +1576,12 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
 
   RunInTerminalDebugAdapterCommChannel comm_channel(comm_file.m_path);
 
+  lldb::pid_t debugger_pid = LLDB_INVALID_PROCESS_ID;
+#if !defined(_WIN32)
+  debugger_pid = getpid();
+#endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
-      launch_request, g_vsc.debug_adaptor_path, comm_file.m_path);
+      launch_request, g_vsc.debug_adaptor_path, comm_file.m_path, debugger_pid);
   llvm::json::Object reverse_response;
   lldb_vscode::PacketStatus status =
       g_vsc.SendReverseRequest(reverse_request, reverse_response);
@@ -1601,6 +1632,71 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
                                  error.GetCString());
 }
 
+// Takes a LaunchRequest object and launches the process, also handling
+// runInTerminal if applicable. It doesn't do any of the additional
+// initialization and bookkeeping stuff that is needed for `request_launch`.
+// This way we can reuse the process launching logic for RestartRequest too.
+lldb::SBError LaunchProcess(const llvm::json::Object &request) {
+  lldb::SBError error;
+  auto arguments = request.getObject("arguments");
+  auto launchCommands = GetStrings(arguments, "launchCommands");
+
+  // Instantiate a launch info instance for the target.
+  auto launch_info = g_vsc.target.GetLaunchInfo();
+
+  // Grab the current working directory if there is one and set it in the
+  // launch info.
+  const auto cwd = GetString(arguments, "cwd");
+  if (!cwd.empty())
+    launch_info.SetWorkingDirectory(cwd.data());
+
+  // Extract any extra arguments and append them to our program arguments for
+  // when we launch
+  auto args = GetStrings(arguments, "args");
+  if (!args.empty())
+    launch_info.SetArguments(MakeArgv(args).data(), true);
+
+  // Pass any environment variables along that the user specified.
+  auto envs = GetStrings(arguments, "env");
+  if (!envs.empty())
+    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
+
+  auto flags = launch_info.GetLaunchFlags();
+
+  if (GetBoolean(arguments, "disableASLR", true))
+    flags |= lldb::eLaunchFlagDisableASLR;
+  if (GetBoolean(arguments, "disableSTDIO", false))
+    flags |= lldb::eLaunchFlagDisableSTDIO;
+  if (GetBoolean(arguments, "shellExpandArguments", false))
+    flags |= lldb::eLaunchFlagShellExpandArguments;
+  const bool detachOnError = GetBoolean(arguments, "detachOnError", false);
+  launch_info.SetDetachOnError(detachOnError);
+  launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
+                             lldb::eLaunchFlagStopAtEntry);
+  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
+
+  if (GetBoolean(arguments, "runInTerminal", false)) {
+    if (llvm::Error err = request_runInTerminal(request))
+      error.SetErrorString(llvm::toString(std::move(err)).c_str());
+  } else if (launchCommands.empty()) {
+    // Disable async events so the launch will be successful when we return from
+    // the launch call and the launch will happen synchronously
+    g_vsc.debugger.SetAsync(false);
+    g_vsc.target.Launch(launch_info, error);
+    g_vsc.debugger.SetAsync(true);
+  } else {
+    g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
+    // The custom commands might have created a new target so we should use the
+    // selected target after these commands are run.
+    g_vsc.target = g_vsc.debugger.GetSelectedTarget();
+    // Make sure the process is launched and stopped at the entry point before
+    // proceeding as the the launch commands are not run using the synchronous
+    // mode.
+    error = g_vsc.WaitForProcessToStop(timeout_seconds);
+  }
+  return error;
+}
+
 // "LaunchRequest": {
 //   "allOf": [ { "$ref": "#/definitions/Request" }, {
 //     "type": "object",
@@ -1637,8 +1733,8 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
 // }
 void request_launch(const llvm::json::Object &request) {
   g_vsc.is_attach = false;
+  g_vsc.last_launch_or_attach_request = request;
   llvm::json::Object response;
-  lldb::SBError error;
   FillResponse(request, response);
   auto arguments = request.getObject("arguments");
   g_vsc.init_commands = GetStrings(arguments, "initCommands");
@@ -1646,12 +1742,10 @@ void request_launch(const llvm::json::Object &request) {
   g_vsc.stop_commands = GetStrings(arguments, "stopCommands");
   g_vsc.exit_commands = GetStrings(arguments, "exitCommands");
   g_vsc.terminate_commands = GetStrings(arguments, "terminateCommands");
-  auto launchCommands = GetStrings(arguments, "launchCommands");
   std::vector<std::string> postRunCommands =
       GetStrings(arguments, "postRunCommands");
   g_vsc.stop_at_entry = GetBoolean(arguments, "stopOnEntry", false);
   const llvm::StringRef debuggerRoot = GetString(arguments, "debuggerRoot");
-  const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
 
   // This is a hack for loading DWARF in .o files on Mac where the .o files
   // in the debug map of the main executable have relative paths which require
@@ -1676,76 +1770,27 @@ void request_launch(const llvm::json::Object &request) {
     return;
   }
 
-  // Instantiate a launch info instance for the target.
-  auto launch_info = g_vsc.target.GetLaunchInfo();
-
-  // Grab the current working directory if there is one and set it in the
-  // launch info.
-  const auto cwd = GetString(arguments, "cwd");
-  if (!cwd.empty())
-    launch_info.SetWorkingDirectory(cwd.data());
-
-  // Extract any extra arguments and append them to our program arguments for
-  // when we launch
-  auto args = GetStrings(arguments, "args");
-  if (!args.empty())
-    launch_info.SetArguments(MakeArgv(args).data(), true);
-
-  // Pass any environment variables along that the user specified.
-  auto envs = GetStrings(arguments, "env");
-  if (!envs.empty())
-    launch_info.SetEnvironmentEntries(MakeArgv(envs).data(), true);
-
-  auto flags = launch_info.GetLaunchFlags();
-
-  if (GetBoolean(arguments, "disableASLR", true))
-    flags |= lldb::eLaunchFlagDisableASLR;
-  if (GetBoolean(arguments, "disableSTDIO", false))
-    flags |= lldb::eLaunchFlagDisableSTDIO;
-  if (GetBoolean(arguments, "shellExpandArguments", false))
-    flags |= lldb::eLaunchFlagShellExpandArguments;
-  const bool detatchOnError = GetBoolean(arguments, "detachOnError", false);
-  launch_info.SetDetachOnError(detatchOnError);
-  launch_info.SetLaunchFlags(flags | lldb::eLaunchFlagDebug |
-                             lldb::eLaunchFlagStopAtEntry);
-
   // Run any pre run LLDB commands the user specified in the launch.json
   g_vsc.RunPreRunCommands();
 
-  if (GetBoolean(arguments, "runInTerminal", false)) {
-    if (llvm::Error err = request_runInTerminal(request))
-      error.SetErrorString(llvm::toString(std::move(err)).c_str());
-  } else if (launchCommands.empty()) {
-    // Disable async events so the launch will be successful when we return from
-    // the launch call and the launch will happen synchronously
-    g_vsc.debugger.SetAsync(false);
-    g_vsc.target.Launch(launch_info, error);
-    g_vsc.debugger.SetAsync(true);
-  } else {
-    g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
-    // The custom commands might have created a new target so we should use the
-    // selected target after these commands are run.
-    g_vsc.target = g_vsc.debugger.GetSelectedTarget();
-    // Make sure the process is launched and stopped at the entry point before
-    // proceeding as the the launch commands are not run using the synchronous
-    // mode.
-    error = g_vsc.WaitForProcessToStop(timeout_seconds);
-  }
+  status = LaunchProcess(request);
 
-  if (error.Fail()) {
+  if (status.Fail()) {
     response["success"] = llvm::json::Value(false);
-    EmplaceSafeString(response, "message", std::string(error.GetCString()));
+    EmplaceSafeString(response, "message", std::string(status.GetCString()));
   } else {
     g_vsc.RunLLDBCommands("Running postRunCommands:", postRunCommands);
   }
 
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 
-  if (g_vsc.is_attach)
-    SendProcessEvent(Attach); // this happens when doing runInTerminal
-  else
-    SendProcessEvent(Launch);
-  g_vsc.SendJSON(llvm::json::Value(CreateEventObject("initialized")));
+  if (!status.Fail()) {
+    if (g_vsc.is_attach)
+      SendProcessEvent(Attach);  // this happens when doing runInTerminal
+    else
+      SendProcessEvent(Launch);
+  }
+  g_vsc.SendJSON(CreateEventObject("initialized"));
 }
 
 // "NextRequest": {
@@ -1843,6 +1888,120 @@ void request_pause(const llvm::json::Object &request) {
   FillResponse(request, response);
   lldb::SBProcess process = g_vsc.target.GetProcess();
   lldb::SBError error = process.Stop();
+  g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
+
+
+// "RestartRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Restarts a debug session. Clients should only call this
+//     request if the corresponding capability `supportsRestartRequest` is
+//     true.\nIf the capability is missing or has the value false, a typical
+//     client emulates `restart` by terminating the debug adapter first and then
+//     launching it anew.",
+//     "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "restart" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/RestartArguments"
+//       }
+//     },
+//     "required": [ "command" ]
+//   }]
+// },
+// "RestartArguments": {
+//   "type": "object",
+//   "description": "Arguments for `restart` request.",
+//   "properties": {
+//     "arguments": {
+//       "oneOf": [
+//         { "$ref": "#/definitions/LaunchRequestArguments" },
+//         { "$ref": "#/definitions/AttachRequestArguments" }
+//       ],
+//       "description": "The latest version of the `launch` or `attach`
+//       configuration."
+//     }
+//   }
+// },
+// "RestartResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `restart` request. This is just an
+//     acknowledgement, so no body field is required."
+//   }]
+// },
+void request_restart(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  if (!g_vsc.last_launch_or_attach_request) {
+    response["success"] = llvm::json::Value(false);
+    EmplaceSafeString(response, "message",
+                      "Restart request received but no process was launched.");
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+  // Check if we were in a "launch" session or an "attach" session.
+  //
+  // Restarting is not well defined when we started the session by attaching to
+  // an existing process, because we don't know how the process was started, so
+  // we don't support it.
+  //
+  // Note that when using runInTerminal we're technically attached, but it's an
+  // implementation detail. The adapter *did* launch the process in response to
+  // a "launch" command, so we can still stop it and re-run it. This is why we
+  // don't just check `g_vsc.is_attach`.
+  if (GetString(*g_vsc.last_launch_or_attach_request, "command") == "attach") {
+    response["success"] = llvm::json::Value(false);
+    EmplaceSafeString(response, "message",
+                      "Restarting an \"attach\" session is not supported.");
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  // The optional `arguments` field in RestartRequest can contain an updated
+  // version of the launch arguments. If there's one, use it.
+  auto restart_arguments = request.getObject("arguments");
+  if (restart_arguments) {
+    auto launch_request_arguments = restart_arguments->getObject("arguments");
+    if (launch_request_arguments) {
+      (*g_vsc.last_launch_or_attach_request)["arguments"] =
+          llvm::json::Value(llvm::json::Object(*launch_request_arguments));
+    }
+  }
+
+  // Keep track of the old PID so when we get a "process exited" event from the
+  // killed process we can detect it and not shut down the whole session.
+  lldb::SBProcess process = g_vsc.target.GetProcess();
+  g_vsc.restarting_process_id = process.GetProcessID();
+
+  // Stop the current process if necessary. The logic here is similar to
+  // CommandObjectProcessLaunchOrAttach::StopProcessIfNecessary, except that
+  // we don't ask the user for confirmation.
+  g_vsc.debugger.SetAsync(false);
+  if (process.IsValid()) {
+    lldb::StateType state = process.GetState();
+    if (state != lldb::eStateConnected) {
+      process.Kill();
+    }
+    // Clear the list of thread ids to avoid sending "thread exited" events
+    // for threads of the process we are terminating.
+    g_vsc.thread_ids.clear();
+  }
+  g_vsc.debugger.SetAsync(true);
+  LaunchProcess(*g_vsc.last_launch_or_attach_request);
+
+  // This is normally done after receiving a "configuration done" request.
+  // Because we're restarting, configuration has already happened so we can
+  // continue the process right away.
+  if (g_vsc.stop_at_entry) {
+    SendThreadStoppedEvent();
+  } else {
+    g_vsc.target.GetProcess().Continue();
+  }
+
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
@@ -2079,9 +2238,10 @@ void request_setBreakpoints(const llvm::json::Object &request) {
           }
         }
         // At this point the breakpoint is new
-        src_bp.SetBreakpoint(path.data());
-        AppendBreakpoint(src_bp.bp, response_breakpoints, path, src_bp.line);
-        g_vsc.source_breakpoints[path][src_bp.line] = std::move(src_bp);
+        g_vsc.source_breakpoints[path][src_bp.line] = src_bp;
+        SourceBreakpoint &new_bp = g_vsc.source_breakpoints[path][src_bp.line];
+        new_bp.SetBreakpoint(path.data());
+        AppendBreakpoint(new_bp.bp, response_breakpoints, path, new_bp.line);
       }
     }
   }
@@ -2304,10 +2464,11 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
   // Any breakpoints that are left in "request_bps" are breakpoints that
   // need to be set.
   for (auto &pair : request_bps) {
-    pair.second.SetBreakpoint();
     // Add this breakpoint info to the response
-    AppendBreakpoint(pair.second.bp, response_breakpoints);
     g_vsc.function_breakpoints[pair.first()] = std::move(pair.second);
+    FunctionBreakpoint &new_bp = g_vsc.function_breakpoints[pair.first()];
+    new_bp.SetBreakpoint();
+    AppendBreakpoint(new_bp.bp, response_breakpoints);
   }
 
   llvm::json::Object body;
@@ -2929,7 +3090,51 @@ void request_variables(const llvm::json::Object &request) {
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
+    if (variablesReference == VARREF_REGS) {
+      // Change the default format of any pointer sized registers in the first
+      // register set to be the lldb::eFormatAddressInfo so we show the pointer
+      // and resolve what the pointer resolves to. Only change the format if the
+      // format was set to the default format or if it was hex as some registers
+      // have formats set for them.
+      const uint32_t addr_size = g_vsc.target.GetProcess().GetAddressByteSize();
+      lldb::SBValue reg_set = g_vsc.variables.registers.GetValueAtIndex(0);
+      const uint32_t num_regs = reg_set.GetNumChildren();
+      for (uint32_t reg_idx = 0; reg_idx < num_regs; ++reg_idx) {
+        lldb::SBValue reg = reg_set.GetChildAtIndex(reg_idx);
+        const lldb::Format format = reg.GetFormat();
+        if (format == lldb::eFormatDefault || format == lldb::eFormatHex) {
+          if (reg.GetByteSize() == addr_size)
+            reg.SetFormat(lldb::eFormatAddressInfo);
+        }
+      }
+    }
+
     num_children = top_scope->GetSize();
+    if (num_children == 0 && variablesReference == VARREF_LOCALS) {
+      // Check for an error in the SBValueList that might explain why we don't
+      // have locals. If we have an error display it as the sole value in the
+      // the locals.
+
+      // "error" owns the error string so we must keep it alive as long as we
+      // want to use the returns "const char *"
+      lldb::SBError error = top_scope->GetError();
+      const char *var_err = error.GetCString();
+      if (var_err) {
+        // Create a fake variable named "error" to explain why variables were
+        // not available. This new error will help let users know when there was
+        // a problem that kept variables from being available for display and
+        // allow users to fix this issue instead of seeing no variables. The
+        // errors are only set when there is a problem that the user could
+        // fix, so no error will show up when you have no debug info, only when
+        // we do have debug info and something that is fixable can be done.
+        llvm::json::Object object;
+        EmplaceSafeString(object, "name", "<error>");
+        EmplaceSafeString(object, "type", "const char *");
+        EmplaceSafeString(object, "value", var_err);
+        object.try_emplace("variablesReference", (int64_t)0);
+        variables.emplace_back(std::move(object));
+      }
+    }
     const int64_t end_idx = start_idx + ((count == 0) ? num_children : count);
 
     // We first find out which variable names are duplicated
@@ -3017,6 +3222,7 @@ void RegisterRequestCallbacks() {
   g_vsc.RegisterRequestCallback("launch", request_launch);
   g_vsc.RegisterRequestCallback("next", request_next);
   g_vsc.RegisterRequestCallback("pause", request_pause);
+  g_vsc.RegisterRequestCallback("restart", request_restart);
   g_vsc.RegisterRequestCallback("scopes", request_scopes);
   g_vsc.RegisterRequestCallback("setBreakpoints", request_setBreakpoints);
   g_vsc.RegisterRequestCallback("setExceptionBreakpoints",
@@ -3082,11 +3288,21 @@ EXAMPLES:
 // In case of errors launching the target, a suitable error message will be
 // emitted to the debug adaptor.
 void LaunchRunInTerminalTarget(llvm::opt::Arg &target_arg,
-                               llvm::StringRef comm_file, char *argv[]) {
+                               llvm::StringRef comm_file,
+                               lldb::pid_t debugger_pid, char *argv[]) {
 #if defined(_WIN32)
   llvm::errs() << "runInTerminal is only supported on POSIX systems\n";
   exit(EXIT_FAILURE);
 #else
+
+  // On Linux with the Yama security module enabled, a process can only attach
+  // to its descendants by default. In the runInTerminal case the target
+  // process is launched by the client so we need to allow tracing explicitly.
+#if defined(__linux__)
+  if (debugger_pid != LLDB_INVALID_PROCESS_ID)
+    (void)prctl(PR_SET_PTRACER, debugger_pid, 0, 0, 0);
+#endif
+
   RunInTerminalLauncherCommChannel comm_channel(comm_file);
   if (llvm::Error err = comm_channel.NotifyPid()) {
     llvm::errs() << llvm::toString(std::move(err)) << "\n";
@@ -3169,7 +3385,7 @@ int main(int argc, char *argv[]) {
 
   LLDBVSCodeOptTable T;
   unsigned MAI, MAC;
-  llvm::ArrayRef<const char *> ArgsArr = llvm::makeArrayRef(argv + 1, argc);
+  llvm::ArrayRef<const char *> ArgsArr = llvm::ArrayRef(argv + 1, argc);
   llvm::opt::InputArgList input_args = T.ParseArgs(ArgsArr, MAI, MAC);
 
   if (input_args.hasArg(OPT_help)) {
@@ -3179,13 +3395,23 @@ int main(int argc, char *argv[]) {
 
   if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {
     if (llvm::opt::Arg *comm_file = input_args.getLastArg(OPT_comm_file)) {
+      lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
+      llvm::opt::Arg *debugger_pid = input_args.getLastArg(OPT_debugger_pid);
+      if (debugger_pid) {
+        llvm::StringRef debugger_pid_value = debugger_pid->getValue();
+        if (debugger_pid_value.getAsInteger(10, pid)) {
+          llvm::errs() << "'" << debugger_pid_value << "' is not a valid "
+                          "PID\n";
+          return EXIT_FAILURE;
+        }
+      }
       int target_args_pos = argc;
       for (int i = 0; i < argc; i++)
         if (strcmp(argv[i], "--launch-target") == 0) {
           target_args_pos = i + 1;
           break;
         }
-      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(),
+      LaunchRunInTerminalTarget(*target_arg, comm_file->getValue(), pid,
                                 argv + target_args_pos);
     } else {
       llvm::errs() << "\"--launch-target\" requires \"--comm-file\" to be "

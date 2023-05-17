@@ -24,6 +24,8 @@ class ObjCDataFormatterNSData(ObjCDataFormatterTestCase):
         self.appkit_tester_impl(self.nsdata_data_formatter_commands, False)
 
     def nsdata_data_formatter_commands(self):
+        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
+
         self.expect(
             'frame variable immutableData mutableData data_ref mutable_data_ref mutable_string_ref concreteData concreteMutableData',
             substrs=[

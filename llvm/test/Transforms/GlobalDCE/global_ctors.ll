@@ -1,12 +1,12 @@
 ; RUN: opt -S -passes=globaldce < %s | FileCheck %s
 
 ; Test that the presence of debug intrinsics isn't affecting GlobalDCE.
-; CHECK: @llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_notremovable, i8* null }]
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_notremovable, ptr null }]
 ; CHECK-NOT: @_GLOBAL__I_a
 
 declare void @_notremovable()
 
-@llvm.global_ctors = appending global [3 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_b, i8* null }, { i32, void ()*, i8* } { i32 65535, void ()* @_notremovable, i8* null }]
+@llvm.global_ctors = appending global [3 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_a, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_b, ptr null }, { i32, ptr, ptr } { i32 65535, ptr @_notremovable, ptr null }]
 
 @x = internal unnamed_addr constant i8 undef, align 1
 
@@ -19,7 +19,7 @@ entry:
 ; Function Attrs: nounwind readnone
 define internal void @_GLOBAL__I_b() #1 section "__TEXT,__StaticInit,regular,pure_instructions" {
 entry:
-  tail call void @llvm.dbg.value(metadata i8* @x, metadata !4, metadata !DIExpression(DW_OP_deref, DW_OP_constu, 0, DW_OP_swap, DW_OP_xderef)), !dbg !5
+  tail call void @llvm.dbg.value(metadata ptr @x, metadata !4, metadata !DIExpression(DW_OP_deref, DW_OP_constu, 0, DW_OP_swap, DW_OP_xderef)), !dbg !5
   ret void
 }
 

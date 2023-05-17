@@ -1,6 +1,7 @@
 // Test lowering FIR to LLVM IR of fir.select{|_rank|_case}
 
 // RUN: tco %s | FileCheck %s
+// RUN: %flang_fc1 -emit-llvm %s -o - | FileCheck %s
 
 // CHECK-LABEL: @f
 func.func @f(%a : i32) -> i32 {

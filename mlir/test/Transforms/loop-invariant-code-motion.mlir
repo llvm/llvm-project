@@ -13,7 +13,7 @@ func.func @nested_loops_both_having_invariant_code() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST0:.*]] = arith.constant 7.000000e+00 : f32
   // CHECK-NEXT: %[[CST1:.*]] = arith.constant 8.000000e+00 : f32
   // CHECK-NEXT: %[[ADD0:.*]] = arith.addf %[[CST0]], %[[CST1]] : f32
@@ -38,10 +38,10 @@ func.func @nested_loops_code_invariant_to_both() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %cst = arith.constant 7.000000e+00 : f32
-  // CHECK-NEXT: %cst_0 = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: %1 = arith.addf %cst, %cst_0 : f32
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: arith.constant 7.000000e+00 : f32
+  // CHECK-NEXT: arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: arith.addf
 
   return
 }
@@ -58,13 +58,13 @@ func.func @single_loop_nothing_invariant() {
     affine.store %v2, %m1[%arg0] : memref<10xf32>
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %1 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
-  // CHECK-NEXT: %2 = affine.load %0[%arg0] : memref<10xf32>
-  // CHECK-NEXT: %3 = affine.load %1[%arg0] : memref<10xf32>
-  // CHECK-NEXT: %4 = arith.addf %2, %3 : f32
-  // CHECK-NEXT: affine.store %4, %0[%arg0] : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT: affine.load
+  // CHECK-NEXT: affine.load
+  // CHECK-NEXT: arith.addf
+  // CHECK-NEXT: affine.store
 
   return
 }
@@ -84,13 +84,13 @@ func.func @invariant_code_inside_affine_if() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %cst = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: affine.for %arg0 = 0 to 10 {
-  // CHECK-NEXT: %1 = affine.apply #map(%arg0)
-  // CHECK-NEXT: affine.if #set(%arg0, %1) {
-  // CHECK-NEXT: %2 = arith.addf %cst, %cst : f32
-  // CHECK-NEXT: affine.store %2, %0[%arg0] : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: affine.for
+  // CHECK-NEXT: affine.apply
+  // CHECK-NEXT: affine.if
+  // CHECK-NEXT: arith.addf
+  // CHECK-NEXT: affine.store
   // CHECK-NEXT: }
 
 
@@ -103,20 +103,109 @@ func.func @invariant_affine_if() {
   %m = memref.alloc() : memref<10xf32>
   %cf8 = arith.constant 8.0 : f32
   affine.for %arg0 = 0 to 10 {
-    affine.for %arg1 = 0 to 10 {
+    affine.for %arg1 = 0 to 20 {
       affine.if affine_set<(d0, d1) : (d1 - d0 >= 0)> (%arg0, %arg0) {
           %cf9 = arith.addf %cf8, %cf8 : f32
       }
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: %[[CST:.*]] = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
+  // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 20 {
   // CHECK-NEXT: }
   // CHECK-NEXT: affine.for %[[ARG:.*]] = 0 to 10 {
   // CHECK-NEXT: affine.if #set(%[[ARG]], %[[ARG]]) {
   // CHECK-NEXT: arith.addf %[[CST]], %[[CST]] : f32
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_affine_for_with_unknown_trip_count(%lb: index, %ub: index) {
+  affine.for %arg0 = 0 to 10 {
+    affine.for %arg1 = %lb to %ub {
+    }
+  }
+
+  // CHECK: @hoist_affine_for_with_unknown_trip_count(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK-NEXT: affine.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]] {
+  // CHECK-NEXT: }
+  // CHECK-NEXT: affine.for %[[ARG3:.*]] = 0 to 10 {
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_affine_for_with_unknown_trip_count_non_unit_step(%lb: index, %ub: index) {
+  affine.for %arg0 = 0 to 10 {
+    affine.for %arg1 = %lb to %ub step 2 {
+    }
+  }
+
+  // CHECK: @hoist_affine_for_with_unknown_trip_count_non_unit_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK-NEXT: affine.for %[[ARG2:.*]] = 0 to 10 {
+  // CHECK-NEXT: affine.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]] step 2 {
+  // CHECK-NEXT: }
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_scf_for_with_unknown_trip_count_unit_step(%lb: index, %ub: index) {
+  %c1 = arith.constant 1 : index
+  scf.for %arg0 = %lb to %ub step %c1 {
+    scf.for %arg1 = %lb to %ub step %c1 {
+    }
+  }
+
+  // CHECK: @hoist_scf_for_with_unknown_trip_count_unit_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK: scf.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: }
+  // CHECK-NEXT: scf.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_scf_for_with_unknown_trip_count_non_unit_constant_step(%lb: index, %ub: index) {
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  scf.for %arg0 = %lb to %ub step %c1 {
+    scf.for %arg1 = %lb to %ub step %c2 {
+    }
+  }
+
+  // CHECK: @hoist_scf_for_with_unknown_trip_count_non_unit_constant_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) {
+  // CHECK: scf.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: scf.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: }
+  // CHECK-NEXT: }
+
+  return
+}
+
+// -----
+
+func.func @hoist_scf_for_with_unknown_trip_count_unknown_step(%lb: index, %ub: index, %step: index) {
+  %c1 = arith.constant 1 : index
+  scf.for %arg0 = %lb to %ub step %c1 {
+    scf.for %arg1 = %lb to %ub step %step {
+    }
+  }
+
+  // CHECK: @hoist_scf_for_with_unknown_trip_count_unknown_step(%[[ARG0:.*]]: index, %[[ARG1:.*]]: index, %[[STEP:.*]]: index) {
+  // CHECK: scf.for %[[ARG2:.*]] = %[[ARG0]] to %[[ARG1]]
+  // CHECK-NEXT: scf.for %[[ARG3:.*]] = %[[ARG0]] to %[[ARG1]] step %[[STEP]]
+  // CHECK-NEXT: }
   // CHECK-NEXT: }
 
   return
@@ -234,10 +323,10 @@ func.func @invariant_loop_dialect() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
-  // CHECK-NEXT: %cst = arith.constant 7.000000e+00 : f32
-  // CHECK-NEXT: %cst_0 = arith.constant 8.000000e+00 : f32
-  // CHECK-NEXT: %1 = arith.addf %cst, %cst_0 : f32
+  // CHECK: memref.alloc() : memref<10xf32>
+  // CHECK-NEXT: arith.constant 7.000000e+00 : f32
+  // CHECK-NEXT: arith.constant 8.000000e+00 : f32
+  // CHECK-NEXT: arith.addf
 
   return
 }
@@ -255,7 +344,7 @@ func.func @variant_loop_dialect() {
     }
   }
 
-  // CHECK: %0 = memref.alloc() : memref<10xf32>
+  // CHECK: memref.alloc() : memref<10xf32>
   // CHECK-NEXT: scf.for
   // CHECK-NEXT: scf.for
   // CHECK-NEXT: arith.addi
@@ -277,14 +366,14 @@ func.func @parallel_loop_with_invariant() {
   }
 
   // CHECK-LABEL: func @parallel_loop_with_invariant
-  // CHECK: %c0 = arith.constant 0 : index
-  // CHECK-NEXT: %c10 = arith.constant 10 : index
-  // CHECK-NEXT: %c1 = arith.constant 1 : index
-  // CHECK-NEXT: %c7_i32 = arith.constant 7 : i32
-  // CHECK-NEXT: %c8_i32 = arith.constant 8 : i32
-  // CHECK-NEXT: arith.addi %c7_i32, %c8_i32 : i32
-  // CHECK-NEXT: scf.parallel (%arg0, %arg1) = (%c0, %c0) to (%c10, %c10) step (%c1, %c1)
-  // CHECK-NEXT:   arith.addi %arg0, %arg1 : index
+  // CHECK: arith.constant 0 : index
+  // CHECK-NEXT: arith.constant 10 : index
+  // CHECK-NEXT: arith.constant 1 : index
+  // CHECK-NEXT: arith.constant 7 : i32
+  // CHECK-NEXT: arith.constant 8 : i32
+  // CHECK-NEXT: arith.addi
+  // CHECK-NEXT: scf.parallel (%[[A:.*]],{{.*}}) =
+  // CHECK-NEXT:   arith.addi %[[A]]
   // CHECK-NEXT:   yield
   // CHECK-NEXT: }
   // CHECK-NEXT: return
@@ -300,7 +389,7 @@ func.func private @make_val() -> (index)
 func.func @nested_uses_inside(%lb: index, %ub: index, %step: index) {
   %true = arith.constant true
 
-  // Check that ops that contain nested uses to values not defiend outside 
+  // Check that ops that contain nested uses to values not defiend outside
   // remain in the loop.
   // CHECK-NEXT: arith.constant
   // CHECK-NEXT: scf.for
@@ -424,5 +513,419 @@ func.func @test_invariant_cycle_not_hoisted() {
     %b = "test.b"(%a) : (i32) -> i32
     test.region_yield %a : i32
   } : () -> ()
+  return
+}
+
+// -----
+
+// CHECK-LABEL: test_always_speculatable_op
+func.func @test_always_speculatable_op(%lb: index, %ub: index, %step: index) {
+  // CHECK: test.always_speculatable_op
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.always_speculatable_op"() : () -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_never_speculatable_op
+func.func @test_never_speculatable_op(%lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: test.never_speculatable_op
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.never_speculatable_op"() : () -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_conditionally_speculatable_op_success
+func.func @test_conditionally_speculatable_op_success(%lb: index, %ub: index, %step: index) {
+  // CHECK: test.conditionally_speculatable_op
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %const_val = arith.constant 5 : i32
+    %val = "test.conditionally_speculatable_op"(%const_val) : (i32) -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_conditionally_speculatable_op_failure
+func.func @test_conditionally_speculatable_op_failure(%lb: index, %ub: index, %step: index, %arg: i32) {
+  // CHECK: scf.for
+  // CHECK-NEXT: test.conditionally_speculatable_op
+  %const_5 = arith.constant 5 : i32
+  %non_const = arith.addi %arg, %const_5 : i32
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.conditionally_speculatable_op"(%non_const) : (i32) -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_recursively_speculatable_op_success
+func.func @test_recursively_speculatable_op_success(%lb: index, %ub: index, %step: index, %arg: i32) {
+  // CHECK: test.recursively_speculatable_op
+  // CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.recursively_speculatable_op"()({
+      %result = arith.addi %arg, %arg : i32
+      test.region_yield %result : i32
+    }) : () -> i32
+  }
+
+  return
+}
+
+// CHECK-LABEL: test_recursively_speculatable_op_failure
+func.func @test_recursively_speculatable_op_failure(%lb: index, %ub: index, %step: index, %arg: i32) {
+  // CHECK: scf.for
+  // CHECK-NEXT: test.recursively_speculatable_op
+  scf.for %i = %lb to %ub step %step {
+    %val = "test.recursively_speculatable_op"()({
+      %result = "test.never_speculatable_op"() : () -> i32
+      test.region_yield %result : i32
+    }) : () -> i32
+  }
+
+  return
+}
+
+// -----
+
+func.func @speculate_tensor_dim_unknown_rank_unknown_dim(
+// CHECK-LABEL: @speculate_tensor_dim_unknown_rank_unknown_dim
+    %t: tensor<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %dim_idx : tensor<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_tensor_dim_known_rank_unknown_dim(
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_unknown_dim
+    %t: tensor<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %dim_idx : tensor<?x?x?x?xf32>
+  }
+
+  return
+}
+
+func.func @speculate_tensor_dim_unknown_rank_known_dim(
+// CHECK-LABEL: @speculate_tensor_dim_unknown_rank_known_dim
+    %t: tensor<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %c0 : tensor<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_tensor_dim_known_rank_known_dim_inbounds(
+// CHECK-LABEL: @speculate_tensor_dim_known_rank_known_dim_inbounds
+    %t: tensor<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c1 = arith.constant 1 : index
+  // CHECK: tensor.dim
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = tensor.dim %t, %c1 : tensor<?x?x?x?xf32>
+  }
+
+  return
+}
+
+// -----
+
+func.func @speculate_memref_dim_unknown_rank_unknown_dim(
+// CHECK-LABEL: @speculate_memref_dim_unknown_rank_unknown_dim
+    %t: memref<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: memref.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %dim_idx : memref<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_memref_dim_known_rank_unknown_dim(
+// CHECK-LABEL: @speculate_memref_dim_known_rank_unknown_dim
+    %t: memref<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  // CHECK: scf.for
+  // CHECK-NEXT: memref.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %dim_idx : memref<?x?x?x?xf32>
+  }
+
+  return
+}
+
+func.func @speculate_memref_dim_unknown_rank_known_dim(
+// CHECK-LABEL: @speculate_memref_dim_unknown_rank_known_dim
+    %t: memref<*xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : index
+  // CHECK: scf.for
+  // CHECK-NEXT: memref.dim
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %c0 : memref<*xf32>
+  }
+
+  return
+}
+
+func.func @speculate_memref_dim_known_rank_known_dim_inbounds(
+// CHECK-LABEL: @speculate_memref_dim_known_rank_known_dim_inbounds
+    %t: memref<?x?x?x?xf32>, %dim_idx: index, %lb: index, %ub: index, %step: index) {
+  %c1 = arith.constant 1 : index
+  // CHECK: memref.dim
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = memref.dim %t, %c1 : memref<?x?x?x?xf32>
+  }
+
+  return
+}
+
+// -----
+
+func.func @no_speculate_divui(
+// CHECK-LABEL: @no_speculate_divui(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi(
+// CHECK-LABEL: @no_speculate_divsi(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui(
+// CHECK-LABEL: @no_speculate_ceildivui(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi(
+// CHECK-LABEL: @no_speculate_ceildivsi(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %denom : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divui_const(%num: i32, %lb: index, %ub: index, %step: index) {
+// CHECK-LABEL: @no_speculate_divui_const(
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divui
+    %val = arith.divui %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @speculate_divui_const(
+// CHECK-LABEL: @speculate_divui_const(
+    %num: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+// CHECK: arith.divui
+// CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = arith.divui %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivui_const(%num: i32, %lb: index, %ub: index, %step: index) {
+// CHECK-LABEL: @no_speculate_ceildivui_const(
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivui
+    %val = arith.ceildivui %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @speculate_ceildivui_const(
+// CHECK-LABEL: @speculate_ceildivui_const(
+    %num: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+// CHECK: arith.ceildivui
+// CHECK: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %val = arith.ceildivui %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_const0(
+// CHECK-LABEL: @no_speculate_divsi_const0(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_divsi_const_minus1(
+// CHECK-LABEL: @no_speculate_divsi_const_minus1(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %cm1 = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.divsi
+    %val = arith.divsi %num, %cm1 : i32
+  }
+
+  return
+}
+
+func.func @speculate_divsi_const(
+// CHECK-LABEL: @speculate_divsi_const(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.divsi
+// CHECK: scf.for
+    %val = arith.divsi %num, %c5 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_const0(
+// CHECK-LABEL: @no_speculate_ceildivsi_const0(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c0 = arith.constant 0 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %c0 : i32
+  }
+
+  return
+}
+
+func.func @no_speculate_ceildivsi_const_minus1(
+// CHECK-LABEL: @no_speculate_ceildivsi_const_minus1(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %cm1 = arith.constant -1 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: scf.for
+// CHECK: arith.ceildivsi
+    %val = arith.ceildivsi %num, %cm1 : i32
+  }
+
+  return
+}
+
+func.func @speculate_ceildivsi_const(
+// CHECK-LABEL: @speculate_ceildivsi_const(
+    %num: i32, %denom: i32, %lb: index, %ub: index, %step: index) {
+  %c5 = arith.constant 5 : i32
+  scf.for %i = %lb to %ub step %step {
+// CHECK: arith.ceildivsi
+// CHECK: scf.for
+    %val = arith.ceildivsi %num, %c5 : i32
+  }
+
+  return
+}
+
+// -----
+
+func.func @speculate_static_pack_and_unpack(%source: tensor<128x256xf32>,
+  %dest: tensor<4x16x32x16xf32>, %lb: index, %ub: index, %step: index) {
+
+  // CHECK: tensor.pack
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %packed = tensor.pack %source
+      inner_dims_pos = [0, 1]
+      inner_tiles = [32, 16] into %dest : tensor<128x256xf32> -> tensor<4x16x32x16xf32>
+  }
+
+  // CHECK: tensor.unpack
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %unpacked = tensor.unpack %dest
+      inner_dims_pos = [0, 1]
+      inner_tiles = [32, 16] into %source : tensor<4x16x32x16xf32> -> tensor<128x256xf32>
+  }
+  return
+}
+
+// -----
+
+func.func @speculate_dynamic_pack_and_unpack(%source: tensor<?x?xf32>,
+  %dest: tensor<?x?x?x?xf32>, %lb: index, %ub: index, %step: index,
+  %tile_m: index, %tile_n: index, %pad: f32) {
+
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.pack
+  scf.for %i = %lb to %ub step %step {
+    %packed = tensor.pack %source
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  }
+
+  // CHECK: scf.for
+  // CHECK-NEXT: tensor.unpack
+  scf.for %i = %lb to %ub step %step {
+    %unpacked = tensor.unpack %dest
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_n, %tile_m] into %source : tensor<?x?x?x?xf32> -> tensor<?x?xf32>
+  }
+
+  // CHECK: tensor.pack
+  // CHECK-NEXT: scf.for
+  scf.for %i = %lb to %ub step %step {
+    %packed = tensor.pack %source padding_value(%pad : f32)
+      inner_dims_pos = [0, 1]
+      inner_tiles = [%tile_n, %tile_m] into %dest : tensor<?x?xf32> -> tensor<?x?x?x?xf32>
+  }
   return
 }

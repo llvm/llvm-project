@@ -14,19 +14,19 @@ target triple = "x86_64-apple-macosx10.7.0"
 
 define void @fn1() nounwind uwtable ssp {
 entry:
-  %0 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @d, align 4
   %tobool72 = icmp eq i32 %0, 0
   br i1 %tobool72, label %for.end32, label %for.cond1.preheader.lr.ph
 
 for.cond1.preheader.lr.ph:                        ; preds = %entry
-  %1 = load i32, i32* @c, align 4
+  %1 = load i32, ptr @c, align 4
   %tobool2 = icmp eq i32 %1, 0
-  %2 = load i32, i32* @b, align 4
+  %2 = load i32, ptr @b, align 4
   %cmp = icmp sgt i32 %2, 0
   %conv = zext i1 %cmp to i32
-  %3 = load i32, i32* @g, align 4
+  %3 = load i32, ptr @g, align 4
   %tobool4 = icmp eq i32 %3, 0
-  %4 = load i16, i16* @a, align 2
+  %4 = load i16, ptr @a, align 2
   %tobool9 = icmp eq i16 %4, 0
   br label %for.cond1.preheader
 
@@ -41,7 +41,7 @@ for.cond1.preheader.split.us:                     ; preds = %for.cond1.preheader
   br i1 %tobool9, label %cond.end.us.us, label %cond.end.us
 
 cond.false18.us.us:                               ; preds = %if.end.us.us
-  %5 = load i32, i32* @f, align 4
+  %5 = load i32, ptr @f, align 4
   %sext76 = shl i32 %5, 16
   %phitmp75 = ashr exact i32 %sext76, 16
   br label %cond.end.us.us
@@ -50,12 +50,12 @@ if.end.us.us:                                     ; preds = %cond.end.us.us, %if
   br i1 %tobool4, label %cond.false18.us.us, label %for.cond1.preheader
 
 if.then.us.us:                                    ; preds = %cond.end.us.us
-  store i32 0, i32* @f, align 4
+  store i32 0, ptr @f, align 4
   br label %if.end.us.us
 
 cond.end.us.us:                                   ; preds = %cond.false18.us.us, %for.cond1.preheader.split.us
   %j.1.us.us = phi i32 [ %j.073, %for.cond1.preheader.split.us ], [ %phitmp75, %cond.false18.us.us ]
-  store i32 %conv, i32* @h, align 4
+  store i32 %conv, ptr @h, align 4
   br i1 %cmp, label %if.then.us.us, label %if.end.us.us
 
 cond.end21.us:                                    ; preds = %land.lhs.true12.us, %cond.false18.us
@@ -74,7 +74,7 @@ land.lhs.true12.us:                               ; preds = %if.end6.us
   br i1 %cmp14.us, label %cond.end21.us, label %cond.false18.us
 
 if.end6.us:                                       ; preds = %if.end.us
-  %6 = load i32, i32* @f, align 4
+  %6 = load i32, ptr @f, align 4
   %conv7.us = trunc i32 %6 to i16
   %tobool11.us = icmp eq i16 %conv7.us, 0
   br i1 %tobool11.us, label %cond.false18.us, label %land.lhs.true12.us
@@ -83,34 +83,34 @@ if.end.us:                                        ; preds = %cond.end.us, %if.th
   br i1 %tobool4, label %if.end6.us, label %for.cond1.preheader
 
 if.then.us:                                       ; preds = %cond.end.us
-  store i32 0, i32* @f, align 4
+  store i32 0, ptr @f, align 4
   br label %if.end.us
 
 cond.end.us:                                      ; preds = %cond.end21.us, %for.cond1.preheader.split.us
   %j.1.us = phi i32 [ %conv24.us, %cond.end21.us ], [ %j.073, %for.cond1.preheader.split.us ]
-  store i32 %conv, i32* @h, align 4
+  store i32 %conv, ptr @h, align 4
   br i1 %cmp, label %if.then.us, label %if.end.us
 
 for.cond1.preheader.split.for.cond1.preheader.split.split_crit_edge: ; preds = %for.cond1.preheader.for.cond1.preheader.split_crit_edge
   br i1 %tobool4, label %if.end6.us65, label %for.cond25.loopexit.us-lcssa.us-lcssa
 
 cond.false18.us40:                                ; preds = %if.end.us50
-  %7 = load i32, i32* @f, align 4
+  %7 = load i32, ptr @f, align 4
   %sext = shl i32 %7, 16
   %phitmp = ashr exact i32 %sext, 16
   br label %if.end.us50
 
 if.end.us50:                                      ; preds = %cond.false18.us40, %for.cond1.preheader.for.cond1.preheader.split_crit_edge
   %j.1.us36 = phi i32 [ %j.073, %for.cond1.preheader.for.cond1.preheader.split_crit_edge ], [ %phitmp, %cond.false18.us40 ]
-  store i32 0, i32* @h, align 4
+  store i32 0, ptr @h, align 4
   br i1 %tobool4, label %cond.false18.us40, label %for.cond1.preheader
 
 if.end6.us65:                                     ; preds = %if.end6.us65, %for.cond1.preheader.split.for.cond1.preheader.split.split_crit_edge
-  store i32 0, i32* @h, align 4
+  store i32 0, ptr @h, align 4
   br label %if.end6.us65
 
 for.cond25.loopexit.us-lcssa.us-lcssa:            ; preds = %for.cond1.preheader.split.for.cond1.preheader.split.split_crit_edge
-  store i32 0, i32* @h, align 4
+  store i32 0, ptr @h, align 4
   br label %for.cond1.preheader
 
 for.end32:                                        ; preds = %entry

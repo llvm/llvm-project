@@ -6,13 +6,13 @@
 # RUN: not ld.lld --allow-multiple-definition --no-allow-multiple-definition %t1 %t2 -o /dev/null
 # RUN: ld.lld --allow-multiple-definition --fatal-warnings %t1 %t2 -o %t3
 # RUN: ld.lld --allow-multiple-definition --fatal-warnings %t2 %t1 -o %t4
-# RUN: llvm-objdump -d %t3 | FileCheck %s
-# RUN: llvm-objdump -d %t4 | FileCheck --check-prefix=REVERT %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t3 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t4 | FileCheck --check-prefix=REVERT %s
 
 # RUN: ld.lld -z muldefs --fatal-warnings  %t1 %t2 -o %t3
 # RUN: ld.lld -z muldefs --fatal-warnings  %t2 %t1 -o %t4
-# RUN: llvm-objdump -d %t3 | FileCheck %s
-# RUN: llvm-objdump -d %t4 | FileCheck --check-prefix=REVERT %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t3 | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t4 | FileCheck --check-prefix=REVERT %s
 
 # inputs contain different constants for instruction movl.
 # Tests below checks that order of files in command line

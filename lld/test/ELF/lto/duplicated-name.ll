@@ -1,5 +1,5 @@
 ; REQUIRES: x86
-; Cretae two archive with the same member name
+; Create two archive with the same member name
 ; RUN: rm -f %t1.a %t2.a
 ; RUN: opt -module-summary %s -o %t.o
 ; RUN: llvm-ar rcS %t1.a %t.o

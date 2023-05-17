@@ -99,7 +99,7 @@ Windows
   or even write new tests at all, PTVS is an indispensable debugging
   extension to VS that enables full editing and debugging support for Python
   (including mixed native/managed debugging).
-* `SWIG for Windows <http://www.swig.org/download.html>_`
+* `SWIG for Windows <http://www.swig.org/download.html>`_
 
 The steps outlined here describes how to set up your system and install the
 required dependencies such that they can be found when needed during the build
@@ -169,8 +169,15 @@ We used the ``LLVM_ENABLE_PROJECTS`` option here to tell the build-system which
 subprojects to build in addition to LLVM (for more options see
 :ref:`CommonCMakeOptions` and :ref:`CMakeCaches`). Parts of the LLDB test suite
 require ``lld``. Add it to the list in order to run all tests. Once CMake is done,
-run ninja to perform the actual build. We pass ``lldb`` here as the target, so
-it only builds what is necessary to run the lldb driver:
+run ninja to perform the actual build.
+
+::
+
+  $ ninja lldb lldb-server
+
+If you only want lldb, or are on a platform where lldb-server is not supported,
+you can pass just ``lldb``. Ninja will only build what is necessary to run the
+lldb driver:
 
 ::
 
@@ -210,7 +217,10 @@ build directory for Clang, remember to pass its module path via ``Clang_DIR``
   $ cmake -B /path/to/lldb-build -G Ninja \
           -DLLVM_DIR=/path/to/llvm-build/lib/cmake/llvm \
           [<more cmake options>] /path/to/llvm-project/lldb
-  $ ninja lldb
+  $ ninja lldb lldb-server
+
+If you do not require or cannot build ``lldb-server`` on your platform, simply
+remove it from the Ninja command.
 
 .. note::
 
@@ -391,10 +401,9 @@ Building the Documentation
 If you wish to build the optional (reference) documentation, additional
 dependencies are required:
 
-* Sphinx (for the website)
+* Sphinx (for the website and the Python API reference)
 * Graphviz (for the 'dot' tool)
 * doxygen (if you wish to build the C++ API reference)
-* epydoc (if you wish to build the Python API reference)
 
 To install the prerequisites for building the documentation (on Debian/Ubuntu)
 do:
@@ -402,7 +411,6 @@ do:
 ::
 
   $ sudo apt-get install doxygen graphviz python3-sphinx
-  $ sudo pip install epydoc
 
 To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build the desired target(s).
 
@@ -411,7 +419,6 @@ To build the documentation, configure with ``LLVM_ENABLE_SPHINX=ON`` and build t
   $ ninja docs-lldb-html
   $ ninja docs-lldb-man
   $ ninja lldb-cpp-doc
-  $ ninja lldb-python-doc
 
 Cross-compiling LLDB
 --------------------

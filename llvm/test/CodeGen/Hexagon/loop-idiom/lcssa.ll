@@ -1,4 +1,4 @@
-; RUN: opt -hexagon-loop-idiom -loop-deletion -gvn -S < %s
+; RUN: opt -S -hexagon-loop-idiom < %s | opt -S -passes='loop(loop-deletion),gvn'
 ; REQUIRES: asserts
 
 ; This tests that the HexagonLoopIdiom pass does not mark LCSSA information
@@ -29,12 +29,12 @@ do.end329:
 
 do.body330:
   %row_width.7 = phi i32 [ %sub325.lcssa, %do.end329 ], [ %dec334, %do.body330 ]
-  %sp.5 = phi i8* [ undef, %do.end329 ], [ %incdec.ptr331, %do.body330 ]
-  %dp.addr.5 = phi i8* [ undef, %do.end329 ], [ %incdec.ptr332, %do.body330 ]
-  %0 = load i8, i8* %sp.5, align 1
-  store i8 %0, i8* %dp.addr.5, align 1
-  %incdec.ptr332 = getelementptr inbounds i8, i8* %dp.addr.5, i32 1
-  %incdec.ptr331 = getelementptr inbounds i8, i8* %sp.5, i32 1
+  %sp.5 = phi ptr [ undef, %do.end329 ], [ %incdec.ptr331, %do.body330 ]
+  %dp.addr.5 = phi ptr [ undef, %do.end329 ], [ %incdec.ptr332, %do.body330 ]
+  %0 = load i8, ptr %sp.5, align 1
+  store i8 %0, ptr %dp.addr.5, align 1
+  %incdec.ptr332 = getelementptr inbounds i8, ptr %dp.addr.5, i32 1
+  %incdec.ptr331 = getelementptr inbounds i8, ptr %sp.5, i32 1
   %dec334 = add i32 %row_width.7, -1
   %cmp335 = icmp eq i32 %dec334, 0
   br i1 %cmp335, label %if.end375, label %do.body330

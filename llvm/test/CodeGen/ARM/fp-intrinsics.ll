@@ -77,13 +77,13 @@ define i32 @fptosi_f32(float %x) #0 {
 ; CHECK-NOSP: bl __aeabi_f2iz
 ; CHECK-SP: vcvt.s32.f32
 ; FIXME-CHECK-SP: vcvt.s32.f32
-define void @fptosi_f32_twice(float %arg, i32* %ptr) #0 {
+define void @fptosi_f32_twice(float %arg, ptr %ptr) #0 {
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptosi.f32(float %arg, metadata !"fpexcept.strict") #0
-  store i32 %conv, i32* %ptr, align 4
+  store i32 %conv, ptr %ptr, align 4
   %conv1 = call i32 @llvm.experimental.constrained.fptosi.f32(float %arg, metadata !"fpexcept.strict") #0
-  %idx = getelementptr inbounds i32, i32* %ptr, i32 1
-  store i32 %conv1, i32* %idx, align 4
+  %idx = getelementptr inbounds i32, ptr %ptr, i32 1
+  store i32 %conv1, ptr %idx, align 4
   ret void
 }
 
@@ -100,13 +100,13 @@ define i32 @fptoui_f32(float %x) #0 {
 ; CHECK-NOSP: bl __aeabi_f2uiz
 ; FIXME-CHECK-SP: vcvt.u32.f32
 ; FIXME-CHECK-SP: vcvt.u32.f32
-define void @fptoui_f32_twice(float %arg, i32* %ptr) #0 {
+define void @fptoui_f32_twice(float %arg, ptr %ptr) #0 {
 entry:
   %conv = call i32 @llvm.experimental.constrained.fptoui.f32(float %arg, metadata !"fpexcept.strict") #0
-  store i32 %conv, i32* %ptr, align 4
+  store i32 %conv, ptr %ptr, align 4
   %conv1 = call i32 @llvm.experimental.constrained.fptoui.f32(float %arg, metadata !"fpexcept.strict") #0
-  %idx = getelementptr inbounds i32, i32* %ptr, i32 1
-  store i32 %conv1, i32* %idx, align 4
+  %idx = getelementptr inbounds i32, ptr %ptr, i32 1
+  store i32 %conv1, ptr %idx, align 4
   ret void
 }
 
@@ -982,13 +982,13 @@ define double @fpext_f32(float %x) #0 {
 ; CHECK-NODP: bl __aeabi_f2d
 ; CHECK-DP: vcvt.f64.f32
 ; FIXME-CHECK-DP: vcvt.f64.f32
-define void @fpext_f32_twice(float %arg, double* %ptr) #0 {
+define void @fpext_f32_twice(float %arg, ptr %ptr) #0 {
 entry:
   %conv1 = call double @llvm.experimental.constrained.fpext.f64.f32(float %arg, metadata !"fpexcept.strict") #0
-  store double %conv1, double* %ptr, align 8
+  store double %conv1, ptr %ptr, align 8
   %conv2 = call double @llvm.experimental.constrained.fpext.f64.f32(float %arg, metadata !"fpexcept.strict") #0
-  %idx = getelementptr inbounds double, double* %ptr, i32 1
-  store double %conv2, double* %idx, align 8
+  %idx = getelementptr inbounds double, ptr %ptr, i32 1
+  store double %conv2, ptr %idx, align 8
   ret void
 }
 

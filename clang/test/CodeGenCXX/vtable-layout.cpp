@@ -81,20 +81,20 @@ namespace Test2 {
 // CHECK-2-NEXT:       -- (Test2::A, 0) vtable address --
 // CHECK-2-NEXT:   2 | void Test2::A::f()
 // CHECK-2-NEXT:   3 | void Test2::A::f() const
-// CHECK-2-NEXT:   4 | Test2::A *Test2::A::g(int)
+// CHECK-2-NEXT:   4 | A *Test2::A::g(int)
 // CHECK-2-NEXT:   5 | Test2::A::~A() [complete]
 // CHECK-2-NEXT:   6 | Test2::A::~A() [deleting]
 // CHECK-2-NEXT:   7 | void Test2::A::h()
-// CHECK-2-NEXT:   8 | Test2::A &Test2::A::operator=(const Test2::A &)
+// CHECK-2-NEXT:   8 | A &Test2::A::operator=(const A &)
 //
 // CHECK-2:      VTable indices for 'Test2::A' (7 entries).
 // CHECK-2-NEXT:   0 | void Test2::A::f()
 // CHECK-2-NEXT:   1 | void Test2::A::f() const
-// CHECK-2-NEXT:   2 | Test2::A *Test2::A::g(int)
+// CHECK-2-NEXT:   2 | A *Test2::A::g(int)
 // CHECK-2-NEXT:   3 | Test2::A::~A() [complete]
 // CHECK-2-NEXT:   4 | Test2::A::~A() [deleting]
 // CHECK-2-NEXT:   5 | void Test2::A::h()
-// CHECK-2-NEXT:   6 | Test2::A &Test2::A::operator=(const Test2::A &)
+// CHECK-2-NEXT:   6 | A &Test2::A::operator=(const A &)
 struct A {
   virtual void f();
   virtual void f() const;
@@ -225,12 +225,12 @@ struct A {
 // CHECK-8-NEXT:  1 | Test4::B RTTI
 // CHECK-8-NEXT:      -- (Test4::A, 0) vtable address --
 // CHECK-8-NEXT:      -- (Test4::B, 0) vtable address --
-// CHECK-8-NEXT:  2 | Test4::R3 *Test4::B::f()
+// CHECK-8-NEXT:  2 | R3 *Test4::B::f()
 // CHECK-8-NEXT:      [return adjustment: 4 non-virtual]
-// CHECK-8-NEXT:  3 | Test4::R3 *Test4::B::f()
+// CHECK-8-NEXT:  3 | R3 *Test4::B::f()
 //
 // CHECK-8:     VTable indices for 'Test4::B' (1 entries).
-// CHECK-8-NEXT:  1 | Test4::R3 *Test4::B::f()
+// CHECK-8-NEXT:  1 | R3 *Test4::B::f()
 struct B : A {
   virtual R3 *f();
 };
@@ -249,12 +249,12 @@ struct C {
 // CHECK-9-NEXT:   1 | Test4::D RTTI
 // CHECK-9-NEXT:       -- (Test4::C, 0) vtable address --
 // CHECK-9-NEXT:       -- (Test4::D, 0) vtable address --
-// CHECK-9-NEXT:   2 | Test4::V2 *Test4::D::f()
+// CHECK-9-NEXT:   2 | V2 *Test4::D::f()
 // CHECK-9-NEXT:       [return adjustment: 0 non-virtual, -24 vbase offset offset]
-// CHECK-9-NEXT:   3 | Test4::V2 *Test4::D::f()
+// CHECK-9-NEXT:   3 | V2 *Test4::D::f()
 //
 // CHECK-9:     VTable indices for 'Test4::D' (1 entries).
-// CHECK-9-NEXT:   1 | Test4::V2 *Test4::D::f()
+// CHECK-9-NEXT:   1 | V2 *Test4::D::f()
 struct D : C {
   virtual V2 *f();
 };
@@ -268,12 +268,12 @@ struct V3 : virtual R3 { int r3; };
 // CHECK-10-NEXT:   1 | Test4::E RTTI
 // CHECK-10-NEXT:       -- (Test4::A, 0) vtable address --
 // CHECK-10-NEXT:       -- (Test4::E, 0) vtable address --
-// CHECK-10-NEXT:   2 | Test4::V3 *Test4::E::f()
+// CHECK-10-NEXT:   2 | V3 *Test4::E::f()
 // CHECK-10-NEXT:       [return adjustment: 4 non-virtual, -24 vbase offset offset]
-// CHECK-10-NEXT:   3 | Test4::V3 *Test4::E::f()
+// CHECK-10-NEXT:   3 | V3 *Test4::E::f()
 //
 // CHECK-10:     VTable indices for 'Test4::E' (1 entries).
-// CHECK-10-NEXT:   1 | Test4::V3 *Test4::E::f()
+// CHECK-10-NEXT:   1 | V3 *Test4::E::f()
 struct E : A {
   virtual V3 *f();
 };
@@ -286,13 +286,13 @@ V3 *E::f() { return 0;}
 // CHECK-11-NEXT:   1 | Test4::F RTTI
 // CHECK-11-NEXT:       -- (Test4::A, 0) vtable address --
 // CHECK-11-NEXT:       -- (Test4::F, 0) vtable address --
-// CHECK-11-NEXT:   2 | Test4::R3 *Test4::F::f() [pure]
+// CHECK-11-NEXT:   2 | R3 *Test4::F::f() [pure]
 // CHECK-11-NEXT:   3 | void Test4::F::g()
-// CHECK-11-NEXT:   4 | Test4::R3 *Test4::F::f() [pure]
+// CHECK-11-NEXT:   4 | R3 *Test4::F::f() [pure]
 //
 // CHECK-11:     VTable indices for 'Test4::F' (2 entries).
 // CHECK-11-NEXT:   1 | void Test4::F::g()
-// CHECK-11-NEXT:   2 | Test4::R3 *Test4::F::f()
+// CHECK-11-NEXT:   2 | R3 *Test4::F::f()
 struct F : A {
   virtual void g();
   virtual R3 *f() = 0;
@@ -1458,13 +1458,13 @@ struct A {
 // CHECK-36-NEXT:    3 | Test29::B RTTI
 // CHECK-36-NEXT:        -- (Test29::A, 0) vtable address --
 // CHECK-36-NEXT:        -- (Test29::B, 0) vtable address --
-// CHECK-36-NEXT:    4 | Test29::V2 *Test29::B::f()
+// CHECK-36-NEXT:    4 | V2 *Test29::B::f()
 // CHECK-36-NEXT:        [return adjustment: 0 non-virtual, -24 vbase offset offset]
 // CHECK-36-NEXT:        [this adjustment: 0 non-virtual, -24 vcall offset offset]
-// CHECK-36-NEXT:    5 | Test29::V2 *Test29::B::f()
+// CHECK-36-NEXT:    5 | V2 *Test29::B::f()
 //
 // CHECK-36:      VTable indices for 'Test29::B' (1 entries).
-// CHECK-36-NEXT:    1 | Test29::V2 *Test29::B::f()
+// CHECK-36-NEXT:    1 | V2 *Test29::B::f()
 struct B : virtual A {
   virtual V2 *f();
 };
@@ -1830,7 +1830,7 @@ struct B : virtual A {
 };
 
 // CHECK-43:      VTable indices for 'Test37::C' (1 entries).
-// CHECK-43-NEXT:    1 | Test37::C *Test37::C::f()
+// CHECK-43-NEXT:    1 | C *Test37::C::f()
 struct C : B {
   virtual C* f();
 };

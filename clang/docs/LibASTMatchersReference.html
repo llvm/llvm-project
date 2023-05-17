@@ -112,7 +112,7 @@ This affects both matchers and AST dump output in results.
 <span class="mono">traverse()</span> matcher is used to set the mode:
 <pre>
 Finder->addMatcher(traverse(TK_IgnoreUnlessSpelledInSource,
-  returnStmt(hasReturnArgument(integerLiteral(equals(0))))
+  returnStmt(hasReturnValue(integerLiteral(equals(0))))
   ), this);
 </pre>
 </p>
@@ -1236,7 +1236,7 @@ Given
   #pragma omp parallel
 
 ``ompDefaultClause()`` matches ``default(none)``, ``default(shared)``,
-``default(private)`` and ``default(firstprivate)``
+`` default(private)`` and ``default(firstprivate)``
 </pre></td></tr>
 
 
@@ -2033,6 +2033,14 @@ NSString class, while the outermost message send invokes the
 "initWithString" instance method on the object returned from
 NSString's "alloc". This matcher should match both message sends.
   [[NSString alloc] initWithString:@"Hello"]
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt;</td><td class="name" onclick="toggle('objcStringLiteral0')"><a name="objcStringLiteral0Anchor">objcStringLiteral</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCStringLiteral.html">ObjCStringLiteral</a>&gt;...</td></tr>
+<tr><td colspan="4" class="doc" id="objcStringLiteral0"><pre>Matches ObjectiveC String literal expressions.
+
+Example matches @"abcd"
+  NSString *s = @"abcd";
 </pre></td></tr>
 
 
@@ -3932,6 +3940,28 @@ implicit default/copy constructors).
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInAnonymousNamespace0')"><a name="isInAnonymousNamespace0Anchor">isInAnonymousNamespace</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isInAnonymousNamespace0"><pre>Matches declarations in an anonymous namespace.
+
+Given
+  class vector {};
+  namespace foo {
+    class vector {};
+    namespace {
+      class vector {}; // #1
+    }
+  }
+  namespace {
+    class vector {}; // #2
+    namespace foo {
+      class vector{}; // #3
+    }
+  }
+cxxRecordDecl(hasName("vector"), isInAnonymousNamespace()) will match
+#1, #2 and #3.
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt;</td><td class="name" onclick="toggle('isInStdNamespace0')"><a name="isInStdNamespace0Anchor">isInStdNamespace</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isInStdNamespace0"><pre>Matches declarations in the namespace `std`, but not in nested namespaces.
 
@@ -4716,22 +4746,6 @@ varDecl(isInline()) will match Foo;
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isPrivateKind0')"><a name="isPrivateKind0Anchor">isFirstPrivateKind</a></td><td></td></tr>
-<tr><td colspan="4" class="doc" id="isPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``private`` kind
-specified.
-
-Given
-
-  #pragma omp parallel
-  #pragma omp parallel default(none)
-  #pragma omp parallel default(shared)
-  #pragma omp parallel default(private)
-  #pragma omp parallel default(firstprivate)
-
-``ompDefaultClause(isFirstPrivateKind())`` matches only
-``default(private)``.
-</pre></td></tr>
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isFirstPrivateKind0')"><a name="isFirstPrivateKind0Anchor">isFirstPrivateKind</a></td><td></td></tr>
 <tr><td colspan="4" class="doc" id="isFirstPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``firstprivate`` kind
 specified.
@@ -4761,6 +4775,23 @@ Given
   #pragma omp parallel default(firstprivate)
 
 ``ompDefaultClause(isNoneKind())`` matches only ``default(none)``.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1OMPDefaultClause.html">OMPDefaultClause</a>&gt;</td><td class="name" onclick="toggle('isPrivateKind0')"><a name="isPrivateKind0Anchor">isPrivateKind</a></td><td></td></tr>
+<tr><td colspan="4" class="doc" id="isPrivateKind0"><pre>Matches if the OpenMP ``default`` clause has ``private`` kind
+specified.
+
+Given
+
+  #pragma omp parallel
+  #pragma omp parallel default(none)
+  #pragma omp parallel default(shared)
+  #pragma omp parallel default(private)
+  #pragma omp parallel default(firstprivate)
+
+``ompDefaultClause(isPrivateKind())`` matches only
+``default(private)``.
 </pre></td></tr>
 
 
@@ -6716,7 +6747,26 @@ memberExpr(hasObjectExpression(hasType(pointsTo(
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXForRangeStmt.html">CXXForRangeStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody3')"><a name="hasBody3Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody3"><pre></pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody3"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
+a given body. Note that in case of functions this matcher only matches the
+definition itself and not the other declarations of the same function.
+
+Given
+  for (;;) {}
+forStmt(hasBody(compoundStmt()))
+  matches 'for (;;) {}'
+with compoundStmt()
+  matching '{}'
+
+Given
+  void f();
+  void f() {}
+functionDecl(hasBody(compoundStmt()))
+  matches 'void f() {}'
+with compoundStmt()
+  matching '{}'
+  but does not match 'void f();'
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CXXForRangeStmt.html">CXXForRangeStmt</a>&gt;</td><td class="name" onclick="toggle('hasInitStatement2')"><a name="hasInitStatement2Anchor">hasInitStatement</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
@@ -7246,14 +7296,24 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Bloc
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('callee1')"><a name="callee1Anchor">callee</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="callee1"><pre>Matches if the call expression's callee's declaration matches the
-given matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1CallExpr.html">CallExpr</a>&gt;</td><td class="name" onclick="toggle('callee2')"><a name="callee2Anchor">callee</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="callee2"><pre>Matches 1) if the call expression's callee's declaration matches the
+given matcher; or 2) if the Obj-C message expression's callee's method
+declaration matches the given matcher.
 
 Example matches y.x() (matcher = callExpr(callee(
                                    cxxMethodDecl(hasName("x")))))
   class Y { public: void x(); };
   void z() { Y y; y.x(); }
+
+Example 2. Matches [I foo] with
+objcMessageExpr(callee(objcMethodDecl(hasName("foo"))))
+
+  @interface I: NSObject
+  +(void)foo;
+  @end
+  ...
+  [I foo]
 </pre></td></tr>
 
 
@@ -7411,8 +7471,9 @@ int a = b ?: 1;
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument0')"><a name="forEachTemplateArgument0Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument0"><pre>Matches classTemplateSpecialization, templateSpecializationType and functionDecl nodes where the template argument matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ClassTemplateSpecializationDecl.html">ClassTemplateSpecializationDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument0')"><a name="forEachTemplateArgument0Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument0"><pre>Matches classTemplateSpecialization, templateSpecializationType and
+functionDecl nodes where the template argument matches the inner matcher.
 This matcher may produce multiple matches.
 
 Given
@@ -7427,10 +7488,8 @@ Given
 
   bool B = false;
   f(R, B);
-
 templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
   matches twice, with expr() matching 'R * 2' and 'R * 4'
-
 functionDecl(forEachTemplateArgument(refersToType(builtinType())))
   matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
   and 'bool'
@@ -7783,7 +7842,26 @@ matches the decomposition decl with 'f' bound to "fBinding".
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody0')"><a name="hasBody0Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody0"><pre></pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody0"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
+a given body. Note that in case of functions this matcher only matches the
+definition itself and not the other declarations of the same function.
+
+Given
+  for (;;) {}
+forStmt(hasBody(compoundStmt()))
+  matches 'for (;;) {}'
+with compoundStmt()
+  matching '{}'
+
+Given
+  void f();
+  void f() {}
+functionDecl(hasBody(compoundStmt()))
+  matches 'void f() {}'
+with compoundStmt()
+  matching '{}'
+  but does not match 'void f();'
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1DoStmt.html">DoStmt</a>&gt;</td><td class="name" onclick="toggle('hasCondition3')"><a name="hasCondition3Anchor">hasCondition</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
@@ -8100,7 +8178,26 @@ fieldDecl(hasInClassInitializer(anything()))
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ForStmt.html">ForStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody1')"><a name="hasBody1Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody1"><pre></pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody1"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
+a given body. Note that in case of functions this matcher only matches the
+definition itself and not the other declarations of the same function.
+
+Given
+  for (;;) {}
+forStmt(hasBody(compoundStmt()))
+  matches 'for (;;) {}'
+with compoundStmt()
+  matching '{}'
+
+Given
+  void f();
+  void f() {}
+functionDecl(hasBody(compoundStmt()))
+  matches 'void f() {}'
+with compoundStmt()
+  matching '{}'
+  but does not match 'void f();'
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ForStmt.html">ForStmt</a>&gt;</td><td class="name" onclick="toggle('hasCondition1')"><a name="hasCondition1Anchor">hasCondition</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
@@ -8180,6 +8277,31 @@ Example matches x (matcher = expr(hasType(cxxRecordDecl(hasName("X")))))
 </pre></td></tr>
 
 
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument2')"><a name="forEachTemplateArgument2Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument2"><pre>Matches classTemplateSpecialization, templateSpecializationType and
+functionDecl nodes where the template argument matches the inner matcher.
+This matcher may produce multiple matches.
+
+Given
+  template &lt;typename T, unsigned N, unsigned M&gt;
+  struct Matrix {};
+
+  constexpr unsigned R = 2;
+  Matrix&lt;int, R * 2, R * 4&gt; M;
+
+  template &lt;typename T, typename U&gt;
+  void f(T&amp;&amp; t, U&amp;&amp; u) {}
+
+  bool B = false;
+  f(R, B);
+templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
+  matches twice, with expr() matching 'R * 2' and 'R * 4'
+functionDecl(forEachTemplateArgument(refersToType(builtinType())))
+  matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
+  and 'bool'
+</pre></td></tr>
+
+
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyBody0')"><a name="hasAnyBody0Anchor">hasAnyBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyBody0"><pre>Matches a function declaration that has a given body present in the AST.
 Note that this matcher matches all the declarations of a function whose
@@ -8227,32 +8349,6 @@ matching y.
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument1"><pre>Matches classTemplateSpecialization, templateSpecializationType and functionDecl nodes where the template argument matches the inner matcher.
-This matcher may produce multiple matches.
-
-Given
-  template &lt;typename T, unsigned N, unsigned M&gt;
-  struct Matrix {};
-
-  constexpr unsigned R = 2;
-  Matrix&lt;int, R * 2, R * 4&gt; M;
-
-  template &lt;typename T, typename U&gt;
-  void f(T&amp;&amp; t, U&amp;&amp; u) {}
-
-  bool B = false;
-  f(R, B);
-
-templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
-  matches twice, with expr() matching 'R * 2' and 'R * 4'
-
-functionDecl(forEachTemplateArgument(refersToType(builtinType())))
-  matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
-  and 'bool'
-</pre></td></tr>
-
-
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasAnyTemplateArgument2')"><a name="hasAnyTemplateArgument2Anchor">hasAnyTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasAnyTemplateArgument2"><pre>Matches classTemplateSpecializations, templateSpecializationType and
 functionDecl that have at least one TemplateArgument matching the given
@@ -8276,7 +8372,26 @@ functionDecl(hasAnyTemplateArgument(refersToType(asString("int"))))
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasBody4')"><a name="hasBody4Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody4"><pre></pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody4"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
+a given body. Note that in case of functions this matcher only matches the
+definition itself and not the other declarations of the same function.
+
+Given
+  for (;;) {}
+forStmt(hasBody(compoundStmt()))
+  matches 'for (;;) {}'
+with compoundStmt()
+  matching '{}'
+
+Given
+  void f();
+  void f() {}
+functionDecl(hasBody(compoundStmt()))
+  matches 'void f() {}'
+with compoundStmt()
+  matching '{}'
+  but does not match 'void f();'
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1FunctionDecl.html">FunctionDecl</a>&gt;</td><td class="name" onclick="toggle('hasExplicitSpecifier0')"><a name="hasExplicitSpecifier0Anchor">hasExplicitSpecifier</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>
@@ -8426,8 +8541,6 @@ Examples matches the if statement
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ImplicitCastExpr.html">ImplicitCastExpr</a>&gt;</td><td class="name" onclick="toggle('hasImplicitDestinationType0')"><a name="hasImplicitDestinationType0Anchor">hasImplicitDestinationType</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1QualType.html">QualType</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="hasImplicitDestinationType0"><pre>Matches implicit casts whose destination type matches a given
 matcher.
-
-FIXME: Unit test this matcher
 </pre></td></tr>
 
 
@@ -8514,7 +8627,7 @@ Usable as: Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Addr
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('capturesVar0')"><a name="capturesVar0Anchor">capturesVar</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1VarDecl.html">VarDecl</a>&gt; InnerMatcher</td></tr>
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1LambdaCapture.html">LambdaCapture</a>&gt;</td><td class="name" onclick="toggle('capturesVar0')"><a name="capturesVar0Anchor">capturesVar</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ValueDecl.html">ValueDecl</a>&gt; InnerMatcher</td></tr>
 <tr><td colspan="4" class="doc" id="capturesVar0"><pre>Matches a `LambdaCapture` that refers to the specified `VarDecl`. The
 `VarDecl` can be a separate variable that is captured by value or
 reference, or a synthesized variable if the capture has an initializer.
@@ -8804,6 +8917,27 @@ In the following example, Bar matches isDerivedFrom(hasName("X")):
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCInterfaceDecl.html">ObjCInterfaceDecl</a>&gt;</td><td class="name" onclick="toggle('isSameOrDerivedFrom1')"><a name="isSameOrDerivedFrom1Anchor">isSameOrDerivedFrom</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1NamedDecl.html">NamedDecl</a>&gt; Base</td></tr>
 <tr><td colspan="4" class="doc" id="isSameOrDerivedFrom1"><pre>Similar to isDerivedFrom(), but also matches classes that directly
 match Base.
+</pre></td></tr>
+
+
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1ObjCMessageExpr.html">ObjCMessageExpr</a>&gt;</td><td class="name" onclick="toggle('callee1')"><a name="callee1Anchor">callee</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Decl.html">Decl</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="callee1"><pre>Matches 1) if the call expression's callee's declaration matches the
+given matcher; or 2) if the Obj-C message expression's callee's method
+declaration matches the given matcher.
+
+Example matches y.x() (matcher = callExpr(callee(
+                                   cxxMethodDecl(hasName("x")))))
+  class Y { public: void x(); };
+  void z() { Y y; y.x(); }
+
+Example 2. Matches [I foo] with
+objcMessageExpr(callee(objcMethodDecl(hasName("foo"))))
+
+  @interface I: NSObject
+  +(void)foo;
+  @end
+  ...
+  [I foo]
 </pre></td></tr>
 
 
@@ -9444,9 +9578,9 @@ Given
   struct X {};
   template&lt;typename T&gt; struct A {};
   A&lt;X&gt; a;
-classTemplateSpecializationDecl(hasAnyTemplateArgument(
-    refersToType(class(hasName("X")))))
-  matches the specialization A&lt;X&gt;
+classTemplateSpecializationDecl(hasAnyTemplateArgument(refersToType(
+  recordType(hasDeclaration(recordDecl(hasName("X")))))))
+matches the specialization of struct A generated by A&lt;X&gt;.
 </pre></td></tr>
 
 
@@ -9477,10 +9611,10 @@ varDecl(hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(0,
 </pre></td></tr>
 
 
-<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument2')"><a name="forEachTemplateArgument2Anchor">forEachTemplateArgument</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="forEachTemplateArgument2"><pre>Matches classTemplateSpecialization, templateSpecializationType and functionDecl nodes where the template argument matches the inner matcher.
+<tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateSpecializationType.html">TemplateSpecializationType</a>&gt;</td><td class="name" onclick="toggle('forEachTemplateArgument1')"><a name="forEachTemplateArgument1Anchor">forEachTemplateArgument</a></td><td>clang::ast_matchers::Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1TemplateArgument.html">TemplateArgument</a>&gt; InnerMatcher</td></tr>
+<tr><td colspan="4" class="doc" id="forEachTemplateArgument1"><pre>Matches classTemplateSpecialization, templateSpecializationType and
+functionDecl nodes where the template argument matches the inner matcher.
 This matcher may produce multiple matches.
-
 
 Given
   template &lt;typename T, unsigned N, unsigned M&gt;
@@ -9494,10 +9628,8 @@ Given
 
   bool B = false;
   f(R, B);
-
 templateSpecializationType(forEachTemplateArgument(isExpr(expr())))
   matches twice, with expr() matching 'R * 2' and 'R * 4'
-
 functionDecl(forEachTemplateArgument(refersToType(builtinType())))
   matches the specialization f&lt;unsigned, bool&gt; twice, for 'unsigned'
   and 'bool'
@@ -9902,7 +10034,26 @@ variableArrayType(hasSizeExpr(ignoringImpCasts(declRefExpr(to(
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1WhileStmt.html">WhileStmt</a>&gt;</td><td class="name" onclick="toggle('hasBody2')"><a name="hasBody2Anchor">hasBody</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Stmt.html">Stmt</a>&gt; InnerMatcher</td></tr>
-<tr><td colspan="4" class="doc" id="hasBody2"><pre></pre></td></tr>
+<tr><td colspan="4" class="doc" id="hasBody2"><pre>Matches a 'for', 'while', 'do' statement or a function definition that has
+a given body. Note that in case of functions this matcher only matches the
+definition itself and not the other declarations of the same function.
+
+Given
+  for (;;) {}
+forStmt(hasBody(compoundStmt()))
+  matches 'for (;;) {}'
+with compoundStmt()
+  matching '{}'
+
+Given
+  void f();
+  void f() {}
+functionDecl(hasBody(compoundStmt()))
+  matches 'void f() {}'
+with compoundStmt()
+  matching '{}'
+  but does not match 'void f();'
+</pre></td></tr>
 
 
 <tr><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1WhileStmt.html">WhileStmt</a>&gt;</td><td class="name" onclick="toggle('hasCondition2')"><a name="hasCondition2Anchor">hasCondition</a></td><td>Matcher&lt;<a href="https://clang.llvm.org/doxygen/classclang_1_1Expr.html">Expr</a>&gt; InnerMatcher</td></tr>

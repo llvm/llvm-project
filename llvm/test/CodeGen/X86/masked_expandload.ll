@@ -11,7 +11,7 @@
 ; vXf64
 ;
 
-define <2 x double> @expandload_v2f64_v2i64(double* %base, <2 x double> %src0, <2 x i64> %trigger) {
+define <2 x double> @expandload_v2f64_v2i64(ptr %base, <2 x double> %src0, <2 x i64> %trigger) {
 ; SSE2-LABEL: expandload_v2f64_v2i64:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -95,11 +95,11 @@ define <2 x double> @expandload_v2f64_v2i64(double* %base, <2 x double> %src0, <
 ; AVX512VL-NEXT:    vexpandpd (%rdi), %xmm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %mask = icmp eq <2 x i64> %trigger, zeroinitializer
-  %res = call <2 x double> @llvm.masked.expandload.v2f64(double* %base, <2 x i1> %mask, <2 x double> %src0)
+  %res = call <2 x double> @llvm.masked.expandload.v2f64(ptr %base, <2 x i1> %mask, <2 x double> %src0)
   ret <2 x double>%res
 }
 
-define <4 x double> @expandload_v4f64_v4i64(double* %base, <4 x double> %src0, <4 x i64> %trigger) {
+define <4 x double> @expandload_v4f64_v4i64(ptr %base, <4 x double> %src0, <4 x i64> %trigger) {
 ; SSE2-LABEL: expandload_v4f64_v4i64:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm4, %xmm4
@@ -284,11 +284,11 @@ define <4 x double> @expandload_v4f64_v4i64(double* %base, <4 x double> %src0, <
 ; AVX512VL-NEXT:    vexpandpd (%rdi), %ymm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i64> %trigger, zeroinitializer
-  %res = call <4 x double> @llvm.masked.expandload.v4f64(double* %base, <4 x i1> %mask, <4 x double> %src0)
+  %res = call <4 x double> @llvm.masked.expandload.v4f64(ptr %base, <4 x i1> %mask, <4 x double> %src0)
   ret <4 x double>%res
 }
 
-define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8 x i1> %mask) {
+define <8 x double> @expandload_v8f64_v8i1(ptr %base, <8 x double> %src0, <8 x i1> %mask) {
 ; SSE-LABEL: expandload_v8f64_v8i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    psllw $15, %xmm4
@@ -534,11 +534,11 @@ define <8 x double> @expandload_v8f64_v8i1(double* %base, <8 x double> %src0, <8
 ; AVX512VLBW-NEXT:    vpmovw2m %xmm1, %k1
 ; AVX512VLBW-NEXT:    vexpandpd (%rdi), %zmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
-  %res = call <8 x double> @llvm.masked.expandload.v8f64(double* %base, <8 x i1> %mask, <8 x double> %src0)
+  %res = call <8 x double> @llvm.masked.expandload.v8f64(ptr %base, <8 x i1> %mask, <8 x double> %src0)
   ret <8 x double>%res
 }
 
-define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src0, <16 x i32> %trigger) {
+define <16 x double> @expandload_v16f64_v16i32(ptr %base, <16 x double> %src0, <16 x i32> %trigger) {
 ; SSE-LABEL: expandload_v16f64_v16i32:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movq %rdi, %rax
@@ -575,8 +575,8 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; SSE-NEXT:    testb $64, %cl
 ; SSE-NEXT:    jne LBB3_13
 ; SSE-NEXT:  LBB3_14: ## %else22
-; SSE-NEXT:    testb $-128, %cl
-; SSE-NEXT:    jne LBB3_15
+; SSE-NEXT:    testb %cl, %cl
+; SSE-NEXT:    js LBB3_15
 ; SSE-NEXT:  LBB3_16: ## %else26
 ; SSE-NEXT:    testl $256, %ecx ## imm = 0x100
 ; SSE-NEXT:    jne LBB3_17
@@ -646,8 +646,8 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; SSE-NEXT:  LBB3_13: ## %cond.load21
 ; SSE-NEXT:    movlps (%rsi), %xmm3 ## xmm3 = mem[0,1],xmm3[2,3]
 ; SSE-NEXT:    addq $8, %rsi
-; SSE-NEXT:    testb $-128, %cl
-; SSE-NEXT:    je LBB3_16
+; SSE-NEXT:    testb %cl, %cl
+; SSE-NEXT:    jns LBB3_16
 ; SSE-NEXT:  LBB3_15: ## %cond.load25
 ; SSE-NEXT:    movhps (%rsi), %xmm3 ## xmm3 = xmm3[0,1],mem[0,1]
 ; SSE-NEXT:    addq $8, %rsi
@@ -724,8 +724,8 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne LBB3_13
 ; AVX1-NEXT:  LBB3_14: ## %else22
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    jne LBB3_15
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js LBB3_15
 ; AVX1-NEXT:  LBB3_16: ## %else26
 ; AVX1-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX1-NEXT:    jne LBB3_17
@@ -792,8 +792,8 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm4[4,5],ymm1[6,7]
 ; AVX1-NEXT:    addq $8, %rdi
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je LBB3_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns LBB3_16
 ; AVX1-NEXT:  LBB3_15: ## %cond.load25
 ; AVX1-NEXT:    vbroadcastsd (%rdi), %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm4[6,7]
@@ -878,8 +878,8 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne LBB3_13
 ; AVX2-NEXT:  LBB3_14: ## %else22
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    jne LBB3_15
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js LBB3_15
 ; AVX2-NEXT:  LBB3_16: ## %else26
 ; AVX2-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX2-NEXT:    jne LBB3_17
@@ -946,8 +946,8 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; AVX2-NEXT:    vpbroadcastq (%rdi), %ymm4
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3],ymm4[4,5],ymm1[6,7]
 ; AVX2-NEXT:    addq $8, %rdi
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je LBB3_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns LBB3_16
 ; AVX2-NEXT:  LBB3_15: ## %cond.load25
 ; AVX2-NEXT:    vpbroadcastq (%rdi), %ymm4
 ; AVX2-NEXT:    vpblendd {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm4[6,7]
@@ -1078,7 +1078,7 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; AVX512VLBW-NEXT:    vexpandpd (%rdi,%rax,8), %zmm1 {%k1}
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <16 x i32> %trigger, zeroinitializer
-  %res = call <16 x double> @llvm.masked.expandload.v16f64(double* %base, <16 x i1> %mask, <16 x double> %src0)
+  %res = call <16 x double> @llvm.masked.expandload.v16f64(ptr %base, <16 x i1> %mask, <16 x double> %src0)
   ret <16 x double> %res
 }
 
@@ -1086,7 +1086,7 @@ define <16 x double> @expandload_v16f64_v16i32(double* %base, <16 x double> %src
 ; vXf32
 ;
 
-define <2 x float> @expandload_v2f32_v2i1(float* %base, <2 x float> %src0, <2 x i32> %trigger) {
+define <2 x float> @expandload_v2f32_v2i1(ptr %base, <2 x float> %src0, <2 x i32> %trigger) {
 ; SSE2-LABEL: expandload_v2f32_v2i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
@@ -1187,11 +1187,11 @@ define <2 x float> @expandload_v2f32_v2i1(float* %base, <2 x float> %src0, <2 x 
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  %res = call <2 x float> @llvm.masked.expandload.v2f32(float* %base, <2 x i1> %mask, <2 x float> %src0)
+  %res = call <2 x float> @llvm.masked.expandload.v2f32(ptr %base, <2 x i1> %mask, <2 x float> %src0)
   ret <2 x float> %res
 }
 
-define <4 x float> @expandload_v4f32_const(float* %base, <4 x float> %src0) {
+define <4 x float> @expandload_v4f32_const(ptr %base, <4 x float> %src0) {
 ; SSE2-LABEL: expandload_v4f32_const:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movsd (%rdi), %xmm1 ## xmm1 = mem[0],zero
@@ -1238,11 +1238,11 @@ define <4 x float> @expandload_v4f32_const(float* %base, <4 x float> %src0) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
-  %res = call <4 x float> @llvm.masked.expandload.v4f32(float* %base, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x float> %src0)
+  %res = call <4 x float> @llvm.masked.expandload.v4f32(ptr %base, <4 x i1> <i1 true, i1 true, i1 true, i1 false>, <4 x float> %src0)
   ret <4 x float>%res
 }
 
-define <16 x float> @expandload_v16f32_const(float* %base, <16 x float> %src0) {
+define <16 x float> @expandload_v16f32_const(ptr %base, <16 x float> %src0) {
 ; SSE2-LABEL: expandload_v16f32_const:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movups (%rdi), %xmm0
@@ -1302,11 +1302,11 @@ define <16 x float> @expandload_v16f32_const(float* %base, <16 x float> %src0) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
-  %res = call <16 x float> @llvm.masked.expandload.v16f32(float* %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>, <16 x float> %src0)
+  %res = call <16 x float> @llvm.masked.expandload.v16f32(ptr %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 false>, <16 x float> %src0)
   ret <16 x float>%res
 }
 
-define <16 x float> @expandload_v16f32_const_undef(float* %base) {
+define <16 x float> @expandload_v16f32_const_undef(ptr %base) {
 ; SSE2-LABEL: expandload_v16f32_const_undef:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movss 40(%rdi), %xmm0 ## xmm0 = mem[0],zero,zero,zero
@@ -1354,12 +1354,12 @@ define <16 x float> @expandload_v16f32_const_undef(float* %base) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vexpandps (%rdi), %zmm0 {%k1} {z}
 ; AVX512VLBW-NEXT:    retq
-  %res = call <16 x float> @llvm.masked.expandload.v16f32(float* %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
+  %res = call <16 x float> @llvm.masked.expandload.v16f32(ptr %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>, <16 x float> undef)
   ret <16 x float>%res
 }
 
 
-define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, <32 x i32> %trigger) {
+define <32 x float> @expandload_v32f32_v32i32(ptr %base, <32 x float> %src0, <32 x i32> %trigger) {
 ; SSE2-LABEL: expandload_v32f32_v32i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movq %rdi, %rax
@@ -1410,8 +1410,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE2-NEXT:    testb $64, %cl
 ; SSE2-NEXT:    jne LBB8_13
 ; SSE2-NEXT:  LBB8_14: ## %else22
-; SSE2-NEXT:    testb $-128, %cl
-; SSE2-NEXT:    jne LBB8_15
+; SSE2-NEXT:    testb %cl, %cl
+; SSE2-NEXT:    js LBB8_15
 ; SSE2-NEXT:  LBB8_16: ## %else26
 ; SSE2-NEXT:    testl $256, %ecx ## imm = 0x100
 ; SSE2-NEXT:    jne LBB8_17
@@ -1434,8 +1434,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE2-NEXT:    testl $16384, %ecx ## imm = 0x4000
 ; SSE2-NEXT:    jne LBB8_29
 ; SSE2-NEXT:  LBB8_30: ## %else54
-; SSE2-NEXT:    testl $32768, %ecx ## imm = 0x8000
-; SSE2-NEXT:    jne LBB8_31
+; SSE2-NEXT:    testw %cx, %cx
+; SSE2-NEXT:    js LBB8_31
 ; SSE2-NEXT:  LBB8_32: ## %else58
 ; SSE2-NEXT:    testl $65536, %ecx ## imm = 0x10000
 ; SSE2-NEXT:    jne LBB8_33
@@ -1545,8 +1545,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE2-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,0],xmm1[3,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,1],xmm8[0,2]
 ; SSE2-NEXT:    addq $4, %rsi
-; SSE2-NEXT:    testb $-128, %cl
-; SSE2-NEXT:    je LBB8_16
+; SSE2-NEXT:    testb %cl, %cl
+; SSE2-NEXT:    jns LBB8_16
 ; SSE2-NEXT:  LBB8_15: ## %cond.load25
 ; SSE2-NEXT:    movss (%rsi), %xmm8 ## xmm8 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,1],xmm1[2,3]
@@ -1601,8 +1601,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE2-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,0],xmm3[3,0]
 ; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm8[0,2]
 ; SSE2-NEXT:    addq $4, %rsi
-; SSE2-NEXT:    testl $32768, %ecx ## imm = 0x8000
-; SSE2-NEXT:    je LBB8_32
+; SSE2-NEXT:    testw %cx, %cx
+; SSE2-NEXT:    jns LBB8_32
 ; SSE2-NEXT:  LBB8_31: ## %cond.load57
 ; SSE2-NEXT:    movss (%rsi), %xmm8 ## xmm8 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    shufps {{.*#+}} xmm8 = xmm8[0,1],xmm3[2,3]
@@ -1767,8 +1767,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE42-NEXT:    testb $64, %cl
 ; SSE42-NEXT:    jne LBB8_13
 ; SSE42-NEXT:  LBB8_14: ## %else22
-; SSE42-NEXT:    testb $-128, %cl
-; SSE42-NEXT:    jne LBB8_15
+; SSE42-NEXT:    testb %cl, %cl
+; SSE42-NEXT:    js LBB8_15
 ; SSE42-NEXT:  LBB8_16: ## %else26
 ; SSE42-NEXT:    testl $256, %ecx ## imm = 0x100
 ; SSE42-NEXT:    jne LBB8_17
@@ -1791,8 +1791,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE42-NEXT:    testl $16384, %ecx ## imm = 0x4000
 ; SSE42-NEXT:    jne LBB8_29
 ; SSE42-NEXT:  LBB8_30: ## %else54
-; SSE42-NEXT:    testl $32768, %ecx ## imm = 0x8000
-; SSE42-NEXT:    jne LBB8_31
+; SSE42-NEXT:    testw %cx, %cx
+; SSE42-NEXT:    js LBB8_31
 ; SSE42-NEXT:  LBB8_32: ## %else58
 ; SSE42-NEXT:    testl $65536, %ecx ## imm = 0x10000
 ; SSE42-NEXT:    jne LBB8_33
@@ -1888,8 +1888,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE42-NEXT:  LBB8_13: ## %cond.load21
 ; SSE42-NEXT:    insertps $32, (%rsi), %xmm1 ## xmm1 = xmm1[0,1],mem[0],xmm1[3]
 ; SSE42-NEXT:    addq $4, %rsi
-; SSE42-NEXT:    testb $-128, %cl
-; SSE42-NEXT:    je LBB8_16
+; SSE42-NEXT:    testb %cl, %cl
+; SSE42-NEXT:    jns LBB8_16
 ; SSE42-NEXT:  LBB8_15: ## %cond.load25
 ; SSE42-NEXT:    insertps $48, (%rsi), %xmm1 ## xmm1 = xmm1[0,1,2],mem[0]
 ; SSE42-NEXT:    addq $4, %rsi
@@ -1930,8 +1930,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; SSE42-NEXT:  LBB8_29: ## %cond.load53
 ; SSE42-NEXT:    insertps $32, (%rsi), %xmm3 ## xmm3 = xmm3[0,1],mem[0],xmm3[3]
 ; SSE42-NEXT:    addq $4, %rsi
-; SSE42-NEXT:    testl $32768, %ecx ## imm = 0x8000
-; SSE42-NEXT:    je LBB8_32
+; SSE42-NEXT:    testw %cx, %cx
+; SSE42-NEXT:    jns LBB8_32
 ; SSE42-NEXT:  LBB8_31: ## %cond.load57
 ; SSE42-NEXT:    insertps $48, (%rsi), %xmm3 ## xmm3 = xmm3[0,1,2],mem[0]
 ; SSE42-NEXT:    addq $4, %rsi
@@ -2024,12 +2024,12 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX1-NEXT:    vpxor %xmm9, %xmm9, %xmm9
 ; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm8, %xmm8
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm9, %xmm5
-; AVX1-NEXT:    vpackssdw %xmm8, %xmm5, %xmm8
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm9, %xmm5
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm5, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm8
+; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm8, %xmm8
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm9, %xmm4
-; AVX1-NEXT:    vpackssdw %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpacksswb %xmm8, %xmm4, %xmm4
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm4, %xmm4
+; AVX1-NEXT:    vpacksswb %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpmovmskb %xmm4, %ecx
 ; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm4
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm9, %xmm4
@@ -2064,8 +2064,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne LBB8_13
 ; AVX1-NEXT:  LBB8_14: ## %else22
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    jne LBB8_15
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js LBB8_15
 ; AVX1-NEXT:  LBB8_16: ## %else26
 ; AVX1-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX1-NEXT:    jne LBB8_17
@@ -2088,8 +2088,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX1-NEXT:    testl $16384, %eax ## imm = 0x4000
 ; AVX1-NEXT:    jne LBB8_29
 ; AVX1-NEXT:  LBB8_30: ## %else54
-; AVX1-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX1-NEXT:    jne LBB8_31
+; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    js LBB8_31
 ; AVX1-NEXT:  LBB8_32: ## %else58
 ; AVX1-NEXT:    testl $65536, %eax ## imm = 0x10000
 ; AVX1-NEXT:    jne LBB8_33
@@ -2180,8 +2180,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX1-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm4[6],ymm0[7]
 ; AVX1-NEXT:    addq $4, %rdi
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je LBB8_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns LBB8_16
 ; AVX1-NEXT:  LBB8_15: ## %cond.load25
 ; AVX1-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm4[7]
@@ -2228,8 +2228,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX1-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm4[6],ymm1[7]
 ; AVX1-NEXT:    addq $4, %rdi
-; AVX1-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX1-NEXT:    je LBB8_32
+; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    jns LBB8_32
 ; AVX1-NEXT:  LBB8_31: ## %cond.load57
 ; AVX1-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX1-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5,6],ymm4[7]
@@ -2366,8 +2366,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne LBB8_13
 ; AVX2-NEXT:  LBB8_14: ## %else22
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    jne LBB8_15
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js LBB8_15
 ; AVX2-NEXT:  LBB8_16: ## %else26
 ; AVX2-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX2-NEXT:    jne LBB8_17
@@ -2390,8 +2390,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX2-NEXT:    testl $16384, %eax ## imm = 0x4000
 ; AVX2-NEXT:    jne LBB8_29
 ; AVX2-NEXT:  LBB8_30: ## %else54
-; AVX2-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX2-NEXT:    jne LBB8_31
+; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    js LBB8_31
 ; AVX2-NEXT:  LBB8_32: ## %else58
 ; AVX2-NEXT:    testl $65536, %eax ## imm = 0x10000
 ; AVX2-NEXT:    jne LBB8_33
@@ -2482,8 +2482,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX2-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5],ymm4[6],ymm0[7]
 ; AVX2-NEXT:    addq $4, %rdi
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je LBB8_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns LBB8_16
 ; AVX2-NEXT:  LBB8_15: ## %cond.load25
 ; AVX2-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3,4,5,6],ymm4[7]
@@ -2530,8 +2530,8 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX2-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5],ymm4[6],ymm1[7]
 ; AVX2-NEXT:    addq $4, %rdi
-; AVX2-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX2-NEXT:    je LBB8_32
+; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    jns LBB8_32
 ; AVX2-NEXT:  LBB8_31: ## %cond.load57
 ; AVX2-NEXT:    vbroadcastss (%rdi), %ymm4
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm1 = ymm1[0,1,2,3,4,5,6],ymm4[7]
@@ -2657,7 +2657,7 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; AVX512-NEXT:    vexpandps (%rdi), %zmm0 {%k1}
 ; AVX512-NEXT:    retq
   %mask = icmp eq <32 x i32> %trigger, zeroinitializer
-  %res = call <32 x float> @llvm.masked.expandload.v32f32(float* %base, <32 x i1> %mask, <32 x float> %src0)
+  %res = call <32 x float> @llvm.masked.expandload.v32f32(ptr %base, <32 x i1> %mask, <32 x float> %src0)
   ret <32 x float> %res
 }
 
@@ -2665,7 +2665,7 @@ define <32 x float> @expandload_v32f32_v32i32(float* %base, <32 x float> %src0, 
 ; vXi64
 ;
 
-define <2 x i64> @expandload_v2i64_const(i64* %base, <2 x i64> %src0) {
+define <2 x i64> @expandload_v2i64_const(ptr %base, <2 x i64> %src0) {
 ; SSE2-LABEL: expandload_v2i64_const:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movsd (%rdi), %xmm1 ## xmm1 = mem[0],zero
@@ -2705,7 +2705,7 @@ define <2 x i64> @expandload_v2i64_const(i64* %base, <2 x i64> %src0) {
 ; AVX512VLBW-NEXT:    kmovd %eax, %k1
 ; AVX512VLBW-NEXT:    vpexpandq (%rdi), %xmm0 {%k1}
 ; AVX512VLBW-NEXT:    retq
-  %res = call <2 x i64> @llvm.masked.expandload.v2i64(i64* %base, <2 x i1> <i1 false, i1 true>, <2 x i64> %src0)
+  %res = call <2 x i64> @llvm.masked.expandload.v2i64(ptr %base, <2 x i1> <i1 false, i1 true>, <2 x i64> %src0)
   ret <2 x i64>%res
 }
 
@@ -2713,7 +2713,7 @@ define <2 x i64> @expandload_v2i64_const(i64* %base, <2 x i64> %src0) {
 ; vXi32
 ;
 
-define <4 x i32> @expandload_v4i32_v4i32(i32* %base, <4 x i32> %src0, <4 x i32> %trigger) {
+define <4 x i32> @expandload_v4i32_v4i32(ptr %base, <4 x i32> %src0, <4 x i32> %trigger) {
 ; SSE2-LABEL: expandload_v4i32_v4i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -2851,7 +2851,7 @@ define <4 x i32> @expandload_v4i32_v4i32(i32* %base, <4 x i32> %src0, <4 x i32> 
 ; AVX512VL-NEXT:    vpexpandd (%rdi), %xmm0 {%k1}
 ; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  %res = call <4 x i32> @llvm.masked.expandload.v4i32(i32* %base, <4 x i1> %mask, <4 x i32> %src0)
+  %res = call <4 x i32> @llvm.masked.expandload.v4i32(ptr %base, <4 x i1> %mask, <4 x i32> %src0)
   ret <4 x i32>%res
 }
 
@@ -2859,7 +2859,7 @@ define <4 x i32> @expandload_v4i32_v4i32(i32* %base, <4 x i32> %src0, <4 x i32> 
 ; vXi16
 ;
 
-define <8 x i16> @expandload_v8i16_v8i16(i16* %base, <8 x i16> %src0, <8 x i16> %trigger) {
+define <8 x i16> @expandload_v8i16_v8i16(ptr %base, <8 x i16> %src0, <8 x i16> %trigger) {
 ; SSE-LABEL: expandload_v8i16_v8i16:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    pxor %xmm2, %xmm2
@@ -3214,7 +3214,7 @@ define <8 x i16> @expandload_v8i16_v8i16(i16* %base, <8 x i16> %src0, <8 x i16> 
 ; AVX512VLBW-NEXT:    vpinsrw $7, (%rdi), %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <8 x i16> %trigger, zeroinitializer
-  %res = call <8 x i16> @llvm.masked.expandload.v8i16(i16* %base, <8 x i1> %mask, <8 x i16> %src0)
+  %res = call <8 x i16> @llvm.masked.expandload.v8i16(ptr %base, <8 x i1> %mask, <8 x i16> %src0)
   ret <8 x i16>%res
 }
 
@@ -3222,7 +3222,7 @@ define <8 x i16> @expandload_v8i16_v8i16(i16* %base, <8 x i16> %src0, <8 x i16> 
 ; vXi8
 ;
 
-define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %trigger) {
+define <16 x i8> @expandload_v16i8_v16i8(ptr %base, <16 x i8> %src0, <16 x i8> %trigger) {
 ; SSE2-LABEL: expandload_v16i8_v16i8:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -3249,8 +3249,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    jne LBB12_13
 ; SSE2-NEXT:  LBB12_14: ## %else22
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    jne LBB12_15
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    js LBB12_15
 ; SSE2-NEXT:  LBB12_16: ## %else26
 ; SSE2-NEXT:    testl $256, %eax ## imm = 0x100
 ; SSE2-NEXT:    jne LBB12_17
@@ -3351,8 +3351,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; SSE2-NEXT:    pandn %xmm2, %xmm1
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    incq %rdi
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je LBB12_16
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jns LBB12_16
 ; SSE2-NEXT:  LBB12_15: ## %cond.load25
 ; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,255,255,255,255,255,0,255,255,255,255,255,255,255,255]
 ; SSE2-NEXT:    pand %xmm1, %xmm0
@@ -3475,8 +3475,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; SSE42-NEXT:    testb $64, %al
 ; SSE42-NEXT:    jne LBB12_13
 ; SSE42-NEXT:  LBB12_14: ## %else22
-; SSE42-NEXT:    testb $-128, %al
-; SSE42-NEXT:    jne LBB12_15
+; SSE42-NEXT:    testb %al, %al
+; SSE42-NEXT:    js LBB12_15
 ; SSE42-NEXT:  LBB12_16: ## %else26
 ; SSE42-NEXT:    testl $256, %eax ## imm = 0x100
 ; SSE42-NEXT:    jne LBB12_17
@@ -3536,8 +3536,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; SSE42-NEXT:  LBB12_13: ## %cond.load21
 ; SSE42-NEXT:    pinsrb $6, (%rdi), %xmm0
 ; SSE42-NEXT:    incq %rdi
-; SSE42-NEXT:    testb $-128, %al
-; SSE42-NEXT:    je LBB12_16
+; SSE42-NEXT:    testb %al, %al
+; SSE42-NEXT:    jns LBB12_16
 ; SSE42-NEXT:  LBB12_15: ## %cond.load25
 ; SSE42-NEXT:    pinsrb $7, (%rdi), %xmm0
 ; SSE42-NEXT:    incq %rdi
@@ -3608,8 +3608,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX1OR2-NEXT:    testb $64, %al
 ; AVX1OR2-NEXT:    jne LBB12_13
 ; AVX1OR2-NEXT:  LBB12_14: ## %else22
-; AVX1OR2-NEXT:    testb $-128, %al
-; AVX1OR2-NEXT:    jne LBB12_15
+; AVX1OR2-NEXT:    testb %al, %al
+; AVX1OR2-NEXT:    js LBB12_15
 ; AVX1OR2-NEXT:  LBB12_16: ## %else26
 ; AVX1OR2-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX1OR2-NEXT:    jne LBB12_17
@@ -3669,8 +3669,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX1OR2-NEXT:  LBB12_13: ## %cond.load21
 ; AVX1OR2-NEXT:    vpinsrb $6, (%rdi), %xmm0, %xmm0
 ; AVX1OR2-NEXT:    incq %rdi
-; AVX1OR2-NEXT:    testb $-128, %al
-; AVX1OR2-NEXT:    je LBB12_16
+; AVX1OR2-NEXT:    testb %al, %al
+; AVX1OR2-NEXT:    jns LBB12_16
 ; AVX1OR2-NEXT:  LBB12_15: ## %cond.load25
 ; AVX1OR2-NEXT:    vpinsrb $7, (%rdi), %xmm0, %xmm0
 ; AVX1OR2-NEXT:    incq %rdi
@@ -3741,8 +3741,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne LBB12_13
 ; AVX512F-NEXT:  LBB12_14: ## %else22
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    jne LBB12_15
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js LBB12_15
 ; AVX512F-NEXT:  LBB12_16: ## %else26
 ; AVX512F-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX512F-NEXT:    jne LBB12_17
@@ -3802,8 +3802,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512F-NEXT:  LBB12_13: ## %cond.load21
 ; AVX512F-NEXT:    vpinsrb $6, (%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    incq %rdi
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je LBB12_16
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    jns LBB12_16
 ; AVX512F-NEXT:  LBB12_15: ## %cond.load25
 ; AVX512F-NEXT:    vpinsrb $7, (%rdi), %xmm0, %xmm0
 ; AVX512F-NEXT:    incq %rdi
@@ -3874,8 +3874,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512VLDQ-NEXT:    testb $64, %al
 ; AVX512VLDQ-NEXT:    jne LBB12_13
 ; AVX512VLDQ-NEXT:  LBB12_14: ## %else22
-; AVX512VLDQ-NEXT:    testb $-128, %al
-; AVX512VLDQ-NEXT:    jne LBB12_15
+; AVX512VLDQ-NEXT:    testb %al, %al
+; AVX512VLDQ-NEXT:    js LBB12_15
 ; AVX512VLDQ-NEXT:  LBB12_16: ## %else26
 ; AVX512VLDQ-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX512VLDQ-NEXT:    jne LBB12_17
@@ -3935,8 +3935,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512VLDQ-NEXT:  LBB12_13: ## %cond.load21
 ; AVX512VLDQ-NEXT:    vpinsrb $6, (%rdi), %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    incq %rdi
-; AVX512VLDQ-NEXT:    testb $-128, %al
-; AVX512VLDQ-NEXT:    je LBB12_16
+; AVX512VLDQ-NEXT:    testb %al, %al
+; AVX512VLDQ-NEXT:    jns LBB12_16
 ; AVX512VLDQ-NEXT:  LBB12_15: ## %cond.load25
 ; AVX512VLDQ-NEXT:    vpinsrb $7, (%rdi), %xmm0, %xmm0
 ; AVX512VLDQ-NEXT:    incq %rdi
@@ -4006,8 +4006,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512VLBW-NEXT:    testb $64, %al
 ; AVX512VLBW-NEXT:    jne LBB12_13
 ; AVX512VLBW-NEXT:  LBB12_14: ## %else22
-; AVX512VLBW-NEXT:    testb $-128, %al
-; AVX512VLBW-NEXT:    jne LBB12_15
+; AVX512VLBW-NEXT:    testb %al, %al
+; AVX512VLBW-NEXT:    js LBB12_15
 ; AVX512VLBW-NEXT:  LBB12_16: ## %else26
 ; AVX512VLBW-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX512VLBW-NEXT:    jne LBB12_17
@@ -4067,8 +4067,8 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512VLBW-NEXT:  LBB12_13: ## %cond.load21
 ; AVX512VLBW-NEXT:    vpinsrb $6, (%rdi), %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    incq %rdi
-; AVX512VLBW-NEXT:    testb $-128, %al
-; AVX512VLBW-NEXT:    je LBB12_16
+; AVX512VLBW-NEXT:    testb %al, %al
+; AVX512VLBW-NEXT:    jns LBB12_16
 ; AVX512VLBW-NEXT:  LBB12_15: ## %cond.load25
 ; AVX512VLBW-NEXT:    vpinsrb $7, (%rdi), %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    incq %rdi
@@ -4113,38 +4113,38 @@ define <16 x i8> @expandload_v16i8_v16i8(i8* %base, <16 x i8> %src0, <16 x i8> %
 ; AVX512VLBW-NEXT:    vpinsrb $15, (%rdi), %xmm0, %xmm0
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <16 x i8> %trigger, zeroinitializer
-  %res = call <16 x i8> @llvm.masked.expandload.v16i8(i8* %base, <16 x i1> %mask, <16 x i8> %src0)
+  %res = call <16 x i8> @llvm.masked.expandload.v16i8(ptr %base, <16 x i1> %mask, <16 x i8> %src0)
   ret <16 x i8>%res
 }
 
-declare <16 x double> @llvm.masked.expandload.v16f64(double*, <16 x i1>, <16 x double>)
-declare <8 x double> @llvm.masked.expandload.v8f64(double*, <8 x i1>, <8 x double>)
-declare <4 x double> @llvm.masked.expandload.v4f64(double*, <4 x i1>, <4 x double>)
-declare <2 x double> @llvm.masked.expandload.v2f64(double*, <2 x i1>, <2 x double>)
-declare <1 x double> @llvm.masked.expandload.v1f64(double*, <1 x i1>, <1 x double>)
+declare <16 x double> @llvm.masked.expandload.v16f64(ptr, <16 x i1>, <16 x double>)
+declare <8 x double> @llvm.masked.expandload.v8f64(ptr, <8 x i1>, <8 x double>)
+declare <4 x double> @llvm.masked.expandload.v4f64(ptr, <4 x i1>, <4 x double>)
+declare <2 x double> @llvm.masked.expandload.v2f64(ptr, <2 x i1>, <2 x double>)
+declare <1 x double> @llvm.masked.expandload.v1f64(ptr, <1 x i1>, <1 x double>)
 
-declare <32 x float> @llvm.masked.expandload.v32f32(float*, <32 x i1>, <32 x float>)
-declare <16 x float> @llvm.masked.expandload.v16f32(float*, <16 x i1>, <16 x float>)
-declare <8 x float> @llvm.masked.expandload.v8f32(float*, <8 x i1>, <8 x float>)
-declare <4 x float> @llvm.masked.expandload.v4f32(float*, <4 x i1>, <4 x float>)
-declare <2 x float> @llvm.masked.expandload.v2f32(float*, <2 x i1>, <2 x float>)
+declare <32 x float> @llvm.masked.expandload.v32f32(ptr, <32 x i1>, <32 x float>)
+declare <16 x float> @llvm.masked.expandload.v16f32(ptr, <16 x i1>, <16 x float>)
+declare <8 x float> @llvm.masked.expandload.v8f32(ptr, <8 x i1>, <8 x float>)
+declare <4 x float> @llvm.masked.expandload.v4f32(ptr, <4 x i1>, <4 x float>)
+declare <2 x float> @llvm.masked.expandload.v2f32(ptr, <2 x i1>, <2 x float>)
 
-declare <8 x i64> @llvm.masked.expandload.v8i64(i64*, <8 x i1>, <8 x i64>)
-declare <4 x i64> @llvm.masked.expandload.v4i64(i64*, <4 x i1>, <4 x i64>)
-declare <2 x i64> @llvm.masked.expandload.v2i64(i64*, <2 x i1>, <2 x i64>)
-declare <1 x i64> @llvm.masked.expandload.v1i64(i64*, <1 x i1>, <1 x i64>)
+declare <8 x i64> @llvm.masked.expandload.v8i64(ptr, <8 x i1>, <8 x i64>)
+declare <4 x i64> @llvm.masked.expandload.v4i64(ptr, <4 x i1>, <4 x i64>)
+declare <2 x i64> @llvm.masked.expandload.v2i64(ptr, <2 x i1>, <2 x i64>)
+declare <1 x i64> @llvm.masked.expandload.v1i64(ptr, <1 x i1>, <1 x i64>)
 
-declare <16 x i32> @llvm.masked.expandload.v16i32(i32*, <16 x i1>, <16 x i32>)
-declare <8 x i32> @llvm.masked.expandload.v8i32(i32*, <8 x i1>, <8 x i32>)
-declare <4 x i32> @llvm.masked.expandload.v4i32(i32*, <4 x i1>, <4 x i32>)
-declare <2 x i32> @llvm.masked.expandload.v2i32(i32*, <2 x i1>, <2 x i32>)
+declare <16 x i32> @llvm.masked.expandload.v16i32(ptr, <16 x i1>, <16 x i32>)
+declare <8 x i32> @llvm.masked.expandload.v8i32(ptr, <8 x i1>, <8 x i32>)
+declare <4 x i32> @llvm.masked.expandload.v4i32(ptr, <4 x i1>, <4 x i32>)
+declare <2 x i32> @llvm.masked.expandload.v2i32(ptr, <2 x i1>, <2 x i32>)
 
-declare <32 x i16> @llvm.masked.expandload.v32i16(i16*, <32 x i1>, <32 x i16>)
-declare <16 x i16> @llvm.masked.expandload.v16i16(i16*, <16 x i1>, <16 x i16>)
-declare <8 x i16> @llvm.masked.expandload.v8i16(i16*, <8 x i1>, <8 x i16>)
-declare <4 x i16> @llvm.masked.expandload.v4i16(i16*, <4 x i1>, <4 x i16>)
+declare <32 x i16> @llvm.masked.expandload.v32i16(ptr, <32 x i1>, <32 x i16>)
+declare <16 x i16> @llvm.masked.expandload.v16i16(ptr, <16 x i1>, <16 x i16>)
+declare <8 x i16> @llvm.masked.expandload.v8i16(ptr, <8 x i1>, <8 x i16>)
+declare <4 x i16> @llvm.masked.expandload.v4i16(ptr, <4 x i1>, <4 x i16>)
 
-declare <64 x i8> @llvm.masked.expandload.v64i8(i8*, <64 x i1>, <64 x i8>)
-declare <32 x i8> @llvm.masked.expandload.v32i8(i8*, <32 x i1>, <32 x i8>)
-declare <16 x i8> @llvm.masked.expandload.v16i8(i8*, <16 x i1>, <16 x i8>)
-declare <8 x i8> @llvm.masked.expandload.v8i8(i8*, <8 x i1>, <8 x i8>)
+declare <64 x i8> @llvm.masked.expandload.v64i8(ptr, <64 x i1>, <64 x i8>)
+declare <32 x i8> @llvm.masked.expandload.v32i8(ptr, <32 x i1>, <32 x i8>)
+declare <16 x i8> @llvm.masked.expandload.v16i8(ptr, <16 x i1>, <16 x i8>)
+declare <8 x i8> @llvm.masked.expandload.v8i8(ptr, <8 x i1>, <8 x i8>)

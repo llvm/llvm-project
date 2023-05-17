@@ -99,7 +99,7 @@ define i64 @test_v2i64(<2 x i64> %a) nounwind {
 define i8 @test_v3i8(<3 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v3i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    movi v0.2d, #0000000000000000
 ; CHECK-NEXT:    mov v0.h[0], w0
 ; CHECK-NEXT:    mov v0.h[1], w1
 ; CHECK-NEXT:    mov v0.h[2], w2
@@ -114,13 +114,9 @@ define i8 @test_v3i8(<3 x i8> %a) nounwind {
 define i8 @test_v9i8(<9 x i8> %a) nounwind {
 ; CHECK-LABEL: test_v9i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov v0.b[9], wzr
-; CHECK-NEXT:    mov v0.b[10], wzr
-; CHECK-NEXT:    mov v0.b[11], wzr
-; CHECK-NEXT:    mov v0.b[12], wzr
-; CHECK-NEXT:    mov v0.b[13], wzr
-; CHECK-NEXT:    mov v0.b[14], wzr
-; CHECK-NEXT:    mov v0.b[15], wzr
+; CHECK-NEXT:    adrp x8, .LCPI9_0
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI9_0]
+; CHECK-NEXT:    and v0.16b, v0.16b, v1.16b
 ; CHECK-NEXT:    umaxv b0, v0.16b
 ; CHECK-NEXT:    fmov w0, s0
 ; CHECK-NEXT:    ret
@@ -142,14 +138,10 @@ define i32 @test_v3i32(<3 x i32> %a) nounwind {
 define i1 @test_v4i1(<4 x i1> %a) nounwind {
 ; CHECK-LABEL: test_v4i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    umov w8, v0.h[1]
-; CHECK-NEXT:    umov w9, v0.h[0]
-; CHECK-NEXT:    umov w10, v0.h[2]
-; CHECK-NEXT:    umov w11, v0.h[3]
-; CHECK-NEXT:    orr w8, w9, w8
-; CHECK-NEXT:    orr w8, w8, w10
-; CHECK-NEXT:    orr w8, w8, w11
+; CHECK-NEXT:    shl v0.4h, v0.4h, #15
+; CHECK-NEXT:    cmlt v0.4h, v0.4h, #0
+; CHECK-NEXT:    umaxv h0, v0.4h
+; CHECK-NEXT:    fmov w8, s0
 ; CHECK-NEXT:    and w0, w8, #0x1
 ; CHECK-NEXT:    ret
   %b = call i1 @llvm.vector.reduce.umax.v4i1(<4 x i1> %a)

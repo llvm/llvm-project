@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus -analyzer-store=region -verify %s
+// RUN: %clang_analyze_cc1 -std=c++11 -analyzer-checker=core,alpha.deadcode.UnreachableCode,alpha.core.CastSize,unix.Malloc,cplusplus -verify %s
 // expected-no-diagnostics
 #include "Inputs/qt-simulator.h"
 
@@ -18,4 +18,9 @@ void connect(QObject *obj) {
   obj->connectImpl(nullptr, nullptr, nullptr, nullptr,
                    new QtPrivate::QSlotObjectBase(), (Qt::ConnectionType)0,
                    nullptr, nullptr);
+}
+
+void singleShot(QTimer *timer) {
+  timer->singleShotImpl(0, (Qt::TimerType)0, nullptr,
+                        new QtPrivate::QSlotObjectBase());
 }

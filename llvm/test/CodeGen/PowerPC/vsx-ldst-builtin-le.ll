@@ -31,86 +31,86 @@ entry:
 ; CHECK-P9UP-LABEL: test1
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %0 = call <4 x i32> @llvm.ppc.vsx.lxvw4x(i8* bitcast (<4 x i32>* @vsi to i8*))
+  %0 = call <4 x i32> @llvm.ppc.vsx.lxvw4x(ptr @vsi)
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  store <4 x i32> %0, <4 x i32>* @res_vsi, align 16
+  store <4 x i32> %0, ptr @res_vsi, align 16
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %1 = call <4 x i32> @llvm.ppc.vsx.lxvw4x(i8* bitcast (<4 x i32>* @vui to i8*))
+  %1 = call <4 x i32> @llvm.ppc.vsx.lxvw4x(ptr @vui)
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  store <4 x i32> %1, <4 x i32>* @res_vui, align 16
+  store <4 x i32> %1, ptr @res_vui, align 16
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %2 = call <4 x i32> @llvm.ppc.vsx.lxvw4x(i8* bitcast (<4 x float>* @vf to i8*))
+  %2 = call <4 x i32> @llvm.ppc.vsx.lxvw4x(ptr @vf)
   %3 = bitcast <4 x i32> %2 to <4 x float>
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  store <4 x float> %3, <4 x float>* @res_vf, align 16
+  store <4 x float> %3, ptr @res_vf, align 16
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %4 = call <2 x double> @llvm.ppc.vsx.lxvd2x(i8* bitcast (<2 x i64>* @vsll to i8*))
+  %4 = call <2 x double> @llvm.ppc.vsx.lxvd2x(ptr @vsll)
   %5 = bitcast <2 x double> %4 to <2 x i64>
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  store <2 x i64> %5, <2 x i64>* @res_vsll, align 16
+  store <2 x i64> %5, ptr @res_vsll, align 16
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %6 = call <2 x double> @llvm.ppc.vsx.lxvd2x(i8* bitcast (<2 x i64>* @vull to i8*))
+  %6 = call <2 x double> @llvm.ppc.vsx.lxvd2x(ptr @vull)
   %7 = bitcast <2 x double> %6 to <2 x i64>
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  store <2 x i64> %7, <2 x i64>* @res_vull, align 16
+  store <2 x i64> %7, ptr @res_vull, align 16
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %8 = call <2 x double> @llvm.ppc.vsx.lxvd2x(i8* bitcast (<2 x double>* @vd to i8*))
+  %8 = call <2 x double> @llvm.ppc.vsx.lxvd2x(ptr @vd)
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  store <2 x double> %8, <2 x double>* @res_vd, align 16
+  store <2 x double> %8, ptr @res_vd, align 16
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %9 = load <4 x i32>, <4 x i32>* @vsi, align 16
+  %9 = load <4 x i32>, ptr @vsi, align 16
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  call void @llvm.ppc.vsx.stxvw4x(<4 x i32> %9, i8* bitcast (<4 x i32>* @res_vsi to i8*))
+  call void @llvm.ppc.vsx.stxvw4x(<4 x i32> %9, ptr @res_vsi)
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %10 = load <4 x i32>, <4 x i32>* @vui, align 16
+  %10 = load <4 x i32>, ptr @vui, align 16
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  call void @llvm.ppc.vsx.stxvw4x(<4 x i32> %10, i8* bitcast (<4 x i32>* @res_vui to i8*))
+  call void @llvm.ppc.vsx.stxvw4x(<4 x i32> %10, ptr @res_vui)
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %11 = load <4 x float>, <4 x float>* @vf, align 16
+  %11 = load <4 x float>, ptr @vf, align 16
   %12 = bitcast <4 x float> %11 to <4 x i32>
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  call void @llvm.ppc.vsx.stxvw4x(<4 x i32> %12, i8* bitcast (<4 x float>* @res_vf to i8*))
+  call void @llvm.ppc.vsx.stxvw4x(<4 x i32> %12, ptr @res_vf)
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %13 = load <2 x i64>, <2 x i64>* @vsll, align 16
+  %13 = load <2 x i64>, ptr @vsll, align 16
   %14 = bitcast <2 x i64> %13 to <2 x double>
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  call void @llvm.ppc.vsx.stxvd2x(<2 x double> %14, i8* bitcast (<2 x i64>* @res_vsll to i8*))
+  call void @llvm.ppc.vsx.stxvd2x(<2 x double> %14, ptr @res_vsll)
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %15 = load <2 x i64>, <2 x i64>* @vull, align 16
+  %15 = load <2 x i64>, ptr @vull, align 16
   %16 = bitcast <2 x i64> %15 to <2 x double>
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  call void @llvm.ppc.vsx.stxvd2x(<2 x double> %16, i8* bitcast (<2 x i64>* @res_vull to i8*))
+  call void @llvm.ppc.vsx.stxvd2x(<2 x double> %16, ptr @res_vull)
 ; CHECK: lxvd2x
 ; CHECK-P9UP-DAG: lxv
-  %17 = load <2 x double>, <2 x double>* @vd, align 16
+  %17 = load <2 x double>, ptr @vd, align 16
 ; CHECK: stxvd2x
 ; CHECK-P9UP-DAG: stxv
-  call void @llvm.ppc.vsx.stxvd2x(<2 x double> %17, i8* bitcast (<2 x double>* @res_vd to i8*))
+  call void @llvm.ppc.vsx.stxvd2x(<2 x double> %17, ptr @res_vd)
   ret void
 }
 
-declare void @llvm.ppc.vsx.stxvd2x(<2 x double>, i8*)
-declare void @llvm.ppc.vsx.stxvw4x(<4 x i32>, i8*)
-declare <2 x double> @llvm.ppc.vsx.lxvd2x(i8*)
-declare <4 x i32> @llvm.ppc.vsx.lxvw4x(i8*)
+declare void @llvm.ppc.vsx.stxvd2x(<2 x double>, ptr)
+declare void @llvm.ppc.vsx.stxvw4x(<4 x i32>, ptr)
+declare <2 x double> @llvm.ppc.vsx.lxvd2x(ptr)
+declare <4 x i32> @llvm.ppc.vsx.lxvw4x(ptr)

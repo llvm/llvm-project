@@ -31,7 +31,7 @@ struct IntegerTypeStorage : public TypeStorage {
       : width(width), signedness(signedness) {}
 
   /// The hash key used for uniquing.
-  using KeyTy = std::pair<unsigned, IntegerType::SignednessSemantics>;
+  using KeyTy = std::tuple<unsigned, IntegerType::SignednessSemantics>;
 
   static llvm::hash_code hashKey(const KeyTy &key) {
     return llvm::hash_value(key);
@@ -44,8 +44,10 @@ struct IntegerTypeStorage : public TypeStorage {
   static IntegerTypeStorage *construct(TypeStorageAllocator &allocator,
                                        KeyTy key) {
     return new (allocator.allocate<IntegerTypeStorage>())
-        IntegerTypeStorage(key.first, key.second);
+        IntegerTypeStorage(std::get<0>(key), std::get<1>(key));
   }
+
+  KeyTy getAsKey() const { return KeyTy(width, signedness); }
 
   unsigned width : 30;
   IntegerType::SignednessSemantics signedness : 2;
@@ -59,7 +61,7 @@ struct FunctionTypeStorage : public TypeStorage {
         inputsAndResults(inputsAndResults) {}
 
   /// The hash key used for uniquing.
-  using KeyTy = std::pair<TypeRange, TypeRange>;
+  using KeyTy = std::tuple<TypeRange, TypeRange>;
   bool operator==(const KeyTy &key) const {
     if (std::get<0>(key) == getInputs())
       return std::get<1>(key) == getResults();
@@ -69,7 +71,7 @@ struct FunctionTypeStorage : public TypeStorage {
   /// Construction.
   static FunctionTypeStorage *construct(TypeStorageAllocator &allocator,
                                         const KeyTy &key) {
-    TypeRange inputs = key.first, results = key.second;
+    auto [inputs, results] = key;
 
     // Copy the inputs and results into the bump pointer.
     SmallVector<Type, 16> types;
@@ -89,6 +91,8 @@ struct FunctionTypeStorage : public TypeStorage {
   ArrayRef<Type> getResults() const {
     return ArrayRef<Type>(inputsAndResults + numInputs, numResults);
   }
+
+  KeyTy getAsKey() const { return KeyTy(getInputs(), getResults()); }
 
   unsigned numInputs;
   unsigned numResults;
@@ -126,6 +130,8 @@ struct TupleTypeStorage final
   ArrayRef<Type> getTypes() const {
     return {getTrailingObjects<Type>(), size()};
   }
+
+  KeyTy getAsKey() const { return getTypes(); }
 
   /// The number of tuple elements.
   unsigned numElements;

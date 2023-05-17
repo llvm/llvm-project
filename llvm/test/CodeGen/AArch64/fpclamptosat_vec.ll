@@ -397,12 +397,12 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov d0, v0.d[1]
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
+; CHECK-NEXT:    mov d0, v0.d[1]
 ; CHECK-NEXT:    bl __fixdfti
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -411,23 +411,15 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-NEXT:    cmp x20, #1
 ; CHECK-NEXT:    csel x10, x19, xzr, lt
 ; CHECK-NEXT:    csinc x11, x20, xzr, lt
-; CHECK-NEXT:    cmp x10, #0
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    cset w11, gt
-; CHECK-NEXT:    csel w11, w12, w11, eq
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cset w9, gt
-; CHECK-NEXT:    csel w9, w12, w9, eq
-; CHECK-NEXT:    cmp w9, #0
-; CHECK-NEXT:    csel x8, x8, xzr, ne
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    csel x9, x10, xzr, ne
+; CHECK-NEXT:    cmp xzr, x10
+; CHECK-NEXT:    ngcs xzr, x11
+; CHECK-NEXT:    csel x10, x10, xzr, lt
+; CHECK-NEXT:    cmp xzr, x8
+; CHECK-NEXT:    ngcs xzr, x9
+; CHECK-NEXT:    csel x8, x8, xzr, lt
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x10
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
@@ -511,12 +503,12 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov s0, v0.s[1]
+; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $s0 killed $s0 killed $q0
+; CHECK-NEXT:    mov s0, v0.s[1]
 ; CHECK-NEXT:    bl __fixsfti
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -525,23 +517,15 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-NEXT:    cmp x20, #1
 ; CHECK-NEXT:    csel x10, x19, xzr, lt
 ; CHECK-NEXT:    csinc x11, x20, xzr, lt
-; CHECK-NEXT:    cmp x10, #0
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    cset w11, gt
-; CHECK-NEXT:    csel w11, w12, w11, eq
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    csel w8, w12, w8, eq
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel x8, x9, xzr, ne
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    csel x9, x10, xzr, ne
+; CHECK-NEXT:    cmp xzr, x10
+; CHECK-NEXT:    ngcs xzr, x11
+; CHECK-NEXT:    csel x10, x10, xzr, lt
+; CHECK-NEXT:    cmp xzr, x9
+; CHECK-NEXT:    ngcs xzr, x8
+; CHECK-NEXT:    csel x8, x9, xzr, lt
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x10
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret
@@ -637,12 +621,12 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NEXT:    .cfi_offset w30, -32
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
 ; CHECK-NEXT:    str q0, [sp] // 16-byte Folded Spill
-; CHECK-NEXT:    mov h0, v0.h[1]
+; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
 ; CHECK-NEXT:    bl __fixhfti
 ; CHECK-NEXT:    ldr q0, [sp] // 16-byte Folded Reload
 ; CHECK-NEXT:    mov x19, x0
 ; CHECK-NEXT:    mov x20, x1
-; CHECK-NEXT:    // kill: def $h0 killed $h0 killed $q0
+; CHECK-NEXT:    mov h0, v0.h[1]
 ; CHECK-NEXT:    bl __fixhfti
 ; CHECK-NEXT:    cmp x1, #1
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
@@ -651,23 +635,15 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NEXT:    cmp x20, #1
 ; CHECK-NEXT:    csel x10, x19, xzr, lt
 ; CHECK-NEXT:    csinc x11, x20, xzr, lt
-; CHECK-NEXT:    cmp x10, #0
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    cset w11, gt
-; CHECK-NEXT:    csel w11, w12, w11, eq
-; CHECK-NEXT:    cmp x9, #0
-; CHECK-NEXT:    cset w12, ne
-; CHECK-NEXT:    cmp x8, #0
-; CHECK-NEXT:    cset w8, gt
-; CHECK-NEXT:    csel w8, w12, w8, eq
-; CHECK-NEXT:    cmp w8, #0
-; CHECK-NEXT:    csel x8, x9, xzr, ne
-; CHECK-NEXT:    cmp w11, #0
-; CHECK-NEXT:    csel x9, x10, xzr, ne
+; CHECK-NEXT:    cmp xzr, x10
+; CHECK-NEXT:    ngcs xzr, x11
+; CHECK-NEXT:    csel x10, x10, xzr, lt
+; CHECK-NEXT:    cmp xzr, x9
+; CHECK-NEXT:    ngcs xzr, x8
+; CHECK-NEXT:    csel x8, x9, xzr, lt
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmov d1, x9
+; CHECK-NEXT:    fmov d0, x10
+; CHECK-NEXT:    fmov d1, x8
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    add sp, sp, #48
 ; CHECK-NEXT:    ret

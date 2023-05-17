@@ -16,7 +16,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -35,7 +35,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -54,7 +54,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -72,7 +72,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -91,7 +91,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -111,7 +111,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -130,7 +130,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -150,7 +150,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -169,7 +169,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -189,7 +189,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -208,7 +208,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -228,7 +228,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -247,7 +247,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -266,7 +266,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -285,7 +285,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -305,7 +305,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -324,7 +324,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -344,7 +344,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -363,7 +363,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -383,7 +383,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -403,7 +403,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -423,7 +423,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -443,7 +443,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -463,7 +463,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:
@@ -483,7 +483,7 @@ entry:
   br i1 %cmp, label %exit, label %store
 
 store:
-  store i32 1, i32 *@g
+  store i32 1, ptr@g
   br label %exit
 
 exit:

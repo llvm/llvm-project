@@ -94,4 +94,15 @@ struct CountedView : std::ranges::view_base {
   constexpr CountedIter end() const { return CountedIter(ForwardIter(globalBuff + 8)); }
 };
 
+struct View : std::ranges::view_base {
+  constexpr explicit View(int* b, int* e) : begin_(b), end_(e) { }
+
+  constexpr int* begin() const { return begin_; }
+  constexpr int* end() const { return end_; }
+
+private:
+  int* begin_;
+  int* end_;
+};
+
 #endif // TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_DROP_TYPES_H

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // iterator() = default;
 
@@ -21,7 +20,7 @@ struct PODIter {
 
   using iterator_category = std::random_access_iterator_tag;
   using value_type = int;
-  using difference_type = intptr_t;
+  using difference_type = std::intptr_t;
 
   constexpr int operator*() const { return i; }
 
@@ -57,7 +56,7 @@ constexpr bool test() {
     auto [x] = *iter;
     assert(x == 0); // PODIter has to be initialised to have value 0
   }
-  
+
   {
     ZipIter iter = {};
     auto [x] = *iter;

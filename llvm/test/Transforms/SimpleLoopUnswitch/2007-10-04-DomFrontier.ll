@@ -1,20 +1,20 @@
-; RUN: opt < %s -licm -loop-unroll -disable-output
+; RUN: opt < %s -passes='loop-mssa(licm),loop-unroll' -disable-output
 
-@resonant = external global i32		; <i32*> [#uses=2]
+@resonant = external global i32		; <ptr> [#uses=2]
 
 define void @weightadj() {
 entry:
 	br label %bb
 
 bb:		; preds = %bb158, %entry
-	store i32 0, i32* @resonant, align 4
+	store i32 0, ptr @resonant, align 4
 	br i1 false, label %g.exit, label %bb158
 
 g.exit:		; preds = %bb68, %bb
 	br i1 false, label %bb68, label %cond_true
 
 cond_true:		; preds = %g.exit
-	store i32 1, i32* @resonant, align 4
+	store i32 1, ptr @resonant, align 4
 	br label %bb68
 
 bb68:		; preds = %cond_true, %g.exit

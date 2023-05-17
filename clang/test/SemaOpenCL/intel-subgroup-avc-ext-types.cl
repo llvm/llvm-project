@@ -28,37 +28,34 @@ void foo(char c, float f, void* v, struct st ss) {
   intel_sub_group_avc_sic_result_t result_sic = ss;
   intel_sub_group_avc_ime_result_single_reference_streamout_t sstreamout = v;
   intel_sub_group_avc_ime_result_dual_reference_streamout_t dstreamin_list = {0x0, 0x1};
-  intel_sub_group_avc_ime_dual_reference_streamin_t dstreamin_list2 = {};
   intel_sub_group_avc_ime_single_reference_streamin_t dstreamin_list3 = {c};
   intel_sub_group_avc_ime_dual_reference_streamin_t dstreamin_list4 = {1};
 #ifdef EXT
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_mce_payload_t' with an expression of incompatible type 'int'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_ime_payload_t' with an expression of incompatible type 'int'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_ref_payload_t' with an expression of incompatible type '__private float'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_sic_payload_t' with an expression of incompatible type '__private struct st'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_mce_result_t' with an expression of incompatible type 'int'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_ime_result_t' with an expression of incompatible type 'int'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_ref_result_t' with an expression of incompatible type '__private float'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_sic_result_t' with an expression of incompatible type '__private struct st'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_ime_result_single_reference_streamout_t' with an expression of incompatible type '__private void *__private'}}
-// expected-warning@-14 {{excess elements in struct initializer}}
-// expected-error@-14 {{scalar initializer cannot be empty}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_ime_single_reference_streamin_t' with an expression of incompatible type '__private char'}}
-// expected-error@-14 {{initializing '__private intel_sub_group_avc_ime_dual_reference_streamin_t' with an expression of incompatible type 'int'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_mce_payload_t' with an expression of incompatible type 'int'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_ime_payload_t' with an expression of incompatible type 'int'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_ref_payload_t' with an expression of incompatible type '__private float'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_sic_payload_t' with an expression of incompatible type '__private struct st'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_mce_result_t' with an expression of incompatible type 'int'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_ime_result_t' with an expression of incompatible type 'int'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_ref_result_t' with an expression of incompatible type '__private float'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_sic_result_t' with an expression of incompatible type '__private struct st'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_ime_result_single_reference_streamout_t' with an expression of incompatible type '__private void *__private'}}
+// expected-warning@-13 {{excess elements in struct initializer}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_ime_single_reference_streamin_t' with an expression of incompatible type '__private char'}}
+// expected-error@-13 {{initializing '__private intel_sub_group_avc_ime_dual_reference_streamin_t' with an expression of incompatible type 'int'}}
 #else
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_mce_payload_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ime_payload_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ref_payload_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_sic_payload_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_mce_result_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ime_result_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ref_result_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_sic_result_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ime_result_single_reference_streamout_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ime_result_dual_reference_streamout_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ime_dual_reference_streamin_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ime_single_reference_streamin_t'}}
-// expected-error@-28 {{use of undeclared identifier 'intel_sub_group_avc_ime_dual_reference_streamin_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_mce_payload_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ime_payload_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ref_payload_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_sic_payload_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_mce_result_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ime_result_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ref_result_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_sic_result_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ime_result_single_reference_streamout_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ime_result_dual_reference_streamout_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ime_single_reference_streamin_t'}}
+// expected-error@-26 {{use of undeclared identifier 'intel_sub_group_avc_ime_dual_reference_streamin_t'}}
 #endif
 }
 

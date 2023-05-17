@@ -8,20 +8,20 @@
 define void @func1() {
 ; CHECK-LABEL: define {{[^@]+}}@func1
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    store i32 0, i32* @x, align 4
+; CHECK-NEXT:    store i32 0, ptr @x, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* @x
+  store i32 0, ptr @x
   ret void
 }
 
 define void @func4() {
 ; CHECK-LABEL: define {{[^@]+}}@func4
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    store i32 0, i32* @x, align 4
+; CHECK-NEXT:    store i32 0, ptr @x, align 4
 ; CHECK-NEXT:    ret void
 ;
-  store i32 0, i32* @x
+  store i32 0, ptr @x
   ret void
 }
 
@@ -61,5 +61,5 @@ define amdgpu_kernel void @kernel3() #0 {
 
 attributes #0 = { "uniform-work-group-size"="false" }
 ;.
-; CHECK: attributes #[[ATTR0]] = { "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
+; CHECK: attributes #[[ATTR0]] = { "amdgpu-no-completion-action" "amdgpu-no-default-queue" "amdgpu-no-dispatch-id" "amdgpu-no-dispatch-ptr" "amdgpu-no-heap-ptr" "amdgpu-no-hostcall-ptr" "amdgpu-no-implicitarg-ptr" "amdgpu-no-lds-kernel-id" "amdgpu-no-multigrid-sync-arg" "amdgpu-no-queue-ptr" "amdgpu-no-workgroup-id-x" "amdgpu-no-workgroup-id-y" "amdgpu-no-workgroup-id-z" "amdgpu-no-workitem-id-x" "amdgpu-no-workitem-id-y" "amdgpu-no-workitem-id-z" "uniform-work-group-size"="false" }
 ;.

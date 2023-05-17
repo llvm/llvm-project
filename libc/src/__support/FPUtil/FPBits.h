@@ -11,8 +11,10 @@
 
 #include "PlatformDefs.h"
 
-#include "src/__support/CPP/Bit.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/bit.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/builtin_wrappers.h"
+#include "src/__support/common.h"
 
 #include "FloatProperties.h"
 #include <stdint.h>
@@ -37,7 +39,7 @@ template <typename T> struct ExponentWidth {
 // an x87 floating point format. This format is an IEEE 754 extension format.
 // It is handled as an explicit specialization of this class.
 template <typename T> struct FPBits {
-  static_assert(cpp::IsFloatingPointType<T>::Value,
+  static_assert(cpp::is_floating_point_v<T>,
                 "FPBits instantiated with invalid type.");
 
   // Reinterpreting bits as an integer value and interpreting the bits of an
@@ -49,33 +51,44 @@ template <typename T> struct FPBits {
 
   UIntType bits;
 
-  void set_mantissa(UIntType mantVal) {
+  LIBC_INLINE void set_mantissa(UIntType mantVal) {
     mantVal &= (FloatProp::MANTISSA_MASK);
     bits &= ~(FloatProp::MANTISSA_MASK);
     bits |= mantVal;
   }
 
-  UIntType get_mantissa() const { return bits & FloatProp::MANTISSA_MASK; }
+  LIBC_INLINE UIntType get_mantissa() const {
+    return bits & FloatProp::MANTISSA_MASK;
+  }
 
-  void set_unbiased_exponent(UIntType expVal) {
+  LIBC_INLINE void set_unbiased_exponent(UIntType expVal) {
     expVal = (expVal << (FloatProp::MANTISSA_WIDTH)) & FloatProp::EXPONENT_MASK;
     bits &= ~(FloatProp::EXPONENT_MASK);
     bits |= expVal;
   }
 
-  uint16_t get_unbiased_exponent() const {
+  LIBC_INLINE uint16_t get_unbiased_exponent() const {
     return uint16_t((bits & FloatProp::EXPONENT_MASK) >>
                     (FloatProp::MANTISSA_WIDTH));
   }
 
-  void set_sign(bool signVal) {
-    bits &= ~(FloatProp::SIGN_MASK);
-    UIntType sign = UIntType(signVal) << (FloatProp::BIT_WIDTH - 1);
-    bits |= sign;
+  // The function return mantissa with the implicit bit set iff the current
+  // value is a valid normal number.
+  LIBC_INLINE constexpr UIntType get_explicit_mantissa() {
+    return ((get_unbiased_exponent() > 0 && !is_inf_or_nan())
+                ? (FloatProp::MANTISSA_MASK + 1)
+                : 0) |
+           (FloatProp::MANTISSA_MASK & bits);
   }
 
-  bool get_sign() const {
-    return ((bits & FloatProp::SIGN_MASK) >> (FloatProp::BIT_WIDTH - 1));
+  LIBC_INLINE void set_sign(bool signVal) {
+    bits |= FloatProp::SIGN_MASK;
+    if (!signVal)
+      bits -= FloatProp::SIGN_MASK;
+  }
+
+  LIBC_INLINE bool get_sign() const {
+    return (bits & FloatProp::SIGN_MASK) != 0;
   }
 
   static_assert(sizeof(T) == sizeof(UIntType),
@@ -92,67 +105,113 @@ template <typename T> struct FPBits {
   static constexpr UIntType MAX_NORMAL =
       ((UIntType(MAX_EXPONENT) - 1) << MantissaWidth<T>::VALUE) | MAX_SUBNORMAL;
 
-  // We don't want accidental type promotions/conversions so we require exact
+  // We don't want accidental type promotions/conversions, so we require exact
   // type match.
-  template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<T, XType>::Value, int> = 0>
-  constexpr explicit FPBits(XType x)
-      : bits(__llvm_libc::bit_cast<UIntType>(x)) {}
+  template <typename XType, cpp::enable_if_t<cpp::is_same_v<T, XType>, int> = 0>
+  constexpr explicit FPBits(XType x) : bits(cpp::bit_cast<UIntType>(x)) {}
 
   template <typename XType,
-            cpp::EnableIfType<cpp::IsSame<XType, UIntType>::Value, int> = 0>
+            cpp::enable_if_t<cpp::is_same_v<XType, UIntType>, int> = 0>
   constexpr explicit FPBits(XType x) : bits(x) {}
 
   FPBits() : bits(0) {}
 
-  T get_val() const { return __llvm_libc::bit_cast<T>(bits); }
+  LIBC_INLINE T get_val() const { return cpp::bit_cast<T>(bits); }
 
-  void set_val(T value) { bits = __llvm_libc::bit_cast<UIntType>(value); }
+  LIBC_INLINE void set_val(T value) { bits = cpp::bit_cast<UIntType>(value); }
 
-  explicit operator T() const { return get_val(); }
+  LIBC_INLINE explicit operator T() const { return get_val(); }
 
-  UIntType uintval() const { return bits; }
+  LIBC_INLINE UIntType uintval() const { return bits; }
 
-  int get_exponent() const {
+  LIBC_INLINE int get_exponent() const {
     return int(get_unbiased_exponent()) - EXPONENT_BIAS;
   }
 
-  bool is_zero() const {
-    return get_mantissa() == 0 && get_unbiased_exponent() == 0;
+  LIBC_INLINE bool is_zero() const {
+    // Remove sign bit by shift
+    return (bits << 1) == 0;
   }
 
-  bool is_inf() const {
-    return get_mantissa() == 0 && get_unbiased_exponent() == MAX_EXPONENT;
+  LIBC_INLINE bool is_inf() const {
+    return (bits & FloatProp::EXP_MANT_MASK) == FloatProp::EXPONENT_MASK;
   }
 
-  bool is_nan() const {
-    return get_unbiased_exponent() == MAX_EXPONENT && get_mantissa() != 0;
+  LIBC_INLINE bool is_nan() const {
+    return (bits & FloatProp::EXP_MANT_MASK) > FloatProp::EXPONENT_MASK;
   }
 
-  bool is_inf_or_nan() const { return get_unbiased_exponent() == MAX_EXPONENT; }
-
-  static FPBits<T> zero() { return FPBits(); }
-
-  static FPBits<T> neg_zero() {
-    return FPBits(UIntType(1) << (sizeof(UIntType) * 8 - 1));
+  LIBC_INLINE bool is_quiet_nan() const {
+    return (bits & FloatProp::EXP_MANT_MASK) ==
+           (FloatProp::EXPONENT_MASK | FloatProp::QUIET_NAN_MASK);
   }
 
-  static FPBits<T> inf() {
-    FPBits<T> bits;
+  LIBC_INLINE bool is_inf_or_nan() const {
+    return (bits & FloatProp::EXPONENT_MASK) == FloatProp::EXPONENT_MASK;
+  }
+
+  LIBC_INLINE static constexpr FPBits<T> zero(bool sign = false) {
+    return FPBits(sign ? FloatProp::SIGN_MASK : UIntType(0));
+  }
+
+  LIBC_INLINE static constexpr FPBits<T> neg_zero() { return zero(true); }
+
+  LIBC_INLINE static constexpr FPBits<T> inf(bool sign = false) {
+    FPBits<T> bits(sign ? FloatProp::SIGN_MASK : UIntType(0));
     bits.set_unbiased_exponent(MAX_EXPONENT);
     return bits;
   }
 
-  static FPBits<T> neg_inf() {
+  LIBC_INLINE static constexpr FPBits<T> neg_inf() {
     FPBits<T> bits = inf();
     bits.set_sign(1);
     return bits;
   }
 
-  static T build_nan(UIntType v) {
+  LIBC_INLINE static constexpr T build_nan(UIntType v) {
     FPBits<T> bits = inf();
     bits.set_mantissa(v);
     return T(bits);
+  }
+
+  LIBC_INLINE static constexpr T build_quiet_nan(UIntType v) {
+    return build_nan(FloatProp::QUIET_NAN_MASK | v);
+  }
+
+  // The function convert integer number and unbiased exponent to proper float
+  // T type:
+  //   Result = number * 2^(ep+1 - exponent_bias)
+  // Be careful!
+  //   1) "ep" is raw exponent value.
+  //   2) The function add to +1 to ep for seamless normalized to denormalized
+  //      transition.
+  //   3) The function did not check exponent high limit.
+  //   4) "number" zero value is not processed correctly.
+  //   5) Number is unsigned, so the result can be only positive.
+  LIBC_INLINE static constexpr FPBits<T> make_value(UIntType number, int ep) {
+    FPBits<T> result;
+    // offset: +1 for sign, but -1 for implicit first bit
+    int lz = unsafe_clz(number) - FloatProp::EXPONENT_WIDTH;
+    number <<= lz;
+    ep -= lz;
+
+    if (LIBC_LIKELY(ep >= 0)) {
+      // Implicit number bit will be removed by mask
+      result.set_mantissa(number);
+      result.set_unbiased_exponent(ep + 1);
+    } else {
+      result.set_mantissa(number >> -ep);
+    }
+    return result;
+  }
+
+  LIBC_INLINE static FPBits<T> create_value(bool sign, UIntType unbiased_exp,
+                                            UIntType mantissa) {
+    FPBits<T> result;
+    result.set_sign(sign);
+    result.set_unbiased_exponent(unbiased_exp);
+    result.set_mantissa(mantissa);
+    return result;
   }
 };
 

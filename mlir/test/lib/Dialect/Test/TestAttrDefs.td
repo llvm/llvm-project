@@ -15,9 +15,12 @@
 
 // To get the test dialect definition.
 include "TestDialect.td"
+include "TestEnumDefs.td"
+include "mlir/Dialect/Utils/StructuredOpsUtils.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/BuiltinAttributeInterfaces.td"
-include "mlir/IR/SubElementInterfaces.td"
+include "mlir/IR/EnumAttr.td"
+include "mlir/IR/OpAsmInterface.td"
 
 // All of the attributes will extend this class.
 class Test_Attr<string name, list<Trait> traits = []>
@@ -52,18 +55,22 @@ def CompoundAttrNested : Test_Attr<"CompoundAttrNested"> {
 }
 
 // An attribute testing AttributeSelfTypeParameter.
-def AttrWithSelfTypeParam : Test_Attr<"AttrWithSelfTypeParam"> {
+def AttrWithSelfTypeParam
+    : Test_Attr<"AttrWithSelfTypeParam", [TypedAttrInterface]> {
   let mnemonic = "attr_with_self_type_param";
   let parameters = (ins AttributeSelfTypeParameter<"">:$type);
   let assemblyFormat = "";
 }
 
 // An attribute testing AttributeSelfTypeParameter.
-def AttrWithTypeBuilder : Test_Attr<"AttrWithTypeBuilder"> {
+def AttrWithTypeBuilder
+    : Test_Attr<"AttrWithTypeBuilder", [TypedAttrInterface]> {
   let mnemonic = "attr_with_type_builder";
-  let parameters = (ins "::mlir::IntegerAttr":$attr);
-  let typeBuilder = "$_attr.getType()";
-  let hasCustomAssemblyFormat = 1;
+  let parameters = (ins
+    "::mlir::IntegerAttr":$attr,
+    AttributeSelfTypeParameter<"", "mlir::Type", "$attr.getType()">:$type
+  );
+  let assemblyFormat = "$attr";
 }
 
 def TestAttrTrait : NativeAttrTrait<"TestAttrTrait">;
@@ -74,9 +81,7 @@ def AttrWithTrait : Test_Attr<"AttrWithTrait", [TestAttrTrait]> {
 }
 
 // Test support for ElementsAttrInterface.
-def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [
-    ElementsAttrInterface
-  ]> {
+def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [ElementsAttrInterface]> {
   let mnemonic = "i64_elements";
   let parameters = (ins
     AttributeSelfTypeParameter<"", "::mlir::ShapedType">:$type,
@@ -89,33 +94,30 @@ def TestI64ElementsAttr : Test_Attr<"TestI64Elements", [
 
     /// Provide begin iterators for the various iterable types.
     // * uint64_t
-    auto value_begin_impl(OverloadToken<uint64_t>) const {
+    mlir::FailureOr<const uint64_t *>
+    try_value_begin_impl(OverloadToken<uint64_t>) const {
       return getElements().begin();
     }
     // * Attribute
-    auto value_begin_impl(OverloadToken<mlir::Attribute>) const {
+    auto try_value_begin_impl(OverloadToken<mlir::Attribute>) const {
       mlir::Type elementType = getType().getElementType();
-      return llvm::map_range(getElements(), [=](uint64_t value) {
+      return mlir::success(llvm::map_range(getElements(), [=](uint64_t value) {
         return mlir::IntegerAttr::get(elementType,
                                       llvm::APInt(/*numBits=*/64, value));
-      }).begin();
+      }).begin());
     }
     // * APInt
-    auto value_begin_impl(OverloadToken<llvm::APInt>) const {
-      return llvm::map_range(getElements(), [=](uint64_t value) {
+    auto try_value_begin_impl(OverloadToken<llvm::APInt>) const {
+      return mlir::success(llvm::map_range(getElements(), [=](uint64_t value) {
         return llvm::APInt(/*numBits=*/64, value);
-      }).begin();
+      }).begin());
     }
   }];
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
 }
 
-def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess", [
-    DeclareAttrInterfaceMethods<SubElementAttrInterface,
-        ["replaceImmediateSubAttribute"]>
-  ]> {
-
+def TestSubElementsAccessAttr : Test_Attr<"TestSubElementsAccess"> {
   let mnemonic = "sub_elements_access";
 
   let parameters = (ins
@@ -169,18 +171,47 @@ def TestParamFour : ArrayRefParameter<"int", ""> {
   let printer = "::printIntArray($_printer, $_self)";
 }
 
+
+def TestParamVector : ArrayRefParameter<"int", ""> {
+  let cppStorageType = "std::vector<int>";
+}
+
+def TestParamUnsigned : AttrParameter<"uint64_t", ""> {}
+
 def TestAttrWithFormat : Test_Attr<"TestAttrWithFormat"> {
   let parameters = (
     ins
     TestParamOne:$one,
     TestParamTwo:$two,
     "::mlir::IntegerAttr":$three,
-    TestParamFour:$four
+    TestParamFour:$four,
+    TestParamUnsigned:$five,
+    TestParamVector:$six,
+    // Array of another attribute.
+    ArrayRefParameter<
+      "AttrWithTypeBuilderAttr", // The parameter C++ type.
+      "An example of an array of another Attribute" // Parameter description.
+      >: $arrayOfAttrWithTypeBuilderAttr
   );
 
   let mnemonic = "attr_with_format";
-  let assemblyFormat = "`<` $one `:` struct($two, $four) `:` $three `>`";
+  let assemblyFormat = [{
+    `<` $one `:` struct($two, $four) `:` $three `:` $five `:` `[` $six `]` `,`
+    `[` `` $arrayOfAttrWithTypeBuilderAttr `]` `>`
+  }];
   let genVerifyDecl = 1;
+}
+
+def TestAttrWithOptionalSigned : Test_Attr<"TestAttrWithOptionalSigned"> {
+  let parameters = (ins OptionalParameter<"std::optional<int64_t>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_signed";
+}
+
+def TestAttrWithOptionalUnsigned : Test_Attr<"TestAttrWithOptionalUnsigned"> {
+  let parameters = (ins OptionalParameter<"std::optional<uint64_t>">:$value);
+  let assemblyFormat = "`<` $value `>`";
+  let mnemonic = "attr_with_optional_unsigned";
 }
 
 def TestAttrUgly : Test_Attr<"TestAttrUgly"> {
@@ -207,11 +238,90 @@ def TestAttrWithTypeParam : Test_Attr<"TestAttrWithTypeParam"> {
 
 // Test self type parameter with assembly format.
 def TestAttrSelfTypeParameterFormat
-    : Test_Attr<"TestAttrSelfTypeParameterFormat"> {
+    : Test_Attr<"TestAttrSelfTypeParameterFormat", [TypedAttrInterface]> {
   let parameters = (ins "int":$a, AttributeSelfTypeParameter<"">:$type);
 
   let mnemonic = "attr_self_type_format";
   let assemblyFormat = "`<` $a `>`";
 }
+
+def TestAttrSelfTypeParameterStructFormat
+    : Test_Attr<"TestAttrSelfTypeParameterStructFormat", [TypedAttrInterface]> {
+  let parameters = (ins "int":$a, AttributeSelfTypeParameter<"">:$type);
+
+  let mnemonic = "attr_self_type_struct_format";
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+// Test overridding attribute builders with a custom builder.
+def TestOverrideBuilderAttr : Test_Attr<"TestOverrideBuilder"> {
+  let mnemonic = "override_builder";
+  let parameters = (ins "int":$a);
+  let assemblyFormat = "`<` $a `>`";
+
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let builders = [AttrBuilder<(ins "int":$a), [{
+    return ::mlir::IntegerAttr::get(::mlir::IndexType::get($_ctxt), a);
+  }], "::mlir::Attribute">];
+}
+
+// Test simple extern 1D vector using ElementsAttrInterface.
+def TestExtern1DI64ElementsAttr : Test_Attr<"TestExtern1DI64Elements", [ElementsAttrInterface]> {
+  let mnemonic = "e1di64_elements";
+  let parameters = (ins
+    AttributeSelfTypeParameter<"", "::mlir::ShapedType">:$type,
+    ResourceHandleParameter<"TestDialectResourceBlobHandle">:$handle
+  );
+  let extraClassDeclaration = [{
+    /// Return the elements referenced by this attribute.
+    llvm::ArrayRef<uint64_t> getElements() const;
+
+    /// The set of data types that can be iterated by this attribute.
+    using ContiguousIterableTypesT = std::tuple<uint64_t>;
+
+    /// Provide begin iterators for the various iterable types.
+    // * uint64_t
+    mlir::FailureOr<const uint64_t *>
+    try_value_begin_impl(OverloadToken<uint64_t>) const {
+      return getElements().begin();
+    }
+  }];
+  let assemblyFormat = "`<` $handle `>`";
+}
+
+// An array of nested attributes.
+def TestArrayOfUglyAttrs : ArrayOfAttr<Test_Dialect, "ArrayOfUglyAttrs",
+    "array_of_ugly", "TestAttrUglyAttr"> {
+  let assemblyFormat = "`[` (`]`) : ($value^ ` ` `]`)?";
+}
+
+// An array of integers.
+def TestArrayOfInts : ArrayOfAttr<Test_Dialect, "ArrayOfInts",
+    "array_of_ints", "int32_t">;
+
+// An array of enum attributes.
+def TestSimpleEnumAttr : EnumAttr<Test_Dialect, TestSimpleEnum, "simple_enum"> {
+  let assemblyFormat = "`` $value";
+}
+def TestArrayOfEnums : ArrayOfAttr<Test_Dialect, "ArrayOfEnums",
+    "array_of_enums", "SimpleEnumAttr">;
+
+// Test custom directive as optional group anchor.
+def TestCustomAnchor : Test_Attr<"TestCustomAnchor"> {
+  let parameters = (ins "int":$a, OptionalParameter<"std::optional<int>">:$b);
+  let mnemonic = "custom_anchor";
+  let assemblyFormat = "`<` $a (`>`) : (`,` custom<TrueFalse>($b)^ `>`)?";
+}
+
+def Test_IteratorTypeEnum
+    : EnumAttr<Test_Dialect, IteratorType, "iterator_type"> {
+  let assemblyFormat = "`<` $value `>`";
+}
+
+def Test_IteratorTypeArrayAttr
+    : TypedArrayAttrBase<Test_IteratorTypeEnum,
+  "Iterator type should be an enum.">;
+
 
 #endif // TEST_ATTRDEFS

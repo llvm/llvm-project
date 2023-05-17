@@ -22,6 +22,7 @@
 
 #include <cassert>
 #include <concepts>
+#include <iterator>
 
 #include "test_macros.h"
 

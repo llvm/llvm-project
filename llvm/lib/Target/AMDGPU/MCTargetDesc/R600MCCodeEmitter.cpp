@@ -58,11 +58,6 @@ private:
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
-
 };
 
 } // end anonymous namespace
@@ -90,11 +85,8 @@ MCCodeEmitter *llvm::createR600MCCodeEmitter(const MCInstrInfo &MCII,
 }
 
 void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
-                                       SmallVectorImpl<MCFixup> &Fixups,
-                                       const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
-
+                                          SmallVectorImpl<MCFixup> &Fixups,
+                                          const MCSubtargetInfo &STI) const {
   const MCInstrDesc &Desc = MCII.get(MI.getOpcode());
   if (MI.getOpcode() == R600::RETURN ||
     MI.getOpcode() == R600::FETCH_CLAUSE ||
@@ -105,7 +97,7 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
   } else if (IS_VTX(Desc)) {
     uint64_t InstWord01 = getBinaryCodeForInstr(MI, Fixups, STI);
     uint32_t InstWord2 = MI.getOperand(2).getImm(); // Offset
-    if (!(STI.getFeatureBits()[R600::FeatureCaymanISA])) {
+    if (!(STI.hasFeature(R600::FeatureCaymanISA))) {
       InstWord2 |= 1 << 19; // Mega-Fetch bit
     }
 
@@ -138,7 +130,7 @@ void R600MCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
       Emit((uint32_t) 0, OS);
   } else {
     uint64_t Inst = getBinaryCodeForInstr(MI, Fixups, STI);
-    if ((STI.getFeatureBits()[R600::FeatureR600ALUInst]) &&
+    if ((STI.hasFeature(R600::FeatureR600ALUInst)) &&
        ((Desc.TSFlags & R600_InstFlag::OP1) ||
          Desc.TSFlags & R600_InstFlag::OP2)) {
       uint64_t ISAOpCode = Inst & (0x3FFULL << 39);
@@ -187,5 +179,4 @@ uint64_t R600MCCodeEmitter::getMachineOpValue(const MCInst &MI,
   return MO.getImm();
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "R600GenMCCodeEmitter.inc"

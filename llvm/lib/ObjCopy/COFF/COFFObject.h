@@ -11,7 +11,6 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -87,7 +86,7 @@ struct Symbol {
   StringRef AuxFile;
   ssize_t TargetSectionId;
   ssize_t AssociativeComdatTargetSectionId = 0;
-  Optional<size_t> WeakTargetSymbolId;
+  std::optional<size_t> WeakTargetSymbolId;
   size_t UniqueId;
   size_t RawIndex;
   bool Referenced;

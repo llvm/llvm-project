@@ -45,12 +45,12 @@ entry:
 ; STATIC-N64: daddiu $[[R3]], $[[R3]], %hi(g1)
 ; STATIC-N64: lw  ${{[0-9]+}}, %lo(g1)($[[R3]])
 
-  %0 = load i32, i32* @s1, align 4
+  %0 = load i32, ptr @s1, align 4
   tail call void @foo1(i32 %0) nounwind
-  %1 = load i32, i32* @g1, align 4
-  store i32 %1, i32* @s1, align 4
+  %1 = load i32, ptr @g1, align 4
+  store i32 %1, ptr @s1, align 4
   %add = add nsw i32 %1, 2
-  store i32 %add, i32* @g1, align 4
+  store i32 %add, ptr @g1, align 4
   ret void
 }
 

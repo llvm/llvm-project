@@ -3,11 +3,13 @@ set(LLVM_OPTIONAL_SOURCES
   TensorInferTypeOpInterfaceImpl.cpp
   TensorOps.cpp
   TensorTilingInterfaceImpl.cpp
+  ValueBoundsOpInterfaceImpl.cpp
 )
 
-add_mlir_dialect_library(MLIRTensor
+add_mlir_dialect_library(MLIRTensorDialect
   TensorDialect.cpp
   TensorOps.cpp
+  ValueBoundsOpInterfaceImpl.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${PROJECT_SOURCE_DIR}/include/mlir/Dialect/Tensor
@@ -19,15 +21,20 @@ add_mlir_dialect_library(MLIRTensor
   Core
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
-  MLIRArithmeticUtils
+  MLIRAffineDialect
+  MLIRArithDialect
+  MLIRArithUtils
   MLIRCastInterfaces
-  MLIRComplex
+  MLIRComplexDialect
+  MLIRDestinationStyleOpInterface
   MLIRDialectUtils
   MLIRIR
   MLIRInferTypeOpInterface
+  MLIRParallelCombiningOpInterface
+  MLIRShapedOpInterfaces
   MLIRSideEffectInterfaces
   MLIRSupport
+  MLIRValueBoundsOpInterface
   MLIRViewLikeInterface
   )
 
@@ -38,11 +45,11 @@ add_mlir_dialect_library(MLIRTensorInferTypeOpInterfaceImpl
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tensor
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
   MLIRIR
   MLIRInferTypeOpInterface
   MLIRSupport
-  MLIRTensor
+  MLIRTensorDialect
   )
 
 add_mlir_dialect_library(MLIRTensorTilingInterfaceImpl
@@ -52,11 +59,17 @@ add_mlir_dialect_library(MLIRTensorTilingInterfaceImpl
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tensor
 
   LINK_LIBS PUBLIC
-  MLIRAffine
+  MLIRAffineDialect
+  MLIRAffineUtils
+  MLIRArithUtils
+  MLIRDialectUtils
   MLIRIR
-  MLIRLinalg
-  MLIRSCF
+  MLIRLinalgDialect
+  MLIRLinalgUtils
+  MLIRSCFDialect
   MLIRSupport
-  MLIRTensor
+  MLIRTensorDialect
+  MLIRTensorUtils
   MLIRTilingInterface
+  MLIRValueBoundsOpInterface
   )

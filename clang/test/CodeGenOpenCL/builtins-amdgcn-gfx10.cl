@@ -37,3 +37,10 @@ void test_groupstaticsize(global uint* out)
 {
   *out = __builtin_amdgcn_groupstaticsize();
 }
+
+// CHECK-LABEL: @test_ballot_wave32(
+// CHECK: call i32 @llvm.amdgcn.ballot.i32(i1 %{{.+}})
+void test_ballot_wave32(global uint* out, int a, int b)
+{
+  *out = __builtin_amdgcn_ballot_w32(a == b);
+}

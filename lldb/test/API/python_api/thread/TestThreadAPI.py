@@ -2,9 +2,6 @@
 Test SBThread APIs.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +10,6 @@ from lldbsuite.test.lldbutil import get_stopped_thread, get_caller_symbol
 
 
 class ThreadAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def test_get_process(self):
         """Test Python SBThread.GetProcess() API."""
@@ -52,6 +47,11 @@ class ThreadAPITestCase(TestBase):
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
         self.step_over_3_times(self.exe_name)
+
+    def test_negative_indexing(self):
+        """Test SBThread.frame with negative indexes."""
+        self.build()
+        self.validate_negative_indexing()
 
     def setUp(self):
         # Call super's setUp().
@@ -216,7 +216,7 @@ class ThreadAPITestCase(TestBase):
         # main2.cpp.
         frame0 = thread.GetFrameAtIndex(0)
         lineEntry = frame0.GetLineEntry()
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
         # Expected failure with clang as the compiler.
         # rdar://problem/9223880
         #
@@ -274,3 +274,29 @@ class ThreadAPITestCase(TestBase):
         thread.RunToAddress(start_addr)
         self.runCmd("process status")
         #self.runCmd("thread backtrace")
+
+    def validate_negative_indexing(self):
+        exe = self.getBuildArtifact("a.out")
+
+        target = self.dbg.CreateTarget(exe)
+        self.assertTrue(target, VALID_TARGET)
+
+        breakpoint = target.BreakpointCreateByLocation(
+            "main.cpp", self.break_line)
+        self.assertTrue(breakpoint, VALID_BREAKPOINT)
+        self.runCmd("breakpoint list")
+
+        # Launch the process, and do not stop at the entry point.
+        process = target.LaunchSimple(
+            None, None, self.get_process_working_directory())
+
+        thread = get_stopped_thread(process, lldb.eStopReasonBreakpoint)
+        self.assertTrue(
+            thread.IsValid(),
+            "There should be a thread stopped due to breakpoint")
+        self.runCmd("process status")
+
+        pos_range = range(thread.num_frames)
+        neg_range = range(thread.num_frames, 0, -1)
+        for pos, neg in zip(pos_range, neg_range):
+            self.assertEqual(thread.frame[pos].idx, thread.frame[-neg].idx)

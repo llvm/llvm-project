@@ -14,6 +14,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include <functional>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -49,7 +50,7 @@ struct CapturedDiags {
     std::string Message;
     llvm::SourceMgr::DiagKind Kind;
     Position Pos;
-    llvm::Optional<Range> Rng;
+    std::optional<Range> Rng;
 
     friend void PrintTo(const Diag &D, std::ostream *OS) {
       *OS << (D.Kind == llvm::SourceMgr::DK_Error ? "error: " : "warning: ")

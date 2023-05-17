@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple sparcv9-unknown-unknown -emit-llvm %s -o - | FileCheck %s
 static unsigned char dwarf_reg_size_table[102+1];
 
 int test(void) {
@@ -8,92 +8,92 @@ int test(void) {
 }
 
 // CHECK-LABEL: define{{.*}} signext i32 @test()
-// CHECK:       store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 0)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 1)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 2)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 3)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 4)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 5)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 6)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 7)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 8)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 9)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 10)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 11)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 12)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 13)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 14)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 15)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 16)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 17)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 18)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 19)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 20)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 21)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 22)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 23)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 24)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 25)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 26)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 27)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 28)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 29)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 30)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 31)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 32)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 33)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 34)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 35)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 36)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 37)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 38)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 39)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 40)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 41)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 42)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 43)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 44)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 45)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 46)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 47)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 48)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 49)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 50)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 51)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 52)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 53)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 54)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 55)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 56)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 57)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 58)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 59)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 60)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 61)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 62)
-// CHECK-NEXT:  store i8 4, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 63)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 64)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 65)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 66)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 67)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 68)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 69)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 70)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 71)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 72)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 73)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 74)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 75)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 76)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 77)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 78)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 79)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 80)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 81)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 82)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 83)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 84)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 85)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 86)
-// CHECK-NEXT:  store i8 8, i8* getelementptr inbounds ([103 x i8], [103 x i8]* @dwarf_reg_size_table, i64 0, i64 87)
+// CHECK:       store i8 8, ptr @dwarf_reg_size_table
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 1), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 2), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 3), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 4), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 5), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 6), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 7), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 8), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 9), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 10), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 11), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 12), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 13), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 14), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 15), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 16), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 17), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 18), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 19), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 20), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 21), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 22), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 23), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 24), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 25), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 26), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 27), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 28), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 29), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 30), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 31), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 32), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 33), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 34), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 35), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 36), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 37), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 38), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 39), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 40), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 41), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 42), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 43), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 44), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 45), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 46), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 47), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 48), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 49), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 50), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 51), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 52), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 53), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 54), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 55), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 56), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 57), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 58), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 59), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 60), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 61), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 62), align 1
+// CHECK-NEXT: store i8 4, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 63), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 64), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 65), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 66), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 67), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 68), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 69), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 70), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 71), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 72), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 73), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 74), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 75), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 76), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 77), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 78), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 79), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 80), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 81), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 82), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 83), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 84), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 85), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 86), align 1
+// CHECK-NEXT: store i8 8, ptr getelementptr inbounds (i8, ptr @dwarf_reg_size_table, i32 87), align 1
 // CHECK-NEXT:  ret i32 14

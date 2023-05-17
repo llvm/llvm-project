@@ -1,4 +1,4 @@
-//===-- RISCVCallingConv.td - Calling Conventions RISCV ----*- tablegen -*-===//
+//===-- RISCVCallingConv.td - Calling Conventions RISC-V ---*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This describes the calling conventions for the RISCV architecture.
+// This describes the calling conventions for the RISC-V architecture.
 //
 //===----------------------------------------------------------------------===//
 

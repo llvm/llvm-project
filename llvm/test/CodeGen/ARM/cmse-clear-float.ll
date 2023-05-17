@@ -13,7 +13,7 @@
 ; RUN: llc %s -o - -mtriple=thumbebv8.1m.main -mattr=+mve | \
 ; RUN:   FileCheck %s --check-prefix=CHECK-81M --check-prefix=CHECK-81M-BE
 
-define float @f1(float (float)* nocapture %fptr) #0 {
+define float @f1(ptr nocapture %fptr) #0 {
 ; CHECK-8M-LABEL: f1:
 ; CHECK-8M:       @ %bb.0: @ %entry
 ; CHECK-8M-NEXT:    push {r7, lr}
@@ -69,7 +69,7 @@ entry:
 attributes #0 = { "cmse_nonsecure_entry" nounwind }
 attributes #1 = { nounwind }
 
-define double @d1(double (double)* nocapture %fptr) #0 {
+define double @d1(ptr nocapture %fptr) #0 {
 ; CHECK-8M-LE-LABEL: d1:
 ; CHECK-8M-LE:       @ %bb.0: @ %entry
 ; CHECK-8M-LE-NEXT:    push {r7, lr}
@@ -188,7 +188,7 @@ entry:
   ret double %call
 }
 
-define float @f2(float (float)* nocapture %fptr) #2 {
+define float @f2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-LABEL: f2:
 ; CHECK-8M:       @ %bb.0: @ %entry
 ; CHECK-8M-NEXT:    push {r7, lr}
@@ -241,7 +241,7 @@ entry:
 attributes #2 = { nounwind }
 attributes #3 = { "cmse_nonsecure_call" nounwind }
 
-define double @d2(double (double)* nocapture %fptr) #2 {
+define double @d2(ptr nocapture %fptr) #2 {
 ; CHECK-8M-LE-LABEL: d2:
 ; CHECK-8M-LE:       @ %bb.0: @ %entry
 ; CHECK-8M-LE-NEXT:    push {r7, lr}
@@ -354,7 +354,7 @@ entry:
   ret double %call
 }
 
-define float @f3(float (float)* nocapture %fptr) #4 {
+define float @f3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-LABEL: f3:
 ; CHECK-8M:       @ %bb.0: @ %entry
 ; CHECK-8M-NEXT:    push {r7, lr}
@@ -407,7 +407,7 @@ entry:
 attributes #4 = { nounwind }
 attributes #5 = { "cmse_nonsecure_call" nounwind }
 
-define double @d3(double (double)* nocapture %fptr) #4 {
+define double @d3(ptr nocapture %fptr) #4 {
 ; CHECK-8M-LE-LABEL: d3:
 ; CHECK-8M-LE:       @ %bb.0: @ %entry
 ; CHECK-8M-LE-NEXT:    push {r7, lr}
@@ -520,7 +520,7 @@ entry:
   ret double %call
 }
 
-define float @f4(float ()* nocapture %fptr) #6 {
+define float @f4(ptr nocapture %fptr) #6 {
 ; CHECK-8M-LABEL: f4:
 ; CHECK-8M:       @ %bb.0: @ %entry
 ; CHECK-8M-NEXT:    push {r7, lr}
@@ -568,7 +568,7 @@ entry:
 attributes #6 = { nounwind }
 attributes #7 = { "cmse_nonsecure_call" nounwind }
 
-define double @d4(double ()* nocapture %fptr) #6 {
+define double @d4(ptr nocapture %fptr) #6 {
 ; CHECK-8M-LABEL: d4:
 ; CHECK-8M:       @ %bb.0: @ %entry
 ; CHECK-8M-NEXT:    push {r7, lr}
@@ -613,7 +613,7 @@ entry:
   ret double %call
 }
 
-define void @fd(void (float, double)* %f, float %a, double %b) #8 {
+define void @fd(ptr %f, float %a, double %b) #8 {
 ; CHECK-8M-LABEL: fd:
 ; CHECK-8M:       @ %bb.0: @ %entry
 ; CHECK-8M-NEXT:    push {r7, lr}
@@ -662,7 +662,7 @@ entry:
 attributes #8 = { nounwind }
 attributes #9 = { "cmse_nonsecure_call" nounwind }
 
-define float @f1_minsize(float (float)* nocapture %fptr) #10 {
+define float @f1_minsize(ptr nocapture %fptr) #10 {
 ; CHECK-8M-LABEL: f1_minsize:
 ; CHECK-8M:       @ %bb.0: @ %entry
 ; CHECK-8M-NEXT:    push {r7, lr}

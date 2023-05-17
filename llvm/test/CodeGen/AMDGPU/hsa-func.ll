@@ -1,9 +1,9 @@
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | FileCheck --check-prefix=HSA-CI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo  | FileCheck --check-prefix=HSA %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo | FileCheck --check-prefix=HSA-VI %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
-; RUN: llc < %s -mtriple=amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | FileCheck --check-prefix=HSA-CI %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo  | FileCheck --check-prefix=HSA %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=carrizo | FileCheck --check-prefix=HSA-VI %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri -filetype=obj | llvm-readobj --symbols -S --sd - | FileCheck --check-prefix=ELF %s
+; RUN: llc < %s -mtriple=amdgcn--amdhsa -mcpu=kaveri | llvm-mc -filetype=obj -triple amdgcn--amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri | llvm-readobj --symbols -S --sd - | FileCheck %s --check-prefix=ELF
 
 ; The SHT_NOTE section contains the output from the .hsa_code_object_*
 ; directives.
@@ -51,19 +51,22 @@
 ; HSA: .size   simple, .Lfunc_end0-simple
 ; HSA: ; Function info:
 ; HSA-NOT: COMPUTE_PGM_RSRC2
-define void @simple(i32 addrspace(1)* addrspace(4)* %ptr.out) {
+define void @simple(ptr addrspace(4) %ptr.out) {
 entry:
-  %out = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %ptr.out
-  store i32 0, i32 addrspace(1)* %out
+  %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }
 
 ; Ignore explicit alignment that is too low.
 ; HSA: .globl simple_align2
 ; HSA: .p2align 2
-define void @simple_align2(i32 addrspace(1)* addrspace(4)* %ptr.out) align 2 {
+define void @simple_align2(ptr addrspace(4) %ptr.out) align 2 {
 entry:
-  %out = load i32 addrspace(1)*, i32 addrspace(1)* addrspace(4)* %ptr.out
-  store i32 0, i32 addrspace(1)* %out
+  %out = load ptr addrspace(1), ptr addrspace(4) %ptr.out
+  store i32 0, ptr addrspace(1) %out
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}

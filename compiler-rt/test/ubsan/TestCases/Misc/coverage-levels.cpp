@@ -24,7 +24,7 @@
 // XFAIL: ubsan-tsan
 // UNSUPPORTED: ubsan-standalone-static
 // No coverage support
-// UNSUPPORTED: openbsd
+// UNSUPPORTED: target={{.*openbsd.*}}
 
 volatile int sink;
 int main(int argc, char **argv) {

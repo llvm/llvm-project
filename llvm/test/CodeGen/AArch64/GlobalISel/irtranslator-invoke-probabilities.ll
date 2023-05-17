@@ -2,13 +2,13 @@
 
 %struct.foo = type { i64, i64, %struct.pluto, %struct.pluto }
 %struct.pluto = type { %struct.wombat }
-%struct.wombat = type { i32*, i32*, %struct.barney }
+%struct.wombat = type { ptr, ptr, %struct.barney }
 %struct.barney = type { %struct.widget }
-%struct.widget = type { i32* }
+%struct.widget = type { ptr }
 
 declare i32 @hoge(...)
 
-define void @pluto() align 2 personality i8* bitcast (i32 (...)* @hoge to i8*) {
+define void @pluto() align 2 personality ptr @hoge {
 ; CHECK-LABEL: @pluto
 ; CHECK: bb.1.bb
 ; CHECK: successors: %bb.2(0x00000000), %bb.3(0x80000000)
@@ -23,10 +23,10 @@ bb1:                                              ; preds = %bb
   unreachable
 
 bb2:                                              ; preds = %bb
-  %tmp = landingpad { i8*, i32 }
+  %tmp = landingpad { ptr, i32 }
           cleanup
-  %tmp3 = getelementptr inbounds %struct.foo, %struct.foo* undef, i64 0, i32 3, i32 0, i32 0
-  resume { i8*, i32 } %tmp
+  %tmp3 = getelementptr inbounds %struct.foo, ptr undef, i64 0, i32 3, i32 0, i32 0
+  resume { ptr, i32 } %tmp
 }
 
 declare void @spam()

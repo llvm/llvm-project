@@ -8,19 +8,18 @@
 ; CHECK-LABEL: @debug_local_scalable(
 define <vscale x 2 x double> @debug_local_scalable(<vscale x 2 x double> %tostore) {
   %vx = alloca <vscale x 2 x double>, align 16
-  call void @llvm.dbg.declare(metadata <vscale x 2 x double>* %vx, metadata !3, metadata !DIExpression()), !dbg !5
-  store <vscale x 2 x double> %tostore, <vscale x 2 x double>* %vx, align 16
-  %ret = call <vscale x 2 x double> @f(<vscale x 2 x double>* %vx)
+  call void @llvm.dbg.declare(metadata ptr %vx, metadata !3, metadata !DIExpression()), !dbg !5
+  store <vscale x 2 x double> %tostore, ptr %vx, align 16
+  %ret = call <vscale x 2 x double> @f(ptr %vx)
   ret <vscale x 2 x double> %ret
 }
 
-declare <vscale x 2 x double> @f(<vscale x 2 x double>*)
+declare <vscale x 2 x double> @f(ptr)
 
 define float @debug_scalablevec_bitcast_to_scalar() {
   %v.addr = alloca <vscale x 4 x float>, align 16
-  call void @llvm.dbg.declare(metadata <vscale x 4 x float>* %v.addr, metadata !3, metadata !DIExpression()), !dbg !5
-  %a = bitcast <vscale x 4 x float>* %v.addr to float*
-  %b = load float, float* %a, align 16
+  call void @llvm.dbg.declare(metadata ptr %v.addr, metadata !3, metadata !DIExpression()), !dbg !5
+  %b = load float, ptr %v.addr, align 16
   ret float %b
 }
 

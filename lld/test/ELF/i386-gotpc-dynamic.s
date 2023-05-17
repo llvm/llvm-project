@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=i686-pc-linux %s -o %t.o
 # RUN: ld.lld --hash-style=sysv %t.o -o %t.so -shared
 # RUN: llvm-readelf -S %t.so | FileCheck %s
-# RUN: llvm-objdump -d %t.so | FileCheck --check-prefix=DISASM %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t.so | FileCheck --check-prefix=DISASM %s
 
 # CHECK: .got.plt          PROGBITS        00003190
 

@@ -44,28 +44,28 @@ define dso_local i32 @main() local_unnamed_addr #0 !dbg !11 {
   %3 = alloca i32, align 4
   %4 = alloca i32, align 4
   %5 = alloca i32, align 4
-  store i32 0, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i32* %2, metadata !15, metadata !DIExpression()), !dbg !16
-  store i32 10, i32* %2, align 4, !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %3, metadata !17, metadata !DIExpression()), !dbg !16
-  store i32 5, i32* %3, align 4, !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %4, metadata !19, metadata !DIExpression()), !dbg !16
-  %6 = load i32, i32* %2, align 4, !dbg !16
-  %7 = load i32, i32* %3, align 4, !dbg !16
+  store i32 0, ptr %1, align 4
+  call void @llvm.dbg.declare(metadata ptr %2, metadata !15, metadata !DIExpression()), !dbg !16
+  store i32 10, ptr %2, align 4, !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %3, metadata !17, metadata !DIExpression()), !dbg !16
+  store i32 5, ptr %3, align 4, !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %4, metadata !19, metadata !DIExpression()), !dbg !16
+  %6 = load i32, ptr %2, align 4, !dbg !16
+  %7 = load i32, ptr %3, align 4, !dbg !16
   call void @llvm.dbg.value(metadata i32 %6, metadata !23, metadata !DIExpression()), !dbg !27
   call void @llvm.dbg.value(metadata i32 %7, metadata !29, metadata !DIExpression()), !dbg !27
   %8 = add nsw i32 %7, %6, !dbg !27
   call void @llvm.dbg.value(metadata i32 %8, metadata !31, metadata !DIExpression()), !dbg !27
-  store i32 %8, i32* %4, align 4, !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %5, metadata !32, metadata !DIExpression()), !dbg !16
-  %9 = load i32, i32* %4, align 4, !dbg !16
-  %10 = load i32, i32* %4, align 4, !dbg !16
+  store i32 %8, ptr %4, align 4, !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %5, metadata !32, metadata !DIExpression()), !dbg !16
+  %9 = load i32, ptr %4, align 4, !dbg !16
+  %10 = load i32, ptr %4, align 4, !dbg !16
   call void @llvm.dbg.value(metadata i32 undef, metadata !23, metadata !DIExpression()), !dbg !36 ;; Hard coded line: There was %10 instead of undef.
   call void @llvm.dbg.value(metadata i32 2, metadata !29, metadata !DIExpression()), !dbg !36
   %11 = add nsw i32 2, %10, !dbg !36
   call void @llvm.dbg.value(metadata i32 %11, metadata !31, metadata !DIExpression()), !dbg !36
   %12 = add nsw i32 %9, %11, !dbg !16
-  store i32 %12, i32* %5, align 4, !dbg !16
+  store i32 %12, ptr %5, align 4, !dbg !16
   ret i32 0, !dbg !16
 }
 

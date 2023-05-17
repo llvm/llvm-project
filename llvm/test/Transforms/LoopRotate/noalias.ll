@@ -1,22 +1,22 @@
-; RUN: opt -S -loop-rotate -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -passes=loop-rotate -verify-memoryssa < %s | FileCheck %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' -verify-memoryssa  < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-declare void @g(i32*)
+declare void @g(ptr)
 
-define void @test_02(i32* nocapture %_pA) nounwind ssp {
+define void @test_02(ptr nocapture %_pA) nounwind ssp {
 ; CHECK-LABEL: @test_02(
 ; CHECK: entry:
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
-; CHECK:   store i32 42, i32* %_pA, align 16, !alias.scope !2
+; CHECK:   store i32 42, ptr %_pA, align 16, !alias.scope !2
 ; CHECK: for.body:
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !5)
-; CHECK:   store i32 0, i32* %arrayidx, align 16, !noalias !5
+; CHECK:   store i32 0, ptr %array, align 16, !noalias !5
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !7)
-; CHECK:   store i32 42, i32* %_pA, align 16, !alias.scope !7
+; CHECK:   store i32 42, ptr %_pA, align 16, !alias.scope !7
 ; CHECK: for.end:
 
 entry:
@@ -26,29 +26,28 @@ entry:
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
-  store i32 42, i32* %_pA, align 16, !alias.scope !2
+  store i32 42, ptr %_pA, align 16, !alias.scope !2
   %cmp = icmp slt i32 %i.0, 100
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 0, i32* %arrayidx, align 16, !noalias !2
+  store i32 0, ptr %array, align 16, !noalias !2
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %arrayidx.lcssa = phi i32* [ %arrayidx, %for.cond ]
-  call void @g(i32* %arrayidx.lcssa) nounwind
+  %arrayidx.lcssa = phi ptr [ %array, %for.cond ]
+  call void @g(ptr %arrayidx.lcssa) nounwind
   ret void
 }
 
-define void @test_03(i32* nocapture %_pA) nounwind ssp {
+define void @test_03(ptr nocapture %_pA) nounwind ssp {
 ; CHECK-LABEL: @test_03(
 ; CHECK: entry:
 ; CHECK: for.body:
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !5)
-; CHECK:   store i32 42, i32* %_pA, align 16, !alias.scope !5
-; CHECK:   store i32 0, i32* %arrayidx, align 16, !noalias !5
+; CHECK:   store i32 42, ptr %_pA, align 16, !alias.scope !5
+; CHECK:   store i32 0, ptr %array, align 16, !noalias !5
 ; CHECK: for.end:
 
 entry:
@@ -58,33 +57,32 @@ entry:
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %cmp = icmp slt i32 %i.0, 100
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
-  store i32 42, i32* %_pA, align 16, !alias.scope !2
-  store i32 0, i32* %arrayidx, align 16, !noalias !2
+  store i32 42, ptr %_pA, align 16, !alias.scope !2
+  store i32 0, ptr %array, align 16, !noalias !2
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %arrayidx.lcssa = phi i32* [ %arrayidx, %for.cond ]
-  call void @g(i32* %arrayidx.lcssa) nounwind
+  %arrayidx.lcssa = phi ptr [ %array, %for.cond ]
+  call void @g(ptr %arrayidx.lcssa) nounwind
   ret void
 }
 
-define void @test_04(i32* nocapture %_pA) nounwind ssp {
+define void @test_04(ptr nocapture %_pA) nounwind ssp {
 ; CHECK-LABEL: @test_04(
 ; CHECK: entry:
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !9)
-; CHECK:   store i32 42, i32* %_pA, align 16, !alias.scope !9
+; CHECK:   store i32 42, ptr %_pA, align 16, !alias.scope !9
 ; CHECK: for.body:
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !5)
-; CHECK:   store i32 0, i32* %arrayidx, align 16, !noalias !5
-; CHECK:   store i32 43, i32* %_pA, align 16, !alias.scope !5
+; CHECK:   store i32 0, ptr %array, align 16, !noalias !5
+; CHECK:   store i32 43, ptr %_pA, align 16, !alias.scope !5
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !11)
-; CHECK:   store i32 42, i32* %_pA, align 16, !alias.scope !11
+; CHECK:   store i32 42, ptr %_pA, align 16, !alias.scope !11
 ; CHECK: for.end:
 entry:
   %array = alloca [20 x i32], align 16
@@ -93,36 +91,35 @@ entry:
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
-  store i32 42, i32* %_pA, align 16, !alias.scope !2
+  store i32 42, ptr %_pA, align 16, !alias.scope !2
   %cmp = icmp slt i32 %i.0, 100
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 0, i32* %arrayidx, align 16, !noalias !2
-  store i32 43, i32* %_pA, align 16, !alias.scope !2
+  store i32 0, ptr %array, align 16, !noalias !2
+  store i32 43, ptr %_pA, align 16, !alias.scope !2
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %arrayidx.lcssa = phi i32* [ %arrayidx, %for.cond ]
-  call void @g(i32* %arrayidx.lcssa) nounwind
+  %arrayidx.lcssa = phi ptr [ %array, %for.cond ]
+  call void @g(ptr %arrayidx.lcssa) nounwind
   ret void
 }
 
-define void @test_05(i32* nocapture %_pA) nounwind ssp {
+define void @test_05(ptr nocapture %_pA) nounwind ssp {
 ; CHECK-LABEL: @test_05(
 ; CHECK: entry:
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !13)
-; CHECK:   store i32 42, i32* %_pA, align 16, !alias.scope !13
+; CHECK:   store i32 42, ptr %_pA, align 16, !alias.scope !13
 ; CHECK: for.body:
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !5)
-; CHECK:   store i32 0, i32* %arrayidx, align 16, !noalias !5
-; CHECK:   store i32 43, i32* %_pA, align 16, !alias.scope !5
+; CHECK:   store i32 0, ptr %array, align 16, !noalias !5
+; CHECK:   store i32 43, ptr %_pA, align 16, !alias.scope !5
 ; CHECK:   tail call void @llvm.experimental.noalias.scope.decl(metadata !15)
-; CHECK:   store i32 42, i32* %_pA, align 16, !alias.scope !15
+; CHECK:   store i32 42, ptr %_pA, align 16, !alias.scope !15
 ; CHECK: for.end:
-; CHECK:   store i32 44, i32* %_pA, align 16, !alias.scope !5
+; CHECK:   store i32 44, ptr %_pA, align 16, !alias.scope !5
 
 entry:
   %array = alloca [20 x i32], align 16
@@ -131,21 +128,20 @@ entry:
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   tail call void @llvm.experimental.noalias.scope.decl(metadata !2)
-  store i32 42, i32* %_pA, align 16, !alias.scope !2
+  store i32 42, ptr %_pA, align 16, !alias.scope !2
   %cmp = icmp slt i32 %i.0, 100
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 0, i32* %arrayidx, align 16, !noalias !2
-  store i32 43, i32* %_pA, align 16, !alias.scope !2
+  store i32 0, ptr %array, align 16, !noalias !2
+  store i32 43, ptr %_pA, align 16, !alias.scope !2
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond
-  %arrayidx.lcssa = phi i32* [ %arrayidx, %for.cond ]
-  store i32 44, i32* %_pA, align 16, !alias.scope !2
-  call void @g(i32* %arrayidx.lcssa) nounwind
+  %arrayidx.lcssa = phi ptr [ %array, %for.cond ]
+  store i32 44, ptr %_pA, align 16, !alias.scope !2
+  call void @g(ptr %arrayidx.lcssa) nounwind
   ret void
 }
 

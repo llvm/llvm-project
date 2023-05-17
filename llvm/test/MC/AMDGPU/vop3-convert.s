@@ -80,92 +80,92 @@ v_movrels_b32 v1, v2
 // VI:   v_movrelsd_b32_e32 v1, v2 ; encoding: [0x02,0x71,0x02,0x7e]
 v_movrelsd_b32 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_cvt_f16_u16 v1, v2
 // VI: v_cvt_f16_u16_e32 v1, v2 ; encoding: [0x02,0x73,0x02,0x7e]
 v_cvt_f16_u16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_cvt_f16_i16 v1, v2
 // VI: v_cvt_f16_i16_e32 v1, v2 ; encoding: [0x02,0x75,0x02,0x7e]
 v_cvt_f16_i16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_cvt_u16_f16 v1, v2
 // VI: v_cvt_u16_f16_e32 v1, v2 ; encoding: [0x02,0x77,0x02,0x7e]
 v_cvt_u16_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_cvt_i16_f16 v1, v2
 // VI: v_cvt_i16_f16_e32 v1, v2 ; encoding: [0x02,0x79,0x02,0x7e]
 v_cvt_i16_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_rcp_f16 v1, v2
 // VI: v_rcp_f16_e32 v1, v2 ; encoding: [0x02,0x7b,0x02,0x7e]
 v_rcp_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_sqrt_f16 v1, v2
 // VI: v_sqrt_f16_e32 v1, v2 ; encoding: [0x02,0x7d,0x02,0x7e]
 v_sqrt_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_rsq_f16 v1, v2
 // VI: v_rsq_f16_e32 v1, v2 ; encoding: [0x02,0x7f,0x02,0x7e]
 v_rsq_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_log_f16 v1, v2
 // VI: v_log_f16_e32 v1, v2 ; encoding: [0x02,0x81,0x02,0x7e]
 v_log_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_exp_f16 v1, v2
 // VI: v_exp_f16_e32 v1, v2 ; encoding: [0x02,0x83,0x02,0x7e]
 v_exp_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_frexp_mant_f16 v1, v2
 // VI: v_frexp_mant_f16_e32 v1, v2 ; encoding: [0x02,0x85,0x02,0x7e]
 v_frexp_mant_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_frexp_exp_i16_f16 v1, v2
 // VI: v_frexp_exp_i16_f16_e32 v1, v2 ; encoding: [0x02,0x87,0x02,0x7e]
 v_frexp_exp_i16_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_floor_f16 v1, v2
 // VI: v_floor_f16_e32 v1, v2 ; encoding: [0x02,0x89,0x02,0x7e]
 v_floor_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_ceil_f16 v1, v2
 // VI: v_ceil_f16_e32 v1, v2 ; encoding: [0x02,0x8b,0x02,0x7e]
 v_ceil_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_trunc_f16 v1, v2
 // VI: v_trunc_f16_e32 v1, v2 ; encoding: [0x02,0x8d,0x02,0x7e]
 v_trunc_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_rndne_f16 v1, v2
 // VI: v_rndne_f16_e32 v1, v2 ; encoding: [0x02,0x8f,0x02,0x7e]
 v_rndne_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_fract_f16 v1, v2
 // VI: v_fract_f16_e32 v1, v2 ; encoding: [0x02,0x91,0x02,0x7e]
 v_fract_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_sin_f16 v1, v2
 // VI: v_sin_f16_e32 v1, v2 ; encoding: [0x02,0x93,0x02,0x7e]
 v_sin_f16 v1, v2
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_cos_f16 v1, v2
 // VI: v_cos_f16_e32 v1, v2 ; encoding: [0x02,0x95,0x02,0x7e]
 v_cos_f16 v1, v2
@@ -249,7 +249,7 @@ v_min_u32 v1, v2, v3
 v_max_u32 v1, v2, v3
 
 // SICI: v_lshr_b32_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x2a]
-// NOVI: error: instruction not supported on this GPU
+// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOVI: v_lshr_b32 v1, v2, v3
 v_lshr_b32 v1, v2, v3
 
@@ -258,7 +258,7 @@ v_lshr_b32 v1, v2, v3
 v_lshrrev_b32 v1, v2, v3
 
 // SICI: v_ashr_i32_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x2e]
-// NOVI: error: instruction not supported on this GPU
+// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOVI: v_ashr_i32 v1, v2, v3
 v_ashr_i32 v1, v2, v3
 
@@ -267,7 +267,7 @@ v_ashr_i32 v1, v2, v3
 v_ashrrev_i32 v1, v2, v3
 
 // SICI: v_lshl_b32_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x32]
-// NOVI: error: instruction not supported on this GPU
+// NOVI: :[[@LINE+2]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOVI: v_lshl_b32_e32 v1, v2, v3
 v_lshl_b32_e32 v1, v2, v3
 
@@ -315,97 +315,97 @@ v_cvt_pk_i16_i32 v1, v2, v3
 // VI:   v_bfm_b32 v1, v2, v3 ; encoding: [0x01,0x00,0x93,0xd2,0x02,0x07,0x02,0x00]
 v_bfm_b32 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_add_f16 v1, v2, v3
 // VI:     v_add_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x3e]
 v_add_f16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_sub_f16 v1, v2, v3
 // VI:     v_sub_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x40]
 v_sub_f16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_subrev_f16 v1, v2, v3
 // VI:     v_subrev_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x42]
 v_subrev_f16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_mul_f16 v1, v2, v3
 // VI:     v_mul_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x44]
 v_mul_f16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_mac_f16 v1, v2, v3
 // VI:     v_mac_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x46]
 v_mac_f16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_add_u16 v1, v2, v3
 // VI:     v_add_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x4c]
 v_add_u16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_sub_u16 v1, v2, v3
 // VI:     v_sub_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x4e]
 v_sub_u16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_subrev_u16 v1, v2, v3
 // VI:     v_subrev_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x50]
 v_subrev_u16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_mul_lo_u16 v1, v2, v3
 // VI:     v_mul_lo_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x52]
 v_mul_lo_u16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_lshlrev_b16 v1, v2, v3
 // VI:     v_lshlrev_b16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x54]
 v_lshlrev_b16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_lshrrev_b16 v1, v2, v3
 // VI: v_lshrrev_b16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x56]
 v_lshrrev_b16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_ashrrev_i16 v1, v2, v3
 // VI:     v_ashrrev_i16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x58]
 v_ashrrev_i16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_max_f16 v1, v2, v3
 // VI:     v_max_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x5a]
 v_max_f16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_min_f16 v1, v2, v3
 // VI:     v_min_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x5c]
 v_min_f16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_max_u16 v1, v2, v3
 // VI:     v_max_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x5e]
 v_max_u16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_max_i16 v1, v2, v3
 // VI:     v_max_i16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x60]
 v_max_i16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_min_u16 v1, v2, v3
 // VI:     v_min_u16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x62]
 v_min_u16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_min_i16 v1, v2, v3
 // VI:     v_min_i16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x64]
 v_min_i16 v1, v2, v3
 
-// NOSICI: error: instruction not supported on this GPU
+// NOSICI: :[[@LINE+3]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // NOSICI: v_ldexp_f16 v1, v2, v3
 // VI:     v_ldexp_f16_e32 v1, v2, v3 ; encoding: [0x02,0x07,0x02,0x66]
 v_ldexp_f16 v1, v2, v3

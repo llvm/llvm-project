@@ -62,8 +62,6 @@ class RegisterCommandsTestCase(TestBase):
 
         self.expect("register read " + 'ffr', substrs=[p_regs_value])
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @no_debug_info_test
     @skipIf(archs=no_match(["aarch64"]))
     @skipIf(oslist=no_match(['linux']))
@@ -165,7 +163,7 @@ class RegisterCommandsTestCase(TestBase):
         self.check_sve_regs_read(z_reg_size)
 
         # Evaluate simple expression and print function expr_eval_func address.
-        self.expect("p expr_eval_func", substrs=["= 0x"])
+        self.expect("expression expr_eval_func", substrs=["= 0x"])
 
         # Evaluate expression call function expr_eval_func.
         self.expect_expr("expr_eval_func()",

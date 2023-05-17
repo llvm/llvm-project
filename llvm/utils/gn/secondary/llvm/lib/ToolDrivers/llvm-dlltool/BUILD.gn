@@ -12,6 +12,7 @@ static_library("DlltoolDriver") {
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "DlltoolDriver.cpp" ]
 }

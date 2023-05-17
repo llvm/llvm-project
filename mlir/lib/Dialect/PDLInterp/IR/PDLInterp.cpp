@@ -145,7 +145,7 @@ void ForEachOp::build(::mlir::OpBuilder &builder, ::mlir::OperationState &state,
   if (initLoop) {
     // Create the block and the loop variable.
     // FIXME: Allow passing in a proper location for the loop variable.
-    auto rangeType = range.getType().cast<pdl::RangeType>();
+    auto rangeType = llvm::cast<pdl::RangeType>(range.getType());
     state.regions.front()->emplaceBlock();
     state.regions.front()->addArgument(rangeType.getElementType(),
                                        state.location);
@@ -220,11 +220,15 @@ ParseResult FuncOp::parse(OpAsmParser &parser, OperationState &result) {
          std::string &) { return builder.getFunctionType(argTypes, results); };
 
   return function_interface_impl::parseFunctionOp(
-      parser, result, /*allowVariadic=*/false, buildFuncType);
+      parser, result, /*allowVariadic=*/false,
+      getFunctionTypeAttrName(result.name), buildFuncType,
+      getArgAttrsAttrName(result.name), getResAttrsAttrName(result.name));
 }
 
 void FuncOp::print(OpAsmPrinter &p) {
-  function_interface_impl::printFunctionOp(p, *this, /*isVariadic=*/false);
+  function_interface_impl::printFunctionOp(
+      p, *this, /*isVariadic=*/false, getFunctionTypeAttrName(),
+      getArgAttrsAttrName(), getResAttrsAttrName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -234,7 +238,42 @@ void FuncOp::print(OpAsmPrinter &p) {
 /// Given the result type of a `GetValueTypeOp`, return the expected input type.
 static Type getGetValueTypeOpValueType(Type type) {
   Type valueTy = pdl::ValueType::get(type.getContext());
-  return type.isa<pdl::RangeType>() ? pdl::RangeType::get(valueTy) : valueTy;
+  return llvm::isa<pdl::RangeType>(type) ? pdl::RangeType::get(valueTy)
+                                         : valueTy;
+}
+
+//===----------------------------------------------------------------------===//
+// pdl::CreateRangeOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult parseRangeType(OpAsmParser &p, TypeRange argumentTypes,
+                                  Type &resultType) {
+  // If arguments were provided, infer the result type from the argument list.
+  if (!argumentTypes.empty()) {
+    resultType =
+        pdl::RangeType::get(pdl::getRangeElementTypeOrSelf(argumentTypes[0]));
+    return success();
+  }
+  // Otherwise, parse the type as a trailing type.
+  return p.parseColonType(resultType);
+}
+
+static void printRangeType(OpAsmPrinter &p, CreateRangeOp op,
+                           TypeRange argumentTypes, Type resultType) {
+  if (argumentTypes.empty())
+    p << ": " << resultType;
+}
+
+LogicalResult CreateRangeOp::verify() {
+  Type elementType = getType().getElementType();
+  for (Type operandType : getOperandTypes()) {
+    Type operandElementType = pdl::getRangeElementTypeOrSelf(operandType);
+    if (operandElementType != elementType) {
+      return emitOpError("expected operand to have element type ")
+             << elementType << ", but got " << operandElementType;
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

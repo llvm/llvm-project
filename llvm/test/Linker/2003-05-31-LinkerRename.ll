@@ -1,6 +1,6 @@
 ; RUN: llvm-link %S/Inputs/2003-05-31-LinkerRename.ll %s -S | FileCheck %s
 
-; CHECK: @bar = global i32 ()* @foo.2
+; CHECK: @bar = global ptr @foo.2
 
 ; CHECK:      define internal i32 @foo.2() {
 ; CHECK-NEXT:   ret i32 7

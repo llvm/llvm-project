@@ -45,7 +45,6 @@ failsVerification: true
 tracksDebugUserValues: true
 callsEHReturn: true
 callsUnwindInit: true
-callsUnwindInit: true
 hasEHCatchret: true
 hasEHScopes: true
 hasEHFunclets: true

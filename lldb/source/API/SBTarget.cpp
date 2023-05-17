@@ -434,7 +434,8 @@ lldb::SBProcess SBTarget::Attach(SBAttachInfo &sb_attach_info, SBError &error) {
 
   if (target_sp) {
     ProcessAttachInfo &attach_info = sb_attach_info.ref();
-    if (attach_info.ProcessIDIsValid() && !attach_info.UserIDIsValid()) {
+    if (attach_info.ProcessIDIsValid() && !attach_info.UserIDIsValid() &&
+        !attach_info.IsScriptedProcess()) {
       PlatformSP platform_sp = target_sp->GetPlatform();
       // See if we can pre-verify if a process exists or not
       if (platform_sp && platform_sp->IsConnected()) {
@@ -1766,7 +1767,7 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
       }
     }
 
-    // Didn't find the type in the symbols; Try the loaded language runtimes
+    // Didn't find the type in the symbols; Try the loaded language runtimes.
     if (auto process_sp = target_sp->GetProcessSP()) {
       for (auto *runtime : process_sp->GetLanguageRuntimes()) {
         if (auto vendor = runtime->GetDeclVendor()) {
@@ -1777,9 +1778,9 @@ lldb::SBType SBTarget::FindFirstType(const char *typename_cstr) {
       }
     }
 
-    // No matches, search for basic typename matches
-    for (auto *type_system : target_sp->GetScratchTypeSystems())
-      if (auto type = type_system->GetBuiltinTypeByName(const_typename))
+    // No matches, search for basic typename matches.
+    for (auto type_system_sp : target_sp->GetScratchTypeSystems())
+      if (auto type = type_system_sp->GetBuiltinTypeByName(const_typename))
         return SBType(type);
   }
 
@@ -1791,8 +1792,8 @@ SBType SBTarget::GetBasicType(lldb::BasicType type) {
 
   TargetSP target_sp(GetSP());
   if (target_sp) {
-    for (auto *type_system : target_sp->GetScratchTypeSystems())
-      if (auto compiler_type = type_system->GetBasicTypeFromAST(type))
+    for (auto type_system_sp : target_sp->GetScratchTypeSystems())
+      if (auto compiler_type = type_system_sp->GetBasicTypeFromAST(type))
         return SBType(compiler_type);
   }
   return SBType();
@@ -1832,9 +1833,9 @@ lldb::SBTypeList SBTarget::FindTypes(const char *typename_cstr) {
 
     if (sb_type_list.GetSize() == 0) {
       // No matches, search for basic typename matches
-      for (auto *type_system : target_sp->GetScratchTypeSystems())
+      for (auto type_system_sp : target_sp->GetScratchTypeSystems())
         if (auto compiler_type =
-                type_system->GetBuiltinTypeByName(const_typename))
+                type_system_sp->GetBuiltinTypeByName(const_typename))
           sb_type_list.Append(SBType(compiler_type));
     }
   }
@@ -2092,6 +2093,18 @@ SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
                                        int64_t slide_offset) {
   LLDB_INSTRUMENT_VA(this, module, slide_offset);
 
+  if (slide_offset < 0) {
+    SBError sb_error;
+    sb_error.SetErrorStringWithFormat("slide must be positive");
+    return sb_error;
+  }
+
+  return SetModuleLoadAddress(module, static_cast<uint64_t>(slide_offset));
+}
+
+SBError SBTarget::SetModuleLoadAddress(lldb::SBModule module,
+                                               uint64_t slide_offset) {
+
   SBError sb_error;
 
   TargetSP target_sp(GetSP());
@@ -2219,12 +2232,25 @@ lldb::SBValue SBTarget::EvaluateExpression(const char *expr,
     std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
     ExecutionContext exe_ctx(m_opaque_sp.get());
 
-
     frame = exe_ctx.GetFramePtr();
     Target *target = exe_ctx.GetTargetPtr();
+    Process *process = exe_ctx.GetProcessPtr();
 
     if (target) {
-      target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
+      // If we have a process, make sure to lock the runlock:
+      if (process) {
+        Process::StopLocker stop_locker;
+        if (stop_locker.TryLock(&process->GetRunLock())) {
+          target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
+        } else {
+          Status error;
+          error.SetErrorString("can't evaluate expressions when the "
+                               "process is running.");
+          expr_value_sp = ValueObjectConstResult::Create(nullptr, error);
+        }
+      } else {
+        target->EvaluateExpression(expr, frame, expr_value_sp, options.ref());
+      }
 
       expr_result.SetSP(expr_value_sp, options.GetFetchDynamicValue());
     }

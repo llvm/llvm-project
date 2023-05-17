@@ -5,29 +5,29 @@
   target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
   target triple = "thumbv8.1m.main"
 
-  define void @ne_trip_count(i1 zeroext %t1, i32* nocapture %a, i32* nocapture readonly %b, i32 %N) #0 {
+  define void @ne_trip_count(i1 zeroext %t1, ptr nocapture %a, ptr nocapture readonly %b, i32 %N) #0 {
   entry:
     %0 = call i1 @llvm.test.set.loop.iterations.i32(i32 %N)
     br i1 %0, label %do.body.preheader, label %if.end
 
   do.body.preheader:                                ; preds = %entry
-    %scevgep2 = getelementptr i32, i32* %a, i32 -1
-    %scevgep5 = getelementptr i32, i32* %b, i32 -1
+    %scevgep2 = getelementptr i32, ptr %a, i32 -1
+    %scevgep5 = getelementptr i32, ptr %b, i32 -1
     br label %do.body
 
   do.body:                                          ; preds = %do.body, %do.body.preheader
-    %lsr.iv6 = phi i32* [ %scevgep5, %do.body.preheader ], [ %scevgep7, %do.body ]
-    %lsr.iv = phi i32* [ %scevgep2, %do.body.preheader ], [ %scevgep3, %do.body ]
+    %lsr.iv6 = phi ptr [ %scevgep5, %do.body.preheader ], [ %scevgep7, %do.body ]
+    %lsr.iv = phi ptr [ %scevgep2, %do.body.preheader ], [ %scevgep3, %do.body ]
     %1 = phi i32 [ %2, %do.body ], [ %N, %do.body.preheader ]
-    %scevgep = getelementptr i32, i32* %lsr.iv6, i32 1
-    %scevgep1 = getelementptr i32, i32* %lsr.iv, i32 1
+    %scevgep = getelementptr i32, ptr %lsr.iv6, i32 1
+    %scevgep1 = getelementptr i32, ptr %lsr.iv, i32 1
     %size = call i32 @llvm.arm.space(i32 4096, i32 undef)
-    %tmp = load i32, i32* %scevgep, align 4
-    store i32 %tmp, i32* %scevgep1, align 4
+    %tmp = load i32, ptr %scevgep, align 4
+    store i32 %tmp, ptr %scevgep1, align 4
     %2 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %1, i32 1)
     %3 = icmp ne i32 %2, 0
-    %scevgep3 = getelementptr i32, i32* %lsr.iv, i32 1
-    %scevgep7 = getelementptr i32, i32* %lsr.iv6, i32 1
+    %scevgep3 = getelementptr i32, ptr %lsr.iv, i32 1
+    %scevgep7 = getelementptr i32, ptr %lsr.iv6, i32 1
     br i1 %3, label %do.body, label %if.end
 
   if.end:                                           ; preds = %do.body, %entry

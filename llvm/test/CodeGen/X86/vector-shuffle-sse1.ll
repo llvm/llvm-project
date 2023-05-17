@@ -216,76 +216,76 @@ define <4 x float> @insert_reg_and_zero_v4f32(float %a) {
   ret <4 x float> %shuffle
 }
 
-define <4 x float> @insert_mem_and_zero_v4f32(float* %ptr) {
+define <4 x float> @insert_mem_and_zero_v4f32(ptr %ptr) {
 ; SSE1-LABEL: insert_mem_and_zero_v4f32:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; SSE1-NEXT:    retq
-  %a = load float, float* %ptr
+  %a = load float, ptr %ptr
   %v = insertelement <4 x float> undef, float %a, i32 0
   %shuffle = shufflevector <4 x float> %v, <4 x float> zeroinitializer, <4 x i32> <i32 0, i32 5, i32 6, i32 7>
   ret <4 x float> %shuffle
 }
 
-define <4 x float> @insert_mem_lo_v4f32(<2 x float>* %ptr, <4 x float> %b) {
+define <4 x float> @insert_mem_lo_v4f32(ptr %ptr, <4 x float> %b) {
 ; SSE1-LABEL: insert_mem_lo_v4f32:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE1-NEXT:    retq
-  %a = load <2 x float>, <2 x float>* %ptr
+  %a = load <2 x float>, ptr %ptr
   %v = shufflevector <2 x float> %a, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %shuffle = shufflevector <4 x float> %v, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 6, i32 7>
   ret <4 x float> %shuffle
 }
 
-define <4 x float> @insert_mem_hi_v4f32(<2 x float>* %ptr, <4 x float> %b) {
+define <4 x float> @insert_mem_hi_v4f32(ptr %ptr, <4 x float> %b) {
 ; SSE1-LABEL: insert_mem_hi_v4f32:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE1-NEXT:    retq
-  %a = load <2 x float>, <2 x float>* %ptr
+  %a = load <2 x float>, ptr %ptr
   %v = shufflevector <2 x float> %a, <2 x float> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %shuffle = shufflevector <4 x float> %v, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 0, i32 1>
   ret <4 x float> %shuffle
 }
 
-define <4 x float> @shuffle_mem_v4f32_3210(<4 x float>* %ptr) {
+define <4 x float> @shuffle_mem_v4f32_3210(ptr %ptr) {
 ; SSE1-LABEL: shuffle_mem_v4f32_3210:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movaps (%rdi), %xmm0
 ; SSE1-NEXT:    shufps {{.*#+}} xmm0 = xmm0[3,2,1,0]
 ; SSE1-NEXT:    retq
-  %a = load <4 x float>, <4 x float>* %ptr
+  %a = load <4 x float>, ptr %ptr
   %shuffle = shufflevector <4 x float> %a, <4 x float> undef, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
   ret <4 x float> %shuffle
 }
 
-define <4 x float> @shuffle_mem_v4f32_0145(<4 x float> %a, <4 x float>* %pb) {
+define <4 x float> @shuffle_mem_v4f32_0145(<4 x float> %a, ptr %pb) {
 ; SSE1-LABEL: shuffle_mem_v4f32_0145:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; SSE1-NEXT:    retq
-  %b = load <4 x float>, <4 x float>* %pb, align 1
+  %b = load <4 x float>, ptr %pb, align 1
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
   ret <4 x float> %shuffle
 }
 
-define <4 x float> @shuffle_mem_v4f32_6723(<4 x float> %a, <4 x float>* %pb) {
+define <4 x float> @shuffle_mem_v4f32_6723(<4 x float> %a, ptr %pb) {
 ; SSE1-LABEL: shuffle_mem_v4f32_6723:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE1-NEXT:    retq
-  %b = load <4 x float>, <4 x float>* %pb, align 16
+  %b = load <4 x float>, ptr %pb, align 16
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 6, i32 7, i32 2, i32 3>
   ret <4 x float> %shuffle
 }
 
-define <4 x float> @shuffle_mem_v4f32_4523(<4 x float> %a, <4 x float>* %pb) {
+define <4 x float> @shuffle_mem_v4f32_4523(<4 x float> %a, ptr %pb) {
 ; SSE1-LABEL: shuffle_mem_v4f32_4523:
 ; SSE1:       # %bb.0:
 ; SSE1-NEXT:    movlps {{.*#+}} xmm0 = mem[0,1],xmm0[2,3]
 ; SSE1-NEXT:    retq
-  %b = load <4 x float>, <4 x float>* %pb, align 1
+  %b = load <4 x float>, ptr %pb, align 1
   %shuffle = shufflevector <4 x float> %a, <4 x float> %b, <4 x i32> <i32 4, i32 5, i32 2, i32 3>
   ret <4 x float> %shuffle
 }

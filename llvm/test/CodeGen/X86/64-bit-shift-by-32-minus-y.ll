@@ -281,7 +281,7 @@ define i64 @t4(i64 %val, i64 %shamt) nounwind {
   ret i64 %shifted
 }
 
-define i64 @t5_cse(i64 %val, i64 %shamt, i64*%dst) nounwind {
+define i64 @t5_cse(i64 %val, i64 %shamt, ptr%dst) nounwind {
 ; X64-NOBMI2-LABEL: t5_cse:
 ; X64-NOBMI2:       # %bb.0:
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
@@ -361,13 +361,13 @@ define i64 @t5_cse(i64 %val, i64 %shamt, i64*%dst) nounwind {
 ; X32-BMI2-NEXT:    popl %ebx
 ; X32-BMI2-NEXT:    retl
   %incshamt = add i64 %shamt, 32
-  store i64 %incshamt, i64* %dst
+  store i64 %incshamt, ptr %dst
   %negshamt = sub i64 32, %shamt
   %shifted = shl i64 %val, %negshamt
   ret i64 %shifted
 }
 
-define i64 @t6_cse2(i64 %val, i64 %shamt, i64*%dst) nounwind {
+define i64 @t6_cse2(i64 %val, i64 %shamt, ptr%dst) nounwind {
 ; X64-NOBMI2-LABEL: t6_cse2:
 ; X64-NOBMI2:       # %bb.0:
 ; X64-NOBMI2-NEXT:    movq %rdi, %rax
@@ -437,7 +437,7 @@ define i64 @t6_cse2(i64 %val, i64 %shamt, i64*%dst) nounwind {
 ; X32-BMI2-NEXT:    popl %edi
 ; X32-BMI2-NEXT:    retl
   %negshamt = sub i64 32, %shamt
-  store i64 %negshamt, i64* %dst
+  store i64 %negshamt, ptr %dst
   %shifted = shl i64 %val, %negshamt
   ret i64 %shifted
 }

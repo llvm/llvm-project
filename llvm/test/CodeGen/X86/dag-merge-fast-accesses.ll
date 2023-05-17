@@ -5,7 +5,7 @@
 ; Verify that the DAGCombiner is creating unaligned 16-byte loads and stores
 ; if and only if those are fast.
 
-define void @merge_const_vec_store(i64* %ptr) {
+define void @merge_const_vec_store(ptr %ptr) {
 ; FAST-LABEL: merge_const_vec_store:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    xorps %xmm0, %xmm0
@@ -18,16 +18,15 @@ define void @merge_const_vec_store(i64* %ptr) {
 ; SLOW-NEXT:    movq $0, 8(%rdi)
 ; SLOW-NEXT:    retq
 
-  %idx0 = getelementptr i64, i64* %ptr, i64 0
-  %idx1 = getelementptr i64, i64* %ptr, i64 1
+  %idx1 = getelementptr i64, ptr %ptr, i64 1
 
-  store i64 0, i64* %idx0, align 8
-  store i64 0, i64* %idx1, align 8
+  store i64 0, ptr %ptr, align 8
+  store i64 0, ptr %idx1, align 8
   ret void
 }
 
 
-define void @merge_vec_element_store(<4 x double> %v, double* %ptr) {
+define void @merge_vec_element_store(<4 x double> %v, ptr %ptr) {
 ; FAST-LABEL: merge_vec_element_store:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movups %xmm0, (%rdi)
@@ -42,16 +41,15 @@ define void @merge_vec_element_store(<4 x double> %v, double* %ptr) {
   %vecext0 = extractelement <4 x double> %v, i32 0
   %vecext1 = extractelement <4 x double> %v, i32 1
 
-  %idx0 = getelementptr double, double* %ptr, i64 0
-  %idx1 = getelementptr double, double* %ptr, i64 1
+  %idx1 = getelementptr double, ptr %ptr, i64 1
 
-  store double %vecext0, double* %idx0, align 8
-  store double %vecext1, double* %idx1, align 8
+  store double %vecext0, ptr %ptr, align 8
+  store double %vecext1, ptr %idx1, align 8
   ret void
 }
 
 
-define void @merge_vec_load_and_stores(i64 *%ptr) {
+define void @merge_vec_load_and_stores(ptr%ptr) {
 ; FAST-LABEL: merge_vec_load_and_stores:
 ; FAST:       # %bb.0:
 ; FAST-NEXT:    movups (%rdi), %xmm0
@@ -66,17 +64,16 @@ define void @merge_vec_load_and_stores(i64 *%ptr) {
 ; SLOW-NEXT:    movq %rcx, 48(%rdi)
 ; SLOW-NEXT:    retq
 
-  %idx0 = getelementptr i64, i64* %ptr, i64 0
-  %idx1 = getelementptr i64, i64* %ptr, i64 1
+  %idx1 = getelementptr i64, ptr %ptr, i64 1
 
-  %ld0 = load i64, i64* %idx0, align 4
-  %ld1 = load i64, i64* %idx1, align 4
+  %ld0 = load i64, ptr %ptr, align 4
+  %ld1 = load i64, ptr %idx1, align 4
 
-  %idx4 = getelementptr i64, i64* %ptr, i64 5
-  %idx5 = getelementptr i64, i64* %ptr, i64 6
+  %idx4 = getelementptr i64, ptr %ptr, i64 5
+  %idx5 = getelementptr i64, ptr %ptr, i64 6
 
-  store i64 %ld0, i64* %idx4, align 4
-  store i64 %ld1, i64* %idx5, align 4
+  store i64 %ld0, ptr %idx4, align 4
+  store i64 %ld1, ptr %idx5, align 4
   ret void
 }
 

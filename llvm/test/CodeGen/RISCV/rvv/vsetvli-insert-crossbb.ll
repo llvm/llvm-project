@@ -23,7 +23,7 @@ declare void @llvm.riscv.vse.nxv2f32(<vscale x 2 x float>, <vscale x 2 x float>*
 define <vscale x 1 x double> @test1(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    beqz a1, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
@@ -54,7 +54,7 @@ if.end:                                           ; preds = %if.else, %if.then
 define <vscale x 1 x double> @test2(i64 %avl, i8 zeroext %cond, <vscale x 1 x double> %a, <vscale x 1 x double> %b) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    beqz a1, .LBB1_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v9, v8, v9
@@ -88,14 +88,16 @@ define <vscale x 1 x double> @test3(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    beqz a1, .LBB2_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v9, v8, v9
 ; CHECK-NEXT:    vfmul.vv v8, v9, v8
+; CHECK-NEXT:    # implicit-def: $x10
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_2: # %if.else
-; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfsub.vv v9, v8, v9
 ; CHECK-NEXT:    vfmul.vv v8, v9, v8
+; CHECK-NEXT:    # implicit-def: $x10
 ; CHECK-NEXT:    ret
 entry:
   %tobool = icmp eq i8 %cond, 0
@@ -125,7 +127,7 @@ define <vscale x 1 x double> @test4(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_0)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_0)
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vlse64.v v10, (a1), zero
 ; CHECK-NEXT:    lui a1, %hi(.LCPI3_1)
 ; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_1)
@@ -136,19 +138,17 @@ define <vscale x 1 x double> @test4(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    vse64.v v10, (a1)
 ; CHECK-NEXT:    j .LBB3_3
 ; CHECK-NEXT:  .LBB3_2: # %if.else
-; CHECK-NEXT:    lui a1, %hi(.LCPI3_2)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_2)
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    vlse32.v v10, (a1), zero
-; CHECK-NEXT:    lui a1, %hi(.LCPI3_3)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI3_3)
-; CHECK-NEXT:    vlse32.v v11, (a1), zero
+; CHECK-NEXT:    lui a1, 260096
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vmv.v.x v10, a1
+; CHECK-NEXT:    lui a1, 262144
+; CHECK-NEXT:    vmv.v.x v11, a1
 ; CHECK-NEXT:    vfadd.vv v10, v10, v11
 ; CHECK-NEXT:    lui a1, %hi(scratch)
 ; CHECK-NEXT:    addi a1, a1, %lo(scratch)
 ; CHECK-NEXT:    vse32.v v10, (a1)
 ; CHECK-NEXT:  .LBB3_3: # %if.end
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -180,19 +180,19 @@ define <vscale x 1 x double> @test5(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a2, a1, 1
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    bnez a2, .LBB4_3
 ; CHECK-NEXT:  # %bb.1: # %if.else
 ; CHECK-NEXT:    vfsub.vv v9, v8, v9
-; CHECK-NEXT:    andi a0, a1, 2
-; CHECK-NEXT:    beqz a0, .LBB4_4
+; CHECK-NEXT:    andi a1, a1, 2
+; CHECK-NEXT:    beqz a1, .LBB4_4
 ; CHECK-NEXT:  .LBB4_2: # %if.then4
 ; CHECK-NEXT:    vfmul.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB4_3: # %if.then
 ; CHECK-NEXT:    vfadd.vv v9, v8, v9
-; CHECK-NEXT:    andi a0, a1, 2
-; CHECK-NEXT:    bnez a0, .LBB4_2
+; CHECK-NEXT:    andi a1, a1, 2
+; CHECK-NEXT:    bnez a1, .LBB4_2
 ; CHECK-NEXT:  .LBB4_4: # %if.else5
 ; CHECK-NEXT:    vfmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
@@ -237,14 +237,14 @@ define <vscale x 1 x double> @test6(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a3, a1, 1
-; CHECK-NEXT:    vsetvli a2, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a2, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    bnez a3, .LBB5_3
 ; CHECK-NEXT:  # %bb.1: # %if.else
 ; CHECK-NEXT:    vfsub.vv v8, v8, v9
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    beqz a1, .LBB5_4
 ; CHECK-NEXT:  .LBB5_2: # %if.then4
-; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    lui a0, %hi(.LCPI5_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_0)
 ; CHECK-NEXT:    vlse64.v v9, (a0), zero
@@ -261,19 +261,17 @@ define <vscale x 1 x double> @test6(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    andi a1, a1, 2
 ; CHECK-NEXT:    bnez a1, .LBB5_2
 ; CHECK-NEXT:  .LBB5_4: # %if.else5
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
-; CHECK-NEXT:    lui a0, %hi(.LCPI5_2)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_2)
-; CHECK-NEXT:    vlse32.v v9, (a0), zero
-; CHECK-NEXT:    lui a0, %hi(.LCPI5_3)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_3)
-; CHECK-NEXT:    vlse32.v v10, (a0), zero
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    lui a0, 260096
+; CHECK-NEXT:    vmv.v.x v9, a0
+; CHECK-NEXT:    lui a0, 262144
+; CHECK-NEXT:    vmv.v.x v10, a0
 ; CHECK-NEXT:    vfadd.vv v9, v9, v10
 ; CHECK-NEXT:    lui a0, %hi(scratch)
 ; CHECK-NEXT:    addi a0, a0, %lo(scratch)
 ; CHECK-NEXT:    vse32.v v9, (a0)
 ; CHECK-NEXT:  .LBB5_5: # %if.end10
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmul.vv v8, v8, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -333,7 +331,7 @@ define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    vsetvli s0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli s0, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    beqz a1, .LBB6_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
@@ -346,7 +344,7 @@ define <vscale x 1 x double> @test8(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    addi a0, sp, 16
 ; CHECK-NEXT:    vs1r.v v8, (a0) # Unknown-size Folded Spill
 ; CHECK-NEXT:    call foo@plt
-; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    add a0, a0, sp
 ; CHECK-NEXT:    addi a0, a0, 16
@@ -392,7 +390,7 @@ define <vscale x 1 x double> @test9(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:    csrr a2, vlenb
 ; CHECK-NEXT:    slli a2, a2, 1
 ; CHECK-NEXT:    sub sp, sp, a2
-; CHECK-NEXT:    vsetvli s0, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli s0, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    beqz a1, .LBB7_2
 ; CHECK-NEXT:  # %bb.1: # %if.then
 ; CHECK-NEXT:    vfadd.vv v9, v8, v9
@@ -413,7 +411,7 @@ define <vscale x 1 x double> @test9(i64 %avl, i8 zeroext %cond, <vscale x 1 x do
 ; CHECK-NEXT:  .LBB7_2: # %if.else
 ; CHECK-NEXT:    vfsub.vv v9, v8, v9
 ; CHECK-NEXT:  .LBB7_3: # %if.end
-; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, s0, e64, m1, ta, ma
 ; CHECK-NEXT:    vfmul.vv v8, v9, v8
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    slli a0, a0, 1
@@ -445,7 +443,7 @@ if.end:                                           ; preds = %if.else, %if.then
 define void @saxpy_vec(i64 %n, float %a, float* nocapture readonly %x, float* nocapture %y) {
 ; CHECK-LABEL: saxpy_vec:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a3, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a3, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    beqz a3, .LBB8_2
 ; CHECK-NEXT:  .LBB8_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
@@ -453,11 +451,11 @@ define void @saxpy_vec(i64 %n, float %a, float* nocapture readonly %x, float* no
 ; CHECK-NEXT:    vle32.v v16, (a2)
 ; CHECK-NEXT:    slli a4, a3, 2
 ; CHECK-NEXT:    add a1, a1, a4
-; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m8, tu, ma
 ; CHECK-NEXT:    vfmacc.vf v16, fa0, v8
 ; CHECK-NEXT:    vse32.v v16, (a2)
 ; CHECK-NEXT:    sub a0, a0, a3
-; CHECK-NEXT:    vsetvli a3, a0, e32, m8, ta, mu
+; CHECK-NEXT:    vsetvli a3, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    add a2, a2, a4
 ; CHECK-NEXT:    bnez a3, .LBB8_1
 ; CHECK-NEXT:  .LBB8_2: # %for.end
@@ -500,16 +498,16 @@ declare void @llvm.riscv.vse.nxv16f32.i64(<vscale x 16 x float>, <vscale x 16 x 
 define <vscale x 2 x i32> @test_vsetvli_x0_x0(<vscale x 2 x i32>* %x, <vscale x 2 x i16>* %y, <vscale x 2 x i32> %z, i64 %vl, i1 %cond) nounwind {
 ; CHECK-LABEL: test_vsetvli_x0_x0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    andi a0, a3, 1
-; CHECK-NEXT:    beqz a0, .LBB9_2
+; CHECK-NEXT:    andi a3, a3, 1
+; CHECK-NEXT:    beqz a3, .LBB9_2
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwcvt.x.x.v v8, v10
 ; CHECK-NEXT:  .LBB9_2: # %if.end
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -539,23 +537,23 @@ declare <vscale x 2 x i32> @llvm.riscv.vadd.nxv2i32(<vscale x 2 x i32>, <vscale 
 define <vscale x 2 x i32> @test_vsetvli_x0_x0_2(<vscale x 2 x i32>* %x, <vscale x 2 x i16>* %y, <vscale x 2 x i16>* %z, i64 %vl, i1 %cond, i1 %cond2, <vscale x 2 x i32> %w) nounwind {
 ; CHECK-LABEL: test_vsetvli_x0_x0_2:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a3, e32, m1, ta, ma
 ; CHECK-NEXT:    vle32.v v9, (a0)
-; CHECK-NEXT:    andi a0, a4, 1
-; CHECK-NEXT:    beqz a0, .LBB10_2
+; CHECK-NEXT:    andi a4, a4, 1
+; CHECK-NEXT:    beqz a4, .LBB10_2
 ; CHECK-NEXT:  # %bb.1: # %if
 ; CHECK-NEXT:    vle16.v v10, (a1)
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vwadd.wv v9, v9, v10
 ; CHECK-NEXT:  .LBB10_2: # %if.end
-; CHECK-NEXT:    andi a0, a5, 1
-; CHECK-NEXT:    beqz a0, .LBB10_4
+; CHECK-NEXT:    andi a5, a5, 1
+; CHECK-NEXT:    beqz a5, .LBB10_4
 ; CHECK-NEXT:  # %bb.3: # %if2
-; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e16, mf2, ta, ma
 ; CHECK-NEXT:    vle16.v v10, (a2)
 ; CHECK-NEXT:    vwadd.wv v9, v9, v10
 ; CHECK-NEXT:  .LBB10_4: # %if2.end
-; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v8
 ; CHECK-NEXT:    ret
 entry:
@@ -587,24 +585,22 @@ declare <vscale x 2 x i32> @llvm.riscv.vwadd.w.nxv2i32.nxv2i16(<vscale x 2 x i32
 define void @vlmax(i64 %N, double* %c, double* %a, double* %b) {
 ; CHECK-LABEL: vlmax:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a6, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    blez a0, .LBB11_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a5, 0
-; CHECK-NEXT:    li t0, 0
-; CHECK-NEXT:    slli a7, a6, 3
+; CHECK-NEXT:    slli a4, a6, 3
 ; CHECK-NEXT:  .LBB11_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    add a4, a2, a5
-; CHECK-NEXT:    vle64.v v8, (a4)
-; CHECK-NEXT:    add a4, a3, a5
-; CHECK-NEXT:    vle64.v v9, (a4)
+; CHECK-NEXT:    vle64.v v8, (a2)
+; CHECK-NEXT:    vle64.v v9, (a3)
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
-; CHECK-NEXT:    add a4, a1, a5
-; CHECK-NEXT:    vse64.v v8, (a4)
-; CHECK-NEXT:    add t0, t0, a6
-; CHECK-NEXT:    add a5, a5, a7
-; CHECK-NEXT:    blt t0, a0, .LBB11_2
+; CHECK-NEXT:    vse64.v v8, (a1)
+; CHECK-NEXT:    add a5, a5, a6
+; CHECK-NEXT:    add a1, a1, a4
+; CHECK-NEXT:    add a3, a3, a4
+; CHECK-NEXT:    add a2, a2, a4
+; CHECK-NEXT:    blt a5, a0, .LBB11_2
 ; CHECK-NEXT:  .LBB11_3: # %for.end
 ; CHECK-NEXT:    ret
 entry:
@@ -636,7 +632,7 @@ for.end:                                          ; preds = %for.body, %entry
 define void @vector_init_vlmax(i64 %N, double* %c) {
 ; CHECK-LABEL: vector_init_vlmax:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a2, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    blez a0, .LBB12_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a3, 0
@@ -672,16 +668,16 @@ for.end:                                          ; preds = %for.body, %entry
 define void @vector_init_vsetvli_N(i64 %N, double* %c) {
 ; CHECK-LABEL: vector_init_vsetvli_N:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetvli a2, a0, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a2, a0, e64, m1, ta, ma
 ; CHECK-NEXT:    blez a0, .LBB13_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    li a3, 0
 ; CHECK-NEXT:    slli a4, a2, 3
-; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB13_2: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a3, a3, a2
 ; CHECK-NEXT:    add a1, a1, a4
@@ -711,13 +707,13 @@ define void @vector_init_vsetvli_fv(i64 %N, double* %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetivli a3, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli a3, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    slli a4, a3, 3
-; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a5, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB14_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    add a2, a2, a3
 ; CHECK-NEXT:    add a1, a1, a4
@@ -747,11 +743,11 @@ define void @vector_init_vsetvli_fv2(i64 %N, double* %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB15_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    addi a1, a1, 32
@@ -781,11 +777,11 @@ define void @vector_init_vsetvli_fv3(i64 %N, double* %c) {
 ; CHECK-LABEL: vector_init_vsetvli_fv3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    li a2, 0
-; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vmv.v.i v8, 0
 ; CHECK-NEXT:  .LBB16_1: # %for.body
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, mu
+; CHECK-NEXT:    vsetivli zero, 4, e64, m1, ta, ma
 ; CHECK-NEXT:    vse64.v v8, (a1)
 ; CHECK-NEXT:    addi a2, a2, 4
 ; CHECK-NEXT:    addi a1, a1, 32
@@ -814,8 +810,9 @@ for.end:                                          ; preds = %for.body
 define <vscale x 4 x i32> @cross_block_mutate(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b,
 ; CHECK-LABEL: cross_block_mutate:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vsetivli a0, 6, e32, m2, tu, mu
+; CHECK-NEXT:    vsetivli a0, 6, e32, m2, tu, ma
 ; CHECK-NEXT:    vmv.s.x v8, a0
+; CHECK-NEXT:    vsetvli zero, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v10, v0.t
 ; CHECK-NEXT:    ret
                                          <vscale x 4 x i1> %mask) {
@@ -835,15 +832,10 @@ fallthrough:
 define <vscale x 2 x i32> @pre_lmul(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i1 %cond) nounwind {
 ; CHECK-LABEL: pre_lmul:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    andi a1, a0, 1
-; CHECK-NEXT:    vsetvli a0, zero, e64, m1, ta, mu
-; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, mu
+; CHECK-NEXT:    andi a0, a0, 1
+; CHECK-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    beqz a1, .LBB18_2
-; CHECK-NEXT:  # %bb.1: # %if
-; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, mu
-; CHECK-NEXT:  .LBB18_2: # %if.end
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
 entry:
@@ -866,7 +858,7 @@ define <vscale x 1 x double> @compat_store_consistency(i1 %cond, <vscale x 1 x d
 ; CHECK-LABEL: compat_store_consistency:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    andi a0, a0, 1
-; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, mu
+; CHECK-NEXT:    vsetvli a3, zero, e64, m1, ta, ma
 ; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    vs1r.v v8, (a1)
 ; CHECK-NEXT:    beqz a0, .LBB19_2
@@ -885,6 +877,106 @@ if.then:                                          ; preds = %entry
 
 if.end:                                           ; preds = %if.else, %if.then
   ret <vscale x 1 x double> %res
+}
+
+; Next two tests (which are the same except for swapped block order), make sure that the
+; demanded reasoning around vmv.s.x correctly handles a forward state with only a valid
+; SEWLMULRatio.  We previously had a crash bug in this case.
+define <vscale x 2 x i32> @test_ratio_only_vmv_s_x(<vscale x 2 x i32>* %x, <vscale x 2 x i16>* %y, i1 %cond) nounwind {
+; CHECK-LABEL: test_ratio_only_vmv_s_x:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB20_2
+; CHECK-NEXT:  # %bb.1: # %if
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vwcvt.x.x.v v8, v9
+; CHECK-NEXT:    j .LBB20_3
+; CHECK-NEXT:  .LBB20_2:
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:  .LBB20_3: # %if.end
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    ret
+entry:
+  %a = call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %x, i64 2)
+  br i1 %cond, label %if, label %if.end
+
+if:
+  %b = call <vscale x 2 x i16> @llvm.riscv.vle.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16>* %y, i64 2)
+  %c = call <vscale x 2 x i32> @llvm.riscv.vwadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i16> %b, i16 0, i64 2)
+  br label %if.end
+
+if.end:
+  %d = phi <vscale x 2 x i32> [ %a, %entry ], [ %c, %if ]
+  %e = insertelement <vscale x 2 x i32> %d, i32 0, i32 0
+  ret <vscale x 2 x i32> %e
+}
+
+define <vscale x 2 x i32> @test_ratio_only_vmv_s_x2(<vscale x 2 x i32>* %x, <vscale x 2 x i16>* %y, i1 %cond) nounwind {
+; CHECK-LABEL: test_ratio_only_vmv_s_x2:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    andi a2, a2, 1
+; CHECK-NEXT:    beqz a2, .LBB21_2
+; CHECK-NEXT:  # %bb.1: # %if
+; CHECK-NEXT:    vsetivli zero, 2, e32, m1, ta, ma
+; CHECK-NEXT:    vle32.v v8, (a0)
+; CHECK-NEXT:    j .LBB21_3
+; CHECK-NEXT:  .LBB21_2:
+; CHECK-NEXT:    vsetivli zero, 2, e16, mf2, ta, ma
+; CHECK-NEXT:    vle16.v v9, (a1)
+; CHECK-NEXT:    vwcvt.x.x.v v8, v9
+; CHECK-NEXT:  .LBB21_3: # %if.end
+; CHECK-NEXT:    vsetvli zero, zero, e32, m1, tu, ma
+; CHECK-NEXT:    vmv.s.x v8, zero
+; CHECK-NEXT:    ret
+entry:
+  %b = call <vscale x 2 x i16> @llvm.riscv.vle.nxv2i16(<vscale x 2 x i16> undef, <vscale x 2 x i16>* %y, i64 2)
+  %c = call <vscale x 2 x i32> @llvm.riscv.vwadd.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i16> %b, i16 0, i64 2)
+  br i1 %cond, label %if, label %if.end
+
+if:
+  %a = call <vscale x 2 x i32> @llvm.riscv.vle.nxv2i32(<vscale x 2 x i32> undef, <vscale x 2 x i32>* %x, i64 2)
+  br label %if.end
+
+if.end:
+  %d = phi <vscale x 2 x i32> [ %a, %if ], [ %c, %entry ]
+  %e = insertelement <vscale x 2 x i32> %d, i32 0, i32 0
+  ret <vscale x 2 x i32> %e
+}
+
+; This case demonstrates a PRE case where the first instruction in the block
+; doesn't require a state transition.
+define void @pre_over_vle(ptr %A) {
+; CHECK-LABEL: pre_over_vle:
+; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    li a1, 100
+; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
+; CHECK-NEXT:  .LBB22_1: # %vector.body
+; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:    vle8.v v8, (a0)
+; CHECK-NEXT:    vsext.vf4 v9, v8
+; CHECK-NEXT:    vse32.v v9, (a0)
+; CHECK-NEXT:    addi a1, a1, -1
+; CHECK-NEXT:    addi a0, a0, 8
+; CHECK-NEXT:    bnez a1, .LBB22_1
+; CHECK-NEXT:  # %bb.2: # %exit
+; CHECK-NEXT:    ret
+entry:
+  br label %vector.body
+
+vector.body:
+  %iv = phi i64 [ 0, %entry], [%iv.next, %vector.body]
+  %addr = getelementptr inbounds <2 x i32>, ptr %A, i64 %iv
+  %v = load <2 x i8>, ptr %addr
+  %v2 = sext <2 x i8> %v to <2 x i32>
+  store <2 x i32> %v2, ptr %addr
+  %iv.next = add i64 %iv, 1
+  %cmp = icmp ne i64 %iv.next, 100
+  br i1 %cmp, label %vector.body, label %exit
+exit:
+  ret void
 }
 
 declare i64 @llvm.riscv.vsetvlimax.i64(i64, i64)

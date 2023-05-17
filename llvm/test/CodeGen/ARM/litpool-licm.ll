@@ -26,12 +26,12 @@ entry:
 
 loop:
   %i = phi i32 [ %inc, %next ], [ 0, %entry ]
-  %val = load i32, i32* @var
+  %val = load i32, ptr @var
   %tst = icmp eq i32 %val, 0
   br i1 %tst, label %next, label %call
 
 call:
-  tail call void @foo(i32* nonnull @var) #2
+  tail call void @foo(ptr nonnull @var) #2
   br label %next
 
 next:
@@ -43,4 +43,4 @@ done:
   ret void
 }
 
-declare void @foo(i32*)
+declare void @foo(ptr)

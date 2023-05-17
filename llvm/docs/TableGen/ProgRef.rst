@@ -219,14 +219,15 @@ TableGen provides "bang operators" that have a wide variety of uses:
 
 .. productionlist::
    BangOperator: one of
-               : !add        !and         !cast        !con         !dag
-               : !empty      !eq          !filter      !find        !foldl
-               : !foreach    !ge          !getdagop    !gt          !head
-               : !if         !interleave  !isa         !le          !listconcat
-               : !listsplat  !lt          !mul         !ne          !not
-               : !or         !setdagop    !shl         !size        !sra
-               : !srl        !strconcat   !sub         !subst       !substr
-               : !tail       !xor
+               : !add         !and         !cast        !con         !dag
+               : !div         !empty       !eq          !exists      !filter
+               : !find        !foldl       !foreach     !ge          !getdagop
+               : !gt          !head        !if          !interleave  !isa
+               : !le          !listconcat  !listremove  !listsplat   !logtwo
+               : !lt          !mul         !ne          !not         !or
+               : !range       !setdagop    !shl         !size        !sra
+               : !srl         !strconcat   !sub         !subst       !substr
+               : !tail        !tolower     !toupper     !xor
 
 The ``!cond`` operator has a slightly different
 syntax compared to other bang operators, so it is defined separately:
@@ -334,19 +335,25 @@ to an entity of type ``bits<4>``.
    Value: `SimpleValue` `ValueSuffix`*
         :| `Value` "#" [`Value`]
    ValueSuffix: "{" `RangeList` "}"
-              :| "[" `RangeList` "]"
+              :| "[" `SliceElements` "]"
               :| "." `TokIdentifier`
    RangeList: `RangePiece` ("," `RangePiece`)*
    RangePiece: `TokInteger`
              :| `TokInteger` "..." `TokInteger`
              :| `TokInteger` "-" `TokInteger`
              :| `TokInteger` `TokInteger`
+   SliceElements: (`SliceElement` ",")* `SliceElement` ","?
+   SliceElement: `Value`
+               :| `Value` "..." `Value`
+               :| `Value` "-" `Value`
+               :| `Value` `TokInteger`
 
 .. warning::
-  The peculiar last form of :token:`RangePiece` is due to the fact that the
-  "``-``" is included in the :token:`TokInteger`, hence ``1-5`` gets lexed as
-  two consecutive tokens, with values ``1`` and ``-5``, instead of "1", "-",
-  and "5". The use of hyphen as the range punctuation is deprecated.
+  The peculiar last form of :token:`RangePiece` and :token:`SliceElement` is
+  due to the fact that the "``-``" is included in the :token:`TokInteger`,
+  hence ``1-5`` gets lexed as two consecutive tokens, with values ``1`` and
+  ``-5``, instead of "1", "-", and "5".
+  The use of hyphen as the range punctuation is deprecated.
 
 Simple values
 -------------
@@ -504,16 +511,25 @@ primary value. Here are the possible suffixes for some primary *value*.
     The final value is bits 8--15 of the integer *value*. The order of the
     bits can be reversed by specifying ``{15...8}``.
 
-*value*\ ``[4]``
-    The final value is element 4 of the list *value* (note the brackets).
+*value*\ ``[i]``
+    The final value is element `i` of the list *value* (note the brackets).
     In other words, the brackets act as a subscripting operator on the list.
     This is the case only when a single element is specified.
+
+*value*\ ``[i,]``
+    The final value is a list that contains a single element `i` of the list.
+    In short, a list slice with a single element.
 
 *value*\ ``[4...7,17,2...3,4]``
     The final value is a new list that is a slice of the list *value*.
     The new list contains elements 4, 5, 6, 7, 17, 2, 3, and 4.
     Elements may be included multiple times and in any order. This is the result
     only when more than one element is specified.
+
+    *value*\ ``[i,m...n,j,ls]``
+        Each element may be an expression (variables, bang operators).
+        The type of `m` and `n` should be `int`.
+        The type of `i`, `j`, and `ls` should be either `int` or `list<int>`.
 
 *value*\ ``.``\ *field*
     The final value is the value of the specified *field* in the specified
@@ -1622,6 +1638,10 @@ and non-0 as true.
     Example: ``!dag(op, [a1, a2, ?], ["name1", "name2", "name3"])`` results in
     ``(op a1-value:$name1, a2-value:$name2, ?:$name3)``.
 
+``!div(``\ *a*\ ``,`` *b*\ ``)``
+    This operator performs signed division of *a* by *b*, and produces the quotient.
+    Division by 0 produces an error. Division of INT64_MIN by -1 produces an error.
+
 ``!empty(``\ *a*\ ``)``
     This operator produces 1 if the string, list, or DAG *a* is empty; 0 otherwise.
     A dag is empty if it has no arguments; the operator does not count.
@@ -1630,6 +1650,10 @@ and non-0 as true.
     This operator produces 1 if *a* is equal to *b*; 0 otherwise.
     The arguments must be ``bit``, ``bits``, ``int``, ``string``, or
     record values. Use ``!cast<string>`` to compare other types of objects.
+
+``!exists<``\ *type*\ ``>(``\ *name*\ ``)``
+    This operator produces 1 if a record of the given *type* whose name is *name*
+    exists; 0 otherwise. *name* should be of type *string*.
 
 ``!filter(``\ *var*\ ``,`` *list*\ ``,`` *predicate*\ ``)``
 
@@ -1732,10 +1756,19 @@ and non-0 as true.
     This operator concatenates the list arguments *list1*, *list2*, etc., and
     produces the resulting list. The lists must have the same element type.
 
+``!listremove(``\ *list1*\ ``,`` *list2*\ ``)``
+    This operator returns a copy of *list1* removing all elements that also occur in
+    *list2*. The lists must have the same element type.
+
 ``!listsplat(``\ *value*\ ``,`` *count*\ ``)``
     This operator produces a list of length *count* whose elements are all
     equal to the *value*. For example, ``!listsplat(42, 3)`` results in
     ``[42, 42, 42]``.
+
+``!logtwo(``\ *a*\ ``)``
+    This operator produces the base 2 log of *a* and produces the integer
+    result. The log of 0 or a negative number produces an error. This
+    is a flooring operation.
 
 ``!lt(``\ *a*\ `,` *b*\ ``)``
     This operator produces 1 if *a* is less than *b*; 0 otherwise.
@@ -1758,6 +1791,15 @@ and non-0 as true.
     This operator does a bitwise OR on *a*, *b*, etc., and produces the
     result. A logical OR can be performed if all the arguments are either
     0 or 1.
+
+``!range([``\ *a*\ ``,``] *b*\ ``)``
+    This operator produces half-open range sequence ``[a : b)`` as ``list<int>``.
+    *a* is ``0`` by default. ``!range(4)`` is equivalent to ``!range(0, 4)``.
+    The result is `[0, 1, 2, 3]`.
+    If *a* ``>=`` *b*, then the result is `[]<list<int>>`.
+
+``!range(``\ *list*\ ``)``
+    Equivalent to ``!range(0, !size(list))``.
 
 ``!setdagop(``\ *dag*\ ``,`` *op*\ ``)``
     This operator produces a DAG node with the same arguments as *dag*, but with its
@@ -1810,6 +1852,12 @@ and non-0 as true.
 ``!tail(``\ *a*\ ``)``
     This operator produces a new list with all the elements
     of the list *a* except for the zeroth one. (See also ``!head``.)
+
+``!tolower(``\ *a*\ ``)``
+  This operator converts a string input *a* to lower case.
+
+``!toupper(``\ *a*\ ``)``
+  This operator converts a string input *a* to upper case.
 
 ``!xor(``\ *a*\ ``,`` *b*\ ``, ...)``
     This operator does a bitwise EXCLUSIVE OR on *a*, *b*, etc., and produces

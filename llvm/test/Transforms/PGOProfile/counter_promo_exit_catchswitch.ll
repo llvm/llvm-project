@@ -25,7 +25,7 @@
 %eh.ThrowInfo = type { i32, i32, i32, i32 }
 
 @"?buffer@@3PADA" = dso_local local_unnamed_addr global [200 x i8] zeroinitializer, align 16
-define dso_local void @"?run@@YAXH@Z"(i32 %count) local_unnamed_addr personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @"?run@@YAXH@Z"(i32 %count) local_unnamed_addr personality ptr @__CxxFrameHandler3 {
 entry:
   br label %for.cond
 
@@ -36,14 +36,14 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
 ; CHECK: for.body:
-; NOTENTRY: %pgocount1 = load i64, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 0)
-; TENTRY: %pgocount1 = load i64, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 1)
+; NOTENTRY: %pgocount1 = load i64, ptr @"__profc_?run@@YAXH@Z"
+; TENTRY: %pgocount1 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
 ; CHECK: %1 = add i64 %pgocount1, 1
-; NOTENTRY: store i64 %1, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 0)
-; ENTRY: store i64 %1, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 1)
+; NOTENTRY: store i64 %1, ptr @"__profc_?run@@YAXH@Z"
+; ENTRY: store i64 %1, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
   %idxprom = zext i32 %i.0 to i64
-  %arrayidx = getelementptr inbounds [200 x i8], [200 x i8]* @"?buffer@@3PADA", i64 0, i64 %idxprom
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds [200 x i8], ptr @"?buffer@@3PADA", i64 0, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
   %cmp1 = icmp eq i8 %0, 0
   br i1 %cmp1, label %cleanup, label %if.end
 
@@ -53,11 +53,11 @@ if.end:                                           ; preds = %for.body
 
 for.inc:                                          ; preds = %if.end
 ; CHECK: for.inc:
-; NOTENTRY: %pgocount2 = load i64, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 1)
-; ENTRY: %pgocount2 = load i64, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 2)
+; NOTENTRY: %pgocount2 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
+; ENTRY: %pgocount2 = load i64, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 2)
 ; CHECK: %3 = add i64 %pgocount2, 1
-; NOTENTRY: store i64 %3, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 1)
-; ENTRY: store i64 %3, i64* getelementptr inbounds ([3 x i64], [3 x i64]* @"__profc_?run@@YAXH@Z", i32 0, i32 2)
+; NOTENTRY: store i64 %3, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 1)
+; ENTRY: store i64 %3, ptr getelementptr inbounds ([3 x i64], ptr @"__profc_?run@@YAXH@Z", i32 0, i32 2)
   %inc = add nuw nsw i32 %i.0, 1
   br label %for.cond
 
@@ -68,10 +68,10 @@ catch.dispatch:                                   ; preds = %if.end
   %1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %2 = catchpad within %1 [i8* null, i32 64, i8* null]
-  call void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) #2 [ "funclet"(token %2) ]
+  %2 = catchpad within %1 [ptr null, i32 64, ptr null]
+  call void @_CxxThrowException(ptr null, ptr null) #2 [ "funclet"(token %2) ]
   unreachable
 }
 declare dso_local void @"?may_throw@@YAXH@Z"(i32)
-declare dso_local void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare dso_local void @_CxxThrowException(ptr, ptr)
 declare dso_local i32 @__CxxFrameHandler3(...)

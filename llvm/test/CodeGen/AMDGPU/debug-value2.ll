@@ -6,34 +6,33 @@ declare float @llvm.fmuladd.f32(float, float, float)
 
 declare <4 x float> @llvm.fmuladd.v4f32(<4 x float>, <4 x float>, <4 x float>)
 
-declare %struct.ShapeData addrspace(1)* @Scene_getSubShapeData(i32, i8 addrspace(1)*, i32 addrspace(1)*) local_unnamed_addr
+declare ptr addrspace(1) @Scene_getSubShapeData(i32, ptr addrspace(1), ptr addrspace(1)) local_unnamed_addr
 
-define <4 x float> @Scene_transformT(i32 %subshapeIdx, <4 x float> %v, float %time, i8 addrspace(1)* %gScene, i32 addrspace(1)* %gSceneOffsets) local_unnamed_addr !dbg !110 {
+define <4 x float> @Scene_transformT(i32 %subshapeIdx, <4 x float> %v, float %time, ptr addrspace(1) %gScene, ptr addrspace(1) %gSceneOffsets) local_unnamed_addr !dbg !110 {
 entry:
   ; CHECK: v_mov_b32_e32 v[[COPIED_ARG_PIECE:[0-9]+]], v9
 
   ; CHECK: ;DEBUG_VALUE: Scene_transformT:gScene <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr6
   ; CHECK: ;DEBUG_VALUE: Scene_transformT:gScene <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr7
-  call void @llvm.dbg.value(metadata i8 addrspace(1)* %gScene, metadata !120, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !154
+  call void @llvm.dbg.value(metadata ptr addrspace(1) %gScene, metadata !120, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !154
   ; CHECK: ;DEBUG_VALUE: Scene_transformT:gSceneOffsets <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 0 32] $vgpr8
   ; CHECK: ;DEBUG_VALUE: Scene_transformT:gSceneOffsets <- [DW_OP_constu 1, DW_OP_swap, DW_OP_xderef, DW_OP_LLVM_fragment 32 32] $vgpr[[COPIED_ARG_PIECE]]
-  call void @llvm.dbg.value(metadata i32 addrspace(1)* %gSceneOffsets, metadata !121, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !155
-  %call = tail call %struct.ShapeData addrspace(1)* @Scene_getSubShapeData(i32 %subshapeIdx, i8 addrspace(1)* %gScene, i32 addrspace(1)* %gSceneOffsets)
-  %m_linearMotion = getelementptr inbounds %struct.ShapeData, %struct.ShapeData addrspace(1)* %call, i64 0, i32 2
-  %tmp = load <4 x float>, <4 x float> addrspace(1)* %m_linearMotion, align 16
-  %m_angularMotion = getelementptr inbounds %struct.ShapeData, %struct.ShapeData addrspace(1)* %call, i64 0, i32 3
-  %tmp1 = load <4 x float>, <4 x float> addrspace(1)* %m_angularMotion, align 16
-  %m_scaleMotion = getelementptr inbounds %struct.ShapeData, %struct.ShapeData addrspace(1)* %call, i64 0, i32 4
-  %tmp2 = load <4 x float>, <4 x float> addrspace(1)* %m_scaleMotion, align 16
+  call void @llvm.dbg.value(metadata ptr addrspace(1) %gSceneOffsets, metadata !121, metadata !DIExpression(DW_OP_constu, 1, DW_OP_swap, DW_OP_xderef)), !dbg !155
+  %call = tail call ptr addrspace(1) @Scene_getSubShapeData(i32 %subshapeIdx, ptr addrspace(1) %gScene, ptr addrspace(1) %gSceneOffsets)
+  %m_linearMotion = getelementptr inbounds %struct.ShapeData, ptr addrspace(1) %call, i64 0, i32 2
+  %tmp = load <4 x float>, ptr addrspace(1) %m_linearMotion, align 16
+  %m_angularMotion = getelementptr inbounds %struct.ShapeData, ptr addrspace(1) %call, i64 0, i32 3
+  %tmp1 = load <4 x float>, ptr addrspace(1) %m_angularMotion, align 16
+  %m_scaleMotion = getelementptr inbounds %struct.ShapeData, ptr addrspace(1) %call, i64 0, i32 4
+  %tmp2 = load <4 x float>, ptr addrspace(1) %m_scaleMotion, align 16
   %splat.splatinsert = insertelement <4 x float> undef, float %time, i32 0
   %splat.splat = shufflevector <4 x float> %splat.splatinsert, <4 x float> undef, <4 x i32> zeroinitializer
   %tmp3 = tail call <4 x float> @llvm.fmuladd.v4f32(<4 x float> %tmp2, <4 x float> %splat.splat, <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>)
-  %m_translation = getelementptr inbounds %struct.ShapeData, %struct.ShapeData addrspace(1)* %call, i64 0, i32 0
-  %tmp4 = load <4 x float>, <4 x float> addrspace(1)* %m_translation, align 16
-  %m_quaternion = getelementptr inbounds %struct.ShapeData, %struct.ShapeData addrspace(1)* %call, i64 0, i32 1
-  %tmp5 = load <4 x float>, <4 x float> addrspace(1)* %m_quaternion, align 16
-  %m_scale = getelementptr inbounds %struct.ShapeData, %struct.ShapeData addrspace(1)* %call, i64 0, i32 8
-  %tmp6 = load <4 x float>, <4 x float> addrspace(1)* %m_scale, align 16
+  %tmp4 = load <4 x float>, ptr addrspace(1) %call, align 16
+  %m_quaternion = getelementptr inbounds %struct.ShapeData, ptr addrspace(1) %call, i64 0, i32 1
+  %tmp5 = load <4 x float>, ptr addrspace(1) %m_quaternion, align 16
+  %m_scale = getelementptr inbounds %struct.ShapeData, ptr addrspace(1) %call, i64 0, i32 8
+  %tmp6 = load <4 x float>, ptr addrspace(1) %m_scale, align 16
   %mul = fmul <4 x float> %tmp6, %v
   %tmp7 = extractelement <4 x float> %tmp5, i64 0
   %sub.i.i = fsub float -0.000000e+00, %tmp7

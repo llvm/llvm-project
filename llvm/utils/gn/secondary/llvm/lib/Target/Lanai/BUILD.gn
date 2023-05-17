@@ -27,6 +27,7 @@ static_library("LLVMLanaiCodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ "." ]
   sources = [

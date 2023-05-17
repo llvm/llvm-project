@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S %s | FileCheck %s
+; RUN: opt -passes=indvars -S %s | FileCheck %s
 ;
 ; PR18384: ValueHandleBase::ValueIsDeleted.
 ;
@@ -60,7 +60,7 @@ for.inc172.us:
   br i1 undef, label %for.cond142.preheader.us, label %for.end174.us
 
 for.body145.us:
-  %arrayidx163.us = getelementptr inbounds %struct.Params, %struct.Params* undef, i64 0, i32 0, i64 %idxprom130, i64 %idxprom146.us
+  %arrayidx163.us = getelementptr inbounds %struct.Params, ptr undef, i64 0, i32 0, i64 %idxprom130, i64 %idxprom146.us
   br i1 undef, label %for.body145.us, label %for.inc172.us
 
 for.cond142.preheader.us:

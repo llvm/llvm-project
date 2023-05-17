@@ -38,19 +38,32 @@ class ABIInfo;
 class CallArgList;
 class CodeGenFunction;
 class CGBlockInfo;
+class SwiftABIInfo;
 
 /// TargetCodeGenInfo - This class organizes various target-specific
 /// codegeneration issues, like target-specific attributes, builtins and so
 /// on.
 class TargetCodeGenInfo {
-  std::unique_ptr<ABIInfo> Info = nullptr;
+  std::unique_ptr<ABIInfo> Info;
+
+protected:
+  // Target hooks supporting Swift calling conventions. The target must
+  // initialize this field if it claims to support these calling conventions
+  // by returning true from TargetInfo::checkCallingConvention for them.
+  std::unique_ptr<SwiftABIInfo> SwiftInfo;
 
 public:
-  TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info) : Info(std::move(Info)) {}
+  TargetCodeGenInfo(std::unique_ptr<ABIInfo> Info);
   virtual ~TargetCodeGenInfo();
 
   /// getABIInfo() - Returns ABI info helper for the target.
   const ABIInfo &getABIInfo() const { return *Info; }
+
+  /// Returns Swift ABI info helper for the target.
+  const SwiftABIInfo &getSwiftABIInfo() const {
+    assert(SwiftInfo && "Swift ABI info has not been initialized");
+    return *SwiftInfo;
+  }
 
   /// setTargetAttributes - Provides a convenient hook to handle extra
   /// target-specific attributes for the given global.
@@ -326,7 +339,7 @@ public:
   /// convention and ABI as an OpenCL kernel. The wrapper function accepts
   /// block context and block arguments in target-specific way and calls
   /// the original block invoke function.
-  virtual llvm::Function *
+  virtual llvm::Value *
   createEnqueuedBlockKernel(CodeGenFunction &CGF,
                             llvm::Function *BlockInvokeFunc,
                             llvm::Type *BlockTy) const;
@@ -335,6 +348,11 @@ public:
   /// mangled name of functions declared within an extern "C" region and marked
   /// as 'used', and having internal linkage.
   virtual bool shouldEmitStaticExternCAliases() const { return true; }
+
+  /// \return true if annonymous zero-sized bitfields should be emitted to
+  /// correctly distinguish between struct types whose memory layout is the
+  /// same, but whose layout may differ when used as argument passed by value
+  virtual bool shouldEmitDWARFBitFieldSeparators() const { return false; }
 
   virtual void setCUDAKernelCallingConvention(const FunctionType *&FT) const {}
 
@@ -349,6 +367,12 @@ public:
     return nullptr;
   }
 
+  /// Return the WebAssembly externref reference type.
+  virtual llvm::Type *getWasmExternrefReferenceType() const { return nullptr; }
+
+  /// Return the WebAssembly funcref reference type.
+  virtual llvm::Type *getWasmFuncrefReferenceType() const { return nullptr; }
+
   /// Emit the device-side copy of the builtin surface type.
   virtual bool emitCUDADeviceBuiltinSurfaceDeviceCopy(CodeGenFunction &CGF,
                                                       LValue Dst,
@@ -362,6 +386,11 @@ public:
                                                       LValue Src) const {
     // DO NOTHING by default.
     return false;
+  }
+
+  /// Return an LLVM type that corresponds to an OpenCL type.
+  virtual llvm::Type *getOpenCLType(CodeGenModule &CGM, const Type *T) const {
+    return nullptr;
   }
 };
 

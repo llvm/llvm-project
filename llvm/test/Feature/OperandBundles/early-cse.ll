@@ -9,90 +9,90 @@
 declare void @readonly_function() readonly nounwind willreturn
 declare void @readnone_function() readnone nounwind willreturn
 
-define i32 @test0(i32* %x) {
+define i32 @test0(ptr %x) {
 ; CHECK-LABEL: @test0(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 100, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 100, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    call void @readonly_function() [ "tag"() ]
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[X]], align 4
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[X]], align 4
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
   entry:
-  store i32 100, i32* %x
+  store i32 100, ptr %x
   call void @readonly_function() [ "tag"() ]
 
-  %v = load i32, i32* %x
+  %v = load i32, ptr %x
   ret i32 %v
 }
 
-define i32 @test1(i32* %x) {
+define i32 @test1(ptr %x) {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 100, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 100, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    ret i32 100
 ;
   entry:
-  store i32 100, i32* %x
+  store i32 100, ptr %x
   call void @readonly_function() readonly [ "tag"() ]
-  %v = load i32, i32* %x
+  %v = load i32, ptr %x
   ret i32 %v
 }
 
-define i32 @test3(i32* %x) {
+define i32 @test3(ptr %x) {
 ; CHECK-LABEL: @test3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 100, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 100, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    ret i32 100
 ;
   entry:
-  store i32 100, i32* %x
+  store i32 100, ptr %x
   call void @readonly_function()
-  %v = load i32, i32* %x
+  %v = load i32, ptr %x
   ret i32 %v
 }
 
-define void @test4(i32* %x) {
+define void @test4(ptr %x) {
 ; CHECK-LABEL: @test4(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 100, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 100, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    call void @readnone_function() [ "tag"() ]
-; CHECK-NEXT:    store i32 200, i32* [[X]], align 4
+; CHECK-NEXT:    store i32 200, ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
   entry:
-  store i32 100, i32* %x
+  store i32 100, ptr %x
   call void @readnone_function() [ "tag"() ]
-  store i32 200, i32* %x
+  store i32 200, ptr %x
   ret void
 }
 
-define void @test5(i32* %x) {
+define void @test5(ptr %x) {
 ; CHECK-LABEL: @test5(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 200, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 200, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   entry:
-  store i32 100, i32* %x
+  store i32 100, ptr %x
   call void @readnone_function() readnone [ "tag"() ]
-  store i32 200, i32* %x
+  store i32 200, ptr %x
   ret void
 }
 
-define void @test6(i32* %x) {
+define void @test6(ptr %x) {
 ; The "deopt" operand bundle does not make the call to
 ; @readonly_function read-write; and so the nounwind readonly call can
 ; be deleted.
 ; CHECK-LABEL: @test6(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 200, i32* [[X:%.*]], align 4
+; CHECK-NEXT:    store i32 200, ptr [[X:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   entry:
 
 
-  store i32 100, i32* %x
+  store i32 100, ptr %x
   call void @readonly_function() [ "deopt"() ]
-  store i32 200, i32* %x
+  store i32 200, ptr %x
   ret void
 }

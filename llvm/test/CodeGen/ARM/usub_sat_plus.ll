@@ -54,7 +54,7 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:    adcs r0, r1
 ; CHECK-T1-NEXT:    movs r4, #1
-; CHECK-T1-NEXT:    subs r4, r4, r0
+; CHECK-T1-NEXT:    eors r4, r0
 ; CHECK-T1-NEXT:    mov r0, r1
 ; CHECK-T1-NEXT:    beq .LBB1_3
 ; CHECK-T1-NEXT:  @ %bb.1:
@@ -77,7 +77,7 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-T2-NEXT:    subs r0, r0, r2
 ; CHECK-T2-NEXT:    sbcs r1, r3
 ; CHECK-T2-NEXT:    adc r2, r12, #0
-; CHECK-T2-NEXT:    rsbs.w r2, r2, #1
+; CHECK-T2-NEXT:    eors r2, r2, #1
 ; CHECK-T2-NEXT:    itt ne
 ; CHECK-T2-NEXT:    movne r0, #0
 ; CHECK-T2-NEXT:    movne r1, #0
@@ -91,7 +91,7 @@ define i64 @func64(i64 %x, i64 %y, i64 %z) nounwind {
 ; CHECK-ARM-NEXT:    subs r0, r0, r2
 ; CHECK-ARM-NEXT:    sbcs r1, r1, r3
 ; CHECK-ARM-NEXT:    adc r2, r12, #0
-; CHECK-ARM-NEXT:    rsbs r2, r2, #1
+; CHECK-ARM-NEXT:    eors r2, r2, #1
 ; CHECK-ARM-NEXT:    movwne r0, #0
 ; CHECK-ARM-NEXT:    movwne r1, #0
 ; CHECK-ARM-NEXT:    bx lr

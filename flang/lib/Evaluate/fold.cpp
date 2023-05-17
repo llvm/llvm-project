@@ -9,6 +9,8 @@
 #include "flang/Evaluate/fold.h"
 #include "fold-implementation.h"
 #include "flang/Evaluate/characteristics.h"
+#include "flang/Evaluate/initial-image.h"
+#include "flang/Evaluate/tools.h"
 
 namespace Fortran::evaluate {
 
@@ -71,13 +73,17 @@ Expr<SomeDerived> FoldOperation(
   for (auto &&[symbol, value] : std::move(structure)) {
     auto expr{Fold(context, std::move(value.value()))};
     if (IsPointer(symbol)) {
-      if (IsProcedure(symbol)) {
+      if (IsNullPointer(expr)) {
+        // Handle x%c when x designates a named constant of derived
+        // type and %c is NULL() in that constant.
+        expr = Expr<SomeType>{NullPointer{}};
+      } else if (IsProcedure(symbol)) {
         isConstant &= IsInitialProcedureTarget(expr);
       } else {
         isConstant &= IsInitialDataTarget(expr);
       }
     } else {
-      isConstant &= IsActuallyConstant(expr);
+      isConstant &= IsActuallyConstant(expr) || IsNullPointer(expr);
       if (auto valueShape{GetConstantExtents(context, expr)}) {
         if (auto componentShape{GetConstantExtents(context, symbol)}) {
           if (GetRank(*componentShape) > 0 && GetRank(*valueShape) == 0) {
@@ -86,6 +92,14 @@ Expr<SomeDerived> FoldOperation(
             isConstant &= expr.Rank() > 0;
           } else {
             isConstant &= *valueShape == *componentShape;
+          }
+          if (*valueShape == *componentShape) {
+            if (auto lbounds{AsConstantExtents(
+                    context, GetLBOUNDs(context, NamedEntity{symbol}))}) {
+              expr =
+                  ArrayConstantBoundChanger{std::move(*lbounds)}.ChangeLbounds(
+                      std::move(expr));
+            }
           }
         }
       }
@@ -191,24 +205,9 @@ ComplexPart FoldOperation(FoldingContext &context, ComplexPart &&complexPart) {
       FoldOperation(context, std::move(complex)), complexPart.part()};
 }
 
-std::optional<std::int64_t> GetInt64Arg(
-    const std::optional<ActualArgument> &arg) {
-  if (const auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(arg)}) {
-    return ToInt64(*intExpr);
-  } else {
-    return std::nullopt;
-  }
-}
-
 std::optional<std::int64_t> GetInt64ArgOr(
     const std::optional<ActualArgument> &arg, std::int64_t defaultValue) {
-  if (!arg) {
-    return defaultValue;
-  } else if (const auto *intExpr{UnwrapExpr<Expr<SomeInteger>>(arg)}) {
-    return ToInt64(*intExpr);
-  } else {
-    return std::nullopt;
-  }
+  return arg ? ToInt64(*arg) : defaultValue;
 }
 
 Expr<ImpliedDoIndex::Result> FoldOperation(
@@ -218,6 +217,72 @@ Expr<ImpliedDoIndex::Result> FoldOperation(
   } else {
     return Expr<ImpliedDoIndex::Result>{std::move(iDo)};
   }
+}
+
+// TRANSFER (F'2018 16.9.193)
+std::optional<Expr<SomeType>> FoldTransfer(
+    FoldingContext &context, const ActualArguments &arguments) {
+  CHECK(arguments.size() == 2 || arguments.size() == 3);
+  const auto *source{UnwrapExpr<Expr<SomeType>>(arguments[0])};
+  std::optional<std::size_t> sourceBytes;
+  if (source) {
+    if (auto sourceTypeAndShape{
+            characteristics::TypeAndShape::Characterize(*source, context)}) {
+      if (auto sourceBytesExpr{
+              sourceTypeAndShape->MeasureSizeInBytes(context)}) {
+        sourceBytes = ToInt64(*sourceBytesExpr);
+      }
+    }
+  }
+  std::optional<DynamicType> moldType;
+  std::optional<std::int64_t> moldLength;
+  if (arguments[1]) { // MOLD=
+    moldType = arguments[1]->GetType();
+    if (moldType && moldType->category() == TypeCategory::Character) {
+      if (const auto *chExpr{UnwrapExpr<Expr<SomeCharacter>>(arguments[1])}) {
+        moldLength = ToInt64(Fold(context, chExpr->LEN()));
+      }
+    }
+  }
+  std::optional<ConstantSubscripts> extents;
+  if (arguments.size() == 2) { // no SIZE=
+    if (moldType && sourceBytes) {
+      if (arguments[1]->Rank() == 0) { // scalar MOLD=
+        extents = ConstantSubscripts{}; // empty extents (scalar result)
+      } else if (auto moldBytesExpr{
+                     moldType->MeasureSizeInBytes(context, true)}) {
+        if (auto moldBytes{ToInt64(Fold(context, std::move(*moldBytesExpr)))};
+            *moldBytes > 0) {
+          extents = ConstantSubscripts{
+              static_cast<ConstantSubscript>((*sourceBytes) + *moldBytes - 1) /
+              *moldBytes};
+        }
+      }
+    }
+  } else if (arguments[2]) { // SIZE= is present
+    if (const auto *sizeExpr{arguments[2]->UnwrapExpr()}) {
+      if (auto sizeValue{ToInt64(*sizeExpr)}) {
+        extents = ConstantSubscripts{*sizeValue};
+      }
+    }
+  }
+  if (sourceBytes && IsActuallyConstant(*source) && moldType && extents &&
+      (moldLength || moldType->category() != TypeCategory::Character)) {
+    std::size_t elements{
+        extents->empty() ? 1 : static_cast<std::size_t>((*extents)[0])};
+    std::size_t totalBytes{*sourceBytes * elements};
+    // Don't fold intentional overflow cases from sneaky tests
+    if (totalBytes < std::size_t{1000000} &&
+        (elements == 0 || totalBytes / elements == *sourceBytes)) {
+      InitialImage image{*sourceBytes};
+      InitialImage::Result imageResult{
+          image.Add(0, *sourceBytes, *source, context)};
+      CHECK(imageResult == InitialImage::Ok);
+      return image.AsConstant(
+          context, *moldType, moldLength, *extents, true /*pad with 0*/);
+    }
+  }
+  return std::nullopt;
 }
 
 template class ExpressionBase<SomeDerived>;

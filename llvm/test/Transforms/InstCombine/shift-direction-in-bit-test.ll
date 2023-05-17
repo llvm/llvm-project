@@ -126,7 +126,7 @@ define i1 @t6_twoshifts1(i32 %a, i32 %b, i32 %c, i32 %d) {
 
 define i1 @t7_twoshifts2(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @t7_twoshifts2(
-; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[B:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i32 1, [[B:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = shl i32 [[C:%.*]], [[D:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T2]], 0
@@ -142,7 +142,7 @@ define i1 @t7_twoshifts2(i32 %a, i32 %b, i32 %c, i32 %d) {
 define i1 @t8_twoshifts3(i32 %a, i32 %b, i32 %c, i32 %d) {
 ; CHECK-LABEL: @t8_twoshifts3(
 ; CHECK-NEXT:    [[T0:%.*]] = shl i32 [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[T1:%.*]] = shl i32 1, [[D:%.*]]
+; CHECK-NEXT:    [[T1:%.*]] = shl nuw i32 1, [[D:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = and i32 [[T1]], [[T0]]
 ; CHECK-NEXT:    [[T3:%.*]] = icmp eq i32 [[T2]], 0
 ; CHECK-NEXT:    ret i1 [[T3]]
@@ -213,7 +213,7 @@ define i1 @t11_extrause2(i32 %x, i32 %y, i32 %z) {
 
 define i1 @t12_shift_of_const0(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @t12_shift_of_const0(
-; CHECK-NEXT:    [[T0:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[T1:%.*]] = and i32 [[T0]], [[Z:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[T1]], 0
 ; CHECK-NEXT:    ret i1 [[T2]]
@@ -250,7 +250,7 @@ define i1 @t14_and_with_const0(i32 %x, i32 %y, i32 %z) {
 }
 define i1 @t15_and_with_const1(i32 %x, i32 %y, i32 %z) {
 ; CHECK-LABEL: @t15_and_with_const1(
-; CHECK-NEXT:    [[TMP1:%.*]] = shl i32 1, [[Y:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = shl nuw i32 1, [[Y:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i32 [[TMP1]], [[X:%.*]]
 ; CHECK-NEXT:    [[T2:%.*]] = icmp eq i32 [[TMP2]], 0
 ; CHECK-NEXT:    ret i1 [[T2]]

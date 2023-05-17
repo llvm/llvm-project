@@ -37,7 +37,7 @@ OptionGroupFormat::OptionGroupFormat(
     : m_format(default_format, default_format),
       m_byte_size(default_byte_size, default_byte_size),
       m_count(default_count, default_count), m_prev_gdb_format('x'),
-      m_prev_gdb_size('w') {
+      m_prev_gdb_size('w'), m_has_gdb_format(false) {
   // Copy the default option definitions.
   std::copy(std::begin(g_default_option_definitions),
             std::end(g_default_option_definitions),
@@ -58,7 +58,7 @@ OptionGroupFormat::OptionGroupFormat(
 }
 
 llvm::ArrayRef<OptionDefinition> OptionGroupFormat::GetDefinitions() {
-  auto result = llvm::makeArrayRef(m_option_definitions);
+  auto result = llvm::ArrayRef(m_option_definitions);
   if (m_byte_size.GetDefaultValue() < UINT64_MAX) {
     if (m_count.GetDefaultValue() < UINT64_MAX)
       return result;

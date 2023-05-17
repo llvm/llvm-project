@@ -13,7 +13,7 @@
 
 ; testb should be scheduled right before je to enable macro-fusion.
 
-define i32 @macrofuse_test_je(i32 %flags, i8* %p) nounwind {
+define i32 @macrofuse_test_je(i32 %flags, ptr %p) nounwind {
 ; NOFUSION-LABEL: macrofuse_test_je:
 ; NOFUSION:       # %bb.0: # %entry
 ; NOFUSION-NEXT:    xorl %eax, %eax
@@ -38,7 +38,7 @@ define i32 @macrofuse_test_je(i32 %flags, i8* %p) nounwind {
 entry:
   %and = and i32 %flags, 512
   %tobool = icmp eq i32 %and, 0
-  store i8 1, i8* %p
+  store i8 1, ptr %p
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
@@ -49,7 +49,7 @@ if.end:
   ret i32 %hasflag
 }
 
-define i32 @macrofuse_cmp_je(i32 %flags, i8* %p) nounwind {
+define i32 @macrofuse_cmp_je(i32 %flags, ptr %p) nounwind {
 ; NOFUSION-LABEL: macrofuse_cmp_je:
 ; NOFUSION:       # %bb.0: # %entry
 ; NOFUSION-NEXT:    cmpl $512, %edi # imm = 0x200
@@ -76,7 +76,7 @@ define i32 @macrofuse_cmp_je(i32 %flags, i8* %p) nounwind {
 entry:
   %sub = sub i32 %flags, 512
   %tobool = icmp eq i32 %sub, 0
-  store i8 1, i8* %p
+  store i8 1, ptr %p
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
@@ -87,7 +87,7 @@ if.end:
   ret i32 %hasflag
 }
 
-define i32 @macrofuse_alu_je(i32 %flags, i8* %p) nounwind {
+define i32 @macrofuse_alu_je(i32 %flags, ptr %p) nounwind {
 ; NOFUSION_NOPOSTRA-LABEL: macrofuse_alu_je:
 ; NOFUSION_NOPOSTRA:       # %bb.0: # %entry
 ; NOFUSION_NOPOSTRA-NEXT:    movl %edi, %eax
@@ -167,7 +167,7 @@ define i32 @macrofuse_alu_je(i32 %flags, i8* %p) nounwind {
 entry:
   %sub = sub i32 %flags, 512
   %tobool = icmp eq i32 %sub, 0
-  store i8 1, i8* %p
+  store i8 1, ptr %p
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:
@@ -178,7 +178,7 @@ if.end:
   ret i32 %hasflag
 }
 
-define i32 @macrofuse_dec_je(i32 %flags, i8* %p) nounwind {
+define i32 @macrofuse_dec_je(i32 %flags, ptr %p) nounwind {
 ; NOFUSION_NOPOSTRA-LABEL: macrofuse_dec_je:
 ; NOFUSION_NOPOSTRA:       # %bb.0: # %entry
 ; NOFUSION_NOPOSTRA-NEXT:    movl %edi, %eax
@@ -258,7 +258,7 @@ define i32 @macrofuse_dec_je(i32 %flags, i8* %p) nounwind {
 entry:
   %sub = sub i32 %flags, 1
   %tobool = icmp eq i32 %sub, 0
-  store i8 1, i8* %p
+  store i8 1, ptr %p
   br i1 %tobool, label %if.end, label %if.then
 
 if.then:

@@ -31,10 +31,10 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32 %N, i32* noalias %valid, i32* noalias %ptr, i32* noalias %A) {
+define void @f(i32 %N, ptr noalias %valid, ptr noalias %ptr, ptr noalias %A) {
 entry:
-  %ptr.addr = alloca i32*, align 8
-  store i32* %ptr, i32** %ptr.addr, align 8
+  %ptr.addr = alloca ptr, align 8
+  store ptr %ptr, ptr %ptr.addr, align 8
   %tmp = sext i32 %N to i64
   br label %for.cond
 
@@ -44,22 +44,22 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %valid_val = load i32, i32* %valid, align 4
+  %valid_val = load i32, ptr %valid, align 4
   %cmp1 = icmp eq i32 %valid_val, 0
   br i1 %cmp1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %for.body
-  call void @doSth(i32** nonnull %ptr.addr)
+  call void @doSth(ptr nonnull %ptr.addr)
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %for.body
   br label %S
 
 S:                                                ; preds = %if.end
-  %tmp2 = load i32*, i32** %ptr.addr, align 8
-  %tmp3 = load i32, i32* %tmp2, align 4
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %tmp3, i32* %arrayidx, align 4
+  %tmp2 = load ptr, ptr %ptr.addr, align 8
+  %tmp3 = load i32, ptr %tmp2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %tmp3, ptr %arrayidx, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %S
@@ -70,4 +70,4 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
-declare void @doSth(i32**)
+declare void @doSth(ptr)

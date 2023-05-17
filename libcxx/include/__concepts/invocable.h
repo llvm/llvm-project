@@ -12,7 +12,6 @@
 #include <__config>
 #include <__functional/invoke.h>
 #include <__utility/forward.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,7 +19,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.invocable]
 
@@ -34,7 +33,7 @@ concept invocable = requires(_Fn&& __fn, _Args&&... __args) {
 template<class _Fn, class... _Args>
 concept regular_invocable = invocable<_Fn, _Args...>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

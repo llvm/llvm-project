@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify %s
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -std=c++1z -Wc++14-compat -verify %s -DCPP17
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -verify %std_cxx98-14 %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value -Wc++14-compat -verify %std_cxx17- %s -DCPP17
 
 int f();
 
@@ -63,8 +63,6 @@ void whileInitStatement() {
   // expected-note@-1 {{to match this '('}}
   // expected-error@-2 {{expected ';' after expression}}
   // expected-error@-3 {{expected expression}}
-  // expected-warning@-4 {{while loop has empty body}}
-  // expected-note@-5 {{put the semicolon on a separate line to silence this warning}}
 }
 
 // TODO: This is needed because clang can't seem to diagnose invalid syntax after the

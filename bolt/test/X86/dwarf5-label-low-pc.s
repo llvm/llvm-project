@@ -3,7 +3,7 @@
 
 # RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %s -o %tmain.o
 # RUN: %clang %cflags -dwarf-5 %tmain.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
 
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt

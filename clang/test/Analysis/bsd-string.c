@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -w -verify %s \
+// RUN: %clang_analyze_cc1 -w -Wno-int-conversion -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=unix.cstring.NullArg \
 // RUN:   -analyzer-checker=alpha.unix.cstring \

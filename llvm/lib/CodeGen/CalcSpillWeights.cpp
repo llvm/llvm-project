@@ -61,7 +61,7 @@ Register VirtRegAuxInfo::copyHint(const MachineInstr *MI, unsigned Reg,
   if (!HReg)
     return 0;
 
-  if (Register::isVirtualRegister(HReg))
+  if (HReg.isVirtual())
     return Sub == HSub ? HReg : Register();
 
   const TargetRegisterClass *RC = MRI.getRegClass(Reg);
@@ -107,7 +107,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
 
       // If the original (pre-splitting) registers match this
       // copy came from a split.
-      if (!Register::isVirtualRegister(Reg) || VRM.getOriginal(Reg) != Original)
+      if (!Reg.isVirtual() || VRM.getOriginal(Reg) != Original)
         return false;
 
       // Follow the copy live-in value.
@@ -121,7 +121,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
       assert(MI && "Dead valno in interval");
     }
 
-    if (!TII.isTriviallyReMaterializable(*MI, LIS.getAliasAnalysis()))
+    if (!TII.isTriviallyReMaterializable(*MI))
       return false;
   }
   return true;
@@ -133,7 +133,7 @@ bool VirtRegAuxInfo::isLiveAtStatepointVarArg(LiveInterval &LI) {
     MachineInstr *MI = MO.getParent();
     if (MI->getOpcode() != TargetOpcode::STATEPOINT)
       return false;
-    return StatepointOpers(MI).getVarIdx() <= MI->getOperandNo(&MO);
+    return StatepointOpers(MI).getVarIdx() <= MO.getOperandNo();
   });
 }
 
@@ -143,11 +143,6 @@ void VirtRegAuxInfo::calculateSpillWeightAndHint(LiveInterval &LI) {
   if (Weight < 0)
     return;
   LI.setWeight(Weight);
-}
-
-float VirtRegAuxInfo::futureWeight(LiveInterval &LI, SlotIndex Start,
-                                   SlotIndex End) {
-  return weightCalcHelper(LI, &Start, &End);
 }
 
 float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
@@ -162,7 +157,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
   unsigned NumInstr = 0; // Number of instructions using LI
   SmallPtrSet<MachineInstr *, 8> Visited;
 
-  std::pair<Register, Register> TargetHint = MRI.getRegAllocationHint(LI.reg());
+  std::pair<unsigned, Register> TargetHint = MRI.getRegAllocationHint(LI.reg());
 
   if (LI.isSpillable()) {
     Register Reg = LI.reg();
@@ -283,8 +278,8 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     if (TargetHint.first == 0 && TargetHint.second)
       MRI.clearSimpleHint(LI.reg());
 
-    std::set<Register> HintedRegs;
-    for (auto &Hint : CopyHints) {
+    SmallSet<Register, 4> HintedRegs;
+    for (const auto &Hint : CopyHints) {
       if (!HintedRegs.insert(Hint.Reg).second ||
           (TargetHint.first != 0 && Hint.Reg == TargetHint.second))
         // Don't add the same reg twice or the target-type hint again.

@@ -13,15 +13,13 @@
 #include "../GlobList.h"
 #include "clang/Lex/PPCallbacks.h"
 
-namespace clang {
-namespace tidy {
-namespace portability {
+namespace clang::tidy::portability {
 
 /// Checks for allowed includes and suggests removal of any others. If no
 /// includes are specified, the check will exit without issuing any warnings.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/portability-restrict-system-includes.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/portability/restrict-system-includes.html
 class RestrictSystemIncludesCheck : public ClangTidyCheck {
 public:
   RestrictSystemIncludesCheck(StringRef Name, ClangTidyContext *Context,
@@ -51,7 +49,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void EndOfMainFile() override;
@@ -78,8 +76,6 @@ private:
   const SourceManager &SM;
 };
 
-} // namespace portability 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::portability
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_PORTABILITY_RESTRICTINCLUDESSCHECK_H

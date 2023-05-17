@@ -6,14 +6,14 @@
 ; check.
 ; LatchExitProbability: 0x04000000 / 0x80000000 = 3.12%
 ; ExitingBlockProbability: 0x7ffa572a / 0x80000000 = 99.98%
-define i64 @donot_predicate(i64* nocapture readonly %arg, i32 %length, i64* nocapture readonly %arg2, i64* nocapture readonly %n_addr, i64 %i) !prof !21 {
+define i64 @donot_predicate(ptr nocapture readonly %arg, i32 %length, ptr nocapture readonly %arg2, ptr nocapture readonly %n_addr, i64 %i) !prof !21 {
 ; CHECK-LABEL: @donot_predicate(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH:%.*]] to i64
-; CHECK-NEXT:    [[N_PRE:%.*]] = load i64, i64* [[N_ADDR:%.*]], align 4
+; CHECK-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR:%.*]], align 4
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       Header:
-; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi i64* [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi ptr [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[J2:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i64 [[J2]], [[LENGTH_EXT]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
@@ -27,17 +27,17 @@ define i64 @donot_predicate(i64* nocapture readonly %arg, i32 %length, i64* noca
 ; CHECK-NEXT:    [[COUNTED_SPECULATION_FAILED:%.*]] = call i64 (...) @llvm.experimental.deoptimize.i64(i64 30) [ "deopt"(i32 0) ]
 ; CHECK-NEXT:    ret i64 [[COUNTED_SPECULATION_FAILED]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT_IN3_LCSSA:%.*]] = phi i64* [ [[RESULT_IN3]], [[HEADER]] ]
-; CHECK-NEXT:    [[RESULT_LE:%.*]] = load i64, i64* [[RESULT_IN3_LCSSA]], align 8
+; CHECK-NEXT:    [[RESULT_IN3_LCSSA:%.*]] = phi ptr [ [[RESULT_IN3]], [[HEADER]] ]
+; CHECK-NEXT:    [[RESULT_LE:%.*]] = load i64, ptr [[RESULT_IN3_LCSSA]], align 8
 ; CHECK-NEXT:    ret i64 [[RESULT_LE]]
 ;
 entry:
   %length.ext = zext i32 %length to i64
-  %n.pre = load i64, i64* %n_addr, align 4
+  %n.pre = load i64, ptr %n_addr, align 4
   br label %Header
 
 Header:                                          ; preds = %entry, %Latch
-  %result.in3 = phi i64* [ %arg2, %entry ], [ %arg, %Latch ]
+  %result.in3 = phi ptr [ %arg2, %entry ], [ %arg, %Latch ]
   %j2 = phi i64 [ 0, %entry ], [ %j.next, %Latch ]
   %within.bounds = icmp ult i64 %j2, %length.ext
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
@@ -54,27 +54,30 @@ deopt:                                            ; preds = %Latch
   ret i64 %counted_speculation_failed
 
 exit:                                             ; preds = %Header
-  %result.in3.lcssa = phi i64* [ %result.in3, %Header ]
-  %result.le = load i64, i64* %result.in3.lcssa, align 8
+  %result.in3.lcssa = phi ptr [ %result.in3, %Header ]
+  %result.le = load i64, ptr %result.in3.lcssa, align 8
   ret i64 %result.le
 }
 !0 = !{!"branch_weights", i32 18, i32 104200}
 
 ; predicate loop since there's no profile information and BPI concluded all
 ; exiting blocks have same probability of exiting from loop.
-define i64 @predicate(i64* nocapture readonly %arg, i32 %length, i64* nocapture readonly %arg2, i64* nocapture readonly %n_addr, i64 %i) !prof !21 {
+define i64 @predicate(ptr nocapture readonly %arg, i32 %length, ptr nocapture readonly %arg2, ptr nocapture readonly %n_addr, i64 %i) !prof !21 {
 ; CHECK-LABEL: @predicate(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH:%.*]] to i64
-; CHECK-NEXT:    [[N_PRE:%.*]] = load i64, i64* [[N_ADDR:%.*]], align 4
+; CHECK-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR:%.*]], align 4
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ule i64 1048576, [[LENGTH_EXT]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i64 0, [[LENGTH_EXT]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = and i1 [[TMP1]], [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = freeze i1 [[TMP2]]
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       Header:
-; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi i64* [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi ptr [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[J2:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LATCH]] ]
-; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP2]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i64 [[J2]], [[LENGTH_EXT]]
+; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[TMP3]], i32 9) [ "deopt"() ]
+; CHECK-NEXT:    call void @llvm.assume(i1 [[WITHIN_BOUNDS]])
 ; CHECK-NEXT:    [[INNERCMP:%.*]] = icmp eq i64 [[J2]], [[N_PRE]]
 ; CHECK-NEXT:    [[J_NEXT]] = add nuw nsw i64 [[J2]], 1
 ; CHECK-NEXT:    br i1 [[INNERCMP]], label [[LATCH]], label [[EXIT:%.*]]
@@ -84,17 +87,17 @@ define i64 @predicate(i64* nocapture readonly %arg, i32 %length, i64* nocapture 
 ; CHECK:       exitLatch:
 ; CHECK-NEXT:    ret i64 1
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT_IN3_LCSSA:%.*]] = phi i64* [ [[RESULT_IN3]], [[HEADER]] ]
-; CHECK-NEXT:    [[RESULT_LE:%.*]] = load i64, i64* [[RESULT_IN3_LCSSA]], align 8
+; CHECK-NEXT:    [[RESULT_IN3_LCSSA:%.*]] = phi ptr [ [[RESULT_IN3]], [[HEADER]] ]
+; CHECK-NEXT:    [[RESULT_LE:%.*]] = load i64, ptr [[RESULT_IN3_LCSSA]], align 8
 ; CHECK-NEXT:    ret i64 [[RESULT_LE]]
 ;
 entry:
   %length.ext = zext i32 %length to i64
-  %n.pre = load i64, i64* %n_addr, align 4
+  %n.pre = load i64, ptr %n_addr, align 4
   br label %Header
 
 Header:                                          ; preds = %entry, %Latch
-  %result.in3 = phi i64* [ %arg2, %entry ], [ %arg, %Latch ]
+  %result.in3 = phi ptr [ %arg2, %entry ], [ %arg, %Latch ]
   %j2 = phi i64 [ 0, %entry ], [ %j.next, %Latch ]
   %within.bounds = icmp ult i64 %j2, %length.ext
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
@@ -110,8 +113,8 @@ exitLatch:                                            ; preds = %Latch
   ret i64 1
 
 exit:                                             ; preds = %Header
-  %result.in3.lcssa = phi i64* [ %result.in3, %Header ]
-  %result.le = load i64, i64* %result.in3.lcssa, align 8
+  %result.in3.lcssa = phi ptr [ %result.in3, %Header ]
+  %result.le = load i64, ptr %result.in3.lcssa, align 8
   ret i64 %result.le
 }
 
@@ -119,14 +122,14 @@ exit:                                             ; preds = %Header
 ; the loop is the header exiting block (not the latch block). So do not predicate.
 ; LatchExitProbability: 0x000020e1 / 0x80000000 = 0.00%
 ; ExitingBlockProbability: 0x7ffcbb86 / 0x80000000 = 99.99%
-define i64 @donot_predicate_prof(i64* nocapture readonly %arg, i32 %length, i64* nocapture readonly %arg2, i64* nocapture readonly %n_addr, i64 %i) !prof !21 {
+define i64 @donot_predicate_prof(ptr nocapture readonly %arg, i32 %length, ptr nocapture readonly %arg2, ptr nocapture readonly %n_addr, i64 %i) !prof !21 {
 ; CHECK-LABEL: @donot_predicate_prof(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[LENGTH_EXT:%.*]] = zext i32 [[LENGTH:%.*]] to i64
-; CHECK-NEXT:    [[N_PRE:%.*]] = load i64, i64* [[N_ADDR:%.*]], align 4
+; CHECK-NEXT:    [[N_PRE:%.*]] = load i64, ptr [[N_ADDR:%.*]], align 4
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       Header:
-; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi i64* [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
+; CHECK-NEXT:    [[RESULT_IN3:%.*]] = phi ptr [ [[ARG2:%.*]], [[ENTRY:%.*]] ], [ [[ARG:%.*]], [[LATCH:%.*]] ]
 ; CHECK-NEXT:    [[J2:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[J_NEXT:%.*]], [[LATCH]] ]
 ; CHECK-NEXT:    [[WITHIN_BOUNDS:%.*]] = icmp ult i64 [[J2]], [[LENGTH_EXT]]
 ; CHECK-NEXT:    call void (i1, ...) @llvm.experimental.guard(i1 [[WITHIN_BOUNDS]], i32 9) [ "deopt"() ]
@@ -139,17 +142,17 @@ define i64 @donot_predicate_prof(i64* nocapture readonly %arg, i32 %length, i64*
 ; CHECK:       exitLatch:
 ; CHECK-NEXT:    ret i64 1
 ; CHECK:       exit:
-; CHECK-NEXT:    [[RESULT_IN3_LCSSA:%.*]] = phi i64* [ [[RESULT_IN3]], [[HEADER]] ]
-; CHECK-NEXT:    [[RESULT_LE:%.*]] = load i64, i64* [[RESULT_IN3_LCSSA]], align 8
+; CHECK-NEXT:    [[RESULT_IN3_LCSSA:%.*]] = phi ptr [ [[RESULT_IN3]], [[HEADER]] ]
+; CHECK-NEXT:    [[RESULT_LE:%.*]] = load i64, ptr [[RESULT_IN3_LCSSA]], align 8
 ; CHECK-NEXT:    ret i64 [[RESULT_LE]]
 ;
 entry:
   %length.ext = zext i32 %length to i64
-  %n.pre = load i64, i64* %n_addr, align 4
+  %n.pre = load i64, ptr %n_addr, align 4
   br label %Header
 
 Header:                                          ; preds = %entry, %Latch
-  %result.in3 = phi i64* [ %arg2, %entry ], [ %arg, %Latch ]
+  %result.in3 = phi ptr [ %arg2, %entry ], [ %arg, %Latch ]
   %j2 = phi i64 [ 0, %entry ], [ %j.next, %Latch ]
   %within.bounds = icmp ult i64 %j2, %length.ext
   call void (i1, ...) @llvm.experimental.guard(i1 %within.bounds, i32 9) [ "deopt"() ]
@@ -165,8 +168,8 @@ exitLatch:                                            ; preds = %Latch
   ret i64 1
 
 exit:                                             ; preds = %Header
-  %result.in3.lcssa = phi i64* [ %result.in3, %Header ]
-  %result.le = load i64, i64* %result.in3.lcssa, align 8
+  %result.in3.lcssa = phi ptr [ %result.in3, %Header ]
+  %result.le = load i64, ptr %result.in3.lcssa, align 8
   ret i64 %result.le
 }
 declare i64 @llvm.experimental.deoptimize.i64(...)

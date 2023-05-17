@@ -13,13 +13,13 @@ entry:
 
 declare i64 @llvm.x86.tbm.bextri.u64(i64, i64) nounwind readnone
 
-define i64 @test_x86_tbm_bextri_u64_m(i64* nocapture %a) nounwind readonly {
+define i64 @test_x86_tbm_bextri_u64_m(ptr nocapture %a) nounwind readonly {
 ; CHECK-LABEL: test_x86_tbm_bextri_u64_m:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    bextrq $3841, (%rdi), %rax # imm = 0xF01
 ; CHECK-NEXT:    retq
 entry:
-  %tmp1 = load i64, i64* %a, align 8
+  %tmp1 = load i64, ptr %a, align 8
   %0 = tail call i64 @llvm.x86.tbm.bextri.u64(i64 %tmp1, i64 3841)
   ret i64 %0
 }

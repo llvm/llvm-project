@@ -57,11 +57,11 @@
 
 
 # RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk -lSystem
-# RUN: llvm-objdump --macho --all-headers %t/out | FileCheck --check-prefix=NO-ADHOC %s
+# RUN: llvm-objdump --macho --all-headers %t/out | FileCheck --check-prefix=ADHOC %s
 # RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -dylib   -o %t/out %t/foo-arm64-sim.o
-# RUN: llvm-objdump --macho --all-headers  %t/out| FileCheck --check-prefix=NO-ADHOC %s
+# RUN: llvm-objdump --macho --all-headers  %t/out| FileCheck --check-prefix=ADHOC %s
 # RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -bundle  -o %t/out %t/foo-arm64-sim.o
-# RUN: llvm-objdump --macho --all-headers  %t/out| FileCheck --check-prefix=NO-ADHOC %s
+# RUN: llvm-objdump --macho --all-headers  %t/out| FileCheck --check-prefix=ADHOC %s
 
 # RUN: %no-arg-lld -arch arm64 -platform_version ios-simulator 14.0 15.0 -execute -adhoc_codesign -o %t/out %t/main-arm64-sim.o -syslibroot %S/Inputs/iPhoneSimulator.sdk -lSystem
 # RUN: llvm-objdump --macho --all-headers %t/out| FileCheck --check-prefix=ADHOC %s

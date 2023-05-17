@@ -4,7 +4,7 @@
 
 #include <emmintrin.h>
 
-int to_int(double v) {
+int to_int(double &v) {
   __m128d t = _mm_set_sd(v);
   int x = _mm_cvtsd_si32(t);
   return x;

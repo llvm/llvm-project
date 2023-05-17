@@ -199,7 +199,7 @@ private:
     SmallVector<unsigned> CellCounts;
     unsigned InitialSpaces = 0;
 
-    // Determine if every row in the the array
+    // Determine if every row in the array
     // has the same number of columns.
     bool isRectangular() const {
       if (CellCounts.empty())
@@ -294,7 +294,7 @@ private:
         calculateCellWidth(CellIter->Index, CellIter->EndIndex, true);
     if (Changes[CellIter->Index].NewlinesBefore == 0)
       CellWidth += NetWidth;
-    for (const auto *Next = CellIter->NextColumnElement; Next != nullptr;
+    for (const auto *Next = CellIter->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
       auto ThisWidth = calculateCellWidth(Next->Index, Next->EndIndex, true);
       if (Changes[Next->Index].NewlinesBefore == 0)
@@ -312,7 +312,7 @@ private:
     auto MaxNetWidth = getNetWidth(CellStart, CellStop, InitialSpaces);
     auto RowCount = 1U;
     auto Offset = std::distance(CellStart, CellStop);
-    for (const auto *Next = CellStop->NextColumnElement; Next != nullptr;
+    for (const auto *Next = CellStop->NextColumnElement; Next;
          Next = Next->NextColumnElement) {
       if (RowCount > MaxRowCount)
         break;

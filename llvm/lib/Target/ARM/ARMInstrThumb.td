@@ -501,11 +501,11 @@ let isBranch = 1, isTerminator = 1, isBarrier = 1, isIndirectBranch = 1 in {
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def tBX_RET : tPseudoExpand<(outs), (ins pred:$p), 2, IIC_Br,
-                   [(ARMretflag)], (tBX LR, pred:$p)>, Sched<[WriteBr]>;
+                   [(ARMretglue)], (tBX LR, pred:$p)>, Sched<[WriteBr]>;
 
   // alternative return for CMSE entry functions
   def tBXNS_RET : tPseudoInst<(outs), (ins), 2, IIC_Br,
-                  [(ARMseretflag)]>, Sched<[WriteBr]>;
+                  [(ARMseretglue)]>, Sched<[WriteBr]>;
 
   // Alternative return instruction used by vararg functions.
   def tBX_RET_vararg : tPseudoExpand<(outs), (ins tGPR:$Rm, pred:$p),
@@ -1782,11 +1782,15 @@ def tLDRConstPool
 
 let Constraints = "@earlyclobber $Rd,@earlyclobber $temp",
     mayLoad = 1, mayStore = 1 in {
-def tCMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+def tCMP_SWAP_8 : PseudoInst<(outs GPR:$Rd, tGPR:$temp),
                              (ins GPR:$addr, tGPR:$desired, GPR:$new),
                              NoItinerary, []>, Sched<[]>;
 
-def tCMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, GPR:$temp),
+def tCMP_SWAP_16 : PseudoInst<(outs GPR:$Rd, tGPR:$temp),
                               (ins GPR:$addr, tGPR:$desired, GPR:$new),
+                              NoItinerary, []>, Sched<[]>;
+
+def tCMP_SWAP_32 : PseudoInst<(outs GPR:$Rd, tGPR:$temp),
+                              (ins GPR:$addr, GPR:$desired, GPR:$new),
                               NoItinerary, []>, Sched<[]>;
 }

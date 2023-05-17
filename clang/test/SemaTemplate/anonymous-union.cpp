@@ -8,7 +8,7 @@ struct T0 {
   };
 };
 template <typename T>
-struct T1 : public T0, public T { //expected-warning{{direct base 'T0' is inaccessible due to ambiguity:\n    struct T1<struct A> -> struct T0\n    struct T1<struct A> -> struct A -> struct T0}}
+struct T1 : public T0, public T { //expected-warning{{direct base 'T0' is inaccessible due to ambiguity:\n    struct T1<struct A> -> T0\n    struct T1<struct A> -> A -> T0}}
   void f0() { 
     m0 = 0; // expected-error{{ambiguous conversion}}
   } 

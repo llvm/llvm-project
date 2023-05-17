@@ -1,6 +1,6 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=powerpc64-unknown-linux-gnu.5
 
-define void @__multc3({ ppc_fp128, ppc_fp128 }* noalias sret({ ppc_fp128, ppc_fp128 }) %agg.result, ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) nounwind {
+define void @__multc3(ptr noalias sret({ ppc_fp128, ppc_fp128 }) %agg.result, ppc_fp128 %a, ppc_fp128 %b, ppc_fp128 %c, ppc_fp128 %d) nounwind {
 entry:
 	%.pre139 = and i1 false, false		; <i1> [#uses=1]
 	br i1 false, label %bb6, label %bb21

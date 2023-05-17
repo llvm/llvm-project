@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template <class View, class Pattern>
 // class std::ranges::lazy_split_view;
@@ -20,13 +19,46 @@
 #include <algorithm>
 #include <array>
 #include <cassert>
+#include <concepts>
 #include <map>
-#include <string>
 #include <string_view>
+#include <string>
 #include <utility>
 #include <vector>
-#include "small_string.h"
 #include "types.h"
+
+// Basic utility to convert a range to a string-like type. This handles ranges
+// that do not contain character types and can work with non-contiguous inputs.
+template <class Char>
+class BasicSmallString {
+  std::vector<Char> buffer_{};
+
+public:
+  constexpr BasicSmallString(std::basic_string_view<Char> v)
+    requires (std::same_as<Char, char> ||
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
+              std::same_as<Char, wchar_t> ||
+#endif
+              std::same_as<Char, char8_t> ||
+              std::same_as<Char, char16_t> ||
+              std::same_as<Char, char32_t>)
+    : buffer_(v.begin(), v.end())
+  {}
+
+  template <class I, class S>
+  constexpr BasicSmallString(I b, const S& e) {
+    for (; b != e; ++b) {
+      buffer_.push_back(*b);
+    }
+  }
+
+  template <std::ranges::range R>
+  constexpr BasicSmallString(R&& from) : BasicSmallString(from.begin(), from.end()) {}
+
+  friend constexpr bool operator==(const BasicSmallString& lhs, const BasicSmallString& rhs) {
+    return lhs.buffer_ == rhs.buffer_;
+  }
+};
 
 template <std::ranges::view View, std::ranges::range Expected>
 constexpr bool is_equal(View& view, const Expected& expected) {
@@ -43,19 +75,19 @@ constexpr bool is_equal(View& view, const Expected& expected) {
   return actual_it == view.end() && expected_it == expected.end();
 }
 
-template <class T, class Separator, class U, size_t M>
+template <class T, class Separator, class U, std::size_t M>
 constexpr bool test_function_call(T&& input, Separator&& separator, std::array<U, M> expected) {
   std::ranges::lazy_split_view v(input, separator);
   return is_equal(v, expected);
 }
 
-template <class T, class Separator, class U, size_t M>
+template <class T, class Separator, class U, std::size_t M>
 constexpr bool test_with_piping(T&& input, Separator&& separator, std::array<U, M> expected) {
   auto expected_it = expected.begin();
   for (auto e : input | std::ranges::views::lazy_split(separator)) {
     if (expected_it == expected.end())
       return false;
-    if (SmallString(e) != *expected_it)
+    if (!std::ranges::equal(e, *expected_it))
       return false;
 
     ++expected_it;
@@ -134,7 +166,7 @@ constexpr std::string_view sv(T&& str) {
   return std::string_view(str);
 };
 
-template <class T, class Separator, class U, size_t M>
+template <class T, class Separator, class U, std::size_t M>
 constexpr void test_one(T&& input, Separator&& separator, std::array<U, M> expected) {
   assert(test_function_call(input, separator, expected));
   assert(test_with_piping(input, separator, expected));

@@ -17,18 +17,15 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 
-namespace llvm {
-namespace codeview {
+namespace llvm::codeview {
 struct GloballyHashedType;
-} // namespace codeview
-namespace pdb {
+}
+namespace llvm::pdb {
 class NativeSession;
 class TpiStream;
 }
-} // namespace llvm
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 using llvm::codeview::GloballyHashedType;
 using llvm::codeview::TypeIndex;
@@ -109,18 +106,18 @@ public:
   /// it is unique. This prevents a record from being added to the input ghash
   /// table.
   bool shouldOmitFromPdb(uint32_t ghashIdx) {
-    return ghashIdx == endPrecompGHashIdx;
+    return ghashIdx == endPrecompIdx;
   }
 
   const TpiKind kind;
   bool ownedGHashes = true;
   uint32_t tpiSrcIdx = 0;
 
-protected:
-  /// The ghash index (zero based, not 0x1000-based) of the LF_ENDPRECOMP record
-  /// in this object, if one exists. This is the all ones value otherwise. It is
-  /// recorded here so that it can be omitted from the final ghash table.
-  uint32_t endPrecompGHashIdx = ~0U;
+  /// The index (zero based, not 0x1000-based) of the LF_ENDPRECOMP record in
+  /// this object, if one exists. This is the all ones value otherwise. It is
+  /// recorded here for validation, and so that it can be omitted from the final
+  /// ghash table.
+  uint32_t endPrecompIdx = ~0U;
 
 public:
   ObjFile *file;
@@ -175,7 +172,6 @@ TpiSource *makePrecompSource(COFFLinkerContext &ctx, ObjFile *file);
 TpiSource *makeUsePrecompSource(COFFLinkerContext &ctx, ObjFile *file,
                                 llvm::codeview::PrecompRecord ts);
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff
 
 #endif

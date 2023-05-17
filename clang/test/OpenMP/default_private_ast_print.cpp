@@ -96,4 +96,57 @@ void bar() {
   // DUMP-NEXT:  -DeclRefExpr {{.*}} 'a'
   // DUMP-NEXT:  -DeclRefExpr {{.*}} 'yy'
 }
+
+void zoo(int);
+struct A {
+  int z;
+  int f;
+  A();
+  ~A();
+  void foo() {
+#pragma omp parallel private(z) default(private)
+    {
+      z++;
+      f++;
+      zoo(z + f);
+      f++;
+    }
+  }
+  // PRINT:    #pragma omp parallel private(this->z) default(private)
+  // DUMP:     -OMPParallelDirective
+  // DUMP-NEXT:  -OMPPrivateClause
+  // DUMP-NEXT:    -DeclRefExpr {{.*}} 'z'
+  // DUMP-NEXT:  -OMPDefaultClause
+  // DUMP-NEXT:  -OMPPrivateClause
+  // DUMP-NEXT:    -DeclRefExpr {{.*}} 'f'
+  // DUMP:         -CXXThisExpr {{.*}} 'A *' implicit this
+  void bar() {
+#pragma omp parallel private(z) default(private)
+    {
+#pragma omp parallel private(z) default(private)
+      {
+        z++;
+        f++;
+        zoo(z + f);
+        f++;
+      }
+    }
+  }
+  // PRINT:    #pragma omp parallel private(this->z) default(private)
+  // PRINT:          #pragma omp parallel private(this->z) default(private)
+  // DUMP:     -OMPParallelDirective
+  // DUMP-NEXT:  -OMPPrivateClause
+  // DUMP-NEXT:    -DeclRefExpr {{.*}} 'z'
+  // DUMP-NEXT:  -OMPDefaultClause
+  // DUMP:           -OMPParallelDirective
+  // DUMP-NEXT:        -OMPPrivateClause
+  // DUMP-NEXT:           -DeclRefExpr {{.*}} 'z'
+  // DUMP-NEXT:        -OMPDefaultClause
+  // DUMP-NEXT:        -OMPPrivateClause {{.*}} <implicit>
+  // DUMP-NEXT:           -DeclRefExpr {{.*}} 'f'
+  // DUMP:             -CXXThisExpr
+  // DUMP:         -MemberExpr
+  // DUMP-NEXT:       -CXXThisExpr
+  // DUMP:         -CXXThisExpr
+};
 #endif // HEADER

@@ -8,10 +8,10 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
 ; RUN:   -mcpu=pwr7 < %s | FileCheck %s --check-prefix=CHECK-AIX64
 
-declare void @llvm.ppc.dcbtstt(i8*)
-declare void @llvm.ppc.dcbtt(i8*)
+declare void @llvm.ppc.dcbtstt(ptr)
+declare void @llvm.ppc.dcbtt(ptr)
 
-@vpa = external local_unnamed_addr global i8*, align 8
+@vpa = external local_unnamed_addr global ptr, align 8
 
 define dso_local void @test_dcbtstt() {
 ; CHECK-LABEL: test_dcbtstt:
@@ -36,8 +36,8 @@ define dso_local void @test_dcbtstt() {
 ; CHECK-AIX64-NEXT:    dcbtst 0, 3, 16
 ; CHECK-AIX64-NEXT:    blr
 entry:
-  %0 = load i8*, i8** @vpa, align 8
-  tail call void @llvm.ppc.dcbtstt(i8* %0)
+  %0 = load ptr, ptr @vpa, align 8
+  tail call void @llvm.ppc.dcbtstt(ptr %0)
   ret void
 }
 
@@ -65,7 +65,7 @@ define dso_local void @test_dcbtt() {
 ; CHECK-AIX64-NEXT:    dcbt 0, 3, 16
 ; CHECK-AIX64-NEXT:    blr
 entry:
-  %0 = load i8*, i8** @vpa, align 8
-  tail call void @llvm.ppc.dcbtt(i8* %0)
+  %0 = load ptr, ptr @vpa, align 8
+  tail call void @llvm.ppc.dcbtt(ptr %0)
   ret void
 }

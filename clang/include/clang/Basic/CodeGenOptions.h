@@ -13,10 +13,10 @@
 #ifndef LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 #define LLVM_CLANG_BASIC_CODEGENOPTIONS_H
 
-#include "clang/Basic/DebugInfoOptions.h"
 #include "clang/Basic/Sanitizers.h"
 #include "clang/Basic/XRayInstr.h"
 #include "llvm/ADT/FloatingPointMode.h"
+#include "llvm/Frontend/Debug/Options.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Target/TargetOptions.h"
@@ -60,6 +60,7 @@ public:
     LIBMVEC,           // GLIBC vector math library.
     MASSV,             // IBM MASS vector library.
     SVML,              // Intel short vector math library.
+    SLEEF,             // SLEEF SIMD Library for Evaluating Elementary Functions.
     Darwin_libsystem_m // Use Darwin's libsytem_m vector functions.
   };
 
@@ -102,6 +103,12 @@ public:
     IAD_Intel,
   };
 
+  enum DebugSrcHashKind {
+    DSH_MD5,
+    DSH_SHA1,
+    DSH_SHA256,
+  };
+
   // This field stores one of the allowed values for the option
   // -fbasic-block-sections=.  The allowed values with this option are:
   // {"labels", "all", "list=<file>", "none"}.
@@ -130,6 +137,19 @@ public:
     All,         // Keep all frame pointers.
   };
 
+  static StringRef getFramePointerKindName(FramePointerKind Kind) {
+    switch (Kind) {
+    case FramePointerKind::None:
+      return "none";
+    case FramePointerKind::NonLeaf:
+      return "non-leaf";
+    case FramePointerKind::All:
+      return "all";
+    }
+
+    llvm_unreachable("invalid FramePointerKind");
+  }
+
   enum class SwiftAsyncFramePointerKind {
     Auto, // Choose Swift async extended frame info based on deployment target.
     Always, // Unconditionally emit Swift async extended frame info.
@@ -141,6 +161,12 @@ public:
     Language, // Not specified, use language standard.
     Always,   // All loops are assumed to be finite.
     Never,    // No loop is assumed to be finite.
+  };
+
+  enum AssignmentTrackingOpts {
+    Disabled,
+    Enabled,
+    Forced,
   };
 
   /// The code model to use (-mcmodel).
@@ -180,8 +206,11 @@ public:
   /// if non-empty.
   std::string RecordCommandLine;
 
-  std::map<std::string, std::string> DebugPrefixMap;
-  std::map<std::string, std::string> CoveragePrefixMap;
+  llvm::SmallVector<std::pair<std::string, std::string>, 0> DebugPrefixMap;
+
+  /// Prefix replacement map for source-based code coverage to remap source
+  /// file paths in coverage mapping.
+  llvm::SmallVector<std::pair<std::string, std::string>, 0> CoveragePrefixMap;
 
   /// The ABI to use for passing floating point arguments.
   std::string FloatABI;
@@ -306,12 +335,12 @@ public:
 
   /// Optimization remark with an optional regular expression pattern.
   struct OptRemark {
-    RemarkKind Kind;
+    RemarkKind Kind = RK_Missing;
     std::string Pattern;
     std::shared_ptr<llvm::Regex> Regex;
 
     /// By default, optimization remark is missing.
-    OptRemark() : Kind(RK_Missing), Regex(nullptr) {}
+    OptRemark() = default;
 
     /// Returns true iff the optimization remark holds a valid regular
     /// expression.
@@ -341,9 +370,6 @@ public:
   /// they want to explain why they decided to apply or not apply a given
   /// transformation.
   OptRemark OptimizationRemarkAnalysis;
-
-  /// Set of files defining the rules for the symbol rewriting.
-  std::vector<std::string> RewriteMapFiles;
 
   /// Set of sanitizer checks that are non-fatal (i.e. execution should be
   /// continued when possible).
@@ -389,10 +415,18 @@ public:
   /// On AArch64 this can only be "sp_el0".
   std::string StackProtectorGuardReg;
 
+  /// Specify a symbol to be the guard value.
+  std::string StackProtectorGuardSymbol;
+
   /// Path to ignorelist file specifying which objects
   /// (files, functions) listed for instrumentation by sanitizer
   /// coverage pass should actually not be instrumented.
   std::vector<std::string> SanitizeCoverageIgnorelistFiles;
+
+  /// Path to ignorelist file specifying which objects
+  /// (files, functions) listed for instrumentation by sanitizer
+  /// binary metadata pass should not be instrumented.
+  std::vector<std::string> SanitizeMetadataIgnorelistFiles;
 
   /// Name of the stack usage file (i.e., .su file) if user passes
   /// -fstack-usage. If empty, it can be implied that -fstack-usage is not
@@ -417,11 +451,14 @@ public:
   ///                    compilation.
   ///
   /// If threshold option is not specified, it is disabled by default.
-  Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
+  std::optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
   /// The maximum percentage profiling weights can deviate from the expected
   /// values in order to be included in misexpect diagnostics.
-  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  std::optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
+
+  /// The name of a file to use with \c .secure_log_unique directives.
+  std::string AsSecureLogFile;
 
 public:
   // Define accessors/mutators for code generation options of enumeration type.
@@ -468,19 +505,25 @@ public:
 
   /// Check if type and variable info should be emitted.
   bool hasReducedDebugInfo() const {
-    return getDebugInfo() >= codegenoptions::DebugInfoConstructor;
+    return getDebugInfo() >= llvm::codegenoptions::DebugInfoConstructor;
   }
 
   /// Check if maybe unused type info should be emitted.
   bool hasMaybeUnusedDebugInfo() const {
-    return getDebugInfo() >= codegenoptions::UnusedTypeInfo;
+    return getDebugInfo() >= llvm::codegenoptions::UnusedTypeInfo;
   }
 
   // Check if any one of SanitizeCoverage* is enabled.
   bool hasSanitizeCoverage() const {
     return SanitizeCoverageType || SanitizeCoverageIndirectCalls ||
            SanitizeCoverageTraceCmp || SanitizeCoverageTraceLoads ||
-           SanitizeCoverageTraceStores;
+           SanitizeCoverageTraceStores || SanitizeCoverageControlFlow;
+  }
+
+  // Check if any one of SanitizeBinaryMetadata* is enabled.
+  bool hasSanitizeBinaryMetadata() const {
+    return SanitizeBinaryMetadataCovered || SanitizeBinaryMetadataAtomics ||
+           SanitizeBinaryMetadataUAR;
   }
 };
 

@@ -10,6 +10,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Type.h"
+#include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Support/WithColor.h"
@@ -173,8 +174,19 @@ std::string EVT::getEVTString() const {
   case MVT::Untyped:   return "Untyped";
   case MVT::funcref:   return "funcref";
   case MVT::externref: return "externref";
+  case MVT::aarch64svcount:
+    return "aarch64svcount";
+  case MVT::spirvbuiltin:
+    return "spirvbuiltin";
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void EVT::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
 
 /// getTypeForEVT - This method returns an LLVM type corresponding to the
 /// specified EVT.  For integer types, this returns an unsigned type.  Note
@@ -202,14 +214,12 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
   case MVT::f128:    return Type::getFP128Ty(Context);
   case MVT::ppcf128: return Type::getPPC_FP128Ty(Context);
   case MVT::x86mmx:  return Type::getX86_MMXTy(Context);
+  case MVT::aarch64svcount:
+    return TargetExtType::get(Context, "aarch64.svcount");
   case MVT::x86amx:  return Type::getX86_AMXTy(Context);
   case MVT::i64x8:   return IntegerType::get(Context, 512);
-  case MVT::externref:
-    // pointer to opaque struct in addrspace(10)
-    return PointerType::get(StructType::create(Context), 10);
-  case MVT::funcref:
-    // pointer to i8 addrspace(20)
-    return PointerType::get(Type::getInt8Ty(Context), 20);
+  case MVT::externref: return Type::getWasm_ExternrefTy(Context);
+  case MVT::funcref: return Type::getWasm_FuncrefTy(Context);
   case MVT::v1i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 1);
   case MVT::v2i1:
@@ -232,10 +242,16 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt1Ty(Context), 512);
   case MVT::v1024i1:
     return FixedVectorType::get(Type::getInt1Ty(Context), 1024);
+  case MVT::v2048i1:
+    return FixedVectorType::get(Type::getInt1Ty(Context), 2048);
   case MVT::v128i2:
     return FixedVectorType::get(Type::getIntNTy(Context, 2), 128);
+  case MVT::v256i2:
+    return FixedVectorType::get(Type::getIntNTy(Context, 2), 256);
   case MVT::v64i4:
     return FixedVectorType::get(Type::getIntNTy(Context, 4), 64);
+  case MVT::v128i4:
+    return FixedVectorType::get(Type::getIntNTy(Context, 4), 128);
   case MVT::v1i8:
     return FixedVectorType::get(Type::getInt8Ty(Context), 1);
   case MVT::v2i8:
@@ -296,6 +312,14 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getInt32Ty(Context), 7);
   case MVT::v8i32:
     return FixedVectorType::get(Type::getInt32Ty(Context), 8);
+  case MVT::v9i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 9);
+  case MVT::v10i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 10);
+  case MVT::v11i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 11);
+  case MVT::v12i32:
+    return FixedVectorType::get(Type::getInt32Ty(Context), 12);
   case MVT::v16i32:
     return FixedVectorType::get(Type::getInt32Ty(Context), 16);
   case MVT::v32i32:
@@ -388,6 +412,14 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return FixedVectorType::get(Type::getFloatTy(Context), 7);
   case MVT::v8f32:
     return FixedVectorType::get(Type::getFloatTy(Context), 8);
+  case MVT::v9f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 9);
+  case MVT::v10f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 10);
+  case MVT::v11f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 11);
+  case MVT::v12f32:
+    return FixedVectorType::get(Type::getFloatTy(Context), 12);
   case MVT::v16f32:
     return FixedVectorType::get(Type::getFloatTy(Context), 16);
   case MVT::v32f32:
@@ -508,6 +540,10 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
     return ScalableVectorType::get(Type::getBFloatTy(Context), 4);
   case MVT::nxv8bf16:
     return ScalableVectorType::get(Type::getBFloatTy(Context), 8);
+  case MVT::nxv16bf16:
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 16);
+  case MVT::nxv32bf16:
+    return ScalableVectorType::get(Type::getBFloatTy(Context), 32);
   case MVT::nxv1f32:
     return ScalableVectorType::get(Type::getFloatTy(Context), 1);
   case MVT::nxv2f32:
@@ -535,6 +571,7 @@ Type *EVT::getTypeForEVT(LLVMContext &Context) const {
 /// pointers as MVT::iPTR.  If HandleUnknown is true, unknown types are returned
 /// as Other, otherwise they are invalid.
 MVT MVT::getVT(Type *Ty, bool HandleUnknown){
+  assert(Ty != nullptr && "Invalid type");
   switch (Ty->getTypeID()) {
   default:
     if (HandleUnknown) return MVT(MVT::Other);
@@ -549,6 +586,16 @@ MVT MVT::getVT(Type *Ty, bool HandleUnknown){
   case Type::DoubleTyID:    return MVT(MVT::f64);
   case Type::X86_FP80TyID:  return MVT(MVT::f80);
   case Type::X86_MMXTyID:   return MVT(MVT::x86mmx);
+  case Type::TargetExtTyID: {
+    TargetExtType *TargetExtTy = cast<TargetExtType>(Ty);
+    if (TargetExtTy->getName() == "aarch64.svcount")
+      return MVT(MVT::aarch64svcount);
+    else if (TargetExtTy->getName().starts_with("spirv."))
+      return MVT(MVT::spirvbuiltin);
+    if (HandleUnknown)
+      return MVT(MVT::Other);
+    llvm_unreachable("Unknown target ext type!");
+  }
   case Type::X86_AMXTyID:   return MVT(MVT::x86amx);
   case Type::FP128TyID:     return MVT(MVT::f128);
   case Type::PPC_FP128TyID: return MVT(MVT::ppcf128);
@@ -581,3 +628,15 @@ EVT EVT::getEVT(Type *Ty, bool HandleUnknown){
   }
   }
 }
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+void MVT::dump() const {
+  print(dbgs());
+  dbgs() << "\n";
+}
+#endif
+
+void MVT::print(raw_ostream &OS) const {
+  OS << EVT(*this).getEVTString();
+}
+

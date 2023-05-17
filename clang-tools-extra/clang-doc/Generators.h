@@ -25,14 +25,22 @@ class Generator {
 public:
   virtual ~Generator() = default;
 
-  // Write out the decl info in the specified format.
-  virtual llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
-                                         const ClangDocContext &CDCtx) = 0;
+  // Write out the decl info for the objects in the given map in the specified
+  // format.
+  virtual llvm::Error
+  generateDocs(StringRef RootDir,
+               llvm::StringMap<std::unique_ptr<doc::Info>> Infos,
+               const ClangDocContext &CDCtx) = 0;
+
   // This function writes a file with the index previously constructed.
   // It can be overwritten by any of the inherited generators.
   // If the override method wants to run this it should call
   // Generator::createResources(CDCtx);
   virtual llvm::Error createResources(ClangDocContext &CDCtx);
+
+  // Write out one specific decl info to the destination stream.
+  virtual llvm::Error generateDocForInfo(Info *I, llvm::raw_ostream &OS,
+                                         const ClangDocContext &CDCtx) = 0;
 
   static void addInfoToIndex(Index &Idx, const doc::Info *Info);
 };

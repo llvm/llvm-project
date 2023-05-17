@@ -33,8 +33,8 @@ for.one:
 while.body:
   %indvar = phi i64 [ %sub42, %while.body ], [ %i.1, %for.one ]
   %sub42 = add nsw i64 %indvar, -1
-  %arrayidx44 = getelementptr inbounds [258 x i64], [258 x i64]* @cum_freq, i64 0, i64 %sub42
-  store i64 1, i64* %arrayidx44, align 4
+  %arrayidx44 = getelementptr inbounds [258 x i64], ptr @cum_freq, i64 0, i64 %sub42
+  store i64 1, ptr %arrayidx44, align 4
   %cmp40 = icmp sgt i64 %sub42, 0
   br i1 %cmp40, label %while.body, label %while.end
 

@@ -20,16 +20,15 @@ target triple = "bpf"
 %struct.s1 = type { i32, i16 }
 
 ; Function Attrs: nounwind readnone
-define dso_local i32 @test(%union.u1* %arg) local_unnamed_addr #0 !dbg !11 {
+define dso_local i32 @test(ptr %arg) local_unnamed_addr #0 !dbg !11 {
 entry:
-  call void @llvm.dbg.value(metadata %union.u1* %arg, metadata !27, metadata !DIExpression()), !dbg !30
-  %0 = tail call %union.u1* @llvm.preserve.union.access.index.p0s_union.u1s.p0s_union.u1s(%union.u1* %arg, i32 1), !dbg !31, !llvm.preserve.access.index !16
-  %b2 = getelementptr inbounds %union.u1, %union.u1* %0, i64 0, i32 0, !dbg !31
-  %1 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 0, i32 0), !dbg !32, !llvm.preserve.access.index !20
-  %2 = tail call i32 @llvm.bpf.preserve.field.info.p0i32(i32* %1, i64 2), !dbg !33
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !27, metadata !DIExpression()), !dbg !30
+  %0 = tail call ptr @llvm.preserve.union.access.index.p0.u1s.p0.u1s(ptr %arg, i32 1), !dbg !31, !llvm.preserve.access.index !16
+  %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr elementtype(%struct.s1) %0, i32 0, i32 0), !dbg !32, !llvm.preserve.access.index !20
+  %2 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %1, i64 2), !dbg !33
   call void @llvm.dbg.value(metadata i32 %2, metadata !28, metadata !DIExpression()), !dbg !30
-  %3 = tail call i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.s1s(%struct.s1* elementtype(%struct.s1) %b2, i32 1, i32 2), !dbg !34, !llvm.preserve.access.index !20
-  %4 = tail call i32 @llvm.bpf.preserve.field.info.p0i16(i16* %3, i64 2), !dbg !35
+  %3 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr elementtype(%struct.s1) %0, i32 1, i32 2), !dbg !34, !llvm.preserve.access.index !20
+  %4 = tail call i32 @llvm.bpf.preserve.field.info.p0(ptr %3, i64 2), !dbg !35
   call void @llvm.dbg.value(metadata i32 %4, metadata !29, metadata !DIExpression()), !dbg !30
   %add = add i32 %4, %2, !dbg !36
   ret i32 %add, !dbg !37
@@ -60,19 +59,17 @@ entry:
 ; CHECK-NEXT:        .long   2
 
 ; Function Attrs: nounwind readnone
-declare %union.u1* @llvm.preserve.union.access.index.p0s_union.u1s.p0s_union.u1s(%union.u1*, i32) #1
+declare ptr @llvm.preserve.union.access.index.p0.u1s.p0.u1s(ptr, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.s1s(%struct.s1*, i32, i32) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.s1s(ptr, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0i32(i32*, i64) #1
+declare i32 @llvm.bpf.preserve.field.info.p0(ptr, i64) #1
 
 ; Function Attrs: nounwind readnone
-declare i16* @llvm.preserve.struct.access.index.p0i16.p0s_struct.s1s(%struct.s1*, i32, i32) #1
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0i16(i16*, i64) #1
 
 ; Function Attrs: nounwind readnone speculatable willreturn
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

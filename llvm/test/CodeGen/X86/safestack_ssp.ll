@@ -6,12 +6,11 @@
 define void @_Z1fv() safestack sspreq {
 entry:
   %x = alloca i32, align 4
-  %0 = bitcast i32* %x to i8*
-  call void @_Z7CapturePi(i32* nonnull %x)
+  call void @_Z7CapturePi(ptr nonnull %x)
   ret void
 }
 
-declare void @_Z7CapturePi(i32*)
+declare void @_Z7CapturePi(ptr)
 
 ; LINUX-X64-DAG: movq __safestack_unsafe_stack_ptr@GOTTPOFF(%rip), %[[A:.*]]
 ; LINUX-X64-DAG: movq %fs:(%[[A]]), %[[B:.*]]

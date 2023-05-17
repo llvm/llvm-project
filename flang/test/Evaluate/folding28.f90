@@ -49,4 +49,25 @@ module m
   logical, parameter :: test_sqrt_zero_4 = sqrt_zero_4 == 0.0
   real(8), parameter :: sqrt_zero_8 = sqrt(0.0)
   logical, parameter :: test_sqrt_zero_8 = sqrt_zero_8 == 0.0
+  ! Some common values to get right
+  real(8), parameter :: sqrt_1_8 = sqrt(1.d0)
+  logical, parameter :: test_sqrt_1_8 = sqrt_1_8 == 1.d0
+  real(8), parameter :: sqrt_2_8 = sqrt(2.d0)
+  logical, parameter :: test_sqrt_2_8 = sqrt_2_8 == 1.4142135623730951454746218587388284504413604736328125d0
+  real(8), parameter :: sqrt_3_8 = sqrt(3.d0)
+  logical, parameter :: test_sqrt_3_8 = sqrt_3_8 == 1.732050807568877193176604123436845839023590087890625d0
+  real(8), parameter :: sqrt_4_8 = sqrt(4.d0)
+  logical, parameter :: test_sqrt_4_8 = sqrt_4_8 == 2.d0
+  real(8), parameter :: sqrt_5_8 = sqrt(5.d0)
+  logical, parameter :: test_sqrt_5_8 = sqrt_5_8 == 2.236067977499789805051477742381393909454345703125d0
+  real(8), parameter :: sqrt_6_8 = sqrt(6.d0)
+  logical, parameter :: test_sqrt_6_8 = sqrt_6_8 == 2.44948974278317788133563226438127458095550537109375d0
+  real(8), parameter :: sqrt_7_8 = sqrt(7.d0)
+  logical, parameter :: test_sqrt_7_8 = sqrt_7_8 == 2.64575131106459071617109657381661236286163330078125d0
+  real(8), parameter :: sqrt_8_8 = sqrt(8.d0)
+  logical, parameter :: test_sqrt_8_8 = sqrt_8_8 == 2.828427124746190290949243717477656900882720947265625d0
+  real(8), parameter :: sqrt_9_8 = sqrt(9.d0)
+  logical, parameter :: test_sqrt_9_8 = sqrt_9_8 == 3.d0
+  real(8), parameter :: sqrt_10_8 = sqrt(10.d0)
+  logical, parameter :: test_sqrt_10_8 = sqrt_10_8 == 3.162277660168379522787063251598738133907318115234375d0
 end module

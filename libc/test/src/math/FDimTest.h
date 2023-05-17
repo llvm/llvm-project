@@ -8,8 +8,8 @@
 
 #include "src/__support/FPUtil/BasicOperations.h"
 #include "src/__support/FPUtil/FPBits.h"
-#include "utils/UnitTest/FPMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/FPMatcher.h"
+#include "test/UnitTest/Test.h"
 #include <math.h>
 
 template <typename T>
@@ -74,7 +74,7 @@ public:
 private:
   // constexpr does not work on FPBits yet, so we cannot have these constants as
   // static.
-  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_nan(1));
+  const T nan = T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1));
   const T inf = T(__llvm_libc::fputil::FPBits<T>::inf());
   const T neg_inf = T(__llvm_libc::fputil::FPBits<T>::neg_inf());
   const T zero = T(__llvm_libc::fputil::FPBits<T>::zero());

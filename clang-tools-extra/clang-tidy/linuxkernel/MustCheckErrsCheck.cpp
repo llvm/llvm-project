@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace linuxkernel {
+namespace clang::tidy::linuxkernel {
 
 void MustCheckErrsCheck::registerMatchers(MatchFinder *Finder) {
   auto ErrFn =
@@ -48,6 +46,4 @@ void MustCheckErrsCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-} // namespace linuxkernel
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::linuxkernel

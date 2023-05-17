@@ -10,7 +10,9 @@
 #define _LIBCPP___ALGORITHM_HALF_POSITIVE_H
 
 #include <__config>
-#include <type_traits>
+#include <__type_traits/enable_if.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/make_unsigned.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,7 +31,7 @@ typename enable_if
 >::type
 __half_positive(_Integral __value)
 {
-    return static_cast<_Integral>(static_cast<typename make_unsigned<_Integral>::type>(__value) / 2);
+    return static_cast<_Integral>(static_cast<__make_unsigned_t<_Integral> >(__value) / 2);
 }
 
 template <typename _Tp>

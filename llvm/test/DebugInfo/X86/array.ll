@@ -32,10 +32,10 @@ target triple = "x86_64-apple-macosx10.12.0"
 @main.array = private unnamed_addr constant [4 x i32] [i32 0, i32 1, i32 2, i32 3], align 16
 
 ; Function Attrs: nounwind ssp uwtable
-define void @f(i32* nocapture %p) local_unnamed_addr #0 !dbg !8 {
+define void @f(ptr nocapture %p) local_unnamed_addr #0 !dbg !8 {
 entry:
-  tail call void @llvm.dbg.value(metadata i32* %p, metadata !14, metadata !15), !dbg !16
-  store i32 42, i32* %p, align 4, !dbg !17, !tbaa !18
+  tail call void @llvm.dbg.value(metadata ptr %p, metadata !14, metadata !15), !dbg !16
+  store i32 42, ptr %p, align 4, !dbg !17, !tbaa !18
   ret void, !dbg !22
 }
 
@@ -43,30 +43,28 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: nounwind ssp uwtable
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) local_unnamed_addr #0 !dbg !23 {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) local_unnamed_addr #0 !dbg !23 {
 entry:
   %array = alloca [4 x i32], align 16
   tail call void @llvm.dbg.value(metadata i32 %argc, metadata !30, metadata !15), !dbg !36
-  tail call void @llvm.dbg.value(metadata i8** %argv, metadata !31, metadata !15), !dbg !37
-  %0 = bitcast [4 x i32]* %array to i8*, !dbg !38
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* nonnull %0) #3, !dbg !38
-  tail call void @llvm.dbg.declare(metadata [4 x i32]* %array, metadata !32, metadata !15), !dbg !39
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 16 nonnull %0, i8* align 16 bitcast ([4 x i32]* @main.array to i8*), i64 16, i1 false), !dbg !39
-  %arraydecay = getelementptr inbounds [4 x i32], [4 x i32]* %array, i64 0, i64 0, !dbg !40
-  call void @f(i32* nonnull %arraydecay), !dbg !41
-  %1 = load i32, i32* %arraydecay, align 16, !dbg !42, !tbaa !18
-  call void @llvm.lifetime.end.p0i8(i64 16, i8* nonnull %0) #3, !dbg !43
-  ret i32 %1, !dbg !44
+  tail call void @llvm.dbg.value(metadata ptr %argv, metadata !31, metadata !15), !dbg !37
+  call void @llvm.lifetime.start.p0(i64 16, ptr nonnull %array) #3, !dbg !38
+  tail call void @llvm.dbg.declare(metadata ptr %array, metadata !32, metadata !15), !dbg !39
+  call void @llvm.memcpy.p0.p0.i64(ptr align 16 nonnull %array, ptr align 16 @main.array, i64 16, i1 false), !dbg !39
+  call void @f(ptr nonnull %array), !dbg !41
+  %0 = load i32, ptr %array, align 16, !dbg !42, !tbaa !18
+  call void @llvm.lifetime.end.p0(i64 16, ptr nonnull %array) #3, !dbg !43
+  ret i32 %0, !dbg !44
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #2
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

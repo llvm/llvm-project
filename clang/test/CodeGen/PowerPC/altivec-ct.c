@@ -19,12 +19,12 @@ vector float test2(vector unsigned int x) {
 
 #ifdef __VSX__
 // VSX-LABEL: test3
-vector double test3(vector signed long long x) {
+vector float test3(vector signed long long x) {
   return vec_ctf(x, 0);
 }
 
 // VSX-LABEL: test4
-vector double test4(vector unsigned long long x) {
+vector float test4(vector unsigned long long x) {
   return vec_ctf(x, 0);
 }
 #endif

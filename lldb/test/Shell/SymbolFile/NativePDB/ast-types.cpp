@@ -86,6 +86,31 @@ Anonymous<int> AnonInt;
 Anonymous<A::B::C<void>> AnonABCVoid;
 Anonymous<A::B::C<void>>::D AnonABCVoidD;
 
+// The following tests that MSInheritanceAttr are set for record decls.
+class  SI { int si; };
+struct SI2 { int si2; };
+class  MI : SI, SI2 { int mi; };
+class MI2 : MI { int mi2; };
+class VI : virtual MI { int vi; };
+class VI2 : virtual SI, virtual SI2 { int vi; };
+class/* __unspecified_inheritance*/ UI;
+
+typedef void (SI::*SITYPE)();
+typedef void (MI::*MITYPE)();
+typedef void (MI2::*MI2TYPE)();
+typedef void (VI::*VITYPE)();
+typedef void (VI2::*VI2TYPE)();
+typedef void (UI::*UITYPE)();
+SITYPE mp1 = nullptr;
+MITYPE mp2 = nullptr;
+MI2TYPE mp3 = nullptr;
+VITYPE mp4 = nullptr;
+VI2TYPE mp5 = nullptr;
+UITYPE mp6 = nullptr;
+MITYPE *mp7 = nullptr;
+VI2TYPE *mp8 = nullptr;
+int SI::*mp9 = nullptr;
+
 // FIXME: Enum size isn't being correctly determined.
 // FIXME: Can't read memory for variable values.
 
@@ -106,6 +131,15 @@ Anonymous<A::B::C<void>>::D AnonABCVoidD;
 // CHECK: (Anonymous<int>) AnonInt = (AnonymousMember = 0)
 // CHECK: (Anonymous<A::B::C<void>>) AnonABCVoid = (AnonymousMember = 0)
 // CHECK: (Anonymous<A::B::C<void>>::D) AnonABCVoidD = (AnonymousDMember = 0)
+// CHECK: (void (SI::*)()) mp1 = 0x0000000000000000
+// CHECK: (void (MI::*)()) mp2 = 0x0000000000000000
+// CHECK: (void (MI2::*)()) mp3 = 0x0000000000000000
+// CHECK: (void (VI::*)()) mp4 = 0x0000000000000000
+// CHECK: (void (VI2::*)()) mp5 = 0x0000000000000000
+// CHECK: (void (UI::*)()) mp6 = 0x0000000000000000
+// CHECK: (void (MI::**)()) mp7 = 0x0000000000000000
+// CHECK: (void (VI2::**)()) mp8 = 0x0000000000000000
+// CHECK: (int SI::*) mp9 = 0xffffffff
 // CHECK: Dumping clang ast for 1 modules.
 // CHECK: TranslationUnitDecl {{.*}}
 // CHECK: |-CXXRecordDecl {{.*}} class TrivialC definition

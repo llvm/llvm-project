@@ -36,7 +36,7 @@
 ///  the instructions in bb.then will only overwrite lanes that will never be
 ///  accessed in bb.else.
 ///
-///  This pass aims to to tell register allocator that %a is in-fact dead,
+///  This pass aims to tell register allocator that %a is in-fact dead,
 ///  through inserting a phi-node in bb.flow saying that %a is undef when coming
 ///  from bb.then, and then replace the uses in the bb.else with the result of
 ///  newly inserted phi.
@@ -522,8 +522,15 @@ void SIOptimizeVGPRLiveRange::optimizeLiveRange(
     auto *UseBlock = UseMI->getParent();
     // Replace uses in Endif block
     if (UseBlock == Endif) {
-      assert(UseMI->isPHI() && "Uses should be PHI in Endif block");
-      O.setReg(NewReg);
+      if (UseMI->isPHI()) {
+        O.setReg(NewReg);
+      } else {
+        // DetectDeadLanes may mark register uses as undef without removing
+        // them, in which case a non-phi instruction using the original register
+        // may exist in the Endif block even though the register is not live
+        // into it.
+        assert(!O.readsReg());
+      }
       continue;
     }
 
@@ -645,6 +652,10 @@ bool SIOptimizeVGPRLiveRange::runOnMachineFunction(MachineFunction &MF) {
         MachineBasicBlock *IfTarget = MI.getOperand(2).getMBB();
         auto *Endif = getElseTarget(IfTarget);
         if (!Endif)
+          continue;
+
+        // Skip unexpected control flow.
+        if (!MDT->dominates(&MBB, IfTarget) || !MDT->dominates(IfTarget, Endif))
           continue;
 
         SmallSetVector<MachineBasicBlock *, 16> ElseBlocks;

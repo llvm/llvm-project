@@ -75,17 +75,18 @@ void Thumb1InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   }
 }
 
-void Thumb1InstrInfo::
-storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                    Register SrcReg, bool isKill, int FI,
-                    const TargetRegisterClass *RC,
-                    const TargetRegisterInfo *TRI) const {
+void Thumb1InstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
+                                          MachineBasicBlock::iterator I,
+                                          Register SrcReg, bool isKill, int FI,
+                                          const TargetRegisterClass *RC,
+                                          const TargetRegisterInfo *TRI,
+                                          Register VReg) const {
   assert((RC == &ARM::tGPRRegClass ||
-          (Register::isPhysicalRegister(SrcReg) && isARMLowRegister(SrcReg))) &&
+          (SrcReg.isPhysical() && isARMLowRegister(SrcReg))) &&
          "Unknown regclass!");
 
   if (RC == &ARM::tGPRRegClass ||
-      (Register::isPhysicalRegister(SrcReg) && isARMLowRegister(SrcReg))) {
+      (SrcReg.isPhysical() && isARMLowRegister(SrcReg))) {
     DebugLoc DL;
     if (I != MBB.end()) DL = I->getDebugLoc();
 
@@ -103,18 +104,18 @@ storeRegToStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
   }
 }
 
-void Thumb1InstrInfo::
-loadRegFromStackSlot(MachineBasicBlock &MBB, MachineBasicBlock::iterator I,
-                     Register DestReg, int FI,
-                     const TargetRegisterClass *RC,
-                     const TargetRegisterInfo *TRI) const {
-  assert(
-      (RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
-       (Register::isPhysicalRegister(DestReg) && isARMLowRegister(DestReg))) &&
-      "Unknown regclass!");
+void Thumb1InstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                           MachineBasicBlock::iterator I,
+                                           Register DestReg, int FI,
+                                           const TargetRegisterClass *RC,
+                                           const TargetRegisterInfo *TRI,
+                                           Register VReg) const {
+  assert((RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
+          (DestReg.isPhysical() && isARMLowRegister(DestReg))) &&
+         "Unknown regclass!");
 
   if (RC->hasSuperClassEq(&ARM::tGPRRegClass) ||
-      (Register::isPhysicalRegister(DestReg) && isARMLowRegister(DestReg))) {
+      (DestReg.isPhysical() && isARMLowRegister(DestReg))) {
     DebugLoc DL;
     if (I != MBB.end()) DL = I->getDebugLoc();
 

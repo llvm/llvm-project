@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -fcxx-exceptions                       -verify=expected,cxx11_2b,cxx2b    %s
-// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions                       -verify=expected,cxx98_20,cxx11_2b,cxx11_20 %s
-// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions                       -verify=expected,cxx98_20,cxx11_2b,cxx11_20 %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -fcxx-exceptions                       -verify=expected,cxx11_23,cxx23    %s
+// RUN: %clang_cc1 -std=c++20 -fsyntax-only -fcxx-exceptions                       -verify=expected,cxx98_20,cxx11_23,cxx11_20 %s
+// RUN: %clang_cc1 -std=c++11 -fsyntax-only -fcxx-exceptions                       -verify=expected,cxx98_20,cxx11_23,cxx11_20 %s
 // RUN: %clang_cc1 -std=c++98 -fsyntax-only -fcxx-exceptions -Wno-c++11-extensions -verify=expected,cxx98_20,cxx98 %s
 
 namespace test_delete_function {
@@ -11,7 +11,7 @@ struct A1 {
 };
 A1 test1() {
   A1 a;
-  return a; // expected-error {{call to deleted constructor of 'test_delete_function::A1'}}
+  return a; // expected-error {{call to deleted constructor of 'A1'}}
 }
 
 struct A2 {
@@ -34,7 +34,7 @@ struct B1 {
 };
 B1 test3() {
   C c;
-  return c; // expected-error {{conversion function from 'test_delete_function::C' to 'test_delete_function::B1' invokes a deleted function}}
+  return c; // expected-error {{conversion function from 'C' to 'B1' invokes a deleted function}}
 }
 
 struct B2 {
@@ -75,7 +75,7 @@ struct B1 {
   B1(B1 &&) = delete; // expected-note {{'B1' has been explicitly marked deleted here}}
 };
 B1 test3(B1 &&b) {
-  return b; // expected-error {{call to deleted constructor of 'test_implicitly_movable_rvalue_ref::B1'}}
+  return b; // expected-error {{call to deleted constructor of 'B1'}}
 }
 
 struct B2 {
@@ -98,13 +98,13 @@ struct A1 {
   A1(const A1 &);
   A1(A1 &&) = delete;
   // expected-note@-1 2{{'A1' has been explicitly marked deleted here}}
-  // cxx11_2b-note@-2 3{{'A1' has been explicitly marked deleted here}}
+  // cxx11_23-note@-2 3{{'A1' has been explicitly marked deleted here}}
 };
 void test1() {
   try {
     func();
   } catch (A1 a) {
-    throw a; // expected-error {{call to deleted constructor of 'test_throw_parameter::A1'}}
+    throw a; // expected-error {{call to deleted constructor of 'A1'}}
   }
 }
 
@@ -125,21 +125,21 @@ void test2() {
 void test3(A1 a) try {
   func();
 } catch (...) {
-  throw a; // expected-error {{call to deleted constructor of 'test_throw_parameter::A1'}}
+  throw a; // expected-error {{call to deleted constructor of 'A1'}}
 }
 
 #if __cplusplus >= 201103L
 namespace PR54341 {
 void test4(A1 a) {
   void f(decltype((throw a, 0)));
-  // expected-error@-1 {{call to deleted constructor of 'test_throw_parameter::A1'}}
+  // expected-error@-1 {{call to deleted constructor of 'A1'}}
 
   void g(int = decltype(throw a, 0){});
-  // expected-error@-1 {{call to deleted constructor of 'test_throw_parameter::A1'}}
+  // expected-error@-1 {{call to deleted constructor of 'A1'}}
 }
 
 void test5(A1 a, int = decltype(throw a, 0){}) {}
-// expected-error@-1 {{call to deleted constructor of 'test_throw_parameter::A1'}}
+// expected-error@-1 {{call to deleted constructor of 'A1'}}
 } // namespace PR54341
 #endif
 
@@ -176,7 +176,7 @@ struct B1 {
 };
 C test3() {
   B1 b;
-  return b; // expected-error {{conversion function from 'test_non_ctor_conversion::B1' to 'test_non_ctor_conversion::C' invokes a deleted function}}
+  return b; // expected-error {{conversion function from 'B1' to 'C' invokes a deleted function}}
 }
 
 struct B2 {
@@ -208,7 +208,7 @@ struct NeedRvalueRef {
 struct NeedValue {
   NeedValue(A1); // cxx98-note 2 {{passing argument to parameter here}}
   NeedValue(A2);
-  NeedValue(B1); // cxx11_2b-note 2 {{passing argument to parameter here}}
+  NeedValue(B1); // cxx11_23-note 2 {{passing argument to parameter here}}
   NeedValue(B2);
 };
 
@@ -267,27 +267,27 @@ NeedValue test_2_3() {
 struct B1 {
   B1();
   B1(const B1 &);
-  B1(B1 &&) = delete; // cxx11_2b-note 3 {{'B1' has been explicitly marked deleted here}}
+  B1(B1 &&) = delete; // cxx11_23-note 3 {{'B1' has been explicitly marked deleted here}}
                       // cxx98-note@-1 {{'B1' has been explicitly marked deleted here}}
 };
 NeedValue test_3_1() {
   // not rvalue reference
   // same type
   B1 b;
-  return b; // cxx11_2b-error {{call to deleted constructor of 'test_ctor_param_rvalue_ref::B1'}}
+  return b; // cxx11_23-error {{call to deleted constructor of 'B1'}}
 }
 class DerivedB1 : public B1 {};
 B1 test_3_2() {
   // rvalue reference
   // not same type
   DerivedB1 b;
-  return b; // expected-error {{call to deleted constructor of 'test_ctor_param_rvalue_ref::B1'}}
+  return b; // expected-error {{call to deleted constructor of 'B1'}}
 }
 NeedValue test_3_3() {
   // not rvalue reference
   // not same type
   DerivedB1 b;
-  return b; // cxx11_2b-error {{call to deleted constructor of 'test_ctor_param_rvalue_ref::B1'}}
+  return b; // cxx11_23-error {{call to deleted constructor of 'B1'}}
 }
 
 struct B2 {
@@ -295,14 +295,14 @@ struct B2 {
   B2(const B2 &);
 
 private:
-  B2(B2 &&); // cxx11_2b-note 3 {{declared private here}}
+  B2(B2 &&); // cxx11_23-note 3 {{declared private here}}
              // cxx98-note@-1 {{declared private here}}
 };
 NeedValue test_4_1() {
   // not rvalue reference
   // same type
   B2 b;
-  return b; // cxx11_2b-error {{calling a private constructor of class 'test_ctor_param_rvalue_ref::B2'}}
+  return b; // cxx11_23-error {{calling a private constructor of class 'test_ctor_param_rvalue_ref::B2'}}
 }
 class DerivedB2 : public B2 {};
 B2 test_4_2() {
@@ -315,7 +315,7 @@ NeedValue test_4_3() {
   // not rvalue reference
   // not same type
   DerivedB2 b;
-  return b; // cxx11_2b-error {{calling a private constructor of class 'test_ctor_param_rvalue_ref::B2'}}
+  return b; // cxx11_23-error {{calling a private constructor of class 'test_ctor_param_rvalue_ref::B2'}}
 }
 } // namespace test_ctor_param_rvalue_ref
 
@@ -323,7 +323,7 @@ namespace test_lvalue_ref_is_not_moved_from {
 
 struct Target {};
 // expected-note@-1  {{candidate constructor (the implicit copy constructor) not viable}}
-// cxx11_2b-note@-2  {{candidate constructor (the implicit move constructor) not viable}}
+// cxx11_23-note@-2  {{candidate constructor (the implicit move constructor) not viable}}
 
 struct CopyOnly {
   CopyOnly(CopyOnly &&) = delete; // expected-note {{has been explicitly marked deleted here}}
@@ -333,7 +333,7 @@ struct CopyOnly {
 };
 
 struct MoveOnly {
-  MoveOnly(MoveOnly &&); // cxx11_2b-note {{copy constructor is implicitly deleted because}}
+  MoveOnly(MoveOnly &&); // cxx11_23-note {{copy constructor is implicitly deleted because}}
   operator Target() &&;  // expected-note {{candidate function not viable}}
 };
 
@@ -352,7 +352,7 @@ CopyOnly t2() {
 
 MoveOnly t3() {
     MoveOnly& r = moveonly;
-    return r; // cxx11_2b-error {{call to implicitly-deleted copy constructor}}
+    return r; // cxx11_23-error {{call to implicitly-deleted copy constructor}}
 }
 
 MoveOnly t4() {
@@ -437,11 +437,11 @@ ConstCopyOnly t1() {
 struct NonConstCopyOnly {
   NonConstCopyOnly();
   NonConstCopyOnly(NonConstCopyOnly &);
-  NonConstCopyOnly(const NonConstCopyOnly &) = delete; // cxx11_2b-note {{marked deleted here}}
+  NonConstCopyOnly(const NonConstCopyOnly &) = delete; // cxx11_23-note {{marked deleted here}}
 };
 NonConstCopyOnly t2() {
   NonConstCopyOnly x;
-  return x; // cxx11_2b-error {{call to deleted constructor}}
+  return x; // cxx11_23-error {{call to deleted constructor}}
 }
 
 } // namespace test_constandnonconstcopy
@@ -469,10 +469,10 @@ C test2(D x) { return x; } // expected-error {{invokes a deleted function}}
 namespace test_simpler_implicit_move {
 
 struct CopyOnly {
-  CopyOnly(); // cxx2b-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
-  // cxx2b-note@-1 {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
-  CopyOnly(CopyOnly &); // cxx2b-note {{candidate constructor not viable: expects an lvalue for 1st argument}}
-  // cxx2b-note@-1 {{candidate constructor not viable: expects an lvalue for 1st argument}}
+  CopyOnly(); // cxx23-note {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  // cxx23-note@-1 {{candidate constructor not viable: requires 0 arguments, but 1 was provided}}
+  CopyOnly(CopyOnly &); // cxx23-note {{candidate constructor not viable: expects an lvalue for 1st argument}}
+  // cxx23-note@-1 {{candidate constructor not viable: expects an lvalue for 1st argument}}
 };
 struct MoveOnly {
   MoveOnly();
@@ -490,7 +490,7 @@ CopyOnly test2(bool b) {
   if (b) {
     return w1;
   } else {
-    return w2; // cxx2b-error {{no matching constructor for initialization}}
+    return w2; // cxx23-error {{no matching constructor for initialization}}
   }
 }
 
@@ -505,7 +505,7 @@ MoveOnly &&test4() {
 
 void test5() try {
   CopyOnly x;
-  throw x; // cxx2b-error {{no matching constructor for initialization}}
+  throw x; // cxx23-error {{no matching constructor for initialization}}
 } catch (...) {
 }
 

@@ -3,7 +3,7 @@
 
 declare {i64, i32} @llvm.x86.rdrand.64()
 
-define i32 @_rdrand64_step(i64* %random_val) {
+define i32 @_rdrand64_step(ptr %random_val) {
 ; CHECK-LABEL: _rdrand64_step:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    rdrandq %rcx
@@ -13,7 +13,7 @@ define i32 @_rdrand64_step(i64* %random_val) {
 ; CHECK-NEXT:    retq
   %call = call {i64, i32} @llvm.x86.rdrand.64()
   %randval = extractvalue {i64, i32} %call, 0
-  store i64 %randval, i64* %random_val
+  store i64 %randval, ptr %random_val
   %isvalid = extractvalue {i64, i32} %call, 1
   ret i32 %isvalid
 }

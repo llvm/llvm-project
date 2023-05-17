@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -internalize -disable-output
+; RUN: opt < %s -passes='cgscc(inline)',internalize -disable-output
 define void @foo() nounwind {
   ret void
 }

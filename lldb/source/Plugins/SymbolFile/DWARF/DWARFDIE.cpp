@@ -14,6 +14,8 @@
 #include "DWARFDeclContext.h"
 #include "DWARFUnit.h"
 
+#include "llvm/ADT/iterator.h"
+
 using namespace lldb_private;
 using namespace lldb_private::dwarf;
 
@@ -24,7 +26,9 @@ namespace {
 /// convenience, the starting die is included in the sequence as the first
 /// item.
 class ElaboratingDIEIterator
-    : public std::iterator<std::input_iterator_tag, DWARFDIE> {
+    : public llvm::iterator_facade_base<
+          ElaboratingDIEIterator, std::input_iterator_tag, DWARFDIE,
+          std::ptrdiff_t, DWARFDIE *, DWARFDIE *> {
 
   // The operating invariant is: top of m_worklist contains the "current" item
   // and the rest of the list are items yet to be visited. An empty worklist
@@ -62,21 +66,12 @@ public:
     Next();
     return *this;
   }
-  ElaboratingDIEIterator operator++(int) {
-    ElaboratingDIEIterator I = *this;
-    Next();
-    return I;
-  }
 
   friend bool operator==(const ElaboratingDIEIterator &a,
                          const ElaboratingDIEIterator &b) {
     if (a.m_worklist.empty() || b.m_worklist.empty())
       return a.m_worklist.empty() == b.m_worklist.empty();
     return a.m_worklist.back() == b.m_worklist.back();
-  }
-  friend bool operator!=(const ElaboratingDIEIterator &a,
-                         const ElaboratingDIEIterator &b) {
-    return !(a == b);
   }
 };
 
@@ -215,13 +210,6 @@ const char *DWARFDIE::GetPubname() const {
     return nullptr;
 }
 
-const char *DWARFDIE::GetQualifiedName(std::string &storage) const {
-  if (IsValid())
-    return m_die->GetQualifiedName(m_cu, storage);
-  else
-    return nullptr;
-}
-
 // GetName
 //
 // Get value of the DW_AT_name attribute and place that value into the supplied
@@ -320,6 +308,18 @@ void DWARFDIE::AppendTypeName(Stream &s) const {
   case DW_TAG_volatile_type:
     s.PutCString("volatile ");
     break;
+  case DW_TAG_LLVM_ptrauth_type: {
+    unsigned key = GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_key, 0);
+    bool isAddressDiscriminated = GetAttributeValueAsUnsigned(
+        DW_AT_LLVM_ptrauth_address_discriminated, 0);
+    unsigned extraDiscriminator =
+        GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_extra_discriminator, 0);
+    bool isaPointer =
+        GetAttributeValueAsUnsigned(DW_AT_LLVM_ptrauth_isa_pointer, 0);
+    s.Printf("__ptrauth(%d, %d, 0x0%x, %d)", key, isAddressDiscriminated,
+             extraDiscriminator, isaPointer);
+    break;
+  }
   default:
     return;
   }
@@ -439,9 +439,10 @@ bool DWARFDIE::IsMethod() const {
 
 bool DWARFDIE::GetDIENamesAndRanges(
     const char *&name, const char *&mangled, DWARFRangeList &ranges,
-    int &decl_file, int &decl_line, int &decl_column, int &call_file,
-    int &call_line, int &call_column,
-    lldb_private::DWARFExpression *frame_base) const {
+    std::optional<int> &decl_file, std::optional<int> &decl_line,
+    std::optional<int> &decl_column, std::optional<int> &call_file,
+    std::optional<int> &call_line, std::optional<int> &call_column,
+    lldb_private::DWARFExpressionList *frame_base) const {
   if (IsValid()) {
     return m_die->GetDIENamesAndRanges(
         GetCU(), name, mangled, ranges, decl_file, decl_line, decl_column,

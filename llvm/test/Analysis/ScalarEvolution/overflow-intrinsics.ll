@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define void @f_sadd_0(i8* %a) {
+define void @f_sadd_0(ptr %a) {
 ; CHECK-LABEL: Classifying expressions for: @f_sadd_0
 entry:
   br label %for.body
@@ -17,8 +17,8 @@ for.body:                                         ; preds = %entry, %cont
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   br i1 %tmp1, label %trap, label %cont, !nosanitize !{}
@@ -31,10 +31,10 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is 15
 }
 
-define void @f_sadd_1(i8* %a) {
+define void @f_sadd_1(ptr %a) {
 ; CHECK-LABEL: Classifying expressions for: @f_sadd_1
 entry:
   br label %for.body
@@ -44,7 +44,7 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {0,+,1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%for.body> U: [0,16) S: [0,16)
 
 ; SCEV can prove <nsw> for the above induction variable; but it does
 ; not bother so before it sees the sext below since it is not a 100%
@@ -52,8 +52,8 @@ for.body:                                         ; preds = %entry, %cont
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   br i1 %tmp1, label %trap, label %cont, !nosanitize !{}
@@ -66,10 +66,10 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is 15
 }
 
-define void @f_sadd_2(i8* %a, i1* %c) {
+define void @f_sadd_2(ptr %a, ptr %c) {
 ; CHECK-LABEL: Classifying expressions for: @f_sadd_2
 entry:
   br label %for.body
@@ -83,8 +83,8 @@ for.body:                                         ; preds = %entry, %cont
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   br i1 %tmp1, label %trap, label %cont, !nosanitize !{}
@@ -95,11 +95,11 @@ trap:                                             ; preds = %for.body
 
 cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
-  %cond = load volatile i1, i1* %c
+  %cond = load volatile i1, ptr %c
   br i1 %cond, label %for.body, label %for.cond.cleanup
 }
 
-define void @f_sadd_3(i8* %a, i1* %c) {
+define void @f_sadd_3(ptr %a, ptr %c) {
 ; CHECK-LABEL: Classifying expressions for: @f_sadd_3
 entry:
   br label %for.body
@@ -113,8 +113,8 @@ for.body:                                         ; preds = %entry, %cont
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %for.body ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
@@ -125,7 +125,7 @@ trap:                                             ; preds = %for.body
   unreachable, !nosanitize !{}
 }
 
-define void @f_sadd_4(i8* %a, i1* %c) {
+define void @f_sadd_4(ptr %a, ptr %c) {
 ; CHECK-LABEL: Classifying expressions for: @f_sadd_4
 entry:
   br label %for.body
@@ -139,8 +139,8 @@ for.body:                                         ; preds = %entry, %cont
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %merge ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
@@ -158,7 +158,7 @@ trap:                                             ; preds = %for.body
   unreachable, !nosanitize !{}
 }
 
-define void @f_sadd_may_overflow(i8* %a, i1* %c) {
+define void @f_sadd_may_overflow(ptr %a, ptr %c) {
 ; CHECK-LABEL: Classifying expressions for: @f_sadd_may_overflow
 entry:
   br label %for.body
@@ -172,10 +172,10 @@ for.body:                                         ; preds = %entry, %cont
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp1, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.sadd.with.overflow.i32(i32 %i.04, i32 1)
-  %cond1 = load volatile i1, i1* %c
+  %cond1 = load volatile i1, ptr %c
   br i1 %cond1, label %trap, label %cont, !nosanitize !{}
 
 trap:                                             ; preds = %for.body
@@ -184,11 +184,11 @@ trap:                                             ; preds = %for.body
 
 cont:                                             ; preds = %for.body
   %tmp1 = extractvalue { i32, i1 } %tmp0, 0
-  %cond = load volatile i1, i1* %c
+  %cond = load volatile i1, ptr %c
   br i1 %cond, label %for.body, label %for.cond.cleanup
 }
 
-define void @f_uadd(i8* %a) {
+define void @f_uadd(ptr %a) {
 ; CHECK-LABEL: Classifying expressions for: @f_uadd
 entry:
   br label %for.body
@@ -198,12 +198,12 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {0,+,1}<nuw><%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {0,+,1}<nuw><nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 0, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.uadd.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   br i1 %tmp1, label %trap, label %cont, !nosanitize !{}
@@ -216,10 +216,10 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp slt i32 %tmp2, 16
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is 15
 }
 
-define void @f_ssub(i8* nocapture %a) {
+define void @f_ssub(ptr nocapture %a) {
 ; CHECK-LABEL: Classifying expressions for: @f_ssub
 entry:
   br label %for.body
@@ -229,12 +229,12 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {15,+,-1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {15,+,-1}<nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.ssub.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   br i1 %tmp1, label %trap, label %cont, !nosanitize !{}
@@ -247,10 +247,10 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp sgt i32 %tmp2, -1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is 15
 }
 
-define void @f_usub(i8* nocapture %a) {
+define void @f_usub(ptr nocapture %a) {
 ; CHECK-LABEL: Classifying expressions for: @f_usub
 entry:
   br label %for.body
@@ -260,12 +260,12 @@ for.cond.cleanup:                                 ; preds = %cont
 
 for.body:                                         ; preds = %entry, %cont
 ; CHECK:  %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
-; CHECK-NEXT:  -->  {15,+,-1}<%for.body> U: [0,16) S: [0,16)
+; CHECK-NEXT:  -->  {15,+,-1}<nsw><%for.body> U: [0,16) S: [0,16)
 
   %i.04 = phi i32 [ 15, %entry ], [ %tmp2, %cont ]
   %idxprom = sext i32 %i.04 to i64
-  %arrayidx = getelementptr inbounds i8, i8* %a, i64 %idxprom
-  store i8 0, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %a, i64 %idxprom
+  store i8 0, ptr %arrayidx, align 1
   %tmp0 = tail call { i32, i1 } @llvm.usub.with.overflow.i32(i32 %i.04, i32 1)
   %tmp1 = extractvalue { i32, i1 } %tmp0, 1
   br i1 %tmp1, label %trap, label %cont, !nosanitize !{}
@@ -278,7 +278,7 @@ cont:                                             ; preds = %for.body
   %tmp2 = extractvalue { i32, i1 } %tmp0, 0
   %cmp = icmp sgt i32 %tmp2, -1
   br i1 %cmp, label %for.body, label %for.cond.cleanup
-; CHECK: Loop %for.body: max backedge-taken count is 15
+; CHECK: Loop %for.body: constant max backedge-taken count is 15
 }
 
 define i32 @f_smul(i32 %val_a, i32 %val_b) {

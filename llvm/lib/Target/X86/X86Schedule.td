@@ -299,7 +299,6 @@ defm WriteFMAZ   : X86SchedWritePair<ReadAfterVecYLd>; // Fused Multiply Add (ZM
 defm WriteDPPD   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point double dot product.
 defm WriteDPPS   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point single dot product.
 defm WriteDPPSY  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point single dot product (YMM).
-defm WriteDPPSZ  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point single dot product (ZMM).
 defm WriteFSign  : X86SchedWritePair<ReadAfterVecLd>;  // Floating point fabs/fchs.
 defm WriteFRnd   : X86SchedWritePair<ReadAfterVecXLd>; // Floating point rounding.
 defm WriteFRndY  : X86SchedWritePair<ReadAfterVecYLd>; // Floating point rounding (YMM).
@@ -594,7 +593,7 @@ def SchedWriteFMA
 def SchedWriteDPPD
  : X86SchedWriteWidths<WriteDPPD, WriteDPPD, WriteDPPD, WriteDPPD>;
 def SchedWriteDPPS
- : X86SchedWriteWidths<WriteDPPS, WriteDPPS, WriteDPPSY, WriteDPPSZ>;
+ : X86SchedWriteWidths<WriteDPPS, WriteDPPS, WriteDPPSY, WriteDPPSY>;
 def SchedWriteFDiv
  : X86SchedWriteWidths<WriteFDiv, WriteFDivX, WriteFDivY, WriteFDivZ>;
 def SchedWriteFDiv64
@@ -679,6 +678,12 @@ def SchedWritePSADBW
  : X86SchedWriteWidths<WritePSADBW, WritePSADBWX,
                        WritePSADBWY, WritePSADBWZ>;
 
+def SchedWriteVecExtend
+ : X86SchedWriteWidths<WriteShuffle, WriteShuffleX,
+                       WriteVPMOV256, WriteVPMOV256>;
+def SchedWriteVecTruncate
+ : X86SchedWriteWidths<WriteVPMOV256, WriteVPMOV256,
+                       WriteVPMOV256, WriteVPMOV256>;
 def SchedWriteShuffle
  : X86SchedWriteWidths<WriteShuffle, WriteShuffleX,
                        WriteShuffleY, WriteShuffleZ>;

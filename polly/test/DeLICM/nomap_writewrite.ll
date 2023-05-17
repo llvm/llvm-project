@@ -20,7 +20,7 @@
 ; write of %phi would be. There is currently no differentiation between
 ; implicit and explicit writes in Polly.
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   %fsomeval = fadd double 21.0, 21.0
   br label %outer.preheader
@@ -40,12 +40,12 @@ outer.for:
     reduction.for:
       %i = phi i32 [0, %reduction.preheader], [%i.inc, %reduction.inc]
       %phi = phi double [0.0, %reduction.preheader], [%add, %reduction.inc]
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
       %phi.cmp = fcmp ogt double %phi, 0.0
       br i1 %phi.cmp, label %reduction.for.true, label %reduction.for.unconditional
 
     reduction.for.true:
-       store double undef, double* %A_idx
+       store double undef, ptr %A_idx
        br label %reduction.for.unconditional
 
     reduction.for.unconditional:
@@ -65,7 +65,7 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      store double %phi, double* %A_idx
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

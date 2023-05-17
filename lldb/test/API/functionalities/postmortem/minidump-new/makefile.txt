@@ -3,7 +3,7 @@
 # The binary should have debug symbols because stack unwinding doesn't work
 # correctly using the information in the Minidump only. Also we want to evaluate
 # local variables, etc.
-# Breakpad compiles as a static library, so statically linking againts it
+# Breakpad compiles as a static library, so statically linking against it
 # makes the binary huge.
 # Dynamically linking to it does improve things, but we are still #include-ing
 # breakpad headers (which is a lot of source code for which we generate debug

@@ -1019,10 +1019,10 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-32-NEXT:    s_mov_b32 s0, exec_lo
 ; GFX10-32-NEXT:    s_wqm_b32 exec_lo, exec_lo
 ; GFX10-32-NEXT:    v_cvt_i32_f32_e32 v0, v0
-; GFX10-32-NEXT:    s_mov_b32 s2, 0
+; GFX10-32-NEXT:    s_mov_b32 s1, 0
 ; GFX10-32-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
-; GFX10-32-NEXT:    s_and_saveexec_b32 s1, vcc_lo
-; GFX10-32-NEXT:    s_xor_b32 s1, exec_lo, s1
+; GFX10-32-NEXT:    s_and_saveexec_b32 s2, vcc_lo
+; GFX10-32-NEXT:    s_xor_b32 s2, exec_lo, s2
 ; GFX10-32-NEXT:    s_cbranch_execz .LBB7_3
 ; GFX10-32-NEXT:  ; %bb.1: ; %.demote0
 ; GFX10-32-NEXT:    s_andn2_b32 s0, s0, exec_lo
@@ -1031,30 +1031,30 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-32-NEXT:    s_wqm_b32 s3, s0
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s3
 ; GFX10-32-NEXT:  .LBB7_3: ; %.continue0.preheader
-; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10-32-NEXT:    s_mov_b32 s3, 0
+; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; GFX10-32-NEXT:    s_mov_b32 s2, 0
 ; GFX10-32-NEXT:    s_branch .LBB7_5
 ; GFX10-32-NEXT:  .LBB7_4: ; %.continue1
 ; GFX10-32-NEXT:    ; in Loop: Header=BB7_5 Depth=1
-; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
-; GFX10-32-NEXT:    s_add_i32 s3, s3, 1
-; GFX10-32-NEXT:    v_cmp_ge_i32_e32 vcc_lo, s3, v1
-; GFX10-32-NEXT:    s_or_b32 s2, vcc_lo, s2
-; GFX10-32-NEXT:    s_andn2_b32 exec_lo, exec_lo, s2
+; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s3
+; GFX10-32-NEXT:    s_add_i32 s2, s2, 1
+; GFX10-32-NEXT:    v_cmp_ge_i32_e32 vcc_lo, s2, v1
+; GFX10-32-NEXT:    s_or_b32 s1, vcc_lo, s1
+; GFX10-32-NEXT:    s_andn2_b32 exec_lo, exec_lo, s1
 ; GFX10-32-NEXT:    s_cbranch_execz .LBB7_8
 ; GFX10-32-NEXT:  .LBB7_5: ; %.continue0
 ; GFX10-32-NEXT:    ; =>This Inner Loop Header: Depth=1
-; GFX10-32-NEXT:    s_mov_b32 s1, s0
-; GFX10-32-NEXT:    v_cndmask_b32_e64 v0, s3, 0, s1
-; GFX10-32-NEXT:    s_xor_b32 s1, s0, -1
+; GFX10-32-NEXT:    s_mov_b32 s3, s0
+; GFX10-32-NEXT:    v_cndmask_b32_e64 v0, s2, 0, s3
+; GFX10-32-NEXT:    s_xor_b32 s3, s0, -1
 ; GFX10-32-NEXT:    v_mov_b32_e32 v2, v0
 ; GFX10-32-NEXT:    v_mov_b32_dpp v2, v2 quad_perm:[1,1,1,1] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-32-NEXT:    v_subrev_f32_dpp v0, v0, v2 quad_perm:[0,0,0,0] row_mask:0xf bank_mask:0xf bound_ctrl:1
 ; GFX10-32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-32-NEXT:    v_cmp_neq_f32_e32 vcc_lo, 0, v0
-; GFX10-32-NEXT:    s_or_b32 s1, s1, vcc_lo
-; GFX10-32-NEXT:    s_and_saveexec_b32 s4, s1
-; GFX10-32-NEXT:    s_xor_b32 s1, exec_lo, s4
+; GFX10-32-NEXT:    s_or_b32 s3, s3, vcc_lo
+; GFX10-32-NEXT:    s_and_saveexec_b32 s4, s3
+; GFX10-32-NEXT:    s_xor_b32 s3, exec_lo, s4
 ; GFX10-32-NEXT:    s_cbranch_execz .LBB7_4
 ; GFX10-32-NEXT:  ; %bb.6: ; %.demote1
 ; GFX10-32-NEXT:    ; in Loop: Header=BB7_5 Depth=1
@@ -1066,7 +1066,7 @@ define amdgpu_ps void @wqm_deriv_loop(<2 x float> %input, float %arg, i32 %index
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s4
 ; GFX10-32-NEXT:    s_branch .LBB7_4
 ; GFX10-32-NEXT:  .LBB7_8: ; %.return
-; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s2
+; GFX10-32-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GFX10-32-NEXT:    s_and_b32 exec_lo, exec_lo, s0
 ; GFX10-32-NEXT:    v_mov_b32_e32 v0, 0x3c00
 ; GFX10-32-NEXT:    v_bfrev_b32_e32 v1, 60

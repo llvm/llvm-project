@@ -20,7 +20,7 @@
     br i1 %cmp63, label %for.body.preheader, label %for.cond.cleanup
 
   for.body.preheader:                               ; preds = %entry
-    %0 = load i32, i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0), align 4
+    %0 = load i32, ptr @A, align 4
     br label %for.body
 
   for.cond.cleanup:                                 ; preds = %for.body, %entry
@@ -99,7 +99,7 @@ body:             |
   ; SINK1: bb.1.for.body.preheader:
   ; SINK1:   successors: %bb.3(0x80000000)
   ; SINK1:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; SINK1:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; SINK1:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
   ; SINK1:   B %bb.3
   ; SINK1: bb.2.for.cond.cleanup:
   ; SINK1:   [[PHI:%[0-9]+]]:gpr32all = PHI [[COPY]], %bb.0, %4, %bb.3
@@ -126,7 +126,7 @@ body:             |
   ; SINK2: bb.1.for.body.preheader:
   ; SINK2:   successors: %bb.3(0x80000000)
   ; SINK2:   [[ADRP:%[0-9]+]]:gpr64common = ADRP target-flags(aarch64-page) @A
-  ; SINK2:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+  ; SINK2:   [[LDRWui:%[0-9]+]]:gpr32 = LDRWui killed [[ADRP]], target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
   ; SINK2:   B %bb.3
   ; SINK2: bb.2.for.cond.cleanup:
   ; SINK2:   [[PHI:%[0-9]+]]:gpr32all = PHI [[COPY]], %bb.0, %4, %bb.3
@@ -155,7 +155,7 @@ body:             |
     successors: %bb.3(0x80000000)
 
     %8:gpr64common = ADRP target-flags(aarch64-page) @A
-    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from `i32* getelementptr inbounds ([100 x i32], [100 x i32]* @A, i64 0, i64 0)`)
+    %9:gpr32 = LDRWui killed %8, target-flags(aarch64-pageoff, aarch64-nc) @A :: (dereferenceable load (s32) from @A)
     B %bb.3
 
   bb.2.for.cond.cleanup:

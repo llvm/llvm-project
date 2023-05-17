@@ -26,6 +26,7 @@
 #include <cassert>
 #include <list>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -164,9 +165,10 @@ class CompilerInstance : public ModuleLoader {
   /// failed.
   struct OutputFile {
     std::string Filename;
-    Optional<llvm::sys::fs::TempFile> File;
+    std::optional<llvm::sys::fs::TempFile> File;
 
-    OutputFile(std::string filename, Optional<llvm::sys::fs::TempFile> file)
+    OutputFile(std::string filename,
+               std::optional<llvm::sys::fs::TempFile> file)
         : Filename(std::move(filename)), File(std::move(file)) {}
   };
 

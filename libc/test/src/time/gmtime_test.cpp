@@ -6,15 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/time/gmtime.h"
 #include "src/time/time_utils.h"
 #include "test/ErrnoSetterMatcher.h"
+#include "test/UnitTest/Test.h"
 #include "test/src/time/TmMatcher.h"
-#include "utils/UnitTest/Test.h"
 
-#include <errno.h>
 #include <limits.h>
-#include <string.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
 using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
@@ -26,15 +25,15 @@ TEST(LlvmLibcGmTime, OutOfRange) {
                         TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR);
   struct tm *tm_data = __llvm_libc::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  EXPECT_EQ(llvmlibc_errno, EOVERFLOW);
+  EXPECT_EQ(libc_errno, EOVERFLOW);
 
-  llvmlibc_errno = 0;
+  libc_errno = 0;
   seconds = INT_MIN * static_cast<int64_t>(
                           TimeConstants::NUMBER_OF_SECONDS_IN_LEAP_YEAR) -
             1;
   tm_data = __llvm_libc::gmtime(&seconds);
   EXPECT_TRUE(tm_data == nullptr);
-  EXPECT_EQ(llvmlibc_errno, EOVERFLOW);
+  EXPECT_EQ(libc_errno, EOVERFLOW);
 }
 
 TEST(LlvmLibcGmTime, InvalidSeconds) {

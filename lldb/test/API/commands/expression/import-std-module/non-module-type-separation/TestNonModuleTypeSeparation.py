@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -33,22 +31,23 @@ class TestCase(TestBase):
             ValueCheck(value="2"),
         ]
 
-        # The debug info vector type doesn't know about the default template
-        # arguments, so they will be printed.
-        debug_info_vector_type = "std::vector<int, std::allocator<int> >"
-
-        # The C++ module vector knows its default template arguments and will
-        # suppress them.
-        module_vector_type = "std::vector<int>"
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
+            vector_type = "std::vector<int>"
+            dbg_vec_type = "std::vector<DbgInfoClass>"
+            module_vector_type = "std::vector<int>"
+        else:
+            vector_type = "std::vector<int, std::allocator<int> >"
+            dbg_vec_type = "std::vector<DbgInfoClass, std::allocator<DbgInfoClass> >"
+            module_vector_type = "std::vector<int>"
 
         # First muddy the scratch AST with non-C++ module types.
-        self.expect_expr("a", result_type=debug_info_vector_type,
+        self.expect_expr("a", result_type=vector_type,
                          result_children=children)
         self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass, std::allocator<DbgInfoClass> >",
+                         result_type=dbg_vec_type,
                          result_children=[
             ValueCheck(type="DbgInfoClass", children=[
-                ValueCheck(name="ints", type=debug_info_vector_type, children=[
+                ValueCheck(name="ints", type=vector_type, children=[
                     ValueCheck(value="1")
                 ])
             ])
@@ -61,7 +60,7 @@ class TestCase(TestBase):
 
         # Test mixed debug info/module types
         self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass>",
+                         result_type=dbg_vec_type,
                          result_children=[
             ValueCheck(type="DbgInfoClass", children=[
                 ValueCheck(name="ints", type=module_vector_type, children=[
@@ -73,15 +72,15 @@ class TestCase(TestBase):
 
         # Turn off the C++ module import and use debug info types again.
         self.runCmd("settings set target.import-std-module false")
-        self.expect_expr("a", result_type=debug_info_vector_type,
+        self.expect_expr("a", result_type=vector_type,
                          result_children=children)
 
         # Test the types that were previoiusly mixed debug info/module types.
         self.expect_expr("dbg_info_vec",
-                         result_type="std::vector<DbgInfoClass, std::allocator<DbgInfoClass> >",
+                         result_type=dbg_vec_type,
                          result_children=[
             ValueCheck(type="DbgInfoClass", children=[
-                ValueCheck(name="ints", type=debug_info_vector_type, children=[
+                ValueCheck(name="ints", type=vector_type, children=[
                     ValueCheck(value="1")
                 ])
             ])

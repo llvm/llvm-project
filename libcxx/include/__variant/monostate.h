@@ -10,6 +10,7 @@
 #ifndef _LIBCPP___VARIANT_MONOSTATE_H
 #define _LIBCPP___VARIANT_MONOSTATE_H
 
+#include <__compare/ordering.h>
 #include <__config>
 #include <__functional/hash.h>
 #include <cstddef>
@@ -20,40 +21,43 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 struct _LIBCPP_TEMPLATE_VIS monostate {};
 
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator<(monostate, monostate) noexcept { return false; }
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator==(monostate, monostate) noexcept { return true; }
 
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator>(monostate, monostate) noexcept { return false; }
+#  if _LIBCPP_STD_VER >= 20
 
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator<=(monostate, monostate) noexcept { return true; }
+_LIBCPP_HIDE_FROM_ABI constexpr strong_ordering operator<=>(monostate, monostate) noexcept {
+  return strong_ordering::equal;
+}
 
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator>=(monostate, monostate) noexcept { return true; }
+#  else // _LIBCPP_STD_VER >= 20
 
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator==(monostate, monostate) noexcept { return true; }
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator!=(monostate, monostate) noexcept { return false; }
 
-inline _LIBCPP_INLINE_VISIBILITY
-constexpr bool operator!=(monostate, monostate) noexcept { return false; }
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator<(monostate, monostate) noexcept { return false; }
+
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator>(monostate, monostate) noexcept { return false; }
+
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator<=(monostate, monostate) noexcept { return true; }
+
+_LIBCPP_HIDE_FROM_ABI constexpr bool operator>=(monostate, monostate) noexcept { return true; }
+
+#  endif // _LIBCPP_STD_VER >= 20
 
 template <>
 struct _LIBCPP_TEMPLATE_VIS hash<monostate> {
   using argument_type = monostate;
   using result_type = size_t;
 
-  inline _LIBCPP_INLINE_VISIBILITY
-  result_type operator()(const argument_type&) const _NOEXCEPT {
+  inline _LIBCPP_HIDE_FROM_ABI result_type operator()(const argument_type&) const _NOEXCEPT {
     return 66740831; // return a fundamentally attractive random value.
   }
 };
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

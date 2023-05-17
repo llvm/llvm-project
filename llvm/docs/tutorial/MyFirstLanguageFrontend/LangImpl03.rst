@@ -73,8 +73,8 @@ parser, which will be used to report errors found during code generation
 
 .. code-block:: c++
 
-    static LLVMContext TheContext;
-    static IRBuilder<> Builder(TheContext);
+    static std::unique_ptr<LLVMContext> TheContext;
+    static std::unique_ptr<IRBuilder<>> Builder(TheContext);
     static std::unique_ptr<Module> TheModule;
     static std::map<std::string, Value *> NamedValues;
 
@@ -122,7 +122,7 @@ First we'll do numeric literals:
 .. code-block:: c++
 
     Value *NumberExprAST::codegen() {
-      return ConstantFP::get(TheContext, APFloat(Val));
+      return ConstantFP::get(*TheContext, APFloat(Val));
     }
 
 In the LLVM IR, numeric constants are represented with the
@@ -163,16 +163,16 @@ variables <LangImpl07.html#user-defined-local-variables>`_.
 
       switch (Op) {
       case '+':
-        return Builder.CreateFAdd(L, R, "addtmp");
+        return Builder->CreateFAdd(L, R, "addtmp");
       case '-':
-        return Builder.CreateFSub(L, R, "subtmp");
+        return Builder->CreateFSub(L, R, "subtmp");
       case '*':
-        return Builder.CreateFMul(L, R, "multmp");
+        return Builder->CreateFMul(L, R, "multmp");
       case '<':
-        L = Builder.CreateFCmpULT(L, R, "cmptmp");
+        L = Builder->CreateFCmpULT(L, R, "cmptmp");
         // Convert bool 0/1 to double 0.0 or 1.0
-        return Builder.CreateUIToFP(L, Type::getDoubleTy(TheContext),
-                                    "booltmp");
+        return Builder->CreateUIToFP(L, Type::getDoubleTy(TheContext),
+                                     "booltmp");
       default:
         return LogErrorV("invalid binary operator");
       }
@@ -233,7 +233,7 @@ would return 0.0 and -1.0, depending on the input value.
           return nullptr;
       }
 
-      return Builder.CreateCall(CalleeF, ArgsV, "calltmp");
+      return Builder->CreateCall(CalleeF, ArgsV, "calltmp");
     }
 
 Code generation for function calls is quite straightforward with LLVM. The code
@@ -270,9 +270,9 @@ with:
     Function *PrototypeAST::codegen() {
       // Make the function type:  double(double,double) etc.
       std::vector<Type*> Doubles(Args.size(),
-                                 Type::getDoubleTy(TheContext));
+                                 Type::getDoubleTy(*TheContext));
       FunctionType *FT =
-        FunctionType::get(Type::getDoubleTy(TheContext), Doubles, false);
+        FunctionType::get(Type::getDoubleTy(*TheContext), Doubles, false);
 
       Function *F =
         Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
@@ -346,13 +346,13 @@ assert that the function is empty (i.e. has no body yet) before we start.
 .. code-block:: c++
 
   // Create a new basic block to start insertion into.
-  BasicBlock *BB = BasicBlock::Create(TheContext, "entry", TheFunction);
-  Builder.SetInsertPoint(BB);
+  BasicBlock *BB = BasicBlock::Create(*TheContext, "entry", TheFunction);
+  Builder->SetInsertPoint(BB);
 
   // Record the function arguments in the NamedValues map.
   NamedValues.clear();
   for (auto &Arg : TheFunction->args())
-    NamedValues[Arg.getName()] = &Arg;
+    NamedValues[std::string(Arg.getName())] = &Arg;
 
 Now we get to the point where the ``Builder`` is set up. The first line
 creates a new `basic block <http://en.wikipedia.org/wiki/Basic_block>`_
@@ -371,7 +371,7 @@ it out) so that they're accessible to ``VariableExprAST`` nodes.
 
       if (Value *RetVal = Body->codegen()) {
         // Finish off the function.
-        Builder.CreateRet(RetVal);
+        Builder->CreateRet(RetVal);
 
         // Validate the generated code, checking for consistency.
         verifyFunction(*TheFunction);

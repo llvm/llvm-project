@@ -14,21 +14,20 @@
 #ifndef LLVM_TARGET_CGPASSBUILDEROPTION_H
 #define LLVM_TARGET_CGPASSBUILDEROPTION_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 
 namespace llvm {
 
 enum class RunOutliner { TargetDefault, AlwaysOutline, NeverOutline };
 enum class RegAllocType { Default, Basic, Fast, Greedy, PBQP };
-enum class CFLAAType { None, Steensgaard, Andersen, Both };
 
 // Not one-on-one but mostly corresponding to commandline options in
 // TargetPassConfig.cpp.
 struct CGPassBuilderOption {
-  Optional<bool> OptimizeRegAlloc;
-  Optional<bool> EnableIPRA;
+  std::optional<bool> OptimizeRegAlloc;
+  std::optional<bool> EnableIPRA;
   bool DebugPM = false;
   bool DisableVerify = false;
   bool EnableImplicitNullChecks = false;
@@ -49,12 +48,11 @@ struct CGPassBuilderOption {
 
   RunOutliner EnableMachineOutliner = RunOutliner::TargetDefault;
   RegAllocType RegAlloc = RegAllocType::Default;
-  CFLAAType UseCFLAA = CFLAAType::None;
-  Optional<GlobalISelAbortMode> EnableGlobalISelAbort;
+  std::optional<GlobalISelAbortMode> EnableGlobalISelAbort;
 
-  Optional<bool> VerifyMachineCode;
-  Optional<bool> EnableFastISelOption;
-  Optional<bool> EnableGlobalISelOption;
+  std::optional<bool> VerifyMachineCode;
+  std::optional<bool> EnableFastISelOption;
+  std::optional<bool> EnableGlobalISelOption;
 };
 
 CGPassBuilderOption getCGPassBuilderOption();

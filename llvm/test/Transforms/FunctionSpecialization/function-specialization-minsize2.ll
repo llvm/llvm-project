@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -func-specialization-size-threshold=3 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -funcspec-min-function-size=3 -S < %s | FileCheck %s
 
 ; Checks for callsites that have been annotated with MinSize. No specialisation
 ; expected here:
@@ -11,11 +11,11 @@ entry:
   br i1 %flag, label %plus, label %minus
 
 plus:
-  %tmp0 = call i64 @compute(i64 %x, i64 (i64)* @plus) #0
+  %tmp0 = call i64 @compute(i64 %x, ptr @plus) #0
   br label %merge
 
 minus:
-  %tmp1 = call i64 @compute(i64 %x, i64 (i64)* @minus) #0
+  %tmp1 = call i64 @compute(i64 %x, ptr @minus) #0
   br label %merge
 
 merge:
@@ -23,7 +23,7 @@ merge:
   ret i64 %tmp2
 }
 
-define internal i64 @compute(i64 %x, i64 (i64)* %binop) {
+define internal i64 @compute(i64 %x, ptr %binop) {
 entry:
   %tmp0 = call i64 %binop(i64 %x)
   ret i64 %tmp0

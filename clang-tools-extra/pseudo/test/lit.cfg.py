@@ -14,3 +14,8 @@ config.environment['PATH'] = os.path.pathsep.join((
         config.clang_tools_dir,
         config.llvm_tools_dir,
         config.environment['PATH']))
+
+# It is not realistically possible to account for all options that could
+# possibly be present in system and user configuration files, so disable
+# default configs for the test runs.
+config.environment["CLANG_NO_DEFAULT_CONFIG"] = "1"

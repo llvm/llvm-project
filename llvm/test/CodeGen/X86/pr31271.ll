@@ -3,7 +3,7 @@
 
 @c = external dso_local global [1 x i32], align 4
 
-define void @fn1(i32 %k, i32* %p) {
+define void @fn1(i32 %k, ptr %p) {
 ; CHECK-LABEL: fn1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -18,11 +18,11 @@ define void @fn1(i32 %k, i32* %p) {
 ; CHECK-NEXT:  # %bb.2: # %r
 ; CHECK-NEXT:    retl
 ; CHECK-NEXT:  .LBB0_1: # %u
-  %g = getelementptr inbounds [1 x i32], [1 x i32]* @c, i32 0, i32 %k
-  %cmp = icmp ne i32* %p, %g
+  %g = getelementptr inbounds [1 x i32], ptr @c, i32 0, i32 %k
+  %cmp = icmp ne ptr %p, %g
   %z = zext i1 %cmp to i32
-  store i32 %z, i32* undef, align 4
-  %cmp2 = icmp eq i32* %g, null
+  store i32 %z, ptr undef, align 4
+  %cmp2 = icmp eq ptr %g, null
   br i1 %cmp2, label %u, label %r
 
 u:

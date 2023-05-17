@@ -301,24 +301,24 @@ define void @main() local_unnamed_addr nounwind {
 ; CHECK-NEXT:    lw s11, 636(sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 688
 ; CHECK-NEXT:    ret
-  %1 = load fp128, fp128* @U, align 16
+  %1 = load fp128, ptr @U, align 16
   %2 = fsub fp128 0xL00000000000000000000000000000000, %1
   %3 = fsub fp128 %2, %1
   %4 = fadd fp128 %1, 0xL00000000000000000000000000000000
-  %5 = load fp128, fp128* @Y1, align 16
+  %5 = load fp128, ptr @Y1, align 16
   %6 = fmul fp128 %2, %5
   %7 = fadd fp128 %1, %4
   %8 = fsub fp128 0xL00000000000000000000000000000000, %7
-  store fp128 %8, fp128* @X, align 16
+  store fp128 %8, ptr @X, align 16
   %9 = fmul fp128 %3, %5
   %10 = fmul fp128 0xL00000000000000000000000000000000, %4
-  store fp128 %10, fp128* @S, align 16
+  store fp128 %10, ptr @S, align 16
   %11 = fsub fp128 %6, %3
-  store fp128 %11, fp128* @T, align 16
+  store fp128 %11, ptr @T, align 16
   %12 = fadd fp128 0xL00000000000000000000000000000000, %9
-  store fp128 %12, fp128* @Y, align 16
+  store fp128 %12, ptr @Y, align 16
   %13 = fmul fp128 0xL00000000000000000000000000000000, %5
   %14 = fadd fp128 %13, 0xL0000000000000000BFFE000000000000
-  store fp128 %14, fp128* @Y1, align 16
+  store fp128 %14, ptr @Y1, align 16
   ret void
 }

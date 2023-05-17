@@ -7,8 +7,8 @@ define double @foo() #0 {
 entry:
   %a = alloca double, align 8
   %b = alloca double, align 8
-  %0 = load double, double* %a, align 8
-  %1 = load double, double* %b, align 8
+  %0 = load double, ptr %a, align 8
+  %1 = load double, ptr %b, align 8
   %add = fadd double %0, %1
   ret double %add
 
@@ -19,8 +19,8 @@ define double @foo1() #0 {
 entry:
   %a = alloca double, align 8
   %b = alloca double, align 8
-  %0 = load double, double* %a, align 8
-  %1 = load double, double* %b, align 8
+  %0 = load double, ptr %a, align 8
+  %1 = load double, ptr %b, align 8
   %mul = fmul double %0, %1
   ret double %mul
 
@@ -31,8 +31,8 @@ define double @foo2() #0 {
 entry:
   %a = alloca double, align 8
   %b = alloca double, align 8
-  %0 = load double, double* %a, align 8
-  %1 = load double, double* %b, align 8
+  %0 = load double, ptr %a, align 8
+  %1 = load double, ptr %b, align 8
   %sub = fsub double %0, %1
   ret double %sub
 
@@ -43,8 +43,8 @@ define double @foo3() #0 {
 entry:
   %a = alloca double, align 8
   %b = alloca double, align 8
-  %0 = load double, double* %a, align 8
-  %1 = load double, double* %b, align 8
+  %0 = load double, ptr %a, align 8
+  %1 = load double, ptr %b, align 8
   %div = fdiv double %0, %1
   ret double %div
 

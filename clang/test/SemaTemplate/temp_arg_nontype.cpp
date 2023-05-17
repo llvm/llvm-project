@@ -204,8 +204,8 @@ namespace EntityReferenced {
 }
 
 namespace PR6964 {
-  template <typename ,int, int = 9223372036854775807L > // expected-warning 2{{non-type template argument value '9223372036854775807' truncated to '-1' for template parameter of type 'int'}} \
-  // expected-note 2{{template parameter is declared here}}
+  template <typename ,int, int = 9223372036854775807L > // expected-warning {{non-type template argument value '9223372036854775807' truncated to '-1' for template parameter of type 'int'}} \
+  // expected-note {{template parameter is declared here}}
   struct as_nview { };
 
   template <typename Sequence, int I0> 
@@ -398,7 +398,7 @@ namespace partial_order_different_types {
 
 namespace partial_order_references {
   // FIXME: The standard does not appear to consider the second specialization
-  // to be more more specialized than the first! The problem is that deducing
+  // to be more specialized than the first! The problem is that deducing
   // an 'int&' parameter from an argument 'R' results in a type mismatch,
   // because the parameter has a reference type and the argument is an
   // expression and thus does not have reference type. We resolve this by

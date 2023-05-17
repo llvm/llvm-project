@@ -9,12 +9,12 @@ target triple = "nvptx-nvidia-cuda"
 ; CHECK: .entry foo
 ; CHECK:   .param .u8 foo_param_0
 ; CHECK:   .param .u32 foo_param_1
-define void @foo(i1 %p, i32* %out) {
+define void @foo(i1 %p, ptr %out) {
   %val = zext i1 %p to i32
-  store i32 %val, i32* %out
+  store i32 %val, ptr %out
   ret void
 }
 
 
 !nvvm.annotations = !{!0}
-!0 = !{void (i1, i32*)* @foo, !"kernel", i32 1}
+!0 = !{ptr @foo, !"kernel", i32 1}

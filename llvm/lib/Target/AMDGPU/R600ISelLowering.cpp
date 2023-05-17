@@ -18,6 +18,7 @@
 #include "R600InstrInfo.h"
 #include "R600MachineFunctionInfo.h"
 #include "R600Subtarget.h"
+#include "R600TargetMachine.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -180,6 +181,7 @@ R600TargetLowering::R600TargetLowering(const TargetMachine &TM,
     setHasExtractBitsInsn(true);
 
   setOperationAction(ISD::GlobalAddress, MVT::i32, Custom);
+  setOperationAction(ISD::ADDRSPACECAST, MVT::i32, Custom);
 
   const MVT ScalarIntVTs[] = { MVT::i32, MVT::i64 };
   for (MVT VT : ScalarIntVTs)
@@ -418,6 +420,8 @@ SDValue R600TargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const 
   case ISD::BRCOND: return LowerBRCOND(Op, DAG);
   case ISD::GlobalAddress: return LowerGlobalAddress(MFI, Op, DAG);
   case ISD::FrameIndex: return lowerFrameIndex(Op, DAG);
+  case ISD::ADDRSPACECAST:
+    return lowerADDRSPACECAST(Op, DAG);
   case ISD::INTRINSIC_VOID: {
     SDValue Chain = Op.getOperand(0);
     unsigned IntrinsicID =
@@ -589,7 +593,7 @@ void R600TargetLowering::ReplaceNodeResults(SDNode *N,
     // Since we don't care about out of bounds values we can use FP_TO_SINT for
     // uints too. The DAGLegalizer code for uint considers some extra cases
     // which are not necessary here.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case ISD::FP_TO_SINT: {
     if (N->getValueType(0) == MVT::i1) {
       Results.push_back(lowerFP_TO_SINT(N->getOperand(0), DAG));
@@ -937,6 +941,24 @@ SDValue R600TargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const 
       DAG.getCondCode(ISD::SETNE));
 }
 
+SDValue R600TargetLowering::lowerADDRSPACECAST(SDValue Op,
+                                               SelectionDAG &DAG) const {
+  SDLoc SL(Op);
+  EVT VT = Op.getValueType();
+
+  const R600TargetMachine &TM =
+      static_cast<const R600TargetMachine &>(getTargetMachine());
+
+  const AddrSpaceCastSDNode *ASC = cast<AddrSpaceCastSDNode>(Op);
+  unsigned SrcAS = ASC->getSrcAddressSpace();
+  unsigned DestAS = ASC->getDestAddressSpace();
+
+  if (isNullConstant(Op.getOperand(0)) && SrcAS == AMDGPUAS::FLAT_ADDRESS)
+    return DAG.getConstant(TM.getNullPointerValue(DestAS), SL, VT);
+
+  return Op;
+}
+
 /// LLVM generates byte-addressed pointers.  For indirect addressing, we need to
 /// convert these pointers to a register index.  Each register holds
 /// 16 bytes, (4 x 32bit sub-register), but we need to take into account the
@@ -1003,10 +1025,10 @@ SDValue R600TargetLowering::lowerPrivateTruncStore(StoreSDNode *Store,
 
   SDValue Mask;
   if (Store->getMemoryVT() == MVT::i8) {
-    assert(Store->getAlignment() >= 1);
+    assert(Store->getAlign() >= 1);
     Mask = DAG.getConstant(0xff, DL, MVT::i32);
   } else if (Store->getMemoryVT() == MVT::i16) {
-    assert(Store->getAlignment() >= 2);
+    assert(Store->getAlign() >= 2);
     Mask = DAG.getConstant(0xffff, DL, MVT::i32);
   } else {
     llvm_unreachable("Unsupported private trunc store");
@@ -1138,7 +1160,7 @@ SDValue R600TargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
         MaskConstant = DAG.getConstant(0xFF, DL, MVT::i32);
       } else {
         assert(MemVT == MVT::i16);
-        assert(StoreNode->getAlignment() >= 2);
+        assert(StoreNode->getAlign() >= 2);
         MaskConstant = DAG.getConstant(0xFFFF, DL, MVT::i32);
       }
 
@@ -1245,7 +1267,7 @@ SDValue R600TargetLowering::lowerPrivateExtLoad(SDValue Op,
   LoadSDNode *Load = cast<LoadSDNode>(Op);
   ISD::LoadExtType ExtType = Load->getExtensionType();
   EVT MemVT = Load->getMemoryVT();
-  assert(Load->getAlignment() >= MemVT.getStoreSize());
+  assert(Load->getAlign() >= MemVT.getStoreSize());
 
   SDValue BasePtr = Load->getBasePtr();
   SDValue Chain = Load->getChain();
@@ -1487,7 +1509,7 @@ SDValue R600TargetLowering::LowerFormalArguments(
     // size of the register which isn't useful.
 
     unsigned PartOffset = VA.getLocMemOffset();
-    unsigned Alignment = MinAlign(VT.getStoreSize(), PartOffset);
+    Align Alignment = commonAlignment(Align(VT.getStoreSize()), PartOffset);
 
     MachinePointerInfo PtrInfo(AMDGPUAS::PARAM_I_ADDRESS);
     SDValue Arg = DAG.getLoad(
@@ -1521,9 +1543,9 @@ bool R600TargetLowering::canMergeStoresTo(unsigned AS, EVT MemVT,
 
 bool R600TargetLowering::allowsMisalignedMemoryAccesses(
     EVT VT, unsigned AddrSpace, Align Alignment, MachineMemOperand::Flags Flags,
-    bool *IsFast) const {
+    unsigned *IsFast) const {
   if (IsFast)
-    *IsFast = false;
+    *IsFast = 0;
 
   if (!VT.isSimple() || VT == MVT::Other)
     return false;
@@ -1533,7 +1555,7 @@ bool R600TargetLowering::allowsMisalignedMemoryAccesses(
 
   // TODO: This is a rough estimate.
   if (IsFast)
-    *IsFast = true;
+    *IsFast = 1;
 
   return VT.bitsGT(MVT::i32) && Alignment >= Align(4);
 }
@@ -1623,7 +1645,7 @@ static SDValue ReorganizeVector(SelectionDAG &DAG, SDValue VectorEntry,
                             NewBldVec);
 }
 
-SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[4],
+SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[],
                                             SelectionDAG &DAG,
                                             const SDLoc &DL) const {
   // Old -> New swizzle values
@@ -1632,7 +1654,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[4],
   BuildVector = CompactSwizzlableVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
-    if (SwizzleRemap.find(Idx) != SwizzleRemap.end())
+    if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
 
@@ -1640,7 +1662,7 @@ SDValue R600TargetLowering::OptimizeSwizzle(SDValue BuildVector, SDValue Swz[4],
   BuildVector = ReorganizeVector(DAG, BuildVector, SwizzleRemap);
   for (unsigned i = 0; i < 4; i++) {
     unsigned Idx = cast<ConstantSDNode>(Swz[i])->getZExtValue();
-    if (SwizzleRemap.find(Idx) != SwizzleRemap.end())
+    if (SwizzleRemap.contains(Idx))
       Swz[i] = DAG.getConstant(SwizzleRemap[Idx], DL, MVT::i32);
   }
 
@@ -1681,7 +1703,7 @@ SDValue R600TargetLowering::constBufferLoad(LoadSDNode *LoadNode, int Block,
     NewVT = VT;
     NumElements = VT.getVectorNumElements();
   }
-  SDValue Result = DAG.getBuildVector(NewVT, DL, makeArrayRef(Slots, NumElements));
+  SDValue Result = DAG.getBuildVector(NewVT, DL, ArrayRef(Slots, NumElements));
   if (!VT.isVector()) {
     Result = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, MVT::i32, Result,
                          DAG.getConstant(0, DL, MVT::i32));
@@ -2157,4 +2179,19 @@ SDNode *R600TargetLowering::PostISelFolding(MachineSDNode *Node,
   }
 
   return Node;
+}
+
+TargetLowering::AtomicExpansionKind
+R600TargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *RMW) const {
+  switch (RMW->getOperation()) {
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+    // FIXME: Cayman at least appears to have instructions for this, but the
+    // instruction defintions appear to be missing.
+    return AtomicExpansionKind::CmpXChg;
+  default:
+    break;
+  }
+
+  return AMDGPUTargetLowering::shouldExpandAtomicRMWInIR(RMW);
 }

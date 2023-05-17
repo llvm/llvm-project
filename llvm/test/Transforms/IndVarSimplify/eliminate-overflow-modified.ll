@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S -o - | FileCheck %s
+; RUN: opt < %s -passes=indvars -S -o - | FileCheck %s
 
 ; When eliminating the overflow intrinsic the indvars pass would incorrectly
 ; return a false Modified status. This was caught by the pass return

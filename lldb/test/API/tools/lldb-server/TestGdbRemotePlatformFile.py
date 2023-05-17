@@ -1,5 +1,3 @@
-from __future__ import print_function
-
 # lldb test suite imports
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import TestBase
@@ -32,11 +30,11 @@ class GDBStat(typing.NamedTuple):
 
 
 def uint32_or_zero(x):
-    return x if x < 2**32 else 0
+    return x if x < 2**32 and x >= 0 else 0
 
 
 def uint32_or_max(x):
-    return x if x < 2**32 else 2**32 - 1
+    return x if x < 2**32 and x >= 0 else 2**32 - 1
 
 
 def uint32_trunc(x):
@@ -44,8 +42,6 @@ def uint32_trunc(x):
 
 
 class TestGdbRemotePlatformFile(GdbRemoteTestCaseBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfWindows
     @add_test_categories(["llgs"])

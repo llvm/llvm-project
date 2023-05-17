@@ -27,6 +27,7 @@
 #include "llvm/Support/ConvertUTF.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/Unicode.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -233,7 +234,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
       HadError = true;
       if (Diags)
         Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-             diag::err_delimited_escape_missing_brace);
+             diag::err_delimited_escape_missing_brace)
+            << "o";
 
       break;
     }
@@ -261,7 +263,8 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
         ThisTokBuf++;
         continue;
       }
-      if (ResultChar & 0x020000000)
+      // Check if one of the top three bits is set before shifting them out.
+      if (ResultChar & 0xE0000000)
         Overflow = true;
 
       ResultChar <<= 3;
@@ -309,7 +312,9 @@ static unsigned ProcessCharEscape(const char *ThisTokBegin,
           << tok::r_brace;
     else if (!HadError) {
       Diag(Diags, Features, Loc, ThisTokBegin, EscapeBegin, ThisTokBuf,
-           diag::ext_delimited_escape_sequence);
+           Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
+                                : diag::ext_delimited_escape_sequence)
+          << /*delimited*/ 0 << (Features.CPlusPlus ? 1 : 0);
     }
   }
 
@@ -335,7 +340,7 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
     char Kind = *I;
     ++I;
 
-    assert(Kind == 'u' || Kind == 'U');
+    assert(Kind == 'u' || Kind == 'U' || Kind == 'N');
     uint32_t CodePoint = 0;
 
     if (Kind == 'u' && *I == '{') {
@@ -346,6 +351,22 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
         CodePoint += Value;
       }
       appendCodePoint(CodePoint, Buf);
+      continue;
+    }
+
+    if (Kind == 'N') {
+      assert(*I == '{');
+      ++I;
+      auto Delim = std::find(I, Input.end(), '}');
+      assert(Delim != Input.end());
+      std::optional<llvm::sys::unicode::LooseMatchingResult> Res =
+          llvm::sys::unicode::nameToCodepointLooseMatching(
+              StringRef(I, std::distance(I, Delim)));
+      assert(Res);
+      CodePoint = Res->CodePoint;
+      assert(CodePoint != 0xFFFFFFFF);
+      appendCodePoint(CodePoint, Buf);
+      I = Delim;
       continue;
     }
 
@@ -370,23 +391,20 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
   }
 }
 
-/// ProcessUCNEscape - Read the Universal Character Name, check constraints and
-/// return the UTF32.
-static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
-                             const char *ThisTokEnd,
-                             uint32_t &UcnVal, unsigned short &UcnLen,
-                             FullSourceLoc Loc, DiagnosticsEngine *Diags,
-                             const LangOptions &Features,
-                             bool in_char_string_literal = false) {
+static bool ProcessNumericUCNEscape(const char *ThisTokBegin,
+                                    const char *&ThisTokBuf,
+                                    const char *ThisTokEnd, uint32_t &UcnVal,
+                                    unsigned short &UcnLen, bool &Delimited,
+                                    FullSourceLoc Loc, DiagnosticsEngine *Diags,
+                                    const LangOptions &Features,
+                                    bool in_char_string_literal = false) {
   const char *UcnBegin = ThisTokBuf;
+  bool HasError = false;
+  bool EndDelimiterFound = false;
 
   // Skip the '\u' char's.
   ThisTokBuf += 2;
-
-  bool Delimited = false;
-  bool EndDelimiterFound = false;
-  bool HasError = false;
-
+  Delimited = false;
   if (UcnBegin[1] == 'u' && in_char_string_literal &&
       ThisTokBuf != ThisTokEnd && *ThisTokBuf == '{') {
     Delimited = true;
@@ -394,7 +412,8 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   } else if (ThisTokBuf == ThisTokEnd || !isHexDigit(*ThisTokBuf)) {
     if (Diags)
       Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
-           diag::err_hex_escape_no_digits) << StringRef(&ThisTokBuf[-1], 1);
+           diag::err_hex_escape_no_digits)
+          << StringRef(&ThisTokBuf[-1], 1);
     return false;
   }
   UcnLen = (ThisTokBuf[-1] == 'u' ? 4 : 8);
@@ -455,7 +474,134 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
                      : diag::err_ucn_escape_incomplete);
     return false;
   }
+  return !HasError;
+}
 
+static void DiagnoseInvalidUnicodeCharacterName(
+    DiagnosticsEngine *Diags, const LangOptions &Features, FullSourceLoc Loc,
+    const char *TokBegin, const char *TokRangeBegin, const char *TokRangeEnd,
+    llvm::StringRef Name) {
+
+  Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
+       diag::err_invalid_ucn_name)
+      << Name;
+
+  namespace u = llvm::sys::unicode;
+
+  std::optional<u::LooseMatchingResult> Res =
+      u::nameToCodepointLooseMatching(Name);
+  if (Res) {
+    Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
+         diag::note_invalid_ucn_name_loose_matching)
+        << FixItHint::CreateReplacement(
+               MakeCharSourceRange(Features, Loc, TokBegin, TokRangeBegin,
+                                   TokRangeEnd),
+               Res->Name);
+    return;
+  }
+
+  unsigned Distance = 0;
+  SmallVector<u::MatchForCodepointName> Matches =
+      u::nearestMatchesForCodepointName(Name, 5);
+  assert(!Matches.empty() && "No unicode characters found");
+
+  for (const auto &Match : Matches) {
+    if (Distance == 0)
+      Distance = Match.Distance;
+    if (std::max(Distance, Match.Distance) -
+            std::min(Distance, Match.Distance) >
+        3)
+      break;
+    Distance = Match.Distance;
+
+    std::string Str;
+    llvm::UTF32 V = Match.Value;
+    bool Converted =
+        llvm::convertUTF32ToUTF8String(llvm::ArrayRef<llvm::UTF32>(&V, 1), Str);
+    (void)Converted;
+    assert(Converted && "Found a match wich is not a unicode character");
+
+    Diag(Diags, Features, Loc, TokBegin, TokRangeBegin, TokRangeEnd,
+         diag::note_invalid_ucn_name_candidate)
+        << Match.Name << llvm::utohexstr(Match.Value)
+        << Str // FIXME: Fix the rendering of non printable characters
+        << FixItHint::CreateReplacement(
+               MakeCharSourceRange(Features, Loc, TokBegin, TokRangeBegin,
+                                   TokRangeEnd),
+               Match.Name);
+  }
+}
+
+static bool ProcessNamedUCNEscape(const char *ThisTokBegin,
+                                  const char *&ThisTokBuf,
+                                  const char *ThisTokEnd, uint32_t &UcnVal,
+                                  unsigned short &UcnLen, FullSourceLoc Loc,
+                                  DiagnosticsEngine *Diags,
+                                  const LangOptions &Features) {
+  const char *UcnBegin = ThisTokBuf;
+  assert(UcnBegin[0] == '\\' && UcnBegin[1] == 'N');
+  ThisTokBuf += 2;
+  if (ThisTokBuf == ThisTokEnd || *ThisTokBuf != '{') {
+    if (Diags) {
+      Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
+           diag::err_delimited_escape_missing_brace)
+          << StringRef(&ThisTokBuf[-1], 1);
+    }
+    return false;
+  }
+  ThisTokBuf++;
+  const char *ClosingBrace = std::find_if(ThisTokBuf, ThisTokEnd, [](char C) {
+    return C == '}' || isVerticalWhitespace(C);
+  });
+  bool Incomplete = ClosingBrace == ThisTokEnd;
+  bool Empty = ClosingBrace == ThisTokBuf;
+  if (Incomplete || Empty) {
+    if (Diags) {
+      Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
+           Incomplete ? diag::err_ucn_escape_incomplete
+                      : diag::err_delimited_escape_empty)
+          << StringRef(&UcnBegin[1], 1);
+    }
+    ThisTokBuf = ClosingBrace == ThisTokEnd ? ClosingBrace : ClosingBrace + 1;
+    return false;
+  }
+  StringRef Name(ThisTokBuf, ClosingBrace - ThisTokBuf);
+  ThisTokBuf = ClosingBrace + 1;
+  std::optional<char32_t> Res = llvm::sys::unicode::nameToCodepointStrict(Name);
+  if (!Res) {
+    if (Diags)
+      DiagnoseInvalidUnicodeCharacterName(Diags, Features, Loc, ThisTokBegin,
+                                          &UcnBegin[3], ClosingBrace, Name);
+    return false;
+  }
+  UcnVal = *Res;
+  UcnLen = UcnVal > 0xFFFF ? 8 : 4;
+  return true;
+}
+
+/// ProcessUCNEscape - Read the Universal Character Name, check constraints and
+/// return the UTF32.
+static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
+                             const char *ThisTokEnd, uint32_t &UcnVal,
+                             unsigned short &UcnLen, FullSourceLoc Loc,
+                             DiagnosticsEngine *Diags,
+                             const LangOptions &Features,
+                             bool in_char_string_literal = false) {
+
+  bool HasError;
+  const char *UcnBegin = ThisTokBuf;
+  bool IsDelimitedEscapeSequence = false;
+  bool IsNamedEscapeSequence = false;
+  if (ThisTokBuf[1] == 'N') {
+    IsNamedEscapeSequence = true;
+    HasError = !ProcessNamedUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd,
+                                      UcnVal, UcnLen, Loc, Diags, Features);
+  } else {
+    HasError =
+        !ProcessNumericUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd, UcnVal,
+                                 UcnLen, IsDelimitedEscapeSequence, Loc, Diags,
+                                 Features, in_char_string_literal);
+  }
   if (HasError)
     return false;
 
@@ -493,9 +639,11 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
     Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
          diag::warn_ucn_not_valid_in_c89_literal);
 
-  if (Delimited && Diags)
+  if ((IsDelimitedEscapeSequence || IsNamedEscapeSequence) && Diags)
     Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
-         diag::ext_delimited_escape_sequence);
+         Features.CPlusPlus23 ? diag::warn_cxx23_delimited_escape_sequence
+                              : diag::ext_delimited_escape_sequence)
+        << (IsNamedEscapeSequence ? 1 : 0) << (Features.CPlusPlus ? 1 : 0);
 
   return true;
 }
@@ -617,13 +765,13 @@ static void EncodeUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
   switch (bytesToWrite) { // note: everything falls through.
   case 4:
     *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 3:
     *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 2:
     *--ResultBuf = (UTF8)((UcnVal | byteMark) & byteMask); UcnVal >>= 6;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 1:
     *--ResultBuf = (UTF8) (UcnVal | firstByteMark[bytesToWrite]);
   }
@@ -796,9 +944,13 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
 
       // CUDA host and device may have different _Float16 support, therefore
       // allows f16 literals to avoid false alarm.
+      // When we compile for OpenMP target offloading on NVPTX, f16 suffix
+      // should also be supported.
       // ToDo: more precise check for CUDA.
-      if ((Target.hasFloat16Type() || LangOpts.CUDA) && s + 2 < ThisTokEnd &&
-          s[1] == '1' && s[2] == '6') {
+      // TODO: AMDGPU might also support it in the future.
+      if ((Target.hasFloat16Type() || LangOpts.CUDA ||
+           (LangOpts.OpenMPIsDevice && Target.getTriple().isNVPTX())) &&
+          s + 2 < ThisTokEnd && s[1] == '1' && s[2] == '6') {
         s += 2; // success, eat up 2 characters.
         isFloat16 = true;
         continue;
@@ -888,7 +1040,7 @@ NumericLiteralParser::NumericLiteralParser(StringRef TokSpelling,
           break;
         }
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case 'j':
     case 'J':
       if (isImaginary) break;   // Cannot be repeated.
@@ -1534,7 +1686,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
         // If we see bad encoding for unprefixed character literals, warn and
         // simply copy the byte values, for compatibility with gcc and
         // older versions of clang.
-        bool NoErrorOnBadEncoding = isAscii();
+        bool NoErrorOnBadEncoding = isOrdinary();
         unsigned Msg = diag::err_bad_character_encoding;
         if (NoErrorOnBadEncoding)
           Msg = diag::warn_bad_character_encoding;
@@ -1559,7 +1711,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
       continue;
     }
     // Is this a Universal Character Name escape?
-    if (begin[1] == 'u' || begin[1] == 'U') {
+    if (begin[1] == 'u' || begin[1] == 'U' || begin[1] == 'N') {
       unsigned short UcnLen = 0;
       if (!ProcessUCNEscape(TokBegin, begin, end, *buffer_begin, UcnLen,
                             FullSourceLoc(Loc, PP.getSourceManager()),
@@ -1584,9 +1736,9 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   unsigned NumCharsSoFar = buffer_begin - &codepoint_buffer.front();
 
   if (NumCharsSoFar > 1) {
-    if (isAscii() && NumCharsSoFar == 4)
+    if (isOrdinary() && NumCharsSoFar == 4)
       PP.Diag(Loc, diag::warn_four_char_character_literal);
-    else if (isAscii())
+    else if (isOrdinary())
       PP.Diag(Loc, diag::warn_multichar_character_literal);
     else {
       PP.Diag(Loc, diag::err_multichar_character_literal) << (isWide() ? 0 : 1);
@@ -1602,11 +1754,11 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   // Narrow character literals act as though their value is concatenated
   // in this implementation, but warn on overflow.
   bool multi_char_too_long = false;
-  if (isAscii() && isMultiChar()) {
+  if (isOrdinary() && isMultiChar()) {
     LitVal = 0;
     for (size_t i = 0; i < NumCharsSoFar; ++i) {
       // check for enough leading zeros to shift into
-      multi_char_too_long |= (LitVal.countLeadingZeros() < 8);
+      multi_char_too_long |= (LitVal.countl_zero() < 8);
       LitVal <<= 8;
       LitVal = LitVal + (codepoint_buffer[i] & 0xFF);
     }
@@ -1626,7 +1778,7 @@ CharLiteralParser::CharLiteralParser(const char *begin, const char *end,
   // if 'char' is signed for this target (C99 6.4.4.4p10).  Note that multiple
   // character constants are not sign extended in the this implementation:
   // '\xFF\xFF' = 65536 and '\x0\xFF' = 255, which matches GCC.
-  if (isAscii() && NumCharsSoFar == 1 && (Value & 128) &&
+  if (isOrdinary() && NumCharsSoFar == 1 && (Value & 128) &&
       PP.getLangOpts().CharIsSigned)
     Value = (signed char)Value;
 }
@@ -1715,28 +1867,27 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
 
   // Implement Translation Phase #6: concatenation of string literals
   /// (C99 5.1.1.2p1).  The common case is only one string fragment.
-  for (unsigned i = 1; i != StringToks.size(); ++i) {
-    if (StringToks[i].getLength() < 2)
-      return DiagnoseLexingError(StringToks[i].getLocation());
+  for (const Token &Tok : StringToks) {
+    if (Tok.getLength() < 2)
+      return DiagnoseLexingError(Tok.getLocation());
 
     // The string could be shorter than this if it needs cleaning, but this is a
     // reasonable bound, which is all we need.
-    assert(StringToks[i].getLength() >= 2 && "literal token is invalid!");
-    SizeBound += StringToks[i].getLength()-2;  // -2 for "".
+    assert(Tok.getLength() >= 2 && "literal token is invalid!");
+    SizeBound += Tok.getLength() - 2; // -2 for "".
 
     // Remember maximum string piece length.
-    if (StringToks[i].getLength() > MaxTokenLength)
-      MaxTokenLength = StringToks[i].getLength();
+    if (Tok.getLength() > MaxTokenLength)
+      MaxTokenLength = Tok.getLength();
 
     // Remember if we see any wide or utf-8/16/32 strings.
     // Also check for illegal concatenations.
-    if (StringToks[i].isNot(Kind) && StringToks[i].isNot(tok::string_literal)) {
-      if (isAscii()) {
-        Kind = StringToks[i].getKind();
+    if (Tok.isNot(Kind) && Tok.isNot(tok::string_literal)) {
+      if (isOrdinary()) {
+        Kind = Tok.getKind();
       } else {
         if (Diags)
-          Diags->Report(StringToks[i].getLocation(),
-                        diag::err_unsupported_string_concat);
+          Diags->Report(Tok.getLocation(), diag::err_unsupported_string_concat);
         hadError = true;
       }
     }
@@ -1919,7 +2070,8 @@ void StringLiteralParser::init(ArrayRef<Token> StringToks){
           continue;
         }
         // Is this a Universal Character Name escape?
-        if (ThisTokBuf[1] == 'u' || ThisTokBuf[1] == 'U') {
+        if (ThisTokBuf[1] == 'u' || ThisTokBuf[1] == 'U' ||
+            ThisTokBuf[1] == 'N') {
           EncodeUCNEscape(ThisTokBegin, ThisTokBuf, ThisTokEnd,
                           ResultPtr, hadError,
                           FullSourceLoc(StringToks[i].getLocation(), SM),
@@ -2014,7 +2166,7 @@ bool StringLiteralParser::CopyStringFragment(const Token &Tok,
   // If we see bad encoding for unprefixed string literals, warn and
   // simply copy the byte values, for compatibility with gcc and older
   // versions of clang.
-  bool NoErrorOnBadEncoding = isAscii();
+  bool NoErrorOnBadEncoding = isOrdinary();
   if (NoErrorOnBadEncoding) {
     memcpy(ResultPtr, Fragment.data(), Fragment.size());
     ResultPtr += Fragment.size();
@@ -2112,7 +2264,8 @@ unsigned StringLiteralParser::getOffsetOfStringByte(const Token &Tok,
 
     // Otherwise, this is an escape character.  Advance over it.
     bool HadError = false;
-    if (SpellingPtr[1] == 'u' || SpellingPtr[1] == 'U') {
+    if (SpellingPtr[1] == 'u' || SpellingPtr[1] == 'U' ||
+        SpellingPtr[1] == 'N') {
       const char *EscapePtr = SpellingPtr;
       unsigned Len = MeasureUCNEscape(SpellingStart, SpellingPtr, SpellingEnd,
                                       1, Features, HadError);

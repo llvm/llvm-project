@@ -17,6 +17,11 @@
 _bar:
 
 #--- test.s
+
+# Added to ensure that the error mentions the right function.
+_baz:
+  ret
+
 .globl _main, _foo
 
 _main:

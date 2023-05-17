@@ -7,7 +7,7 @@
 # RUN:         . = 0x3000;  .data : { *(.data) } \
 # RUN:       }" > %t.script
 # RUN: ld.lld %t.o -shared --script %t.script -o %t.so
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.so | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.so | FileCheck %s
 # RUN: llvm-readelf -r -A %t.so | FileCheck -check-prefix=GOT %s
 
 # CHECK: SYMBOL TABLE:

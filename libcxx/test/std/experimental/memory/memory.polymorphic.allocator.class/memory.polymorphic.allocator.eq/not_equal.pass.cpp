@@ -8,6 +8,11 @@
 
 // UNSUPPORTED: c++03
 
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/memory_resource>
 
 // template <class T> class polymorphic_allocator;
@@ -16,6 +21,8 @@
 // bool operator!=(
 //      polymorphic_allocator<T> const &
 //    , polymorphic_allocator<T> const &) noexcept
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

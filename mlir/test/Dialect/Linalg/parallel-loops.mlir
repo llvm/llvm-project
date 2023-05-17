@@ -9,7 +9,7 @@ func.func @linalg_generic_sum(%lhs: memref<2x2xf32>,
     iterator_types = ["parallel", "parallel"]}
       ins(%lhs, %rhs : memref<2x2xf32>, memref<2x2xf32>)
      outs(%sum : memref<2x2xf32>) {
-    ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):   
+    ^bb0(%lhs_in: f32, %rhs_in: f32, %sum_out: f32):
       %0 = arith.addf %lhs_in, %rhs_in : f32
       linalg.yield %0 : f32
   }

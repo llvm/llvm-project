@@ -21,7 +21,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _OutputIterator>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator
 partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __result)
 {
@@ -31,7 +31,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
         *__result = __t;
         for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
         {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
             __t = _VSTD::move(__t) + *__first;
 #else
             __t = __t + *__first;
@@ -43,7 +43,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
 }
 
 template <class _InputIterator, class _OutputIterator, class _BinaryOperation>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _OutputIterator
 partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __result,
               _BinaryOperation __binary_op)
@@ -54,7 +54,7 @@ partial_sum(_InputIterator __first, _InputIterator __last, _OutputIterator __res
         *__result = __t;
         for (++__first, (void) ++__result; __first != __last; ++__first, (void) ++__result)
         {
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
             __t = __binary_op(_VSTD::move(__t), *__first);
 #else
             __t = __binary_op(__t, *__first);

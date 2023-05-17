@@ -321,7 +321,7 @@ static __isl_give PW *FN(PW,union_opt_cmp)(
 	}
 
 	for (i = 0; i < 2; ++i) {
-		data[i].pw = FN(PW,sort)(data[i].pw);
+		data[i].pw = FN(PW,sort_unique)(data[i].pw);
 		data[i].cell = FN(PW,extract_domains)(data[i].pw);
 	}
 

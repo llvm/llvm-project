@@ -267,15 +267,7 @@ bool CGPassManager::RefreshCallGraph(const CallGraphSCC &CurSCC, CallGraph &CG,
           // If we've already seen this call site, then the FunctionPass RAUW'd
           // one call with another, which resulted in two "uses" in the edge
           // list of the same call.
-          Calls.count(Call) ||
-
-          // If the call edge is not from a call or invoke, or it is a
-          // intrinsic call, then the function pass RAUW'd a call with
-          // another value. This can happen when constant folding happens
-          // of well known functions etc.
-          (Call->getCalledFunction() &&
-           Call->getCalledFunction()->isIntrinsic() &&
-           Intrinsic::isLeaf(Call->getCalledFunction()->getIntrinsicID()))) {
+          Calls.count(Call)) {
         assert(!CheckingMode &&
                "CallGraphSCCPass did not update the CallGraph correctly!");
 
@@ -751,7 +743,8 @@ static std::string getDescription(const CallGraphSCC &SCC) {
 bool CallGraphSCCPass::skipSCC(CallGraphSCC &SCC) const {
   OptPassGate &Gate =
       SCC.getCallGraph().getModule().getContext().getOptPassGate();
-  return Gate.isEnabled() && !Gate.shouldRunPass(this, getDescription(SCC));
+  return Gate.isEnabled() &&
+         !Gate.shouldRunPass(this->getPassName(), getDescription(SCC));
 }
 
 char DummyCGSCCPass::ID = 0;

@@ -7,17 +7,17 @@
 
 declare i32 @_except_handler3(...)
 declare void @crash()
-declare i32 @printf(i8* nocapture readonly, ...) nounwind
-declare i32 @llvm.eh.typeid.for(i8*)
-declare i8* @llvm.frameaddress(i32)
-declare i8* @llvm.localrecover(i8*, i8*, i32)
+declare i32 @printf(ptr nocapture readonly, ...) nounwind
+declare i32 @llvm.eh.typeid.for(ptr)
+declare ptr @llvm.frameaddress(i32)
+declare ptr @llvm.localrecover(ptr, ptr, i32)
 declare void @llvm.localescape(...)
-declare i8* @llvm.eh.recoverfp(i8*, i8*)
+declare ptr @llvm.eh.recoverfp(ptr, ptr)
 
-define i32 @main() personality i8* bitcast (i32 (...)* @_except_handler3 to i8*) {
+define i32 @main() personality ptr @_except_handler3 {
 entry:
   %__exceptioncode = alloca i32, align 4
-  call void (...) @llvm.localescape(i32* %__exceptioncode)
+  call void (...) @llvm.localescape(ptr %__exceptioncode)
   invoke void @crash() #5
           to label %__try.cont unwind label %lpad
 
@@ -25,9 +25,9 @@ lpad:                                             ; preds = %entry
   %cs1 = catchswitch within none [label %__except] unwind to caller
 
 __except:                                         ; preds = %lpad
-  %p = catchpad within %cs1 [i8* bitcast (i32 ()* @"filt$main" to i8*)]
-  %code = load i32, i32* %__exceptioncode, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i32 0, i32 0), i32 %code) #4 [ "funclet"(token %p) ]
+  %p = catchpad within %cs1 [ptr @"filt$main"]
+  %code = load i32, ptr %__exceptioncode, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @str, i32 %code) #4 [ "funclet"(token %p) ]
   catchret from %p to label %__try.cont
 
 __try.cont:                                       ; preds = %entry, %__except
@@ -36,16 +36,14 @@ __try.cont:                                       ; preds = %entry, %__except
 
 define internal i32 @"filt$main"() {
 entry:
-  %ebp = tail call i8* @llvm.frameaddress(i32 1)
-  %parentfp = tail call i8* @llvm.eh.recoverfp(i8* bitcast (i32 ()* @main to i8*), i8* %ebp)
-  %code.i8 = tail call i8* @llvm.localrecover(i8* bitcast (i32 ()* @main to i8*), i8* %parentfp, i32 0)
-  %__exceptioncode = bitcast i8* %code.i8 to i32*
-  %info.addr = getelementptr inbounds i8, i8* %ebp, i32 -20
-  %0 = bitcast i8* %info.addr to i32***
-  %1 = load i32**, i32*** %0, align 4
-  %2 = load i32*, i32** %1, align 4
-  %3 = load i32, i32* %2, align 4
-  store i32 %3, i32* %__exceptioncode, align 4
+  %ebp = tail call ptr @llvm.frameaddress(i32 1)
+  %parentfp = tail call ptr @llvm.eh.recoverfp(ptr @main, ptr %ebp)
+  %code.i8 = tail call ptr @llvm.localrecover(ptr @main, ptr %parentfp, i32 0)
+  %info.addr = getelementptr inbounds i8, ptr %ebp, i32 -20
+  %0 = load ptr, ptr %info.addr, align 4
+  %1 = load ptr, ptr %0, align 4
+  %2 = load i32, ptr %1, align 4
+  store i32 %2, ptr %code.i8, align 4
   ret i32 1
 }
 

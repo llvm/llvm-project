@@ -15,15 +15,16 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Symbol/ObjectFile.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 
 using namespace lldb_private;
 
-llvm::Optional<DIERef> DWARFBaseDIE::GetDIERef() const {
+std::optional<DIERef> DWARFBaseDIE::GetDIERef() const {
   if (!IsValid())
-    return llvm::None;
+    return std::nullopt;
 
-  return DIERef(m_cu->GetSymbolFileDWARF().GetDwoNum(), m_cu->GetDebugSection(),
-                m_die->GetOffset());
+  return DIERef(m_cu->GetSymbolFileDWARF().GetFileIndex(),
+                m_cu->GetDebugSection(), m_die->GetOffset());
 }
 
 dw_tag_t DWARFBaseDIE::Tag() const {
@@ -53,6 +54,13 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsUnsigned(const dw_attr_t attr,
     return fail_value;
 }
 
+std::optional<uint64_t>
+DWARFBaseDIE::GetAttributeValueAsOptionalUnsigned(const dw_attr_t attr) const {
+  if (IsValid())
+    return m_die->GetAttributeValueAsOptionalUnsigned(GetCU(), attr);
+  return std::nullopt;
+}
+
 uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
                                               uint64_t fail_value) const {
   if (IsValid())
@@ -62,8 +70,10 @@ uint64_t DWARFBaseDIE::GetAttributeValueAsAddress(const dw_attr_t attr,
 }
 
 lldb::user_id_t DWARFBaseDIE::GetID() const {
-  if (IsValid())
-    return GetDWARF()->GetUID(*this);
+  const std::optional<DIERef> &ref = this->GetDIERef();
+  if (ref)
+    return ref->get_id();
+
   return LLDB_INVALID_UID;
 }
 
@@ -104,12 +114,10 @@ bool DWARFBaseDIE::Supports_DW_AT_APPLE_objc_complete_type() const {
   return IsValid() && GetDWARF()->Supports_DW_AT_APPLE_objc_complete_type(m_cu);
 }
 
-size_t DWARFBaseDIE::GetAttributes(DWARFAttributes &attributes,
-                                   Recurse recurse) const {
+DWARFAttributes DWARFBaseDIE::GetAttributes(Recurse recurse) const {
   if (IsValid())
-    return m_die->GetAttributes(m_cu, attributes, recurse);
-  attributes.Clear();
-  return 0;
+    return m_die->GetAttributes(m_cu, recurse);
+  return DWARFAttributes();
 }
 
 bool operator==(const DWARFBaseDIE &lhs, const DWARFBaseDIE &rhs) {

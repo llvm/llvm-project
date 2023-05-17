@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
 static id __attribute((objc_gc(weak))) a;
 static id __attribute((objc_gc(strong))) b;
 
@@ -17,6 +17,10 @@ static WEAK int h; // expected-warning {{'objc_ownership' only applies to Object
 
 /* expected-warning {{'__weak' only applies to Objective-C object or block pointer types; type here is 'int'}}*/ static __we\
 ak int i;
+
+static id [[clang::objc_gc(weak)]] j;
+[[clang::objc_gc(weak)]] static id k; // expected-warning {{applying attribute 'objc_gc' to a declaration is deprecated; apply it to the type instead}}
+static id l [[clang::objc_gc(weak)]]; // expected-warning {{applying attribute 'objc_gc' to a declaration is deprecated; apply it to the type instead}}
 
 // rdar://problem/9126213
 void test2(id __attribute((objc_gc(strong))) *strong,

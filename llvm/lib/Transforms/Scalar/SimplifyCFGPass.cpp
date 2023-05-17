@@ -108,12 +108,12 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
       std::get<1>(I) = PHINode::Create(std::get<0>(I)->getType(),
                                        /*NumReservedValues=*/BBs.size(),
                                        CanonicalBB->getName() + ".op");
-      CanonicalBB->getInstList().push_back(std::get<1>(I));
+      std::get<1>(I)->insertInto(CanonicalBB, CanonicalBB->end());
     }
     // Make it so that this canonical block actually has the right
     // terminator.
     CanonicalTerm = Term->clone();
-    CanonicalBB->getInstList().push_back(CanonicalTerm);
+    CanonicalTerm->insertInto(CanonicalBB, CanonicalBB->end());
     // If the canonical terminator has operands, rewrite it to take PHI's.
     for (auto I : zip(NewOps, CanonicalTerm->operands()))
       std::get<1>(I) = std::get<0>(I);
@@ -121,7 +121,7 @@ performBlockTailMerging(Function &F, ArrayRef<BasicBlock *> BBs,
 
   // Now, go through each block (with the current terminator type)
   // we've recorded, and rewrite it to branch to the new common block.
-  const DILocation *CommonDebugLoc = nullptr;
+  DILocation *CommonDebugLoc = nullptr;
   for (BasicBlock *BB : BBs) {
     auto *Term = BB->getTerminator();
     assert(Term->getOpcode() == CanonicalTerm->getOpcode() &&
@@ -228,8 +228,8 @@ static bool iterativelySimplifyCFG(Function &F, const TargetTransformInfo &TTI,
   SmallVector<std::pair<const BasicBlock *, const BasicBlock *>, 32> Edges;
   FindFunctionBackedges(F, Edges);
   SmallPtrSet<BasicBlock *, 16> UniqueLoopHeaders;
-  for (unsigned i = 0, e = Edges.size(); i != e; ++i)
-    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edges[i].second));
+  for (const auto &Edge : Edges)
+    UniqueLoopHeaders.insert(const_cast<BasicBlock *>(Edge.second));
 
   SmallVector<WeakVH, 16> LoopHeaders(UniqueLoopHeaders.begin(),
                                       UniqueLoopHeaders.end());
@@ -338,8 +338,8 @@ void SimplifyCFGPass::printPipeline(
     raw_ostream &OS, function_ref<StringRef(StringRef)> MapClassName2PassName) {
   static_cast<PassInfoMixin<SimplifyCFGPass> *>(this)->printPipeline(
       OS, MapClassName2PassName);
-  OS << "<";
-  OS << "bonus-inst-threshold=" << Options.BonusInstThreshold << ";";
+  OS << '<';
+  OS << "bonus-inst-threshold=" << Options.BonusInstThreshold << ';';
   OS << (Options.ForwardSwitchCondToPhi ? "" : "no-") << "forward-switch-cond;";
   OS << (Options.ConvertSwitchRangeToICmp ? "" : "no-")
      << "switch-range-to-icmp;";
@@ -348,7 +348,7 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
   OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts";
-  OS << ">";
+  OS << '>';
 }
 
 PreservedAnalyses SimplifyCFGPass::run(Function &F,

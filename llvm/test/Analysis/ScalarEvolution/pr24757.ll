@@ -12,7 +12,7 @@ declare void @use(i32)
 
 define i32 @main() {
 bb:
-  %a.promoted = load i8, i8* @a
+  %a.promoted = load i8, ptr @a
   br label %bb1
 
 bb1:                                              ; preds = %bb1, %bb
@@ -27,8 +27,8 @@ bb1:                                              ; preds = %bb1, %bb
   br i1 %tmp7, label %bb8, label %bb1
 
 bb8:                                              ; preds = %bb1
-  store i8 %tmp2, i8* @a
-  store i32 %tmp4, i32* @b
+  store i8 %tmp2, ptr @a
+  store i32 %tmp4, ptr @b
   %tmp9 = sext i8 %tmp2 to i32
   call void @use(i32 %tmp9)
   ret i32 0

@@ -24,7 +24,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp2 = load i64, i64* undef, align 8
+  %tmp2 = load i64, ptr undef, align 8
   %tmp3 = insertelement <2 x i64> undef, i64 %tmp2, i32 1
   %tmp4 = icmp ne <2 x i64> %a0, zeroinitializer
   %tmp5 = xor <2 x i1> %tmp4, zeroinitializer
@@ -39,7 +39,7 @@ bb1:                                              ; preds = %bb
   br i1 %tmp13, label %bb14, label %bb15
 
 bb14:                                             ; preds = %bb1
-  store i64 undef, i64* undef, align 8
+  store i64 undef, ptr undef, align 8
   br label %bb15
 
 bb15:                                             ; preds = %bb14, %bb1

@@ -14,7 +14,7 @@
 # RUN:    -U 'section$start$__DYNAMIC$__unref' \
 # RUN:    -e 'section$start$__TEXT$__text'
 # RUN: llvm-objdump --macho --syms --section-headers %t.out > %t-dump.txt
-# RUN: llvm-objdump --macho -d --no-symbolic-operands --no-show-raw-insn %t.out >> %t-dump.txt
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-symbolic-operands --no-show-raw-insn %t.out >> %t-dump.txt
 # RUN: llvm-objdump --macho --function-starts %t.out >> %t-dump.txt
 # RUN: FileCheck %s < %t-dump.txt
 
@@ -38,7 +38,7 @@
 # RUN:    -U 'section$start$__DYNAMIC$__unref' \
 # RUN:    -e 'section$start$__TEXT$__text'
 # RUN: llvm-objdump --macho --syms --section-headers %t.ordered.out > %t-ordered-dump.txt
-# RUN: llvm-objdump --macho -d --no-symbolic-operands --no-show-raw-insn %t.ordered.out >> %t-ordered-dump.txt
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-symbolic-operands --no-show-raw-insn %t.ordered.out >> %t-ordered-dump.txt
 # RUN: llvm-objdump --macho --function-starts %t.out >> %t-ordered-dump.txt
 # RUN: FileCheck %s < %t-ordered-dump.txt
 
@@ -51,7 +51,7 @@
 # RUN:    -U 'section$start$__DYNAMIC$__unref' \
 # RUN:    -e 'section$start$__TEXT$__text'
 # RUN: llvm-objdump --macho --syms --section-headers %t.dl.out > %t-dump.dl.txt
-# RUN: llvm-objdump --macho -d --no-symbolic-operands --no-show-raw-insn %t.dl.out >> %t-dump.dl.txt
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-symbolic-operands --no-show-raw-insn %t.dl.out >> %t-dump.dl.txt
 # RUN: llvm-objdump --macho --function-starts %t.out >> %t-dump.dl.txt
 # RUN: FileCheck %s < %t-dump.dl.txt
 
@@ -68,7 +68,7 @@
 ## Test that the link succeeds with dead-stripping enabled too.
 # RUN: %lld -dead_strip -lSystem %t/main.o -o %t/stripped.out
 # RUN: llvm-objdump --macho --syms --section-headers %t/stripped.out > %t-stripped-dump.txt
-# RUN: llvm-objdump --macho -d --no-symbolic-operands --no-show-raw-insn %t/stripped.out >> %t-stripped-dump.txt
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-symbolic-operands --no-show-raw-insn %t/stripped.out >> %t-stripped-dump.txt
 # RUN: FileCheck --check-prefix=STRIP %s < %t-stripped-dump.txt
 
 ## -u 'section$start$*' does not cause an undefined symbol error. This matches ld64.
@@ -224,7 +224,7 @@
 # RUN: llvm-objdump --macho --syms %t.seg.out > %t-seg-dump.txt
 ## llvm-objdump can't dump segment names; use lld-otool for this.
 # RUN: llvm-otool -l %t.seg.out | grep -A6 LC_SEGMENT >> %t-seg-dump.txt
-# RUN: llvm-objdump --macho -d --no-symbolic-operands --no-show-raw-insn %t.seg.out >> %t-seg-dump.txt
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-symbolic-operands --no-show-raw-insn %t.seg.out >> %t-seg-dump.txt
 # RUN: llvm-objdump --macho --function-starts %t.out >> %t-seg-dump.txt
 # RUN: FileCheck %s --check-prefix=SEG < %t-seg-dump.txt
 

@@ -5,12 +5,12 @@ llvm.func @arm_neon_smull(%arg0: vector<8xi8>, %arg1: vector<8xi8>) -> !llvm.str
   //      CHECK: %[[V0:.*]] = call <8 x i16> @llvm.aarch64.neon.smull.v8i16(<8 x i8> %{{.*}}, <8 x i8> %{{.*}})
   // CHECK-NEXT: %[[V00:.*]] = shufflevector <8 x i16> %3, <8 x i16> %[[V0]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
   %0 = arm_neon.intr.smull %arg0, %arg1 : vector<8xi8> to vector<8xi16>
-  %1 = llvm.shufflevector %0, %0 [3, 4, 5, 6] : vector<8xi16>, vector<8xi16>
+  %1 = llvm.shufflevector %0, %0 [3, 4, 5, 6] : vector<8xi16>
 
   // CHECK-NEXT: %[[V1:.*]] = call <4 x i32> @llvm.aarch64.neon.smull.v4i32(<4 x i16> %[[V00]], <4 x i16> %[[V00]])
   // CHECK-NEXT: %[[V11:.*]] = shufflevector <4 x i32> %[[V1]], <4 x i32> %[[V1]], <2 x i32> <i32 1, i32 2>
   %2 = arm_neon.intr.smull %1, %1 : vector<4xi16> to vector<4xi32>
-  %3 = llvm.shufflevector %2, %2 [1, 2] : vector<4xi32>, vector<4xi32>
+  %3 = llvm.shufflevector %2, %2 [1, 2] : vector<4xi32>
 
   // CHECK-NEXT: %[[V1:.*]] = call <2 x i64> @llvm.aarch64.neon.smull.v2i64(<2 x i32> %[[V11]], <2 x i32> %[[V11]])
   %4 = arm_neon.intr.smull %3, %3 : vector<2xi32> to vector<2xi64>

@@ -13,6 +13,7 @@
 #include "support/ThreadCrashReporter.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <system_error>
 
 namespace clang {
@@ -53,7 +54,7 @@ llvm::json::Object encodeError(llvm::Error E) {
 }
 
 llvm::Error decodeError(const llvm::json::Object &O) {
-  llvm::StringRef Msg = O.getString("message").getValueOr("Unspecified error");
+  llvm::StringRef Msg = O.getString("message").value_or("Unspecified error");
   if (auto Code = O.getInteger("code"))
     return llvm::make_error<LSPError>(Msg.str(), ErrorCode(*Code));
   return error(Msg.str());
@@ -163,12 +164,12 @@ bool JSONTransport::handleMessage(llvm::json::Value Message,
   // Message must be an object with "jsonrpc":"2.0".
   auto *Object = Message.getAsObject();
   if (!Object ||
-      Object->getString("jsonrpc") != llvm::Optional<llvm::StringRef>("2.0")) {
+      Object->getString("jsonrpc") != std::optional<llvm::StringRef>("2.0")) {
     elog("Not a JSON-RPC 2.0 message: {0:2}", Message);
     return false;
   }
   // ID may be any JSON value. If absent, this is a notification.
-  llvm::Optional<llvm::json::Value> ID;
+  std::optional<llvm::json::Value> ID;
   if (auto *I = Object->get("id"))
     ID = std::move(*I);
   auto Method = Object->getString("method");

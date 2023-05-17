@@ -274,9 +274,8 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
     if (context.module_sp) {
       for (const auto &lookup : m_lookups) {
         const size_t start_func_idx = func_list.GetSize();
-        context.module_sp->FindFunctions(
-            lookup.GetLookupName(), CompilerDeclContext(),
-            lookup.GetNameTypeMask(), function_options, func_list);
+        context.module_sp->FindFunctions(lookup, CompilerDeclContext(),
+                                         function_options, func_list);
 
         const size_t end_func_idx = func_list.GetSize();
 
@@ -332,14 +331,7 @@ BreakpointResolverName::SearchCallback(SearchFilter &filter,
   Address break_addr;
 
   // Remove any duplicates between the function list and the symbol list
-  SymbolContext sc;
-  if (!func_list.GetSize())
-    return Searcher::eCallbackReturnContinue;
-
-  for (uint32_t i = 0; i < func_list.GetSize(); i++) {
-    if (!func_list.GetContextAtIndex(i, sc))
-      continue;
-
+  for (const SymbolContext &sc : func_list) {
     bool is_reexported = false;
 
     if (sc.block && sc.block->GetInlinedFunctionInfo()) {

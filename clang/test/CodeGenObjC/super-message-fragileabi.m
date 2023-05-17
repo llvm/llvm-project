@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple i386-apple-darwin9 -fobjc-runtime=macosx-fragile-10.5 -emit-llvm %s -o - | FileCheck %s
 
 @class  Some;
 
@@ -24,7 +24,7 @@
  {
 	;
  }
-// CHECK: load %struct._objc_class*, %struct._objc_class** getelementptr inbounds (%struct._objc_class, %struct._objc_class* @OBJC_CLASS_BetterTable, i32 0, i32 1)
+// CHECK: load ptr, ptr getelementptr inbounds (%struct._objc_class, ptr @OBJC_CLASS_BetterTable, i32 0, i32 1)
 
  return self;
 }

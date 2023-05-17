@@ -1,3 +1,4 @@
+RUN: export LSAN_OPTIONS=detect_leaks=0
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-empty.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=INVALID-EMPTY %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-pr20485.bc 2>&1 | \
@@ -14,14 +15,6 @@ RUN: not llvm-dis -disable-output %p/Inputs/invalid-bitwidth.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-BITWIDTH %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-align.bc  2>&1 | \
 RUN:   FileCheck --check-prefix=BAD-ALIGN %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-GEP %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-load-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-LOAD %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-gep-operator-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-GEP-OPERATOR %s
-RUN: not llvm-dis -disable-output %p/Inputs/invalid-call-mismatched-explicit-type.bc 2>&1 | \
-RUN:   FileCheck --check-prefix=MISMATCHED-EXPLICIT-CALL %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-call-non-function-explicit-type.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NON-FUNCTION-EXPLICIT-CALL %s
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-invoke-mismatched-explicit-type.bc 2>&1 | \
@@ -37,12 +30,8 @@ BAD-ABBREV-NUMBER: error: can't skip to bit
 BAD-TYPE-TABLE-FORWARD-REF: Invalid TYPE table: Only named structs can be forward referenced
 BAD-BITWIDTH: error: can't skip to bit
 BAD-ALIGN: Invalid alignment value
-MISMATCHED-EXPLICIT-GEP: Explicit gep type does not match pointee type of pointer operand
-MISMATCHED-EXPLICIT-LOAD: Explicit load/store type does not match pointee type of pointer operand
-MISMATCHED-EXPLICIT-GEP-OPERATOR: Explicit gep operator type does not match pointee type of pointer operand
-MISMATCHED-EXPLICIT-CALL: Explicit call type does not match pointee type of callee operand
 NON-FUNCTION-EXPLICIT-CALL: Explicit call type is not a function type
-MISMATCHED-EXPLICIT-INVOKE: Explicit invoke type does not match pointee type of callee operand
+MISMATCHED-EXPLICIT-INVOKE: Insufficient operands to call
 NON-FUNCTION-EXPLICIT-INVOKE: Explicit invoke type is not a function type
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-extractval-array-idx.bc 2>&1 | \
@@ -199,7 +188,7 @@ VECTOR-LENGTH: Invalid vector length
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-alias-type-mismatch.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=ALIAS-TYPE-MISMATCH %s
 
-ALIAS-TYPE-MISMATCH: Alias and aliasee types don't match
+ALIAS-TYPE-MISMATCH: Insufficient function protos
 
 RUN: not llvm-dis -disable-output %p/Inputs/invalid-no-function-block.bc 2>&1 | \
 RUN:   FileCheck --check-prefix=NO-FUNCTION-BLOCK %s

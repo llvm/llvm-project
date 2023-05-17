@@ -1,3 +1,5 @@
+include(TableGen)
+
 set(LLVM_LINK_COMPONENTS Support)
 
 add_tablegen(libc-hdrgen LIBC

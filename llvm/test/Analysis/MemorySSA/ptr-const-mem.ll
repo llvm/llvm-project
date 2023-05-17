@@ -4,18 +4,18 @@ target triple = "amdgcn"
 
 @g4 = external unnamed_addr constant i8, align 1
 
-define signext i8 @cmp_constant(i8* %q, i8 %v) local_unnamed_addr {
+define signext i8 @cmp_constant(ptr %q, i8 %v) local_unnamed_addr {
 entry:
 
-  store i8 %v, i8* %q, align 1
+  store i8 %v, ptr %q, align 1
 ; CHECK: 1 = MemoryDef(liveOnEntry)
-; CHECK-NEXT: store i8 %v, i8* %q, align 1
+; CHECK-NEXT: store i8 %v, ptr %q, align 1
 
-  %0 = load i8, i8* @g4, align 1
+  %0 = load i8, ptr @g4, align 1
 ; Make sure that this load is liveOnEntry just based on the fact that @g4 is
 ; constant memory.
 ; CHECK: MemoryUse(liveOnEntry)
-; CHECK-NEXT: load i8, i8* @g4, align 1
+; CHECK-NEXT: load i8, ptr @g4, align 1
 
   ret i8 %0
 }

@@ -460,7 +460,7 @@ is preferred.
 Machine Operands
 ----------------
 
-There are seventeen different kinds of machine operands, and all of them can be
+There are eighteen different kinds of machine operands, and all of them can be
 serialized.
 
 Immediate Operands
@@ -736,6 +736,19 @@ The syntax is:
 
     EH_LABEL <mcsymbol Ltmp1>
 
+Debug Instruction Reference Operands
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A debug instruction reference operand is a pair of indices, referring to an
+instruction and an operand within that instruction respectively; see
+:ref:`Instruction referencing locations <instruction-referencing-locations>`.
+
+The example below uses a reference to Instruction 1, Operand 0:
+
+.. code-block:: text
+
+    DBG_INSTR_REF !123, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !456
+
 CFIIndex Operands
 ^^^^^^^^^^^^^^^^^
 
@@ -886,6 +899,8 @@ variable. The second operand (``IsIndirect``) is deprecated and to be deleted.
 All additional qualifiers for the variable location should be made through the
 expression metadata.
 
+.. _instruction-referencing-locations:
+
 Instruction referencing locations
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -898,16 +913,16 @@ instruction number and operand number. Consider the example below:
 .. code-block:: text
 
     $rbp = MOV64ri 0, debug-instr-number 1, debug-location !12
-    DBG_INSTR_REF 1, 0, !123, !DIExpression(), debug-location !456
+    DBG_INSTR_REF !123, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(1, 0), debug-location !456
 
 Instruction numbers are directly attached to machine instructions with an
 optional ``debug-instr-number`` attachment, before the optional
 ``debug-location`` attachment. The value defined in ``$rbp`` in the code
 above would be identified by the pair ``<1, 0>``.
 
-The first two operands of the ``DBG_INSTR_REF`` above record the instruction
+The 3rd operand of the ``DBG_INSTR_REF`` above records the instruction
 and operand number ``<1, 0>``, identifying the value defined by the ``MOV64ri``.
-The additional operands to ``DBG_INSTR_REF`` are identical to ``DBG_VALUE``,
+The first two operands to ``DBG_INSTR_REF`` are identical to ``DBG_VALUE_LIST``,
 and the ``DBG_INSTR_REF`` s position records where the variable takes on the
 designated value in the same way.
 

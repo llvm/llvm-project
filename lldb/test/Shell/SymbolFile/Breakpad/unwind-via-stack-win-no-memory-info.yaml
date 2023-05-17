@@ -50,7 +50,7 @@ Streams:
 ...
 
 --- !COFF
-OptionalHeader:  
+OptionalHeader:
   AddressOfEntryPoint: 0
   ImageBase:       720896
   SectionAlignment: 4096
@@ -67,13 +67,13 @@ OptionalHeader:
   SizeOfStackCommit: 4096
   SizeOfHeapReserve: 1048576
   SizeOfHeapCommit: 4096
-  Debug:           
+  Debug:
     RelativeVirtualAddress: 8192
     Size:            28
-header:          
-  Machine:         IMAGE_FILE_MACHINE_AMD64
+header:
+  Machine:         IMAGE_FILE_MACHINE_I386
   Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
-sections:        
+sections:
   - Name:            .text
     Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
     VirtualAddress:  4096

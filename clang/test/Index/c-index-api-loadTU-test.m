@@ -105,7 +105,7 @@ struct X0  {};
 // CHECK: c-index-api-loadTU-test.m:35:9: ObjCIvarDecl=_anIVar:35:9 (Definition) Extent=[35:5 - 35:16]
 // CHECK: c-index-api-loadTU-test.m:38:11: ObjCInstanceMethodDecl=bazMethod:38:11 Extent=[38:1 - 38:21]
 // CHECK: c-index-api-loadTU-test.m:38:4: ObjCClassRef=Foo:4:12 Extent=[38:4 - 38:7]
-// CHECK: c-index-api-loadTU-test.m:42:1: EnumDecl=:42:1 (Definition) Extent=[42:1 - 44:2]
+// CHECK: c-index-api-loadTU-test.m:42:1: EnumDecl=enum (unnamed at {{.*}}):42:1 (Definition) Extent=[42:1 - 44:2]
 // CHECK: c-index-api-loadTU-test.m:43:3: EnumConstantDecl=someEnum:43:3 (Definition) Extent=[43:3 - 43:11]
 // CHECK: c-index-api-loadTU-test.m:46:5: FunctionDecl=main:46:5 (Definition) Extent=[46:1 - 55:2]
 // CHECK: c-index-api-loadTU-test.m:46:15: ParmDecl=argc:46:15 (Definition) Extent=[46:11 - 46:19]

@@ -1,8 +1,6 @@
 // RUN: %clang_dfsan -fno-sanitize=dataflow -O2 -fPIE -DCALLBACKS -c %s -o %t-callbacks.o
 // RUN: %clang_dfsan -fsanitize-ignorelist=%S/Inputs/flags_abilist.txt -O2 -mllvm -dfsan-conditional-callbacks %s %t-callbacks.o -o %t
 // RUN: %run %t FooBarBaz 2>&1 | FileCheck %s
-//
-// REQUIRES: x86_64-target-arch
 
 #include <assert.h>
 #include <sanitizer/dfsan_interface.h>

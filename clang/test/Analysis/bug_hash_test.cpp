@@ -43,7 +43,7 @@ class X {
   void OutOfLine();
 
   X &operator=(int) {
-    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$class AA::X & AA::X::operator=(int)$29$clang_analyzer_hashDump(5);$Category}}
+    clang_analyzer_hashDump(5); // expected-warning {{debug.ExprInspection$X & AA::X::operator=(int)$29$clang_analyzer_hashDump(5);$Category}}
     return *this;
   }
 

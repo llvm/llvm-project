@@ -58,10 +58,10 @@ define dso_local void @t1() #0 {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
 entry:
-  call void asm sideeffect inteldialect "add eax, dword ptr $4[rax]\0A\09add dword ptr $0[rax], eax\0A\09add ebx, dword ptr $5[rbx + $$270]\0A\09add dword ptr $1[rbx + $$828], ebx\0A\09add ecx, dword ptr ${6:P}[rcx + rcx * $$4 + $$4590]\0A\09add dword ptr ${2:P}[rcx + rcx * $$8 + $$73], ecx\0A\09add ${3:P}[rcx + rbx + $$7], eax", "=*m,=*m,=*m,=*m,*m,*m,*m,~{eax},~{ebx},~{ecx},~{flags},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar, i32* elementtype(i32) @gVar) #1
-  %0 = load i32, i32* @gVar, align 4
+  call void asm sideeffect inteldialect "add eax, dword ptr $4[rax]\0A\09add dword ptr $0[rax], eax\0A\09add ebx, dword ptr $5[rbx + $$270]\0A\09add dword ptr $1[rbx + $$828], ebx\0A\09add ecx, dword ptr ${6:P}[rcx + rcx * $$4 + $$4590]\0A\09add dword ptr ${2:P}[rcx + rcx * $$8 + $$73], ecx\0A\09add ${3:P}[rcx + rbx + $$7], eax", "=*m,=*m,=*m,=*m,*m,*m,*m,~{eax},~{ebx},~{ecx},~{flags},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar, ptr elementtype(i32) @gVar) #1
+  %0 = load i32, ptr @gVar, align 4
   %add = add nsw i32 %0, 2
-  store i32 %add, i32* @gVar, align 4
+  store i32 %add, ptr @gVar, align 4
   ret void
 }
 
@@ -91,7 +91,7 @@ define dso_local void @t2() #0 {
 ; CHECK-NEXT:    retq
 entry:
   %lVar = alloca i32, align 4
-  call void asm sideeffect inteldialect "mov eax, dword ptr $3[rax]\0A\09mov dword ptr $0[rax], eax\0A\09mov ebx, dword ptr $4[rbx + $$270]\0A\09mov dword ptr $1[rbx + $$828], ebx\0A\09mov $2[rbx + $$47], eax", "=*m,=*m,=*m,*m,*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar, i32* elementtype(i32) %lVar) #1
+  call void asm sideeffect inteldialect "mov eax, dword ptr $3[rax]\0A\09mov dword ptr $0[rax], eax\0A\09mov ebx, dword ptr $4[rbx + $$270]\0A\09mov dword ptr $1[rbx + $$828], ebx\0A\09mov $2[rbx + $$47], eax", "=*m,=*m,=*m,*m,*m,~{eax},~{ebx},~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar, ptr elementtype(i32) %lVar) #1
   ret void
 }
 

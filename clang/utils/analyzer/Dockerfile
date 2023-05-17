@@ -18,6 +18,7 @@ RUN apt-get update && apt-get install -y \
     python3=3.6.7-1~18.04 \
     python3-pip=9.0.1-2.3* \
     cmake=3.20.5* \
+    cmake-data=3.20.5* \
     ninja-build=1.8.2-1
 
 # box2d dependencies
@@ -30,8 +31,8 @@ RUN apt-get install -y \
 
 # symengine dependencies
 RUN apt-get install -y \
-    libgmp10=2:6.1.2+dfsg-2 \
-    libgmp-dev=2:6.1.2+dfsg-2
+    libgmp10=2:6.1.2+dfsg-2ubuntu0.1 \
+    libgmp-dev=2:6.1.2+dfsg-2ubuntu0.1
 
 # simbody dependencies
 RUN apt-get install -y \
@@ -51,6 +52,9 @@ RUN apt-get install -y \
     pkg-config=0.29.1-0* \
     flex=2.6.4-6 \
     bison=2:3.0.4.*
+
+RUN apt-get install -y \
+    libjpeg-dev
 
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3 1
 

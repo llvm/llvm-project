@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -loop-vectorize -force-target-instruction-cost=1 -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=loop-vectorize -force-target-instruction-cost=1 -debug-only=loop-vectorize -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
@@ -7,23 +7,23 @@ target triple = "aarch64--linux-gnu"
 ; CHECK-LABEL: Checking a loop in 'interleaved_access'
 ; CHECK:         The Smallest and Widest types: 64 / 64 bits
 ;
-define void @interleaved_access(i8** %A, i64 %N) {
+define void @interleaved_access(ptr %A, i64 %N) {
 for.ph:
   br label %for.body
 
 for.body:
   %i = phi i64 [ %i.next.3, %for.body ], [ 0, %for.ph ]
-  %tmp0 = getelementptr inbounds i8*, i8** %A, i64 %i
-  store i8* null, i8** %tmp0, align 8
+  %tmp0 = getelementptr inbounds ptr, ptr %A, i64 %i
+  store ptr null, ptr %tmp0, align 8
   %i.next.0 = add nuw nsw i64 %i, 1
-  %tmp1 = getelementptr inbounds i8*, i8** %A, i64 %i.next.0
-  store i8* null, i8** %tmp1, align 8
+  %tmp1 = getelementptr inbounds ptr, ptr %A, i64 %i.next.0
+  store ptr null, ptr %tmp1, align 8
   %i.next.1 = add nsw i64 %i, 2
-  %tmp2 = getelementptr inbounds i8*, i8** %A, i64 %i.next.1
-  store i8* null, i8** %tmp2, align 8
+  %tmp2 = getelementptr inbounds ptr, ptr %A, i64 %i.next.1
+  store ptr null, ptr %tmp2, align 8
   %i.next.2 = add nsw i64 %i, 3
-  %tmp3 = getelementptr inbounds i8*, i8** %A, i64 %i.next.2
-  store i8* null, i8** %tmp3, align 8
+  %tmp3 = getelementptr inbounds ptr, ptr %A, i64 %i.next.2
+  store ptr null, ptr %tmp3, align 8
   %i.next.3 = add nsw i64 %i, 4
   %cond = icmp slt i64 %i.next.3, %N
   br i1 %cond, label %for.body, label %for.end
@@ -95,7 +95,7 @@ for.body:
   %conv = sitofp i8 %i.08 to float
   %add = fadd float %s.09, %conv
   %inc = add nuw nsw i8 %i.08, 1
-  %exitcond.not = icmp eq i8 %inc, 12345
+  %exitcond.not = icmp eq i8 %inc, 241
   br i1 %exitcond.not, label %for.end, label %for.body
 
 for.end:

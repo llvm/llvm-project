@@ -1,7 +1,7 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
 //===----------------------------------------------------------------------===//
-// pdl::CreateOperationOp
+// pdl_interp::CreateOperationOp
 //===----------------------------------------------------------------------===//
 
 pdl_interp.func @rewriter() {
@@ -19,8 +19,19 @@ pdl_interp.func @rewriter() {
     inferredResultTypes,
     inputAttributeNames = [],
     name = "foo.op",
-    operand_segment_sizes = dense<[0, 0, 1]> : vector<3xi32>
+    operand_segment_sizes = array<i32: 0, 0, 1>
   } : (!pdl.type) -> (!pdl.operation)
   pdl_interp.finalize
 }
 
+// -----
+
+//===----------------------------------------------------------------------===//
+// pdl_interp::CreateRangeOp
+//===----------------------------------------------------------------------===//
+
+pdl_interp.func @rewriter(%value: !pdl.value, %type: !pdl.type) {
+  // expected-error @below {{expected operand to have element type '!pdl.value', but got '!pdl.type'}}
+  %range = pdl_interp.create_range %value, %type : !pdl.value, !pdl.type
+  pdl_interp.finalize
+}

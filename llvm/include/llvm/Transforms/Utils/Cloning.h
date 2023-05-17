@@ -63,6 +63,10 @@ struct ClonedCodeInfo {
   /// This is set to true if the cloned code contains a normal call instruction.
   bool ContainsCalls = false;
 
+  /// This is set to true if there is memprof related metadata (memprof or
+  /// callsite metadata) in the cloned code.
+  bool ContainsMemProfMetadata = false;
+
   /// This is set to true if the cloned code contains a 'dynamic' alloca.
   /// Dynamic allocas are allocas that are either not in the entry block or they
   /// are in the entry block but are not a constant size.
@@ -199,18 +203,15 @@ void CloneAndPruneFunctionInto(Function *NewFunc, const Function *OldFunc,
 class InlineFunctionInfo {
 public:
   explicit InlineFunctionInfo(
-      CallGraph *cg = nullptr,
       function_ref<AssumptionCache &(Function &)> GetAssumptionCache = nullptr,
       ProfileSummaryInfo *PSI = nullptr,
       BlockFrequencyInfo *CallerBFI = nullptr,
       BlockFrequencyInfo *CalleeBFI = nullptr, bool UpdateProfile = true)
-      : CG(cg), GetAssumptionCache(GetAssumptionCache), PSI(PSI),
-        CallerBFI(CallerBFI), CalleeBFI(CalleeBFI),
-        UpdateProfile(UpdateProfile) {}
+      : GetAssumptionCache(GetAssumptionCache), PSI(PSI), CallerBFI(CallerBFI),
+        CalleeBFI(CalleeBFI), UpdateProfile(UpdateProfile) {}
 
   /// If non-null, InlineFunction will update the callgraph to reflect the
   /// changes it makes.
-  CallGraph *CG;
   function_ref<AssumptionCache &(Function &)> GetAssumptionCache;
   ProfileSummaryInfo *PSI;
   BlockFrequencyInfo *CallerBFI, *CalleeBFI;
@@ -260,7 +261,11 @@ public:
 /// and all varargs at the callsite will be passed to any calls to
 /// ForwardVarArgsTo. The caller of InlineFunction has to make sure any varargs
 /// are only used by ForwardVarArgsTo.
+///
+/// The callee's function attributes are merged into the callers' if
+/// MergeAttributes is set to true.
 InlineResult InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
+                            bool MergeAttributes = false,
                             AAResults *CalleeAAR = nullptr,
                             bool InsertLifetime = true,
                             Function *ForwardVarArgsTo = nullptr);
@@ -278,7 +283,7 @@ Loop *cloneLoopWithPreheader(BasicBlock *Before, BasicBlock *LoopDomBB,
                              SmallVectorImpl<BasicBlock *> &Blocks);
 
 /// Remaps instructions in \p Blocks using the mapping in \p VMap.
-void remapInstructionsInBlocks(const SmallVectorImpl<BasicBlock *> &Blocks,
+void remapInstructionsInBlocks(ArrayRef<BasicBlock *> Blocks,
                                ValueToValueMapTy &VMap);
 
 /// Split edge between BB and PredBB and duplicate all non-Phi instructions

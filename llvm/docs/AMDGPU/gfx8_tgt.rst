@@ -21,3 +21,10 @@ An export target:
     mrtz               Copy pixel depth (Z) data.
     null               Copy nothing.
     ================== ===================================
+
+Examples:
+
+.. parsed-literal::
+
+  exp pos3 v1, v2, v3, v4
+  exp mrt0 v1, v2, v3, v4

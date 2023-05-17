@@ -6,8 +6,7 @@ target triple = "hexagon-unknown-linux-gnu"
 define void @f0() #0 {
 b0:
   %v0 = alloca i32, align 4
-  %v1 = bitcast i32* %v0 to i64*
-  %v2 = load i64, i64* %v1, align 8
+  %v2 = load i64, ptr %v0, align 8
 ; CHECK: 	call f1
   %v3 = call i32 @f1(i64 %v2)
   unreachable

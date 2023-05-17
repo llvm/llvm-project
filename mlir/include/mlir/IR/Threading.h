@@ -138,8 +138,7 @@ void parallelForEach(MLIRContext *context, RangeT &&range, FuncT &&func) {
 /// not have multi-threading enabled, this function always processes elements
 /// sequentially.
 template <typename FuncT>
-void parallelForEachN(MLIRContext *context, size_t begin, size_t end,
-                      FuncT &&func) {
+void parallelFor(MLIRContext *context, size_t begin, size_t end, FuncT &&func) {
   parallelForEach(context, llvm::seq(begin, end), std::forward<FuncT>(func));
 }
 

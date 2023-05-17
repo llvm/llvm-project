@@ -1,4 +1,4 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; CHECK: @test
 ; CHECK: %5 = add i32 %local_6_, %local_0_

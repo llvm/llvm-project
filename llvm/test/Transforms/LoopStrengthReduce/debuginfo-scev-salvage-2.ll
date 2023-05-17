@@ -26,11 +26,11 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define dso_local void @_Z16basic_recurrencejjPj(i32 %k, i32 %size, i32* nocapture %data) local_unnamed_addr !dbg !7 {
+define dso_local void @_Z16basic_recurrencejjPj(i32 %k, i32 %size, ptr nocapture %data) local_unnamed_addr !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata i32 %k, metadata !13, metadata !DIExpression()), !dbg !14
   call void @llvm.dbg.value(metadata i32 %size, metadata !15, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.value(metadata i32* %data, metadata !16, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.value(metadata ptr %data, metadata !16, metadata !DIExpression()), !dbg !14
   br label %while.cond, !dbg !14
 
 while.cond:                                       ; preds = %while.body, %entry
@@ -43,8 +43,8 @@ while.body:                                       ; preds = %while.cond
   %mul = mul i32 %i.0, %k, !dbg !18
   call void @llvm.dbg.value(metadata i32 %mul, metadata !20, metadata !DIExpression()), !dbg !18
   %idxprom = zext i32 %i.0 to i64, !dbg !18
-  %arrayidx = getelementptr inbounds i32, i32* %data, i64 %idxprom, !dbg !18
-  store i32 %mul, i32* %arrayidx, align 4, !dbg !18
+  %arrayidx = getelementptr inbounds i32, ptr %data, i64 %idxprom, !dbg !18
+  store i32 %mul, ptr %arrayidx, align 4, !dbg !18
   %inc = add nuw i32 %i.0, 1, !dbg !18
   call void @llvm.dbg.value(metadata i32 %inc, metadata !17, metadata !DIExpression()), !dbg !14
   br label %while.cond, !dbg !14, !llvm.loop !21

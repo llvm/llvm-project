@@ -10,6 +10,6 @@ entry:
   ; CHECK-NEXT: vpush   {[[PAD_REG:d[0-9]+]], [[SAVE_REG]]}
   ; CHECK: vpop     {[[PAD_REG]], [[SAVE_REG]]}
   %a = alloca i32, align 4
-  call void asm sideeffect "", "r,~{d8}"(i32* %a)
+  call void asm sideeffect "", "r,~{d8}"(ptr %a)
   ret void
 }

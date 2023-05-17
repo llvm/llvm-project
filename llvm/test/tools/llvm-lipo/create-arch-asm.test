@@ -1,0 +1,9 @@
+# REQUIRES: x86-registered-target && aarch64-registered-target
+# RUN: llvm-as %p/Inputs/arm64-asm.ll -o %t-arm64-asm.o
+# RUN: llvm-as %p/Inputs/x86_64-asm.ll -o %t-x86_64-asm.o
+
+# RUN: llvm-lipo %t-arm64-asm.o %t-x86_64-asm.o -create -output %t-universal.o
+# RUN: llvm-lipo %t-arm64-asm.o -arch x86_64 %t-x86_64-asm.o -create -output %t-universal-1.o
+# RUN: cmp %t-universal.o %t-universal-1.o
+# RUN: llvm-lipo -arch arm64 %t-arm64-asm.o -arch x86_64 %t-x86_64-asm.o -create -output %t-universal-2.o
+# RUN: cmp %t-universal.o %t-universal-2.o

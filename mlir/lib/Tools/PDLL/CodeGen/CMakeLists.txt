@@ -5,6 +5,6 @@ add_mlir_library(MLIRPDLLCodeGen
   LINK_LIBS PUBLIC
   MLIRParser
   MLIRPDLLAST
-  MLIRPDL
+  MLIRPDLDialect
   MLIRSupport
   )

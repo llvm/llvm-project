@@ -202,7 +202,7 @@ def get_required_sm(frag, b1op=""):
   if frag.ptx_type in ["f64", "bf16", "tf32"]:
     return 80
   if frag.ptx_type in ["u4", "s4", "b1"]:
-    if b1op == "_and_popc":
+    if b1op == ".and.popc":
       return 80
     return 75
   if frag.ptx_type in ["s8", "u8"]:
@@ -409,7 +409,7 @@ __device__ void test_wmma_buitins(int *src, int *dst,
     print()
     print("#if (PTX >= %d) && (SM >= %d)" % (ptx, sm))
     print(tests)
-    print("#endif // (PTX >= %d) && (SM >= %d) "% (ptx, sm))
+    print("#endif // (PTX >= %d) && (SM >= %d)"% (ptx, sm))
 
   print("}")
 

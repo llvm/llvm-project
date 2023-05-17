@@ -6,12 +6,11 @@
 // I386: "-mframe-pointer=all"
 // I386: "-funwind-tables=2"
 // I386: "-Os"
-// I386: "-fvisibility"
-// I386: "hidden"
+// I386: "-fvisibility=hidden"
 // I386: "-o"
 // I386: clang-translation
 
-// RUN: %clang -target i386-unknown-unknown -### -S %s -fasynchronous-unwind-tables -fno-unwind-tables 2>&1 | FileCheck --check-prefix=UNWIND-TABLES %s
+// RUN: %clang -target i386-unknown-unknown -### -S %s -fasynchronous-unwind-tables -fno-unwind-tables 2>&1 | FileCheck --check-prefix=UNWIND-TABLES %s --implicit-check-not=warning:
 // UNWIND-TABLES: "-funwind-tables=2"
 
 // RUN: %clang -target i386-apple-darwin9 -### -S %s -o %t.s 2>&1 | \
@@ -78,7 +77,11 @@
 
 // RUN: %clang -target arm64-apple-ios10 -### -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-APPLE %s
-// ARM64-APPLE: -funwind-tables=2
+// ARM64-APPLE: -funwind-tables=1
+
+// RUN: %clang -target arm64-apple-ios10 -funwind-tables -### -S %s -arch arm64 2>&1 | \
+// RUN: FileCheck -check-prefix=ARM64-APPLE-UNWIND %s
+// ARM64-APPLE-UNWIND: -funwind-tables=1
 
 // RUN: %clang -target arm64-apple-ios10 -### -ffreestanding -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-FREESTANDING-APPLE %s
@@ -95,6 +98,17 @@
 // RUN: FileCheck -check-prefix=ARM64-EXPLICIT-UWTABLE-APPLE %s
 //
 // ARM64-EXPLICIT-UWTABLE-APPLE: -funwind-tables
+
+// RUN: %clang -target arm64-apple-macosx -### -ffreestanding -fasynchronous-unwind-tables %s 2>&1 | \
+// RUN: FileCheck --check-prefix=ASYNC-UNWIND-FREESTANDING %s
+//
+// ASYNC-UNWIND-FREESTANDING: -funwind-tables=2
+
+// Quite weird behaviour, but it's a long-standing default.
+// RUN: %clang -target x86_64-apple-macosx -### -fno-unwind-tables %s 2>&1 |\
+// RUN: FileCheck --check-prefix=NOUNWIND-IGNORED %s
+//
+// NOUNWIND-IGNORED: -funwind-tables=2
 
 // RUN: %clang -target arm64-apple-ios10 -fno-exceptions -### -S %s -arch arm64 2>&1 | \
 // RUN: FileCheck -check-prefix=ARM64-APPLE-EXCEP %s
@@ -378,24 +392,6 @@
 // MIPSR6EL: "-target-cpu" "mips32r6"
 // MIPSR6EL: "-mfloat-abi" "hard"
 
-// RUN: %clang -target mipsel-linux-android -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=MIPSEL-ANDROID %s
-// MIPSEL-ANDROID: clang
-// MIPSEL-ANDROID: "-cc1"
-// MIPSEL-ANDROID: "-target-cpu" "mips32"
-// MIPSEL-ANDROID: "-target-feature" "+fpxx"
-// MIPSEL-ANDROID: "-target-feature" "+nooddspreg"
-// MIPSEL-ANDROID: "-mfloat-abi" "hard"
-
-// RUN: %clang -target mipsel-linux-android -### -S %s -mcpu=mips32r6 2>&1 | \
-// RUN: FileCheck -check-prefix=MIPSEL-ANDROID-R6 %s
-// MIPSEL-ANDROID-R6: clang
-// MIPSEL-ANDROID-R6: "-cc1"
-// MIPSEL-ANDROID-R6: "-target-cpu" "mips32r6"
-// MIPSEL-ANDROID-R6: "-target-feature" "+fp64"
-// MIPSEL-ANDROID-R6: "-target-feature" "+nooddspreg"
-// MIPSEL-ANDROID-R6: "-mfloat-abi" "hard"
-
 // RUN: %clang -target mips64-linux-gnu -### -S %s 2>&1 | \
 // RUN: FileCheck -check-prefix=MIPS64 %s
 // MIPS64: clang
@@ -487,10 +483,3 @@
 // MIPSN32R6EL: "-target-cpu" "mips64r6"
 // MIPSN32R6EL: "-target-abi" "n32"
 // MIPSN32R6EL: "-mfloat-abi" "hard"
-
-// RUN: %clang -target mips64el-linux-android -### -S %s 2>&1 | \
-// RUN: FileCheck -check-prefix=MIPS64EL-ANDROID %s
-// MIPS64EL-ANDROID: clang
-// MIPS64EL-ANDROID: "-cc1"
-// MIPS64EL-ANDROID: "-target-cpu" "mips64r6"
-// MIPS64EL-ANDROID: "-mfloat-abi" "hard"

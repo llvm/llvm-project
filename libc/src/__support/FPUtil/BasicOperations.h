@@ -11,22 +11,21 @@
 
 #include "FPBits.h"
 
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/common.h"
 
 namespace __llvm_libc {
 namespace fputil {
 
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline T abs(T x) {
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE T abs(T x) {
   FPBits<T> bits(x);
   bits.set_sign(0);
   return T(bits);
 }
 
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline T fmin(T x, T y) {
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE T fmin(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (bitx.is_nan()) {
@@ -43,9 +42,8 @@ static inline T fmin(T x, T y) {
   }
 }
 
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline T fmax(T x, T y) {
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE T fmax(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (bitx.is_nan()) {
@@ -62,9 +60,8 @@ static inline T fmax(T x, T y) {
   }
 }
 
-template <typename T,
-          cpp::EnableIfType<cpp::IsFloatingPointType<T>::Value, int> = 0>
-static inline T fdim(T x, T y) {
+template <typename T, cpp::enable_if_t<cpp::is_floating_point_v<T>, int> = 0>
+LIBC_INLINE T fdim(T x, T y) {
   FPBits<T> bitx(x), bity(y);
 
   if (bitx.is_nan()) {

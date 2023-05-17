@@ -1,4 +1,4 @@
-; RUN: opt -S < %s -gvn | FileCheck %s
+; RUN: opt -S < %s -passes=gvn | FileCheck %s
 
 declare void @llvm.sideeffect()
 
@@ -6,10 +6,10 @@ declare void @llvm.sideeffect()
 
 ; CHECK-LABEL: s2l
 ; CHECK-NOT: load
-define float @s2l(float* %p) {
-    store float 0.0, float* %p
+define float @s2l(ptr %p) {
+    store float 0.0, ptr %p
     call void @llvm.sideeffect()
-    %t = load float, float* %p
+    %t = load float, ptr %p
     ret float %t
 }
 
@@ -18,10 +18,10 @@ define float @s2l(float* %p) {
 ; CHECK-LABEL: rle
 ; CHECK: load
 ; CHECK-NOT: load
-define float @rle(float* %p) {
-    %r = load float, float* %p
+define float @rle(ptr %p) {
+    %r = load float, ptr %p
     call void @llvm.sideeffect()
-    %s = load float, float* %p
+    %s = load float, ptr %p
     %t = fadd float %r, %s
     ret float %t
 }
@@ -32,7 +32,7 @@ define float @rle(float* %p) {
 ; CHECK: load
 ; CHECK: loop:
 ; CHECK-NOT: load
-define float @licm(i64 %n, float* nocapture readonly %p) #0 {
+define float @licm(i64 %n, ptr nocapture readonly %p) #0 {
 bb0:
   br label %loop
 
@@ -40,7 +40,7 @@ loop:
   %i = phi i64 [ 0, %bb0 ], [ %t5, %loop ]
   %sum = phi float [ 0.000000e+00, %bb0 ], [ %t4, %loop ]
   call void @llvm.sideeffect()
-  %t3 = load float, float* %p
+  %t3 = load float, ptr %p
   %t4 = fadd float %sum, %t3
   %t5 = add i64 %i, 1
   %t6 = icmp ult i64 %t5, %n

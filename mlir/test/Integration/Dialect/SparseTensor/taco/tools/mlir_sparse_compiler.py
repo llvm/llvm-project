@@ -6,7 +6,6 @@
 #  test/Integration/Dialect/SparseTensor/python/ until we have a better
 #  solution.
 
-from mlir import all_passes_registration
 from mlir import execution_engine
 from mlir import ir
 from mlir import passmanager
@@ -17,7 +16,7 @@ class SparseCompiler:
   """Sparse compiler class for compiling and building MLIR modules."""
 
   def __init__(self, options: str, opt_level: int, shared_libs: Sequence[str]):
-    pipeline = f'sparse-compiler{{{options} reassociate-fp-reductions=1 enable-index-optimizations=1}}'
+    pipeline = f'builtin.module(sparse-compiler{{{options} reassociate-fp-reductions=1 enable-index-optimizations=1}})'
     self.pipeline = pipeline
     self.opt_level = opt_level
     self.shared_libs = shared_libs
@@ -28,7 +27,7 @@ class SparseCompiler:
 
   def compile(self, module: ir.Module):
     """Compiles the module by invoking the sparse copmiler pipeline."""
-    passmanager.PassManager.parse(self.pipeline).run(module)
+    passmanager.PassManager.parse(self.pipeline).run(module.operation)
 
   def jit(self, module: ir.Module) -> execution_engine.ExecutionEngine:
     """Wraps the module in a JIT execution engine."""

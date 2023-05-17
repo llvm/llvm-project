@@ -23,16 +23,15 @@ entry:
 
 ; MIPS16-LABEL: bswap32:
 ; MIPS16-DAG: srl $[[R0:[0-9]+]], $4, 8
-; MIPS16-DAG: srl $[[R1:[0-9]+]], $4, 24
-; MIPS16-DAG: sll $[[R2:[0-9]+]], $4, 8
-; MIPS16-DAG: sll $[[R3:[0-9]+]], $4, 24
 ; MIPS16-DAG: li  $[[R4:[0-9]+]], 65280
-; MIPS16-DAG: and $[[R4]], $[[R0]]
-; MIPS16-DAG: or  $[[R1]], $[[R4]]
-; MIPS16-DAG: lw  $[[R7:[0-9]+]], $CPI
-; MIPS16-DAG: and $[[R7]], $[[R2]]
-; MIPS16-DAG: or  $[[R3]], $[[R7]]
-; MIPS16-DAG: or  $[[R3]], $[[R1]]
+; MIPS16-DAG: and $[[R0]], $[[R4]]
+; MIPS16-DAG: srl $[[R1:[0-9]+]], $4, 24
+; MIPS16-DAG: or $[[R1]], $[[R0]]
+; MIPS16-DAG: and $[[R4]], $4
+; MIPS16-DAG: sll $[[R2:[0-9]+]], $[[R4]], 8
+; MIPS16-DAG: sll $[[R3:[0-9]+]], $4, 24
+; MIPS16-DAG: or $[[R3]], $[[R2]]
+; MIPS16-DAG: or $[[R3]], $[[R1]]
 
   %or.3 = call i32 @llvm.bswap.i32(i32 %x)
   ret i32 %or.3
@@ -58,23 +57,22 @@ entry:
 
 ; MIPS16-LABEL: bswap64:
 ; MIPS16-DAG: srl $[[R0:[0-9]+]], $5, 8
-; MIPS16-DAG: srl $[[R1:[0-9]+]], $5, 24
-; MIPS16-DAG: sll $[[R2:[0-9]+]], $5, 8
-; MIPS16-DAG: sll $[[R3:[0-9]+]], $5, 24
 ; MIPS16-DAG: li  $[[R4:[0-9]+]], 65280
 ; MIPS16-DAG: and $[[R0]], $[[R4]]
+; MIPS16-DAG: srl $[[R1:[0-9]+]], $5, 24
 ; MIPS16-DAG: or  $[[R1]], $[[R0]]
-; MIPS16-DAG: lw  $[[R7:[0-9]+]], 1f
-; MIPS16-DAG: and $[[R2]], $[[R7]]
-; MIPS16-DAG: or  $[[R3]], $[[R2]]
-; MIPS16-DAG: or  $[[R3]], $[[R1]]
+; MIPS16-DAG: sll $[[R3:[0-9]+]], $5, 24
+; MIPS16-DAG: and $5, $[[R4]]
+; MIPS16-DAG: sll $[[R2:[0-9]+]], $5, 8
+; MIPS16-DAG: or $[[R0]], $[[R3]]
+; MIPS16-DAG: or $[[R0]], $[[R1]]
 ; MIPS16-DAG: srl $[[R0:[0-9]+]], $4, 8
-; MIPS16-DAG: srl $[[R1:[0-9]+]], $4, 24
-; MIPS16-DAG: sll $[[R2:[0-9]+]], $4, 8
-; MIPS16-DAG: sll $[[R3:[0-9]+]], $4, 24
 ; MIPS16-DAG: and $[[R0]], $[[R4]]
+; MIPS16-DAG: srl $[[R1:[0-9]+]], $4, 24
 ; MIPS16-DAG: or  $[[R1]], $[[R0]]
-; MIPS16-DAG: and $[[R2]], $[[R7]]
+; MIPS16-DAG: and $[[R4]], $4
+; MIPS16-DAG: sll $[[R2:[0-9]+]], $[[R4]], 8
+; MIPS16-DAG: sll $[[R3:[0-9]+]], $4, 24
 ; MIPS16-DAG: or  $[[R3]], $[[R2]]
 ; MIPS16-DAG: or  $[[R3]], $[[R1]]
 

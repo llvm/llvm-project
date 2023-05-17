@@ -10,9 +10,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
-#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H
 
+#include "Headers.h"
+#include "index/Symbol.h"
 #include "index/SymbolID.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclObjC.h"
@@ -21,6 +23,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/MacroInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -93,6 +96,42 @@ SymbolID getSymbolID(const Decl *D);
 SymbolID getSymbolID(const llvm::StringRef MacroName, const MacroInfo *MI,
                      const SourceManager &SM);
 
+/// Return the corresponding implementation/definition for the given ObjC
+/// container if it has one, otherwise, return nullptr.
+///
+/// Objective-C classes can have three types of declarations:
+///
+/// - forward declaration: "@class MyClass;"
+/// - true declaration (interface definition): "@interface MyClass ... @end"
+/// - true definition (implementation): "@implementation MyClass ... @end"
+///
+/// Objective-C categories are extensions on classes:
+///
+/// - declaration: "@interface MyClass (Ext) ... @end"
+/// - definition: "@implementation MyClass (Ext) ... @end"
+///
+/// With one special case, a class extension, which is normally used to keep
+/// some declarations internal to a file without exposing them in a header.
+///
+/// - class extension declaration: "@interface MyClass () ... @end"
+/// - which really links to class definition: "@implementation MyClass ... @end"
+///
+/// For Objective-C protocols, e.g. "@protocol MyProtocol ... @end" this will
+/// return nullptr as protocols don't have an implementation.
+const ObjCImplDecl *getCorrespondingObjCImpl(const ObjCContainerDecl *D);
+
+/// Infer the include directive to use for the given \p FileName. It aims for
+/// #import for ObjC files and #include for the rest.
+///
+/// - For source files we use LangOpts directly to infer ObjC-ness.
+/// - For header files we also check for symbols declared by the file and
+///   existing include directives, as the language can be set to ObjC++ as a
+///   fallback in the absence of compile flags.
+Symbol::IncludeDirective
+preferredIncludeDirective(llvm::StringRef FileName, const LangOptions &LangOpts,
+                          ArrayRef<Inclusion> MainFileIncludes,
+                          ArrayRef<const Decl *> TopLevelDecls);
+
 /// Returns a QualType as string. The result doesn't contain unwritten scopes
 /// like anonymous/inline namespace.
 std::string printType(const QualType QT, const DeclContext &CurContext,
@@ -127,7 +166,7 @@ QualType declaredType(const TypeDecl *D);
 /// Retrieves the deduced type at a given location (auto, decltype).
 /// It will return the underlying type.
 /// If the type is an undeduced auto, returns the type itself.
-llvm::Optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
+std::optional<QualType> getDeducedType(ASTContext &, SourceLocation Loc);
 
 // Find the abbreviated-function-template `auto` within a type, or returns null.
 // Similar to getContainedAutoTypeLoc, but these `auto`s are
@@ -199,7 +238,19 @@ bool hasUnstableLinkage(const Decl *D);
 /// reasonable.
 bool isDeeplyNested(const Decl *D, unsigned MaxDepth = 10);
 
+/// Recursively resolves the parameters of a FunctionDecl that forwards its
+/// parameters to another function via variadic template parameters. This can
+/// for example be used to retrieve the constructor parameter ParmVarDecl for a
+/// make_unique or emplace_back call.
+llvm::SmallVector<const ParmVarDecl *>
+resolveForwardingParameters(const FunctionDecl *D, unsigned MaxDepth = 10);
+
+/// Checks whether D is instantiated from a function parameter pack
+/// whose type is a bare type parameter pack (e.g. `Args...`), or a
+/// reference to one (e.g. `Args&...` or `Args&&...`).
+bool isExpandedFromParameterPack(const ParmVarDecl *D);
+
 } // namespace clangd
 } // namespace clang
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H_
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANGD_AST_H

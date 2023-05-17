@@ -4,12 +4,12 @@
 
 ; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  %sgpr = call <4 x i32> asm sideeffect "; def $0", "={s[8:12]}"()' (in function: return_type_is_too_big_vector)
 ; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  %reg = call i64 asm sideeffect "; def $0", "={v8}"()' (in function: return_type_is_too_big_scalar)
-; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  %reg = call i8 addrspace(1)* asm sideeffect "; def $0", "={v8}"()' (in function: return_type_is_too_big_pointer)
-; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  %reg = call i8 addrspace(3)* asm sideeffect "; def $0", "={v[8:9]}"()' (in function: return_type_is_too_small_pointer)
+; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  %reg = call ptr addrspace(1) asm sideeffect "; def $0", "={v8}"()' (in function: return_type_is_too_big_pointer)
+; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  %reg = call ptr addrspace(3) asm sideeffect "; def $0", "={v[8:9]}"()' (in function: return_type_is_too_small_pointer)
 ; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  call void asm sideeffect "; use $0", "{v[0:9]}"(<8 x i32> %arg)' (in function: use_vector_too_big)
 ; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  call void asm sideeffect "; use $0", "{v0}"(i64 %arg)' (in function: use_scalar_too_small)
-; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  call void asm sideeffect "; use $0", "{v0}"(i8 addrspace(1)* %arg)' (in function: use_pointer_too_small)
-; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  call void asm sideeffect "; use $0", "{v[0:1]}"(i32 addrspace(3)* %arg)' (in function: use_pointer_too_big)
+; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  call void asm sideeffect "; use $0", "{v0}"(ptr addrspace(1) %arg)' (in function: use_pointer_too_small)
+; ERR: remark: <unknown>:0:0: unable to translate instruction: call: '  call void asm sideeffect "; use $0", "{v[0:1]}"(ptr addrspace(3) %arg)' (in function: use_pointer_too_big)
 
 
 ; This asm is broken because it's using a 5 element wide physical
@@ -59,7 +59,7 @@ define i32 @return_type_is_too_small_scalar() {
   ret i32 %reg
 }
 
-define i8 addrspace(1)* @return_type_is_too_big_pointer() {
+define ptr addrspace(1) @return_type_is_too_big_pointer() {
   ; CHECK-LABEL: name: return_type_is_too_big_pointer
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
@@ -67,11 +67,11 @@ define i8 addrspace(1)* @return_type_is_too_big_pointer() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vgpr8
-  %reg = call i8 addrspace(1)* asm sideeffect "; def $0", "={v8}" ()
-  ret i8 addrspace(1)* %reg
+  %reg = call ptr addrspace(1) asm sideeffect "; def $0", "={v8}" ()
+  ret ptr addrspace(1) %reg
 }
 
-define i8 addrspace(3)* @return_type_is_too_small_pointer() {
+define ptr addrspace(3) @return_type_is_too_small_pointer() {
   ; CHECK-LABEL: name: return_type_is_too_small_pointer
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
@@ -79,8 +79,8 @@ define i8 addrspace(3)* @return_type_is_too_small_pointer() {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   INLINEASM &"; def $0", 1 /* sideeffect attdialect */, 10 /* regdef */, implicit-def $vgpr8_vgpr9
-  %reg = call i8 addrspace(3)* asm sideeffect "; def $0", "={v[8:9]}" ()
-  ret i8 addrspace(3)* %reg
+  %reg = call ptr addrspace(3) asm sideeffect "; def $0", "={v[8:9]}" ()
+  ret ptr addrspace(3) %reg
 }
 
 define void @use_vector_too_small(<8 x i32> %arg) {
@@ -154,7 +154,7 @@ define void @use_scalar_too_big(i32 %arg) {
   ret void
 }
 
-define void @use_pointer_too_small(i8 addrspace(1)* %arg) {
+define void @use_pointer_too_small(ptr addrspace(1) %arg) {
   ; CHECK-LABEL: name: use_pointer_too_small
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
@@ -165,11 +165,11 @@ define void @use_pointer_too_small(i8 addrspace(1)* %arg) {
   ; CHECK-NEXT:   [[MV:%[0-9]+]]:_(p1) = G_MERGE_VALUES [[COPY]](s32), [[COPY1]](s32)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
-  call void asm sideeffect "; use $0", "{v0}"(i8 addrspace(1)* %arg)
+  call void asm sideeffect "; use $0", "{v0}"(ptr addrspace(1) %arg)
   ret void
 }
 
-define void @use_pointer_too_big(i32 addrspace(3)* %arg) {
+define void @use_pointer_too_big(ptr addrspace(3) %arg) {
   ; CHECK-LABEL: name: use_pointer_too_big
   ; CHECK: bb.0:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
@@ -178,6 +178,6 @@ define void @use_pointer_too_big(i32 addrspace(3)* %arg) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(p3) = COPY $vgpr0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1 (%ir-block.0):
-  call void asm sideeffect "; use $0", "{v[0:1]}"(i32 addrspace(3)* %arg)
+  call void asm sideeffect "; use $0", "{v[0:1]}"(ptr addrspace(3) %arg)
   ret void
 }

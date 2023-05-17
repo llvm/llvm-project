@@ -22,5 +22,5 @@ struct X
 int main(int, char**)
 {
 
-  return 0;
+    return 0;
 }

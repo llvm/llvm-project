@@ -8,16 +8,16 @@ entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  store float 0.000000e+00, float* %t.02.reg2mem
+  store float 0.000000e+00, ptr %t.02.reg2mem
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry.split
   %j.01 = phi i32 [ 0, %entry.split ], [ %inc1, %for.body ]
-  %t.02.reload = load float, float* %t.02.reg2mem
+  %t.02.reload = load float, ptr %t.02.reg2mem
   %inc = fadd float %t.02.reload, 1.000000e+00
   %inc1 = add nsw i32 %j.01, 1
   %exitcond = icmp eq i32 %inc1, 5000001
-  store float %inc, float* %t.02.reg2mem
+  store float %inc, ptr %t.02.reg2mem
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:                                          ; preds = %for.body

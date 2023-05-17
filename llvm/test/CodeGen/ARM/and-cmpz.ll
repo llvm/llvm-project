@@ -23,8 +23,8 @@ false:
 ; T2-NEXT: mov
 ; T2-NEXT: it
 ; T1-NEXT: bmi
-define i32 @single_bit_multi_use(i32 %p, i32* %z) {
-  store i32 %p, i32* %z
+define i32 @single_bit_multi_use(i32 %p, ptr %z) {
+  store i32 %p, ptr %z
   %a = and i32 %p, 256
   %b = icmp eq i32 %a, 0
   br i1 %b, label %true, label %false
@@ -95,7 +95,7 @@ false:
 ; T2:      uxth    r0, r0
 ; T2-NEXT: movs    r2, #0
 ; T2-NEXT: cmp.w   r2, r0, lsr #9
-define void @i16_cmpz(i16 %x, void (i32)* %foo) {
+define void @i16_cmpz(i16 %x, ptr %foo) {
 entry:
   %cmp = icmp ult i16 %x, 512
   br i1 %cmp, label %if.then, label %if.end

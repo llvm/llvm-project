@@ -3,6 +3,7 @@ static_library("InterfaceStub") {
   deps = [
     "//llvm/lib/Object",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   sources = [

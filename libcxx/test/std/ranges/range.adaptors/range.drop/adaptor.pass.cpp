@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::views::drop
 
@@ -48,7 +47,7 @@ struct SizedViewWithUnsizedSentinel : std::ranges::view_base {
 
   constexpr auto begin() const { return iterator(begin_); }
   constexpr auto end() const { return sentinel(iterator(end_)); }
-  constexpr size_t size() const { return end_ - begin_; }
+  constexpr std::size_t size() const { return end_ - begin_; }
 };
 static_assert(std::ranges::random_access_range<SizedViewWithUnsizedSentinel>);
 static_assert(std::ranges::sized_range<SizedViewWithUnsizedSentinel>);

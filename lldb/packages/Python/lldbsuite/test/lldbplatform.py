@@ -5,9 +5,6 @@ from __future__ import absolute_import
 # System modules
 import itertools
 
-# Third-party modules
-import six
-
 # LLDB modules
 import lldb
 
@@ -39,10 +36,10 @@ __name_lookup = {
 
 def translate(values):
 
-    if isinstance(values, six.integer_types):
+    if isinstance(values, int):
         # This is a value from the platform enumeration, translate it.
         return __name_lookup[values]
-    elif isinstance(values, six.string_types):
+    elif isinstance(values, str):
         # This is a raw string, return it.
         return [values]
     elif hasattr(values, "__iter__"):

@@ -3,8 +3,12 @@
 #include <cstdio>
 #include <thread>
 #include <chrono>
+#include <fstream>
 
 int main(int argc, char* argv[]) {
+  lldb_enable_attach();
+  std::ofstream(argv[1]).close();
+
   // Wait until debugger is attached.
   int main_thread_continue = 0;
   int i = 0;

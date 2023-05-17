@@ -8,7 +8,7 @@ target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 target triple = "arm64-apple-ios14.0.0"
 
 define [1 x <4 x float>] @test1() {
-; CHECK-LABEL:    .p2align    4               ; -- Begin function test1
+; CHECK-LABEL:    .p2align    4, 0x0              ; -- Begin function test1
 ; CHECK-NEXT: lCPI0_0:
 ; CHECK-NEXT:     .quad   0                       ; 0x0
 ; CHECK-NEXT:     .quad   4575657221408423936     ; 0x3f80000000000000
@@ -28,7 +28,7 @@ define [1 x <4 x float>] @test1() {
 }
 
 define [1 x <4 x float>] @test2() {
-; CHECK-LABEL:    .p2align    4               ; -- Begin function test2
+; CHECK-LABEL:    .p2align    4, 0x0              ; -- Begin function test2
 ; CHECK-NEXT: lCPI1_0:
 ; CHECK-NEXT:     .long   0x00000000              ; float 0
 ; CHECK-NEXT:     .long   0x00000000              ; float 0
@@ -45,20 +45,25 @@ define [1 x <4 x float>] @test2() {
 ; CHECK-NEXT: Lloh3:
 ; CHECK-NEXT:     ldr q1, [x8, lCPI1_0@PAGEOFF]
 ; CHECK-NEXT:     mov s2, v1[1]
-; CHECK-NEXT:     fneg    s0, s1
 ; CHECK-NEXT:     mov s3, v1[2]
+; CHECK-NEXT:     fneg    s0, s1
 ; CHECK-NEXT:     mov s1, v1[3]
 ; CHECK-NEXT:     fneg    s2, s2
+; CHECK-NEXT:     fneg    s3, s3
 ; CHECK-NEXT:     fneg    s1, s1
 ; CHECK-NEXT:     mov.s   v0[1], v2[0]
-; CHECK-NEXT:     fneg    s2, s3
-; CHECK-NEXT:     mov.s   v0[2], v2[0]
+; CHECK-NEXT:     mov.s   v0[2], v3[0]
 ; CHECK-NEXT:     mov.s   v0[3], v1[0]
 ; CHECK-NEXT:     ret
 ;
-  ret [1 x <4 x float>] [<4 x float>
-    <float fneg (float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 0)),
-     float fneg (float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 1)),
-     float fneg (float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 2)),
-     float fneg (float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 3))>]
+  %constexpr = fneg float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 0)
+  %constexpr1 = fneg float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 1)
+  %constexpr2 = fneg float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 2)
+  %constexpr3 = fneg float extractelement (<4 x float> bitcast (<1 x i128> <i128 84405977732342157929391748327801880576> to <4 x float>), i32 3)
+  %constexpr.ins = insertelement <4 x float> poison, float %constexpr, i32 0
+  %constexpr.ins4 = insertelement <4 x float> %constexpr.ins, float %constexpr1, i32 1
+  %constexpr.ins5 = insertelement <4 x float> %constexpr.ins4, float %constexpr2, i32 2
+  %constexpr.ins6 = insertelement <4 x float> %constexpr.ins5, float %constexpr3, i32 3
+  %constexpr.ins7 = insertvalue [1 x <4 x float>] poison, <4 x float> %constexpr.ins6, 0
+  ret [1 x <4 x float>] %constexpr.ins7
 }

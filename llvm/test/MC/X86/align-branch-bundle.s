@@ -1,4 +1,4 @@
-# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=16 --x86-align-branch=fused+jcc --mc-relax-all %s | llvm-objdump -d --no-show-raw-insn - | FileCheck %s
+# RUN: llvm-mc -filetype=obj -triple x86_64-unknown-unknown --x86-align-branch-boundary=16 --x86-align-branch=fused+jcc --mc-relax-all %s | llvm-objdump --no-print-imm-hex -d --no-show-raw-insn - | FileCheck %s
 
 # Check using option --x86-align-branch-boundary=16 --x86-align-branch=fused+jcc --mc-relax-all with bundle won't make code crazy
 

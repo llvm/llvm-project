@@ -49,7 +49,7 @@ func.func private @foo2(%arg0: !fir.ref<!fir.box<!fir.heap<!fir.type<_QMs1Ta1{x:
 // CHECK-SAME: !llvm.ptr<struct<(ptr<struct<"_QMs1Ta1", (i32, f32)>>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, ptr<i{{.*}}>, array<1 x i{{.*}}>)>>
 func.func private @foo3(%arg0: !fir.ref<!fir.array<10x?x11xf32>>)
 // CHECK-LABEL: foo3
-// CHECK-SAME: !llvm.ptr<f32>
+// CHECK-SAME: !llvm.ptr<array<10 x f32>>
 func.func private @foo4(%arg0: !fir.ref<!fir.array<10x11x?x?xf32>>)
 // CHECK-LABEL: foo4
 // CHECK-SAME: !llvm.ptr<array<11 x array<10 x f32>>>

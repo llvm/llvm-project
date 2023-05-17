@@ -49,7 +49,7 @@ protected:
 // CHECK: <Declaration>Test()</Declaration>
 // CHECK: <Declaration>unsigned int getID() const</Declaration>
 // CHECK: <Declaration>~Test(){{( noexcept)?}}</Declaration>
-// CHECK: <Declaration>Test::data *reserved</Declaration>
+// CHECK: <Declaration>data *reserved</Declaration>
 
 
 class S {
@@ -149,7 +149,7 @@ namespace test3 {
   };
 }
 // CHECK: <Declaration>void f(const T &amp;t = T())</Declaration>
-// CHECK: <Declaration>friend void vector&lt;A&gt;::f(const test3::A &amp;)</Declaration>
+// CHECK: <Declaration>friend void vector&lt;A&gt;::f(const A &amp;)</Declaration>
 
 class MyClass
 {

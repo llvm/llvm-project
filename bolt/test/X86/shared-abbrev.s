@@ -2,7 +2,7 @@
 # RUN: mkdir %t
 # RUN: llvm-mc -filetype=obj -triple=x86_64 -dwarf-version=4 %s -o %t/shared-abbrev.o
 # RUN: %clang %cflags %t/shared-abbrev.o -o %t/shared-abbrev.exe
-# RUN: llvm-bolt %t/shared-abbrev.exe -o %t/shared-abbrev.exe.bolt -update-debug-sections
+# RUN: llvm-bolt %t/shared-abbrev.exe -o %t/shared-abbrev.exe.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --debug-info %t/shared-abbrev.exe.bolt | FileCheck %s
 
 # CHECK: 0x00000000:
@@ -12,14 +12,14 @@
 # CHECK-NEXT: 		DW_AT_stmt_list
 # CHECK-NEXT: 		DW_AT_low_pc
 # CHECK-NEXT: 		DW_AT_ranges
-# CHECK: 0x0000001d:
+# CHECK: 0x0000001c:
 # CHECK-SAME: abbr_offset = 0x0017
 # CHECK-EMPTY:
 # CHECK:		DW_TAG_compile_unit
 # CHECK-NEXT: 		DW_AT_stmt_list
 # CHECK-NEXT: 		DW_AT_low_pc
 # CHECK-NEXT: 		DW_AT_ranges
-# CHECK: 0x0000003a:
+# CHECK: 0x00000039:
 # CHECK-SAME: abbr_offset = 0x0000
 # CHECK-EMPTY:
 # CHECK-NEXT: 		DW_TAG_compile_unit
@@ -78,7 +78,6 @@ main:                                   # @main
   .byte 2                               # Abbrev [2] DW_TAG_compile_unit
   .long .Lline_table_start0             # DW_AT_stmt_list
   .quad 0                               # DW_AT_low_pc
-  .byte 0                               # End Of Children Mark
   .long .Ldebug_ranges0                 # DW_AT_ranges --- end manual --
 .Ldebug_info_end0:
 
@@ -104,7 +103,6 @@ main:                                   # @main
   .byte 2                               # Abbrev [2] DW_TAG_compile_unit
   .long .Lline_table_start0             # DW_AT_stmt_list
   .quad 0                               # DW_AT_low_pc
-  .byte 0                               # End Of Children Mark
   .long .Ldebug_ranges0                 # DW_AT_ranges --- end manual --
 .Ldebug_info_end2:
   .section  .debug_ranges,"",@progbits

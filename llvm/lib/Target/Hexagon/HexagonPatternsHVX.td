@@ -41,7 +41,7 @@ def HwLen2: SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(ST.getVectorLength()/2, SDLoc(N), MVT::i32);
 }]>;
 
-def Q2V: OutPatFrag<(ops node:$Qs), (V6_vandqrt $Qs, (A2_tfrsi -1))>;
+def Q2V: OutPatFrag<(ops node:$Qs), (V6_vandqrt $Qs, (ToI32 -1))>;
 
 def Combinev: OutPatFrag<(ops node:$Vs, node:$Vt),
   (REG_SEQUENCE HvxWR, $Vs, vsub_hi, $Vt, vsub_lo)>;
@@ -50,9 +50,9 @@ def Combineq: OutPatFrag<(ops node:$Qs, node:$Qt),
   (V6_vandvrt
     (V6_vor
       (V6_vror (V6_vpackeb (V6_vd0), (Q2V $Qs)),
-               (A2_tfrsi (HwLen2 (i32 0)))),  // Half the vector length
+               (ToI32 (HwLen2 (i32 0)))),  // Half the vector length
       (V6_vpackeb (V6_vd0), (Q2V $Qt))),
-    (A2_tfrsi -1))>;
+    (ToI32 -1))>;
 
 def LoVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_lo)>;
 def HiVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_hi)>;
@@ -60,9 +60,6 @@ def HiVec: OutPatFrag<(ops node:$Vs), (EXTRACT_SUBREG $Vs, vsub_hi)>;
 def HexagonQCAT:       SDNode<"HexagonISD::QCAT",       SDTVecBinOp>;
 def HexagonQTRUE:      SDNode<"HexagonISD::QTRUE",      SDTVecLeaf>;
 def HexagonQFALSE:     SDNode<"HexagonISD::QFALSE",     SDTVecLeaf>;
-def HexagonVPACKL:     SDNode<"HexagonISD::VPACKL",     SDTVecUnaryOp>;
-def HexagonVUNPACK:    SDNode<"HexagonISD::VUNPACK",    SDTVecUnaryOp>;
-def HexagonVUNPACKU:   SDNode<"HexagonISD::VUNPACKU",   SDTVecUnaryOp>;
 
 def vzero:  PatFrags<(ops), [(splat_vector (i32 0)), (splat_vector (f32zero))]>;
 def qtrue:  PatFrag<(ops), (HexagonQTRUE)>;
@@ -71,14 +68,28 @@ def qcat:   PatFrag<(ops node:$Qs, node:$Qt),
                     (HexagonQCAT node:$Qs, node:$Qt)>;
 
 def qnot:     PatFrag<(ops node:$Qs), (xor node:$Qs, qtrue)>;
-def vpackl:   PatFrag<(ops node:$Vs), (HexagonVPACKL node:$Vs)>;
-def vunpack:  PatFrag<(ops node:$Vs), (HexagonVUNPACK node:$Vs)>;
-def vunpacku: PatFrag<(ops node:$Vs), (HexagonVUNPACKU node:$Vs)>;
 
 def VSxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackb  $Vs)>;
 def VSxth: OutPatFrag<(ops node:$Vs), (V6_vunpackh  $Vs)>;
 def VZxtb: OutPatFrag<(ops node:$Vs), (V6_vunpackub $Vs)>;
 def VZxth: OutPatFrag<(ops node:$Vs), (V6_vunpackuh $Vs)>;
+
+class VSubi<InstHexagon VSub, InstHexagon VSplati>:
+  OutPatFrag<(ops node:$Imm, node:$Vs), (VSub (VSplati (i32 $Imm)), $Vs)>;
+
+def VSubib: VSubi<V6_vsubb, PS_vsplatib>;
+def VSubih: VSubi<V6_vsubh, PS_vsplatih>;
+def VSubiw: VSubi<V6_vsubw, PS_vsplatiw>;
+
+def VNegb: OutPatFrag<(ops node:$Vs), (VSubib 0, $Vs)>;
+def VNegh: OutPatFrag<(ops node:$Vs), (VSubih 0, $Vs)>;
+def VNegw: OutPatFrag<(ops node:$Vs), (VSubiw 0, $Vs)>;
+
+class pf3<SDNode Op>: PatFrag<(ops node:$a, node:$b, node:$c),
+                              (Op node:$a, node:$b, node:$c)>;
+
+def Mfshl: pf3<HexagonMFSHL>;
+def Mfshr: pf3<HexagonMFSHR>;
 
 def IsVecOff : PatLeaf<(i32 imm), [{
   int32_t V = N->getSExtValue();
@@ -132,7 +143,7 @@ multiclass HvxLdc_pat<InstHexagon MI, PatFrag Load, ValueType ResType> {
   // Calling "Select" on the resulting loads from CP fails without these
   // patterns.
   def: Pat<(ResType (Load (HexagonCP tconstpool:$Addr))),
-           (MI (A2_tfrsi imm:$Addr), 0)>;
+           (MI (ToI32 imm:$Addr), 0)>;
   def: Pat<(ResType (Load (HexagonAtPcrel tconstpool:$Addr))),
            (MI (C4_addipc imm:$Addr), 0)>;
 }
@@ -323,72 +334,34 @@ let Predicates = [UseHVX, UseHVXFloatingPoint] in {
            (V6_vinsertwr HvxVR:$Vu, I32:$Rt)>;
 }
 
-// Splats for HvxV60
-def V60splatib: OutPatFrag<(ops node:$V),  (V6_lvsplatw (ToI32 (SplatB $V)))>;
-def V60splatih: OutPatFrag<(ops node:$V),  (V6_lvsplatw (ToI32 (SplatH $V)))>;
-def V60splatiw: OutPatFrag<(ops node:$V),  (V6_lvsplatw (ToI32 $V))>;
-def V60splatrb: OutPatFrag<(ops node:$Rs), (V6_lvsplatw (S2_vsplatrb $Rs))>;
-def V60splatrh: OutPatFrag<(ops node:$Rs),
-                           (V6_lvsplatw (A2_combine_ll $Rs, $Rs))>;
-def V60splatrw: OutPatFrag<(ops node:$Rs), (V6_lvsplatw $Rs)>;
-
-// Splats for HvxV62+
-def V62splatib: OutPatFrag<(ops node:$V),  (V6_lvsplatb (ToI32 $V))>;
-def V62splatih: OutPatFrag<(ops node:$V),  (V6_lvsplath (ToI32 $V))>;
-def V62splatiw: OutPatFrag<(ops node:$V),  (V6_lvsplatw (ToI32 $V))>;
-def V62splatrb: OutPatFrag<(ops node:$Rs), (V6_lvsplatb $Rs)>;
-def V62splatrh: OutPatFrag<(ops node:$Rs), (V6_lvsplath $Rs)>;
-def V62splatrw: OutPatFrag<(ops node:$Rs), (V6_lvsplatw $Rs)>;
-
 def Rep: OutPatFrag<(ops node:$N), (Combinev $N, $N)>;
 
-let Predicates = [UseHVX,UseHVXV60] in {
+let Predicates = [UseHVX] in {
   let AddedComplexity = 10 in {
-    def: Pat<(VecI8   (splat_vector u8_0ImmPred:$V)),  (V60splatib $V)>;
-    def: Pat<(VecI16  (splat_vector u16_0ImmPred:$V)), (V60splatih $V)>;
-    def: Pat<(VecI32  (splat_vector anyimm:$V)),       (V60splatiw $V)>;
-    def: Pat<(VecPI8  (splat_vector u8_0ImmPred:$V)),  (Rep (V60splatib $V))>;
-    def: Pat<(VecPI16 (splat_vector u16_0ImmPred:$V)), (Rep (V60splatih $V))>;
-    def: Pat<(VecPI32 (splat_vector anyimm:$V)),       (Rep (V60splatiw $V))>;
+    def: Pat<(VecI8   (splat_vector u8_0ImmPred:$V)),  (PS_vsplatib imm:$V)>;
+    def: Pat<(VecI16  (splat_vector u16_0ImmPred:$V)), (PS_vsplatih imm:$V)>;
+    def: Pat<(VecI32  (splat_vector anyimm:$V)),       (PS_vsplatiw imm:$V)>;
+    def: Pat<(VecPI8  (splat_vector u8_0ImmPred:$V)),  (Rep (PS_vsplatib imm:$V))>;
+    def: Pat<(VecPI16 (splat_vector u16_0ImmPred:$V)), (Rep (PS_vsplatih imm:$V))>;
+    def: Pat<(VecPI32 (splat_vector anyimm:$V)),       (Rep (PS_vsplatiw imm:$V))>;
   }
-  def: Pat<(VecI8   (splat_vector I32:$Rs)), (V60splatrb $Rs)>;
-  def: Pat<(VecI16  (splat_vector I32:$Rs)), (V60splatrh $Rs)>;
-  def: Pat<(VecI32  (splat_vector I32:$Rs)), (V60splatrw $Rs)>;
-  def: Pat<(VecPI8  (splat_vector I32:$Rs)), (Rep (V60splatrb $Rs))>;
-  def: Pat<(VecPI16 (splat_vector I32:$Rs)), (Rep (V60splatrh $Rs))>;
-  def: Pat<(VecPI32 (splat_vector I32:$Rs)), (Rep (V60splatrw $Rs))>;
-}
-let Predicates = [UseHVX,UseHVXV62] in {
-  let AddedComplexity = 30 in {
-    def: Pat<(VecI8   (splat_vector u8_0ImmPred:$V)),  (V62splatib imm:$V)>;
-    def: Pat<(VecI16  (splat_vector u16_0ImmPred:$V)), (V62splatih imm:$V)>;
-    def: Pat<(VecI32  (splat_vector anyimm:$V)),       (V62splatiw imm:$V)>;
-    def: Pat<(VecPI8  (splat_vector u8_0ImmPred:$V)),
-             (Rep (V62splatib imm:$V))>;
-    def: Pat<(VecPI16 (splat_vector u16_0ImmPred:$V)),
-             (Rep (V62splatih imm:$V))>;
-    def: Pat<(VecPI32 (splat_vector anyimm:$V)),
-             (Rep (V62splatiw imm:$V))>;
-  }
-  let AddedComplexity = 20 in {
-    def: Pat<(VecI8   (splat_vector I32:$Rs)), (V62splatrb $Rs)>;
-    def: Pat<(VecI16  (splat_vector I32:$Rs)), (V62splatrh $Rs)>;
-    def: Pat<(VecI32  (splat_vector I32:$Rs)), (V62splatrw $Rs)>;
-    def: Pat<(VecPI8  (splat_vector I32:$Rs)), (Rep (V62splatrb $Rs))>;
-    def: Pat<(VecPI16 (splat_vector I32:$Rs)), (Rep (V62splatrh $Rs))>;
-    def: Pat<(VecPI32 (splat_vector I32:$Rs)), (Rep (V62splatrw $Rs))>;
-  }
+  def: Pat<(VecI8   (splat_vector I32:$Rs)), (PS_vsplatrb $Rs)>;
+  def: Pat<(VecI16  (splat_vector I32:$Rs)), (PS_vsplatrh $Rs)>;
+  def: Pat<(VecI32  (splat_vector I32:$Rs)), (PS_vsplatrw $Rs)>;
+  def: Pat<(VecPI8  (splat_vector I32:$Rs)), (Rep (PS_vsplatrb $Rs))>;
+  def: Pat<(VecPI16 (splat_vector I32:$Rs)), (Rep (PS_vsplatrh $Rs))>;
+  def: Pat<(VecPI32 (splat_vector I32:$Rs)), (Rep (PS_vsplatrw $Rs))>;
 }
 let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
   let AddedComplexity = 30 in {
-    def: Pat<(VecF16  (splat_vector u16_0ImmPred:$V)), (V62splatih imm:$V)>;
-    def: Pat<(VecF32  (splat_vector anyint:$V)),       (V62splatiw imm:$V)>;
-    def: Pat<(VecF32  (splat_vector f32ImmPred:$V)),   (V62splatiw (ftoi $V))>;
+    def: Pat<(VecF16  (splat_vector u16_0ImmPred:$V)), (PS_vsplatih imm:$V)>;
+    def: Pat<(VecF32  (splat_vector anyint:$V)),       (PS_vsplatiw imm:$V)>;
+    def: Pat<(VecF32  (splat_vector f32ImmPred:$V)),   (PS_vsplatiw (ftoi $V))>;
   }
   let AddedComplexity = 20 in {
-    def: Pat<(VecF16  (splat_vector I32:$Rs)), (V62splatrh $Rs)>;
-    def: Pat<(VecF32  (splat_vector I32:$Rs)), (V62splatrw $Rs)>;
-    def: Pat<(VecF32  (splat_vector F32:$Rs)), (V62splatrw $Rs)>;
+    def: Pat<(VecF16  (splat_vector I32:$Rs)), (PS_vsplatrh $Rs)>;
+    def: Pat<(VecF32  (splat_vector I32:$Rs)), (PS_vsplatrw $Rs)>;
+    def: Pat<(VecF32  (splat_vector F32:$Rs)), (PS_vsplatrw $Rs)>;
   }
 }
 
@@ -596,13 +569,19 @@ let Predicates = [UseHVX] in {
            (V6_vpackeb (HiVec $Vss), (LoVec $Vss))>;
   def: Pat<(VecI16 (trunc HWI32:$Vss)),
            (V6_vpackeh (HiVec $Vss), (LoVec $Vss))>;
+  // Pattern for (v32i8 (trunc v32i32:$Vs)) after widening:
+  def: Pat<(VecI8 (trunc
+              (concat_vectors
+                (VecI16 (trunc (concat_vectors HVI32:$Vs, undef))),
+                undef))),
+           (V6_vdealb4w (IMPLICIT_DEF), HvxVR:$Vs)>;
 
   def: Pat<(VecQ8 (trunc HVI8:$Vs)),
-           (V6_vandvrt HvxVR:$Vs, (A2_tfrsi 0x01010101))>;
+           (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
   def: Pat<(VecQ16 (trunc HVI16:$Vs)),
-           (V6_vandvrt HvxVR:$Vs, (A2_tfrsi 0x01010101))>;
+           (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
   def: Pat<(VecQ32 (trunc HVI32:$Vs)),
-           (V6_vandvrt HvxVR:$Vs, (A2_tfrsi 0x01010101))>;
+           (V6_vandvrt HvxVR:$Vs, (ToI32 0x01010101))>;
 }
 
 let Predicates = [UseHVX] in {
@@ -610,19 +589,19 @@ let Predicates = [UseHVX] in {
   // definitions for them, but they are length-specific.
   let Predicates = [UseHVX,UseHVX64B] in {
     def: Pat<(VecI16 (sext_inreg HVI16:$Vs, v32i8)),
-             (V6_vasrh (V6_vaslh HVI16:$Vs, (A2_tfrsi 8)), (A2_tfrsi 8))>;
+             (V6_vasrh (V6_vaslh HVI16:$Vs, (ToI32 8)), (ToI32 8))>;
     def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v16i8)),
-             (V6_vasrw (V6_vaslw HVI32:$Vs, (A2_tfrsi 24)), (A2_tfrsi 24))>;
+             (V6_vasrw (V6_vaslw HVI32:$Vs, (ToI32 24)), (ToI32 24))>;
     def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v16i16)),
-             (V6_vasrw (V6_vaslw HVI32:$Vs, (A2_tfrsi 16)), (A2_tfrsi 16))>;
+             (V6_vasrw (V6_vaslw HVI32:$Vs, (ToI32 16)), (ToI32 16))>;
   }
   let Predicates = [UseHVX,UseHVX128B] in {
     def: Pat<(VecI16 (sext_inreg HVI16:$Vs, v64i8)),
-             (V6_vasrh (V6_vaslh HVI16:$Vs, (A2_tfrsi 8)), (A2_tfrsi 8))>;
+             (V6_vasrh (V6_vaslh HVI16:$Vs, (ToI32 8)), (ToI32 8))>;
     def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v32i8)),
-             (V6_vasrw (V6_vaslw HVI32:$Vs, (A2_tfrsi 24)), (A2_tfrsi 24))>;
+             (V6_vasrw (V6_vaslw HVI32:$Vs, (ToI32 24)), (ToI32 24))>;
     def: Pat<(VecI32 (sext_inreg HVI32:$Vs, v32i16)),
-             (V6_vasrw (V6_vaslw HVI32:$Vs, (A2_tfrsi 16)), (A2_tfrsi 16))>;
+             (V6_vasrw (V6_vaslw HVI32:$Vs, (ToI32 16)), (ToI32 16))>;
   }
 
   // Take a pair of vectors Vt:Vs and shift them towards LSB by (Rt & HwLen).
@@ -634,14 +613,14 @@ let Predicates = [UseHVX] in {
            (LoVec (V6_valignb HvxVR:$Vt, HvxVR:$Vs, I32:$Rt))>;
 
   def: Pat<(HexagonVASL HVI8:$Vs, I32:$Rt),
-           (V6_vpackeb (V6_vaslh (HiVec (VZxtb HvxVR:$Vs)), I32:$Rt),
-                       (V6_vaslh (LoVec (VZxtb HvxVR:$Vs)), I32:$Rt))>;
+           (V6_vshuffeb (V6_vaslh (HiVec (V6_vzb HvxVR:$Vs)), I32:$Rt),
+                        (V6_vaslh (LoVec (V6_vzb HvxVR:$Vs)), I32:$Rt))>;
   def: Pat<(HexagonVASR HVI8:$Vs, I32:$Rt),
-           (V6_vpackeb (V6_vasrh (HiVec (VSxtb HvxVR:$Vs)), I32:$Rt),
-                       (V6_vasrh (LoVec (VSxtb HvxVR:$Vs)), I32:$Rt))>;
+           (V6_vshuffeb (V6_vasrh (HiVec (V6_vsb HvxVR:$Vs)), I32:$Rt),
+                        (V6_vasrh (LoVec (V6_vsb HvxVR:$Vs)), I32:$Rt))>;
   def: Pat<(HexagonVLSR HVI8:$Vs, I32:$Rt),
-           (V6_vpackeb (V6_vlsrh (HiVec (VZxtb HvxVR:$Vs)), I32:$Rt),
-                       (V6_vlsrh (LoVec (VZxtb HvxVR:$Vs)), I32:$Rt))>;
+           (V6_vshuffeb (V6_vlsrh (HiVec (V6_vzb HvxVR:$Vs)), I32:$Rt),
+                        (V6_vlsrh (LoVec (V6_vzb HvxVR:$Vs)), I32:$Rt))>;
 
   def: Pat<(HexagonVASL HVI16:$Vs, I32:$Rt), (V6_vaslh HvxVR:$Vs, I32:$Rt)>;
   def: Pat<(HexagonVASL HVI32:$Vs, I32:$Rt), (V6_vaslw HvxVR:$Vs, I32:$Rt)>;
@@ -655,6 +634,16 @@ let Predicates = [UseHVX] in {
   def: Pat<(add HVI32:$Vx, (HexagonVASR HVI32:$Vu, I32:$Rt)),
            (V6_vasrw_acc HvxVR:$Vx, HvxVR:$Vu, I32:$Rt)>;
 
+  def: Pat<(shl HVI8:$Vs, HVI8:$Vt),
+           (V6_vshuffeb (V6_vaslhv (HiVec (V6_vzb $Vs)), (HiVec (V6_vzb $Vt))),
+                        (V6_vaslhv (LoVec (V6_vzb $Vs)), (LoVec (V6_vzb $Vt))))>;
+  def: Pat<(sra HVI8:$Vs, HVI8:$Vt),
+           (V6_vshuffeb (V6_vasrhv (HiVec (V6_vsb $Vs)), (HiVec (V6_vzb $Vt))),
+                        (V6_vasrhv (LoVec (V6_vsb $Vs)), (LoVec (V6_vzb $Vt))))>;
+  def: Pat<(srl HVI8:$Vs, HVI8:$Vt),
+           (V6_vshuffeb (V6_vlsrhv (HiVec (V6_vzb $Vs)), (HiVec (V6_vzb $Vt))),
+                        (V6_vlsrhv (LoVec (V6_vzb $Vs)), (LoVec (V6_vzb $Vt))))>;
+
   def: Pat<(shl HVI16:$Vs, HVI16:$Vt), (V6_vaslhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(shl HVI32:$Vs, HVI32:$Vt), (V6_vaslwv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(sra HVI16:$Vs, HVI16:$Vt), (V6_vasrhv HvxVR:$Vs, HvxVR:$Vt)>;
@@ -662,62 +651,105 @@ let Predicates = [UseHVX] in {
   def: Pat<(srl HVI16:$Vs, HVI16:$Vt), (V6_vlsrhv HvxVR:$Vs, HvxVR:$Vt)>;
   def: Pat<(srl HVI32:$Vs, HVI32:$Vt), (V6_vlsrwv HvxVR:$Vs, HvxVR:$Vt)>;
 
-  // Vpackl is a pseudo-op that is used when legalizing widened truncates.
-  // It should never be produced with a register pair in the output, but
-  // it can happen to have a pair as an input.
-  def: Pat<(VecI8  (vpackl HVI16:$Vs)), (V6_vdealb HvxVR:$Vs)>;
-  def: Pat<(VecI8  (vpackl HVI32:$Vs)), (V6_vdealb4w (IMPLICIT_DEF), HvxVR:$Vs)>;
-  def: Pat<(VecI16 (vpackl HVI32:$Vs)), (V6_vdealh HvxVR:$Vs)>;
-  def: Pat<(VecI8  (vpackl HWI16:$Vs)), (V6_vpackeb (HiVec $Vs), (LoVec $Vs))>;
-  def: Pat<(VecI8  (vpackl HWI32:$Vs)),
-           (V6_vpackeb (IMPLICIT_DEF), (V6_vpackeh (HiVec $Vs), (LoVec $Vs)))>;
-  def: Pat<(VecI16 (vpackl HWI32:$Vs)), (V6_vpackeh (HiVec $Vs), (LoVec $Vs))>;
-
-  def: Pat<(VecI16  (vunpack   HVI8:$Vs)), (LoVec (VSxtb $Vs))>;
-  def: Pat<(VecI32  (vunpack   HVI8:$Vs)), (LoVec (VSxth (LoVec (VSxtb $Vs))))>;
-  def: Pat<(VecI32  (vunpack  HVI16:$Vs)), (LoVec (VSxth $Vs))>;
-  def: Pat<(VecPI16 (vunpack   HVI8:$Vs)), (VSxtb $Vs)>;
-  def: Pat<(VecPI32 (vunpack   HVI8:$Vs)), (VSxth (LoVec (VSxtb $Vs)))>;
-  def: Pat<(VecPI32 (vunpack  HVI32:$Vs)), (VSxth $Vs)>;
-
-  def: Pat<(VecI16  (vunpacku  HVI8:$Vs)), (LoVec (VZxtb $Vs))>;
-  def: Pat<(VecI32  (vunpacku  HVI8:$Vs)), (LoVec (VZxth (LoVec (VZxtb $Vs))))>;
-  def: Pat<(VecI32  (vunpacku HVI16:$Vs)), (LoVec (VZxth $Vs))>;
-  def: Pat<(VecPI16 (vunpacku  HVI8:$Vs)), (VZxtb $Vs)>;
-  def: Pat<(VecPI32 (vunpacku  HVI8:$Vs)), (VZxth (LoVec (VZxtb $Vs)))>;
-  def: Pat<(VecPI32 (vunpacku HVI32:$Vs)), (VZxth $Vs)>;
-
+  // Mfshl hi, lo, amt
+  def: Pat<(Mfshl HVI8:$Vu, HVI8:$Vv, HVI8:$Vs),
+           (V6_vshuffob (V6_vaslhv (HiVec (V6_vshufoeb $Vu, $Vv)),
+                                   (HiVec (V6_vzb $Vs))),
+                        (V6_vaslhv (LoVec (V6_vshufoeb $Vu, $Vv)),
+                                   (LoVec (V6_vzb $Vs))))>;
   let Predicates = [UseHVX,UseHVXV60] in {
-    def: Pat<(VecI16 (bswap HVI16:$Vs)),
-             (V6_vdelta HvxVR:$Vs, (V60splatib (i32 0x01)))>;
-    def: Pat<(VecI32 (bswap HVI32:$Vs)),
-             (V6_vdelta HvxVR:$Vs, (V60splatib (i32 0x03)))>;
+    // V60 doesn't produce 0 on shifts by bitwidth, e.g. Vv.h << 16-0
+    def: Pat<(Mfshl HVI16:$Vu, HVI16:$Vv, HVI16:$Vs),
+             (V6_vmux (V6_veqh $Vs, (V6_vd0)),
+                      $Vu,
+                      (V6_vor (V6_vaslhv $Vu, $Vs),
+                              (V6_vlsrhv $Vv, (VSubih 16, $Vs))))>;
+    def: Pat<(Mfshl HVI32:$Vu, HVI32:$Vv, HVI32:$Vs),
+             (V6_vmux (V6_veqw (V6_vand $Vs, (PS_vsplatiw (i32 31))), (V6_vd0)),
+                      $Vu,
+                      (V6_vor (V6_vaslwv $Vu, $Vs),
+                              (V6_vlsrwv $Vv, (VSubiw 32, $Vs))))>;
   }
   let Predicates = [UseHVX,UseHVXV62], AddedComplexity = 10 in {
-    def: Pat<(VecI16 (bswap HVI16:$Vs)),
-             (V6_vdelta HvxVR:$Vs, (V62splatib (i32 0x01)))>;
-    def: Pat<(VecI32 (bswap HVI32:$Vs)),
-             (V6_vdelta HvxVR:$Vs, (V62splatib (i32 0x03)))>;
+    // Do it as (Vu << Vs) | (Vv >> (BW-Vs)).
+    // For Vs == 0 becomes Vu | (Vv >> -BW), since the shift amount is
+    // sign-extended. Then this becomes Vu | (Vv << BW) == Vu.
+    def: Pat<(Mfshl HVI16:$Vu, HVI16:$Vv, HVI16:$Vs),
+             (V6_vor (V6_vaslhv $Vu, $Vs),
+                     (V6_vlsrhv $Vv, (VSubih 16, $Vs)))>;
+    def: Pat<(Mfshl HVI32:$Vu, HVI32:$Vv, HVI32:$Vs),
+             (V6_vor (V6_vaslwv $Vu, $Vs),
+                     (V6_vlsrwv $Vv, (VSubiw 32, $Vs)))>;
+  }
+  let Predicates = [UseHVX,UseHVXV66], AddedComplexity = 20 in {
+    // Assume Vs > 0 (and within bit width)
+    // Vx[1]:Vx[0] = V6_vasr_into Vx[0], Vv, Vs
+    //   -->  (Vx[0]:Vx[0] & (ffffffff << -Vs)) | (Vv:00000000 << -Vs)
+    // i.e. Vx[1] = insert ((Vv << -Vs) -> Vx[0])
+    def: Pat<(Mfshl HVI32:$Vu, HVI32:$Vv, HVI32:$Vs),
+             (HiVec (V6_vasr_into (Combinev (VecI32 (IMPLICIT_DEF)),
+                                            (V6_vlsrwv $Vv, (VSubiw 32, $Vs))),
+                                  $Vu,
+                                  (V6_vsubw (V6_vd0), $Vs)))>;
   }
 
+  // Mfshr hi, lo, amt
+  def: Pat<(Mfshr HVI8:$Vu, HVI8:$Vv, HVI8:$Vs),
+           (V6_vshuffeb (V6_vlsrhv (HiVec (V6_vshufoeb $Vu, $Vv)),
+                                   (HiVec (V6_vzb $Vs))),
+                        (V6_vlsrhv (LoVec (V6_vshufoeb $Vu, $Vv)),
+                                   (LoVec (V6_vzb $Vs))))>;
+  let Predicates = [UseHVX,UseHVXV60] in {
+    def: Pat<(Mfshr HVI16:$Vu, HVI16:$Vv, HVI16:$Vs),
+             (V6_vmux (V6_veqh $Vs, (V6_vd0)),
+                      $Vv,
+                      (V6_vor (V6_vaslhv $Vu, (VSubih 16, $Vs)),
+                              (V6_vlsrhv $Vv, $Vs)))>;
+    def: Pat<(Mfshr HVI32:$Vu, HVI32:$Vv, HVI32:$Vs),
+             (V6_vmux (V6_veqw $Vs, (V6_vd0)),
+                      $Vv,
+                      (V6_vor (V6_vaslwv $Vu, (VSubiw 32, $Vs)),
+                              (V6_vlsrwv $Vv, $Vs)))>;
+  }
+  let Predicates = [UseHVX,UseHVXV62], AddedComplexity = 10 in {
+    // Do it as (Vu >> -(BW-Vs)) | (Vv >> Vs).
+    // For Vs == 0 becomes (Vu << BW) | Vs == 0 | Vv
+    def: Pat<(Mfshr HVI16:$Vu, HVI16:$Vv, HVI16:$Vs),
+             (V6_vor (V6_vlsrhv $Vu, (V6_vsubh $Vs, (PS_vsplatih (i32 16)))),
+                     (V6_vlsrhv $Vv, $Vs))>;
+    def: Pat<(Mfshr HVI32:$Vu, HVI32:$Vv, HVI32:$Vs),
+             (V6_vor (V6_vlsrwv $Vu, (V6_vsubw $Vs, (PS_vsplatiw (i32 32)))),
+                     (V6_vlsrwv $Vv, $Vs))>;
+  }
+  let Predicates = [UseHVX,UseHVXV66], AddedComplexity = 20 in {
+    // Assume Vs > 0 (and within bit width)
+    // Vx[1]:Vx[0] = V6_vasr_into Vx[0], Vv, Vs
+    //   -->  (Vx[0]:Vx[0] & (ffffffff >> Vs)) | (Vv:00000000 >> Vs)
+    // i.e. Vx[0] = insert ((Vv >> Vs) -> Vx[0])
+    def: Pat<(Mfshr HVI32:$Vu, HVI32:$Vv, HVI32:$Vs),
+             (LoVec (V6_vasr_into (Combinev (VecI32 (IMPLICIT_DEF)),
+                                            (V6_vlsrwv $Vv, $Vs)),
+                                  $Vu,
+                                  $Vs))>;
+  }
+
+  def: Pat<(VecI16 (bswap HVI16:$Vs)),
+           (V6_vdelta HvxVR:$Vs, (PS_vsplatib (i32 0x01)))>;
+  def: Pat<(VecI32 (bswap HVI32:$Vs)),
+           (V6_vdelta HvxVR:$Vs, (PS_vsplatib (i32 0x03)))>;
+
   def: Pat<(VecI8 (ctpop HVI8:$Vs)),
-           (V6_vpackeb (V6_vpopcounth (HiVec (V6_vunpackub HvxVR:$Vs))),
-                       (V6_vpopcounth (LoVec (V6_vunpackub HvxVR:$Vs))))>;
+           (V6_vshuffeb (V6_vpopcounth (HiVec (V6_vzb HvxVR:$Vs))),
+                        (V6_vpopcounth (LoVec (V6_vzb HvxVR:$Vs))))>;
   def: Pat<(VecI16 (ctpop HVI16:$Vs)), (V6_vpopcounth HvxVR:$Vs)>;
   def: Pat<(VecI32 (ctpop HVI32:$Vs)),
            (V6_vaddw (LoVec (V6_vzh (V6_vpopcounth HvxVR:$Vs))),
                      (HiVec (V6_vzh (V6_vpopcounth HvxVR:$Vs))))>;
 
-  let Predicates = [UseHVX,UseHVXV60] in
   def: Pat<(VecI8 (ctlz HVI8:$Vs)),
-           (V6_vsubb (V6_vpackeb (V6_vcl0h (HiVec (V6_vunpackub HvxVR:$Vs))),
-                                 (V6_vcl0h (LoVec (V6_vunpackub HvxVR:$Vs)))),
-                     (V60splatib (i32 0x08)))>;
-  let Predicates = [UseHVX,UseHVXV62], AddedComplexity = 10 in
-  def: Pat<(VecI8 (ctlz HVI8:$Vs)),
-           (V6_vsubb (V6_vpackeb (V6_vcl0h (HiVec (V6_vunpackub HvxVR:$Vs))),
-                                 (V6_vcl0h (LoVec (V6_vunpackub HvxVR:$Vs)))),
-                     (V62splatib (i32 0x08)))>;
+           (V6_vsubb (V6_vshuffeb (V6_vcl0h (HiVec (V6_vzb HvxVR:$Vs))),
+                                  (V6_vcl0h (LoVec (V6_vzb HvxVR:$Vs)))),
+                     (PS_vsplatib (i32 0x08)))>;
 
   def: Pat<(VecI16 (ctlz HVI16:$Vs)), (V6_vcl0h HvxVR:$Vs)>;
   def: Pat<(VecI32 (ctlz HVI32:$Vs)), (V6_vcl0w HvxVR:$Vs)>;
@@ -736,7 +768,7 @@ let Predicates = [UseHVX] in {
   def: HvxSel_pat<PS_wselect, HWI32>;
 }
 
-def V2Q: OutPatFrag<(ops node:$Vs), (V6_vandvrt $Vs, (A2_tfrsi -1))>;
+def V2Q: OutPatFrag<(ops node:$Vs), (V6_vandvrt $Vs, (ToI32 -1))>;
 
 let Predicates = [UseHVX] in {
   def: Pat<(select I1:$Pu, VecQ8:$Qs, VecQ8:$Qt),
@@ -878,4 +910,72 @@ let Predicates = [UseHVXV68, UseHVXFloatingPoint] in {
 
   def: Pat<(VecQ32 (setone HVF32:$Vt, HVF32:$Vu)),
            (V6_pred_not (V6_veqw HvxVR:$Vt, HvxVR:$Vu))>;
+}
+
+// Multiply high for non-i32 types
+def: Pat<(VecI8  (mulhs  HVI8:$Vu,  HVI8:$Vv)),
+         (V6_vshuffob (HiVec (V6_vmpybv $Vu, $Vv)),
+                      (LoVec (V6_vmpybv $Vu, $Vv)))>;
+def: Pat<(VecI16 (mulhs HVI16:$Vu, HVI16:$Vv)),
+         (V6_vshufoh (HiVec (V6_vmpyhv $Vu, $Vv)),
+                     (LoVec (V6_vmpyhv $Vu, $Vv)))>;
+def: Pat<(VecI8  (mulhu  HVI8:$Vu,  HVI8:$Vv)),
+         (V6_vshuffob (HiVec (V6_vmpyubv $Vu, $Vv)),
+                      (LoVec (V6_vmpyubv $Vu, $Vv)))>;
+def: Pat<(VecI16 (mulhu HVI16:$Vu, HVI16:$Vv)),
+         (V6_vshufoh (HiVec (V6_vmpyuhv $Vu, $Vv)),
+                     (LoVec (V6_vmpyuhv $Vu, $Vv)))>;
+let Predicates = [UseHVXV69], AddedComplexity = 20 in {
+  def: Pat<(VecI16 (mulhu HVI16:$Vu, HVI16:$Vv)),
+           (V6_vmpyuhvs $Vu, $Vv)>;
+}
+
+let Predicates = [UseHVXV60] in {
+  // V60 doesn't have vabsb or byte shifts.
+  // Do the "mask = x >> width-1; abs = (x + mask) ^ mask" trick.
+  // v31:30.h = vsxt(Inp.b)             ; generate masks in odd bytes in
+  //                                    ; interleaved half-words
+  // v29:28.b = vshuffoe(v31.b,v30.b)   ; collect odd/even bytes, masks = v29
+  // v27.b    = vadd(Inp.b,v29.b)       ; x + masks
+  // Abs      = vxor(v27,v29)           ;   ^ masks
+  def: Pat<(VecI8 (abs HVI8:$Vs)),
+    (V6_vxor HvxVR:$Vs,
+      (V6_vaddb HvxVR:$Vs,
+        (HiVec
+          (V6_vshufoeb
+            (HiVec (V6_vsb HvxVR:$Vs)),
+            (LoVec (V6_vsb HvxVR:$Vs))))))>;
+}
+
+let Predicates = [UseHVXV62], AddedComplexity = 20 in {
+  def: Pat<(VecI8 (abs HVI8:$Vs)), (V6_vabsb HvxVR:$Vs)>;
+}
+
+def: Pat<(VecI16 (abs HVI16:$Vs)), (V6_vabsh HvxVR:$Vs)>;
+def: Pat<(VecI32 (abs HVI32:$Vs)), (V6_vabsw HvxVR:$Vs)>;
+
+// If a node takes an MVT type as a parameter, the argument must be
+// a name of a member of MVT.
+multiclass Saturates<ValueType HvxTy_i8, ValueType HvxTy_i16> {
+  def: Pat<(VecI8 (ssat HWI16:$Vss, HvxTy_i8)),
+           (V6_vpackhb_sat (HiVec $Vss), (LoVec $Vss))>;
+  def: Pat<(VecI8 (ssat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+           (V6_vpackhb_sat (V6_vpackwh_sat (HiVec $Vtt), (LoVec $Vtt)),
+                           (V6_vpackwh_sat (HiVec $Vss), (LoVec $Vss)))>;
+  def: Pat<(VecI16 (ssat HWI32:$Vss, HvxTy_i16)),
+           (V6_vpackwh_sat (HiVec $Vss), (LoVec $Vss))>;
+
+  def: Pat<(VecI8 (usat HWI16:$Vss, HvxTy_i8)),
+           (V6_vpackhub_sat (HiVec $Vss), (LoVec $Vss))>;
+  def: Pat<(VecI8 (usat (concat_vectors HWI32:$Vss, HWI32:$Vtt), HvxTy_i8)),
+           (V6_vpackhub_sat (V6_vpackwuh_sat (HiVec $Vtt), (LoVec $Vtt)),
+                            (V6_vpackwuh_sat (HiVec $Vss), (LoVec $Vss)))>;
+  def: Pat<(VecI16 (usat HWI32:$Vss, HvxTy_i16)),
+           (V6_vpackwuh_sat (HiVec $Vss), (LoVec $Vss))>;
+}
+let Predicates = [UseHVX64B] in {
+  defm: Saturates<v64i8, v32i16>;
+}
+let Predicates = [UseHVX128B] in {
+  defm: Saturates<v128i8, v64i16>;
 }

@@ -1,15 +1,15 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx17 %std_cxx98-14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify %std_cxx17- %s
 template<typename T>
 struct X1 {
-  static void member() { T* x = 1; } // expected-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
+  static void member() { T* x = 1; } // precxx17-error{{cannot initialize a variable of type 'int *' with an rvalue of type 'int'}}
 };
 
 template<void(*)()> struct instantiate { };
 
 template<typename T>
 struct X2 {
-  typedef instantiate<&X1<int>::member> i; // expected-note{{in instantiation of}}
+  typedef instantiate<&X1<int>::member> i; // precxx17-note{{in instantiation of}}
 };
 
 X2<int> x;

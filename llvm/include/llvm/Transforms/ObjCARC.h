@@ -60,6 +60,10 @@ struct ObjCARCExpandPass : public PassInfoMixin<ObjCARCExpandPass> {
   PreservedAnalyses run(Function &M, FunctionAnalysisManager &AM);
 };
 
+struct PAEvalPass : public PassInfoMixin<PAEvalPass> {
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+};
+
 } // End llvm namespace
 
 #endif

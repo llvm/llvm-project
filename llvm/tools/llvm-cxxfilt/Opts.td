@@ -16,7 +16,7 @@ multiclass Eq<string name, string help> {
 
 def help : FF<"help", "Display this help">;
 defm strip_underscore : BB<"strip-underscore", "Strip the leading underscore", "Don't strip the leading underscore">;
-def types : FF<"types", "">;
+def types : FF<"types", "Attempt to demangle types as well as function names">;
 def version : FF<"version", "Display the version">;
 
 defm : Eq<"format", "Specify mangling format. Currently ignored because only 'gnu' is supported">;

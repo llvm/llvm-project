@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Test the [[nodiscard]] extension in libc++.
 
@@ -25,12 +24,10 @@ struct WithADL {
   friend constexpr auto iter_move(WithADL&) { return 0; }
 };
 
-int main(int, char**) {
+void f() {
   int* noADL = nullptr;
   std::ranges::iter_move(noADL); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
 
   WithADL adl;
   std::ranges::iter_move(adl); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-  return 0;
 }

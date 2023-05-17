@@ -6,16 +6,16 @@ target triple = "arm64-apple-ios5.0.0"
 @var1 = common global i32 0, align 4, !dbg !0
 @var2 = common global i32 0, align 4, !dbg !6
 
-; We check here that the G_GLOBAL_VALUE has a debug loc with line 0.
+; We check here that the G_GLOBAL_VALUE has no debug loc.
 define i32 @main() #0 !dbg !14 {
   ; CHECK-LABEL: name: main
   ; CHECK: bb.1.entry:
   ; CHECK:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1, debug-location !DILocation(line: 0, scope: !18)
+  ; CHECK:   [[GV:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var1
   ; CHECK:   [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
   ; CHECK:   [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 2
-  ; CHECK:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2, debug-location !DILocation(line: 0, scope: !22)
+  ; CHECK:   [[GV1:%[0-9]+]]:_(p0) = G_GLOBAL_VALUE @var2
   ; CHECK:   [[FRAME_INDEX:%[0-9]+]]:_(p0) = G_FRAME_INDEX %stack.0.retval
   ; CHECK:   G_STORE [[C]](s32), [[FRAME_INDEX]](p0) :: (store (s32) into %ir.retval)
   ; CHECK:   [[LOAD:%[0-9]+]]:_(s32) = G_LOAD [[GV]](p0), debug-location !17 :: (dereferenceable load (s32) from @var1)
@@ -30,13 +30,13 @@ define i32 @main() #0 !dbg !14 {
   ; CHECK:   RET_ReallyLR implicit $w0, debug-location !24
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  %0 = load i32, i32* @var1, align 4, !dbg !17
+  store i32 0, ptr %retval, align 4
+  %0 = load i32, ptr @var1, align 4, !dbg !17
   %cmp = icmp eq i32 %0, 1, !dbg !19
   br i1 %cmp, label %if.then, label %if.end, !dbg !20
 
 if.then:
-  store i32 2, i32* @var2, align 4, !dbg !21
+  store i32 2, ptr @var2, align 4, !dbg !21
   br label %if.end, !dbg !23
 
 if.end:

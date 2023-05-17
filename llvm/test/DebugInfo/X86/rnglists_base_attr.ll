@@ -46,7 +46,7 @@
 define dso_local void @_Z2f2v() !dbg !7 {
 entry:
   %b = alloca i8, align 1
-  call void @llvm.dbg.declare(metadata i8* %b, metadata !11, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !11, metadata !DIExpression()), !dbg !14
   call void @_Z2f1v(), !dbg !15
   ; The following call has been moved here from right after the alloca
   call void @_Z2f1v(), !dbg !10  

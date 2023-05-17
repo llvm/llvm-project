@@ -106,6 +106,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX11-WGP-NEXT:    scratch_load_b32 v0, off, s2 glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: private_volatile_load_0:
@@ -118,11 +119,12 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX11-CU-NEXT:    scratch_load_b32 v0, off, s2 glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(5) %in, ptr addrspace(1) %out) {
 entry:
-  %val = load volatile i32, i32 addrspace(5)* %in, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val = load volatile i32, ptr addrspace(5) %in, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -220,33 +222,37 @@ define amdgpu_kernel void @private_volatile_load_1(
 ;
 ; GFX11-WGP-LABEL: private_volatile_load_1:
 ; GFX11-WGP:       ; %bb.0: ; %entry
+; GFX11-WGP-NEXT:    s_clause 0x1
 ; GFX11-WGP-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX11-WGP-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-WGP-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-WGP-NEXT:    scratch_load_b32 v0, v0, s2 glc dlc
+; GFX11-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX11-WGP-NEXT:    scratch_load_b32 v0, v0, off glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: private_volatile_load_1:
 ; GFX11-CU:       ; %bb.0: ; %entry
+; GFX11-CU-NEXT:    s_clause 0x1
 ; GFX11-CU-NEXT:    s_load_b32 s2, s[0:1], 0x0
-; GFX11-CU-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-CU-NEXT:    s_load_b64 s[0:1], s[0:1], 0x8
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, 0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11-CU-NEXT:    scratch_load_b32 v0, v0, s2 glc dlc
+; GFX11-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s2
+; GFX11-CU-NEXT:    scratch_load_b32 v0, v0, off glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(5)* %in, i32 addrspace(1)* %out) {
+    ptr addrspace(5) %in, ptr addrspace(1) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %val.gep = getelementptr inbounds i32, i32 addrspace(5)* %in, i32 %tid
-  %val = load volatile i32, i32 addrspace(5)* %val.gep, align 4
-  store i32 %val, i32 addrspace(1)* %out
+  %val.gep = getelementptr inbounds i32, ptr addrspace(5) %in, i32 %tid
+  %val = load volatile i32, ptr addrspace(5) %val.gep, align 4
+  store i32 %val, ptr addrspace(1) %out
   ret void
 }
 
@@ -353,6 +359,7 @@ define amdgpu_kernel void @private_volatile_store_0(
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX11-WGP-NEXT:    scratch_store_b32 off, v0, s0 dlc
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: private_volatile_store_0:
@@ -366,11 +373,12 @@ define amdgpu_kernel void @private_volatile_store_0(
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v0, s1
 ; GFX11-CU-NEXT:    scratch_store_b32 off, v0, s0 dlc
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:
-  %val = load i32, i32 addrspace(1)* %in, align 4
-  store volatile i32 %val, i32 addrspace(5)* %out
+  %val = load i32, ptr addrspace(1) %in, align 4
+  store volatile i32 %val, ptr addrspace(5) %out
   ret void
 }
 
@@ -474,13 +482,14 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX11-WGP-NEXT:    s_clause 0x1
 ; GFX11-WGP-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX11-WGP-NEXT:    s_load_b32 s0, s[0:1], 0x8
-; GFX11-WGP-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-WGP-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
 ; GFX11-WGP-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-WGP-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-WGP-NEXT:    scratch_store_b32 v0, v1, s0 dlc
+; GFX11-WGP-NEXT:    scratch_store_b32 v0, v1, off dlc
 ; GFX11-WGP-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
 ; GFX11-CU-LABEL: private_volatile_store_1:
@@ -488,20 +497,21 @@ define amdgpu_kernel void @private_volatile_store_1(
 ; GFX11-CU-NEXT:    s_clause 0x1
 ; GFX11-CU-NEXT:    s_load_b64 s[2:3], s[0:1], 0x0
 ; GFX11-CU-NEXT:    s_load_b32 s0, s[0:1], 0x8
-; GFX11-CU-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    s_load_b32 s1, s[2:3], 0x0
+; GFX11-CU-NEXT:    v_lshl_add_u32 v0, v0, 2, s0
 ; GFX11-CU-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-CU-NEXT:    v_mov_b32_e32 v1, s1
-; GFX11-CU-NEXT:    scratch_store_b32 v0, v1, s0 dlc
+; GFX11-CU-NEXT:    scratch_store_b32 v0, v1, off dlc
 ; GFX11-CU-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
-    i32 addrspace(1)* %in, i32 addrspace(5)* %out) {
+    ptr addrspace(1) %in, ptr addrspace(5) %out) {
 entry:
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %val = load i32, i32 addrspace(1)* %in, align 4
-  %out.gep = getelementptr inbounds i32, i32 addrspace(5)* %out, i32 %tid
-  store volatile i32 %val, i32 addrspace(5)* %out.gep
+  %val = load i32, ptr addrspace(1) %in, align 4
+  %out.gep = getelementptr inbounds i32, ptr addrspace(5) %out, i32 %tid
+  store volatile i32 %val, ptr addrspace(5) %out.gep
   ret void
 }
 

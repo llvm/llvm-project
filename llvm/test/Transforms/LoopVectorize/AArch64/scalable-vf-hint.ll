@@ -1,7 +1,7 @@
 ; REQUIRES: asserts
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -loop-vectorize -S < %s 2>&1 | FileCheck %s
-; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck --check-prefix=CHECK-DBG %s
-; RUN: opt -mtriple=aarch64-none-linux-gnu -loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>%t | FileCheck --check-prefix=CHECK-NO-SVE %s
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -passes=loop-vectorize -S < %s 2>&1 | FileCheck %s
+; RUN: opt -mtriple=aarch64-none-linux-gnu -mattr=+sve -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>&1 | FileCheck --check-prefix=CHECK-DBG %s
+; RUN: opt -mtriple=aarch64-none-linux-gnu -passes=loop-vectorize -pass-remarks-analysis=loop-vectorize -debug-only=loop-vectorize -S < %s 2>%t | FileCheck --check-prefix=CHECK-NO-SVE %s
 ; RUN: cat %t | FileCheck %s -check-prefix=CHECK-NO-SVE-REMARKS
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
@@ -45,20 +45,20 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test1
 ; CHECK: <4 x i32>
-define void @test1(i32* %a, i32* %b) #0 {
+define void @test1(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 8
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !0
@@ -90,20 +90,20 @@ exit:
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test2
 ; CHECK: <4 x i32>
-define void @test2(i32* %a, i32* %b) #0 {
+define void @test2(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 4
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !3
@@ -138,20 +138,20 @@ exit:
 ; CHECK-DBG: LV: Using user VF vscale x 2.
 ; CHECK-LABEL: @test3
 ; CHECK: <vscale x 2 x i32>
-define void @test3(i32* %a, i32* %b) #0 {
+define void @test3(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 32
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !6
@@ -190,20 +190,20 @@ exit:
 ; CHECK-DBG: LV: Selecting VF: vscale x 2.
 ; CHECK-LABEL: @test4
 ; CHECK: <vscale x 2 x i32>
-define void @test4(i32* %a, i32* %b) #0 {
+define void @test4(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 32
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !9
@@ -238,20 +238,20 @@ exit:
 ; CHECK-DBG: LV: Using user VF vscale x 4
 ; CHECK-LABEL: @test5
 ; CHECK: <vscale x 4 x i32>
-define void @test5(i32* %a, i32* %b) #0 {
+define void @test5(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 128
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !12
@@ -289,20 +289,20 @@ exit:
 ; CHECK-DBG: Selecting VF: vscale x 4.
 ; CHECK-LABEL: @test6
 ; CHECK: <vscale x 4 x i32>
-define void @test6(i32* %a, i32* %b) #0 {
+define void @test6(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 128
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !15
@@ -322,18 +322,18 @@ exit:
 ; CHECK-NO-SVE-LABEL: @test_no_sve
 ; CHECK-NO-SVE: <4 x i32>
 ; CHECK-NO-SVE-NOT: <vscale x 4 x i32>
-define void @test_no_sve(i32* %a, i32* %b) #0 {
+define void @test_no_sve(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !18
@@ -356,20 +356,20 @@ exit:
 ; CHECK-DBG: LV: Selecting VF: 4.
 ; CHECK-LABEL: @test_no_max_vscale
 ; CHECK: <4 x i32>
-define void @test_no_max_vscale(i32* %a, i32* %b) #0 {
+define void @test_no_max_vscale(ptr %a, ptr %b) #0 {
 entry:
   br label %loop
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i64 %iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %b, i64 %iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i64 %iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %b, i64 %iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %1, %0
   %2 = add nuw nsw i64 %iv, 4
-  %arrayidx5 = getelementptr inbounds i32, i32* %a, i64 %2
-  store i32 %add, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %a, i64 %2
+  store i32 %add, ptr %arrayidx5, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond.not = icmp eq i64 %iv.next, 1024
   br i1 %exitcond.not, label %exit, label %loop, !llvm.loop !21

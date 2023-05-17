@@ -6,9 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 /// \file
-/// This file implements class SourceMgr. Class SourceMgr abstracts the input
-/// code sequence (a sequence of MCInst), and assings unique identifiers to
-/// every instruction in the sequence.
+/// This file contains abstract class SourceMgr and the default implementation,
+/// CircularSourceMgr.
 ///
 //===----------------------------------------------------------------------===//
 
@@ -25,30 +24,62 @@ namespace mca {
 // prevent compiler error C2139 about intrinsic type trait '__is_assignable'.
 typedef std::pair<unsigned, const Instruction &> SourceRef;
 
-class SourceMgr {
+/// Abstracting the input code sequence (a sequence of MCInst) and assigning
+/// unique identifiers to every instruction in the sequence.
+struct SourceMgr {
   using UniqueInst = std::unique_ptr<Instruction>;
+
+  /// Provides a fixed range of \a UniqueInst to iterate.
+  virtual ArrayRef<UniqueInst> getInstructions() const = 0;
+
+  /// (Fixed) Number of \a UniqueInst. Returns the size of
+  /// \a getInstructions by default.
+  virtual size_t size() const { return getInstructions().size(); }
+
+  /// Whether there is any \a SourceRef to inspect / peek next.
+  /// Note that returning false from this doesn't mean the instruction
+  /// stream has ended.
+  virtual bool hasNext() const = 0;
+
+  /// Whether the instruction stream has eneded.
+  virtual bool isEnd() const = 0;
+
+  /// The next \a SourceRef.
+  virtual SourceRef peekNext() const = 0;
+
+  /// Advance to the next \a SourceRef.
+  virtual void updateNext() = 0;
+
+  virtual ~SourceMgr() {}
+};
+
+/// The default implementation of \a SourceMgr. It always takes a fixed number
+/// of instructions and provides an option to loop the given sequence for a
+/// certain iterations.
+class CircularSourceMgr : public SourceMgr {
   ArrayRef<UniqueInst> Sequence;
   unsigned Current;
   const unsigned Iterations;
   static const unsigned DefaultIterations = 100;
 
 public:
-  SourceMgr(ArrayRef<UniqueInst> S, unsigned Iter)
-      : Sequence(S), Current(0), Iterations(Iter ? Iter : DefaultIterations) {}
+  CircularSourceMgr(ArrayRef<UniqueInst> S, unsigned Iter)
+      : Sequence(S), Current(0U), Iterations(Iter ? Iter : DefaultIterations) {}
+
+  ArrayRef<UniqueInst> getInstructions() const override { return Sequence; }
 
   unsigned getNumIterations() const { return Iterations; }
-  unsigned size() const { return Sequence.size(); }
-  bool hasNext() const { return Current < (Iterations * Sequence.size()); }
-  void updateNext() { ++Current; }
+  bool hasNext() const override {
+    return Current < (Iterations * Sequence.size());
+  }
+  bool isEnd() const override { return !hasNext(); }
 
-  SourceRef peekNext() const {
+  SourceRef peekNext() const override {
     assert(hasNext() && "Already at end of sequence!");
     return SourceRef(Current, *Sequence[Current % Sequence.size()]);
   }
 
-  using const_iterator = ArrayRef<UniqueInst>::const_iterator;
-  const_iterator begin() const { return Sequence.begin(); }
-  const_iterator end() const { return Sequence.end(); }
+  void updateNext() override { ++Current; }
 };
 
 } // namespace mca

@@ -19,7 +19,7 @@ int main(int argc, char **argv) {
     printf("dlopen() failed: %s\n", dlerror());
     return 1;
   }
-  Foo = (int (*)(void)) dlsym(Handle, "foo");
+  Foo = (int (*)(void))dlsym(Handle, "foo");
   if (Handle == NULL) {
     printf("dlsym() failed: %s\n", dlerror());
     return 1;

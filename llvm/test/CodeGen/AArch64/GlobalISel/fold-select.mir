@@ -31,8 +31,7 @@ body:             |
     %1:gpr(s32) = COPY $w1
     %2:gpr(s32) = G_CONSTANT i32 0
     %5:gpr(s32) = G_ICMP intpred(eq), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %4:gpr(s32) = G_SELECT %3(s1), %2, %1
+    %4:gpr(s32) = G_SELECT %5, %2, %1
     $w0 = COPY %4(s32)
     RET_ReallyLR implicit $w0
 
@@ -62,8 +61,7 @@ body:             |
     %3:fpr(s32) = G_FCONSTANT float 0.000000e+00
     %6:gpr(s32) = G_CONSTANT i32 0
     %7:gpr(s32) = G_FCMP floatpred(oeq), %2(s32), %3
-    %4:gpr(s1) = G_TRUNC %7(s32)
-    %5:gpr(s32) = G_SELECT %4(s1), %6, %1
+    %5:gpr(s32) = G_SELECT %7, %6, %1
     $w0 = COPY %5(s32)
     RET_ReallyLR implicit $w0
 
@@ -90,8 +88,7 @@ body:             |
     %1:gpr(s32) = COPY $w1
     %2:gpr(s32) = G_CONSTANT i32 1
     %5:gpr(s32) = G_ICMP intpred(eq), %0(s32), %2
-    %3:gpr(s1) = G_TRUNC %5(s32)
-    %4:gpr(s32) = G_SELECT %3(s1), %0, %2
+    %4:gpr(s32) = G_SELECT %5, %0, %2
     $w0 = COPY %4(s32)
     RET_ReallyLR implicit $w0
 ...

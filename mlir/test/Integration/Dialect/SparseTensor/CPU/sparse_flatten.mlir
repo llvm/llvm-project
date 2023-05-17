@@ -1,18 +1,32 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test.tns" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/test.tns" \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
+// DEFINE: FileCheck %s
 //
-// Do the same run, but now with SIMDization as well. This should not change the outcome.
+// RUN: %{compile} | %{run}
 //
-// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=2 vl=4" | \
-// RUN: TENSOR0="%mlir_integration_test_dir/data/test.tns" \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{compile} | %{run}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/test.tns" \
+// REDEFINE: %lli_host_or_aarch64_cmd \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext --dlopen=%mlir_runner_utils | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 !Filename = !llvm.ptr<i8>
 
@@ -45,8 +59,8 @@ module {
   // A kernel that flattens a rank 8 tensor into a dense matrix.
   //
   func.func @kernel_flatten(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>,
-                       %argx: tensor<7x3xf64> {linalg.inplaceable = true})
-		       -> tensor<7x3xf64> {
+                            %argx: tensor<7x3xf64>)
+                                -> tensor<7x3xf64> {
     %0 = linalg.generic #trait_flatten
       ins(%arga: tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>)
       outs(%argx: tensor<7x3xf64>) {
@@ -58,6 +72,7 @@ module {
   }
 
   func.func private @getTensorFilename(index) -> (!Filename)
+  func.func private @printMemrefF64(%ptr : tensor<*xf64>)
 
   //
   // Main driver that reads tensor from file and calls the sparse kernel.
@@ -70,13 +85,7 @@ module {
     %c7 = arith.constant 7 : index
 
     // Setup matrix memory that is initialized to zero.
-    %xdata = memref.alloc() : memref<7x3xf64>
-    scf.for %i = %c0 to %c7 step %c1 {
-      scf.for %j = %c0 to %c3 step %c1 {
-        memref.store %d0, %xdata[%i, %j] : memref<7x3xf64>
-      }
-    }
-    %x = bufferization.to_tensor %xdata : memref<7x3xf64>
+    %x = arith.constant dense<0.000000e+00> : tensor<7x3xf64>
 
     // Read the sparse tensor from file, construct sparse storage.
     %fileName = call @getTensorFilename(%c0) : (index) -> (!Filename)
@@ -88,23 +97,19 @@ module {
 
     // Print the result for verification.
     //
-    // CHECK: ( 6.25, 0, 0 )
-    // CHECK: ( 4.224, 6.21, 0 )
-    // CHECK: ( 0, 0, 15.455 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 0, 0, 0 )
-    // CHECK: ( 7, 0, 0 )
+    // CHECK:      {{\[}}[6.25,   0,   0],
+    // CHECK-NEXT: [4.224,   6.21,   0],
+    // CHECK-NEXT: [0,   0,   15.455],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0],
+    // CHECK-NEXT: [7,   0,   0]]
     //
-    %r = bufferization.to_memref %0 : memref<7x3xf64>
-    scf.for %i = %c0 to %c7 step %c1 {
-      %v = vector.transfer_read %r[%i, %c0], %d0: memref<7x3xf64>, vector<3xf64>
-      vector.print %v : vector<3xf64>
-    }
+    %1 = tensor.cast %0 : tensor<7x3xf64> to tensor<*xf64>
+    call @printMemrefF64(%1) : (tensor<*xf64>) -> ()
 
     // Release the resources.
-    memref.dealloc %xdata : memref<7x3xf64>
-    sparse_tensor.release %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
+    bufferization.dealloc_tensor %a : tensor<7x3x3x3x3x3x5x3xf64, #SparseTensor>
 
     return
   }

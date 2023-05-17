@@ -13,16 +13,16 @@ define void @"NewCasts" (i16 %x) {
   %i = fpext float %d to double
   %j = fptrunc double %i to float
   %k = bitcast i32 %a to float
-  %l = inttoptr i16 %x to i32*
-  %m = ptrtoint i32* %l to i64
+  %l = inttoptr i16 %x to ptr
+  %m = ptrtoint ptr %l to i64
   %n = insertelement <4 x i32> undef, i32 %a, i32 0
   %o = sitofp <4 x i32> %n to <4 x float>
   %p = uitofp <4 x i32> %n to <4 x float>
   %q = fptosi <4 x float> %p to <4 x i32>
   %r = fptoui <4 x float> %p to <4 x i32>
-  %s = inttoptr <4 x i32> %n to <4 x i32*>
-  %t = addrspacecast <4 x i32*> %s to <4 x i32 addrspace(1)*>
-  %z = addrspacecast <4 x i32*> %s to <4 x float addrspace(2)*>
+  %s = inttoptr <4 x i32> %n to <4 x ptr>
+  %t = addrspacecast <4 x ptr> %s to <4 x ptr addrspace(1)>
+  %z = addrspacecast <4 x ptr> %s to <4 x ptr addrspace(2)>
   ret void
 }
 

@@ -12,7 +12,7 @@
 ;    }
 ;
 
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -51,8 +51,8 @@ outer.for:
       br i1 %phi.cmp , label %reduction.exit_true, label %reduction.exit_false
 
     reduction.exit_true:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
     reduction.exit_false:

@@ -51,18 +51,15 @@ enum SymbolKind : uint16_t {
 
 #define CV_DEFINE_ENUM_CLASS_FLAGS_OPERATORS(Class)                            \
   inline Class operator|(Class a, Class b) {                                   \
-    return static_cast<Class>(                                                 \
-        static_cast<std::underlying_type<Class>::type>(a) |                    \
-        static_cast<std::underlying_type<Class>::type>(b));                    \
+    return static_cast<Class>(static_cast<std::underlying_type_t<Class>>(a) |  \
+                              static_cast<std::underlying_type_t<Class>>(b));  \
   }                                                                            \
   inline Class operator&(Class a, Class b) {                                   \
-    return static_cast<Class>(                                                 \
-        static_cast<std::underlying_type<Class>::type>(a) &                    \
-        static_cast<std::underlying_type<Class>::type>(b));                    \
+    return static_cast<Class>(static_cast<std::underlying_type_t<Class>>(a) &  \
+                              static_cast<std::underlying_type_t<Class>>(b));  \
   }                                                                            \
   inline Class operator~(Class a) {                                            \
-    return static_cast<Class>(                                                 \
-        ~static_cast<std::underlying_type<Class>::type>(a));                   \
+    return static_cast<Class>(~static_cast<std::underlying_type_t<Class>>(a)); \
   }                                                                            \
   inline Class &operator|=(Class &a, Class b) {                                \
     a = a | b;                                                                 \
@@ -141,8 +138,8 @@ enum class CPUType : uint16_t {
   D3D11_Shader = 0x100,
 };
 
-/// These values correspond to the CV_CFL_LANG enumeration, and are documented
-/// here: https://msdn.microsoft.com/en-us/library/bw3aekw6.aspx
+/// These values correspond to the CV_CFL_LANG enumeration in the Microsoft
+/// Debug Interface Access SDK
 enum SourceLanguage : uint8_t {
   C = 0x00,
   Cpp = 0x01,
@@ -161,6 +158,8 @@ enum SourceLanguage : uint8_t {
   JScript = 0x0e,
   MSIL = 0x0f,
   HLSL = 0x10,
+  ObjC = 0x11,
+  ObjCpp = 0x12,
 
   Rust = 0x15,
 
@@ -330,6 +329,9 @@ enum class DebugSubsectionKind : uint32_t {
   MergedAssemblyInput = 0xfc,
 
   CoffSymbolRVA = 0xfd,
+
+  XfgHashType = 0xff,
+  XfgHashVirtual = 0x100,
 };
 
 /// Equivalent to CV_ptrtype_e.

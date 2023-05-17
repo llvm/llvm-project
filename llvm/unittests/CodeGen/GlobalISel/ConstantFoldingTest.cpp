@@ -20,7 +20,7 @@ namespace {
 TEST_F(AArch64GISelMITest, FoldWithBuilder) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
   // Try to use the FoldableInstructionsBuilder to build binary ops.
   CSEMIRBuilder CFB(B.getState());
   LLT s32 = LLT::scalar(32);
@@ -71,7 +71,7 @@ TEST_F(AArch64GISelMITest, FoldWithBuilder) {
 TEST_F(AArch64GISelMITest, FoldBinOp) {
   setUp();
   if (!TM)
-    return;
+    GTEST_SKIP();
 
   LLT s32{LLT::scalar(32)};
   auto MIBCst1 = B.buildConstant(s32, 16);
@@ -80,160 +80,134 @@ TEST_F(AArch64GISelMITest, FoldBinOp) {
   auto MIBFCst2 = B.buildFConstant(s32, 2.0);
 
   // Test G_ADD folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGAddInt =
-      ConstantFoldBinOp(TargetOpcode::G_ADD, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGAddInt.hasValue());
-  EXPECT_EQ(25ULL, FoldGAddInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGAddMix =
-      ConstantFoldBinOp(TargetOpcode::G_ADD, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGAddMix.hasValue());
-  EXPECT_EQ(1073741840ULL, FoldGAddMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGAddInt = ConstantFoldBinOp(
+      TargetOpcode::G_ADD, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGAddInt.has_value());
+  EXPECT_EQ(25ULL, FoldGAddInt->getLimitedValue());
+  std::optional<APInt> FoldGAddMix = ConstantFoldBinOp(
+      TargetOpcode::G_ADD, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGAddMix.has_value());
+  EXPECT_EQ(1073741840ULL, FoldGAddMix->getLimitedValue());
 
   // Test G_AND folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGAndInt =
-      ConstantFoldBinOp(TargetOpcode::G_AND, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGAndInt.hasValue());
-  EXPECT_EQ(0ULL, FoldGAndInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGAndMix =
-      ConstantFoldBinOp(TargetOpcode::G_AND, MIBCst2.getReg(0),
-                        MIBFCst1.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGAndMix.hasValue());
-  EXPECT_EQ(1ULL, FoldGAndMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGAndInt = ConstantFoldBinOp(
+      TargetOpcode::G_AND, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGAndInt.has_value());
+  EXPECT_EQ(0ULL, FoldGAndInt->getLimitedValue());
+  std::optional<APInt> FoldGAndMix = ConstantFoldBinOp(
+      TargetOpcode::G_AND, MIBCst2.getReg(0), MIBFCst1.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGAndMix.has_value());
+  EXPECT_EQ(1ULL, FoldGAndMix->getLimitedValue());
 
   // Test G_ASHR folding Integer + Mixed cases
-  Optional<APInt> FoldGAShrInt =
-      ConstantFoldBinOp(TargetOpcode::G_ASHR, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGAShrInt.hasValue());
-  EXPECT_EQ(0ULL, FoldGAShrInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGAShrMix =
-      ConstantFoldBinOp(TargetOpcode::G_ASHR, MIBFCst2.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGAShrMix.hasValue());
-  EXPECT_EQ(2097152ULL, FoldGAShrMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGAShrInt = ConstantFoldBinOp(
+      TargetOpcode::G_ASHR, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGAShrInt.has_value());
+  EXPECT_EQ(0ULL, FoldGAShrInt->getLimitedValue());
+  std::optional<APInt> FoldGAShrMix = ConstantFoldBinOp(
+      TargetOpcode::G_ASHR, MIBFCst2.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGAShrMix.has_value());
+  EXPECT_EQ(2097152ULL, FoldGAShrMix->getLimitedValue());
 
   // Test G_LSHR folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGLShrInt =
-      ConstantFoldBinOp(TargetOpcode::G_LSHR, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGLShrInt.hasValue());
-  EXPECT_EQ(0ULL, FoldGLShrInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGLShrMix =
-      ConstantFoldBinOp(TargetOpcode::G_LSHR, MIBFCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGLShrMix.hasValue());
-  EXPECT_EQ(2080768ULL, FoldGLShrMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGLShrInt = ConstantFoldBinOp(
+      TargetOpcode::G_LSHR, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGLShrInt.has_value());
+  EXPECT_EQ(0ULL, FoldGLShrInt->getLimitedValue());
+  std::optional<APInt> FoldGLShrMix = ConstantFoldBinOp(
+      TargetOpcode::G_LSHR, MIBFCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGLShrMix.has_value());
+  EXPECT_EQ(2080768ULL, FoldGLShrMix->getLimitedValue());
 
   // Test G_MUL folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGMulInt =
-      ConstantFoldBinOp(TargetOpcode::G_MUL, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGMulInt.hasValue());
-  EXPECT_EQ(144ULL, FoldGMulInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGMulMix =
-      ConstantFoldBinOp(TargetOpcode::G_MUL, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGMulMix.hasValue());
-  EXPECT_EQ(0ULL, FoldGMulMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGMulInt = ConstantFoldBinOp(
+      TargetOpcode::G_MUL, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGMulInt.has_value());
+  EXPECT_EQ(144ULL, FoldGMulInt->getLimitedValue());
+  std::optional<APInt> FoldGMulMix = ConstantFoldBinOp(
+      TargetOpcode::G_MUL, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGMulMix.has_value());
+  EXPECT_EQ(0ULL, FoldGMulMix->getLimitedValue());
 
   // Test G_OR folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGOrInt =
-      ConstantFoldBinOp(TargetOpcode::G_OR, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGOrInt.hasValue());
-  EXPECT_EQ(25ULL, FoldGOrInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGOrMix =
-      ConstantFoldBinOp(TargetOpcode::G_OR, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGOrMix.hasValue());
-  EXPECT_EQ(1073741840ULL, FoldGOrMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGOrInt = ConstantFoldBinOp(
+      TargetOpcode::G_OR, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGOrInt.has_value());
+  EXPECT_EQ(25ULL, FoldGOrInt->getLimitedValue());
+  std::optional<APInt> FoldGOrMix = ConstantFoldBinOp(
+      TargetOpcode::G_OR, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGOrMix.has_value());
+  EXPECT_EQ(1073741840ULL, FoldGOrMix->getLimitedValue());
 
   // Test G_SHL folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGShlInt =
-      ConstantFoldBinOp(TargetOpcode::G_SHL, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGShlInt.hasValue());
-  EXPECT_EQ(8192ULL, FoldGShlInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGShlMix =
-      ConstantFoldBinOp(TargetOpcode::G_SHL, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGShlMix.hasValue());
-  EXPECT_EQ(0ULL, FoldGShlMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGShlInt = ConstantFoldBinOp(
+      TargetOpcode::G_SHL, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGShlInt.has_value());
+  EXPECT_EQ(8192ULL, FoldGShlInt->getLimitedValue());
+  std::optional<APInt> FoldGShlMix = ConstantFoldBinOp(
+      TargetOpcode::G_SHL, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGShlMix.has_value());
+  EXPECT_EQ(0ULL, FoldGShlMix->getLimitedValue());
 
   // Test G_SUB folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGSubInt =
-      ConstantFoldBinOp(TargetOpcode::G_SUB, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGSubInt.hasValue());
-  EXPECT_EQ(7ULL, FoldGSubInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGSubMix =
-      ConstantFoldBinOp(TargetOpcode::G_SUB, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGSubMix.hasValue());
-  EXPECT_EQ(3221225488ULL, FoldGSubMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGSubInt = ConstantFoldBinOp(
+      TargetOpcode::G_SUB, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGSubInt.has_value());
+  EXPECT_EQ(7ULL, FoldGSubInt->getLimitedValue());
+  std::optional<APInt> FoldGSubMix = ConstantFoldBinOp(
+      TargetOpcode::G_SUB, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGSubMix.has_value());
+  EXPECT_EQ(3221225488ULL, FoldGSubMix->getLimitedValue());
 
   // Test G_XOR folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGXorInt =
-      ConstantFoldBinOp(TargetOpcode::G_XOR, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGXorInt.hasValue());
-  EXPECT_EQ(25ULL, FoldGXorInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGXorMix =
-      ConstantFoldBinOp(TargetOpcode::G_XOR, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGXorMix.hasValue());
-  EXPECT_EQ(1073741840ULL, FoldGXorMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGXorInt = ConstantFoldBinOp(
+      TargetOpcode::G_XOR, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGXorInt.has_value());
+  EXPECT_EQ(25ULL, FoldGXorInt->getLimitedValue());
+  std::optional<APInt> FoldGXorMix = ConstantFoldBinOp(
+      TargetOpcode::G_XOR, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGXorMix.has_value());
+  EXPECT_EQ(1073741840ULL, FoldGXorMix->getLimitedValue());
 
   // Test G_UDIV folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGUdivInt =
-      ConstantFoldBinOp(TargetOpcode::G_UDIV, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGUdivInt.hasValue());
-  EXPECT_EQ(1ULL, FoldGUdivInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGUdivMix =
-      ConstantFoldBinOp(TargetOpcode::G_UDIV, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGUdivMix.hasValue());
-  EXPECT_EQ(0ULL, FoldGUdivMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGUdivInt = ConstantFoldBinOp(
+      TargetOpcode::G_UDIV, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGUdivInt.has_value());
+  EXPECT_EQ(1ULL, FoldGUdivInt->getLimitedValue());
+  std::optional<APInt> FoldGUdivMix = ConstantFoldBinOp(
+      TargetOpcode::G_UDIV, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGUdivMix.has_value());
+  EXPECT_EQ(0ULL, FoldGUdivMix->getLimitedValue());
 
   // Test G_SDIV folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGSdivInt =
-      ConstantFoldBinOp(TargetOpcode::G_SDIV, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGSdivInt.hasValue());
-  EXPECT_EQ(1ULL, FoldGSdivInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGSdivMix =
-      ConstantFoldBinOp(TargetOpcode::G_SDIV, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGSdivMix.hasValue());
-  EXPECT_EQ(0ULL, FoldGSdivMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGSdivInt = ConstantFoldBinOp(
+      TargetOpcode::G_SDIV, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGSdivInt.has_value());
+  EXPECT_EQ(1ULL, FoldGSdivInt->getLimitedValue());
+  std::optional<APInt> FoldGSdivMix = ConstantFoldBinOp(
+      TargetOpcode::G_SDIV, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGSdivMix.has_value());
+  EXPECT_EQ(0ULL, FoldGSdivMix->getLimitedValue());
 
   // Test G_UREM folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGUremInt =
-      ConstantFoldBinOp(TargetOpcode::G_UDIV, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGUremInt.hasValue());
-  EXPECT_EQ(1ULL, FoldGUremInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGUremMix =
-      ConstantFoldBinOp(TargetOpcode::G_UDIV, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGUremMix.hasValue());
-  EXPECT_EQ(0ULL, FoldGUremMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGUremInt = ConstantFoldBinOp(
+      TargetOpcode::G_UDIV, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGUremInt.has_value());
+  EXPECT_EQ(1ULL, FoldGUremInt->getLimitedValue());
+  std::optional<APInt> FoldGUremMix = ConstantFoldBinOp(
+      TargetOpcode::G_UDIV, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGUremMix.has_value());
+  EXPECT_EQ(0ULL, FoldGUremMix->getLimitedValue());
 
   // Test G_SREM folding Integer + Mixed Int-Float cases
-  Optional<APInt> FoldGSremInt =
-      ConstantFoldBinOp(TargetOpcode::G_SREM, MIBCst1.getReg(0),
-                        MIBCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGSremInt.hasValue());
-  EXPECT_EQ(7ULL, FoldGSremInt.getValue().getLimitedValue());
-  Optional<APInt> FoldGSremMix =
-      ConstantFoldBinOp(TargetOpcode::G_SREM, MIBCst1.getReg(0),
-                        MIBFCst2.getReg(0), *MRI);
-  EXPECT_TRUE(FoldGSremMix.hasValue());
-  EXPECT_EQ(16ULL, FoldGSremMix.getValue().getLimitedValue());
+  std::optional<APInt> FoldGSremInt = ConstantFoldBinOp(
+      TargetOpcode::G_SREM, MIBCst1.getReg(0), MIBCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGSremInt.has_value());
+  EXPECT_EQ(7ULL, FoldGSremInt->getLimitedValue());
+  std::optional<APInt> FoldGSremMix = ConstantFoldBinOp(
+      TargetOpcode::G_SREM, MIBCst1.getReg(0), MIBFCst2.getReg(0), *MRI);
+  EXPECT_TRUE(FoldGSremMix.has_value());
+  EXPECT_EQ(16ULL, FoldGSremMix->getLimitedValue());
 }
 
 } // namespace

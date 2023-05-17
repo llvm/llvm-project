@@ -23,6 +23,7 @@
 #include "lldb/lldb-types.h"
 
 #include <cstring>
+#include <optional>
 namespace lldb_private {
 class Declaration;
 }
@@ -94,7 +95,7 @@ size_t ValueObjectDynamicValue::CalculateNumChildren(uint32_t max) {
     return m_parent->GetNumChildren(max);
 }
 
-llvm::Optional<uint64_t> ValueObjectDynamicValue::GetByteSize() {
+std::optional<uint64_t> ValueObjectDynamicValue::GetByteSize() {
   const bool success = UpdateValueIfNeeded(false);
   if (success && m_dynamic_type_info.HasType()) {
     ExecutionContext exe_ctx(GetExecutionContextRef());
@@ -186,17 +187,19 @@ bool ValueObjectDynamicValue::UpdateValue() {
     m_type_impl.Clear();
   }
 
-  // If we don't have a dynamic type, then make ourselves just a echo of our
-  // parent. Or we could return false, and make ourselves an echo of our
-  // parent?
+  // If we don't have a dynamic type, set ourselves to be invalid and return
+  // false.  We used to try to produce a dynamic ValueObject that behaved "like"
+  // its parent, but that failed for ValueObjectConstResult, which is too 
+  // complex a beast to try to emulate.  If we return an invalid ValueObject,
+  // clients will end up getting the static value instead, which behaves
+  // correctly.
   if (!found_dynamic_type) {
     if (m_dynamic_type_info)
       SetValueDidChange(true);
     ClearDynamicTypeInformation();
     m_dynamic_type_info.Clear();
-    m_value = m_parent->GetValue();
-    m_error = m_value.GetValueAsData(&exe_ctx, m_data, GetModule().get());
-    return m_error.Success();
+    m_error.SetErrorString("no dynamic type found");
+    return false;
   }
 
   Value old_value(m_value);

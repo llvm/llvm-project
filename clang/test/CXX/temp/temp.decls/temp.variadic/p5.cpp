@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -fblocks -fms-extensions -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -fblocks -fms-extensions -fsyntax-only -verify=expected,cxx11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++23 -fblocks -fms-extensions -fsyntax-only -verify=expected %s
 
 template<typename T, typename U> struct pair;
 template<typename ...> struct tuple;
@@ -164,7 +165,9 @@ template<typename T, typename... Types>
 // FIXME: this should test that the diagnostic reads "type contains..."
 struct alignas(Types) TestUnexpandedDecls : T{ // expected-error{{expression contains unexpanded parameter pack 'Types'}}
   void member_function(Types);  // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
+#if __cplusplus < 201703L
   void member_function () throw(Types); // expected-error{{exception type contains unexpanded parameter pack 'Types'}}
+#endif
   void member_function2() noexcept(Types()); // expected-error{{expression contains unexpanded parameter pack 'Types'}}
   operator Types() const; // expected-error{{declaration type contains unexpanded parameter pack 'Types'}}
   Types data_member;  // expected-error{{data member type contains unexpanded parameter pack 'Types'}}
@@ -427,7 +430,7 @@ namespace PR16303 {
 namespace PR21289 {
   template<int> using T = int;
   template<typename> struct S { static const int value = 0; };
-  template<typename> const int vt = 0; // expected-warning {{extension}}
+  template<typename> const int vt = 0; // cxx11-warning {{extension}}
   int f(...);
   template<int ...Ns> void g() {
     f(T<Ns>()...);
@@ -467,5 +470,48 @@ int fn() {
 
   FooAlias<int> b;
   bar(b);
+}
+}
+
+namespace GH58452 {
+template <typename... As> struct A {
+  template <typename... Bs> using B = void(As...(Bs));
+};
+
+template <typename... Cs> struct C {
+    template <typename... Ds> using D = typename A<Cs...>::template B<Ds...>;
+};
+
+using t1 = C<int, int>::template D<float, float>;
+
+template <typename A, typename B>
+using ConditionalRewrite = B;
+
+template <typename T>
+using SignatureType = int;
+
+template <typename... Args>
+struct Type1 {
+    template <typename... Params>
+        using Return = SignatureType<int(ConditionalRewrite<Args, Params>...)>;
+
+};
+
+template <typename... Args>
+struct Type2 {
+    using T1 = Type1<Args...>;
+
+      template <typename... Params>
+          using Return = typename T1::template Return<Params...>;
+
+};
+
+template <typename T>
+typename T::template Return<int, int> InvokeMethod() {
+    return 3;
+}
+
+int Function1() {
+    return InvokeMethod<Type2<int, int>>();
 }
 }

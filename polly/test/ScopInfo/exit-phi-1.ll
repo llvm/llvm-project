@@ -9,7 +9,7 @@
 ;
 ; CHECK:         Arrays {
 ; CHECK-NEXT:        double MemRef_up_3_ph; // Element size 8
-; CHECK-NEXT:        i32* MemRef_A[*]; // Element size 8
+; CHECK-NEXT:        ptr MemRef_A[*]; // Element size 8
 ; CHECK-NEXT:        double MemRef_up_3_ph; // Element size 8
 ; CHECK-NEXT:    }
 ;
@@ -21,16 +21,16 @@
 ; CODEGEN-NEXT:   %up.3.ph = phi double [ 0.000000e+00, %entry ], [ %up.3.ph.ph.merge, %polly.merge_new_and_old ]
 ;
 ; CODEGEN:      polly.stmt.if.then111:
-; CODEGEN-NEXT:   store double undef, double* %up.3.ph.s2a
+; CODEGEN-NEXT:   store double undef, ptr %up.3.ph.s2a
 ;
 ; CODEGEN:      polly.exiting:
-; CODEGEN-NEXT:   %up.3.ph.ph.final_reload = load double, double* %up.3.ph.s2a
+; CODEGEN-NEXT:   %up.3.ph.ph.final_reload = load double, ptr %up.3.ph.s2a
 ;
 ; ModuleID = 'bugpoint-reduced-simplified.bc'
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: uwtable
-define void @_ZN6soplex14SPxAggregateSM9eliminateERKNS_7SVectorEd(i32** nocapture readonly %A) {
+define void @_ZN6soplex14SPxAggregateSM9eliminateERKNS_7SVectorEd(ptr nocapture readonly %A) {
 entry:
   br label %for.cond.outer304
 
@@ -39,9 +39,8 @@ for.cond.outer304:                                ; preds = %if.else113, %if.the
   br i1 undef, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond.outer304
-  %0 = load i32*, i32** %A, align 8
+  %0 = load ptr, ptr %A, align 8
   %add = fadd double %up.3.ph, undef
-  %val.i.i.i235 = getelementptr inbounds i32, i32* %0, i64 0
   br i1 false, label %if.else113, label %if.then111
 
 if.then111:                                       ; preds = %for.body

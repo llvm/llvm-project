@@ -5,6 +5,8 @@
 # RUN: llvm-objdump -d %t2 | FileCheck %s
 # RUN: llvm-readobj -r %t2 | FileCheck %s --check-prefix=RELOC
 
+# RUN: ld.lld %t -w --noinhibit-exec -o /dev/null 2>&1 | count 0
+
 # CHECK: Disassembly of section .text:
 # CHECK-EMPTY:
 # CHECK-NEXT: _start

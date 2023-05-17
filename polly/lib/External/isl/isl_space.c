@@ -390,7 +390,7 @@ static __isl_give isl_space *copy_ids(__isl_take isl_space *dst,
 	return dst;
 }
 
-__isl_take isl_space *isl_space_dup(__isl_keep isl_space *space)
+__isl_give isl_space *isl_space_dup(__isl_keep isl_space *space)
 {
 	isl_space *dup;
 	if (!space)
@@ -476,9 +476,8 @@ __isl_null isl_space *isl_space_free(__isl_take isl_space *space)
 static int name_ok(isl_ctx *ctx, const char *s)
 {
 	char *p;
-	long dummy;
 
-	dummy = strtol(s, &p, 0);
+	strtol(s, &p, 0);
 	if (p != s)
 		isl_die(ctx, isl_error_invalid, "name looks like a number",
 			return 0);
@@ -1860,6 +1859,38 @@ __isl_give isl_space *isl_space_factor_range(__isl_take isl_space *space)
 	return space;
 }
 
+/* Given a space of the form [A -> B] -> C, return the space A.
+ */
+__isl_give isl_space *isl_space_domain_wrapped_domain(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_domain(isl_space_domain(space));
+}
+
+/* Given a space of the form [A -> B] -> C, return the space B.
+ */
+__isl_give isl_space *isl_space_domain_wrapped_range(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_range(isl_space_domain(space));
+}
+
+/* Given a space of the form A -> [B -> C], return the space B.
+ */
+__isl_give isl_space *isl_space_range_wrapped_domain(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_domain(isl_space_range(space));
+}
+
+/* Given a space of the form A -> [B -> C], return the space C.
+ */
+__isl_give isl_space *isl_space_range_wrapped_range(
+	__isl_take isl_space *space)
+{
+	return isl_space_factor_range(isl_space_range(space));
+}
+
 __isl_give isl_space *isl_space_map_from_set(__isl_take isl_space *space)
 {
 	isl_ctx *ctx;
@@ -3238,7 +3269,7 @@ __isl_give isl_space *isl_space_align_params(__isl_take isl_space *space1,
 		goto error;
 
 	exp = isl_parameter_alignment_reordering(space1, space2);
-	exp = isl_reordering_extend_space(exp, space1);
+	isl_space_free(space1);
 	isl_space_free(space2);
 	space1 = isl_reordering_get_space(exp);
 	isl_reordering_free(exp);

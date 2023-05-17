@@ -1,16 +1,16 @@
-; RUN: opt -S -indvars < %s | FileCheck %s
+; RUN: opt -S -passes=indvars < %s | FileCheck %s
 
 ; This is not an IndVarSimplify bug, but the original symptom
 ; manifested as one.
 
-define i32 @foo(i32 %a, i32 %b, i32 %c, i32* %sink) {
+define i32 @foo(i32 %a, i32 %b, i32 %c, ptr %sink) {
 ; CHECK-LABEL: @foo(
 ; CHECK:       for.end:
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 %neg3, -1
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 0, [[SHR]]
 ; CHECK-NEXT:    [[SHR1:%.*]] = ashr i32 [[SUB]], [[B:%.*]]
 ; CHECK-NEXT:    [[NEG:%.*]] = xor i32 [[SHR1]], -1
-; CHECK-NEXT:    store i32 [[NEG]], i32* %sink
+; CHECK-NEXT:    store i32 [[NEG]], ptr %sink
 ;
 entry:
   %tobool2 = icmp eq i32 %a, 0
@@ -31,7 +31,7 @@ for.end:
   %sub = sub nsw i32 0, %shr
   %shr1 = ashr i32 %sub, %b
   %neg = xor i32 %shr1, -1
-  store i32 %neg, i32* %sink
+  store i32 %neg, ptr %sink
   br i1 false, label %exit, label %preheader
 
 exit:

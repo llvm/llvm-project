@@ -11,8 +11,6 @@
 define signext i32 @wobble() nounwind {
 ; CHECK-LABEL: wobble:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    addi sp, sp, -16
-; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    lui a0, %hi(global)
 ; CHECK-NEXT:    lbu a0, %lo(global)(a0)
 ; CHECK-NEXT:    lui a1, %hi(global.2)
@@ -31,29 +29,31 @@ define signext i32 @wobble() nounwind {
 ; CHECK-NEXT:    sw a1, %lo(global.3)(a2)
 ; CHECK-NEXT:    bltu a0, a3, .LBB0_2
 ; CHECK-NEXT:  # %bb.1: # %bb10
+; CHECK-NEXT:    addi sp, sp, -16
+; CHECK-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; CHECK-NEXT:    call quux@plt
-; CHECK-NEXT:  .LBB0_2: # %bb12
-; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; CHECK-NEXT:    addi sp, sp, 16
+; CHECK-NEXT:  .LBB0_2: # %bb12
+; CHECK-NEXT:    li a0, 0
 ; CHECK-NEXT:    ret
 bb:
-  %tmp = load i8, i8* @global, align 1
+  %tmp = load i8, ptr @global, align 1
   %tmp1 = zext i8 %tmp to i32
   %tmp2 = add nuw nsw i32 %tmp1, 1
-  store i32 %tmp2, i32* @global.1, align 4
-  %tmp3 = load i8, i8* @global.2, align 1
+  store i32 %tmp2, ptr @global.1, align 4
+  %tmp3 = load i8, ptr @global.2, align 1
   %tmp4 = zext i8 %tmp3 to i32
   %tmp5 = mul nuw nsw i32 %tmp2, %tmp4
   %tmp6 = trunc i32 %tmp5 to i16
   %tmp7 = udiv i16 %tmp6, 5
   %tmp8 = zext i16 %tmp7 to i32
-  store i32 %tmp8, i32* @global.3, align 4
+  store i32 %tmp8, ptr @global.3, align 4
   %tmp9 = icmp ult i32 %tmp5, 5
   br i1 %tmp9, label %bb12, label %bb10
 
 bb10:                                             ; preds = %bb
-  %tmp11 = tail call signext i32 bitcast (i32 (...)* @quux to i32 ()*)()
+  %tmp11 = tail call signext i32 @quux()
   br label %bb12
 
 bb12:                                             ; preds = %bb10, %bb

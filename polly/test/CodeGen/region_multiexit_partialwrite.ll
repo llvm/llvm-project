@@ -6,14 +6,14 @@
 ;
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-define void @region_multiexit_partialwrite(i32* %arg, i64 %arg1, i32* %arg2) {
+define void @region_multiexit_partialwrite(ptr %arg, i64 %arg1, ptr %arg2) {
 bb:
   br label %bb3
 
 bb3:
   %tmp = phi i64 [ %tmp17, %bb10 ], [ 1, %bb ]
-  %tmp4 = getelementptr inbounds i32, i32* %arg, i64 %tmp
-  %tmp5 = load i32, i32* %tmp4, align 4
+  %tmp4 = getelementptr inbounds i32, ptr %arg, i64 %tmp
+  %tmp5 = load i32, ptr %tmp4, align 4
   %tmp6 = icmp slt i32 %tmp5, 0
   br i1 %tmp6, label %bb7, label %bb9
 
@@ -26,8 +26,8 @@ bb9:
 
 bb10:
   %tmp11 = phi i32 [ %tmp8, %bb7 ], [ undef, %bb9 ]
-  %tmp16 = getelementptr inbounds i32, i32* %arg2, i64 %tmp
-  store i32 %tmp11, i32* %tmp16, align 4
+  %tmp16 = getelementptr inbounds i32, ptr %arg2, i64 %tmp
+  store i32 %tmp11, ptr %tmp16, align 4
   %tmp17 = add nuw i64 %tmp, 1
   %tmp18 = icmp eq i64 %tmp17, %arg1
   br i1 %tmp18, label %bb19, label %bb3

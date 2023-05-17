@@ -172,6 +172,12 @@ int __tsan_on_finalize(int failed);
 // Release TSan internal memory in a best-effort manner.
 void __tsan_flush_memory();
 
+// User-provided default TSAN options.
+const char* __tsan_default_options(void);
+
+// User-provided default TSAN suppressions.
+const char* __tsan_default_suppressions(void);
+
 #ifdef __cplusplus
 }  // extern "C"
 #endif

@@ -6,7 +6,7 @@
 ; RUN: llc -mtriple=x86_64-linux-gnux32 -global-isel -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32ABI-GISEL
 ; RUN: llc -mtriple=x86_64-linux-gnux32              -verify-machineinstrs < %s -o - | FileCheck %s --check-prefix=X32ABI-SDAG
 
-define i32* @allocai32() {
+define ptr @allocai32() {
 ; X64-LABEL: allocai32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    leaq -{{[0-9]+}}(%rsp), %rax
@@ -36,5 +36,5 @@ define i32* @allocai32() {
 ; X32ABI-NEXT:    leal -{{[0-9]+}}(%rsp), %eax
 ; X32ABI-NEXT:    retq
   %ptr1 = alloca i32
-  ret i32* %ptr1
+  ret ptr %ptr1
 }

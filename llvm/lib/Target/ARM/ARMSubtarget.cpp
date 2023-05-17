@@ -13,10 +13,10 @@
 #include "ARM.h"
 
 #include "ARMCallLowering.h"
-#include "ARMLegalizerInfo.h"
-#include "ARMRegisterBankInfo.h"
 #include "ARMFrameLowering.h"
 #include "ARMInstrInfo.h"
+#include "ARMLegalizerInfo.h"
+#include "ARMRegisterBankInfo.h"
 #include "ARMSubtarget.h"
 #include "ARMTargetMachine.h"
 #include "MCTargetDesc/ARMMCTargetDesc.h"
@@ -24,7 +24,6 @@
 #include "Thumb1InstrInfo.h"
 #include "Thumb2InstrInfo.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -35,9 +34,9 @@
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/ARMTargetParser.h"
-#include "llvm/Support/TargetParser.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/ARMTargetParser.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 

@@ -4,8 +4,6 @@ from lldbsuite.test.lldbgdbclient import GDBPlatformClientTestBase
 
 class TestGDBRemotePlatformFile(GDBPlatformClientTestBase):
 
-    mydir = GDBPlatformClientTestBase.compute_mydir(__file__)
-
     def test_file(self):
         """Test mock operations on a remote file"""
 

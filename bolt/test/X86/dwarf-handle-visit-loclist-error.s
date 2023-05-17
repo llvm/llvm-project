@@ -4,7 +4,7 @@
 # RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %s -o %t1.o
 # RUN: %clang %cflags -dwarf-4 %t1.o -o %t.exe
 # RUN: llvm-objcopy --remove-section=.debug_loc %t.exe
-# RUN: llvm-bolt %t.exe -o %t.bolt -update-debug-sections &> file
+# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections &> file
 # RUN: cat file | FileCheck --check-prefix=CHECK %s
 
 # Making sure we handle error returned by visitLocationList correctly.

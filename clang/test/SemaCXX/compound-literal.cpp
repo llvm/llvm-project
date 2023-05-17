@@ -36,8 +36,8 @@ namespace brace_initializers {
 
   POD p = (POD){1, 2};
   // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
-  // CHECK: CompoundLiteralExpr {{.*}} 'brace_initializers::POD'
-  // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::POD'
+  // CHECK: CompoundLiteralExpr {{.*}} 'POD':'brace_initializers::POD'
+  // CHECK-NEXT: InitListExpr {{.*}} 'POD':'brace_initializers::POD'
   // CHECK-NEXT: ConstantExpr {{.*}}
   // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
   // CHECK-NEXT: ConstantExpr {{.*}}
@@ -45,34 +45,34 @@ namespace brace_initializers {
 
   void test() {
     (void)(POD){1, 2};
-    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::POD'
-    // CHECK-NOT: ConstantExpr {{.*}} 'brace_initializers::POD'
-    // CHECK: CompoundLiteralExpr {{.*}} 'brace_initializers::POD'
-    // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::POD'
+    // CHECK-NOT: CXXBindTemporaryExpr {{.*}} 'POD':'brace_initializers::POD'
+    // CHECK-NOT: ConstantExpr {{.*}} 'POD':'brace_initializers::POD'
+    // CHECK: CompoundLiteralExpr {{.*}} 'POD':'brace_initializers::POD'
+    // CHECK-NEXT: InitListExpr {{.*}} 'POD':'brace_initializers::POD'
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasDtor){1, 2};
-    // CHECK: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasDtor'
-    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'brace_initializers::HasDtor'
-    // CHECK-NEXT: InitListExpr {{.*}} 'brace_initializers::HasDtor'
+    // CHECK: CXXBindTemporaryExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
+    // CHECK-NEXT: CompoundLiteralExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
+    // CHECK-NEXT: InitListExpr {{.*}} 'HasDtor':'brace_initializers::HasDtor'
     // CHECK-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
 #if __cplusplus >= 201103L
     (void)(HasCtor){1, 2};
-    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasCtor'
-    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'brace_initializers::HasCtor'
-    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'brace_initializers::HasCtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'brace_initializers::HasCtor'
+    // CHECK-CXX11-NOT: CXXBindTemporaryExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
+    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
+    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtor':'brace_initializers::HasCtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 
     (void)(HasCtorDtor){1, 2};
-    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'brace_initializers::HasCtorDtor'
-    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11: CXXBindTemporaryExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11-NOT: ConstantExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11: CompoundLiteralExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
+    // CHECK-CXX11-NEXT: CXXTemporaryObjectExpr {{.*}} 'HasCtorDtor':'brace_initializers::HasCtorDtor'
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 1{{$}}
     // CHECK-CXX11-NEXT: IntegerLiteral {{.*}} 2{{$}}
 #endif
@@ -85,7 +85,7 @@ namespace brace_initializers {
   };
 
   void testPrivateDtor() {
-    (void)(PrivateDtor){1, 2}; // expected-error {{temporary of type 'brace_initializers::PrivateDtor' has private destructor}}
+    (void)(PrivateDtor){1, 2}; // expected-error {{temporary of type 'PrivateDtor' has private destructor}}
   }
 }
 

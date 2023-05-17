@@ -9,8 +9,8 @@
 
 define i32 @foo() nounwind {
 entry:
-  %0 = load i32, i32* @src, align 4, !tbaa !0
-  store i32 %0, i32* @dst, align 4, !tbaa !0
+  %0 = load i32, ptr @src, align 4, !tbaa !0
+  store i32 %0, ptr @dst, align 4, !tbaa !0
   %call = tail call i32 @baz(i32 %0) nounwind
   ret i32 0
 }

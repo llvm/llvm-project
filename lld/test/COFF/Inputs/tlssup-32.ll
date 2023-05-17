@@ -17,9 +17,9 @@ target triple = "i686-pc-windows-msvc"
 @_tls_index = global i32 0
 
 @_tls_used = global %IMAGE_TLS_DIRECTORY32 {
-    i32 ptrtoint (i8* @_tls_start to i32),
-    i32 ptrtoint (i8* @_tls_end to i32),
-    i32 ptrtoint (i32* @_tls_index to i32),
+    i32 ptrtoint (ptr @_tls_start to i32),
+    i32 ptrtoint (ptr @_tls_end to i32),
+    i32 ptrtoint (ptr @_tls_index to i32),
     i32 0,
     i32 0,
     i32 0

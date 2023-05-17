@@ -13,16 +13,11 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Object/ArchiveWriter.h"
-#include "llvm/Object/IRObjectFile.h"
-#include "llvm/Object/MachO.h"
-#include "llvm/Object/ObjectFile.h"
 #include "llvm/Object/SymbolicFile.h"
-#include "llvm/Object/XCOFFObjectFile.h"
 #include "llvm/Support/Chrono.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -30,8 +25,8 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -41,6 +36,8 @@
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/ToolDrivers/llvm-dlltool/DlltoolDriver.h"
 #include "llvm/ToolDrivers/llvm-lib/LibDriver.h"
 
@@ -55,6 +52,7 @@
 #endif
 
 using namespace llvm;
+using namespace llvm::object;
 
 // The name this program was invoked as.
 static StringRef ToolName;
@@ -63,9 +61,9 @@ static StringRef ToolName;
 static StringRef Stem;
 
 static void printRanLibHelp(StringRef ToolName) {
-  outs() << "OVERVIEW: LLVM Ranlib\n\n"
-         << "This program generates an index to speed access to archives\n\n"
-         << "USAGE: " + ToolName + " <archive-file>\n\n"
+  outs() << "OVERVIEW: LLVM ranlib\n\n"
+         << "Generate an index for archives\n\n"
+         << "USAGE: " + ToolName + " archive...\n\n"
          << "OPTIONS:\n"
          << "  -h --help             - Display available options\n"
          << "  -v --version          - Display the version of this program\n"
@@ -82,14 +80,16 @@ static void printArHelp(StringRef ToolName) {
     =gnu                -   gnu
     =darwin             -   darwin
     =bsd                -   bsd
-    =aix                -   aix (big archive)
+    =bigarchive         -   big archive (AIX OS)
   --plugin=<string>     - ignored for compatibility
   -h --help             - display this help and exit
+  --output              - the directory to extract archive members to
   --rsp-quoting         - quoting style for response files
     =posix              -   posix
     =windows            -   windows
   --thin                - create a thin archive
   --version             - print the version and exit
+  -X{32|64|32_64|any}   - object mode (only for AIX OS)
   @<file>               - read options from <file>
 
 OPERATIONS:
@@ -183,6 +183,10 @@ static void failIfError(Error E, Twine Context = "") {
   });
 }
 
+static void warn(Twine Message) {
+  WithColor::warning(errs(), ToolName) << Message << "\n";
+}
+
 static SmallVector<const char *, 256> PositionalArgs;
 
 static bool MRI;
@@ -207,6 +211,10 @@ enum ArchiveOperation {
   Extract,         ///< Extract files back to file system
   CreateSymTab     ///< Create a symbol table in an existing archive
 };
+
+enum class BitModeTy { Bit32, Bit64, Bit32_64, Any, Unknown };
+
+static BitModeTy BitMode = BitModeTy::Bit32;
 
 // Modifiers to follow operation to vary behavior
 static bool AddAfter = false;             ///< 'a' modifier
@@ -236,6 +244,9 @@ static int CountParam = 0;
 // This variable holds the name of the archive file as given on the
 // command line.
 static std::string ArchiveName;
+
+// Output directory specified by --output.
+static std::string OutputDir;
 
 static std::vector<std::unique_ptr<MemoryBuffer>> ArchiveBuffers;
 static std::vector<std::unique_ptr<object::Archive>> Archives;
@@ -454,6 +465,19 @@ static ArchiveOperation parseCommandLine() {
   if (AddLibrary && Operation != QuickAppend)
     badUsage("the 'L' modifier is only applicable to the 'q' operation");
 
+  if (!OutputDir.empty()) {
+    if (Operation != Extract)
+      badUsage("--output is only applicable to the 'x' operation");
+    bool IsDir = false;
+    // If OutputDir is not a directory, create_directories may still succeed if
+    // all components of the path prefix are directories. Test is_directory as
+    // well.
+    if (!sys::fs::create_directories(OutputDir))
+      sys::fs::is_directory(OutputDir, IsDir);
+    if (!IsDir)
+      fail("'" + OutputDir + "' is not a directory");
+  }
+
   // Return the parsed operation to the caller
   return Operation;
 }
@@ -554,7 +578,15 @@ static void doExtract(StringRef Name, const object::Archive::Child &C) {
   failIfError(ModeOrErr.takeError());
   sys::fs::perms Mode = ModeOrErr.get();
 
-  llvm::StringRef outputFilePath = sys::path::filename(Name);
+  StringRef outputFilePath;
+  SmallString<128> path;
+  if (OutputDir.empty()) {
+    outputFilePath = sys::path::filename(Name);
+  } else {
+    sys::path::append(path, OutputDir, sys::path::filename(Name));
+    outputFilePath = path.str();
+  }
+
   if (Verbose)
     outs() << "x - " << outputFilePath << '\n';
 
@@ -607,6 +639,52 @@ static bool shouldCreateArchive(ArchiveOperation Op) {
   llvm_unreachable("Missing entry in covered switch.");
 }
 
+static bool isValidInBitMode(Binary &Bin) {
+  if (BitMode == BitModeTy::Bit32_64 || BitMode == BitModeTy::Any)
+    return true;
+
+  if (SymbolicFile *SymFile = dyn_cast<SymbolicFile>(&Bin)) {
+    bool Is64Bit = SymFile->is64Bit();
+    if ((Is64Bit && (BitMode == BitModeTy::Bit32)) ||
+        (!Is64Bit && (BitMode == BitModeTy::Bit64)))
+      return false;
+  }
+  // In AIX "ar", non-object files are always considered to have a valid bit
+  // mode.
+  return true;
+}
+
+Expected<std::unique_ptr<Binary>> getAsBinary(const NewArchiveMember &NM,
+                                              LLVMContext *Context) {
+  auto BinaryOrErr = createBinary(NM.Buf->getMemBufferRef(), Context);
+  if (BinaryOrErr)
+    return std::move(*BinaryOrErr);
+  return BinaryOrErr.takeError();
+}
+
+Expected<std::unique_ptr<Binary>> getAsBinary(const Archive::Child &C,
+                                              LLVMContext *Context) {
+  return C.getAsBinary(Context);
+}
+
+template <class A> static bool isValidInBitMode(const A &Member) {
+  if (object::Archive::getDefaultKindForHost() != object::Archive::K_AIXBIG)
+    return true;
+  LLVMContext Context;
+  Expected<std::unique_ptr<Binary>> BinOrErr = getAsBinary(Member, &Context);
+  // In AIX "ar", if there is a non-object file member, it is never ignored due
+  // to the bit mode setting.
+  if (!BinOrErr) {
+    consumeError(BinOrErr.takeError());
+    return true;
+  }
+  return isValidInBitMode(*BinOrErr.get());
+}
+
+static void warnInvalidObjectForFileMode(Twine Name) {
+  warn("'" + Name + "' is not valid with the current object file mode");
+}
+
 static void performReadOperation(ArchiveOperation Operation,
                                  object::Archive *OldArchive) {
   if (Operation == Extract && OldArchive->isThin())
@@ -620,6 +698,10 @@ static void performReadOperation(ArchiveOperation Operation,
       Expected<StringRef> NameOrErr = C.getName();
       failIfError(NameOrErr.takeError());
       StringRef Name = NameOrErr.get();
+
+      // Check whether to ignore this object due to its bitness.
+      if (!isValidInBitMode(C))
+        continue;
 
       if (Filter) {
         auto I = find_if(Members, [Name](StringRef Path) {
@@ -697,8 +779,7 @@ static void addChildMember(std::vector<NewArchiveMember> &Members,
   Members.push_back(std::move(*NMOrErr));
 }
 
-static void addMember(std::vector<NewArchiveMember> &Members,
-                      StringRef FileName, bool FlattenArchive = false) {
+static NewArchiveMember getArchiveMember(StringRef FileName) {
   Expected<NewArchiveMember> NMOrErr =
       NewArchiveMember::getFile(FileName, Deterministic);
   failIfError(NMOrErr.takeError(), FileName);
@@ -718,9 +799,24 @@ static void addMember(std::vector<NewArchiveMember> &Members,
           PathOrErr ? *PathOrErr : sys::path::convert_to_slash(FileName));
     }
   }
+  return std::move(*NMOrErr);
+}
+
+static void addMember(std::vector<NewArchiveMember> &Members,
+                      NewArchiveMember &NM) {
+  Members.push_back(std::move(NM));
+}
+
+static void addMember(std::vector<NewArchiveMember> &Members,
+                      StringRef FileName, bool FlattenArchive = false) {
+  NewArchiveMember NM = getArchiveMember(FileName);
+  if (!isValidInBitMode(NM)) {
+    warnInvalidObjectForFileMode(FileName);
+    return;
+  }
 
   if (FlattenArchive &&
-      identify_magic(NMOrErr->Buf->getBuffer()) == file_magic::archive) {
+      identify_magic(NM.Buf->getBuffer()) == file_magic::archive) {
     object::Archive &Lib = readLibrary(FileName);
     // When creating thin archives, only flatten if the member is also thin.
     if (!Thin || Lib.isThin()) {
@@ -732,7 +828,7 @@ static void addMember(std::vector<NewArchiveMember> &Members,
       return;
     }
   }
-  Members.push_back(std::move(*NMOrErr));
+  Members.push_back(std::move(NM));
 }
 
 enum InsertAction {
@@ -748,10 +844,21 @@ static InsertAction computeInsertAction(ArchiveOperation Operation,
                                         StringRef Name,
                                         std::vector<StringRef>::iterator &Pos,
                                         StringMap<int> &MemberCount) {
+  if (!isValidInBitMode(Member))
+    return IA_AddOldMember;
+
   if (Operation == QuickAppend || Members.empty())
     return IA_AddOldMember;
-  auto MI = find_if(
-      Members, [Name](StringRef Path) { return comparePaths(Name, Path); });
+
+  auto MI = find_if(Members, [Name](StringRef Path) {
+    if (Thin && !sys::path::is_absolute(Path)) {
+      Expected<std::string> PathOrErr =
+          computeArchiveRelativePath(ArchiveName, Path);
+      return comparePaths(Name, PathOrErr ? *PathOrErr : Path);
+    } else {
+      return comparePaths(Name, Path);
+    }
+  });
 
   if (MI == Members.end())
     return IA_AddOldMember;
@@ -809,7 +916,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       Expected<StringRef> NameOrErr = Child.getName();
       failIfError(NameOrErr.takeError());
       std::string Name = std::string(NameOrErr.get());
-      if (comparePaths(Name, RelPos)) {
+      if (comparePaths(Name, RelPos) && isValidInBitMode(Child)) {
         assert(AddAfter || AddBefore);
         if (AddBefore)
           InsertPos = Pos;
@@ -820,12 +927,25 @@ computeNewArchiveMembers(ArchiveOperation Operation,
       std::vector<StringRef>::iterator MemberI = Members.end();
       InsertAction Action =
           computeInsertAction(Operation, Child, Name, MemberI, MemberCount);
+
+      auto HandleNewMember = [](auto Member, auto &Members, auto &Child) {
+        NewArchiveMember NM = getArchiveMember(*Member);
+        if (isValidInBitMode(NM))
+          addMember(Members, NM);
+        else {
+          // If a new member is not a valid object for the bit mode, add
+          // the old member back.
+          warnInvalidObjectForFileMode(*Member);
+          addChildMember(Members, Child, /*FlattenArchive=*/Thin);
+        }
+      };
+
       switch (Action) {
       case IA_AddOldMember:
         addChildMember(Ret, Child, /*FlattenArchive=*/Thin);
         break;
       case IA_AddNewMember:
-        addMember(Ret, *MemberI);
+        HandleNewMember(MemberI, Ret, Child);
         break;
       case IA_Delete:
         break;
@@ -833,7 +953,7 @@ computeNewArchiveMembers(ArchiveOperation Operation,
         addChildMember(Moved, Child, /*FlattenArchive=*/Thin);
         break;
       case IA_MoveNewMember:
-        addMember(Moved, *MemberI);
+        HandleNewMember(MemberI, Moved, Child);
         break;
       }
       // When processing elements with the count param, we need to preserve the
@@ -987,8 +1107,7 @@ static void performOperation(ArchiveOperation Operation,
   llvm_unreachable("Unknown operation.");
 }
 
-static int performOperation(ArchiveOperation Operation,
-                            std::vector<NewArchiveMember> *NewMembers) {
+static int performOperation(ArchiveOperation Operation) {
   // Create or open the archive object.
   ErrorOr<std::unique_ptr<MemoryBuffer>> Buf = MemoryBuffer::getFile(
       ArchiveName, /*IsText=*/false, /*RequiresNullTerminator=*/false);
@@ -1007,7 +1126,7 @@ static int performOperation(ArchiveOperation Operation,
     if (Archive->isThin())
       CompareFullPath = true;
     performOperation(Operation, Archive.get(), std::move(Buf.get()),
-                     NewMembers);
+                     /*NewMembers=*/nullptr);
     return 0;
   }
 
@@ -1018,12 +1137,11 @@ static int performOperation(ArchiveOperation Operation,
   } else {
     if (!Create) {
       // Produce a warning if we should and we're creating the archive
-      WithColor::warning(errs(), ToolName)
-          << "creating " << ArchiveName << "\n";
+      warn("creating " + ArchiveName);
     }
   }
 
-  performOperation(Operation, nullptr, nullptr, NewMembers);
+  performOperation(Operation, nullptr, nullptr, /*NewMembers=*/nullptr);
   return 0;
 }
 
@@ -1062,8 +1180,12 @@ static void runMRIScript() {
 
     switch (Command) {
     case MRICommand::AddLib: {
+      if (!Create)
+        fail("no output archive has been opened");
       object::Archive &Lib = readLibrary(Rest);
       {
+        if (Thin && !Lib.isThin())
+          fail("cannot add a regular archive's contents to a thin archive");
         Error Err = Error::success();
         for (auto &Member : Lib.children(Err))
           addChildMember(NewMembers, Member, /*FlattenArchive=*/Thin);
@@ -1072,11 +1194,13 @@ static void runMRIScript() {
       break;
     }
     case MRICommand::AddMod:
+      if (!Create)
+        fail("no output archive has been opened");
       addMember(NewMembers, Rest);
       break;
     case MRICommand::CreateThin:
       Thin = true;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case MRICommand::Create:
       Create = true;
       if (!ArchiveName.empty())
@@ -1084,6 +1208,8 @@ static void runMRIScript() {
       if (Saved)
         fail("file already saved");
       ArchiveName = std::string(Rest);
+      if (ArchiveName.empty())
+        fail("missing archive name");
       break;
     case MRICommand::Delete: {
       llvm::erase_if(NewMembers, [=](NewArchiveMember &M) {
@@ -1120,6 +1246,15 @@ static bool handleGenericOption(StringRef arg) {
     return true;
   }
   return false;
+}
+
+static BitModeTy getBitMode(const char *RawBitMode) {
+  return StringSwitch<BitModeTy>(RawBitMode)
+      .Case("32", BitModeTy::Bit32)
+      .Case("64", BitModeTy::Bit64)
+      .Case("32_64", BitModeTy::Bit32_64)
+      .Case("any", BitModeTy::Any)
+      .Default(BitModeTy::Unknown);
 }
 
 static const char *matchFlagWithArg(StringRef Expected,
@@ -1169,7 +1304,15 @@ static int ar_main(int argc, char **argv) {
   SmallVector<const char *, 0> Argv(argv + 1, argv + argc);
   StringSaver Saver(Alloc);
 
-  cl::ExpandResponseFiles(Saver, getRspQuoting(makeArrayRef(argv, argc)), Argv);
+  cl::ExpandResponseFiles(Saver, getRspQuoting(ArrayRef(argv, argc)), Argv);
+
+  // Get BitMode from enviorment variable "OBJECT_MODE" for AIX OS, if
+  // specified.
+  if (object::Archive::getDefaultKindForHost() == object::Archive::K_AIXBIG) {
+    BitMode = getBitMode(getenv("OBJECT_MODE"));
+    if (BitMode == BitModeTy::Unknown)
+      BitMode = BitModeTy::Bit32;
+  }
 
   for (ArrayRef<const char *>::iterator ArgIt = Argv.begin();
        ArgIt != Argv.end(); ++ArgIt) {
@@ -1216,19 +1359,36 @@ static int ar_main(int argc, char **argv) {
       continue;
     }
 
+    if ((Match = matchFlagWithArg("output", ArgIt, Argv))) {
+      OutputDir = Match;
+      continue;
+    }
+
     if (matchFlagWithArg("plugin", ArgIt, Argv) ||
         matchFlagWithArg("rsp-quoting", ArgIt, Argv))
       continue;
 
+    if (strncmp(*ArgIt, "-X", 2) == 0) {
+      if (object::Archive::getDefaultKindForHost() ==
+          object::Archive::K_AIXBIG) {
+        Match = *(*ArgIt + 2) != '\0' ? *ArgIt + 2 : *(++ArgIt);
+        BitMode = getBitMode(Match);
+        if (BitMode == BitModeTy::Unknown)
+          fail(Twine("invalid bit mode: ") + Match);
+        continue;
+      } else {
+        fail(Twine(*ArgIt) + " option not supported on non AIX OS");
+      }
+    }
+
     Options += *ArgIt + 1;
   }
 
-  ArchiveOperation Operation = parseCommandLine();
-  return performOperation(Operation, nullptr);
+  return performOperation(parseCommandLine());
 }
 
 static int ranlib_main(int argc, char **argv) {
-  bool ArchiveSpecified = false;
+  std::vector<StringRef> Archives;
   for (int i = 1; i < argc; ++i) {
     StringRef arg(argv[i]);
     if (handleGenericOption(arg)) {
@@ -1253,19 +1413,20 @@ static int ranlib_main(int argc, char **argv) {
         arg = arg.drop_front(1);
       }
     } else {
-      if (ArchiveSpecified)
-        fail("exactly one archive should be specified");
-      ArchiveSpecified = true;
-      ArchiveName = arg.str();
+      Archives.push_back(arg);
     }
   }
-  if (!ArchiveSpecified) {
-    badUsage("an archive name must be specified");
+
+  for (StringRef Archive : Archives) {
+    ArchiveName = Archive.str();
+    performOperation(CreateSymTab);
   }
-  return performOperation(CreateSymTab, nullptr);
+  if (Archives.empty())
+    badUsage("an archive name must be specified");
+  return 0;
 }
 
-int llvm_ar_main(int argc, char **argv) {
+int llvm_ar_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   ToolName = argv[0];
 
@@ -1286,11 +1447,11 @@ int llvm_ar_main(int argc, char **argv) {
   };
 
   if (Is("dlltool"))
-    return dlltoolDriverMain(makeArrayRef(argv, argc));
+    return dlltoolDriverMain(ArrayRef(argv, argc));
   if (Is("ranlib"))
     return ranlib_main(argc, argv);
   if (Is("lib"))
-    return libDriverMain(makeArrayRef(argv, argc));
+    return libDriverMain(ArrayRef(argv, argc));
   if (Is("ar"))
     return ar_main(argc, argv);
 

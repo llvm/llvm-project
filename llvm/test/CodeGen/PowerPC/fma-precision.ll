@@ -98,7 +98,7 @@ entry:
   ret double %add
 }
 
-define double @fma_multi_uses1(double %a, double %b, double %c, double %d, double* %p1, double* %p2, double* %p3) {
+define double @fma_multi_uses1(double %a, double %b, double %c, double %d, ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: fma_multi_uses1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmuldp 1, 1, 2
@@ -110,14 +110,14 @@ define double @fma_multi_uses1(double %a, double %b, double %c, double %d, doubl
 ; CHECK-NEXT:    blr
   %ab = fmul contract reassoc double %a, %b
   %cd = fmul contract reassoc double %c, %d
-  store double %ab, double* %p1 ; extra use of %ab
-  store double %ab, double* %p2 ; another extra use of %ab
-  store double %cd, double* %p3 ; extra use of %cd
+  store double %ab, ptr %p1 ; extra use of %ab
+  store double %ab, ptr %p2 ; another extra use of %ab
+  store double %cd, ptr %p3 ; extra use of %cd
   %r = fsub contract reassoc nsz double %ab, %cd
   ret double %r
 }
 
-define double @fma_multi_uses2(double %a, double %b, double %c, double %d, double* %p1, double* %p2, double* %p3) {
+define double @fma_multi_uses2(double %a, double %b, double %c, double %d, ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: fma_multi_uses2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmuldp 5, 1, 2
@@ -130,14 +130,14 @@ define double @fma_multi_uses2(double %a, double %b, double %c, double %d, doubl
 ; CHECK-NEXT:    blr
   %ab = fmul contract reassoc double %a, %b
   %cd = fmul contract reassoc double %c, %d
-  store double %ab, double* %p1 ; extra use of %ab
-  store double %cd, double* %p2 ; extra use of %cd
-  store double %cd, double* %p3 ; another extra use of %cd
+  store double %ab, ptr %p1 ; extra use of %ab
+  store double %cd, ptr %p2 ; extra use of %cd
+  store double %cd, ptr %p3 ; another extra use of %cd
   %r = fsub contract reassoc double %ab, %cd
   ret double %r
 }
 
-define double @fma_multi_uses3(double %a, double %b, double %c, double %d, double %f, double %g, double* %p1, double* %p2, double* %p3) {
+define double @fma_multi_uses3(double %a, double %b, double %c, double %d, double %f, double %g, ptr %p1, ptr %p2, ptr %p3) {
 ; CHECK-LABEL: fma_multi_uses3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    xsmuldp 0, 1, 2
@@ -153,9 +153,9 @@ define double @fma_multi_uses3(double %a, double %b, double %c, double %d, doubl
   %ab = fmul contract reassoc double %a, %b
   %cd = fmul contract reassoc double %c, %d
   %fg = fmul contract reassoc double %f, %g
-  store double %ab, double* %p1 ; extra use of %ab
-  store double %ab, double* %p2 ; another extra use of %ab
-  store double %fg, double* %p3 ; extra use of %fg
+  store double %ab, ptr %p1 ; extra use of %ab
+  store double %ab, ptr %p2 ; another extra use of %ab
+  store double %fg, ptr %p3 ; extra use of %fg
   %q = fsub contract reassoc nsz double %fg, %cd ; The uses of %cd reduce to 1 after %r is folded. 2 uses of %fg, fold %cd, remove def of %cd
   %r = fsub contract reassoc nsz double %ab, %cd ; Fold %r before %q. 3 uses of %ab, 2 uses of %cd, fold %cd
   %add = fadd contract reassoc double %r, %q

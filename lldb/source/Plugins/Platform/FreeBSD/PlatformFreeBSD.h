@@ -60,7 +60,8 @@ public:
   std::vector<ArchSpec> m_supported_architectures;
 
 private:
-  std::unique_ptr<TypeSystemClang> m_type_system_up;
+  std::mutex m_mutex;
+  std::shared_ptr<TypeSystemClang> m_type_system;
 };
 
 } // namespace platform_freebsd

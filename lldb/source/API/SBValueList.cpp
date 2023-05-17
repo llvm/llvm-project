@@ -7,11 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/API/SBValueList.h"
+#include "lldb/API/SBError.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/Core/ValueObjectList.h"
 #include "lldb/Utility/Instrumentation.h"
-
+#include "lldb/Utility/Status.h"
 #include <vector>
 
 using namespace lldb;
@@ -27,6 +28,7 @@ public:
     if (this == &rhs)
       return *this;
     m_values = rhs.m_values;
+    m_error = rhs.m_error;
     return *this;
   }
 
@@ -63,8 +65,13 @@ public:
     return lldb::SBValue();
   }
 
+  const Status &GetError() const { return m_error; }
+
+  void SetError(const Status &error) { m_error = error; }
+
 private:
   std::vector<lldb::SBValue> m_values;
+  Status m_error;
 };
 
 SBValueList::SBValueList() { LLDB_INSTRUMENT_VA(this); }
@@ -192,4 +199,16 @@ void *SBValueList::opaque_ptr() { return m_opaque_up.get(); }
 ValueListImpl &SBValueList::ref() {
   CreateIfNeeded();
   return *m_opaque_up;
+}
+
+lldb::SBError SBValueList::GetError() {
+  LLDB_INSTRUMENT_VA(this);
+  SBError sb_error;
+  if (m_opaque_up)
+    sb_error.SetError(m_opaque_up->GetError());
+  return sb_error;
+}
+
+void SBValueList::SetError(const lldb_private::Status &status) {
+  ref().SetError(status);
 }

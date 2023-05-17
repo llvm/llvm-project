@@ -6,7 +6,10 @@
 // FIXME: What about other type sugar, like _Atomic? This would only matter in a
 // packed struct context.
 struct __declspec(align(16)) AlignedStruct { int x; };
-typedef int  __declspec(align(16)) AlignedInt;
+struct Struct2 {
+  char c[16];
+};
+typedef struct Struct2 __declspec(align(16)) AlignedStruct2;
 
 #define CHECK_SIZE(X, Align) \
   _Static_assert(__alignof(struct X) == Align, "should be aligned");
@@ -20,13 +23,13 @@ CHECK_SIZE(A, 16);
 
 struct B {
   char b;
-  AlignedInt a[1];
+  AlignedStruct2 a[1];
 };
 CHECK_SIZE(B, 16);
 
 struct C {
   char b;
-  AlignedInt a[];
+  AlignedStruct2 a[];
 };
 CHECK_SIZE(C, 16);
 
@@ -39,14 +42,18 @@ CHECK_SIZE(C, 16);
 // CHECK-NEXT:          0 |   struct AlignedStruct[1] a
 // CHECK-NEXT:            | [sizeof=16, align=16]
 // CHECK: *** Dumping AST Record Layout
+// CHECK-NEXT:          0 | struct Struct2
+// CHECK-NEXT:          0 |   char[16] c
+// CHECK-NEXT:            | [sizeof=16, align=1]
+// CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct B
 // CHECK-NEXT:          0 |   char b
-// CHECK-NEXT:         16 |   AlignedInt[1] a
+// CHECK-NEXT:         16 |   AlignedStruct2[1] a
 // CHECK-NEXT:            | [sizeof=32, align=16]
 // CHECK: *** Dumping AST Record Layout
 // CHECK-NEXT:          0 | struct C
 // CHECK-NEXT:          0 |   char b
-// CHECK-NEXT:         16 |   AlignedInt[] a
+// CHECK-NEXT:         16 |   AlignedStruct2[] a
 // CHECK-NEXT:            | [sizeof=16, align=16]
 
 #pragma pack(pop)

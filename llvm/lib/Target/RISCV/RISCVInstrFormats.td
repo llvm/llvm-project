@@ -1,4 +1,4 @@
-//===-- RISCVInstrFormats.td - RISCV Instruction Formats ---*- tablegen -*-===//
+//===-- RISCVInstrFormats.td - RISC-V Instruction Formats --*- tablegen -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -47,7 +47,12 @@ def InstFormatCS     : InstFormat<13>;
 def InstFormatCA     : InstFormat<14>;
 def InstFormatCB     : InstFormat<15>;
 def InstFormatCJ     : InstFormat<16>;
-def InstFormatOther  : InstFormat<17>;
+def InstFormatCU     : InstFormat<17>;
+def InstFormatCLB    : InstFormat<18>;
+def InstFormatCLH    : InstFormat<19>;
+def InstFormatCSB    : InstFormat<20>;
+def InstFormatCSH    : InstFormat<21>;
+def InstFormatOther  : InstFormat<22>;
 
 class RISCVVConstraint<bits<3> val> {
   bits<3> Value = val;
@@ -125,12 +130,14 @@ def lookupRISCVOpcodeByName : SearchIndex {
 }
 def OPC_LOAD      : RISCVOpcode<"LOAD",      0b0000011>;
 def OPC_LOAD_FP   : RISCVOpcode<"LOAD_FP",   0b0000111>;
+def OPC_CUSTOM_0  : RISCVOpcode<"CUSTOM_0",  0b0001011>;
 def OPC_MISC_MEM  : RISCVOpcode<"MISC_MEM",  0b0001111>;
 def OPC_OP_IMM    : RISCVOpcode<"OP_IMM",    0b0010011>;
 def OPC_AUIPC     : RISCVOpcode<"AUIPC",     0b0010111>;
 def OPC_OP_IMM_32 : RISCVOpcode<"OP_IMM_32", 0b0011011>;
 def OPC_STORE     : RISCVOpcode<"STORE",     0b0100011>;
 def OPC_STORE_FP  : RISCVOpcode<"STORE_FP",  0b0100111>;
+def OPC_CUSTOM_1  : RISCVOpcode<"CUSTOM_1",  0b0101011>;
 def OPC_AMO       : RISCVOpcode<"AMO",       0b0101111>;
 def OPC_OP        : RISCVOpcode<"OP",        0b0110011>;
 def OPC_LUI       : RISCVOpcode<"LUI",       0b0110111>;
@@ -141,10 +148,13 @@ def OPC_NMSUB     : RISCVOpcode<"NMSUB",     0b1001011>;
 def OPC_NMADD     : RISCVOpcode<"NMADD",     0b1001111>;
 def OPC_OP_FP     : RISCVOpcode<"OP_FP",     0b1010011>;
 def OPC_OP_V      : RISCVOpcode<"OP_V",      0b1010111>;
+def OPC_CUSTOM_2  : RISCVOpcode<"CUSTOM_2",  0b1011011>;
 def OPC_BRANCH    : RISCVOpcode<"BRANCH",    0b1100011>;
 def OPC_JALR      : RISCVOpcode<"JALR",      0b1100111>;
 def OPC_JAL       : RISCVOpcode<"JAL",       0b1101111>;
 def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
+def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
+def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
@@ -200,6 +210,13 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
 
   bit UsesMaskPolicy = 0;
   let TSFlags{18} = UsesMaskPolicy;
+
+  // Indicates that the result can be considered sign extended from bit 31. Some
+  // instructions with this flag aren't W instructions, but are either sign
+  // extended from a smaller size, always outputs a small integer, or put zeros
+  // in bits 63:31. Used by the SExtWRemoval pass.
+  bit IsSignExtendingOpW = 0;
+  let TSFlags{19} = IsSignExtendingOpW;
 }
 
 // Pseudo instructions
@@ -209,7 +226,7 @@ class Pseudo<dag outs, dag ins, list<dag> pattern, string opcodestr = "", string
   let isCodeGenOnly = 1;
 }
 
-class PseudoQuietFCMP<RegisterClass Ty>
+class PseudoQuietFCMP<DAGOperand Ty>
     : Pseudo<(outs GPR:$rd), (ins Ty:$rs1, Ty:$rs2), []> {
   let hasSideEffects = 1;
   let mayLoad = 0;

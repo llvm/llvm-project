@@ -15,6 +15,8 @@
 
 #include "mlir/Support/LLVM.h"
 
+#include <string>
+
 namespace mlir {
 struct LogicalResult;
 class Operation;
@@ -23,6 +25,9 @@ class Value;
 namespace gpu {
 class GPUFuncOp;
 class LaunchOp;
+
+/// Returns the default annotation name for GPU binary blobs.
+std::string getDefaultGpuBinaryAnnotation();
 } // namespace gpu
 
 /// Get a gpu.func created from outlining the region of a gpu.launch op with the

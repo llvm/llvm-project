@@ -8,7 +8,7 @@
 
 ; PR27708
 
-define <7 x i64> @load7_aligned(<7 x i64>* %x) {
+define <7 x i64> @load7_aligned(ptr %x) {
 ; X86-SSE-LABEL: load7_aligned:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -63,11 +63,11 @@ define <7 x i64> @load7_aligned(<7 x i64>* %x) {
 ; X64-AVX-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
-  %x1 = load <7 x i64>, <7 x i64>* %x
+  %x1 = load <7 x i64>, ptr %x
   ret <7 x i64> %x1
 }
 
-define <7 x i64> @load7_unaligned(<7 x i64>* %x) {
+define <7 x i64> @load7_unaligned(ptr %x) {
 ; X86-SSE-LABEL: load7_unaligned:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -123,13 +123,13 @@ define <7 x i64> @load7_unaligned(<7 x i64>* %x) {
 ; X64-AVX-NEXT:    vmovaps %ymm0, (%rdi)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
-  %x1 = load <7 x i64>, <7 x i64>* %x, align 1
+  %x1 = load <7 x i64>, ptr %x, align 1
   ret <7 x i64> %x1
 }
 
 ; PR42305 - https://bugs.llvm.org/show_bug.cgi?id=42305
 
-define void @load_split(<8 x float>* %ld, <4 x float>* %st1, <4 x float>* %st2) nounwind {
+define void @load_split(ptr %ld, ptr %st1, ptr %st2) nounwind {
 ; X86-SSE-LABEL: load_split:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -167,15 +167,15 @@ define void @load_split(<8 x float>* %ld, <4 x float>* %st1, <4 x float>* %st2) 
 ; X64-AVX-NEXT:    vextractf128 $1, %ymm0, (%rdx)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
-  %t256 = load <8 x float>, <8 x float>* %ld, align 1
+  %t256 = load <8 x float>, ptr %ld, align 1
   %b128 = shufflevector <8 x float> %t256, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  store <4 x float> %b128, <4 x float>* %st1, align 1
+  store <4 x float> %b128, ptr %st1, align 1
   %t128 = shufflevector <8 x float> %t256, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  store <4 x float> %t128, <4 x float>* %st2, align 1
+  store <4 x float> %t128, ptr %st2, align 1
   ret void
 }
 
-define void @load_split_more(float* %src, i32* %idx, float* %dst) nounwind {
+define void @load_split_more(ptr %src, ptr %idx, ptr %dst) nounwind {
 ; X86-SSE-LABEL: load_split_more:
 ; X86-SSE:       # %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -221,20 +221,17 @@ define void @load_split_more(float* %src, i32* %idx, float* %dst) nounwind {
 ; X64-AVX-NEXT:    vextractf128 $1, %ymm0, (%rdx,%rax,4)
 ; X64-AVX-NEXT:    vzeroupper
 ; X64-AVX-NEXT:    retq
-  %v.i = bitcast float* %src to <8 x float>*
-  %tmp = load <8 x float>, <8 x float>* %v.i, align 1
-  %tmp1 = load i32, i32* %idx, align 4
+  %tmp = load <8 x float>, ptr %src, align 1
+  %tmp1 = load i32, ptr %idx, align 4
   %idx.ext = sext i32 %tmp1 to i64
-  %add.ptr1 = getelementptr inbounds float, float* %dst, i64 %idx.ext
+  %add.ptr1 = getelementptr inbounds float, ptr %dst, i64 %idx.ext
   %extract = shufflevector <8 x float> %tmp, <8 x float> undef, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-  %v.i11 = bitcast float* %add.ptr1 to <4 x float>*
-  store <4 x float> %extract, <4 x float>* %v.i11, align 1
-  %arrayidx2 = getelementptr inbounds i32, i32* %idx, i64 1
-  %tmp2 = load i32, i32* %arrayidx2, align 4
+  store <4 x float> %extract, ptr %add.ptr1, align 1
+  %arrayidx2 = getelementptr inbounds i32, ptr %idx, i64 1
+  %tmp2 = load i32, ptr %arrayidx2, align 4
   %idx.ext3 = sext i32 %tmp2 to i64
-  %add.ptr4 = getelementptr inbounds float, float* %dst, i64 %idx.ext3
+  %add.ptr4 = getelementptr inbounds float, ptr %dst, i64 %idx.ext3
   %extract5 = shufflevector <8 x float> %tmp, <8 x float> undef, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
-  %v.i10 = bitcast float* %add.ptr4 to <4 x float>*
-  store <4 x float> %extract5, <4 x float>* %v.i10, align 1
+  store <4 x float> %extract5, ptr %add.ptr4, align 1
   ret void
 }

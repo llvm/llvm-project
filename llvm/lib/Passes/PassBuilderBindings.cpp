@@ -53,7 +53,7 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
 
   Module *Mod = unwrap(M);
   PassInstrumentationCallbacks PIC;
-  PassBuilder PB(Machine, PassOpts->PTO, None, &PIC);
+  PassBuilder PB(Machine, PassOpts->PTO, std::nullopt, &PIC);
 
   LoopAnalysisManager LAM;
   FunctionAnalysisManager FAM;
@@ -65,8 +65,8 @@ LLVMErrorRef LLVMRunPasses(LLVMModuleRef M, const char *Passes,
   PB.registerModuleAnalyses(MAM);
   PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
 
-  StandardInstrumentations SI(Debug, VerifyEach);
-  SI.registerCallbacks(PIC, &FAM);
+  StandardInstrumentations SI(Mod->getContext(), Debug, VerifyEach);
+  SI.registerCallbacks(PIC, &MAM);
   ModulePassManager MPM;
   if (VerifyEach) {
     MPM.addPass(VerifierPass());

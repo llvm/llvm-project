@@ -8,7 +8,7 @@
 define void @fence_singlethread() {
 ; CHECK-LABEL: fence_singlethread:
 ; CHECK-NOT: dmb
-; CHECK: @ COMPILER BARRIER
+; CHECK: @MEMBARRIER
 ; CHECK-NOT: dmb
 
   fence syncscope("singlethread") seq_cst

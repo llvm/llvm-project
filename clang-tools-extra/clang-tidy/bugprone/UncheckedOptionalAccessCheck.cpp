@@ -9,66 +9,62 @@
 #include "UncheckedOptionalAccessCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/AST/DeclTemplate.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
-#include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/Models/UncheckedOptionalAccessModel.h"
-#include "clang/Analysis/FlowSensitive/SourceLocationsLattice.h"
 #include "clang/Analysis/FlowSensitive/WatchedLiteralsSolver.h"
 #include "clang/Basic/SourceLocation.h"
-#include "llvm/ADT/Any.h"
-#include "llvm/ADT/Optional.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 using ast_matchers::MatchFinder;
-using dataflow::SourceLocationsLattice;
+using dataflow::UncheckedOptionalAccessDiagnoser;
 using dataflow::UncheckedOptionalAccessModel;
-using llvm::Optional;
+using dataflow::UncheckedOptionalAccessModelOptions;
 
 static constexpr llvm::StringLiteral FuncID("fun");
 
-static Optional<SourceLocationsLattice>
-analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx) {
+static std::optional<std::vector<SourceLocation>>
+analyzeFunction(const FunctionDecl &FuncDecl, ASTContext &ASTCtx,
+                UncheckedOptionalAccessModelOptions ModelOptions) {
   using dataflow::ControlFlowContext;
   using dataflow::DataflowAnalysisState;
   using llvm::Expected;
 
   Expected<ControlFlowContext> Context =
-      ControlFlowContext::build(&FuncDecl, FuncDecl.getBody(), &ASTCtx);
+      ControlFlowContext::build(FuncDecl, *FuncDecl.getBody(), ASTCtx);
   if (!Context)
-    return llvm::None;
+    return std::nullopt;
 
   dataflow::DataflowAnalysisContext AnalysisContext(
       std::make_unique<dataflow::WatchedLiteralsSolver>());
   dataflow::Environment Env(AnalysisContext, FuncDecl);
   UncheckedOptionalAccessModel Analysis(ASTCtx);
-  Expected<std::vector<Optional<DataflowAnalysisState<SourceLocationsLattice>>>>
-      BlockToOutputState =
-          dataflow::runDataflowAnalysis(*Context, Analysis, Env);
+  UncheckedOptionalAccessDiagnoser Diagnoser(ModelOptions);
+  std::vector<SourceLocation> Diagnostics;
+  Expected<std::vector<std::optional<
+      DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>>>>
+      BlockToOutputState = dataflow::runDataflowAnalysis(
+          *Context, Analysis, Env,
+          [&ASTCtx, &Diagnoser, &Diagnostics](
+              const CFGElement &Elt,
+              const DataflowAnalysisState<UncheckedOptionalAccessModel::Lattice>
+                  &State) mutable {
+            auto EltDiagnostics = Diagnoser.diagnose(ASTCtx, &Elt, State.Env);
+            llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
+          });
   if (!BlockToOutputState)
-    return llvm::None;
-  assert(Context->getCFG().getExit().getBlockID() < BlockToOutputState->size());
+    return std::nullopt;
 
-  const Optional<DataflowAnalysisState<SourceLocationsLattice>>
-      &ExitBlockState =
-          (*BlockToOutputState)[Context->getCFG().getExit().getBlockID()];
-  // `runDataflowAnalysis` doesn't guarantee that the exit block is visited;
-  // for example, when it is unreachable.
-  // FIXME: Diagnose violations even when the exit block is unreachable.
-  if (!ExitBlockState.hasValue())
-    return llvm::None;
-
-  return std::move(ExitBlockState->Lattice);
+  return Diagnostics;
 }
 
 void UncheckedOptionalAccessCheck::registerMatchers(MatchFinder *Finder) {
@@ -97,12 +93,10 @@ void UncheckedOptionalAccessCheck::check(
   if (FuncDecl->isTemplated())
     return;
 
-  if (Optional<SourceLocationsLattice> Errors =
-          analyzeFunction(*FuncDecl, *Result.Context))
-    for (const SourceLocation &Loc : Errors->getSourceLocations())
+  if (std::optional<std::vector<SourceLocation>> Errors =
+          analyzeFunction(*FuncDecl, *Result.Context, ModelOptions))
+    for (const SourceLocation &Loc : *Errors)
       diag(Loc, "unchecked access to optional value");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

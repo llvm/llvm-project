@@ -1,6 +1,6 @@
 # REQUIRES: x86
 # RUN: llvm-mc -triple x86_64-windows-msvc %s -filetype=obj -o %t.obj
-# RUN: lld-link %t.obj -guard:cf -out:%t.exe -opt:icf -entry:main
+# RUN: lld-link %t.obj -guard:cf,nolongjmp -out:%t.exe -opt:icf -entry:main
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s --check-prefix=CHECK
 
 # This assembly is meant to mimic what CL emits for this kind of C code:
@@ -24,7 +24,10 @@
 # CHECK:   GuardCFCheckDispatch: 0x0
 # CHECK:   GuardCFFunctionTable: 0x14000{{.*}}
 # CHECK:   GuardCFFunctionCount: 2
-# CHECK:   GuardFlags: 0x500
+# CHECK:   GuardFlags [ (0x500)
+# CHECK:     CF_FUNCTION_TABLE_PRESENT (0x400)
+# CHECK:     CF_INSTRUMENTED (0x100)
+# CHECK:   ]
 # CHECK:   GuardAddressTakenIatEntryTable: 0x0
 # CHECK:   GuardAddressTakenIatEntryCount: 0
 # CHECK:   GuardLongJumpTargetTable: 0x0

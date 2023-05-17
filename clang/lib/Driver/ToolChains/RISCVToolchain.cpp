@@ -1,4 +1,4 @@
-//===--- RISCVToolchain.cpp - RISCV ToolChain Implementations ---*- C++ -*-===//
+//===--- RISCVToolchain.cpp - RISC-V ToolChain Implementations --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -46,7 +46,7 @@ bool RISCVToolChain::hasGCCToolchain(const Driver &D,
   return llvm::sys::fs::exists(GCCDir);
 }
 
-/// RISCV Toolchain
+/// RISC-V Toolchain
 RISCVToolChain::RISCVToolChain(const Driver &D, const llvm::Triple &Triple,
                                const ArgList &Args)
     : Generic_ELF(D, Triple, Args) {
@@ -163,6 +163,7 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else {
     CmdArgs.push_back("elf32lriscv");
   }
+  CmdArgs.push_back("-X");
 
   std::string Linker = getToolChain().GetLinkerPath();
 
@@ -200,8 +201,11 @@ void RISCV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   if (!Args.hasArg(options::OPT_nostdlib) &&
       !Args.hasArg(options::OPT_nodefaultlibs)) {
-    if (ToolChain.ShouldLinkCXXStdlib(Args))
-      ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+    if (D.CCCIsCXX()) {
+      if (ToolChain.ShouldLinkCXXStdlib(Args))
+        ToolChain.AddCXXStdlibLibArgs(Args, CmdArgs);
+      CmdArgs.push_back("-lm");
+    }
     CmdArgs.push_back("--start-group");
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lgloss");

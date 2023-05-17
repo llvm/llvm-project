@@ -552,3 +552,72 @@ define <4 x float> @PR37502(float %x, float %y) {
   ret <4 x float> %i3
 }
 
+define void @pr60168_buildvector_of_zeros_and_undef(<2 x i32> %x, ptr %out) {
+; SSE2-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
+; SSE2-32:       # %bb.0:
+; SSE2-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE2-32-NEXT:    paddd %xmm0, %xmm0
+; SSE2-32-NEXT:    pxor %xmm1, %xmm1
+; SSE2-32-NEXT:    psubd %xmm0, %xmm1
+; SSE2-32-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-32-NEXT:    psrad $31, %xmm0
+; SSE2-32-NEXT:    pxor %xmm0, %xmm1
+; SSE2-32-NEXT:    psubd %xmm0, %xmm1
+; SSE2-32-NEXT:    movq %xmm1, (%eax)
+; SSE2-32-NEXT:    retl
+;
+; SSE2-64-LABEL: pr60168_buildvector_of_zeros_and_undef:
+; SSE2-64:       # %bb.0:
+; SSE2-64-NEXT:    paddd %xmm0, %xmm0
+; SSE2-64-NEXT:    pxor %xmm1, %xmm1
+; SSE2-64-NEXT:    psubd %xmm0, %xmm1
+; SSE2-64-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-64-NEXT:    psrad $31, %xmm0
+; SSE2-64-NEXT:    pxor %xmm0, %xmm1
+; SSE2-64-NEXT:    psubd %xmm0, %xmm1
+; SSE2-64-NEXT:    movq %xmm1, (%rdi)
+; SSE2-64-NEXT:    retq
+;
+; SSE41-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
+; SSE41-32:       # %bb.0:
+; SSE41-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; SSE41-32-NEXT:    paddd %xmm0, %xmm0
+; SSE41-32-NEXT:    pxor %xmm1, %xmm1
+; SSE41-32-NEXT:    psubd %xmm0, %xmm1
+; SSE41-32-NEXT:    pabsd %xmm1, %xmm0
+; SSE41-32-NEXT:    movq %xmm0, (%eax)
+; SSE41-32-NEXT:    retl
+;
+; SSE41-64-LABEL: pr60168_buildvector_of_zeros_and_undef:
+; SSE41-64:       # %bb.0:
+; SSE41-64-NEXT:    paddd %xmm0, %xmm0
+; SSE41-64-NEXT:    pxor %xmm1, %xmm1
+; SSE41-64-NEXT:    psubd %xmm0, %xmm1
+; SSE41-64-NEXT:    pabsd %xmm1, %xmm0
+; SSE41-64-NEXT:    movq %xmm0, (%rdi)
+; SSE41-64-NEXT:    retq
+;
+; AVX-32-LABEL: pr60168_buildvector_of_zeros_and_undef:
+; AVX-32:       # %bb.0:
+; AVX-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
+; AVX-32-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; AVX-32-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-32-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX-32-NEXT:    vpabsd %xmm0, %xmm0
+; AVX-32-NEXT:    vmovq %xmm0, (%eax)
+; AVX-32-NEXT:    retl
+;
+; AVX-64-LABEL: pr60168_buildvector_of_zeros_and_undef:
+; AVX-64:       # %bb.0:
+; AVX-64-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
+; AVX-64-NEXT:    vpxor %xmm1, %xmm1, %xmm1
+; AVX-64-NEXT:    vpsubd %xmm0, %xmm1, %xmm0
+; AVX-64-NEXT:    vpabsd %xmm0, %xmm0
+; AVX-64-NEXT:    vmovq %xmm0, (%rdi)
+; AVX-64-NEXT:    retq
+  %i2 = mul <2 x i32> %x, <i32 -2, i32 -2>
+  %i3 = call <2 x i32> @llvm.abs.v2i32(<2 x i32> %i2, i1 false)
+  store <2 x i32> %i3, ptr %out
+  ret void
+}
+declare <2 x i32> @llvm.abs.v2i32(<2 x i32>, i1 immarg)

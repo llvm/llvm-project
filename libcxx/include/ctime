@@ -47,7 +47,14 @@ int timespec_get( struct timespec *ts, int base); // C++17
 
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
-#include <time.h>
+
+// <time.h> is not provided by libc++
+#if __has_include(<time.h>)
+#  include <time.h>
+#  ifdef _LIBCPP_TIME_H
+#    error "If libc++ starts defining <time.h>, the __has_include check should move to libc++'s <time.h>"
+#  endif
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -59,7 +66,7 @@ using ::clock_t _LIBCPP_USING_IF_EXISTS;
 using ::size_t _LIBCPP_USING_IF_EXISTS;
 using ::time_t _LIBCPP_USING_IF_EXISTS;
 using ::tm _LIBCPP_USING_IF_EXISTS;
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 using ::timespec _LIBCPP_USING_IF_EXISTS;
 #endif
 using ::clock _LIBCPP_USING_IF_EXISTS;
@@ -71,7 +78,7 @@ using ::ctime _LIBCPP_USING_IF_EXISTS;
 using ::gmtime _LIBCPP_USING_IF_EXISTS;
 using ::localtime _LIBCPP_USING_IF_EXISTS;
 using ::strftime _LIBCPP_USING_IF_EXISTS;
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 using ::timespec_get _LIBCPP_USING_IF_EXISTS;
 #endif
 

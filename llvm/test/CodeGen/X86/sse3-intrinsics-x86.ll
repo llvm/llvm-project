@@ -102,7 +102,7 @@ define <4 x float> @test_x86_sse3_hsub_ps(<4 x float> %a0, <4 x float> %a1) {
 declare <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float>, <4 x float>) nounwind readnone
 
 
-define <16 x i8> @test_x86_sse3_ldu_dq(i8* %a0) {
+define <16 x i8> @test_x86_sse3_ldu_dq(ptr %a0) {
 ; X86-SSE-LABEL: test_x86_sse3_ldu_dq:
 ; X86-SSE:       ## %bb.0:
 ; X86-SSE-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -124,14 +124,14 @@ define <16 x i8> @test_x86_sse3_ldu_dq(i8* %a0) {
 ; X64-AVX:       ## %bb.0:
 ; X64-AVX-NEXT:    vlddqu (%rdi), %xmm0 ## encoding: [0xc5,0xfb,0xf0,0x07]
 ; X64-AVX-NEXT:    retq ## encoding: [0xc3]
-  %res = call <16 x i8> @llvm.x86.sse3.ldu.dq(i8* %a0) ; <<16 x i8>> [#uses=1]
+  %res = call <16 x i8> @llvm.x86.sse3.ldu.dq(ptr %a0) ; <<16 x i8>> [#uses=1]
   ret <16 x i8> %res
 }
-declare <16 x i8> @llvm.x86.sse3.ldu.dq(i8*) nounwind readonly
+declare <16 x i8> @llvm.x86.sse3.ldu.dq(ptr) nounwind readonly
 
 ; Make sure instructions with no AVX equivalents, but are associated with SSEX feature flags still work
 
-define void @monitor(i8* %P, i32 %E, i32 %H) nounwind {
+define void @monitor(ptr %P, i32 %E, i32 %H) nounwind {
 ; X86-LABEL: monitor:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax ## encoding: [0x8b,0x44,0x24,0x04]
@@ -146,10 +146,10 @@ define void @monitor(i8* %P, i32 %E, i32 %H) nounwind {
 ; X64-NEXT:    movq %rdi, %rax ## encoding: [0x48,0x89,0xf8]
 ; X64-NEXT:    monitor ## encoding: [0x0f,0x01,0xc8]
 ; X64-NEXT:    retq ## encoding: [0xc3]
-  tail call void @llvm.x86.sse3.monitor(i8* %P, i32 %E, i32 %H)
+  tail call void @llvm.x86.sse3.monitor(ptr %P, i32 %E, i32 %H)
   ret void
 }
-declare void @llvm.x86.sse3.monitor(i8*, i32, i32) nounwind
+declare void @llvm.x86.sse3.monitor(ptr, i32, i32) nounwind
 
 define void @mwait(i32 %E, i32 %H) nounwind {
 ; X86-LABEL: mwait:

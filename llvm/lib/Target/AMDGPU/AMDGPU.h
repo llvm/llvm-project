@@ -26,6 +26,8 @@ FunctionPass *createAMDGPUPostLegalizeCombiner(bool IsOptNone);
 FunctionPass *createAMDGPURegBankCombiner(bool IsOptNone);
 void initializeAMDGPURegBankCombinerPass(PassRegistry &);
 
+void initializeAMDGPURegBankSelectPass(PassRegistry &);
+
 // SI Passes
 FunctionPass *createGCNDPPCombinePass();
 FunctionPass *createSIAnnotateControlFlowPass();
@@ -47,13 +49,13 @@ FunctionPass *createSIFormMemoryClausesPass();
 FunctionPass *createSIPostRABundlerPass();
 FunctionPass *createAMDGPUSimplifyLibCallsPass(const TargetMachine *);
 FunctionPass *createAMDGPUUseNativeCallsPass();
+ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPreparePass();
 FunctionPass *createAMDGPUMachineCFGStructurizerPass();
 FunctionPass *createAMDGPUPropagateAttributesEarlyPass(const TargetMachine *);
 ModulePass *createAMDGPUPropagateAttributesLatePass(const TargetMachine *);
 FunctionPass *createAMDGPURewriteOutArgumentsPass();
-ModulePass *createAMDGPUReplaceLDSUseWithPointerPass();
 ModulePass *createAMDGPULowerModuleLDSPass();
 FunctionPass *createSIModeRegisterPass();
 FunctionPass *createGCNPreRAOptimizationsPass();
@@ -91,9 +93,9 @@ ModulePass *createAMDGPULowerIntrinsicsPass();
 void initializeAMDGPULowerIntrinsicsPass(PassRegistry &);
 extern char &AMDGPULowerIntrinsicsID;
 
-ModulePass *createAMDGPUCtorDtorLoweringPass();
-void initializeAMDGPUCtorDtorLoweringPass(PassRegistry &);
-extern char &AMDGPUCtorDtorLoweringID;
+ModulePass *createAMDGPUCtorDtorLoweringLegacyPass();
+void initializeAMDGPUCtorDtorLoweringLegacyPass(PassRegistry &);
+extern char &AMDGPUCtorDtorLoweringLegacyPassID;
 
 FunctionPass *createAMDGPULowerKernelArgumentsPass();
 void initializeAMDGPULowerKernelArgumentsPass(PassRegistry &);
@@ -139,14 +141,6 @@ struct AMDGPUPropagateAttributesLatePass
 
 private:
   TargetMachine &TM;
-};
-
-void initializeAMDGPUReplaceLDSUseWithPointerPass(PassRegistry &);
-extern char &AMDGPUReplaceLDSUseWithPointerID;
-
-struct AMDGPUReplaceLDSUseWithPointerPass
-    : PassInfoMixin<AMDGPUReplaceLDSUseWithPointerPass> {
-  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 
 void initializeAMDGPULowerModuleLDSPass(PassRegistry &);
@@ -239,10 +233,17 @@ private:
   TargetMachine &TM;
 };
 
+struct AMDGPUAtomicOptimizerPass : PassInfoMixin<AMDGPUAtomicOptimizerPass> {
+  AMDGPUAtomicOptimizerPass(TargetMachine &TM) : TM(TM) {}
+  PreservedAnalyses run(Function &F, FunctionAnalysisManager &AM);
+
+private:
+  TargetMachine &TM;
+};
+
 Pass *createAMDGPUStructurizeCFGPass();
-FunctionPass *createAMDGPUISelDag(
-  TargetMachine *TM = nullptr,
-  CodeGenOpt::Level OptLevel = CodeGenOpt::Default);
+FunctionPass *createAMDGPUISelDag(TargetMachine &TM,
+                                  CodeGenOpt::Level OptLevel);
 ModulePass *createAMDGPUAlwaysInlinePass(bool GlobalOpt = true);
 
 struct AMDGPUAlwaysInlinePass : PassInfoMixin<AMDGPUAlwaysInlinePass> {
@@ -287,8 +288,15 @@ extern char &AMDGPUAnnotateUniformValuesPassID;
 void initializeAMDGPUCodeGenPreparePass(PassRegistry&);
 extern char &AMDGPUCodeGenPrepareID;
 
+void initializeAMDGPURemoveIncompatibleFunctionsPass(PassRegistry &);
+extern char &AMDGPURemoveIncompatibleFunctionsID;
+
 void initializeAMDGPULateCodeGenPreparePass(PassRegistry &);
 extern char &AMDGPULateCodeGenPrepareID;
+
+FunctionPass *createAMDGPURewriteUndefForPHIPass();
+void initializeAMDGPURewriteUndefForPHIPass(PassRegistry &);
+extern char &AMDGPURewriteUndefForPHIPassID;
 
 void initializeSIAnnotateControlFlowPass(PassRegistry&);
 extern char &SIAnnotateControlFlowPassID;
@@ -298,6 +306,12 @@ extern char &SIMemoryLegalizerID;
 
 void initializeSIModeRegisterPass(PassRegistry&);
 extern char &SIModeRegisterID;
+
+void initializeAMDGPUReleaseVGPRsPass(PassRegistry &);
+extern char &AMDGPUReleaseVGPRsID;
+
+void initializeAMDGPUInsertDelayAluPass(PassRegistry &);
+extern char &AMDGPUInsertDelayAluID;
 
 void initializeSIInsertHardClausesPass(PassRegistry &);
 extern char &SIInsertHardClausesID;
@@ -310,6 +324,9 @@ extern char &SIFormMemoryClausesID;
 
 void initializeSIPostRABundlerPass(PassRegistry&);
 extern char &SIPostRABundlerID;
+
+void initializeGCNCreateVOPDPass(PassRegistry &);
+extern char &GCNCreateVOPDID;
 
 void initializeAMDGPUUnifyDivergentExitNodesPass(PassRegistry&);
 extern char &AMDGPUUnifyDivergentExitNodesID;
@@ -351,53 +368,60 @@ enum TargetIndex {
 /// a separate piece of memory that is unique from other
 /// memory locations.
 namespace AMDGPUAS {
-  enum : unsigned {
-    // The maximum value for flat, generic, local, private, constant and region.
-    MAX_AMDGPU_ADDRESS = 7,
+enum : unsigned {
+  // The maximum value for flat, generic, local, private, constant and region.
+  MAX_AMDGPU_ADDRESS = 8,
 
-    FLAT_ADDRESS = 0,     ///< Address space for flat memory.
-    GLOBAL_ADDRESS = 1,   ///< Address space for global memory (RAT0, VTX0).
-    REGION_ADDRESS = 2,   ///< Address space for region memory. (GDS)
+  FLAT_ADDRESS = 0,   ///< Address space for flat memory.
+  GLOBAL_ADDRESS = 1, ///< Address space for global memory (RAT0, VTX0).
+  REGION_ADDRESS = 2, ///< Address space for region memory. (GDS)
 
-    CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
-    LOCAL_ADDRESS = 3,    ///< Address space for local memory.
-    PRIVATE_ADDRESS = 5,  ///< Address space for private memory.
+  CONSTANT_ADDRESS = 4, ///< Address space for constant memory (VTX2).
+  LOCAL_ADDRESS = 3,    ///< Address space for local memory.
+  PRIVATE_ADDRESS = 5,  ///< Address space for private memory.
 
-    CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory.
+  CONSTANT_ADDRESS_32BIT = 6, ///< Address space for 32-bit constant memory.
 
-    BUFFER_FAT_POINTER = 7, ///< Address space for 160-bit buffer fat pointers.
+  BUFFER_FAT_POINTER = 7, ///< Address space for 160-bit buffer fat pointers.
+                          ///< Not used in backend.
 
-    /// Address space for direct addressable parameter memory (CONST0).
-    PARAM_D_ADDRESS = 6,
-    /// Address space for indirect addressable parameter memory (VTX1).
-    PARAM_I_ADDRESS = 7,
+  BUFFER_RESOURCE = 8, ///< Address space for 128-bit buffer resources.
 
-    // Do not re-order the CONSTANT_BUFFER_* enums.  Several places depend on
-    // this order to be able to dynamically index a constant buffer, for
-    // example:
-    //
-    // ConstantBufferAS = CONSTANT_BUFFER_0 + CBIdx
+  /// Internal address spaces. Can be freely renumbered.
+  STREAMOUT_REGISTER = 128, ///< Address space for GS NGG Streamout registers.
+  /// end Internal address spaces.
 
-    CONSTANT_BUFFER_0 = 8,
-    CONSTANT_BUFFER_1 = 9,
-    CONSTANT_BUFFER_2 = 10,
-    CONSTANT_BUFFER_3 = 11,
-    CONSTANT_BUFFER_4 = 12,
-    CONSTANT_BUFFER_5 = 13,
-    CONSTANT_BUFFER_6 = 14,
-    CONSTANT_BUFFER_7 = 15,
-    CONSTANT_BUFFER_8 = 16,
-    CONSTANT_BUFFER_9 = 17,
-    CONSTANT_BUFFER_10 = 18,
-    CONSTANT_BUFFER_11 = 19,
-    CONSTANT_BUFFER_12 = 20,
-    CONSTANT_BUFFER_13 = 21,
-    CONSTANT_BUFFER_14 = 22,
-    CONSTANT_BUFFER_15 = 23,
+  /// Address space for direct addressable parameter memory (CONST0).
+  PARAM_D_ADDRESS = 6,
+  /// Address space for indirect addressable parameter memory (VTX1).
+  PARAM_I_ADDRESS = 7,
 
-    // Some places use this if the address space can't be determined.
-    UNKNOWN_ADDRESS_SPACE = ~0u,
-  };
+  // Do not re-order the CONSTANT_BUFFER_* enums.  Several places depend on
+  // this order to be able to dynamically index a constant buffer, for
+  // example:
+  //
+  // ConstantBufferAS = CONSTANT_BUFFER_0 + CBIdx
+
+  CONSTANT_BUFFER_0 = 8,
+  CONSTANT_BUFFER_1 = 9,
+  CONSTANT_BUFFER_2 = 10,
+  CONSTANT_BUFFER_3 = 11,
+  CONSTANT_BUFFER_4 = 12,
+  CONSTANT_BUFFER_5 = 13,
+  CONSTANT_BUFFER_6 = 14,
+  CONSTANT_BUFFER_7 = 15,
+  CONSTANT_BUFFER_8 = 16,
+  CONSTANT_BUFFER_9 = 17,
+  CONSTANT_BUFFER_10 = 18,
+  CONSTANT_BUFFER_11 = 19,
+  CONSTANT_BUFFER_12 = 20,
+  CONSTANT_BUFFER_13 = 21,
+  CONSTANT_BUFFER_14 = 22,
+  CONSTANT_BUFFER_15 = 23,
+
+  // Some places use this if the address space can't be determined.
+  UNKNOWN_ADDRESS_SPACE = ~0u,
+};
 }
 
 namespace AMDGPU {
@@ -407,6 +431,12 @@ inline bool isFlatGlobalAddrSpace(unsigned AS) {
   return AS == AMDGPUAS::GLOBAL_ADDRESS ||
          AS == AMDGPUAS::FLAT_ADDRESS ||
          AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
+}
+
+inline bool isExtendedGlobalAddrSpace(unsigned AS) {
+  return AS == AMDGPUAS::GLOBAL_ADDRESS || AS == AMDGPUAS::CONSTANT_ADDRESS ||
+         AS == AMDGPUAS::CONSTANT_ADDRESS_32BIT ||
          AS > AMDGPUAS::MAX_AMDGPU_ADDRESS;
 }
 }

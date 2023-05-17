@@ -170,8 +170,6 @@ public:
   static bool classof(const MCExpr *E) {
     return E->getKind() == MCExpr::Target;
   }
-
-  static bool classof(const AArch64MCExpr *) { return true; }
 };
 } // end namespace llvm
 

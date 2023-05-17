@@ -50,8 +50,7 @@ void M68kSubtarget::anchor() {}
 
 M68kSubtarget::M68kSubtarget(const Triple &TT, StringRef CPU, StringRef FS,
                              const M68kTargetMachine &TM)
-    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS),
-      UserReservedRegister(M68k::NUM_TARGET_REGS), TM(TM), TSInfo(),
+    : M68kGenSubtargetInfo(TT, CPU, /*TuneCPU*/ CPU, FS), TM(TM), TSInfo(),
       InstrInfo(initializeSubtargetDependencies(CPU, TT, FS, TM)),
       FrameLowering(*this, this->getStackAlignment()), TLInfo(TM, *this),
       TargetTriple(TT) {
@@ -84,8 +83,6 @@ bool M68kSubtarget::isPositionIndependent() const {
 }
 
 bool M68kSubtarget::isLegalToCallImmediateAddr() const { return true; }
-
-bool M68kSubtarget::abiUsesSoftFloat() const { return true; }
 
 M68kSubtarget &M68kSubtarget::initializeSubtargetDependencies(
     StringRef CPU, Triple TT, StringRef FS, const M68kTargetMachine &TM) {

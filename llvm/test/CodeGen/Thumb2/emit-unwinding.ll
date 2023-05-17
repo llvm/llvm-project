@@ -21,6 +21,5 @@ declare void @foo2()
 
 define void @bar() {
   %a1 = alloca [3800 x i8], align 4
-  %p = getelementptr inbounds [3800 x i8], [3800 x i8]* %a1, i32 0, i32 0
   ret void
 }

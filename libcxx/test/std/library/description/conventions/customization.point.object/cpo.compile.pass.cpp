@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
+// TODO: make `join_view` non-experimental once D2770 is implemented.
+// UNSUPPORTED: !c++experimental
 
 // [customization.point.object]
 // [range.adaptor.object] "A range adaptor object is a customization point object..."

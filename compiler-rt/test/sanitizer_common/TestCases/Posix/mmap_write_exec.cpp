@@ -7,6 +7,9 @@
 // TODO: Fix option on Android, it hangs there for unknown reasons.
 // XFAIL: android
 
+// FIXME: Implement.
+// XFAIL: hwasan
+
 #if defined(__APPLE__)
 #include <Availability.h>
 #endif

@@ -6,7 +6,7 @@
 
 # RUN: ld.lld %t-lib.so %t.o -o %t.exe
 # RUN: llvm-readobj -r %t.exe | FileCheck --check-prefix=RELOC %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.exe | FileCheck --check-prefix=DIS %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.exe | FileCheck --check-prefix=DIS %s
 
 ## Checks if got access to dynamic objects is done through a got relative
 ## dynamic relocation and not using plt relative (R_AARCH64_JUMP_SLOT).

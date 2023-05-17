@@ -1,6 +1,6 @@
 # RUN: llc -o - %s -mtriple=arm-- -run-pass prologepilog | FileCheck %s
 --- |
-  define swiftcc i8* @need_emergency_slot(i8 *swiftself %v) {
+  define swiftcc ptr @need_emergency_slot(ptr swiftself %v) {
     ; Just a dummy to add a swiftself bit. The real code is in the MI below.
     unreachable
   }

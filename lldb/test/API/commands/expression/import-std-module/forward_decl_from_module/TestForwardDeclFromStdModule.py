@@ -10,8 +10,6 @@ import os
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     # We only emulate a fake libc++ in this test and don't use the real libc++,
     # but we still add the libc++ category so that this test is only run in
     # test configurations where libc++ is actually supposed to be tested.
@@ -39,4 +37,4 @@ class TestCase(TestBase):
         # Both `std::vector` and the type of the member have forward
         # declarations before their definitions.
         self.expect("expr --raw -- v",
-                    substrs=['(std::__1::vector<int>) $0 = {', 'f = nullptr', '}'])
+                    patterns=[r'\(std::__[^:]*::vector<int>\) \$0 = {', 'f = nullptr', '}'])

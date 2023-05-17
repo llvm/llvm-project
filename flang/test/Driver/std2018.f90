@@ -7,14 +7,8 @@
 ! RUN: %flang_fc1 -fsyntax-only -std=f2018 %s  2>&1 | FileCheck %s --check-prefix=GIVEN
 ! RUN: %flang_fc1 -fsyntax-only -pedantic %s  2>&1 | FileCheck %s --check-prefix=GIVEN
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITHOUT
-!-----------------------------------------
 ! WITHOUT-NOT: A DO loop should terminate with an END DO or CONTINUE
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITH
-!-----------------------------------------
 ! GIVEN: A DO loop should terminate with an END DO or CONTINUE
 
 subroutine foo2()

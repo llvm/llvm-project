@@ -127,15 +127,11 @@ bool llvm::isCriticalEdge(const Instruction *TI, const BasicBlock *Dest,
 // the outermost loop in the loop nest that contains BB.
 static const Loop *getOutermostLoop(const LoopInfo *LI, const BasicBlock *BB) {
   const Loop *L = LI->getLoopFor(BB);
-  if (L) {
-    while (const Loop *Parent = L->getParentLoop())
-      L = Parent;
-  }
-  return L;
+  return L ? L->getOutermostLoop() : nullptr;
 }
 
 bool llvm::isPotentiallyReachableFromMany(
-    SmallVectorImpl<BasicBlock *> &Worklist, BasicBlock *StopBB,
+    SmallVectorImpl<BasicBlock *> &Worklist, const BasicBlock *StopBB,
     const SmallPtrSetImpl<BasicBlock *> *ExclusionSet, const DominatorTree *DT,
     const LoopInfo *LI) {
   // When the stop block is unreachable, it's dominated from everywhere,
@@ -153,7 +149,7 @@ bool llvm::isPotentiallyReachableFromMany(
   // untrue.
   SmallPtrSet<const Loop *, 8> LoopsWithHoles;
   if (LI && ExclusionSet) {
-    for (auto BB : *ExclusionSet) {
+    for (auto *BB : *ExclusionSet) {
       if (const Loop *L = getOutermostLoop(LI, BB))
         LoopsWithHoles.insert(L);
     }
@@ -229,8 +225,7 @@ bool llvm::isPotentiallyReachable(
   SmallVector<BasicBlock*, 32> Worklist;
   Worklist.push_back(const_cast<BasicBlock*>(A));
 
-  return isPotentiallyReachableFromMany(Worklist, const_cast<BasicBlock *>(B),
-                                        ExclusionSet, DT, LI);
+  return isPotentiallyReachableFromMany(Worklist, B, ExclusionSet, DT, LI);
 }
 
 bool llvm::isPotentiallyReachable(
@@ -270,9 +265,8 @@ bool llvm::isPotentiallyReachable(
       return false;
     }
 
-    return isPotentiallyReachableFromMany(
-        Worklist, const_cast<BasicBlock *>(B->getParent()), ExclusionSet,
-        DT, LI);
+    return isPotentiallyReachableFromMany(Worklist, B->getParent(),
+                                          ExclusionSet, DT, LI);
   }
 
   return isPotentiallyReachable(

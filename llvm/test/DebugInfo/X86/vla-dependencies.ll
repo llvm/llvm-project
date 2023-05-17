@@ -16,7 +16,7 @@
 ; #define DECLARE_ARRAY(type, var_name, size) type var_name[size]
 ;
 ; void h(void);
-; void k(void *);
+; void k(ptr);
 ;
 ; void g() {
 ;   h();
@@ -25,7 +25,7 @@
 ; void h() {
 ;   int count = 2;
 ;   DECLARE_ARRAY(int, array, count);
-;   k((void *)array);
+;   k((ptr)array);
 ; }
 source_filename = "/tmp/test.c"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
@@ -35,31 +35,30 @@ target triple = "x86_64-apple-macosx10.13.0"
 define void @g() local_unnamed_addr #0 !dbg !10 {
 entry:
   %vla2.i = alloca [2 x i32], align 16, !dbg !13
-  call void @llvm.dbg.declare(metadata [2 x i32]* %vla2.i, metadata !20, metadata !DIExpression(DW_OP_stack_value)), !dbg !13
-  %0 = bitcast [2 x i32]* %vla2.i to i8*, !dbg !25
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %0), !dbg !25
+  call void @llvm.dbg.declare(metadata ptr %vla2.i, metadata !20, metadata !DIExpression(DW_OP_stack_value)), !dbg !13
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %vla2.i), !dbg !25
   call void @llvm.dbg.value(metadata i32 2, metadata !16, metadata !DIExpression()) #3, !dbg !25
   call void @llvm.dbg.value(metadata i64 2, metadata !18, metadata !DIExpression()) #3, !dbg !13
   call void @llvm.dbg.value(metadata i32 2, metadata !16, metadata !DIExpression()) #3, !dbg !25
   call void @llvm.dbg.value(metadata i64 2, metadata !18, metadata !DIExpression()) #3, !dbg !13
-  call void @k(i8* nonnull %0) #3, !dbg !26
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %0), !dbg !27
+  call void @k(ptr nonnull %vla2.i) #3, !dbg !26
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %vla2.i), !dbg !27
   ret void, !dbg !28
 }
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @k(i8*) local_unnamed_addr
+declare void @k(ptr) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 attributes #0 = { nounwind ssp uwtable }
 attributes #1 = { nounwind readnone speculatable }

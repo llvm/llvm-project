@@ -43,8 +43,12 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
       LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
                      "Failed to set type.");
     } else {
-      m_type = type_system_or_err->GetBuiltinTypeForEncodingAndBitSize(
-          eEncodingUint, 8 * size);
+      if (auto ts = *type_system_or_err)
+        m_type =
+            ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
+      else
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
+                       "Failed to set type. Typesystem is no longer live.");
     }
   }
 
@@ -333,12 +337,11 @@ Watchpoint::WatchpointEventData::WatchpointEventData(
 
 Watchpoint::WatchpointEventData::~WatchpointEventData() = default;
 
-ConstString Watchpoint::WatchpointEventData::GetFlavorString() {
-  static ConstString g_flavor("Watchpoint::WatchpointEventData");
-  return g_flavor;
+llvm::StringRef Watchpoint::WatchpointEventData::GetFlavorString() {
+  return "Watchpoint::WatchpointEventData";
 }
 
-ConstString Watchpoint::WatchpointEventData::GetFlavor() const {
+llvm::StringRef Watchpoint::WatchpointEventData::GetFlavor() const {
   return WatchpointEventData::GetFlavorString();
 }
 

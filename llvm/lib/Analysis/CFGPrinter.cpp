@@ -325,8 +325,7 @@ bool DOTGraphTraits<DOTFuncInfo *>::isNodeHidden(const BasicBlock *Node,
         return true;
     }
   if (HideUnreachablePaths || HideDeoptimizePaths) {
-    if (isOnDeoptOrUnreachablePath.find(Node) == 
-        isOnDeoptOrUnreachablePath.end())
+    if (!isOnDeoptOrUnreachablePath.contains(Node))
       computeDeoptOrUnreachablePaths(Node->getParent());
     return isOnDeoptOrUnreachablePath[Node];
   }

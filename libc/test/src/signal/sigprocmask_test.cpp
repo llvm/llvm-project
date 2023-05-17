@@ -6,16 +6,15 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/errno.h"
 #include "include/signal.h"
-#include "src/errno/llvmlibc_errno.h"
+#include "src/errno/libc_errno.h"
 #include "src/signal/raise.h"
 #include "src/signal/sigaddset.h"
 #include "src/signal/sigemptyset.h"
 #include "src/signal/sigprocmask.h"
 
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 class LlvmLibcSignalTest : public __llvm_libc::testing::Test {
   sigset_t oldSet;
@@ -33,7 +32,7 @@ using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
 
 // This tests for invalid input.
 TEST_F(LlvmLibcSignalTest, SigprocmaskInvalid) {
-  llvmlibc_errno = 0;
+  libc_errno = 0;
 
   sigset_t valid;
   // 17 and -4 are out of the range for sigprocmask's how paramater.

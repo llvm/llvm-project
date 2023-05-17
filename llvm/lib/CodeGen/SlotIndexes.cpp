@@ -179,21 +179,12 @@ void SlotIndexes::renumberIndexes(IndexList::iterator curItr) {
 void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
                                        MachineBasicBlock::iterator Begin,
                                        MachineBasicBlock::iterator End) {
-  // FIXME: Is this really necessary? The only caller repairIntervalsForRange()
-  // does the same thing.
-  // Find anchor points, which are at the beginning/end of blocks or at
-  // instructions that already have indexes.
-  while (Begin != MBB->begin() && !hasIndex(*Begin))
-    --Begin;
-  while (End != MBB->end() && !hasIndex(*End))
-    ++End;
-
   bool includeStart = (Begin == MBB->begin());
   SlotIndex startIdx;
   if (includeStart)
     startIdx = getMBBStartIdx(MBB);
   else
-    startIdx = getInstructionIndex(*Begin);
+    startIdx = getInstructionIndex(*--Begin);
 
   SlotIndex endIdx;
   if (End == MBB->end())
@@ -224,7 +215,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
         --MBBI;
       else
         pastStart = true;
-    } else if (MI && mi2iMap.find(MI) == mi2iMap.end()) {
+    } else if (MI && !mi2iMap.contains(MI)) {
       if (MBBI != Begin)
         --MBBI;
       else
@@ -241,7 +232,7 @@ void SlotIndexes::repairIndexesInRange(MachineBasicBlock *MBB,
   for (MachineBasicBlock::iterator I = End; I != Begin;) {
     --I;
     MachineInstr &MI = *I;
-    if (!MI.isDebugOrPseudoInstr() && mi2iMap.find(&MI) == mi2iMap.end())
+    if (!MI.isDebugOrPseudoInstr() && !mi2iMap.contains(&MI))
       insertMachineInstrInMaps(MI);
   }
 }

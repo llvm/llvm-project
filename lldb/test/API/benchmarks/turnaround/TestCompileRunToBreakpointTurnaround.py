@@ -1,8 +1,5 @@
 """Benchmark the turnaround time starting a debugger and run to the breakpoint with lldb vs. gdb."""
 
-from __future__ import print_function
-
-
 import sys
 import lldb
 from lldbsuite.test.lldbbench import *
@@ -13,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class CompileRunToBreakpointBench(BenchBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         BenchBase.setUp(self)

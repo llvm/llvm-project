@@ -1,14 +1,31 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
+// DEFINE: FileCheck %s
 //
-// Do the same run, but now with SIMDization as well. This should not change the outcome.
+// RUN: %{compile} | %{run}
 //
-// RUN: mlir-opt %s --sparse-compiler="vectorization-strategy=2 vl=8" | \
-// RUN: mlir-cpu-runner -e entry -entry-point-result=void \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{compile} | %{run}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
+// REDEFINE: FileCheck %s
+
+// Reduction in this file _are_ supported by the AArch64 SVE backend
 
 #SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
 #DV = #sparse_tensor.encoding<{ dimLevelType = [ "dense"      ] }>
@@ -44,30 +61,6 @@ module {
       outs(%argx: tensor<f32>) {
         ^bb(%a: f32, %x: f32):
           %0 = arith.addf %x, %a : f32
-          linalg.yield %0 : f32
-    } -> tensor<f32>
-    return %0 : tensor<f32>
-  }
-
-  func.func @prod_reduction_i32(%arga: tensor<32xi32, #DV>,
-                           %argx: tensor<i32>) -> tensor<i32> {
-    %0 = linalg.generic #trait_reduction
-      ins(%arga: tensor<32xi32, #DV>)
-      outs(%argx: tensor<i32>) {
-        ^bb(%a: i32, %x: i32):
-          %0 = arith.muli %x, %a : i32
-          linalg.yield %0 : i32
-    } -> tensor<i32>
-    return %0 : tensor<i32>
-  }
-
-  func.func @prod_reduction_f32(%arga: tensor<32xf32, #DV>,
-                           %argx: tensor<f32>) -> tensor<f32> {
-    %0 = linalg.generic #trait_reduction
-      ins(%arga: tensor<32xf32, #DV>)
-      outs(%argx: tensor<f32>) {
-        ^bb(%a: f32, %x: f32):
-          %0 = arith.mulf %x, %a : f32
           linalg.yield %0 : f32
     } -> tensor<f32>
     return %0 : tensor<f32>
@@ -109,14 +102,14 @@ module {
     return %0 : tensor<i32>
   }
 
-  func.func @dump_i32(%arg0 : memref<i32>) {
-    %v = memref.load %arg0[] : memref<i32>
+  func.func @dump_i32(%arg0 : tensor<i32>) {
+    %v = tensor.extract %arg0[] : tensor<i32>
     vector.print %v : i32
     return
   }
 
-  func.func @dump_f32(%arg0 : memref<f32>) {
-    %v = memref.load %arg0[] : memref<f32>
+  func.func @dump_f32(%arg0 : tensor<f32>) {
+    %v = tensor.extract %arg0[] : tensor<f32>
     vector.print %v : f32
     return
   }
@@ -164,10 +157,6 @@ module {
        : (tensor<32xi32, #SV>, tensor<i32>) -> tensor<i32>
     %1 = call @sum_reduction_f32(%sparse_input_f32, %rf)
        : (tensor<32xf32, #SV>, tensor<f32>) -> tensor<f32>
-    %2 = call @prod_reduction_i32(%dense_input_i32, %ri)
-       : (tensor<32xi32, #DV>, tensor<i32>) -> tensor<i32>
-    %3 = call @prod_reduction_f32(%dense_input_f32, %rf)
-       : (tensor<32xf32, #DV>, tensor<f32>) -> tensor<f32>
     %4 = call @and_reduction_i32(%dense_input_i32, %ri)
        : (tensor<32xi32, #DV>, tensor<i32>) -> tensor<i32>
     %5 = call @or_reduction_i32(%sparse_input_i32, %ri)
@@ -179,39 +168,21 @@ module {
     //
     // CHECK: 26
     // CHECK: 27.5
-    // CHECK: 3087
-    // CHECK: 168
     // CHECK: 1
     // CHECK: 15
     // CHECK: 10
     //
-    %m0 = bufferization.to_memref %0 : memref<i32>
-    call @dump_i32(%m0) : (memref<i32>) -> ()
-    %m1 = bufferization.to_memref %1 : memref<f32>
-    call @dump_f32(%m1) : (memref<f32>) -> ()
-    %m2 = bufferization.to_memref %2 : memref<i32>
-    call @dump_i32(%m2) : (memref<i32>) -> ()
-    %m3 = bufferization.to_memref %3 : memref<f32>
-    call @dump_f32(%m3) : (memref<f32>) -> ()
-    %m4 = bufferization.to_memref %4 : memref<i32>
-    call @dump_i32(%m4) : (memref<i32>) -> ()
-    %m5 = bufferization.to_memref %5 : memref<i32>
-    call @dump_i32(%m5) : (memref<i32>) -> ()
-    %m6 = bufferization.to_memref %6 : memref<i32>
-    call @dump_i32(%m6) : (memref<i32>) -> ()
+    call @dump_i32(%0) : (tensor<i32>) -> ()
+    call @dump_f32(%1) : (tensor<f32>) -> ()
+    call @dump_i32(%4) : (tensor<i32>) -> ()
+    call @dump_i32(%5) : (tensor<i32>) -> ()
+    call @dump_i32(%6) : (tensor<i32>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sparse_input_i32 : tensor<32xi32, #SV>
-    sparse_tensor.release %sparse_input_f32 : tensor<32xf32, #SV>
-    sparse_tensor.release %dense_input_i32  : tensor<32xi32, #DV>
-    sparse_tensor.release %dense_input_f32  : tensor<32xf32, #DV>
-    memref.dealloc %m0 : memref<i32>
-    memref.dealloc %m1 : memref<f32>
-    memref.dealloc %m2 : memref<i32>
-    memref.dealloc %m3 : memref<f32>
-    memref.dealloc %m4 : memref<i32>
-    memref.dealloc %m5 : memref<i32>
-    memref.dealloc %m6 : memref<i32>
+    bufferization.dealloc_tensor %sparse_input_i32 : tensor<32xi32, #SV>
+    bufferization.dealloc_tensor %sparse_input_f32 : tensor<32xf32, #SV>
+    bufferization.dealloc_tensor %dense_input_i32  : tensor<32xi32, #DV>
+    bufferization.dealloc_tensor %dense_input_f32  : tensor<32xf32, #DV>
 
     return
   }

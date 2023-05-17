@@ -131,7 +131,7 @@ entry:
 define  void @test_i1(i1 %b)  {
   entry:
    %frombool = zext i1 %b to i8
-   store i8 %frombool, i8* @global_i1, align 1
+   store i8 %frombool, ptr @global_i1, align 1
    ret void
 }
 
@@ -171,7 +171,7 @@ entry:
 define void @test_i1zext(i1 zeroext %b) {
   entry:
     %frombool = zext i1 %b to i8
-    store i8 %frombool, i8 * @global_i1, align 1
+    store i8 %frombool, ptr @global_i1, align 1
     ret void
   }
 
@@ -315,8 +315,8 @@ entry:
 define void @call_test_int_ptr() {
 entry:
   %b = alloca i32, align 4
-  store i32 0, i32* %b, align 4
-  call void @test_int_ptr(i32* %b)
+  store i32 0, ptr %b, align 4
+  call void @test_int_ptr(ptr %b)
   ret void
 }
 
@@ -332,10 +332,10 @@ entry:
 ; 64BIT: BL8_NOP <mcsymbol .test_int_ptr>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT: ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-define void @test_int_ptr(i32* %a) {
+define void @test_int_ptr(ptr %a) {
 entry:
-  %a.addr = alloca i32*, align 8
-  store i32* %a, i32** %a.addr, align 8
+  %a.addr = alloca ptr, align 8
+  store ptr %a, ptr %a.addr, align 8
   ret void
 }
 
@@ -360,12 +360,12 @@ define i32 @caller(i32 %i)  {
 entry:
   %i.addr = alloca i32, align 4
   %b = alloca i8, align 1
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   %cmp = icmp ne i32 %0, 0
   %frombool = zext i1 %cmp to i8
-  store i8 %frombool, i8* %b, align 1
-  %1 = load i8, i8* %b, align 1
+  store i8 %frombool, ptr %b, align 1
+  %1 = load i8, ptr %b, align 1
   %tobool = trunc i8 %1 to i1
   %call = call i32 @call_test_bool(i1 zeroext %tobool)
   ret i32 %call
@@ -398,7 +398,7 @@ declare i32 @call_test_bool(i1 zeroext)
 
 define void @call_test_floats() {
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   call float @test_floats(float %0, float %0, float %0)
   ret void
 }
@@ -440,7 +440,7 @@ entry:
 
 define void @call_test_fpr_max() {
 entry:
-  %0 = load double, double* @d1, align 8
+  %0 = load double, ptr @d1, align 8
   call double @test_fpr_max(double %0, double %0, double %0, double %0, double %0, double %0, double %0, double %0, double %0, double %0, double %0, double %0, double %0)
   ret void
 }
@@ -478,6 +478,7 @@ entry:
 
 ; ASM32PWR4:       stwu 1, -128(1)
 ; ASM32PWR4-NEXT:  lwz [[REG:[0-9]+]], L..C2(2)
+; ASM32PWR4-NEXT:  stw 0, 136(1)
 ; ASM32PWR4-NEXT:  lfd 1, 0([[REG]])
 ; ASM32PWR4-DAG:   stfd 1, 56(1)
 ; ASM32PWR4-DAG:   stfd 1, 64(1)
@@ -529,6 +530,7 @@ entry:
 
 ; ASM64PWR4:       stdu 1, -160(1)
 ; ASM64PWR4-NEXT:  ld [[REG:[0-9]+]], L..C2(2)
+; ASM64PWR4-NEXT:  std 0, 176(1)
 ; ASM64PWR4-NEXT:  lfd 1, 0([[REG]])
 ; ASM64PWR4-DAG:   stfd 1, 112(1)
 ; ASM64PWR4-DAG:   stfd 1, 120(1)
@@ -590,8 +592,8 @@ entry:
 
 define void @call_test_mix() {
 entry:
-  %0 = load float, float* @f1, align 4
-  %1 = load double, double* @d1, align 8
+  %0 = load float, ptr @f1, align 4
+  %1 = load double, ptr @d1, align 8
   call i32 @test_mix(float %0, i32 1, double %1, i8 signext 97)
   ret void
 }
@@ -689,9 +691,9 @@ entry:
 
 define void @call_test_vararg() {
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   %conv = fpext float %0 to double
-  %1 = load double, double* @d1, align 8
+  %1 = load double, ptr @d1, align 8
   call void (i32, ...) @test_vararg(i32 42, double %conv, double %1)
   ret void
 }
@@ -719,6 +721,7 @@ declare void @test_vararg(i32, ...)
 
 ; ASM32PWR4:      stwu 1, -80(1)
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C1(2)
+; ASM32PWR4-NEXT: stw 0, 88(1)
 ; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C2(2)
 ; ASM32PWR4-NEXT: stfd 1, 64(1)
@@ -747,6 +750,7 @@ declare void @test_vararg(i32, ...)
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C2(2)
 ; ASM64PWR4-NEXT: stfd 1, 112(1)
@@ -760,9 +764,9 @@ declare void @test_vararg(i32, ...)
 
 define void @call_test_vararg2() {
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   %conv = fpext float %0 to double
-  %1 = load double, double* @d1, align 8
+  %1 = load double, ptr @d1, align 8
   call void (i32, ...) @test_vararg(i32 42, double %conv, i32 42, double %1)
   ret void
 }
@@ -787,6 +791,7 @@ entry:
 
 ; ASM32PWR4:      stwu 1, -80(1)
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C1(2)
+; ASM32PWR4-NEXT: stw 0, 88(1)
 ; ASM32PWR4-NEXT: li 6, 42
 ; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C2(2)
@@ -817,6 +822,7 @@ entry:
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: li 5, 42
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C2(2)
@@ -831,9 +837,9 @@ entry:
 
 define void @call_test_vararg3() {
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   %conv = fpext float %0 to double
-  %1 = load double, double* @d1, align 8
+  %1 = load double, ptr @d1, align 8
   call void (i32, ...) @test_vararg(i32 42, double %conv, i64 42, double %1)
   ret void
 }
@@ -890,6 +896,7 @@ entry:
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: li 5, 42
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C2(2)
@@ -904,7 +911,7 @@ entry:
 
 define void @call_test_vararg4() {
 entry:
-  %0 = load float, float* @f1, align 4
+  %0 = load float, ptr @f1, align 4
   call void (i32, ...) @test_vararg(i32 42, float %0)
   ret void
 }
@@ -922,6 +929,7 @@ entry:
 
 ; ASM32PWR4:      stwu 1, -64(1)
 ; ASM32PWR4-NEXT: lwz [[REG:[0-9]+]], L..C1(2)
+; ASM32PWR4-NEXT: stw 0, 72(1)
 ; ASM32PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM32PWR4-NEXT: li 3, 42
 ; ASM32PWR4-NEXT: stfs 1, 60(1)
@@ -940,6 +948,7 @@ entry:
 
 ; ASM64PWR4:      stdu 1, -128(1)
 ; ASM64PWR4-NEXT: ld [[REG:[0-9]+]], L..C1(2)
+; ASM64PWR4-NEXT: std 0, 144(1)
 ; ASM64PWR4-NEXT: lfs 1, 0([[REG]])
 ; ASM64PWR4-NEXT: li 3, 42
 ; ASM64PWR4-NEXT: stfs 1, 124(1)
@@ -957,11 +966,11 @@ entry:
 ; Basic saving of integral type arguments to the parameter save area.
 define void @call_test_stackarg_int() {
 entry:
-  %0 = load i8, i8* @c, align 1
-  %1 = load i16, i16* @si, align 2
-  %2 = load i32, i32* @i, align 4
-  %3 = load i64, i64* @lli, align 8
-  %4 = load i32, i32* @i, align 4
+  %0 = load i8, ptr @c, align 1
+  %1 = load i16, ptr @si, align 2
+  %2 = load i32, ptr @i, align 4
+  %3 = load i64, ptr @lli, align 8
+  %4 = load i32, ptr @i, align 4
   call void @test_stackarg_int(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i8 zeroext %0, i16 signext %1, i32 %2, i64 %3, i32 %4)
   ret void
 }
@@ -1084,8 +1093,8 @@ declare void @test_stackarg_int(i32, i32, i32, i32, i32, i32, i32, i32, i8 zeroe
 ; The float and double arguments will pass in both fpr as well as parameter save area.
 define void @call_test_stackarg_float() {
 entry:
-  %0 = load float, float* @f, align 4
-  %1 = load double, double* @d, align 8
+  %0 = load float, ptr @f, align 4
+  %1 = load double, ptr @d, align 8
   call void @test_stackarg_float(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, float %0, double %1)
   ret void
 }
@@ -1176,7 +1185,7 @@ declare void @test_stackarg_float(i32, i32, i32, i32, i32, i32, i32, i32, float,
 
 define void @call_test_stackarg_float2() {
 entry:
-  %0 = load double, double* @d, align 8
+  %0 = load double, ptr @d, align 8
   call void (i32, i32, i32, i32, i32, i32, ...) @test_stackarg_float2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, double %0)
   ret void
 }
@@ -1254,8 +1263,8 @@ declare void @test_stackarg_float2(i32, i32, i32, i32, i32, i32, ...)
 ; A double arg will pass on the stack in PPC32 if there is only one available GPR.
 define void @call_test_stackarg_float3() {
 entry:
-  %0 = load double, double* @d, align 8
-  %1 = load float, float* @f, align 4
+  %0 = load double, ptr @d, align 8
+  %1 = load float, ptr @f, align 4
   call void (i32, i32, i32, i32, i32, i32, i32, ...) @test_stackarg_float3(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, double %0, float %1)
   ret void
 }
@@ -1441,7 +1450,7 @@ entry:
 ; ASM32PWR4-DAG:   lwz [[REG10:[0-9]+]], 92(1)
 
 ; ASM64PWR4-DAG:   ld [[REG1:[0-9]+]], 112(1)
-; ASM64PWR4-DAG:   lwz [[REG2:[0-9]+]], 124(1)
+; ASM64PWR4-DAG:   lwa [[REG2:[0-9]+]], 124(1)
 ; ASM64PWR4-DAG:   lwz [[REG3:[0-9]+]], 132(1)
 ; ASM64PWR4-DAG:   lwz [[REG4:[0-9]+]], 140(1)
 ; ASM64PWR4-DAG:   lwa [[REG5:[0-9]+]], 148(1)
@@ -1460,14 +1469,14 @@ entry:
 
 define void @caller_ints_stack() {
 entry:
-  %0 = load i64, i64* @ll1, align 8
-  %1 = load i16, i16* @si1, align 2
-  %2 = load i8, i8* @ch, align 1
-  %3 = load i32, i32* @ui, align 4
-  %4 = load i32, i32* @sint, align 4
-  %5 = load i64, i64* @ll2, align 8
-  %6 = load i8, i8* @uc1, align 1
-  %7 = load i32, i32* @i1, align 4
+  %0 = load i64, ptr @ll1, align 8
+  %1 = load i16, ptr @si1, align 2
+  %2 = load i8, ptr @ch, align 1
+  %3 = load i32, ptr @ui, align 4
+  %4 = load i32, ptr @sint, align 4
+  %5 = load i64, ptr @ll2, align 8
+  %6 = load i8, ptr @uc1, align 1
+  %7 = load i32, ptr @i1, align 4
   %call = call i64 @test_ints_stack(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i64 %0, i16 signext %1, i8 zeroext %2, i32 %3, i32 %4, i64 %5, i8 zeroext %6, i32 %7)
   ret void
 }
@@ -1554,8 +1563,8 @@ entry:
 ; CHECKASM-LABEL:  .caller_ints_stack:
 
 ; ASM32PWR4:        mflr 0
-; ASM32PWR4-DAG:    stw 0, 8(1)
-; ASM32PWR4-DAG:    stwu 1, -96(1)
+; ASM32PWR4-NEXT:   stwu 1, -96(1)
+; ASM32PWR4-DAG:    stw 0, 104(1)
 ; ASM32PWR4-DAG:    li 3, 1
 ; ASM32PWR4-DAG:    li 4, 2
 ; ASM32PWR4-DAG:    li 5, 3
@@ -1600,8 +1609,8 @@ entry:
 ; ASM32PWR4-NEXT:   blr
 
 ; ASM64PWR4:        mflr 0
-; ASM64PWR4-DAG:    std 0, 16(1)
-; ASM64PWR4-DAG:    stdu 1, -176(1)
+; ASM64PWR4-NEXT:   stdu 1, -176(1)
+; ASM64PWR4-DAG:    std 0, 192(1)
 ; ASM64PWR4-DAG:    li 3, 1
 ; ASM64PWR4-DAG:    li 4, 2
 ; ASM64PWR4-DAG:    li 5, 3
@@ -1646,7 +1655,7 @@ entry:
 define void @test_i1_stack(i32 %a, i32 %c, i32 %d, i32 %e, i32 %f, i32 %g, i32 %h, i32 %i, i1 zeroext %b) {
   entry:
     %frombool = zext i1 %b to i8
-    store i8 %frombool, i8* @globali1, align 1
+    store i8 %frombool, ptr @globali1, align 1
     ret void
 }
 
@@ -1807,9 +1816,9 @@ define double @test_fpr_stack(double %d1, double %d2, double %d3, double %d4, do
 
 define void @caller_fpr_stack() {
 entry:
-  %0 = load float, float* @f14, align 4
-  %1 = load double, double* @d15, align 8
-  %2 = load float, float* @f16, align 4
+  %0 = load float, ptr @f14, align 4
+  %1 = load double, ptr @d15, align 8
+  %2 = load float, ptr @f16, align 4
   %call = call double @test_fpr_stack(double 1.000000e-01, double 2.000000e-01, double 3.000000e-01, double 4.000000e-01, double 5.000000e-01, double 6.000000e-01, double 0x3FE6666666666666, double 8.000000e-01, double 9.000000e-01, double 1.000000e-01, double 1.100000e-01, double 1.200000e-01, double 1.300000e-01, float %0, double %1, float %2)
   ret void
 }
@@ -1909,8 +1918,8 @@ entry:
 ; CHECKASM-LABEL:  .caller_fpr_stack:
 
 ; ASM32PWR4:       mflr 0
-; ASM32PWR4-DAG:   stw 0, 8(1)
-; ASM32PWR4-DAG:   stwu 1, -144(1)
+; ASM32PWR4-NEXT:  stwu 1, -144(1)
+; ASM32PWR4-DAG:   stw 0, 152(1)
 ; ASM32PWR4-DAG:   lwz [[REGF1ADDR:[0-9]+]], L..C20(2)
 ; ASM32PWR4-DAG:   lwz [[REGF1:[0-9]+]], 0([[REGF1ADDR]])
 ; ASM32PWR4-DAG:   lwz [[REGDADDR:[0-9]+]], L..C19(2)
@@ -1941,8 +1950,8 @@ entry:
 ; ASM32PWR4-NEXT:  bl .test_fpr_stack
 
 ; ASM64PWR4:       mflr 0
-; ASM64PWR4-DAG:   std 0, 16(1)
-; ASM64PWR4-DAG:   stdu 1, -176(1)
+; ASM64PWR4-NEXT:  stdu 1, -176(1)
+; ASM64PWR4-DAG:   std 0, 192(1)
 ; ASM64PWR4-DAG:   ld [[REGF1ADDR:[0-9]+]], L..C18(2)
 ; ASM64PWR4-DAG:   lwz [[REGF1:[0-9]+]], 0([[REGF1ADDR]])
 ; ASM64PWR4-DAG:   ld [[REGDADDR:[0-9]+]], L..C19(2)
@@ -2290,8 +2299,8 @@ define void @caller_mix() {
 ; CHEKASM-LABEL:    .mix_floats_caller:
 
 ; ASM32PWR4:       mflr 0
-; ASM32PWR4-DAG:   stw 0, 8(1)
-; ASM32PWR4-DAG:   stwu 1, -176(1)
+; ASM32PWR4-NEXT:  stwu 1, -176(1)
+; ASM32PWR4-DAG:   stw 0, 184(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 56(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 60(1)
 ; ASM32PWR4-DAG:   stw [[REG:[0-9]+]], 64(1)
@@ -2323,8 +2332,8 @@ define void @caller_mix() {
 ; ASM32PWR4:       bl .mix_floats
 
 ; ASM64PWR4:      mflr 0
-; ASM64PWR4-DAG:  std 0, 16(1)
-; ASM64PWR4-DAG:  stdu 1, -240(1)
+; ASM64PWR4-NEXT: stdu 1, -240(1)
+; ASM64PWR4-DAG:  std 0, 256(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 112(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 120(1)
 ; ASM64PWR4-DAG:  std [[REG:[0-9]+]], 128(1)

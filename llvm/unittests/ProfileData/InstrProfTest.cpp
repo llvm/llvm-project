@@ -22,8 +22,11 @@
 #include <cstdarg>
 
 using namespace llvm;
+using ::testing::IsSubsetOf;
+using ::testing::SizeIs;
+using ::testing::UnorderedElementsAre;
 
-LLVM_NODISCARD static ::testing::AssertionResult
+[[nodiscard]] static ::testing::AssertionResult
 ErrorEquals(instrprof_error Expected, Error E) {
   instrprof_error Found;
   std::string FoundMsg;
@@ -35,6 +38,14 @@ ErrorEquals(instrprof_error Expected, Error E) {
     return ::testing::AssertionSuccess();
   return ::testing::AssertionFailure() << "error: " << FoundMsg << "\n";
 }
+
+namespace llvm {
+bool operator==(const TemporalProfTraceTy &lhs,
+                const TemporalProfTraceTy &rhs) {
+  return lhs.Weight == rhs.Weight &&
+         lhs.FunctionNameRefs == rhs.FunctionNameRefs;
+}
+} // end namespace llvm
 
 namespace {
 
@@ -222,6 +233,94 @@ TEST_F(InstrProfTest, test_writer_merge) {
   ASSERT_EQ(2U, R->Counts.size());
   ASSERT_EQ(0U, R->Counts[0]);
   ASSERT_EQ(0U, R->Counts[1]);
+}
+
+TEST_F(InstrProfTest, test_merge_temporal_prof_traces_truncated) {
+  uint64_t ReservoirSize = 10;
+  uint64_t MaxTraceLength = 2;
+  InstrProfWriter Writer(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+
+  TemporalProfTraceTy LargeTrace, SmallTrace;
+  LargeTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo"),
+                                 IndexedInstrProf::ComputeHash("bar"),
+                                 IndexedInstrProf::ComputeHash("goo")};
+  SmallTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo"),
+                                 IndexedInstrProf::ComputeHash("bar")};
+
+  SmallVector<TemporalProfTraceTy, 4> Traces = {LargeTrace, SmallTrace};
+  Writer.addTemporalProfileTraces(Traces, 2);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ASSERT_TRUE(Reader->hasTemporalProfile());
+  EXPECT_EQ(Reader->getTemporalProfTraceStreamSize(), 2U);
+  EXPECT_THAT(Reader->getTemporalProfTraces(),
+              UnorderedElementsAre(SmallTrace, SmallTrace));
+}
+
+TEST_F(InstrProfTest, test_merge_traces_from_writer) {
+  uint64_t ReservoirSize = 10;
+  uint64_t MaxTraceLength = 10;
+  InstrProfWriter Writer(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  InstrProfWriter Writer2(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+  ASSERT_THAT_ERROR(Writer2.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+
+  TemporalProfTraceTy FooTrace, BarTrace;
+  FooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo")};
+  BarTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("bar")};
+
+  SmallVector<TemporalProfTraceTy, 4> Traces1({FooTrace}), Traces2({BarTrace});
+  Writer.addTemporalProfileTraces(Traces1, 1);
+  Writer2.addTemporalProfileTraces(Traces2, 1);
+  Writer.mergeRecordsFromWriter(std::move(Writer2), Err);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ASSERT_TRUE(Reader->hasTemporalProfile());
+  EXPECT_EQ(Reader->getTemporalProfTraceStreamSize(), 2U);
+  EXPECT_THAT(Reader->getTemporalProfTraces(),
+              UnorderedElementsAre(FooTrace, BarTrace));
+}
+
+TEST_F(InstrProfTest, test_merge_traces_sampled) {
+  uint64_t ReservoirSize = 3;
+  uint64_t MaxTraceLength = 10;
+  InstrProfWriter Writer(/*Sparse=*/false, ReservoirSize, MaxTraceLength);
+  ASSERT_THAT_ERROR(Writer.mergeProfileKind(InstrProfKind::TemporalProfile),
+                    Succeeded());
+
+  TemporalProfTraceTy FooTrace, BarTrace, GooTrace;
+  FooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("foo")};
+  BarTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("bar")};
+  GooTrace.FunctionNameRefs = {IndexedInstrProf::ComputeHash("Goo")};
+
+  // Add some sampled traces
+  SmallVector<TemporalProfTraceTy, 4> SampledTraces = {FooTrace, BarTrace,
+                                                       GooTrace};
+  Writer.addTemporalProfileTraces(SampledTraces, 5);
+  // Add some unsampled traces
+  SmallVector<TemporalProfTraceTy, 4> UnsampledTraces = {BarTrace, GooTrace};
+  Writer.addTemporalProfileTraces(UnsampledTraces, 2);
+  UnsampledTraces = {FooTrace};
+  Writer.addTemporalProfileTraces(UnsampledTraces, 1);
+
+  auto Profile = Writer.writeBuffer();
+  readProfile(std::move(Profile));
+
+  ASSERT_TRUE(Reader->hasTemporalProfile());
+  EXPECT_EQ(Reader->getTemporalProfTraceStreamSize(), 8U);
+  // Check that we have a subset of all the traces we added
+  EXPECT_THAT(Reader->getTemporalProfTraces(), SizeIs(ReservoirSize));
+  EXPECT_THAT(
+      Reader->getTemporalProfTraces(),
+      IsSubsetOf({FooTrace, BarTrace, GooTrace, BarTrace, GooTrace, FooTrace}));
 }
 
 using ::llvm::memprof::IndexedMemProfRecord;
@@ -526,7 +625,7 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
                                  N, T);
   ASSERT_FALSE(Res);
 
-  // Remove the MD_prof metadata 
+  // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate 5 records this time.
   annotateValueSite(*M, *Inst, R.get(), IPVK_IndirectCallTarget, 0, 5);
@@ -546,12 +645,12 @@ TEST_P(MaybeSparseInstrProfTest, annotate_vp_data) {
   ASSERT_EQ(2000U, ValueData[4].Value);
   ASSERT_EQ(2U, ValueData[4].Count);
 
-  // Remove the MD_prof metadata 
+  // Remove the MD_prof metadata
   Inst->setMetadata(LLVMContext::MD_prof, 0);
   // Annotate with 4 records.
   InstrProfValueData VD0Sorted[] = {{1000, 6}, {2000, 5}, {3000, 4}, {4000, 3},
                               {5000, 2}, {6000, 1}};
-  annotateValueSite(*M, *Inst, makeArrayRef(VD0Sorted).slice(2), 10,
+  annotateValueSite(*M, *Inst, ArrayRef(VD0Sorted).slice(2), 10,
                     IPVK_IndirectCallTarget, 5);
   Res = getValueProfDataFromInst(*Inst, IPVK_IndirectCallTarget, 5,
                                       ValueData, N, T);
@@ -766,17 +865,20 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1) {
 TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   static const char bar[] = "bar";
 
-  const uint64_t Max = std::numeric_limits<uint64_t>::max();
+  const uint64_t MaxValCount = std::numeric_limits<uint64_t>::max();
+  const uint64_t MaxEdgeCount = getInstrMaxCountValue();
 
   instrprof_error Result;
-  auto Err = [&](Error E) { Result = InstrProfError::take(std::move(E)); };
+  auto Err = [&](Error E) {
+    Result = std::get<0>(InstrProfError::take(std::move(E)));
+  };
   Result = instrprof_error::success;
   Writer.addRecord({"foo", 0x1234, {1}}, Err);
   ASSERT_EQ(Result, instrprof_error::success);
 
   // Verify counter overflow.
   Result = instrprof_error::success;
-  Writer.addRecord({"foo", 0x1234, {Max}}, Err);
+  Writer.addRecord({"foo", 0x1234, {MaxEdgeCount}}, Err);
   ASSERT_EQ(Result, instrprof_error::counter_overflow);
 
   Result = instrprof_error::success;
@@ -794,7 +896,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   // Verify value data counter overflow.
   NamedInstrProfRecord Record5("baz", 0x5678, {5, 6});
   Record5.reserveSites(IPVK_IndirectCallTarget, 1);
-  InstrProfValueData VD5[] = {{uint64_t(bar), Max}};
+  InstrProfValueData VD5[] = {{uint64_t(bar), MaxValCount}};
   Record5.addValueData(IPVK_IndirectCallTarget, 0, VD5, 1, nullptr);
   Result = instrprof_error::success;
   Writer.addRecord(std::move(Record5), Err);
@@ -807,7 +909,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   Expected<InstrProfRecord> ReadRecord1 =
       Reader->getInstrProfRecord("foo", 0x1234);
   EXPECT_THAT_ERROR(ReadRecord1.takeError(), Succeeded());
-  ASSERT_EQ(Max, ReadRecord1->Counts[0]);
+  ASSERT_EQ(MaxEdgeCount, ReadRecord1->Counts[0]);
 
   Expected<InstrProfRecord> ReadRecord2 =
       Reader->getInstrProfRecord("baz", 0x5678);
@@ -816,7 +918,7 @@ TEST_P(MaybeSparseInstrProfTest, get_icall_data_merge1_saturation) {
   std::unique_ptr<InstrProfValueData[]> VD =
       ReadRecord2->getValueForSite(IPVK_IndirectCallTarget, 0);
   ASSERT_EQ(StringRef("bar"), StringRef((const char *)VD[0].Value, 3));
-  ASSERT_EQ(Max, VD[0].Count);
+  ASSERT_EQ(MaxValCount, VD[0].Count);
 }
 
 // This test tests that when there are too many values
@@ -1111,7 +1213,7 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_module_test) {
   StringRef Funcs[] = {"Gfoo", "Gblah", "Gbar", "Ifoo", "Iblah", "Ibar",
                        "Pfoo", "Pblah", "Pbar", "Wfoo", "Wblah", "Wbar"};
 
-  for (unsigned I = 0; I < sizeof(Funcs) / sizeof(*Funcs); I++) {
+  for (unsigned I = 0; I < std::size(Funcs); I++) {
     Function *F = M->getFunction(Funcs[I]);
     ASSERT_TRUE(F != nullptr);
     std::string PGOName = getPGOFuncName(*F);
@@ -1147,14 +1249,16 @@ TEST_P(MaybeSparseInstrProfTest, instr_prof_symtab_compression_test) {
     // Compressing:
     std::string FuncNameStrings1;
     EXPECT_THAT_ERROR(collectPGOFuncNameStrings(
-                          FuncNames1, (DoCompression && zlib::isAvailable()),
+                          FuncNames1,
+                          (DoCompression && compression::zlib::isAvailable()),
                           FuncNameStrings1),
                       Succeeded());
 
     // Compressing:
     std::string FuncNameStrings2;
     EXPECT_THAT_ERROR(collectPGOFuncNameStrings(
-                          FuncNames2, (DoCompression && zlib::isAvailable()),
+                          FuncNames2,
+                          (DoCompression && compression::zlib::isAvailable()),
                           FuncNameStrings2),
                       Succeeded());
 
@@ -1250,18 +1354,20 @@ TEST(ProfileReaderTest, ReadsLargeFiles) {
 
   auto RawProfile = WritableMemoryBuffer::getNewUninitMemBuffer(LargeSize);
   if (!RawProfile)
-    return;
+    GTEST_SKIP();
   auto RawProfileReaderOrErr = InstrProfReader::create(std::move(RawProfile));
-  ASSERT_TRUE(InstrProfError::take(RawProfileReaderOrErr.takeError()) ==
-              instrprof_error::unrecognized_format);
+  ASSERT_TRUE(
+      std::get<0>(InstrProfError::take(RawProfileReaderOrErr.takeError())) ==
+      instrprof_error::unrecognized_format);
 
   auto IndexedProfile = WritableMemoryBuffer::getNewUninitMemBuffer(LargeSize);
   if (!IndexedProfile)
-    return;
+    GTEST_SKIP();
   auto IndexedReaderOrErr =
       IndexedInstrProfReader::create(std::move(IndexedProfile), nullptr);
-  ASSERT_TRUE(InstrProfError::take(IndexedReaderOrErr.takeError()) ==
-              instrprof_error::bad_magic);
+  ASSERT_TRUE(
+      std::get<0>(InstrProfError::take(IndexedReaderOrErr.takeError())) ==
+      instrprof_error::bad_magic);
 }
 #endif
 

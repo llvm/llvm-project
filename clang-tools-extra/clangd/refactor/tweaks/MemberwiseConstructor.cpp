@@ -32,7 +32,7 @@ namespace {
 // We place the constructor inline, other tweaks are available to outline it.
 class MemberwiseConstructor : public Tweak {
 public:
-  const char *id() const override final;
+  const char *id() const final;
   llvm::StringLiteral kind() const override {
     return CodeAction::REFACTOR_KIND;
   }

@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/CodeView/MergingTypeTableBuilder.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/DebugInfo/CodeView/ContinuationRecordBuilder.h"
 #include "llvm/DebugInfo/CodeView/TypeHashing.h"
@@ -33,16 +32,16 @@ MergingTypeTableBuilder::MergingTypeTableBuilder(BumpPtrAllocator &Storage)
 
 MergingTypeTableBuilder::~MergingTypeTableBuilder() = default;
 
-Optional<TypeIndex> MergingTypeTableBuilder::getFirst() {
+std::optional<TypeIndex> MergingTypeTableBuilder::getFirst() {
   if (empty())
-    return None;
+    return std::nullopt;
 
   return TypeIndex(TypeIndex::FirstNonSimpleIndex);
 }
 
-Optional<TypeIndex> MergingTypeTableBuilder::getNext(TypeIndex Prev) {
+std::optional<TypeIndex> MergingTypeTableBuilder::getNext(TypeIndex Prev) {
   if (++Prev == nextTypeIndex())
-    return None;
+    return std::nullopt;
   return Prev;
 }
 
@@ -79,7 +78,7 @@ static inline ArrayRef<uint8_t> stabilize(BumpPtrAllocator &Alloc,
                                           ArrayRef<uint8_t> Data) {
   uint8_t *Stable = Alloc.Allocate<uint8_t>(Data.size());
   memcpy(Stable, Data.data(), Data.size());
-  return makeArrayRef(Stable, Data.size());
+  return ArrayRef(Stable, Data.size());
 }
 
 TypeIndex MergingTypeTableBuilder::insertRecordAs(hash_code Hash,

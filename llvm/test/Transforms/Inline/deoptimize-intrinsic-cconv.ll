@@ -1,4 +1,4 @@
-; RUN: opt -S -always-inline < %s | FileCheck %s
+; RUN: opt -S -passes=always-inline < %s | FileCheck %s
 
 declare cc42 i32 @llvm.experimental.deoptimize.i32(...)
 

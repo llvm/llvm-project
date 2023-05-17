@@ -5,8 +5,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-define void @bar(i32* %r, i32* %s) {
+define void @bar(ptr %r, ptr %s) {
 entry:
-  tail call void asm sideeffect "# $0 = bbb($1)", "=*m,*m"(i32* %s, i32* %r) #0, !srcloc !1
+  tail call void asm sideeffect "# $0 = bbb($1)", "=*m,*m"(ptr %s, ptr %r) #0, !srcloc !1
   ret void
 }

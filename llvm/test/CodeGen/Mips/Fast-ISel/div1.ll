@@ -25,10 +25,10 @@ define void @divs() {
   ; CHECK-DAG:    teq     $[[K]], $zero, 7
   ; CHECK-DAG:    mflo    $[[RESULT:[0-9]+]]
   ; CHECK:        sw      $[[RESULT]], 0($[[I_ADDR]])
-  %1 = load i32, i32* @sj, align 4
-  %2 = load i32, i32* @sk, align 4
+  %1 = load i32, ptr @sj, align 4
+  %2 = load i32, ptr @sk, align 4
   %div = sdiv i32 %1, %2
-  store i32 %div, i32* @si, align 4
+  store i32 %div, ptr @si, align 4
   ret void
 }
 
@@ -47,9 +47,9 @@ define void @divu() {
   ; CHECK-DAG:        teq     $[[K]], $zero, 7
   ; CHECK-DAG:        mflo    $[[RESULT:[0-9]+]]
   ; CHECK:            sw      $[[RESULT]], 0($[[I_ADDR]])
-  %1 = load i32, i32* @uj, align 4
-  %2 = load i32, i32* @uk, align 4
+  %1 = load i32, ptr @uj, align 4
+  %2 = load i32, ptr @uk, align 4
   %div = udiv i32 %1, %2
-  store i32 %div, i32* @ui, align 4
+  store i32 %div, ptr @ui, align 4
   ret void
 }

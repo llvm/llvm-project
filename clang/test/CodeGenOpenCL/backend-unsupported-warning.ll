@@ -11,7 +11,7 @@ target triple = "amdgcn-amd-amdhsa"
 @lds = external addrspace(3) global i32, align 4
 
 define i32 @use_lds_global_in_func() !dbg !5 {
-  %load = load i32, i32 addrspace(3)* @lds, !dbg !9
+  %load = load i32, ptr addrspace(3) @lds, !dbg !9
   ret i32 %load, !dbg !10
 }
 

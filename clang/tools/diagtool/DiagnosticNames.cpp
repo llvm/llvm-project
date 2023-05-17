@@ -20,7 +20,7 @@ static const DiagnosticRecord BuiltinDiagnosticsByName[] = {
 };
 
 llvm::ArrayRef<DiagnosticRecord> diagtool::getBuiltinDiagnosticsByName() {
-  return llvm::makeArrayRef(BuiltinDiagnosticsByName);
+  return llvm::ArrayRef(BuiltinDiagnosticsByName);
 }
 
 
@@ -66,7 +66,7 @@ const DiagnosticRecord &diagtool::getDiagnosticForID(short DiagID) {
 
 // Second the table of options, sorted by name for fast binary lookup.
 static const GroupRecord OptionTable[] = {
-#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups)              \
+#define DIAG_ENTRY(GroupName, FlagNameOffset, Members, SubGroups, Docs)        \
   {FlagNameOffset, Members, SubGroups},
 #include "clang/Basic/DiagnosticGroups.inc"
 #undef DIAG_ENTRY
@@ -103,5 +103,5 @@ GroupRecord::diagnostics() const {
 }
 
 llvm::ArrayRef<GroupRecord> diagtool::getDiagnosticGroups() {
-  return llvm::makeArrayRef(OptionTable);
+  return llvm::ArrayRef(OptionTable);
 }

@@ -11,7 +11,7 @@
 # REQUIRES: target-x86_64, system-linux, lld
 
 # RUN: %clang_host -o %t %s
-# RUN: %lldb %t -o r -o 'p p' -o exit | FileCheck %s
+# RUN: %lldb %t -o r -o 'expression p' -o exit | FileCheck %s
 
 # CHECK: (int) $0 = 1
 

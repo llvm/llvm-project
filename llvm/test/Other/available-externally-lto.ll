@@ -16,7 +16,7 @@ entry:
 ; LTO: define available_externally void @f0(i32 %y)
 define available_externally void @f0(i32 %y) local_unnamed_addr #0 {
 entry:
-  store i32 %y, i32* @x, align 4
+  store i32 %y, ptr @x, align 4
   ret void
 }
 

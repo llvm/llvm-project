@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-WIN
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-LIN
+// RUN: %clang_cc1 -triple x86_64-windows-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-WIN
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -o - -emit-llvm %s | FileCheck %s -check-prefix CHECK-LIN
 
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 template <typename FTy> ptrdiff_t func_as_int(FTy *fp) { return ptrdiff_t(fp); }
@@ -16,11 +16,11 @@ ptrdiff_t useThem() {
 }
 
 // CHECK-WIN: define dso_local noundef i64 @_Z7useThemv()
-// CHECK-WIN:   call noundef i64 @_Z11func_as_intIFiiEExPT_(i32 (i32)* noundef @_Z7f_plaini)
-// CHECK-WIN:   call noundef i64 @_Z11func_as_intIU8sysv_abiFiiEExPT_(i32 (i32)* noundef @_Z9f_sysvabii)
-// CHECK-WIN:   call noundef i64 @_Z11func_as_intIFiiEExPT_(i32 (i32)* noundef @_Z7f_msabii)
+// CHECK-WIN:   call noundef i64 @_Z11func_as_intIFiiEExPT_(ptr noundef @_Z7f_plaini)
+// CHECK-WIN:   call noundef i64 @_Z11func_as_intIU8sysv_abiFiiEExPT_(ptr noundef @_Z9f_sysvabii)
+// CHECK-WIN:   call noundef i64 @_Z11func_as_intIFiiEExPT_(ptr noundef @_Z7f_msabii)
 
 // CHECK-LIN: define{{.*}} i64 @_Z7useThemv()
-// CHECK-LIN:   call noundef i64 @_Z11func_as_intIFiiEElPT_(i32 (i32)* noundef @_Z7f_plaini)
-// CHECK-LIN:   call noundef i64 @_Z11func_as_intIFiiEElPT_(i32 (i32)* noundef @_Z9f_sysvabii)
-// CHECK-LIN:   call noundef i64 @_Z11func_as_intIU6ms_abiFiiEElPT_(i32 (i32)* noundef @_Z7f_msabii)
+// CHECK-LIN:   call noundef i64 @_Z11func_as_intIFiiEElPT_(ptr noundef @_Z7f_plaini)
+// CHECK-LIN:   call noundef i64 @_Z11func_as_intIFiiEElPT_(ptr noundef @_Z9f_sysvabii)
+// CHECK-LIN:   call noundef i64 @_Z11func_as_intIU6ms_abiFiiEElPT_(ptr noundef @_Z7f_msabii)

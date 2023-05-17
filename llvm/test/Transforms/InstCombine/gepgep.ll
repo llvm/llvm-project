@@ -5,9 +5,9 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @buffer = external global [64 x float]
 
-declare void @use(i8*)
+declare void @use(ptr)
 
 define void @f() {
-  call void @use(i8* getelementptr (i8, i8* getelementptr (i8, i8* bitcast ([64 x float]* @buffer to i8*), i64 and (i64 sub (i64 0, i64 ptrtoint ([64 x float]* @buffer to i64)), i64 63)), i64 64))
+  call void @use(ptr getelementptr (i8, ptr getelementptr (i8, ptr @buffer, i64 and (i64 sub (i64 0, i64 ptrtoint (ptr @buffer to i64)), i64 63)), i64 64))
   ret void
 }

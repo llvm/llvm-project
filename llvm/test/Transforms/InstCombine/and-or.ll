@@ -671,8 +671,8 @@ define i32 @or_or_and_noOneUse_fail1(i32 %a, i32 %b) {
 ; CHECK-NEXT:    [[SHR:%.*]] = ashr i32 [[A:%.*]], 23
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], 157
 ; CHECK-NEXT:    call void @use2(i32 [[AND]])
-; CHECK-NEXT:    [[AND3:%.*]] = and i32 [[SHR]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i32 [[AND3]], [[AND]]
+; CHECK-NEXT:    [[AND1:%.*]] = or i32 [[B:%.*]], 157
+; CHECK-NEXT:    [[OR:%.*]] = and i32 [[SHR]], [[AND1]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = lshr i32 [[B]], 23
 ; CHECK-NEXT:    [[AND9:%.*]] = and i32 [[TMP1]], 157
 ; CHECK-NEXT:    [[R:%.*]] = or i32 [[OR]], [[AND9]]
@@ -700,16 +700,16 @@ define { i1, i1, i1, i1, i1 } @or_or_and_noOneUse_fail2(i1 %a_0, i1 %a_1, i1 %a_
 ; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[A_1:%.*]], [[B_1:%.*]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = xor i1 [[TMP3]], true
 ; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP0]], [[A_1]]
-; CHECK-NEXT:    [[TMP6:%.*]] = and i1 [[TMP2]], [[B_1]]
-; CHECK-NEXT:    [[TMP7:%.*]] = or i1 [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP6:%.*]] = or i1 [[TMP2]], [[A_1]]
+; CHECK-NEXT:    [[TMP7:%.*]] = and i1 [[TMP6]], [[B_1]]
 ; CHECK-NEXT:    [[D:%.*]] = or i1 [[TMP7]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = or i1 [[TMP1]], [[TMP3]]
-; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { i1, i1, i1, i1, i1 } zeroinitializer, i1 [[D]], 0
-; CHECK-NEXT:    [[TMP10:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP9]], i1 [[TMP4]], 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP10]], i1 true, 2
-; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP11]], i1 [[A_3]], 3
-; CHECK-NEXT:    [[TMP13:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP12]], i1 [[TMP8]], 4
-; CHECK-NEXT:    ret { i1, i1, i1, i1, i1 } [[TMP13]]
+; CHECK-NEXT:    [[DOTNOT1:%.*]] = or i1 [[TMP1]], [[TMP3]]
+; CHECK-NEXT:    [[TMP8:%.*]] = insertvalue { i1, i1, i1, i1, i1 } zeroinitializer, i1 [[D]], 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP8]], i1 [[TMP4]], 1
+; CHECK-NEXT:    [[TMP10:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP9]], i1 true, 2
+; CHECK-NEXT:    [[TMP11:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP10]], i1 [[A_3]], 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertvalue { i1, i1, i1, i1, i1 } [[TMP11]], i1 [[DOTNOT1]], 4
+; CHECK-NEXT:    ret { i1, i1, i1, i1, i1 } [[TMP12]]
 ;
 entry:
   %0 = and i1 %a_0, %b_0

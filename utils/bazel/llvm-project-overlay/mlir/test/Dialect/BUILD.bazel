@@ -1,0 +1,32 @@
+load("//llvm:lit_test.bzl", "lit_test")
+
+licenses(["notice"])
+
+package(default_visibility = ["//visibility:public"])
+
+[
+    lit_test(
+        name = "%s.test" % src,
+        srcs = [src],
+        data = [
+            "//llvm:llvm-symbolizer",
+            "//mlir:mlir-opt",
+            "//mlir:mlir-translate",
+            "//mlir/test:lit_data",
+        ] + glob([
+            "IRDL/*.irdl.mlir",
+            "Transform/*-source.mlir",
+            "Transform/*-symbol-def.mlir",
+            "Transform/*-symbol-decl-and-schedule.mlir",
+        ])
+    )
+    for src in glob(
+        include=["**/*.mlir"],
+        exclude=[
+            "IRDL/*.irdl.mlir",
+            "Transform/*-source.mlir",
+            "Transform/*-symbol-def.mlir",
+            "Transform/*-symbol-decl-and-schedule.mlir",
+        ]
+    )
+]

@@ -1882,6 +1882,7 @@ let Predicates = [HasMVEInt] in {
   def : Pat<(ARMvgetlaneu (v8f16 MQPR:$src), imm:$lane),
             (MVE_VMOV_from_lane_u16 MQPR:$src, imm:$lane)>;
   // For i16's inserts being extracted from low lanes, then may use VINS.
+  let Predicates = [HasFullFP16] in {
   def : Pat<(ARMinsertelt (v8i16 MQPR:$src1),
                           (ARMvgetlaneu (v8i16 MQPR:$src2), imm_even:$extlane),
                           imm_odd:$inslane),
@@ -1889,6 +1890,7 @@ let Predicates = [HasMVEInt] in {
                                 (VINSH (EXTRACT_SUBREG MQPR:$src1, (SSubReg_f16_reg imm_odd:$inslane)),
                                        (EXTRACT_SUBREG MQPR:$src2, (SSubReg_f16_reg imm_even:$extlane))),
                                 (SSubReg_f16_reg imm_odd:$inslane)), MQPR)>;
+  }
 
   def : Pat<(v16i8 (scalar_to_vector GPR:$src)),
             (MVE_VMOV_to_lane_8  (v16i8 (IMPLICIT_DEF)), rGPR:$src, (i32 0))>;
@@ -1905,17 +1907,21 @@ let Predicates = [HasMVEInt] in {
 
   def : Pat<(insertelt (v8f16 MQPR:$src1), (f16 HPR:$src2), imm_even:$lane),
             (MVE_VMOV_to_lane_16 MQPR:$src1, (COPY_TO_REGCLASS (f16 HPR:$src2), rGPR), imm:$lane)>;
+  let Predicates = [HasFullFP16] in {
   def : Pat<(insertelt (v8f16 MQPR:$src1), (f16 HPR:$src2), imm_odd:$lane),
             (COPY_TO_REGCLASS (INSERT_SUBREG (v4f32 (COPY_TO_REGCLASS MQPR:$src1, MQPR)),
                                 (VINSH (EXTRACT_SUBREG MQPR:$src1, (SSubReg_f16_reg imm_odd:$lane)),
                                        (COPY_TO_REGCLASS HPR:$src2, SPR)),
                                 (SSubReg_f16_reg imm_odd:$lane)), MQPR)>;
+  }
   def : Pat<(extractelt (v8f16 MQPR:$src), imm_even:$lane),
             (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_even:$lane))>;
+  let Predicates = [HasFullFP16] in {
   def : Pat<(extractelt (v8f16 MQPR:$src), imm_odd:$lane),
             (COPY_TO_REGCLASS
               (VMOVH (EXTRACT_SUBREG MQPR:$src, (SSubReg_f16_reg imm_odd:$lane))),
               HPR)>;
+  }
 
   def : Pat<(v2f64 (scalar_to_vector (f64 DPR:$src))),
             (INSERT_SUBREG (v2f64 (IMPLICIT_DEF)), DPR:$src, dsub_0)>;
@@ -3186,19 +3192,18 @@ defm MVE_VQRSHL_by_vec : mve_shift_by_vec_multi<"vqrshl", 0b1, 0b1>;
 defm MVE_VRSHL_by_vec  : mve_shift_by_vec_multi<"vrshl",  0b0, 0b1>;
 
 let Predicates = [HasMVEInt] in {
-  def : Pat<(v4i32 (ARMvshlu (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn))),
-            (v4i32 (MVE_VSHL_by_vecu32 (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)))>;
-  def : Pat<(v8i16 (ARMvshlu (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn))),
-            (v8i16 (MVE_VSHL_by_vecu16 (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)))>;
-  def : Pat<(v16i8 (ARMvshlu (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn))),
-            (v16i8 (MVE_VSHL_by_vecu8 (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)))>;
-
-  def : Pat<(v4i32 (ARMvshls (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn))),
-            (v4i32 (MVE_VSHL_by_vecs32 (v4i32 MQPR:$Qm), (v4i32 MQPR:$Qn)))>;
-  def : Pat<(v8i16 (ARMvshls (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn))),
-            (v8i16 (MVE_VSHL_by_vecs16 (v8i16 MQPR:$Qm), (v8i16 MQPR:$Qn)))>;
-  def : Pat<(v16i8 (ARMvshls (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn))),
-            (v16i8 (MVE_VSHL_by_vecs8 (v16i8 MQPR:$Qm), (v16i8 MQPR:$Qn)))>;
+  defm : MVE_TwoOpPattern<MVE_v16i8, ARMvshlu, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 1)), MVE_VSHL_by_vecu8, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v8i16, ARMvshlu, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 1)), MVE_VSHL_by_vecu16, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v4i32, ARMvshlu, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 1)), MVE_VSHL_by_vecu32, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v16i8, ARMvshls, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 0)), MVE_VSHL_by_vecs8, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v8i16, ARMvshls, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 0)), MVE_VSHL_by_vecs16, null_frag>;
+  defm : MVE_TwoOpPattern<MVE_v4i32, ARMvshls, int_arm_mve_vshl_vector_predicated,
+                          (? (i32 0), (i32 0), (i32 0)), MVE_VSHL_by_vecs32, null_frag>;
 }
 
 class MVE_shift_with_imm<string iname, string suffix, dag oops, dag iops,
@@ -3677,6 +3682,13 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
                              (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
                              imm:$rot))>;
 
+    def: Pat<(VTI.Vec (fadd_contract MQPR:$Qd_src,
+                            (int_arm_mve_vcmulq imm:$rot,
+                              (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm)))),
+              (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src),
+                             (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
+                             imm:$rot))>;
+
     def : Pat<(VTI.Vec (int_arm_mve_vcmlaq_predicated
                             imm:$rot, (VTI.Vec MQPR:$Qd_src),
                             (VTI.Vec MQPR:$Qn), (VTI.Vec MQPR:$Qm),
@@ -3684,7 +3696,6 @@ multiclass MVE_VCMLA_m<MVEVectorVTInfo VTI> {
               (VTI.Vec (Inst (VTI.Vec MQPR:$Qd_src), (VTI.Vec MQPR:$Qn),
                              (VTI.Vec MQPR:$Qm), imm:$rot,
                              ARMVCCThen, (VTI.Pred VCCR:$mask), zero_reg))>;
-
   }
 }
 
@@ -4475,7 +4486,7 @@ let Predicates = [HasMVEInt] in {
 def predicate_cast : SDNode<"ARMISD::PREDICATE_CAST", SDTUnaryOp>;
 
 def load_align4 : PatFrag<(ops node:$ptr), (load node:$ptr), [{
-  return cast<LoadSDNode>(N)->getAlignment() >= 4;
+  return cast<LoadSDNode>(N)->getAlign() >= 4;
 }]>;
 
 let Predicates = [HasMVEInt] in {
@@ -5619,7 +5630,7 @@ class MVE_VFMAMLA_qr<string iname, string suffix,
 
 multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
                              bit scalar_addend> {
-  def "": MVE_VFMAMLA_qr<iname, VTI.Suffix, VTI.Unsigned, VTI.Size,
+  def "": MVE_VFMAMLA_qr<iname, VTI.Suffix, 0b0, VTI.Size,
                          scalar_addend, VTI.Size>;
   defvar Inst = !cast<Instruction>(NAME);
   defvar pred_int = !cast<Intrinsic>("int_arm_mve_" # iname # "_n_predicated");
@@ -5629,10 +5640,7 @@ multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
   defvar s    = (i32 rGPR:$s);
   defvar pred = (VTI.Pred VCCR:$pred);
 
-  // The signed and unsigned variants of this instruction have different
-  // encodings, but they're functionally identical. For the sake of
-  // determinism, we generate only the unsigned variant.
-  if VTI.Unsigned then let Predicates = [HasMVEInt] in {
+  let Predicates = [HasMVEInt] in {
     if scalar_addend then {
       def : Pat<(VTI.Vec (add (mul v1, v2), vs)),
                 (VTI.Vec (Inst v1, v2, s))>;
@@ -5646,19 +5654,13 @@ multiclass MVE_VMLA_qr_multi<string iname, MVEVectorVTInfo VTI,
   }
 }
 
-defm MVE_VMLA_qr_s8   : MVE_VMLA_qr_multi<"vmla", MVE_v16s8, 0b0>;
-defm MVE_VMLA_qr_s16  : MVE_VMLA_qr_multi<"vmla", MVE_v8s16, 0b0>;
-defm MVE_VMLA_qr_s32  : MVE_VMLA_qr_multi<"vmla", MVE_v4s32, 0b0>;
-defm MVE_VMLA_qr_u8   : MVE_VMLA_qr_multi<"vmla", MVE_v16u8, 0b0>;
-defm MVE_VMLA_qr_u16  : MVE_VMLA_qr_multi<"vmla", MVE_v8u16, 0b0>;
-defm MVE_VMLA_qr_u32  : MVE_VMLA_qr_multi<"vmla", MVE_v4u32, 0b0>;
+defm MVE_VMLA_qr_i8   : MVE_VMLA_qr_multi<"vmla", MVE_v16i8, 0b0>;
+defm MVE_VMLA_qr_i16  : MVE_VMLA_qr_multi<"vmla", MVE_v8i16, 0b0>;
+defm MVE_VMLA_qr_i32  : MVE_VMLA_qr_multi<"vmla", MVE_v4i32, 0b0>;
 
-defm MVE_VMLAS_qr_s8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16s8, 0b1>;
-defm MVE_VMLAS_qr_s16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8s16, 0b1>;
-defm MVE_VMLAS_qr_s32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4s32, 0b1>;
-defm MVE_VMLAS_qr_u8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16u8, 0b1>;
-defm MVE_VMLAS_qr_u16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8u16, 0b1>;
-defm MVE_VMLAS_qr_u32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4u32, 0b1>;
+defm MVE_VMLAS_qr_i8  : MVE_VMLA_qr_multi<"vmlas", MVE_v16i8, 0b1>;
+defm MVE_VMLAS_qr_i16 : MVE_VMLA_qr_multi<"vmlas", MVE_v8i16, 0b1>;
+defm MVE_VMLAS_qr_i32 : MVE_VMLA_qr_multi<"vmlas", MVE_v4i32, 0b1>;
 
 multiclass MVE_VFMA_qr_multi<string iname, MVEVectorVTInfo VTI,
                              bit scalar_addend> {
@@ -7030,19 +7032,19 @@ let Predicates = [HasMVEInt], hasSideEffects = 0, isMoveReg = 1,
 
 def aligned32_pre_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
                                   (pre_store node:$val, node:$ptr, node:$offset), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 4;
+  return cast<StoreSDNode>(N)->getAlign() >= 4;
 }]>;
 def aligned32_post_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
                                    (post_store node:$val, node:$ptr, node:$offset), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 4;
+  return cast<StoreSDNode>(N)->getAlign() >= 4;
 }]>;
 def aligned16_pre_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
                                   (pre_store node:$val, node:$ptr, node:$offset), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 2;
+  return cast<StoreSDNode>(N)->getAlign() >= 2;
 }]>;
 def aligned16_post_store : PatFrag<(ops node:$val, node:$ptr, node:$offset),
                                    (post_store node:$val, node:$ptr, node:$offset), [{
-  return cast<StoreSDNode>(N)->getAlignment() >= 2;
+  return cast<StoreSDNode>(N)->getAlign() >= 2;
 }]>;
 
 
@@ -7069,7 +7071,7 @@ def aligned_maskedloadvi16: PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
                                     (masked_ld node:$ptr, undef, node:$pred, node:$passthru), [{
   auto *Ld = cast<MaskedLoadSDNode>(N);
   EVT ScalarVT = Ld->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && Ld->getAlignment() >= 2;
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && Ld->getAlign() >= 2;
 }]>;
 def aligned_sextmaskedloadvi16 : PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
                                          (aligned_maskedloadvi16 node:$ptr, node:$pred, node:$passthru), [{
@@ -7089,7 +7091,7 @@ def aligned_maskedloadvi32: PatFrag<(ops node:$ptr, node:$pred, node:$passthru),
                                     (masked_ld node:$ptr, undef, node:$pred, node:$passthru), [{
   auto *Ld = cast<MaskedLoadSDNode>(N);
   EVT ScalarVT = Ld->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && Ld->getAlignment() >= 4;
+  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && Ld->getAlign() >= 4;
 }]>;
 
 def aligned_maskedstvi8 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
@@ -7100,13 +7102,13 @@ def aligned_maskedstvi16 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
                                    (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlign() >= 2;
 }]>;
 def aligned_maskedstvi32 : PatFrag<(ops node:$val, node:$ptr, node:$pred),
                                    (masked_st node:$val, node:$ptr, undef, node:$pred), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && St->getAlignment() >= 4;
+  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && St->getAlign() >= 4;
 }]>;
 
 def pre_maskedstore : PatFrag<(ops node:$val, node:$base, node:$offset, node:$mask),
@@ -7131,25 +7133,25 @@ def aligned_pre_maskedstorevi16 : PatFrag<(ops node:$val, node:$ptr, node:$offse
                                           (pre_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlign() >= 2;
 }]>;
 def aligned_post_maskedstorevi16 : PatFrag<(ops node:$val, node:$ptr, node:$offset, node:$mask),
                                            (post_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlign() >= 2;
 }]>;
 def aligned_pre_maskedstorevi32 : PatFrag<(ops node:$val, node:$ptr, node:$offset, node:$mask),
                                           (pre_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && St->getAlignment() >= 4;
+  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && St->getAlign() >= 4;
 }]>;
 def aligned_post_maskedstorevi32 : PatFrag<(ops node:$val, node:$ptr, node:$offset, node:$mask),
                                            (post_maskedstore node:$val, node:$ptr, node:$offset, node:$mask), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && St->getAlignment() >= 4;
+  return (ScalarVT == MVT::i32 || ScalarVT == MVT::f32) && St->getAlign() >= 4;
 }]>;
 
 
@@ -7191,7 +7193,7 @@ def aligned_truncmaskedstvi16 : PatFrag<(ops node:$val, node:$base, node:$pred),
                                         (truncmaskedst node:$val, node:$base, node:$pred), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlign() >= 2;
 }]>;
 def pre_truncmaskedst : PatFrag<(ops node:$val, node:$base, node:$offset, node:$pred),
                                 (masked_st node:$val, node:$base, node:$offset, node:$pred), [{
@@ -7206,7 +7208,7 @@ def aligned_pre_truncmaskedstvi16 : PatFrag<(ops node:$val, node:$base, node:$of
                                             (pre_truncmaskedst node:$val, node:$base, node:$offset, node:$pred), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlign() >= 2;
 }]>;
 def post_truncmaskedst : PatFrag<(ops node:$val, node:$base, node:$offset, node:$postd),
                                  (masked_st node:$val, node:$base, node:$offset, node:$postd), [{
@@ -7221,7 +7223,7 @@ def aligned_post_truncmaskedstvi16 : PatFrag<(ops node:$val, node:$base, node:$o
                                              (post_truncmaskedst node:$val, node:$base, node:$offset, node:$postd), [{
   auto *St = cast<MaskedStoreSDNode>(N);
   EVT ScalarVT = St->getMemoryVT().getScalarType();
-  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlignment() >= 2;
+  return (ScalarVT == MVT::i16 || ScalarVT == MVT::f16) && St->getAlign() >= 2;
 }]>;
 
 // Load/store patterns

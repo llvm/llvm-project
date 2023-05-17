@@ -19,24 +19,19 @@ __isl_give MULTI(BASE) *FN(FN(MULTI(BASE),apply_aligned),APPLY_DOMBASE)(
 	__isl_take MULTI(BASE) *multi, __isl_take APPLY_DOM *set,
 	__isl_give EL *(*fn)(EL *el, __isl_take APPLY_DOM *set))
 {
+	isl_size n;
 	int i;
 
-	if (!multi || !set)
+	n = FN(MULTI(BASE),size)(multi);
+	if (n < 0 || !set)
 		goto error;
 
-	if (multi->n == 0) {
-		FN(APPLY_DOM,free)(set);
-		return multi;
-	}
+	for (i = 0; i < n; ++i) {
+		EL *el;
 
-	multi = FN(MULTI(BASE),cow)(multi);
-	if (!multi)
-		goto error;
-
-	for (i = 0; i < multi->n; ++i) {
-		multi->u.p[i] = fn(multi->u.p[i], FN(APPLY_DOM,copy)(set));
-		if (!multi->u.p[i])
-			goto error;
+		el = FN(MULTI(BASE),take_at)(multi, i);
+		el = fn(el, FN(APPLY_DOM,copy)(set));
+		multi = FN(MULTI(BASE),restore_at)(multi, i, el);
 	}
 
 	FN(APPLY_DOM,free)(set);

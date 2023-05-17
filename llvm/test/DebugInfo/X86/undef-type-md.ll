@@ -1,6 +1,6 @@
-; RUN:  opt -S -ipsccp %S/undef-type-md.ll | FileCheck %s
+; RUN:  opt -opaque-pointers=0 -S -passes=ipsccp %S/undef-type-md.ll | FileCheck %s
 ; CHECK: llvm.nondebug.metadata = !{[[NONDEBUG_METADATA:![0-9]+]]}
-; CHECK: [[NONDEBUG_METADATA]] =  distinct !{null} 
+; CHECK: [[NONDEBUG_METADATA]] =  distinct !{null}
 ; CHECK: !DITemplateValueParameter({{.*}} value: %class.1 addrspace(1)* undef)
 
 ; ModuleID = '<stdin>'

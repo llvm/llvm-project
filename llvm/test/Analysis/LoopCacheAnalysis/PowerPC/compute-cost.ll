@@ -1,4 +1,4 @@
-; RUN: opt < %s -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -opaque-pointers -passes='print<loop-cache-cost>' -disable-output 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
@@ -33,7 +33,54 @@ for.end:                                          ; preds = %for.cond
   ret void
 }
 
+; Check IndexedReference::computeRefCost can handle type differences between
+; Coeff and ElemSize.
 
+; CHECK: Loop 'for.cond' has cost = 100000000
+; CHECK: Loop 'for.cond1' has cost = 1000000
+; CHECK: Loop 'for.cond5' has cost = 30000
+
+@data = external dso_local global [2 x [4 x [18 x i32]]], align 1
+
+define dso_local void @handle_to_ptr_2(i1 %b0, i1 %b1, i1 %b2) {
+entry:
+  br label %for.cond
+
+for.cond:
+  %i.0 = phi i16 [ 0, %entry ], [ %inc18, %for.inc17 ]
+  %idxprom = zext i16 %i.0 to i32
+  br i1 %b2, label %for.end19, label %for.cond1
+
+for.cond1:
+  %j.0 = phi i16 [ %inc15, %for.inc14 ], [ 0, %for.cond ]
+  br i1 %b1, label %for.inc17, label %for.cond5.preheader
+
+for.cond5.preheader:
+  %idxprom10 = zext i16 %j.0 to i32
+  br label %for.cond5
+
+for.cond5:
+  %k.0 = phi i16 [ %inc, %for.inc ], [ 0, %for.cond5.preheader ]
+  br i1 %b0, label %for.inc14, label %for.inc
+
+for.inc:
+  %idxprom12 = zext i16 %k.0 to i32
+  %arrayidx13 = getelementptr inbounds [2 x [4 x [18 x i32]]], ptr @data, i32 0, i32 %idxprom, i32 %idxprom10, i32 %idxprom12
+  store i32 7, ptr %arrayidx13, align 1
+  %inc = add nuw nsw i16 %k.0, 1
+  br label %for.cond5
+
+for.inc14:
+  %inc15 = add nuw nsw i16 %j.0, 1
+  br label %for.cond1
+
+for.inc17:
+  %inc18 = add nuw nsw i16 %i.0, 1
+  br label %for.cond
+
+for.end19:
+  ret void
+}
 
 ; Check IndexedReference::computeRefCost can handle negative stride
 

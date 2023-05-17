@@ -183,11 +183,11 @@ entry:
   %retval = alloca i32, align 4
   %iDebug1 = alloca i64, align 8
   %iDebug2 = alloca i64, align 8
-  store i32 0, i32* %retval, align 4
-  call void @llvm.dbg.declare(metadata i64* %iDebug1, metadata !40, metadata !DIExpression()), !dbg !41
-  store i64 -4295033092, i64* %iDebug1, align 8, !dbg !41
-  call void @llvm.dbg.declare(metadata i64* %iDebug2, metadata !42, metadata !DIExpression()), !dbg !43
-  store i64 4295032830, i64* %iDebug2, align 8, !dbg !43
+  store i32 0, ptr %retval, align 4
+  call void @llvm.dbg.declare(metadata ptr %iDebug1, metadata !40, metadata !DIExpression()), !dbg !41
+  store i64 -4295033092, ptr %iDebug1, align 8, !dbg !41
+  call void @llvm.dbg.declare(metadata ptr %iDebug2, metadata !42, metadata !DIExpression()), !dbg !43
+  store i64 4295032830, ptr %iDebug2, align 8, !dbg !43
   ret i32 0, !dbg !44
 }
 

@@ -7,7 +7,7 @@
 %i16vec_t = type <8 x i16>
 %i8vec_t =  type <8 x i8>
 
-define void @fptoui16(%f32vec_t %a, %i16vec_t *%p) {
+define void @fptoui16(%f32vec_t %a, ptr%p) {
 ; CHECK-LABEL: fptoui16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
@@ -17,11 +17,11 @@ define void @fptoui16(%f32vec_t %a, %i16vec_t *%p) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = fptoui %f32vec_t %a to %i16vec_t
-  store %i16vec_t %b, %i16vec_t * %p
+  store %i16vec_t %b, ptr %p
   ret void
 }
 
-define void @fptosi16(%f32vec_t %a, %i16vec_t *%p) {
+define void @fptosi16(%f32vec_t %a, ptr%p) {
 ; CHECK-LABEL: fptosi16:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
@@ -31,11 +31,11 @@ define void @fptosi16(%f32vec_t %a, %i16vec_t *%p) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = fptosi %f32vec_t %a to %i16vec_t
-  store %i16vec_t %b, %i16vec_t * %p
+  store %i16vec_t %b, ptr %p
   ret void
 }
 
-define void @fptoui8(%f32vec_t %a, %i8vec_t *%p) {
+define void @fptoui8(%f32vec_t %a, ptr%p) {
 ; CHECK-LABEL: fptoui8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
@@ -46,11 +46,11 @@ define void @fptoui8(%f32vec_t %a, %i8vec_t *%p) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = fptoui %f32vec_t %a to %i8vec_t
-  store %i8vec_t %b, %i8vec_t * %p
+  store %i8vec_t %b, ptr %p
   ret void
 }
 
-define void @fptosi8(%f32vec_t %a, %i8vec_t *%p) {
+define void @fptosi8(%f32vec_t %a, ptr%p) {
 ; CHECK-LABEL: fptosi8:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vcvttps2dq %ymm0, %ymm0
@@ -61,6 +61,6 @@ define void @fptosi8(%f32vec_t %a, %i8vec_t *%p) {
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
   %b = fptosi %f32vec_t %a to %i8vec_t
-  store %i8vec_t %b, %i8vec_t * %p
+  store %i8vec_t %b, ptr %p
   ret void
 }

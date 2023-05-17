@@ -34,6 +34,10 @@ enum class MachineCombinerPattern {
   REASSOC_XY_BCA,
   REASSOC_XY_BAC,
 
+  // These are patterns used to reduce the length of dependence chain.
+  SUBADD_OP1,
+  SUBADD_OP2,
+
   // These are multiply-add patterns matched by the AArch64 machine combiner.
   MULADDW_OP1,
   MULADDW_OP2,
@@ -165,6 +169,17 @@ enum class MachineCombinerPattern {
   FMULv4i32_indexed_OP2,
   FMULv8i16_indexed_OP1,
   FMULv8i16_indexed_OP2,
+
+  // RISCV FMADD, FMSUB, FNMSUB patterns
+  FMADD_AX,
+  FMADD_XA,
+  FMSUB,
+  FNMSUB,
+
+  // X86 VNNI
+  DPWSSD,
+
+  FNMADD,
 };
 
 } // end namespace llvm

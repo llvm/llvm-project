@@ -1,4 +1,4 @@
-; RUN: opt -S -globalopt < %s | FileCheck %s
+; RUN: opt -S -passes=globalopt < %s | FileCheck %s
 source_filename = "array.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -32,10 +32,10 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @foo(i32 %in) #0 {
 entry:
   %in.addr = alloca i32, align 4
-  store i32 %in, i32* %in.addr, align 4
-  %0 = load i32, i32* %in.addr, align 4
+  store i32 %in, ptr %in.addr, align 4
+  %0 = load i32, ptr %in.addr, align 4
   %conv = sitofp i32 %0 to x86_fp80
-  store x86_fp80 %conv, x86_fp80* getelementptr inbounds ([2 x x86_fp80], [2 x x86_fp80]* @array, i64 0, i64 0), align 16
+  store x86_fp80 %conv, ptr @array, align 16
   ret void
 }
 
@@ -43,40 +43,38 @@ entry:
 define void @bar(i32 %in) #0 {
 entry:
   %in.addr = alloca i32, align 4
-  store i32 %in, i32* %in.addr, align 4
-  %0 = load i32, i32* %in.addr, align 4
+  store i32 %in, ptr %in.addr, align 4
+  %0 = load i32, ptr %in.addr, align 4
   %conv = sitofp i32 %0 to x86_fp80
-  store x86_fp80 %conv, x86_fp80* getelementptr inbounds ([2 x x86_fp80], [2 x x86_fp80]* @array, i64 0, i64 1), align 16
+  store x86_fp80 %conv, ptr getelementptr inbounds ([2 x x86_fp80], ptr @array, i64 0, i64 1), align 16
   ret void
 }
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define i32 @main(i32 %argc, i8** %argv) #0 !dbg !14 {
+define i32 @main(i32 %argc, ptr %argv) #0 !dbg !14 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
-  store i32 0, i32* %retval, align 4
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !21, metadata !DIExpression()), !dbg !22
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !23, metadata !DIExpression()), !dbg !24
-  %0 = load i8**, i8*** %argv.addr, align 8, !dbg !25
-  %arrayidx = getelementptr inbounds i8*, i8** %0, i64 0, !dbg !25
-  %1 = load i8*, i8** %arrayidx, align 8, !dbg !25
-  %arrayidx1 = getelementptr inbounds i8, i8* %1, i64 1, !dbg !25
-  %2 = load i8, i8* %arrayidx1, align 1, !dbg !25
+  %argv.addr = alloca ptr, align 8
+  store i32 0, ptr %retval, align 4
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !21, metadata !DIExpression()), !dbg !22
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !23, metadata !DIExpression()), !dbg !24
+  %0 = load ptr, ptr %argv.addr, align 8, !dbg !25
+  %1 = load ptr, ptr %0, align 8, !dbg !25
+  %arrayidx1 = getelementptr inbounds i8, ptr %1, i64 1, !dbg !25
+  %2 = load i8, ptr %arrayidx1, align 1, !dbg !25
   %conv = sext i8 %2 to i32, !dbg !25
   call void @foo(i32 %conv), !dbg !26
-  %3 = load i8**, i8*** %argv.addr, align 8, !dbg !27
-  %arrayidx2 = getelementptr inbounds i8*, i8** %3, i64 0, !dbg !27
-  %4 = load i8*, i8** %arrayidx2, align 8, !dbg !27
-  %arrayidx3 = getelementptr inbounds i8, i8* %4, i64 1, !dbg !27
-  %5 = load i8, i8* %arrayidx3, align 1, !dbg !27
+  %3 = load ptr, ptr %argv.addr, align 8, !dbg !27
+  %4 = load ptr, ptr %3, align 8, !dbg !27
+  %arrayidx3 = getelementptr inbounds i8, ptr %4, i64 1, !dbg !27
+  %5 = load i8, ptr %arrayidx3, align 1, !dbg !27
   %conv4 = sext i8 %5 to i32, !dbg !27
   call void @bar(i32 %conv4), !dbg !28
-  %6 = load x86_fp80, x86_fp80* getelementptr inbounds ([2 x x86_fp80], [2 x x86_fp80]* @array, i64 0, i64 0), align 16, !dbg !29
-  %7 = load x86_fp80, x86_fp80* getelementptr inbounds ([2 x x86_fp80], [2 x x86_fp80]* @array, i64 0, i64 1), align 16, !dbg !30
+  %6 = load x86_fp80, ptr @array, align 16, !dbg !29
+  %7 = load x86_fp80, ptr getelementptr inbounds ([2 x x86_fp80], ptr @array, i64 0, i64 1), align 16, !dbg !30
   %add = fadd x86_fp80 %6, %7, !dbg !31
   %cmp = fcmp ogt x86_fp80 %add, 0xK00000000000000000000, !dbg !32
   %conv5 = zext i1 %cmp to i32, !dbg !32

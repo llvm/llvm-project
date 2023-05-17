@@ -14,11 +14,11 @@
 define void @ifv() {
 entry:
 ; CHECK-LABEL:   .ent  ifv
-  %0 = load float, float* @f, align 4
+  %0 = load float, ptr @f, align 4
   %conv = fptosi float %0 to i32
 ; CHECK:   trunc.w.s  $f[[REG:[0-9]+]], $f{{[0-9]+}}
 ; CHECK:   mfc1	${{[0-9]+}}, $f[[REG]]
-  store i32 %conv, i32* @i_f, align 4
+  store i32 %conv, ptr @i_f, align 4
   ret void
 }
 
@@ -26,10 +26,10 @@ entry:
 define void @idv() {
 entry:
 ; CHECK-LABEL:   .ent  idv
-  %0 = load double, double* @d, align 8
+  %0 = load double, ptr @d, align 8
   %conv = fptosi double %0 to i32
 ; CHECK:   trunc.w.d  $f[[REG:[0-9]+]], $f{{[0-9]+}}
 ; CHECK:   mfc1	${{[0-9]+}}, $f[[REG]]
-  store i32 %conv, i32* @i_d, align 4
+  store i32 %conv, ptr @i_d, align 4
   ret void
 }

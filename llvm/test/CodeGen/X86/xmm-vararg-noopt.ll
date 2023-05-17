@@ -6,12 +6,12 @@ source_filename = "variadic.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux"
 
-%struct.__va_list_tag = type { i32, i32, i8*, i8* }
+%struct.__va_list_tag = type { i32, i32, ptr, ptr }
 
 @.str = private unnamed_addr constant [9 x i8] c"\0A hello \00", align 1
 
 ; Function Attrs: noinline nounwind optnone uwtable
-define dso_local void @testvarargs(i8* %fmt, ...) {
+define dso_local void @testvarargs(ptr %fmt, ...) {
 ; CHECK-LABEL: testvarargs:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $216, %rsp
@@ -48,23 +48,19 @@ define dso_local void @testvarargs(i8* %fmt, ...) {
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 entry:
-  %fmt.addr = alloca i8*, align 8
+  %fmt.addr = alloca ptr, align 8
   %va = alloca [1 x %struct.__va_list_tag], align 16
-  store i8* %fmt, i8** %fmt.addr, align 8
-  %arraydecay = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i64 0, i64 0
-  %arraydecay1 = bitcast %struct.__va_list_tag* %arraydecay to i8*
-  call void @llvm.va_start(i8* %arraydecay1)
-  %arraydecay2 = getelementptr inbounds [1 x %struct.__va_list_tag], [1 x %struct.__va_list_tag]* %va, i64 0, i64 0
-  %arraydecay23 = bitcast %struct.__va_list_tag* %arraydecay2 to i8*
-  call void @llvm.va_end(i8* %arraydecay23)
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str, i64 0, i64 0))
+  store ptr %fmt, ptr %fmt.addr, align 8
+  call void @llvm.va_start(ptr %va)
+  call void @llvm.va_end(ptr %va)
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
   ret void
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.va_start(i8*)
+declare void @llvm.va_start(ptr)
 
 ; Function Attrs: nounwind
-declare void @llvm.va_end(i8*)
+declare void @llvm.va_end(ptr)
 
-declare dso_local i32 @printf(i8*, ...)
+declare dso_local i32 @printf(ptr, ...)

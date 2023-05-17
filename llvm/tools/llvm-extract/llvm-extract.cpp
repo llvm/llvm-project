@@ -18,10 +18,10 @@
 #include "llvm/IR/IRPrintingPasses.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/LLVMContext.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IRPrinter/IRPrintingPasses.h"
 #include "llvm/IRReader/IRReader.h"
-#include "llvm/Pass.h"
+#include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
@@ -31,8 +31,14 @@
 #include "llvm/Support/SystemUtils.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Transforms/IPO.h"
+#include "llvm/Transforms/IPO/BlockExtractor.h"
+#include "llvm/Transforms/IPO/ExtractGV.h"
+#include "llvm/Transforms/IPO/GlobalDCE.h"
+#include "llvm/Transforms/IPO/StripDeadPrototypes.h"
+#include "llvm/Transforms/IPO/StripSymbols.h"
 #include <memory>
 #include <utility>
+
 using namespace llvm;
 
 cl::OptionCategory ExtractCat("llvm-extract Options");
@@ -317,9 +323,22 @@ int main(int argc, char **argv) {
 
   {
     std::vector<GlobalValue *> Gvs(GVs.begin(), GVs.end());
-    legacy::PassManager Extract;
-    Extract.add(createGVExtractionPass(Gvs, DeleteFn, KeepConstInit));
-    Extract.run(*M);
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+
+    PassBuilder PB;
+
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    ModulePassManager PM;
+    PM.addPass(ExtractGVPass(Gvs, DeleteFn, KeepConstInit));
+    PM.run(*M, MAM);
 
     // Now that we have all the GVs we want, mark the module as fully
     // materialized.
@@ -331,9 +350,9 @@ int main(int argc, char **argv) {
   // functions.
   if (!ExtractBlocks.empty()) {
     // Figure out which BasicBlocks we should extract.
-    SmallVector<SmallVector<BasicBlock *, 16>, 4> GroupOfBBs;
+    std::vector<std::vector<BasicBlock *>> GroupOfBBs;
     for (auto &P : BBMap) {
-      SmallVector<BasicBlock *, 16> BBs;
+      std::vector<BasicBlock *> BBs;
       for (StringRef BBName : P.second) {
         // The function has been materialized, so add its matching basic blocks
         // to the block extractor list, or fail if a name is not found.
@@ -351,19 +370,45 @@ int main(int argc, char **argv) {
       GroupOfBBs.push_back(BBs);
     }
 
-    legacy::PassManager PM;
-    PM.add(createBlockExtractorPass(GroupOfBBs, true));
-    PM.run(*M);
+    LoopAnalysisManager LAM;
+    FunctionAnalysisManager FAM;
+    CGSCCAnalysisManager CGAM;
+    ModuleAnalysisManager MAM;
+
+    PassBuilder PB;
+
+    PB.registerModuleAnalyses(MAM);
+    PB.registerCGSCCAnalyses(CGAM);
+    PB.registerFunctionAnalyses(FAM);
+    PB.registerLoopAnalyses(LAM);
+    PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+    ModulePassManager PM;
+    PM.addPass(BlockExtractorPass(std::move(GroupOfBBs), true));
+    PM.run(*M, MAM);
   }
 
   // In addition to deleting all other functions, we also want to spiff it
   // up a little bit.  Do this now.
-  legacy::PassManager Passes;
 
+  LoopAnalysisManager LAM;
+  FunctionAnalysisManager FAM;
+  CGSCCAnalysisManager CGAM;
+  ModuleAnalysisManager MAM;
+
+  PassBuilder PB;
+
+  PB.registerModuleAnalyses(MAM);
+  PB.registerCGSCCAnalyses(CGAM);
+  PB.registerFunctionAnalyses(FAM);
+  PB.registerLoopAnalyses(LAM);
+  PB.crossRegisterProxies(LAM, FAM, CGAM, MAM);
+
+  ModulePassManager PM;
   if (!DeleteFn)
-    Passes.add(createGlobalDCEPass());           // Delete unreachable globals
-  Passes.add(createStripDeadDebugInfoPass());    // Remove dead debug info
-  Passes.add(createStripDeadPrototypesPass());   // Remove dead func decls
+    PM.addPass(GlobalDCEPass());
+  PM.addPass(StripDeadDebugInfoPass());
+  PM.addPass(StripDeadPrototypesPass());
 
   std::error_code EC;
   ToolOutputFile Out(OutputFilename, EC, sys::fs::OF_None);
@@ -373,12 +418,11 @@ int main(int argc, char **argv) {
   }
 
   if (OutputAssembly)
-    Passes.add(
-        createPrintModulePass(Out.os(), "", PreserveAssemblyUseListOrder));
+    PM.addPass(PrintModulePass(Out.os(), "", PreserveAssemblyUseListOrder));
   else if (Force || !CheckBitcodeOutputToConsole(Out.os()))
-    Passes.add(createBitcodeWriterPass(Out.os(), PreserveBitcodeUseListOrder));
+    PM.addPass(BitcodeWriterPass(Out.os(), PreserveBitcodeUseListOrder));
 
-  Passes.run(*M.get());
+  PM.run(*M, MAM);
 
   // Declare success.
   Out.keep();

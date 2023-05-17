@@ -11,9 +11,10 @@ body:             |
     liveins: $sgpr50
     ; CHECK-LABEL: name: spill_csr_sgpr_argument
     ; CHECK: liveins: $sgpr50, $vgpr0
-    ; CHECK: $vgpr0 = V_WRITELANE_B32 $sgpr50, 0, $vgpr0
-    ; CHECK: S_NOP 0, implicit $sgpr50
-    ; CHECK: $sgpr50 = S_MOV_B32 0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $vgpr0 = V_WRITELANE_B32 $sgpr50, 0, $vgpr0
+    ; CHECK-NEXT: S_NOP 0, implicit $sgpr50
+    ; CHECK-NEXT: $sgpr50 = S_MOV_B32 0
     S_NOP 0, implicit $sgpr50
     $sgpr50 = S_MOV_B32 0
 

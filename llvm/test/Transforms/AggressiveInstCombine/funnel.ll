@@ -442,7 +442,7 @@ end:
 ; being cautious not to cause a potential perf pessimization for
 ; targets that do not have a fshate instruction.
 
-define i32 @could_be_fshr(i32 %a, i32 %b, i32 %c, i32* %p) {
+define i32 @could_be_fshr(i32 %a, i32 %b, i32 %c, ptr %p) {
 ; CHECK-LABEL: @could_be_fshr(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[C:%.*]], 0
@@ -452,7 +452,7 @@ define i32 @could_be_fshr(i32 %a, i32 %b, i32 %c, i32* %p) {
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], [[SUB]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[B:%.*]], [[C]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR]]
-; CHECK-NEXT:    store i32 [[OR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[OR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
 ; CHECK-NEXT:    [[COND:%.*]] = phi i32 [ [[B]], [[ENTRY:%.*]] ], [ [[OR]], [[FSHBB]] ]
@@ -467,7 +467,7 @@ fshbb:
   %shl = shl i32 %a, %sub
   %shr = lshr i32 %b, %c
   %or = or i32 %shl, %shr
-  store i32 %or, i32* %p
+  store i32 %or, ptr %p
   br label %end
 
 end:
@@ -484,13 +484,13 @@ declare i32 @f(...)
 define i32 @PR48068() {
 ; CHECK-LABEL: @PR48068(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[CALL:%.*]] = call i32 bitcast (i32 (...)* @i to i32 ()*)()
-; CHECK-NEXT:    [[TMP0:%.*]] = load i32, i32* @a, align 4
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @i()
+; CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr @a, align 4
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i32 [[TMP0]], 0
 ; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[IF_END:%.*]], label [[IF_THEN:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[CALL]], [[TMP0]]
-; CHECK-NEXT:    [[CALL_I:%.*]] = call i32 bitcast (i32 (...)* @f to i32 ()*)()
+; CHECK-NEXT:    [[CALL_I:%.*]] = call i32 @f()
 ; CHECK-NEXT:    [[SUB_I:%.*]] = sub nsw i32 32, [[TMP0]]
 ; CHECK-NEXT:    [[SHR_I:%.*]] = lshr i32 [[CALL_I]], [[SUB_I]]
 ; CHECK-NEXT:    [[OR:%.*]] = or i32 [[SHL]], [[SHR_I]]
@@ -500,14 +500,14 @@ define i32 @PR48068() {
 ; CHECK-NEXT:    ret i32 [[H_0]]
 ;
 entry:
-  %call = call i32 bitcast (i32 (...)* @i to i32 ()*)()
-  %0 = load i32, i32* @a, align 4
+  %call = call i32 @i()
+  %0 = load i32, ptr @a, align 4
   %tobool.not = icmp eq i32 %0, 0
   br i1 %tobool.not, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
   %shl = shl i32 %call, %0
-  %call.i = call i32 bitcast (i32 (...)* @f to i32 ()*)()
+  %call.i = call i32 @f()
   %sub.i = sub nsw i32 32, %0
   %shr.i = lshr i32 %call.i, %sub.i
   %or = or i32 %shl, %shr.i

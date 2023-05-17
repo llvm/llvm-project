@@ -176,7 +176,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
         Register Reg = MO.getReg();
         // Do not move the instruction if it def/uses a physical register,
         // unless it is a constant physical register or a noreg.
-        if (!Register::isVirtualRegister(Reg)) {
+        if (!Reg.isVirtual()) {
           if (!Reg || MRI.isConstantPhysReg(Reg))
             continue;
           Insert = nullptr;

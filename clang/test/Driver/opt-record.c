@@ -53,28 +53,28 @@
 // RUN: %clang -target x86_64-linux -### -o FOO -fuse-ld=lld -flto=thin -fdiagnostics-hotness-threshold=100 -Rpass=inline -Rpass-missed=inline -Rpass-analysis=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-RPASS
 // RUN: %clang -target x86_64-linux -### -o FOO -fuse-ld=lld -flto=thin -fdiagnostics-hotness-threshold=auto -Rpass=inline -Rpass-missed=inline -Rpass-analysis=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-AUTO
 
-// CHECK-NOPASS-NOT: "--plugin-opt=opt-remarks-filename="
-// CHECK-NOPASS-NOT: "--plugin-opt=opt-remarks-passes=inline"
-// CHECK-NOPASS-NOT: "--plugin-opt=opt-remarks-format=yaml"
-// CHECK-NOPASS-NOT: "--plugin-opt=opt-remarks-hotness-threshold=100"
+// CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-filename="
+// CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-passes=inline"
+// CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-format=yaml"
+// CHECK-NOPASS-NOT: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS-A:      "--plugin-opt=opt-remarks-filename=a.out.opt.ld.yaml"
-// CHECK-PASS-A-SAME: "--plugin-opt=opt-remarks-passes=inline"
-// CHECK-PASS-A-SAME: "--plugin-opt=opt-remarks-format=yaml"
-// CHECK-PASS-A-SAME: "--plugin-opt=opt-remarks-hotness-threshold=100"
+// CHECK-PASS-A:      "-plugin-opt=opt-remarks-filename=a.out.opt.ld.yaml"
+// CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-passes=inline"
+// CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-format=yaml"
+// CHECK-PASS-A-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS:      "--plugin-opt=opt-remarks-filename=FOO.opt.ld.yaml"
-// CHECK-PASS-SAME: "--plugin-opt=opt-remarks-passes=inline"
-// CHECK-PASS-SAME: "--plugin-opt=opt-remarks-format=yaml"
-// CHECK-PASS-SAME: "--plugin-opt=opt-remarks-hotness-threshold=100"
+// CHECK-PASS:      "-plugin-opt=opt-remarks-filename=FOO.opt.ld.yaml"
+// CHECK-PASS-SAME: "-plugin-opt=opt-remarks-passes=inline"
+// CHECK-PASS-SAME: "-plugin-opt=opt-remarks-format=yaml"
+// CHECK-PASS-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS-CUSTOM:      "--plugin-opt=opt-remarks-filename=FOO.txt.opt.ld.some-format"
-// CHECK-PASS-CUSTOM-SAME: "--plugin-opt=opt-remarks-format=some-format"
-// CHECK-PASS-CUSTOM-SAME: "--plugin-opt=opt-remarks-hotness-threshold=100"
+// CHECK-PASS-CUSTOM:      "-plugin-opt=opt-remarks-filename=FOO.txt.opt.ld.some-format"
+// CHECK-PASS-CUSTOM-SAME: "-plugin-opt=opt-remarks-format=some-format"
+// CHECK-PASS-CUSTOM-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS-RPASS:      "--plugin-opt=-pass-remarks=inline"
-// CHECK-PASS-RPASS-SAME: "--plugin-opt=-pass-remarks-missed=inline"
-// CHECK-PASS-RPASS-SAME: "--plugin-opt=-pass-remarks-analysis=inline"
-// CHECK-PASS-RPASS-SAME: "--plugin-opt=opt-remarks-hotness-threshold=100"
+// CHECK-PASS-RPASS:      "-plugin-opt=-pass-remarks=inline"
+// CHECK-PASS-RPASS-SAME: "-plugin-opt=-pass-remarks-missed=inline"
+// CHECK-PASS-RPASS-SAME: "-plugin-opt=-pass-remarks-analysis=inline"
+// CHECK-PASS-RPASS-SAME: "-plugin-opt=opt-remarks-hotness-threshold=100"
 
-// CHECK-PASS-AUTO:   "--plugin-opt=opt-remarks-hotness-threshold=auto"
+// CHECK-PASS-AUTO:   "-plugin-opt=opt-remarks-hotness-threshold=auto"

@@ -12,7 +12,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2eb.o
 # RUN: ld.lld -o %teb.exe -script %t.script %t1eb.o %t2eb.o
-# RUN: llvm-objdump -d -t -s --mattr=micromips --no-show-raw-insn %teb.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d -t -s --mattr=micromips --no-show-raw-insn %teb.exe \
 # RUN:   | FileCheck --check-prefixes=ASM,EB %s
 # RUN: llvm-readelf -h %teb.exe | FileCheck --check-prefix=ELF %s
 
@@ -21,7 +21,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mipsel-unknown-linux \
 # RUN:         -mattr=micromips %s -o %t2el.o
 # RUN: ld.lld -o %tel.exe -script %t.script %t1el.o %t2el.o
-# RUN: llvm-objdump -d -t -s --mattr=micromips --no-show-raw-insn %tel.exe \
+# RUN: llvm-objdump --no-print-imm-hex -d -t -s --mattr=micromips --no-show-raw-insn %tel.exe \
 # RUN:   | FileCheck --check-prefixes=ASM,EL %s
 # RUN: llvm-readelf -h %tel.exe | FileCheck --check-prefix=ELF %s
 

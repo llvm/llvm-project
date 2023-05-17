@@ -14,17 +14,18 @@
 #ifndef FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 #define FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_
 
+#include "flang/Common/reference.h"
+#include "flang/Semantics/symbol.h"
+#include <map>
 #include <set>
 #include <string>
+#include <vector>
 
 namespace llvm {
 class raw_ostream;
 }
 
 namespace Fortran::semantics {
-class Scope;
-class SemanticsContext;
-class Symbol;
 
 struct RuntimeDerivedTypeTables {
   Scope *schemata{nullptr};
@@ -36,6 +37,25 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(SemanticsContext &);
 /// Name of the builtin module that defines builtin derived types meant
 /// to describe other derived types at runtime in flang descriptor.
 constexpr char typeInfoBuiltinModule[]{"__fortran_type_info"};
+
+/// Name of the bindings descriptor component in the DerivedType type of the
+/// __Fortran_type_info module
+constexpr char bindingDescCompName[]{"binding"};
+
+/// Name of the __builtin_c_funptr component in the Binding type  of the
+/// __Fortran_type_info module
+constexpr char procCompName[]{"proc"};
+
+SymbolVector CollectBindings(const Scope &dtScope);
+
+struct NonTbpDefinedIo {
+  const Symbol *subroutine;
+  common::DefinedIo definedIo;
+  bool isDtvArgPolymorphic;
+};
+
+std::multimap<const Symbol *, NonTbpDefinedIo>
+CollectNonTbpDefinedIoGenericInterfaces(const Scope &scope);
 
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RUNTIME_TYPE_INFO_H_

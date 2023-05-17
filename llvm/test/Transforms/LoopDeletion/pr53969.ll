@@ -10,13 +10,6 @@ define void @test() {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[TMP2:%.*]] = phi i32 [ 11, [[BB:%.*]] ]
-; CHECK-NEXT:    [[TMP3:%.*]] = add nsw i32 112, -1
-; CHECK-NEXT:    [[TMP4:%.*]] = add nuw nsw i32 [[TMP2]], 1
-; CHECK-NEXT:    [[TMP5:%.*]] = mul i32 [[TMP3]], [[TMP3]]
-; CHECK-NEXT:    [[TMP6:%.*]] = mul nsw i32 [[TMP2]], -6
-; CHECK-NEXT:    [[TMP7:%.*]] = mul nsw i32 [[TMP6]], [[TMP5]]
-; CHECK-NEXT:    [[TMP8:%.*]] = add nuw nsw i32 [[TMP7]], [[TMP2]]
 ; CHECK-NEXT:    [[TMP9:%.*]] = and i32 undef, 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[TMP9]], 0
 ; CHECK-NEXT:    br i1 [[TMP10]], label [[BB33_LOOPEXIT1:%.*]], label [[BB34_PREHEADER:%.*]]
@@ -26,14 +19,10 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2_LCSSA12:%.*]] = phi i32 [ 11, [[BB34]] ]
 ; CHECK-NEXT:    br label [[BB33_LOOPEXIT:%.*]]
 ; CHECK:       bb12:
-; CHECK-NEXT:    [[TMP0:%.*]] = add i64 [[TMP40:%.*]], 0
 ; CHECK-NEXT:    br label [[BB14:%.*]]
 ; CHECK:       bb14:
 ; CHECK-NEXT:    br i1 true, label [[BB32:%.*]], label [[BB22:%.*]]
 ; CHECK:       bb22:
-; CHECK-NEXT:    [[TMP1:%.*]] = trunc i64 4 to i32
-; CHECK-NEXT:    [[TMP23:%.*]] = or i32 [[TMP1]], undef
-; CHECK-NEXT:    [[TMP24:%.*]] = add i32 [[TMP23]], undef
 ; CHECK-NEXT:    br i1 false, label [[BB42:%.*]], label [[BB25:%.*]]
 ; CHECK:       bb25:
 ; CHECK-NEXT:    br label [[BB31:%.*]]
@@ -45,22 +34,18 @@ define void @test() {
 ; CHECK-NEXT:    [[TMP2_LCSSA9:%.*]] = phi i32 [ [[TMP2_LCSSA12]], [[BB11:%.*]] ]
 ; CHECK-NEXT:    br label [[BB33:%.*]]
 ; CHECK:       bb33.loopexit1:
-; CHECK-NEXT:    [[TMP2_LCSSA:%.*]] = phi i32 [ [[TMP2]], [[BB1]] ]
+; CHECK-NEXT:    [[TMP2_LCSSA:%.*]] = phi i32 [ 11, [[BB1]] ]
 ; CHECK-NEXT:    br label [[BB33]]
 ; CHECK:       bb33:
 ; CHECK-NEXT:    [[TMP210:%.*]] = phi i32 [ [[TMP2_LCSSA]], [[BB33_LOOPEXIT1]] ], [ [[TMP2_LCSSA9]], [[BB33_LOOPEXIT]] ]
 ; CHECK-NEXT:    call void @use(i32 [[TMP210]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb34:
-; CHECK-NEXT:    [[TMP36:%.*]] = xor i32 0, [[TMP8]]
-; CHECK-NEXT:    [[TMP38:%.*]] = add i32 [[TMP36]], undef
-; CHECK-NEXT:    [[TMP39:%.*]] = add i32 [[TMP38]], undef
-; CHECK-NEXT:    [[TMP40]] = sext i32 [[TMP39]] to i64
 ; CHECK-NEXT:    br i1 false, label [[BB11]], label [[BB12:%.*]]
 ; CHECK:       bb42:
-; CHECK-NEXT:    [[TMP24_LCSSA:%.*]] = phi i32 [ [[TMP24]], [[BB22]] ]
-; CHECK-NEXT:    [[TMP18_LCSSA4:%.*]] = phi i64 [ [[TMP0]], [[BB22]] ]
-; CHECK-NEXT:    store atomic i64 [[TMP18_LCSSA4]], i64 addrspace(1)* undef unordered, align 8
+; CHECK-NEXT:    [[TMP24_LCSSA:%.*]] = phi i32 [ undef, [[BB22]] ]
+; CHECK-NEXT:    [[TMP18_LCSSA4:%.*]] = phi i64 [ 0, [[BB22]] ]
+; CHECK-NEXT:    store atomic i64 [[TMP18_LCSSA4]], ptr addrspace(1) undef unordered, align 8
 ; CHECK-NEXT:    call void @use(i32 [[TMP24_LCSSA]])
 ; CHECK-NEXT:    ret void
 ;
@@ -84,7 +69,7 @@ bb11:                                             ; preds = %bb34
   br i1 undef, label %bb33, label %bb34
 
 bb12:                                             ; preds = %bb34
-  %tmp13 = icmp eq i8 addrspace(1)* undef, null
+  %tmp13 = icmp eq ptr addrspace(1) undef, null
   br label %bb14
 
 bb14:                                             ; preds = %bb25, %bb12
@@ -105,7 +90,7 @@ bb22:                                             ; preds = %bb14
 bb25:                                             ; preds = %bb22
   %tmp26 = add nuw nsw i32 %tmp17, 1
   %tmp27 = zext i32 %tmp26 to i64
-  %tmp28 = getelementptr inbounds i32, i32 addrspace(1)* undef, i64 %tmp27
+  %tmp28 = getelementptr inbounds i32, ptr addrspace(1) undef, i64 %tmp27
   %tmp29 = add i32 %tmp15, 3
   %tmp30 = icmp ugt i32 %tmp17, 110
   br i1 %tmp30, label %bb31, label %bb14
@@ -131,7 +116,7 @@ bb34:                                             ; preds = %bb11, %bb1
   br i1 undef, label %bb11, label %bb12
 
 bb42:                                             ; preds = %bb22
-  store atomic i64 %tmp18, i64 addrspace(1)* undef unordered, align 8
+  store atomic i64 %tmp18, ptr addrspace(1) undef unordered, align 8
   call void @use(i32 %tmp24)
   ret void
 }

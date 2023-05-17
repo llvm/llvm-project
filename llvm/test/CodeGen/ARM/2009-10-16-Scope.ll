@@ -5,12 +5,12 @@
 
 define void @bar() nounwind ssp {
 entry:
-  %count_ = alloca i32, align 4                   ; <i32*> [#uses=2]
+  %count_ = alloca i32, align 4                   ; <ptr> [#uses=2]
   br label %do.body, !dbg !0
 
 do.body:                                          ; preds = %entry
-  call void @llvm.dbg.declare(metadata i32* %count_, metadata !4, metadata !DIExpression()), !dbg !DILocation(scope: !5)
-  %conv = ptrtoint i32* %count_ to i32, !dbg !0   ; <i32> [#uses=1]
+  call void @llvm.dbg.declare(metadata ptr %count_, metadata !4, metadata !DIExpression()), !dbg !DILocation(scope: !5)
+  %conv = ptrtoint ptr %count_ to i32, !dbg !0   ; <i32> [#uses=1]
   %call = call i32 @foo(i32 %conv) ssp, !dbg !0   ; <i32> [#uses=0]
   br label %do.end, !dbg !0
 

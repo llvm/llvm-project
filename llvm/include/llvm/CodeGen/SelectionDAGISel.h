@@ -21,6 +21,7 @@
 
 namespace llvm {
 class AAResults;
+class AssumptionCache;
 class TargetInstrInfo;
 class TargetMachine;
 class SelectionDAGBuilder;
@@ -48,21 +49,19 @@ public:
   SelectionDAG *CurDAG;
   std::unique_ptr<SelectionDAGBuilder> SDB;
   AAResults *AA = nullptr;
+  AssumptionCache *AC = nullptr;
   GCFunctionInfo *GFI = nullptr;
   CodeGenOpt::Level OptLevel;
   const TargetInstrInfo *TII;
   const TargetLowering *TLI;
   bool FastISelFailed;
   SmallPtrSet<const Instruction *, 4> ElidedArgCopyInstrs;
-  bool UseInstrRefDebugInfo = false;
 
   /// Current optimization remark emitter.
   /// Used to report things like combines and FastISel failures.
   std::unique_ptr<OptimizationRemarkEmitter> ORE;
 
-  static char ID;
-
-  explicit SelectionDAGISel(TargetMachine &tm,
+  explicit SelectionDAGISel(char &ID, TargetMachine &tm,
                             CodeGenOpt::Level OL = CodeGenOpt::Default);
   ~SelectionDAGISel() override;
 
@@ -321,6 +320,12 @@ private:
 
   void Select_FREEZE(SDNode *N);
   void Select_ARITH_FENCE(SDNode *N);
+  void Select_MEMBARRIER(SDNode *N);
+
+  void pushStackMapLiveVariable(SmallVectorImpl<SDValue> &Ops, SDValue Operand,
+                                SDLoc DL);
+  void Select_STACKMAP(SDNode *N);
+  void Select_PATCHPOINT(SDNode *N);
 
 private:
   void DoInstructionSelection();
@@ -331,6 +336,9 @@ private:
   /// personality specific tasks. Returns true if the block should be
   /// instruction selected, false if no code should be emitted for it.
   bool PrepareEHLandingPad();
+
+  // Mark and Report IPToState for each Block under AsynchEH
+  void reportIPToStateForBlocks(MachineFunction *Fn);
 
   /// Perform instruction selection on all basic blocks in the function.
   void SelectAllBasicBlocks(const Function &Fn);

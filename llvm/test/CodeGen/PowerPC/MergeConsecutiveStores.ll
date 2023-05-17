@@ -34,14 +34,14 @@
 ;; CHECK-NEXT: blr
 define void @f() {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 0), align 4
-  %1 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 1), align 4
-  %2 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 2), align 4
-  %3 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 3), align 4
-  store i32 %0, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 0), align 4
-  store i32 %1, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 1), align 4
-  store i32 %2, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 2), align 4
-  store i32 %3, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 3), align 4
+  %0 = load i32, ptr @fx, align 4
+  %1 = load i32, ptr getelementptr inbounds (%struct.X, ptr @fx, i32 0, i32 1), align 4
+  %2 = load i32, ptr getelementptr inbounds (%struct.X, ptr @fx, i32 0, i32 2), align 4
+  %3 = load i32, ptr getelementptr inbounds (%struct.X, ptr @fx, i32 0, i32 3), align 4
+  store i32 %0, ptr @fy, align 4
+  store i32 %1, ptr getelementptr inbounds (%struct.X, ptr @fy, i32 0, i32 1), align 4
+  store i32 %2, ptr getelementptr inbounds (%struct.X, ptr @fy, i32 0, i32 2), align 4
+  store i32 %3, ptr getelementptr inbounds (%struct.X, ptr @fy, i32 0, i32 3), align 4
   ret void
 }
 
@@ -56,13 +56,13 @@ entry:
 ;; CHECK: blr
 define void @g() {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 0), align 16
-  %1 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 1), align 4
-  %2 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 2), align 4
-  %3 = load i32, i32* getelementptr inbounds (%struct.X, %struct.X* @fx, i32 0, i32 3), align 4
-  store i32 %0, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 0), align 16
-  store i32 %1, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 1), align 4
-  store i32 %2, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 2), align 4
-  store i32 %3, i32* getelementptr inbounds (%struct.X, %struct.X* @fy, i32 0, i32 3), align 4
+  %0 = load i32, ptr @fx, align 16
+  %1 = load i32, ptr getelementptr inbounds (%struct.X, ptr @fx, i32 0, i32 1), align 4
+  %2 = load i32, ptr getelementptr inbounds (%struct.X, ptr @fx, i32 0, i32 2), align 4
+  %3 = load i32, ptr getelementptr inbounds (%struct.X, ptr @fx, i32 0, i32 3), align 4
+  store i32 %0, ptr @fy, align 16
+  store i32 %1, ptr getelementptr inbounds (%struct.X, ptr @fy, i32 0, i32 1), align 4
+  store i32 %2, ptr getelementptr inbounds (%struct.X, ptr @fy, i32 0, i32 2), align 4
+  store i32 %3, ptr getelementptr inbounds (%struct.X, ptr @fy, i32 0, i32 3), align 4
   ret void
 }

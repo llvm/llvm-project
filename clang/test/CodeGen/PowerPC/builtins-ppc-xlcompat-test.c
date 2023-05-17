@@ -16,110 +16,58 @@
 extern double d;
 extern float f;
 
-int test_builtin_ppc_compare_exp_uo() {
-// CHECK-LABEL:       @test_builtin_ppc_compare_exp_uo
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.uo(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __builtin_ppc_compare_exp_uo(d, d);
-}
+int test_builtin_ppc_test() {
+// CHECK-LABEL: @test_builtin_ppc_test
+// CHECK: call i32 @llvm.ppc.compare.exp.uo(double %0, double %1)
+// CHECK: call i32 @llvm.ppc.compare.exp.lt(double %3, double %4)
+// CHECK: call i32 @llvm.ppc.compare.exp.gt(double %6, double %7)
+// CHECK: call i32 @llvm.ppc.compare.exp.eq(double %9, double %10)
+// CHECK: call i32 @llvm.ppc.test.data.class.f64(double %12, i32 0)
+// CHECK: call i32 @llvm.ppc.test.data.class.f32(float %13, i32 0)
+// CHECK: call i32 @llvm.ppc.compare.exp.uo(double %14, double %15)
+// CHECK: call i32 @llvm.ppc.compare.exp.lt(double %17, double %18)
+// CHECK: call i32 @llvm.ppc.compare.exp.gt(double %20, double %21)
+// CHECK: call i32 @llvm.ppc.compare.exp.eq(double %23, double %24)
+// CHECK: call i32 @llvm.ppc.test.data.class.f64(double %26, i32 127)
+// CHECK: call i32 @llvm.ppc.test.data.class.f32(float %27, i32 127)
 
-int test_builtin_ppc_compare_exp_lt() {
-// CHECK-LABEL:       @test_builtin_ppc_compare_exp_lt
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.lt(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __builtin_ppc_compare_exp_lt(d, d);
-}
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_uo' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_lt' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_gt' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_eq' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_uo' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_lt' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_gt' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_compare_exp_eq' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions
+// CHECK-NONPWR9-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions
 
-int test_builtin_ppc_compare_exp_gt() {
-// CHECK-LABEL:       @test_builtin_ppc_compare_exp_gt
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.gt(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __builtin_ppc_compare_exp_gt(d, d);
-}
-
-int test_builtin_ppc_compare_exp_eq() {
-// CHECK-LABEL:       @test_builtin_ppc_compare_exp_eq
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.eq(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __builtin_ppc_compare_exp_eq(d, d);
-}
-
-int test_builtin_ppc_test_data_class_d() {
-// CHECK-LABEL:       @test_builtin_ppc_test_data_class_d
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.d(double %0, i32 0)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __builtin_ppc_test_data_class(d, 0);
-}
-
-int test_builtin_ppc_test_data_class_f() {
-// CHECK-LABEL:       @test_builtin_ppc_test_data_class_f
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f(float %0, i32 0)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __builtin_ppc_test_data_class(f, 0);
-}
-
-int test_compare_exp_uo() {
-// CHECK-LABEL:       @test_compare_exp_uo
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.uo(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __compare_exp_uo(d, d);
-}
-
-int test_compare_exp_lt() {
-// CHECK-LABEL:       @test_compare_exp_lt
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.lt(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __compare_exp_lt(d, d);
-}
-
-int test_compare_exp_gt() {
-// CHECK-LABEL:       @test_compare_exp_gt
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.gt(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __compare_exp_gt(d, d);
-}
-
-int test_compare_exp_eq() {
-// CHECK-LABEL:       @test_compare_exp_eq
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.compare.exp.eq(double %0, double %1)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __compare_exp_eq(d, d);
-}
-
-int test_test_data_class_d() {
-// CHECK-LABEL:       @test_test_data_class_d
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.d(double %0, i32 127)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __test_data_class(d, 127);
-}
-
-int test_test_data_class_f() {
-// CHECK-LABEL:       @test_test_data_class_f
-// CHECK:             [[TMP:%.*]] = call i32 @llvm.ppc.test.data.class.f(float %0, i32 127)
-// CHECK-NEXT:        ret i32 [[TMP]]
-// CHECK-NONPWR9-ERR: error: this builtin is only valid on POWER9 or later CPUs
-// CHECK-NOVSX-ERR: error: this builtin requires VSX to be enabled
-  return __test_data_class(f, 127);
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_uo' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_lt' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_gt' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_eq' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_uo' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_lt' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_gt' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_compare_exp_eq' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions,vsx
+// CHECK-NOVSX-ERR: error: '__builtin_ppc_test_data_class' needs target feature isa-v30-instructions,vsx
+  int i;
+  i = __builtin_ppc_compare_exp_uo(d, d);
+  i = __builtin_ppc_compare_exp_lt(d, d);
+  i = __builtin_ppc_compare_exp_gt(d, d);
+  i = __builtin_ppc_compare_exp_eq(d, d);
+  i = __builtin_ppc_test_data_class(d, 0);
+  i = __builtin_ppc_test_data_class(f, 0);
+  i = __compare_exp_uo(d, d);
+  i = __compare_exp_lt(d, d);
+  i = __compare_exp_gt(d, d);
+  i = __compare_exp_eq(d, d);
+  i = __test_data_class(d, 127);
+  i = __test_data_class(f, 127);
+  return i;
 }

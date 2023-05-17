@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='func.func(test-pass-invalid-parent)' -verify-diagnostics
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(func.func(test-pass-invalid-parent))' -verify-diagnostics
 
 // Test that we properly report errors when the parent becomes invalid after running a pass
 // on a child operation.

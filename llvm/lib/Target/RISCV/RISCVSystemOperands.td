@@ -67,25 +67,8 @@ def lookupSysRegByDeprecatedName : SearchIndex {
 }
 
 // The following CSR encodings match those given in Tables 2.2,
-// 2.3, 2.4 and  2.5 in the RISC-V Instruction Set Manual
+// 2.3, 2.4, 2.5 and 2.6 in the RISC-V Instruction Set Manual
 // Volume II: Privileged Architecture.
-
-//===----------------------------------------------------------------------===//
-// User Trap Setup
-//===----------------------------------------------------------------------===//
-def : SysReg<"ustatus", 0x000>;
-def : SysReg<"uie", 0x004>;
-def : SysReg<"utvec", 0x005>;
-
-//===----------------------------------------------------------------------===//
-// User Trap Handling
-//===----------------------------------------------------------------------===//
-def : SysReg<"uscratch", 0x040>;
-def : SysReg<"uepc", 0x041>;
-def : SysReg<"ucause", 0x042>;
-let DeprecatedName = "ubadaddr" in
-def : SysReg<"utval", 0x043>;
-def : SysReg<"uip", 0x044>;
 
 //===----------------------------------------------------------------------===//
 // User Floating-Point CSRs
@@ -120,8 +103,6 @@ foreach i = 3...31 in
 // Supervisor Trap Setup
 //===----------------------------------------------------------------------===//
 def : SysReg<"sstatus", 0x100>;
-def : SysReg<"sedeleg", 0x102>;
-def : SysReg<"sideleg", 0x103>;
 def : SysReg<"sie", 0x104>;
 def : SysReg<"stvec", 0x105>;
 def : SysReg<"scounteren", 0x106>;
@@ -352,7 +333,7 @@ def : SysReg<"vstart", 0x008>;
 def : SysReg<"vxsat", 0x009>;
 def : SysReg<"vxrm", 0x00A>;
 def : SysReg<"vcsr", 0x00F>;
-def : SysReg<"vl", 0xC20>;
+def SysRegVL : SysReg<"vl", 0xC20>;
 def : SysReg<"vtype", 0xC21>;
 def SysRegVLENB: SysReg<"vlenb", 0xC22>;
 
@@ -378,3 +359,56 @@ foreach i = 0...3 in {
 //===-----------------------------------------------
 
 def SEED : SysReg<"seed", 0x015>;
+
+//===-----------------------------------------------
+// Advanced Interrupt Architecture
+//===-----------------------------------------------
+
+// Machine-level CSRs
+def : SysReg<"miselect", 0x350>;
+def : SysReg<"mireg", 0x351>;
+def : SysReg<"mtopei", 0x35C>;
+def : SysReg<"mtopi", 0xFB0>;
+def : SysReg<"mvien", 0x308>;
+def : SysReg<"mvip", 0x309>;
+let isRV32Only = 1 in {
+def : SysReg<"midelegh", 0x313>;
+def : SysReg<"mieh", 0x314>;
+def : SysReg<"mvienh", 0x318>;
+def : SysReg<"mviph", 0x319>;
+def : SysReg<"miph", 0x354>;
+} // isRV32Only
+
+// Supervisor-level CSRs
+def : SysReg<"siselect", 0x150>;
+def : SysReg<"sireg", 0x151>;
+def : SysReg<"stopei", 0x15C>;
+def : SysReg<"stopi", 0xDB0>;
+let isRV32Only = 1 in {
+def : SysReg<"sieh", 0x114>;
+def : SysReg<"siph", 0x154>;
+} // isRV32Only
+
+// Hypervisor and VS CSRs
+def : SysReg<"hvien", 0x608>;
+def : SysReg<"hvictl", 0x609>;
+def : SysReg<"hviprio1", 0x646>;
+def : SysReg<"hviprio2", 0x647>;
+def : SysReg<"vsiselect", 0x250>;
+def : SysReg<"vsireg", 0x251>;
+def : SysReg<"vstopei", 0x25C>;
+def : SysReg<"vstopi", 0xEB0>;
+let isRV32Only = 1 in {
+def : SysReg<"hidelegh", 0x613>;
+def : SysReg<"hvienh", 0x618>;
+def : SysReg<"hviph", 0x655>;
+def : SysReg<"hviprio1h", 0x656>;
+def : SysReg<"hviprio2h", 0x657>;
+def : SysReg<"vsieh", 0x214>;
+def : SysReg<"vsiph", 0x254>;
+} // isRV32Only
+
+// Jump Vector Table CSR
+//===-----------------------------------------------
+
+def : SysReg<"jvt", 0x017>;

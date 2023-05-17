@@ -2,7 +2,6 @@
 // RUN: %libomptarget-run-generic 2>&1 \
 // RUN: | %fcheck-generic
 
-
 // END.
 
 #include <omp.h>
@@ -11,7 +10,7 @@
 int main() {
   int arr[100];
 
-#pragma omp target data map(alloc: arr[50:2]) // partially mapped
+#pragma omp target data map(alloc : arr[50 : 2]) // partially mapped
   {
     // CHECK: arr[50] must present: 1
     fprintf(stderr, "arr[50] must present: %d\n",
@@ -30,7 +29,7 @@ int main() {
       arr[50] = 5;
       arr[51] = 6;
     } // must treat as present (dec ref count) even though full size not present
-  } // wouldn't delete if previous ref count dec didn't happen
+  }   // wouldn't delete if previous ref count dec didn't happen
 
   // CHECK: arr[50] still present: 0
   fprintf(stderr, "arr[50] still present: %d\n",

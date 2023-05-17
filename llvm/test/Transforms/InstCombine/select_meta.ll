@@ -28,15 +28,13 @@ define i8 @shrink_select(i1 %cond, i32 %x) {
   ret i8 %trunc
 }
 
-define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, <4 x i32>* %ptr1, <4 x i32>* %ptr2) {
+define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, ptr %ptr1, ptr %ptr2) {
 ; CHECK-LABEL: @min_max_bitcast(
 ; CHECK-NEXT:    [[CMP:%.*]] = fcmp olt <4 x float> [[A:%.*]], [[B:%.*]]
 ; CHECK-NEXT:    [[SEL1_V:%.*]] = select <4 x i1> [[CMP]], <4 x float> [[A]], <4 x float> [[B]], !prof [[PROF0]]
 ; CHECK-NEXT:    [[SEL2_V:%.*]] = select <4 x i1> [[CMP]], <4 x float> [[B]], <4 x float> [[A]], !prof [[PROF0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i32>* [[PTR1:%.*]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[SEL1_V]], <4 x float>* [[TMP1]], align 16
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast <4 x i32>* [[PTR2:%.*]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[SEL2_V]], <4 x float>* [[TMP2]], align 16
+; CHECK-NEXT:    store <4 x float> [[SEL1_V]], ptr [[PTR1:%.*]], align 16
+; CHECK-NEXT:    store <4 x float> [[SEL2_V]], ptr [[PTR2:%.*]], align 16
 ; CHECK-NEXT:    ret void
 ;
   %cmp = fcmp olt <4 x float> %a, %b
@@ -44,8 +42,8 @@ define void @min_max_bitcast(<4 x float> %a, <4 x float> %b, <4 x i32>* %ptr1, <
   %bc2 = bitcast <4 x float> %b to <4 x i32>
   %sel1 = select <4 x i1> %cmp, <4 x i32> %bc1, <4 x i32> %bc2, !prof !1
   %sel2 = select <4 x i1> %cmp, <4 x i32> %bc2, <4 x i32> %bc1, !prof !1
-  store <4 x i32> %sel1, <4 x i32>* %ptr1
-  store <4 x i32> %sel2, <4 x i32>* %ptr2
+  store <4 x i32> %sel1, ptr %ptr1
+  store <4 x i32> %sel2, ptr %ptr2
   ret void
 }
 
@@ -67,8 +65,8 @@ define i32 @foo2(i32, i32) local_unnamed_addr #0  {
 define i64 @test43(i32 %a) nounwind {
 ; CHECK-LABEL: @test43(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[A:%.*]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i32 [[TMP1]] to i64
-; CHECK-NEXT:    ret i64 [[TMP2]]
+; CHECK-NEXT:    [[MAX:%.*]] = zext i32 [[TMP1]] to i64
+; CHECK-NEXT:    ret i64 [[MAX]]
 ;
   %a_ext = sext i32 %a to i64
   %is_a_nonnegative = icmp sgt i32 %a, -1
@@ -133,8 +131,8 @@ define <2 x i32> @abs_nabs_x01_vec(<2 x i32> %x) {
 ; SMAX(SMAX(x, y), x) -> SMAX(x, y)
 define i32 @test30(i32 %x, i32 %y) {
 ; CHECK-LABEL: @test30(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp sgt i32 %x, %y
   %cond = select i1 %cmp, i32 %x, i32 %y, !prof !1
@@ -146,8 +144,8 @@ define i32 @test30(i32 %x, i32 %y) {
 ; SMAX(SMAX(75, X), 36) -> SMAX(X, 75)
 define i32 @test70(i32 %x) {
 ; CHECK-LABEL: @test70(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 75)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 75)
+; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %cmp = icmp slt i32 %x, 75
   %cond = select i1 %cmp, i32 75, i32 %x, !prof !1
@@ -160,8 +158,8 @@ define i32 @test70(i32 %x) {
 ; SMIN(SMIN(X, 92), 11) -> SMIN(X, 11)
 define i32 @test72(i32 %x) {
 ; CHECK-LABEL: @test72(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 11)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[RETVAL:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 11)
+; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
   %cmp = icmp sgt i32 %x, 92
   %cond = select i1 %cmp, i32 92, i32 %x, !prof !1
@@ -174,9 +172,9 @@ define i32 @test72(i32 %x) {
 ; SMAX(SMAX(X, 36), 75) -> SMAX(X, 75)
 define i32 @test74(i32 %x) {
 ; CHECK-LABEL: @test74(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 36)
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umax.i32(i32 [[TMP1]], i32 75)
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 36)
+; CHECK-NEXT:    [[RETVAL:%.*]] = call i32 @llvm.umax.i32(i32 [[COND]], i32 75)
+; CHECK-NEXT:    ret i32 [[RETVAL]]
 ;
   %cmp = icmp slt i32 %x, 36
   %cond = select i1 %cmp, i32 36, i32 %x, !prof !1
@@ -189,8 +187,8 @@ define i32 @test74(i32 %x) {
 define i32 @smin1(i32 %x) {
 ; CHECK-LABEL: @smin1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %not_x = xor i32 %x, -1
   %cmp = icmp sgt i32 %x, 0
@@ -202,8 +200,8 @@ define i32 @smin1(i32 %x) {
 define i32 @smin2(i32 %x) {
 ; CHECK-LABEL: @smin2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smax.i32(i32 [[X:%.*]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %not_x = xor i32 %x, -1
   %cmp = icmp slt i32 %x, 0
@@ -215,8 +213,8 @@ define i32 @smin2(i32 %x) {
 define i32 @smax1(i32 %x) {
 ; CHECK-LABEL: @smax1(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %not_x = xor i32 %x, -1
   %cmp = icmp slt i32 %x, 0
@@ -228,8 +226,8 @@ define i32 @smax1(i32 %x) {
 define i32 @smax2(i32 %x) {
 ; CHECK-LABEL: @smax2(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.smin.i32(i32 [[X:%.*]], i32 0)
-; CHECK-NEXT:    [[TMP2:%.*]] = xor i32 [[TMP1]], -1
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[SEL:%.*]] = xor i32 [[TMP1]], -1
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %not_x = xor i32 %x, -1
   %cmp = icmp sgt i32 %x, 0
@@ -240,8 +238,8 @@ define i32 @smax2(i32 %x) {
 ; The compare should change, but the metadata remains the same because the select operands are not swapped.
 define i32 @umin1(i32 %x) {
 ; CHECK-LABEL: @umin1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 -2147483648)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 -2147483648)
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %sel = select i1 %cmp, i32 %x, i32 -2147483648, !prof !1
@@ -251,8 +249,8 @@ define i32 @umin1(i32 %x) {
 ; The compare should change, and the metadata is swapped because the select operands are swapped.
 define i32 @umin2(i32 %x) {
 ; CHECK-LABEL: @umin2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 2147483647)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umin.i32(i32 [[X:%.*]], i32 2147483647)
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp slt i32 %x, 0
   %sel = select i1 %cmp, i32 2147483647, i32 %x, !prof !1
@@ -262,8 +260,8 @@ define i32 @umin2(i32 %x) {
 ; The compare should change, but the metadata remains the same because the select operands are not swapped.
 define i32 @umax1(i32 %x) {
 ; CHECK-LABEL: @umax1(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 2147483647)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 2147483647)
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp slt i32 %x, 0
   %sel = select i1 %cmp, i32 %x, i32 2147483647, !prof !1
@@ -273,8 +271,8 @@ define i32 @umax1(i32 %x) {
 ; The compare should change, and the metadata is swapped because the select operands are swapped.
 define i32 @umax2(i32 %x) {
 ; CHECK-LABEL: @umax2(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 -2147483648)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[SEL:%.*]] = call i32 @llvm.umax.i32(i32 [[X:%.*]], i32 -2147483648)
+; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %cmp = icmp sgt i32 %x, -1
   %sel = select i1 %cmp, i32 -2147483648, i32 %x, !prof !1

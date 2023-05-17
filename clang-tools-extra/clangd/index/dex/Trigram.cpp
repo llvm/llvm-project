@@ -32,7 +32,7 @@ static void identifierTrigrams(llvm::StringRef Identifier, Func Out) {
   // Apply fuzzy matching text segmentation.
   llvm::SmallVector<CharRole> Roles(Identifier.size());
   calculateRoles(Identifier,
-                 llvm::makeMutableArrayRef(Roles.data(), Identifier.size()));
+                 llvm::MutableArrayRef(Roles.data(), Identifier.size()));
 
   std::string LowercaseIdentifier = Identifier.lower();
 
@@ -126,7 +126,7 @@ std::vector<Token> generateQueryTrigrams(llvm::StringRef Query) {
 
   // Apply fuzzy matching text segmentation.
   llvm::SmallVector<CharRole> Roles(Query.size());
-  calculateRoles(Query, llvm::makeMutableArrayRef(Roles.data(), Query.size()));
+  calculateRoles(Query, llvm::MutableArrayRef(Roles.data(), Query.size()));
 
   std::string LowercaseQuery = Query.lower();
 

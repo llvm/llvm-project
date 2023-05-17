@@ -8,10 +8,10 @@
 define void @ParseFunc() local_unnamed_addr #0 {
 entry:
   %dataVar = alloca i32, align 4
-  %0 = load i32, i32* %dataVar, align 4
+  %0 = load i32, ptr %dataVar, align 4
   %and = and i32 %0, 65535
-  store i32 %and, i32* %dataVar, align 4
-  %.pr = load i32, i32* %dataVar, align 4
+  store i32 %and, ptr %dataVar, align 4
+  %.pr = load i32, ptr %dataVar, align 4
   switch i32 %.pr, label %sw.epilog [
     i32 4, label %sw.bb
     i32 5, label %sw.bb
@@ -37,7 +37,7 @@ ParseFuncNext.exit.i:
   br i1 %cmp1.i, label %if.then.i, label %if.else10.i
 
 if.then.i:
-  call void (i8*, i32, i8*, ...) @snprintf(i8* undef, i32 undef, i8* getelementptr inbounds ([8 x i8], [8 x i8]* @.str.3, i32 0, i32 0), i32 undef) #2
+  call void (ptr, i32, ptr, ...) @snprintf(ptr undef, i32 undef, ptr @.str.3, i32 undef) #2
   br label %if.end27.i
 
 if.else10.i:
@@ -56,12 +56,12 @@ sw.bb41:
   unreachable
 
 sw.bb42:
-  %1 = load i32, i32* undef, align 4
+  %1 = load i32, ptr undef, align 4
   %shr.i = lshr i32 %1, 16
   br label %while.cond.i.i
 
 while.cond.i.i:
-  %2 = load i8, i8* undef, align 1
+  %2 = load i8, ptr undef, align 1
   switch i8 %2, label %if.then4.i [
     i8 48, label %land.end.i.i
     i8 120, label %land.end.i.i
@@ -104,7 +104,7 @@ sw.bb16.i:
   unreachable
 
 sw.epilog.i:
-  call void (i8*, i32, i8*, ...) @snprintf(i8* undef, i32 undef, i8* nonnull undef, i32 undef) #2
+  call void (ptr, i32, ptr, ...) @snprintf(ptr undef, i32 undef, ptr nonnull undef, i32 undef) #2
   br label %land.rhs.i126
 
 sw.bb43:
@@ -124,7 +124,7 @@ sw.epilog:
 }
 
 ; Function Attrs: nounwind
-declare void @snprintf(i8* nocapture, i32, i8* nocapture readonly, ...) local_unnamed_addr #1
+declare void @snprintf(ptr nocapture, i32, ptr nocapture readonly, ...) local_unnamed_addr #1
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="hexagonv62" "target-features"="+hvx,+hvx-length64b" "unsafe-fp-math"="false" "use-soft-float"="false" }

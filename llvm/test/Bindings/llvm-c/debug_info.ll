@@ -12,13 +12,13 @@
 ; CHECK-NEXT:   call void @llvm.dbg.value(metadata i64 0, metadata !41, metadata !DIExpression(DW_OP_constu, 0, DW_OP_stack_value)), !dbg !44
 ; CHECK-NEXT: }
 
-; CHECK:      ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+; CHECK:      ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 ; CHECK-NEXT: declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 
-; CHECK:      ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+; CHECK:      ; Function Attrs: nocallback nofree nosync nounwind speculatable willreturn memory(none)
 ; CHECK-NEXT: declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
-; CHECK:      attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+; CHECK:      attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
 
 ; CHECK:      !llvm.dbg.cu = !{!0}
 ; CHECK-NEXT: !FooType = !{!28}

@@ -59,19 +59,18 @@ if.then:
 
 if.end:
   %h = phi float [ 0.0, %if.then ], [ 4.0, %entry ]
-  call void @foo(%struct.A* nonnull undef)
-  tail call void @llvm.dbg.value(metadata %struct.A* undef, i64 0, metadata !5, metadata !4), !dbg !6
+  call void @foo(ptr nonnull undef)
+  tail call void @llvm.dbg.value(metadata ptr undef, i64 0, metadata !5, metadata !4), !dbg !6
   tail call void @llvm.dbg.value(metadata float %h, i64 0, metadata !5, metadata !4), !dbg !6
-  %n0 = load float, float* undef, align 4
+  %n0 = load float, ptr undef, align 4
   %mul = fmul fast float %n0, %h
   %add = fadd fast float %mul, 1.0
-  tail call void @llvm.dbg.value(metadata %struct.A* undef, i64 0, metadata !5, metadata !4), !dbg !6
+  tail call void @llvm.dbg.value(metadata ptr undef, i64 0, metadata !5, metadata !4), !dbg !6
   tail call void @llvm.dbg.value(metadata float %add, i64 0, metadata !5, metadata !4), !dbg !6
   %add.i = fadd fast float %add, %n0
-  store float %add.i, float* undef, align 4
-  %n1 = bitcast %struct.A* %i to i8*
-  call void @llvm.lifetime.start.p0i8(i64 16, i8* %n1)
-  %n2 = load <2 x float>, <2 x float>* undef, align 8
+  store float %add.i, ptr undef, align 4
+  call void @llvm.lifetime.start.p0(i64 16, ptr %i)
+  %n2 = load <2 x float>, ptr undef, align 8
   %conv = uitofp i1 %tobool to float
   %bitcast = extractelement <2 x float> %n2, i32 0
   %factor = fmul fast float %bitcast, 2.0
@@ -83,8 +82,8 @@ if.end:
 %struct.A = type { float, float }
 
 declare void @bar(float)
-declare void @foo(%struct.A*)
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @foo(ptr)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare void @llvm.dbg.value(metadata, i64, metadata, metadata)
 
 !llvm.dbg.cu = !{!0}

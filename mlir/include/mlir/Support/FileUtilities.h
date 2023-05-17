@@ -17,6 +17,7 @@
 #include <string>
 
 namespace llvm {
+struct Align;
 class MemoryBuffer;
 class ToolOutputFile;
 class StringRef;
@@ -28,6 +29,12 @@ namespace mlir {
 /// `errorMessage` if errors occur and `errorMessage` is not nullptr.
 std::unique_ptr<llvm::MemoryBuffer>
 openInputFile(llvm::StringRef inputFilename,
+              std::string *errorMessage = nullptr);
+/// Open the file specified by its name for reading, with the given buffer
+/// alignment constraint. Write the error message to `errorMessage` if errors
+/// occur and `errorMessage` is not nullptr.
+std::unique_ptr<llvm::MemoryBuffer>
+openInputFile(llvm::StringRef inputFilename, llvm::Align alignment,
               std::string *errorMessage = nullptr);
 
 /// Open the file specified by its name for writing. Write the error message to

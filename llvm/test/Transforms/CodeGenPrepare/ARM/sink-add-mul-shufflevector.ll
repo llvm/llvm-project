@@ -1,6 +1,6 @@
 ; RUN: opt -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp < %s -codegenprepare -S | FileCheck -check-prefix=CHECK %s
 
-define void @sink_add_mul(i32* %s1, i32 %x, i32* %d, i32 %n) {
+define void @sink_add_mul(ptr %s1, i32 %x, ptr %d, i32 %n) {
 ; CHECK-LABEL: @sink_add_mul(
 ; CHECK:    vector.ph:
 ; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
@@ -21,25 +21,22 @@ vector.ph:                                        ; preds = %for.body.preheader
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %s1, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = mul nsw <4 x i32> %wide.load, %broadcast.splat9
-  %3 = getelementptr inbounds i32, i32* %d, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load10 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = add nsw <4 x i32> %wide.load10, %2
-  %6 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %5, <4 x i32>* %6, align 4
+  %0 = getelementptr inbounds i32, ptr %s1, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = mul nsw <4 x i32> %wide.load, %broadcast.splat9
+  %2 = getelementptr inbounds i32, ptr %d, i32 %index
+  %wide.load10 = load <4 x i32>, ptr %2, align 4
+  %3 = add nsw <4 x i32> %wide.load10, %1
+  store <4 x i32> %3, ptr %2, align 4
   %index.next = add i32 %index, 4
-  %7 = icmp eq i32 %index.next, %n.vec
-  br i1 %7, label %for.cond.cleanup, label %vector.body
+  %4 = icmp eq i32 %index.next, %n.vec
+  br i1 %4, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
   ret void
 }
 
-define void @sink_add_mul_multiple(i32* %s1, i32* %s2, i32 %x, i32* %d, i32* %d2, i32 %n) {
+define void @sink_add_mul_multiple(ptr %s1, ptr %s2, i32 %x, ptr %d, ptr %d2, i32 %n) {
 ; CHECK-LABEL: @sink_add_mul_multiple(
 ; CHECK:    vector.ph:
 ; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
@@ -64,36 +61,30 @@ vector.ph:                                        ; preds = %for.body.preheader
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %s1, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = mul nsw <4 x i32> %wide.load, %broadcast.splat16
-  %3 = getelementptr inbounds i32, i32* %d, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load17 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = add nsw <4 x i32> %wide.load17, %2
-  %6 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %5, <4 x i32>* %6, align 4
-  %7 = getelementptr inbounds i32, i32* %s2, i32 %index
-  %8 = bitcast i32* %7 to <4 x i32>*
-  %wide.load18 = load <4 x i32>, <4 x i32>* %8, align 4
-  %9 = mul nsw <4 x i32> %wide.load18, %broadcast.splat16
-  %10 = getelementptr inbounds i32, i32* %d2, i32 %index
-  %11 = bitcast i32* %10 to <4 x i32>*
-  %wide.load19 = load <4 x i32>, <4 x i32>* %11, align 4
-  %12 = add nsw <4 x i32> %wide.load19, %9
-  %13 = bitcast i32* %10 to <4 x i32>*
-  store <4 x i32> %12, <4 x i32>* %13, align 4
+  %0 = getelementptr inbounds i32, ptr %s1, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = mul nsw <4 x i32> %wide.load, %broadcast.splat16
+  %2 = getelementptr inbounds i32, ptr %d, i32 %index
+  %wide.load17 = load <4 x i32>, ptr %2, align 4
+  %3 = add nsw <4 x i32> %wide.load17, %1
+  store <4 x i32> %3, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %s2, i32 %index
+  %wide.load18 = load <4 x i32>, ptr %4, align 4
+  %5 = mul nsw <4 x i32> %wide.load18, %broadcast.splat16
+  %6 = getelementptr inbounds i32, ptr %d2, i32 %index
+  %wide.load19 = load <4 x i32>, ptr %6, align 4
+  %7 = add nsw <4 x i32> %wide.load19, %5
+  store <4 x i32> %7, ptr %6, align 4
   %index.next = add i32 %index, 4
-  %14 = icmp eq i32 %index.next, %n.vec
-  br i1 %14, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
   ret void
 }
 
 
-define void @sink_add_sub_unsinkable(i32* %s1, i32* %s2, i32 %x, i32* %d, i32* %d2, i32 %n) {
+define void @sink_add_sub_unsinkable(ptr %s1, ptr %s2, i32 %x, ptr %d, ptr %d2, i32 %n) {
 ; CHECK-LABEL: @sink_add_sub_unsinkable(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP13:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -116,35 +107,29 @@ vector.ph:                                        ; preds = %for.body.preheader
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %s1, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = mul nsw <4 x i32> %wide.load, %broadcast.splat16
-  %3 = getelementptr inbounds i32, i32* %d, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load17 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = add nsw <4 x i32> %wide.load17, %2
-  %6 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %5, <4 x i32>* %6, align 4
-  %7 = getelementptr inbounds i32, i32* %s2, i32 %index
-  %8 = bitcast i32* %7 to <4 x i32>*
-  %wide.load18 = load <4 x i32>, <4 x i32>* %8, align 4
-  %9 = sub nsw <4 x i32> %broadcast.splat16, %wide.load18
-  %10 = getelementptr inbounds i32, i32* %d2, i32 %index
-  %11 = bitcast i32* %10 to <4 x i32>*
-  %wide.load19 = load <4 x i32>, <4 x i32>* %11, align 4
-  %12 = add nsw <4 x i32> %wide.load19, %9
-  %13 = bitcast i32* %10 to <4 x i32>*
-  store <4 x i32> %12, <4 x i32>* %13, align 4
+  %0 = getelementptr inbounds i32, ptr %s1, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = mul nsw <4 x i32> %wide.load, %broadcast.splat16
+  %2 = getelementptr inbounds i32, ptr %d, i32 %index
+  %wide.load17 = load <4 x i32>, ptr %2, align 4
+  %3 = add nsw <4 x i32> %wide.load17, %1
+  store <4 x i32> %3, ptr %2, align 4
+  %4 = getelementptr inbounds i32, ptr %s2, i32 %index
+  %wide.load18 = load <4 x i32>, ptr %4, align 4
+  %5 = sub nsw <4 x i32> %broadcast.splat16, %wide.load18
+  %6 = getelementptr inbounds i32, ptr %d2, i32 %index
+  %wide.load19 = load <4 x i32>, ptr %6, align 4
+  %7 = add nsw <4 x i32> %wide.load19, %5
+  store <4 x i32> %7, ptr %6, align 4
   %index.next = add i32 %index, 4
-  %14 = icmp eq i32 %index.next, %n.vec
-  br i1 %14, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
   ret void
 }
 
-define void @sink_sub(i32* %s1, i32 %x, i32* %d, i32 %n) {
+define void @sink_sub(ptr %s1, i32 %x, ptr %d, i32 %n) {
 ; CHECK-LABEL: @sink_sub(
 ; CHECK:    vector.ph:
 ; CHECK-NOT:  %{{.*}} = insertelement <4 x i32> undef, i32 %{{.*}}, i32 0
@@ -165,22 +150,20 @@ vector.ph:                                        ; preds = %for.body.preheader
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %s1, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = sub nsw <4 x i32> %wide.load, %broadcast.splat9
-  %3 = getelementptr inbounds i32, i32* %d, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %2, <4 x i32>* %4, align 4
+  %0 = getelementptr inbounds i32, ptr %s1, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = sub nsw <4 x i32> %wide.load, %broadcast.splat9
+  %2 = getelementptr inbounds i32, ptr %d, i32 %index
+  store <4 x i32> %1, ptr %2, align 4
   %index.next = add i32 %index, 4
-  %5 = icmp eq i32 %index.next, %n.vec
-  br i1 %5, label %for.cond.cleanup, label %vector.body
+  %3 = icmp eq i32 %index.next, %n.vec
+  br i1 %3, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
   ret void
 }
 
-define void @sink_sub_unsinkable(i32* %s1, i32 %x, i32* %d, i32 %n) {
+define void @sink_sub_unsinkable(ptr %s1, i32 %x, ptr %d, i32 %n) {
 entry:
 ; CHECK-LABEL: @sink_sub_unsinkable(
 ; CHECK:      vector.ph:
@@ -203,16 +186,14 @@ vector.ph:                                        ; preds = %for.body.preheader
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %s1, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = sub nsw <4 x i32> %broadcast.splat9, %wide.load
-  %3 = getelementptr inbounds i32, i32* %d, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  store <4 x i32> %2, <4 x i32>* %4, align 4
+  %0 = getelementptr inbounds i32, ptr %s1, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = sub nsw <4 x i32> %broadcast.splat9, %wide.load
+  %2 = getelementptr inbounds i32, ptr %d, i32 %index
+  store <4 x i32> %1, ptr %2, align 4
   %index.next = add i32 %index, 4
-  %5 = icmp eq i32 %index.next, %n.vec
-  br i1 %5, label %for.cond.cleanup, label %vector.body
+  %3 = icmp eq i32 %index.next, %n.vec
+  br i1 %3, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %for.body, %middle.block, %entry
   ret void

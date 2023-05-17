@@ -8,6 +8,7 @@
 
 #include "flang/Semantics/scope.h"
 #include "flang/Parser/characters.h"
+#include "flang/Semantics/semantics.h"
 #include "flang/Semantics/symbol.h"
 #include "flang/Semantics/type.h"
 #include "llvm/Support/raw_ostream.h"
@@ -88,6 +89,9 @@ Symbol *Scope::FindSymbol(const SourceName &name) const {
   auto it{find(name)};
   if (it != end()) {
     return &*it->second;
+  } else if (IsSubmodule()) {
+    const Scope *parent{symbol_->get<ModuleDetails>().parent()};
+    return parent ? parent->FindSymbol(name) : nullptr;
   } else if (CanImport(name)) {
     return parent_.FindSymbol(name);
   } else {
@@ -272,7 +276,7 @@ std::optional<parser::MessageFixedText> Scope::SetImportKind(ImportKind kind) {
         ? "IMPORT,NONE must be the only IMPORT statement in a scope"_err_en_US
         : "IMPORT,ALL must be the only IMPORT statement in a scope"_err_en_US;
   } else if (kind != *importKind_ &&
-      (kind != ImportKind::Only || kind != ImportKind::Only)) {
+      (kind != ImportKind::Only && *importKind_ != ImportKind::Only)) {
     return "Every IMPORT must have ONLY specifier if one of them does"_err_en_US;
   } else {
     return std::nullopt;
@@ -306,7 +310,7 @@ const Scope *Scope::FindScope(parser::CharBlock source) const {
 
 Scope *Scope::FindScope(parser::CharBlock source) {
   bool isContained{sourceRange_.Contains(source)};
-  if (!isContained && !IsTopLevel() && !IsModuleFile()) {
+  if (!isContained && !IsTopLevel() && kind_ != Kind::Module) {
     return nullptr;
   }
   for (auto &child : children_) {
@@ -317,9 +321,49 @@ Scope *Scope::FindScope(parser::CharBlock source) {
   return isContained && !IsTopLevel() ? this : nullptr;
 }
 
-void Scope::AddSourceRange(const parser::CharBlock &source) {
-  for (auto *scope{this}; !scope->IsGlobal(); scope = &scope->parent()) {
-    scope->sourceRange_.ExtendToCover(source);
+void Scope::AddSourceRange(parser::CharBlock source) {
+  if (source.empty()) {
+    return;
+  }
+  const parser::AllCookedSources &allCookedSources{context_.allCookedSources()};
+  const parser::CookedSource *cooked{allCookedSources.Find(source)};
+  if (!cooked) {
+    CHECK(context_.IsTempName(source.ToString()));
+    return;
+  }
+  for (auto *scope{this}; !scope->IsTopLevel(); scope = &scope->parent()) {
+    CHECK(scope->sourceRange_.empty() == (scope->cookedSource_ == nullptr));
+    if (!scope->cookedSource_) {
+      scope->cookedSource_ = cooked;
+      scope->sourceRange_ = source;
+    } else if (scope->cookedSource_ == cooked) {
+      scope->sourceRange_.ExtendToCover(source);
+    } else {
+      // There's a bug that will be hard to fix; crash informatively
+      const parser::AllSources &allSources{allCookedSources.allSources()};
+      const auto describe{[&](parser::CharBlock src) {
+        if (auto range{allCookedSources.GetProvenanceRange(src)}) {
+          std::size_t offset;
+          if (const parser::SourceFile *
+              file{allSources.GetSourceFile(range->start(), &offset)}) {
+            return "'"s + file->path() + "' at " + std::to_string(offset) +
+                " for " + std::to_string(range->size());
+          } else {
+            return "(GetSourceFile failed)"s;
+          }
+        } else {
+          return "(GetProvenanceRange failed)"s;
+        }
+      }};
+      std::string scopeDesc{describe(scope->sourceRange_)};
+      std::string newDesc{describe(source)};
+      common::die("AddSourceRange would have combined ranges from distinct "
+                  "source files \"%s\" and \"%s\"",
+          scopeDesc.c_str(), newDesc.c_str());
+    }
+    if (scope->IsSubmodule()) {
+      break; // Submodules are child scopes but not contained ranges
+    }
   }
 }
 

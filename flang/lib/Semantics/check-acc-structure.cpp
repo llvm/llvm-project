@@ -409,17 +409,20 @@ void AccStructureChecker::Enter(const parser::AccClause::Copyout &c) {
 
 void AccStructureChecker::Enter(const parser::AccClause::Self &x) {
   CheckAllowed(llvm::acc::Clause::ACCC_self);
-  const parser::AccSelfClause &accSelfClause = x.v;
+  const std::optional<parser::AccSelfClause> &accSelfClause = x.v;
   if (GetContext().directive == llvm::acc::Directive::ACCD_update &&
-      std::holds_alternative<std::optional<parser::ScalarLogicalExpr>>(
-          accSelfClause.u)) {
+      ((accSelfClause &&
+           std::holds_alternative<std::optional<parser::ScalarLogicalExpr>>(
+               (*accSelfClause).u)) ||
+          !accSelfClause)) {
     context_.Say(GetContext().clauseSource,
         "SELF clause on the %s directive must have a var-list"_err_en_US,
         ContextDirectiveAsFortran());
   } else if (GetContext().directive != llvm::acc::Directive::ACCD_update &&
-      std::holds_alternative<parser::AccObjectList>(accSelfClause.u)) {
+      accSelfClause &&
+      std::holds_alternative<parser::AccObjectList>((*accSelfClause).u)) {
     const auto &accObjectList =
-        std::get<parser::AccObjectList>(accSelfClause.u);
+        std::get<parser::AccObjectList>((*accSelfClause).u);
     if (accObjectList.v.size() != 1) {
       context_.Say(GetContext().clauseSource,
           "SELF clause on the %s directive only accepts optional scalar logical"

@@ -42,17 +42,6 @@ namespace dr1611 { // dr1611: dup 1658
   C c;
 }
 
-namespace dr1684 { // dr1684: 3.6
-#if __cplusplus >= 201103L
-  struct NonLiteral { // expected-note {{because}}
-    NonLiteral();
-    constexpr int f() { return 0; } // expected-warning 0-1{{will not be implicitly 'const'}}
-  };
-  constexpr int f(NonLiteral &) { return 0; }
-  constexpr int f(NonLiteral) { return 0; } // expected-error {{not a literal type}}
-#endif
-}
-
 namespace dr1631 {  // dr1631: 3.7
 #if __cplusplus >= 201103L
   // Incorrect overload resolution for single-element initializer-list
@@ -123,6 +112,12 @@ namespace dr1645 { // dr1645: 3.9
   constexpr B a(0); // expected-error {{ambiguous}}
   constexpr B b(0, 0); // expected-error {{ambiguous}}
 #endif
+}
+
+namespace dr1652 { // dr1652: 3.6
+  int a, b;
+  int arr[&a + 1 == &b ? 1 : 2]; // expected-error 2{{variable length array}}
+                                 // expected-note@-1 {{points past the end}}
 }
 
 namespace dr1653 { // dr1653: 4 c++17
@@ -277,6 +272,17 @@ namespace dr1672 { // dr1672: 7
   static_assert(!__is_standard_layout(Y<X>), "");
 }
 
+namespace dr1684 { // dr1684: 3.6
+#if __cplusplus >= 201103L
+  struct NonLiteral { // expected-note {{because}}
+    NonLiteral();
+    constexpr int f() { return 0; } // expected-warning 0-1{{will not be implicitly 'const'}}
+  };
+  constexpr int f(NonLiteral &) { return 0; }
+  constexpr int f(NonLiteral) { return 0; } // expected-error {{not a literal type}}
+#endif
+}
+
 namespace dr1687 { // dr1687: 7
   template<typename T> struct To {
     operator T(); // expected-note 2{{first operand was implicitly converted to type 'int *'}}
@@ -292,7 +298,7 @@ namespace dr1687 { // dr1687: 7
 #if __cplusplus > 201703L
   enum E1 {};
   enum E2 {};
-  auto c = To<E1>() <=> To<E2>(); // expected-error {{invalid operands to binary expression ('To<dr1687::E1>' and 'To<dr1687::E2>')}}
+  auto c = To<E1>() <=> To<E2>(); // expected-error {{invalid operands to binary expression ('To<E1>' and 'To<E2>')}}
 #endif
 }
 

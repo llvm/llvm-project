@@ -7,7 +7,7 @@ define void @f1(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f1(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_255:%.*]] = and i32 [[A:%.*]], 255
-; CHECK-NEXT:    [[A_2:%.*]] = add i32 [[A_255]], 20
+; CHECK-NEXT:    [[A_2:%.*]] = add nuw nsw i32 [[A_255]], 20
 ; CHECK-NEXT:    [[BC:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
 ; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
@@ -85,55 +85,55 @@ false: ;%b in [0, 276)
   ret void
 }
 
-define void @f2_ptr(i8* %a, i8* %b) {
+define void @f2_ptr(ptr %a, ptr %b) {
 ; CHECK-LABEL: @f2_ptr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BC:%.*]] = icmp eq i8* [[A:%.*]], null
+; CHECK-NEXT:    [[BC:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[BC]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* null, [[B:%.*]]
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr null, [[B:%.*]]
 ; CHECK-NEXT:    call void @use(i1 [[C_1]])
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
-; CHECK-NEXT:    [[C_2:%.*]] = icmp eq i8* [[A]], [[B]]
+; CHECK-NEXT:    [[C_2:%.*]] = icmp eq ptr [[A]], [[B]]
 ; CHECK-NEXT:    call void @use(i1 [[C_2]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %bc = icmp eq i8* %a, null
+  %bc = icmp eq ptr %a, null
   br i1 %bc, label %true, label %false
 
 true: ; %a == 0
-  %f.1 = icmp ne i8* %a, null
+  %f.1 = icmp ne ptr %a, null
   call void @use(i1 %f.1)
 
-  %t.1 = icmp eq i8* %a, null
+  %t.1 = icmp eq ptr %a, null
   call void @use(i1 %t.1)
 
-  %c.1 = icmp eq i8* %a, %b
+  %c.1 = icmp eq ptr %a, %b
   call void @use(i1 %c.1)
   ret void
 
 false: ; %a != 0
-  %f.2 = icmp eq i8* %a, null
+  %f.2 = icmp eq ptr %a, null
   call void @use(i1 %f.2)
 
-  %t.2 = icmp ne i8* %a, null
+  %t.2 = icmp ne ptr %a, null
   call void @use(i1 %t.2)
 
-  %c.2 = icmp eq i8* %a, %b
+  %c.2 = icmp eq ptr %a, %b
   call void @use(i1 %c.2)
   ret void
 }
 
-define i8* @f3(i8* %a, i8* %b, i1 %c) {
+define ptr @f3(ptr %a, ptr %b, i1 %c) {
 ; CHECK-LABEL: @f3(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[C_1:%.*]] = icmp eq i8* [[A:%.*]], null
+; CHECK-NEXT:    [[C_1:%.*]] = icmp eq ptr [[A:%.*]], null
 ; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE_2:%.*]], label [[FALSE_2:%.*]]
@@ -142,13 +142,13 @@ define i8* @f3(i8* %a, i8* %b, i1 %c) {
 ; CHECK:       false.2:
 ; CHECK-NEXT:    br label [[EXIT_2]]
 ; CHECK:       exit.2:
-; CHECK-NEXT:    [[P:%.*]] = phi i8* [ null, [[TRUE_2]] ], [ [[B:%.*]], [[FALSE_2]] ]
-; CHECK-NEXT:    ret i8* [[P]]
+; CHECK-NEXT:    [[P:%.*]] = phi ptr [ null, [[TRUE_2]] ], [ [[B:%.*]], [[FALSE_2]] ]
+; CHECK-NEXT:    ret ptr [[P]]
 ; CHECK:       false:
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret ptr null
 ;
 entry:
-  %c.1 = icmp eq i8* %a, null
+  %c.1 = icmp eq ptr %a, null
   br i1 %c.1, label %true, label %false
 
 true:
@@ -161,11 +161,11 @@ false.2:
   br label %exit.2
 
 exit.2:
-  %p = phi i8* [ %a, %true.2 ], [ %b, %false.2 ]
-  ret i8* %p
+  %p = phi ptr [ %a, %true.2 ], [ %b, %false.2 ]
+  ret ptr %p
 
 false:
-  ret i8* null
+  ret ptr null
 }
 
 define i32 @f5(i64 %sz) {
@@ -221,10 +221,10 @@ false:
 }
 
 ; Test with 2 unrelated nested conditions.
-define void @f7_nested_conds(i32* %a, i32 %b) {
+define void @f7_nested_conds(ptr %a, i32 %b) {
 ; CHECK-LABEL: @f7_nested_conds(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A_V:%.*]] = load i32, i32* [[A:%.*]], align 4
+; CHECK-NEXT:    [[A_V:%.*]] = load i32, ptr [[A:%.*]], align 4
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp ne i32 [[A_V]], 0
 ; CHECK-NEXT:    br i1 [[C_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       false:
@@ -233,11 +233,11 @@ define void @f7_nested_conds(i32* %a, i32 %b) {
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    ret void
 ; CHECK:       true:
-; CHECK-NEXT:    store i32 [[B:%.*]], i32* [[A]], align 4
+; CHECK-NEXT:    store i32 [[B:%.*]], ptr [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a.v = load i32, i32* %a
+  %a.v = load i32, ptr %a
   %c.1 = icmp ne i32 %a.v, 0
   br i1 %c.1, label %true, label %false
 
@@ -251,7 +251,7 @@ true.2:
   ret void
 
 true:
-  store i32 %b, i32* %a
+  store i32 %b, ptr %a
   ret void
 }
 
@@ -260,7 +260,7 @@ define void @f8_nested_conds(i32 %a, i32 %b) {
 ; CHECK-LABEL: @f8_nested_conds(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A_255:%.*]] = and i32 [[A:%.*]], 255
-; CHECK-NEXT:    [[A_2:%.*]] = add i32 [[A_255]], 20
+; CHECK-NEXT:    [[A_2:%.*]] = add nuw nsw i32 [[A_255]], 20
 ; CHECK-NEXT:    [[BC_1:%.*]] = icmp ugt i32 [[B:%.*]], [[A_2]]
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
@@ -601,7 +601,7 @@ false:
 define void @f13_constexpr1() {
 ; CHECK-LABEL: @f13_constexpr1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 add (i32 ptrtoint (i32* @A to i32), i32 10), 55
+; CHECK-NEXT:    [[BC_1:%.*]] = icmp eq i32 add (i32 ptrtoint (ptr @A to i32), i32 10), 55
 ; CHECK-NEXT:    br i1 [[BC_1]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
 ; CHECK-NEXT:    call void @use(i1 false)
@@ -611,7 +611,7 @@ define void @f13_constexpr1() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = add i32 ptrtoint (i32* @A to i32), 10
+  %a = add i32 ptrtoint (ptr @A to i32), 10
   %bc.1 = icmp eq i32 %a, 55
   br i1 %bc.1, label %true, label %false
 
@@ -631,17 +631,17 @@ false:
 define void @f14_constexpr2() {
 ; CHECK-LABEL: @f14_constexpr2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br i1 icmp eq (i32 ptrtoint (i32* @A to i32), i32 ptrtoint (i32* @B to i32)), label [[TRUE:%.*]], label [[FALSE:%.*]]
+; CHECK-NEXT:    br i1 icmp eq (i32 ptrtoint (ptr @A to i32), i32 ptrtoint (ptr @B to i32)), label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    call void @use(i1 icmp ne (i32 ptrtoint (i32* @B to i32), i32 ptrtoint (i32* @A to i32)))
-; CHECK-NEXT:    call void @use(i1 icmp eq (i32 ptrtoint (i32* @B to i32), i32 ptrtoint (i32* @A to i32)))
+; CHECK-NEXT:    call void @use(i1 icmp ne (i32 ptrtoint (ptr @B to i32), i32 ptrtoint (ptr @A to i32)))
+; CHECK-NEXT:    call void @use(i1 icmp eq (i32 ptrtoint (ptr @B to i32), i32 ptrtoint (ptr @A to i32)))
 ; CHECK-NEXT:    ret void
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %a = add i32 ptrtoint (i32* @A to i32), 0
-  %b = add i32 ptrtoint (i32* @B to i32), 0
+  %a = add i32 ptrtoint (ptr @A to i32), 0
+  %b = add i32 ptrtoint (ptr @B to i32), 0
   %bc.1 = icmp eq i32 %a, %b
   br i1 %bc.1, label %true, label %false
 
@@ -718,7 +718,7 @@ define void @loop() {
 ; CHECK-NEXT:    [[INC27]] = add nsw i32 [[I_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND]]
 ; CHECK:       for.body14:
-; CHECK-NEXT:    [[INC]] = add nsw i32 [[J_0]], 1
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[J_0]], 1
 ; CHECK-NEXT:    br label [[FOR_COND11]]
 ;
 entry:
@@ -1368,4 +1368,76 @@ bb139:                                            ; preds = %bb135
 
 bb142:                                            ; preds = %bb139
   ret void
+}
+
+define i32 @equal_not_constant(ptr noundef %p, ptr noundef %q) {
+; CHECK-LABEL: @equal_not_constant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP_THEN:%.*]] = icmp eq ptr [[P]], [[Q:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_THEN]], label [[IF_THEN1:%.*]], label [[IF_END]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    call void @use(i1 true)
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %cmp = icmp ne ptr %p, null
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %cmp.then = icmp eq ptr %p, %q
+  br i1 %cmp.then, label %if.then1, label %if.end
+
+if.then1:                                         ; preds = %if.then
+  %cmp.then1 = icmp ne ptr %q, null
+  call void @use(i1 %cmp.then1)
+  br label %if.end
+
+if.end:
+  ret i32 0
+}
+
+define i32 @not_equal_not_constant(ptr noundef %p, ptr noundef %q) {
+; CHECK-LABEL: @not_equal_not_constant(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne ptr [[P:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.then:
+; CHECK-NEXT:    [[CMP_THEN:%.*]] = icmp ne ptr [[P]], [[Q:%.*]]
+; CHECK-NEXT:    br i1 [[CMP_THEN]], label [[IF_THEN1:%.*]], label [[IF_END]]
+; CHECK:       if.then1:
+; CHECK-NEXT:    [[CMP_THEN1:%.*]] = icmp ne ptr [[Q]], null
+; CHECK-NEXT:    call void @use(i1 [[CMP_THEN1]])
+; CHECK-NEXT:    br label [[IF_END]]
+; CHECK:       if.end:
+; CHECK-NEXT:    ret i32 0
+;
+entry:
+  %cmp = icmp ne ptr %p, null
+  br i1 %cmp, label %if.then, label %if.end
+
+if.then:                                          ; preds = %entry
+  %cmp.then = icmp ne ptr %p, %q
+  br i1 %cmp.then, label %if.then1, label %if.end
+
+if.then1:                                         ; preds = %if.then
+  %cmp.then1 = icmp ne ptr %q, null
+  call void @use(i1 %cmp.then1)
+  br label %if.end
+
+if.end:
+  ret i32 0
+}
+
+define i1 @ptr_icmp_data_layout() {
+; CHECK-LABEL: @ptr_icmp_data_layout(
+; CHECK-NEXT:    ret i1 false
+;
+  %a.end = getelementptr i32, ptr @A, i64 1
+  %cmp = icmp eq ptr %a.end, @A
+  ret i1 %cmp
 }

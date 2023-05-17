@@ -3,29 +3,27 @@
 
 ;Test for PR45185.
 
-define void @spam([4 x [24 x float]]* %arg) {
+define void @spam(ptr %arg) {
 ; CHECK-LABEL: @spam(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds [4 x [24 x float]], [4 x [24 x float]]* [[ARG:%.*]], i64 0, i64 0, i64 0
-; CHECK-NEXT:    call void @blam(i32 0, float* nonnull [[TMP]])
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x [24 x float]], [4 x [24 x float]]* [[ARG]], i64 0, i64 1, i64 0
-; CHECK-NEXT:    call void @blam(i32 1, float* nonnull [[TMP1]])
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x [24 x float]], [4 x [24 x float]]* [[ARG]], i64 0, i64 2, i64 0
-; CHECK-NEXT:    call void @blam(i32 2, float* nonnull [[TMP2]])
+; CHECK-NEXT:    call void @blam(i32 0, ptr nonnull [[ARG:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [4 x [24 x float]], ptr [[ARG]], i64 0, i64 1, i64 0
+; CHECK-NEXT:    call void @blam(i32 1, ptr nonnull [[TMP1]])
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [4 x [24 x float]], ptr [[ARG]], i64 0, i64 2, i64 0
+; CHECK-NEXT:    call void @blam(i32 2, ptr nonnull [[TMP2]])
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = getelementptr inbounds [4 x [24 x float]], [4 x [24 x float]]* %arg, i64 0, i64 0, i64 0
-  call void @blam(i32 0, float* nonnull %tmp)
-  %tmp1 = getelementptr inbounds [4 x [24 x float]], [4 x [24 x float]]* %arg, i64 0, i64 1, i64 0
-  call void @blam(i32 1, float* nonnull %tmp1)
-  %tmp2 = getelementptr inbounds [4 x [24 x float]], [4 x [24 x float]]* %arg, i64 0, i64 2, i64 0
-  call void @blam(i32 2, float* nonnull %tmp2)
+  call void @blam(i32 0, ptr nonnull %arg)
+  %tmp1 = getelementptr inbounds [4 x [24 x float]], ptr %arg, i64 0, i64 1, i64 0
+  call void @blam(i32 1, ptr nonnull %tmp1)
+  %tmp2 = getelementptr inbounds [4 x [24 x float]], ptr %arg, i64 0, i64 2, i64 0
+  call void @blam(i32 2, ptr nonnull %tmp2)
   ret void
 }
 
 ; Make sure we do not incorrectly eliminate the checks in @blam.
-define internal void @blam(i32 %arg, float* nocapture %arg1) {
+define internal void @blam(i32 %arg, ptr nocapture %arg1) {
 ; CHECK-LABEL: define {{.*}} @blam(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[TMP:%.*]] = icmp eq i32 [[ARG:%.*]], 0

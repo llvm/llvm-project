@@ -23,7 +23,7 @@ $nt = comdat any
 
 ; MERGED: @lwt_aliasee = private unnamed_addr global
 ; MERGED-SAME: comdat(${{"?lwt[^ ]+}})
-@lwt_aliasee = private unnamed_addr global [1 x i8*] [i8* null], comdat($lwt), !type !0
+@lwt_aliasee = private unnamed_addr global [1 x ptr] [ptr null], comdat($lwt), !type !0
 
 ; MERGED: {{@"?lwt_nl[^ ]+}} = hidden unnamed_addr global
 ; MERGED-SAME: comdat(${{"?lwt[^ ]+}})
@@ -32,7 +32,7 @@ $nt = comdat any
 
 ; MERGED: @nlwt_aliasee = private unnamed_addr global
 ; MERGED-SAME: comdat($nlwt)
-@nlwt_aliasee = private unnamed_addr global [1 x i8*] [i8* null], comdat($nlwt), !type !0
+@nlwt_aliasee = private unnamed_addr global [1 x ptr] [ptr null], comdat($nlwt), !type !0
 
 ; MERGED: @nlwt = unnamed_addr global
 ; MERGED-SAME: comdat
@@ -41,7 +41,7 @@ $nt = comdat any
 
 ; THIN: @nt = internal
 ; THIN-SAME: comdat
-@nt = internal unnamed_addr global [1 x i8*] [i8* null], comdat
+@nt = internal unnamed_addr global [1 x ptr] [ptr null], comdat
 
 ; THIN: @nt_nl = internal
 ; THIN-SAME: comdat($nt)
@@ -49,32 +49,32 @@ $nt = comdat any
 
 ; MERGED: {{@"?lwt[^ ]+}} = hidden unnamed_addr alias
 ; THIN: {{@"?lwt[^ ]+}} = external hidden
-@lwt = internal unnamed_addr alias [1 x i8*], [1 x i8*]* @lwt_aliasee
+@lwt = internal unnamed_addr alias [1 x ptr], ptr @lwt_aliasee
 
 ; MERGED: {{@"?nlwt_nl[^ ]+}} = hidden unnamed_addr alias
 ; THIN: {{@"?nlwt_nl[^ ]+}} = external hidden
-@nlwt_nl = internal unnamed_addr alias [1 x i8*], [1 x i8*]* @nlwt_aliasee
+@nlwt_nl = internal unnamed_addr alias [1 x ptr], ptr @nlwt_aliasee
 
 ; The functions below exist just to make sure the globals are used.
-define i8* @lwt_fun() {
-  %1 = load i32, i32* @lwt_nl
-  %2 = getelementptr inbounds [1 x i8*], [1 x i8*]* @lwt, i32 0, i32 %1
-  %3 = load i8*, i8** %2
-  ret i8* %3
+define ptr @lwt_fun() {
+  %1 = load i32, ptr @lwt_nl
+  %2 = getelementptr inbounds [1 x ptr], ptr @lwt, i32 0, i32 %1
+  %3 = load ptr, ptr %2
+  ret ptr %3
 }
 
-define i8* @nlwt_fun() {
-  %1 = load i32, i32* @nlwt
-  %2 = getelementptr inbounds [1 x i8*], [1 x i8*]* @nlwt_nl, i32 0, i32 %1
-  %3 = load i8*, i8** %2
-  ret i8* %3
+define ptr @nlwt_fun() {
+  %1 = load i32, ptr @nlwt
+  %2 = getelementptr inbounds [1 x ptr], ptr @nlwt_nl, i32 0, i32 %1
+  %3 = load ptr, ptr %2
+  ret ptr %3
 }
 
-define i8* @nt_fun() {
-  %1 = load i32, i32* @nt_nl
-  %2 = getelementptr inbounds [1 x i8*], [1 x i8*]* @nt, i32 0, i32 %1
-  %3 = load i8*, i8** %2
-  ret i8* %3
+define ptr @nt_fun() {
+  %1 = load i32, ptr @nt_nl
+  %2 = getelementptr inbounds [1 x ptr], ptr @nt, i32 0, i32 %1
+  %3 = load ptr, ptr %2
+  ret ptr %3
 }
 
 !0 = !{i64 8, !"?AVA@@"}

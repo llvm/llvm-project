@@ -65,6 +65,6 @@ target triple = "x86_64-unknown-linux-gnu"
 ; NONE-PREVAILED1: @v = external global i8, align 8
 ; NONE-PREVAILED2: @v = external global i16, align 4
 
-define i8 *@foo() {
- ret i8 *@v
+define ptr @foo() {
+ ret ptr @v
 }

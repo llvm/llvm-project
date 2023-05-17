@@ -9,9 +9,9 @@
 ; CONFIG-NEXT: .long   2
 ; CONFIG-NEXT: .long   165900
 ; CONFIG-NEXT: .long   0
-define amdgpu_kernel void @test(float addrspace(1)* %out, i32 %p) {
+define amdgpu_kernel void @test(ptr addrspace(1) %out, i32 %p) {
    %i = add i32 %p, 2
    %r = bitcast i32 %i to float
-   store float %r, float addrspace(1)* %out
+   store float %r, ptr addrspace(1) %out
    ret void
 }

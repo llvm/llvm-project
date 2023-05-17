@@ -19,28 +19,89 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/Region.h"
 #include "llvm/ADT/Twine.h"
+#include <optional>
 
 namespace mlir {
-/// Operation is a basic unit of execution within MLIR. Operations can
-/// be nested within `Region`s held by other operations effectively forming a
-/// tree. Child operations are organized into operation blocks represented by a
-/// 'Block' class.
+namespace detail {
+/// This is a "tag" used for mapping the properties storage in
+/// llvm::TrailingObjects.
+enum class OpProperties : char {};
+} // namespace detail
+
+/// Operation is the basic unit of execution within MLIR.
+///
+/// The following documentation are recommended to understand this class:
+/// - https://mlir.llvm.org/docs/LangRef/#operations
+/// - https://mlir.llvm.org/docs/Tutorials/UnderstandingTheIRStructure/
+///
+/// An Operation is defined first by its name, which is a unique string. The
+/// name is interpreted so that if it contains a '.' character, the part before
+/// is the dialect name this operation belongs to, and everything that follows
+/// is this operation name within the dialect.
+///
+/// An Operation defines zero or more SSA `Value` that we refer to as the
+/// Operation results. This array of Value is actually stored in memory before
+/// the Operation itself in reverse order. That is for an Operation with 3
+/// results we allocate the following memory layout:
+///
+///  [Result2, Result1, Result0, Operation]
+///                              ^ this is where `Operation*` pointer points to.
+///
+/// A consequence of this is that this class must be heap allocated, which is
+/// handled by the various `create` methods. Each result contains:
+///  - one pointer to the first use (see `OpOperand`)
+///  - the type of the SSA Value this result defines.
+///  - the index for this result in the array.
+/// The results are defined as subclass of `ValueImpl`, and more precisely as
+/// the only two subclasses of `OpResultImpl`: `InlineOpResult` and
+/// `OutOfLineOpResult`. The former is used for the first 5 results and the
+/// latter for the subsequent ones. They differ in how they store their index:
+/// the first 5 results only need 3 bits and thus are packed with the Type
+/// pointer, while the subsequent one have an extra `unsigned` value and thus
+/// need more space.
+///
+/// An Operation also has zero or more operands: these are uses of SSA Value,
+/// which can be the results of other operations or Block arguments. Each of
+/// these uses is an instance of `OpOperand`. This optional array is initially
+/// tail allocated with the operation class itself, but can be dynamically moved
+/// out-of-line in a dynamic allocation as needed.
+///
+/// An Operation may contain optionally one or multiple Regions, stored in a
+/// tail allocated array. Each `Region` is a list of Blocks. Each `Block` is
+/// itself a list of Operations. This structure is effectively forming a tree.
+///
+/// Some operations like branches also refer to other Block, in which case they
+/// would have an array of `BlockOperand`.
+///
+/// An Operation may contain optionally a "Properties" object: this is a
+/// pre-defined C++ object with a fixed size. This object is owned by the
+/// operation and deleted with the operation. It can be converted to an
+/// Attribute on demand, or loaded from an Attribute.
+///
+///
+/// Finally an Operation also contain an optional `DictionaryAttr`, a Location,
+/// and a pointer to its parent Block (if any).
 class alignas(8) Operation final
     : public llvm::ilist_node_with_parent<Operation, Block>,
       private llvm::TrailingObjects<Operation, detail::OperandStorage,
-                                    BlockOperand, Region, OpOperand> {
+                                    detail::OpProperties, BlockOperand, Region,
+                                    OpOperand> {
 public:
-  /// Create a new Operation with the specific fields.
+  /// Create a new Operation with the specific fields. This constructor
+  /// populates the provided attribute list with default attributes if
+  /// necessary.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           ArrayRef<NamedAttribute> attributes,
-                           BlockRange successors, unsigned numRegions);
+                           NamedAttrList &&attributes,
+                           OpaqueProperties properties, BlockRange successors,
+                           unsigned numRegions);
 
-  /// Overload of create that takes an existing DictionaryAttr to avoid
-  /// unnecessarily uniquing a list of attributes.
+  /// Create a new Operation with the specific fields. This constructor uses an
+  /// existing attribute dictionary to avoid uniquing a list of attributes.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes, BlockRange successors,
+                           DictionaryAttr attributes,
+                           OpaqueProperties properties, BlockRange successors,
                            unsigned numRegions);
 
   /// Create a new Operation from the fields stored in `state`.
@@ -49,7 +110,8 @@ public:
   /// Create a new Operation with the specific fields.
   static Operation *create(Location location, OperationName name,
                            TypeRange resultTypes, ValueRange operands,
-                           DictionaryAttr attributes,
+                           NamedAttrList &&attributes,
+                           OpaqueProperties properties,
                            BlockRange successors = {},
                            RegionRange regions = {});
 
@@ -57,8 +119,8 @@ public:
   OperationName getName() { return name; }
 
   /// If this operation has a registered operation description, return it.
-  /// Otherwise return None.
-  Optional<RegisteredOperationName> getRegisteredInfo() {
+  /// Otherwise return std::nullopt.
+  std::optional<RegisteredOperationName> getRegisteredInfo() {
     return getName().getRegisteredInfo();
   }
 
@@ -131,7 +193,7 @@ public:
   /// as top level function operations, is therefore always safe. Using the
   /// mapper, it is possible to avoid adding uses to outside operands by
   /// remapping them to 'Value's owned by the caller thread.
-  Operation *clone(BlockAndValueMapping &mapper,
+  Operation *clone(IRMapping &mapper,
                    CloneOptions options = CloneOptions::all());
   Operation *clone(CloneOptions options = CloneOptions::all());
 
@@ -140,7 +202,7 @@ public:
   /// original one, but they will be left empty.
   /// Operands are remapped using `mapper` (if present), and `mapper` is updated
   /// to contain the results.
-  Operation *cloneWithoutRegions(BlockAndValueMapping &mapper);
+  Operation *cloneWithoutRegions(IRMapping &mapper);
 
   /// Create a partial copy of this operation without traversing into attached
   /// regions. The new operation will have the same number of regions as the
@@ -211,6 +273,15 @@ public:
     getResults().replaceAllUsesWith(std::forward<ValuesT>(values));
   }
 
+  /// Replace uses of results of this operation with the provided `values` if
+  /// the given callback returns true.
+  template <typename ValuesT>
+  void replaceUsesWithIf(ValuesT &&values,
+                         function_ref<bool(OpOperand &)> shouldReplace) {
+    getResults().replaceUsesWithIf(std::forward<ValuesT>(values),
+                                   shouldReplace);
+  }
+
   /// Destroys this operation and its subclass data.
   void destroy();
 
@@ -247,7 +318,7 @@ public:
   /// take O(N) where N is the number of operations within the parent block.
   bool isBeforeInBlock(Operation *other);
 
-  void print(raw_ostream &os, const OpPrintingFlags &flags = llvm::None);
+  void print(raw_ostream &os, const OpPrintingFlags &flags = std::nullopt);
   void print(raw_ostream &os, AsmState &state);
   void dump();
 
@@ -359,38 +430,108 @@ public:
   // constants to names.  Attributes may be dynamically added and removed over
   // the lifetime of an operation.
 
+  /// Access an inherent attribute by name: returns an empty optional if there
+  /// is no inherent attribute with this name.
+  ///
+  /// This method is available as a transient facility in the migration process
+  /// to use Properties instead.
+  std::optional<Attribute> getInherentAttr(StringRef name);
+
+  /// Set an inherent attribute by name.
+  ///
+  /// This method is available as a transient facility in the migration process
+  /// to use Properties instead.
+  void setInherentAttr(StringAttr name, Attribute value);
+
+  /// Access a discardable attribute by name, returns an null Attribute if the
+  /// discardable attribute does not exist.
+  Attribute getDiscardableAttr(StringRef name) { return attrs.get(name); }
+
+  /// Access a discardable attribute by name, returns an null Attribute if the
+  /// discardable attribute does not exist.
+  Attribute getDiscardableAttr(StringAttr name) { return attrs.get(name); }
+
+  /// Set a discardable attribute by name.
+  void setDiscardableAttr(StringAttr name, Attribute value) {
+    NamedAttrList attributes(attrs);
+    if (attributes.set(name, value) != value)
+      attrs = attributes.getDictionary(getContext());
+  }
+
+  /// Return all of the discardable attributes on this operation.
+  ArrayRef<NamedAttribute> getDiscardableAttrs() { return attrs.getValue(); }
+
+  /// Return all of the discardable attributes on this operation as a
+  /// DictionaryAttr.
+  DictionaryAttr getDiscardableAttrDictionary() { return attrs; }
+
   /// Return all of the attributes on this operation.
-  ArrayRef<NamedAttribute> getAttrs() { return attrs.getValue(); }
+  ArrayRef<NamedAttribute> getAttrs() {
+    if (!getPropertiesStorage())
+      return getDiscardableAttrs();
+    return getAttrDictionary().getValue();
+  }
 
   /// Return all of the attributes on this operation as a DictionaryAttr.
-  DictionaryAttr getAttrDictionary() { return attrs; }
+  DictionaryAttr getAttrDictionary();
 
-  /// Set the attribute dictionary on this operation.
-  void setAttrs(DictionaryAttr newAttrs) {
+  /// Set the attributes from a dictionary on this operation.
+  /// These methods are expensive: if the dictionnary only contains discardable
+  /// attributes, `setDiscardableAttrs` is more efficient.
+  void setAttrs(DictionaryAttr newAttrs);
+  void setAttrs(ArrayRef<NamedAttribute> newAttrs);
+  /// Set the discardable attribute dictionary on this operation.
+  void setDiscardableAttrs(DictionaryAttr newAttrs) {
     assert(newAttrs && "expected valid attribute dictionary");
     attrs = newAttrs;
   }
-  void setAttrs(ArrayRef<NamedAttribute> newAttrs) {
-    setAttrs(DictionaryAttr::get(getContext(), newAttrs));
+  void setDiscardableAttrs(ArrayRef<NamedAttribute> newAttrs) {
+    setDiscardableAttrs(DictionaryAttr::get(getContext(), newAttrs));
   }
 
   /// Return the specified attribute if present, null otherwise.
-  Attribute getAttr(StringAttr name) { return attrs.get(name); }
-  Attribute getAttr(StringRef name) { return attrs.get(name); }
+  /// These methods are expensive: if the dictionnary only contains discardable
+  /// attributes, `getDiscardableAttr` is more efficient.
+  Attribute getAttr(StringAttr name) {
+    if (getPropertiesStorageSize()) {
+      if (std::optional<Attribute> inherentAttr = getInherentAttr(name))
+        return *inherentAttr;
+    }
+    return attrs.get(name);
+  }
+  Attribute getAttr(StringRef name) {
+    if (getPropertiesStorageSize()) {
+      if (std::optional<Attribute> inherentAttr = getInherentAttr(name))
+        return *inherentAttr;
+    }
+    return attrs.get(name);
+  }
 
   template <typename AttrClass>
   AttrClass getAttrOfType(StringAttr name) {
-    return getAttr(name).dyn_cast_or_null<AttrClass>();
+    return llvm::dyn_cast_or_null<AttrClass>(getAttr(name));
   }
   template <typename AttrClass>
   AttrClass getAttrOfType(StringRef name) {
-    return getAttr(name).dyn_cast_or_null<AttrClass>();
+    return llvm::dyn_cast_or_null<AttrClass>(getAttr(name));
   }
 
   /// Return true if the operation has an attribute with the provided name,
   /// false otherwise.
-  bool hasAttr(StringAttr name) { return attrs.contains(name); }
-  bool hasAttr(StringRef name) { return attrs.contains(name); }
+  bool hasAttr(StringAttr name) {
+    if (getPropertiesStorageSize()) {
+      if (std::optional<Attribute> inherentAttr = getInherentAttr(name))
+        return (bool)*inherentAttr;
+    }
+    return attrs.contains(name);
+  }
+  bool hasAttr(StringRef name) {
+    if (getPropertiesStorageSize()) {
+      if (std::optional<Attribute> inherentAttr = getInherentAttr(name))
+        return (bool)*inherentAttr;
+    }
+    return attrs.contains(name);
+  }
   template <typename AttrClass, typename NameT>
   bool hasAttrOfType(NameT &&name) {
     return static_cast<bool>(
@@ -400,6 +541,12 @@ public:
   /// If the an attribute exists with the specified name, change it to the new
   /// value. Otherwise, add a new attribute with the specified name/value.
   void setAttr(StringAttr name, Attribute value) {
+    if (getPropertiesStorageSize()) {
+      if (std::optional<Attribute> inherentAttr = getInherentAttr(name)) {
+        setInherentAttr(name, value);
+        return;
+      }
+    }
     NamedAttrList attributes(attrs);
     if (attributes.set(name, value) != value)
       attrs = attributes.getDictionary(getContext());
@@ -412,6 +559,12 @@ public:
   /// attribute that was erased, or nullptr if there was no attribute with such
   /// name.
   Attribute removeAttr(StringAttr name) {
+    if (getPropertiesStorageSize()) {
+      if (std::optional<Attribute> inherentAttr = getInherentAttr(name)) {
+        setInherentAttr(name, {});
+        return *inherentAttr;
+      }
+    }
     NamedAttrList attributes(attrs);
     Attribute removedAttr = attributes.erase(name);
     if (removedAttr)
@@ -456,7 +609,7 @@ public:
     return dialect_attr_iterator(attrs.end(), attrs.end());
   }
 
-  /// Set the dialect attributes for this operation, and preserve all dependent.
+  /// Set the dialect attributes for this operation, and preserve all inherent.
   template <typename DialectAttrT>
   void setDialectAttrs(DialectAttrT &&dialectAttrs) {
     NamedAttrList attrs;
@@ -464,6 +617,13 @@ public:
     for (auto attr : getAttrs())
       if (!attr.getName().strref().contains('.'))
         attrs.push_back(attr);
+    setAttrs(attrs.getDictionary(getContext()));
+  }
+
+  /// Sets default attributes on unset attributes.
+  void populateDefaultAttrs() {
+    NamedAttrList attrs(getAttrDictionary());
+    name.populateDefaultAttrs(attrs);
     setAttrs(attrs.getDictionary(getContext()));
   }
 
@@ -476,6 +636,10 @@ public:
 
   /// Returns the regions held by this operation.
   MutableArrayRef<Region> getRegions() {
+    // Check the count first, as computing the trailing objects can be slow.
+    if (numRegions == 0)
+      return MutableArrayRef<Region>();
+
     auto *regions = getTrailingObjects<Region>();
     return {regions, numRegions};
   }
@@ -541,9 +705,10 @@ public:
 
   /// Walk the operation by calling the callback for each nested operation
   /// (including this one), block or region, depending on the callback provided.
-  /// Regions, blocks and operations at the same nesting level are visited in
-  /// lexicographical order. The walk order for enclosing regions, blocks and
-  /// operations with respect to their nested ones is specified by 'Order'
+  /// The order in which regions, blocks and operations at the same nesting
+  /// level are visited (e.g., lexicographical or reverse lexicographical order)
+  /// is determined by 'Iterator'. The walk order for enclosing regions, blocks
+  /// and operations with respect to their nested ones is specified by 'Order'
   /// (post-order by default). A callback on a block or operation is allowed to
   /// erase that block or operation if either:
   ///   * the walk is in post-order, or
@@ -565,12 +730,13 @@ public:
   ///           return WalkResult::interrupt();
   ///         return WalkResult::advance();
   ///       });
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 1, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 1,
+                   RetT>
   walk(FnT &&callback) {
-    return detail::walk<Order>(this, std::forward<FnT>(callback));
+    return detail::walk<Order, Iterator>(this, std::forward<FnT>(callback));
   }
 
   /// Generic walker with a stage aware callback. Walk the operation by calling
@@ -595,8 +761,8 @@ public:
   ///         return WalkResult::advance();
   ///       });
   template <typename FnT, typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<
-      llvm::function_traits<std::decay_t<FnT>>::num_args == 2, RetT>::type
+  std::enable_if_t<llvm::function_traits<std::decay_t<FnT>>::num_args == 2,
+                   RetT>
   walk(FnT &&callback) {
     return detail::walk(this, std::forward<FnT>(callback));
   }
@@ -667,6 +833,44 @@ public:
   /// handlers that may be listening.
   InFlightDiagnostic emitRemark(const Twine &message = {});
 
+  /// Returns the properties storage size.
+  int getPropertiesStorageSize() const {
+    return ((int)propertiesStorageSize) * 8;
+  }
+  /// Returns the properties storage.
+  OpaqueProperties getPropertiesStorage() {
+    if (propertiesStorageSize)
+      return {
+          reinterpret_cast<void *>(getTrailingObjects<detail::OpProperties>())};
+    return {nullptr};
+  }
+  OpaqueProperties getPropertiesStorage() const {
+    if (propertiesStorageSize)
+      return {reinterpret_cast<void *>(const_cast<detail::OpProperties *>(
+          getTrailingObjects<detail::OpProperties>()))};
+    return {nullptr};
+  }
+
+  /// Return the properties converted to an attribute.
+  /// This is expensive, and mostly useful when dealing with unregistered
+  /// operation. Returns an empty attribute if no properties are present.
+  Attribute getPropertiesAsAttribute();
+
+  /// Set the properties from the provided  attribute.
+  /// This is an expensive operation that can fail if the attribute is not
+  /// matching the expectations of the properties for this operation. This is
+  /// mostly useful for unregistered operations or used when parsing the
+  /// generic format. An optional diagnostic can be passed in for richer errors.
+  LogicalResult setPropertiesFromAttribute(Attribute attr,
+                                           InFlightDiagnostic *diagnostic);
+
+  /// Copy properties from an existing other properties object. The two objects
+  /// must be the same type.
+  void copyProperties(OpaqueProperties rhs);
+
+  /// Compute a hash for the op properties (if any).
+  llvm::hash_code hashProperties();
+
 private:
   //===--------------------------------------------------------------------===//
   // Ordering
@@ -690,7 +894,8 @@ private:
 private:
   Operation(Location location, OperationName name, unsigned numResults,
             unsigned numSuccessors, unsigned numRegions,
-            DictionaryAttr attributes, bool hasOperandStorage);
+            int propertiesStorageSize, DictionaryAttr attributes,
+            OpaqueProperties properties, bool hasOperandStorage);
 
   // Operations are deleted through the destroy() member because they are
   // allocated with malloc.
@@ -736,6 +941,8 @@ private:
   /// Returns a pointer to the use list for the given result, which may be
   /// either inline or out-of-line.
   detail::OpResultImpl *getOpResultImpl(unsigned resultNumber) {
+    assert(resultNumber < getNumResults() &&
+           "Result number is out of range for operation");
     unsigned maxInlineResults = detail::OpResultImpl::getMaxInlineResults();
     if (resultNumber < maxInlineResults)
       return getInlineOpResult(resultNumber);
@@ -748,6 +955,19 @@ private:
   /// constraint, we should drop the const to fit the rest of the MLIR const
   /// model.
   Block *getParent() const { return block; }
+
+  /// Expose a few methods explicitly for the debugger to call for
+  /// visualization.
+#ifndef NDEBUG
+  LLVM_DUMP_METHOD operand_range debug_getOperands() { return getOperands(); }
+  LLVM_DUMP_METHOD result_range debug_getResults() { return getResults(); }
+  LLVM_DUMP_METHOD SuccessorRange debug_getSuccessors() {
+    return getSuccessors();
+  }
+  LLVM_DUMP_METHOD MutableArrayRef<Region> debug_getRegions() {
+    return getRegions();
+  }
+#endif
 
   /// The operation block that contains this operation.
   Block *block = nullptr;
@@ -762,12 +982,20 @@ private:
 
   const unsigned numResults;
   const unsigned numSuccs;
-  const unsigned numRegions : 31;
+  const unsigned numRegions : 23;
 
   /// This bit signals whether this operation has an operand storage or not. The
   /// operand storage may be elided for operations that are known to never have
   /// operands.
   bool hasOperandStorage : 1;
+
+  /// The size of the storage for properties (if any), divided by 8: since the
+  /// Properties storage will always be rounded up to the next multiple of 8 we
+  /// save some bits here.
+  unsigned char propertiesStorageSize : 8;
+  /// This is the maximum size we support to allocate properties inline with an
+  /// operation: this must match the bitwidth above.
+  static constexpr int64_t propertiesCapacity = 8 * 256;
 
   /// This holds the name of the operation.
   OperationName name;
@@ -788,8 +1016,9 @@ private:
   friend class llvm::ilist_node_with_parent<Operation, Block>;
 
   // This stuff is used by the TrailingObjects template.
-  friend llvm::TrailingObjects<Operation, detail::OperandStorage, BlockOperand,
-                               Region, OpOperand>;
+  friend llvm::TrailingObjects<Operation, detail::OperandStorage,
+                               detail::OpProperties, BlockOperand, Region,
+                               OpOperand>;
   size_t numTrailingObjects(OverloadToken<detail::OperandStorage>) const {
     return hasOperandStorage ? 1 : 0;
   }
@@ -797,6 +1026,9 @@ private:
     return numSuccs;
   }
   size_t numTrailingObjects(OverloadToken<Region>) const { return numRegions; }
+  size_t numTrailingObjects(OverloadToken<detail::OpProperties>) const {
+    return getPropertiesStorageSize();
+  }
 };
 
 inline raw_ostream &operator<<(raw_ostream &os, const Operation &op) {

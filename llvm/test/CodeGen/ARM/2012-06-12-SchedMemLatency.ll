@@ -24,16 +24,16 @@
 ; CHECK: SU(2): Ord Latency=1
 ; CHECK-NOT: SU({{.*}}): Ord
 ; CHECK: Successors:
-define i32 @f1(i32* nocapture %p1, i32* nocapture %p2) nounwind {
+define i32 @f1(ptr nocapture %p1, ptr nocapture %p2) nounwind {
 entry:
-  store volatile i32 65540, i32* %p1, align 4
-  %0 = load volatile i32, i32* %p2, align 4
+  store volatile i32 65540, ptr %p1, align 4
+  %0 = load volatile i32, ptr %p2, align 4
   ret i32 %0
 }
 
-define i32 @f2(i32* nocapture %p1, i32* nocapture %p2) nounwind {
+define i32 @f2(ptr nocapture %p1, ptr nocapture %p2) nounwind {
 entry:
-  store i32 65540, i32* %p1, align 4
-  %0 = load i32, i32* %p2, align 4
+  store i32 65540, ptr %p1, align 4
+  %0 = load i32, ptr %p2, align 4
   ret i32 %0
 }

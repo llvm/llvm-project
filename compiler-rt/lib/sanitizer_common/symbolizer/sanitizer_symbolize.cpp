@@ -41,6 +41,16 @@ static llvm::symbolize::PrinterConfig getDefaultPrinterConfig() {
   return Config;
 }
 
+static llvm::symbolize::ErrorHandler symbolize_error_handler(
+    llvm::raw_string_ostream &OS) {
+  return
+      [&](const llvm::ErrorInfoBase &ErrorInfo, llvm::StringRef ErrorBanner) {
+        OS << ErrorBanner;
+        ErrorInfo.log(OS);
+        OS << '\n';
+      };
+}
+
 namespace __sanitizer {
 int internal_snprintf(char *buffer, uintptr_t length, const char *format,
                       ...);
@@ -57,8 +67,8 @@ bool __sanitizer_symbolize_code(const char *ModuleName, uint64_t ModuleOffset,
     llvm::raw_string_ostream OS(Result);
     llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
     llvm::symbolize::Request Request{ModuleName, ModuleOffset};
-    auto Printer =
-        std::make_unique<llvm::symbolize::LLVMPrinter>(OS, OS, Config);
+    auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(
+        OS, symbolize_error_handler(OS), Config);
 
     // TODO: it is neccessary to set proper SectionIndex here.
     // object::SectionedAddress::UndefSection works for only absolute addresses.
@@ -86,8 +96,8 @@ bool __sanitizer_symbolize_data(const char *ModuleName, uint64_t ModuleOffset,
     llvm::symbolize::PrinterConfig Config = getDefaultPrinterConfig();
     llvm::raw_string_ostream OS(Result);
     llvm::symbolize::Request Request{ModuleName, ModuleOffset};
-    auto Printer =
-        std::make_unique<llvm::symbolize::LLVMPrinter>(OS, OS, Config);
+    auto Printer = std::make_unique<llvm::symbolize::LLVMPrinter>(
+        OS, symbolize_error_handler(OS), Config);
 
     // TODO: it is neccessary to set proper SectionIndex here.
     // object::SectionedAddress::UndefSection works for only absolute addresses.

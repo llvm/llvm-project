@@ -171,14 +171,14 @@ void test_atomic_fetch_with_address_space(volatile __generic atomic_float *a_flo
 // extension is disabled.  Test this by counting the number of notes about
 // candidate functions.
 void test_atomic_double_reporting(volatile __generic atomic_int *a) {
-  atomic_init(a);
+  atomic_init(a, a);
   // expected-error@-1{{no matching function for call to 'atomic_init'}}
 #if defined(NO_FP64)
   // Expecting 5 candidates: int, uint, long, ulong, float
-  // expected-note@-4 5 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+  // expected-note@-4 5 {{candidate function not viable: no known conversion}}
 #else
   // Expecting 6 candidates: int, uint, long, ulong, float, double
-  // expected-note@-7 6 {{candidate function not viable: requires 2 arguments, but 1 was provided}}
+  // expected-note@-7 6 {{candidate function not viable: no known conversion}}
 #endif
 }
 
@@ -198,7 +198,6 @@ void test_atomics_without_scope_device(volatile __generic atomic_int *a_int) {
 
   atomic_exchange_explicit(a_int, d, memory_order_seq_cst);
   // expected-error@-1{{no matching function for call to 'atomic_exchange_explicit'}}
-  // expected-note@-2 + {{candidate function not viable}}
 
   atomic_exchange_explicit(a_int, d, memory_order_seq_cst, memory_scope_work_group);
 }
@@ -272,9 +271,7 @@ kernel void basic_image_readonly(read_only image2d_t image_read_only_image2d) {
   res = read_imageh(image_read_only_image2d, i2);
 #if __OPENCL_C_VERSION__ < CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-3{{no matching function for call to 'read_imagef'}}
-  // expected-note@-4 + {{candidate function not viable}}
-  // expected-error@-4{{no matching function for call to 'read_imageh'}}
-  // expected-note@-5 + {{candidate function not viable}}
+  // expected-error@-3{{no matching function for call to 'read_imageh'}}
 #endif
   res = read_imageh(image_read_only_image2d, sampler, i2);
 
@@ -304,7 +301,6 @@ kernel void basic_image_writeonly(write_only image1d_buffer_t image_write_only_i
   write_imagef(image3dwo, i4, i, f4);
 #if __OPENCL_C_VERSION__ <= CL_VERSION_1_2 && !defined(__OPENCL_CPP_VERSION__)
   // expected-error@-2{{no matching function for call to 'write_imagef'}}
-  // expected-note@-3 + {{candidate function not viable}}
 #endif
 }
 

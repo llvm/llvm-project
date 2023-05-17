@@ -75,11 +75,11 @@ TEST_P(BinaryContextTester, BaseAddress) {
   BC->SegmentMapInfo[0x4b84d5e8] =
       SegmentInfo{0x4b84d5e8, 0x294f830, 0x4b84a5e8, 0x3d3820, 0x1000};
 
-  Optional<uint64_t> BaseAddress =
+  std::optional<uint64_t> BaseAddress =
       BC->getBaseAddressForMapping(0x7f13f5556000, 0x10e8c000);
-  ASSERT_TRUE(BaseAddress.hasValue());
+  ASSERT_TRUE(BaseAddress.has_value());
   ASSERT_EQ(*BaseAddress, 0x7f13e46c9000ULL);
 
   BaseAddress = BC->getBaseAddressForMapping(0x7f13f5556000, 0x137a000);
-  ASSERT_FALSE(BaseAddress.hasValue());
+  ASSERT_FALSE(BaseAddress.has_value());
 }

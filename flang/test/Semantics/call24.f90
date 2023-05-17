@@ -8,9 +8,19 @@ subroutine foo(a_pointer)
   real, pointer :: a_pointer(:)
 end subroutine
 
+subroutine bar(a_pointer)
+  procedure(real), pointer :: a_pointer
+end subroutine
+
+subroutine baz(proc)
+  external :: proc
+  real, optional :: proc
+end subroutine
+
 subroutine test()
   real, pointer :: a_pointer(:)
   real, pointer :: an_array(:)
+  intrinsic :: sin
 
   ! This call would be allowed if the interface was explicit here,
   ! but its handling with an implicit interface is different (no
@@ -23,4 +33,12 @@ subroutine test()
 
   !ERROR: References to the procedure 'foo' require an explicit interface
   call foo(an_array)
+
+  !ERROR: References to the procedure 'bar' require an explicit interface
+  !WARNING: If the procedure's interface were explicit, this reference would be in error
+  !BECAUSE: Actual argument associated with procedure pointer dummy argument 'a_pointer=' must be a POINTER unless INTENT(IN)
+  call bar(sin)
+
+  !ERROR: References to the procedure 'baz' require an explicit interface
+  call baz(sin)
 end subroutine

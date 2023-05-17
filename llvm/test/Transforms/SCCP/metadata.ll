@@ -4,9 +4,9 @@
 declare void @use(i1)
 declare i32 @get_i32()
 
-define void @load_range(i32* %p) {
+define void @load_range(ptr %p) {
 ; CHECK-LABEL: @load_range(
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    [[C2:%.*]] = icmp ult i32 [[V]], 9
 ; CHECK-NEXT:    call void @use(i1 [[C2]])
@@ -15,7 +15,7 @@ define void @load_range(i32* %p) {
 ; CHECK-NEXT:    call void @use(i1 [[C4]])
 ; CHECK-NEXT:    ret void
 ;
-  %v = load i32, i32* %p, !range !{i32 0, i32 10}
+  %v = load i32, ptr %p, !range !{i32 0, i32 10}
   %c1 = icmp ult i32 %v, 10
   call void @use(i1 %c1)
   %c2 = icmp ult i32 %v, 9
@@ -27,56 +27,56 @@ define void @load_range(i32* %p) {
   ret void
 }
 
-define i32 @load_range_single(i32* %p) {
+define i32 @load_range_single(ptr %p) {
 ; CHECK-LABEL: @load_range_single(
 ; CHECK-NEXT:    ret i32 0
 ;
-  %v = load i32, i32* %p, !range !{i32 0, i32 1}
+  %v = load i32, ptr %p, !range !{i32 0, i32 1}
   ret i32 %v
 }
 
-define i32 @load_range_single_volatile(i32* %p) {
+define i32 @load_range_single_volatile(ptr %p) {
 ; CHECK-LABEL: @load_range_single_volatile(
-; CHECK-NEXT:    [[V:%.*]] = load volatile i32, i32* [[P:%.*]], align 4, !range !1
+; CHECK-NEXT:    [[V:%.*]] = load volatile i32, ptr [[P:%.*]], align 4, !range !1
 ; CHECK-NEXT:    ret i32 [[V]]
 ;
-  %v = load volatile i32, i32* %p, !range !{i32 0, i32 1}
+  %v = load volatile i32, ptr %p, !range !{i32 0, i32 1}
   ret i32 %v
 }
 
-define void @load_nonnull(i32** %p, i32** %p2) {
+define void @load_nonnull(ptr %p, ptr %p2) {
 ; CHECK-LABEL: @load_nonnull(
-; CHECK-NEXT:    [[V:%.*]] = load i32*, i32** [[P:%.*]], align 8, !nonnull !2
-; CHECK-NEXT:    [[V2:%.*]] = load i32*, i32** [[P2:%.*]], align 8, !nonnull !2
+; CHECK-NEXT:    [[V:%.*]] = load ptr, ptr [[P:%.*]], align 8, !nonnull !2
+; CHECK-NEXT:    [[V2:%.*]] = load ptr, ptr [[P2:%.*]], align 8, !nonnull !2
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
 ; CHECK-NEXT:    call void @use(i1 true)
 ; CHECK-NEXT:    call void @use(i1 false)
-; CHECK-NEXT:    [[C5:%.*]] = icmp eq i32* [[V]], [[V2]]
+; CHECK-NEXT:    [[C5:%.*]] = icmp eq ptr [[V]], [[V2]]
 ; CHECK-NEXT:    call void @use(i1 [[C5]])
-; CHECK-NEXT:    [[C6:%.*]] = icmp ne i32* [[V]], [[V2]]
+; CHECK-NEXT:    [[C6:%.*]] = icmp ne ptr [[V]], [[V2]]
 ; CHECK-NEXT:    call void @use(i1 [[C6]])
 ; CHECK-NEXT:    ret void
 ;
-  %v = load i32*, i32** %p, !nonnull !{}
-  %v2 = load i32*, i32** %p2, !nonnull !{}
-  %c1 = icmp ne i32* %v, null
+  %v = load ptr, ptr %p, !nonnull !{}
+  %v2 = load ptr, ptr %p2, !nonnull !{}
+  %c1 = icmp ne ptr %v, null
   call void @use(i1 %c1)
-  %c2 = icmp eq i32* %v, null
+  %c2 = icmp eq ptr %v, null
   call void @use(i1 %c2)
-  %c3 = icmp ne i32* null, %v
+  %c3 = icmp ne ptr null, %v
   call void @use(i1 %c3)
-  %c4 = icmp eq i32* null, %v
+  %c4 = icmp eq ptr null, %v
   call void @use(i1 %c4)
   ; There is no particular relationship between two nonnull values.
-  %c5 = icmp eq i32* %v, %v2
+  %c5 = icmp eq ptr %v, %v2
   call void @use(i1 %c5)
-  %c6 = icmp ne i32* %v, %v2
+  %c6 = icmp ne ptr %v, %v2
   call void @use(i1 %c6)
   ret void
 }
 
-define void @call_range(i32* %p) {
+define void @call_range(ptr %p) {
 ; CHECK-LABEL: @call_range(
 ; CHECK-NEXT:    [[V:%.*]] = call i32 @get_i32(), !range !0
 ; CHECK-NEXT:    call void @use(i1 true)
@@ -107,13 +107,13 @@ define internal i1 @ip_cmp_range(i32 %v) {
   ret i1 %c
 }
 
-define i1 @ip_load_range(i32* %p) {
+define i1 @ip_load_range(ptr %p) {
 ; CHECK-LABEL: @ip_load_range(
-; CHECK-NEXT:    [[V:%.*]] = load i32, i32* [[P:%.*]], align 4, !range !0
+; CHECK-NEXT:    [[V:%.*]] = load i32, ptr [[P:%.*]], align 4, !range !0
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @ip_cmp_range(i32 [[V]])
 ; CHECK-NEXT:    ret i1 true
 ;
-  %v = load i32, i32* %p, !range !{i32 0, i32 10}
+  %v = load i32, ptr %p, !range !{i32 0, i32 10}
   %c = call i1 @ip_cmp_range(i32 %v)
   ret i1 %c
 }

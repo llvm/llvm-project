@@ -24,42 +24,42 @@ int main(int, char**)
     assert(std::stoi("-10") == -10);
     assert(std::stoi(" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stoi("10g", &idx, 16) == 16);
         assert(idx == 2);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     if (std::numeric_limits<long>::max() > std::numeric_limits<int>::max()) {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi("0x100000000", &idx, 16);
+            (void)std::stoi("0x100000000", &idx, 16);
             assert(false);
         } catch (const std::out_of_range&) {
 
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi("", &idx);
+            (void)std::stoi("", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi("  - 8", &idx);
+            (void)std::stoi("  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi("a1", &idx);
+            (void)std::stoi("a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
@@ -73,42 +73,42 @@ int main(int, char**)
     assert(std::stoi(L"-10") == -10);
     assert(std::stoi(L" 10") == 10);
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         assert(std::stoi(L"10g", &idx, 16) == 16);
         assert(idx == 2);
     }
 #ifndef TEST_HAS_NO_EXCEPTIONS
     if (std::numeric_limits<long>::max() > std::numeric_limits<int>::max()) {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi(L"0x100000000", &idx, 16);
+            (void)std::stoi(L"0x100000000", &idx, 16);
             assert(false);
         } catch (const std::out_of_range&) {
 
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi(L"", &idx);
+            (void)std::stoi(L"", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi(L"  - 8", &idx);
+            (void)std::stoi(L"  - 8", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);
         }
     }
     {
-        size_t idx = 0;
+        std::size_t idx = 0;
         try {
-            std::stoi(L"a1", &idx);
+            (void)std::stoi(L"a1", &idx);
             assert(false);
         } catch (const std::invalid_argument&) {
             assert(idx == 0);

@@ -8,8 +8,8 @@
 
 from pprint import pformat
 import ast
-import distutils.spawn
 import re
+import shutil
 import subprocess
 import sys
 
@@ -60,7 +60,7 @@ def write_syms(sym_list, out=None, names_only=False, filter=None):
             f.write(out_str)
 
 
-_cppfilt_exe = distutils.spawn.find_executable('c++filt')
+_cppfilt_exe = shutil.which('c++filt')
 
 
 def demangle_symbol(symbol):
@@ -90,10 +90,19 @@ def is_mach_o(filename):
         b'\xbe\xba\xfe\xca'   # FAT_CIGAM
     ]
 
+def is_xcoff_or_big_ar(filename):
+    with open(filename, 'rb') as f:
+        magic_bytes = f.read(7)
+    return magic_bytes[:4] in [
+        b'\x01DF',  # XCOFF32
+        b'\x01F7'   # XCOFF64
+    ] or magic_bytes == b'<bigaf>'
 
 def is_library_file(filename):
     if sys.platform == 'darwin':
         return is_mach_o(filename)
+    elif sys.platform.startswith('aix'):
+        return is_xcoff_or_big_ar(filename)
     else:
         return is_elf(filename)
 

@@ -4,12 +4,12 @@
 
 #include <assert.h>
 #include <sanitizer/hwasan_interface.h>
+#include <stdlib.h>
 
 #ifdef REALLOCARRAY
 extern "C" void *reallocarray(void *, size_t nmemb, size_t size);
 #define REALLOC(p, s) reallocarray(p, 1, s)
 #else
-#include <stdlib.h>
 #define REALLOC(p, s) realloc(p, s)
 #endif
 
@@ -41,4 +41,5 @@ int main() {
   assert(x4 != x3);
   assert(x4[0] == 10 && x4[1] == 20 && x4[2] == 30 && x4[3] == 40 &&
          x4[4] == 50);
+  free(x4);
 }

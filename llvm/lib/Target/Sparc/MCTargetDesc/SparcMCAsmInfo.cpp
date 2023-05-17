@@ -12,11 +12,11 @@
 
 #include "SparcMCAsmInfo.h"
 #include "SparcMCExpr.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCTargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -40,7 +40,6 @@ SparcELFMCAsmInfo::SparcELFMCAsmInfo(const Triple &TheTriple) {
 
   ExceptionsType = ExceptionHandling::DwarfCFI;
 
-  SunStyleELFSectionSwitchSyntax = true;
   UsesELFSectionDirectiveForBSS = true;
 }
 

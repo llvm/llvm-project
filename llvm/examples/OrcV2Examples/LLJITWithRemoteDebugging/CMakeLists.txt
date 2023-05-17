@@ -7,6 +7,7 @@ set(LLVM_LINK_COMPONENTS
   OrcShared
   OrcTargetProcess
   Support
+  TargetParser
   nativecodegen
   )
 
@@ -18,4 +19,6 @@ if (LLVM_INCLUDE_UTILS)
     DEPENDS
       llvm-jitlink-executor
   )
+
+  export_executable_symbols(LLJITWithRemoteDebugging)
 endif()

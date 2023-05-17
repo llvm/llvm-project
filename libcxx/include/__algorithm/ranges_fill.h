@@ -20,7 +20,7 @@
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -30,7 +30,7 @@ struct __fn {
   template <class _Type, output_iterator<const _Type&> _Iter, sentinel_for<_Iter> _Sent>
   _LIBCPP_HIDE_FROM_ABI constexpr
   _Iter operator()(_Iter __first, _Sent __last, const _Type& __value) const {
-    if constexpr(random_access_iterator<_Iter>) {
+    if constexpr(random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>) {
       return ranges::fill_n(__first, __last - __first, __value);
     } else {
       for (; __first != __last; ++__first)
@@ -54,6 +54,6 @@ inline namespace __cpo {
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___ALGORITHM_RANGES_FILL_H

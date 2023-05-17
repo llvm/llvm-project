@@ -107,9 +107,10 @@ class CheckRunner:
     # If the test does not specify a config style, force an empty one; otherwise
     # auto-detection logic can discover a ".clang-tidy" file that is not related to
     # the test.
-    if not any(
-        [arg.startswith('-config=') for arg in self.clang_tidy_extra_args]):
-      self.clang_tidy_extra_args.append('-config={}')
+    if not any([
+        re.match('^-?-config(-file)?=', arg)
+        for arg in self.clang_tidy_extra_args]):
+      self.clang_tidy_extra_args.append('--config={}')
 
     if extension in ['.m', '.mm']:
       self.clang_extra_args = ['-fobjc-abi-version=2', '-fobjc-arc', '-fblocks'] + \
@@ -173,13 +174,13 @@ class CheckRunner:
     print('Running ' + repr(args) + '...')
     clang_tidy_output = try_run(args)
     print('------------------------ clang-tidy output -----------------------')
-    print(clang_tidy_output.encode())
-    print('\n------------------------------------------------------------------')
+    print(clang_tidy_output.encode(sys.stdout.encoding, errors="replace").decode(sys.stdout.encoding))
+    print('------------------------------------------------------------------')
 
     diff_output = try_run(['diff', '-u', self.original_file_name, self.temp_file_name], False)
-    print('------------------------------ Fixes -----------------------------\n' +
-          diff_output +
-          '\n------------------------------------------------------------------')
+    print('------------------------------ Fixes -----------------------------')
+    print(diff_output)
+    print('------------------------------------------------------------------')
     return clang_tidy_output
 
   def check_fixes(self):

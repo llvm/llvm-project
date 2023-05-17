@@ -47,7 +47,7 @@ end
 ! CHECK-SAME:    %[[A:.*]]: !fir.ref<f32> {fir.bindc_name = "a"}) -> f32 {
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca f32 {bindc_name = "negr", uniq_name = "_QFnegrEnegr"}
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<f32>
-! CHECK:         %[[NEG:.*]] = arith.negf %[[A_VAL]] : f32
+! CHECK:         %[[NEG:.*]] = arith.negf %[[A_VAL]] {{.*}}: f32
 ! CHECK:         fir.store %[[NEG]] to %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         return %[[RET]] : f32
@@ -139,7 +139,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca f32
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<f32>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<f32>
-! CHECK:         %[[ADD:.*]] = arith.addf %[[A_VAL]], %[[B_VAL]] : f32
+! CHECK:         %[[ADD:.*]] = arith.addf %[[A_VAL]], %[[B_VAL]] {{.*}}: f32
 ! CHECK:         fir.store %[[ADD]] to %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         return %[[RET]] : f32
@@ -155,7 +155,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca f32
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<f32>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<f32>
-! CHECK:         %[[SUB:.*]] = arith.subf %[[A_VAL]], %[[B_VAL]] : f32
+! CHECK:         %[[SUB:.*]] = arith.subf %[[A_VAL]], %[[B_VAL]] {{.*}}: f32
 ! CHECK:         fir.store %[[SUB]] to %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         return %[[RET]] : f32
@@ -171,7 +171,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca f32
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<f32>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<f32>
-! CHECK:         %[[MUL:.*]] = arith.mulf %[[A_VAL]], %[[B_VAL]] : f32
+! CHECK:         %[[MUL:.*]] = arith.mulf %[[A_VAL]], %[[B_VAL]] {{.*}}: f32
 ! CHECK:         fir.store %[[MUL]] to %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         return %[[RET]] : f32
@@ -187,7 +187,7 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca f32
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<f32>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<f32>
-! CHECK:         %[[DIV:.*]] = arith.divf %[[A_VAL]], %[[B_VAL]] : f32
+! CHECK:         %[[DIV:.*]] = arith.divf %[[A_VAL]], %[[B_VAL]] {{.*}}: f32
 ! CHECK:         fir.store %[[DIV]] to %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<f32>
 ! CHECK:         return %[[RET]] : f32
@@ -251,7 +251,11 @@ end
 ! CHECK:         %[[FCTRES:.*]] = fir.alloca !fir.complex<4>
 ! CHECK:         %[[A_VAL:.*]] = fir.load %[[A]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[B_VAL:.*]] = fir.load %[[B]] : !fir.ref<!fir.complex<4>>
-! CHECK:         %[[DIV:.*]] = fir.divc %[[A_VAL]], %[[B_VAL]] : !fir.complex<4>
+! CHECK:         %[[A_REAL:.*]] = fir.extract_value %[[A_VAL]], [0 : index] : (!fir.complex<4>) -> f32
+! CHECK:         %[[A_IMAG:.*]] = fir.extract_value %[[A_VAL]], [1 : index] : (!fir.complex<4>) -> f32
+! CHECK:         %[[B_REAL:.*]] = fir.extract_value %[[B_VAL]], [0 : index] : (!fir.complex<4>) -> f32
+! CHECK:         %[[B_IMAG:.*]] = fir.extract_value %[[B_VAL]], [1 : index] : (!fir.complex<4>) -> f32
+! CHECK:         %[[DIV:.*]] = fir.call @__divsc3(%[[A_REAL]], %[[A_IMAG]], %[[B_REAL]], %[[B_IMAG]]) fastmath<contract> : (f32, f32, f32, f32) -> !fir.complex<4>
 ! CHECK:         fir.store %[[DIV]] to %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         %[[RET:.*]] = fir.load %[[FCTRES]] : !fir.ref<!fir.complex<4>>
 ! CHECK:         return %[[RET]] : !fir.complex<4>

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -mtriple=amdgcn-- -early-cse -earlycse-debug-hash | FileCheck %s
+; RUN: opt < %s -S -mtriple=amdgcn-- -passes=early-cse -earlycse-debug-hash | FileCheck %s
 
 ; CHECK-LABEL: @no_cse
 ; CHECK: call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %in, i32 0, i32 0)

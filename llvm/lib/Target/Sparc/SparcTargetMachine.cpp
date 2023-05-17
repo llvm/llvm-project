@@ -12,12 +12,13 @@
 #include "SparcTargetMachine.h"
 #include "LeonPasses.h"
 #include "Sparc.h"
+#include "SparcMachineFunctionInfo.h"
 #include "SparcTargetObjectFile.h"
 #include "TargetInfo/SparcTargetInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/MC/TargetRegistry.h"
+#include <optional>
 using namespace llvm;
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
@@ -25,7 +26,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeSparcTarget() {
   RegisterTargetMachine<SparcV8TargetMachine> X(getTheSparcTarget());
   RegisterTargetMachine<SparcV9TargetMachine> Y(getTheSparcV9Target());
   RegisterTargetMachine<SparcelTargetMachine> Z(getTheSparcelTarget());
+
+  PassRegistry &PR = *PassRegistry::getPassRegistry();
+  initializeSparcDAGToDAGISelPass(PR);
 }
+
+static cl::opt<bool>
+    BranchRelaxation("sparc-enable-branch-relax", cl::Hidden, cl::init(true),
+                     cl::desc("Relax out of range conditional branches"));
 
 static std::string computeDataLayout(const Triple &T, bool is64Bit) {
   // Sparc is typically big endian, but some are little.
@@ -54,8 +62,8 @@ static std::string computeDataLayout(const Triple &T, bool is64Bit) {
   return Ret;
 }
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
-  return RM.getValueOr(Reloc::Static);
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
+  return RM.value_or(Reloc::Static);
 }
 
 // Code models. Some only make sense for 64-bit code.
@@ -69,7 +77,7 @@ static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
 //
 // All code models require that the text segment is smaller than 2GB.
 static CodeModel::Model
-getEffectiveSparcCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
+getEffectiveSparcCodeModel(std::optional<CodeModel::Model> CM, Reloc::Model RM,
                            bool Is64Bit, bool JIT) {
   if (CM) {
     if (*CM == CodeModel::Tiny)
@@ -87,10 +95,13 @@ getEffectiveSparcCodeModel(Optional<CodeModel::Model> CM, Reloc::Model RM,
 }
 
 /// Create an ILP32 architecture model
-SparcTargetMachine::SparcTargetMachine(
-    const Target &T, const Triple &TT, StringRef CPU, StringRef FS,
-    const TargetOptions &Options, Optional<Reloc::Model> RM,
-    Optional<CodeModel::Model> CM, CodeGenOpt::Level OL, bool JIT, bool is64bit)
+SparcTargetMachine::SparcTargetMachine(const Target &T, const Triple &TT,
+                                       StringRef CPU, StringRef FS,
+                                       const TargetOptions &Options,
+                                       std::optional<Reloc::Model> RM,
+                                       std::optional<CodeModel::Model> CM,
+                                       CodeGenOpt::Level OL, bool JIT,
+                                       bool is64bit)
     : LLVMTargetMachine(T, computeDataLayout(TT, is64bit), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveSparcCodeModel(
@@ -134,6 +145,13 @@ SparcTargetMachine::getSubtargetImpl(const Function &F) const {
   return I.get();
 }
 
+MachineFunctionInfo *SparcTargetMachine::createMachineFunctionInfo(
+    BumpPtrAllocator &Allocator, const Function &F,
+    const TargetSubtargetInfo *STI) const {
+  return SparcMachineFunctionInfo::create<SparcMachineFunctionInfo>(Allocator,
+                                                                    F, STI);
+}
+
 namespace {
 /// Sparc Code Generator Pass Configuration Options.
 class SparcPassConfig : public TargetPassConfig {
@@ -167,6 +185,9 @@ bool SparcPassConfig::addInstSelector() {
 }
 
 void SparcPassConfig::addPreEmitPass(){
+  if (BranchRelaxation)
+    addPass(&BranchRelaxationPassID);
+
   addPass(createSparcDelaySlotFillerPass());
 
   if (this->getSparcTargetMachine().getSubtargetImpl()->insertNOPLoad())
@@ -187,8 +208,8 @@ void SparcV8TargetMachine::anchor() { }
 SparcV8TargetMachine::SparcV8TargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<Reloc::Model> RM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}
 
@@ -197,8 +218,8 @@ void SparcV9TargetMachine::anchor() { }
 SparcV9TargetMachine::SparcV9TargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<Reloc::Model> RM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, true) {}
 
@@ -207,7 +228,7 @@ void SparcelTargetMachine::anchor() {}
 SparcelTargetMachine::SparcelTargetMachine(const Target &T, const Triple &TT,
                                            StringRef CPU, StringRef FS,
                                            const TargetOptions &Options,
-                                           Optional<Reloc::Model> RM,
-                                           Optional<CodeModel::Model> CM,
+                                           std::optional<Reloc::Model> RM,
+                                           std::optional<CodeModel::Model> CM,
                                            CodeGenOpt::Level OL, bool JIT)
     : SparcTargetMachine(T, TT, CPU, FS, Options, RM, CM, OL, JIT, false) {}

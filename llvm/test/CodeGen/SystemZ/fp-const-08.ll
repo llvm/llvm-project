@@ -5,7 +5,7 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s -check-prefix=CONST
 
-define void @f1(fp128 *%x) {
+define void @f1(ptr %x) {
 ; CHECK-LABEL: f1:
 ; CHECK: larl [[REGISTER:%r[1-5]+]], {{.*}}
 ; CHECK: ld %f0, 0([[REGISTER]])
@@ -16,6 +16,6 @@ define void @f1(fp128 *%x) {
 ;
 ; CONST: .quad 0x3fff000000000000
 ; CONST: .quad 0x0800000000000000
-  store fp128 0xL08000000000000003fff000000000000, fp128 *%x
+  store fp128 0xL08000000000000003fff000000000000, ptr %x
   ret void
 }

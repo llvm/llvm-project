@@ -3,19 +3,19 @@ get_property(dialect_libs GLOBAL PROPERTY MLIR_DIALECT_LIBS)
 add_flang_library(flangFrontend
   CompilerInstance.cpp
   CompilerInvocation.cpp
+  CodeGenOptions.cpp
   FrontendAction.cpp
   FrontendActions.cpp
   FrontendOptions.cpp
+  LangOptions.cpp
   TextDiagnosticPrinter.cpp
   TextDiagnosticBuffer.cpp
   TextDiagnostic.cpp
 
   DEPENDS
-  clangBasic
-  FIRBuilder
   FIRDialect
-  FIRSupport
   FIROptTransformsPassIncGen
+  HLFIRDialect
   MLIRIR
   ${dialect_libs}
 
@@ -25,25 +25,34 @@ add_flang_library(flangFrontend
   FortranEvaluate
   FortranCommon
   FortranLower
-  clangBasic
-  clangDriver
   FIRDialect
+  FIRDialectSupport
   FIRSupport
   FIRBuilder
   FIRCodeGen
   FIRTransforms
+  HLFIRDialect
+  HLFIRTransforms
   MLIRTransforms
+  MLIRBuiltinToLLVMIRTranslation
   MLIRLLVMToLLVMIRTranslation
   MLIRSCFToControlFlow
+  MLIRTargetLLVMIRImport
   ${dialect_libs}
 
   LINK_COMPONENTS
   Passes
   Analysis
+  Extensions
   IRReader
   Option
   Support
   Target
+  TargetParser
   FrontendOpenACC
   FrontendOpenMP
+
+  CLANG_LIBS
+  clangBasic
+  clangDriver
 )

@@ -1,4 +1,4 @@
-# With Bitmanip base extension:
+# With Zba extension:
 # RUN: llvm-mc %s -triple=riscv32 -mattr=+zba -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc %s -triple=riscv64 -mattr=+zba -show-encoding \

@@ -200,8 +200,9 @@ static void PrintLocation(const ReportLocation *loc) {
   } else if (loc->type == ReportLocationTLS) {
     Printf("  Location is TLS of %s.\n\n", thread_name(thrbuf, loc->tid));
   } else if (loc->type == ReportLocationFD) {
-    Printf("  Location is file descriptor %d created by %s at:\n",
-        loc->fd, thread_name(thrbuf, loc->tid));
+    Printf("  Location is file descriptor %d %s by %s at:\n", loc->fd,
+           loc->fd_closed ? "destroyed" : "created",
+           thread_name(thrbuf, loc->tid));
     print_stack = true;
   }
   Printf("%s", d.Default());

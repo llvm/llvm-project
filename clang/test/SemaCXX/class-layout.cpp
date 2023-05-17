@@ -1,11 +1,22 @@
-// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++98 -Wno-inaccessible-base
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++98 -Wno-inaccessible-base -Wno-c++11-extensions
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
-// RUN: %clang_cc1 -triple x86_64-apple-darwin    %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=14
+// RUN: %clang_cc1 -triple x86_64-apple-darwin    %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=15
 // RUN: %clang_cc1 -triple x86_64-scei-ps4        %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=6
 // RUN: %clang_cc1 -triple x86_64-sie-ps5         %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=6
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=6 -DCLANG_ABI_COMPAT=6
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=16 -DCLANG_ABI_COMPAT=16
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -triple powerpc-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -triple powerpc64-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -triple s390x-none-zos %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
+// RUN: %clang_cc1 -triple s390x-none-zos %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+
 // expected-no-diagnostics
+
+#if !defined(__MVS__) && !defined(_AIX)
 
 #define SA(n, p) int a##n[(p) ? 1 : -1]
 
@@ -609,6 +620,8 @@ namespace PR37275 {
 #pragma pack(pop)
 }
 
+#endif // !defined(__MVS__) && !defined(__AIX__)
+
 namespace non_pod {
 struct t1 {
 protected:
@@ -621,7 +634,7 @@ struct t2 {
   char c2;
   t1 v1;
 } __attribute__((packed));
-#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 14
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 15
 _Static_assert(_Alignof(t1) == 4, "");
 _Static_assert(_Alignof(t2) == 1, "");
 #else
@@ -642,3 +655,43 @@ struct t2 {
 _Static_assert(_Alignof(t1) == 1, "");
 _Static_assert(_Alignof(t2) == 1, "");
 } // namespace non_pod_packed
+
+namespace non_pod_packed_packed {
+struct B {
+  int b;
+};
+struct  FromB : B {
+} __attribute__((packed));
+struct C {
+  char a[3];
+  FromB b;
+} __attribute__((packed));
+_Static_assert(__builtin_offsetof(C, b) == 3, "");
+}
+
+namespace cxx11_pod {
+struct t1 {
+  t1() = default;
+  t1(const t1&) = delete;
+  ~t1() = delete;
+  t1(t1&&) = default;
+  int a;
+  char c;
+};
+struct t2 {
+  t1 v1;
+} __attribute__((packed));
+#if (defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 15) || !defined(__MVS__)
+_Static_assert(_Alignof(t2) == 1, "");
+#else
+_Static_assert(_Alignof(t2) == 4, "");
+#endif
+struct t3 : t1 {
+  char c;
+};
+#if (defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 15) || defined(__MVS__)
+_Static_assert(sizeof(t3) == 8, "");
+#else
+_Static_assert(sizeof(t3) == 12, "");
+#endif
+}

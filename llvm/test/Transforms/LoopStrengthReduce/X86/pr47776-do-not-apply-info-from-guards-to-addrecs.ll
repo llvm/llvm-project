@@ -7,7 +7,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Make sure we do not crash when applying info from loop guards to expressions in @bar.
 ; Test case for PR47776.
 
-define void @bar() personality i32* ()* @zot {
+define void @bar() personality ptr @zot {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[BB1:%.*]]
@@ -21,7 +21,7 @@ define void @bar() personality i32* ()* @zot {
 ; CHECK-NEXT:    [[TMP4:%.*]] = invoke i32 @fn()
 ; CHECK-NEXT:    to label [[BB5]] unwind label [[BB23_LOOPEXIT_SPLIT_LP:%.*]]
 ; CHECK:       bb5:
-; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i32, i32 addrspace(1)* undef unordered, align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = load atomic i32, ptr addrspace(1) undef unordered, align 8
 ; CHECK-NEXT:    [[TMP7]] = add nuw nsw i64 [[TMP3]], 1
 ; CHECK-NEXT:    [[C_0:%.*]] = icmp ult i64 [[TMP7]], 10000
 ; CHECK-NEXT:    br i1 [[C_0]], label [[BB2]], label [[BB8:%.*]]
@@ -70,7 +70,7 @@ bb2:                                              ; preds = %bb5, %bb1
   to label %bb5 unwind label %bb23
 
 bb5:                                              ; preds = %bb2
-  %tmp6 = load atomic i32, i32 addrspace(1)* undef unordered, align 8
+  %tmp6 = load atomic i32, ptr addrspace(1) undef unordered, align 8
   %tmp7 = add nuw nsw i64 %tmp3, 1
   %c.0 = icmp ult i64 %tmp7, 10000
   br i1 %c.0, label %bb2, label %bb8
@@ -107,6 +107,6 @@ bb29:                                             ; preds = %bb8
   ret void
 }
 
-declare i32* @zot() #1
+declare ptr @zot() #1
 
 declare i32 @fn()

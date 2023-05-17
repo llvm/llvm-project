@@ -411,13 +411,6 @@ def PdWriteCMPXCHG16B : SchedWriteRes<[PdEX1]> {
 }
 def : InstRW<[PdWriteCMPXCHG16B], (instrs CMPXCHG16B)>;
 
-def PdWriteXADD : SchedWriteRes<[PdEX1]> {
-  let Latency = 1;
-  let ResourceCycles = [1];
-  let NumMicroOps = 2;
-}
-def : InstRW<[PdWriteXADD], (instrs XADD8rr, XADD16rr, XADD32rr, XADD64rr)>;
-
 def PdWriteXADDm : SchedWriteRes<[PdEX1]> {
   let Latency = 6;
   let ResourceCycles = [20];
@@ -710,13 +703,6 @@ def : InstRW<[PdWriteRCL8ri], (instrs RCL8ri)>;
 defm : PdWriteRes<WriteSHDrri,       [PdEX01],         3, [6], 6>;
 defm : PdWriteRes<WriteSHDrrcl,      [PdEX01],         3, [8], 7>;
 
-def PdWriteSHLD32rri8SHRD16rri8 : SchedWriteRes<[PdEX01]> {
-  let Latency = 3;
-  let ResourceCycles = [6];
-  let NumMicroOps = 6;
-}
-def : InstRW<[PdWriteSHLD32rri8SHRD16rri8 ], (instrs SHLD32rri8, SHRD16rri8)>;
-
 def PdWriteSHLD16rrCLSHLD32rrCLSHRD32rrCL : SchedWriteRes<[PdEX01]> {
   let Latency = 3;
   let ResourceCycles = [6];
@@ -836,12 +822,10 @@ defm : PdWriteResXMMPair<WriteFMAX,         [PdFPU, PdFPFMA], 5, [1, 3]>;
 defm : PdWriteResYMMPair<WriteFMAY,         [PdFPU, PdFPFMA], 5, [1, 3]>;
 defm : X86WriteResPairUnsupported<WriteFMAZ>;
 
-
 defm : PdWriteResXMMPair<WriteDPPD,         [PdFPU1, PdFPFMA], 15, [1, 10], 15, 2>;
 
 defm : PdWriteResXMMPair<WriteDPPS,         [PdFPU1, PdFPFMA], 25, [1, 14],  16, 2>;
 defm : PdWriteResYMMPair<WriteDPPSY,        [PdFPU1, PdFPFMA], 27, [2, 25], /*or 29*/ 25, 4>;
-defm : X86WriteResPairUnsupported<WriteDPPSZ>;
 
 def PdWriteVDPPSrri : SchedWriteRes<[PdFPU1, PdFPFMA]> {
   let Latency = 27;
@@ -932,8 +916,8 @@ def PdWriteVFRCZYm : SchedWriteRes<[PdFPU1, PdFPSTO]> {
 }
 def : InstRW<[PdWriteVFRCZYm], (instrs VFRCZPSYrm, VFRCZPDYrm)>;
 
-defm : PdWriteResXMMPair<WriteFLogic,       [PdFPU01, PdFPFMA],  2, [1, 2]>;
-defm : PdWriteResYMMPair<WriteFLogicY,      [PdFPU01, PdFPFMA],  2, [2, 2]>;
+defm : PdWriteResXMMPair<WriteFLogic,       [PdFPU23, PdFPMAL],  2>;
+defm : PdWriteResYMMPair<WriteFLogicY,      [PdFPU23, PdFPMAL],  2, [2, 2]>;
 defm : X86WriteResPairUnsupported<WriteFLogicZ>;
 
 defm : PdWriteResXMMPair<WriteFTest,        [PdFPU0, PdFPFMA, PdEX0],  1, [], 2>;
@@ -951,16 +935,16 @@ def PdWriteVBROADCASTF128 : SchedWriteRes<[PdFPU01, PdFPFMA]> {
 }
 def : InstRW<[PdWriteVBROADCASTF128], (instrs VBROADCASTF128)>;
 
-defm : PdWriteResXMMPair<WriteFVarShuffle,  [PdFPU01, PdFPFMA],  3, [1, 2]>;
-defm : PdWriteResYMMPair<WriteFVarShuffleY, [PdFPU01, PdFPFMA],  3, [2, 4], 2>;
+defm : PdWriteResXMMPair<WriteFVarShuffle,  [PdFPU1, PdFPXBR],  3>;
+defm : PdWriteResYMMPair<WriteFVarShuffleY, [PdFPU1, PdFPXBR],  3, [2, 2], 2>;
 defm : X86WriteResPairUnsupported<WriteFVarShuffleZ>;
 
-defm : PdWriteResXMMPair<WriteFBlend,       [PdFPU01, PdFPFMA],  2, [1, 3]>;
-defm : PdWriteResYMMPair<WriteFBlendY,      [PdFPU01, PdFPFMA],  2, [2, 3], 2>;
+defm : PdWriteResXMMPair<WriteFBlend,       [PdFPU23, PdFPMAL],  2>;
+defm : PdWriteResYMMPair<WriteFBlendY,      [PdFPU23, PdFPMAL],  2, [2, 2], 2>;
 defm : X86WriteResPairUnsupported<WriteFBlendZ>;
 
-defm : PdWriteResXMMPair<WriteFVarBlend,    [PdFPU01, PdFPFMA],  2, [1, 3]>;
-defm : PdWriteResYMMPair<WriteFVarBlendY,   [PdFPU01, PdFPFMA],  2, [2, 4], 2>;
+defm : PdWriteResXMMPair<WriteFVarBlend,    [PdFPU1, PdFPXBR],  2>;
+defm : PdWriteResYMMPair<WriteFVarBlendY,   [PdFPU1, PdFPXBR],  2, [2, 2], 2>;
 defm : X86WriteResPairUnsupported<WriteFVarBlendZ>;
 
 defm : PdWriteResXMMPair<WriteFShuffle256,  [PdFPU01, PdFPFMA],  2, [1, 3], 2>;
@@ -1122,18 +1106,18 @@ def : InstRW<[PdWriteMOVQ2DQrr], (instrs MMX_MOVQ2DQrr)>;
 defm : PdWriteRes<WriteVecMoveToGpr,        [PdFPU0, PdFPFMA, PdEX0], 11>;
 defm : PdWriteRes<WriteVecMoveFromGpr,      [PdFPU01, PdFPFMA], 11, [1, 2], 2>;
 
-defm : PdWriteResXMMPair<WriteVecALU,        [PdFPU01, PdFPMAL], 2>;
-defm : PdWriteResXMMPair<WriteVecALUX,       [PdFPU01, PdFPMAL], 2, [1, 2]>;
+defm : PdWriteResXMMPair<WriteVecALU,        [PdFPU23, PdFPMAL], 2>;
+defm : PdWriteResXMMPair<WriteVecALUX,       [PdFPU23, PdFPMAL], 2>;
 defm : X86WriteResPairUnsupported<WriteVecALUY>;
 defm : X86WriteResPairUnsupported<WriteVecALUZ>;
 
-defm : PdWriteResXMMPair<WriteVecShift,      [PdFPU01, PdFPMAL], 3, [1, 2]>;
-defm : PdWriteResXMMPair<WriteVecShiftX,     [PdFPU01, PdFPMAL], 3, [1, 2]>;
+defm : PdWriteResXMMPair<WriteVecShift,      [PdFPU1, PdFPXBR], 3>;
+defm : PdWriteResXMMPair<WriteVecShiftX,     [PdFPU1, PdFPXBR], 3>;
 defm : X86WriteResPairUnsupported<WriteVecShiftY>;
 defm : X86WriteResPairUnsupported<WriteVecShiftZ>;
 
-defm : PdWriteResXMMPair<WriteVecShiftImm,   [PdFPU01, PdFPMAL], 2, [1, 2]>;
-defm : PdWriteResXMMPair<WriteVecShiftImmX,  [PdFPU01, PdFPMAL], 2, [1, 2]>;
+defm : PdWriteResXMMPair<WriteVecShiftImm,   [PdFPU1, PdFPXBR], 2>;
+defm : PdWriteResXMMPair<WriteVecShiftImmX,  [PdFPU1, PdFPXBR], 2>;
 defm : X86WriteResPairUnsupported<WriteVecShiftImmY>;
 defm : X86WriteResPairUnsupported<WriteVecShiftImmZ>;
 
@@ -1152,16 +1136,11 @@ def PdWriteVPMACS : SchedWriteRes<[PdFPU0, PdFPMMA, PdFPMAL]> {
 def : InstRW<[PdWriteVPMACS], (instrs VPMACSDQHrr, VPMACSDQLrr, VPMACSSDQHrr,
                                       VPMACSSDQLrr)>;
 
-defm : PdWriteResXMMPair<WriteMPSAD,         [PdFPU0, PdFPMMA], 9, [1, 4], 8>;
+// FIXME: Investigate RR vs RM differences.
+defm : PdWriteRes<WriteMPSAD,   [PdFPU0, PdFPMMA], 8, [1, 4], 8>;
+defm : PdWriteRes<WriteMPSADLd, [PdFPU0, PdFPMMA, PdLoad], 14, [1, 4, 3],  8>;
 defm : X86WriteResPairUnsupported<WriteMPSADY>;
 defm : X86WriteResPairUnsupported<WriteMPSADZ>;
-
-def PdWriteVMPSADBW : SchedWriteRes<[PdFPU0, PdFPMMA]> {
-  let Latency = 8;
-  let ResourceCycles = [1, 4];
-  let NumMicroOps = 10;
-}
-def : InstRW<[PdWriteVMPSADBW], (instrs VMPSADBWrri)>;
 
 defm : PdWriteResXMMPair<WritePSADBW,        [PdFPU01, PdFPMAL], 4, [1, 2], 2>;
 defm : PdWriteResXMMPair<WritePSADBWX,       [PdFPU01, PdFPMAL], 4, [1, 2], 2>;
@@ -1170,32 +1149,38 @@ defm : X86WriteResPairUnsupported<WritePSADBWZ>;
 
 defm : PdWriteResXMMPair<WritePHMINPOS,      [PdFPU0,  PdFPMAL], 4, [], 2>;
 
-defm : PdWriteResXMMPair<WriteShuffle,       [PdFPU01, PdFPMAL], 2, [1, 2]>;
-defm : PdWriteResXMMPair<WriteShuffleX,      [PdFPU01, PdFPMAL], 2, [1, 2]>;
-defm : PdWriteResYMMPair<WriteShuffleY,      [PdFPU01, PdFPMAL], 2, [1, 4]>;
+defm : PdWriteResXMMPair<WriteShuffle,       [PdFPU1, PdFPXBR], 2>;
+defm : PdWriteResXMMPair<WriteShuffleX,      [PdFPU1, PdFPXBR], 2>;
+defm : PdWriteResYMMPair<WriteShuffleY,      [PdFPU1, PdFPXBR], 2, [2, 2]>;
 defm : X86WriteResPairUnsupported<WriteShuffleZ>;
 
-defm : PdWriteResXMMPair<WriteVarShuffle,    [PdFPU01, PdFPMAL], 3, [1, 2]>;
-defm : PdWriteResXMMPair<WriteVarShuffleX,   [PdFPU01, PdFPMAL], 3, [1, 3]>;
+defm : PdWriteResXMMPair<WriteVarShuffle,    [PdFPU1, PdFPXBR], 3>;
+defm : PdWriteResXMMPair<WriteVarShuffleX,   [PdFPU1, PdFPXBR], 3>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleY>;
 defm : X86WriteResPairUnsupported<WriteVarShuffleZ>;
 
-def PdWriteVPPERM : SchedWriteRes<[PdFPU01, PdFPMAL]> {
+def PdWriteVPPERM : SchedWriteRes<[PdFPU1, PdFPXBR]> {
   let Latency = 2;
-  let ResourceCycles = [1, 3];
+  let ResourceCycles = [1, 1];
 }
 def : InstRW<[PdWriteVPPERM], (instrs VPPERMrrr, VPPERMrrr_REV)>;
 
-defm : PdWriteResXMMPair<WriteBlend,         [PdFPU01, PdFPMAL], 2>;
+def PdWriteVPPERMLd : SchedWriteRes<[PdFPU1, PdFPXBR, PdLoad]> {
+  let Latency = 7;
+  let ResourceCycles = [1, 1, 3];
+}
+def : InstRW<[PdWriteVPPERMLd], (instrs VPPERMrrm, VPPERMrmr)>;
+
+defm : PdWriteResXMMPair<WriteBlend,         [PdFPU23, PdFPMAL], 2>;
 defm : X86WriteResPairUnsupported<WriteBlendY>;
 defm : X86WriteResPairUnsupported<WriteBlendZ>;
 
-defm : PdWriteResXMMPair<WriteVarBlend,      [PdFPU01, PdFPMAL], 2, [1, 2]>;
+defm : PdWriteResXMMPair<WriteVarBlend,      [PdFPU1, PdFPXBR], 2>;
 defm : X86WriteResPairUnsupported<WriteVarBlendY>;
 defm : X86WriteResPairUnsupported<WriteVarBlendZ>;
 
-defm : PdWriteResXMMPair<WriteVecLogic,      [PdFPU01, PdFPMAL], 2>;
-defm : PdWriteResXMMPair<WriteVecLogicX,     [PdFPU01, PdFPMAL], 2, [1, 2]>;
+defm : PdWriteResXMMPair<WriteVecLogic,      [PdFPU23, PdFPMAL], 2>;
+defm : PdWriteResXMMPair<WriteVecLogicX,     [PdFPU23, PdFPMAL], 2>;
 defm : X86WriteResPairUnsupported<WriteVecLogicY>;
 defm : X86WriteResPairUnsupported<WriteVecLogicZ>;
 
@@ -1207,7 +1192,7 @@ defm : PdWriteResXMMPair<WriteShuffle256,    [PdFPU01, PdFPMAL]>;
 defm : PdWriteResXMMPair<WriteVPMOV256,      [PdFPU01, PdFPMAL]>;
 defm : PdWriteResXMMPair<WriteVarShuffle256, [PdFPU01, PdFPMAL]>;
 
-defm : PdWriteResXMMPair<WriteVarVecShift,   [PdFPU01, PdFPMAL], 3, [1, 2]>;
+defm : PdWriteResXMMPair<WriteVarVecShift,   [PdFPU1, PdFPXBR], 3>;
 defm : X86WriteResPairUnsupported<WriteVarVecShiftY>;
 defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>;
 

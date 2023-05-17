@@ -33,10 +33,10 @@ define void @f1(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [3912 x i8], align 8
   %region2 = alloca [3912 x i8], align 8
-  %ptr1 = getelementptr inbounds [3912 x i8], [3912 x i8]* %region1, i64 0, i64 7
-  %ptr2 = getelementptr inbounds [3912 x i8], [3912 x i8]* %region2, i64 0, i64 7
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [3912 x i8], ptr %region1, i64 0, i64 7
+  %ptr2 = getelementptr inbounds [3912 x i8], ptr %region2, i64 0, i64 7
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -51,10 +51,10 @@ define void @f2(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [3912 x i8], align 8
   %region2 = alloca [3912 x i8], align 8
-  %ptr1 = getelementptr inbounds [3912 x i8], [3912 x i8]* %region1, i64 0, i64 8
-  %ptr2 = getelementptr inbounds [3912 x i8], [3912 x i8]* %region2, i64 0, i64 8
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [3912 x i8], ptr %region1, i64 0, i64 8
+  %ptr2 = getelementptr inbounds [3912 x i8], ptr %region2, i64 0, i64 8
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -72,10 +72,10 @@ define void @f3(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
-  %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 7
-  %ptr2 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region2, i64 0, i64 7
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [524104 x i8], ptr %region1, i64 0, i64 7
+  %ptr2 = getelementptr inbounds [524104 x i8], ptr %region2, i64 0, i64 7
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -94,10 +94,10 @@ define void @f4(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
-  %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 8
-  %ptr2 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region2, i64 0, i64 8
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [524104 x i8], ptr %region1, i64 0, i64 8
+  %ptr2 = getelementptr inbounds [524104 x i8], ptr %region2, i64 0, i64 8
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -115,10 +115,10 @@ define void @f5(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
-  %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 4103
-  %ptr2 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region2, i64 0, i64 4103
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [524104 x i8], ptr %region1, i64 0, i64 4103
+  %ptr2 = getelementptr inbounds [524104 x i8], ptr %region2, i64 0, i64 4103
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -135,10 +135,10 @@ define void @f6(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
-  %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 4104
-  %ptr2 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region2, i64 0, i64 4104
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [524104 x i8], ptr %region1, i64 0, i64 4104
+  %ptr2 = getelementptr inbounds [524104 x i8], ptr %region2, i64 0, i64 4104
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -158,10 +158,10 @@ define void @f7(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [1048400 x i8], align 8
   %region2 = alloca [1048400 x i8], align 8
-  %ptr1 = getelementptr inbounds [1048400 x i8], [1048400 x i8]* %region1, i64 0, i64 524287
-  %ptr2 = getelementptr inbounds [1048400 x i8], [1048400 x i8]* %region2, i64 0, i64 524287
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [1048400 x i8], ptr %region1, i64 0, i64 524287
+  %ptr2 = getelementptr inbounds [1048400 x i8], ptr %region2, i64 0, i64 524287
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -179,10 +179,10 @@ define void @f8(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [1048408 x i8], align 8
   %region2 = alloca [1048408 x i8], align 8
-  %ptr1 = getelementptr inbounds [1048408 x i8], [1048408 x i8]* %region1, i64 0, i64 524287
-  %ptr2 = getelementptr inbounds [1048408 x i8], [1048408 x i8]* %region2, i64 0, i64 524287
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [1048408 x i8], ptr %region1, i64 0, i64 524287
+  %ptr2 = getelementptr inbounds [1048408 x i8], ptr %region2, i64 0, i64 524287
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
@@ -209,17 +209,17 @@ define void @f9(i8 %byte) {
 ; CHECK-FP: br %r14
   %region1 = alloca [1048408 x i8], align 8
   %region2 = alloca [1048408 x i8], align 8
-  %ptr1 = getelementptr inbounds [1048408 x i8], [1048408 x i8]* %region1, i64 0, i64 524288
-  %ptr2 = getelementptr inbounds [1048408 x i8], [1048408 x i8]* %region2, i64 0, i64 524288
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [1048408 x i8], ptr %region1, i64 0, i64 524288
+  %ptr2 = getelementptr inbounds [1048408 x i8], ptr %region2, i64 0, i64 524288
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }
 
 ; Repeat f4 in a case that needs the emergency spill slots (because all
 ; call-clobbered registers are live and no call-saved ones have been
 ; allocated).
-define void @f10(i32 *%vptr, i8 %byte) {
+define void @f10(ptr %vptr, i8 %byte) {
 ; CHECK-NOFP-LABEL: f10:
 ; CHECK-NOFP: stg [[REGISTER:%r[1-9][0-4]?]], [[OFFSET:160|168]](%r15)
 ; CHECK-NOFP: llilh [[REGISTER]], 8
@@ -233,20 +233,20 @@ define void @f10(i32 *%vptr, i8 %byte) {
 ; CHECK-FP: stc %r3, 0([[REGISTER]],%r11)
 ; CHECK-FP: lg [[REGISTER]], [[OFFSET]](%r11)
 ; CHECK-FP: br %r14
-  %i0 = load volatile i32, i32 *%vptr
-  %i1 = load volatile i32, i32 *%vptr
-  %i4 = load volatile i32, i32 *%vptr
-  %i5 = load volatile i32, i32 *%vptr
+  %i0 = load volatile i32, ptr %vptr
+  %i1 = load volatile i32, ptr %vptr
+  %i4 = load volatile i32, ptr %vptr
+  %i5 = load volatile i32, ptr %vptr
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
-  %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 8
-  %ptr2 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region2, i64 0, i64 8
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
-  store volatile i32 %i0, i32 *%vptr
-  store volatile i32 %i1, i32 *%vptr
-  store volatile i32 %i4, i32 *%vptr
-  store volatile i32 %i5, i32 *%vptr
+  %ptr1 = getelementptr inbounds [524104 x i8], ptr %region1, i64 0, i64 8
+  %ptr2 = getelementptr inbounds [524104 x i8], ptr %region2, i64 0, i64 8
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
+  store volatile i32 %i0, ptr %vptr
+  store volatile i32 %i1, ptr %vptr
+  store volatile i32 %i4, ptr %vptr
+  store volatile i32 %i5, ptr %vptr
   ret void
 }
 
@@ -254,7 +254,7 @@ define void @f10(i32 *%vptr, i8 %byte) {
 ; NOFP case needs are the emergency ones, so the offsets are the same as for f4.
 ; However, the FP case uses %r11 as the frame pointer and must therefore
 ; spill a second register.  This leads to an extra displacement of 8.
-define void @f11(i32 *%vptr, i8 %byte) {
+define void @f11(ptr %vptr, i8 %byte) {
 ; CHECK-NOFP-LABEL: f11:
 ; CHECK-NOFP: stmg %r6, %r15,
 ; CHECK-NOFP: stg [[REGISTER:%r[1-9][0-4]?]], [[OFFSET:160|168]](%r15)
@@ -272,38 +272,38 @@ define void @f11(i32 *%vptr, i8 %byte) {
 ; CHECK-FP: lg [[REGISTER]], [[OFFSET]](%r11)
 ; CHECK-FP: lmg %r6, %r15,
 ; CHECK-FP: br %r14
-  %i0 = load volatile i32, i32 *%vptr
-  %i1 = load volatile i32, i32 *%vptr
-  %i4 = load volatile i32, i32 *%vptr
-  %i5 = load volatile i32, i32 *%vptr
-  %i6 = load volatile i32, i32 *%vptr
-  %i7 = load volatile i32, i32 *%vptr
-  %i8 = load volatile i32, i32 *%vptr
-  %i9 = load volatile i32, i32 *%vptr
-  %i10 = load volatile i32, i32 *%vptr
-  %i11 = load volatile i32, i32 *%vptr
-  %i12 = load volatile i32, i32 *%vptr
-  %i13 = load volatile i32, i32 *%vptr
-  %i14 = load volatile i32, i32 *%vptr
+  %i0 = load volatile i32, ptr %vptr
+  %i1 = load volatile i32, ptr %vptr
+  %i4 = load volatile i32, ptr %vptr
+  %i5 = load volatile i32, ptr %vptr
+  %i6 = load volatile i32, ptr %vptr
+  %i7 = load volatile i32, ptr %vptr
+  %i8 = load volatile i32, ptr %vptr
+  %i9 = load volatile i32, ptr %vptr
+  %i10 = load volatile i32, ptr %vptr
+  %i11 = load volatile i32, ptr %vptr
+  %i12 = load volatile i32, ptr %vptr
+  %i13 = load volatile i32, ptr %vptr
+  %i14 = load volatile i32, ptr %vptr
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
-  %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 8
-  %ptr2 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region2, i64 0, i64 8
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
-  store volatile i32 %i0, i32 *%vptr
-  store volatile i32 %i1, i32 *%vptr
-  store volatile i32 %i4, i32 *%vptr
-  store volatile i32 %i5, i32 *%vptr
-  store volatile i32 %i6, i32 *%vptr
-  store volatile i32 %i7, i32 *%vptr
-  store volatile i32 %i8, i32 *%vptr
-  store volatile i32 %i9, i32 *%vptr
-  store volatile i32 %i10, i32 *%vptr
-  store volatile i32 %i11, i32 *%vptr
-  store volatile i32 %i12, i32 *%vptr
-  store volatile i32 %i13, i32 *%vptr
-  store volatile i32 %i14, i32 *%vptr
+  %ptr1 = getelementptr inbounds [524104 x i8], ptr %region1, i64 0, i64 8
+  %ptr2 = getelementptr inbounds [524104 x i8], ptr %region2, i64 0, i64 8
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
+  store volatile i32 %i0, ptr %vptr
+  store volatile i32 %i1, ptr %vptr
+  store volatile i32 %i4, ptr %vptr
+  store volatile i32 %i5, ptr %vptr
+  store volatile i32 %i6, ptr %vptr
+  store volatile i32 %i7, ptr %vptr
+  store volatile i32 %i8, ptr %vptr
+  store volatile i32 %i9, ptr %vptr
+  store volatile i32 %i10, ptr %vptr
+  store volatile i32 %i11, ptr %vptr
+  store volatile i32 %i12, ptr %vptr
+  store volatile i32 %i13, ptr %vptr
+  store volatile i32 %i14, ptr %vptr
   ret void
 }
 
@@ -323,9 +323,9 @@ define void @f12(i8 %byte, i64 %index) {
   %region1 = alloca [524104 x i8], align 8
   %region2 = alloca [524104 x i8], align 8
   %index1 = add i64 %index, 8
-  %ptr1 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region1, i64 0, i64 %index1
-  %ptr2 = getelementptr inbounds [524104 x i8], [524104 x i8]* %region2, i64 0, i64 %index1
-  store volatile i8 %byte, i8 *%ptr1
-  store volatile i8 %byte, i8 *%ptr2
+  %ptr1 = getelementptr inbounds [524104 x i8], ptr %region1, i64 0, i64 %index1
+  %ptr2 = getelementptr inbounds [524104 x i8], ptr %region2, i64 0, i64 %index1
+  store volatile i8 %byte, ptr %ptr1
+  store volatile i8 %byte, ptr %ptr2
   ret void
 }

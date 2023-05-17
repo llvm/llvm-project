@@ -17,9 +17,9 @@
 
 #include "llvm/ADT/STLForwardCompat.h"
 
+#include <cstdint>
 #include <type_traits>
 #include <utility>
-#include <cstdint>
 
 namespace llvm {
 
@@ -61,7 +61,7 @@ public:
                        std::is_convertible<decltype(std::declval<Callable>()(
                                                std::declval<Params>()...)),
                                            Ret>::value> * = nullptr)
-      : callback(callback_fn<typename std::remove_reference<Callable>::type>),
+      : callback(callback_fn<std::remove_reference_t<Callable>>),
         callable(reinterpret_cast<intptr_t>(&callable)) {}
 
   Ret operator()(Params ...params) const {

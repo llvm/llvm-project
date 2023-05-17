@@ -19,7 +19,7 @@ using llvm::unittest::TempLink;
 namespace {
 
 TEST(TempPathTest, TempDir) {
-  Optional<TempDir> Dir1, Dir2;
+  std::optional<TempDir> Dir1, Dir2;
   StringRef Prefix = "temp-path-test";
   Dir1.emplace(Prefix, /*Unique=*/true);
   EXPECT_EQ(Prefix,
@@ -33,10 +33,10 @@ TEST(TempPathTest, TempDir) {
   ASSERT_EQ(Path, Dir2->path());
   ASSERT_TRUE(sys::fs::exists(Path));
 
-  Dir1 = None;
+  Dir1 = std::nullopt;
   ASSERT_TRUE(sys::fs::exists(Path));
 
-  Dir2 = None;
+  Dir2 = std::nullopt;
   ASSERT_FALSE(sys::fs::exists(Path));
 }
 
@@ -44,7 +44,7 @@ TEST(TempPathTest, TempFile) {
   TempDir D("temp-path-test", /*Unique=*/true);
   ASSERT_TRUE(sys::fs::exists(D.path()));
 
-  Optional<TempFile> File1, File2;
+  std::optional<TempFile> File1, File2;
   File1.emplace(D.path("file"), "suffix", "content");
   EXPECT_EQ("file.suffix", sys::path::filename(File1->path()));
   {
@@ -61,10 +61,10 @@ TEST(TempPathTest, TempFile) {
   ASSERT_EQ(Path, File2->path());
   ASSERT_TRUE(sys::fs::exists(Path));
 
-  File1 = None;
+  File1 = std::nullopt;
   ASSERT_TRUE(sys::fs::exists(Path));
 
-  File2 = None;
+  File2 = std::nullopt;
   ASSERT_FALSE(sys::fs::exists(Path));
 }
 
@@ -73,7 +73,7 @@ TEST(TempPathTest, TempLink) {
   ASSERT_TRUE(sys::fs::exists(D.path()));
   TempFile File(D.path("file"), "suffix", "content");
 
-  Optional<TempLink> Link1, Link2;
+  std::optional<TempLink> Link1, Link2;
   Link1.emplace(File.path(), D.path("link"));
   EXPECT_EQ("link", sys::path::filename(Link1->path()));
   {
@@ -90,10 +90,10 @@ TEST(TempPathTest, TempLink) {
   ASSERT_EQ(Path, Link2->path());
   ASSERT_TRUE(sys::fs::exists(Path));
 
-  Link1 = None;
+  Link1 = std::nullopt;
   ASSERT_TRUE(sys::fs::exists(Path));
 
-  Link2 = None;
+  Link2 = std::nullopt;
   ASSERT_FALSE(sys::fs::exists(Path));
 }
 

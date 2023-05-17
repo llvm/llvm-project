@@ -5,7 +5,7 @@ typedef int (__cdecl *tptr)(void);
 void (*__fastcall fastpfunc)(void);
 extern __declspec(dllimport) void __stdcall VarR4FromDec(void);
 __declspec(deprecated) __declspec(deprecated) char * __cdecl ltoa( long _Val, char * _DstBuf, int _Radix);
-__declspec(safebuffers) __declspec(noalias) __declspec(restrict) void * __cdecl xxx(void *_Memory); /* expected-warning{{__declspec attribute 'safebuffers' is not supported}} */
+__declspec(safebuffers) __declspec(noalias) __declspec(restrict) void * __cdecl xxx(void *_Memory);
 typedef __w64 unsigned long ULONG_PTR, *PULONG_PTR;
 
 void * __ptr64 PtrToPtr64(const void *p) {

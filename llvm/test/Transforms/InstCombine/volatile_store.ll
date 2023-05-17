@@ -6,26 +6,26 @@
 define void @self_assign_1() {
 ; CHECK-LABEL: @self_assign_1(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load volatile i32, i32* @x, align 4
-; CHECK-NEXT:    store volatile i32 [[TMP]], i32* @x, align 4
+; CHECK-NEXT:    [[TMP:%.*]] = load volatile i32, ptr @x, align 4
+; CHECK-NEXT:    store volatile i32 [[TMP]], ptr @x, align 4
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       return:
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp = load volatile i32, i32* @x
-  store volatile i32 %tmp, i32* @x
+  %tmp = load volatile i32, ptr @x
+  store volatile i32 %tmp, ptr @x
   br label %return
 
 return:
   ret void
 }
 
-define void @volatile_store_before_unreachable(i1 %c, i8* %p) {
+define void @volatile_store_before_unreachable(i1 %c, ptr %p) {
 ; CHECK-LABEL: @volatile_store_before_unreachable(
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       true:
-; CHECK-NEXT:    store volatile i8 0, i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store volatile i8 0, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    unreachable
 ; CHECK:       false:
 ; CHECK-NEXT:    ret void
@@ -33,7 +33,7 @@ define void @volatile_store_before_unreachable(i1 %c, i8* %p) {
   br i1 %c, label %true, label %false
 
 true:
-  store volatile i8 0, i8* %p
+  store volatile i8 0, ptr %p
   unreachable
 
 false:

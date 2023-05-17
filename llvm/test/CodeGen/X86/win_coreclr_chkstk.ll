@@ -106,7 +106,7 @@ entry:
   ret i32 0
 }
 
-declare i32 @bar(i8*) nounwind
+declare i32 @bar(ptr) nounwind
 
 ; Within-body inline probe expansion
 define win64cc i32 @main4k_alloca(i64 %n) nounwind {
@@ -118,9 +118,9 @@ entry:
 ; LINUX-NOT:  	movq	%gs:16, [[R:%r.*]]
 ; LINUX: 	callq	bar
   %a = alloca i8, i64 1024
-  %ra = call i32 @bar(i8* %a) nounwind
+  %ra = call i32 @bar(ptr %a) nounwind
   %b = alloca i8, i64 %n
-  %rb = call i32 @bar(i8* %b) nounwind
+  %rb = call i32 @bar(ptr %b) nounwind
   %r = add i32 %ra, %rb
   ret i32 %r
 }

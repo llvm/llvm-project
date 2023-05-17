@@ -9,7 +9,7 @@
 #ifndef LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 #define LLVM_LIBC_SRC_STDIO_PRINTF_CORE_CORE_STRUCTS_H
 
-#include "src/__support/CPP/StringView.h"
+#include "src/__support/CPP/string_view.h"
 #include "src/__support/FPUtil/FPBits.h"
 
 #include <inttypes.h>
@@ -37,8 +37,7 @@ enum FormatFlags : uint8_t {
 struct FormatSection {
   bool has_conv;
 
-  const char *__restrict raw_string;
-  size_t raw_len;
+  cpp::string_view raw_string;
 
   // Format Specifier Values
   FormatFlags flags = FormatFlags(0);
@@ -58,8 +57,7 @@ struct FormatSection {
     if (has_conv != other.has_conv)
       return false;
 
-    if (!cpp::StringView(raw_string, raw_len)
-             .equals(cpp::StringView(other.raw_string, other.raw_len)))
+    if (raw_string != other.raw_string)
       return false;
 
     if (has_conv) {
@@ -78,6 +76,39 @@ struct FormatSection {
     return true;
   }
 };
+
+enum PrimaryType : uint8_t { Unknown = 0, Float = 1, Pointer = 2, Integer = 3 };
+
+// TypeDesc stores the information about a type that is relevant to printf in
+// a relatively compact manner.
+struct TypeDesc {
+  uint8_t size;
+  PrimaryType primary_type;
+  LIBC_INLINE constexpr bool operator==(const TypeDesc &other) const {
+    return (size == other.size) && (primary_type == other.primary_type);
+  }
+};
+
+template <typename T> LIBC_INLINE constexpr TypeDesc type_desc_from_type() {
+  if constexpr (cpp::is_same_v<T, void>) {
+    return TypeDesc{0, PrimaryType::Unknown};
+  } else {
+    constexpr bool isPointer = cpp::is_pointer_v<T>;
+    constexpr bool isFloat = cpp::is_floating_point_v<T>;
+    return TypeDesc{sizeof(T), isPointer ? PrimaryType::Pointer
+                               : isFloat ? PrimaryType::Float
+                                         : PrimaryType::Integer};
+  }
+}
+
+// This is the value to be returned by conversions when no error has occurred.
+constexpr int WRITE_OK = 0;
+// These are the printf return values for when an error has occurred. They are
+// all negative, and should be distinct.
+constexpr int FILE_WRITE_ERROR = -1;
+constexpr int FILE_STATUS_ERROR = -2;
+constexpr int NULLPTR_WRITE_ERROR = -3;
+constexpr int INT_CONVERSION_ERROR = -4;
 
 } // namespace printf_core
 } // namespace __llvm_libc

@@ -50,7 +50,7 @@ private:
 
   /// DirCharacteristic - The type of directory this is: this is an instance of
   /// SrcMgr::CharacteristicKind.
-  unsigned DirCharacteristic : 2;
+  unsigned DirCharacteristic : 3;
 
   /// LookupType - This indicates whether this DirectoryLookup object is a
   /// normal directory, a framework, or a headermap.
@@ -91,8 +91,8 @@ public:
     return isNormalDir() ? &u.Dir.getDirEntry() : nullptr;
   }
 
-  Optional<DirectoryEntryRef> getDirRef() const {
-    return isNormalDir() ? Optional<DirectoryEntryRef>(u.Dir) : None;
+  OptionalDirectoryEntryRef getDirRef() const {
+    return isNormalDir() ? OptionalDirectoryEntryRef(u.Dir) : std::nullopt;
   }
 
   /// getFrameworkDir - Return the directory that this framework refers to.
@@ -101,8 +101,8 @@ public:
     return isFramework() ? &u.Dir.getDirEntry() : nullptr;
   }
 
-  Optional<DirectoryEntryRef> getFrameworkDirRef() const {
-    return isFramework() ? Optional<DirectoryEntryRef>(u.Dir) : None;
+  OptionalDirectoryEntryRef getFrameworkDirRef() const {
+    return isFramework() ? OptionalDirectoryEntryRef(u.Dir) : std::nullopt;
   }
 
   /// getHeaderMap - Return the directory that this entry refers to.
@@ -180,16 +180,17 @@ public:
   /// \param [out] MappedName if this is a headermap which maps the filename to
   /// a framework include ("Foo.h" -> "Foo/Foo.h"), set the new name to this
   /// vector and point Filename to it.
-  Optional<FileEntryRef>
+  OptionalFileEntryRef
   LookupFile(StringRef &Filename, HeaderSearch &HS, SourceLocation IncludeLoc,
              SmallVectorImpl<char> *SearchPath,
              SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
              ModuleMap::KnownHeader *SuggestedModule,
              bool &InUserSpecifiedSystemFramework, bool &IsFrameworkFound,
-             bool &IsInHeaderMap, SmallVectorImpl<char> &MappedName) const;
+             bool &IsInHeaderMap, SmallVectorImpl<char> &MappedName,
+             bool OpenFile = true) const;
 
 private:
-  Optional<FileEntryRef> DoFrameworkLookup(
+  OptionalFileEntryRef DoFrameworkLookup(
       StringRef Filename, HeaderSearch &HS, SmallVectorImpl<char> *SearchPath,
       SmallVectorImpl<char> *RelativePath, Module *RequestingModule,
       ModuleMap::KnownHeader *SuggestedModule,

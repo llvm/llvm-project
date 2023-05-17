@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_SUPPORT_MSVCPATHS_H
-#define LLVM_SUPPORT_MSVCPATHS_H
+#ifndef LLVM_WINDOWSDRIVER_MSVCPATHS_H
+#define LLVM_WINDOWSDRIVER_MSVCPATHS_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -65,25 +65,24 @@ bool useUniversalCRT(ToolsetLayout VSLayout, const std::string &VCToolChainPath,
 
 /// Get Windows SDK installation directory.
 bool getWindowsSDKDir(vfs::FileSystem &VFS,
-                      llvm::Optional<llvm::StringRef> WinSdkDir,
-                      llvm::Optional<llvm::StringRef> WinSdkVersion,
-                      llvm::Optional<llvm::StringRef> WinSysRoot,
+                      std::optional<llvm::StringRef> WinSdkDir,
+                      std::optional<llvm::StringRef> WinSdkVersion,
+                      std::optional<llvm::StringRef> WinSysRoot,
                       std::string &Path, int &Major,
                       std::string &WindowsSDKIncludeVersion,
                       std::string &WindowsSDKLibVersion);
 
 bool getUniversalCRTSdkDir(vfs::FileSystem &VFS,
-                           llvm::Optional<llvm::StringRef> WinSdkDir,
-                           llvm::Optional<llvm::StringRef> WinSdkVersion,
-                           llvm::Optional<llvm::StringRef> WinSysRoot,
-                           std::string &Path,
-                           std::string &UCRTVersion);
+                           std::optional<llvm::StringRef> WinSdkDir,
+                           std::optional<llvm::StringRef> WinSdkVersion,
+                           std::optional<llvm::StringRef> WinSysRoot,
+                           std::string &Path, std::string &UCRTVersion);
 
 // Check command line arguments to try and find a toolchain.
 bool findVCToolChainViaCommandLine(
-    vfs::FileSystem &VFS, llvm::Optional<llvm::StringRef> VCToolsDir,
-    llvm::Optional<llvm::StringRef> VCToolsVersion,
-    llvm::Optional<llvm::StringRef> WinSysRoot, std::string &Path,
+    vfs::FileSystem &VFS, std::optional<llvm::StringRef> VCToolsDir,
+    std::optional<llvm::StringRef> VCToolsVersion,
+    std::optional<llvm::StringRef> WinSysRoot, std::string &Path,
     ToolsetLayout &VSLayout);
 
 // Check various environment variables to try and find a toolchain.
@@ -91,11 +90,15 @@ bool findVCToolChainViaEnvironment(vfs::FileSystem &VFS, std::string &Path,
                                    ToolsetLayout &VSLayout);
 
 // Query the Setup Config server for installs, then pick the newest version
-// and find its default VC toolchain.
+// and find its default VC toolchain. If `VCToolsVersion` is specified, that
+// version is preferred over the latest version.
+//
 // This is the preferred way to discover new Visual Studios, as they're no
 // longer listed in the registry.
-bool findVCToolChainViaSetupConfig(vfs::FileSystem &VFS, std::string &Path,
-                                   ToolsetLayout &VSLayout);
+bool
+findVCToolChainViaSetupConfig(vfs::FileSystem &VFS,
+                              std::optional<llvm::StringRef> VCToolsVersion,
+                              std::string &Path, ToolsetLayout &VSLayout);
 
 // Look in the registry for Visual Studio installs, and use that to get
 // a toolchain path. VS2017 and newer don't get added to the registry.

@@ -16,14 +16,15 @@
 #include "flang/Common/reference.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Dialect/FortranVariableInterface.h"
 #include "flang/Optimizer/Support/Matcher.h"
 #include "flang/Semantics/symbol.h"
 #include "mlir/IR/Value.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace Fortran::lower {
 
@@ -74,8 +75,9 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   // symbol).
   using Box = fir::BoxValue;
 
-  using VT = std::variant<Intrinsic, FullDim, Char, CharFullDim,
-                          PointerOrAllocatable, Box, None>;
+  using VT =
+      std::variant<Intrinsic, FullDim, Char, CharFullDim, PointerOrAllocatable,
+                   Box, fir::FortranVariableOpInterface, None>;
 
   //===--------------------------------------------------------------------===//
   // Constructors
@@ -87,16 +89,6 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
 
   explicit operator bool() const { return !std::holds_alternative<None>(box); }
 
-  fir::ExtendedValue toExtendedValue() const {
-    return match(
-        [](const Fortran::lower::SymbolBox::Intrinsic &box)
-            -> fir::ExtendedValue { return box.getAddr(); },
-        [](const Fortran::lower::SymbolBox::None &) -> fir::ExtendedValue {
-          llvm::report_fatal_error("symbol not mapped");
-        },
-        [](const auto &box) -> fir::ExtendedValue { return box; });
-  }
-
   //===--------------------------------------------------------------------===//
   // Accessors
   //===--------------------------------------------------------------------===//
@@ -106,60 +98,25 @@ struct SymbolBox : public fir::details::matcher<SymbolBox> {
   /// array, etc.
   mlir::Value getAddr() const {
     return match([](const None &) { return mlir::Value{}; },
+                 [](const fir::FortranVariableOpInterface &x) {
+                   return fir::FortranVariableOpInterface(x).getBase();
+                 },
                  [](const auto &x) { return x.getAddr(); });
   }
 
-  /// Does the boxed value have an intrinsic type?
-  bool isIntrinsic() const {
-    return match([](const Intrinsic &) { return true; },
-                 [](const Char &) { return true; },
-                 [](const PointerOrAllocatable &x) {
-                   return !x.isDerived() && !x.isUnlimitedPolymorphic();
-                 },
-                 [](const Box &x) {
-                   return !x.isDerived() && !x.isUnlimitedPolymorphic();
-                 },
-                 [](const auto &x) { return false; });
-  }
-
-  /// Does the boxed value have a rank greater than zero?
-  bool hasRank() const {
-    return match([](const Intrinsic &) { return false; },
-                 [](const Char &) { return false; },
-                 [](const None &) { return false; },
-                 [](const PointerOrAllocatable &x) { return x.hasRank(); },
-                 [](const Box &x) { return x.hasRank(); },
-                 [](const auto &x) { return x.getExtents().size() > 0; });
-  }
-
-  /// Does the boxed value have trivial lower bounds (== 1)?
-  bool hasSimpleLBounds() const {
+  std::optional<fir::FortranVariableOpInterface>
+  getIfFortranVariableOpInterface() {
     return match(
-        [](const FullDim &arr) { return arr.getLBounds().empty(); },
-        [](const CharFullDim &arr) { return arr.getLBounds().empty(); },
-        [](const Box &arr) { return arr.getLBounds().empty(); },
-        [](const auto &) { return false; });
-  }
-
-  /// Does the boxed value have a constant shape?
-  bool hasConstantShape() const {
-    if (auto eleTy = fir::dyn_cast_ptrEleTy(getAddr().getType()))
-      if (auto arrTy = eleTy.dyn_cast<fir::SequenceType>())
-        return arrTy.hasConstantShape();
-    return false;
-  }
-
-  /// Get the lbound if the box explicitly contains it.
-  mlir::Value getLBound(unsigned dim) const {
-    return match([&](const FullDim &box) { return box.getLBounds()[dim]; },
-                 [&](const CharFullDim &box) { return box.getLBounds()[dim]; },
-                 [&](const Box &box) { return box.getLBounds()[dim]; },
-                 [](const auto &) { return mlir::Value{}; });
+        [](const fir::FortranVariableOpInterface &x)
+            -> std::optional<fir::FortranVariableOpInterface> { return x; },
+        [](const auto &x) -> std::optional<fir::FortranVariableOpInterface> {
+          return std::nullopt;
+        });
   }
 
   /// Apply the lambda `func` to this box value.
   template <typename ON, typename RT>
-  constexpr RT apply(RT(&&func)(const ON &)) const {
+  constexpr RT apply(RT (&&func)(const ON &)) const {
     if (auto *x = std::get_if<ON>(&box))
       return func(*x);
     return RT{};
@@ -302,6 +259,13 @@ public:
     return shallowLookupSymbol(*sym);
   }
 
+  /// Find `symbol` and return its value if it appears in the one level up map
+  /// such as for the host variable in host-association in OpenMP code.
+  SymbolBox lookupOneLevelUpSymbol(semantics::SymbolRef sym);
+  SymbolBox lookupOneLevelUpSymbol(const semantics::Symbol *sym) {
+    return lookupOneLevelUpSymbol(*sym);
+  }
+
   /// Add a new binding from the ac-do-variable `var` to `value`.
   void pushImpliedDoBinding(AcDoVar var, mlir::Value value) {
     impliedDoStack.emplace_back(var, value);
@@ -330,6 +294,26 @@ public:
 
   /// Dump the map. For debugging.
   LLVM_DUMP_METHOD void dump() const { llvm::errs() << *this << '\n'; }
+
+  void addVariableDefinition(semantics::SymbolRef symRef,
+                             fir::FortranVariableOpInterface definingOp,
+                             bool force = false) {
+    makeSym(symRef, SymbolBox(definingOp), force);
+  }
+
+  void copySymbolBinding(semantics::SymbolRef src,
+                         semantics::SymbolRef target) {
+    auto symBox = lookupSymbol(src);
+    assert(symBox && "source binding does not exists");
+    makeSym(target, symBox, /*force=*/false);
+  }
+
+  std::optional<fir::FortranVariableOpInterface>
+  lookupVariableDefinition(semantics::SymbolRef sym) {
+    if (auto symBox = lookupSymbol(sym))
+      return symBox.getIfFortranVariableOpInterface();
+    return std::nullopt;
+  }
 
 private:
   /// Add `symbol` to the current map and bind a `box`.

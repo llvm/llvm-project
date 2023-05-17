@@ -68,34 +68,32 @@ define { <2 x float>, <2 x float> } @add_aggregate(<2 x float> %a0, <2 x float> 
   ret { <2 x float>, <2 x float> } %fca.1.insert
 }
 
-define void @add_aggregate_store(<2 x float> %a0, <2 x float> %a1, <2 x float> %b0, <2 x float> %b1, %struct.Vector4* nocapture dereferenceable(16) %r) {
+define void @add_aggregate_store(<2 x float> %a0, <2 x float> %a1, <2 x float> %b0, <2 x float> %b1, ptr nocapture dereferenceable(16) %r) {
 ; CHECK-LABEL: @add_aggregate_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fadd <2 x float> [[A0:%.*]], [[B0:%.*]]
 ; CHECK-NEXT:    [[TMP2:%.*]] = fadd <2 x float> [[A1:%.*]], [[B1:%.*]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <2 x float> [[TMP1]], <2 x float> [[TMP2]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast %struct.Vector4* [[R:%.*]] to <4 x float>*
-; CHECK-NEXT:    store <4 x float> [[TMP3]], <4 x float>* [[TMP4]], align 4
+; CHECK-NEXT:    store <4 x float> [[TMP3]], ptr [[R:%.*]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %a00 = extractelement <2 x float> %a0, i32 0
   %b00 = extractelement <2 x float> %b0, i32 0
   %add = fadd float %a00, %b00
-  %r0 = getelementptr inbounds %struct.Vector4, %struct.Vector4* %r, i64 0, i32 0
-  store float %add, float* %r0, align 4
+  store float %add, ptr %r, align 4
   %a01 = extractelement <2 x float> %a0, i32 1
   %b01 = extractelement <2 x float> %b0, i32 1
   %add4 = fadd float %a01, %b01
-  %r1 = getelementptr inbounds %struct.Vector4, %struct.Vector4* %r, i64 0, i32 1
-  store float %add4, float* %r1, align 4
+  %r1 = getelementptr inbounds %struct.Vector4, ptr %r, i64 0, i32 1
+  store float %add4, ptr %r1, align 4
   %a10 = extractelement <2 x float> %a1, i32 0
   %b10 = extractelement <2 x float> %b1, i32 0
   %add7 = fadd float %a10, %b10
-  %r2 = getelementptr inbounds %struct.Vector4, %struct.Vector4* %r, i64 0, i32 2
-  store float %add7, float* %r2, align 4
+  %r2 = getelementptr inbounds %struct.Vector4, ptr %r, i64 0, i32 2
+  store float %add7, ptr %r2, align 4
   %a11 = extractelement <2 x float> %a1, i32 1
   %b11 = extractelement <2 x float> %b1, i32 1
   %add10 = fadd float %a11, %b11
-  %r3 = getelementptr inbounds %struct.Vector4, %struct.Vector4* %r, i64 0, i32 3
-  store float %add10, float* %r3, align 4
+  %r3 = getelementptr inbounds %struct.Vector4, ptr %r, i64 0, i32 3
+  store float %add10, ptr %r3, align 4
   ret void
 }

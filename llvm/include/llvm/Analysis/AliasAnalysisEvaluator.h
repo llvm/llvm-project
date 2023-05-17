@@ -36,8 +36,6 @@ class AAEvaluator : public PassInfoMixin<AAEvaluator> {
   int64_t NoAliasCount = 0, MayAliasCount = 0, PartialAliasCount = 0;
   int64_t MustAliasCount = 0;
   int64_t NoModRefCount = 0, ModCount = 0, RefCount = 0, ModRefCount = 0;
-  int64_t MustCount = 0, MustRefCount = 0, MustModCount = 0;
-  int64_t MustModRefCount = 0;
 
 public:
   AAEvaluator() = default;
@@ -47,9 +45,7 @@ public:
         PartialAliasCount(Arg.PartialAliasCount),
         MustAliasCount(Arg.MustAliasCount), NoModRefCount(Arg.NoModRefCount),
         ModCount(Arg.ModCount), RefCount(Arg.RefCount),
-        ModRefCount(Arg.ModRefCount), MustCount(Arg.MustCount),
-        MustRefCount(Arg.MustRefCount), MustModCount(Arg.MustModCount),
-        MustModRefCount(Arg.MustModRefCount) {
+        ModRefCount(Arg.ModRefCount) {
     Arg.FunctionCount = 0;
   }
   ~AAEvaluator();

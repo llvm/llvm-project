@@ -7,12 +7,12 @@
 ; Function Attrs: nounwind
 define double @_Z7getLXSDddddddddddddd(double %a, double %b, double %c, double %d, double %e, double %f, double %g, double %h, double %i, double %j, double %k, double %l, double %m) local_unnamed_addr #0 {
 entry:
-  %0 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 10), align 8
-  %1 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 17), align 8
-  %2 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 87), align 8
-  %3 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 97), align 8
-  %4 = load double, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 77), align 8
-  store double %3, double* getelementptr inbounds ([500 x double], [500 x double]* @gd, i64 0, i64 122), align 8
+  %0 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 10), align 8
+  %1 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 17), align 8
+  %2 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 87), align 8
+  %3 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 97), align 8
+  %4 = load double, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 77), align 8
+  store double %3, ptr getelementptr inbounds ([500 x double], ptr @gd, i64 0, i64 122), align 8
   %add = fadd double %a, %b
   %add1 = fadd double %add, %c
   %add2 = fadd double %add1, %d
@@ -41,12 +41,12 @@ entry:
 ; Function Attrs: nounwind
 define float @_Z8getLXSSPfffffffffffff(float %a, float %b, float %c, float %d, float %e, float %f, float %g, float %h, float %i, float %j, float %k, float %l, float %m) local_unnamed_addr #0 {
 entry:
-  %0 = load float, float* getelementptr inbounds ([500 x float], [500 x float]* @gf, i64 0, i64 10), align 4
-  %1 = load float, float* getelementptr inbounds ([500 x float], [500 x float]* @gf, i64 0, i64 17), align 4
-  %2 = load float, float* getelementptr inbounds ([500 x float], [500 x float]* @gf, i64 0, i64 87), align 4
-  %3 = load float, float* getelementptr inbounds ([500 x float], [500 x float]* @gf, i64 0, i64 97), align 4
-  %4 = load float, float* getelementptr inbounds ([500 x float], [500 x float]* @gf, i64 0, i64 77), align 4
-  store float %3, float* getelementptr inbounds ([500 x float], [500 x float]* @gf, i64 0, i64 122), align 4
+  %0 = load float, ptr getelementptr inbounds ([500 x float], ptr @gf, i64 0, i64 10), align 4
+  %1 = load float, ptr getelementptr inbounds ([500 x float], ptr @gf, i64 0, i64 17), align 4
+  %2 = load float, ptr getelementptr inbounds ([500 x float], ptr @gf, i64 0, i64 87), align 4
+  %3 = load float, ptr getelementptr inbounds ([500 x float], ptr @gf, i64 0, i64 97), align 4
+  %4 = load float, ptr getelementptr inbounds ([500 x float], ptr @gf, i64 0, i64 77), align 4
+  store float %3, ptr getelementptr inbounds ([500 x float], ptr @gf, i64 0, i64 122), align 4
   %add = fadd float %a, %b
   %add1 = fadd float %add, %c
   %add2 = fadd float %add1, %d

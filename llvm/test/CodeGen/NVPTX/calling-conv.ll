@@ -7,21 +7,21 @@
 ;; Kernel function using ptx_kernel calling conv
 
 ; CHECK: .entry kernel_func
-define ptx_kernel void @kernel_func(float* %a) {
+define ptx_kernel void @kernel_func(ptr %a) {
 ; CHECK: ret
   ret void
 }
 
 ;; Device function
 ; CHECK: .func device_func
-define void @device_func(float* %a) {
+define void @device_func(ptr %a) {
 ; CHECK: ret
   ret void
 }
 
 ;; Kernel function using NVVM metadata
 ; CHECK: .entry metadata_kernel
-define void @metadata_kernel(float* %a) {
+define void @metadata_kernel(ptr %a) {
 ; CHECK: ret
   ret void
 }
@@ -29,4 +29,4 @@ define void @metadata_kernel(float* %a) {
 
 !nvvm.annotations = !{!1}
 
-!1 = !{void (float*)* @metadata_kernel, !"kernel", i32 1}
+!1 = !{ptr @metadata_kernel, !"kernel", i32 1}

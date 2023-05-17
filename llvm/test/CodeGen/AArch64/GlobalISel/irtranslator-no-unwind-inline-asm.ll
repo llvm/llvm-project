@@ -10,15 +10,15 @@ entry:
   unreachable
 }
 
-define dso_local void @test() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define dso_local void @test() personality ptr @__gxx_personality_v0 {
 entry:
 
 ; CHECK-LABEL: name: test
 ; CHECK: body:
 ; CHECK-NEXT: bb.1.entry
-; CHECK-NOT: EH_LABEL
+; CHECK: EH_LABEL
 ; CHECK: INLINEASM
-; CHECK-NOT: EH_LABEL
+; CHECK: EH_LABEL
 
   invoke void asm sideeffect "bl trap", ""()
           to label %invoke.cont unwind label %lpad
@@ -30,13 +30,13 @@ lpad:
 ; CHECK: bb.3.lpad
 ; CHECK: EH_LABEL
 
-  %0 = landingpad { i8*, i32 }
+  %0 = landingpad { ptr, i32 }
           cleanup
-  call void (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str.2, i64 0, i64 0))
-  resume { i8*, i32 } %0
+  call void (ptr, ...) @printf(ptr @.str.2)
+  resume { ptr, i32 } %0
 
 }
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
-declare dso_local void @printf(i8*, ...)
+declare dso_local void @printf(ptr, ...)

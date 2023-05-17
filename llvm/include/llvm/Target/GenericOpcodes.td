@@ -23,7 +23,7 @@ class GenericInstruction : StandardPseudoInstruction {
 // different instruction flags. This is intended to provide a
 // convenient way to define strict floating point variants of ordinary
 // floating point instructions.
-class ConstrainedIntruction<GenericInstruction baseInst> :
+class ConstrainedInstruction<GenericInstruction baseInst> :
   GenericInstruction {
   let OutOperandList = baseInst.OutOperandList;
   let InOperandList =  baseInst.InOperandList;
@@ -101,6 +101,12 @@ def G_FRAME_INDEX : GenericInstruction {
 }
 
 def G_GLOBAL_VALUE : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins unknown:$src);
+  let hasSideEffects = false;
+}
+
+def G_CONSTANT_POOL : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$src);
   let hasSideEffects = false;
@@ -411,8 +417,8 @@ def G_SELECT : GenericInstruction {
 
 // Generic pointer offset.
 def G_PTR_ADD : GenericInstruction {
-  let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type0:$src1, type1:$src2);
+  let OutOperandList = (outs ptype0:$dst);
+  let InOperandList = (ins ptype0:$src1, type1:$src2);
   let hasSideEffects = false;
 }
 
@@ -748,7 +754,7 @@ def G_FCANONICALIZE : GenericInstruction {
 // Generic opcode equivalent to the llvm.is_fpclass intrinsic.
 def G_IS_FPCLASS: GenericInstruction {
   let OutOperandList = (outs type0:$dst);
-  let InOperandList = (ins type1:$src, unknown:$test, unknown:$fpsem);
+  let InOperandList = (ins type1:$src, unknown:$test);
   let hasSideEffects = false;
 }
 
@@ -1126,6 +1132,10 @@ def G_ATOMICRMW_UMAX : G_ATOMICRMW_OP;
 def G_ATOMICRMW_UMIN : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FADD : G_ATOMICRMW_OP;
 def G_ATOMICRMW_FSUB : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMAX : G_ATOMICRMW_OP;
+def G_ATOMICRMW_FMIN : G_ATOMICRMW_OP;
+def G_ATOMICRMW_UINC_WRAP : G_ATOMICRMW_OP;
+def G_ATOMICRMW_UDEC_WRAP : G_ATOMICRMW_OP;
 
 def G_FENCE : GenericInstruction {
   let OutOperandList = (outs);
@@ -1268,6 +1278,15 @@ def G_BRJT : GenericInstruction {
   let isIndirectBranch = true;
 }
 
+// A marker to signal the following code is an invoke region, that may throw
+// an exception and therefore not return.
+def G_INVOKE_REGION_START : GenericInstruction {
+  let OutOperandList = (outs);
+  let InOperandList = (ins);
+  let isTerminator = true; // This must be a terminator.
+  let hasSideEffects = false;
+}
+
 def G_READ_REGISTER : GenericInstruction {
   let OutOperandList = (outs type0:$dst);
   let InOperandList = (ins unknown:$register);
@@ -1358,13 +1377,13 @@ def G_VECREDUCE_UMIN : VectorReduction;
 // Constrained floating point ops
 //------------------------------------------------------------------------------
 
-def G_STRICT_FADD : ConstrainedIntruction<G_FADD>;
-def G_STRICT_FSUB : ConstrainedIntruction<G_FSUB>;
-def G_STRICT_FMUL : ConstrainedIntruction<G_FMUL>;
-def G_STRICT_FDIV : ConstrainedIntruction<G_FDIV>;
-def G_STRICT_FREM : ConstrainedIntruction<G_FREM>;
-def G_STRICT_FMA : ConstrainedIntruction<G_FMA>;
-def G_STRICT_FSQRT : ConstrainedIntruction<G_FSQRT>;
+def G_STRICT_FADD : ConstrainedInstruction<G_FADD>;
+def G_STRICT_FSUB : ConstrainedInstruction<G_FSUB>;
+def G_STRICT_FMUL : ConstrainedInstruction<G_FMUL>;
+def G_STRICT_FDIV : ConstrainedInstruction<G_FDIV>;
+def G_STRICT_FREM : ConstrainedInstruction<G_FREM>;
+def G_STRICT_FMA : ConstrainedInstruction<G_FMA>;
+def G_STRICT_FSQRT : ConstrainedInstruction<G_FSQRT>;
 
 //------------------------------------------------------------------------------
 // Memory intrinsics

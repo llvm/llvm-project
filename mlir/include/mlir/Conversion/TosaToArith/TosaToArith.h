@@ -16,9 +16,14 @@
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
+
+#define GEN_PASS_DECL_TOSATOARITH
+#include "mlir/Conversion/Passes.h.inc"
+
 namespace tosa {
 
-std::unique_ptr<Pass> createTosaToArith();
+std::unique_ptr<Pass> createTosaToArith(bool includeApplyRescale = false,
+                                        bool use32BitApplyRescale = false);
 
 void populateTosaToArithConversionPatterns(RewritePatternSet *patterns);
 

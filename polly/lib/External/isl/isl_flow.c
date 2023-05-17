@@ -1873,6 +1873,12 @@ __isl_give char *isl_union_access_info_to_str(
 #define KEY_ERROR isl_ai_key_error
 #undef KEY_END
 #define KEY_END isl_ai_key_end
+#undef KEY_STR
+#define KEY_STR key_str
+#undef KEY_EXTRACT
+#define KEY_EXTRACT extract_key
+#undef KEY_GET
+#define KEY_GET get_key
 #include "extract_key.c"
 
 #undef BASE
@@ -1893,17 +1899,18 @@ __isl_give isl_union_access_info *isl_stream_read_union_access_info(
 {
 	isl_ctx *ctx;
 	isl_union_access_info *info;
-	int more;
+	isl_bool more;
 	int sink_set = 0;
 	int schedule_set = 0;
 
-	if (isl_stream_yaml_read_start_mapping(s))
+	if (isl_stream_yaml_read_start_mapping(s) < 0)
 		return NULL;
 
 	ctx = isl_stream_get_ctx(s);
 	info = isl_union_access_info_alloc(ctx);
-	while ((more = isl_stream_yaml_next(s)) > 0) {
+	while ((more = isl_stream_yaml_next(s)) == isl_bool_true) {
 		enum isl_ai_key key;
+		enum isl_access_type type;
 		isl_union_map *access, *schedule_map;
 		isl_schedule *schedule;
 
@@ -1919,8 +1926,9 @@ __isl_give isl_union_access_info *isl_stream_read_union_access_info(
 		case isl_ai_key_must_source:
 		case isl_ai_key_may_source:
 		case isl_ai_key_kill:
+			type = (enum isl_access_type) key;
 			access = read_union_map(s);
-			info = isl_union_access_info_set(info, key, access);
+			info = isl_union_access_info_set(info, type, access);
 			if (!info)
 				return NULL;
 			break;
@@ -1945,10 +1953,8 @@ __isl_give isl_union_access_info *isl_stream_read_union_access_info(
 	if (more < 0)
 		return isl_union_access_info_free(info);
 
-	if (isl_stream_yaml_read_end_mapping(s) < 0) {
-		isl_stream_error(s, NULL, "unexpected extra elements");
+	if (isl_stream_yaml_read_end_mapping(s) < 0)
 		return isl_union_access_info_free(info);
-	}
 
 	if (!sink_set) {
 		isl_stream_error(s, NULL, "no sink specified");

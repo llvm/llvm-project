@@ -1,6 +1,7 @@
 ; RUN: llc < %s -mtriple=i686-apple-darwin8 -mcpu=yonah | FileCheck %s -check-prefix=DARWIN
 ; RUN: llc < %s -mtriple=i686-unknown-linux -mcpu=yonah | FileCheck %s -check-prefix=LINUX
 ; RUN: llc < %s -mtriple=x86_64-scei-ps4 | FileCheck %s -check-prefix=PS4
+; RUN: llc < %s -mtriple=x86_64-sie-ps5  | FileCheck %s -check-prefix=PS4
 ; RUN: llc < %s -mtriple=x86_64-windows-msvc | FileCheck %s -check-prefix=WIN64
 
 ; DARWIN-LABEL: test0:

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Transforms/Passes.h"
@@ -16,6 +16,11 @@
 #include "mlir/IR/SymbolTable.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace fir {
+#define GEN_PASS_DEF_EXTERNALNAMECONVERSION
+#include "flang/Optimizer/Transforms/Passes.h.inc"
+} // namespace fir
 
 using namespace mlir;
 
@@ -27,11 +32,16 @@ using namespace mlir;
 std::string
 mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
                                    fir::NameUniquer::DeconstructedName>
-                       result) {
+                       result,
+                   bool appendUnderscore) {
   if (result.first == fir::NameUniquer::NameKind::COMMON &&
       result.second.name.empty())
     return "__BLNK__";
-  return result.second.name + "_";
+
+  if (appendUnderscore)
+    return result.second.name + "_";
+
+  return result.second.name;
 }
 
 //===----------------------------------------------------------------------===//
@@ -40,46 +50,47 @@ mangleExternalName(const std::pair<fir::NameUniquer::NameKind,
 
 namespace {
 
-class MangleNameOnCallOp : public mlir::OpRewritePattern<fir::CallOp> {
-public:
-  using OpRewritePattern::OpRewritePattern;
-
-  mlir::LogicalResult
-  matchAndRewrite(fir::CallOp op,
-                  mlir::PatternRewriter &rewriter) const override {
-    rewriter.startRootUpdate(op);
-    auto callee = op.getCallee();
-    if (callee.hasValue()) {
-      auto result = fir::NameUniquer::deconstruct(
-          callee.getValue().getRootReference().getValue());
-      if (fir::NameUniquer::isExternalFacingUniquedName(result))
-        op.setCalleeAttr(
-            SymbolRefAttr::get(op.getContext(), mangleExternalName(result)));
-    }
-    rewriter.finalizeRootUpdate(op);
-    return success();
-  }
-};
-
 struct MangleNameOnFuncOp : public mlir::OpRewritePattern<mlir::func::FuncOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
 
+  MangleNameOnFuncOp(mlir::MLIRContext *ctx, bool appendUnderscore)
+      : mlir::OpRewritePattern<mlir::func::FuncOp>(ctx),
+        appendUnderscore(appendUnderscore) {}
+
   mlir::LogicalResult
   matchAndRewrite(mlir::func::FuncOp op,
                   mlir::PatternRewriter &rewriter) const override {
+    mlir::LogicalResult ret = success();
     rewriter.startRootUpdate(op);
     auto result = fir::NameUniquer::deconstruct(op.getSymName());
-    if (fir::NameUniquer::isExternalFacingUniquedName(result))
-      op.setSymNameAttr(rewriter.getStringAttr(mangleExternalName(result)));
+    if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
+      auto newSymbol =
+          rewriter.getStringAttr(mangleExternalName(result, appendUnderscore));
+
+      // Try to update all SymbolRef's in the module that match the current op
+      if (mlir::ModuleOp mod = op->getParentOfType<mlir::ModuleOp>())
+        ret = op.replaceAllSymbolUses(newSymbol, mod);
+
+      op.setSymNameAttr(newSymbol);
+      mlir::SymbolTable::setSymbolName(op, newSymbol);
+    }
+
     rewriter.finalizeRootUpdate(op);
-    return success();
+    return ret;
   }
+
+private:
+  bool appendUnderscore;
 };
 
 struct MangleNameForCommonBlock : public mlir::OpRewritePattern<fir::GlobalOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
+
+  MangleNameForCommonBlock(mlir::MLIRContext *ctx, bool appendUnderscore)
+      : mlir::OpRewritePattern<fir::GlobalOp>(ctx),
+        appendUnderscore(appendUnderscore) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::GlobalOp op,
@@ -88,18 +99,25 @@ public:
     auto result = fir::NameUniquer::deconstruct(
         op.getSymref().getRootReference().getValue());
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
-      auto newName = mangleExternalName(result);
+      auto newName = mangleExternalName(result, appendUnderscore);
       op.setSymrefAttr(mlir::SymbolRefAttr::get(op.getContext(), newName));
       SymbolTable::setSymbolName(op, newName);
     }
     rewriter.finalizeRootUpdate(op);
     return success();
   }
+
+private:
+  bool appendUnderscore;
 };
 
 struct MangleNameOnAddrOfOp : public mlir::OpRewritePattern<fir::AddrOfOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
+
+  MangleNameOnAddrOfOp(mlir::MLIRContext *ctx, bool appendUnderscore)
+      : mlir::OpRewritePattern<fir::AddrOfOp>(ctx),
+        appendUnderscore(appendUnderscore) {}
 
   mlir::LogicalResult
   matchAndRewrite(fir::AddrOfOp op,
@@ -107,20 +125,31 @@ public:
     auto result = fir::NameUniquer::deconstruct(
         op.getSymbol().getRootReference().getValue());
     if (fir::NameUniquer::isExternalFacingUniquedName(result)) {
-      auto newName =
-          SymbolRefAttr::get(op.getContext(), mangleExternalName(result));
+      auto newName = SymbolRefAttr::get(
+          op.getContext(), mangleExternalName(result, appendUnderscore));
       rewriter.replaceOpWithNewOp<fir::AddrOfOp>(op, op.getResTy().getType(),
                                                  newName);
     }
     return success();
   }
+
+private:
+  bool appendUnderscore;
 };
 
 class ExternalNameConversionPass
-    : public fir::ExternalNameConversionBase<ExternalNameConversionPass> {
+    : public fir::impl::ExternalNameConversionBase<ExternalNameConversionPass> {
 public:
+  ExternalNameConversionPass(bool appendUnderscoring)
+      : appendUnderscores(appendUnderscoring) {}
+
+  ExternalNameConversionPass() { appendUnderscores = appendUnderscore; }
+
   mlir::ModuleOp getModule() { return getOperation(); }
   void runOnOperation() override;
+
+private:
+  bool appendUnderscores;
 };
 } // namespace
 
@@ -129,19 +158,12 @@ void ExternalNameConversionPass::runOnOperation() {
   auto *context = &getContext();
 
   mlir::RewritePatternSet patterns(context);
-  patterns.insert<MangleNameOnCallOp, MangleNameOnCallOp, MangleNameOnFuncOp,
-                  MangleNameForCommonBlock, MangleNameOnAddrOfOp>(context);
+  patterns.insert<MangleNameOnFuncOp, MangleNameForCommonBlock,
+                  MangleNameOnAddrOfOp>(context, appendUnderscore);
 
   ConversionTarget target(*context);
   target.addLegalDialect<fir::FIROpsDialect, LLVM::LLVMDialect,
                          acc::OpenACCDialect, omp::OpenMPDialect>();
-
-  target.addDynamicallyLegalOp<fir::CallOp>([](fir::CallOp op) {
-    if (op.getCallee().hasValue())
-      return !fir::NameUniquer::needExternalNameMangling(
-          op.getCallee().getValue().getRootReference().getValue());
-    return true;
-  });
 
   target.addDynamicallyLegalOp<mlir::func::FuncOp>([](mlir::func::FuncOp op) {
     return !fir::NameUniquer::needExternalNameMangling(op.getSymName());
@@ -163,4 +185,9 @@ void ExternalNameConversionPass::runOnOperation() {
 
 std::unique_ptr<mlir::Pass> fir::createExternalNameConversionPass() {
   return std::make_unique<ExternalNameConversionPass>();
+}
+
+std::unique_ptr<mlir::Pass>
+fir::createExternalNameConversionPass(bool appendUnderscoring) {
+  return std::make_unique<ExternalNameConversionPass>(appendUnderscoring);
 }

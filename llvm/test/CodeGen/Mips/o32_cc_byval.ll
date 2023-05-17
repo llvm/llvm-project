@@ -69,8 +69,8 @@ define void @f1() nounwind {
 ; CHECK-NEXT:    sw $1, 16($sp)
 ; CHECK-NEXT:    lw $7, 4($18)
 ; CHECK-NEXT:    lw $6, %lo(f1.s1)($17)
-; CHECK-NEXT:    lbu $5, 40($sp)
 ; CHECK-NEXT:    lw $25, %call16(callee3)($16)
+; CHECK-NEXT:    addiu $5, $zero, 11
 ; CHECK-NEXT:    jalr $25
 ; CHECK-NEXT:    move $gp, $16
 ; CHECK-NEXT:    lw $16, 48($sp) # 4-byte Folded Reload
@@ -80,22 +80,21 @@ define void @f1() nounwind {
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 64
 entry:
-  %agg.tmp10 = alloca %struct.S3, align 4
-  call void @callee1(float 2.000000e+01, %struct.S1* byval(%struct.S1) bitcast (%0* @f1.s1 to %struct.S1*)) nounwind
-  call void @callee2(%struct.S2* byval(%struct.S2) @f1.s2) nounwind
-  %tmp11 = getelementptr inbounds %struct.S3, %struct.S3* %agg.tmp10, i32 0, i32 0
-  store i8 11, i8* %tmp11, align 4
-  call void @callee3(float 2.100000e+01, %struct.S3* byval(%struct.S3) %agg.tmp10, %struct.S1* byval(%struct.S1) bitcast (%0* @f1.s1 to %struct.S1*)) nounwind
+  %agg.tmp10 = alloca %struct.S3, align 8
+  call void @callee1(float 2.000000e+01, ptr byval(%struct.S1) @f1.s1) nounwind
+  call void @callee2(ptr byval(%struct.S2) @f1.s2) nounwind
+  store i8 11, ptr %agg.tmp10, align 4
+  call void @callee3(float 2.100000e+01, ptr byval(%struct.S3) %agg.tmp10, ptr byval(%struct.S1) @f1.s1) nounwind
   ret void
 }
 
-declare void @callee1(float, %struct.S1* byval(%struct.S1))
+declare void @callee1(float, ptr byval(%struct.S1))
 
-declare void @callee2(%struct.S2* byval(%struct.S2))
+declare void @callee2(ptr byval(%struct.S2))
 
-declare void @callee3(float, %struct.S3* byval(%struct.S3), %struct.S1* byval(%struct.S1))
+declare void @callee3(float, ptr byval(%struct.S3), ptr byval(%struct.S1))
 
-define void @f2(float %f, %struct.S1* nocapture byval(%struct.S1) %s1) nounwind {
+define void @f2(float %f, ptr nocapture byval(%struct.S1) %s1) nounwind {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -126,25 +125,24 @@ define void @f2(float %f, %struct.S1* nocapture byval(%struct.S1) %s1) nounwind 
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 48
 entry:
-  %i2 = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 5
-  %tmp = load i32, i32* %i2, align 4
-  %d = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 4
-  %tmp1 = load double, double* %d, align 8
-  %ll = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 3
-  %tmp2 = load i64, i64* %ll, align 8
-  %i = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 2
-  %tmp3 = load i32, i32* %i, align 4
-  %s = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 1
-  %tmp4 = load i16, i16* %s, align 2
-  %c = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 0
-  %tmp5 = load i8, i8* %c, align 1
+  %i2 = getelementptr inbounds %struct.S1, ptr %s1, i32 0, i32 5
+  %tmp = load i32, ptr %i2, align 4
+  %d = getelementptr inbounds %struct.S1, ptr %s1, i32 0, i32 4
+  %tmp1 = load double, ptr %d, align 8
+  %ll = getelementptr inbounds %struct.S1, ptr %s1, i32 0, i32 3
+  %tmp2 = load i64, ptr %ll, align 8
+  %i = getelementptr inbounds %struct.S1, ptr %s1, i32 0, i32 2
+  %tmp3 = load i32, ptr %i, align 4
+  %s = getelementptr inbounds %struct.S1, ptr %s1, i32 0, i32 1
+  %tmp4 = load i16, ptr %s, align 2
+  %tmp5 = load i8, ptr %s1, align 1
   tail call void @callee4(i32 %tmp, double %tmp1, i64 %tmp2, i32 %tmp3, i16 signext %tmp4, i8 signext %tmp5, float %f) nounwind
   ret void
 }
 
 declare void @callee4(i32, double, i64, i32, i16 signext, i8 signext, float)
 
-define void @f3(%struct.S2* nocapture byval(%struct.S2) %s2) nounwind {
+define void @f3(ptr nocapture byval(%struct.S2) %s2) nounwind {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -176,15 +174,14 @@ define void @f3(%struct.S2* nocapture byval(%struct.S2) %s2) nounwind {
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 48
 entry:
-  %arrayidx = getelementptr inbounds %struct.S2, %struct.S2* %s2, i32 0, i32 0, i32 0
-  %tmp = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds %struct.S2, %struct.S2* %s2, i32 0, i32 0, i32 3
-  %tmp3 = load i32, i32* %arrayidx2, align 4
+  %tmp = load i32, ptr %s2, align 4
+  %arrayidx2 = getelementptr inbounds %struct.S2, ptr %s2, i32 0, i32 0, i32 3
+  %tmp3 = load i32, ptr %arrayidx2, align 4
   tail call void @callee4(i32 %tmp, double 2.000000e+00, i64 3, i32 %tmp3, i16 signext 4, i8 signext 5, float 6.000000e+00) nounwind
   ret void
 }
 
-define void @f4(float %f, %struct.S3* nocapture byval(%struct.S3) %s3, %struct.S1* nocapture byval(%struct.S1) %s1) nounwind {
+define void @f4(float %f, ptr nocapture byval(%struct.S3) %s3, ptr nocapture byval(%struct.S1) %s1) nounwind {
 ; CHECK-LABEL: f4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -218,19 +215,18 @@ define void @f4(float %f, %struct.S3* nocapture byval(%struct.S3) %s3, %struct.S
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 48
 entry:
-  %i = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 2
-  %tmp = load i32, i32* %i, align 4
-  %i2 = getelementptr inbounds %struct.S1, %struct.S1* %s1, i32 0, i32 5
-  %tmp1 = load i32, i32* %i2, align 4
-  %c = getelementptr inbounds %struct.S3, %struct.S3* %s3, i32 0, i32 0
-  %tmp2 = load i8, i8* %c, align 1
+  %i = getelementptr inbounds %struct.S1, ptr %s1, i32 0, i32 2
+  %tmp = load i32, ptr %i, align 4
+  %i2 = getelementptr inbounds %struct.S1, ptr %s1, i32 0, i32 5
+  %tmp1 = load i32, ptr %i2, align 4
+  %tmp2 = load i8, ptr %s3, align 1
   tail call void @callee4(i32 %tmp, double 2.000000e+00, i64 3, i32 %tmp1, i16 signext 4, i8 signext %tmp2, float 6.000000e+00) nounwind
   ret void
 }
 
 %struct.S4 = type { [4 x i32] }
 
-define void @f5(i64 %a0, %struct.S4* nocapture byval(%struct.S4) %a1) nounwind {
+define void @f5(i64 %a0, ptr nocapture byval(%struct.S4) %a1) nounwind {
 ; CHECK-LABEL: f5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lui $2, %hi(_gp_disp)
@@ -238,6 +234,7 @@ define void @f5(i64 %a0, %struct.S4* nocapture byval(%struct.S4) %a1) nounwind {
 ; CHECK-NEXT:    addiu $sp, $sp, -32
 ; CHECK-NEXT:    sw $ra, 28($sp) # 4-byte Folded Spill
 ; CHECK-NEXT:    addu $gp, $2, $25
+; CHECK-NEXT:    move $1, $6
 ; CHECK-NEXT:    sw $7, 44($sp)
 ; CHECK-NEXT:    sw $6, 40($sp)
 ; CHECK-NEXT:    sw $5, 20($sp)
@@ -247,13 +244,13 @@ define void @f5(i64 %a0, %struct.S4* nocapture byval(%struct.S4) %a1) nounwind {
 ; CHECK-NEXT:    lw $5, 44($sp)
 ; CHECK-NEXT:    lw $25, %call16(f6)($gp)
 ; CHECK-NEXT:    jalr $25
-; CHECK-NEXT:    lw $4, 40($sp)
+; CHECK-NEXT:    move $4, $1
 ; CHECK-NEXT:    lw $ra, 28($sp) # 4-byte Folded Reload
 ; CHECK-NEXT:    jr $ra
 ; CHECK-NEXT:    addiu $sp, $sp, 32
 entry:
-  tail call void @f6(%struct.S4* byval(%struct.S4) %a1, i64 %a0) nounwind
+  tail call void @f6(ptr byval(%struct.S4) %a1, i64 %a0) nounwind
   ret void
 }
 
-declare void @f6(%struct.S4* nocapture byval(%struct.S4), i64)
+declare void @f6(ptr nocapture byval(%struct.S4), i64)

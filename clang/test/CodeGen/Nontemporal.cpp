@@ -1,5 +1,5 @@
 // Test frontend handling of nontemporal builtins.
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin -emit-llvm %s -o - | FileCheck %s
 
 signed char sc;
 unsigned char uc;
@@ -17,7 +17,7 @@ bool b1, b2;
 
 void test_all_sizes(void)                 // CHECK-LABEL: test_all_sizes
 {
-  __builtin_nontemporal_store(true, &b1); // CHECK: store i8 1, i8* @b1, align 1, !nontemporal
+  __builtin_nontemporal_store(true, &b1); // CHECK: store i8 1, ptr @b1, align 1, !nontemporal
   __builtin_nontemporal_store(b1, &b2);   // CHECK: store i8{{.*}}, align 1, !nontemporal
   __builtin_nontemporal_store(1, &uc);    // CHECK: store i8{{.*}}align 1, !nontemporal
   __builtin_nontemporal_store(1, &sc);    // CHECK: store i8{{.*}}align 1, !nontemporal

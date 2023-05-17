@@ -78,7 +78,7 @@ end subroutine test3_forall_construct
 ! CHECK:               %[[VAL_65:.*]] = fir.convert %[[VAL_64]] : (i64) -> index
 ! CHECK:               %[[VAL_66:.*]] = arith.subi %[[VAL_65]], %[[VAL_56]] : index
 ! CHECK:               %[[VAL_68:.*]] = fir.array_fetch %[[VAL_26]], %[[VAL_62]], %[[VAL_66]] : (!fir.array<200x200xf32>, index, index) -> f32
-! CHECK:               %[[VAL_69:.*]] = arith.addf %[[VAL_67]], %[[VAL_68]] : f32
+! CHECK:               %[[VAL_69:.*]] = arith.addf %[[VAL_67]], %[[VAL_68]] {{.*}}: f32
 ! CHECK:               %[[VAL_70:.*]] = arith.constant 1 : index
 ! CHECK:               %[[VAL_71:.*]] = fir.load %[[VAL_6]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_72:.*]] = fir.convert %[[VAL_71]] : (i32) -> i64
@@ -131,7 +131,7 @@ end subroutine test3_forall_construct
 ! CHECK:               %[[VAL_115:.*]] = fir.convert %[[VAL_114]] : (i64) -> index
 ! CHECK:               %[[VAL_116:.*]] = arith.subi %[[VAL_115]], %[[VAL_108]] : index
 ! CHECK:               %[[VAL_117:.*]] = fir.array_fetch %[[VAL_86]], %[[VAL_112]], %[[VAL_116]] : (!fir.array<200x200xf32>, index, index) -> f32
-! CHECK:               %[[VAL_118:.*]] = arith.divf %[[VAL_107]], %[[VAL_117]] : f32
+! CHECK:               %[[VAL_118:.*]] = arith.divf %[[VAL_107]], %[[VAL_117]] {{.*}}: f32
 ! CHECK:               %[[VAL_119:.*]] = arith.constant 1 : index
 ! CHECK:               %[[VAL_120:.*]] = fir.load %[[VAL_4]] : !fir.ref<i32>
 ! CHECK:               %[[VAL_121:.*]] = fir.convert %[[VAL_120]] : (i32) -> i64

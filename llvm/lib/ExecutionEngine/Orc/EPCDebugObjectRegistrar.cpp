@@ -16,12 +16,17 @@
 namespace llvm {
 namespace orc {
 
-Expected<std::unique_ptr<EPCDebugObjectRegistrar>>
-createJITLoaderGDBRegistrar(ExecutionSession &ES) {
+Expected<std::unique_ptr<EPCDebugObjectRegistrar>> createJITLoaderGDBRegistrar(
+    ExecutionSession &ES,
+    std::optional<ExecutorAddr> RegistrationFunctionDylib) {
   auto &EPC = ES.getExecutorProcessControl();
-  auto ProcessHandle = EPC.loadDylib(nullptr);
-  if (!ProcessHandle)
-    return ProcessHandle.takeError();
+
+  if (!RegistrationFunctionDylib) {
+    if (auto D = EPC.loadDylib(nullptr))
+      RegistrationFunctionDylib = *D;
+    else
+      return D.takeError();
+  }
 
   SymbolStringPtr RegisterFn =
       EPC.getTargetTriple().isOSBinFormatMachO()
@@ -31,7 +36,8 @@ createJITLoaderGDBRegistrar(ExecutionSession &ES) {
   SymbolLookupSet RegistrationSymbols;
   RegistrationSymbols.add(RegisterFn);
 
-  auto Result = EPC.lookupSymbols({{*ProcessHandle, RegistrationSymbols}});
+  auto Result =
+      EPC.lookupSymbols({{*RegistrationFunctionDylib, RegistrationSymbols}});
   if (!Result)
     return Result.takeError();
 
@@ -39,14 +45,13 @@ createJITLoaderGDBRegistrar(ExecutionSession &ES) {
   assert((*Result)[0].size() == 1 &&
          "Unexpected number of addresses in result");
 
-  return std::make_unique<EPCDebugObjectRegistrar>(
-      ES, ExecutorAddr((*Result)[0][0]));
+  return std::make_unique<EPCDebugObjectRegistrar>(ES, (*Result)[0][0]);
 }
 
-Error EPCDebugObjectRegistrar::registerDebugObject(
-    ExecutorAddrRange TargetMem) {
-  return ES.callSPSWrapper<void(shared::SPSExecutorAddrRange)>(RegisterFn,
-                                                               TargetMem);
+Error EPCDebugObjectRegistrar::registerDebugObject(ExecutorAddrRange TargetMem,
+                                                   bool AutoRegisterCode) {
+  return ES.callSPSWrapper<void(shared::SPSExecutorAddrRange, bool)>(
+      RegisterFn, TargetMem, AutoRegisterCode);
 }
 
 } // namespace orc

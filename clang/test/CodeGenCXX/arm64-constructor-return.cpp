@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple=arm64-apple-ios7.0.0 -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple=arm64-apple-ios7.0.0 -emit-llvm -o - | FileCheck %s
 // rdar://12162905
 
 struct S {
@@ -10,10 +10,10 @@ S::S() {
   iField = 1;
 };
 
-// CHECK: %struct.S* @_ZN1SC2Ev(%struct.S* {{[^,]*}} %this)
+// CHECK: ptr @_ZN1SC2Ev(ptr {{[^,]*}} %this)
 
-// CHECK: %struct.S* @_ZN1SC1Ev(%struct.S* {{[^,]*}} returned align 4 dereferenceable(4) %this)
-// CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca %struct.S*
-// CHECK: store %struct.S* %this, %struct.S** [[THISADDR]]
-// CHECK: [[THIS1:%.*]] = load %struct.S*, %struct.S** [[THISADDR]]
-// CHECK: ret %struct.S* [[THIS1]]
+// CHECK: ptr @_ZN1SC1Ev(ptr {{[^,]*}} returned align 4 dereferenceable(4) %this)
+// CHECK: [[THISADDR:%[a-zA-Z0-9.]+]] = alloca ptr
+// CHECK: store ptr %this, ptr [[THISADDR]]
+// CHECK: [[THIS1:%.*]] = load ptr, ptr [[THISADDR]]
+// CHECK: ret ptr [[THIS1]]

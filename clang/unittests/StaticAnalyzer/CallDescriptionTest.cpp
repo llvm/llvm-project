@@ -89,11 +89,14 @@ class CallDescriptionConsumer : public ExprEngineConsumer {
 
     CallEventManager &CEMgr = Eng.getStateManager().getCallEventManager();
     CallEventRef<> Call = [=, &CEMgr]() -> CallEventRef<CallEvent> {
+      CFGBlock::ConstCFGElementRef ElemRef = {SFC->getCallSiteBlock(),
+                                              SFC->getIndex()};
       if (std::is_base_of<CallExpr, T>::value)
-        return CEMgr.getCall(E, State, SFC);
+        return CEMgr.getCall(E, State, SFC, ElemRef);
       if (std::is_same<T, CXXConstructExpr>::value)
         return CEMgr.getCXXConstructorCall(cast<CXXConstructExpr>(E),
-                                           /*Target=*/nullptr, State, SFC);
+                                           /*Target=*/nullptr, State, SFC,
+                                           ElemRef);
       llvm_unreachable("Only these expressions are supported for now.");
     }();
 
@@ -135,8 +138,8 @@ public:
 TEST(CallDescription, SimpleNameMatching) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{"bar"}, false}, // false: there's no call to 'bar' in this code.
-          {{"foo"}, true},  // true: there's a call to 'foo' in this code.
+          {{{"bar"}}, false}, // false: there's no call to 'bar' in this code.
+          {{{"foo"}}, true},  // true: there's a call to 'foo' in this code.
       })),
       "void foo(); void bar() { foo(); }"));
 }
@@ -144,8 +147,8 @@ TEST(CallDescription, SimpleNameMatching) {
 TEST(CallDescription, RequiredArguments) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{"foo", 1}, true},
-          {{"foo", 2}, false},
+          {{{"foo"}, 1}, true},
+          {{{"foo"}, 2}, false},
       })),
       "void foo(int); void foo(int, int); void bar() { foo(1); }"));
 }
@@ -153,8 +156,8 @@ TEST(CallDescription, RequiredArguments) {
 TEST(CallDescription, LackOfRequiredArguments) {
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
-          {{"foo", None}, true},
-          {{"foo", 2}, false},
+          {{{"foo"}, std::nullopt}, true},
+          {{{"foo"}, 2}, false},
       })),
       "void foo(int); void foo(int, int); void bar() { foo(1); }"));
 }
@@ -479,7 +482,7 @@ TEST(CallDescription, NegativeMatchQualifiedNames) {
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>({
           {{{"foo", "bar"}}, false},
           {{{"bar", "foo"}}, false},
-          {{"foo"}, true},
+          {{{"foo"}}, true},
       })),
       "void foo(); struct bar { void foo(); }; void test() { foo(); }"));
 }
@@ -488,7 +491,8 @@ TEST(CallDescription, MatchBuiltins) {
   // Test CDF_MaybeBuiltin - a flag that allows matching weird builtins.
   EXPECT_TRUE(tooling::runToolOnCode(
       std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-          {{{"memset", 3}, false}, {{CDF_MaybeBuiltin, "memset", 3}, true}})),
+          {{{{"memset"}, 3}, false},
+           {{CDF_MaybeBuiltin, {"memset"}, 3}, true}})),
       "void foo() {"
       "  int x;"
       "  __builtin___memset_chk(&x, 0, sizeof(x),"
@@ -499,8 +503,8 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("multiple similar builtins");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, "memcpy", 3}, false},
-             {{CDF_MaybeBuiltin, "wmemcpy", 3}, true}})),
+            {{{CDF_MaybeBuiltin, {"memcpy"}, 3}, false},
+             {{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
@@ -509,8 +513,8 @@ TEST(CallDescription, MatchBuiltins) {
     SCOPED_TRACE("multiple similar builtins reversed order");
     EXPECT_TRUE(tooling::runToolOnCode(
         std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
-            {{{CDF_MaybeBuiltin, "wmemcpy", 3}, true},
-             {{CDF_MaybeBuiltin, "memcpy", 3}, false}})),
+            {{{CDF_MaybeBuiltin, {"wmemcpy"}, 3}, true},
+             {{CDF_MaybeBuiltin, {"memcpy"}, 3}, false}})),
         R"(void foo(wchar_t *x, wchar_t *y) {
             __builtin_wmemcpy(x, y, sizeof(wchar_t));
           })"));
@@ -518,8 +522,8 @@ TEST(CallDescription, MatchBuiltins) {
   {
     SCOPED_TRACE("lookbehind and lookahead mismatches");
     EXPECT_TRUE(tooling::runToolOnCode(
-        std::unique_ptr<FrontendAction>(
-            new CallDescriptionAction<>({{{CDF_MaybeBuiltin, "func"}, false}})),
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDF_MaybeBuiltin, {"func"}}, false}})),
         R"(
           void funcXXX();
           void XXXfunc();
@@ -533,8 +537,8 @@ TEST(CallDescription, MatchBuiltins) {
   {
     SCOPED_TRACE("lookbehind and lookahead matches");
     EXPECT_TRUE(tooling::runToolOnCode(
-        std::unique_ptr<FrontendAction>(
-            new CallDescriptionAction<>({{{CDF_MaybeBuiltin, "func"}, true}})),
+        std::unique_ptr<FrontendAction>(new CallDescriptionAction<>(
+            {{{CDF_MaybeBuiltin, {"func"}}, true}})),
         R"(
           void func();
           void func_XXX();
@@ -561,7 +565,7 @@ TEST(CallDescription, MatchBuiltins) {
 
 class CallDescChecker
     : public Checker<check::PreCall, check::PreStmt<CallExpr>> {
-  CallDescriptionSet Set = {{"bar", 0}};
+  CallDescriptionSet Set = {{{"bar"}, 0}};
 
 public:
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const {

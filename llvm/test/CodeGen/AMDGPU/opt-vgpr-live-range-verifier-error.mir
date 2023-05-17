@@ -1,0 +1,43 @@
+# RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx90a -verify-machineinstrs -run-pass=si-opt-vgpr-liverange -o - %s | FileCheck %s
+#
+# This is a very rare case which comes from llvm-reduce. The SI_IF/SI_ELSE usage is quite different from normal.
+#
+# CHECK-LABEL: name: unusual_if_else
+---
+name:            unusual_if_else
+tracksRegLiveness: true
+machineFunctionInfo:
+  scratchRSrcReg:  '$sgpr0_sgpr1_sgpr2_sgpr3'
+  stackPtrOffsetReg: '$sgpr32'
+body:             |
+  bb.0:
+    successors: %bb.1(0x80000000)
+
+    %0:sreg_32 = S_ADD_U32 undef %1.sub0:sgpr_64, 32, implicit-def $scc
+    %2:sreg_32 = S_ADDC_U32 undef %1.sub1:sgpr_64, 0, implicit-def dead $scc, implicit killed $scc
+    %3:sreg_64 = REG_SEQUENCE killed %0, %subreg.sub0, killed %2, %subreg.sub1
+    %4:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+
+  bb.1:
+    successors: %bb.2(0x40000000), %bb.4(0x40000000)
+
+    %5:sreg_64 = V_CMP_LT_I32_e64 0, %4, implicit $exec
+    %6:sreg_64 = SI_IF killed %5, %bb.2, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.2:
+    successors: %bb.4(0x40000000), %bb.3(0x40000000)
+
+    dead %7:sreg_64 = SI_ELSE killed %6, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.3
+
+  bb.3:
+    successors: %bb.4(0x80000000)
+
+    %8:sreg_64 = V_CMP_EQ_U32_e64 0, killed %4, implicit $exec
+    dead %9:sreg_64 = SI_IF killed %8, %bb.4, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.4
+
+  bb.4:
+
+...

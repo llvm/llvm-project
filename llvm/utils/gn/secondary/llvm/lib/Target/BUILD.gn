@@ -28,6 +28,7 @@ static_library("Target") {
     "//llvm/lib/IR",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   public_deps = [
     # This is a bit of a hack: llvm-c/Target.h includes llvm/Config/Targets.def,
@@ -59,6 +60,13 @@ group("AllTargetsAsmParsers") {
   deps = []
   foreach(target, targets_with_asm_parsers) {
     deps += [ "$target/AsmParser" ]
+  }
+}
+
+group("AllTargetsCodeGens") {
+  deps = []
+  foreach(target, llvm_targets_to_build) {
+    deps += [ "$target:LLVM${target}CodeGen" ]
   }
 }
 

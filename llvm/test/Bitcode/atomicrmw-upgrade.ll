@@ -5,7 +5,7 @@
 ; before the IR change on this file.
 
 ; CHECK: @atomicrmw
-; CHECK:   %b = atomicrmw add i32* %a, i32 %i acquire
+; CHECK:   %b = atomicrmw add ptr %a, i32 %i acquire
 define void @atomicrmw(i32* %a, i32 %i) {
     %b = atomicrmw add i32* %a, i32 %i acquire
     ret void

@@ -9,21 +9,21 @@ define <2 x double> @test_int_x86_xop_vpermil2pd(<2 x double> %a0, <2 x double> 
   %res = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %a2, i8 1) ;  [#uses=1]
   ret <2 x double> %res
 }
-define <2 x double> @test_int_x86_xop_vpermil2pd_mr(<2 x double> %a0, <2 x double>* %a1, <2 x double> %a2) {
+define <2 x double> @test_int_x86_xop_vpermil2pd_mr(<2 x double> %a0, ptr %a1, <2 x double> %a2) {
 ; CHECK-LABEL: test_int_x86_xop_vpermil2pd_mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermil2pd $1, %xmm1, (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %vec = load <2 x double>, <2 x double>* %a1
+  %vec = load <2 x double>, ptr %a1
   %res = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %vec, <2 x double> %a2, i8 1) ;  [#uses=1]
   ret <2 x double> %res
 }
-define <2 x double> @test_int_x86_xop_vpermil2pd_rm(<2 x double> %a0, <2 x double> %a1, <2 x double>* %a2) {
+define <2 x double> @test_int_x86_xop_vpermil2pd_rm(<2 x double> %a0, <2 x double> %a1, ptr %a2) {
 ; CHECK-LABEL: test_int_x86_xop_vpermil2pd_rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermil2pd $1, (%rdi), %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %vec = load <2 x double>, <2 x double>* %a2
+  %vec = load <2 x double>, ptr %a2
   %res = call <2 x double> @llvm.x86.xop.vpermil2pd(<2 x double> %a0, <2 x double> %a1, <2 x double> %vec, i8 1) ;  [#uses=1]
   ret <2 x double> %res
 }
@@ -37,21 +37,21 @@ define <4 x double> @test_int_x86_xop_vpermil2pd_256(<4 x double> %a0, <4 x doub
   %res = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %a2, i8 2) ;
   ret <4 x double> %res
 }
-define <4 x double> @test_int_x86_xop_vpermil2pd_256_mr(<4 x double> %a0, <4 x double>* %a1, <4 x double> %a2) {
+define <4 x double> @test_int_x86_xop_vpermil2pd_256_mr(<4 x double> %a0, ptr %a1, <4 x double> %a2) {
 ; CHECK-LABEL: test_int_x86_xop_vpermil2pd_256_mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermil2pd $2, %ymm1, (%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %vec = load <4 x double>, <4 x double>* %a1
+  %vec = load <4 x double>, ptr %a1
   %res = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %vec, <4 x double> %a2, i8 2) ;
   ret <4 x double> %res
 }
-define <4 x double> @test_int_x86_xop_vpermil2pd_256_rm(<4 x double> %a0, <4 x double> %a1, <4 x double>* %a2) {
+define <4 x double> @test_int_x86_xop_vpermil2pd_256_rm(<4 x double> %a0, <4 x double> %a1, ptr %a2) {
 ; CHECK-LABEL: test_int_x86_xop_vpermil2pd_256_rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpermil2pd $2, (%rdi), %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %vec = load <4 x double>, <4 x double>* %a2
+  %vec = load <4 x double>, ptr %a2
   %res = call <4 x double> @llvm.x86.xop.vpermil2pd.256(<4 x double> %a0, <4 x double> %a1, <4 x double> %vec, i8 2) ;
   ret <4 x double> %res
 }
@@ -85,12 +85,12 @@ define <16 x i8> @test_int_x86_xop_vpcomeqb(<16 x i8> %a0, <16 x i8> %a1) {
   %res = call <16 x i8> @llvm.x86.xop.vpcomeqb(<16 x i8> %a0, <16 x i8> %a1) ;
   ret <16 x i8> %res
 }
-define <16 x i8> @test_int_x86_xop_vpcomeqb_mem(<16 x i8> %a0, <16 x i8>* %a1) {
+define <16 x i8> @test_int_x86_xop_vpcomeqb_mem(<16 x i8> %a0, ptr %a1) {
 ; CHECK-LABEL: test_int_x86_xop_vpcomeqb_mem:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcomeqb (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %vec = load <16 x i8>, <16 x i8>* %a1
+  %vec = load <16 x i8>, ptr %a1
   %res = call <16 x i8> @llvm.x86.xop.vpcomeqb(<16 x i8> %a0, <16 x i8> %vec) ;
   ret <16 x i8> %res
 }
@@ -824,21 +824,21 @@ define <4 x i64> @test_int_x86_xop_vpcmov_256(<4 x i64> %a0, <4 x i64> %a1, <4 x
   %res = call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %a2) ;
   ret <4 x i64> %res
 }
-define <4 x i64> @test_int_x86_xop_vpcmov_256_mr(<4 x i64> %a0, <4 x i64>* %a1, <4 x i64> %a2) {
+define <4 x i64> @test_int_x86_xop_vpcmov_256_mr(<4 x i64> %a0, ptr %a1, <4 x i64> %a2) {
 ; CHECK-LABEL: test_int_x86_xop_vpcmov_256_mr:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov %ymm1, (%rdi), %ymm0, %ymm0
 ; CHECK-NEXT:    retq
-  %vec = load <4 x i64>, <4 x i64>* %a1
+  %vec = load <4 x i64>, ptr %a1
   %res = call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %a0, <4 x i64> %vec, <4 x i64> %a2) ;
   ret <4 x i64> %res
 }
-define <4 x i64> @test_int_x86_xop_vpcmov_256_rm(<4 x i64> %a0, <4 x i64> %a1, <4 x i64>* %a2) {
+define <4 x i64> @test_int_x86_xop_vpcmov_256_rm(<4 x i64> %a0, <4 x i64> %a1, ptr %a2) {
 ; CHECK-LABEL: test_int_x86_xop_vpcmov_256_rm:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vpcmov (%rdi), %ymm1, %ymm0, %ymm0
 ; CHECK-NEXT:    retq
- %vec = load <4 x i64>, <4 x i64>* %a2
+ %vec = load <4 x i64>, ptr %a2
  %res = call <4 x i64> @llvm.x86.xop.vpcmov.256(<4 x i64> %a0, <4 x i64> %a1, <4 x i64> %vec) ;
   ret <4 x i64> %res
 }

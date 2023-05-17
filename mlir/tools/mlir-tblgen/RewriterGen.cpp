@@ -582,22 +582,24 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
   if (!name.empty())
     os << formatv("{0} = {1};\n", name, castedName);
 
-  for (int i = 0, e = tree.getNumArgs(), nextOperand = 0; i != e; ++i) {
-    auto opArg = op.getArg(i);
+  for (int i = 0, opArgIdx = 0, e = tree.getNumArgs(), nextOperand = 0; i != e;
+       ++i, ++opArgIdx) {
+    auto opArg = op.getArg(opArgIdx);
     std::string argName = formatv("op{0}", depth + 1);
 
     // Handle nested DAG construct first
     if (DagNode argTree = tree.getArgAsNestedDag(i)) {
       if (argTree.isEither()) {
-        emitEitherOperandMatch(tree, argTree, castedName, i, nextOperand,
+        emitEitherOperandMatch(tree, argTree, castedName, opArgIdx, nextOperand,
                                depth);
+        ++opArgIdx;
         continue;
       }
       if (auto *operand = opArg.dyn_cast<NamedTypeConstraint *>()) {
         if (operand->isVariableLength()) {
           auto error = formatv("use nested DAG construct to match op {0}'s "
                                "variadic operand #{1} unsupported now",
-                               op.getOperationName(), i);
+                               op.getOperationName(), opArgIdx);
           PrintFatalError(loc, error);
         }
       }
@@ -627,11 +629,10 @@ void PatternEmitter::emitOpMatch(DagNode tree, StringRef opName, int depth) {
           formatv("{0}.getODSOperands({1})", castedName, nextOperand);
       emitOperandMatch(tree, castedName, operandName.str(),
                        /*operandMatcher=*/tree.getArgAsLeaf(i),
-                       /*argName=*/tree.getArgName(i),
-                       /*argIndex=*/i);
+                       /*argName=*/tree.getArgName(i), opArgIdx);
       ++nextOperand;
     } else if (opArg.is<NamedAttribute *>()) {
-      emitAttributeMatch(tree, opName, i, depth);
+      emitAttributeMatch(tree, opName, opArgIdx, depth);
     } else {
       PrintFatalError(loc, "unhandled case when matching op");
     }
@@ -1044,7 +1045,8 @@ void PatternEmitter::emitRewriteLogic() {
   }
 
   if (offsets.front() > 0) {
-    const char error[] = "no enough values generated to replace the matched op";
+    const char error[] =
+        "not enough values generated to replace the matched op";
     PrintFatalError(loc, error);
   }
 
@@ -1702,7 +1704,7 @@ void StaticMatcherHelper::populateStaticMatchers(raw_ostream &os) {
 
     std::string funcName =
         formatv("static_dag_matcher_{0}", staticMatcherCounter++);
-    assert(matcherNames.find(node) == matcherNames.end());
+    assert(!matcherNames.contains(node));
     PatternEmitter(dagInfo.second, &opMap, os, *this)
         .emitStaticMatcher(node, funcName);
     matcherNames[node] = funcName;
@@ -1743,9 +1745,9 @@ void StaticMatcherHelper::addPattern(Record *record) {
 
 StringRef StaticMatcherHelper::getVerifierName(DagLeaf leaf) {
   if (leaf.isAttrMatcher()) {
-    Optional<StringRef> constraint =
+    std::optional<StringRef> constraint =
         staticVerifierEmitter.getAttrConstraintFn(leaf.getAsConstraint());
-    assert(constraint.hasValue() && "attribute constraint was not uniqued");
+    assert(constraint && "attribute constraint was not uniqued");
     return *constraint;
   }
   assert(leaf.isOperandMatcher());

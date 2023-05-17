@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
 
 @interface OCType @end
 void opaque();
@@ -6,14 +6,14 @@ void opaque();
 namespace test0 {
 
   // CHECK-LABEL: define{{.*}} void @_ZN5test03fooEv
-  // CHECK-SAME:  personality i8* bitcast (i32 (...)* @__objc_personality_v0 to i8*)
+  // CHECK-SAME:  personality ptr @__objc_personality_v0
   void foo() {
     try {
       // CHECK: invoke void @_Z6opaquev
       opaque();
     } catch (OCType *T) {
-      // CHECK:      landingpad { i8*, i32 }
-      // CHECK-NEXT:   catch %struct._objc_typeinfo* @"OBJC_EHTYPE_$_OCType"
+      // CHECK:      landingpad { ptr, i32 }
+      // CHECK-NEXT:   catch ptr @"OBJC_EHTYPE_$_OCType"
     }
   }
 }
@@ -30,7 +30,7 @@ namespace test1 {
     } @catch (id i) {
     }
   }
-// CHECK: invoke void @objc_exception_throw(i8* [[CALL:%.*]]) [[NR:#[0-9]+]]
+// CHECK: invoke void @objc_exception_throw(ptr [[CALL:%.*]]) [[NR:#[0-9]+]]
 // CHECK:          to label [[INVOKECONT1:%.*]] unwind label [[LPAD:%.*]]
 }
 

@@ -1,4 +1,3 @@
-from __future__ import print_function
 import lldb
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test.decorators import *
@@ -101,8 +100,6 @@ class MyResponder(MockGDBServerResponder):
             return "0000000000000000"
 
 class TestTargetXMLArch(GDBRemoteTestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIfXmlSupportMissing
     @expectedFailureAll(archs=["i386"])

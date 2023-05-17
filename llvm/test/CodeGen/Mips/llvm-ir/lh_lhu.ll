@@ -8,7 +8,7 @@ define i32 @lhfunc() {
 entry:
 ; CHECK-LABEL: lhfunc
 ; CHECK: lh $[[REG1:[0-9]+]], 0(${{[0-9]+}})
-  %0 = load i16, i16* @us, align 2
+  %0 = load i16, ptr @us, align 2
   %conv = sext i16 %0 to i32
   ret i32 %conv
 }
@@ -17,7 +17,7 @@ define i16 @lhfunc_atomic() {
 entry:
 ; CHECK-LABEL: lhfunc_atomic
 ; CHECK: lh $[[REG1:[0-9]+]], 0(${{[0-9]+}})
-  %0 = load atomic i16, i16* @us acquire, align 2
+  %0 = load atomic i16, ptr @us acquire, align 2
   ret i16 %0
 }
 
@@ -25,7 +25,7 @@ define i32 @lhufunc() {
 entry:
 ; CHECK-LABEL: lhufunc
 ; CHECK: lhu $[[REG1:[0-9]+]], 0(${{[0-9]+}})
-  %0 = load i16, i16* @us, align 2
+  %0 = load i16, ptr @us, align 2
   %conv = zext i16 %0 to i32
   ret i32 %conv
 }

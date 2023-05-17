@@ -1,23 +1,19 @@
 ; RUN: llvm-as < %s | llvm-dis > %t.orig
-; RUN: llvm-as < %s | llvm-c-test --echo --no-opaque-pointers > %t.echo
+; RUN: llvm-as < %s | llvm-c-test --echo > %t.echo
 ; RUN: diff -w %t.orig %t.echo
 ;
-; RUN: llvm-as -opaque-pointers < %s | llvm-dis > %t.orig_opaque
-; RUN: llvm-as -opaque-pointers < %s | llvm-c-test --echo > %t.echo_opaque
-; RUN: diff -w %t.orig_opaque %t.echo_opaque
-
 source_filename = "/test/Bindings/echo.ll"
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-apple-macosx10.11.0"
 
 module asm "classical GAS"
 
-%S = type { i64, %S* }
+%S = type { i64, ptr }
 
 @var = global i32 42
-@ext = external global i32*
-@cst = constant %S { i64 1, %S* @cst }
-@tl = thread_local global { i64, %S* } { i64 1, %S* @cst }
+@ext = external global ptr
+@cst = constant %S { i64 1, ptr @cst }
+@tl = thread_local global { i64, ptr } { i64 1, ptr @cst }
 @arr = linkonce_odr global [5 x i8] [ i8 2, i8 3, i8 5, i8 7, i8 11 ]
 @str = private unnamed_addr constant [13 x i8] c"hello world\0A\00"
 @locStr = private local_unnamed_addr constant [13 x i8] c"hello world\0A\00"
@@ -25,30 +21,30 @@ module asm "classical GAS"
 @protected = protected global i32 23
 @section = global i32 27, section ".custom"
 @align = global i32 31, align 4
-@nullptr = global i32* null
+@nullptr = global ptr null
 
-@const_gep = global i32* getelementptr (i32, i32* @var, i64 2)
-@const_inbounds_gep = global i32* getelementptr inbounds (i32, i32* @var, i64 1)
+@const_gep = global ptr getelementptr (i32, ptr @var, i64 2)
+@const_inbounds_gep = global ptr getelementptr inbounds (i32, ptr @var, i64 1)
 
-@aliased1 = alias i32, i32* @var
-@aliased2 = internal alias i32, i32* @var
-@aliased3 = external alias i32, i32* @var
-@aliased4 = weak alias i32, i32* @var
-@aliased5 = weak_odr alias i32, i32* @var
+@aliased1 = alias i32, ptr @var
+@aliased2 = internal alias i32, ptr @var
+@aliased3 = external alias i32, ptr @var
+@aliased4 = weak alias i32, ptr @var
+@aliased5 = weak_odr alias i32, ptr @var
 
-@ifunc = ifunc i32 (i32), i32 (i32)* ()* @ifunc_resolver
+@ifunc = ifunc i32 (i32), ptr @ifunc_resolver
 
-define i32 (i32)* @ifunc_resolver() {
+define ptr @ifunc_resolver() {
 entry:
-  ret i32 (i32)* null
+  ret ptr null
 }
 
-define { i64, %S* } @unpackrepack(%S %s) {
+define { i64, ptr } @unpackrepack(%S %s) {
   %1 = extractvalue %S %s, 0
   %2 = extractvalue %S %s, 1
-  %3 = insertvalue { i64, %S* } undef, %S* %2, 1
-  %4 = insertvalue { i64, %S* } %3, i64 %1, 0
-  ret { i64, %S* } %4
+  %3 = insertvalue { i64, ptr } undef, ptr %2, 1
+  %4 = insertvalue { i64, ptr } %3, i64 %1, 0
+  ret { i64, ptr } %4
 }
 
 declare void @decl()
@@ -62,10 +58,10 @@ define void @types() {
   %5 = alloca fp128, align 16
   %6 = alloca ppc_fp128, align 16
   %7 = alloca i7, align 1
-  %8 = alloca void (i1)*, align 8
+  %8 = alloca ptr, align 8
   %9 = alloca [3 x i22], align 4
-  %10 = alloca i328 addrspace(5)*, align 8
-  %11 = alloca <5 x i23*>, align 64
+  %10 = alloca ptr addrspace(5), align 8
+  %11 = alloca <5 x ptr>, align 64
   %12 = alloca x86_mmx, align 8
   ret void
 }
@@ -146,20 +142,20 @@ done:
   ret i32 %p
 }
 
-define void @memops(i8* %ptr) {
-  %a = load i8, i8* %ptr
-  %b = load volatile i8, i8* %ptr
-  %c = load i8, i8* %ptr, align 8
-  %d = load atomic i8, i8* %ptr acquire, align 32
-  store i8 0, i8* %ptr
-  store volatile i8 0, i8* %ptr
-  store i8 0, i8* %ptr, align 8
-  store atomic i8 0, i8* %ptr release, align 32
-  %e = atomicrmw add i8* %ptr, i8 0 monotonic, align 1
-  %f = atomicrmw volatile xchg i8* %ptr, i8 0 acq_rel, align 8
-  %g = cmpxchg i8* %ptr, i8 1, i8 2 seq_cst acquire, align 1
-  %h = cmpxchg weak i8* %ptr, i8 1, i8 2 seq_cst acquire, align 8
-  %i = cmpxchg volatile i8* %ptr, i8 1, i8 2 monotonic monotonic, align 16
+define void @memops(ptr %ptr) {
+  %a = load i8, ptr %ptr
+  %b = load volatile i8, ptr %ptr
+  %c = load i8, ptr %ptr, align 8
+  %d = load atomic i8, ptr %ptr acquire, align 32
+  store i8 0, ptr %ptr
+  store volatile i8 0, ptr %ptr
+  store i8 0, ptr %ptr, align 8
+  store atomic i8 0, ptr %ptr release, align 32
+  %e = atomicrmw add ptr %ptr, i8 0 monotonic, align 1
+  %f = atomicrmw volatile xchg ptr %ptr, i8 0 acq_rel, align 8
+  %g = cmpxchg ptr %ptr, i8 1, i8 2 seq_cst acquire, align 1
+  %h = cmpxchg weak ptr %ptr, i8 1, i8 2 seq_cst acquire, align 8
+  %i = cmpxchg volatile ptr %ptr, i8 1, i8 2 monotonic monotonic, align 16
   ret void
 }
 
@@ -196,7 +192,7 @@ define i32 @scalablevectorops(i32, <vscale x 4 x i32>) {
 
 declare void @personalityFn()
 
-define void @exn() personality void ()* @personalityFn {
+define void @exn() personality ptr @personalityFn {
 entry:
   invoke void @decl()
           to label %via.cleanup unwind label %exn.dispatch
@@ -233,18 +229,18 @@ define void @with_debuginfo() !dbg !4 {
   ret void, !dbg !7
 }
 
-declare i8* @llvm.stacksave()
-declare void @llvm.stackrestore(i8*)
-declare void @llvm.lifetime.start.p0i8(i64, i8*)
-declare void @llvm.lifetime.end.p0i8(i64, i8*)
+declare ptr @llvm.stacksave()
+declare void @llvm.stackrestore(ptr)
+declare void @llvm.lifetime.start.p0(i64, ptr)
+declare void @llvm.lifetime.end.p0(i64, ptr)
 
 define void @test_intrinsics() {
 entry:
-  %sp = call i8* @llvm.stacksave()
+  %sp = call ptr @llvm.stacksave()
   %0 = alloca i8, align 1
-  call void @llvm.lifetime.start.p0i8(i64 1, i8* %0)
-  call void @llvm.lifetime.end.p0i8(i64 1, i8* %0)
-  call void @llvm.stackrestore(i8* %sp)
+  call void @llvm.lifetime.start.p0(i64 1, ptr %0)
+  call void @llvm.lifetime.end.p0(i64 1, ptr %0)
+  call void @llvm.stackrestore(ptr %sp)
   ret void
 }
 

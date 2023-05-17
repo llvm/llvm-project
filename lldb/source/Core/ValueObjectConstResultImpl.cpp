@@ -89,13 +89,20 @@ ValueObject *ValueObjectConstResultImpl::CreateChildAtIndex(
     if (!child_name_str.empty())
       child_name.SetCString(child_name_str.c_str());
 
+    lldb::addr_t child_live_addr = LLDB_INVALID_ADDRESS;
+    // Transfer the live address (with offset) to the child.  But if
+    // the parent is a pointer, the live address is where that pointer
+    // value lives in memory, so the children live addresses aren't
+    // offsets from that value, they are just other load addresses that
+    // are recorded in the Value of the child ValueObjects.
+    if (m_live_address != LLDB_INVALID_ADDRESS) {
+      if (!compiler_type.IsPointerType())
+        child_live_addr = m_live_address + child_byte_offset;
+    }
     valobj = new ValueObjectConstResultChild(
         *m_impl_backend, child_compiler_type, child_name, child_byte_size,
         child_byte_offset, child_bitfield_bit_size, child_bitfield_bit_offset,
-        child_is_base_class, child_is_deref_of_parent,
-        m_live_address == LLDB_INVALID_ADDRESS
-            ? m_live_address
-            : m_live_address + child_byte_offset,
+        child_is_base_class, child_is_deref_of_parent, child_live_addr,
         language_flags);
   }
 

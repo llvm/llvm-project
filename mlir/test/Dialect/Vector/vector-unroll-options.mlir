@@ -15,66 +15,66 @@ func.func @vector_contract_f32(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
 // CHECK-LABEL: func @vector_contract_f32
 // CHECK-SAME: [[arg0:%.+]]: vector<8x4xf32>, [[arg1:%.+]]: vector<8x4xf32>, [[arg2:%.+]]: vector<8x8xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [0, 0]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [0, 0]
-//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  CHECK-SAME:   offsets = [0, 0]
 //       CHECK:   [[accum1:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [0, 2]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [0, 2]
 //       CHECK:   [[accum2:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum1]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [0, 0]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [4, 0]
-//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  CHECK-SAME:   offsets = [0, 4]
 //       CHECK:   [[accum3:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [0, 2]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [4, 2]
 //       CHECK:   [[accum4:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum3]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [4, 0]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [0, 0]
-//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  CHECK-SAME:   offsets = [4, 0]
 //       CHECK:   [[accum5:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [4, 2]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [0, 2]
 //       CHECK:   [[accum6:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum5]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [4, 0]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [4, 0]
-//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       CHECK:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  CHECK-SAME:   offsets = [4, 4]
 //       CHECK:   [[accum7:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       CHECK:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  CHECK-SAME:   offsets = [4, 2]
-//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       CHECK:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  CHECK-SAME:   offsets = [4, 2]
 //       CHECK:   [[accum8:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum7]]
 //  CHECK-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
@@ -84,66 +84,66 @@ func.func @vector_contract_f32(%lhs : vector<8x4xf32>, %rhs : vector<8x4xf32>,
 // ORDER-LABEL: func @vector_contract_f32
 // ORDER-SAME: [[arg0:%.+]]: vector<8x4xf32>, [[arg1:%.+]]: vector<8x4xf32>, [[arg2:%.+]]: vector<8x8xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [0, 0]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [0, 0]
-//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  ORDER-SAME:   offsets = [0, 0]
 //       ORDER:   [[accum1:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [0, 0]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [4, 0]
-//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  ORDER-SAME:   offsets = [0, 4]
 //       ORDER:   [[accum2:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [4, 0]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [0, 0]
-//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  ORDER-SAME:   offsets = [4, 0]
 //       ORDER:   [[accum3:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [4, 0]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [4, 0]
-//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]] 
+//       ORDER:   [[c:%.+]] = vector.extract_strided_slice [[arg2]]
 //  ORDER-SAME:   offsets = [4, 4]
 //       ORDER:   [[accum4:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[c]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [0, 2]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [0, 2]
 //       ORDER:   [[accum5:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum1]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [0, 2]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [4, 2]
 //       ORDER:   [[accum6:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum2]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [4, 2]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [0, 2]
 //       ORDER:   [[accum7:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum3]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
 
-//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]] 
+//       ORDER:   [[a:%.+]] = vector.extract_strided_slice [[arg0]]
 //  ORDER-SAME:   offsets = [4, 2]
-//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]] 
+//       ORDER:   [[b:%.+]] = vector.extract_strided_slice [[arg1]]
 //  ORDER-SAME:   offsets = [4, 2]
 //       ORDER:   [[accum8:%.+]] = vector.contract {{{.*}}} [[a]], [[b]], [[accum4]]
 //  ORDER-SAME:     vector<4x2xf32>, vector<4x2xf32> into vector<4x4xf32>
@@ -188,30 +188,28 @@ func.func @vector_fma(%a: vector<4x4xf32>, %b: vector<4x4xf32>, %c: vector<4x4xf
 //   CHECK-LABEL: func @vector_fma
 // CHECK-COUNT-4: vector.fma %{{.+}}, %{{.+}}, %{{.+}} : vector<2x2xf32>
 
-func.func @vector_multi_reduction(%v : vector<4x6xf32>) -> vector<4xf32> {
-  %0 = vector.multi_reduction #vector.kind<add>, %v [1] : vector<4x6xf32> to vector<4xf32>
+func.func @vector_multi_reduction(%v : vector<4x6xf32>, %acc: vector<4xf32>) -> vector<4xf32> {
+  %0 = vector.multi_reduction #vector.kind<add>, %v, %acc [1] : vector<4x6xf32> to vector<4xf32>
   return %0 : vector<4xf32>
 }
 // CHECK-LABEL: func @vector_multi_reduction
 //       CHECK:   %[[V0:.*]] = arith.constant dense<0.000000e+00> : vector<4xf32>
 //       CHECK:   %[[E0:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x6xf32> to vector<2x2xf32>
-//       CHECK:   %[[R0:.*]] = vector.multi_reduction <add>, %[[E0]] [1] : vector<2x2xf32> to vector<2xf32>
+//       CHECK:   %[[ACC0:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
+//       CHECK:   %[[R0:.*]] = vector.multi_reduction <add>, %[[E0]], %[[ACC0]] [1] : vector<2x2xf32> to vector<2xf32>
 //       CHECK:   %[[E1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x6xf32> to vector<2x2xf32>
-//       CHECK:   %[[R1:.*]] = vector.multi_reduction <add>, %[[E1]] [1] : vector<2x2xf32> to vector<2xf32>
-//       CHECK:   %[[A0:.*]] = arith.addf %[[R1]], %[[R0]] : vector<2xf32>
+//       CHECK:   %[[R1:.*]] = vector.multi_reduction <add>, %[[E1]], %[[R0]] [1] : vector<2x2xf32> to vector<2xf32>
 //       CHECK:   %[[E2:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [0, 4], sizes = [2, 2], strides = [1, 1]} : vector<4x6xf32> to vector<2x2xf32>
-//       CHECK:   %[[R2:.*]] = vector.multi_reduction <add>, %5 [1] : vector<2x2xf32> to vector<2xf32>
-//       CHECK:   %[[A1:.*]] = arith.addf %[[R2]], %[[A0]] : vector<2xf32>
+//       CHECK:   %[[R2:.*]] = vector.multi_reduction <add>, %[[E2]], %[[R1]] [1] : vector<2x2xf32> to vector<2xf32>
 //       CHECK:   %[[E3:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 0], sizes = [2, 2], strides = [1, 1]} : vector<4x6xf32> to vector<2x2xf32>
-//       CHECK:   %[[R3:.*]] = vector.multi_reduction <add>, %[[E3]] [1] : vector<2x2xf32> to vector<2xf32>
+//       CHECK:   %[[ACC1:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2], sizes = [2], strides = [1]} : vector<4xf32> to vector<2xf32>
+//       CHECK:   %[[R3:.*]] = vector.multi_reduction <add>, %[[E3]], %[[ACC1]] [1] : vector<2x2xf32> to vector<2xf32>
 //       CHECK:   %[[E4:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 2], sizes = [2, 2], strides = [1, 1]} : vector<4x6xf32> to vector<2x2xf32>
-//       CHECK:   %[[R4:.*]] = vector.multi_reduction <add>, %[[E4]] [1] : vector<2x2xf32> to vector<2xf32>
-//       CHECK:   %[[A2:.*]] = arith.addf %[[R4]], %[[R3]] : vector<2xf32>
+//       CHECK:   %[[R4:.*]] = vector.multi_reduction <add>, %[[E4]], %[[R3]] [1] : vector<2x2xf32> to vector<2xf32>
 //       CHECK:   %[[E5:.*]] = vector.extract_strided_slice %{{.*}} {offsets = [2, 4], sizes = [2, 2], strides = [1, 1]} : vector<4x6xf32> to vector<2x2xf32>
-//       CHECK:   %[[R5:.*]] = vector.multi_reduction <add>, %[[E5]] [1] : vector<2x2xf32> to vector<2xf32>
-//       CHECK:   %[[A3:.*]] = arith.addf %[[R5]], %[[A2]] : vector<2xf32>
-//       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[A1]], %[[V0]] {offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
-//       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[A3]], %[[V1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
+//       CHECK:   %[[R5:.*]] = vector.multi_reduction <add>, %[[E5]], %[[R4]] [1] : vector<2x2xf32> to vector<2xf32>
+//       CHECK:   %[[V1:.*]] = vector.insert_strided_slice %[[R2]], %[[V0]] {offsets = [0], strides = [1]} : vector<2xf32> into vector<4xf32>
+//       CHECK:   %[[V2:.*]] = vector.insert_strided_slice %[[R5]], %[[V1]] {offsets = [2], strides = [1]} : vector<2xf32> into vector<4xf32>
 //       CHECK:   return %[[V2]] : vector<4xf32>
 
 
@@ -268,7 +266,7 @@ func.func @vector_tranpose(%v : vector<2x4x3x8xf32>) -> vector<2x3x8x4xf32> {
 
 // -----
 
-func.func @vector_contract_batched(%lhs: vector<8x8x4xf32>, %rhs: vector<8x8x4xf32>, %init: vector<8x8x8xf32>) -> vector<8x8x8xf32> {    
+func.func @vector_contract_batched(%lhs: vector<8x8x4xf32>, %rhs: vector<8x8x4xf32>, %init: vector<8x8x8xf32>) -> vector<8x8x8xf32> {
   %0 = vector.contract
          {indexing_maps = [affine_map<(d0,d1,d2,c0) -> (d0,d1,c0)>,
                            affine_map<(d0,d1,d2,c0) -> (d0,d2,c0)>,
@@ -282,7 +280,7 @@ func.func @vector_contract_batched(%lhs: vector<8x8x4xf32>, %rhs: vector<8x8x4xf
 //    CHECK-LABEL: vector_contract_batched
 // CHECK-COUNT-16: vector.contract
 //      CHECK-NOT: vector.contract
-//          CHECK: return 
+//          CHECK: return
 
 //    UNROLL-LABEL: vector_contract_batched
 //  UNROLL-COUNT-1: vector.contract

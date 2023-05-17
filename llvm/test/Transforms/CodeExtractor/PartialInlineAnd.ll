@@ -1,6 +1,4 @@
-; RUN: opt < %s -partial-inliner -S | FileCheck %s
 ; RUN: opt < %s -passes=partial-inliner -S | FileCheck %s
-; RUN: opt < %s -partial-inliner -skip-partial-inlining-cost-analysis -max-num-inline-blocks=2 -S | FileCheck --check-prefix=LIMIT %s
 ; RUN: opt < %s -passes=partial-inliner -skip-partial-inlining-cost-analysis -max-num-inline-blocks=2 -S | FileCheck  --check-prefix=LIMIT %s
 
 ; Function Attrs: nounwind uwtable

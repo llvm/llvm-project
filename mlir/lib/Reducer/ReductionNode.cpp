@@ -15,7 +15,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Reducer/ReductionNode.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "llvm/ADT/STLExtras.h"
 
 #include <algorithm>
@@ -38,7 +38,7 @@ ReductionNode::ReductionNode(
 LogicalResult ReductionNode::initialize(ModuleOp parentModule,
                                         Region &targetRegion) {
   // Use the mapper help us find the corresponding region after module clone.
-  BlockAndValueMapping mapper;
+  IRMapping mapper;
   module = cast<ModuleOp>(parentModule->clone(mapper));
   // Use the first block of targetRegion to locate the cloned region.
   Block *block = mapper.lookup(&*targetRegion.begin());

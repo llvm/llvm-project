@@ -2,17 +2,18 @@
 ! C721 A type-param-value of * shall be used only
 ! * to declare a dummy argument,
 ! * to declare a named constant,
-! * in the type-spec of an ALLOCATE statement wherein each allocate-object is 
+! * in the type-spec of an ALLOCATE statement wherein each allocate-object is
 !   a dummy argument of type CHARACTER with an assumed character length,
-! * in the type-spec or derived-type-spec of a type guard statement (11.1.11), 
+! * in the type-spec or derived-type-spec of a type guard statement (11.1.11),
 !   or
 ! * in an external function, to declare the character length parameter of the function result.
+! Note also C795 for derived types (C721 applies to intrinsic types)
 subroutine s(arg)
   character(len=*), pointer :: arg
   character*(*), parameter  :: cvar1 = "abc"
   character*4,  cvar2
   character(len=4_4) :: cvar3
-  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, named constant, or external function result
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
   character(len=*) :: cvar4
 
   type derived(param)
@@ -25,6 +26,12 @@ subroutine s(arg)
       character(len=4) :: fun
     end function fun
   end interface
+
+  type t(len)
+    integer, len :: len
+  end type
+  !ERROR: An assumed (*) type parameter may be used only for a (non-statement function) dummy argument, associate name, character named constant, or external function result
+  type(t(*)), parameter :: p2 = t(123)() ! C795
 
   select type (ax => a%x)
     type is (integer)

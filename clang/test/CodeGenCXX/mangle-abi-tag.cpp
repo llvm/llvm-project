@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple %itanium_abi_triple -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple i686-linux-gnu -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -triple powerpc64le-unknown-linux-gnu -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple %itanium_abi_triple -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple i686-linux-gnu -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple x86_64-linux-gnu -std=c++11 -o - | FileCheck %s
+// RUN: %clang_cc1 %s -emit-llvm -triple powerpc64le-unknown-linux-gnu -std=c++11 -o - | FileCheck %s
 
 struct __attribute__((abi_tag("A", "B"))) A { };
 
@@ -145,7 +145,7 @@ void f13_test() {
   f13();
 }
 // f13()::L::foo[abi:C][abi:D]()
-// CHECK-DAG: define linkonce_odr {{(dso_local )?}}{{(noundef )?}}%struct.E* @_ZZ3f13vEN1L3fooB1CB1DEv(
+// CHECK-DAG: define linkonce_odr {{(dso_local )?}}{{(noundef )?}}ptr @_ZZ3f13vEN1L3fooB1CB1DEv(
 
 // f13()::L::foo[abi:C][abi:D]()::a[abi:A][abi:B]
 // CHECK-DAG: @_ZZZ3f13vEN1L3fooB1CB1DEvE1aB1AB1B =

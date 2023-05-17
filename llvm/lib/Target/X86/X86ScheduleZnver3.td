@@ -937,14 +937,13 @@ defm : Zn3WriteResXMMPair<WriteFRsqrt, [Zn3FPFDiv], 3, [1], 1>;  // Floating poi
 defm : Zn3WriteResXMMPair<WriteFRsqrtX, [Zn3FPFDiv], 3, [1], 1>; // Floating point reciprocal square root estimate (XMM).
 defm : Zn3WriteResYMMPair<WriteFRsqrtY, [Zn3FPFDiv], 3, [1], 1>; // Floating point reciprocal square root estimate (YMM).
 defm : X86WriteResPairUnsupported<WriteFRsqrtZ>; // Floating point reciprocal square root estimate (ZMM).
-defm : Zn3WriteResXMMPair<WriteFMA, [Zn3FPFMul01], 4, [2], 1>;  // Fused Multiply Add.
-defm : Zn3WriteResXMMPair<WriteFMAX, [Zn3FPFMul01], 4, [2], 1>; // Fused Multiply Add (XMM).
-defm : Zn3WriteResYMMPair<WriteFMAY, [Zn3FPFMul01], 4, [2], 1>; // Fused Multiply Add (YMM).
+defm : Zn3WriteResXMMPair<WriteFMA, [Zn3FPFMul01], 4, [1], 1>;  // Fused Multiply Add.
+defm : Zn3WriteResXMMPair<WriteFMAX, [Zn3FPFMul01], 4, [1], 1>; // Fused Multiply Add (XMM).
+defm : Zn3WriteResYMMPair<WriteFMAY, [Zn3FPFMul01], 4, [1], 1>; // Fused Multiply Add (YMM).
 defm : X86WriteResPairUnsupported<WriteFMAZ>; // Fused Multiply Add (ZMM).
 defm : Zn3WriteResXMMPair<WriteDPPD, [Zn3FPFMul01], 9, [6], 3, /*LoadUOps=*/2>; // Floating point double dot product.
 defm : Zn3WriteResXMMPair<WriteDPPS, [Zn3FPFMul01], 15, [8], 8, /*LoadUOps=*/2>; // Floating point single dot product.
 defm : Zn3WriteResYMMPair<WriteDPPSY, [Zn3FPFMul01], 15, [8], 7, /*LoadUOps=*/1>; // Floating point single dot product (YMM).
-defm : X86WriteResPairUnsupported<WriteDPPSZ>; // Floating point single dot product (ZMM).
 defm : Zn3WriteResXMMPair<WriteFSign, [Zn3FPFMul01], 1, [2], 1>; // FIXME: latency not from llvm-exegesis  // Floating point fabs/fchs.
 defm : Zn3WriteResXMMPair<WriteFRnd, [Zn3FPFCvt01], 3, [1], 1>; // Floating point rounding.
 defm : Zn3WriteResYMMPair<WriteFRndY, [Zn3FPFCvt01], 3, [1], 1>; // Floating point rounding (YMM).
@@ -1348,17 +1347,10 @@ def Zn3WriteVPERM2F128rm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
 }
 def : InstRW<[Zn3WriteVPERM2F128rm], (instrs VPERM2F128rm)>;
 
-def Zn3WriteVPERMPSYrr : SchedWriteRes<[Zn3FPVShuf]> {
-  let Latency = 7;
-  let ResourceCycles = [1];
-  let NumMicroOps = 2;
-}
-def : InstRW<[Zn3WriteVPERMPSYrr], (instrs VPERMPSYrr)>;
-
 def Zn3WriteVPERMPSYrm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVPERMPSYrr.Latency);
+  let Latency = !add(Znver3Model.LoadLatency, 7);
   let ResourceCycles = [1, 1, 2];
-  let NumMicroOps = !add(Zn3WriteVPERMPSYrr.NumMicroOps, 1);
+  let NumMicroOps = 3;
 }
 def : InstRW<[Zn3WriteVPERMPSYrm], (instrs VPERMPSYrm)>;
 
@@ -1376,22 +1368,15 @@ def Zn3WriteVPERMPDYmi : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
 }
 def : InstRW<[Zn3WriteVPERMPDYmi], (instrs VPERMPDYmi)>;
 
-def Zn3WriteVPERMDYrr : SchedWriteRes<[Zn3FPVShuf]> {
-  let Latency = 5;
-  let ResourceCycles = [1];
+def Zn3WriteVPERMDYm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
+  let Latency = !add(Znver3Model.LoadLatency, 5);
+  let ResourceCycles = [1, 1, 2];
   let NumMicroOps = 2;
 }
-def : InstRW<[Zn3WriteVPERMDYrr], (instrs VPERMDYrr)>;
-
-def Zn3WriteVPERMYm : SchedWriteRes<[Zn3AGU012, Zn3Load, Zn3FPVShuf]> {
-  let Latency = !add(Znver3Model.LoadLatency, Zn3WriteVPERMDYrr.Latency);
-  let ResourceCycles = [1, 1, 2];
-  let NumMicroOps = !add(Zn3WriteVPERMDYrr.NumMicroOps, 0);
-}
-def : InstRW<[Zn3WriteVPERMYm], (instrs VPERMQYmi, VPERMDYrm)>;
+def : InstRW<[Zn3WriteVPERMDYm], (instrs VPERMQYmi, VPERMDYrm)>;
 
 defm : Zn3WriteResYMMPair<WriteVPMOV256, [Zn3FPVShuf01], 4, [3], 2, /*LoadUOps=*/-1>; // 256-bit width packed vector width-changing move.
-defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShuf01], 1, [1], 2>; // 256-bit width vector variable shuffles.
+defm : Zn3WriteResYMMPair<WriteVarShuffle256, [Zn3FPVShuf], 5, [1], 2, /*LoadUOps=*/1>; // 256-bit width vector variable shuffles.
 defm : Zn3WriteResXMMPair<WriteVarVecShift, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts.
 defm : Zn3WriteResYMMPair<WriteVarVecShiftY, [Zn3FPVShift01], 1, [1], 1>; // Variable vector shifts (YMM).
 defm : X86WriteResPairUnsupported<WriteVarVecShiftZ>; // Variable vector shifts (ZMM).

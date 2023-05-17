@@ -145,11 +145,11 @@ int ios_base::__xindex_ = 0;
 template <typename _Tp>
 static size_t __ios_new_cap(size_t __req_size, size_t __current_cap)
 { // Precondition: __req_size > __current_cap
-	const size_t mx = std::numeric_limits<size_t>::max() / sizeof(_Tp);
-	if (__req_size < mx/2)
-		return _VSTD::max(2 * __current_cap, __req_size);
-	else
-		return mx;
+    const size_t mx = std::numeric_limits<size_t>::max() / sizeof(_Tp);
+    if (__req_size < mx/2)
+        return _VSTD::max(2 * __current_cap, __req_size);
+    else
+        return mx;
 }
 
 int
@@ -413,20 +413,20 @@ void
 ios_base::__set_badbit_and_consider_rethrow()
 {
     __rdstate_ |= badbit;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     if (__exceptions_ & badbit)
         throw;
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 void
 ios_base::__set_failbit_and_consider_rethrow()
 {
     __rdstate_ |= failbit;
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     if (__exceptions_ & failbit)
         throw;
-#endif // _LIBCPP_NO_EXCEPTIONS
+#endif // _LIBCPP_HAS_NO_EXCEPTIONS
 }
 
 bool

@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace misc {
+namespace clang::tidy::misc {
 
 namespace {
 
@@ -38,6 +36,24 @@ static bool shouldCheckDecl(const Decl *TargetDecl) {
          isa<EnumConstantDecl>(TargetDecl);
 }
 
+UnusedUsingDeclsCheck::UnusedUsingDeclsCheck(StringRef Name,
+                                             ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context) {
+  std::optional<StringRef> HeaderFileExtensionsOption =
+      Options.get("HeaderFileExtensions");
+  RawStringHeaderFileExtensions =
+      HeaderFileExtensionsOption.value_or(utils::defaultHeaderFileExtensions());
+  if (HeaderFileExtensionsOption) {
+    if (!utils::parseFileExtensions(RawStringHeaderFileExtensions,
+                                    HeaderFileExtensions,
+                                    utils::defaultFileExtensionDelimiters())) {
+      this->configurationDiag("Invalid header file extension: '%0'")
+          << RawStringHeaderFileExtensions;
+    }
+  } else
+    HeaderFileExtensions = Context->getHeaderFileExtensions();
+}
+
 void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(usingDecl(isExpansionInMainFile()).bind("using"), this);
   auto DeclMatcher = hasDeclaration(namedDecl().bind("used"));
@@ -54,6 +70,7 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(loc(templateSpecializationType(forEachTemplateArgument(
                          templateArgument().bind("used")))),
                      this);
+  Finder->addMatcher(userDefinedLiteral().bind("used"), this);
   // Cases where we can identify the UsingShadowDecl directly, rather than
   // just its target.
   // FIXME: cover more cases in this way, as the AST supports it.
@@ -64,6 +81,12 @@ void UnusedUsingDeclsCheck::registerMatchers(MatchFinder *Finder) {
 
 void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
   if (Result.Context->getDiagnostics().hasUncompilableErrorOccurred())
+    return;
+  // We don't emit warnings on unused-using-decls from headers, so bail out if
+  // the main file is a header.
+  if (const auto *MainFile = Result.SourceManager->getFileEntryForID(
+          Result.SourceManager->getMainFileID());
+      utils::isFileExtension(MainFile->getName(), HeaderFileExtensions))
     return;
 
   if (const auto *Using = Result.Nodes.getNodeAs<UsingDecl>("using")) {
@@ -106,9 +129,6 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
     } else if (const auto *Specialization =
                    dyn_cast<ClassTemplateSpecializationDecl>(Used)) {
       removeFromFoundDecls(Specialization->getSpecializedTemplate());
-    } else if (const auto *FD = dyn_cast<FunctionDecl>(Used)) {
-      if (const auto *FDT = FD->getPrimaryTemplate())
-        removeFromFoundDecls(FDT);
     } else if (const auto *ECD = dyn_cast<EnumConstantDecl>(Used)) {
       if (const auto *ET = ECD->getType()->getAs<EnumType>())
         removeFromFoundDecls(ET->getDecl());
@@ -150,7 +170,11 @@ void UnusedUsingDeclsCheck::check(const MatchFinder::MatchResult &Result) {
       if (const auto *USD = dyn_cast<UsingShadowDecl>(ND))
         removeFromFoundDecls(USD->getTargetDecl()->getCanonicalDecl());
     }
+    return;
   }
+  // Check user-defined literals
+  if (const auto *UDL = Result.Nodes.getNodeAs<UserDefinedLiteral>("used"))
+    removeFromFoundDecls(UDL->getCalleeDecl());
 }
 
 void UnusedUsingDeclsCheck::removeFromFoundDecls(const Decl *D) {
@@ -181,6 +205,4 @@ void UnusedUsingDeclsCheck::onEndOfTranslationUnit() {
   Contexts.clear();
 }
 
-} // namespace misc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::misc

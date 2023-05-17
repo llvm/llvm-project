@@ -69,9 +69,13 @@ def to_yaml_type(typestr: str):
   elif typestr == 'std::string':
     return 'String'
 
-  subtype, napplied = re.subn(r'^std::vector<(.*)>$', r'\1', typestr)
-  if napplied == 1:
-    return 'List of ' + pluralize(to_yaml_type(subtype))
+  match = re.match(r'std::vector<(.*)>$', typestr)
+  if match:
+    return 'List of ' + pluralize(to_yaml_type(match.group(1)))
+
+  match = re.match(r'std::optional<(.*)>$', typestr)
+  if match:
+    return to_yaml_type(match.group(1))
 
   return typestr
 
@@ -98,12 +102,10 @@ class Option(object):
     self.version = version
 
   def __str__(self):
+    s = ".. _%s:\n\n**%s** (``%s``) " % (self.name, self.name, to_yaml_type(self.type))
     if self.version:
-      s = '**%s** (``%s``) :versionbadge:`clang-format %s`\n%s' % (self.name, to_yaml_type(self.type), self.version,
-                                 doxygen2rst(indent(self.comment, 2)))
-    else:
-      s = '**%s** (``%s``)\n%s' % (self.name, to_yaml_type(self.type),
-                                 doxygen2rst(indent(self.comment, 2)))
+      s += ':versionbadge:`clang-format %s` ' % self.version
+    s += ':ref:`¶ <%s>`\n%s' % (self.name, doxygen2rst(indent(self.comment, 2)))
     if self.enum and self.enum.values:
       s += indent('\n\nPossible values:\n\n%s\n' % self.enum, 2)
     if self.nested_struct:
@@ -267,6 +269,9 @@ class OptionsReader:
           name = re.sub(r'struct\s+(\w+)\s*\{', '\\1', line)
           nested_struct = NestedStruct(name, comment)
         elif line.endswith(';'):
+          prefix = '// '
+          if line.startswith(prefix):
+            line = line[len(prefix):]
           state = State.InStruct
           field_type, field_name = re.match(r'([<>:\w(,\s)]+)\s+(\w+);',
                                             line).groups()
@@ -330,7 +335,8 @@ class OptionsReader:
       if option.type not in ['bool', 'unsigned', 'int', 'std::string',
                              'std::vector<std::string>',
                              'std::vector<IncludeCategory>',
-                             'std::vector<RawStringFormat>']:
+                             'std::vector<RawStringFormat>',
+                             'std::optional<unsigned>']:
         if option.type in enums:
           option.enum = enums[option.type]
         elif option.type in nested_structs:

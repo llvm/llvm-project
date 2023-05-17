@@ -11,9 +11,10 @@
 
 // raw_storage_iterator
 
+#include <cassert>
 #include <memory>
 #include <type_traits>
-#include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 #include <MoveOnly.h>

@@ -23,8 +23,8 @@ int main() {
     B[i] = 2 * i;
   }
 
-#pragma omp target enter data map(to : A [FROM:LENGTH], B [FROM:LENGTH])
-#pragma omp target enter data map(alloc : C [FROM:LENGTH])
+#pragma omp target enter data map(to : A[FROM : LENGTH], B[FROM : LENGTH])
+#pragma omp target enter data map(alloc : C[FROM : LENGTH])
 
 // A, B and C have been mapped starting at index FROM, but inside the kernel
 // they are captured implicitly so the library must look them up using their
@@ -36,8 +36,8 @@ int main() {
     }
   }
 
-#pragma omp target exit data map(from : C [FROM:LENGTH])
-#pragma omp target exit data map(delete : A [FROM:LENGTH], B [FROM:LENGTH])
+#pragma omp target exit data map(from : C[FROM : LENGTH])
+#pragma omp target exit data map(delete : A[FROM : LENGTH], B[FROM : LENGTH])
 
   int errors = 0;
   for (int i = FROM; i < FROM + LENGTH; i++)

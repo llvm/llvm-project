@@ -24,6 +24,7 @@ module m
   end type derived4
 
   !WARNING: Attribute 'BIND(C)' cannot be used more than once
+  !WARNING: A derived type with the BIND attribute is empty
   type, bind(c), public, bind(c) :: derived5
   end type derived5
 

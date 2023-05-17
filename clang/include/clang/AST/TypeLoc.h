@@ -430,7 +430,7 @@ protected:
     unsigned size = sizeof(LocalData);
     unsigned extraAlign = asDerived()->getExtraLocalDataAlignment();
     size = llvm::alignTo(size, extraAlign);
-    return reinterpret_cast<char*>(Base::Data) + size;
+    return reinterpret_cast<char *>(Base::Data) + size;
   }
 
   void *getNonLocalData() const {
@@ -814,7 +814,7 @@ public:
   }
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::makeArrayRef(getProtocolLocArray(), getNumProtocols());
+    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
@@ -1020,7 +1020,7 @@ public:
 
 
   ArrayRef<SourceLocation> getProtocolLocs() const {
-    return llvm::makeArrayRef(getProtocolLocArray(), getNumProtocols());
+    return llvm::ArrayRef(getProtocolLocArray(), getNumProtocols());
   }
 
   bool hasBaseTypeAsWritten() const {
@@ -1447,7 +1447,7 @@ public:
   }
 
   ArrayRef<ParmVarDecl *> getParams() const {
-    return llvm::makeArrayRef(getParmArray(), getNumParams());
+    return llvm::ArrayRef(getParmArray(), getNumParams());
   }
 
   // ParmVarDecls* are stored after Info, one for each parameter.
@@ -1634,7 +1634,7 @@ public:
   }
 
   unsigned getNumArgs() const {
-    return getTypePtr()->getNumArgs();
+    return getTypePtr()->template_arguments().size();
   }
 
   void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
@@ -1646,7 +1646,8 @@ public:
   }
 
   TemplateArgumentLoc getArgLoc(unsigned i) const {
-    return TemplateArgumentLoc(getTypePtr()->getArg(i), getArgLocInfo(i));
+    return TemplateArgumentLoc(getTypePtr()->template_arguments()[i],
+                               getArgLocInfo(i));
   }
 
   SourceLocation getTemplateNameLoc() const {
@@ -1681,12 +1682,12 @@ public:
     setTemplateNameLoc(Loc);
     setLAngleLoc(Loc);
     setRAngleLoc(Loc);
-    initializeArgLocs(Context, getNumArgs(), getTypePtr()->getArgs(),
+    initializeArgLocs(Context, getTypePtr()->template_arguments(),
                       getArgInfos(), Loc);
   }
 
-  static void initializeArgLocs(ASTContext &Context, unsigned NumArgs,
-                                const TemplateArgument *Args,
+  static void initializeArgLocs(ASTContext &Context,
+                                ArrayRef<TemplateArgument> Args,
                                 TemplateArgumentLocInfo *ArgInfos,
                                 SourceLocation Loc);
 
@@ -1934,7 +1935,7 @@ struct TypeOfExprTypeLocInfo : public TypeofLocInfo {
 };
 
 struct TypeOfTypeLocInfo : public TypeofLocInfo {
-  TypeSourceInfo* UnderlyingTInfo;
+  TypeSourceInfo *UnmodifiedTInfo;
 };
 
 template <class Derived, class TypeClass, class LocalData = TypeofLocInfo>
@@ -2002,16 +2003,16 @@ public:
 class TypeOfTypeLoc
   : public TypeofLikeTypeLoc<TypeOfTypeLoc, TypeOfType, TypeOfTypeLocInfo> {
 public:
-  QualType getUnderlyingType() const {
-    return this->getTypePtr()->getUnderlyingType();
+  QualType getUnmodifiedType() const {
+    return this->getTypePtr()->getUnmodifiedType();
   }
 
-  TypeSourceInfo* getUnderlyingTInfo() const {
-    return this->getLocalData()->UnderlyingTInfo;
+  TypeSourceInfo *getUnmodifiedTInfo() const {
+    return this->getLocalData()->UnmodifiedTInfo;
   }
 
-  void setUnderlyingTInfo(TypeSourceInfo* TI) const {
-    this->getLocalData()->UnderlyingTInfo = TI;
+  void setUnmodifiedTInfo(TypeSourceInfo *TI) const {
+    this->getLocalData()->UnmodifiedTInfo = TI;
   }
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
@@ -2188,7 +2189,7 @@ public:
   }
 
   unsigned getNumArgs() const {
-    return getTypePtr()->getNumArgs();
+    return getTypePtr()->getTypeConstraintArguments().size();
   }
 
   void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
@@ -2263,22 +2264,31 @@ class ElaboratedTypeLoc : public ConcreteTypeLoc<UnqualTypeLoc,
                                                  ElaboratedLocInfo> {
 public:
   SourceLocation getElaboratedKeywordLoc() const {
-    return this->getLocalData()->ElaboratedKWLoc;
+    return !isEmpty() ? getLocalData()->ElaboratedKWLoc : SourceLocation();
   }
 
   void setElaboratedKeywordLoc(SourceLocation Loc) {
-    this->getLocalData()->ElaboratedKWLoc = Loc;
+    if (isEmpty()) {
+      assert(Loc.isInvalid());
+      return;
+    }
+    getLocalData()->ElaboratedKWLoc = Loc;
   }
 
   NestedNameSpecifierLoc getQualifierLoc() const {
-    return NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
-                                  getLocalData()->QualifierData);
+    return !isEmpty() ? NestedNameSpecifierLoc(getTypePtr()->getQualifier(),
+                                               getLocalData()->QualifierData)
+                      : NestedNameSpecifierLoc();
   }
 
   void setQualifierLoc(NestedNameSpecifierLoc QualifierLoc) {
-    assert(QualifierLoc.getNestedNameSpecifier()
-                                            == getTypePtr()->getQualifier() &&
+    assert(QualifierLoc.getNestedNameSpecifier() ==
+               getTypePtr()->getQualifier() &&
            "Inconsistent nested-name-specifier pointer");
+    if (isEmpty()) {
+      assert(!QualifierLoc.hasQualifier());
+      return;
+    }
     getLocalData()->QualifierData = QualifierLoc.getOpaqueData();
   }
 
@@ -2295,12 +2305,24 @@ public:
 
   void initializeLocal(ASTContext &Context, SourceLocation Loc);
 
-  TypeLoc getNamedTypeLoc() const {
-    return getInnerTypeLoc();
+  TypeLoc getNamedTypeLoc() const { return getInnerTypeLoc(); }
+
+  QualType getInnerType() const { return getTypePtr()->getNamedType(); }
+
+  bool isEmpty() const {
+    return getTypePtr()->getKeyword() == ElaboratedTypeKeyword::ETK_None &&
+           !getTypePtr()->getQualifier();
   }
 
-  QualType getInnerType() const {
-    return getTypePtr()->getNamedType();
+  unsigned getLocalDataAlignment() const {
+    // FIXME: We want to return 1 here in the empty case, but
+    // there are bugs in how alignment is handled in TypeLocs
+    // that prevent this from working.
+    return ConcreteTypeLoc::getLocalDataAlignment();
+  }
+
+  unsigned getLocalDataSize() const {
+    return !isEmpty() ? ConcreteTypeLoc::getLocalDataSize() : 0;
   }
 
   void copy(ElaboratedTypeLoc Loc) {
@@ -2443,7 +2465,7 @@ public:
   }
 
   unsigned getNumArgs() const {
-    return getTypePtr()->getNumArgs();
+    return getTypePtr()->template_arguments().size();
   }
 
   void setArgLocInfo(unsigned i, TemplateArgumentLocInfo AI) {
@@ -2455,7 +2477,8 @@ public:
   }
 
   TemplateArgumentLoc getArgLoc(unsigned i) const {
-    return TemplateArgumentLoc(getTypePtr()->getArg(i), getArgLocInfo(i));
+    return TemplateArgumentLoc(getTypePtr()->template_arguments()[i],
+                               getArgLocInfo(i));
   }
 
   SourceRange getLocalSourceRange() const {

@@ -254,7 +254,7 @@ bool SystemZPostRewrite::selectMBB(MachineBasicBlock &MBB) {
 }
 
 bool SystemZPostRewrite::runOnMachineFunction(MachineFunction &MF) {
-  TII = static_cast<const SystemZInstrInfo *>(MF.getSubtarget().getInstrInfo());
+  TII = MF.getSubtarget<SystemZSubtarget>().getInstrInfo();
 
   bool Modified = false;
   for (auto &MBB : MF)

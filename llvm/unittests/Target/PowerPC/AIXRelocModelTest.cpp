@@ -1,7 +1,7 @@
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -28,7 +28,7 @@ TEST_F(AIXRelocModelTest, DefalutToPIC) {
   // relocation model unset.
   std::unique_ptr<TargetMachine> Target(TheTarget->createTargetMachine(
       /*TT*/ TheTriple.getTriple(), /*CPU*/ "", /*Features*/ "",
-      /*Options*/ Options, /*RM*/ None, /*CM*/ None,
+      /*Options*/ Options, /*RM*/ std::nullopt, /*CM*/ std::nullopt,
       /*OL*/ CodeGenOpt::Default));
   ASSERT_TRUE(Target) << "Could not allocate target machine!";
 

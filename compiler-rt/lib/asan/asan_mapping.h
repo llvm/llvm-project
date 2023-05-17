@@ -114,6 +114,13 @@
 // || `[0x0080000000000, 0x008ffffffffff]` || LowShadow  ||
 // || `[0x0000000000000, 0x007ffffffffff]` || LowMem     ||
 //
+// Default Linux/LoongArch64 (47-bit VMA) mapping:
+// || `[0x500000000000, 0x7fffffffffff]` || HighMem    ||
+// || `[0x4a0000000000, 0x4fffffffffff]` || HighShadow ||
+// || `[0x480000000000, 0x49ffffffffff]` || ShadowGap  ||
+// || `[0x400000000000, 0x47ffffffffff]` || LowShadow  ||
+// || `[0x000000000000, 0x3fffffffffff]` || LowMem     ||
+//
 // Shadow mapping on FreeBSD/x86-64 with SHADOW_OFFSET == 0x400000000000:
 // || `[0x500000000000, 0x7fffffffffff]` || HighMem    ||
 // || `[0x4a0000000000, 0x4fffffffffff]` || HighShadow ||
@@ -196,6 +203,8 @@
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000002000000000
 #  elif defined(__sparc__)
 #    define ASAN_SHADOW_OFFSET_CONST 0x0000080000000000
+#  elif SANITIZER_LOONGARCH64
+#    define ASAN_SHADOW_OFFSET_CONST 0x0000400000000000
 #  elif SANITIZER_WINDOWS64
 #    define ASAN_SHADOW_OFFSET_DYNAMIC
 #  else
@@ -263,6 +272,8 @@ extern uptr kHighMemEnd, kMidMemBeg, kMidMemEnd;  // Initialized in __asan_init.
 #  else
 #    define MEM_TO_SHADOW(mem) \
       (((mem) >> ASAN_SHADOW_SCALE) + (ASAN_SHADOW_OFFSET))
+#    define SHADOW_TO_MEM(mem) \
+      (((mem) - (ASAN_SHADOW_OFFSET)) << (ASAN_SHADOW_SCALE))
 
 #    define kLowMemBeg 0
 #    define kLowMemEnd (ASAN_SHADOW_OFFSET ? ASAN_SHADOW_OFFSET - 1 : 0)
@@ -365,6 +376,12 @@ static inline uptr MemToShadow(uptr p) {
 static inline bool AddrIsInShadow(uptr a) {
   PROFILE_ASAN_MAPPING();
   return AddrIsInLowShadow(a) || AddrIsInMidShadow(a) || AddrIsInHighShadow(a);
+}
+
+static inline uptr ShadowToMem(uptr p) {
+  PROFILE_ASAN_MAPPING();
+  CHECK(AddrIsInShadow(p));
+  return SHADOW_TO_MEM(p);
 }
 
 static inline bool AddrIsAlignedByGranularity(uptr a) {

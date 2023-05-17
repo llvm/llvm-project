@@ -8,11 +8,11 @@ entry:
   %a = alloca double, align 8
   %b = alloca double, align 8
   %c = alloca double, align 8
-  store volatile double 1.540000e+01, double* %a, align 8
-  store volatile double 9.100000e+00, double* %b, align 8
-  %0 = load volatile double, double* %b, align 8
-  %1 = load volatile double, double* %a, align 8
+  store volatile double 1.540000e+01, ptr %a, align 8
+  store volatile double 9.100000e+00, ptr %b, align 8
+  %0 = load volatile double, ptr %b, align 8
+  %1 = load volatile double, ptr %a, align 8
   %sub = fsub double %0, %1
-  store double %sub, double* %c, align 8
+  store double %sub, ptr %c, align 8
   ret i32 0
 }

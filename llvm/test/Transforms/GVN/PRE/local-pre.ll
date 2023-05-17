@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-pre -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -enable-pre -S | FileCheck %s
 ; RUN: opt < %s -passes="gvn<pre>" -enable-pre=false -S | FileCheck %s
 
 declare void @may_exit() nounwind
@@ -10,7 +10,7 @@ define i32 @main(i32 %p, i32 %q) {
 ; CHECK-LABEL: @main(
 
 block1:
-    %cmp = icmp eq i32 %p, %q 
+    %cmp = icmp eq i32 %p, %q
 	br i1 %cmp, label %block2, label %block3
 
 block2:

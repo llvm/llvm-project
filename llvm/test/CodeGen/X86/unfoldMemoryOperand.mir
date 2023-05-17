@@ -3,22 +3,21 @@
 --- |
   @x = dso_local global i32 0, align 4
   @z = dso_local local_unnamed_addr global [1024 x i32] zeroinitializer, align 16
-  @y = dso_local local_unnamed_addr constant i32* null, align 8
+  @y = dso_local local_unnamed_addr constant ptr null, align 8
 
   ; Function Attrs: nofree norecurse nosync nounwind uwtable writeonly mustprogress
   define dso_local void @_Z3foov() local_unnamed_addr #0 {
-    %1 = load i32*, i32** @y, align 8, !tbaa !3
-    %2 = icmp eq i32* %1, @x
+    %1 = load ptr, ptr @y, align 8, !tbaa !3
+    %2 = icmp eq ptr %1, @x
     %3 = zext i1 %2 to i32
     br label %5
   4:                                                ; preds = %5
     ret void
   5:                                                ; preds = %5, %0
     %lsr.iv = phi i64 [ %lsr.iv.next, %5 ], [ -4096, %0 ]
-    %uglygep = getelementptr i8, i8* bitcast ([1024 x i32]* @z to i8*), i64 %lsr.iv
-    %uglygep2 = bitcast i8* %uglygep to i32*
-    %scevgep = getelementptr i32, i32* %uglygep2, i64 1024
-    store i32 %3, i32* %scevgep, align 4, !tbaa !7
+    %uglygep = getelementptr i8, ptr @z, i64 %lsr.iv
+    %scevgep = getelementptr i32, ptr %uglygep, i64 1024
+    store i32 %3, ptr %scevgep, align 4, !tbaa !7
     %lsr.iv.next = add nsw i64 %lsr.iv, 4
     %6 = icmp eq i64 %lsr.iv.next, 0
     br i1 %6, label %4, label %5, !llvm.loop !9
@@ -83,23 +82,27 @@ machineFunctionInfo: {}
 body:             |
   ; CHECK-LABEL: name: _Z3foov
   ; CHECK: bb.0 (%ir-block.0):
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   renamable $eax = MOV32r0 implicit-def dead $eflags
-  ; CHECK:   renamable $rcx = MOV64ri32 -4096
-  ; CHECK:   [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 -4096
-  ; CHECK:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, @y, $noreg :: (dereferenceable load (s64) from @y, !tbaa !3)
-  ; CHECK:   JMP_1 %bb.2
-  ; CHECK: bb.1 (%ir-block.4):
-  ; CHECK:   RET 0
-  ; CHECK: bb.2 (%ir-block.5):
-  ; CHECK:   successors: %bb.1(0x04000000), %bb.2(0x7c000000)
-  ; CHECK:   liveins: $eax, $rcx
-  ; CHECK:   CMP64ri32 [[MOV64rm]], @x, implicit-def $eflags
-  ; CHECK:   renamable $al = SETCCr 4, implicit killed $eflags, implicit killed $eax, implicit-def $eax
-  ; CHECK:   MOV32mr renamable $rcx, 1, $noreg, @z + 4096, $noreg, renamable $eax :: (store (s32) into %ir.scevgep, !tbaa !7)
-  ; CHECK:   renamable $rcx = ADD64ri8 killed renamable $rcx, 4, implicit-def $eflags
-  ; CHECK:   JCC_1 %bb.1, 4, implicit killed $eflags
-  ; CHECK:   JMP_1 %bb.2
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   renamable $eax = MOV32r0 implicit-def dead $eflags
+  ; CHECK-NEXT:   renamable $rcx = MOV64ri32 -4096
+  ; CHECK-NEXT:   [[MOV64ri32_:%[0-9]+]]:gr64 = MOV64ri32 -4096
+  ; CHECK-NEXT:   [[MOV64rm:%[0-9]+]]:gr64 = MOV64rm $rip, 1, $noreg, @y, $noreg :: (dereferenceable invariant load (s64) from @y, !tbaa !3)
+  ; CHECK-NEXT:   JMP_1 %bb.2
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1 (%ir-block.4):
+  ; CHECK-NEXT:   RET 0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2 (%ir-block.5):
+  ; CHECK-NEXT:   successors: %bb.1(0x04000000), %bb.2(0x7c000000)
+  ; CHECK-NEXT:   liveins: $eax, $rcx
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   CMP64ri32 [[MOV64rm]], @x, implicit-def $eflags
+  ; CHECK-NEXT:   renamable $al = SETCCr 4, implicit killed $eflags, implicit killed $eax, implicit-def $eax
+  ; CHECK-NEXT:   MOV32mr renamable $rcx, 1, $noreg, @z + 4096, $noreg, renamable $eax :: (store (s32) into %ir.scevgep, !tbaa !7)
+  ; CHECK-NEXT:   renamable $rcx = ADD64ri8 killed renamable $rcx, 4, implicit-def $eflags
+  ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit killed $eflags
+  ; CHECK-NEXT:   JMP_1 %bb.2
   bb.0 (%ir-block.0):
     successors: %bb.2(0x80000000)
     renamable $eax = MOV32r0 implicit-def dead $eflags
@@ -111,7 +114,7 @@ body:             |
     successors: %bb.1(0x04000000), %bb.2(0x7c000000)
     liveins: $eax, $rcx
     %2:gr64 = MOV64ri32 -4096
-    CMP64mi32 $rip, 1, $noreg, @y, $noreg, @x, implicit-def $eflags :: (dereferenceable load (s64) from @y, !tbaa !3)
+    CMP64mi32 $rip, 1, $noreg, @y, $noreg, @x, implicit-def $eflags :: (dereferenceable invariant load (s64) from @y, !tbaa !3)
     renamable $al = SETCCr 4, implicit killed $eflags, implicit killed $eax, implicit-def $eax
     MOV32mr renamable $rcx, 1, $noreg, @z + 4096, $noreg, renamable $eax :: (store (s32) into %ir.scevgep, !tbaa !7)
     renamable $rcx = ADD64ri8 killed renamable $rcx, 4, implicit-def $eflags

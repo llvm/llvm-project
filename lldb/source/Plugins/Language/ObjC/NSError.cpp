@@ -83,13 +83,15 @@ bool lldb_private::formatters::NSError_SummaryProvider(
   }
 
   InferiorSizedWord isw(domain_str_value, *process_sp);
+  TypeSystemClangSP scratch_ts_sp =
+      ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
 
+  if (!scratch_ts_sp)
+    return false;
   ValueObjectSP domain_str_sp = ValueObject::CreateValueObjectFromData(
       "domain_str", isw.GetAsData(process_sp->GetByteOrder()),
       valobj.GetExecutionContextRef(),
-      ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget())
-          ->GetBasicType(lldb::eBasicTypeVoid)
-          .GetPointerType());
+      scratch_ts_sp->GetBasicType(lldb::eBasicTypeVoid).GetPointerType());
 
   if (!domain_str_sp)
     return false;
@@ -153,11 +155,14 @@ public:
     if (userinfo == LLDB_INVALID_ADDRESS || error.Fail())
       return false;
     InferiorSizedWord isw(userinfo, *process_sp);
+    TypeSystemClangSP scratch_ts_sp =
+        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget());
+    if (!scratch_ts_sp)
+      return false;
     m_child_sp = CreateValueObjectFromData(
         "_userInfo", isw.GetAsData(process_sp->GetByteOrder()),
         m_backend.GetExecutionContextRef(),
-        ScratchTypeSystemClang::GetForTarget(process_sp->GetTarget())
-            ->GetBasicType(lldb::eBasicTypeObjCID));
+        scratch_ts_sp->GetBasicType(lldb::eBasicTypeObjCID));
     return false;
   }
 
@@ -177,7 +182,7 @@ private:
   // values to leak if the latter, then I need to store a SharedPointer to it -
   // so that it only goes away when everyone else in the cluster goes away oh
   // joy!
-  ValueObject *m_child_ptr;
+  ValueObject *m_child_ptr = nullptr;
   ValueObjectSP m_child_sp;
 };
 

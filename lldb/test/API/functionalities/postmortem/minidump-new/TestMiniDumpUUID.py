@@ -2,9 +2,6 @@
 Test basics of Minidump debugging.
 """
 
-from six import iteritems
-
-
 import lldb
 import os
 from lldbsuite.test.decorators import *
@@ -13,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class MiniDumpUUIDTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
 

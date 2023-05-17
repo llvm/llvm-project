@@ -11,8 +11,8 @@
 
 #include "gtest/gtest.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
-#include "flang/Optimizer/Support/KindMapping.h"
 
 struct RuntimeCallTest : public testing::Test {
 public:
@@ -27,7 +27,7 @@ public:
     mlir::ModuleOp mod = builder.create<mlir::ModuleOp>(loc);
     mlir::func::FuncOp func =
         mlir::func::FuncOp::create(loc, "runtime_unit_tests_func",
-            builder.getFunctionType(llvm::None, llvm::None));
+            builder.getFunctionType(std::nullopt, std::nullopt));
     auto *entryBlock = func.addEntryBlock();
     mod.push_back(mod);
     builder.setInsertionPointToStart(entryBlock);
@@ -54,6 +54,10 @@ public:
 
     seqTy10 = fir::SequenceType::get(fir::SequenceType::Shape(1, 10), i32Ty);
     boxTy = fir::BoxType::get(mlir::NoneType::get(firBuilder->getContext()));
+
+    char1Ty = fir::CharacterType::getSingleton(builder.getContext(), 1);
+    char2Ty = fir::CharacterType::getSingleton(builder.getContext(), 2);
+    char4Ty = fir::CharacterType::getSingleton(builder.getContext(), 4);
   }
 
   mlir::MLIRContext context;
@@ -77,6 +81,9 @@ public:
   mlir::Type c16Ty;
   mlir::Type seqTy10;
   mlir::Type boxTy;
+  mlir::Type char1Ty;
+  mlir::Type char2Ty;
+  mlir::Type char4Ty;
 };
 
 /// Check that the \p op is a `fir::CallOp` operation and its name matches
@@ -87,7 +94,7 @@ static inline void checkCallOp(mlir::Operation *op, llvm::StringRef fctName,
     unsigned nbArgs, bool addLocArgs = true) {
   EXPECT_TRUE(mlir::isa<fir::CallOp>(*op));
   auto callOp = mlir::dyn_cast<fir::CallOp>(*op);
-  EXPECT_TRUE(callOp.getCallee().hasValue());
+  EXPECT_TRUE(callOp.getCallee().has_value());
   mlir::SymbolRefAttr callee = *callOp.getCallee();
   EXPECT_EQ(fctName, callee.getRootReference().getValue());
   // sourceFile and sourceLine are added arguments.

@@ -7,9 +7,8 @@
 # RUN: not %lld -L%t -linvalidYAML %t/test.o -o %t/test 2>&1 | FileCheck %s -DDIR=%t
 # RUN: not %lld -F%t -framework invalidYAML %t/test.o -o %t/test 2>&1 | FileCheck %s -DDIR=%t --check-prefix=CHECK-FRAMEWORK
 
-# CHECK: could not load TAPI file at [[DIR]]{{[\\/]}}libinvalidYAML.tbd: malformed file
-# CHECK-FRAMEWORK: could not load TAPI file at [[DIR]]{{[\\/]}}invalidYAML.framework{{[\\/]}}invalidYAML.tbd: malformed file
-
+# CHECK: could not load TAPI file at [[DIR]]{{[\\/]}}libinvalidYAML.tbd: unsupported file type  
+# CHECK-FRAMEWORK: could not load TAPI file at [[DIR]]{{[\\/]}}invalidYAML.framework{{[\\/]}}invalidYAML.tbd: unsupported file type  
 .globl _main
 _main:
   ret

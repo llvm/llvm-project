@@ -20,7 +20,7 @@ llvm_type_to_ptx_type = {
     "half": "b16",
     "<2 x half>": "b32",
     "float": "f32",
-    "double": "f64"
+    "double": "f64",
 }
 
 llvm_type_to_ptx_reg = {
@@ -31,7 +31,7 @@ llvm_type_to_ptx_reg = {
     "half": "h",
     "<2 x half>": "hh",
     "float": "f",
-    "double": "fd"
+    "double": "fd",
 }
 
 addrspace_id = {
@@ -40,12 +40,12 @@ addrspace_id = {
     ".shared": 3,
     ".const": 4,
     ".local": 5,
-    ".param": 101
+    ".param": 101,
 }
 
 
 def gen_load_tests():
-  load_template = """
+    load_template = """
 define ${type} @${testname}(${type} addrspace(${asid})* %ptr) {
 ; CHECK: ${testname}
 ; CHECK_P32: ld${_volatile}${_volatile_as}.${ptx_type} %${ptx_reg}{{[0-9]+}}, [%r{{[0-9]+}}]
@@ -56,51 +56,52 @@ define ${type} @${testname}(${type} addrspace(${asid})* %ptr) {
   ret ${type} %a
 }
 """
-  for op_type, volatile, space in product(
-      ["i8", "i16", "i32", "i64", "half", "float", "double", "<2 x half>"],
-      [True, False],  # volatile
-      ["", ".shared", ".global", ".const", ".local", ".param"]):
+    for op_type, volatile, space in product(
+        ["i8", "i16", "i32", "i64", "half", "float", "double", "<2 x half>"],
+        [True, False],  # volatile
+        ["", ".shared", ".global", ".const", ".local", ".param"],
+    ):
 
-    # Volatile is only supported for global, shared and generic.
-    if volatile and not space in ["", ".global", ".shared"]:
-      continue
+        # Volatile is only supported for global, shared and generic.
+        if volatile and not space in ["", ".global", ".shared"]:
+            continue
 
-    # Volatile is only supported for global, shared and generic.
-    # All other volatile accesses are done in generic AS.
-    if volatile and not space in ["", ".global", ".shared"]:
-      volatile_as = ""
-    else:
-      volatile_as = space
+        # Volatile is only supported for global, shared and generic.
+        # All other volatile accesses are done in generic AS.
+        if volatile and not space in ["", ".global", ".shared"]:
+            volatile_as = ""
+        else:
+            volatile_as = space
 
-    params = {
-        "type": op_type,
-        "volatile": "volatile" if volatile else "",
-        "_volatile": ".volatile" if volatile else "",
-        "_volatile_as": volatile_as,
-        "_space": space,
-        "ptx_reg": llvm_type_to_ptx_reg[op_type],
-        "ptx_type": llvm_type_to_ptx_type[op_type],
-        "asid": addrspace_id[space],
-    }
+        params = {
+            "type": op_type,
+            "volatile": "volatile" if volatile else "",
+            "_volatile": ".volatile" if volatile else "",
+            "_volatile_as": volatile_as,
+            "_space": space,
+            "ptx_reg": llvm_type_to_ptx_reg[op_type],
+            "ptx_type": llvm_type_to_ptx_type[op_type],
+            "asid": addrspace_id[space],
+        }
 
-    testname = \
-      Template("ld_${_volatile}${_space}.${ptx_type}").substitute(params)
-    params["testname"] = testname.replace(".", "_")
+        testname = Template("ld_${_volatile}${_space}.${ptx_type}").substitute(params)
+        params["testname"] = testname.replace(".", "_")
 
-    # LLVM does not accept "addrspacecast Type* addrspace(0) to Type*", so we
-    # need to avoid it for generic pointer tests.
-    if space:
-      generic_ptr_template = ("addrspacecast ${type} addrspace(${asid})* %ptr "
-                              "to ${type}*")
-    else:
-      generic_ptr_template = "select i1 true, ${type}* %ptr, ${type}* %ptr"
-    params["generic_ptr"] = Template(generic_ptr_template).substitute(params)
+        # LLVM does not accept "addrspacecast Type* addrspace(0) to Type*", so we
+        # need to avoid it for generic pointer tests.
+        if space:
+            generic_ptr_template = (
+                "addrspacecast ${type} addrspace(${asid})* %ptr " "to ${type}*"
+            )
+        else:
+            generic_ptr_template = "select i1 true, ${type}* %ptr, ${type}* %ptr"
+        params["generic_ptr"] = Template(generic_ptr_template).substitute(params)
 
-    print(Template(load_template).substitute(params))
+        print(Template(load_template).substitute(params))
 
 
 def main():
-  gen_load_tests()
+    gen_load_tests()
 
 
 main()

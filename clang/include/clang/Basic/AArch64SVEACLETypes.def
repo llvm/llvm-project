@@ -49,6 +49,11 @@
   SVE_TYPE(Name, Id, SingletonId)
 #endif
 
+#ifndef SVE_OPAQUE_TYPE
+#define SVE_OPAQUE_TYPE(Name, MangledName, Id, SingletonId)                    \
+  SVE_TYPE(Name, Id, SingletonId)
+#endif
+
 //===- Vector point types -----------------------------------------------===//
 
 
@@ -124,7 +129,12 @@ SVE_VECTOR_TYPE("__clang_svfloat64x4_t", "svfloat64x4_t", SveFloat64x4, SveFloat
 SVE_VECTOR_TYPE("__clang_svbfloat16x4_t", "svbfloat16x4_t", SveBFloat16x4, SveBFloat16x4Ty, 32, 16, true, false, true)
 
 SVE_PREDICATE_TYPE("__SVBool_t", "__SVBool_t", SveBool, SveBoolTy, 16)
+SVE_PREDICATE_TYPE("__clang_svboolx2_t", "svboolx2_t", SveBoolx2, SveBoolx2Ty, 32)
+SVE_PREDICATE_TYPE("__clang_svboolx4_t", "svboolx4_t", SveBoolx4, SveBoolx4Ty, 64)
+
+SVE_OPAQUE_TYPE("__SVCount_t", "__SVCount_t", SveCount, SveCountTy)
 
 #undef SVE_VECTOR_TYPE
 #undef SVE_PREDICATE_TYPE
+#undef SVE_OPAQUE_TYPE
 #undef SVE_TYPE

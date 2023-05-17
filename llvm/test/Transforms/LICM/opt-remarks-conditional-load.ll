@@ -1,26 +1,26 @@
-; RUN: opt < %s -licm -pass-remarks-missed=licm -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=licm -pass-remarks-missed=licm -o /dev/null 2>&1 | FileCheck %s
 ; RUN: opt -aa-pipeline=basic-aa -passes='require<aa>,require<targetir>,require<scalar-evolution>,require<opt-remark-emit>,loop-mssa(licm)' %s -o /dev/null -pass-remarks-missed=licm 2>&1 | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
 ; With the load from %p conditional, we can't optmize this and the remark
 ; should tell us about it.
 
-define void @test(i32* %array, i32* noalias %p) {
+define void @test(ptr %array, ptr noalias %p) {
 Entry:
   br label %Loop
 
 Loop:
   %j = phi i32 [ 0, %Entry ], [ %Next, %else]
-  %addr = getelementptr i32, i32* %array, i32 %j
-  %a = load i32, i32* %addr
+  %addr = getelementptr i32, ptr %array, i32 %j
+  %a = load i32, ptr %addr
   %c = icmp eq i32 %a, 0
   br i1 %c, label %then, label %else
 
 then:
 ; CHECK: remark: /tmp/kk.c:2:20: failed to hoist load with loop-invariant address because load is conditionally executed
-  %b = load i32, i32* %p, !dbg !8
+  %b = load i32, ptr %p, !dbg !8
   %a2 = add i32 %a, %b
-  store i32 %a2, i32* %addr
+  store i32 %a2, ptr %addr
   br label %else
 
 else:

@@ -167,14 +167,14 @@ define <2 x i1> @constant_op1_i64_not_undef_lane(i64 %x) {
 
 ; negative test - load prevents the transform
 
-define <2 x i1> @constant_op1_i64_load(i64* %p) {
+define <2 x i1> @constant_op1_i64_load(ptr %p) {
 ; CHECK-LABEL: @constant_op1_i64_load(
-; CHECK-NEXT:    [[LD:%.*]] = load i64, i64* [[P:%.*]], align 4
+; CHECK-NEXT:    [[LD:%.*]] = load i64, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[INS:%.*]] = insertelement <2 x i64> undef, i64 [[LD]], i32 0
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i64> [[INS]], <i64 42, i64 -42>
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
-  %ld = load i64, i64* %p
+  %ld = load i64, ptr %p
   %ins = insertelement <2 x i64> undef, i64 %ld, i32 0
   %r = icmp eq <2 x i64> %ins, <i64 42, i64 -42>
   ret <2 x i1> %r
@@ -278,13 +278,13 @@ define <4 x float> @vec_select_use2(<4 x float> %x, <4 x float> %y, float %a) {
   ret <4 x float> %r
 }
 
-define <4 x i1> @vector_of_pointers(i32* %t1) {
+define <4 x i1> @vector_of_pointers(ptr %t1) {
 ; CHECK-LABEL: @vector_of_pointers(
-; CHECK-NEXT:    [[T6_SCALAR:%.*]] = icmp ne i32* [[T1:%.*]], null
+; CHECK-NEXT:    [[T6_SCALAR:%.*]] = icmp ne ptr [[T1:%.*]], null
 ; CHECK-NEXT:    [[T6:%.*]] = insertelement <4 x i1> undef, i1 [[T6_SCALAR]], i64 0
 ; CHECK-NEXT:    ret <4 x i1> [[T6]]
 ;
-  %t5 = insertelement <4 x i32*> undef, i32* %t1, i32 0
-  %t6 = icmp ne <4 x i32*> %t5, zeroinitializer
+  %t5 = insertelement <4 x ptr> undef, ptr %t1, i32 0
+  %t6 = icmp ne <4 x ptr> %t5, zeroinitializer
   ret <4 x i1> %t6
 }

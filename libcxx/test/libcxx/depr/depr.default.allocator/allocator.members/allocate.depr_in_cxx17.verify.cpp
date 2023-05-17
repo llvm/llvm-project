@@ -18,12 +18,10 @@
 // ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_CXX20_REMOVED_ALLOCATOR_MEMBERS
 
 #include <memory>
+
 #include "test_macros.h"
 
-int main(int, char**)
-{
+void f() {
     std::allocator<int> a;
     TEST_IGNORE_NODISCARD a.allocate(3, nullptr); // expected-warning {{'allocate' is deprecated}}
-
-    return 0;
 }

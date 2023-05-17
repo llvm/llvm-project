@@ -41,7 +41,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i32 %retval.0
 }
 
-define void @neg_truncate_i32_eq(i32 *%ptr) {
+define void @neg_truncate_i32_eq(ptr %ptr) {
 ; CHECK-LABEL: neg_truncate_i32_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lwz r3, 0(r3)
@@ -49,7 +49,7 @@ define void @neg_truncate_i32_eq(i32 *%ptr) {
 ; CHECK-NEXT:    bclr 12, eq, 0
 ; CHECK-NEXT:  # %bb.1: # %if.end29.thread136
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %rem17127 = and i32 %0, 1
   %cmp18 = icmp eq i32 %rem17127, 0
   br label %if.else
@@ -99,7 +99,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i64 %retval.0
 }
 
-define void @neg_truncate_i64_eq(i64 *%ptr) {
+define void @neg_truncate_i64_eq(ptr %ptr) {
 ; CHECK-LABEL: neg_truncate_i64_eq:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 0(r3)
@@ -107,7 +107,7 @@ define void @neg_truncate_i64_eq(i64 *%ptr) {
 ; CHECK-NEXT:    bclr 12, eq, 0
 ; CHECK-NEXT:  # %bb.1: # %if.end29.thread136
 entry:
-  %0 = load i64, i64* %ptr, align 4
+  %0 = load i64, ptr %ptr, align 4
   %rem17127 = and i64 %0, 1
   %cmp18 = icmp eq i64 %rem17127, 0
   br label %if.else
@@ -159,7 +159,7 @@ return:                                           ; preds = %if.end, %if.then
   ret i64 %retval.0
 }
 
-define void @neg_truncate_i64_ne(i64 *%ptr) {
+define void @neg_truncate_i64_ne(ptr %ptr) {
 ; CHECK-LABEL: neg_truncate_i64_ne:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    ld r3, 0(r3)
@@ -167,7 +167,7 @@ define void @neg_truncate_i64_ne(i64 *%ptr) {
 ; CHECK-NEXT:    bclr 12, gt, 0
 ; CHECK-NEXT:  # %bb.1: # %if.end29.thread136
 entry:
-  %0 = load i64, i64* %ptr, align 4
+  %0 = load i64, ptr %ptr, align 4
   %rem17127 = and i64 %0, 1
   %cmp18 = icmp ne i64 %rem17127, 0
   br label %if.else

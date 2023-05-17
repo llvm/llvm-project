@@ -25,7 +25,7 @@ template <typename SimdType>
 void test_store() {
   SimdType a([](int i) { return 4 - i; });
   {
-    alignas(32) int32_t buffer[4] = {0};
+    alignas(32) std::int32_t buffer[4] = {0};
     a.copy_to(buffer, ex::element_aligned_tag());
     assert(buffer[0] == 4);
     assert(buffer[1] == 3);
@@ -33,7 +33,7 @@ void test_store() {
     assert(buffer[3] == 1);
   }
   {
-    alignas(32) int32_t buffer[4] = {0};
+    alignas(32) std::int32_t buffer[4] = {0};
     a.copy_to(buffer, ex::vector_aligned_tag());
     assert(buffer[0] == 4);
     assert(buffer[1] == 3);
@@ -41,7 +41,7 @@ void test_store() {
     assert(buffer[3] == 1);
   }
   {
-    alignas(32) int32_t buffer[4] = {0};
+    alignas(32) std::int32_t buffer[4] = {0};
     a.copy_to(buffer, ex::overaligned_tag<32>());
     assert(buffer[0] == 4);
     assert(buffer[1] == 3);
@@ -50,7 +50,7 @@ void test_store() {
   }
 
   {
-    alignas(32) int32_t buffer[4] = {0};
+    alignas(32) std::int32_t buffer[4] = {0};
     a.copy_to(buffer, ex::element_aligned);
     assert(buffer[0] == 4);
     assert(buffer[1] == 3);
@@ -58,7 +58,7 @@ void test_store() {
     assert(buffer[3] == 1);
   }
   {
-    alignas(32) int32_t buffer[4] = {0};
+    alignas(32) std::int32_t buffer[4] = {0};
     a.copy_to(buffer, ex::vector_aligned);
     assert(buffer[0] == 4);
     assert(buffer[1] == 3);
@@ -66,7 +66,7 @@ void test_store() {
     assert(buffer[3] == 1);
   }
   {
-    alignas(32) int32_t buffer[4] = {0};
+    alignas(32) std::int32_t buffer[4] = {0};
     a.copy_to(buffer, ex::overaligned<32>);
     assert(buffer[0] == 4);
     assert(buffer[1] == 3);
@@ -88,10 +88,10 @@ void test_converting_store() {
 
 int main(int, char**) {
   // TODO: adjust the tests when this assertion fails.
-  test_store<ex::native_simd<int32_t>>();
-  test_store<ex::fixed_size_simd<int32_t, 4>>();
-  test_converting_store<ex::native_simd<int32_t>>();
-  test_converting_store<ex::fixed_size_simd<int32_t, 4>>();
+  test_store<ex::native_simd<std::int32_t>>();
+  test_store<ex::fixed_size_simd<std::int32_t, 4>>();
+  test_converting_store<ex::native_simd<std::int32_t>>();
+  test_converting_store<ex::fixed_size_simd<std::int32_t, 4>>();
 
   return 0;
 }

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/ctype/isspace.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcIsSpace, DefaultLocale) {
   // Loops through all characters, verifying that space characters
@@ -19,7 +19,7 @@ TEST(LlvmLibcIsSpace, DefaultLocale) {
   //    0x0b     |   vertical tab
   //    0x0d     |   carriage return
   //    0x20     |   space
-  for (int ch = 0; ch < 255; ++ch) {
+  for (int ch = -255; ch < 255; ++ch) {
     if (ch == 0x20 || (0x09 <= ch && ch <= 0x0d))
       EXPECT_NE(__llvm_libc::isspace(ch), 0);
     else

@@ -3,27 +3,27 @@
 
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:32:32"
 target triple = "i386-pc-linux-gnu"
-@g_14 = internal global i32 1		; <i32*> [#uses=1]
-@g_39 = internal global i16 -5		; <i16*> [#uses=2]
-@g_43 = internal global i32 -6		; <i32*> [#uses=3]
-@g_33 = internal global i32 -1269044541		; <i32*> [#uses=1]
-@g_137 = internal global i32 8		; <i32*> [#uses=1]
-@g_82 = internal global i32 -5		; <i32*> [#uses=3]
-@g_91 = internal global i32 1		; <i32*> [#uses=1]
-@g_197 = internal global i32 1		; <i32*> [#uses=4]
-@g_207 = internal global i32 1		; <i32*> [#uses=2]
-@g_222 = internal global i16 4165		; <i16*> [#uses=1]
-@g_247 = internal global i8 -21		; <i8*> [#uses=2]
-@g_260 = internal global i32 1		; <i32*> [#uses=2]
-@g_221 = internal global i16 -17503		; <i16*> [#uses=3]
-@g_267 = internal global i16 1		; <i16*> [#uses=1]
-@llvm.used = appending global [1 x i8*] [ i8* bitcast (i32 (i32, i32, i16, i32, i8, i32)* @func_44 to i8*) ], section "llvm.metadata"		; <[1 x i8*]*> [#uses=0]
+@g_14 = internal global i32 1		; <ptr> [#uses=1]
+@g_39 = internal global i16 -5		; <ptr> [#uses=2]
+@g_43 = internal global i32 -6		; <ptr> [#uses=3]
+@g_33 = internal global i32 -1269044541		; <ptr> [#uses=1]
+@g_137 = internal global i32 8		; <ptr> [#uses=1]
+@g_82 = internal global i32 -5		; <ptr> [#uses=3]
+@g_91 = internal global i32 1		; <ptr> [#uses=1]
+@g_197 = internal global i32 1		; <ptr> [#uses=4]
+@g_207 = internal global i32 1		; <ptr> [#uses=2]
+@g_222 = internal global i16 4165		; <ptr> [#uses=1]
+@g_247 = internal global i8 -21		; <ptr> [#uses=2]
+@g_260 = internal global i32 1		; <ptr> [#uses=2]
+@g_221 = internal global i16 -17503		; <ptr> [#uses=3]
+@g_267 = internal global i16 1		; <ptr> [#uses=1]
+@llvm.used = appending global [1 x ptr] [ ptr @func_44 ], section "llvm.metadata"		; <ptr> [#uses=0]
 
 define i32 @func_44(i32 %p_45, i32 %p_46, i16 zeroext  %p_48, i32 %p_49, i8 zeroext  %p_50, i32 %p_52) nounwind  {
 entry:
 	tail call i32 @func_116( i8 zeroext  2 ) nounwind 		; <i32>:0 [#uses=0]
 	tail call i32 @func_63( i16 signext  2 ) nounwind 		; <i32>:1 [#uses=1]
-	load i16, i16* @g_39, align 2		; <i16>:2 [#uses=1]
+	load i16, ptr @g_39, align 2		; <i16>:2 [#uses=1]
 	tail call i32 @func_63( i16 signext  %2 ) nounwind 		; <i32>:3 [#uses=1]
 	trunc i32 %3 to i16		; <i16>:4 [#uses=1]
 	and i16 %4, 1		; <i16>:5 [#uses=1]
@@ -32,10 +32,10 @@ entry:
 	tail call i32 @func_74( i16 zeroext  %5, i8 zeroext  %6, i16 zeroext  %7, i16 zeroext  0 ) nounwind 		; <i32>:8 [#uses=0]
 	tail call i32 @func_124( i32 544824386 ) nounwind 		; <i32>:9 [#uses=0]
 	zext i8 %p_50 to i32		; <i32>:10 [#uses=1]
-	load i32, i32* @g_43, align 4		; <i32>:11 [#uses=1]
+	load i32, ptr @g_43, align 4		; <i32>:11 [#uses=1]
 	icmp sle i32 %10, %11		; <i1>:12 [#uses=1]
 	zext i1 %12 to i32		; <i32>:13 [#uses=2]
-	load i8, i8* @g_247, align 1		; <i8>:14 [#uses=1]
+	load i8, ptr @g_247, align 1		; <i8>:14 [#uses=1]
 	trunc i32 %p_45 to i16		; <i16>:15 [#uses=1]
 	zext i8 %14 to i16		; <i16>:16 [#uses=1]
 	tail call i32 @func_74( i16 zeroext  %15, i8 zeroext  0, i16 zeroext  %16, i16 zeroext  23618 ) nounwind 		; <i32>:17 [#uses=4]
@@ -72,7 +72,7 @@ bb172:		; preds = %bb168, %bb162
 	icmp eq i32 %.0343, 0		; <i1>:30 [#uses=1]
 	%.0341 = select i1 %30, i32 1, i32 %.0343		; <i32> [#uses=1]
 	urem i32 %23, %.0341		; <i32>:31 [#uses=1]
-	load i32, i32* @g_137, align 4		; <i32>:32 [#uses=4]
+	load i32, ptr @g_137, align 4		; <i32>:32 [#uses=4]
 	icmp slt i32 %32, 0		; <i1>:33 [#uses=1]
 	br i1 %33, label %bb202, label %bb198
 
@@ -119,13 +119,13 @@ bb222:		; preds = %bb215, %bb205
 
 bb223:		; preds = %bb222, %bb215
 	%iftmp.437.0 = phi i32 [ 0, %bb222 ], [ 1, %bb215 ]		; <i32> [#uses=1]
-	load i32, i32* @g_91, align 4		; <i32>:55 [#uses=3]
+	load i32, ptr @g_91, align 4		; <i32>:55 [#uses=3]
 	tail call i32 @func_103( i16 zeroext  4 ) nounwind 		; <i32>:56 [#uses=0]
 	tail call i32 @func_112( i32 0, i16 zeroext  -31374 ) nounwind 		; <i32>:57 [#uses=0]
-	load i32, i32* @g_197, align 4		; <i32>:58 [#uses=1]
+	load i32, ptr @g_197, align 4		; <i32>:58 [#uses=1]
 	tail call i32 @func_124( i32 28156 ) nounwind 		; <i32>:59 [#uses=1]
-	load i32, i32* @g_260, align 4		; <i32>:60 [#uses=1]
-	load i32, i32* @g_43, align 4		; <i32>:61 [#uses=1]
+	load i32, ptr @g_260, align 4		; <i32>:60 [#uses=1]
+	load i32, ptr @g_43, align 4		; <i32>:61 [#uses=1]
 	xor i32 %61, %60		; <i32>:62 [#uses=1]
 	mul i32 %62, %59		; <i32>:63 [#uses=1]
 	trunc i32 %63 to i8		; <i8>:64 [#uses=1]
@@ -138,7 +138,7 @@ bb223:		; preds = %bb222, %bb215
 	%or.cond352 = or i1 %70, %67		; <i1> [#uses=1]
 	select i1 %or.cond352, i32 0, i32 %55		; <i32>:71 [#uses=1]
 	%.353 = ashr i32 %66, %71		; <i32> [#uses=2]
-	load i16, i16* @g_221, align 2		; <i16>:72 [#uses=1]
+	load i16, ptr @g_221, align 2		; <i16>:72 [#uses=1]
 	zext i16 %72 to i32		; <i32>:73 [#uses=1]
 	icmp ugt i32 %.353, 31		; <i1>:74 [#uses=1]
 	select i1 %74, i32 0, i32 %.353		; <i32>:75 [#uses=1]
@@ -146,7 +146,7 @@ bb223:		; preds = %bb222, %bb215
 	add i32 %.0323, %iftmp.437.0		; <i32>:76 [#uses=1]
 	and i32 %48, 255		; <i32>:77 [#uses=2]
 	add i32 %77, 2042556439		; <i32>:78 [#uses=1]
-	load i32, i32* @g_207, align 4		; <i32>:79 [#uses=2]
+	load i32, ptr @g_207, align 4		; <i32>:79 [#uses=2]
 	icmp ugt i32 %79, 31		; <i1>:80 [#uses=1]
 	select i1 %80, i32 0, i32 %79		; <i32>:81 [#uses=1]
 	%.0320 = lshr i32 %77, %81		; <i32> [#uses=1]
@@ -154,34 +154,34 @@ bb223:		; preds = %bb222, %bb215
 	zext i1 %82 to i8		; <i8>:83 [#uses=1]
 	tail call i32 @func_25( i8 zeroext  %83 ) nounwind 		; <i32>:84 [#uses=1]
 	xor i32 %84, 1		; <i32>:85 [#uses=1]
-	load i32, i32* @g_197, align 4		; <i32>:86 [#uses=1]
+	load i32, ptr @g_197, align 4		; <i32>:86 [#uses=1]
 	add i32 %86, 1		; <i32>:87 [#uses=1]
 	add i32 %87, %85		; <i32>:88 [#uses=1]
 	icmp ugt i32 %76, %88		; <i1>:89 [#uses=1]
 	br i1 %89, label %bb241, label %bb311
 
 bb241:		; preds = %bb223
-	store i16 -9, i16* @g_221, align 2
+	store i16 -9, ptr @g_221, align 2
 	udiv i32 %p_52, 1538244727		; <i32>:90 [#uses=1]
-	load i32, i32* @g_207, align 4		; <i32>:91 [#uses=1]
+	load i32, ptr @g_207, align 4		; <i32>:91 [#uses=1]
 	sub i32 %91, %90		; <i32>:92 [#uses=1]
-	load i32, i32* @g_14, align 4		; <i32>:93 [#uses=1]
+	load i32, ptr @g_14, align 4		; <i32>:93 [#uses=1]
 	trunc i32 %93 to i16		; <i16>:94 [#uses=1]
 	trunc i32 %p_46 to i16		; <i16>:95 [#uses=2]
 	sub i16 %94, %95		; <i16>:96 [#uses=1]
-	load i32, i32* @g_197, align 4		; <i32>:97 [#uses=1]
+	load i32, ptr @g_197, align 4		; <i32>:97 [#uses=1]
 	trunc i32 %97 to i16		; <i16>:98 [#uses=1]
 	tail call i32 @func_55( i32 -346178830, i16 zeroext  %98, i16 zeroext  %95 ) nounwind 		; <i32>:99 [#uses=0]
 	zext i16 %p_48 to i32		; <i32>:100 [#uses=1]
-	load i8, i8* @g_247, align 1		; <i8>:101 [#uses=1]
+	load i8, ptr @g_247, align 1		; <i8>:101 [#uses=1]
 	zext i8 %101 to i32		; <i32>:102 [#uses=1]
 	sub i32 %100, %102		; <i32>:103 [#uses=1]
 	tail call i32 @func_55( i32 %103, i16 zeroext  -2972, i16 zeroext  %96 ) nounwind 		; <i32>:104 [#uses=0]
 	xor i32 %92, 2968		; <i32>:105 [#uses=1]
-	load i32, i32* @g_197, align 4		; <i32>:106 [#uses=1]
+	load i32, ptr @g_197, align 4		; <i32>:106 [#uses=1]
 	icmp ugt i32 %105, %106		; <i1>:107 [#uses=1]
 	zext i1 %107 to i32		; <i32>:108 [#uses=1]
-	store i32 %108, i32* @g_33, align 4
+	store i32 %108, ptr @g_33, align 4
 	br label %bb248
 
 bb248:		; preds = %bb284, %bb241
@@ -194,18 +194,18 @@ bb248:		; preds = %bb284, %bb241
 	br i1 %110, label %bb272.thread, label %bb255.thread
 
 bb272.thread:		; preds = %bb248
-	store i32 1, i32* @g_82
-	load i16, i16* @g_267, align 2		; <i16>:111 [#uses=1]
+	store i32 1, ptr @g_82
+	load i16, ptr @g_267, align 2		; <i16>:111 [#uses=1]
 	icmp eq i16 %111, 0		; <i1>:112 [#uses=1]
 	br i1 %112, label %bb311.loopexit.split, label %bb268
 
 bb255.thread:		; preds = %bb248
-	load i32, i32* @g_260, align 4		; <i32>:113 [#uses=1]
+	load i32, ptr @g_260, align 4		; <i32>:113 [#uses=1]
 	sub i32 %113, %p_52		; <i32>:114 [#uses=1]
 	and i32 %114, -20753		; <i32>:115 [#uses=1]
 	icmp ne i32 %115, 0		; <i1>:116 [#uses=1]
 	zext i1 %116 to i16		; <i16>:117 [#uses=1]
-	store i16 %117, i16* @g_221, align 2
+	store i16 %117, ptr @g_221, align 2
 	br label %bb284
 
 bb268:		; preds = %bb268, %bb272.thread
@@ -219,11 +219,11 @@ bb268:		; preds = %bb268, %bb272.thread
 	br i1 %121, label %bb268, label %bb274.split
 
 bb274.split:		; preds = %bb268
-	store i32 %120, i32* @g_82
+	store i32 %120, ptr @g_82
 	br i1 %50, label %bb279, label %bb276
 
 bb276:		; preds = %bb274.split
-	store i16 0, i16* @g_222, align 2
+	store i16 0, ptr @g_222, align 2
 	br label %bb284
 
 bb279:		; preds = %bb274.split
@@ -237,7 +237,7 @@ bb284:		; preds = %bb279, %bb276, %bb255.thread
 	%p_49_addr.0 = phi i32 [ %p_49_addr.1.reg2mem.0, %bb279 ], [ %p_49_addr.1.reg2mem.0, %bb276 ], [ 0, %bb255.thread ]		; <i32> [#uses=1]
 	%p_48_addr.1 = phi i16 [ %124, %bb279 ], [ %118, %bb276 ], [ %p_48_addr.2.reg2mem.0, %bb255.thread ]		; <i16> [#uses=1]
 	%p_45_addr.0 = phi i32 [ %p_45_addr.1.reg2mem.0, %bb279 ], [ %p_45_addr.1.reg2mem.0, %bb276 ], [ 8, %bb255.thread ]		; <i32> [#uses=3]
-	load i32, i32* @g_43, align 4		; <i32>:125 [#uses=1]
+	load i32, ptr @g_43, align 4		; <i32>:125 [#uses=1]
 	trunc i32 %125 to i8		; <i8>:126 [#uses=1]
 	tail call i32 @func_116( i8 zeroext  %126 ) nounwind 		; <i32>:127 [#uses=0]
 	lshr i32 65255, %p_45_addr.0		; <i32>:128 [#uses=1]
@@ -245,7 +245,7 @@ bb284:		; preds = %bb279, %bb276, %bb255.thread
 	%.op = lshr i32 %128, 31		; <i32> [#uses=1]
 	%.op.op = xor i32 %.op, 1		; <i32> [#uses=1]
 	%.354..lobit.not = select i1 %129, i32 1, i32 %.op.op		; <i32> [#uses=1]
-	load i16, i16* @g_39, align 2		; <i16>:130 [#uses=1]
+	load i16, ptr @g_39, align 2		; <i16>:130 [#uses=1]
 	zext i16 %130 to i32		; <i32>:131 [#uses=1]
 	icmp slt i32 %.354..lobit.not, %131		; <i1>:132 [#uses=1]
 	zext i1 %132 to i32		; <i32>:133 [#uses=1]
@@ -258,7 +258,7 @@ bb307:		; preds = %bb284
 	ret i32 %40
 
 bb311.loopexit.split:		; preds = %bb272.thread
-	store i32 1, i32* @g_82
+	store i32 1, ptr @g_82
 	ret i32 1
 
 bb311:		; preds = %bb223, %bb202

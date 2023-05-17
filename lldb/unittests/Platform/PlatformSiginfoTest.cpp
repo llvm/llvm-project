@@ -9,6 +9,7 @@
 #include "gtest/gtest.h"
 
 #include <initializer_list>
+#include <optional>
 #include <tuple>
 
 #include "Plugins/Platform/FreeBSD/PlatformFreeBSD.h"
@@ -21,7 +22,6 @@
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/ArchSpec.h"
-#include "lldb/Utility/Reproducer.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -38,7 +38,6 @@ public:
   CompilerType siginfo_type;
 
   void SetUp() override {
-    llvm::cantFail(Reproducer::Initialize(ReproducerMode::Off, llvm::None));
     platform_freebsd::PlatformFreeBSD::Initialize();
     platform_linux::PlatformLinux::Initialize();
     platform_netbsd::PlatformNetBSD::Initialize();
@@ -48,7 +47,6 @@ public:
     platform_netbsd::PlatformNetBSD::Terminate();
     platform_linux::PlatformLinux::Terminate();
     platform_freebsd::PlatformFreeBSD::Terminate();
-    Reproducer::Terminate();
   }
 
   typedef std::tuple<const char *, uint64_t, uint64_t> field_tuple;
@@ -70,7 +68,7 @@ public:
     }
 
     EXPECT_EQ(total_offset, offset * 8);
-    EXPECT_EQ(field_type.GetByteSize(nullptr), llvm::Optional<uint64_t>(size));
+    EXPECT_EQ(field_type.GetByteSize(nullptr), std::optional<uint64_t>(size));
   }
 
   void ExpectFields(const CompilerType &container,

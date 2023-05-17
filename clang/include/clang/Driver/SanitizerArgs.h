@@ -30,12 +30,15 @@ class SanitizerArgs {
   std::vector<std::string> SystemIgnorelistFiles;
   std::vector<std::string> CoverageAllowlistFiles;
   std::vector<std::string> CoverageIgnorelistFiles;
+  std::vector<std::string> BinaryMetadataIgnorelistFiles;
   int CoverageFeatures = 0;
+  int BinaryMetadataFeatures = 0;
   int MsanTrackOrigins = 0;
   bool MsanUseAfterDtor = true;
-  bool MsanParamRetval = false;
+  bool MsanParamRetval = true;
   bool CfiCrossDso = false;
   bool CfiICallGeneralizePointers = false;
+  bool CfiICallNormalizeIntegers = false;
   bool CfiCanonicalJumpTables = false;
   int AsanFieldPadding = 0;
   bool SharedRuntime = false;
@@ -99,16 +102,25 @@ public:
   bool needsStatsRt() const { return Stats; }
   bool needsScudoRt() const { return Sanitizers.has(SanitizerKind::Scudo); }
 
-  bool hasMemTag() const { return hasMemtagHeap() || hasMemtagStack(); }
+  bool hasMemTag() const {
+    return hasMemtagHeap() || hasMemtagStack() || hasMemtagGlobals();
+  }
   bool hasMemtagHeap() const {
     return Sanitizers.has(SanitizerKind::MemtagHeap);
   }
   bool hasMemtagStack() const {
     return Sanitizers.has(SanitizerKind::MemtagStack);
   }
+  bool hasMemtagGlobals() const {
+    return Sanitizers.has(SanitizerKind::MemtagGlobals);
+  }
   const std::string &getMemtagMode() const {
     assert(!MemtagMode.empty());
     return MemtagMode;
+  }
+
+  bool hasShadowCallStack() const {
+    return Sanitizers.has(SanitizerKind::ShadowCallStack);
   }
 
   bool requiresPIE() const;

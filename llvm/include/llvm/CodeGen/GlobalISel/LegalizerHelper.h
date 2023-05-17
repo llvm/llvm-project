@@ -21,6 +21,7 @@
 #define LLVM_CODEGEN_GLOBALISEL_LEGALIZERHELPER_H
 
 #include "llvm/CodeGen/GlobalISel/CallLowering.h"
+#include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -56,6 +57,7 @@ private:
   MachineRegisterInfo &MRI;
   const LegalizerInfo &LI;
   const TargetLowering &TLI;
+  GISelKnownBits *KB;
 
 public:
   enum LegalizeResult {
@@ -74,11 +76,13 @@ public:
   /// Expose LegalizerInfo so the clients can re-use.
   const LegalizerInfo &getLegalizerInfo() const { return LI; }
   const TargetLowering &getTargetLowering() const { return TLI; }
+  GISelKnownBits *getKnownBits() const { return KB; }
 
   LegalizerHelper(MachineFunction &MF, GISelChangeObserver &Observer,
                   MachineIRBuilder &B);
   LegalizerHelper(MachineFunction &MF, const LegalizerInfo &LI,
-                  GISelChangeObserver &Observer, MachineIRBuilder &B);
+                  GISelChangeObserver &Observer, MachineIRBuilder &B,
+                  GISelKnownBits *KB = nullptr);
 
   /// Replace \p MI by a sequence of legal instructions that can implement the
   /// same operation. Note that this means \p MI may be deleted, so any iterator
@@ -324,11 +328,11 @@ public:
                                                            unsigned TypeIdx,
                                                            LLT NarrowTy);
 
+  /// Equalize source and destination vector sizes of G_SHUFFLE_VECTOR.
+  LegalizeResult equalizeVectorShuffleLengths(MachineInstr &MI);
+
   LegalizeResult reduceLoadStoreWidth(GLoadStore &MI, unsigned TypeIdx,
                                       LLT NarrowTy);
-
-  LegalizeResult fewerElementsVectorSextInReg(MachineInstr &MI, unsigned TypeIdx,
-                                              LLT NarrowTy);
 
   LegalizeResult narrowScalarShiftByConstant(MachineInstr &MI, const APInt &Amt,
                                              LLT HalfTy, LLT ShiftAmtTy);
@@ -362,6 +366,7 @@ public:
   LegalizeResult bitcastInsertVectorElt(MachineInstr &MI, unsigned TypeIdx,
                                         LLT CastTy);
 
+  LegalizeResult lowerFConstant(MachineInstr &MI);
   LegalizeResult lowerBitcast(MachineInstr &MI);
   LegalizeResult lowerLoad(GAnyLoad &MI);
   LegalizeResult lowerStore(GStore &MI);
@@ -381,6 +386,8 @@ public:
   LegalizeResult lowerFPTRUNC_F64_TO_F16(MachineInstr &MI);
   LegalizeResult lowerFPTRUNC(MachineInstr &MI);
   LegalizeResult lowerFPOWI(MachineInstr &MI);
+
+  LegalizeResult lowerISFPCLASS(MachineInstr &MI);
 
   LegalizeResult lowerMinMax(MachineInstr &MI);
   LegalizeResult lowerFCopySign(MachineInstr &MI);

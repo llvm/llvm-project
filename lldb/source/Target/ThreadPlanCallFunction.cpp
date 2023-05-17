@@ -104,7 +104,10 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_ignore_breakpoints(options.DoesIgnoreBreakpoints()),
       m_debug_execution(options.GetDebug()),
       m_trap_exceptions(options.GetTrapExceptions()), m_function_addr(function),
-      m_function_sp(0), m_takedown_done(false),
+      m_start_addr(), m_function_sp(0), m_subplan_sp(),
+      m_cxx_language_runtime(nullptr), m_objc_language_runtime(nullptr),
+      m_stored_thread_state(), m_real_stop_info_sp(), m_constructor_errors(),
+      m_return_valobj_sp(), m_takedown_done(false),
       m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
       m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(return_type) {
@@ -134,7 +137,10 @@ ThreadPlanCallFunction::ThreadPlanCallFunction(
       m_ignore_breakpoints(options.DoesIgnoreBreakpoints()),
       m_debug_execution(options.GetDebug()),
       m_trap_exceptions(options.GetTrapExceptions()), m_function_addr(function),
-      m_function_sp(0), m_takedown_done(false),
+      m_start_addr(), m_function_sp(0), m_subplan_sp(),
+      m_cxx_language_runtime(nullptr), m_objc_language_runtime(nullptr),
+      m_stored_thread_state(), m_real_stop_info_sp(), m_constructor_errors(),
+      m_return_valobj_sp(), m_takedown_done(false),
       m_should_clear_objc_exception_bp(false),
       m_should_clear_cxx_exception_bp(false),
       m_stop_address(LLDB_INVALID_ADDRESS), m_return_type(CompilerType()) {}
@@ -157,7 +163,7 @@ void ThreadPlanCallFunction::ReportRegisterState(const char *message) {
          reg_idx < num_registers; ++reg_idx) {
       const RegisterInfo *reg_info = reg_ctx->GetRegisterInfoAtIndex(reg_idx);
       if (reg_ctx->ReadRegister(reg_info, reg_value)) {
-        DumpRegisterValue(reg_value, &strm, reg_info, true, false,
+        DumpRegisterValue(reg_value, strm, *reg_info, true, false,
                           eFormatDefault);
         strm.EOL();
       }

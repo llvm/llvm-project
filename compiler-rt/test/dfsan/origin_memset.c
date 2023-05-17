@@ -5,8 +5,6 @@
 // RUN: %clang_dfsan -gmlt -DOFFSET=10 -mllvm -dfsan-track-origins=1 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s --check-prefix=CHECK10 < %t.out
-//
-// REQUIRES: x86_64-target-arch
 
 #include <sanitizer/dfsan_interface.h>
 

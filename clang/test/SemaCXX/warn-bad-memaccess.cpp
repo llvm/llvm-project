@@ -152,7 +152,7 @@ namespace N {
 namespace recursive_class {
 struct S {
   S v;
-  // expected-error@-1{{field has incomplete type 'recursive_class::S'}}
+  // expected-error@-1{{field has incomplete type 'S'}}
   // expected-note@-3{{definition of 'recursive_class::S' is not complete until the closing '}'}}
 } a;
 

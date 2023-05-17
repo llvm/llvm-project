@@ -13,7 +13,7 @@
 ;     A[0] = 0.0;
 ; }
 ;
-define void @notredundant_region(i32 %n, double* noalias nonnull %A) {
+define void @notredundant_region(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -24,16 +24,16 @@ for:
 
 
     region_entry:
-      %val = load double, double* %A
+      %val = load double, ptr %A
       %cmp = fcmp oeq double %val, 0.0
       br i1 %cmp, label %region_true, label %region_false
 
     region_true:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %region_exit
 
     region_false:
-      store double 0.0, double* %A
+      store double 0.0, ptr %A
       br label %region_exit
 
     region_exit:

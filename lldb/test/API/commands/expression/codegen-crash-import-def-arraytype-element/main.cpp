@@ -11,7 +11,7 @@ struct A {
 struct B {
   // When we import the all the FieldDecl we need to check if we have an
   // ArrayType and then check if the ElementType is a RecordDecl and if so
-  // import the defintion. Otherwise during codegen we will attempt to layout A
+  // import the definition. Otherwise during codegen we will attempt to layout A
   // but won't be able to.
   A s1[2];
   A s2[2][2][3];

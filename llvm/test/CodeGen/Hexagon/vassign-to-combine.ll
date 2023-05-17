@@ -16,10 +16,10 @@ declare <64 x i32> @llvm.hexagon.V6.vadduhsat.dv.128B(<64 x i32>, <64 x i32>) #0
 declare <64 x i32> @llvm.hexagon.V6.vaddubh.128B(<32 x i32>, <32 x i32>) #0
 declare <64 x i32> @llvm.hexagon.V6.vmpyub.128B(<32 x i32>, i32) #0
 
-define void @f0(<32 x i32>* %a0, <32 x i32>* %a1) local_unnamed_addr #1 {
+define void @f0(ptr %a0, ptr %a1) local_unnamed_addr #1 {
 b0:
-  %v0 = load <32 x i32>, <32 x i32>* %a0, align 128
-  %v1 = load <32 x i32>, <32 x i32>* %a1, align 128
+  %v0 = load <32 x i32>, ptr %a0, align 128
+  %v1 = load <32 x i32>, ptr %a1, align 128
   br i1 undef, label %b2, label %b1
 
 b1:                                               ; preds = %b0
@@ -32,7 +32,7 @@ b1:                                               ; preds = %b0
   %v8 = tail call <64 x i32> @llvm.hexagon.V6.vaddh.dv.128B(<64 x i32> undef, <64 x i32> %v7) #1
   %v9 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %v8) #1
   %v10 = tail call <32 x i32> @llvm.hexagon.V6.vsathub.128B(<32 x i32> %v9, <32 x i32> undef) #1
-  store <32 x i32> %v10, <32 x i32>* %a0, align 128
+  store <32 x i32> %v10, ptr %a0, align 128
   br label %b2
 
 b2:                                               ; preds = %b1, %b0
@@ -47,7 +47,7 @@ b2:                                               ; preds = %b1, %b0
   %v19 = tail call <64 x i32> @llvm.hexagon.V6.vaddh.dv.128B(<64 x i32> undef, <64 x i32> %v18) #1
   %v20 = tail call <32 x i32> @llvm.hexagon.V6.hi.128B(<64 x i32> %v19) #1
   %v21 = tail call <32 x i32> @llvm.hexagon.V6.vsathub.128B(<32 x i32> %v20, <32 x i32> undef) #1
-  store <32 x i32> %v21, <32 x i32>* %a1, align 128
+  store <32 x i32> %v21, ptr %a1, align 128
   ret void
 }
 

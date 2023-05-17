@@ -105,6 +105,7 @@ void AsanApplyToGlobals(globals_op_fptr op, const void *needle);
 
 void AsanOnDeadlySignal(int, void *siginfo, void *context);
 
+void SignContextStack(void *context);
 void ReadContextStack(void *context, uptr *stack, uptr *ssize);
 void StopInitOrderChecking();
 
@@ -132,6 +133,7 @@ void InstallAtExitCheckLeaks();
 extern int asan_inited;
 // Used to avoid infinite recursion in __asan_init().
 extern bool asan_init_is_running;
+extern bool replace_intrin_cached;
 extern void (*death_callback)(void);
 // These magic values are written to shadow for better error
 // reporting.

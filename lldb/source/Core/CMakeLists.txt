@@ -19,6 +19,7 @@ if (LLDB_ENABLE_CURSES)
   endif()
 endif()
 
+# TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbCore
 add_lldb_library(lldbCore
   Address.cpp
   AddressRange.cpp
@@ -35,7 +36,6 @@ add_lldb_library(lldbCore
   DynamicLoader.cpp
   EmulateInstruction.cpp
   FileLineResolver.cpp
-  FileSpecList.cpp
   FormatEntity.cpp
   Highlighter.cpp
   IOHandler.cpp
@@ -54,6 +54,7 @@ add_lldb_library(lldbCore
   SourceManager.cpp
   StreamAsynchronousIO.cpp
   StreamFile.cpp
+  ThreadedCommunication.cpp
   UserSettingsController.cpp
   Value.cpp
   ValueObject.cpp
@@ -93,6 +94,7 @@ add_lldb_library(lldbCore
   LINK_COMPONENTS
     Support
     Demangle
+    TargetParser
   )
 
 add_dependencies(lldbCore

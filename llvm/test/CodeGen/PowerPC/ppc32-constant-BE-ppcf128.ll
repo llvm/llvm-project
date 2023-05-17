@@ -7,7 +7,7 @@ target triple = "powerpc-buildroot-linux-gnu"
 
 define i32 @main() #0 {
 entry:
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i32 0, i32 0), ppc_fp128 0xM3FF00000000000000000000000000000)
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, ppc_fp128 0xM3FF00000000000000000000000000000)
   ret i32 0
 }
 
@@ -18,7 +18,7 @@ entry:
 ; CHECK: li 5, 0
 ; CHECK: li 7, 0
 
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)
 
 attributes #0 = { "use-soft-float"="true" }
 

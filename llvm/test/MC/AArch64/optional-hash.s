@@ -1,6 +1,6 @@
 // PR18929
 // RUN: llvm-mc < %s -triple=aarch64-linux-gnueabi -mattr=+fp-armv8,+neon -filetype=obj -o - \
-// RUN: | llvm-objdump -d --arch=arm64 - | FileCheck %s
+// RUN: | llvm-objdump --no-print-imm-hex -d --arch=arm64 - | FileCheck %s
 
     .text
 // CHECK: cmp w0, #123

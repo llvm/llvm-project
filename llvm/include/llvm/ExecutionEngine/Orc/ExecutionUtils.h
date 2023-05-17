@@ -18,6 +18,7 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
+#include "llvm/ExecutionEngine/Orc/ObjectLinkingLayer.h"
 #include "llvm/ExecutionEngine/Orc/Shared/OrcError.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/Object/Archive.h"
@@ -34,6 +35,10 @@ class GlobalVariable;
 class Function;
 class Module;
 class Value;
+
+namespace object {
+class MachOUniversalBinary;
+}
 
 namespace orc {
 
@@ -175,10 +180,6 @@ public:
   void runDestructors();
 
 protected:
-  template <typename PtrTy> JITTargetAddress toTargetAddress(PtrTy *P) {
-    return static_cast<JITTargetAddress>(reinterpret_cast<uintptr_t>(P));
-  }
-
   using DestructorPtr = void (*)(void *);
   using CXXDestructorDataPair = std::pair<DestructorPtr, void *>;
   using CXXDestructorDataPairList = std::vector<CXXDestructorDataPair>;
@@ -266,26 +267,36 @@ public:
   /// Try to create a StaticLibraryDefinitionGenerator from the given path.
   ///
   /// This call will succeed if the file at the given path is a static library
-  /// is a valid archive, otherwise it will return an error.
+  /// or a MachO universal binary containing a static library that is compatible
+  /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Load(ObjectLayer &L, const char *FileName,
        GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
-  /// Try to create a StaticLibraryDefinitionGenerator from the given path.
-  ///
-  /// This call will succeed if the file at the given path is a static library
-  /// or a MachO universal binary containing a static library that is compatible
-  /// with the given triple. Otherwise it will return an error.
+  /// Try to create a StaticLibrarySearchGenerator from the given memory buffer
+  /// and Archive object.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
-  Load(ObjectLayer &L, const char *FileName, const Triple &TT,
-       GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
+  Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+         std::unique_ptr<object::Archive> Archive,
+         GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
 
   /// Try to create a StaticLibrarySearchGenerator from the given memory buffer.
   /// This call will succeed if the buffer contains a valid archive, otherwise
   /// it will return an error.
+  ///
+  /// This call will succeed if the buffer contains a valid static library or a
+  /// MachO universal binary containing a static library that is compatible
+  /// with the ExecutionSession's triple. Otherwise it will return an error.
   static Expected<std::unique_ptr<StaticLibraryDefinitionGenerator>>
   Create(ObjectLayer &L, std::unique_ptr<MemoryBuffer> ArchiveBuffer,
          GetObjectFileInterface GetObjFileInterface = GetObjectFileInterface());
+
+  /// Returns a list of filenames of dynamic libraries that this archive has
+  /// imported. This class does not load these libraries by itself. User is
+  /// responsible for making sure these libraries are avaliable to the JITDylib.
+  const std::set<std::string> &getImportedDynamicLibraries() const {
+    return ImportedDynamicLibraries;
+  }
 
   Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                       JITDylibLookupFlags JDLookupFlags,
@@ -294,13 +305,54 @@ public:
 private:
   StaticLibraryDefinitionGenerator(ObjectLayer &L,
                                    std::unique_ptr<MemoryBuffer> ArchiveBuffer,
+                                   std::unique_ptr<object::Archive> Archive,
                                    GetObjectFileInterface GetObjFileInterface,
                                    Error &Err);
+  Error buildObjectFilesMap();
+
+  static Expected<std::pair<size_t, size_t>>
+  getSliceRangeForArch(object::MachOUniversalBinary &UB, const Triple &TT);
 
   ObjectLayer &L;
   GetObjectFileInterface GetObjFileInterface;
+  std::set<std::string> ImportedDynamicLibraries;
   std::unique_ptr<MemoryBuffer> ArchiveBuffer;
   std::unique_ptr<object::Archive> Archive;
+  DenseMap<SymbolStringPtr, MemoryBufferRef> ObjectFilesMap;
+};
+
+/// A utility class to create COFF dllimport GOT symbols (__imp_*) and PLT
+/// stubs.
+///
+/// If an instance of this class is attached to a JITDylib as a fallback
+/// definition generator, PLT stubs and dllimport __imp_ symbols will be
+/// generated for external symbols found outside the given jitdylib. Currently
+/// only supports x86_64 architecture.
+class DLLImportDefinitionGenerator : public DefinitionGenerator {
+public:
+  /// Creates a DLLImportDefinitionGenerator instance.
+  static std::unique_ptr<DLLImportDefinitionGenerator>
+  Create(ExecutionSession &ES, ObjectLinkingLayer &L);
+
+  Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
+                      JITDylibLookupFlags JDLookupFlags,
+                      const SymbolLookupSet &Symbols) override;
+
+private:
+  DLLImportDefinitionGenerator(ExecutionSession &ES, ObjectLinkingLayer &L)
+      : ES(ES), L(L) {}
+
+  static Expected<unsigned> getTargetPointerSize(const Triple &TT);
+  static Expected<support::endianness> getTargetEndianness(const Triple &TT);
+  Expected<std::unique_ptr<jitlink::LinkGraph>>
+  createStubsGraph(const SymbolMap &Resolved);
+
+  static StringRef getImpPrefix() { return "__imp_"; }
+
+  static StringRef getSectionName() { return "$__DLLIMPORT_STUBS"; }
+
+  ExecutionSession &ES;
+  ObjectLinkingLayer &L;
 };
 
 } // end namespace orc

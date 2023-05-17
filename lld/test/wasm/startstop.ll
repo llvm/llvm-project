@@ -9,15 +9,15 @@ target triple = "wasm32-unknown-unknown"
 @foo = global i32 3, section "mysection", align 4
 @bar = global i32 4, section "mysection", align 4
 
-@__start_mysection = external global i8*
-@__stop_mysection = external global i8*
+@__start_mysection = external global ptr
+@__stop_mysection = external global ptr
 
-define i8** @get_start() {
-  ret i8** @__start_mysection
+define ptr @get_start() {
+  ret ptr @__start_mysection
 }
 
-define i8** @get_end() {
-  ret i8** @__stop_mysection
+define ptr @get_end() {
+  ret ptr @__stop_mysection
 }
 
 define void @_start()  {

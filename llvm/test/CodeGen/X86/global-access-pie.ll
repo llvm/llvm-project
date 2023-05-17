@@ -19,7 +19,7 @@ define dso_local i32 @my_access_global_a() #0 {
 ; X64:       movl a(%rip), %eax
 
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   ret i32 %0
 }
 
@@ -34,7 +34,7 @@ define dso_local i32 @my_access_global_b() #0 {
 ; X64:       movl b(%rip), %eax
 
 entry:
-  %0 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @b, align 4
   ret i32 %0
 }
 
@@ -49,7 +49,7 @@ define dso_local i32 @my_access_global_c() #0 {
 ; X64:       movl c(%rip), %eax
 
 entry:
-  %0 = load i32, i32* @c, align 4
+  %0 = load i32, ptr @c, align 4
   ret i32 %0
 }
 
@@ -66,7 +66,7 @@ define dso_local i32 @my_access_global_load_d() #0 {
 ; X64-NEXT:  movl (%rax), %eax
 
 entry:
-  %0 = load i32, i32* @d, align 4
+  %0 = load i32, ptr @d, align 4
   ret i32 %0
 }
 
@@ -82,12 +82,12 @@ define dso_local i32 @my_access_global_store_d() #0 {
 ; X64-NEXT:  movl $2, (%rax)
 
 entry:
-  store i32 2, i32* @d, align 4
+  store i32 2, ptr @d, align 4
   ret i32 0
 }
 
 ; External Linkage, function pointer access.
-declare i32 @access_fp(i32 ()*)
+declare i32 @access_fp(ptr)
 declare i32 @foo()
 
 define dso_local i32 @my_access_fp_foo() #0 {
@@ -98,7 +98,7 @@ define dso_local i32 @my_access_fp_foo() #0 {
 ; X64:       movq foo@GOTPCREL(%rip), %rdi
 
 entry:
-  %call = call i32 @access_fp(i32 ()* @foo)
+  %call = call i32 @access_fp(ptr @foo)
   ret i32 %call
 }
 
@@ -119,7 +119,7 @@ define dso_local i32 @my_access_fp_bar() #0 {
 ; X64:       leaq bar(%rip), %rdi
 
 entry:
-  %call = call i32 @access_fp(i32 ()* @bar)
+  %call = call i32 @access_fp(ptr @bar)
   ret i32 %call
 }
 

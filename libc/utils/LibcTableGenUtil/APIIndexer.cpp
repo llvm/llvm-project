@@ -83,7 +83,7 @@ void APIIndexer::indexStandardSpecDef(llvm::Record *StandardSpec) {
   auto HeaderSpecList = StandardSpec->getValueAsListOfDefs("Headers");
   for (llvm::Record *HeaderSpec : HeaderSpecList) {
     llvm::StringRef Header = HeaderSpec->getValueAsString("Name");
-    if (!StdHeader.hasValue() || Header == StdHeader) {
+    if (!StdHeader.has_value() || Header == StdHeader) {
       PublicHeaders.emplace(Header);
       auto MacroSpecList = HeaderSpec->getValueAsListOfDefs("Macros");
       // TODO: Trigger a fatal error on duplicate specs.
@@ -163,7 +163,7 @@ void APIIndexer::index(llvm::RecordKeeper &Records) {
     if (isaStandardSpec(Def))
       indexStandardSpecDef(Def);
     if (isaPublicAPI(Def)) {
-      if (!StdHeader.hasValue() ||
+      if (!StdHeader.has_value() ||
           Def->getValueAsString("HeaderName") == StdHeader)
         indexPublicAPIDef(Def);
     }

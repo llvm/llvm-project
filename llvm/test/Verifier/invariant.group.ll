@@ -6,8 +6,8 @@
 ; CHECK-NEXT: ret void
 define void @f() {
   %a = alloca i32, !invariant.group !0
-  %b = load i32, i32* %a, !invariant.group !0
-  store i32 43, i32* %a, !invariant.group !0
+  %b = load i32, ptr %a, !invariant.group !0
+  store i32 43, ptr %a, !invariant.group !0
   ret void, !invariant.group !0
 }
 

@@ -1,4 +1,4 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 define i32 @fn() {
 entry:
@@ -15,7 +15,7 @@ define i32 @test_nested2(i32 %tnr) {
 
 entry:
   %res = alloca i32, align 4
-  store volatile i32 0, i32* %res, align 4
+  store volatile i32 0, ptr %res, align 4
   %call = call i32 @fn()
   br label %for.cond
 
@@ -39,9 +39,9 @@ for.cond.cleanup3:                                ; preds = %for.cond1
   br label %for.end
 
 for.body4:                                        ; preds = %for.cond1
-  %0 = load volatile i32, i32* %res, align 4
+  %0 = load volatile i32, ptr %res, align 4
   %inc = add nsw i32 %0, 1
-  store volatile i32 %inc, i32* %res, align 4
+  store volatile i32 %inc, ptr %res, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body4
@@ -56,7 +56,7 @@ for.inc6:                                         ; preds = %for.end
   br label %for.cond
 
 for.end8:                                         ; preds = %for.cond.cleanup
-  %1 = load volatile i32, i32* %res, align 4
+  %1 = load volatile i32, ptr %res, align 4
   %cmp9 = icmp eq i32 %1, 45
   %conv = zext i1 %cmp9 to i32
   ret i32 %conv

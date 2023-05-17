@@ -30,3 +30,8 @@ config.environment['LD_LIBRARY_PATH'] = path
 
 # Propagate PYTHON_EXECUTABLE into the environment
 #config.environment['PYTHON_EXECUTABLE'] = sys.executable
+
+# To modify the default target triple for flang tests.
+if config.flang_test_triple:
+    config.target_triple = config.flang_test_triple
+    config.environment[config.llvm_target_triple_env] = config.flang_test_triple

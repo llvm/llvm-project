@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class AArch64LinuxMTEMemoryRegionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessArch("aarch64")

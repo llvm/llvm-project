@@ -22,6 +22,27 @@
 
 namespace llvm {
 
+// This namespace holds all of the target specific flags that instruction info
+// tracks.
+namespace LoongArchII {
+enum {
+  MO_None,
+  MO_CALL,
+  MO_CALL_PLT,
+  MO_PCREL_HI,
+  MO_PCREL_LO,
+  MO_GOT_PC_HI,
+  MO_GOT_PC_LO,
+  MO_LE_HI,
+  MO_LE_LO,
+  MO_IE_PC_HI,
+  MO_IE_PC_LO,
+  MO_LD_PC_HI,
+  MO_GD_PC_HI,
+  // TODO: Add more flags.
+};
+} // end namespace LoongArchII
+
 namespace LoongArchABI {
 enum ABI {
   ABI_ILP32S,
@@ -33,12 +54,13 @@ enum ABI {
   ABI_Unknown
 };
 
+ABI computeTargetABI(const Triple &TT, StringRef ABIName);
 ABI getTargetABI(StringRef ABIName);
 
 // Returns the register used to hold the stack pointer after realignment.
 MCRegister getBPReg();
-} // namespace LoongArchABI
+} // end namespace LoongArchABI
 
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_MCTARGETDESC_LOONGARCHBASEINFO_H

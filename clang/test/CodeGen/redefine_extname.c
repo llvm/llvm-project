@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple=i386-pc-solaris2.11 -w -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple=i386-pc-solaris2.11 -w -emit-llvm %s -o - | FileCheck %s
 
 #pragma redefine_extname fake real
 #pragma redefine_extname name alias
@@ -12,7 +12,7 @@ int fish(void) { return fake() + __PRAGMA_REDEFINE_EXTNAME + name; }
 // Check that the call to fake() is emitted as a call to real()
 // CHECK:   call i32 @real()
 // Check that this also works with variables names
-// CHECK:   load i32, i32* @alias
+// CHECK:   load i32, ptr @alias
 
 // This is a case when redefenition is deferred *and* we have a local of the
 // same name. PR23923.
@@ -35,4 +35,4 @@ typedef unsigned long size_t;
 extern void *memcpy(void *, const void *, size_t);
 #pragma redefine_extname memcpy __GI_memcpy
 void *test_memcpy(void *dst, const void *src, size_t n) { return memcpy(dst, src, n); }
-// CHECK: call i8* @__GI_memcpy(
+// CHECK: call ptr @__GI_memcpy(

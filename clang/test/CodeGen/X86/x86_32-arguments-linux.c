@@ -1,23 +1,23 @@
-// RUN: %clang_cc1 -no-opaque-pointers -w -fblocks -triple i386-pc-linux-gnu -target-cpu pentium4 -emit-llvm -o %t %s
+// RUN: %clang_cc1 -w -fblocks -triple i386-pc-linux-gnu -target-cpu pentium4 -emit-llvm -o %t %s
 // RUN: FileCheck < %t %s
 
 // CHECK-LABEL: define{{.*}} void @f56(
-// CHECK: i8 noundef signext %a0, %struct.s56_0* noundef byval(%struct.s56_0) align 4 %a1,
-// CHECK: i64 noundef %a2.coerce, %struct.s56_1* noundef byval(%struct.s56_1) align 4 %0,
-// CHECK: <1 x double> noundef %a4, %struct.s56_2* noundef byval(%struct.s56_2) align 4 %1,
-// CHECK: <4 x i32> noundef %a6, %struct.s56_3* noundef byval(%struct.s56_3) align 4 %2,
-// CHECK: <2 x double> noundef %a8, %struct.s56_4* noundef byval(%struct.s56_4) align 4 %3,
-// CHECK: <8 x i32> noundef %a10, %struct.s56_5* noundef byval(%struct.s56_5) align 4 %4,
-// CHECK: <4 x double> noundef %a12, %struct.s56_6* noundef byval(%struct.s56_6) align 4 %5)
+// CHECK: i8 noundef signext %a0, ptr noundef byval(%struct.s56_0) align 4 %a1,
+// CHECK: i64 noundef %a2.coerce, ptr noundef byval(%struct.s56_1) align 4 %0,
+// CHECK: <1 x double> noundef %a4, ptr noundef byval(%struct.s56_2) align 4 %1,
+// CHECK: <4 x i32> noundef %a6, ptr noundef byval(%struct.s56_3) align 4 %2,
+// CHECK: <2 x double> noundef %a8, ptr noundef byval(%struct.s56_4) align 4 %3,
+// CHECK: <8 x i32> noundef %a10, ptr noundef byval(%struct.s56_5) align 4 %4,
+// CHECK: <4 x double> noundef %a12, ptr noundef byval(%struct.s56_6) align 4 %5)
 
 // CHECK: call void (i32, ...) @f56_0(i32 noundef 1,
-// CHECK: i32 noundef %{{.*}}, %struct.s56_0* noundef byval(%struct.s56_0) align 4 %{{[^ ]*}},
-// CHECK: i64 noundef %{{[^ ]*}}, %struct.s56_1* noundef byval(%struct.s56_1) align 4 %{{[^ ]*}},
-// CHECK: <1 x double> noundef %{{[^ ]*}}, %struct.s56_2* noundef byval(%struct.s56_2) align 4 %{{[^ ]*}},
-// CHECK: <4 x i32> noundef %{{[^ ]*}}, %struct.s56_3* noundef byval(%struct.s56_3) align 4 %{{[^ ]*}},
-// CHECK: <2 x double> noundef %{{[^ ]*}}, %struct.s56_4* noundef byval(%struct.s56_4) align 4 %{{[^ ]*}},
-// CHECK: <8 x i32> noundef %{{[^ ]*}}, %struct.s56_5* noundef byval(%struct.s56_5) align 4 %{{[^ ]*}},
-// CHECK: <4 x double> noundef %{{[^ ]*}}, %struct.s56_6* noundef byval(%struct.s56_6) align 4 %{{[^ ]*}})
+// CHECK: i32 noundef %{{.*}}, ptr noundef byval(%struct.s56_0) align 4 %{{[^ ]*}},
+// CHECK: i64 noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_1) align 4 %{{[^ ]*}},
+// CHECK: <1 x double> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_2) align 4 %{{[^ ]*}},
+// CHECK: <4 x i32> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_3) align 4 %{{[^ ]*}},
+// CHECK: <2 x double> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_4) align 4 %{{[^ ]*}},
+// CHECK: <8 x i32> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_5) align 4 %{{[^ ]*}},
+// CHECK: <4 x double> noundef %{{[^ ]*}}, ptr noundef byval(%struct.s56_6) align 4 %{{[^ ]*}})
 // CHECK: }
 //
 // <rdar://problem/7964854> [i386] clang misaligns long double in structures

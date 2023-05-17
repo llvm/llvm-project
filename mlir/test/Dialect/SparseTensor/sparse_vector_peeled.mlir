@@ -1,10 +1,10 @@
-// RUN: mlir-opt %s -sparsification="vectorization-strategy=2 vl=16" -scf-for-loop-peeling -canonicalize | \
+// RUN: mlir-opt %s --sparsification -cse -sparse-vectorization="vl=16" -scf-for-loop-peeling -canonicalize -cse | \
 // RUN:   FileCheck %s
 
 #SparseVector = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed" ],
-  pointerBitWidth = 32,
-  indexBitWidth = 32
+  posWidth = 32,
+  crdWidth = 32
 }>
 
 #trait_mul_s = {

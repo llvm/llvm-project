@@ -30,57 +30,57 @@ int main(int, char**)
     using weekday            = std::chrono::weekday;
     using year_month_weekday = std::chrono::year_month_weekday;
 
-    AssertComparisons2AreNoexcept<year_month_weekday>();
-    AssertComparisons2ReturnBool<year_month_weekday>();
+    AssertEqualityAreNoexcept<year_month_weekday>();
+    AssertEqualityReturnBool<year_month_weekday>();
 
     constexpr month January   = std::chrono::January;
     constexpr month February  = std::chrono::February;
     constexpr weekday Tuesday = std::chrono::Tuesday;
 
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, 1}},
         year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, 1}},
         true), "");
 
     // different day
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, 1}},
         year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, 2}},
         false), "");
 
     // different month
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, January,  weekday_indexed{Tuesday, 1}},
         year_month_weekday{year{1234}, February, weekday_indexed{Tuesday, 1}},
         false), "");
 
     // different year
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, 1}},
         year_month_weekday{year{1235}, January, weekday_indexed{Tuesday, 1}},
         false), "");
 
 
     // different month and day
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, January,  weekday_indexed{Tuesday, 1}},
         year_month_weekday{year{1234}, February, weekday_indexed{Tuesday, 2}},
         false), "");
 
     // different year and month
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, February, weekday_indexed{Tuesday, 1}},
         year_month_weekday{year{1235}, January,  weekday_indexed{Tuesday, 1}},
         false), "");
 
     // different year and day
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, 2}},
         year_month_weekday{year{1235}, January, weekday_indexed{Tuesday, 1}},
         false), "");
 
     // different year, month and day
-    static_assert( testComparisons2(
+    static_assert( testEquality(
         year_month_weekday{year{1234}, February, weekday_indexed{Tuesday, 2}},
         year_month_weekday{year{1235}, January,  weekday_indexed{Tuesday, 1}},
         false), "");
@@ -89,7 +89,7 @@ int main(int, char**)
     // same year, different days
     for (unsigned i = 1; i < 28; ++i)
         for (unsigned j = 1; j < 28; ++j)
-            assert((testComparisons2(
+            assert((testEquality(
                 year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, i}},
                 year_month_weekday{year{1234}, January, weekday_indexed{Tuesday, j}},
                 i == j)));
@@ -97,7 +97,7 @@ int main(int, char**)
     // same year, different months
     for (unsigned i = 1; i < 12; ++i)
         for (unsigned j = 1; j < 12; ++j)
-            assert((testComparisons2(
+            assert((testEquality(
                 year_month_weekday{year{1234}, month{i}, weekday_indexed{Tuesday, 1}},
                 year_month_weekday{year{1234}, month{j}, weekday_indexed{Tuesday, 1}},
                 i == j)));
@@ -105,7 +105,7 @@ int main(int, char**)
     // same month, different years
     for (int i = 1000; i < 2000; ++i)
         for (int j = 1000; j < 2000; ++j)
-        assert((testComparisons2(
+        assert((testEquality(
             year_month_weekday{year{i}, January, weekday_indexed{Tuesday, 1}},
             year_month_weekday{year{j}, January, weekday_indexed{Tuesday, 1}},
             i == j)));

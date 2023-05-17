@@ -45,8 +45,8 @@ define i8 @sub_zext_cmp_mask_narrower_result(i32 %x) {
 define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_same_size_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    subfic 3, 3, 27
+; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    xori 3, 3, 27
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -58,8 +58,8 @@ define i8 @add_zext_cmp_mask_same_size_result(i8 %x) {
 define i32 @add_zext_cmp_mask_wider_result(i8 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_wider_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    subfic 3, 3, 27
+; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    xori 3, 3, 27
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -71,8 +71,8 @@ define i32 @add_zext_cmp_mask_wider_result(i8 %x) {
 define i8 @add_zext_cmp_mask_narrower_result(i32 %x) {
 ; CHECK-LABEL: add_zext_cmp_mask_narrower_result:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    clrlwi 3, 3, 31
-; CHECK-NEXT:    subfic 3, 3, 43
+; CHECK-NEXT:    clrldi 3, 3, 63
+; CHECK-NEXT:    xori 3, 3, 43
 ; CHECK-NEXT:    blr
   %a = and i32 %x, 1
   %c = icmp eq i32 %a, 0
@@ -120,8 +120,9 @@ define i16 @low_bit_select_constants_bigger_false_narrower_result(i32 %x) {
 define i8 @low_bit_select_constants_bigger_true_same_size_result(i8 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_same_size_result:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    li 4, -29
 ; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    subfic 3, 3, -29
+; CHECK-NEXT:    xor 3, 3, 4
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -133,7 +134,7 @@ define i32 @low_bit_select_constants_bigger_true_wider_result(i8 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_wider_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    subfic 3, 3, 227
+; CHECK-NEXT:    xori 3, 3, 227
 ; CHECK-NEXT:    blr
   %a = and i8 %x, 1
   %c = icmp eq i8 %a, 0
@@ -145,7 +146,7 @@ define i8 @low_bit_select_constants_bigger_true_narrower_result(i16 %x) {
 ; CHECK-LABEL: low_bit_select_constants_bigger_true_narrower_result:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    clrldi 3, 3, 63
-; CHECK-NEXT:    subfic 3, 3, 41
+; CHECK-NEXT:    xori 3, 3, 41
 ; CHECK-NEXT:    blr
   %a = and i16 %x, 1
   %c = icmp eq i16 %a, 0

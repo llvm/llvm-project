@@ -1209,10 +1209,6 @@
 	risbgn	%r1, %r2, 0, 0, 0
 
 #CHECK: error: invalid operand
-#CHECK: risbhg	%r0,%r0,0,0,-1
-#CHECK: error: invalid operand
-#CHECK: risbhg	%r0,%r0,0,0,64
-#CHECK: error: invalid operand
 #CHECK: risbhg	%r0,%r0,0,-1,0
 #CHECK: error: invalid operand
 #CHECK: risbhg	%r0,%r0,0,256,0
@@ -1221,17 +1217,11 @@
 #CHECK: error: invalid operand
 #CHECK: risbhg	%r0,%r0,256,0,0
 
-	risbhg	%r0,%r0,0,0,-1
-	risbhg	%r0,%r0,0,0,64
 	risbhg	%r0,%r0,0,-1,0
 	risbhg	%r0,%r0,0,256,0
 	risbhg	%r0,%r0,-1,0,0
 	risbhg	%r0,%r0,256,0,0
 
-#CHECK: error: invalid operand
-#CHECK: risblg	%r0,%r0,0,0,-1
-#CHECK: error: invalid operand
-#CHECK: risblg	%r0,%r0,0,0,64
 #CHECK: error: invalid operand
 #CHECK: risblg	%r0,%r0,0,-1,0
 #CHECK: error: invalid operand
@@ -1241,8 +1231,6 @@
 #CHECK: error: invalid operand
 #CHECK: risblg	%r0,%r0,256,0,0
 
-	risblg	%r0,%r0,0,0,-1
-	risblg	%r0,%r0,0,0,64
 	risblg	%r0,%r0,0,-1,0
 	risblg	%r0,%r0,0,256,0
 	risblg	%r0,%r0,-1,0,0

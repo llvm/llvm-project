@@ -5,7 +5,7 @@
 declare i32 @foo()
 
 ; Check ALR.
-define zeroext i1 @f1(i32 %dummy, i32 %a, i32 %b, i32 *%res) {
+define zeroext i1 @f1(i32 %dummy, i32 %a, i32 %b, ptr %res) {
 ; CHECK-LABEL: f1:
 ; CHECK: alr %r3, %r4
 ; CHECK-DAG: st %r3, 0(%r5)
@@ -15,12 +15,12 @@ define zeroext i1 @f1(i32 %dummy, i32 %a, i32 %b, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check using the overflow result for a branch.
-define void @f2(i32 %dummy, i32 %a, i32 %b, i32 *%res) {
+define void @f2(i32 %dummy, i32 %a, i32 %b, ptr %res) {
 ; CHECK-LABEL: f2:
 ; CHECK: alr %r3, %r4
 ; CHECK: st %r3, 0(%r5)
@@ -29,7 +29,7 @@ define void @f2(i32 %dummy, i32 %a, i32 %b, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   br i1 %obit, label %call, label %exit
 
 call:
@@ -41,7 +41,7 @@ exit:
 }
 
 ; ... and the same with the inverted direction.
-define void @f3(i32 %dummy, i32 %a, i32 %b, i32 *%res) {
+define void @f3(i32 %dummy, i32 %a, i32 %b, ptr %res) {
 ; CHECK-LABEL: f3:
 ; CHECK: alr %r3, %r4
 ; CHECK: st %r3, 0(%r5)
@@ -50,7 +50,7 @@ define void @f3(i32 %dummy, i32 %a, i32 %b, i32 *%res) {
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   br i1 %obit, label %exit, label %call
 
 call:
@@ -62,75 +62,75 @@ exit:
 }
 
 ; Check the low end of the AL range.
-define zeroext i1 @f4(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f4(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f4:
 ; CHECK: al %r3, 0(%r4)
 ; CHECK-DAG: st %r3, 0(%r5)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %b = load i32, i32 *%src
+  %b = load i32, ptr %src
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the aligned AL range.
-define zeroext i1 @f5(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f5(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f5:
 ; CHECK: al %r3, 4092(%r4)
 ; CHECK-DAG: st %r3, 0(%r5)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 1023
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 1023
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next word up, which should use ALY instead of AL.
-define zeroext i1 @f6(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f6(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f6:
 ; CHECK: aly %r3, 4096(%r4)
 ; CHECK-DAG: st %r3, 0(%r5)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 1024
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 1024
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the aligned ALY range.
-define zeroext i1 @f7(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f7(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f7:
 ; CHECK: aly %r3, 524284(%r4)
 ; CHECK-DAG: st %r3, 0(%r5)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131071
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131071
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define zeroext i1 @f8(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f8(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f8:
 ; CHECK: agfi %r4, 524288
 ; CHECK: al %r3, 0(%r4)
@@ -138,52 +138,52 @@ define zeroext i1 @f8(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131072
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131072
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the high end of the negative aligned ALY range.
-define zeroext i1 @f9(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f9(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f9:
 ; CHECK: aly %r3, -4(%r4)
 ; CHECK-DAG: st %r3, 0(%r5)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 -1
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 -1
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the low end of the ALY range.
-define zeroext i1 @f10(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f10(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f10:
 ; CHECK: aly %r3, -524288(%r4)
 ; CHECK-DAG: st %r3, 0(%r5)
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 -131072
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 -131072
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check the next word down, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define zeroext i1 @f11(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
+define zeroext i1 @f11(i32 %dummy, i32 %a, ptr %src, ptr %res) {
 ; CHECK-LABEL: f11:
 ; CHECK: agfi %r4, -524292
 ; CHECK: al %r3, 0(%r4)
@@ -191,17 +191,17 @@ define zeroext i1 @f11(i32 %dummy, i32 %a, i32 *%src, i32 *%res) {
 ; CHECK-DAG: ipm [[REG:%r[0-5]]]
 ; CHECK-DAG: risbg %r2, [[REG]], 63, 191, 35
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 -131073
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 -131073
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check that AL allows an index.
-define zeroext i1 @f12(i64 %src, i64 %index, i32 %a, i32 *%res) {
+define zeroext i1 @f12(i64 %src, i64 %index, i32 %a, ptr %res) {
 ; CHECK-LABEL: f12:
 ; CHECK: al %r4, 4092({{%r3,%r2|%r2,%r3}})
 ; CHECK-DAG: st %r4, 0(%r5)
@@ -210,17 +210,17 @@ define zeroext i1 @f12(i64 %src, i64 %index, i32 %a, i32 *%res) {
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 4092
-  %ptr = inttoptr i64 %add2 to i32 *
-  %b = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check that ALY allows an index.
-define zeroext i1 @f13(i64 %src, i64 %index, i32 %a, i32 *%res) {
+define zeroext i1 @f13(i64 %src, i64 %index, i32 %a, ptr %res) {
 ; CHECK-LABEL: f13:
 ; CHECK: aly %r4, 4096({{%r3,%r2|%r2,%r3}})
 ; CHECK-DAG: st %r4, 0(%r5)
@@ -229,41 +229,41 @@ define zeroext i1 @f13(i64 %src, i64 %index, i32 %a, i32 *%res) {
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 4096
-  %ptr = inttoptr i64 %add2 to i32 *
-  %b = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %b = load i32, ptr %ptr
   %t = call {i32, i1} @llvm.uadd.with.overflow.i32(i32 %a, i32 %b)
   %val = extractvalue {i32, i1} %t, 0
   %obit = extractvalue {i32, i1} %t, 1
-  store i32 %val, i32 *%res
+  store i32 %val, ptr %res
   ret i1 %obit
 }
 
 ; Check that additions of spilled values can use AL rather than ALR.
-define zeroext i1 @f14(i32 *%ptr0) {
+define zeroext i1 @f14(ptr %ptr0) {
 ; CHECK-LABEL: f14:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: al %r2, 16{{[04]}}(%r15)
 ; CHECK: br %r14
-  %ptr1 = getelementptr i32, i32 *%ptr0, i64 2
-  %ptr2 = getelementptr i32, i32 *%ptr0, i64 4
-  %ptr3 = getelementptr i32, i32 *%ptr0, i64 6
-  %ptr4 = getelementptr i32, i32 *%ptr0, i64 8
-  %ptr5 = getelementptr i32, i32 *%ptr0, i64 10
-  %ptr6 = getelementptr i32, i32 *%ptr0, i64 12
-  %ptr7 = getelementptr i32, i32 *%ptr0, i64 14
-  %ptr8 = getelementptr i32, i32 *%ptr0, i64 16
-  %ptr9 = getelementptr i32, i32 *%ptr0, i64 18
+  %ptr1 = getelementptr i32, ptr %ptr0, i64 2
+  %ptr2 = getelementptr i32, ptr %ptr0, i64 4
+  %ptr3 = getelementptr i32, ptr %ptr0, i64 6
+  %ptr4 = getelementptr i32, ptr %ptr0, i64 8
+  %ptr5 = getelementptr i32, ptr %ptr0, i64 10
+  %ptr6 = getelementptr i32, ptr %ptr0, i64 12
+  %ptr7 = getelementptr i32, ptr %ptr0, i64 14
+  %ptr8 = getelementptr i32, ptr %ptr0, i64 16
+  %ptr9 = getelementptr i32, ptr %ptr0, i64 18
 
-  %val0 = load i32, i32 *%ptr0
-  %val1 = load i32, i32 *%ptr1
-  %val2 = load i32, i32 *%ptr2
-  %val3 = load i32, i32 *%ptr3
-  %val4 = load i32, i32 *%ptr4
-  %val5 = load i32, i32 *%ptr5
-  %val6 = load i32, i32 *%ptr6
-  %val7 = load i32, i32 *%ptr7
-  %val8 = load i32, i32 *%ptr8
-  %val9 = load i32, i32 *%ptr9
+  %val0 = load i32, ptr %ptr0
+  %val1 = load i32, ptr %ptr1
+  %val2 = load i32, ptr %ptr2
+  %val3 = load i32, ptr %ptr3
+  %val4 = load i32, ptr %ptr4
+  %val5 = load i32, ptr %ptr5
+  %val6 = load i32, ptr %ptr6
+  %val7 = load i32, ptr %ptr7
+  %val8 = load i32, ptr %ptr8
+  %val9 = load i32, ptr %ptr9
 
   %ret = call i32 @foo()
 

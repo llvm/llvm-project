@@ -159,20 +159,14 @@ typename Tr::LoopT *RegionBase<Tr>::outermostLoopInRegion(LoopInfoT *LI,
 
 template <class Tr>
 typename RegionBase<Tr>::BlockT *RegionBase<Tr>::getEnteringBlock() const {
+  auto isEnteringBlock = [&](BlockT *Pred, bool AllowRepeats) -> BlockT * {
+    assert(!AllowRepeats && "Unexpected parameter value.");
+    return DT->getNode(Pred) && !contains(Pred) ? Pred : nullptr;
+  };
   BlockT *entry = getEntry();
-  BlockT *enteringBlock = nullptr;
-
-  for (BlockT *Pred : make_range(InvBlockTraits::child_begin(entry),
-                                 InvBlockTraits::child_end(entry))) {
-    if (DT->getNode(Pred) && !contains(Pred)) {
-      if (enteringBlock)
-        return nullptr;
-
-      enteringBlock = Pred;
-    }
-  }
-
-  return enteringBlock;
+  return find_singleton<BlockT>(make_range(InvBlockTraits::child_begin(entry),
+                                           InvBlockTraits::child_end(entry)),
+                                isEnteringBlock);
 }
 
 template <class Tr>
@@ -201,22 +195,16 @@ bool RegionBase<Tr>::getExitingBlocks(
 template <class Tr>
 typename RegionBase<Tr>::BlockT *RegionBase<Tr>::getExitingBlock() const {
   BlockT *exit = getExit();
-  BlockT *exitingBlock = nullptr;
-
   if (!exit)
     return nullptr;
 
-  for (BlockT *Pred : make_range(InvBlockTraits::child_begin(exit),
-                                 InvBlockTraits::child_end(exit))) {
-    if (contains(Pred)) {
-      if (exitingBlock)
-        return nullptr;
-
-      exitingBlock = Pred;
-    }
-  }
-
-  return exitingBlock;
+  auto isContained = [&](BlockT *Pred, bool AllowRepeats) -> BlockT * {
+    assert(!AllowRepeats && "Unexpected parameter value.");
+    return contains(Pred) ? Pred : nullptr;
+  };
+  return find_singleton<BlockT>(make_range(InvBlockTraits::child_begin(exit),
+                                           InvBlockTraits::child_end(exit)),
+                                isContained);
 }
 
 template <class Tr>
@@ -390,10 +378,10 @@ void RegionBase<Tr>::transferChildrenTo(RegionT *To) {
 template <class Tr>
 void RegionBase<Tr>::addSubRegion(RegionT *SubRegion, bool moveChildren) {
   assert(!SubRegion->parent && "SubRegion already has a parent!");
-  assert(llvm::find_if(*this,
+  assert(llvm::none_of(*this,
                        [&](const std::unique_ptr<RegionT> &R) {
                          return R.get() == SubRegion;
-                       }) == children.end() &&
+                       }) &&
          "Subregion already exists!");
 
   SubRegion->parent = static_cast<RegionT *>(this);
@@ -790,12 +778,12 @@ template <class Tr>
 void RegionInfoBase<Tr>::dump() const { print(dbgs()); }
 #endif
 
-template <class Tr>
-void RegionInfoBase<Tr>::releaseMemory() {
+template <class Tr> void RegionInfoBase<Tr>::releaseMemory() {
   BBtoRegion.clear();
-  if (TopLevelRegion)
+  if (TopLevelRegion) {
     delete TopLevelRegion;
-  TopLevelRegion = nullptr;
+    TopLevelRegion = nullptr;
+  }
 }
 
 template <class Tr>

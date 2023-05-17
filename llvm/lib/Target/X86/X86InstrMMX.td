@@ -178,7 +178,7 @@ def MMX_MOVD64grr : MMXI<0x7E, MRMDestReg, (outs GR32:$dst), (ins VR64:$src),
                          "movd\t{$src, $dst|$dst, $src}",
                          [(set GR32:$dst,
                           (MMX_X86movd2w (x86mmx VR64:$src)))]>,
-                         Sched<[WriteVecMoveToGpr]>, FoldGenData<"MMX_MOVD64rr">;
+                         Sched<[WriteVecMoveToGpr]>;
 
 let isBitcast = 1 in
 def MMX_MOVD64to64rr : MMXRI<0x6E, MRMSrcReg, (outs VR64:$dst), (ins GR64:$src),
@@ -202,19 +202,15 @@ def MMX_MOVQ64rr : MMXI<0x6F, MRMSrcReg, (outs VR64:$dst), (ins VR64:$src),
                         "movq\t{$src, $dst|$dst, $src}", []>;
 let isCodeGenOnly = 1, ForceDisassemble = 1 in
 def MMX_MOVQ64rr_REV : MMXI<0x7F, MRMDestReg, (outs VR64:$dst), (ins VR64:$src),
-                            "movq\t{$src, $dst|$dst, $src}", []>,
-                            FoldGenData<"MMX_MOVQ64rr">;
+                            "movq\t{$src, $dst|$dst, $src}", []>;
 } // SchedRW, hasSideEffects, isMoveReg
 } // isBitcast
-
-def : InstAlias<"movq.s\t{$src, $dst|$dst, $src}",
-                (MMX_MOVQ64rr_REV VR64:$dst, VR64:$src), 0>;
 
 let isCodeGenOnly = 1, ForceDisassemble = 1, hasSideEffects = 0, mayStore = 1 in
 def MMX_MOVD64from64mr : MMXRI<0x7E, MRMDestMem,
                                (outs), (ins i64mem:$dst, VR64:$src),
                                "movq\t{$src, $dst|$dst, $src}", []>,
-                               Sched<[SchedWriteVecMoveLS.MMX.MR]>, NotMemoryFoldable;
+                               Sched<[SchedWriteVecMoveLS.MMX.MR]>;
 
 let SchedRW = [SchedWriteVecMoveLS.MMX.RM] in {
 let canFoldAsLoad = 1 in

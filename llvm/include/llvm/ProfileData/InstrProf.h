@@ -20,7 +20,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/IR/ProfileSummary.h"
 #include "llvm/ProfileData/InstrProfData.inc"
@@ -29,10 +28,11 @@
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
@@ -59,6 +59,11 @@ enum InstrProfSectKind {
 #define INSTR_PROF_SECT_ENTRY(Kind, SectNameCommon, SectNameCoff, Prefix) Kind,
 #include "llvm/ProfileData/InstrProfData.inc"
 };
+
+/// Return the max count value. We reserver a few large values for special use.
+inline uint64_t getInstrMaxCountValue() {
+  return std::numeric_limits<uint64_t>::max() - 2;
+}
 
 /// Return the name of the profile section corresponding to \p IPSK.
 ///
@@ -295,7 +300,9 @@ enum class InstrProfKind {
   FunctionEntryOnly = 0x20,
   // A memory profile collected using -fprofile=memory.
   MemProf = 0x40,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/MemProf)
+  // A temporal profile.
+  TemporalProfile = 0x80,
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/TemporalProfile)
 };
 
 const std::error_category &instrprof_category();
@@ -323,7 +330,15 @@ enum class instrprof_error {
   compress_failed,
   uncompress_failed,
   empty_raw_profile,
-  zlib_unavailable
+  zlib_unavailable,
+  raw_profile_version_mismatch
+};
+
+/// An ordered list of functions identified by their NameRef found in
+/// INSTR_PROF_DATA
+struct TemporalProfTraceTy {
+  uint64_t Weight = 1;
+  std::vector<uint64_t> FunctionNameRefs;
 };
 
 inline std::error_code make_error_code(instrprof_error E) {
@@ -348,15 +363,18 @@ public:
   instrprof_error get() const { return Err; }
   const std::string &getMessage() const { return Msg; }
 
-  /// Consume an Error and return the raw enum value contained within it. The
-  /// Error must either be a success value, or contain a single InstrProfError.
-  static instrprof_error take(Error E) {
+  /// Consume an Error and return the raw enum value contained within it, and
+  /// the optional error message. The Error must either be a success value, or
+  /// contain a single InstrProfError.
+  static std::pair<instrprof_error, std::string> take(Error E) {
     auto Err = instrprof_error::success;
-    handleAllErrors(std::move(E), [&Err](const InstrProfError &IPE) {
+    std::string Msg = "";
+    handleAllErrors(std::move(E), [&Err, &Msg](const InstrProfError &IPE) {
       assert(Err == instrprof_error::success && "Multiple errors encountered");
       Err = IPE.get();
+      Msg = IPE.getMessage();
     });
-    return Err;
+    return {Err, Msg};
   }
 
   static char ID;
@@ -636,8 +654,8 @@ struct CountSumOrPercent {
   void reset() {
     NumEntries = 0;
     CountSum = 0.0f;
-    for (unsigned I = 0; I < IPVK_Last - IPVK_First + 1; I++)
-      ValueCounts[I] = 0.0f;
+    for (double &VC : ValueCounts)
+      VC = 0.0f;
   }
 };
 
@@ -819,6 +837,30 @@ struct InstrProfRecord {
                             OverlapStats &Overlap,
                             OverlapStats &FuncLevelOverlap);
 
+  enum CountPseudoKind {
+    NotPseudo = 0,
+    PseudoHot,
+    PseudoWarm,
+  };
+  enum PseudoCountVal {
+    HotFunctionVal = -1,
+    WarmFunctionVal = -2,
+  };
+  CountPseudoKind getCountPseudoKind() const {
+    uint64_t FirstCount = Counts[0];
+    if (FirstCount == (uint64_t)HotFunctionVal)
+      return PseudoHot;
+    if (FirstCount == (uint64_t)WarmFunctionVal)
+      return PseudoWarm;
+    return NotPseudo;
+  }
+  void setPseudoCount(CountPseudoKind Kind) {
+    if (Kind == PseudoHot)
+      Counts[0] = (uint64_t)HotFunctionVal;
+    else if (Kind == PseudoWarm)
+      Counts[0] = (uint64_t)WarmFunctionVal;
+  }
+
 private:
   struct ValueProfData {
     std::vector<InstrProfValueSiteRecord> IndirectCallSites;
@@ -833,13 +875,13 @@ private:
     // cast away the constness from the result.
     auto AR = const_cast<const InstrProfRecord *>(this)->getValueSitesForKind(
         ValueKind);
-    return makeMutableArrayRef(
+    return MutableArrayRef(
         const_cast<InstrProfValueSiteRecord *>(AR.data()), AR.size());
   }
   ArrayRef<InstrProfValueSiteRecord>
   getValueSitesForKind(uint32_t ValueKind) const {
     if (!ValueData)
-      return None;
+      return std::nullopt;
     switch (ValueKind) {
     case IPVK_IndirectCallTarget:
       return ValueData->IndirectCallSites;
@@ -908,7 +950,7 @@ uint32_t InstrProfRecord::getNumValueKinds() const {
 
 uint32_t InstrProfRecord::getNumValueData(uint32_t ValueKind) const {
   uint32_t N = 0;
-  for (auto &SR : getValueSitesForKind(ValueKind))
+  for (const auto &SR : getValueSitesForKind(ValueKind))
     N += SR.ValueData.size();
   return N;
 }
@@ -1021,7 +1063,11 @@ enum ProfVersion {
   Version7 = 7,
   // An additional (optional) memory profile type is added.
   Version8 = 8,
-  // The current version is 8.
+  // Binary ids are added.
+  Version9 = 9,
+  // An additional (optional) temporal profile traces section is added.
+  Version10 = 10,
+  // The current version is 10.
   CurrentVersion = INSTR_PROF_INDEX_VERSION
 };
 const uint64_t Version = ProfVersion::CurrentVersion;
@@ -1039,6 +1085,8 @@ struct Header {
   uint64_t HashType;
   uint64_t HashOffset;
   uint64_t MemProfOffset;
+  uint64_t BinaryIdOffset;
+  uint64_t TemporalProfTracesOffset;
   // New fields should only be added at the end to ensure that the size
   // computation is correct. The methods below need to be updated to ensure that
   // the new field is read correctly.

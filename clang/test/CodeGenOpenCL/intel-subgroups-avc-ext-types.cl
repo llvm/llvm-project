@@ -1,45 +1,30 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple spir-unknown-unknown -cl-std=CL1.2 -cl-ext=+cl_intel_device_side_avc_motion_estimation -emit-llvm -o - -O0 | FileCheck %s
+// RUN: %clang_cc1 %s -triple spir-unknown-unknown -cl-std=CL1.2 -cl-ext=+cl_intel_device_side_avc_motion_estimation -emit-llvm -o - -O0 | FileCheck %s
 
-// CHECK: %opencl.intel_sub_group_avc_mce_payload_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_ime_payload_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_ref_payload_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_sic_payload_t = type opaque
+// CHECK: store target("spirv.AvcImePayloadINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcRefPayloadINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcSicPayloadINTEL") zeroinitializer,
 
-// CHECK: %opencl.intel_sub_group_avc_mce_result_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_ime_result_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_ref_result_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_sic_result_t = type opaque
+// CHECK: store target("spirv.AvcImeResultINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcRefResultINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcSicResultINTEL") zeroinitializer,
 
-// CHECK: %opencl.intel_sub_group_avc_ime_result_single_reference_streamout_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_ime_result_dual_reference_streamout_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_ime_single_reference_streamin_t = type opaque
-// CHECK: %opencl.intel_sub_group_avc_ime_dual_reference_streamin_t = type opaque
+// CHECK: store target("spirv.AvcImeResultSingleReferenceStreamoutINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcImeResultDualReferenceStreamoutINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcImeSingleReferenceStreaminINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcImeDualReferenceStreaminINTEL") zeroinitializer,
 
-// CHECK: store %opencl.intel_sub_group_avc_ime_payload_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ref_payload_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_sic_payload_t* null,
+// CHECK: store target("spirv.AvcImePayloadINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcRefPayloadINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcSicPayloadINTEL") zeroinitializer,
 
-// CHECK: store %opencl.intel_sub_group_avc_ime_result_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ref_result_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_sic_result_t* null,
+// CHECK: store target("spirv.AvcImeResultINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcRefResultINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcSicResultINTEL") zeroinitializer,
 
-// CHECK: store %opencl.intel_sub_group_avc_ime_result_single_reference_streamout_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ime_result_dual_reference_streamout_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ime_single_reference_streamin_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ime_dual_reference_streamin_t* null,
-//
-// CHECK: store %opencl.intel_sub_group_avc_ime_payload_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ref_payload_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_sic_payload_t* null,
-
-// CHECK: store %opencl.intel_sub_group_avc_ime_result_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ref_result_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_sic_result_t* null,
-
-// CHECK: store %opencl.intel_sub_group_avc_ime_result_single_reference_streamout_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ime_result_dual_reference_streamout_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ime_single_reference_streamin_t* null,
-// CHECK: store %opencl.intel_sub_group_avc_ime_dual_reference_streamin_t* null,
+// CHECK: store target("spirv.AvcImeResultSingleReferenceStreamoutINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcImeResultDualReferenceStreamoutINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcImeSingleReferenceStreaminINTEL") zeroinitializer,
+// CHECK: store target("spirv.AvcImeDualReferenceStreaminINTEL") zeroinitializer,
 
 #pragma OPENCL EXTENSION cl_intel_device_side_avc_motion_estimation : enable
 

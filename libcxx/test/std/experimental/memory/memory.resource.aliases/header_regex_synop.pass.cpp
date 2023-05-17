@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-localization
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/regex>
 
 // namespace std { namespace experimental { namespace pmr {
@@ -24,6 +26,8 @@
 //  typedef match_results<wstring::const_iterator> wsmatch;
 //
 // }}} // namespace std::experimental::pmr
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/regex>
 #include <type_traits>

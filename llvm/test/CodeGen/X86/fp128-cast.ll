@@ -62,9 +62,9 @@ define dso_local void @TestFPExtF32_F128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load float, float* @vf32, align 4
+  %0 = load float, ptr @vf32, align 4
   %conv = fpext float %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -109,9 +109,9 @@ define dso_local void @TestFPExtF64_F128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load double, double* @vf64, align 8
+  %0 = load double, ptr @vf64, align 8
   %conv = fpext double %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -158,9 +158,9 @@ define dso_local void @TestFPExtF80_F128() nounwind {
 ; X64-AVX-NEXT:    addq $24, %rsp
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load x86_fp80, x86_fp80* @vf80, align 8
+  %0 = load x86_fp80, ptr @vf80, align 8
   %conv = fpext x86_fp80 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -196,9 +196,9 @@ define dso_local void @TestFPToSIF128_I16() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptosi fp128 %0 to i16
-  store i16 %conv, i16* @vi16, align 2
+  store i16 %conv, ptr @vi16, align 2
   ret void
 }
 
@@ -234,9 +234,9 @@ define dso_local void @TestFPToUIF128_I16() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptoui fp128 %0 to i16
-  store i16 %conv, i16* @vi16, align 2
+  store i16 %conv, ptr @vi16, align 2
   ret void
 }
 
@@ -272,9 +272,9 @@ define dso_local void @TestFPToSIF128_I32() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptosi fp128 %0 to i32
-  store i32 %conv, i32* @vi32, align 4
+  store i32 %conv, ptr @vi32, align 4
   ret void
 }
 
@@ -310,9 +310,9 @@ define dso_local void @TestFPToUIF128_U32() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptoui fp128 %0 to i32
-  store i32 %conv, i32* @vu32, align 4
+  store i32 %conv, ptr @vu32, align 4
   ret void
 }
 
@@ -352,10 +352,10 @@ define dso_local void @TestFPToSIF128_I64() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptosi fp128 %0 to i32
   %conv1 = sext i32 %conv to i64
-  store i64 %conv1, i64* @vi64, align 8
+  store i64 %conv1, ptr @vi64, align 8
   ret void
 }
 
@@ -394,10 +394,10 @@ define dso_local void @TestFPToUIF128_U64() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptoui fp128 %0 to i32
   %conv1 = zext i32 %conv to i64
-  store i64 %conv1, i64* @vu64, align 8
+  store i64 %conv1, ptr @vu64, align 8
   ret void
 }
 
@@ -446,9 +446,9 @@ define dso_local void @TestFPToSIF128_I128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptosi fp128 %0 to i128
-  store i128 %conv, i128* @vi128, align 16
+  store i128 %conv, ptr @vi128, align 16
   ret void
 }
 
@@ -497,9 +497,9 @@ define dso_local void @TestFPToUIF128_U128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptoui fp128 %0 to i128
-  store i128 %conv, i128* @vu128, align 16
+  store i128 %conv, ptr @vu128, align 16
   ret void
 }
 
@@ -535,9 +535,9 @@ define dso_local void @TestFPTruncF128_F32() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptrunc fp128 %0 to float
-  store float %conv, float* @vf32, align 4
+  store float %conv, ptr @vf32, align 4
   ret void
 }
 
@@ -573,9 +573,9 @@ define dso_local void @TestFPTruncF128_F64() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptrunc fp128 %0 to double
-  store double %conv, double* @vf64, align 8
+  store double %conv, ptr @vf64, align 8
   ret void
 }
 
@@ -611,9 +611,9 @@ define dso_local void @TestFPTruncF128_F80() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @vf128, align 16
+  %0 = load fp128, ptr @vf128, align 16
   %conv = fptrunc fp128 %0 to x86_fp80
-  store x86_fp80 %conv, x86_fp80* @vf80, align 8
+  store x86_fp80 %conv, ptr @vf80, align 8
   ret void
 }
 
@@ -659,9 +659,9 @@ define dso_local void @TestSIToFPI16_F128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i16, i16* @vi16, align 4
+  %0 = load i16, ptr @vi16, align 4
   %conv = sitofp i16 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -707,9 +707,9 @@ define dso_local void @TestSIToFPU16_F128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i16, i16* @vi16, align 4
+  %0 = load i16, ptr @vi16, align 4
   %conv = uitofp i16 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -753,9 +753,9 @@ define dso_local void @TestSIToFPI32_F128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i32, i32* @vi32, align 4
+  %0 = load i32, ptr @vi32, align 4
   %conv = sitofp i32 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -799,9 +799,9 @@ define dso_local void @TestUIToFPU32_F128() #2 {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i32, i32* @vu32, align 4
+  %0 = load i32, ptr @vu32, align 4
   %conv = uitofp i32 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -846,9 +846,9 @@ define dso_local void @TestSIToFPI64_F128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i64, i64* @vi64, align 8
+  %0 = load i64, ptr @vi64, align 8
   %conv = sitofp i64 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -893,9 +893,9 @@ define dso_local void @TestUIToFPU64_F128() #2 {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i64, i64* @vu64, align 8
+  %0 = load i64, ptr @vu64, align 8
   %conv = uitofp i64 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -944,9 +944,9 @@ define dso_local void @TestSIToFPI128_F128() nounwind {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i128, i128* @vi128, align 16
+  %0 = load i128, ptr @vi128, align 16
   %conv = sitofp i128 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 
@@ -995,9 +995,9 @@ define dso_local void @TestUIToFPU128_F128() #2 {
 ; X64-AVX-NEXT:    popq %rax
 ; X64-AVX-NEXT:    retq
 entry:
-  %0 = load i128, i128* @vu128, align 16
+  %0 = load i128, ptr @vu128, align 16
   %conv = uitofp i128 %0 to fp128
-  store fp128 %conv, fp128* @vf128, align 16
+  store fp128 %conv, ptr @vf128, align 16
   ret void
 }
 

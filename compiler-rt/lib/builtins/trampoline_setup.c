@@ -16,7 +16,7 @@ extern void __clear_cache(void *start, void *end);
 // which loads r11 with a pointer to the outer function's locals
 // and then jumps to the target nested function.
 
-#if __ppc__ && !defined(__powerpc64__)
+#if __powerpc__ && !defined(__powerpc64__)
 COMPILER_RT_ABI void __trampoline_setup(uint32_t *trampOnStack,
                                         int trampSizeAllocated,
                                         const void *realFunc, void *localsPtr) {
@@ -40,4 +40,4 @@ COMPILER_RT_ABI void __trampoline_setup(uint32_t *trampOnStack,
   // clear instruction cache
   __clear_cache(trampOnStack, &trampOnStack[10]);
 }
-#endif // __ppc__ && !defined(__powerpc64__)
+#endif // __powerpc__ && !defined(__powerpc64__)

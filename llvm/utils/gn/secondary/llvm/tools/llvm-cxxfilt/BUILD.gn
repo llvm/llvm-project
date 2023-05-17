@@ -30,6 +30,7 @@ driver_executable("llvm-cxxfilt") {
     "//llvm/lib/Demangle",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-cxxfilt.cpp" ]
 }

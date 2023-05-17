@@ -48,7 +48,7 @@ define i64 @f2(double %f) {
 }
 
 ; Test f128->i64.
-define i64 @f3(fp128 *%src) {
+define i64 @f3(ptr %src) {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    ld %f0, 0(%r2)
@@ -65,7 +65,7 @@ define i64 @f3(fp128 *%src) {
 ; CHECK-NEXT:    cgxbr %r2, 5, %f0
 ; CHECK-NEXT:    xihf %r2, 2147483648
 ; CHECK-NEXT:    br %r14
-  %f = load fp128, fp128 *%src
+  %f = load fp128, ptr %src
   %conv = fptoui fp128 %f to i64
   ret i64 %conv
 }

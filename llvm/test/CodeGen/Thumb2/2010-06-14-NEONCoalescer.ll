@@ -10,9 +10,9 @@ target triple = "thumbv7-apple-darwin10"
 ;
 ; Only one can be coalesced.
 
-@.str = private constant [7 x i8] c"%g %g\0A\00", align 4 ; <[7 x i8]*> [#uses=1]
+@.str = private constant [7 x i8] c"%g %g\0A\00", align 4 ; <ptr> [#uses=1]
 
-define i32 @main(i32 %argc, i8** nocapture %Argv) nounwind {
+define i32 @main(i32 %argc, ptr nocapture %Argv) nounwind {
 entry:
   %0 = icmp eq i32 %argc, 2123                    ; <i1> [#uses=1]
   %U.0 = select i1 %0, double 3.282190e+01, double 8.731834e+02 ; <double> [#uses=2]
@@ -32,11 +32,11 @@ entry:
   %tmp7 = extractelement <2 x double> %5, i32 0   ; <double> [#uses=1]
   %tmp5 = extractelement <2 x double> %5, i32 1   ; <double> [#uses=1]
 ; CHECK: printf
-  %7 = tail call  i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0), double %tmp7, double %tmp5) nounwind ; <i32> [#uses=0]
+  %7 = tail call  i32 (ptr, ...) @printf(ptr @.str, double %tmp7, double %tmp5) nounwind ; <i32> [#uses=0]
   %tmp3 = extractelement <2 x double> %6, i32 0   ; <double> [#uses=1]
   %tmp1 = extractelement <2 x double> %6, i32 1   ; <double> [#uses=1]
-  %8 = tail call  i32 (i8*, ...) @printf(i8* getelementptr inbounds ([7 x i8], [7 x i8]* @.str, i32 0, i32 0), double %tmp3, double %tmp1) nounwind ; <i32> [#uses=0]
+  %8 = tail call  i32 (ptr, ...) @printf(ptr @.str, double %tmp3, double %tmp1) nounwind ; <i32> [#uses=0]
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...) nounwind
+declare i32 @printf(ptr nocapture, ...) nounwind

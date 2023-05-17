@@ -62,10 +62,12 @@ RegisterInfo g_register_infos[] = {
       LLDB_INVALID_REGNUM, lldb_eax_i386},
      nullptr,
      nullptr,
+     nullptr,
     },
     {DEFINE_GPR(ebx, nullptr),
      {ehframe_ebx_i386, dwarf_ebx_i386, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, lldb_ebx_i386},
+     nullptr,
      nullptr,
      nullptr,
     },
@@ -74,10 +76,12 @@ RegisterInfo g_register_infos[] = {
       LLDB_INVALID_REGNUM, lldb_ecx_i386},
      nullptr,
      nullptr,
+     nullptr,
     },
     {DEFINE_GPR(edx, nullptr),
      {ehframe_edx_i386, dwarf_edx_i386, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, lldb_edx_i386},
+     nullptr,
      nullptr,
      nullptr,
     },
@@ -86,10 +90,12 @@ RegisterInfo g_register_infos[] = {
       LLDB_INVALID_REGNUM, lldb_edi_i386},
      nullptr,
      nullptr,
+     nullptr,
     },
     {DEFINE_GPR(esi, nullptr),
      {ehframe_esi_i386, dwarf_esi_i386, LLDB_INVALID_REGNUM,
       LLDB_INVALID_REGNUM, lldb_esi_i386},
+     nullptr,
      nullptr,
      nullptr,
     },
@@ -98,10 +104,12 @@ RegisterInfo g_register_infos[] = {
       LLDB_INVALID_REGNUM, lldb_ebp_i386},
      nullptr,
      nullptr,
+     nullptr,
     },
     {DEFINE_GPR(esp, "sp"),
      {ehframe_esp_i386, dwarf_esp_i386, LLDB_REGNUM_GENERIC_SP,
       LLDB_INVALID_REGNUM, lldb_esp_i386},
+     nullptr,
      nullptr,
      nullptr,
     },
@@ -110,15 +118,17 @@ RegisterInfo g_register_infos[] = {
       LLDB_INVALID_REGNUM, lldb_eip_i386},
      nullptr,
      nullptr,
+     nullptr,
     },
     {DEFINE_GPR_BIN(eflags, "flags"),
      {ehframe_eflags_i386, dwarf_eflags_i386, LLDB_REGNUM_GENERIC_FLAGS,
       LLDB_INVALID_REGNUM, lldb_eflags_i386},
      nullptr,
      nullptr,
+     nullptr,
     },
 };
-static size_t k_num_register_infos = llvm::array_lengthof(g_register_infos);
+static size_t k_num_register_infos = std::size(g_register_infos);
 
 // Array of lldb register numbers used to define the set of all General Purpose
 // Registers
@@ -129,8 +139,8 @@ uint32_t g_gpr_reg_indices[] = {eRegisterIndexEax, eRegisterIndexEbx,
                                 eRegisterIndexEip, eRegisterIndexEflags};
 
 RegisterSet g_register_sets[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_reg_indices), g_gpr_reg_indices},
+    {"General Purpose Registers", "gpr", std::size(g_gpr_reg_indices),
+     g_gpr_reg_indices},
 };
 }
 
@@ -142,7 +152,7 @@ RegisterContextWindows_x86::RegisterContextWindows_x86(
 RegisterContextWindows_x86::~RegisterContextWindows_x86() {}
 
 size_t RegisterContextWindows_x86::GetRegisterCount() {
-  return llvm::array_lengthof(g_register_infos);
+  return std::size(g_register_infos);
 }
 
 const RegisterInfo *
@@ -153,7 +163,7 @@ RegisterContextWindows_x86::GetRegisterInfoAtIndex(size_t reg) {
 }
 
 size_t RegisterContextWindows_x86::GetRegisterSetCount() {
-  return llvm::array_lengthof(g_register_sets);
+  return std::size(g_register_sets);
 }
 
 const RegisterSet *RegisterContextWindows_x86::GetRegisterSet(size_t reg_set) {

@@ -416,15 +416,15 @@ bool AppleObjCTrampolineHandler::AppleObjCVTables::RefreshTrampolines(
     Process *process = exe_ctx.GetProcessPtr();
     const ABI *abi = process->GetABI().get();
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return false;
 
     ValueList argument_values;
     Value input_value;
     CompilerType clang_void_ptr_type =
-        clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
 
     input_value.SetValueType(Value::ValueType::Scalar);
     // input_value.SetContext (Value::eContextTypeClangType,
@@ -578,7 +578,8 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
     : m_process_wp(), m_objc_module_sp(objc_module_sp),
       m_impl_fn_addr(LLDB_INVALID_ADDRESS),
       m_impl_stret_fn_addr(LLDB_INVALID_ADDRESS),
-      m_msg_forward_addr(LLDB_INVALID_ADDRESS) {
+      m_msg_forward_addr(LLDB_INVALID_ADDRESS),
+      m_msg_forward_stret_addr(LLDB_INVALID_ADDRESS) {
   if (process_sp)
     m_process_wp = process_sp;
   // Look up the known resolution functions:
@@ -655,7 +656,7 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
   // array into a template table, and populate the DispatchFunction
   // map from there.
 
-  for (size_t i = 0; i != llvm::array_lengthof(g_dispatch_functions); i++) {
+  for (size_t i = 0; i != std::size(g_dispatch_functions); i++) {
     ConstString name_const_str(g_dispatch_functions[i].name);
     const Symbol *msgSend_symbol =
         m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
@@ -673,9 +674,9 @@ AppleObjCTrampolineHandler::AppleObjCTrampolineHandler(
       m_msgSend_map.insert(std::pair<lldb::addr_t, int>(sym_addr, i));
     }
   }
-  
+
   // Similarly, cache the addresses of the "optimized dispatch" function.
-  for (size_t i = 0; i != llvm::array_lengthof(g_opt_dispatch_names); i++) {
+  for (size_t i = 0; i != std::size(g_opt_dispatch_names); i++) {
     ConstString name_const_str(g_opt_dispatch_names[i]);
     const Symbol *msgSend_symbol =
         m_objc_module_sp->FindFirstSymbolWithNameAndType(name_const_str,
@@ -729,13 +730,13 @@ AppleObjCTrampolineHandler::SetupDispatchFunction(Thread &thread,
       }
 
       // Next make the runner function for our implementation utility function.
-      TypeSystemClang *clang_ast_context = ScratchTypeSystemClang::GetForTarget(
+      TypeSystemClangSP scratch_ts_sp = ScratchTypeSystemClang::GetForTarget(
           thread.GetProcess()->GetTarget());
-      if (!clang_ast_context)
+      if (!scratch_ts_sp)
         return LLDB_INVALID_ADDRESS;
 
       CompilerType clang_void_ptr_type =
-          clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+          scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
       Status error;
 
       impl_function_caller = m_impl_code->MakeFunctionCaller(
@@ -780,10 +781,8 @@ AppleObjCTrampolineHandler::FindDispatchFunction(lldb::addr_t addr) {
   return nullptr;
 }
 
-void
-AppleObjCTrampolineHandler::ForEachDispatchFunction(
-    std::function<void(lldb::addr_t, 
-                       const DispatchFunction &)> callback) {
+void AppleObjCTrampolineHandler::ForEachDispatchFunction(
+    std::function<void(lldb::addr_t, const DispatchFunction &)> callback) {
   for (auto elem : m_msgSend_map) {
     callback(elem.first, g_dispatch_functions[elem.second]);
   }
@@ -867,15 +866,15 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
     TargetSP target_sp(thread.CalculateTarget());
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(*target_sp);
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return ret_plan_sp;
 
     ValueList argument_values;
     Value void_ptr_value;
     CompilerType clang_void_ptr_type =
-        clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
     void_ptr_value.SetValueType(Value::ValueType::Scalar);
     // void_ptr_value.SetContext (Value::eContextTypeClangType,
     // clang_void_ptr_type);
@@ -1090,7 +1089,7 @@ AppleObjCTrampolineHandler::GetStepThroughDispatchPlan(Thread &thread,
 
       Value flag_value;
       CompilerType clang_int_type =
-          clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
+          scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(
               lldb::eEncodingSint, 32);
       flag_value.SetValueType(Value::ValueType::Scalar);
       // flag_value.SetContext (Value::eContextTypeClangType, clang_int_type);

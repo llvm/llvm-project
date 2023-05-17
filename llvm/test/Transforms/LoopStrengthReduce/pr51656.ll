@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local i32 @d() local_unnamed_addr #0 !dbg !16 {
 entry:
-  %b.promoted = load i32, i32* @b, align 4, !tbaa !29
+  %b.promoted = load i32, ptr @b, align 4, !tbaa !29
   %mul = mul nsw i32 %b.promoted, %b.promoted, !dbg !33
   %mul.1 = mul nsw i32 %mul, %mul, !dbg !33
   %mul.2 = mul nsw i32 %mul.1, %mul.1, !dbg !33
@@ -62,9 +62,9 @@ entry:
   %mul.45 = mul nsw i32 %mul.44, %mul.44, !dbg !33
   %mul.46 = mul nsw i32 %mul.45, %mul.45, !dbg !33
   %mul.47 = mul nsw i32 %mul.46, %mul.46, !dbg !33
-  store i32 49, i32* @c, align 4, !dbg !36, !tbaa !29
-  store i32 %mul.47, i32* @b, align 4, !dbg !37, !tbaa !29
-  %.pr = load i32, i32* @a, align 4, !dbg !38, !tbaa !29
+  store i32 49, ptr @c, align 4, !dbg !36, !tbaa !29
+  store i32 %mul.47, ptr @b, align 4, !dbg !37, !tbaa !29
+  %.pr = load i32, ptr @a, align 4, !dbg !38, !tbaa !29
   %tobool.not8 = icmp eq i32 %.pr, 0, !dbg !39
   br i1 %tobool.not8, label %for.end3, label %for.body2.preheader, !dbg !39
 
@@ -74,17 +74,17 @@ for.body2.preheader:                              ; preds = %entry
 for.body2:                                        ; preds = %for.body2.preheader, %for.body2
   %0 = phi i32 [ %sub, %for.body2 ], [ %.pr, %for.body2.preheader ]
   %sub = sub nsw i32 %0, %mul.47, !dbg !40
-  ; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 undef, i32 %mul.47), metadata ![[VAR_e:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value))
+  ; CHECK: call void @llvm.dbg.value(metadata !DIArgList(i32 poison, i32 %mul.47), metadata ![[VAR_e:[0-9]+]], metadata !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_LLVM_arg, 1, DW_OP_minus, DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value))
   call void @llvm.dbg.value(metadata i32 %sub, metadata !20, metadata !DIExpression(DW_OP_LLVM_convert, 32, DW_ATE_signed, DW_OP_LLVM_convert, 64, DW_ATE_signed, DW_OP_stack_value)), !dbg !41
   %tobool.not = icmp eq i32 %sub, 0, !dbg !39
   br i1 %tobool.not, label %for.cond1.for.end3_crit_edge, label %for.body2, !dbg !39, !llvm.loop !42
 
 for.cond1.for.end3_crit_edge:                     ; preds = %for.body2
-  store i32 0, i32* @a, align 4, !dbg !40, !tbaa !29
+  store i32 0, ptr @a, align 4, !dbg !40, !tbaa !29
   br label %for.end3, !dbg !39
 
 for.end3:                                         ; preds = %for.cond1.for.end3_crit_edge, %entry
-  ret i32 undef, !dbg !45
+  ret i32 poison, !dbg !45
 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

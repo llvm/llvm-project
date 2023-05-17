@@ -7,8 +7,8 @@ define void @need_cfi_def_cfa_offset() #0 !dbg !3 {
 ; CHECK: .cfi_def_cfa_offset 4
 entry:
   %Depth = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %Depth, metadata !9, metadata !10), !dbg !11
-  store i32 2, i32* %Depth, align 4, !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %Depth, metadata !9, metadata !10), !dbg !11
+  store i32 2, ptr %Depth, align 4, !dbg !11
   ret void, !dbg !12
 }
 

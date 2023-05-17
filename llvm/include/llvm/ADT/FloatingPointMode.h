@@ -15,6 +15,7 @@
 #ifndef LLVM_ADT_FLOATINGPOINTMODE_H
 #define LLVM_ADT_FLOATINGPOINTMODE_H
 
+#include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -79,7 +80,10 @@ struct DenormalMode {
     PreserveSign,
 
     /// Denormals are flushed to positive zero.
-    PositiveZero
+    PositiveZero,
+
+    /// Denormals have unknown treatment.
+    Dynamic
   };
 
   /// Denormal flushing mode for floating point instruction results in the
@@ -100,6 +104,11 @@ struct DenormalMode {
     return DenormalMode(DenormalModeKind::Invalid, DenormalModeKind::Invalid);
   }
 
+  /// Return the assumed default mode for a function without denormal-fp-math.
+  static constexpr DenormalMode getDefault() {
+    return getIEEE();
+  }
+
   static constexpr DenormalMode getIEEE() {
     return DenormalMode(DenormalModeKind::IEEE, DenormalModeKind::IEEE);
   }
@@ -112,6 +121,10 @@ struct DenormalMode {
   static constexpr DenormalMode getPositiveZero() {
     return DenormalMode(DenormalModeKind::PositiveZero,
                         DenormalModeKind::PositiveZero);
+  }
+
+  static constexpr DenormalMode getDynamic() {
+    return DenormalMode(DenormalModeKind::Dynamic, DenormalModeKind::Dynamic);
   }
 
   bool operator==(DenormalMode Other) const {
@@ -129,6 +142,30 @@ struct DenormalMode {
   bool isValid() const {
     return Output != DenormalModeKind::Invalid &&
            Input != DenormalModeKind::Invalid;
+  }
+
+  /// Return true if input denormals must be implicitly treated as 0.
+  constexpr bool inputsAreZero() const {
+    return Input == DenormalModeKind::PreserveSign ||
+           Input == DenormalModeKind::PositiveZero;
+  }
+
+  /// Return true if output denormals should be flushed to 0.
+  constexpr bool outputsAreZero() const {
+    return Output == DenormalModeKind::PreserveSign ||
+           Output == DenormalModeKind::PositiveZero;
+  }
+
+  /// Get the effective denormal mode if the mode if this caller calls into a
+  /// function with \p Callee. This promotes dynamic modes to the mode of the
+  /// caller.
+  DenormalMode mergeCalleeMode(DenormalMode Callee) const {
+    DenormalMode MergedMode = Callee;
+    if (Callee.Input == DenormalMode::Dynamic)
+      MergedMode.Input = Input;
+    if (Callee.Output == DenormalMode::Dynamic)
+      MergedMode.Output = Output;
+    return MergedMode;
   }
 
   inline void print(raw_ostream &OS) const;
@@ -151,10 +188,11 @@ inline DenormalMode::DenormalModeKind
 parseDenormalFPAttributeComponent(StringRef Str) {
   // Assume ieee on unspecified attribute.
   return StringSwitch<DenormalMode::DenormalModeKind>(Str)
-    .Cases("", "ieee", DenormalMode::IEEE)
-    .Case("preserve-sign", DenormalMode::PreserveSign)
-    .Case("positive-zero", DenormalMode::PositiveZero)
-    .Default(DenormalMode::Invalid);
+      .Cases("", "ieee", DenormalMode::IEEE)
+      .Case("preserve-sign", DenormalMode::PreserveSign)
+      .Case("positive-zero", DenormalMode::PositiveZero)
+      .Case("dynamic", DenormalMode::Dynamic)
+      .Default(DenormalMode::Invalid);
 }
 
 /// Return the name used for the denormal handling mode used by the the
@@ -167,6 +205,8 @@ inline StringRef denormalModeKindName(DenormalMode::DenormalModeKind Mode) {
     return "preserve-sign";
   case DenormalMode::PositiveZero:
     return "positive-zero";
+  case DenormalMode::Dynamic:
+    return "dynamic";
   default:
     return "";
   }
@@ -192,11 +232,11 @@ void DenormalMode::print(raw_ostream &OS) const {
   OS << denormalModeKindName(Output) << ',' << denormalModeKindName(Input);
 }
 
-}
-
 /// Floating-point class tests, supported by 'is_fpclass' intrinsic. Actual
 /// test may be an OR combination of basic tests.
-enum FPClassTest {
+enum FPClassTest : unsigned {
+  fcNone = 0,
+
   fcSNan = 0x0001,
   fcQNan = 0x0002,
   fcNegInf = 0x0004,
@@ -216,7 +256,23 @@ enum FPClassTest {
   fcPosFinite = fcPosNormal | fcPosSubnormal | fcPosZero,
   fcNegFinite = fcNegNormal | fcNegSubnormal | fcNegZero,
   fcFinite = fcPosFinite | fcNegFinite,
-  fcAllFlags = fcNan | fcInf | fcFinite
+  fcPositive = fcPosFinite | fcPosInf,
+  fcNegative = fcNegFinite | fcNegInf,
+
+  fcAllFlags = fcNan | fcInf | fcFinite,
 };
+
+LLVM_DECLARE_ENUM_AS_BITMASK(FPClassTest, /* LargestValue */ fcPosInf);
+
+/// Return the test mask which returns true if the value's sign bit is flipped.
+FPClassTest fneg(FPClassTest Mask);
+
+/// Return the test mask which returns true if the value's sign bit is cleared.
+FPClassTest fabs(FPClassTest Mask);
+
+/// Write a human readable form of \p Mask to \p OS
+raw_ostream &operator<<(raw_ostream &OS, FPClassTest Mask);
+
+} // namespace llvm
 
 #endif // LLVM_ADT_FLOATINGPOINTMODE_H

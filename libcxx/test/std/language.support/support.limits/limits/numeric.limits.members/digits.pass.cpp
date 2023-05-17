@@ -35,10 +35,8 @@ int main(int, char**)
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<char8_t, 8>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<char16_t, 16>();
     test<char32_t, 32>();
-#endif
     test<short, 15>();
     test<unsigned short, 16>();
     test<int, 31>();

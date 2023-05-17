@@ -3,11 +3,11 @@
 ; Check that the second load of @g_2 is not incorrectly eliminated by
 ; DAGCombiner. It is needed since the preceding store is aliasing.
 
-; %.b1.i = load i1, i1* @g_2, align 4
+; %.b1.i = load i1, ptr @g_2, align 4
 ; ...
-; %g_717.sink.i = select i1 %cmp.i, i1* @g_717, i1* @g_2
-; store i1 true, i1* %g_717.sink.i, align 4
-; %.b = load i1, i1* @g_2, align 4
+; %g_717.sink.i = select i1 %cmp.i, ptr @g_717, ptr @g_2
+; store i1 true, ptr %g_717.sink.i, align 4
+; %.b = load i1, ptr @g_2, align 4
 
 ; CHECK: # %bb.6: # %crc32_gentab.exit
 ; CHECK:        larl    %r2, g_2
@@ -25,23 +25,23 @@
 @.str.4 = external hidden unnamed_addr constant [15 x i8], align 2
 
 ; Function Attrs: nounwind
-define signext i32 @main(i32 signext %argc, i8** nocapture readonly %argv) local_unnamed_addr #0 {
+define signext i32 @main(i32 signext %argc, ptr nocapture readonly %argv) local_unnamed_addr #0 {
 entry:
   %cmp = icmp eq i32 %argc, 2
   br i1 %cmp, label %cond.true, label %vector.ph
 
 cond.true:                                        ; preds = %entry
-  %arrayidx = getelementptr inbounds i8*, i8** %argv, i64 1
-  %0 = load i8*, i8** %arrayidx, align 8, !tbaa !2
-  %1 = load i8, i8* %0, align 1, !tbaa !6
+  %arrayidx = getelementptr inbounds ptr, ptr %argv, i64 1
+  %0 = load ptr, ptr %arrayidx, align 8, !tbaa !2
+  %1 = load i8, ptr %0, align 1, !tbaa !6
   %conv4 = zext i8 %1 to i32
   %sub = sub nsw i32 49, %conv4
   %cmp8 = icmp eq i32 %sub, 0
   br i1 %cmp8, label %if.then, label %if.end35
 
 if.then:                                          ; preds = %cond.true
-  %arrayidx11 = getelementptr inbounds i8, i8* %0, i64 1
-  %2 = load i8, i8* %arrayidx11, align 1, !tbaa !6
+  %arrayidx11 = getelementptr inbounds i8, ptr %0, i64 1
+  %2 = load i8, ptr %arrayidx11, align 1, !tbaa !6
   %conv12 = zext i8 %2 to i32
   %sub13 = sub nsw i32 0, %conv12
   br label %if.end35
@@ -99,40 +99,39 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %40 = lshr <4 x i32> %37, <i32 1, i32 1, i32 1, i32 1>
   %41 = xor <4 x i32> %40, <i32 -306674912, i32 -306674912, i32 -306674912, i32 -306674912>
   %42 = select <4 x i1> %39, <4 x i32> %40, <4 x i32> %41
-  %43 = getelementptr inbounds [256 x i32], [256 x i32]* @crc32_tab, i64 0, i64 %index
-  %44 = bitcast i32* %43 to <4 x i32>*
-  store <4 x i32> %42, <4 x i32>* %44, align 4, !tbaa !7
+  %43 = getelementptr inbounds [256 x i32], ptr @crc32_tab, i64 0, i64 %index
+  store <4 x i32> %42, ptr %43, align 4, !tbaa !7
   %index.next = add i64 %index, 4
   %vec.ind.next23 = add <4 x i32> %vec.ind22, <i32 4, i32 4, i32 4, i32 4>
-  %45 = icmp eq i64 %index.next, 256
-  br i1 %45, label %crc32_gentab.exit, label %vector.body
+  %44 = icmp eq i64 %index.next, 256
+  br i1 %44, label %crc32_gentab.exit, label %vector.body
 
 crc32_gentab.exit:                                ; preds = %vector.body
-  %46 = load i32, i32* @g_5, align 4, !tbaa !7
-  %.b1.i = load i1, i1* @g_2, align 4
-  %47 = select i1 %.b1.i, i32 1, i32 2
-  %and.i21 = and i32 %47, %46
-  store i32 %and.i21, i32* @g_5, align 4, !tbaa !7
+  %45 = load i32, ptr @g_5, align 4, !tbaa !7
+  %.b1.i = load i1, ptr @g_2, align 4
+  %46 = select i1 %.b1.i, i32 1, i32 2
+  %and.i21 = and i32 %46, %45
+  store i32 %and.i21, ptr @g_5, align 4, !tbaa !7
   %cmp.i = icmp eq i32 %and.i21, 1
-  %g_717.sink.i = select i1 %cmp.i, i1* @g_717, i1* @g_2
-  store i1 true, i1* %g_717.sink.i, align 4
-  %.b = load i1, i1* @g_2, align 4
+  %g_717.sink.i = select i1 %cmp.i, ptr @g_717, ptr @g_2
+  store i1 true, ptr %g_717.sink.i, align 4
+  %.b = load i1, ptr @g_2, align 4
   %conv44 = select i1 %.b, i64 1, i64 2
-  tail call fastcc void @transparent_crc(i64 %conv44, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str.1, i64 0, i64 0), i32 signext %print_hash_value.0)
-  %.b20 = load i1, i1* @g_717, align 4
+  tail call fastcc void @transparent_crc(i64 %conv44, ptr @.str.1, i32 signext %print_hash_value.0)
+  %.b20 = load i1, ptr @g_717, align 4
   %conv45 = select i1 %.b20, i64 2, i64 0
-  tail call fastcc void @transparent_crc(i64 %conv45, i8* getelementptr inbounds ([6 x i8], [6 x i8]* @.str.2, i64 0, i64 0), i32 signext %print_hash_value.0)
-  %48 = load i32, i32* @crc32_context, align 4, !tbaa !7
-  %49 = xor i32 %48, -1
-  %call.i = tail call signext i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str.4, i64 0, i64 0), i32 zeroext %49) #2
+  tail call fastcc void @transparent_crc(i64 %conv45, ptr @.str.2, i32 signext %print_hash_value.0)
+  %47 = load i32, ptr @crc32_context, align 4, !tbaa !7
+  %48 = xor i32 %47, -1
+  %call.i = tail call signext i32 (ptr, ...) @printf(ptr @.str.4, i32 zeroext %48) #2
   ret i32 0
 }
 
 ; Function Attrs: nounwind
-declare hidden fastcc void @transparent_crc(i64, i8*, i32 signext) unnamed_addr #0
+declare hidden fastcc void @transparent_crc(i64, ptr, i32 signext) unnamed_addr #0
 
 ; Function Attrs: nounwind
-declare signext i32 @printf(i8* nocapture readonly, ...) local_unnamed_addr #1
+declare signext i32 @printf(ptr nocapture readonly, ...) local_unnamed_addr #1
 
 !2 = !{!3, !3, i64 0}
 !3 = !{!"any pointer", !4, i64 0}

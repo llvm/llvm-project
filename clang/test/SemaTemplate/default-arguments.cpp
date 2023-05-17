@@ -169,7 +169,8 @@ namespace DR1635 {
 
 namespace NondefDecls {
   template<typename T> void f1() {
-    int g1(int defarg = T::error);  // expected-error{{type 'int' cannot be used prior to '::' because it has no members}}
+    int g1(int defarg = T::error);  // expected-error{{type 'int' cannot be used prior to '::' because it has no members}} \
+                                    // expected-note {{in instantiation of default function argument expression for 'g1<int>' required here}}
   }
   template void f1<int>();  // expected-note{{in instantiation of function template specialization 'NondefDecls::f1<int>' requested here}}
 }

@@ -11,14 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/BufferizationToMemRef/BufferizationToMemRef.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTBUFFERIZATIONTOMEMREF
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -35,11 +41,11 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
                   ConversionPatternRewriter &rewriter) const override {
     // Check for unranked memref types which are currently not supported.
     Type type = op.getType();
-    if (type.isa<UnrankedMemRefType>()) {
+    if (isa<UnrankedMemRefType>(type)) {
       return rewriter.notifyMatchFailure(
           op, "UnrankedMemRefType is not supported.");
     }
-    MemRefType memrefType = type.cast<MemRefType>();
+    MemRefType memrefType = cast<MemRefType>(type);
     MemRefLayoutAttrInterface layout;
     auto allocType =
         MemRefType::get(memrefType.getShape(), memrefType.getElementType(),
@@ -57,7 +63,8 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
       if (!memrefType.isDynamicDim(i))
         continue;
       Value size = rewriter.createOrFold<arith::ConstantIndexOp>(loc, i);
-      Value dim = rewriter.createOrFold<memref::DimOp>(loc, op.input(), size);
+      Value dim =
+          rewriter.createOrFold<memref::DimOp>(loc, op.getInput(), size);
       dynamicOperands.push_back(dim);
     }
 
@@ -68,7 +75,7 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
     if (memrefType != allocType)
       alloc = rewriter.create<memref::CastOp>(op->getLoc(), memrefType, alloc);
     rewriter.replaceOp(op, alloc);
-    rewriter.create<memref::CopyOp>(loc, op.input(), alloc);
+    rewriter.create<memref::CopyOp>(loc, op.getInput(), alloc);
     return success();
   }
 };
@@ -81,7 +88,7 @@ void mlir::populateBufferizationToMemRefConversionPatterns(
 
 namespace {
 struct BufferizationToMemRefPass
-    : public ConvertBufferizationToMemRefBase<BufferizationToMemRefPass> {
+    : public impl::ConvertBufferizationToMemRefBase<BufferizationToMemRefPass> {
   BufferizationToMemRefPass() = default;
 
   void runOnOperation() override {

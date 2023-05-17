@@ -25,7 +25,7 @@ bb5:                                              ; preds = %bb4
   unreachable
 
 bb6:                                              ; preds = %bb4
-  %1 = getelementptr inbounds i8, i8* undef, i64 %0   ; <i8*> [#uses=0]
+  %1 = getelementptr inbounds i8, ptr undef, i64 %0   ; <ptr> [#uses=0]
   ret void
 
 return:                                           ; preds = %bb, %entry

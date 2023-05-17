@@ -13,10 +13,173 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
+Version 17.0
+------------
+
+* [libc++] Remove symbols for a std::allocator_arg & friends from the dylib
+
+  This patch removes the symbols defined in the library for std::allocator_arg,
+  std::defer_lock, std::try_to_lock, std::adopt_lock, and std::piecewise_construct.
+  Those were defined in the library because we provided them in C++03 as an
+  extension, and in C++03 it was impossible to define them as `constexpr`
+  variables, as required by the Standard.
+
+  This is technically an ABI break since we are removing symbols from the
+  library. However, in practice, only programs compiled in C++03 mode that
+  take the address of those objects (or pass them as a reference) will have
+  an undefined ref to those symbols. In practice, this is expected to be
+  rare. First, those are C++11 features that we happen to provide in C++03,
+  and only the C++03 definition can potentially lead to code referencing
+  the dylib definition. So any code that is using these objects but compiling
+  in C++11 mode (as they should) is not at risk. Second, all uses of these
+  types in the library is done by passing those types by value to a function
+  that can get inlined. Since they are empty types, the compiler won't
+  generate an undefined reference if passed by value, since there's nothing
+  to pass anyway.
+
+  Long story short, the risk for code actually containing an undefined
+  reference to one of these types is rather small (but non-zero).
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__110adopt_lockE
+  Symbol removed: _ZNSt3__110defer_lockE
+  Symbol removed: _ZNSt3__111try_to_lockE
+  Symbol removed: _ZNSt3__113allocator_argE
+  Symbol removed: _ZNSt3__119piecewise_constructE
+
+* [libc++] Remove explicit instantiations of __insertion_sort_incomplete and __sort5 from the dylib
+
+  These instantiations were never visible, because they are only used in `__sort`, which is also explicitly
+  instantiated in the dylib.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIaaEEPaEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIccEEPcEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIddEEPdEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIeeEEPeEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIffEEPfEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIhhEEPhEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIiiEEPiEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIjjEEPjEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIllEEPlEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessImmEEPmEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIssEEPsEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIttEEPtEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIwwEEPwEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIxxEEPxEEbT0_S5_T_
+  Symbol removed: _ZNSt3__127__insertion_sort_incompleteIRNS_6__lessIyyEEPyEEbT0_S5_T_
+  Symbol removed: _ZNSt3__17__sort5IRNS_6__lessIeeEEPeEEjT0_S5_S5_S5_S5_T_
+
+------------
+Version 16.0
+------------
+
+* [libc++][PMR] Move the pmr::memory_resource destructor into the dylib
+
+  All platforms
+  -------------
+  Symbol added: _ZNSt3__13pmr15memory_resourceD0Ev
+  Symbol added: _ZNSt3__13pmr15memory_resourceD1Ev
+  Symbol added: _ZNSt3__13pmr15memory_resourceD2Ev
+  Symbol added: _ZTVNSt3__13pmr15memory_resourceE
+
+* [libc++] [C++17] Implement <memory_resource>.
+
+  This commit adds <memory_resource> to the shared library.
+
+  All platforms
+  -------------
+  Symbol added: _ZNKSt3__13pmr26synchronized_pool_resource11do_is_equalERKNS0_15memory_resourceE
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource12__pool_indexEmm
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource17__pool_block_sizeEi
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource22__log2_pool_block_sizeEi
+  Symbol added: _ZNKSt3__13pmr28unsynchronized_pool_resource7optionsEv
+  Symbol added: _ZNSt3__13pmr19new_delete_resourceEv
+  Symbol added: _ZNSt3__13pmr20get_default_resourceEv
+  Symbol added: _ZNSt3__13pmr20null_memory_resourceEv
+  Symbol added: _ZNSt3__13pmr20set_default_resourceEPNS0_15memory_resourceE
+  Symbol added: _ZNSt3__13pmr25monotonic_buffer_resource11do_allocateEmm
+  Symbol added: _ZNSt3__13pmr25monotonic_buffer_resource14__chunk_footer25__try_allocate_from_chunkEmm
+  Symbol added: _ZNSt3__13pmr25monotonic_buffer_resource20__initial_descriptor25__try_allocate_from_chunkEmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource11do_allocateEmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__do_allocateEPNS0_15memory_resourceEmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool13__release_ptrEPNS0_15memory_resourceE
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource12__adhoc_pool15__do_deallocateEPNS0_15memory_resourceEPvmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource13do_deallocateEPvmm
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resource7releaseEv
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resourceC1ERKNS0_12pool_optionsEPNS0_15memory_resourceE
+  Symbol added: _ZNSt3__13pmr28unsynchronized_pool_resourceC2ERKNS0_12pool_optionsEPNS0_15memory_resourceE
+  Symbol added: _ZTINSt3__13pmr15memory_resourceE
+  Symbol added: _ZTINSt3__13pmr25monotonic_buffer_resourceE
+  Symbol added: _ZTINSt3__13pmr26__null_memory_resource_impE
+  Symbol added: _ZTINSt3__13pmr26synchronized_pool_resourceE
+  Symbol added: _ZTINSt3__13pmr28unsynchronized_pool_resourceE
+  Symbol added: _ZTINSt3__13pmr32__new_delete_memory_resource_impE
+  Symbol added: _ZTSNSt3__13pmr15memory_resourceE
+  Symbol added: _ZTSNSt3__13pmr25monotonic_buffer_resourceE
+  Symbol added: _ZTSNSt3__13pmr26__null_memory_resource_impE
+  Symbol added: _ZTSNSt3__13pmr26synchronized_pool_resourceE
+  Symbol added: _ZTSNSt3__13pmr28unsynchronized_pool_resourceE
+  Symbol added: _ZTSNSt3__13pmr32__new_delete_memory_resource_impE
+  Symbol added: _ZTVNSt3__13pmr25monotonic_buffer_resourceE
+  Symbol added: _ZTVNSt3__13pmr26synchronized_pool_resourceE
+  Symbol added: _ZTVNSt3__13pmr28unsynchronized_pool_resourceE
+
+------------
 Version 15.0
 ------------
 
-* b0fd9497af6d - [libc++] Add a lightweight overridable assertion handler
+* f1c30135417f - [libc++] Drop the legacy debug mode symbols by default
+
+  This commit removed symbols implementing debug mode in the non-debug
+  configuration of the library. Using the debug mode now requires a
+  differently-configured version of libc++. This is technically an ABI
+  break, however any user having been using the debug mode support previously
+  was already at risk of non-benign ODR violations, and in practice we
+  never found it to work reliably.
+
+  All platforms
+  -------------
+  Symbol removed: _ZNKSt3__111__libcpp_db15__decrementableEPKv
+  Symbol removed: _ZNKSt3__111__libcpp_db15__find_c_from_iEPv
+  Symbol removed: _ZNKSt3__111__libcpp_db15__subscriptableEPKvl
+  Symbol removed: _ZNKSt3__111__libcpp_db17__dereferenceableEPKv
+  Symbol removed: _ZNKSt3__111__libcpp_db17__find_c_and_lockEPv
+  Symbol removed: _ZNKSt3__111__libcpp_db22__less_than_comparableEPKvS2_
+  Symbol removed: _ZNKSt3__111__libcpp_db6unlockEv
+  Symbol removed: _ZNKSt3__111__libcpp_db8__find_cEPv
+  Symbol removed: _ZNKSt3__111__libcpp_db9__addableEPKvl
+  Symbol removed: _ZNKSt3__119__libcpp_debug_info4whatEv
+  Symbol removed: _ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: _ZNSt3__111__libcpp_db10__insert_iEPv
+  Symbol removed: _ZNSt3__111__libcpp_db11__insert_icEPvPKv
+  Symbol removed: _ZNSt3__111__libcpp_db15__iterator_copyEPvPKv
+  Symbol removed: _ZNSt3__111__libcpp_db16__invalidate_allEPv
+  Symbol removed: _ZNSt3__111__libcpp_db4swapEPvS1_
+  Symbol removed: _ZNSt3__111__libcpp_db9__erase_cEPv
+  Symbol removed: _ZNSt3__111__libcpp_db9__erase_iEPv
+  Symbol removed: _ZNSt3__111__libcpp_dbC1Ev
+  Symbol removed: _ZNSt3__111__libcpp_dbC2Ev
+  Symbol removed: _ZNSt3__111__libcpp_dbD1Ev
+  Symbol removed: _ZNSt3__111__libcpp_dbD2Ev
+  Symbol removed: _ZNSt3__114__get_const_dbEv
+  Symbol removed: _ZNSt3__123__libcpp_debug_functionE
+  Symbol removed: _ZNSt3__127__libcpp_set_debug_functionEPFvRKNS_19__libcpp_debug_infoEE
+  Symbol removed: _ZNSt3__129__libcpp_abort_debug_functionERKNS_19__libcpp_debug_infoE
+  Symbol removed: _ZNSt3__18__c_node5__addEPNS_8__i_nodeE
+  Symbol removed: _ZNSt3__18__c_nodeD0Ev
+  Symbol removed: _ZNSt3__18__c_nodeD1Ev
+  Symbol removed: _ZNSt3__18__c_nodeD2Ev
+  Symbol removed: _ZNSt3__18__get_dbEv
+  Symbol removed: _ZNSt3__18__i_nodeD1Ev
+  Symbol removed: _ZNSt3__18__i_nodeD2Ev
+  Symbol removed: _ZTINSt3__18__c_nodeE
+  Symbol removed: _ZTSNSt3__18__c_nodeE
+  Symbol removed: _ZTVNSt3__18__c_nodeE
+
+* b0fd9497af6d, 7de5aca84c54 and 507125af3d0b - [libc++] Add a lightweight overridable assertion handler
 
   This patch adds a lightweight assertion handler mechanism that can be
   overriden at link-time in a fashion similar to `operator new`. A default
@@ -25,7 +188,7 @@ Version 15.0
 
   All platforms
   -------------
-  Symbol added: _ZNSt3__126__libcpp_assertion_handlerEPKciS1_S1_
+  Symbol added: _ZNSt3__122__libcpp_verbose_abortEPKcz
 
 ------------
 Version 14.0
@@ -56,7 +219,7 @@ Version 14.0
   In fact, any program that would have attempted to refer to that symbol would
   have previously failed to link.
 
-  x86_64-apple-apple-darwin
+  <arch>-apple-darwin
   -------------------------
   Symbol added: _ZNSt3__15ctypeIcE10table_sizeE
 
@@ -235,7 +398,7 @@ Version 12.0
   Those were previously defined in both libc++ and libc++abi, which was an
   ODR violation.
 
-  <arch>-apple-apple-darwin
+  <arch>-apple-darwin
   -------------------------
   The following symbols are now re-exported from libc++abi instead of exported
   by libc++ directly (this should not be an ABI break):
@@ -293,8 +456,8 @@ Version 12.0
   We re-export some symbols that were exported from libc++abi but not from
   libc++. Exporting new symbols is not an ABI break.
 
-  x86_64-apple-apple-darwin
-  -------------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_allocate_dependent_exception
   Symbol added: ___cxa_free_dependent_exception
 
@@ -308,12 +471,8 @@ Version 10.0
   adds a few symbols to the dylib. This is backwards-compatible since we're
   just adding new symbols.
 
-  x86_64-unknown-linux-gnu
-  ------------------------
-  TODO
-
-  <arch>-apple-apple-darwin
-  -------------------------
+  All platforms
+  -------------
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEEx
   Symbol added: __ZNSt3__120__libcpp_atomic_waitEPVKvx
   Symbol added: __ZNSt3__123__cxx_atomic_notify_allEPVKNS_17__cxx_atomic_implIxNS_22__cxx_atomic_base_implIxEEEE
@@ -338,12 +497,8 @@ Version 9.0
   against an older version of libc++abi that doesn't provide those symbols,
   however doing so is not supported anyway.
 
-  x86_64-unknown-linux-gnu
-  ------------------------
-  TODO
-
-  x86_64-apple-apple-darwin
-  -------------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_throw_bad_array_new_length
   Symbol added: ___cxa_uncaught_exceptions
 
@@ -463,11 +618,10 @@ Version 9.0
   Symbol removed: _ZTSNSt3__124__libcpp_debug_exceptionE
   Symbol removed: _ZTVNSt3__124__libcpp_debug_exceptionE
 
-
-    x86_64-apple-apple-darwin
-    -------------------------
-    Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
-    Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
+  <arch>-apple-darwin
+  -------------------
+  Symbol added: __ZNSt3__111__libcpp_db10__insert_cEPvPFPNS_8__c_nodeES1_S1_S3_E
+  Symbol removed: __ZNSt3__111__libcpp_db10__insert_cEPv
 
 * r355367 - Fix -fsanitize=vptr badness in <__debug>
 
@@ -495,8 +649,8 @@ Version 8.0
   users couldn't be relying on the functionality because it is marked as being
   unavailable using Clang's availability attribute.
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol removed: __ZNKSt16bad_array_length4whatEv
   Symbol removed: __ZNKSt16bad_array_length4whatEv
   Symbol removed: __ZNSt16bad_array_lengthC1Ev
@@ -575,8 +729,8 @@ Version 8.0
   Symbol removed: _ZNSt3__121__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
   Symbol removed: _ZNSt3__119__start_std_streamsE
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol removed: __ZNSt3__221__thread_specific_ptrINS_15__thread_structEE16__at_thread_exitEPv
   Symbol removed: __ZNSt3__119__start_std_streamsE
 
@@ -593,8 +747,8 @@ Version 7.0
   Symbol added: _ZNSt3__16__itoa8__u64toaEmPc
   Symbol added: _ZNSt3__16__itoa8__u32toaEjPc
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: __ZNSt3__16__itoa8__u64toaEyPc
   Symbol added: __ZNSt3__16__itoa8__u32toaEjPc
 
@@ -622,8 +776,8 @@ Version 5.0
   ----------------
   No changes
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   Symbol added: ___cxa_deleted_virtual
 
 * r296729 - Remove std::num_get template methods which should be inline
@@ -654,8 +808,8 @@ Version 5.0
   Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIeEES4_S4_S4_RNS_8ios_baseERjRT_
   Symbol removed: _ZNKSt3__17num_getIwNS_19istreambuf_iteratorIwNS_11char_traitsIwEEEEE23__do_get_floating_pointIfEES4_S4_S4_RNS_8ios_baseERjRT_
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No changes
 
 -----------
@@ -705,8 +859,8 @@ Version 4.0
   Symbol removed: _ZNSt3__112basic_stringIcNS_11char_traitsIcEENS_9allocatorIcEEE6appendIPcEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
   Symbol removed: _ZNSt3__112basic_stringIwNS_11char_traitsIwEENS_9allocatorIwEEE6appendIPwEENS_9enable_ifIXaasr21__is_forward_iteratorIT_EE5valuesr38__libcpp_string_gets_noexcept_iteratorIS9_EE5valueERS5_E4typeES9_S9_
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No changes
 
 * r285101 - Add -fvisibility-inlines-hidden when building libc++.
@@ -738,8 +892,8 @@ Version 4.0
   Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IDsED0Ev
   Symbol removed: _ZNSt3__120__codecvt_utf8_utf16IwED0Ev
 
-  x86_64-apple-darwin16.0
-  -----------------------
+  <arch>-apple-darwin
+  -------------------
   No Changes - inline symbols are already hidden
 
 * r284206 - Implement C++17 aligned allocation in <new>
@@ -778,8 +932,7 @@ Version 4.0
   Symbol added: _ZTSSt12bad_any_cast
   Symbol added: _ZTVSt12bad_any_cast
 
-* r295398 - Remove basic_string::insert and basic_string::replace template methods
-    which should be inline.
+* r295398 - Remove basic_string::insert and basic_string::replace template methods which should be inline.
 
   These functions should never have had visible definitions in the dylib but
   since they were previously not specified with 'inline' they accidentally

@@ -14,10 +14,10 @@ target triple="aarch64--"
 
 define void @f() !dbg !6 {
 entry:
-  %a = alloca i8*
-  %b = alloca i8*
-  call void @llvm.dbg.declare(metadata i8** %a, metadata !12, metadata !DIExpression(DW_OP_LLVM_tag_offset, 1)), !dbg !14
-  call void @llvm.dbg.declare(metadata i8** %b, metadata !13, metadata !DIExpression(DW_OP_LLVM_tag_offset, 2)), !dbg !14
+  %a = alloca ptr
+  %b = alloca ptr
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !12, metadata !DIExpression(DW_OP_LLVM_tag_offset, 1)), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !13, metadata !DIExpression(DW_OP_LLVM_tag_offset, 2)), !dbg !14
   ret void, !dbg !15
 }
 

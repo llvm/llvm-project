@@ -9,7 +9,7 @@
 ; generic implementation for 128-bit vectors
 ;
 
-define void @signum32a(<4 x float>*) {
+define void @signum32a(ptr) {
 ; AVX-LABEL: signum32a:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
@@ -22,38 +22,38 @@ define void @signum32a(<4 x float>*) {
 ; AVX-NEXT:    vmovaps %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 entry:
-  %1 = load <4 x float>, <4 x float>* %0
+  %1 = load <4 x float>, ptr %0
   %2 = fcmp olt <4 x float> %1, zeroinitializer
   %3 = sitofp <4 x i1> %2 to <4 x float>
   %4 = fcmp ogt <4 x float> %1, zeroinitializer
   %5 = sitofp <4 x i1> %4 to <4 x float>
   %6 = fsub <4 x float> %3, %5
-  store <4 x float> %6, <4 x float>* %0
+  store <4 x float> %6, ptr %0
   ret void
 }
 
-define void @signum64a(<2 x double>*) {
+define void @signum64a(ptr) {
 ; AVX-LABEL: signum64a:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovapd (%rdi), %xmm0
 ; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
 ; AVX-NEXT:    vcmpltpd %xmm1, %xmm0, %xmm2
-; AVX-NEXT:    vpermilps {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[0,2,2,3]
 ; AVX-NEXT:    vcvtdq2pd %xmm2, %xmm2
 ; AVX-NEXT:    vcmpltpd %xmm0, %xmm1, %xmm0
-; AVX-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,2,2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2,2,3]
 ; AVX-NEXT:    vcvtdq2pd %xmm0, %xmm0
 ; AVX-NEXT:    vsubpd %xmm0, %xmm2, %xmm0
 ; AVX-NEXT:    vmovapd %xmm0, (%rdi)
 ; AVX-NEXT:    retq
 entry:
-  %1 = load <2 x double>, <2 x double>* %0
+  %1 = load <2 x double>, ptr %0
   %2 = fcmp olt <2 x double> %1, zeroinitializer
   %3 = sitofp <2 x i1> %2 to <2 x double>
   %4 = fcmp ogt <2 x double> %1, zeroinitializer
   %5 = sitofp <2 x i1> %4 to <2 x double>
   %6 = fsub <2 x double> %3, %5
-  store <2 x double> %6, <2 x double>* %0
+  store <2 x double> %6, ptr %0
   ret void
 }
 
@@ -61,7 +61,7 @@ entry:
 ; generic implementation for 256-bit vectors
 ;
 
-define void @signum32b(<8 x float>*) {
+define void @signum32b(ptr) {
 ; AVX-LABEL: signum32b:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovaps (%rdi), %ymm0
@@ -75,17 +75,17 @@ define void @signum32b(<8 x float>*) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 entry:
-  %1 = load <8 x float>, <8 x float>* %0
+  %1 = load <8 x float>, ptr %0
   %2 = fcmp olt <8 x float> %1, zeroinitializer
   %3 = sitofp <8 x i1> %2 to <8 x float>
   %4 = fcmp ogt <8 x float> %1, zeroinitializer
   %5 = sitofp <8 x i1> %4 to <8 x float>
   %6 = fsub <8 x float> %3, %5
-  store <8 x float> %6, <8 x float>* %0
+  store <8 x float> %6, ptr %0
   ret void
 }
 
-define void @signum64b(<4 x double>*) {
+define void @signum64b(ptr) {
 ; AVX1-LABEL: signum64b:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovapd (%rdi), %ymm0
@@ -135,13 +135,13 @@ define void @signum64b(<4 x double>*) {
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 entry:
-  %1 = load <4 x double>, <4 x double>* %0
+  %1 = load <4 x double>, ptr %0
   %2 = fcmp olt <4 x double> %1, zeroinitializer
   %3 = sitofp <4 x i1> %2 to <4 x double>
   %4 = fcmp ogt <4 x double> %1, zeroinitializer
   %5 = sitofp <4 x i1> %4 to <4 x double>
   %6 = fsub <4 x double> %3, %5
-  store <4 x double> %6, <4 x double>* %0
+  store <4 x double> %6, ptr %0
   ret void
 }
 
@@ -149,7 +149,7 @@ entry:
 ; implementation using AVX intrinsics for 256-bit vectors
 ;
 
-define void @signum32c(<8 x float>*) {
+define void @signum32c(ptr) {
 ; AVX-LABEL: signum32c:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovaps (%rdi), %ymm0
@@ -163,7 +163,7 @@ define void @signum32c(<8 x float>*) {
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    retq
 entry:
-  %1 = load <8 x float>, <8 x float>* %0
+  %1 = load <8 x float>, ptr %0
   %2 = tail call <8 x float> @llvm.x86.avx.cmp.ps.256(<8 x float> %1, <8 x float> zeroinitializer, i8 1)
   %3 = bitcast <8 x float> %2 to <8 x i32>
   %4 = sitofp <8 x i32> %3 to <8 x float>
@@ -171,11 +171,11 @@ entry:
   %6 = bitcast <8 x float> %5 to <8 x i32>
   %7 = sitofp <8 x i32> %6 to <8 x float>
   %8 = fsub <8 x float> %4, %7
-  store <8 x float> %8, <8 x float>* %0
+  store <8 x float> %8, ptr %0
   ret void
 }
 
-define void @signum64c(<4 x double>*) {
+define void @signum64c(ptr) {
 ; AVX1-LABEL: signum64c:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    vmovapd (%rdi), %ymm0
@@ -220,7 +220,7 @@ define void @signum64c(<4 x double>*) {
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 entry:
-  %x = load <4 x double>, <4 x double>* %0
+  %x = load <4 x double>, ptr %0
   %xgt = tail call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> %x, <4 x double> zeroinitializer, i8 1)
   %igt = bitcast <4 x double> %xgt to <8 x i32>
   %xlt = tail call <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double> zeroinitializer, <4 x double> %x, i8 1)
@@ -229,7 +229,7 @@ entry:
   %isign = sub <8 x i32> %igt, %ilt
   %ssign = shufflevector <8 x i32> %isign, <8 x i32> %isign, <4 x i32> <i32 0, i32 2, i32 12, i32 14>
   %sign = tail call <4 x double> @llvm.x86.avx.cvtdq2.pd.256(<4 x i32> %ssign)
-  store <4 x double> %sign, <4 x double>* %0
+  store <4 x double> %sign, ptr %0
   ret void
 }
 

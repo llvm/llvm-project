@@ -6,7 +6,7 @@ define void @foo() {
 ; CHECK-LABEL: _foo:
 ; CHECK: ret
 
-; CHECK-OBJ: 0: c0 03 5f d6 ret
+; CHECK-OBJ: 0: d65f03c0    ret
 
   ret void
 }

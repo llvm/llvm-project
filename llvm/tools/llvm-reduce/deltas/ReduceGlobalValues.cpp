@@ -37,8 +37,8 @@ static bool shouldReduceThreadLocal(GlobalValue &GV) {
   return GV.isThreadLocal();
 }
 
-static void reduceGVs(Oracle &O, Module &Program) {
-  for (auto &GV : Program.global_values()) {
+static void reduceGVs(Oracle &O, ReducerWorkItem &Program) {
+  for (auto &GV : Program.getModule().global_values()) {
     if (shouldReduceDSOLocal(GV) && !O.shouldKeep())
       GV.setDSOLocal(false);
     if (shouldReduceVisibility(GV) && !O.shouldKeep()) {
@@ -58,6 +58,5 @@ static void reduceGVs(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceGlobalValuesDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing GlobalValues...\n";
-  runDeltaPass(Test, reduceGVs);
+  runDeltaPass(Test, reduceGVs, "Reducing GlobalValues");
 }

@@ -1,0 +1,3 @@
+ompd init
+b test_ompd_rel_address_space_handle.c:10
+ompdtestapi ompd_rel_address_space_handle

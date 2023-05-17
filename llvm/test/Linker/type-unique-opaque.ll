@@ -4,13 +4,13 @@
 ; not cause %u and %t to get merged.
 
 ; CHECK: %u = type opaque
-; CHECK: define %u* @g() {
+; CHECK: define %u @g(%u %a) {
 
 %u = type opaque
-%u2 = type { %u*, i8 }
+%u2 = type { %u, i8 }
 
-declare %u2* @f()
+declare %u2 @f()
 
-define %u* @g() {
-  ret %u* null
+define %u @g(%u %a) {
+  ret %u %a
 }

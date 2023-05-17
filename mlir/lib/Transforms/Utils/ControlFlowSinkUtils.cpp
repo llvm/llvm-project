@@ -136,8 +136,8 @@ void mlir::getSinglyExecutedRegionsToSink(RegionBranchOpInterface branch,
                                           SmallVectorImpl<Region *> &regions) {
   // Collect constant operands.
   SmallVector<Attribute> operands(branch->getNumOperands(), Attribute());
-  for (auto &it : llvm::enumerate(branch->getOperands()))
-    (void)matchPattern(it.value(), m_Constant(&operands[it.index()]));
+  for (auto [idx, operand] : llvm::enumerate(branch->getOperands()))
+    (void)matchPattern(operand, m_Constant(&operands[idx]));
 
   // Get the invocation bounds.
   SmallVector<InvocationBounds> bounds;

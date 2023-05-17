@@ -25,7 +25,7 @@
 ; Function Attrs: nounwind
 define i32 @test() local_unnamed_addr #0 {
 entry:
-    tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 getelementptr inbounds (%struct.test_t1, %struct.test_t1* @g, i64 0, i32 0), i8* align 4 getelementptr inbounds (%struct.test_t1, %struct.test_t1* @test.t1, i64 0, i32 0), i64 16, i1 false)
+    tail call void @llvm.memcpy.p0.p0.i64(ptr align 4 @g, ptr align 4 @test.t1, i64 16, i1 false)
 ; CHECK-EL:  r2 = 1
 ; CHECK-EL:  *(u32 *)(r1 + 0) = r2
 ; CHECK-EB:  r2 = 16777216
@@ -35,7 +35,7 @@ entry:
 ; CHECK-EL:  .section .rodata.cst16,"aM",@progbits,16
 ; CHECK-EB:  .section .rodata.cst16,"aM",@progbits,16
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture writeonly, i8* nocapture readonly, i64, i1) #1
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture writeonly, ptr nocapture readonly, i64, i1) #1
 
 attributes #0 = { nounwind }
 attributes #1 = { argmemonly nounwind }

@@ -119,13 +119,16 @@ function f14(n) result(res)
 end function
 
 subroutine s01(f1, f2, fp1, fp2)
+  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
   character*(*) :: f1, f3, fp1
   external :: f1, f3
   pointer :: fp1
+  !PORTABILITY: A dummy procedure pointer should not have assumed-length CHARACTER(*) result type
   procedure(character*(*)), pointer :: fp2
   interface
     character*(*) function f2()
     end function
+    !ERROR: A function interface may not declare an assumed-length CHARACTER(*) result
     character*(*) function f4()
     end function
   end interface
@@ -133,8 +136,6 @@ subroutine s01(f1, f2, fp1, fp2)
   print *, f2()
   !ERROR: Assumed-length character function must be defined with a length to be called
   print *, f3()
-  !ERROR: Assumed-length character function must be defined with a length to be called
-  print *, f4()
   print *, fp1()
   print *, fp2()
 end subroutine

@@ -3,7 +3,7 @@
 define i64 @selectcceq(i64, i64, i64, i64) {
 ; CHECK-LABEL: selectcceq:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmpu.l %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.l.eq %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
 ; CHECK-NEXT:    b.l.t (, %s10)
@@ -15,7 +15,7 @@ define i64 @selectcceq(i64, i64, i64, i64) {
 define i64 @selectccne(i64, i64, i64, i64) {
 ; CHECK-LABEL: selectccne:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    cmps.l %s0, %s0, %s1
+; CHECK-NEXT:    cmpu.l %s0, %s0, %s1
 ; CHECK-NEXT:    cmov.l.ne %s3, %s2, %s0
 ; CHECK-NEXT:    or %s0, 0, %s3
 ; CHECK-NEXT:    b.l.t (, %s10)

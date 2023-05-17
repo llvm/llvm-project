@@ -3,7 +3,7 @@
 # RUN: obj2yaml %t.wasm | FileCheck %s
 
 # Debug sections are allowed to contains references to non-live symbols that
-# then get GC'd.  In this test the .debug_info seciton contains a reference to
+# then get GC'd.  In this test the .debug_info section contains a reference to
 # foo which is not otherwise used and will not be marked a live in the output.
 # Verify the tombstone value is written to debug_info section.
 

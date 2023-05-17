@@ -12,6 +12,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Interpreter/ScriptInterpreter.h"
@@ -19,28 +20,6 @@
 
 using namespace lldb;
 using namespace lldb_private;
-
-static constexpr OptionEnumValueElement g_script_option_enumeration[] = {
-    {
-        eScriptLanguagePython,
-        "python",
-        "Python",
-    },
-    {
-        eScriptLanguageLua,
-        "lua",
-        "Lua",
-    },
-    {
-        eScriptLanguageNone,
-        "default",
-        "The default scripting language.",
-    },
-};
-
-static constexpr OptionEnumValues ScriptOptionEnum() {
-  return OptionEnumValues(g_script_option_enumeration);
-}
 
 #define LLDB_OPTIONS_script
 #include "CommandOptions.inc"
@@ -74,7 +53,7 @@ void CommandObjectScript::CommandOptions::OptionParsingStarting(
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectScript::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_script_options);
+  return llvm::ArrayRef(g_script_options);
 }
 
 CommandObjectScript::CommandObjectScript(CommandInterpreter &interpreter)

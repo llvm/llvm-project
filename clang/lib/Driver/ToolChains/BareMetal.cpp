@@ -16,6 +16,7 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/DriverDiagnostic.h"
+#include "clang/Driver/MultilibBuilder.h"
 #include "clang/Driver/Options.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/Path.h"
@@ -28,10 +29,6 @@ using namespace clang::driver;
 using namespace clang::driver::tools;
 using namespace clang::driver::toolchains;
 
-static Multilib makeMultilib(StringRef commonSuffix) {
-  return Multilib(commonSuffix, commonSuffix, commonSuffix);
-}
-
 static bool findRISCVMultilibs(const Driver &D,
                                const llvm::Triple &TargetTriple,
                                const ArgList &Args, DetectedMultilibs &Result) {
@@ -39,11 +36,12 @@ static bool findRISCVMultilibs(const Driver &D,
   StringRef Arch = riscv::getRISCVArch(Args, TargetTriple);
   StringRef Abi = tools::riscv::getRISCVABI(Args, TargetTriple);
 
-  if (TargetTriple.getArch() == llvm::Triple::riscv64) {
-    Multilib Imac = makeMultilib("").flag("+march=rv64imac").flag("+mabi=lp64");
-    Multilib Imafdc = makeMultilib("/rv64imafdc/lp64d")
-                          .flag("+march=rv64imafdc")
-                          .flag("+mabi=lp64d");
+  if (TargetTriple.isRISCV64()) {
+    MultilibBuilder Imac =
+        MultilibBuilder().flag("+march=rv64imac").flag("+mabi=lp64");
+    MultilibBuilder Imafdc = MultilibBuilder("/rv64imafdc/lp64d")
+                                 .flag("+march=rv64imafdc")
+                                 .flag("+mabi=lp64d");
 
     // Multilib reuse
     bool UseImafdc =
@@ -54,22 +52,25 @@ static bool findRISCVMultilibs(const Driver &D,
     addMultilibFlag(Abi == "lp64", "mabi=lp64", Flags);
     addMultilibFlag(Abi == "lp64d", "mabi=lp64d", Flags);
 
-    Result.Multilibs = MultilibSet().Either(Imac, Imafdc);
+    Result.Multilibs =
+        MultilibSetBuilder().Either(Imac, Imafdc).makeMultilibSet();
     return Result.Multilibs.select(Flags, Result.SelectedMultilib);
   }
-  if (TargetTriple.getArch() == llvm::Triple::riscv32) {
-    Multilib Imac =
-        makeMultilib("").flag("+march=rv32imac").flag("+mabi=ilp32");
-    Multilib I =
-        makeMultilib("/rv32i/ilp32").flag("+march=rv32i").flag("+mabi=ilp32");
-    Multilib Im =
-        makeMultilib("/rv32im/ilp32").flag("+march=rv32im").flag("+mabi=ilp32");
-    Multilib Iac = makeMultilib("/rv32iac/ilp32")
-                       .flag("+march=rv32iac")
-                       .flag("+mabi=ilp32");
-    Multilib Imafc = makeMultilib("/rv32imafc/ilp32f")
-                         .flag("+march=rv32imafc")
-                         .flag("+mabi=ilp32f");
+  if (TargetTriple.isRISCV32()) {
+    MultilibBuilder Imac =
+        MultilibBuilder().flag("+march=rv32imac").flag("+mabi=ilp32");
+    MultilibBuilder I = MultilibBuilder("/rv32i/ilp32")
+                            .flag("+march=rv32i")
+                            .flag("+mabi=ilp32");
+    MultilibBuilder Im = MultilibBuilder("/rv32im/ilp32")
+                             .flag("+march=rv32im")
+                             .flag("+mabi=ilp32");
+    MultilibBuilder Iac = MultilibBuilder("/rv32iac/ilp32")
+                              .flag("+march=rv32iac")
+                              .flag("+mabi=ilp32");
+    MultilibBuilder Imafc = MultilibBuilder("/rv32imafc/ilp32f")
+                                .flag("+march=rv32imafc")
+                                .flag("+mabi=ilp32f");
 
     // Multilib reuse
     bool UseI = (Arch == "rv32i") || (Arch == "rv32ic");    // ic => i
@@ -85,14 +86,15 @@ static bool findRISCVMultilibs(const Driver &D,
     addMultilibFlag(Abi == "ilp32", "mabi=ilp32", Flags);
     addMultilibFlag(Abi == "ilp32f", "mabi=ilp32f", Flags);
 
-    Result.Multilibs = MultilibSet().Either(I, Im, Iac, Imac, Imafc);
+    Result.Multilibs =
+        MultilibSetBuilder().Either(I, Im, Iac, Imac, Imafc).makeMultilibSet();
     return Result.Multilibs.select(Flags, Result.SelectedMultilib);
   }
   return false;
 }
 
 BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
-                           const ArgList &Args)
+                     const ArgList &Args)
     : ToolChain(D, Triple, Args) {
   getProgramPaths().push_back(getDriver().getInstalledDir());
   if (getDriver().getInstalledDir() != getDriver().Dir)
@@ -103,6 +105,7 @@ BareMetal::BareMetal(const Driver &D, const llvm::Triple &Triple,
   if (!SysRoot.empty()) {
     llvm::sys::path::append(SysRoot, "lib");
     getFilePaths().push_back(std::string(SysRoot));
+    getLibraryPaths().push_back(std::string(SysRoot));
   }
 }
 
@@ -140,8 +143,7 @@ static bool isAArch64BareMetal(const llvm::Triple &Triple) {
 }
 
 static bool isRISCVBareMetal(const llvm::Triple &Triple) {
-  if (Triple.getArch() != llvm::Triple::riscv32 &&
-      Triple.getArch() != llvm::Triple::riscv64)
+  if (!Triple.isRISCV())
     return false;
 
   if (Triple.getVendor() != llvm::Triple::UnknownVendor)
@@ -171,21 +173,6 @@ bool BareMetal::handlesTarget(const llvm::Triple &Triple) {
 
 Tool *BareMetal::buildLinker() const {
   return new tools::baremetal::Linker(*this);
-}
-
-std::string BareMetal::getCompilerRTPath() const { return getRuntimesDir(); }
-
-std::string BareMetal::buildCompilerRTBasename(const llvm::opt::ArgList &,
-                                               StringRef, FileType,
-                                               bool) const {
-  return ("libclang_rt.builtins-" + getTriple().getArchName() + ".a").str();
-}
-
-std::string BareMetal::getRuntimesDir() const {
-  SmallString<128> Dir(getDriver().ResourceDir);
-  llvm::sys::path::append(Dir, "lib", "baremetal");
-  Dir += SelectedMultilib.gccSuffix();
-  return std::string(Dir.str());
 }
 
 std::string BareMetal::computeSysRoot() const {
@@ -226,19 +213,28 @@ void BareMetal::addClangTargetOptions(const ArgList &DriverArgs,
   CC1Args.push_back("-nostdsysteminc");
 }
 
-void BareMetal::AddClangCXXStdlibIncludeArgs(
-    const ArgList &DriverArgs, ArgStringList &CC1Args) const {
+void BareMetal::AddClangCXXStdlibIncludeArgs(const ArgList &DriverArgs,
+                                             ArgStringList &CC1Args) const {
   if (DriverArgs.hasArg(options::OPT_nostdinc) ||
       DriverArgs.hasArg(options::OPT_nostdlibinc) ||
       DriverArgs.hasArg(options::OPT_nostdincxx))
     return;
 
+  const Driver &D = getDriver();
   std::string SysRoot(computeSysRoot());
   if (SysRoot.empty())
     return;
 
   switch (GetCXXStdlibType(DriverArgs)) {
   case ToolChain::CST_Libcxx: {
+    // First check sysroot/usr/include/c++/v1 if it exists.
+    SmallString<128> TargetDir(SysRoot);
+    llvm::sys::path::append(TargetDir, "usr", "include", "c++", "v1");
+    if (D.getVFS().exists(TargetDir)) {
+      addSystemInclude(DriverArgs, CC1Args, TargetDir.str());
+      break;
+    }
+    // Add generic path if nothing else succeeded so far.
     SmallString<128> Dir(SysRoot);
     llvm::sys::path::append(Dir, "include", "c++", "v1");
     addSystemInclude(DriverArgs, CC1Args, Dir.str());
@@ -250,9 +246,8 @@ void BareMetal::AddClangCXXStdlibIncludeArgs(
     std::error_code EC;
     Generic_GCC::GCCVersion Version = {"", -1, -1, -1, "", "", ""};
     // Walk the subdirs, and find the one with the newest gcc version:
-    for (llvm::vfs::directory_iterator
-             LI = getDriver().getVFS().dir_begin(Dir.str(), EC),
-             LE;
+    for (llvm::vfs::directory_iterator LI = D.getVFS().dir_begin(Dir.str(), EC),
+                                       LE;
          !EC && LI != LE; LI = LI.increment(EC)) {
       StringRef VersionText = llvm::sys::path::filename(LI->path());
       auto CandidateVersion = Generic_GCC::GCCVersion::Parse(VersionText);
@@ -276,6 +271,8 @@ void BareMetal::AddCXXStdlibLibArgs(const ArgList &Args,
   switch (GetCXXStdlibType(Args)) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
+    if (Args.hasArg(options::OPT_fexperimental_library))
+      CmdArgs.push_back("-lc++experimental");
     CmdArgs.push_back("-lc++abi");
     break;
   case ToolChain::CST_Libstdcxx:
@@ -290,10 +287,14 @@ void BareMetal::AddLinkRuntimeLib(const ArgList &Args,
                                   ArgStringList &CmdArgs) const {
   ToolChain::RuntimeLibType RLT = GetRuntimeLibType(Args);
   switch (RLT) {
-  case ToolChain::RLT_CompilerRT:
-    CmdArgs.push_back(
-        Args.MakeArgString("-lclang_rt.builtins-" + getTriple().getArchName()));
+  case ToolChain::RLT_CompilerRT: {
+    const std::string FileName = getCompilerRT(Args, "builtins");
+    llvm::StringRef BaseName = llvm::sys::path::filename(FileName);
+    BaseName.consume_front("lib");
+    BaseName.consume_back(".a");
+    CmdArgs.push_back(Args.MakeArgString("-l" + BaseName));
     return;
+  }
   case ToolChain::RLT_Libgcc:
     CmdArgs.push_back("-lgcc");
     return;
@@ -308,7 +309,7 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                      const char *LinkingOutput) const {
   ArgStringList CmdArgs;
 
-  auto &TC = static_cast<const toolchains::BareMetal&>(getToolChain());
+  auto &TC = static_cast<const toolchains::BareMetal &>(getToolChain());
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
@@ -320,10 +321,17 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   TC.AddFilePathLibArgs(Args, CmdArgs);
 
-  CmdArgs.push_back(Args.MakeArgString("-L" + TC.getRuntimesDir()));
+  for (const auto &LibPath : TC.getLibraryPaths())
+    CmdArgs.push_back(Args.MakeArgString(llvm::Twine("-L", LibPath)));
+
+  const std::string FileName = TC.getCompilerRT(Args, "builtins");
+  llvm::SmallString<128> PathBuf{FileName};
+  llvm::sys::path::remove_filename(PathBuf);
+  CmdArgs.push_back(Args.MakeArgString("-L" + PathBuf));
 
   if (TC.ShouldLinkCXXStdlib(Args))
     TC.AddCXXStdlibLibArgs(Args, CmdArgs);
+
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
     CmdArgs.push_back("-lc");
     CmdArgs.push_back("-lm");
@@ -331,10 +339,20 @@ void baremetal::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     TC.AddLinkRuntimeLib(Args, CmdArgs);
   }
 
+  if (TC.getTriple().isRISCV())
+    CmdArgs.push_back("-X");
+
+  // The R_ARM_TARGET2 relocation must be treated as R_ARM_REL32 on arm*-*-elf
+  // and arm*-*-eabi (the default is R_ARM_GOT_PREL, used on arm*-*-linux and
+  // arm*-*-*bsd).
+  if (isARMBareMetal(TC.getTriple()))
+    CmdArgs.push_back("--target2=rel");
+
   CmdArgs.push_back("-o");
   CmdArgs.push_back(Output.getFilename());
 
-  C.addCommand(std::make_unique<Command>(JA, *this, ResponseFileSupport::None(),
+  C.addCommand(std::make_unique<Command>(JA, *this,
+                                         ResponseFileSupport::AtFileCurCP(),
                                          Args.MakeArgString(TC.GetLinkerPath()),
                                          CmdArgs, Inputs, Output));
 }

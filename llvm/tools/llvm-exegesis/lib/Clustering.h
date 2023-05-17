@@ -15,7 +15,6 @@
 #define LLVM_TOOLS_LLVM_EXEGESIS_CLUSTERING_H
 
 #include "BenchmarkResult.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 #include <limits>
 #include <vector>
@@ -23,14 +22,14 @@
 namespace llvm {
 namespace exegesis {
 
-class InstructionBenchmarkClustering {
+class BenchmarkClustering {
 public:
   enum ModeE { Dbscan, Naive };
 
   // Clusters `Points` using DBSCAN with the given parameters. See the cc file
   // for more explanations on the algorithm.
-  static Expected<InstructionBenchmarkClustering>
-  create(const std::vector<InstructionBenchmark> &Points, ModeE Mode,
+  static Expected<BenchmarkClustering>
+  create(const std::vector<Benchmark> &Points, ModeE Mode,
          size_t DbscanMinPts, double AnalysisClusteringEpsilon,
          const MCSubtargetInfo *SubtargetInfo = nullptr,
          const MCInstrInfo *InstrInfo = nullptr);
@@ -92,7 +91,7 @@ public:
     return ClusterIdForPoint_[P];
   }
 
-  const std::vector<InstructionBenchmark> &getPoints() const { return Points_; }
+  const std::vector<Benchmark> &getPoints() const { return Points_; }
 
   const Cluster &getCluster(ClusterId Id) const {
     assert(!Id.isUndef() && "unlabeled cluster");
@@ -120,8 +119,8 @@ public:
   }
 
 private:
-  InstructionBenchmarkClustering(
-      const std::vector<InstructionBenchmark> &Points,
+  BenchmarkClustering(
+      const std::vector<Benchmark> &Points,
       double AnalysisClusteringEpsilonSquared);
 
   Error validateAndSetup();
@@ -137,7 +136,7 @@ private:
 
   bool areAllNeighbours(ArrayRef<size_t> Pts) const;
 
-  const std::vector<InstructionBenchmark> &Points_;
+  const std::vector<Benchmark> &Points_;
   const double AnalysisClusteringEpsilonSquared_;
 
   int NumDimensions_ = 0;
@@ -158,7 +157,7 @@ public:
 
   void addPoint(ArrayRef<BenchmarkMeasure> Point);
 
-  bool validate(InstructionBenchmark::ModeE Mode) const;
+  bool validate(Benchmark::ModeE Mode) const;
 
 private:
   // Measurement stats for the points in the SchedClassCluster.

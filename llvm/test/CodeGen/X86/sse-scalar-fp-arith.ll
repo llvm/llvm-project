@@ -1323,7 +1323,7 @@ define <4 x float> @add_ss_mask(<4 x float> %a, <4 x float> %b, <4 x float> %c, 
 ;
 ; X86-AVX512-LABEL: add_ss_mask:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovw %eax, %k1
 ; X86-AVX512-NEXT:    vaddss %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-AVX512-NEXT:    vmovaps %xmm2, %xmm0
@@ -1417,7 +1417,7 @@ define <2 x double> @add_sd_mask(<2 x double> %a, <2 x double> %b, <2 x double> 
 ;
 ; X86-AVX512-LABEL: add_sd_mask:
 ; X86-AVX512:       # %bb.0:
-; X86-AVX512-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-AVX512-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    kmovw %eax, %k1
 ; X86-AVX512-NEXT:    vaddsd %xmm1, %xmm0, %xmm2 {%k1}
 ; X86-AVX512-NEXT:    vmovapd %xmm2, %xmm0
@@ -1489,7 +1489,7 @@ define float @PR26515(<4 x float> %0) nounwind {
 ; X86-AVX-LABEL: PR26515:
 ; X86-AVX:       # %bb.0:
 ; X86-AVX-NEXT:    pushl %eax
-; X86-AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; X86-AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X86-AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X86-AVX-NEXT:    vmovss %xmm0, (%esp)
 ; X86-AVX-NEXT:    flds (%esp)
@@ -1505,7 +1505,7 @@ define float @PR26515(<4 x float> %0) nounwind {
 ;
 ; X64-AVX-LABEL: PR26515:
 ; X64-AVX:       # %bb.0:
-; X64-AVX-NEXT:    vpermilpd {{.*#+}} xmm1 = xmm0[1,0]
+; X64-AVX-NEXT:    vshufpd {{.*#+}} xmm1 = xmm0[1,0]
 ; X64-AVX-NEXT:    vaddss %xmm0, %xmm1, %xmm0
 ; X64-AVX-NEXT:    retq
   %2 = shufflevector <4 x float> %0, <4 x float> poison, <4 x i32> <i32 2, i32 undef, i32 undef, i32 undef>

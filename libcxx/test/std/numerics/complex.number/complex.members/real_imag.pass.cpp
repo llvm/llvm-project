@@ -8,8 +8,8 @@
 
 // <complex>
 
-// void real(T val);
-// void imag(T val);
+// void real(T val); // constexpr in C++20
+// void imag(T val); // constexpr in C++20
 
 #include <complex>
 #include <cassert>
@@ -17,6 +17,7 @@
 #include "test_macros.h"
 
 template <class T>
+TEST_CONSTEXPR_CXX20
 void
 test_constexpr()
 {
@@ -34,7 +35,8 @@ test_constexpr()
 }
 
 template <class T>
-void
+TEST_CONSTEXPR_CXX20
+bool
 test()
 {
     std::complex<T> c;
@@ -53,15 +55,21 @@ test()
     assert(c.real() == -4.5);
     assert(c.imag() == -5.5);
 
-    test_constexpr<T> ();
+    test_constexpr<T>();
+    return true;
 }
 
-int main(int, char**)
-{
+int main(int, char**) {
     test<float>();
     test<double>();
     test<long double>();
-    test_constexpr<int> ();
+    test_constexpr<int>();
+
+#if TEST_STD_VER >= 20
+    static_assert(test<float>());
+    static_assert(test<double>());
+    static_assert(test<long double>());
+#endif
 
   return 0;
 }

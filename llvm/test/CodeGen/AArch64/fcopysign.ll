@@ -46,7 +46,7 @@ define fp128 @copysign0() {
 ; CHECK-NONEON-NEXT:    ldr q0, [sp], #16
 ; CHECK-NONEON-NEXT:    ret
 entry:
-  %v = load double, double* @val_double, align 8
+  %v = load double, ptr @val_double, align 8
   %conv = fpext double %v to fp128
   %call = tail call fp128 @llvm.copysign.f128(fp128 0xL00000000000000007FFF000000000000, fp128 %conv) #2
   ret fp128 %call
@@ -63,8 +63,8 @@ define fp128@copysign1() {
 ; CHECK-NEXT:    ldr w8, [x8, :lo12:val_float]
 ; CHECK-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NEXT:    and w8, w8, #0x80000000
-; CHECK-NEXT:    lsr w8, w8, #24
-; CHECK-NEXT:    bfxil w8, w9, #0, #7
+; CHECK-NEXT:    and w9, w9, #0x7f
+; CHECK-NEXT:    orr w8, w9, w8, lsr #24
 ; CHECK-NEXT:    strb w8, [sp, #15]
 ; CHECK-NEXT:    ldr q0, [sp], #16
 ; CHECK-NEXT:    ret
@@ -79,14 +79,14 @@ define fp128@copysign1() {
 ; CHECK-NONEON-NEXT:    ldr w8, [x8, :lo12:val_float]
 ; CHECK-NONEON-NEXT:    ldrb w9, [sp, #15]
 ; CHECK-NONEON-NEXT:    and w8, w8, #0x80000000
-; CHECK-NONEON-NEXT:    lsr w8, w8, #24
-; CHECK-NONEON-NEXT:    bfxil w8, w9, #0, #7
+; CHECK-NONEON-NEXT:    and w9, w9, #0x7f
+; CHECK-NONEON-NEXT:    orr w8, w9, w8, lsr #24
 ; CHECK-NONEON-NEXT:    strb w8, [sp, #15]
 ; CHECK-NONEON-NEXT:    ldr q0, [sp], #16
 ; CHECK-NONEON-NEXT:    ret
 entry:
-  %v0 = load fp128, fp128* @val_fp128, align 16
-  %v1 = load float, float* @val_float, align 4
+  %v0 = load fp128, ptr @val_fp128, align 16
+  %v1 = load float, ptr @val_float, align 4
   %conv = fpext float %v1 to fp128
   %call = tail call fp128 @llvm.copysign.f128(fp128 %v0, fp128 %conv)
   ret fp128 %call

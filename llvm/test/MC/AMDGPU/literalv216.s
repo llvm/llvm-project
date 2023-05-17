@@ -161,75 +161,75 @@ v_pk_add_f16 v1, 65535, v2
 //===----------------------------------------------------------------------===//
 
 v_pk_add_f16 v5, v1, 0x12345678
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_f16 v5, v1, 0x12345678 ; encoding: [0x05,0x40,0x0f,0xcc,0x01,0xff,0x01,0x18,0x78,0x56,0x34,0x12]
 
 v_pk_add_f16 v5, 0x12345678, v2
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_f16 v5, 0x12345678, v2 ; encoding: [0x05,0x40,0x0f,0xcc,0xff,0x04,0x02,0x18,0x78,0x56,0x34,0x12]
 
 v_pk_add_f16 v5, -256, v2
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_f16 v5, 0xffffff00, v2 ; encoding: [0x05,0x40,0x0f,0xcc,0xff,0x04,0x02,0x18,0x00,0xff,0xff,0xff]
 
 v_pk_add_f16 v5, v1, 256
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_f16 v5, v1, 0x100      ; encoding: [0x05,0x40,0x0f,0xcc,0x01,0xff,0x01,0x18,0x00,0x01,0x00,0x00]
 
 v_pk_add_u16 v5, v1, 0x12345678
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_u16 v5, v1, 0x12345678 ; encoding: [0x05,0x40,0x0a,0xcc,0x01,0xff,0x01,0x18,0x78,0x56,0x34,0x12]
 
 v_pk_add_u16 v5, 0x12345678, v2
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_u16 v5, 0x12345678, v2 ; encoding: [0x05,0x40,0x0a,0xcc,0xff,0x04,0x02,0x18,0x78,0x56,0x34,0x12]
 
 v_pk_add_u16 v5, -256, v2
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_u16 v5, 0xffffff00, v2 ; encoding: [0x05,0x40,0x0a,0xcc,0xff,0x04,0x02,0x18,0x00,0xff,0xff,0xff]
 
 v_pk_add_u16 v5, v1, 256
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_u16 v5, v1, 0x100      ; encoding: [0x05,0x40,0x0a,0xcc,0x01,0xff,0x01,0x18,0x00,0x01,0x00,0x00]
 
 v_pk_add_f16 v5, v1, 0x123456780
-// NOGFX9: error: invalid operand for instruction
-// NOGFX10: error: invalid operand for instruction
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGFX10: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_pk_add_u16 v5, v1, 0x123456780
-// NOGFX9: error: invalid operand for instruction
-// NOGFX10: error: invalid operand for instruction
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGFX10: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_pk_fma_f16 v5, 0xaf123456, v2, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_fma_f16 v5, 0xaf123456, v2, v3 ; encoding: [0x05,0x40,0x0e,0xcc,0xff,0x04,0x0e,0x1c,0x56,0x34,0x12,0xaf]
 
 v_pk_fma_f16 v5, v1, 0xaf123456, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_fma_f16 v5, v1, 0xaf123456, v3 ; encoding: [0x05,0x40,0x0e,0xcc,0x01,0xff,0x0d,0x1c,0x56,0x34,0x12,0xaf]
 
 v_pk_fma_f16 v5, v1, v2, 0xaf123456
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_fma_f16 v5, v1, v2, 0xaf123456 ; encoding: [0x05,0x40,0x0e,0xcc,0x01,0x05,0xfe,0x1b,0x56,0x34,0x12,0xaf]
 
 v_pk_mad_i16 v5, 0xaf123456, v2, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_mad_i16 v5, 0xaf123456, v2, v3 ; encoding: [0x05,0x40,0x00,0xcc,0xff,0x04,0x0e,0x1c,0x56,0x34,0x12,0xaf]
 
 v_pk_mad_i16 v5, v1, 0xaf123456, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_mad_i16 v5, v1, 0xaf123456, v3 ; encoding: [0x05,0x40,0x00,0xcc,0x01,0xff,0x0d,0x1c,0x56,0x34,0x12,0xaf]
 
 v_pk_mad_i16 v5, v1, v2, 0xaf123456
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_mad_i16 v5, v1, v2, 0xaf123456 ; encoding: [0x05,0x40,0x00,0xcc,0x01,0x05,0xfe,0x1b,0x56,0x34,0x12,0xaf]
 
 v_pk_ashrrev_i16 v5, 0x12345678, v2
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_ashrrev_i16 v5, 0x12345678, v2 ; encoding: [0x05,0x40,0x06,0xcc,0xff,0x04,0x02,0x18,0x78,0x56,0x34,0x12]
 
 v_pk_ashrrev_i16 v5, v1, 0x12345678
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_ashrrev_i16 v5, v1, 0x12345678 ; encoding: [0x05,0x40,0x06,0xcc,0x01,0xff,0x01,0x18,0x78,0x56,0x34,0x12]
 
 //===----------------------------------------------------------------------===//
@@ -237,44 +237,44 @@ v_pk_ashrrev_i16 v5, v1, 0x12345678
 //===----------------------------------------------------------------------===//
 
 v_pk_add_f16 v5, v1, 0.1234
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_f16 v5, v1, 0x2fe6     ; encoding: [0x05,0x40,0x0f,0xcc,0x01,0xff,0x01,0x18,0xe6,0x2f,0x00,0x00]
 
 v_pk_add_u16 v5, v1, 0.1234
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_add_u16 v5, v1, 0x2fe6     ; encoding: [0x05,0x40,0x0a,0xcc,0x01,0xff,0x01,0x18,0xe6,0x2f,0x00,0x00]
 
 v_pk_fma_f16 v5, 0.1234, v2, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_fma_f16 v5, 0x2fe6, v2, v3 ; encoding: [0x05,0x40,0x0e,0xcc,0xff,0x04,0x0e,0x1c,0xe6,0x2f,0x00,0x00]
 
 v_pk_fma_f16 v5, v1, 0.1234, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_fma_f16 v5, v1, 0x2fe6, v3 ; encoding: [0x05,0x40,0x0e,0xcc,0x01,0xff,0x0d,0x1c,0xe6,0x2f,0x00,0x00]
 
 v_pk_fma_f16 v5, v1, v2, 0.1234
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_fma_f16 v5, v1, v2, 0x2fe6 ; encoding: [0x05,0x40,0x0e,0xcc,0x01,0x05,0xfe,0x1b,0xe6,0x2f,0x00,0x00]
 
 v_pk_mad_i16 v5, 0.1234, v2, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_mad_i16 v5, 0x2fe6, v2, v3 ; encoding: [0x05,0x40,0x00,0xcc,0xff,0x04,0x0e,0x1c,0xe6,0x2f,0x00,0x00]
 
 v_pk_mad_i16 v5, v1, 0.1234, v3
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_mad_i16 v5, v1, 0x2fe6, v3 ; encoding: [0x05,0x40,0x00,0xcc,0x01,0xff,0x0d,0x1c,0xe6,0x2f,0x00,0x00]
 
 v_pk_mad_i16 v5, v1, v2, 0.1234
-// NOGFX9: error: literal operands are not supported
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: literal operands are not supported
 // GFX10: v_pk_mad_i16 v5, v1, v2, 0x2fe6 ; encoding: [0x05,0x40,0x00,0xcc,0x01,0x05,0xfe,0x1b,0xe6,0x2f,0x00,0x00]
 
 v_pk_add_f16 v5, v1, 123456.0
-// NOGFX9: error: invalid operand for instruction
-// NOGFX10: error: invalid operand for instruction
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGFX10: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 v_pk_add_u16 v5, v1, 123456.0
-// NOGFX9: error: invalid operand for instruction
-// NOGFX10: error: invalid operand for instruction
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// NOGFX10: :[[@LINE-2]]:{{[0-9]+}}: error: invalid operand for instruction
 
 //===----------------------------------------------------------------------===//
 // Packed VOP2
@@ -282,5 +282,5 @@ v_pk_add_u16 v5, v1, 123456.0
 
 // FIXME: v_pk_fmac_f16 cannot be promoted to VOP3 so '_e32' suffix is not valid
 v_pk_fmac_f16 v5, 0x12345678, v2
-// NOGFX9: error: instruction not supported on this GPU
+// NOGFX9: :[[@LINE-1]]:{{[0-9]+}}: error: instruction not supported on this GPU
 // GFX10: v_pk_fmac_f16 v5, 0x12345678, v2 ; encoding: [0xff,0x04,0x0a,0x78,0x78,0x56,0x34,0x12]

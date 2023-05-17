@@ -67,6 +67,10 @@
 // LINK_IOSSIM_3_0-NOT: -lbundle1.o
 // LINK_IOSSIM_3_0: -lSystem
 
+// RUN: %clang -target arm64-apple-darwin -fuse-ld= -mlinker-version=700 -### -arch arm64 -mios-simulator-version-min=15.0 %t.o 2>&1 | FileCheck -check-prefix=LINK_IOSSIM_ARM64 %s
+
+// LINK_IOSSIM_ARM64: "-platform_version" "ios-simulator" "15.0.0" "15.0.0"
+
 // RUN: %clang -target i386-apple-darwin9 -### -fpie %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_EXPLICIT_PIE %s < %t.log
 //
@@ -334,18 +338,6 @@
 // RUN: FileCheck -check-prefix=PROFILE_SECTALIGN %s < %t.log
 // PROFILE_SECTALIGN: "-sectalign" "__DATA" "__llvm_prf_cnts" "0x4000" "-sectalign" "__DATA" "__llvm_prf_data" "0x4000"
 
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -exported_symbols_list /dev/null -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Wl,-exported_symbols_list,/dev/null -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Wl,-exported_symbol,foo -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Xlinker -exported_symbol -Xlinker foo -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate -Xlinker -exported_symbols_list -Xlinker /dev/null -### %t.o 2> %t.log
-// RUN: FileCheck -check-prefix=PROFILE_EXPORT %s < %t.log
-// PROFILE_EXPORT: "-exported_symbol" "___llvm_profile_filename" "-exported_symbol" "___llvm_profile_raw_version"
-//
 // RUN: %clang -target x86_64-apple-darwin12 -fprofile-instr-generate --coverage -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=NO_PROFILE_EXPORT %s < %t.log
 // NO_PROFILE_EXPORT-NOT: "-exported_symbol"

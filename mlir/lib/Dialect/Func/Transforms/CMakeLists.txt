@@ -1,7 +1,9 @@
 add_mlir_dialect_library(MLIRFuncTransforms
   DecomposeCallGraphTypes.cpp
+  DuplicateFunctionElimination.cpp
   FuncBufferize.cpp
   FuncConversions.cpp
+  OneToNFuncConversions.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Func/Transforms
@@ -10,14 +12,11 @@ add_mlir_dialect_library(MLIRFuncTransforms
   MLIRFuncTransformsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRArithmeticTransforms
-  MLIRBufferization
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
-  MLIRFunc
+  MLIRFuncDialect
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
-  MLIRSCF
   MLIRTransforms
   )

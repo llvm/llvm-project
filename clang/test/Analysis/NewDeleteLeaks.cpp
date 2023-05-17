@@ -192,3 +192,29 @@ void use_ret() {
 // expected-note@-1 {{Potential leak of memory pointed to by 'v'}}
 
 } // namespace refkind_from_unoallocated_to_allocated
+
+// Check that memory leak is reported against a symbol if the last place it's
+// mentioned is a base region of a lazy compound value, as the program cannot
+// possibly free that memory.
+namespace symbol_reaper_lifetime {
+struct Nested {
+  int buf[2];
+};
+struct Wrapping {
+  Nested data;
+};
+
+Nested allocateWrappingAndReturnNested() {
+  // expected-note@+1 {{Memory is allocated}}
+  Wrapping const* p = new Wrapping();
+  // expected-warning@+2 {{Potential leak of memory pointed to by 'p'}}
+  // expected-note@+1    {{Potential leak of memory pointed to by 'p'}}
+  return p->data;
+}
+
+void caller() {
+  // expected-note@+1 {{Calling 'allocateWrappingAndReturnNested'}}
+  Nested n = allocateWrappingAndReturnNested();
+  (void)n;
+} // no-warning: No potential memory leak here, because that's been already reported.
+} // namespace symbol_reaper_lifetime

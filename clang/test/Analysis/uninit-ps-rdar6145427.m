@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify -analyzer-store=region %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core -verify %s
 
 // Delta-Debugging reduced preamble.
 typedef signed char BOOL;

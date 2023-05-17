@@ -4,8 +4,8 @@
 #include "a.h"
 
 // CHECK-LABEL: define {{.*}} @foo(
-// CHECK: callbr {{.*}} "=r,i{{.*}} blockaddress(@foo, %indirect))
-// CHECK-NEXT: to label %asm.fallthrough [label %indirect]
+// CHECK: callbr {{.*}} "=r,!i{{.*}}()
+// CHECK-NEXT: to label %asm.fallthrough [label %indirect.split]
 
 int bar(void) {
   return foo();

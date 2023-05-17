@@ -83,9 +83,9 @@ value while applying a runtime shape, shift, or slice to the memory
 reference, and its semantics guarantee immutability.
 
 ```mlir
-%s = fir.shape_shift %lb1, %ex1, %lb2, %ex2 : (index, index, index, index) -> !fir.shape<2>
+%s = fir.shape_shift %lb1, %ex1, %lb2, %ex2 : (index, index, index, index) -> !fir.shapeshift<2>
 // load the entire array 'a'
-%v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shape<2>) -> !fir.array<?x?xf32>
+%v = fir.array_load %a(%s) : (!fir.ref<!fir.array<?x?xf32>>, !fir.shapeshift<2>) -> !fir.array<?x?xf32>
 // a fir.store here into array %a does not change %v
 ```
 
@@ -115,7 +115,7 @@ chained updates, `%r`, and stores the result to the array at address, `%a`.
 This operation taken with `array_load`'s captures Fortran's
 copy-in/copy-out semantics. The first operands of `array_merge_store` is the
 result of the initial `array_load` operation. While this value could be
-retrieved by reference chasiing through the different array operations it is
+retrieved by reference chasing through the different array operations it is
 useful to have it on hand directly for analysis passes since this directly
 defines the "bounds" of the Fortran statement represented by these operations.
 The intention is to allow copy-in/copy-out regions to be easily delineated,

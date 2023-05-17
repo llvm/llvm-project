@@ -6,6 +6,7 @@
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver1 -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL,ZNVER1 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver2 -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL,ZNVER2 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver3 -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL,ZNVER3 %s
+# RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=znver4 -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL,ZNVER4 %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=sandybridge -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=ivybridge -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
 # RUN: llvm-mca %s -mtriple=x86_64-unknown-unknown -mcpu=haswell -iterations=1 -all-stats=false -all-views=false -register-file-stats < %s | FileCheck --check-prefixes=ALL %s
@@ -54,6 +55,11 @@ xor %eax, %ebx
 # ZNVER3-NEXT:       Total number of mappings created: 0
 # ZNVER3-NEXT:       Max number of mappings used:      0
 
+# ZNVER4:         *  Register File #1 -- Zn4FpPRF:
+# ZNVER4-NEXT:       Number of physical registers:     192
+# ZNVER4-NEXT:       Total number of mappings created: 0
+# ZNVER4-NEXT:       Max number of mappings used:      0
+
 # BDVER2:         *  Register File #2 -- PdIntegerPRF:
 # BDVER2-NEXT:       Number of physical registers:     96
 # BDVER2-NEXT:       Total number of mappings created: 2
@@ -78,3 +84,8 @@ xor %eax, %ebx
 # ZNVER3-NEXT:       Number of physical registers:     192
 # ZNVER3-NEXT:       Total number of mappings created: 2
 # ZNVER3-NEXT:       Max number of mappings used:      2
+
+# ZNVER4:         *  Register File #2 -- Zn4IntegerPRF:
+# ZNVER4-NEXT:       Number of physical registers:     224
+# ZNVER4-NEXT:       Total number of mappings created: 2
+# ZNVER4-NEXT:       Max number of mappings used:      2

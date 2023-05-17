@@ -7,7 +7,7 @@
 ;      B[0] = 42.0;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -18,12 +18,12 @@ for:
 
 
     region_entry:
-      %val = load double, double* %A
+      %val = load double, ptr %A
       %cmp = fcmp oeq double 21.0, 0.0
       br i1 %cmp, label %region_true, label %region_exit
 
     region_true:
-      store double 42.0, double* %B
+      store double 42.0, ptr %B
       br label %region_exit
 
     region_exit:

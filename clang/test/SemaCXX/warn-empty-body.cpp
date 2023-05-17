@@ -6,6 +6,8 @@ int c();
 
 #define MACRO_A 0
 
+#define AND(x, y) ((x) && (y))
+
 void test1(int x, int y) {
   while(true) {
     if (x); // expected-warning {{if statement has empty body}} expected-note{{put the semicolon on a separate line to silence this warning}}
@@ -14,6 +16,15 @@ void test1(int x, int y) {
     // correctly.
     if (x == MACRO_A); // expected-warning {{if statement has empty body}} expected-note{{put the semicolon on a separate line to silence this warning}}
     if (MACRO_A == x); // expected-warning {{if statement has empty body}} expected-note{{put the semicolon on a separate line to silence this warning}}
+
+    // Check that we handle the case where the condition comes from a macro
+    // expansion over multiple lines.
+    if (AND(b(),
+            c())); // expected-warning {{if statement has empty body}} expected-note{{put the semicolon on a separate line to silence this warning}}
+
+    while (AND(b(),
+               c())); // expected-warning{{while loop has empty body}} expected-note{{put the semicolon on a separate line to silence this warning}}
+      a(0);
 
     int i;
     // PR11329

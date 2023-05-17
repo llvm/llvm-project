@@ -40,6 +40,7 @@
 #include "llvm/Support/SwapByteOrder.h"
 
 #include <limits>
+#include <optional>
 #include <string>
 #include <tuple>
 #include <type_traits>
@@ -56,6 +57,7 @@ public:
   SPSOutputBuffer(char *Buffer, size_t Remaining)
       : Buffer(Buffer), Remaining(Remaining) {}
   bool write(const char *Data, size_t Size) {
+    assert(Data && "Data must not be null");
     if (Size > Remaining)
       return false;
     memcpy(Buffer, Data, Size);
@@ -196,6 +198,14 @@ public:
   /// Convenience typedef of the corresponding arg list.
   typedef SPSArgList<SPSTagTs...> AsArgList;
 };
+
+/// SPS tag type for optionals.
+///
+/// SPSOptionals should be serialized as a bool with true indicating that an
+/// SPSTagT value is present, and false indicating that there is no value.
+/// If the boolean is true then the serialized SPSTagT will follow immediately
+/// after it.
+template <typename SPSTagT> class SPSOptional {};
 
 /// SPS tag type for sequences.
 ///
@@ -349,6 +359,8 @@ public:
   static bool serialize(SPSOutputBuffer &OB, const ArrayRef<char> &A) {
     if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(A.size())))
       return false;
+    if (A.empty()) // Empty ArrayRef may have null data, so bail out early.
+      return true;
     return OB.write(A.data(), A.size());
   }
 
@@ -358,7 +370,7 @@ public:
       return false;
     if (Size > std::numeric_limits<size_t>::max())
       return false;
-    A = {IB.data(), static_cast<size_t>(Size)};
+    A = {Size ? IB.data() : nullptr, static_cast<size_t>(Size)};
     return IB.skip(Size);
   }
 };
@@ -462,6 +474,38 @@ public:
   }
 };
 
+/// SPSOptional serialization for std::optional.
+template <typename SPSTagT, typename T>
+class SPSSerializationTraits<SPSOptional<SPSTagT>, std::optional<T>> {
+public:
+  static size_t size(const std::optional<T> &Value) {
+    size_t Size = SPSArgList<bool>::size(!!Value);
+    if (Value)
+      Size += SPSArgList<SPSTagT>::size(*Value);
+    return Size;
+  }
+
+  static bool serialize(SPSOutputBuffer &OB, const std::optional<T> &Value) {
+    if (!SPSArgList<bool>::serialize(OB, !!Value))
+      return false;
+    if (Value)
+      return SPSArgList<SPSTagT>::serialize(OB, *Value);
+    return true;
+  }
+
+  static bool deserialize(SPSInputBuffer &IB, std::optional<T> &Value) {
+    bool HasValue;
+    if (!SPSArgList<bool>::deserialize(IB, HasValue))
+      return false;
+    if (HasValue) {
+      Value = T();
+      return SPSArgList<SPSTagT>::deserialize(IB, *Value);
+    } else
+      Value = std::optional<T>();
+    return true;
+  }
+};
+
 /// Serialization for StringRefs.
 ///
 /// Serialization is as for regular strings. Deserialization points directly
@@ -476,6 +520,8 @@ public:
   static bool serialize(SPSOutputBuffer &OB, StringRef S) {
     if (!SPSArgList<uint64_t>::serialize(OB, static_cast<uint64_t>(S.size())))
       return false;
+    if (S.empty()) // Empty StringRef may have null data, so bail out early.
+      return true;
     return OB.write(S.data(), S.size());
   }
 
@@ -487,7 +533,7 @@ public:
     Data = IB.data();
     if (!IB.skip(Size))
       return false;
-    S = StringRef(Data, Size);
+    S = StringRef(Size ? Data : nullptr, Size);
     return true;
   }
 };

@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.coreFoundation.CFNumber,osx.cocoa.RetainCount -analyzer-store=region -verify -triple x86_64-apple-darwin9 %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,osx.coreFoundation.CFNumber,osx.cocoa.RetainCount -verify -triple x86_64-apple-darwin9 %s
 
 typedef signed long CFIndex;
 typedef const struct __CFAllocator * CFAllocatorRef;

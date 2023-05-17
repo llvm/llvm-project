@@ -1,7 +1,7 @@
-// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=LIST %s
-// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=PIPELINE %s
-// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=MT_LIST %s
-// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='func.func(cse,canonicalize,cse)' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=MT_PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=LIST %s
+// RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=PIPELINE %s
+// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=list 2>&1 | FileCheck -check-prefix=MT_LIST %s
+// RUN: mlir-opt %s -mlir-disable-threading=false -verify-each=true -pass-pipeline='builtin.module(func.func(cse,canonicalize,cse))' -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=MT_PIPELINE %s
 // RUN: mlir-opt %s -mlir-disable-threading=true -verify-each=false -test-pm-nested-pipeline -mlir-timing -mlir-timing-display=tree 2>&1 | FileCheck -check-prefix=NESTED_PIPELINE %s
 
 // LIST: Execution time report

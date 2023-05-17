@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Mark unimplemented private special member functions with '= delete'.
 /// \code
@@ -33,7 +31,7 @@ namespace modernize {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-use-equals-delete.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/use-equals-delete.html
 class UseEqualsDeleteCheck : public ClangTidyCheck {
 public:
   UseEqualsDeleteCheck(StringRef Name, ClangTidyContext *Context)
@@ -50,8 +48,6 @@ private:
   const bool IgnoreMacros;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_USE_EQUALS_DELETE_H

@@ -1,4 +1,4 @@
-//===-- RISCVAsmParser.cpp - Parse RISCV assembly to MCInst instructions --===//
+//===-- RISCVAsmParser.cpp - Parse RISC-V assembly to MCInst instructions -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -35,6 +35,7 @@
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/RISCVAttributes.h"
 #include "llvm/Support/RISCVISAInfo.h"
@@ -45,12 +46,11 @@ using namespace llvm;
 
 #define DEBUG_TYPE "riscv-asm-parser"
 
-// Include the auto-generated portion of the compress emitter.
-#define GEN_COMPRESS_INSTR
-#include "RISCVGenCompressInstEmitter.inc"
-
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
+
+static cl::opt<bool> AddBuildAttributes("riscv-add-build-attributes",
+                                        cl::init(false));
 
 namespace llvm {
 extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
@@ -71,26 +71,33 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   SMLoc getLoc() const { return getParser().getTok().getLoc(); }
   bool isRV64() const { return getSTI().hasFeature(RISCV::Feature64Bit); }
-  bool isRV32E() const { return getSTI().hasFeature(RISCV::FeatureRV32E); }
+  bool isRVE() const { return getSTI().hasFeature(RISCV::FeatureRVE); }
 
   RISCVTargetStreamer &getTargetStreamer() {
+    assert(getParser().getStreamer().getTargetStreamer() &&
+           "do not have a target streamer");
     MCTargetStreamer &TS = *getParser().getStreamer().getTargetStreamer();
     return static_cast<RISCVTargetStreamer &>(TS);
   }
 
   unsigned validateTargetOperandClass(MCParsedAsmOperand &Op,
                                       unsigned Kind) override;
+  unsigned checkTargetMatchPredicate(MCInst &Inst) override;
 
   bool generateImmOutOfRangeError(OperandVector &Operands, uint64_t ErrorInfo,
-                                  int64_t Lower, int64_t Upper, Twine Msg);
+                                  int64_t Lower, int64_t Upper,
+                                  const Twine &Msg);
+  bool generateImmOutOfRangeError(SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
+                                  const Twine &Msg);
 
   bool MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                OperandVector &Operands, MCStreamer &Out,
                                uint64_t &ErrorInfo,
                                bool MatchingInlineAsm) override;
 
-  bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) override;
-  OperandMatchResultTy tryParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  bool parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
+                     SMLoc &EndLoc) override;
+  OperandMatchResultTy tryParseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                         SMLoc &EndLoc) override;
 
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
@@ -158,6 +165,7 @@ class RISCVAsmParser : public MCTargetAsmParser {
 #include "RISCVGenAsmMatcher.inc"
 
   OperandMatchResultTy parseCSRSystemRegister(OperandVector &Operands);
+  OperandMatchResultTy parseFPImm(OperandVector &Operands);
   OperandMatchResultTy parseImmediate(OperandVector &Operands);
   OperandMatchResultTy parseRegister(OperandVector &Operands,
                                      bool AllowParens = false);
@@ -171,28 +179,31 @@ class RISCVAsmParser : public MCTargetAsmParser {
   OperandMatchResultTy parseVTypeI(OperandVector &Operands);
   OperandMatchResultTy parseMaskReg(OperandVector &Operands);
   OperandMatchResultTy parseInsnDirectiveOpcode(OperandVector &Operands);
+  OperandMatchResultTy parseInsnCDirectiveOpcode(OperandVector &Operands);
   OperandMatchResultTy parseGPRAsFPR(OperandVector &Operands);
+  OperandMatchResultTy parseFRMArg(OperandVector &Operands);
+  OperandMatchResultTy parseFenceArg(OperandVector &Operands);
+  OperandMatchResultTy parseReglist(OperandVector &Operands);
+  OperandMatchResultTy parseRetval(OperandVector &Operands);
+  OperandMatchResultTy parseZcmpSpimm(OperandVector &Operands);
 
   bool parseOperand(OperandVector &Operands, StringRef Mnemonic);
 
   bool parseDirectiveOption();
   bool parseDirectiveAttribute();
   bool parseDirectiveInsn(SMLoc L);
+  bool parseDirectiveVariantCC();
 
   void setFeatureBits(uint64_t Feature, StringRef FeatureString) {
-    if (!(getSTI().getFeatureBits()[Feature])) {
+    if (!(getSTI().hasFeature(Feature))) {
       MCSubtargetInfo &STI = copySTI();
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
     }
   }
 
-  bool getFeatureBits(uint64_t Feature) {
-    return getSTI().getFeatureBits()[Feature];
-  }
-
   void clearFeatureBits(uint64_t Feature, StringRef FeatureString) {
-    if (getSTI().getFeatureBits()[Feature]) {
+    if (getSTI().hasFeature(Feature)) {
       MCSubtargetInfo &STI = copySTI();
       setAvailableFeatures(
           ComputeAvailableFeatures(STI.ToggleFeature(FeatureString)));
@@ -222,10 +233,12 @@ class RISCVAsmParser : public MCTargetAsmParser {
   }
 
   std::unique_ptr<RISCVOperand> defaultMaskRegOp() const;
+  std::unique_ptr<RISCVOperand> defaultFRMArgOp() const;
 
 public:
   enum RISCVMatchResultTy {
     Match_Dummy = FIRST_TARGET_MATCH_RESULT_TY,
+    Match_RequiresEvenGPRs,
 #define GET_OPERAND_DIAGNOSTIC_TYPES
 #include "RISCVGenAsmMatcher.inc"
 #undef GET_OPERAND_DIAGNOSTIC_TYPES
@@ -233,10 +246,13 @@ public:
 
   static bool classifySymbolRef(const MCExpr *Expr,
                                 RISCVMCExpr::VariantKind &Kind);
+  static bool isSymbolDiff(const MCExpr *Expr);
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII, const MCTargetOptions &Options)
       : MCTargetAsmParser(Options, STI, MII) {
+    MCAsmParserExtension::Initialize(Parser);
+
     Parser.addAliasForDirective(".half", ".2byte");
     Parser.addAliasForDirective(".hword", ".2byte");
     Parser.addAliasForDirective(".word", ".4byte");
@@ -244,13 +260,12 @@ public:
     setAvailableFeatures(ComputeAvailableFeatures(STI.getFeatureBits()));
 
     auto ABIName = StringRef(Options.ABIName);
-    if (ABIName.endswith("f") &&
-        !getSTI().getFeatureBits()[RISCV::FeatureStdExtF]) {
+    if (ABIName.endswith("f") && !getSTI().hasFeature(RISCV::FeatureStdExtF)) {
       errs() << "Hard-float 'f' ABI can't be used for a target that "
                 "doesn't support the F instruction set extension (ignoring "
                 "target-abi)\n";
     } else if (ABIName.endswith("d") &&
-               !getSTI().getFeatureBits()[RISCV::FeatureStdExtD]) {
+               !getSTI().hasFeature(RISCV::FeatureStdExtD)) {
       errs() << "Hard-float 'd' ABI can't be used for a target that "
                 "doesn't support the D instruction set extension (ignoring "
                 "target-abi)\n";
@@ -263,31 +278,41 @@ public:
 
     const MCObjectFileInfo *MOFI = Parser.getContext().getObjectFileInfo();
     ParserOptions.IsPicEnabled = MOFI->isPositionIndependent();
+
+    if (AddBuildAttributes)
+      getTargetStreamer().emitTargetAttributes(STI, /*EmitStackAlign*/ false);
   }
 };
 
 /// RISCVOperand - Instances of this class represent a parsed machine
 /// instruction
-struct RISCVOperand : public MCParsedAsmOperand {
+struct RISCVOperand final : public MCParsedAsmOperand {
 
   enum class KindTy {
     Token,
     Register,
     Immediate,
+    FPImmediate,
     SystemRegister,
     VType,
+    FRM,
+    Fence,
+    Rlist,
+    Spimm,
   } Kind;
-
-  bool IsRV64;
-
-  bool IsGPRAsFPR;
 
   struct RegOp {
     MCRegister RegNum;
+    bool IsGPRAsFPR;
   };
 
   struct ImmOp {
     const MCExpr *Val;
+    bool IsRV64;
+  };
+
+  struct FPImmOp {
+    uint64_t Val;
   };
 
   struct SysRegOp {
@@ -302,13 +327,34 @@ struct RISCVOperand : public MCParsedAsmOperand {
     unsigned Val;
   };
 
+  struct FRMOp {
+    RISCVFPRndMode::RoundingMode FRM;
+  };
+
+  struct FenceOp {
+    unsigned Val;
+  };
+
+  struct RlistOp {
+    unsigned Val;
+  };
+
+  struct SpimmOp {
+    unsigned Val;
+  };
+
   SMLoc StartLoc, EndLoc;
   union {
     StringRef Tok;
     RegOp Reg;
     ImmOp Imm;
+    FPImmOp FPImm;
     struct SysRegOp SysReg;
     struct VTypeOp VType;
+    struct FRMOp FRM;
+    struct FenceOp Fence;
+    struct RlistOp Rlist;
+    struct SpimmOp Spimm;
   };
 
   RISCVOperand(KindTy K) : Kind(K) {}
@@ -316,7 +362,6 @@ struct RISCVOperand : public MCParsedAsmOperand {
 public:
   RISCVOperand(const RISCVOperand &o) : MCParsedAsmOperand() {
     Kind = o.Kind;
-    IsRV64 = o.IsRV64;
     StartLoc = o.StartLoc;
     EndLoc = o.EndLoc;
     switch (Kind) {
@@ -325,6 +370,9 @@ public:
       break;
     case KindTy::Immediate:
       Imm = o.Imm;
+      break;
+    case KindTy::FPImmediate:
+      FPImm = o.FPImm;
       break;
     case KindTy::Token:
       Tok = o.Tok;
@@ -335,6 +383,18 @@ public:
     case KindTy::VType:
       VType = o.VType;
       break;
+    case KindTy::FRM:
+      FRM = o.FRM;
+      break;
+    case KindTy::Fence:
+      Fence = o.Fence;
+      break;
+    case KindTy::Rlist:
+      Rlist = o.Rlist;
+      break;
+    case KindTy::Spimm:
+      Spimm = o.Spimm;
+      break;
     }
   }
 
@@ -343,22 +403,35 @@ public:
   bool isV0Reg() const {
     return Kind == KindTy::Register && Reg.RegNum == RISCV::V0;
   }
+  bool isAnyReg() const {
+    return Kind == KindTy::Register &&
+           (RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.RegNum) ||
+            RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg.RegNum) ||
+            RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg.RegNum));
+  }
+  bool isAnyRegC() const {
+    return Kind == KindTy::Register &&
+           (RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(
+                Reg.RegNum) ||
+            RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(
+                Reg.RegNum));
+  }
   bool isImm() const override { return Kind == KindTy::Immediate; }
   bool isMem() const override { return false; }
   bool isSystemRegister() const { return Kind == KindTy::SystemRegister; }
+  bool isRlist() const { return Kind == KindTy::Rlist; }
+  bool isSpimm() const { return Kind == KindTy::Spimm; }
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.RegNum);
   }
 
-  bool isGPRAsFPR() const { return isGPR() && IsGPRAsFPR; }
+  bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
-  bool isGPRF64AsFPR() const { return isGPR() && IsGPRAsFPR && IsRV64; }
+  bool isGPRF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
-  bool isGPRPF64AsFPR() const {
-    return isGPR() && IsGPRAsFPR && !IsRV64 && !((Reg.RegNum - RISCV::X0) & 1);
-  }
+  bool isGPRPF64AsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
 
   static bool evaluateConstantImm(const MCExpr *Expr, int64_t &Imm,
                                   RISCVMCExpr::VariantKind &VK) {
@@ -461,49 +534,23 @@ public:
 
   /// Return true if the operand is a valid for the fence instruction e.g.
   /// ('iorw').
-  bool isFenceArg() const {
-    if (!isImm())
-      return false;
-
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (evaluateConstantImm(getImm(), Imm, VK)) {
-      // Only accept 0 as a constant immediate.
-      return VK == RISCVMCExpr::VK_RISCV_None && Imm == 0;
-    }
-
-    auto *SVal = dyn_cast<MCSymbolRefExpr>(getImm());
-
-    if (!SVal || SVal->getKind() != MCSymbolRefExpr::VK_None)
-      return false;
-
-    StringRef Str = SVal->getSymbol().getName();
-    // Letters must be unique, taken from 'iorw', and in ascending order. This
-    // holds as long as each individual character is one of 'iorw' and is
-    // greater than the previous character.
-    char Prev = '\0';
-    for (char c : Str) {
-      if (c != 'i' && c != 'o' && c != 'r' && c != 'w')
-        return false;
-      if (c <= Prev)
-        return false;
-      Prev = c;
-    }
-    return true;
-  }
+  bool isFenceArg() const { return Kind == KindTy::Fence; }
 
   /// Return true if the operand is a valid floating point rounding mode.
-  bool isFRMArg() const {
-    if (!isImm())
-      return false;
-    const MCExpr *Val = getImm();
-    auto *SVal = dyn_cast<MCSymbolRefExpr>(Val);
-    if (!SVal || SVal->getKind() != MCSymbolRefExpr::VK_None)
-      return false;
+  bool isFRMArg() const { return Kind == KindTy::FRM; }
+  bool isRTZArg() const { return isFRMArg() && FRM.FRM == RISCVFPRndMode::RTZ; }
 
-    StringRef Str = SVal->getSymbol().getName();
-
-    return RISCVFPRndMode::stringToRoundingMode(Str) != RISCVFPRndMode::Invalid;
+  /// Return true if the operand is a valid fli.s floating-point immediate.
+  bool isLoadFPImm() const {
+    if (isImm())
+      return isUImm5();
+    if (Kind != KindTy::FPImmediate)
+      return false;
+    int Idx = RISCVLoadFPImm::getLoadFPImm(
+        APFloat(APFloat::IEEEdouble(), APInt(64, getFPConst())));
+    // Don't allow decimal version of the minimum value. It is a different value
+    // for each supported data type.
+    return Idx >= 0 && Idx != 1;
   }
 
   bool isImmXLenLI() const {
@@ -516,8 +563,12 @@ public:
       return true;
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
-    return IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None &&
-           (isRV64() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+    if (IsConstantImm) {
+      return VK == RISCVMCExpr::VK_RISCV_None &&
+             (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+    }
+
+    return RISCVAsmParser::isSymbolDiff(getImm());
   }
 
   bool isUImmLog2XLen() const {
@@ -528,7 +579,7 @@ public:
     if (!evaluateConstantImm(getImm(), Imm, VK) ||
         VK != RISCVMCExpr::VK_RISCV_None)
       return false;
-    return (isRV64() && isUInt<6>(Imm)) || isUInt<5>(Imm);
+    return (isRV64Imm() && isUInt<6>(Imm)) || isUInt<5>(Imm);
   }
 
   bool isUImmLog2XLenNonZero() const {
@@ -541,7 +592,7 @@ public:
       return false;
     if (Imm == 0)
       return false;
-    return (isRV64() && isUInt<6>(Imm)) || isUInt<5>(Imm);
+    return (isRV64Imm() && isUInt<6>(Imm)) || isUInt<5>(Imm);
   }
 
   bool isUImmLog2XLenHalf() const {
@@ -552,43 +603,35 @@ public:
     if (!evaluateConstantImm(getImm(), Imm, VK) ||
         VK != RISCVMCExpr::VK_RISCV_None)
       return false;
-    return (isRV64() && isUInt<5>(Imm)) || isUInt<4>(Imm);
+    return (isRV64Imm() && isUInt<5>(Imm)) || isUInt<4>(Imm);
   }
 
-  bool isUImm2() const {
+  template <unsigned N> bool IsUImm() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<2>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isUInt<N>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
   }
 
-  bool isUImm3() const {
+  bool isUImm1() const { return IsUImm<1>(); }
+  bool isUImm2() const { return IsUImm<2>(); }
+  bool isUImm3() const { return IsUImm<3>(); }
+  bool isUImm4() const { return IsUImm<4>(); }
+  bool isUImm5() const { return IsUImm<5>(); }
+  bool isUImm6() const { return IsUImm<6>(); }
+  bool isUImm7() const { return IsUImm<7>(); }
+  bool isUImm8() const { return IsUImm<8>(); }
+
+  bool isUImm8GE32() const {
     int64_t Imm;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     if (!isImm())
       return false;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<3>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
-  }
-
-  bool isUImm5() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
-  }
-
-  bool isUImm7() const {
-    int64_t Imm;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (!isImm())
-      return false;
-    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isUInt<7>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isUInt<8>(Imm) && Imm >= 32 &&
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isRnumArg() const {
@@ -601,13 +644,44 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  bool isRnumArg_0_7() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && Imm >= INT64_C(0) && Imm <= INT64_C(7) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isRnumArg_1_10() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && Imm >= INT64_C(1) && Imm <= INT64_C(10) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isRnumArg_2_14() const {
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    if (!isImm())
+      return false;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && Imm >= INT64_C(2) && Imm <= INT64_C(14) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
   bool isSImm5() const {
     if (!isImm())
       return false;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<5>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isInt<5>(fixImmediateForRV32(Imm, isRV64Imm())) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6() const {
@@ -616,7 +690,8 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<6>(Imm) && VK == RISCVMCExpr::VK_RISCV_None;
+    return IsConstantImm && isInt<6>(fixImmediateForRV32(Imm, isRV64Imm())) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
   }
 
   bool isSImm6NonZero() const {
@@ -625,7 +700,8 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<6>(Imm) && (Imm != 0) &&
+    return IsConstantImm && Imm != 0 &&
+           isInt<6>(fixImmediateForRV32(Imm, isRV64Imm())) &&
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
@@ -637,6 +713,16 @@ public:
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
     return IsConstantImm && (Imm != 0) &&
            (isUInt<5>(Imm) || (Imm >= 0xfffe0 && Imm <= 0xfffff)) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
+
+  bool isUImm2Lsb0() const {
+    if (!isImm())
+      return false;
+    int64_t Imm;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedUInt<1, 1>(Imm) &&
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
@@ -692,6 +778,14 @@ public:
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
+  // If this a RV32 and the immediate is a uimm32, sign extend it to 32 bits.
+  // This allows writing 'addi a0, a0, 0xffffffff'.
+  static int64_t fixImmediateForRV32(int64_t Imm, bool IsRV64Imm) {
+    if (IsRV64Imm || !isUInt<32>(Imm))
+      return Imm;
+    return SignExtend64<32>(Imm);
+  }
+
   bool isSImm12() const {
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
@@ -702,7 +796,7 @@ public:
     if (!IsConstantImm)
       IsValid = RISCVAsmParser::classifySymbolRef(getImm(), VK);
     else
-      IsValid = isInt<12>(Imm);
+      IsValid = isInt<12>(fixImmediateForRV32(Imm, isRV64Imm()));
     return IsValid && ((IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None) ||
                        VK == RISCVMCExpr::VK_RISCV_LO ||
                        VK == RISCVMCExpr::VK_RISCV_PCREL_LO ||
@@ -710,6 +804,16 @@ public:
   }
 
   bool isSImm12Lsb0() const { return isBareSimmNLsb0<12>(); }
+
+  bool isSImm12Lsb00000() const {
+    if (!isImm())
+      return false;
+    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
+    int64_t Imm;
+    bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
+    return IsConstantImm && isShiftedInt<7, 5>(Imm) &&
+           VK == RISCVMCExpr::VK_RISCV_None;
+  }
 
   bool isSImm13Lsb0() const { return isBareSimmNLsb0<13>(); }
 
@@ -780,7 +884,8 @@ public:
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     int64_t Imm;
     bool IsConstantImm = evaluateConstantImm(getImm(), Imm, VK);
-    return IsConstantImm && isInt<5>(Imm - 1) &&
+    return IsConstantImm &&
+           isInt<5>(fixImmediateForRV32(Imm, isRV64Imm()) - 1) &&
            VK == RISCVMCExpr::VK_RISCV_None;
   }
 
@@ -789,7 +894,10 @@ public:
   /// getEndLoc - Gets location of the last token of this operand
   SMLoc getEndLoc() const override { return EndLoc; }
   /// True if this operand is for an RV64 instruction
-  bool isRV64() const { return IsRV64; }
+  bool isRV64Imm() const {
+    assert(Kind == KindTy::Immediate && "Invalid type access!");
+    return Imm.IsRV64;
+  }
 
   unsigned getReg() const override {
     assert(Kind == KindTy::Register && "Invalid type access!");
@@ -806,6 +914,11 @@ public:
     return Imm.Val;
   }
 
+  uint64_t getFPConst() const {
+    assert(Kind == KindTy::FPImmediate && "Invalid type access!");
+    return FPImm.Val;
+  }
+
   StringRef getToken() const {
     assert(Kind == KindTy::Token && "Invalid type access!");
     return Tok;
@@ -816,8 +929,18 @@ public:
     return VType.Val;
   }
 
+  RISCVFPRndMode::RoundingMode getFRM() const {
+    assert(Kind == KindTy::FRM && "Invalid type access!");
+    return FRM.FRM;
+  }
+
+  unsigned getFence() const {
+    assert(Kind == KindTy::Fence && "Invalid type access!");
+    return Fence.Val;
+  }
+
   void print(raw_ostream &OS) const override {
-    auto RegName = [](unsigned Reg) {
+    auto RegName = [](MCRegister Reg) {
       if (Reg)
         return RISCVInstPrinter::getRegisterName(Reg);
       else
@@ -827,6 +950,8 @@ public:
     switch (Kind) {
     case KindTy::Immediate:
       OS << *getImm();
+      break;
+    case KindTy::FPImmediate:
       break;
     case KindTy::Register:
       OS << "<register " << RegName(getReg()) << ">";
@@ -842,28 +967,44 @@ public:
       RISCVVType::printVType(getVType(), OS);
       OS << '>';
       break;
+    case KindTy::FRM:
+      OS << "<frm: ";
+      roundingModeToString(getFRM());
+      OS << '>';
+      break;
+    case KindTy::Fence:
+      OS << "<fence: ";
+      OS << getFence();
+      OS << '>';
+      break;
+    case KindTy::Rlist:
+      OS << "<rlist: ";
+      RISCVZC::printRlist(Rlist.Val, OS);
+      OS << '>';
+      break;
+    case KindTy::Spimm:
+      OS << "<Spimm: ";
+      RISCVZC::printSpimm(Spimm.Val, OS);
+      OS << '>';
+      break;
     }
   }
 
-  static std::unique_ptr<RISCVOperand> createToken(StringRef Str, SMLoc S,
-                                                   bool IsRV64) {
+  static std::unique_ptr<RISCVOperand> createToken(StringRef Str, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Token);
     Op->Tok = Str;
     Op->StartLoc = S;
     Op->EndLoc = S;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createReg(unsigned RegNo, SMLoc S,
-                                                 SMLoc E, bool IsRV64,
-                                                 bool IsGPRAsFPR = false) {
+  static std::unique_ptr<RISCVOperand>
+  createReg(unsigned RegNo, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
     Op->Reg.RegNum = RegNo;
+    Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
-    Op->IsRV64 = IsRV64;
-    Op->IsGPRAsFPR = IsGPRAsFPR;
     return Op;
   }
 
@@ -871,42 +1012,80 @@ public:
                                                  SMLoc E, bool IsRV64) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Immediate);
     Op->Imm.Val = Val;
+    Op->Imm.IsRV64 = IsRV64;
     Op->StartLoc = S;
     Op->EndLoc = E;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand>
-  createSysReg(StringRef Str, SMLoc S, unsigned Encoding, bool IsRV64) {
+  static std::unique_ptr<RISCVOperand> createFPImm(uint64_t Val, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::FPImmediate);
+    Op->FPImm.Val = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<RISCVOperand> createSysReg(StringRef Str, SMLoc S,
+                                                    unsigned Encoding) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::SystemRegister);
     Op->SysReg.Data = Str.data();
     Op->SysReg.Length = Str.size();
     Op->SysReg.Encoding = Encoding;
     Op->StartLoc = S;
     Op->EndLoc = S;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
-  static std::unique_ptr<RISCVOperand> createVType(unsigned VTypeI, SMLoc S,
-                                                   bool IsRV64) {
+  static std::unique_ptr<RISCVOperand>
+  createFRMArg(RISCVFPRndMode::RoundingMode FRM, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::FRM);
+    Op->FRM.FRM = FRM;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<RISCVOperand> createFenceArg(unsigned Val, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::Fence);
+    Op->Fence.Val = Val;
+    Op->StartLoc = S;
+    Op->EndLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<RISCVOperand> createVType(unsigned VTypeI, SMLoc S) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::VType);
     Op->VType.Val = VTypeI;
     Op->StartLoc = S;
     Op->EndLoc = S;
-    Op->IsRV64 = IsRV64;
     return Op;
   }
 
-  void addExpr(MCInst &Inst, const MCExpr *Expr) const {
+  static std::unique_ptr<RISCVOperand> createRlist(unsigned RlistEncode,
+                                                   SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::Rlist);
+    Op->Rlist.Val = RlistEncode;
+    Op->StartLoc = S;
+    return Op;
+  }
+
+  static std::unique_ptr<RISCVOperand> createSpimm(unsigned Spimm, SMLoc S) {
+    auto Op = std::make_unique<RISCVOperand>(KindTy::Spimm);
+    Op->Spimm.Val = Spimm;
+    Op->StartLoc = S;
+    return Op;
+  }
+
+  static void addExpr(MCInst &Inst, const MCExpr *Expr, bool IsRV64Imm) {
     assert(Expr && "Expr shouldn't be null!");
     int64_t Imm = 0;
     RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
     bool IsConstant = evaluateConstantImm(Expr, Imm, VK);
 
     if (IsConstant)
-      Inst.addOperand(MCOperand::createImm(Imm));
+      Inst.addOperand(
+          MCOperand::createImm(fixImmediateForRV32(Imm, IsRV64Imm)));
     else
       Inst.addOperand(MCOperand::createExpr(Expr));
   }
@@ -919,45 +1098,24 @@ public:
 
   void addImmOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    addExpr(Inst, getImm());
+    addExpr(Inst, getImm(), isRV64Imm());
+  }
+
+  void addFPImmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    if (isImm()) {
+      addExpr(Inst, getImm(), isRV64Imm());
+      return;
+    }
+
+    int Imm = RISCVLoadFPImm::getLoadFPImm(
+        APFloat(APFloat::IEEEdouble(), APInt(64, getFPConst())));
+    Inst.addOperand(MCOperand::createImm(Imm));
   }
 
   void addFenceArgOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-
-    int64_t Constant = 0;
-    RISCVMCExpr::VariantKind VK = RISCVMCExpr::VK_RISCV_None;
-    if (evaluateConstantImm(getImm(), Constant, VK)) {
-      if (Constant == 0) {
-        Inst.addOperand(MCOperand::createImm(Constant));
-        return;
-      }
-      llvm_unreachable("FenceArg must contain only [iorw] or be 0");
-    }
-
-    // isFenceArg has validated the operand, meaning this cast is safe
-    auto SE = cast<MCSymbolRefExpr>(getImm());
-
-    unsigned Imm = 0;
-    for (char c : SE->getSymbol().getName()) {
-      switch (c) {
-      default:
-        llvm_unreachable("FenceArg must contain only [iorw] or be 0");
-      case 'i':
-        Imm |= RISCVFenceField::I;
-        break;
-      case 'o':
-        Imm |= RISCVFenceField::O;
-        break;
-      case 'r':
-        Imm |= RISCVFenceField::R;
-        break;
-      case 'w':
-        Imm |= RISCVFenceField::W;
-        break;
-      }
-    }
-    Inst.addOperand(MCOperand::createImm(Imm));
+    Inst.addOperand(MCOperand::createImm(Fence.Val));
   }
 
   void addCSRSystemRegisterOperands(MCInst &Inst, unsigned N) const {
@@ -982,20 +1140,19 @@ public:
     Inst.addOperand(MCOperand::createImm(Imm));
   }
 
-  // Returns the rounding mode represented by this RISCVOperand. Should only
-  // be called after checking isFRMArg.
-  RISCVFPRndMode::RoundingMode getRoundingMode() const {
-    // isFRMArg has validated the operand, meaning this cast is safe.
-    auto SE = cast<MCSymbolRefExpr>(getImm());
-    RISCVFPRndMode::RoundingMode FRM =
-        RISCVFPRndMode::stringToRoundingMode(SE->getSymbol().getName());
-    assert(FRM != RISCVFPRndMode::Invalid && "Invalid rounding mode");
-    return FRM;
+  void addRlistOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(Rlist.Val));
+  }
+
+  void addSpimmOperands(MCInst &Inst, unsigned N) const {
+    assert(N == 1 && "Invalid number of operands!");
+    Inst.addOperand(MCOperand::createImm(Spimm.Val));
   }
 
   void addFRMArgOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(getRoundingMode()));
+    Inst.addOperand(MCOperand::createImm(getFRM()));
   }
 };
 } // end anonymous namespace.
@@ -1068,11 +1225,34 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   return Match_InvalidOperand;
 }
 
+unsigned RISCVAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
+  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
+
+  for (unsigned I = 0; I < MCID.NumOperands; ++I) {
+    if (MCID.operands()[I].RegClass == RISCV::GPRPF64RegClassID) {
+      const auto &Op = Inst.getOperand(I);
+      assert(Op.isReg());
+
+      MCRegister Reg = Op.getReg();
+      if (((Reg.id() - RISCV::X0) & 1) != 0)
+        return Match_RequiresEvenGPRs;
+    }
+  }
+
+  return Match_Success;
+}
+
+bool RISCVAsmParser::generateImmOutOfRangeError(
+    SMLoc ErrorLoc, int64_t Lower, int64_t Upper,
+    const Twine &Msg = "immediate must be an integer in the range") {
+  return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
+}
+
 bool RISCVAsmParser::generateImmOutOfRangeError(
     OperandVector &Operands, uint64_t ErrorInfo, int64_t Lower, int64_t Upper,
-    Twine Msg = "immediate must be an integer in the range") {
+    const Twine &Msg = "immediate must be an integer in the range") {
   SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-  return Error(ErrorLoc, Msg + " [" + Twine(Lower) + ", " + Twine(Upper) + "]");
+  return generateImmOutOfRangeError(ErrorLoc, Lower, Upper, Msg);
 }
 
 bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
@@ -1137,6 +1317,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
   switch (Result) {
   default:
     break;
+  case Match_RequiresEvenGPRs:
+    return Error(IDLoc,
+                 "double precision floating point operands must use even "
+                 "numbered X register");
   case Match_InvalidImmXLenLI:
     if (isRV64()) {
       SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -1161,14 +1345,27 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     if (isRV64())
       return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
+  case Match_InvalidUImm1:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 1) - 1);
   case Match_InvalidUImm2:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 2) - 1);
+  case Match_InvalidUImm2Lsb0:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 2,
+                                      "immediate must be one of");
   case Match_InvalidUImm3:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 3) - 1);
+  case Match_InvalidUImm4:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 4) - 1);
   case Match_InvalidUImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 5) - 1);
+  case Match_InvalidUImm6:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 6) - 1);
   case Match_InvalidUImm7:
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 7) - 1);
+  case Match_InvalidUImm8:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, (1 << 8) - 1);
+  case Match_InvalidUImm8GE32:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 32, (1 << 8) - 1);
   case Match_InvalidSImm5:
     return generateImmOutOfRangeError(Operands, ErrorInfo, -(1 << 4),
                                       (1 << 4) - 1);
@@ -1220,6 +1417,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 11), (1 << 11) - 2,
         "immediate must be a multiple of 2 bytes in the range");
+  case Match_InvalidSImm12Lsb00000:
+    return generateImmOutOfRangeError(
+        Operands, ErrorInfo, -(1 << 11), (1 << 11) - 32,
+        "immediate must be a multiple of 32 bytes in the range");
   case Match_InvalidSImm13Lsb0:
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -(1 << 12), (1 << 12) - 2,
@@ -1244,16 +1445,9 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       "operand must be a valid system register "
                                       "name or an integer in the range");
   }
-  case Match_InvalidFenceArg: {
+  case Match_InvalidLoadFPImm: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(ErrorLoc, "operand must be formed of letters selected "
-                           "in-order from 'iorw' or be 0");
-  }
-  case Match_InvalidFRMArg: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return Error(
-        ErrorLoc,
-        "operand must be a valid floating point rounding mode mnemonic");
+    return Error(ErrorLoc, "operand must be a valid floating-point constant");
   }
   case Match_InvalidBareSymbol: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
@@ -1271,6 +1465,10 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(ErrorLoc, "operand must be a symbol with %tprel_add modifier");
   }
+  case Match_InvalidRTZArg: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(ErrorLoc, "operand must be 'rtz' floating-point rounding mode");
+  }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return Error(
@@ -1287,8 +1485,30 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
                                       (1 << 4),
                                       "immediate must be in the range");
   }
+  case Match_InvalidRlist: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(
+        ErrorLoc,
+        "operand must be {ra [, s0[-sN]]} or {x1 [, x8[-x9][, x18[-xN]]]}");
+  }
+  case Match_InvalidSpimm: {
+    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
+    return Error(
+        ErrorLoc,
+        "stack adjustment is invalid for this instruction and register list; "
+        "refer to Zc spec for a detailed range of stack adjustment");
+  }
   case Match_InvalidRnumArg: {
     return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 10);
+  }
+  case Match_InvalidRnumArg_0_7: {
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 0, 7);
+  }
+  case Match_InvalidRnumArg_1_10: {
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 1, 10);
+  }
+  case Match_InvalidRnumArg_2_14: {
+    return generateImmOutOfRangeError(Operands, ErrorInfo, 2, 14);
   }
   }
 
@@ -1297,42 +1517,41 @@ bool RISCVAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
 
 // Attempts to match Name as a register (either using the default name or
 // alternative ABI names), setting RegNo to the matching register. Upon
-// failure, returns true and sets RegNo to 0. If IsRV32E then registers
-// x16-x31 will be rejected.
-static bool matchRegisterNameHelper(bool IsRV32E, MCRegister &RegNo,
-                                    StringRef Name) {
-  RegNo = MatchRegisterName(Name);
+// failure, returns a non-valid MCRegister. If IsRVE, then registers x16-x31
+// will be rejected.
+static MCRegister matchRegisterNameHelper(bool IsRVE, StringRef Name) {
+  MCRegister Reg = MatchRegisterName(Name);
   // The 16-/32- and 64-bit FPRs have the same asm name. Check that the initial
   // match always matches the 64-bit variant, and not the 16/32-bit one.
-  assert(!(RegNo >= RISCV::F0_H && RegNo <= RISCV::F31_H));
-  assert(!(RegNo >= RISCV::F0_F && RegNo <= RISCV::F31_F));
+  assert(!(Reg >= RISCV::F0_H && Reg <= RISCV::F31_H));
+  assert(!(Reg >= RISCV::F0_F && Reg <= RISCV::F31_F));
   // The default FPR register class is based on the tablegen enum ordering.
   static_assert(RISCV::F0_D < RISCV::F0_H, "FPR matching must be updated");
   static_assert(RISCV::F0_D < RISCV::F0_F, "FPR matching must be updated");
-  if (RegNo == RISCV::NoRegister)
-    RegNo = MatchRegisterAltName(Name);
-  if (IsRV32E && RegNo >= RISCV::X16 && RegNo <= RISCV::X31)
-    RegNo = RISCV::NoRegister;
-  return RegNo == RISCV::NoRegister;
+  if (!Reg)
+    Reg = MatchRegisterAltName(Name);
+  if (IsRVE && Reg >= RISCV::X16 && Reg <= RISCV::X31)
+    Reg = RISCV::NoRegister;
+  return Reg;
 }
 
-bool RISCVAsmParser::ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+bool RISCVAsmParser::parseRegister(MCRegister &RegNo, SMLoc &StartLoc,
                                    SMLoc &EndLoc) {
   if (tryParseRegister(RegNo, StartLoc, EndLoc) != MatchOperand_Success)
     return Error(StartLoc, "invalid register name");
   return false;
 }
 
-OperandMatchResultTy RISCVAsmParser::tryParseRegister(unsigned &RegNo,
+OperandMatchResultTy RISCVAsmParser::tryParseRegister(MCRegister &RegNo,
                                                       SMLoc &StartLoc,
                                                       SMLoc &EndLoc) {
   const AsmToken &Tok = getParser().getTok();
   StartLoc = Tok.getLoc();
   EndLoc = Tok.getEndLoc();
-  RegNo = 0;
   StringRef Name = getLexer().getTok().getIdentifier();
 
-  if (matchRegisterNameHelper(isRV32E(), (MCRegister &)RegNo, Name))
+  RegNo = matchRegisterNameHelper(isRVE(), Name);
+  if (!RegNo)
     return MatchOperand_NoMatch;
 
   getParser().Lex(); // Eat identifier token.
@@ -1364,25 +1583,24 @@ OperandMatchResultTy RISCVAsmParser::parseRegister(OperandVector &Operands,
     return MatchOperand_NoMatch;
   case AsmToken::Identifier:
     StringRef Name = getLexer().getTok().getIdentifier();
-    MCRegister RegNo;
-    matchRegisterNameHelper(isRV32E(), RegNo, Name);
+    MCRegister RegNo = matchRegisterNameHelper(isRVE(), Name);
 
-    if (RegNo == RISCV::NoRegister) {
+    if (!RegNo) {
       if (HadParens)
         getLexer().UnLex(LParen);
       return MatchOperand_NoMatch;
     }
     if (HadParens)
-      Operands.push_back(RISCVOperand::createToken("(", FirstS, isRV64()));
+      Operands.push_back(RISCVOperand::createToken("(", FirstS));
     SMLoc S = getLoc();
     SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
     getLexer().Lex();
-    Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
+    Operands.push_back(RISCVOperand::createReg(RegNo, S, E));
   }
 
   if (HadParens) {
     getParser().Lex(); // Eat ')'
-    Operands.push_back(RISCVOperand::createToken(")", getLoc(), isRV64()));
+    Operands.push_back(RISCVOperand::createToken(")", getLoc()));
   }
 
   return MatchOperand_Success;
@@ -1416,9 +1634,7 @@ RISCVAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
       }
     }
 
-    Twine Msg = "immediate must be an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 7) - 1) + "]");
-    return MatchOperand_ParseFail;
+    break;
   }
   case AsmToken::Identifier: {
     StringRef Identifier;
@@ -1427,26 +1643,86 @@ RISCVAsmParser::parseInsnDirectiveOpcode(OperandVector &Operands) {
 
     auto Opcode = RISCVInsnOpcode::lookupRISCVOpcodeByName(Identifier);
     if (Opcode) {
+      assert(isUInt<7>(Opcode->Value) && (Opcode->Value & 0x3) == 3 &&
+             "Unexpected opcode");
       Res = MCConstantExpr::create(Opcode->Value, getContext());
       E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
       Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
       return MatchOperand_Success;
     }
 
-    Twine Msg = "operand must be a valid opcode name or an "
-                "integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 7) - 1) + "]");
-    return MatchOperand_ParseFail;
+    break;
+  }
+  case AsmToken::Percent:
+    break;
+  }
+
+  generateImmOutOfRangeError(S, 0, 127,
+                             "opcode must be a valid opcode name or an "
+                             "immediate in the range");
+  return MatchOperand_ParseFail;
+}
+
+OperandMatchResultTy
+RISCVAsmParser::parseInsnCDirectiveOpcode(OperandVector &Operands) {
+  SMLoc S = getLoc();
+  SMLoc E;
+  const MCExpr *Res;
+
+  switch (getLexer().getKind()) {
+  default:
+    return MatchOperand_NoMatch;
+  case AsmToken::LParen:
+  case AsmToken::Minus:
+  case AsmToken::Plus:
+  case AsmToken::Exclaim:
+  case AsmToken::Tilde:
+  case AsmToken::Integer:
+  case AsmToken::String: {
+    if (getParser().parseExpression(Res, E))
+      return MatchOperand_ParseFail;
+
+    auto *CE = dyn_cast<MCConstantExpr>(Res);
+    if (CE) {
+      int64_t Imm = CE->getValue();
+      if (Imm >= 0 && Imm <= 2) {
+        Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
+        return MatchOperand_Success;
+      }
+    }
+
+    break;
+  }
+  case AsmToken::Identifier: {
+    StringRef Identifier;
+    if (getParser().parseIdentifier(Identifier))
+      return MatchOperand_ParseFail;
+
+    unsigned Opcode;
+    if (Identifier == "C0")
+      Opcode = 0;
+    else if (Identifier == "C1")
+      Opcode = 1;
+    else if (Identifier == "C2")
+      Opcode = 2;
+    else
+      break;
+
+    Res = MCConstantExpr::create(Opcode, getContext());
+    E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
+    Operands.push_back(RISCVOperand::createImm(Res, S, E, isRV64()));
+    return MatchOperand_Success;
   }
   case AsmToken::Percent: {
     // Discard operand with modifier.
-    Twine Msg = "immediate must be an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 7) - 1) + "]");
-    return MatchOperand_ParseFail;
+    break;
   }
   }
 
-  return MatchOperand_NoMatch;
+  generateImmOutOfRangeError(S, 0, 2,
+                             "opcode must be a valid opcode name or an "
+                             "immediate in the range");
+  return MatchOperand_ParseFail;
 }
 
 OperandMatchResultTy
@@ -1474,14 +1750,13 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
         auto SysReg = RISCVSysReg::lookupSysRegByEncoding(Imm);
         // Accept an immediate representing a named or un-named Sys Reg
         // if the range is valid, regardless of the required features.
-        Operands.push_back(RISCVOperand::createSysReg(
-            SysReg ? SysReg->Name : "", S, Imm, isRV64()));
+        Operands.push_back(
+            RISCVOperand::createSysReg(SysReg ? SysReg->Name : "", S, Imm));
         return MatchOperand_Success;
       }
     }
 
-    Twine Msg = "immediate must be an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 12) - 1) + "]");
+    generateImmOutOfRangeError(S, 0, (1 << 12) - 1);
     return MatchOperand_ParseFail;
   }
   case AsmToken::Identifier: {
@@ -1503,25 +1778,81 @@ RISCVAsmParser::parseCSRSystemRegister(OperandVector &Operands) {
         Error(S, "system register use requires an option to be enabled");
         return MatchOperand_ParseFail;
       }
-      Operands.push_back(RISCVOperand::createSysReg(
-          Identifier, S, SysReg->Encoding, isRV64()));
+      Operands.push_back(
+          RISCVOperand::createSysReg(Identifier, S, SysReg->Encoding));
       return MatchOperand_Success;
     }
 
-    Twine Msg = "operand must be a valid system register name "
-                "or an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 12) - 1) + "]");
+    generateImmOutOfRangeError(S, 0, (1 << 12) - 1,
+                               "operand must be a valid system register name "
+                               "or an integer in the range");
     return MatchOperand_ParseFail;
   }
   case AsmToken::Percent: {
     // Discard operand with modifier.
-    Twine Msg = "immediate must be an integer in the range";
-    Error(S, Msg + " [" + Twine(0) + ", " + Twine((1 << 12) - 1) + "]");
+    generateImmOutOfRangeError(S, 0, (1 << 12) - 1);
     return MatchOperand_ParseFail;
   }
   }
 
   return MatchOperand_NoMatch;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseFPImm(OperandVector &Operands) {
+  SMLoc S = getLoc();
+
+  // Parse special floats (inf/nan/min) representation.
+  if (getTok().is(AsmToken::Identifier)) {
+    StringRef Identifier = getTok().getIdentifier();
+    if (Identifier.compare_insensitive("inf") == 0) {
+      Operands.push_back(
+          RISCVOperand::createImm(MCConstantExpr::create(30, getContext()), S,
+                                  getTok().getEndLoc(), isRV64()));
+    } else if (Identifier.compare_insensitive("nan") == 0) {
+      Operands.push_back(
+          RISCVOperand::createImm(MCConstantExpr::create(31, getContext()), S,
+                                  getTok().getEndLoc(), isRV64()));
+    } else if (Identifier.compare_insensitive("min") == 0) {
+      Operands.push_back(
+          RISCVOperand::createImm(MCConstantExpr::create(1, getContext()), S,
+                                  getTok().getEndLoc(), isRV64()));
+    } else {
+      TokError("invalid floating point literal");
+      return MatchOperand_ParseFail;
+    }
+
+    Lex(); // Eat the token.
+
+    return MatchOperand_Success;
+  }
+
+  // Handle negation, as that still comes through as a separate token.
+  bool IsNegative = parseOptionalToken(AsmToken::Minus);
+
+  const AsmToken &Tok = getTok();
+  if (!Tok.is(AsmToken::Real)) {
+    TokError("invalid floating point immediate");
+    return MatchOperand_ParseFail;
+  }
+
+  // Parse FP representation.
+  APFloat RealVal(APFloat::IEEEdouble());
+  auto StatusOrErr =
+      RealVal.convertFromString(Tok.getString(), APFloat::rmTowardZero);
+  if (errorToBool(StatusOrErr.takeError())) {
+    TokError("invalid floating point representation");
+    return MatchOperand_ParseFail;
+  }
+
+  if (IsNegative)
+    RealVal.changeSign();
+
+  Operands.push_back(RISCVOperand::createFPImm(
+      RealVal.bitcastToAPInt().getZExtValue(), S));
+
+  Lex(); // Eat the token.
+
+  return MatchOperand_Success;
 }
 
 OperandMatchResultTy RISCVAsmParser::parseImmediate(OperandVector &Operands) {
@@ -1557,12 +1888,8 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   SMLoc S = getLoc();
   SMLoc E;
 
-  if (getLexer().getKind() != AsmToken::Percent) {
-    Error(getLoc(), "expected '%' for operand modifier");
+  if (parseToken(AsmToken::Percent, "expected '%' for operand modifier"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat '%'
 
   if (getLexer().getKind() != AsmToken::Identifier) {
     Error(getLoc(), "expected valid identifier for operand modifier");
@@ -1576,11 +1903,8 @@ RISCVAsmParser::parseOperandWithModifier(OperandVector &Operands) {
   }
 
   getParser().Lex(); // Eat the identifier
-  if (getLexer().getKind() != AsmToken::LParen) {
-    Error(getLoc(), "expected '('");
+  if (parseToken(AsmToken::LParen, "expected '('"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat '('
 
   const MCExpr *SubExpr;
   if (getParser().parseParenExpression(SubExpr, E)) {
@@ -1715,12 +2039,12 @@ OperandMatchResultTy RISCVAsmParser::parseJALOffset(OperandVector &Operands) {
 
 OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
   SMLoc S = getLoc();
-  if (getLexer().isNot(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
 
   SmallVector<AsmToken, 7> VTypeIElements;
   // Put all the tokens for vtypei operand into VTypeIElements vector.
   while (getLexer().isNot(AsmToken::EndOfStatement)) {
+    if (getLexer().isNot(AsmToken::Identifier))
+      goto MatchFail;
     VTypeIElements.push_back(getLexer().getTok());
     getLexer().Lex();
     if (getLexer().is(AsmToken::EndOfStatement))
@@ -1780,7 +2104,7 @@ OperandMatchResultTy RISCVAsmParser::parseVTypeI(OperandVector &Operands) {
 
     unsigned VTypeI =
         RISCVVType::encodeVTYPE(VLMUL, Sew, TailAgnostic, MaskAgnostic);
-    Operands.push_back(RISCVOperand::createVType(VTypeI, S, isRV64()));
+    Operands.push_back(RISCVOperand::createVType(VTypeI, S));
     return MatchOperand_Success;
   }
 
@@ -1792,73 +2116,138 @@ MatchFail:
 }
 
 OperandMatchResultTy RISCVAsmParser::parseMaskReg(OperandVector &Operands) {
-  switch (getLexer().getKind()) {
-  default:
+  if (getLexer().isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
-  case AsmToken::Identifier:
-    StringRef Name = getLexer().getTok().getIdentifier();
-    if (!Name.consume_back(".t")) {
-      Error(getLoc(), "expected '.t' suffix");
-      return MatchOperand_ParseFail;
-    }
-    MCRegister RegNo;
-    matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
-    if (RegNo == RISCV::NoRegister)
-      return MatchOperand_NoMatch;
-    if (RegNo != RISCV::V0)
-      return MatchOperand_NoMatch;
-    SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
-    getLexer().Lex();
-    Operands.push_back(RISCVOperand::createReg(RegNo, S, E, isRV64()));
+  StringRef Name = getLexer().getTok().getIdentifier();
+  if (!Name.consume_back(".t")) {
+    Error(getLoc(), "expected '.t' suffix");
+    return MatchOperand_ParseFail;
   }
+  MCRegister RegNo = matchRegisterNameHelper(isRVE(), Name);
 
+  if (!RegNo)
+    return MatchOperand_NoMatch;
+  if (RegNo != RISCV::V0)
+    return MatchOperand_NoMatch;
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  getLexer().Lex();
+  Operands.push_back(RISCVOperand::createReg(RegNo, S, E));
   return MatchOperand_Success;
 }
 
 OperandMatchResultTy RISCVAsmParser::parseGPRAsFPR(OperandVector &Operands) {
-  switch (getLexer().getKind()) {
-  default:
+  if (getLexer().isNot(AsmToken::Identifier))
     return MatchOperand_NoMatch;
-  case AsmToken::Identifier:
-    StringRef Name = getLexer().getTok().getIdentifier();
-    MCRegister RegNo;
-    matchRegisterNameHelper(isRV32E(), RegNo, Name);
 
-    if (RegNo == RISCV::NoRegister)
-      return MatchOperand_NoMatch;
-    SMLoc S = getLoc();
-    SMLoc E = SMLoc::getFromPointer(S.getPointer() - 1);
-    getLexer().Lex();
-    Operands.push_back(RISCVOperand::createReg(
-        RegNo, S, E, isRV64(), !getSTI().hasFeature(RISCV::FeatureStdExtF)));
-  }
+  StringRef Name = getLexer().getTok().getIdentifier();
+  MCRegister RegNo = matchRegisterNameHelper(isRVE(), Name);
+
+  if (!RegNo)
+    return MatchOperand_NoMatch;
+  SMLoc S = getLoc();
+  SMLoc E = SMLoc::getFromPointer(S.getPointer() + Name.size());
+  getLexer().Lex();
+  Operands.push_back(RISCVOperand::createReg(
+      RegNo, S, E, !getSTI().hasFeature(RISCV::FeatureStdExtF)));
   return MatchOperand_Success;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseFRMArg(OperandVector &Operands) {
+  if (getLexer().isNot(AsmToken::Identifier)) {
+    TokError("operand must be a valid floating point rounding mode mnemonic");
+    return MatchOperand_ParseFail;
+  }
+
+  StringRef Str = getLexer().getTok().getIdentifier();
+  RISCVFPRndMode::RoundingMode FRM = RISCVFPRndMode::stringToRoundingMode(Str);
+
+  if (FRM == RISCVFPRndMode::Invalid) {
+    TokError("operand must be a valid floating point rounding mode mnemonic");
+    return MatchOperand_ParseFail;
+  }
+
+  Operands.push_back(RISCVOperand::createFRMArg(FRM, getLoc()));
+  Lex(); // Eat identifier token.
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseFenceArg(OperandVector &Operands) {
+  const AsmToken &Tok = getLexer().getTok();
+
+  if (Tok.is(AsmToken::Integer)) {
+    if (Tok.getIntVal() != 0)
+      goto ParseFail;
+
+    Operands.push_back(RISCVOperand::createFenceArg(0, getLoc()));
+    Lex();
+    return MatchOperand_Success;
+  }
+
+  if (Tok.is(AsmToken::Identifier)) {
+    StringRef Str = Tok.getIdentifier();
+
+    // Letters must be unique, taken from 'iorw', and in ascending order. This
+    // holds as long as each individual character is one of 'iorw' and is
+    // greater than the previous character.
+    unsigned Imm = 0;
+    bool Valid = true;
+    char Prev = '\0';
+    for (char c : Str) {
+      switch (c) {
+      default:
+        Valid = false;
+        break;
+      case 'i':
+        Imm |= RISCVFenceField::I;
+        break;
+      case 'o':
+        Imm |= RISCVFenceField::O;
+        break;
+      case 'r':
+        Imm |= RISCVFenceField::R;
+        break;
+      case 'w':
+        Imm |= RISCVFenceField::W;
+        break;
+      }
+
+      if (c <= Prev) {
+        Valid = false;
+        break;
+      }
+      Prev = c;
+    }
+
+    if (!Valid)
+      goto ParseFail;
+
+    Operands.push_back(RISCVOperand::createFenceArg(Imm, getLoc()));
+    Lex();
+    return MatchOperand_Success;
+  }
+
+ParseFail:
+  TokError("operand must be formed of letters selected in-order from 'iorw' "
+           "or be 0");
+  return MatchOperand_ParseFail;
 }
 
 OperandMatchResultTy
 RISCVAsmParser::parseMemOpBaseReg(OperandVector &Operands) {
-  if (getLexer().isNot(AsmToken::LParen)) {
-    Error(getLoc(), "expected '('");
+  if (parseToken(AsmToken::LParen, "expected '('"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat '('
-  Operands.push_back(RISCVOperand::createToken("(", getLoc(), isRV64()));
+  Operands.push_back(RISCVOperand::createToken("(", getLoc()));
 
   if (parseRegister(Operands) != MatchOperand_Success) {
     Error(getLoc(), "expected register");
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RParen)) {
-    Error(getLoc(), "expected ')'");
+  if (parseToken(AsmToken::RParen, "expected ')'"))
     return MatchOperand_ParseFail;
-  }
-
-  getParser().Lex(); // Eat ')'
-  Operands.push_back(RISCVOperand::createToken(")", getLoc(), isRV64()));
+  Operands.push_back(RISCVOperand::createToken(")", getLoc()));
 
   return MatchOperand_Success;
 }
@@ -1903,23 +2292,18 @@ RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
                                 ImmStart, ImmEnd, isRV64());
   }
 
-  if (getLexer().isNot(AsmToken::LParen)) {
-    Error(getLoc(), OptionalImmOp ? "expected '(' after optional integer offset"
-                                  : "expected '(' or optional integer offset");
+  if (parseToken(AsmToken::LParen,
+                 OptionalImmOp ? "expected '(' after optional integer offset"
+                               : "expected '(' or optional integer offset"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat '('
 
   if (parseRegister(Operands) != MatchOperand_Success) {
     Error(getLoc(), "expected register");
     return MatchOperand_ParseFail;
   }
 
-  if (getLexer().isNot(AsmToken::RParen)) {
-    Error(getLoc(), "expected ')'");
+  if (parseToken(AsmToken::RParen, "expected ')'"))
     return MatchOperand_ParseFail;
-  }
-  getParser().Lex(); // Eat ')'
 
   // Deferred Handling of non-zero offsets. This makes the error messages nicer.
   if (OptionalImmOp && !OptionalImmOp->isImmZero()) {
@@ -1928,6 +2312,149 @@ RISCVAsmParser::parseZeroOffsetMemOp(OperandVector &Operands) {
     return MatchOperand_ParseFail;
   }
 
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseReglist(OperandVector &Operands) {
+  // Rlist: {ra [, s0[-sN]]}
+  // XRlist: {x1 [, x8[-x9][, x18[-xN]]]}
+  SMLoc S = getLoc();
+
+  if (parseToken(AsmToken::LCurly, "register list must start with '{'"))
+    return MatchOperand_ParseFail;
+
+  bool IsEABI = isRVE();
+
+  if (getLexer().isNot(AsmToken::Identifier)) {
+    Error(getLoc(), "register list must start from 'ra' or 'x1'");
+    return MatchOperand_ParseFail;
+  }
+
+  StringRef RegName = getLexer().getTok().getIdentifier();
+  MCRegister RegStart = matchRegisterNameHelper(IsEABI, RegName);
+  MCRegister RegEnd;
+  if (RegStart != RISCV::X1) {
+    Error(getLoc(), "register list must start from 'ra' or 'x1'");
+    return MatchOperand_ParseFail;
+  }
+  getLexer().Lex();
+
+  // parse case like ,s0
+  if (getLexer().is(AsmToken::Comma)) {
+    getLexer().Lex();
+    if (getLexer().isNot(AsmToken::Identifier)) {
+      Error(getLoc(), "invalid register");
+      return MatchOperand_ParseFail;
+    }
+    StringRef RegName = getLexer().getTok().getIdentifier();
+    RegStart = matchRegisterNameHelper(IsEABI, RegName);
+    if (!RegStart) {
+      Error(getLoc(), "invalid register");
+      return MatchOperand_ParseFail;
+    }
+    if (RegStart != RISCV::X8) {
+      Error(getLoc(), "continuous register list must start from 's0' or 'x8'");
+      return MatchOperand_ParseFail;
+    }
+    getLexer().Lex(); // eat reg
+  }
+
+  // parse case like -s1
+  if (getLexer().is(AsmToken::Minus)) {
+    getLexer().Lex();
+    StringRef EndName = getLexer().getTok().getIdentifier();
+    // FIXME: the register mapping and checks of EABI is wrong
+    RegEnd = matchRegisterNameHelper(IsEABI, EndName);
+    if (!RegEnd) {
+      Error(getLoc(), "invalid register");
+      return MatchOperand_ParseFail;
+    }
+    if (IsEABI && RegEnd != RISCV::X9) {
+      Error(getLoc(), "contiguous register list of EABI can only be 's0-s1' or "
+                      "'x8-x9' pair");
+      return MatchOperand_ParseFail;
+    }
+    getLexer().Lex();
+  }
+
+  if (!IsEABI) {
+    // parse extra part like ', x18[-x20]' for XRegList
+    if (getLexer().is(AsmToken::Comma)) {
+      if (RegEnd != RISCV::X9) {
+        Error(
+            getLoc(),
+            "first contiguous registers pair of register list must be 'x8-x9'");
+        return MatchOperand_ParseFail;
+      }
+
+      // parse ', x18' for extra part
+      getLexer().Lex();
+      if (getLexer().isNot(AsmToken::Identifier)) {
+        Error(getLoc(), "invalid register");
+        return MatchOperand_ParseFail;
+      }
+      StringRef EndName = getLexer().getTok().getIdentifier();
+      if (MatchRegisterName(EndName) != RISCV::X18) {
+        Error(getLoc(), "second contiguous registers pair of register list "
+                        "must start from 'x18'");
+        return MatchOperand_ParseFail;
+      }
+      getLexer().Lex();
+
+      // parse '-x20' for extra part
+      if (getLexer().is(AsmToken::Minus)) {
+        getLexer().Lex();
+        if (getLexer().isNot(AsmToken::Identifier)) {
+          Error(getLoc(), "invalid register");
+          return MatchOperand_ParseFail;
+        }
+        EndName = getLexer().getTok().getIdentifier();
+        if (MatchRegisterName(EndName) == RISCV::NoRegister) {
+          Error(getLoc(), "invalid register");
+          return MatchOperand_ParseFail;
+        }
+        getLexer().Lex();
+      }
+      RegEnd = MatchRegisterName(EndName);
+    }
+  }
+
+  if (RegEnd == RISCV::X26) {
+    Error(getLoc(), "invalid register list, {ra, s0-s10} or {x1, x8-x9, "
+                    "x18-x26} is not supported");
+    return MatchOperand_ParseFail;
+  }
+
+  if (parseToken(AsmToken::RCurly, "register list must end with '}'"))
+    return MatchOperand_ParseFail;
+
+  if (RegEnd == RISCV::NoRegister)
+    RegEnd = RegStart;
+
+  auto Encode = RISCVZC::encodeRlist(RegEnd, IsEABI);
+  if (Encode == 16) {
+    Error(S, "invalid register list");
+    return MatchOperand_ParseFail;
+  }
+  Operands.push_back(RISCVOperand::createRlist(Encode, S));
+
+  return MatchOperand_Success;
+}
+
+OperandMatchResultTy RISCVAsmParser::parseZcmpSpimm(OperandVector &Operands) {
+  if (getLexer().is(AsmToken::Minus))
+    getLexer().Lex();
+
+  SMLoc S = getLoc();
+  int64_t StackAdjustment = getLexer().getTok().getIntVal();
+  unsigned Spimm = 0;
+  unsigned RlistVal = static_cast<RISCVOperand *>(Operands[1].get())->Rlist.Val;
+
+  bool IsEABI = isRVE();
+  if (!RISCVZC::getSpimm(RlistVal, Spimm, StackAdjustment, isRV64(), IsEABI))
+    return MatchOperand_NoMatch;
+  Operands.push_back(RISCVOperand::createSpimm(Spimm << 4, S));
+  getLexer().Lex();
   return MatchOperand_Success;
 }
 
@@ -1970,7 +2497,7 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   // cause relaxations. Unfortunately instruction processing stage occurs in the
   // same pass as relocation emission, so it's too late to set a 'sticky bit'
   // for the entire file.
-  if (getSTI().getFeatureBits()[RISCV::FeatureRelax]) {
+  if (getSTI().hasFeature(RISCV::FeatureRelax)) {
     auto *Assembler = getTargetStreamer().getStreamer().getAssemblerPtr();
     if (Assembler != nullptr) {
       RISCVAsmBackend &MAB =
@@ -1980,7 +2507,7 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   }
 
   // First operand is token for instruction
-  Operands.push_back(RISCVOperand::createToken(Name, NameLoc, isRV64()));
+  Operands.push_back(RISCVOperand::createToken(Name, NameLoc));
 
   // If there are no more operands, then finish
   if (getLexer().is(AsmToken::EndOfStatement)) {
@@ -2002,13 +2529,10 @@ bool RISCVAsmParser::ParseInstruction(ParseInstructionInfo &Info,
       return true;
   }
 
-  if (getLexer().isNot(AsmToken::EndOfStatement)) {
-    SMLoc Loc = getLexer().getLoc();
+  if (getParser().parseEOL("unexpected token")) {
     getParser().eatToEndOfStatement();
-    return Error(Loc, "unexpected token");
+    return true;
   }
-
-  getParser().Lex(); // Consume the EndOfStatement.
   return false;
 }
 
@@ -2028,6 +2552,16 @@ bool RISCVAsmParser::classifySymbolRef(const MCExpr *Expr,
   return false;
 }
 
+bool RISCVAsmParser::isSymbolDiff(const MCExpr *Expr) {
+  MCValue Res;
+  MCFixup Fixup;
+  if (Expr->evaluateAsRelocatable(Res, nullptr, &Fixup)) {
+    return Res.getRefKind() == RISCVMCExpr::VK_RISCV_None && Res.getSymA() &&
+           Res.getSymB();
+  }
+  return false;
+}
+
 bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
   // This returns false if this function recognizes the directive
   // regardless of whether it is successfully handles or reports an
@@ -2041,6 +2575,8 @@ bool RISCVAsmParser::ParseDirective(AsmToken DirectiveID) {
     return parseDirectiveAttribute();
   if (IDVal == ".insn")
     return parseDirectiveInsn(DirectiveID.getLoc());
+  if (IDVal == ".variant_cc")
+    return parseDirectiveVariantCC();
 
   return true;
 }
@@ -2049,34 +2585,28 @@ bool RISCVAsmParser::parseDirectiveOption() {
   MCAsmParser &Parser = getParser();
   // Get the option token.
   AsmToken Tok = Parser.getTok();
+
   // At the moment only identifiers are supported.
-  if (Tok.isNot(AsmToken::Identifier))
-    return Error(Parser.getTok().getLoc(),
-                 "unexpected token, expected identifier");
+  if (parseToken(AsmToken::Identifier, "expected identifier"))
+    return true;
 
   StringRef Option = Tok.getIdentifier();
 
   if (Option == "push") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionPush();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     pushFeatureBits();
     return false;
   }
 
   if (Option == "pop") {
     SMLoc StartLoc = Parser.getTok().getLoc();
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionPop();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     if (popFeatureBits())
       return Error(StartLoc, ".option pop with no .option push");
 
@@ -2084,73 +2614,56 @@ bool RISCVAsmParser::parseDirectiveOption() {
   }
 
   if (Option == "rvc") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionRVC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     setFeatureBits(RISCV::FeatureStdExtC, "c");
     return false;
   }
 
   if (Option == "norvc") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionNoRVC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     clearFeatureBits(RISCV::FeatureStdExtC, "c");
+    clearFeatureBits(RISCV::FeatureStdExtZca, "+experimental-zca");
     return false;
   }
 
   if (Option == "pic") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionPIC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     ParserOptions.IsPicEnabled = true;
     return false;
   }
 
   if (Option == "nopic") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionNoPIC();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     ParserOptions.IsPicEnabled = false;
     return false;
   }
 
   if (Option == "relax") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionRelax();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     setFeatureBits(RISCV::FeatureRelax, "relax");
     return false;
   }
 
   if (Option == "norelax") {
+    if (Parser.parseEOL())
+      return true;
+
     getTargetStreamer().emitDirectiveOptionNoRelax();
-
-    Parser.Lex();
-    if (Parser.getTok().isNot(AsmToken::EndOfStatement))
-      return Error(Parser.getTok().getLoc(),
-                   "unexpected token, expected end of statement");
-
     clearFeatureBits(RISCV::FeatureRelax, "relax");
     return false;
   }
@@ -2173,13 +2686,13 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   TagLoc = Parser.getTok().getLoc();
   if (Parser.getTok().is(AsmToken::Identifier)) {
     StringRef Name = Parser.getTok().getIdentifier();
-    Optional<unsigned> Ret =
+    std::optional<unsigned> Ret =
         ELFAttrs::attrTypeFromString(Name, RISCVAttrs::getRISCVAttributeTags());
-    if (!Ret.hasValue()) {
+    if (!Ret) {
       Error(TagLoc, "attribute name not recognised: " + Name);
       return false;
     }
-    Tag = Ret.getValue();
+    Tag = *Ret;
     Parser.Lex();
   } else {
     const MCExpr *AttrExpr;
@@ -2195,7 +2708,7 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
     Tag = CE->getValue();
   }
 
-  if (Parser.parseToken(AsmToken::Comma, "comma expected"))
+  if (Parser.parseComma())
     return true;
 
   StringRef StringValue;
@@ -2271,6 +2784,13 @@ bool RISCVAsmParser::parseDirectiveAttribute() {
   return false;
 }
 
+bool isValidInsnFormat(StringRef Format, bool AllowC) {
+  return StringSwitch<bool>(Format)
+      .Cases("r", "r4", "i", "b", "sb", "u", "j", "uj", "s", true)
+      .Cases("cr", "ci", "ciw", "css", "cl", "cs", "ca", "cb", "cj", AllowC)
+      .Default(false);
+}
+
 /// parseDirectiveInsn
 /// ::= .insn [ format encoding, (operands (, operands)*) ]
 bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
@@ -2282,9 +2802,9 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
   if (Parser.parseIdentifier(Format))
     return Error(ErrorLoc, "expected instruction format");
 
-  if (Format != "r" && Format != "r4" && Format != "i" && Format != "b" &&
-      Format != "sb" && Format != "u" && Format != "j" && Format != "uj" &&
-      Format != "s")
+  bool AllowC = getSTI().hasFeature(RISCV::FeatureStdExtC) ||
+                getSTI().hasFeature(RISCV::FeatureStdExtZca);
+  if (!isValidInsnFormat(Format, AllowC))
     return Error(ErrorLoc, "invalid instruction format");
 
   std::string FormatName = (".insn_" + Format).str();
@@ -2302,9 +2822,22 @@ bool RISCVAsmParser::parseDirectiveInsn(SMLoc L) {
                                  /*MatchingInlineAsm=*/false);
 }
 
+/// parseDirectiveVariantCC
+///  ::= .variant_cc symbol
+bool RISCVAsmParser::parseDirectiveVariantCC() {
+  StringRef Name;
+  if (getParser().parseIdentifier(Name))
+    return TokError("expected symbol name");
+  if (parseEOL())
+    return false;
+  getTargetStreamer().emitDirectiveVariantCC(
+      *getContext().getOrCreateSymbol(Name));
+  return false;
+}
+
 void RISCVAsmParser::emitToStreamer(MCStreamer &S, const MCInst &Inst) {
   MCInst CInst;
-  bool Res = compressInst(CInst, Inst, getSTI(), S.getContext());
+  bool Res = RISCVRVC::compress(CInst, Inst, getSTI());
   if (Res)
     ++RISCVNumInstrsCompressed;
   S.emitInstruction((Res ? CInst : Inst), getSTI());
@@ -2320,22 +2853,22 @@ void RISCVAsmParser::emitLoadImm(MCRegister DestReg, int64_t Value,
     switch (Inst.getOpndKind()) {
     case RISCVMatInt::Imm:
       emitToStreamer(Out,
-                     MCInstBuilder(Inst.Opc).addReg(DestReg).addImm(Inst.Imm));
+                     MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addImm(Inst.getImm()));
       break;
     case RISCVMatInt::RegX0:
       emitToStreamer(
-          Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addReg(
+          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addReg(
                    RISCV::X0));
       break;
     case RISCVMatInt::RegReg:
       emitToStreamer(
-          Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addReg(
+          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addReg(
                    SrcReg));
       break;
     case RISCVMatInt::RegImm:
       emitToStreamer(
-          Out, MCInstBuilder(Inst.Opc).addReg(DestReg).addReg(SrcReg).addImm(
-                   Inst.Imm));
+          Out, MCInstBuilder(Inst.getOpcode()).addReg(DestReg).addReg(SrcReg).addImm(
+                   Inst.getImm()));
       break;
     }
 
@@ -2581,13 +3114,20 @@ bool RISCVAsmParser::checkPseudoAddTPRel(MCInst &Inst,
 
 std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultMaskRegOp() const {
   return RISCVOperand::createReg(RISCV::NoRegister, llvm::SMLoc(),
-                                 llvm::SMLoc(), isRV64());
+                                 llvm::SMLoc());
+}
+
+std::unique_ptr<RISCVOperand> RISCVAsmParser::defaultFRMArgOp() const {
+  return RISCVOperand::createFRMArg(RISCVFPRndMode::RoundingMode::DYN,
+                                    llvm::SMLoc());
 }
 
 bool RISCVAsmParser::validateInstruction(MCInst &Inst,
                                          OperandVector &Operands) {
-  if (Inst.getOpcode() == RISCV::PseudoVMSGEU_VX_M_T ||
-      Inst.getOpcode() == RISCV::PseudoVMSGE_VX_M_T) {
+  unsigned Opcode = Inst.getOpcode();
+
+  if (Opcode == RISCV::PseudoVMSGEU_VX_M_T ||
+      Opcode == RISCV::PseudoVMSGE_VX_M_T) {
     unsigned DestReg = Inst.getOperand(0).getReg();
     unsigned TempReg = Inst.getOperand(1).getReg();
     if (DestReg == TempReg) {
@@ -2597,30 +3137,83 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
     }
   }
 
-  const MCInstrDesc &MCID = MII.get(Inst.getOpcode());
-  RISCVII::VConstraintType Constraints = RISCVII::getConstraint(MCID.TSFlags);
-  if (Constraints == RISCVII::NoConstraint)
+  if (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_LWUD ||
+      Opcode == RISCV::TH_LWD) {
+    unsigned Rd1 = Inst.getOperand(0).getReg();
+    unsigned Rd2 = Inst.getOperand(1).getReg();
+    unsigned Rs1 = Inst.getOperand(2).getReg();
+    // The encoding with rd1 == rd2 == rs1 is reserved for XTHead load pair.
+    if (Rs1 == Rd1 && Rs1 == Rd2) {
+      SMLoc Loc = Operands[1]->getStartLoc();
+      return Error(Loc, "The source register and destination registers "
+                        "cannot be equal.");
+    }
+  }
+
+  if (Opcode == RISCV::CM_MVSA01) {
+    unsigned Rd1 = Inst.getOperand(0).getReg();
+    unsigned Rd2 = Inst.getOperand(1).getReg();
+    if (Rd1 == Rd2) {
+      SMLoc Loc = Operands[1]->getStartLoc();
+      return Error(Loc, "'rs1' and 'rs2' must be different.");
+    }
+  }
+
+  bool IsTHeadMemPair32 = (Opcode == RISCV::TH_LWD ||
+                           Opcode == RISCV::TH_LWUD || Opcode == RISCV::TH_SWD);
+  bool IsTHeadMemPair64 = (Opcode == RISCV::TH_LDD || Opcode == RISCV::TH_SDD);
+  // The last operand of XTHeadMemPair instructions must be constant 3 or 4
+  // depending on the data width.
+  if (IsTHeadMemPair32 && Inst.getOperand(4).getImm() != 3) {
+    SMLoc Loc = Operands.back()->getStartLoc();
+    return Error(Loc, "Operand must be constant 3.");
+  } else if (IsTHeadMemPair64 && Inst.getOperand(4).getImm() != 4) {
+    SMLoc Loc = Operands.back()->getStartLoc();
+    return Error(Loc, "Operand must be constant 4.");
+  }
+
+  const MCInstrDesc &MCID = MII.get(Opcode);
+  if (!(MCID.TSFlags & RISCVII::ConstraintMask))
     return false;
+
+  if (Opcode == RISCV::VC_V_XVW || Opcode == RISCV::VC_V_IVW ||
+      Opcode == RISCV::VC_V_FVW || Opcode == RISCV::VC_V_VVW) {
+    // Operands Opcode, Dst, uimm, Dst, Rs2, Rs1 for VC_V_XVW.
+    unsigned VCIXDst = Inst.getOperand(0).getReg();
+    SMLoc VCIXDstLoc = Operands[2]->getStartLoc();
+    if (MCID.TSFlags & RISCVII::VS1Constraint) {
+      unsigned VCIXRs1 = Inst.getOperand(Inst.getNumOperands() - 1).getReg();
+      if (VCIXDst == VCIXRs1)
+        return Error(VCIXDstLoc, "The destination vector register group cannot"
+                                 " overlap the source vector register group.");
+    }
+    if (MCID.TSFlags & RISCVII::VS2Constraint) {
+      unsigned VCIXRs2 = Inst.getOperand(Inst.getNumOperands() - 2).getReg();
+      if (VCIXDst == VCIXRs2)
+        return Error(VCIXDstLoc, "The destination vector register group cannot"
+                                 " overlap the source vector register group.");
+    }
+    return false;
+  }
 
   unsigned DestReg = Inst.getOperand(0).getReg();
   // Operands[1] will be the first operand, DestReg.
   SMLoc Loc = Operands[1]->getStartLoc();
-  if (Constraints & RISCVII::VS2Constraint) {
+  if (MCID.TSFlags & RISCVII::VS2Constraint) {
     unsigned CheckReg = Inst.getOperand(1).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
-  if ((Constraints & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
+  if ((MCID.TSFlags & RISCVII::VS1Constraint) && (Inst.getOperand(2).isReg())) {
     unsigned CheckReg = Inst.getOperand(2).getReg();
     if (DestReg == CheckReg)
       return Error(Loc, "The destination vector register group cannot overlap"
                         " the source vector register group.");
   }
-  if ((Constraints & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
+  if ((MCID.TSFlags & RISCVII::VMConstraint) && (DestReg == RISCV::V0)) {
     // vadc, vsbc are special cases. These instructions have no mask register.
     // The destination register could not be V0.
-    unsigned Opcode = Inst.getOpcode();
     if (Opcode == RISCV::VADC_VVM || Opcode == RISCV::VADC_VXM ||
         Opcode == RISCV::VADC_VIM || Opcode == RISCV::VSBC_VVM ||
         Opcode == RISCV::VSBC_VXM || Opcode == RISCV::VFMERGE_VFM ||

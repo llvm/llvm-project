@@ -8,8 +8,8 @@
 ; CHECK-DAG:   ##dst_le@TPREL
 define dso_local i32 @test_local_exec() nounwind {
 entry:
-  %0 = load i32, i32* @src_le, align 4
-  store i32 %0, i32* @dst_le, align 4
+  %0 = load i32, ptr @src_le, align 4
+  store i32 %0, ptr @dst_le, align 4
   ret i32 0
 }
 
@@ -21,8 +21,8 @@ entry:
 ; CHECK-DAG:   = memw(##dst_ie@IE)
 define dso_local i32 @test_initial_exec() nounwind {
 entry:
-  %0 = load i32, i32* @src_ie, align 4
-  store i32 %0, i32* @dst_ie, align 4
+  %0 = load i32, ptr @src_ie, align 4
+  store i32 %0, ptr @dst_ie, align 4
   ret i32 0
 }
 

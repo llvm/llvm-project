@@ -172,5 +172,3 @@ struct ExplicitlyCopyable {
 };
 static_assert(!std::copy_constructible<ExplicitlyCopyable>);
 } // namespace CopyConstructibleTests
-
-int main(int, char**) { return 0; }

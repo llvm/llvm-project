@@ -4,9 +4,9 @@
 
 define dso_local void @call() {
 entry:
-  %0 = load x86_fp80, x86_fp80* @glob, align 16
+  %0 = load x86_fp80, ptr @glob, align 16
   %1 = tail call x86_fp80 @floorl(x86_fp80 %0)
-  store x86_fp80 %1, x86_fp80* @glob, align 16
+  store x86_fp80 %1, ptr @glob, align 16
   ret void
 }
 

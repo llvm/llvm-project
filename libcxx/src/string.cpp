@@ -63,7 +63,7 @@ namespace
 
 template<typename T>
 inline void throw_helper(const string& msg) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw T(msg);
 #else
     fprintf(stderr, "%s\n", msg.c_str());
@@ -85,7 +85,7 @@ template<typename V, typename S, typename F>
 inline V as_integer_helper(const string& func, const S& str, size_t* idx, int base, F f) {
     typename S::value_type* ptr = nullptr;
     const typename S::value_type* const p = str.c_str();
-    typename remove_reference<decltype(errno)>::type errno_save = errno;
+    __libcpp_remove_reference_t<decltype(errno)> errno_save = errno;
     errno = 0;
     V r = f(p, &ptr, base);
     swap(errno, errno_save);
@@ -172,7 +172,7 @@ template<typename V, typename S, typename F>
 inline V as_float_helper(const string& func, const S& str, size_t* idx, F f) {
     typename S::value_type* ptr = nullptr;
     const typename S::value_type* const p = str.c_str();
-    typename remove_reference<decltype(errno)>::type errno_save = errno;
+    __libcpp_remove_reference_t<decltype(errno)> errno_save = errno;
     errno = 0;
     V r = f(p, &ptr);
     swap(errno, errno_save);

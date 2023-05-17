@@ -82,13 +82,149 @@ static void CheckTeamStat(
   }
 }
 
+static void CheckCoindexedStatOrErrmsg(SemanticsContext &context,
+    const parser::StatOrErrmsg &statOrErrmsg, const std::string &listName) {
+  auto CoindexedCheck{[&](const auto &statOrErrmsg) {
+    if (const auto *expr{GetExpr(context, statOrErrmsg)}) {
+      if (ExtractCoarrayRef(expr)) {
+        context.Say(parser::FindSourceLocation(statOrErrmsg), // C1173
+            "The stat-variable or errmsg-variable in a %s may not be a coindexed object"_err_en_US,
+            listName);
+      }
+    }
+  }};
+  std::visit(CoindexedCheck, statOrErrmsg.u);
+}
+
+static void CheckSyncStatList(
+    SemanticsContext &context, const std::list<parser::StatOrErrmsg> &list) {
+  bool gotStat{false}, gotMsg{false};
+
+  for (const parser::StatOrErrmsg &statOrErrmsg : list) {
+    common::visit(
+        common::visitors{
+            [&](const parser::StatVariable &stat) {
+              if (gotStat) {
+                context.Say( // C1172
+                    "The stat-variable in a sync-stat-list may not be repeated"_err_en_US);
+              }
+              gotStat = true;
+            },
+            [&](const parser::MsgVariable &errmsg) {
+              if (gotMsg) {
+                context.Say( // C1172
+                    "The errmsg-variable in a sync-stat-list may not be repeated"_err_en_US);
+              }
+              gotMsg = true;
+            },
+        },
+        statOrErrmsg.u);
+
+    CheckCoindexedStatOrErrmsg(context, statOrErrmsg, "sync-stat-list");
+  }
+}
+
+static void CheckEventVariable(
+    SemanticsContext &context, const parser::EventVariable &eventVar) {
+  if (const auto *expr{GetExpr(context, eventVar)}) {
+    if (!IsEventType(evaluate::GetDerivedTypeSpec(expr->GetType()))) { // C1176
+      context.Say(parser::FindSourceLocation(eventVar),
+          "The event-variable must be of type EVENT_TYPE from module ISO_FORTRAN_ENV"_err_en_US);
+    } else if (!evaluate::IsCoarray(*expr)) { // C1604
+      context.Say(parser::FindSourceLocation(eventVar),
+          "The event-variable must be a coarray"_err_en_US);
+    }
+  }
+}
+
 void CoarrayChecker::Leave(const parser::ChangeTeamStmt &x) {
   CheckNamesAreDistinct(std::get<std::list<parser::CoarrayAssociation>>(x.t));
   CheckTeamType(context_, std::get<parser::TeamValue>(x.t));
 }
 
+void CoarrayChecker::Leave(const parser::SyncAllStmt &x) {
+  CheckSyncStatList(context_, x.v);
+}
+
+void CoarrayChecker::Leave(const parser::SyncImagesStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+
+  const auto &imageSet{std::get<parser::SyncImagesStmt::ImageSet>(x.t)};
+  if (const auto *intExpr{std::get_if<parser::IntExpr>(&imageSet.u)}) {
+    if (const auto *expr{GetExpr(context_, *intExpr)}) {
+      if (expr->Rank() > 1) {
+        context_.Say(parser::FindSourceLocation(imageSet), // C1174
+            "An image-set that is an int-expr must be a scalar or a rank-one array"_err_en_US);
+      }
+    }
+  }
+}
+
+void CoarrayChecker::Leave(const parser::SyncMemoryStmt &x) {
+  CheckSyncStatList(context_, x.v);
+}
+
 void CoarrayChecker::Leave(const parser::SyncTeamStmt &x) {
   CheckTeamType(context_, std::get<parser::TeamValue>(x.t));
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::EventPostStmt &x) {
+  CheckSyncStatList(context_, std::get<std::list<parser::StatOrErrmsg>>(x.t));
+  CheckEventVariable(context_, std::get<parser::EventVariable>(x.t));
+}
+
+void CoarrayChecker::Leave(const parser::EventWaitStmt &x) {
+  const auto &eventVar{std::get<parser::EventVariable>(x.t)};
+
+  if (const auto *expr{GetExpr(context_, eventVar)}) {
+    if (ExtractCoarrayRef(expr)) {
+      context_.Say(parser::FindSourceLocation(eventVar), // C1177
+          "A event-variable in a EVENT WAIT statement may not be a coindexed object"_err_en_US);
+    } else {
+      CheckEventVariable(context_, eventVar);
+    }
+  }
+
+  bool gotStat{false}, gotMsg{false}, gotUntil{false};
+  using EventWaitSpec = parser::EventWaitStmt::EventWaitSpec;
+  for (const EventWaitSpec &eventWaitSpec :
+      std::get<std::list<EventWaitSpec>>(x.t)) {
+    common::visit(
+        common::visitors{
+            [&](const parser::ScalarIntExpr &untilCount) {
+              if (gotUntil) {
+                context_.Say( // C1178
+                    "Until-spec in a event-wait-spec-list may not be repeated"_err_en_US);
+              }
+              gotUntil = true;
+            },
+            [&](const parser::StatOrErrmsg &statOrErrmsg) {
+              common::visit(
+                  common::visitors{
+                      [&](const parser::StatVariable &stat) {
+                        if (gotStat) {
+                          context_.Say( // C1178
+                              "A stat-variable in a event-wait-spec-list may not be repeated"_err_en_US);
+                        }
+                        gotStat = true;
+                      },
+                      [&](const parser::MsgVariable &errmsg) {
+                        if (gotMsg) {
+                          context_.Say( // C1178
+                              "A errmsg-variable in a event-wait-spec-list may not be repeated"_err_en_US);
+                        }
+                        gotMsg = true;
+                      },
+                  },
+                  statOrErrmsg.u);
+              CheckCoindexedStatOrErrmsg(
+                  context_, statOrErrmsg, "event-wait-spec-list");
+            },
+
+        },
+        eventWaitSpec.u);
+  }
 }
 
 void CoarrayChecker::Leave(const parser::ImageSelector &imageSelector) {

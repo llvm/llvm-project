@@ -17,6 +17,7 @@
 #include "hwasan_interface_internal.h"
 #include "hwasan_mapping.h"
 #include "hwasan_poisoning.h"
+#include "lsan/lsan_common.h"
 #include "sanitizer_common/sanitizer_allocator.h"
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
@@ -24,25 +25,32 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_ring_buffer.h"
 
-#if !defined(__aarch64__) && !defined(__x86_64__)
-#error Unsupported platform
+#if !defined(__aarch64__) && !defined(__x86_64__) && !(SANITIZER_RISCV64)
+#  error Unsupported platform
 #endif
 
 namespace __hwasan {
 
 struct Metadata {
+ private:
+  atomic_uint64_t alloc_context_id;
   u32 requested_size_low;
-  u32 requested_size_high : 31;
-  u32 right_aligned : 1;
-  u32 alloc_context_id;
-  u64 get_requested_size() {
-    return (static_cast<u64>(requested_size_high) << 32) + requested_size_low;
-  }
-  void set_requested_size(u64 size) {
-    requested_size_low = size & ((1ul << 32) - 1);
-    requested_size_high = size >> 32;
-  }
+  u16 requested_size_high;
+  atomic_uint8_t chunk_state;
+  u8 lsan_tag;
+
+ public:
+  inline void SetAllocated(u32 stack, u64 size);
+  inline void SetUnallocated();
+
+  inline bool IsAllocated() const;
+  inline u64 GetRequestedSize() const;
+  inline u32 GetAllocStackId() const;
+  inline u32 GetAllocThreadId() const;
+  inline void SetLsanTag(__lsan::ChunkTag tag);
+  inline __lsan::ChunkTag GetLsanTag() const;
 };
+static_assert(sizeof(Metadata) == 16);
 
 struct HwasanMapUnmapCallback {
   void OnMap(uptr p, uptr size) const { UpdateMemoryUsage(); }
@@ -61,15 +69,21 @@ struct AP64 {
 
 #if defined(HWASAN_ALIASING_MODE)
   static const uptr kSpaceSize = 1ULL << kAddressTagShift;
+  typedef __sanitizer::DefaultSizeClassMap SizeClassMap;
+#elif SANITIZER_LINUX && !SANITIZER_ANDROID
+  static const uptr kSpaceSize = 0x40000000000ULL;  // 4T.
+  typedef __sanitizer::DefaultSizeClassMap SizeClassMap;
 #else
-  static const uptr kSpaceSize = 0x2000000000ULL;
-#endif
-  static const uptr kMetadataSize = sizeof(Metadata);
+  static const uptr kSpaceSize = 0x2000000000ULL;  // 128G.
   typedef __sanitizer::VeryDenseSizeClassMap SizeClassMap;
+#endif
+
+  static const uptr kMetadataSize = sizeof(Metadata);
   using AddressSpaceView = LocalAddressSpaceView;
   typedef HwasanMapUnmapCallback MapUnmapCallback;
   static const uptr kFlags = 0;
 };
+
 typedef SizeClassAllocator64<AP64> PrimaryAllocator;
 typedef CombinedAllocator<PrimaryAllocator> Allocator;
 typedef Allocator::AllocatorCache AllocatorCache;
@@ -87,8 +101,12 @@ class HwasanChunkView {
   uptr UsedSize() const;       // Size requested by the user
   uptr ActualSize() const;     // Size allocated by the allocator.
   u32 GetAllocStackId() const;
+  u32 GetAllocThreadId() const;
   bool FromSmallHeap() const;
+  bool AddrIsInside(uptr addr) const;
+
  private:
+  friend class __lsan::LsanMetadata;
   uptr block_;
   Metadata *const metadata_;
 };
@@ -97,28 +115,17 @@ HwasanChunkView FindHeapChunkByAddress(uptr address);
 
 // Information about one (de)allocation that happened in the past.
 // These are recorded in a thread-local ring buffer.
-// TODO: this is currently 24 bytes (20 bytes + alignment).
-// Compress it to 16 bytes or extend it to be more useful.
 struct HeapAllocationRecord {
   uptr tagged_addr;
-  u32  alloc_context_id;
-  u32  free_context_id;
-  u32  requested_size;
+  u32 alloc_thread_id;
+  u32 alloc_context_id;
+  u32 free_context_id;
+  u32 requested_size;
 };
 
 typedef RingBuffer<HeapAllocationRecord> HeapAllocationsRingBuffer;
 
 void GetAllocatorStats(AllocatorStatCounters s);
-
-inline bool InTaggableRegion(uptr addr) {
-#if defined(HWASAN_ALIASING_MODE)
-  // Aliases are mapped next to shadow so that the upper bits match the shadow
-  // base.
-  return (addr >> kTaggableRegionCheckShift) ==
-         (GetShadowOffset() >> kTaggableRegionCheckShift);
-#endif
-  return true;
-}
 
 } // namespace __hwasan
 

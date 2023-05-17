@@ -3,7 +3,7 @@
 ; RUN: llc < %s -mtriple=i686-- -mcpu=pentiumpro | FileCheck %s --check-prefix=CMOV
 ; PR6679
 
-define float @foo(float* %col) {
+define float @foo(ptr %col) {
 ; BASE-LABEL: foo:
 ; BASE:       # %bb.0:
 ; BASE-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -34,7 +34,7 @@ define float @foo(float* %col) {
 ; CMOV-NEXT:    fcmovnbe %st(1), %st
 ; CMOV-NEXT:    fstp %st(1)
 ; CMOV-NEXT:    retl
-  %t = load float, float* %col
+  %t = load float, ptr %col
   %t16 = fcmp olt float %t, 0.0
   %t20 = fsub float -0.000000e+00, %t
   %ift = select i1 %t16, float %t20, float %t

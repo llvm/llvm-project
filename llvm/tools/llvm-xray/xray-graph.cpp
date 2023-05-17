@@ -17,6 +17,8 @@
 #include "llvm/XRay/InstrumentationMap.h"
 #include "llvm/XRay/Trace.h"
 
+#include <cmath>
+
 using namespace llvm;
 using namespace llvm::xray;
 
@@ -198,7 +200,7 @@ static std::string escapeString(StringRef Label) {
 // example caused by tail call elimination and if the option is enabled then
 // then tries to recover from this.
 //
-// This funciton will also error if the records are out of order, as the trace
+// This function will also error if the records are out of order, as the trace
 // is expected to be sorted.
 //
 // The graph generated has an immaginary root for functions called by no-one at
@@ -232,10 +234,11 @@ Error GraphRenderer::accountRecord(const XRayRecord &Record) {
       if (!DeduceSiblingCalls)
         return make_error<StringError>("No matching ENTRY record",
                                        make_error_code(errc::invalid_argument));
-      auto Parent = std::find_if(
-          ThreadStack.rbegin(), ThreadStack.rend(),
-          [&](const FunctionAttr &A) { return A.FuncId == Record.FuncId; });
-      if (Parent == ThreadStack.rend())
+      bool FoundParent =
+          llvm::any_of(llvm::reverse(ThreadStack), [&](const FunctionAttr &A) {
+            return A.FuncId == Record.FuncId;
+          });
+      if (!FoundParent)
         return make_error<StringError>(
             "No matching Entry record in stack",
             make_error_code(errc::invalid_argument)); // There is no matching

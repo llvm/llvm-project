@@ -44,18 +44,18 @@ using namespace llvm;
 
 using testing::AllOf;
 using testing::AnyOf;
+using testing::Each;
 using testing::ElementsAre;
 using testing::Eq;
 using testing::Ge;
-using testing::Each;
-using testing::Truly;
 using testing::NotNull;
 using testing::PrintToString;
 using testing::SizeIs;
+using testing::Truly;
 
 namespace {
-std::unique_ptr<Module> parseAssembly(
-    const char *Assembly, LLVMContext &Context) {
+std::unique_ptr<Module> parseAssembly(const char *Assembly,
+                                      LLVMContext &Context) {
 
   SMDiagnostic Error;
   std::unique_ptr<Module> M = parseAssemblyString(Assembly, Error, Context);
@@ -88,14 +88,20 @@ TEST(OperationsTest, SourcePreds) {
   Constant *f16 = ConstantFP::getInfinity(Type::getHalfTy(Ctx));
   Constant *f32 = ConstantFP::get(Type::getFloatTy(Ctx), 0.0);
   Constant *f64 = ConstantFP::get(Type::getDoubleTy(Ctx), 123.45);
-  Constant *s =
-      ConstantStruct::get(StructType::create(Ctx, "OpaqueStruct"));
+  Constant *s = ConstantStruct::get(StructType::create(Ctx, "OpaqueStruct"));
   Constant *a =
       ConstantArray::get(ArrayType::get(i32->getType(), 2), {i32, i32});
+  Constant *v8i1 = ConstantVector::getSplat(ElementCount::getFixed(8), i1);
   Constant *v8i8 = ConstantVector::getSplat(ElementCount::getFixed(8), i8);
   Constant *v4f16 = ConstantVector::getSplat(ElementCount::getFixed(4), f16);
   Constant *p0i32 =
       ConstantPointerNull::get(PointerType::get(i32->getType(), 0));
+  Constant *v8p0i32 =
+      ConstantVector::getSplat(ElementCount::getFixed(8), p0i32);
+  Constant *vni32 = ConstantVector::getSplat(ElementCount::getScalable(8), i32);
+  Constant *vnf64 = ConstantVector::getSplat(ElementCount::getScalable(8), f64);
+  Constant *vnp0i32 =
+      ConstantVector::getSplat(ElementCount::getScalable(8), p0i32);
 
   auto OnlyI32 = onlyType(i32->getType());
   EXPECT_TRUE(OnlyI32.matches({}, i32));
@@ -127,6 +133,36 @@ TEST(OperationsTest, SourcePreds) {
       AnyInt.generate({}, {i32->getType(), f16->getType(), v8i8->getType()}),
       AllOf(SizeIs(Ge(1u)), Each(TypesMatch(i32))));
 
+  auto AnyIntOrVecInt = anyIntOrVecIntType();
+  EXPECT_TRUE(AnyIntOrVecInt.matches({}, i1));
+  EXPECT_TRUE(AnyIntOrVecInt.matches({}, i64));
+  EXPECT_FALSE(AnyIntOrVecInt.matches({}, f32));
+  EXPECT_FALSE(AnyIntOrVecInt.matches({}, v4f16));
+  EXPECT_TRUE(AnyIntOrVecInt.matches({}, v8i8));
+  EXPECT_FALSE(AnyIntOrVecInt.matches({}, v4f16));
+  EXPECT_FALSE(AnyIntOrVecInt.matches({}, v8p0i32));
+  EXPECT_TRUE(AnyIntOrVecInt.matches({}, vni32));
+  EXPECT_FALSE(AnyIntOrVecInt.matches({}, vnf64));
+  EXPECT_FALSE(AnyIntOrVecInt.matches({}, vnp0i32));
+
+  EXPECT_THAT(AnyIntOrVecInt.generate({}, {v8i8->getType()}),
+              AllOf(Each(TypesMatch(v8i8))));
+
+  auto BoolOrVecBool = boolOrVecBoolType();
+  EXPECT_TRUE(BoolOrVecBool.matches({}, i1));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, i64));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, f32));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, v4f16));
+  EXPECT_TRUE(BoolOrVecBool.matches({}, v8i1));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, v4f16));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, v8p0i32));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, vni32));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, vnf64));
+  EXPECT_FALSE(BoolOrVecBool.matches({}, vnp0i32));
+
+  EXPECT_THAT(BoolOrVecBool.generate({}, {v8i8->getType(), v8i1->getType()}),
+              AllOf(Each(TypesMatch(v8i1))));
+
   auto AnyFP = anyFloatType();
   EXPECT_TRUE(AnyFP.matches({}, f16));
   EXPECT_TRUE(AnyFP.matches({}, f32));
@@ -138,11 +174,30 @@ TEST(OperationsTest, SourcePreds) {
       AnyFP.generate({}, {i32->getType(), f16->getType(), v8i8->getType()}),
       AllOf(SizeIs(Ge(1u)), Each(TypesMatch(f16))));
 
+  auto AnyFPOrVecFP = anyFloatOrVecFloatType();
+  EXPECT_TRUE(AnyFPOrVecFP.matches({}, f16));
+  EXPECT_TRUE(AnyFPOrVecFP.matches({}, f32));
+  EXPECT_FALSE(AnyFPOrVecFP.matches({}, i16));
+  EXPECT_FALSE(AnyFPOrVecFP.matches({}, p0i32));
+  EXPECT_TRUE(AnyFPOrVecFP.matches({}, v4f16));
+  EXPECT_FALSE(AnyFPOrVecFP.matches({}, v8p0i32));
+  EXPECT_FALSE(AnyFPOrVecFP.matches({}, vni32));
+  EXPECT_TRUE(AnyFPOrVecFP.matches({}, vnf64));
+  EXPECT_FALSE(AnyFPOrVecFP.matches({}, vnp0i32));
+
+  EXPECT_THAT(AnyFPOrVecFP.generate(
+                  {}, {i32->getType(), f16->getType(), v8i8->getType()}),
+              AllOf(SizeIs(Ge(1u)), Each(TypesMatch(f16))));
+  EXPECT_THAT(AnyFPOrVecFP.generate({}, {v4f16->getType()}),
+              AllOf(SizeIs(Ge(1u)), Each(TypesMatch(v4f16))));
+
   auto AnyPtr = anyPtrType();
   EXPECT_TRUE(AnyPtr.matches({}, p0i32));
   EXPECT_FALSE(AnyPtr.matches({}, i8));
   EXPECT_FALSE(AnyPtr.matches({}, a));
   EXPECT_FALSE(AnyPtr.matches({}, v8i8));
+  EXPECT_FALSE(AnyPtr.matches({}, v8p0i32));
+  EXPECT_FALSE(AnyPtr.matches({}, vni32));
 
   auto isPointer = [](Value *V) { return V->getType()->isPointerTy(); };
   EXPECT_THAT(
@@ -155,9 +210,12 @@ TEST(OperationsTest, SourcePreds) {
   EXPECT_FALSE(AnyVec.matches({}, i8));
   EXPECT_FALSE(AnyVec.matches({}, a));
   EXPECT_FALSE(AnyVec.matches({}, s));
+  EXPECT_TRUE(AnyVec.matches({}, v8p0i32));
+  EXPECT_TRUE(AnyVec.matches({}, vni32));
+  EXPECT_TRUE(AnyVec.matches({}, vnf64));
+  EXPECT_TRUE(AnyVec.matches({}, vnp0i32));
 
-  EXPECT_THAT(AnyVec.generate({}, {v8i8->getType()}),
-              ElementsAre(TypesMatch(v8i8)));
+  EXPECT_THAT(AnyVec.generate({}, {v8i8->getType()}), Each(TypesMatch(v8i8)));
 
   auto First = matchFirstType();
   EXPECT_TRUE(First.matches({i8}, i8));
@@ -166,9 +224,30 @@ TEST(OperationsTest, SourcePreds) {
   EXPECT_FALSE(First.matches({v4f16, f64}, f64));
 
   EXPECT_THAT(First.generate({i8}, {}), Each(TypesMatch(i8)));
-  EXPECT_THAT(First.generate({f16}, {i8->getType()}),
-              Each(TypesMatch(f16)));
+  EXPECT_THAT(First.generate({f16}, {i8->getType()}), Each(TypesMatch(f16)));
   EXPECT_THAT(First.generate({v8i8, i32}, {}), Each(TypesMatch(v8i8)));
+
+  auto FirstLength = matchFirstLengthWAnyType();
+  EXPECT_TRUE(FirstLength.matches({v8i8}, v8i1));
+
+  EXPECT_THAT(FirstLength.generate({v8i1}, {i8->getType()}),
+              Each(TypesMatch(v8i8)));
+
+  auto Second = matchSecondType();
+  EXPECT_TRUE(Second.matches({i32, i8}, i8));
+  EXPECT_TRUE(Second.matches({i8, f16}, f16));
+
+  EXPECT_THAT(Second.generate({v8i8, i32}, {}), Each(TypesMatch(i32)));
+  EXPECT_THAT(Second.generate({f32, f16}, {f16->getType()}),
+              Each(TypesMatch(f16)));
+
+  auto FirstScalar = matchScalarOfFirstType();
+  EXPECT_TRUE(FirstScalar.matches({v8i8}, i8));
+  EXPECT_TRUE(FirstScalar.matches({i8}, i8));
+  EXPECT_TRUE(FirstScalar.matches({v4f16}, f16));
+
+  EXPECT_THAT(FirstScalar.generate({v8i8}, {i8->getType()}),
+              Each(TypesMatch(i8)));
 }
 
 TEST(OperationsTest, SplitBlock) {
@@ -216,17 +295,17 @@ TEST(OperationsTest, SplitEHBlock) {
 
   LLVMContext Ctx;
   const char *SourceCode =
-      "declare i32* @f()"
+      "declare ptr @f()"
       "declare i32 @personality_function()"
-      "define i32* @test() personality i32 ()* @personality_function {\n"
+      "define ptr @test() personality ptr @personality_function {\n"
       "entry:\n"
-      "  %val = invoke i32* @f()\n"
+      "  %val = invoke ptr @f()\n"
       "          to label %normal unwind label %exceptional\n"
       "normal:\n"
-      "  ret i32* %val\n"
+      "  ret ptr %val\n"
       "exceptional:\n"
       "  %landing_pad4 = landingpad token cleanup\n"
-      "  ret i32* undef\n"
+      "  ret ptr undef\n"
       "}";
   auto M = parseAssembly(SourceCode, Ctx);
 
@@ -235,7 +314,7 @@ TEST(OperationsTest, SplitEHBlock) {
 
   fuzzerop::OpDescriptor Descr = fuzzerop::splitBlockDescriptor(1);
 
-  Descr.BuilderFunc({ConstantInt::getTrue(Ctx)},&*BB.getFirstInsertionPt());
+  Descr.BuilderFunc({ConstantInt::getTrue(Ctx)}, &*BB.getFirstInsertionPt());
   ASSERT_TRUE(!verifyModule(*M, &errs()));
 }
 
@@ -299,18 +378,16 @@ TEST(OperationsTest, GEP) {
   EXPECT_FALSE(verifyModule(M, &errs()));
 }
 
-
 TEST(OperationsTest, GEPPointerOperand) {
   // Check that we only pick sized pointers for the GEP instructions
 
   LLVMContext Ctx;
-  const char *SourceCode =
-      "declare void @f()\n"
-      "define void @test() {\n"
-      "  %v = bitcast void ()* @f to i64 (i8 addrspace(4)*)*\n"
-      "  %a = alloca i64, i32 10\n"
-      "  ret void\n"
-      "}";
+  const char *SourceCode = "%opaque = type opaque\n"
+                           "declare void @f()\n"
+                           "define void @test(%opaque %o) {\n"
+                           "  %a = alloca i64, i32 10\n"
+                           "  ret void\n"
+                           "}";
   auto M = parseAssembly(SourceCode, Ctx);
 
   fuzzerop::OpDescriptor Descr = fuzzerop::gepDescriptor(1);
@@ -319,11 +396,11 @@ TEST(OperationsTest, GEPPointerOperand) {
   Function &F = *M->getFunction("test");
   BasicBlock &BB = *F.begin();
 
-  // Don't match %v
-  ASSERT_FALSE(Descr.SourcePreds[0].matches({}, &*BB.begin()));
+  // Don't match %o
+  ASSERT_FALSE(Descr.SourcePreds[0].matches({}, &*F.arg_begin()));
 
   // Match %a
-  ASSERT_TRUE(Descr.SourcePreds[0].matches({}, &*std::next(BB.begin())));
+  ASSERT_TRUE(Descr.SourcePreds[0].matches({}, &*BB.begin()));
 }
 
 TEST(OperationsTest, ExtractAndInsertValue) {
@@ -401,4 +478,4 @@ TEST(OperationsTest, ExtractAndInsertValue) {
       ElementsAre(ConstantInt::get(Int32Ty, 1)));
 }
 
-}
+} // namespace

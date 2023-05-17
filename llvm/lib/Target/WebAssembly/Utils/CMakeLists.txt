@@ -4,9 +4,11 @@ add_llvm_component_library(LLVMWebAssemblyUtils
 
   LINK_COMPONENTS
   CodeGen
+  CodeGenTypes
   Core
   MC
   Support
+  WebAssemblyDesc
 
   ADD_TO_COMPONENT
   WebAssembly

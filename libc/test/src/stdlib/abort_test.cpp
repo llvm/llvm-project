@@ -9,7 +9,7 @@
 #include "include/signal.h"
 #include "include/stdlib.h"
 #include "src/stdlib/abort.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStdlib, abort) {
   // -1 matches against any signal, which is necessary for now until

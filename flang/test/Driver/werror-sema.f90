@@ -15,14 +15,8 @@
 ! RUN: %flang_fc1 -fdebug-unparse %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
 ! RUN: %flang_fc1 -fdebug-dump-symbols %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITH -Werror
-!-----------------------------------------
 ! WITH: Semantic errors in
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITHOUT -Werror
-!-----------------------------------------
 ! WITHOUT-NOT: Semantic errors in
 
 PROGRAM werror

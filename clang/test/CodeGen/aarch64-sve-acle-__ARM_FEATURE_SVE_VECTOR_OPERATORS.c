@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK128
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECK256
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECK512
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECK1024
-// RUN: %clang_cc1 -no-opaque-pointers -triple aarch64-none-linux-gnu -target-feature +sve -fallow-half-arguments-and-returns -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECK2048
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=1 -mvscale-max=1  | FileCheck %s -D#VBITS=128  --check-prefixes=CHECK128
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=2 -mvscale-max=2  | FileCheck %s -D#VBITS=256  --check-prefixes=CHECK,CHECK256
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=4 -mvscale-max=4  | FileCheck %s -D#VBITS=512  --check-prefixes=CHECK,CHECK512
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=8 -mvscale-max=8 | FileCheck %s -D#VBITS=1024 --check-prefixes=CHECK,CHECK1024
+// RUN: %clang_cc1 -triple aarch64-none-linux-gnu -target-feature +sve -S -O1 -Werror -Wall -emit-llvm -o - %s -mvscale-min=16 -mvscale-max=16 | FileCheck %s -D#VBITS=2048 --check-prefixes=CHECK,CHECK2048
 
 // REQUIRES: aarch64-registered-target
 
@@ -52,21 +52,21 @@ vec2048 x2048 = {0, 1, 2, 3, 3 , 2 , 1, 0, 0, 1, 2, 3, 3 , 2 , 1, 0,
 typedef int8_t vec_int8 __attribute__((vector_size(N / 8)));
 // CHECK128-LABEL: define{{.*}} <16 x i8> @f2(<16 x i8> noundef %x)
 // CHECK128-NEXT:  entry:
-// CHECK128-NEXT:    [[TMP0:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-// CHECK128-NEXT:    [[CASTSCALABLESVE:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[X:%.*]], i64 0)
-// CHECK128-NEXT:    [[TMP1:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
-// CHECK128-NEXT:    [[CASTFIXEDSVE:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[TMP1]], i64 0)
+// CHECK128-NEXT:    [[TMP0:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+// CHECK128-NEXT:    [[CASTSCALABLESVE:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v16i8(<vscale x 16 x i8> undef, <16 x i8> [[X:%.*]], i64 0)
+// CHECK128-NEXT:    [[TMP1:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP0]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
+// CHECK128-NEXT:    [[CASTFIXEDSVE:%.*]] = tail call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[TMP1]], i64 0)
 // CHECK128-NEXT:    ret <16 x i8> [[CASTFIXEDSVE]]
 
 // CHECK-LABEL: define{{.*}} void @f2(
-// CHECK-SAME:   <[[#div(VBITS,8)]] x i8>* noalias nocapture writeonly sret(<[[#div(VBITS,8)]] x i8>) align 16 %agg.result, <[[#div(VBITS,8)]] x i8>* nocapture noundef readonly %0)
+// CHECK-SAME:   ptr noalias nocapture writeonly sret(<[[#div(VBITS,8)]] x i8>) align 16 %agg.result, ptr nocapture noundef readonly %0)
 // CHECK-NEXT: entry:
-// CHECK-NEXT:   [[X:%.*]] = load <[[#div(VBITS,8)]] x i8>, <[[#div(VBITS,8)]] x i8>* [[TMP0:%.*]], align 16, [[TBAA6:!tbaa !.*]]
-// CHECK-NEXT:   [[TMP1:%.*]] = call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
-// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = call <vscale x 16 x i8> @llvm.experimental.vector.insert.nxv16i8.v[[#div(VBITS,8)]]i8(<vscale x 16 x i8> undef, <[[#div(VBITS,8)]] x i8> [[X]], i64 0)
-// CHECK-NEXT:   [[TMP2:%.*]] = call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP1]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
-// CHECK-NEXT:   [[CASTFIXEDSVE:%.*]] = call <[[#div(VBITS,8)]] x i8> @llvm.experimental.vector.extract.v[[#div(VBITS,8)]]i8.nxv16i8(<vscale x 16 x i8> [[TMP2]], i64 0)
-// CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> [[CASTFIXEDSVE]], <[[#div(VBITS,8)]] x i8>* [[AGG_RESULT:%.*]], align 16, [[TBAA6]]
+// CHECK-NEXT:   [[X:%.*]] = load <[[#div(VBITS,8)]] x i8>, ptr [[TMP0:%.*]], align 16, [[TBAA6:!tbaa !.*]]
+// CHECK-NEXT:   [[TMP1:%.*]] = tail call <vscale x 16 x i1> @llvm.aarch64.sve.ptrue.nxv16i1(i32 31)
+// CHECK-NEXT:   [[CASTSCALABLESVE:%.*]] = tail call <vscale x 16 x i8> @llvm.vector.insert.nxv16i8.v[[#div(VBITS,8)]]i8(<vscale x 16 x i8> undef, <[[#div(VBITS,8)]] x i8> [[X]], i64 0)
+// CHECK-NEXT:   [[TMP2:%.*]] = tail call <vscale x 16 x i8> @llvm.aarch64.sve.asrd.nxv16i8(<vscale x 16 x i1> [[TMP1]], <vscale x 16 x i8> [[CASTSCALABLESVE]], i32 1)
+// CHECK-NEXT:   [[CASTFIXEDSVE:%.*]] = tail call <[[#div(VBITS,8)]] x i8> @llvm.vector.extract.v[[#div(VBITS,8)]]i8.nxv16i8(<vscale x 16 x i8> [[TMP2]], i64 0)
+// CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> [[CASTFIXEDSVE]], ptr [[AGG_RESULT:%.*]], align 16, [[TBAA6]]
 // CHECK-NEXT:   ret void
 vec_int8 f2(vec_int8 x) { return svasrd_x(svptrue_b8(), x, 1); }
 #endif
@@ -80,21 +80,21 @@ typedef svint8_t vec2 __attribute__((arm_sve_vector_bits(N)));
 
 // CHECK128-LABEL: define{{.*}} void @g(<vscale x 16 x i8> noundef %x.coerce)
 // CHECK128-NEXT: entry:
-// CHECK128-NEXT:  [[X:%.*]] = call <16 x i8> @llvm.experimental.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[X_COERCE:%.*]], i64 0)
+// CHECK128-NEXT:  [[X:%.*]] = tail call <16 x i8> @llvm.vector.extract.v16i8.nxv16i8(<vscale x 16 x i8> [[X_COERCE:%.*]], i64 0)
 // CHECK128-NEXT:    call void @f3(<16 x i8> noundef [[X]]) [[ATTR5:#.*]]
 // CHECK128-NEXT:    ret void
 
 // CHECK-LABEL: define{{.*}} void @g(<vscale x 16 x i8> noundef %x.coerce)
 // CHECK-NEXT: entry:
 // CHECK-NEXT:   [[INDIRECT_ARG_TEMP:%.*]] = alloca <[[#div(VBITS,8)]] x i8>, align 16
-// CHECK-NEXT:   [[X:%.*]] = call <[[#div(VBITS,8)]] x i8> @llvm.experimental.vector.extract.v[[#div(VBITS,8)]]i8.nxv16i8(<vscale x 16 x i8> [[X_COERCE:%.*]], i64 0)
-// CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> [[X]], <[[#div(VBITS,8)]] x i8>* [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6]]
-// CHECK-NEXT:   call void @f3(<[[#div(VBITS,8)]] x i8>* noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
+// CHECK-NEXT:   [[X:%.*]] = tail call <[[#div(VBITS,8)]] x i8> @llvm.vector.extract.v[[#div(VBITS,8)]]i8.nxv16i8(<vscale x 16 x i8> [[X_COERCE:%.*]], i64 0)
+// CHECK-NEXT:   store <[[#div(VBITS,8)]] x i8> [[X]], ptr [[INDIRECT_ARG_TEMP]], align 16, [[TBAA6]]
+// CHECK-NEXT:   call void @f3(ptr noundef nonnull [[INDIRECT_ARG_TEMP]]) [[ATTR5:#.*]]
 // CHECK-NEXT:   ret void
 
 // CHECK128-LABEL: declare void @f3(<16 x i8> noundef)
 
 // CHECK-LABEL: declare void @f3(
-// CHECK-SAME:   <[[#div(VBITS,8)]] x i8>* noundef)
+// CHECK-SAME:   ptr noundef)
 void g(vec2 x) { f3(x); } // OK
 #endif

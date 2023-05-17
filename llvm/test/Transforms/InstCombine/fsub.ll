@@ -397,10 +397,10 @@ define float @unary_neg_trunc_op1_extra_uses(double %a, float %b) {
 
 define float @PR37605(float %conv) {
 ; CHECK-LABEL: @PR37605(
-; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[CONV:%.*]], bitcast (i32 ptrtoint (i16* @b to i32) to float)
+; CHECK-NEXT:    [[SUB:%.*]] = fsub float [[CONV:%.*]], bitcast (i32 ptrtoint (ptr @b to i32) to float)
 ; CHECK-NEXT:    ret float [[SUB]]
 ;
-  %sub = fsub float %conv, bitcast (i32 ptrtoint (i16* @b to i32) to float)
+  %sub = fsub float %conv, bitcast (i32 ptrtoint (ptr @b to i32) to float)
   ret float %sub
 }
 

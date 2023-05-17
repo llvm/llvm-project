@@ -9,13 +9,13 @@
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
 ; First do with default options, which should import both foo and bar
-; RUN: opt -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORT
+; RUN: opt -passes=function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORT
 
 ; Next try to restrict to 1 import. This should import just foo.
-; RUN: opt -import-cutoff=1 -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORT1
+; RUN: opt -import-cutoff=1 -passes=function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=IMPORT1
 
 ; Next try to restrict to 0 imports. This should not import.
-; RUN: opt -import-cutoff=0 -function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=NOIMPORT
+; RUN: opt -import-cutoff=0 -passes=function-import -stats -print-imports -summary-file %t3.thinlto.bc %t.bc -S 2>&1 | FileCheck %s --check-prefix=NOIMPORT
 
 define i32 @main() {
 entry:

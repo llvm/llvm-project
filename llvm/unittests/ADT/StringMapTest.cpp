@@ -17,6 +17,10 @@ using namespace llvm;
 
 namespace {
 
+static_assert(sizeof(StringMap<uint32_t>) <
+                  sizeof(StringMap<uint32_t, MallocAllocator &>),
+              "Ensure empty base optimization happens with default allocator");
+
 // Test fixture
 class StringMapTest : public testing::Test {
 protected:
@@ -24,7 +28,7 @@ protected:
 
   static const char testKey[];
   static const uint32_t testValue;
-  static const char* testKeyFirst;
+  static const char *testKeyFirst;
   static size_t testKeyLength;
   static const std::string testKeyStr;
 
@@ -37,11 +41,12 @@ protected:
     EXPECT_TRUE(testMap.begin() == testMap.end());
 
     // Lookup tests
+    EXPECT_FALSE(testMap.contains(testKey));
     EXPECT_EQ(0u, testMap.count(testKey));
     EXPECT_EQ(0u, testMap.count(StringRef(testKeyFirst, testKeyLength)));
     EXPECT_EQ(0u, testMap.count(testKeyStr));
     EXPECT_TRUE(testMap.find(testKey) == testMap.end());
-    EXPECT_TRUE(testMap.find(StringRef(testKeyFirst, testKeyLength)) == 
+    EXPECT_TRUE(testMap.find(StringRef(testKeyFirst, testKeyLength)) ==
                 testMap.end());
     EXPECT_TRUE(testMap.find(testKeyStr) == testMap.end());
   }
@@ -60,11 +65,12 @@ protected:
     EXPECT_TRUE(it == testMap.end());
 
     // Lookup tests
+    EXPECT_TRUE(testMap.contains(testKey));
     EXPECT_EQ(1u, testMap.count(testKey));
     EXPECT_EQ(1u, testMap.count(StringRef(testKeyFirst, testKeyLength)));
     EXPECT_EQ(1u, testMap.count(testKeyStr));
     EXPECT_TRUE(testMap.find(testKey) == testMap.begin());
-    EXPECT_TRUE(testMap.find(StringRef(testKeyFirst, testKeyLength)) == 
+    EXPECT_TRUE(testMap.find(StringRef(testKeyFirst, testKeyLength)) ==
                 testMap.begin());
     EXPECT_TRUE(testMap.find(testKeyStr) == testMap.begin());
   }
@@ -72,7 +78,7 @@ protected:
 
 const char StringMapTest::testKey[] = "key";
 const uint32_t StringMapTest::testValue = 1u;
-const char* StringMapTest::testKeyFirst = testKey;
+const char *StringMapTest::testKeyFirst = testKey;
 size_t StringMapTest::testKeyLength = sizeof(testKey) - 1;
 const std::string StringMapTest::testKeyStr(testKey);
 
@@ -87,13 +93,11 @@ struct CountCopyAndMove {
 };
 
 // Empty map tests.
-TEST_F(StringMapTest, EmptyMapTest) {
-  assertEmptyMap();
-}
+TEST_F(StringMapTest, EmptyMapTest) { assertEmptyMap(); }
 
 // Constant map tests.
 TEST_F(StringMapTest, ConstEmptyMapTest) {
-  const StringMap<uint32_t>& constTestMap = testMap;
+  const StringMap<uint32_t> &constTestMap = testMap;
 
   // Size tests
   EXPECT_EQ(0u, constTestMap.size());
@@ -203,6 +207,18 @@ TEST_F(StringMapTest, CopyCtorTest) {
   EXPECT_EQ(5, Map2.lookup("funf"));
 }
 
+TEST_F(StringMapTest, AtTest) {
+  llvm::StringMap<int> Map;
+
+  // keys both found and not found on non-empty map
+  Map["a"] = 1;
+  Map["b"] = 2;
+  Map["c"] = 3;
+  EXPECT_EQ(1, Map.at("a"));
+  EXPECT_EQ(2, Map.at("b"));
+  EXPECT_EQ(3, Map.at("c"));
+}
+
 // A more complex iteration test.
 TEST_F(StringMapTest, IterationTest) {
   bool visited[100];
@@ -216,8 +232,8 @@ TEST_F(StringMapTest, IterationTest) {
   }
 
   // Iterate over all numbers and mark each one found.
-  for (StringMap<uint32_t>::iterator it = testMap.begin();
-      it != testMap.end(); ++it) {
+  for (StringMap<uint32_t>::iterator it = testMap.begin(); it != testMap.end();
+       ++it) {
     std::stringstream ss;
     ss << "key_" << it->second;
     ASSERT_STREQ(ss.str().c_str(), it->first().data());
@@ -234,7 +250,7 @@ TEST_F(StringMapTest, IterationTest) {
 TEST_F(StringMapTest, StringMapEntryTest) {
   MallocAllocator Allocator;
   StringMap<uint32_t>::value_type *entry =
-      StringMap<uint32_t>::value_type::Create(
+      StringMap<uint32_t>::value_type::create(
           StringRef(testKeyFirst, testKeyLength), Allocator, 1u);
   EXPECT_STREQ(testKey, entry->first().data());
   EXPECT_EQ(1u, entry->second);
@@ -244,10 +260,8 @@ TEST_F(StringMapTest, StringMapEntryTest) {
 // Test insert() method.
 TEST_F(StringMapTest, InsertTest) {
   SCOPED_TRACE("InsertTest");
-  testMap.insert(
-      StringMap<uint32_t>::value_type::Create(
-          StringRef(testKeyFirst, testKeyLength),
-          testMap.getAllocator(), 1u));
+  testMap.insert(StringMap<uint32_t>::value_type::create(
+      StringRef(testKeyFirst, testKeyLength), testMap.getAllocator(), 1u));
   assertSingleItemMap();
 }
 
@@ -282,7 +296,7 @@ TEST_F(StringMapTest, InsertRehashingPairTest) {
   EXPECT_EQ(0u, t.getNumBuckets());
 
   StringMap<uint32_t>::iterator It =
-    t.insert(std::make_pair("abcdef", 42)).first;
+      t.insert(std::make_pair("abcdef", 42)).first;
   EXPECT_EQ(16u, t.getNumBuckets());
   EXPECT_EQ("abcdef", It->first());
   EXPECT_EQ(42u, It->second);
@@ -354,13 +368,13 @@ TEST_F(StringMapTest, NonDefaultConstructable) {
 
 struct Immovable {
   Immovable() {}
-  Immovable(Immovable&&) = delete; // will disable the other special members
+  Immovable(Immovable &&) = delete; // will disable the other special members
 };
 
 struct MoveOnly {
   int i;
   MoveOnly(int i) : i(i) {}
-  MoveOnly(const Immovable&) : i(0) {}
+  MoveOnly(const Immovable &) : i(0) {}
   MoveOnly(MoveOnly &&RHS) : i(RHS.i) {}
   MoveOnly &operator=(MoveOnly &&RHS) {
     i = RHS.i;
@@ -376,14 +390,14 @@ TEST_F(StringMapTest, MoveOnly) {
   StringMap<MoveOnly> t;
   t.insert(std::make_pair("Test", MoveOnly(42)));
   StringRef Key = "Test";
-  StringMapEntry<MoveOnly>::Create(Key, t.getAllocator(), MoveOnly(42))
+  StringMapEntry<MoveOnly>::create(Key, t.getAllocator(), MoveOnly(42))
       ->Destroy(t.getAllocator());
 }
 
 TEST_F(StringMapTest, CtorArg) {
   StringRef Key = "Test";
   MallocAllocator Allocator;
-  StringMapEntry<MoveOnly>::Create(Key, Allocator, Immovable())
+  StringMapEntry<MoveOnly>::create(Key, Allocator, Immovable())
       ->Destroy(Allocator);
 }
 
@@ -517,6 +531,16 @@ TEST_F(StringMapTest, MoveDtor) {
   ASSERT_TRUE(B.empty());
 }
 
+TEST_F(StringMapTest, StructuredBindings) {
+  StringMap<int> A;
+  A["a"] = 42;
+
+  for (auto &[Key, Value] : A) {
+    EXPECT_EQ("a", Key);
+    EXPECT_EQ(42, Value);
+  }
+}
+
 namespace {
 // Simple class that counts how many moves and copy happens when growing a map
 struct CountCtorCopyAndMove {
@@ -586,7 +610,7 @@ struct NonMoveableNonCopyableType {
   NonMoveableNonCopyableType(const NonMoveableNonCopyableType &) = delete;
   NonMoveableNonCopyableType(NonMoveableNonCopyableType &&) = delete;
 };
-}
+} // namespace
 
 // Test that we can "emplace" an element in the map without involving map/move
 TEST(StringMapCustomTest, EmplaceTest) {

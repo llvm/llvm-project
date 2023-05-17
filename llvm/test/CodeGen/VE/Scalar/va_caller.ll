@@ -48,6 +48,6 @@ define i32 @caller() {
 ; CHECK-NEXT:    bsic %s10, (, %s12)
 ; CHECK-NEXT:    or %s0, 0, (0)1
 ; CHECK-NEXT:    or %s11, 0, %s9
-  call i32 (i32, ...) @func(i32 0, i16 1, i8 2, i32 3, i16 4, i8 5, float 6.0, i8* null, i64 8, double 9.0, i128 10, fp128 0xLA000000000000000)
+  call i32 (i32, ...) @func(i32 0, i16 1, i8 2, i32 3, i16 4, i8 5, float 6.0, ptr null, i64 8, double 9.0, i128 10, fp128 0xLA000000000000000)
   ret i32 0
 }

@@ -5,7 +5,7 @@
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128"
 target triple = "x86_64-apple-darwin8"
 
-define i32 @test1(i8* %v, i8* %blk2, i8* %blk1, i32 %stride, i32 %h) nounwind  {
+define i32 @test1(ptr %v, ptr %blk2, ptr %blk1, i32 %stride, i32 %h) nounwind  {
 ; CHECK-LABEL: test1:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movslq %ecx, %rax
@@ -17,9 +17,9 @@ define i32 @test1(i8* %v, i8* %blk2, i8* %blk1, i32 %stride, i32 %h) nounwind  {
 ; CHECK-NEXT:    ## InlineAsm End
 ; CHECK-NEXT:    retq
 	%tmp12 = sext i32 %stride to i64		; <i64> [#uses=1]
-	%mrv = call {i32, i8*, i8*} asm sideeffect "$0 $1 $2 $3 $4 $5 $6",
-         "=r,=r,=r,r,r,r,r"( i64 %tmp12, i32 %h, i8* %blk1, i8* %blk2 ) nounwind
-        %tmp6 = extractvalue {i32, i8*, i8*} %mrv, 0
+	%mrv = call {i32, ptr, ptr} asm sideeffect "$0 $1 $2 $3 $4 $5 $6",
+         "=r,=r,=r,r,r,r,r"( i64 %tmp12, i32 %h, ptr %blk1, ptr %blk2 ) nounwind
+        %tmp6 = extractvalue {i32, ptr, ptr} %mrv, 0
 	%tmp7 = call i32 asm sideeffect "set $0",
              "=r,~{dirflag},~{fpsr},~{flags}"( ) nounwind
 	ret i32 %tmp7

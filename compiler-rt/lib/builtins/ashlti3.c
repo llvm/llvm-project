@@ -18,7 +18,7 @@
 
 // Precondition:  0 <= b < bits_in_tword
 
-COMPILER_RT_ABI ti_int __ashlti3(ti_int a, si_int b) {
+COMPILER_RT_ABI ti_int __ashlti3(ti_int a, int b) {
   const int bits_in_dword = (int)(sizeof(di_int) * CHAR_BIT);
   twords input;
   twords result;

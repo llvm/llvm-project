@@ -1,11 +1,9 @@
 {
-  "trace": {
-    "type": "intel-pt",
-    "cpuInfo": {
-      "vendor": "intel",
-      "model": 79,
-      "stepping": 1
-    }
+  "type": "intel-pt",
+  "cpuInfo": {
+    "vendor": "GenuineIntel",
+    "model": 79,
+    "stepping": 1
   },
   "processes": [
   ]

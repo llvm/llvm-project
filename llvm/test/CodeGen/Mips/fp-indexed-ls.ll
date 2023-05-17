@@ -19,7 +19,7 @@
 @s2 = external global [4 x %struct.S2]
 @s3 = external global %struct.S3
 
-define float @foo0(float* nocapture %b, i32 %o) nounwind readonly {
+define float @foo0(ptr nocapture %b, i32 %o) nounwind readonly {
 entry:
 ; ALL-LABEL: foo0:
 
@@ -45,12 +45,12 @@ entry:
 
 ; CHECK-NACL-NOT: lwxc1
 
-  %arrayidx = getelementptr inbounds float, float* %b, i32 %o
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %b, i32 %o
+  %0 = load float, ptr %arrayidx, align 4
   ret float %0
 }
 
-define double @foo1(double* nocapture %b, i32 %o) nounwind readonly {
+define double @foo1(ptr nocapture %b, i32 %o) nounwind readonly {
 entry:
 ; ALL-LABEL: foo1:
 
@@ -76,8 +76,8 @@ entry:
 
 ; CHECK-NACL-NOT: ldxc1
 
-  %arrayidx = getelementptr inbounds double, double* %b, i32 %o
-  %0 = load double, double* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds double, ptr %b, i32 %o
+  %0 = load double, ptr %arrayidx, align 8
   ret double %0
 }
 
@@ -100,12 +100,12 @@ entry:
 ; luxc1 was removed in MIPS64r6
 ; MIPS64R6-NOT:  luxc1
 
-  %arrayidx1 = getelementptr inbounds [4 x %struct.S], [4 x %struct.S]* @s, i32 0, i32 %b, i32 0, i32 %c
-  %0 = load float, float* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds [4 x %struct.S], ptr @s, i32 0, i32 %b, i32 0, i32 %c
+  %0 = load float, ptr %arrayidx1, align 1
   ret float %0
 }
 
-define void @foo3(float* nocapture %b, i32 %o) nounwind {
+define void @foo3(ptr nocapture %b, i32 %o) nounwind {
 entry:
 ; ALL-LABEL: foo3:
 
@@ -129,13 +129,13 @@ entry:
 
 ; CHECK-NACL-NOT: swxc1
 
-  %0 = load float, float* @gf, align 4
-  %arrayidx = getelementptr inbounds float, float* %b, i32 %o
-  store float %0, float* %arrayidx, align 4
+  %0 = load float, ptr @gf, align 4
+  %arrayidx = getelementptr inbounds float, ptr %b, i32 %o
+  store float %0, ptr %arrayidx, align 4
   ret void
 }
 
-define void @foo4(double* nocapture %b, i32 %o) nounwind {
+define void @foo4(ptr nocapture %b, i32 %o) nounwind {
 entry:
 ; ALL-LABEL: foo4:
 
@@ -159,9 +159,9 @@ entry:
 
 ; CHECK-NACL-NOT: sdxc1
 
-  %0 = load double, double* @gd, align 8
-  %arrayidx = getelementptr inbounds double, double* %b, i32 %o
-  store double %0, double* %arrayidx, align 8
+  %0 = load double, ptr @gd, align 8
+  %arrayidx = getelementptr inbounds double, ptr %b, i32 %o
+  store double %0, ptr %arrayidx, align 8
   ret void
 }
 
@@ -179,9 +179,9 @@ entry:
 
 ; MIPS64R6-NOT:  suxc1
 
-  %0 = load float, float* @gf, align 4
-  %arrayidx1 = getelementptr inbounds [4 x %struct.S], [4 x %struct.S]* @s, i32 0, i32 %b, i32 0, i32 %c
-  store float %0, float* %arrayidx1, align 1
+  %0 = load float, ptr @gf, align 4
+  %arrayidx1 = getelementptr inbounds [4 x %struct.S], ptr @s, i32 0, i32 %b, i32 0, i32 %c
+  store float %0, ptr %arrayidx1, align 1
   ret void
 }
 
@@ -199,8 +199,8 @@ entry:
 
 ; MIPS64R6-NOT:  luxc1
 
-  %arrayidx1 = getelementptr inbounds [4 x %struct.S2], [4 x %struct.S2]* @s2, i32 0, i32 %b, i32 0, i32 %c
-  %0 = load double, double* %arrayidx1, align 1
+  %arrayidx1 = getelementptr inbounds [4 x %struct.S2], ptr @s2, i32 0, i32 %b, i32 0, i32 %c
+  %0 = load double, ptr %arrayidx1, align 1
   ret double %0
 }
 
@@ -218,9 +218,9 @@ entry:
 
 ; MIPS64R6-NOT:  suxc1
 
-  %0 = load double, double* @gd, align 8
-  %arrayidx1 = getelementptr inbounds [4 x %struct.S2], [4 x %struct.S2]* @s2, i32 0, i32 %b, i32 0, i32 %c
-  store double %0, double* %arrayidx1, align 1
+  %0 = load double, ptr @gd, align 8
+  %arrayidx1 = getelementptr inbounds [4 x %struct.S2], ptr @s2, i32 0, i32 %b, i32 0, i32 %c
+  store double %0, ptr %arrayidx1, align 1
   ret void
 }
 
@@ -238,7 +238,7 @@ entry:
 
 ; MIPS64R6-NOT:  luxc1
 
-  %0 = load float, float* getelementptr inbounds (%struct.S3, %struct.S3* @s3, i32 0, i32 1), align 1
+  %0 = load float, ptr getelementptr inbounds (%struct.S3, ptr @s3, i32 0, i32 1), align 1
   ret float %0
 }
 
@@ -256,7 +256,7 @@ entry:
 
 ; MIPS64R6-NOT:  suxc1
 
-  store float %f, float* getelementptr inbounds (%struct.S3, %struct.S3* @s3, i32 0, i32 1), align 1
+  store float %f, ptr getelementptr inbounds (%struct.S3, ptr @s3, i32 0, i32 1), align 1
   ret void
 }
 

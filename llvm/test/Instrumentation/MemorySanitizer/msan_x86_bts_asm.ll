@@ -38,14 +38,14 @@ entry:
   %bit = alloca i8, align 1
   %value = alloca i64, align 8
   %nr = alloca i64, align 8
-  %addr = alloca i64*, align 8
-  store i32 0, i32* %retval, align 4
-  store i64 2, i64* %value, align 8
-  store i64 0, i64* %nr, align 8
-  store i64* %value, i64** %addr, align 8
-  %0 = load i64, i64* %nr, align 8
-  call void asm "btsq $2, $1; setc $0", "=*qm,=*m,Ir,~{dirflag},~{fpsr},~{flags}"(i8* elementtype(i8) %bit, i64** elementtype(i64*) %addr, i64 %0)
-  %1 = load i8, i8* %bit, align 1
+  %addr = alloca ptr, align 8
+  store i32 0, ptr %retval, align 4
+  store i64 2, ptr %value, align 8
+  store i64 0, ptr %nr, align 8
+  store ptr %value, ptr %addr, align 8
+  %0 = load i64, ptr %nr, align 8
+  call void asm "btsq $2, $1; setc $0", "=*qm,=*m,Ir,~{dirflag},~{fpsr},~{flags}"(ptr elementtype(i8) %bit, ptr elementtype(ptr) %addr, i64 %0)
+  %1 = load i8, ptr %bit, align 1
   %tobool = trunc i8 %1 to i1
   br i1 %tobool, label %if.then, label %if.else
 
@@ -57,20 +57,16 @@ if.else:                                          ; preds = %entry
 }
 
 ; %nr is first poisoned, then unpoisoned (written to). Need to optimize this in the future.
-; CHECK: [[NRC1:%.*]] = bitcast i64* %nr to i8*
-; CHECK: call void @__msan_poison_alloca(i8* [[NRC1]]{{.*}})
-; CHECK: [[NRC2:%.*]] = bitcast i64* %nr to i8*
-; CHECK: call { i8*, i32* } @__msan_metadata_ptr_for_store_8(i8* [[NRC2]])
+; CHECK: call void @__msan_poison_alloca(ptr %nr{{.*}})
+; CHECK: call { ptr, ptr } @__msan_metadata_ptr_for_store_8(ptr %nr)
 
 ; Hooks for inputs usually go before the assembly statement. But here we have none,
 ; because %nr is passed by value. However we check %nr for being initialized.
-; CHECK-CONS: [[NRC3:%.*]] = bitcast i64* %nr to i8*
-; CHECK-CONS: call { i8*, i32* } @__msan_metadata_ptr_for_load_8(i8* [[NRC3]])
+; CHECK-CONS: call { ptr, ptr } @__msan_metadata_ptr_for_load_8(ptr %nr)
 
 ; In the conservative mode, call the store hooks for %bit and %addr:
-; CHECK-CONS: call void @__msan_instrument_asm_store(i8* %bit, i64 1)
-; CHECK-CONS: [[ADDR8S:%.*]] = bitcast i64** %addr to i8*
-; CHECK-CONS: call void @__msan_instrument_asm_store(i8* [[ADDR8S]], i64 8)
+; CHECK-CONS: call void @__msan_instrument_asm_store(ptr %bit, i64 1)
+; CHECK-CONS: call void @__msan_instrument_asm_store(ptr %addr, i64 8)
 
 ; Landing pad for the %nr check above.
 ; CHECK-CONS: call void @__msan_warning
@@ -82,8 +78,8 @@ if.else:                                          ; preds = %entry
 ; CHECKz: [[SH_NUM:%.*]] = xor i64 [[PTR]]
 ; CHECKz: [[SHADOW:%.*]] = inttoptr i64 [[SH_NUM]] {{.*}}
 
-; CHECK: [[META:%.*]] = call {{.*}} @__msan_metadata_ptr_for_load_1(i8* %bit)
-; CHECK: [[SHADOW:%.*]] = extractvalue { i8*, i32* } [[META]], 0
+; CHECK: [[META:%.*]] = call {{.*}} @__msan_metadata_ptr_for_load_1(ptr %bit)
+; CHECK: [[SHADOW:%.*]] = extractvalue { ptr, ptr } [[META]], 0
 
 ; Now load the shadow value for the boolean.
 ; CHECK: [[MSLD:%.*]] = load {{.*}} [[SHADOW]]

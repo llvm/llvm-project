@@ -224,7 +224,7 @@ public:
   std::string getModuleHash() const;
 
   using StringAllocator = llvm::function_ref<const char *(const llvm::Twine &)>;
-  /// Generate a cc1-compatible command line arguments from this instance.
+  /// Generate cc1-compatible command line arguments from this instance.
   ///
   /// \param [out] Args - The generated arguments. Note that the caller is
   /// responsible for inserting the path to the clang executable and "-cc1" if
@@ -234,6 +234,31 @@ public:
   /// The returned pointer is what gets appended to Args.
   void generateCC1CommandLine(llvm::SmallVectorImpl<const char *> &Args,
                               StringAllocator SA) const;
+
+  /// Generate cc1-compatible command line arguments from this instance,
+  /// wrapping the result as a std::vector<std::string>.
+  ///
+  /// This is a (less-efficient) wrapper over generateCC1CommandLine().
+  std::vector<std::string> getCC1CommandLine() const;
+
+  /// Check that \p Args can be parsed and re-serialized without change,
+  /// emiting diagnostics for any differences.
+  ///
+  /// This check is only suitable for command-lines that are expected to already
+  /// be canonical.
+  ///
+  /// \return false if there are any errors.
+  static bool checkCC1RoundTrip(ArrayRef<const char *> Args,
+                                DiagnosticsEngine &Diags,
+                                const char *Argv0 = nullptr);
+
+  /// Reset all of the options that are not considered when building a
+  /// module.
+  void resetNonModularOptions();
+
+  /// Disable implicit modules and canonicalize options that are only used by
+  /// implicit modules.
+  void clearImplicitModuleBuildOptions();
 
 private:
   static bool CreateFromArgsImpl(CompilerInvocation &Res,
@@ -279,6 +304,11 @@ createVFSFromCompilerInvocation(const CompilerInvocation &CI,
 IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+
+IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+createVFSFromOverlayFiles(ArrayRef<std::string> VFSOverlayFiles,
+                          DiagnosticsEngine &Diags,
+                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
 } // namespace clang
 

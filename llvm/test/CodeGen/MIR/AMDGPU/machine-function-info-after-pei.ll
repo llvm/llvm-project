@@ -26,6 +26,8 @@
 ; AFTER-PEI-NEXT:   workGroupIDX:    { reg: '$sgpr6' }
 ; AFTER-PEI-NEXT:   privateSegmentWaveByteOffset: { reg: '$sgpr7' }
 ; AFTER-PEI-NEXT:   workItemIDX:     { reg: '$vgpr0' }
+; AFTER-PEI-NEXT: psInputAddr:     0
+; AFTER-PEI-NEXT: psInputEnable:   0
 ; AFTER-PEI-NEXT: mode:
 ; AFTER-PEI-NEXT:   ieee:            true
 ; AFTER-PEI-NEXT:   dx10-clamp:      true
@@ -38,7 +40,7 @@
 ; AFTER-PEI-NEXT: scavengeFI: '%fixed-stack.0'
 ; AFTER-PEI-NEXT: vgprForAGPRCopy: ''
 ; AFTER-PEI-NEXT: body:
-define amdgpu_kernel void @scavenge_fi(i32 addrspace(1)* %out, i32 %in) #0 {
+define amdgpu_kernel void @scavenge_fi(ptr addrspace(1) %out, i32 %in) #0 {
   %wide.sgpr0 = call <32 x i32>  asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr1 = call <32 x i32>  asm sideeffect "; def $0", "=s" () #0
   %wide.sgpr2 = call <32 x i32>  asm sideeffect "; def $0", "=s" () #0

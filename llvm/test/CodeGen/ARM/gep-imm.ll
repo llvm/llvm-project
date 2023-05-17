@@ -3,7 +3,7 @@
 ; RUN: llc -mtriple=thumbv7m-none-eabi < %s | FileCheck %s --check-prefix=CHECKV7M
 ; RUN: llc -mtriple=thumbv7a-none-eabi < %s | FileCheck %s --check-prefix=CHECKV7A
 
-define void @small(i32 %a, i32 %b, i32 *%c, i32* %d) {
+define void @small(i32 %a, i32 %b, ptr %c, ptr %d) {
 ; CHECKV6M-LABEL: small:
 ; CHECKV6M:       @ %bb.0: @ %entry
 ; CHECKV6M-NEXT:    str r1, [r3, #120]
@@ -25,16 +25,16 @@ define void @small(i32 %a, i32 %b, i32 *%c, i32* %d) {
 ; CHECKV7A-NEXT:    str r0, [r2, #80]
 ; CHECKV7A-NEXT:    bx lr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %d, i32 20
-  store i32 %a, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %d, i32 30
-  store i32 %b, i32* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 20
-  store i32 %a, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %d, i32 20
+  store i32 %a, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %d, i32 30
+  store i32 %b, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %c, i32 20
+  store i32 %a, ptr %arrayidx2, align 4
   ret void
 }
 
-define void @large(i32 %a, i32 %b, i32 *%c, i32* %d) {
+define void @large(i32 %a, i32 %b, ptr %c, ptr %d) {
 ; CHECKV6M-LABEL: large:
 ; CHECKV6M:       @ %bb.0: @ %entry
 ; CHECKV6M-NEXT:    .save {r4, lr}
@@ -69,16 +69,16 @@ define void @large(i32 %a, i32 %b, i32 *%c, i32* %d) {
 ; CHECKV7A-NEXT:    str.w r0, [r2, r12]
 ; CHECKV7A-NEXT:    bx lr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %d, i32 2000
-  store i32 %a, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %d, i32 3000
-  store i32 %b, i32* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 2000
-  store i32 %a, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %d, i32 2000
+  store i32 %a, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %d, i32 3000
+  store i32 %b, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %c, i32 2000
+  store i32 %a, ptr %arrayidx2, align 4
   ret void
 }
 
-define void @huge(i32 %a, i32 %b, i32 *%c, i32* %d) {
+define void @huge(i32 %a, i32 %b, ptr %c, ptr %d) {
 ; CHECKV6M-LABEL: huge:
 ; CHECKV6M:       @ %bb.0: @ %entry
 ; CHECKV6M-NEXT:    .save {r4, lr}
@@ -118,11 +118,11 @@ define void @huge(i32 %a, i32 %b, i32 *%c, i32* %d) {
 ; CHECKV7A-NEXT:    str r0, [r2, r1]
 ; CHECKV7A-NEXT:    bx lr
 entry:
-  %arrayidx = getelementptr inbounds i32, i32* %d, i32 200000
-  store i32 %a, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %d, i32 300000
-  store i32 %b, i32* %arrayidx1, align 4
-  %arrayidx2 = getelementptr inbounds i32, i32* %c, i32 200000
-  store i32 %a, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %d, i32 200000
+  store i32 %a, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %d, i32 300000
+  store i32 %b, ptr %arrayidx1, align 4
+  %arrayidx2 = getelementptr inbounds i32, ptr %c, i32 200000
+  store i32 %a, ptr %arrayidx2, align 4
   ret void
 }

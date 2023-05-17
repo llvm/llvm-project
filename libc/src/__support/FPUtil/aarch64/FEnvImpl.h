@@ -9,9 +9,10 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_AARCH64_FENVIMPL_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/properties/architectures.h"
 
-#if !defined(LLVM_LIBC_ARCH_AARCH64) || defined(__APPLE__)
+#if !defined(LIBC_TARGET_ARCH_IS_AARCH64) || defined(__APPLE__)
 #error "Invalid include"
 #endif
 
@@ -50,7 +51,7 @@ struct FEnv {
   static constexpr uint32_t ExceptionStatusFlagsBitPosition = 0;
   static constexpr uint32_t ExceptionControlFlagsBitPosition = 8;
 
-  static inline uint32_t getStatusValueForExcept(int excepts) {
+  LIBC_INLINE static uint32_t getStatusValueForExcept(int excepts) {
     return (excepts & FE_INVALID ? INVALID : 0) |
            (excepts & FE_DIVBYZERO ? DIVBYZERO : 0) |
            (excepts & FE_OVERFLOW ? OVERFLOW : 0) |
@@ -58,7 +59,7 @@ struct FEnv {
            (excepts & FE_INEXACT ? INEXACT : 0);
   }
 
-  static inline int exceptionStatusToMacro(uint32_t status) {
+  LIBC_INLINE static int exceptionStatusToMacro(uint32_t status) {
     return (status & INVALID ? FE_INVALID : 0) |
            (status & DIVBYZERO ? FE_DIVBYZERO : 0) |
            (status & OVERFLOW ? FE_OVERFLOW : 0) |
@@ -66,16 +67,42 @@ struct FEnv {
            (status & INEXACT ? FE_INEXACT : 0);
   }
 
-  static uint32_t getControlWord() { return __arm_rsr("fpcr"); }
+  static uint32_t getControlWord() {
+#ifdef __clang__
+    // GCC does not currently support __arm_rsr.
+    return __arm_rsr("fpcr");
+#else
+    return __builtin_aarch64_get_fpcr();
+#endif
+  }
 
-  static void writeControlWord(uint32_t fpcr) { __arm_wsr("fpcr", fpcr); }
+  static void writeControlWord(uint32_t fpcr) {
+#ifdef __clang__
+    // GCC does not currently support __arm_wsr.
+    __arm_wsr("fpcr", fpcr);
+#else
+    __builtin_aarch64_set_fpcr(fpcr);
+#endif
+  }
 
-  static uint32_t getStatusWord() { return __arm_rsr("fpsr"); }
+  static uint32_t getStatusWord() {
+#ifdef __clang__
+    return __arm_rsr("fpsr");
+#else
+    return __builtin_aarch64_get_fpsr();
+#endif
+  }
 
-  static void writeStatusWord(uint32_t fpsr) { __arm_wsr("fpsr", fpsr); }
+  static void writeStatusWord(uint32_t fpsr) {
+#ifdef __clang__
+    __arm_wsr("fpsr", fpsr);
+#else
+    __builtin_aarch64_set_fpsr(fpsr);
+#endif
+  }
 };
 
-static inline int enable_except(int excepts) {
+LIBC_INLINE int enable_except(int excepts) {
   uint32_t newExcepts = FEnv::getStatusValueForExcept(excepts);
   uint32_t controlWord = FEnv::getControlWord();
   int oldExcepts =
@@ -85,7 +112,7 @@ static inline int enable_except(int excepts) {
   return FEnv::exceptionStatusToMacro(oldExcepts);
 }
 
-static inline int disable_except(int excepts) {
+LIBC_INLINE int disable_except(int excepts) {
   uint32_t disabledExcepts = FEnv::getStatusValueForExcept(excepts);
   uint32_t controlWord = FEnv::getControlWord();
   int oldExcepts =
@@ -95,14 +122,14 @@ static inline int disable_except(int excepts) {
   return FEnv::exceptionStatusToMacro(oldExcepts);
 }
 
-static inline int get_except() {
+LIBC_INLINE int get_except() {
   uint32_t controlWord = FEnv::getControlWord();
   int enabledExcepts =
       (controlWord >> FEnv::ExceptionControlFlagsBitPosition) & 0x1F;
   return FEnv::exceptionStatusToMacro(enabledExcepts);
 }
 
-static inline int clear_except(int excepts) {
+LIBC_INLINE int clear_except(int excepts) {
   uint32_t statusWord = FEnv::getStatusWord();
   uint32_t toClear = FEnv::getStatusValueForExcept(excepts);
   statusWord &= ~(toClear << FEnv::ExceptionStatusFlagsBitPosition);
@@ -110,14 +137,14 @@ static inline int clear_except(int excepts) {
   return 0;
 }
 
-static inline int test_except(int excepts) {
+LIBC_INLINE int test_except(int excepts) {
   uint32_t toTest = FEnv::getStatusValueForExcept(excepts);
   uint32_t statusWord = FEnv::getStatusWord();
   return FEnv::exceptionStatusToMacro(
       (statusWord >> FEnv::ExceptionStatusFlagsBitPosition) & toTest);
 }
 
-static inline int set_except(int excepts) {
+LIBC_INLINE int set_except(int excepts) {
   uint32_t statusWord = FEnv::getStatusWord();
   uint32_t statusValue = FEnv::getStatusValueForExcept(excepts);
   statusWord |= (statusValue << FEnv::ExceptionStatusFlagsBitPosition);
@@ -125,7 +152,7 @@ static inline int set_except(int excepts) {
   return 0;
 }
 
-static inline int raise_except(int excepts) {
+LIBC_INLINE int raise_except(int excepts) {
   float zero = 0.0f;
   float one = 1.0f;
   float largeValue = float(FPBits<float>(FPBits<float>::MAX_NORMAL));
@@ -185,7 +212,7 @@ static inline int raise_except(int excepts) {
   return result;
 }
 
-static inline int get_round() {
+LIBC_INLINE int get_round() {
   uint32_t roundingMode =
       (FEnv::getControlWord() >> FEnv::RoundingControlBitPosition) & 0x3;
   switch (roundingMode) {
@@ -202,7 +229,7 @@ static inline int get_round() {
   }
 }
 
-static inline int set_round(int mode) {
+LIBC_INLINE int set_round(int mode) {
   uint16_t bitValue;
   switch (mode) {
   case FE_TONEAREST:
@@ -229,14 +256,14 @@ static inline int set_round(int mode) {
   return 0;
 }
 
-static inline int get_env(fenv_t *envp) {
+LIBC_INLINE int get_env(fenv_t *envp) {
   FEnv::FPState *state = reinterpret_cast<FEnv::FPState *>(envp);
   state->ControlWord = FEnv::getControlWord();
   state->StatusWord = FEnv::getStatusWord();
   return 0;
 }
 
-static inline int set_env(const fenv_t *envp) {
+LIBC_INLINE int set_env(const fenv_t *envp) {
   if (envp == FE_DFL_ENV) {
     // Default status and control words bits are all zeros so we just
     // write zeros.

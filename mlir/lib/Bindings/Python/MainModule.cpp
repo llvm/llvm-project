@@ -41,7 +41,6 @@ PYBIND11_MODULE(_mlir, m) {
            "Testing hook for directly registering a dialect")
       .def("_register_operation_impl", &PyGlobals::registerOperationImpl,
            py::arg("operation_name"), py::arg("operation_class"),
-           py::arg("raw_opview_class"),
            "Testing hook for directly registering an operation");
 
   // Aside from making the globals accessible to python, having python manage
@@ -68,18 +67,11 @@ PYBIND11_MODULE(_mlir, m) {
             [dialectClass](py::object opClass) -> py::object {
               std::string operationName =
                   opClass.attr("OPERATION_NAME").cast<std::string>();
-              auto rawSubclass = PyOpView::createRawSubclass(opClass);
-              PyGlobals::get().registerOperationImpl(operationName, opClass,
-                                                     rawSubclass);
+              PyGlobals::get().registerOperationImpl(operationName, opClass);
 
               // Dict-stuff the new opClass by name onto the dialect class.
               py::object opClassName = opClass.attr("__name__");
               dialectClass.attr(opClassName) = opClass;
-
-              // Now create a special "Raw" subclass that passes through
-              // construction to the OpView parent (bypasses the intermediate
-              // child's __init__).
-              opClass.attr("_Raw") = rawSubclass;
               return opClass;
             });
       },

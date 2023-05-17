@@ -29,7 +29,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #0
 declare void @llvm.dbg.value(metadata, metadata, metadata) #0
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @foobar(i32* nocapture %arg0) local_unnamed_addr #0 {
+define dso_local void @foobar(ptr nocapture %arg0) local_unnamed_addr #0 {
 entry:
   br label %while.cond
 

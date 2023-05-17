@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux | FileCheck %s
 
 ; No overflow flags, same type width.
-define i32 @test_01(i32* %p, i64 %len, i32 %x) {
+define i32 @test_01(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_01:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
@@ -21,7 +21,7 @@ define i32 @test_01(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %scevgep = getelementptr i32, i32* %p, i64 -1
+  %scevgep = getelementptr i32, ptr %p, i64 -1
   br label %loop
 
 loop:                                             ; preds = %backedge, %entry
@@ -31,8 +31,8 @@ loop:                                             ; preds = %backedge, %entry
   br i1 %cond_1, label %exit, label %backedge
 
 backedge:                                         ; preds = %loop
-  %scevgep1 = getelementptr i32, i32* %scevgep, i64 %iv
-  %loaded = load atomic i32, i32* %scevgep1 unordered, align 4
+  %scevgep1 = getelementptr i32, ptr %scevgep, i64 %iv
+  %loaded = load atomic i32, ptr %scevgep1 unordered, align 4
   %cond_2 = icmp eq i32 %loaded, %x
   br i1 %cond_2, label %failure, label %loop
 
@@ -44,7 +44,7 @@ failure:                                          ; preds = %backedge
 }
 
 ; nsw flag, same type width.
-define i32 @test_02(i32* %p, i64 %len, i32 %x) {
+define i32 @test_02(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_02:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
@@ -63,7 +63,7 @@ define i32 @test_02(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %scevgep = getelementptr i32, i32* %p, i64 -1
+  %scevgep = getelementptr i32, ptr %p, i64 -1
   br label %loop
 
 loop:                                             ; preds = %backedge, %entry
@@ -73,8 +73,8 @@ loop:                                             ; preds = %backedge, %entry
   br i1 %cond_1, label %exit, label %backedge
 
 backedge:                                         ; preds = %loop
-  %scevgep1 = getelementptr i32, i32* %scevgep, i64 %iv
-  %loaded = load atomic i32, i32* %scevgep1 unordered, align 4
+  %scevgep1 = getelementptr i32, ptr %scevgep, i64 %iv
+  %loaded = load atomic i32, ptr %scevgep1 unordered, align 4
   %cond_2 = icmp eq i32 %loaded, %x
   br i1 %cond_2, label %failure, label %loop
 
@@ -86,7 +86,7 @@ failure:                                          ; preds = %backedge
 }
 
 ; nsw flag, optimization is possible because memory instruction is dominated by loop-exiting check against iv.next.
-define i32 @test_02_nopoison(i32* %p, i64 %len, i32 %x) {
+define i32 @test_02_nopoison(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_02_nopoison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
@@ -106,7 +106,7 @@ define i32 @test_02_nopoison(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    retq
 entry:
   %len.plus.1 = add i64 %len, 1
-  %scevgep = getelementptr i32, i32* %p, i64 -1
+  %scevgep = getelementptr i32, ptr %p, i64 -1
   br label %loop
 
 loop:                                             ; preds = %backedge, %entry
@@ -116,8 +116,8 @@ loop:                                             ; preds = %backedge, %entry
   br i1 %cond_1, label %exit, label %backedge
 
 backedge:                                         ; preds = %loop
-  %scevgep1 = getelementptr i32, i32* %scevgep, i64 %iv
-  %loaded = load atomic i32, i32* %scevgep1 unordered, align 4
+  %scevgep1 = getelementptr i32, ptr %scevgep, i64 %iv
+  %loaded = load atomic i32, ptr %scevgep1 unordered, align 4
   %cond_2 = icmp eq i32 %loaded, %x
   br i1 %cond_2, label %failure, label %loop
 
@@ -130,7 +130,7 @@ failure:                                          ; preds = %backedge
 
 
 ; nuw flag, same type width.
-define i32 @test_03(i32* %p, i64 %len, i32 %x) {
+define i32 @test_03(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_03:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
@@ -149,7 +149,7 @@ define i32 @test_03(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    movl $-1, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %scevgep = getelementptr i32, i32* %p, i64 -1
+  %scevgep = getelementptr i32, ptr %p, i64 -1
   br label %loop
 
 loop:                                             ; preds = %backedge, %entry
@@ -159,8 +159,8 @@ loop:                                             ; preds = %backedge, %entry
   br i1 %cond_1, label %exit, label %backedge
 
 backedge:                                         ; preds = %loop
-  %scevgep1 = getelementptr i32, i32* %scevgep, i64 %iv
-  %loaded = load atomic i32, i32* %scevgep1 unordered, align 4
+  %scevgep1 = getelementptr i32, ptr %scevgep, i64 %iv
+  %loaded = load atomic i32, ptr %scevgep1 unordered, align 4
   %cond_2 = icmp eq i32 %loaded, %x
   br i1 %cond_2, label %failure, label %loop
 
@@ -172,7 +172,7 @@ failure:                                          ; preds = %backedge
 }
 
 ; nuw flag, optimization is possible because memory instruction is dominated by loop-exiting check against iv.next.
-define i32 @test_03_nopoison(i32* %p, i64 %len, i32 %x) {
+define i32 @test_03_nopoison(ptr %p, i64 %len, i32 %x) {
 ; CHECK-LABEL: test_03_nopoison:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    addq $-4, %rdi
@@ -192,7 +192,7 @@ define i32 @test_03_nopoison(i32* %p, i64 %len, i32 %x) {
 ; CHECK-NEXT:    retq
 entry:
   %len.plus.1 = add i64 %len, 1
-  %scevgep = getelementptr i32, i32* %p, i64 -1
+  %scevgep = getelementptr i32, ptr %p, i64 -1
   br label %loop
 
 loop:                                             ; preds = %backedge, %entry
@@ -202,8 +202,8 @@ loop:                                             ; preds = %backedge, %entry
   br i1 %cond_1, label %exit, label %backedge
 
 backedge:                                         ; preds = %loop
-  %scevgep1 = getelementptr i32, i32* %scevgep, i64 %iv
-  %loaded = load atomic i32, i32* %scevgep1 unordered, align 4
+  %scevgep1 = getelementptr i32, ptr %scevgep, i64 %iv
+  %loaded = load atomic i32, ptr %scevgep1 unordered, align 4
   %cond_2 = icmp eq i32 %loaded, %x
   br i1 %cond_2, label %failure, label %loop
 

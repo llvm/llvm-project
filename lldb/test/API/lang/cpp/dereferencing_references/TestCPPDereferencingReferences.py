@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test(self):
         """Tests deferencing lvalue/rvalue references via LLDB's builtin type system."""
         self.build()

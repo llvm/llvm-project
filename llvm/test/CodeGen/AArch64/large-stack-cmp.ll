@@ -32,7 +32,7 @@ define void @foo() {
 
 %var = alloca i32, i32 12
   %var2 = alloca i32, i32 1030
-  %tst = icmp eq i32* %var, null
+  %tst = icmp eq ptr %var, null
   br i1 %tst, label %true, label %false
 
 true:

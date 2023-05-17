@@ -1,5 +1,5 @@
 @ RUN: llvm-mc -triple armv7-apple-ios -filetype=obj -o %t %s
-@ RUN: llvm-objdump -d -r %t | FileCheck %s
+@ RUN: llvm-objdump --no-print-imm-hex -d -r %t | FileCheck %s
 
 @ CHECK: <_func>:
 @ CHECK:    bl 0x8 <_func+0x8> @ imm = #0

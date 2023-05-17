@@ -143,35 +143,36 @@ const Decoder::RingEntry Decoder::Ring[] = {
   { 0xff, 0xff, 1, &Decoder::opcode_11111111 },  // UOP_END
 };
 
-
 // Unwind opcodes for ARM64.
 // https://docs.microsoft.com/en-us/cpp/build/arm64-exception-handling
 const Decoder::RingEntry Decoder::Ring64[] = {
-  { 0xe0, 0x00, 1, &Decoder::opcode_alloc_s },
-  { 0xe0, 0x20, 1, &Decoder::opcode_save_r19r20_x },
-  { 0xc0, 0x40, 1, &Decoder::opcode_save_fplr },
-  { 0xc0, 0x80, 1, &Decoder::opcode_save_fplr_x },
-  { 0xf8, 0xc0, 2, &Decoder::opcode_alloc_m },
-  { 0xfc, 0xc8, 2, &Decoder::opcode_save_regp },
-  { 0xfc, 0xcc, 2, &Decoder::opcode_save_regp_x },
-  { 0xfc, 0xd0, 2, &Decoder::opcode_save_reg },
-  { 0xfe, 0xd4, 2, &Decoder::opcode_save_reg_x },
-  { 0xfe, 0xd6, 2, &Decoder::opcode_save_lrpair },
-  { 0xfe, 0xd8, 2, &Decoder::opcode_save_fregp },
-  { 0xfe, 0xda, 2, &Decoder::opcode_save_fregp_x },
-  { 0xfe, 0xdc, 2, &Decoder::opcode_save_freg },
-  { 0xff, 0xde, 2, &Decoder::opcode_save_freg_x },
-  { 0xff, 0xe0, 4, &Decoder::opcode_alloc_l },
-  { 0xff, 0xe1, 1, &Decoder::opcode_setfp },
-  { 0xff, 0xe2, 2, &Decoder::opcode_addfp },
-  { 0xff, 0xe3, 1, &Decoder::opcode_nop },
-  { 0xff, 0xe4, 1, &Decoder::opcode_end },
-  { 0xff, 0xe5, 1, &Decoder::opcode_end_c },
-  { 0xff, 0xe6, 1, &Decoder::opcode_save_next },
-  { 0xff, 0xe8, 1, &Decoder::opcode_trap_frame },
-  { 0xff, 0xe9, 1, &Decoder::opcode_machine_frame },
-  { 0xff, 0xea, 1, &Decoder::opcode_context },
-  { 0xff, 0xec, 1, &Decoder::opcode_clear_unwound_to_call },
+    {0xe0, 0x00, 1, &Decoder::opcode_alloc_s},
+    {0xe0, 0x20, 1, &Decoder::opcode_save_r19r20_x},
+    {0xc0, 0x40, 1, &Decoder::opcode_save_fplr},
+    {0xc0, 0x80, 1, &Decoder::opcode_save_fplr_x},
+    {0xf8, 0xc0, 2, &Decoder::opcode_alloc_m},
+    {0xfc, 0xc8, 2, &Decoder::opcode_save_regp},
+    {0xfc, 0xcc, 2, &Decoder::opcode_save_regp_x},
+    {0xfc, 0xd0, 2, &Decoder::opcode_save_reg},
+    {0xfe, 0xd4, 2, &Decoder::opcode_save_reg_x},
+    {0xfe, 0xd6, 2, &Decoder::opcode_save_lrpair},
+    {0xfe, 0xd8, 2, &Decoder::opcode_save_fregp},
+    {0xfe, 0xda, 2, &Decoder::opcode_save_fregp_x},
+    {0xfe, 0xdc, 2, &Decoder::opcode_save_freg},
+    {0xff, 0xde, 2, &Decoder::opcode_save_freg_x},
+    {0xff, 0xe0, 4, &Decoder::opcode_alloc_l},
+    {0xff, 0xe1, 1, &Decoder::opcode_setfp},
+    {0xff, 0xe2, 2, &Decoder::opcode_addfp},
+    {0xff, 0xe3, 1, &Decoder::opcode_nop},
+    {0xff, 0xe4, 1, &Decoder::opcode_end},
+    {0xff, 0xe5, 1, &Decoder::opcode_end_c},
+    {0xff, 0xe6, 1, &Decoder::opcode_save_next},
+    {0xff, 0xe7, 3, &Decoder::opcode_save_any_reg},
+    {0xff, 0xe8, 1, &Decoder::opcode_trap_frame},
+    {0xff, 0xe9, 1, &Decoder::opcode_machine_frame},
+    {0xff, 0xea, 1, &Decoder::opcode_context},
+    {0xff, 0xec, 1, &Decoder::opcode_clear_unwound_to_call},
+    {0xff, 0xfc, 1, &Decoder::opcode_pac_sign_lr},
 };
 
 static void printRange(raw_ostream &OS, ListSeparator &LS, unsigned First,
@@ -855,7 +856,7 @@ bool Decoder::opcode_end_c(const uint8_t *OC, unsigned &Offset, unsigned Length,
                            bool Prologue) {
   SW.startLine() << format("0x%02x                ; end_c\n", OC[Offset]);
   ++Offset;
-  return true;
+  return false;
 }
 
 bool Decoder::opcode_save_next(const uint8_t *OC, unsigned &Offset,
@@ -866,6 +867,83 @@ bool Decoder::opcode_save_next(const uint8_t *OC, unsigned &Offset,
     SW.startLine() << format("0x%02x                ; restore next\n",
                              OC[Offset]);
   ++Offset;
+  return false;
+}
+
+bool Decoder::opcode_save_any_reg(const uint8_t *OC, unsigned &Offset,
+                                  unsigned Length, bool Prologue) {
+  // Whether the instruction has writeback
+  bool Writeback = (OC[Offset + 1] & 0x20) == 0x20;
+  // Whether the instruction is paired.  (Paired instructions are required
+  // to save/restore adjacent registers.)
+  bool Paired = (OC[Offset + 1] & 0x40) == 0x40;
+  // The kind of register saved:
+  // - 0 is an x register
+  // - 1 is the low half of a q register
+  // - 2 is a whole q register
+  int RegKind = (OC[Offset + 2] & 0xC0) >> 6;
+  // Encoded register name (0 -> x0/q0, 1 -> x1/q1, etc.)
+  int Reg = OC[Offset + 1] & 0x1F;
+  // Encoded stack offset of load/store instruction; decoding varies by mode.
+  int StackOffset = OC[Offset + 2] & 0x3F;
+  if (Writeback)
+    StackOffset++;
+  if (!Writeback && !Paired && RegKind != 2)
+    StackOffset *= 8;
+  else
+    StackOffset *= 16;
+
+  SW.startLine() << format("0x%02x%02x%02x            ; ", OC[Offset],
+                           OC[Offset + 1], OC[Offset + 2]);
+
+  // Verify the encoding is in a form we understand.  The high bit of the first
+  // byte, and mode 3 for the register kind are apparently reserved.  The
+  // encoded register must refer to a valid register.
+  int MaxReg = 0x1F;
+  if (Paired)
+    --MaxReg;
+  if (RegKind == 0)
+    --MaxReg;
+  if ((OC[Offset + 1] & 0x80) == 0x80 || RegKind == 3 || Reg > MaxReg) {
+    SW.getOStream() << "invalid save_any_reg encoding\n";
+    Offset += 3;
+    return false;
+  }
+
+  if (Paired) {
+    if (Prologue)
+      SW.getOStream() << "stp ";
+    else
+      SW.getOStream() << "ldp ";
+  } else {
+    if (Prologue)
+      SW.getOStream() << "str ";
+    else
+      SW.getOStream() << "ldr ";
+  }
+
+  char RegChar = 'x';
+  if (RegKind == 1) {
+    RegChar = 'd';
+  } else if (RegKind == 2) {
+    RegChar = 'q';
+  }
+
+  if (Paired)
+    SW.getOStream() << format("%c%d, %c%d, ", RegChar, Reg, RegChar, Reg + 1);
+  else
+    SW.getOStream() << format("%c%d, ", RegChar, Reg);
+
+  if (Writeback) {
+    if (Prologue)
+      SW.getOStream() << format("[sp, #-%d]!\n", StackOffset);
+    else
+      SW.getOStream() << format("[sp], #%d\n", StackOffset);
+  } else {
+    SW.getOStream() << format("[sp, #%d]\n", StackOffset);
+  }
+
+  Offset += 3;
   return false;
 }
 
@@ -899,6 +977,16 @@ bool Decoder::opcode_clear_unwound_to_call(const uint8_t *OC, unsigned &Offset,
   return false;
 }
 
+bool Decoder::opcode_pac_sign_lr(const uint8_t *OC, unsigned &Offset,
+                                 unsigned Length, bool Prologue) {
+  if (Prologue)
+    SW.startLine() << format("0x%02x                ; pacibsp\n", OC[Offset]);
+  else
+    SW.startLine() << format("0x%02x                ; autibsp\n", OC[Offset]);
+  ++Offset;
+  return false;
+}
+
 void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
                             bool Prologue) {
   assert((!Prologue || Offset == 0) && "prologue should always use offset 0");
@@ -906,8 +994,8 @@ void Decoder::decodeOpcodes(ArrayRef<uint8_t> Opcodes, unsigned Offset,
   bool Terminated = false;
   for (unsigned OI = Offset, OE = Opcodes.size(); !Terminated && OI < OE; ) {
     for (unsigned DI = 0;; ++DI) {
-      if ((isAArch64 && (DI >= array_lengthof(Ring64))) ||
-          (!isAArch64 && (DI >= array_lengthof(Ring)))) {
+      if ((isAArch64 && (DI >= std::size(Ring64))) ||
+          (!isAArch64 && (DI >= std::size(Ring)))) {
         SW.startLine() << format("0x%02x                ; Bad opcode!\n",
                                  Opcodes.data()[OI]);
         ++OI;
@@ -1160,7 +1248,7 @@ bool Decoder::dumpPackedEntry(const object::COFFObjectFile &COFF,
     }
     if (RF.C()) {
       // Count the number of registers pushed below R11
-      int FpOffset = 4 * countPopulation(GPRMask & ((1U << 11) - 1));
+      int FpOffset = 4 * llvm::popcount(GPRMask & ((1U << 11) - 1));
       if (FpOffset)
         SW.startLine() << "add.w r11, sp, #" << FpOffset << "\n";
       else
@@ -1256,7 +1344,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
   int SavSZ = (IntSZ + FpSZ + 8 * 8 * RF.H() + 0xf) & ~0xf;
   int LocSZ = (RF.FrameSize() << 4) - SavSZ;
 
-  if (RF.CR() == 3) {
+  if (RF.CR() == 2 || RF.CR() == 3) {
     SW.startLine() << "mov x29, sp\n";
     if (LocSZ <= 512) {
       SW.startLine() << format("stp x29, lr, [sp, #-%d]!\n", LocSZ);
@@ -1267,7 +1355,7 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
   if (LocSZ > 4080) {
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ - 4080);
     SW.startLine() << "sub sp, sp, #4080\n";
-  } else if ((RF.CR() != 3 && LocSZ > 0) || LocSZ > 512) {
+  } else if ((RF.CR() != 3 && RF.CR() != 2 && LocSZ > 0) || LocSZ > 512) {
     SW.startLine() << format("sub sp, sp, #%d\n", LocSZ);
   }
   if (RF.H()) {
@@ -1329,6 +1417,11 @@ bool Decoder::dumpPackedARM64Entry(const object::COFFObjectFile &COFF,
                                19 + 2 * I + 1, 16 * I);
     }
   }
+  // CR=2 is yet undocumented, see
+  // https://github.com/MicrosoftDocs/cpp-docs/pull/4202 for upstream
+  // progress on getting it documented.
+  if (RF.CR() == 2)
+    SW.startLine() << "pacibsp\n";
   SW.startLine() << "end\n";
 
   return true;

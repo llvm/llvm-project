@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/deque>
 
 // namespace std { namespace experimental { namespace pmr {
@@ -16,6 +18,8 @@
 //     ::std::deque<T, polymorphic_allocator<T>>
 //
 // }}} // namespace std::experimental::pmr
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/deque>
 #include <experimental/memory_resource>

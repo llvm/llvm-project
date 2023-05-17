@@ -85,3 +85,7 @@
 # pstxv 31, 8589934591(3), 1. However, RA is not zero with R=1
 # CHECK: warning: invalid instruction encoding
 0x04 0x11 0xff 0xff 0xdb 0xe3 0xff 0xff
+
+# xxextractuw 52, 30, 20 (i.e. the immediate 20 is invalid)
+# CHECK: warning: invalid instruction encoding
+0xf2 0x94 0xf2 0x95

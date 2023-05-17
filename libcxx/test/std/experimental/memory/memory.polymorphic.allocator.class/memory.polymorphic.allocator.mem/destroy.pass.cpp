@@ -8,12 +8,16 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/memory_resource>
 
 // template <class T> class polymorphic_allocator
 
 // template <class U>
 // void polymorphic_allocator<T>::destroy(U * ptr);
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

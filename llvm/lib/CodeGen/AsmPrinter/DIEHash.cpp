@@ -42,7 +42,7 @@ static StringRef getDIEStringAttr(const DIE &Die, uint16_t Attr) {
 void DIEHash::addString(StringRef Str) {
   LLVM_DEBUG(dbgs() << "Adding string " << Str << " to hash.\n");
   Hash.update(Str);
-  Hash.update(makeArrayRef((uint8_t)'\0'));
+  Hash.update(ArrayRef((uint8_t)'\0'));
 }
 
 // FIXME: The LEB128 routines are copied and only slightly modified out of
@@ -374,7 +374,7 @@ void DIEHash::computeHash(const DIE &Die) {
   addAttributes(Die);
 
   // Then hash each of the children of the DIE.
-  for (auto &C : Die.children()) {
+  for (const auto &C : Die.children()) {
     // 7.27 Step 7
     // If C is a nested type entry or a member function entry, ...
     if (isType(C.getTag()) || (C.getTag() == dwarf::DW_TAG_subprogram && isType(C.getParent()->getTag()))) {
@@ -389,7 +389,7 @@ void DIEHash::computeHash(const DIE &Die) {
   }
 
   // Following the last (or if there are no children), append a zero byte.
-  Hash.update(makeArrayRef((uint8_t)'\0'));
+  Hash.update(ArrayRef((uint8_t)'\0'));
 }
 
 /// This is based on the type signature computation given in section 7.27 of the

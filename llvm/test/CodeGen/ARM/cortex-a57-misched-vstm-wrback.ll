@@ -16,25 +16,25 @@
 @b = dso_local global double 0.0, align 4
 @c = dso_local global double 0.0, align 4
 
-define dso_local i32 @bar(double* %vptr, i32 %iv1, i32* %iptr) minsize {
+define dso_local i32 @bar(ptr %vptr, i32 %iv1, ptr %iptr) minsize {
   
-  %vp2 = getelementptr double, double* %vptr, i32 1
-  %vp3 = getelementptr double, double* %vptr, i32 2
+  %vp2 = getelementptr double, ptr %vptr, i32 1
+  %vp3 = getelementptr double, ptr %vptr, i32 2
 
-  %v1 = load double, double* %vptr, align 8
-  %v2 = load double, double* %vp2, align 8
-  %v3 = load double, double* %vp3, align 8
+  %v1 = load double, ptr %vptr, align 8
+  %v2 = load double, ptr %vp2, align 8
+  %v3 = load double, ptr %vp3, align 8
 
-  store double %v1, double* @a, align 8
-  store double %v2, double* @b, align 8
-  store double %v3, double* @c, align 8
+  store double %v1, ptr @a, align 8
+  store double %v2, ptr @b, align 8
+  store double %v3, ptr @c, align 8
 
-  %ptr_after = getelementptr double, double* @a, i32 3
+  %ptr_after = getelementptr double, ptr @a, i32 3
 
-  %ptr_new_ival = ptrtoint double* %ptr_after to i32
-  %ptr_new = inttoptr i32 %ptr_new_ival to i32*
+  %ptr_new_ival = ptrtoint ptr %ptr_after to i32
+  %ptr_new = inttoptr i32 %ptr_new_ival to ptr
 
-  store i32 %ptr_new_ival, i32* %iptr, align 8
+  store i32 %ptr_new_ival, ptr %iptr, align 8
 
   %mul1 = mul i32 %ptr_new_ival, %iv1
 

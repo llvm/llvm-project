@@ -1,4 +1,4 @@
-// RUN: llvm-mc -triple aarch64-elf -filetype=obj %s -o - | llvm-objdump -d - | FileCheck %s
+// RUN: llvm-mc -triple aarch64-elf -filetype=obj %s -o - | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 start:
   .space 8

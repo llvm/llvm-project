@@ -1,14 +1,14 @@
-; RUN: opt -mcpu=kryo -loop-simplify -loop-data-prefetch -max-prefetch-iters-ahead=1000 -min-prefetch-stride=16 -S < %s | FileCheck %s
+; RUN: opt -mcpu=kryo -passes=loop-simplify,loop-data-prefetch -max-prefetch-iters-ahead=1000 -min-prefetch-stride=16 -S < %s | FileCheck %s
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-linux-gnu"
 
-%struct._Chv = type { i32, i32, i32, i32, i32, i32, i32*, i32*, double*, %struct._DV, %struct._Chv* }
-%struct._DV = type { i32, i32, i32, double* }
+%struct._Chv = type { i32, i32, i32, i32, i32, i32, ptr, ptr, ptr, %struct._DV, ptr }
+%struct._DV = type { i32, i32, i32, ptr }
 
-declare double* @f_entries() local_unnamed_addr
+declare ptr @f_entries() local_unnamed_addr
 
-define i32 @f(%struct._Chv* %chv, i32 %npivot, i32* %pivotsizes, i32* %sizes) local_unnamed_addr {
+define i32 @f(ptr %chv, i32 %npivot, ptr %pivotsizes, ptr %sizes) local_unnamed_addr {
 if.end:
   switch i32 undef, label %sw.default [
     i32 1, label %sw.epilog
@@ -26,12 +26,12 @@ sw.epilog:                                        ; preds = %if.end, %if.end, %i
   br label %if.end12
 
 if.end12:                                         ; preds = %sw.epilog
-  %nD13 = getelementptr inbounds %struct._Chv, %struct._Chv* %chv, i64 0, i32 1
-  %0 = load i32, i32* %nD13, align 4
-  %nU15 = getelementptr inbounds %struct._Chv, %struct._Chv* %chv, i64 0, i32 3
-  %1 = load i32, i32* %nU15, align 4
+  %nD13 = getelementptr inbounds %struct._Chv, ptr %chv, i64 0, i32 1
+  %0 = load i32, ptr %nD13, align 4
+  %nU15 = getelementptr inbounds %struct._Chv, ptr %chv, i64 0, i32 3
+  %1 = load i32, ptr %nU15, align 4
   %add17 = add i32 %1, %0
-  %call18 = call double* @f_entries()
+  %call18 = call ptr @f_entries()
   switch i32 undef, label %sw.epilog2454 [
     i32 3, label %sw.bb213
   ]
@@ -45,8 +45,8 @@ sw.bb214:                                         ; preds = %sw.bb213
   br label %if.then220
 
 if.then220:                                       ; preds = %sw.bb214
-  %type230 = getelementptr inbounds %struct._Chv, %struct._Chv* %chv, i64 0, i32 4
-  %2 = load i32, i32* %type230, align 8
+  %type230 = getelementptr inbounds %struct._Chv, ptr %chv, i64 0, i32 4
+  %2 = load i32, ptr %type230, align 8
   br label %if.else319
 
 if.else319:                                       ; preds = %if.then220
@@ -62,8 +62,7 @@ for.body374.lr.ph:                                ; preds = %for.cond372.prehead
   br label %for.body374
 
 for.body374:                                      ; preds = %for.body374.lr.ph
-  %arrayidx376 = getelementptr inbounds i32, i32* %pivotsizes, i64 0
-  %3 = load i32, i32* %arrayidx376, align 4
+  %3 = load i32, ptr %pivotsizes, align 4
   %add377 = add i32 %3, 0
   br label %for.body381.lr.ph
 
@@ -92,8 +91,8 @@ for.body388.us:                                   ; preds = %for.inc418.us, %for
   %kk224.3.us = add nsw i32 %kk224.3.in4330.us, 1
   %mul389.us = shl nsw i32 %kk224.3.us, 1
   %idxprom390.us = sext i32 %mul389.us to i64
-  %arrayidx391.us = getelementptr inbounds double, double* %call18, i64 %idxprom390.us
-  %6 = load double, double* %arrayidx391.us, align 8
+  %arrayidx391.us = getelementptr inbounds double, ptr %call18, i64 %idxprom390.us
+  %6 = load double, ptr %arrayidx391.us, align 8
   %call396.us = call double @Zabs(double %6)
   br label %for.inc418.us
 
@@ -114,5 +113,5 @@ sw.epilog2454:                                    ; preds = %for.cond372.prehead
 
 declare double @llvm.fabs.f64(double)
 declare dso_local double @Zabs(double) local_unnamed_addr
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1 immarg)
 

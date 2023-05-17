@@ -19,6 +19,7 @@
 #include "clang/AST/GlobalDecl.h"
 
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/Support/Error.h"
 
 #include <memory>
@@ -28,7 +29,7 @@ namespace llvm {
 namespace orc {
 class LLJIT;
 class ThreadSafeContext;
-}
+} // namespace orc
 } // namespace llvm
 
 namespace clang {
@@ -52,12 +53,15 @@ class Interpreter {
 
   Interpreter(std::unique_ptr<CompilerInstance> CI, llvm::Error &Err);
 
+  llvm::Error CreateExecutor();
+
 public:
   ~Interpreter();
   static llvm::Expected<std::unique_ptr<Interpreter>>
   create(std::unique_ptr<CompilerInstance> CI);
   const CompilerInstance *getCompilerInstance() const;
-  const llvm::orc::LLJIT *getExecutionEngine() const;
+  llvm::Expected<llvm::orc::LLJIT &> getExecutionEngine();
+
   llvm::Expected<PartialTranslationUnit &> Parse(llvm::StringRef Code);
   llvm::Error Execute(PartialTranslationUnit &T);
   llvm::Error ParseAndExecute(llvm::StringRef Code) {
@@ -69,18 +73,24 @@ public:
     return llvm::Error::success();
   }
 
-  /// \returns the \c JITTargetAddress of a \c GlobalDecl. This interface uses
+  /// Undo N previous incremental inputs.
+  llvm::Error Undo(unsigned N = 1);
+
+  /// Link a dynamic library
+  llvm::Error LoadDynamicLibrary(const char *name);
+
+  /// \returns the \c ExecutorAddr of a \c GlobalDecl. This interface uses
   /// the CodeGenModule's internal mangling cache to avoid recomputing the
   /// mangled name.
-  llvm::Expected<llvm::JITTargetAddress> getSymbolAddress(GlobalDecl GD) const;
+  llvm::Expected<llvm::orc::ExecutorAddr> getSymbolAddress(GlobalDecl GD) const;
 
-  /// \returns the \c JITTargetAddress of a given name as written in the IR.
-  llvm::Expected<llvm::JITTargetAddress>
+  /// \returns the \c ExecutorAddr of a given name as written in the IR.
+  llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddress(llvm::StringRef IRName) const;
 
-  /// \returns the \c JITTargetAddress of a given name as written in the object
+  /// \returns the \c ExecutorAddr of a given name as written in the object
   /// file.
-  llvm::Expected<llvm::JITTargetAddress>
+  llvm::Expected<llvm::orc::ExecutorAddr>
   getSymbolAddressFromLinkerName(llvm::StringRef LinkerName) const;
 };
 } // namespace clang

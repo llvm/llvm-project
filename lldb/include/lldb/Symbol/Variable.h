@@ -11,7 +11,7 @@
 
 #include "lldb/Core/Declaration.h"
 #include "lldb/Core/Mangled.h"
-#include "lldb/Expression/DWARFExpression.h"
+#include "lldb/Expression/DWARFExpressionList.h"
 #include "lldb/Utility/CompletionRequest.h"
 #include "lldb/Utility/RangeMap.h"
 #include "lldb/Utility/UserID.h"
@@ -32,8 +32,8 @@ public:
   Variable(lldb::user_id_t uid, const char *name, const char *mangled,
            const lldb::SymbolFileTypeSP &symfile_type_sp, lldb::ValueType scope,
            SymbolContextScope *owner_scope, const RangeList &scope_range,
-           Declaration *decl, const DWARFExpression &location, bool external,
-           bool artificial, bool location_is_constant_data,
+           Declaration *decl, const DWARFExpressionList &location,
+           bool external, bool artificial, bool location_is_constant_data,
            bool static_member = false);
 
   virtual ~Variable();
@@ -73,9 +73,11 @@ public:
 
   bool IsStaticMember() const { return m_static_member; }
 
-  DWARFExpression &LocationExpression() { return m_location; }
+  DWARFExpressionList &LocationExpressionList() { return m_location_list; }
 
-  const DWARFExpression &LocationExpression() const { return m_location; }
+  const DWARFExpressionList &LocationExpressionList() const {
+    return m_location_list;
+  }
 
   // When given invalid address, it dumps all locations. Otherwise it only dumps
   // the location that contains this address.
@@ -128,7 +130,7 @@ protected:
   Declaration m_declaration;
   /// The location of this variable that can be fed to
   /// DWARFExpression::Evaluate().
-  DWARFExpression m_location;
+  DWARFExpressionList m_location_list;
   /// Visible outside the containing compile unit?
   unsigned m_external : 1;
   /// Non-zero if the variable is not explicitly declared in source.

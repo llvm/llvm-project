@@ -95,12 +95,13 @@ class VPRecipeBuilder {
   /// return a new VPWidenCallRecipe. Range.End may be decreased to ensure same
   /// decision from \p Range.Start to \p Range.End.
   VPWidenCallRecipe *tryToWidenCall(CallInst *CI, ArrayRef<VPValue *> Operands,
-                                    VFRange &Range) const;
+                                    VFRange &Range, VPlanPtr &Plan);
 
   /// Check if \p I has an opcode that can be widened and return a VPWidenRecipe
   /// if it can. The function should only be called if the cost-model indicates
   /// that widening should be performed.
-  VPWidenRecipe *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands) const;
+  VPRecipeBase *tryToWiden(Instruction *I, ArrayRef<VPValue *> Operands,
+                           VPBasicBlock *VPBB, VPlanPtr &Plan);
 
   /// Return a VPRecipeOrValueTy with VPRecipeBase * being set. This can be used to force the use as VPRecipeBase* for recipe sub-types that also inherit from VPValue.
   VPRecipeOrVPValueTy toVPRecipeResult(VPRecipeBase *R) const { return R; }
@@ -119,7 +120,8 @@ public:
   /// VPRecipeOrVPValueTy with nullptr.
   VPRecipeOrVPValueTy tryToCreateWidenRecipe(Instruction *Instr,
                                              ArrayRef<VPValue *> Operands,
-                                             VFRange &Range, VPlanPtr &Plan);
+                                             VFRange &Range, VPBasicBlock *VPBB,
+                                             VPlanPtr &Plan);
 
   /// Set the recipe created for given ingredient. This operation is a no-op for
   /// ingredients that were not marked using a nullptr entry in the map.
@@ -134,11 +136,11 @@ public:
   /// A helper function that computes the predicate of the block BB, assuming
   /// that the header block of the loop is set to True. It returns the *entry*
   /// mask for the block BB.
-  VPValue *createBlockInMask(BasicBlock *BB, VPlanPtr &Plan);
+  VPValue *createBlockInMask(BasicBlock *BB, VPlan &Plan);
 
   /// A helper function that computes the predicate of the edge between SRC
   /// and DST.
-  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlanPtr &Plan);
+  VPValue *createEdgeMask(BasicBlock *Src, BasicBlock *Dst, VPlan &Plan);
 
   /// Mark given ingredient for recording its recipe once one is created for
   /// it.
@@ -157,20 +159,11 @@ public:
     return Ingredient2Recipe[I];
   }
 
-  /// Create a replicating region for instruction \p I that requires
-  /// predication. \p PredRecipe is a VPReplicateRecipe holding \p I.
-  VPRegionBlock *createReplicateRegion(Instruction *I, VPRecipeBase *PredRecipe,
-                                       VPlanPtr &Plan);
-
-  /// Build a VPReplicationRecipe for \p I and enclose it within a Region if it
-  /// is predicated. \return \p VPBB augmented with this new recipe if \p I is
-  /// not predicated, otherwise \return a new VPBasicBlock that succeeds the new
-  /// Region. Update the packing decision of predicated instructions if they
-  /// feed \p I. Range.End may be decreased to ensure same recipe behavior from
-  /// \p Range.Start to \p Range.End.
-  VPBasicBlock *handleReplication(
-      Instruction *I, VFRange &Range, VPBasicBlock *VPBB,
-      VPlanPtr &Plan);
+  /// Build a VPReplicationRecipe for \p I. If it is predicated, add the mask as
+  /// last operand. Range.End may be decreased to ensure same recipe behavior
+  /// from \p Range.Start to \p Range.End.
+  VPRecipeOrVPValueTy handleReplication(Instruction *I, VFRange &Range,
+                                        VPlan &Plan);
 
   /// Add the incoming values from the backedge to reduction & first-order
   /// recurrence cross-iteration phis.

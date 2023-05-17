@@ -11,7 +11,7 @@
 // RUN:  -o  %t/X.pcm
 
 // RUN: %clang_cc1 -std=c++20 -emit-module-interface %t/std-10-2-ex2-tu2.cpp \
-// RUN: -fmodule-file=%t/std-10-2-ex2-c.pcm -fmodule-file=%t/X.pcm \
+// RUN: -fmodule-file=%t/std-10-2-ex2-c.pcm -fmodule-file=X=%t/X.pcm \
 // RUN: -pedantic-errors -verify -o  %t/M.pcm
 
 //--- std-10-2-ex2-b.h

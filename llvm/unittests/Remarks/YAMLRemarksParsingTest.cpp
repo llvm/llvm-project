@@ -10,6 +10,7 @@
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkParser.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -68,14 +69,15 @@ enum class CmpType {
   Contains
 };
 
-void parseExpectErrorMeta(StringRef Buf, const char *Error, CmpType Cmp,
-                          Optional<StringRef> ExternalFilePrependPath = None) {
+void parseExpectErrorMeta(
+    StringRef Buf, const char *Error, CmpType Cmp,
+    std::optional<StringRef> ExternalFilePrependPath = std::nullopt) {
   std::string ErrorStr;
   raw_string_ostream Stream(ErrorStr);
 
   Expected<std::unique_ptr<remarks::RemarkParser>> MaybeParser =
       remarks::createRemarkParserFromMeta(remarks::Format::YAML, Buf,
-                                          /*StrTab=*/None,
+                                          /*StrTab=*/std::nullopt,
                                           std::move(ExternalFilePrependPath));
   handleAllErrors(MaybeParser.takeError(),
                   [&](const ErrorInfoBase &EIB) { EIB.log(Stream); });

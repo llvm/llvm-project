@@ -72,12 +72,14 @@ PYBIND11_MODULE(_mlirExecutionEngine, m) {
   //----------------------------------------------------------------------------
   py::class_<PyExecutionEngine>(m, "ExecutionEngine", py::module_local())
       .def(py::init<>([](MlirModule module, int optLevel,
-                         const std::vector<std::string> &sharedLibPaths) {
+                         const std::vector<std::string> &sharedLibPaths,
+                         bool enableObjectDump) {
              llvm::SmallVector<MlirStringRef, 4> libPaths;
              for (const std::string &path : sharedLibPaths)
                libPaths.push_back({path.c_str(), path.length()});
-             MlirExecutionEngine executionEngine = mlirExecutionEngineCreate(
-                 module, optLevel, libPaths.size(), libPaths.data());
+             MlirExecutionEngine executionEngine =
+                 mlirExecutionEngineCreate(module, optLevel, libPaths.size(),
+                                           libPaths.data(), enableObjectDump);
              if (mlirExecutionEngineIsNull(executionEngine))
                throw std::runtime_error(
                    "Failure while creating the ExecutionEngine.");
@@ -85,6 +87,7 @@ PYBIND11_MODULE(_mlirExecutionEngine, m) {
            }),
            py::arg("module"), py::arg("opt_level") = 2,
            py::arg("shared_libs") = py::list(),
+           py::arg("enable_object_dump") = true,
            "Create a new ExecutionEngine instance for the given Module. The "
            "module must contain only dialects that can be translated to LLVM. "
            "Perform transformations and code generation at the optimization "

@@ -16,7 +16,7 @@ define void @foo(i32 %x, i32 %y, i32 %z) local_unnamed_addr #0 !dbg !4 {
 entry:
   %not.tobool = icmp eq i32 %x, 0, !dbg !8
   %.sink = zext i1 %not.tobool to i32, !dbg !8
-  store i32 %.sink, i32* @g, align 4, !tbaa !9
+  store i32 %.sink, ptr @g, align 4, !tbaa !9
   %cmp8 = icmp sgt i32 %y, 0, !dbg !13
   br i1 %cmp8, label %for.body.preheader, label %for.end, !dbg !17
 
@@ -29,9 +29,9 @@ for.body:                                         ; preds = %for.body.preheader,
   br i1 %cmp1, label %if.then2, label %for.inc, !dbg !21
 
 if.then2:                                         ; preds = %for.body
-  %0 = load i32, i32* @g, align 4, !dbg !22, !tbaa !9
+  %0 = load i32, ptr @g, align 4, !dbg !22, !tbaa !9
   %inc = add nsw i32 %0, 1, !dbg !22
-  store i32 %inc, i32* @g, align 4, !dbg !22, !tbaa !9
+  store i32 %inc, ptr @g, align 4, !dbg !22, !tbaa !9
   br label %for.inc, !dbg !23
 
 for.inc:                                          ; preds = %for.body, %if.then2

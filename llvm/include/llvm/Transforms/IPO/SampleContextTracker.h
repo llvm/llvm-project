@@ -17,8 +17,10 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 #include "llvm/ProfileData/SampleProf.h"
 #include <map>
+#include <queue>
 #include <vector>
 
 namespace llvm {
@@ -44,21 +46,17 @@ public:
   ContextTrieNode *getOrCreateChildContext(const LineLocation &CallSite,
                                            StringRef ChildName,
                                            bool AllowCreate = true);
-
-  ContextTrieNode &moveToChildContext(const LineLocation &CallSite,
-                                      ContextTrieNode &&NodeToMove,
-                                      uint32_t ContextFramesToRemove,
-                                      bool DeleteNode = true);
   void removeChildContext(const LineLocation &CallSite, StringRef ChildName);
   std::map<uint64_t, ContextTrieNode> &getAllChildContext();
   StringRef getFuncName() const;
   FunctionSamples *getFunctionSamples() const;
   void setFunctionSamples(FunctionSamples *FSamples);
-  Optional<uint32_t> getFunctionSize() const;
+  std::optional<uint32_t> getFunctionSize() const;
   void addFunctionSize(uint32_t FSize);
   LineLocation getCallSiteLoc() const;
   ContextTrieNode *getParentContext() const;
   void setParentContext(ContextTrieNode *Parent);
+  void setCallSiteLoc(const LineLocation &Loc);
   void dumpNode();
   void dumpTree();
 
@@ -76,7 +74,7 @@ private:
   FunctionSamples *FuncSamples;
 
   // Function size for current context
-  Optional<uint32_t> FuncSize;
+  std::optional<uint32_t> FuncSize;
 
   // Callsite location in parent context
   LineLocation CallSiteLoc;
@@ -91,22 +89,13 @@ private:
 // calling context and the context is identified by path from root to the node.
 class SampleContextTracker {
 public:
-  struct ProfileComparer {
-    bool operator()(FunctionSamples *A, FunctionSamples *B) const {
-      // Sort function profiles by the number of total samples and their
-      // contexts.
-      if (A->getTotalSamples() == B->getTotalSamples())
-        return A->getContext() < B->getContext();
-      return A->getTotalSamples() > B->getTotalSamples();
-    }
-  };
+  using ContextSamplesTy = std::vector<FunctionSamples *>;
 
-  // Keep profiles of a function sorted so that they will be processed/promoted
-  // deterministically.
-  using ContextSamplesTy = std::set<FunctionSamples *, ProfileComparer>;
-
+  SampleContextTracker() = default;
   SampleContextTracker(SampleProfileMap &Profiles,
                        const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap);
+  // Populate the FuncToCtxtProfiles map after the trie is built.
+  void populateFuncToCtxtMap();
   // Query context profile for a specific callee with given name at a given
   // call-site. The full context is identified by location of call instruction.
   FunctionSamples *getCalleeContextSamplesFor(const CallBase &Inst,
@@ -122,6 +111,8 @@ public:
   // Get all context profile for given function.
   ContextSamplesTy &getAllContextSamplesFor(const Function &Func);
   ContextSamplesTy &getAllContextSamplesFor(StringRef Name);
+  ContextTrieNode *getOrCreateContextPath(const SampleContext &Context,
+                                          bool AllowCreate);
   // Query base profile for a given function. A base profile is a merged view
   // of all context profiles for contexts that are not inlined.
   FunctionSamples *getBaseSamplesFor(const Function &Func,
@@ -139,6 +130,59 @@ public:
   ContextTrieNode &getRootContext();
   void promoteMergeContextSamplesTree(const Instruction &Inst,
                                       StringRef CalleeName);
+
+  // Create a merged conext-less profile map.
+  void createContextLessProfileMap(SampleProfileMap &ContextLessProfiles);
+  ContextTrieNode *
+  getContextNodeForProfile(const FunctionSamples *FSamples) const {
+    auto I = ProfileToNodeMap.find(FSamples);
+    if (I == ProfileToNodeMap.end())
+      return nullptr;
+    return I->second;
+  }
+  StringMap<ContextSamplesTy> &getFuncToCtxtProfiles() {
+    return FuncToCtxtProfiles;
+  }
+
+  class Iterator : public llvm::iterator_facade_base<
+                       Iterator, std::forward_iterator_tag, ContextTrieNode *,
+                       std::ptrdiff_t, ContextTrieNode **, ContextTrieNode *> {
+    std::queue<ContextTrieNode *> NodeQueue;
+
+  public:
+    explicit Iterator() = default;
+    explicit Iterator(ContextTrieNode *Node) { NodeQueue.push(Node); }
+    Iterator &operator++() {
+      assert(!NodeQueue.empty() && "Iterator already at the end");
+      ContextTrieNode *Node = NodeQueue.front();
+      NodeQueue.pop();
+      for (auto &It : Node->getAllChildContext())
+        NodeQueue.push(&It.second);
+      return *this;
+    }
+
+    bool operator==(const Iterator &Other) const {
+      if (NodeQueue.empty() && Other.NodeQueue.empty())
+        return true;
+      if (NodeQueue.empty() || Other.NodeQueue.empty())
+        return false;
+      return NodeQueue.front() == Other.NodeQueue.front();
+    }
+
+    ContextTrieNode *operator*() const {
+      assert(!NodeQueue.empty() && "Invalid access to end iterator");
+      return NodeQueue.front();
+    }
+  };
+
+  Iterator begin() { return Iterator(&RootContext); }
+  Iterator end() { return Iterator(); }
+
+#ifndef NDEBUG
+  // Get a context string from root to current node.
+  std::string getContextString(const FunctionSamples &FSamples) const;
+  std::string getContextString(ContextTrieNode *Node) const;
+#endif
   // Dump the internal context profile trie.
   void dump();
 
@@ -146,20 +190,25 @@ private:
   ContextTrieNode *getContextFor(const DILocation *DIL);
   ContextTrieNode *getCalleeContextFor(const DILocation *DIL,
                                        StringRef CalleeName);
-  ContextTrieNode *getOrCreateContextPath(const SampleContext &Context,
-                                          bool AllowCreate);
   ContextTrieNode *getTopLevelContextNode(StringRef FName);
   ContextTrieNode &addTopLevelContextNode(StringRef FName);
   ContextTrieNode &promoteMergeContextSamplesTree(ContextTrieNode &NodeToPromo);
-  void mergeContextNode(ContextTrieNode &FromNode, ContextTrieNode &ToNode,
-                        uint32_t ContextFramesToRemove);
+  void mergeContextNode(ContextTrieNode &FromNode, ContextTrieNode &ToNode);
   ContextTrieNode &
   promoteMergeContextSamplesTree(ContextTrieNode &FromNode,
-                                 ContextTrieNode &ToNodeParent,
-                                 uint32_t ContextFramesToRemove);
-
+                                 ContextTrieNode &ToNodeParent);
+  ContextTrieNode &moveContextSamples(ContextTrieNode &ToNodeParent,
+                                      const LineLocation &CallSite,
+                                      ContextTrieNode &&NodeToMove);
+  void setContextNode(const FunctionSamples *FSample, ContextTrieNode *Node) {
+    ProfileToNodeMap[FSample] = Node;
+  }
   // Map from function name to context profiles (excluding base profile)
   StringMap<ContextSamplesTy> FuncToCtxtProfiles;
+
+  // Map from current FunctionSample to the belonged context trie.
+  std::unordered_map<const FunctionSamples *, ContextTrieNode *>
+      ProfileToNodeMap;
 
   // Map from function guid to real function names. Only used in md5 mode.
   const DenseMap<uint64_t, StringRef> *GUIDToFuncNameMap;

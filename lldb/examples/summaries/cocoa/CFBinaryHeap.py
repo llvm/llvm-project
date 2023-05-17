@@ -13,11 +13,6 @@ import lldb.runtime.objc.objc_runtime
 import lldb.formatters.metrics
 import lldb.formatters.Logger
 
-try:
-    basestring
-except NameError:
-    basestring = str
-
 statistics = lldb.formatters.metrics.Metrics()
 statistics.add_metric('invalid_isa')
 statistics.add_metric('invalid_pointer')
@@ -148,7 +143,7 @@ def CFBinaryHeap_SummaryProvider(valobj, dict):
         #  the mask needs to be changed)
         if summary is None:
             summary = '<variable is not CFBinaryHeap>'
-        elif isinstance(summary, basestring):
+        elif isinstance(summary, str):
             pass
         else:
             if provider.sys_params.is_64_bit:

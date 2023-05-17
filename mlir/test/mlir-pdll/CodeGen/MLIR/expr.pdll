@@ -115,6 +115,26 @@ Pattern TupleMemberAccessName {
 // -----
 
 //===----------------------------------------------------------------------===//
+// RangeExpr
+//===----------------------------------------------------------------------===//
+
+// CHECK: pdl.pattern @RangeExpr
+// CHECK: %[[ARG:.*]] = operand
+// CHECK: %[[ARGS:.*]] = operands
+// CHECK: %[[TYPE:.*]] = type
+// CHECK: %[[TYPES:.*]] = types
+// CHECK:   range : !pdl.range<value>
+// CHECK:   range %[[ARG]], %[[ARGS]] : !pdl.value, !pdl.range<value>
+// CHECK:   range : !pdl.range<type>
+// CHECK:   range %[[TYPE]], %[[TYPES]] : !pdl.type, !pdl.range<type>
+Pattern RangeExpr {
+  replace op<>(arg: Value, args: ValueRange) -> (type: Type, types: TypeRange)
+    with op<test.op>((), (arg, args)) -> ((), (type, types));
+}
+
+// -----
+
+//===----------------------------------------------------------------------===//
 // TypeExpr
 //===----------------------------------------------------------------------===//
 

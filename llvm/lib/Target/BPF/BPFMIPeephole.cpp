@@ -99,7 +99,7 @@ bool BPFMIPeephole::isCopyFrom32Def(MachineInstr *CopyMI)
   // Most likely, this physical register is aliased to
   // function call return value or current function parameters.
   Register Reg = opnd.getReg();
-  if (!Register::isVirtualRegister(Reg))
+  if (!Reg.isVirtual())
     return false;
 
   if (MRI->getRegClass(Reg) == &BPF::GPRRegClass)
@@ -124,9 +124,8 @@ bool BPFMIPeephole::isPhiFrom32Def(MachineInstr *PhiMI)
     if (!PhiDef)
       return false;
     if (PhiDef->isPHI()) {
-      if (PhiInsns.find(PhiDef) != PhiInsns.end())
+      if (!PhiInsns.insert(PhiDef).second)
         return false;
-      PhiInsns.insert(PhiDef);
       if (!isPhiFrom32Def(PhiDef))
         return false;
     }
@@ -144,9 +143,8 @@ bool BPFMIPeephole::isInsnFrom32Def(MachineInstr *DefInsn)
     return false;
 
   if (DefInsn->isPHI()) {
-    if (PhiInsns.find(DefInsn) != PhiInsns.end())
+    if (!PhiInsns.insert(DefInsn).second)
       return false;
-    PhiInsns.insert(DefInsn);
     if (!isPhiFrom32Def(DefInsn))
       return false;
   } else if (DefInsn->getOpcode() == BPF::COPY) {

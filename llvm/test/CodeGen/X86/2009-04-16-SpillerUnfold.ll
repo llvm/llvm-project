@@ -7,9 +7,9 @@
 
 	%struct.SHA512_CTX = type { [8 x i64], i64, i64, %struct.anon, i32, i32 }
 	%struct.anon = type { [16 x i64] }
-@K512 = external constant [80 x i64], align 32		; <[80 x i64]*> [#uses=2]
+@K512 = external constant [80 x i64], align 32		; <ptr> [#uses=2]
 
-define fastcc void @sha512_block_data_order(%struct.SHA512_CTX* nocapture %ctx, i8* nocapture %in, i64 %num) nounwind ssp {
+define fastcc void @sha512_block_data_order(ptr nocapture %ctx, ptr nocapture %in, i64 %num) nounwind ssp {
 entry:
 	br label %bb349
 
@@ -47,7 +47,7 @@ bb349:		; preds = %bb349, %entry
 	%23 = add i32 0, 12		; <i32> [#uses=1]
 	%24 = and i32 %23, 12		; <i32> [#uses=1]
 	%25 = zext i32 %24 to i64		; <i64> [#uses=1]
-	%26 = getelementptr [16 x i64], [16 x i64]* null, i64 0, i64 %25		; <i64*> [#uses=0]
+	%26 = getelementptr [16 x i64], ptr null, i64 0, i64 %25		; <ptr> [#uses=0]
 	%27 = add i64 0, %e.0489		; <i64> [#uses=1]
 	%28 = add i64 %27, 0		; <i64> [#uses=1]
 	%29 = add i64 %28, 0		; <i64> [#uses=1]
@@ -67,12 +67,12 @@ bb349:		; preds = %bb349, %entry
 	%43 = or i32 0, 6		; <i32> [#uses=1]
 	%44 = and i32 %43, 14		; <i32> [#uses=1]
 	%45 = zext i32 %44 to i64		; <i64> [#uses=1]
-	%46 = getelementptr [16 x i64], [16 x i64]* null, i64 0, i64 %45		; <i64*> [#uses=1]
+	%46 = getelementptr [16 x i64], ptr null, i64 0, i64 %45		; <ptr> [#uses=1]
 	%not417 = xor i64 %42, -1		; <i64> [#uses=1]
 	%47 = and i64 %20, %not417		; <i64> [#uses=1]
 	%48 = xor i64 0, %47		; <i64> [#uses=1]
-	%49 = getelementptr [80 x i64], [80 x i64]* @K512, i64 0, i64 0		; <i64*> [#uses=1]
-	%50 = load i64, i64* %49, align 8		; <i64> [#uses=1]
+	%49 = getelementptr [80 x i64], ptr @K512, i64 0, i64 0		; <ptr> [#uses=1]
+	%50 = load i64, ptr %49, align 8		; <i64> [#uses=1]
 	%51 = add i64 %48, 0		; <i64> [#uses=1]
 	%52 = add i64 %51, 0		; <i64> [#uses=1]
 	%53 = add i64 %52, 0		; <i64> [#uses=1]
@@ -87,13 +87,13 @@ bb349:		; preds = %bb349, %entry
 	%60 = or i32 0, 7		; <i32> [#uses=1]
 	%61 = and i32 %60, 15		; <i32> [#uses=1]
 	%62 = zext i32 %61 to i64		; <i64> [#uses=1]
-	%63 = getelementptr [16 x i64], [16 x i64]* null, i64 0, i64 %62		; <i64*> [#uses=2]
-	%64 = load i64, i64* null, align 8		; <i64> [#uses=1]
+	%63 = getelementptr [16 x i64], ptr null, i64 0, i64 %62		; <ptr> [#uses=2]
+	%64 = load i64, ptr null, align 8		; <i64> [#uses=1]
 	%65 = lshr i64 %64, 6		; <i64> [#uses=1]
 	%66 = xor i64 0, %65		; <i64> [#uses=1]
 	%67 = xor i64 %66, 0		; <i64> [#uses=1]
-	%68 = load i64, i64* %46, align 8		; <i64> [#uses=1]
-	%69 = load i64, i64* null, align 8		; <i64> [#uses=1]
+	%68 = load i64, ptr %46, align 8		; <i64> [#uses=1]
+	%69 = load i64, ptr null, align 8		; <i64> [#uses=1]
 	%70 = add i64 %68, 0		; <i64> [#uses=1]
 	%71 = add i64 %70, %67		; <i64> [#uses=1]
 	%72 = add i64 %71, %69		; <i64> [#uses=1]
@@ -105,8 +105,8 @@ bb349:		; preds = %bb349, %entry
 	%not429 = xor i64 %57, -1		; <i64> [#uses=1]
 	%76 = and i64 %33, %not429		; <i64> [#uses=1]
 	%77 = xor i64 %75, %76		; <i64> [#uses=1]
-	%78 = getelementptr [80 x i64], [80 x i64]* @K512, i64 0, i64 0		; <i64*> [#uses=1]
-	%79 = load i64, i64* %78, align 16		; <i64> [#uses=1]
+	%78 = getelementptr [80 x i64], ptr @K512, i64 0, i64 0		; <ptr> [#uses=1]
+	%79 = load i64, ptr %78, align 16		; <i64> [#uses=1]
 	%80 = add i64 %77, %20		; <i64> [#uses=1]
 	%81 = add i64 %80, %72		; <i64> [#uses=1]
 	%82 = add i64 %81, %74		; <i64> [#uses=1]
@@ -119,18 +119,18 @@ bb349:		; preds = %bb349, %entry
 	%87 = add i64 0, %85		; <i64> [#uses=1]
 	%asmtmp435 = call i64 asm "rorq $1,$0", "=r,J,0,~{dirflag},~{fpsr},~{flags},~{cc}"(i32 8, i64 0) nounwind		; <i64> [#uses=1]
 	%88 = xor i64 0, %asmtmp435		; <i64> [#uses=1]
-	%89 = load i64, i64* null, align 8		; <i64> [#uses=3]
+	%89 = load i64, ptr null, align 8		; <i64> [#uses=3]
 	%asmtmp436 = call i64 asm "rorq $1,$0", "=r,J,0,~{dirflag},~{fpsr},~{flags},~{cc}"(i32 19, i64 %89) nounwind		; <i64> [#uses=1]
 	%asmtmp437 = call i64 asm "rorq $1,$0", "=r,J,0,~{dirflag},~{fpsr},~{flags},~{cc}"(i32 61, i64 %89) nounwind		; <i64> [#uses=1]
 	%90 = lshr i64 %89, 6		; <i64> [#uses=1]
 	%91 = xor i64 %asmtmp436, %90		; <i64> [#uses=1]
 	%92 = xor i64 %91, %asmtmp437		; <i64> [#uses=1]
-	%93 = load i64, i64* %63, align 8		; <i64> [#uses=1]
-	%94 = load i64, i64* null, align 8		; <i64> [#uses=1]
+	%93 = load i64, ptr %63, align 8		; <i64> [#uses=1]
+	%94 = load i64, ptr null, align 8		; <i64> [#uses=1]
 	%95 = add i64 %93, %88		; <i64> [#uses=1]
 	%96 = add i64 %95, %92		; <i64> [#uses=1]
 	%97 = add i64 %96, %94		; <i64> [#uses=2]
-	store i64 %97, i64* %63, align 8
+	store i64 %97, ptr %63, align 8
 	%98 = and i64 %86, %57		; <i64> [#uses=1]
 	%not441 = xor i64 %86, -1		; <i64> [#uses=1]
 	%99 = and i64 %42, %not441		; <i64> [#uses=1]

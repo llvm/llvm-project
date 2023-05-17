@@ -111,13 +111,13 @@ public:
   /// elements.
   bool containsPoisonElement() const;
 
+  /// Return true if this is a vector constant that includes any strictly undef
+  /// (not poison) elements.
+  bool containsUndefElement() const;
+
   /// Return true if this is a fixed width vector constant that includes
   /// any constant expressions.
   bool containsConstantExpression() const;
-
-  /// Return true if evaluation of this constant could trap. This is true for
-  /// things like constant expressions that could divide by zero.
-  bool canTrap() const;
 
   /// Return true if the value can vary between threads.
   bool isThreadDependent() const;

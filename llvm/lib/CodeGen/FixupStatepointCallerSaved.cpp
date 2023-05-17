@@ -153,12 +153,17 @@ static Register performCopyPropagation(Register Reg,
   RI = ++MachineBasicBlock::iterator(Def);
   IsKill = DestSrc->Source->isKill();
 
-  // There are no uses of original register between COPY and STATEPOINT.
-  // There can't be any after STATEPOINT, so we can eliminate Def.
   if (!Use) {
+    // There are no uses of original register between COPY and STATEPOINT.
+    // There can't be any after STATEPOINT, so we can eliminate Def.
     LLVM_DEBUG(dbgs() << "spillRegisters: removing dead copy " << *Def);
     Def->eraseFromParent();
+  } else if (IsKill) {
+    // COPY will remain in place, spill will be inserted *after* it, so it is
+    // not a kill of source anymore.
+    const_cast<MachineOperand *>(DestSrc->Source)->setIsKill(false);
   }
+
   return SrcReg;
 }
 
@@ -383,7 +388,7 @@ public:
       Register Reg = MO.getReg();
       assert(Reg.isPhysical() && "Only physical regs are expected");
 
-      if (isCalleeSaved(Reg) && (AllowGCPtrInCSR || !is_contained(GCRegs, Reg)))
+      if (isCalleeSaved(Reg) && (AllowGCPtrInCSR || !GCRegs.contains(Reg)))
         continue;
 
       LLVM_DEBUG(dbgs() << "Will spill " << printReg(Reg, &TRI) << " at index "
@@ -417,7 +422,7 @@ public:
 
       LLVM_DEBUG(dbgs() << "Insert spill before " << *InsertBefore);
       TII.storeRegToStackSlot(*MI.getParent(), InsertBefore, Reg, IsKill, FI,
-                              RC, &TRI);
+                              RC, &TRI, Register());
     }
   }
 
@@ -426,7 +431,7 @@ public:
     const TargetRegisterClass *RC = TRI.getMinimalPhysRegClass(Reg);
     int FI = RegToSlotIdx[Reg];
     if (It != MBB->end()) {
-      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
+      TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
       return;
     }
 
@@ -434,7 +439,7 @@ public:
     // and then swap them.
     assert(!MBB->empty() && "Empty block");
     --It;
-    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI);
+    TII.loadRegFromStackSlot(*MBB, It, Reg, FI, RC, &TRI, Register());
     MachineInstr *Reload = It->getPrevNode();
     int Dummy = 0;
     (void)Dummy;

@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TsanThreadLeakTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         oslist=["linux"],
         bugnumber="non-core functionality, need to reenable and fix later (DES 2014.11.07)")

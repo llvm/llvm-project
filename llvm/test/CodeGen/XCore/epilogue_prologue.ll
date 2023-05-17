@@ -173,14 +173,13 @@ entry:
 ; CHECK-NEXT: ldaw sp, sp[65535]
 ; CHECK-NEXT: ldaw sp, sp[65535]
 ; CHECK-NEXT: retsp 3399
-declare void @f5(i32*)
+declare void @f5(ptr)
 define i32 @f6(i32 %i) {
 entry:
   %0 = alloca [200000 x i32]
-  %1 = getelementptr inbounds [200000 x i32], [200000 x i32]* %0, i32 0, i32 0
-  call void @f5(i32* %1)
-  %2 = getelementptr inbounds [200000 x i32], [200000 x i32]* %0, i32 0, i32 199999
-  call void @f5(i32* %2)
+  call void @f5(ptr %0)
+  %1 = getelementptr inbounds [200000 x i32], ptr %0, i32 0, i32 199999
+  call void @f5(ptr %1)
   ret i32 %i
 }
 
@@ -207,8 +206,8 @@ entry:
 define void @f8() nounwind {
 entry:
   %0 = alloca [256 x i32]
-  %1 = getelementptr inbounds [256 x i32], [256 x i32]* %0, i32 0, i32 253
-  call void @f5(i32* %1)
+  %1 = getelementptr inbounds [256 x i32], ptr %0, i32 0, i32 253
+  call void @f5(ptr %1)
   ret void
 }
 
@@ -235,7 +234,7 @@ entry:
 define void @f9() nounwind {
 entry:
   %0 = alloca [32768 x i32]
-  %1 = getelementptr inbounds [32768 x i32], [32768 x i32]* %0, i32 0, i32 32765
-  call void @f5(i32* %1)
+  %1 = getelementptr inbounds [32768 x i32], ptr %0, i32 0, i32 32765
+  call void @f5(ptr %1)
   ret void
 }

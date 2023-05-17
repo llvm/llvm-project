@@ -30,6 +30,7 @@
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -73,7 +74,8 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
                           BasicBlock *OriginalLoopLatchExit,
                           BasicBlock *PreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
-                          LoopInfo *LI, bool PreserveLCSSA) {
+                          LoopInfo *LI, bool PreserveLCSSA,
+                          ScalarEvolution &SE) {
   // Loop structure should be the following:
   // Preheader
   //  PrologHeader
@@ -133,6 +135,7 @@ static void ConnectProlog(Loop *L, Value *BECount, unsigned Count,
         PN.setIncomingValueForBlock(NewPreHeader, NewPN);
       else
         PN.addIncoming(NewPN, PrologExit);
+      SE.forgetValue(&PN);
     }
   }
 
@@ -191,7 +194,8 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
                           BasicBlock *Exit, BasicBlock *PreHeader,
                           BasicBlock *EpilogPreHeader, BasicBlock *NewPreHeader,
                           ValueToValueMapTy &VMap, DominatorTree *DT,
-                          LoopInfo *LI, bool PreserveLCSSA)  {
+                          LoopInfo *LI, bool PreserveLCSSA,
+                          ScalarEvolution &SE) {
   BasicBlock *Latch = L->getLoopLatch();
   assert(Latch && "Loop must have a latch");
   BasicBlock *EpilogLatch = cast<BasicBlock>(VMap[Latch]);
@@ -214,7 +218,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
   for (PHINode &PN : NewExit->phis()) {
     // PN should be used in another PHI located in Exit block as
     // Exit was split by SplitBlockPredecessors into Exit and NewExit
-    // Basicaly it should look like:
+    // Basically it should look like:
     // NewExit:
     //   PN = PHI [I, Latch]
     // ...
@@ -232,6 +236,7 @@ static void ConnectEpilog(Loop *L, Value *ModVal, BasicBlock *NewExit,
 
     // Add incoming PreHeader from branch around the Loop
     PN.addIncoming(UndefValue::get(PN.getType()), PreHeader);
+    SE.forgetValue(&PN);
 
     Value *V = PN.getIncomingValueForBlock(Latch);
     Instruction *I = dyn_cast<Instruction>(V);
@@ -395,10 +400,10 @@ CloneLoopBlocks(Loop *L, Value *NewIter, const bool UseEpilogRemainder,
   if (UnrollRemainder)
     return NewLoop;
 
-  Optional<MDNode *> NewLoopID = makeFollowupLoopID(
+  std::optional<MDNode *> NewLoopID = makeFollowupLoopID(
       LoopID, {LLVMLoopUnrollFollowupAll, LLVMLoopUnrollFollowupRemainder});
-  if (NewLoopID.hasValue()) {
-    NewLoop->setLoopID(NewLoopID.getValue());
+  if (NewLoopID) {
+    NewLoop->setLoopID(*NewLoopID);
 
     // Do not setLoopAlreadyUnrolled if loop attributes have been defined
     // explicitly.
@@ -467,7 +472,7 @@ static void updateLatchBranchWeightsForRemainderLoop(Loop *OrigLoop,
   uint64_t TrueWeight, FalseWeight;
   BranchInst *LatchBR =
       cast<BranchInst>(OrigLoop->getLoopLatch()->getTerminator());
-  if (!LatchBR->extractProfMetadata(TrueWeight, FalseWeight))
+  if (!extractBranchWeights(*LatchBR, TrueWeight, FalseWeight))
     return;
   uint64_t ExitWeight = LatchBR->getSuccessor(0) == OrigLoop->getHeader()
                             ? FalseWeight
@@ -807,10 +812,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     updateLatchBranchWeightsForRemainderLoop(L, remainderLoop, Count);
 
   // Insert the cloned blocks into the function.
-  F->getBasicBlockList().splice(InsertBot->getIterator(),
-                                F->getBasicBlockList(),
-                                NewBlocks[0]->getIterator(),
-                                F->end());
+  F->splice(InsertBot->getIterator(), F, NewBlocks[0]->getIterator(), F->end());
 
   // Now the loop blocks are cloned and the other exiting blocks from the
   // remainder are connected to the original Loop's exit blocks. The remaining
@@ -900,9 +902,8 @@ bool llvm::UnrollRuntimeLoopRemainder(
   if (UseEpilogRemainder) {
     // Connect the epilog code to the original loop and update the
     // PHI functions.
-    ConnectEpilog(L, ModVal, NewExit, LatchExit, PreHeader,
-                  EpilogPreHeader, NewPreHeader, VMap, DT, LI,
-                  PreserveLCSSA);
+    ConnectEpilog(L, ModVal, NewExit, LatchExit, PreHeader, EpilogPreHeader,
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE);
 
     // Update counter in loop for unrolling.
     // Use an incrementing IV.  Pre-incr/post-incr is backedge/trip count.
@@ -926,7 +927,7 @@ bool llvm::UnrollRuntimeLoopRemainder(
     // Connect the prolog code to the original loop and update the
     // PHI functions.
     ConnectProlog(L, BECount, Count, PrologExit, LatchExit, PreHeader,
-                  NewPreHeader, VMap, DT, LI, PreserveLCSSA);
+                  NewPreHeader, VMap, DT, LI, PreserveLCSSA, *SE);
   }
 
   // If this loop is nested, then the loop unroller changes the code in the any

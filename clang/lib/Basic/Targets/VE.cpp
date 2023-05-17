@@ -18,9 +18,9 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info VETargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsVE.def"
 };
 
@@ -38,9 +38,14 @@ void VETargetInfo::getTargetDefines(const LangOptions &Opts,
   // FIXME: define __FAST_MATH__ 1 if -ffast-math is enabled
   // FIXME: define __OPTIMIZE__ n if -On is enabled
   // FIXME: define __VECTOR__ n 1 if automatic vectorization is enabled
+
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_1");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_2");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_4");
+  Builder.defineMacro("__GCC_HAVE_SYNC_COMPARE_AND_SWAP_8");
 }
 
 ArrayRef<Builtin::Info> VETargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo,
-                            clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo,
+                        clang::VE::LastTSBuiltin - Builtin::FirstTSBuiltin);
 }

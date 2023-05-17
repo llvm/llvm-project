@@ -75,6 +75,14 @@ void OptionValueArray::DumpValue(const ExecutionContext *exe_ctx, Stream &strm,
   }
 }
 
+llvm::json::Value OptionValueArray::ToJSON(const ExecutionContext *exe_ctx) {
+  llvm::json::Array json_array;
+  const uint32_t size = m_values.size();
+  for (uint32_t i = 0; i < size; ++i)
+    json_array.emplace_back(m_values[i]->ToJSON(exe_ctx));
+  return json_array;
+}
+
 Status OptionValueArray::SetValueFromString(llvm::StringRef value,
                                             VarSetOperationType op) {
   Args args(value.str());
@@ -86,8 +94,7 @@ Status OptionValueArray::SetValueFromString(llvm::StringRef value,
 
 lldb::OptionValueSP
 OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx,
-                              llvm::StringRef name, bool will_modify,
-                              Status &error) const {
+                              llvm::StringRef name, Status &error) const {
   if (name.empty() || name.front() != '[') {
     error.SetErrorStringWithFormat(
       "invalid value path '%s', %s values only support '[<index>]' subvalues "
@@ -121,8 +128,7 @@ OptionValueArray::GetSubValue(const ExecutionContext *exe_ctx,
   if (new_idx < array_count) {
     if (m_values[new_idx]) {
       if (!sub_value.empty())
-        return m_values[new_idx]->GetSubValue(exe_ctx, sub_value,
-                                              will_modify, error);
+        return m_values[new_idx]->GetSubValue(exe_ctx, sub_value, error);
       else
         return m_values[new_idx];
     }
@@ -147,9 +153,9 @@ size_t OptionValueArray::GetArgs(Args &args) const {
   args.Clear();
   const uint32_t size = m_values.size();
   for (uint32_t i = 0; i < size; ++i) {
-    llvm::StringRef string_value = m_values[i]->GetStringValue();
-    if (!string_value.empty())
-      args.AppendArgument(string_value);
+    auto string_value = m_values[i]->GetValueAs<llvm::StringRef>();
+    if (string_value)
+      args.AppendArgument(*string_value);
   }
 
   return args.GetArgumentCount();
@@ -218,7 +224,7 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
         if (num_remove_indexes) {
           // Sort and then erase in reverse so indexes are always valid
           if (num_remove_indexes > 1) {
-            llvm::sort(remove_indexes.begin(), remove_indexes.end());
+            llvm::sort(remove_indexes);
             for (std::vector<int>::const_reverse_iterator
                      pos = remove_indexes.rbegin(),
                      end = remove_indexes.rend();
@@ -279,7 +285,7 @@ Status OptionValueArray::SetArgs(const Args &args, VarSetOperationType op) {
   case eVarSetOperationAssign:
     m_values.clear();
     // Fall through to append case
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case eVarSetOperationAppend:
     for (size_t i = 0; i < argc; ++i) {
       lldb::OptionValueSP value_sp(CreateValueFromCStringForTypeMask(

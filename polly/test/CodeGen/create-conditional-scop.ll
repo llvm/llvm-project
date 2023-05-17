@@ -18,8 +18,8 @@ for.body7.single_entry.single_entry:              ; preds = %for.inc02, %entry
 
 while.body:                                       ; preds = %while.body, %for.body7.single_entry.single_entry
   %indvar35 = phi i32 [ %0, %while.body ], [ 0, %for.body7.single_entry.single_entry ]
-  %ptr = getelementptr [1536 x float], [1536 x float]* @A, i64 0, i32 %indvar35
-  store float undef, float* %ptr
+  %ptr = getelementptr [1536 x float], ptr @A, i64 0, i32 %indvar35
+  store float undef, ptr %ptr
   %0 = add i32 %indvar35, 1
   %exitcond2 = icmp eq i32 %0, 42
   br i1 %exitcond2, label %for.inc02, label %while.body

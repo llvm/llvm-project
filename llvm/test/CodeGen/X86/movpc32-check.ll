@@ -6,7 +6,7 @@ target triple = "i686-pc-linux"
 ; Function Attrs: nounwind
 define void @test() #0 !dbg !4 {
 entry:
-  call void bitcast (void (...)* @bar to void ()*)(), !dbg !11
+  call void @bar(), !dbg !11
   ret void, !dbg !12
 }
 

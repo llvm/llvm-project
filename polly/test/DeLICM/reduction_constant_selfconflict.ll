@@ -11,7 +11,7 @@
 ;      }
 ;    }
 ;
-define void @func(double* noalias nonnull %A) {
+define void @func(ptr noalias nonnull %A) {
 entry:
   br label %outer.preheader
 
@@ -31,14 +31,14 @@ outer.for:
       %i = phi i32 [0, %reduction.preheader], [%i.inc, %reduction.inc]
       %phi = phi double [0.0, %reduction.preheader], [%add, %reduction.inc]
       %i.cmp = icmp slt i32 %i, 4
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
       br i1 %i.cmp, label %body, label %reduction.exit
 
 
 
         body:
           %add = fadd double %phi, 4.2
-          store double %add, double* %A_idx
+          store double %add, ptr %A_idx
           br label %reduction.inc
 
 
@@ -48,7 +48,7 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      store double %phi, double* %A_idx
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 

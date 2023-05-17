@@ -1,5 +1,0 @@
-set(LLVM_TARGET_DEFINITIONS ArithmeticOps.td)
-mlir_tablegen(ArithmeticOpsEnums.h.inc -gen-enum-decls)
-mlir_tablegen(ArithmeticOpsEnums.cpp.inc -gen-enum-defs)
-add_mlir_dialect(ArithmeticOps arith)
-add_mlir_doc(ArithmeticOps ArithmeticOps Dialects/ -gen-dialect-doc)

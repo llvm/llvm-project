@@ -24,7 +24,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Errno.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Mutex.h"
 #include "llvm/Support/Path.h"
@@ -206,7 +205,7 @@ PerfJITEventListener::PerfJITEventListener()
 
   Dumpstream = std::make_unique<raw_fd_ostream>(DumpFd, true);
 
-  LLVMPerfJitHeader Header = {0};
+  LLVMPerfJitHeader Header = {0, 0, 0, 0, 0, 0, 0, 0};
   if (!FillMachine(Header))
     return;
 
@@ -418,7 +417,7 @@ void PerfJITEventListener::NotifyCode(Expected<llvm::StringRef> &Symbol,
   rec.Prefix.Timestamp = perf_get_timestamp();
 
   rec.CodeSize = CodeSize;
-  rec.Vma = 0;
+  rec.Vma = CodeAddr;
   rec.CodeAddr = CodeAddr;
   rec.Pid = Pid;
   rec.Tid = get_threadid();
@@ -488,15 +487,14 @@ void PerfJITEventListener::NotifyDebug(uint64_t CodeAddr,
   }
 }
 
-// There should be only a single event listener per process, otherwise perf gets
-// confused.
-llvm::ManagedStatic<PerfJITEventListener> PerfListener;
-
 } // end anonymous namespace
 
 namespace llvm {
 JITEventListener *JITEventListener::createPerfJITEventListener() {
-  return &*PerfListener;
+  // There should be only a single event listener per process, otherwise perf
+  // gets confused.
+  static PerfJITEventListener PerfListener;
+  return &PerfListener;
 }
 
 } // namespace llvm

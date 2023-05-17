@@ -6,12 +6,12 @@
 ; WhileLoopStart
 
 @arr_183 = external dso_local local_unnamed_addr global [20 x [23 x [19 x i8]]], align 1
-define i32 @a(i8 zeroext %b, [3 x i8]* nocapture readonly %c, [3 x i32]* nocapture readonly %d) {
+define i32 @a(i8 zeroext %b, ptr nocapture readonly %c, ptr nocapture readonly %d) {
 ; CHECK-LABEL: a:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r7, lr}
 ; CHECK-NEXT:    push {r4, r5, r7, lr}
-; CHECK-NEXT:    cmp r0, #1
+; CHECK-NEXT:    cmp r0, #2
 ; CHECK-NEXT:    bls.w .LBB0_12
 ; CHECK-NEXT:  @ %bb.1: @ %for.body.us.preheader
 ; CHECK-NEXT:    movw r5, :lower16:arr_183
@@ -189,177 +189,177 @@ define i32 @a(i8 zeroext %b, [3 x i8]* nocapture readonly %c, [3 x i32]* nocaptu
 ; CHECK-NEXT:    letp lr, .LBB0_24
 ; CHECK-NEXT:    b .LBB0_14
 entry:
-  %cmp = icmp ugt i8 %b, 1
+  %cmp = icmp ugt i8 %b, 2  ; avoid following BB optimizing away through the domination
   br i1 %cmp, label %for.body.us.preheader, label %for.cond.preheader
 
 for.cond.preheader:                               ; preds = %entry
   %cmp43 = icmp ugt i8 %b, 1
-  %arrayidx6 = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 1
-  %arrayidx12 = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 1
+  %arrayidx6 = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 1
+  %arrayidx12 = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 1
   %cmp43.1 = icmp ugt i8 %b, 1
-  %arrayidx6.1 = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 1
-  %arrayidx12.1 = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 1
+  %arrayidx6.1 = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 1
+  %arrayidx12.1 = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 1
   %cmp43.2 = icmp ugt i8 %b, 1
-  %arrayidx6.2 = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 1
-  %arrayidx12.2 = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 1
+  %arrayidx6.2 = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 1
+  %arrayidx12.2 = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 1
   %cmp43.3 = icmp ugt i8 %b, 1
-  %arrayidx6.3 = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 1
-  %arrayidx12.3 = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 1
+  %arrayidx6.3 = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 1
+  %arrayidx12.3 = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 1
   br label %for.cond
 
 for.body.us.preheader:                            ; preds = %entry
-  %arrayidx6.us.1 = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 1
-  %arrayidx12.us.1 = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 1
-  %arrayidx6.us.2 = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 1
-  %arrayidx12.us.2 = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 1
-  %arrayidx6.us.3 = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 1
-  %arrayidx12.us.3 = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 1
+  %arrayidx6.us.1 = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 1
+  %arrayidx12.us.1 = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 1
+  %arrayidx6.us.2 = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 1
+  %arrayidx12.us.2 = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 1
+  %arrayidx6.us.3 = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 1
+  %arrayidx12.us.3 = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 1
   br label %for.body.us
 
 for.cond:                                         ; preds = %for.cond.backedge.3, %for.cond.preheader
   br i1 %cmp43, label %for.body.lr.ph, label %for.cond.backedge
 
 for.body.lr.ph:                                   ; preds = %for.cond
-  %0 = load i32, i32* %arrayidx6, align 4
+  %0 = load i32, ptr %arrayidx6, align 4
   %tobool7.not = icmp eq i32 %0, 0
   br i1 %tobool7.not, label %land.end, label %land.rhs
 
 for.body.us:                                      ; preds = %land.end.us.3, %for.body.us.preheader
   %conv44.us = phi i32 [ 0, %for.body.us.preheader ], [ 1, %land.end.us.3 ]
-  %arrayidx6.us = getelementptr inbounds [3 x i32], [3 x i32]* %d, i32 0, i32 %conv44.us
-  %1 = load i32, i32* %arrayidx6.us, align 4
+  %arrayidx6.us = getelementptr inbounds [3 x i32], ptr %d, i32 0, i32 %conv44.us
+  %1 = load i32, ptr %arrayidx6.us, align 4
   %tobool7.not.us = icmp eq i32 %1, 0
   br i1 %tobool7.not.us, label %land.end.us, label %land.rhs.us
 
 land.rhs.us:                                      ; preds = %for.body.us
-  %arrayidx12.us = getelementptr inbounds [3 x i8], [3 x i8]* %c, i32 0, i32 %conv44.us
-  %2 = load i8, i8* %arrayidx12.us, align 1
+  %arrayidx12.us = getelementptr inbounds [3 x i8], ptr %c, i32 0, i32 %conv44.us
+  %2 = load i8, ptr %arrayidx12.us, align 1
   %tobool13.us = zext i8 %2 to i32
   br label %land.end.us
 
 land.end.us:                                      ; preds = %land.rhs.us, %for.body.us
   %3 = phi i32 [ 0, %for.body.us ], [ %tobool13.us, %land.rhs.us ]
-  %scevgep45 = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 %conv44.us, i32 %3
+  %scevgep45 = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 %conv44.us, i32 %3
   %4 = sub nuw nsw i32 108, %3
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep45, i8 0, i32 %4, i1 false)
-  %5 = load i32, i32* %arrayidx6.us.1, align 4
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep45, i8 0, i32 %4, i1 false)
+  %5 = load i32, ptr %arrayidx6.us.1, align 4
   %tobool7.not.us.1 = icmp eq i32 %5, 0
   br i1 %tobool7.not.us.1, label %land.end.us.1, label %land.rhs.us.1
 
 land.rhs:                                         ; preds = %for.body.lr.ph
-  %6 = load i8, i8* %arrayidx12, align 1
+  %6 = load i8, ptr %arrayidx12, align 1
   %tobool13 = zext i8 %6 to i32
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %for.body.lr.ph
   %7 = phi i32 [ 0, %for.body.lr.ph ], [ %tobool13, %land.rhs ]
-  %scevgep = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 1, i32 %7
+  %scevgep = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 1, i32 %7
   %8 = sub nuw nsw i32 108, %7
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep, i8 0, i32 %8, i1 false)
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep, i8 0, i32 %8, i1 false)
   br label %for.cond.backedge
 
 for.cond.backedge:                                ; preds = %land.end, %for.cond
   br i1 %cmp43.1, label %for.body.lr.ph.1, label %for.cond.backedge.1
 
 for.body.lr.ph.1:                                 ; preds = %for.cond.backedge
-  %9 = load i32, i32* %arrayidx6.1, align 4
+  %9 = load i32, ptr %arrayidx6.1, align 4
   %tobool7.not.1 = icmp eq i32 %9, 0
   br i1 %tobool7.not.1, label %land.end.1, label %land.rhs.1
 
 land.rhs.1:                                       ; preds = %for.body.lr.ph.1
-  %10 = load i8, i8* %arrayidx12.1, align 1
+  %10 = load i8, ptr %arrayidx12.1, align 1
   %tobool13.1 = zext i8 %10 to i32
   br label %land.end.1
 
 land.end.1:                                       ; preds = %land.rhs.1, %for.body.lr.ph.1
   %11 = phi i32 [ 0, %for.body.lr.ph.1 ], [ %tobool13.1, %land.rhs.1 ]
-  %scevgep.1 = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 1, i32 %11
+  %scevgep.1 = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 1, i32 %11
   %12 = sub nuw nsw i32 108, %11
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep.1, i8 0, i32 %12, i1 false)
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep.1, i8 0, i32 %12, i1 false)
   br label %for.cond.backedge.1
 
 for.cond.backedge.1:                              ; preds = %land.end.1, %for.cond.backedge
   br i1 %cmp43.2, label %for.body.lr.ph.2, label %for.cond.backedge.2
 
 for.body.lr.ph.2:                                 ; preds = %for.cond.backedge.1
-  %13 = load i32, i32* %arrayidx6.2, align 4
+  %13 = load i32, ptr %arrayidx6.2, align 4
   %tobool7.not.2 = icmp eq i32 %13, 0
   br i1 %tobool7.not.2, label %land.end.2, label %land.rhs.2
 
 land.rhs.2:                                       ; preds = %for.body.lr.ph.2
-  %14 = load i8, i8* %arrayidx12.2, align 1
+  %14 = load i8, ptr %arrayidx12.2, align 1
   %tobool13.2 = zext i8 %14 to i32
   br label %land.end.2
 
 land.end.2:                                       ; preds = %land.rhs.2, %for.body.lr.ph.2
   %15 = phi i32 [ 0, %for.body.lr.ph.2 ], [ %tobool13.2, %land.rhs.2 ]
-  %scevgep.2 = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 1, i32 %15
+  %scevgep.2 = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 1, i32 %15
   %16 = sub nuw nsw i32 108, %15
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep.2, i8 0, i32 %16, i1 false)
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep.2, i8 0, i32 %16, i1 false)
   br label %for.cond.backedge.2
 
 for.cond.backedge.2:                              ; preds = %land.end.2, %for.cond.backedge.1
   br i1 %cmp43.3, label %for.body.lr.ph.3, label %for.cond.backedge.3
 
 for.body.lr.ph.3:                                 ; preds = %for.cond.backedge.2
-  %17 = load i32, i32* %arrayidx6.3, align 4
+  %17 = load i32, ptr %arrayidx6.3, align 4
   %tobool7.not.3 = icmp eq i32 %17, 0
   br i1 %tobool7.not.3, label %land.end.3, label %land.rhs.3
 
 land.rhs.3:                                       ; preds = %for.body.lr.ph.3
-  %18 = load i8, i8* %arrayidx12.3, align 1
+  %18 = load i8, ptr %arrayidx12.3, align 1
   %tobool13.3 = zext i8 %18 to i32
   br label %land.end.3
 
 land.end.3:                                       ; preds = %land.rhs.3, %for.body.lr.ph.3
   %19 = phi i32 [ 0, %for.body.lr.ph.3 ], [ %tobool13.3, %land.rhs.3 ]
-  %scevgep.3 = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 1, i32 %19
+  %scevgep.3 = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 1, i32 %19
   %20 = sub nuw nsw i32 108, %19
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep.3, i8 0, i32 %20, i1 false)
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep.3, i8 0, i32 %20, i1 false)
   br label %for.cond.backedge.3
 
 for.cond.backedge.3:                              ; preds = %land.end.3, %for.cond.backedge.2
   br label %for.cond
 
 land.rhs.us.1:                                    ; preds = %land.end.us
-  %21 = load i8, i8* %arrayidx12.us.1, align 1
+  %21 = load i8, ptr %arrayidx12.us.1, align 1
   %tobool13.us.1 = zext i8 %21 to i32
   br label %land.end.us.1
 
 land.end.us.1:                                    ; preds = %land.rhs.us.1, %land.end.us
   %22 = phi i32 [ 0, %land.end.us ], [ %tobool13.us.1, %land.rhs.us.1 ]
-  %scevgep45.1 = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 1, i32 %22
+  %scevgep45.1 = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 1, i32 %22
   %23 = sub nuw nsw i32 108, %22
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep45.1, i8 0, i32 %23, i1 false)
-  %24 = load i32, i32* %arrayidx6.us.2, align 4
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep45.1, i8 0, i32 %23, i1 false)
+  %24 = load i32, ptr %arrayidx6.us.2, align 4
   %tobool7.not.us.2 = icmp eq i32 %24, 0
   br i1 %tobool7.not.us.2, label %land.end.us.2, label %land.rhs.us.2
 
 land.rhs.us.2:                                    ; preds = %land.end.us.1
-  %25 = load i8, i8* %arrayidx12.us.2, align 1
+  %25 = load i8, ptr %arrayidx12.us.2, align 1
   %tobool13.us.2 = zext i8 %25 to i32
   br label %land.end.us.2
 
 land.end.us.2:                                    ; preds = %land.rhs.us.2, %land.end.us.1
   %26 = phi i32 [ 0, %land.end.us.1 ], [ %tobool13.us.2, %land.rhs.us.2 ]
-  %scevgep45.2 = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 1, i32 %26
+  %scevgep45.2 = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 1, i32 %26
   %27 = sub nuw nsw i32 108, %26
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep45.2, i8 0, i32 %27, i1 false)
-  %28 = load i32, i32* %arrayidx6.us.3, align 4
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep45.2, i8 0, i32 %27, i1 false)
+  %28 = load i32, ptr %arrayidx6.us.3, align 4
   %tobool7.not.us.3 = icmp eq i32 %28, 0
   br i1 %tobool7.not.us.3, label %land.end.us.3, label %land.rhs.us.3
 
 land.rhs.us.3:                                    ; preds = %land.end.us.2
-  %29 = load i8, i8* %arrayidx12.us.3, align 1
+  %29 = load i8, ptr %arrayidx12.us.3, align 1
   %tobool13.us.3 = zext i8 %29 to i32
   br label %land.end.us.3
 
 land.end.us.3:                                    ; preds = %land.rhs.us.3, %land.end.us.2
   %30 = phi i32 [ 0, %land.end.us.2 ], [ %tobool13.us.3, %land.rhs.us.3 ]
-  %scevgep45.3 = getelementptr [20 x [23 x [19 x i8]]], [20 x [23 x [19 x i8]]]* @arr_183, i32 0, i32 0, i32 1, i32 %30
+  %scevgep45.3 = getelementptr [20 x [23 x [19 x i8]]], ptr @arr_183, i32 0, i32 0, i32 1, i32 %30
   %31 = sub nuw nsw i32 108, %30
-  call void @llvm.memset.p0i8.i32(i8* align 1 %scevgep45.3, i8 0, i32 %31, i1 false)
+  call void @llvm.memset.p0.i32(ptr align 1 %scevgep45.3, i8 0, i32 %31, i1 false)
   br label %for.body.us
 }
 
-declare void @llvm.memset.p0i8.i32(i8*, i8, i32, i1)
+declare void @llvm.memset.p0.i32(ptr, i8, i32, i1)

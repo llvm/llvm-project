@@ -15,7 +15,7 @@
 
 #pragma omp begin declare target device_type(nohost)
 
-namespace _OMP {
+namespace ompx {
 namespace impl {
 
 double getWTick();
@@ -52,14 +52,14 @@ double getWTick() {
 
 double getWTime() {
   unsigned long long nsecs;
-  asm("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
+  asm volatile("mov.u64  %0, %%globaltimer;" : "=l"(nsecs));
   return (double)nsecs * getWTick();
 }
 
 #pragma omp end declare variant
 
 } // namespace impl
-} // namespace _OMP
+} // namespace ompx
 
 /// Interfaces
 ///
@@ -76,9 +76,9 @@ int32_t __kmpc_cancel(IdentTy *, int32_t, int32_t) {
   return 0;
 }
 
-double omp_get_wtick(void) { return _OMP::impl::getWTick(); }
+double omp_get_wtick(void) { return ompx::impl::getWTick(); }
 
-double omp_get_wtime(void) { return _OMP::impl::getWTime(); }
+double omp_get_wtime(void) { return ompx::impl::getWTime(); }
 }
 
 ///}

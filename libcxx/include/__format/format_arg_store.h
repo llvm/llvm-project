@@ -14,17 +14,21 @@
 #  pragma GCC system_header
 #endif
 
+#include <__concepts/arithmetic.h>
+#include <__concepts/same_as.h>
 #include <__config>
 #include <__format/concepts.h>
 #include <__format/format_arg.h>
-#include <cstring>
+#include <__type_traits/conditional.h>
+#include <__type_traits/extent.h>
+#include <__type_traits/is_same.h>
+#include <__utility/forward.h>
 #include <string>
 #include <string_view>
-#include <type_traits>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace __format {
 
@@ -139,21 +143,24 @@ consteval __arg_t __determine_arg_t() {
 //
 // Note this version can't be constrained avoiding ambiguous overloads.
 // That means it can be instantiated by disabled formatters. To solve this, a
-// constrained version for not formattable formatters is added. That overload
-// is marked as deleted to fail creating a storage type for disabled formatters.
+// constrained version for not formattable formatters is added.
 template <class _Context, class _Tp>
 consteval __arg_t __determine_arg_t() {
   return __arg_t::__handle;
 }
 
+// The overload for not formattable types allows triggering the static
+// assertion below.
 template <class _Context, class _Tp>
   requires(!__formattable<_Tp, typename _Context::char_type>)
-consteval __arg_t __determine_arg_t() = delete;
+consteval __arg_t __determine_arg_t() {
+  return __arg_t::__none;
+}
 
 template <class _Context, class _Tp>
 _LIBCPP_HIDE_FROM_ABI basic_format_arg<_Context> __create_format_arg(_Tp&& __value) noexcept {
   constexpr __arg_t __arg = __determine_arg_t<_Context, remove_cvref_t<_Tp>>();
-  static_assert(__arg != __arg_t::__none);
+  static_assert(__arg != __arg_t::__none, "the supplied type is not formattable");
 
   // Not all types can be used to directly initialize the
   // __basic_format_arg_value.  First handle all types needing adjustment, the
@@ -195,7 +202,7 @@ _LIBCPP_HIDE_FROM_ABI void __create_packed_storage(uint64_t& __types, __basic_fo
   int __shift = 0;
   (
       [&] {
-        basic_format_arg<_Context> __arg = __create_format_arg<_Context>(_VSTD::forward<_Args>(__args));
+        basic_format_arg<_Context> __arg = __format::__create_format_arg<_Context>(__args);
         if (__shift != 0)
           __types |= static_cast<uint64_t>(__arg.__type_) << __shift;
         else
@@ -209,7 +216,7 @@ _LIBCPP_HIDE_FROM_ABI void __create_packed_storage(uint64_t& __types, __basic_fo
 
 template <class _Context, class... _Args>
 _LIBCPP_HIDE_FROM_ABI void __store_basic_format_arg(basic_format_arg<_Context>* __data, _Args&&... __args) noexcept {
-  ([&] { *__data++ = __create_format_arg<_Context>(_VSTD::forward<_Args>(__args)); }(), ...);
+  ([&] { *__data++ = __format::__create_format_arg<_Context>(__args); }(), ...);
 }
 
 template <class _Context, size_t N>
@@ -228,12 +235,12 @@ struct __unpacked_format_arg_store {
 template <class _Context, class... _Args>
 struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
   _LIBCPP_HIDE_FROM_ABI
-  __format_arg_store(_Args&&... __args) noexcept {
+  __format_arg_store(_Args&... __args) noexcept {
     if constexpr (sizeof...(_Args) != 0) {
       if constexpr (__format::__use_packed_format_arg_store(sizeof...(_Args)))
-        __format::__create_packed_storage(__storage.__types_, __storage.__values_, _VSTD::forward<_Args>(__args)...);
+        __format::__create_packed_storage(__storage.__types_, __storage.__values_, __args...);
       else
-        __format::__store_basic_format_arg<_Context>(__storage.__args_, _VSTD::forward<_Args>(__args)...);
+        __format::__store_basic_format_arg<_Context>(__storage.__args_, __args...);
     }
   }
 
@@ -244,7 +251,7 @@ struct _LIBCPP_TEMPLATE_VIS __format_arg_store {
   _Storage __storage;
 };
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

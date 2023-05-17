@@ -38,7 +38,11 @@ private:
 
   /// Stores and serializes information that will be put into the
   /// .debug_ranges DWARF section.
-  std::unique_ptr<DebugRangesSectionWriter> RangesSectionWriter;
+  std::unique_ptr<DebugRangesSectionWriter> LegacyRangesSectionWriter;
+
+  /// Stores and serializes information that will be put into the
+  /// .debug_rnglists DWARF section.
+  std::unique_ptr<DebugRangeListsSectionWriter> RangeListsSectionWriter;
 
   /// Stores and serializes information that will be put into the
   /// .debug_aranges DWARF section.
@@ -94,7 +98,7 @@ private:
                            DebugAbbrevWriter &AbbrevWriter,
                            DebugLocWriter &DebugLocWriter,
                            DebugRangesSectionWriter &RangesWriter,
-                           Optional<uint64_t> RangesBase = None);
+                           std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Patches the binary for an object's address ranges to be updated.
   /// The object can be anything that has associated address ranges via either
@@ -105,11 +109,10 @@ private:
   /// \p DIE is the object's DIE in the input binary.
   /// \p RangesBase if present, update \p DIE to use  DW_AT_GNU_ranges_base
   ///    attribute.
-  void updateDWARFObjectAddressRanges(const DWARFDie DIE,
-                                      uint64_t DebugRangesOffset,
-                                      SimpleBinaryPatcher &DebugInfoPatcher,
-                                      DebugAbbrevWriter &AbbrevWriter,
-                                      Optional<uint64_t> RangesBase = None);
+  void updateDWARFObjectAddressRanges(
+      const DWARFDie DIE, uint64_t DebugRangesOffset,
+      SimpleBinaryPatcher &DebugInfoPatcher, DebugAbbrevWriter &AbbrevWriter,
+      uint64_t LowPCToUse, std::optional<uint64_t> RangesBase = std::nullopt);
 
   std::unique_ptr<DebugBufferVector>
   makeFinalLocListsSection(DebugInfoBinaryPatcher &DebugInfoPatcher,
@@ -157,17 +160,19 @@ private:
 
   /// Convert \p Abbrev from using a simple DW_AT_(low|high)_pc range to
   /// DW_AT_ranges with optional \p RangesBase.
-  void convertToRangesPatchAbbrev(const DWARFUnit &Unit,
-                                  const DWARFAbbreviationDeclaration *Abbrev,
-                                  DebugAbbrevWriter &AbbrevWriter,
-                                  Optional<uint64_t> RangesBase = None);
+  void
+  convertToRangesPatchAbbrev(const DWARFUnit &Unit,
+                             const DWARFAbbreviationDeclaration *Abbrev,
+                             DebugAbbrevWriter &AbbrevWriter,
+                             std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Update \p DIE that was using DW_AT_(low|high)_pc with DW_AT_ranges offset.
   /// Updates to the DIE should be synced with abbreviation updates using the
   /// function above.
-  void convertToRangesPatchDebugInfo(DWARFDie DIE, uint64_t RangesSectionOffset,
-                                     SimpleBinaryPatcher &DebugInfoPatcher,
-                                     Optional<uint64_t> RangesBase = None);
+  void convertToRangesPatchDebugInfo(
+      DWARFDie DIE, uint64_t RangesSectionOffset,
+      SimpleBinaryPatcher &DebugInfoPatcher, uint64_t LowPCToUse,
+      std::optional<uint64_t> RangesBase = std::nullopt);
 
   /// Helper function for creating and returning per-DWO patchers/writers.
   template <class T, class Patcher>

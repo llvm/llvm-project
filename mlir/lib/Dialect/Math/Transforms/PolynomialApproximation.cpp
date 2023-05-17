@@ -14,7 +14,7 @@
 #include <climits>
 #include <cstddef>
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Math/IR/Math.h"
 #include "mlir/Dialect/Math/Transforms/Approximation.h"
 #include "mlir/Dialect/Math/Transforms/Passes.h"
@@ -40,7 +40,7 @@ using namespace mlir::vector;
 // Returns vector shape if the type is a vector. Returns an empty shape if it is
 // not a vector.
 static ArrayRef<int64_t> vectorShape(Type type) {
-  auto vectorType = type.dyn_cast<VectorType>();
+  auto vectorType = dyn_cast<VectorType>(type);
   return vectorType ? vectorType.getShape() : ArrayRef<int64_t>();
 }
 
@@ -54,14 +54,14 @@ static ArrayRef<int64_t> vectorShape(Value value) {
 
 // Broadcasts scalar type into vector type (iff shape is non-scalar).
 static Type broadcast(Type type, ArrayRef<int64_t> shape) {
-  assert(!type.isa<VectorType>() && "must be scalar type");
+  assert(!isa<VectorType>(type) && "must be scalar type");
   return !shape.empty() ? VectorType::get(shape, type) : type;
 }
 
 // Broadcasts scalar value into vector (iff shape is non-scalar).
 static Value broadcast(ImplicitLocOpBuilder &builder, Value value,
                        ArrayRef<int64_t> shape) {
-  assert(!value.getType().isa<VectorType>() && "must be scalar value");
+  assert(!isa<VectorType>(value.getType()) && "must be scalar value");
   auto type = broadcast(value.getType(), shape);
   return !shape.empty() ? builder.create<BroadcastOp>(type, value) : value;
 }
@@ -92,12 +92,12 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   assert(!operands.empty() && "operands must be not empty");
   assert(vectorWidth > 0 && "vector width must be larger than 0");
 
-  VectorType inputType = operands[0].getType().cast<VectorType>();
+  VectorType inputType = cast<VectorType>(operands[0].getType());
   ArrayRef<int64_t> inputShape = inputType.getShape();
 
   // If input shape matches target vector width, we can just call the
   // user-provided compute function with the operands.
-  if (inputShape == llvm::makeArrayRef(vectorWidth))
+  if (inputShape == llvm::ArrayRef(vectorWidth))
     return compute(operands);
 
   // Check if the inner dimension has to be expanded, or we can directly iterate
@@ -118,7 +118,7 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
     for (unsigned i = 0; i < operands.size(); ++i) {
       auto operand = operands[i];
-      auto eltType = operand.getType().cast<VectorType>().getElementType();
+      auto eltType = cast<VectorType>(operand.getType()).getElementType();
       auto expandedType = VectorType::get(expandedShape, eltType);
       expandedOperands[i] =
           builder.create<vector::ShapeCastOp>(expandedType, operand);
@@ -127,16 +127,14 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 
   // Iterate over all outer dimensions of the compute shape vector type.
   auto iterationDims = ArrayRef<int64_t>(expandedShape).drop_back();
-  int64_t maxLinearIndex = computeMaxLinearIndex(iterationDims);
-
-  SmallVector<int64_t> ones(iterationDims.size(), 1);
-  auto strides = computeStrides(iterationDims, ones);
+  int64_t maxIndex = computeMaxLinearIndex(iterationDims);
+  auto strides = computeStrides(iterationDims);
 
   // Compute results for each one dimensional vector.
-  SmallVector<Value> results(maxLinearIndex);
+  SmallVector<Value> results(maxIndex);
 
-  for (int64_t i = 0; i < maxLinearIndex; ++i) {
-    auto offsets = delinearize(strides, i);
+  for (int64_t i = 0; i < maxIndex; ++i) {
+    auto offsets = delinearize(i, strides);
 
     SmallVector<Value> extracted(expandedOperands.size());
     for (const auto &tuple : llvm::enumerate(expandedOperands))
@@ -147,14 +145,14 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
   }
 
   // Stitch results together into one large vector.
-  Type resultEltType = results[0].getType().cast<VectorType>().getElementType();
+  Type resultEltType = cast<VectorType>(results[0].getType()).getElementType();
   Type resultExpandedType = VectorType::get(expandedShape, resultEltType);
   Value result = builder.create<arith::ConstantOp>(
       resultExpandedType, builder.getZeroAttr(resultExpandedType));
 
-  for (int64_t i = 0; i < maxLinearIndex; ++i)
+  for (int64_t i = 0; i < maxIndex; ++i)
     result = builder.create<vector::InsertOp>(results[i], result,
-                                              delinearize(strides, i));
+                                              delinearize(i, strides));
 
   // Reshape back to the original vector shape.
   return builder.create<vector::ShapeCastOp>(
@@ -164,6 +162,14 @@ handleMultidimensionalVectors(ImplicitLocOpBuilder &builder,
 //----------------------------------------------------------------------------//
 // Helper functions to create constants.
 //----------------------------------------------------------------------------//
+
+static Value floatCst(ImplicitLocOpBuilder &builder, float value,
+                      Type elementType) {
+  assert((elementType.isF16() || elementType.isF32()) &&
+         "x must be f16 or f32 type.");
+  return builder.create<arith::ConstantOp>(
+      builder.getFloatAttr(elementType, value));
+}
 
 static Value f32Cst(ImplicitLocOpBuilder &builder, float value) {
   return builder.create<arith::ConstantOp>(builder.getF32FloatAttr(value));
@@ -232,7 +238,7 @@ static std::pair<Value, Value> frexp(ImplicitLocOpBuilder &builder, Value arg,
   Value normalizedFraction = builder.create<arith::BitcastOp>(f32Vec, tmp1);
 
   // Compute exponent.
-  Value arg0 = isPositive ? arg : builder.create<math::AbsOp>(arg);
+  Value arg0 = isPositive ? arg : builder.create<math::AbsFOp>(arg);
   Value biasedExponentBits = builder.create<arith::ShRUIOp>(
       builder.create<arith::BitcastOp>(i32Vec, arg0),
       bcast(i32Cst(builder, 23)));
@@ -270,11 +276,13 @@ static Value exp2I32(ImplicitLocOpBuilder &builder, Value arg) {
 namespace {
 Value makePolynomialCalculation(ImplicitLocOpBuilder &builder,
                                 llvm::ArrayRef<Value> coeffs, Value x) {
-  assert(getElementTypeOrSelf(x).isF32() && "x must be f32 type");
+  Type elementType = getElementTypeOrSelf(x);
+  assert((elementType.isF32() || elementType.isF16()) &&
+         "x must be f32 or f16 type");
   ArrayRef<int64_t> shape = vectorShape(x);
 
   if (coeffs.empty())
-    return broadcast(builder, f32Cst(builder, 0.0f), shape);
+    return broadcast(builder, floatCst(builder, 0.0f, elementType), shape);
 
   if (coeffs.size() == 1)
     return coeffs[0];
@@ -310,9 +318,9 @@ LogicalResult insertCasts(Operation *op, PatternRewriter &rewriter) {
 
   // Create F32 equivalent type.
   Type newType;
-  if (auto shaped = origType.dyn_cast<ShapedType>()) {
+  if (auto shaped = dyn_cast<ShapedType>(origType)) {
     newType = shaped.clone(rewriter.getF32Type());
-  } else if (origType.isa<FloatType>()) {
+  } else if (isa<FloatType>(origType)) {
     newType = rewriter.getF32Type();
   } else {
     return rewriter.notifyMatchFailure(op,
@@ -323,7 +331,8 @@ LogicalResult insertCasts(Operation *op, PatternRewriter &rewriter) {
   SmallVector<Value> operands;
   for (auto operand : op->getOperands())
     operands.push_back(rewriter.create<arith::ExtFOp>(loc, newType, operand));
-  auto result = rewriter.create<math::Atan2Op>(loc, newType, operands);
+  auto result =
+      rewriter.create<T>(loc, TypeRange{newType}, operands, op->getAttrs());
   rewriter.replaceOpWithNewOp<arith::TruncFOp>(op, origType, result);
   return success();
 }
@@ -375,7 +384,7 @@ AtanApproximation::matchAndRewrite(math::AtanOp op,
 
   // Remap the problem over [0.0, 1.0] by looking at the absolute value and the
   // handling symmetry.
-  Value abs = builder.create<math::AbsOp>(operand);
+  Value abs = builder.create<math::AbsFOp>(operand);
   Value reciprocal = builder.create<arith::DivFOp>(one, abs);
   Value compare =
       builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, abs, reciprocal);
@@ -507,7 +516,7 @@ TanhApproximation::matchAndRewrite(math::TanhOp op,
   // Mask for tiny values that are approximated with `operand`.
   Value tiny = bcast(f32Cst(builder, 0.0004f));
   Value tinyMask = builder.create<arith::CmpFOp>(
-      arith::CmpFPredicate::OLT, builder.create<math::AbsOp>(op.getOperand()),
+      arith::CmpFPredicate::OLT, builder.create<math::AbsFOp>(op.getOperand()),
       tiny);
 
   // The monomial coefficients of the numerator polynomial (odd).
@@ -771,10 +780,13 @@ Log1pApproximation::matchAndRewrite(math::Log1pOp op,
 LogicalResult
 ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
                                             PatternRewriter &rewriter) const {
-  if (!getElementTypeOrSelf(op.getOperand()).isF32())
-    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+  Value operand = op.getOperand();
+  Type elementType = getElementTypeOrSelf(operand);
 
-  ArrayRef<int64_t> shape = vectorShape(op.getOperand());
+  if (!(elementType.isF32() || elementType.isF16()))
+    return rewriter.notifyMatchFailure(op,
+                                       "only f32 and f16 type is supported.");
+  ArrayRef<int64_t> shape = vectorShape(operand);
 
   ImplicitLocOpBuilder builder(op->getLoc(), rewriter);
   auto bcast = [&](Value value) -> Value {
@@ -784,57 +796,56 @@ ErfPolynomialApproximation::matchAndRewrite(math::ErfOp op,
   const int intervalsCount = 3;
   const int polyDegree = 4;
 
-  Value zero = bcast(f32Cst(builder, 0));
-  Value one = bcast(f32Cst(builder, 1));
+  Value zero = bcast(floatCst(builder, 0, elementType));
+  Value one = bcast(floatCst(builder, 1, elementType));
   Value pp[intervalsCount][polyDegree + 1];
-  pp[0][0] = bcast(f32Cst(builder, +0.00000000000000000e+00f));
-  pp[0][1] = bcast(f32Cst(builder, +1.12837916222975858e+00f));
-  pp[0][2] = bcast(f32Cst(builder, -5.23018562988006470e-01f));
-  pp[0][3] = bcast(f32Cst(builder, +2.09741709609267072e-01f));
-  pp[0][4] = bcast(f32Cst(builder, +2.58146801602987875e-02f));
-  pp[1][0] = bcast(f32Cst(builder, +0.00000000000000000e+00f));
-  pp[1][1] = bcast(f32Cst(builder, +1.12750687816789140e+00f));
-  pp[1][2] = bcast(f32Cst(builder, -3.64721408487825775e-01f));
-  pp[1][3] = bcast(f32Cst(builder, +1.18407396425136952e-01f));
-  pp[1][4] = bcast(f32Cst(builder, +3.70645533056476558e-02f));
-  pp[2][0] = bcast(f32Cst(builder, -3.30093071049483172e-03f));
-  pp[2][1] = bcast(f32Cst(builder, +3.51961938357697011e-03f));
-  pp[2][2] = bcast(f32Cst(builder, -1.41373622814988039e-03f));
-  pp[2][3] = bcast(f32Cst(builder, +2.53447094961941348e-04f));
-  pp[2][4] = bcast(f32Cst(builder, -1.71048029455037401e-05f));
+  pp[0][0] = bcast(floatCst(builder, +0.00000000000000000e+00f, elementType));
+  pp[0][1] = bcast(floatCst(builder, +1.12837916222975858e+00f, elementType));
+  pp[0][2] = bcast(floatCst(builder, -5.23018562988006470e-01f, elementType));
+  pp[0][3] = bcast(floatCst(builder, +2.09741709609267072e-01f, elementType));
+  pp[0][4] = bcast(floatCst(builder, +2.58146801602987875e-02f, elementType));
+  pp[1][0] = bcast(floatCst(builder, +0.00000000000000000e+00f, elementType));
+  pp[1][1] = bcast(floatCst(builder, +1.12750687816789140e+00f, elementType));
+  pp[1][2] = bcast(floatCst(builder, -3.64721408487825775e-01f, elementType));
+  pp[1][3] = bcast(floatCst(builder, +1.18407396425136952e-01f, elementType));
+  pp[1][4] = bcast(floatCst(builder, +3.70645533056476558e-02f, elementType));
+  pp[2][0] = bcast(floatCst(builder, -3.30093071049483172e-03f, elementType));
+  pp[2][1] = bcast(floatCst(builder, +3.51961938357697011e-03f, elementType));
+  pp[2][2] = bcast(floatCst(builder, -1.41373622814988039e-03f, elementType));
+  pp[2][3] = bcast(floatCst(builder, +2.53447094961941348e-04f, elementType));
+  pp[2][4] = bcast(floatCst(builder, -1.71048029455037401e-05f, elementType));
 
   Value qq[intervalsCount][polyDegree + 1];
-  qq[0][0] = bcast(f32Cst(builder, +1.000000000000000000e+00f));
-  qq[0][1] = bcast(f32Cst(builder, -4.635138185962547255e-01f));
-  qq[0][2] = bcast(f32Cst(builder, +5.192301327279782447e-01f));
-  qq[0][3] = bcast(f32Cst(builder, -1.318089722204810087e-01f));
-  qq[0][4] = bcast(f32Cst(builder, +7.397964654672315005e-02f));
-  qq[1][0] = bcast(f32Cst(builder, +1.00000000000000000e+00f));
-  qq[1][1] = bcast(f32Cst(builder, -3.27607011824493086e-01f));
-  qq[1][2] = bcast(f32Cst(builder, +4.48369090658821977e-01f));
-  qq[1][3] = bcast(f32Cst(builder, -8.83462621207857930e-02f));
-  qq[1][4] = bcast(f32Cst(builder, +5.72442770283176093e-02f));
-  qq[2][0] = bcast(f32Cst(builder, +1.00000000000000000e+00f));
-  qq[2][1] = bcast(f32Cst(builder, -2.06069165953913769e+00f));
-  qq[2][2] = bcast(f32Cst(builder, +1.62705939945477759e+00f));
-  qq[2][3] = bcast(f32Cst(builder, -5.83389859211130017e-01f));
-  qq[2][4] = bcast(f32Cst(builder, +8.21908939856640930e-02f));
+  qq[0][0] = bcast(floatCst(builder, +1.000000000000000000e+00f, elementType));
+  qq[0][1] = bcast(floatCst(builder, -4.635138185962547255e-01f, elementType));
+  qq[0][2] = bcast(floatCst(builder, +5.192301327279782447e-01f, elementType));
+  qq[0][3] = bcast(floatCst(builder, -1.318089722204810087e-01f, elementType));
+  qq[0][4] = bcast(floatCst(builder, +7.397964654672315005e-02f, elementType));
+  qq[1][0] = bcast(floatCst(builder, +1.00000000000000000e+00f, elementType));
+  qq[1][1] = bcast(floatCst(builder, -3.27607011824493086e-01f, elementType));
+  qq[1][2] = bcast(floatCst(builder, +4.48369090658821977e-01f, elementType));
+  qq[1][3] = bcast(floatCst(builder, -8.83462621207857930e-02f, elementType));
+  qq[1][4] = bcast(floatCst(builder, +5.72442770283176093e-02f, elementType));
+  qq[2][0] = bcast(floatCst(builder, +1.00000000000000000e+00f, elementType));
+  qq[2][1] = bcast(floatCst(builder, -2.06069165953913769e+00f, elementType));
+  qq[2][2] = bcast(floatCst(builder, +1.62705939945477759e+00f, elementType));
+  qq[2][3] = bcast(floatCst(builder, -5.83389859211130017e-01f, elementType));
+  qq[2][4] = bcast(floatCst(builder, +8.21908939856640930e-02f, elementType));
 
   Value offsets[intervalsCount];
-  offsets[0] = bcast(f32Cst(builder, 0.0f));
-  offsets[1] = bcast(f32Cst(builder, 0.0f));
-  offsets[2] = bcast(f32Cst(builder, 1.0f));
+  offsets[0] = bcast(floatCst(builder, 0.0f, elementType));
+  offsets[1] = bcast(floatCst(builder, 0.0f, elementType));
+  offsets[2] = bcast(floatCst(builder, 1.0f, elementType));
 
   Value bounds[intervalsCount];
-  bounds[0] = bcast(f32Cst(builder, 0.8f));
-  bounds[1] = bcast(f32Cst(builder, 2.0f));
-  bounds[2] = bcast(f32Cst(builder, 3.75f));
+  bounds[0] = bcast(floatCst(builder, 0.8f, elementType));
+  bounds[1] = bcast(floatCst(builder, 2.0f, elementType));
+  bounds[2] = bcast(floatCst(builder, 3.75f, elementType));
 
-  Value isNegativeArg = builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT,
-                                                      op.getOperand(), zero);
-  Value negArg = builder.create<arith::NegFOp>(op.getOperand());
-  Value x =
-      builder.create<arith::SelectOp>(isNegativeArg, negArg, op.getOperand());
+  Value isNegativeArg =
+      builder.create<arith::CmpFOp>(arith::CmpFPredicate::OLT, operand, zero);
+  Value negArg = builder.create<arith::NegFOp>(operand);
+  Value x = builder.create<arith::SelectOp>(isNegativeArg, negArg, operand);
 
   Value offset = offsets[0];
   Value p[polyDegree + 1];
@@ -1203,6 +1214,99 @@ LogicalResult SinAndCosApproximation<isSine, OpTy>::matchAndRewrite(
 }
 
 //----------------------------------------------------------------------------//
+// Cbrt approximation.
+//----------------------------------------------------------------------------//
+
+namespace {
+struct CbrtApproximation : public OpRewritePattern<math::CbrtOp> {
+  using OpRewritePattern::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(math::CbrtOp op,
+                                PatternRewriter &rewriter) const final;
+};
+} // namespace
+
+// Estimation of cube-root using an algorithm defined in
+// Hacker's Delight 2nd Edition.
+LogicalResult
+CbrtApproximation::matchAndRewrite(math::CbrtOp op,
+                                   PatternRewriter &rewriter) const {
+  auto operand = op.getOperand();
+  if (!getElementTypeOrSelf(operand).isF32())
+    return rewriter.notifyMatchFailure(op, "unsupported operand type");
+
+  ImplicitLocOpBuilder b(op->getLoc(), rewriter);
+  ArrayRef<int64_t> shape = vectorShape(operand);
+
+  Type floatTy = getElementTypeOrSelf(operand.getType());
+  Type intTy = b.getIntegerType(floatTy.getIntOrFloatBitWidth());
+
+  // Convert to vector types if necessary.
+  floatTy = broadcast(floatTy, shape);
+  intTy = broadcast(intTy, shape);
+
+  auto bconst = [&](TypedAttr attr) -> Value {
+    Value value = b.create<arith::ConstantOp>(attr);
+    return broadcast(b, value, shape);
+  };
+
+  // Declare the initial values:
+  Value intTwo = bconst(b.getI32IntegerAttr(2));
+  Value intFour = bconst(b.getI32IntegerAttr(4));
+  Value intEight = bconst(b.getI32IntegerAttr(8));
+  Value intMagic = bconst(b.getI32IntegerAttr(0x2a5137a0));
+  Value fpThird = bconst(b.getF32FloatAttr(0.33333333f));
+  Value fpTwo = bconst(b.getF32FloatAttr(2.0f));
+  Value fpZero = bconst(b.getF32FloatAttr(0.0f));
+
+  // Compute an approximation of one third:
+  // union {int ix; float x;};
+  // x = x0;
+  // ix = ix/4 + ix/16;
+  Value absValue = b.create<math::AbsFOp>(operand);
+  Value intValue = b.create<arith::BitcastOp>(intTy, absValue);
+  Value divideBy4 = b.create<arith::ShRSIOp>(intValue, intTwo);
+  Value divideBy16 = b.create<arith::ShRSIOp>(intValue, intFour);
+  intValue = b.create<arith::AddIOp>(divideBy4, divideBy16);
+
+  // ix = ix + ix/16;
+  divideBy16 = b.create<arith::ShRSIOp>(intValue, intFour);
+  intValue = b.create<arith::AddIOp>(intValue, divideBy16);
+
+  // ix = ix + ix/256;
+  Value divideBy256 = b.create<arith::ShRSIOp>(intValue, intEight);
+  intValue = b.create<arith::AddIOp>(intValue, divideBy256);
+
+  // ix = 0x2a5137a0 + ix;
+  intValue = b.create<arith::AddIOp>(intValue, intMagic);
+
+  // Perform one newtons step:
+  // x = 0.33333333f*(2.0f*x + x0/(x*x));
+  Value floatValue = b.create<arith::BitcastOp>(floatTy, intValue);
+  Value squared = b.create<arith::MulFOp>(floatValue, floatValue);
+  Value mulTwo = b.create<arith::MulFOp>(floatValue, fpTwo);
+  Value divSquared = b.create<arith::DivFOp>(absValue, squared);
+  floatValue = b.create<arith::AddFOp>(mulTwo, divSquared);
+  floatValue = b.create<arith::MulFOp>(floatValue, fpThird);
+
+  // x = 0.33333333f*(2.0f*x + x0/(x*x));
+  squared = b.create<arith::MulFOp>(floatValue, floatValue);
+  mulTwo = b.create<arith::MulFOp>(floatValue, fpTwo);
+  divSquared = b.create<arith::DivFOp>(absValue, squared);
+  floatValue = b.create<arith::AddFOp>(mulTwo, divSquared);
+  floatValue = b.create<arith::MulFOp>(floatValue, fpThird);
+
+  // Check for zero and restore sign.
+  Value isZero =
+      b.create<arith::CmpFOp>(arith::CmpFPredicate::OEQ, absValue, fpZero);
+  floatValue = b.create<arith::SelectOp>(isZero, fpZero, floatValue);
+  floatValue = b.create<math::CopySignOp>(floatValue, operand);
+
+  rewriter.replaceOp(op, floatValue);
+  return success();
+}
+
+//----------------------------------------------------------------------------//
 // Rsqrt approximation.
 //----------------------------------------------------------------------------//
 
@@ -1278,13 +1382,24 @@ RsqrtApproximation::matchAndRewrite(math::RsqrtOp op,
 void mlir::populateMathPolynomialApproximationPatterns(
     RewritePatternSet &patterns,
     const MathPolynomialApproximationOptions &options) {
+  // Patterns for leveraging existing f32 lowerings on other data types.
+  patterns
+      .add<ReuseF32Expansion<math::AtanOp>, ReuseF32Expansion<math::Atan2Op>,
+           ReuseF32Expansion<math::TanhOp>, ReuseF32Expansion<math::LogOp>,
+           ReuseF32Expansion<math::Log2Op>, ReuseF32Expansion<math::Log1pOp>,
+           ReuseF32Expansion<math::ErfOp>, ReuseF32Expansion<math::ExpOp>,
+           ReuseF32Expansion<math::ExpM1Op>, ReuseF32Expansion<math::CbrtOp>,
+           ReuseF32Expansion<math::SinOp>, ReuseF32Expansion<math::CosOp>>(
+          patterns.getContext());
+
   patterns.add<AtanApproximation, Atan2Approximation, TanhApproximation,
                LogApproximation, Log2Approximation, Log1pApproximation,
                ErfPolynomialApproximation, ExpApproximation, ExpM1Approximation,
-               ReuseF32Expansion<math::Atan2Op>,
-               SinAndCosApproximation<true, math::SinOp>,
+               CbrtApproximation, SinAndCosApproximation<true, math::SinOp>,
                SinAndCosApproximation<false, math::CosOp>>(
       patterns.getContext());
-  if (options.enableAvx2)
-    patterns.add<RsqrtApproximation>(patterns.getContext());
+  if (options.enableAvx2) {
+    patterns.add<RsqrtApproximation, ReuseF32Expansion<math::RsqrtOp>>(
+        patterns.getContext());
+  }
 }

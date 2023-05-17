@@ -7,7 +7,7 @@ target triple = "thumbv7-apple-darwin"
 declare double @exp(double)
 
 ; CHECK: remat_subreg
-define void @remat_subreg(float* nocapture %x, i32* %y, i32 %n, i32 %z, float %c, float %lambda, float* nocapture %ret_f, float* nocapture %ret_df, i1 %cond) nounwind {
+define void @remat_subreg(ptr nocapture %x, ptr %y, i32 %n, i32 %z, float %c, float %lambda, ptr nocapture %ret_f, ptr nocapture %ret_df, i1 %cond) nounwind {
 entry:
   %conv16 = fpext float %lambda to double
   %mul17 = fmul double %conv16, -1.000000e+00
@@ -43,7 +43,7 @@ for.end:                                          ; preds = %cond.end
   %div129 = fdiv double %add103, %add88
   %add130 = fadd double %sub, %div129
   %conv131 = fptrunc double %add130 to float
-  store float %conv131, float* %ret_f, align 4
+  store float %conv131, ptr %ret_f, align 4
   %mul139 = fmul double %div129, %div129
   %div142 = fdiv double %add121, %add88
   %sub143 = fsub double %mul139, %div142
@@ -55,7 +55,7 @@ for.end:                                          ; preds = %cond.end
   %div148 = fdiv double 1.000000e+00, %conv147
   %sub149 = fsub double %sub143, %div148
   %conv150 = fptrunc double %sub149 to float
-  store float %conv150, float* %ret_df, align 4
+  store float %conv150, ptr %ret_df, align 4
   ret void
 }
 
@@ -76,7 +76,7 @@ if.then195:                                       ; preds = %if.then84
   %vecinit208 = insertelement <4 x float> %vecinit207, float 1.000000e+00, i32 2
   %vecinit209 = insertelement <4 x float> %vecinit208, float 1.000000e+00, i32 3
   %mul216 = fmul <4 x float> zeroinitializer, %vecinit209
-  store <4 x float> %mul216, <4 x float>* undef, align 16
+  store <4 x float> %mul216, ptr undef, align 16
   br label %if.end251
 
 if.end251:                                        ; preds = %if.then195, %if.then84, %entry

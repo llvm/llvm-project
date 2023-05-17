@@ -37,7 +37,7 @@ For example, consider this IR:
            br i1 %cond, label %B, label %C, !prof !0
        ; ...
    }
-   !0 = metadata !{metadata !"branch_weights", i32 7, i32 8}
+   !0 = !{!"branch_weights", i32 7, i32 8}
 
 and this simple graph representation::
 

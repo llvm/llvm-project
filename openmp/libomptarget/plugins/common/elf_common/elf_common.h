@@ -18,10 +18,10 @@
 
 /// Return non-zero, if the given \p image is an ELF object, which
 /// e_machine matches \p target_id; return zero otherwise.
-EXTERN int32_t elf_check_machine(__tgt_device_image *image, uint16_t target_id);
+EXTERN int32_t elf_check_machine(__tgt_device_image *Image, uint16_t TargetId);
 
 /// Return non-zero, if the given \p image is an ET_DYN ELF object;
 /// return zero otherwise.
-EXTERN int32_t elf_is_dynamic(__tgt_device_image *image);
+EXTERN int32_t elf_is_dynamic(__tgt_device_image *Image);
 
 #endif // LLVM_OPENMP_LIBOMPTARGET_PLUGINS_COMMON_ELF_COMMON_ELF_COMMON_H

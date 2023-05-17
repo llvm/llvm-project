@@ -37,11 +37,11 @@ static cl::opt<bool> RoundSectionSizes(
 } // end anonymous namespace
 
 static bool isMicroMips(const MCSubtargetInfo *STI) {
-  return STI->getFeatureBits()[Mips::FeatureMicroMips];
+  return STI->hasFeature(Mips::FeatureMicroMips);
 }
 
 static bool isMips32r6(const MCSubtargetInfo *STI) {
-  return STI->getFeatureBits()[Mips::FeatureMips32r6];
+  return STI->hasFeature(Mips::FeatureMips32r6);
 }
 
 MipsTargetStreamer::MipsTargetStreamer(MCStreamer &S)
@@ -899,9 +899,9 @@ void MipsTargetELFStreamer::finish() {
   MCSection &BSSSection = *OFI.getBSSSection();
   MCA.registerSection(BSSSection);
 
-  TextSection.setAlignment(Align(std::max(16u, TextSection.getAlignment())));
-  DataSection.setAlignment(Align(std::max(16u, DataSection.getAlignment())));
-  BSSSection.setAlignment(Align(std::max(16u, BSSSection.getAlignment())));
+  TextSection.ensureMinAlignment(Align(16));
+  DataSection.ensureMinAlignment(Align(16));
+  BSSSection.ensureMinAlignment(Align(16));
 
   if (RoundSectionSizes) {
     // Make sections sizes a multiple of the alignment. This is useful for
@@ -912,14 +912,12 @@ void MipsTargetELFStreamer::finish() {
     for (MCSection &S : MCA) {
       MCSectionELF &Section = static_cast<MCSectionELF &>(S);
 
-      unsigned Alignment = Section.getAlignment();
-      if (Alignment) {
-        OS.SwitchSection(&Section);
-        if (Section.useCodeAlign())
-          OS.emitCodeAlignment(Alignment, &STI, Alignment);
-        else
-          OS.emitValueToAlignment(Alignment, 0, 1, Alignment);
-      }
+      Align Alignment = Section.getAlign();
+      OS.switchSection(&Section);
+      if (Section.useCodeAlign())
+        OS.emitCodeAlignment(Alignment, &STI, Alignment.value());
+      else
+        OS.emitValueToAlignment(Alignment, 0, 1, Alignment.value());
     }
   }
 
@@ -1028,7 +1026,7 @@ void MipsTargetELFStreamer::emitDirectiveEnd(StringRef Name) {
 
   OS.pushSection();
 
-  OS.SwitchSection(Sec);
+  OS.switchSection(Sec);
 
   OS.emitValueImpl(ExprRef, 4);
 
@@ -1326,7 +1324,7 @@ void MipsTargetELFStreamer::emitMipsAbiFlags() {
       ".MIPS.abiflags", ELF::SHT_MIPS_ABIFLAGS, ELF::SHF_ALLOC, 24);
   MCA.registerSection(*Sec);
   Sec->setAlignment(Align(8));
-  OS.SwitchSection(Sec);
+  OS.switchSection(Sec);
 
   OS << ABIFlagsSection;
 }

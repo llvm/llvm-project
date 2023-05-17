@@ -21,8 +21,7 @@ static StructuredData::ObjectSP ParseJSONValue(json::Value &value);
 static StructuredData::ObjectSP ParseJSONObject(json::Object *object);
 static StructuredData::ObjectSP ParseJSONArray(json::Array *array);
 
-StructuredData::ObjectSP
-StructuredData::ParseJSON(const std::string &json_text) {
+StructuredData::ObjectSP StructuredData::ParseJSON(llvm::StringRef json_text) {
   llvm::Expected<json::Value> value = json::parse(json_text);
   if (!value) {
     llvm::consumeError(value.takeError());
@@ -50,6 +49,11 @@ StructuredData::ParseJSONFromFile(const FileSpec &input_spec, Status &error) {
   return StructuredData::ObjectSP();
 }
 
+bool StructuredData::IsRecordType(const ObjectSP object_sp) {
+  return object_sp->GetType() == lldb::eStructuredDataTypeArray ||
+         object_sp->GetType() == lldb::eStructuredDataTypeDictionary;
+}
+
 static StructuredData::ObjectSP ParseJSONValue(json::Value &value) {
   if (json::Object *O = value.getAsObject())
     return ParseJSONObject(O);
@@ -63,11 +67,17 @@ static StructuredData::ObjectSP ParseJSONValue(json::Value &value) {
   if (auto b = value.getAsBoolean())
     return std::make_shared<StructuredData::Boolean>(*b);
 
+  if (auto u = value.getAsUINT64())
+    return std::make_shared<StructuredData::Integer>(*u);
+
   if (auto i = value.getAsInteger())
     return std::make_shared<StructuredData::Integer>(*i);
 
   if (auto d = value.getAsNumber())
     return std::make_shared<StructuredData::Float>(*d);
+
+  if (auto n = value.getAsNull())
+    return std::make_shared<StructuredData::Null>();
 
   return StructuredData::ObjectSP();
 }
@@ -171,4 +181,99 @@ void StructuredData::Null::Serialize(json::OStream &s) const {
 
 void StructuredData::Generic::Serialize(json::OStream &s) const {
   s.value(llvm::formatv("{0:X}", m_object));
+}
+
+void StructuredData::Integer::GetDescription(lldb_private::Stream &s) const {
+  s.Printf("%" PRId64, static_cast<int64_t>(m_value));
+}
+
+void StructuredData::Float::GetDescription(lldb_private::Stream &s) const {
+  s.Printf("%f", m_value);
+}
+
+void StructuredData::Boolean::GetDescription(lldb_private::Stream &s) const {
+  s.Printf(m_value ? "True" : "False");
+}
+
+void StructuredData::String::GetDescription(lldb_private::Stream &s) const {
+  s.Printf("%s", m_value.empty() ? "\"\"" : m_value.c_str());
+}
+
+void StructuredData::Array::GetDescription(lldb_private::Stream &s) const {
+  size_t index = 0;
+  size_t indentation_level = s.GetIndentLevel();
+  for (const auto &item_sp : m_items) {
+    // Sanitize.
+    if (!item_sp)
+      continue;
+
+    // Reset original indentation level.
+    s.SetIndentLevel(indentation_level);
+    s.Indent();
+
+    // Print key
+    s.Printf("[%zu]:", index++);
+
+    // Return to new line and increase indentation if value is record type.
+    // Otherwise add spacing.
+    bool should_indent = IsRecordType(item_sp);
+    if (should_indent) {
+      s.EOL();
+      s.IndentMore();
+    } else {
+      s.PutChar(' ');
+    }
+
+    // Print value and new line if now last pair.
+    item_sp->GetDescription(s);
+    if (item_sp != *(--m_items.end()))
+      s.EOL();
+
+    // Reset indentation level if it was incremented previously.
+    if (should_indent)
+      s.IndentLess();
+  }
+}
+
+void StructuredData::Dictionary::GetDescription(lldb_private::Stream &s) const {
+  size_t indentation_level = s.GetIndentLevel();
+  for (const auto &pair : m_dict) {
+    // Sanitize.
+    if (pair.first.IsNull() || pair.first.IsEmpty() || !pair.second)
+      continue;
+
+    // Reset original indentation level.
+    s.SetIndentLevel(indentation_level);
+    s.Indent();
+
+    // Print key.
+    s.Printf("%s:", pair.first.AsCString());
+
+    // Return to new line and increase indentation if value is record type.
+    // Otherwise add spacing.
+    bool should_indent = IsRecordType(pair.second);
+    if (should_indent) {
+      s.EOL();
+      s.IndentMore();
+    } else {
+      s.PutChar(' ');
+    }
+
+    // Print value and new line if now last pair.
+    pair.second->GetDescription(s);
+    if (pair != *(--m_dict.end()))
+      s.EOL();
+
+    // Reset indentation level if it was incremented previously.
+    if (should_indent)
+      s.IndentLess();
+  }
+}
+
+void StructuredData::Null::GetDescription(lldb_private::Stream &s) const {
+  s.Printf("NULL");
+}
+
+void StructuredData::Generic::GetDescription(lldb_private::Stream &s) const {
+  s.Printf("%p", m_object);
 }

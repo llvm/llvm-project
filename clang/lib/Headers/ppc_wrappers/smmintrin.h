@@ -29,7 +29,8 @@
 #ifndef SMMINTRIN_H_
 #define SMMINTRIN_H_
 
-#if defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))
+#if defined(__powerpc64__) &&                                                  \
+    (defined(__linux__) || defined(__FreeBSD__) || defined(_AIX))
 
 #include <altivec.h>
 #include <tmmintrin.h>
@@ -304,9 +305,9 @@ extern __inline int
 extern __inline __m128i
     __attribute__((__gnu_inline__, __always_inline__, __artificial__))
     _mm_blend_epi16(__m128i __A, __m128i __B, const int __imm8) {
-  __v16qi __charmask = vec_splats((signed char)__imm8);
+  __v16qu __charmask = vec_splats((unsigned char)__imm8);
   __charmask = vec_gb(__charmask);
-  __v8hu __shortmask = (__v8hu)vec_unpackh(__charmask);
+  __v8hu __shortmask = (__v8hu)vec_unpackh((__v16qi)__charmask);
 #ifdef __BIG_ENDIAN__
   __shortmask = vec_reve(__shortmask);
 #endif
@@ -656,7 +657,7 @@ extern __inline __m128i
 
 #else
 #include_next <smmintrin.h>
-#endif /* defined(__ppc64__) && (defined(__linux__) || defined(__FreeBSD__))   \
-        */
+#endif /* defined(__powerpc64__) &&                                            \
+        *   (defined(__linux__) || defined(__FreeBSD__) || defined(_AIX)) */
 
 #endif /* SMMINTRIN_H_ */

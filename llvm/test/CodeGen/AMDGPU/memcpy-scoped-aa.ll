@@ -12,9 +12,9 @@
 ; MIR-DAG: ![[SET1:[0-9]+]] = !{![[SCOPE1]]}
 
 ; MIR-LABEL: name: test_memcpy
-; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-define i32 @test_memcpy(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
+; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+define i32 @test_memcpy(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy:
 ; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
@@ -22,21 +22,19 @@ define i32 @test_memcpy(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapt
 ; CHECK-DAG:    v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        global_store_dwordx4 v[0:1], [[PVAL]], off
 ; CHECK:        s_setpc_b64 s[30:31]
-  %p0 = bitcast i32 addrspace(1)* %p to i8 addrspace(1)*
-  %add.ptr = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 4
-  %p1 = bitcast i32 addrspace(1)* %add.ptr to i8 addrspace(1)*
-  tail call void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p0, i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p1, i64 16, i1 false), !alias.scope !2, !noalias !4
-  %v0 = load i32, i32 addrspace(1)* %q, align 4, !alias.scope !4, !noalias !2
-  %q1 = getelementptr inbounds i32, i32 addrspace(1)* %q, i64 1
-  %v1 = load i32, i32 addrspace(1)* %q1, align 4, !alias.scope !4, !noalias !2
+  %add.ptr = getelementptr inbounds i32, ptr addrspace(1) %p, i64 4
+  tail call void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p, ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %add.ptr, i64 16, i1 false), !alias.scope !2, !noalias !4
+  %v0 = load i32, ptr addrspace(1) %q, align 4, !alias.scope !4, !noalias !2
+  %q1 = getelementptr inbounds i32, ptr addrspace(1) %q, i64 1
+  %v1 = load i32, ptr addrspace(1) %q1, align 4, !alias.scope !4, !noalias !2
   %add = add i32 %v0, %v1
   ret i32 %add
 }
 
 ; MIR-LABEL: name: test_memcpy_inline
-; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-define i32 @test_memcpy_inline(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
+; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+define i32 @test_memcpy_inline(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memcpy on %p.
 ; CHECK-LABEL: test_memcpy_inline:
 ; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
@@ -44,21 +42,19 @@ define i32 @test_memcpy_inline(i32 addrspace(1)* nocapture %p, i32 addrspace(1)*
 ; CHECK-DAG:    v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        global_store_dwordx4 v[0:1], [[PVAL]], off
 ; CHECK:        s_setpc_b64 s[30:31]
-  %p0 = bitcast i32 addrspace(1)* %p to i8 addrspace(1)*
-  %add.ptr = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 4
-  %p1 = bitcast i32 addrspace(1)* %add.ptr to i8 addrspace(1)*
-  tail call void @llvm.memcpy.inline.p1i8.p1i8.i64(i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p0, i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p1, i64 16, i1 false), !alias.scope !2, !noalias !4
-  %v0 = load i32, i32 addrspace(1)* %q, align 4, !alias.scope !4, !noalias !2
-  %q1 = getelementptr inbounds i32, i32 addrspace(1)* %q, i64 1
-  %v1 = load i32, i32 addrspace(1)* %q1, align 4, !alias.scope !4, !noalias !2
+  %add.ptr = getelementptr inbounds i32, ptr addrspace(1) %p, i64 4
+  tail call void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p, ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %add.ptr, i64 16, i1 false), !alias.scope !2, !noalias !4
+  %v0 = load i32, ptr addrspace(1) %q, align 4, !alias.scope !4, !noalias !2
+  %q1 = getelementptr inbounds i32, ptr addrspace(1) %q, i64 1
+  %v1 = load i32, ptr addrspace(1) %q1, align 4, !alias.scope !4, !noalias !2
   %add = add i32 %v0, %v1
   ret i32 %add
 }
 
 ; MIR-LABEL: name: test_memmove
-; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.p1, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-define i32 @test_memmove(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
+; MIR: [[LOAD:%[0-9]+]]:vreg_128 = GLOBAL_LOAD_DWORDX4 %{{[0-9]+}}, 16, 0, implicit $exec :: (load (s128) from %ir.add.ptr, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+; MIR: GLOBAL_STORE_DWORDX4 %{{[0-9]+}}, killed [[LOAD]], 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+define i32 @test_memmove(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memmove on %p.
 ; CHECK-LABEL: test_memmove:
 ; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
@@ -66,20 +62,18 @@ define i32 @test_memmove(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocap
 ; CHECK-DAG:    v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        global_store_dwordx4 v[0:1], [[PVAL]]
 ; CHECK:        s_setpc_b64 s[30:31]
-  %p0 = bitcast i32 addrspace(1)* %p to i8 addrspace(1)*
-  %add.ptr = getelementptr inbounds i32, i32 addrspace(1)* %p, i64 4
-  %p1 = bitcast i32 addrspace(1)* %add.ptr to i8 addrspace(1)*
-  tail call void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p0, i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p1, i64 16, i1 false), !alias.scope !2, !noalias !4
-  %v0 = load i32, i32 addrspace(1)* %q, align 4, !alias.scope !4, !noalias !2
-  %q1 = getelementptr inbounds i32, i32 addrspace(1)* %q, i64 1
-  %v1 = load i32, i32 addrspace(1)* %q1, align 4, !alias.scope !4, !noalias !2
+  %add.ptr = getelementptr inbounds i32, ptr addrspace(1) %p, i64 4
+  tail call void @llvm.memmove.p1.p1.i64(ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p, ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %add.ptr, i64 16, i1 false), !alias.scope !2, !noalias !4
+  %v0 = load i32, ptr addrspace(1) %q, align 4, !alias.scope !4, !noalias !2
+  %q1 = getelementptr inbounds i32, ptr addrspace(1) %q, i64 1
+  %v1 = load i32, ptr addrspace(1) %q1, align 4, !alias.scope !4, !noalias !2
   %add = add i32 %v0, %v1
   ret i32 %add
 }
 
 ; MIR-LABEL: name: test_memset
-; MIR: GLOBAL_STORE_DWORDX4 killed %{{[0-9]+}}, killed %{{[0-9]+}}, 0, 0, implicit $exec :: (store (s128) into %ir.p0, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
-define i32 @test_memset(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapture readonly %q) {
+; MIR: GLOBAL_STORE_DWORDX4 killed %{{[0-9]+}}, killed %{{[0-9]+}}, 0, 0, implicit $exec :: (store (s128) into %ir.p, align 4, !alias.scope ![[SET0]], !noalias ![[SET1]], addrspace 1)
+define i32 @test_memset(ptr addrspace(1) nocapture %p, ptr addrspace(1) nocapture readonly %q) {
 ; Check loads of %q are scheduled ahead of that store of the memset on %p.
 ; CHECK-LABEL: test_memset:
 ; CHECK-DAG:    global_load_dwordx2 v[[[Q0:[0-9]+]]:[[Q1:[0-9]+]]], v[2:3], off
@@ -87,19 +81,18 @@ define i32 @test_memset(i32 addrspace(1)* nocapture %p, i32 addrspace(1)* nocapt
 ; CHECK:        global_store_dwordx4 v[0:1], v[[[PVAL]]{{:[0-9]+\]}}, off
 ; CHECK:        v_add_nc_u32_e32 v{{[0-9]+}}, v[[Q0]], v[[Q1]]
 ; CHECK:        s_setpc_b64 s[30:31]
-  %p0 = bitcast i32 addrspace(1)* %p to i8 addrspace(1)*
-  tail call void @llvm.memset.p1i8.i64(i8 addrspace(1)* noundef nonnull align 4 dereferenceable(16) %p0, i8 170, i64 16, i1 false), !alias.scope !2, !noalias !4
-  %v0 = load i32, i32 addrspace(1)* %q, align 4, !alias.scope !4, !noalias !2
-  %q1 = getelementptr inbounds i32, i32 addrspace(1)* %q, i64 1
-  %v1 = load i32, i32 addrspace(1)* %q1, align 4, !alias.scope !4, !noalias !2
+  tail call void @llvm.memset.p1.i64(ptr addrspace(1) noundef nonnull align 4 dereferenceable(16) %p, i8 170, i64 16, i1 false), !alias.scope !2, !noalias !4
+  %v0 = load i32, ptr addrspace(1) %q, align 4, !alias.scope !4, !noalias !2
+  %q1 = getelementptr inbounds i32, ptr addrspace(1) %q, i64 1
+  %v1 = load i32, ptr addrspace(1) %q1, align 4, !alias.scope !4, !noalias !2
   %add = add i32 %v0, %v1
   ret i32 %add
 }
 
-declare void @llvm.memcpy.p1i8.p1i8.i64(i8 addrspace(1)* noalias nocapture writeonly, i8 addrspace(1)* noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.memcpy.inline.p1i8.p1i8.i64(i8 addrspace(1)* noalias nocapture writeonly, i8 addrspace(1)* noalias nocapture readonly, i64, i1 immarg)
-declare void @llvm.memmove.p1i8.p1i8.i64(i8 addrspace(1)* nocapture writeonly, i8 addrspace(1)* nocapture readonly, i64, i1 immarg)
-declare void @llvm.memset.p1i8.i64(i8 addrspace(1)* nocapture writeonly, i8, i64, i1 immarg)
+declare void @llvm.memcpy.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.memcpy.inline.p1.p1.i64(ptr addrspace(1) noalias nocapture writeonly, ptr addrspace(1) noalias nocapture readonly, i64, i1 immarg)
+declare void @llvm.memmove.p1.p1.i64(ptr addrspace(1) nocapture writeonly, ptr addrspace(1) nocapture readonly, i64, i1 immarg)
+declare void @llvm.memset.p1.i64(ptr addrspace(1) nocapture writeonly, i8, i64, i1 immarg)
 
 !0 = distinct !{!0, !"bax"}
 !1 = distinct !{!1, !0, !"bax: %p"}

@@ -129,8 +129,8 @@ define i32 @foo(i32 %a, i32 %b) "frame-pointer"="all" {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:
@@ -139,7 +139,7 @@ false:
 }
 
 ; Function Attrs: optsize
-declare i32 @doSomething(i32, i32*)
+declare i32 @doSomething(i32, ptr)
 
 
 ; Check that we do not perform the restore inside the loop whereas the save
@@ -1499,7 +1499,7 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi i32 [ 0, %if.then ], [ %add, %for.body ]
   %call = tail call i32 asm sideeffect "mov $0, #1", "=r,~{r4}"()
   %add = add nsw i32 %call, %sum.03
-  store i32 %add, i32* %ptr
+  store i32 %add, ptr %ptr
   br label %for.body
 
 if.end:
@@ -1521,7 +1521,7 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi i32 [ 0, %if.then ], [ %add, %body1 ], [ 1, %body2]
   %call = tail call i32 asm "mov $0, #0", "=r,~{r4}"()
   %add = add nsw i32 %call, %sum.03
-  store i32 %add, i32* %ptr
+  store i32 %add, ptr %ptr
   br i1 undef, label %body1, label %body2
 
 body1:
@@ -1652,7 +1652,6 @@ define void @infiniteloop3() "frame-pointer"="all" {
 ; THUMB-ENABLE-NEXT:    movs r0, #0
 ; THUMB-ENABLE-NEXT:    cbnz r0, LBB11_5
 ; THUMB-ENABLE-NEXT:  @ %bb.1: @ %loop2a.preheader
-; THUMB-ENABLE-NEXT:    movs r0, #0
 ; THUMB-ENABLE-NEXT:    movs r1, #0
 ; THUMB-ENABLE-NEXT:    mov r2, r0
 ; THUMB-ENABLE-NEXT:    b LBB11_3
@@ -1679,7 +1678,6 @@ define void @infiniteloop3() "frame-pointer"="all" {
 ; THUMB-DISABLE-NEXT:    movs r0, #0
 ; THUMB-DISABLE-NEXT:    cbnz r0, LBB11_5
 ; THUMB-DISABLE-NEXT:  @ %bb.1: @ %loop2a.preheader
-; THUMB-DISABLE-NEXT:    movs r0, #0
 ; THUMB-DISABLE-NEXT:    movs r1, #0
 ; THUMB-DISABLE-NEXT:    mov r2, r0
 ; THUMB-DISABLE-NEXT:    b LBB11_3
@@ -1707,21 +1705,19 @@ body:                                             ; preds = %entry
   br i1 undef, label %loop2a, label %end
 
 loop1:                                            ; preds = %loop2a, %loop2b
-  %var.phi = phi i32* [ %next.phi, %loop2b ], [ %var, %loop2a ]
-  %next.phi = phi i32* [ %next.load, %loop2b ], [ %next.var, %loop2a ]
-  %0 = icmp eq i32* %var, null
-  %next.load = load i32*, i32** undef
+  %var.phi = phi ptr [ %next.phi, %loop2b ], [ %var, %loop2a ]
+  %next.phi = phi ptr [ %next.load, %loop2b ], [ %next.var, %loop2a ]
+  %0 = icmp eq ptr %var, null
+  %next.load = load ptr, ptr undef
   br i1 %0, label %loop2a, label %loop2b
 
 loop2a:                                           ; preds = %loop1, %body, %entry
-  %var = phi i32* [ null, %body ], [ null, %entry ], [ %next.phi, %loop1 ]
-  %next.var = phi i32* [ undef, %body ], [ null, %entry ], [ %next.load, %loop1 ]
+  %var = phi ptr [ null, %body ], [ null, %entry ], [ %next.phi, %loop1 ]
+  %next.var = phi ptr [ undef, %body ], [ null, %entry ], [ %next.load, %loop1 ]
   br label %loop1
 
 loop2b:                                           ; preds = %loop1
-  %gep1 = bitcast i32* %var.phi to i32*
-  %next.ptr = bitcast i32* %gep1 to i32**
-  store i32* %next.phi, i32** %next.ptr
+  store ptr %next.phi, ptr %var.phi
   br label %loop1
 
 end:

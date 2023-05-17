@@ -1,4 +1,4 @@
-; RUN: opt -S %s -deadargelim -o - | FileCheck %s
+; RUN: opt -S %s -passes=deadargelim -o - | FileCheck %s
 ; In that test @internal_fct is used by an instruction
 ; we don't know how to rewrite (the comparison that produces
 ; %cmp1).
@@ -8,15 +8,15 @@
 ; statically known, by replacing the related arguments with poison.
 ; This is what we check on the call that produces %res2.
 
-define i32 @call_indirect(i32 (i32, i32, i32)* readnone %fct_ptr, i32 %arg1, i32 %arg2, i32 %arg3) {
+define i32 @call_indirect(ptr readnone %fct_ptr, i32 %arg1, i32 %arg2, i32 %arg3) {
 ; CHECK-LABEL: @call_indirect(
-; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq i32 (i32, i32, i32)* [[FCT_PTR:%.*]], @external_fct
+; CHECK-NEXT:    [[CMP0:%.*]] = icmp eq ptr [[FCT_PTR:%.*]], @external_fct
 ; CHECK-NEXT:    br i1 [[CMP0]], label [[CALL_EXT:%.*]], label [[CHK2:%.*]]
 ; CHECK:       call_ext:
 ; CHECK-NEXT:    [[RES1:%.*]] = tail call i32 @external_fct(i32 poison, i32 [[ARG2:%.*]], i32 poison)
 ; CHECK-NEXT:    br label [[END:%.*]]
 ; CHECK:       chk2:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 (i32, i32, i32)* [[FCT_PTR]], @internal_fct
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[FCT_PTR]], @internal_fct
 ; CHECK-NEXT:    br i1 [[CMP1]], label [[CALL_INT:%.*]], label [[CALL_OTHER:%.*]]
 ; CHECK:       call_int:
 ; CHECK-NEXT:    [[RES2:%.*]] = tail call i32 @internal_fct(i32 poison, i32 [[ARG2]], i32 poison)
@@ -36,7 +36,7 @@ call_ext:
   br label %end
 
 chk2:
-  %cmp1 = icmp eq i32 (i32, i32, i32)* %fct_ptr, @internal_fct
+  %cmp1 = icmp eq ptr %fct_ptr, @internal_fct
   br i1 %cmp1, label %call_int, label %call_other
 
 call_int:

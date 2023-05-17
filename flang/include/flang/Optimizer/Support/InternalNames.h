@@ -10,9 +10,13 @@
 #define FORTRAN_OPTIMIZER_SUPPORT_INTERNALNAMES_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
+#include <optional>
+
+static constexpr llvm::StringRef typeDescriptorSeparator = ".dt.";
+static constexpr llvm::StringRef bindingTableSeparator = ".v.";
+static constexpr llvm::StringRef boxprocSuffix = "UnboxProc";
 
 namespace fir {
 
@@ -39,23 +43,25 @@ struct NameUniquer {
     DISPATCH_TABLE,
     GENERATED,
     INTRINSIC_TYPE_DESC,
+    NAMELIST_GROUP,
     PROCEDURE,
     TYPE_DESC,
-    VARIABLE,
-    NAMELIST_GROUP
+    VARIABLE
   };
 
   /// Components of an unparsed unique name
   struct DeconstructedName {
     DeconstructedName(llvm::StringRef name) : name{name} {}
     DeconstructedName(llvm::ArrayRef<std::string> modules,
-                      llvm::Optional<std::string> host, llvm::StringRef name,
-                      llvm::ArrayRef<std::int64_t> kinds)
-        : modules{modules.begin(), modules.end()}, host{host}, name{name},
-          kinds{kinds.begin(), kinds.end()} {}
+                      llvm::ArrayRef<std::string> procs, std::int64_t blockId,
+                      llvm::StringRef name, llvm::ArrayRef<std::int64_t> kinds)
+        : modules{modules.begin(), modules.end()}, procs{procs.begin(),
+                                                         procs.end()},
+          blockId{blockId}, name{name}, kinds{kinds.begin(), kinds.end()} {}
 
     llvm::SmallVector<std::string> modules;
-    llvm::Optional<std::string> host;
+    llvm::SmallVector<std::string> procs;
+    std::int64_t blockId;
     std::string name;
     llvm::SmallVector<std::int64_t> kinds;
   };
@@ -63,18 +69,15 @@ struct NameUniquer {
   /// Unique a common block name
   static std::string doCommonBlock(llvm::StringRef name);
 
-  /// Unique a block data unit name
-  static std::string doBlockData(llvm::StringRef name);
-
   /// Unique a (global) constant name
   static std::string doConstant(llvm::ArrayRef<llvm::StringRef> modules,
-                                llvm::Optional<llvm::StringRef> host,
-                                llvm::StringRef name);
+                                llvm::ArrayRef<llvm::StringRef> procs,
+                                std::int64_t block, llvm::StringRef name);
 
   /// Unique a dispatch table name
   static std::string doDispatchTable(llvm::ArrayRef<llvm::StringRef> modules,
-                                     llvm::Optional<llvm::StringRef> host,
-                                     llvm::StringRef name,
+                                     llvm::ArrayRef<llvm::StringRef> procs,
+                                     std::int64_t block, llvm::StringRef name,
                                      llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a compiler generated name
@@ -83,39 +86,40 @@ struct NameUniquer {
   /// Unique an intrinsic type descriptor
   static std::string
   doIntrinsicTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
-                            llvm::Optional<llvm::StringRef> host,
-                            IntrinsicType type, std::int64_t kind);
+                            llvm::ArrayRef<llvm::StringRef> procs,
+                            std::int64_t block, IntrinsicType type,
+                            std::int64_t kind);
 
   /// Unique a procedure name
   static std::string doProcedure(llvm::ArrayRef<llvm::StringRef> modules,
-                                 llvm::Optional<llvm::StringRef> host,
+                                 llvm::ArrayRef<llvm::StringRef> procs,
                                  llvm::StringRef name);
 
   /// Unique a derived type name
   static std::string doType(llvm::ArrayRef<llvm::StringRef> modules,
-                            llvm::Optional<llvm::StringRef> host,
-                            llvm::StringRef name,
+                            llvm::ArrayRef<llvm::StringRef> procs,
+                            std::int64_t block, llvm::StringRef name,
                             llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a (derived) type descriptor name
   static std::string doTypeDescriptor(llvm::ArrayRef<llvm::StringRef> modules,
-                                      llvm::Optional<llvm::StringRef> host,
-                                      llvm::StringRef name,
+                                      llvm::ArrayRef<llvm::StringRef> procs,
+                                      std::int64_t block, llvm::StringRef name,
                                       llvm::ArrayRef<std::int64_t> kinds);
   static std::string doTypeDescriptor(llvm::ArrayRef<std::string> modules,
-                                      llvm::Optional<std::string> host,
-                                      llvm::StringRef name,
+                                      llvm::ArrayRef<std::string> procs,
+                                      std::int64_t block, llvm::StringRef name,
                                       llvm::ArrayRef<std::int64_t> kinds);
 
   /// Unique a (global) variable name. A variable with save attribute
   /// defined inside a subprogram also needs to be handled here
   static std::string doVariable(llvm::ArrayRef<llvm::StringRef> modules,
-                                llvm::Optional<llvm::StringRef> host,
-                                llvm::StringRef name);
+                                llvm::ArrayRef<llvm::StringRef> procs,
+                                std::int64_t block, llvm::StringRef name);
 
   /// Unique a namelist group name
   static std::string doNamelistGroup(llvm::ArrayRef<llvm::StringRef> modules,
-                                     llvm::Optional<llvm::StringRef> host,
+                                     llvm::ArrayRef<llvm::StringRef> procs,
                                      llvm::StringRef name);
 
   /// Entry point for the PROGRAM (called by the runtime)
@@ -141,6 +145,12 @@ struct NameUniquer {
   /// type descriptor object. Returns an empty string if \p mangledTypeName is
   /// not a valid mangled derived type name.
   static std::string getTypeDescriptorName(llvm::StringRef mangledTypeName);
+
+  /// Given a mangled derived type name, get the name of the related binding
+  /// table object. Returns an empty string if \p mangledTypeName is not a valid
+  /// mangled derived type name.
+  static std::string
+  getTypeDescriptorBindingTableName(llvm::StringRef mangledTypeName);
 
 private:
   static std::string intAsString(std::int64_t i);

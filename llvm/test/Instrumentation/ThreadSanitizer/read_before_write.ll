@@ -5,11 +5,11 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define void @IncrementMe(i32* nocapture %ptr) nounwind uwtable sanitize_thread {
+define void @IncrementMe(ptr nocapture %ptr) nounwind uwtable sanitize_thread {
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %ptr, align 4
+  store i32 %inc, ptr %ptr, align 4
   ret void
 }
 ; CHECK-LABEL: define void @IncrementMe
@@ -21,12 +21,12 @@ entry:
 ; CHECK-COMPOUND: __tsan_read_write4
 ; CHECK: ret void
 
-define void @IncrementMeWithCallInBetween(i32* nocapture %ptr) nounwind uwtable sanitize_thread {
+define void @IncrementMeWithCallInBetween(ptr nocapture %ptr) nounwind uwtable sanitize_thread {
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %inc = add nsw i32 %0, 1
   call void @foo()
-  store i32 %inc, i32* %ptr, align 4
+  store i32 %inc, ptr %ptr, align 4
   ret void
 }
 
@@ -37,11 +37,11 @@ entry:
 
 declare void @foo()
 
-define void @VolatileLoad(i32* nocapture %ptr) nounwind uwtable sanitize_thread {
+define void @VolatileLoad(ptr nocapture %ptr) nounwind uwtable sanitize_thread {
 entry:
-  %0 = load volatile i32, i32* %ptr, align 4
+  %0 = load volatile i32, ptr %ptr, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %ptr, align 4
+  store i32 %inc, ptr %ptr, align 4
   ret void
 }
 ; CHECK-LABEL: define void @VolatileLoad
@@ -51,11 +51,11 @@ entry:
 ; CHECK-COMPOUND-VOLATILE: __tsan_write4
 ; CHECK: ret void
 
-define void @VolatileStore(i32* nocapture %ptr) nounwind uwtable sanitize_thread {
+define void @VolatileStore(ptr nocapture %ptr) nounwind uwtable sanitize_thread {
 entry:
-  %0 = load i32, i32* %ptr, align 4
+  %0 = load i32, ptr %ptr, align 4
   %inc = add nsw i32 %0, 1
-  store volatile i32 %inc, i32* %ptr, align 4
+  store volatile i32 %inc, ptr %ptr, align 4
   ret void
 }
 ; CHECK-LABEL: define void @VolatileStore
@@ -65,11 +65,11 @@ entry:
 ; CHECK-COMPOUND-VOLATILE: __tsan_volatile_write4
 ; CHECK: ret void
 
-define void @VolatileBoth(i32* nocapture %ptr) nounwind uwtable sanitize_thread {
+define void @VolatileBoth(ptr nocapture %ptr) nounwind uwtable sanitize_thread {
 entry:
-  %0 = load volatile i32, i32* %ptr, align 4
+  %0 = load volatile i32, ptr %ptr, align 4
   %inc = add nsw i32 %0, 1
-  store volatile i32 %inc, i32* %ptr, align 4
+  store volatile i32 %inc, ptr %ptr, align 4
   ret void
 }
 ; CHECK-LABEL: define void @VolatileBoth

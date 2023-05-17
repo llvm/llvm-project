@@ -28,15 +28,15 @@ while.end:                                        ; preds = %if.end12
 
 if.end15:                                         ; preds = %while.end
   %idxprom.i.i230 = sext i32 %i.1 to i64
-  %arrayidx18 = getelementptr inbounds [100 x i32], [100 x i32]* @multvec_i, i64 0, i64 %idxprom.i.i230
-  store i32 0, i32* %arrayidx18, align 4
+  %arrayidx18 = getelementptr inbounds [100 x i32], ptr @multvec_i, i64 0, i64 %idxprom.i.i230
+  store i32 0, ptr %arrayidx18, align 4
   br i1 undef, label %while.body21, label %while.end90
 
 while.body21:                                     ; preds = %if.end15
   unreachable
 
 while.end90:                                      ; preds = %if.end15
-  store i32 0, i32* %arrayidx18, align 4
+  store i32 0, ptr %arrayidx18, align 4
   br label %return
 
 return:                                           ; preds = %while.end90, %while.end, %entry

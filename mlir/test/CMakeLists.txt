@@ -5,20 +5,13 @@ if (MLIR_ENABLE_BINDINGS_PYTHON)
   add_subdirectory(python)
 endif()
 
-# Passed to lit.site.cfg.py.so that the out of tree Standalone dialect test
-# can find MLIR's CMake configuration
+# Provide the MLIR CMake module dir so that the out of tree Standalone
+# dialect and can add it to the module path.
 set(MLIR_CMAKE_DIR
   "${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX}/cmake/mlir")
 
-# Passed to lit.site.cfg.py.in to set up the path where to find the libraries
-# for linalg integration tests.
-set(MLIR_DIALECT_LINALG_INTEGRATION_TEST_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set(MLIR_RUNNER_UTILS_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-
-# Passed to lit.site.cfg.py.in to set up the path where to find the libraries
-# for the mlir spirv / vulkan runner tests.
-set(MLIR_SPIRV_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
-set(MLIR_VULKAN_WRAPPER_LIBRARY_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+# Passed to lit.site.cfg.py.in to set up the path where to find libraries.
+set(MLIR_LIB_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
 
 if (MLIR_INCLUDE_INTEGRATION_TESTS)
   set(INTEL_SDE_EXECUTABLE "" CACHE STRING
@@ -34,24 +27,16 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
   option(MLIR_RUN_AMX_TESTS "Run AMX tests.")
   option(MLIR_RUN_X86VECTOR_TESTS "Run X86Vector tests.")
   option(MLIR_RUN_CUDA_TENSOR_CORE_TESTS "Run CUDA Tensor core WMMA tests.")
+  option(MLIR_RUN_CUDA_SM80_TESTS "Run CUDA A100 tests.")
   option(MLIR_RUN_ARM_SVE_TESTS "Run Arm SVE tests.")
-  # Passed to lit.site.cfg.py.in to set up the path where to find the libraries.
-  set(MLIR_INTEGRATION_TEST_DIR ${CMAKE_LIBRARY_OUTPUT_DIRECTORY})
+  option(MLIR_RUN_ARM_SME_TESTS "Run Arm SME tests.")
 
 
   # The native target may not be enabled when cross compiling, raise an error.
-  if(NOT TARGET ${LLVM_NATIVE_ARCH})
+  if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
     message(FATAL_ERROR "MLIR_INCLUDE_INTEGRATION_TESTS requires a native target")
   endif()
 
-  # Copy test data over.
-  file(COPY ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/mttkrp_b.tns
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.mtx
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric.mtx
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test_symmetric_complex.mtx
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/test.tns
-            ${CMAKE_CURRENT_SOURCE_DIR}/Integration/data/wide.mtx
-          DESTINATION ${MLIR_INTEGRATION_TEST_DIR}/data/)
 endif()
 
 llvm_canonicalize_cmake_booleans(
@@ -67,6 +52,9 @@ llvm_canonicalize_cmake_booleans(
   MLIR_RUN_AMX_TESTS
   MLIR_RUN_CUDA_TENSOR_CORE_TESTS
   MLIR_RUN_X86VECTOR_TESTS
+  MLIR_RUN_ARM_SVE_TESTS
+  MLIR_RUN_ARM_SME_TESTS
+  MLIR_RUN_CUDA_SM80_TESTS
   )
 
 configure_lit_site_cfg(
@@ -87,9 +75,10 @@ set(MLIR_TEST_DEPENDS
   mlir-capi-ir-test
   mlir-capi-llvm-test
   mlir-capi-pass-test
-  mlir-capi-sparse-tensor-test
-  mlir-capi-quant-test
   mlir-capi-pdl-test
+  mlir-capi-quant-test
+  mlir-capi-sparse-tensor-test
+  mlir-capi-transform-test
   mlir-linalg-ods-yaml-gen
   mlir-lsp-server
   mlir-pdll-lsp-server
@@ -104,7 +93,7 @@ set(MLIR_TEST_DEPENDS
 # The native target may not be enabled, in this case we won't
 # run tests that involves executing on the host: do not build
 # useless binaries.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(LLVM_ENABLE_PIC AND TARGET ${LLVM_NATIVE_ARCH})
   list(APPEND MLIR_TEST_DEPENDS
     mlir-cpu-runner
     llc
@@ -136,9 +125,13 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch3
     toyc-ch4
     toyc-ch5
-    toyc-ch6
-    toyc-ch7
     )
+  if(MLIR_ENABLE_EXECUTION_ENGINE)
+    list(APPEND MLIR_TEST_DEPENDS
+      toyc-ch6
+      toyc-ch7
+    )
+  endif()
 endif()
 
 if(MLIR_ENABLE_SPIRV_CPU_RUNNER)

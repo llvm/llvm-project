@@ -11,7 +11,7 @@
 
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/ManipulationFunctions.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 #include <math.h>
 
 #include <limits.h>
@@ -26,7 +26,7 @@ public:
     EXPECT_EQ(FP_ILOGB0, func(T(__llvm_libc::fputil::FPBits<T>::neg_zero())));
 
     EXPECT_EQ(FP_ILOGBNAN,
-              func(T(__llvm_libc::fputil::FPBits<T>::build_nan(1))));
+              func(T(__llvm_libc::fputil::FPBits<T>::build_quiet_nan(1))));
 
     EXPECT_EQ(INT_MAX, func(T(__llvm_libc::fputil::FPBits<T>::inf())));
     EXPECT_EQ(INT_MAX, func(T(__llvm_libc::fputil::FPBits<T>::neg_inf())));

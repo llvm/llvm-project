@@ -1255,9 +1255,9 @@ static void check_table(struct isl_tab *tab)
  * the sample value will also be non-negative.
  *
  * If "var" is manifestly unbounded wrt positive values, we are done.
- * Otherwise, we pivot the variable up to a row if needed
- * Then we continue pivoting down until either
- *	- no more down pivots can be performed
+ * Otherwise, we pivot the variable up to a row if needed.
+ * Then we continue pivoting up until either
+ *	- no more up pivots can be performed
  *	- the sample value is positive
  *	- the variable is pivoted into a manifestly unbounded column
  */

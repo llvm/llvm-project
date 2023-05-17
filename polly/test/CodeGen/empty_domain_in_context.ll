@@ -13,7 +13,7 @@ target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 
 define void @fn1() {
 entry:
-  %a.promoted = load i16, i16* @a
+  %a.promoted = load i16, ptr @a
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond3.for.end_crit_edge, %entry
@@ -32,7 +32,7 @@ if.end:                                           ; preds = %for.body
   br label %for.body5.lr.ph
 
 for.body5.lr.ph:                                  ; preds = %if.end
-  %tmp = load i8, i8* @b, align 1
+  %tmp = load i8, ptr @b, align 1
   %cmp = icmp eq i32 %div, 1
   br i1 %cmp, label %for.body5.lr.ph.split.us, label %for.body5.lr.ph.split
 
@@ -70,7 +70,7 @@ lor.end:                                          ; preds = %lor.end, %for.body5
 
 for.cond3.for.end_crit_edge:                      ; preds = %lor.end, %lor.end.peel, %lor.end.us, %lor.end.us.peel
   %tmp3 = phi i8 [ %tmp, %lor.end.us.peel ], [ %tmp, %lor.end.peel ], [ %tmp, %lor.end.us ], [ %tmp, %lor.end ]
-  store i8 4, i8* @c
+  store i8 4, ptr @c
   br label %for.cond
 }
 
@@ -81,6 +81,6 @@ for.cond3.for.end_crit_edge:                      ; preds = %lor.end, %lor.end.p
 ; It is not important since this code will never be executed.
 
 ; CHECK:      polly.stmt.lor.end.us.peel:
-; CHECK-NEXT:   %tmp_p_scalar_2 = load i8, i8* @b
-; CHECK-NEXT:   store i8 %tmp_p_scalar_2, i8* %tmp3.phiops
+; CHECK-NEXT:   %tmp_p_scalar_2 = load i8, ptr @b
+; CHECK-NEXT:   store i8 %tmp_p_scalar_2, ptr %tmp3.phiops
 ; CHECK-NEXT:   br label %polly.merge

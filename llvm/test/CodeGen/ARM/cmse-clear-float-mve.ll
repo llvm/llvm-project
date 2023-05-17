@@ -42,7 +42,7 @@ define <8 x i16> @f0() #1 {
 ; CHECK-HARD-NEXT:    clrm {r0, r1, r2, r3, r12, apsr}
 ; CHECK-HARD-NEXT:    bxns lr
 entry:
-  %call = call <8 x i16> bitcast (<8 x i16> (...)* @g0 to <8 x i16> ()*)() #0
+  %call = call <8 x i16> @g0() #0
   ret <8 x i16> %call
 }
 
@@ -77,7 +77,7 @@ define <4 x float> @f1() #1 {
 ; CHECK-HARD-NEXT:    clrm {r0, r1, r2, r3, r12, apsr}
 ; CHECK-HARD-NEXT:    bxns lr
 entry:
-  %call = call nnan ninf nsz <4 x float> bitcast (<4 x float> (...)* @g1 to <4 x float> ()*)() #0
+  %call = call nnan ninf nsz <4 x float> @g1() #0
   ret <4 x float> %call
 }
 
@@ -85,7 +85,7 @@ entry:
 ;; Test clearing around nonsecure calls
 ;;
 
-define void @f2(void (<8 x i16>)* nocapture %cb) #0 {
+define void @f2(ptr nocapture %cb) #0 {
 ; CHECK-SOFTFP-LABEL: f2:
 ; CHECK-SOFTFP:       @ %bb.0: @ %entry
 ; CHECK-SOFTFP-NEXT:    .save {r4, lr}
@@ -121,12 +121,12 @@ define void @f2(void (<8 x i16>)* nocapture %cb) #0 {
 ; CHECK-HARD-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-HARD-NEXT:    pop {r4, pc}
 entry:
-  %call = tail call <8 x i16> bitcast (<8 x i16> (...)* @g0 to <8 x i16> ()*)() #0
+  %call = tail call <8 x i16> @g0() #0
   tail call void %cb(<8 x i16> %call) #2
   ret void
 }
 
-define void @f3(void (<4 x float>)* nocapture %cb) #0 {
+define void @f3(ptr nocapture %cb) #0 {
 ; CHECK-SOFTFP-LABEL: f3:
 ; CHECK-SOFTFP:       @ %bb.0: @ %entry
 ; CHECK-SOFTFP-NEXT:    .save {r4, lr}
@@ -162,7 +162,7 @@ define void @f3(void (<4 x float>)* nocapture %cb) #0 {
 ; CHECK-HARD-NEXT:    pop.w {r4, r5, r6, r7, r8, r9, r10, r11}
 ; CHECK-HARD-NEXT:    pop {r4, pc}
 entry:
-  %call = tail call nnan ninf nsz <4 x float> bitcast (<4 x float> (...)* @g1 to <4 x float> ()*)() #0
+  %call = tail call nnan ninf nsz <4 x float> @g1() #0
   tail call void %cb(<4 x float> %call) #2
   ret void
 }

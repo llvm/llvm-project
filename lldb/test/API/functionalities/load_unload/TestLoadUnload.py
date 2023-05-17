@@ -2,9 +2,6 @@
 Test that breakpoint by symbol name works correctly with dynamic libs.
 """
 
-from __future__ import print_function
-
-
 import os
 import re
 import lldb
@@ -14,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class LoadUnloadTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -327,7 +322,7 @@ class LoadUnloadTestCase(TestBase):
         # The breakpoint should have a hit count of 1.
         lldbutil.check_breakpoint(self, bpno = 1, expected_hit_count = 1)
 
-        # Issue the 'continue' command.  We should stop agaian at a_function.
+        # Issue the 'continue' command.  We should stop again at a_function.
         # The stop reason of the thread should be breakpoint and at a_function.
         self.runCmd("continue")
 
@@ -379,6 +374,7 @@ class LoadUnloadTestCase(TestBase):
     # We can't find a breakpoint location for d_init before launching because
     # executable dependencies are resolved relative to the debuggers PWD. Bug?
     @expectedFailureAll(oslist=["freebsd", "linux", "netbsd"], triple=no_match('aarch64-.*-android'))
+    @expectedFailureAll(oslist=["windows"], archs=["aarch64"])
     def test_static_init_during_load(self):
         """Test that we can set breakpoints correctly in static initializers"""
         self.copy_shlibs_to_remote()

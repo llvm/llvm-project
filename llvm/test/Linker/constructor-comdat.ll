@@ -5,8 +5,8 @@ $_ZN3fooIiEC5Ev = comdat any
 ; CHECK: $_ZN3fooIiEC5Ev = comdat any
 ; NOCOMDAT-NOT: comdat
 
-@_ZN3fooIiEC1Ev = weak_odr alias void (), void ()* @_ZN3fooIiEC2Ev
-; CHECK: @_ZN3fooIiEC1Ev = weak_odr alias void (), void ()* @_ZN3fooIiEC2Ev
+@_ZN3fooIiEC1Ev = weak_odr alias void (), ptr @_ZN3fooIiEC2Ev
+; CHECK: @_ZN3fooIiEC1Ev = weak_odr alias void (), ptr @_ZN3fooIiEC2Ev
 ; NOCOMDAT-DAG: define weak_odr void @_ZN3fooIiEC1Ev() {
 
 ; CHECK: define weak_odr void @_ZN3fooIiEC2Ev() comdat($_ZN3fooIiEC5Ev) {

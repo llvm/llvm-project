@@ -17,7 +17,7 @@ public:
   CFCData(CFDataRef data = NULL);
   CFCData(const CFCData &rhs);
   CFCData &operator=(const CFCData &rhs);
-  virtual ~CFCData();
+  ~CFCData() override;
 
   CFDataRef Serialize(CFPropertyListRef plist, CFPropertyListFormat format);
   const uint8_t *GetBytePtr() const;

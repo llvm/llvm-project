@@ -7,7 +7,7 @@
 
 target triple = "hexagon"
 
-define fastcc i32 @fred(i32 %a0, i8* %a1, i1 %a2, i1 %a3) #0 {
+define fastcc i32 @fred(i32 %a0, ptr %a1, i1 %a2, i1 %a3) #0 {
 b1:
   %v2 = lshr i32 %a0, 16
   %v3 = trunc i32 %v2 to i8
@@ -22,7 +22,7 @@ b6:                                               ; preds = %b1
   br label %b9
 
 b8:                                               ; preds = %b4
-  store i8 %v3, i8* %a1, align 2
+  store i8 %v3, ptr %a1, align 2
   ret i32 1
 
 b9:                                               ; preds = %b6, %b4

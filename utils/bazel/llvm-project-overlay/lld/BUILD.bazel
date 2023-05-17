@@ -2,18 +2,25 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("//llvm:tblgen.bzl", "gentbl")
+load(
+    "//:vars.bzl",
+    "LLVM_VERSION",
+)
 
 package(
     default_visibility = ["//visibility:public"],
-    licenses = ["notice"],
+    features = ["layering_check"],
 )
+
+licenses(["notice"])
 
 # TODO: Actually compute version info
 genrule(
     name = "config_version_gen",
     outs = ["include/lld/Common/Version.inc"],
-    cmd = "echo '#define LLD_VERSION_STRING \"15.0.0\"' > $@",
+    cmd = "echo '#define LLD_VERSION_STRING \"{}\"' > $@".format(LLVM_VERSION),
 )
 
 genrule(
@@ -39,9 +46,13 @@ cc_library(
         ":vcs_version",
         "//llvm:CodeGen",
         "//llvm:Core",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:IRPrinter",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Target",
+        "//llvm:TargetParser",
+        "//llvm:config",
     ],
 )
 
@@ -92,8 +103,12 @@ cc_library(
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Passes",
+        "//llvm:Remarks",
         "//llvm:Support",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
+        "//llvm:config",
+        "@llvm_zstd//:zstd",
     ],
 )
 
@@ -126,10 +141,15 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:AllTargetsDisassemblers",
         "//llvm:Analysis",
+        "//llvm:BinaryFormat",
         "//llvm:BitReader",
         "//llvm:BitWriter",
         "//llvm:Core",
+        "//llvm:DebugInfo",
+        "//llvm:DebugInfoCodeView",
+        "//llvm:DebugInfoMSF",
         "//llvm:DebugInfoPDB",
+        "//llvm:Demangle",
         "//llvm:IPO",
         "//llvm:LTO",
         "//llvm:LibDriver",
@@ -139,9 +159,12 @@ cc_library(
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:Symbolize",
+        "//llvm:Target",
+        "//llvm:TargetParser",
         "//llvm:TransformUtils",
         "//llvm:WindowsDriver",
         "//llvm:WindowsManifest",
+        "//llvm:config",
     ],
 )
 
@@ -170,6 +193,7 @@ cc_library(
         ":mingw_options_inc_gen",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -199,7 +223,21 @@ cc_library(
         ":Common",
         ":macho_options_inc_gen",
         "//libunwind:unwind_headers_only",
+        "//llvm:BinaryFormat",
+        "//llvm:BitReader",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:DebugInfoDWARF",
+        "//llvm:Demangle",
         "//llvm:LTO",
+        "//llvm:MC",
+        "//llvm:ObjCARC",
+        "//llvm:Object",
+        "//llvm:Option",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:TextAPI",
+        "//llvm:config",
     ],
 )
 
@@ -232,11 +270,24 @@ cc_library(
         "//llvm:AllTargetsCodeGens",
         "//llvm:BinaryFormat",
         "//llvm:Core",
+        "//llvm:Demangle",
         "//llvm:LTO",
+        "//llvm:MC",
         "//llvm:Object",
         "//llvm:Option",
         "//llvm:Support",
+        "//llvm:TargetParser",
+        "//llvm:config",
     ],
+)
+
+expand_template(
+    name = "lld_main",
+    out = "lld-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "lld",
+    },
+    template = "//llvm:cmake/modules/llvm-driver-template.cpp.in",
 )
 
 cc_binary(
@@ -244,11 +295,7 @@ cc_binary(
     srcs = glob([
         "tools/lld/*.cpp",
         "tools/lld/*.h",
-    ]),
-    tags = [
-        "manual",  # External dependency (libxml through WindowsManifest)
-        "nobuildkite",  # TODO(gcmn): Remote executors don't have libxml
-    ],
+    ]) + ["lld-driver.cpp"],
     deps = [
         ":COFF",
         ":Common",
@@ -257,6 +304,7 @@ cc_binary(
         ":MinGW",
         ":Wasm",
         "//llvm:Support",
+        "//llvm:TargetParser",
     ],
 )
 
@@ -278,8 +326,4 @@ genrule(
     cmd =
         "target=$$(basename $<); for n in ld.lld ld64.lld lld-link wasm-ld; do ln -sf $$target $(@D)/$$n; done",
     output_to_bindir = 1,
-    tags = [
-        "manual",  # External dependency (libxml through WindowsManifest)
-        "nobuildkite",  # TODO(gcmn): Remote executors don't have libxml
-    ],
 )

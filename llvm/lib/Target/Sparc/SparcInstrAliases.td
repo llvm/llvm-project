@@ -59,6 +59,34 @@ multiclass fpcond_mov_alias<string cond, int condVal,
                   (fmovd DFPRegs:$rd, FCCRegs:$cc, DFPRegs:$rs2, condVal)>;
 }
 
+// movr<cond> rs1, rs2, rd
+multiclass regcond_mov_alias<string rcond, int condVal,
+                          Instruction movrrr, Instruction movrri,
+                          Instruction fmovrs, Instruction fmovrd,
+                          Instruction fmovrq> {
+
+  // movr<cond> $rs1, $rs2, $rd
+  def : InstAlias<!strconcat(!strconcat("movr", rcond), " $rs1, $rs2, $rd"),
+                  (movrrr IntRegs:$rd, I64Regs:$rs1, IntRegs:$rs2, condVal)>;
+
+  // movr<cond> $rs1, $simm10, $rd
+  def : InstAlias<!strconcat(!strconcat("movr", rcond), " $rs1, $simm10, $rd"),
+                  (movrri IntRegs:$rd, I64Regs:$rs1, i32imm:$simm10, condVal)>;
+
+  // fmovrs<cond> $rs1, $rs2, $rd
+  def : InstAlias<!strconcat(!strconcat("fmovrs", rcond), " $rs1, $rs2, $rd"),
+                  (fmovrs FPRegs:$rd, I64Regs:$rs1, FPRegs:$rs2, condVal)>;
+
+  // fmovrd<cond> $rs1, $rs2, $rd
+  def : InstAlias<!strconcat(!strconcat("fmovrd", rcond), " $rs1, $rs2, $rd"),
+                  (fmovrd DFPRegs:$rd, I64Regs:$rs1, DFPRegs:$rs2, condVal)>;
+
+  // fmovrq<cond> $rs1, $rs2, $rd
+  let Predicates = [HasHardQuad] in
+  def : InstAlias<!strconcat(!strconcat("fmovrq", rcond), " $rs1, $rs2, $rd"),
+                  (fmovrq QFPRegs:$rd, I64Regs:$rs1, QFPRegs:$rs2, condVal)>;
+}
+
 // Instruction aliases for integer conditional branches and moves.
 multiclass int_cond_alias<string cond, int condVal> {
 
@@ -265,6 +293,44 @@ multiclass cp_cond_alias<string cond, int condVal> {
                   (CBCONDA brtarget:$imm, condVal), 0>;
 }
 
+// Instruction aliases for register conditional branches and moves.
+multiclass reg_cond_alias<string rcond, int condVal> {
+  // br<rcond> $rs1, $imm
+  def : InstAlias<!strconcat(!strconcat("br", rcond), " $rs1, $imm"),
+                  (BPR bprtarget16:$imm, condVal, I64Regs:$rs1)>,
+                  Requires<[Is64Bit]>;
+
+  // br<rcond>,pt $rs1, $imm
+  def : InstAlias<!strconcat(!strconcat("br", rcond), ",pt $rs1, $imm"),
+                  (BPR bprtarget16:$imm, condVal, I64Regs:$rs1)>,
+                  Requires<[Is64Bit]>;
+
+  // br<rcond>,pn $rs1, $imm
+  def : InstAlias<!strconcat(!strconcat("br", rcond), ",pn $rs1, $imm"),
+                  (BPRNT bprtarget16:$imm, condVal, I64Regs:$rs1)>,
+                  Requires<[Is64Bit]>;
+
+  // br<rcond>,a $rs1, $imm
+  def : InstAlias<!strconcat(!strconcat("br", rcond), ",a $rs1, $imm"),
+                  (BPRA bprtarget16:$imm, condVal, I64Regs:$rs1)>,
+                  Requires<[Is64Bit]>;
+
+  // br<rcond>,a,pt $rs1, $imm
+  def : InstAlias<!strconcat(!strconcat("br", rcond), ",a,pt $rs1, $imm"),
+                  (BPRA bprtarget16:$imm, condVal, I64Regs:$rs1)>,
+                  Requires<[Is64Bit]>;
+
+  // br<rcond>,a,pn $rs1, $imm
+  def : InstAlias<!strconcat(!strconcat("br", rcond), ",a,pn $rs1, $imm"),
+                  (BPRANT bprtarget16:$imm, condVal, I64Regs:$rs1)>,
+                  Requires<[Is64Bit]>;
+
+  defm : regcond_mov_alias<rcond, condVal,
+                            MOVRrr, MOVRri,
+                            FMOVRS, FMOVRD, FMOVRQ>,
+                            Requires<[Is64Bit]>;
+}
+
 defm : int_cond_alias<"a",    0b1000>;
 defm : int_cond_alias<"n",    0b0000>;
 defm : int_cond_alias<"ne",   0b1001>;
@@ -330,6 +396,13 @@ defm : cp_cond_alias<"01",    0b1101>;
 defm : cp_cond_alias<"013",   0b1110>;
 defm : cp_cond_alias<"012",   0b1111>;
 let EmitPriority = 0 in defm : cp_cond_alias<"",      0b1000>; // same as a; gnu asm, not in manual
+
+defm : reg_cond_alias<"z",    0b001>;
+defm : reg_cond_alias<"lez",  0b010>;
+defm : reg_cond_alias<"lz",   0b011>;
+defm : reg_cond_alias<"nz",   0b101>;
+defm : reg_cond_alias<"gz",   0b110>;
+defm : reg_cond_alias<"gez",  0b111>;
 
 // Section A.3 Synthetic Instructions
 
@@ -472,6 +545,14 @@ def : InstAlias<"wr $simm13, %tbr", (WRTBRri G0, i32imm:$simm13), 0>;
 
 def : InstAlias<"pwr $rs2, %psr", (PWRPSRrr G0, IntRegs:$rs2), 0>;
 def : InstAlias<"pwr $simm13, %psr", (PWRPSRri G0, i32imm:$simm13), 0>;
+
+// wrpr %reg, %rd -> wrpr %reg, %g0, %rd
+// wrpr  imm, %rd -> wrpr  %g0, imm, %rd
+// Nonstandard GNU extensions.
+let Predicates = [HasV9] in {
+  def : InstAlias<"wrpr $rs1, $rd", (WRPRrr PRRegs:$rd, IntRegs:$rs1, G0), 0>;
+  def : InstAlias<"wrpr $simm13, $rd", (WRPRri PRRegs:$rd, G0, i32imm:$simm13), 0>;
+}
 
 // flush -> flush %g0
 def : InstAlias<"flush", (FLUSH), 0>;

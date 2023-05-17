@@ -82,9 +82,9 @@ define void @caller4(double %d) {
 entry:
   %call = tail call double @ceil(double %d)
   %call1 = tail call double @ceil(double %call)
-  store double %call1, double* @gd2, align 8
+  store double %call1, ptr @gd2, align 8
   %call2 = tail call double @ceil(double %call1)
-  store double %call2, double* @gd1, align 8
+  store double %call2, ptr @gd1, align 8
   ret void
 }
 

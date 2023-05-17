@@ -126,7 +126,16 @@ enum : uint64_t {
   IsAtomicNoRet = UINT64_C(1) << 57,
 
   // Atomic with return.
-  IsAtomicRet = UINT64_C(1) << 58
+  IsAtomicRet = UINT64_C(1) << 58,
+
+  // Is a WMMA instruction.
+  IsWMMA = UINT64_C(1) << 59,
+
+  // Whether tied sources will be read.
+  TiedSourceNotRead = UINT64_C(1) << 60,
+
+  // Is never uniform.
+  IsNeverUniform = UINT64_C(1) << 61,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.
@@ -188,6 +197,12 @@ enum OperandType : unsigned {
   OPERAND_REG_INLINE_AC_V2INT32,
   OPERAND_REG_INLINE_AC_V2FP32,
 
+  // Operand for source modifiers for VOP instructions
+  OPERAND_INPUT_MODS,
+
+  // Operand for SDWA instructions
+  OPERAND_SDWA_VOPC_DST,
+
   OPERAND_REG_IMM_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_REG_IMM_LAST = OPERAND_REG_IMM_V2FP32,
 
@@ -200,11 +215,8 @@ enum OperandType : unsigned {
   OPERAND_SRC_FIRST = OPERAND_REG_IMM_INT32,
   OPERAND_SRC_LAST = OPERAND_REG_INLINE_C_LAST,
 
-  // Operand for source modifiers for VOP instructions
-  OPERAND_INPUT_MODS,
-
-  // Operand for SDWA instructions
-  OPERAND_SDWA_VOPC_DST
+  OPERAND_KIMM_FIRST = OPERAND_KIMM32,
+  OPERAND_KIMM_LAST = OPERAND_KIMM16
 
 };
 }
@@ -324,7 +336,7 @@ enum Id { // Message ID, width(4) [3:0].
   ID_SAVEWAVE = 4,           // added in GFX8, removed in GFX11
   ID_STALL_WAVE_GEN = 5,     // added in GFX9
   ID_HALT_WAVES = 6,         // added in GFX9
-  ID_ORDERED_PS_DONE = 7,    // added in GFX9
+  ID_ORDERED_PS_DONE = 7,    // added in GFX9, removed in GFX11
   ID_EARLY_PRIM_DEALLOC = 8, // added in GFX9, removed in GFX10
   ID_GS_ALLOC_REQ = 9,       // added in GFX9
   ID_GET_DOORBELL = 10,      // added in GFX9, removed in GFX11
@@ -392,18 +404,25 @@ enum Id { // HwRegCode, (6) [5:0]
   ID_TBA_HI = 17,
   ID_TMA_LO = 18,
   ID_TMA_HI = 19,
-  ID_XCC_ID = 20,
-  ID_SQ_PERF_SNAPSHOT_DATA = 21,
-  ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
-  ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
-  ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
   ID_FLAT_SCR_LO = 20,
   ID_FLAT_SCR_HI = 21,
   ID_XNACK_MASK = 22,
   ID_HW_ID1 = 23,
   ID_HW_ID2 = 24,
   ID_POPS_PACKER = 25,
+  ID_PERF_SNAPSHOT_DATA = 27,
   ID_SHADER_CYCLES = 29,
+
+  // Register numbers reused in GFX11+
+  ID_PERF_SNAPSHOT_PC_LO = 18,
+  ID_PERF_SNAPSHOT_PC_HI = 19,
+
+  // GFX940 specific registers
+  ID_XCC_ID = 20,
+  ID_SQ_PERF_SNAPSHOT_DATA = 21,
+  ID_SQ_PERF_SNAPSHOT_DATA1 = 22,
+  ID_SQ_PERF_SNAPSHOT_PC_LO = 23,
+  ID_SQ_PERF_SNAPSHOT_PC_HI = 24,
 
   ID_SHIFT_ = 0,
   ID_WIDTH_ = 6,
@@ -417,9 +436,6 @@ enum Offset : unsigned { // Offset, (5) [10:6]
   OFFSET_MASK_ = (((1 << OFFSET_WIDTH_) - 1) << OFFSET_SHIFT_),
 
   OFFSET_MEM_VIOL = 8,
-
-  OFFSET_SRC_SHARED_BASE = 16,
-  OFFSET_SRC_PRIVATE_BASE = 0
 };
 
 enum WidthMinusOne : unsigned { // WidthMinusOne, (5) [15:11]
@@ -427,9 +443,6 @@ enum WidthMinusOne : unsigned { // WidthMinusOne, (5) [15:11]
   WIDTH_M1_SHIFT_ = 11,
   WIDTH_M1_WIDTH_ = 5,
   WIDTH_M1_MASK_ = (((1 << WIDTH_M1_WIDTH_) - 1) << WIDTH_M1_SHIFT_),
-
-  WIDTH_M1_SRC_SHARED_BASE = 15,
-  WIDTH_M1_SRC_PRIVATE_BASE = 15
 };
 
 // Some values from WidthMinusOne mapped into Width domain.
@@ -896,6 +909,10 @@ enum Offset_COV5 : unsigned {
   HOSTCALL_PTR_OFFSET = 80,
   MULTIGRID_SYNC_ARG_OFFSET = 88,
   HEAP_PTR_OFFSET = 96,
+
+  DEFAULT_QUEUE_OFFSET = 104,
+  COMPLETION_ACTION_OFFSET = 112,
+
   PRIVATE_BASE_OFFSET = 192,
   SHARED_BASE_OFFSET = 196,
   QUEUE_PTR_OFFSET = 200,
@@ -1036,10 +1053,12 @@ enum Offset_COV5 : unsigned {
 #define FP_DENORM_MODE_DP(x) (((x) & 0x3) << 6)
 
 #define R_00B860_COMPUTE_TMPRING_SIZE                                   0x00B860
-#define   S_00B860_WAVESIZE(x)                                        (((x) & 0x1FFF) << 12)
+#define   S_00B860_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
+#define   S_00B860_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
 
 #define R_0286E8_SPI_TMPRING_SIZE                                       0x0286E8
-#define   S_0286E8_WAVESIZE(x)                                        (((x) & 0x1FFF) << 12)
+#define   S_0286E8_WAVESIZE_PreGFX11(x)                               (((x) & 0x1FFF) << 12)
+#define   S_0286E8_WAVESIZE_GFX11Plus(x)                              (((x) & 0x7FFF) << 12)
 
 #define R_028B54_VGT_SHADER_STAGES_EN                                 0x028B54
 #define   S_028B54_HS_W32_EN(x)                                       (((x) & 0x1) << 21)

@@ -10,6 +10,8 @@
 #define LLDB_INTERPRETER_COMMANDOBJECT_H
 
 #include <map>
+#include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -64,7 +66,7 @@ size_t FindLongestCommandWord(std::map<std::string, ValueType> &dict) {
   return max_len;
 }
 
-class CommandObject {
+class CommandObject : public std::enable_shared_from_this<CommandObject> {
 public:
   typedef llvm::StringRef(ArgumentHelpCallbackFunction)();
 
@@ -77,17 +79,18 @@ public:
     explicit operator bool() const { return (help_callback != nullptr); }
   };
 
-  struct ArgumentTableEntry // Entries in the main argument information table
-  {
+  /// Entries in the main argument information table.
+  struct ArgumentTableEntry {
     lldb::CommandArgumentType arg_type;
     const char *arg_name;
     CommandCompletions::CommonCompletionTypes completion_type;
+    OptionEnumValues enum_values;
     ArgumentHelpCallback help_function;
     const char *help_text;
   };
 
-  struct CommandArgumentData // Used to build individual command argument lists
-  {
+  /// Used to build individual command argument lists.
+  struct CommandArgumentData {
     lldb::CommandArgumentType arg_type;
     ArgumentRepetitionType arg_repetition;
     /// This arg might be associated only with some particular option set(s). By
@@ -103,9 +106,6 @@ public:
 
   typedef std::vector<CommandArgumentData>
       CommandArgumentEntry; // Used to build individual command argument lists
-
-  static ArgumentTableEntry g_arguments_data
-      [lldb::eArgTypeLastArg]; // Main argument information table
 
   typedef std::map<std::string, lldb::CommandObjectSP> CommandMap;
 
@@ -202,8 +202,6 @@ public:
 
   virtual Options *GetOptions();
 
-  static const ArgumentTableEntry *GetArgumentTable();
-
   static lldb::CommandArgumentType LookupArgumentName(llvm::StringRef arg_name);
 
   static const ArgumentTableEntry *
@@ -276,13 +274,13 @@ public:
   ///    The command arguments.
   ///
   /// \return
-  ///     llvm::None if there is no special repeat command - it will use the
+  ///     std::nullopt if there is no special repeat command - it will use the
   ///     current command line.
   ///     Otherwise a std::string containing the command to be repeated.
   ///     If the string is empty, the command won't be allow repeating.
-  virtual llvm::Optional<std::string>
+  virtual std::optional<std::string>
   GetRepeatCommand(Args &current_command_args, uint32_t index) {
-    return llvm::None;
+    return std::nullopt;
   }
 
   bool HasOverrideCallback() const {

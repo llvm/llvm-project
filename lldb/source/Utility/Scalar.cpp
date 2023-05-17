@@ -145,7 +145,7 @@ bool Scalar::IsZero() const {
   case e_void:
     break;
   case e_int:
-    return m_integer.isNullValue();
+    return m_integer.isZero();
   case e_float:
     return m_float.isZero();
   }

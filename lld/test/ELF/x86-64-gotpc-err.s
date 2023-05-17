@@ -7,8 +7,8 @@
 ## `>>> defined in` for linker synthesized __stop_* symbols (there is no
 ## associated file or linker script line number).
 
-# CHECK:      error: {{.*}}:(.text+0x2): relocation R_X86_64_GOTPCRELX out of range: 2147483655 is not in [-2147483648, 2147483647]; references __stop_data
-# CHECK-NEXT: error: {{.*}}:(.text+0x9): relocation R_X86_64_REX_GOTPCRELX out of range: 2147483648 is not in [-2147483648, 2147483647]; references __stop_data
+# CHECK:      error: {{.*}}:(.text+0x2): relocation R_X86_64_GOTPCRELX out of range: 2147483655 is not in [-2147483648, 2147483647]; references '__stop_data'
+# CHECK-NEXT: error: {{.*}}:(.text+0x9): relocation R_X86_64_REX_GOTPCRELX out of range: 2147483648 is not in [-2147483648, 2147483647]; references '__stop_data'
 # CHECK-NOT: error:
 
 #--- a.s

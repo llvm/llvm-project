@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=2 -S < %s | FileCheck %s
+; RUN: opt -passes=loop-unroll-and-jam -allow-unroll-and-jam -unroll-and-jam-count=2 -S < %s | FileCheck %s
 ;
 ; Verify that the llvm.loop.unroll_and_jam.enable loop property
 ; overrides llvm.loop.disable_nonforced.
@@ -10,7 +10,7 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 ; CHECK: load
 ; CHECK-NOT: load
 ; CHECK: br i1
-define void @disable_nonforced_enable(i32 %I, i32 %J, i32* noalias nocapture %A, i32* noalias nocapture readonly %B) {
+define void @disable_nonforced_enable(i32 %I, i32 %J, ptr noalias nocapture %A, ptr noalias nocapture readonly %B) {
 entry:
   %cmp = icmp ne i32 %J, 0
   %cmp122 = icmp ne i32 %I, 0
@@ -27,8 +27,8 @@ for.outer:
 for.inner:
   %j.us = phi i32 [ 0, %for.outer ], [ %inc.us, %for.inner ]
   %sum1.us = phi i32 [ 0, %for.outer ], [ %add.us, %for.inner ]
-  %arrayidx.us = getelementptr inbounds i32, i32* %B, i32 %j.us
-  %0 = load i32, i32* %arrayidx.us, align 4
+  %arrayidx.us = getelementptr inbounds i32, ptr %B, i32 %j.us
+  %0 = load i32, ptr %arrayidx.us, align 4
   %add.us = add i32 %0, %sum1.us
   %inc.us = add nuw i32 %j.us, 1
   %exitcond = icmp eq i32 %inc.us, %J
@@ -36,8 +36,8 @@ for.inner:
 
 for.latch:
   %add.us.lcssa = phi i32 [ %add.us, %for.inner ]
-  %arrayidx6.us = getelementptr inbounds i32, i32* %A, i32 %i.us
-  store i32 %add.us.lcssa, i32* %arrayidx6.us, align 4
+  %arrayidx6.us = getelementptr inbounds i32, ptr %A, i32 %i.us
+  store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4
   %add8.us = add nuw i32 %i.us, 1
   %exitcond25 = icmp eq i32 %add8.us, %I
   br i1 %exitcond25, label %for.end.loopexit, label %for.outer, !llvm.loop !0

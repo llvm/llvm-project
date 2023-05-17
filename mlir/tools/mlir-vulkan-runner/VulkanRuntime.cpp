@@ -234,12 +234,23 @@ LogicalResult VulkanRuntime::createInstance() {
   VkInstanceCreateInfo instanceCreateInfo = {};
   instanceCreateInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
   instanceCreateInfo.pNext = nullptr;
-  instanceCreateInfo.flags = 0;
   instanceCreateInfo.pApplicationInfo = &applicationInfo;
   instanceCreateInfo.enabledLayerCount = 0;
   instanceCreateInfo.ppEnabledLayerNames = nullptr;
-  instanceCreateInfo.enabledExtensionCount = 0;
-  instanceCreateInfo.ppEnabledExtensionNames = nullptr;
+
+  std::vector<const char *> extNames;
+#if defined(__APPLE__)
+  // enumerate MoltenVK for Vulkan 1.0
+  instanceCreateInfo.flags = VK_INSTANCE_CREATE_ENUMERATE_PORTABILITY_BIT_KHR;
+  // add KHR portability instance extensions
+  extNames.push_back(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+  extNames.push_back(VK_KHR_PORTABILITY_ENUMERATION_EXTENSION_NAME);
+#else
+  instanceCreateInfo.flags = 0;
+#endif // __APPLE__
+  instanceCreateInfo.enabledExtensionCount =
+      static_cast<uint32_t>(extNames.size());
+  instanceCreateInfo.ppEnabledExtensionNames = extNames.data();
 
   RETURN_ON_VULKAN_ERROR(
       vkCreateInstance(&instanceCreateInfo, nullptr, &instance),

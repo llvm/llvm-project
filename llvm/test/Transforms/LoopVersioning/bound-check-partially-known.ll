@@ -1,4 +1,4 @@
-; RUN: opt -aa-pipeline=basic-aa -passes=loop-versioning -S %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -aa-pipeline=basic-aa -passes=loop-versioning -S %s | FileCheck %s
 
 %struct.foo = type { [32000 x double], [32000 x double] }
 

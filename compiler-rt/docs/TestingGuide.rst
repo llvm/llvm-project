@@ -31,23 +31,24 @@ REQUIRES, XFAIL, etc.
 
 Sometimes it is necessary to restrict a test to a specific target or mark it as
 an "expected fail" or XFAIL. This is normally achieved using ``REQUIRES:`` or
-``XFAIL:`` with a substring of LLVM's default target triple. Unfortunately, the
+``XFAIL:`` and the ``target=<target-triple>`` feature, typically with a regular
+expression matching an appropriate substring of the triple. Unfortunately, the
 behaviour of this is somewhat quirky in compiler-rt. There are two main
 pitfalls to avoid.
 
-The first pitfall is that these directives perform a substring match on the
-triple and as such ``XFAIL: mips`` affects more triples than expected. For
-example, ``mips-linux-gnu``, ``mipsel-linux-gnu``, ``mips64-linux-gnu``, and
-``mips64el-linux-gnu`` will all match a ``XFAIL: mips`` directive. Including a
-trailing ``-`` such as in ``XFAIL: mips-`` can help to mitigate this quirk but
-even that has issues as described below.
+The first pitfall is that these regular expressions may inadvertently match
+more triples than expected. For example, ``XFAIL: target=mips{{.*}}`` matches
+``mips-linux-gnu``, ``mipsel-linux-gnu``, ``mips64-linux-gnu``, and
+``mips64el-linux-gnu``. Including a trailing ``-`` such as in 
+``XFAIL: target=mips-{{.*}}`` can help to mitigate this quirk but even that has
+issues as described below.
 
 The second pitfall is that the default target triple is often inappropriate for
 compiler-rt tests since compiler-rt tests may be compiled for multiple targets.
 For example, a typical build on an ``x86_64-linux-gnu`` host will often run the
-tests for both x86_64 and i386. In this situation ``XFAIL: x86_64`` will mark
-both the x86_64 and i386 tests as an expected failure while ``XFAIL: i386``
-will have no effect at all.
+tests for both x86_64 and i386. In this situation ``XFAIL: target=x86_64{{{.*}}``
+will mark both the x86_64 and i386 tests as an expected failure while 
+``XFAIL: target=i386{{.*}}`` will have no effect at all.
 
 To remedy both pitfalls, compiler-rt tests provide a feature string which can
 be used to specify a single target. This string is of the form

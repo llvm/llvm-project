@@ -26,18 +26,24 @@
 namespace mlir {
 
 class ShapedTypeComponents;
-using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<Value>>;
+using ReifiedRankedShapedTypeDims = SmallVector<SmallVector<OpFoldResult>>;
+
+/// Reify the shape of the result of an operation (typically in terms of the
+/// shape of its operands).
+LogicalResult
+reifyResultShapes(OpBuilder &b, Operation *op,
+                  ReifiedRankedShapedTypeDims &reifiedReturnShapes);
 
 /// Adaptor class to abstract the differences between whether value is from
 /// a ShapedType or ShapedTypeComponents or DenseIntElementsAttribute.
 class ShapeAdaptor {
 public:
   ShapeAdaptor(Type t) {
-    if (auto st = t.dyn_cast<ShapedType>())
+    if (auto st = dyn_cast<ShapedType>(t))
       val = st;
   }
   ShapeAdaptor(Attribute t) {
-    if (auto da = t.dyn_cast<DenseIntElementsAttr>())
+    if (auto da = dyn_cast<DenseIntElementsAttr>(t))
       val = da;
   }
   ShapeAdaptor(ShapedTypeComponents *components) : val(components) {}
@@ -94,7 +100,7 @@ private:
 /// The components consist of
 ///  - A ranked or unranked shape with the dimension specification match those
 ///    of ShapeType's getShape() (e.g., dynamic dimension represented using
-///    ShapedType::kDynamicSize)
+///    ShapedType::kDynamic)
 ///  - A element type, may be unset (nullptr)
 ///  - A attribute, may be unset (nullptr)
 /// Used by ShapedType type inferences.
@@ -119,7 +125,7 @@ public:
     if (ranked)
       adaptor.getDims(*this);
   }
-  template <typename Arg, typename = typename std::enable_if_t<
+  template <typename Arg, typename = std::enable_if_t<
                               std::is_constructible<ShapeStorageT, Arg>::value>>
   ShapedTypeComponents(Arg &&arg, Type elementType = nullptr,
                        Attribute attr = nullptr)
@@ -235,13 +241,14 @@ namespace detail {
 // TODO: Consider generating typedefs for trait member functions if this usage
 // becomes more common.
 LogicalResult inferReturnTensorTypes(
-    function_ref<LogicalResult(
-        MLIRContext *, Optional<Location> location, ValueShapeRange operands,
-        DictionaryAttr attributes, RegionRange regions,
-        SmallVectorImpl<ShapedTypeComponents> &retComponents)>
+    function_ref<
+        LogicalResult(MLIRContext *, std::optional<Location> location,
+                      ValueShapeRange operands, DictionaryAttr attributes,
+                      OpaqueProperties properties, RegionRange regions,
+                      SmallVectorImpl<ShapedTypeComponents> &retComponents)>
         componentTypeFn,
-    MLIRContext *context, Optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, RegionRange regions,
+    MLIRContext *context, std::optional<Location> location, ValueRange operands,
+    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
     SmallVectorImpl<Type> &inferredReturnTypes);
 
 /// Verifies that the inferred result types match the actual result types for
@@ -272,9 +279,9 @@ template <typename ConcreteType>
 class InferTensorType : public TraitBase<ConcreteType, InferTensorType> {
 public:
   static LogicalResult
-  inferReturnTypes(MLIRContext *context, Optional<Location> location,
+  inferReturnTypes(MLIRContext *context, std::optional<Location> location,
                    ValueRange operands, DictionaryAttr attributes,
-                   RegionRange regions,
+                   OpaqueProperties properties, RegionRange regions,
                    SmallVectorImpl<Type> &inferredReturnTypes) {
     static_assert(
         ConcreteType::template hasTrait<InferShapedTypeOpInterface::Trait>(),
@@ -284,7 +291,7 @@ public:
         "requires InferTypeOpInterface to ensure succesful invocation");
     return ::mlir::detail::inferReturnTensorTypes(
         ConcreteType::inferReturnTypeComponents, context, location, operands,
-        attributes, regions, inferredReturnTypes);
+        attributes, properties, regions, inferredReturnTypes);
   }
 };
 

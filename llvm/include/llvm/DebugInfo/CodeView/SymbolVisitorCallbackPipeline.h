@@ -22,7 +22,7 @@ public:
   SymbolVisitorCallbackPipeline() = default;
 
   Error visitUnknownSymbol(CVSymbol &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitUnknownSymbol(Record))
         return EC;
     }
@@ -30,7 +30,7 @@ public:
   }
 
   Error visitSymbolBegin(CVSymbol &Record, uint32_t Offset) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitSymbolBegin(Record, Offset))
         return EC;
     }
@@ -38,7 +38,7 @@ public:
   }
 
   Error visitSymbolBegin(CVSymbol &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitSymbolBegin(Record))
         return EC;
     }
@@ -46,7 +46,7 @@ public:
   }
 
   Error visitSymbolEnd(CVSymbol &Record) override {
-    for (auto Visitor : Pipeline) {
+    for (auto *Visitor : Pipeline) {
       if (auto EC = Visitor->visitSymbolEnd(Record))
         return EC;
     }

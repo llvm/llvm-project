@@ -6,15 +6,15 @@
 
 define void @foo() #0 {
 entry:
-  %0 = load ppc_fp128, ppc_fp128* @x, align 16
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i32 0, i32 0), ppc_fp128 %0)
+  %0 = load ppc_fp128, ptr @x, align 16
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, ppc_fp128 %0)
   ret void
 }
 ; Do not skip register r4 because of register alignment in soft float mode. Instead skipping 
 ; put in r4 part of first argument for printf function (long double).
 ; CHECK: lwzu 4, x@l({{[0-9]+}})
 
-declare i32 @printf(i8* nocapture readonly, ...) #0
+declare i32 @printf(ptr nocapture readonly, ...) #0
 
 attributes #0 = { "use-soft-float"="true" }
 

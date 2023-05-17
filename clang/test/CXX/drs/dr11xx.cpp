@@ -4,6 +4,46 @@
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 // RUN: %clang_cc1 -std=c++2a %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
 
+namespace dr1111 { // dr1111: yes
+namespace example1 {
+template <typename> struct set;
+
+struct X {
+  template <typename T> void set(const T &value);
+};
+void foo() {
+  X x;
+#pragma clang diagnostic push
+#if __cplusplus < 201103L
+#pragma clang diagnostic ignored "-Wambiguous-member-template"
+#endif
+  x.set<double>(3.2);
+#pragma clang diagnostic pop
+}
+
+struct Y {};
+void bar() {
+  Y y;
+  y.set<double>(3.2); // expected-error {{no member named 'set' in 'dr1111::example1::Y'}}
+}
+} // namespace example1
+
+namespace example2 {
+struct A {};
+namespace N {
+struct A {
+  void g() {}
+  template <class T> operator T();
+};
+} // namespace N
+
+void baz() {
+  N::A a;
+  a.operator A();
+}
+} // namespace example2
+} // namespace dr1111
+
 namespace dr1113 { // dr1113: partial
   namespace named {
     extern int a; // expected-note {{previous}}

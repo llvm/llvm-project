@@ -16,6 +16,7 @@
 
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -23,8 +24,10 @@ using namespace lldb_private::formatters;
 
 static CompilerType GetCompilerTypeForFormat(lldb::Format format,
                                              CompilerType element_type,
-                                             TypeSystem *type_system) {
+                                             TypeSystemSP type_system) {
   lldbassert(type_system && "type_system needs to be not NULL");
+  if (!type_system)
+    return {};
 
   switch (format) {
   case lldb::eFormatAddressInfo:
@@ -171,9 +174,9 @@ static size_t CalculateNumChildren(
     lldb_private::ExecutionContextScope *exe_scope =
         nullptr // does not matter here because all we trade in are basic types
     ) {
-  llvm::Optional<uint64_t> container_size =
+  std::optional<uint64_t> container_size =
       container_type.GetByteSize(exe_scope);
-  llvm::Optional<uint64_t> element_size = element_type.GetByteSize(exe_scope);
+  std::optional<uint64_t> element_size = element_type.GetByteSize(exe_scope);
 
   if (container_size && element_size && *element_size) {
     if (*container_size % *element_size)
@@ -198,7 +201,7 @@ public:
   lldb::ValueObjectSP GetChildAtIndex(size_t idx) override {
     if (idx >= CalculateNumChildren())
       return {};
-    llvm::Optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
+    std::optional<uint64_t> size = m_child_type.GetByteSize(nullptr);
     if (!size)
       return {};
     auto offset = idx * *size;
@@ -219,8 +222,9 @@ public:
     CompilerType parent_type(m_backend.GetCompilerType());
     CompilerType element_type;
     parent_type.IsVectorType(&element_type);
-    m_child_type = ::GetCompilerTypeForFormat(m_parent_format, element_type,
-                                              parent_type.GetTypeSystem());
+    m_child_type = ::GetCompilerTypeForFormat(
+        m_parent_format, element_type,
+        parent_type.GetTypeSystem().GetSharedPointer());
     m_num_children = ::CalculateNumChildren(parent_type, m_child_type);
     m_item_format = GetItemFormatForFormat(m_parent_format, m_child_type);
     return false;

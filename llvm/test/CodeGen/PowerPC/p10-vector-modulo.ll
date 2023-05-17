@@ -5,6 +5,9 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu \
 ; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
 ; RUN:   FileCheck %s
+; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff \
+; RUN:   -mcpu=pwr10 -ppc-asm-full-reg-names -ppc-vsr-nums-as-vr < %s | \
+; RUN:   FileCheck %s
 
 ; This test case aims to test the vector modulo instructions on Power10.
 ; The vector modulo instructions operate on signed and unsigned words

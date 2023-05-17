@@ -27,7 +27,7 @@
 ; CHECK-NOT: lwz {{[0-9]+}}, -{{[0-9]+}}(1)
 define i32 @test_n() local_unnamed_addr #0 {
 entry:
-  %t0 = tail call i32 bitcast (i32 (...)* @bar0 to i32 ()*)() #0
+  %t0 = tail call i32 @bar0() #0
   ret i32 %t0
 }
 
@@ -42,7 +42,7 @@ entry:
 define i32 @test_a() local_unnamed_addr #0 {
 entry:
   %t0 = alloca i32, align 128
-  %t1 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t0) #0
+  %t1 = tail call i32 @bar1(ptr %t0) #0
   ret i32 %t1
 }
 
@@ -55,7 +55,7 @@ entry:
 ; CHECK-NOT: lwz {{[0-9]+}}, -{{[0-9]+}}(1)
 define i32 @test_d(i32 %p0) local_unnamed_addr #0 {
   %t0 = alloca i32, i32 %p0, align 4
-  %t1 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t0) #0
+  %t1 = tail call i32 @bar1(ptr %t0) #0
   ret i32 %t1
 }
 
@@ -68,8 +68,7 @@ define i32 @test_d(i32 %p0) local_unnamed_addr #0 {
 define i32 @test_s(i32 %p0) local_unnamed_addr #0 {
 entry:
   %t0 = alloca [16384 x i32]
-  %t1 = getelementptr [16384 x i32], [16384 x i32]* %t0, i32 0, i32 0
-  %t2 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t1) #0
+  %t2 = tail call i32 @bar1(ptr %t0) #0
   ret i32 %t2
 }
 
@@ -83,8 +82,8 @@ entry:
 define i32 @test_ad(i32 %p0) local_unnamed_addr #0 {
   %t0 = alloca i32, align 128
   %t1 = alloca i32, i32 %p0, align 4
-  %t2 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t0) #0
-  %t3 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t1) #0
+  %t2 = tail call i32 @bar1(ptr %t0) #0
+  %t3 = tail call i32 @bar1(ptr %t1) #0
   %t4 = add i32 %t2, %t3
   ret i32 %t4
 }
@@ -97,9 +96,8 @@ define i32 @test_ad(i32 %p0) local_unnamed_addr #0 {
 define i32 @test_as() local_unnamed_addr #0 {
   %t0 = alloca i32, align 128
   %t1 = alloca [16384 x i32]
-  %t2 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t0) #0
-  %t3 = getelementptr [16384 x i32], [16384 x i32]* %t1, i32 0, i32 0
-  %t4 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t3) #0
+  %t2 = tail call i32 @bar1(ptr %t0) #0
+  %t4 = tail call i32 @bar1(ptr %t1) #0
   %t5 = add i32 %t2, %t4
   ret i32 %t5
 }
@@ -112,9 +110,8 @@ define i32 @test_as() local_unnamed_addr #0 {
 define i32 @test_ds(i32 %p0) local_unnamed_addr #0 {
   %t0 = alloca i32, i32 %p0, align 4
   %t1 = alloca [16384 x i32]
-  %t2 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t0) #0
-  %t3 = getelementptr [16384 x i32], [16384 x i32]* %t1, i32 0, i32 0
-  %t4 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t3) #0
+  %t2 = tail call i32 @bar1(ptr %t0) #0
+  %t4 = tail call i32 @bar1(ptr %t1) #0
   %t5 = add i32 %t2, %t4
   ret i32 %t5
 }
@@ -129,12 +126,11 @@ define i32 @test_ads(i32 %p0) local_unnamed_addr #0 {
   %t1 = alloca i32, i32 %p0, align 4
   %t2 = alloca [16384 x i32]
 
-  %t3 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t0) #0
-  %t4 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t1) #0
+  %t3 = tail call i32 @bar1(ptr %t0) #0
+  %t4 = tail call i32 @bar1(ptr %t1) #0
   %t5 = add i32 %t3, %t4
 
-  %t6 = getelementptr [16384 x i32], [16384 x i32]* %t2, i32 0, i32 0
-  %t7 = tail call i32 bitcast (i32 (...)* @bar1 to i32 (i32*)*)(i32* %t6) #0
+  %t7 = tail call i32 @bar1(ptr %t2) #0
   %t8 = add i32 %t5, %t7
   ret i32 %t7
 }

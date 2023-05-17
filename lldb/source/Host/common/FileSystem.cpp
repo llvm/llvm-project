@@ -37,6 +37,7 @@
 
 #include <algorithm>
 #include <fstream>
+#include <optional>
 #include <vector>
 
 using namespace lldb;
@@ -60,8 +61,8 @@ void FileSystem::Terminate() {
   InstanceImpl().reset();
 }
 
-Optional<FileSystem> &FileSystem::InstanceImpl() {
-  static Optional<FileSystem> g_fs;
+std::optional<FileSystem> &FileSystem::InstanceImpl() {
+  static std::optional<FileSystem> g_fs;
   return g_fs;
 }
 
@@ -267,7 +268,7 @@ void FileSystem::Resolve(FileSpec &file_spec) {
 
   // Update the FileSpec with the resolved path.
   if (file_spec.GetFilename().IsEmpty())
-    file_spec.GetDirectory().SetString(path);
+    file_spec.SetDirectory(path);
   else
     file_spec.SetPath(path);
   file_spec.SetIsResolved(true);

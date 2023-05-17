@@ -20,8 +20,8 @@
 define void @foo(i1 zeroext) nounwind {
   %2 = alloca i8, align 1
   %3 = zext i1 %0 to i8
-  store i8 %3, i8* %2, align 1
-  %4 = load i8, i8* %2, align 1
+  store i8 %3, ptr %2, align 1
+  %4 = load i8, ptr %2, align 1
   %5 = trunc i8 %4 to i1
   br i1 %5, label %6, label %8
 

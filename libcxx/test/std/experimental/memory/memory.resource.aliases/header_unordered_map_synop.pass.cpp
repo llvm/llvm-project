@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/unordered_map>
 
 // namespace std { namespace experimental { namespace pmr {
@@ -20,6 +22,8 @@
 //     ::std::unordered_multimap<K, V, H, P, polymorphic_allocator<pair<const K, V>>>
 //
 // }}} // namespace std::experimental::pmr
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/unordered_map>
 #include <experimental/memory_resource>

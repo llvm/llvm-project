@@ -8,7 +8,6 @@
 # CHECK:      Export Table:
 # CHECK:      DLL name: export-armnt.yaml.tmp.dll
 # CHECK:      Ordinal      RVA  Name
-# CHECK-NEXT:       0        0
 # CHECK-NEXT:       1   0x3000  exportdata
 # CHECK-NEXT:       2   0x1005  exportfn1
 # CHECK-NEXT:       3   0x1009  exportfn2

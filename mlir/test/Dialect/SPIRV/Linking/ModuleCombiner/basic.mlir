@@ -3,43 +3,43 @@
 // Combine modules without the same symbols
 
 // CHECK:      module {
-// CHECK-NEXT:   spv.module Logical GLSL450 {
-// CHECK-NEXT:     spv.SpecConstant @m1_sc
-// CHECK-NEXT:     spv.GlobalVariable @m1_gv bind(1, 0)
-// CHECK-NEXT:     spv.func @no_op
-// CHECK-NEXT:       spv.Return
+// CHECK-NEXT:   spirv.module Logical GLSL450 {
+// CHECK-NEXT:     spirv.SpecConstant @m1_sc
+// CHECK-NEXT:     spirv.GlobalVariable @m1_gv bind(1, 0)
+// CHECK-NEXT:     spirv.func @no_op
+// CHECK-NEXT:       spirv.Return
 // CHECK-NEXT:     }
-// CHECK-NEXT:     spv.EntryPoint "GLCompute" @no_op
-// CHECK-NEXT:     spv.ExecutionMode @no_op "LocalSize", 32, 1, 1
+// CHECK-NEXT:     spirv.EntryPoint "GLCompute" @no_op
+// CHECK-NEXT:     spirv.ExecutionMode @no_op "LocalSize", 32, 1, 1
 
-// CHECK-NEXT:     spv.SpecConstant @m2_sc
-// CHECK-NEXT:     spv.GlobalVariable @m2_gv bind(0, 1)
-// CHECK-NEXT:     spv.func @variable_init_spec_constant
-// CHECK-NEXT:       spv.mlir.referenceof @m2_sc
-// CHECK-NEXT:       spv.Variable init
-// CHECK-NEXT:       spv.Return
+// CHECK-NEXT:     spirv.SpecConstant @m2_sc
+// CHECK-NEXT:     spirv.GlobalVariable @m2_gv bind(0, 1)
+// CHECK-NEXT:     spirv.func @variable_init_spec_constant
+// CHECK-NEXT:       spirv.mlir.referenceof @m2_sc
+// CHECK-NEXT:       spirv.Variable init
+// CHECK-NEXT:       spirv.Return
 // CHECK-NEXT:     }
 // CHECK-NEXT:   }
 // CHECK-NEXT: }
 
 module {
-spv.module Logical GLSL450 {
-  spv.SpecConstant @m1_sc = 42.42 : f32
-  spv.GlobalVariable @m1_gv bind(1, 0): !spv.ptr<f32, Input>
-  spv.func @no_op() -> () "None" {
-    spv.Return
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @m1_sc = 42.42 : f32
+  spirv.GlobalVariable @m1_gv bind(1, 0): !spirv.ptr<f32, Input>
+  spirv.func @no_op() -> () "None" {
+    spirv.Return
   }
-  spv.EntryPoint "GLCompute" @no_op
-  spv.ExecutionMode @no_op "LocalSize", 32, 1, 1
+  spirv.EntryPoint "GLCompute" @no_op
+  spirv.ExecutionMode @no_op "LocalSize", 32, 1, 1
 }
 
-spv.module Logical GLSL450 {
-  spv.SpecConstant @m2_sc = 42 : i32
-  spv.GlobalVariable @m2_gv bind(0, 1): !spv.ptr<f32, Input>
-  spv.func @variable_init_spec_constant() -> () "None" {
-    %0 = spv.mlir.referenceof @m2_sc : i32
-    %1 = spv.Variable init(%0) : !spv.ptr<i32, Function>
-    spv.Return
+spirv.module Logical GLSL450 {
+  spirv.SpecConstant @m2_sc = 42 : i32
+  spirv.GlobalVariable @m2_gv bind(0, 1): !spirv.ptr<f32, Input>
+  spirv.func @variable_init_spec_constant() -> () "None" {
+    %0 = spirv.mlir.referenceof @m2_sc : i32
+    %1 = spirv.Variable init(%0) : !spirv.ptr<i32, Function>
+    spirv.Return
   }
 }
 }
@@ -47,33 +47,41 @@ spv.module Logical GLSL450 {
 // -----
 
 module {
-spv.module Physical64 GLSL450 {
+spirv.module Physical64 GLSL450 {
 }
 
 // expected-error @+1 {{input modules differ in addressing model, memory model, and/or VCE triple}}
-spv.module Logical GLSL450 {
+spirv.module Logical GLSL450 {
 }
 }
 
 // -----
 
 module {
-spv.module Logical Simple {
+spirv.module Logical Simple {
 }
 
 // expected-error @+1 {{input modules differ in addressing model, memory model, and/or VCE triple}}
-spv.module Logical GLSL450 {
+spirv.module Logical GLSL450 {
 }
 }
 
 // -----
 
 module {
-spv.module Logical GLSL450 {
+spirv.module Logical GLSL450 {
 }
 
 // expected-error @+1 {{input modules differ in addressing model, memory model, and/or VCE triple}}
-spv.module Logical GLSL450 requires #spv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]> {
+spirv.module Logical GLSL450 requires #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]> {
 }
 }
 
+// -----
+
+// No spir-v modules to combine.
+module {
+  func.func @foo(%arg0: i32) -> i32 {
+    return %arg0 : i32
+  }
+}

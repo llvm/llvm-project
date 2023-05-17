@@ -1,7 +1,5 @@
 "Collection of tools for displaying bit representation of numbers."""
 
-from __future__ import print_function
-
 def binary(n, width=None):
     """
     Return a list of (0|1)'s for the binary representation of n where n >= 0.

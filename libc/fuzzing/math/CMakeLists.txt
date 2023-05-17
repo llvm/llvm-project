@@ -45,7 +45,7 @@ add_libc_fuzzer(
     libc.src.math.trunc
     libc.src.math.truncf
     libc.src.math.truncl
-    libc.src.__support.FPUtil.fputil
+    libc.src.__support.FPUtil.fp_bits
     libc.src.__support.CPP.type_traits
 )
 

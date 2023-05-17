@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: grep -B99999 [S]PLITMARKER %s | llvm-mc -triple x86_64-windows-msvc -filetype=obj -o %t1.obj
 # RUN: grep -A99999 [S]PLITMARKER %s | llvm-mc -triple x86_64-windows-msvc -filetype=obj -o %t2.obj
-# RUN: lld-link %t1.obj %t2.obj -guard:cf -out:%t.exe -entry:main -opt:noref
+# RUN: lld-link %t1.obj %t2.obj -guard:cf,nolongjmp -out:%t.exe -entry:main -opt:noref
 # RUN: llvm-readobj --file-headers --coff-load-config %t.exe | FileCheck %s
 
 # CHECK: ImageBase: 0x140000000
@@ -12,7 +12,10 @@
 # CHECK:   GuardCFCheckDispatch: 0x0
 # CHECK:   GuardCFFunctionTable: 0x14000{{.*}}
 # CHECK:   GuardCFFunctionCount: 3
-# CHECK:   GuardFlags: 0x500
+# CHECK:   GuardFlags [ (0x500)
+# CHECK:     CF_FUNCTION_TABLE_PRESENT (0x400)
+# CHECK:     CF_INSTRUMENTED (0x100)
+# CHECK:   ]
 # CHECK:   GuardAddressTakenIatEntryTable: 0x0
 # CHECK:   GuardAddressTakenIatEntryCount: 0
 # CHECK:   GuardLongJumpTargetTable: 0x0

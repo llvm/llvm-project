@@ -18,9 +18,9 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 define dso_local signext i32 @test_external() nounwind {
 entry:
-  %0 = load i32, i32* @ei, align 4
+  %0 = load i32, ptr @ei, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @ei, align 4
+  store i32 %inc, ptr @ei, align 4
   ret i32 %0
 }
 
@@ -41,9 +41,9 @@ entry:
 
 define dso_local signext i32 @test_fn_static() nounwind {
 entry:
-  %0 = load i32, i32* @test_fn_static.si, align 4
+  %0 = load i32, ptr @test_fn_static.si, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @test_fn_static.si, align 4
+  store i32 %inc, ptr @test_fn_static.si, align 4
   ret i32 %0
 }
 
@@ -63,9 +63,9 @@ entry:
 
 define dso_local signext i32 @test_file_static() nounwind {
 entry:
-  %0 = load i32, i32* @gi, align 4
+  %0 = load i32, ptr @gi, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @gi, align 4
+  store i32 %inc, ptr @gi, align 4
   ret i32 %0
 }
 
@@ -102,9 +102,9 @@ entry:
 
 define dso_local signext i32 @test_tentative() nounwind {
 entry:
-  %0 = load i32, i32* @ti, align 4
+  %0 = load i32, ptr @ti, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @ti, align 4
+  store i32 %inc, ptr @ti, align 4
   ret i32 %0
 }
 
@@ -116,13 +116,12 @@ entry:
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_HA [[SYM6:[^ ]+]]
 ; LARGE-NEXT:      0x{{[0-9,A-F]+}} R_PPC64_TOC16_LO_DS [[SYM6]]
 
-define i8* @test_fnaddr() nounwind {
+define ptr @test_fnaddr() nounwind {
 entry:
-  %func = alloca i32 (i32)*, align 8
-  store i32 (i32)* @foo, i32 (i32)** %func, align 8
-  %0 = load i32 (i32)*, i32 (i32)** %func, align 8
-  %1 = bitcast i32 (i32)* %0 to i8*
-  ret i8* %1
+  %func = alloca ptr, align 8
+  store ptr @foo, ptr %func, align 8
+  %0 = load ptr, ptr %func, align 8
+  ret ptr %0
 }
 
 declare signext i32 @foo(i32 signext)
@@ -140,8 +139,8 @@ declare signext i32 @foo(i32 signext)
 define dso_local signext i32 @test_jump_table(i32 signext %i) nounwind {
 entry:
   %i.addr = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   switch i32 %0, label %sw.default [
     i32 3, label %sw.bb
     i32 4, label %sw.bb1
@@ -153,31 +152,31 @@ sw.default:                                       ; preds = %entry
   br label %sw.epilog
 
 sw.bb:                                            ; preds = %entry
-  %1 = load i32, i32* %i.addr, align 4
+  %1 = load i32, ptr %i.addr, align 4
   %mul = mul nsw i32 %1, 7
-  store i32 %mul, i32* %i.addr, align 4
+  store i32 %mul, ptr %i.addr, align 4
   br label %sw.bb1
 
 sw.bb1:                                           ; preds = %entry, %sw.bb
-  %2 = load i32, i32* %i.addr, align 4
+  %2 = load i32, ptr %i.addr, align 4
   %dec = add nsw i32 %2, -1
-  store i32 %dec, i32* %i.addr, align 4
+  store i32 %dec, ptr %i.addr, align 4
   br label %sw.bb2
 
 sw.bb2:                                           ; preds = %entry, %sw.bb1
-  %3 = load i32, i32* %i.addr, align 4
+  %3 = load i32, ptr %i.addr, align 4
   %add = add nsw i32 %3, 3
-  store i32 %add, i32* %i.addr, align 4
+  store i32 %add, ptr %i.addr, align 4
   br label %sw.bb3
 
 sw.bb3:                                           ; preds = %entry, %sw.bb2
-  %4 = load i32, i32* %i.addr, align 4
+  %4 = load i32, ptr %i.addr, align 4
   %shl = shl i32 %4, 1
-  store i32 %shl, i32* %i.addr, align 4
+  store i32 %shl, ptr %i.addr, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb3, %sw.default
-  %5 = load i32, i32* %i.addr, align 4
+  %5 = load i32, ptr %i.addr, align 4
   ret i32 %5
 }
 

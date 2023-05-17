@@ -1,4 +1,4 @@
-; RUN: opt -loop-reduce -S < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -loop-reduce -S < %s | FileCheck %s
 ;
 ; PR11571: handle a postinc user outside of for.body7 that requires
 ; recursive expansion of a quadratic recurrence within for.body7. LSR

@@ -47,8 +47,8 @@ FullRegNamesWithPercent("ppc-reg-with-percent-prefix", cl::Hidden,
 #define PRINT_ALIAS_INSTR
 #include "PPCGenAsmWriter.inc"
 
-void PPCInstPrinter::printRegName(raw_ostream &OS, unsigned RegNo) const {
-  const char *RegName = getRegisterName(RegNo);
+void PPCInstPrinter::printRegName(raw_ostream &OS, MCRegister Reg) const {
+  const char *RegName = getRegisterName(Reg);
   OS << RegName;
 }
 
@@ -161,7 +161,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
   // On AIX, only emit the extended mnemonics for dcbt and dcbtst if
   // the "modern assembler" is available.
   if ((MI->getOpcode() == PPC::DCBT || MI->getOpcode() == PPC::DCBTST) &&
-      (!TT.isOSAIX() || STI.getFeatureBits()[PPC::FeatureModernAIXAs])) {
+      (!TT.isOSAIX() || STI.hasFeature(PPC::FeatureModernAIXAs))) {
     unsigned char TH = MI->getOperand(0).getImm();
     O << "\tdcbt";
     if (MI->getOpcode() == PPC::DCBTST)
@@ -170,7 +170,7 @@ void PPCInstPrinter::printInst(const MCInst *MI, uint64_t Address,
       O << "t";
     O << " ";
 
-    bool IsBookE = STI.getFeatureBits()[PPC::FeatureBookE];
+    bool IsBookE = STI.hasFeature(PPC::FeatureBookE);
     if (IsBookE && TH != 0 && TH != 16)
       O << (unsigned int) TH << ", ";
 

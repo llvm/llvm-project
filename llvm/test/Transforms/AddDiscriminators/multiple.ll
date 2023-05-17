@@ -14,30 +14,30 @@ define void @foo(i32 %i) #0 !dbg !4 {
 entry:
   %i.addr = alloca i32, align 4
   %x = alloca i32, align 4
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4, !dbg !10
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4, !dbg !10
   %cmp = icmp slt i32 %0, 10, !dbg !10
   br i1 %cmp, label %if.then, label %if.else, !dbg !10
 
 if.then:                                          ; preds = %entry
-  %1 = load i32, i32* %i.addr, align 4, !dbg !10
-; CHECK:  %1 = load i32, i32* %i.addr, align 4, !dbg ![[THEN:[0-9]+]]
+  %1 = load i32, ptr %i.addr, align 4, !dbg !10
+; CHECK:  %1 = load i32, ptr %i.addr, align 4, !dbg ![[THEN:[0-9]+]]
 
-  store i32 %1, i32* %x, align 4, !dbg !10
-; CHECK:  store i32 %1, i32* %x, align 4, !dbg ![[THEN]]
+  store i32 %1, ptr %x, align 4, !dbg !10
+; CHECK:  store i32 %1, ptr %x, align 4, !dbg ![[THEN]]
 
   br label %if.end, !dbg !10
 ; CHECK:  br label %if.end, !dbg ![[THEN]]
 
 if.else:                                          ; preds = %entry
-  %2 = load i32, i32* %i.addr, align 4, !dbg !10
-; CHECK:  %2 = load i32, i32* %i.addr, align 4, !dbg ![[ELSE:[0-9]+]]
+  %2 = load i32, ptr %i.addr, align 4, !dbg !10
+; CHECK:  %2 = load i32, ptr %i.addr, align 4, !dbg ![[ELSE:[0-9]+]]
 
   %sub = sub nsw i32 0, %2, !dbg !10
 ; CHECK:  %sub = sub nsw i32 0, %2, !dbg ![[ELSE]]
 
-  store i32 %sub, i32* %x, align 4, !dbg !10
-; CHECK:  store i32 %sub, i32* %x, align 4, !dbg ![[ELSE]]
+  store i32 %sub, ptr %x, align 4, !dbg !10
+; CHECK:  store i32 %sub, ptr %x, align 4, !dbg ![[ELSE]]
 
   br label %if.end
 

@@ -4,20 +4,20 @@
 ; RUN: llvm-reduce --test FileCheck --test-arg --check-prefixes=CHECK-ALL,CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
 ; RUN: FileCheck --check-prefixes=CHECK-ALL,CHECK-FINAL %s --input-file %t
 
-declare void @pass(void (i32, i8*, i64*)*)
+declare void @pass(ptr)
 
 define void @bar() {
 entry:
   ; CHECK-INTERESTINGNESS: call void @pass({{.*}}@interesting
-  ; CHECK-FINAL: call void @pass(void (i32, i8*, i64*)* bitcast (void (i64*)* @interesting to void (i32, i8*, i64*)*))
-  call void @pass(void (i32, i8*, i64*)* @interesting)
+  ; CHECK-FINAL: call void @pass(ptr @interesting)
+  call void @pass(ptr @interesting)
   ret void
 }
 
 ; CHECK-ALL: define internal void @interesting
 ; CHECK-INTERESTINGNESS-SAME: ({{.*}}%interesting{{.*}}) {
-; CHECK-FINAL-SAME: (i64* %interesting)
-define internal void @interesting(i32 %uninteresting1, i8* %uninteresting2, i64* %interesting) {
+; CHECK-FINAL-SAME: (ptr %interesting)
+define internal void @interesting(i32 %uninteresting1, ptr %uninteresting2, ptr %interesting) {
 entry:
   ret void
 }

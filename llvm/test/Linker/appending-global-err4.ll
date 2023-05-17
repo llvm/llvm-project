@@ -6,4 +6,4 @@
 
 ; CHECK: Appending variables with different visibility need to be linked
 
-@var = appending hidden global [1 x i32* ] undef
+@var = appending hidden global [1 x ptr ] undef

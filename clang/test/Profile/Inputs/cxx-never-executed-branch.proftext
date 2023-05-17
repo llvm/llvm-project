@@ -1,0 +1,13 @@
+_Z13is_in_profilev
+0x000000029f493458
+2
+20000
+# The branch is never executed.
+0
+
+_Z17is_not_in_profilev
+0x000000029f493458
+2
+# The function was never executed
+0
+0

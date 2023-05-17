@@ -10,7 +10,6 @@
 #define LLVM_TRANSFORMS_IPO_INLINER_H
 
 #include "llvm/Analysis/CGSCCPassManager.h"
-#include "llvm/Analysis/CallGraphSCCPass.h"
 #include "llvm/Analysis/InlineAdvisor.h"
 #include "llvm/Analysis/InlineCost.h"
 #include "llvm/Analysis/LazyCallGraph.h"
@@ -22,62 +21,6 @@ namespace llvm {
 class AssumptionCacheTracker;
 class CallGraph;
 class ProfileSummaryInfo;
-
-/// This class contains all of the helper code which is used to perform the
-/// inlining operations that do not depend on the policy. It contains the core
-/// bottom-up inlining infrastructure that specific inliner passes use.
-struct LegacyInlinerBase : public CallGraphSCCPass {
-  explicit LegacyInlinerBase(char &ID);
-  explicit LegacyInlinerBase(char &ID, bool InsertLifetime);
-
-  /// For this class, we declare that we require and preserve the call graph.
-  /// If the derived class implements this method, it should always explicitly
-  /// call the implementation here.
-  void getAnalysisUsage(AnalysisUsage &Info) const override;
-
-  using llvm::Pass::doInitialization;
-
-  bool doInitialization(CallGraph &CG) override;
-
-  /// Main run interface method, this implements the interface required by the
-  /// Pass class.
-  bool runOnSCC(CallGraphSCC &SCC) override;
-
-  using llvm::Pass::doFinalization;
-
-  /// Remove now-dead linkonce functions at the end of processing to avoid
-  /// breaking the SCC traversal.
-  bool doFinalization(CallGraph &CG) override;
-
-  /// This method must be implemented by the subclass to determine the cost of
-  /// inlining the specified call site.  If the cost returned is greater than
-  /// the current inline threshold, the call site is not inlined.
-  virtual InlineCost getInlineCost(CallBase &CB) = 0;
-
-  /// Remove dead functions.
-  ///
-  /// This also includes a hack in the form of the 'AlwaysInlineOnly' flag
-  /// which restricts it to deleting functions with an 'AlwaysInline'
-  /// attribute. This is useful for the InlineAlways pass that only wants to
-  /// deal with that subset of the functions.
-  bool removeDeadFunctions(CallGraph &CG, bool AlwaysInlineOnly = false);
-
-  /// This function performs the main work of the pass.  The default of
-  /// Inlinter::runOnSCC() calls skipSCC() before calling this method, but
-  /// derived classes which cannot be skipped can override that method and call
-  /// this function unconditionally.
-  bool inlineCalls(CallGraphSCC &SCC);
-
-private:
-  // Insert @llvm.lifetime intrinsics.
-  bool InsertLifetime = true;
-
-protected:
-  AssumptionCacheTracker *ACT;
-  ProfileSummaryInfo *PSI;
-  std::function<const TargetLibraryInfo &(Function &)> GetTLI;
-  ImportedFunctionsInliningStatistics ImportedFunctionsStats;
-};
 
 /// The inliner pass for the new pass manager.
 ///
@@ -95,7 +38,9 @@ protected:
 /// passes be composed to achieve the same end result.
 class InlinerPass : public PassInfoMixin<InlinerPass> {
 public:
-  InlinerPass(bool OnlyMandatory = false) : OnlyMandatory(OnlyMandatory) {}
+  InlinerPass(bool OnlyMandatory = false,
+              ThinOrFullLTOPhase LTOPhase = ThinOrFullLTOPhase::None)
+      : OnlyMandatory(OnlyMandatory), LTOPhase(LTOPhase) {}
   InlinerPass(InlinerPass &&Arg) = default;
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
@@ -109,6 +54,7 @@ private:
                             FunctionAnalysisManager &FAM, Module &M);
   std::unique_ptr<InlineAdvisor> OwnedAdvisor;
   const bool OnlyMandatory;
+  const ThinOrFullLTOPhase LTOPhase;
 };
 
 /// Module pass, wrapping the inliner pass. This works in conjunction with the
@@ -121,6 +67,7 @@ class ModuleInlinerWrapperPass
 public:
   ModuleInlinerWrapperPass(
       InlineParams Params = getInlineParams(), bool MandatoryFirst = true,
+      InlineContext IC = {},
       InliningAdvisorMode Mode = InliningAdvisorMode::Default,
       unsigned MaxDevirtIterations = 0);
   ModuleInlinerWrapperPass(ModuleInlinerWrapperPass &&Arg) = default;
@@ -146,6 +93,7 @@ public:
 
 private:
   const InlineParams Params;
+  const InlineContext IC;
   const InliningAdvisorMode Mode;
   const unsigned MaxDevirtIterations;
   // TODO: Clean this up so we only have one ModulePassManager.

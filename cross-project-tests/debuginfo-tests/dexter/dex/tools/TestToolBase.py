@@ -17,7 +17,7 @@ from dex.debugger.Debuggers import add_debugger_tool_arguments
 from dex.debugger.Debuggers import handle_debugger_tool_options
 from dex.heuristic.Heuristic import add_heuristic_tool_arguments
 from dex.tools.ToolBase import ToolBase
-from dex.utils import get_root_directory, warn
+from dex.utils import get_root_directory
 from dex.utils.Exceptions import Error, ToolArgumentError
 from dex.utils.ReturnCode import ReturnCode
 
@@ -53,8 +53,9 @@ class TestToolBase(ToolBase):
         options = self.context.options
 
         if not options.builder and (options.cflags or options.ldflags):
-            warn(self.context, '--cflags and --ldflags will be ignored when not'
-                               ' using --builder')
+            self.context.logger.warning(
+                '--cflags and --ldflags will be ignored when not using --builder',
+                enable_prefix=True)
 
         if options.vs_solution:
             options.vs_solution = os.path.abspath(options.vs_solution)

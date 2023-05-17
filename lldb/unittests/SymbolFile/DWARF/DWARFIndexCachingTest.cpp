@@ -39,10 +39,30 @@ static void EncodeDecode(const DIERef &object) {
 
 TEST(DWARFIndexCachingTest, DIERefEncodeDecode) {
   // Tests DIERef::Encode(...) and DIERef::Decode(...)
-  EncodeDecode(DIERef(llvm::None, DIERef::Section::DebugInfo, 0x11223344));
-  EncodeDecode(DIERef(llvm::None, DIERef::Section::DebugTypes, 0x11223344));
+  EncodeDecode(DIERef(std::nullopt, DIERef::Section::DebugInfo, 0x11223344));
+  EncodeDecode(DIERef(std::nullopt, DIERef::Section::DebugTypes, 0x11223344));
   EncodeDecode(DIERef(100, DIERef::Section::DebugInfo, 0x11223344));
   EncodeDecode(DIERef(200, DIERef::Section::DebugTypes, 0x11223344));
+}
+
+TEST(DWARFIndexCachingTest, DIERefEncodeDecodeMax) {
+  // Tests DIERef::Encode(...) and DIERef::Decode(...)
+  EncodeDecode(DIERef(std::nullopt, DIERef::Section::DebugInfo,
+                      DIERef::k_die_offset_mask - 1));
+  EncodeDecode(DIERef(std::nullopt, DIERef::Section::DebugTypes,
+                      DIERef::k_die_offset_mask - 1));
+  EncodeDecode(
+      DIERef(100, DIERef::Section::DebugInfo, DIERef::k_die_offset_mask - 1));
+  EncodeDecode(
+      DIERef(200, DIERef::Section::DebugTypes, DIERef::k_die_offset_mask - 1));
+  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugInfo,
+                      DIERef::k_file_index_mask));
+  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugTypes,
+                      DIERef::k_file_index_mask));
+  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugInfo,
+                      0x11223344));
+  EncodeDecode(DIERef(DIERef::k_file_index_mask, DIERef::Section::DebugTypes,
+                      0x11223344));
 }
 
 static void EncodeDecode(const NameToDIE &object, ByteOrder byte_order) {
@@ -80,7 +100,7 @@ TEST(DWARFIndexCachingTest, NameToDIEEncodeDecode) {
   // Make sure an empty NameToDIE map encodes and decodes correctly.
   EncodeDecode(map);
   map.Insert(ConstString("hello"),
-             DIERef(llvm::None, DIERef::Section::DebugInfo, 0x11223344));
+             DIERef(std::nullopt, DIERef::Section::DebugInfo, 0x11223344));
   map.Insert(ConstString("workd"),
              DIERef(100, DIERef::Section::DebugInfo, 0x11223344));
   map.Finalize();
@@ -117,84 +137,84 @@ TEST(DWARFIndexCachingTest, ManualDWARFIndexIndexSetEncodeDecode) {
   // be encoded and decoded correctly.
   set.function_basenames.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.function_basenames.Clear();
   // Make sure an IndexSet with only items in IndexSet::function_fullnames can
   // be encoded and decoded correctly.
   set.function_fullnames.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.function_fullnames.Clear();
   // Make sure an IndexSet with only items in IndexSet::function_methods can
   // be encoded and decoded correctly.
   set.function_methods.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.function_methods.Clear();
   // Make sure an IndexSet with only items in IndexSet::function_selectors can
   // be encoded and decoded correctly.
   set.function_selectors.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.function_selectors.Clear();
   // Make sure an IndexSet with only items in IndexSet::objc_class_selectors can
   // be encoded and decoded correctly.
   set.objc_class_selectors.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.objc_class_selectors.Clear();
   // Make sure an IndexSet with only items in IndexSet::globals can
   // be encoded and decoded correctly.
   set.globals.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.globals.Clear();
   // Make sure an IndexSet with only items in IndexSet::types can
   // be encoded and decoded correctly.
   set.types.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.types.Clear();
   // Make sure an IndexSet with only items in IndexSet::namespaces can
   // be encoded and decoded correctly.
   set.namespaces.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
   set.namespaces.Clear();
   // Make sure that an IndexSet with item in all NameToDIE maps can be
   // be encoded and decoded correctly.
   set.function_basenames.Insert(
       ConstString("a"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   set.function_fullnames.Insert(
       ConstString("b"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   set.function_methods.Insert(
       ConstString("c"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   set.function_selectors.Insert(
       ConstString("d"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   set.objc_class_selectors.Insert(
       ConstString("e"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   set.globals.Insert(
       ConstString("f"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   set.types.Insert(
       ConstString("g"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   set.namespaces.Insert(
       ConstString("h"),
-      DIERef(llvm::None, DIERef::Section::DebugInfo, ++die_offset));
+      DIERef(std::nullopt, DIERef::Section::DebugInfo, ++die_offset));
   EncodeDecode(set);
 }
 
@@ -231,7 +251,7 @@ TEST(DWARFIndexCachingTest, CacheSignatureTests) {
   EncodeDecode(sig, /*encode_result=*/false);
   sig.Clear();
 
-  sig.m_uuid = UUID::fromData("@\x00\x11\x22\x33\x44\x55\x66\x77", 8);
+  sig.m_uuid = UUID("@\x00\x11\x22\x33\x44\x55\x66\x77", 8);
   EXPECT_TRUE(sig.IsValid());
   EncodeDecode(sig, /*encode_result=*/true);
   sig.m_mod_time = 0x12345678;
@@ -240,7 +260,7 @@ TEST(DWARFIndexCachingTest, CacheSignatureTests) {
   sig.m_obj_mod_time = 0x456789ab;
   EXPECT_TRUE(sig.IsValid());
   EncodeDecode(sig, /*encode_result=*/true);
-  sig.m_mod_time = llvm::None;
+  sig.m_mod_time = std::nullopt;
   EXPECT_TRUE(sig.IsValid());
   EncodeDecode(sig, /*encode_result=*/true);
 

@@ -22,18 +22,18 @@ TEST(PostOrderIteratorTest, Compiles) {
   // Tests that template specializations are kept up to date
   void *Null = nullptr;
   po_iterator_storage<std::set<void *>, false> PIS;
-  PIS.insertEdge(Optional<void *>(), Null);
+  PIS.insertEdge(std::optional<void *>(), Null);
   ExtSetTy Ext;
   po_iterator_storage<ExtSetTy, true> PISExt(Ext);
-  PIS.insertEdge(Optional<void *>(), Null);
+  PIS.insertEdge(std::optional<void *>(), Null);
 
   // Test above, but going through po_iterator (which inherits from template
   // base)
   BasicBlock *NullBB = nullptr;
   auto PI = po_end(NullBB);
-  PI.insertEdge(Optional<BasicBlock *>(), NullBB);
+  PI.insertEdge(std::optional<BasicBlock *>(), NullBB);
   auto PIExt = po_ext_end(NullBB, Ext);
-  PIExt.insertEdge(Optional<BasicBlock *>(), NullBB);
+  PIExt.insertEdge(std::optional<BasicBlock *>(), NullBB);
 }
 
 // Test post-order and reverse post-order traversals for simple graph type.

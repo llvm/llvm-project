@@ -22,7 +22,7 @@ define i32 @andn32(i32 %x, i32 %y)   {
   ret i32 %tmp2
 }
 
-define i32 @andn32_load(i32 %x, i32* %y)   {
+define i32 @andn32_load(i32 %x, ptr %y)   {
 ; X86-LABEL: andn32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -34,7 +34,7 @@ define i32 @andn32_load(i32 %x, i32* %y)   {
 ; X64:       # %bb.0:
 ; X64-NEXT:    andnl (%rsi), %edi, %eax
 ; X64-NEXT:    retq
-  %y1 = load i32, i32* %y
+  %y1 = load i32, ptr %y
   %tmp1 = xor i32 %x, -1
   %tmp2 = and i32 %y1, %tmp1
   ret i32 %tmp2
@@ -291,7 +291,7 @@ define i1 @andn_cmp_swap_ops(i64 %x, i64 %y) {
 define i1 @andn_cmp_i8(i8 %x, i8 %y) {
 ; X86-LABEL: andn_cmp_i8:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    notb %al
 ; X86-NEXT:    testb %al, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %al
@@ -346,7 +346,7 @@ define i32 @bextr32(i32 %x, i32 %y)   {
   ret i32 %tmp
 }
 
-define i32 @bextr32_load(i32* %x, i32 %y)   {
+define i32 @bextr32_load(ptr %x, i32 %y)   {
 ; X86-LABEL: bextr32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -358,7 +358,7 @@ define i32 @bextr32_load(i32* %x, i32 %y)   {
 ; X64:       # %bb.0:
 ; X64-NEXT:    bextrl %esi, (%rdi), %eax
 ; X64-NEXT:    retq
-  %x1 = load i32, i32* %x
+  %x1 = load i32, ptr %x
   %tmp = tail call i32 @llvm.x86.bmi.bextr.32(i32 %x1, i32 %y)
   ret i32 %tmp
 }
@@ -411,7 +411,7 @@ define i32 @bextr32_subreg(i32 %x)  uwtable  ssp {
   ret i32 %2
 }
 
-define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
+define i32 @bextr32b_load(ptr %x)  uwtable  ssp {
 ; X86-SLOW-BEXTR-LABEL: bextr32b_load:
 ; X86-SLOW-BEXTR:       # %bb.0:
 ; X86-SLOW-BEXTR-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -439,7 +439,7 @@ define i32 @bextr32b_load(i32* %x)  uwtable  ssp {
 ; X64-FAST-BEXTR-NEXT:    movl $3076, %eax # imm = 0xC04
 ; X64-FAST-BEXTR-NEXT:    bextrl %eax, (%rdi), %eax
 ; X64-FAST-BEXTR-NEXT:    retq
-  %1 = load i32, i32* %x
+  %1 = load i32, ptr %x
   %2 = lshr i32 %1, 4
   %3 = and i32 %2, 4095
   ret i32 %3
@@ -497,7 +497,7 @@ define i32 @blsi32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsi32_load(i32* %x)   {
+define i32 @blsi32_load(ptr %x)   {
 ; X86-LABEL: blsi32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -508,7 +508,7 @@ define i32 @blsi32_load(i32* %x)   {
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsil (%rdi), %eax
 ; X64-NEXT:    retq
-  %x1 = load i32, i32* %x
+  %x1 = load i32, ptr %x
   %tmp = sub i32 0, %x1
   %tmp2 = and i32 %x1, %tmp
   ret i32 %tmp2
@@ -729,7 +729,7 @@ define i32 @blsmsk32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsmsk32_load(i32* %x)   {
+define i32 @blsmsk32_load(ptr %x)   {
 ; X86-LABEL: blsmsk32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -740,7 +740,7 @@ define i32 @blsmsk32_load(i32* %x)   {
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsmskl (%rdi), %eax
 ; X64-NEXT:    retq
-  %x1 = load i32, i32* %x
+  %x1 = load i32, ptr %x
   %tmp = sub i32 %x1, 1
   %tmp2 = xor i32 %x1, %tmp
   ret i32 %tmp2
@@ -959,7 +959,7 @@ define i32 @blsr32(i32 %x)   {
   ret i32 %tmp2
 }
 
-define i32 @blsr32_load(i32* %x)   {
+define i32 @blsr32_load(ptr %x)   {
 ; X86-LABEL: blsr32_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -970,7 +970,7 @@ define i32 @blsr32_load(i32* %x)   {
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsrl (%rdi), %eax
 ; X64-NEXT:    retq
-  %x1 = load i32, i32* %x
+  %x1 = load i32, ptr %x
   %tmp = sub i32 %x1, 1
   %tmp2 = and i32 %x1, %tmp
   ret i32 %tmp2
@@ -1223,20 +1223,16 @@ define void @pr40060(i32, i32) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    bextrl %eax, {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    testl %eax, %eax
-; X86-NEXT:    js .LBB52_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    jmp bar # TAILCALL
-; X86-NEXT:  .LBB52_1:
+; X86-NEXT:    jns bar # TAILCALL
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr40060:
 ; X64:       # %bb.0:
 ; X64-NEXT:    bextrl %esi, %edi, %eax
 ; X64-NEXT:    testl %eax, %eax
-; X64-NEXT:    js .LBB52_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    jmp bar # TAILCALL
-; X64-NEXT:  .LBB52_1:
+; X64-NEXT:    jns bar # TAILCALL
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    retq
   %3 = tail call i32 @llvm.x86.bmi.bextr.32(i32 %0, i32 %1)
   %4 = icmp sgt i32 %3, -1
@@ -1444,19 +1440,15 @@ define void @pr42118_i32(i32 %x) {
 ; X86-LABEL: pr42118_i32:
 ; X86:       # %bb.0:
 ; X86-NEXT:    blsrl {{[0-9]+}}(%esp), %eax
-; X86-NEXT:    jne .LBB57_1
-; X86-NEXT:  # %bb.2:
-; X86-NEXT:    jmp bar # TAILCALL
-; X86-NEXT:  .LBB57_1:
+; X86-NEXT:    je bar # TAILCALL
+; X86-NEXT:  # %bb.1:
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: pr42118_i32:
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsrl %edi, %eax
-; X64-NEXT:    jne .LBB57_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    jmp bar # TAILCALL
-; X64-NEXT:  .LBB57_1:
+; X64-NEXT:    je bar # TAILCALL
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    retq
   %tmp = sub i32 0, %x
   %tmp1 = and i32 %tmp, %x
@@ -1498,10 +1490,8 @@ define void @pr42118_i64(i64 %x) {
 ; X64-LABEL: pr42118_i64:
 ; X64:       # %bb.0:
 ; X64-NEXT:    blsrq %rdi, %rax
-; X64-NEXT:    jne .LBB58_1
-; X64-NEXT:  # %bb.2:
-; X64-NEXT:    jmp bar # TAILCALL
-; X64-NEXT:  .LBB58_1:
+; X64-NEXT:    je bar # TAILCALL
+; X64-NEXT:  # %bb.1:
 ; X64-NEXT:    retq
   %tmp = sub i64 0, %x
   %tmp1 = and i64 %tmp, %x

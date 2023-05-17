@@ -7,11 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"
-#include "PassDetail.h"
+
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+
+namespace mlir {
+namespace NVVM {
+#define GEN_PASS_DEF_NVVMOPTIMIZEFORTARGET
+#include "mlir/Dialect/LLVMIR/Transforms/Passes.h.inc"
+} // namespace NVVM
+} // namespace mlir
 
 using namespace mlir;
 
@@ -32,7 +40,7 @@ private:
 };
 
 struct NVVMOptimizeForTarget
-    : public NVVMOptimizeForTargetBase<NVVMOptimizeForTarget> {
+    : public NVVM::impl::NVVMOptimizeForTargetBase<NVVMOptimizeForTarget> {
   void runOnOperation() override;
 
   void getDependentDialects(DialectRegistry &registry) const override {

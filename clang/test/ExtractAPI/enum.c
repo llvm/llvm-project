@@ -65,57 +65,68 @@ enum {
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Bicycle",
-      "target": "c:@E@Vehicle"
+      "target": "c:@E@Vehicle",
+      "targetFallback": "Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Car",
-      "target": "c:@E@Vehicle"
+      "target": "c:@E@Vehicle",
+      "targetFallback": "Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Train",
-      "target": "c:@E@Vehicle"
+      "target": "c:@E@Vehicle",
+      "targetFallback": "Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Ship",
-      "target": "c:@E@Vehicle"
+      "target": "c:@E@Vehicle",
+      "targetFallback": "Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Vehicle@Airplane",
-      "target": "c:@E@Vehicle"
+      "target": "c:@E@Vehicle",
+      "targetFallback": "Vehicle"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@North",
-      "target": "c:@E@Direction"
+      "target": "c:@E@Direction",
+      "targetFallback": "Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@East",
-      "target": "c:@E@Direction"
+      "target": "c:@E@Direction",
+      "targetFallback": "Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@South",
-      "target": "c:@E@Direction"
+      "target": "c:@E@Direction",
+      "targetFallback": "Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@E@Direction@West",
-      "target": "c:@E@Direction"
+      "target": "c:@E@Direction",
+      "targetFallback": "Direction"
     },
     {
       "kind": "memberOf",
       "source": "c:@Ea@Constant@Constant",
-      "target": "c:@Ea@Constant"
+      "target": "c:@Ea@Constant",
+      "targetFallback": "enum (unnamed)"
     },
     {
       "kind": "memberOf",
       "source": "c:@Ea@OtherConstant@OtherConstant",
-      "target": "c:@Ea@OtherConstant"
+      "target": "c:@Ea@OtherConstant",
+      "targetFallback": "enum (unnamed)"
     }
   ],
   "symbols": [
@@ -142,6 +153,10 @@ enum {
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:i",
           "spelling": "unsigned int"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "docComment": {
@@ -450,6 +465,10 @@ enum {
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:c",
           "spelling": "unsigned char"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -673,6 +692,10 @@ enum {
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:i",
           "spelling": "unsigned int"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -694,13 +717,13 @@ enum {
         "navigator": [
           {
             "kind": "identifier",
-            "spelling": "(anonymous)"
+            "spelling": "enum (unnamed)"
           }
         ],
-        "title": "(anonymous)"
+        "title": "enum (unnamed)"
       },
       "pathComponents": [
-        "(anonymous)"
+        "enum (unnamed)"
       ]
     },
     {
@@ -742,7 +765,7 @@ enum {
         "title": "Constant"
       },
       "pathComponents": [
-        "(anonymous)",
+        "enum (unnamed)",
         "Constant"
       ]
     },
@@ -761,6 +784,10 @@ enum {
           "kind": "typeIdentifier",
           "preciseIdentifier": "c:i",
           "spelling": "unsigned int"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -782,13 +809,13 @@ enum {
         "navigator": [
           {
             "kind": "identifier",
-            "spelling": "(anonymous)"
+            "spelling": "enum (unnamed)"
           }
         ],
-        "title": "(anonymous)"
+        "title": "enum (unnamed)"
       },
       "pathComponents": [
-        "(anonymous)"
+        "enum (unnamed)"
       ]
     },
     {
@@ -830,7 +857,7 @@ enum {
         "title": "OtherConstant"
       },
       "pathComponents": [
-        "(anonymous)",
+        "enum (unnamed)",
         "OtherConstant"
       ]
     }

@@ -20,6 +20,7 @@
 #include "flang/Common/Fortran.h"
 #include "flang/Common/uint128.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
+#include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -35,7 +36,10 @@ struct c_double_complex_t;
 
 namespace Fortran::runtime {
 class Descriptor;
+namespace typeInfo {
+class DerivedType;
 }
+} // namespace Fortran::runtime
 
 namespace fir::runtime {
 
@@ -280,6 +284,20 @@ constexpr TypeBuilderFunc getModel<Fortran::common::TypeCategory>() {
   };
 }
 template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::typeInfo::DerivedType &>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::NoneType::get(context));
+  };
+}
+template <>
+constexpr TypeBuilderFunc
+getModel<const Fortran::runtime::typeInfo::DerivedType *>() {
+  return [](mlir::MLIRContext *context) -> mlir::Type {
+    return fir::ReferenceType::get(mlir::NoneType::get(context));
+  };
+}
+template <>
 constexpr TypeBuilderFunc getModel<void>() {
   return [](mlir::MLIRContext *context) -> mlir::Type {
     return mlir::NoneType::get(context);
@@ -387,6 +405,7 @@ struct RuntimeTableEntry<RuntimeTableKey<KT>, RuntimeIdentifier<Cs...>> {
   fir::runtime::RuntimeTableEntry<fir::runtime::RuntimeTableKey<decltype(X)>,  \
                                   FirAsSequence(X)>
 #define mkRTKey(X) FirmkKey(RTNAME(X))
+#define EXPAND_AND_QUOTE_KEY(S) ExpandAndQuoteKey(RTNAME(S))
 
 /// Get (or generate) the MLIR FuncOp for a given runtime function. Its template
 /// argument is intended to be of the form: <mkRTKey(runtime function name)>.
@@ -400,7 +419,7 @@ static mlir::func::FuncOp getRuntimeFunc(mlir::Location loc,
     return func;
   auto funTy = RuntimeEntry::getTypeModel()(builder.getContext());
   func = builder.createFunction(loc, name, funTy);
-  func->setAttr("fir.runtime", builder.getUnitAttr());
+  func->setAttr(FIROpsDialect::getFirRuntimeAttrName(), builder.getUnitAttr());
   return func;
 }
 

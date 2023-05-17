@@ -14,8 +14,6 @@ def cursor_horizontal_abs(s):
 
 class TestCase(PExpectTest):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     ANSI_FAINT = "\x1b[2m"
     ANSI_RESET = "\x1b[0m"
     ANSI_RED = "\x1b[31m"

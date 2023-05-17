@@ -9,12 +9,12 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @foo(float* %A, i64 %N) #0 !dbg !4 {
+define void @foo(ptr %A, i64 %N) #0 !dbg !4 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  tail call void @llvm.dbg.value(metadata float* %A, metadata !14, metadata !DIExpression()), !dbg !15
+  tail call void @llvm.dbg.value(metadata ptr %A, metadata !14, metadata !DIExpression()), !dbg !15
   tail call void @llvm.dbg.value(metadata i64 %N, metadata !16, metadata !DIExpression()), !dbg !15
   tail call void @llvm.dbg.value(metadata i64 0, metadata !18, metadata !DIExpression()), !dbg !20
   %cmp1 = icmp sgt i64 %N, 0, !dbg !20
@@ -25,9 +25,9 @@ for.body.lr.ph:                                   ; preds = %entry.split
 
 for.body:                                         ; preds = %for.body.lr.ph, %for.body
   %0 = phi i64 [ 0, %for.body.lr.ph ], [ %1, %for.body ], !dbg !21
-  %arrayidx = getelementptr float, float* %A, i64 %0, !dbg !21
+  %arrayidx = getelementptr float, ptr %A, i64 %0, !dbg !21
   %conv = sitofp i64 %0 to float, !dbg !21
-  store float %conv, float* %arrayidx, align 4, !dbg !21
+  store float %conv, ptr %arrayidx, align 4, !dbg !21
   %1 = add nsw i64 %0, 1, !dbg !20
   tail call void @llvm.dbg.value(metadata i64 %1, metadata !18, metadata !DIExpression()), !dbg !20
   %exitcond = icmp ne i64 %1, %N, !dbg !20

@@ -14,8 +14,8 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/ManagedStatic.h"
 #include <mutex>
+#include <optional>
 #if HAVE_FCNTL_H
 #include <fcntl.h>
 #endif
@@ -41,10 +41,10 @@
 #include <malloc/malloc.h>
 #endif
 #ifdef HAVE_SYS_IOCTL_H
-#  include <sys/ioctl.h>
+#include <sys/ioctl.h>
 #endif
 #ifdef HAVE_TERMIOS_H
-#  include <termios.h>
+#include <termios.h>
 #endif
 
 //===----------------------------------------------------------------------===//
@@ -55,14 +55,15 @@
 using namespace llvm;
 using namespace sys;
 
-static std::pair<std::chrono::microseconds, std::chrono::microseconds> getRUsageTimes() {
+static std::pair<std::chrono::microseconds, std::chrono::microseconds>
+getRUsageTimes() {
 #if defined(HAVE_GETRUSAGE)
   struct rusage RU;
   ::getrusage(RUSAGE_SELF, &RU);
-  return { toDuration(RU.ru_utime), toDuration(RU.ru_stime) };
+  return {toDuration(RU.ru_utime), toDuration(RU.ru_stime)};
 #else
 #warning Cannot get usage times on this platform
-  return { std::chrono::microseconds::zero(), std::chrono::microseconds::zero() };
+  return {std::chrono::microseconds::zero(), std::chrono::microseconds::zero()};
 #endif
 }
 
@@ -100,7 +101,7 @@ size_t Process::GetMallocUsage() {
 #elif defined(HAVE_MALLOC_ZONE_STATISTICS) && defined(HAVE_MALLOC_MALLOC_H)
   malloc_statistics_t Stats;
   malloc_zone_statistics(malloc_default_zone(), &Stats);
-  return Stats.size_in_use;   // darwin
+  return Stats.size_in_use; // darwin
 #elif defined(HAVE_MALLCTL)
   size_t alloc, sz;
   sz = sizeof(size_t);
@@ -110,9 +111,9 @@ size_t Process::GetMallocUsage() {
 #elif defined(HAVE_SBRK)
   // Note this is only an approximation and more closely resembles
   // the value returned by mallinfo in the arena field.
-  static char *StartOfMemory = reinterpret_cast<char*>(::sbrk(0));
-  char *EndOfMemory = (char*)sbrk(0);
-  if (EndOfMemory != ((char*)-1) && StartOfMemory != ((char*)-1))
+  static char *StartOfMemory = reinterpret_cast<char *>(::sbrk(0));
+  char *EndOfMemory = (char *)sbrk(0);
+  if (EndOfMemory != ((char *)-1) && StartOfMemory != ((char *)-1))
     return EndOfMemory - StartOfMemory;
   return 0;
 #else
@@ -121,7 +122,8 @@ size_t Process::GetMallocUsage() {
 #endif
 }
 
-void Process::GetTimeUsage(TimePoint<> &elapsed, std::chrono::nanoseconds &user_time,
+void Process::GetTimeUsage(TimePoint<> &elapsed,
+                           std::chrono::nanoseconds &user_time,
                            std::chrono::nanoseconds &sys_time) {
   elapsed = std::chrono::system_clock::now();
   std::tie(user_time, sys_time) = getRUsageTimes();
@@ -150,10 +152,9 @@ void Process::PreventCoreFiles() {
   exception_port_t OriginalPorts[EXC_TYPES_COUNT];
   exception_behavior_t OriginalBehaviors[EXC_TYPES_COUNT];
   thread_state_flavor_t OriginalFlavors[EXC_TYPES_COUNT];
-  kern_return_t err =
-    task_get_exception_ports(mach_task_self(), EXC_MASK_ALL, OriginalMasks,
-                             &Count, OriginalPorts, OriginalBehaviors,
-                             OriginalFlavors);
+  kern_return_t err = task_get_exception_ports(
+      mach_task_self(), EXC_MASK_ALL, OriginalMasks, &Count, OriginalPorts,
+      OriginalBehaviors, OriginalFlavors);
   if (err == KERN_SUCCESS) {
     // replace each with MACH_PORT_NULL.
     for (unsigned i = 0; i != Count; ++i)
@@ -164,20 +165,20 @@ void Process::PreventCoreFiles() {
 
   // Disable crash reporting on Mac OS X 10.5
   signal(SIGABRT, _exit);
-  signal(SIGILL,  _exit);
-  signal(SIGFPE,  _exit);
+  signal(SIGILL, _exit);
+  signal(SIGFPE, _exit);
   signal(SIGSEGV, _exit);
-  signal(SIGBUS,  _exit);
+  signal(SIGBUS, _exit);
 #endif
 
   coreFilesPrevented = true;
 }
 
-Optional<std::string> Process::GetEnv(StringRef Name) {
+std::optional<std::string> Process::GetEnv(StringRef Name) {
   std::string NameStr = Name.str();
   const char *Val = ::getenv(NameStr.c_str());
   if (!Val)
-    return None;
+    return std::nullopt;
   return std::string(Val);
 }
 
@@ -198,7 +199,7 @@ private:
   int &FD;
   bool KeepOpen;
 };
-}
+} // namespace
 
 std::error_code Process::FixupStandardFileDescriptors() {
   int NullFD = -1;
@@ -240,7 +241,7 @@ std::error_code Process::SafelyCloseFileDescriptor(int FD) {
   if (sigfillset(&FullSet) < 0 || sigfillset(&SavedSet) < 0)
     return std::error_code(errno, std::generic_category());
 
-  // Atomically swap our current signal mask with a full mask.
+    // Atomically swap our current signal mask with a full mask.
 #if LLVM_ENABLE_THREADS
   if (int EC = pthread_sigmask(SIG_SETMASK, &FullSet, &SavedSet))
     return std::error_code(EC, std::generic_category());
@@ -327,22 +328,18 @@ extern "C" int del_curterm(struct term *termp);
 extern "C" int tigetnum(char *capname);
 #endif
 
-#ifdef LLVM_ENABLE_TERMINFO
-static ManagedStatic<std::mutex> TermColorMutex;
-#endif
-
 bool checkTerminalEnvironmentForColors() {
   if (const char *TermStr = std::getenv("TERM")) {
     return StringSwitch<bool>(TermStr)
-      .Case("ansi", true)
-      .Case("cygwin", true)
-      .Case("linux", true)
-      .StartsWith("screen", true)
-      .StartsWith("xterm", true)
-      .StartsWith("vt100", true)
-      .StartsWith("rxvt", true)
-      .EndsWith("color", true)
-      .Default(false);
+        .Case("ansi", true)
+        .Case("cygwin", true)
+        .Case("linux", true)
+        .StartsWith("screen", true)
+        .StartsWith("xterm", true)
+        .StartsWith("vt100", true)
+        .StartsWith("rxvt", true)
+        .EndsWith("color", true)
+        .Default(false);
   }
 
   return false;
@@ -351,7 +348,8 @@ bool checkTerminalEnvironmentForColors() {
 static bool terminalHasColors(int fd) {
 #ifdef LLVM_ENABLE_TERMINFO
   // First, acquire a global lock because these C routines are thread hostile.
-  std::lock_guard<std::mutex> G(*TermColorMutex);
+  static std::mutex TermColorMutex;
+  std::lock_guard<std::mutex> G(TermColorMutex);
 
   struct term *previous_term = set_curterm(nullptr);
   int errret = 0;
@@ -374,7 +372,8 @@ static bool terminalHasColors(int fd) {
   // The 'tigetnum' routine returns -2 or -1 on errors, and might return 0 if
   // the terminfo says that no colors are supported.
   int colors_ti = tigetnum(const_cast<char *>("colors"));
-  bool HasColors = colors_ti >= 0 ? colors_ti : checkTerminalEnvironmentForColors();
+  bool HasColors =
+      colors_ti >= 0 ? colors_ti : checkTerminalEnvironmentForColors();
 
   // Now extract the structure allocated by setupterm and free its memory
   // through a really silly dance.
@@ -414,20 +413,14 @@ bool Process::ColorNeedsFlush() {
 }
 
 const char *Process::OutputColor(char code, bool bold, bool bg) {
-  return colorcodes[bg?1:0][bold?1:0][code&7];
+  return colorcodes[bg ? 1 : 0][bold ? 1 : 0][code & 7];
 }
 
-const char *Process::OutputBold(bool bg) {
-  return "\033[1m";
-}
+const char *Process::OutputBold(bool bg) { return "\033[1m"; }
 
-const char *Process::OutputReverse() {
-  return "\033[7m";
-}
+const char *Process::OutputReverse() { return "\033[7m"; }
 
-const char *Process::ResetColor() {
-  return "\033[0m";
-}
+const char *Process::ResetColor() { return "\033[0m"; }
 
 #if !HAVE_DECL_ARC4RANDOM
 static unsigned GetRandomNumberSeed() {

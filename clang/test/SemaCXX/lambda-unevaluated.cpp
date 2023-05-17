@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 %s -verify
+// RUN: %clang_cc1 -std=c++20 %s -Wno-c++23-extensions -verify
+// RUN: %clang_cc1 -std=c++23 %s -verify
 
 
 template <auto> struct Nothing {};
@@ -27,8 +28,11 @@ static_assert(&unique_test1<[](){}> != &unique_test1<[](){}>);
 
 template <class T>
 auto g(T) -> decltype([]() { T::invalid; } ());
-auto e = g(0); // expected-error{{no matching function for call}}
-// expected-note@-2 {{substitution failure}}
+auto e = g(0); // expected-error@-1{{type 'int' cannot be used prior to '::'}}
+               // expected-note@-1{{while substituting deduced template}}
+               // expected-note@-3{{while substituting into a lambda}}
+               // expected-error@-3 {{no matching function for call to 'g'}}
+               // expected-note@-5 {{substitution failure}}
 
 template <typename T>
 auto foo(decltype([] {
@@ -60,9 +64,7 @@ void use_f() { f<int>({}); } // expected-error {{ambiguous}}
 // Same.
 template<int N> void g(const char (*)[([]{ return N; })()]) {} // expected-note {{candidate}}
 template<int N> void g(const char (*)[([]{ return N; })()]) {} // expected-note {{candidate}}
-// FIXME: We instantiate the lambdas into the context of the function template,
-//  so we think they're dependent and can't evaluate a call to them.
-void use_g() { g<6>(&"hello"); } // expected-error {{no matching function}}
+void use_g() { g<6>(&"hello"); } // expected-error {{ambiguous}}
 }
 
 namespace GH51416 {
@@ -120,3 +122,63 @@ template <class T>
 void foo(decltype(+[](T) {}) lambda, T param);
 static_assert(!__is_same(decltype(foo<int>), void));
 } // namespace GH51641
+
+namespace StaticLambdas {
+template <auto> struct Nothing {};
+Nothing<[]() static { return 0; }()> nothing;
+
+template <typename> struct NothingT {};
+Nothing<[]() static { return 0; }> nothingT;
+
+template <typename T>
+concept True = [] static { return true; }();
+static_assert(True<int>);
+
+static_assert(sizeof([] static { return 0; }));
+static_assert(sizeof([] static { return 0; }()));
+
+void f()  noexcept(noexcept([] static { return 0; }()));
+
+using a = decltype([] static { return 0; });
+using b = decltype([] static { return 0; }());
+using c = decltype([]() static noexcept(noexcept([] { return 0; }())) { return 0; });
+using d = decltype(sizeof([] static { return 0; }));
+
+}
+
+namespace lambda_in_trailing_decltype {
+auto x = ([](auto) -> decltype([] {}()) {}(0), 2);
+}
+
+namespace lambda_in_constraints {
+struct WithFoo { static void foo(); };
+
+template <class T>
+concept lambda_works = requires {
+    []() { T::foo(); };
+};
+
+static_assert(!lambda_works<int>);
+static_assert(lambda_works<WithFoo>);
+
+template <class T>
+int* func(T) requires requires { []() { T::foo(); }; };
+double* func(...);
+
+static_assert(__is_same(decltype(func(0)), double*));
+static_assert(__is_same(decltype(func(WithFoo())), int*));
+
+template <class T>
+auto direct_lambda(T) -> decltype([] { T::foo(); }) {}
+void direct_lambda(...) {}
+
+void recursive() {
+    direct_lambda(0); // expected-error@-4 {{type 'int' cannot be used prior to '::'}}
+                      // expected-note@-1 {{while substituting deduced template arguments}}
+                      // expected-note@-6 {{while substituting into a lambda}}
+    bool x = requires { direct_lambda(0); }; // expected-error@-7 {{type 'int' cannot be used prior to '::'}}
+                                             // expected-note@-1 {{while substituting deduced template arguments}}
+                                             // expected-note@-9 {{while substituting into a lambda}}
+
+}
+}

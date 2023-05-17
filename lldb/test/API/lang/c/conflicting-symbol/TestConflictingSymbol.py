@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestConflictingSymbols(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):

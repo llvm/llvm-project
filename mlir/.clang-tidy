@@ -1,5 +1,6 @@
 InheritParentConfig: true
 Checks: >
+        -misc-const-correctness,
         bugprone-argument-comment,
         bugprone-assert-side-effect,
         bugprone-branch-clone,

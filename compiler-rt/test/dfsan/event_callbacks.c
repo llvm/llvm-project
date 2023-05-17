@@ -1,8 +1,6 @@
 // RUN: %clang_dfsan -fno-sanitize=dataflow -O2 -fPIE -DCALLBACKS -c %s -o %t-callbacks.o
 // RUN: %clang_dfsan -O2 -mllvm -dfsan-event-callbacks %s %t-callbacks.o -o %t
 // RUN: %run %t FooBarBaz 2>&1 | FileCheck %s
-//
-// REQUIRES: x86_64-target-arch
 
 // Tests that callbacks are inserted for store events when
 // -dfsan-event-callbacks is specified.

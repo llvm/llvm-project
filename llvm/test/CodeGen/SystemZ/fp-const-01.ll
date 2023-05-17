@@ -19,12 +19,12 @@ define double @f2() {
 }
 
 ; Test f128.
-define void @f3(fp128 *%x) {
+define void @f3(ptr %x) {
 ; CHECK-LABEL: f3:
 ; CHECK: lzxr %f0
 ; CHECK: std %f0, 0(%r2)
 ; CHECK: std %f2, 8(%r2)
 ; CHECK: br %r14
-  store fp128 0xL00000000000000000000000000000000, fp128 *%x
+  store fp128 0xL00000000000000000000000000000000, ptr %x
   ret void
 }

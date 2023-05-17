@@ -12,7 +12,7 @@
 ;   B[0] = valB;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -22,10 +22,10 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      %valA = load double, double* %A
+      %valA = load double, ptr %A
       %valB = fadd double 21.0, 21.0
-      store double %valA, double* %A
-      store double %valB, double* %B
+      store double %valA, ptr %A
+      store double %valB, ptr %B
       br label %inc
 
 inc:
@@ -51,8 +51,8 @@ return:
 ; CHECK-NEXT:         MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_body[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:         Instructions {
-; CHECK-NEXT:               %valA = load double, double* %A, align 8
-; CHECK-NEXT:               store double %valA, double* %A, align 8
+; CHECK-NEXT:               %valA = load double, ptr %A, align 8
+; CHECK-NEXT:               store double %valA, ptr %A, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT:     Stmt_body_b
 ; CHECK-NEXT:         Domain :=
@@ -63,6 +63,6 @@ return:
 ; CHECK-NEXT:             [n] -> { Stmt_body_b[i0] -> MemRef_B[0] };
 ; CHECK-NEXT:         Instructions {
 ; CHECK-NEXT:               %valB = fadd double 2.100000e+01, 2.100000e+01
-; CHECK-NEXT:               store double %valB, double* %B, align 8
+; CHECK-NEXT:               store double %valB, ptr %B, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: }

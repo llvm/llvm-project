@@ -15,7 +15,7 @@ define void @storef64stk(double %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca double, align 2
-  store double %0, double* %addr, align 2
+  store double %0, ptr %addr, align 2
   ret void
 }
 
@@ -27,7 +27,7 @@ define void @storef32stk(float %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca float, align 2
-  store float %0, float* %addr, align 2
+  store float %0, ptr %addr, align 2
   ret void
 }
 
@@ -39,7 +39,7 @@ define void @storei64stk(i64 %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i64, align 2
-  store i64 %0, i64* %addr, align 2
+  store i64 %0, ptr %addr, align 2
   ret void
 }
 
@@ -51,7 +51,7 @@ define void @storei32stk(i32 %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i32, align 2
-  store i32 %0, i32* %addr, align 2
+  store i32 %0, ptr %addr, align 2
   ret void
 }
 
@@ -63,7 +63,7 @@ define void @storei16stk(i16 %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i16, align 2
-  store i16 %0, i16* %addr, align 2
+  store i16 %0, ptr %addr, align 2
   ret void
 }
 
@@ -75,7 +75,7 @@ define void @storei8stk(i8 %0) {
 ; CHECK-NEXT:    adds.l %s11, 16, %s11
 ; CHECK-NEXT:    b.l.t (, %s10)
   %addr = alloca i8, align 2
-  store i8 %0, i8* %addr, align 2
+  store i8 %0, ptr %addr, align 2
   ret void
 }
 
@@ -88,7 +88,7 @@ define void @storef64com(double %0) {
 ; CHECK-NEXT:    lea.sl %s1, vf64@hi(, %s1)
 ; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store double %0, double* @vf64, align 2
+  store double %0, ptr @vf64, align 2
   ret void
 }
 
@@ -101,7 +101,7 @@ define void @storef32com(float %0) {
 ; CHECK-NEXT:    lea.sl %s1, vf32@hi(, %s1)
 ; CHECK-NEXT:    stu %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store float %0, float* @vf32, align 2
+  store float %0, ptr @vf32, align 2
   ret void
 }
 
@@ -114,7 +114,7 @@ define void @storei64com(i64 %0) {
 ; CHECK-NEXT:    lea.sl %s1, vi64@hi(, %s1)
 ; CHECK-NEXT:    st %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store i64 %0, i64* @vi64, align 2
+  store i64 %0, ptr @vi64, align 2
   ret void
 }
 
@@ -127,7 +127,7 @@ define void @storei32com(i32 %0) {
 ; CHECK-NEXT:    lea.sl %s1, vi32@hi(, %s1)
 ; CHECK-NEXT:    stl %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store i32 %0, i32* @vi32, align 2
+  store i32 %0, ptr @vi32, align 2
   ret void
 }
 
@@ -140,7 +140,7 @@ define void @storei16com(i16 %0) {
 ; CHECK-NEXT:    lea.sl %s1, vi16@hi(, %s1)
 ; CHECK-NEXT:    st2b %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store i16 %0, i16* @vi16, align 2
+  store i16 %0, ptr @vi16, align 2
   ret void
 }
 
@@ -153,7 +153,7 @@ define void @storei8com(i8 %0) {
 ; CHECK-NEXT:    lea.sl %s1, vi8@hi(, %s1)
 ; CHECK-NEXT:    st1b %s0, (, %s1)
 ; CHECK-NEXT:    b.l.t (, %s10)
-  store i8 %0, i8* @vi8, align 2
+  store i8 %0, ptr @vi8, align 2
   ret void
 }
 

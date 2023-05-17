@@ -11,14 +11,12 @@
 
 #include "CloexecCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace android {
+namespace clang::tidy::android {
 
 /// Finds code that uses pipe2() without using the O_CLOEXEC flag.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/android-cloexec-pipe2.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/android/cloexec-pipe2.html
 class CloexecPipe2Check : public CloexecCheck {
 public:
   CloexecPipe2Check(StringRef Name, ClangTidyContext *Context)
@@ -27,8 +25,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace android
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::android
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ANDROID_CLOEXEC_PIPE2_H

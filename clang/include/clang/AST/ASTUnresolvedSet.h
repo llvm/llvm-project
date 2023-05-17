@@ -69,7 +69,12 @@ public:
     return false;
   }
 
-  void erase(unsigned I) { Decls[I] = Decls.pop_back_val(); }
+  void erase(unsigned I) {
+    if (I == Decls.size() - 1)
+      Decls.pop_back();
+    else
+      Decls[I] = Decls.pop_back_val();
+  }
 
   void clear() { Decls.clear(); }
 

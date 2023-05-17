@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -instcombine -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize,instcombine -force-vector-width=4 -force-vector-interleave=1 -enable-interleaved-mem-accesses=true < %s | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
@@ -36,13 +36,13 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 ;}
 
 ; CHECK: vector.body:
-; CHECK: %wide.vec = load <8 x i32>, <8 x i32>* {{.*}}, align 4
+; CHECK: %wide.vec = load <8 x i32>, ptr {{.*}}, align 4
 ; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK: shufflevector <8 x i32> %wide.vec, <8 x i32> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
 
 %class.Complex = type { float, float }
 
-define void @_Z4testP7ComplexS0_mm(%class.Complex* noalias nocapture %out, %class.Complex* noalias nocapture readonly %in, i64 %out_start, i64 %size) local_unnamed_addr {
+define void @_Z4testP7ComplexS0_mm(ptr noalias nocapture %out, ptr noalias nocapture readonly %in, i64 %out_start, i64 %size) local_unnamed_addr {
 entry:
   %cmp9 = icmp eq i64 %size, 0
   br i1 %cmp9, label %for.cond.cleanup, label %for.body.preheader
@@ -59,19 +59,16 @@ for.cond.cleanup:
 for.body:
   %out_offset.010 = phi i64 [ %inc, %for.body ], [ 0, %for.body.preheader ]
   %add = add i64 %out_offset.010, %out_start
-  %arrayidx = getelementptr inbounds %class.Complex, %class.Complex* %in, i64 %add
-  %0 = bitcast %class.Complex* %arrayidx to i32*
-  %1 = load i32, i32* %0, align 4
-  %imaginary_.i.i = getelementptr inbounds %class.Complex, %class.Complex* %in, i64 %add, i32 1
-  %2 = bitcast float* %imaginary_.i.i to i32*
-  %3 = load i32, i32* %2, align 4
-  %arrayidx1 = getelementptr inbounds %class.Complex, %class.Complex* %out, i64 %add
-  %4 = bitcast %class.Complex* %arrayidx1 to i64*
-  %t0.sroa.4.0.insert.ext = zext i32 %3 to i64
+  %arrayidx = getelementptr inbounds %class.Complex, ptr %in, i64 %add
+  %0 = load i32, ptr %arrayidx, align 4
+  %imaginary_.i.i = getelementptr inbounds %class.Complex, ptr %in, i64 %add, i32 1
+  %1 = load i32, ptr %imaginary_.i.i, align 4
+  %arrayidx1 = getelementptr inbounds %class.Complex, ptr %out, i64 %add
+  %t0.sroa.4.0.insert.ext = zext i32 %1 to i64
   %t0.sroa.4.0.insert.shift = shl nuw i64 %t0.sroa.4.0.insert.ext, 32
-  %t0.sroa.0.0.insert.ext = zext i32 %1 to i64
+  %t0.sroa.0.0.insert.ext = zext i32 %0 to i64
   %t0.sroa.0.0.insert.insert = or i64 %t0.sroa.4.0.insert.shift, %t0.sroa.0.0.insert.ext
-  store i64 %t0.sroa.0.0.insert.insert, i64* %4, align 4
+  store i64 %t0.sroa.0.0.insert.insert, ptr %arrayidx1, align 4
   %inc = add nuw i64 %out_offset.010, 1
   %exitcond = icmp eq i64 %inc, %size
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body

@@ -39,7 +39,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define i32 @foo() #0 !dbg !17 {
 entry:
   %local_data = alloca %struct.data, align 128
-  call void @llvm.dbg.declare(metadata %struct.data* %local_data, metadata !21, metadata !22), !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %local_data, metadata !21, metadata !22), !dbg !23
   ret i32 0, !dbg !24
 }
 

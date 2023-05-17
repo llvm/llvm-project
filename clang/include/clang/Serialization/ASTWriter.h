@@ -444,8 +444,40 @@ private:
   std::vector<std::unique_ptr<ModuleFileExtensionWriter>>
       ModuleFileExtensionWriters;
 
-  /// User ModuleMaps skipped when writing control block.
-  std::set<const FileEntry *> SkippedModuleMaps;
+  /// Mapping from a source location entry to whether it is affecting or not.
+  llvm::BitVector IsSLocAffecting;
+
+  /// Mapping from \c FileID to an index into the FileID adjustment table.
+  std::vector<FileID> NonAffectingFileIDs;
+  std::vector<unsigned> NonAffectingFileIDAdjustments;
+
+  /// Mapping from an offset to an index into the offset adjustment table.
+  std::vector<SourceRange> NonAffectingRanges;
+  std::vector<SourceLocation::UIntTy> NonAffectingOffsetAdjustments;
+
+  /// Collects input files that didn't affect compilation of the current module,
+  /// and initializes data structures necessary for leaving those files out
+  /// during \c SourceManager serialization.
+  void collectNonAffectingInputFiles();
+
+  /// Returns an adjusted \c FileID, accounting for any non-affecting input
+  /// files.
+  FileID getAdjustedFileID(FileID FID) const;
+  /// Returns an adjusted number of \c FileIDs created within the specified \c
+  /// FileID, accounting for any non-affecting input files.
+  unsigned getAdjustedNumCreatedFIDs(FileID FID) const;
+  /// Returns an adjusted \c SourceLocation, accounting for any non-affecting
+  /// input files.
+  SourceLocation getAdjustedLocation(SourceLocation Loc) const;
+  /// Returns an adjusted \c SourceRange, accounting for any non-affecting input
+  /// files.
+  SourceRange getAdjustedRange(SourceRange Range) const;
+  /// Returns an adjusted \c SourceLocation offset, accounting for any
+  /// non-affecting input files.
+  SourceLocation::UIntTy getAdjustedOffset(SourceLocation::UIntTy Offset) const;
+  /// Returns an adjustment for offset into SourceManager, accounting for any
+  /// non-affecting input files.
+  SourceLocation::UIntTy getAdjustment(SourceLocation::UIntTy Offset) const;
 
   /// Retrieve or create a submodule ID for this module.
   unsigned getSubmoduleID(Module *Mod);
@@ -455,7 +487,7 @@ private:
 
   void WriteBlockInfoBlock();
   void WriteControlBlock(Preprocessor &PP, ASTContext &Context,
-                         StringRef isysroot, const std::string &OutputFile);
+                         StringRef isysroot);
 
   /// Write out the signature and diagnostic options, and return the signature.
   ASTFileSignature writeUnhashedControlBlock(Preprocessor &PP,
@@ -465,8 +497,7 @@ private:
   static std::pair<ASTFileSignature, ASTFileSignature>
   createSignature(StringRef AllBytes, StringRef ASTBlockBytes);
 
-  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts,
-                       std::set<const FileEntry *> &AffectingModuleMaps);
+  void WriteInputFiles(SourceManager &SourceMgr, HeaderSearchOptions &HSOpts);
   void WriteSourceManagerBlock(SourceManager &SourceMgr,
                                const Preprocessor &PP);
   void writeIncludedFiles(raw_ostream &Out, const Preprocessor &PP);
@@ -533,7 +564,6 @@ private:
   void WriteDecl(ASTContext &Context, Decl *D);
 
   ASTFileSignature WriteASTCore(Sema &SemaRef, StringRef isysroot,
-                                const std::string &OutputFile,
                                 Module *WritingModule);
 
 public:
@@ -571,7 +601,7 @@ public:
   ///
   /// \return the module signature, which eventually will be a hash of
   /// the module but currently is merely a random 32-bit number.
-  ASTFileSignature WriteAST(Sema &SemaRef, const std::string &OutputFile,
+  ASTFileSignature WriteAST(Sema &SemaRef, StringRef OutputFile,
                             Module *WritingModule, StringRef isysroot,
                             bool hasErrors = false,
                             bool ShouldCacheASTInMemory = false);
@@ -582,6 +612,9 @@ public:
   /// Emit a AlignPackInfo.
   void AddAlignPackInfo(const Sema::AlignPackInfo &Info,
                         RecordDataImpl &Record);
+
+  /// Emit a FileID.
+  void AddFileID(FileID FID, RecordDataImpl &Record);
 
   /// Emit a source location.
   void AddSourceLocation(SourceLocation Loc, RecordDataImpl &Record,
@@ -702,6 +735,10 @@ public:
 
   bool hasChain() const { return Chain; }
   ASTReader *getChain() const { return Chain; }
+
+  bool isWritingStdCXXNamedModules() const {
+    return WritingModule && WritingModule->isModulePurview();
+  }
 
 private:
   // ASTDeserializationListener implementation

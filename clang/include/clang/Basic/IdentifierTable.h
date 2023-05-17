@@ -15,6 +15,7 @@
 #ifndef LLVM_CLANG_BASIC_IDENTIFIERTABLE_H
 #define LLVM_CLANG_BASIC_IDENTIFIERTABLE_H
 
+#include "clang/Basic/DiagnosticIDs.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/TokenKinds.h"
 #include "llvm/ADT/DenseMapInfo.h"
@@ -594,7 +595,7 @@ public:
   /// Return the identifier token info for the specified named
   /// identifier.
   IdentifierInfo &get(StringRef Name) {
-    auto &Entry = *HashTable.insert(std::make_pair(Name, nullptr)).first;
+    auto &Entry = *HashTable.try_emplace(Name, nullptr).first;
 
     IdentifierInfo *&II = Entry.second;
     if (II) return *II;
@@ -668,6 +669,12 @@ public:
   /// Populate the identifier table with info about the language keywords
   /// for the language specified by \p LangOpts.
   void AddKeywords(const LangOptions &LangOpts);
+
+  /// Returns the correct diagnostic to issue for a future-compat diagnostic
+  /// warning. Note, this function assumes the identifier passed has already
+  /// been determined to be a future compatible keyword.
+  diag::kind getFutureCompatDiagKind(const IdentifierInfo &II,
+                                     const LangOptions &LangOpts);
 };
 
 /// A family of Objective-C methods.

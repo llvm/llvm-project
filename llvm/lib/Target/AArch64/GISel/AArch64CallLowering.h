@@ -35,6 +35,10 @@ public:
                    ArrayRef<Register> VRegs, FunctionLoweringInfo &FLI,
                    Register SwiftErrorVReg) const override;
 
+  bool canLowerReturn(MachineFunction &MF, CallingConv::ID CallConv,
+                      SmallVectorImpl<BaseArgInfo> &Outs,
+                      bool IsVarArg) const override;
+
   bool fallBackToDAGISel(const MachineFunction &MF) const override;
 
   bool lowerFormalArguments(MachineIRBuilder &MIRBuilder, const Function &F,
@@ -61,6 +65,10 @@ private:
 
   using MemHandler =
       std::function<void(MachineIRBuilder &, int, CCValAssign &)>;
+
+  void saveVarArgRegisters(MachineIRBuilder &MIRBuilder,
+                           CallLowering::IncomingValueHandler &Handler,
+                           CCState &CCInfo) const;
 
   bool lowerTailCall(MachineIRBuilder &MIRBuilder, CallLoweringInfo &Info,
                      SmallVectorImpl<ArgInfo> &OutArgs) const;

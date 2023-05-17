@@ -3,7 +3,7 @@
 ; duplicating Phi inputs properly.
 ; REQUIRES: asserts
 ; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes='require<domtree>,loop(loop-simplifycfg)' -debug-only=loop-simplifycfg -verify-loop-info -verify-dom-info -verify-loop-lcssa 2>&1 < %s | FileCheck %s
-; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -loop-simplifycfg -verify-memoryssa -debug-only=loop-simplifycfg -verify-loop-info -verify-dom-info -verify-loop-lcssa 2>&1 < %s | FileCheck %s
+; RUN: opt -S -enable-loop-simplifycfg-term-folding=true -passes=loop-simplifycfg -verify-memoryssa -debug-only=loop-simplifycfg -verify-loop-info -verify-dom-info -verify-loop-lcssa 2>&1 < %s | FileCheck %s
 
 target datalayout = "P40"
 
@@ -16,7 +16,7 @@ define void @f1(i1 %cond) {
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    br i1 [[COND:%.*]], label [[IF_THEN:%.*]], label [[FOR_INC:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP0:%.*]] = load i16, i16* @a, align 1
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr @a, align 1
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i16 [[TMP0]], 0
 ; CHECK-NEXT:    br label [[FOR_INC]]
 ; CHECK:       for.inc:
@@ -30,7 +30,7 @@ for.cond:
   br i1 %cond, label %if.then, label %for.inc
 
 if.then:
-  %0 = load i16, i16* @a, align 1
+  %0 = load i16, ptr @a, align 1
   %tobool = icmp ne i16 %0, 0
   br i1 %tobool, label %for.inc, label %for.inc
 

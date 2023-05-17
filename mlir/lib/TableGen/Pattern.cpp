@@ -33,7 +33,7 @@ using llvm::formatv;
 //===----------------------------------------------------------------------===//
 
 bool DagLeaf::isUnspecified() const {
-  return dyn_cast_or_null<llvm::UnsetInit>(def);
+  return isa_and_nonnull<llvm::UnsetInit>(def);
 }
 
 bool DagLeaf::isOperandMatcher() const {
@@ -203,9 +203,8 @@ void DagNode::print(raw_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 StringRef SymbolInfoMap::getValuePackName(StringRef symbol, int *index) {
-  StringRef name, indexStr;
   int idx = -1;
-  std::tie(name, indexStr) = symbol.rsplit("__");
+  auto [name, indexStr] = symbol.rsplit("__");
 
   if (indexStr.consumeInteger(10, idx)) {
     // The second part is not an index; we return the whole symbol as-is.
@@ -217,8 +216,9 @@ StringRef SymbolInfoMap::getValuePackName(StringRef symbol, int *index) {
   return name;
 }
 
-SymbolInfoMap::SymbolInfo::SymbolInfo(const Operator *op, SymbolInfo::Kind kind,
-                                      Optional<DagAndConstant> dagAndConstant)
+SymbolInfoMap::SymbolInfo::SymbolInfo(
+    const Operator *op, SymbolInfo::Kind kind,
+    std::optional<DagAndConstant> dagAndConstant)
     : op(op), kind(kind), dagAndConstant(std::move(dagAndConstant)) {}
 
 int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
@@ -236,7 +236,7 @@ int SymbolInfoMap::SymbolInfo::getStaticValueCount() const {
 }
 
 std::string SymbolInfoMap::SymbolInfo::getVarName(StringRef name) const {
-  return alternativeName.hasValue() ? alternativeName.getValue() : name.str();
+  return alternativeName ? *alternativeName : name.str();
 }
 
 std::string SymbolInfoMap::SymbolInfo::getVarTypeStr(StringRef name) const {
@@ -807,15 +807,16 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
     // The operand in `either` DAG should be bound to the operation in the
     // parent DagNode.
     auto collectSymbolInEither = [&](DagNode parent, DagNode tree,
-                                     int &opArgIdx) {
+                                     int opArgIdx) {
       for (int i = 0; i < tree.getNumArgs(); ++i, ++opArgIdx) {
         if (DagNode subTree = tree.getArgAsNestedDag(i)) {
           collectBoundSymbols(subTree, infoMap, isSrcPattern);
         } else {
           auto argName = tree.getArgName(i);
-          if (!argName.empty() && argName != "_")
+          if (!argName.empty() && argName != "_") {
             verifyBind(infoMap.bindOpArgument(parent, argName, op, opArgIdx),
                        argName);
+          }
         }
       }
     };
@@ -824,6 +825,14 @@ void Pattern::collectBoundSymbols(DagNode tree, SymbolInfoMap &infoMap,
       if (auto treeArg = tree.getArgAsNestedDag(i)) {
         if (treeArg.isEither()) {
           collectSymbolInEither(tree, treeArg, opArgIdx);
+          // `either` DAG is *flattened*. For example,
+          //
+          //  (FooOp (either arg0, arg1), arg2)
+          //
+          //  can be viewed as:
+          //
+          //  (FooOp arg0, arg1, arg2)
+          ++opArgIdx;
         } else {
           // This DAG node argument is a DAG node itself. Go inside recursively.
           collectBoundSymbols(treeArg, infoMap, isSrcPattern);

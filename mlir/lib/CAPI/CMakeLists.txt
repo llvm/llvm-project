@@ -12,11 +12,10 @@ add_subdirectory(Dialect)
 add_subdirectory(Conversion)
 add_subdirectory(Interfaces)
 add_subdirectory(IR)
-add_subdirectory(Registration)
+add_subdirectory(RegisterEverything)
 add_subdirectory(Transforms)
 
-# Only enable the ExecutionEngine if the native target is configured in.
-if(TARGET ${LLVM_NATIVE_ARCH})
+if(MLIR_ENABLE_EXECUTION_ENGINE)
   add_subdirectory(ExecutionEngine)
 endif()
 

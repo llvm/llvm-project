@@ -8,25 +8,25 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-%struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029 = type { i32, i32, i32, i32, i32, i32, [8 x i32], [6 x [16 x i32]], [2 x [64 x i32]], [6 x i32], [2 x i32], i32, i32, i32, [8 x i32], [8 x i32], [8 x i32], i32, i32, i32, i32*, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
+%struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029 = type { i32, i32, i32, i32, i32, i32, [8 x i32], [6 x [16 x i32]], [2 x [64 x i32]], [6 x i32], [2 x i32], i32, i32, i32, [8 x i32], [8 x i32], [8 x i32], i32, i32, i32, ptr, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32, i32 }
 
 @quant8_intra_default = external global [64 x i32], align 16
 @quant_org = external global [16 x i32], align 16
-@qmatrix = external local_unnamed_addr global [8 x i32*], align 16
+@qmatrix = external local_unnamed_addr global [8 x ptr], align 16
 
 ; Function Attrs: nounwind uwtable
-define void @AssignQuantParam(%struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029* %pps) local_unnamed_addr #0 {
+define void @AssignQuantParam(ptr %pps) local_unnamed_addr #0 {
 entry:
   br label %entry.split
 
 entry.split:                                      ; preds = %entry
-  %pic_scaling_matrix_present_flag = getelementptr inbounds %struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029, %struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029* %pps, i64 0, i32 5
-  %0 = load i32, i32* %pic_scaling_matrix_present_flag, align 4, !tbaa !1
+  %pic_scaling_matrix_present_flag = getelementptr inbounds %struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029, ptr %pps, i64 0, i32 5
+  %0 = load i32, ptr %pic_scaling_matrix_present_flag, align 4, !tbaa !1
   %tobool = icmp eq i32 %0, 0
   br i1 %tobool, label %land.lhs.true, label %if.else
 
 land.lhs.true:                                    ; preds = %entry.split
-  store i32* getelementptr inbounds ([16 x i32], [16 x i32]* @quant_org, i64 0, i64 0), i32** getelementptr inbounds ([8 x i32*], [8 x i32*]* @qmatrix, i64 0, i64 4), align 16, !tbaa !7
+  store ptr @quant_org, ptr getelementptr inbounds ([8 x ptr], ptr @qmatrix, i64 0, i64 4), align 16, !tbaa !7
   br label %if.end161
 
 if.else:                                          ; preds = %entry.split
@@ -36,14 +36,14 @@ if.end161:                                        ; preds = %if.else121.us.7, %l
   ret void
 
 if.else121.us.6:                                  ; preds = %if.else
-  %arrayidx80.us.6 = getelementptr inbounds %struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029, %struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029* %pps, i64 0, i32 6, i64 6
+  %arrayidx80.us.6 = getelementptr inbounds %struct.pic_parameter_set_rbsp_t.3.45.87.129.192.255.465.927.969.990.1029, ptr %pps, i64 0, i32 6, i64 6
   br i1 false, label %if.else121.us.7, label %if.else135.us.6
 
 if.else135.us.6:                                  ; preds = %if.else121.us.6
   br label %if.else121.us.7
 
 if.else121.us.7:                                  ; preds = %if.else135.us.6, %if.else121.us.6
-  %cond91.sink.sink.us.sink.6 = phi i32* [ undef, %if.else135.us.6 ], [ getelementptr inbounds ([64 x i32], [64 x i32]* @quant8_intra_default, i64 0, i64 0), %if.else121.us.6 ]
+  %cond91.sink.sink.us.sink.6 = phi ptr [ undef, %if.else135.us.6 ], [ @quant8_intra_default, %if.else121.us.6 ]
   br label %if.end161
 }
 

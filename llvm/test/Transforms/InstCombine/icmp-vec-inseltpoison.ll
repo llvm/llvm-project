@@ -201,10 +201,10 @@ define <3 x i1> @PR27756_3(<3 x i8> %a) {
 
 define <2 x i1> @PR27786(<2 x i8> %a) {
 ; CHECK-LABEL: @PR27786(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle <2 x i8> [[A:%.*]], bitcast (i16 ptrtoint (i32* @someglobal to i16) to <2 x i8>)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle <2 x i8> [[A:%.*]], bitcast (i16 ptrtoint (ptr @someglobal to i16) to <2 x i8>)
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
-  %cmp = icmp sle <2 x i8> %a, bitcast (i16 ptrtoint (i32* @someglobal to i16) to <2 x i8>)
+  %cmp = icmp sle <2 x i8> %a, bitcast (i16 ptrtoint (ptr @someglobal to i16) to <2 x i8>)
   ret <2 x i1> %cmp
 }
 

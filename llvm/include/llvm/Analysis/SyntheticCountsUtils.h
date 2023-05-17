@@ -34,7 +34,8 @@ public:
 
   // Not all EdgeRef have information about the source of the edge. Hence
   // NodeRef corresponding to the source of the EdgeRef is explicitly passed.
-  using GetProfCountTy = function_ref<Optional<Scaled64>(NodeRef, EdgeRef)>;
+  using GetProfCountTy =
+      function_ref<std::optional<Scaled64>(NodeRef, EdgeRef)>;
   using AddCountTy = function_ref<void(NodeRef, Scaled64)>;
 
   static void propagate(const CallGraphType &CG, GetProfCountTy GetProfCount,

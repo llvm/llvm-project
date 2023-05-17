@@ -5,6 +5,7 @@
 define zeroext i8 @test_add1(<16 x i8> %a, i32 signext %index, i8 zeroext %c) {
 ; CHECK-64-LABEL: test_add1:
 ; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    clrldi 3, 3, 32
 ; CHECK-64-NEXT:    vextublx 3, 3, 2
 ; CHECK-64-NEXT:    add 3, 3, 4
 ; CHECK-64-NEXT:    clrldi 3, 3, 56
@@ -31,6 +32,7 @@ entry:
 define signext i8 @test_add2(<16 x i8> %a, i32 signext %index, i8 signext %c) {
 ; CHECK-64-LABEL: test_add2:
 ; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    clrldi 3, 3, 32
 ; CHECK-64-NEXT:    vextublx 3, 3, 2
 ; CHECK-64-NEXT:    add 3, 3, 4
 ; CHECK-64-NEXT:    extsb 3, 3
@@ -57,6 +59,7 @@ entry:
 define zeroext i16 @test_add3(<8 x i16> %a, i32 signext %index, i16 zeroext %c) {
 ; CHECK-64-LABEL: test_add3:
 ; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    clrldi 3, 3, 32
 ; CHECK-64-NEXT:    rlwinm 3, 3, 1, 28, 30
 ; CHECK-64-NEXT:    vextuhlx 3, 3, 2
 ; CHECK-64-NEXT:    add 3, 3, 4
@@ -84,6 +87,7 @@ entry:
 define signext i16 @test_add4(<8 x i16> %a, i32 signext %index, i16 signext %c) {
 ; CHECK-64-LABEL: test_add4:
 ; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    clrldi 3, 3, 32
 ; CHECK-64-NEXT:    rlwinm 3, 3, 1, 28, 30
 ; CHECK-64-NEXT:    vextuhlx 3, 3, 2
 ; CHECK-64-NEXT:    add 3, 3, 4
@@ -111,6 +115,7 @@ entry:
 define zeroext i32 @test_add5(<4 x i32> %a, i32 signext %index, i32 zeroext %c) {
 ; CHECK-64-LABEL: test_add5:
 ; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    clrldi 3, 3, 32
 ; CHECK-64-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-64-NEXT:    vextuwlx 3, 3, 2
 ; CHECK-64-NEXT:    add 3, 3, 4
@@ -134,6 +139,7 @@ entry:
 define signext i32 @test_add6(<4 x i32> %a, i32 signext %index, i32 signext %c) {
 ; CHECK-64-LABEL: test_add6:
 ; CHECK-64:       # %bb.0: # %entry
+; CHECK-64-NEXT:    clrldi 3, 3, 32
 ; CHECK-64-NEXT:    rlwinm 3, 3, 2, 28, 29
 ; CHECK-64-NEXT:    vextuwlx 3, 3, 2
 ; CHECK-64-NEXT:    add 3, 3, 4

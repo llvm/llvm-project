@@ -8,7 +8,7 @@ target triple = "wasm64"
 ; CHECK-NEXT:  i32.wrap_i64 $push[[L1:[0-9]+]]=, $pop[[L0]]
 ; CHECK-NEXT:  call_indirect $pop[[L1]]
 
-define hidden void @f(void ()* %g) {
+define hidden void @f(ptr %g) {
   call void %g()
   ret void
 }

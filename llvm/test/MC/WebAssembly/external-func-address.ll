@@ -6,12 +6,12 @@ target triple = "wasm32-unknown-unknown"
 ; imports and relocations of type R_TABLE_INDEX_I32.
 
 declare void @f0(i32) #0
-@ptr_to_f0 = hidden global void (i32)* @f0, align 4
+@ptr_to_f0 = hidden global ptr @f0, align 4
 
 attributes #0 = { "wasm-import-module"="somewhere" "wasm-import-name"="something" }
 
 declare void @f1(i32) #1
-@ptr_to_f1 = hidden global void (i32)* @f1, align 4
+@ptr_to_f1 = hidden global ptr @f1, align 4
 
 ; Check that varargs functions have correctly typed imports
 declare i32 @varargs(i32, i32, ...)

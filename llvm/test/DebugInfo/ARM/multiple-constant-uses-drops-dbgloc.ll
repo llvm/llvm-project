@@ -22,8 +22,8 @@ target triple = "armv7--linux-gnueabihf"
 ; Function Attrs: nounwind
 define void @proc() #0 !dbg !13 {
 entry:
-  store i8 65, i8* @ch, align 1, !dbg !17
-  store i32 0, i32* @b, align 4, !dbg !18
+  store i8 65, ptr @ch, align 1, !dbg !17
+  store i32 0, ptr @b, align 4, !dbg !18
   ret void, !dbg !19
 }
 

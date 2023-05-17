@@ -2,14 +2,14 @@
 ; REQUIRES: asserts
 
 declare void @bar()
-declare void @baz(i32*)
+declare void @baz(ptr)
 
 ; CHECK-LABEL: @foo1()
 define void @foo1() {
 entry:
   %tag = alloca i32, align 4
-  call void @baz(i32* %tag)
-  %tmp = load i32, i32* %tag, align 4
+  call void @baz(ptr %tag)
+  %tmp = load i32, ptr %tag, align 4
   switch i32 %tmp, label %sw.bb799 [
     i32 10, label %sw.bb239
   ]
@@ -40,8 +40,8 @@ define void @foo3(i32 %ptr) {
 define void @foo4() {
 entry:
   %tag = alloca i32, align 4
-  call void @baz(i32* %tag)
-  %tmp = load i32, i32* %tag, align 4
+  call void @baz(ptr %tag)
+  %tmp = load i32, ptr %tag, align 4
   switch i32 %tmp, label %sw.bb442 [
     i32 16, label %sw.bb352
   ]

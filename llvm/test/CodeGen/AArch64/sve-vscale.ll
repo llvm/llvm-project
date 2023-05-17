@@ -46,7 +46,10 @@ define i64 @rdvl_i64() nounwind {
 ; CHECK:       rdvl x0, #1
 ; CHECK-NEXT:  ret
 define i32 @rdvl_const() nounwind {
-  ret i32 mul nsw (i32 ptrtoint (<vscale x 1 x i8>* getelementptr (<vscale x 1 x i8>, <vscale x 1 x i8>* null, i64 1) to i32), i32 16)
+  %vscale.ptr = getelementptr <vscale x 1 x i8>, ptr null, i64 1
+  %vscale.int = ptrtoint ptr %vscale.ptr to i32
+  %vscale.scaled = mul nsw i32 %vscale.int, 16
+  ret i32 %vscale.scaled
 }
 
 define i32 @vscale_1() nounwind {

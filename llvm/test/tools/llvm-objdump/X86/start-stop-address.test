@@ -1,10 +1,10 @@
 // RUN: yaml2obj -o %t.out %p/Inputs/simple-executable-x86_64.yaml 
-// RUN: llvm-objdump -d %t.out --start-address=0x18 --stop-address=0x2f | FileCheck %s 
-// RUN: llvm-objdump -d %t.out --start-address=0xc --stop-address=0x11 | FileCheck %s --check-prefix CROSSSECTION
-// RUN: llvm-objdump -d %t.out --start-address=0x40 --stop-address=0x47 | FileCheck %s --check-prefix CROSSDATA
-// RUN: llvm-objdump -d %t.out --start-address=0x40 | FileCheck %s --check-prefix START
-// RUN: llvm-objdump -d %t.out --stop-address=0x11 | FileCheck %s --check-prefix STOP
-// RUN: llvm-objdump -d %t.out --start-address=0xffffffff | FileCheck %s --check-prefix OUT-OF-RANGE
+// RUN: llvm-objdump --no-print-imm-hex -d %t.out --start-address=0x18 --stop-address=0x2f | FileCheck %s 
+// RUN: llvm-objdump --no-print-imm-hex -d %t.out --start-address=0xc --stop-address=0x11 | FileCheck %s --check-prefix CROSSSECTION
+// RUN: llvm-objdump --no-print-imm-hex -d %t.out --start-address=0x40 --stop-address=0x47 | FileCheck %s --check-prefix CROSSDATA
+// RUN: llvm-objdump --no-print-imm-hex -d %t.out --start-address=0x40 | FileCheck %s --check-prefix START
+// RUN: llvm-objdump --no-print-imm-hex -d %t.out --stop-address=0x11 | FileCheck %s --check-prefix STOP
+// RUN: llvm-objdump --no-print-imm-hex -d %t.out --start-address=0xffffffff | FileCheck %s --check-prefix OUT-OF-RANGE
 
 // CHECK-NOT:          Disassembly
 // CHECK:              Disassembly of section .anothertext:

@@ -100,7 +100,7 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if defined(__OPENCL_CPP_VERSION__) || (__OPENCL_C_VERSION__ >= CL_VERSION_1_2)
 // expected-no-diagnostics
 #else //__OPENCL_C_VERSION__
-// expected-warning@+2{{unknown OpenCL extension 'cl_intel_planar_yuv' - ignoring}}
+// expected-warning@+2{{OpenCL extension 'cl_intel_planar_yuv' unknown or does not require pragma - ignoring}}
 #endif //__OPENCL_C_VERSION__
 #pragma OPENCL EXTENSION cl_intel_planar_yuv : enable
 

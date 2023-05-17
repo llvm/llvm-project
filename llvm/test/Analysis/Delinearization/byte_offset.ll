@@ -12,24 +12,23 @@
 ;   }
 ; }
 
-define void @foo(i8* %A, i64 %i2, i64 %arg, i1 %c) {
+define void @foo(ptr %A, i64 %i2, i64 %arg, i1 %c) {
 entry:
   br label %outer.loop
 
 outer.loop:
   %outer.iv = phi i64 [ 0, %entry ], [ %outer.iv.next, %outer.latch ]
   %i414 = mul nsw i64 %outer.iv, %i2
-  %tmp = getelementptr inbounds i8, i8* %A, i64 %i414
+  %tmp = getelementptr inbounds i8, ptr %A, i64 %i414
   br i1 %c, label %inner.preheader, label %outer.latch
 
 inner.preheader:
   %unknown = shl i64 %arg, %arg
-  %arrayidx = getelementptr inbounds i8, i8* %tmp, i64 %unknown
-  %ptr = bitcast i8* %arrayidx to float*
+  %arrayidx = getelementptr inbounds i8, ptr %tmp, i64 %unknown
   br label %inner.loop
 
 inner.loop:
-  store float 0.000000e+00, float* %ptr, align 4
+  store float 0.000000e+00, ptr %arrayidx, align 4
   br label %inner.loop
 
 outer.latch:

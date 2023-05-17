@@ -26,6 +26,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbolWasm.h"
 #include "llvm/Support/Casting.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -93,7 +94,7 @@ public:
 
   bool parseSectionDirectiveData(StringRef, SMLoc) {
     auto *S = getContext().getObjectFileInfo()->getDataSection();
-    getStreamer().SwitchSection(S);
+    getStreamer().switchSection(S);
     return false;
   }
 
@@ -152,7 +153,7 @@ public:
     if (Lexer->isNot(AsmToken::String))
       return error("expected string in directive, instead got: ", Lexer->getTok());
 
-    auto Kind = StringSwitch<Optional<SectionKind>>(Name)
+    auto Kind = StringSwitch<std::optional<SectionKind>>(Name)
                     .StartsWith(".data", SectionKind::getData())
                     .StartsWith(".tdata", SectionKind::getThreadData())
                     .StartsWith(".tbss", SectionKind::getThreadBSS())
@@ -188,7 +189,7 @@ public:
 
     // TODO: Parse UniqueID
     MCSectionWasm *WS = getContext().getWasmSection(
-        Name, Kind.getValue(), Flags, GroupName, MCContext::GenericSectionID);
+        Name, *Kind, Flags, GroupName, MCContext::GenericSectionID);
 
     if (WS->getSegmentFlags() != Flags)
       Parser->Error(loc, "changed section flags for " + Name +
@@ -201,13 +202,13 @@ public:
       WS->setPassive();
     }
 
-    getStreamer().SwitchSection(WS);
+    getStreamer().switchSection(WS);
     return false;
   }
 
   // TODO: This function is almost the same as ELFAsmParser::ParseDirectiveSize
   // so maybe could be shared somehow.
-  bool parseDirectiveSize(StringRef, SMLoc) {
+  bool parseDirectiveSize(StringRef, SMLoc Loc) {
     StringRef Name;
     if (Parser->parseIdentifier(Name))
       return TokError("expected identifier in directive");
@@ -219,9 +220,14 @@ public:
       return true;
     if (expect(AsmToken::EndOfStatement, "eol"))
       return true;
-    // This is done automatically by the assembler for functions currently,
-    // so this is only currently needed for data sections:
-    getStreamer().emitELFSize(Sym, Expr);
+    auto WasmSym = cast<MCSymbolWasm>(Sym);
+    if (WasmSym->isFunction()) {
+      // Ignore .size directives for function symbols.  They get their size
+      // set automatically based on their content.
+      Warning(Loc, ".size directive ignored for function symbols");
+    } else {
+      getStreamer().emitELFSize(Sym, Expr);
+    }
     return false;
   }
 

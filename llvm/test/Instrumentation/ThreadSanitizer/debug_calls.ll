@@ -2,12 +2,12 @@
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @Increment(i32* nocapture %0) local_unnamed_addr sanitize_thread !dbg !7 {
-  call void @llvm.dbg.value(metadata i32* %0, metadata !14, metadata !DIExpression()), !dbg !16
-  %2 = load i32, i32* %0, align 4, !dbg !17, !tbaa !18
+define void @Increment(ptr nocapture %0) local_unnamed_addr sanitize_thread !dbg !7 {
+  call void @llvm.dbg.value(metadata ptr %0, metadata !14, metadata !DIExpression()), !dbg !16
+  %2 = load i32, ptr %0, align 4, !dbg !17, !tbaa !18
   call void @llvm.dbg.value(metadata i32 %2, metadata !15, metadata !DIExpression()), !dbg !16
   %3 = add nsw i32 %2, 1, !dbg !22
-  store i32 %3, i32* %0, align 4, !dbg !23, !tbaa !18
+  store i32 %3, ptr %0, align 4, !dbg !23, !tbaa !18
   ret void, !dbg !24
 }
 ; CHECK-LABEL: define void @Increment

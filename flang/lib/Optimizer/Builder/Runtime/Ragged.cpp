@@ -35,7 +35,7 @@ void fir::runtime::genRaggedArrayAllocate(mlir::Location loc,
   auto ptrTy = builder.getRefType(eleTy.cast<mlir::TupleType>().getType(1));
   auto ptr = builder.create<fir::CoordinateOp>(loc, ptrTy, header, one);
   auto heap = builder.create<fir::LoadOp>(loc, ptr);
-  auto cmp = builder.genIsNull(loc, heap);
+  auto cmp = builder.genIsNullAddr(loc, heap);
   builder.genIfThen(loc, cmp)
       .genThen([&]() {
         auto asHeadersVal = builder.createIntegerConstant(loc, i1Ty, asHeaders);

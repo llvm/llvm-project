@@ -1,7 +1,7 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 
-; RUN: opt -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=65536 -o - | FileCheck %s
-; RUN: opt -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=2147483647 -o - | FileCheck %s
+; RUN: opt -opaque-pointers=0 -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=65536 -o - | FileCheck %s
+; RUN: opt -opaque-pointers=0 -mtriple=thumbv7em %s -S -loop-reduce -lsr-complexity-limit=2147483647 -o - | FileCheck %s
 
 ; CHECK-LABEL: for.body12.us.us:
 ; CHECK: [[LSR_IV6:%[^ ]+]] = phi i16* [ [[SCEVGEP7:%[^ ]+]], %for.body12.us.us ], [ [[SCEVGEP5:%[^ ]+]], %for.cond9.preheader.us.us ]

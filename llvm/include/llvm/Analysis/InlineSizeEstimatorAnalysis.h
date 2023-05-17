@@ -24,7 +24,7 @@ public:
   ~InlineSizeEstimatorAnalysis();
 
   static AnalysisKey Key;
-  using Result = Optional<size_t>;
+  using Result = std::optional<size_t>;
   Result run(const Function &F, FunctionAnalysisManager &FAM);
   static bool isEvaluatorRequested();
 

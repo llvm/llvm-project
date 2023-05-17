@@ -5,7 +5,7 @@
 
 %struct.desc = type { i32, [7 x i32] }
 
-define i32 @foo(%struct.desc* %descs, i32 %num, i32 %cw) local_unnamed_addr #0 {
+define i32 @foo(ptr %descs, i32 %num, i32 %cw) local_unnamed_addr #0 {
 ; CHECK-LABEL: foo:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldr d16, [r0, #32]
@@ -13,8 +13,7 @@ define i32 @foo(%struct.desc* %descs, i32 %num, i32 %cw) local_unnamed_addr #0 {
 ; CHECK-NEXT:    vmov.32 r0, d16[0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %descs.vec = bitcast %struct.desc* %descs to <16 x i32>*
-  %wide.vec = load <16 x i32>, <16 x i32>* %descs.vec, align 4
+  %wide.vec = load <16 x i32>, ptr %descs, align 4
   %strided.vec = shufflevector <16 x i32> %wide.vec, <16 x i32> undef, <2 x i32> <i32 0, i32 8>
   %bin.rdx20 = add <2 x i32> %strided.vec, %strided.vec
   %0 = extractelement <2 x i32> %bin.rdx20, i32 1

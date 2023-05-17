@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class SessionSaveTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def raw_transcript_builder(self, cmd, res):
         raw = "(lldb) " + cmd + "\n"
         if res.GetOutputSize():
@@ -32,7 +30,8 @@ class SessionSaveTestCase(TestBase):
         settings = [
           'settings set interpreter.echo-commands true',
           'settings set interpreter.echo-comment-commands true',
-          'settings set interpreter.stop-command-source-on-error false'
+          'settings set interpreter.stop-command-source-on-error false',
+          'settings set interpreter.open-transcript-in-editor false',
         ]
 
         for setting in settings:
@@ -104,6 +103,7 @@ class SessionSaveTestCase(TestBase):
           'settings set interpreter.stop-command-source-on-error false',
           'settings set interpreter.save-session-on-quit true',
           'settings set interpreter.save-session-directory ' + td.name,
+          'settings set interpreter.open-transcript-in-editor false',
         ]
 
         for setting in settings:

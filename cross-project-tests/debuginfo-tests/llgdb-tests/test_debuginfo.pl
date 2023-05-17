@@ -56,8 +56,7 @@ my $my_debugger = $ENV{'DEBUGGER'};
 if (!$my_debugger) {
     if ($use_lldb) {
         my $path = dirname(Cwd::abs_path($0));
-        # At least on darwin, LLDB needs te system python.
-        $my_debugger = "/usr/bin/python $path/llgdb.py";
+        $my_debugger = "/usr/bin/env python3 $path/llgdb.py";
     } else {
         $my_debugger = "gdb";
     }

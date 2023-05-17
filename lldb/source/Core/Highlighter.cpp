@@ -11,6 +11,7 @@
 #include "lldb/Target/Language.h"
 #include "lldb/Utility/AnsiTerminal.h"
 #include "lldb/Utility/StreamString.h"
+#include <optional>
 
 using namespace lldb_private;
 using namespace lldb_private::ansi;
@@ -27,7 +28,7 @@ void HighlightStyle::ColorStyle::Set(llvm::StringRef prefix,
 
 void DefaultHighlighter::Highlight(const HighlightStyle &options,
                                    llvm::StringRef line,
-                                   llvm::Optional<size_t> cursor_pos,
+                                   std::optional<size_t> cursor_pos,
                                    llvm::StringRef previous_lines,
                                    Stream &s) const {
   // If we don't have a valid cursor, then we just print the line as-is.
@@ -72,7 +73,7 @@ HighlighterManager::getHighlighterFor(lldb::LanguageType language_type,
 
 std::string Highlighter::Highlight(const HighlightStyle &options,
                                    llvm::StringRef line,
-                                   llvm::Optional<size_t> cursor_pos,
+                                   std::optional<size_t> cursor_pos,
                                    llvm::StringRef previous_lines) const {
   StreamString s;
   Highlight(options, line, cursor_pos, previous_lines, s);

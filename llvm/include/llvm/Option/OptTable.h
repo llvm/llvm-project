@@ -10,8 +10,8 @@
 #define LLVM_OPTION_OPTTABLE_H
 
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Option/OptSpecifier.h"
 #include "llvm/Support/StringSaver.h"
 #include <cassert>
@@ -43,8 +43,8 @@ public:
   struct Info {
     /// A null terminated array of prefix strings to apply to name while
     /// matching.
-    const char *const *Prefixes;
-    const char *Name;
+    ArrayRef<StringLiteral> Prefixes;
+    StringRef Name;
     const char *HelpText;
     const char *MetaVar;
     unsigned ID;
@@ -59,7 +59,7 @@ public:
 
 private:
   /// The option information table.
-  std::vector<Info> OptionInfos;
+  ArrayRef<Info> OptionInfos;
   bool IgnoreCase;
   bool GroupedShortOptions = false;
   const char *EnvVar = nullptr;
@@ -67,14 +67,17 @@ private:
   unsigned InputOptionID = 0;
   unsigned UnknownOptionID = 0;
 
+protected:
   /// The index of the first option which can be parsed (i.e., is not a
   /// special option like 'input' or 'unknown', and is not an option group).
   unsigned FirstSearchableIndex = 0;
 
+  /// The union of the first element of all option prefixes.
+  SmallString<8> PrefixChars;
+
   /// The union of all option prefixes. If an argument does not begin with
   /// one of these, it is an input.
-  StringSet<> PrefixesUnion;
-  std::string PrefixChars;
+  virtual ArrayRef<StringLiteral> getPrefixesUnion() const = 0;
 
 private:
   const Info &getInfo(OptSpecifier Opt) const {
@@ -87,10 +90,15 @@ private:
                                           unsigned &Index) const;
 
 protected:
+  /// Initialize OptTable using Tablegen'ed OptionInfos. Child class must
+  /// manually call \c buildPrefixChars once they are fully constructed.
   OptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
 
+  /// Build (or rebuild) the PrefixChars member.
+  void buildPrefixChars();
+
 public:
-  ~OptTable();
+  virtual ~OptTable();
 
   /// Return the total number of option classes.
   unsigned getNumOptions() const { return OptionInfos.size(); }
@@ -102,9 +110,7 @@ public:
   const Option getOption(OptSpecifier Opt) const;
 
   /// Lookup the name of the given option.
-  const char *getOptionName(OptSpecifier id) const {
-    return getInfo(id).Name;
-  }
+  StringRef getOptionName(OptSpecifier id) const { return getInfo(id).Name; }
 
   /// Get the kind of the given option.
   unsigned getOptionKind(OptSpecifier id) const {
@@ -169,22 +175,21 @@ public:
   /// \param [in] MinimumLength - Don't find options shorter than this length.
   /// For example, a minimum length of 3 prevents "-x" from being considered
   /// near to "-S".
+  /// \param [in] MaximumDistance - Don't find options whose distance is greater
+  /// than this value.
   ///
   /// \return The edit distance of the nearest string found.
   unsigned findNearest(StringRef Option, std::string &NearestString,
                        unsigned FlagsToInclude = 0, unsigned FlagsToExclude = 0,
-                       unsigned MinimumLength = 4) const;
+                       unsigned MinimumLength = 4,
+                       unsigned MaximumDistance = UINT_MAX) const;
 
-  /// Add Values to Option's Values class
-  ///
-  /// \param [in] Option - Prefix + Name of the flag which Values will be
-  ///  changed. For example, "-analyzer-checker".
-  /// \param [in] Values - String of Values seperated by ",", such as
-  ///  "foo, bar..", where foo and bar is the argument which the Option flag
-  ///  takes
-  ///
-  /// \return true in success, and false in fail.
-  bool addValues(const char *Option, const char *Values);
+  bool findExact(StringRef Option, std::string &ExactString,
+                 unsigned FlagsToInclude = 0,
+                 unsigned FlagsToExclude = 0) const {
+    return findNearest(Option, ExactString, FlagsToInclude, FlagsToExclude, 4,
+                       0) == 0;
+  }
 
   /// Parse a single argument; returning the new argument and
   /// updating Index.
@@ -256,6 +261,32 @@ public:
 
   void printHelp(raw_ostream &OS, const char *Usage, const char *Title,
                  bool ShowHidden = false, bool ShowAllAliases = false) const;
+};
+
+/// Specialization of OptTable
+class GenericOptTable : public OptTable {
+  SmallVector<StringLiteral> PrefixesUnionBuffer;
+
+protected:
+  GenericOptTable(ArrayRef<Info> OptionInfos, bool IgnoreCase = false);
+  ArrayRef<StringLiteral> getPrefixesUnion() const final {
+    return PrefixesUnionBuffer;
+  }
+};
+
+class PrecomputedOptTable : public OptTable {
+  ArrayRef<StringLiteral> PrefixesUnion;
+
+protected:
+  PrecomputedOptTable(ArrayRef<Info> OptionInfos,
+                      ArrayRef<StringLiteral> PrefixesTable,
+                      bool IgnoreCase = false)
+      : OptTable(OptionInfos, IgnoreCase), PrefixesUnion(PrefixesTable) {
+    buildPrefixChars();
+  }
+  ArrayRef<StringLiteral> getPrefixesUnion() const final {
+    return PrefixesUnion;
+  }
 };
 
 } // end namespace opt

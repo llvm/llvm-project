@@ -60,7 +60,7 @@
 define i32 @main() #0 !dbg !7 {
 entry:
   %a = alloca i32, align 4
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !11, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !11, metadata !DIExpression()), !dbg !12
   %call = call i32 @_Z7get_argv(), !dbg !13
   call void @_Z4funci(i32 %call), !dbg !14
   ret i32 0, !dbg !15

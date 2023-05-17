@@ -17,26 +17,25 @@ module real_tests
   !WARN: warning: division by zero
   real(4), parameter :: r4_ninf = -1._4/0._4
 
-  !WARN: warning: invalid argument on intrinsic function
+  !WARN: warning: invalid argument on evaluation of intrinsic function or operation
   real(4), parameter :: nan_r4_acos1 = acos(1.1)
   TEST_ISNAN(nan_r4_acos1)
-  !WARN: warning: invalid argument on intrinsic function
+  !WARN: warning: invalid argument on evaluation of intrinsic function or operation
   real(4), parameter :: nan_r4_acos2 = acos(r4_pmax)
   TEST_ISNAN(nan_r4_acos2)
-  !WARN: warning: invalid argument on intrinsic function
+  !WARN: warning: invalid argument on evaluation of intrinsic function or operation
   real(4), parameter :: nan_r4_acos3 = acos(r4_nmax)
   TEST_ISNAN(nan_r4_acos3)
-  !WARN: warning: invalid argument on intrinsic function
+  !WARN: warning: invalid argument on evaluation of intrinsic function or operation
   real(4), parameter :: nan_r4_acos4 = acos(r4_ninf)
   TEST_ISNAN(nan_r4_acos4)
-  !WARN: warning: invalid argument on intrinsic function
+  !WARN: warning: invalid argument on evaluation of intrinsic function or operation
   real(4), parameter :: nan_r4_acos5 = acos(r4_pinf)
   TEST_ISNAN(nan_r4_acos5)
   !WARN: warning: second argument to MOD must not be zero
   real(4), parameter :: nan_r4_mod = mod(3.5, 0.)
   TEST_ISNAN(nan_r4_mod)
-
-  !WARN: warning: overflow on intrinsic function
+  !WARN: warning: overflow on evaluation of intrinsic function or operation
   logical, parameter :: test_exp_overflow = exp(256._4).EQ.r4_pinf
 end module
 

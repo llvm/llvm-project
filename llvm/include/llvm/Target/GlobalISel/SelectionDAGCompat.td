@@ -55,6 +55,7 @@ def : GINodeEquiv<G_FCONSTANT, fpimm>;
 def : GINodeEquiv<G_IMPLICIT_DEF, undef>;
 def : GINodeEquiv<G_FRAME_INDEX, frameindex>;
 def : GINodeEquiv<G_BLOCK_ADDR, blockaddress>;
+def : GINodeEquiv<G_PTR_ADD, ptradd>;
 def : GINodeEquiv<G_ADD, add>;
 def : GINodeEquiv<G_SUB, sub>;
 def : GINodeEquiv<G_MUL, mul>;
@@ -103,6 +104,7 @@ def : GINodeEquiv<G_FPOW, fpow>;
 def : GINodeEquiv<G_FEXP2, fexp2>;
 def : GINodeEquiv<G_FLOG2, flog2>;
 def : GINodeEquiv<G_FCANONICALIZE, fcanonicalize>;
+def : GINodeEquiv<G_IS_FPCLASS, is_fpclass>;
 def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain>;
 // ISD::INTRINSIC_VOID can also be handled with G_INTRINSIC_W_SIDE_EFFECTS.
 def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
@@ -141,6 +143,8 @@ def : GINodeEquiv<G_FMINNUM, fminnum>;
 def : GINodeEquiv<G_FMAXNUM, fmaxnum>;
 def : GINodeEquiv<G_FMINNUM_IEEE, fminnum_ieee>;
 def : GINodeEquiv<G_FMAXNUM_IEEE, fmaxnum_ieee>;
+def : GINodeEquiv<G_FMAXIMUM, fmaximum>;
+def : GINodeEquiv<G_FMINIMUM, fminimum>;
 def : GINodeEquiv<G_READCYCLECOUNTER, readcyclecounter>;
 def : GINodeEquiv<G_ROTR, rotr>;
 def : GINodeEquiv<G_ROTL, rotl>;
@@ -184,6 +188,8 @@ def : GINodeEquiv<G_STORE, st> { let CheckMMOIsNonAtomic = true; }
 def : GINodeEquiv<G_LOAD, atomic_load> {
   let CheckMMOIsNonAtomic = false;
   let CheckMMOIsAtomic = true;
+  let IfSignExtend = G_SEXTLOAD;
+  let IfZeroExtend = G_ZEXTLOAD;
 }
 
 // Operands are swapped for atomic_store vs. regular store
@@ -206,6 +212,10 @@ def : GINodeEquiv<G_ATOMICRMW_UMIN, atomic_load_umin>;
 def : GINodeEquiv<G_ATOMICRMW_UMAX, atomic_load_umax>;
 def : GINodeEquiv<G_ATOMICRMW_FADD, atomic_load_fadd>;
 def : GINodeEquiv<G_ATOMICRMW_FSUB, atomic_load_fsub>;
+def : GINodeEquiv<G_ATOMICRMW_FMAX, atomic_load_fmax>;
+def : GINodeEquiv<G_ATOMICRMW_FMIN, atomic_load_fmin>;
+def : GINodeEquiv<G_ATOMICRMW_UINC_WRAP, atomic_load_uinc_wrap>;
+def : GINodeEquiv<G_ATOMICRMW_UDEC_WRAP, atomic_load_udec_wrap>;
 def : GINodeEquiv<G_FENCE, atomic_fence>;
 
 // Specifies the GlobalISel equivalents for SelectionDAG's ComplexPattern.

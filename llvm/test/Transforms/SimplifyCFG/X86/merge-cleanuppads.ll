@@ -1,9 +1,9 @@
-; RUN: opt -S -simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
+; RUN: opt -S -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 < %s | FileCheck %s
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc18.0.0"
 
 ; Function Attrs: uwtable
-define void @test1() #0 personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() #0 personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @may_throw(i32 3)
           to label %invoke.cont unwind label %ehcleanup

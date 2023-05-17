@@ -84,7 +84,7 @@ void ARM64Common::relocateOne(uint8_t *loc, const Reloc &r, uint64_t value,
   case ARM64_RELOC_GOT_LOAD_PAGEOFF12:
   case ARM64_RELOC_TLVP_LOAD_PAGEOFF12:
     assert(!r.pcrel);
-    encodePageOff12(loc32, base, value);
+    encodePageOff12(loc32, r, base, value);
     break;
   default:
     llvm_unreachable("unexpected relocation type");
@@ -108,4 +108,45 @@ void ARM64Common::relaxGotLoad(uint8_t *loc, uint8_t type) const {
   // ADD <Xd|SP>, <Xn|SP>, #<imm>{, <shift>}
   instruction = ((instruction & 0x001fffff) | 0x91000000);
   write32le(loc, instruction);
+}
+
+void ARM64Common::handleDtraceReloc(const Symbol *sym, const Reloc &r,
+                                    uint8_t *loc) const {
+  assert(r.type == ARM64_RELOC_BRANCH26);
+
+  if (config->outputType == MH_OBJECT)
+    return;
+
+  if (sym->getName().startswith("___dtrace_probe")) {
+    // change call site to a NOP
+    write32le(loc, 0xD503201F);
+  } else if (sym->getName().startswith("___dtrace_isenabled")) {
+    // change call site to 'MOVZ X0,0'
+    write32le(loc, 0xD2800000);
+  } else {
+    error("Unrecognized dtrace symbol prefix: " + toString(*sym));
+  }
+}
+
+static void reportUnalignedLdrStr(Twine loc, uint64_t va, int align,
+                                  const Symbol *sym) {
+  std::string symbolHint;
+  if (sym)
+    symbolHint = " (" + toString(*sym) + ")";
+  error(loc + ": " + Twine(8 * align) + "-bit LDR/STR to 0x" +
+        llvm::utohexstr(va) + symbolHint + " is not " + Twine(align) +
+        "-byte aligned");
+}
+
+void macho::reportUnalignedLdrStr(void *loc, const lld::macho::Reloc &r,
+                                  uint64_t va, int align) {
+  uint64_t off = reinterpret_cast<const uint8_t *>(loc) - in.bufferStart;
+  const InputSection *isec = offsetToInputSection(&off);
+  std::string locStr = isec ? isec->getLocation(off) : "(invalid location)";
+  ::reportUnalignedLdrStr(locStr, va, align, r.referent.dyn_cast<Symbol *>());
+}
+
+void macho::reportUnalignedLdrStr(void *loc, lld::macho::SymbolDiagnostic d,
+                                  uint64_t va, int align) {
+  ::reportUnalignedLdrStr(d.reason, va, align, d.symbol);
 }

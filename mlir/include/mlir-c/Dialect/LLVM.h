@@ -11,7 +11,6 @@
 #define MLIR_C_DIALECT_LLVM_H
 
 #include "mlir-c/IR.h"
-#include "mlir-c/Registration.h"
 
 #ifdef __cplusplus
 extern "C" {

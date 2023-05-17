@@ -303,21 +303,21 @@ define float @sqrt_afn_ieee(float %x) #0 {
 ; FMF-LABEL: sqrt_afn_ieee:
 ; FMF:       # %bb.0:
 ; FMF-NEXT:    xsabsdp 0, 1
-; FMF-NEXT:    addis 3, 2, .LCPI11_2@toc@ha
-; FMF-NEXT:    lfs 2, .LCPI11_2@toc@l(3)
+; FMF-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
 ; FMF-NEXT:    fcmpu 0, 0, 2
 ; FMF-NEXT:    xxlxor 0, 0, 0
 ; FMF-NEXT:    blt 0, .LBB11_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 0, 1
+; FMF-NEXT:    vspltisw 2, -3
 ; FMF-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; FMF-NEXT:    lfs 2, .LCPI11_0@toc@l(3)
-; FMF-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
-; FMF-NEXT:    lfs 3, .LCPI11_1@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI11_0@toc@l(3)
+; FMF-NEXT:    xvcvsxwdp 2, 34
 ; FMF-NEXT:    xsmulsp 1, 1, 0
 ; FMF-NEXT:    xsmulsp 0, 1, 0
-; FMF-NEXT:    xsmulsp 1, 1, 2
-; FMF-NEXT:    xsaddsp 0, 0, 3
+; FMF-NEXT:    xsmulsp 1, 1, 3
+; FMF-NEXT:    xsaddsp 0, 0, 2
 ; FMF-NEXT:    xsmulsp 0, 1, 0
 ; FMF-NEXT:  .LBB11_2:
 ; FMF-NEXT:    fmr 1, 0
@@ -326,17 +326,17 @@ define float @sqrt_afn_ieee(float %x) #0 {
 ; GLOBAL-LABEL: sqrt_afn_ieee:
 ; GLOBAL:       # %bb.0:
 ; GLOBAL-NEXT:    xsabsdp 0, 1
-; GLOBAL-NEXT:    addis 3, 2, .LCPI11_2@toc@ha
-; GLOBAL-NEXT:    lfs 2, .LCPI11_2@toc@l(3)
+; GLOBAL-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI11_1@toc@l(3)
 ; GLOBAL-NEXT:    fcmpu 0, 0, 2
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0
 ; GLOBAL-NEXT:    blt 0, .LBB11_2
 ; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
+; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI11_0@toc@ha
-; GLOBAL-NEXT:    lfs 2, .LCPI11_0@toc@l(3)
-; GLOBAL-NEXT:    addis 3, 2, .LCPI11_1@toc@ha
-; GLOBAL-NEXT:    lfs 3, .LCPI11_1@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI11_0@toc@l(3)
+; GLOBAL-NEXT:    xvcvsxwdp 2, 34
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
 ; GLOBAL-NEXT:    xsmulsp 0, 1, 3
@@ -378,14 +378,14 @@ define float @sqrt_afn_preserve_sign(float %x) #1 {
 ; FMF-NEXT:    beq 0, .LBB13_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 0, 1
+; FMF-NEXT:    vspltisw 2, -3
 ; FMF-NEXT:    addis 3, 2, .LCPI13_0@toc@ha
-; FMF-NEXT:    lfs 2, .LCPI13_0@toc@l(3)
-; FMF-NEXT:    addis 3, 2, .LCPI13_1@toc@ha
-; FMF-NEXT:    lfs 3, .LCPI13_1@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI13_0@toc@l(3)
+; FMF-NEXT:    xvcvsxwdp 2, 34
 ; FMF-NEXT:    xsmulsp 1, 1, 0
 ; FMF-NEXT:    xsmulsp 0, 1, 0
-; FMF-NEXT:    xsmulsp 1, 1, 2
-; FMF-NEXT:    xsaddsp 0, 0, 3
+; FMF-NEXT:    xsmulsp 1, 1, 3
+; FMF-NEXT:    xsaddsp 0, 0, 2
 ; FMF-NEXT:    xsmulsp 0, 1, 0
 ; FMF-NEXT:  .LBB13_2:
 ; FMF-NEXT:    fmr 1, 0
@@ -398,10 +398,10 @@ define float @sqrt_afn_preserve_sign(float %x) #1 {
 ; GLOBAL-NEXT:    beq 0, .LBB13_2
 ; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
+; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI13_0@toc@ha
-; GLOBAL-NEXT:    lfs 2, .LCPI13_0@toc@l(3)
-; GLOBAL-NEXT:    addis 3, 2, .LCPI13_1@toc@ha
-; GLOBAL-NEXT:    lfs 3, .LCPI13_1@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI13_0@toc@l(3)
+; GLOBAL-NEXT:    xvcvsxwdp 2, 34
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
 ; GLOBAL-NEXT:    xsmulsp 0, 1, 3
@@ -441,17 +441,17 @@ define float @sqrt_fast_ieee(float %x) #0 {
 ; FMF-LABEL: sqrt_fast_ieee:
 ; FMF:       # %bb.0:
 ; FMF-NEXT:    xsabsdp 0, 1
-; FMF-NEXT:    addis 3, 2, .LCPI15_2@toc@ha
-; FMF-NEXT:    lfs 2, .LCPI15_2@toc@l(3)
+; FMF-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
+; FMF-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
 ; FMF-NEXT:    fcmpu 0, 0, 2
 ; FMF-NEXT:    xxlxor 0, 0, 0
 ; FMF-NEXT:    blt 0, .LBB15_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 0, 1
+; FMF-NEXT:    vspltisw 2, -3
 ; FMF-NEXT:    addis 3, 2, .LCPI15_0@toc@ha
-; FMF-NEXT:    lfs 2, .LCPI15_0@toc@l(3)
-; FMF-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
-; FMF-NEXT:    lfs 3, .LCPI15_1@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI15_0@toc@l(3)
+; FMF-NEXT:    xvcvsxwdp 2, 34
 ; FMF-NEXT:    xsmulsp 1, 1, 0
 ; FMF-NEXT:    xsmaddasp 2, 1, 0
 ; FMF-NEXT:    xsmulsp 0, 1, 3
@@ -463,17 +463,17 @@ define float @sqrt_fast_ieee(float %x) #0 {
 ; GLOBAL-LABEL: sqrt_fast_ieee:
 ; GLOBAL:       # %bb.0:
 ; GLOBAL-NEXT:    xsabsdp 0, 1
-; GLOBAL-NEXT:    addis 3, 2, .LCPI15_2@toc@ha
-; GLOBAL-NEXT:    lfs 2, .LCPI15_2@toc@l(3)
+; GLOBAL-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
+; GLOBAL-NEXT:    lfs 2, .LCPI15_1@toc@l(3)
 ; GLOBAL-NEXT:    fcmpu 0, 0, 2
 ; GLOBAL-NEXT:    xxlxor 0, 0, 0
 ; GLOBAL-NEXT:    blt 0, .LBB15_2
 ; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
+; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI15_0@toc@ha
-; GLOBAL-NEXT:    lfs 2, .LCPI15_0@toc@l(3)
-; GLOBAL-NEXT:    addis 3, 2, .LCPI15_1@toc@ha
-; GLOBAL-NEXT:    lfs 3, .LCPI15_1@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI15_0@toc@l(3)
+; GLOBAL-NEXT:    xvcvsxwdp 2, 34
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
 ; GLOBAL-NEXT:    xsmulsp 0, 1, 3
@@ -503,10 +503,10 @@ define float @sqrt_fast_preserve_sign(float %x) #1 {
 ; FMF-NEXT:    beq 0, .LBB16_2
 ; FMF-NEXT:  # %bb.1:
 ; FMF-NEXT:    xsrsqrtesp 0, 1
+; FMF-NEXT:    vspltisw 2, -3
 ; FMF-NEXT:    addis 3, 2, .LCPI16_0@toc@ha
-; FMF-NEXT:    lfs 2, .LCPI16_0@toc@l(3)
-; FMF-NEXT:    addis 3, 2, .LCPI16_1@toc@ha
-; FMF-NEXT:    lfs 3, .LCPI16_1@toc@l(3)
+; FMF-NEXT:    lfs 3, .LCPI16_0@toc@l(3)
+; FMF-NEXT:    xvcvsxwdp 2, 34
 ; FMF-NEXT:    xsmulsp 1, 1, 0
 ; FMF-NEXT:    xsmaddasp 2, 1, 0
 ; FMF-NEXT:    xsmulsp 0, 1, 3
@@ -522,10 +522,10 @@ define float @sqrt_fast_preserve_sign(float %x) #1 {
 ; GLOBAL-NEXT:    beq 0, .LBB16_2
 ; GLOBAL-NEXT:  # %bb.1:
 ; GLOBAL-NEXT:    xsrsqrtesp 0, 1
+; GLOBAL-NEXT:    vspltisw 2, -3
 ; GLOBAL-NEXT:    addis 3, 2, .LCPI16_0@toc@ha
-; GLOBAL-NEXT:    lfs 2, .LCPI16_0@toc@l(3)
-; GLOBAL-NEXT:    addis 3, 2, .LCPI16_1@toc@ha
-; GLOBAL-NEXT:    lfs 3, .LCPI16_1@toc@l(3)
+; GLOBAL-NEXT:    lfs 3, .LCPI16_0@toc@l(3)
+; GLOBAL-NEXT:    xvcvsxwdp 2, 34
 ; GLOBAL-NEXT:    xsmulsp 1, 1, 0
 ; GLOBAL-NEXT:    xsmaddasp 2, 1, 0
 ; GLOBAL-NEXT:    xsmulsp 0, 1, 3
@@ -593,8 +593,8 @@ define double @log2_approx(double %x) nounwind {
 ; FMF-LABEL: log2_approx:
 ; FMF:       # %bb.0:
 ; FMF-NEXT:    mflr 0
-; FMF-NEXT:    std 0, 16(1)
 ; FMF-NEXT:    stdu 1, -32(1)
+; FMF-NEXT:    std 0, 48(1)
 ; FMF-NEXT:    bl log2
 ; FMF-NEXT:    nop
 ; FMF-NEXT:    addi 1, 1, 32
@@ -605,8 +605,8 @@ define double @log2_approx(double %x) nounwind {
 ; GLOBAL-LABEL: log2_approx:
 ; GLOBAL:       # %bb.0:
 ; GLOBAL-NEXT:    mflr 0
-; GLOBAL-NEXT:    std 0, 16(1)
 ; GLOBAL-NEXT:    stdu 1, -32(1)
+; GLOBAL-NEXT:    std 0, 48(1)
 ; GLOBAL-NEXT:    bl log2
 ; GLOBAL-NEXT:    nop
 ; GLOBAL-NEXT:    addi 1, 1, 32
@@ -644,3 +644,6 @@ define float @fneg_fsub_nozeros_1(float %x, float %y, float %z) {
 
 attributes #0 = { "denormal-fp-math"="ieee,ieee" }
 attributes #1 = { "denormal-fp-math"="preserve-sign,preserve-sign" }
+;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
+; FMFDEBUG: {{.*}}
+; GLOBALDEBUG: {{.*}}

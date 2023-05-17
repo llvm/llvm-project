@@ -2,13 +2,13 @@
 ; RUN: llc < %s -relocation-model=pic -mtriple=i386-pc-solaris2.11 | FileCheck %s -check-prefix=X32
 ; PR1632
 
-define void @_Z1fv() personality i32 (...)* @__gxx_personality_v0 {
+define void @_Z1fv() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z1gv()
           to label %return unwind label %unwind
 
 unwind:                                           ; preds = %entry
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   ret void
 

@@ -14,10 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
-namespace readability {
+namespace clang::tidy::google::readability {
 
 void AvoidCStyleCastsCheck::registerMatchers(
     ast_matchers::MatchFinder *Finder) {
@@ -130,7 +127,12 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
     // case of overloaded functions, so detection of redundant casts is trickier
     // in this case. Don't emit "redundant cast" warnings for function
     // pointer/reference types.
-    if (SourceTypeAsWritten == DestTypeAsWritten) {
+    QualType Src = SourceTypeAsWritten, Dst = DestTypeAsWritten;
+    if (const auto *ElTy = dyn_cast<ElaboratedType>(Src))
+      Src = ElTy->getNamedType();
+    if (const auto *ElTy = dyn_cast<ElaboratedType>(Dst))
+      Dst = ElTy->getNamedType();
+    if (Src == Dst) {
       diag(CastExpr->getBeginLoc(), "redundant cast to the same type")
           << FixItHint::CreateRemoval(ReplaceRange);
       return;
@@ -225,7 +227,7 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
       }
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case clang::CK_IntegralCast:
     // Convert integral and no-op casts between builtin types and enums to
     // static_cast. A cast from enum to integer may be unnecessary, but it's
@@ -253,7 +255,4 @@ void AvoidCStyleCastsCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << "static_cast/const_cast/reinterpret_cast";
 }
 
-} // namespace readability
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google::readability

@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/forward_list>
 
 // namespace std { namespace experimental { namespace pmr {
@@ -16,6 +18,8 @@
 //     ::std::forward_list<T, polymorphic_allocator<T>>
 //
 // }}} // namespace std::experimental::pmr
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/forward_list>
 #include <experimental/memory_resource>

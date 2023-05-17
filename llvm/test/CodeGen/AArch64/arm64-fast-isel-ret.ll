@@ -15,8 +15,8 @@ entry:
 ; CHECK-NEXT: ldr w0, [sp, #12]
 ; CHECK: ret
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  %tmp = load i32, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %tmp = load i32, ptr %a.addr, align 4
   ret i32 %tmp
 }
 
@@ -27,8 +27,8 @@ entry:
 ; CHECK-NEXT: ldr x0, [sp, #8]
 ; CHECK: ret
   %a.addr = alloca i64, align 8
-  store i64 %a, i64* %a.addr, align 8
-  %tmp = load i64, i64* %a.addr, align 8
+  store i64 %a, ptr %a.addr, align 8
+  %tmp = load i64, ptr %a.addr, align 8
   ret i64 %tmp
 }
 
@@ -37,8 +37,8 @@ entry:
 ; CHECK: @ret_i16
 ; CHECK: sxth	w0, {{w[0-9]+}}
   %a.addr = alloca i16, align 1
-  store i16 %a, i16* %a.addr, align 1
-  %0 = load i16, i16* %a.addr, align 1
+  store i16 %a, ptr %a.addr, align 1
+  %0 = load i16, ptr %a.addr, align 1
   ret i16 %0
 }
 
@@ -47,8 +47,8 @@ entry:
 ; CHECK: @ret_i8
 ; CHECK: sxtb	w0, {{w[0-9]+}}
   %a.addr = alloca i8, align 1
-  store i8 %a, i8* %a.addr, align 1
-  %0 = load i8, i8* %a.addr, align 1
+  store i8 %a, ptr %a.addr, align 1
+  %0 = load i8, ptr %a.addr, align 1
   ret i8 %0
 }
 
@@ -58,7 +58,7 @@ entry:
 ; CHECK: and [[REG:w[0-9]+]], {{w[0-9]+}}, #0x1
 ; CHECK: sbfx w0, [[REG]], #0, #1
   %a.addr = alloca i1, align 1
-  store i1 %a, i1* %a.addr, align 1
-  %0 = load i1, i1* %a.addr, align 1
+  store i1 %a, ptr %a.addr, align 1
+  %0 = load i1, ptr %a.addr, align 1
   ret i1 %0
 }

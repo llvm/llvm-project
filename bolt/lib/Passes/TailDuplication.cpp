@@ -13,6 +13,7 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include <queue>
 
 #include <numeric>
 
@@ -256,14 +257,12 @@ bool TailDuplication::isInCacheLine(const BinaryBasicBlock &BB,
   if (&BB == &Succ)
     return true;
 
-  BinaryFunction::BasicBlockOrderType BlockLayout =
-      BB.getFunction()->getLayout();
   uint64_t Distance = 0;
   int Direction = (Succ.getLayoutIndex() > BB.getLayoutIndex()) ? 1 : -1;
 
   for (unsigned I = BB.getLayoutIndex() + Direction; I != Succ.getLayoutIndex();
        I += Direction) {
-    Distance += BlockLayout[I]->getOriginalSize();
+    Distance += BB.getFunction()->getLayout().getBlock(I)->getOriginalSize();
     if (Distance > opts::TailDuplicationMinimumOffset)
       return false;
   }
@@ -410,15 +409,15 @@ bool TailDuplication::cacheScoreImproved(const MCCodeEmitter *Emitter,
                                          BinaryBasicBlock *Pred,
                                          BinaryBasicBlock *Tail) const {
   // Collect (estimated) basic block sizes
-  DenseMap<BinaryBasicBlock *, uint64_t> BBSize;
-  for (BinaryBasicBlock *BB : BF.layout()) {
-    BBSize[BB] = std::max<uint64_t>(BB->estimateSize(Emitter), 1);
+  DenseMap<const BinaryBasicBlock *, uint64_t> BBSize;
+  for (const BinaryBasicBlock &BB : BF) {
+    BBSize[&BB] = std::max<uint64_t>(BB.estimateSize(Emitter), 1);
   }
 
   // Build current addresses of basic blocks starting at the entry block
   DenseMap<BinaryBasicBlock *, uint64_t> CurAddr;
   uint64_t Addr = 0;
-  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+  for (BinaryBasicBlock *SrcBB : BF.getLayout().blocks()) {
     CurAddr[SrcBB] = Addr;
     Addr += BBSize[SrcBB];
   }
@@ -426,7 +425,7 @@ bool TailDuplication::cacheScoreImproved(const MCCodeEmitter *Emitter,
   // Build new addresses (after duplication) starting at the entry block
   DenseMap<BinaryBasicBlock *, uint64_t> NewAddr;
   Addr = 0;
-  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+  for (BinaryBasicBlock *SrcBB : BF.getLayout().blocks()) {
     NewAddr[SrcBB] = Addr;
     Addr += BBSize[SrcBB];
     if (SrcBB == Pred)
@@ -435,7 +434,7 @@ bool TailDuplication::cacheScoreImproved(const MCCodeEmitter *Emitter,
 
   // Compute the cache score for the existing layout of basic blocks
   double CurScore = 0;
-  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+  for (BinaryBasicBlock *SrcBB : BF.getLayout().blocks()) {
     auto BI = SrcBB->branch_info_begin();
     for (BinaryBasicBlock *DstBB : SrcBB->successors()) {
       if (SrcBB != DstBB) {
@@ -448,7 +447,7 @@ bool TailDuplication::cacheScoreImproved(const MCCodeEmitter *Emitter,
 
   // Compute the cache score for the layout of blocks after tail duplication
   double NewScore = 0;
-  for (BinaryBasicBlock *SrcBB : BF.layout()) {
+  for (BinaryBasicBlock *SrcBB : BF.getLayout().blocks()) {
     auto BI = SrcBB->branch_info_begin();
     for (BinaryBasicBlock *DstBB : SrcBB->successors()) {
       if (SrcBB != DstBB) {
@@ -489,7 +488,7 @@ TailDuplication::cacheDuplicate(const MCCodeEmitter *Emitter,
     return BlocksToDuplicate;
   }
   // Do not append basic blocks after the last hot block in the current layout
-  auto NextBlock = BF.getBasicBlockAfter(Pred);
+  auto NextBlock = BF.getLayout().getBasicBlockAfter(Pred);
   if (NextBlock == nullptr || (!Pred->isCold() && NextBlock->isCold())) {
     return BlocksToDuplicate;
   }
@@ -532,7 +531,7 @@ std::vector<BinaryBasicBlock *> TailDuplication::duplicateBlocks(
 
   for (BinaryBasicBlock *CurBB : BlocksToDuplicate) {
     DuplicatedBlocks.emplace_back(
-        BF->createBasicBlock(0, (BC.Ctx)->createNamedTempSymbol("tail-dup")));
+        BF->createBasicBlock((BC.Ctx)->createNamedTempSymbol("tail-dup")));
     BinaryBasicBlock *NewBB = DuplicatedBlocks.back().get();
 
     NewBB->addInstructions(CurBB->begin(), CurBB->end());
@@ -576,11 +575,12 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     Emitter = Function.getBinaryContext().createIndependentMCCodeEmitter();
   }
 
-  Function.updateLayoutIndices();
+  Function.getLayout().updateLayoutIndices();
 
   // New blocks will be added and layout will change,
   // so make a copy here to iterate over the original layout
-  BinaryFunction::BasicBlockOrderType BlockLayout = Function.getLayout();
+  BinaryFunction::BasicBlockOrderType BlockLayout(
+      Function.getLayout().block_begin(), Function.getLayout().block_end());
   bool ModifiedFunction = false;
   for (BinaryBasicBlock *BB : BlockLayout) {
     AllDynamicCount += BB->getKnownExecutionCount();
@@ -627,7 +627,7 @@ void TailDuplication::runOnFunction(BinaryFunction &Function) {
     }
 
     // Layout indices might be stale after duplication
-    Function.updateLayoutIndices();
+    Function.getLayout().updateLayoutIndices();
   }
   if (ModifiedFunction)
     ModifiedFunctions++;

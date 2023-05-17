@@ -54,6 +54,7 @@
 #include "llvm/IR/PassManager.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
+#include <optional>
 
 namespace llvm {
 class Module;
@@ -126,8 +127,8 @@ struct IRInstructionData
 
   /// This is only relevant if we are wrapping a CmpInst where we needed to
   /// change the predicate of a compare instruction from a greater than form
-  /// to a less than form.  It is None otherwise.
-  Optional<CmpInst::Predicate> RevisedPredicate;
+  /// to a less than form.  It is std::nullopt otherwise.
+  std::optional<CmpInst::Predicate> RevisedPredicate;
 
   /// This is only relevant if we are wrapping a CallInst. If we are requiring
   /// that the function calls have matching names as well as types, and the
@@ -137,7 +138,7 @@ struct IRInstructionData
   /// function call type.  The value held here is used to create the hash of the
   /// instruction, and check to make sure two instructions are close to one
   /// another.
-  Optional<std::string> CalleeName;
+  std::optional<std::string> CalleeName;
 
   /// This structure holds the distances of how far "ahead of" or "behind" the
   /// target blocks of a branch, or the incoming blocks of a phi nodes are.
@@ -224,6 +225,11 @@ struct IRInstructionData
   /// in the module.
   void
   setPHIPredecessors(DenseMap<BasicBlock *, unsigned> &BasicBlockToInteger);
+
+  /// Get the BasicBlock based operands for PHINodes and BranchInsts.
+  ///
+  /// \returns A list of relevant BasicBlocks.
+  ArrayRef<Value *> getBlockOperVals();
 
   /// Hashes \p Value based on its opcode, types, and operand types.
   /// Two IRInstructionData instances produce the same hash when they perform
@@ -547,7 +553,7 @@ struct IRInstructionMapper {
       // an outlined function. Also, assume-like intrinsics could be removed
       // from the region, removing arguments, causing discrepencies in the
       // number of inputs between different regions.
-      if (II.isLifetimeStartOrEnd() || II.isAssumeLikeIntrinsic())
+      if (II.isAssumeLikeIntrinsic())
         return Illegal;
       return EnableIntrinsics ? Legal : Illegal;
     }
@@ -762,6 +768,24 @@ public:
   static bool compareCommutativeOperandMapping(OperandMapping A,
                                                OperandMapping B);
 
+  /// Compare the GVN of the assignment value in corresponding instructions in
+  /// IRSimilarityCandidates \p A and \p B and check that there exists a mapping
+  /// between the values and replaces the mapping with a one-to-one value if
+  /// needed.
+  ///
+  /// \param InstValA - The assignment GVN from the first IRSimilarityCandidate.
+  /// \param InstValB - The assignment GVN from the second
+  /// IRSimilarityCandidate.
+  /// \param [in,out] ValueNumberMappingA - A mapping of value numbers from 
+  /// candidate \p A to candidate \B.
+  /// \param [in,out] ValueNumberMappingB - A mapping of value numbers from 
+  /// candidate \p B to candidate \A.
+  /// \returns true if the IRSimilarityCandidates assignments are compatible.
+  static bool compareAssignmentMapping(
+      const unsigned InstValA, const unsigned &InstValB,
+      DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingA,
+      DenseMap<unsigned, DenseSet<unsigned>> &ValueNumberMappingB);
+
   /// Compare the relative locations in \p A and \p B and check that the
   /// distances match if both locations are contained in the region, and that
   /// the branches both point outside the region if they do not.
@@ -826,13 +850,54 @@ public:
       IRSimilarityCandidate &SourceCand,
       DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
       DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
+  
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// found mappings in \p ToSourceMapping and \p FromSourceMapping.  Both of
+  /// these relationships should have the same information, just in opposite
+  /// directions.  Uses the \p OneToOne mapping from target candidate to \p
+  /// SourceCand GVNs to determine the mapping first for values with multiple
+  /// mappings.  This mapping is created by the ordering of operands in the
+  /// instruction they are first seen in the candidates.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param [in,out] OneToOne - A mapping of value numbers from candidate
+  /// \p A to candidate \B using the structure of the original instructions.
+  /// \param ToSourceMapping - The mapping of value numbers from this candidate
+  /// to \p SourceCand.
+  /// \param FromSourceMapping - The mapping of value numbers from \p SoureCand
+  /// to this candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      DenseMap<unsigned, unsigned> &OneToOne,
+      DenseMap<unsigned, DenseSet<unsigned>> &ToSourceMapping,
+      DenseMap<unsigned, DenseSet<unsigned>> &FromSourceMapping);
+  
+  /// Create a mapping for the value numbering of the calling
+  /// IRSimilarityCandidate, to a different separate set of numbers, based on
+  /// the canonical ordering in \p SourceCand. These are defined based on the
+  /// canonical mapping defined between \p SoureCandLarge and
+  /// \p TargetCandLarge.  These IRSimilarityCandidates are already structurally
+  /// similar, and fully encapsulate the IRSimilarityCandidates in question.
+  /// These are used as a "bridge" from the \p SourceCand to the target.
+  ///
+  /// \param [in, out] SourceCand - The IRSimilarityCandidate to create a
+  /// canonical numbering from.
+  /// \param SoureCandLarge - The IRSimilarityCandidate fully containing
+  /// \p SourceCand.
+  /// \param TargetCandLarge -  The IRSimilarityCandidate fully containing
+  /// this Candidate.
+  void createCanonicalRelationFrom(
+      IRSimilarityCandidate &SourceCand,
+      IRSimilarityCandidate &SourceCandLarge,
+      IRSimilarityCandidate &TargetCandLarge);
 
   /// \param [in,out] BBSet - The set to track the basic blocks.
   void getBasicBlocks(DenseSet<BasicBlock *> &BBSet) const {
     for (IRInstructionData &ID : *this) {
       BasicBlock *BB = ID.Inst->getParent();
-      if (BBSet.contains(BB))
-        continue;
       BBSet.insert(BB);
     }
   }
@@ -843,10 +908,8 @@ public:
                       SmallVector<BasicBlock *> &BBList) const {
     for (IRInstructionData &ID : *this) {
       BasicBlock *BB = ID.Inst->getParent();
-      if (BBSet.contains(BB))
-        continue;
-      BBSet.insert(BB);
-      BBList.push_back(BB);
+      if (BBSet.insert(BB).second)
+        BBList.push_back(BB);
     }
   }
 
@@ -891,23 +954,23 @@ public:
   /// Finds the positive number associated with \p V if it has been mapped.
   /// \param [in] V - the Value to find.
   /// \returns The positive number corresponding to the value.
-  /// \returns None if not present.
-  Optional<unsigned> getGVN(Value *V) {
+  /// \returns std::nullopt if not present.
+  std::optional<unsigned> getGVN(Value *V) {
     assert(V != nullptr && "Value is a nullptr?");
     DenseMap<Value *, unsigned>::iterator VNIt = ValueToNumber.find(V);
     if (VNIt == ValueToNumber.end())
-      return None;
+      return std::nullopt;
     return VNIt->second;
   }
 
   /// Finds the Value associate with \p Num if it exists.
   /// \param [in] Num - the number to find.
   /// \returns The Value associated with the number.
-  /// \returns None if not present.
-  Optional<Value *> fromGVN(unsigned Num) {
+  /// \returns std::nullopt if not present.
+  std::optional<Value *> fromGVN(unsigned Num) {
     DenseMap<unsigned, Value *>::iterator VNIt = NumberToValue.find(Num);
     if (VNIt == NumberToValue.end())
-      return None;
+      return std::nullopt;
     assert(VNIt->second != nullptr && "Found value is a nullptr!");
     return VNIt->second;
   }
@@ -916,12 +979,12 @@ public:
   /// candidate.
   ///
   /// \param N - The global value number to find the canonical number for.
-  /// \returns An optional containing the value, and None if it could not be
-  /// found.
-  Optional<unsigned> getCanonicalNum(unsigned N) {
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
+  std::optional<unsigned> getCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator NCIt = NumberToCanonNum.find(N);
     if (NCIt == NumberToCanonNum.end())
-      return None;
+      return std::nullopt;
     return NCIt->second;
   }
 
@@ -929,12 +992,12 @@ public:
   /// candidate.
   ///
   /// \param N - The canonical number to find the global vlaue number for.
-  /// \returns An optional containing the value, and None if it could not be
-  /// found.
-  Optional<unsigned> fromCanonicalNum(unsigned N) {
+  /// \returns An optional containing the value, and std::nullopt if it could
+  /// not be found.
+  std::optional<unsigned> fromCanonicalNum(unsigned N) {
     DenseMap<unsigned, unsigned>::iterator CNIt = CanonNumToNumber.find(N);
     if (CNIt == CanonNumToNumber.end())
-      return None;
+      return std::nullopt;
     return CNIt->second;
   }
 
@@ -1043,7 +1106,7 @@ public:
     // If we've already analyzed a Module or set of Modules, so we must clear
     // the SimilarityCandidates to make sure we do not have only old values
     // hanging around.
-    if (SimilarityCandidates.hasValue())
+    if (SimilarityCandidates)
       SimilarityCandidates->clear();
     else
       SimilarityCandidates = SimilarityGroupList();
@@ -1051,7 +1114,7 @@ public:
 
   // \returns The groups of similarity ranges found in the most recently passed
   // set of modules.
-  Optional<SimilarityGroupList> &getSimilarity() {
+  std::optional<SimilarityGroupList> &getSimilarity() {
     return SimilarityCandidates;
   }
 
@@ -1088,8 +1151,8 @@ private:
   bool EnableMustTailCalls = false;
 
   /// The SimilarityGroups found with the most recent run of \ref
-  /// findSimilarity. None if there is no recent run.
-  Optional<SimilarityGroupList> SimilarityCandidates;
+  /// findSimilarity. std::nullopt if there is no recent run.
+  std::optional<SimilarityGroupList> SimilarityCandidates;
 };
 
 } // end namespace IRSimilarity

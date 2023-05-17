@@ -1,4 +1,4 @@
-; RUN: opt -S -partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis  < %s  | FileCheck %s
+; RUN: opt -S -passes=partial-inliner -max-num-inline-blocks=2 -skip-partial-inlining-cost-analysis  < %s  | FileCheck %s
 ; RUN: opt -S -passes=partial-inliner -max-num-inline-blocks=2  -skip-partial-inlining-cost-analysis < %s  | FileCheck %s
 
 define i32 @test(i32 %arg) local_unnamed_addr #0 {
@@ -49,7 +49,7 @@ bb:
 
 ; CHECK-LABEL: define internal void @test.1.bb2()
 ; CHECK: .exitStub:
-; CHECK-NOT:  store i32 %tmp7, i32* %tmp7.out
+; CHECK-NOT:  store i32 %tmp7, ptr %tmp7.out
 ; CHECK: ret
 
 attributes #0 = { nounwind uwtable }

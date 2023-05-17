@@ -19,7 +19,7 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 %struct.incomplete_struct = type { i32 }
 
 @"\01?multi_dim_arr@@3PAY146DA" = global [2 x [5 x [7 x i8]]] zeroinitializer, align 1, !dbg !0
-@"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global [3 x i8]* null, align 4, !dbg !6
+@"\01?p_incomplete_struct_arr@@3PAY02Uincomplete_struct@@A" = global ptr null, align 4, !dbg !6
 @"\01?incomplete_struct_arr@@3PAUincomplete_struct@@A" = global [3 x %struct.incomplete_struct] zeroinitializer, align 4, !dbg !16
 @"\01?typedef_arr@@3SDHD" = constant [4 x i32] zeroinitializer, align 4, !dbg !18
 
@@ -27,18 +27,17 @@ target triple = "x86_64-pc-windows-msvc19.0.24210"
 define void @"\01?foo@@YAXH@Z"(i32 %x) #0 !dbg !35 {
 entry:
   %x.addr = alloca i32, align 4
-  %saved_stack = alloca i8*, align 4
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !38, metadata !39), !dbg !40
-  %0 = load i32, i32* %x.addr, align 4, !dbg !41
-  %1 = call i8* @llvm.stacksave(), !dbg !42
-  store i8* %1, i8** %saved_stack, align 4, !dbg !42
+  %saved_stack = alloca ptr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !38, metadata !39), !dbg !40
+  %0 = load i32, ptr %x.addr, align 4, !dbg !41
+  %1 = call ptr @llvm.stacksave(), !dbg !42
+  store ptr %1, ptr %saved_stack, align 4, !dbg !42
   %vla = alloca i32, i32 %0, align 4, !dbg !42
-  call void @llvm.dbg.declare(metadata i32* %vla, metadata !43, metadata !47), !dbg !48
-  %arrayidx = getelementptr inbounds i32, i32* %vla, i32 0, !dbg !49
-  store i32 0, i32* %arrayidx, align 4, !dbg !50
-  %2 = load i8*, i8** %saved_stack, align 4, !dbg !51
-  call void @llvm.stackrestore(i8* %2), !dbg !51
+  call void @llvm.dbg.declare(metadata ptr %vla, metadata !43, metadata !47), !dbg !48
+  store i32 0, ptr %vla, align 4, !dbg !50
+  %2 = load ptr, ptr %saved_stack, align 4, !dbg !51
+  call void @llvm.stackrestore(ptr %2), !dbg !51
   ret void, !dbg !51
 }
 
@@ -46,10 +45,10 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind
-declare i8* @llvm.stacksave()
+declare ptr @llvm.stacksave()
 
 ; Function Attrs: nounwind
-declare void @llvm.stackrestore(i8*)
+declare void @llvm.stackrestore(ptr)
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!32, !33}

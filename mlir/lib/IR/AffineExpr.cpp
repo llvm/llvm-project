@@ -8,14 +8,16 @@
 
 #include <utility>
 
-#include "mlir/IR/AffineExpr.h"
 #include "AffineExprDetail.h"
+#include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/MathExtras.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/STLExtras.h"
+#include <numeric>
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::detail;
@@ -218,12 +220,25 @@ bool AffineExpr::isPureAffine() const {
 int64_t AffineExpr::getLargestKnownDivisor() const {
   AffineBinaryOpExpr binExpr(nullptr);
   switch (getKind()) {
-  case AffineExprKind::CeilDiv:
-    LLVM_FALLTHROUGH;
   case AffineExprKind::DimId:
-  case AffineExprKind::FloorDiv:
+    [[fallthrough]];
   case AffineExprKind::SymbolId:
     return 1;
+  case AffineExprKind::CeilDiv:
+    [[fallthrough]];
+  case AffineExprKind::FloorDiv: {
+    // If the RHS is a constant and divides the known divisor on the LHS, the
+    // quotient is a known divisor of the expression.
+    binExpr = this->cast<AffineBinaryOpExpr>();
+    auto rhs = binExpr.getRHS().dyn_cast<AffineConstantExpr>();
+    // Leave alone undefined expressions.
+    if (rhs && rhs.getValue() != 0) {
+      int64_t lhsDiv = binExpr.getLHS().getLargestKnownDivisor();
+      if (lhsDiv % rhs.getValue() == 0)
+        return lhsDiv / rhs.getValue();
+    }
+    return 1;
+  }
   case AffineExprKind::Constant:
     return std::abs(this->cast<AffineConstantExpr>().getValue());
   case AffineExprKind::Mul: {
@@ -232,12 +247,11 @@ int64_t AffineExpr::getLargestKnownDivisor() const {
            binExpr.getRHS().getLargestKnownDivisor();
   }
   case AffineExprKind::Add:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AffineExprKind::Mod: {
     binExpr = cast<AffineBinaryOpExpr>();
-    return llvm::GreatestCommonDivisor64(
-        binExpr.getLHS().getLargestKnownDivisor(),
-        binExpr.getRHS().getLargestKnownDivisor());
+    return std::gcd((uint64_t)binExpr.getLHS().getLargestKnownDivisor(),
+                    (uint64_t)binExpr.getRHS().getLargestKnownDivisor());
   }
   }
   llvm_unreachable("Unknown AffineExpr");
@@ -248,7 +262,7 @@ bool AffineExpr::isMultipleOf(int64_t factor) const {
   uint64_t l, u;
   switch (getKind()) {
   case AffineExprKind::SymbolId:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case AffineExprKind::DimId:
     return factor * factor == 1;
   case AffineExprKind::Constant:
@@ -267,9 +281,8 @@ bool AffineExpr::isMultipleOf(int64_t factor) const {
   case AffineExprKind::CeilDiv:
   case AffineExprKind::Mod: {
     binExpr = cast<AffineBinaryOpExpr>();
-    return llvm::GreatestCommonDivisor64(
-               binExpr.getLHS().getLargestKnownDivisor(),
-               binExpr.getRHS().getLargestKnownDivisor()) %
+    return std::gcd((uint64_t)binExpr.getLHS().getLargestKnownDivisor(),
+                    (uint64_t)binExpr.getRHS().getLargestKnownDivisor()) %
                factor ==
            0;
   }
@@ -553,7 +566,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   // Detect "c1 * expr + c_2 * expr" as "(c1 + c2) * expr".
   // c1 is rRhsConst, c2 is rLhsConst; firstExpr, secondExpr are their
   // respective multiplicands.
-  Optional<int64_t> rLhsConst, rRhsConst;
+  std::optional<int64_t> rLhsConst, rRhsConst;
   AffineExpr firstExpr, secondExpr;
   AffineConstantExpr rLhsConstExpr;
   auto lBinOpExpr = lhs.dyn_cast<AffineBinaryOpExpr>();
@@ -580,8 +593,7 @@ static AffineExpr simplifyAdd(AffineExpr lhs, AffineExpr rhs) {
   if (rLhsConst && rRhsConst && firstExpr == secondExpr)
     return getAffineBinaryOpExpr(
         AffineExprKind::Mul, firstExpr,
-        getAffineConstantExpr(rLhsConst.getValue() + rRhsConst.getValue(),
-                              lhs.getContext()));
+        getAffineConstantExpr(*rLhsConst + *rRhsConst, lhs.getContext()));
 
   // When doing successive additions, bring constant to the right: turn (d0 + 2)
   // + d1 into (d0 + d1) + 2.
@@ -975,7 +987,7 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // Adds entries to `indexToExprMap`, `coefficients` and `indices`.
   auto addEntry = [&](std::pair<unsigned, signed> index, int64_t coefficient,
                       AffineExpr expr) {
-    assert(std::find(indices.begin(), indices.end(), index) == indices.end() &&
+    assert(!llvm::is_contained(indices, index) &&
            "Key is already present in indices vector and overwriting will "
            "happen in `indexToExprMap` and `coefficients`!");
 
@@ -988,16 +1000,9 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
   // constant coefficient corresponding to the indices in `coefficients` map,
   // and affine expression corresponding to indices in `indexToExprMap` map.
 
-  for (unsigned j = 0; j < numDims; ++j) {
-    if (flatExprs[j] == 0)
-      continue;
-    // For dimensional expressions we set the index as <position number of the
-    // dimension, 0>, as we want dimensional expressions to appear before
-    // symbolic ones and products of dimensional and symbolic expressions
-    // having the dimension with the same position number.
-    std::pair<unsigned, signed> indexEntry(j, -1);
-    addEntry(indexEntry, flatExprs[j], getAffineDimExpr(j, context));
-  }
+  // Ensure we do not have duplicate keys in `indexToExpr` map.
+  unsigned offsetSym = 0;
+  signed offsetDim = -1;
   for (unsigned j = numDims; j < numDims + numSymbols; ++j) {
     if (flatExprs[j] == 0)
       continue;
@@ -1005,8 +1010,8 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
     // of the symbol, max(dimCount, symCount)> number,
     // as we want symbolic expressions with the same positional number to
     // appear after dimensional expressions having the same positional number.
-    std::pair<unsigned, signed> indexEntry(j - numDims,
-                                           std::max(numDims, numSymbols));
+    std::pair<unsigned, signed> indexEntry(
+        j - numDims, std::max(numDims, numSymbols) + offsetSym++);
     addEntry(indexEntry, flatExprs[j],
              getAffineSymbolExpr(j - numDims, context));
   }
@@ -1038,13 +1043,13 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
       // constructing. When rhs is constant, we place 0 in place of keyB.
       if (lhs.isa<AffineDimExpr>()) {
         lhsPos = lhs.cast<AffineDimExpr>().getPosition();
-        std::pair<unsigned, signed> indexEntry(lhsPos, -1);
+        std::pair<unsigned, signed> indexEntry(lhsPos, offsetDim--);
         addEntry(indexEntry, flatExprs[numDims + numSymbols + it.index()],
                  expr);
       } else {
         lhsPos = lhs.cast<AffineSymbolExpr>().getPosition();
-        std::pair<unsigned, signed> indexEntry(lhsPos,
-                                               std::max(numDims, numSymbols));
+        std::pair<unsigned, signed> indexEntry(
+            lhsPos, std::max(numDims, numSymbols) + offsetSym++);
         addEntry(indexEntry, flatExprs[numDims + numSymbols + it.index()],
                  expr);
       }
@@ -1065,16 +1070,28 @@ static AffineExpr getSemiAffineExprFromFlatForm(ArrayRef<int64_t> flatExprs,
       // the dimension and keyB is the position number of the symbol.
       lhsPos = lhs.cast<AffineSymbolExpr>().getPosition();
       rhsPos = rhs.cast<AffineSymbolExpr>().getPosition();
-      std::pair<unsigned, signed> indexEntry(lhsPos, rhsPos);
+      std::pair<unsigned, signed> indexEntry(
+          lhsPos, std::max(numDims, numSymbols) + offsetSym++);
       addEntry(indexEntry, flatExprs[numDims + numSymbols + it.index()], expr);
     }
     addedToMap[it.index()] = true;
   }
 
+  for (unsigned j = 0; j < numDims; ++j) {
+    if (flatExprs[j] == 0)
+      continue;
+    // For dimensional expressions we set the index as <position number of the
+    // dimension, 0>, as we want dimensional expressions to appear before
+    // symbolic ones and products of dimensional and symbolic expressions
+    // having the dimension with the same position number.
+    std::pair<unsigned, signed> indexEntry(j, offsetDim--);
+    addEntry(indexEntry, flatExprs[j], getAffineDimExpr(j, context));
+  }
+
   // Constructing the simplified semi-affine sum of product/division/mod
   // expression from the flattened form in the desired sorted order of indices
   // of the various individual product/division/mod expressions.
-  std::sort(indices.begin(), indices.end());
+  llvm::sort(indices);
   for (const std::pair<unsigned, unsigned> index : indices) {
     assert(indexToExprMap.lookup(index) &&
            "cannot find key in `indexToExprMap` map");
@@ -1202,7 +1219,7 @@ void SimpleAffineExprFlattener::visitModExpr(AffineBinaryOpExpr expr) {
   SmallVector<int64_t, 8> floorDividend(lhs);
   uint64_t gcd = rhsConst;
   for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = llvm::GreatestCommonDivisor64(gcd, std::abs(lhs[i]));
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
     for (unsigned i = 0, e = floorDividend.size(); i < e; i++)
@@ -1273,7 +1290,7 @@ void SimpleAffineExprFlattener::addLocalVariableSemiAffine(
 // A floordiv is thus flattened by introducing a new local variable q, and
 // replacing that expression with 'q' while adding the constraints
 // c * q <= expr <= c * q + c - 1 to localVarCst (done by
-// FlatAffineConstraints::addLocalFloorDiv).
+// IntegerRelation::addLocalFloorDiv).
 //
 // A ceildiv is similarly flattened:
 // t = expr ceildiv c   <=> t =  (expr + c - 1) floordiv c
@@ -1314,7 +1331,7 @@ void SimpleAffineExprFlattener::visitDivExpr(AffineBinaryOpExpr expr,
   // common divisors of the numerator and denominator.
   uint64_t gcd = std::abs(rhsConst);
   for (unsigned i = 0, e = lhs.size(); i < e; i++)
-    gcd = llvm::GreatestCommonDivisor64(gcd, std::abs(lhs[i]));
+    gcd = std::gcd(gcd, (uint64_t)std::abs(lhs[i]));
   // Simplify the numerator and the denominator.
   if (gcd != 1) {
     for (unsigned i = 0, e = lhs.size(); i < e; i++)

@@ -10,9 +10,9 @@
 
 %a = type { i32, i32 }
 
-define hidden fastcc %a* @test() #1 !dbg !1 {
+define hidden fastcc ptr @test() #1 !dbg !1 {
 entry:
-  %0 = icmp eq %a* undef, null, !dbg !12
+  %0 = icmp eq ptr undef, null, !dbg !12
   br i1 %0, label %"14", label %return, !dbg !12
 
 "14":                                             ; preds = %"8"
@@ -86,24 +86,23 @@ VEC_edge_base_index.exit7.i:                      ; preds = %"3.i5.i"
   br i1 undef, label %may_unswitch_on.exit, label %"44.i", !dbg !12
 
 "44.i":                                           ; preds = %"42.i"
-  %2 = load %a*, %a** undef, align 8, !dbg !12
-  %3 = bitcast %a* %2 to %a*, !dbg !12
-  call void @llvm.dbg.value(metadata %a* %3, metadata !6, metadata !DIExpression(DW_OP_deref)), !dbg !12
+  %2 = load ptr, ptr undef, align 8, !dbg !12
+  call void @llvm.dbg.value(metadata ptr %2, metadata !6, metadata !DIExpression(DW_OP_deref)), !dbg !12
   br label %may_unswitch_on.exit, !dbg !12
 
 "45.i":                                           ; preds = %"38.i"
   unreachable
 
 may_unswitch_on.exit:                             ; preds = %"44.i", %"42.i", %"41.i", %"39.i", %"23.i", %"21.i", %VEC_edge_base_index.exit7.i, %VEC_edge_base_index.exit.i, %"10.i", %"6.i", %"21"
-  %4 = phi %a* [ %3, %"44.i" ], [ null, %"6.i" ], [ null, %"10.i" ], [ null, %VEC_edge_base_index.exit7.i ], [ null, %VEC_edge_base_index.exit.i ], [ null, %"21.i" ], [ null, %"23.i" ], [ null, %"39.i" ], [ null, %"42.i" ], [ null, %"41.i" ], [ null, %"21" ]
+  %3 = phi ptr [ %2, %"44.i" ], [ null, %"6.i" ], [ null, %"10.i" ], [ null, %VEC_edge_base_index.exit7.i ], [ null, %VEC_edge_base_index.exit.i ], [ null, %"21.i" ], [ null, %"23.i" ], [ null, %"39.i" ], [ null, %"42.i" ], [ null, %"41.i" ], [ null, %"21" ]
   br label %return
 
 "25":                                             ; preds = %"14"
   unreachable
 
 "return":
-  %result = phi %a* [ null, %entry ], [ %4, %may_unswitch_on.exit ]
-  ret %a* %result, !dbg !12
+  %result = phi ptr [ null, %entry ], [ %3, %may_unswitch_on.exit ]
+  ret ptr %result, !dbg !12
 }
 
 attributes #0 = { nounwind readnone }

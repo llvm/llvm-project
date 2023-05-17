@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-LE
 ; RUN: llc -mtriple=thumbebv8.1m.main-none-none-eabi -mattr=+mve -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=CHECK --check-prefix=CHECK-BE
 
-define void @load_load_add_store(<4 x i32> *%src1, <4 x i32> *%src2) {
+define void @load_load_add_store(ptr %src1, ptr %src2) {
 ; CHECK-LABEL: load_load_add_store:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r1]
@@ -11,14 +11,14 @@ define void @load_load_add_store(<4 x i32> *%src1, <4 x i32> *%src2) {
 ; CHECK-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-NEXT:    bx lr
 entry:
-  %l1 = load <4 x i32>, <4 x i32>* %src1, align 4
-  %l2 = load <4 x i32>, <4 x i32>* %src2, align 4
+  %l1 = load <4 x i32>, ptr %src1, align 4
+  %l2 = load <4 x i32>, ptr %src2, align 4
   %a = add <4 x i32> %l1, %l2
-  store <4 x i32> %a, <4 x i32>* %src1, align 4
+  store <4 x i32> %a, ptr %src1, align 4
   ret void
 }
 
-define void @load_load_add_store_align1(<4 x i32> *%src1, <4 x i32> *%src2) {
+define void @load_load_add_store_align1(ptr %src1, ptr %src2) {
 ; CHECK-LE-LABEL: load_load_add_store_align1:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrb.u8 q0, [r1]
@@ -38,14 +38,14 @@ define void @load_load_add_store_align1(<4 x i32> *%src1, <4 x i32> *%src2) {
 ; CHECK-BE-NEXT:    vstrb.8 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %l1 = load <4 x i32>, <4 x i32>* %src1, align 1
-  %l2 = load <4 x i32>, <4 x i32>* %src2, align 1
+  %l1 = load <4 x i32>, ptr %src1, align 1
+  %l2 = load <4 x i32>, ptr %src2, align 1
   %a = add <4 x i32> %l1, %l2
-  store <4 x i32> %a, <4 x i32>* %src1, align 1
+  store <4 x i32> %a, ptr %src1, align 1
   ret void
 }
 
-define arm_aapcs_vfpcc void @load_arg_add_store(<4 x i32> *%src1, <4 x i32> %src2) {
+define arm_aapcs_vfpcc void @load_arg_add_store(ptr %src1, <4 x i32> %src2) {
 ; CHECK-LE-LABEL: load_arg_add_store:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrw.u32 q1, [r0]
@@ -61,9 +61,9 @@ define arm_aapcs_vfpcc void @load_arg_add_store(<4 x i32> *%src1, <4 x i32> %src
 ; CHECK-BE-NEXT:    vstrw.32 q0, [r0]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %l1 = load <4 x i32>, <4 x i32>* %src1, align 4
+  %l1 = load <4 x i32>, ptr %src1, align 4
   %a = add <4 x i32> %l1, %src2
-  store <4 x i32> %a, <4 x i32>* %src1, align 4
+  store <4 x i32> %a, ptr %src1, align 4
   ret void
 }
 
@@ -265,7 +265,7 @@ entry:
 }
 
 ; FIXME: This looks wrong
-define arm_aapcs_vfpcc <4 x i32> @test(i32* %data) {
+define arm_aapcs_vfpcc <4 x i32> @test(ptr %data) {
 ; CHECK-LE-LABEL: test:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrw.u32 q0, [r0, #32]
@@ -289,12 +289,11 @@ define arm_aapcs_vfpcc <4 x i32> @test(i32* %data) {
 ; CHECK-BE-NEXT:    vrev64.8 q0, q1
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %add.ptr = getelementptr inbounds i32, i32* %data, i32 8
-  %0 = bitcast i32* %add.ptr to <4 x i32>*
-  %1 = load <4 x i32>, <4 x i32>* %0, align 4
-  %2 = add <4 x i32> %1, <i32 1, i32 1, i32 1, i32 1>
-  %3 = tail call <4 x i32> asm sideeffect "  VMULLB.s32 $0, $1, $1", "=&w,w"(<4 x i32> %2) #2
-  ret <4 x i32> %3
+  %add.ptr = getelementptr inbounds i32, ptr %data, i32 8
+  %0 = load <4 x i32>, ptr %add.ptr, align 4
+  %1 = add <4 x i32> %0, <i32 1, i32 1, i32 1, i32 1>
+  %2 = tail call <4 x i32> asm sideeffect "  VMULLB.s32 $0, $1, $1", "=&w,w"(<4 x i32> %1) #2
+  ret <4 x i32> %2
 }
 
 ; Test case demonstrating that 'bitcast' reinterprets the memory format of a
@@ -302,7 +301,7 @@ entry:
 ; operations treating a register as having different lane sizes, then in
 ; big-endian mode, it has to emit a vrev32.16, which is equivalent to the
 ; effect that vstrw.32 followed by vldrh.16 would have.
-define arm_aapcs_vfpcc void @test_bitcast(<4 x i32>* readonly %in, <8 x i16>* %out) {
+define arm_aapcs_vfpcc void @test_bitcast(ptr readonly %in, ptr %out) {
 ; CHECK-LE-LABEL: test_bitcast:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrw.u32 q0, [r0]
@@ -320,18 +319,18 @@ define arm_aapcs_vfpcc void @test_bitcast(<4 x i32>* readonly %in, <8 x i16>* %o
 ; CHECK-BE-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %vin = load <4 x i32>, <4 x i32>* %in, align 8
+  %vin = load <4 x i32>, ptr %in, align 8
   %vdbl = mul <4 x i32> %vin, %vin
   %cast = bitcast <4 x i32> %vdbl to <8 x i16>
   %cdbl = mul <8 x i16> %cast, %cast
-  store <8 x i16> %cdbl, <8 x i16>* %out, align 8
+  store <8 x i16> %cdbl, ptr %out, align 8
   ret void
 }
 
 ; Similar test case but using the arm.mve.vreinterpretq intrinsic instead,
 ; which is defined to reinterpret the in-register format, so it generates no
 ; instruction in either endianness.
-define arm_aapcs_vfpcc void @test_vreinterpretq(<4 x i32>* readonly %in, <8 x i16>* %out) {
+define arm_aapcs_vfpcc void @test_vreinterpretq(ptr readonly %in, ptr %out) {
 ; CHECK-LE-LABEL: test_vreinterpretq:
 ; CHECK-LE:       @ %bb.0: @ %entry
 ; CHECK-LE-NEXT:    vldrw.u32 q0, [r0]
@@ -348,11 +347,11 @@ define arm_aapcs_vfpcc void @test_vreinterpretq(<4 x i32>* readonly %in, <8 x i1
 ; CHECK-BE-NEXT:    vstrh.16 q0, [r1]
 ; CHECK-BE-NEXT:    bx lr
 entry:
-  %vin = load <4 x i32>, <4 x i32>* %in, align 8
+  %vin = load <4 x i32>, ptr %in, align 8
   %vdbl = mul <4 x i32> %vin, %vin
   %cast = call <8 x i16> @llvm.arm.mve.vreinterpretq.v8i16.v4i32(<4 x i32> %vdbl)
   %cdbl = mul <8 x i16> %cast, %cast
-  store <8 x i16> %cdbl, <8 x i16>* %out, align 8
+  store <8 x i16> %cdbl, ptr %out, align 8
   ret void
 }
 

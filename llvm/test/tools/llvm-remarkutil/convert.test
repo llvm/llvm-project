@@ -1,0 +1,20 @@
+RUN: llvm-remarkutil bitstream2yaml %p/Inputs/two-remarks.bitstream -o - | FileCheck %s -strict-whitespace
+RUN: llvm-remarkutil yaml2bitstream %p/Inputs/two-remarks.yaml -o %t
+RUN: llvm-remarkutil bitstream2yaml %t -o - | FileCheck %s -strict-whitespace
+
+; CHECK: --- !Analysis
+; CHECK-NEXT: Pass:            prologepilog
+; CHECK-NEXT: Name:            StackSize
+; CHECK-NEXT: Function:        func0
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - NumStackBytes:   '1'
+; CHECK-NEXT:   - String:          ' stack bytes in function'
+; CHECK-NEXT: ...
+; CHECK-NEXT: --- !Analysis
+; CHECK-NEXT: Pass:            asm-printer
+; CHECK-NEXT: Name:            InstructionCount
+; CHECK-NEXT: Function:        func0
+; CHECK-NEXT: Args:
+; CHECK-NEXT:   - NumInstructions: '1'
+; CHECK-NEXT:   - String:          ' instructions in function'
+; CHECK-NEXT: ...

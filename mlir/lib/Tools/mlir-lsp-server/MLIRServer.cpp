@@ -7,26 +7,40 @@
 //===----------------------------------------------------------------------===//
 
 #include "MLIRServer.h"
-#include "../lsp-server-support/Logging.h"
-#include "../lsp-server-support/Protocol.h"
-#include "../lsp-server-support/SourceMgrUtils.h"
+#include "Protocol.h"
+#include "mlir/AsmParser/AsmParser.h"
+#include "mlir/AsmParser/AsmParserState.h"
+#include "mlir/AsmParser/CodeComplete.h"
+#include "mlir/Bytecode/BytecodeWriter.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Operation.h"
-#include "mlir/Parser/AsmParserState.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Tools/lsp-server-support/Logging.h"
+#include "mlir/Tools/lsp-server-support/SourceMgrUtils.h"
+#include "llvm/Support/Base64.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 using namespace mlir;
 
+/// Returns the range of a lexical token given a SMLoc corresponding to the
+/// start of an token location. The range is computed heuristically, and
+/// supports identifier-like tokens, strings, etc.
+static SMRange convertTokenLocToRange(SMLoc loc) {
+  return lsp::convertTokenLocToRange(loc, "$-.");
+}
+
 /// Returns a language server location from the given MLIR file location.
-static Optional<lsp::Location> getLocationFromLoc(FileLineColLoc loc) {
+/// `uriScheme` is the scheme to use when building new uris.
+static std::optional<lsp::Location> getLocationFromLoc(StringRef uriScheme,
+                                                       FileLineColLoc loc) {
   llvm::Expected<lsp::URIForFile> sourceURI =
-      lsp::URIForFile::fromFile(loc.getFilename());
+      lsp::URIForFile::fromFile(loc.getFilename(), uriScheme);
   if (!sourceURI) {
     lsp::Logger::error("Failed to create URI for file `{0}`: {1}",
                        loc.getFilename(),
                        llvm::toString(sourceURI.takeError()));
-    return llvm::None;
+    return std::nullopt;
   }
 
   lsp::Position position;
@@ -35,19 +49,21 @@ static Optional<lsp::Location> getLocationFromLoc(FileLineColLoc loc) {
   return lsp::Location{*sourceURI, lsp::Range(position)};
 }
 
-/// Returns a language server location from the given MLIR location, or None if
-/// one couldn't be created. `uri` is an optional additional filter that, when
+/// Returns a language server location from the given MLIR location, or
+/// std::nullopt if one couldn't be created. `uriScheme` is the scheme to use
+/// when building new uris. `uri` is an optional additional filter that, when
 /// present, is used to filter sub locations that do not share the same uri.
-static Optional<lsp::Location>
+static std::optional<lsp::Location>
 getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
-                   const lsp::URIForFile *uri = nullptr) {
-  Optional<lsp::Location> location;
+                   StringRef uriScheme, const lsp::URIForFile *uri = nullptr) {
+  std::optional<lsp::Location> location;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc)
       return WalkResult::advance();
 
-    Optional<lsp::Location> sourceLoc = getLocationFromLoc(fileLoc);
+    std::optional<lsp::Location> sourceLoc =
+        getLocationFromLoc(uriScheme, fileLoc);
     if (sourceLoc && (!uri || sourceLoc->uri == *uri)) {
       location = *sourceLoc;
       SMLoc loc = sourceMgr.FindLocForLineAndColumn(
@@ -56,7 +72,7 @@ getLocationFromLoc(llvm::SourceMgr &sourceMgr, Location loc,
       // Use range of potential identifier starting at location, else length 1
       // range.
       location->range.end.character += 1;
-      if (Optional<SMRange> range = lsp::convertTokenLocToRange(loc)) {
+      if (std::optional<SMRange> range = convertTokenLocToRange(loc)) {
         auto lineCol = sourceMgr.getLineAndColumn(range->End);
         location->range.end.character =
             std::max(fileLoc.getColumn() + 1, lineCol.second - 1);
@@ -75,11 +91,12 @@ static void collectLocationsFromLoc(Location loc,
                                     const lsp::URIForFile &uri) {
   SetVector<Location> visitedLocs;
   loc->walk([&](Location nestedLoc) {
-    FileLineColLoc fileLoc = nestedLoc.dyn_cast<FileLineColLoc>();
+    FileLineColLoc fileLoc = dyn_cast<FileLineColLoc>(nestedLoc);
     if (!fileLoc || !visitedLocs.insert(nestedLoc))
       return WalkResult::advance();
 
-    Optional<lsp::Location> sourceLoc = getLocationFromLoc(fileLoc);
+    std::optional<lsp::Location> sourceLoc =
+        getLocationFromLoc(uri.scheme(), fileLoc);
     if (sourceLoc && sourceLoc->uri != uri)
       locations.push_back(*sourceLoc);
     return WalkResult::advance();
@@ -118,8 +135,8 @@ static bool isDefOrUse(const AsmParserState::SMDefinition &def, SMLoc loc,
 }
 
 /// Given a location pointing to a result, return the result number it refers
-/// to or None if it refers to all of the results.
-static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
+/// to or std::nullopt if it refers to all of the results.
+static std::optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
   // Skip all of the identifier characters.
   auto isIdentifierChar = [](char c) {
     return isalnum(c) || c == '%' || c == '$' || c == '.' || c == '_' ||
@@ -132,7 +149,7 @@ static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
   // Check to see if this location indexes into the result group, via `#`. If it
   // doesn't, we can't extract a sub result number.
   if (*curPtr != '#')
-    return llvm::None;
+    return std::nullopt;
 
   // Compute the sub result number from the remaining portion of the string.
   const char *numberStart = ++curPtr;
@@ -140,15 +157,15 @@ static Optional<unsigned> getResultNumberFromLoc(SMLoc loc) {
     ++curPtr;
   StringRef numberStr(numberStart, curPtr - numberStart);
   unsigned resultNumber = 0;
-  return numberStr.consumeInteger(10, resultNumber) ? Optional<unsigned>()
+  return numberStr.consumeInteger(10, resultNumber) ? std::optional<unsigned>()
                                                     : resultNumber;
 }
 
 /// Given a source location range, return the text covered by the given range.
-/// If the range is invalid, returns None.
-static Optional<StringRef> getTextFromRange(SMRange range) {
+/// If the range is invalid, returns std::nullopt.
+static std::optional<StringRef> getTextFromRange(SMRange range) {
   if (!range.isValid())
-    return None;
+    return std::nullopt;
   const char *startPtr = range.Start.getPointer();
   return StringRef(startPtr, range.End.getPointer() - startPtr);
 }
@@ -162,7 +179,7 @@ static unsigned getBlockNumber(Block *block) {
 /// given output stream.
 static void printDefBlockName(raw_ostream &os, Block *block, SMRange loc = {}) {
   // Try to extract a name from the source location.
-  Optional<StringRef> text = getTextFromRange(loc);
+  std::optional<StringRef> text = getTextFromRange(loc);
   if (text && text->startswith("^")) {
     os << *text;
     return;
@@ -190,8 +207,9 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
   // Try to grab a file location for this diagnostic.
   // TODO: For simplicity, we just grab the first one. It may be likely that we
   // will need a more interesting heuristic here.'
-  Optional<lsp::Location> lspLocation =
-      getLocationFromLoc(sourceMgr, diag.getLocation(), &uri);
+  StringRef uriScheme = uri.scheme();
+  std::optional<lsp::Location> lspLocation =
+      getLocationFromLoc(sourceMgr, diag.getLocation(), uriScheme, &uri);
   if (lspLocation)
     lspDiag.range = lspLocation->range;
 
@@ -215,8 +233,8 @@ static lsp::Diagnostic getLspDiagnoticFromDiag(llvm::SourceMgr &sourceMgr,
   std::vector<lsp::DiagnosticRelatedInformation> relatedDiags;
   for (Diagnostic &note : diag.getNotes()) {
     lsp::Location noteLoc;
-    if (Optional<lsp::Location> loc =
-            getLocationFromLoc(sourceMgr, note.getLocation()))
+    if (std::optional<lsp::Location> loc =
+            getLocationFromLoc(sourceMgr, note.getLocation(), uriScheme))
       noteLoc = *loc;
     else
       noteLoc.uri = uri;
@@ -254,9 +272,9 @@ struct MLIRDocument {
   // Hover
   //===--------------------------------------------------------------------===//
 
-  Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
-                                 const lsp::Position &hoverPos);
-  Optional<lsp::Hover>
+  std::optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
+                                      const lsp::Position &hoverPos);
+  std::optional<lsp::Hover>
   buildHoverForOperation(SMRange hoverRange,
                          const AsmParserState::OperationDefinition &op);
   lsp::Hover buildHoverForOperationResult(SMRange hoverRange, Operation *op,
@@ -277,6 +295,29 @@ struct MLIRDocument {
                            std::vector<lsp::DocumentSymbol> &symbols);
 
   //===--------------------------------------------------------------------===//
+  // Code Completion
+  //===--------------------------------------------------------------------===//
+
+  lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
+                                        const lsp::Position &completePos,
+                                        const DialectRegistry &registry);
+
+  //===--------------------------------------------------------------------===//
+  // Code Action
+  //===--------------------------------------------------------------------===//
+
+  void getCodeActionForDiagnostic(const lsp::URIForFile &uri,
+                                  lsp::Position &pos, StringRef severity,
+                                  StringRef message,
+                                  std::vector<lsp::TextEdit> &edits);
+
+  //===--------------------------------------------------------------------===//
+  // Bytecode
+  //===--------------------------------------------------------------------===//
+
+  llvm::Expected<lsp::MLIRConvertBytecodeResult> convertToBytecode();
+
+  //===--------------------------------------------------------------------===//
   // Fields
   //===--------------------------------------------------------------------===//
 
@@ -286,6 +327,10 @@ struct MLIRDocument {
 
   /// The container for the IR parsed from the input file.
   Block parsedIR;
+
+  /// A collection of external resources, which we want to propagate up to the
+  /// user.
+  FallbackAsmResourceMap fallbackResourceMap;
 
   /// The source manager containing the contents of the input file.
   llvm::SourceMgr sourceMgr;
@@ -306,12 +351,14 @@ MLIRDocument::MLIRDocument(MLIRContext &context, const lsp::URIForFile &uri,
     return;
   }
 
+  ParserConfig config(&context, /*verifyAfterParse=*/true,
+                      &fallbackResourceMap);
   sourceMgr.AddNewSourceBuffer(std::move(memBuffer), SMLoc());
-  if (failed(parseSourceFile(sourceMgr, &parsedIR, &context, nullptr,
-                             &asmState))) {
+  if (failed(parseAsmSourceFile(sourceMgr, &parsedIR, config, &asmState))) {
     // If parsing failed, clear out any of the current state.
     parsedIR.clear();
     asmState = AsmParserState();
+    fallbackResourceMap = FallbackAsmResourceMap();
     return;
   }
 }
@@ -408,8 +455,9 @@ void MLIRDocument::findReferencesOf(const lsp::URIForFile &uri,
 // MLIRDocument: Hover
 //===----------------------------------------------------------------------===//
 
-Optional<lsp::Hover> MLIRDocument::findHover(const lsp::URIForFile &uri,
-                                             const lsp::Position &hoverPos) {
+std::optional<lsp::Hover>
+MLIRDocument::findHover(const lsp::URIForFile &uri,
+                        const lsp::Position &hoverPos) {
   SMLoc posLoc = hoverPos.getAsSMLoc(sourceMgr);
   SMRange hoverRange;
 
@@ -452,10 +500,10 @@ Optional<lsp::Hover> MLIRDocument::findHover(const lsp::URIForFile &uri,
           hoverRange, block.block->getArgument(arg.index()), block);
     }
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
-Optional<lsp::Hover> MLIRDocument::buildHoverForOperation(
+std::optional<lsp::Hover> MLIRDocument::buildHoverForOperation(
     SMRange hoverRange, const AsmParserState::OperationDefinition &op) {
   lsp::Hover hover(lsp::Range(sourceMgr, hoverRange));
   llvm::raw_string_ostream os(hover.contents.value);
@@ -468,22 +516,11 @@ Optional<lsp::Hover> MLIRDocument::buildHoverForOperation(
 
   os << "Generic Form:\n\n```mlir\n";
 
-  // Temporary drop the regions of this operation so that they don't get
-  // printed in the output. This helps keeps the size of the output hover
-  // small.
-  SmallVector<std::unique_ptr<Region>> regions;
-  for (Region &region : op.op->getRegions()) {
-    regions.emplace_back(std::make_unique<Region>());
-    regions.back()->takeBody(region);
-  }
-
-  op.op->print(
-      os, OpPrintingFlags().printGenericOpForm().elideLargeElementsAttrs());
+  op.op->print(os, OpPrintingFlags()
+                       .printGenericOpForm()
+                       .elideLargeElementsAttrs()
+                       .skipRegions());
   os << "\n```\n";
-
-  // Move the regions back to the current operation.
-  for (Region &region : op.op->getRegions())
-    region.takeBody(*regions.back());
 
   return hover;
 }
@@ -501,7 +538,7 @@ lsp::Hover MLIRDocument::buildHoverForOperationResult(SMRange hoverRange,
 
   // Check to see if the location points to a specific result within the
   // group.
-  if (Optional<unsigned> resultNumber = getResultNumberFromLoc(posLoc)) {
+  if (std::optional<unsigned> resultNumber = getResultNumberFromLoc(posLoc)) {
     if ((resultStart + *resultNumber) < resultEnd) {
       resultStart += *resultNumber;
       resultEnd = resultStart + 1;
@@ -616,6 +653,246 @@ void MLIRDocument::findDocumentSymbols(
 }
 
 //===----------------------------------------------------------------------===//
+// MLIRDocument: Code Completion
+//===----------------------------------------------------------------------===//
+
+namespace {
+class LSPCodeCompleteContext : public AsmParserCodeCompleteContext {
+public:
+  LSPCodeCompleteContext(SMLoc completeLoc, lsp::CompletionList &completionList,
+                         MLIRContext *ctx)
+      : AsmParserCodeCompleteContext(completeLoc),
+        completionList(completionList), ctx(ctx) {}
+
+  /// Signal code completion for a dialect name, with an optional prefix.
+  void completeDialectName(StringRef prefix) final {
+    for (StringRef dialect : ctx->getAvailableDialects()) {
+      lsp::CompletionItem item(prefix + dialect,
+                               lsp::CompletionItemKind::Module,
+                               /*sortText=*/"3");
+      item.detail = "dialect";
+      completionList.items.emplace_back(item);
+    }
+  }
+  using AsmParserCodeCompleteContext::completeDialectName;
+
+  /// Signal code completion for an operation name within the given dialect.
+  void completeOperationName(StringRef dialectName) final {
+    Dialect *dialect = ctx->getOrLoadDialect(dialectName);
+    if (!dialect)
+      return;
+
+    for (const auto &op : ctx->getRegisteredOperations()) {
+      if (&op.getDialect() != dialect)
+        continue;
+
+      lsp::CompletionItem item(
+          op.getStringRef().drop_front(dialectName.size() + 1),
+          lsp::CompletionItemKind::Field,
+          /*sortText=*/"1");
+      item.detail = "operation";
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  /// Append the given SSA value as a code completion result for SSA value
+  /// completions.
+  void appendSSAValueCompletion(StringRef name, std::string typeData) final {
+    // Check if we need to insert the `%` or not.
+    bool stripPrefix = getCodeCompleteLoc().getPointer()[-1] == '%';
+
+    lsp::CompletionItem item(name, lsp::CompletionItemKind::Variable);
+    if (stripPrefix)
+      item.insertText = name.drop_front(1).str();
+    item.detail = std::move(typeData);
+    completionList.items.emplace_back(item);
+  }
+
+  /// Append the given block as a code completion result for block name
+  /// completions.
+  void appendBlockCompletion(StringRef name) final {
+    // Check if we need to insert the `^` or not.
+    bool stripPrefix = getCodeCompleteLoc().getPointer()[-1] == '^';
+
+    lsp::CompletionItem item(name, lsp::CompletionItemKind::Field);
+    if (stripPrefix)
+      item.insertText = name.drop_front(1).str();
+    completionList.items.emplace_back(item);
+  }
+
+  /// Signal a completion for the given expected token.
+  void completeExpectedTokens(ArrayRef<StringRef> tokens, bool optional) final {
+    for (StringRef token : tokens) {
+      lsp::CompletionItem item(token, lsp::CompletionItemKind::Keyword,
+                               /*sortText=*/"0");
+      item.detail = optional ? "optional" : "";
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  /// Signal a completion for an attribute.
+  void completeAttribute(const llvm::StringMap<Attribute> &aliases) override {
+    appendSimpleCompletions({"affine_set", "affine_map", "dense",
+                             "dense_resource", "false", "loc", "sparse", "true",
+                             "unit"},
+                            lsp::CompletionItemKind::Field,
+                            /*sortText=*/"1");
+
+    completeDialectName("#");
+    completeAliases(aliases, "#");
+  }
+  void completeDialectAttributeOrAlias(
+      const llvm::StringMap<Attribute> &aliases) override {
+    completeDialectName();
+    completeAliases(aliases);
+  }
+
+  /// Signal a completion for a type.
+  void completeType(const llvm::StringMap<Type> &aliases) override {
+    // Handle the various builtin types.
+    appendSimpleCompletions({"memref", "tensor", "complex", "tuple", "vector",
+                             "bf16", "f16", "f32", "f64", "f80", "f128",
+                             "index", "none"},
+                            lsp::CompletionItemKind::Field,
+                            /*sortText=*/"1");
+
+    // Handle the builtin integer types.
+    for (StringRef type : {"i", "si", "ui"}) {
+      lsp::CompletionItem item(type + "<N>", lsp::CompletionItemKind::Field,
+                               /*sortText=*/"1");
+      item.insertText = type.str();
+      completionList.items.emplace_back(item);
+    }
+
+    // Insert completions for dialect types and aliases.
+    completeDialectName("!");
+    completeAliases(aliases, "!");
+  }
+  void
+  completeDialectTypeOrAlias(const llvm::StringMap<Type> &aliases) override {
+    completeDialectName();
+    completeAliases(aliases);
+  }
+
+  /// Add completion results for the given set of aliases.
+  template <typename T>
+  void completeAliases(const llvm::StringMap<T> &aliases,
+                       StringRef prefix = "") {
+    for (const auto &alias : aliases) {
+      lsp::CompletionItem item(prefix + alias.getKey(),
+                               lsp::CompletionItemKind::Field,
+                               /*sortText=*/"2");
+      llvm::raw_string_ostream(item.detail) << "alias: " << alias.getValue();
+      completionList.items.emplace_back(item);
+    }
+  }
+
+  /// Add a set of simple completions that all have the same kind.
+  void appendSimpleCompletions(ArrayRef<StringRef> completions,
+                               lsp::CompletionItemKind kind,
+                               StringRef sortText = "") {
+    for (StringRef completion : completions)
+      completionList.items.emplace_back(completion, kind, sortText);
+  }
+
+private:
+  lsp::CompletionList &completionList;
+  MLIRContext *ctx;
+};
+} // namespace
+
+lsp::CompletionList
+MLIRDocument::getCodeCompletion(const lsp::URIForFile &uri,
+                                const lsp::Position &completePos,
+                                const DialectRegistry &registry) {
+  SMLoc posLoc = completePos.getAsSMLoc(sourceMgr);
+  if (!posLoc.isValid())
+    return lsp::CompletionList();
+
+  // To perform code completion, we run another parse of the module with the
+  // code completion context provided.
+  MLIRContext tmpContext(registry, MLIRContext::Threading::DISABLED);
+  tmpContext.allowUnregisteredDialects();
+  lsp::CompletionList completionList;
+  LSPCodeCompleteContext lspCompleteContext(posLoc, completionList,
+                                            &tmpContext);
+
+  Block tmpIR;
+  AsmParserState tmpState;
+  (void)parseAsmSourceFile(sourceMgr, &tmpIR, &tmpContext, &tmpState,
+                           &lspCompleteContext);
+  return completionList;
+}
+
+//===----------------------------------------------------------------------===//
+// MLIRDocument: Code Action
+//===----------------------------------------------------------------------===//
+
+void MLIRDocument::getCodeActionForDiagnostic(
+    const lsp::URIForFile &uri, lsp::Position &pos, StringRef severity,
+    StringRef message, std::vector<lsp::TextEdit> &edits) {
+  // Ignore diagnostics that print the current operation. These are always
+  // enabled for the language server, but not generally during normal
+  // parsing/verification.
+  if (message.startswith("see current operation: "))
+    return;
+
+  // Get the start of the line containing the diagnostic.
+  const auto &buffer = sourceMgr.getBufferInfo(sourceMgr.getMainFileID());
+  const char *lineStart = buffer.getPointerForLineNumber(pos.line + 1);
+  if (!lineStart)
+    return;
+  StringRef line(lineStart, pos.character);
+
+  // Add a text edit for adding an expected-* diagnostic check for this
+  // diagnostic.
+  lsp::TextEdit edit;
+  edit.range = lsp::Range(lsp::Position(pos.line, 0));
+
+  // Use the indent of the current line for the expected-* diagnostic.
+  size_t indent = line.find_first_not_of(" ");
+  if (indent == StringRef::npos)
+    indent = line.size();
+
+  edit.newText.append(indent, ' ');
+  llvm::raw_string_ostream(edit.newText)
+      << "// expected-" << severity << " @below {{" << message << "}}\n";
+  edits.emplace_back(std::move(edit));
+}
+
+//===----------------------------------------------------------------------===//
+// MLIRDocument: Bytecode
+//===----------------------------------------------------------------------===//
+
+llvm::Expected<lsp::MLIRConvertBytecodeResult>
+MLIRDocument::convertToBytecode() {
+  // TODO: We currently require a single top-level operation, but this could
+  // conceptually be relaxed.
+  if (!llvm::hasSingleElement(parsedIR)) {
+    if (parsedIR.empty()) {
+      return llvm::make_error<lsp::LSPError>(
+          "expected a single and valid top-level operation, please ensure "
+          "there are no errors",
+          lsp::ErrorCode::RequestFailed);
+    }
+    return llvm::make_error<lsp::LSPError>(
+        "expected a single top-level operation", lsp::ErrorCode::RequestFailed);
+  }
+
+  lsp::MLIRConvertBytecodeResult result;
+  {
+    BytecodeWriterConfig writerConfig(fallbackResourceMap);
+
+    std::string rawBytecodeBuffer;
+    llvm::raw_string_ostream os(rawBytecodeBuffer);
+    // No desired bytecode version set, so no need to check for error.
+    (void)writeBytecodeToFile(&parsedIR.front(), os, writerConfig);
+    result.output = llvm::encodeBase64(rawBytecodeBuffer);
+  }
+  return result;
+}
+
+//===----------------------------------------------------------------------===//
 // MLIRTextFileChunk
 //===----------------------------------------------------------------------===//
 
@@ -667,9 +944,15 @@ public:
                       std::vector<lsp::Location> &locations);
   void findReferencesOf(const lsp::URIForFile &uri, lsp::Position pos,
                         std::vector<lsp::Location> &references);
-  Optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
-                                 lsp::Position hoverPos);
+  std::optional<lsp::Hover> findHover(const lsp::URIForFile &uri,
+                                      lsp::Position hoverPos);
   void findDocumentSymbols(std::vector<lsp::DocumentSymbol> &symbols);
+  lsp::CompletionList getCodeCompletion(const lsp::URIForFile &uri,
+                                        lsp::Position completePos);
+  void getCodeActions(const lsp::URIForFile &uri, const lsp::Range &pos,
+                      const lsp::CodeActionContext &context,
+                      std::vector<lsp::CodeAction> &actions);
+  llvm::Expected<lsp::MLIRConvertBytecodeResult> convertToBytecode();
 
 private:
   /// Find the MLIR document that contains the given position, and update the
@@ -763,10 +1046,10 @@ void MLIRTextFile::findReferencesOf(const lsp::URIForFile &uri,
       chunk.adjustLocForChunkOffset(loc.range);
 }
 
-Optional<lsp::Hover> MLIRTextFile::findHover(const lsp::URIForFile &uri,
-                                             lsp::Position hoverPos) {
+std::optional<lsp::Hover> MLIRTextFile::findHover(const lsp::URIForFile &uri,
+                                                  lsp::Position hoverPos) {
   MLIRTextFileChunk &chunk = getChunkFor(hoverPos);
-  Optional<lsp::Hover> hoverInfo = chunk.document.findHover(uri, hoverPos);
+  std::optional<lsp::Hover> hoverInfo = chunk.document.findHover(uri, hoverPos);
 
   // Adjust any locations within this file for the offset of this chunk.
   if (chunk.lineOffset != 0 && hoverInfo && hoverInfo->range)
@@ -811,6 +1094,89 @@ void MLIRTextFile::findDocumentSymbols(
     // Push the symbol for this chunk.
     symbols.emplace_back(std::move(symbol));
   }
+}
+
+lsp::CompletionList MLIRTextFile::getCodeCompletion(const lsp::URIForFile &uri,
+                                                    lsp::Position completePos) {
+  MLIRTextFileChunk &chunk = getChunkFor(completePos);
+  lsp::CompletionList completionList = chunk.document.getCodeCompletion(
+      uri, completePos, context.getDialectRegistry());
+
+  // Adjust any completion locations.
+  for (lsp::CompletionItem &item : completionList.items) {
+    if (item.textEdit)
+      chunk.adjustLocForChunkOffset(item.textEdit->range);
+    for (lsp::TextEdit &edit : item.additionalTextEdits)
+      chunk.adjustLocForChunkOffset(edit.range);
+  }
+  return completionList;
+}
+
+void MLIRTextFile::getCodeActions(const lsp::URIForFile &uri,
+                                  const lsp::Range &pos,
+                                  const lsp::CodeActionContext &context,
+                                  std::vector<lsp::CodeAction> &actions) {
+  // Create actions for any diagnostics in this file.
+  for (auto &diag : context.diagnostics) {
+    if (diag.source != "mlir")
+      continue;
+    lsp::Position diagPos = diag.range.start;
+    MLIRTextFileChunk &chunk = getChunkFor(diagPos);
+
+    // Add a new code action that inserts a "expected" diagnostic check.
+    lsp::CodeAction action;
+    action.title = "Add expected-* diagnostic checks";
+    action.kind = lsp::CodeAction::kQuickFix.str();
+
+    StringRef severity;
+    switch (diag.severity) {
+    case lsp::DiagnosticSeverity::Error:
+      severity = "error";
+      break;
+    case lsp::DiagnosticSeverity::Warning:
+      severity = "warning";
+      break;
+    default:
+      continue;
+    }
+
+    // Get edits for the diagnostic.
+    std::vector<lsp::TextEdit> edits;
+    chunk.document.getCodeActionForDiagnostic(uri, diagPos, severity,
+                                              diag.message, edits);
+
+    // Walk the related diagnostics, this is how we encode notes.
+    if (diag.relatedInformation) {
+      for (auto &noteDiag : *diag.relatedInformation) {
+        if (noteDiag.location.uri != uri)
+          continue;
+        diagPos = noteDiag.location.range.start;
+        diagPos.line -= chunk.lineOffset;
+        chunk.document.getCodeActionForDiagnostic(uri, diagPos, "note",
+                                                  noteDiag.message, edits);
+      }
+    }
+    // Fixup the locations for any edits.
+    for (lsp::TextEdit &edit : edits)
+      chunk.adjustLocForChunkOffset(edit.range);
+
+    action.edit.emplace();
+    action.edit->changes[uri.uri().str()] = std::move(edits);
+    action.diagnostics = {diag};
+
+    actions.emplace_back(std::move(action));
+  }
+}
+
+llvm::Expected<lsp::MLIRConvertBytecodeResult>
+MLIRTextFile::convertToBytecode() {
+  // Bail out if there is more than one chunk, bytecode wants a single module.
+  if (chunks.size() != 1) {
+    return llvm::make_error<lsp::LSPError>(
+        "unexpected split file, please remove all `// -----`",
+        lsp::ErrorCode::RequestFailed);
+  }
+  return chunks.front()->document.convertToBytecode();
 }
 
 MLIRTextFileChunk &MLIRTextFile::getChunkFor(lsp::Position &pos) {
@@ -858,10 +1224,10 @@ void lsp::MLIRServer::addOrUpdateDocument(
       uri, contents, version, impl->registry, diagnostics);
 }
 
-Optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
+std::optional<int64_t> lsp::MLIRServer::removeDocument(const URIForFile &uri) {
   auto it = impl->files.find(uri.file());
   if (it == impl->files.end())
-    return llvm::None;
+    return std::nullopt;
 
   int64_t version = it->second->getVersion();
   impl->files.erase(it);
@@ -884,12 +1250,12 @@ void lsp::MLIRServer::findReferencesOf(const URIForFile &uri,
     fileIt->second->findReferencesOf(uri, pos, references);
 }
 
-Optional<lsp::Hover> lsp::MLIRServer::findHover(const URIForFile &uri,
-                                                const Position &hoverPos) {
+std::optional<lsp::Hover> lsp::MLIRServer::findHover(const URIForFile &uri,
+                                                     const Position &hoverPos) {
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     return fileIt->second->findHover(uri, hoverPos);
-  return llvm::None;
+  return std::nullopt;
 }
 
 void lsp::MLIRServer::findDocumentSymbols(
@@ -897,4 +1263,83 @@ void lsp::MLIRServer::findDocumentSymbols(
   auto fileIt = impl->files.find(uri.file());
   if (fileIt != impl->files.end())
     fileIt->second->findDocumentSymbols(symbols);
+}
+
+lsp::CompletionList
+lsp::MLIRServer::getCodeCompletion(const URIForFile &uri,
+                                   const Position &completePos) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    return fileIt->second->getCodeCompletion(uri, completePos);
+  return CompletionList();
+}
+
+void lsp::MLIRServer::getCodeActions(const URIForFile &uri, const Range &pos,
+                                     const CodeActionContext &context,
+                                     std::vector<CodeAction> &actions) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt != impl->files.end())
+    fileIt->second->getCodeActions(uri, pos, context, actions);
+}
+
+llvm::Expected<lsp::MLIRConvertBytecodeResult>
+lsp::MLIRServer::convertFromBytecode(const URIForFile &uri) {
+  MLIRContext tempContext(impl->registry);
+  tempContext.allowUnregisteredDialects();
+
+  // Collect any errors during parsing.
+  std::string errorMsg;
+  ScopedDiagnosticHandler diagHandler(
+      &tempContext,
+      [&](mlir::Diagnostic &diag) { errorMsg += diag.str() + "\n"; });
+
+  // Handling for external resources, which we want to propagate up to the user.
+  FallbackAsmResourceMap fallbackResourceMap;
+
+  // Setup the parser config.
+  ParserConfig parserConfig(&tempContext, /*verifyAfterParse=*/true,
+                            &fallbackResourceMap);
+
+  // Try to parse the given source file.
+  Block parsedBlock;
+  if (failed(parseSourceFile(uri.file(), &parsedBlock, parserConfig))) {
+    return llvm::make_error<lsp::LSPError>(
+        "failed to parse bytecode source file: " + errorMsg,
+        lsp::ErrorCode::RequestFailed);
+  }
+
+  // TODO: We currently expect a single top-level operation, but this could
+  // conceptually be relaxed.
+  if (!llvm::hasSingleElement(parsedBlock)) {
+    return llvm::make_error<lsp::LSPError>(
+        "expected bytecode to contain a single top-level operation",
+        lsp::ErrorCode::RequestFailed);
+  }
+
+  // Print the module to a buffer.
+  lsp::MLIRConvertBytecodeResult result;
+  {
+    // Extract the top-level op so that aliases get printed.
+    // FIXME: We should be able to enable aliases without having to do this!
+    OwningOpRef<Operation *> topOp = &parsedBlock.front();
+    (*topOp)->remove();
+
+    AsmState state(*topOp, OpPrintingFlags().enableDebugInfo().assumeVerified(),
+                   /*locationMap=*/nullptr, &fallbackResourceMap);
+
+    llvm::raw_string_ostream os(result.output);
+    (*topOp)->print(os, state);
+  }
+  return std::move(result);
+}
+
+llvm::Expected<lsp::MLIRConvertBytecodeResult>
+lsp::MLIRServer::convertToBytecode(const URIForFile &uri) {
+  auto fileIt = impl->files.find(uri.file());
+  if (fileIt == impl->files.end()) {
+    return llvm::make_error<lsp::LSPError>(
+        "language server does not contain an entry for this source file",
+        lsp::ErrorCode::RequestFailed);
+  }
+  return fileIt->second->convertToBytecode();
 }

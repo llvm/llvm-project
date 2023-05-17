@@ -1,3 +1,9 @@
+# This chapter depends on JIT support enabled.
+if(NOT MLIR_ENABLE_EXECUTION_ENGINE)
+  return()
+endif()
+
+
 # For a better template to copy, see examples/standalone
 include_directories(include)
 add_subdirectory(include)
@@ -38,14 +44,15 @@ target_link_libraries(toyc-ch6
     ${dialect_libs}
     ${conversion_libs}
     MLIRAnalysis
+    MLIRBuiltinToLLVMIRTranslation
     MLIRCallInterfaces
     MLIRCastInterfaces
     MLIRExecutionEngine
     MLIRIR
     MLIRLLVMCommonConversion
-    MLIRLLVMIR
+    MLIRLLVMDialect
     MLIRLLVMToLLVMIRTranslation
-    MLIRMemRef
+    MLIRMemRefDialect
     MLIRParser
     MLIRPass
     MLIRSideEffectInterfaces

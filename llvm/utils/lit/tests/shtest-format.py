@@ -59,7 +59,7 @@
 # CHECK: UNSUPPORTED: shtest-format :: requires-missing.txt
 # CHECK: PASS: shtest-format :: requires-present.txt
 # CHECK: UNRESOLVED: shtest-format :: requires-star.txt
-# CHECK: UNSUPPORTED: shtest-format :: requires-triple.txt
+# CHECK: PASS: shtest-format :: requires-triple.txt
 # CHECK: PASS: shtest-format :: unsupported-expr-false.txt
 # CHECK: UNSUPPORTED: shtest-format :: unsupported-expr-true.txt
 # CHECK: UNRESOLVED: shtest-format :: unsupported-star.txt
@@ -86,8 +86,8 @@
 # CHECK: shtest-format :: xpass.txt
 
 # CHECK: Testing Time:
-# CHECK: Unsupported        : 4
-# CHECK: Passed             : 6
+# CHECK: Unsupported        : 3
+# CHECK: Passed             : 7
 # CHECK: Expectedly Failed  : 4
 # CHECK: Unresolved         : 3
 # CHECK: Failed             : 4
@@ -96,7 +96,7 @@
 
 # XUNIT: <?xml version="1.0" encoding="UTF-8"?>
 # XUNIT-NEXT: <testsuites time="{{[0-9.]+}}">
-# XUNIT-NEXT: <testsuite name="shtest-format" tests="22" failures="8" skipped="4">
+# XUNIT-NEXT: <testsuite name="shtest-format" tests="22" failures="8" skipped="3">
 
 # XUNIT: <testcase classname="shtest-format.external_shell" name="fail.txt" time="{{[0-9]+\.[0-9]+}}">
 # XUNIT-NEXT: <failure{{[ ]*}}>
@@ -141,9 +141,7 @@
 # XUNIT: </failure>
 # XUNIT-NEXT: </testcase>
 
-
-# XUNIT: <testcase classname="shtest-format.shtest-format" name="requires-triple.txt" time="{{[0-9]+\.[0-9]+}}">
-# XUNIT-NEXT:<skipped message="Missing required feature(s): x86_64"/>
+# XUNIT: <testcase classname="shtest-format.shtest-format" name="requires-triple.txt" time="{{[0-9]+\.[0-9]+}}"/>
 
 # XUNIT: <testcase classname="shtest-format.shtest-format" name="unsupported-expr-false.txt" time="{{[0-9]+\.[0-9]+}}"/>
 

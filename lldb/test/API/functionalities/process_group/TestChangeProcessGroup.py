@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class ChangeProcessGroupTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def setUp(self):
@@ -79,7 +77,7 @@ class ChangeProcessGroupTestCase(TestBase):
 
         # step over the setpgid() call
         thread.StepOver()
-        self.assertEqual(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
+        self.assertStopReason(thread.GetStopReason(), lldb.eStopReasonPlanComplete)
 
         # verify that the process group has been set correctly
         # this also checks that we are still in full control of the child
@@ -89,4 +87,4 @@ class ChangeProcessGroupTestCase(TestBase):
 
         # run to completion
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)

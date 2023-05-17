@@ -13,17 +13,13 @@
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/LogicalResult.h"
 #include "mlir/Support/Timing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/Support/raw_ostream.h"
 
 #include <functional>
 #include <vector>
-
-namespace llvm {
-class Any;
-} // namespace llvm
+#include <optional>
 
 namespace mlir {
 class AnalysisManager;
@@ -75,6 +71,7 @@ public:
   OpPassManager(const OpPassManager &rhs);
   ~OpPassManager();
   OpPassManager &operator=(const OpPassManager &rhs);
+  OpPassManager &operator=(OpPassManager &&rhs);
 
   /// Iterator over the passes in this pass manager.
   using pass_iterator =
@@ -98,7 +95,8 @@ public:
   /// pass manager.
   OpPassManager &nest(OperationName nestedName);
   OpPassManager &nest(StringRef nestedName);
-  template <typename OpT> OpPassManager &nest() {
+  template <typename OpT>
+  OpPassManager &nest() {
     return nest(OpT::getOperationName());
   }
 
@@ -115,20 +113,21 @@ public:
 
   /// Add the given pass to a nested pass manager for the given operation kind
   /// `OpT`.
-  template <typename OpT> void addNestedPass(std::unique_ptr<Pass> pass) {
+  template <typename OpT>
+  void addNestedPass(std::unique_ptr<Pass> pass) {
     nest<OpT>().addPass(std::move(pass));
   }
 
   /// Returns the number of passes held by this manager.
   size_t size() const;
 
-  /// Return the operation name that this pass manager operates on, or None if
-  /// this is an op-agnostic pass manager.
-  Optional<OperationName> getOpName(MLIRContext &context) const;
+  /// Return the operation name that this pass manager operates on, or
+  /// std::nullopt if this is an op-agnostic pass manager.
+  std::optional<OperationName> getOpName(MLIRContext &context) const;
 
-  /// Return the operation name that this pass manager operates on, or None if
-  /// this is an op-agnostic pass manager.
-  Optional<StringRef> getOpName() const;
+  /// Return the operation name that this pass manager operates on, or
+  /// std::nullopt if this is an op-agnostic pass manager.
+  std::optional<StringRef> getOpName() const;
 
   /// Return the name used to anchor this pass manager. This is either the name
   /// of an operation, or the result of `getAnyOpAnchorName()` in the case of an
@@ -210,13 +209,19 @@ public:
   /// Create a new pass manager under the given context with a specific nesting
   /// style. The created pass manager can schedule operations that match
   /// `operationName`.
-  /// FIXME: We should make the specification of `builtin.module` explicit here,
-  /// so that we can have top-level op-agnostic pass managers.
-  PassManager(MLIRContext *ctx, Nesting nesting = Nesting::Explicit,
-              StringRef operationName = "builtin.module");
-  PassManager(MLIRContext *ctx, StringRef operationName)
-      : PassManager(ctx, Nesting::Explicit, operationName) {}
+  PassManager(MLIRContext *ctx,
+              StringRef operationName = PassManager::getAnyOpAnchorName(),
+              Nesting nesting = Nesting::Explicit);
+  PassManager(OperationName operationName, Nesting nesting = Nesting::Explicit);
   ~PassManager();
+
+  /// Create a new pass manager under the given context with a specific nesting
+  /// style. The created pass manager can schedule operations that match
+  /// `OperationTy`.
+  template <typename OperationTy>
+  static PassManager on(MLIRContext *ctx, Nesting nesting = Nesting::Explicit) {
+    return PassManager(ctx, OperationTy::getOperationName(), nesting);
+  }
 
   /// Run the passes within this manager on the provided operation. The
   /// specified operation must have the same name as the one provided the pass
@@ -425,7 +430,7 @@ private:
   MLIRContext *context;
 
   /// Flag that specifies if pass statistics should be dumped.
-  Optional<PassDisplayMode> passStatisticsMode;
+  std::optional<PassDisplayMode> passStatisticsMode;
 
   /// A manager for pass instrumentations.
   std::unique_ptr<PassInstrumentor> instrumentor;
@@ -435,7 +440,8 @@ private:
   std::unique_ptr<detail::PassCrashReproducerGenerator> crashReproGenerator;
 
   /// A hash key used to detect when reinitialization is necessary.
-  llvm::hash_code initializationKey;
+  llvm::hash_code initializationKey =
+      DenseMapInfo<llvm::hash_code>::getTombstoneKey();
 
   /// Flag that specifies if pass timing is enabled.
   bool passTiming : 1;
@@ -451,7 +457,7 @@ void registerPassManagerCLOptions();
 
 /// Apply any values provided to the pass manager options that were registered
 /// with 'registerPassManagerOptions'.
-void applyPassManagerCLOptions(PassManager &pm);
+LogicalResult applyPassManagerCLOptions(PassManager &pm);
 
 /// Apply any values provided to the timing manager options that were registered
 /// with `registerDefaultTimingManagerOptions`. This is a handy helper function

@@ -37,13 +37,13 @@ RUN:   | FileCheck %s --check-prefix=NOT-EXIST-GNU -DMSG=%errc_ENOENT
 RUN: llvm-symbolizer --output-style=LLVM --obj=%p/Inputs/not.exist 0x1 0x2 --no-inlines 2>&1 \
 RUN:   | FileCheck %s --check-prefix=NOT-EXIST-LLVM -DMSG=%errc_ENOENT
 
-# NOT-EXIST-GNU:      LLVMSymbolizer: error reading file: [[MSG]]
+# NOT-EXIST-GNU:      llvm-symbolizer{{.*}}: error: '{{.*}}Inputs/not.exist': [[MSG]]
 # NOT-EXIST-GNU-NEXT: ??
 # NOT-EXIST-GNU-NEXT: ??:0
 # NOT-EXIST-GNU-NEXT: ??
 # NOT-EXIST-GNU-NEXT: ??:0
 
-# NOT-EXIST-LLVM:       LLVMSymbolizer: error reading file: [[MSG]]
+# NOT-EXIST-LLVM:       llvm-symbolizer{{.*}}: error: '{{.*}}Inputs/not.exist': [[MSG]]
 # NOT-EXIST-LLVM-NEXT:  ??
 # NOT-EXIST-LLVM-NEXT:  ??:0:0
 # NOT-EXIST-LLVM-EMPTY:

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -std=c++11 -fms-extensions -fvisibility hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM %s
+// RUN: %clang_cc1 -flto -triple x86_64-unknown-linux -std=c++11 -fms-extensions -fvisibility=hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=ITANIUM %s
 // RUN: %clang_cc1 -flto -triple x86_64-pc-windows-msvc -std=c++11 -fms-extensions -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=MS --check-prefix=MS-STD %s
 // RUN: %clang_cc1 -flto -triple x86_64-pc-windows-msvc -std=c++11 -fms-extensions -fwhole-program-vtables -flto-visibility-public-std -emit-llvm -o - %s | FileCheck --check-prefix=MS --check-prefix=MS-NOSTD %s
 
@@ -74,16 +74,16 @@ void f(C1 *c1, C2 *c2, C3 *c3, C4 *c4, C5 *c5, C6 *c6, std::C7 *c7,
   // MS: type.test{{.*}}!"?AUC2@@"
   c2->f();
   // ITANIUM: type.test{{.*}}!"_ZTS2C3"
-  // MS: type.test{{.*}}!"?AUC3@@"
+  // MS-NOT: type.test{{.*}}!"?AUC3@@"
   c3->f();
   // ITANIUM: type.test{{.*}}!"_ZTS2C4"
-  // MS: type.test{{.*}}!"?AUC4@@"
+  // MS-NOT: type.test{{.*}}!"?AUC4@@"
   c4->f();
-  // ITANIUM: type.test{{.*}}!"_ZTS2C5"
-  // MS: type.test{{.*}}!"?AUC5@@"
+  // ITANIUM-NOT: type.test{{.*}}!"_ZTS2C5"
+  // MS-NOT: type.test{{.*}}!"?AUC5@@"
   c5->f();
-  // ITANIUM: type.test{{.*}}!"_ZTS2C6"
-  // MS: type.test{{.*}}!"?AUC6@@"
+  // ITANIUM-NOT: type.test{{.*}}!"_ZTS2C6"
+  // MS-NOT: type.test{{.*}}!"?AUC6@@"
   c6->f();
   // ITANIUM: type.test{{.*}}!"_ZTSSt2C7"
   // MS-STD: type.test{{.*}}!"?AUC7@std@@"

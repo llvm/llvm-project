@@ -8,10 +8,9 @@ entry:
 
 define void @f() gc "ocaml" {
 entry:
-  %ptr.stackref = alloca i8*
-  %gcroot = bitcast i8** %ptr.stackref to i8**
-  call void @llvm.gcroot(i8** %gcroot, i8* null)
+  %ptr.stackref = alloca ptr
+  call void @llvm.gcroot(ptr %ptr.stackref, ptr null)
   ret void
 }
 
-declare void @llvm.gcroot(i8**, i8*) nounwind
+declare void @llvm.gcroot(ptr, ptr) nounwind

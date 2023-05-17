@@ -1,14 +1,14 @@
 ; RUN: opt < %s -passes=pgo-instr-gen -S | FileCheck %s
 
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* nocapture writeonly, i8* nocapture readonly, i32, i1)
-declare i32 @strlen(i8* nocapture)
+declare void @llvm.memcpy.p0.p0.i32(ptr nocapture writeonly, ptr nocapture readonly, i32, i1)
+declare i32 @strlen(ptr nocapture)
 
 ; CHECK-LABEL: test
 ; CHECK: %1 = zext i32 %c to i64
-; CHECK:  call void @llvm.instrprof.value.profile(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @__profn_test, i32 0, i32 0), i64 {{[0-9]+}}, i64 %1, i32 1, i32 0)
+; CHECK:  call void @llvm.instrprof.value.profile(ptr @__profn_test, i64 {{[0-9]+}}, i64 %1, i32 1, i32 0)
 
-define void @test(i8* %a, i8* %p) {
-  %c = call i32 @strlen(i8* %p)
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %p, i32 %c, i1 false)
+define void @test(ptr %a, ptr %p) {
+  %c = call i32 @strlen(ptr %p)
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %p, i32 %c, i1 false)
   ret void
 }

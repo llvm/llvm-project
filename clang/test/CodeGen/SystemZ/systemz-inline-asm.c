@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple s390x-linux-gnu -O2 -emit-llvm -o - %s | FileCheck %s
 
 unsigned int gi;
 unsigned long gl;
@@ -6,31 +6,31 @@ unsigned long gl;
 void test_store_m(unsigned int i) {
   asm("st %1, %0" : "=m" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_m(i32 noundef zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*m,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*m,r"(ptr nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_Q(unsigned int i) {
   asm("st %1, %0" : "=Q" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_Q(i32 noundef zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*Q,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*Q,r"(ptr nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_R(unsigned int i) {
   asm("st %1, %0" : "=R" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_R(i32 noundef zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*R,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*R,r"(ptr nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_S(unsigned int i) {
   asm("st %1, %0" : "=S" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_S(i32 noundef zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*S,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*S,r"(ptr nonnull elementtype(i32) @gi, i32 %i)
 }
 
 void test_store_T(unsigned int i) {
   asm("st %1, %0" : "=T" (gi) : "r" (i));
 // CHECK-LABEL: define{{.*}} void @test_store_T(i32 noundef zeroext %i)
-// CHECK: call void asm "st $1, $0", "=*T,r"(i32* nonnull elementtype(i32) @gi, i32 %i)
+// CHECK: call void asm "st $1, $0", "=*T,r"(ptr nonnull elementtype(i32) @gi, i32 %i)
 }
 
 int test_load_m(void) {
@@ -38,7 +38,7 @@ int test_load_m(void) {
   asm("l %0, %1" : "=r" (i) : "m" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_m()
-// CHECK: call i32 asm "l $0, $1", "=r,*m"(i32* nonnull elementtype(i32) @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*m"(ptr nonnull elementtype(i32) @gi)
 }
 
 int test_load_Q(void) {
@@ -46,7 +46,7 @@ int test_load_Q(void) {
   asm("l %0, %1" : "=r" (i) : "Q" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_Q()
-// CHECK: call i32 asm "l $0, $1", "=r,*Q"(i32* nonnull elementtype(i32) @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*Q"(ptr nonnull elementtype(i32) @gi)
 }
 
 int test_load_R(void) {
@@ -54,7 +54,7 @@ int test_load_R(void) {
   asm("l %0, %1" : "=r" (i) : "R" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_R()
-// CHECK: call i32 asm "l $0, $1", "=r,*R"(i32* nonnull elementtype(i32) @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*R"(ptr nonnull elementtype(i32) @gi)
 }
 
 int test_load_S(void) {
@@ -62,7 +62,7 @@ int test_load_S(void) {
   asm("l %0, %1" : "=r" (i) : "S" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_S()
-// CHECK: call i32 asm "l $0, $1", "=r,*S"(i32* nonnull elementtype(i32) @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*S"(ptr nonnull elementtype(i32) @gi)
 }
 
 int test_load_T(void) {
@@ -70,13 +70,13 @@ int test_load_T(void) {
   asm("l %0, %1" : "=r" (i) : "T" (gi));
   return i;
 // CHECK-LABEL: define{{.*}} signext i32 @test_load_T()
-// CHECK: call i32 asm "l $0, $1", "=r,*T"(i32* nonnull elementtype(i32) @gi)
+// CHECK: call i32 asm "l $0, $1", "=r,*T"(ptr nonnull elementtype(i32) @gi)
 }
 
 void test_mI(unsigned char *c) {
   asm volatile("cli %0, %1" :: "Q" (*c), "I" (100));
-// CHECK-LABEL: define{{.*}} void @test_mI(i8* noundef %c)
-// CHECK: call void asm sideeffect "cli $0, $1", "*Q,I"(i8* elementtype(i8) %c, i32 100)
+// CHECK-LABEL: define{{.*}} void @test_mI(ptr noundef %c)
+// CHECK: call void asm sideeffect "cli $0, $1", "*Q,I"(ptr elementtype(i8) %c, i32 100)
 }
 
 unsigned int test_dJa(unsigned int i, unsigned int j) {
@@ -123,11 +123,11 @@ double test_f64(double f, double g) {
 long double test_f128(long double f, long double g) {
   asm("axbr %0, %2" : "=f" (f) : "0" (f), "f" (g));
   return f;
-// CHECK: define{{.*}} void @test_f128(fp128* noalias nocapture writeonly sret(fp128) align 8 [[DEST:%.*]], fp128* nocapture noundef readonly %0, fp128* nocapture noundef readonly %1)
-// CHECK: %f = load fp128, fp128* %0
-// CHECK: %g = load fp128, fp128* %1
+// CHECK: define{{.*}} void @test_f128(ptr noalias nocapture writeonly sret(fp128) align 8 [[DEST:%.*]], ptr nocapture noundef readonly %0, ptr nocapture noundef readonly %1)
+// CHECK: %f = load fp128, ptr %0
+// CHECK: %g = load fp128, ptr %1
 // CHECK: [[RESULT:%.*]] = tail call fp128 asm "axbr $0, $2", "=f,0,f"(fp128 %f, fp128 %g)
-// CHECK: store fp128 [[RESULT]], fp128* [[DEST]]
+// CHECK: store fp128 [[RESULT]], ptr [[DEST]]
 }
 
 // Test that there are no tied physreg uses. TwoAddress pass cannot deal with them.

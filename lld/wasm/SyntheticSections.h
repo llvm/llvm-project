@@ -20,11 +20,11 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/BinaryFormat/WasmTraits.h"
+#include <optional>
 
 #define DEBUG_TYPE "lld"
 
-namespace lld {
-namespace wasm {
+namespace lld::wasm {
 
 // An init entry to be written to either the synthetic init func or the
 // linking metadata.
@@ -107,15 +107,15 @@ public:
 
 public:
   T type;
-  llvm::Optional<StringRef> importModule;
-  llvm::Optional<StringRef> importName;
+  std::optional<StringRef> importModule;
+  std::optional<StringRef> importName;
   State state;
 
 public:
   ImportKey(T type) : type(type), state(State::Plain) {}
   ImportKey(T type, State state) : type(type), state(state) {}
-  ImportKey(T type, llvm::Optional<StringRef> importModule,
-            llvm::Optional<StringRef> importName)
+  ImportKey(T type, std::optional<StringRef> importModule,
+            std::optional<StringRef> importName)
       : type(type), importModule(importModule), importName(importName),
         state(State::Plain) {}
 };
@@ -126,8 +126,7 @@ inline bool operator==(const ImportKey<T> &lhs, const ImportKey<T> &rhs) {
          lhs.importName == rhs.importName && lhs.type == rhs.type;
 }
 
-} // namespace wasm
-} // namespace lld
+} // namespace wasm::lld
 
 // `ImportKey<T>` can be used as a key in a `DenseMap` if `T` can be used as a
 // key in a `DenseMap`.
@@ -230,7 +229,7 @@ class MemorySection : public SyntheticSection {
 public:
   MemorySection() : SyntheticSection(llvm::wasm::WASM_SEC_MEMORY) {}
 
-  bool isNeeded() const override { return !config->importMemory; }
+  bool isNeeded() const override { return !config->memoryImport.has_value(); }
   void writeBody() override;
 
   uint64_t numMemoryPages = 0;
@@ -290,14 +289,12 @@ public:
   bool needsRelocations() {
     if (config->extendedConst)
       return false;
-    return llvm::find_if(internalGotSymbols, [=](Symbol *sym) {
-             return !sym->isTLS();
-           }) != internalGotSymbols.end();
+    return llvm::any_of(internalGotSymbols,
+                        [=](Symbol *sym) { return !sym->isTLS(); });
   }
   bool needsTLSRelocations() {
-    return llvm::find_if(internalGotSymbols, [=](Symbol *sym) {
-             return sym->isTLS();
-           }) != internalGotSymbols.end();
+    return llvm::any_of(internalGotSymbols,
+                        [=](Symbol *sym) { return sym->isTLS(); });
   }
   void generateRelocationCode(raw_ostream &os, bool TLS) const;
 
@@ -430,6 +427,35 @@ protected:
   OutputSection *sec;
 };
 
+class BuildIdSection : public SyntheticSection {
+public:
+  BuildIdSection();
+  void writeBody() override;
+  bool isNeeded() const override {
+    return config->buildId != BuildIdKind::None;
+  }
+  void writeBuildId(llvm::ArrayRef<uint8_t> buf);
+  void writeTo(uint8_t *buf) override {
+    LLVM_DEBUG(llvm::dbgs()
+               << "BuildId writeto buf " << buf << " offset " << offset
+               << " headersize " << header.size() << '\n');
+    // The actual build ID is derived from a hash of all of the output
+    // sections, so it can't be calculated until they are written. Here
+    // we write the section leaving zeros in place of the hash.
+    SyntheticSection::writeTo(buf);
+    // Calculate and store the location where the hash will be written.
+    hashPlaceholderPtr = buf + offset + header.size() +
+                         +sizeof(buildIdSectionName) /*name string*/ +
+                         1 /* hash size */;
+  }
+
+  const uint32_t hashSize;
+
+private:
+  static constexpr char buildIdSectionName[] = "build_id";
+  uint8_t *hashPlaceholderPtr = nullptr;
+};
+
 // Linker generated output sections
 struct OutStruct {
   DylinkSection *dylinkSec;
@@ -448,6 +474,7 @@ struct OutStruct {
   NameSection *nameSec;
   ProducersSection *producersSec;
   TargetFeaturesSection *targetFeaturesSec;
+  BuildIdSection *buildIdSec;
 };
 
 extern OutStruct out;

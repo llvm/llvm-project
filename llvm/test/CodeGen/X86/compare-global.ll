@@ -5,10 +5,10 @@ target triple = "i686-pc-windows-msvc18.0.0"
 
 @foo = external global i8
 
-define void @f(i8* %c) {
+define void @f(ptr %c) {
 entry:
   ; CHECK: cmpl $_foo, 4(%esp)
-  %cmp = icmp eq i8* %c, @foo
+  %cmp = icmp eq ptr %c, @foo
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:

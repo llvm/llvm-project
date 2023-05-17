@@ -64,7 +64,7 @@ for.body:                                         ; preds = %for.body, %entry
 ; CHECK-DARWINA15: vmul.f32 s{{[0-9]*}}
 ; CHECK-DARWINSWIFT: vmul.f32 d{{[0-9]*}}
   %conv = fpext float %mul to double
-  %call = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), double %conv) #1
+  %call = tail call i32 (ptr, ...) @printf(ptr @.str, double %conv) #1
   %inc = add nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %inc, 16000
   br i1 %exitcond, label %for.end, label %for.body
@@ -73,4 +73,4 @@ for.end:                                          ; preds = %for.body
   ret i32 0
 }
 
-declare i32 @printf(i8* nocapture, ...)
+declare i32 @printf(ptr nocapture, ...)

@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class SBFrameFindValueTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_formatters_api(self):
@@ -44,12 +42,8 @@ class SBFrameFindValueTestCase(TestBase):
         self.frame = self.thread.frames[0]
         self.assertTrue(self.frame, "Frame 0 is valid.")
 
-        self.assertTrue(
-            self.frame.GetVariables(
-                True,
-                True,
-                False,
-                True).GetSize() == 2,
+        self.assertEqual(
+            self.frame.GetVariables(True, True, False, True).GetSize(), 2,
             "variable count is off")
         self.assertFalse(
             self.frame.FindValue(
@@ -57,12 +51,8 @@ class SBFrameFindValueTestCase(TestBase):
                 lldb.eValueTypeVariableArgument,
                 lldb.eDynamicCanRunTarget).IsValid(),
             "found something that should not be here")
-        self.assertTrue(
-            self.frame.GetVariables(
-                True,
-                True,
-                False,
-                True).GetSize() == 2,
+        self.assertEqual(
+            self.frame.GetVariables(True, True, False, True).GetSize(), 2,
             "variable count is off after failed FindValue()")
         self.assertTrue(
             self.frame.FindValue(
@@ -70,10 +60,6 @@ class SBFrameFindValueTestCase(TestBase):
                 lldb.eValueTypeVariableArgument,
                 lldb.eDynamicCanRunTarget).IsValid(),
             "FindValue() didn't find an argument")
-        self.assertTrue(
-            self.frame.GetVariables(
-                True,
-                True,
-                False,
-                True).GetSize() == 2,
+        self.assertEqual(
+            self.frame.GetVariables(True, True, False, True).GetSize(), 2,
             "variable count is off after successful FindValue()")

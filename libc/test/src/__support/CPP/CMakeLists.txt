@@ -1,81 +1,113 @@
-add_libc_testsuite(libc_cpp_utils_unittests)
+add_custom_target(libc-cpp-utils-tests)
 
-add_libc_unittest(
+add_libc_test(
   bitset_test
   SUITE
-    libc_cpp_utils_unittests
+    libc-cpp-utils-tests
   SRCS
     bitset_test.cpp
   DEPENDS
     libc.src.__support.CPP.bitset
 )
 
-add_libc_unittest(
+add_libc_test(
+  cstddef_test
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    cstddef_test.cpp
+  DEPENDS
+    libc.src.__support.CPP.cstddef
+)
+
+add_libc_test(
   stringview_test
   SUITE
-    libc_cpp_utils_unittests
+    libc-cpp-utils-tests
   SRCS
     stringview_test.cpp
   DEPENDS
     libc.src.__support.CPP.string_view
 )
 
-add_libc_unittest(
+add_libc_test(
   limits_test
   SUITE
-    libc_cpp_utils_unittests
+    libc-cpp-utils-tests
   SRCS
     limits_test.cpp
   DEPENDS
     libc.src.__support.CPP.limits
+    libc.src.__support.uint
 )
 
-add_libc_unittest(
-  arrayref_test
-  SUITE
-    libc_cpp_utils_unittests
-  SRCS
-    arrayref_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.array_ref
-)
-
-add_libc_unittest(
-  vector_test
-  SUITE
-    libc_cpp_utils_unittests
-  SRCS
-    vector_test.cpp
-  DEPENDS
-    libc.src.__support.CPP.vector
-)
-
-add_libc_unittest(
+add_libc_test(
   int_seq_test
   SUITE
-    libc_cpp_utils_unittests
+    libc-cpp-utils-tests
   SRCS
     integer_sequence_test.cpp
   DEPENDS
     libc.src.__support.CPP.utility
 )
 
-add_libc_unittest(
-  atomic_test
+
+# This test fails with invalid address space operations on sm_60
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    atomic_test
+    SUITE
+      libc-cpp-utils-tests
+    SRCS
+      atomic_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.atomic
+  )
+endif()
+
+# This test fails with a segmentation fault on NVPTX.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_libc_test(
+    stringstream_test
+    SUITE
+      libc-cpp-utils-tests
+    SRCS
+      stringstream_test.cpp
+    DEPENDS
+      libc.src.__support.CPP.span
+      libc.src.__support.CPP.stringstream
+  )
+endif()
+
+add_libc_test(
+  optional_test
   SUITE
-    libc_cpp_utils_unittests
+    libc-cpp-utils-tests
   SRCS
-    atomic_test.cpp
+    optional_test.cpp
   DEPENDS
-    libc.src.__support.CPP.atomic
+    libc.src.__support.CPP.optional
 )
 
-add_libc_unittest(
-  blockstore_test
+add_libc_test(
+  span_test
   SUITE
-    libc_cpp_utils_unittests
+    libc-cpp-utils-tests
   SRCS
-    blockstore_test.cpp
+    span_test.cpp
   DEPENDS
-    libc.src.__support.CPP.blockstore
+    libc.src.__support.CPP.span
+)
+
+add_libc_test(
+  string_test
+  # This test relies on 'realloc' which is not implemented for hermetic tests.
+  UNIT_TEST_ONLY
+  SUITE
+    libc-cpp-utils-tests
+  SRCS
+    string_test.cpp
+  DEPENDS
+  libc.src.__support.CPP.string
+  libc.src.__support.CPP.string_view
 )

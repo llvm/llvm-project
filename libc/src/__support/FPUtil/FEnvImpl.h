@@ -9,42 +9,77 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
+#include "src/__support/macros/properties/architectures.h"
+#include "src/errno/libc_errno.h"
 
-#if defined(LLVM_LIBC_ARCH_AARCH64)
+#include <fenv.h>
+#include <math.h>
+
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #if defined(__APPLE__)
 #include "aarch64/fenv_darwin_impl.h"
 #else
 #include "aarch64/FEnvImpl.h"
 #endif
-#elif defined(LLVM_LIBC_ARCH_X86)
-#include "x86_64/FEnvImpl.h"
-#else
-#include <fenv.h>
 
-namespace __llvm_libc {
-namespace fputil {
+// The extra !defined(APPLE) condition is to cause x86_64 MacOS builds to use
+// the dummy implementations below. Once a proper x86_64 darwin fenv is set up,
+// the apple condition here should be removed.
+#elif defined(LIBC_TARGET_ARCH_IS_X86) && !defined(__APPLE__)
+#include "x86_64/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_ARM)
+#include "arm/FEnvImpl.h"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#include "riscv64/FEnvImpl.h"
+#else
+
+namespace __llvm_libc::fputil {
 
 // All dummy functions silently succeed.
 
-static inline int clear_except(int) { return 0; }
+LIBC_INLINE int clear_except(int) { return 0; }
 
-static inline int test_except(int) { return 0; }
+LIBC_INLINE int test_except(int) { return 0; }
 
-static inline int set_except(int) { return 0; }
+LIBC_INLINE int set_except(int) { return 0; }
 
-static inline int raise_except(int) { return 0; }
+LIBC_INLINE int raise_except(int) { return 0; }
 
-static inline int get_round() { return FE_TONEAREST; }
+LIBC_INLINE int enable_except(int) { return 0; }
 
-static inline int set_round(int) { return 0; }
+LIBC_INLINE int disable_except(int) { return 0; }
 
-static inline int get_env(fenv_t *) { return 0; }
+LIBC_INLINE int get_round() { return FE_TONEAREST; }
 
-static inline int set_env(const fenv_t *) { return 0; }
+LIBC_INLINE int set_round(int) { return 0; }
 
-} // namespace fputil
-} // namespace __llvm_libc
+LIBC_INLINE int get_env(fenv_t *) { return 0; }
+
+LIBC_INLINE int set_env(const fenv_t *) { return 0; }
+
+} // namespace __llvm_libc::fputil
 #endif
+
+namespace __llvm_libc::fputil {
+
+LIBC_INLINE int set_except_if_required(int excepts) {
+  if (math_errhandling & MATH_ERREXCEPT)
+    return set_except(excepts);
+  return 0;
+}
+
+LIBC_INLINE int raise_except_if_required(int excepts) {
+  if (math_errhandling & MATH_ERREXCEPT)
+    return raise_except(excepts);
+  return 0;
+}
+
+LIBC_INLINE void set_errno_if_required(int err) {
+  if (math_errhandling & MATH_ERRNO)
+    libc_errno = err;
+}
+
+} // namespace __llvm_libc::fputil
 
 #endif // LLVM_LIBC_SRC_SUPPORT_FPUTIL_FENVIMPL_H

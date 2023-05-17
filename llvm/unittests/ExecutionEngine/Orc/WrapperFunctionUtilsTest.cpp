@@ -58,6 +58,11 @@ TEST(WrapperFunctionUtilsTest, WrapperFunctionResultFromOutOfBandError) {
   EXPECT_TRUE(strcmp(R.getOutOfBandError(), TestString) == 0);
 }
 
+TEST(WrapperFunctionUtilsTest, WrapperFunctionCCallCreateEmpty) {
+  EXPECT_THAT_EXPECTED(
+      WrapperFunctionCall::Create<SPSArgList<>>(ExecutorAddr()), Succeeded());
+}
+
 static void voidNoop() {}
 
 class AddClass {

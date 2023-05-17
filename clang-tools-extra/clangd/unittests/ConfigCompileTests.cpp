@@ -13,13 +13,12 @@
 #include "Feature.h"
 #include "TestFS.h"
 #include "clang/Basic/DiagnosticSema.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SourceMgr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -250,19 +249,19 @@ TEST_F(ConfigCompileTests, DiagnosticsIncludeCleaner) {
   // Defaults to None.
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::UnusedIncludesPolicy::None);
+            Config::IncludesPolicy::None);
 
   Frag = {};
   Frag.Diagnostics.UnusedIncludes.emplace("None");
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::UnusedIncludesPolicy::None);
+            Config::IncludesPolicy::None);
 
   Frag = {};
   Frag.Diagnostics.UnusedIncludes.emplace("Strict");
   EXPECT_TRUE(compileAndApply());
   EXPECT_EQ(Conf.Diagnostics.UnusedIncludes,
-            Config::UnusedIncludesPolicy::Strict);
+            Config::IncludesPolicy::Strict);
 
   Frag = {};
   EXPECT_TRUE(Conf.Diagnostics.Includes.IgnoreHeader.empty())
@@ -436,7 +435,7 @@ TEST_F(ConfigCompileTests, ExternalBlockDisablesBackgroundIndex) {
 
 TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   auto GetFrag = [](llvm::StringRef Directory,
-                    llvm::Optional<const char *> MountPoint) {
+                    std::optional<const char *> MountPoint) {
     Fragment Frag;
     Frag.Source.Directory = Directory.str();
     Fragment::IndexBlock::ExternalBlock External;
@@ -471,7 +470,7 @@ TEST_F(ConfigCompileTests, ExternalBlockMountPoint) {
   EXPECT_THAT(Conf.Index.External.MountPoint, FooPath);
 
   // None defaults to ".".
-  Frag = GetFrag(FooPath, llvm::None);
+  Frag = GetFrag(FooPath, std::nullopt);
   compileAndApply();
   ASSERT_THAT(Diags.Diagnostics, IsEmpty());
   ASSERT_EQ(Conf.Index.External.Kind, Config::ExternalIndexSpec::File);
@@ -535,6 +534,29 @@ TEST_F(ConfigCompileTests, AllScopes) {
   Frag.Completion.AllScopes = true;
   EXPECT_TRUE(compileAndApply());
   EXPECT_TRUE(Conf.Completion.AllScopes);
+}
+
+TEST_F(ConfigCompileTests, Style) {
+  Frag = {};
+  Frag.Style.FullyQualifiedNamespaces.push_back(std::string("foo"));
+  Frag.Style.FullyQualifiedNamespaces.push_back(std::string("bar"));
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_THAT(Conf.Style.FullyQualifiedNamespaces, ElementsAre("foo", "bar"));
+}
+
+TEST_F(ConfigCompileTests, AllowDiagsFromStalePreamble) {
+  Frag = {};
+  EXPECT_TRUE(compileAndApply());
+  // Off by default.
+  EXPECT_EQ(Conf.Diagnostics.AllowStalePreamble, false);
+
+  Frag.Diagnostics.AllowStalePreamble.emplace(true);
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Diagnostics.AllowStalePreamble, true);
+
+  Frag.Diagnostics.AllowStalePreamble.emplace(false);
+  EXPECT_TRUE(compileAndApply());
+  EXPECT_EQ(Conf.Diagnostics.AllowStalePreamble, false);
 }
 } // namespace
 } // namespace config

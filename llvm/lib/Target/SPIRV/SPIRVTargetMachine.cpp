@@ -25,11 +25,11 @@
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetLoweringObjectFileImpl.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Target/TargetOptions.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -52,7 +52,7 @@ static std::string computeDataLayout(const Triple &TT) {
          "v96:128-v192:256-v256:256-v512:512-v1024:1024";
 }
 
-static Reloc::Model getEffectiveRelocModel(Optional<Reloc::Model> RM) {
+static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM) {
   if (!RM)
     return Reloc::PIC_;
   return *RM;
@@ -64,13 +64,13 @@ SPIRVTargetObjectFile::~SPIRVTargetObjectFile() {}
 SPIRVTargetMachine::SPIRVTargetMachine(const Target &T, const Triple &TT,
                                        StringRef CPU, StringRef FS,
                                        const TargetOptions &Options,
-                                       Optional<Reloc::Model> RM,
-                                       Optional<CodeModel::Model> CM,
+                                       std::optional<Reloc::Model> RM,
+                                       std::optional<CodeModel::Model> CM,
                                        CodeGenOpt::Level OL, bool JIT)
     : LLVMTargetMachine(T, computeDataLayout(TT), TT, CPU, FS, Options,
                         getEffectiveRelocModel(RM),
                         getEffectiveCodeModel(CM, CodeModel::Small), OL),
-      TLOF(std::make_unique<TargetLoweringObjectFileELF>()),
+      TLOF(std::make_unique<SPIRVTargetObjectFile>()),
       Subtarget(TT, CPU.str(), FS.str(), *this) {
   initAsmInfo();
   setGlobalISel(true);
@@ -123,6 +123,7 @@ void SPIRVPassConfig::addPostRegAlloc() {
   disablePass(&PatchableFunctionID);
   disablePass(&ShrinkWrapID);
   disablePass(&LiveDebugValuesID);
+  disablePass(&MachineLateInstrsCleanupID);
 
   // Do not work with OpPhi.
   disablePass(&BranchFolderPassID);
@@ -140,7 +141,11 @@ TargetPassConfig *SPIRVTargetMachine::createPassConfig(PassManagerBase &PM) {
   return new SPIRVPassConfig(*this, PM);
 }
 
-void SPIRVPassConfig::addIRPasses() { TargetPassConfig::addIRPasses(); }
+void SPIRVPassConfig::addIRPasses() {
+  TargetPassConfig::addIRPasses();
+  addPass(createSPIRVRegularizerPass());
+  addPass(createSPIRVPrepareFunctionsPass());
+}
 
 void SPIRVPassConfig::addISelPrepare() {
   addPass(createSPIRVEmitIntrinsicsPass(&getTM<SPIRVTargetMachine>()));
@@ -156,13 +161,13 @@ void SPIRVPassConfig::addPreLegalizeMachineIR() {
   addPass(createSPIRVPreLegalizerPass());
 }
 
-// Use a default legalizer.
+// Use the default legalizer.
 bool SPIRVPassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
 }
 
-// Do not add a RegBankSelect pass, as we only ever need virtual registers.
+// Do not add the RegBankSelect pass, as we only ever need virtual registers.
 bool SPIRVPassConfig::addRegBankSelect() {
   disablePass(&RegBankSelect::ID);
   return false;
@@ -180,6 +185,7 @@ class SPIRVInstructionSelect : public InstructionSelect {
 };
 } // namespace
 
+// Add the custom SPIRVInstructionSelect from above.
 bool SPIRVPassConfig::addGlobalInstructionSelect() {
   addPass(new SPIRVInstructionSelect());
   return false;

@@ -13,8 +13,8 @@ define void @test1(i1 %cmp) align 2 {
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rsp, %rcx
+; CHECK-NEXT:    movq %rsp, %rax
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    cmovneq %rax, %rcx
 ; CHECK-NEXT:    movups (%rcx), %xmm0
 ; CHECK-NEXT:    callq _sink
@@ -23,8 +23,8 @@ define void @test1(i1 %cmp) align 2 {
   %1 = alloca  <2 x double>, align 16
   %2 = alloca  <2 x double>, align 8
 
-  %val = load <2 x double>, <2 x double>* %1, align 16
-  %val2 = load <2 x double>, <2 x double>* %2, align 8
+  %val = load <2 x double>, ptr %1, align 16
+  %val2 = load <2 x double>, ptr %2, align 8
   %val3 = select i1 %cmp, <2 x double> %val, <2 x double> %val2
   call void @sink(<2 x double> %val3)
   ret void
@@ -36,8 +36,8 @@ define void @test2(i1 %cmp) align 2 {
 ; CHECK-NEXT:    subq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    testb $1, %dil
-; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; CHECK-NEXT:    movq %rsp, %rcx
+; CHECK-NEXT:    movq %rsp, %rax
+; CHECK-NEXT:    leaq {{[0-9]+}}(%rsp), %rcx
 ; CHECK-NEXT:    cmovneq %rax, %rcx
 ; CHECK-NEXT:    movaps (%rcx), %xmm0
 ; CHECK-NEXT:    callq _sink
@@ -46,8 +46,8 @@ define void @test2(i1 %cmp) align 2 {
   %1 = alloca  <2 x double>, align 16
   %2 = alloca  <2 x double>, align 8
 
-  %val = load <2 x double>, <2 x double>* %1, align 16
-  %val2 = load <2 x double>, <2 x double>* %2, align 16
+  %val = load <2 x double>, ptr %1, align 16
+  %val2 = load <2 x double>, ptr %2, align 16
   %val3 = select i1 %cmp, <2 x double> %val, <2 x double> %val2
   call void @sink(<2 x double> %val3)
   ret void

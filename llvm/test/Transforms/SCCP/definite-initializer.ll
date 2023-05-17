@@ -4,8 +4,8 @@
 ; CHECK-LABEL: @test1(
 define i32 @test1() {
 entry:
-  %load = load i32, i32* @d, align 4
+  %load = load i32, ptr @d, align 4
   ret i32 %load
-; CHECK: %[[load:.*]] = load i32, i32* @d, align 4
+; CHECK: %[[load:.*]] = load i32, ptr @d, align 4
 ; CHECK: ret i32 %[[load]]
 }

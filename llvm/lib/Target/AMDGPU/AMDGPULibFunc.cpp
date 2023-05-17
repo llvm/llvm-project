@@ -20,6 +20,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/ValueSymbolTable.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ModRef.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -347,7 +348,7 @@ const UnmangledFuncInfo UnmangledFuncInfo::Table[] = {
 };
 
 const unsigned UnmangledFuncInfo::TableSize =
-    array_lengthof(UnmangledFuncInfo::Table);
+    std::size(UnmangledFuncInfo::Table);
 
 static AMDGPULibFunc::Param getRetType(AMDGPULibFunc::EFuncId id,
                                        const AMDGPULibFunc::Param (&Leads)[2]) {
@@ -555,7 +556,7 @@ static AMDGPULibFunc::ENamePrefix parseNamePrefix(StringRef& mangledName) {
 }
 
 StringMap<int> ManglingRule::buildManglingRulesMap() {
-  StringMap<int> Map(array_lengthof(manglingRules));
+  StringMap<int> Map(std::size(manglingRules));
   int Id = 0;
   for (auto Rule : manglingRules)
     Map.insert({Rule.Name, Id++});
@@ -992,7 +993,8 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
   } else {
     AttributeList Attr;
     LLVMContext &Ctx = M->getContext();
-    Attr = Attr.addFnAttribute(Ctx, Attribute::ReadOnly);
+    Attr = Attr.addFnAttribute(
+        Ctx, Attribute::getWithMemoryEffects(Ctx, MemoryEffects::readOnly()));
     Attr = Attr.addFnAttribute(Ctx, Attribute::NoUnwind);
     C = M->getOrInsertFunction(FuncName, FuncTy, Attr);
   }

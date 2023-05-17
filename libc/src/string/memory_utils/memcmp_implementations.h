@@ -9,95 +9,109 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCMP_IMPLEMENTATIONS_H
 
-#include "src/__support/architectures.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/elements.h"
+#include "src/__support/macros/optimization.h" // LIBC_UNLIKELY LIBC_LOOP_NOUNROLL
+#include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/op_generic.h"
+#include "src/string/memory_utils/utils.h" // CPtr MemcmpReturnType
 
 #include <stddef.h> // size_t
 
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/memcmp_implementations.h"
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#include "src/string/memory_utils/aarch64/memcmp_implementations.h"
+#endif
+
 namespace __llvm_libc {
 
-static inline int inline_memcmp(const char *lhs, const char *rhs,
-                                size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_X86
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::x86;
-  if (count == 0)
-    return 0;
-  if (count == 1)
-    return three_way_compare<_1>(lhs, rhs);
-  if (count == 2)
-    return three_way_compare<_2>(lhs, rhs);
-  if (count == 3)
-    return three_way_compare<_3>(lhs, rhs);
-  if (count <= 8)
-    return three_way_compare<HeadTail<_4>>(lhs, rhs, count);
-  if (count <= 16)
-    return three_way_compare<HeadTail<_8>>(lhs, rhs, count);
-  if (count <= 32)
-    return three_way_compare<HeadTail<_16>>(lhs, rhs, count);
-  if (count <= 64)
-    return three_way_compare<HeadTail<_32>>(lhs, rhs, count);
-  if (count <= 128)
-    return three_way_compare<HeadTail<_64>>(lhs, rhs, count);
-  return three_way_compare<Align<_32>::Then<Loop<_32>>>(lhs, rhs, count);
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_AARCH64
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace ::__llvm_libc::aarch64;
-  if (count == 0) // [0, 0]
-    return 0;
-  if (count == 1) // [1, 1]
-    return three_way_compare<_1>(lhs, rhs);
-  if (count == 2) // [2, 2]
-    return three_way_compare<_2>(lhs, rhs);
-  if (count == 3) // [3, 3]
-    return three_way_compare<_3>(lhs, rhs);
-  if (count < 8) // [4, 7]
-    return three_way_compare<HeadTail<_4>>(lhs, rhs, count);
-  if (count < 16) // [8, 15]
-    return three_way_compare<HeadTail<_8>>(lhs, rhs, count);
-  if (unlikely(count >= 128)) // [128, ∞]
-    return three_way_compare<Align<_16>::Then<Loop<_32>>>(lhs, rhs, count);
-  if (!equals<_16>(lhs, rhs)) // [16, 16]
-    return three_way_compare<_16>(lhs, rhs);
-  if (count < 32) // [17, 31]
-    return three_way_compare<Tail<_16>>(lhs, rhs, count);
-  if (!equals<Skip<16>::Then<_16>>(lhs, rhs)) // [32, 32]
-    return three_way_compare<Skip<16>::Then<_16>>(lhs, rhs);
-  if (count < 64) // [33, 63]
-    return three_way_compare<Tail<_32>>(lhs, rhs, count);
-  // [64, 127]
-  return three_way_compare<Skip<32>::Then<Loop<_16>>>(lhs, rhs, count);
-#else
-  /////////////////////////////////////////////////////////////////////////////
-  // Default
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace ::__llvm_libc::scalar;
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
+inline_memcmp_byte_per_byte(CPtr p1, CPtr p2, size_t offset, size_t count) {
+  LIBC_LOOP_NOUNROLL
+  for (; offset < count; ++offset)
+    if (auto value = generic::Memcmp<1>::block(p1 + offset, p2 + offset))
+      return value;
+  return MemcmpReturnType::ZERO();
+}
 
-  if (count == 0)
-    return 0;
-  if (count == 1)
-    return three_way_compare<_1>(lhs, rhs);
-  if (count == 2)
-    return three_way_compare<_2>(lhs, rhs);
-  if (count == 3)
-    return three_way_compare<_3>(lhs, rhs);
-  if (count <= 8)
-    return three_way_compare<HeadTail<_4>>(lhs, rhs, count);
-  if (count <= 16)
-    return three_way_compare<HeadTail<_8>>(lhs, rhs, count);
-  if (count <= 32)
-    return three_way_compare<HeadTail<_16>>(lhs, rhs, count);
-  if (count <= 64)
-    return three_way_compare<HeadTail<_32>>(lhs, rhs, count);
-  if (count <= 128)
-    return three_way_compare<HeadTail<_64>>(lhs, rhs, count);
-  return three_way_compare<Align<_32>::Then<Loop<_32>>>(lhs, rhs, count);
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
+inline_memcmp_aligned_access_64bit(CPtr p1, CPtr p2, size_t count) {
+  constexpr size_t kAlign = sizeof(uint64_t);
+  if (count <= 2 * kAlign)
+    return inline_memcmp_byte_per_byte(p1, p2, 0, count);
+  size_t bytes_to_p1_align = distance_to_align_up<kAlign>(p1);
+  if (auto value = inline_memcmp_byte_per_byte(p1, p2, 0, bytes_to_p1_align))
+    return value;
+  size_t offset = bytes_to_p1_align;
+  size_t p2_alignment = distance_to_align_down<kAlign>(p2 + offset);
+  for (; offset < count - kAlign; offset += kAlign) {
+    uint64_t b;
+    if (p2_alignment == 0)
+      b = load64_aligned<uint64_t>(p2, offset);
+    else if (p2_alignment == 4)
+      b = load64_aligned<uint32_t, uint32_t>(p2, offset);
+    else if (p2_alignment == 2)
+      b = load64_aligned<uint16_t, uint16_t, uint16_t, uint16_t>(p2, offset);
+    else
+      b = load64_aligned<uint8_t, uint16_t, uint16_t, uint16_t, uint8_t>(
+          p2, offset);
+    uint64_t a = load64_aligned<uint64_t>(p1, offset);
+    if (a != b) {
+      // TODO use cmp_neq_uint64_t from D148717 once it's submitted.
+      return Endian::to_big_endian(a) < Endian::to_big_endian(b) ? -1 : 1;
+    }
+  }
+  return inline_memcmp_byte_per_byte(p1, p2, offset, count);
+}
+
+[[maybe_unused]] LIBC_INLINE MemcmpReturnType
+inline_memcmp_aligned_access_32bit(CPtr p1, CPtr p2, size_t count) {
+  constexpr size_t kAlign = sizeof(uint32_t);
+  if (count <= 2 * kAlign)
+    return inline_memcmp_byte_per_byte(p1, p2, 0, count);
+  size_t bytes_to_p1_align = distance_to_align_up<kAlign>(p1);
+  if (auto value = inline_memcmp_byte_per_byte(p1, p2, 0, bytes_to_p1_align))
+    return value;
+  size_t offset = bytes_to_p1_align;
+  size_t p2_alignment = distance_to_align_down<kAlign>(p2 + offset);
+  for (; offset < count - kAlign; offset += kAlign) {
+    uint32_t b;
+    if (p2_alignment == 0)
+      b = load32_aligned<uint32_t>(p2, offset);
+    else if (p2_alignment == 2)
+      b = load32_aligned<uint16_t, uint16_t>(p2, offset);
+    else
+      b = load32_aligned<uint8_t, uint16_t, uint8_t>(p2, offset);
+    uint32_t a = load32_aligned<uint32_t>(p1, offset);
+    if (a != b) {
+      // TODO use cmp_uint32_t from D148717 once it's submitted.
+      // We perform the difference as an uint64_t.
+      const int64_t diff = static_cast<int64_t>(Endian::to_big_endian(a)) -
+                           static_cast<int64_t>(Endian::to_big_endian(b));
+      // And reduce the uint64_t into an uint32_t.
+      return static_cast<int32_t>((diff >> 1) | (diff & 0xFFFF));
+    }
+  }
+  return inline_memcmp_byte_per_byte(p1, p2, offset, count);
+}
+
+LIBC_INLINE MemcmpReturnType inline_memcmp(CPtr p1, CPtr p2, size_t count) {
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+  return inline_memcmp_x86(p1, p2, count);
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+  return inline_memcmp_aarch64(p1, p2, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  return inline_memcmp_aligned_access_64bit(p1, p2, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
+  return inline_memcmp_aligned_access_32bit(p1, p2, count);
+#else
+  return inline_memcmp_byte_per_byte(p1, p2, 0, count);
 #endif
+}
+
+LIBC_INLINE int inline_memcmp(const void *p1, const void *p2, size_t count) {
+  return static_cast<int>(inline_memcmp(reinterpret_cast<CPtr>(p1),
+                                        reinterpret_cast<CPtr>(p2), count));
 }
 
 } // namespace __llvm_libc

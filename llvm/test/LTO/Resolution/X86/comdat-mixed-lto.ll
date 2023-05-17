@@ -8,7 +8,7 @@
 ; The copy of C from this module is prevailing. The copy of C from the
 ; regular LTO module is not prevailing, and will be dropped to
 ; available_externally.
-; RUN: llvm-lto2 run -r=%t1.o,C,pl -r=%t2.o,C,l -r=%t2.o,testglobfunc,lxp -r=%t1.o,testglobfunc,lx -o %t3 %t1.o %t2.o -save-temps
+; RUN: llvm-lto2 run -r=%t1.o,C,pl -r=%t2.o,C,l -r=%t1.o,testglobfunc,lxp -r=%t2.o,testglobfunc,lx -o %t3 %t1.o %t2.o -save-temps
 
 ; The Input module (regular LTO) is %t3.0. Check to make sure that we removed
 ; __cxx_global_var_init and testglobfunc from comdat. Also check to ensure
@@ -16,8 +16,21 @@
 ; have linker multiply defined errors as it is no longer in a comdat and
 ; would clash with the copy from this module.
 ; RUN: llvm-dis %t3.0.0.preopt.bc -o - | FileCheck %s
-; CHECK: define internal void @__cxx_global_var_init() section ".text.startup" {
-; CHECK: define available_externally dso_local void @testglobfunc() section ".text.startup" {
+
+; CHECK: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @C }]
+; CHECK: @C = available_externally dso_local global %"class.Test::ptr" zeroinitializer, align 4
+; CHECK-NOT: declare
+; CHECK: declare dso_local void @__cxx_global_var_init() section ".text.startup"
+; CHECK-NOT: declare
+
+; Check the behavior with the prevailing testglobfunc in %t2.o.
+; RUN: llvm-lto2 run -r=%t1.o,C,pl -r=%t2.o,C,l -r=%t1.o,testglobfunc,lx -r=%t2.o,testglobfunc,plx -o %t4 %t1.o %t2.o -save-temps
+; RUN: llvm-dis %t4.0.0.preopt.bc -o - | FileCheck %s --check-prefix=CHECK2
+
+; CHECK2: @llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @__cxx_global_var_init, ptr @C }]
+; CHECK2: @C = available_externally dso_local global %"class.Test::ptr" zeroinitializer, align 4
+; CHECK2: declare dso_local void @__cxx_global_var_init() section ".text.startup"
+; CHECK2: define available_externally dso_local void @testglobfunc() section ".text.startup" {
 
 ; ModuleID = 'comdat-mixed-lto.o'
 source_filename = "comdat-mixed-lto.cpp"

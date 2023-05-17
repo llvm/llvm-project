@@ -18,7 +18,7 @@ entry:
   %and.i2.i.i.i = bitcast <8 x i16> %and.i.i.i to <2 x i64>
   %or.i.i.i.i = or <2 x i64> %and.i2.i.i.i, %and.i5.i.i.i
   %a37 = bitcast <2 x i64> %or.i.i.i.i to <8 x i16>
-  store <8 x i16> %a37, <8 x i16> addrspace(1)* undef, align 4
+  store <8 x i16> %a37, ptr addrspace(1) undef, align 4
   ret void
 }
 

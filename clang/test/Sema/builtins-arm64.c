@@ -25,7 +25,7 @@ void test_memory_barriers(void) {
 
 void test_prefetch(void) {
   __builtin_arm_prefetch(0, 2, 0, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
-  __builtin_arm_prefetch(0, 0, 3, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
+  __builtin_arm_prefetch(0, 0, 4, 0, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_prefetch(0, 0, 0, 2, 0); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   __builtin_arm_prefetch(0, 0, 0, 0, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
 }

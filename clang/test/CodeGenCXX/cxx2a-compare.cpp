@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | \
+// RUN: %clang_cc1 -std=c++2a -emit-llvm %s -o - -triple %itanium_abi_triple | \
 // RUN:    FileCheck %s \
 // RUN:          '-DSO="class.std::__1::strong_ordering"' \
 // RUN:          '-DPO="class.std::__1::partial_ordering"' \
@@ -18,8 +18,8 @@ auto test_signed(int x, int y) {
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
   // CHECK: %cmp.eq = icmp eq i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], %[[SO]]* %[[DEST]]
-  // CHECK: store i8 %sel.eq, i8* %__value_, align 1
+  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK: store i8 %sel.eq, ptr %__value_, align 1
   // CHECK: ret
   return x <=> y;
 }
@@ -31,8 +31,8 @@ auto test_unsigned(unsigned x, unsigned y) {
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
   // CHECK: %cmp.eq = icmp eq i32 %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], %[[SO]]* %[[DEST]]
-  // CHECK: store i8 %sel.eq, i8* %__value_
+  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK: store i8 %sel.eq, ptr %__value_
   // CHECK: ret
   return x <=> y;
 }
@@ -46,8 +46,8 @@ auto float_test(double x, double y) {
   // CHECK: %sel.gt = select i1 %cmp.gt, i8 [[GT]], i8 %sel.eq
   // CHECK: %cmp.lt = fcmp olt double %{{.+}}, %{{.+}}
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 %sel.gt
-  // CHECK: %__value_ = getelementptr inbounds %[[PO]], %[[PO]]* %[[DEST]]
-  // CHECK: store i8 %sel.lt, i8* %__value_
+  // CHECK: %__value_ = getelementptr inbounds %[[PO]], ptr %[[DEST]]
+  // CHECK: store i8 %sel.lt, ptr %__value_
   // CHECK: ret
   return x <=> y;
 }
@@ -55,12 +55,12 @@ auto float_test(double x, double y) {
 // CHECK-LABEL: @_Z8ptr_testPiS_
 auto ptr_test(int *x, int *y) {
   // CHECK: %[[DEST:retval|agg.result]]
-  // CHECK: %cmp.lt = icmp ult i32* %{{.+}}, %{{.+}}
+  // CHECK: %cmp.lt = icmp ult ptr %{{.+}}, %{{.+}}
   // CHECK: %sel.lt = select i1 %cmp.lt, i8 [[LT]], i8 [[GT]]
-  // CHECK: %cmp.eq = icmp eq i32* %{{.+}}, %{{.+}}
+  // CHECK: %cmp.eq = icmp eq ptr %{{.+}}, %{{.+}}
   // CHECK: %sel.eq = select i1 %cmp.eq, i8 [[EQ]], i8 %sel.lt
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], %[[SO]]* %[[DEST]]
-  // CHECK: store i8 %sel.eq, i8* %__value_, align 1
+  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK: store i8 %sel.eq, ptr %__value_, align 1
   // CHECK: ret
   return x <=> y;
 }
@@ -69,8 +69,8 @@ auto ptr_test(int *x, int *y) {
 auto test_constant() {
   // CHECK: %[[DEST:retval|agg.result]]
   // CHECK-NOT: icmp
-  // CHECK: %__value_ = getelementptr inbounds %[[SO]], %[[SO]]* %[[DEST]]
-  // CHECK-NEXT: store i8 -1, i8* %__value_
+  // CHECK: %__value_ = getelementptr inbounds %[[SO]], ptr %[[DEST]]
+  // CHECK-NEXT: store i8 -1, ptr %__value_
   // CHECK: ret
   const int x = 42;
   const int y = 101;

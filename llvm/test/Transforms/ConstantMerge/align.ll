@@ -8,9 +8,9 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 @T1B = internal unnamed_addr constant i32 1, align 2
 ; CHECK: @T1B = internal unnamed_addr constant i32 1, align 4
 
-define void @test1(i32** %P1, i32** %P2) {
-  store i32* @T1A, i32** %P1
-  store i32* @T1B, i32** %P2
+define void @test1(ptr %P1, ptr %P2) {
+  store ptr @T1A, ptr %P1
+  store ptr @T1B, ptr %P2
   ret void
 }
 
@@ -21,8 +21,8 @@ define void @test1(i32** %P1, i32** %P2) {
 @T2B = internal unnamed_addr constant i32 2, align 2
 ; CHECK: @T2B = internal unnamed_addr constant i32 2, align 2
 
-define void @test2(i32** %P1, i32** %P2) {
-  store i32* @T2A, i32** %P1
-  store i32* @T2B, i32** %P2
+define void @test2(ptr %P1, ptr %P2) {
+  store ptr @T2A, ptr %P1
+  store ptr @T2B, ptr %P2
   ret void
 }

@@ -66,12 +66,15 @@ public:
   /// The type of this jump table.
   JumpTableType Type;
 
+  /// Whether this jump table has entries pointing to multiple functions.
+  bool IsSplit{false};
+
   /// All the entries as labels.
   std::vector<MCSymbol *> Entries;
 
-  /// All the entries as offsets into a function. Invalid after CFG is built.
-  using OffsetsType = std::vector<uint64_t>;
-  OffsetsType OffsetEntries;
+  /// All the entries as absolute addresses. Invalid after disassembly is done.
+  using AddressesType = std::vector<uint64_t>;
+  AddressesType EntriesAsAddress;
 
   /// Map <Offset> -> <Label> used for embedded jump tables. Label at 0 offset
   /// is the main label for the jump table.
@@ -87,18 +90,17 @@ public:
   uint64_t Count{0};
 
   /// BinaryFunction this jump tables belongs to.
-  BinaryFunction *Parent{nullptr};
+  SmallVector<BinaryFunction *, 1> Parents;
 
 private:
   /// Constructor should only be called by a BinaryContext.
   JumpTable(MCSymbol &Symbol, uint64_t Address, size_t EntrySize,
-            JumpTableType Type, LabelMapType &&Labels, BinaryFunction &BF,
-            BinarySection &Section);
+            JumpTableType Type, LabelMapType &&Labels, BinarySection &Section);
 
 public:
   /// Return the size of the jump table.
   uint64_t getSize() const {
-    return std::max(OffsetEntries.size(), Entries.size()) * EntrySize;
+    return std::max(EntriesAsAddress.size(), Entries.size()) * EntrySize;
   }
 
   const MCSymbol *getFirstLabel() const {
@@ -110,7 +112,7 @@ public:
   /// starting at (or containing) 'Addr'.
   std::pair<size_t, size_t> getEntriesForAddress(const uint64_t Addr) const;
 
-  virtual bool isJumpTable() const override { return true; }
+  bool isJumpTable() const override { return true; }
 
   /// Change all entries of the jump table in \p JTAddress pointing to
   /// \p OldDest to \p NewDest. Return false if unsuccessful.
@@ -121,7 +123,7 @@ public:
   void updateOriginal();
 
   /// Print for debugging purposes.
-  virtual void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS) const override;
 };
 
 } // namespace bolt

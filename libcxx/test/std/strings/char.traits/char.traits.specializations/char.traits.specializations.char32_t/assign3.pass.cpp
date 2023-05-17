@@ -19,16 +19,14 @@
 
 TEST_CONSTEXPR_CXX20 bool test()
 {
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     char32_t s2[3] = {0};
     assert(std::char_traits<char32_t>::assign(s2, 3, char32_t(5)) == s2);
     assert(s2[0] == char32_t(5));
     assert(s2[1] == char32_t(5));
     assert(s2[2] == char32_t(5));
     assert(std::char_traits<char32_t>::assign(NULL, 0, char32_t(5)) == NULL);
-#endif // TEST_HAS_NO_UNICODE_CHARS
 
-  return true;
+    return true;
 }
 
 int main(int, char**)

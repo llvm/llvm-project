@@ -107,21 +107,19 @@ void DynoStats::print(raw_ostream &OS, const DynoStats *Other,
       SortedHistogram.emplace_back(Stat.second.first, Stat.first);
 
     // Sort using lexicographic ordering
-    std::sort(SortedHistogram.begin(), SortedHistogram.end());
+    llvm::sort(SortedHistogram);
 
     // Dump in ascending order: Start with Opcode with Highest execution
     // count.
-    for (auto Stat = SortedHistogram.rbegin(); Stat != SortedHistogram.rend();
-         ++Stat) {
-      OS << format("%20s,%'18lld", Printer->getOpcodeName(Stat->second).data(),
-                   Stat->first * opts::DynoStatsScale);
+    for (auto &Stat : llvm::reverse(SortedHistogram)) {
+      OS << format("%20s,%'18lld", Printer->getOpcodeName(Stat.second).data(),
+                   Stat.first * opts::DynoStatsScale);
 
-      MaxOpcodeHistogramTy MaxMultiMap =
-          OpcodeHistogram.at(Stat->second).second;
+      MaxOpcodeHistogramTy MaxMultiMap = OpcodeHistogram.at(Stat.second).second;
       // Start with function name:BB offset with highest execution count.
-      for (auto Max = MaxMultiMap.rbegin(); Max != MaxMultiMap.rend(); ++Max) {
-        OS << format(", %'18lld, ", Max->first * opts::DynoStatsScale)
-           << Max->second.first.str() << ':' << Max->second.second;
+      for (auto &Max : llvm::reverse(MaxMultiMap)) {
+        OS << format(", %'18lld, ", Max.first * opts::DynoStatsScale)
+           << Max.second.first.str() << ':' << Max.second.second;
       }
       OS << '\n';
     }
@@ -145,20 +143,20 @@ void DynoStats::operator+=(const DynoStats &Other) {
       auto &OtherMMap = Stat.second.second;
       auto Size = MMap.size();
       assert(Size <= opts::PrintDynoOpcodeStat);
-      for (auto Iter = OtherMMap.rbegin(); Iter != OtherMMap.rend(); ++Iter) {
+      for (auto OtherMMapPair : llvm::reverse(OtherMMap)) {
         if (Size++ >= opts::PrintDynoOpcodeStat) {
           auto First = MMap.begin();
-          if (Iter->first <= First->first)
+          if (OtherMMapPair.first <= First->first)
             break;
           MMap.erase(First);
         }
-        MMap.emplace(*Iter);
+        MMap.emplace(OtherMMapPair);
       }
     }
   }
 }
 
-DynoStats getDynoStats(const BinaryFunction &BF) {
+DynoStats getDynoStats(BinaryFunction &BF) {
   auto &BC = BF.getBinaryContext();
 
   DynoStats Stats(/*PrintAArch64Stats*/ BC.isAArch64());
@@ -169,9 +167,9 @@ DynoStats getDynoStats(const BinaryFunction &BF) {
 
   // Update enumeration of basic blocks for correct detection of branch'
   // direction.
-  BF.updateLayoutIndices();
+  BF.getLayout().updateLayoutIndices();
 
-  for (BinaryBasicBlock *const &BB : BF.layout()) {
+  for (BinaryBasicBlock *const BB : BF.getLayout().blocks()) {
     // The basic block execution count equals to the sum of incoming branch
     // frequencies. This may deviate from the sum of outgoing branches of the
     // basic block especially since the block may contain a function that

@@ -12,6 +12,6 @@ define void @test () {
 ; X64:       # %bb.0:
 ; X64-NEXT:    movb $0, (%rax)
 ; X64-NEXT:    retq
-  store <2 x i4> zeroinitializer, <2 x i4>* undef, align 1
+  store <2 x i4> zeroinitializer, ptr undef, align 1
   ret void
 }

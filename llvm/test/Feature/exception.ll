@@ -2,11 +2,11 @@
 ; RUN: llvm-as %t1.ll -o - | llvm-dis > %t2.ll
 ; RUN: diff %t1.ll %t2.ll
 
-@_ZTIc = external constant i8*
-@_ZTId = external constant i8*
-@_ZTIPKc = external constant i8*
+@_ZTIc = external constant ptr
+@_ZTId = external constant ptr
+@_ZTIPKc = external constant ptr
 
-define void @_Z3barv() uwtable optsize ssp personality i32 (...)* @__gxx_personality_v0 {
+define void @_Z3barv() uwtable optsize ssp personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %try.cont unwind label %lpad
@@ -15,18 +15,18 @@ try.cont:                                         ; preds = %entry, %invoke.cont
   ret void
 
 lpad:                                             ; preds = %entry
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
-            catch i8** @_ZTIc
-            filter [2 x i8**] [i8** @_ZTIPKc, i8** @_ZTId]
-  resume { i8*, i32 } %exn
+            catch ptr @_ZTIc
+            filter [2 x ptr] [ptr @_ZTIPKc, ptr @_ZTId]
+  resume { ptr, i32 } %exn
 }
 
 declare void @_Z3quxv() optsize
 
 declare i32 @__gxx_personality_v0(...)
 
-define void @cleanupret0() personality i32 (...)* @__gxx_personality_v0 {
+define void @cleanupret0() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
@@ -38,7 +38,7 @@ exit:
 }
 
 ; forward ref by name
-define void @cleanupret1() personality i32 (...)* @__gxx_personality_v0 {
+define void @cleanupret1() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
@@ -52,7 +52,7 @@ exit:
 }
 
 ; forward ref by ID
-define void @cleanupret2() personality i32 (...)* @__gxx_personality_v0 {
+define void @cleanupret2() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
@@ -65,7 +65,7 @@ exit:
   ret void
 }
 
-define void @catchret0() personality i32 (...)* @__gxx_personality_v0 {
+define void @catchret0() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
@@ -79,7 +79,7 @@ exit:
 }
 
 ; forward ref by name
-define void @catchret1() personality i32 (...)* @__gxx_personality_v0 {
+define void @catchret1() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
@@ -95,7 +95,7 @@ exit:
 }
 
 ; forward ref by ID
-define void @catchret2() personality i32 (...)* @__gxx_personality_v0 {
+define void @catchret2() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %pad
@@ -110,7 +110,7 @@ exit:
   ret void
 }
 
-define i8 @catchpad() personality i32 (...)* @__gxx_personality_v0 {
+define i8 @catchpad() personality ptr @__gxx_personality_v0 {
 entry:
   invoke void @_Z3quxv() optsize
           to label %exit unwind label %bb2
@@ -123,7 +123,7 @@ exit:
   ret i8 0
 }
 
-define void @cleanuppad() personality i32 (...)* @__gxx_personality_v0 {
+define void @cleanuppad() personality ptr @__gxx_personality_v0 {
 entry:
   br label %try.cont
 

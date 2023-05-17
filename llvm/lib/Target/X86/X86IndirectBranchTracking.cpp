@@ -102,23 +102,10 @@ static bool needsPrologueENDBR(MachineFunction &MF, const Module *M) {
   if (F.doesNoCfCheck())
     return false;
 
-  const X86TargetMachine *TM =
-      static_cast<const X86TargetMachine *>(&MF.getTarget());
-  Metadata *IBTSeal = M->getModuleFlag("ibt-seal");
-
-  switch (TM->getCodeModel()) {
+  switch (MF.getTarget().getCodeModel()) {
   // Large code model functions always reachable through indirect calls.
   case CodeModel::Large:
     return true;
-  // Only address taken functions in LTO'ed kernel are reachable indirectly.
-  // IBTSeal implies LTO, thus only check if function is address taken.
-  case CodeModel::Kernel:
-    // Check if ibt-seal was enabled (implies LTO is being used).
-    if (IBTSeal) {
-      return F.hasAddressTaken();
-    }
-    // if !IBTSeal, fall into default case.
-    LLVM_FALLTHROUGH;
   // Address taken or externally linked functions may be reachable.
   default:
     return (F.hasAddressTaken() || !F.hasLocalLinkage());

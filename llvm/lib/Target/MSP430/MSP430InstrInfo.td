@@ -40,9 +40,9 @@ def SDT_MSP430DAdd         : SDTypeProfile<1, 2, [SDTCisSameAs<0, 1>,
 //===----------------------------------------------------------------------===//
 // MSP430 Specific Node Definitions.
 //===----------------------------------------------------------------------===//
-def MSP430retflag  : SDNode<"MSP430ISD::RET_FLAG", SDTNone,
+def MSP430retglue  : SDNode<"MSP430ISD::RET_GLUE", SDTNone,
                        [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
-def MSP430retiflag : SDNode<"MSP430ISD::RETI_FLAG", SDTNone,
+def MSP430retiglue : SDNode<"MSP430ISD::RETI_GLUE", SDTNone,
                        [SDNPHasChain, SDNPOptInGlue, SDNPVariadic]>;
 
 def MSP430rra     : SDNode<"MSP430ISD::RRA", SDTIntUnaryOp, []>;
@@ -227,13 +227,13 @@ let isCodeGenOnly = 1, usesCustomInserter = 1 in {
 
 let isReturn = 1, isTerminator = 1, isBarrier = 1 in {
   def RET  : IForm16<0b0100, DstReg, SrcPostInc, 2,
-                     (outs), (ins), "ret",  [(MSP430retflag)]> {
+                     (outs), (ins), "ret",  [(MSP430retglue)]> {
     let DecoderNamespace = "Delta";
     let rs = 1;
     let rd = 0;
   }
   def RETI : IIForm16<0b110, SrcReg, 2,
-                      (outs), (ins), "reti", [(MSP430retiflag)]> {
+                      (outs), (ins), "reti", [(MSP430retiglue)]> {
     let rs = 0;
   }
 }

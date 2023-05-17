@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=armv7a-none-linux-gnueabi %s -o %t
 // RUN: ld.lld --image-base=0x10000000 %t -o %t2
-// RUN: llvm-objdump --triple=armv7a-none-linux-gnueabi --no-show-raw-insn -d %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex --triple=armv7a-none-linux-gnueabi --no-show-raw-insn -d %t2 | FileCheck %s
 
 /// Check that the ARM ABI rules for undefined weak symbols are applied.
 /// Branch instructions are resolved to the next instruction. Undefined

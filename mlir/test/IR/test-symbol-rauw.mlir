@@ -76,7 +76,7 @@ module {
 
 // -----
 
-// Check that replacement works in any implementations of SubElementsAttrInterface
+// Check that replacement works in any implementations of SubElements.
 module {
     // CHECK: func private @replaced_foo
     func.func private @symbol_foo() attributes {sym.new_name = "replaced_foo" }
@@ -93,4 +93,20 @@ module {
         z_non_symbol_attr_3
       } : () -> ()
     }
+}
+
+// -----
+
+module {
+  // CHECK: module @replaced_foo
+  module @foo attributes {sym.new_name = "replaced_foo" } {
+    // CHECK: func.func private @foo
+    func.func private @foo()
+  }
+
+  // CHECK: foo.op
+  // CHECK-SAME: use = @replaced_foo::@foo
+  "foo.op"() {
+    use = @foo::@foo
+  } : () -> ()
 }

@@ -1,4 +1,4 @@
-// UNSUPPORTED: -aix
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: %clang_cc1 -emit-llvm -o %t/test.bc -F%t/Frameworks %t/test.m -Werror=objc-method-access -DHIDDEN_FIRST=1 \

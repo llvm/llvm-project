@@ -1,4 +1,4 @@
-; RUN: llc --stop-after=virtregrewriter -o - %s | FileCheck %s
+; RUN: llc --stop-after=virtregrewriter -experimental-debug-variable-locations=false -o - %s | FileCheck %s
 
 ; Check that any debug value with 64+ unique machine location operands is set
 ; undef by LiveDebugVariables.
@@ -11,7 +11,7 @@
 ; CHECK: ![[VAR_A:[0-9]+]] = !DILocalVariable(name: "a"
 
 ; CHECK-NOT: DBG_VALUE
-; CHECK: DBG_VALUE_LIST ![[VAR_A]], !DIExpression(DW_OP_LLVM_arg, 0, DW_OP_stack_value), $noreg
+; CHECK: DBG_VALUE_LIST ![[VAR_A]], !DIExpression(DW_OP_LLVM_arg, 0), $noreg
 ; CHECK-NOT: DBG_VALUE
 
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

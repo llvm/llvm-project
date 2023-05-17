@@ -293,33 +293,6 @@ define void @call_inreg_ii(i32* %p, i32 %i1, i32 %i2) {
   ret void
 }
 
-; Structs up to 32 bytes in size can be returned in registers.
-; CHECK-LABEL: ret_i64_pair:
-; CHECK: ldx [%i2], %i0
-; CHECK: ldx [%i3], %i1
-define { i64, i64 } @ret_i64_pair(i32 %a0, i32 %a1, i64* %p, i64* %q) {
-  %r1 = load i64, i64* %p
-  %rv1 = insertvalue { i64, i64 } undef, i64 %r1, 0
-  store i64 0, i64* %p
-  %r2 = load i64, i64* %q
-  %rv2 = insertvalue { i64, i64 } %rv1, i64 %r2, 1
-  ret { i64, i64 } %rv2
-}
-
-; CHECK-LABEL: call_ret_i64_pair:
-; CHECK: call ret_i64_pair
-; CHECK: stx %o0, [%i0]
-; CHECK: stx %o1, [%i0]
-define void @call_ret_i64_pair(i64* %i0) {
-  %rv = call { i64, i64 } @ret_i64_pair(i32 undef, i32 undef,
-                                        i64* undef, i64* undef)
-  %e0 = extractvalue { i64, i64 } %rv, 0
-  store volatile i64 %e0, i64* %i0
-  %e1 = extractvalue { i64, i64 } %rv, 1
-  store i64 %e1, i64* %i0
-  ret void
-}
-
 ; This is not a C struct, the i32 member uses 8 bytes, but the float only 4.
 ; CHECK-LABEL: ret_i32_float_pair:
 ; CHECK: ld [%i2], %i0

@@ -6,7 +6,6 @@
 //
 //===---------------------------------------------------------------------===//
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <span>
 
@@ -23,7 +22,7 @@
 
 #include "test_iterators.h"
 
-template <class T, size_t Extent>
+template <class T, std::size_t Extent>
 constexpr void test_from_range() {
   T val[3]{};
   std::span<T, Extent> s{val};

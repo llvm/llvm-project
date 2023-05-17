@@ -1,4 +1,4 @@
-; RUN: opt -instcombine -S %s -o - | FileCheck %s
+; RUN: opt -passes=instcombine -S %s -o - | FileCheck %s
 
 ; In pr40648 one of two dbg.values used to describe the variable bumble was
 ; being dropped by instcombine. Test that both dbg.values survive instcombine.
@@ -36,7 +36,7 @@ entry:
   %bumble.sroa.3.0.extract.shift = lshr i64 %bumble.coerce, 32
   %bumble.sroa.3.0.extract.trunc = trunc i64 %bumble.sroa.3.0.extract.shift to i32
   call void @llvm.dbg.value(metadata i32 %bumble.sroa.3.0.extract.trunc, metadata !18, metadata !DIExpression(DW_OP_LLVM_fragment, 32, 32)), !dbg !19
-  store i32 1, i32* @global, align 4, !dbg !20
+  store i32 1, ptr @global, align 4, !dbg !20
   call void @llvm.dbg.value(metadata i32 undef, metadata !21, metadata !DIExpression()), !dbg !19
   %retval.sroa.2.0.insert.ext = zext i32 %bumble.sroa.3.0.extract.trunc to i64, !dbg !22
   %retval.sroa.2.0.insert.shift = shl i64 %retval.sroa.2.0.insert.ext, 32, !dbg !22

@@ -7,7 +7,7 @@
 
 @asdf = internal constant [4 x i8] c"asdf"
 
-declare void @puts(i8*)
+declare void @puts(ptr)
 
 define i32 @call_fast_thunk() {
   %r = call x86_fastcallcc i32 (...) @fast_thunk(i32 inreg 1, i32 inreg 2, i32 3)
@@ -15,8 +15,8 @@ define i32 @call_fast_thunk() {
 }
 
 define x86_fastcallcc i32 @fast_thunk(...) {
-  call void @puts(i8* getelementptr ([4 x i8], [4 x i8]* @asdf, i32 0, i32 0))
-  %r = musttail call x86_fastcallcc i32 (...) bitcast (i32 (i32, i32, i32)* @fast_target to i32 (...)*) (...)
+  call void @puts(ptr @asdf)
+  %r = musttail call x86_fastcallcc i32 (...) @fast_target (...)
   ret i32 %r
 }
 
@@ -44,8 +44,8 @@ define i32 @call_vector_thunk() {
 }
 
 define x86_vectorcallcc i32 @vector_thunk(...) {
-  call void @puts(i8* getelementptr ([4 x i8], [4 x i8]* @asdf, i32 0, i32 0))
-  %r = musttail call x86_vectorcallcc i32 (...) bitcast (i32 (i32, i32, i32)* @vector_target to i32 (...)*) (...)
+  call void @puts(ptr @asdf)
+  %r = musttail call x86_vectorcallcc i32 (...) @vector_target (...)
   ret i32 %r
 }
 
@@ -117,8 +117,8 @@ define i32 @call_vector_thunk_prefer256() "min-legal-vector-width"="256" "prefer
 }
 
 define x86_vectorcallcc i32 @vector_thunk_prefer256(...) "min-legal-vector-width"="256" "prefer-vector-width"="256" {
-  call void @puts(i8* getelementptr ([4 x i8], [4 x i8]* @asdf, i32 0, i32 0))
-  %r = musttail call x86_vectorcallcc i32 (...) bitcast (i32 (i32, i32, i32)* @vector_target_prefer256 to i32 (...)*) (...)
+  call void @puts(ptr @asdf)
+  %r = musttail call x86_vectorcallcc i32 (...) @vector_target_prefer256 (...)
   ret i32 %r
 }
 

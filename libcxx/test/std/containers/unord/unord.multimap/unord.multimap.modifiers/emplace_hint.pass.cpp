@@ -20,6 +20,7 @@
 
 #include <unordered_map>
 #include <cassert>
+#include <iterator>
 
 #include "../../../Emplaceable.h"
 #include "min_allocator.h"

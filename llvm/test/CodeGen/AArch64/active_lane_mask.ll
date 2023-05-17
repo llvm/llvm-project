@@ -100,7 +100,6 @@ define <vscale x 8 x i1> @lane_mask_nxv8i1_i8(i8 %index, i8 %TC) {
 ; CHECK-NEXT:    mov z1.h, w1
 ; CHECK-NEXT:    umin z0.h, z0.h, #255
 ; CHECK-NEXT:    and z1.h, z1.h, #0xff
-; CHECK-NEXT:    and z0.h, z0.h, #0xff
 ; CHECK-NEXT:    ptrue p0.h
 ; CHECK-NEXT:    cmphi p0.h, p0/z, z1.h, z0.h
 ; CHECK-NEXT:    ret
@@ -111,16 +110,15 @@ define <vscale x 8 x i1> @lane_mask_nxv8i1_i8(i8 %index, i8 %TC) {
 define <vscale x 4 x i1> @lane_mask_nxv4i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_nxv4i1_i8:
 ; CHECK:       // %bb.0:
+; CHECK-NEXT:    and w8, w0, #0xff
 ; CHECK-NEXT:    index z0.s, #0, #1
-; CHECK-NEXT:    mov z1.s, w0
-; CHECK-NEXT:    and z0.s, z0.s, #0xff
-; CHECK-NEXT:    and z1.s, z1.s, #0xff
-; CHECK-NEXT:    add z0.s, z0.s, z1.s
-; CHECK-NEXT:    mov z1.s, w1
-; CHECK-NEXT:    umin z0.s, z0.s, #255
-; CHECK-NEXT:    and z1.s, z1.s, #0xff
+; CHECK-NEXT:    and w9, w1, #0xff
 ; CHECK-NEXT:    and z0.s, z0.s, #0xff
 ; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    mov z1.s, w8
+; CHECK-NEXT:    add z0.s, z0.s, z1.s
+; CHECK-NEXT:    mov z1.s, w9
+; CHECK-NEXT:    umin z0.s, z0.s, #255
 ; CHECK-NEXT:    cmphi p0.s, p0/z, z1.s, z0.s
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i8(i8 %index, i8 %TC)
@@ -131,17 +129,16 @@ define <vscale x 2 x i1> @lane_mask_nxv2i1_i8(i8 %index, i8 %TC) {
 ; CHECK-LABEL: lane_mask_nxv2i1_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $w0 killed $w0 def $x0
-; CHECK-NEXT:    index z0.d, #0, #1
-; CHECK-NEXT:    mov z1.d, x0
-; CHECK-NEXT:    and z0.d, z0.d, #0xff
-; CHECK-NEXT:    and z1.d, z1.d, #0xff
-; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    and x8, x0, #0xff
 ; CHECK-NEXT:    // kill: def $w1 killed $w1 def $x1
-; CHECK-NEXT:    mov z2.d, x1
-; CHECK-NEXT:    umin z0.d, z0.d, #255
-; CHECK-NEXT:    and z2.d, z2.d, #0xff
-; CHECK-NEXT:    and z0.d, z0.d, #0xff
+; CHECK-NEXT:    and x9, x1, #0xff
+; CHECK-NEXT:    index z0.d, #0, #1
 ; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    and z0.d, z0.d, #0xff
+; CHECK-NEXT:    mov z1.d, x8
+; CHECK-NEXT:    mov z2.d, x9
+; CHECK-NEXT:    add z0.d, z0.d, z1.d
+; CHECK-NEXT:    umin z0.d, z0.d, #255
 ; CHECK-NEXT:    cmphi p0.d, p0/z, z2.d, z0.d
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i8(i8 %index, i8 %TC)
@@ -473,6 +470,58 @@ define <2 x i1> @lane_mask_v2i1_i8(i8 %index, i8 %TC) {
 ; CHECK-NEXT:    ret
   %active.lane.mask = call <2 x i1> @llvm.get.active.lane.mask.v2i1.i8(i8 %index, i8 %TC)
   ret <2 x i1> %active.lane.mask
+}
+
+define <vscale x 4 x i1> @lane_mask_nxv4i1_imm3() {
+; CHECK-LABEL: lane_mask_nxv4i1_imm3:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s, vl3
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 3)
+  ret <vscale x 4 x i1> %active.lane.mask
+}
+
+define <vscale x 4 x i1> @lane_mask_nxv4i1_imm5() {
+; CHECK-LABEL: lane_mask_nxv4i1_imm5:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #5
+; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 5)
+  ret <vscale x 4 x i1> %active.lane.mask
+}
+
+define <vscale x 4 x i1> @lane_mask_nxv4i1_imm4() {
+; CHECK-LABEL: lane_mask_nxv4i1_imm4:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 10, i64 14)
+  ret <vscale x 4 x i1> %active.lane.mask
+}
+
+define <vscale x 16 x i1> @lane_mask_nxv16i1_imm10() {
+; CHECK-LABEL: lane_mask_nxv16i1_imm10:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 10)
+  ret <vscale x 16 x i1> %active.lane.mask
+}
+
+define <vscale x 16 x i1> @lane_mask_nxv16i1_imm256() vscale_range(16, 16) {
+; CHECK-LABEL: lane_mask_nxv16i1_imm256:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.b, vl256
+; CHECK-NEXT:    ret
+entry:
+  %active.lane.mask = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 256)
+  ret <vscale x 16 x i1> %active.lane.mask
 }
 
 

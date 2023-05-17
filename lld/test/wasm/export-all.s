@@ -34,15 +34,24 @@ foo:
 # CHECK-NEXT:       - Name:            __data_end
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           2
-# CHECK-NEXT:       - Name:            __global_base
+# CHECK-NEXT:       - Name:            __stack_low
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           3
-# CHECK-NEXT:       - Name:            __heap_base
+# CHECK-NEXT:       - Name:            __stack_high
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           4
-# CHECK-NEXT:       - Name:            __memory_base
+# CHECK-NEXT:       - Name:            __global_base
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           5
-# CHECK-NEXT:       - Name:            __table_base
+# CHECK-NEXT:       - Name:            __heap_base
 # CHECK-NEXT:         Kind:            GLOBAL
 # CHECK-NEXT:         Index:           6
+# CHECK-NEXT:       - Name:            __heap_end
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           7
+# CHECK-NEXT:       - Name:            __memory_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           8
+# CHECK-NEXT:       - Name:            __table_base
+# CHECK-NEXT:         Kind:            GLOBAL
+# CHECK-NEXT:         Index:           9

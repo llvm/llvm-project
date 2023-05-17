@@ -1,9 +1,9 @@
 ; RUN: opt -passes=bdce -S < %s | FileCheck %s
 
-declare i32 @strlen(i8*) readonly nounwind willreturn
+declare i32 @strlen(ptr) readonly nounwind willreturn
 
 define void @test1() {
-  call i32 @strlen( i8* null )
+  call i32 @strlen( ptr null )
   ret void
 
 ; CHECK-LABEL: @test1
@@ -11,16 +11,16 @@ define void @test1() {
 ; CHECK: ret void
 }
 
-define i32 @test2() personality i32 (...)* @__gxx_personality_v0 {
+define i32 @test2() personality ptr @__gxx_personality_v0 {
   ; invoke of pure function should not be deleted!
-  invoke i32 @strlen( i8* null ) readnone
+  invoke i32 @strlen( ptr null ) readnone
                   to label %Cont unwind label %Other
 
 Cont:           ; preds = %0
   ret i32 0
 
 Other:          ; preds = %0
-   %exn = landingpad {i8*, i32}
+   %exn = landingpad {ptr, i32}
             cleanup
   ret i32 1
 

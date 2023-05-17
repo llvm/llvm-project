@@ -14,7 +14,6 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/CompilationDatabase.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -24,6 +23,7 @@
 #include "gtest/gtest.h"
 #include <chrono>
 #include <fstream>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -63,11 +63,11 @@ static tooling::CompileCommand cmd(llvm::StringRef File, llvm::StringRef Arg) {
 class OverlayCDBTest : public ::testing::Test {
   class BaseCDB : public GlobalCompilationDatabase {
   public:
-    llvm::Optional<tooling::CompileCommand>
+    std::optional<tooling::CompileCommand>
     getCompileCommand(llvm::StringRef File) const override {
       if (File == testPath("foo.cc"))
         return cmd(File, "-DA=1");
-      return None;
+      return std::nullopt;
     }
 
     tooling::CompileCommand
@@ -75,7 +75,7 @@ class OverlayCDBTest : public ::testing::Test {
       return cmd(File, "-DA=2");
     }
 
-    llvm::Optional<ProjectInfo> getProjectInfo(PathRef File) const override {
+    std::optional<ProjectInfo> getProjectInfo(PathRef File) const override {
       return ProjectInfo{testRoot()};
     }
   };
@@ -89,13 +89,13 @@ TEST_F(OverlayCDBTest, GetCompileCommand) {
   OverlayCDB CDB(Base.get());
   EXPECT_THAT(CDB.getCompileCommand(testPath("foo.cc"))->CommandLine,
               AllOf(Contains(testPath("foo.cc")), Contains("-DA=1")));
-  EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), llvm::None);
+  EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), std::nullopt);
 
   auto Override = cmd(testPath("foo.cc"), "-DA=3");
   CDB.setCompileCommand(testPath("foo.cc"), Override);
   EXPECT_THAT(CDB.getCompileCommand(testPath("foo.cc"))->CommandLine,
               Contains("-DA=3"));
-  EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), llvm::None);
+  EXPECT_EQ(CDB.getCompileCommand(testPath("missing.cc")), std::nullopt);
   CDB.setCompileCommand(testPath("missing.cc"), Override);
   EXPECT_THAT(CDB.getCompileCommand(testPath("missing.cc"))->CommandLine,
               Contains("-DA=3"));
@@ -109,7 +109,7 @@ TEST_F(OverlayCDBTest, GetFallbackCommand) {
 
 TEST_F(OverlayCDBTest, NoBase) {
   OverlayCDB CDB(nullptr, {"-DA=6"});
-  EXPECT_EQ(CDB.getCompileCommand(testPath("bar.cc")), None);
+  EXPECT_EQ(CDB.getCompileCommand(testPath("bar.cc")), std::nullopt);
   auto Override = cmd(testPath("bar.cc"), "-DA=5");
   CDB.setCompileCommand(testPath("bar.cc"), Override);
   EXPECT_THAT(CDB.getCompileCommand(testPath("bar.cc"))->CommandLine,
@@ -130,22 +130,20 @@ TEST_F(OverlayCDBTest, Watch) {
 
   Inner.setCompileCommand("A.cpp", tooling::CompileCommand());
   Outer.setCompileCommand("B.cpp", tooling::CompileCommand());
-  Inner.setCompileCommand("A.cpp", llvm::None);
-  Outer.setCompileCommand("C.cpp", llvm::None);
+  Inner.setCompileCommand("A.cpp", std::nullopt);
+  Outer.setCompileCommand("C.cpp", std::nullopt);
   EXPECT_THAT(Changes, ElementsAre(ElementsAre("A.cpp"), ElementsAre("B.cpp"),
                                    ElementsAre("A.cpp"), ElementsAre("C.cpp")));
 }
 
 TEST_F(OverlayCDBTest, Adjustments) {
   OverlayCDB CDB(Base.get(), {"-DFallback"},
-                 [](const std::vector<std::string> &Cmd, llvm::StringRef File) {
-                   auto Ret = Cmd;
-                   Ret.push_back(
+                 [](tooling::CompileCommand &Cmd, llvm::StringRef File) {
+                   Cmd.CommandLine.push_back(
                        ("-DAdjust_" + llvm::sys::path::filename(File)).str());
-                   return Ret;
                  });
   // Command from underlying gets adjusted.
-  auto Cmd = CDB.getCompileCommand(testPath("foo.cc")).getValue();
+  auto Cmd = *CDB.getCompileCommand(testPath("foo.cc"));
   EXPECT_THAT(Cmd.CommandLine, ElementsAre("clang", "-DA=1", testPath("foo.cc"),
                                            "-DAdjust_foo.cc"));
 
@@ -154,7 +152,7 @@ TEST_F(OverlayCDBTest, Adjustments) {
   BarCommand.Filename = testPath("bar.cc");
   BarCommand.CommandLine = {"clang++", "-DB=1", testPath("bar.cc")};
   CDB.setCompileCommand(testPath("bar.cc"), BarCommand);
-  Cmd = CDB.getCompileCommand(testPath("bar.cc")).getValue();
+  Cmd = *CDB.getCompileCommand(testPath("bar.cc"));
   EXPECT_THAT(
       Cmd.CommandLine,
       ElementsAre("clang++", "-DB=1", testPath("bar.cc"), "-DAdjust_bar.cc"));
@@ -253,7 +251,7 @@ TEST(GlobalCompilationDatabaseTest, DiscoveryWithNestedCDBs) {
 
     // Does not use the root CDB, so no broadcast.
     auto Cmd = DB.getCompileCommand(testPath("build/../a.cc"));
-    ASSERT_TRUE(Cmd.hasValue());
+    ASSERT_TRUE(Cmd);
     EXPECT_THAT(Cmd->CommandLine, Contains("-DFOO")) << "a.cc uses foo/ CDB";
     ASSERT_TRUE(DB.blockUntilIdle(timeoutSeconds(10)));
     EXPECT_THAT(DiscoveredFiles, IsEmpty()) << "Root CDB not discovered yet";
@@ -300,7 +298,7 @@ TEST(GlobalCompilationDatabaseTest, BuildDir) {
     DirectoryBasedGlobalCompilationDatabase::Options Opts(FS);
     return DirectoryBasedGlobalCompilationDatabase(Opts)
         .getCompileCommand(testPath(Relative))
-        .getValueOr(tooling::CompileCommand())
+        .value_or(tooling::CompileCommand())
         .CommandLine;
   };
   EXPECT_THAT(Command("x/foo.cc"), IsEmpty());
@@ -331,14 +329,14 @@ TEST(GlobalCompilationDatabaseTest, CompileFlagsDirectory) {
   FS.Files[testPath("x/compile_flags.txt")] = "-DFOO";
   DirectoryBasedGlobalCompilationDatabase CDB(FS);
   auto Commands = CDB.getCompileCommand(testPath("x/y.cpp"));
-  ASSERT_TRUE(Commands.hasValue());
-  EXPECT_THAT(Commands.getValue().CommandLine, Contains("-DFOO"));
+  ASSERT_TRUE(Commands.has_value());
+  EXPECT_THAT(Commands->CommandLine, Contains("-DFOO"));
   // Make sure we pick the right working directory.
-  EXPECT_EQ(testPath("x"), Commands.getValue().Directory);
+  EXPECT_EQ(testPath("x"), Commands->Directory);
 }
 
 MATCHER_P(hasArg, Flag, "") {
-  if (!arg.hasValue()) {
+  if (!arg) {
     *result_listener << "command is null";
     return false;
   }

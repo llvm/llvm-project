@@ -34,7 +34,7 @@ bb:
   br label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = load double, double* getelementptr inbounds (%struct.hoge, %struct.hoge* @global, i64 0, i32 0), align 8
+  %tmp = load double, ptr @global, align 8
   br i1 false, label %bb3, label %bb2
 
 bb2:                                              ; preds = %bb1

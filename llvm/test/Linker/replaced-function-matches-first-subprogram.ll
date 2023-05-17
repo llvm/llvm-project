@@ -19,18 +19,18 @@
 define i32 @_Z3foov() !dbg !4 {
 entry:
   %tmp = alloca %struct.Class, align 1
-  %call = call i32 @_ZN5ClassIiE3fooEv(%struct.Class* %tmp), !dbg !14
+  %call = call i32 @_ZN5ClassIiE3fooEv(ptr %tmp), !dbg !14
   ret i32 %call, !dbg !14
 }
 
-; CHECK: define weak_odr i32 @_ZN5ClassIiE3fooEv(%struct.Class* %this){{.*}} !dbg ![[SP2:[0-9]+]] {
+; CHECK: define weak_odr i32 @_ZN5ClassIiE3fooEv(ptr %this){{.*}} !dbg ![[SP2:[0-9]+]] {
 ; CHECK-NOT: }
 ; CHECK: !dbg ![[LOC:[0-9]+]]
-define linkonce_odr i32 @_ZN5ClassIiE3fooEv(%struct.Class* %this) align 2 !dbg !7 {
+define linkonce_odr i32 @_ZN5ClassIiE3fooEv(ptr %this) align 2 !dbg !7 {
 entry:
-  %this.addr = alloca %struct.Class*, align 8
-  store %struct.Class* %this, %struct.Class** %this.addr, align 8
-  %this1 = load %struct.Class*, %struct.Class** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  %this1 = load ptr, ptr %this.addr
   ret i32 0, !dbg !15
 }
 

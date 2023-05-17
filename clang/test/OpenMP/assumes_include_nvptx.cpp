@@ -11,11 +11,11 @@
 
 // TODO: Think about teaching the OMPIRBuilder about default attributes as well so the __kmpc* declarations are annotated.
 
-// CHECK: define weak_odr void @__omp_offloading_{{.*}}__Z17complex_reductionIfEvv_{{.*}}() [[attr0:#[0-9]]]
+// CHECK: define weak_odr protected void @__omp_offloading_{{.*}}__Z17complex_reductionIfEvv_{{.*}}() [[attr0:#[0-9]]]
 // CHECK: call i32 @__kmpc_target_init(
 // CHECK: declare noundef float @_Z3sinf(float noundef) [[attr1:#[0-9]*]]
 // CHECK: declare void @__kmpc_target_deinit(
-// CHECK: define weak_odr void @__omp_offloading_{{.*}}__Z17complex_reductionIdEvv_{{.*}}() [[attr0]]
+// CHECK: define weak_odr protected void @__omp_offloading_{{.*}}__Z17complex_reductionIdEvv_{{.*}}() [[attr0]]
 // CHECK: %call = call noundef double @_Z3sind(double noundef 0.000000e+00) [[attr2:#[0-9]]]
 // CHECK: declare noundef double @_Z3sind(double noundef) [[attr1]]
 

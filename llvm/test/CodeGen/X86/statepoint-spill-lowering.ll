@@ -5,36 +5,36 @@
 
 target triple = "x86_64-pc-linux-gnu"
 
-declare void @"some_call"(i8 addrspace(1)*)
+declare void @"some_call"(ptr addrspace(1))
 declare i32 @"personality_function"()
 
 ; CHECK-LABEL: test_invoke:
-define i8 addrspace(1)* @test_invoke(i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i8 addrspace(1)* %d, i8 addrspace(1)* %e, i8 addrspace(1)* %f, i8 addrspace(1)* %g, i8 addrspace(1)* %h, i8 addrspace(1)* %j, i8 addrspace(1)* %k, i8 addrspace(1)* %l, i8 addrspace(1)* %m, i8 addrspace(1)* %n, i8 addrspace(1)* %o, i8 addrspace(1)* %p, i8 addrspace(1)* %q, i8 addrspace(1)* %r, i8 addrspace(1)* %s, i8 addrspace(1)* %t)
-gc "statepoint-example" personality i32 ()* @"personality_function" {
+define ptr addrspace(1) @test_invoke(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e, ptr addrspace(1) %f, ptr addrspace(1) %g, ptr addrspace(1) %h, ptr addrspace(1) %j, ptr addrspace(1) %k, ptr addrspace(1) %l, ptr addrspace(1) %m, ptr addrspace(1) %n, ptr addrspace(1) %o, ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %s, ptr addrspace(1) %t)
+gc "statepoint-example" personality ptr @"personality_function" {
 entry:
-  %0 = invoke token (i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 0, i32 0, void (i8 addrspace(1)*)* elementtype(void (i8 addrspace(1)*)) @some_call, i32 1, i32 0, i8 addrspace(1)* %t, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %t)]
+  %0 = invoke token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) @some_call, i32 1, i32 0, ptr addrspace(1) %t, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %t)]
           to label %invoke_safepoint_normal_dest unwind label %exceptional_return
 
 invoke_safepoint_normal_dest:
-  %t.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 0, i32 0)
-  ret i8 addrspace(1)* %t.relocated
+  %t.relocated = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %0, i32 0, i32 0)
+  ret ptr addrspace(1) %t.relocated
 
 exceptional_return:
   %landing_pad = landingpad token
           cleanup
-  ret i8 addrspace(1)* null
+  ret ptr addrspace(1) null
 }
 
 ; CHECK-LABEL: test_call:
-define i8 addrspace(1)* @test_call(i8 addrspace(1)* %a, i8 addrspace(1)* %b, i8 addrspace(1)* %c, i8 addrspace(1)* %d, i8 addrspace(1)* %e, i8 addrspace(1)* %f, i8 addrspace(1)* %g, i8 addrspace(1)* %h, i8 addrspace(1)* %j, i8 addrspace(1)* %k, i8 addrspace(1)* %l, i8 addrspace(1)* %m, i8 addrspace(1)* %n, i8 addrspace(1)* %o, i8 addrspace(1)* %p, i8 addrspace(1)* %q, i8 addrspace(1)* %r, i8 addrspace(1)* %s, i8 addrspace(1)* %t)
-gc "statepoint-example" personality i32 ()* @"personality_function" {
+define ptr addrspace(1) @test_call(ptr addrspace(1) %a, ptr addrspace(1) %b, ptr addrspace(1) %c, ptr addrspace(1) %d, ptr addrspace(1) %e, ptr addrspace(1) %f, ptr addrspace(1) %g, ptr addrspace(1) %h, ptr addrspace(1) %j, ptr addrspace(1) %k, ptr addrspace(1) %l, ptr addrspace(1) %m, ptr addrspace(1) %n, ptr addrspace(1) %o, ptr addrspace(1) %p, ptr addrspace(1) %q, ptr addrspace(1) %r, ptr addrspace(1) %s, ptr addrspace(1) %t)
+gc "statepoint-example" personality ptr @"personality_function" {
 entry:
-  %0 = call token (i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64 0, i32 0, void (i8 addrspace(1)*)* elementtype(void (i8 addrspace(1)*)) @some_call, i32 1, i32 0, i8 addrspace(1)* %t, i32 0, i32 0) ["gc-live" (i8 addrspace(1)* %t)]
+  %0 = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(void (ptr addrspace(1))) @some_call, i32 1, i32 0, ptr addrspace(1) %t, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %t)]
   br label %other_block
 
 other_block:
-  %t.relocated = call coldcc i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token %0, i32 0, i32 0)
-  ret i8 addrspace(1)* %t.relocated
+  %t.relocated = call coldcc ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %0, i32 0, i32 0)
+  ret ptr addrspace(1) %t.relocated
 }
-declare token @llvm.experimental.gc.statepoint.p0f_isVoidp1i8f(i64, i32, void (i8 addrspace(1)*)*, i32, i32, ...)
-declare i8 addrspace(1)* @llvm.experimental.gc.relocate.p1i8(token, i32, i32)
+declare token @llvm.experimental.gc.statepoint.p0(i64, i32, ptr, i32, i32, ...)
+declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32, i32)

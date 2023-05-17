@@ -7,9 +7,9 @@ define dso_local zeroext i32 @test(i32 signext %l) nounwind {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr r0
-; CHECK-NEXT:    std r0, 16(r1)
 ; CHECK-NEXT:    stdu r1, -32(r1)
 ; CHECK-NEXT:    addi r3, r3, -1
+; CHECK-NEXT:    std r0, 48(r1)
 ; CHECK-NEXT:    cmplwi r3, 5
 ; CHECK-NEXT:    bgt cr0, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %entry

@@ -48,6 +48,7 @@ public:
     SV_Wasm,
     SV_XCOFF,
     SV_SPIRV,
+    SV_DXContainer,
   };
 
   /// Express the state of bundle locked groups while emitting code.
@@ -73,7 +74,7 @@ private:
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
   /// The index of this section in the layout order.
-  unsigned LayoutOrder;
+  unsigned LayoutOrder = 0;
 
   /// Keeping track of bundle-locked state.
   BundleLockStateType BundleLockState = NotBundleLocked;
@@ -136,8 +137,14 @@ public:
   MCSymbol *getEndSymbol(MCContext &Ctx);
   bool hasEnded() const;
 
-  unsigned getAlignment() const { return Alignment.value(); }
+  Align getAlign() const { return Alignment; }
   void setAlignment(Align Value) { Alignment = Value; }
+
+  /// Makes sure that Alignment is at least MinAlignment.
+  void ensureMinAlignment(Align MinAlignment) {
+    if (Alignment < MinAlignment)
+      Alignment = MinAlignment;
+  }
 
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }

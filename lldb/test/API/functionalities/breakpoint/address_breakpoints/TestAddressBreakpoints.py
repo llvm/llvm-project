@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class AddressBreakpointTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_address_breakpoints(self):
@@ -84,5 +82,6 @@ class AddressBreakpointTestCase(TestBase):
             len(threads), 1,
             "There should be a thread stopped at our breakpoint")
 
-        # The hit count for the breakpoint should now be 2.
-        self.assertEquals(breakpoint.GetHitCount(), 2)
+        # The hit count for the breakpoint should be 1, since we reset counts
+        # for each run.
+        self.assertEquals(breakpoint.GetHitCount(), 1)

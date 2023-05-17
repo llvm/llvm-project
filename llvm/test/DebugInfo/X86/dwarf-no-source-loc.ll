@@ -26,17 +26,17 @@ define void @_Z3fooi(i32 %x) !dbg !6 {
 entry:
   %x.addr = alloca i32, align 4
   %z = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  %0 = load i32, i32* %x.addr, align 4, !dbg !8
+  store i32 %x, ptr %x.addr, align 4
+  %0 = load i32, ptr %x.addr, align 4, !dbg !8
   %tobool = icmp ne i32 %0, 0, !dbg !8
   br i1 %tobool, label %if.then, label %if.end, !dbg !8
 
 if.then:                                          ; preds = %entry
-  call void @_Z3barPi(i32* %z), !dbg !9
+  call void @_Z3barPi(ptr %z), !dbg !9
   br label %if.end, !dbg !9
 
 if.end:                                           ; preds = %if.then, %entry
-  call void @_Z3bazPi(i32* %z), !dbg !12
+  call void @_Z3bazPi(ptr %z), !dbg !12
   ret void, !dbg !14
 }
 
@@ -52,9 +52,9 @@ if.end:                                           ; preds = %if.then, %entry
 ;
 ; DISABLE-NOT: .loc 1 0
 
-declare void @_Z3barPi(i32*)
+declare void @_Z3barPi(ptr)
 
-declare void @_Z3bazPi(i32*)
+declare void @_Z3bazPi(ptr)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

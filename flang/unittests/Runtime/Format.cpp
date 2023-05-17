@@ -7,8 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "CrashHandlerFixture.h"
+#include "../runtime/connection.h"
 #include "../runtime/format-implementation.h"
 #include "../runtime/io-error.h"
+#include <optional>
 #include <string>
 #include <tuple>
 #include <vector>
@@ -24,32 +26,24 @@ class TestFormatContext : public IoErrorHandler {
 public:
   using CharType = char;
   TestFormatContext() : IoErrorHandler{"format.cpp", 1} {}
-  bool Emit(const char *, std::size_t);
-  bool Emit(const char16_t *, std::size_t);
-  bool Emit(const char32_t *, std::size_t);
+  bool Emit(const char *, std::size_t, std::size_t = 0);
   bool AdvanceRecord(int = 1);
   void HandleRelativePosition(std::int64_t);
   void HandleAbsolutePosition(std::int64_t);
-  void Report(const DataEdit &);
+  void Report(const std::optional<DataEdit> &);
   ResultsTy results;
   MutableModes &mutableModes() { return mutableModes_; }
+  ConnectionState &GetConnectionState() { return connectionState_; }
 
 private:
   MutableModes mutableModes_;
+  ConnectionState connectionState_;
 };
 
-bool TestFormatContext::Emit(const char *s, std::size_t len) {
+bool TestFormatContext::Emit(const char *s, std::size_t len, std::size_t) {
   std::string str{s, len};
   results.push_back("'"s + str + '\'');
   return true;
-}
-bool TestFormatContext::Emit(const char16_t *, std::size_t) {
-  Crash("TestFormatContext::Emit(const char16_t *) called");
-  return false;
-}
-bool TestFormatContext::Emit(const char32_t *, std::size_t) {
-  Crash("TestFormatContext::Emit(const char32_t *) called");
-  return false;
 }
 
 bool TestFormatContext::AdvanceRecord(int n) {
@@ -71,25 +65,29 @@ void TestFormatContext::HandleRelativePosition(std::int64_t n) {
   }
 }
 
-void TestFormatContext::Report(const DataEdit &edit) {
-  std::string str{edit.descriptor};
-  if (edit.repeat != 1) {
-    str = std::to_string(edit.repeat) + '*' + str;
+void TestFormatContext::Report(const std::optional<DataEdit> &edit) {
+  if (edit) {
+    std::string str{edit->descriptor};
+    if (edit->repeat != 1) {
+      str = std::to_string(edit->repeat) + '*' + str;
+    }
+    if (edit->variation) {
+      str += edit->variation;
+    }
+    if (edit->width) {
+      str += std::to_string(*edit->width);
+    }
+    if (edit->digits) {
+      str += "."s + std::to_string(*edit->digits);
+    }
+    if (edit->expoDigits) {
+      str += "E"s + std::to_string(*edit->expoDigits);
+    }
+    // modes?
+    results.push_back(str);
+  } else {
+    results.push_back("(nullopt)"s);
   }
-  if (edit.variation) {
-    str += edit.variation;
-  }
-  if (edit.width) {
-    str += std::to_string(*edit.width);
-  }
-  if (edit.digits) {
-    str += "."s + std::to_string(*edit.digits);
-  }
-  if (edit.expoDigits) {
-    str += "E"s + std::to_string(*edit.expoDigits);
-  }
-  // modes?
-  results.push_back(str);
 }
 
 struct FormatTests : public CrashHandlerFixture {};

@@ -14,3 +14,44 @@ define i8 @or-of-constant-with-no-common-bits-set(i8 %x, i8 %y) {
   %r = or i8 %t0, 3
   ret i8 %r
 }
+
+define void @mask-high(i64 %arg, ptr dereferenceable(4) %arg1) {
+; CHECK-LABEL: 'mask-high'
+; CHECK-NEXT:  Classifying expressions for: @mask-high
+; CHECK-NEXT:    %i = load i32, ptr %arg1, align 4
+; CHECK-NEXT:    --> %i U: full-set S: full-set
+; CHECK-NEXT:    %i2 = sext i32 %i to i64
+; CHECK-NEXT:    --> (sext i32 %i to i64) U: [-2147483648,2147483648) S: [-2147483648,2147483648)
+; CHECK-NEXT:    %i3 = and i64 %arg, -16
+; CHECK-NEXT:    --> (16 * (%arg /u 16))<nuw> U: [0,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    %i4 = or i64 1, %i3
+; CHECK-NEXT:    --> (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw> U: [1,-14) S: [-9223372036854775807,9223372036854775794)
+; CHECK-NEXT:    %i7 = phi i64 [ %i4, %bb ], [ %i8, %bb6 ]
+; CHECK-NEXT:    --> {(1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>,+,1}<%bb6> U: full-set S: full-set Exits: ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>) LoopDispositions: { %bb6: Computable }
+; CHECK-NEXT:    %i8 = add i64 %i7, 1
+; CHECK-NEXT:    --> {(2 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>,+,1}<%bb6> U: full-set S: full-set Exits: (1 + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))<nsw> LoopDispositions: { %bb6: Computable }
+; CHECK-NEXT:  Determining loop execution counts for: @mask-high
+; CHECK-NEXT:  Loop %bb6: backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
+; CHECK-NEXT:  Loop %bb6: constant max backedge-taken count is -9223372034707292162
+; CHECK-NEXT:  Loop %bb6: symbolic max backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
+; CHECK-NEXT:  Loop %bb6: Predicated backedge-taken count is (-1 + (-16 * (%arg /u 16)) + ((sext i32 %i to i64) smax (1 + (16 * (%arg /u 16))<nuw>)<nuw><nsw>))
+; CHECK-NEXT:   Predicates:
+; CHECK:       Loop %bb6: Trip multiple is 1
+;
+bb:
+  %i = load i32, ptr %arg1, align 4
+  %i2 = sext i32 %i to i64
+  %i3 = and i64 %arg, -16
+  %i4 = or i64 1, %i3
+  %i5 = icmp sgt i64 %i4, %i2
+  br i1 %i5, label %bb10, label %bb6
+
+bb6:                                              ; preds = %bb6, %bb
+  %i7 = phi i64 [ %i4, %bb ], [ %i8, %bb6 ]
+  %i8 = add i64 %i7, 1
+  %i9 = icmp slt i64 %i7, %i2
+  br i1 %i9, label %bb6, label %bb10
+
+bb10:                                             ; preds = %bb6, %bb
+  ret void
+}

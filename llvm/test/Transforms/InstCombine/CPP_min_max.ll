@@ -8,43 +8,43 @@
 ; Instcombine should propagate the load through the select instructions to
 ; allow elimination of the extra stuff by the mem2reg pass.
 
-define void @_Z5test1RiS_(i32* %x, i32* %y) {
+define void @_Z5test1RiS_(ptr %x, ptr %y) {
 ; CHECK-LABEL: @_Z5test1RiS_(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP_1_I:%.*]] = load i32, i32* [[Y:%.*]], align 4
-; CHECK-NEXT:    [[TMP_3_I:%.*]] = load i32, i32* [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP_1_I]], i32 [[TMP_3_I]])
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[X]], align 4
+; CHECK-NEXT:    [[TMP_1_I:%.*]] = load i32, ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    [[TMP_3_I:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP_4:%.*]] = call i32 @llvm.smin.i32(i32 [[TMP_1_I]], i32 [[TMP_3_I]])
+; CHECK-NEXT:    store i32 [[TMP_4]], ptr [[X]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp.1.i = load i32, i32* %y         ; <i32> [#uses=1]
-  %tmp.3.i = load i32, i32* %x         ; <i32> [#uses=1]
+  %tmp.1.i = load i32, ptr %y         ; <i32> [#uses=1]
+  %tmp.3.i = load i32, ptr %x         ; <i32> [#uses=1]
   %tmp.4.i = icmp slt i32 %tmp.1.i, %tmp.3.i              ; <i1> [#uses=1]
-  %retval.i = select i1 %tmp.4.i, i32* %y, i32* %x                ; <i32*> [#uses=1]
-  %tmp.4 = load i32, i32* %retval.i            ; <i32> [#uses=1]
-  store i32 %tmp.4, i32* %x
+  %retval.i = select i1 %tmp.4.i, ptr %y, ptr %x                ; <ptr> [#uses=1]
+  %tmp.4 = load i32, ptr %retval.i            ; <i32> [#uses=1]
+  store i32 %tmp.4, ptr %x
   ret void
 }
 
-define void @_Z5test2RiS_(i32* %x, i32* %y) {
+define void @_Z5test2RiS_(ptr %x, ptr %y) {
 ; CHECK-LABEL: @_Z5test2RiS_(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP_2:%.*]] = load i32, i32* [[X:%.*]], align 4
-; CHECK-NEXT:    [[TMP_3_I:%.*]] = load i32, i32* [[Y:%.*]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP_2]], i32 [[TMP_3_I]])
-; CHECK-NEXT:    store i32 [[TMP0]], i32* [[Y]], align 4
+; CHECK-NEXT:    [[TMP_2:%.*]] = load i32, ptr [[X:%.*]], align 4
+; CHECK-NEXT:    [[TMP_3_I:%.*]] = load i32, ptr [[Y:%.*]], align 4
+; CHECK-NEXT:    [[TMP_6:%.*]] = call i32 @llvm.smax.i32(i32 [[TMP_2]], i32 [[TMP_3_I]])
+; CHECK-NEXT:    store i32 [[TMP_6]], ptr [[Y]], align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp.0 = alloca i32             ; <i32*> [#uses=2]
-  %tmp.2 = load i32, i32* %x           ; <i32> [#uses=2]
-  store i32 %tmp.2, i32* %tmp.0
-  %tmp.3.i = load i32, i32* %y         ; <i32> [#uses=1]
+  %tmp.0 = alloca i32             ; <ptr> [#uses=2]
+  %tmp.2 = load i32, ptr %x           ; <i32> [#uses=2]
+  store i32 %tmp.2, ptr %tmp.0
+  %tmp.3.i = load i32, ptr %y         ; <i32> [#uses=1]
   %tmp.4.i = icmp slt i32 %tmp.2, %tmp.3.i                ; <i1> [#uses=1]
-  %retval.i = select i1 %tmp.4.i, i32* %y, i32* %tmp.0            ; <i32*> [#uses=1]
-  %tmp.6 = load i32, i32* %retval.i            ; <i32> [#uses=1]
-  store i32 %tmp.6, i32* %y
+  %retval.i = select i1 %tmp.4.i, ptr %y, ptr %tmp.0            ; <ptr> [#uses=1]
+  %tmp.6 = load i32, ptr %retval.i            ; <i32> [#uses=1]
+  store i32 %tmp.6, ptr %y
   ret void
 }
 

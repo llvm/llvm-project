@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class CategoriesDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -19,6 +17,7 @@ class CategoriesDataFormatterTestCase(TestBase):
         self.line = line_number('main.cpp', '// Set break point at this line.')
 
     @expectedFlakeyNetBSD
+    @expectedFailureAll(oslist=["windows"])
     def test_with_run_command(self):
         """Test that that file and class static variables display correctly."""
         self.build()
@@ -262,13 +261,13 @@ class CategoriesDataFormatterTestCase(TestBase):
             "type summary add Shape -w BaseCategory --summary-string \"AShape\"")
         self.runCmd("type category enable BaseCategory")
 
-        self.expect("print (Shape*)&c1",
+        self.expect("expression (Shape*)&c1",
                     substrs=['AShape'])
-        self.expect("print (Shape*)&r1",
+        self.expect("expression (Shape*)&r1",
                     substrs=['AShape'])
-        self.expect("print (Shape*)c_ptr",
+        self.expect("expression (Shape*)c_ptr",
                     substrs=['AShape'])
-        self.expect("print (Shape*)r_ptr",
+        self.expect("expression (Shape*)r_ptr",
                     substrs=['AShape'])
 
         self.runCmd(

@@ -2,9 +2,6 @@
 Test some SBValue APIs.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class ValueAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -23,7 +18,6 @@ class ValueAPITestCase(TestBase):
         # Find the line number to of function 'c'.
         self.line = line_number('main.c', '// Break at this line')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24772")
     def test(self):
         """Exercise some SBValue APIs."""
         d = {'EXE': self.exe_name}
@@ -163,10 +157,10 @@ class ValueAPITestCase(TestBase):
         self.assertFalse(lldb.value(frame0.FindVariable('bogus')))
         self.assertTrue(lldb.value(frame0.FindVariable('uinthex')))
 
-        self.assertTrue(int(lldb.value(frame0.FindVariable('uinthex')))
-                        == 3768803088, 'uinthex == 3768803088')
-        self.assertTrue(int(lldb.value(frame0.FindVariable('sinthex')))
-                        == -526164208, 'sinthex == -526164208')
+        self.assertEqual(int(lldb.value(frame0.FindVariable('uinthex'))),
+                         3768803088, 'uinthex == 3768803088')
+        self.assertEqual(int(lldb.value(frame0.FindVariable('sinthex'))),
+                         -526164208, 'sinthex == -526164208')
 
         # Check value_iter works correctly.
         for v in [
@@ -182,11 +176,9 @@ class ValueAPITestCase(TestBase):
             frame0.FindVariable('sinthex').GetValueAsUnsigned(), 3768803088,
             'unsigned sinthex == 3768803088')
 
-        self.assertTrue(
-            frame0.FindVariable('uinthex').GetValueAsSigned() == -
-            526164208,
+        self.assertEqual(
+            frame0.FindVariable('uinthex').GetValueAsSigned(), -526164208,
             'signed uinthex == -526164208')
-        self.assertTrue(
-            frame0.FindVariable('sinthex').GetValueAsSigned() == -
-            526164208,
+        self.assertEqual(
+            frame0.FindVariable('sinthex').GetValueAsSigned(), -526164208,
             'signed sinthex == -526164208')

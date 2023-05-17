@@ -70,10 +70,10 @@
 # RUN: %lld -o %t/out -lSystem %t/weak-aligned-1.o %t/weak-aligned-2.o -dead_strip
 # RUN: llvm-objdump --syms --section=__const --full-contents %t/out | FileCheck --check-prefixes=ALIGN,ALIGN3 %s
 # ALIGN:       SYMBOL TABLE:
-# ALIGN-DAG:   [[#%x, ADDR:]]       l     O __DATA_CONST,__const _weak1
-# ALIGN2-DAG:  {{0*}}[[#ADDR+ 0x4]] l     O __DATA_CONST,__const _weak3
-# ALIGN3-DAG:  {{0*}}[[#ADDR+ 0x4]] l     O __DATA_CONST,__const _weak2
-# ALIGN2-DAG:  {{0*}}[[#ADDR+ 0x8]] l     O __DATA_CONST,__const _weak2
+# ALIGN-DAG:   [[#%x, ADDR:]]       l     O __DATA_CONST,__const .hidden _weak1
+# ALIGN2-DAG:  {{0*}}[[#ADDR+ 0x4]] l     O __DATA_CONST,__const .hidden _weak3
+# ALIGN3-DAG:  {{0*}}[[#ADDR+ 0x4]] l     O __DATA_CONST,__const .hidden _weak2
+# ALIGN2-DAG:  {{0*}}[[#ADDR+ 0x8]] l     O __DATA_CONST,__const .hidden _weak2
 # ALIGN-DAG:   {{0*}}[[#ADDR+0x10]] g     O __DATA_CONST,__const _aligned
 # ALIGN:       Contents of section __DATA_CONST,__const:
 # ALIGN2-NEXT: {{0*}}[[#ADDR]]      11111111 33333333 22222222 00000000

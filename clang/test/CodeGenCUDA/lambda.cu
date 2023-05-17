@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x hip -emit-llvm -std=c++11 %s -o - \
+// RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
 // RUN:   -triple x86_64-linux-gnu \
 // RUN:   | FileCheck -check-prefix=HOST %s
-// RUN: %clang_cc1 -no-opaque-pointers -x hip -emit-llvm -std=c++11 %s -o - \
+// RUN: %clang_cc1 -x hip -emit-llvm -std=c++11 %s -o - \
 // RUN:   -triple amdgcn-amd-amdhsa -fcuda-is-device \
 // RUN:   | FileCheck -check-prefix=DEV %s
 
@@ -43,7 +43,7 @@
 // DEV-LABEL: define{{.*}} amdgpu_kernel void @_Z1gIZ12test_capturevEUlvE_EvT_
 // DEV:  call void @_ZZ12test_capturevENKUlvE_clEv
 // DEV-LABEL: define internal void @_ZZ12test_capturevENKUlvE_clEv
-// DEV:  store i32 1, i32* addrspacecast (i32 addrspace(1)* @a to i32*)
+// DEV:  store i32 1, ptr addrspacecast (ptr addrspace(1) @a to ptr)
 
 // Check functions emitted for test_resolve in device compilation.
 // Check device version of template function 'overloaded' is emitted and called

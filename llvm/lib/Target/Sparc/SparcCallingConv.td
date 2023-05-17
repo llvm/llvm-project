@@ -125,10 +125,14 @@ def CC_Sparc64 : CallingConv<[
 def RetCC_Sparc64 : CallingConv<[
   // A single f32 return value always goes in %f0. The ABI doesn't specify what
   // happens to multiple f32 return values outside a struct.
-  CCIfType<[f32], CCCustom<"CC_Sparc64_Half">>,
+  CCIfType<[f32], CCCustom<"RetCC_Sparc64_Half">>,
 
-  // Otherwise, return values are passed exactly like arguments.
-  CCDelegateTo<CC_Sparc64>
+  // Otherwise, return values are passed exactly like arguments, except that
+  // returns that are too big to fit into the registers is passed as an sret
+  // instead.
+  CCIfInReg<CCIfType<[i32, f32], CCCustom<"RetCC_Sparc64_Half">>>,
+  CCIfType<[i32], CCPromoteToType<i64>>,
+  CCCustom<"RetCC_Sparc64_Full">
 ]>;
 
 // Callee-saved registers are handled by the register window mechanism.

@@ -145,5 +145,11 @@ private:
   } currObject_; // equivalence object currently being constructed
 };
 
+// Duplicates a subprogram's dummy arguments and result, if any, and
+// maps all of the symbols in their expressions.
+struct SymbolAndTypeMappings;
+void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
+    Scope &newScope, SymbolAndTypeMappings * = nullptr);
+
 } // namespace Fortran::semantics
 #endif // FORTRAN_SEMANTICS_RESOLVE_NAMES_H_

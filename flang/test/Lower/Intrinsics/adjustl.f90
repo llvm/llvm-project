@@ -13,7 +13,7 @@ subroutine adjustl_test
   ! CHECK: %[[r3:.*]] = fir.convert %[[strBox]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK: %[[r4:.*]] = fir.convert %[[eBox]] : (!fir.box<!fir.char<1,12>>) -> !fir.box<none>
   ! CHECK: %[[r5:.*]] = fir.convert %[[r2]] : (!fir.ref<!fir.char<1,{{.*}}>>) -> !fir.ref<i8>
-  ! CHECK: %[[r6:.*]] = fir.call @_FortranAAdjustl(%[[r3]], %[[r4]], %[[r5]], %{{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
+  ! CHECK: %[[r6:.*]] = fir.call @_FortranAAdjustl(%[[r3]], %[[r4]], %[[r5]], %{{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, !fir.ref<i8>, i32) -> none
     adjust_str = adjustl(adjust_str)
   end subroutine
   

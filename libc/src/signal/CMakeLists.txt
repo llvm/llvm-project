@@ -10,10 +10,24 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  kill
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.kill
+)
+
+add_entrypoint_object(
   sigaction
   ALIAS
   DEPENDS
     .${LIBC_TARGET_OS}.sigaction
+)
+
+add_entrypoint_object(
+  sigaltstack
+  ALIAS
+  DEPENDS
+    .${LIBC_TARGET_OS}.sigaltstack
 )
 
 add_entrypoint_object(

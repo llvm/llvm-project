@@ -9,12 +9,12 @@
 #include "BinaryHolder.h"
 #include "DebugMap.h"
 #include "MachOUtils.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 namespace {
@@ -59,10 +59,10 @@ private:
   std::vector<std::string> CommonSymbols;
 
   /// Map of the currently processed object file symbol addresses.
-  StringMap<Optional<uint64_t>> CurrentObjectAddresses;
+  StringMap<std::optional<uint64_t>> CurrentObjectAddresses;
 
   /// Lazily computed map of symbols aliased to the processed object file.
-  StringMap<Optional<uint64_t>> CurrentObjectAliasMap;
+  StringMap<std::optional<uint64_t>> CurrentObjectAliasMap;
 
   /// If CurrentObjectAliasMap has been computed for a given address.
   SmallSet<uint64_t, 4> SeenAliasValues;
@@ -113,6 +113,8 @@ private:
                          StringRef BinaryPath);
 
   void Warning(const Twine &Msg, StringRef File = StringRef()) {
+    assert(Result &&
+           "The debug map must be initialized before calling this function");
     WithColor::warning() << "("
                          << MachOUtils::getArchName(
                                 Result->getTriple().getArchName())
@@ -151,7 +153,8 @@ void MachODebugMapParser::addCommonSymbols() {
       // The main binary doesn't have an address for the given symbol.
       continue;
     }
-    if (!CurrentDebugMapObject->addSymbol(CommonSymbol, None /*ObjectAddress*/,
+    if (!CurrentDebugMapObject->addSymbol(CommonSymbol,
+                                          std::nullopt /*ObjectAddress*/,
                                           CommonAddr, 0 /*size*/)) {
       // The symbol is already present.
       continue;
@@ -199,10 +202,9 @@ static std::string getArchName(const object::MachOObjectFile &Obj) {
 std::unique_ptr<DebugMap>
 MachODebugMapParser::parseOneBinary(const MachOObjectFile &MainBinary,
                                     StringRef BinaryPath) {
+  Result = std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath,
+                                      MainBinary.getUuid());
   loadMainBinarySymbols(MainBinary);
-  ArrayRef<uint8_t> UUID = MainBinary.getUuid();
-  Result =
-      std::make_unique<DebugMap>(MainBinary.getArchTriple(), BinaryPath, UUID);
   MainBinaryStrings = MainBinary.getStringTableData();
   for (const SymbolRef &Symbol : MainBinary.symbols()) {
     const DataRefImpl &DRI = Symbol.getRawDataRefImpl();
@@ -533,9 +535,9 @@ void MachODebugMapParser::loadCurrentObjectFileSymbols(
     // in the DebugMap, leave it unassigned for these symbols.
     uint32_t Flags = cantFail(Sym.getFlags());
     if (Flags & SymbolRef::SF_Absolute) {
-      CurrentObjectAddresses[*Name] = None;
+      CurrentObjectAddresses[*Name] = std::nullopt;
     } else if (Flags & SymbolRef::SF_Common) {
-      CurrentObjectAddresses[*Name] = None;
+      CurrentObjectAddresses[*Name] = std::nullopt;
       CommonSymbols.push_back(std::string(*Name));
     } else {
       CurrentObjectAddresses[*Name] = Addr;

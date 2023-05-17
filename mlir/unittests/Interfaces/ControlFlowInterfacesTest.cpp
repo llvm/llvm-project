@@ -37,7 +37,7 @@ struct MutuallyExclusiveRegionsOp
   }
 
   // Regions have no successors.
-  void getSuccessorRegions(Optional<unsigned> index,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            ArrayRef<Attribute> operands,
                            SmallVectorImpl<RegionSuccessor> &regions) {}
 };
@@ -52,7 +52,7 @@ struct LoopRegionsOp
 
   static StringRef getOperationName() { return "cftest.loop_regions_op"; }
 
-  void getSuccessorRegions(Optional<unsigned> index,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            ArrayRef<Attribute> operands,
                            SmallVectorImpl<RegionSuccessor> &regions) {
     if (index) {
@@ -76,10 +76,10 @@ struct DoubleLoopRegionsOp
     return "cftest.double_loop_regions_op";
   }
 
-  void getSuccessorRegions(Optional<unsigned> index,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            ArrayRef<Attribute> operands,
                            SmallVectorImpl<RegionSuccessor> &regions) {
-    if (index.hasValue()) {
+    if (index.has_value()) {
       regions.push_back(RegionSuccessor());
       regions.push_back(RegionSuccessor(&getOperation()->getRegion(*index)));
     }
@@ -95,7 +95,7 @@ struct SequentialRegionsOp
   static StringRef getOperationName() { return "cftest.sequential_regions_op"; }
 
   // Region 0 has Region 1 as a successor.
-  void getSuccessorRegions(Optional<unsigned> index,
+  void getSuccessorRegions(std::optional<unsigned> index,
                            ArrayRef<Attribute> operands,
                            SmallVectorImpl<RegionSuccessor> &regions) {
     if (index == 0u) {

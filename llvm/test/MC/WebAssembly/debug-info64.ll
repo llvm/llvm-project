@@ -1,4 +1,4 @@
-; RUN: llc -generate-arange-section -filetype=obj %s -o - | llvm-readobj -S -r --symbols - | FileCheck %s
+; RUN: llc -mcpu=mvp -generate-arange-section -filetype=obj %s -o - | llvm-readobj -S -r --symbols - | FileCheck %s
 
 ; CHECK:      Format: WASM
 ; CHECK-NEXT: Arch: wasm64
@@ -89,62 +89,62 @@
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
-; CHECK-NEXT:     Size: 61
+; CHECK-NEXT:     Size: 60
 ; CHECK-NEXT:     Offset: 781
 ; CHECK-NEXT:     Name: .debug_line
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 91
-; CHECK-NEXT:     Offset: 860
+; CHECK-NEXT:     Offset: 859
 ; CHECK-NEXT:     Name: linking
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 9
-; CHECK-NEXT:     Offset: 965
+; CHECK-NEXT:     Offset: 964
 ; CHECK-NEXT:     Name: reloc.DATA
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 61
-; CHECK-NEXT:     Offset: 991
+; CHECK-NEXT:     Offset: 990
 ; CHECK-NEXT:     Name: reloc..debug_info
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 18
-; CHECK-NEXT:     Offset: 1076
+; CHECK-NEXT:     Offset: 1075
 ; CHECK-NEXT:     Name: reloc..debug_aranges
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1121
+; CHECK-NEXT:     Offset: 1120
 ; CHECK-NEXT:     Name: reloc..debug_pubnames
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1155
+; CHECK-NEXT:     Offset: 1154
 ; CHECK-NEXT:     Name: reloc..debug_pubtypes
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 6
-; CHECK-NEXT:     Offset: 1189
+; CHECK-NEXT:     Offset: 1188
 ; CHECK-NEXT:     Name: reloc..debug_line
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 77
-; CHECK-NEXT:     Offset: 1219
+; CHECK-NEXT:     Offset: 1218
 ; CHECK-NEXT:     Name: producers
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section {
 ; CHECK-NEXT:     Type: CUSTOM (0x0)
 ; CHECK-NEXT:     Size: 11
-; CHECK-NEXT:     Offset: 1312
+; CHECK-NEXT:     Offset: 1311
 ; CHECK-NEXT:     Name: target_features
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
@@ -182,7 +182,7 @@
 ; CHECK-NEXT:     0x6 R_WASM_SECTION_OFFSET_I32 .debug_info 0
 ; CHECK-NEXT:   }
 ; CHECK-NEXT:   Section (14) .debug_line {
-; CHECK-NEXT:     0x2B R_WASM_FUNCTION_OFFSET_I64 f2 0
+; CHECK-NEXT:     0x2E R_WASM_FUNCTION_OFFSET_I64 f2 1
 ; CHECK-NEXT:   }
 ; CHECK-NEXT: ]
 ; CHECK-NEXT: Symbols [
@@ -276,8 +276,8 @@ target triple = "wasm64-unknown-unknown"
 source_filename = "test.c"
 
 @myextern = external global i32, align 4
-@foo = hidden global i32* @myextern, align 4, !dbg !0
-@ptr2 = hidden global void ()* @f2, align 4, !dbg !6
+@foo = hidden global ptr @myextern, align 4, !dbg !0
+@ptr2 = hidden global ptr @f2, align 4, !dbg !6
 
 ; Function Attrs: noinline nounwind optnone
 define hidden void @f2() #0 !dbg !17 {
@@ -285,7 +285,7 @@ entry:
   ret void, !dbg !18
 }
 
-attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="generic" "unsafe-fp-math"="false" "use-soft-float"="false" }
+attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="mvp" "unsafe-fp-math"="false" "use-soft-float"="false" }
 
 !llvm.dbg.cu = !{!2}
 !llvm.module.flags = !{!13, !14, !15}

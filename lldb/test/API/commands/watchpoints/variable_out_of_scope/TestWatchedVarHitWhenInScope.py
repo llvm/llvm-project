@@ -4,7 +4,6 @@ Test that a variable watchpoint should only hit when in scope.
 
 
 
-import unittest2
 import lldb
 from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
@@ -12,8 +11,6 @@ from lldbsuite.test.decorators import *
 
 
 class WatchedVariableHitWhenInScopeTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # This test depends on not tracking watchpoint expression hits if we have

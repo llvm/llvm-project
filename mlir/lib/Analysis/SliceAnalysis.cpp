@@ -13,6 +13,7 @@
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Operation.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -50,11 +51,13 @@ static void getForwardSliceImpl(Operation *op,
 }
 
 void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
-                           TransitiveFilter filter) {
+                           TransitiveFilter filter, bool inclusive) {
   getForwardSliceImpl(op, forwardSlice, filter);
-  // Don't insert the top level operation, we just queried on it and don't
-  // want it in the results.
-  forwardSlice->remove(op);
+  if (!inclusive) {
+    // Don't insert the top level operation, we just queried on it and don't
+    // want it in the results.
+    forwardSlice->remove(op);
+  }
 
   // Reverse to get back the actual topological order.
   // std::reverse does not work out of the box on SetVector and I want an
@@ -64,7 +67,7 @@ void mlir::getForwardSlice(Operation *op, SetVector<Operation *> *forwardSlice,
 }
 
 void mlir::getForwardSlice(Value root, SetVector<Operation *> *forwardSlice,
-                           TransitiveFilter filter) {
+                           TransitiveFilter filter, bool inclusive) {
   for (Operation *user : root.getUsers())
     getForwardSliceImpl(user, forwardSlice, filter);
 
@@ -92,16 +95,17 @@ static void getBackwardSliceImpl(Operation *op,
     if (auto *definingOp = operand.getDefiningOp()) {
       if (backwardSlice->count(definingOp) == 0)
         getBackwardSliceImpl(definingOp, backwardSlice, filter);
-    } else if (auto blockArg = operand.dyn_cast<BlockArgument>()) {
+    } else if (auto blockArg = dyn_cast<BlockArgument>(operand)) {
       Block *block = blockArg.getOwner();
       Operation *parentOp = block->getParentOp();
       // TODO: determine whether we want to recurse backward into the other
       // blocks of parentOp, which are not technically backward unless they flow
       // into us. For now, just bail.
-      assert(parentOp->getNumRegions() == 1 &&
-             parentOp->getRegion(0).getBlocks().size() == 1);
-      if (backwardSlice->count(parentOp) == 0)
+      if (parentOp && backwardSlice->count(parentOp) == 0) {
+        assert(parentOp->getNumRegions() == 1 &&
+               parentOp->getRegion(0).getBlocks().size() == 1);
         getBackwardSliceImpl(parentOp, backwardSlice, filter);
+      }
     } else {
       llvm_unreachable("No definingOp and not a block argument.");
     }
@@ -112,27 +116,30 @@ static void getBackwardSliceImpl(Operation *op,
 
 void mlir::getBackwardSlice(Operation *op,
                             SetVector<Operation *> *backwardSlice,
-                            TransitiveFilter filter) {
+                            TransitiveFilter filter, bool inclusive) {
   getBackwardSliceImpl(op, backwardSlice, filter);
 
-  // Don't insert the top level operation, we just queried on it and don't
-  // want it in the results.
-  backwardSlice->remove(op);
+  if (!inclusive) {
+    // Don't insert the top level operation, we just queried on it and don't
+    // want it in the results.
+    backwardSlice->remove(op);
+  }
 }
 
 void mlir::getBackwardSlice(Value root, SetVector<Operation *> *backwardSlice,
-                            TransitiveFilter filter) {
+                            TransitiveFilter filter, bool inclusive) {
   if (Operation *definingOp = root.getDefiningOp()) {
-    getBackwardSlice(definingOp, backwardSlice, filter);
+    getBackwardSlice(definingOp, backwardSlice, filter, inclusive);
     return;
   }
-  Operation *bbAargOwner = root.cast<BlockArgument>().getOwner()->getParentOp();
-  getBackwardSlice(bbAargOwner, backwardSlice, filter);
+  Operation *bbAargOwner = cast<BlockArgument>(root).getOwner()->getParentOp();
+  getBackwardSlice(bbAargOwner, backwardSlice, filter, inclusive);
 }
 
 SetVector<Operation *> mlir::getSlice(Operation *op,
                                       TransitiveFilter backwardFilter,
-                                      TransitiveFilter forwardFilter) {
+                                      TransitiveFilter forwardFilter,
+                                      bool inclusive) {
   SetVector<Operation *> slice;
   slice.insert(op);
 
@@ -143,12 +150,12 @@ SetVector<Operation *> mlir::getSlice(Operation *op,
     auto *currentOp = (slice)[currentIndex];
     // Compute and insert the backwardSlice starting from currentOp.
     backwardSlice.clear();
-    getBackwardSlice(currentOp, &backwardSlice, backwardFilter);
+    getBackwardSlice(currentOp, &backwardSlice, backwardFilter, inclusive);
     slice.insert(backwardSlice.begin(), backwardSlice.end());
 
     // Compute and insert the forwardSlice starting from currentOp.
     forwardSlice.clear();
-    getForwardSlice(currentOp, &forwardSlice, forwardFilter);
+    getForwardSlice(currentOp, &forwardSlice, forwardFilter, inclusive);
     slice.insert(forwardSlice.begin(), forwardSlice.end());
     ++currentIndex;
   }
@@ -161,8 +168,7 @@ namespace {
 /// We traverse all operations but only record the ones that appear in
 /// `toSort` for the final result.
 struct DFSState {
-  DFSState(const SetVector<Operation *> &set)
-      : toSort(set), topologicalCounts(), seen() {}
+  DFSState(const SetVector<Operation *> &set) : toSort(set), seen() {}
   const SetVector<Operation *> &toSort;
   SmallVector<Operation *, 16> topologicalCounts;
   DenseSet<Operation *> seen;
@@ -175,10 +181,8 @@ static void dfsPostorder(Operation *root, DFSState *state) {
   while (!queue.empty()) {
     Operation *current = queue.pop_back_val();
     ops.push_back(current);
-    for (Value result : current->getResults()) {
-      for (Operation *op : result.getUsers())
-        queue.push_back(op);
-    }
+    for (Operation *op : current->getUsers())
+      queue.push_back(op);
     for (Region &region : current->getRegions()) {
       for (Operation &op : region.getOps())
         queue.push_back(&op);
@@ -293,9 +297,8 @@ Value mlir::matchReduction(ArrayRef<BlockArgument> iterCarriedArgs,
   // terminator is found. Gather all the combiner ops along the way in
   // topological order.
   while (!combinerOp->mightHaveTrait<OpTrait::IsTerminator>()) {
-    if (!MemoryEffectOpInterface::hasNoEffect(combinerOp) ||
-        combinerOp->getNumResults() != 1 || !combinerOp->hasOneUse() ||
-        combinerOp->getParentOp() != redRegionOp)
+    if (!isMemoryEffectFree(combinerOp) || combinerOp->getNumResults() != 1 ||
+        !combinerOp->hasOneUse() || combinerOp->getParentOp() != redRegionOp)
       return nullptr;
 
     combinerOps.push_back(combinerOp);

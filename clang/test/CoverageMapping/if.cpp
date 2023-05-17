@@ -1,6 +1,14 @@
-// RUN: %clang_cc1 -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++1z -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
+// RUN: %clang_cc1 -fms-extensions -mllvm -emptyline-comment-coverage=false -fprofile-instrument=clang -fcoverage-mapping -dump-coverage-mapping -emit-llvm-only -std=c++23 -triple %itanium_abi_triple -main-file-name if.cpp %s | FileCheck %s
 
 int nop() { return 0; }
+struct S {
+   int i;
+   int putprop(int j) {
+      i = j;
+      return i;
+   }
+   __declspec(property(put = putprop)) int the_prop;
+};
 
 // CHECK-LABEL: _Z3foov:
                                 // CHECK-NEXT: [[@LINE+3]]:12 -> [[@LINE+8]]:2 = #0
@@ -13,6 +21,22 @@ void foo() {                    // CHECK-NEXT: Gap,File 0, [[@LINE+1]]:21 -> [[@
     ++j;                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:7 -> [[@LINE-1]]:8 = #1, (#0 - #1)
 }                               // CHECK-NEXT: [[@LINE-2]]:9 -> [[@LINE-1]]:5 = #1
                                 // CHECK-NEXT: [[@LINE-2]]:5 -> [[@LINE-2]]:8 = #1
+
+// FIXME: Do not generate coverage for discarded branches in if consteval and if constexpr statements
+constexpr int check_consteval(int i) {
+    if consteval {
+      i++;
+    }
+    if !consteval {
+      i++;
+    }
+    if consteval {
+        return 42;
+    } else {
+        return i;
+    }
+}
+
 // CHECK-LABEL: main:
 int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 = #0
   int i = 0;
@@ -50,7 +74,21 @@ int main() {                    // CHECK: File 0, [[@LINE]]:12 -> {{[0-9]+}}:2 =
                                 // CHECK-NEXT: File 0, [[@LINE+1]]:14 -> [[@LINE+1]]:20 = #6
   i = i == 0?i + 12:i + 10;     // CHECK-NEXT: File 0, [[@LINE]]:21 -> [[@LINE]]:27 = (#0 - #6)
 
-  return 0;
+  // GH-57377
+  constexpr int c_i = check_consteval(0);
+  check_consteval(i);
+
+  // GH-45481
+  S s;                    
+  s.the_prop = 0? 1 : 2;        // CHECK-NEXT: File 0, [[@LINE]]:16 -> [[@LINE]]:17 = #0
+                                // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:16 -> [[@LINE-1]]:17 = 0, 0
+                                // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:18 -> [[@LINE-2]]:19 = #7
+                                // CHECK-NEXT: File 0, [[@LINE-3]]:19 -> [[@LINE-3]]:20 = #7
+                                // CHECK-NEXT: File 0, [[@LINE-4]]:23 -> [[@LINE-4]]:24 = (#0 - #7)
+  if (s.the_prop = 1) {         // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:21 = #0
+     return 1;                  // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:7 -> [[@LINE-1]]:21 = #8, (#0 - #8)
+  }                             // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:22 -> [[@LINE-2]]:23 = #8
+                                // CHECK-NEXT: File 0, [[@LINE-3]]:23 -> [[@LINE-1]]:4 = #8
 }
 
 #define FOO true

@@ -81,7 +81,7 @@ ParseResult MubufStoreOp::parse(OpAsmParser &parser, OperationState &result) {
 }
 
 void MubufStoreOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << vdata().getType();
+  p << " " << getOperands() << " : " << getVdata().getType();
 }
 
 // <operation> ::=
@@ -103,7 +103,7 @@ ParseResult RawBufferLoadOp::parse(OpAsmParser &parser,
 }
 
 void RawBufferLoadOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << res().getType();
+  p << " " << getOperands() << " : " << getRes().getType();
 }
 
 // <operation> ::=
@@ -127,7 +127,7 @@ ParseResult RawBufferStoreOp::parse(OpAsmParser &parser,
 }
 
 void RawBufferStoreOp::print(OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << vdata().getType();
+  p << " " << getOperands() << " : " << getVdata().getType();
 }
 
 // <operation> ::=
@@ -151,7 +151,79 @@ ParseResult RawBufferAtomicFAddOp::parse(OpAsmParser &parser,
 }
 
 void RawBufferAtomicFAddOp::print(mlir::OpAsmPrinter &p) {
-  p << " " << getOperands() << " : " << vdata().getType();
+  p << " " << getOperands() << " : " << getVdata().getType();
+}
+
+// <operation> ::=
+//     `llvm.amdgcn.raw.buffer.atomic.fmax.* %vdata, %rsrc,  %offset,
+//     %soffset, %aux : result_type`
+ParseResult RawBufferAtomicFMaxOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
+  Type type;
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
+    return failure();
+
+  auto bldr = parser.getBuilder();
+  auto int32Ty = bldr.getI32Type();
+  auto i32x4Ty = VectorType::get({4}, int32Ty);
+
+  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
+                             parser.getNameLoc(), result.operands))
+    return failure();
+  return success();
+}
+
+void RawBufferAtomicFMaxOp::print(mlir::OpAsmPrinter &p) {
+  p << " " << getOperands() << " : " << getVdata().getType();
+}
+
+// <operation> ::=
+//     `llvm.amdgcn.raw.buffer.atomic.smax.* %vdata, %rsrc,  %offset,
+//     %soffset, %aux : result_type`
+ParseResult RawBufferAtomicSMaxOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
+  Type type;
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
+    return failure();
+
+  auto bldr = parser.getBuilder();
+  auto int32Ty = bldr.getI32Type();
+  auto i32x4Ty = VectorType::get({4}, int32Ty);
+
+  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
+                             parser.getNameLoc(), result.operands))
+    return failure();
+  return success();
+}
+
+void RawBufferAtomicSMaxOp::print(mlir::OpAsmPrinter &p) {
+  p << " " << getOperands() << " : " << getVdata().getType();
+}
+
+// <operation> ::=
+//     `llvm.amdgcn.raw.buffer.atomic.umin.* %vdata, %rsrc,  %offset,
+//     %soffset, %aux : result_type`
+ParseResult RawBufferAtomicUMinOp::parse(OpAsmParser &parser,
+                                         OperationState &result) {
+  SmallVector<OpAsmParser::UnresolvedOperand, 5> ops;
+  Type type;
+  if (parser.parseOperandList(ops, 5) || parser.parseColonType(type))
+    return failure();
+
+  auto bldr = parser.getBuilder();
+  auto int32Ty = bldr.getI32Type();
+  auto i32x4Ty = VectorType::get({4}, int32Ty);
+
+  if (parser.resolveOperands(ops, {type, i32x4Ty, int32Ty, int32Ty, int32Ty},
+                             parser.getNameLoc(), result.operands))
+    return failure();
+  return success();
+}
+
+void RawBufferAtomicUMinOp::print(mlir::OpAsmPrinter &p) {
+  p << " " << getOperands() << " : " << getVdata().getType();
 }
 
 //===----------------------------------------------------------------------===//

@@ -64,16 +64,22 @@ public:
   using iterator = ProfiledCallGraphNode::iterator;
 
   // Constructor for non-CS profile.
-  ProfiledCallGraph(SampleProfileMap &ProfileMap) {
+  ProfiledCallGraph(SampleProfileMap &ProfileMap,
+                    uint64_t IgnoreColdCallThreshold = 0) {
     assert(!FunctionSamples::ProfileIsCS &&
            "CS flat profile is not handled here");
     for (const auto &Samples : ProfileMap) {
       addProfiledCalls(Samples.second);
     }
+
+    // Trim edges with weight up to `IgnoreColdCallThreshold`. This aims
+    // for a more stable call graph with "determinstic" edges from run to run.
+    trimColdEges(IgnoreColdCallThreshold);
   }
 
   // Constructor for CS profile.
-  ProfiledCallGraph(SampleContextTracker &ContextTracker) {
+  ProfiledCallGraph(SampleContextTracker &ContextTracker,
+                    uint64_t IgnoreColdCallThreshold = 0) {
     // BFS traverse the context profile trie to add call edges for calls shown
     // in context.
     std::queue<ContextTrieNode *> Queue;
@@ -105,7 +111,7 @@ public:
         if (!CalleeSamples || !CallerSamples) {
           Weight = 0;
         } else {
-          uint64_t CalleeEntryCount = CalleeSamples->getEntrySamples();
+          uint64_t CalleeEntryCount = CalleeSamples->getHeadSamplesEstimate();
           uint64_t CallsiteCount = 0;
           LineLocation Callsite = Callee->getCallSiteLoc();
           if (auto CallTargets = CallerSamples->findCallTargetMapAt(Callsite)) {
@@ -121,11 +127,16 @@ public:
                         ContextTracker.getFuncNameFor(Callee), Weight);
       }
     }
+
+    // Trim edges with weight up to `IgnoreColdCallThreshold`. This aims
+    // for a more stable call graph with "determinstic" edges from run to run.
+    trimColdEges(IgnoreColdCallThreshold);
   }
 
   iterator begin() { return Root.Edges.begin(); }
   iterator end() { return Root.Edges.end(); }
   ProfiledCallGraphNode *getEntryNode() { return &Root; }
+
   void addProfiledFunction(StringRef Name) {
     if (!ProfiledFunctions.count(Name)) {
       // Link to synthetic root to make sure every node is reachable
@@ -148,8 +159,9 @@ private:
     auto EdgeIt = Edges.find(Edge);
     if (EdgeIt == Edges.end()) {
       Edges.insert(Edge);
-    } else if (EdgeIt->Weight < Edge.Weight) {
-      // Replace existing call edges with same target but smaller weight.
+    } else {
+      // Accumulate weight to the existing edge.
+      Edge.Weight += EdgeIt->Weight;
       Edges.erase(EdgeIt);
       Edges.insert(Edge);
     }
@@ -159,9 +171,9 @@ private:
     addProfiledFunction(Samples.getFuncName());
 
     for (const auto &Sample : Samples.getBodySamples()) {
-      for (const auto &Target : Sample.second.getCallTargets()) {
-        addProfiledFunction(Target.first());
-        addProfiledCall(Samples.getFuncName(), Target.first(), Target.second);
+      for (const auto &[Target, Frequency] : Sample.second.getCallTargets()) {
+        addProfiledFunction(Target);
+        addProfiledCall(Samples.getFuncName(), Target, Frequency);
       }
     }
 
@@ -169,8 +181,26 @@ private:
       for (const auto &InlinedSamples : CallsiteSamples.second) {
         addProfiledFunction(InlinedSamples.first);
         addProfiledCall(Samples.getFuncName(), InlinedSamples.first,
-                        InlinedSamples.second.getEntrySamples());
+                        InlinedSamples.second.getHeadSamplesEstimate());
         addProfiledCalls(InlinedSamples.second);
+      }
+    }
+  }
+
+  // Trim edges with weight up to `Threshold`. Do not trim anything if
+  // `Threshold` is zero.
+  void trimColdEges(uint64_t Threshold = 0) {
+    if (!Threshold)
+      return;
+
+    for (auto &Node : ProfiledFunctions) {
+      auto &Edges = Node.second.Edges;
+      auto I = Edges.begin();
+      while (I != Edges.end()) {
+        if (I->Weight <= Threshold)
+          I = Edges.erase(I);
+        else
+          I++;
       }
     }
   }

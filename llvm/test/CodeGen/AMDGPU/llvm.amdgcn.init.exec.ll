@@ -1,5 +1,9 @@
-; RUN: llc < %s -march=amdgcn -mcpu=gfx900 -verify-machineinstrs | FileCheck %s --check-prefix=GCN
-; RUN: llc -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx900 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1010 -mattr=-wavefrontsize32,+wavefrontsize64 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=0 -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -global-isel=1 -march=amdgcn -mcpu=gfx1100 -mattr=-wavefrontsize32,+wavefrontsize64 -amdgpu-enable-delay-alu=0 -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
 ; GCN-LABEL: {{^}}full_mask:
 ; GCN: s_mov_b64 exec, -1
@@ -95,20 +99,20 @@ main_body:
   %array1 = alloca [20 x i32], align 16, addrspace(5)
   call void @llvm.amdgcn.init.exec(i64 -1)
 
-  %ptr0 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr0, align 4
+  %ptr0 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr0, align 4
 
-  %ptr1 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr1, align 4
+  %ptr1 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr1, align 4
 
-  %ptr2 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 2
-  store i32 %b, i32 addrspace(5)* %ptr2, align 4
+  %ptr2 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 2
+  store i32 %b, ptr addrspace(5) %ptr2, align 4
 
-  %ptr3 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 %b
-  %v3 = load i32, i32 addrspace(5)* %ptr3, align 4
+  %ptr3 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 %b
+  %v3 = load i32, ptr addrspace(5) %ptr3, align 4
 
-  %ptr4 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 %b
-  %v4 = load i32, i32 addrspace(5)* %ptr4, align 4
+  %ptr4 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 %b
+  %v4 = load i32, ptr addrspace(5) %ptr4, align 4
 
   %v5 = add i32 %v3, %v4
   %v = bitcast i32 %v5 to float
@@ -129,20 +133,20 @@ main_body:
   %array1 = alloca [20 x i32], align 16, addrspace(5)
   call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 8)
 
-  %ptr0 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr0, align 4
+  %ptr0 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr0, align 4
 
-  %ptr1 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr1, align 4
+  %ptr1 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr1, align 4
 
-  %ptr2 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 2
-  store i32 %b, i32 addrspace(5)* %ptr2, align 4
+  %ptr2 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 2
+  store i32 %b, ptr addrspace(5) %ptr2, align 4
 
-  %ptr3 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 %b
-  %v3 = load i32, i32 addrspace(5)* %ptr3, align 4
+  %ptr3 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 %b
+  %v3 = load i32, ptr addrspace(5) %ptr3, align 4
 
-  %ptr4 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 %b
-  %v4 = load i32, i32 addrspace(5)* %ptr4, align 4
+  %ptr4 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 %b
+  %v4 = load i32, ptr addrspace(5) %ptr4, align 4
 
   %v5 = add i32 %v3, %v4
   %v = bitcast i32 %v5 to float
@@ -152,9 +156,9 @@ main_body:
 ; GCN-LABEL: {{^}}init_exec_input_before_frame_materialize_nonentry:
 ; GCN-NOT: {{^}}v_
 ; GCN: %endif
-; GCN: s_bfe_u32 s3, s2, 0x70008
-; GCN-NEXT: s_bfm_b64 exec, s3, 0
-; GCN-NEXT: s_cmp_eq_u32 s3, 64
+; GCN: s_bfe_u32 [[S:s[0-9]+]], s2, 0x70008
+; GCN-NEXT: s_bfm_b64 exec, [[S]], 0
+; GCN-NEXT: s_cmp_eq_u32 [[S]], 64
 ; GCN-NEXT: s_cmov_b64 exec, -1
 ; GCN: v_mov
 ; GCN: v_add
@@ -174,20 +178,20 @@ if:
 endif:
   call void @llvm.amdgcn.init.exec.from.input(i32 %count, i32 8)
 
-  %ptr0 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr0, align 4
+  %ptr0 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr0, align 4
 
-  %ptr1 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 1
-  store i32 %a, i32 addrspace(5)* %ptr1, align 4
+  %ptr1 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 1
+  store i32 %a, ptr addrspace(5) %ptr1, align 4
 
-  %ptr2 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 2
-  store i32 %b, i32 addrspace(5)* %ptr2, align 4
+  %ptr2 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 2
+  store i32 %b, ptr addrspace(5) %ptr2, align 4
 
-  %ptr3 = getelementptr inbounds [20 x i32], [20 x i32] addrspace(5)* %array1, i32 0, i32 %b
-  %v3 = load i32, i32 addrspace(5)* %ptr3, align 4
+  %ptr3 = getelementptr inbounds [20 x i32], ptr addrspace(5) %array1, i32 0, i32 %b
+  %v3 = load i32, ptr addrspace(5) %ptr3, align 4
 
-  %ptr4 = getelementptr inbounds [1024 x i32], [1024 x i32] addrspace(5)* %array0, i32 0, i32 %b
-  %v4 = load i32, i32 addrspace(5)* %ptr4, align 4
+  %ptr4 = getelementptr inbounds [1024 x i32], ptr addrspace(5) %array0, i32 0, i32 %b
+  %v4 = load i32, ptr addrspace(5) %ptr4, align 4
 
   %v5 = add i32 %v3, %v4
   %v6 = add i32 %v5, %count

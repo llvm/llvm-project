@@ -11,6 +11,15 @@ using ullong = unsigned long long;
 template <typename T>
 void clang_analyzer_dump(T);
 
+void test_double(int n) {
+  double D = n / 30;
+  clang_analyzer_dump(D); // expected-warning{{(double) ((reg_$0<int n>) / 30)}}
+  char C = D;
+  clang_analyzer_dump(C); // expected-warning{{(char) ((double) ((reg_$0<int n>) / 30))}}
+  int I = C; // assertion should not fail here!
+  clang_analyzer_dump(I); // expected-warning{{(int) ((char) ((double) ((reg_$0<int n>) / 30)))}}
+}
+
 void test_schar(schar x) {
   clang_analyzer_dump(x); // expected-warning{{reg_$0<schar x>}}
 

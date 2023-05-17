@@ -3,10 +3,10 @@
 
 --- |
 
-  define i32* @inttoptr_p0_s32(i32 %val) {
+  define ptr @inttoptr_p0_s32(i32 %val) {
   entry:
-    %0 = inttoptr i32 %val to i32*
-    ret i32* %0
+    %0 = inttoptr i32 %val to ptr
+    ret ptr %0
   }
 
 ...

@@ -2,7 +2,6 @@
 
 
 
-import unittest2
 import lldb
 
 from lldbsuite.test.decorators import *
@@ -11,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class ObjCModulesAutoImportTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -42,5 +39,5 @@ class ObjCModulesAutoImportTestCase(TestBase):
 
         self.runCmd("settings set target.auto-import-clang-modules true")
 
-        self.expect("p getpid()", VARIABLES_DISPLAYED_CORRECTLY,
+        self.expect("expression getpid()", VARIABLES_DISPLAYED_CORRECTLY,
                     substrs=["pid_t"])

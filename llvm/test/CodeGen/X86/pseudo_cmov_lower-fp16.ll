@@ -26,19 +26,15 @@ define void @foo2(i32 %v1,
                   <8 x half> %v52, <8 x half> %v53,
                   <16 x half> %v122, <16 x half> %v123,
                   <32 x half> %v132, <32 x half> %v133,
-                  i8 * %dst) nounwind {
+                  ptr %dst) nounwind {
 entry:
-  %add.ptr31 = getelementptr inbounds i8, i8* %dst, i32 2
-  %a31 = bitcast i8* %add.ptr31 to half*
+  %add.ptr31 = getelementptr inbounds i8, ptr %dst, i32 2
 
-  %add.ptr51 = getelementptr inbounds i8, i8* %dst, i32 4
-  %a51 = bitcast i8* %add.ptr51 to <8 x half>*
+  %add.ptr51 = getelementptr inbounds i8, ptr %dst, i32 4
 
-  %add.ptr121 = getelementptr inbounds i8, i8* %dst, i32 20
-  %a121 = bitcast i8* %add.ptr121 to <16 x half>*
+  %add.ptr121 = getelementptr inbounds i8, ptr %dst, i32 20
 
-  %add.ptr131 = getelementptr inbounds i8, i8* %dst, i32 52
-  %a131 = bitcast i8* %add.ptr131 to <32 x half>*
+  %add.ptr131 = getelementptr inbounds i8, ptr %dst, i32 52
 
   ; These operations are necessary, because select of two single use loads
   ; ends up getting optimized into a select of two leas, followed by a
@@ -55,10 +51,10 @@ entry:
   %t121 = select i1 %cmp, <16 x half> %v122, <16 x half> %t123
   %t131 = select i1 %cmp, <32 x half> %v132, <32 x half> %t133
 
-  store half %t31, half* %a31, align 2
-  store <8 x half> %t51, <8 x half>* %a51, align 16
-  store <16 x half> %t121, <16 x half>* %a121, align 32
-  store <32 x half> %t131, <32 x half>* %a131, align 64
+  store half %t31, ptr %add.ptr31, align 2
+  store <8 x half> %t51, ptr %add.ptr51, align 16
+  store <16 x half> %t121, ptr %add.ptr121, align 32
+  store <32 x half> %t131, ptr %add.ptr131, align 64
 
   ret void
 }

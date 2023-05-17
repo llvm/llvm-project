@@ -28,7 +28,7 @@ struct BadHashNoCopy {
   BadHashNoCopy(BadHashNoCopy const&) = delete;
 
   template <class T>
-  size_t operator()(T const&) const { return 0; }
+  std::size_t operator()(T const&) const { return 0; }
 };
 
 struct BadHashNoCall {
@@ -39,7 +39,7 @@ struct BadHashNoCall {
 struct GoodHashNoDefault {
   explicit GoodHashNoDefault(void*) {}
   template <class T>
-  size_t operator()(T const&) const { return 0; }
+  std::size_t operator()(T const&) const { return 0; }
 };
 
 int main(int, char**) {

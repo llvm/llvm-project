@@ -5,16 +5,16 @@
 
 declare void @use(i32) readnone
 
-define i32 @test(i32* %ptr.0, i32** %ptr.1, i1 %c) {
+define i32 @test(ptr %ptr.0, ptr %ptr.1, i1 %c) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LV_0:%.*]] = load i32, i32* [[PTR_0:%.*]], align 8
+; CHECK-NEXT:    [[LV_0:%.*]] = load i32, ptr [[PTR_0:%.*]], align 8
 ; CHECK-NEXT:    call void @use(i32 [[LV_0]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN749:%.*]], label [[FOR_INC774:%.*]]
 ; CHECK:       if.then749:
-; CHECK-NEXT:    [[LV_1:%.*]] = load i32*, i32** [[PTR_1:%.*]], align 8
-; CHECK-NEXT:    store i32 10, i32* [[LV_1]], align 4
-; CHECK-NEXT:    [[LV_2_PRE:%.*]] = load i32, i32* [[PTR_0]], align 8
+; CHECK-NEXT:    [[LV_1:%.*]] = load ptr, ptr [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    store i32 10, ptr [[LV_1]], align 4
+; CHECK-NEXT:    [[LV_2_PRE:%.*]] = load i32, ptr [[PTR_0]], align 8
 ; CHECK-NEXT:    br label [[FOR_INC774]]
 ; CHECK:       for.inc774:
 ; CHECK-NEXT:    [[LV_2:%.*]] = phi i32 [ [[LV_2_PRE]], [[IF_THEN749]] ], [ [[LV_0]], [[ENTRY:%.*]] ]
@@ -25,7 +25,7 @@ entry:
   br label %for.end435
 
 for.end435:
-  %lv.0 = load i32, i32* %ptr.0, align 8
+  %lv.0 = load i32, ptr %ptr.0, align 8
   call void @use(i32 %lv.0)
   br label %if.end724
 
@@ -33,16 +33,15 @@ if.end724:
   br i1 %c, label %if.then749, label %for.inc774
 
 if.then749:
-  %lv.1 = load i32*, i32** %ptr.1, align 8
-  %arrayidx772 = getelementptr inbounds i32, i32* %lv.1, i64 0
-  store i32 10, i32* %arrayidx772, align 4
+  %lv.1 = load ptr, ptr %ptr.1, align 8
+  store i32 10, ptr %lv.1, align 4
   br label %for.inc774
 
 for.inc774:
   br label %for.body830
 
 for.body830:
-  %lv.2 = load i32, i32* %ptr.0, align 8
+  %lv.2 = load i32, ptr %ptr.0, align 8
   call void @use(i32 %lv.2)
   br label %for.body.i22
 
@@ -50,18 +49,18 @@ for.body.i22:
   ret i32 1
 }
 
-define i32 @test_volatile(i32* %ptr.0, i32** %ptr.1, i1 %c) {
+define i32 @test_volatile(ptr %ptr.0, ptr %ptr.1, i1 %c) {
 ; CHECK-LABEL: @test_volatile(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[LV_0:%.*]] = load volatile i32, i32* [[PTR_0:%.*]], align 8
+; CHECK-NEXT:    [[LV_0:%.*]] = load volatile i32, ptr [[PTR_0:%.*]], align 8
 ; CHECK-NEXT:    call void @use(i32 [[LV_0]])
 ; CHECK-NEXT:    br i1 [[C:%.*]], label [[IF_THEN749:%.*]], label [[FOR_INC774:%.*]]
 ; CHECK:       if.then749:
-; CHECK-NEXT:    [[LV_1:%.*]] = load volatile i32*, i32** [[PTR_1:%.*]], align 8
-; CHECK-NEXT:    store i32 10, i32* [[LV_1]], align 4
+; CHECK-NEXT:    [[LV_1:%.*]] = load volatile ptr, ptr [[PTR_1:%.*]], align 8
+; CHECK-NEXT:    store i32 10, ptr [[LV_1]], align 4
 ; CHECK-NEXT:    br label [[FOR_INC774]]
 ; CHECK:       for.inc774:
-; CHECK-NEXT:    [[LV_2:%.*]] = load volatile i32, i32* [[PTR_0]], align 8
+; CHECK-NEXT:    [[LV_2:%.*]] = load volatile i32, ptr [[PTR_0]], align 8
 ; CHECK-NEXT:    call void @use(i32 [[LV_2]])
 ; CHECK-NEXT:    ret i32 1
 ;
@@ -69,7 +68,7 @@ entry:
   br label %for.end435
 
 for.end435:
-  %lv.0 = load volatile i32, i32* %ptr.0, align 8
+  %lv.0 = load volatile i32, ptr %ptr.0, align 8
   call void @use(i32 %lv.0)
   br label %if.end724
 
@@ -77,16 +76,15 @@ if.end724:
   br i1 %c, label %if.then749, label %for.inc774
 
 if.then749:
-  %lv.1 = load volatile i32*, i32** %ptr.1, align 8
-  %arrayidx772 = getelementptr inbounds i32, i32* %lv.1, i64 0
-  store i32 10, i32* %arrayidx772, align 4
+  %lv.1 = load volatile ptr, ptr %ptr.1, align 8
+  store i32 10, ptr %lv.1, align 4
   br label %for.inc774
 
 for.inc774:
   br label %for.body830
 
 for.body830:
-  %lv.2 = load volatile i32, i32* %ptr.0, align 8
+  %lv.2 = load volatile i32, ptr %ptr.0, align 8
   call void @use(i32 %lv.2)
   br label %for.body.i22
 
@@ -94,14 +92,14 @@ for.body.i22:
   ret i32 1
 }
 
-define void @test_assume_false_to_store_undef_1(i32* %ptr) {
+define void @test_assume_false_to_store_undef_1(ptr %ptr) {
 ; CHECK-LABEL: @test_assume_false_to_store_undef_1(
-; CHECK-NEXT:    store i32 10, i32* [[PTR:%.*]], align 4
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i32 10, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    ret void
 ;
-  store i32 10, i32* %ptr
+  store i32 10, ptr %ptr
   %tobool = icmp ne i16 1, 0
   %xor = xor i1 %tobool, true
   call void @llvm.assume(i1 %xor)
@@ -109,16 +107,16 @@ define void @test_assume_false_to_store_undef_1(i32* %ptr) {
   ret void
 }
 
-define i32 @test_assume_false_to_store_undef_2(i32* %ptr, i32* %ptr.2) {
+define i32 @test_assume_false_to_store_undef_2(ptr %ptr, ptr %ptr.2) {
 ; CHECK-LABEL: @test_assume_false_to_store_undef_2(
-; CHECK-NEXT:    store i32 10, i32* [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR_2:%.*]], align 4
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i32 10, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR_2:%.*]], align 4
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    call void @f()
 ; CHECK-NEXT:    ret i32 [[LV]]
 ;
-  store i32 10, i32* %ptr
-  %lv = load i32, i32* %ptr.2
+  store i32 10, ptr %ptr
+  %lv = load i32, ptr %ptr.2
   %tobool = icmp ne i16 1, 0
   %xor = xor i1 %tobool, true
   call void @llvm.assume(i1 %xor)
@@ -126,15 +124,15 @@ define i32 @test_assume_false_to_store_undef_2(i32* %ptr, i32* %ptr.2) {
   ret i32 %lv
 }
 
-define i32 @test_assume_false_to_store_undef_3(i32* %ptr, i32* %ptr.2) {
+define i32 @test_assume_false_to_store_undef_3(ptr %ptr, ptr %ptr.2) {
 ; CHECK-LABEL: @test_assume_false_to_store_undef_3(
-; CHECK-NEXT:    store i32 10, i32* [[PTR:%.*]], align 4
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[PTR_2:%.*]], align 4
-; CHECK-NEXT:    store i8 poison, i8* null, align 1
+; CHECK-NEXT:    store i32 10, ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[PTR_2:%.*]], align 4
+; CHECK-NEXT:    store i8 poison, ptr null, align 1
 ; CHECK-NEXT:    ret i32 [[LV]]
 ;
-  store i32 10, i32* %ptr
-  %lv = load i32, i32* %ptr.2
+  store i32 10, ptr %ptr
+  %lv = load i32, ptr %ptr.2
   %tobool = icmp ne i16 1, 0
   %xor = xor i1 %tobool, true
   call void @llvm.assume(i1 %xor)
@@ -142,11 +140,11 @@ define i32 @test_assume_false_to_store_undef_3(i32* %ptr, i32* %ptr.2) {
 }
 
 ; Test case for PR48616.
-define void @rename_unreachable_block(i1 %c) personality i32 (...)* undef {
+define void @rename_unreachable_block(i1 %c) personality ptr undef {
 ; CHECK-LABEL: @rename_unreachable_block(
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb1:
-; CHECK-NEXT:    [[LP:%.*]] = landingpad { i8*, i32 }
+; CHECK-NEXT:    [[LP:%.*]] = landingpad { ptr, i32 }
 ; CHECK-NEXT:    cleanup
 ; CHECK-NEXT:    ret void
 ; CHECK:       bb2:
@@ -158,7 +156,7 @@ define void @rename_unreachable_block(i1 %c) personality i32 (...)* undef {
   ret void
 
 bb1:
-  %lp = landingpad { i8*, i32 }
+  %lp = landingpad { ptr, i32 }
   cleanup
   ret void
 

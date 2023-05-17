@@ -28,6 +28,8 @@
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-types.h"
 
+#include "SBBreakpointOptionCommon.h"
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -198,6 +200,21 @@ bool SBBreakpointLocation::GetAutoContinue() {
   return false;
 }
 
+void SBBreakpointLocation::SetCallback(SBBreakpointHitCallback callback,
+                                       void *baton) {
+  LLDB_INSTRUMENT_VA(this, callback, baton);
+
+  BreakpointLocationSP loc_sp = GetSP();
+
+  if (loc_sp) {
+    std::lock_guard<std::recursive_mutex> guard(
+        loc_sp->GetTarget().GetAPIMutex());
+    BatonSP baton_sp(new SBBreakpointCallbackBaton(callback, baton));
+    loc_sp->SetCallback(SBBreakpointCallbackBaton::PrivateBreakpointHitCallback,
+                        baton_sp, false);
+  }
+}
+
 void SBBreakpointLocation::SetScriptCallbackFunction(
   const char *callback_function_name) {
   LLDB_INSTRUMENT_VA(this, callback_function_name);
@@ -246,7 +263,8 @@ SBBreakpointLocation::SetScriptCallbackBody(const char *callback_body_text) {
             .GetTarget()
             .GetDebugger()
             .GetScriptInterpreter()
-            ->SetBreakpointCommandCallback(bp_options, callback_body_text);
+            ->SetBreakpointCommandCallback(bp_options, callback_body_text,
+                                           /*is_callback=*/false);
     sb_error.SetError(error);
   } else
     sb_error.SetErrorString("invalid breakpoint");
@@ -374,7 +392,7 @@ const char *SBBreakpointLocation::GetQueueName() const {
   if (loc_sp) {
     std::lock_guard<std::recursive_mutex> guard(
         loc_sp->GetTarget().GetAPIMutex());
-    loc_sp->GetQueueName();
+    return loc_sp->GetQueueName();
   }
   return nullptr;
 }

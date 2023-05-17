@@ -2,6 +2,7 @@
 ; RUN: llc -mtriple=arm64-freebsd-gnu -mattr=+reserve-x18 -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=arm64-linux-gnu -o - %s | FileCheck %s
 ; RUN: llc -mtriple=aarch64-linux-android -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
+; RUN: llc -mtriple=aarch64-linux-ohos -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=aarch64-fuchsia -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 ; RUN: llc -mtriple=aarch64-windows -o - %s | FileCheck %s --check-prefix=CHECK-RESERVE --check-prefix=CHECK-RESERVE-X18
 
@@ -13,6 +14,7 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x5 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X5
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x6 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X6
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x7 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X7
+; RUN: llc -mtriple=arm64-linux-gnu -reserve-regs-for-regalloc=X8 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X8
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x9 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X9
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x10 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X10
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x11 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X11
@@ -20,6 +22,9 @@
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x13 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X13
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x14 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X14
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x15 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X15
+; RUN: llc -mtriple=arm64-linux-gnu -reserve-regs-for-regalloc=X16 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X16
+; RUN: llc -mtriple=arm64-linux-gnu -reserve-regs-for-regalloc=X17 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X17
+; RUN: llc -mtriple=arm64-linux-gnu -reserve-regs-for-regalloc=X19 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X19
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x20 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X20
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x21 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X21
 ; RUN: llc -mtriple=arm64-linux-gnu -mattr=+reserve-x22 -o - %s | FileCheck %s --check-prefixes=CHECK-RESERVE,CHECK-RESERVE-X22
@@ -69,6 +74,7 @@
 ; RUN: -mattr=+reserve-x27 \
 ; RUN: -mattr=+reserve-x28 \
 ; RUN: -mattr=+reserve-x30 \
+; RUN: -reserve-regs-for-regalloc=X8,X16,X17,X19 \
 ; RUN: -o - %s | FileCheck %s \
 ; RUN: --check-prefix=CHECK-RESERVE \
 ; RUN: --check-prefix=CHECK-RESERVE-X1 \
@@ -78,6 +84,7 @@
 ; RUN: --check-prefix=CHECK-RESERVE-X5 \
 ; RUN: --check-prefix=CHECK-RESERVE-X6 \
 ; RUN: --check-prefix=CHECK-RESERVE-X7 \
+; RUN: --check-prefix=CHECK-RESERVE-X8 \
 ; RUN: --check-prefix=CHECK-RESERVE-X9 \
 ; RUN: --check-prefix=CHECK-RESERVE-X10 \
 ; RUN: --check-prefix=CHECK-RESERVE-X11 \
@@ -85,7 +92,10 @@
 ; RUN: --check-prefix=CHECK-RESERVE-X13 \
 ; RUN: --check-prefix=CHECK-RESERVE-X14 \
 ; RUN: --check-prefix=CHECK-RESERVE-X15 \
+; RUN: --check-prefix=CHECK-RESERVE-X16 \
+; RUN: --check-prefix=CHECK-RESERVE-X17 \
 ; RUN: --check-prefix=CHECK-RESERVE-X18 \
+; RUN: --check-prefix=CHECK-RESERVE-X19 \
 ; RUN: --check-prefix=CHECK-RESERVE-X20 \
 ; RUN: --check-prefix=CHECK-RESERVE-X21 \
 ; RUN: --check-prefix=CHECK-RESERVE-X22 \
@@ -106,13 +116,15 @@
 @var = global [30 x i64] zeroinitializer
 
 define void @keep_live() {
-  %val = load volatile [30 x i64], [30 x i64]* @var
-  store volatile [30 x i64] %val, [30 x i64]* @var
+  %val = load volatile [30 x i64], ptr @var
+  store volatile [30 x i64] %val, ptr @var
 
 ; CHECK: ldr x18
 ; CHECK: str x18
 
 ; CHECK-RESERVE-NOT: ldr fp
+; CHECK-RESERVE-X8-NOT: adrp x8
+; CHECK-RESERVE-X8-NOT: ldr x8
 ; CHECK-RESERVE-X1-NOT: ldr x1,
 ; CHECK-RESERVE-X2-NOT: ldr x2,
 ; CHECK-RESERVE-X3-NOT: ldr x3,
@@ -127,7 +139,10 @@ define void @keep_live() {
 ; CHECK-RESERVE-X13-NOT: ldr x13,
 ; CHECK-RESERVE-X14-NOT: ldr x14,
 ; CHECK-RESERVE-X15-NOT: ldr x15,
+; CHECK-RESERVE-X16-NOT: ldr x16
+; CHECK-RESERVE-X17-NOT: ldr x17
 ; CHECK-RESERVE-X18-NOT: ldr x18
+; CHECK-RESERVE-X19-NOT: ldr x19
 ; CHECK-RESERVE-X20-NOT: ldr x20
 ; CHECK-RESERVE-X21-NOT: ldr x21
 ; CHECK-RESERVE-X22-NOT: ldr x22
@@ -154,7 +169,10 @@ define void @keep_live() {
 ; CHECK-RESERVE-X13-NOT: ldr x13,
 ; CHECK-RESERVE-X14-NOT: ldr x14,
 ; CHECK-RESERVE-X15-NOT: ldr x15,
+; CHECK-RESERVE-X16-NOT: ldr x16
+; CHECK-RESERVE-X17-NOT: ldr x17
 ; CHECK-RESERVE-X18-NOT: ldr x18
+; CHECK-RESERVE-X19-NOT: ldr x19
 ; CHECK-RESERVE-X20-NOT: ldr x20
 ; CHECK-RESERVE-X21-NOT: ldr x21
 ; CHECK-RESERVE-X22-NOT: ldr x22

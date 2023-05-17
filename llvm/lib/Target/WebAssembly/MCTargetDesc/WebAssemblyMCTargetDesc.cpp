@@ -26,6 +26,7 @@ using namespace llvm;
 #define DEBUG_TYPE "wasm-mc-target-desc"
 
 #define GET_INSTRINFO_MC_DESC
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "WebAssemblyGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -33,6 +34,26 @@ using namespace llvm;
 
 #define GET_REGINFO_MC_DESC
 #include "WebAssemblyGenRegisterInfo.inc"
+
+// Exception handling & setjmp-longjmp handling related options.
+
+// Emscripten's asm.js-style exception handling
+cl::opt<bool> WebAssembly::WasmEnableEmEH(
+    "enable-emscripten-cxx-exceptions",
+    cl::desc("WebAssembly Emscripten-style exception handling"),
+    cl::init(false));
+// Emscripten's asm.js-style setjmp/longjmp handling
+cl::opt<bool> WebAssembly::WasmEnableEmSjLj(
+    "enable-emscripten-sjlj",
+    cl::desc("WebAssembly Emscripten-style setjmp/longjmp handling"),
+    cl::init(false));
+// Exception handling using wasm EH instructions
+cl::opt<bool>
+    WebAssembly::WasmEnableEH("wasm-enable-eh",
+                              cl::desc("WebAssembly exception handling"));
+// setjmp/longjmp handling using wasm EH instrutions
+cl::opt<bool> WebAssembly::WasmEnableSjLj(
+    "wasm-enable-sjlj", cl::desc("WebAssembly setjmp/longjmp handling"));
 
 static MCAsmInfo *createMCAsmInfo(const MCRegisterInfo & /*MRI*/,
                                   const Triple &TT,

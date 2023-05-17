@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class BuiltinTrapTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -48,4 +46,4 @@ class BuiltinTrapTestCase(TestBase):
         self.runCmd("up", RUN_SUCCEEDED)
 
         # evaluate a local
-        self.expect('p foo', substrs=['= 5'])
+        self.expect('expression foo', substrs=['= 5'])

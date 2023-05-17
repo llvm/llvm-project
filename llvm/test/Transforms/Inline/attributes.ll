@@ -1,4 +1,4 @@
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline)' -S | FileCheck %s
 target datalayout = "E-p:64:64:64-a0:0:8-f32:32:32-f64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-v64:64:64-v128:128:128"
 
@@ -347,7 +347,7 @@ define i32 @test_no-implicit-float3(i32 %i) noimplicitfloat {
 ; CHECK-NEXT: ret i32
 }
 
-; Check that no-jump-tables flag propagates from inlined callee to caller 
+; Check that no-jump-tables flag propagates from inlined callee to caller
 
 define i32 @no-use-jump-tables_callee0(i32 %i) {
   ret i32 %i
@@ -600,6 +600,33 @@ define i32 @test_unsafe-fp-math3(i32 %i) "unsafe-fp-math"="true" {
 ; CHECK-NEXT: ret i32
 }
 
+; Test that fn_ret_thunk_extern has no CompatRule; inlining is permitted.
+; Test that fn_ret_thunk_extern has no MergeRule; fn_ret_thunk_extern is not
+; propagated or dropped on the caller after inlining.
+define i32 @thunk_extern_callee() fn_ret_thunk_extern {
+; CHECK: @thunk_extern_callee() [[FNRETTHUNK_EXTERN:#[0-9]+]]
+  ret i32 42
+}
+
+define i32 @thunk_keep_caller() {
+; CHECK: @thunk_keep_caller() {
+; CHECK-NEXT: ret i32 42
+  %1 = call i32 @thunk_extern_callee()
+  ret i32 %1
+}
+
+define i32 @thunk_keep_callee() {
+; CHECK: @thunk_keep_callee() {
+  ret i32 42
+}
+
+define i32 @thunk_extern_caller() fn_ret_thunk_extern {
+; CHECK: @thunk_extern_caller() [[FNRETTHUNK_EXTERN]]
+; CHECK-NEXT: ret i32 42
+  %1 = call i32 @thunk_keep_callee()
+  ret i32 %1
+}
+
 ; CHECK: attributes [[SLH]] = { speculative_load_hardening }
 ; CHECK: attributes [[FPMAD_FALSE]] = { "less-precise-fpmad"="false" }
 ; CHECK: attributes [[FPMAD_TRUE]] = { "less-precise-fpmad"="true" }
@@ -614,3 +641,4 @@ define i32 @test_unsafe-fp-math3(i32 %i) "unsafe-fp-math"="true" {
 ; CHECK: attributes [[NO_SIGNED_ZEROS_FPMATH_TRUE]] = { "no-signed-zeros-fp-math"="true" }
 ; CHECK: attributes [[UNSAFE_FPMATH_FALSE]] = { "unsafe-fp-math"="false" }
 ; CHECK: attributes [[UNSAFE_FPMATH_TRUE]] = { "unsafe-fp-math"="true" }
+; CHECK: attributes [[FNRETTHUNK_EXTERN]] = { fn_ret_thunk_extern }

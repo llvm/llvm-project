@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -verify -fsyntax-only -Weverything -Wno-unused-but-set-variable -triple x86_64-apple-darwin10
+// RUN: %clang_cc1 %s -verify -fsyntax-only -fdouble-square-bracket-attributes -Weverything -Wno-unused-but-set-variable -triple x86_64-apple-darwin10
 
 // Test the compatibility of clang's vector extensions with gcc's vector
 // extensions for C. Notably &&, ||, ?: and ! are not available.
@@ -16,6 +16,32 @@ typedef float v4f32 __attribute__((vector_size(16)));
 typedef double v2f64 __attribute__((vector_size(16)));
 typedef double v4f64 __attribute__((vector_size(32)));
 typedef int v4i32 __attribute((vector_size(16)));
+
+// Verify that we can use the [[]] spelling of the attribute.
+// We intentionally use the same type alias name to check that both versions
+// define the same type.
+// FIXME: Warnings are nuisance warnings due to the `-Weverything` flag, but
+// we shouldn't really be emitting them in C mode with the
+// `-fdouble-square-bracket-attributes` flag.
+typedef long long v2i64 [[gnu::vector_size(16)]]; // expected-warning{{C++11 attribute syntax is incompatible with C++98}}
+typedef int v2i32 [[gnu::vector_size(8)]]; // expected-warning{{C++11 attribute syntax is incompatible with C++98}}
+
+// Check various positions where the [[]] spelling can or cannot be used.
+[[gnu::vector_size(16)]] typedef long long v2i64; // expected-warning{{C++11 attribute syntax is incompatible with C++98}}
+typedef long long [[gnu::vector_size(16)]] v2i64_ignored;
+  // expected-warning@-1{{'vector_size' attribute ignored}}
+  // expected-warning@-2{{C++11 attribute syntax is incompatible with C++98}}
+// FIXME: Contrary to the error message that we emit, GCC does actually allow
+// the attribute in the following position. Somewhat surprisingly, the attribute
+// is applied not to the pointer but to the base type, i.e. this declaration has
+// the same effect in GCC as the other declarations for `v2i64`.
+typedef long long *[[gnu::vector_size(16)]] v2i64_doesnt_work;
+  // expected-error@-1{{invalid vector element type 'long long *'}}
+  // expected-warning@-2{{GCC does not allow the 'vector_size' attribute to be written on a type}}
+  // expected-warning@-3{{C++11 attribute syntax is incompatible with C++98}}
+
+// Verify that we can use the attribute outside of a typedef.
+static int v2i32_var [[gnu::vector_size(8)]]; // expected-warning{{C++11 attribute syntax is incompatible with C++98}}
 
 void arithmeticTest(void);
 void logicTest(void);

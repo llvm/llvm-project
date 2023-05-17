@@ -59,10 +59,11 @@ void SimpleLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   // The first block in loopinfo.Blocks is guaranteed to be the header.
   assert(Header == *CurLoop->getBlocks().begin() &&
          "First block must be header");
-  for (Loop::block_iterator BB = std::next(CurLoop->block_begin()),
-                            BBE = CurLoop->block_end();
-       (BB != BBE) && !MayThrow; ++BB)
-    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(*BB);
+  for (const BasicBlock *BB : llvm::drop_begin(CurLoop->blocks())) {
+    MayThrow |= !isGuaranteedToTransferExecutionToSuccessor(BB);
+    if (MayThrow)
+      break;
+  }
 
   computeBlockColors(CurLoop);
 }
@@ -81,7 +82,7 @@ void ICFLoopSafetyInfo::computeLoopSafetyInfo(const Loop *CurLoop) {
   MW.clear();
   MayThrow = false;
   // Figure out the fact that at least one block may throw.
-  for (auto &BB : CurLoop->blocks())
+  for (const auto &BB : CurLoop->blocks())
     if (ICF.hasICF(&*BB)) {
       MayThrow = true;
       break;
@@ -164,7 +165,7 @@ static void collectTransitivePredecessors(
   if (BB == CurLoop->getHeader())
     return;
   SmallVector<const BasicBlock *, 4> WorkList;
-  for (auto *Pred : predecessors(BB)) {
+  for (const auto *Pred : predecessors(BB)) {
     Predecessors.insert(Pred);
     WorkList.push_back(Pred);
   }
@@ -180,7 +181,7 @@ static void collectTransitivePredecessors(
     // @nested and @nested_no_throw in test/Analysis/MustExecute/loop-header.ll.
     // We can ignore backedge of all loops containing BB to get a sligtly more
     // optimistic result.
-    for (auto *PredPred : predecessors(Pred))
+    for (const auto *PredPred : predecessors(Pred))
       if (Predecessors.insert(PredPred).second)
         WorkList.push_back(PredPred);
   }
@@ -200,6 +201,15 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   SmallPtrSet<const BasicBlock *, 4> Predecessors;
   collectTransitivePredecessors(CurLoop, BB, Predecessors);
 
+  // Bail out if a latch block is part of the predecessor set. In this case
+  // we may take the backedge to the header and not execute other latch
+  // successors.
+  for (const BasicBlock *Pred : predecessors(CurLoop->getHeader()))
+    // Predecessors only contains loop blocks, so we don't have to worry about
+    // preheader predecessors here.
+    if (Predecessors.contains(Pred))
+      return false;
+
   // Make sure that all successors of, all predecessors of BB which are not
   // dominated by BB, are either:
   // 1) BB,
@@ -207,7 +217,7 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
   // 3) Exit blocks which are not taken on 1st iteration.
   // Memoize blocks we've already checked.
   SmallPtrSet<const BasicBlock *, 4> CheckedSuccessors;
-  for (auto *Pred : Predecessors) {
+  for (const auto *Pred : Predecessors) {
     // Predecessor block may throw, so it has a side exit.
     if (blockMayThrow(Pred))
       return false;
@@ -217,7 +227,7 @@ bool LoopSafetyInfo::allLoopPathsLeadToBlock(const Loop *CurLoop,
     if (DT->dominates(BB, Pred))
       continue;
 
-    for (auto *Succ : successors(Pred))
+    for (const auto *Succ : successors(Pred))
       if (CheckedSuccessors.insert(Succ).second &&
           Succ != BB && !Predecessors.count(Succ))
         // By discharging conditions that are not executed on the 1st iteration,
@@ -285,7 +295,7 @@ bool ICFLoopSafetyInfo::doesNotWriteMemoryBefore(const BasicBlock *BB,
   collectTransitivePredecessors(CurLoop, BB, Predecessors);
   // Find if there any instruction in either predecessor that could write
   // to memory.
-  for (auto *Pred : Predecessors)
+  for (const auto *Pred : Predecessors)
     if (MW.mayWriteToMemory(Pred))
       return false;
   return true;
@@ -413,7 +423,7 @@ class MustExecuteAnnotatedWriter : public AssemblyAnnotationWriter {
 public:
   MustExecuteAnnotatedWriter(const Function &F,
                              DominatorTree &DT, LoopInfo &LI) {
-    for (auto &I: instructions(F)) {
+    for (const auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
         if (isMustExecuteIn(I, L, &DT)) {
@@ -425,8 +435,8 @@ public:
   }
   MustExecuteAnnotatedWriter(const Module &M,
                              DominatorTree &DT, LoopInfo &LI) {
-    for (auto &F : M)
-    for (auto &I: instructions(F)) {
+    for (const auto &F : M)
+    for (const auto &I: instructions(F)) {
       Loop *L = LI.getLoopFor(I.getParent());
       while (L) {
         if (isMustExecuteIn(I, L, &DT)) {
@@ -488,12 +498,12 @@ bool llvm::mayContainIrreducibleControl(const Function &F, const LoopInfo *LI) {
 /// Lookup \p Key in \p Map and return the result, potentially after
 /// initializing the optional through \p Fn(\p args).
 template <typename K, typename V, typename FnTy, typename... ArgsTy>
-static V getOrCreateCachedOptional(K Key, DenseMap<K, Optional<V>> &Map,
-                                   FnTy &&Fn, ArgsTy&&... args) {
-  Optional<V> &OptVal = Map[Key];
-  if (!OptVal.hasValue())
+static V getOrCreateCachedOptional(K Key, DenseMap<K, std::optional<V>> &Map,
+                                   FnTy &&Fn, ArgsTy &&...args) {
+  std::optional<V> &OptVal = Map[Key];
+  if (!OptVal)
     OptVal = Fn(std::forward<ArgsTy>(args)...);
-  return OptVal.getValue();
+  return *OptVal;
 }
 
 const BasicBlock *

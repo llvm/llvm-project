@@ -1,8 +1,8 @@
 ; RUN: llc < %s	
 %struct.rtunion = type { i64 }
 	%struct.rtx_def = type { i16, i8, i8, [1 x %struct.rtunion] }
-@ix86_cpu = external global i32		; <i32*> [#uses=1]
-@which_alternative = external global i32		; <i32*> [#uses=3]
+@ix86_cpu = external global i32		; <ptr> [#uses=1]
+@which_alternative = external global i32		; <ptr> [#uses=3]
 
 declare fastcc i32 @recog()
 
@@ -169,7 +169,7 @@ cond_next778:		; preds = %cond_next6.i119
 	br i1 %tmp781, label %cond_next784, label %bb790
 
 cond_next784:		; preds = %cond_next778
-	%tmp785 = load i32, i32* @ix86_cpu		; <i32> [#uses=1]
+	%tmp785 = load i32, ptr @ix86_cpu		; <i32> [#uses=1]
 	%tmp786 = icmp eq i32 %tmp785, 5		; <i1> [#uses=1]
 	br i1 %tmp786, label %UnifiedReturnBlock, label %bb790
 
@@ -208,7 +208,7 @@ bb1419:		; preds = %cond_true.i
 	ret void
 
 bb1648:		; preds = %cond_true.i, %cond_true.i, %cond_true.i, %cond_true.i
-	%tmp1650 = load i32, i32* @which_alternative		; <i32> [#uses=1]
+	%tmp1650 = load i32, ptr @which_alternative		; <i32> [#uses=1]
 	switch i32 %tmp1650, label %bb1701 [
 		 i32 0, label %cond_next1675
 		 i32 1, label %cond_next1675
@@ -219,7 +219,7 @@ cond_next1675:		; preds = %bb1648, %bb1648, %bb1648
 	ret void
 
 bb1701:		; preds = %bb1648
-	%tmp1702 = load i32, i32* @which_alternative		; <i32> [#uses=1]
+	%tmp1702 = load i32, ptr @which_alternative		; <i32> [#uses=1]
 	switch i32 %tmp1702, label %bb1808 [
 		 i32 0, label %cond_next1727
 		 i32 1, label %cond_next1727
@@ -237,7 +237,7 @@ cond_next1834:		; preds = %bb1808
 	ret void
 
 bb1876:		; preds = %bb1808
-	%tmp1877signed = load i32, i32* @which_alternative		; <i32> [#uses=4]
+	%tmp1877signed = load i32, ptr @which_alternative		; <i32> [#uses=4]
 	%tmp1877 = bitcast i32 %tmp1877signed to i32		; <i32> [#uses=1]
 	%bothcond699 = icmp ult i32 %tmp1877, 2		; <i1> [#uses=1]
 	%tmp1888 = icmp eq i32 %tmp1877signed, 2		; <i1> [#uses=1]

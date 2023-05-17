@@ -22,9 +22,9 @@ define i32 @foo1(i64 %i) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
   %a = alloca i32, i32 200, align 64
-  %b = getelementptr inbounds i32, i32* %a, i64 %i
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 %i
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -50,9 +50,9 @@ define i32 @foo2(i64 %i) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
   %a = alloca i32, i32 2000, align 2048
-  %b = getelementptr inbounds i32, i32* %a, i64 %i
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 %i
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -76,9 +76,9 @@ define i32 @foo3(i64 %i) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
   %a = alloca i32, i32 1000, align 1024
-  %b = getelementptr inbounds i32, i32* %a, i64 %i
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 %i
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -119,11 +119,11 @@ define i32 @foo4(i64 %i) local_unnamed_addr #0 {
 ; CHECK-NEXT:    .cfi_def_cfa %rsp, 8
 ; CHECK-NEXT:    retq
   %a = alloca i32, i32 200, align 64
-  %b = getelementptr inbounds i32, i32* %a, i64 %i
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 %i
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   %d = alloca i32, i32 %c, align 64
-  %e = load volatile i32, i32* %d
+  %e = load volatile i32, ptr %d
   ret i32 %e
 }
 

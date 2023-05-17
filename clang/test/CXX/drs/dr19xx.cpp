@@ -83,7 +83,7 @@ namespace dr1940 { // dr1940: yes
 #if __cplusplus >= 201103L
 static union {
   static_assert(true, "");  // ok
-  static_assert(false, ""); // expected-error {{static_assert failed}}
+  static_assert(false, ""); // expected-error {{static assertion failed}}
   int not_empty;
 };
 #endif
@@ -165,6 +165,27 @@ namespace dr1959 { // dr1959: 3.9
   // where the base class is reference-related to the argument type.
   c q(static_cast<c&&>(q));
 #endif
+}
+
+namespace dr1960 { // dr1960: no
+struct A {
+void f() {}
+protected:
+void g() {}
+};
+
+struct B: A {
+private:
+using A::f;
+using A::g;
+};
+
+struct C : B {
+// FIXME: both declarations are ill-formed, because A::f and A::g
+// are not accessible.
+using A::f;
+using A::g;
+};
 }
 
 namespace dr1966 { // dr1966: 11

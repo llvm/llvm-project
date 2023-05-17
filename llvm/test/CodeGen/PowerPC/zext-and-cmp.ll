@@ -7,18 +7,18 @@
 @k = local_unnamed_addr global i32 0, align 4
 
 ; Function Attrs: norecurse nounwind
-define signext i32 @cmplwi(i32* nocapture readonly %p, i32* nocapture readonly %q, i32 signext %j, i32 signext %r10) {
+define signext i32 @cmplwi(ptr nocapture readonly %p, ptr nocapture readonly %q, i32 signext %j, i32 signext %r10) {
 entry:
-  %0 = load i32, i32* %q, align 4
+  %0 = load i32, ptr %q, align 4
   %shl = shl i32 %0, %j
-  %1 = load i32, i32* %p, align 4
+  %1 = load i32, ptr %p, align 4
   %and = and i32 %shl, %r10
   %and1 = and i32 %and, %1
   %tobool = icmp eq i32 %and1, 0
   br i1 %tobool, label %cleanup, label %if.then
 
 if.then:
-  store i32 %j, i32* @k, align 4
+  store i32 %j, ptr @k, align 4
   br label %cleanup
 
 cleanup:

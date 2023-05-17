@@ -9,30 +9,26 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @null = constant [1 x i8] zeroinitializer
 @null_hello = constant [7 x i8] c"\00hello\00"
 
-declare i8* @strcat(i8*, i8*)
-declare i32 @puts(i8*)
+declare ptr @strcat(ptr, ptr)
+declare i32 @puts(ptr)
 
 define i32 @main() {
 ; CHECK-LABEL: @main(
-; CHECK-NOT: call i8* @strcat
+; CHECK-NOT: call ptr @strcat
 ; CHECK: call i32 @puts
 
   %target = alloca [1024 x i8]
-  %arg1 = getelementptr [1024 x i8], [1024 x i8]* %target, i32 0, i32 0
-  store i8 0, i8* %arg1
+  store i8 0, ptr %target
 
   ; rslt1 = strcat(target, "hello\00")
-  %arg2 = getelementptr [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %rslt1 = call i8* @strcat(i8* %arg1, i8* %arg2)
+  %rslt1 = call ptr @strcat(ptr %target, ptr @hello)
 
   ; rslt2 = strcat(rslt1, "\00")
-  %arg3 = getelementptr [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %rslt2 = call i8* @strcat(i8* %rslt1, i8* %arg3)
+  %rslt2 = call ptr @strcat(ptr %rslt1, ptr @null)
 
   ; rslt3 = strcat(rslt2, "\00hello\00")
-  %arg4 = getelementptr [7 x i8], [7 x i8]* @null_hello, i32 0, i32 0
-  %rslt3 = call i8* @strcat(i8* %rslt2, i8* %arg4)
+  %rslt3 = call ptr @strcat(ptr %rslt2, ptr @null_hello)
 
-  call i32 @puts( i8* %rslt3 )
+  call i32 @puts( ptr %rslt3 )
   ret i32 0
 }

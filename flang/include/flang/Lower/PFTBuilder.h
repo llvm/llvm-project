@@ -37,7 +37,6 @@ struct ModuleLikeUnit;
 struct FunctionLikeUnit;
 
 using EvaluationList = std::list<Evaluation>;
-using LabelEvalMap = llvm::DenseMap<Fortran::parser::Label, Evaluation *>;
 
 /// Provide a variant like container that can hold references. It can hold
 /// constant or mutable references. It is used in the other classes to provide
@@ -170,9 +169,9 @@ static constexpr bool isIntermediateConstructStmt{common::HasMember<
 
 template <typename A>
 static constexpr bool isNopConstructStmt{common::HasMember<
-    A, std::tuple<parser::CaseStmt, parser::EndSelectStmt, parser::ElseIfStmt,
-                  parser::ElseStmt, parser::EndIfStmt,
-                  parser::SelectRankCaseStmt, parser::TypeGuardStmt>>};
+    A, std::tuple<parser::CaseStmt, parser::ElseIfStmt, parser::ElseStmt,
+                  parser::EndIfStmt, parser::SelectRankCaseStmt,
+                  parser::TypeGuardStmt>>};
 
 template <typename A>
 static constexpr bool isExecutableDirective{common::HasMember<
@@ -206,7 +205,7 @@ using EvaluationTuple =
 /// from EvaluationTuple type (std::tuple<A, B, ...>).
 using EvaluationVariant = MakeReferenceVariant<EvaluationTuple>;
 
-/// Function-like units contain lists of evaluations.  These can be simple
+/// Function-like units contain lists of evaluations. These can be simple
 /// statements or constructs, where a construct contains its own evaluations.
 struct Evaluation : EvaluationVariant {
 
@@ -277,9 +276,8 @@ struct Evaluation : EvaluationVariant {
   /// from one or more enclosing constructs.
   Evaluation &nonNopSuccessor() const {
     Evaluation *successor = lexicalSuccessor;
-    if (successor && successor->isNopConstructStmt()) {
+    if (successor && successor->isNopConstructStmt())
       successor = successor->parentConstruct->constructExit;
-    }
     assert(successor && "missing successor");
     return *successor;
   }
@@ -310,35 +308,36 @@ struct Evaluation : EvaluationVariant {
 
   bool lowerAsStructured() const;
   bool lowerAsUnstructured() const;
+  bool forceAsUnstructured() const;
 
   // FIR generation looks primarily at PFT ActionStmt and ConstructStmt leaf
-  // nodes.  Members such as lexicalSuccessor and block are applicable only
-  // to these nodes, plus some directives.  The controlSuccessor member is
-  // used for nonlexical successors, such as linking to a GOTO target.  For
-  // multiway branches, it is set to the first target.  Successor and exit
-  // links always target statements or directives.  An internal Construct
+  // nodes. Members such as lexicalSuccessor and block are applicable only
+  // to these nodes, plus some directives. The controlSuccessor member is
+  // used for nonlexical successors, such as linking to a GOTO target. For
+  // multiway branches, it is set to the first target. Successor and exit
+  // links always target statements or directives. An internal Construct
   // node has a constructExit link that applies to exits from anywhere within
   // the construct.
   //
-  // An unstructured construct is one that contains some form of goto.  This
+  // An unstructured construct is one that contains some form of goto. This
   // is indicated by the isUnstructured member flag, which may be set on a
-  // statement and propagated to enclosing constructs.  This distinction allows
+  // statement and propagated to enclosing constructs. This distinction allows
   // a structured IF or DO statement to be materialized with custom structured
-  // FIR operations.  An unstructured statement is materialized as mlir
+  // FIR operations. An unstructured statement is materialized as mlir
   // operation sequences that include explicit branches.
   //
-  // The block member is set for statements that begin a new block.  This
-  // block is the target of any branch to the statement.  Statements may have
+  // The block member is set for statements that begin a new block. This
+  // block is the target of any branch to the statement. Statements may have
   // additional (unstructured) "local" blocks, but such blocks cannot be the
-  // target of any explicit branch.  The primary example of an (unstructured)
+  // target of any explicit branch. The primary example of an (unstructured)
   // statement that may have multiple associated blocks is NonLabelDoStmt,
   // which may have a loop preheader block for loop initialization code (the
   // block member), and always has a "local" header block that is the target
-  // of the loop back edge.  If the NonLabelDoStmt is a concurrent loop, it
+  // of the loop back edge. If the NonLabelDoStmt is a concurrent loop, it
   // may be associated with an arbitrary number of nested preheader, header,
   // and mask blocks.
   //
-  // The printIndex member is only set for statements.  It is used for dumps
+  // The printIndex member is only set for statements. It is used for dumps
   // (and debugging) and does not affect FIR generation.
 
   PftNode parent;
@@ -352,6 +351,7 @@ struct Evaluation : EvaluationVariant {
   bool isNewBlock{false};                // evaluation begins a new basic block
   bool isUnstructured{false};  // evaluation has unstructured control flow
   bool negateCondition{false}; // If[Then]Stmt condition must be negated
+  bool activeConstruct{false}; // temporarily set for some constructs
   mlir::Block *block{nullptr}; // isNewBlock block (ActionStmt, ConstructStmt)
   int printIndex{0}; // (ActionStmt, ConstructStmt) evaluation index for dumps
 };
@@ -445,7 +445,7 @@ struct Variable {
     const semantics::Symbol *namingSymbol;
     /// Compiler generated symbol with the aggregate initial value if any.
     const semantics::Symbol *initialValueSymbol = nullptr;
-    /// Is this a global aggregate ?
+    /// Is this a global aggregate?
     bool isGlobalAggregate;
   };
 
@@ -485,10 +485,10 @@ struct Variable {
     return std::visit([](const auto &x) { return x.isGlobal(); }, var);
   }
 
-  /// Is this a module variable ?
-  bool isModuleVariable() const {
+  /// Is this a module or submodule variable?
+  bool isModuleOrSubmoduleVariable() const {
     const semantics::Scope *scope = getOwningScope();
-    return scope && scope->IsModule();
+    return scope && scope->kind() == Fortran::semantics::Scope::Kind::Module;
   }
 
   const Fortran::semantics::Scope *getOwningScope() const {
@@ -522,7 +522,7 @@ struct Variable {
       return s->aliaser;
     return false;
   }
-  std::size_t getAlias() const {
+  std::size_t getAliasOffset() const {
     if (auto *s = std::get_if<Nominal>(&var))
       return s->aliasOffset;
     return 0;
@@ -568,6 +568,25 @@ private:
   std::variant<Nominal, AggregateStore> var;
 };
 
+using VariableList = std::vector<Variable>;
+using ScopeVariableListMap =
+    std::map<const Fortran::semantics::Scope *, VariableList>;
+
+/// Find or create an ordered list of the equivalence sets and variables that
+/// appear in \p scope. The result is cached in \p map.
+const VariableList &getScopeVariableList(const Fortran::semantics::Scope &scope,
+                                         ScopeVariableListMap &map);
+
+/// Create an ordered list of the equivalence sets and variables that appear in
+/// \p scope. The result is not cached.
+VariableList getScopeVariableList(const Fortran::semantics::Scope &scope);
+
+/// Create an ordered list of the equivalence sets and variables that \p symbol
+/// depends on. \p symbol itself will be the last variable in the list.
+VariableList getDependentVariableList(const Fortran::semantics::Symbol &);
+
+void dump(VariableList &, std::string s = {}); // `s` is an optional dump label
+
 /// Function-like units may contain evaluations (executable statements) and
 /// nested function-like units (internal procedures and function statements).
 struct FunctionLikeUnit : public ProgramUnit {
@@ -597,8 +616,6 @@ struct FunctionLikeUnit : public ProgramUnit {
   FunctionLikeUnit(FunctionLikeUnit &&) = default;
   FunctionLikeUnit(const FunctionLikeUnit &) = delete;
 
-  std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
-
   bool isMainProgram() const {
     return endStmt.isA<parser::Statement<parser::EndProgramStmt>>();
   }
@@ -623,6 +640,15 @@ struct FunctionLikeUnit : public ProgramUnit {
     return *symbol;
   }
 
+  /// Return a pointer to the main program symbol for named programs
+  /// Return the null pointer for anonymous programs
+  const semantics::Symbol *getMainProgramSymbol() const {
+    if (!isMainProgram()) {
+      llvm::report_fatal_error("call only on main program.");
+    }
+    return entryPointList[activeEntry].first;
+  }
+
   /// Return a pointer to the current entry point Evaluation.
   /// This is null for a primary entry point.
   Evaluation *getEntryEval() const {
@@ -635,7 +661,7 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   void setHostAssociatedSymbols(
       const llvm::SetVector<const semantics::Symbol *> &symbols) {
-    hostAssociations.addSymbolsToBind(symbols);
+    hostAssociations.addSymbolsToBind(symbols, getScope());
   }
 
   /// Return the host associations, if any, from the parent (host) procedure.
@@ -643,7 +669,12 @@ struct FunctionLikeUnit : public ProgramUnit {
   HostAssociations &parentHostAssoc();
 
   /// Return true iff the parent is a procedure and the parent has a non-empty
-  /// set of host associations.
+  /// set of host associations that are conveyed through an extra tuple
+  /// argument.
+  bool parentHasTupleHostAssoc();
+
+  /// Return true iff the parent is a procedure and the parent has a non-empty
+  /// set of host associations for variables.
   bool parentHasHostAssoc();
 
   /// Return the host associations for this function like unit. The list of host
@@ -652,28 +683,31 @@ struct FunctionLikeUnit : public ProgramUnit {
 
   LLVM_DUMP_METHOD void dump() const;
 
-  /// Anonymous programs do not have a begin statement
+  /// Get the function scope.
+  const Fortran::semantics::Scope &getScope() const { return *scope; }
+
+  /// Anonymous programs do not have a begin statement.
   std::optional<FunctionStatement> beginStmt;
   FunctionStatement endStmt;
+  const semantics::Scope *scope;
   EvaluationList evaluationList;
   LabelEvalMap labelEvaluationMap;
   SymbolLabelMap assignSymbolLabelMap;
   std::list<FunctionLikeUnit> nestedFunctions;
-  /// <Symbol, Evaluation> pairs for each entry point.  The pair at index 0
+  /// <Symbol, Evaluation> pairs for each entry point. The pair at index 0
   /// is the primary entry point; remaining pairs are alternate entry points.
   /// The primary entry point symbol is Null for an anonymous program.
-  /// A named program symbol has MainProgramDetails.  Other symbols have
-  /// SubprogramDetails.  Evaluations are filled in for alternate entries.
+  /// A named program symbol has MainProgramDetails. Other symbols have
+  /// SubprogramDetails. Evaluations are filled in for alternate entries.
   llvm::SmallVector<std::pair<const semantics::Symbol *, Evaluation *>, 1>
       entryPointList{std::pair{nullptr, nullptr}};
-  /// Current index into entryPointList.  Index 0 is the primary entry point.
+  /// Current index into entryPointList. Index 0 is the primary entry point.
   int activeEntry = 0;
-  /// Primary result for function subprograms with alternate entries.  This
+  /// Primary result for function subprograms with alternate entries. This
   /// is one of the largest result values, not necessarily the first one.
   const semantics::Symbol *primaryResult{nullptr};
   /// Terminal basic block (if any)
   mlir::Block *finalBlock{};
-  std::vector<std::vector<Variable>> varList;
   HostAssociations hostAssociations;
 };
 
@@ -694,8 +728,6 @@ struct ModuleLikeUnit : public ProgramUnit {
 
   LLVM_DUMP_METHOD void dump() const;
 
-  std::vector<Variable> getOrderedSymbolTable() { return varList[0]; }
-
   /// Get the starting source location for this module like unit.
   parser::CharBlock getStartingSourceLoc() const;
 
@@ -706,7 +738,6 @@ struct ModuleLikeUnit : public ProgramUnit {
   ModuleStatement endStmt;
   std::list<FunctionLikeUnit> nestedFunctions;
   EvaluationList evaluationList;
-  std::vector<std::vector<Variable>> varList;
 };
 
 /// Block data units contain the variables and data initializers for common
@@ -746,6 +777,9 @@ struct Program {
   const semantics::CommonBlockList &getCommonBlocks() const {
     return commonBlocks;
   }
+  ScopeVariableListMap &getScopeVariableListMap() {
+    return scopeVariableListMap;
+  }
 
   /// LLVM dump method on a Program.
   LLVM_DUMP_METHOD void dump() const;
@@ -753,12 +787,8 @@ struct Program {
 private:
   std::list<Units> units;
   semantics::CommonBlockList commonBlocks;
+  ScopeVariableListMap scopeVariableListMap; // module and submodule scopes
 };
-
-/// Return the list of variables that appears in the specification expressions
-/// of a function result.
-std::vector<pft::Variable>
-buildFuncResultDependencyList(const Fortran::semantics::Symbol &);
 
 /// Helper to get location from FunctionLikeUnit/ModuleLikeUnit begin/end
 /// statements.
@@ -775,6 +805,14 @@ ParentType *getAncestor(A &node) {
   return node.parent.visit(common::visitors{
       [](Program &p) -> ParentType * { return nullptr; },
       [](auto &p) -> ParentType * { return getAncestor<ParentType>(p); }});
+}
+
+/// Get the "global" scopeVariableListMap, stored in the pft root node.
+template <typename A>
+ScopeVariableListMap &getScopeVariableListMap(A &node) {
+  Program *pftRoot = getAncestor<Program>(node);
+  assert(pftRoot && "pft must have a root");
+  return pftRoot->getScopeVariableListMap();
 }
 
 /// Call the provided \p callBack on all symbols that are referenced inside \p
@@ -794,9 +832,9 @@ namespace Fortran::lower {
 ///
 /// A PFT is a light weight tree over the parse tree that is used to create FIR.
 /// The PFT captures pointers back into the parse tree, so the parse tree must
-/// not be changed between the construction of the PFT and its last use.  The
-/// PFT captures a structured view of a program.  A program is a list of units.
-/// A function like unit contains a list of evaluations.  An evaluation is
+/// not be changed between the construction of the PFT and its last use. The
+/// PFT captures a structured view of a program. A program is a list of units.
+/// A function like unit contains a list of evaluations. An evaluation is
 /// either a statement, or a construct with a nested list of evaluations.
 std::unique_ptr<pft::Program>
 createPFT(const parser::Program &root,

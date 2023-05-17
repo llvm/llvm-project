@@ -44,12 +44,11 @@ STATISTIC(MCNumEmitted, "Number of MC instructions emitted");
 namespace {
 
 class SparcMCCodeEmitter : public MCCodeEmitter {
-  const MCInstrInfo &MCII;
   MCContext &Ctx;
 
 public:
-  SparcMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
-      : MCII(mcii), Ctx(ctx) {}
+  SparcMCCodeEmitter(const MCInstrInfo &, MCContext &ctx)
+      : Ctx(ctx) {}
   SparcMCCodeEmitter(const SparcMCCodeEmitter &) = delete;
   SparcMCCodeEmitter &operator=(const SparcMCCodeEmitter &) = delete;
   ~SparcMCCodeEmitter() override = default;
@@ -84,12 +83,6 @@ public:
   unsigned getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
                                        SmallVectorImpl<MCFixup> &Fixups,
                                        const MCSubtargetInfo &STI) const;
-
-private:
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // end anonymous namespace
@@ -97,9 +90,6 @@ private:
 void SparcMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  verifyInstructionPredicates(MI,
-                              computeAvailableFeatures(STI.getFeatureBits()));
-
   unsigned Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   support::endian::write(OS, Bits,
                          Ctx.getAsmInfo()->isLittleEndian() ? support::little
@@ -245,15 +235,12 @@ getBranchOnRegTargetOpValue(const MCInst &MI, unsigned OpNo,
   if (MO.isReg() || MO.isImm())
     return getMachineOpValue(MI, MO, Fixups, STI);
 
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)Sparc::fixup_sparc_br16_2));
-  Fixups.push_back(MCFixup::create(0, MO.getExpr(),
-                                   (MCFixupKind)Sparc::fixup_sparc_br16_14));
+  Fixups.push_back(
+      MCFixup::create(0, MO.getExpr(), (MCFixupKind)Sparc::fixup_sparc_br16));
 
   return 0;
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SparcGenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createSparcMCCodeEmitter(const MCInstrInfo &MCII,

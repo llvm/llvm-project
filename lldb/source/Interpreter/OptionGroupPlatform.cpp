@@ -30,8 +30,9 @@ PlatformSP OptionGroupPlatform::CreatePlatformWithOptions(
           m_platform_name);
     }
     if (platform_sp) {
-      if (platform_arch.IsValid() && !platform_sp->IsCompatibleArchitecture(
-                                         arch, {}, false, &platform_arch)) {
+      if (platform_arch.IsValid() &&
+          !platform_sp->IsCompatibleArchitecture(
+              arch, {}, ArchSpec::CompatibleMatch, &platform_arch)) {
         error.SetErrorStringWithFormatv("platform '{0}' doesn't support '{1}'",
                                         platform_sp->GetPluginName(),
                                         arch.GetTriple().getTriple());

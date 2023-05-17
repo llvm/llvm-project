@@ -23,7 +23,7 @@
 
 #include "test_macros.h"
 
-template<class T, size_t extent, size_t otherExtent>
+template<class T, std::size_t extent, size_t otherExtent>
 std::span<T, extent> createImplicitSpan(std::span<T, otherExtent> s) {
     return {s}; // expected-error {{chosen constructor is explicit in copy-initialization}}
 }

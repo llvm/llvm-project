@@ -2,6 +2,8 @@
 // RUN: %clang_cc1 -std=c++11 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 // RUN: %clang_cc1 -std=c++14 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 // RUN: %clang_cc1 -std=c++17 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
+// RUN: %clang_cc1 -std=c++20 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
+// RUN: %clang_cc1 -std=c++23 %s -verify -fexceptions -fcxx-exceptions -pedantic-errors -triple %itanium_abi_triple
 
 namespace dr1 { // dr1: no
   namespace X { extern "C" void dr1_f(int a = 1); }
@@ -79,7 +81,7 @@ namespace dr5 { // dr5: yes
 namespace dr7 { // dr7: yes
   class A { public: ~A(); };
   class B : virtual private A {}; // expected-note 2 {{declared private here}}
-  class C : public B {} c; // expected-error 2 {{inherited virtual base class 'dr7::A' has private destructor}} \
+  class C : public B {} c; // expected-error 2 {{inherited virtual base class 'A' has private destructor}} \
                            // expected-note {{implicit default constructor for 'dr7::C' first required here}} \
                            // expected-note {{implicit destructor for 'dr7::C' first required here}}
   class VeryDerivedC : public B, virtual public A {} vdc;
@@ -448,6 +450,94 @@ namespace dr33 { // dr33: yes
 
 // dr34: na
 // dr35: dup 178
+
+namespace dr36 { // dr36: yes
+namespace example1 {
+  namespace A {
+    int i;
+  }
+  
+  namespace A1 {
+    using A::i;
+    using A::i;
+  }
+  
+  void f()
+  {
+    using A::i;
+    using A::i;
+  }
+}
+
+namespace example2 {
+  struct A
+  {
+    int i;
+    static int j;
+  };
+
+  struct B : A { };
+  struct C : A { };
+
+  struct D : virtual B, virtual C
+  {
+    using B::i; // expected-note {{previous using declaration}}
+    using B::i; // expected-error {{redeclaration of using declaration}}
+
+    using C::i; // expected-note {{previous using declaration}}
+    using C::i; // expected-error {{redeclaration of using declaration}}
+
+    using B::j; // expected-note {{previous using declaration}}
+    using B::j; // expected-error {{redeclaration of using declaration}}
+
+    using C::j; // expected-note {{previous using declaration}}
+    using C::j; // expected-error {{redeclaration of using declaration}}
+  };
+}
+
+namespace example3 {
+  template<typename T>
+  struct A
+  {
+    T i;
+    static T j;
+  };
+
+  template<typename T>
+  struct B : A<T> { };
+  template<typename T>
+  struct C : A<T> { };
+
+  template<typename T>
+  struct D : virtual B<T>, virtual C<T>
+  {
+    using B<T>::i; // expected-note {{previous using declaration}}
+    using B<T>::i; // expected-error {{redeclaration of using declaration}}
+
+    using C<T>::i; // expected-note {{previous using declaration}}
+    using C<T>::i; // expected-error {{redeclaration of using declaration}}
+
+    using B<T>::j; // expected-note {{previous using declaration}}
+    using B<T>::j; // expected-error {{redeclaration of using declaration}}
+
+    using C<T>::j; // expected-note {{previous using declaration}}
+    using C<T>::j; // expected-error {{redeclaration of using declaration}}
+  };
+}
+namespace example4 {
+  template<typename T>
+  struct E {
+    T k;
+  };
+
+  template<typename T>
+  struct G : E<T> {
+    using E<T>::k; // expected-note {{previous using declaration}}
+    using E<T>::k; // expected-error {{redeclaration of using declaration}}
+  };
+}
+}
+
 // dr37: sup 475
 
 namespace dr38 { // dr38: yes
@@ -482,7 +572,7 @@ namespace dr39 { // dr39: no
       using V::z;
       float &z(float);
     };
-    struct C : A, B, virtual V {} c; // expected-warning {{direct base 'dr39::example2::A' is inaccessible due to ambiguity:\n    struct dr39::example2::C -> struct dr39::example2::A\n    struct dr39::example2::C -> struct dr39::example2::B -> struct dr39::example2::A}}
+    struct C : A, B, virtual V {} c; // expected-warning {{direct base 'A' is inaccessible due to ambiguity:\n    struct dr39::example2::C -> A\n    struct dr39::example2::C -> B -> A}}
     int &x = c.x(0); // expected-error {{found in multiple base classes}}
     // FIXME: This is valid, because we find the same static data member either way.
     int &y = c.y(0); // expected-error {{found in multiple base classes}}
@@ -699,6 +789,8 @@ namespace dr58 { // dr58: yes
 }
 
 namespace dr59 { // dr59: yes
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-volatile"
   template<typename T> struct convert_to { operator T() const; };
   struct A {}; // expected-note 5+{{candidate}}
   struct B : A {}; // expected-note 0+{{candidate}}
@@ -732,6 +824,7 @@ namespace dr59 { // dr59: yes
   int n3 = convert_to<const int>();
   int n4 = convert_to<const volatile int>();
   int n5 = convert_to<const volatile int&>();
+#pragma clang diagnostic pop
 }
 
 namespace dr60 { // dr60: yes
@@ -895,10 +988,10 @@ namespace dr70 { // dr70: yes
 // dr72: dup 69
 
 #if __cplusplus >= 201103L
-namespace dr73 { // dr73: no
-  // The resolution to dr73 is unworkable. Consider:
+namespace dr73 { // dr73: sup 1652
   int a, b;
   static_assert(&a + 1 != &b, ""); // expected-error {{not an integral constant expression}}
+  // expected-note@-1 {{comparison against pointer '&a + 1' that points past the end of a complete object}}
 }
 #endif
 
@@ -965,7 +1058,7 @@ namespace dr84 { // dr84: yes
   struct C {};
   struct B {
     B(B&); // expected-note 0-1{{candidate}}
-    B(C); // expected-note 0-1{{no known conversion from 'dr84::B' to 'dr84::C'}}
+    B(C); // expected-note 0-1{{no known conversion from 'B' to 'C'}}
     operator C() const;
   };
   A a;

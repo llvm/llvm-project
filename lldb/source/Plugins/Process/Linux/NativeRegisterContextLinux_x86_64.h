@@ -13,8 +13,10 @@
 
 #include "Plugins/Process/Linux/NativeRegisterContextLinux.h"
 #include "Plugins/Process/Utility/NativeRegisterContextDBReg_x86.h"
+#include "Plugins/Process/Utility/RegisterContextLinux_x86.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/Process/Utility/lldb-x86-register-enums.h"
+#include <optional>
 #include <sys/uio.h>
 
 namespace lldb_private {
@@ -45,9 +47,9 @@ public:
 
   Status WriteAllRegisterValues(const lldb::DataBufferSP &data_sp) override;
 
-  llvm::Optional<SyscallData> GetSyscallData() override;
+  std::optional<SyscallData> GetSyscallData() override;
 
-  llvm::Optional<MmapData> GetMmapData() override;
+  std::optional<MmapData> GetMmapData() override;
 
 protected:
   void *GetGPRBuffer() override { return &m_gpr_x86_64; }
@@ -129,6 +131,11 @@ private:
   bool IsMPX(uint32_t reg_index) const;
 
   void UpdateXSTATEforWrite(uint32_t reg_index);
+
+  RegisterContextLinux_x86 &GetRegisterInfo() const {
+    return static_cast<RegisterContextLinux_x86 &>(
+        *m_register_info_interface_up);
+  }
 };
 
 } // namespace process_linux

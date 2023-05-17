@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple mips64el-unknown-linux -O3 -target-abi n64 -o - -emit-llvm %s | FileCheck %s
+// RUN: %clang_cc1 -triple mips64el-unknown-linux -O3 -target-abi n64 -o - -emit-llvm %s | FileCheck %s
 
 class B {
 public:
@@ -10,7 +10,7 @@ class D : public B {
 
 extern D gd0;
 
-// CHECK: _Z4foo1v(%class.D* noalias nocapture writeonly sret
+// CHECK: _Z4foo1v(ptr noalias nocapture writeonly sret
 
 D foo1(void) {
   return gd0;

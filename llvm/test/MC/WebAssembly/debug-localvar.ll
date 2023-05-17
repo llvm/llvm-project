@@ -9,16 +9,16 @@ entry:
   %arg.addr = alloca i32, align 4
   %a = alloca i32, align 4
   %b = alloca i32, align 4
-  store i32 %arg, i32* %arg.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %arg.addr, metadata !11, metadata !DIExpression()), !dbg !12
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !13, metadata !DIExpression()), !dbg !14
-  store i32 1, i32* %a, align 4, !dbg !14
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !15, metadata !DIExpression()), !dbg !17
-  store i32 2, i32* %b, align 4, !dbg !17
-  %0 = load i32, i32* %b, align 4, !dbg !18
-  store i32 %0, i32* %arg.addr, align 4, !dbg !19
-  %1 = load i32, i32* %arg.addr, align 4, !dbg !20
-  %2 = load i32, i32* %a, align 4, !dbg !21
+  store i32 %arg, ptr %arg.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %arg.addr, metadata !11, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !13, metadata !DIExpression()), !dbg !14
+  store i32 1, ptr %a, align 4, !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !15, metadata !DIExpression()), !dbg !17
+  store i32 2, ptr %b, align 4, !dbg !17
+  %0 = load i32, ptr %b, align 4, !dbg !18
+  store i32 %0, ptr %arg.addr, align 4, !dbg !19
+  %1 = load i32, ptr %arg.addr, align 4, !dbg !20
+  %2 = load i32, ptr %a, align 4, !dbg !21
   %add = add nsw i32 %1, %2, !dbg !22
   ret i32 %add, !dbg !23
 }

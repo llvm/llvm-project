@@ -550,6 +550,20 @@ TEST_F(PatternMatchTest, Power2) {
   EXPECT_TRUE(m_NegatedPower2().match(CNegIntMin));
 }
 
+TEST_F(PatternMatchTest, Not) {
+  Value *C1 = IRB.getInt32(1);
+  Value *C2 = IRB.getInt32(2);
+  Value *C3 = IRB.getInt32(3);
+  Instruction *Not = BinaryOperator::CreateXor(C1, C2);
+
+  // When `m_Not` does not match the `not` itself,
+  // it should not try to apply the inner matcher.
+  Value *Val = C3;
+  EXPECT_FALSE(m_Not(m_Value(Val)).match(Not));
+  EXPECT_EQ(Val, C3);
+  Not->deleteValue();
+}
+
 TEST_F(PatternMatchTest, CommutativeDeferredValue) {
   Value *X = IRB.getInt32(1);
   Value *Y = IRB.getInt32(2);
@@ -1707,6 +1721,37 @@ TEST_F(PatternMatchTest, LogicalSelects) {
   EXPECT_FALSE(match(Or, m_c_LogicalOr(m_Specific(Y), m_Specific(Y))));
 }
 
+TEST_F(PatternMatchTest, VectorLogicalSelects) {
+  Type *i1 = IRB.getInt1Ty();
+  Type *v3i1 = FixedVectorType::get(i1, 3);
+
+  Value *Alloca = IRB.CreateAlloca(i1);
+  Value *AllocaVec = IRB.CreateAlloca(v3i1);
+  Value *Scalar = IRB.CreateLoad(i1, Alloca);
+  Value *Vector = IRB.CreateLoad(v3i1, AllocaVec);
+  Constant *F = Constant::getNullValue(v3i1);
+  Constant *T = Constant::getAllOnesValue(v3i1);
+
+  // select <3 x i1> Vector, <3 x i1> Vector, <3 x i1> <i1 0, i1 0, i1 0>
+  Value *VecAnd = IRB.CreateSelect(Vector, Vector, F);
+
+  // select i1 Scalar, <3 x i1> Vector, <3 x i1> <i1 0, i1 0, i1 0>
+  Value *MixedTypeAnd = IRB.CreateSelect(Scalar, Vector, F);
+
+  // select <3 x i1> Vector, <3 x i1> <i1 1, i1 1, i1 1>, <3 x i1> Vector
+  Value *VecOr = IRB.CreateSelect(Vector, T, Vector);
+
+  // select i1 Scalar, <3 x i1> <i1 1, i1 1, i1 1>, <3 x i1> Vector
+  Value *MixedTypeOr = IRB.CreateSelect(Scalar, T, Vector);
+
+  // We allow matching a real vector logical select,
+  // but not a scalar select of vector bools.
+  EXPECT_TRUE(match(VecAnd, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_FALSE(match(MixedTypeAnd, m_LogicalAnd(m_Value(), m_Value())));
+  EXPECT_TRUE(match(VecOr, m_LogicalOr(m_Value(), m_Value())));
+  EXPECT_FALSE(match(MixedTypeOr, m_LogicalOr(m_Value(), m_Value())));
+}
+
 TEST_F(PatternMatchTest, VScale) {
   DataLayout DL = M->getDataLayout();
 
@@ -1715,7 +1760,7 @@ TEST_F(PatternMatchTest, VScale) {
   Value *NullPtrVec = Constant::getNullValue(VecPtrTy);
   Value *GEP = IRB.CreateGEP(VecTy, NullPtrVec, IRB.getInt64(1));
   Value *PtrToInt = IRB.CreatePtrToInt(GEP, DL.getIntPtrType(GEP->getType()));
-  EXPECT_TRUE(match(PtrToInt, m_VScale(DL)));
+  EXPECT_TRUE(match(PtrToInt, m_VScale()));
 
   // This used to cause assertion failures when attempting to match m_VScale.
   // With opaque pointers the bitcast is no longer present.
@@ -1725,7 +1770,7 @@ TEST_F(PatternMatchTest, VScale) {
   Value *GEP2 = IRB.CreateGEP(VecTy, BitCast, IRB.getInt64(1));
   Value *PtrToInt2 =
       IRB.CreatePtrToInt(GEP2, DL.getIntPtrType(GEP2->getType()));
-  EXPECT_TRUE(match(PtrToInt2, m_VScale(DL)));
+  EXPECT_TRUE(match(PtrToInt2, m_VScale()));
 }
 
 TEST_F(PatternMatchTest, NotForbidUndef) {
@@ -1788,6 +1833,20 @@ TYPED_TEST(MutableConstTest, ICmp) {
               .match((InstructionType)IRB.CreateICmp(Pred, L, R)));
   EXPECT_EQ(L, MatchL);
   EXPECT_EQ(R, MatchR);
+}
+
+TEST_F(PatternMatchTest, ConstExpr) {
+  Constant *G =
+      M->getOrInsertGlobal("dummy", PointerType::getUnqual(IRB.getInt32Ty()));
+  Constant *S = ConstantExpr::getPtrToInt(G, IRB.getInt32Ty());
+  Type *VecTy = FixedVectorType::get(IRB.getInt32Ty(), 2);
+  PoisonValue *P = PoisonValue::get(VecTy);
+  Constant *V = ConstantExpr::getInsertElement(P, S, IRB.getInt32(0));
+
+  // The match succeeds on a constant that is a constant expression itself
+  // or a constant that contains a constant expression.
+  EXPECT_TRUE(match(S, m_ConstantExpr()));
+  EXPECT_TRUE(match(V, m_ConstantExpr()));
 }
 
 } // anonymous namespace.

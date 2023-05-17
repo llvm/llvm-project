@@ -23,7 +23,6 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/Support/raw_ostream.h"
 
 namespace llvm {
 namespace mca {
@@ -38,7 +37,6 @@ class CodeEmitter {
   const MCCodeEmitter &MCE;
 
   SmallString<256> Code;
-  raw_svector_ostream VecOS;
   ArrayRef<MCInst> Sequence;
 
   // An EncodingInfo pair stores <base, length> information.  Base (i.e. first)
@@ -53,8 +51,7 @@ class CodeEmitter {
 public:
   CodeEmitter(const MCSubtargetInfo &ST, const MCAsmBackend &AB,
               const MCCodeEmitter &CE, ArrayRef<MCInst> S)
-      : STI(ST), MAB(AB), MCE(CE), VecOS(Code), Sequence(S),
-        Encodings(S.size()) {}
+      : STI(ST), MAB(AB), MCE(CE), Sequence(S), Encodings(S.size()) {}
 
   StringRef getEncoding(unsigned MCID) {
     EncodingInfo EI = getOrCreateEncodingInfo(MCID);

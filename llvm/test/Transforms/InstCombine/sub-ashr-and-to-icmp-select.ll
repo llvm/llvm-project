@@ -127,48 +127,48 @@ define <4 x i32> @sub_ashr_and_i32_vec_commute(<4 x i32> %x, <4 x i32> %y) {
 
 ; Extra uses
 
-define i32 @sub_ashr_and_i32_extra_use_sub(i32 %x, i32 %y, i32* %p) {
+define i32 @sub_ashr_and_i32_extra_use_sub(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @sub_ashr_and_i32_extra_use_sub(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    store i32 [[SUB]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SUB]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt i32 [[SUB]], 0
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[ISNEG]], i32 [[X]], i32 0
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub nsw i32 %y, %x
-  store i32 %sub, i32* %p
+  store i32 %sub, ptr %p
   %shr = ashr i32 %sub, 31
   %and = and i32 %shr, %x
   ret i32 %and
 }
 
-define i32 @sub_ashr_and_i32_extra_use_and(i32 %x, i32 %y, i32* %p) {
+define i32 @sub_ashr_and_i32_extra_use_and(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @sub_ashr_and_i32_extra_use_and(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = select i1 [[TMP1]], i32 [[X]], i32 0
-; CHECK-NEXT:    store i32 [[AND]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[AND]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub nsw i32 %y, %x
   %shr = ashr i32 %sub, 31
   %and = and i32 %shr, %x
-  store i32 %and, i32* %p
+  store i32 %and, ptr %p
   ret i32 %and
 }
 
 ; Negative Tests
 
-define i32 @sub_ashr_and_i32_extra_use_ashr(i32 %x, i32 %y, i32* %p) {
+define i32 @sub_ashr_and_i32_extra_use_ashr(i32 %x, i32 %y, ptr %p) {
 ; CHECK-LABEL: @sub_ashr_and_i32_extra_use_ashr(
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp slt i32 [[Y:%.*]], [[X:%.*]]
 ; CHECK-NEXT:    [[SHR:%.*]] = sext i1 [[TMP1]] to i32
-; CHECK-NEXT:    store i32 [[SHR]], i32* [[P:%.*]], align 4
+; CHECK-NEXT:    store i32 [[SHR]], ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SHR]], [[X]]
 ; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %sub = sub nsw i32 %y, %x
   %shr = ashr i32 %sub, 31
-  store i32 %shr, i32* %p
+  store i32 %shr, ptr %p
   %and = and i32 %shr, %x
   ret i32 %and
 }
@@ -186,15 +186,14 @@ define i32 @sub_ashr_and_i32_no_nuw_nsw(i32 %x, i32 %y) {
   ret i32 %and
 }
 
-define <4 x i32> @sub_ashr_and_i32_vec_undef(<4 x i32> %x, <4 x i32> %y) {
-; CHECK-LABEL: @sub_ashr_and_i32_vec_undef(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw <4 x i32> [[Y:%.*]], [[X:%.*]]
-; CHECK-NEXT:    [[SHR:%.*]] = ashr <4 x i32> [[SUB]], <i32 31, i32 31, i32 31, i32 undef>
-; CHECK-NEXT:    [[AND:%.*]] = and <4 x i32> [[SHR]], [[X]]
+define <4 x i32> @sub_ashr_and_i32_vec_poison(<4 x i32> %x, <4 x i32> %y) {
+; CHECK-LABEL: @sub_ashr_and_i32_vec_poison(
+; CHECK-NEXT:    [[ISNEG:%.*]] = icmp slt <4 x i32> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = select <4 x i1> [[ISNEG]], <4 x i32> [[X]], <4 x i32> zeroinitializer
 ; CHECK-NEXT:    ret <4 x i32> [[AND]]
 ;
   %sub = sub nsw <4 x i32> %y, %x
-  %shr = ashr <4 x i32> %sub, <i32 31, i32 31, i32 31, i32 undef>
+  %shr = ashr <4 x i32> %sub, <i32 31, i32 31, i32 31, i32 poison>
   %and = and <4 x i32> %shr, %x
   ret <4 x i32> %and
 }

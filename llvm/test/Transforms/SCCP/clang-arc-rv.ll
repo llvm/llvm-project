@@ -5,23 +5,23 @@
 
 @g0 = global i8 zeroinitializer, align 1
 
-define internal i8* @foo() {
+define internal ptr @foo() {
 ; CHECK-LABEL: @foo(
-; CHECK-NEXT:    ret i8* @g0
+; CHECK-NEXT:    ret ptr @g0
 ;
-  ret i8* @g0
+  ret ptr @g0
 }
 
 define void @test() {
 ; CHECK-LABEL: @test(
-; CHECK-NEXT:    [[R:%.*]] = call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-; CHECK-NEXT:    call void (...) @llvm.objc.clang.arc.noop.use(i8* [[R]])
+; CHECK-NEXT:    [[R:%.*]] = call ptr @foo() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+; CHECK-NEXT:    call void (...) @llvm.objc.clang.arc.noop.use(ptr [[R]])
 ; CHECK-NEXT:    ret void
 ;
-  %r = call i8* @foo() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
-  call void (...) @llvm.objc.clang.arc.noop.use(i8* %r)
+  %r = call ptr @foo() [ "clang.arc.attachedcall"(ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue) ]
+  call void (...) @llvm.objc.clang.arc.noop.use(ptr %r)
   ret void
 }
 
-declare i8* @llvm.objc.unsafeClaimAutoreleasedReturnValue(i8*)
+declare ptr @llvm.objc.unsafeClaimAutoreleasedReturnValue(ptr)
 declare void @llvm.objc.clang.arc.noop.use(...)

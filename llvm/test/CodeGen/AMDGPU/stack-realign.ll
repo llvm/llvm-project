@@ -26,8 +26,8 @@
 ; GCN: ; ScratchSize: 144
 define void @needs_align16_default_stack_align(i32 %idx) #0 {
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
-  %gep0 = getelementptr inbounds [8 x <4 x i32>], [8 x <4 x i32>] addrspace(5)* %alloca.align16, i32 0, i32 %idx
-  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(5)* %gep0, align 16
+  %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
+  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
   ret void
 }
 
@@ -47,8 +47,8 @@ define void @needs_align16_default_stack_align(i32 %idx) #0 {
 ; GCN: ; ScratchSize: 160
 define void @needs_align16_stack_align4(i32 %idx) #2 {
   %alloca.align16 = alloca [8 x <4 x i32>], align 16, addrspace(5)
-  %gep0 = getelementptr inbounds [8 x <4 x i32>], [8 x <4 x i32>] addrspace(5)* %alloca.align16, i32 0, i32 %idx
-  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(5)* %gep0, align 16
+  %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
+  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 16
   ret void
 }
 
@@ -68,8 +68,8 @@ define void @needs_align16_stack_align4(i32 %idx) #2 {
 ; GCN: ; ScratchSize: 192
 define void @needs_align32(i32 %idx) #0 {
   %alloca.align16 = alloca [8 x <4 x i32>], align 32, addrspace(5)
-  %gep0 = getelementptr inbounds [8 x <4 x i32>], [8 x <4 x i32>] addrspace(5)* %alloca.align16, i32 0, i32 %idx
-  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, <4 x i32> addrspace(5)* %gep0, align 32
+  %gep0 = getelementptr inbounds [8 x <4 x i32>], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
+  store volatile <4 x i32> <i32 1, i32 2, i32 3, i32 4>, ptr addrspace(5) %gep0, align 32
   ret void
 }
 
@@ -84,8 +84,8 @@ define void @needs_align32(i32 %idx) #0 {
 ; GCN: ; ScratchSize: 52
 define void @force_realign4(i32 %idx) #1 {
   %alloca.align16 = alloca [8 x i32], align 4, addrspace(5)
-  %gep0 = getelementptr inbounds [8 x i32], [8 x i32] addrspace(5)* %alloca.align16, i32 0, i32 %idx
-  store volatile i32 3, i32 addrspace(5)* %gep0, align 4
+  %gep0 = getelementptr inbounds [8 x i32], ptr addrspace(5) %alloca.align16, i32 0, i32 %idx
+  store volatile i32 3, ptr addrspace(5) %gep0, align 4
   ret void
 }
 
@@ -95,7 +95,7 @@ define void @force_realign4(i32 %idx) #1 {
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
   %alloca = alloca i32, align 4, addrspace(5)
-  store volatile i32 2, i32 addrspace(5)* %alloca
+  store volatile i32 2, ptr addrspace(5) %alloca
   call void @needs_align16_default_stack_align(i32 1)
   ret void
 }
@@ -106,7 +106,7 @@ define amdgpu_kernel void @kernel_call_align16_from_8() #0 {
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align16_from_5() {
   %alloca0 = alloca i8, align 1, addrspace(5)
-  store volatile i8 2, i8  addrspace(5)* %alloca0
+  store volatile i8 2, ptr  addrspace(5) %alloca0
 
   call void @needs_align16_default_stack_align(i32 1)
   ret void
@@ -117,7 +117,7 @@ define amdgpu_kernel void @kernel_call_align16_from_5() {
 ; GCN: s_swappc_b64
 define amdgpu_kernel void @kernel_call_align4_from_5() {
   %alloca0 = alloca i8, align 1, addrspace(5)
-  store volatile i8 2, i8  addrspace(5)* %alloca0
+  store volatile i8 2, ptr  addrspace(5) %alloca0
 
   call void @needs_align16_stack_align4(i32 1)
   ret void
@@ -134,7 +134,7 @@ define amdgpu_kernel void @kernel_call_align4_from_5() {
 ; GCN: s_mov_b32 s33, [[FP_COPY]]
 define void @default_realign_align128(i32 %idx) #0 {
   %alloca.align = alloca i32, align 128, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 128
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 128
   ret void
 }
 
@@ -144,7 +144,7 @@ define void @default_realign_align128(i32 %idx) #0 {
 ; GCN-NOT: s32
 define void @disable_realign_align128(i32 %idx) #3 {
   %alloca.align = alloca i32, align 128, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 128
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 128
   ret void
 }
 
@@ -156,38 +156,43 @@ define void @func_call_align1024_bp_gets_vgpr_spill(<32 x i32> %a, i32 %b) #0 {
 ; The BP value is saved/restored with a VGPR spill.
 
 ; GCN-LABEL: func_call_align1024_bp_gets_vgpr_spill:
-; GCN: buffer_store_dword [[VGPR_REG:v[0-9]+]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Spill
-; GCN-NEXT: s_mov_b64 exec, s[16:17]
-; GCN-NEXT: v_writelane_b32 [[VGPR_REG]], s33, 2
-; GCN-DAG: s_add_i32 [[SCRATCH_REG:s[0-9]+]], s32, 0xffc0
-; GCN: s_and_b32 s33, [[SCRATCH_REG]], 0xffff0000
-; GCN: v_mov_b32_e32 v32, 0
-; GCN-DAG: v_writelane_b32 [[VGPR_REG]], s34, 3
+; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; GCN-NEXT: s_add_i32 [[SCRATCH_REG:s[0-9]+]], s32, 0xffc0
+; GCN-NEXT: s_and_b32 s33, [[SCRATCH_REG]], 0xffff0000
+; GCN-NEXT: s_or_saveexec_b64 s[18:19], -1
+; GCN-NEXT: buffer_store_dword [[VGPR_REG:v[0-9]+]], off, s[0:3], s33 offset:1028 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword [[VGPR_REG_1:v[0-9]+]], off, s[0:3], s33 offset:1032 ; 4-byte Folded Spill
+; GCN-NEXT: s_mov_b64 exec, s[18:19]
+; GCN-NEXT: v_mov_b32_e32 v32, 0
+; GCN-DAG: v_writelane_b32 [[VGPR_REG_1]], s34, 1
 ; GCN: s_mov_b32 s34, s32
 ; GCN: buffer_store_dword v32, off, s[0:3], s33 offset:1024
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: buffer_load_dword v{{[0-9]+}}, off, s[0:3], s34
 ; GCN-DAG: s_add_i32 s32, s32, 0x30000
+; GCN: v_writelane_b32 [[VGPR_REG_1]], [[FP_SCRATCH_COPY]], 0
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s32
 ; GCN: s_swappc_b64 s[30:31],
 
 ; GCN: v_readlane_b32 s31, [[VGPR_REG]], 1
 ; GCN: v_readlane_b32 s30, [[VGPR_REG]], 0
-; GCN: s_add_i32 s32, s32, 0xfffd0000
-; GCN-NEXT: v_readlane_b32 s33, [[VGPR_REG]], 2
-; GCN-NEXT: v_readlane_b32 s34, [[VGPR_REG]], 3
-; GCN-NEXT: s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT: buffer_load_dword [[VGPR_REG]], off, s[0:3], s32 offset:1028 ; 4-byte Folded Reload
-; GCN-NEXT: s_mov_b64 exec, s[4:5]
+; GCN-NEXT: v_readlane_b32 s34, [[VGPR_REG_1]], 1
+; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], [[VGPR_REG_1]], 0
+; GCN-NEXT: s_or_saveexec_b64 s[6:7], -1
+; GCN-NEXT: buffer_load_dword [[VGPR_REG]], off, s[0:3], s33 offset:1028 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword [[VGPR_REG_1]], off, s[0:3], s33 offset:1032 ; 4-byte Folded Reload
+; GCN-NEXT: s_mov_b64 exec, s[6:7]
+; GCN-NEXT: s_add_i32 s32, s32, 0xfffd0000
+; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN: s_setpc_b64 s[30:31]
   %temp = alloca i32, align 1024, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %temp, align 1024
+  store volatile i32 0, ptr addrspace(5) %temp, align 1024
   call void @extern_func(<32 x i32> %a, i32 %b)
   ret void
 }
 
 %struct.Data = type { [9 x i32] }
-define i32 @needs_align1024_stack_args_used_inside_loop(%struct.Data addrspace(5)* nocapture readonly byval(%struct.Data) align 8 %arg) local_unnamed_addr #4 {
+define i32 @needs_align1024_stack_args_used_inside_loop(ptr addrspace(5) nocapture readonly byval(%struct.Data) align 8 %arg) local_unnamed_addr #4 {
 ; The local object allocation needed an alignment of 1024.
 ; Since the function argument is accessed in a loop with an
 ; index variable, the base pointer first get loaded into a VGPR
@@ -196,8 +201,8 @@ define i32 @needs_align1024_stack_args_used_inside_loop(%struct.Data addrspace(5
 
 ; GCN-LABEL: needs_align1024_stack_args_used_inside_loop:
 ; GCN: s_mov_b32 [[FP_COPY:s[0-9]+]], s33
-; GCN-NEXT: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
 ; GCN-NEXT: s_add_i32 s33, s32, 0xffc0
+; GCN-NEXT: s_mov_b32 [[BP_COPY:s[0-9]+]], s34
 ; GCN-NEXT: s_mov_b32 s34, s32
 ; GCN-NEXT: s_and_b32 s33, s33, 0xffff0000
 ; GCN-NEXT: v_lshrrev_b32_e64 [[VGPR_REG:v[0-9]+]], 6, s34
@@ -206,13 +211,13 @@ define i32 @needs_align1024_stack_args_used_inside_loop(%struct.Data addrspace(5
 ; GCN: buffer_store_dword v{{[0-9]+}}, off, s[0:3], s33 offset:1024
 ; GCN: buffer_load_dword v{{[0-9]+}}, [[VGPR_REG]], s[0:3], 0 offen
 ; GCN: v_add_u32_e32 [[VGPR_REG]], vcc, 4, [[VGPR_REG]]
-; GCN: s_add_i32 s32, s32, 0xfffd0000
+; GCN: s_mov_b32 s34, [[BP_COPY]]
+; GCN-NEXT: s_add_i32 s32, s32, 0xfffd0000
 ; GCN-NEXT: s_mov_b32 s33, [[FP_COPY]]
-; GCN-NEXT: s_mov_b32 s34, [[BP_COPY]]
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 begin:
   %local_var = alloca i32, align 1024, addrspace(5)
-  store volatile i32 0, i32 addrspace(5)* %local_var, align 1024
+  store volatile i32 0, ptr addrspace(5) %local_var, align 1024
   br label %loop_body
 
 loop_end:                                                ; preds = %loop_body
@@ -222,8 +227,8 @@ loop_end:                                                ; preds = %loop_body
 
 loop_body:                                                ; preds = %loop_end, %begin
   %lp_idx = phi i32 [ 0, %begin ], [ %idx_next, %loop_end ]
-  %ptr = getelementptr inbounds %struct.Data, %struct.Data addrspace(5)* %arg, i32 0, i32 0, i32 %lp_idx
-  %val = load i32, i32 addrspace(5)* %ptr, align 8
+  %ptr = getelementptr inbounds %struct.Data, ptr addrspace(5) %arg, i32 0, i32 0, i32 %lp_idx
+  %val = load i32, ptr addrspace(5) %ptr, align 8
   %lp_cond = icmp eq i32 %val, %lp_idx
   br i1 %lp_cond, label %loop_end, label %exit
 
@@ -245,7 +250,7 @@ define void @no_free_scratch_sgpr_for_bp_copy(<32 x i32> %a, i32 %b) #0 {
 ; GCN-NEXT: ;;#ASMEND
 ; GCN: s_setpc_b64 s[30:31]
   %local_val = alloca i32, align 128, addrspace(5)
-  store volatile i32 %b, i32 addrspace(5)* %local_val, align 128
+  store volatile i32 %b, ptr addrspace(5) %local_val, align 128
   ; Use all clobberable registers, so BP has to spill to a VGPR.
   call void asm sideeffect "",
     "~{s0},~{s1},~{s2},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
@@ -259,13 +264,15 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
 ; If there are no free SGPRs or VGPRs available we must spill the BP to memory.
 
 ; GCN-LABEL: no_free_regs_spill_bp_to_mem
-; GCN: s_or_saveexec_b64 s[4:5], -1
-; GCN: v_mov_b32_e32 v0, s33
-; GCN: buffer_store_dword v0, off, s[0:3], s32
+; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; GCN: s_xor_saveexec_b64 s[6:7], -1
+; GCN: buffer_store_dword v39, off, s[0:3], s33
 ; GCN: v_mov_b32_e32 v0, s34
-; GCN-DAG: buffer_store_dword v0, off, s[0:3], s32
+; GCN: buffer_store_dword v0, off, s[0:3], s33
+; GCN: v_mov_b32_e32 v0, [[FP_SCRATCH_COPY]]
+; GCN-DAG: buffer_store_dword v0, off, s[0:3], s33
   %local_val = alloca i32, align 128, addrspace(5)
-  store volatile i32 %b, i32 addrspace(5)* %local_val, align 128
+  store volatile i32 %b, ptr addrspace(5) %local_val, align 128
 
   call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}
@@ -287,26 +294,29 @@ define void @no_free_regs_spill_bp_to_memory(<32 x i32> %a, i32 %b) #5 {
   ret void
 }
 
-define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i32 %b, [4096 x i8] addrspace(5)* byval([4096 x i8]) align 4 %arg) #5 {
+define void @spill_bp_to_memory_scratch_reg_needed_mubuf_offset(<32 x i32> %a, i32 %b, ptr addrspace(5) byval([4096 x i8]) align 4 %arg) #5 {
 ; If the size of the offset exceeds the MUBUF offset field we need another
 ; scratch VGPR to hold the offset.
 
 ; GCN-LABEL: spill_bp_to_memory_scratch_reg_needed_mubuf_offset
-; GCN: s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT: s_add_i32 s6, s32, 0x42100
-; GCN-NEXT: buffer_store_dword v39, off, s[0:3], s6 ; 4-byte Folded Spill
-; GCN-NEXT: s_mov_b64 exec, s[4:5]
-; GCN-NEXT: v_mov_b32_e32 v0, s33
-; GCN-NOT: v_mov_b32_e32 v0, 0x1088
-; GCN-NEXT: s_add_i32 s6, s32, 0x42200
-; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
+; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; GCN-NEXT: s_add_i32 s33, s32, 0x1fc0
+; GCN-NEXT: s_and_b32 s33, s33, 0xffffe000
+; GCN-NEXT: s_xor_saveexec_b64 s[6:7], -1
+; GCN-NEXT: s_add_i32 s5, s33, 0x42100
+; GCN-NEXT: buffer_store_dword v39, off, s[0:3], s5 ; 4-byte Folded Spill
+; GCN-NEXT: s_mov_b64 exec, s[6:7]
 ; GCN-NEXT: v_mov_b32_e32 v0, s34
 ; GCN-NOT: v_mov_b32_e32 v0, 0x108c
-; GCN-NEXT: s_add_i32 s6, s32, 0x42300
+; GCN-NEXT: s_add_i32 s5, s33, 0x42300
+; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s5 ; 4-byte Folded Spill
+; GCN-NEXT: v_mov_b32_e32 v0, [[FP_SCRATCH_COPY]]
+; GCN-NOT: v_mov_b32_e32 v0, 0x1088
+; GCN-NEXT: s_add_i32 s5, s33, 0x42200
 ; GCN-NEXT: s_mov_b32 s34, s32
-; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s6 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v0, off, s[0:3], s5 ; 4-byte Folded Spill
   %local_val = alloca i32, align 128, addrspace(5)
-  store volatile i32 %b, i32 addrspace(5)* %local_val, align 128
+  store volatile i32 %b, ptr addrspace(5) %local_val, align 128
 
   call void asm sideeffect "; clobber nonpreserved SGPRs and 64 CSRs",
     "~{s4},~{s5},~{s6},~{s7},~{s8},~{s9}

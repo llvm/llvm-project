@@ -14,6 +14,7 @@
 #include "WriterUtils.h"
 #include "lld/Common/LLVM.h"
 #include "llvm/Object/Wasm.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -27,8 +28,8 @@ protected:
 
 public:
   StringRef getName() const { return name; }
-  uint32_t getAssignedIndex() const { return assignedIndex.getValue(); }
-  bool hasAssignedIndex() const { return assignedIndex.hasValue(); }
+  uint32_t getAssignedIndex() const { return *assignedIndex; }
+  bool hasAssignedIndex() const { return assignedIndex.has_value(); }
   void assignIndex(uint32_t index) {
     assert(!hasAssignedIndex());
     assignedIndex = index;
@@ -39,7 +40,7 @@ public:
 
 protected:
   StringRef name;
-  llvm::Optional<uint32_t> assignedIndex;
+  std::optional<uint32_t> assignedIndex;
 };
 
 inline WasmInitExpr intConst(uint64_t value, bool is64) {
@@ -64,7 +65,7 @@ public:
   const WasmInitExpr &getInitExpr() const { return initExpr; }
 
   void setPointerValue(uint64_t value) {
-    initExpr = intConst(value, config->is64.getValueOr(false));
+    initExpr = intConst(value, config->is64.value_or(false));
   }
 
 private:

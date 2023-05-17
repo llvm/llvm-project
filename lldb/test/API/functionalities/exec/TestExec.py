@@ -1,8 +1,6 @@
 """
 Test some lldb command abbreviations.
 """
-from __future__ import print_function
-
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -13,8 +11,6 @@ from lldbsuite.test import lldbutil
 class ExecTestCase(TestBase):
 
     NO_DEBUG_INFO_TESTCASE = True
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(archs=['i386'],
                         oslist=no_match(["freebsd"]),
@@ -46,7 +42,7 @@ class ExecTestCase(TestBase):
 
         # Create any breakpoints we need
         breakpoint1 = target.BreakpointCreateBySourceRegex(
-            'Set breakpoint 1 here', lldb.SBFileSpec("main.cpp", False))
+            'Set breakpoint 1 here', lldb.SBFileSpec("main.c", False))
         self.assertTrue(breakpoint1, VALID_BREAKPOINT)
         breakpoint2 = target.BreakpointCreateBySourceRegex(
             'Set breakpoint 2 here', lldb.SBFileSpec("secondprog.cpp", False))
@@ -106,13 +102,18 @@ class ExecTestCase(TestBase):
             # Run and we should stop at breakpoint in main after exec
             process.Continue()
 
+        self.assertState(process.GetState(), lldb.eStateStopped)
+        for t in process.threads:
+            if t.stop_reason != lldb.eStopReasonNone:
+                self.assertStopReason(t.stop_reason, lldb.eStopReasonBreakpoint,
+                    "Unexpected stop reason")
+                if self.TraceOn():
+                    print(t)
+                    if t.stop_reason != lldb.eStopReasonBreakpoint:
+                        self.runCmd("bt")
+
         threads = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint2)
-        if self.TraceOn():
-            for t in process.threads:
-                print(t)
-                if t.GetStopReason() != lldb.eStopReasonBreakpoint:
-                    self.runCmd("bt")
         self.assertEqual(len(threads), 1,
                         "Stopped at breakpoint in exec'ed process.")
 
@@ -134,7 +135,7 @@ class ExecTestCase(TestBase):
         target = self.dbg.CreateTarget(exe)
 
         (target, process, thread, breakpoint1) = lldbutil.run_to_source_breakpoint(
-            self, 'Set breakpoint 1 here', lldb.SBFileSpec('main.cpp', False))
+            self, 'Set breakpoint 1 here', lldb.SBFileSpec('main.c', False))
 
         # The stop reason of the thread should be breakpoint.
         self.assertState(process.GetState(), lldb.eStateStopped,
@@ -147,7 +148,7 @@ class ExecTestCase(TestBase):
         # thread plan, which should be cleared when a new thread list appears.
         #
         # Continuing after this instruction step will trigger a call to
-        # ThreadPlan::ShouldReportRun, which sets the ThreadPlan's Thread cache to 
+        # ThreadPlan::ShouldReportRun, which sets the ThreadPlan's Thread cache to
         # the old Thread* value. In Process::UpdateThreadList we are clearing this
         # cache in preparation for the new ThreadList.
         #

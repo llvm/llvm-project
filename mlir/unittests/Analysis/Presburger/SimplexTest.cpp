@@ -6,16 +6,42 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "./Utils.h"
+#include "Parser.h"
+#include "Utils.h"
 
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/IR/MLIRContext.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
+#include <optional>
 
 using namespace mlir;
 using namespace presburger;
+
+/// Convenience functions to pass literals to Simplex.
+void addInequality(SimplexBase &simplex, ArrayRef<int64_t> coeffs) {
+  simplex.addInequality(getMPIntVec(coeffs));
+}
+void addEquality(SimplexBase &simplex, ArrayRef<int64_t> coeffs) {
+  simplex.addEquality(getMPIntVec(coeffs));
+}
+bool isRedundantInequality(Simplex &simplex, ArrayRef<int64_t> coeffs) {
+  return simplex.isRedundantInequality(getMPIntVec(coeffs));
+}
+bool isRedundantInequality(LexSimplex &simplex, ArrayRef<int64_t> coeffs) {
+  return simplex.isRedundantInequality(getMPIntVec(coeffs));
+}
+bool isRedundantEquality(Simplex &simplex, ArrayRef<int64_t> coeffs) {
+  return simplex.isRedundantEquality(getMPIntVec(coeffs));
+}
+bool isSeparateInequality(LexSimplex &simplex, ArrayRef<int64_t> coeffs) {
+  return simplex.isSeparateInequality(getMPIntVec(coeffs));
+}
+
+Simplex::IneqType findIneqType(Simplex &simplex, ArrayRef<int64_t> coeffs) {
+  return simplex.findIneqType(getMPIntVec(coeffs));
+}
 
 /// Take a snapshot, add constraints making the set empty, and rollback.
 /// The set should not be empty after rolling back. We add additional
@@ -25,17 +51,17 @@ using namespace presburger;
 TEST(SimplexTest, emptyRollback) {
   Simplex simplex(2);
   // (u - v) >= 0
-  simplex.addInequality({1, -1, 0});
+  addInequality(simplex, {1, -1, 0});
   ASSERT_FALSE(simplex.isEmpty());
 
   unsigned snapshot = simplex.getSnapshot();
   // (u - v) <= -1
-  simplex.addInequality({-1, 1, -1});
+  addInequality(simplex, {-1, 1, -1});
   ASSERT_TRUE(simplex.isEmpty());
 
   unsigned snapshot2 = simplex.getSnapshot();
   // (u - v) <= -3
-  simplex.addInequality({-1, 1, -3});
+  addInequality(simplex, {-1, 1, -3});
   ASSERT_TRUE(simplex.isEmpty());
 
   simplex.rollback(snapshot2);
@@ -49,9 +75,9 @@ TEST(SimplexTest, emptyRollback) {
 /// constraints.
 TEST(SimplexTest, addEquality_separate) {
   Simplex simplex(1);
-  simplex.addInequality({1, -1}); // x >= 1.
+  addInequality(simplex, {1, -1}); // x >= 1.
   ASSERT_FALSE(simplex.isEmpty());
-  simplex.addEquality({1, 0}); // x == 0.
+  addEquality(simplex, {1, 0}); // x == 0.
   EXPECT_TRUE(simplex.isEmpty());
 }
 
@@ -59,7 +85,7 @@ void expectInequalityMakesSetEmpty(Simplex &simplex, ArrayRef<int64_t> coeffs,
                                    bool expect) {
   ASSERT_FALSE(simplex.isEmpty());
   unsigned snapshot = simplex.getSnapshot();
-  simplex.addInequality(coeffs);
+  addInequality(simplex, coeffs);
   EXPECT_EQ(simplex.isEmpty(), expect);
   simplex.rollback(snapshot);
 }
@@ -82,7 +108,7 @@ TEST(SimplexTest, addInequality_rollback) {
     expectInequalityMakesSetEmpty(simplex, checkCoeffs[1], false);
 
     for (int i = 0; i < 4; i++)
-      simplex.addInequality(coeffs[(run + i) % 4]);
+      addInequality(simplex, coeffs[(run + i) % 4]);
 
     expectInequalityMakesSetEmpty(simplex, checkCoeffs[0], true);
     expectInequalityMakesSetEmpty(simplex, checkCoeffs[1], true);
@@ -100,9 +126,9 @@ Simplex simplexFromConstraints(unsigned nDim,
                                ArrayRef<SmallVector<int64_t, 8>> eqs) {
   Simplex simplex(nDim);
   for (const auto &ineq : ineqs)
-    simplex.addInequality(ineq);
+    addInequality(simplex, ineq);
   for (const auto &eq : eqs)
-    simplex.addEquality(eq);
+    addEquality(simplex, eq);
   return simplex;
 }
 
@@ -196,7 +222,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                       },
                                       {})
                    .getSamplePointIfIntegral()
-                   .hasValue());
+                   .has_value());
 
   auto maybeSample = simplexFromConstraints(2,
                                             {// x = y - 2.
@@ -208,7 +234,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                             {})
                          .getSamplePointIfIntegral();
 
-  EXPECT_TRUE(maybeSample.hasValue());
+  EXPECT_TRUE(maybeSample.has_value());
   EXPECT_THAT(*maybeSample, testing::ElementsAre(0, 2));
 
   auto maybeSample2 = simplexFromConstraints(2,
@@ -220,7 +246,7 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                                  {0, 1, -2} // y = 2.
                                              })
                           .getSamplePointIfIntegral();
-  EXPECT_TRUE(maybeSample2.hasValue());
+  EXPECT_TRUE(maybeSample2.has_value());
   EXPECT_THAT(*maybeSample2, testing::ElementsAre(0, 2));
 
   EXPECT_FALSE(simplexFromConstraints(1,
@@ -229,13 +255,13 @@ TEST(SimplexTest, getSamplePointIfIntegral) {
                                        {-2, +1}},
                                       {})
                    .getSamplePointIfIntegral()
-                   .hasValue());
+                   .has_value());
 }
 
 /// Some basic sanity checks involving zero or one variables.
 TEST(SimplexTest, isMarkedRedundant_no_var_ge_zero) {
   Simplex simplex(0);
-  simplex.addInequality({0}); // 0 >= 0.
+  addInequality(simplex, {0}); // 0 >= 0.
 
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
@@ -244,7 +270,7 @@ TEST(SimplexTest, isMarkedRedundant_no_var_ge_zero) {
 
 TEST(SimplexTest, isMarkedRedundant_no_var_eq) {
   Simplex simplex(0);
-  simplex.addEquality({0}); // 0 == 0.
+  addEquality(simplex, {0}); // 0 == 0.
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
   EXPECT_TRUE(simplex.isMarkedRedundant(0));
@@ -252,7 +278,7 @@ TEST(SimplexTest, isMarkedRedundant_no_var_eq) {
 
 TEST(SimplexTest, isMarkedRedundant_pos_var_eq) {
   Simplex simplex(1);
-  simplex.addEquality({1, 0}); // x == 0.
+  addEquality(simplex, {1, 0}); // x == 0.
 
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
@@ -261,7 +287,7 @@ TEST(SimplexTest, isMarkedRedundant_pos_var_eq) {
 
 TEST(SimplexTest, isMarkedRedundant_zero_var_eq) {
   Simplex simplex(1);
-  simplex.addEquality({0, 0}); // 0x == 0.
+  addEquality(simplex, {0, 0}); // 0x == 0.
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
   EXPECT_TRUE(simplex.isMarkedRedundant(0));
@@ -269,7 +295,7 @@ TEST(SimplexTest, isMarkedRedundant_zero_var_eq) {
 
 TEST(SimplexTest, isMarkedRedundant_neg_var_eq) {
   Simplex simplex(1);
-  simplex.addEquality({-1, 0}); // -x == 0.
+  addEquality(simplex, {-1, 0}); // -x == 0.
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
   EXPECT_FALSE(simplex.isMarkedRedundant(0));
@@ -277,7 +303,7 @@ TEST(SimplexTest, isMarkedRedundant_neg_var_eq) {
 
 TEST(SimplexTest, isMarkedRedundant_pos_var_ge) {
   Simplex simplex(1);
-  simplex.addInequality({1, 0}); // x >= 0.
+  addInequality(simplex, {1, 0}); // x >= 0.
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
   EXPECT_FALSE(simplex.isMarkedRedundant(0));
@@ -285,7 +311,7 @@ TEST(SimplexTest, isMarkedRedundant_pos_var_ge) {
 
 TEST(SimplexTest, isMarkedRedundant_zero_var_ge) {
   Simplex simplex(1);
-  simplex.addInequality({0, 0}); // 0x >= 0.
+  addInequality(simplex, {0, 0}); // 0x >= 0.
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
   EXPECT_TRUE(simplex.isMarkedRedundant(0));
@@ -293,7 +319,7 @@ TEST(SimplexTest, isMarkedRedundant_zero_var_ge) {
 
 TEST(SimplexTest, isMarkedRedundant_neg_var_ge) {
   Simplex simplex(1);
-  simplex.addInequality({-1, 0}); // x <= 0.
+  addInequality(simplex, {-1, 0}); // x <= 0.
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
   EXPECT_FALSE(simplex.isMarkedRedundant(0));
@@ -304,9 +330,9 @@ TEST(SimplexTest, isMarkedRedundant_neg_var_ge) {
 TEST(SimplexTest, isMarkedRedundant_no_redundant) {
   Simplex simplex(3);
 
-  simplex.addEquality({-1, 0, 1, 0});     // u = w.
-  simplex.addInequality({-1, 16, 0, 15}); // 15 - (u - 16v) >= 0.
-  simplex.addInequality({1, -16, 0, 0});  //      (u - 16v) >= 0.
+  addEquality(simplex, {-1, 0, 1, 0});     // u = w.
+  addInequality(simplex, {-1, 16, 0, 15}); // 15 - (u - 16v) >= 0.
+  addInequality(simplex, {1, -16, 0, 0});  //      (u - 16v) >= 0.
 
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
@@ -319,14 +345,14 @@ TEST(SimplexTest, isMarkedRedundant_repeated_constraints) {
   Simplex simplex(3);
 
   // [4] to [7] are repeats of [0] to [3].
-  simplex.addInequality({0, -1, 0, 1}); // [0]: y <= 1.
-  simplex.addInequality({-1, 0, 8, 7}); // [1]: 8z >= x - 7.
-  simplex.addInequality({1, 0, -8, 0}); // [2]: 8z <= x.
-  simplex.addInequality({0, 1, 0, 0});  // [3]: y >= 0.
-  simplex.addInequality({-1, 0, 8, 7}); // [4]: 8z >= 7 - x.
-  simplex.addInequality({1, 0, -8, 0}); // [5]: 8z <= x.
-  simplex.addInequality({0, 1, 0, 0});  // [6]: y >= 0.
-  simplex.addInequality({0, -1, 0, 1}); // [7]: y <= 1.
+  addInequality(simplex, {0, -1, 0, 1}); // [0]: y <= 1.
+  addInequality(simplex, {-1, 0, 8, 7}); // [1]: 8z >= x - 7.
+  addInequality(simplex, {1, 0, -8, 0}); // [2]: 8z <= x.
+  addInequality(simplex, {0, 1, 0, 0});  // [3]: y >= 0.
+  addInequality(simplex, {-1, 0, 8, 7}); // [4]: 8z >= 7 - x.
+  addInequality(simplex, {1, 0, -8, 0}); // [5]: 8z <= x.
+  addInequality(simplex, {0, 1, 0, 0});  // [6]: y >= 0.
+  addInequality(simplex, {0, -1, 0, 1}); // [7]: y <= 1.
 
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
@@ -343,14 +369,14 @@ TEST(SimplexTest, isMarkedRedundant_repeated_constraints) {
 
 TEST(SimplexTest, isMarkedRedundant) {
   Simplex simplex(3);
-  simplex.addInequality({0, -1, 0, 1}); // [0]: y <= 1.
-  simplex.addInequality({1, 0, 0, -1}); // [1]: x >= 1.
-  simplex.addInequality({-1, 0, 0, 2}); // [2]: x <= 2.
-  simplex.addInequality({-1, 0, 2, 7}); // [3]: 2z >= x - 7.
-  simplex.addInequality({1, 0, -2, 0}); // [4]: 2z <= x.
-  simplex.addInequality({0, 1, 0, 0});  // [5]: y >= 0.
-  simplex.addInequality({0, 1, -2, 1}); // [6]: y >= 2z - 1.
-  simplex.addInequality({-1, 1, 0, 1}); // [7]: y >= x - 1.
+  addInequality(simplex, {0, -1, 0, 1}); // [0]: y <= 1.
+  addInequality(simplex, {1, 0, 0, -1}); // [1]: x >= 1.
+  addInequality(simplex, {-1, 0, 0, 2}); // [2]: x <= 2.
+  addInequality(simplex, {-1, 0, 2, 7}); // [3]: 2z >= x - 7.
+  addInequality(simplex, {1, 0, -2, 0}); // [4]: 2z <= x.
+  addInequality(simplex, {0, 1, 0, 0});  // [5]: y >= 0.
+  addInequality(simplex, {0, 1, -2, 1}); // [6]: y >= 2z - 1.
+  addInequality(simplex, {-1, 1, 0, 1}); // [7]: y >= x - 1.
 
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
@@ -372,12 +398,12 @@ TEST(SimplexTest, isMarkedRedundant) {
 
 TEST(SimplexTest, isMarkedRedundantTiledLoopNestConstraints) {
   Simplex simplex(3);                     // Variables are x, y, N.
-  simplex.addInequality({1, 0, 0, 0});    // [0]: x >= 0.
-  simplex.addInequality({-32, 0, 1, -1}); // [1]: 32x <= N - 1.
-  simplex.addInequality({0, 1, 0, 0});    // [2]: y >= 0.
-  simplex.addInequality({-32, 1, 0, 0});  // [3]: y >= 32x.
-  simplex.addInequality({32, -1, 0, 31}); // [4]: y <= 32x + 31.
-  simplex.addInequality({0, -1, 1, -1});  // [5]: y <= N - 1.
+  addInequality(simplex, {1, 0, 0, 0});   // [0]: x >= 0.
+  addInequality(simplex, {-32, 0, 1, -1}); // [1]: 32x <= N - 1.
+  addInequality(simplex, {0, 1, 0, 0});    // [2]: y >= 0.
+  addInequality(simplex, {-32, 1, 0, 0});  // [3]: y >= 32x.
+  addInequality(simplex, {32, -1, 0, 31}); // [4]: y <= 32x + 31.
+  addInequality(simplex, {0, -1, 1, -1});  // [5]: y <= N - 1.
   // [3] and [0] imply [2], as we have y >= 32x >= 0.
   // [3] and [5] imply [1], as we have 32x <= y <= N - 1.
   simplex.detectRedundant();
@@ -391,11 +417,11 @@ TEST(SimplexTest, isMarkedRedundantTiledLoopNestConstraints) {
 
 TEST(SimplexTest, pivotRedundantRegressionTest) {
   Simplex simplex(2);
-  simplex.addInequality({-1, 0, -1}); // x <= -1.
+  addInequality(simplex, {-1, 0, -1}); // x <= -1.
   unsigned snapshot = simplex.getSnapshot();
 
-  simplex.addInequality({-1, 0, -2}); // x <= -2.
-  simplex.addInequality({-3, 0, -6});
+  addInequality(simplex, {-1, 0, -2}); // x <= -2.
+  addInequality(simplex, {-3, 0, -6});
 
   // This first marks x <= -1 as redundant. Then it performs some more pivots
   // to check if the other constraints are redundant. Pivot must update the
@@ -408,14 +434,14 @@ TEST(SimplexTest, pivotRedundantRegressionTest) {
   // The maximum value of x should be -1.
   simplex.rollback(snapshot);
   MaybeOptimum<Fraction> maxX =
-      simplex.computeOptimum(Simplex::Direction::Up, {1, 0, 0});
+      simplex.computeOptimum(Simplex::Direction::Up, getMPIntVec({1, 0, 0}));
   EXPECT_TRUE(maxX.isBounded() && *maxX == Fraction(-1, 1));
 }
 
 TEST(SimplexTest, addInequality_already_redundant) {
   Simplex simplex(1);
-  simplex.addInequality({1, -1}); // x >= 1.
-  simplex.addInequality({1, 0});  // x >= 0.
+  addInequality(simplex, {1, -1}); // x >= 1.
+  addInequality(simplex, {1, 0});  // x >= 0.
   simplex.detectRedundant();
   ASSERT_FALSE(simplex.isEmpty());
   EXPECT_FALSE(simplex.isMarkedRedundant(0));
@@ -431,8 +457,8 @@ TEST(SimplexTest, appendVariable) {
   EXPECT_EQ(simplex.getNumVariables(), 2u);
 
   int64_t yMin = 2, yMax = 5;
-  simplex.addInequality({0, 1, -yMin}); // y >= 2.
-  simplex.addInequality({0, -1, yMax}); // y <= 5.
+  addInequality(simplex, {0, 1, -yMin}); // y >= 2.
+  addInequality(simplex, {0, -1, yMax}); // y <= 5.
 
   unsigned snapshot2 = simplex.getSnapshot();
   simplex.appendVariable(2);
@@ -441,9 +467,9 @@ TEST(SimplexTest, appendVariable) {
 
   EXPECT_EQ(simplex.getNumVariables(), 2u);
   EXPECT_EQ(simplex.getNumConstraints(), 2u);
-  EXPECT_EQ(
-      simplex.computeIntegerBounds({0, 1, 0}),
-      std::make_pair(MaybeOptimum<int64_t>(yMin), MaybeOptimum<int64_t>(yMax)));
+  EXPECT_EQ(simplex.computeIntegerBounds(getMPIntVec({0, 1, 0})),
+            std::make_pair(MaybeOptimum<MPInt>(MPInt(yMin)),
+                           MaybeOptimum<MPInt>(MPInt(yMax))));
 
   simplex.rollback(snapshot1);
   EXPECT_EQ(simplex.getNumVariables(), 1u);
@@ -452,61 +478,63 @@ TEST(SimplexTest, appendVariable) {
 
 TEST(SimplexTest, isRedundantInequality) {
   Simplex simplex(2);
-  simplex.addInequality({0, -1, 2}); // y <= 2.
-  simplex.addInequality({1, 0, 0});  // x >= 0.
-  simplex.addEquality({-1, 1, 0});   // y = x.
+  addInequality(simplex, {0, -1, 2}); // y <= 2.
+  addInequality(simplex, {1, 0, 0});  // x >= 0.
+  addEquality(simplex, {-1, 1, 0});   // y = x.
 
-  EXPECT_TRUE(simplex.isRedundantInequality({-1, 0, 2})); // x <= 2.
-  EXPECT_TRUE(simplex.isRedundantInequality({0, 1, 0}));  // y >= 0.
+  EXPECT_TRUE(isRedundantInequality(simplex, {-1, 0, 2})); // x <= 2.
+  EXPECT_TRUE(isRedundantInequality(simplex, {0, 1, 0}));  // y >= 0.
 
-  EXPECT_FALSE(simplex.isRedundantInequality({-1, 0, -1})); // x <= -1.
-  EXPECT_FALSE(simplex.isRedundantInequality({0, 1, -2}));  // y >= 2.
-  EXPECT_FALSE(simplex.isRedundantInequality({0, 1, -1}));  // y >= 1.
+  EXPECT_FALSE(isRedundantInequality(simplex, {-1, 0, -1})); // x <= -1.
+  EXPECT_FALSE(isRedundantInequality(simplex, {0, 1, -2}));  // y >= 2.
+  EXPECT_FALSE(isRedundantInequality(simplex, {0, 1, -1}));  // y >= 1.
 }
 
 TEST(SimplexTest, ineqType) {
   Simplex simplex(2);
-  simplex.addInequality({0, -1, 2}); // y <= 2.
-  simplex.addInequality({1, 0, 0});  // x >= 0.
-  simplex.addEquality({-1, 1, 0});   // y = x.
+  addInequality(simplex, {0, -1, 2}); // y <= 2.
+  addInequality(simplex, {1, 0, 0});  // x >= 0.
+  addEquality(simplex, {-1, 1, 0});   // y = x.
 
-  EXPECT_TRUE(simplex.findIneqType({-1, 0, 2}) ==
-              Simplex::IneqType::Redundant); // x <= 2.
-  EXPECT_TRUE(simplex.findIneqType({0, 1, 0}) ==
-              Simplex::IneqType::Redundant); // y >= 0.
+  EXPECT_EQ(findIneqType(simplex, {-1, 0, 2}),
+            Simplex::IneqType::Redundant); // x <= 2.
+  EXPECT_EQ(findIneqType(simplex, {0, 1, 0}),
+            Simplex::IneqType::Redundant); // y >= 0.
 
-  EXPECT_TRUE(simplex.findIneqType({0, 1, -1}) ==
-              Simplex::IneqType::Cut); // y >= 1.
-  EXPECT_TRUE(simplex.findIneqType({-1, 0, 1}) ==
-              Simplex::IneqType::Cut); // x <= 1.
-  EXPECT_TRUE(simplex.findIneqType({0, 1, -2}) ==
-              Simplex::IneqType::Cut); // y >= 2.
+  EXPECT_EQ(findIneqType(simplex, {0, 1, -1}),
+            Simplex::IneqType::Cut); // y >= 1.
+  EXPECT_EQ(findIneqType(simplex, {-1, 0, 1}),
+            Simplex::IneqType::Cut); // x <= 1.
+  EXPECT_EQ(findIneqType(simplex, {0, 1, -2}),
+            Simplex::IneqType::Cut); // y >= 2.
 
-  EXPECT_TRUE(simplex.findIneqType({-1, 0, -1}) ==
-              Simplex::IneqType::Separate); // x <= -1.
+  EXPECT_EQ(findIneqType(simplex, {-1, 0, -1}),
+            Simplex::IneqType::Separate); // x <= -1.
 }
 
 TEST(SimplexTest, isRedundantEquality) {
   Simplex simplex(2);
-  simplex.addInequality({0, -1, 2}); // y <= 2.
-  simplex.addInequality({1, 0, 0});  // x >= 0.
-  simplex.addEquality({-1, 1, 0});   // y = x.
+  addInequality(simplex, {0, -1, 2}); // y <= 2.
+  addInequality(simplex, {1, 0, 0});  // x >= 0.
+  addEquality(simplex, {-1, 1, 0});   // y = x.
 
-  EXPECT_TRUE(simplex.isRedundantEquality({-1, 1, 0})); // y = x.
-  EXPECT_TRUE(simplex.isRedundantEquality({1, -1, 0})); // x = y.
+  EXPECT_TRUE(isRedundantEquality(simplex, {-1, 1, 0})); // y = x.
+  EXPECT_TRUE(isRedundantEquality(simplex, {1, -1, 0})); // x = y.
 
-  EXPECT_FALSE(simplex.isRedundantEquality({0, 1, -1})); // y = 1.
+  EXPECT_FALSE(isRedundantEquality(simplex, {0, 1, -1})); // y = 1.
 
-  simplex.addEquality({0, -1, 2}); // y = 2.
+  addEquality(simplex, {0, -1, 2}); // y = 2.
 
-  EXPECT_TRUE(simplex.isRedundantEquality({-1, 0, 2})); // x = 2.
+  EXPECT_TRUE(isRedundantEquality(simplex, {-1, 0, 2})); // x = 2.
 }
 
 TEST(SimplexTest, IsRationalSubsetOf) {
-  IntegerPolyhedron univ = parsePoly("(x) : ()");
-  IntegerPolyhedron empty = parsePoly("(x) : (x + 0 >= 0, -x - 1 >= 0)");
-  IntegerPolyhedron s1 = parsePoly("(x) : ( x >= 0, -x + 4 >= 0)");
-  IntegerPolyhedron s2 = parsePoly("(x) : (x - 1 >= 0, -x + 3 >= 0)");
+  IntegerPolyhedron univ = parseIntegerPolyhedron("(x) : ()");
+  IntegerPolyhedron empty =
+      parseIntegerPolyhedron("(x) : (x + 0 >= 0, -x - 1 >= 0)");
+  IntegerPolyhedron s1 = parseIntegerPolyhedron("(x) : ( x >= 0, -x + 4 >= 0)");
+  IntegerPolyhedron s2 =
+      parseIntegerPolyhedron("(x) : (x - 1 >= 0, -x + 3 >= 0)");
 
   Simplex simUniv(univ);
   Simplex simEmpty(empty);
@@ -541,27 +569,27 @@ TEST(SimplexTest, IsRationalSubsetOf) {
 
 TEST(SimplexTest, addDivisionVariable) {
   Simplex simplex(/*nVar=*/1);
-  simplex.addDivisionVariable({1, 0}, 2);
-  simplex.addInequality({1, 0, -3}); // x >= 3.
-  simplex.addInequality({-1, 0, 9}); // x <= 9.
-  Optional<SmallVector<int64_t, 8>> sample = simplex.findIntegerSample();
-  ASSERT_TRUE(sample.hasValue());
+  simplex.addDivisionVariable(getMPIntVec({1, 0}), MPInt(2));
+  addInequality(simplex, {1, 0, -3}); // x >= 3.
+  addInequality(simplex, {-1, 0, 9}); // x <= 9.
+  std::optional<SmallVector<MPInt, 8>> sample = simplex.findIntegerSample();
+  ASSERT_TRUE(sample.has_value());
   EXPECT_EQ((*sample)[0] / 2, (*sample)[1]);
 }
 
 TEST(SimplexTest, LexIneqType) {
   LexSimplex simplex(/*nVar=*/1);
-  simplex.addInequality({2, -1}); // x >= 1/2.
+  addInequality(simplex, {2, -1}); // x >= 1/2.
 
   // Redundant inequality x >= 2/3.
-  EXPECT_TRUE(simplex.isRedundantInequality({3, -2}));
-  EXPECT_FALSE(simplex.isSeparateInequality({3, -2}));
+  EXPECT_TRUE(isRedundantInequality(simplex, {3, -2}));
+  EXPECT_FALSE(isSeparateInequality(simplex, {3, -2}));
 
   // Separate inequality x <= 2/3.
-  EXPECT_FALSE(simplex.isRedundantInequality({-3, 2}));
-  EXPECT_TRUE(simplex.isSeparateInequality({-3, 2}));
+  EXPECT_FALSE(isRedundantInequality(simplex, {-3, 2}));
+  EXPECT_TRUE(isSeparateInequality(simplex, {-3, 2}));
 
   // Cut inequality x <= 1.
-  EXPECT_FALSE(simplex.isRedundantInequality({-1, 1}));
-  EXPECT_FALSE(simplex.isSeparateInequality({-1, 1}));
+  EXPECT_FALSE(isRedundantInequality(simplex, {-1, 1}));
+  EXPECT_FALSE(isSeparateInequality(simplex, {-1, 1}));
 }

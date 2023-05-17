@@ -81,10 +81,10 @@ TEST(TBDv3, ReadFile) {
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  UUIDs Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
-                  "00000000-0000-0000-0000-000000000000"},
-                 {Target(AK_arm64, PLATFORM_UNKNOWN),
-                  "11111111-1111-1111-1111-111111111111"}};
+  TargetToAttr Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
+                         "00000000-0000-0000-0000-000000000000"},
+                        {Target(AK_arm64, PLATFORM_UNKNOWN),
+                         "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(Uuids, File->uuids());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
@@ -111,9 +111,9 @@ TEST(TBDv3, ReadFile) {
         ExportedSymbol{Sym->getKind(), std::string(Sym->getName()),
                        Sym->isWeakDefined(), Sym->isThreadLocalValue()});
   }
-  llvm::sort(Exports.begin(), Exports.end());
+  llvm::sort(Exports);
 
-  EXPECT_EQ(sizeof(TBDv3Symbols) / sizeof(ExportedSymbol), Exports.size());
+  EXPECT_EQ(std::size(TBDv3Symbols), Exports.size());
   EXPECT_TRUE(
       std::equal(Exports.begin(), Exports.end(), std::begin(TBDv3Symbols)));
 }
@@ -171,10 +171,10 @@ TEST(TBDv3, ReadMultipleDocuments) {
   for (auto &&arch : Archs)
     Targets.emplace_back(Target(arch, Platform));
   EXPECT_EQ(Archs, File->getArchitectures());
-  UUIDs Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
-                  "00000000-0000-0000-0000-000000000000"},
-                 {Target(AK_arm64, PLATFORM_UNKNOWN),
-                  "11111111-1111-1111-1111-111111111111"}};
+  TargetToAttr Uuids = {{Target(AK_armv7, PLATFORM_UNKNOWN),
+                         "00000000-0000-0000-0000-000000000000"},
+                        {Target(AK_arm64, PLATFORM_UNKNOWN),
+                         "11111111-1111-1111-1111-111111111111"}};
   EXPECT_EQ(Uuids, File->uuids());
   EXPECT_EQ(File->getPlatforms().size(), 1U);
   EXPECT_EQ(Platform, *File->getPlatforms().begin());
@@ -203,9 +203,9 @@ TEST(TBDv3, ReadMultipleDocuments) {
                                         Sym->isWeakDefined(),
                                         Sym->isThreadLocalValue()});
   }
-  llvm::sort(Exports.begin(), Exports.end());
+  llvm::sort(Exports);
 
-  EXPECT_EQ(sizeof(TBDv3Symbols) / sizeof(ExportedSymbol), Exports.size());
+  EXPECT_EQ(std::size(TBDv3Symbols), Exports.size());
   EXPECT_TRUE(
       std::equal(Exports.begin(), Exports.end(), std::begin(TBDv3Symbols)));
 
@@ -228,7 +228,7 @@ TEST(TBDv3, ReadMultipleDocuments) {
                                         Sym->isWeakDefined(),
                                         Sym->isThreadLocalValue()});
   }
-  llvm::sort(Exports.begin(), Exports.end());
+  llvm::sort(Exports);
 
   ExportedSymbolSeq DocumentSymbols{
       {SymbolKind::GlobalSymbol, "_sym5", false, false},
@@ -495,7 +495,7 @@ TEST(TBDv3, Platform_bridgeOS) {
 TEST(TBDv3, Platform_macCatalyst) {
   static const char TBDv3PlatformiOSmac[] = "--- !tapi-tbd-v3\n"
                                             "archs: [ armv7k ]\n"
-                                            "platform: iosmac\n"
+                                            "platform: maccatalyst\n"
                                             "install-name: Test.dylib\n"
                                             "...\n";
 
@@ -940,6 +940,7 @@ TEST(TBDv3, InterfaceInequality) {
   }));
   EXPECT_TRUE(checkEqualityOnTransform(FileA, FileB, [](InterfaceFile *File) {
     InterfaceFile Document;
+    Document.setFileType(FileType::TBD_V3);
     Document.addTargets(TargetList{Target(AK_armv7, PLATFORM_IOS),
                                    Target(AK_arm64, PLATFORM_IOS)});
     Document.setInstallName("/System/Library/Frameworks/A.framework/A");

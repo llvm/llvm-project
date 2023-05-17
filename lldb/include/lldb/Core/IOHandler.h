@@ -23,6 +23,7 @@
 
 #include <memory>
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -31,9 +32,6 @@
 
 namespace lldb_private {
 class Debugger;
-namespace repro {
-class DataRecorder;
-}
 } // namespace lldb_private
 
 namespace curses {
@@ -63,8 +61,7 @@ public:
 
   IOHandler(Debugger &debugger, IOHandler::Type type,
             const lldb::FileSP &input_sp, const lldb::StreamFileSP &output_sp,
-            const lldb::StreamFileSP &error_sp, uint32_t flags,
-            repro::DataRecorder *data_recorder);
+            const lldb::StreamFileSP &error_sp, uint32_t flags);
 
   virtual ~IOHandler();
 
@@ -173,7 +170,6 @@ protected:
   lldb::StreamFileSP m_output_sp;
   lldb::StreamFileSP m_error_sp;
   std::recursive_mutex m_output_mutex;
-  repro::DataRecorder *m_data_recorder;
   Predicate<bool> m_popped;
   Flags m_flags;
   Type m_type;
@@ -205,8 +201,8 @@ public:
 
   virtual void IOHandlerDeactivated(IOHandler &io_handler) {}
 
-  virtual llvm::Optional<std::string> IOHandlerSuggestion(IOHandler &io_handler,
-                                                          llvm::StringRef line);
+  virtual std::optional<std::string> IOHandlerSuggestion(IOHandler &io_handler,
+                                                         llvm::StringRef line);
 
   virtual void IOHandlerComplete(IOHandler &io_handler,
                                  CompletionRequest &request);
@@ -338,8 +334,7 @@ public:
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
-                    IOHandlerDelegate &delegate,
-                    repro::DataRecorder *data_recorder);
+                    IOHandlerDelegate &delegate);
 
   IOHandlerEditline(Debugger &debugger, IOHandler::Type type,
                     const lldb::FileSP &input_sp,
@@ -351,8 +346,7 @@ public:
                     uint32_t line_number_start, // If non-zero show line numbers
                                                 // starting at
                                                 // 'line_number_start'
-                    IOHandlerDelegate &delegate,
-                    repro::DataRecorder *data_recorder);
+                    IOHandlerDelegate &delegate);
 
   IOHandlerEditline(Debugger &, IOHandler::Type, const char *, const char *,
                     const char *, bool, bool, uint32_t,
@@ -424,7 +418,7 @@ private:
   int FixIndentationCallback(Editline *editline, const StringList &lines,
                              int cursor_position);
 
-  llvm::Optional<std::string> SuggestionCallback(llvm::StringRef line);
+  std::optional<std::string> SuggestionCallback(llvm::StringRef line);
 
   void AutoCompleteCallback(CompletionRequest &request);
 #endif

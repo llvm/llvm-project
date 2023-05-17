@@ -1,8 +1,9 @@
 ; RUN: llc -mtriple x86_64-apple-macosx -O0 -filetype=obj -o - %s \
 ; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ; RUN: llc -mtriple x86_64-gnu-linux -O0 -filetype=obj -o - %s \
-; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s --check-prefix=LINUX
-; LINUX-NOT: DW_AT_data_bit_offset
+; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
+; RUN: llc -mtriple x86_64-gnu-linux -O0 -debugger-tune=gdb -filetype=obj -o - %s \
+; RUN: | llvm-dwarfdump -v -debug-info - | FileCheck %s
 ;
 ; Generated from:
 ;   #include <stdint.h>
@@ -43,7 +44,7 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NOT:  DW_AT_data_bit_offset
 ; CHECK:      DW_AT_data_member_location [DW_FORM_data1]	(0x00)
 !9 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
-!10 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !6, file: !3, line: 6, baseType: !11, size: 5, offset: 8)
+!10 = !DIDerivedType(tag: DW_TAG_member, name: "b", scope: !6, file: !3, line: 6, baseType: !11, size: 5, offset: 8, flags: DIFlagBitField)
 !11 = !DIDerivedType(tag: DW_TAG_typedef, name: "uint32_t", file: !12, line: 183, baseType: !13)
 !12 = !DIFile(filename: "/Volumes/Data/llvm/_build.ninja.release/bin/../lib/clang/3.9.0/include/stdint.h", directory: "/Volumes/Data/llvm")
 !13 = !DIBasicType(name: "unsigned int", size: 32, encoding: DW_ATE_unsigned)
@@ -56,7 +57,7 @@ target triple = "x86_64-apple-macosx"
 ; CHECK-NOT:  DW_AT_byte_size
 ; CHECK-NEXT: DW_AT_data_bit_offset      [DW_FORM_data1]	(0x08)
 ; CHECK-NOT:  DW_AT_data_member_location
-!14 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !6, file: !3, line: 7, baseType: !11, size: 27, offset: 13)
+!14 = !DIDerivedType(tag: DW_TAG_member, name: "c", scope: !6, file: !3, line: 7, baseType: !11, size: 27, offset: 13, flags: DIFlagBitField)
 !15 = !{i32 2, !"Dwarf Version", i32 4}
 !16 = !{i32 2, !"Debug Info Version", i32 3}
 !17 = !{i32 1, !"PIC Level", i32 2}

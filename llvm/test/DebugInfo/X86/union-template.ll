@@ -18,9 +18,9 @@ define void @_ZN7PR156371gEf(float %value) #0 !dbg !19 {
 entry:
   %value.addr = alloca float, align 4
   %tempValue = alloca %"union.PR15637::Value", align 4
-  store float %value, float* %value.addr, align 4
-  call void @llvm.dbg.declare(metadata float* %value.addr, metadata !22, metadata !23), !dbg !24
-  call void @llvm.dbg.declare(metadata %"union.PR15637::Value"* %tempValue, metadata !25, metadata !23), !dbg !26
+  store float %value, ptr %value.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %value.addr, metadata !22, metadata !23), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %tempValue, metadata !25, metadata !23), !dbg !26
   ret void, !dbg !27
 }
 

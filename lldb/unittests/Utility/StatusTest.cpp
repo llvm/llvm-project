@@ -72,7 +72,7 @@ TEST(StatusTest, ErrorWin32) {
   EXPECT_TRUE(success.Success());
 
   WCHAR name[128]{};
-  ULONG nameLen = llvm::array_lengthof(name);
+  ULONG nameLen = std::size(name);
   ULONG langs = 0;
   GetUserPreferredUILanguages(MUI_LANGUAGE_NAME, &langs,
                               reinterpret_cast<PZZWSTR>(&name), &nameLen);

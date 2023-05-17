@@ -104,7 +104,7 @@
   declare void @llvm.dbg.value(metadata, i64, metadata, metadata) #2
   
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #3
+  declare void @llvm.stackprotector(ptr, ptr) #3
   
   attributes #0 = { minsize nounwind optsize }
   attributes #1 = { minsize optsize }

@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class CrashingInferiorTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     @expectedFailureNetBSD
     def test_inferior_crashing(self):
@@ -66,7 +64,7 @@ class CrashingInferiorTestCase(TestBase):
         if self.platformIsDarwin():
             stop_reason = 'stop reason = EXC_BAD_ACCESS'
         elif self.getPlatform() == "linux" or self.getPlatform() == "freebsd":
-            stop_reason = 'stop reason = signal SIGSEGV'
+            stop_reason = 'stop reason = signal SIGSEGV: address not mapped to object'
         else:
             stop_reason = 'stop reason = invalid address'
         self.expect("thread list", STOPPED_DUE_TO_EXC_BAD_ACCESS,
@@ -126,8 +124,8 @@ class CrashingInferiorTestCase(TestBase):
 
         # The lldb expression interpreter should be able to read from addresses
         # of the inferior after a crash.
-        self.expect("p argc",
+        self.expect("expression argc",
                     startstr='(int) $0 = 1')
 
-        self.expect("p hello_world",
+        self.expect("expression hello_world",
                     substrs=['Hello'])

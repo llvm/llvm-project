@@ -118,8 +118,7 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
       if (!TST->isTypeAlias()) {
         bool DesugarArgument = false;
         SmallVector<TemplateArgument, 4> Args;
-        for (unsigned I = 0, N = TST->getNumArgs(); I != N; ++I) {
-          const TemplateArgument &Arg = TST->getArg(I);
+        for (const TemplateArgument &Arg : TST->template_arguments()) {
           if (Arg.getKind() == TemplateArgument::Type)
             Args.push_back(desugarForDiagnostic(Context, Arg.getAsType(),
                                                 DesugarArgument));
@@ -228,7 +227,7 @@ break; \
           desugarForDiagnostic(Context, Ty->getBaseType(), ShouldAKA);
       QT = Context.getObjCObjectType(
           BaseType, Ty->getTypeArgsAsWritten(),
-          llvm::makeArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
+          llvm::ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
           Ty->isKindOfTypeAsWritten());
     }
   }
@@ -425,7 +424,7 @@ void clang::FormatASTNodeDiagnosticArgument(
       Modifier = StringRef();
       Argument = StringRef();
       // Fall through
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     }
     case DiagnosticsEngine::ak_qualtype: {
       assert(Modifier.empty() && Argument.empty() &&
@@ -539,7 +538,7 @@ class TemplateDiff {
   bool ShowColor;
 
   /// FromTemplateType - When single type printing is selected, this is the
-  /// type to be be printed.  When tree printing is selected, this type will
+  /// type to be printed.  When tree printing is selected, this type will
   /// show up first in the tree.
   QualType FromTemplateType;
 
@@ -986,7 +985,7 @@ class TemplateDiff {
         if (isEnd()) return;
 
         // Set to first template argument.  If not a parameter pack, done.
-        TemplateArgument TA = TST->getArg(0);
+        TemplateArgument TA = TST->template_arguments()[0];
         if (TA.getKind() != TemplateArgument::Pack) return;
 
         // Start looking into the parameter pack.
@@ -1007,7 +1006,7 @@ class TemplateDiff {
       /// isEnd - Returns true if the iterator is one past the end.
       bool isEnd() const {
         assert(TST && "InternalIterator is invalid with a null TST.");
-        return Index >= TST->getNumArgs();
+        return Index >= TST->template_arguments().size();
       }
 
       /// &operator++ - Increment the iterator to the next template argument.
@@ -1027,11 +1026,11 @@ class TemplateDiff {
         // Loop until a template argument is found, or the end is reached.
         while (true) {
           // Advance to the next template argument.  Break if reached the end.
-          if (++Index == TST->getNumArgs())
+          if (++Index == TST->template_arguments().size())
             break;
 
           // If the TemplateArgument is not a parameter pack, done.
-          TemplateArgument TA = TST->getArg(Index);
+          TemplateArgument TA = TST->template_arguments()[Index];
           if (TA.getKind() != TemplateArgument::Pack)
             break;
 
@@ -1051,7 +1050,7 @@ class TemplateDiff {
         assert(TST && "InternalIterator is invalid with a null TST.");
         assert(!isEnd() && "Index exceeds number of arguments.");
         if (CurrentTA == EndTA)
-          return TST->getArg(Index);
+          return TST->template_arguments()[Index];
         else
           return *CurrentTA;
       }
@@ -1684,9 +1683,24 @@ class TemplateDiff {
                                                 : FromType.getAsString(Policy);
     std::string ToTypeStr = ToType.isNull() ? "(no argument)"
                                             : ToType.getAsString(Policy);
-    // Switch to canonical typename if it is better.
+    // Print without ElaboratedType sugar if it is better.
     // TODO: merge this with other aka printing above.
     if (FromTypeStr == ToTypeStr) {
+      const auto *FromElTy = dyn_cast<ElaboratedType>(FromType),
+                 *ToElTy = dyn_cast<ElaboratedType>(ToType);
+      if (FromElTy || ToElTy) {
+        std::string FromNamedTypeStr =
+            FromElTy ? FromElTy->getNamedType().getAsString(Policy)
+                     : FromTypeStr;
+        std::string ToNamedTypeStr =
+            ToElTy ? ToElTy->getNamedType().getAsString(Policy) : ToTypeStr;
+        if (FromNamedTypeStr != ToNamedTypeStr) {
+          FromTypeStr = FromNamedTypeStr;
+          ToTypeStr = ToNamedTypeStr;
+          goto PrintTypes;
+        }
+      }
+      // Switch to canonical typename if it is better.
       std::string FromCanTypeStr =
           FromType.getCanonicalType().getAsString(Policy);
       std::string ToCanTypeStr = ToType.getCanonicalType().getAsString(Policy);
@@ -1696,6 +1710,7 @@ class TemplateDiff {
       }
     }
 
+  PrintTypes:
     if (PrintTree) OS << '[';
     OS << (FromDefault ? "(default) " : "");
     Bold();
@@ -1877,7 +1892,7 @@ class TemplateDiff {
         TPO->printAsInit(OS, Policy);
         return;
       }
-      VD->printName(OS);
+      VD->printName(OS, Policy);
       return;
     }
 

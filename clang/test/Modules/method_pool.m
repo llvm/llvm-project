@@ -28,6 +28,8 @@ void testMethod5(id object, D* d) {
 }
 
 @import MethodPoolB;
+// expected-error@MethodPoolB.h:* {{'B' has different definitions in different modules; first difference is definition in module 'MethodPoolB' found no super class}}
+// expected-note@MethodPoolA.h:* {{but in 'MethodPoolA' found super class with type 'A'}}
 
 void testMethod1Again(id object) {
   [object method1];

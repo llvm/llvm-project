@@ -9,8 +9,6 @@ import os
 
 class TestTraceExport(TraceIntelPTTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def testErrorMessages(self):
         ctf_test_file = self.getBuildArtifact("ctf-test.json")
         # We first check the output when there are no targets
@@ -35,7 +33,7 @@ class TestTraceExport(TraceIntelPTTestCaseBase):
             error=True)
 
 
-    def testHtrBasicSuperBlockPassFullCheck(self):
+    def _testHtrBasicSuperBlockPassFullCheck(self):
         '''
         Test the BasicSuperBlock pass of HTR.
 
@@ -113,12 +111,12 @@ class TestTraceExport(TraceIntelPTTestCaseBase):
         ]
 
         # Check that the length of the expected JSON array is equal to the actual
-        self.assertTrue(len(data) == len(expected))
+        self.assertEqual(len(data), len(expected))
         for i in range(len(data)):
             # Check each individual JSON object in "ctf-test.json" against the expected value above
-            self.assertTrue(data[i] == expected[i])
+            self.assertEqual(data[i], expected[i])
 
-    def testHtrBasicSuperBlockPassSequenceCheck(self):
+    def _testHtrBasicSuperBlockPassSequenceCheck(self):
         '''
         Test the BasicSuperBlock pass of HTR.
 
@@ -171,4 +169,4 @@ class TestTraceExport(TraceIntelPTTestCaseBase):
 
         data_index = index_of_first_layer_1_block
         for i in range(len(expected_block_names)):
-            self.assertTrue(data[data_index + i]['name'] == expected_block_names[i])
+            self.assertEqual(data[data_index + i]['name'], expected_block_names[i])

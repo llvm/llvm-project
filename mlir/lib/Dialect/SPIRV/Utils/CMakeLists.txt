@@ -5,6 +5,6 @@ add_mlir_dialect_library(MLIRSPIRVUtils
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SPIRV
 
   LINK_LIBS PUBLIC
-  MLIRSPIRV
+  MLIRSPIRVDialect
 )
 

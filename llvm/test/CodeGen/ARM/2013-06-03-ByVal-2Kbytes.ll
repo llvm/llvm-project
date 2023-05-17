@@ -7,24 +7,24 @@ target triple = "armv4t--linux-gnueabihf"
 %big_struct1 = type { [516 x i32] }
 
 ;CHECK-LABEL: f:
-define void @f(%big_struct0* %p0, %big_struct1* %p1) {
+define void @f(ptr %p0, ptr %p1) {
 
 ;CHECK: sub sp, sp, #8
 ;CHECK: sub sp, sp, #2048
 ;CHECK: bl callme0
-  call void @callme0(%big_struct0* byval(%big_struct0) %p0)
+  call void @callme0(ptr byval(%big_struct0) %p0)
 
 ;CHECK: add sp, sp, #8
 ;CHECK: add sp, sp, #2048
 ;CHECK: sub sp, sp, #2048
 ;CHECK: bl callme1
-  call void @callme1(%big_struct1* byval(%big_struct1) %p1)
+  call void @callme1(ptr byval(%big_struct1) %p1)
 
 ;CHECK: add sp, sp, #2048
 
   ret void
 }
 
-declare void @callme0(%big_struct0* byval(%big_struct0))
-declare void @callme1(%big_struct1* byval(%big_struct1))
+declare void @callme0(ptr byval(%big_struct0))
+declare void @callme1(ptr byval(%big_struct1))
 

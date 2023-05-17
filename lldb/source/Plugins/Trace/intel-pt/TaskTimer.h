@@ -10,10 +10,8 @@
 #define LLDB_SOURCE_PLUGINS_TRACE_INTEL_PT_TASKTIMER_H
 
 #include "lldb/lldb-types.h"
-
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringRef.h"
-
 #include <chrono>
 #include <functional>
 #include <unordered_map>
@@ -22,8 +20,8 @@ namespace lldb_private {
 namespace trace_intel_pt {
 
 /// Class used to track the duration of long running tasks related to a single
-/// thread for reporting.
-class ThreadTaskTimer {
+/// scope for reporting.
+class ScopedTaskTimer {
 public:
   /// Execute the given \p task and record its duration.
   ///
@@ -35,9 +33,9 @@ public:
   ///
   /// \return
   ///     The return value of the task.
-  template <class R> R TimeTask(llvm::StringRef name, std::function<R()> task) {
+  template <typename C> auto TimeTask(llvm::StringRef name, C task) {
     auto start = std::chrono::steady_clock::now();
-    R result = task();
+    auto result = task();
     auto end = std::chrono::steady_clock::now();
     std::chrono::milliseconds duration =
         std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
@@ -63,10 +61,15 @@ class TaskTimer {
 public:
   /// \return
   ///     The timer object for the given thread.
-  ThreadTaskTimer &ForThread(lldb::tid_t tid);
+  ScopedTaskTimer &ForThread(lldb::tid_t tid);
+
+  /// \return
+  ///     The timer object for global tasks.
+  ScopedTaskTimer &ForGlobal();
 
 private:
-  llvm::DenseMap<lldb::tid_t, ThreadTaskTimer> m_thread_timers;
+  llvm::DenseMap<lldb::tid_t, ScopedTaskTimer> m_thread_timers;
+  ScopedTaskTimer m_global_timer;
 };
 
 } // namespace trace_intel_pt

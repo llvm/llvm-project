@@ -123,11 +123,11 @@ Error DebugLinesSubsection::commit(BinaryStreamWriter &Writer) const {
     if (auto EC = Writer.writeObject(BlockHeader))
       return EC;
 
-    if (auto EC = Writer.writeArray(makeArrayRef(B.Lines)))
+    if (auto EC = Writer.writeArray(ArrayRef(B.Lines)))
       return EC;
 
     if (hasColumnInfo()) {
-      if (auto EC = Writer.writeArray(makeArrayRef(B.Columns)))
+      if (auto EC = Writer.writeArray(ArrayRef(B.Columns)))
         return EC;
     }
   }

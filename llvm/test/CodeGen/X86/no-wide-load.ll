@@ -3,7 +3,7 @@
 
 %struct.S = type { i32, i16, i16 }
 
-define void @foo(%struct.S* %p, i16 signext %s) {
+define void @foo(ptr %p, i16 signext %s) {
 ; CHECK-LABEL: foo:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movzwl 4(%rdi), %eax
@@ -12,11 +12,11 @@ define void @foo(%struct.S* %p, i16 signext %s) {
 ; CHECK-NEXT:    movw %ax, 4(%rdi)
 ; CHECK-NEXT:    retq
 entry:
-  %f2 = getelementptr inbounds %struct.S, %struct.S* %p, i64 0, i32 1
-  %0 = load i16, i16* %f2, align 4
+  %f2 = getelementptr inbounds %struct.S, ptr %p, i64 0, i32 1
+  %0 = load i16, ptr %f2, align 4
   %1 = and i16 %0, -1121
   %2 = or i16 %1, 1024
-  store i16 %2, i16* %f2, align 4
+  store i16 %2, ptr %f2, align 4
   ret void
 }
 

@@ -5,97 +5,97 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -mattr=+avx512f -mattr=+avx512vl -run-pass=instruction-select -verify-machineinstrs %s -o - | FileCheck %s --check-prefix=AVX512VL
 
 --- |
-  define i8 @test_load_i8(i8* %p1) {
-    %r = load atomic i8, i8* %p1 unordered, align 1
+  define i8 @test_load_i8(ptr %p1) {
+    %r = load atomic i8, ptr %p1 unordered, align 1
     ret i8 %r
   }
 
-  define i16 @test_load_i16(i16* %p1) {
-    %r = load atomic i16, i16* %p1 unordered, align 2
+  define i16 @test_load_i16(ptr %p1) {
+    %r = load atomic i16, ptr %p1 unordered, align 2
     ret i16 %r
   }
 
-  define i32 @test_load_i32(i32* %p1) {
-    %r = load atomic i32, i32* %p1 unordered, align 4
+  define i32 @test_load_i32(ptr %p1) {
+    %r = load atomic i32, ptr %p1 unordered, align 4
     ret i32 %r
   }
 
-  define i64 @test_load_i64(i64* %p1) {
-    %r = load atomic i64, i64* %p1 unordered, align 8
+  define i64 @test_load_i64(ptr %p1) {
+    %r = load atomic i64, ptr %p1 unordered, align 8
     ret i64 %r
   }
 
-  define float @test_load_float(float* %p1) {
-    %r = load atomic float, float* %p1 unordered, align 4
+  define float @test_load_float(ptr %p1) {
+    %r = load atomic float, ptr %p1 unordered, align 4
     ret float %r
   }
 
-  define float @test_load_float_vecreg(float* %p1) {
-    %r = load atomic float, float* %p1 unordered, align 8
+  define float @test_load_float_vecreg(ptr %p1) {
+    %r = load atomic float, ptr %p1 unordered, align 8
     ret float %r
   }
 
-  define double @test_load_double(double* %p1) {
-    %r = load atomic double, double* %p1 unordered, align 8
+  define double @test_load_double(ptr %p1) {
+    %r = load atomic double, ptr %p1 unordered, align 8
     ret double %r
   }
 
-  define double @test_load_double_vecreg(double* %p1) {
-    %r = load atomic double, double* %p1 unordered, align 8
+  define double @test_load_double_vecreg(ptr %p1) {
+    %r = load atomic double, ptr %p1 unordered, align 8
     ret double %r
   }
 
-  define i32* @test_store_i32(i32 %val, i32* %p1) {
-    store atomic i32 %val, i32* %p1 unordered, align 4
-    ret i32* %p1
+  define ptr @test_store_i32(i32 %val, ptr %p1) {
+    store atomic i32 %val, ptr %p1 unordered, align 4
+    ret ptr %p1
   }
 
-  define i64* @test_store_i64(i64 %val, i64* %p1) {
-    store atomic i64 %val, i64* %p1 unordered, align 8
-    ret i64* %p1
+  define ptr @test_store_i64(i64 %val, ptr %p1) {
+    store atomic i64 %val, ptr %p1 unordered, align 8
+    ret ptr %p1
   }
 
-  define float* @test_store_float(float %val, float* %p1) {
-    store atomic float %val, float* %p1 unordered, align 4
-    ret float* %p1
+  define ptr @test_store_float(float %val, ptr %p1) {
+    store atomic float %val, ptr %p1 unordered, align 4
+    ret ptr %p1
   }
 
-  define float* @test_store_float_vec(float %val, float* %p1) {
-    store atomic float %val, float* %p1 unordered, align 4
-    ret float* %p1
+  define ptr @test_store_float_vec(float %val, ptr %p1) {
+    store atomic float %val, ptr %p1 unordered, align 4
+    ret ptr %p1
   }
 
-  define double* @test_store_double(double %val, double* %p1) {
-    store atomic double %val, double* %p1 unordered, align 8
-    ret double* %p1
+  define ptr @test_store_double(double %val, ptr %p1) {
+    store atomic double %val, ptr %p1 unordered, align 8
+    ret ptr %p1
   }
 
-  define double* @test_store_double_vec(double %val, double* %p1) {
-    store atomic double %val, double* %p1 unordered, align 8
-    ret double* %p1
+  define ptr @test_store_double_vec(double %val, ptr %p1) {
+    store atomic double %val, ptr %p1 unordered, align 8
+    ret ptr %p1
   }
 
-  define i32* @test_load_ptr(i32** %ptr1) {
-    %p = load atomic i32*, i32** %ptr1 unordered, align 8
-    ret i32* %p
+  define ptr @test_load_ptr(ptr %ptr1) {
+    %p = load atomic ptr, ptr %ptr1 unordered, align 8
+    ret ptr %p
   }
 
-  define void @test_store_ptr(i32** %ptr1, i32* %a) {
-    store atomic i32* %a, i32** %ptr1 unordered, align 8
+  define void @test_store_ptr(ptr %ptr1, ptr %a) {
+    store atomic ptr %a, ptr %ptr1 unordered, align 8
     ret void
   }
 
-  define i32 @test_gep_folding(i32* %arr, i32 %val) {
-    %arrayidx = getelementptr i32, i32* %arr, i32 5
-    store atomic i32 %val, i32* %arrayidx unordered, align 8
-    %r = load atomic i32, i32* %arrayidx unordered, align 8
+  define i32 @test_gep_folding(ptr %arr, i32 %val) {
+    %arrayidx = getelementptr i32, ptr %arr, i32 5
+    store atomic i32 %val, ptr %arrayidx unordered, align 8
+    %r = load atomic i32, ptr %arrayidx unordered, align 8
     ret i32 %r
   }
 
-  define i32 @test_gep_folding_largeGepIndex(i32* %arr, i32 %val) #0 {
-    %arrayidx = getelementptr i32, i32* %arr, i64 57179869180
-    store atomic i32 %val, i32* %arrayidx unordered, align 8
-    %r = load atomic i32, i32* %arrayidx unordered, align 8
+  define i32 @test_gep_folding_largeGepIndex(ptr %arr, i32 %val) #0 {
+    %arrayidx = getelementptr i32, ptr %arr, i64 57179869180
+    store atomic i32 %val, ptr %arrayidx unordered, align 8
+    %r = load atomic i32, ptr %arrayidx unordered, align 8
     ret i32 %r
   }
 ...

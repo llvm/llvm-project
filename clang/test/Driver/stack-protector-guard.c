@@ -13,6 +13,8 @@
 // RUN:   FileCheck -check-prefix=CHECK-FS %s
 // RUN: %clang -### -target x86_64-unknown-unknown -mstack-protector-guard-reg=gs %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=CHECK-GS %s
+// RUN: %clang -### -target x86_64-unknown-unknown -mstack-protector-guard-symbol=sym %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=CHECK-SYM %s
 
 // Invalid arch
 // RUN: not %clang -target powerpc64le-linux-gnu -mstack-protector-guard=tls %s 2>&1 | \
@@ -32,10 +34,16 @@
 // RUN:   FileCheck -check-prefix=INVALID-REG %s
 // RUN: not %clang -target x86_64-unknown-unknown -c -mstack-protector-guard-reg=ds %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=INVALID-REG %s
+// RUN: not %clang -target x86_64-unknown-unknown -c -mstack-protector-guard-symbol=2s %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-SYM %s
+// RUN: not %clang -target x86_64-unknown-unknown -c -mstack-protector-guard-symbol= %s 2>&1 | \
+// RUN:   FileCheck -check-prefix=INVALID-SYM %s
 
 // CHECK-FS: "-cc1" {{.*}}"-mstack-protector-guard-reg=fs"
 // CHECK-GS: "-cc1" {{.*}}"-mstack-protector-guard-reg=gs"
 // INVALID-REG: error: invalid value {{.*}} in 'mstack-protector-guard-reg=', expected one of: fs gs
+// CHECK-SYM: "-cc1" {{.*}}"-mstack-protector-guard-symbol=sym"
+// INVALID-SYM: error: invalid argument 'mstack-protector-guard-symbol=' only allowed with 'legal symbol name'
 
 // RUN: not %clang -target arm-eabi-c -mstack-protector-guard=tls %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=MISSING-OFFSET %s

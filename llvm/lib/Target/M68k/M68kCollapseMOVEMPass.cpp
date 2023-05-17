@@ -20,16 +20,17 @@
 #include "M68kMachineFunction.h"
 #include "M68kSubtarget.h"
 
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 #include "llvm/Support/MathExtras.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "M68k-collapse-movem"
+#define DEBUG_TYPE "m68k-collapse-movem"
+#define PASS_NAME "M68k MOVEM collapser pass"
 
 namespace {
 
@@ -294,12 +295,12 @@ public:
 
     return Modified;
   }
-
-  StringRef getPassName() const override { return "M68k MOVEM collapser pass"; }
 };
 
 char M68kCollapseMOVEM::ID = 0;
 } // anonymous namespace.
+
+INITIALIZE_PASS(M68kCollapseMOVEM, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// Returns an instance of the pseudo instruction expansion pass.
 FunctionPass *llvm::createM68kCollapseMOVEMPass() {

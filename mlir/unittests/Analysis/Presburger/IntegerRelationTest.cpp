@@ -7,7 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/IntegerRelation.h"
-#include "./Utils.h"
+#include "Parser.h"
+#include "mlir/Analysis/Presburger/Simplex.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -16,9 +17,9 @@ using namespace mlir;
 using namespace presburger;
 
 static IntegerRelation parseRelationFromSet(StringRef set, unsigned numDomain) {
-  IntegerRelation rel = parsePoly(set);
+  IntegerRelation rel = parseIntegerPolyhedron(set);
 
-  rel.convertIdKind(IdKind::SetDim, 0, numDomain, IdKind::Domain);
+  rel.convertVarKind(VarKind::SetDim, 0, numDomain, VarKind::Domain);
 
   return rel;
 }
@@ -30,14 +31,14 @@ TEST(IntegerRelationTest, getDomainAndRangeSet) {
   IntegerPolyhedron domainSet = rel.getDomainSet();
 
   IntegerPolyhedron expectedDomainSet =
-      parsePoly("(x)[N] : (x + 10 >= 0, N - x - 10 >= 0)");
+      parseIntegerPolyhedron("(x)[N] : (x + 10 >= 0, N - x - 10 >= 0)");
 
   EXPECT_TRUE(domainSet.isEqual(expectedDomainSet));
 
   IntegerPolyhedron rangeSet = rel.getRangeSet();
 
   IntegerPolyhedron expectedRangeSet =
-      parsePoly("(x)[N] : (x >= 0, N - x >= 0)");
+      parseIntegerPolyhedron("(x)[N] : (x >= 0, N - x >= 0)");
 
   EXPECT_TRUE(rangeSet.isEqual(expectedRangeSet));
 }
@@ -65,7 +66,8 @@ TEST(IntegerRelationTest, intersectDomainAndRange) {
       1);
 
   {
-    IntegerPolyhedron poly = parsePoly("(x)[N, M] : (x >= 0, M - x - 1 >= 0)");
+    IntegerPolyhedron poly =
+        parseIntegerPolyhedron("(x)[N, M] : (x >= 0, M - x - 1 >= 0)");
 
     IntegerRelation expectedRel = parseRelationFromSet(
         "(x, y, z)[N, M]: (y floordiv 2 - N >= 0, z floordiv 5 - M"
@@ -78,8 +80,8 @@ TEST(IntegerRelationTest, intersectDomainAndRange) {
   }
 
   {
-    IntegerPolyhedron poly =
-        parsePoly("(y, z)[N, M] : (y >= 0, M - y - 1 >= 0, y + z == 0)");
+    IntegerPolyhedron poly = parseIntegerPolyhedron(
+        "(y, z)[N, M] : (y >= 0, M - y - 1 >= 0, y + z == 0)");
 
     IntegerRelation expectedRel = parseRelationFromSet(
         "(x, y, z)[N, M]: (y floordiv 2 - N >= 0, z floordiv 5 - M"
@@ -121,4 +123,17 @@ TEST(IntegerRelationTest, applyDomainAndRange) {
 
     EXPECT_TRUE(map1.isEqual(map3));
   }
+}
+
+TEST(IntegerRelationTest, symbolicLexmin) {
+  SymbolicLexMin lexmin =
+      parseRelationFromSet("(a, x)[b] : (x - a >= 0, x - b >= 0)", 1)
+          .findSymbolicIntegerLexMin();
+
+  PWMAFunction expectedLexmin = parsePWMAF({
+      {"(a)[b] : (a - b >= 0)", "(a)[b] -> (a)"},     // a
+      {"(a)[b] : (b - a - 1 >= 0)", "(a)[b] -> (b)"}, // b
+  });
+  EXPECT_TRUE(lexmin.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin.lexmin.isEqual(expectedLexmin));
 }

@@ -5,7 +5,7 @@
 // objects.
 
 // Stack histories are currently not recorded on x86.
-// XFAIL: x86_64
+// XFAIL: target=x86_64{{.*}}
 
 __attribute((noinline))
 char *buggy(int b) {

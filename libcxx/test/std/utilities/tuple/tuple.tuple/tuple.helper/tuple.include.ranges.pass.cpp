@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <ranges>
 
@@ -23,8 +22,8 @@ using Iterator = int*;
 class SizedSentinel {
 public:
     constexpr bool operator==(int*) const;
-    friend constexpr ptrdiff_t operator-(const SizedSentinel&, int*);
-    friend constexpr ptrdiff_t operator-(int*, const SizedSentinel&);
+    friend constexpr std::ptrdiff_t operator-(const SizedSentinel&, int*);
+    friend constexpr std::ptrdiff_t operator-(int*, const SizedSentinel&);
 };
 
 static_assert(std::sized_sentinel_for<SizedSentinel, Iterator>);

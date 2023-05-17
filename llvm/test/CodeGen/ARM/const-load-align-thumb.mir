@@ -6,8 +6,8 @@
   define hidden i32 @main() {
   entry:
     %P5 = alloca half, align 2
-    store half 0xH3FE0, half* %P5, align 2
-    %0 = load half, half* %P5, align 2
+    store half 0xH3FE0, ptr %P5, align 2
+    %0 = load half, ptr %P5, align 2
     call void @z_bar(half %0)
     ret i32 0
   }

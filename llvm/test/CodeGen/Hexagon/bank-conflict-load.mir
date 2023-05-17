@@ -8,7 +8,7 @@
 # CHECK: L2_loadri_io killed $r0, 12
 
 --- |
-  define void @foo(i32* %a, i32* %b) {
+  define void @foo(ptr %a, ptr %b) {
     ret void
   }
 ...

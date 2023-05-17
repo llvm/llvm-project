@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/memory_resource>
 
 // memory_resource * new_delete_resource()
@@ -16,6 +18,8 @@
 // never end, even very late into program termination. This test constructs
 // attempts to use 'new_delete_resource()' very late in program termination
 // to detect lifetime issues.
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

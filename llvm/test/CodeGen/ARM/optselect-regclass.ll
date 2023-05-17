@@ -9,7 +9,7 @@
 ; Function Attrs: nounwind ssp
 define void @xfr() {
 entry:
-  %bf.load4 = load i32, i32* getelementptr inbounds (%union.opcode.0.2.5.8.15.28, %union.opcode.0.2.5.8.15.28* @opcode, i32 0, i32 0), align 4
+  %bf.load4 = load i32, ptr @opcode, align 4
   %bf.clear10 = and i32 %bf.load4, 65535
   %and11 = and i32 %bf.load4, 32768
   %tobool12 = icmp ne i32 %and11, 0
@@ -17,8 +17,8 @@ entry:
   %or = or i32 %cond13, %bf.clear10
   %shl = shl nuw i32 %or, 2
   %add = add i32 0, %shl
-  tail call void (i8*, i32, i32, i8*, ...) @__sprintf_chk(i8* getelementptr inbounds ([50 x i8], [50 x i8]* @operands, i32 0, i32 0), i32 0, i32 50, i8* getelementptr inbounds ([13 x i8], [13 x i8]* @.str86, i32 0, i32 0), i32 undef, i32 undef, i32 %add)
+  tail call void (ptr, i32, i32, ptr, ...) @__sprintf_chk(ptr @operands, i32 0, i32 50, ptr @.str86, i32 undef, i32 undef, i32 %add)
   ret void
 }
 
-declare void @__sprintf_chk(i8*, i32, i32, i8*, ...)
+declare void @__sprintf_chk(ptr, i32, i32, ptr, ...)

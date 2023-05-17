@@ -11,11 +11,8 @@
 #define _LIBCPP___FORMAT_FORMAT_ERROR_H
 
 #include <__config>
-#include <stdexcept>
-
-#ifdef _LIBCPP_NO_EXCEPTIONS
 #include <cstdlib>
-#endif
+#include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,20 +20,24 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
+_LIBCPP_DIAGNOSTIC_PUSH
+_LIBCPP_CLANG_DIAGNOSTIC_IGNORED("-Wweak-vtables")
 class _LIBCPP_EXCEPTION_ABI format_error : public runtime_error {
 public:
   _LIBCPP_HIDE_FROM_ABI explicit format_error(const string& __s)
       : runtime_error(__s) {}
   _LIBCPP_HIDE_FROM_ABI explicit format_error(const char* __s)
       : runtime_error(__s) {}
-  virtual ~format_error() noexcept;
+  _LIBCPP_HIDE_FROM_ABI_VIRTUAL
+  ~format_error() noexcept override = default;
 };
+_LIBCPP_DIAGNOSTIC_POP
 
 _LIBCPP_NORETURN inline _LIBCPP_HIDE_FROM_ABI void
 __throw_format_error(const char* __s) {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw format_error(__s);
 #else
   (void)__s;
@@ -44,7 +45,7 @@ __throw_format_error(const char* __s) {
 #endif
 }
 
-#endif //_LIBCPP_STD_VER > 17
+#endif //_LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

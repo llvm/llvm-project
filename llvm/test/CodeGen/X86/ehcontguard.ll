@@ -5,14 +5,14 @@
 
 ; CHECK: .section .gehcont$y
 
-define dso_local void @"?func1@@YAXXZ"() #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local void @"?func1@@YAXXZ"() #0 personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @"?func2@@YAXXZ"()
           to label %invoke.cont unwind label %catch.dispatch
 catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch] unwind to caller
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null, i32 64, i8* null]
+  %1 = catchpad within %0 [ptr null, i32 64, ptr null]
   catchret from %1 to label %catchret.dest
 catchret.dest:                                    ; preds = %catch
   br label %try.cont

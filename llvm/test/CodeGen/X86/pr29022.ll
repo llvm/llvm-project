@@ -8,8 +8,8 @@ define i32 @A() {
 ; X32: movl %esp, %edi
 ; X32-NEXT: call
   %alloc = alloca i32, align 8
-  %call = call i32 @foo(i32* %alloc)
+  %call = call i32 @foo(ptr %alloc)
   ret i32 %call
 }
 
-declare i32 @foo(i32*)
+declare i32 @foo(ptr)

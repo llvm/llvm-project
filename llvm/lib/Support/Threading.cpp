@@ -12,12 +12,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/Threading.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Config/config.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Config/llvm-config.h"
 
 #include <cassert>
 #include <errno.h>
+#include <optional>
 #include <stdlib.h>
 #include <string.h>
 
@@ -27,14 +27,6 @@ using namespace llvm;
 //=== WARNING: Implementation here must contain only TRULY operating system
 //===          independent code.
 //===----------------------------------------------------------------------===//
-
-bool llvm::llvm_is_multithreaded() {
-#if LLVM_ENABLE_THREADS != 0
-  return true;
-#else
-  return false;
-#endif
-}
 
 #if LLVM_ENABLE_THREADS == 0 ||                                                \
     (!defined(_WIN32) && !defined(HAVE_PTHREAD_H))
@@ -53,13 +45,16 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   return 1;
 }
 
+// Unknown if threading turned off
+int llvm::get_physical_cores() { return -1; }
+
 #else
 
-int computeHostNumHardwareThreads();
+static int computeHostNumHardwareThreads();
 
 unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
-  int MaxThreadCount = UseHyperThreads ? computeHostNumHardwareThreads()
-                                       : sys::getHostNumPhysicalCores();
+  int MaxThreadCount =
+      UseHyperThreads ? computeHostNumHardwareThreads() : get_physical_cores();
   if (MaxThreadCount <= 0)
     MaxThreadCount = 1;
   if (ThreadsRequested == 0)
@@ -87,15 +82,15 @@ unsigned llvm::ThreadPoolStrategy::compute_thread_count() const {
   // which is not enough for some/many normal LLVM compilations. This implements
   // the same interface as std::thread but requests the same stack size as the
   // main thread (8MB) before creation.
-const llvm::Optional<unsigned> llvm::thread::DefaultStackSize = 8 * 1024 * 1024;
+const std::optional<unsigned> llvm::thread::DefaultStackSize = 8 * 1024 * 1024;
 #else
-const llvm::Optional<unsigned> llvm::thread::DefaultStackSize = None;
+const std::optional<unsigned> llvm::thread::DefaultStackSize;
 #endif
 
 
 #endif
 
-Optional<ThreadPoolStrategy>
+std::optional<ThreadPoolStrategy>
 llvm::get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default) {
   if (Num == "all")
     return llvm::hardware_concurrency();
@@ -103,7 +98,7 @@ llvm::get_threadpool_strategy(StringRef Num, ThreadPoolStrategy Default) {
     return Default;
   unsigned V;
   if (Num.getAsInteger(10, V))
-    return None; // malformed 'Num' value
+    return std::nullopt; // malformed 'Num' value
   if (V == 0)
     return Default;
 

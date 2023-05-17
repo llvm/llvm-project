@@ -87,7 +87,7 @@ exit:
 define void @test_zext(i32 %a, i32 %b, i32 %c, i32 %d, i32 %e, i32 %f) {
 ; CHECK-LABEL: @test_zext
 ; CHECK:          %ze2 = zext i64 %iv2.inc to i128
-; CHECK-NEXT:     -->  {(1 + (zext i64 {7,+,1}<nuw><nsw><%loop> to i128))<nuw><nsw>,+,1}<nuw><%loop2>
+; CHECK-NEXT:     -->  {(1 + (zext i64 {7,+,1}<nuw><nsw><%loop> to i128))<nuw><nsw>,+,1}<nuw><nsw><%loop2>
 entry:
   br label %loop
 

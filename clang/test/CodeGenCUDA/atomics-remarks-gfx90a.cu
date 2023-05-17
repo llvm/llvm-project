@@ -9,7 +9,7 @@
 
 // GFX90A-CAS: A compare and swap loop was generated for an atomic fadd operation at system memory scope
 // GFX90A-CAS-LABEL: _Z14atomic_add_casPf
-// GFX90A-CAS:  flat_atomic_cmpswap v0, v[2:3], v[4:5] glc
+// GFX90A-CAS:  flat_atomic_cmpswap
 // GFX90A-CAS:  s_cbranch_execnz
 __device__ float atomic_add_cas(float *p) {
   return __atomic_fetch_add(p, 1.0f, memory_order_relaxed);

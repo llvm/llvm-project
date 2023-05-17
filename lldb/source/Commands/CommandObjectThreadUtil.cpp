@@ -19,7 +19,20 @@ using namespace llvm;
 CommandObjectIterateOverThreads::CommandObjectIterateOverThreads(
     CommandInterpreter &interpreter, const char *name, const char *help,
     const char *syntax, uint32_t flags)
-    : CommandObjectParsed(interpreter, name, help, syntax, flags) {}
+    : CommandObjectParsed(interpreter, name, help, syntax, flags) {
+  // These commands all take thread ID's as arguments.
+  CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatStar};
+  m_arguments.push_back({thread_arg});
+}
+
+CommandObjectMultipleThreads::CommandObjectMultipleThreads(
+    CommandInterpreter &interpreter, const char *name, const char *help,
+    const char *syntax, uint32_t flags)
+    : CommandObjectParsed(interpreter, name, help, syntax, flags) {
+  // These commands all take thread ID's as arguments.
+  CommandArgumentData thread_arg{eArgTypeThreadIndex, eArgRepeatStar};
+  m_arguments.push_back({thread_arg});
+}
 
 bool CommandObjectIterateOverThreads::DoExecute(Args &command,
                                                 CommandReturnObject &result) {

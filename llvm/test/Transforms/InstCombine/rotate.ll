@@ -288,18 +288,18 @@ define i32 @rotl_safe_i32(i32 %x, i32 %y) {
 
 ; Extra uses don't change anything.
 
-define i16 @rotl_safe_i16_commute_extra_use(i16 %x, i16 %y, i16* %p) {
+define i16 @rotl_safe_i16_commute_extra_use(i16 %x, i16 %y, ptr %p) {
 ; CHECK-LABEL: @rotl_safe_i16_commute_extra_use(
 ; CHECK-NEXT:    [[NEGY:%.*]] = sub i16 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[NEGYMASK:%.*]] = and i16 [[NEGY]], 15
-; CHECK-NEXT:    store i16 [[NEGYMASK]], i16* [[P:%.*]], align 2
+; CHECK-NEXT:    store i16 [[NEGYMASK]], ptr [[P:%.*]], align 2
 ; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.fshl.i16(i16 [[X:%.*]], i16 [[X]], i16 [[Y]])
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %negy = sub i16 0, %y
   %ymask = and i16 %y, 15
   %negymask = and i16 %negy, 15
-  store i16 %negymask, i16* %p
+  store i16 %negymask, ptr %p
   %shl = shl i16 %x, %ymask
   %shr = lshr i16 %x, %negymask
   %r = or i16 %shl, %shr
@@ -324,14 +324,14 @@ define i64 @rotr_safe_i64(i64 %x, i64 %y) {
 
 ; Extra uses don't change anything.
 
-define i8 @rotr_safe_i8_commute_extra_use(i8 %x, i8 %y, i8* %p) {
+define i8 @rotr_safe_i8_commute_extra_use(i8 %x, i8 %y, ptr %p) {
 ; CHECK-LABEL: @rotr_safe_i8_commute_extra_use(
 ; CHECK-NEXT:    [[NEGY:%.*]] = sub i8 0, [[Y:%.*]]
 ; CHECK-NEXT:    [[YMASK:%.*]] = and i8 [[Y]], 7
 ; CHECK-NEXT:    [[NEGYMASK:%.*]] = and i8 [[NEGY]], 7
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i8 [[X:%.*]], [[NEGYMASK]]
 ; CHECK-NEXT:    [[SHR:%.*]] = lshr i8 [[X]], [[YMASK]]
-; CHECK-NEXT:    store i8 [[SHR]], i8* [[P:%.*]], align 1
+; CHECK-NEXT:    store i8 [[SHR]], ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[R:%.*]] = or i8 [[SHL]], [[SHR]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
@@ -340,7 +340,7 @@ define i8 @rotr_safe_i8_commute_extra_use(i8 %x, i8 %y, i8* %p) {
   %negymask = and i8 %negy, 7
   %shl = shl i8 %x, %negymask
   %shr = lshr i8 %x, %ymask
-  store i8 %shr, i8* %p
+  store i8 %shr, ptr %p
   %r = or i8 %shl, %shr
   ret i8 %r
 }
@@ -892,12 +892,12 @@ define i64 @rotr_select_zext_shamt(i64 %x, i32 %y) {
 
 define i32 @rotl_constant_expr(i32 %shamt) {
 ; CHECK-LABEL: @rotl_constant_expr(
-; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 ptrtoint (i8* @external_global to i32), [[SHAMT:%.*]]
-; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], shl (i32 ptrtoint (i8* @external_global to i32), i32 11)
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 ptrtoint (ptr @external_global to i32), [[SHAMT:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = or i32 [[SHR]], shl (i32 ptrtoint (ptr @external_global to i32), i32 11)
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
-  %shr = lshr i32 ptrtoint (i8* @external_global to i32), %shamt
-  %r = or i32 %shr, shl (i32 ptrtoint (i8* @external_global to i32), i32 11)
+  %shr = lshr i32 ptrtoint (ptr @external_global to i32), %shamt
+  %r = or i32 %shr, shl (i32 ptrtoint (ptr @external_global to i32), i32 11)
   ret i32 %r
 }
 

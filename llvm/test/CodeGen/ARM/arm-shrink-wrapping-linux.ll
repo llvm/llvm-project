@@ -14,7 +14,7 @@ target triple = "armv7--linux-gnueabi"
 ; It also post-dominates the loop body and we use to generate invalid
 ; restore sequence. I.e., we restored too early.
 
-define fastcc i8* @wrongUseOfPostDominate(i8* readonly %s, i32 %off, i8* readnone %lim) {
+define fastcc ptr @wrongUseOfPostDominate(ptr readonly %s, i32 %off, ptr readnone %lim) {
 ; ENABLE-LABEL: wrongUseOfPostDominate:
 ; ENABLE:       @ %bb.0: @ %entry
 ; ENABLE-NEXT:    .save {r11, lr}
@@ -200,28 +200,28 @@ entry:
 
 while.cond.preheader:                             ; preds = %entry
   %tobool4 = icmp ne i32 %off, 0
-  %cmp15 = icmp ult i8* %s, %lim
+  %cmp15 = icmp ult ptr %s, %lim
   %sel66 = and i1 %tobool4, %cmp15
   br i1 %sel66, label %while.body, label %if.end29
 
 while.body:                                       ; preds = %while.body, %while.cond.preheader
-  %s.addr.08 = phi i8* [ %add.ptr, %while.body ], [ %s, %while.cond.preheader ]
+  %s.addr.08 = phi ptr [ %add.ptr, %while.body ], [ %s, %while.cond.preheader ]
   %off.addr.07 = phi i32 [ %dec, %while.body ], [ %off, %while.cond.preheader ]
   %dec = add nsw i32 %off.addr.07, -1
-  %tmp = load i8, i8* %s.addr.08, align 1, !tbaa !2
+  %tmp = load i8, ptr %s.addr.08, align 1, !tbaa !2
   %idxprom = zext i8 %tmp to i32
-  %arrayidx = getelementptr inbounds [2 x i8], [2 x i8]* @skip, i32 0, i32 %idxprom
-  %tmp1 = load i8, i8* %arrayidx, align 1, !tbaa !2
+  %arrayidx = getelementptr inbounds [2 x i8], ptr @skip, i32 0, i32 %idxprom
+  %tmp1 = load i8, ptr %arrayidx, align 1, !tbaa !2
   %conv = zext i8 %tmp1 to i32
-  %add.ptr = getelementptr inbounds i8, i8* %s.addr.08, i32 %conv
+  %add.ptr = getelementptr inbounds i8, ptr %s.addr.08, i32 %conv
   %tobool = icmp ne i32 %off.addr.07, 1
-  %cmp1 = icmp ult i8* %add.ptr, %lim
+  %cmp1 = icmp ult ptr %add.ptr, %lim
   %sel6 = and i1 %tobool, %cmp1
   br i1 %sel6, label %while.body, label %if.end29
 
 while.cond2.outer:                                ; preds = %while.body24.land.rhs14_crit_edge, %while.body24, %land.rhs14.preheader, %if.then7, %entry
   %off.addr.1.ph = phi i32 [ %off, %entry ], [ %inc, %land.rhs14.preheader ], [ %inc, %if.then7 ], [ %inc, %while.body24.land.rhs14_crit_edge ], [ %inc, %while.body24 ]
-  %s.addr.1.ph = phi i8* [ %s, %entry ], [ %incdec.ptr, %land.rhs14.preheader ], [ %incdec.ptr, %if.then7 ], [ %lsr.iv, %while.body24.land.rhs14_crit_edge ], [ %lsr.iv, %while.body24 ]
+  %s.addr.1.ph = phi ptr [ %s, %entry ], [ %incdec.ptr, %land.rhs14.preheader ], [ %incdec.ptr, %if.then7 ], [ %lsr.iv, %while.body24.land.rhs14_crit_edge ], [ %lsr.iv, %while.body24 ]
   br label %while.cond2
 
 while.cond2:                                      ; preds = %while.body4, %while.cond2.outer
@@ -231,15 +231,15 @@ while.cond2:                                      ; preds = %while.body4, %while
   br i1 %tobool3, label %if.end29, label %while.body4
 
 while.body4:                                      ; preds = %while.cond2
-  %tmp2 = icmp ugt i8* %s.addr.1.ph, %lim
+  %tmp2 = icmp ugt ptr %s.addr.1.ph, %lim
   br i1 %tmp2, label %if.then7, label %while.cond2
 
 if.then7:                                         ; preds = %while.body4
-  %incdec.ptr = getelementptr inbounds i8, i8* %s.addr.1.ph, i32 -1
-  %tmp3 = load i8, i8* %incdec.ptr, align 1, !tbaa !2
+  %incdec.ptr = getelementptr inbounds i8, ptr %s.addr.1.ph, i32 -1
+  %tmp3 = load i8, ptr %incdec.ptr, align 1, !tbaa !2
   %conv1525 = zext i8 %tmp3 to i32
   %tobool9 = icmp slt i8 %tmp3, 0
-  %cmp129 = icmp ugt i8* %incdec.ptr, %lim
+  %cmp129 = icmp ugt ptr %incdec.ptr, %lim
   %or.cond13 = and i1 %tobool9, %cmp129
   br i1 %or.cond13, label %land.rhs14.preheader, label %while.cond2.outer
 
@@ -250,26 +250,26 @@ land.rhs14.preheader:                             ; preds = %if.then7
   br i1 %or.cond27, label %while.body24.preheader, label %while.cond2.outer
 
 while.body24.preheader:                           ; preds = %land.rhs14.preheader
-  %scevgep = getelementptr i8, i8* %s.addr.1.ph, i32 -2
+  %scevgep = getelementptr i8, ptr %s.addr.1.ph, i32 -2
   br label %while.body24
 
 while.body24:                                     ; preds = %while.body24.land.rhs14_crit_edge, %while.body24.preheader
-  %lsr.iv = phi i8* [ %scevgep, %while.body24.preheader ], [ %scevgep34, %while.body24.land.rhs14_crit_edge ]
-  %cmp12 = icmp ugt i8* %lsr.iv, %lim
+  %lsr.iv = phi ptr [ %scevgep, %while.body24.preheader ], [ %scevgep34, %while.body24.land.rhs14_crit_edge ]
+  %cmp12 = icmp ugt ptr %lsr.iv, %lim
   br i1 %cmp12, label %while.body24.land.rhs14_crit_edge, label %while.cond2.outer
 
 while.body24.land.rhs14_crit_edge:                ; preds = %while.body24
-  %.pre = load i8, i8* %lsr.iv, align 1, !tbaa !2
+  %.pre = load i8, ptr %lsr.iv, align 1, !tbaa !2
   %cmp16 = icmp slt i8 %.pre, 0
   %conv15 = zext i8 %.pre to i32
   %cmp20 = icmp ult i32 %conv15, 192
   %or.cond = and i1 %cmp16, %cmp20
-  %scevgep34 = getelementptr i8, i8* %lsr.iv, i32 -1
+  %scevgep34 = getelementptr i8, ptr %lsr.iv, i32 -1
   br i1 %or.cond, label %while.body24, label %while.cond2.outer
 
 if.end29:                                         ; preds = %while.cond2, %while.body, %while.cond.preheader
-  %s.addr.3 = phi i8* [ %s, %while.cond.preheader ], [ %add.ptr, %while.body ], [ %s.addr.1.ph, %while.cond2 ]
-  ret i8* %s.addr.3
+  %s.addr.3 = phi ptr [ %s, %while.cond.preheader ], [ %add.ptr, %while.body ], [ %s.addr.1.ph, %while.cond2 ]
+  ret ptr %s.addr.3
 }
 
 !llvm.module.flags = !{!0, !1}

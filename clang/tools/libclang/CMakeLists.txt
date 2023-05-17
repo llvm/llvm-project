@@ -2,7 +2,22 @@
 # ABI, and when it is updated, it should be updated to the current
 # LLVM_VERSION_MAJOR.
 # Please also see clang/tools/libclang/libclang.map
-set(CLANG_SONAME 13)
+
+# This option defaults to CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION
+# to ON - which means that it by default matches CLANG_VERSION_MAJOR
+#
+# TODO: This should probably not be a option going forward but we
+# we should commit to a way to do it. But due to getting this out
+# in LLVM 15.x we opted for a option.
+set(LIBCLANG_SOVERSION_ARG)
+if(NOT CLANG_FORCE_MATCHING_LIBCLANG_SOVERSION)
+  set(LIBCLANG_SOVERSION_ARG SOVERSION 13)
+endif()
+
+# TODO: harmonize usage of LIBCLANG_SOVERSION / LIBCLANG_LIBARY_VERSION
+#       below; this was added under time-pressure to avoid reverting the
+#       better default from LLVM 14 for LLVM 15.0.0-rc3, hence no time
+#       to clean up previous inconsistencies.
 
 set(SOURCES
   ARCMigrate.cpp
@@ -17,6 +32,7 @@ set(SOURCES
   CIndexer.cpp
   CXComment.cpp
   CXCursor.cpp
+  CXExtractAPI.cpp
   CXIndexDataConsumer.cpp
   CXCompilationDatabase.cpp
   CXLoadedDiagnostic.cpp
@@ -45,6 +61,7 @@ set(LIBS
   clangAST
   clangBasic
   clangDriver
+  clangExtractAPI
   clangFrontend
   clangIndex
   clangLex
@@ -132,6 +149,7 @@ add_clang_library(libclang ${ENABLE_SHARED} ${ENABLE_STATIC} INSTALL_WITH_TOOLCH
   ${LLVM_TARGETS_TO_BUILD}
   Core
   Support
+  TargetParser
   )
 
 if(ENABLE_STATIC)
@@ -179,7 +197,7 @@ if(ENABLE_SHARED)
 
     set_target_properties(libclang PROPERTIES
                           VERSION ${LLVM_VERSION_MAJOR}.${LLVM_VERSION_MINOR}.${LLVM_VERSION_PATCH}${LLVM_VERSION_SUFFIX}
-                          SOVERSION ${CLANG_SONAME})
+                          ${LIBCLANG_SOVERSION_ARG})
   endif()
 endif()
 

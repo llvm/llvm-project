@@ -82,17 +82,18 @@ struct VerCapExtAttributeStorage : public AttributeStorage {
 };
 
 struct TargetEnvAttributeStorage : public AttributeStorage {
-  using KeyTy = std::tuple<Attribute, Vendor, DeviceType, uint32_t, Attribute>;
+  using KeyTy =
+      std::tuple<Attribute, ClientAPI, Vendor, DeviceType, uint32_t, Attribute>;
 
-  TargetEnvAttributeStorage(Attribute triple, Vendor vendorID,
-                            DeviceType deviceType, uint32_t deviceID,
-                            Attribute limits)
-      : triple(triple), limits(limits), vendorID(vendorID),
-        deviceType(deviceType), deviceID(deviceID) {}
+  TargetEnvAttributeStorage(Attribute triple, ClientAPI clientAPI,
+                            Vendor vendorID, DeviceType deviceType,
+                            uint32_t deviceID, Attribute limits)
+      : triple(triple), limits(limits), clientAPI(clientAPI),
+        vendorID(vendorID), deviceType(deviceType), deviceID(deviceID) {}
 
   bool operator==(const KeyTy &key) const {
-    return key ==
-           std::make_tuple(triple, vendorID, deviceType, deviceID, limits);
+    return key == std::make_tuple(triple, clientAPI, vendorID, deviceType,
+                                  deviceID, limits);
   }
 
   static TargetEnvAttributeStorage *
@@ -100,11 +101,12 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
     return new (allocator.allocate<TargetEnvAttributeStorage>())
         TargetEnvAttributeStorage(std::get<0>(key), std::get<1>(key),
                                   std::get<2>(key), std::get<3>(key),
-                                  std::get<4>(key));
+                                  std::get<4>(key), std::get<5>(key));
   }
 
   Attribute triple;
   Attribute limits;
+  ClientAPI clientAPI;
   Vendor vendorID;
   DeviceType deviceType;
   uint32_t deviceID;
@@ -119,7 +121,7 @@ struct TargetEnvAttributeStorage : public AttributeStorage {
 
 spirv::InterfaceVarABIAttr
 spirv::InterfaceVarABIAttr::get(uint32_t descriptorSet, uint32_t binding,
-                                Optional<spirv::StorageClass> storageClass,
+                                std::optional<spirv::StorageClass> storageClass,
                                 MLIRContext *context) {
   Builder b(context);
   auto descriptorSetAttr = b.getI32IntegerAttr(descriptorSet);
@@ -143,18 +145,21 @@ StringRef spirv::InterfaceVarABIAttr::getKindName() {
 }
 
 uint32_t spirv::InterfaceVarABIAttr::getBinding() {
-  return getImpl()->binding.cast<IntegerAttr>().getInt();
+  return llvm::cast<IntegerAttr>(getImpl()->binding).getInt();
 }
 
 uint32_t spirv::InterfaceVarABIAttr::getDescriptorSet() {
-  return getImpl()->descriptorSet.cast<IntegerAttr>().getInt();
+  return llvm::cast<IntegerAttr>(getImpl()->descriptorSet).getInt();
 }
 
-Optional<spirv::StorageClass> spirv::InterfaceVarABIAttr::getStorageClass() {
+std::optional<spirv::StorageClass>
+spirv::InterfaceVarABIAttr::getStorageClass() {
   if (getImpl()->storageClass)
     return static_cast<spirv::StorageClass>(
-        getImpl()->storageClass.cast<IntegerAttr>().getValue().getZExtValue());
-  return llvm::None;
+        llvm::cast<IntegerAttr>(getImpl()->storageClass)
+            .getValue()
+            .getZExtValue());
+  return std::nullopt;
 }
 
 LogicalResult spirv::InterfaceVarABIAttr::verify(
@@ -167,7 +172,7 @@ LogicalResult spirv::InterfaceVarABIAttr::verify(
     return emitError() << "expected 32-bit integer for binding";
 
   if (storageClass) {
-    if (auto storageClassAttr = storageClass.cast<IntegerAttr>()) {
+    if (auto storageClassAttr = llvm::cast<IntegerAttr>(storageClass)) {
       auto storageClassValue =
           spirv::symbolizeStorageClass(storageClassAttr.getInt());
       if (!storageClassValue)
@@ -216,14 +221,14 @@ StringRef spirv::VerCapExtAttr::getKindName() { return "vce"; }
 
 spirv::Version spirv::VerCapExtAttr::getVersion() {
   return static_cast<spirv::Version>(
-      getImpl()->version.cast<IntegerAttr>().getValue().getZExtValue());
+      llvm::cast<IntegerAttr>(getImpl()->version).getValue().getZExtValue());
 }
 
 spirv::VerCapExtAttr::ext_iterator::ext_iterator(ArrayAttr::iterator it)
     : llvm::mapped_iterator<ArrayAttr::iterator,
                             spirv::Extension (*)(Attribute)>(
           it, [](Attribute attr) {
-            return *symbolizeExtension(attr.cast<StringAttr>().getValue());
+            return *symbolizeExtension(llvm::cast<StringAttr>(attr).getValue());
           }) {}
 
 spirv::VerCapExtAttr::ext_range spirv::VerCapExtAttr::getExtensions() {
@@ -232,7 +237,7 @@ spirv::VerCapExtAttr::ext_range spirv::VerCapExtAttr::getExtensions() {
 }
 
 ArrayAttr spirv::VerCapExtAttr::getExtensionsAttr() {
-  return getImpl()->extensions.cast<ArrayAttr>();
+  return llvm::cast<ArrayAttr>(getImpl()->extensions);
 }
 
 spirv::VerCapExtAttr::cap_iterator::cap_iterator(ArrayAttr::iterator it)
@@ -240,7 +245,7 @@ spirv::VerCapExtAttr::cap_iterator::cap_iterator(ArrayAttr::iterator it)
                             spirv::Capability (*)(Attribute)>(
           it, [](Attribute attr) {
             return *symbolizeCapability(
-                attr.cast<IntegerAttr>().getValue().getZExtValue());
+                llvm::cast<IntegerAttr>(attr).getValue().getZExtValue());
           }) {}
 
 spirv::VerCapExtAttr::cap_range spirv::VerCapExtAttr::getCapabilities() {
@@ -249,7 +254,7 @@ spirv::VerCapExtAttr::cap_range spirv::VerCapExtAttr::getCapabilities() {
 }
 
 ArrayAttr spirv::VerCapExtAttr::getCapabilitiesAttr() {
-  return getImpl()->capabilities.cast<ArrayAttr>();
+  return llvm::cast<ArrayAttr>(getImpl()->capabilities);
 }
 
 LogicalResult
@@ -260,7 +265,7 @@ spirv::VerCapExtAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "expected 32-bit integer for version";
 
   if (!llvm::all_of(capabilities.getValue(), [](Attribute attr) {
-        if (auto intAttr = attr.dyn_cast<IntegerAttr>())
+        if (auto intAttr = llvm::dyn_cast<IntegerAttr>(attr))
           if (spirv::symbolizeCapability(intAttr.getValue().getZExtValue()))
             return true;
         return false;
@@ -268,7 +273,7 @@ spirv::VerCapExtAttr::verify(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "unknown capability in capability list";
 
   if (!llvm::all_of(extensions.getValue(), [](Attribute attr) {
-        if (auto strAttr = attr.dyn_cast<StringAttr>())
+        if (auto strAttr = llvm::dyn_cast<StringAttr>(attr))
           if (spirv::symbolizeExtension(strAttr.getValue()))
             return true;
         return false;
@@ -282,20 +287,19 @@ spirv::VerCapExtAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // TargetEnvAttr
 //===----------------------------------------------------------------------===//
 
-spirv::TargetEnvAttr spirv::TargetEnvAttr::get(spirv::VerCapExtAttr triple,
-                                               Vendor vendorID,
-                                               DeviceType deviceType,
-                                               uint32_t deviceID,
-                                               ResourceLimitsAttr limits) {
+spirv::TargetEnvAttr spirv::TargetEnvAttr::get(
+    spirv::VerCapExtAttr triple, ResourceLimitsAttr limits, ClientAPI clientAPI,
+    Vendor vendorID, DeviceType deviceType, uint32_t deviceID) {
   assert(triple && limits && "expected valid triple and limits");
   MLIRContext *context = triple.getContext();
-  return Base::get(context, triple, vendorID, deviceType, deviceID, limits);
+  return Base::get(context, triple, clientAPI, vendorID, deviceType, deviceID,
+                   limits);
 }
 
 StringRef spirv::TargetEnvAttr::getKindName() { return "target_env"; }
 
 spirv::VerCapExtAttr spirv::TargetEnvAttr::getTripleAttr() const {
-  return getImpl()->triple.cast<spirv::VerCapExtAttr>();
+  return llvm::cast<spirv::VerCapExtAttr>(getImpl()->triple);
 }
 
 spirv::Version spirv::TargetEnvAttr::getVersion() const {
@@ -318,6 +322,10 @@ ArrayAttr spirv::TargetEnvAttr::getCapabilitiesAttr() {
   return getTripleAttr().getCapabilitiesAttr();
 }
 
+spirv::ClientAPI spirv::TargetEnvAttr::getClientAPI() const {
+  return getImpl()->clientAPI;
+}
+
 spirv::Vendor spirv::TargetEnvAttr::getVendorID() const {
   return getImpl()->vendorID;
 }
@@ -331,7 +339,7 @@ uint32_t spirv::TargetEnvAttr::getDeviceID() const {
 }
 
 spirv::ResourceLimitsAttr spirv::TargetEnvAttr::getResourceLimits() const {
-  return getImpl()->limits.cast<spirv::ResourceLimitsAttr>();
+  return llvm::cast<spirv::ResourceLimitsAttr>(getImpl()->limits);
 }
 
 //===----------------------------------------------------------------------===//
@@ -387,7 +395,7 @@ static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
     uint32_t descriptorSet = 0;
     auto descriptorSetParseResult = parser.parseOptionalInteger(descriptorSet);
 
-    if (!descriptorSetParseResult.hasValue() ||
+    if (!descriptorSetParseResult.has_value() ||
         failed(*descriptorSetParseResult)) {
       parser.emitError(loc, "missing descriptor set");
       return {};
@@ -404,7 +412,7 @@ static Attribute parseInterfaceVarABIAttr(DialectAsmParser &parser) {
     uint32_t binding = 0;
     auto bindingParseResult = parser.parseOptionalInteger(binding);
 
-    if (!bindingParseResult.hasValue() || failed(*bindingParseResult)) {
+    if (!bindingParseResult.has_value() || failed(*bindingParseResult)) {
       parser.emitError(loc, "missing binding");
       return {};
     }
@@ -523,6 +531,22 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
   if (parser.parseAttribute(tripleAttr) || parser.parseComma())
     return {};
 
+  auto clientAPI = spirv::ClientAPI::Unknown;
+  if (succeeded(parser.parseOptionalKeyword("api"))) {
+    if (parser.parseEqual())
+      return {};
+    auto loc = parser.getCurrentLocation();
+    StringRef apiStr;
+    if (parser.parseKeyword(&apiStr))
+      return {};
+    if (auto apiSymbol = spirv::symbolizeClientAPI(apiStr))
+      clientAPI = *apiSymbol;
+    else
+      parser.emitError(loc, "unknown client API: ") << apiStr;
+    if (parser.parseComma())
+      return {};
+  }
+
   // Parse [vendor[:device-type[:device-id]]]
   Vendor vendorID = Vendor::Unknown;
   DeviceType deviceType = DeviceType::Unknown;
@@ -531,22 +555,20 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
     auto loc = parser.getCurrentLocation();
     StringRef vendorStr;
     if (succeeded(parser.parseOptionalKeyword(&vendorStr))) {
-      if (auto vendorSymbol = spirv::symbolizeVendor(vendorStr)) {
+      if (auto vendorSymbol = spirv::symbolizeVendor(vendorStr))
         vendorID = *vendorSymbol;
-      } else {
+      else
         parser.emitError(loc, "unknown vendor: ") << vendorStr;
-      }
 
       if (succeeded(parser.parseOptionalColon())) {
         loc = parser.getCurrentLocation();
         StringRef deviceTypeStr;
         if (parser.parseKeyword(&deviceTypeStr))
           return {};
-        if (auto deviceTypeSymbol = spirv::symbolizeDeviceType(deviceTypeStr)) {
+        if (auto deviceTypeSymbol = spirv::symbolizeDeviceType(deviceTypeStr))
           deviceType = *deviceTypeSymbol;
-        } else {
+        else
           parser.emitError(loc, "unknown device type: ") << deviceTypeStr;
-        }
 
         if (succeeded(parser.parseOptionalColon())) {
           loc = parser.getCurrentLocation();
@@ -563,8 +585,8 @@ static Attribute parseTargetEnvAttr(DialectAsmParser &parser) {
   if (parser.parseAttribute(limitsAttr) || parser.parseGreater())
     return {};
 
-  return spirv::TargetEnvAttr::get(tripleAttr, vendorID, deviceType, deviceID,
-                                   limitsAttr);
+  return spirv::TargetEnvAttr::get(tripleAttr, limitsAttr, clientAPI, vendorID,
+                                   deviceType, deviceID);
 }
 
 Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
@@ -577,17 +599,11 @@ Attribute SPIRVDialect::parseAttribute(DialectAsmParser &parser,
 
   // Parse the kind keyword first.
   StringRef attrKind;
-  if (parser.parseKeyword(&attrKind))
-    return {};
-
   Attribute attr;
   OptionalParseResult result =
-      generatedAttributeParser(parser, attrKind, type, attr);
-  if (result.hasValue()) {
-    if (failed(result.getValue()))
-      return {};
+      generatedAttributeParser(parser, &attrKind, type, attr);
+  if (result.has_value())
     return attr;
-  }
 
   if (attrKind == spirv::TargetEnvAttr::getKindName())
     return parseTargetEnvAttr(parser);
@@ -614,14 +630,17 @@ static void print(spirv::VerCapExtAttr triple, DialectAsmPrinter &printer) {
       [&](spirv::Capability cap) { os << spirv::stringifyCapability(cap); });
   printer << "], [";
   llvm::interleaveComma(triple.getExtensionsAttr(), os, [&](Attribute attr) {
-    os << attr.cast<StringAttr>().getValue();
+    os << llvm::cast<StringAttr>(attr).getValue();
   });
   printer << "]>";
 }
 
 static void print(spirv::TargetEnvAttr targetEnv, DialectAsmPrinter &printer) {
-  printer << spirv::TargetEnvAttr::getKindName() << "<#spv.";
+  printer << spirv::TargetEnvAttr::getKindName() << "<#spirv.";
   print(targetEnv.getTripleAttr(), printer);
+  auto clientAPI = targetEnv.getClientAPI();
+  if (clientAPI != spirv::ClientAPI::Unknown)
+    printer << ", api=" << clientAPI;
   spirv::Vendor vendorID = targetEnv.getVendorID();
   spirv::DeviceType deviceType = targetEnv.getDeviceType();
   uint32_t deviceID = targetEnv.getDeviceID();
@@ -652,11 +671,11 @@ void SPIRVDialect::printAttribute(Attribute attr,
   if (succeeded(generatedAttributePrinter(attr, printer)))
     return;
 
-  if (auto targetEnv = attr.dyn_cast<TargetEnvAttr>())
+  if (auto targetEnv = llvm::dyn_cast<TargetEnvAttr>(attr))
     print(targetEnv, printer);
-  else if (auto vceAttr = attr.dyn_cast<VerCapExtAttr>())
+  else if (auto vceAttr = llvm::dyn_cast<VerCapExtAttr>(attr))
     print(vceAttr, printer);
-  else if (auto interfaceVarABIAttr = attr.dyn_cast<InterfaceVarABIAttr>())
+  else if (auto interfaceVarABIAttr = llvm::dyn_cast<InterfaceVarABIAttr>(attr))
     print(interfaceVarABIAttr, printer);
   else
     llvm_unreachable("unhandled SPIR-V attribute kind");

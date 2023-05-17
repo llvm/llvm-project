@@ -8,8 +8,6 @@ supported_oses = ["linux", "windows"]+lldbplatformutil.getDarwinOSTriples()
 
 class TestGdbRemoteMemoryAllocation(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def allocate(self, size, permissions):
         self.test_sequence.add_log_lines(["read packet: $_M{:x},{}#00".format(size, permissions),
                                           {"direction": "send",

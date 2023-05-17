@@ -1,0 +1,12 @@
+Section,Description,Dependencies,Assignee,Complete
+| `[parallel.exceptions] <https://wg21.link/N4808>`_, "Parallel Exceptions", None, unassigned, |Not Started|
+| `[parallel.execpol] <https://wg21.link/N4808>`_, "Execution policies", None, unassigned, |Not Started|
+| `[parallel.alg] <https://wg21.link/N4808>`_, "Parallel algorithms", None, unassigned, |Not Started|
+| `[parallel.taskblock] <https://wg21.link/N4808>`_, "Task Block", None, unassigned, |Not Started|
+| `[parallel.simd.abi] <https://wg21.link/N4808>`_, "simd ABI tags", None, Yin Zhang, |In Progress|
+| `[parallel.simd.traits] <https://wg21.link/N4808>`_, "simd type traits", None, Yin Zhang, |In Progress|
+| `[parallel.simd.whereexpr] <https://wg21.link/N4808>`_, "Where expression class templates", None, Yin Zhang, |In Progress|
+| `[parallel.simd.class] <https://wg21.link/N4808>`_, "Class template simd", None, Yin Zhang, |In Progress|
+| `[parallel.simd.nonmembers] <https://wg21.link/N4808>`_, "simd non-member operations", None, Yin Zhang, |In Progress|
+| `[parallel.simd.mask.class] <https://wg21.link/N4808>`_, "Class template simd_mask", None, Yin Zhang, |In Progress|
+| `[parallel.simd.mask.nonmembers] <https://wg21.link/N4808>`_, "simd_mask non-member operations", None, Yin Zhang, |In Progress|

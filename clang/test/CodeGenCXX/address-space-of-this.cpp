@@ -8,5 +8,5 @@ struct MyType {
   MyType(int i) __attribute__((address_space(10))) : i(i) {}
   int i;
 };
-//CHECK: call void @_ZN6MyTypeC1Ei(%struct.MyType* addrspacecast (%struct.MyType addrspace(10)* @m to %struct.MyType*), i32 123)
+//CHECK: call void @_ZN6MyTypeC1Ei(ptr addrspacecast (ptr addrspace(10) @m to ptr), i32 123)
 MyType __attribute__((address_space(10))) m = 123;

@@ -1,7 +1,9 @@
-// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
-// RUN: %clang_cc1 -std=c++1z -triple x86_64-unknown-unknown %s -verify -fexceptions -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++98 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++11 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++14 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++17 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++20 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
+// RUN: %clang_cc1 -std=c++23 -triple x86_64-unknown-unknown %s -verify -fexceptions -Wno-deprecated-builtins -fcxx-exceptions -pedantic-errors
 
 #if __cplusplus < 201103L
 // expected-error@+1 {{variadic macro}}
@@ -127,6 +129,8 @@ namespace dr2157 { // dr2157: 11
 #endif
 }
 
+// dr2165: na
+
 namespace dr2170 { // dr2170: 9
 #if __cplusplus >= 201103L
   void f() {
@@ -139,6 +143,33 @@ namespace dr2170 { // dr2170: 9
   }
 #endif
 }
+
+namespace dr2171 { // dr2171: 15
+#if __cplusplus >= 201103L
+
+struct NonConstCopy {
+  NonConstCopy(NonConstCopy &) = default;
+  NonConstCopy &operator=(NonConstCopy &) = default;
+};
+
+static_assert(__has_trivial_copy(NonConstCopy), "");
+static_assert(__is_trivially_constructible(NonConstCopy, NonConstCopy &), "");
+static_assert(!__is_trivially_constructible(NonConstCopy, NonConstCopy), "");
+static_assert(!__is_trivially_constructible(NonConstCopy, const NonConstCopy &), "");
+static_assert(!__is_trivially_constructible(NonConstCopy, NonConstCopy &&), "");
+
+static_assert(__has_trivial_assign(NonConstCopy), "");
+static_assert(__is_trivially_assignable(NonConstCopy &, NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, const NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, NonConstCopy), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &, NonConstCopy &&), "");
+static_assert(__is_trivially_assignable(NonConstCopy &&, NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, const NonConstCopy &), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy), "");
+static_assert(!__is_trivially_assignable(NonConstCopy &&, NonConstCopy &&), "");
+
+#endif
+} // namespace dr2171
 
 namespace dr2180 { // dr2180: yes
   class A {
@@ -158,4 +189,32 @@ namespace dr2180 { // dr2180: yes
   B &B::operator=(const B&) = default; // expected-error {{would delete}} expected-note@-9{{inaccessible copy assignment}}
   B &B::operator=(B&&) = default; // expected-error {{would delete}} expected-note@-10{{inaccessible move assignment}}
 #endif
+}
+
+namespace dr2199 { // dr2199: 3.8
+                   // NB: reusing part of dr407 test
+namespace A {
+  struct S {};
+}
+namespace B {
+  typedef int S;
+}
+namespace E {
+  typedef A::S S;
+  using A::S;
+  struct S s;
+}
+namespace F {
+  typedef A::S S;
+}
+namespace G {
+  using namespace A;
+  using namespace F;
+  struct S s;
+}
+namespace H {
+  using namespace F;
+  using namespace A;
+  struct S s;
+}
 }

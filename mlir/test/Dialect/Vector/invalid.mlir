@@ -44,6 +44,13 @@ func.func @broadcast_unknown(%arg0: memref<4x8xf32>) {
 
 // -----
 
+func.func @fma_vector_4xi32(%arg0: vector<4xi32>) {
+  // expected-error@+1 {{'vector.fma' op operand #0 must be vector of floating-point value}}
+  %1 = vector.fma %arg0, %arg0, %arg0 : vector<4xi32>
+}
+
+// -----
+
 func.func @shuffle_elt_type_mismatch(%arg0: vector<2xf32>, %arg1: vector<2xi32>) {
   // expected-error@+1 {{'vector.shuffle' op failed to verify that second operand v2 and result have same element type}}
   %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<2xi32>
@@ -54,6 +61,13 @@ func.func @shuffle_elt_type_mismatch(%arg0: vector<2xf32>, %arg1: vector<2xi32>)
 func.func @shuffle_rank_mismatch(%arg0: vector<2xf32>, %arg1: vector<4x2xf32>) {
   // expected-error@+1 {{'vector.shuffle' op rank mismatch}}
   %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<2xf32>, vector<4x2xf32>
+}
+
+// -----
+
+func.func @shuffle_rank_mismatch_0d(%arg0: vector<f32>, %arg1: vector<1xf32>) {
+  // expected-error@+1 {{'vector.shuffle' op rank mismatch}}
+  %1 = vector.shuffle %arg0, %arg1 [0, 1] : vector<f32>, vector<1xf32>
 }
 
 // -----
@@ -874,6 +888,21 @@ func.func @contraction(%arg0: vector<2x1xf32>, %arg1: vector<1x3xf32>, %arg2: ve
 
 // -----
 
+func.func @contract_with_dim_unused_by_lhs_and_rhs(%arg0 : vector<1x2xi32>, %arg1 : vector<2xi32>, %arg2 : vector<1xi32>) -> vector<1xi32> {
+// expected-error@+1 {{'vector.contract' op expected all dimensions to be either a LHS or a RHS dimension}}
+  %result = vector.contract {
+    indexing_maps = [
+      affine_map<(d0, d1, d2) -> (d0, d2)>,
+      affine_map<(d0, d1, d2) -> (d2)>,
+      affine_map<(d0, d1, d2) -> (d1)>
+    ],
+    iterator_types = ["reduction", "parallel", "reduction"],
+    kind = #vector.kind<add>} %arg0, %arg1, %arg2 : vector<1x2xi32>, vector<2xi32> into vector<1xi32>
+  return  %result : vector<1xi32>
+}
+
+// -----
+
 func.func @create_mask_0d_no_operands() {
   %c1 = arith.constant 1 : index
   // expected-error@+1 {{must specify exactly one operand for 0-D create_mask}}
@@ -954,6 +983,14 @@ func.func @constant_mask_scalable_non_zero_dim_size() {
 func.func @print_no_result(%arg0 : f32) -> i32 {
   // expected-error@+1 {{cannot name an operation with no results}}
   %0 = vector.print %arg0 : f32
+}
+
+// -----
+
+func.func private @print_needs_vector(%arg0: tensor<8xf32>) {
+  // expected-error@+1 {{op operand #0 must be , but got 'tensor<8xf32>'}}
+  vector.print %arg0 : tensor<8xf32>
+  return
 }
 
 // -----
@@ -1089,7 +1126,8 @@ func.func @bitcast_sizemismatch(%arg0 : vector<5x1x3x2xf32>) {
 // -----
 
 func.func @reduce_unknown_kind(%arg0: vector<16xf32>) -> f32 {
-  // expected-error@+1 {{custom op 'vector.reduction' Unknown combining kind: joho}}
+  // expected-error@+2 {{custom op 'vector.reduction' failed to parse Vector_CombiningKindAttr parameter 'value' which is to be a `::mlir::vector::CombiningKind`}}
+  // expected-error@+1 {{custom op 'vector.reduction' expected ::mlir::vector::CombiningKind to be one of: }}
   %0 = vector.reduction <joho>, %arg0 : vector<16xf32> into f32
 }
 
@@ -1116,27 +1154,6 @@ func.func @reduce_unsupported_third_argument(%arg0: vector<16xf32>, %arg1: f32) 
 
 // -----
 
-func.func @reduce_unsupported_accumulator_kind(%arg0: vector<16xf32>, %arg1: f32) -> f32 {
-  // expected-error@+1 {{'vector.reduction' op no accumulator for reduction kind: min}}
-  %0 = vector.reduction <minf>, %arg0, %arg1 : vector<16xf32> into f32
-}
-
-// -----
-
-func.func @reduce_unsupported_accumulator_type(%arg0: vector<16xi32>, %arg1: i32) -> i32 {
-  // expected-error@+1 {{'vector.reduction' op no accumulator for type: 'i32'}}
-  %0 = vector.reduction <add>, %arg0, %arg1 : vector<16xi32> into i32
-}
-
-// -----
-
-func.func @reduce_unsupported_type(%arg0: vector<16xf32>) -> f32 {
-  // expected-error@+1 {{'vector.reduction' op unsupported reduction type}}
-  %0 = vector.reduction <xor>, %arg0 : vector<16xf32> into f32
-}
-
-// -----
-
 func.func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
   // expected-error@+1 {{'vector.reduction' op unsupported reduction rank: 2}}
   %0 = vector.reduction <add>, %arg0 : vector<4x16xf32> into f32
@@ -1144,9 +1161,16 @@ func.func @reduce_unsupported_rank(%arg0: vector<4x16xf32>) -> f32 {
 
 // -----
 
-func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>) -> f32 {
-  // expected-error@+1 {{'vector.multi_reduction' op inferred type(s) 'vector<4xf32>' are incompatible with return type(s) of operation 'vector<16xf32>'}}
-  %0 = vector.multi_reduction <mul>, %arg0 [1] : vector<4x16xf32> to vector<16xf32>
+func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>, %acc: vector<16xf32>) -> f32 {
+  // expected-error@+1 {{'vector.multi_reduction' op destination type 'vector<16xf32>' is incompatible with source type 'vector<4x16xf32>'}}
+  %0 = vector.multi_reduction <mul>, %arg0, %acc [1] : vector<4x16xf32> to vector<16xf32>
+}
+
+// -----
+
+func.func @transpose_rank_mismatch_0d(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
+  %0 = vector.transpose %arg0, [] : vector<f32> to vector<100xf32>
 }
 
 // -----
@@ -1154,6 +1178,13 @@ func.func @multi_reduce_invalid_type(%arg0: vector<4x16xf32>) -> f32 {
 func.func @transpose_rank_mismatch(%arg0: vector<4x16x11xf32>) {
   // expected-error@+1 {{'vector.transpose' op vector result rank mismatch: 1}}
   %0 = vector.transpose %arg0, [2, 1, 0] : vector<4x16x11xf32> to vector<100xf32>
+}
+
+// -----
+
+func.func @transpose_length_mismatch_0d(%arg0: vector<f32>) {
+  // expected-error@+1 {{'vector.transpose' op transposition length mismatch: 1}}
+  %0 = vector.transpose %arg0, [1] : vector<f32> to vector<f32>
 }
 
 // -----
@@ -1311,7 +1342,7 @@ func.func @gather_memref_mismatch(%base: memref<?x?xf64>, %indices: vector<16xi3
 func.func @gather_rank_mismatch(%base: memref<?xf32>, %indices: vector<16xi32>,
                            %mask: vector<16xi1>, %pass_thru: vector<16xf32>) {
   %c0 = arith.constant 0 : index
-  // expected-error@+1 {{'vector.gather' op result #0 must be  of ranks 1, but got 'vector<2x16xf32>'}}
+  // expected-error@+1 {{'vector.gather' op expected result dim to match indices dim}}
   %0 = vector.gather %base[%c0][%indices], %mask, %pass_thru
     : memref<?xf32>, vector<16xi32>, vector<16xi1>, vector<16xf32> into vector<2x16xf32>
 }
@@ -1454,48 +1485,6 @@ func.func @compress_memref_mismatch(%base: memref<?x?xf32>, %mask: vector<16xi1>
 
 // -----
 
-func.func @extract_map_rank(%v: vector<32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op expected source and destination vectors of same rank}}
-  %0 = vector.extract_map %v[%id] : vector<32xf32> to vector<2x1xf32>
-}
-
-// -----
-
-func.func @extract_map_size(%v: vector<63xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op source vector dimensions must be a multiple of destination vector dimensions}}
-  %0 = vector.extract_map %v[%id] : vector<63xf32> to vector<2xf32>
-}
-
-// -----
-
-func.func @extract_map_id(%v: vector<2x32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.extract_map' op expected number of ids must match the number of dimensions distributed}}
-  %0 = vector.extract_map %v[%id] : vector<2x32xf32> to vector<1x1xf32>
-}
-
-// -----
-
-func.func @insert_map_rank(%v: vector<2x1xf32>, %v1: vector<32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op expected source and destination vectors of same rank}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<32xf32>
-}
-
-// -----
-
-func.func @insert_map_size(%v: vector<3xf32>, %v1: vector<64xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op destination vector size must be a multiple of source vector size}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<3xf32> into vector<64xf32>
-}
-
-// -----
-
-func.func @insert_map_id(%v: vector<2x1xf32>, %v1: vector<4x32xf32>, %id : index) {
-  // expected-error@+1 {{'vector.insert_map' op expected number of ids must match the number of dimensions distributed}}
-  %0 = vector.insert_map %v, %v1[%id] : vector<2x1xf32> into vector<4x32xf32>
-}
-
-// -----
-
 func.func @scan_reduction_dim_constraint(%arg0: vector<2x3xi32>, %arg1: vector<3xi32>) -> vector<3xi32> {
   // expected-error@+1 {{'vector.scan' op reduction dimension 5 has to be less than 2}}
   %0:2 = vector.scan <add>, %arg0, %arg1 {inclusive = true, reduction_dim = 5} :
@@ -1611,4 +1600,67 @@ func.func @warp_mismatch_rank(%laneid: index) {
     vector.yield %0 : vector<128xi32>
   }
   return
+}
+
+// -----
+
+func.func @vector_mask_multiple_ops(%t0: tensor<?xf32>, %t1: tensor<?xf32>, %idx: index, %val: vector<16xf32>, %m0: vector<16xi1>) {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{'vector.mask' op expects only one operation to mask}}
+  vector.mask %m0 {
+    vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32>
+    vector.transfer_write %val, %t1[%idx] : vector<16xf32>, tensor<?xf32>
+  } : vector<16xi1>
+  return
+}
+
+// -----
+
+func.func @vector_mask_shape_mismatch(%a: vector<8xi32>, %m0: vector<16xi1>) -> i32 {
+  // expected-error@+1 {{'vector.mask' op expects a 'vector<8xi1>' mask for the maskable operation}}
+  %0 = vector.mask %m0 { vector.reduction <add>, %a : vector<8xi32> into i32 } : vector<16xi1> -> i32
+  return %0 : i32
+}
+
+// -----
+
+// expected-note@+1 {{prior use here}}
+func.func @vector_mask_passthru_type_mismatch(%t0: tensor<?xf32>, %idx: index, %m0: vector<16xi1>, %pt0: vector<16xi32>) -> vector<16xf32> {
+  %ft0 = arith.constant 0.0 : f32
+  // expected-error@+1 {{use of value '%pt0' expects different type than prior uses: 'vector<16xf32>' vs 'vector<16xi32>'}}
+  %0 = vector.mask %m0, %pt0 { vector.transfer_read %t0[%idx], %ft0 : tensor<?xf32>, vector<16xf32> } : vector<16xi1> -> vector<16xf32>
+  return %0 : vector<16xf32>
+}
+
+// -----
+
+func.func @vector_mask_passthru_no_return(%val: vector<16xf32>, %t0: tensor<?xf32>, %idx: index, %m0: vector<16xi1>, %pt0: vector<16xf32>) {
+  // expected-error@+1 {{'vector.mask' op expects result type to match maskable operation result type}}
+  vector.mask %m0, %pt0 { vector.transfer_write %val, %t0[%idx] : vector<16xf32>, tensor<?xf32> } : vector<16xi1> -> vector<16xf32>
+  return
+}
+
+// -----
+
+func.func @vector_scalable_insert_unaligned(%subv: vector<4xi32>, %vec: vector<[16]xi32>) {
+  // expected-error@+1 {{op failed to verify that position is a multiple of the source length.}}
+  %0 = vector.scalable.insert %subv, %vec[2] : vector<4xi32> into vector<[16]xi32>
+}
+
+// -----
+
+func.func @vector_scalable_extract_unaligned(%vec: vector<[16]xf32>) {
+  // expected-error@+1 {{op failed to verify that position is a multiple of the result length.}}
+  %0 = vector.scalable.extract %vec[5] : vector<4xf32> from vector<[16]xf32>
+}
+
+// -----
+
+func.func @integer_vector_contract(%arg0: vector<16x32xsi8>, %arg1: vector<32x16xsi8>, %arg2: vector<16x16xsi32>) -> vector<16x16xsi32> {
+  // expected-error@+1 {{op only supports signless integer types}}
+  %0 = vector.contract {
+    indexing_maps = [affine_map<(d0, d1, d2) -> (d0, d2)>, affine_map<(d0, d1, d2) -> (d2, d1)>, affine_map<(d0, d1, d2) -> (d0, d1)>],
+    iterator_types = ["parallel", "parallel", "reduction"], kind = #vector.kind<add>
+  } %arg0, %arg1, %arg2 : vector<16x32xsi8>, vector<32x16xsi8> into vector<16x16xsi32>
+  return %0: vector<16x16xsi32>
 }

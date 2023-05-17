@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mcpu=sapphirerapids -mattr=+false-deps-getmant -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefixes=ENABLE
 ; RUN: llc -verify-machineinstrs -mcpu=sapphirerapids -mattr=-false-deps-getmant -mtriple=x86_64-unknown-unknown < %s | FileCheck %s --check-prefixes=DISABLE
 
-define <4 x float> @getmantps_mem_128(<4 x float>* %p0) {
+define <4 x float> @getmantps_mem_128(ptr %p0) {
 ; ENABLE-LABEL: getmantps_mem_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -20,12 +20,12 @@ define <4 x float> @getmantps_mem_128(<4 x float>* %p0) {
 ; DISABLE-NEXT:    vgetmantps $88, (%rdi), %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <4 x float>, <4 x float>* %p0, align 64
+  %a0 = load <4 x float>, ptr %p0, align 64
   %2 = call <4 x float> @llvm.x86.avx512.mask.getmant.ps.128(<4 x float> %a0, i32 88, <4 x float> undef, i8 -1)
   ret <4 x float> %2
 }
 
-define <4 x float> @getmantps_broadcast_128(float* %p0) {
+define <4 x float> @getmantps_broadcast_128(ptr %p0) {
 ; ENABLE-LABEL: getmantps_broadcast_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -43,7 +43,7 @@ define <4 x float> @getmantps_broadcast_128(float* %p0) {
 ; DISABLE-NEXT:    vgetmantps $88, (%rdi){1to4}, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load float, float* %p0, align 4
+  %v0 = load float, ptr %p0, align 4
   %t0 = insertelement <4 x float> undef, float %v0, i64 0
   %a0 = shufflevector <4 x float> %t0, <4 x float> undef, <4 x i32> zeroinitializer
   %2 = call <4 x float> @llvm.x86.avx512.mask.getmant.ps.128(<4 x float> %a0, i32 88, <4 x float> undef, i8 -1)
@@ -52,7 +52,7 @@ define <4 x float> @getmantps_broadcast_128(float* %p0) {
 
 declare <4 x float> @llvm.x86.avx512.mask.getmant.ps.128(<4 x float>, i32, <4 x float>, i8)
 
-define <8 x float> @getmantps_mem_256(<8 x float>* %p0) {
+define <8 x float> @getmantps_mem_256(ptr %p0) {
 ; ENABLE-LABEL: getmantps_mem_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -70,12 +70,12 @@ define <8 x float> @getmantps_mem_256(<8 x float>* %p0) {
 ; DISABLE-NEXT:    vgetmantps $88, (%rdi), %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <8 x float>, <8 x float>* %p0, align 64
+  %a0 = load <8 x float>, ptr %p0, align 64
   %2 = call <8 x float> @llvm.x86.avx512.mask.getmant.ps.256(<8 x float> %a0, i32 88, <8 x float> undef, i8 -1)
   ret <8 x float> %2
 }
 
-define <8 x float> @getmantps_broadcast_256(float* %p0) {
+define <8 x float> @getmantps_broadcast_256(ptr %p0) {
 ; ENABLE-LABEL: getmantps_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -93,7 +93,7 @@ define <8 x float> @getmantps_broadcast_256(float* %p0) {
 ; DISABLE-NEXT:    vgetmantps $88, (%rdi){1to8}, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load float, float* %p0, align 4
+  %v0 = load float, ptr %p0, align 4
   %t0 = insertelement <8 x float> undef, float %v0, i64 0
   %a0 = shufflevector <8 x float> %t0, <8 x float> undef, <8 x i32> zeroinitializer
   %2 = call <8 x float> @llvm.x86.avx512.mask.getmant.ps.256(<8 x float> %a0, i32 88, <8 x float> undef, i8 -1)
@@ -102,7 +102,7 @@ define <8 x float> @getmantps_broadcast_256(float* %p0) {
 
 declare <8 x float> @llvm.x86.avx512.mask.getmant.ps.256(<8 x float>, i32, <8 x float>, i8)
 
-define <16 x float> @getmantps_mem_512(<16 x float>* %p0) {
+define <16 x float> @getmantps_mem_512(ptr %p0) {
 ; ENABLE-LABEL: getmantps_mem_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -120,12 +120,12 @@ define <16 x float> @getmantps_mem_512(<16 x float>* %p0) {
 ; DISABLE-NEXT:    vgetmantps $88, (%rdi), %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <16 x float>, <16 x float>* %p0, align 64
+  %a0 = load <16 x float>, ptr %p0, align 64
   %2 = call <16 x float> @llvm.x86.avx512.mask.getmant.ps.512(<16 x float> %a0, i32 88, <16 x float> undef, i16 -1, i32 4)
   ret <16 x float> %2
 }
 
-define <16 x float> @getmantps_broadcast_512(float* %p0) {
+define <16 x float> @getmantps_broadcast_512(ptr %p0) {
 ; ENABLE-LABEL: getmantps_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -143,7 +143,7 @@ define <16 x float> @getmantps_broadcast_512(float* %p0) {
 ; DISABLE-NEXT:    vgetmantps $88, (%rdi){1to16}, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load float, float* %p0, align 4
+  %v0 = load float, ptr %p0, align 4
   %t0 = insertelement <16 x float> undef, float %v0, i64 0
   %a0 = shufflevector <16 x float> %t0, <16 x float> undef, <16 x i32> zeroinitializer
   %2 = call <16 x float> @llvm.x86.avx512.mask.getmant.ps.512(<16 x float> %a0, i32 88, <16 x float> undef, i16 -1, i32 4)
@@ -153,7 +153,7 @@ define <16 x float> @getmantps_broadcast_512(float* %p0) {
 declare <16 x float> @llvm.x86.avx512.mask.getmant.ps.512(<16 x float>, i32, <16 x float>, i16, i32)
 
 
-define <2 x double> @getmantpd_mem_128(<2 x double>* %p0) {
+define <2 x double> @getmantpd_mem_128(ptr %p0) {
 ; ENABLE-LABEL: getmantpd_mem_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -171,12 +171,12 @@ define <2 x double> @getmantpd_mem_128(<2 x double>* %p0) {
 ; DISABLE-NEXT:    vgetmantpd $88, (%rdi), %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <2 x double>, <2 x double>* %p0, align 64
+  %a0 = load <2 x double>, ptr %p0, align 64
   %2 = call <2 x double> @llvm.x86.avx512.mask.getmant.pd.128(<2 x double> %a0, i32 88, <2 x double> undef, i8 -1)
   ret <2 x double> %2
 }
 
-define <2 x double> @getmantpd_broadcast_128(double* %p0) {
+define <2 x double> @getmantpd_broadcast_128(ptr %p0) {
 ; ENABLE-LABEL: getmantpd_broadcast_128:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -194,7 +194,7 @@ define <2 x double> @getmantpd_broadcast_128(double* %p0) {
 ; DISABLE-NEXT:    vgetmantpd $88, (%rdi){1to2}, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load double, double* %p0, align 4
+  %v0 = load double, ptr %p0, align 4
   %t0 = insertelement <2 x double> undef, double %v0, i64 0
   %a0 = shufflevector <2 x double> %t0, <2 x double> undef, <2 x i32> zeroinitializer
   %2 = call <2 x double> @llvm.x86.avx512.mask.getmant.pd.128(<2 x double> %a0, i32 88, <2 x double> undef, i8 -1)
@@ -203,7 +203,7 @@ define <2 x double> @getmantpd_broadcast_128(double* %p0) {
 
 declare <2 x double> @llvm.x86.avx512.mask.getmant.pd.128(<2 x double>, i32, <2 x double>, i8)
 
-define <4 x double> @getmantpd_mem_256(<4 x double>* %p0) {
+define <4 x double> @getmantpd_mem_256(ptr %p0) {
 ; ENABLE-LABEL: getmantpd_mem_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -221,12 +221,12 @@ define <4 x double> @getmantpd_mem_256(<4 x double>* %p0) {
 ; DISABLE-NEXT:    vgetmantpd $88, (%rdi), %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <4 x double>, <4 x double>* %p0, align 64
+  %a0 = load <4 x double>, ptr %p0, align 64
   %2 = call <4 x double> @llvm.x86.avx512.mask.getmant.pd.256(<4 x double> %a0, i32 88, <4 x double> undef, i8 -1)
   ret <4 x double> %2
 }
 
-define <4 x double> @getmantpd_broadcast_256(double* %p0) {
+define <4 x double> @getmantpd_broadcast_256(ptr %p0) {
 ; ENABLE-LABEL: getmantpd_broadcast_256:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -244,7 +244,7 @@ define <4 x double> @getmantpd_broadcast_256(double* %p0) {
 ; DISABLE-NEXT:    vgetmantpd $88, (%rdi){1to4}, %ymm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load double, double* %p0, align 4
+  %v0 = load double, ptr %p0, align 4
   %t0 = insertelement <4 x double> undef, double %v0, i64 0
   %a0 = shufflevector <4 x double> %t0, <4 x double> undef, <4 x i32> zeroinitializer
   %2 = call <4 x double> @llvm.x86.avx512.mask.getmant.pd.256(<4 x double> %a0, i32 88, <4 x double> undef, i8 -1)
@@ -253,7 +253,7 @@ define <4 x double> @getmantpd_broadcast_256(double* %p0) {
 
 declare <4 x double> @llvm.x86.avx512.mask.getmant.pd.256(<4 x double>, i32, <4 x double>, i8)
 
-define <8 x double> @getmantpd_mem_512(<8 x double>* %p0) {
+define <8 x double> @getmantpd_mem_512(ptr %p0) {
 ; ENABLE-LABEL: getmantpd_mem_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -271,12 +271,12 @@ define <8 x double> @getmantpd_mem_512(<8 x double>* %p0) {
 ; DISABLE-NEXT:    vgetmantpd $88, (%rdi), %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a0 = load <8 x double>, <8 x double>* %p0, align 64
+  %a0 = load <8 x double>, ptr %p0, align 64
   %2 = call <8 x double> @llvm.x86.avx512.mask.getmant.pd.512(<8 x double> %a0, i32 88, <8 x double> undef, i8 -1, i32 4)
   ret <8 x double> %2
 }
 
-define <8 x double> @getmantpd_broadcast_512(double* %p0) {
+define <8 x double> @getmantpd_broadcast_512(ptr %p0) {
 ; ENABLE-LABEL: getmantpd_broadcast_512:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -294,7 +294,7 @@ define <8 x double> @getmantpd_broadcast_512(double* %p0) {
 ; DISABLE-NEXT:    vgetmantpd $88, (%rdi){1to8}, %zmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %v0 = load double, double* %p0, align 4
+  %v0 = load double, ptr %p0, align 4
   %t0 = insertelement <8 x double> undef, double %v0, i64 0
   %a0 = shufflevector <8 x double> %t0, <8 x double> undef, <8 x i32> zeroinitializer
   %2 = call <8 x double> @llvm.x86.avx512.mask.getmant.pd.512(<8 x double> %a0, i32 88, <8 x double> undef, i8 -1, i32 4)
@@ -335,7 +335,7 @@ define <8 x half> @getmantsh(<8 x half> %a0, <8 x half> %a1) {
   ret <8 x half> %res
 }
 
-define <8 x half> @getmantsh_mem(<8 x half> %a0, <8 x half>* %p1) {
+define <8 x half> @getmantsh_mem(<8 x half> %a0, ptr %p1) {
 ; ENABLE-LABEL: getmantsh_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -359,13 +359,13 @@ define <8 x half> @getmantsh_mem(<8 x half> %a0, <8 x half>* %p1) {
 ; DISABLE-NEXT:    vaddph %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <8 x half>, <8 x half>* %p1, align 64
+  %a1 = load <8 x half>, ptr %p1, align 64
   %2 = call <8 x half> @llvm.x86.avx512fp16.mask.getmant.sh(<8 x half> %a0, <8 x half> %a1, i32 11, <8 x half> undef, i8 -1, i32 4)
   %res = fadd <8 x half> %2, %a0
   ret <8 x half> %res
 }
 
-define <8 x half> @getmantsh_maskz(<8 x half> %a0, <8 x half> %a1, i8* %mask) {
+define <8 x half> @getmantsh_maskz(<8 x half> %a0, <8 x half> %a1, ptr %mask) {
 ; ENABLE-LABEL: getmantsh_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -389,7 +389,7 @@ define <8 x half> @getmantsh_maskz(<8 x half> %a0, <8 x half> %a1, i8* %mask) {
 ; DISABLE-NEXT:    vaddph %xmm0, %xmm2, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <8 x half> @llvm.x86.avx512fp16.mask.getmant.sh(<8 x half> %a0, <8 x half> %a1, i32 11, <8 x half> zeroinitializer, i8 %2, i32 4)
   %t = fadd <8 x half> %a0, %a1
   %res = fadd <8 x half> %3, %t
@@ -430,7 +430,7 @@ define <4 x float> @getmantss(<4 x float> %a0, <4 x float> %a1) {
   ret <4 x float> %res
 }
 
-define <4 x float> @getmantss_mem(<4 x float> %a0, <4 x float>* %p1) {
+define <4 x float> @getmantss_mem(<4 x float> %a0, ptr %p1) {
 ; ENABLE-LABEL: getmantss_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -454,13 +454,13 @@ define <4 x float> @getmantss_mem(<4 x float> %a0, <4 x float>* %p1) {
 ; DISABLE-NEXT:    vaddps %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <4 x float>, <4 x float>* %p1, align 64
+  %a1 = load <4 x float>, ptr %p1, align 64
   %2 = call <4 x float> @llvm.x86.avx512.mask.getmant.ss(<4 x float> %a0, <4 x float> %a1, i32 11, <4 x float> undef, i8 -1, i32 4)
   %res = fadd <4 x float> %2, %a0
   ret <4 x float> %res
 }
 
-define <4 x float> @getmantss_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask) {
+define <4 x float> @getmantss_maskz(<4 x float> %a0, <4 x float> %a1, ptr %mask) {
 ; ENABLE-LABEL: getmantss_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -484,7 +484,7 @@ define <4 x float> @getmantss_maskz(<4 x float> %a0, <4 x float> %a1, i8* %mask)
 ; DISABLE-NEXT:    vaddps %xmm0, %xmm2, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <4 x float> @llvm.x86.avx512.mask.getmant.ss(<4 x float> %a0, <4 x float> %a1, i32 11, <4 x float> zeroinitializer, i8 %2, i32 4)
   %t = fadd <4 x float> %a0, %a1
   %res = fadd <4 x float> %3, %t
@@ -525,7 +525,7 @@ define <2 x double> @getmantsd(<2 x double> %a0, <2 x double> %a1) {
   ret <2 x double> %res
 }
 
-define <2 x double> @getmantsd_mem(<2 x double> %a0, <2 x double>* %p1) {
+define <2 x double> @getmantsd_mem(<2 x double> %a0, ptr %p1) {
 ; ENABLE-LABEL: getmantsd_mem:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
@@ -549,13 +549,13 @@ define <2 x double> @getmantsd_mem(<2 x double> %a0, <2 x double>* %p1) {
 ; DISABLE-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %a1 = load <2 x double>, <2 x double>* %p1, align 64
+  %a1 = load <2 x double>, ptr %p1, align 64
   %2 = call <2 x double> @llvm.x86.avx512.mask.getmant.sd(<2 x double> %a0, <2 x double> %a1, i32 11, <2 x double> undef, i8 -1, i32 4)
   %res = fadd <2 x double> %2, %a0
   ret <2 x double> %res
 }
 
-define <2 x double> @getmantsd_maskz(<2 x double> %a0, <2 x double> %a1, i8* %mask) {
+define <2 x double> @getmantsd_maskz(<2 x double> %a0, <2 x double> %a1, ptr %mask) {
 ; ENABLE-LABEL: getmantsd_maskz:
 ; ENABLE:       # %bb.0:
 ; ENABLE-NEXT:    #APP
@@ -579,7 +579,7 @@ define <2 x double> @getmantsd_maskz(<2 x double> %a0, <2 x double> %a1, i8* %ma
 ; DISABLE-NEXT:    vaddpd %xmm0, %xmm2, %xmm0
 ; DISABLE-NEXT:    retq
   %1 = tail call <2 x i64> asm sideeffect "nop", "=x,~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15},~{xmm16},~{xmm17},~{xmm18},~{xmm19},~{xmm20},~{xmm21},~{xmm22},~{xmm23},~{xmm24},~{xmm25},~{xmm26},~{xmm27},~{xmm28},~{xmm29},~{xmm30},~{xmm31},~{flags}"()
-  %2 = load i8, i8* %mask
+  %2 = load i8, ptr %mask
   %3 = call <2 x double> @llvm.x86.avx512.mask.getmant.sd(<2 x double> %a0, <2 x double> %a1, i32 11, <2 x double> zeroinitializer, i8 %2, i32 4)
   %t = fadd <2 x double> %a0, %a1
   %res = fadd <2 x double> %3, %t

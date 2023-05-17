@@ -132,7 +132,7 @@ define i32 @reduceshuffle_twoin_uneven_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_undef_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_undef_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 undef, i32 1, i32 5>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 poison, i32 1, i32 5>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -143,7 +143,7 @@ define i32 @reduceshuffle_twoin_undef_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_undef2_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_undef2_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 undef>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 4, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;
@@ -154,7 +154,7 @@ define i32 @reduceshuffle_twoin_undef2_v4i32(<4 x i32> %a, <4 x i32> %b) {
 
 define i32 @reduceshuffle_twoin_multiundef_v4i32(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: @reduceshuffle_twoin_multiundef_v4i32(
-; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
+; CHECK-NEXT:    [[X:%.*]] = shufflevector <4 x i32> [[A:%.*]], <4 x i32> [[B:%.*]], <4 x i32> <i32 0, i32 1, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[X]])
 ; CHECK-NEXT:    ret i32 [[R]]
 ;

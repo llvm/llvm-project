@@ -7,9 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: no-filesystem
-
-// std::filesystem is unavailable prior to macOS 10.15
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12|13|14}}
+// XFAIL: availability-filesystem-missing
 
 // Make sure the various containers' iterators are not broken by the use of `std::rel_ops`.
 

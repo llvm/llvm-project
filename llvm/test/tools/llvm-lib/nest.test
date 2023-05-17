@@ -10,6 +10,6 @@ RUN: llvm-lib -out:%t/foo.lib %t/foo.o
 RUN: llvm-mc -triple=x86_64-pc-windows-msvc -filetype=obj -o %t/bar.o %S/Inputs/b.s
 RUN: llvm-lib -out:%t/bar.lib %t/foo.lib %t/bar.o
 
-RUN: llvm-ar t %t/bar.lib | FileCheck %s
+RUN: llvm-lib -list %t/bar.lib | FileCheck %s
 CHECK: foo.o
 CHECK: bar.o

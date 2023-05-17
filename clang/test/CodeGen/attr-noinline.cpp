@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
+// RUN: %clang_cc1 -S -emit-llvm %s -triple x86_64-unknown-linux-gnu -o - | FileCheck %s
 
 bool bar();
 void f(bool, bool);
@@ -24,7 +24,7 @@ void foo(int i) {
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
 // CHECK: call void @_Z1fbb({{.*}}) #[[NOINLINEATTR]]
   [[clang::noinline]] [] { bar(); bar(); }(); // noinline only applies to the anonymous function call
-// CHECK: call void @"_ZZ3fooiENK3$_0clEv"(%class.anon* {{[^,]*}} %ref.tmp) #[[NOINLINEATTR]]
+// CHECK: call void @"_ZZ3fooiENK3$_0clEv"(ptr {{[^,]*}} %ref.tmp) #[[NOINLINEATTR]]
   [[clang::noinline]] for (bar(); bar(); bar()) {}
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]
 // CHECK: call noundef zeroext i1 @_Z3barv() #[[NOINLINEATTR]]

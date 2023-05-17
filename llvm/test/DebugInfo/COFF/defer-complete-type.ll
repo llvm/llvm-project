@@ -154,20 +154,18 @@ source_filename = "t.cpp"
 target datalayout = "e-m:w-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-pc-windows-msvc19.0.23918"
 
-%struct.A = type { %struct.B* }
+%struct.A = type { ptr }
 %struct.B = type { i32 }
 
 ; Function Attrs: nounwind uwtable
-define i32 @"\01?f@@YAHPEAUA@@@Z"(%struct.A* %p) #0 !dbg !7 {
+define i32 @"\01?f@@YAHPEAUA@@@Z"(ptr %p) #0 !dbg !7 {
 entry:
-  %p.addr = alloca %struct.A*, align 8
-  store %struct.A* %p, %struct.A** %p.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.A** %p.addr, metadata !19, metadata !20), !dbg !21
-  %0 = load %struct.A*, %struct.A** %p.addr, align 8, !dbg !22
-  %b = getelementptr inbounds %struct.A, %struct.A* %0, i32 0, i32 0, !dbg !23
-  %1 = load %struct.B*, %struct.B** %b, align 8, !dbg !23
-  %b1 = getelementptr inbounds %struct.B, %struct.B* %1, i32 0, i32 0, !dbg !24
-  %2 = load i32, i32* %b1, align 4, !dbg !24
+  %p.addr = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !19, metadata !20), !dbg !21
+  %0 = load ptr, ptr %p.addr, align 8, !dbg !22
+  %1 = load ptr, ptr %0, align 8, !dbg !23
+  %2 = load i32, ptr %1, align 4, !dbg !24
   ret i32 %2, !dbg !25
 }
 

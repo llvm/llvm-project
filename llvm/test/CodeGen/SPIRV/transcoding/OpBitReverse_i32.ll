@@ -3,7 +3,6 @@
 ; CHECK-SPIRV: %[[#int:]] = OpTypeInt 32
 ; CHECK-SPIRV: OpBitReverse %[[#int]]
 
-; Function Attrs: convergent nounwind writeonly
 define spir_kernel void @testBitRev(i32 %a, i32 %b, i32 %c, i32 addrspace(1)* nocapture %res) local_unnamed_addr {
 entry:
   %call = tail call i32 @llvm.bitreverse.i32(i32 %b)

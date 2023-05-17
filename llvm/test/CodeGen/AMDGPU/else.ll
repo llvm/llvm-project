@@ -3,8 +3,7 @@
 
 ; CHECK-LABEL: {{^}}else_no_execfix:
 ; CHECK: ; %Flow
-; CHECK-NEXT: s_or_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]],
-; CHECK-NEXT: s_xor_b64 exec, exec, [[DST]]
+; CHECK-NEXT: s_andn2_saveexec_b64 [[DST:s\[[0-9]+:[0-9]+\]]], [[DST]]
 define amdgpu_ps float @else_no_execfix(i32 %z, float %v) #0 {
 main_body:
   %cc = icmp sgt i32 %z, 5

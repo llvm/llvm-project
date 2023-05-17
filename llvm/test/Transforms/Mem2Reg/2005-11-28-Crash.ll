@@ -3,12 +3,12 @@
 
 define void @printk(i32, ...) {
 entry:
-	%flags = alloca i32		; <i32*> [#uses=2]
+	%flags = alloca i32		; <ptr> [#uses=2]
 	br i1 false, label %then.0, label %endif.0
 then.0:		; preds = %entry
 	br label %endif.0
 endif.0:		; preds = %then.0, %entry
-	store i32 0, i32* %flags
+	store i32 0, ptr %flags
 	br label %loopentry
 loopentry:		; preds = %endif.3, %endif.0
 	br i1 false, label %no_exit, label %loopexit
@@ -41,7 +41,7 @@ endif.3:		; preds = %then.3, %endif.1
 loopexit:		; preds = %loopentry
 	br label %endif.4
 then.4:		; No predecessors!
-	%tmp.61 = load i32, i32* %flags		; <i32> [#uses=0]
+	%tmp.61 = load i32, ptr %flags		; <i32> [#uses=0]
 	br label %out
 dead_block_after_goto:		; No predecessors!
 	br label %endif.4

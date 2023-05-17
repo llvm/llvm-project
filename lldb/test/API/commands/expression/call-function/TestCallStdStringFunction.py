@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class ExprCommandCallFunctionTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(
         compiler="icc",
         bugnumber="llvm.org/pr14437, fails with ICC 13.1")
@@ -21,7 +19,7 @@ class ExprCommandCallFunctionTestCase(TestBase):
         self.build()
         lldbutil.run_to_source_breakpoint(self, "// break here", lldb.SBFileSpec("main.cpp"))
 
-        self.expect("print str",
+        self.expect("expression str",
                     substrs=['Hello world'])
 
         # Calling this function now succeeds, but we follow the typedef return type through to
@@ -34,5 +32,5 @@ class ExprCommandCallFunctionTestCase(TestBase):
         if triple in ["arm64-apple-ios", "arm64e-apple-ios", "arm64-apple-tvos", "armv7k-apple-watchos", "arm64-apple-bridgeos", "arm64_32-apple-watchos"]:
             do_cstr_test = False
         if do_cstr_test:
-            self.expect("print str.c_str()",
+            self.expect("expression str.c_str()",
                         substrs=['Hello world'])

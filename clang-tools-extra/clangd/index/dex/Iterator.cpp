@@ -34,7 +34,7 @@ public:
     // When children are sorted by the estimateSize(), sync() calls are more
     // effective. Each sync() starts with the first child and makes sure all
     // children point to the same element. If any child is "above" the previous
-    // ones, the algorithm resets and and advances the children to the next
+    // ones, the algorithm resets and advances the children to the next
     // highest element starting from the front. When child iterators in the
     // beginning have smaller estimated size, the sync() will have less restarts
     // and become more effective.

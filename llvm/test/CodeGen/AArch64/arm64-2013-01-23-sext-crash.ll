@@ -32,6 +32,6 @@ CF83:                                             ; preds = %CF
 define void @_Z12my_example2bv() nounwind noinline ssp {
 entry:
   %0 = fptosi <2 x double> undef to <2 x i32>
-  store <2 x i32> %0, <2 x i32>* undef, align 8
+  store <2 x i32> %0, ptr undef, align 8
   ret void
 }

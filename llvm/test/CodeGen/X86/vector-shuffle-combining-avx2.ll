@@ -636,6 +636,19 @@ define <16 x i16> @shuffle_combine_packusdw_pshufb(<8 x i32> %a0, <8 x i32> %a1)
 }
 declare <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32>, <8 x i32>) nounwind readnone
 
+define <8 x i16> @shuffle_combine_packusdw_permq_extract(<8 x i32> %a0) {
+; CHECK-LABEL: shuffle_combine_packusdw_permq_extract:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
+; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
+; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    ret{{[l|q]}}
+  %1 = tail call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a0, <8 x i32> poison)
+  %2 = shufflevector <16 x i16> %1, <16 x i16> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  ret <8 x i16> %2
+}
+
 define <32 x i8> @shuffle_combine_packuswb_pshufb(<16 x i16> %a0, <16 x i16> %a1) {
 ; CHECK-LABEL: shuffle_combine_packuswb_pshufb:
 ; CHECK:       # %bb.0:
@@ -742,7 +755,7 @@ define <32 x i8> @combine_pshufb_pshufb_or_as_unpcklbw(<32 x i8> %a0, <32 x i8> 
 define <32 x i8> @combine_pshufb_pshufb_or_pshufb(<32 x i8> %a0) {
 ; CHECK-LABEL: combine_pshufb_pshufb_or_pshufb:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[0,0,0,0,4,4,4,4]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1>)
   %2 = call <32 x i8> @llvm.x86.avx2.pshuf.b(<32 x i8> %a0, <32 x i8> <i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3, i8 -1, i8 -1, i8 -1, i8 -1, i8 0, i8 1, i8 2, i8 3>)
@@ -778,7 +791,7 @@ define <32 x i8> @constant_fold_pshufb_256() {
   ret <32 x i8> %1
 }
 
-define i32 @broadcast_v2i64_multiuse(i64* %p0) {
+define i32 @broadcast_v2i64_multiuse(ptr %p0) {
 ; X86-LABEL: broadcast_v2i64_multiuse:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -792,7 +805,7 @@ define i32 @broadcast_v2i64_multiuse(i64* %p0) {
 ; X64-NEXT:    addl %eax, %eax
 ; X64-NEXT:    retq
 entry:
-  %tmp = load i64, i64* %p0, align 8
+  %tmp = load i64, ptr %p0, align 8
   %tmp1 = trunc i64 %tmp to i32
   %tmp2 = insertelement <2 x i64> undef, i64 %tmp, i32 0
   %tmp3 = shufflevector <2 x i64> %tmp2, <2 x i64> undef, <2 x i32> zeroinitializer
@@ -830,7 +843,7 @@ define internal fastcc <8 x float> @PR34577(<8 x float> %inp0, <8 x float> %inp1
 ; AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; AVX512-NEXT:    vpermpd {{.*#+}} ymm0 = ymm0[1,1,1,1]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
-; AVX512-NEXT:    vblendps {{.*#+}} ymm2 = ymm0[0,1],ymm2[2,3],ymm0[4,5],ymm2[6,7]
+; AVX512-NEXT:    vblendps {{.*#+}} ymm2 = ymm2[0,1,2,3],ymm0[4,5],ymm2[6,7]
 ; AVX512-NEXT:    vmovaps {{.*#+}} ymm0 = <23,18,7,2,20,u,3,2>
 ; AVX512-NEXT:    vpermi2ps %zmm2, %zmm1, %zmm0
 ; AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 killed $zmm0
@@ -878,6 +891,6 @@ define void @packss_zext_v8i1() {
   %tmp6 = sext <16 x i16> %tmp4 to <16 x i32>
   %tmp10 = shufflevector <16 x i32> %tmp6, <16 x i32> undef, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   %tmp11 = tail call <16 x i16> @llvm.x86.avx2.packssdw(<8 x i32> undef, <8 x i32> %tmp10)
-  store <16 x i16> %tmp11, <16 x i16>* undef, align 2
+  store <16 x i16> %tmp11, ptr undef, align 2
   ret void
 }

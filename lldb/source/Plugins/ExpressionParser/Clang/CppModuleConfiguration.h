@@ -9,7 +9,7 @@
 #ifndef LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CPPMODULECONFIGURATION_H
 #define LLDB_SOURCE_PLUGINS_EXPRESSIONPARSER_CLANG_CPPMODULECONFIGURATION_H
 
-#include <lldb/Core/FileSpecList.h>
+#include <lldb/Utility/FileSpecList.h>
 #include <llvm/Support/Regex.h>
 
 namespace lldb_private {
@@ -30,7 +30,7 @@ class CppModuleConfiguration {
   public:
     /// Try setting the path. Returns true if the path was set and false if
     /// the path was already set.
-    LLVM_NODISCARD bool TrySet(llvm::StringRef path);
+    [[nodiscard]] bool TrySet(llvm::StringRef path);
     /// Return the path if there is one.
     llvm::StringRef Get() const {
       assert(m_valid && "Called Get() on an invalid SetOncePath?");

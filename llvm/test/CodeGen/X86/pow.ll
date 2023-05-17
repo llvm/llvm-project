@@ -12,32 +12,8 @@ declare x86_fp80 @llvm.pow.f80(x86_fp80, x86_fp80)
 define float @pow_f32_one_fourth_fmf_ieee(float %x) nounwind {
 ; CHECK-LABEL: pow_f32_one_fourth_fmf_ieee:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rsqrtss %xmm0, %xmm1
-; CHECK-NEXT:    movaps %xmm0, %xmm3
-; CHECK-NEXT:    mulss %xmm1, %xmm3
-; CHECK-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movaps %xmm3, %xmm4
-; CHECK-NEXT:    mulss %xmm2, %xmm4
-; CHECK-NEXT:    mulss %xmm1, %xmm3
-; CHECK-NEXT:    movss {{.*#+}} xmm5 = mem[0],zero,zero,zero
-; CHECK-NEXT:    addss %xmm5, %xmm3
-; CHECK-NEXT:    mulss %xmm4, %xmm3
-; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [NaN,NaN,NaN,NaN]
-; CHECK-NEXT:    andps %xmm1, %xmm0
-; CHECK-NEXT:    movss {{.*#+}} xmm4 = mem[0],zero,zero,zero
-; CHECK-NEXT:    cmpltss %xmm4, %xmm0
-; CHECK-NEXT:    andnps %xmm3, %xmm0
-; CHECK-NEXT:    xorps %xmm3, %xmm3
-; CHECK-NEXT:    rsqrtss %xmm0, %xmm3
-; CHECK-NEXT:    andps %xmm0, %xmm1
-; CHECK-NEXT:    mulss %xmm3, %xmm0
-; CHECK-NEXT:    mulss %xmm0, %xmm2
-; CHECK-NEXT:    mulss %xmm3, %xmm0
-; CHECK-NEXT:    addss %xmm5, %xmm0
-; CHECK-NEXT:    mulss %xmm2, %xmm0
-; CHECK-NEXT:    cmpltss %xmm4, %xmm1
-; CHECK-NEXT:    andnps %xmm0, %xmm1
-; CHECK-NEXT:    movaps %xmm1, %xmm0
+; CHECK-NEXT:    sqrtss %xmm0, %xmm0
+; CHECK-NEXT:    sqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = call nsz ninf afn float @llvm.pow.f32(float %x, float 2.5e-01)
   ret float %r
@@ -46,29 +22,8 @@ define float @pow_f32_one_fourth_fmf_ieee(float %x) nounwind {
 define float @pow_f32_one_fourth_fmf_daz(float %x) #0 {
 ; CHECK-LABEL: pow_f32_one_fourth_fmf_daz:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    rsqrtss %xmm0, %xmm1
-; CHECK-NEXT:    movaps %xmm0, %xmm2
-; CHECK-NEXT:    mulss %xmm1, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm3 = mem[0],zero,zero,zero
-; CHECK-NEXT:    movaps %xmm2, %xmm4
-; CHECK-NEXT:    mulss %xmm3, %xmm4
-; CHECK-NEXT:    mulss %xmm1, %xmm2
-; CHECK-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; CHECK-NEXT:    addss %xmm1, %xmm2
-; CHECK-NEXT:    mulss %xmm4, %xmm2
-; CHECK-NEXT:    xorps %xmm4, %xmm4
-; CHECK-NEXT:    cmpeqss %xmm4, %xmm0
-; CHECK-NEXT:    andnps %xmm2, %xmm0
-; CHECK-NEXT:    xorps %xmm2, %xmm2
-; CHECK-NEXT:    rsqrtss %xmm0, %xmm2
-; CHECK-NEXT:    movaps %xmm0, %xmm5
-; CHECK-NEXT:    mulss %xmm2, %xmm5
-; CHECK-NEXT:    mulss %xmm5, %xmm3
-; CHECK-NEXT:    mulss %xmm2, %xmm5
-; CHECK-NEXT:    addss %xmm1, %xmm5
-; CHECK-NEXT:    mulss %xmm3, %xmm5
-; CHECK-NEXT:    cmpeqss %xmm4, %xmm0
-; CHECK-NEXT:    andnps %xmm5, %xmm0
+; CHECK-NEXT:    sqrtss %xmm0, %xmm0
+; CHECK-NEXT:    sqrtss %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %r = call nsz ninf afn float @llvm.pow.f32(float %x, float 2.5e-01)
   ret float %r

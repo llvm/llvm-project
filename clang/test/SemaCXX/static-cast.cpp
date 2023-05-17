@@ -90,8 +90,8 @@ void t_529_5_8()
   (void)static_cast<B&>(*((const A*)0)); // expected-error {{static_cast from 'const A' to 'B &' casts away qualifiers}}
   (void)static_cast<E*>((A*)0); // expected-error {{cannot cast private base class 'A' to 'E'}}
   (void)static_cast<E&>(*((A*)0)); // expected-error {{cannot cast private base class 'A' to 'E'}}
-  (void)static_cast<H*>((A*)0); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    struct A -> struct B -> struct G1 -> struct H\n    struct A -> struct B -> struct G2 -> struct H}}
-  (void)static_cast<H&>(*((A*)0)); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    struct A -> struct B -> struct G1 -> struct H\n    struct A -> struct B -> struct G2 -> struct H}}
+  (void)static_cast<H*>((A*)0); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    A -> B -> G1 -> struct H\n    struct A -> B -> G2 -> struct H}}
+  (void)static_cast<H&>(*((A*)0)); // expected-error {{ambiguous cast from base 'A' to derived 'H':\n    A -> B -> G1 -> struct H\n    A -> B -> G2 -> struct H}}
   (void)static_cast<E*>((B*)0); // expected-error {{static_cast from 'B *' to 'E *', which are not related by inheritance, is not allowed}}
   (void)static_cast<E&>(*((B*)0)); // expected-error {{non-const lvalue reference to type 'E' cannot bind to a value of unrelated type 'B'}}
 

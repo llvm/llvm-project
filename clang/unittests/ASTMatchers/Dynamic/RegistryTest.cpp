@@ -9,6 +9,7 @@
 #include "../ASTMatchersTest.h"
 #include "clang/ASTMatchers/Dynamic/Registry.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <vector>
 
 namespace clang {
@@ -34,7 +35,7 @@ public:
     return Out;
   }
 
-  llvm::Optional<MatcherCtor> lookupMatcherCtor(StringRef MatcherName) {
+  std::optional<MatcherCtor> lookupMatcherCtor(StringRef MatcherName) {
     return Registry::lookupMatcherCtor(MatcherName);
   }
 
@@ -42,7 +43,7 @@ public:
                                   Diagnostics *Error = nullptr) {
     Diagnostics DummyError;
     if (!Error) Error = &DummyError;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
     VariantMatcher Out;
     if (Ctor)
       Out = Registry::constructMatcher(*Ctor, SourceRange(), Args(), Error);
@@ -55,7 +56,7 @@ public:
                                   Diagnostics *Error = nullptr) {
     Diagnostics DummyError;
     if (!Error) Error = &DummyError;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
     VariantMatcher Out;
     if (Ctor)
       Out = Registry::constructMatcher(*Ctor, SourceRange(), Args(Arg1), Error);
@@ -69,7 +70,7 @@ public:
                                   Diagnostics *Error = nullptr) {
     Diagnostics DummyError;
     if (!Error) Error = &DummyError;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName);
     VariantMatcher Out;
     if (Ctor)
       Out = Registry::constructMatcher(*Ctor, SourceRange(), Args(Arg1, Arg2),
@@ -88,7 +89,7 @@ public:
 
   CompVector getCompletions(StringRef MatcherName1, unsigned ArgNo1) {
     std::vector<std::pair<MatcherCtor, unsigned> > Context;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
     if (!Ctor)
       return CompVector();
     Context.push_back(std::make_pair(*Ctor, ArgNo1));
@@ -99,7 +100,7 @@ public:
   CompVector getCompletions(StringRef MatcherName1, unsigned ArgNo1,
                             StringRef MatcherName2, unsigned ArgNo2) {
     std::vector<std::pair<MatcherCtor, unsigned> > Context;
-    llvm::Optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
+    std::optional<MatcherCtor> Ctor = lookupMatcherCtor(MatcherName1);
     if (!Ctor)
       return CompVector();
     Context.push_back(std::make_pair(*Ctor, ArgNo1));
@@ -198,13 +199,32 @@ TEST_F(RegistryTest, OverloadedMatchers) {
                            constructMatcher("hasName", StringRef("x")))))
       .getTypedMatcher<Stmt>();
 
+  Matcher<Stmt> ObjCMsgExpr =
+      constructMatcher(
+          "objcMessageExpr",
+          constructMatcher(
+              "callee",
+              constructMatcher("objcMethodDecl",
+                               constructMatcher("hasName", StringRef("x")))))
+          .getTypedMatcher<Stmt>();
+
   std::string Code = "class Y { public: void x(); }; void z() { Y y; y.x(); }";
   EXPECT_FALSE(matches(Code, CallExpr0));
   EXPECT_TRUE(matches(Code, CallExpr1));
+  EXPECT_FALSE(matches(Code, ObjCMsgExpr));
 
   Code = "class Z { public: void z() { this->z(); } };";
   EXPECT_TRUE(matches(Code, CallExpr0));
   EXPECT_FALSE(matches(Code, CallExpr1));
+  EXPECT_FALSE(matches(Code, ObjCMsgExpr));
+
+  Code = "@interface I "
+         "+ (void)x; "
+         "@end\n"
+         "int main() { [I x]; }";
+  EXPECT_FALSE(matchesObjC(Code, CallExpr0));
+  EXPECT_FALSE(matchesObjC(Code, CallExpr1));
+  EXPECT_TRUE(matchesObjC(Code, ObjCMsgExpr));
 
   Matcher<Decl> DeclDecl = declaratorDecl(hasTypeLoc(
       constructMatcher(

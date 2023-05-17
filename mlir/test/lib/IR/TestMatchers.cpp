@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/FunctionInterfaces.h"
 #include "mlir/IR/Matchers.h"
@@ -139,13 +139,28 @@ void test2(FunctionOpInterface f) {
       m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(a, m_Constant(&floatAttr)));
   auto p1 = m_Op<arith::MulFOp>(a, m_Op<arith::AddFOp>(a, m_Constant()));
   // Last operation that is not the terminator.
-  Operation *lastOp = f.getBody().front().back().getPrevNode();
+  Operation *lastOp = f.getFunctionBody().front().back().getPrevNode();
   if (p.match(lastOp))
     llvm::outs()
         << "Pattern add(add(a, constant), a) matched and bound constant to: "
         << floatAttr.getValueAsDouble() << "\n";
   if (p1.match(lastOp))
     llvm::outs() << "Pattern add(add(a, constant), a) matched\n";
+}
+
+void test3(FunctionOpInterface f) {
+  arith::FastMathFlagsAttr fastMathAttr;
+  auto p = m_Op<arith::MulFOp>(m_Any(),
+                               m_Op<arith::AddFOp>(m_Any(), m_Op("test.name")));
+  auto p1 = m_Attr("fastmath", &fastMathAttr);
+
+  // Last operation that is not the terminator.
+  Operation *lastOp = f.getFunctionBody().front().back().getPrevNode();
+  if (p.match(lastOp))
+    llvm::outs() << "Pattern mul(*, add(*, m_Op(\"test.name\"))) matched\n";
+  if (p1.match(lastOp))
+    llvm::outs() << "Pattern m_Attr(\"fastmath\") matched and bound value to: "
+                 << fastMathAttr.getValue() << "\n";
 }
 
 void TestMatchers::runOnOperation() {
@@ -155,6 +170,8 @@ void TestMatchers::runOnOperation() {
     test1(f);
   if (f.getName() == "test2")
     test2(f);
+  if (f.getName() == "test3")
+    test3(f);
 }
 
 namespace mlir {

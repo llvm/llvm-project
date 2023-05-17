@@ -1230,7 +1230,7 @@ void HexagonCommonGEP::removeDeadCode() {
 
   for (unsigned i = 0; i < BO.size(); ++i) {
     BasicBlock *B = cast<BasicBlock>(BO[i]);
-    for (auto DTN : children<DomTreeNode*>(DT->getNode(B)))
+    for (auto *DTN : children<DomTreeNode *>(DT->getNode(B)))
       BO.push_back(DTN->getBlock());
   }
 

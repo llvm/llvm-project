@@ -638,10 +638,6 @@ isl::ast_build IslAstInfo::getBuild(const isl::ast_node &Node) {
 static std::unique_ptr<IslAstInfo> runIslAst(
     Scop &Scop,
     function_ref<const Dependences &(Dependences::AnalysisLevel)> GetDeps) {
-  // Skip SCoPs in case they're already handled by PPCGCodeGeneration.
-  if (Scop.isToBeSkipped())
-    return {};
-
   ScopsProcessed++;
 
   const Dependences &D = GetDeps(Dependences::AL_Statement);

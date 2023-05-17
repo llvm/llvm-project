@@ -40,7 +40,7 @@ static void handleHVXWarnings(const Driver &D, const ArgList &Args) {
     StringRef Val = A->getValue();
     if (!Val.equals_insensitive("64b") && !Val.equals_insensitive("128b"))
       D.Diag(diag::err_drv_unsupported_option_argument)
-          << A->getOption().getName() << Val;
+          << A->getSpelling() << Val;
   }
 }
 
@@ -120,16 +120,17 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
     HvxVerNum = 0;
 
   // Handle HVX floating point flags.
-  auto checkFlagHvxVersion = [&](auto FlagOn, auto FlagOff,
-                                 unsigned MinVerNum) -> Optional<StringRef> {
-    // Return an Optional<StringRef>:
-    // - None indicates a verification failure, or that the flag was not
+  auto checkFlagHvxVersion =
+      [&](auto FlagOn, auto FlagOff,
+          unsigned MinVerNum) -> std::optional<StringRef> {
+    // Return an std::optional<StringRef>:
+    // - std::nullopt indicates a verification failure, or that the flag was not
     //   present in Args.
     // - Otherwise the returned value is that name of the feature to add
     //   to Features.
     Arg *A = Args.getLastArg(FlagOn, FlagOff);
     if (!A)
-      return None;
+      return std::nullopt;
 
     StringRef OptName = A->getOption().getName();
     if (A->getOption().matches(FlagOff))
@@ -137,12 +138,12 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 
     if (!HasHVX) {
       D.Diag(diag::err_drv_needs_hvx) << withMinus(OptName);
-      return None;
+      return std::nullopt;
     }
     if (HvxVerNum < MinVerNum) {
       D.Diag(diag::err_drv_needs_hvx_version)
           << withMinus(OptName) << ("v" + std::to_string(HvxVerNum));
-      return None;
+      return std::nullopt;
     }
     return makeFeature(OptName, true);
   };
@@ -158,9 +159,11 @@ static void handleHVXTargetFeatures(const Driver &D, const ArgList &Args,
 }
 
 // Hexagon target features.
-void hexagon::getHexagonTargetFeatures(const Driver &D, const ArgList &Args,
+void hexagon::getHexagonTargetFeatures(const Driver &D,
+                                       const llvm::Triple &Triple,
+                                       const ArgList &Args,
                                        std::vector<StringRef> &Features) {
-  handleTargetFeaturesGroup(Args, Features,
+  handleTargetFeaturesGroup(D, Triple, Args, Features,
                             options::OPT_m_hexagon_Features_Group);
 
   bool UseLongCalls = false;
@@ -230,7 +233,7 @@ void hexagon::Assembler::ConstructJob(Compilation &C, const JobAction &JA,
   }
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(G.getValue())));
+    CmdArgs.push_back(Args.MakeArgString("-gpsize=" + Twine(*G)));
   }
 
   Args.AddAllArgValues(CmdArgs, options::OPT_Wa_COMMA, options::OPT_Xassembler);
@@ -340,8 +343,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("-pie");
 
   if (auto G = toolchains::HexagonToolChain::getSmallDataThreshold(Args)) {
-    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(G.getValue())));
-    UseG0 = G.getValue() == 0;
+    CmdArgs.push_back(Args.MakeArgString("-G" + Twine(*G)));
+    UseG0 = *G == 0;
   }
 
   CmdArgs.push_back("-o");
@@ -519,8 +522,8 @@ std::string HexagonToolChain::getHexagonTargetDir(
   return InstalledDir;
 }
 
-Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
-      const ArgList &Args) {
+std::optional<unsigned>
+HexagonToolChain::getSmallDataThreshold(const ArgList &Args) {
   StringRef Gn = "";
   if (Arg *A = Args.getLastArg(options::OPT_G)) {
     Gn = A->getValue();
@@ -533,7 +536,7 @@ Optional<unsigned> HexagonToolChain::getSmallDataThreshold(
   if (!Gn.getAsInteger(10, G))
     return G;
 
-  return None;
+  return std::nullopt;
 }
 
 std::string HexagonToolChain::getCompilerRTPath() const {
@@ -569,7 +572,7 @@ void HexagonToolChain::getHexagonLibraryPaths(const ArgList &Args,
   // Assume G0 with -shared.
   bool HasG0 = Args.hasArg(options::OPT_shared);
   if (auto G = getSmallDataThreshold(Args))
-    HasG0 = G.getValue() == 0;
+    HasG0 = *G == 0;
 
   const std::string CpuVer = GetTargetCPUVersion(Args).str();
   for (auto &Dir : RootDirs) {
@@ -614,6 +617,8 @@ void HexagonToolChain::AddCXXStdlibLibArgs(const ArgList &Args,
   switch (Type) {
   case ToolChain::CST_Libcxx:
     CmdArgs.push_back("-lc++");
+    if (Args.hasArg(options::OPT_fexperimental_library))
+      CmdArgs.push_back("-lc++experimental");
     CmdArgs.push_back("-lc++abi");
     CmdArgs.push_back("-lunwind");
     break;

@@ -7,11 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class S, class I>
 // concept __nothrow_sentinel_for;
 
+#include <iterator>
 #include <memory>
 
 static_assert(std::ranges::__nothrow_sentinel_for<int*, int*>);

@@ -4,14 +4,14 @@ target triple = "powerpc-unknown-linux-gnu"
         %struct.empty0 = type {  }
         %struct.es = type { %struct.empty0 }
         %struct.es1 = type { %struct.empty0 }
-@aaui1 = internal global [6 x [2 x i32]] [ [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ] ]              ; <[6 x [2 x i32]]*> [#uses=1]
-@aaui0 = internal global [0 x [2 x i32]] zeroinitializer                ; <[0 x [2 x i32]]*> [#uses=1]
+@aaui1 = internal global [6 x [2 x i32]] [ [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ], [2 x i32] [ i32 1, i32 1 ] ]              ; <ptr> [#uses=1]
+@aaui0 = internal global [0 x [2 x i32]] zeroinitializer                ; <ptr> [#uses=1]
 
 define i8 @func() {
 entry:
-        %tmp10 = getelementptr [2 x i32], [2 x i32]* getelementptr ([6 x [2 x i32]], [6 x [2 x i32]]* @aaui1, i32 0, i32 0), i32 5, i32 1           ; <i32*> [#uses=1]
-        %tmp11 = load i32, i32* %tmp10, align 4              ; <i32> [#uses=1]
-        %tmp12 = call i32 (...) @func3( i32* null, i32 0, i32 %tmp11 )         ; <i32> [#uses=0]
+        %tmp10 = getelementptr [2 x i32], ptr @aaui1, i32 5, i32 1           ; <ptr> [#uses=1]
+        %tmp11 = load i32, ptr %tmp10, align 4              ; <i32> [#uses=1]
+        %tmp12 = call i32 (...) @func3( ptr null, i32 0, i32 %tmp11 )         ; <i32> [#uses=0]
         ret i8 undef
 }
 

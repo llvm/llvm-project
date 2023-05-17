@@ -11,8 +11,7 @@
 
 target datalayout = "e-m:e-p200:128:128:128:64-p:64:64-A200-P200-G200"
 
-define i8 addrspace(200)* @test_zerogep_in_different_as(i8 addrspace(200)* %arg) addrspace(200) nounwind {
+define ptr addrspace(200) @test_zerogep_in_different_as(ptr addrspace(200) %arg) addrspace(200) nounwind {
 entry:
-  %ret = getelementptr inbounds i8, i8 addrspace(200)* %arg, i64 0
-  ret i8 addrspace(200)* %ret
+  ret ptr addrspace(200) %arg
 }

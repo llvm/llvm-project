@@ -18,7 +18,7 @@
 // Use the first element as a position into the data
 extern "C" int LLVMFuzzerTestOneInput(const std::uint8_t *data, std::size_t size) {
     if (size <= 1) return 0;
-    const size_t partition_point = data[0] % size;
+    const std::size_t partition_point = data[0] % size;
     std::vector<std::uint8_t> working(data + 1, data + size);
     const auto partition_iter = working.begin() + partition_point;
     std::nth_element(working.begin(), partition_iter, working.end());

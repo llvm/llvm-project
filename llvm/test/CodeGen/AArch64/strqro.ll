@@ -7,8 +7,8 @@
 ; CHECK-NOSTRQRO-NOT: str q{{[0-9]+}}, [x{{[0-9]+}}, x
 define void @strqrox(fp128 %val64, i64 %base, i64 %offset) {
   %addrint = add i64 %base, %offset
-  %addr = inttoptr i64 %addrint to fp128*
-  store volatile fp128 %val64, fp128* %addr
+  %addr = inttoptr i64 %addrint to ptr
+  store volatile fp128 %val64, ptr %addr
   ret void
 }
 
@@ -18,8 +18,8 @@ define void @strqrox(fp128 %val64, i64 %base, i64 %offset) {
 ; CHECK-NOSTRQRO: str q{{[0-9]+}}, [x{{[0-9]+}}, x
 define void @strqrox_optsize(fp128 %val64, i64 %base, i64 %offset) minsize {
   %addrint = add i64 %base, %offset
-  %addr = inttoptr i64 %addrint to fp128*
-  store volatile fp128 %val64, fp128* %addr
+  %addr = inttoptr i64 %addrint to ptr
+  store volatile fp128 %val64, ptr %addr
   ret void
 }
 
@@ -29,8 +29,8 @@ define void @strqrox_optsize(fp128 %val64, i64 %base, i64 %offset) minsize {
 define void @strqrow(fp128 %val64, i64 %base, i32 %offset) {
   %offset64 = zext i32 %offset to i64
   %addrint = add i64 %base, %offset64
-  %addr = inttoptr i64 %addrint to fp128*
-  store volatile fp128 %val64, fp128* %addr
+  %addr = inttoptr i64 %addrint to ptr
+  store volatile fp128 %val64, ptr %addr
   ret void
 }
 
@@ -41,8 +41,8 @@ define void @strqrow(fp128 %val64, i64 %base, i32 %offset) {
 define void @strqrow_optsize(fp128 %val64, i64 %base, i32 %offset) minsize {
   %offset64 = zext i32 %offset to i64
   %addrint = add i64 %base, %offset64
-  %addr = inttoptr i64 %addrint to fp128*
-  store volatile fp128 %val64, fp128* %addr
+  %addr = inttoptr i64 %addrint to ptr
+  store volatile fp128 %val64, ptr %addr
   ret void
 }
 

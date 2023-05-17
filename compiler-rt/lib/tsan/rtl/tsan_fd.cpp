@@ -34,6 +34,7 @@ struct FdDesc {
   atomic_uintptr_t aux_sync;  // FdSync*
   Tid creation_tid;
   StackID creation_stack;
+  bool closed;
 };
 
 struct FdContext {
@@ -120,6 +121,7 @@ static void init(ThreadState *thr, uptr pc, int fd, FdSync *s,
   }
   d->creation_tid = thr->tid;
   d->creation_stack = CurrentStackId(thr, pc);
+  d->closed = false;
   // This prevents false positives on fd_close_norace3.cpp test.
   // The mechanics of the false positive are not completely clear,
   // but it happens only if global reset is enabled (flush_memory_ms=1)
@@ -155,7 +157,7 @@ void FdOnFork(ThreadState *thr, uptr pc) {
   }
 }
 
-bool FdLocation(uptr addr, int *fd, Tid *tid, StackID *stack) {
+bool FdLocation(uptr addr, int *fd, Tid *tid, StackID *stack, bool *closed) {
   for (int l1 = 0; l1 < kTableSizeL1; l1++) {
     FdDesc *tab = (FdDesc*)atomic_load(&fdctx.tab[l1], memory_order_relaxed);
     if (tab == 0)
@@ -166,6 +168,7 @@ bool FdLocation(uptr addr, int *fd, Tid *tid, StackID *stack) {
       *fd = l1 * kTableSizeL1 + l2;
       *tid = d->creation_tid;
       *stack = d->creation_stack;
+      *closed = d->closed;
       return true;
     }
   }
@@ -242,8 +245,9 @@ void FdClose(ThreadState *thr, uptr pc, int fd, bool write) {
         reinterpret_cast<FdSync *>(
             atomic_load(&d->aux_sync, memory_order_relaxed)));
   atomic_store(&d->aux_sync, 0, memory_order_relaxed);
-  d->creation_tid = kInvalidTid;
-  d->creation_stack = kInvalidStackID;
+  d->closed = true;
+  d->creation_tid = thr->tid;
+  d->creation_stack = CurrentStackId(thr, pc);
 }
 
 void FdFileCreate(ThreadState *thr, uptr pc, int fd) {

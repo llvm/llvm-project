@@ -23,10 +23,11 @@
     __cpp_lib_atomic_value_initialization         201911L [C++20]
     __cpp_lib_constexpr_dynamic_alloc             201907L [C++20]
     __cpp_lib_constexpr_memory                    201811L [C++20]
+                                                  202202L [C++2b]
     __cpp_lib_enable_shared_from_this             201603L [C++17]
     __cpp_lib_make_unique                         201304L [C++14]
     __cpp_lib_out_ptr                             202106L [C++2b]
-    __cpp_lib_ranges                              201811L [C++20]
+    __cpp_lib_ranges                              202106L [C++20]
     __cpp_lib_raw_memory_algorithms               201606L [C++17]
     __cpp_lib_shared_ptr_arrays                   201611L [C++17]
                                                   201707L [C++20]
@@ -346,17 +347,11 @@
 #   error "__cpp_lib_out_ptr should not be defined before c++2b"
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should be defined in c++20"
-#   endif
-#   if __cpp_lib_ranges != 201811L
-#     error "__cpp_lib_ranges should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges
+#   error "__cpp_lib_ranges should be defined in c++20"
+# endif
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++20"
 # endif
 
 # ifndef __cpp_lib_raw_memory_algorithms
@@ -454,8 +449,8 @@
 # ifndef __cpp_lib_constexpr_memory
 #   error "__cpp_lib_constexpr_memory should be defined in c++2b"
 # endif
-# if __cpp_lib_constexpr_memory != 201811L
-#   error "__cpp_lib_constexpr_memory should have the value 201811L in c++2b"
+# if __cpp_lib_constexpr_memory != 202202L
+#   error "__cpp_lib_constexpr_memory should have the value 202202L in c++2b"
 # endif
 
 # ifndef __cpp_lib_enable_shared_from_this
@@ -485,17 +480,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should be defined in c++2b"
-#   endif
-#   if __cpp_lib_ranges != 201811L
-#     error "__cpp_lib_ranges should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges
+#   error "__cpp_lib_ranges should be defined in c++2b"
+# endif
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++2b"
 # endif
 
 # ifndef __cpp_lib_raw_memory_algorithms

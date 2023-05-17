@@ -5,7 +5,7 @@
 ; test vector shifts converted to proper SSE2 vector shifts when the shift
 ; amounts are the same.
 
-define void @shift1a(<2 x i64> %val, <2 x i64>* %dst) nounwind {
+define void @shift1a(<2 x i64> %val, ptr %dst) nounwind {
 ; X86-LABEL: shift1a:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -20,11 +20,11 @@ define void @shift1a(<2 x i64> %val, <2 x i64>* %dst) nounwind {
 ; X64-NEXT:    retq
 entry:
   %lshr = lshr <2 x i64> %val, < i64 32, i64 32 >
-  store <2 x i64> %lshr, <2 x i64>* %dst
+  store <2 x i64> %lshr, ptr %dst
   ret void
 }
 
-define void @shift1b(<2 x i64> %val, <2 x i64>* %dst, i64 %amt) nounwind {
+define void @shift1b(<2 x i64> %val, ptr %dst, i64 %amt) nounwind {
 ; X86-LABEL: shift1b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -43,11 +43,11 @@ entry:
   %0 = insertelement <2 x i64> undef, i64 %amt, i32 0
   %1 = insertelement <2 x i64> %0, i64 %amt, i32 1
   %lshr = lshr <2 x i64> %val, %1
-  store <2 x i64> %lshr, <2 x i64>* %dst
+  store <2 x i64> %lshr, ptr %dst
   ret void
 }
 
-define void @shift2a(<4 x i32> %val, <4 x i32>* %dst) nounwind {
+define void @shift2a(<4 x i32> %val, ptr %dst) nounwind {
 ; X86-LABEL: shift2a:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -62,11 +62,11 @@ define void @shift2a(<4 x i32> %val, <4 x i32>* %dst) nounwind {
 ; X64-NEXT:    retq
 entry:
   %lshr = lshr <4 x i32> %val, < i32 17, i32 17, i32 17, i32 17 >
-  store <4 x i32> %lshr, <4 x i32>* %dst
+  store <4 x i32> %lshr, ptr %dst
   ret void
 }
 
-define void @shift2b(<4 x i32> %val, <4 x i32>* %dst, i32 %amt) nounwind {
+define void @shift2b(<4 x i32> %val, ptr %dst, i32 %amt) nounwind {
 ; X86-LABEL: shift2b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -87,12 +87,12 @@ entry:
   %2 = insertelement <4 x i32> %1, i32 %amt, i32 2
   %3 = insertelement <4 x i32> %2, i32 %amt, i32 3
   %lshr = lshr <4 x i32> %val, %3
-  store <4 x i32> %lshr, <4 x i32>* %dst
+  store <4 x i32> %lshr, ptr %dst
   ret void
 }
 
 
-define void @shift3a(<8 x i16> %val, <8 x i16>* %dst) nounwind {
+define void @shift3a(<8 x i16> %val, ptr %dst) nounwind {
 ; X86-LABEL: shift3a:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -107,12 +107,12 @@ define void @shift3a(<8 x i16> %val, <8 x i16>* %dst) nounwind {
 ; X64-NEXT:    retq
 entry:
   %lshr = lshr <8 x i16> %val, < i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5 >
-  store <8 x i16> %lshr, <8 x i16>* %dst
+  store <8 x i16> %lshr, ptr %dst
   ret void
 }
 
 ; properly zero extend the shift amount
-define void @shift3b(<8 x i16> %val, <8 x i16>* %dst, i16 %amt) nounwind {
+define void @shift3b(<8 x i16> %val, ptr %dst, i16 %amt) nounwind {
 ; X86-LABEL: shift3b:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -139,6 +139,6 @@ entry:
   %6 = insertelement <8 x i16> %5, i16 %amt, i32 6
   %7 = insertelement <8 x i16> %6, i16 %amt, i32 7
   %lshr = lshr <8 x i16> %val, %7
-  store <8 x i16> %lshr, <8 x i16>* %dst
+  store <8 x i16> %lshr, ptr %dst
   ret void
 }

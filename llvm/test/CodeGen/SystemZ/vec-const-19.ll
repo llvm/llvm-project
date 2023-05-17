@@ -10,9 +10,9 @@ define void @fun()  {
 
   %tmp = fadd <2 x double> zeroinitializer, <double 1.000000e+00, double 1.000000e+00>
   %tmp1 = fmul <2 x double> %tmp, <double 5.000000e-01, double 5.000000e-01>
-  store <2 x double> %tmp1, <2 x double>* undef
-  %tmp2 = load double, double* undef
+  store <2 x double> %tmp1, ptr undef
+  %tmp2 = load double, ptr undef
   %tmp3 = fmul double %tmp2, 5.000000e-01
-  store double %tmp3, double* undef
+  store double %tmp3, ptr undef
   ret void
 }

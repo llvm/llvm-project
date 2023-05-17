@@ -65,7 +65,8 @@ namespace mlir {
 /// just as efficient as having your own switch instruction over the instruction
 /// opcode.
 
-template <typename SubClass, typename RetTy = void> class AffineExprVisitor {
+template <typename SubClass, typename RetTy = void>
+class AffineExprVisitor {
   //===--------------------------------------------------------------------===//
   // Interface code - This is the public interface of the AffineExprVisitor
   // that you use to visit affine expressions...
@@ -323,7 +324,7 @@ private:
   // A floordiv is thus flattened by introducing a new local variable q, and
   // replacing that expression with 'q' while adding the constraints
   // c * q <= expr <= c * q + c - 1 to localVarCst (done by
-  // FlatAffineConstraints::addLocalFloorDiv).
+  // IntegerRelation::addLocalFloorDiv).
   //
   // A ceildiv is similarly flattened:
   // t = expr ceildiv c   <=> t =  (expr + c - 1) floordiv c

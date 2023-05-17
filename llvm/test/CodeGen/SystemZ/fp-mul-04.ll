@@ -7,7 +7,7 @@ declare double @foo()
 ; Check register multiplication.  "mxdbr %f0, %f2" is not valid from LLVM's
 ; point of view, because %f2 is the low register of the FP128 %f0.  Pass the
 ; multiplier in %f4 instead.
-define void @f1(double %f1, double %dummy, double %f2, fp128 *%dst) {
+define void @f1(double %f1, double %dummy, double %f2, ptr %dst) {
 ; CHECK-LABEL: f1:
 ; CHECK: mxdbr %f0, %f4
 ; CHECK: std %f0, 0(%r2)
@@ -16,122 +16,122 @@ define void @f1(double %f1, double %dummy, double %f2, fp128 *%dst) {
   %f1x = fpext double %f1 to fp128
   %f2x = fpext double %f2 to fp128
   %res = fmul fp128 %f1x, %f2x
-  store fp128 %res, fp128 *%dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Check the low end of the MXDB range.
-define void @f2(double %f1, double *%ptr, fp128 *%dst) {
+define void @f2(double %f1, ptr %ptr, ptr %dst) {
 ; CHECK-LABEL: f2:
 ; CHECK: mxdb %f0, 0(%r2)
 ; CHECK: std %f0, 0(%r3)
 ; CHECK: std %f2, 8(%r3)
 ; CHECK: br %r14
-  %f2 = load double, double *%ptr
+  %f2 = load double, ptr %ptr
   %f1x = fpext double %f1 to fp128
   %f2x = fpext double %f2 to fp128
   %res = fmul fp128 %f1x, %f2x
-  store fp128 %res, fp128 *%dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Check the high end of the aligned MXDB range.
-define void @f3(double %f1, double *%base, fp128 *%dst) {
+define void @f3(double %f1, ptr %base, ptr %dst) {
 ; CHECK-LABEL: f3:
 ; CHECK: mxdb %f0, 4088(%r2)
 ; CHECK: std %f0, 0(%r3)
 ; CHECK: std %f2, 8(%r3)
 ; CHECK: br %r14
-  %ptr = getelementptr double, double *%base, i64 511
-  %f2 = load double, double *%ptr
+  %ptr = getelementptr double, ptr %base, i64 511
+  %f2 = load double, ptr %ptr
   %f1x = fpext double %f1 to fp128
   %f2x = fpext double %f2 to fp128
   %res = fmul fp128 %f1x, %f2x
-  store fp128 %res, fp128 *%dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Check the next doubleword up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f4(double %f1, double *%base, fp128 *%dst) {
+define void @f4(double %f1, ptr %base, ptr %dst) {
 ; CHECK-LABEL: f4:
 ; CHECK: aghi %r2, 4096
 ; CHECK: mxdb %f0, 0(%r2)
 ; CHECK: std %f0, 0(%r3)
 ; CHECK: std %f2, 8(%r3)
 ; CHECK: br %r14
-  %ptr = getelementptr double, double *%base, i64 512
-  %f2 = load double, double *%ptr
+  %ptr = getelementptr double, ptr %base, i64 512
+  %f2 = load double, ptr %ptr
   %f1x = fpext double %f1 to fp128
   %f2x = fpext double %f2 to fp128
   %res = fmul fp128 %f1x, %f2x
-  store fp128 %res, fp128 *%dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Check negative displacements, which also need separate address logic.
-define void @f5(double %f1, double *%base, fp128 *%dst) {
+define void @f5(double %f1, ptr %base, ptr %dst) {
 ; CHECK-LABEL: f5:
 ; CHECK: aghi %r2, -8
 ; CHECK: mxdb %f0, 0(%r2)
 ; CHECK: std %f0, 0(%r3)
 ; CHECK: std %f2, 8(%r3)
 ; CHECK: br %r14
-  %ptr = getelementptr double, double *%base, i64 -1
-  %f2 = load double, double *%ptr
+  %ptr = getelementptr double, ptr %base, i64 -1
+  %f2 = load double, ptr %ptr
   %f1x = fpext double %f1 to fp128
   %f2x = fpext double %f2 to fp128
   %res = fmul fp128 %f1x, %f2x
-  store fp128 %res, fp128 *%dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Check that MXDB allows indices.
-define void @f6(double %f1, double *%base, i64 %index, fp128 *%dst) {
+define void @f6(double %f1, ptr %base, i64 %index, ptr %dst) {
 ; CHECK-LABEL: f6:
 ; CHECK: sllg %r1, %r3, 3
 ; CHECK: mxdb %f0, 800(%r1,%r2)
 ; CHECK: std %f0, 0(%r4)
 ; CHECK: std %f2, 8(%r4)
 ; CHECK: br %r14
-  %ptr1 = getelementptr double, double *%base, i64 %index
-  %ptr2 = getelementptr double, double *%ptr1, i64 100
-  %f2 = load double, double *%ptr2
+  %ptr1 = getelementptr double, ptr %base, i64 %index
+  %ptr2 = getelementptr double, ptr %ptr1, i64 100
+  %f2 = load double, ptr %ptr2
   %f1x = fpext double %f1 to fp128
   %f2x = fpext double %f2 to fp128
   %res = fmul fp128 %f1x, %f2x
-  store fp128 %res, fp128 *%dst
+  store fp128 %res, ptr %dst
   ret void
 }
 
 ; Check that multiplications of spilled values can use MXDB rather than MXDBR.
-define double @f7(double *%ptr0) {
+define double @f7(ptr %ptr0) {
 ; CHECK-LABEL: f7:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: mxdb %f0, 160(%r15)
 ; CHECK: br %r14
-  %ptr1 = getelementptr double, double *%ptr0, i64 2
-  %ptr2 = getelementptr double, double *%ptr0, i64 4
-  %ptr3 = getelementptr double, double *%ptr0, i64 6
-  %ptr4 = getelementptr double, double *%ptr0, i64 8
-  %ptr5 = getelementptr double, double *%ptr0, i64 10
-  %ptr6 = getelementptr double, double *%ptr0, i64 12
-  %ptr7 = getelementptr double, double *%ptr0, i64 14
-  %ptr8 = getelementptr double, double *%ptr0, i64 16
-  %ptr9 = getelementptr double, double *%ptr0, i64 18
-  %ptr10 = getelementptr double, double *%ptr0, i64 20
+  %ptr1 = getelementptr double, ptr %ptr0, i64 2
+  %ptr2 = getelementptr double, ptr %ptr0, i64 4
+  %ptr3 = getelementptr double, ptr %ptr0, i64 6
+  %ptr4 = getelementptr double, ptr %ptr0, i64 8
+  %ptr5 = getelementptr double, ptr %ptr0, i64 10
+  %ptr6 = getelementptr double, ptr %ptr0, i64 12
+  %ptr7 = getelementptr double, ptr %ptr0, i64 14
+  %ptr8 = getelementptr double, ptr %ptr0, i64 16
+  %ptr9 = getelementptr double, ptr %ptr0, i64 18
+  %ptr10 = getelementptr double, ptr %ptr0, i64 20
 
-  %val0 = load double, double *%ptr0
-  %val1 = load double, double *%ptr1
-  %val2 = load double, double *%ptr2
-  %val3 = load double, double *%ptr3
-  %val4 = load double, double *%ptr4
-  %val5 = load double, double *%ptr5
-  %val6 = load double, double *%ptr6
-  %val7 = load double, double *%ptr7
-  %val8 = load double, double *%ptr8
-  %val9 = load double, double *%ptr9
-  %val10 = load double, double *%ptr10
+  %val0 = load double, ptr %ptr0
+  %val1 = load double, ptr %ptr1
+  %val2 = load double, ptr %ptr2
+  %val3 = load double, ptr %ptr3
+  %val4 = load double, ptr %ptr4
+  %val5 = load double, ptr %ptr5
+  %val6 = load double, ptr %ptr6
+  %val7 = load double, ptr %ptr7
+  %val8 = load double, ptr %ptr8
+  %val9 = load double, ptr %ptr9
+  %val10 = load double, ptr %ptr10
 
   %frob0 = fadd double %val0, %val0
   %frob1 = fadd double %val1, %val1
@@ -145,17 +145,17 @@ define double @f7(double *%ptr0) {
   %frob9 = fadd double %val9, %val9
   %frob10 = fadd double %val9, %val10
 
-  store double %frob0, double *%ptr0
-  store double %frob1, double *%ptr1
-  store double %frob2, double *%ptr2
-  store double %frob3, double *%ptr3
-  store double %frob4, double *%ptr4
-  store double %frob5, double *%ptr5
-  store double %frob6, double *%ptr6
-  store double %frob7, double *%ptr7
-  store double %frob8, double *%ptr8
-  store double %frob9, double *%ptr9
-  store double %frob10, double *%ptr10
+  store double %frob0, ptr %ptr0
+  store double %frob1, ptr %ptr1
+  store double %frob2, ptr %ptr2
+  store double %frob3, ptr %ptr3
+  store double %frob4, ptr %ptr4
+  store double %frob5, ptr %ptr5
+  store double %frob6, ptr %ptr6
+  store double %frob7, ptr %ptr7
+  store double %frob8, ptr %ptr8
+  store double %frob9, ptr %ptr9
+  store double %frob10, ptr %ptr10
 
   %ret = call double @foo()
 

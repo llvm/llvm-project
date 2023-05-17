@@ -28,6 +28,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Error.h"
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -40,7 +41,7 @@ namespace clangd {
 // of hashing function at every place that needs to store this information.
 using FileDigest = std::array<uint8_t, 8>;
 FileDigest digest(StringRef Content);
-Optional<FileDigest> digestFile(const SourceManager &SM, FileID FID);
+std::optional<FileDigest> digestFile(const SourceManager &SM, FileID FID);
 
 // This context variable controls the behavior of functions in this file
 // that convert between LSP offsets and native clang byte offsets.
@@ -110,9 +111,9 @@ bool isSpelledInSource(SourceLocation Loc, const SourceManager &SM);
 /// User input (e.g. cursor position) is expressed as a file location, so this
 /// function can be viewed as a way to normalize the ranges used in the clang
 /// AST so that they are comparable with ranges coming from the user input.
-llvm::Optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
-                                                const LangOptions &LangOpts,
-                                                SourceRange R);
+std::optional<SourceRange> toHalfOpenFileRange(const SourceManager &Mgr,
+                                               const LangOptions &LangOpts,
+                                               SourceRange R);
 
 /// Returns true iff all of the following conditions hold:
 ///   - start and end locations are valid,
@@ -162,8 +163,8 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 /// This function should be used when paths needs to be used outside the
 /// component that generate it, so that paths are normalized as much as
 /// possible.
-llvm::Optional<std::string> getCanonicalPath(const FileEntry *F,
-                                             const SourceManager &SourceMgr);
+std::optional<std::string> getCanonicalPath(const FileEntryRef F,
+                                            const SourceManager &SourceMgr);
 
 /// Choose the clang-format style we should apply to a certain file.
 /// This will usually use FS to look for .clang-format directories.
@@ -251,9 +252,9 @@ struct SpelledWord {
   const syntax::Token *ExpandedToken = nullptr;
 
   // Find the unique word that contains SpelledLoc or starts/ends there.
-  static llvm::Optional<SpelledWord> touching(SourceLocation SpelledLoc,
-                                              const syntax::TokenBuffer &TB,
-                                              const LangOptions &LangOpts);
+  static std::optional<SpelledWord> touching(SourceLocation SpelledLoc,
+                                             const syntax::TokenBuffer &TB,
+                                             const LangOptions &LangOpts);
 };
 
 /// Return true if the \p TokenName is in the list of reversed keywords of the
@@ -314,21 +315,16 @@ struct DefinedMacro {
 };
 /// Gets the macro referenced by \p SpelledTok. It must be a spelled token
 /// aligned to the beginning of an identifier.
-llvm::Optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
-                                           Preprocessor &PP);
+std::optional<DefinedMacro> locateMacroAt(const syntax::Token &SpelledTok,
+                                          Preprocessor &PP);
 
 /// Infers whether this is a header from the FileName and LangOpts (if
 /// presents).
 bool isHeaderFile(llvm::StringRef FileName,
-                  llvm::Optional<LangOptions> LangOpts = llvm::None);
+                  std::optional<LangOptions> LangOpts = std::nullopt);
 
 /// Returns true if the given location is in a generated protobuf file.
 bool isProtoFile(SourceLocation Loc, const SourceManager &SourceMgr);
-
-/// This scans source code, and should not be called when using a preamble.
-/// Prefer to access the cache in IncludeStructure::isSelfContained if you can.
-bool isSelfContainedHeader(const FileEntry *FE, FileID ID,
-                           const SourceManager &SM, HeaderSearch &HeaderInfo);
 
 /// Returns true if Name is reserved, like _Foo or __Vector_base.
 inline bool isReservedName(llvm::StringRef Name) {
@@ -337,6 +333,10 @@ inline bool isReservedName(llvm::StringRef Name) {
          (isUppercase(Name[1]) || Name[1] == '_');
 }
 
+/// Translates locations inside preamble patch to their main-file equivalent
+/// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
+SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
+                                              const SourceManager &SM);
 } // namespace clangd
 } // namespace clang
 #endif

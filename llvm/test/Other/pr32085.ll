@@ -1,6 +1,6 @@
 ; RUN: opt -S -O1 < %s -o %t1.ll
 ; RUN: opt -S < %t1.ll -o %t2.ll
-; RUN: opt -S -simplifycfg < %t1.ll -o %t3.ll
+; RUN: opt -S -passes=simplifycfg < %t1.ll -o %t3.ll
 ;; Show that there's no difference after running another simplify CFG
 ; RUN: diff %t2.ll %t3.ll
 
@@ -16,7 +16,7 @@ define i32 @t1(i32, i32) {
   br i1 %3, label %.exit, label %.preheader
 
 .preheader:
-  %invariant = load i32, i32* @g
+  %invariant = load i32, ptr @g
   br label %.b1
 
 .b1:

@@ -15,7 +15,6 @@ clang_target_link_libraries(clang-repl PRIVATE
   clangBasic
   clangFrontend
   clangInterpreter
-  clangTooling
   )
 
 # Support plugins.

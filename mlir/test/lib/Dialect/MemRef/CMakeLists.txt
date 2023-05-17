@@ -7,7 +7,7 @@ add_mlir_library(MLIRMemRefTestPasses
 
   LINK_LIBS PUBLIC
   MLIRPass
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRMemRefTransforms
   MLIRTestDialect
   )

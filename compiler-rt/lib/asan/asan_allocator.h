@@ -135,12 +135,6 @@ typedef VeryCompactSizeClassMap SizeClassMap;
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize = 0x2000000000ULL;  // 128G.
 typedef VeryDenseSizeClassMap SizeClassMap;
-# elif defined(__aarch64__)
-// AArch64/SANITIZER_CAN_USE_ALLOCATOR64 is only for 42-bit VMA
-// so no need to different values for different VMA.
-const uptr kAllocatorSpace =  0x10000000000ULL;
-const uptr kAllocatorSize  =  0x10000000000ULL;  // 3T.
-typedef DefaultSizeClassMap SizeClassMap;
 #elif defined(__sparc__)
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize = 0x20000000000ULL;  // 2T.
@@ -149,11 +143,15 @@ typedef DefaultSizeClassMap SizeClassMap;
 const uptr kAllocatorSpace = ~(uptr)0;
 const uptr kAllocatorSize  =  0x8000000000ULL;  // 500G
 typedef DefaultSizeClassMap SizeClassMap;
-# else
+#  elif SANITIZER_APPLE
 const uptr kAllocatorSpace = 0x600000000000ULL;
 const uptr kAllocatorSize  =  0x40000000000ULL;  // 4T.
 typedef DefaultSizeClassMap SizeClassMap;
-# endif
+#  else
+const uptr kAllocatorSpace = 0x500000000000ULL;
+const uptr kAllocatorSize = 0x40000000000ULL;  // 4T.
+typedef DefaultSizeClassMap SizeClassMap;
+#  endif
 template <typename AddressSpaceViewTy>
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;

@@ -11,12 +11,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/DataFlowAnalysis.h"
-#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Transform/Transforms/Passes.h"
+
+#include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetOperations.h"
+
+namespace mlir {
+namespace transform {
+#define GEN_PASS_DEF_CHECKUSESPASS
+#include "mlir/Dialect/Transform/Transforms/Passes.h.inc"
+} // namespace transform
+} // namespace mlir
 
 using namespace mlir;
 
@@ -133,16 +140,23 @@ public:
       return live();
 
 #ifndef NDEBUG
-    // Check that the definition point actually allcoates the value.
+    // Check that the definition point actually allocates the value. If the
+    // definition is a block argument, it may be just forwarding the operand of
+    // the parent op without doing a new allocation, allow that. We currently
+    // don't have the capability to analyze region-based control flow here.
+    //
+    // TODO: when this ported to the dataflow analysis infra, we should have
+    // proper support for region-based control flow.
     Operation *valueSource =
-        operand.get().isa<OpResult>()
+        isa<OpResult>(operand.get())
             ? operand.get().getDefiningOp()
             : operand.get().getParentBlock()->getParentOp();
     auto iface = cast<MemoryEffectOpInterface>(valueSource);
     SmallVector<MemoryEffects::EffectInstance> instances;
     iface.getEffectsOnResource(transform::TransformMappingResource::get(),
                                instances);
-    assert(hasEffect<MemoryEffects::Allocate>(instances, operand.get()) &&
+    assert((isa<BlockArgument>(operand.get()) ||
+            hasEffect<MemoryEffects::Allocate>(instances, operand.get())) &&
            "expected the op defining the value to have an allocation effect "
            "on it");
 #endif
@@ -168,7 +182,7 @@ public:
       // value is defined in the middle of the block, i.e., is not a block
       // argument.
       bool isOutermost = ancestor == ancestors.front();
-      bool isFromBlockPartial = isOutermost && operand.get().isa<OpResult>();
+      bool isFromBlockPartial = isOutermost && isa<OpResult>(operand.get());
 
       // Check if the value may be freed by operations between its definition
       // (allocation) point in its block and the terminator of the block or the
@@ -362,12 +376,9 @@ private:
   DenseMap<Block *, llvm::SmallPtrSet<Block *, 4>> reachableFromCache;
 };
 
-#define GEN_PASS_CLASSES
-#include "mlir/Dialect/Transform/Transforms/Passes.h.inc"
-
 //// A simple pass that warns about any use of a value by a transform operation
 // that may be using the value after it has been freed.
-class CheckUsesPass : public CheckUsesBase<CheckUsesPass> {
+class CheckUsesPass : public transform::impl::CheckUsesPassBase<CheckUsesPass> {
 public:
   void runOnOperation() override {
     auto &analysis = getAnalysis<TransformOpMemFreeAnalysis>();
@@ -393,10 +404,3 @@ public:
 
 } // namespace
 
-namespace mlir {
-namespace transform {
-std::unique_ptr<Pass> createCheckUsesPass() {
-  return std::make_unique<CheckUsesPass>();
-}
-} // namespace transform
-} // namespace mlir

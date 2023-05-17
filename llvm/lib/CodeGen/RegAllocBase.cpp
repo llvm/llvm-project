@@ -156,7 +156,7 @@ void RegAllocBase::allocatePhysRegs() {
         continue;
       }
       LLVM_DEBUG(dbgs() << "queuing new interval: " << *SplitVirtReg << "\n");
-      assert(Register::isVirtualRegister(SplitVirtReg->reg()) &&
+      assert(SplitVirtReg->reg().isVirtual() &&
              "expect split value in virtual register");
       enqueue(SplitVirtReg);
       ++NumNewQueued;
@@ -166,7 +166,7 @@ void RegAllocBase::allocatePhysRegs() {
 
 void RegAllocBase::postOptimization() {
   spiller().postOptimization();
-  for (auto DeadInst : DeadRemats) {
+  for (auto *DeadInst : DeadRemats) {
     LIS->RemoveMachineInstrFromMaps(*DeadInst);
     DeadInst->eraseFromParent();
   }

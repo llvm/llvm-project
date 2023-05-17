@@ -11,8 +11,8 @@ target datalayout = "p:32:32"
 
 define arm_aapcscc i32 @_abs(i32 %i) nounwind readnone {
 ; CHECK-LABEL: @_abs(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[I:%.*]], i1 true)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.abs.i32(i32 [[I:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = tail call arm_aapcscc i32 @abs(i32 %i) nounwind readnone
   ret i32 %call
@@ -22,8 +22,8 @@ declare arm_aapcscc i32 @abs(i32) nounwind readnone
 
 define arm_aapcscc i32 @_labs(i32 %i) nounwind readnone {
 ; CHECK-LABEL: @_labs(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.abs.i32(i32 [[I:%.*]], i1 true)
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @llvm.abs.i32(i32 [[I:%.*]], i1 true)
+; CHECK-NEXT:    ret i32 [[CALL]]
 ;
   %call = tail call arm_aapcscc i32 @labs(i32 %i) nounwind readnone
   ret i32 %call
@@ -35,19 +35,19 @@ define arm_aapcscc i32 @_strlen1() {
 ; CHECK-LABEL: @_strlen1(
 ; CHECK-NEXT:    ret i32 3
 ;
-  %call = tail call arm_aapcscc i32 @strlen(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0))
+  %call = tail call arm_aapcscc i32 @strlen(ptr @.str)
   ret i32 %call
 }
 
-declare arm_aapcscc i32 @strlen(i8*)
+declare arm_aapcscc i32 @strlen(ptr)
 
-define arm_aapcscc zeroext i1 @_strlen2(i8* %str) {
+define arm_aapcscc zeroext i1 @_strlen2(ptr %str) {
 ; CHECK-LABEL: @_strlen2(
-; CHECK-NEXT:    [[STRLENFIRST:%.*]] = load i8, i8* [[STR:%.*]], align 1
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[STRLENFIRST]], 0
+; CHECK-NEXT:    [[CHAR0:%.*]] = load i8, ptr [[STR:%.*]], align 1
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i8 [[CHAR0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
-  %call = tail call arm_aapcscc i32 @strlen(i8* %str)
+  %call = tail call arm_aapcscc i32 @strlen(ptr %str)
   %cmp = icmp ne i32 %call, 0
   ret i1 %cmp
 }

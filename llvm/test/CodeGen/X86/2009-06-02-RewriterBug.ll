@@ -1,7 +1,7 @@
 ; RUN: llc < %s -mtriple=x86_64-undermydesk-freebsd8.0 -relocation-model=pic -frame-pointer=all
 ; PR4225
 
-define void @sha256_block1(i32* nocapture %arr, i8* nocapture %in, i64 %num) nounwind {
+define void @sha256_block1(ptr nocapture %arr, ptr nocapture %in, i64 %num) nounwind {
 entry:
 	br i1 undef, label %while.end, label %bb.nph
 
@@ -11,14 +11,14 @@ bb.nph:		; preds = %entry
 while.body:		; preds = %for.end, %bb.nph
 	%indvar2787 = phi i64 [ 0, %bb.nph ], [ %indvar.next2788, %for.end ]		; <i64> [#uses=2]
 	%tmp2791 = mul i64 %indvar2787, 44		; <i64> [#uses=0]
-	%ctg22996 = getelementptr i8, i8* %in, i64 0		; <i8*> [#uses=1]
+	%ctg22996 = getelementptr i8, ptr %in, i64 0		; <ptr> [#uses=1]
 	%conv = zext i32 undef to i64		; <i64> [#uses=1]
 	%conv11 = zext i32 undef to i64		; <i64> [#uses=1]
-	%tmp18 = load i32, i32* undef		; <i32> [#uses=1]
+	%tmp18 = load i32, ptr undef		; <i32> [#uses=1]
 	%conv19 = zext i32 %tmp18 to i64		; <i64> [#uses=1]
-	%tmp30 = load i32, i32* undef		; <i32> [#uses=1]
+	%tmp30 = load i32, ptr undef		; <i32> [#uses=1]
 	%conv31 = zext i32 %tmp30 to i64		; <i64> [#uses=4]
-	%ptrincdec3065 = load i8, i8* null		; <i8> [#uses=1]
+	%ptrincdec3065 = load i8, ptr null		; <i8> [#uses=1]
 	%conv442709 = zext i8 %ptrincdec3065 to i64		; <i64> [#uses=1]
 	%shl45 = shl i64 %conv442709, 16		; <i64> [#uses=1]
 	%conv632707 = zext i8 undef to i64		; <i64> [#uses=1]
@@ -31,7 +31,7 @@ while.body:		; preds = %for.end, %bb.nph
 	%add98 = add i64 %add95, 0		; <i64> [#uses=1]
 	%add99 = add i64 %add98, %or64		; <i64> [#uses=1]
 	%add134 = add i64 %add99, 0		; <i64> [#uses=4]
-	store i32 undef, i32* undef
+	store i32 undef, ptr undef
 	%shl187 = shl i64 %add134, 21		; <i64> [#uses=0]
 	%and203 = and i64 %add134, %conv31		; <i64> [#uses=1]
 	%xor208 = xor i64 0, %and203		; <i64> [#uses=1]
@@ -68,15 +68,15 @@ while.body:		; preds = %for.end, %bb.nph
 	%add479 = add i64 %add473, %add441		; <i64> [#uses=3]
 	%conv4932682 = zext i8 undef to i64		; <i64> [#uses=1]
 	%shl494 = shl i64 %conv4932682, 16		; <i64> [#uses=1]
-	%ptrincdec4903012 = load i8, i8* null		; <i8> [#uses=1]
+	%ptrincdec4903012 = load i8, ptr null		; <i8> [#uses=1]
 	%conv5032681 = zext i8 %ptrincdec4903012 to i64		; <i64> [#uses=1]
 	%shl504 = shl i64 %conv5032681, 8		; <i64> [#uses=1]
-	%ptrincdec5003009 = load i8, i8* null		; <i8> [#uses=1]
+	%ptrincdec5003009 = load i8, ptr null		; <i8> [#uses=1]
 	%conv5132680 = zext i8 %ptrincdec5003009 to i64		; <i64> [#uses=1]
 	%or495 = or i64 %shl494, 0		; <i64> [#uses=1]
 	%or505 = or i64 %or495, %conv5132680		; <i64> [#uses=1]
 	%or514 = or i64 %or505, %shl504		; <i64> [#uses=1]
-	store i32 undef, i32* undef
+	store i32 undef, ptr undef
 	%or540 = or i64 undef, 0		; <i64> [#uses=0]
 	%add542 = add i64 %add134, 310598401		; <i64> [#uses=1]
 	%add551 = add i64 %add542, %or514		; <i64> [#uses=1]
@@ -91,10 +91,10 @@ while.body:		; preds = %for.end, %bb.nph
 	%xor575 = xor i64 %xor568, %or561		; <i64> [#uses=1]
 	%add587 = add i64 %xor575, 0		; <i64> [#uses=1]
 	%add593 = add i64 %add587, %add555		; <i64> [#uses=1]
-	%ptrincdec6043000 = load i8, i8* null		; <i8> [#uses=1]
+	%ptrincdec6043000 = load i8, ptr null		; <i8> [#uses=1]
 	%conv6172676 = zext i8 %ptrincdec6043000 to i64		; <i64> [#uses=1]
 	%shl618 = shl i64 %conv6172676, 8		; <i64> [#uses=1]
-	%ptrincdec6142997 = load i8, i8* %ctg22996		; <i8> [#uses=1]
+	%ptrincdec6142997 = load i8, ptr %ctg22996		; <i8> [#uses=1]
 	%conv6272675 = zext i8 %ptrincdec6142997 to i64		; <i64> [#uses=1]
 	%or619 = or i64 0, %conv6272675		; <i64> [#uses=1]
 	%or628 = or i64 %or619, %shl618		; <i64> [#uses=1]
@@ -106,7 +106,7 @@ while.body:		; preds = %for.end, %bb.nph
 	%xor700 = xor i64 0, %and699		; <i64> [#uses=1]
 	%add701 = add i64 0, %xor700		; <i64> [#uses=1]
 	%add707 = add i64 %add701, %add669		; <i64> [#uses=4]
-	%ptrincdec6242994 = load i8, i8* null		; <i8> [#uses=1]
+	%ptrincdec6242994 = load i8, ptr null		; <i8> [#uses=1]
 	%conv7122673 = zext i8 %ptrincdec6242994 to i64		; <i64> [#uses=1]
 	%shl713 = shl i64 %conv7122673, 24		; <i64> [#uses=1]
 	%conv7412670 = zext i8 undef to i64		; <i64> [#uses=1]
@@ -114,7 +114,7 @@ while.body:		; preds = %for.end, %bb.nph
 	%or733 = or i64 %or723, %conv7412670		; <i64> [#uses=1]
 	%or742 = or i64 %or733, 0		; <i64> [#uses=2]
 	%conv743 = trunc i64 %or742 to i32		; <i32> [#uses=1]
-	store i32 %conv743, i32* undef
+	store i32 %conv743, ptr undef
 	%xor762 = xor i64 undef, 0		; <i64> [#uses=0]
 	%add770 = add i64 %add362, 1426881987		; <i64> [#uses=1]
 	%add779 = add i64 %add770, %or742		; <i64> [#uses=1]
@@ -132,11 +132,11 @@ while.body:		; preds = %for.end, %bb.nph
 	%add821 = add i64 %add815, %add783		; <i64> [#uses=1]
 	%add1160 = add i64 0, %add707		; <i64> [#uses=0]
 	%add1157 = add i64 undef, undef		; <i64> [#uses=0]
-	%ptrincdec11742940 = load i8, i8* null		; <i8> [#uses=1]
+	%ptrincdec11742940 = load i8, ptr null		; <i8> [#uses=1]
 	%conv11872651 = zext i8 %ptrincdec11742940 to i64		; <i64> [#uses=1]
 	%shl1188 = shl i64 %conv11872651, 8		; <i64> [#uses=1]
 	%or1198 = or i64 0, %shl1188		; <i64> [#uses=1]
-	store i32 undef, i32* undef
+	store i32 undef, ptr undef
 	%add1226 = add i64 %or1198, 3248222580		; <i64> [#uses=1]
 	%add1235 = add i64 %add1226, 0		; <i64> [#uses=1]
 	%add1238 = add i64 %add1235, 0		; <i64> [#uses=1]
@@ -159,31 +159,31 @@ while.end:		; preds = %for.end, %entry
 	ret void
 }
 
-define void @sha256_block2(i32* nocapture %arr, i8* nocapture %in, i64 %num) nounwind {
+define void @sha256_block2(ptr nocapture %arr, ptr nocapture %in, i64 %num) nounwind {
 entry:
 	br i1 undef, label %while.end, label %bb.nph
 
 bb.nph:		; preds = %entry
-	%arrayidx5 = getelementptr i32, i32* %arr, i64 1		; <i32*> [#uses=1]
-	%arrayidx9 = getelementptr i32, i32* %arr, i64 2		; <i32*> [#uses=2]
-	%arrayidx13 = getelementptr i32, i32* %arr, i64 3		; <i32*> [#uses=2]
-	%arrayidx25 = getelementptr i32, i32* %arr, i64 6		; <i32*> [#uses=1]
-	%arrayidx29 = getelementptr i32, i32* %arr, i64 7		; <i32*> [#uses=1]
+	%arrayidx5 = getelementptr i32, ptr %arr, i64 1		; <ptr> [#uses=1]
+	%arrayidx9 = getelementptr i32, ptr %arr, i64 2		; <ptr> [#uses=2]
+	%arrayidx13 = getelementptr i32, ptr %arr, i64 3		; <ptr> [#uses=2]
+	%arrayidx25 = getelementptr i32, ptr %arr, i64 6		; <ptr> [#uses=1]
+	%arrayidx29 = getelementptr i32, ptr %arr, i64 7		; <ptr> [#uses=1]
 	br label %while.body
 
 while.body:		; preds = %for.end, %bb.nph
-	%tmp3 = load i32, i32* %arr		; <i32> [#uses=2]
+	%tmp3 = load i32, ptr %arr		; <i32> [#uses=2]
 	%conv = zext i32 %tmp3 to i64		; <i64> [#uses=1]
-	%tmp10 = load i32, i32* %arrayidx9		; <i32> [#uses=1]
+	%tmp10 = load i32, ptr %arrayidx9		; <i32> [#uses=1]
 	%conv11 = zext i32 %tmp10 to i64		; <i64> [#uses=1]
-	%tmp14 = load i32, i32* %arrayidx13		; <i32> [#uses=3]
+	%tmp14 = load i32, ptr %arrayidx13		; <i32> [#uses=3]
 	%conv15 = zext i32 %tmp14 to i64		; <i64> [#uses=2]
-	%tmp18 = load i32, i32* undef		; <i32> [#uses=2]
+	%tmp18 = load i32, ptr undef		; <i32> [#uses=2]
 	%conv19 = zext i32 %tmp18 to i64		; <i64> [#uses=1]
 	%conv23 = zext i32 undef to i64		; <i64> [#uses=1]
-	%tmp26 = load i32, i32* %arrayidx25		; <i32> [#uses=1]
+	%tmp26 = load i32, ptr %arrayidx25		; <i32> [#uses=1]
 	%conv27 = zext i32 %tmp26 to i64		; <i64> [#uses=1]
-	%tmp30 = load i32, i32* %arrayidx29		; <i32> [#uses=2]
+	%tmp30 = load i32, ptr %arrayidx29		; <i32> [#uses=2]
 	%conv31 = zext i32 %tmp30 to i64		; <i64> [#uses=5]
 	%shl72 = shl i64 %conv31, 26		; <i64> [#uses=1]
 	%shr = lshr i64 %conv31, 6		; <i64> [#uses=1]
@@ -203,7 +203,7 @@ while.body:		; preds = %for.end, %bb.nph
 	%add137 = add i64 %add131, %add99		; <i64> [#uses=5]
 	%conv1422700 = zext i8 undef to i64		; <i64> [#uses=1]
 	%shl143 = shl i64 %conv1422700, 24		; <i64> [#uses=1]
-	%ptrincdec1393051 = load i8, i8* undef		; <i8> [#uses=1]
+	%ptrincdec1393051 = load i8, ptr undef		; <i8> [#uses=1]
 	%conv1512699 = zext i8 %ptrincdec1393051 to i64		; <i64> [#uses=1]
 	%shl152 = shl i64 %conv1512699, 16		; <i64> [#uses=1]
 	%conv1712697 = zext i8 undef to i64		; <i64> [#uses=1]
@@ -253,10 +253,10 @@ while.body:		; preds = %for.end, %bb.nph
 	%add783 = add i64 %add782, 0		; <i64> [#uses=2]
 	%add818 = add i64 %add783, %add365		; <i64> [#uses=1]
 	%add821 = add i64 0, %add783		; <i64> [#uses=1]
-	store i32 undef, i32* undef
+	store i32 undef, ptr undef
 	%add1046 = add i64 undef, undef		; <i64> [#uses=1]
 	%add1160 = add i64 undef, undef		; <i64> [#uses=1]
-	store i32 0, i32* undef
+	store i32 0, ptr undef
 	%add1235 = add i64 0, %add818		; <i64> [#uses=1]
 	%add1238 = add i64 %add1235, 0		; <i64> [#uses=1]
 	%add1239 = add i64 %add1238, 0		; <i64> [#uses=1]
@@ -283,7 +283,7 @@ for.body:		; preds = %for.cond
 	%add1427 = add i64 %add1392, %d.0		; <i64> [#uses=1]
 	%add1424 = add i64 %xor1412, 0		; <i64> [#uses=1]
 	%add1430 = add i64 %add1424, %add1392		; <i64> [#uses=5]
-	%tmp1438 = load i32, i32* undef		; <i32> [#uses=1]
+	%tmp1438 = load i32, ptr undef		; <i32> [#uses=1]
 	%conv1439 = zext i32 %tmp1438 to i64		; <i64> [#uses=4]
 	%shl1441 = shl i64 %conv1439, 25		; <i64> [#uses=1]
 	%shr1444 = lshr i64 %conv1439, 7		; <i64> [#uses=1]
@@ -302,13 +302,13 @@ for.body:		; preds = %for.cond
 	%shr1479 = lshr i64 %conv1464, 10		; <i64> [#uses=1]
 	%xor1477 = xor i64 %or1476, %shr1479		; <i64> [#uses=1]
 	%xor1480 = xor i64 %xor1477, %or1470		; <i64> [#uses=1]
-	%tmp1499 = load i32, i32* null		; <i32> [#uses=1]
+	%tmp1499 = load i32, ptr null		; <i32> [#uses=1]
 	%conv1500 = zext i32 %tmp1499 to i64		; <i64> [#uses=1]
 	%add1491 = add i64 %conv1500, 0		; <i64> [#uses=1]
 	%add1501 = add i64 %add1491, %xor1455		; <i64> [#uses=1]
 	%add1502 = add i64 %add1501, %xor1480		; <i64> [#uses=1]
 	%conv1504 = and i64 %add1502, 4294967295		; <i64> [#uses=1]
-	%tmp1541 = load i32, i32* undef		; <i32> [#uses=1]
+	%tmp1541 = load i32, ptr undef		; <i32> [#uses=1]
 	%conv1542 = zext i32 %tmp1541 to i64		; <i64> [#uses=1]
 	%add1527 = add i64 %conv1542, %g.0		; <i64> [#uses=1]
 	%add1536 = add i64 %add1527, 0		; <i64> [#uses=1]
@@ -326,8 +326,8 @@ for.body:		; preds = %for.cond
 	%xor1564 = xor i64 %xor1557, %or1550		; <i64> [#uses=1]
 	%add1576 = add i64 %xor1564, 0		; <i64> [#uses=1]
 	%add1582 = add i64 %add1576, %add1544		; <i64> [#uses=3]
-	store i32 undef, i32* undef
-	%tmp1693 = load i32, i32* undef		; <i32> [#uses=1]
+	store i32 undef, ptr undef
+	%tmp1693 = load i32, ptr undef		; <i32> [#uses=1]
 	%conv1694 = zext i32 %tmp1693 to i64		; <i64> [#uses=1]
 	%add1679 = add i64 %conv1694, %f.0		; <i64> [#uses=1]
 	%add1688 = add i64 %add1679, 0		; <i64> [#uses=1]
@@ -345,15 +345,15 @@ for.body:		; preds = %for.cond
 	%add2035 = add i64 %add2000, %add1430		; <i64> [#uses=1]
 	%add2032 = add i64 0, %xor2031		; <i64> [#uses=1]
 	%add2038 = add i64 %add2032, %add2000		; <i64> [#uses=1]
-	store i32 0, i32* undef
+	store i32 0, ptr undef
 	br label %for.cond
 
 for.end:		; preds = %for.cond
-	store i32 undef, i32* %arrayidx5
-	store i32 undef, i32* %arrayidx9
+	store i32 undef, ptr %arrayidx5
+	store i32 undef, ptr %arrayidx9
 	%d.02641 = trunc i64 %d.0 to i32		; <i32> [#uses=1]
 	%conv2524 = add i32 %tmp14, %d.02641		; <i32> [#uses=1]
-	store i32 %conv2524, i32* %arrayidx13
+	store i32 %conv2524, ptr %arrayidx13
 	%exitcond2789 = icmp eq i64 undef, %num		; <i1> [#uses=1]
 	br i1 %exitcond2789, label %while.end, label %while.body
 

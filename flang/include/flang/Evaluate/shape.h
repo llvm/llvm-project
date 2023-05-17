@@ -13,11 +13,9 @@
 #define FORTRAN_EVALUATE_SHAPE_H_
 
 #include "expression.h"
-#include "fold.h"
 #include "traverse.h"
 #include "variable.h"
 #include "flang/Common/indirection.h"
-#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/type.h"
 #include <optional>
 #include <variant>
@@ -170,8 +168,9 @@ private:
     return common::visit(
         common::visitors{
             [&](const Expr<T> &x) -> MaybeExtentExpr {
-              if (auto xShape{
-                      context_ ? GetShape(*context_, x) : GetShape(x)}) {
+              if (auto xShape{!useResultSymbolShape_ ? (*this)(x)
+                          : context_                 ? GetShape(*context_, x)
+                                                     : GetShape(x)}) {
                 // Array values in array constructors get linearized.
                 return GetSize(std::move(*xShape));
               } else {
@@ -185,8 +184,10 @@ private:
                   !ContainsAnyImpliedDoIndex(ido.upper()) &&
                   !ContainsAnyImpliedDoIndex(ido.stride())) {
                 if (auto nValues{GetArrayConstructorExtent(ido.values())}) {
-                  return std::move(*nValues) *
-                      CountTrips(ido.lower(), ido.upper(), ido.stride());
+                  if (!ContainsAnyImpliedDoIndex(*nValues)) {
+                    return std::move(*nValues) *
+                        CountTrips(ido.lower(), ido.upper(), ido.stride());
+                  }
                 }
               }
               return std::nullopt;
@@ -201,18 +202,16 @@ private:
     ExtentExpr result{0};
     for (const auto &value : values) {
       if (MaybeExtentExpr n{GetArrayConstructorValueExtent(value)}) {
-        result = std::move(result) + std::move(*n);
-        if (context_) {
-          // Fold during expression creation to avoid creating an expression so
-          // large we can't evalute it without overflowing the stack.
-          result = Fold(*context_, std::move(result));
-        }
+        AccumulateExtent(result, std::move(*n));
       } else {
         return std::nullopt;
       }
     }
     return result;
   }
+
+  // Add an extent to another, with folding
+  void AccumulateExtent(ExtentExpr &, ExtentExpr &&) const;
 
   FoldingContext *context_{nullptr};
   bool useResultSymbolShape_{true};

@@ -38,16 +38,18 @@ add_llvm_target(BPFCodeGen
   LINK_COMPONENTS
   Analysis
   AsmPrinter
-  CodeGen
-  Core
-  MC
   BPFDesc
   BPFInfo
+  CodeGen
+  CodeGenTypes
+  Core
   IPO
+  MC
   Scalar
   SelectionDAG
   Support
   Target
+  TargetParser
   TransformUtils
 
   ADD_TO_COMPONENT

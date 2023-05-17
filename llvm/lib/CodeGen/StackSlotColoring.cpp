@@ -14,6 +14,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
+#include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveStacks.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
@@ -58,10 +59,10 @@ STATISTIC(NumDead,       "Number of trivially dead stack accesses eliminated");
 namespace {
 
   class StackSlotColoring : public MachineFunctionPass {
-    LiveStacks* LS;
-    MachineFrameInfo *MFI;
-    const TargetInstrInfo  *TII;
-    const MachineBlockFrequencyInfo *MBFI;
+    LiveStacks *LS = nullptr;
+    MachineFrameInfo *MFI = nullptr;
+    const TargetInstrInfo *TII = nullptr;
+    const MachineBlockFrequencyInfo *MBFI = nullptr;
 
     // SSIntervals - Spill slot intervals.
     std::vector<LiveInterval*> SSIntervals;
@@ -90,8 +91,50 @@ namespace {
     // UsedColors - "Colors" that have been assigned. This is per stack ID
     SmallVector<BitVector, 2> UsedColors;
 
+    // Join all intervals sharing one color into a single LiveIntervalUnion to
+    // speedup range overlap test.
+    class ColorAssignmentInfo {
+      // Single liverange (used to avoid creation of LiveIntervalUnion).
+      LiveInterval *SingleLI = nullptr;
+      // LiveIntervalUnion to perform overlap test.
+      LiveIntervalUnion *LIU = nullptr;
+      // LiveIntervalUnion has a parameter in its constructor so doing this
+      // dirty magic.
+      uint8_t LIUPad[sizeof(LiveIntervalUnion)];
+
+    public:
+      ~ColorAssignmentInfo() {
+        if (LIU)
+          LIU->~LiveIntervalUnion(); // Dirty magic again.
+      }
+
+      // Return true if LiveInterval overlaps with any
+      // intervals that have already been assigned to this color.
+      bool overlaps(LiveInterval *LI) const {
+        if (LIU)
+          return LiveIntervalUnion::Query(*LI, *LIU).checkInterference();
+        return SingleLI ? SingleLI->overlaps(*LI) : false;
+      }
+
+      // Add new LiveInterval to this color.
+      void add(LiveInterval *LI, LiveIntervalUnion::Allocator &Alloc) {
+        assert(!overlaps(LI));
+        if (LIU) {
+          LIU->unify(*LI, *LI);
+        } else if (SingleLI) {
+          LIU = new (LIUPad) LiveIntervalUnion(Alloc);
+          LIU->unify(*SingleLI, *SingleLI);
+          LIU->unify(*LI, *LI);
+          SingleLI = nullptr;
+        } else
+          SingleLI = LI;
+      }
+    };
+
+    LiveIntervalUnion::Allocator LIUAlloc;
+
     // Assignments - Color to intervals mapping.
-    SmallVector<SmallVector<LiveInterval*,4>, 16> Assignments;
+    SmallVector<ColorAssignmentInfo, 16> Assignments;
 
   public:
     static char ID; // Pass identification
@@ -116,7 +159,6 @@ namespace {
   private:
     void InitializeSlots();
     void ScanForSpillSlotRefs(MachineFunction &MF);
-    bool OverlapWithAssignments(LiveInterval *li, int Color) const;
     int ColorSlot(LiveInterval *li);
     bool ColorSlots(MachineFunction &MF);
     void RewriteInstruction(MachineInstr &MI, SmallVectorImpl<int> &SlotMapping,
@@ -247,19 +289,6 @@ void StackSlotColoring::InitializeSlots() {
     NextColors[I] = AllColors[I].find_first();
 }
 
-/// OverlapWithAssignments - Return true if LiveInterval overlaps with any
-/// LiveIntervals that have already been assigned to the specified color.
-bool
-StackSlotColoring::OverlapWithAssignments(LiveInterval *li, int Color) const {
-  const SmallVectorImpl<LiveInterval *> &OtherLIs = Assignments[Color];
-  for (unsigned i = 0, e = OtherLIs.size(); i != e; ++i) {
-    LiveInterval *OtherLI = OtherLIs[i];
-    if (OtherLI->overlaps(*li))
-      return true;
-  }
-  return false;
-}
-
 /// ColorSlot - Assign a "color" (stack slot) to the specified stack slot.
 int StackSlotColoring::ColorSlot(LiveInterval *li) {
   int Color = -1;
@@ -272,7 +301,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
     // Check if it's possible to reuse any of the used colors.
     Color = UsedColors[StackID].find_first();
     while (Color != -1) {
-      if (!OverlapWithAssignments(li, Color)) {
+      if (!Assignments[Color].overlaps(li)) {
         Share = true;
         ++NumEliminated;
         break;
@@ -298,7 +327,7 @@ int StackSlotColoring::ColorSlot(LiveInterval *li) {
   assert(MFI->getStackID(Color) == MFI->getStackID(FI));
 
   // Record the assignment.
-  Assignments[Color].push_back(li);
+  Assignments[Color].add(li, LIUAlloc);
   LLVM_DEBUG(dbgs() << "Assigning fi#" << FI << " to fi#" << Color << "\n");
 
   // Change size and alignment of the allocated slot. If there are multiple
@@ -515,8 +544,6 @@ bool StackSlotColoring::runOnMachineFunction(MachineFunction &MF) {
   OrigSizes.clear();
   AllColors.clear();
   UsedColors.clear();
-  for (unsigned i = 0, e = Assignments.size(); i != e; ++i)
-    Assignments[i].clear();
   Assignments.clear();
 
   return Changed;

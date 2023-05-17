@@ -85,8 +85,6 @@
 
 ; UNWIND: Function: ?func@@YAHXZ (0x0)
 ; UNWIND: Prologue [
-; UNWIND-NEXT: ; nop
-; UNWIND-NEXT: ; sub sp, #624
 ; UNWIND-NEXT: ; add fp, sp, #32
 ; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
 ; UNWIND-NEXT: ; str x28, [sp, #24]
@@ -104,7 +102,7 @@
 target datalayout = "e-m:w-p:64:64-i32:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64-unknown-windows-msvc19.11.0"
 
-%rtti.TypeDescriptor2 = type { i8**, i8*, [3 x i8] }
+%rtti.TypeDescriptor2 = type { ptr, ptr, [3 x i8] }
 %eh.CatchableType = type { i32, i32, i32, i32, i32, i32, i32 }
 %eh.CatchableTypeArray.1 = type { i32, [1 x i32] }
 %eh.ThrowInfo = type { i32, i32, i32, i32 }
@@ -117,81 +115,77 @@ $_CTA1H = comdat any
 
 $_TI1H = comdat any
 
-@"??_7type_info@@6B@" = external constant i8*
-@"??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { i8** @"??_7type_info@@6B@", i8* null, [3 x i8] c".H\00" }, comdat
+@"??_7type_info@@6B@" = external constant ptr
+@"??_R0H@8" = linkonce_odr global %rtti.TypeDescriptor2 { ptr @"??_7type_info@@6B@", ptr null, [3 x i8] c".H\00" }, comdat
 @__ImageBase = external dso_local constant i8
-@"_CT??_R0H@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%rtti.TypeDescriptor2* @"??_R0H@8" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32), i32 0, i32 -1, i32 0, i32 4, i32 0 }, section ".xdata", comdat
-@_CTA1H = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%eh.CatchableType* @"_CT??_R0H@84" to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32)] }, section ".xdata", comdat
-@_TI1H = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (%eh.CatchableTypeArray.1* @_CTA1H to i64), i64 ptrtoint (i8* @__ImageBase to i64)) to i32) }, section ".xdata", comdat
+@"_CT??_R0H@84" = linkonce_odr unnamed_addr constant %eh.CatchableType { i32 1, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"??_R0H@8" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32), i32 0, i32 -1, i32 0, i32 4, i32 0 }, section ".xdata", comdat
+@_CTA1H = linkonce_odr unnamed_addr constant %eh.CatchableTypeArray.1 { i32 1, [1 x i32] [i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @"_CT??_R0H@84" to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32)] }, section ".xdata", comdat
+@_TI1H = linkonce_odr unnamed_addr constant %eh.ThrowInfo { i32 0, i32 0, i32 0, i32 trunc (i64 sub nuw nsw (i64 ptrtoint (ptr @_CTA1H to i64), i64 ptrtoint (ptr @__ImageBase to i64)) to i32) }, section ".xdata", comdat
 
 ; Function Attrs: noinline optnone
-define dso_local i32 @"?func@@YAHXZ"() #0 personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define dso_local i32 @"?func@@YAHXZ"() #0 personality ptr @__CxxFrameHandler3 {
 entry:
   %B = alloca [50 x i32], align 4
   %x = alloca i32, align 4
   %tmp = alloca i32, align 4
   %i = alloca i32, align 4
   %C = alloca [100 x i32], align 4
-  store i32 1, i32* %x, align 4
-  %arraydecay = getelementptr inbounds [50 x i32], [50 x i32]* %B, i32 0, i32 0
-  call void @"?init@@YAXPEAH@Z"(i32* %arraydecay)
+  store i32 1, ptr %x, align 4
+  call void @"?init@@YAXPEAH@Z"(ptr %B)
   %call = invoke i32 @"?func2@@YAHXZ"()
           to label %invoke.cont unwind label %catch.dispatch
 
 invoke.cont:                                      ; preds = %entry
-  store i32 %call, i32* %tmp, align 4
-  %0 = bitcast i32* %tmp to i8*
-  invoke void @_CxxThrowException(i8* %0, %eh.ThrowInfo* @_TI1H) #2
+  store i32 %call, ptr %tmp, align 4
+  invoke void @_CxxThrowException(ptr %tmp, ptr @_TI1H) #2
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %invoke.cont, %entry
-  %1 = catchswitch within none [label %catch] unwind to caller
+  %0 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %2 = catchpad within %1 [%rtti.TypeDescriptor2* @"??_R0H@8", i32 0, i32* %i]
-  %arraydecay1 = getelementptr inbounds [100 x i32], [100 x i32]* %C, i32 0, i32 0
-  call void @"?init@@YAXPEAH@Z"(i32* %arraydecay1) [ "funclet"(token %2) ]
-  %arraydecay2 = getelementptr inbounds [50 x i32], [50 x i32]* %B, i32 0, i32 0
-  call void @"?init2@@YAXPEAH@Z"(i32* %arraydecay2) [ "funclet"(token %2) ]
-  %3 = load i32, i32* %i, align 4
-  %idxprom = sext i32 %3 to i64
-  %arrayidx = getelementptr inbounds [50 x i32], [50 x i32]* %B, i64 0, i64 %idxprom
-  %4 = load i32, i32* %arrayidx, align 4
-  %5 = load i32, i32* %i, align 4
-  %idxprom3 = sext i32 %5 to i64
-  %arrayidx4 = getelementptr inbounds [100 x i32], [100 x i32]* %C, i64 0, i64 %idxprom3
-  %6 = load i32, i32* %arrayidx4, align 4
-  %add = add nsw i32 %4, %6
-  %7 = load i32, i32* %i, align 4
-  %8 = load i32, i32* %i, align 4
-  %mul = mul nsw i32 %7, %8
+  %1 = catchpad within %0 [ptr @"??_R0H@8", i32 0, ptr %i]
+  call void @"?init@@YAXPEAH@Z"(ptr %C) [ "funclet"(token %1) ]
+  call void @"?init2@@YAXPEAH@Z"(ptr %B) [ "funclet"(token %1) ]
+  %2 = load i32, ptr %i, align 4
+  %idxprom = sext i32 %2 to i64
+  %arrayidx = getelementptr inbounds [50 x i32], ptr %B, i64 0, i64 %idxprom
+  %3 = load i32, ptr %arrayidx, align 4
+  %4 = load i32, ptr %i, align 4
+  %idxprom3 = sext i32 %4 to i64
+  %arrayidx4 = getelementptr inbounds [100 x i32], ptr %C, i64 0, i64 %idxprom3
+  %5 = load i32, ptr %arrayidx4, align 4
+  %add = add nsw i32 %3, %5
+  %6 = load i32, ptr %i, align 4
+  %7 = load i32, ptr %i, align 4
+  %mul = mul nsw i32 %6, %7
   %add5 = add nsw i32 %add, %mul
-  store i32 %add5, i32* %x, align 4
-  catchret from %2 to label %catchret.dest
+  store i32 %add5, ptr %x, align 4
+  catchret from %1 to label %catchret.dest
 
 catchret.dest:                                    ; preds = %catch
   br label %try.cont
 
 try.cont:                                         ; preds = %catchret.dest
-  %arrayidx6 = getelementptr inbounds [50 x i32], [50 x i32]* %B, i64 0, i64 2
-  %9 = load i32, i32* %arrayidx6, align 4
-  %10 = load i32, i32* %x, align 4
-  %add7 = add nsw i32 %9, %10
+  %arrayidx6 = getelementptr inbounds [50 x i32], ptr %B, i64 0, i64 2
+  %8 = load i32, ptr %arrayidx6, align 4
+  %9 = load i32, ptr %x, align 4
+  %add7 = add nsw i32 %8, %9
   ret i32 %add7
 
 unreachable:                                      ; preds = %invoke.cont
   unreachable
 }
 
-declare dso_local void @"?init@@YAXPEAH@Z"(i32*)
+declare dso_local void @"?init@@YAXPEAH@Z"(ptr)
 
 declare dso_local i32 @"?func2@@YAHXZ"()
 
 declare dso_local i32 @__CxxFrameHandler3(...)
 
-declare dllimport void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare dllimport void @_CxxThrowException(ptr, ptr)
 
-declare dso_local void @"?init2@@YAXPEAH@Z"(i32*)
+declare dso_local void @"?init2@@YAXPEAH@Z"(ptr)
 
 attributes #0 = { noinline optnone }
 attributes #2 = { noreturn }

@@ -66,6 +66,7 @@ def PDL_Dialect : Dialect {
   let cppNamespace = "::mlir::pdl";
 
   let useDefaultTypePrinterParser = 1;
+  let usePropertiesForAttributes = 1;
   let extraClassDeclaration = [{
     void registerTypes();
   }];

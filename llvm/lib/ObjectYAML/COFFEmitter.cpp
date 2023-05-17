@@ -25,6 +25,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <vector>
 
 using namespace llvm;
@@ -46,10 +47,10 @@ struct COFFParser {
            COFF::MaxNumberOfSections16;
   }
 
-  bool isPE() const { return Obj.OptionalHeader.hasValue(); }
+  bool isPE() const { return Obj.OptionalHeader.has_value(); }
   bool is64Bit() const {
     return Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_AMD64 ||
-           Obj.Header.Machine == COFF::IMAGE_FILE_MACHINE_ARM64;
+           COFF::isAnyArm64(Obj.Header.Machine);
   }
 
   uint32_t getFileAlignment() const {
@@ -237,7 +238,7 @@ static bool layoutCOFF(COFFParser &CP) {
       if (S.SectionData.binary_size() == 0)
         S.SectionData = CodeViewYAML::toDebugT(S.DebugP, CP.Allocator, S.Name);
     } else if (S.Name == ".debug$H") {
-      if (S.DebugH.hasValue() && S.SectionData.binary_size() == 0)
+      if (S.DebugH && S.SectionData.binary_size() == 0)
         S.SectionData = CodeViewYAML::toDebugH(*S.DebugH, CP.Allocator);
     }
 
@@ -453,11 +454,10 @@ static bool writeCOFF(COFFParser &CP, raw_ostream &OS) {
     }
     for (uint32_t I = 0; I < CP.Obj.OptionalHeader->Header.NumberOfRvaAndSize;
          ++I) {
-      const Optional<COFF::DataDirectory> *DataDirectories =
+      const std::optional<COFF::DataDirectory> *DataDirectories =
           CP.Obj.OptionalHeader->DataDirectories;
-      uint32_t NumDataDir = sizeof(CP.Obj.OptionalHeader->DataDirectories) /
-                            sizeof(Optional<COFF::DataDirectory>);
-      if (I >= NumDataDir || !DataDirectories[I].hasValue()) {
+      uint32_t NumDataDir = std::size(CP.Obj.OptionalHeader->DataDirectories);
+      if (I >= NumDataDir || !DataDirectories[I]) {
         OS << zeros(uint32_t(0));
         OS << zeros(uint32_t(0));
       } else {

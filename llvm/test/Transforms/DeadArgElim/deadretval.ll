@@ -23,21 +23,21 @@ define i32 @test3() {
 ; The callee function's return type shouldn't be changed if the call result is
 ; used.
 
-; CHECK-LABEL: define internal i8* @callee4()
+; CHECK-LABEL: define internal ptr @callee4()
 
-define internal i8* @callee4(i8* %a0) {
-  ret i8* @g0;
+define internal ptr @callee4(ptr %a0) {
+  ret ptr @g0;
 }
 
 declare void @llvm.objc.clang.arc.noop.use(...)
 
-; CHECK-LABEL: define i8* @test4(
-; CHECK: tail call i8* @callee4() [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
+; CHECK-LABEL: define ptr @test4(
+; CHECK: tail call ptr @callee4() [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
 
-define i8* @test4() {
-  %call = tail call i8* @callee4(i8* @g0) [ "clang.arc.attachedcall"(i8* (i8*)* @llvm.objc.retainAutoreleasedReturnValue) ]
-  call void (...) @llvm.objc.clang.arc.noop.use(i8* %call)
-  ret i8* @g0
+define ptr @test4() {
+  %call = tail call ptr @callee4(ptr @g0) [ "clang.arc.attachedcall"(ptr @llvm.objc.retainAutoreleasedReturnValue) ]
+  call void (...) @llvm.objc.clang.arc.noop.use(ptr %call)
+  ret ptr @g0
 }
 
-declare i8* @llvm.objc.retainAutoreleasedReturnValue(i8*)
+declare ptr @llvm.objc.retainAutoreleasedReturnValue(ptr)

@@ -52,12 +52,12 @@
 define void @_Z1biz(i32 %c, ...) #0 !dbg !14 {
   %1 = alloca i32, align 4
   %a = alloca %struct.A, align 1
-  %fptr = alloca void (i32, ...)*, align 8
-  store i32 %c, i32* %1, align 4
-  call void @llvm.dbg.declare(metadata i32* %1, metadata !21, metadata !DIExpression()), !dbg !22
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !23, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.declare(metadata void (i32, ...)** %fptr, metadata !25, metadata !DIExpression(DW_OP_deref)), !dbg !27
-  store void (i32, ...)* @_Z1biz, void (i32, ...)** %fptr, align 8, !dbg !27
+  %fptr = alloca ptr, align 8
+  store i32 %c, ptr %1, align 4
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !21, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !23, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.declare(metadata ptr %fptr, metadata !25, metadata !DIExpression(DW_OP_deref)), !dbg !27
+  store ptr @_Z1biz, ptr %fptr, align 8, !dbg !27
   ret void, !dbg !28
 }
 

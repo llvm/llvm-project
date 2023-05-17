@@ -11,13 +11,16 @@
 #include "lldb/Target/Target.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
+#include <optional>
 
 using namespace lldb_private;
 
+ExpressionVariable::ExpressionVariable(LLVMCastKind kind)
+    : m_flags(0), m_kind(kind) {}
 ExpressionVariable::~ExpressionVariable() = default;
 
 uint8_t *ExpressionVariable::GetValueBytes() {
-  llvm::Optional<uint64_t> byte_size = m_frozen_sp->GetByteSize();
+  std::optional<uint64_t> byte_size = m_frozen_sp->GetByteSize();
   if (byte_size && *byte_size) {
     if (m_frozen_sp->GetDataExtractor().GetByteSize() < *byte_size) {
       m_frozen_sp->GetValue().ResizeData(*byte_size);
@@ -29,6 +32,8 @@ uint8_t *ExpressionVariable::GetValueBytes() {
   return nullptr;
 }
 
+PersistentExpressionState::PersistentExpressionState(LLVMCastKind kind)
+    : m_kind(kind) {}
 PersistentExpressionState::~PersistentExpressionState() = default;
 
 lldb::addr_t PersistentExpressionState::LookupSymbol(ConstString name) {

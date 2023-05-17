@@ -28,7 +28,7 @@ declare !type !17 !type !18 void @_Z1gIM1iKFivEEvT_(i64, i64)
 !4 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "o<i, int, &i::m_fn1>", file: !5, line: 22, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !2, templateParams: !6, identifier: "_ZTS1oI1iiXadL_ZNKS0_5m_fn1EvEEE")
 !5 = !DIFile(filename: "t.ii", directory: "/tmp")
 !6 = !{!7}
-!7 = !DITemplateValueParameter(type: !8, value: i64 ptrtoint (i32* @_ZNK1i5m_fn1Ev to i64))
+!7 = !DITemplateValueParameter(type: !8, value: i64 ptrtoint (ptr @_ZNK1i5m_fn1Ev to i64))
 !8 = !DIDerivedType(tag: DW_TAG_ptr_to_member_type, baseType: !9, size: 128, extraData: !13)
 !9 = !DISubroutineType(types: !10)
 !10 = !{!11, !12}
@@ -37,6 +37,6 @@ declare !type !17 !type !18 void @_Z1gIM1iKFivEEvT_(i64, i64)
 !13 = distinct !DICompositeType(tag: DW_TAG_class_type, name: "i", file: !5, line: 13, size: 8, flags: DIFlagTypePassByValue | DIFlagNonTrivial, elements: !2, identifier: "_ZTS1i")
 !14 = !{i32 2, !"Debug Info Version", i32 3}
 !15 = !{i32 4, !"CFI Canonical Jump Tables", i32 0}
-!16 = !{i64 ptrtoint (i32* @_ZNK1i5m_fn1Ev to i64)}
+!16 = !{i64 ptrtoint (ptr @_ZNK1i5m_fn1Ev to i64)}
 !17 = !{i64 0, !"_ZTSFvM1iKFivEE"}
 !18 = !{i64 0, !"_ZTSFvM1iKFivEE.generalized"}

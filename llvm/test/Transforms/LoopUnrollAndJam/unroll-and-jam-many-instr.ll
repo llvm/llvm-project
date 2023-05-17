@@ -1,10 +1,10 @@
-; RUN: opt -basic-aa -tbaa -loop-unroll-and-jam  -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
+; RUN: opt -passes=loop-unroll-and-jam  -allow-unroll-and-jam -unroll-and-jam-count=4 < %s -S | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 @a = common dso_local local_unnamed_addr global i32 0, align 4
 @b = common dso_local local_unnamed_addr global i8 0, align 1
 @e = common dso_local local_unnamed_addr global i64 0, align 8
-@c = common dso_local local_unnamed_addr global i32* null, align 8
+@c = common dso_local local_unnamed_addr global ptr null, align 8
 @g = common dso_local local_unnamed_addr global i64 0, align 8
 @f = common dso_local local_unnamed_addr global i32 0, align 4
 
@@ -20,12 +20,12 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 ; CHECK: for.end27
 define dso_local void @test1(i32 %i) {
 entry:
-  %0 = load i32, i32* @a, align 4, !tbaa !1
+  %0 = load i32, ptr @a, align 4, !tbaa !1
   %tobool40 = icmp eq i32 %0, 0
   br i1 %tobool40, label %for.end27, label %for.cond1.preheader.lr.ph
 
 for.cond1.preheader.lr.ph:                        ; preds = %entry
-  %1 = load i32*, i32** @c, align 8, !tbaa !5
+  %1 = load ptr, ptr @c, align 8, !tbaa !5
   br label %for.cond1.preheader
 
 for.cond1.preheader:                              ; preds = %for.cond1.preheader.lr.ph, %for.cond13.preheader
@@ -303,66 +303,66 @@ for.cond13.preheader:                             ; preds = %for.cond4.preheader
   %tobool21.8.9 = icmp ne i32 %xor.7.9, 0
   %lor.ext.8.9 = zext i1 %tobool21.8.9 to i32
   %xor.8.9 = xor i32 %xor.7.9, %lor.ext.8.9
-  store i32 10, i32* @f, align 4, !tbaa !1
-  %2 = load i32, i32* @a, align 4, !tbaa !1
+  store i32 10, ptr @f, align 4, !tbaa !1
+  %2 = load i32, ptr @a, align 4, !tbaa !1
   %tobool = icmp eq i32 %2, 0
   br i1 %tobool, label %for.cond.for.end27_crit_edge, label %for.cond1.preheader
 
 for.cond4.preheader:                              ; preds = %for.cond1.preheader, %for.cond4.preheader
   %j.035 = phi i32 [ 9, %for.cond1.preheader ], [ %dec11, %for.cond4.preheader ]
-  %3 = load i8, i8* @b, align 1, !tbaa !7
+  %3 = load i8, ptr @b, align 1, !tbaa !7
   %conv = zext i8 %3 to i32
   %cmp = icmp sgt i32 %i.addr.041, %conv
   %conv7 = zext i1 %cmp to i32
-  store i32 %conv7, i32* %1, align 4, !tbaa !1
-  %4 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7, ptr %1, align 4, !tbaa !1
+  %4 = load i8, ptr @b, align 1, !tbaa !7
   %conv.1 = zext i8 %4 to i32
   %cmp.1 = icmp sgt i32 %i.addr.041, %conv.1
   %conv7.1 = zext i1 %cmp.1 to i32
-  store i32 %conv7.1, i32* %1, align 4, !tbaa !1
-  %5 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7.1, ptr %1, align 4, !tbaa !1
+  %5 = load i8, ptr @b, align 1, !tbaa !7
   %conv.2 = zext i8 %5 to i32
   %cmp.2 = icmp sgt i32 %i.addr.041, %conv.2
   %conv7.2 = zext i1 %cmp.2 to i32
-  store i32 %conv7.2, i32* %1, align 4, !tbaa !1
-  %6 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7.2, ptr %1, align 4, !tbaa !1
+  %6 = load i8, ptr @b, align 1, !tbaa !7
   %conv.3 = zext i8 %6 to i32
   %cmp.3 = icmp sgt i32 %i.addr.041, %conv.3
   %conv7.3 = zext i1 %cmp.3 to i32
-  store i32 %conv7.3, i32* %1, align 4, !tbaa !1
-  %7 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7.3, ptr %1, align 4, !tbaa !1
+  %7 = load i8, ptr @b, align 1, !tbaa !7
   %conv.4 = zext i8 %7 to i32
   %cmp.4 = icmp sgt i32 %i.addr.041, %conv.4
   %conv7.4 = zext i1 %cmp.4 to i32
-  store i32 %conv7.4, i32* %1, align 4, !tbaa !1
-  %8 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7.4, ptr %1, align 4, !tbaa !1
+  %8 = load i8, ptr @b, align 1, !tbaa !7
   %conv.5 = zext i8 %8 to i32
   %cmp.5 = icmp sgt i32 %i.addr.041, %conv.5
   %conv7.5 = zext i1 %cmp.5 to i32
-  store i32 %conv7.5, i32* %1, align 4, !tbaa !1
-  %9 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7.5, ptr %1, align 4, !tbaa !1
+  %9 = load i8, ptr @b, align 1, !tbaa !7
   %conv.6 = zext i8 %9 to i32
   %cmp.6 = icmp sgt i32 %i.addr.041, %conv.6
   %conv7.6 = zext i1 %cmp.6 to i32
-  store i32 %conv7.6, i32* %1, align 4, !tbaa !1
-  %10 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7.6, ptr %1, align 4, !tbaa !1
+  %10 = load i8, ptr @b, align 1, !tbaa !7
   %conv.7 = zext i8 %10 to i32
   %cmp.7 = icmp sgt i32 %i.addr.041, %conv.7
   %conv7.7 = zext i1 %cmp.7 to i32
-  store i32 %conv7.7, i32* %1, align 4, !tbaa !1
-  %11 = load i8, i8* @b, align 1, !tbaa !7
+  store i32 %conv7.7, ptr %1, align 4, !tbaa !1
+  %11 = load i8, ptr @b, align 1, !tbaa !7
   %conv.8 = zext i8 %11 to i32
   %cmp.8 = icmp sgt i32 %i.addr.041, %conv.8
   %conv7.8 = zext i1 %cmp.8 to i32
-  store i32 %conv7.8, i32* %1, align 4, !tbaa !1
+  store i32 %conv7.8, ptr %1, align 4, !tbaa !1
   %dec11 = add nsw i32 %j.035, -1
   %tobool2 = icmp eq i32 %dec11, 0
   br i1 %tobool2, label %for.cond13.preheader, label %for.cond4.preheader
 
 for.cond.for.end27_crit_edge:                     ; preds = %for.cond13.preheader
   %conv8.le.le = zext i1 %cmp.8 to i64
-  store i64 %conv8.le.le, i64* @e, align 8, !tbaa !8
-  store i64 10, i64* @g, align 8, !tbaa !8
+  store i64 %conv8.le.le, ptr @e, align 8, !tbaa !8
+  store i64 10, ptr @g, align 8, !tbaa !8
   br label %for.end27
 
 for.end27:                                        ; preds = %for.cond.for.end27_crit_edge, %entry

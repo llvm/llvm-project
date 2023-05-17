@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value %s 2>&1 | FileCheck -strict-whitespace %s
+// RUN: %clang_cc1 -fsyntax-only -Wno-unused-value %s 2>&1 | FileCheck %s
 // REQUIRES: asserts
 
 void foo(void) {
@@ -13,7 +13,7 @@ void foo(void) {
 // CHECK: {{^                                  \^~~~}}
 
   "xxé¿¿¿d";
-// CHECK: {{^  "xx<U\+9FFF><BF>d";}}
+// CHECK: {{^  "xxé¿¿<BF>d";}}
 // CHECK: {{^             \^~~~}}
 
   "xxé¿bcd";

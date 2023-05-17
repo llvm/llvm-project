@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -44,7 +42,7 @@ bool containsEscapedCharacters(const MatchFinder::MatchResult &Result,
                                const StringLiteral *Literal,
                                const CharsBitSet &DisallowedChars) {
   // FIXME: Handle L"", u8"", u"" and U"" literals.
-  if (!Literal->isAscii())
+  if (!Literal->isOrdinary())
     return false;
 
   for (const unsigned char C : Literal->getBytes())
@@ -147,6 +145,4 @@ void RawStringLiteralCheck::replaceWithRawStringLiteral(
       << FixItHint::CreateReplacement(CharRange, Replacement);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

@@ -168,11 +168,11 @@ define i64 @test_umnegl(i32 %lhs, i32 %rhs) {
 
 define void @test_mneg(){
 ; CHECK-LABEL: test_mneg:
-  %1 = load i32, i32* @a, align 4
-  %2 = load i32, i32* @b, align 4
+  %1 = load i32, ptr @a, align 4
+  %2 = load i32, ptr @b, align 4
   %3 = sub i32 0, %1
   %4 = mul i32 %2, %3
-  store i32 %4, i32* @c, align 4
+  store i32 %4, ptr @c, align 4
 ; CHECK: mneg {{w[0-9]+}}, {{w[0-9]+}}, {{w[0-9]+}}
   ret void
 }

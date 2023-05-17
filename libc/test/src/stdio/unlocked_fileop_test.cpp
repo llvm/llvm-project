@@ -15,9 +15,9 @@
 #include "src/stdio/fread_unlocked.h"
 #include "src/stdio/funlockfile.h"
 #include "src/stdio/fwrite_unlocked.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
@@ -36,8 +36,8 @@ TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   ASSERT_EQ(size_t(0),
             __llvm_libc::fread_unlocked(data, 1, sizeof(READ_SIZE), f));
   ASSERT_NE(__llvm_libc::ferror_unlocked(f), 0);
-  ASSERT_NE(errno, 0);
-  errno = 0;
+  ASSERT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   __llvm_libc::clearerr_unlocked(f);
   ASSERT_EQ(__llvm_libc::ferror_unlocked(f), 0);
@@ -57,8 +57,8 @@ TEST(LlvmLibcFILETest, UnlockedReadAndWrite) {
   ASSERT_EQ(size_t(0),
             __llvm_libc::fwrite_unlocked(CONTENT, 1, sizeof(CONTENT), f));
   ASSERT_NE(__llvm_libc::ferror_unlocked(f), 0);
-  ASSERT_NE(errno, 0);
-  errno = 0;
+  ASSERT_NE(libc_errno, 0);
+  libc_errno = 0;
 
   __llvm_libc::clearerr_unlocked(f);
   ASSERT_EQ(__llvm_libc::ferror_unlocked(f), 0);

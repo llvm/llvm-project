@@ -6,7 +6,7 @@ template("driver_executable") {
   tool_name = string_replace(target_name, "-", "_")
 
   write_cmake_config("${tool_name}-driver") {
-    input = "//llvm/cmake/driver-template.cpp.in"
+    input = "//llvm/cmake/modules/llvm-driver-template.cpp.in"
     output = "$target_gen_dir/${tool_name}-driver.cpp"
     values = [ "TOOL_NAME=$tool_name" ]
   }

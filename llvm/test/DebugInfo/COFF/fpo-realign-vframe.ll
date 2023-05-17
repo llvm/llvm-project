@@ -14,7 +14,7 @@
 ; struct Foo {
 ;   int x = 42;
 ;   int __declspec(noinline) foo();
-;   void __declspec(noinline) bar(int *a, int *b, double *c);
+;   void __declspec(noinline) bar(int *a, int *b, ptr c);
 ; };
 ; int Foo::foo() {
 ;   int a = 1;
@@ -24,7 +24,7 @@
 ;   x += (int)force_alignment;
 ;   return x;
 ; }
-; void Foo::bar(int *a, int *b, double *c) {
+; void Foo::bar(int *a, int *b, ptr c) {
 ;   __debugbreak();
 ;   *c += *a + *b;
 ; }
@@ -36,7 +36,7 @@
 
 ; More reduced C code to generate this IR:
 ; int getval(void);
-; void usevals(int *, int *, double *);
+; void usevals(int *, int *, ptr);
 ; int realign_with_csrs(int x) {
 ;   int a = getval();
 ;   double __declspec(align(8)) force_alignment = 0.42;
@@ -95,6 +95,10 @@
 ; OBJ:   SubSectionType: Symbols (0xF1)
 ; OBJ:   GlobalProcIdSym {
 ; OBJ:     Kind: S_GPROC32_ID (0x1147)
+; OBJ:     Flags [ (0x81)
+; OBJ:       HasFP (0x1)
+; OBJ:       HasOptimizedDebugInfo (0x80)
+; OBJ:     ]
 ; OBJ:     DisplayName: realign_with_csrs
 ; OBJ:     LinkageName: _realign_with_csrs
 ; OBJ:   }
@@ -158,36 +162,34 @@ entry:
   %x.addr = alloca i32, align 4
   %a = alloca i32, align 4
   %force_alignment = alloca double, align 8
-  store i32 %x, i32* %x.addr, align 4, !tbaa !17
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !13, metadata !DIExpression()), !dbg !21
-  %0 = bitcast i32* %a to i8*, !dbg !22
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #4, !dbg !22
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !14, metadata !DIExpression()), !dbg !22
+  store i32 %x, ptr %x.addr, align 4, !tbaa !17
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !13, metadata !DIExpression()), !dbg !21
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a) #4, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !14, metadata !DIExpression()), !dbg !22
   %call = tail call i32 @getval() #4, !dbg !22
-  store i32 %call, i32* %a, align 4, !dbg !22, !tbaa !17
-  %1 = bitcast double* %force_alignment to i8*, !dbg !23
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %1) #4, !dbg !23
-  call void @llvm.dbg.declare(metadata double* %force_alignment, metadata !15, metadata !DIExpression()), !dbg !23
-  store double 4.200000e-01, double* %force_alignment, align 8, !dbg !23, !tbaa !24
-  call void @usevals(i32* nonnull %a, i32* nonnull %x.addr, double* nonnull %force_alignment) #4, !dbg !26
-  %2 = load i32, i32* %x.addr, align 4, !dbg !27, !tbaa !17
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %1) #4, !dbg !28
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #4, !dbg !28
-  ret i32 %2, !dbg !27
+  store i32 %call, ptr %a, align 4, !dbg !22, !tbaa !17
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %force_alignment) #4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %force_alignment, metadata !15, metadata !DIExpression()), !dbg !23
+  store double 4.200000e-01, ptr %force_alignment, align 8, !dbg !23, !tbaa !24
+  call void @usevals(ptr nonnull %a, ptr nonnull %x.addr, ptr nonnull %force_alignment) #4, !dbg !26
+  %0 = load i32, ptr %x.addr, align 4, !dbg !27, !tbaa !17
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %force_alignment) #4, !dbg !28
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %a) #4, !dbg !28
+  ret i32 %0, !dbg !27
 }
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
 declare dso_local i32 @getval() local_unnamed_addr #3
 
-declare dso_local void @usevals(i32*, i32*, double*) local_unnamed_addr #3
+declare dso_local void @usevals(ptr, ptr, ptr) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }

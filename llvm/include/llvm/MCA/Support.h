@@ -99,7 +99,7 @@ void computeProcResourceMasks(const MCSchedModel &SM,
 // the highest bit set can be used to construct a resource mask identifier.
 inline unsigned getResourceStateIndex(uint64_t Mask) {
   assert(Mask && "Processor Resource Mask cannot be zero!");
-  return (std::numeric_limits<uint64_t>::digits - countLeadingZeros(Mask)) - 1;
+  return llvm::Log2_64(Mask);
 }
 
 /// Compute the reciprocal block throughput from a set of processor resource

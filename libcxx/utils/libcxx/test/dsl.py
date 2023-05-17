@@ -105,7 +105,7 @@ def _executeScriptInternal(test, commands):
     out = out[:-len(conflatedErrorOutput)]
     err += conflatedErrorOutput
 
-  return (out, err, exitCode, timeoutInfo)
+  return (out, err, exitCode, timeoutInfo, parsedCommands)
 
 def _makeConfigTest(config):
   # Make sure the support directories exist, which is needed to create
@@ -146,7 +146,7 @@ def sourceBuilds(config, source, additionalFlags=[]):
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as sourceFile:
       sourceFile.write(source)
-    _, _, exitCode, _ = _executeScriptInternal(test, ['%{{build}} {}'.format(' '.join(additionalFlags))])
+    _, _, exitCode, _, _ = _executeScriptInternal(test, ['%{{build}} {}'.format(' '.join(additionalFlags))])
     return exitCode == 0
 
 @_memoizeExpensiveOperation(lambda c, p, args=None: (c.substitutions, c.environment, p, args))
@@ -164,13 +164,13 @@ def programOutput(config, program, args=None):
   with _makeConfigTest(config) as test:
     with open(test.getSourcePath(), 'w') as source:
       source.write(program)
-    _, err, exitCode, _ = _executeScriptInternal(test, ['%{build}'])
+    _, err, exitCode, _, buildcmd = _executeScriptInternal(test, ['%{build}'])
     if exitCode != 0:
-      raise ConfigurationCompilationError("Failed to build program, stderr is:\n{}".format(err))
+      raise ConfigurationCompilationError("Failed to build program, cmd:\n{}\nstderr is:\n{}".format(buildcmd, err))
 
-    out, err, exitCode, _ = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
+    out, err, exitCode, _, runcmd = _executeScriptInternal(test, ["%{{run}} {}".format(' '.join(args))])
     if exitCode != 0:
-      raise ConfigurationRuntimeError("Failed to run program, stderr is:\n{}".format(err))
+      raise ConfigurationRuntimeError("Failed to run program, cmd:\n{}\nstderr is:\n{}".format(runcmd, err))
 
     actualOut = re.search("# command output:\n(.+)\n$", out, flags=re.DOTALL)
     actualOut = actualOut.group(1) if actualOut else ""
@@ -201,7 +201,7 @@ def hasCompileFlag(config, flag):
   checking whether that succeeds.
   """
   with _makeConfigTest(config) as test:
-    out, err, exitCode, timeoutInfo = _executeScriptInternal(test, [
+    out, err, exitCode, timeoutInfo, _ = _executeScriptInternal(test, [
       "%{{cxx}} -xc++ {} -Werror -fsyntax-only %{{flags}} %{{compile_flags}} {}".format(os.devnull, flag)
     ])
     return exitCode == 0
@@ -215,7 +215,7 @@ def runScriptExitCode(config, script):
   could appear on the right-hand-side of a `RUN:` keyword.
   """
   with _makeConfigTest(config) as test:
-    _, _, exitCode, _ = _executeScriptInternal(test, script)
+    _, _, exitCode, _, _ = _executeScriptInternal(test, script)
     return exitCode
 
 @_memoizeExpensiveOperation(lambda c, s: (c.substitutions, c.environment, s))
@@ -228,9 +228,9 @@ def commandOutput(config, command):
   could appear on the right-hand-side of a `RUN:` keyword.
   """
   with _makeConfigTest(config) as test:
-    out, _, exitCode, _ = _executeScriptInternal(test, command)
+    out, err, exitCode, _, cmd = _executeScriptInternal(test, command)
     if exitCode != 0:
-     raise ConfigurationRuntimeError()
+     raise ConfigurationRuntimeError("Failed to run command: {}\nstderr is:\n{}".format(cmd, err))
     return out
 
 @_memoizeExpensiveOperation(lambda c, l: (c.substitutions, c.environment, l))
@@ -281,11 +281,11 @@ def compilerMacros(config, flags=''):
       #  include <__config_site>
       #endif
       """)
-    unparsedOutput, err, exitCode, _ = _executeScriptInternal(test, [
+    unparsedOutput, err, exitCode, _, cmd = _executeScriptInternal(test, [
       "%{{cxx}} %s -dM -E %{{flags}} %{{compile_flags}} {}".format(flags)
     ])
     if exitCode != 0:
-      raise ConfigurationCompilationError("Failed to retrieve compiler macros, stderr is:\n{}".format(err))
+      raise ConfigurationCompilationError("Failed to retrieve compiler macros, compiler invocation is:\n{}\nstderr is:\n{}".format(cmd, err))
     parsedMacros = dict()
     defines = (l.strip() for l in unparsedOutput.split('\n') if l.startswith('#define '))
     for line in defines:
@@ -604,7 +604,7 @@ class Parameter(object):
   Parameters are used to customize the behavior of test suites in a user
   controllable way. There are two ways of setting the value of a Parameter.
   The first one is to pass `--param <KEY>=<VALUE>` when running Lit (or
-  equivalenlty to set `litConfig.params[KEY] = VALUE` somewhere in the
+  equivalently to set `litConfig.params[KEY] = VALUE` somewhere in the
   Lit configuration files. This method will set the parameter globally for
   all test suites being run.
 

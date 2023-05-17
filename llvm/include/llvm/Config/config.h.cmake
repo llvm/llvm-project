@@ -128,9 +128,6 @@
 /* Define to 1 if you have the <link.h> header file. */
 #cmakedefine HAVE_LINK_H ${HAVE_LINK_H}
 
-/* Define to 1 if you have the `lseek64' function. */
-#cmakedefine HAVE_LSEEK64 ${HAVE_LSEEK64}
-
 /* Define to 1 if you have the <mach/mach.h> header file. */
 #cmakedefine HAVE_MACH_MACH_H ${HAVE_MACH_MACH_H}
 
@@ -319,9 +316,6 @@
 
 /* Define to the vendor of this package. */
 #cmakedefine PACKAGE_VENDOR "${PACKAGE_VENDOR}"
-
-/* Define if std::is_trivially_copyable is supported */
-#cmakedefine HAVE_STD_IS_TRIVIALLY_COPYABLE ${HAVE_STD_IS_TRIVIALLY_COPYABLE}
 
 /* Define to a function implementing stricmp */
 #cmakedefine stricmp ${stricmp}

@@ -26,7 +26,7 @@ for.cond968.preheader:                            ; preds = %for.cond968.prehead
 for.end1042:                                      ; preds = %for.cond968.preheader, %for.cond964.preheader, %entry
 
   %0 = phi i32 [ undef, %for.cond964.preheader ], [ undef, %for.cond968.preheader ], [ undef, %entry ]
-  %1 = load i32, i32* getelementptr inbounds ([3 x i32], [3 x i32]* @grid_points, i64 0, i64 0), align 4, !dbg !285, !tbaa !286
+  %1 = load i32, ptr @grid_points, align 4, !dbg !285, !tbaa !286
   tail call void @llvm.dbg.value(metadata i32 1, i64 0, metadata !268, metadata !290), !dbg !291
   %sub10454270 = add nsw i32 %0, -1, !dbg !291
   %cmp10464271 = icmp sgt i32 %sub10454270, 1, !dbg !291

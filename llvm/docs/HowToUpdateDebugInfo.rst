@@ -217,6 +217,15 @@ Deleting a MIR-level MachineInstr
 
 TODO
 
+Rules for updating ``DIAssignID`` Attachments
+=============================================
+
+``DIAssignID`` metadata attachments are used by Assignment Tracking, which is
+currently an experimental debug mode.
+
+See :doc:`AssignmentTracking` for how to update them and for more info on
+Assignment Tracking.
+
 How to automatically convert tests into debug info tests
 ========================================================
 

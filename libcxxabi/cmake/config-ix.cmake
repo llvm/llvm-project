@@ -41,7 +41,11 @@ if (CXX_SUPPORTS_NOSTDLIBXX_FLAG OR C_SUPPORTS_NODEFAULTLIBS_FLAG)
     include(HandleCompilerRT)
     find_compiler_rt_library(builtins LIBCXXABI_BUILTINS_LIBRARY
                              FLAGS "${LIBCXXABI_COMPILE_FLAGS}")
-    list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBCXXABI_BUILTINS_LIBRARY}")
+    if (LIBCXXABI_BUILTINS_LIBRARY)
+      list(APPEND CMAKE_REQUIRED_LIBRARIES "${LIBCXXABI_BUILTINS_LIBRARY}")
+    else()
+      message(WARNING "Could not find builtins library from libc++abi")
+    endif()
   else ()
     if (LIBCXXABI_HAS_GCC_S_LIB)
       list(APPEND CMAKE_REQUIRED_LIBRARIES gcc_s)
@@ -77,7 +81,7 @@ if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   set(CMAKE_REQUIRED_FLAGS "${CMAKE_REQUIRED_FLAGS} -Werror=unknown-pragmas")
   check_c_source_compiles("
 #pragma comment(lib, \"c\")
-int main() { return 0; }
+int main(void) { return 0; }
 " C_SUPPORTS_COMMENT_LIB_PRAGMA)
   cmake_pop_check_state()
 endif()

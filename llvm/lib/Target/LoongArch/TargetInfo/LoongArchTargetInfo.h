@@ -16,6 +16,6 @@ class Target;
 Target &getTheLoongArch32Target();
 Target &getTheLoongArch64Target();
 
-} // namespace llvm
+} // end namespace llvm
 
 #endif // LLVM_LIB_TARGET_LOONGARCH_TARGETINFO_LOONGARCHTARGETINFO_H

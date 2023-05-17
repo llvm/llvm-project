@@ -23,7 +23,7 @@ entry:
 ; CHECK-NEXT: .Lfunc_lep[[FN]]:
 ; CHECK-NEXT: .localentry use_toc, .Lfunc_lep[[FN]]-.Lfunc_gep[[FN]]
 ; CHECK-NEXT: %entry
-  %0 = load i64, i64* @number64, align 8
+  %0 = load i64, ptr @number64, align 8
   %cmp = icmp eq i64 %0, %a
   %conv1 = zext i1 %cmp to i64
   ret i64 %conv1

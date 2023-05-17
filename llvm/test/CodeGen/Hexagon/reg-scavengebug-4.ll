@@ -6,17 +6,17 @@
 ; and requires another register to compute the location on the stack.
 
 ; Function Attrs: nounwind
-define void @f0(i8* nocapture readonly %a0, i32 %a1, i32 %a2, i8* nocapture readonly %a3, i8* nocapture readonly %a4, i8* nocapture %a5) #0 {
+define void @f0(ptr nocapture readonly %a0, i32 %a1, i32 %a2, ptr nocapture readonly %a3, ptr nocapture readonly %a4, ptr nocapture %a5) #0 {
 b0:
   %v0 = tail call <16 x i32> @llvm.hexagon.V6.vshuffb(<16 x i32> zeroinitializer)
   br i1 undef, label %b1, label %b5
 
 b1:                                               ; preds = %b0
-  %v1 = getelementptr inbounds i8, i8* %a3, i32 31
+  %v1 = getelementptr inbounds i8, ptr %a3, i32 31
   br label %b2
 
 b2:                                               ; preds = %b4, %b1
-  %v2 = phi <16 x i32>* [ undef, %b1 ], [ %v102, %b4 ]
+  %v2 = phi ptr [ undef, %b1 ], [ %v102, %b4 ]
   %v3 = phi i32 [ %a2, %b1 ], [ undef, %b4 ]
   %v4 = tail call <32 x i32> @llvm.hexagon.V6.vmpyh(<16 x i32> undef, i32 undef)
   br label %b3
@@ -25,7 +25,7 @@ b3:                                               ; preds = %b3, %b2
   %v5 = phi <32 x i32> [ %v4, %b2 ], [ %v72, %b3 ]
   %v6 = phi <32 x i32> [ zeroinitializer, %b2 ], [ %v71, %b3 ]
   %v7 = phi i32 [ -4, %b2 ], [ %v73, %b3 ]
-  %v8 = load <16 x i32>, <16 x i32>* undef, align 64
+  %v8 = load <16 x i32>, ptr undef, align 64
   %v9 = mul nsw i32 %v7, 9
   %v10 = tail call <16 x i32> @llvm.hexagon.V6.vlalignb(<16 x i32> %v8, <16 x i32> undef, i32 4)
   %v11 = tail call <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32> undef, <16 x i32> %v8, i32 4)
@@ -44,8 +44,8 @@ b3:                                               ; preds = %b3, %b2
   %v24 = tail call <16 x i32> @llvm.hexagon.V6.vlutvvb.oracc(<16 x i32> %v23, <16 x i32> %v13, <16 x i32> undef, i32 6)
   %v25 = tail call <16 x i32> @llvm.hexagon.V6.vlutvvb.oracc(<16 x i32> %v24, <16 x i32> %v13, <16 x i32> undef, i32 7)
   %v26 = add nsw i32 %v9, 36
-  %v27 = getelementptr inbounds i8, i8* %a3, i32 %v26
-  %v28 = load i8, i8* %v27, align 1
+  %v27 = getelementptr inbounds i8, ptr %a3, i32 %v26
+  %v28 = load i8, ptr %v27, align 1
   %v29 = zext i8 %v28 to i32
   %v30 = tail call i32 @llvm.hexagon.S2.vsplatrb(i32 %v29)
   %v31 = tail call <32 x i32> @llvm.hexagon.V6.vmpyub(<16 x i32> %v21, i32 %v30)
@@ -63,8 +63,8 @@ b3:                                               ; preds = %b3, %b2
   %v43 = tail call <32 x i32> @llvm.hexagon.V6.vadduhw(<16 x i32> %v41, <16 x i32> %v42)
   %v44 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.dv(<32 x i32> %v5, <32 x i32> %v43)
   %v45 = add nsw i32 %v9, 37
-  %v46 = getelementptr inbounds i8, i8* %a3, i32 %v45
-  %v47 = load i8, i8* %v46, align 1
+  %v46 = getelementptr inbounds i8, ptr %a3, i32 %v45
+  %v47 = load i8, ptr %v46, align 1
   %v48 = tail call <32 x i32> @llvm.hexagon.V6.vmpabus.acc(<32 x i32> %v38, <32 x i32> undef, i32 16843009)
   %v49 = tail call <32 x i32> @llvm.hexagon.V6.vaddw.dv(<32 x i32> %v44, <32 x i32> undef)
   %v50 = tail call <16 x i32> @llvm.hexagon.V6.vlalignb(<16 x i32> %v8, <16 x i32> undef, i32 2)
@@ -78,7 +78,7 @@ b3:                                               ; preds = %b3, %b2
   %v58 = tail call <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32> undef, <16 x i32> %v8, i32 1)
   %v59 = tail call <16 x i32> @llvm.hexagon.V6.vabsdiffub(<16 x i32> %v58, <16 x i32> undef)
   %v60 = tail call <16 x i32> @llvm.hexagon.V6.vlutvvb.oracc(<16 x i32> undef, <16 x i32> %v59, <16 x i32> undef, i32 7)
-  %v61 = load i8, i8* undef, align 1
+  %v61 = load i8, ptr undef, align 1
   %v62 = zext i8 %v61 to i32
   %v63 = tail call i32 @llvm.hexagon.S2.vsplatrb(i32 %v62)
   %v64 = tail call <32 x i32> @llvm.hexagon.V6.vmpyub(<16 x i32> undef, i32 %v63)
@@ -97,7 +97,7 @@ b3:                                               ; preds = %b3, %b2
 b4:                                               ; preds = %b3
   %v75 = phi <32 x i32> [ %v72, %b3 ]
   %v76 = phi <32 x i32> [ %v71, %b3 ]
-  %v77 = load i8, i8* %v1, align 1
+  %v77 = load i8, ptr %v1, align 1
   %v78 = zext i8 %v77 to i32
   %v79 = tail call i32 @llvm.hexagon.S2.vsplatrb(i32 %v78)
   %v80 = tail call <32 x i32> @llvm.hexagon.V6.vmpyub(<16 x i32> undef, i32 %v79)
@@ -122,8 +122,8 @@ b4:                                               ; preds = %b3
   %v99 = tail call <16 x i32> @llvm.hexagon.V6.vaddwnq(<64 x i1> undef, <16 x i32> undef, <16 x i32> undef)
   %v100 = tail call <16 x i32> @llvm.hexagon.V6.vshufeh(<16 x i32> %v99, <16 x i32> %v98)
   %v101 = tail call <16 x i32> @llvm.hexagon.V6.vshuffeb(<16 x i32> %v100, <16 x i32> undef)
-  %v102 = getelementptr inbounds <16 x i32>, <16 x i32>* %v2, i32 1
-  store <16 x i32> %v101, <16 x i32>* %v2, align 64
+  %v102 = getelementptr inbounds <16 x i32>, ptr %v2, i32 1
+  store <16 x i32> %v101, ptr %v2, align 64
   %v103 = icmp sgt i32 %v3, 64
   br i1 %v103, label %b2, label %b5
 

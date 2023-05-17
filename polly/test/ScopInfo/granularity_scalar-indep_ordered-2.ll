@@ -14,7 +14,7 @@
 ;   A[0] = valB;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B, double* noalias nonnull %X, double* noalias nonnull %Y) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B, ptr noalias nonnull %X, ptr noalias nonnull %Y) {
 entry:
   br label %for
 
@@ -24,12 +24,12 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      %valX = load double, double* %X
-      store double %valX, double* %Y
-      %valA = load double, double* %A
-      %valB = load double, double* %B
-      store double %valA, double* %A
-      store double %valB, double* %A
+      %valX = load double, ptr %X
+      store double %valX, ptr %Y
+      %valA = load double, ptr %A
+      %valB = load double, ptr %B
+      store double %valA, ptr %A
+      store double %valB, ptr %A
       br label %inc
 
 inc:
@@ -55,8 +55,8 @@ return:
 ; CHECK-NEXT:         MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_body[i0] -> MemRef_Y[0] };
 ; CHECK-NEXT:         Instructions {
-; CHECK-NEXT:               %valX = load double, double* %X, align 8
-; CHECK-NEXT:               store double %valX, double* %Y, align 8
+; CHECK-NEXT:               %valX = load double, ptr %X, align 8
+; CHECK-NEXT:               store double %valX, ptr %Y, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: 	Stmt_body_b
 ; CHECK-NEXT:         Domain :=
@@ -72,9 +72,9 @@ return:
 ; CHECK-NEXT:         MustWriteAccess :=	[Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:             [n] -> { Stmt_body_b[i0] -> MemRef_A[0] };
 ; CHECK-NEXT:         Instructions {
-; CHECK-NEXT:               %valA = load double, double* %A, align 8
-; CHECK-NEXT:               %valB = load double, double* %B, align 8
-; CHECK-NEXT:               store double %valA, double* %A, align 8
-; CHECK-NEXT:               store double %valB, double* %A, align 8
+; CHECK-NEXT:               %valA = load double, ptr %A, align 8
+; CHECK-NEXT:               %valB = load double, ptr %B, align 8
+; CHECK-NEXT:               store double %valA, ptr %A, align 8
+; CHECK-NEXT:               store double %valB, ptr %A, align 8
 ; CHECK-NEXT:         }
 ; CHECK-NEXT: }

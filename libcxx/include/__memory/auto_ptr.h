@@ -16,6 +16,8 @@
 #  pragma GCC system_header
 #endif
 
+#if _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp>
@@ -76,5 +78,7 @@ public:
 };
 
 _LIBCPP_END_NAMESPACE_STD
+
+#endif // _LIBCPP_STD_VER <= 14 || defined(_LIBCPP_ENABLE_CXX17_REMOVED_AUTO_PTR)
 
 #endif // _LIBCPP___MEMORY_AUTO_PTR_H

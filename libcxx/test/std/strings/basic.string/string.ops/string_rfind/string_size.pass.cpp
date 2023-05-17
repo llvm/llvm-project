@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// XFAIL: LIBCXX-AIX-FIXME
-
 // <string>
 
 // size_type rfind(const basic_string& str, size_type pos = npos) const; // constexpr since C++20
@@ -158,7 +156,7 @@ TEST_CONSTEXPR_CXX20 bool test() {
   }
 #endif
 
-#if TEST_STD_VER > 3
+#if TEST_STD_VER >= 11
   { // LWG 2946
     std::string s = " !";
     assert(s.rfind({"abc", 1}) == std::string::npos);

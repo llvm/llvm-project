@@ -1,4 +1,5 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-windows-msvc | FileCheck %s
+; RUN: llc < %s -mtriple=x86_64-w64-windows-gnu | FileCheck %s
 ; Control Flow Guard is currently only available on Windows
 
 declare dllimport i32 @target_func1()

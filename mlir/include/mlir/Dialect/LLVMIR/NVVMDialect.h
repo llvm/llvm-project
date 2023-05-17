@@ -21,7 +21,6 @@
 #include "llvm/IR/IntrinsicsNVPTX.h"
 
 #include "mlir/Dialect/LLVMIR/NVVMOpsEnums.h.inc"
-#include "mlir/Dialect/LLVMIR/NVVMOpsStructs.h.inc"
 
 namespace mlir {
 namespace NVVM {
@@ -38,7 +37,8 @@ enum NVVMMemorySpace {
 /// of given chracteristics. This matches the logic in IntrinsicsNVVM.td
 /// WMMA_REGS structure.
 std::pair<mlir::Type, unsigned> inferMMAType(mlir::NVVM::MMATypes type,
-                                             mlir::NVVM::MMAFrag frag,
+                                             mlir::NVVM::MMAFrag frag, int nRow,
+                                             int nCol,
                                              mlir::MLIRContext *context);
 } // namespace NVVM
 } // namespace mlir

@@ -77,15 +77,11 @@ namespace PR15345 {
   class Derived : public Base {};
 
   void test() {
-	Derived* p;
-	*(reinterpret_cast<void**>(&p)) = new C;
-	p->f();
-
-    // We should still be able to do some reasoning about bindings.
-    p->x = 42;
-    clang_analyzer_eval(p->x == 42); // expected-warning{{TRUE}}
+    Derived* p;
+    *(reinterpret_cast<void**>(&p)) = new C;
+    p->f(); // expected-warning{{Called function pointer is an uninitialized pointer value [core.CallAndMessage]}}
   };
-}
+} // namespace PR15345
 
 int trackpointer_std_addressof() {
   int x;

@@ -10,8 +10,10 @@
 #define NASTY_CONTAINERS_H
 
 #include <cassert>
+#include <cstddef>
 #include <vector>
 #include <list>
+#include <type_traits>
 
 #include "test_macros.h"
 

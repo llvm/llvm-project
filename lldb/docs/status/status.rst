@@ -11,8 +11,8 @@ Linux
 -----
 
 LLDB is improving on Linux. Linux is nearing feature completeness with Darwin
-to debug x86_64, i386, ARM, AArch64, IBM POWER (ppc64), IBM Z (s390x), and
-MIPS64 programs. For more details, see the Features by OS section below.
+to debug x86_64, i386, ARM, AArch64, IBM POWER (ppc64), and IBM Z (s390x)
+programs. For more details, see the Features by OS section below.
 
 macOS
 -----

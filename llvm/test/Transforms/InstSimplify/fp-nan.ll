@@ -31,24 +31,40 @@ define float @fsub_nan_op0(float %x) {
   ret float %r
 }
 
-; Signaling
+; Signaling - make quiet and preserve the payload and signbit
 
 define float @fsub_nan_op1(float %x) {
 ; CHECK-LABEL: @fsub_nan_op1(
-; CHECK-NEXT:    ret float 0x7FF1000000000000
+; CHECK-NEXT:    ret float 0x7FF9000000000000
 ;
   %r = fsub float %x, 0x7FF1000000000000
   ret float %r
 }
 
-; Signaling and signed
+define <2 x float> @fsub_nan_op1_vec(<2 x float> %x) {
+; CHECK-LABEL: @fsub_nan_op1_vec(
+; CHECK-NEXT:    ret <2 x float> <float 0x7FF9000000000000, float 0xFFF9000000000000>
+;
+  %r = fsub <2 x float> %x, <float 0x7FF1000000000000, float 0xFFF1000000000000>
+  ret <2 x float> %r
+}
+
+; Signaling and signed - make quiet and preserve the payload and signbit
 
 define double @fmul_nan_op0(double %x) {
 ; CHECK-LABEL: @fmul_nan_op0(
-; CHECK-NEXT:    ret double 0xFFF0000000000001
+; CHECK-NEXT:    ret double 0xFFF8000000000001
 ;
   %r = fmul double 0xFFF0000000000001, %x
   ret double %r
+}
+
+define <2 x double> @fmul_nan_op0_vec(<2 x double> %x) {
+; CHECK-LABEL: @fmul_nan_op0_vec(
+; CHECK-NEXT:    ret <2 x double> <double 0xFFF8000000000001, double 0xFFF8DEADDEADDEAD>
+;
+  %r = fmul <2 x double> <double 0xFFF0000000000001, double 0xFFF0DEADDEADDEAD>, %x
+  ret <2 x double> %r
 }
 
 ; Vector type
@@ -81,14 +97,34 @@ define <2 x half> @fdiv_nan_op1(<2 x half> %x) {
   ret <2 x half> %r
 }
 
+; Vector with poison element
+
+define <2 x double> @fsub_nan_poison_op1(<2 x double> %x) {
+; CHECK-LABEL: @fsub_nan_poison_op1(
+; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double poison>
+;
+  %r = fsub <2 x double> %x, <double 0xFFFF00000000DEAD, double poison>
+  ret <2 x double> %r
+}
+
 ; Vector with undef element
 
-define <2 x double> @frem_nan_op0(<2 x double> %x) {
-; CHECK-LABEL: @frem_nan_op0(
-; CHECK-NEXT:    ret <2 x double> <double 0x7FF8000000000000, double 0x7FF8000000000000>
+define <2 x double> @frem_nan_undef_op0(<2 x double> %x) {
+; CHECK-LABEL: @frem_nan_undef_op0(
+; CHECK-NEXT:    ret <2 x double> <double 0xFFFF00000000DEAD, double 0x7FF8000000000000>
 ;
-  %r = frem <2 x double> <double 0xFFFF000000000000, double undef>, %x
+  %r = frem <2 x double> <double 0xFFFF00000000DEAD, double undef>, %x
   ret <2 x double> %r
+}
+
+; Vector with poison and undef elements
+
+define <3 x double> @fadd_nan_poison_undef_op1(<3 x double> %x) {
+; CHECK-LABEL: @fadd_nan_poison_undef_op1(
+; CHECK-NEXT:    ret <3 x double> <double 0xFFFF00000000DEAD, double poison, double 0x7FF8000000000000>
+;
+  %r = fadd <3 x double> %x, <double 0xFFFF00000000DEAD, double poison, double undef>
+  ret <3 x double> %r
 }
 
 define float @frem_nan_op1(float %x) {

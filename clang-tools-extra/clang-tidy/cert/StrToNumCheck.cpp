@@ -15,9 +15,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 void StrToNumCheck::registerMatchers(MatchFinder *Finder) {
   // Match any function call to the C standard library string conversion
@@ -63,7 +61,7 @@ ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
   // specifiers, but that is acceptable behavior.
 
   class Handler : public analyze_format_string::FormatStringHandler {
-    ConversionKind CK;
+    ConversionKind CK = ConversionKind::None;
 
     bool HandleScanfSpecifier(const analyze_scanf::ScanfSpecifier &FS,
                               const char *StartSpecifier,
@@ -119,7 +117,7 @@ ConversionKind classifyFormatString(StringRef Fmt, const LangOptions &LO,
     }
 
   public:
-    Handler() : CK(ConversionKind::None) {}
+    Handler() = default;
 
     ConversionKind get() const { return CK; }
   };
@@ -229,6 +227,4 @@ void StrToNumCheck::check(const MatchFinder::MatchResult &Result) {
       << classifyReplacement(Conversion);
 }
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert

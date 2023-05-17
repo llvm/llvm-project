@@ -21,16 +21,15 @@
 #include "llvm/Transforms/IPO/Internalize.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/CallGraph.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/GlobPattern.h"
 #include "llvm/Support/LineIterator.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO.h"
 using namespace llvm;
 
@@ -40,13 +39,13 @@ STATISTIC(NumAliases, "Number of aliases internalized");
 STATISTIC(NumFunctions, "Number of functions internalized");
 STATISTIC(NumGlobals, "Number of global vars internalized");
 
-// APIFile - A file which contains a list of symbols that should not be marked
-// external.
+// APIFile - A file which contains a list of symbol glob patterns that should
+// not be marked external.
 static cl::opt<std::string>
     APIFile("internalize-public-api-file", cl::value_desc("filename"),
             cl::desc("A file containing list of symbol names to preserve"));
 
-// APIList - A list of symbols that should not be marked internal.
+// APIList - A list of symbol glob patterns that should not be marked internal.
 static cl::list<std::string>
     APIList("internalize-public-api-list", cl::value_desc("list"),
             cl::desc("A list of symbol names to preserve"), cl::CommaSeparated);
@@ -59,29 +58,44 @@ public:
   PreserveAPIList() {
     if (!APIFile.empty())
       LoadFile(APIFile);
-    ExternalNames.insert(APIList.begin(), APIList.end());
+    for (StringRef Pattern : APIList)
+      addGlob(Pattern);
   }
 
   bool operator()(const GlobalValue &GV) {
-    return ExternalNames.count(GV.getName());
+    return llvm::any_of(
+        ExternalNames, [&](GlobPattern &GP) { return GP.match(GV.getName()); });
   }
 
 private:
   // Contains the set of symbols loaded from file
-  StringSet<> ExternalNames;
+  SmallVector<GlobPattern> ExternalNames;
+
+  void addGlob(StringRef Pattern) {
+    auto GlobOrErr = GlobPattern::create(Pattern);
+    if (!GlobOrErr) {
+      errs() << "WARNING: when loading pattern: '"
+             << toString(GlobOrErr.takeError()) << "' ignoring";
+      return;
+    }
+    ExternalNames.emplace_back(std::move(*GlobOrErr));
+  }
 
   void LoadFile(StringRef Filename) {
     // Load the APIFile...
-    ErrorOr<std::unique_ptr<MemoryBuffer>> Buf =
+    ErrorOr<std::unique_ptr<MemoryBuffer>> BufOrErr =
         MemoryBuffer::getFile(Filename);
-    if (!Buf) {
+    if (!BufOrErr) {
       errs() << "WARNING: Internalize couldn't load file '" << Filename
              << "'! Continuing as if it's empty.\n";
       return; // Just continue as if the file were empty
     }
-    for (line_iterator I(*Buf->get(), true), E; I != E; ++I)
-      ExternalNames.insert(*I);
+    Buf = std::move(*BufOrErr);
+    for (line_iterator I(*Buf, true), E; I != E; ++I)
+      addGlob(*I);
   }
+
+  std::shared_ptr<MemoryBuffer> Buf;
 };
 } // end anonymous namespace
 
@@ -167,9 +181,8 @@ void InternalizePass::checkComdat(
     Info.External = true;
 }
 
-bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
+bool InternalizePass::internalizeModule(Module &M) {
   bool Changed = false;
-  CallGraphNode *ExternalNode = CG ? CG->getExternalCallingNode() : nullptr;
 
   SmallVector<GlobalValue *, 4> Used;
   collectUsedGlobalVariables(M, Used, false);
@@ -226,10 +239,6 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
       continue;
     Changed = true;
 
-    if (ExternalNode)
-      // Remove a callgraph edge from the external node to this function.
-      ExternalNode->removeOneAbstractEdgeTo((*CG)[&I]);
-
     ++NumFunctions;
     LLVM_DEBUG(dbgs() << "Internalizing func " << I.getName() << "\n");
   }
@@ -261,55 +270,8 @@ bool InternalizePass::internalizeModule(Module &M, CallGraph *CG) {
 InternalizePass::InternalizePass() : MustPreserveGV(PreserveAPIList()) {}
 
 PreservedAnalyses InternalizePass::run(Module &M, ModuleAnalysisManager &AM) {
-  if (!internalizeModule(M, AM.getCachedResult<CallGraphAnalysis>(M)))
+  if (!internalizeModule(M))
     return PreservedAnalyses::all();
 
-  PreservedAnalyses PA;
-  PA.preserve<CallGraphAnalysis>();
-  return PA;
-}
-
-namespace {
-class InternalizeLegacyPass : public ModulePass {
-  // Client supplied callback to control wheter a symbol must be preserved.
-  std::function<bool(const GlobalValue &)> MustPreserveGV;
-
-public:
-  static char ID; // Pass identification, replacement for typeid
-
-  InternalizeLegacyPass() : ModulePass(ID), MustPreserveGV(PreserveAPIList()) {}
-
-  InternalizeLegacyPass(std::function<bool(const GlobalValue &)> MustPreserveGV)
-      : ModulePass(ID), MustPreserveGV(std::move(MustPreserveGV)) {
-    initializeInternalizeLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    CallGraphWrapperPass *CGPass =
-        getAnalysisIfAvailable<CallGraphWrapperPass>();
-    CallGraph *CG = CGPass ? &CGPass->getCallGraph() : nullptr;
-    return internalizeModule(M, MustPreserveGV, CG);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addPreserved<CallGraphWrapperPass>();
-  }
-};
-}
-
-char InternalizeLegacyPass::ID = 0;
-INITIALIZE_PASS(InternalizeLegacyPass, "internalize",
-                "Internalize Global Symbols", false, false)
-
-ModulePass *llvm::createInternalizePass() {
-  return new InternalizeLegacyPass();
-}
-
-ModulePass *llvm::createInternalizePass(
-    std::function<bool(const GlobalValue &)> MustPreserveGV) {
-  return new InternalizeLegacyPass(std::move(MustPreserveGV));
+  return PreservedAnalyses::none();
 }

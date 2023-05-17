@@ -1,20 +1,20 @@
 // Build PCH without object file, then use it.
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -fms-extensions -emit-pch -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCH %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-pch -o %t %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCH %s
 
 // Build PCH with object file, then use it.
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -O1 -fms-extensions -emit-pch -building-pch-with-obj -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -building-pch-with-obj -o - %s | FileCheck -check-prefix=OBJ %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJ -check-prefix=PCHWITHOBJ-O1 %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -fms-extensions -emit-pch -building-pch-with-obj -o %t %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -building-pch-with-obj -o - %s | FileCheck -check-prefix=OBJ %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJ -check-prefix=PCHWITHOBJ-O1 %s
 
 // Check for vars separately to avoid having to reorder the check statements.
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJVARS %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -O1 -disable-llvm-optzns -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJVARS %s
 
 // Test the PCHWITHOBJ at -O0 where available_externally definitions are not
 // provided:
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -fms-extensions -emit-pch -building-pch-with-obj -o %t %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJ -check-prefix=PCHWITHOBJ-O0 %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJVARS %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-pch -building-pch-with-obj -o %t %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJ -check-prefix=PCHWITHOBJ-O0 %s
+// RUN: %clang_cc1 -triple i686-pc-win32 -fms-extensions -emit-obj -emit-llvm -include-pch %t -o - %s | FileCheck -check-prefix=PCHWITHOBJVARS %s
 
 
 #ifndef IN_HEADER
@@ -99,6 +99,6 @@ template int __declspec(dllexport) variableTemplate<int>;
 // PR38934: Make sure S<int>::operator= gets emitted. While it itself isn't a
 // template specialization, its parent is.
 template struct __declspec(dllexport) pr38934::S<int>;
-// PCHWITHOBJ: define weak_odr dso_local dllexport x86_thiscallcc noundef nonnull align 1 dereferenceable(1) %"struct.pr38934::S"* @"??4?$S@H@pr38934@@QAEAAU01@ABU01@@Z"
+// PCHWITHOBJ: define weak_odr dso_local dllexport x86_thiscallcc noundef nonnull align 1 dereferenceable(1) ptr @"??4?$S@H@pr38934@@QAEAAU01@ABU01@@Z"
 
 #endif

@@ -1,4 +1,7 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream -analyzer-output text \
+// RUN:   -verify %s
+// RUN: %clang_analyze_cc1 -analyzer-checker=core,alpha.unix.Stream,alpha.unix.StdCLibraryFunctionArgs -analyzer-output text \
+// RUN:   -analyzer-config apiModeling.StdCLibraryFunctions:ModelPOSIX=true -verify=expected,stdargs %s
 
 #include "Inputs/system-header-simulator.h"
 
@@ -80,13 +83,13 @@ void check_note_leak_2(int c) {
 
 void check_track_null(void) {
   FILE *F;
-  F = fopen("foo1.c", "r"); // expected-note {{Value assigned to 'F'}} expected-note {{Assuming pointer value is null}}
-  if (F != NULL) {          // expected-note {{Taking false branch}} expected-note {{'F' is equal to NULL}}
+  F = fopen("foo1.c", "r"); // stdargs-note {{Value assigned to 'F'}} stdargs-note {{Assuming pointer value is null}}
+  if (F != NULL) {          // stdargs-note {{Taking false branch}} stdargs-note {{'F' is equal to NULL}}
     fclose(F);
     return;
   }
-  fclose(F); // expected-warning {{Stream pointer might be NULL}}
-  // expected-note@-1 {{Stream pointer might be NULL}}
+  fclose(F); // stdargs-warning {{The 1st argument to 'fclose' is NULL but should not be NULL}}
+             // stdargs-note@-1 {{The 1st argument to 'fclose' is NULL but should not be NULL}}
 }
 
 void check_eof_notes_feof_after_feof(void) {

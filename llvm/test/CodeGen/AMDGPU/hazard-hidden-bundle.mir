@@ -54,7 +54,7 @@ body: |
     BUNDLE implicit-def $sgpr0_sgpr1, implicit $sgpr10_sgpr11 {
       $sgpr0_sgpr1 = S_LOAD_DWORDX2_IMM $sgpr10_sgpr11, 0, 0
     }
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
     S_ENDPGM 0
 ...
 
@@ -84,5 +84,5 @@ body: |
     }
 
   bb.2:
-    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, 0, implicit $exec
+    $vgpr1 = BUFFER_LOAD_DWORD_OFFEN $vgpr0, $sgpr0_sgpr1_sgpr2_sgpr3, $vcc_lo, 0, 0, 0, implicit $exec
 ...

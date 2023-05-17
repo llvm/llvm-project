@@ -1,6 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++98 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 %s
+// RUN: %clang_cc1 -fsyntax-only -verify=expected,precxx17 %std_cxx98-14 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 %s
 
 struct X0 { // expected-note {{candidate constructor (the implicit copy constructor) not viable}}
 #if __cplusplus >= 201103L // C++11 or later
@@ -58,16 +57,16 @@ template <> struct A<int>{A(const A<int>&);};
 struct B { A<int> x; B(B& a) : x(a.x) {} };
 
 struct X2 {
-  X2(); // expected-note{{candidate constructor}}
-  X2(X2&);	// expected-note {{candidate constructor}}
-  template<typename T> X2(T); // expected-note {{candidate template ignored: instantiation would take its own class type by value}}
+  X2(); // precxx17-note{{candidate constructor}}
+  X2(X2&);	// precxx17-note {{candidate constructor}}
+  template<typename T> X2(T); // precxx17-note {{candidate template ignored: instantiation would take its own class type by value}}
 };
 
 X2 test(bool Cond, X2 x2) {
   if (Cond)
     return x2; // okay, uses copy constructor
   
-  return X2(); // expected-error{{no matching constructor}}
+  return X2(); // precxx17-error{{no matching constructor}}
 }
 
 struct X3 {
@@ -157,14 +156,14 @@ namespace self_by_value {
 
 namespace self_by_value_2 {
   template <class T, class U> struct A {
-    A() {} // expected-note {{not viable: requires 0 arguments}}
-    A(A<T,U> &o) {} // expected-note {{not viable: expects an lvalue}}
-    A(A<T,T> o) {} // expected-note {{ignored: instantiation takes its own class type by value}}
+    A() {} // precxx17-note {{not viable: requires 0 arguments}}
+    A(A<T,U> &o) {} // precxx17-note {{not viable: expects an lvalue}}
+    A(A<T,T> o) {} // precxx17-note {{ignored: instantiation takes its own class type by value}}
   };
 
-  void helper_A(A<int,int>); // expected-note {{passing argument to parameter here}}
+  void helper_A(A<int,int>); // precxx17-note {{passing argument to parameter here}}
   void test_A() {
-    helper_A(A<int,int>()); // expected-error {{no matching constructor}}
+    helper_A(A<int,int>()); // precxx17-error {{no matching constructor}}
   }
 }
 

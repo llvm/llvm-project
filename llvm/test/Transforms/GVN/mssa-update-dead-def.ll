@@ -4,7 +4,7 @@
 ; Make sure that we don't crash and end up with a valid MemorySSA.
 
 ; CHECK: @test()
-define void @test() personality i32* ()* null {
+define void @test() personality ptr null {
   invoke void @bar()
           to label %bar.normal unwind label %exceptional
 
@@ -22,7 +22,7 @@ baz.normal:
   ret void
 
 exceptional:
-  %tmp9 = landingpad { i8*, i32 }
+  %tmp9 = landingpad { ptr, i32 }
           cleanup
   call void @foo()
   ret void

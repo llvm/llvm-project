@@ -5,7 +5,7 @@
 
 ; PR8573
 
-define void @foo(i8* %P, i32 %E, i32 %H) nounwind {
+define void @foo(ptr %P, i32 %E, i32 %H) nounwind {
 ; X86-LABEL: foo:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -29,11 +29,11 @@ define void @foo(i8* %P, i32 %E, i32 %H) nounwind {
 ; WIN64-NEXT:    monitor
 ; WIN64-NEXT:    retq
 entry:
-  tail call void @llvm.x86.sse3.monitor(i8* %P, i32 %E, i32 %H)
+  tail call void @llvm.x86.sse3.monitor(ptr %P, i32 %E, i32 %H)
   ret void
 }
 
-declare void @llvm.x86.sse3.monitor(i8*, i32, i32) nounwind
+declare void @llvm.x86.sse3.monitor(ptr, i32, i32) nounwind
 
 define void @bar(i32 %E, i32 %H) nounwind {
 ; X86-LABEL: bar:

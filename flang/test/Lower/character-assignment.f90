@@ -1,4 +1,4 @@
-! RUN: bbc %s -o - -emit-fir | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false %s -o - -emit-fir | FileCheck %s
 
 ! Simple character assignment tests
 ! CHECK-LABEL: _QPassign1
@@ -15,7 +15,7 @@ subroutine assign1(lhs, rhs)
   ! CHECK: %[[count:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
   ! CHECK-DAG: %[[bug:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[src:.*]] = fir.convert %[[rhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%{{.*}}, %[[src]], %[[count]], %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%{{.*}}, %[[src]], %[[count]], %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -72,7 +72,7 @@ subroutine assign_constant(lhs)
   ! CHECK-DAG: %[[dst:.*]] = fir.convert %[[lhs]]#0 : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[src:.*]] = fir.convert %[[cst]] : (!fir.ref<!fir.char<1,11>>) -> !fir.ref<i8>
   ! CHECK-DAG: %[[count:.*]] = arith.muli %{{.*}}, %{{.*}} : i64
-  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %[[count]], %false) : (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
+  ! CHECK: fir.call @llvm.memmove.p0.p0.i64(%[[dst]], %[[src]], %[[count]], %false) {{.*}}: (!fir.ref<i8>, !fir.ref<i8>, i64, i1) -> ()
 
   ! Padding
   ! CHECK-DAG: %[[blank:.*]] = fir.insert_value %{{.*}}, %c32{{.*}}, [0 : index] : (!fir.char<1>, i8) -> !fir.char<1>
@@ -102,7 +102,7 @@ end subroutine
     ! CHECK:   return
   end subroutine
 
-! CHECK-LABEL: fir.global linkonce @_QQcl.48656C6C6F20576F726C64
+! CHECK-LABEL: fir.global internal @_QQcl.48656C6C6F20576F726C64
 ! CHECK: %[[lit:.*]] = fir.string_lit "Hello World"(11) : !fir.char<1,11>
 ! CHECK: fir.has_value %[[lit]] : !fir.char<1,11>
 ! CHECK: }

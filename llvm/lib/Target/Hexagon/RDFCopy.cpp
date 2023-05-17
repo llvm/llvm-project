@@ -79,7 +79,7 @@ bool CopyPropagation::scanBlock(MachineBasicBlock *B) {
   }
 
   MachineDomTreeNode *N = MDT.getNode(B);
-  for (auto I : *N)
+  for (auto *I : *N)
     Changed |= scanBlock(I->getBlock());
 
   return Changed;

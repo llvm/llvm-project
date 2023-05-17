@@ -11,9 +11,9 @@
 
 target triple = "hexagon"
 
-define void @f0(i16* %a0, <8 x i16>* %a1) #0 {
+define void @f0(ptr %a0, ptr %a1) #0 {
 b0:
-  %v0 = load i16, i16* %a0, align 2
+  %v0 = load i16, ptr %a0, align 2
   %v1 = sext i16 %v0 to i32
   %v2 = insertelement <8 x i32> undef, i32 %v1, i32 0
   %v3 = shufflevector <8 x i32> %v2, <8 x i32> undef, <8 x i32> zeroinitializer
@@ -21,7 +21,7 @@ b0:
   %v5 = and <8 x i32> %v4, %v3
   %v6 = icmp ne <8 x i32> %v5, zeroinitializer
   %v7 = zext <8 x i1> %v6 to <8 x i16>
-  store <8 x i16> %v7, <8 x i16>* %a1, align 8
+  store <8 x i16> %v7, ptr %a1, align 8
   ret void
 }
 

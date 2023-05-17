@@ -26,8 +26,9 @@ using namespace llvm;
 ReplayInlineAdvisor::ReplayInlineAdvisor(
     Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
     std::unique_ptr<InlineAdvisor> OriginalAdvisor,
-    const ReplayInlinerSettings &ReplaySettings, bool EmitRemarks)
-    : InlineAdvisor(M, FAM), OriginalAdvisor(std::move(OriginalAdvisor)),
+    const ReplayInlinerSettings &ReplaySettings, bool EmitRemarks,
+    InlineContext IC)
+    : InlineAdvisor(M, FAM, IC), OriginalAdvisor(std::move(OriginalAdvisor)),
       ReplaySettings(ReplaySettings), EmitRemarks(EmitRemarks) {
 
   auto BufferOrErr = MemoryBuffer::getFileOrSTDIN(ReplaySettings.ReplayFile);
@@ -75,12 +76,15 @@ ReplayInlineAdvisor::ReplayInlineAdvisor(
   HasReplayRemarks = true;
 }
 
-std::unique_ptr<InlineAdvisor> llvm::getReplayInlineAdvisor(
-    Module &M, FunctionAnalysisManager &FAM, LLVMContext &Context,
-    std::unique_ptr<InlineAdvisor> OriginalAdvisor,
-    const ReplayInlinerSettings &ReplaySettings, bool EmitRemarks) {
+std::unique_ptr<InlineAdvisor>
+llvm::getReplayInlineAdvisor(Module &M, FunctionAnalysisManager &FAM,
+                             LLVMContext &Context,
+                             std::unique_ptr<InlineAdvisor> OriginalAdvisor,
+                             const ReplayInlinerSettings &ReplaySettings,
+                             bool EmitRemarks, InlineContext IC) {
   auto Advisor = std::make_unique<ReplayInlineAdvisor>(
-      M, FAM, Context, std::move(OriginalAdvisor), ReplaySettings, EmitRemarks);
+      M, FAM, Context, std::move(OriginalAdvisor), ReplaySettings, EmitRemarks,
+      IC);
   if (!Advisor->areReplayRemarksLoaded())
     Advisor.reset();
   return Advisor;
@@ -119,8 +123,8 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
     } else {
       LLVM_DEBUG(dbgs() << "Replay Inliner: Not Inlined " << Callee << " @ "
                         << CallSiteLoc << "\n");
-      // A negative inline is conveyed by "None" Optional<InlineCost>
-      return std::make_unique<DefaultInlineAdvice>(this, CB, None, ORE,
+      // A negative inline is conveyed by "None" std::optional<InlineCost>
+      return std::make_unique<DefaultInlineAdvice>(this, CB, std::nullopt, ORE,
                                                    EmitRemarks);
     }
   }
@@ -133,8 +137,8 @@ std::unique_ptr<InlineAdvice> ReplayInlineAdvisor::getAdviceImpl(CallBase &CB) {
         EmitRemarks);
   else if (ReplaySettings.ReplayFallback ==
            ReplayInlinerSettings::Fallback::NeverInline)
-    // A negative inline is conveyed by "None" Optional<InlineCost>
-    return std::make_unique<DefaultInlineAdvice>(this, CB, None, ORE,
+    // A negative inline is conveyed by "None" std::optional<InlineCost>
+    return std::make_unique<DefaultInlineAdvice>(this, CB, std::nullopt, ORE,
                                                  EmitRemarks);
   else {
     assert(ReplaySettings.ReplayFallback ==

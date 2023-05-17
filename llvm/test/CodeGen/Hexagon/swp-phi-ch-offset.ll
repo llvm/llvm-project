@@ -21,13 +21,11 @@ b1:                                               ; preds = %b2
   ret void
 
 b2:                                               ; preds = %b2, %b0
-  %v0 = phi i8* [ getelementptr inbounds ([400 x i8], [400 x i8]* @g0, i32 0, i32 0), %b0 ], [ %v23, %b2 ]
-  %v1 = phi i8* [ getelementptr inbounds ([400 x i8], [400 x i8]* @g1, i32 0, i32 0), %b0 ], [ %v24, %b2 ]
+  %v0 = phi ptr [ @g0, %b0 ], [ %v23, %b2 ]
+  %v1 = phi ptr [ @g1, %b0 ], [ %v24, %b2 ]
   %v2 = phi i32 [ 0, %b0 ], [ %v21, %b2 ]
-  %v3 = bitcast i8* %v0 to <8 x i8>*
-  %v4 = load <8 x i8>, <8 x i8>* %v3, align 8
-  %v5 = bitcast i8* %v1 to <8 x i8>*
-  %v6 = load <8 x i8>, <8 x i8>* %v5, align 8
+  %v4 = load <8 x i8>, ptr %v0, align 8
+  %v6 = load <8 x i8>, ptr %v1, align 8
   %v7 = bitcast <8 x i8> %v4 to <2 x i32>
   %v8 = extractelement <2 x i32> %v7, i32 0
   %v9 = extractelement <2 x i32> %v7, i32 1
@@ -42,11 +40,11 @@ b2:                                               ; preds = %b2, %b0
   %v18 = tail call i32 @llvm.hexagon.S2.vtrunehb(i64 %v16)
   %v19 = tail call i64 @llvm.hexagon.A2.combinew(i32 %v18, i32 %v17)
   %v20 = bitcast i64 %v19 to <8 x i8>
-  store <8 x i8> %v20, <8 x i8>* %v5, align 8
+  store <8 x i8> %v20, ptr %v1, align 8
   %v21 = add nsw i32 %v2, 8
   %v22 = icmp slt i32 %v2, 392
-  %v23 = getelementptr i8, i8* %v0, i32 8
-  %v24 = getelementptr i8, i8* %v1, i32 8
+  %v23 = getelementptr i8, ptr %v0, i32 8
+  %v24 = getelementptr i8, ptr %v1, i32 8
   br i1 %v22, label %b2, label %b1
 }
 

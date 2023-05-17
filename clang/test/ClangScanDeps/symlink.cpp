@@ -8,8 +8,7 @@
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
 // RUN: ln -s %t.dir/Inputs/header.h %t.dir/Inputs/symlink.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/symlink_cdb.json > %t.cdb
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -reuse-filemanager=0 | FileCheck %s
-// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 -reuse-filemanager=1 | FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -j 1 | FileCheck %s
 
 #include "symlink.h"
 #include "header.h"

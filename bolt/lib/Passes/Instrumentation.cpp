@@ -15,6 +15,7 @@
 #include "bolt/RuntimeLibs/InstrumentationRuntimeLibrary.h"
 #include "bolt/Utils/Utils.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/RWMutex.h"
 #include <stack>
 
 #define DEBUG_TYPE "bolt-instrumentation"
@@ -173,27 +174,21 @@ void Instrumentation::createLeafNodeDescription(FunctionDescription &FuncDesc,
 InstructionListType
 Instrumentation::createInstrumentationSnippet(BinaryContext &BC, bool IsLeaf) {
   auto L = BC.scopeLock();
-  MCSymbol *Label;
-  Label = BC.Ctx->createNamedTempSymbol("InstrEntry");
+  MCSymbol *Label = BC.Ctx->createNamedTempSymbol("InstrEntry");
   Summary->Counters.emplace_back(Label);
-  InstructionListType CounterInstrs;
-  BC.MIB->createInstrIncMemory(CounterInstrs, Label, &*BC.Ctx, IsLeaf);
-  return CounterInstrs;
+  return BC.MIB->createInstrIncMemory(Label, BC.Ctx.get(), IsLeaf);
 }
 
-namespace {
-
 // Helper instruction sequence insertion function
-BinaryBasicBlock::iterator insertInstructions(InstructionListType &Instrs,
-                                              BinaryBasicBlock &BB,
-                                              BinaryBasicBlock::iterator Iter) {
+static BinaryBasicBlock::iterator
+insertInstructions(InstructionListType &Instrs, BinaryBasicBlock &BB,
+                   BinaryBasicBlock::iterator Iter) {
   for (MCInst &NewInst : Instrs) {
     Iter = BB.insertInstruction(Iter, NewInst);
     ++Iter;
   }
   return Iter;
 }
-} // namespace
 
 void Instrumentation::instrumentLeafNode(BinaryBasicBlock &BB,
                                          BinaryBasicBlock::iterator Iter,
@@ -217,7 +212,7 @@ void Instrumentation::instrumentIndirectTarget(BinaryBasicBlock &BB,
   BinaryContext &BC = FromFunction.getBinaryContext();
   bool IsTailCall = BC.MIB->isTailCall(*Iter);
   InstructionListType CounterInstrs = BC.MIB->createInstrumentedIndirectCall(
-      *Iter, IsTailCall,
+      std::move(*Iter),
       IsTailCall ? IndTailCallHandlerExitBBFunction->getSymbol()
                  : IndCallHandlerExitBBFunction->getSymbol(),
       IndCallSiteID, &*BC.Ctx);
@@ -233,8 +228,9 @@ bool Instrumentation::instrumentOneTarget(
     BinaryBasicBlock &FromBB, uint32_t From, BinaryFunction &ToFunc,
     BinaryBasicBlock *TargetBB, uint32_t ToOffset, bool IsLeaf, bool IsInvoke,
     FunctionDescription *FuncDesc, uint32_t FromNodeID, uint32_t ToNodeID) {
+  BinaryContext &BC = FromFunction.getBinaryContext();
   {
-    auto L = FromFunction.getBinaryContext().scopeLock();
+    auto L = BC.scopeLock();
     bool Created = true;
     if (!TargetBB)
       Created = createCallDescription(*FuncDesc, FromFunction, From, FromNodeID,
@@ -247,10 +243,8 @@ bool Instrumentation::instrumentOneTarget(
       return false;
   }
 
-  InstructionListType CounterInstrs =
-      createInstrumentationSnippet(FromFunction.getBinaryContext(), IsLeaf);
+  InstructionListType CounterInstrs = createInstrumentationSnippet(BC, IsLeaf);
 
-  BinaryContext &BC = FromFunction.getBinaryContext();
   const MCInst &Inst = *Iter;
   if (BC.MIB->isCall(Inst)) {
     // This code handles both
@@ -298,7 +292,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
 
   FunctionDescription *FuncDesc = nullptr;
   {
-    std::unique_lock<std::shared_timed_mutex> L(FDMutex);
+    std::unique_lock<llvm::sys::RWMutex> L(FDMutex);
     Summary->FunctionDescriptions.emplace_back();
     FuncDesc = &Summary->FunctionDescriptions.back();
   }
@@ -322,8 +316,8 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   std::unordered_map<const BinaryBasicBlock *,
                      std::set<const BinaryBasicBlock *>>
       STOutSet;
-  for (auto BBI = Function.layout_rbegin(); BBI != Function.layout_rend();
-       ++BBI) {
+  for (auto BBI = Function.getLayout().block_rbegin();
+       BBI != Function.getLayout().block_rend(); ++BBI) {
     if ((*BBI)->isEntryPoint() || (*BBI)->isLandingPad()) {
       Stack.push(std::make_pair(nullptr, *BBI));
       if (opts::InstrumentCalls && (*BBI)->isEntryPoint()) {
@@ -343,7 +337,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       const BinaryBasicBlock *Pred;
       std::tie(Pred, BB) = Stack.top();
       Stack.pop();
-      if (VisitedSet.find(BB) != VisitedSet.end())
+      if (llvm::is_contained(VisitedSet, BB))
         continue;
 
       VisitedSet.insert(BB);
@@ -359,12 +353,13 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
   // instructions to protect the red zone
   bool IsLeafFunction = true;
   DenseSet<const BinaryBasicBlock *> InvokeBlocks;
-  for (auto BBI = Function.begin(), BBE = Function.end(); BBI != BBE; ++BBI) {
-    for (auto I = BBI->begin(), E = BBI->end(); I != E; ++I) {
-      if (BC.MIB->isCall(*I)) {
-        if (BC.MIB->isInvoke(*I))
-          InvokeBlocks.insert(&*BBI);
-        IsLeafFunction = false;
+  for (const BinaryBasicBlock &BB : Function) {
+    for (const MCInst &Inst : BB) {
+      if (BC.MIB->isCall(Inst)) {
+        if (BC.MIB->isInvoke(Inst))
+          InvokeBlocks.insert(&BB);
+        if (!BC.MIB->isTailCall(Inst))
+          IsLeafFunction = false;
       }
     }
   }
@@ -410,7 +405,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       }
       if (TargetFunc) {
         // Do not instrument edges in the spanning tree
-        if (STOutSet[&BB].find(TargetBB) != STOutSet[&BB].end()) {
+        if (llvm::is_contained(STOutSet[&BB], TargetBB)) {
           auto L = BC.scopeLock();
           createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                 Function, ToOffset, BBToID[TargetBB],
@@ -427,7 +422,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       if (IsJumpTable) {
         for (BinaryBasicBlock *&Succ : BB.successors()) {
           // Do not instrument edges in the spanning tree
-          if (STOutSet[&BB].find(&*Succ) != STOutSet[&BB].end()) {
+          if (llvm::is_contained(STOutSet[&BB], &*Succ)) {
             auto L = BC.scopeLock();
             createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                                   Function, Succ->getInputOffset(),
@@ -470,7 +465,7 @@ void Instrumentation::instrumentFunction(BinaryFunction &Function,
       FromOffset = *BC.MIB->getOffset(*LastInstr);
 
       // Do not instrument edges in the spanning tree
-      if (STOutSet[&BB].find(FTBB) != STOutSet[&BB].end()) {
+      if (llvm::is_contained(STOutSet[&BB], FTBB)) {
         auto L = BC.scopeLock();
         createEdgeDescription(*FuncDesc, Function, FromOffset, BBToID[&BB],
                               Function, FTBB->getInputOffset(), BBToID[FTBB],
@@ -578,9 +573,8 @@ void Instrumentation::runOnFunctions(BinaryContext &BC) {
       MCSymbol *Target = BC.registerNameAtAddress(
           "__bolt_instr_fini", FiniSection->getAddress(), 0, 0);
       auto IsLEA = [&BC](const MCInst &Inst) { return BC.MIB->isLEA64r(Inst); };
-      const auto LEA =
-          std::find_if(std::next(std::find_if(BB.rbegin(), BB.rend(), IsLEA)),
-                       BB.rend(), IsLEA);
+      const auto LEA = std::find_if(
+          std::next(llvm::find_if(reverse(BB), IsLEA)), BB.rend(), IsLEA);
       LEA->getOperand(4).setExpr(
           MCSymbolRefExpr::create(Target, MCSymbolRefExpr::VK_None, *BC.Ctx));
     } else {
@@ -597,8 +591,7 @@ void Instrumentation::createAuxiliaryFunctions(BinaryContext &BC) {
     BinaryFunction *Func = BC.createInjectedBinaryFunction(std::string(Title));
 
     std::vector<std::unique_ptr<BinaryBasicBlock>> BBs;
-    BBs.emplace_back(
-        Func->createBasicBlock(BinaryBasicBlock::INVALID_OFFSET, nullptr));
+    BBs.emplace_back(Func->createBasicBlock());
     BBs.back()->addInstructions(Instrs.begin(), Instrs.end());
     BBs.back()->setCFIState(0);
     Func->insertBasicBlocks(nullptr, std::move(BBs),

@@ -14,11 +14,11 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <string>
 #include <vector>
@@ -42,6 +42,11 @@ void SubtargetFeatures::AddFeature(StringRef String, bool Enable) {
                                        : (Enable ? "+" : "-") + String.lower());
 }
 
+void SubtargetFeatures::addFeaturesVector(
+    const ArrayRef<std::string> OtherFeatures) {
+  Features.insert(Features.cend(), OtherFeatures.begin(), OtherFeatures.end());
+}
+
 SubtargetFeatures::SubtargetFeatures(StringRef Initial) {
   // Break up string into separate features
   Split(Features, Initial);
@@ -52,7 +57,7 @@ std::string SubtargetFeatures::getString() const {
 }
 
 void SubtargetFeatures::print(raw_ostream &OS) const {
-  for (auto &F : Features)
+  for (const auto &F : Features)
     OS << F << " ";
   OS << "\n";
 }

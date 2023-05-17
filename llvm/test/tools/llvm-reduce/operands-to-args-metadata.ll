@@ -5,7 +5,7 @@
 define void @foo() !dbg !7 {
 entry:
   %a = alloca i32
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !13, metadata !DIExpression()), !dbg !14
   ret void
 }
 

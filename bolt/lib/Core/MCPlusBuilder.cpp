@@ -133,17 +133,17 @@ bool MCPlusBuilder::isTailCall(const MCInst &Inst) const {
   return false;
 }
 
-Optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
+std::optional<MCLandingPad> MCPlusBuilder::getEHInfo(const MCInst &Inst) const {
   if (!isCall(Inst))
-    return NoneType();
-  Optional<int64_t> LPSym =
+    return std::nullopt;
+  std::optional<int64_t> LPSym =
       getAnnotationOpValue(Inst, MCAnnotation::kEHLandingPad);
   if (!LPSym)
-    return NoneType();
-  Optional<int64_t> Action =
+    return std::nullopt;
+  std::optional<int64_t> Action =
       getAnnotationOpValue(Inst, MCAnnotation::kEHAction);
   if (!Action)
-    return NoneType();
+    return std::nullopt;
 
   return std::make_pair(reinterpret_cast<const MCSymbol *>(*LPSym),
                         static_cast<uint64_t>(*Action));
@@ -159,8 +159,19 @@ void MCPlusBuilder::addEHInfo(MCInst &Inst, const MCLandingPad &LP) {
   }
 }
 
+bool MCPlusBuilder::updateEHInfo(MCInst &Inst, const MCLandingPad &LP) {
+  if (!isInvoke(Inst))
+    return false;
+
+  setAnnotationOpValue(Inst, MCAnnotation::kEHLandingPad,
+                       reinterpret_cast<int64_t>(LP.first));
+  setAnnotationOpValue(Inst, MCAnnotation::kEHAction,
+                       static_cast<int64_t>(LP.second));
+  return true;
+}
+
 int64_t MCPlusBuilder::getGnuArgsSize(const MCInst &Inst) const {
-  Optional<int64_t> Value =
+  std::optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kGnuArgsSize);
   if (!Value)
     return -1LL;
@@ -177,7 +188,7 @@ void MCPlusBuilder::addGnuArgsSize(MCInst &Inst, int64_t GnuArgsSize,
 }
 
 uint64_t MCPlusBuilder::getJumpTable(const MCInst &Inst) const {
-  Optional<int64_t> Value =
+  std::optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kJumpTable);
   if (!Value)
     return 0;
@@ -205,12 +216,12 @@ bool MCPlusBuilder::unsetJumpTable(MCInst &Inst) {
   return true;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 MCPlusBuilder::getConditionalTailCall(const MCInst &Inst) const {
-  Optional<int64_t> Value =
+  std::optional<int64_t> Value =
       getAnnotationOpValue(Inst, MCAnnotation::kConditionalTailCall);
   if (!Value)
-    return NoneType();
+    return std::nullopt;
   return static_cast<uint64_t>(*Value);
 }
 
@@ -229,16 +240,17 @@ bool MCPlusBuilder::unsetConditionalTailCall(MCInst &Inst) {
   return true;
 }
 
-Optional<uint32_t> MCPlusBuilder::getOffset(const MCInst &Inst) const {
-  Optional<int64_t> Value = getAnnotationOpValue(Inst, MCAnnotation::kOffset);
+std::optional<uint32_t> MCPlusBuilder::getOffset(const MCInst &Inst) const {
+  std::optional<int64_t> Value =
+      getAnnotationOpValue(Inst, MCAnnotation::kOffset);
   if (!Value)
-    return NoneType();
+    return std::nullopt;
   return static_cast<uint32_t>(*Value);
 }
 
 uint32_t MCPlusBuilder::getOffsetWithDefault(const MCInst &Inst,
                                              uint32_t Default) const {
-  if (Optional<uint32_t> Offset = getOffset(Inst))
+  if (std::optional<uint32_t> Offset = getOffset(Inst))
     return *Offset;
   return Default;
 }
@@ -286,7 +298,8 @@ void MCPlusBuilder::stripAnnotations(MCInst &Inst, bool KeepTC) {
   // Preserve TailCall annotation.
   auto IsTC = hasAnnotation(Inst, MCAnnotation::kTailCall);
 
-  Inst.erase(std::prev(Inst.end()));
+  removeAnnotationInst(Inst);
+
   if (KeepTC && IsTC)
     setTailCall(Inst);
 }
@@ -309,11 +322,6 @@ void MCPlusBuilder::printAnnotations(const MCInst &Inst,
   }
 }
 
-bool MCPlusBuilder::evaluateBranch(const MCInst &Inst, uint64_t Addr,
-                                   uint64_t Size, uint64_t &Target) const {
-  return Analysis->evaluateBranch(Inst, Addr, Size, Target);
-}
-
 void MCPlusBuilder::getClobberedRegs(const MCInst &Inst,
                                      BitVector &Regs) const {
   if (isPrefix(Inst) || isCFI(Inst))
@@ -321,9 +329,8 @@ void MCPlusBuilder::getClobberedRegs(const MCInst &Inst,
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitDefs = InstInfo.getImplicitDefs();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitDefs(); I != E; ++I)
-    Regs |= getAliases(ImplicitDefs[I], /*OnlySmaller=*/false);
+  for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
+    Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/false);
 
   for (unsigned I = 0, E = InstInfo.getNumDefs(); I != E; ++I) {
     const MCOperand &Operand = Inst.getOperand(I);
@@ -338,12 +345,10 @@ void MCPlusBuilder::getTouchedRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitDefs = InstInfo.getImplicitDefs();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitDefs(); I != E; ++I)
-    Regs |= getAliases(ImplicitDefs[I], /*OnlySmaller=*/false);
-  const MCPhysReg *ImplicitUses = InstInfo.getImplicitUses();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitUses(); I != E; ++I)
-    Regs |= getAliases(ImplicitUses[I], /*OnlySmaller=*/false);
+  for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
+    Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/false);
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
+    Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/false);
 
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
     if (!Inst.getOperand(I).isReg())
@@ -358,9 +363,8 @@ void MCPlusBuilder::getWrittenRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitDefs = InstInfo.getImplicitDefs();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitDefs(); I != E; ++I)
-    Regs |= getAliases(ImplicitDefs[I], /*OnlySmaller=*/true);
+  for (MCPhysReg ImplicitDef : InstInfo.implicit_defs())
+    Regs |= getAliases(ImplicitDef, /*OnlySmaller=*/true);
 
   for (unsigned I = 0, E = InstInfo.getNumDefs(); I != E; ++I) {
     const MCOperand &Operand = Inst.getOperand(I);
@@ -375,9 +379,8 @@ void MCPlusBuilder::getUsedRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitUses = InstInfo.getImplicitUses();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitUses(); I != E; ++I)
-    Regs |= getAliases(ImplicitUses[I], /*OnlySmaller=*/true);
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
+    Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
   for (unsigned I = 0, E = Inst.getNumOperands(); I != E; ++I) {
     if (!Inst.getOperand(I).isReg())
@@ -408,9 +411,8 @@ void MCPlusBuilder::getSrcRegs(const MCInst &Inst, BitVector &Regs) const {
 
   const MCInstrDesc &InstInfo = Info->get(Inst.getOpcode());
 
-  const MCPhysReg *ImplicitUses = InstInfo.getImplicitUses();
-  for (unsigned I = 0, E = InstInfo.getNumImplicitUses(); I != E; ++I)
-    Regs |= getAliases(ImplicitUses[I], /*OnlySmaller=*/true);
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses())
+    Regs |= getAliases(ImplicitUse, /*OnlySmaller=*/true);
 
   for (unsigned I = InstInfo.getNumDefs(), E = InstInfo.getNumOperands();
        I != E; ++I) {
@@ -431,10 +433,9 @@ bool MCPlusBuilder::hasUseOfPhysReg(const MCInst &MI, unsigned Reg) const {
     if (MI.getOperand(I).isReg() &&
         RegInfo->isSubRegisterEq(Reg, MI.getOperand(I).getReg()))
       return true;
-  if (const uint16_t *ImpUses = InstInfo.ImplicitUses) {
-    for (; *ImpUses; ++ImpUses)
-      if (*ImpUses == Reg || RegInfo->isSubRegister(Reg, *ImpUses))
-        return true;
+  for (MCPhysReg ImplicitUse : InstInfo.implicit_uses()) {
+    if (ImplicitUse == Reg || RegInfo->isSubRegister(Reg, ImplicitUse))
+      return true;
   }
   return false;
 }
@@ -463,17 +464,9 @@ void MCPlusBuilder::initAliases() {
   }
 
   // Propagate smaller alias info upwards. Skip reg 0 (mapped to NoRegister)
-  std::queue<MCPhysReg> Worklist;
   for (MCPhysReg I = 1, E = RegInfo->getNumRegs(); I < E; ++I)
-    Worklist.push(I);
-  while (!Worklist.empty()) {
-    MCPhysReg I = Worklist.front();
-    Worklist.pop();
     for (MCSubRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
       SmallerAliasMap[I] |= SmallerAliasMap[*SI];
-    for (MCSuperRegIterator SI(I, RegInfo); SI.isValid(); ++SI)
-      Worklist.push(*SI);
-  }
 
   LLVM_DEBUG({
     dbgs() << "Dumping reg alias table:\n";
@@ -490,22 +483,12 @@ void MCPlusBuilder::initAliases() {
   });
 }
 
-uint8_t MCPlusBuilder::getRegSize(MCPhysReg Reg) const {
-  // SizeMap caches a mapping of registers to their sizes
-  static std::vector<uint8_t> SizeMap;
-
-  if (SizeMap.size() > 0) {
-    return SizeMap[Reg];
-  }
-  SizeMap = std::vector<uint8_t>(RegInfo->getNumRegs());
+void MCPlusBuilder::initSizeMap() {
+  SizeMap.resize(RegInfo->getNumRegs());
   // Build size map
-  for (auto I = RegInfo->regclass_begin(), E = RegInfo->regclass_end(); I != E;
-       ++I) {
-    for (MCPhysReg Reg : *I)
-      SizeMap[Reg] = I->getSizeInBits() / 8;
-  }
-
-  return SizeMap[Reg];
+  for (auto RC : RegInfo->regclasses())
+    for (MCPhysReg Reg : RC)
+      SizeMap[Reg] = RC.getSizeInBits() / 8;
 }
 
 bool MCPlusBuilder::setOperandToSymbolRef(MCInst &Inst, int OpNum,

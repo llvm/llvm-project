@@ -21,7 +21,8 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX10-NEXT:    s_or_b32 s1, s0, s1
 ; GFX10-NEXT:    s_andn2_b32 exec_lo, exec_lo, s1
 ; GFX10-NEXT:    s_cbranch_execz .LBB0_4
-; GFX10-NEXT:  .LBB0_2: ; =>This Inner Loop Header: Depth=1
+; GFX10-NEXT:  .LBB0_2: ; %bb
+; GFX10-NEXT:    ; =>This Inner Loop Header: Depth=1
 ; GFX10-NEXT:    s_or_b32 s2, s2, exec_lo
 ; GFX10-NEXT:    s_and_saveexec_b32 s3, vcc_lo
 ; GFX10-NEXT:    s_cbranch_execz .LBB0_1
@@ -50,20 +51,20 @@ define amdgpu_cs void @_amdgpu_cs_main(float %0, i32 %1) {
 ; GFX10-NEXT:    s_inst_prefetch 0x2
 ; GFX10-NEXT:    s_endpgm
 branch1_true:
-  br label %2
+  br label %bb
 
-2:                                                ; preds = %branch2_merge, %branch1_true
+bb:                                               ; preds = %branch2_merge, %branch1_true
   %r1.8.vec.insert14.i1 = phi float [ 0.000000e+00, %branch1_true ], [ %0, %branch2_merge ]
-  %3 = call float @llvm.amdgcn.image.sample.lz.3d.f32.f32(i32 1, float 0.000000e+00, float 0.000000e+00, float %r1.8.vec.insert14.i1, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
-  %4 = icmp eq i32 %1, 0
-  br i1 %4, label %loop0_merge, label %branch2_merge
+  %i = icmp eq i32 %1, 0
+  br i1 %i, label %loop0_merge, label %branch2_merge
 
-branch2_merge:                                    ; preds = %2
-  %5 = call reassoc nnan nsz arcp contract afn float @llvm.fma.f32(float %3, float %0, float 0.000000e+00)
-  %6 = fcmp ult float %5, 0.000000e+00
-  br i1 %6, label %2, label %loop0_merge
+branch2_merge:                                    ; preds = %bb
+  %i2 = call float @llvm.amdgcn.image.sample.lz.3d.f32.f32(i32 1, float 0.000000e+00, float 0.000000e+00, float %r1.8.vec.insert14.i1, <8 x i32> zeroinitializer, <4 x i32> zeroinitializer, i1 false, i32 0, i32 0)
+  %i3 = call reassoc nnan nsz arcp contract afn float @llvm.fma.f32(float %i2, float %0, float 0.000000e+00)
+  %i4 = fcmp ult float %i3, 0.000000e+00
+  br i1 %i4, label %bb, label %loop0_merge
 
-loop0_merge:                                      ; preds = %branch2_merge, %2
+loop0_merge:                                      ; preds = %branch2_merge, %bb
   ret void
 }
 

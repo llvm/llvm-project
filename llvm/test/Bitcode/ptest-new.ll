@@ -23,4 +23,4 @@ declare i32 @llvm.x86.sse41.ptestz(<2 x i64>, <2 x i64>) nounwind readnone
 declare i32 @llvm.x86.sse41.ptestnzc(<2 x i64>, <2 x i64>) nounwind readnone
 
 ; CHECK: attributes #0 = { nounwind }
-; CHECK: attributes #1 = { nounwind readnone }
+; CHECK: attributes #1 = { nocallback nofree nosync nounwind willreturn memory(none) }

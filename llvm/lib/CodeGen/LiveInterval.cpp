@@ -348,23 +348,8 @@ private:
 //===----------------------------------------------------------------------===//
 
 LiveRange::iterator LiveRange::find(SlotIndex Pos) {
-  // This algorithm is basically std::upper_bound.
-  // Unfortunately, std::upper_bound cannot be used with mixed types until we
-  // adopt C++0x. Many libraries can do it, but not all.
-  if (empty() || Pos >= endIndex())
-    return end();
-  iterator I = begin();
-  size_t Len = size();
-  do {
-    size_t Mid = Len >> 1;
-    if (Pos < I[Mid].end) {
-      Len = Mid;
-    } else {
-      I += Mid + 1;
-      Len -= Mid + 1;
-    }
-  } while (Len);
-  return I;
+  return llvm::partition_point(*this,
+                               [&](const Segment &X) { return X.end <= Pos; });
 }
 
 VNInfo *LiveRange::createDeadDef(SlotIndex Def, VNInfo::Allocator &VNIAlloc) {
@@ -460,7 +445,7 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
 
   while (true) {
     // J has just been advanced to satisfy:
-    assert(J->end >= I->start);
+    assert(J->end > I->start);
     // Check for an overlap.
     if (J->start < I->end) {
       // I and J are overlapping. Find the later start.
@@ -475,11 +460,11 @@ bool LiveRange::overlaps(const LiveRange &Other, const CoalescerPair &CP,
       std::swap(I, J);
       std::swap(IE, JE);
     }
-    // Advance J until J->end >= I->start.
+    // Advance J until J->end > I->start.
     do
       if (++J == JE)
         return false;
-    while (J->end < I->start);
+    while (J->end <= I->start);
   }
 }
 
@@ -978,7 +963,7 @@ void LiveInterval::computeSubRangeUndefs(SmallVectorImpl<SlotIndex> &Undefs,
                                          LaneBitmask LaneMask,
                                          const MachineRegisterInfo &MRI,
                                          const SlotIndexes &Indexes) const {
-  assert(Register::isVirtualRegister(reg()));
+  assert(reg().isVirtual());
   LaneBitmask VRegMask = MRI.getMaxLaneMaskForVReg(reg());
   assert((VRegMask & LaneMask).any());
   const TargetRegisterInfo &TRI = *MRI.getTargetRegisterInfo();

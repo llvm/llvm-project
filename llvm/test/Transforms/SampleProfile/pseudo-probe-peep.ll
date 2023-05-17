@@ -1,10 +1,10 @@
 ; REQUIRES: x86_64-linux
 ; RUN: llc -mtriple=x86_64-- -stop-after=peephole-opt -o - %s | FileCheck %s
 
-define internal i32 @arc_compare() {
+define internal i32 @arc_compare(i1 %c) {
 entry:
-  %0 = load i64, i64* undef, align 8
-  br i1 undef, label %return, label %if.end
+  %0 = load i64, ptr undef, align 8
+  br i1 %c, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
 ; Chek a register copy has been sinked into the compare instruction.

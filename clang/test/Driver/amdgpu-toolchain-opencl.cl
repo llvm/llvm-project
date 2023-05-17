@@ -25,3 +25,6 @@
 
 // CHK-INC: "-cc1" {{.*}}"-finclude-default-header" "-fdeclare-opencl-builtins" {{.*}}"-x" "cl"
 // CHK-INC-NOT: "-cc1" {{.*}}"-finclude-default-header" "-fdeclare-opencl-builtins" {{.*}}"-x" "cpp-output"
+
+// RUN: %clang -### --target=amdgcn-amd-amdhsa-opencl -x cl -emit-llvm -mcpu=fiji %s 2>&1 | FileCheck -check-prefix=CHK-LINK %s
+// CHK-LINK: ld.lld{{.*}} "--no-undefined" "-shared"

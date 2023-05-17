@@ -136,7 +136,7 @@ struct S4 {
 };
 
 int *g4(struct S4 *s4) {
-  return &s4->inner.i; // expected-warning {{packed member 'i' of class or structure 'S4::(anonymous)'}}
+  return &s4->inner.i; // expected-warning {{packed member 'i' of class or structure 'S4::struct (unnamed at}}
 }
 
 struct S5 {
@@ -148,7 +148,7 @@ struct S5 {
 };
 
 int *g5(struct S5 *s5) {
-  return &s5->inner.i; // expected-warning {{packed member 'i' of class or structure 'S5::(anonymous)'}}
+  return &s5->inner.i; // expected-warning {{packed member 'i' of class or structure 'S5::struct (unnamed at}}
 }
 
 struct __attribute__((packed, aligned(2))) AlignedTo2 {
@@ -200,7 +200,7 @@ struct S6 {
 };
 
 int *anonymousInnerUnion(struct S6 *s) {
-  return &s->x; // expected-warning {{packed member 'x' of class or structure 'S6::(anonymous)'}}
+  return &s->x; // expected-warning {{packed member 'x' of class or structure 'S6::union (anonymous at}}
 }
 
 struct S6a {
@@ -212,7 +212,7 @@ struct S6a {
 } __attribute__((packed, aligned(16))) s6;
 
 void g8(void)
-{ 
+{
     f1(&s6.a); // no-warning
     f1(&s6.c); // no-warning
     f1(&s6.d); // expected-warning {{packed member 'd' of class or structure 'S6a'}}

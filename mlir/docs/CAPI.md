@@ -2,6 +2,8 @@
 
 **Current status: Under development, API unstable, built by default.**
 
+[TOC]
+
 ## Design
 
 Many languages can interoperate with C but have a harder time with C++ due to

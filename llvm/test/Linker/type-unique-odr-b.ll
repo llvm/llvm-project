@@ -22,12 +22,12 @@
 %class.A = type { i32 }
 
 ; Function Attrs: nounwind
-define void @_ZN1A6getFooEv(%class.A* %this) #0 align 2 !dbg !15 {
+define void @_ZN1A6getFooEv(ptr %this) #0 align 2 !dbg !15 {
 entry:
-  %this.addr = alloca %class.A*, align 8
-  store %class.A* %this, %class.A** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.A** %this.addr, metadata !24, metadata !DIExpression()), !dbg !26
-  %this1 = load %class.A*, %class.A** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !24, metadata !DIExpression()), !dbg !26
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !27
 }
 

@@ -38,11 +38,11 @@ define <2 x i64> @sdiv_by_minus1_vec(<2 x i64> %x) {
   ret <2 x i64> %div
 }
 
-define <2 x i64> @sdiv_by_minus1_vec_undef_elt(<2 x i64> %x) {
-; CHECK-LABEL: @sdiv_by_minus1_vec_undef_elt(
+define <2 x i64> @sdiv_by_minus1_vec_poison_elt(<2 x i64> %x) {
+; CHECK-LABEL: @sdiv_by_minus1_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i64> poison
 ;
-  %div = sdiv <2 x i64> %x, <i64 -1, i64 undef>
+  %div = sdiv <2 x i64> %x, <i64 -1, i64 poison>
   ret <2 x i64> %div
 }
 
@@ -129,8 +129,8 @@ define i32 @test5(i32 %A) {
 
 define i1 @test6(i32 %A) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A:%.*]], 123
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A:%.*]], 123
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = udiv i32 %A, 123
   ; A < 123
@@ -141,8 +141,8 @@ define i1 @test6(i32 %A) {
 define i1 @test7(i32 %A) {
 ; CHECK-LABEL: @test7(
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add i32 [[A:%.*]], -20
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[A_OFF]], 10
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult i32 [[A_OFF]], 10
+; CHECK-NEXT:    ret i1 [[C]]
 ;
   %B = udiv i32 %A, 10
   ; A >= 20 && A < 30
@@ -153,8 +153,8 @@ define i1 @test7(i32 %A) {
 define <2 x i1> @test7vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test7vec(
 ; CHECK-NEXT:    [[A_OFF:%.*]] = add <2 x i32> [[A:%.*]], <i32 -20, i32 -20>
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i32> [[A_OFF]], <i32 10, i32 10>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[C:%.*]] = icmp ult <2 x i32> [[A_OFF]], <i32 10, i32 10>
+; CHECK-NEXT:    ret <2 x i1> [[C]]
 ;
   %B = udiv <2 x i32> %A, <i32 10, i32 10>
   %C = icmp eq <2 x i32> %B, <i32 2, i32 2>
@@ -400,7 +400,7 @@ define i32 @test28(i32 %a) {
 
 define i32 @test29(i32 %a) {
 ; CHECK-LABEL: @test29(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[A:%.*]], -1
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[A:%.*]], 0
 ; CHECK-NEXT:    [[DIV:%.*]] = zext i1 [[TMP1]] to i32
 ; CHECK-NEXT:    ret i32 [[DIV]]
 ;
@@ -514,12 +514,12 @@ define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_splat_smin(<2 x i8> 
   ret <2 x i8> %d
 }
 
-define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_undef(<2 x i8> %x) {
-; CHECK-LABEL: @sdiv_negated_dividend_constant_divisor_vec_undef(
+define <2 x i8> @sdiv_negated_dividend_constant_divisor_vec_poison(<2 x i8> %x) {
+; CHECK-LABEL: @sdiv_negated_dividend_constant_divisor_vec_poison(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
   %neg = sub nsw <2 x i8> zeroinitializer, %x
-  %d = sdiv <2 x i8> %neg, <i8 -128, i8 undef>
+  %d = sdiv <2 x i8> %neg, <i8 -128, i8 poison>
   ret <2 x i8> %d
 }
 
@@ -581,8 +581,8 @@ define <2 x i32> @test35vec(<2 x i32> %A) {
 define i32 @test36(i32 %A) {
 ; CHECK-LABEL: @test36(
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[A:%.*]], 2147483647
-; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact i32 [[AND]], [[A]]
-; CHECK-NEXT:    ret i32 [[MUL1]]
+; CHECK-NEXT:    [[MUL:%.*]] = lshr exact i32 [[AND]], [[A]]
+; CHECK-NEXT:    ret i32 [[MUL]]
 ;
   %and = and i32 %A, 2147483647
   %shl = shl nsw i32 1, %A
@@ -593,8 +593,8 @@ define i32 @test36(i32 %A) {
 define <2 x i32> @test36vec(<2 x i32> %A) {
 ; CHECK-LABEL: @test36vec(
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[A:%.*]], <i32 2147483647, i32 2147483647>
-; CHECK-NEXT:    [[MUL1:%.*]] = lshr exact <2 x i32> [[AND]], [[A]]
-; CHECK-NEXT:    ret <2 x i32> [[MUL1]]
+; CHECK-NEXT:    [[MUL:%.*]] = lshr exact <2 x i32> [[AND]], [[A]]
+; CHECK-NEXT:    ret <2 x i32> [[MUL]]
 ;
   %and = and <2 x i32> %A, <i32 2147483647, i32 2147483647>
   %shl = shl nsw <2 x i32> <i32 1, i32 1>, %A
@@ -602,23 +602,23 @@ define <2 x i32> @test36vec(<2 x i32> %A) {
   ret <2 x i32> %mul
 }
 
-define i32 @test37(i32* %b) {
+define i32 @test37(ptr %b, i1 %c1) {
 ; CHECK-LABEL: @test37(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    store i32 0, i32* [[B:%.*]], align 4
-; CHECK-NEXT:    br i1 undef, label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
+; CHECK-NEXT:    store i32 0, ptr [[B:%.*]], align 4
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOR_RHS:%.*]], label [[LOR_END:%.*]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    br label [[LOR_END]]
 ; CHECK:       lor.end:
 ; CHECK-NEXT:    ret i32 0
 ;
 entry:
-  store i32 0, i32* %b, align 4
-  %0 = load i32, i32* %b, align 4
-  br i1 undef, label %lor.rhs, label %lor.end
+  store i32 0, ptr %b, align 4
+  %0 = load i32, ptr %b, align 4
+  br i1 %c1, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %entry
-  %mul = mul nsw i32 undef, %0
+  %mul = mul nsw i32 1, %0
   br label %lor.end
 
 lor.end:                                          ; preds = %lor.rhs, %entry
@@ -883,13 +883,13 @@ define <2 x i8> @negate_sdiv_vec_splat(<2 x i8> %x) {
   ret <2 x i8> %neg
 }
 
-; Dividing by undef is UB.
+; Dividing by poison is UB.
 
-define <2 x i8> @negate_sdiv_vec_undef_elt(<2 x i8> %x) {
-; CHECK-LABEL: @negate_sdiv_vec_undef_elt(
+define <2 x i8> @negate_sdiv_vec_poison_elt(<2 x i8> %x) {
+; CHECK-LABEL: @negate_sdiv_vec_poison_elt(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
-  %div = sdiv <2 x i8> %x, <i8 undef, i8 42>
+  %div = sdiv <2 x i8> %x, <i8 poison, i8 42>
   %neg = sub <2 x i8> zeroinitializer, %div
   ret <2 x i8> %neg
 }
@@ -1042,11 +1042,11 @@ define <2 x i8> @sdiv_by_int_min_vec_splat(<2 x i8> %x) {
   ret <2 x i8> %d
 }
 
-define <2 x i8> @sdiv_by_int_min_vec_splat_undef(<2 x i8> %x) {
-; CHECK-LABEL: @sdiv_by_int_min_vec_splat_undef(
+define <2 x i8> @sdiv_by_int_min_vec_splat_poison(<2 x i8> %x) {
+; CHECK-LABEL: @sdiv_by_int_min_vec_splat_poison(
 ; CHECK-NEXT:    ret <2 x i8> poison
 ;
-  %d = sdiv <2 x i8> %x, <i8 -128, i8 undef>
+  %d = sdiv <2 x i8> %x, <i8 -128, i8 poison>
   ret <2 x i8> %d
 }
 
@@ -1062,10 +1062,10 @@ define <2 x i8> @sdiv_by_negconst_v2i8(<2 x i8> %x) {
 
 define <vscale x 2 x i8> @sdiv_by_negconst_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_by_negconst_nxv2i8(
-; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 108, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[DIV_NEG:%.*]] = sdiv <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 108, i64 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
 ;
-  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -108, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -108, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
   %sub = sub <vscale x 2 x i8> zeroinitializer, %div
   ret <vscale x 2 x i8> %sub
 }
@@ -1083,11 +1083,11 @@ define <2 x i8> @sdiv_by_minSigned_v2i8(<2 x i8> %x) {
 
 define <vscale x 2 x i8> @sdiv_by_minSigned_nxv2i8(<vscale x 2 x i8> %x) {
 ; CHECK-LABEL: @sdiv_by_minSigned_nxv2i8(
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -128, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <vscale x 2 x i8> [[X:%.*]], shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -128, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    [[DIV_NEG:%.*]] = sext <vscale x 2 x i1> [[TMP1]] to <vscale x 2 x i8>
 ; CHECK-NEXT:    ret <vscale x 2 x i8> [[DIV_NEG]]
 ;
-  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> undef, i8 -128, i32 0), <vscale x 2 x i8> undef, <vscale x 2 x i32> zeroinitializer)
+  %div = sdiv <vscale x 2 x i8> %x, shufflevector (<vscale x 2 x i8> insertelement (<vscale x 2 x i8> poison, i8 -128, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer)
   %sub = sub <vscale x 2 x i8> zeroinitializer, %div
   ret <vscale x 2 x i8> %sub
 }
@@ -1308,8 +1308,8 @@ define i32 @udiv_select_of_constants_divisor(i1 %b, i32 %x) {
 define i1 @sdiv_one_icmpeq_one(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_one(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X_FR]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X_FR]], 1
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %A = sdiv i32 1, %x
   %B = icmp eq i32 %A, 1
@@ -1319,8 +1319,8 @@ define i1 @sdiv_one_icmpeq_one(i32 %x) {
 define i1 @sdiv_one_icmpeq_negone(i32 %x) {
 ; CHECK-LABEL: @sdiv_one_icmpeq_negone(
 ; CHECK-NEXT:    [[X_FR:%.*]] = freeze i32 [[X:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X_FR]], -1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[B:%.*]] = icmp eq i32 [[X_FR]], -1
+; CHECK-NEXT:    ret i1 [[B]]
 ;
   %A = sdiv i32 1, %x
   %B = icmp eq i32 %A, -1
@@ -1345,4 +1345,252 @@ define i1 @udiv_one_icmpne_one(i32 %x) {
   %A = udiv i32 1, %x
   %B = icmp ne i32 %A, 1
   ret i1 %B
+}
+
+; ((X * Y) / Z) / X --> Y / Z
+
+define i8 @udiv_udiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nuw(
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %x, %y
+  %d = udiv i8 %m, %z
+  %r = udiv i8 %d, %x
+  ret i8 %r
+}
+
+; exact propagates and commute is ok
+
+define i8 @udiv_udiv_mul_nuw_exact_exact(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nuw_exact_exact(
+; CHECK-NEXT:    [[R:%.*]] = udiv exact i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %y, %x
+  %d = udiv exact i8 %m, %z
+  %r = udiv exact i8 %d, %x
+  ret i8 %r
+}
+
+; extra uses are ok
+
+define i32 @udiv_udiv_mul_nuw_exact_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nuw_exact_use(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[M]])
+; CHECK-NEXT:    [[R:%.*]] = udiv i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul nuw i32 %x, %y
+  call void @use(i32 %m)
+  %d = udiv exact i32 %m, %z
+  %r = udiv i32 %d, %x
+  ret i32 %r
+}
+
+; negative test - must have nuw
+
+define i8 @udiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_udiv_mul_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nsw i8 %x, %y
+  %d = udiv i8 %m, %z
+  %r = udiv i8 %d, %x
+  ret i8 %r
+}
+
+; negative test - opcode mismatch
+
+define i8 @udiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @udiv_sdiv_mul_nuw(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = udiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %x, %y
+  %d = sdiv i8 %m, %z
+  %r = udiv i8 %d, %x
+  ret i8 %r
+}
+
+; ((Y * X) / Z) / X --> Y / Z
+
+define <2 x i8> @sdiv_sdiv_mul_nsw(<2 x i8> %x, <2 x i8> %y, <2 x i8> %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nsw(
+; CHECK-NEXT:    [[R:%.*]] = sdiv <2 x i8> [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %m = mul nsw <2 x i8> %y, %x
+  %d = sdiv <2 x i8> %m, %z
+  %r = sdiv <2 x i8> %d, %x
+  ret <2 x i8> %r
+}
+
+; exact propagates
+
+define i8 @sdiv_sdiv_mul_nsw_exact_exact(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nsw_exact_exact(
+; CHECK-NEXT:    [[R:%.*]] = sdiv exact i8 [[Y:%.*]], [[Z:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nsw i8 %x, %y
+  %d = sdiv exact i8 %m, %z
+  %r = sdiv exact i8 %d, %x
+  ret i8 %r
+}
+
+; extra uses are ok
+
+define i32 @sdiv_sdiv_mul_nsw_exact_use(i32 %x, i32 %y, i32 %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nsw_exact_use(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i32 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    call void @use(i32 [[D]])
+; CHECK-NEXT:    [[R:%.*]] = sdiv i32 [[Y]], [[Z]]
+; CHECK-NEXT:    ret i32 [[R]]
+;
+  %m = mul nsw i32 %x, %y
+  %d = sdiv i32 %m, %z
+  call void @use(i32 %d)
+  %r = sdiv exact i32 %d, %x
+  ret i32 %r
+}
+
+; negative test - must have nsw
+
+define i8 @sdiv_sdiv_mul_nuw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sdiv_sdiv_mul_nuw(
+; CHECK-NEXT:    [[M:%.*]] = mul nuw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = sdiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nuw i8 %x, %y
+  %d = sdiv i8 %m, %z
+  %r = sdiv i8 %d, %x
+  ret i8 %r
+}
+
+; negative test - opcode mismatch
+
+define i8 @sdiv_udiv_mul_nsw(i8 %x, i8 %y, i8 %z) {
+; CHECK-LABEL: @sdiv_udiv_mul_nsw(
+; CHECK-NEXT:    [[M:%.*]] = mul nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[D:%.*]] = udiv i8 [[M]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = sdiv i8 [[D]], [[X]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %m = mul nsw i8 %x, %y
+  %d = udiv i8 %m, %z
+  %r = sdiv i8 %d, %x
+  ret i8 %r
+}
+
+; ((X * C2) + C1) / C2 --> X + C1/C2
+
+define i6 @sdiv_distribute_mul_nsw_add_nsw(i6 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw(
+; CHECK-NEXT:    [[DIV:%.*]] = add nsw i6 [[X:%.*]], -5
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nsw i6 %x, 3
+  %add = add nsw i6 %mul, -15
+  %div = sdiv i6 %add, 3
+  ret i6 %div
+}
+
+; extra uses are ok
+
+define i32 @sdiv_distribute_mul_nsw_add_nsw_uses(i32 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw_uses(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i32 [[X:%.*]], 42
+; CHECK-NEXT:    call void @use(i32 [[MUL]])
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i32 [[MUL]], 126
+; CHECK-NEXT:    call void @use(i32 [[ADD]])
+; CHECK-NEXT:    [[DIV:%.*]] = add nsw i32 [[X]], 3
+; CHECK-NEXT:    ret i32 [[DIV]]
+;
+  %mul = mul nsw i32 %x, 42
+  call void @use(i32 %mul)
+  %add = add nsw i32 %mul, 126
+  call void @use(i32 %add)
+  %div = sdiv i32 %add, 42
+  ret i32 %div
+}
+
+; vector splats work
+
+define <2 x i6> @udiv_distribute_mul_nuw_add_nuw(<2 x i6> %x) {
+; CHECK-LABEL: @udiv_distribute_mul_nuw_add_nuw(
+; CHECK-NEXT:    [[DIV:%.*]] = add nuw <2 x i6> [[X:%.*]], <i6 5, i6 5>
+; CHECK-NEXT:    ret <2 x i6> [[DIV]]
+;
+  %mul = mul nuw <2 x i6> %x, <i6 3, i6 3>
+  %add = add nuw <2 x i6> %mul, <i6 15, i6 15>
+  %div = udiv <2 x i6> %add, <i6 3, i6 3>
+  ret <2 x i6> %div
+}
+
+; negative test - constants must be evenly divisible
+
+define i6 @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(i6 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nsw_add_nsw_not_multiple_offset(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i6 [[X:%.*]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i6 [[MUL]], -16
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i6 [[ADD]], 3
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nsw i6 %x, 3
+  %add = add nsw i6 %mul, -16
+  %div = sdiv i6 %add, 3
+  ret i6 %div
+}
+
+; constants do not have to be evenly divisible with unsigned division
+
+define i6 @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(i6 %x) {
+; CHECK-LABEL: @udiv_distribute_mul_nuw_add_nuw_not_multiple_offset(
+; CHECK-NEXT:    [[DIV:%.*]] = add nuw i6 [[X:%.*]], 2
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nuw i6 %x, 3
+  %add = add nuw i6 %mul, 7
+  %div = udiv i6 %add, 3
+  ret i6 %div
+}
+
+; negative test - wrong no-wrap
+
+define i6 @sdiv_distribute_mul_nuw_add_nsw(i6 %x) {
+; CHECK-LABEL: @sdiv_distribute_mul_nuw_add_nsw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nuw i6 [[X:%.*]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nsw i6 [[MUL]], -15
+; CHECK-NEXT:    [[DIV:%.*]] = sdiv i6 [[ADD]], 3
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nuw i6 %x, 3
+  %add = add nsw i6 %mul, -15
+  %div = sdiv i6 %add, 3
+  ret i6 %div
+}
+
+; negative test - wrong no-wrap
+
+define i6 @udiv_distribute_mul_nsw_add_nuw(i6 %x) {
+; CHECK-LABEL: @udiv_distribute_mul_nsw_add_nuw(
+; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i6 [[X:%.*]], 3
+; CHECK-NEXT:    [[ADD:%.*]] = add nuw i6 [[MUL]], 9
+; CHECK-NEXT:    [[DIV:%.*]] = udiv i6 [[ADD]], 3
+; CHECK-NEXT:    ret i6 [[DIV]]
+;
+  %mul = mul nsw i6 %x, 3
+  %add = add nuw i6 %mul, 9
+  %div = udiv i6 %add, 3
+  ret i6 %div
 }

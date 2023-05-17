@@ -502,12 +502,10 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
   if (CGM.getLangOpts().OpenCL) {
     // The header is basically 'struct { int; int; generic void *;
     // custom_fields; }'. Assert that struct is packed.
-    auto GenericAS =
-        CGM.getContext().getTargetAddressSpace(LangAS::opencl_generic);
-    auto GenPtrAlign =
-        CharUnits::fromQuantity(CGM.getTarget().getPointerAlign(GenericAS) / 8);
-    auto GenPtrSize =
-        CharUnits::fromQuantity(CGM.getTarget().getPointerWidth(GenericAS) / 8);
+    auto GenPtrAlign = CharUnits::fromQuantity(
+        CGM.getTarget().getPointerAlign(LangAS::opencl_generic) / 8);
+    auto GenPtrSize = CharUnits::fromQuantity(
+        CGM.getTarget().getPointerWidth(LangAS::opencl_generic) / 8);
     assert(CGM.getIntSize() <= GenPtrSize);
     assert(CGM.getIntAlign() <= GenPtrAlign);
     assert((2 * CGM.getIntSize()).isMultipleOf(GenPtrAlign));
@@ -521,10 +519,10 @@ static void initializeForBlockHeader(CodeGenModule &CGM, CGBlockInfo &info,
     unsigned BlockAlign = GenPtrAlign.getQuantity();
     if (auto *Helper =
             CGM.getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
-      for (auto I : Helper->getCustomFieldTypes()) /* custom fields */ {
+      for (auto *I : Helper->getCustomFieldTypes()) /* custom fields */ {
         // TargetOpenCLBlockHelp needs to make sure the struct is packed.
         // If necessary, add padding fields to the custom fields.
-        unsigned Align = CGM.getDataLayout().getABITypeAlignment(I);
+        unsigned Align = CGM.getDataLayout().getABITypeAlign(I).value();
         if (BlockAlign < Align)
           BlockAlign = Align;
         assert(Offset % Align == 0);
@@ -806,9 +804,7 @@ llvm::Value *CodeGenFunction::EmitBlockLiteral(const CGBlockInfo &blockInfo) {
       IsOpenCL ? CGM.getOpenCLRuntime().getGenericVoidPointerType() : VoidPtrTy;
   LangAS GenVoidPtrAddr = IsOpenCL ? LangAS::opencl_generic : LangAS::Default;
   auto GenVoidPtrSize = CharUnits::fromQuantity(
-      CGM.getTarget().getPointerWidth(
-          CGM.getContext().getTargetAddressSpace(GenVoidPtrAddr)) /
-      8);
+      CGM.getTarget().getPointerWidth(GenVoidPtrAddr) / 8);
   // Using the computed layout, generate the actual block function.
   bool isLambdaConv = blockInfo.getBlockDecl()->isConversionFromLambda();
   CodeGenFunction BlockCGF{CGM, true};
@@ -1356,7 +1352,7 @@ static llvm::Constant *buildGlobalBlock(CodeGenModule &CGM,
     fields.add(buildBlockDescriptor(CGM, blockInfo));
   } else if (auto *Helper =
                  CGM.getTargetCodeGenInfo().getTargetOpenCLBlockHelper()) {
-    for (auto I : Helper->getCustomFieldValues(CGM, blockInfo)) {
+    for (auto *I : Helper->getCustomFieldValues(CGM, blockInfo)) {
       fields.add(I);
     }
   }
@@ -2676,7 +2672,7 @@ const BlockByrefInfo &CodeGenFunction::getBlockByrefInfo(const VarDecl *D) {
     size = varOffset;
 
   // Conversely, we might have to prevent LLVM from inserting padding.
-  } else if (CGM.getDataLayout().getABITypeAlignment(varTy) >
+  } else if (CGM.getDataLayout().getABITypeAlign(varTy) >
              uint64_t(varAlign.getQuantity())) {
     packed = true;
   }

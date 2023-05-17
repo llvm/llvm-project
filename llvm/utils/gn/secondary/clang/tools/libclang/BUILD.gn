@@ -28,6 +28,7 @@ shared_library("libclang") {
     "//clang/include/clang/Config",
     "//clang/lib/AST",
     "//clang/lib/Basic",
+    "//clang/lib/ExtractAPI",
     "//clang/lib/Frontend",
     "//clang/lib/Headers",
     "//clang/lib/Index",
@@ -38,6 +39,7 @@ shared_library("libclang") {
     "//llvm/lib/IR",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   if (current_os == "win" || current_os == "mac") {
     deps += [ ":exports" ]
@@ -74,6 +76,7 @@ shared_library("libclang") {
     "CXCompilationDatabase.cpp",
     "CXCursor.cpp",
     "CXCursor.h",
+    "CXExtractAPI.cpp",
     "CXIndexDataConsumer.cpp",
     "CXLoadedDiagnostic.cpp",
     "CXLoadedDiagnostic.h",

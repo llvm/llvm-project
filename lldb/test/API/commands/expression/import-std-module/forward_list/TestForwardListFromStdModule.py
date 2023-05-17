@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestBasicForwardList(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     def test(self):
@@ -22,8 +20,12 @@ class TestBasicForwardList(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
-        list_type = "std::forward_list<int>"
-        value_type = list_type + "::value_type"
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
+            list_type = "std::forward_list<int>"
+        else:
+            list_type = "std::forward_list<int, std::allocator<int> >"
+
+        value_type = "value_type"
 
         # FIXME: This has three elements in it but the formatter seems to
         # calculate the wrong size and contents.

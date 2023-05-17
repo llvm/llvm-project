@@ -1,7 +1,8 @@
 # Check that we don't accidentally optimize out a tail call.
 
 RUN: %clang %cflags %S/Inputs/sctc_bug.s -o %t
-RUN: llvm-bolt %t -o /dev/null -funcs=main -print-after-lowering 2>&1 | FileCheck %s
+RUN: llvm-bolt %t -o /dev/null --funcs=main --print-after-lowering \
+RUN:   2>&1 | FileCheck %s
 
 CHECK:   jp      .L{{.*}}
 CHECK:   je      foo # TAILCALL

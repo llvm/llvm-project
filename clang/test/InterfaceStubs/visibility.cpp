@@ -1,9 +1,9 @@
 // REQUIRES: x86-registered-target
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -fvisibility hidden  %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
+// RUN: -fvisibility=hidden  %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs \
-// RUN: -fvisibility hidden %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
+// RUN: -fvisibility=hidden %s | FileCheck --check-prefix=CHECK-CMD-HIDDEN %s
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -o - -emit-interface-stubs %s | \
 // RUN: FileCheck --check-prefix=CHECK-CMD %s

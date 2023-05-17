@@ -11,15 +11,15 @@
 ; Function Attrs: nofree norecurse nounwind willreturn writeonly
 define void @storesTIInit(i64 %Val) #0 {
 entry:
-  store i64 %Val, i64* @TIInit, align 8
+  store i64 %Val, ptr @TIInit, align 8
   ret void
 }
 
 ; Function Attrs: norecurse nounwind readonly willreturn
 define double @loadsTWInit() #1 {
 entry:
-  %0 = load double, double* @TWInit, align 8
-  %1 = load double, double* @GInit, align 8
+  %0 = load double, ptr @TWInit, align 8
+  %1 = load double, ptr @GInit, align 8
   %add = fadd double %0, %1
   ret double %add
 }
@@ -210,7 +210,7 @@ entry:
 ; SYM-NEXT: Symbols [
 ; SYM-NEXT:   Symbol {
 ; SYM-NEXT:     Index: 0
-; SYM-NEXT:     Name: .file
+; SYM-NEXT:     Name: <stdin>
 ; SYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYM-NEXT:     Section: N_DEBUG
 ; SYM-NEXT:     Source Language ID: TB_C (0x0)
@@ -251,7 +251,7 @@ entry:
 ; SYM-NEXT:       SectionLen: 132
 ; SYM-NEXT:       ParameterHashIndex: 0x0
 ; SYM-NEXT:       TypeChkSectNum: 0x0
-; SYM-NEXT:       SymbolAlignmentLog2: 4
+; SYM-NEXT:       SymbolAlignmentLog2: 5
 ; SYM-NEXT:       SymbolType: XTY_SD (0x1)
 ; SYM-NEXT:       StorageMappingClass: XMC_PR (0x0)
 ; SYM-NEXT:       StabInfoIndex: 0x0
@@ -524,8 +524,8 @@ entry:
 ; DIS:      Disassembly of section .text:
 ; DIS:      00000000 (idx: 5) .storesTIInit:
 ; DIS-NEXT:                                       mflr 0
-; DIS-NEXT:                                       stw 0, 8(1)
 ; DIS-NEXT:                                       stwu 1, -32(1)
+; DIS-NEXT:                                       stw 0, 40(1)
 ; DIS-NEXT:                                       mr 6, 4
 ; DIS-NEXT:                                       mr 7, 3
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
@@ -546,8 +546,8 @@ entry:
 ; DIS-NEXT:                                       blr
 ; DIS:      00000040 (idx: 7) .loadsTWInit:
 ; DIS-NEXT:                                       mflr 0
-; DIS-NEXT:                                       stw 0, 8(1)
 ; DIS-NEXT:                                       stwu 1, -32(1)
+; DIS-NEXT:                                       stw 0, 40(1)
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 3, 2, 0
 ; DIS-NEXT: {{0*}}[[#ADDR + 2]]: R_TOCU (idx: 21) .TWInit[TE]
 ; DIS-NEXT: [[#%x, ADDR:]]: {{.*}}                addis 4, 2, 0
@@ -610,5 +610,5 @@ entry:
 ; DIS-NEXT:        8: 3f f0 00 00
 ; DIS-NEXT:        c: 00 00 00 00
 
-attributes #0 = { nofree norecurse nounwind willreturn writeonly "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-rop-protection,-spe,-vsx" }
-attributes #1 = { norecurse nounwind readonly willreturn "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-rop-protection,-spe,-vsx" }
+attributes #0 = { nofree norecurse nounwind willreturn writeonly "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-spe,-vsx" }
+attributes #1 = { norecurse nounwind readonly willreturn "frame-pointer"="none" "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="pwr4" "target-features"="-altivec,-bpermd,-crypto,-direct-move,-extdiv,-float128,-htm,-mma,-paired-vector-memops,-power10-vector,-power8-vector,-power9-vector,-spe,-vsx" }

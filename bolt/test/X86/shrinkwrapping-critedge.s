@@ -8,9 +8,9 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -relocs -o %t.out -data %t.fdata \
-# RUN:     -frame-opt=all -simplify-conditional-tail-calls=false \
-# RUN:     -eliminate-unreachable=false
+# RUN: llvm-bolt %t.exe --relocs -o %t.out --data %t.fdata \
+# RUN:     --frame-opt=all --simplify-conditional-tail-calls=false \
+# RUN:     --eliminate-unreachable=false
 
   .globl _start
 _start:

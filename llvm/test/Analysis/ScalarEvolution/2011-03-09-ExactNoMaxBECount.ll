@@ -1,4 +1,4 @@
-; RUN: opt -indvars < %s
+; RUN: opt -passes=indvars < %s
 ; PR9424: Attempt to use a SCEVCouldNotCompute object!
 ; The inner loop computes the Step and Start of the outer loop.
 ; Call that Vexit. The outer End value is max(2,Vexit), because

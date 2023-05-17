@@ -10,6 +10,7 @@
 #include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/Options.h"
+#include <optional>
 
 using namespace lldb;
 using namespace lldb_private;
@@ -173,11 +174,6 @@ bool CommandObjectMultiword::Execute(const char *args_string,
     return result.Succeeded();
   }
 
-  if (sub_command.equals_insensitive("help")) {
-    this->CommandObject::GenerateHelpText(result);
-    return result.Succeeded();
-  }
-
   if (m_subcommand_dict.empty()) {
     result.AppendErrorWithFormat("'%s' does not have any subcommands.\n",
                                  GetCommandName().str().c_str());
@@ -290,16 +286,16 @@ void CommandObjectMultiword::HandleCompletion(CompletionRequest &request) {
   sub_command_object->HandleCompletion(request);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandObjectMultiword::GetRepeatCommand(Args &current_command_args,
                                          uint32_t index) {
   index++;
   if (current_command_args.GetArgumentCount() <= index)
-    return llvm::None;
+    return std::nullopt;
   CommandObject *sub_command_object =
       GetSubcommandObject(current_command_args[index].ref());
   if (sub_command_object == nullptr)
-    return llvm::None;
+    return std::nullopt;
   return sub_command_object->GetRepeatCommand(current_command_args, index);
 }
 
@@ -420,13 +416,13 @@ void CommandObjectProxy::HandleArgumentCompletion(
     proxy_command->HandleArgumentCompletion(request, opt_element_vector);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 CommandObjectProxy::GetRepeatCommand(Args &current_command_args,
                                      uint32_t index) {
   CommandObject *proxy_command = GetProxyCommandObject();
   if (proxy_command)
     return proxy_command->GetRepeatCommand(current_command_args, index);
-  return llvm::None;
+  return std::nullopt;
 }
 
 llvm::StringRef CommandObjectProxy::GetUnsupportedError() {

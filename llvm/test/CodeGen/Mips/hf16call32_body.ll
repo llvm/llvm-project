@@ -13,9 +13,9 @@
 define void @v_sf(float %p) #0 {
 entry:
   %p.addr = alloca float, align 4
-  store float %p, float* %p.addr, align 4
-  %0 = load float, float* %p.addr, align 4
-  store float %0, float* @x, align 4
+  store float %p, ptr %p.addr, align 4
+  %0 = load float, ptr %p.addr, align 4
+  store float %0, ptr @x, align 4
   ret void
 }
 ; stel: .section .mips16.fn.v_sf,"ax",@progbits
@@ -27,15 +27,15 @@ entry:
 ; stel: .set $__fn_local_v_sf, v_sf
 ; stel: .end __fn_stub_v_sf
 
-declare i32 @printf(i8*, ...) #1
+declare i32 @printf(ptr, ...) #1
 
 ; Function Attrs: nounwind
 define void @v_df(double %p) #0 {
 entry:
   %p.addr = alloca double, align 8
-  store double %p, double* %p.addr, align 8
-  %0 = load double, double* %p.addr, align 8
-  store double %0, double* @xd, align 8
+  store double %p, ptr %p.addr, align 8
+  %0 = load double, ptr %p.addr, align 8
+  store double %0, ptr @xd, align 8
   ret void
 }
 
@@ -54,12 +54,12 @@ define void @v_sf_sf(float %p1, float %p2) #0 {
 entry:
   %p1.addr = alloca float, align 4
   %p2.addr = alloca float, align 4
-  store float %p1, float* %p1.addr, align 4
-  store float %p2, float* %p2.addr, align 4
-  %0 = load float, float* %p1.addr, align 4
-  store float %0, float* @x, align 4
-  %1 = load float, float* %p2.addr, align 4
-  store float %1, float* @y, align 4
+  store float %p1, ptr %p1.addr, align 4
+  store float %p2, ptr %p2.addr, align 4
+  %0 = load float, ptr %p1.addr, align 4
+  store float %0, ptr @x, align 4
+  %1 = load float, ptr %p2.addr, align 4
+  store float %1, ptr @y, align 4
   ret void
 }
 
@@ -78,12 +78,12 @@ define void @v_sf_df(float %p1, double %p2) #0 {
 entry:
   %p1.addr = alloca float, align 4
   %p2.addr = alloca double, align 8
-  store float %p1, float* %p1.addr, align 4
-  store double %p2, double* %p2.addr, align 8
-  %0 = load float, float* %p1.addr, align 4
-  store float %0, float* @x, align 4
-  %1 = load double, double* %p2.addr, align 8
-  store double %1, double* @yd, align 8
+  store float %p1, ptr %p1.addr, align 4
+  store double %p2, ptr %p2.addr, align 8
+  %0 = load float, ptr %p1.addr, align 4
+  store float %0, ptr @x, align 4
+  %1 = load double, ptr %p2.addr, align 8
+  store double %1, ptr @yd, align 8
   ret void
 }
 
@@ -103,12 +103,12 @@ define void @v_df_sf(double %p1, float %p2) #0 {
 entry:
   %p1.addr = alloca double, align 8
   %p2.addr = alloca float, align 4
-  store double %p1, double* %p1.addr, align 8
-  store float %p2, float* %p2.addr, align 4
-  %0 = load double, double* %p1.addr, align 8
-  store double %0, double* @xd, align 8
-  %1 = load float, float* %p2.addr, align 4
-  store float %1, float* @y, align 4
+  store double %p1, ptr %p1.addr, align 8
+  store float %p2, ptr %p2.addr, align 4
+  %0 = load double, ptr %p1.addr, align 8
+  store double %0, ptr @xd, align 8
+  %1 = load float, ptr %p2.addr, align 4
+  store float %1, ptr @y, align 4
   ret void
 }
 
@@ -128,12 +128,12 @@ define void @v_df_df(double %p1, double %p2) #0 {
 entry:
   %p1.addr = alloca double, align 8
   %p2.addr = alloca double, align 8
-  store double %p1, double* %p1.addr, align 8
-  store double %p2, double* %p2.addr, align 8
-  %0 = load double, double* %p1.addr, align 8
-  store double %0, double* @xd, align 8
-  %1 = load double, double* %p2.addr, align 8
-  store double %1, double* @yd, align 8
+  store double %p1, ptr %p1.addr, align 8
+  store double %p2, ptr %p2.addr, align 8
+  %0 = load double, ptr %p1.addr, align 8
+  store double %0, ptr @xd, align 8
+  %1 = load double, ptr %p2.addr, align 8
+  store double %1, ptr @yd, align 8
   ret void
 }
 
@@ -152,7 +152,7 @@ entry:
 ; Function Attrs: nounwind
 define float @sf_v() #0 {
 entry:
-  %0 = load float, float* @ret_sf, align 4
+  %0 = load float, ptr @ret_sf, align 4
   ret float %0
 }
 
@@ -160,10 +160,10 @@ entry:
 define float @sf_sf(float %p) #0 {
 entry:
   %p.addr = alloca float, align 4
-  store float %p, float* %p.addr, align 4
-  %0 = load float, float* %p.addr, align 4
-  store float %0, float* @x, align 4
-  %1 = load float, float* @ret_sf, align 4
+  store float %p, ptr %p.addr, align 4
+  %0 = load float, ptr %p.addr, align 4
+  store float %0, ptr @x, align 4
+  %1 = load float, ptr @ret_sf, align 4
   ret float %1
 }
 
@@ -182,10 +182,10 @@ entry:
 define float @sf_df(double %p) #0 {
 entry:
   %p.addr = alloca double, align 8
-  store double %p, double* %p.addr, align 8
-  %0 = load double, double* %p.addr, align 8
-  store double %0, double* @xd, align 8
-  %1 = load float, float* @ret_sf, align 4
+  store double %p, ptr %p.addr, align 8
+  %0 = load double, ptr %p.addr, align 8
+  store double %0, ptr @xd, align 8
+  %1 = load float, ptr @ret_sf, align 4
   ret float %1
 }
 
@@ -204,13 +204,13 @@ define float @sf_sf_sf(float %p1, float %p2) #0 {
 entry:
   %p1.addr = alloca float, align 4
   %p2.addr = alloca float, align 4
-  store float %p1, float* %p1.addr, align 4
-  store float %p2, float* %p2.addr, align 4
-  %0 = load float, float* %p1.addr, align 4
-  store float %0, float* @x, align 4
-  %1 = load float, float* %p2.addr, align 4
-  store float %1, float* @y, align 4
-  %2 = load float, float* @ret_sf, align 4
+  store float %p1, ptr %p1.addr, align 4
+  store float %p2, ptr %p2.addr, align 4
+  %0 = load float, ptr %p1.addr, align 4
+  store float %0, ptr @x, align 4
+  %1 = load float, ptr %p2.addr, align 4
+  store float %1, ptr @y, align 4
+  %2 = load float, ptr @ret_sf, align 4
   ret float %2
 }
 
@@ -229,13 +229,13 @@ define float @sf_sf_df(float %p1, double %p2) #0 {
 entry:
   %p1.addr = alloca float, align 4
   %p2.addr = alloca double, align 8
-  store float %p1, float* %p1.addr, align 4
-  store double %p2, double* %p2.addr, align 8
-  %0 = load float, float* %p1.addr, align 4
-  store float %0, float* @x, align 4
-  %1 = load double, double* %p2.addr, align 8
-  store double %1, double* @yd, align 8
-  %2 = load float, float* @ret_sf, align 4
+  store float %p1, ptr %p1.addr, align 4
+  store double %p2, ptr %p2.addr, align 8
+  %0 = load float, ptr %p1.addr, align 4
+  store float %0, ptr @x, align 4
+  %1 = load double, ptr %p2.addr, align 8
+  store double %1, ptr @yd, align 8
+  %2 = load float, ptr @ret_sf, align 4
   ret float %2
 }
 
@@ -255,13 +255,13 @@ define float @sf_df_sf(double %p1, float %p2) #0 {
 entry:
   %p1.addr = alloca double, align 8
   %p2.addr = alloca float, align 4
-  store double %p1, double* %p1.addr, align 8
-  store float %p2, float* %p2.addr, align 4
-  %0 = load double, double* %p1.addr, align 8
-  store double %0, double* @xd, align 8
-  %1 = load float, float* %p2.addr, align 4
-  store float %1, float* @y, align 4
-  %2 = load float, float* @ret_sf, align 4
+  store double %p1, ptr %p1.addr, align 8
+  store float %p2, ptr %p2.addr, align 4
+  %0 = load double, ptr %p1.addr, align 8
+  store double %0, ptr @xd, align 8
+  %1 = load float, ptr %p2.addr, align 4
+  store float %1, ptr @y, align 4
+  %2 = load float, ptr @ret_sf, align 4
   ret float %2
 }
 
@@ -281,13 +281,13 @@ define float @sf_df_df(double %p1, double %p2) #0 {
 entry:
   %p1.addr = alloca double, align 8
   %p2.addr = alloca double, align 8
-  store double %p1, double* %p1.addr, align 8
-  store double %p2, double* %p2.addr, align 8
-  %0 = load double, double* %p1.addr, align 8
-  store double %0, double* @xd, align 8
-  %1 = load double, double* %p2.addr, align 8
-  store double %1, double* @yd, align 8
-  %2 = load float, float* @ret_sf, align 4
+  store double %p1, ptr %p1.addr, align 8
+  store double %p2, ptr %p2.addr, align 8
+  %0 = load double, ptr %p1.addr, align 8
+  store double %0, ptr @xd, align 8
+  %1 = load double, ptr %p2.addr, align 8
+  store double %1, ptr @yd, align 8
+  %2 = load float, ptr @ret_sf, align 4
   ret float %2
 }
 

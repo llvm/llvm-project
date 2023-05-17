@@ -16,16 +16,10 @@
 ! RUN: %flang_fc1 -E -I %S/Inputs -I %S/Inputs/header-dir %s  2>&1 | FileCheck %s --check-prefix=MAINDIRECTORY
 ! RUN: %flang_fc1 -E -I %S/Inputs/header-dir -I %S/Inputs %s  2>&1 | FileCheck %s --check-prefix=SUBDIRECTORY
 
-!--------------------------------------------
-! EXPECTED OUTPUT FOR MISSING INCLUDED FILE
-!--------------------------------------------
 ! UNINCLUDED:#include: Source file 'basic-header-one.h' was not found
 ! UNINCLUDED-NOT:program b
 ! UNINCLUDED-NOT:program c
 
-!---------------------------------------------
-! EXPECTED OUTPUT FOR A SINGLE INCLUDED FOLDER
-!--------------------------------------------
 ! SINGLEINCLUDE:program MainDirectoryOne
 ! SINGLEINCLUDE-NOT:program X
 ! SINGLEINCLUDE-NOT:program B
@@ -33,9 +27,6 @@
 ! SINGLEINCLUDE-NOT:program Y
 ! SINGLEINCLUDE-NOT:program C
 
-!-------------------------------------------------------
-! EXPECTED OUTPUT FOR Inputs/ DIRECTORY SPECIFIED FIRST
-!-------------------------------------------------------
 ! MAINDIRECTORY:program MainDirectoryOne
 ! MAINDIRECTORY-NOT:program SubDirectoryOne
 ! MAINDIRECTORY-NOT:program B
@@ -43,9 +34,6 @@
 ! MAINDIRECTORY-NOT:program SubDirectoryTwo
 ! MAINDIRECTORY-NOT:program C
 
-!------------------------------------------------------------------
-! EXPECTED OUTPUT FOR Inputs/header-dir/ DIRECTORY SPECIFIED FIRST
-!------------------------------------------------------------------
 ! SUBDIRECTORY:program SubDirectoryOne
 ! SUBDIRECTORY-NOT:program MainDirectoryOne
 ! SUBDIRECTORY-NOT:program B

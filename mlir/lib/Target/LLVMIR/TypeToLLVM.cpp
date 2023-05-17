@@ -106,10 +106,7 @@ private:
 
   /// Translates the given pointer type.
   llvm::Type *translate(LLVM::LLVMPointerType type) {
-    if (type.isOpaque())
-      return llvm::PointerType::get(context, type.getAddressSpace());
-    return llvm::PointerType::get(translateType(type.getElementType()),
-                                  type.getAddressSpace());
+    return llvm::PointerType::get(context, type.getAddressSpace());
   }
 
   /// Translates the given structure type, supports both identified and literal
@@ -190,5 +187,5 @@ llvm::Type *LLVM::TypeToLLVMIRTranslator::translateType(Type type) {
 
 unsigned LLVM::TypeToLLVMIRTranslator::getPreferredAlignment(
     Type type, const llvm::DataLayout &layout) {
-  return layout.getPrefTypeAlignment(translateType(type));
+  return layout.getPrefTypeAlign(translateType(type)).value();
 }

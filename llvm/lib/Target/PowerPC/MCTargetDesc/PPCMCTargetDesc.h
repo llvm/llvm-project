@@ -60,17 +60,17 @@ static inline bool isRunOfOnes(unsigned Val, unsigned &MB, unsigned &ME) {
 
   if (isShiftedMask_32(Val)) {
     // look for the first non-zero bit
-    MB = countLeadingZeros(Val);
+    MB = llvm::countl_zero(Val);
     // look for the first zero bit after the run of ones
-    ME = countLeadingZeros((Val - 1) ^ Val);
+    ME = llvm::countl_zero((Val - 1) ^ Val);
     return true;
   } else {
     Val = ~Val; // invert mask
     if (isShiftedMask_32(Val)) {
       // effectively look for the first zero bit
-      ME = countLeadingZeros(Val) - 1;
+      ME = llvm::countl_zero(Val) - 1;
       // effectively look for the first one bit after the run of zeros
-      MB = countLeadingZeros((Val - 1) ^ Val) + 1;
+      MB = llvm::countl_zero((Val - 1) ^ Val) + 1;
       return true;
     }
   }
@@ -84,17 +84,17 @@ static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
 
   if (isShiftedMask_64(Val)) {
     // look for the first non-zero bit
-    MB = countLeadingZeros(Val);
+    MB = llvm::countl_zero(Val);
     // look for the first zero bit after the run of ones
-    ME = countLeadingZeros((Val - 1) ^ Val);
+    ME = llvm::countl_zero((Val - 1) ^ Val);
     return true;
   } else {
     Val = ~Val; // invert mask
     if (isShiftedMask_64(Val)) {
       // effectively look for the first zero bit
-      ME = countLeadingZeros(Val) - 1;
+      ME = llvm::countl_zero(Val) - 1;
       // effectively look for the first one bit after the run of zeros
-      MB = countLeadingZeros((Val - 1) ^ Val) + 1;
+      MB = llvm::countl_zero((Val - 1) ^ Val) + 1;
       return true;
     }
   }
@@ -118,6 +118,7 @@ static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
 //
 #define GET_INSTRINFO_ENUM
 #define GET_INSTRINFO_SCHED_ENUM
+#define GET_INSTRINFO_MC_HELPER_DECLS
 #include "PPCGenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_ENUM
@@ -133,6 +134,23 @@ static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
     X##0, X##1, X##2, X##3, X##4, X##5, X##6, X##7, X##8, X##9, X##10, X##11,  \
         X##12, X##13, X##14, X##15, X##16, X##17, X##18, X##19, X##20, X##21,  \
         X##22, X##23, X##24, X##25, X##26, X##27, X##28, X##29, X##30, X##31   \
+  }
+
+#define PPC_REGS_EVEN0_30(X)                                                   \
+  {                                                                            \
+    X##0, X##2, X##4, X##6, X##8, X##10, X##12, X##14, X##16, X##18, X##20,    \
+        X##22, X##24, X##26, X##28, X##30                                      \
+  }
+
+#define PPC_REGS0_63(X)                                                        \
+  {                                                                            \
+    X##0, X##1, X##2, X##3, X##4, X##5, X##6, X##7, X##8, X##9, X##10, X##11,  \
+        X##12, X##13, X##14, X##15, X##16, X##17, X##18, X##19, X##20, X##21,  \
+        X##22, X##23, X##24, X##25, X##26, X##27, X##28, X##29, X##30, X##31,  \
+        X##32, X##33, X##34, X##35, X##36, X##37, X##38, X##39, X##40, X##41,  \
+        X##42, X##43, X##44, X##45, X##46, X##47, X##48, X##49, X##50, X##51,  \
+        X##52, X##53, X##54, X##55, X##56, X##57, X##58, X##59, X##60, X##61,  \
+        X##62, X##63                                                           \
   }
 
 #define PPC_REGS_NO0_31(Z, X)                                                  \
@@ -154,35 +172,46 @@ static inline bool isRunOfOnes64(uint64_t Val, unsigned &MB, unsigned &ME) {
         HI##28, HI##29, HI##30, HI##31                                         \
   }
 
+#define PPC_REGS0_7(X)                                                         \
+  {                                                                            \
+    X##0, X##1, X##2, X##3, X##4, X##5, X##6, X##7                             \
+  }
+
+#define PPC_REGS0_3(X)                                                         \
+  {                                                                            \
+    X##0, X##1, X##2, X##3                                                     \
+  }
+
 using llvm::MCPhysReg;
 
-#define DEFINE_PPC_REGCLASSES \
-  static const MCPhysReg RRegs[32] = PPC_REGS0_31(PPC::R); \
-  static const MCPhysReg XRegs[32] = PPC_REGS0_31(PPC::X); \
-  static const MCPhysReg FRegs[32] = PPC_REGS0_31(PPC::F); \
-  static const MCPhysReg VSRpRegs[32] = PPC_REGS0_31(PPC::VSRp); \
-  static const MCPhysReg SPERegs[32] = PPC_REGS0_31(PPC::S); \
-  static const MCPhysReg VFRegs[32] = PPC_REGS0_31(PPC::VF); \
-  static const MCPhysReg VRegs[32] = PPC_REGS0_31(PPC::V); \
-  static const MCPhysReg RRegsNoR0[32] = \
-    PPC_REGS_NO0_31(PPC::ZERO, PPC::R); \
-  static const MCPhysReg XRegsNoX0[32] = \
-    PPC_REGS_NO0_31(PPC::ZERO8, PPC::X); \
-  static const MCPhysReg VSRegs[64] = \
-    PPC_REGS_LO_HI(PPC::VSL, PPC::V); \
-  static const MCPhysReg VSFRegs[64] = \
-    PPC_REGS_LO_HI(PPC::F, PPC::VF); \
-  static const MCPhysReg VSSRegs[64] = \
-    PPC_REGS_LO_HI(PPC::F, PPC::VF); \
-  static const MCPhysReg CRBITRegs[32] = { \
-    PPC::CR0LT, PPC::CR0GT, PPC::CR0EQ, PPC::CR0UN, \
-    PPC::CR1LT, PPC::CR1GT, PPC::CR1EQ, PPC::CR1UN, \
-    PPC::CR2LT, PPC::CR2GT, PPC::CR2EQ, PPC::CR2UN, \
-    PPC::CR3LT, PPC::CR3GT, PPC::CR3EQ, PPC::CR3UN, \
-    PPC::CR4LT, PPC::CR4GT, PPC::CR4EQ, PPC::CR4UN, \
-    PPC::CR5LT, PPC::CR5GT, PPC::CR5EQ, PPC::CR5UN, \
-    PPC::CR6LT, PPC::CR6GT, PPC::CR6EQ, PPC::CR6UN, \
-    PPC::CR7LT, PPC::CR7GT, PPC::CR7EQ, PPC::CR7UN}; \
-  static const MCPhysReg CRRegs[8] = PPC_REGS0_7(PPC::CR); \
-  static const MCPhysReg ACCRegs[8] = PPC_REGS0_7(PPC::ACC)
+#define DEFINE_PPC_REGCLASSES                                                  \
+  static const MCPhysReg RRegs[32] = PPC_REGS0_31(PPC::R);                     \
+  static const MCPhysReg XRegs[32] = PPC_REGS0_31(PPC::X);                     \
+  static const MCPhysReg FRegs[32] = PPC_REGS0_31(PPC::F);                     \
+  static const MCPhysReg FpRegs[16] = PPC_REGS_EVEN0_30(PPC::Fpair);           \
+  static const MCPhysReg VSRpRegs[32] = PPC_REGS0_31(PPC::VSRp);               \
+  static const MCPhysReg SPERegs[32] = PPC_REGS0_31(PPC::S);                   \
+  static const MCPhysReg VFRegs[32] = PPC_REGS0_31(PPC::VF);                   \
+  static const MCPhysReg VRegs[32] = PPC_REGS0_31(PPC::V);                     \
+  static const MCPhysReg RRegsNoR0[32] = PPC_REGS_NO0_31(PPC::ZERO, PPC::R);   \
+  static const MCPhysReg XRegsNoX0[32] = PPC_REGS_NO0_31(PPC::ZERO8, PPC::X);  \
+  static const MCPhysReg VSRegs[64] = PPC_REGS_LO_HI(PPC::VSL, PPC::V);        \
+  static const MCPhysReg VSFRegs[64] = PPC_REGS_LO_HI(PPC::F, PPC::VF);        \
+  static const MCPhysReg VSSRegs[64] = PPC_REGS_LO_HI(PPC::F, PPC::VF);        \
+  static const MCPhysReg CRBITRegs[32] = {                                     \
+      PPC::CR0LT, PPC::CR0GT, PPC::CR0EQ, PPC::CR0UN, PPC::CR1LT, PPC::CR1GT,  \
+      PPC::CR1EQ, PPC::CR1UN, PPC::CR2LT, PPC::CR2GT, PPC::CR2EQ, PPC::CR2UN,  \
+      PPC::CR3LT, PPC::CR3GT, PPC::CR3EQ, PPC::CR3UN, PPC::CR4LT, PPC::CR4GT,  \
+      PPC::CR4EQ, PPC::CR4UN, PPC::CR5LT, PPC::CR5GT, PPC::CR5EQ, PPC::CR5UN,  \
+      PPC::CR6LT, PPC::CR6GT, PPC::CR6EQ, PPC::CR6UN, PPC::CR7LT, PPC::CR7GT,  \
+      PPC::CR7EQ, PPC::CR7UN};                                                 \
+  static const MCPhysReg CRRegs[8] = PPC_REGS0_7(PPC::CR);                     \
+  static const MCPhysReg ACCRegs[8] = PPC_REGS0_7(PPC::ACC);                   \
+  static const MCPhysReg WACCRegs[8] = PPC_REGS0_7(PPC::WACC);                 \
+  static const MCPhysReg WACC_HIRegs[8] = PPC_REGS0_7(PPC::WACC_HI);           \
+  static const MCPhysReg DMRROWpRegs[32] = PPC_REGS0_31(PPC::DMRROWp);         \
+  static const MCPhysReg DMRROWRegs[64] = PPC_REGS0_63(PPC::DMRROW);           \
+  static const MCPhysReg DMRRegs[8] = PPC_REGS0_7(PPC::DMR);                   \
+  static const MCPhysReg DMRpRegs[4] = PPC_REGS0_3(PPC::DMRp);
+
 #endif // LLVM_LIB_TARGET_POWERPC_MCTARGETDESC_PPCMCTARGETDESC_H

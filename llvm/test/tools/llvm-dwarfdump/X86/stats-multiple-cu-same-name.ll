@@ -33,9 +33,9 @@ entry:
 define internal i32 @_ZL3fooi(i32 %a) !dbg !15 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !18, metadata !DIExpression()), !dbg !19
-  %0 = load i32, i32* %a.addr, align 4, !dbg !20
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !18, metadata !DIExpression()), !dbg !19
+  %0 = load i32, ptr %a.addr, align 4, !dbg !20
   ret i32 %0
 }
 ; Function Attrs: nounwind readnone speculatable willreturn
@@ -50,9 +50,9 @@ entry:
 define internal i32 @_ZL3fooi.1(i32 %a) !dbg !25 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !26, metadata !DIExpression()), !dbg !27
-  %0 = load i32, i32* %a.addr, align 4, !dbg !28
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !26, metadata !DIExpression()), !dbg !27
+  %0 = load i32, ptr %a.addr, align 4, !dbg !28
   %mul = mul nsw i32 %0, 2
   ret i32 %mul
 }

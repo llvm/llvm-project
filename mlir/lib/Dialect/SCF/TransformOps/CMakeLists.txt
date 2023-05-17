@@ -8,13 +8,12 @@ add_mlir_dialect_library(MLIRSCFTransformOps
   MLIRSCFTransformOpsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRFunc
+  MLIRAffineDialect
+  MLIRFuncDialect
   MLIRIR
-  MLIRPDL
-  MLIRSCF
+  MLIRSCFDialect
   MLIRSCFTransforms
   MLIRSCFUtils
   MLIRTransformDialect
-  MLIRVector
+  MLIRVectorDialect
 )

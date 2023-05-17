@@ -175,7 +175,7 @@ protected:
   /// getAnalysisUsage - Subclasses that override getAnalysisUsage
   /// must call this.
   ///
-  virtual void getAnalysisUsage(AnalysisUsage &AU) const override;
+  void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
   bool runOnRegion(Region *R, RGPassManager &RGM) override;

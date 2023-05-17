@@ -13,9 +13,9 @@ define void @foo() nounwind !dbg !5 {
 ; ASM-NOT: movzbl
 ; ASM: calll
 entry:
-  %tmp17 = load i8, i8* getelementptr inbounds (%struct.S0, %struct.S0* @g_98, i32 0, i32 1, i32 0), align 4, !dbg !14
+  %tmp17 = load i8, ptr getelementptr inbounds (%struct.S0, ptr @g_98, i32 0, i32 1, i32 0), align 4, !dbg !14
   %tmp54 = zext i8 %tmp17 to i32, !dbg !15
-  %foo = load i32, i32* bitcast (i8* getelementptr inbounds (%struct.S0, %struct.S0* @g_98, i32 0, i32 1, i32 0) to i32*), align 4, !dbg !16
+  %foo = load i32, ptr getelementptr inbounds (%struct.S0, ptr @g_98, i32 0, i32 1, i32 0), align 4, !dbg !16
 ; MIR: renamable $edi = MOVZX32rr8 renamable $al, debug-location !16
   %conv.i = trunc i32 %foo to i8, !dbg !17
 

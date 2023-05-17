@@ -37,6 +37,10 @@ OPTIONS
  Dump the *executable*'s debug-map (the list of the object files containing the
  debug information) in YAML format and exit. No DWARF link will take place.
 
+.. option:: --fat64
+
+ Use a 64-bit header when emitting universal binaries.
+
 .. option:: --flat, -f
 
  Produce a flat dSYM file. A ``.dwarf`` extension will be appended to the
@@ -44,7 +48,8 @@ OPTIONS
 
 .. option:: --gen-reproducer
 
- Generate a reproducer consisting of the input object files.
+ Generate a reproducer consisting of the input object files. Alias for
+ --reproducer=GenerateOnExit.
 
 .. option:: --help, -h
 
@@ -110,6 +115,11 @@ OPTIONS
 
  Specify a directory to prepend the paths of the external remark files.
 
+.. option:: --reproducer <mode>
+
+ Specify the reproducer generation mode. Valid options are 'GenerateOnExit',
+ 'GenerateOnCrash', 'Use', 'Off'.
+
 .. option:: --statistics
 
  Print statistics about the contribution of each object file to the linked
@@ -142,7 +152,8 @@ OPTIONS
 
 .. option:: --use-reproducer <path>
 
- Use the object files from the given reproducer path.
+ Use the object files from the given reproducer path. Alias for
+ --reproducer=Use.
 
 .. option:: --verbose
 

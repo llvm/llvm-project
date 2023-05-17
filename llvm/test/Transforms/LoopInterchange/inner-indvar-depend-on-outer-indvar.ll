@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basic-aa -loop-interchange -verify-dom-info -verify-loop-info \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
 ; RUN:     -S -debug 2>&1 | FileCheck %s
 
 @A = common global [100 x [100 x i64]] zeroinitializer
@@ -25,10 +25,10 @@ for1.header:
 
 for2:
   %j = phi i64 [ %j.next, %for2 ], [ 0, %for1.header ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 %j, i64 %i
-  %lv = load i64, i64* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 %j, i64 %i
+  %lv = load i64, ptr %arrayidx5
   %add = add nsw i64 %lv, %k
-  store i64 %add, i64* %arrayidx5
+  store i64 %add, ptr %arrayidx5
   %j.next = add nuw nsw i64 %j, 1
   %exitcond = icmp eq i64 %j, %i
   br i1 %exitcond, label %for1.inc10, label %for2
@@ -62,10 +62,10 @@ for1.header:
 
 for2:
   %j = phi i64 [ %j.next, %for2 ], [ 0, %for1.header ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 %j, i64 %i
-  %lv = load i64, i64* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 %j, i64 %i
+  %lv = load i64, ptr %arrayidx5
   %add = add nsw i64 %lv, %k
-  store i64 %add, i64* %arrayidx5
+  store i64 %add, ptr %arrayidx5
   %0 = add nuw nsw i64 %j, %i
   %j.next = add nuw nsw i64 %j, 1
   %exitcond = icmp eq i64 %0, 100
@@ -99,10 +99,10 @@ for1.header:
 
 for2:
   %j = phi i64 [ %j.next, %for2 ], [ 0, %for1.header ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 %j, i64 %i
-  %lv = load i64, i64* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 %j, i64 %i
+  %lv = load i64, ptr %arrayidx5
   %add = add nsw i64 %lv, %k
-  store i64 %add, i64* %arrayidx5
+  store i64 %add, ptr %arrayidx5
   %j.next = add nuw nsw i64 %j, 1
   %exitcond = icmp ne i64 %i, %j
   br i1 %exitcond, label %for2, label %for1.inc10
@@ -126,7 +126,7 @@ for.end12:
 
 define void @interchange_04(i64 %k) {
 entry:
-  %0 = load i64, i64* @N, align 4
+  %0 = load i64, ptr @N, align 4
   br label %for1.header
 
 for1.header:
@@ -135,10 +135,10 @@ for1.header:
 
 for2:
   %j = phi i64 [ %j.next, %for2 ], [ 0, %for1.header ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], [100 x [100 x i64]]* @A, i64 0, i64 %j, i64 %i
-  %lv = load i64, i64* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i64]], ptr @A, i64 0, i64 %j, i64 %i
+  %lv = load i64, ptr %arrayidx5
   %add = add nsw i64 %lv, %k
-  store i64 %add, i64* %arrayidx5
+  store i64 %add, ptr %arrayidx5
   %j.next = add nuw nsw i64 %j, 1
   %exitcond = icmp ne i64 %0, %j
   br i1 %exitcond, label %for2, label %for1.inc10

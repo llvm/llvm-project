@@ -11,8 +11,41 @@
 
 #include <__llvm-libc-common.h>
 
-%%include_file(${platform_errno})
+#ifdef __linux__
 
-%%public_api()
+#include <linux/errno.h>
+
+#ifndef ERFKILL
+#define ERFKILL 132
+#endif // ERFKILL
+
+#ifndef EOWNERDEAD
+#define EOWNERDEAD 130
+#endif // EOWNERDEAD
+
+#ifndef EHWPOISON
+#define EHWPOISON 133
+#endif // EHWPOISON
+
+#ifndef ECANCELED
+#define ECANCELED 125
+#endif // ECANCELED
+
+#ifndef ENOTSUP
+#define ENOTSUP EOPNOTSUPP
+#endif // ENOTSUP
+
+#ifndef ENOTRECOVERABLE
+#define ENOTRECOVERABLE 131
+#endif // ENOTRECOVERABLE
+
+#else // __linux__
+#include <llvm-libc-macros/generic-error-number-macros.h>
+#endif
+
+#if !defined(__AMDGPU__) && !defined(__NVPTX__)
+extern _Thread_local int __llvmlibc_errno;
+#define errno __llvmlibc_errno
+#endif
 
 #endif // LLVM_LIBC_ERRNO_H

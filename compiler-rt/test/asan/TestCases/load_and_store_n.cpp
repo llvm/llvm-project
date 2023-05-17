@@ -19,10 +19,10 @@
 // RUN: not %run %t D 2>&1 | FileCheck %s --check-prefix=CHECK_1_BYTES
 
 // CHECK_0_BYTES: ERROR: AddressSanitizer: global-buffer-overflow on address [[ADDR:.*]] at
-// CHECK_0_BYTES: [[ADDR]] is located 0 bytes to the right
+// CHECK_0_BYTES: [[ADDR]] is located 0 bytes after
 
 // CHECK_1_BYTES: ERROR: AddressSanitizer: global-buffer-overflow on address [[ADDR:.*]] at
-// CHECK_1_BYTES: [[ADDR]] is located 1 bytes to the right
+// CHECK_1_BYTES: [[ADDR]] is located 1 bytes after
 
 #include <sanitizer/asan_interface.h>
 

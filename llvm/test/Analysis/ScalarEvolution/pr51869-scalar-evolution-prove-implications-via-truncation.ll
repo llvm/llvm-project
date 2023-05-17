@@ -14,11 +14,11 @@
 @v_228 = external dso_local global i32, align 1
 
 ; Function Attrs: nounwind
-define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5, i16* %6, i16* %7, i16* %8, i16* %9, i16* %10, i1 %11) #0 {
+define dso_local i16 @main(ptr %0, ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ptr %8, ptr %9, ptr %10, i1 %11) #0 {
   br i1 %11, label %27, label %13
 
 13:                                               ; preds = %12
-  %14 = load i32, i32* @v_228, align 1
+  %14 = load i32, ptr @v_228, align 1
   %15 = trunc i32 %14 to i16
   %16 = mul i16 %15, 2
   %17 = sub i16 10, %16
@@ -36,7 +36,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %26, label %139, label %27
 
 27:                                               ; preds = %21, %12
-  %28 = load i16, i16* %1, align 1
+  %28 = load i16, ptr %1, align 1
   br label %29
 
 29:                                               ; preds = %29, %27
@@ -46,7 +46,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %32, label %29, label %33
 
 33:                                               ; preds = %29
-  %34 = load i16, i16* %2, align 1
+  %34 = load i16, ptr %2, align 1
   br label %35
 
 35:                                               ; preds = %43, %33
@@ -65,7 +65,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %45, label %35, label %46
 
 46:                                               ; preds = %43
-  %47 = load i16, i16* %3, align 1
+  %47 = load i16, ptr %3, align 1
   br label %48
 
 48:                                               ; preds = %55, %46
@@ -83,7 +83,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %57, label %48, label %58
 
 58:                                               ; preds = %55
-  %59 = load i16, i16* %4, align 1
+  %59 = load i16, ptr %4, align 1
   br label %60
 
 60:                                               ; preds = %67, %58
@@ -101,7 +101,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %69, label %60, label %70
 
 70:                                               ; preds = %67
-  %71 = load i16, i16* %5, align 1
+  %71 = load i16, ptr %5, align 1
   br label %72
 
 72:                                               ; preds = %79, %70
@@ -119,7 +119,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %81, label %72, label %82
 
 82:                                               ; preds = %79
-  %83 = load i16, i16* %6, align 1
+  %83 = load i16, ptr %6, align 1
   br label %84
 
 84:                                               ; preds = %91, %82
@@ -137,7 +137,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %93, label %84, label %94
 
 94:                                               ; preds = %91
-  %95 = load i16, i16* %7, align 1
+  %95 = load i16, ptr %7, align 1
   br label %96
 
 96:                                               ; preds = %103, %94
@@ -155,7 +155,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %105, label %96, label %106
 
 106:                                              ; preds = %103
-  %107 = load i16, i16* %8, align 1
+  %107 = load i16, ptr %8, align 1
   br label %108
 
 108:                                              ; preds = %115, %106
@@ -173,7 +173,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %117, label %108, label %118
 
 118:                                              ; preds = %115
-  %119 = load i16, i16* %9, align 1
+  %119 = load i16, ptr %9, align 1
   br label %120
 
 120:                                              ; preds = %128, %118
@@ -192,7 +192,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %130, label %120, label %131
 
 131:                                              ; preds = %128
-  %132 = load i16, i16* %10, align 1
+  %132 = load i16, ptr %10, align 1
   br label %133
 
 133:                                              ; preds = %133, %131
@@ -202,7 +202,7 @@ define dso_local i16 @main(i16* %0, i16* %1, i16* %2, i16* %3, i16* %4, i16* %5,
   br i1 %136, label %133, label %137
 
 137:                                              ; preds = %133
-  %138 = load i16, i16* %0, align 1
+  %138 = load i16, ptr %0, align 1
   ret i16 %138
 
 139:                                              ; preds = %120, %108, %96, %84, %72, %60, %48, %35, %21, %13

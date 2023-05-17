@@ -5,6 +5,10 @@ let Definition = "modulelist" in {
     Global,
     DefaultTrue,
     Desc<"Control the use of external tools and repositories to locate symbol files. Directories listed in target.debug-file-search-paths and directory of the executable are always checked first for separate debug info files. Then depending on this setting: On macOS, Spotlight would be also used to locate a matching .dSYM bundle based on the UUID of the executable. On NetBSD, directory /usr/libdata/debug would be also searched. On platforms other than NetBSD directory /usr/lib/debug would be also searched.">;
+  def EnableBackgroundLookup: Property<"enable-background-lookup", "Boolean">,
+    Global,
+    DefaultFalse,
+    Desc<"On macOS, enable calling dsymForUUID (or an equivalent script/binary) in the background to locate symbol files that weren't found.">;
   def ClangModulesCachePath: Property<"clang-modules-cache-path", "FileSpec">,
     Global,
     DefaultStringValue<"">,
@@ -70,7 +74,7 @@ let Definition = "debugger" in {
     Global,
     DefaultEnumValue<"eLanguageTypeUnknown">,
     Desc<"The language to use for the REPL.">;
-  def StopDisassemblyCount: Property<"stop-disassembly-count", "SInt64">,
+  def StopDisassemblyCount: Property<"stop-disassembly-count", "UInt64">,
     Global,
     DefaultUnsignedValue<4>,
     Desc<"The number of disassembly lines to show when displaying a stopped context.">;
@@ -83,11 +87,11 @@ let Definition = "debugger" in {
     Global,
     DefaultUnsignedValue<32000>,
     Desc<"The size limit to use when disassembling large functions (default: 32KB).">;
-  def StopLineCountAfter: Property<"stop-line-count-after", "SInt64">,
+  def StopLineCountAfter: Property<"stop-line-count-after", "UInt64">,
     Global,
     DefaultUnsignedValue<3>,
     Desc<"The number of sources lines to display that come after the current source line when displaying a stopped context.">;
-  def StopLineCountBefore: Property<"stop-line-count-before", "SInt64">,
+  def StopLineCountBefore: Property<"stop-line-count-before", "UInt64">,
     Global,
     DefaultUnsignedValue<3>,
     Desc<"The number of sources lines to display that come before the current source line when displaying a stopped context.">;
@@ -131,6 +135,10 @@ let Definition = "debugger" in {
     Global,
     DefaultFalse,
     Desc<"Whether to use an external editor or not.">;
+  def ExternalEditor: Property<"external-editor", "String">,
+    Global,
+    DefaultStringValue<"">,
+    Desc<"External editor to use when use-external-editor is enabled.">;
   def UseColor: Property<"use-color", "Boolean">,
     Global,
     DefaultTrue,
@@ -174,7 +182,7 @@ let Definition = "debugger" in {
   def FrameFormatUnique: Property<"frame-format-unique", "FormatEntity">,
     Global,
     DefaultStringValue<"frame #${frame.index}: ${ansi.fg.yellow}${frame.pc}${ansi.normal}{ ${module.file.basename}{`${function.name-without-args}{${frame.no-debug}${function.pc-offset}}}}{ at ${ansi.fg.cyan}${line.file.basename}${ansi.normal}:${ansi.fg.yellow}${line.number}${ansi.normal}{:${ansi.fg.yellow}${line.column}${ansi.normal}}}{${function.is-optimized} [opt]}{${frame.is-artificial} [artificial]}\\\\n">,
-    Desc<"The default frame format string to use when displaying stack frameinformation for threads from thread backtrace unique.">;
+    Desc<"The default frame format string to use when displaying stack frame information for threads from thread backtrace unique.">;
   def ShowAutosuggestion: Property<"show-autosuggestion", "Boolean">,
     Global,
     DefaultFalse,
@@ -187,4 +195,9 @@ let Definition = "debugger" in {
     Global,
     DefaultStringValue<"${ansi.normal}">,
     Desc<"When displaying suggestion in a color-enabled terminal, use the ANSI terminal code specified in this format immediately after the suggestion.">;
+  def DWIMPrintVerbosity: Property<"dwim-print-verbosity", "Enum">,
+    Global,
+    DefaultEnumValue<"eDWIMPrintVerbosityNone">,
+    EnumValues<"OptionEnumValues(g_dwim_print_verbosities)">,
+    Desc<"The verbosity level used by dwim-print.">;
 }

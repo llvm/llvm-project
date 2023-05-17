@@ -32,6 +32,7 @@
 #include "clang/Lex/Token.h"
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/ParsedAttr.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -61,9 +62,18 @@ namespace clang {
 /// often used as if it meant "present".
 ///
 /// The actual scope is described by getScopeRep().
+///
+/// If the kind of getScopeRep() is TypeSpec then TemplateParamLists may be empty
+/// or contain the template parameter lists attached to the current declaration.
+/// Consider the following example:
+/// template <class T> void SomeType<T>::some_method() {}
+/// If CXXScopeSpec refers to SomeType<T> then TemplateParamLists will contain
+/// a single element referring to template <class T>.
+
 class CXXScopeSpec {
   SourceRange Range;
   NestedNameSpecifierLocBuilder Builder;
+  ArrayRef<TemplateParameterList *> TemplateParamLists;
 
 public:
   SourceRange getRange() const { return Range; }
@@ -72,6 +82,13 @@ public:
   void setEndLoc(SourceLocation Loc) { Range.setEnd(Loc); }
   SourceLocation getBeginLoc() const { return Range.getBegin(); }
   SourceLocation getEndLoc() const { return Range.getEnd(); }
+
+  void setTemplateParamLists(ArrayRef<TemplateParameterList *> L) {
+    TemplateParamLists = L;
+  }
+  ArrayRef<TemplateParameterList *> getTemplateParamLists() const {
+    return TemplateParamLists;
+  }
 
   /// Retrieve the representation of the nested-name-specifier.
   NestedNameSpecifier *getScopeRep() const {
@@ -288,9 +305,13 @@ public:
   static const TST TST_typename = clang::TST_typename;
   static const TST TST_typeofType = clang::TST_typeofType;
   static const TST TST_typeofExpr = clang::TST_typeofExpr;
+  static const TST TST_typeof_unqualType = clang::TST_typeof_unqualType;
+  static const TST TST_typeof_unqualExpr = clang::TST_typeof_unqualExpr;
   static const TST TST_decltype = clang::TST_decltype;
   static const TST TST_decltype_auto = clang::TST_decltype_auto;
-  static const TST TST_underlyingType = clang::TST_underlyingType;
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait)                                     \
+  static const TST TST_##Trait = clang::TST_##Trait;
+#include "clang/Basic/TransformTypeTraits.def"
   static const TST TST_auto = clang::TST_auto;
   static const TST TST_auto_type = clang::TST_auto_type;
   static const TST TST_unknown_anytype = clang::TST_unknown_anytype;
@@ -323,6 +344,11 @@ public:
     // FIXME: Attributes should be included here.
   };
 
+  enum FriendSpecified : bool {
+    No,
+    Yes,
+  };
+
 private:
   // storage-class-specifier
   /*SCS*/unsigned StorageClassSpec : 3;
@@ -333,7 +359,7 @@ private:
   /*TypeSpecifierWidth*/ unsigned TypeSpecWidth : 2;
   /*TSC*/unsigned TypeSpecComplex : 2;
   /*TSS*/unsigned TypeSpecSign : 2;
-  /*TST*/unsigned TypeSpecType : 6;
+  /*TST*/unsigned TypeSpecType : 7;
   unsigned TypeAltiVecVector : 1;
   unsigned TypeAltiVecPixel : 1;
   unsigned TypeAltiVecBool : 1;
@@ -400,11 +426,12 @@ private:
   ObjCDeclSpec *ObjCQualifiers;
 
   static bool isTypeRep(TST T) {
-    return (T == TST_typename || T == TST_typeofType ||
-            T == TST_underlyingType || T == TST_atomic);
+    return T == TST_atomic || T == TST_typename || T == TST_typeofType ||
+           T == TST_typeof_unqualType || isTransformTypeTrait(T);
   }
   static bool isExprRep(TST T) {
-    return (T == TST_typeofExpr || T == TST_decltype || T == TST_bitint);
+    return T == TST_typeofExpr || T == TST_typeof_unqualExpr ||
+           T == TST_decltype || T == TST_bitint;
   }
   static bool isTemplateIdRep(TST T) {
     return (T == TST_auto || T == TST_decltype_auto);
@@ -417,6 +444,14 @@ public:
     return (T == TST_enum || T == TST_struct ||
             T == TST_interface || T == TST_union ||
             T == TST_class);
+  }
+  static bool isTransformTypeTrait(TST T) {
+    constexpr std::array<TST, 16> Traits = {
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) TST_##Trait,
+#include "clang/Basic/TransformTypeTraits.def"
+    };
+
+    return T >= Traits.front() && T <= Traits.back();
   }
 
   DeclSpec(AttributeFactory &attrFactory)
@@ -522,7 +557,7 @@ public:
   }
 
   SourceRange getTypeofParensRange() const { return TypeofParensRange; }
-  void setTypeofParensRange(SourceRange range) { TypeofParensRange = range; }
+  void setTypeArgumentRange(SourceRange range) { TypeofParensRange = range; }
 
   bool hasAutoTypeSpec() const {
     return (TypeSpecType == TST_auto || TypeSpecType == TST_auto_type ||
@@ -746,7 +781,10 @@ public:
   bool SetConstexprSpec(ConstexprSpecKind ConstexprKind, SourceLocation Loc,
                         const char *&PrevSpec, unsigned &DiagID);
 
-  bool isFriendSpecified() const { return Friend_specified; }
+  FriendSpecified isFriendSpecified() const {
+    return static_cast<FriendSpecified>(Friend_specified);
+  }
+
   SourceLocation getFriendSpecLoc() const { return FriendLoc; }
 
   bool isModulePrivateSpecified() const { return ModulePrivateLoc.isValid(); }
@@ -953,10 +991,10 @@ private:
   UnqualifiedId(const UnqualifiedId &Other) = delete;
   const UnqualifiedId &operator=(const UnqualifiedId &) = delete;
 
-public:
   /// Describes the kind of unqualified-id parsed.
   UnqualifiedIdKind Kind;
 
+public:
   struct OFI {
     /// The kind of overloaded operator.
     OverloadedOperatorKind Operator;
@@ -1343,7 +1381,7 @@ struct DeclaratorChunk {
     /// DeclSpec for the function with the qualifier related info.
     DeclSpec *MethodQualifiers;
 
-    /// AtttibuteFactory for the MethodQualifiers.
+    /// AttributeFactory for the MethodQualifiers.
     AttributeFactory *QualAttrFactory;
 
     union {
@@ -1491,7 +1529,7 @@ struct DeclaratorChunk {
     /// prototype. Typically these are tag declarations.
     ArrayRef<NamedDecl *> getDeclsInPrototype() const {
       assert(ExceptionSpecType == EST_None);
-      return llvm::makeArrayRef(DeclsInPrototype, NumExceptionsOrDecls);
+      return llvm::ArrayRef(DeclsInPrototype, NumExceptionsOrDecls);
     }
 
     /// Determine whether this function declarator had a
@@ -1738,7 +1776,7 @@ public:
   }
 
   ArrayRef<Binding> bindings() const {
-    return llvm::makeArrayRef(Bindings, NumBindings);
+    return llvm::ArrayRef(Bindings, NumBindings);
   }
 
   bool isSet() const { return LSquareLoc.isValid(); }
@@ -1788,6 +1826,13 @@ enum class DeclaratorContext {
   AliasTemplate,       // C++11 alias-declaration template.
   RequiresExpr,        // C++2a requires-expression.
   Association          // C11 _Generic selection expression association.
+};
+
+// Describes whether the current context is a context where an implicit
+// typename is allowed (C++2a [temp.res]p5]).
+enum class ImplicitTypenameContext {
+  No,
+  Yes,
 };
 
 /// Information about one declarator, including the parsed type
@@ -1852,8 +1897,12 @@ private:
   /// Indicates whether this declarator has an initializer.
   unsigned HasInitializer : 1;
 
-  /// Attrs - Attributes.
+  /// Attributes attached to the declarator.
   ParsedAttributes Attrs;
+
+  /// Attributes attached to the declaration. See also documentation for the
+  /// corresponding constructor parameter.
+  const ParsedAttributesView &DeclarationAttrs;
 
   /// The asm label, if specified.
   Expr *AsmLabel;
@@ -1893,16 +1942,40 @@ private:
   friend struct DeclaratorChunk;
 
 public:
-  Declarator(const DeclSpec &ds, DeclaratorContext C)
-      : DS(ds), Range(ds.getSourceRange()), Context(C),
+  /// `DS` and `DeclarationAttrs` must outlive the `Declarator`. In particular,
+  /// take care not to pass temporary objects for these parameters.
+  ///
+  /// `DeclarationAttrs` contains [[]] attributes from the
+  /// attribute-specifier-seq at the beginning of a declaration, which appertain
+  /// to the declared entity itself. Attributes with other syntax (e.g. GNU)
+  /// should not be placed in this attribute list; if they occur at the
+  /// beginning of a declaration, they apply to the `DeclSpec` and should be
+  /// attached to that instead.
+  ///
+  /// Here is an example of an attribute associated with a declaration:
+  ///
+  ///  [[deprecated]] int x, y;
+  ///
+  /// This attribute appertains to all of the entities declared in the
+  /// declaration, i.e. `x` and `y` in this case.
+  Declarator(const DeclSpec &DS, const ParsedAttributesView &DeclarationAttrs,
+             DeclaratorContext C)
+      : DS(DS), Range(DS.getSourceRange()), Context(C),
         InvalidType(DS.getTypeSpecType() == DeclSpec::TST_error),
         GroupingParens(false), FunctionDefinition(static_cast<unsigned>(
                                    FunctionDefinitionKind::Declaration)),
         Redeclaration(false), Extension(false), ObjCIvar(false),
         ObjCWeakProperty(false), InlineStorageUsed(false),
-        HasInitializer(false), Attrs(ds.getAttributePool().getFactory()),
-        AsmLabel(nullptr), TrailingRequiresClause(nullptr),
-        InventedTemplateParameterList(nullptr) {}
+        HasInitializer(false), Attrs(DS.getAttributePool().getFactory()),
+        DeclarationAttrs(DeclarationAttrs), AsmLabel(nullptr),
+        TrailingRequiresClause(nullptr),
+        InventedTemplateParameterList(nullptr) {
+    assert(llvm::all_of(DeclarationAttrs,
+                        [](const ParsedAttr &AL) {
+                          return AL.isStandardAttributeSyntax();
+                        }) &&
+           "DeclarationAttrs may only contain [[]] attributes");
+  }
 
   ~Declarator() {
     clear();
@@ -2531,9 +2604,14 @@ public:
   const ParsedAttributes &getAttributes() const { return Attrs; }
   ParsedAttributes &getAttributes() { return Attrs; }
 
+  const ParsedAttributesView &getDeclarationAttributes() const {
+    return DeclarationAttrs;
+  }
+
   /// hasAttributes - do we contain any attributes?
   bool hasAttributes() const {
-    if (!getAttributes().empty() || getDeclSpec().hasAttributes())
+    if (!getAttributes().empty() || !getDeclarationAttributes().empty() ||
+        getDeclSpec().hasAttributes())
       return true;
     for (unsigned i = 0, e = getNumTypeObjects(); i != e; ++i)
       if (!getTypeObject(i).getAttrs().empty())
@@ -2615,8 +2693,10 @@ public:
 struct FieldDeclarator {
   Declarator D;
   Expr *BitfieldSize;
-  explicit FieldDeclarator(const DeclSpec &DS)
-      : D(DS, DeclaratorContext::Member), BitfieldSize(nullptr) {}
+  explicit FieldDeclarator(const DeclSpec &DS,
+                           const ParsedAttributes &DeclarationAttrs)
+      : D(DS, DeclarationAttrs, DeclaratorContext::Member),
+        BitfieldSize(nullptr) {}
 };
 
 /// Represents a C++11 virt-specifier-seq.
@@ -2701,6 +2781,10 @@ struct LambdaIntroducer {
 
   LambdaIntroducer()
     : Default(LCD_None) {}
+
+  bool hasLambdaCapture() const {
+    return Captures.size() > 0 || Default != LCD_None;
+  }
 
   /// Append a capture in a lambda introducer.
   void addCapture(LambdaCaptureKind Kind,

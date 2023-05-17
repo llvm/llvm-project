@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class CMTimeDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     def test_nsindexpath_with_run_command(self):
         """Test formatters for CMTime."""

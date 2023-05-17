@@ -3,7 +3,7 @@
 
 define void @t() nounwind ssp {
   %1 = alloca i32
-  %2 = ptrtoint i32* %1 to i32
+  %2 = ptrtoint ptr %1 to i32
   br label %3
 
 ; <label>:3                                       ; preds = %5, %3, %0
@@ -41,6 +41,6 @@ define void @t() nounwind ssp {
   %28 = xor i8 %27, 125
   %29 = add i8 %28, -16
   %30 = add i8 0, %29
-  store i8 %30, i8* null
+  store i8 %30, ptr null
   br i1 undef, label %5, label %3
 }

@@ -20,7 +20,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @A = external global i32
 
 define i32 @main() {
-  %v = load i32, i32* @A
+  %v = load i32, ptr @A
   ret i32 %v
 }
 

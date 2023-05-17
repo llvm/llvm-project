@@ -16,8 +16,6 @@
 #include "llvm/Transforms/IPO/StripDeadPrototypes.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Module.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/IPO.h"
 
 using namespace llvm;
@@ -55,31 +53,4 @@ PreservedAnalyses StripDeadPrototypesPass::run(Module &M,
   if (stripDeadPrototypes(M))
     return PreservedAnalyses::none();
   return PreservedAnalyses::all();
-}
-
-namespace {
-
-class StripDeadPrototypesLegacyPass : public ModulePass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  StripDeadPrototypesLegacyPass() : ModulePass(ID) {
-    initializeStripDeadPrototypesLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-  bool runOnModule(Module &M) override {
-    if (skipModule(M))
-      return false;
-
-    return stripDeadPrototypes(M);
-  }
-};
-
-} // end anonymous namespace
-
-char StripDeadPrototypesLegacyPass::ID = 0;
-INITIALIZE_PASS(StripDeadPrototypesLegacyPass, "strip-dead-prototypes",
-                "Strip Unused Function Prototypes", false, false)
-
-ModulePass *llvm::createStripDeadPrototypesPass() {
-  return new StripDeadPrototypesLegacyPass();
 }

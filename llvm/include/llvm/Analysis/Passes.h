@@ -21,15 +21,6 @@ namespace llvm {
 
   //===--------------------------------------------------------------------===//
   //
-  // createObjCARCAAWrapperPass - This pass implements ObjC-ARC-based
-  // alias analysis.
-  //
-  ImmutablePass *createObjCARCAAWrapperPass();
-
-  FunctionPass *createPAEvalPass();
-
-  //===--------------------------------------------------------------------===//
-  //
   /// createLazyValueInfoPass - This creates an instance of the LazyValueInfo
   /// pass.
   FunctionPass *createLazyValueInfoPass();
@@ -54,13 +45,6 @@ namespace llvm {
   // multidimensional array indices from linearized expressions.
   //
   FunctionPass *createDelinearizationPass();
-
-  //===--------------------------------------------------------------------===//
-  //
-  // createLegacyDivergenceAnalysisPass - This pass determines which branches in a GPU
-  // program are divergent.
-  //
-  FunctionPass *createLegacyDivergenceAnalysisPass();
 
   //===--------------------------------------------------------------------===//
   //

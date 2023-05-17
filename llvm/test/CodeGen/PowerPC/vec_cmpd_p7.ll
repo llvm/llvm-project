@@ -9,10 +9,11 @@
 define <2 x i64> @v2si64_cmp(<2 x i64> %x, <2 x i64> %y) nounwind readnone {
 ; CHECK-LABEL: v2si64_cmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    addis 3, 2, .LCPI0_0@toc@ha
+; CHECK-NEXT:    vcmpequw 2, 2, 3
 ; CHECK-NEXT:    addi 3, 3, .LCPI0_0@toc@l
-; CHECK-NEXT:    lvx 3, 0, 3
+; CHECK-NEXT:    lxvd2x 0, 0, 3
+; CHECK-NEXT:    xxswapd 35, 0
 ; CHECK-NEXT:    vperm 3, 2, 2, 3
 ; CHECK-NEXT:    xxland 34, 35, 34
 ; CHECK-NEXT:    blr

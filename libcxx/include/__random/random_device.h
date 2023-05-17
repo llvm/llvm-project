@@ -58,7 +58,7 @@ public:
 
     // constructors
 #ifndef _LIBCPP_CXX03_LANG
-    random_device() : random_device("/dev/urandom") {}
+    _LIBCPP_HIDE_FROM_ABI random_device() : random_device("/dev/urandom") {}
     explicit random_device(const string& __token);
 #else
     explicit random_device(const string& __token = "/dev/urandom");

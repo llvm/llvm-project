@@ -2,6 +2,13 @@
 if (NOT DEFINED LLVM_MAIN_SRC_DIR)
   project(Polly)
   cmake_minimum_required(VERSION 3.13.4)
+  if ("${CMAKE_VERSION}" VERSION_LESS "3.20.0")
+    message(WARNING
+      "Your CMake version is ${CMAKE_VERSION}. Starting with LLVM 17.0.0, the "
+      "minimum version of CMake required to build LLVM will become 3.20.0, and "
+      "using an older CMake will become an error. Please upgrade your CMake to "
+      "at least 3.20.0 now to avoid issues in the future!")
+  endif()
   set(POLLY_STANDALONE_BUILD TRUE)
 endif()
 
@@ -20,21 +27,18 @@ if(POLLY_STANDALONE_BUILD)
 
   # Sources available, too?
   if (LLVM_BUILD_MAIN_SRC_DIR)
-    set(LLVM_SOURCE_ROOT ${LLVM_BUILD_MAIN_SRC_DIR} CACHE PATH
-      "Path to LLVM source tree")
+    set(default_llvm_src "${LLVM_BUILD_MAIN_SRC_DIR}")
   else()
-    execute_process(COMMAND "${LLVM_TOOLS_BINARY_DIR}/llvm-config" --src-root
-      OUTPUT_VARIABLE MAIN_SRC_DIR
-      OUTPUT_STRIP_TRAILING_WHITESPACE)
-    set(LLVM_SOURCE_ROOT ${MAIN_SRC_DIR} CACHE PATH "Path to LLVM source tree")
+    set(default_llvm_src "${CMAKE_CURRENT_SOURCE_DIR}/../llvm")
   endif()
+  set(LLVM_SOURCE_ROOT ${default_llvm_src} CACHE PATH "Path to LLVM source tree")
 
   # Enable unit tests if available.
   set(POLLY_GTEST_AVAIL 0)
-  set(UNITTEST_DIR ${LLVM_SOURCE_ROOT}/utils/unittest)
+  set(UNITTEST_DIR ${LLVM_THIRD_PARTY_DIR}/unittest)
   if(EXISTS ${UNITTEST_DIR}/googletest/include/gtest/gtest.h)
     if (NOT TARGET gtest)
-      add_subdirectory(${UNITTEST_DIR} utils/unittest)
+      add_subdirectory(${UNITTEST_DIR} third-party/unittest)
     endif()
     set(POLLY_GTEST_AVAIL 1)
   endif()
@@ -81,31 +85,6 @@ endif ()
 
 SET(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
 
-option(POLLY_ENABLE_GPGPU_CODEGEN "Enable GPGPU code generation feature" OFF)
-set(GPU_CODEGEN FALSE)
-if (POLLY_ENABLE_GPGPU_CODEGEN)
-  # Do not require CUDA/OpenCL, as GPU code generation test cases can be run
-  # without a CUDA/OpenCL library.
-  if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
-    FIND_PACKAGE(CUDA)
-    FIND_PACKAGE(OpenCL)
-    set(GPU_CODEGEN TRUE)
-  else()
-    message(WARNING "The LLVM NVPTX target is required for GPU code generation")
-  endif()
-endif(POLLY_ENABLE_GPGPU_CODEGEN)
-
-
-# Support GPGPU code generation if the library is available.
-if (CUDA_FOUND)
-  add_definitions(-DHAS_LIBCUDART)
-  INCLUDE_DIRECTORIES( ${CUDA_INCLUDE_DIRS} )
-endif(CUDA_FOUND)
-if (OpenCL_FOUND)
-  add_definitions(-DHAS_LIBOPENCL)
-  INCLUDE_DIRECTORIES( ${OpenCL_INCLUDE_DIR} )
-endif(OpenCL_FOUND)
-
 option(POLLY_BUNDLED_ISL "Use the bundled version of libisl included in Polly" ON)
 if (NOT POLLY_BUNDLED_ISL)
   find_package(ISL MODULE REQUIRED)
@@ -151,7 +130,6 @@ add_subdirectory(test)
 if (POLLY_GTEST_AVAIL)
   add_subdirectory(unittests)
 endif ()
-add_subdirectory(tools)
 add_subdirectory(cmake)
 # TODO: docs.
 

@@ -1,15 +1,14 @@
 ; RUN: opt -passes=openmp-opt-cgscc -pass-remarks-analysis=openmp-opt -openmp-print-icv-values -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt -openmp-opt-cgscc -pass-remarks-analysis=openmp-opt -openmp-print-icv-values -disable-output < %s 2>&1 | FileCheck %s
 
 ; ModuleID = 'icv_remarks.c'
 source_filename = "icv_remarks.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @.str = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
-@0 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0) }, align 8
+@0 = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @.str }, align 8
 @1 = private unnamed_addr constant [26 x i8] c";icv_remarks.c;foo;18;1;;\00", align 1
 
 ; CHECK-DAG: remark: icv_remarks.c:12:0: OpenMP ICV nthreads Value: IMPLEMENTATION_DEFINED
@@ -18,16 +17,15 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local void @foo(i32 %a) local_unnamed_addr #0 !dbg !17 {
 entry:
   %.kmpc_loc.addr = alloca %struct.ident_t, align 8
-  %0 = bitcast %struct.ident_t* %.kmpc_loc.addr to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* nonnull align 8 dereferenceable(24) %0, i8* nonnull align 8 dereferenceable(24) bitcast (%struct.ident_t* @0 to i8*), i64 16, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 8 dereferenceable(24) %.kmpc_loc.addr, ptr nonnull align 8 dereferenceable(24) @0, i64 16, i1 false)
   call void @llvm.dbg.value(metadata i32 %a, metadata !19, metadata !DIExpression()), !dbg !21
   tail call void @omp_set_num_threads(i32 %a) #1, !dbg !22
   %call = tail call i32 @omp_get_max_threads() #1, !dbg !23
   call void @llvm.dbg.value(metadata i32 %call, metadata !20, metadata !DIExpression()), !dbg !21
   tail call void @use(i32 %call) #1, !dbg !24
-  %1 = getelementptr inbounds %struct.ident_t, %struct.ident_t* %.kmpc_loc.addr, i64 0, i32 4, !dbg !25
-  store i8* getelementptr inbounds ([26 x i8], [26 x i8]* @1, i64 0, i64 0), i8** %1, align 8, !dbg !25, !tbaa !26
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* nonnull %.kmpc_loc.addr, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined. to void (i32*, i32*, ...)*)) #1, !dbg !25
+  %0 = getelementptr inbounds %struct.ident_t, ptr %.kmpc_loc.addr, i64 0, i32 4, !dbg !25
+  store ptr @1, ptr %0, align 8, !dbg !25, !tbaa !26
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr nonnull %.kmpc_loc.addr, i32 0, ptr @.omp_outlined.) #1, !dbg !25
   ret void, !dbg !32
 }
 
@@ -40,12 +38,12 @@ declare !dbg !12 dso_local void @use(i32) local_unnamed_addr #2
 ; CHECK-DAG: remark: icv_remarks.c:18:0: OpenMP ICV nthreads Value: IMPLEMENTATION_DEFINED
 ; CHECK-DAG: remark: icv_remarks.c:18:0: OpenMP ICV active_levels Value: 0
 ; CHECK-DAG: remark: icv_remarks.c:18:0: OpenMP ICV cancel Value: 0
-define internal void @.omp_outlined.(i32* noalias nocapture readnone %.global_tid., i32* noalias nocapture readnone %.bound_tid.) #3 !dbg !33 {
+define internal void @.omp_outlined.(ptr noalias nocapture readnone %.global_tid., ptr noalias nocapture readnone %.bound_tid.) #3 !dbg !33 {
 entry:
-  call void @llvm.dbg.value(metadata i32* %.global_tid., metadata !41, metadata !DIExpression()), !dbg !43
-  call void @llvm.dbg.value(metadata i32* %.bound_tid., metadata !42, metadata !DIExpression()), !dbg !43
-  call void @llvm.dbg.value(metadata i32* undef, metadata !44, metadata !DIExpression()) #1, !dbg !50
-  call void @llvm.dbg.value(metadata i32* undef, metadata !47, metadata !DIExpression()) #1, !dbg !50
+  call void @llvm.dbg.value(metadata ptr %.global_tid., metadata !41, metadata !DIExpression()), !dbg !43
+  call void @llvm.dbg.value(metadata ptr %.bound_tid., metadata !42, metadata !DIExpression()), !dbg !43
+  call void @llvm.dbg.value(metadata ptr undef, metadata !44, metadata !DIExpression()) #1, !dbg !50
+  call void @llvm.dbg.value(metadata ptr undef, metadata !47, metadata !DIExpression()) #1, !dbg !50
   tail call void @omp_set_num_threads(i32 10) #1, !dbg !52
   %call.i = tail call i32 @omp_get_max_threads() #1, !dbg !53
   call void @llvm.dbg.value(metadata i32 %call.i, metadata !48, metadata !DIExpression()) #1, !dbg !54
@@ -53,9 +51,9 @@ entry:
   ret void, !dbg !56
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i64, i1 immarg) #4
+declare void @llvm.memcpy.p0.p0.i64(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i64, i1 immarg) #4
 
-declare !callback !57 dso_local void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) local_unnamed_addr #1
+declare !callback !57 dso_local void @__kmpc_fork_call(ptr, i32, ptr, ...) local_unnamed_addr #1
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) #5
 

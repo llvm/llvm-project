@@ -34,7 +34,7 @@ splice z0.b, p0, { z1.b, z2.h }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 
 splice z0.b, p0, { z1.b, z31.b }
-// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: registers must be sequential
+// CHECK: [[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
 // CHECK-NEXT: splice z0.b, p0, { z1.b, z31.b }
 // CHECK-NOT: [[@LINE-1]]:{{[0-9]+}}:
 

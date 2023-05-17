@@ -14,7 +14,7 @@
 
 define void @foo() local_unnamed_addr #0 {
 entry:
-  store i32 5, i32* @counter, align 4
+  store i32 5, ptr @counter, align 4
   ret void
 }
 

@@ -55,7 +55,7 @@ public:
     /// The kind flag for an offloading entry.
     enum OffloadEntryKindFlag : uint32_t {
       /// Mark the entry as a global entry. This indicates the presense of a
-      /// kernel if the size size field is zero and a variable otherwise.
+      /// kernel if the size field is zero and a variable otherwise.
       OffloadGlobalEntry = 0x0,
       /// Mark the entry as a managed global variable.
       OffloadGlobalManagedEntry = 0x1,

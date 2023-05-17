@@ -7,13 +7,13 @@
  * RUN: %clang -fPIC %s -o %t.exe -Wl,-q
  *
  * Profile collection: instrument the binary
- * RUN: llvm-bolt %t.exe -instrument -instrumentation-file=%t.fdata -o %t.instr
+ * RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata -o %t.instr
  *
  * Profile collection: run instrumented binary (and capture output)
  * RUN: %t.instr > %t.result
  *
  * Run BOLT with asm-dump
- * RUN: llvm-bolt %t.exe -p %t.fdata -funcs=main -asm-dump=%t -o /dev/null \
+ * RUN: llvm-bolt %t.exe -p %t.fdata --funcs=main --asm-dump=%t -o /dev/null \
  * RUN:   | FileCheck %s --check-prefix=CHECK-BOLT
  *
  * Check asm file contents

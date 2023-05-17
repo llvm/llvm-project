@@ -11,8 +11,8 @@ define coldcc void @bar() {
         ret void
 }
 
-define void @structret({ i8 }* sret({ i8 })  %P) {
-        call void @structret( { i8 }* sret({ i8 })  %P )
+define void @structret(ptr sret({ i8 })  %P) {
+        call void @structret( ptr sret({ i8 })  %P )
         ret void
 }
 
@@ -25,7 +25,7 @@ define coldcc void @bar2() {
         ret void
 }
 
-define cc42 void @bar3() personality i32 (...)* @__gxx_personality_v0 {
+define cc42 void @bar3() personality ptr @__gxx_personality_v0 {
   invoke fastcc void @foo( )
     to label %Ok unwind label %U
 
@@ -33,12 +33,12 @@ Ok:
   ret void
 
 U:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
-define void @bar4() personality i32 (...)* @__gxx_personality_v0 {
+define void @bar4() personality ptr @__gxx_personality_v0 {
   call cc42 void @bar( )
   invoke cc42 void @bar3( )
     to label %Ok unwind label %U
@@ -47,22 +47,15 @@ Ok:
   ret void
 
 U:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
-  resume { i8*, i32 } %exn
+  resume { ptr, i32 } %exn
 }
 
 declare ghccc void @ghc_callee()
 
 define void @ghc_caller() {
   call ghccc void @ghc_callee()
-  ret void
-}
-
-declare hhvm_ccc void @hhvm_c_callee()
-
-define hhvmcc void @hhvm_caller() {
-  call hhvm_ccc void @hhvm_c_callee()
   ret void
 }
 

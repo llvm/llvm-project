@@ -19,7 +19,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @foo()
 @g2 = external global i32
-@llvm.used = appending global [1 x i32*] [i32* @g2]
+@llvm.used = appending global [1 x ptr] [ptr @g2]
 
 define i32 @main() {
   %v = call i32 @foo()

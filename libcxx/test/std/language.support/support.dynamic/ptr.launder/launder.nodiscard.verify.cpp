@@ -10,17 +10,12 @@
 
 // template <class T> constexpr T* launder(T* p) noexcept;
 
-// UNSUPPORTED: c++03, c++11, c++14, c++17
+// UNSUPPORTED: c++03, c++11, c++14
+// UNSUPPORTED: c++17 && !stdlib=libc++
 
 #include <new>
-#include <cassert>
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     int *p = nullptr;
     std::launder(p); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

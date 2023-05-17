@@ -38,11 +38,6 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     If `copy` is specified, no dynamic sizes should be passed, since they are
     the same as the dynamic sizes of the `copy` operand.
 
-    The optional `escape` attribute indicates whether the buffer escapes the
-    parent block or not. In the latter case, the buffer is deallocated at the
-    of the block (during bufferization). In the former case, the buffer is not
-    deallocated and must be deallocated through some other mechanism.
-
     `alloc_tensor` is a helper op for bufferization. The operation is provided
     as an anchor that marks the beginning of a new tensor SSA use-def chain. It
     can be used to control in-place bufferization decisions during One-Shot
@@ -51,29 +46,53 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     conflicts that would have been introduced by the in-place bufferization of
     another op.
 
+    The optional `memory_space` attribute specifies the memory space when
+    bufferizing this op. The memory space is inferred from `copy` if specified.
+    If neither `copy` nor `memory_space` is specified, the default memory space
+    is used during bufferization.
+
+    The optional `size_hint` operand specifies the number of non-zero elements
+    for sparse tensors. The value of `size_hint` should be not less than 1 and
+    not larger than the linear size of the corresponding dense tensor type. If
+    this requirement is not met, the behavior of the operator is undefined.
+
     Both dense and sparse tensor types are supported. The result of a
     `bufferization.alloc_tensor` is a tensor value that can be used like any
     other tensor value. In practice, it is often used as the "out" operand of
-    another op. E.g.:
+    another op. Sparse tensor allocations should always be used in a local
+    construction operation and never escape the function boundary directly.
+
+    Example:
 
     ```mlir
-    %c = bufferization.alloc_tensor [%d1, %d2] : tensor<?x?xf32, #SparseMatrix>
+    %c = bufferization.alloc_tensor(%d1, %d2) : tensor<?x?xf32, #SparseMatrix>
     %0 = linalg.matmul
       ins(%a, %b: tensor<?x?xf32, #SparseMatrix>, tensor<?x?xf32, #SparseMatrix>)
       outs(%c: tensor<?x?xf32, #SparseMatrix>) -> tensor<?x?xf32, #SparseMatrix>
+    return %0 : tensor<?x?xf32, #SparseMatrix>
+    ```
+
+    ```mlir
+    %c = bufferization.alloc_tensor(%d1, %d2) size_hint = %noe
+      : tensor<?x?xf32, #SparseMatrix>
     ```
   }];
 
-  let arguments = (ins Variadic<Index>:$dynamicSizes,
+  let arguments = (ins Variadic<Index>:$dynamic_sizes,
                        Optional<AnyTensor>:$copy,
-                       OptionalAttr<BoolAttr>:$escape);
+                       Optional<Index>:$size_hint,
+                       OptionalAttr<AnyAttr>:$memory_space);
 
   let results = (outs AnyTensor:$result);
 
   let extraClassDeclaration = [{
-    LogicalResult bufferize(RewriterBase &rewriter, BufferizationState &state);
+    LogicalResult bufferize(RewriterBase &rewriter,
+                            const BufferizationOptions &options);
 
-    bool isMemoryWrite(OpResult opResult, const AnalysisState &state);
+    bool resultBufferizesToMemoryWrite(OpResult opResult,
+                                       const AnalysisState &state);
+
+    bool bufferizesToAllocation(OpResult opResult) { return true; }
 
     bool bufferizesToMemoryRead(OpOperand &opOperand,
                                 const AnalysisState &state);
@@ -81,11 +100,15 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
                                  const AnalysisState &state);
 
-    SmallVector<OpResult> getAliasingOpResult(
+    AliasingOpResultList getAliasingOpResults(
         OpOperand &opOperand, const AnalysisState &state);
 
+    FailureOr<BaseMemRefType> getBufferType(
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes);
+
     RankedTensorType getType() {
-      return getResult().getType().cast<RankedTensorType>();
+      return ::llvm::cast<RankedTensorType>(getResult().getType());
     }
 
     // Return true if the size of the tensor is dynamic at `idx`
@@ -97,7 +120,7 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     // the tensor at dimension `idx`. Asserts that the shape is
     // dynamic at that `idx`.
     unsigned getIndexOfDynamicSize(unsigned idx) {
-      assert(!copy() && "no dim sizes specified when copying a tensor");
+      assert(!getCopy() && "no dim sizes specified when copying a tensor");
       assert(isDynamicDim(idx) && "expected dynamic size");
       ArrayRef<int64_t> shape = getType().getShape();
       return std::count_if(
@@ -118,16 +141,16 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
   }];
 
   let builders = [
-    // Build an op without `copy` operand and `escape` attribute.
+    // Build an op without `copy` or `memory_space` or `size_hint`.
     OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes)>,
 
-    // Build an op without `escape` attribute.
+    // Build an op without `memory_space` or `size_hint`.
     OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes,
                    "Value":$copy)>,
 
-    // Build an op with `copy` and `escape` attribute.
-    OpBuilder<(ins "RankedTensorType":$type, "ValueRange":$dynamicSizes,
-                   "Value":$copy, "bool":$escape)>,
+    // Build an op without `size_hint`.
+    OpBuilder<(ins "TensorType":$type, "ValueRange":$dynamicSizes,
+                   "Value":$copy, "IntegerAttr":$memory_space)>,
   ];
 
   let hasCanonicalizer = 1;
@@ -168,8 +191,8 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
   let results = (outs Arg<AnyRankedOrUnrankedMemRef, "", []>:$output);
 
   let extraClassDeclaration = [{
-    Value getSource() { return input(); }
-    Value getTarget() { return output(); }
+    Value getSource() { return getInput(); }
+    Value getTarget() { return getOutput(); }
   }];
 
   let assemblyFormat = "$input attr-dict `:` type($input) `to` type($output)";
@@ -177,6 +200,64 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
   let hasFolder = 1;
   let hasCanonicalizer = 1;
 }
+
+//===----------------------------------------------------------------------===//
+// DeallocTensorOp
+//===----------------------------------------------------------------------===//
+
+def Bufferization_DeallocTensorOp : Bufferization_Op<"dealloc_tensor",
+    [BufferizableOpInterface]> {
+  string summary = "Releases underlying sparse storage format of given tensor";
+  string description = [{
+    `bufferization.dealloc_tensor` is a buffer deallocation in tensor land. This
+    op can be used for manual buffer deallocation. Some bufferizations (such as
+    One-Shot Bufferize) take care of buffer deallocation, in which case this op
+    is usually not needed. Details can be found in the documentation of the
+    respective bufferization passes.
+
+    In case of a dense tensor, this op lowers to a `memref.dealloc` op during
+    bufferization.
+
+    In case of a sparse tensor, this op releases the underlying sparse storage
+    format for a tensor that materialized earlier through a `new` operation, a
+    `convert` operation with annotated destination tensor type (unless the
+    convert is folded away), or a `bufferization.alloc_tensor` operation. The
+    release operation should only be called once for any materialized tensor.
+    After this operation, any subsequent `memref` querying operation on the
+    tensor returns undefined results.
+
+    Example:
+
+    ```mlir
+    bufferization.dealloc_tensor %tensor : tensor<1024x1024xf64, #CSR>
+    ```
+  }];
+
+  let arguments = (ins AnyTensor:$tensor);
+  let results = (outs);
+  let assemblyFormat = "$tensor attr-dict `:` type($tensor)";
+
+  let extraClassDeclaration = [{
+    bool bufferizesToMemoryRead(OpOperand &opOperand,
+                                const AnalysisState &state) const {
+      return false;
+    }
+
+    bool bufferizesToMemoryWrite(OpOperand &opOperand,
+                                 const AnalysisState &state) const {
+      return false;
+    }
+
+    AliasingOpResultList getAliasingOpResults(
+        OpOperand &opOperand, const AnalysisState &state) const {
+      return {};
+    }
+
+    LogicalResult bufferize(RewriterBase &rewriter,
+                            const BufferizationOptions &options);
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // ToTensorOp
 //===----------------------------------------------------------------------===//
@@ -191,11 +272,10 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
   ]> {
   let summary = "memref to tensor operation";
   let description = [{
-    Create a tensor from a memref, making an independent copy of the element
-    data. The result value is a tensor whose shape and element type match the
-    memref operand.
+    An operation that creates a tensor from a `memref`. The result value is a
+    tensor whose shape and element type match the memref operand.
 
-    The opposite of this op is to_memref. Together, these two ops are
+    The opposite of this op is `to_memref`. Together, these two ops are
     useful for source/target materializations when doing type conversions
     involving tensors and memrefs.
 
@@ -203,29 +283,47 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
 
     ```mlir
     // Produces a value of tensor<4x?xf32> type.
-    %12 = bufferization.to_tensor %10 : memref<4x?xf32, #layout, memspace0>
+    %t = bufferization.to_tensor %m : memref<4x?xf32, #layout, 0>
     ```
 
-    If tensor load is used in the bufferization steps, mutating the source
-    buffer after loading leads to undefined behavior.
+    If the `writable` unit attribute is set, the produced tensor is considered
+    "writable" during bufferization. Otherwise, every OpOperand that bufferizes
+    to a write to the future buffer of the resulting tensor (or an alias
+    thereof) will bufferize out-of-place to prevent emitting any writes to
+    `memref` during bufferization.
+
+    If the given memref does not alias with any other memref passed to another
+    `to_tensor` op, the `restrict` unit attribute can be set. Only such
+    operations are supported by One-Shot Bufferize. (Otherwise, potential memref
+    aliasing relationships would have to be captured in One-Shot Bufferize.)
+
+    Example:
+
+    ```
+    %t = bufferization.to_tensor %m restrict writable : memref<4xf32>
+
+    // %t is writable, so the tensor.insert may bufferize in-place in the
+    // absence of other conflicts.
+    %r = tensor.insert %f into %t[%idx] : tensor<4xf32>
+    ```
+
+    `to_tensor` ops are not bufferized. They are expected to fold away after
+    bufferization. If there are non-bufferizable ops in the IR and
+    `allowUnknownOps` is set, they may be part of the resulting IR and not fold
+    away. However, such IR is no longer bufferizable with One-Shot Bufferize.
   }];
 
   let arguments = (ins Arg<AnyRankedOrUnrankedMemRef,
-                       "the reference to load from", [MemRead]>:$memref);
+                       "the reference to load from", [MemRead]>:$memref,
+                       UnitAttr:$restrict, UnitAttr:$writable);
   let results = (outs AnyTensor:$result);
-
-  let builders = [
-    OpBuilder<(ins "Value":$memref), [{
-      $_state.addOperands(memref);
-      $_state.addTypes(memref::getTensorTypeFromMemRefType(memref.getType()));
-    }]>];
 
   let extraClassDeclaration = [{
     /// The result of a to_tensor is always a tensor.
     TensorType getType() {
       Type resultType = getResult().getType();
-      if (resultType.isa<TensorType>())
-        return resultType.cast<TensorType>();
+      if (::llvm::isa<TensorType>(resultType))
+        return ::llvm::cast<TensorType>(resultType);
       return {};
     }
 
@@ -233,33 +331,25 @@ def Bufferization_ToTensorOp : Bufferization_Op<"to_tensor", [
     // BufferizableOpInterface implementation
     //===------------------------------------------------------------------===//
 
-    // ToTensorOp conceptually loads a tensor from a memory location. The
-    // One-Shot analysis has no information about the memref that is loaded from
-    // by ToTensorOp. We have to assume that the loaded tensor may after
-    // bufferization potentially alias with any other bufferized tensor. Since
-    // ToTensorOp and ToMemrefOp have no aliasing OpOperand/OpResult pairs, this
-    // cannot be encoded directly in the analysis. However, declaring ToTensorOp
-    // results as not writable enforces a buffer copy and has the same effect.
-
     LogicalResult bufferize(RewriterBase &rewriter,
-                            BufferizationState &state) const {
-      // to_tensor cannot be bufferized. However, other ops that are using
-      // to_tensor's result will eventually be bufferized. At that point, they
-      // will start using to_tensor's memref operand. Once all users of
-      // to_tensor are bufferized, the op will not have any users anymore and
-      // DCE away. In case of partial bufferization, to_memref(to_tensor(x))
-      // constructs may be left over. These are folded by the canonicalizer or
-      // FinalizingBufferize.
+                            const BufferizationOptions &options) const {
+      // to_tensor/to_memref pairs fold away after bufferization.
       return success();
     }
 
-    bool isWritable(Value value, const AnalysisState &state) const {
-      // It is unknown whether the memref operand is writable or not.
-      return false;
+    bool isWritable(Value value, const AnalysisState &state);
+
+    FailureOr<BaseMemRefType> getBufferType(
+        Value value, const BufferizationOptions &options,
+        const DenseMap<Value, BaseMemRefType> &fixedTypes) {
+      return ::llvm::cast<BaseMemRefType>(getMemref().getType());
     }
   }];
 
-  let assemblyFormat = "$memref attr-dict `:` type($memref)";
+  let assemblyFormat = [{
+    $memref (`restrict` $restrict^)? (`writable` $writable^)? attr-dict
+      `:` type($memref)
+  }];
 
   let hasCanonicalizer = 1;
   let hasFolder = 1;
@@ -274,26 +364,26 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     BufferizableOpInterface,
     SameOperandsAndResultShape,
     SameOperandsAndResultElementType,
-    NoSideEffect,
+    Pure,
     TypesMatchWith<"type of 'tensor' is the tensor equivalent of 'memref'",
                    "memref", "tensor",
                    "memref::getTensorTypeFromMemRefType($_self)">
   ]> {
   let summary = "tensor to memref cast operation";
   let description = [{
-    Casts a tensor to a memref.
+    An operation that returns the future buffer of a `tensor`.
 
     ```mlir
-    // Result type is tensor<4x?xf32>
-    %12 = bufferization.to_memref %10 : memref<4x?xf32, #map0, 42>
+    // Result type is memref<4x?xf32, #layout, 0>
+    %m = bufferization.to_memref %t : memref<4x?xf32, #layout, 0>
     ```
 
-    Note, that mutating the result of the to_memref operation leads to
-    undefined behavior.
-
     This operation is a specialized variant of the built-in
-    unrealized_conversion_cast and is intended for use in the context of
-    gradual bufferization.
+    `unrealized_conversion_cast` and is used to make sure that the IR stays
+    valid at any point during the bufferization.
+
+    IR that contains `to_memref` ops cannot be bufferized with One-Shot
+    Bufferize.
   }];
 
   let arguments = (ins AnyTensor:$tensor);
@@ -328,13 +418,13 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
       return true;
     }
 
-    SmallVector<OpResult> getAliasingOpResult(
+    AliasingOpResultList getAliasingOpResults(
         OpOperand &opOperand, const AnalysisState &state) const {
       return {};
     }
 
     LogicalResult bufferize(RewriterBase &rewriter,
-                            BufferizationState &state);
+                            const BufferizationOptions &options);
   }];
 
   let assemblyFormat = "$tensor attr-dict `:` type($memref)";

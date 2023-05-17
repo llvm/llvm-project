@@ -20,6 +20,7 @@
 #include "min_allocator.h"
 
 int main(int, char**) {
+  using T = decltype(std::uint8_t() - std::uint8_t());
   {
     typedef std::string C;
     C c(1, '\0');

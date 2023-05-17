@@ -44,8 +44,8 @@ static bool testAttribute(unsigned Tag, unsigned Value, unsigned ExpectedTag,
   RISCVAttributeParser Parser;
   cantFail(Parser.parse(Bytes, support::little));
 
-  Optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
-  return Attr.hasValue() && Attr.getValue() == ExpectedValue;
+  std::optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
+  return Attr && *Attr == ExpectedValue;
 }
 
 static bool testTagString(unsigned Tag, const char *name) {

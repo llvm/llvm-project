@@ -13,6 +13,7 @@
 #include "TableGenBackends.h" // Declares all backends.
 #include "ASTTableGen.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/PrettyStackTrace.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/TableGen/Error.h"
@@ -64,6 +65,7 @@ enum ActionType {
   GenClangCommentCommandInfo,
   GenClangCommentCommandList,
   GenClangOpenCLBuiltins,
+  GenClangOpenCLBuiltinHeader,
   GenClangOpenCLBuiltinTests,
   GenArmNeon,
   GenArmFP16,
@@ -88,6 +90,10 @@ enum ActionType {
   GenRISCVVectorHeader,
   GenRISCVVectorBuiltins,
   GenRISCVVectorBuiltinCG,
+  GenRISCVVectorBuiltinSema,
+  GenRISCVSiFiveVectorBuiltins,
+  GenRISCVSiFiveVectorBuiltinCG,
+  GenRISCVSiFiveVectorBuiltinSema,
   GenAttrDocs,
   GenDiagDocs,
   GenOptDocs,
@@ -198,6 +204,9 @@ cl::opt<ActionType> Action(
                    "documentation comments"),
         clEnumValN(GenClangOpenCLBuiltins, "gen-clang-opencl-builtins",
                    "Generate OpenCL builtin declaration handlers"),
+        clEnumValN(GenClangOpenCLBuiltinHeader,
+                   "gen-clang-opencl-builtin-header",
+                   "Generate OpenCL builtin header"),
         clEnumValN(GenClangOpenCLBuiltinTests, "gen-clang-opencl-builtin-tests",
                    "Generate OpenCL builtin declaration tests"),
         clEnumValN(GenArmNeon, "gen-arm-neon", "Generate arm_neon.h for clang"),
@@ -243,6 +252,14 @@ cl::opt<ActionType> Action(
                    "Generate riscv_vector_builtins.inc for clang"),
         clEnumValN(GenRISCVVectorBuiltinCG, "gen-riscv-vector-builtin-codegen",
                    "Generate riscv_vector_builtin_cg.inc for clang"),
+        clEnumValN(GenRISCVVectorBuiltinSema, "gen-riscv-vector-builtin-sema",
+                   "Generate riscv_vector_builtin_sema.inc for clang"),
+        clEnumValN(GenRISCVSiFiveVectorBuiltins, "gen-riscv-sifive-vector-builtins",
+                   "Generate riscv_sifive_vector_builtins.inc for clang"),
+        clEnumValN(GenRISCVSiFiveVectorBuiltinCG, "gen-riscv-sifive-vector-builtin-codegen",
+                   "Generate riscv_sifive_vector_builtin_cg.inc for clang"),
+        clEnumValN(GenRISCVSiFiveVectorBuiltinSema, "gen-riscv-sifive-vector-builtin-sema",
+                   "Generate riscv_sifive_vector_builtin_sema.inc for clang"),
         clEnumValN(GenAttrDocs, "gen-attr-docs",
                    "Generate attribute documentation"),
         clEnumValN(GenDiagDocs, "gen-diag-docs",
@@ -380,6 +397,9 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
   case GenClangOpenCLBuiltins:
     EmitClangOpenCLBuiltins(Records, OS);
     break;
+  case GenClangOpenCLBuiltinHeader:
+    EmitClangOpenCLBuiltinHeader(Records, OS);
+    break;
   case GenClangOpenCLBuiltinTests:
     EmitClangOpenCLBuiltinTests(Records, OS);
     break;
@@ -457,6 +477,18 @@ bool ClangTableGenMain(raw_ostream &OS, RecordKeeper &Records) {
     break;
   case GenRISCVVectorBuiltinCG:
     EmitRVVBuiltinCG(Records, OS);
+    break;
+  case GenRISCVVectorBuiltinSema:
+    EmitRVVBuiltinSema(Records, OS);
+    break;
+  case GenRISCVSiFiveVectorBuiltins:
+    EmitRVVBuiltins(Records, OS);
+    break;
+  case GenRISCVSiFiveVectorBuiltinCG:
+    EmitRVVBuiltinCG(Records, OS);
+    break;
+  case GenRISCVSiFiveVectorBuiltinSema:
+    EmitRVVBuiltinSema(Records, OS);
     break;
   case GenAttrDocs:
     EmitClangAttrDocs(Records, OS);

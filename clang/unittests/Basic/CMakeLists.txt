@@ -10,12 +10,12 @@ add_clang_unittest(BasicTests
   FileManagerTest.cpp
   LineOffsetMappingTest.cpp
   SanitizersTest.cpp
+  SarifTest.cpp
   SourceManagerTest.cpp
   )
 
 clang_target_link_libraries(BasicTests
   PRIVATE
-  clangAST
   clangBasic
   clangLex
   )

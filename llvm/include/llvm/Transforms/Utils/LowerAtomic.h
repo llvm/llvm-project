@@ -11,8 +11,8 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
-#define LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
+#ifndef LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H
+#define LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H
 
 #include "llvm/IR/Instructions.h"
 
@@ -31,7 +31,7 @@ bool lowerAtomicRMWInst(AtomicRMWInst *RMWI);
 /// Emit IR to implement the given atomicrmw operation on values in registers,
 /// returning the new value.
 Value *buildAtomicRMWValue(AtomicRMWInst::BinOp Op, IRBuilderBase &Builder,
-                           Value *Loaded, Value *Inc);
+                           Value *Loaded, Value *Val);
 }
 
-#endif // LLVM_TRANSFORMS_SCALAR_LOWERATOMIC_H
+#endif // LLVM_TRANSFORMS_UTILS_LOWERATOMIC_H

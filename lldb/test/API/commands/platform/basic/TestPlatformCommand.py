@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class PlatformCommandTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @no_debug_info_test

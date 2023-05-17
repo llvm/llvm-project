@@ -80,7 +80,7 @@ struct BasicBlockInfo {
     // If the block size isn't a multiple of the known bits, assume the
     // worst case padding.
     if (Size & ((1u << Bits) - 1))
-      Bits = countTrailingZeros(Size);
+      Bits = llvm::countr_zero(Size);
     return Bits;
   }
 

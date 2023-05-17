@@ -5,15 +5,16 @@ add_flang_library(flangFrontendTool
   # This makes sure that the MLIR dependencies of flangFrontend (which are
   # transitively required here) are generated before this target is build.
   flangFrontend
-  clangBasic
 
   LINK_LIBS
   flangFrontend
-  clangBasic
-  clangDriver
   MLIRPass
 
   LINK_COMPONENTS
   Option
   Support
+
+  CLANG_LIBS
+  clangBasic
+  clangDriver
 )

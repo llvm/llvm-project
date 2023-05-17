@@ -5,13 +5,13 @@
 
 define void @foo() local_unnamed_addr nounwind norecurse {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* bitcast ([4 x i32]* @c to <4 x i32>*), align 4
+  %0 = load <4 x i32>, ptr @c, align 4
   %1 = and <4 x i32> %0,
            <i32 1,
-            i32 zext (i1 icmp ne (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @c, i32 0, i32 1), i32* @d) to i32),
-            i32 zext (i1 icmp ne (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @c, i32 0, i32 2), i32* @d) to i32),
-            i32 zext (i1 icmp ne (i32* getelementptr inbounds ([4 x i32], [4 x i32]* @c, i32 0, i32 3), i32* @d) to i32)>
-  store <4 x i32> %1, <4 x i32>* bitcast ([4 x i32]* @c to <4 x i32>*), align 4
+            i32 zext (i1 icmp ne (ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i32 1), ptr @d) to i32),
+            i32 zext (i1 icmp ne (ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i32 2), ptr @d) to i32),
+            i32 zext (i1 icmp ne (ptr getelementptr inbounds ([4 x i32], ptr @c, i32 0, i32 3), ptr @d) to i32)>
+  store <4 x i32> %1, ptr @c, align 4
   ret void
 ; CHECK-NOT: mvnne
 ; CHECK: movne r{{[0-9]+}}, #1

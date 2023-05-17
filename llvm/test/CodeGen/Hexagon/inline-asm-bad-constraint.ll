@@ -9,7 +9,7 @@ define void @fred() #0 {
 entry:
   %a0 = alloca <16 x i32>, align 64
   %0 = call <16 x i32> asm sideeffect "$0 = vmem(r0)", "=r"()
-  store <16 x i32> %0, <16 x i32>* %a0, align 64
+  store <16 x i32> %0, ptr %a0, align 64
   ret void
 }
 

@@ -6,20 +6,19 @@
 ; CHECK-NOT: vrep
 
 
-define double @fun(double* %Vsrc, <2 x double> %T) {
+define double @fun(ptr %Vsrc, <2 x double> %T) {
 entry:
-  %Vgep1 = getelementptr double, double* %Vsrc, i64 0
-  %Vld1 = load double, double* %Vgep1
-  %Vgep2 = getelementptr double, double* %Vsrc, i64 1
-  %Vld2 = load double, double* %Vgep2
-  %Vgep3 = getelementptr double, double* %Vsrc, i64 2
-  %Vld3 = load double, double* %Vgep3
-  %Vgep4 = getelementptr double, double* %Vsrc, i64 3
-  %Vld4 = load double, double* %Vgep4
-  %Vgep5 = getelementptr double, double* %Vsrc, i64 4
-  %Vld5 = load double, double* %Vgep5
-  %Vgep6 = getelementptr double, double* %Vsrc, i64 5
-  %Vld6 = load double, double* %Vgep6
+  %Vld1 = load double, ptr %Vsrc
+  %Vgep2 = getelementptr double, ptr %Vsrc, i64 1
+  %Vld2 = load double, ptr %Vgep2
+  %Vgep3 = getelementptr double, ptr %Vsrc, i64 2
+  %Vld3 = load double, ptr %Vgep3
+  %Vgep4 = getelementptr double, ptr %Vsrc, i64 3
+  %Vld4 = load double, ptr %Vgep4
+  %Vgep5 = getelementptr double, ptr %Vsrc, i64 4
+  %Vld5 = load double, ptr %Vgep5
+  %Vgep6 = getelementptr double, ptr %Vsrc, i64 5
+  %Vld6 = load double, ptr %Vgep6
 
   %V19 = insertelement <2 x double> undef, double %Vld1, i32 0
   %V20 = shufflevector <2 x double> %V19, <2 x double> undef, <2 x i32> zeroinitializer

@@ -13,6 +13,7 @@
 #ifndef MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
 #define MLIR_DIALECT_TOSA_TRANSFORMS_PASSES
 
+include "mlir/IR/EnumAttr.td"
 include "mlir/Pass/PassBase.td"
 
 def TosaLayerwiseConstantFoldPass : Pass<"tosa-layerwise-constant-fold", "func::FuncOp"> {
@@ -56,11 +57,39 @@ def TosaOptionalDecompositions
   : Pass<"tosa-optional-decompositions", "func::FuncOp"> {
   let summary = "Applies Tosa operations optional decompositions";
   let description = [{
-    Pass to apply the Tosa operations decompositions 
+    Pass to apply the Tosa operations decompositions
     exposed as populate functions in include/mlir/Dialect/Tosa/Transforms/Passes.h
   }];
 
   let constructor = "tosa::createTosaOptionalDecompositions()";
+}
+
+def TosaProfileType : I32EnumAttr<"TosaProfileEnum", "Tosa profile",
+    [
+      I32EnumAttrCase<"BaseInference", 0, "bi">,
+      I32EnumAttrCase<"MainInference", 1, "mi">,
+      I32EnumAttrCase<"MainTraining", 2, "mt">,
+      I32EnumAttrCase<"Undefined", 3>
+    ]>{
+  let cppNamespace = "mlir::tosa";
+}
+
+def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
+  let summary = "Validates TOSA dialect";
+  let description = [{
+    This pass validates if input TOSA operations match the specification for given
+    criteria, e.g. TOSA profile.
+  }];
+  let constructor = "createTosaValidationPass()";
+
+  let options = [
+      Option<"profileName", "profile", "std::string",
+             /*default=*/"\"undefined\"",
+             "Validate if operations match for the given profile">,
+      Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
+             /*default=*/"false",
+             "Verify if the properties of certain operations align the spec requirement">,
+   ];
 }
 
 #endif // MLIR_DIALECT_TOSA_TRANSFORMS_PASSES

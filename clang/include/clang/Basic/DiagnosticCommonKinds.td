@@ -55,7 +55,7 @@ def err_expected_colon_after_setter_name : Error<
 def err_expected_string_literal : Error<"expected string literal "
   "%select{in %1|for diagnostic message in static_assert|"
           "for optional message in 'availability' attribute|"
-          "for %select{language|source container}1 name in "
+          "for %select{language name|source container name|USR}1 in "
           "'external_source_symbol' attribute}0">;
 def err_invalid_string_udl : Error<
   "string literal with user-defined suffix cannot be used here">;
@@ -63,6 +63,10 @@ def err_invalid_character_udl : Error<
   "character literal with user-defined suffix cannot be used here">;
 def err_invalid_numeric_udl : Error<
   "numeric literal with user-defined suffix cannot be used here">;
+def warn_pragma_debug_missing_argument : Warning<
+  "missing argument to debug command '%0'">, InGroup<IgnoredPragmas>;
+def warn_pragma_debug_unexpected_argument : Warning<
+  "unexpected argument to debug command">, InGroup<IgnoredPragmas>;
 
 }
 
@@ -126,6 +130,12 @@ def warn_cxx20_compat_consteval : Warning<
 def warn_missing_type_specifier : Warning<
   "type specifier missing, defaults to 'int'">,
   InGroup<ImplicitInt>, DefaultIgnore;
+
+def ext_c_empty_initializer : Extension<
+  "use of an empty initializer is a C2x extension">, InGroup<C2x>;
+def warn_c2x_compat_empty_initializer : Warning<
+  "use of an empty initializer is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
 }
 
 let CategoryName = "Nullability Issue" in {
@@ -163,6 +173,8 @@ def err_opencl_unknown_type_specifier : Error<
 
 def warn_unknown_attribute_ignored : Warning<
   "unknown attribute %0 ignored">, InGroup<UnknownAttributes>;
+def warn_attribute_ignored : Warning<"%0 attribute ignored">,
+  InGroup<IgnoredAttributes>;
 def err_use_of_tag_name_without_tag : Error<
   "must use '%1' tag to refer to type %0%select{| in this scope}2">;
 
@@ -198,14 +210,14 @@ def ext_cxx11_longlong : Extension<
 def warn_cxx98_compat_longlong : Warning<
   "'long long' is incompatible with C++98">,
   InGroup<CXX98CompatPedantic>, DefaultIgnore;
-def ext_cxx2b_size_t_suffix : ExtWarn<
-  "'size_t' suffix for literals is a C++2b extension">,
-  InGroup<CXX2b>;
+def ext_cxx23_size_t_suffix : ExtWarn<
+  "'size_t' suffix for literals is a C++23 extension">,
+  InGroup<CXX23>;
 def warn_cxx20_compat_size_t_suffix : Warning<
   "'size_t' suffix for literals is incompatible with C++ standards before "
-  "C++2b">, InGroup<CXXPre2bCompat>, DefaultIgnore;
-def err_cxx2b_size_t_suffix: Error<
-  "'size_t' suffix for literals is a C++2b feature">;
+  "C++23">, InGroup<CXXPre23Compat>, DefaultIgnore;
+def err_cxx23_size_t_suffix: Error<
+  "'size_t' suffix for literals is a C++23 feature">;
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
@@ -267,24 +279,26 @@ def note_constexpr_invalid_template_arg : Note<
   "%select{type_info object|string literal|temporary object|"
   "predefined '%3' variable}2 is not allowed in a template argument">;
 def err_constexpr_invalid_template_arg : Error<
-  note_constexpr_invalid_template_arg.Text>;
+  note_constexpr_invalid_template_arg.Summary>;
 
 // Sema && Frontend
 let CategoryName = "Inline Assembly Issue" in {
-  def err_asm_invalid_type_in_input : Error<
-    "invalid type %0 in asm input for constraint '%1'">;
+def err_asm_invalid_type_in_input : Error<
+  "invalid type %0 in asm input for constraint '%1'">;
 
-  def err_asm_invalid_type : Error<
-    "invalid type %0 in asm %select{input|output}1">;
+def err_asm_invalid_type : Error<
+  "invalid type %0 in asm %select{input|output}1">;
 
-  def warn_stack_clash_protection_inline_asm : Warning<
-    "Unable to protect inline asm that clobbers stack pointer against stack clash">,
-    InGroup<DiagGroup<"stack-protector">>;
+def err_ms_asm_bitfield_unsupported : Error<
+  "an inline asm block cannot have an operand which is a bit-field">;
 
-  def warn_slh_does_not_support_asm_goto
-      : Warning<"Speculative load hardening does not protect functions with "
-                "asm goto">,
-        InGroup<DiagGroup<"slh-asm-goto">>;
+def warn_stack_clash_protection_inline_asm : Warning<
+  "unable to protect inline asm that clobbers stack pointer against stack "
+  "clash">, InGroup<DiagGroup<"stack-protector">>;
+
+def warn_slh_does_not_support_asm_goto : Warning<
+  "speculative load hardening does not protect functions with asm goto">,
+  InGroup<DiagGroup<"slh-asm-goto">>;
 }
 
 // Sema && Serialization
@@ -294,7 +308,7 @@ def warn_dup_category_def : Warning<
 // Targets
 
 def err_target_unknown_triple : Error<
-  "unknown target triple '%0', please use -triple or -arch">;
+  "unknown target triple '%0'">;
 def err_target_unknown_cpu : Error<"unknown target CPU '%0'">;
 def note_valid_options : Note<"valid target CPU values are: %0">;
 def err_target_unsupported_cpu_for_micromips : Error<
@@ -341,6 +355,17 @@ def err_unable_to_rename_temp : Error<
   "unable to rename temporary '%0' to output file '%1': '%2'">;
 def err_unable_to_make_temp : Error<
   "unable to make temporary file: %0">;
+def remark_sloc_usage : Remark<
+  "source manager location address space usage:">,
+  InGroup<DiagGroup<"sloc-usage">>, DefaultRemark, ShowInSystemHeader;
+def note_total_sloc_usage : Note<
+  "%0B in local locations, %1B in locations loaded from AST files, for a total "
+  "of %2B (%3%% of available space)">;
+def note_file_sloc_usage : Note<
+  "file entered %0 time%s0 using %1B of space"
+  "%plural{0:|: plus %2B for macro expansions}2">;
+def note_file_misc_sloc_usage : Note<
+  "%0 additional files entered using a total of %1B of space">;
 
 // Modules
 def err_module_format_unhandled : Error<

@@ -5,9 +5,9 @@
 declare i32 @llvm.eh.exceptioncode(token)
 declare i32 @__C_specific_handler(...)
 declare void @crash()
-declare i32 @printf(i8* nocapture readonly, ...) nounwind
+declare i32 @printf(ptr nocapture readonly, ...) nounwind
 
-define i32 @main() personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define i32 @main() personality ptr @__C_specific_handler {
 entry:
   invoke void @crash()
           to label %__try.cont unwind label %lpad
@@ -19,9 +19,9 @@ lpad:
   %cs1 = catchswitch within none [label %catchall] unwind to caller
 
 catchall:
-  %p = catchpad within %cs1 [i8* null, i32 64, i8* null]
+  %p = catchpad within %cs1 [ptr null, i32 64, ptr null]
   %code = call i32 @llvm.eh.exceptioncode(token %p)
-  call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([27 x i8], [27 x i8]* @str, i64 0, i64 0), i32 %code) [ "funclet"(token %p) ]
+  call i32 (ptr, ...) @printf(ptr @str, i32 %code) [ "funclet"(token %p) ]
   catchret from %p to label %__try.cont
 }
 

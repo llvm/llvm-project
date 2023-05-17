@@ -2,9 +2,9 @@
 # RUN: llc -O0 -mtriple=mipsel-linux-gnu -run-pass=legalizer -verify-machineinstrs %s -o - | FileCheck %s -check-prefixes=MIPS32
 --- |
 
-  define i32 @indirectbr(i8* %addr) {
+  define i32 @indirectbr(ptr %addr) {
   entry:
-    indirectbr i8* %addr, [label %L1, label %L2]
+    indirectbr ptr %addr, [label %L1, label %L2]
 
   L1:
     ret i32 0

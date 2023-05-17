@@ -36,7 +36,7 @@
 ## --unresolved-symbols overrides a previous --allow-shlib-undefined.
 # RUN: not ld.lld %t1.o %t.so -o /dev/null --allow-shlib-undefined --unresolved-symbols=ignore-in-object-files 2>&1 | FileCheck %s --check-prefix=SHLIB
 
-# SHLIB: error: {{.*}}.so: undefined reference to undef [--no-allow-shlib-undefined]
+# SHLIB: error: undefined reference due to --no-allow-shlib-undefined: undef
 
 ## Ignoring undefines in shared should produce error for symbol from object.
 # RUN: not ld.lld %t2.o -o /dev/null --unresolved-symbols=ignore-in-shared-libs 2>&1 | \

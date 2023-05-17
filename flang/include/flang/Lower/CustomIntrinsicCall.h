@@ -25,8 +25,9 @@
 #define FORTRAN_LOWER_CUSTOMINTRINSICCALL_H
 
 #include "flang/Lower/AbstractConverter.h"
-#include "llvm/ADT/Optional.h"
+#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include <functional>
+#include <optional>
 
 namespace Fortran {
 
@@ -48,12 +49,14 @@ bool intrinsicRequiresCustomOptionalHandling(
 /// Type of callback to be provided to prepare the arguments fetching from an
 /// actual argument expression.
 using OperandPrepare = std::function<void(const Fortran::lower::SomeExpr &)>;
+using OperandPrepareAs = std::function<void(const Fortran::lower::SomeExpr &,
+                                            fir::LowerIntrinsicArgAs)>;
 
 /// Type of the callback to inquire about an argument presence, once the call
 /// preparation was done. An absent optional means the argument is statically
 /// present. An mlir::Value means the presence must be checked at runtime, and
 /// that the value contains the "is present" boolean value.
-using OperandPresent = std::function<llvm::Optional<mlir::Value>(std::size_t)>;
+using OperandPresent = std::function<std::optional<mlir::Value>(std::size_t)>;
 
 /// Type of the callback to generate an argument reference after the call
 /// preparation was done. For optional arguments, the utility guarantees
@@ -61,8 +64,9 @@ using OperandPresent = std::function<llvm::Optional<mlir::Value>(std::size_t)>;
 /// verified. This means the getter callback can dereference the argument
 /// without any special care.
 /// For elemental intrinsics, the getter must provide the current iteration
-/// element value.
-using OperandGetter = std::function<fir::ExtendedValue(std::size_t)>;
+/// element value. If the boolean argument is true, the callback must load the
+/// argument before returning it.
+using OperandGetter = std::function<fir::ExtendedValue(std::size_t, bool)>;
 
 /// Given a callback \p prepareOptionalArgument to prepare optional
 /// arguments and a callback \p prepareOtherArgument to prepare non-optional
@@ -76,9 +80,9 @@ using OperandGetter = std::function<fir::ExtendedValue(std::size_t)>;
 void prepareCustomIntrinsicArgument(
     const Fortran::evaluate::ProcedureRef &procRef,
     const Fortran::evaluate::SpecificIntrinsic &intrinsic,
-    llvm::Optional<mlir::Type> retTy,
+    std::optional<mlir::Type> retTy,
     const OperandPrepare &prepareOptionalArgument,
-    const OperandPrepare &prepareOtherArgument, AbstractConverter &converter);
+    const OperandPrepareAs &prepareOtherArgument, AbstractConverter &converter);
 
 /// Given a callback \p getOperand to generate a reference to the i-th argument,
 /// and a callback \p isPresentCheck to test if an argument is present, this
@@ -89,10 +93,22 @@ void prepareCustomIntrinsicArgument(
 /// not generate any implicit loop nest on its own).
 fir::ExtendedValue
 lowerCustomIntrinsic(fir::FirOpBuilder &builder, mlir::Location loc,
-                     llvm::StringRef name, llvm::Optional<mlir::Type> retTy,
+                     llvm::StringRef name, std::optional<mlir::Type> retTy,
                      const OperandPresent &isPresentCheck,
                      const OperandGetter &getOperand, std::size_t numOperands,
                      Fortran::lower::StatementContext &stmtCtx);
+
+/// DEPRICATED: NEW CODE SHOULD USE THE VERSION OF genIntrinsicCall WITHOUT A
+/// StatementContext, DECLARED IN IntrinsicCall.h
+/// Generate the FIR+MLIR operations for the generic intrinsic \p name
+/// with argument \p args and expected result type \p resultType.
+/// Returned fir::ExtendedValue is the returned Fortran intrinsic value.
+fir::ExtendedValue genIntrinsicCall(fir::FirOpBuilder &builder,
+                                    mlir::Location loc, llvm::StringRef name,
+                                    std::optional<mlir::Type> resultType,
+                                    llvm::ArrayRef<fir::ExtendedValue> args,
+                                    StatementContext &stmtCtx);
+
 } // namespace lower
 } // namespace Fortran
 

@@ -1,16 +1,14 @@
-; RUN: opt < %s -instcombine -attributor-cgscc -print-callgraph -disable-output -verify 2>&1 -enable-new-pm=0 | FileCheck %s
+; RUN: opt < %s -passes='function(instcombine),cgscc(attributor-cgscc),print-callgraph' -disable-output 2>&1 | FileCheck %s
 
 ; CHECK: Call graph node <<null function>><<{{.*}}>>  #uses=0
-; CHECK:   CS<None> calls function 'dead_fork_call'
-; CHECK:   CS<None> calls function '.omp_outlined..0'
-; CHECK:   CS<None> calls function '__kmpc_fork_call'
-; CHECK:   CS<None> calls function 'live_fork_call'
-; CHECK:   CS<None> calls function '.omp_outlined..1'
-; CHECK:   CS<None> calls function 'd'
+; CHECK-NEXT:   CS<None> calls function 'dead_fork_call'
+; CHECK-NEXT:   CS<None> calls function '__kmpc_fork_call'
+; CHECK-NEXT:   CS<None> calls function 'live_fork_call'
+; CHECK-NEXT:   CS<None> calls function 'd'
 ;
-; CHECK: Call graph node for function: '.omp_outlined..0'<<{{.*}}>>  #uses=1
-; 
-; CHECK: Call graph node for function: '.omp_outlined..1'<<{{.*}}>>  #uses=3
+; CHECK: Call graph node for function: '.omp_outlined..0'<<{{.*}}>>  #uses=0
+;
+; CHECK: Call graph node for function: '.omp_outlined..1'<<{{.*}}>>  #uses=2
 ; CHECK:   CS<{{.*}}> calls function 'd'
 ;
 ; CHECK: Call graph node for function: '__kmpc_fork_call'<<{{.*}}>>  #uses=3
@@ -30,10 +28,10 @@
 ; CHECK:   CS<None> calls function '.omp_outlined..1'
 
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
 @.str = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
-@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str, i32 0, i32 0) }, align 8
+@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 2, i32 0, i32 0, ptr @.str }, align 8
 
 define dso_local void @dead_fork_call() {
 entry:
@@ -44,7 +42,7 @@ if.then:                                          ; preds = %entry
 
 if.else:                                          ; preds = %entry
   call void @dead_fork_call2()
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..0 to void (i32*, i32*, ...)*))
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @0, i32 0, ptr @.omp_outlined..0)
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -53,33 +51,33 @@ if.end:                                           ; preds = %if.else, %if.then
 
 define internal void @dead_fork_call2() {
 entry:
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @0, i32 0, ptr @.omp_outlined..1)
   ret void
 }
 
-define internal void @.omp_outlined..0(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+define internal void @.omp_outlined..0(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 entry:
-  %.global_tid..addr = alloca i32*, align 8
-  %.bound_tid..addr = alloca i32*, align 8
-  store i32* %.global_tid., i32** %.global_tid..addr, align 8
-  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  %.global_tid..addr = alloca ptr, align 8
+  %.bound_tid..addr = alloca ptr, align 8
+  store ptr %.global_tid., ptr %.global_tid..addr, align 8
+  store ptr %.bound_tid., ptr %.bound_tid..addr, align 8
   ret void
 }
 
-declare !callback !2 void @__kmpc_fork_call(%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...)
+declare !callback !2 void @__kmpc_fork_call(ptr, i32, ptr, ...)
 
 define dso_local void @live_fork_call() {
 entry:
-  call void (%struct.ident_t*, i32, void (i32*, i32*, ...)*, ...) @__kmpc_fork_call(%struct.ident_t* @0, i32 0, void (i32*, i32*, ...)* bitcast (void (i32*, i32*)* @.omp_outlined..1 to void (i32*, i32*, ...)*))
+  call void (ptr, i32, ptr, ...) @__kmpc_fork_call(ptr @0, i32 0, ptr @.omp_outlined..1)
   ret void
 }
 
-define internal void @.omp_outlined..1(i32* noalias %.global_tid., i32* noalias %.bound_tid.) {
+define internal void @.omp_outlined..1(ptr noalias %.global_tid., ptr noalias %.bound_tid.) {
 entry:
-  %.global_tid..addr = alloca i32*, align 8
-  %.bound_tid..addr = alloca i32*, align 8
-  store i32* %.global_tid., i32** %.global_tid..addr, align 8
-  store i32* %.bound_tid., i32** %.bound_tid..addr, align 8
+  %.global_tid..addr = alloca ptr, align 8
+  %.bound_tid..addr = alloca ptr, align 8
+  store ptr %.global_tid., ptr %.global_tid..addr, align 8
+  store ptr %.bound_tid., ptr %.bound_tid..addr, align 8
   call void (...) @d()
   ret void
 }

@@ -13,12 +13,18 @@
 
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Tosa/Transforms/Passes.h"
-#include "mlir/Pass/Pass.h"
+#include "mlir/Dialect/Tosa/Utils/ConversionUtils.h"
 
 using namespace mlir;
 using namespace mlir::tosa;
 
 namespace {
+
+SmallVector<int64_t> convertFromMlirShape(ArrayRef<int64_t> shape) {
+  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+    return ShapedType::isDynamic(dim) ? -1 : dim;
+  }));
+}
 
 struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
   explicit Conv2DIsFullyConnected(MLIRContext *context)
@@ -26,40 +32,83 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
 
   LogicalResult matchAndRewrite(tosa::Conv2DOp op,
                                 PatternRewriter &rewriter) const override {
-    Value input = op.input();
-    Value weight = op.weight();
-    ShapedType inputType = input.getType().cast<ShapedType>();
-    ShapedType weightType = weight.getType().cast<ShapedType>();
-    ShapedType resultType = op.getType().cast<ShapedType>();
+    Value input = op.getInput();
+    Value weight = op.getWeight();
+    ShapedType inputType = cast<ShapedType>(input.getType());
+    ShapedType weightType = cast<ShapedType>(weight.getType());
+    ShapedType resultType = cast<ShapedType>(op.getType());
 
-    if (!inputType.hasStaticShape() || !weightType.hasRank()) {
+    auto numDynamic =
+        llvm::count_if(inputType.getShape(), ShapedType::isDynamic);
+    if (numDynamic > 1)
+      return rewriter.notifyMatchFailure(
+          op, "at most one dim in input may be dynamic");
+    if (!weightType.hasRank())
+      return rewriter.notifyMatchFailure(op, "unranked weight input");
+
+    if (!llvm::all_of(op.getStride(), [](int64_t v) { return v == 1; }))
       return failure();
-    }
-
-    // Stride must be 1 for this optimization.
-    for (Attribute stride : op.stride().getValue()) {
-      if (!stride.cast<IntegerAttr>().getValue().isOne()) {
-        return failure();
-      }
-    }
 
     // Only works for a 1x1 kernel.
     ArrayRef<int64_t> weightShape = weightType.getShape();
-    if (weightShape[1] != 1 || weightShape[2] != 1) {
+    if (weightShape[1] != 1 || weightShape[2] != 1)
       return failure();
+
+    llvm::ArrayRef<int64_t> padAttr = op.getPad();
+    llvm::SmallVector<int64_t> pad(8, 0);
+    for (const auto &it : llvm::enumerate(padAttr))
+      pad[it.index() + 2] = it.value();
+
+    if (llvm::any_of(pad, [](int64_t p) { return p != 0; })) {
+      Type inputETy = inputType.getElementType();
+      Attribute zeroAttr = rewriter.getZeroAttr(inputETy);
+      if (op.getQuantizationInfo()) {
+        auto quantizationInfo = op.getQuantizationInfo();
+        int64_t iZp = quantizationInfo->getInputZp();
+
+        if (!validIntegerRange(cast<IntegerType>(inputETy), iZp))
+          return rewriter.notifyMatchFailure(
+              op, "tosa.conv op quantization has zp outside of input range");
+
+        zeroAttr = rewriter.getIntegerAttr(inputETy, iZp);
+      }
+
+      llvm::SmallVector<int64_t> newShape(inputType.getShape());
+
+      for (int i = 0, s = newShape.size(); i < s; ++i) {
+        if (newShape[i] != ShapedType::kDynamic) {
+          newShape[i] += pad[i * 2] + pad[i * 2 + 1];
+        }
+      }
+
+      auto padSizeTy = RankedTensorType::get({4, 2}, rewriter.getI64Type());
+      auto padSize =
+          DenseIntElementsAttr::get(padSizeTy, ArrayRef<int64_t>(pad));
+      Value padSizeVal =
+          rewriter.create<tosa::ConstOp>(op->getLoc(), padSizeTy, padSize);
+
+      auto padTy = RankedTensorType::get({}, inputETy);
+      auto padAttr = DenseElementsAttr::get(padTy, zeroAttr);
+      Value padVal =
+          rewriter.create<tosa::ConstOp>(op->getLoc(), padTy, padAttr);
+      inputType = RankedTensorType::get(newShape, inputETy);
+      input = rewriter.create<tosa::PadOp>(op->getLoc(), inputType, input,
+                                           padSizeVal, padVal);
     }
 
     // Reshape input to [N,IH,IW,IC] -> [N * IH * IW, IC].
     ArrayRef<int64_t> inputShape = inputType.getShape();
-    llvm::SmallVector<int64_t, 2> revisedInputShape{
-        inputShape[0] * inputShape[1] * inputShape[2], inputShape[3]};
-    auto revisedInputShapeType = RankedTensorType::get(
-        revisedInputShape,
-        input.getType().dyn_cast<RankedTensorType>().getElementType());
+    int64_t combined = ShapedType::kDynamic;
+    if (numDynamic == 0)
+      combined = inputShape[0] * inputShape[1] * inputShape[2];
+    llvm::SmallVector<int64_t, 2> revisedInputShape{combined, inputShape[3]};
+    auto revisedInputShapeType =
+        RankedTensorType::get(revisedInputShape, inputType.getElementType());
     auto reshapedInput = rewriter
                              .create<tosa::ReshapeOp>(
                                  op.getLoc(), revisedInputShapeType, input,
-                                 rewriter.getI64ArrayAttr(revisedInputShape))
+                                 rewriter.getDenseI64ArrayAttr(
+                                     convertFromMlirShape(revisedInputShape)))
                              .getResult();
 
     // Reshape kernel to [OC,KH,KW,IC] -> [OC, IC].
@@ -67,33 +116,32 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
                                                      weightShape[3]};
     auto revisedWeightShapeType = RankedTensorType::get(
         revisedWeightShape,
-        weight.getType().dyn_cast<RankedTensorType>().getElementType());
+        dyn_cast<RankedTensorType>(weight.getType()).getElementType());
     auto reshapedWeight = rewriter
                               .create<tosa::ReshapeOp>(
                                   op.getLoc(), revisedWeightShapeType, weight,
-                                  rewriter.getI64ArrayAttr(revisedWeightShape))
+                                  rewriter.getDenseI64ArrayAttr(
+                                      convertFromMlirShape(revisedWeightShape)))
                               .getResult();
 
     // Perform a fully connected network over the reshaped input and weight.
-    llvm::SmallVector<int64_t, 2> fullyConnectedShape{
-        inputShape[0] * inputShape[1] * inputShape[2], weightShape[0]};
-    auto fullyConnectedShapeType = RankedTensorType::get(
-        fullyConnectedShape,
-        resultType.dyn_cast<ShapedType>().getElementType());
+    llvm::SmallVector<int64_t, 2> fullyConnectedShape{combined, weightShape[0]};
+    auto fullyConnectedShapeType =
+        RankedTensorType::get(fullyConnectedShape, resultType.getElementType());
 
     Value fullyConnectedValue;
-    if (op.quantization_info()) {
+    if (op.getQuantizationInfo()) {
       fullyConnectedValue =
           rewriter
               .create<tosa::FullyConnectedOp>(
                   op.getLoc(), fullyConnectedShapeType, reshapedInput,
-                  reshapedWeight, op.bias(), op.quantization_info().getValue())
+                  reshapedWeight, op.getBias(), *op.getQuantizationInfo())
               .getResult();
     } else {
       fullyConnectedValue = rewriter
                                 .create<tosa::FullyConnectedOp>(
                                     op.getLoc(), fullyConnectedShapeType,
-                                    reshapedInput, reshapedWeight, op.bias())
+                                    reshapedInput, reshapedWeight, op.getBias())
                                 .getResult();
     }
 
@@ -102,7 +150,7 @@ struct Conv2DIsFullyConnected : public OpRewritePattern<tosa::Conv2DOp> {
                                               inputShape[2], weightShape[0]};
     rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
         op, resultType, fullyConnectedValue,
-        rewriter.getI64ArrayAttr(outputShape));
+        rewriter.getDenseI64ArrayAttr(convertFromMlirShape(outputShape)));
     return success();
   }
 };

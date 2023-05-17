@@ -126,7 +126,7 @@ bool TextOutputSection::needsThunks() const {
     return false;
   uint64_t isecAddr = addr;
   for (ConcatInputSection *isec : inputs)
-    isecAddr = alignTo(isecAddr, isec->align) + isec->getSize();
+    isecAddr = alignToPowerOf2(isecAddr, isec->align) + isec->getSize();
   if (isecAddr - addr + in.stubs->getSize() <=
       std::min(target->backwardBranchRange, target->forwardBranchRange))
     return false;
@@ -172,7 +172,7 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   uint64_t isecEnd = isecVA;
   for (size_t i = callIdx; i < inputs.size(); i++) {
     InputSection *isec = inputs[i];
-    isecEnd = alignTo(isecEnd, isec->align) + isec->getSize();
+    isecEnd = alignToPowerOf2(isecEnd, isec->align) + isec->getSize();
   }
   // Estimate the address after which call sites can safely call stubs
   // directly rather than through intermediary thunks.
@@ -186,16 +186,16 @@ uint64_t TextOutputSection::estimateStubsInRangeVA(size_t callIdx) const {
   log("thunks = " + std::to_string(thunkMap.size()) +
       ", potential = " + std::to_string(maxPotentialThunks) +
       ", stubs = " + std::to_string(in.stubs->getSize()) + ", isecVA = " +
-      to_hexString(isecVA) + ", threshold = " + to_hexString(stubsInRangeVA) +
-      ", isecEnd = " + to_hexString(isecEnd) +
-      ", tail = " + to_hexString(isecEnd - isecVA) +
-      ", slop = " + to_hexString(forwardBranchRange - (isecEnd - isecVA)));
+      utohexstr(isecVA) + ", threshold = " + utohexstr(stubsInRangeVA) +
+      ", isecEnd = " + utohexstr(isecEnd) +
+      ", tail = " + utohexstr(isecEnd - isecVA) +
+      ", slop = " + utohexstr(forwardBranchRange - (isecEnd - isecVA)));
   return stubsInRangeVA;
 }
 
 void ConcatOutputSection::finalizeOne(ConcatInputSection *isec) {
-  size = alignTo(size, isec->align);
-  fileSize = alignTo(fileSize, isec->align);
+  size = alignToPowerOf2(size, isec->align);
+  fileSize = alignToPowerOf2(fileSize, isec->align);
   isec->outSecOff = size;
   isec->isFinal = true;
   size += isec->getSize();
@@ -247,9 +247,14 @@ void TextOutputSection::finalize() {
     // from the current position to the position where the thunks are inserted
     // grows. So leave room for a bunch of thunks.
     unsigned slop = 256 * thunkSize;
-    while (finalIdx < endIdx && addr + size + inputs[finalIdx]->getSize() <
-                                    isecVA + forwardBranchRange - slop)
+    while (finalIdx < endIdx) {
+      uint64_t expectedNewSize =
+          alignToPowerOf2(addr + size, inputs[finalIdx]->align) +
+          inputs[finalIdx]->getSize();
+      if (expectedNewSize >= isecVA + forwardBranchRange - slop)
+        break;
       finalizeOne(inputs[finalIdx++]);
+    }
 
     if (!isec->hasCallSites)
       continue;

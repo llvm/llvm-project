@@ -1,7 +1,7 @@
 ; RUN: %lli -jit-kind=mcjit %s > /dev/null
 ; RUN: %lli %s > /dev/null
 
-@A = global i32 0		; <i32*> [#uses=1]
+@A = global i32 0		; <ptr> [#uses=1]
 
 define i32 @main() {
 	%Ret = call i32 @test( i1 true, i32 0 )		; <i32> [#uses=1]
@@ -11,7 +11,7 @@ define i32 @main() {
 define i32 @test(i1 %c, i32 %A) {
 	br i1 %c, label %Taken1, label %NotTaken
 Cont:		; preds = %Taken1, %NotTaken
-	%V = phi i32 [ 0, %NotTaken ], [ sub (i32 ptrtoint (i32* @A to i32), i32 1234), %Taken1 ]		; <i32> [#uses=0]
+	%V = phi i32 [ 0, %NotTaken ], [ sub (i32 ptrtoint (ptr @A to i32), i32 1234), %Taken1 ]		; <i32> [#uses=0]
 	ret i32 0
 NotTaken:		; preds = %0
 	br label %Cont

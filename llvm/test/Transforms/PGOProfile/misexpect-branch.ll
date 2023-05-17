@@ -37,15 +37,13 @@ define i32 @bar() #0 !dbg !6 {
 entry:
   %rando = alloca i32, align 4
   %x = alloca i32, align 4
-  %0 = bitcast i32* %rando to i8*, !dbg !9
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #4, !dbg !9
+  call void @llvm.lifetime.start.p0(i64 4, ptr %rando) #4, !dbg !9
   %call = call i32 (...) @buzz(), !dbg !9
-  store i32 %call, i32* %rando, align 4, !dbg !9, !tbaa !10
-  %1 = bitcast i32* %x to i8*, !dbg !14
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %1) #4, !dbg !14
-  store i32 0, i32* %x, align 4, !dbg !14, !tbaa !10
-  %2 = load i32, i32* %rando, align 4, !dbg !15, !tbaa !10
-  %rem = srem i32 %2, 200000, !dbg !15
+  store i32 %call, ptr %rando, align 4, !dbg !9, !tbaa !10
+  call void @llvm.lifetime.start.p0(i64 4, ptr %x) #4, !dbg !14
+  store i32 0, ptr %x, align 4, !dbg !14, !tbaa !10
+  %0 = load i32, ptr %rando, align 4, !dbg !15, !tbaa !10
+  %rem = srem i32 %0, 200000, !dbg !15
   %cmp = icmp eq i32 %rem, 0, !dbg !15
   %lnot = xor i1 %cmp, true, !dbg !15
   %lnot1 = xor i1 %lnot, true, !dbg !15
@@ -56,27 +54,25 @@ entry:
   br i1 %tobool, label %if.then, label %if.else, !dbg !15
 
 if.then:                                          ; preds = %entry
-  %3 = load i32, i32* %rando, align 4, !dbg !16, !tbaa !10
-  %call2 = call i32 @baz(i32 %3), !dbg !16
-  store i32 %call2, i32* %x, align 4, !dbg !16, !tbaa !10
+  %1 = load i32, ptr %rando, align 4, !dbg !16, !tbaa !10
+  %call2 = call i32 @baz(i32 %1), !dbg !16
+  store i32 %call2, ptr %x, align 4, !dbg !16, !tbaa !10
   br label %if.end, !dbg !17
 
 if.else:                                          ; preds = %entry
   %call3 = call i32 @foo(i32 50), !dbg !18
-  store i32 %call3, i32* %x, align 4, !dbg !18, !tbaa !10
+  store i32 %call3, ptr %x, align 4, !dbg !18, !tbaa !10
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
-  %4 = load i32, i32* %x, align 4, !dbg !19, !tbaa !10
-  %5 = bitcast i32* %x to i8*, !dbg !20
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %5) #4, !dbg !20
-  %6 = bitcast i32* %rando to i8*, !dbg !20
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %6) #4, !dbg !20
-  ret i32 %4, !dbg !19
+  %2 = load i32, ptr %x, align 4, !dbg !19, !tbaa !10
+  call void @llvm.lifetime.end.p0(i64 4, ptr %x) #4, !dbg !20
+  call void @llvm.lifetime.end.p0(i64 4, ptr %rando) #4, !dbg !20
+  ret i32 %2, !dbg !19
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 declare i32 @buzz(...) #2
 
@@ -88,7 +84,7 @@ declare i32 @baz(i32) #2
 declare i32 @foo(i32) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "frame-pointer"="none" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+cx8,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind willreturn }

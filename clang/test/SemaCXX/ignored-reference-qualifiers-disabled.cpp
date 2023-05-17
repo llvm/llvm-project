@@ -17,5 +17,5 @@ class container {
 	using value_type = T;
 	using reference  = value_type&;
 	reference get();
-	const reference get() const; // qual-warning{{'const' qualifier on reference type 'container::reference' (aka 'T &') has no effect}}
+	const reference get() const; // qual-warning{{'const' qualifier on reference type 'reference' (aka 'T &') has no effect}}
 };

@@ -9,9 +9,9 @@ target triple = "hexagon"
 @g0 = external global %s.0
 
 ; Function Attrs: nounwind
-define %s.0* @f0() #0 {
+define ptr @f0() #0 {
 b0:
-  ret %s.0* @g0
+  ret ptr @g0
 }
 
 attributes #0 = { nounwind }

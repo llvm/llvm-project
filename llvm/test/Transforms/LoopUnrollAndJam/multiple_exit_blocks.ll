@@ -12,8 +12,8 @@
 
 define void @h() {
 bb:
-  store i32 4, i32* @e, align 4
-  %i15 = load i16, i16* @b, align 2
+  store i32 4, ptr @e, align 4
+  %i15 = load i16, ptr @b, align 2
   %i17 = icmp slt i16 %i15, 1
   br label %bb8
 
@@ -26,7 +26,7 @@ bb24:                                             ; preds = %bb43, %bb8
   br i1 %i17, label %bb46.preheader, label %bb43
 
 bb46.preheader:                                   ; preds = %bb24
-  store i16 %storemerge312, i16* @f, align 2
+  store i16 %storemerge312, ptr @f, align 2
   br label %bb46
 
 bb43:                                             ; preds = %bb24
@@ -39,11 +39,11 @@ bb46:                                             ; preds = %bb46.preheader, %bb
 
 bb47:                                             ; preds = %bb43
   %i49 = add nsw i32 %storemerge15, -1
-  store i32 %i49, i32* @e, align 4
+  store i32 %i49, ptr @e, align 4
   %i7.not = icmp eq i32 %i49, 0
   br i1 %i7.not, label %bb50, label %bb8
 
 bb50:                                             ; preds = %bb47
-  store i16 %i45, i16* @f, align 2
+  store i16 %i45, ptr @f, align 2
   ret void
 }

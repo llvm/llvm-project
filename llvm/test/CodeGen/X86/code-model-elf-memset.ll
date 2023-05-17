@@ -21,7 +21,7 @@ source_filename = "model.c"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64--linux"
 
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #1
+declare void @llvm.memset.p0.i64(ptr nocapture writeonly, i8, i64, i1) #1
 
 define i32 @main() #0 {
 ; SMALL-PIC-LABEL: main:
@@ -73,9 +73,8 @@ define i32 @main() #0 {
 entry:
   %retval = alloca i32, align 4
   %a = alloca [100 x i32], align 16
-  store i32 0, i32* %retval, align 4
-  %0 = bitcast [100 x i32]* %a to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 16 %0, i8 0, i64 400, i1 false)
+  store i32 0, ptr %retval, align 4
+  call void @llvm.memset.p0.i64(ptr align 16 %a, i8 0, i64 400, i1 false)
   ret i32 0
 }
 

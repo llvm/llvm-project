@@ -6,13 +6,11 @@
 define i32 @t(i32 %a, i32 %b) nounwind ssp {
 ; X86-LABEL: t:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    testb $64, %al
-; X86-NEXT:    je .LBB0_1
-; X86-NEXT:  # %bb.2: # %bb1
-; X86-NEXT:    jmp bar # TAILCALL
-; X86-NEXT:  .LBB0_1: # %bb
+; X86-NEXT:    jne bar # TAILCALL
+; X86-NEXT:  # %bb.1: # %bb
 ; X86-NEXT:    jmp foo # TAILCALL
 ;
 ; X64-LABEL: t:
@@ -20,10 +18,8 @@ define i32 @t(i32 %a, i32 %b) nounwind ssp {
 ; X64-NEXT:    xorl %esi, %edi
 ; X64-NEXT:    xorl %eax, %eax
 ; X64-NEXT:    testl $16384, %edi # imm = 0x4000
-; X64-NEXT:    je .LBB0_1
-; X64-NEXT:  # %bb.2: # %bb1
-; X64-NEXT:    jmp bar # TAILCALL
-; X64-NEXT:  .LBB0_1: # %bb
+; X64-NEXT:    jne bar # TAILCALL
+; X64-NEXT:  # %bb.1: # %bb
 ; X64-NEXT:    jmp foo # TAILCALL
 entry:
   %0 = and i32 %a, 16384
@@ -54,10 +50,8 @@ define i32 @t2(i32 %x, i32 %y) nounwind ssp {
 ; X86-NEXT:    cmpl $0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    sete %cl
 ; X86-NEXT:    cmpb %al, %cl
-; X86-NEXT:    je .LBB1_1
-; X86-NEXT:  # %bb.2: # %bb
-; X86-NEXT:    jmp foo # TAILCALL
-; X86-NEXT:  .LBB1_1: # %return
+; X86-NEXT:    jne foo # TAILCALL
+; X86-NEXT:  # %bb.1: # %return
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t2:
@@ -94,7 +88,7 @@ return:                                           ; preds = %entry
 define i1 @xor_not_bools(i1 zeroext %x, i1 zeroext %y) nounwind {
 ; X86-LABEL: xor_not_bools:
 ; X86:       # %bb.0:
-; X86-NEXT:    movb {{[0-9]+}}(%esp), %al
+; X86-NEXT:    movzbl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    xorb {{[0-9]+}}(%esp), %al
 ; X86-NEXT:    xorb $1, %al
 ; X86-NEXT:    retl
@@ -140,7 +134,7 @@ define zeroext i1 @xor_not_cmps(i32 %x, i32 %y) nounwind {
   ret i1 %not
 }
 
-define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
+define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, ptr %p) nounwind {
 ; X86-LABEL: xor_not_cmps_extra_use:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -170,7 +164,7 @@ define zeroext i1 @xor_not_cmps_extra_use(i32 %x, i32 %y, i32* %p) nounwind {
   %cmpy = icmp eq i32 %y, 235
   %xor = xor i1 %cmpx, %cmpy
   %z = zext i1 %xor to i32
-  store i32 %z, i32* %p
+  store i32 %z, ptr %p
   %not = xor i1 %xor, 1
   ret i1 %not
 }

@@ -11,14 +11,12 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace fuchsia {
+namespace clang::tidy::fuchsia {
 
 /// Defining classes with virtual inheritance is disallowed.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia-virtual-inheritance.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/fuchsia/virtual-inheritance.html
 class VirtualInheritanceCheck : public ClangTidyCheck {
  public:
   VirtualInheritanceCheck(StringRef Name, ClangTidyContext *Context)
@@ -27,8 +25,6 @@ class VirtualInheritanceCheck : public ClangTidyCheck {
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-}  // namespace fuchsia
-}  // namespace tidy
-}  // namespace clang
+} // namespace clang::tidy::fuchsia
 
 #endif  // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_FUCHSIA_VIRTUAL_INHERITANCE_H

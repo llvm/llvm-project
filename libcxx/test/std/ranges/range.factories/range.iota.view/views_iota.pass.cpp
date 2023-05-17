@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // views::iota
 
-#include <ranges>
 #include <cassert>
 #include <concepts>
+#include <ranges>
+#include <type_traits>
 
 #include "test_macros.h"
 #include "types.h"

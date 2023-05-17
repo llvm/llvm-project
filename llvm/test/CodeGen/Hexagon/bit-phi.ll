@@ -5,12 +5,12 @@
 target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 target triple = "hexagon-unknown--elf"
 
-%struct.item = type { i32, i8*, i8*, i32, i8, i8, i16, i32, i8, i16, i32 }
+%struct.item = type { i32, ptr, ptr, i32, i8, i8, i16, i32, i8, i16, i32 }
 
-declare %struct.item* @foo(%struct.item*, i8*, i32) #1
+declare ptr @foo(ptr, ptr, i32) #1
 
 ; Function Attrs: nounwind
-define i32 @bar(%struct.item** %ptr, i8* %buf, i32 %c, i8* %d, i32 %e) #1 {
+define i32 @bar(ptr %ptr, ptr %buf, i32 %c, ptr %d, i32 %e) #1 {
 entry:
   br i1 undef, label %return, label %if.end
 
@@ -34,14 +34,14 @@ while.body20.if.end38_crit_edge:                  ; preds = %while.body20
 
 if.then32:                                        ; preds = %while.body20
   %conv33 = and i32 %cond, 65535
-  %.pre = load %struct.item*, %struct.item** %ptr, align 4, !tbaa !1
+  %.pre = load ptr, ptr %ptr, align 4, !tbaa !1
   br label %if.end38
 
 if.end38:                                         ; preds = %if.then32, %while.body20.if.end38_crit_edge
   %conv39.pre-phi = phi i32 [ %conv39.pre, %while.body20.if.end38_crit_edge ], [ %conv33, %if.then32 ]
-  %0 = phi %struct.item* [ undef, %while.body20.if.end38_crit_edge ], [ %.pre, %if.then32 ]
+  %0 = phi ptr [ undef, %while.body20.if.end38_crit_edge ], [ %.pre, %if.then32 ]
   %add = add i32 %conv39.pre-phi, 0
-  %call52 = tail call %struct.item* @foo(%struct.item* %0, i8* %d, i32 %e) #1
+  %call52 = tail call ptr @foo(ptr %0, ptr %d, i32 %e) #1
   br i1 undef, label %while.body20, label %return
 
 return:                                           ; preds = %if.end38, %while.cond13.preheader, %entry

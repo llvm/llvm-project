@@ -1,9 +1,3 @@
-; Legacy pass manager
-; RUN: opt < %s -transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning 2>&1 | FileCheck %s
-; RUN: opt < %s -transform-warning -disable-output -pass-remarks-output=%t.yaml
-; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
-
-; New pass manager
 ; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-missed=transform-warning -pass-remarks-analysis=transform-warning 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes=transform-warning -disable-output -pass-remarks-output=%t.yaml
 ; RUN: cat %t.yaml | FileCheck -check-prefix=YAML %s
@@ -32,32 +26,32 @@
 
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @_Z17test_array_boundsPiS_i(i32* nocapture %A, i32* nocapture readonly %B, i32 %Length) !dbg !8 {
+define void @_Z17test_array_boundsPiS_i(ptr nocapture %A, ptr nocapture readonly %B, i32 %Length) !dbg !8 {
 entry:
   %cmp9 = icmp sgt i32 %Length, 0, !dbg !32
   br i1 %cmp9, label %for.body.preheader, label %for.end, !dbg !32, !llvm.loop !34
 
-for.body.preheader:                          
+for.body.preheader:
   br label %for.body, !dbg !35
 
-for.body:                                    
+for.body:
   %indvars.iv = phi i64 [ %indvars.iv.next, %for.body ], [ 0, %for.body.preheader ]
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %indvars.iv, !dbg !35
-  %0 = load i32, i32* %arrayidx, align 4, !dbg !35, !tbaa !18
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %indvars.iv, !dbg !35
+  %0 = load i32, ptr %arrayidx, align 4, !dbg !35, !tbaa !18
   %idxprom1 = sext i32 %0 to i64, !dbg !35
-  %arrayidx2 = getelementptr inbounds i32, i32* %A, i64 %idxprom1, !dbg !35
-  %1 = load i32, i32* %arrayidx2, align 4, !dbg !35, !tbaa !18
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv, !dbg !35
-  store i32 %1, i32* %arrayidx4, align 4, !dbg !35, !tbaa !18
+  %arrayidx2 = getelementptr inbounds i32, ptr %A, i64 %idxprom1, !dbg !35
+  %1 = load i32, ptr %arrayidx2, align 4, !dbg !35, !tbaa !18
+  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv, !dbg !35
+  store i32 %1, ptr %arrayidx4, align 4, !dbg !35, !tbaa !18
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !32
   %lftr.wideiv = trunc i64 %indvars.iv.next to i32, !dbg !32
   %exitcond = icmp eq i32 %lftr.wideiv, %Length, !dbg !32
   br i1 %exitcond, label %for.end.loopexit, label %for.body, !dbg !32, !llvm.loop !34
 
-for.end.loopexit:                            
+for.end.loopexit:
   br label %for.end
 
-for.end:                                      
+for.end:
   ret void, !dbg !36
 }
 

@@ -73,7 +73,7 @@ define dso_local void @test_llgeull_store(i64 %a, i64 %b) {
 entry:
   %cmp = icmp uge i64 %a, %b
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob
+  store i64 %conv1, ptr @glob
   ret void
 }
 
@@ -90,7 +90,7 @@ define dso_local void @test_llgeull_sext_store(i64 %a, i64 %b) {
 entry:
   %cmp = icmp uge i64 %a, %b
   %conv1 = sext i1 %cmp to i64
-  store i64 %conv1, i64* @glob
+  store i64 %conv1, ptr @glob
   ret void
 }
 
@@ -105,7 +105,7 @@ define dso_local void @test_llgeull_z_store(i64 %a) {
 entry:
   %cmp = icmp uge i64 %a, 0
   %conv1 = zext i1 %cmp to i64
-  store i64 %conv1, i64* @glob
+  store i64 %conv1, ptr @glob
   ret void
 }
 
@@ -118,7 +118,7 @@ define dso_local void @test_llgeull_sext_z_store(i64 %a) {
 ; CHECK-NEXT:    std r4, glob@toc@l(r3)
 ; CHECK-NEXT:    blr
 entry:
-  store i64 -1, i64* @glob
+  store i64 -1, ptr @glob
   ret void
 }
 

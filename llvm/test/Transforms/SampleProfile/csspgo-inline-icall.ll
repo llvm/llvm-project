@@ -1,23 +1,21 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1 -pass-remarks=sample-profile -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-ALL %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-ALL %s
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-HOT %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/indirect-call-csspgo.prof -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-HOT %s
 ; RUN: llvm-profdata merge --sample --extbinary --use-md5 %S/Inputs/indirect-call-csspgo.prof -o %t.md5
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%t.md5 -sample-profile-icp-relative-hotness=1  -pass-remarks=sample-profile -sample-profile-inline-size=0 -S -o /dev/null 2>&1 | FileCheck -check-prefix=ICP-HOT %s
 
 
-define void @test(void ()*) #0 !dbg !3 {
+define void @test(ptr) #0 !dbg !3 {
 ;; Add two direct call to force top-down order for sample profile loader
   call void @_Z3foov(), !dbg !7
   call void @_Z3barv(), !dbg !7
   call void @_Z3bazv(), !dbg !7
-  %2 = alloca void ()*
-  store void ()* %0, void ()** %2
-  %3 = load void ()*, void ()** %2
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
   call void %3(), !dbg !4
-  %4 = alloca void ()*
-  store void ()* %0, void ()** %4
-  %5 = load void ()*, void ()** %4
+  %4 = alloca ptr
+  store ptr %0, ptr %4
+  %5 = load ptr, ptr %4
   call void %5(), !dbg !5
   ret void
 }

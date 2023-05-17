@@ -6,7 +6,7 @@
 ;   struct s { int a; int b; };
 ;   struct t { int c; int d; };
 ;   #define _(x) (__builtin_preserve_access_index(x))
-;   int get_value(const void *addr1, const void *addr2);
+;   int get_value(const ptr addr1, const ptr addr2);
 ;   int test(struct s *arg1, struct t *arg2) {
 ;     return get_value(_(&arg1->b), _(&arg2->d));
 ;   }
@@ -18,15 +18,13 @@ target triple = "bpf"
 %struct.t = type { i32, i32 }
 
 ; Function Attrs: nounwind
-define dso_local i32 @test(%struct.s* %arg1, %struct.t* %arg2) local_unnamed_addr #0 !dbg !7 {
+define dso_local i32 @test(ptr %arg1, ptr %arg2) local_unnamed_addr #0 !dbg !7 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.s* %arg1, metadata !22, metadata !DIExpression()), !dbg !24
-  call void @llvm.dbg.value(metadata %struct.t* %arg2, metadata !23, metadata !DIExpression()), !dbg !24
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s* elementtype(%struct.s) %arg1, i32 1, i32 1), !dbg !25, !llvm.preserve.access.index !12
-  %1 = bitcast i32* %0 to i8*, !dbg !25
-  %2 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t* elementtype(%struct.t) %arg2, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !17
-  %3 = bitcast i32* %2 to i8*, !dbg !26
-  %call = tail call i32 @get_value(i8* %1, i8* %3) #4, !dbg !27
+  call void @llvm.dbg.value(metadata ptr %arg1, metadata !22, metadata !DIExpression()), !dbg !24
+  call void @llvm.dbg.value(metadata ptr %arg2, metadata !23, metadata !DIExpression()), !dbg !24
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr elementtype(%struct.s) %arg1, i32 1, i32 1), !dbg !25, !llvm.preserve.access.index !12
+  %1 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr elementtype(%struct.t) %arg2, i32 1, i32 1), !dbg !26, !llvm.preserve.access.index !17
+  %call = tail call i32 @get_value(ptr %0, ptr %1) #4, !dbg !27
   ret i32 %call, !dbg !28
 }
 
@@ -48,13 +46,13 @@ entry:
 ; CHECK-NEXT:        .long   [[ACCESS_STR]]
 ; CHECK-NEXT:        .long   0
 
-declare dso_local i32 @get_value(i8*, i8*) local_unnamed_addr #1
+declare dso_local i32 @get_value(ptr, ptr) local_unnamed_addr #1
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ss(%struct.s*, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ss(ptr, i32 immarg, i32 immarg) #2
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.ts(%struct.t*, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.p0.ts(ptr, i32 immarg, i32 immarg) #2
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

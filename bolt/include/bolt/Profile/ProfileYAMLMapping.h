@@ -126,6 +126,7 @@ template <> struct MappingTraits<bolt::BinaryBasicBlockProfile> {
   static void mapping(IO &YamlIO, bolt::BinaryBasicBlockProfile &BBP) {
     YamlIO.mapRequired("bid", BBP.Index);
     YamlIO.mapRequired("insns", BBP.NumInstructions);
+    YamlIO.mapOptional("hash", BBP.Hash, (llvm::yaml::Hex64)0);
     YamlIO.mapOptional("exec", BBP.ExecCount, (uint64_t)0);
     YamlIO.mapOptional("events", BBP.EventCount, (uint64_t)0);
     YamlIO.mapOptional("calls", BBP.CallSites,

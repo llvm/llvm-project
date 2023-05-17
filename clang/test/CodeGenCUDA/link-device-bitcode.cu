@@ -15,12 +15,6 @@
 // RUN:    -disable-llvm-passes -o - %s \
 // RUN:    | FileCheck %s -check-prefix CHECK-IR
 
-// Make sure legacy flag name works
-// RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
-// RUN:    -mlink-cuda-bitcode %t.bc  -emit-llvm \
-// RUN:    -disable-llvm-passes -o - %s \
-// RUN:    | FileCheck %s -check-prefix CHECK-IR
-//
 // Make sure we can link two bitcode files.
 // RUN: %clang_cc1 -triple nvptx-unknown-cuda -fcuda-is-device \
 // RUN:    -mlink-builtin-bitcode %t.bc -mlink-builtin-bitcode %t-2.bc \

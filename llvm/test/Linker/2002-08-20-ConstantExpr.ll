@@ -4,6 +4,6 @@
 ; RUN: llvm-as < %s > %t.bc
 ; RUN: llvm-link %t.LinkTest.bc %t.bc
 
-@work = global i32 4		; <i32*> [#uses=1]
-@test = global i32* getelementptr (i32, i32* @work, i64 1)		; <i32**> [#uses=0]
+@work = global i32 4		; <ptr> [#uses=1]
+@test = global ptr getelementptr (i32, ptr @work, i64 1)		; <ptr> [#uses=0]
 

@@ -41,6 +41,7 @@ class ExternalSemaSource;
 class FrontendOptions;
 class PCHContainerReader;
 class Preprocessor;
+class FileManager;
 class PreprocessorOptions;
 class PreprocessorOutputOptions;
 
@@ -79,11 +80,14 @@ public:
   /// Return true if system files should be passed to sawDependency().
   virtual bool needSystemDependencies() { return false; }
 
+  /// Return true if system files should be canonicalized.
+  virtual bool shouldCanonicalizeSystemDependencies() { return false; }
+
   /// Add a dependency \p Filename if it has not been seen before and
   /// sawDependency() returns true.
   virtual void maybeAddDependency(StringRef Filename, bool FromModule,
                                   bool IsSystem, bool IsModuleFile,
-                                  bool IsMissing);
+                                  FileManager *FileMgr, bool IsMissing);
 
 protected:
   /// Return true if the filename was added to the list of dependencies, false
@@ -107,10 +111,14 @@ public:
 
   void finishedMainFile(DiagnosticsEngine &Diags) override;
 
-  bool needSystemDependencies() final override { return IncludeSystemHeaders; }
+  bool needSystemDependencies() final { return IncludeSystemHeaders; }
 
   bool sawDependency(StringRef Filename, bool FromModule, bool IsSystem,
-                     bool IsModuleFile, bool IsMissing) final override;
+                     bool IsModuleFile, bool IsMissing) final;
+
+  bool shouldCanonicalizeSystemDependencies() override {
+    return CanonicalSystemHeaders;
+  }
 
 protected:
   void outputDependencyFile(llvm::raw_ostream &OS);
@@ -121,6 +129,7 @@ private:
   std::string OutputFile;
   std::vector<std::string> Targets;
   bool IncludeSystemHeaders;
+  bool CanonicalSystemHeaders;
   bool PhonyTarget;
   bool AddMissingHeaderDeps;
   bool SeenMissingHeader;

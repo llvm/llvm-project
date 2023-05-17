@@ -5,36 +5,53 @@ from __future__ import print_function
 import sys
 import random
 
+
 class TimingScriptGenerator:
     """Used to generate a bash script which will invoke the toy and time it"""
+
     def __init__(self, scriptname, outputname):
         self.timeFile = outputname
-        self.shfile = open(scriptname, 'w')
-        self.shfile.write("echo \"\" > %s\n" % self.timeFile)
+        self.shfile = open(scriptname, "w")
+        self.shfile.write('echo "" > %s\n' % self.timeFile)
 
     def writeTimingCall(self, filename, numFuncs, funcsCalled, totalCalls):
         """Echo some comments and invoke both versions of toy"""
         rootname = filename
-        if '.' in filename:
-            rootname = filename[:filename.rfind('.')]
-        self.shfile.write("echo \"%s: Calls %d of %d functions, %d total\" >> %s\n" % (filename, funcsCalled, numFuncs, totalCalls, self.timeFile))
-        self.shfile.write("echo \"\" >> %s\n" % self.timeFile)
-        self.shfile.write("echo \"With MCJIT\" >> %s\n" % self.timeFile)
-        self.shfile.write("/usr/bin/time -f \"Command %C\\n\\tuser time: %U s\\n\\tsytem time: %S s\\n\\tmax set: %M kb\"")
+        if "." in filename:
+            rootname = filename[: filename.rfind(".")]
+        self.shfile.write(
+            'echo "%s: Calls %d of %d functions, %d total" >> %s\n'
+            % (filename, funcsCalled, numFuncs, totalCalls, self.timeFile)
+        )
+        self.shfile.write('echo "" >> %s\n' % self.timeFile)
+        self.shfile.write('echo "With MCJIT" >> %s\n' % self.timeFile)
+        self.shfile.write(
+            '/usr/bin/time -f "Command %C\\n\\tuser time: %U s\\n\\tsytem time: %S s\\n\\tmax set: %M kb"'
+        )
         self.shfile.write(" -o %s -a " % self.timeFile)
-        self.shfile.write("./toy-mcjit < %s > %s-mcjit.out 2> %s-mcjit.err\n" % (filename, rootname, rootname))
-        self.shfile.write("echo \"\" >> %s\n" % self.timeFile)
-        self.shfile.write("echo \"With JIT\" >> %s\n" % self.timeFile)
-        self.shfile.write("/usr/bin/time -f \"Command %C\\n\\tuser time: %U s\\n\\tsytem time: %S s\\n\\tmax set: %M kb\"")
+        self.shfile.write(
+            "./toy-mcjit < %s > %s-mcjit.out 2> %s-mcjit.err\n"
+            % (filename, rootname, rootname)
+        )
+        self.shfile.write('echo "" >> %s\n' % self.timeFile)
+        self.shfile.write('echo "With JIT" >> %s\n' % self.timeFile)
+        self.shfile.write(
+            '/usr/bin/time -f "Command %C\\n\\tuser time: %U s\\n\\tsytem time: %S s\\n\\tmax set: %M kb"'
+        )
         self.shfile.write(" -o %s -a " % self.timeFile)
-        self.shfile.write("./toy-jit < %s > %s-jit.out 2> %s-jit.err\n" % (filename, rootname, rootname))
-        self.shfile.write("echo \"\" >> %s\n" % self.timeFile)
-        self.shfile.write("echo \"\" >> %s\n" % self.timeFile)
+        self.shfile.write(
+            "./toy-jit < %s > %s-jit.out 2> %s-jit.err\n"
+            % (filename, rootname, rootname)
+        )
+        self.shfile.write('echo "" >> %s\n' % self.timeFile)
+        self.shfile.write('echo "" >> %s\n' % self.timeFile)
+
 
 class KScriptGenerator:
     """Used to generate random Kaleidoscope code"""
+
     def __init__(self, filename):
-        self.kfile = open(filename, 'w')
+        self.kfile = open(filename, "w")
         self.nextFuncNum = 1
         self.lastFuncNum = None
         self.callWeighting = 0.1
@@ -80,20 +97,22 @@ class KScriptGenerator:
                 self.updateCalledFunctionList(subCallee)
 
     def setCallWeighting(self, weight):
-        """ Sets the probably of generating a function call"""
+        """Sets the probably of generating a function call"""
         self.callWeighting = weight
 
     def writeln(self, line):
-        self.kfile.write(line + '\n')
+        self.kfile.write(line + "\n")
 
     def writeComment(self, comment):
-        self.writeln('# ' + comment)
+        self.writeln("# " + comment)
 
     def writeEmptyLine(self):
         self.writeln("")
 
     def writePredefinedFunctions(self):
-        self.writeComment("Define ':' for sequencing: as a low-precedence operator that ignores operands")
+        self.writeComment(
+            "Define ':' for sequencing: as a low-precedence operator that ignores operands"
+        )
         self.writeComment("and just returns the RHS.")
         self.writeln("def binary : 1 (x y) y;")
         self.writeEmptyLine()
@@ -105,16 +124,18 @@ class KScriptGenerator:
         self.writeComment("Print the result of a function call")
         self.writeln("def printresult(N Result)")
         self.writeln("  # 'result('")
-        self.writeln("  putchard(114) : putchard(101) : putchard(115) : putchard(117) : putchard(108) : putchard(116) : putchard(40) :")
-        self.writeln("  printd(N) :");
+        self.writeln(
+            "  putchard(114) : putchard(101) : putchard(115) : putchard(117) : putchard(108) : putchard(116) : putchard(40) :"
+        )
+        self.writeln("  printd(N) :")
         self.writeln("  # ') = '")
         self.writeln("  putchard(41) : putchard(32) : putchard(61) : putchard(32) :")
-        self.writeln("  printd(Result) :");
+        self.writeln("  printd(Result) :")
         self.writeln("  printlf();")
         self.writeEmptyLine()
 
     def writeRandomOperation(self, LValue, LHS, RHS):
-        shouldCallFunc = (self.lastFuncNum > 2 and random.random() < self.callWeighting)
+        shouldCallFunc = self.lastFuncNum > 2 and random.random() < self.callWeighting
         if shouldCallFunc:
             funcToCall = random.randrange(1, self.lastFuncNum - 1)
             self.updateFunctionCallMap(self.lastFuncNum, funcToCall)
@@ -130,7 +151,10 @@ class KScriptGenerator:
                 self.writeln("  else if %s < %s then" % (RHS, LHS))
                 self.writeln("    %s = %s %s %s" % (LValue, LHS, operation, RHS))
                 self.writeln("  else")
-                self.writeln("    %s = %s %s %f :" % (LValue, LHS, operation, random.uniform(1, 100)))
+                self.writeln(
+                    "    %s = %s %s %f :"
+                    % (LValue, LHS, operation, random.uniform(1, 100))
+                )
             else:
                 self.writeln("  %s = %s %s %s :" % (LValue, LHS, operation, RHS))
 
@@ -166,27 +190,43 @@ class KScriptGenerator:
         self.writeComment("Call the last function")
         arg1 = random.uniform(1, 100)
         arg2 = random.uniform(1, 100)
-        self.writeln("printresult(%d, func%d(%f, %f) )" % (self.lastFuncNum, self.lastFuncNum, arg1, arg2))
+        self.writeln(
+            "printresult(%d, func%d(%f, %f) )"
+            % (self.lastFuncNum, self.lastFuncNum, arg1, arg2)
+        )
         self.writeEmptyLine()
         self.updateCalledFunctionList(self.lastFuncNum)
 
     def writeFinalFunctionCounts(self):
-        self.writeComment("Called %d of %d functions" % (len(self.calledFunctions), self.lastFuncNum))
+        self.writeComment(
+            "Called %d of %d functions" % (len(self.calledFunctions), self.lastFuncNum)
+        )
 
-def generateKScript(filename, numFuncs, elementsPerFunc, funcsBetweenExec, callWeighting, timingScript):
-    """ Generate a random Kaleidoscope script based on the given parameters """
+
+def generateKScript(
+    filename, numFuncs, elementsPerFunc, funcsBetweenExec, callWeighting, timingScript
+):
+    """Generate a random Kaleidoscope script based on the given parameters"""
     print("Generating " + filename)
-    print("  %d functions, %d elements per function, %d functions between execution" %
-          (numFuncs, elementsPerFunc, funcsBetweenExec))
+    print(
+        "  %d functions, %d elements per function, %d functions between execution"
+        % (numFuncs, elementsPerFunc, funcsBetweenExec)
+    )
     print("  Call weighting = %f" % callWeighting)
     script = KScriptGenerator(filename)
     script.setCallWeighting(callWeighting)
-    script.writeComment("===========================================================================")
+    script.writeComment(
+        "==========================================================================="
+    )
     script.writeComment("Auto-generated script")
-    script.writeComment("  %d functions, %d elements per function, %d functions between execution"
-                         % (numFuncs, elementsPerFunc, funcsBetweenExec))
+    script.writeComment(
+        "  %d functions, %d elements per function, %d functions between execution"
+        % (numFuncs, elementsPerFunc, funcsBetweenExec)
+    )
     script.writeComment("  call weighting = %f" % callWeighting)
-    script.writeComment("===========================================================================")
+    script.writeComment(
+        "==========================================================================="
+    )
     script.writeEmptyLine()
     script.writePredefinedFunctions()
     funcsSinceLastExec = 0
@@ -202,20 +242,49 @@ def generateKScript(filename, numFuncs, elementsPerFunc, funcsBetweenExec, callW
     script.writeEmptyLine()
     script.writeFinalFunctionCounts()
     funcsCalled = len(script.calledFunctions)
-    print("  Called %d of %d functions, %d total" % (funcsCalled, numFuncs, script.totalCallsExecuted))
-    timingScript.writeTimingCall(filename, numFuncs, funcsCalled, script.totalCallsExecuted)
+    print(
+        "  Called %d of %d functions, %d total"
+        % (funcsCalled, numFuncs, script.totalCallsExecuted)
+    )
+    timingScript.writeTimingCall(
+        filename, numFuncs, funcsCalled, script.totalCallsExecuted
+    )
+
 
 # Execution begins here
 random.seed()
 
 timingScript = TimingScriptGenerator("time-toy.sh", "timing-data.txt")
 
-dataSets = [(5000, 3,  50, 0.50), (5000, 10, 100, 0.10), (5000, 10, 5, 0.10), (5000, 10, 1, 0.0),
-            (1000, 3,  10, 0.50), (1000, 10, 100, 0.10), (1000, 10, 5, 0.10), (1000, 10, 1, 0.0),
-            ( 200, 3,   2, 0.50), ( 200, 10,  40, 0.10), ( 200, 10, 2, 0.10), ( 200, 10, 1, 0.0)]
+dataSets = [
+    (5000, 3, 50, 0.50),
+    (5000, 10, 100, 0.10),
+    (5000, 10, 5, 0.10),
+    (5000, 10, 1, 0.0),
+    (1000, 3, 10, 0.50),
+    (1000, 10, 100, 0.10),
+    (1000, 10, 5, 0.10),
+    (1000, 10, 1, 0.0),
+    (200, 3, 2, 0.50),
+    (200, 10, 40, 0.10),
+    (200, 10, 2, 0.10),
+    (200, 10, 1, 0.0),
+]
 
 # Generate the code
 for (numFuncs, elementsPerFunc, funcsBetweenExec, callWeighting) in dataSets:
-    filename = "test-%d-%d-%d-%d.k" % (numFuncs, elementsPerFunc, funcsBetweenExec, int(callWeighting * 100))
-    generateKScript(filename, numFuncs, elementsPerFunc, funcsBetweenExec, callWeighting, timingScript)
+    filename = "test-%d-%d-%d-%d.k" % (
+        numFuncs,
+        elementsPerFunc,
+        funcsBetweenExec,
+        int(callWeighting * 100),
+    )
+    generateKScript(
+        filename,
+        numFuncs,
+        elementsPerFunc,
+        funcsBetweenExec,
+        callWeighting,
+        timingScript,
+    )
 print("All done!")

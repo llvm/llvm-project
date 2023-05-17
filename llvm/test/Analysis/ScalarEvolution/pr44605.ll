@@ -2,7 +2,7 @@
 ; NOTE: Only %local_3_4 is important here.
 ;       All other instructions are needed to lure LLVM into executing
 ;       specific code to trigger a bug.
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 define i32 @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:

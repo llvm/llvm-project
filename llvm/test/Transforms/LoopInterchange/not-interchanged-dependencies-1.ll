@@ -1,9 +1,8 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -basic-aa -loop-interchange -verify-dom-info -verify-loop-info \
+; RUN: opt < %s -passes=loop-interchange -cache-line-size=64 -verify-dom-info -verify-loop-info \
 ; RUN:     -S -debug 2>&1 | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
-target triple = "x86_64-unknown-linux-gnu"
 
 @A = common global [100 x [100 x i32]] zeroinitializer
 @B = common global [100 x i32] zeroinitializer
@@ -26,12 +25,12 @@ for.cond1.preheader:
 
 for.body3:
   %indvars.iv = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next, %for.body3 ]
-  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv.next24, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx5
+  %arrayidx5 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %indvars.iv.next24, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx5
   %add6 = add nsw i32 %0, %k
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
-  %arrayidx11 = getelementptr inbounds [100 x [100 x i32]], [100 x [100 x i32]]* @A, i64 0, i64 %indvars.iv23, i64 %indvars.iv.next
-  store i32 %add6, i32* %arrayidx11
+  %arrayidx11 = getelementptr inbounds [100 x [100 x i32]], ptr @A, i64 0, i64 %indvars.iv23, i64 %indvars.iv.next
+  store i32 %add6, ptr %arrayidx11
   %exitcond = icmp eq i64 %indvars.iv.next, 99
   br i1 %exitcond, label %for.inc12, label %for.body3
 

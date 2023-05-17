@@ -14,8 +14,6 @@ exe_name = 'AttachDenied'  # Must match Makefile
 
 
 class AttachDeniedTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfWindows

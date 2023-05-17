@@ -16,7 +16,9 @@
 //                                     result_type xmax, UnaryOperation fw);
 
 #include <random>
+
 #include <cassert>
+#include <vector>
 
 #include "test_macros.h"
 

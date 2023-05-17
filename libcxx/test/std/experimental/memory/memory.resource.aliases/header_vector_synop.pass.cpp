@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/vector>
 
 // namespace std { namespace experimental { namespace pmr {
@@ -16,6 +18,8 @@
 //     ::std::vector<T, polymorphic_allocator<T>>
 //
 // }}} // namespace std::experimental::pmr
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/vector>
 #include <experimental/memory_resource>

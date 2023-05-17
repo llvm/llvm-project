@@ -19,8 +19,7 @@ define i32 @PR28968(i32 %x) {
 ; SLOWLEA3-NEXT:    xorl %eax, %eax
 ; SLOWLEA3-NEXT:    cmpl $1, %edi
 ; SLOWLEA3-NEXT:    sete %al
-; SLOWLEA3-NEXT:    addl %eax, %eax
-; SLOWLEA3-NEXT:    decl %eax
+; SLOWLEA3-NEXT:    leal -1(,%rax,2), %eax
 ; SLOWLEA3-NEXT:    retq
   %cmp = icmp eq i32 %x, 1
   %sel = select i1 %cmp, i32 1, i32 -1

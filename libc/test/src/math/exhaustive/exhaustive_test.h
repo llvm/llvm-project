@@ -6,8 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/__support/CPP/type_traits.h"
+#include "src/__support/FPUtil/FPBits.h"
+#include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/Test.h"
 
 // To test exhaustively for inputs in the range [start, stop) in parallel:
 // 1. Inherit from LlvmLibcExhaustiveTest class
@@ -15,12 +17,16 @@
 // 4. Call: test_full_range(start, stop, nthreads, rounding)
 namespace mpfr = __llvm_libc::testing::mpfr;
 
-template <typename T>
+template <typename T, typename FloatType = float>
 struct LlvmLibcExhaustiveTest : public __llvm_libc::testing::Test {
+  static constexpr T increment = (1 << 20);
+  static_assert(
+      __llvm_libc::cpp::is_same_v<
+          T, typename __llvm_libc::fputil::FPBits<FloatType>::UIntType>,
+      "Types are not consistent");
   // Break [start, stop) into `nthreads` subintervals and apply *check to each
   // subinterval in parallel.
-  void test_full_range(T start, T stop, int nthreads,
-                       mpfr::RoundingMode rounding);
+  void test_full_range(T start, T stop, mpfr::RoundingMode rounding);
 
   virtual bool check(T start, T stop, mpfr::RoundingMode rounding) = 0;
 };

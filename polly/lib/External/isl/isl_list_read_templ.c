@@ -16,7 +16,7 @@
  * In particular, the elements are separated by a comma and
  * the entire list is surrounded by parentheses.
  */
-static __isl_give LIST(EL) *FN(isl_stream_read,LIST(EL_BASE))(isl_stream *s)
+__isl_give LIST(EL) *FN(isl_stream_read,LIST(EL_BASE))(isl_stream *s)
 {
 	isl_ctx *ctx;
 	LIST(EL) *list;
@@ -44,22 +44,6 @@ static __isl_give LIST(EL) *FN(isl_stream_read,LIST(EL_BASE))(isl_stream *s)
 	return list;
 }
 
-/* Read a list of elements of type EL from the string "str".
- * The input format corresponds to the way lists are printed
- * by isl_printer_print_list_*.
- * In particular, the elements are separated by a comma and
- * the entire list is surrounded by parentheses.
- */
-__isl_give LIST(EL) *FN(LIST(EL),read_from_str)(isl_ctx *ctx,
-	const char *str)
-{
-	LIST(EL) *list;
-	isl_stream *s;
-
-	s = isl_stream_new_str(ctx, str);
-	if (!s)
-		return NULL;
-	list = FN(isl_stream_read,LIST(EL_BASE))(s);
-	isl_stream_free(s);
-	return list;
-}
+#undef TYPE_BASE
+#define TYPE_BASE	LIST(EL_BASE)
+#include "isl_read_from_str_templ.c"

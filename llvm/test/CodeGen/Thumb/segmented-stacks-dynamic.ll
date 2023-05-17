@@ -4,11 +4,11 @@
 ; RUN: llc < %s -mtriple=thumb-linux-androideabi -filetype=obj
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define i32 @test_basic(i32 %l) #0 {
         %mem = alloca i32, i32 %l
-        call void @dummy_use (i32* %mem, i32 %l)
+        call void @dummy_use (ptr %mem, i32 %l)
         %terminate = icmp eq i32 %l, 0
         br i1 %terminate, label %true, label %false
 
@@ -27,7 +27,7 @@ false:
 ; Thumb-linux-NEXT: ldr r4, .LCPI0_0
 ; Thumb-linux-NEXT: ldr r4, [r4]
 ; Thumb-linux-NEXT: cmp	r4, r5
-; Thumb-linux-NEXT: blo	.LBB0_2
+; Thumb-linux-NEXT: bls	.LBB0_2
 
 ; Thumb-linux:      mov r4, #16
 ; Thumb-linux-NEXT: mov r5, #0
@@ -47,7 +47,7 @@ false:
 ; Thumb-android-NEXT: ldr r4, .LCPI0_0
 ; Thumb-android-NEXT: ldr r4, [r4]
 ; Thumb-android-NEXT: cmp	r4, r5
-; Thumb-android-NEXT: blo	.LBB0_2
+; Thumb-android-NEXT: bls	.LBB0_2
 
 ; Thumb-android:      mov r4, #16
 ; Thumb-android-NEXT: mov r5, #0

@@ -14,19 +14,25 @@ machineFunctionInfo:
 body:             |
   ; GXN-LABEL: name: invalid_end_cf_fold_0
   ; GXN: bb.0:
-  ; GXN:   successors: %bb.1(0x80000000)
-  ; GXN:   liveins: $vgpr0, $sgpr0_sgpr1
-  ; GXN:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
-  ; GXN:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
-  ; GXN:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $exec
-  ; GXN: bb.1:
-  ; GXN:   successors: %bb.2(0x80000000)
-  ; GXN: bb.2:
-  ; GXN:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def $scc
-  ; GXN:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GXN:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
-  ; GXN:   DS_WRITE_B32 [[DEF]], [[DEF1]], 0, 0, implicit $m0, implicit $exec :: (store (s32), addrspace 3)
-  ; GXN:   S_ENDPGM 0
+  ; GXN-NEXT:   successors: %bb.1(0x80000000)
+  ; GXN-NEXT:   liveins: $vgpr0, $sgpr0_sgpr1
+  ; GXN-NEXT: {{  $}}
+  ; GXN-NEXT:   [[COPY:%[0-9]+]]:sgpr_64 = COPY $sgpr0_sgpr1
+  ; GXN-NEXT:   [[COPY1:%[0-9]+]]:sgpr_64 = COPY $exec
+  ; GXN-NEXT:   $exec = S_OR_B64 $exec, [[COPY]], implicit-def $scc
+  ; GXN-NEXT:   [[COPY2:%[0-9]+]]:sgpr_64 = COPY $exec
+  ; GXN-NEXT: {{  $}}
+  ; GXN-NEXT: bb.1:
+  ; GXN-NEXT:   successors: %bb.2(0x80000000)
+  ; GXN-NEXT: {{  $}}
+  ; GXN-NEXT:   $exec = S_OR_B64 $exec, [[COPY1]], implicit-def $scc
+  ; GXN-NEXT: {{  $}}
+  ; GXN-NEXT: bb.2:
+  ; GXN-NEXT:   $exec = S_OR_B64 $exec, [[COPY2]], implicit-def $scc
+  ; GXN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GXN-NEXT:   [[DEF1:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
+  ; GXN-NEXT:   DS_WRITE_B32 [[DEF]], [[DEF1]], 0, 0, implicit $m0, implicit $exec :: (store (s32), addrspace 3)
+  ; GXN-NEXT:   S_ENDPGM 0
   bb.0:
     liveins: $vgpr0, $sgpr0_sgpr1
 

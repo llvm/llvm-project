@@ -10,10 +10,14 @@
 #define _LIBCPP___UTILITY_CMP_H
 
 #include <__config>
+#include <__type_traits/disjunction.h>
+#include <__type_traits/is_integral.h>
+#include <__type_traits/is_same.h>
+#include <__type_traits/is_signed.h>
+#include <__type_traits/make_unsigned.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
 #include <limits>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -24,18 +28,15 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 template<class _Tp, class... _Up>
 struct _IsSameAsAny : _Or<_IsSame<_Tp, _Up>...> {};
 
 template<class _Tp>
 concept __is_safe_integral_cmp = is_integral_v<_Tp> &&
-                      !_IsSameAsAny<_Tp, bool, char
+                      !_IsSameAsAny<_Tp, bool, char, char16_t, char32_t
 #ifndef _LIBCPP_HAS_NO_CHAR8_T
                                     , char8_t
-#endif
-#ifndef _LIBCPP_HAS_NO_UNICODE_CHARS
-                                    , char16_t, char32_t
 #endif
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
                                     , wchar_t
@@ -101,7 +102,7 @@ bool in_range(_Up __u) noexcept
   return _VSTD::cmp_less_equal(__u, numeric_limits<_Tp>::max()) &&
          _VSTD::cmp_greater_equal(__u, numeric_limits<_Tp>::min());
 }
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

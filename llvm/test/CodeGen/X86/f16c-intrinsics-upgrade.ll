@@ -19,7 +19,7 @@ define <4 x float> @test_x86_vcvtph2ps_128(<8 x i16> %a0) {
 }
 declare <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16>) nounwind readonly
 
-define <4 x float> @test_x86_vcvtph2ps_128_m(<8 x i16>* nocapture %a) {
+define <4 x float> @test_x86_vcvtph2ps_128_m(ptr nocapture %a) {
 ; X86-LABEL: test_x86_vcvtph2ps_128_m:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -41,7 +41,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_m(<8 x i16>* nocapture %a) {
 ; X64-AVX512VL:       # %bb.0:
 ; X64-AVX512VL-NEXT:    vcvtph2ps (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x13,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  %load = load <8 x i16>, <8 x i16>* %a
+  %load = load <8 x i16>, ptr %a
   %res = call <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16> %load) ; <<4 x float>> [#uses=1]
   ret <4 x float> %res
 }
@@ -61,7 +61,7 @@ define <8 x float> @test_x86_vcvtph2ps_256(<8 x i16> %a0) {
 }
 declare <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16>) nounwind readonly
 
-define <8 x float> @test_x86_vcvtph2ps_256_m(<8 x i16>* nocapture %a) nounwind {
+define <8 x float> @test_x86_vcvtph2ps_256_m(ptr nocapture %a) nounwind {
 ; X86-LABEL: test_x86_vcvtph2ps_256_m:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -83,12 +83,12 @@ define <8 x float> @test_x86_vcvtph2ps_256_m(<8 x i16>* nocapture %a) nounwind {
 ; X64-AVX512VL:       # %bb.0:
 ; X64-AVX512VL-NEXT:    vcvtph2ps (%rdi), %ymm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x7d,0x13,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  %load = load <8 x i16>, <8 x i16>* %a
+  %load = load <8 x i16>, ptr %a
   %res = tail call <8 x float> @llvm.x86.vcvtph2ps.256(<8 x i16> %load)
   ret <8 x float> %res
 }
 
-define <4 x float> @test_x86_vcvtph2ps_128_scalar(i64* %ptr) {
+define <4 x float> @test_x86_vcvtph2ps_128_scalar(ptr %ptr) {
 ; X86-LABEL: test_x86_vcvtph2ps_128_scalar:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -110,7 +110,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar(i64* %ptr) {
 ; X64-AVX512VL:       # %bb.0:
 ; X64-AVX512VL-NEXT:    vcvtph2ps (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x13,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  %load = load i64, i64* %ptr
+  %load = load i64, ptr %ptr
   %ins1 = insertelement <2 x i64> undef, i64 %load, i32 0
   %ins2 = insertelement <2 x i64> %ins1, i64 0, i32 1
   %bc = bitcast <2 x i64> %ins2 to <8 x i16>
@@ -118,7 +118,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar(i64* %ptr) {
   ret <4 x float> %res
 }
 
-define <4 x float> @test_x86_vcvtph2ps_128_scalar2(i64* %ptr) {
+define <4 x float> @test_x86_vcvtph2ps_128_scalar2(ptr %ptr) {
 ; X86-LABEL: test_x86_vcvtph2ps_128_scalar2:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax # encoding: [0x8b,0x44,0x24,0x04]
@@ -140,7 +140,7 @@ define <4 x float> @test_x86_vcvtph2ps_128_scalar2(i64* %ptr) {
 ; X64-AVX512VL:       # %bb.0:
 ; X64-AVX512VL-NEXT:    vcvtph2ps (%rdi), %xmm0 # EVEX TO VEX Compression encoding: [0xc4,0xe2,0x79,0x13,0x07]
 ; X64-AVX512VL-NEXT:    retq # encoding: [0xc3]
-  %load = load i64, i64* %ptr
+  %load = load i64, ptr %ptr
   %ins = insertelement <2 x i64> undef, i64 %load, i32 0
   %bc = bitcast <2 x i64> %ins to <8 x i16>
   %res = tail call <4 x float> @llvm.x86.vcvtph2ps.128(<8 x i16> %bc)

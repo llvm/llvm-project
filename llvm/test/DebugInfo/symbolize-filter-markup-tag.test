@@ -1,0 +1,10 @@
+RUN: split-file %s %t
+RUN: llvm-symbolizer --filter-markup < %t/input 2> %t.error
+RUN: FileCheck %s --input-file=%t.error --match-full-lines
+
+CHECK: error: tags must be all lowercase characters
+CHECK: error: tags must be all lowercase characters
+
+;--- input
+{{{t2g}}}
+{{{tAg}}}

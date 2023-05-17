@@ -2,15 +2,15 @@
 ; RUN: opt -S -passes='function(early-cse),globalopt' < %s | FileCheck %s
 ; RUN: opt -S -passes='function(early-cse)' < %s | opt -S -passes=globalopt | FileCheck %s
 
-@g = internal global [6 x i16*] undef
+@g = internal global [6 x ptr] undef
 
 define void @test1() {
 ; CHECK-LABEL: @test1(
 ; CHECK-NEXT:    ret void
 ;
-  %xor4 = xor i32 zext (i1 icmp ne (i8* getelementptr (i8, i8* bitcast ([6 x i16*]* @g to i8*), i64 3), i8* null) to i32), 0
-  %t0 = load i16*, i16** bitcast (i8* getelementptr (i8, i8* bitcast ([6 x i16*]* @g to i8*), i64 3) to i16**), align 1
-  %t1 = load i16, i16* %t0, align 1
+  %xor4 = xor i32 zext (i1 icmp ne (ptr getelementptr (i8, ptr @g, i64 3), ptr null) to i32), 0
+  %t0 = load ptr, ptr getelementptr (i8, ptr @g, i64 3), align 1
+  %t1 = load i16, ptr %t0, align 1
   ret void
 }
 
@@ -18,6 +18,6 @@ define void @test2() {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    ret void
 ;
-  store i16* null, i16** getelementptr inbounds ([6 x i16*], [6 x i16*]* @g, i32 0, i32 5)
+  store ptr null, ptr getelementptr inbounds ([6 x ptr], ptr @g, i32 0, i32 5)
   ret void
 }

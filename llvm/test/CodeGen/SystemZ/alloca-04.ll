@@ -6,7 +6,7 @@
 
 define void @f6() "no-realign-stack" {
   %x = alloca i64, i64 1, align 128
-  store volatile i64 10, i64* %x, align 128
+  store volatile i64 10, ptr %x, align 128
   ret void
 }
 

@@ -49,7 +49,7 @@ static OwningPtr<Descriptor> EmptyIntDescriptor() {
 class CommandFixture : public ::testing::Test {
 protected:
   CommandFixture(int argc, const char *argv[]) {
-    RTNAME(ProgramStart)(argc, argv, {});
+    RTNAME(ProgramStart)(argc, argv, {}, {});
   }
 
   std::string GetPaddedStr(const char *text, std::size_t len) const {
@@ -105,11 +105,11 @@ protected:
     SCOPED_TRACE(n);
     SCOPED_TRACE("Checking argument:");
     CheckValue(
-        [&](const Descriptor *value, const Descriptor *,
+        [&](const Descriptor *value, const Descriptor *length,
             const Descriptor *errmsg) {
-          return RTNAME(ArgumentValue)(n, value, errmsg);
+          return RTNAME(GetCommandArgument)(n, value, length, errmsg);
         },
-        expectedValue);
+        expectedValue, std::strlen(expectedValue));
   }
 
   void CheckCommandValue(const char *args[], int n) const {
@@ -132,12 +132,12 @@ protected:
     SCOPED_TRACE(name);
     SCOPED_TRACE("Checking environment variable");
     CheckValue(
-        [&](const Descriptor *value, const Descriptor *,
+        [&](const Descriptor *value, const Descriptor *length,
             const Descriptor *errmsg) {
-          return RTNAME(EnvVariableValue)(*CharDescriptor(name), value,
-              trimName, errmsg, /*sourceFile=*/nullptr, /*line=*/0);
+          return RTNAME(GetEnvVariable)(
+              *CharDescriptor(name), value, length, trimName, errmsg);
         },
-        expectedValue);
+        expectedValue, std::strlen(expectedValue));
   }
 
   void CheckMissingEnvVarValue(const char *name, bool trimName = true) const {
@@ -147,27 +147,31 @@ protected:
     ASSERT_EQ(nullptr, std::getenv(name))
         << "Environment variable " << name << " not expected to exist";
 
-    OwningPtr<Descriptor> nameDescriptor{CharDescriptor(name)};
-    EXPECT_EQ(0, RTNAME(EnvVariableLength)(*nameDescriptor, trimName));
     CheckValue(
-        [&](const Descriptor *value, const Descriptor *,
+        [&](const Descriptor *value, const Descriptor *length,
             const Descriptor *errmsg) {
-          return RTNAME(EnvVariableValue)(*nameDescriptor, value, trimName,
-              errmsg, /*sourceFile=*/nullptr, /*line=*/0);
+          return RTNAME(GetEnvVariable)(
+              *CharDescriptor(name), value, length, trimName, errmsg);
         },
-        "", -1, 1, "Missing environment variable");
+        "", 0, 1, "Missing environment variable");
   }
 
   void CheckMissingArgumentValue(int n, const char *errStr = nullptr) const {
     OwningPtr<Descriptor> value{CreateEmptyCharDescriptor()};
     ASSERT_NE(value, nullptr);
 
+    OwningPtr<Descriptor> length{EmptyIntDescriptor()};
+    ASSERT_NE(length, nullptr);
+
     OwningPtr<Descriptor> err{errStr ? CreateEmptyCharDescriptor() : nullptr};
 
-    EXPECT_GT(RTNAME(ArgumentValue)(n, value.get(), err.get()), 0);
+    EXPECT_GT(
+        RTNAME(GetCommandArgument)(n, value.get(), length.get(), err.get()), 0);
 
     std::string spaces(value->ElementBytes(), ' ');
     CheckDescriptorEqStr(value.get(), spaces);
+
+    CheckDescriptorEqInt(length.get(), 0);
 
     if (errStr) {
       std::string paddedErrStr(GetPaddedStr(errStr, err->ElementBytes()));
@@ -215,14 +219,10 @@ protected:
 
 TEST_F(ZeroArguments, ArgumentCount) { EXPECT_EQ(0, RTNAME(ArgumentCount)()); }
 
-TEST_F(ZeroArguments, ArgumentLength) {
-  EXPECT_EQ(0, RTNAME(ArgumentLength)(-1));
-  EXPECT_EQ(8, RTNAME(ArgumentLength)(0));
-  EXPECT_EQ(0, RTNAME(ArgumentLength)(1));
-}
-
-TEST_F(ZeroArguments, ArgumentValue) {
+TEST_F(ZeroArguments, GetCommandArgument) {
+  CheckMissingArgumentValue(-1);
   CheckArgumentValue(commandOnlyArgv[0], 0);
+  CheckMissingArgumentValue(1);
 }
 
 TEST_F(ZeroArguments, GetCommand) { CheckCommandValue(commandOnlyArgv, 1); }
@@ -235,16 +235,11 @@ protected:
 
 TEST_F(OneArgument, ArgumentCount) { EXPECT_EQ(1, RTNAME(ArgumentCount)()); }
 
-TEST_F(OneArgument, ArgumentLength) {
-  EXPECT_EQ(0, RTNAME(ArgumentLength)(-1));
-  EXPECT_EQ(8, RTNAME(ArgumentLength)(0));
-  EXPECT_EQ(20, RTNAME(ArgumentLength)(1));
-  EXPECT_EQ(0, RTNAME(ArgumentLength)(2));
-}
-
-TEST_F(OneArgument, ArgumentValue) {
+TEST_F(OneArgument, GetCommandArgument) {
+  CheckMissingArgumentValue(-1);
   CheckArgumentValue(oneArgArgv[0], 0);
   CheckArgumentValue(oneArgArgv[1], 1);
+  CheckMissingArgumentValue(2);
 }
 
 TEST_F(OneArgument, GetCommand) { CheckCommandValue(oneArgArgv, 2); }
@@ -262,17 +257,7 @@ TEST_F(SeveralArguments, ArgumentCount) {
   EXPECT_EQ(4, RTNAME(ArgumentCount)());
 }
 
-TEST_F(SeveralArguments, ArgumentLength) {
-  EXPECT_EQ(0, RTNAME(ArgumentLength)(-1));
-  EXPECT_EQ(8, RTNAME(ArgumentLength)(0));
-  EXPECT_EQ(16, RTNAME(ArgumentLength)(1));
-  EXPECT_EQ(0, RTNAME(ArgumentLength)(2));
-  EXPECT_EQ(22, RTNAME(ArgumentLength)(3));
-  EXPECT_EQ(1, RTNAME(ArgumentLength)(4));
-  EXPECT_EQ(0, RTNAME(ArgumentLength)(5));
-}
-
-TEST_F(SeveralArguments, ArgumentValue) {
+TEST_F(SeveralArguments, GetCommandArgument) {
   CheckArgumentValue(severalArgsArgv[0], 0);
   CheckArgumentValue(severalArgsArgv[1], 1);
   CheckArgumentValue(severalArgsArgv[3], 3);
@@ -280,10 +265,11 @@ TEST_F(SeveralArguments, ArgumentValue) {
 }
 
 TEST_F(SeveralArguments, NoArgumentValue) {
-  // Make sure we don't crash if the 'value' and 'error' parameters aren't
-  // passed.
-  EXPECT_EQ(RTNAME(ArgumentValue)(2, nullptr, nullptr), 0);
-  EXPECT_GT(RTNAME(ArgumentValue)(-1, nullptr, nullptr), 0);
+  // Make sure we don't crash if the 'value', 'length' and 'error' parameters
+  // aren't passed.
+  EXPECT_GT(RTNAME(GetCommandArgument)(2), 0);
+  EXPECT_EQ(RTNAME(GetCommandArgument)(1), 0);
+  EXPECT_GT(RTNAME(GetCommandArgument)(-1), 0);
 }
 
 TEST_F(SeveralArguments, MissingArguments) {
@@ -296,14 +282,19 @@ TEST_F(SeveralArguments, MissingArguments) {
 TEST_F(SeveralArguments, ArgValueTooShort) {
   OwningPtr<Descriptor> tooShort{CreateEmptyCharDescriptor<15>()};
   ASSERT_NE(tooShort, nullptr);
-  EXPECT_EQ(RTNAME(ArgumentValue)(1, tooShort.get(), nullptr), -1);
+  EXPECT_EQ(RTNAME(GetCommandArgument)(1, tooShort.get()), -1);
   CheckDescriptorEqStr(tooShort.get(), severalArgsArgv[1]);
 
+  OwningPtr<Descriptor> length{EmptyIntDescriptor()};
+  ASSERT_NE(length, nullptr);
   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor()};
   ASSERT_NE(errMsg, nullptr);
 
-  EXPECT_EQ(RTNAME(ArgumentValue)(1, tooShort.get(), errMsg.get()), -1);
+  EXPECT_EQ(
+      RTNAME(GetCommandArgument)(1, tooShort.get(), length.get(), errMsg.get()),
+      -1);
 
+  CheckDescriptorEqInt(length.get(), 16);
   std::string expectedErrMsg{
       GetPaddedStr("Value too short", errMsg->ElementBytes())};
   CheckDescriptorEqStr(errMsg.get(), expectedErrMsg);
@@ -311,7 +302,7 @@ TEST_F(SeveralArguments, ArgValueTooShort) {
 
 TEST_F(SeveralArguments, ArgErrMsgTooShort) {
   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor<3>()};
-  EXPECT_GT(RTNAME(ArgumentValue)(-1, nullptr, errMsg.get()), 0);
+  EXPECT_GT(RTNAME(GetCommandArgument)(-1, nullptr, nullptr, errMsg.get()), 0);
   CheckDescriptorEqStr(errMsg.get(), "Inv");
 }
 
@@ -423,7 +414,6 @@ private:
 
 TEST_F(EnvironmentVariables, Nonexistent) {
   CheckMissingEnvVarValue("DOESNT_EXIST");
-
   CheckMissingEnvVarValue("      ");
   CheckMissingEnvVarValue("");
 }
@@ -432,12 +422,15 @@ TEST_F(EnvironmentVariables, Basic) {
   // Test a variable that's expected to exist in the environment.
   char *path{std::getenv("PATH")};
   auto expectedLen{static_cast<int64_t>(std::strlen(path))};
-  EXPECT_EQ(expectedLen, RTNAME(EnvVariableLength)(*CharDescriptor("PATH")));
+  OwningPtr<Descriptor> length{EmptyIntDescriptor()};
+  EXPECT_EQ(0,
+      RTNAME(GetEnvVariable)(*CharDescriptor("PATH"),
+          /*value=*/nullptr, length.get()));
+  CheckDescriptorEqInt(length.get(), expectedLen);
 }
 
 TEST_F(EnvironmentVariables, Trim) {
   if (EnableFineGrainedTests()) {
-    EXPECT_EQ(5, RTNAME(EnvVariableLength)(*CharDescriptor("NAME   ")));
     CheckEnvVarValue("VALUE", "NAME   ");
   }
 }
@@ -450,7 +443,6 @@ TEST_F(EnvironmentVariables, NoTrim) {
 
 TEST_F(EnvironmentVariables, Empty) {
   if (EnableFineGrainedTests()) {
-    EXPECT_EQ(0, RTNAME(EnvVariableLength)(*CharDescriptor("EMPTY")));
     CheckEnvVarValue("", "EMPTY");
   }
 }
@@ -458,10 +450,10 @@ TEST_F(EnvironmentVariables, Empty) {
 TEST_F(EnvironmentVariables, NoValueOrErrmsg) {
   ASSERT_EQ(std::getenv("DOESNT_EXIST"), nullptr)
       << "Environment variable DOESNT_EXIST actually exists";
-  EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("DOESNT_EXIST")), 1);
+  EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("DOESNT_EXIST")), 1);
 
   if (EnableFineGrainedTests()) {
-    EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("NAME")), 0);
+    EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("NAME")), 0);
   }
 }
 
@@ -469,16 +461,16 @@ TEST_F(EnvironmentVariables, ValueTooShort) {
   if (EnableFineGrainedTests()) {
     OwningPtr<Descriptor> tooShort{CreateEmptyCharDescriptor<2>()};
     ASSERT_NE(tooShort, nullptr);
-    EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("NAME"), tooShort.get(),
-                  /*trim_name=*/true, nullptr),
+    EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("NAME"), tooShort.get(),
+                  /*length=*/nullptr, /*trim_name=*/true, nullptr),
         -1);
     CheckDescriptorEqStr(tooShort.get(), "VALUE");
 
     OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor()};
     ASSERT_NE(errMsg, nullptr);
 
-    EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("NAME"), tooShort.get(),
-                  /*trim_name=*/true, errMsg.get()),
+    EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("NAME"), tooShort.get(),
+                  /*length=*/nullptr, /*trim_name=*/true, errMsg.get()),
         -1);
 
     std::string expectedErrMsg{
@@ -492,8 +484,8 @@ TEST_F(EnvironmentVariables, ErrMsgTooShort) {
       << "Environment variable DOESNT_EXIST actually exists";
 
   OwningPtr<Descriptor> errMsg{CreateEmptyCharDescriptor<3>()};
-  EXPECT_EQ(RTNAME(EnvVariableValue)(*CharDescriptor("DOESNT_EXIST"), nullptr,
-                /*trim_name=*/true, errMsg.get()),
+  EXPECT_EQ(RTNAME(GetEnvVariable)(*CharDescriptor("DOESNT_EXIST"), nullptr,
+                /*length=*/nullptr, /*trim_name=*/true, errMsg.get()),
       1);
   CheckDescriptorEqStr(errMsg.get(), "Mis");
 }

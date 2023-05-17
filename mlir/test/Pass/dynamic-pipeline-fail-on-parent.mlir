@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -pass-pipeline='builtin.module(test-dynamic-pipeline{op-name=inner_mod1 run-on-parent=1 dynamic-pipeline=test-patterns})'  -split-input-file -verify-diagnostics
+// RUN: mlir-opt %s -pass-pipeline='builtin.module(builtin.module(test-dynamic-pipeline{op-name=inner_mod1 run-on-parent=1 dynamic-pipeline=test-patterns}))'  -split-input-file -verify-diagnostics
 
 // Verify that we fail to schedule a dynamic pipeline on the parent operation.
 

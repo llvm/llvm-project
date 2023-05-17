@@ -1,8 +1,5 @@
 """Test the lldb public C++ api when doing multiple debug sessions simultaneously."""
 
-from __future__ import print_function
-
-
 import os
 
 import lldb
@@ -13,14 +10,17 @@ from lldbsuite.test import lldbutil
 
 class TestMultipleSimultaneousDebuggers(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipIfNoSBHeaders
     @skipIfWindows
     def test_multiple_debuggers(self):
         env = {self.dylibPath: self.getLLDBLibraryEnvVal()}
+
+        # We need this in order to run under ASAN, in case only LLDB is ASANified.
+        asan_options = os.getenv('ASAN_OPTIONS', None)
+        if (asan_options is not None):
+            env['ASAN_OPTIONS'] = asan_options
 
         self.driver_exe = self.getBuildArtifact("multi-process-driver")
         self.buildDriver('multi-process-driver.cpp', self.driver_exe)

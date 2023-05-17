@@ -1,6 +1,6 @@
 ; This test ensures that inlining an "empty" function does not destroy the CFG
 ;
-; RUN: opt < %s -inline -S | FileCheck %s
+; RUN: opt < %s -passes=inline -S | FileCheck %s
 
 define i32 @func(i32 %i) {
   ret i32 %i

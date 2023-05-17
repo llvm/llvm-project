@@ -4,7 +4,7 @@
 
 ; Ensure we don't crash by trying to convert directly from a subword load
 ; to a ppc_fp128 as we do for conversions to f32/f64.
-define ppc_fp128 @test(i16* nocapture readonly %Ptr) {
+define ppc_fp128 @test(ptr nocapture readonly %Ptr) {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lhz 3, 0(3)
@@ -15,7 +15,7 @@ define ppc_fp128 @test(i16* nocapture readonly %Ptr) {
 ; CHECK-NEXT:    xscvuxddp 1, 0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* %Ptr, align 2
+  %0 = load i16, ptr %Ptr, align 2
   %conv = uitofp i16 %0 to ppc_fp128
   ret ppc_fp128 %conv
 }

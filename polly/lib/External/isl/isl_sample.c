@@ -24,6 +24,9 @@
 #include <bset_from_bmap.c>
 #include <set_to_map.c>
 
+static __isl_give isl_vec *isl_basic_set_sample_bounded(
+	__isl_take isl_basic_set *bset);
+
 static __isl_give isl_vec *empty_sample(__isl_take isl_basic_set *bset)
 {
 	struct isl_vec *vec;
@@ -1150,12 +1153,10 @@ error:
 static __isl_give isl_vec *basic_set_sample(__isl_take isl_basic_set *bset,
 	int bounded)
 {
-	struct isl_ctx *ctx;
 	isl_size dim;
 	if (!bset)
 		return NULL;
 
-	ctx = bset->ctx;
 	if (isl_basic_set_plain_is_empty(bset))
 		return empty_sample(bset);
 

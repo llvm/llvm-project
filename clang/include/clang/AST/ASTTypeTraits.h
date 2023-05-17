@@ -51,11 +51,10 @@ enum TraversalKind {
 class ASTNodeKind {
 public:
   /// Empty identifier. It matches nothing.
-  ASTNodeKind() : KindId(NKI_None) {}
+  constexpr ASTNodeKind() : KindId(NKI_None) {}
 
   /// Construct an identifier for T.
-  template <class T>
-  static ASTNodeKind getFromNodeKind() {
+  template <class T> static constexpr ASTNodeKind getFromNodeKind() {
     return ASTNodeKind(KindToKindId<T>::Id);
   }
 
@@ -71,23 +70,26 @@ public:
   /// \}
 
   /// Returns \c true if \c this and \c Other represent the same kind.
-  bool isSame(ASTNodeKind Other) const {
+  constexpr bool isSame(ASTNodeKind Other) const {
     return KindId != NKI_None && KindId == Other.KindId;
   }
 
   /// Returns \c true only for the default \c ASTNodeKind()
-  bool isNone() const { return KindId == NKI_None; }
+  constexpr bool isNone() const { return KindId == NKI_None; }
+
+  /// Returns \c true if \c this is a base kind of (or same as) \c Other.
+  bool isBaseOf(ASTNodeKind Other) const;
 
   /// Returns \c true if \c this is a base kind of (or same as) \c Other.
   /// \param Distance If non-null, used to return the distance between \c this
   /// and \c Other in the class hierarchy.
-  bool isBaseOf(ASTNodeKind Other, unsigned *Distance = nullptr) const;
+  bool isBaseOf(ASTNodeKind Other, unsigned *Distance) const;
 
   /// String representation of the kind.
   StringRef asStringRef() const;
 
   /// Strict weak ordering for ASTNodeKind.
-  bool operator<(const ASTNodeKind &Other) const {
+  constexpr bool operator<(const ASTNodeKind &Other) const {
     return KindId < Other.KindId;
   }
 
@@ -121,7 +123,7 @@ public:
 
   /// Check if the given ASTNodeKind identifies a type that offers pointer
   /// identity. This is useful for the fast path in DynTypedNode.
-  bool hasPointerIdentity() const {
+  constexpr bool hasPointerIdentity() const {
     return KindId > NKI_LastKindWithoutPointerIdentity;
   }
 
@@ -165,7 +167,11 @@ private:
   };
 
   /// Use getFromNodeKind<T>() to construct the kind.
-  ASTNodeKind(NodeKindId KindId) : KindId(KindId) {}
+  constexpr ASTNodeKind(NodeKindId KindId) : KindId(KindId) {}
+
+  /// Returns \c true if \c Base is a base kind of (or same as) \c
+  ///   Derived.
+  static bool isBaseOf(NodeKindId Base, NodeKindId Derived);
 
   /// Returns \c true if \c Base is a base kind of (or same as) \c
   ///   Derived.

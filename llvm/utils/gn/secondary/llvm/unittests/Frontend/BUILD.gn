@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("LLVMFrontendTests") {
   deps = [
@@ -8,6 +8,7 @@ unittest("LLVMFrontendTests") {
     "//llvm/lib/IR",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Testing/Support",
   ]
   sources = [

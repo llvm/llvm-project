@@ -1,5 +1,5 @@
 // RUN: %clang_cc1 -std=c++14 -Wno-unused-value -fsyntax-only -verify -verify=expected-cxx14 -fblocks %s
-// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -fsyntax-only -verify -fblocks %s
+// RUN: %clang_cc1 -std=c++17 -Wno-unused-value -verify -ast-dump -fblocks %s | FileCheck %s
 
 namespace std { class type_info; };
 
@@ -121,7 +121,7 @@ namespace SpecialMembers {
   void g(P &p, Q &q, R &r) {
     // FIXME: The note attached to the second error here is just amazingly bad.
     auto pp = [p]{}; // expected-error {{deleted constructor}} expected-cxx14-error {{deleted copy constructor of '(lambda}}
-    // expected-cxx14-note@-1 {{copy constructor of '' is implicitly deleted because field '' has a deleted copy constructor}}
+    // expected-cxx14-note-re@-1 {{copy constructor of '(lambda at {{.*}})' is implicitly deleted because field '' has a deleted copy constructor}}
     auto qq = [q]{}; // expected-error {{deleted function}} expected-note {{because}}
 
     auto a = [r]{}; // expected-note 2{{here}}
@@ -260,10 +260,11 @@ namespace VariadicPackExpansion {
     f([&ts] { return (int)f(ts...); } ()...); // \
     // expected-error 2{{'ts' cannot be implicitly captured}} \
     // expected-note 2{{lambda expression begins here}} \
-    // expected-note 4 {{capture 'ts' by}}
+    // expected-note 4 {{capture 'ts' by}} \
+    // expected-note 2 {{while substituting into a lambda}}
   }
   template void nested2(int); // ok
-  template void nested2(int, int); // expected-note {{in instantiation of}}
+  template void nested2(int, int); // expected-note 2 {{in instantiation of}}
 }
 
 namespace PR13860 {
@@ -306,16 +307,16 @@ namespace lambdas_in_NSDMIs {
   template<class T>
   struct L {
       T t{};
-      T t2 = ([](int a) { return [](int b) { return b; };})(t)(t);    
+      T t2 = ([](int a) { return [](int b) { return b; };})(t)(t);
   };
-  L<int> l; 
-  
+  L<int> l;
+
   namespace non_template {
     struct L {
       int t = 0;
-      int t2 = ([](int a) { return [](int b) { return b; };})(t)(t);    
+      int t2 = ([](int a) { return [](int b) { return b; };})(t)(t);
     };
-    L l; 
+    L l;
   }
 }
 
@@ -383,7 +384,7 @@ namespace PR18128 {
 namespace PR18473 {
   template<typename T> void f() {
     T t(0);
-    (void) [=]{ int n = t; }; // expected-error {{deleted}}
+    (void) [=]{ int n = t; }; // expected-error {{deleted}} expected-note {{while substituting into a lambda}}
   }
 
   template void f<int>();
@@ -466,7 +467,7 @@ namespace error_in_transform_prototype {
   void f(T t) {
     // expected-error@+2 {{type 'int' cannot be used prior to '::' because it has no members}}
     // expected-error@+1 {{no member named 'ns' in 'error_in_transform_prototype::S'}}
-    auto x = [](typename T::ns::type &k) {};
+    auto x = [](typename T::ns::type &k) {}; // expected-note 2 {{while substituting into a lambda}}
   }
   class S {};
   void foo() {
@@ -534,9 +535,9 @@ template <int N>
 class S {};
 
 void foo() {
-  const int num = 18; 
+  const int num = 18;
   auto outer = []() {
-    auto inner = [](S<num> &X) {};  
+    auto inner = [](S<num> &X) {};
   };
 }
 }
@@ -584,9 +585,9 @@ void foo1() {
 }
 
 namespace PR25627_dont_odr_use_local_consts {
-  
+
   template<int> struct X {};
-  
+
   void foo() {
     const int N = 10;
     (void) [] { X<N> x; };
@@ -665,3 +666,52 @@ void Test() {
                     // expected-note@-2 2 {{default capture by}}
 }
 };
+
+namespace GH60518 {
+// Lambdas should not try to capture
+// function parameters that are used in enable_if
+struct StringLiteral {
+template <int N>
+StringLiteral(const char (&array)[N])
+    __attribute__((enable_if(__builtin_strlen(array) == 2,
+                              "invalid string literal")));
+};
+
+namespace cpp_attribute {
+struct StringLiteral {
+template <int N>
+StringLiteral(const char (&array)[N]) [[clang::annotate_type("test", array)]];
+};
+}
+
+void Func1() {
+  [[maybe_unused]] auto y = [&](decltype(StringLiteral("xx"))) {};
+  [[maybe_unused]] auto z = [&](decltype(cpp_attribute::StringLiteral("xx"))) {};
+}
+
+}
+
+#if __cplusplus > 201402L
+namespace GH60936 {
+struct S {
+  int i;
+  // `&i` in default initializer causes implicit `this` access.
+  int *p = &i;
+};
+
+static_assert([]() constexpr {
+  S r = S{2};
+  return r.p != nullptr;
+}());
+} // namespace GH60936
+#endif
+
+// Call operator attributes refering to a variable should
+// be properly handled after D124351
+constexpr int i = 2;
+void foo() {
+  (void)[=][[gnu::aligned(i)]] () {}; // expected-warning{{C++23 extension}}
+  // CHECK: AlignedAttr
+  // CHECK-NEXT: ConstantExpr
+  // CHECK-NEXT: value: Int 2
+}

@@ -18,7 +18,6 @@ from dex.dextIR import DextIR
 from dex.utils import get_root_directory, Timer
 from dex.utils.Environment import is_native_windows
 from dex.utils.Exceptions import ToolArgumentError
-from dex.utils.Warning import warn
 from dex.utils.Exceptions import DebuggerException
 
 from dex.debugger.DebuggerControllers.DefaultController import DefaultController
@@ -48,9 +47,10 @@ def _warn_meaningless_option(context, option):
     if hasattr(context.options, 'list_debuggers'):
         return
 
-    warn(context,
-         'option <y>"{}"</> is meaningless with this debugger'.format(option),
-         '--debugger={}'.format(context.options.debugger))
+    context.logger.warning(
+         f'option "{option}" is meaningless with this debugger',
+         enable_prefix=True,
+         flag=f'--debugger={context.options.debugger}')
 
 
 def add_debugger_tool_base_arguments(parser, defaults):
@@ -114,6 +114,28 @@ def add_debugger_tool_arguments(parser, context, defaults):
         action='store_true',
         default=False,
         help='pass the debugger paths relative to --source-root-dir')
+    parser.add_argument(
+        '--target-run-args',
+        type=str,
+        metavar='<flags>',
+        default='',
+        help='command line arguments for the test program, in addition to any '
+             'provided by DexCommandLine')
+    parser.add_argument(
+        '--timeout-total',
+        metavar='<seconds>',
+        type=float,
+        default=0.0,
+        help='if >0, debugger session will automatically exit after '
+             'running for <timeout-total> seconds')
+    parser.add_argument(
+        '--timeout-breakpoint',
+        metavar='<seconds>',
+        type=float,
+        default=0.0,
+        help='if >0, debugger session will automatically exit after '
+             'waiting <timeout-breakpoint> seconds without hitting a '
+             'breakpoint')
 
 def handle_debugger_tool_base_options(context, defaults):  # noqa
     options = context.options

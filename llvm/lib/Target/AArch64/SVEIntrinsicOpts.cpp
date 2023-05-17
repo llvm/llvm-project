@@ -34,6 +34,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 using namespace llvm;
 using namespace llvm::PatternMatch;
@@ -284,7 +285,7 @@ bool SVEIntrinsicOpts::optimizePredicateStore(Instruction *I) {
     return false;
 
   unsigned MinVScale = Attr.getVScaleRangeMin();
-  Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
+  std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
   // The transform needs to know the exact runtime length of scalable vectors
   if (!MaxVScale || MinVScale != MaxVScale)
     return false;
@@ -305,8 +306,7 @@ bool SVEIntrinsicOpts::optimizePredicateStore(Instruction *I) {
 
   // ..where the value stored comes from a vector extract..
   auto *IntrI = dyn_cast<IntrinsicInst>(Store->getOperand(0));
-  if (!IntrI ||
-      IntrI->getIntrinsicID() != Intrinsic::experimental_vector_extract)
+  if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::vector_extract)
     return false;
 
   // ..that is extracting from index 0..
@@ -348,7 +348,7 @@ bool SVEIntrinsicOpts::optimizePredicateLoad(Instruction *I) {
     return false;
 
   unsigned MinVScale = Attr.getVScaleRangeMin();
-  Optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
+  std::optional<unsigned> MaxVScale = Attr.getVScaleRangeMax();
   // The transform needs to know the exact runtime length of scalable vectors
   if (!MaxVScale || MinVScale != MaxVScale)
     return false;
@@ -365,8 +365,7 @@ bool SVEIntrinsicOpts::optimizePredicateLoad(Instruction *I) {
 
   // ..whose operand is a vector_insert..
   auto *IntrI = dyn_cast<IntrinsicInst>(BitCast->getOperand(0));
-  if (!IntrI ||
-      IntrI->getIntrinsicID() != Intrinsic::experimental_vector_insert)
+  if (!IntrI || IntrI->getIntrinsicID() != Intrinsic::vector_insert)
     return false;
 
   // ..that is inserting into index zero of an undef vector..
@@ -451,8 +450,8 @@ bool SVEIntrinsicOpts::runOnModule(Module &M) {
       continue;
 
     switch (F.getIntrinsicID()) {
-    case Intrinsic::experimental_vector_extract:
-    case Intrinsic::experimental_vector_insert:
+    case Intrinsic::vector_extract:
+    case Intrinsic::vector_insert:
     case Intrinsic::aarch64_sve_ptrue:
       for (User *U : F.users())
         Functions.insert(cast<Instruction>(U)->getFunction());

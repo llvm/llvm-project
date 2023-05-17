@@ -5,7 +5,6 @@
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/IPO/PassManagerBuilder.h"
 
 using namespace llvm;
 
@@ -43,17 +42,6 @@ char LegacyBye::ID = 0;
 static RegisterPass<LegacyBye> X("goodbye", "Good Bye World Pass",
                                  false /* Only looks at CFG */,
                                  false /* Analysis Pass */);
-
-/* Legacy PM Registration */
-static llvm::RegisterStandardPasses RegisterBye(
-    llvm::PassManagerBuilder::EP_VectorizerStart,
-    [](const llvm::PassManagerBuilder &Builder,
-       llvm::legacy::PassManagerBase &PM) { PM.add(new LegacyBye()); });
-
-static llvm::RegisterStandardPasses RegisterByeLTO(
-    llvm::PassManagerBuilder::EP_ModuleOptimizerEarly,
-    [](const llvm::PassManagerBuilder &Builder,
-       llvm::legacy::PassManagerBase &PM) { PM.add(new LegacyBye()); });
 
 /* New PM Registration */
 llvm::PassPluginLibraryInfo getByePluginInfo() {

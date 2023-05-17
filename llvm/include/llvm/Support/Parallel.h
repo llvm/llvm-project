@@ -29,10 +29,33 @@ namespace parallel {
 // initialized before the first use of parallel routines.
 extern ThreadPoolStrategy strategy;
 
-namespace detail {
-
 #if LLVM_ENABLE_THREADS
+#define GET_THREAD_INDEX_IMPL                                                  \
+  if (parallel::strategy.ThreadsRequested == 1)                                \
+    return 0;                                                                  \
+  assert((threadIndex != UINT_MAX) &&                                          \
+         "getThreadIndex() must be called from a thread created by "           \
+         "ThreadPoolExecutor");                                                \
+  return threadIndex;
 
+#ifdef _WIN32
+// Direct access to thread_local variables from a different DLL isn't
+// possible with Windows Native TLS.
+unsigned getThreadIndex();
+#else
+// Don't access this directly, use the getThreadIndex wrapper.
+extern thread_local unsigned threadIndex;
+
+inline unsigned getThreadIndex() { GET_THREAD_INDEX_IMPL; }
+#endif
+
+size_t getThreadCount();
+#else
+inline unsigned getThreadIndex() { return 0; }
+inline size_t getThreadCount() { return 1; }
+#endif
+
+namespace detail {
 class Latch {
   uint32_t Count;
   mutable std::mutex Mutex;
@@ -61,20 +84,31 @@ public:
     Cond.wait(lock, [&] { return Count == 0; });
   }
 };
+} // namespace detail
 
 class TaskGroup {
-  Latch L;
+  detail::Latch L;
   bool Parallel;
 
 public:
   TaskGroup();
   ~TaskGroup();
 
-  void spawn(std::function<void()> f);
+  // Spawn a task, but does not wait for it to finish.
+  // Tasks marked with \p Sequential will be executed
+  // exactly in the order which they were spawned.
+  // Note: Sequential tasks may be executed on different
+  // threads, but strictly in sequential order.
+  void spawn(std::function<void()> f, bool Sequential = false);
 
   void sync() const { L.sync(); }
+
+  bool isParallel() const { return Parallel; }
 };
 
+namespace detail {
+
+#if LLVM_ENABLE_THREADS
 const ptrdiff_t MinParallelSize = 1024;
 
 /// Inclusive median.
@@ -169,7 +203,7 @@ ResultTy parallel_transform_reduce(IterTy Begin, IterTy End, ResultTy Init,
   // reductions are cheaper than the transformation.
   ResultTy FinalResult = std::move(Results.front());
   for (ResultTy &PartialResult :
-       makeMutableArrayRef(Results.data() + 1, Results.size() - 1))
+       MutableArrayRef(Results.data() + 1, Results.size() - 1))
     FinalResult = Reduce(FinalResult, std::move(PartialResult));
   return std::move(FinalResult);
 }
@@ -193,11 +227,11 @@ void parallelSort(RandomAccessIterator Start, RandomAccessIterator End,
   llvm::sort(Start, End, Comp);
 }
 
-void parallelForEachN(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
+void parallelFor(size_t Begin, size_t End, function_ref<void(size_t)> Fn);
 
 template <class IterTy, class FuncTy>
 void parallelForEach(IterTy Begin, IterTy End, FuncTy Fn) {
-  parallelForEachN(0, End - Begin, [&](size_t I) { Fn(Begin[I]); });
+  parallelFor(0, End - Begin, [&](size_t I) { Fn(Begin[I]); });
 }
 
 template <class IterTy, class ResultTy, class ReduceFuncTy,

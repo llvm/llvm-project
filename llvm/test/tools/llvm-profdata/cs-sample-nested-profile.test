@@ -1,14 +1,14 @@
-RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=0
+RUN: llvm-profdata merge --sample --text -output=%t.proftext %S/Inputs/cs-sample-preinline.proftext --convert-sample-profile-layout=nest  -generate-merged-base-profiles=0
 RUN: FileCheck %s < %t.proftext --match-full-lines --strict-whitespace
-RUN: llvm-profdata merge --sample --text -output=%t.probe.proftext %S/Inputs/cs-sample-preinline-probe.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=0
+RUN: llvm-profdata merge --sample --text -output=%t.probe.proftext %S/Inputs/cs-sample-preinline-probe.proftext --convert-sample-profile-layout=nest  -generate-merged-base-profiles=0
 RUN: FileCheck %s < %t.probe.proftext --match-full-lines --strict-whitespace -check-prefix=PROBE
-RUN: llvm-profdata merge --sample --extbinary -output=%t.profbin %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=0
+RUN: llvm-profdata merge --sample --extbinary -output=%t.profbin %S/Inputs/cs-sample-preinline.proftext --convert-sample-profile-layout=nest  -generate-merged-base-profiles=0
 RUN: llvm-profdata merge --sample --text -output=%t2.proftext %t.profbin
 RUN: FileCheck %s < %t2.proftext --match-full-lines --strict-whitespace
 RUN: llvm-profdata show --sample -show-sec-info-only %t.profbin | FileCheck %s -check-prefix=PREINLINE
-RUN: llvm-profdata merge --sample --text -output=%t3.proftext %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=1
+RUN: llvm-profdata merge --sample --text -output=%t3.proftext %S/Inputs/cs-sample-preinline.proftext --convert-sample-profile-layout=nest  -generate-merged-base-profiles=1
 RUN: FileCheck %s < %t3.proftext --match-full-lines --strict-whitespace -check-prefix=RECOUNT
-RUN: llvm-profdata merge --sample --extbinary -output=%t2.profbin %S/Inputs/cs-sample-preinline.proftext --gen-cs-nested-profile=1 -generate-merged-base-profiles=1
+RUN: llvm-profdata merge --sample --extbinary -output=%t2.profbin %S/Inputs/cs-sample-preinline.proftext --convert-sample-profile-layout=nest  -generate-merged-base-profiles=1
 RUN: llvm-profdata show -sample -detailed-summary %S/Inputs/cs-sample-preinline.proftext | FileCheck %s -check-prefix=SUMMARY
 RUN: llvm-profdata show -sample -detailed-summary %t2.profbin | FileCheck %s -check-prefix=SUMMARY-NEST
 RUN: llvm-profdata show -sample -detailed-summary %t3.proftext | FileCheck %s -check-prefix=SUMMARY-NEST

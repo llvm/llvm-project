@@ -4,11 +4,11 @@
 # test for 3 consecutive _sdwa's
 # GFX9-LABEL: name:            test1_add_co_sdwa
 # GFX9: = nsw V_ADD_CO_U32_sdwa
-# GFX9-NEXT: = nuw V_ADDC_U32_e32
+# GFX9-NEXT: = nuw V_ADDC_U32_e64
 # GFX9: V_ADD_CO_U32_sdwa
-# GFX9-NEXT: V_ADDC_U32_e32
+# GFX9-NEXT: V_ADDC_U32_e64
 # GFX9: V_ADD_CO_U32_sdwa
-# GFX9-NEXT: V_ADDC_U32_e32
+# GFX9-NEXT: V_ADDC_U32_e64
 ---
 name:            test1_add_co_sdwa
 tracksRegLiveness: true
@@ -48,7 +48,7 @@ body:             |
 # test for VCC interference on sdwa, should generate 1 xform only
 # GFX9-LABEL: name:            test2_add_co_sdwa
 # GFX9: V_ADD_CO_U32_sdwa
-# GFX9: V_ADDC_U32_e32
+# GFX9: V_ADDC_U32_e64
 # GFX9-NOT: V_ADD_CO_U32_sdwa
 # GFX9-NOT: V_ADDC_U32_e32
 ---
@@ -151,7 +151,7 @@ body:             |
 # test for simple example, should generate sdwa
 # GFX9-LABEL: name:            test5_add_co_sdwa
 # GFX9: V_ADD_CO_U32_sdwa
-# GFX9: V_ADDC_U32_e32
+# GFX9: V_ADDC_U32_e64
 ---
 name:            test5_add_co_sdwa
 tracksRegLiveness: true
@@ -388,4 +388,3 @@ body:             |
     %64:vgpr_32, %66:sreg_64_xexec = V_ADDC_U32_e64 %30.sub1, %0, %65, 0, implicit $exec
     %62:vreg_64 = REG_SEQUENCE %63, %subreg.sub0, %64, %subreg.sub1
     GLOBAL_STORE_DWORDX2_SADDR %31.sub0, %62, %1, 0, 0, implicit $exec, implicit $exec :: (store (s64))
-

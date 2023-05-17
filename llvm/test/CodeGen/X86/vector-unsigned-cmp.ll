@@ -536,7 +536,7 @@ define <8 x i16> @PR47448_ugt(i16 signext %0) {
 }
 
 ; Recognise the knownbits from X86ISD::AND in previous block.
-define void @PR54171(<4 x i64>* %mask0, <4 x i64>* %mask1, i64 %i) {
+define void @PR54171(ptr %mask0, ptr %mask1, i64 %i) {
 ; SSE-LABEL: PR54171:
 ; SSE:       # %bb.0: # %entry
 ; SSE-NEXT:    andq $7, %rdx
@@ -601,12 +601,10 @@ if.then:
   %vecinit7.i.i = shufflevector <8 x i32> %vecinit.i.i, <8 x i32> poison, <8 x i32> zeroinitializer
   %cmp.i = icmp ugt <8 x i32> %vecinit7.i.i, <i32 0, i32 0, i32 1, i32 1, i32 2, i32 2, i32 3, i32 3>
   %sext.i = sext <8 x i1> %cmp.i to <8 x i32>
-  %0 = bitcast <4 x i64>* %mask0 to <8 x i32>*
-  store <8 x i32> %sext.i, <8 x i32>* %0, align 32
+  store <8 x i32> %sext.i, ptr %mask0, align 32
   %cmp.i18 = icmp ugt <8 x i32> %vecinit7.i.i, <i32 4, i32 4, i32 5, i32 5, i32 6, i32 6, i32 7, i32 7>
   %sext.i19 = sext <8 x i1> %cmp.i18 to <8 x i32>
-  %1 = bitcast <4 x i64>* %mask1 to <8 x i32>*
-  store <8 x i32> %sext.i19, <8 x i32>* %1, align 32
+  store <8 x i32> %sext.i19, ptr %mask1, align 32
   br label %if.end
 
 if.end:

@@ -63,26 +63,8 @@ unsigned X86Disassembler::getRegOperandSize(const Record *RegRec) {
 }
 
 unsigned X86Disassembler::getMemOperandSize(const Record *MemRec) {
-  if (MemRec->isSubClassOf("Operand")) {
-    StringRef Name =
-        MemRec->getValueAsDef("ParserMatchClass")->getValueAsString("Name");
-    if (Name == "Mem8")
-      return 8;
-    if (Name == "Mem16")
-      return 16;
-    if (Name == "Mem32")
-      return 32;
-    if (Name == "Mem64")
-      return 64;
-    if (Name == "Mem80")
-      return 80;
-    if (Name == "Mem128")
-      return 128;
-    if (Name == "Mem256")
-      return 256;
-    if (Name == "Mem512")
-      return 512;
-  }
+  if (MemRec->isSubClassOf("X86MemOperand"))
+    return MemRec->getValueAsInt("Size");
 
   llvm_unreachable("Memory operand's size not known!");
 }
@@ -136,8 +118,7 @@ RecognizableInstrBase::RecognizableInstrBase(const CodeGenInstruction &insn) {
   AdSize = byteFromRec(Rec, "AdSizeBits");
   HasREX_W = Rec->getValueAsBit("hasREX_W");
   HasVEX_4V = Rec->getValueAsBit("hasVEX_4V");
-  HasVEX_W = Rec->getValueAsBit("HasVEX_W");
-  IgnoresVEX_W = Rec->getValueAsBit("IgnoresVEX_W");
+  IgnoresW = Rec->getValueAsBit("IgnoresW");
   IgnoresVEX_L = Rec->getValueAsBit("ignoresVEX_L");
   HasEVEX_L2 = Rec->getValueAsBit("hasEVEX_L2");
   HasEVEX_K = Rec->getValueAsBit("hasEVEX_K");
@@ -207,7 +188,7 @@ InstructionContext RecognizableInstr::insnContext() const {
       llvm_unreachable("Don't support VEX.L if EVEX_L2 is enabled");
     }
     // VEX_L & VEX_W
-    if (!EncodeRC && HasVEX_L && HasVEX_W) {
+    if (!EncodeRC && HasVEX_L && HasREX_W) {
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L_W_OPSIZE);
       else if (OpPrefix == X86Local::XS)
@@ -234,7 +215,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         errs() << "Instruction does not use a prefix: " << Name << "\n";
         llvm_unreachable("Invalid prefix");
       }
-    } else if (!EncodeRC && HasEVEX_L2 && HasVEX_W) {
+    } else if (!EncodeRC && HasEVEX_L2 && HasREX_W) {
       // EVEX_L2 & VEX_W
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_L2_W_OPSIZE);
@@ -263,7 +244,7 @@ InstructionContext RecognizableInstr::insnContext() const {
         llvm_unreachable("Invalid prefix");
       }
     }
-    else if (HasVEX_W) {
+    else if (HasREX_W) {
       // VEX_W
       if (OpPrefix == X86Local::PD)
         insnContext = EVEX_KB(IC_EVEX_W_OPSIZE);
@@ -293,7 +274,7 @@ InstructionContext RecognizableInstr::insnContext() const {
     }
     /// eof EVEX
   } else if (Encoding == X86Local::VEX || Encoding == X86Local::XOP) {
-    if (HasVEX_L && HasVEX_W) {
+    if (HasVEX_L && HasREX_W) {
       if (OpPrefix == X86Local::PD)
         insnContext = IC_VEX_L_W_OPSIZE;
       else if (OpPrefix == X86Local::XS)
@@ -308,7 +289,7 @@ InstructionContext RecognizableInstr::insnContext() const {
       }
     } else if (OpPrefix == X86Local::PD && HasVEX_L)
       insnContext = IC_VEX_L_OPSIZE;
-    else if (OpPrefix == X86Local::PD && HasVEX_W)
+    else if (OpPrefix == X86Local::PD && HasREX_W)
       insnContext = IC_VEX_W_OPSIZE;
     else if (OpPrefix == X86Local::PD)
       insnContext = IC_VEX_OPSIZE;
@@ -316,11 +297,11 @@ InstructionContext RecognizableInstr::insnContext() const {
       insnContext = IC_VEX_L_XS;
     else if (HasVEX_L && OpPrefix == X86Local::XD)
       insnContext = IC_VEX_L_XD;
-    else if (HasVEX_W && OpPrefix == X86Local::XS)
+    else if (HasREX_W && OpPrefix == X86Local::XS)
       insnContext = IC_VEX_W_XS;
-    else if (HasVEX_W && OpPrefix == X86Local::XD)
+    else if (HasREX_W && OpPrefix == X86Local::XD)
       insnContext = IC_VEX_W_XD;
-    else if (HasVEX_W && OpPrefix == X86Local::PS)
+    else if (HasREX_W && OpPrefix == X86Local::PS)
       insnContext = IC_VEX_W;
     else if (HasVEX_L && OpPrefix == X86Local::PS)
       insnContext = IC_VEX_L;
@@ -550,7 +531,7 @@ void RecognizableInstr::emitInstructionSpecifier() {
     // Operand 3 (optional) is an immediate.
     assert(numPhysicalOperands >= 2 + additionalOperands &&
            numPhysicalOperands <= 3 + additionalOperands &&
-           "Unexpected number of operands for MRMDestRegFrm");
+           "Unexpected number of operands for MRMDestReg");
 
     HANDLE_OPERAND(rmRegister)
     if (HasEVEX_K)
@@ -563,6 +544,18 @@ void RecognizableInstr::emitInstructionSpecifier() {
 
     HANDLE_OPERAND(roRegister)
     HANDLE_OPTIONAL(immediate)
+    break;
+  case X86Local::MRMDestMem4VOp3CC:
+    // Operand 1 is a register operand in the Reg/Opcode field.
+    // Operand 2 is a register operand in the R/M field.
+    // Operand 3 is VEX.vvvv
+    // Operand 4 is condition code.
+    assert(numPhysicalOperands == 4 &&
+           "Unexpected number of operands for MRMDestMem4VOp3CC");
+    HANDLE_OPERAND(roRegister)
+    HANDLE_OPERAND(memory)
+    HANDLE_OPERAND(vvvvRegister)
+    HANDLE_OPERAND(opcodeModifier)
     break;
   case X86Local::MRMDestMem:
   case X86Local::MRMDestMemFSIB:
@@ -785,7 +778,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 #define MAP(from, to)                     \
   case X86Local::MRM_##from:
 
-  llvm::Optional<OpcodeType> opcodeType;
+  std::optional<OpcodeType> opcodeType;
   switch (OpMap) {
   default: llvm_unreachable("Invalid map!");
   case X86Local::OB:        opcodeType = ONEBYTE;       break;
@@ -826,6 +819,7 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
     filter = std::make_unique<ModFilter>(true);
     break;
   case X86Local::MRMDestMem:
+  case X86Local::MRMDestMem4VOp3CC:
   case X86Local::MRMDestMemFSIB:
   case X86Local::MRMSrcMem:
   case X86Local::MRMSrcMemFSIB:
@@ -876,7 +870,8 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
 
   if (Form == X86Local::AddRegFrm || Form == X86Local::MRMSrcRegCC ||
       Form == X86Local::MRMSrcMemCC || Form == X86Local::MRMXrCC ||
-      Form == X86Local::MRMXmCC || Form == X86Local::AddCCFrm) {
+      Form == X86Local::MRMXmCC || Form == X86Local::AddCCFrm ||
+      Form == X86Local::MRMDestMem4VOp3CC) {
     uint8_t Count = Form == X86Local::AddRegFrm ? 8 : 16;
     assert(((opcodeToSet % Count) == 0) && "ADDREG_FRM opcode not aligned");
 
@@ -887,11 +882,11 @@ void RecognizableInstr::emitDecodePath(DisassemblerTables &tables) const {
       tables.setTableFields(*opcodeType, insnContext(), currentOpcode, *filter,
                             UID, Is32Bit, OpPrefix == 0,
                             IgnoresVEX_L || EncodeRC,
-                            IgnoresVEX_W, AddressSize);
+                            IgnoresW, AddressSize);
   } else {
     tables.setTableFields(*opcodeType, insnContext(), opcodeToSet, *filter, UID,
                           Is32Bit, OpPrefix == 0, IgnoresVEX_L || EncodeRC,
-                          IgnoresVEX_W, AddressSize);
+                          IgnoresW, AddressSize);
   }
 
 #undef MAP
@@ -959,6 +954,9 @@ OperandType RecognizableInstr::typeFromString(const std::string &s,
   TYPE("i128mem",             TYPE_M)
   TYPE("i256mem",             TYPE_M)
   TYPE("i512mem",             TYPE_M)
+  TYPE("i512mem_GR16",        TYPE_M)
+  TYPE("i512mem_GR32",        TYPE_M)
+  TYPE("i512mem_GR64",        TYPE_M)
   TYPE("i64i32imm_brtarget",  TYPE_REL)
   TYPE("i16imm_brtarget",     TYPE_REL)
   TYPE("i32imm_brtarget",     TYPE_REL)
@@ -1225,6 +1223,9 @@ RecognizableInstr::memoryEncodingFromString(const std::string &s,
   ENCODING("i128mem",         ENCODING_RM)
   ENCODING("i256mem",         ENCODING_RM)
   ENCODING("i512mem",         ENCODING_RM)
+  ENCODING("i512mem_GR16",    ENCODING_RM)
+  ENCODING("i512mem_GR32",    ENCODING_RM)
+  ENCODING("i512mem_GR64",    ENCODING_RM)
   ENCODING("f80mem",          ENCODING_RM)
   ENCODING("lea64_32mem",     ENCODING_RM)
   ENCODING("lea64mem",        ENCODING_RM)

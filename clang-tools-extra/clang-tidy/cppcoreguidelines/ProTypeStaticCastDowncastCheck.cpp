@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 void ProTypeStaticCastDowncastCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -46,6 +44,4 @@ void ProTypeStaticCastDowncastCheck::check(
          "do not use static_cast to downcast from a base to a derived class");
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

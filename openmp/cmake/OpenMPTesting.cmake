@@ -3,9 +3,9 @@ set(ENABLE_CHECK_TARGETS TRUE)
 
 # Function to find required dependencies for testing.
 function(find_standalone_test_dependencies)
-  include(FindPythonInterp)
+  find_package (Python3 COMPONENTS Interpreter)
 
-  if (NOT PYTHONINTERP_FOUND)
+  if (NOT Python3_Interpreter_FOUND)
     message(STATUS "Could not find Python.")
     message(WARNING "The check targets will not be available!")
     set(ENABLE_CHECK_TARGETS FALSE PARENT_SCOPE)
@@ -77,6 +77,7 @@ macro(extract_test_compiler_information lang file)
   list(GET information 3 openmp_flags)
   list(GET information 4 has_tsan_flags)
   list(GET information 5 has_omit_frame_pointer_flags)
+  list(GET information 6 has_omp_h)
 
   set(OPENMP_TEST_${lang}_COMPILER_PATH ${path})
   set(OPENMP_TEST_${lang}_COMPILER_ID ${id})
@@ -84,6 +85,7 @@ macro(extract_test_compiler_information lang file)
   set(OPENMP_TEST_${lang}_COMPILER_OPENMP_FLAGS ${openmp_flags})
   set(OPENMP_TEST_${lang}_COMPILER_HAS_TSAN_FLAGS ${has_tsan_flags})
   set(OPENMP_TEST_${lang}_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS ${has_omit_frame_pointer_flags})
+  set(OPENMP_TEST_${lang}_COMPILER_HAS_OMP_H ${has_omp_h})
 endmacro()
 
 # Function to set variables with information about the test compiler.
@@ -101,6 +103,7 @@ function(set_test_compiler_information dir)
     set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "${OPENMP_TEST_C_COMPILER_OPENMP_FLAGS}" PARENT_SCOPE)
     set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_TSAN_FLAGS}" PARENT_SCOPE)
     set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS "${OPENMP_TEST_C_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS}" PARENT_SCOPE)
+    set(OPENMP_TEST_COMPILER_HAS_OMP_H "${OPENMP_TEST_C_COMPILER_HAS_OMP_H}" PARENT_SCOPE)
 
     # Determine major version.
     string(REGEX MATCH "[0-9]+" major "${OPENMP_TEST_C_COMPILER_VERSION}")
@@ -150,12 +153,26 @@ else()
   else()
     set(OPENMP_TEST_COMPILER_HAS_TSAN_FLAGS 0)
   endif()
-  # TODO: Implement blockaddress in GlobalISel and remove this flag!
-  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS} -fno-experimental-isel")
+  set(OPENMP_TEST_COMPILER_HAS_OMP_H 1)
+  set(OPENMP_TEST_COMPILER_OPENMP_FLAGS "-fopenmp ${OPENMP_TEST_COMPILER_THREAD_FLAGS}")
   set(OPENMP_TEST_COMPILER_HAS_OMIT_FRAME_POINTER_FLAGS 1)
 endif()
 
 # Function to set compiler features for use in lit.
+function(update_test_compiler_features)
+  set(FEATURES "[")
+  set(first TRUE)
+  foreach(feat IN LISTS OPENMP_TEST_COMPILER_FEATURE_LIST)
+    if (NOT first)
+      string(APPEND FEATURES ", ")
+    endif()
+    set(first FALSE)
+    string(APPEND FEATURES "'${feat}'")
+  endforeach()
+  string(APPEND FEATURES "]")
+  set(OPENMP_TEST_COMPILER_FEATURES ${FEATURES} PARENT_SCOPE)
+endfunction()
+
 function(set_test_compiler_features)
   if ("${OPENMP_TEST_COMPILER_ID}" STREQUAL "GNU")
     set(comp "gcc")
@@ -165,9 +182,10 @@ function(set_test_compiler_features)
     # Just use the lowercase of the compiler ID as fallback.
     string(TOLOWER "${OPENMP_TEST_COMPILER_ID}" comp)
   endif()
-  set(OPENMP_TEST_COMPILER_FEATURES "['${comp}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR}', '${comp}-${OPENMP_TEST_COMPILER_VERSION}']" PARENT_SCOPE)
+  set(OPENMP_TEST_COMPILER_FEATURE_LIST ${comp} ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR} ${comp}-${OPENMP_TEST_COMPILER_VERSION_MAJOR_MINOR} ${comp}-${OPENMP_TEST_COMPILER_VERSION} PARENT_SCOPE)
 endfunction()
 set_test_compiler_features()
+update_test_compiler_features()
 
 # Function to add a testsuite for an OpenMP runtime library.
 function(add_openmp_testsuite target comment)
@@ -189,7 +207,7 @@ function(add_openmp_testsuite target comment)
   if (${OPENMP_STANDALONE_BUILD})
     set(LIT_ARGS ${OPENMP_LIT_ARGS} ${ARG_ARGS})
     add_custom_target(${target}
-      COMMAND ${PYTHON_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
+      COMMAND ${Python3_EXECUTABLE} ${OPENMP_LLVM_LIT_EXECUTABLE} ${LIT_ARGS} ${ARG_UNPARSED_ARGUMENTS}
       COMMENT ${comment}
       DEPENDS ${ARG_DEPENDS}
       USES_TERMINAL

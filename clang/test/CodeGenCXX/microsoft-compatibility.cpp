@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple i686-pc-win32 -std=c++11 -fms-compatibility -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 %s -triple i686-pc-win32 -std=c++11 -fms-compatibility -emit-llvm -o - | FileCheck %s
 
 template <typename>
 struct S {
@@ -24,7 +24,7 @@ extern "C" void f() {
 // CHECK: call void @"??$destroy@X@@YAXPAX@Z"
 // CHECK: ret void
 
-// CHECK-LABEL: define linkonce_odr dso_local void @"??$destroy@X@@YAXPAX@Z"(i8* noundef %p)
+// CHECK-LABEL: define linkonce_odr dso_local void @"??$destroy@X@@YAXPAX@Z"(ptr noundef %p)
 //    The pseudo-dtor expr should not generate calls to anything.
 // CHECK-NOT: call
 // CHECK-NOT: invoke

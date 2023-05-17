@@ -20,11 +20,11 @@ define dso_local void @f1(i32 %a1, i32 %a2, i32 %a3) {
 ;CHECK: str     w1, [x9, #400]
 ;CHECK: str     w0, [x9]
 ;CHECK: str     w2, [x8, :lo12:z]
-  %x3 = getelementptr inbounds [100 x i32], [100 x i32]* @x, i32 0, i64 3
-  %y3 = getelementptr inbounds [100 x i32], [100 x i32]* @y, i32 0, i64 3
-  store i32 %a1, i32* %x3, align 4
-  store i32 %a2, i32* %y3, align 4
-  store i32 %a3, i32* @z, align 4
+  %x3 = getelementptr inbounds [100 x i32], ptr @x, i32 0, i64 3
+  %y3 = getelementptr inbounds [100 x i32], ptr @y, i32 0, i64 3
+  store i32 %a1, ptr %x3, align 4
+  store i32 %a2, ptr %y3, align 4
+  store i32 %a3, ptr @z, align 4
   ret void
 }
 

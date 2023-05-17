@@ -135,7 +135,8 @@ protected:
   }
 
 private:
-  template <unsigned N> bool reportFatalErrors(const char (&message)[N]);
+  template <unsigned N>
+  bool reportFatalErrors(const char (&message)[N]);
 };
 
 } // namespace Fortran::frontend

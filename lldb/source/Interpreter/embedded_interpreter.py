@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 if sys.version_info[0] < 3:
     import __builtin__ as builtins
 else:
@@ -23,36 +23,6 @@ else:
     else:
         readline.parse_and_bind('tab: complete')
 
-g_builtin_override_called = False
-
-
-class LLDBQuitter(object):
-
-    def __init__(self, name):
-        self.name = name
-
-    def __repr__(self):
-        self()
-
-    def __call__(self, code=None):
-        global g_builtin_override_called
-        g_builtin_override_called = True
-        raise SystemExit(-1)
-
-
-def setquit():
-    '''Redefine builtin functions 'quit()' and 'exit()' to print a message and raise an EOFError exception.'''
-    # This function will be called prior to each interactive
-    # interpreter loop or each single line, so we set the global
-    # g_builtin_override_called to False so we know if a SystemExit
-    # is thrown, we can catch it and tell the difference between
-    # a call to "quit()" or "exit()" and something like
-    # "sys.exit(123)"
-    global g_builtin_override_called
-    g_builtin_override_called = False
-    builtins.quit = LLDBQuitter('quit')
-    builtins.exit = LLDBQuitter('exit')
-
 # When running one line, we might place the string to run in this string
 # in case it would be hard to correctly escape a string's contents
 
@@ -70,6 +40,22 @@ def get_terminal_size(fd):
     return hw
 
 
+class LLDBExit(SystemExit):
+    pass
+
+
+def strip_and_check_exit(line):
+    line = line.rstrip()
+    if line in ('exit', 'quit'):
+        raise LLDBExit
+    return line
+
+
+def readfunc(prompt):
+    line = input(prompt)
+    return strip_and_check_exit(line)
+
+
 def readfunc_stdio(prompt):
     sys.stdout.write(prompt)
     sys.stdout.flush()
@@ -78,12 +64,11 @@ def readfunc_stdio(prompt):
     # ends with an incomplete line. An empty line indicates EOF.
     if not line:
         raise EOFError
-    return line.rstrip()
+    return strip_and_check_exit(line)
 
 
 def run_python_interpreter(local_dict):
     # Pass in the dictionary, for continuity from one session to the next.
-    setquit()
     try:
         fd = sys.stdin.fileno()
         interacted = False
@@ -116,24 +101,30 @@ def run_python_interpreter(local_dict):
             # We have a real interactive terminal
             code.interact(
                 banner="Python Interactive Interpreter. To exit, type 'quit()', 'exit()' or Ctrl-D.",
+                readfunc=readfunc,
                 local=local_dict)
+    except LLDBExit:
+        pass
     except SystemExit as e:
-        global g_builtin_override_called
-        if not g_builtin_override_called:
-            print('Script exited with %s' % (e))
+        if e.code:
+            print('Script exited with code %s' % e.code)
 
 
 def run_one_line(local_dict, input_string):
     global g_run_one_line_str
-    setquit()
     try:
+        input_string = strip_and_check_exit(input_string)
         repl = code.InteractiveConsole(local_dict)
         if input_string:
+            # A newline is appended to support one-line statements containing
+            # control flow. For example "if True: print(1)" silently does
+            # nothing, but works with a newline: "if True: print(1)\n".
+            input_string += "\n"
             repl.runsource(input_string)
         elif g_run_one_line_str:
             repl.runsource(g_run_one_line_str)
-
+    except LLDBExit:
+        pass
     except SystemExit as e:
-        global g_builtin_override_called
-        if not g_builtin_override_called:
-            print('Script exited with %s' % (e))
+        if e.code:
+            print('Script exited with code %s' % e.code)

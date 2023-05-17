@@ -2,9 +2,6 @@
 Test that SBFrame::GetVariables() calls work correctly.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -20,8 +17,6 @@ def get_names_from_value_list(value_list):
 
 
 class TestGetVariables(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().

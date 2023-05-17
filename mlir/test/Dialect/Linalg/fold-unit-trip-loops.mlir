@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -split-input-file -pass-pipeline="func.func(linalg-fold-unit-extent-dims{fold-one-trip-loops-only})" | FileCheck %s
+// RUN: mlir-opt %s -split-input-file -pass-pipeline="builtin.module(func.func(linalg-fold-unit-extent-dims{fold-one-trip-loops-only}))" | FileCheck %s
 
 #accesses = [
   affine_map<(i, j, k, l, m) -> (i, k, m)>,
@@ -97,7 +97,7 @@ func.func @leading_dim_1_canonicalization(%arg0: tensor<1x5xf32>, %shape: tensor
   %0 = linalg.generic #trait
        ins(%arg0 : tensor<1x5xf32>)
       outs(%shape : tensor<5xf32>) {
-    ^bb0(%arg2: f32, %arg3: f32):     
+    ^bb0(%arg2: f32, %arg3: f32):
       linalg.yield %arg2 : f32
   } -> tensor<5xf32>
   return %0 : tensor<5xf32>

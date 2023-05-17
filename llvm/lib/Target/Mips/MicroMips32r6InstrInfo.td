@@ -822,6 +822,7 @@ class GINV_MMR6_DESC_BASE<string opstr,
 
 class GINVI_MMR6_DESC : GINV_MMR6_DESC_BASE<"ginvi", GPR32Opnd,
                                             II_GINVI> {
+  bits<2> type = 0b00;
   dag InOperandList = (ins GPR32Opnd:$rs);
   string AsmString = "ginvi\t$rs";
 }

@@ -23,7 +23,7 @@ define void @t1(x86_mmx %v1) nounwind  {
 ; X86-64-NEXT:    movq _u1@GOTPCREL(%rip), %rax
 ; X86-64-NEXT:    movq %mm0, (%rax)
 ; X86-64-NEXT:    retq
-	store x86_mmx %v1, x86_mmx* @u1, align 8
+	store x86_mmx %v1, ptr @u1, align 8
 	ret void
 }
 
@@ -45,6 +45,6 @@ define void @t2(<1 x i64> %v1) nounwind  {
 ; X86-64-NEXT:    movq %rdi, (%rax)
 ; X86-64-NEXT:    retq
         %tmp = bitcast <1 x i64> %v1 to x86_mmx
-	store x86_mmx %tmp, x86_mmx* @u2, align 8
+	store x86_mmx %tmp, ptr @u2, align 8
 	ret void
 }

@@ -15,7 +15,7 @@
 ///
 ///     EXG   [ ]     FMOVE [ ]     FSMOVE [ ]     FDMOVE [ ]     FMOVEM [ ]
 ///     LEA   [~]     PEA   [ ]     MOVE   [~]     MOVE16 [ ]     MOVEA  [ ]
-///     MOVEM [ ]     MOVEP [ ]     MOVEQ  [ ]     LINK   [ ]     UNLK   [ ]
+///     MOVEM [ ]     MOVEP [ ]     MOVEQ  [ ]     LINK   [~]     UNLK   [~]
 ///
 ///  Pseudo:
 ///
@@ -385,13 +385,13 @@ def MOV8cd  : MxMoveToCCRPseudo<MxOp8AddrMode_d.Op>;
 let Uses = [CCR] in {
 class MxMoveFromCCR_R
     : MxInst<(outs MxDRD16:$dst), (ins CCRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ IsM68010 ]> {
+      Requires<[ AtLeastM68010 ]> {
   let Inst = (descend 0b0100001011, MxEncAddrMode_d<"dst">.EA);
 }
 
 class MxMoveFromCCR_M<MxOperand MEMOp, MxEncMemOp DST_ENC>
     : MxInst<(outs), (ins MEMOp:$dst, CCRC:$src), "move.w\t$src, $dst", []>,
-      Requires<[ IsM68010 ]> {
+      Requires<[ AtLeastM68010 ]> {
   let Inst = (ascend
     (descend 0b0100001011, DST_ENC.EA),
     DST_ENC.Supplement
@@ -436,6 +436,35 @@ class MxLEA<MxOpBundle SRC, MxEncMemOp SRC_ENC>
 foreach AM = ["p", "f", "b", "q", "k"] in
 def LEA32 # AM : MxLEA<!cast<MxOpBundle>("MxOp32AddrMode_"#AM),
                        !cast<MxEncMemOp>("MxMoveSrcOpEnc_"#AM)>;
+
+//===----------------------------------------------------------------------===//
+// LINK/UNLK
+//===----------------------------------------------------------------------===//
+
+let Uses = [SP], Defs = [SP] in {
+let mayStore = 1 in {
+
+def LINK16 : MxInst<(outs), (ins MxARD16:$src, Mxi16imm:$disp), "link.w\t$src, $disp", []> {
+  let Inst = (ascend
+    (descend 0b0100111001010, (operand "$src", 3)),
+    (operand "$disp", 16)
+  );
+}
+
+def LINK32 : MxInst<(outs), (ins MxARD16:$src, Mxi32imm:$disp), "link.l\t$src, $disp", []> {
+  let Inst = (ascend
+    (descend 0b0100100000001, (operand "$src", 3)),
+    (slice "$disp", 31, 16),
+    (slice "$disp", 15, 0)
+  );
+}
+
+def UNLK : MxInst<(outs), (ins MxARD32:$src), "unlk\t$src", []> {
+  let Inst = (descend 0b0100111001011, (operand "$src", 3));
+}
+
+} // let mayStore = 1
+} // let Uses = [SP], Defs = [SP]
 
 //===----------------------------------------------------------------------===//
 // Pseudos
@@ -496,6 +525,10 @@ foreach EXT = ["S", "Z"] in {
       def MOV#EXT#Xd32f8   : MxPseudoMove_RM<MxType32d,  MxType8.FOp>;
       def MOV#EXT#Xd32f16  : MxPseudoMove_RM<MxType32d, MxType16.FOp>;
 
+      def MOV#EXT#Xd16q8   : MxPseudoMove_RM<MxType16d,  MxType8.QOp>;
+      def MOV#EXT#Xd32q8   : MxPseudoMove_RM<MxType32d,  MxType8.QOp>;
+      def MOV#EXT#Xd32q16  : MxPseudoMove_RM<MxType32d,  MxType16.QOp>;
+
     }
   }
 }
@@ -543,18 +576,21 @@ def: Pat<(MxZExtLoadi16i8 MxCP_ARID:$src),
           (EXTRACT_SUBREG (MOVZXd32p8 MxARID8:$src), MxSubRegIndex16Lo)>;
 def: Pat<(MxZExtLoadi16i8 MxCP_ARII:$src),
           (EXTRACT_SUBREG (MOVZXd32f8 MxARII8:$src), MxSubRegIndex16Lo)>;
+def: Pat<(MxZExtLoadi16i8 MxCP_PCD :$src), (MOVZXd16q8 MxPCD8 :$src)>;
 
 // i32 <- zext i8
 def: Pat<(i32 (zext i8:$src)), (MOVZXd32d8 MxDRD8:$src)>;
 def: Pat<(MxZExtLoadi32i8 MxCP_ARI :$src), (MOVZXd32j8 MxARI8 :$src)>;
 def: Pat<(MxZExtLoadi32i8 MxCP_ARID:$src), (MOVZXd32p8 MxARID8:$src)>;
 def: Pat<(MxZExtLoadi32i8 MxCP_ARII:$src), (MOVZXd32f8 MxARII8:$src)>;
+def: Pat<(MxZExtLoadi32i8 MxCP_PCD :$src), (MOVZXd32q8 MxPCD8 :$src)>;
 
 // i32 <- zext i16
 def: Pat<(i32 (zext i16:$src)), (MOVZXd32d16 MxDRD16:$src)>;
 def: Pat<(MxZExtLoadi32i16 MxCP_ARI :$src), (MOVZXd32j16 MxARI16 :$src)>;
 def: Pat<(MxZExtLoadi32i16 MxCP_ARID:$src), (MOVZXd32p16 MxARID16:$src)>;
 def: Pat<(MxZExtLoadi32i16 MxCP_ARII:$src), (MOVZXd32f16 MxARII16:$src)>;
+def: Pat<(MxZExtLoadi32i16 MxCP_PCD :$src), (MOVZXd32q16 MxPCD16 :$src)>;
 
 // i16 <- anyext i8
 def: Pat<(i16 (anyext i8:$src)),
@@ -585,3 +621,54 @@ def : Pat<(i8  (trunc i32:$src)),
           (EXTRACT_SUBREG MxXRD32:$src, MxSubRegIndex8Lo)>;
 def : Pat<(i8  (trunc i16:$src)),
           (EXTRACT_SUBREG MxXRD16:$src, MxSubRegIndex8Lo)>;
+
+//===----------------------------------------------------------------------===//
+// FMOVE
+//===----------------------------------------------------------------------===//
+
+let Defs = [FPS] in
+class MxFMove<string size, dag outs, dag ins, list<dag> pattern,
+              string rounding = "">
+    : MxInst<outs, ins,
+             "f"#rounding#"move."#size#"\t$src, $dst", pattern> {
+  // Only FMOVE uses FPC
+  let Uses = !if(!eq(rounding, ""), [FPC], []);
+
+  // FSMOVE and FDMOVE are only available after M68040
+  let Predicates = [!if(!eq(rounding, ""), AtLeastM68881, AtLeastM68040)];
+}
+
+// FPDR <- FPDR
+class MxFMove_FF<string rounding, int size,
+                 MxOpBundle Opnd = !cast<MxOpBundle>("MxOp"#size#"AddrMode_fpr")>
+    : MxFMove<"x", (outs Opnd.Op:$dst), (ins Opnd.Op:$src),
+              [(null_frag)], rounding> {
+  let Inst = (ascend
+    (descend 0b1111,
+      /*COPROCESSOR ID*/0b001,
+      0b000,
+      /*MODE + REGISTER*/0b000000
+    ),
+    (descend 0b0, /* R/M */0b0, 0b0,
+      /*SOURCE SPECIFIER*/
+      (operand "$src", 3),
+      /*DESTINATION*/
+      (operand "$dst", 3),
+      /*OPMODE*/
+      !cond(!eq(rounding, "s"): 0b1000000,
+            !eq(rounding, "d"): 0b1000100,
+            true: 0b0000000)
+    )
+  );
+}
+
+foreach rounding = ["", "s", "d"] in {
+  def F # !toupper(rounding) # MOV80fp_fp : MxFMove_FF<rounding, 80>;
+
+  // We don't have `fmove.s` or `fmove.d` because values will be converted to
+  // f80 upon storing into the register, but FMOV32/64fp_fp are still needed
+  // to make codegen easier.
+  let isCodeGenOnly = true in
+  foreach size = [32, 64] in
+    def F # !toupper(rounding) # MOV # size # fp_fp : MxFMove_FF<rounding, size>;
+}

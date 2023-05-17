@@ -25,7 +25,6 @@
 #include "X86Subtarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -57,6 +56,7 @@
 #include <algorithm>
 #include <cassert>
 #include <iterator>
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -164,7 +164,7 @@ private:
   const X86InstrInfo *TII = nullptr;
   const TargetRegisterInfo *TRI = nullptr;
 
-  Optional<PredState> PS;
+  std::optional<PredState> PS;
 
   void hardenEdgesWithLFENCE(MachineFunction &MF);
 
@@ -1145,7 +1145,7 @@ X86SpeculativeLoadHardeningPass::tracePredStateThroughIndirectBranches(
     // Insert a comparison of the incoming target register with this block's
     // address. This also requires us to mark the block as having its address
     // taken explicitly.
-    MBB.setHasAddressTaken();
+    MBB.setMachineBlockAddressTaken();
     auto InsertPt = MBB.SkipPHIsLabelsAndDebug(MBB.begin());
     if (MF.getTarget().getCodeModel() == CodeModel::Small &&
         !Subtarget->isPositionIndependent()) {
@@ -1781,7 +1781,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
 
   // See if we can sink hardening the loaded value.
   auto SinkCheckToSingleUse =
-      [&](MachineInstr &MI) -> Optional<MachineInstr *> {
+      [&](MachineInstr &MI) -> std::optional<MachineInstr *> {
     Register DefReg = MI.getOperand(0).getReg();
 
     // We need to find a single use which we can sink the check. We can
@@ -1853,7 +1853,7 @@ MachineInstr *X86SpeculativeLoadHardeningPass::sinkPostLoadHardenedInst(
   };
 
   MachineInstr *MI = &InitialMI;
-  while (Optional<MachineInstr *> SingleUse = SinkCheckToSingleUse(*MI)) {
+  while (std::optional<MachineInstr *> SingleUse = SinkCheckToSingleUse(*MI)) {
     // Update which MI we're checking now.
     MI = *SingleUse;
     if (!MI)

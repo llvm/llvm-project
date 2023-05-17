@@ -97,10 +97,10 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override {
-    // File is None if it wasn't found.
+    // File is std::nullopt if it wasn't found.
     // (We have some false negatives if PP recovered e.g. <foo> -> "foo")
     if (File)
       return;
@@ -197,20 +197,32 @@ void TemporaryFiles::removeFile(StringRef File) {
 class TempPCHFile {
 public:
   // A main method used to construct TempPCHFile.
-  static std::unique_ptr<TempPCHFile> create() {
+  static std::unique_ptr<TempPCHFile> create(StringRef StoragePath) {
     // FIXME: This is a hack so that we can override the preamble file during
     // crash-recovery testing, which is the only case where the preamble files
     // are not necessarily cleaned up.
     if (const char *TmpFile = ::getenv("CINDEXTEST_PREAMBLE_FILE"))
       return std::unique_ptr<TempPCHFile>(new TempPCHFile(TmpFile));
 
-    llvm::SmallString<64> File;
-    // Using a version of createTemporaryFile with a file descriptor guarantees
+    llvm::SmallString<128> File;
+    // Using the versions of createTemporaryFile() and
+    // createUniqueFile() with a file descriptor guarantees
     // that we would never get a race condition in a multi-threaded setting
     // (i.e., multiple threads getting the same temporary path).
     int FD;
-    if (auto EC =
-            llvm::sys::fs::createTemporaryFile("preamble", "pch", FD, File))
+    std::error_code EC;
+    if (StoragePath.empty())
+      EC = llvm::sys::fs::createTemporaryFile("preamble", "pch", FD, File);
+    else {
+      llvm::SmallString<128> TempPath = StoragePath;
+      // Use the same filename model as fs::createTemporaryFile().
+      llvm::sys::path::append(TempPath, "preamble-%%%%%%.pch");
+      namespace fs = llvm::sys::fs;
+      // Use the same owner-only file permissions as fs::createTemporaryFile().
+      EC = fs::createUniqueFile(TempPath, FD, File, fs::OF_None,
+                                fs::owner_read | fs::owner_write);
+    }
+    if (EC)
       return nullptr;
     // We only needed to make sure the file exists, close the file right away.
     llvm::sys::Process::SafelyCloseFileDescriptor(FD);
@@ -403,7 +415,7 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
     DiagnosticsEngine &Diagnostics,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
     std::shared_ptr<PCHContainerOperations> PCHContainerOps, bool StoreInMemory,
-    PreambleCallbacks &Callbacks) {
+    StringRef StoragePath, PreambleCallbacks &Callbacks) {
   assert(VFS && "VFS is null");
 
   auto PreambleInvocation = std::make_shared<CompilerInvocation>(Invocation);
@@ -418,7 +430,8 @@ llvm::ErrorOr<PrecompiledPreamble> PrecompiledPreamble::Build(
   } else {
     // Create a temporary file for the precompiled preamble. In rare
     // circumstances, this can fail.
-    std::unique_ptr<TempPCHFile> PreamblePCHFile = TempPCHFile::create();
+    std::unique_ptr<TempPCHFile> PreamblePCHFile =
+        TempPCHFile::create(StoragePath);
     if (!PreamblePCHFile)
       return BuildPreambleError::CouldntCreateTempFile;
     Storage = PCHStorage::file(std::move(PreamblePCHFile));

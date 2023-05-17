@@ -67,10 +67,6 @@ void TargetMachine::resetTargetOptions(const Function &F) const {
 /// and dynamic-no-pic.
 Reloc::Model TargetMachine::getRelocationModel() const { return RM; }
 
-/// Returns the code model. The choices are small, kernel, medium, large, and
-/// target default.
-CodeModel::Model TargetMachine::getCodeModel() const { return CMModel; }
-
 /// Get the IR-specified TLS model for Var.
 static TLSModel::Model getSelectedTLSModel(const GlobalValue *GV) {
   switch (GV->getThreadLocalMode()) {
@@ -147,13 +143,7 @@ bool TargetMachine::shouldAssumeDSOLocal(const Module &M,
   return false;
 }
 
-bool TargetMachine::useEmulatedTLS() const {
-  // Returns Options.EmulatedTLS if the -emulated-tls or -no-emulated-tls
-  // was specified explicitly; otherwise uses target triple to decide default.
-  if (Options.ExplicitEmulatedTLS)
-    return Options.EmulatedTLS;
-  return getTargetTriple().hasDefaultEmulatedTLS();
-}
+bool TargetMachine::useEmulatedTLS() const { return Options.EmulatedTLS; }
 
 TLSModel::Model TargetMachine::getTLSModel(const GlobalValue *GV) const {
   bool IsPIE = GV->getParent()->getPIELevel() != PIELevel::Default;

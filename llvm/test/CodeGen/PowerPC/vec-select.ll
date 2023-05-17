@@ -53,15 +53,11 @@ entry:
   ret <2 x i64> %or.i
 }
 
-; Not valid to emit XXSEL for this illegal type.
+; vXi1 constants are sign-extended to preserve XXSEL pattern.
 define dso_local <4 x i1> @test5(<4 x i1> %a, <4 x i1> %b, <4 x i1> %c) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vspltisw v5, 1
-; CHECK-NEXT:    xxland vs0, vs36, vs35
-; CHECK-NEXT:    xxlxor vs1, vs36, vs37
-; CHECK-NEXT:    xxland vs1, vs34, vs1
-; CHECK-NEXT:    xxlor vs34, vs1, vs0
+; CHECK-NEXT:    xxsel vs34, vs34, vs35, vs36
 ; CHECK-NEXT:    blr
 entry:
   %neg.i = xor <4 x i1> %c, <i1 -1, i1 -1, i1 -1, i1 -1>

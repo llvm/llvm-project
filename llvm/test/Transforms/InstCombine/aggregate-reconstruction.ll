@@ -301,3 +301,17 @@ end:
   %i3 = insertvalue { i32, i32 } %i2, i32 %i1, 1
   ret { i32, i32 } %i3
 }
+
+; Like test2 but with a poison base.
+define [3 x i32] @poison_base([3 x i32] %srcagg) {
+; CHECK-LABEL: @poison_base(
+; CHECK-NEXT:    ret [3 x i32] [[SRCAGG:%.*]]
+;
+  %i0 = extractvalue [3 x i32] %srcagg, 0
+  %i1 = extractvalue [3 x i32] %srcagg, 1
+  %i2 = extractvalue [3 x i32] %srcagg, 2
+  %i3 = insertvalue [3 x i32] poison, i32 %i0, 0
+  %i4 = insertvalue [3 x i32] %i3, i32 %i1, 1
+  %i5 = insertvalue [3 x i32] %i4, i32 %i2, 2
+  ret [3 x i32] %i5
+}

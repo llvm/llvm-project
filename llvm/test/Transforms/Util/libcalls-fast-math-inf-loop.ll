@@ -1,4 +1,4 @@
-; RUN: opt -S -instcombine -o - %s | FileCheck %s
+; RUN: opt -S -passes=instcombine -o - %s | FileCheck %s
 
 ; Test that fast math lib call simplification of double math function to float
 ; equivalent doesn't occur when the calling function matches the float
@@ -23,8 +23,8 @@ define float @fn(float %f) #0 {
 ; CHECK: define float @fn(
 ; CHECK: call fast float @expf(
   %f.addr = alloca float, align 4
-  store float %f, float* %f.addr, align 4, !tbaa !1
-  %1 = load float, float* %f.addr, align 4, !tbaa !1
+  store float %f, ptr %f.addr, align 4, !tbaa !1
+  %1 = load float, ptr %f.addr, align 4, !tbaa !1
   %call = call fast float @expf(float %1) #3
   ret float %call
 }
@@ -36,8 +36,8 @@ define available_externally float @expf(float %x) #1 {
 ; CHECK: call fast double @exp(
 ; CHECK: fptrunc double
   %x.addr = alloca float, align 4
-  store float %x, float* %x.addr, align 4, !tbaa !1
-  %1 = load float, float* %x.addr, align 4, !tbaa !1
+  store float %x, ptr %x.addr, align 4, !tbaa !1
+  %1 = load float, ptr %x.addr, align 4, !tbaa !1
   %conv = fpext float %1 to double
   %call = call fast double @exp(double %conv) #3
   %conv1 = fptrunc double %call to float

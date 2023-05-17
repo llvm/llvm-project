@@ -1,8 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   Core
-  ProfileData
   Object
-  DebugInfoDWARF
+  ProfileData
   Support
   )
 
@@ -11,4 +10,5 @@ add_llvm_tool(llvm-profdata
 
   DEPENDS
   intrinsics_gen
+  GENERATE_DRIVER
   )

@@ -8,7 +8,6 @@
 
 #include "llvm/DebugInfo/PDB/GenericError.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ManagedStatic.h"
 
 using namespace llvm;
 using namespace llvm::pdb;
@@ -42,7 +41,9 @@ public:
 };
 } // namespace
 
-static llvm::ManagedStatic<PDBErrorCategory> PDBCategory;
-const std::error_category &llvm::pdb::PDBErrCategory() { return *PDBCategory; }
+const std::error_category &llvm::pdb::PDBErrCategory() {
+  static PDBErrorCategory PDBCategory;
+  return PDBCategory;
+}
 
 char PDBError::ID;

@@ -6,22 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/fcntl/open.h"
 #include "src/unistd/close.h"
 #include "src/unistd/lseek.h"
 #include "src/unistd/read.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <unistd.h>
 
 TEST(LlvmLibcUniStd, LseekTest) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/lseek.test";
   int fd = __llvm_libc::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   constexpr const char LSEEK_TEST[] = "lseek test";
   constexpr int LSEEK_TEST_SIZE = sizeof(LSEEK_TEST) - 1;
@@ -54,7 +53,7 @@ TEST(LlvmLibcUniStd, LseekFailsTest) {
   using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
   constexpr const char *TEST_FILE = "testdata/lseek.test";
   int fd = __llvm_libc::open(TEST_FILE, O_RDONLY);
-  ASSERT_EQ(errno, 0);
+  ASSERT_EQ(libc_errno, 0);
   ASSERT_GT(fd, 0);
   EXPECT_THAT(__llvm_libc::lseek(fd, -1, SEEK_CUR), Fails(EINVAL));
   ASSERT_THAT(__llvm_libc::close(fd), Succeeds(0));

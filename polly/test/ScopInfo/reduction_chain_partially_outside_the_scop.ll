@@ -13,10 +13,10 @@ target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-n32-S64"
 @c = common global i32 0, align 4
 @d = common global i32 0, align 4
 
-define void @loads_outside_scop(i32* %sum) {
+define void @loads_outside_scop(ptr %sum) {
 entry:
-  %tmp = load i32, i32* @c, align 4
-  %tmp1 = load i32, i32* @d, align 4
+  %tmp = load i32, ptr @c, align 4
+  %tmp1 = load i32, ptr @d, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
@@ -26,7 +26,7 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %add = add nsw i32 %tmp, %tmp1
-  store i32 %add, i32* %sum, align 4
+  store i32 %add, ptr %sum, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -38,10 +38,10 @@ for.end:                                          ; preds = %for.cond
 }
 
 
-define void @binop_outside_scop(i32* %sum) {
+define void @binop_outside_scop(ptr %sum) {
 entry:
-  %tmp = load i32, i32* @c, align 4
-  %tmp1 = load i32, i32* @d, align 4
+  %tmp = load i32, ptr @c, align 4
+  %tmp1 = load i32, ptr @d, align 4
   %add = add nsw i32 %tmp, %tmp1
   br label %for.cond
 
@@ -51,7 +51,7 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 %add, i32* %sum, align 4
+  store i32 %add, ptr %sum, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

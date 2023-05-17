@@ -4,7 +4,7 @@
 
 // RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
 // RUN: ld.lld --shared -o %t.so %t.o
-// RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=DISASM
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=DISASM
 // RUN: llvm-readobj -r %t.so | FileCheck %s
 
 // Check that an IRELATIVE relocation is used for a non-preemptible ifunc

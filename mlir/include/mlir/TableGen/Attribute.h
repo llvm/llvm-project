@@ -57,8 +57,8 @@ public:
   StringRef getReturnType() const;
 
   // Return the type constraint corresponding to the type of this attribute, or
-  // None if this is not a TypedAttr.
-  llvm::Optional<Type> getValueType() const;
+  // std::nullopt if this is not a TypedAttr.
+  std::optional<Type> getValueType() const;
 
   // Returns the template getter method call which reads this attribute's
   // storage and returns the value as of the desired return type.
@@ -113,6 +113,9 @@ public:
 
   // Returns the dialect for the attribute if defined.
   Dialect getDialect() const;
+
+  // Returns the TableGen definition this Attribute was constructed from.
+  const llvm::Record &getDef() const;
 };
 
 // Wrapper class providing helper methods for accessing MLIR constant attribute
@@ -204,36 +207,6 @@ public:
   llvm::Record *getBaseAttrClass() const;
   StringRef getSpecializedAttrClassName() const;
   bool printBitEnumPrimaryGroups() const;
-};
-
-class StructFieldAttr {
-public:
-  explicit StructFieldAttr(const llvm::Record *record);
-  explicit StructFieldAttr(const llvm::Record &record);
-  explicit StructFieldAttr(const llvm::DefInit *init);
-
-  StringRef getName() const;
-  Attribute getType() const;
-
-private:
-  const llvm::Record *def;
-};
-
-// Wrapper class providing helper methods for accessing struct attributes
-// defined in TableGen.
-class StructAttr : public Attribute {
-public:
-  explicit StructAttr(const llvm::Record *record);
-  explicit StructAttr(const llvm::Record &record) : StructAttr(&record){};
-  explicit StructAttr(const llvm::DefInit *init);
-
-  // Returns the struct class name.
-  StringRef getStructClassName() const;
-
-  // Returns the C++ namespaces this struct class should be placed in.
-  StringRef getCppNamespace() const;
-
-  std::vector<StructFieldAttr> getAllFields() const;
 };
 
 // Name of infer type op interface.

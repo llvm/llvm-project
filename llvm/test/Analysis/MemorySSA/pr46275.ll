@@ -1,4 +1,4 @@
-; RUN: opt -S -memoryssa -loop-deletion -loop-simplifycfg -verify-memoryssa < %s | FileCheck %s
+; RUN: opt -S -passes='loop-mssa(loop-deletion,loop-simplifycfg)' -verify-memoryssa < %s | FileCheck %s
 ; REQUIRES: asserts
 
 ; CHECK-LABEL: @foo()

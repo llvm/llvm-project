@@ -14,6 +14,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 
 namespace mlir {
+class CallOpInterface;
 
 namespace LLVM {
 namespace detail {
@@ -21,8 +22,10 @@ namespace detail {
 /// and given operands.
 LogicalResult oneToOneRewrite(Operation *op, StringRef targetOp,
                               ValueRange operands,
+                              ArrayRef<NamedAttribute> targetAttrs,
                               LLVMTypeConverter &typeConverter,
                               ConversionPatternRewriter &rewriter);
+
 } // namespace detail
 } // namespace LLVM
 
@@ -142,8 +145,13 @@ public:
   /// Wrappers around the RewritePattern methods that pass the derived op type.
   void rewrite(Operation *op, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const final {
-    rewrite(cast<SourceOp>(op), OpAdaptor(operands, op->getAttrDictionary()),
-            rewriter);
+    if constexpr (SourceOp::hasProperties())
+      rewrite(cast<SourceOp>(op),
+              OpAdaptor(operands, op->getDiscardableAttrDictionary(),
+                        cast<SourceOp>(op).getProperties()),
+              rewriter);
+    rewrite(cast<SourceOp>(op),
+            OpAdaptor(operands, op->getDiscardableAttrDictionary()), rewriter);
   }
   LogicalResult match(Operation *op) const final {
     return match(cast<SourceOp>(op));
@@ -151,9 +159,15 @@ public:
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
-    return matchAndRewrite(cast<SourceOp>(op),
-                           OpAdaptor(operands, op->getAttrDictionary()),
-                           rewriter);
+    if constexpr (SourceOp::hasProperties())
+      return matchAndRewrite(cast<SourceOp>(op),
+                             OpAdaptor(operands,
+                                       op->getDiscardableAttrDictionary(),
+                                       cast<SourceOp>(op).getProperties()),
+                             rewriter);
+    return matchAndRewrite(
+        cast<SourceOp>(op),
+        OpAdaptor(operands, op->getDiscardableAttrDictionary()), rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
@@ -196,7 +210,7 @@ public:
   matchAndRewrite(SourceOp op, typename SourceOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     return LLVM::detail::oneToOneRewrite(op, TargetOp::getOperationName(),
-                                         adaptor.getOperands(),
+                                         adaptor.getOperands(), op->getAttrs(),
                                          *this->getTypeConverter(), rewriter);
   }
 };

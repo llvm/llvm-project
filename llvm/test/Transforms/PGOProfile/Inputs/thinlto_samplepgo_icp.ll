@@ -1,12 +1,12 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@fptr = external local_unnamed_addr global void ()*, align 8
+@fptr = external local_unnamed_addr global ptr, align 8
 
 ; Function Attrs: norecurse nounwind uwtable
 define void @_Z6updatei(i32 %i) local_unnamed_addr #0 {
 entry:
-  store void ()* @_ZL3foov, void ()** @fptr, align 8
+  store ptr @_ZL3foov, ptr @fptr, align 8
   ret void
 }
 

@@ -1,15 +1,15 @@
 ; RUN: not llvm-as %s -o /dev/null 2>&1 | FileCheck %s
 
-define void @test(i8* %p) {
-  load i8, i8* %p, !noalias !0
-  load i8, i8* %p, !noalias !1
-  load i8, i8* %p, !noalias !3
-  load i8, i8* %p, !noalias !5
-  load i8, i8* %p, !noalias !7
-  load i8, i8* %p, !noalias !9
-  load i8, i8* %p, !noalias !11
-  load i8, i8* %p, !noalias !14
-  load i8, i8* %p, !alias.scope !17
+define void @test(ptr %p) {
+  load i8, ptr %p, !noalias !0
+  load i8, ptr %p, !noalias !1
+  load i8, ptr %p, !noalias !3
+  load i8, ptr %p, !noalias !5
+  load i8, ptr %p, !noalias !7
+  load i8, ptr %p, !noalias !9
+  load i8, ptr %p, !noalias !11
+  load i8, ptr %p, !noalias !14
+  load i8, ptr %p, !alias.scope !17
   call void @llvm.experimental.noalias.scope.decl(metadata !20)
   ret void
 }

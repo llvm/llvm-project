@@ -39,7 +39,7 @@ define <4 x float> @combine_vpermilvar_4f32_movddup(<4 x float> %a0) {
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 1, i32 0, i32 1>)
   ret <4 x float> %1
 }
-define <4 x float> @combine_vpermilvar_4f32_movddup_load(<4 x float> *%a0) {
+define <4 x float> @combine_vpermilvar_4f32_movddup_load(ptr%a0) {
 ; X86-LABEL: combine_vpermilvar_4f32_movddup_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -50,7 +50,7 @@ define <4 x float> @combine_vpermilvar_4f32_movddup_load(<4 x float> *%a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovddup {{.*#+}} xmm0 = mem[0,0]
 ; X64-NEXT:    retq
-  %1 = load <4 x float>, <4 x float> *%a0
+  %1 = load <4 x float>, ptr%a0
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %1, <4 x i32> <i32 0, i32 1, i32 0, i32 1>)
   ret <4 x float> %2
 }
@@ -76,7 +76,7 @@ define <4 x float> @combine_vpermilvar_4f32_movsldup(<4 x float> %a0) {
 define <4 x float> @combine_vpermilvar_4f32_unpckh(<4 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_4f32_unpckh:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,2,3,3]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,2,3,3]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 2, i32 2, i32 3, i32 3>)
   ret <4 x float> %1
@@ -85,7 +85,7 @@ define <4 x float> @combine_vpermilvar_4f32_unpckh(<4 x float> %a0) {
 define <4 x float> @combine_vpermilvar_4f32_unpckl(<4 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_4f32_unpckl:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[0,0,1,1]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,0,1,1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 0, i32 0, i32 1, i32 1>)
   ret <4 x float> %1
@@ -143,7 +143,7 @@ define <8 x float> @combine_vpermilvar_vperm2f128_zero_8f32(<8 x float> %a0) {
 ; AVX512-NEXT:    vmovaps {{.*#+}} ymm1 = [16,17,18,19,3,2,1,0]
 ; AVX512-NEXT:    vxorps %xmm2, %xmm2, %xmm2
 ; AVX512-NEXT:    vpermt2ps %zmm2, %zmm1, %zmm0
-; AVX512-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
+; AVX512-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[3,2,1,0,7,6,5,4]
 ; AVX512-NEXT:    ret{{[l|q]}}
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = shufflevector <8 x float> %1, <8 x float> zeroinitializer, <8 x i32> <i32 8, i32 8, i32 8, i32 8, i32 0, i32 1, i32 2, i32 3>
@@ -181,7 +181,7 @@ define <8 x float> @combine_vpermilvar_8f32_movddup(<8 x float> %a0) {
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>)
   ret <8 x float> %1
 }
-define <8 x float> @combine_vpermilvar_8f32_movddup_load(<8 x float> *%a0) {
+define <8 x float> @combine_vpermilvar_8f32_movddup_load(ptr%a0) {
 ; X86-LABEL: combine_vpermilvar_8f32_movddup_load:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -192,7 +192,7 @@ define <8 x float> @combine_vpermilvar_8f32_movddup_load(<8 x float> *%a0) {
 ; X64:       # %bb.0:
 ; X64-NEXT:    vmovddup {{.*#+}} ymm0 = mem[0,0,2,2]
 ; X64-NEXT:    retq
-  %1 = load <8 x float>, <8 x float> *%a0
+  %1 = load <8 x float>, ptr%a0
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %1, <8 x i32> <i32 0, i32 1, i32 0, i32 1, i32 4, i32 5, i32 4, i32 5>)
   ret <8 x float> %2
 }
@@ -274,7 +274,7 @@ define <4 x double> @combine_vpermilvar_4f64_movddup(<4 x double> %a0) {
 define <4 x float> @combine_vpermilvar_4f32_4stage(<4 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_4f32_4stage:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} xmm0 = xmm0[2,0,3,1]
+; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,0,3,1]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float> %a0, <4 x i32> <i32 3, i32 2, i32 1, i32 0>)
   %2 = tail call <4 x float> @llvm.x86.avx.vpermilvar.ps(<4 x float>  %1, <4 x i32> <i32 2, i32 3, i32 0, i32 1>)
@@ -286,7 +286,7 @@ define <4 x float> @combine_vpermilvar_4f32_4stage(<4 x float> %a0) {
 define <8 x float> @combine_vpermilvar_8f32_4stage(<8 x float> %a0) {
 ; CHECK-LABEL: combine_vpermilvar_8f32_4stage:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpermilps {{.*#+}} ymm0 = ymm0[2,0,3,1,6,4,7,5]
+; CHECK-NEXT:    vshufps {{.*#+}} ymm0 = ymm0[2,0,3,1,6,4,7,5]
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float> %a0, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 3, i32 2, i32 1, i32 0>)
   %2 = tail call <8 x float> @llvm.x86.avx.vpermilvar.ps.256(<8 x float>  %1, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 2, i32 3, i32 0, i32 1>)
@@ -424,22 +424,22 @@ define void @PR39483() {
 ; X64-AVX512-NEXT:    vaddps %ymm0, %ymm1, %ymm0
 ; X64-AVX512-NEXT:    vmovups %ymm0, (%rax)
 entry:
-  %wide.vec = load <24 x float>, <24 x float>* null, align 4
+  %wide.vec = load <24 x float>, ptr null, align 4
   %strided.vec18 = shufflevector <24 x float> %wide.vec, <24 x float> undef, <8 x i32> <i32 2, i32 5, i32 8, i32 11, i32 14, i32 17, i32 20, i32 23>
   %0 = fmul <8 x float> %strided.vec18, zeroinitializer
   %1 = fadd <8 x float> zeroinitializer, %0
-  store <8 x float> %1, <8 x float>* undef, align 16
+  store <8 x float> %1, ptr undef, align 16
   unreachable
 }
 
-define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x double>* noalias %out0, <4 x double>* noalias %out1, <4 x double>* noalias %out2) {
+define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, ptr noalias %out0, ptr noalias %out1, ptr noalias %out2) {
 ; X86-AVX1-LABEL: PR48908:
 ; X86-AVX1:       # %bb.0:
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX1-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
-; X86-AVX1-NEXT:    vpermilpd {{.*#+}} ymm3 = ymm3[0,1,2,2]
+; X86-AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm3[0,1,2,2]
 ; X86-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
 ; X86-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm5
 ; X86-AVX1-NEXT:    vshufpd {{.*#+}} ymm4 = ymm5[1],ymm4[0],ymm5[2],ymm4[3]
@@ -448,7 +448,7 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X86-AVX1-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0],ymm3[1],ymm5[2],ymm3[3]
 ; X86-AVX1-NEXT:    vmovapd %ymm3, (%edx)
 ; X86-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm4[2,3,0,1]
-; X86-AVX1-NEXT:    vblendpd {{.*#+}} ymm4 = ymm4[0,1],ymm0[2],ymm4[3]
+; X86-AVX1-NEXT:    vblendpd {{.*#+}} ymm4 = ymm4[0,1],ymm0[2,3]
 ; X86-AVX1-NEXT:    vblendpd {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2],ymm3[3]
 ; X86-AVX1-NEXT:    vmovapd %ymm3, (%ecx)
 ; X86-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
@@ -466,12 +466,12 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X86-AVX2-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; X86-AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
 ; X86-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
-; X86-AVX2-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
+; X86-AVX2-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
 ; X86-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
 ; X86-AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[0,2,2,1]
 ; X86-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm6[0],ymm3[1],ymm6[2],ymm3[3]
 ; X86-AVX2-NEXT:    vmovapd %ymm3, (%edx)
-; X86-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0,1],ymm0[2],ymm5[3]
+; X86-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0,1],ymm0[2,3]
 ; X86-AVX2-NEXT:    vpermpd {{.*#+}} ymm4 = ymm4[0,3,2,0]
 ; X86-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm3[0],ymm4[1],ymm3[2],ymm4[3]
 ; X86-AVX2-NEXT:    vmovapd %ymm3, (%ecx)
@@ -491,15 +491,15 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-AVX512-NEXT:    movl {{[0-9]+}}(%esp), %edx
-; X86-AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} ymm3 = ymm0[0],ymm3[1],ymm0[2],ymm3[2]
-; X86-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
-; X86-AVX512-NEXT:    vshufpd {{.*#+}} ymm4 = ymm1[1],ymm4[0],ymm1[2],ymm4[3]
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm5 = [0,0,3,0,8,0,1,0]
-; X86-AVX512-NEXT:    vpermt2pd %zmm2, %zmm5, %zmm3
-; X86-AVX512-NEXT:    vmovapd %ymm3, (%edx)
-; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = [0,0,3,0,10,0,1,0]
-; X86-AVX512-NEXT:    vpermt2pd %zmm0, %zmm3, %zmm4
+; X86-AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm4
+; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = [1,0,2,0,8,0,9,0]
+; X86-AVX512-NEXT:    vpermi2pd %zmm2, %zmm1, %zmm3
+; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm5 = [0,0,10,0,2,0,9,0]
+; X86-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
+; X86-AVX512-NEXT:    vpermt2pd %zmm4, %zmm5, %zmm6
+; X86-AVX512-NEXT:    vmovapd %ymm6, (%edx)
+; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm4 = [0,0,3,0,10,0,1,0]
+; X86-AVX512-NEXT:    vpermi2pd %zmm0, %zmm3, %zmm4
 ; X86-AVX512-NEXT:    vmovapd %ymm4, (%ecx)
 ; X86-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = <3,0,11,0,u,u,u,u>
 ; X86-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm3
@@ -512,7 +512,7 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X64-AVX1-LABEL: PR48908:
 ; X64-AVX1:       # %bb.0:
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
-; X64-AVX1-NEXT:    vpermilpd {{.*#+}} ymm3 = ymm3[0,1,2,2]
+; X64-AVX1-NEXT:    vshufpd {{.*#+}} ymm3 = ymm3[0,1,2,2]
 ; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
 ; X64-AVX1-NEXT:    vinsertf128 $1, %xmm2, %ymm1, %ymm5
 ; X64-AVX1-NEXT:    vshufpd {{.*#+}} ymm4 = ymm5[1],ymm4[0],ymm5[2],ymm4[3]
@@ -521,7 +521,7 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X64-AVX1-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0],ymm3[1],ymm5[2],ymm3[3]
 ; X64-AVX1-NEXT:    vmovapd %ymm3, (%rdi)
 ; X64-AVX1-NEXT:    vperm2f128 {{.*#+}} ymm3 = ymm4[2,3,0,1]
-; X64-AVX1-NEXT:    vblendpd {{.*#+}} ymm4 = ymm4[0,1],ymm0[2],ymm4[3]
+; X64-AVX1-NEXT:    vblendpd {{.*#+}} ymm4 = ymm4[0,1],ymm0[2,3]
 ; X64-AVX1-NEXT:    vblendpd {{.*#+}} ymm3 = ymm4[0],ymm3[1],ymm4[2],ymm3[3]
 ; X64-AVX1-NEXT:    vmovapd %ymm3, (%rsi)
 ; X64-AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm0
@@ -536,12 +536,12 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X64-AVX2:       # %bb.0:
 ; X64-AVX2-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
 ; X64-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
-; X64-AVX2-NEXT:    vpermilpd {{.*#+}} xmm5 = xmm1[1,0]
+; X64-AVX2-NEXT:    vshufpd {{.*#+}} xmm5 = xmm1[1,0]
 ; X64-AVX2-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
 ; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm3 = ymm3[0,2,2,1]
 ; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm6[0],ymm3[1],ymm6[2],ymm3[3]
 ; X64-AVX2-NEXT:    vmovapd %ymm3, (%rdi)
-; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0,1],ymm0[2],ymm5[3]
+; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm5[0,1],ymm0[2,3]
 ; X64-AVX2-NEXT:    vpermpd {{.*#+}} ymm4 = ymm4[0,3,2,0]
 ; X64-AVX2-NEXT:    vblendpd {{.*#+}} ymm3 = ymm3[0],ymm4[1],ymm3[2],ymm4[3]
 ; X64-AVX2-NEXT:    vmovapd %ymm3, (%rsi)
@@ -559,15 +559,15 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
 ; X64-AVX512-NEXT:    # kill: def $ymm1 killed $ymm1 def $zmm1
 ; X64-AVX512-NEXT:    # kill: def $ymm0 killed $ymm0 def $zmm0
 ; X64-AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm3
-; X64-AVX512-NEXT:    vshufpd {{.*#+}} ymm3 = ymm0[0],ymm3[1],ymm0[2],ymm3[2]
-; X64-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm1[2,3],ymm2[0,1]
-; X64-AVX512-NEXT:    vshufpd {{.*#+}} ymm4 = ymm1[1],ymm4[0],ymm1[2],ymm4[3]
-; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm5 = [0,3,8,1]
-; X64-AVX512-NEXT:    vpermt2pd %zmm2, %zmm5, %zmm3
-; X64-AVX512-NEXT:    vmovapd %ymm3, (%rdi)
+; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm4 = [1,2,8,9]
+; X64-AVX512-NEXT:    vpermi2pd %zmm2, %zmm1, %zmm4
+; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm5 = [0,10,2,9]
+; X64-AVX512-NEXT:    vperm2f128 {{.*#+}} ymm6 = ymm0[0,1],ymm2[0,1]
+; X64-AVX512-NEXT:    vpermt2pd %zmm3, %zmm5, %zmm6
+; X64-AVX512-NEXT:    vmovapd %ymm6, (%rdi)
 ; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = [0,3,10,1]
-; X64-AVX512-NEXT:    vpermt2pd %zmm0, %zmm3, %zmm4
-; X64-AVX512-NEXT:    vmovapd %ymm4, (%rsi)
+; X64-AVX512-NEXT:    vpermi2pd %zmm0, %zmm4, %zmm3
+; X64-AVX512-NEXT:    vmovapd %ymm3, (%rsi)
 ; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm3 = <3,11,u,u>
 ; X64-AVX512-NEXT:    vpermi2pd %zmm1, %zmm0, %zmm3
 ; X64-AVX512-NEXT:    vmovapd {{.*#+}} ymm0 = [2,8,9,3]
@@ -578,12 +578,12 @@ define void @PR48908(<4 x double> %v0, <4 x double> %v1, <4 x double> %v2, <4 x 
   %t0 = shufflevector <4 x double> %v0, <4 x double> %v1, <4 x i32> <i32 0, i32 1, i32 2, i32 4>
   %t1 = shufflevector <4 x double> %v1, <4 x double> %v2, <4 x i32> <i32 1, i32 2, i32 4, i32 5>
   %r0 = shufflevector <4 x double> %t0, <4 x double> %t1, <4 x i32> <i32 0, i32 3, i32 6, i32 1>
-  store <4 x double> %r0, <4 x double>* %out0, align 32
+  store <4 x double> %r0, ptr %out0, align 32
   %r1 = shufflevector <4 x double> %t0, <4 x double> %t1, <4 x i32> <i32 4, i32 7, i32 2, i32 5>
-  store <4 x double> %r1, <4 x double>* %out1, align 32
+  store <4 x double> %r1, ptr %out1, align 32
   %t2 = shufflevector <4 x double> %v0, <4 x double> %v1, <4 x i32> <i32 3, i32 7, i32 undef, i32 undef>
   %r2 = shufflevector <4 x double> %t2, <4 x double> %v2, <4 x i32> <i32 6, i32 0, i32 1, i32 7>
-  store <4 x double> %r2, <4 x double>* %out2, align 32
+  store <4 x double> %r2, ptr %out2, align 32
   ret void
 }
 
@@ -592,7 +592,7 @@ define <4 x i64> @concat_self_v4i64(<2 x i64> %x) {
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm0, %ymm0
-; AVX1-NEXT:    vpermilpd {{.*#+}} ymm0 = ymm0[0,0,3,3]
+; AVX1-NEXT:    vshufpd {{.*#+}} ymm0 = ymm0[0,0,3,3]
 ; AVX1-NEXT:    ret{{[l|q]}}
 ;
 ; AVX2-LABEL: concat_self_v4i64:

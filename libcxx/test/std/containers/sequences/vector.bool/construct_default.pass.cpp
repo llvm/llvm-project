@@ -24,8 +24,7 @@
 #include "min_allocator.h"
 
 template <class C>
-void
-test0()
+TEST_CONSTEXPR_CXX20 void test0()
 {
 #if TEST_STD_VER > 14
     LIBCPP_STATIC_ASSERT((noexcept(C{})), "" );
@@ -45,8 +44,7 @@ test0()
 }
 
 template <class C>
-void
-test1(const typename C::allocator_type& a)
+TEST_CONSTEXPR_CXX20 void test1(const typename C::allocator_type& a)
 {
 #if TEST_STD_VER > 14
     LIBCPP_STATIC_ASSERT((noexcept(C{typename C::allocator_type{}})), "" );
@@ -59,7 +57,7 @@ test1(const typename C::allocator_type& a)
     assert(c.get_allocator() == a);
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     {
     test0<std::vector<bool> >();
@@ -76,5 +74,14 @@ int main(int, char**)
     }
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

@@ -9,8 +9,6 @@
 #   (lldb) command script import /path/to/cmdtemplate.py
 # ---------------------------------------------------------------------
 
-from __future__ import print_function
-
 import inspect
 import lldb
 import optparse
@@ -26,7 +24,7 @@ class FrameStatCommand:
         parser = cls.create_options()
         cls.__doc__ = parser.format_help()
         # Add any commands contained in this module to LLDB
-        command = 'command script add -c %s.%s %s' % (module_name,
+        command = 'command script add -o -c %s.%s %s' % (module_name,
                                                       cls.__name__,
                                                       cls.program)
         debugger.HandleCommand(command)

@@ -2,9 +2,9 @@
 
 ; CHECK: Determining loop execution counts for: @test
 ; CHECK: Loop %for.body: backedge-taken count is ((-2 + %len) /u 2)
-; CHECK: Loop %for.body: max backedge-taken count is 1073741823
+; CHECK: Loop %for.body: constant max backedge-taken count is 1073741823
 
-define zeroext i16 @test(i16* nocapture %p, i32 %len) nounwind readonly {
+define zeroext i16 @test(ptr nocapture %p, i32 %len) nounwind readonly {
 entry:
   %cmp2 = icmp sgt i32 %len, 1
   br i1 %cmp2, label %for.body.preheader, label %for.end
@@ -13,11 +13,11 @@ for.body.preheader:                               ; preds = %entry
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
-  %p.addr.05 = phi i16* [ %incdec.ptr, %for.body ], [ %p, %for.body.preheader ]
+  %p.addr.05 = phi ptr [ %incdec.ptr, %for.body ], [ %p, %for.body.preheader ]
   %len.addr.04 = phi i32 [ %sub, %for.body ], [ %len, %for.body.preheader ]
   %res.03 = phi i32 [ %add, %for.body ], [ 0, %for.body.preheader ]
-  %incdec.ptr = getelementptr inbounds i16, i16* %p.addr.05, i32 1
-  %0 = load i16, i16* %p.addr.05, align 2
+  %incdec.ptr = getelementptr inbounds i16, ptr %p.addr.05, i32 1
+  %0 = load i16, ptr %p.addr.05, align 2
   %conv = zext i16 %0 to i32
   %add = add i32 %conv, %res.03
   %sub = add nsw i32 %len.addr.04, -2

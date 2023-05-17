@@ -14,11 +14,12 @@ if (current_os == "android") {
     "--target=$llvm_current_triple",
     "--sysroot=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64/sysroot",
     "--gcc-toolchain=$android_ndk_path/toolchains/llvm/prebuilt/linux-x86_64",
+    "-fno-emulated-tls",
   ]
-  if (current_cpu != "arm") {
-    target_flags += [ "-rtlib=libgcc" ]
-  }
-  target_ldflags += [ "-static-libstdc++" ]
+  target_ldflags += [
+    "-static-libstdc++",
+    "--unwindlib=none",
+  ]
   if (current_cpu == "arm") {
     target_flags += [ "-march=armv7-a" ]
   }
@@ -47,5 +48,5 @@ if (current_os == "android") {
 }
 
 if (current_cpu == "x86") {
-  target_flags = [ "-m32" ]
+  target_flags += [ "-m32" ]
 }

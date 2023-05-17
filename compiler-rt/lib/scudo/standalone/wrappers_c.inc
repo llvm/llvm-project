@@ -54,6 +54,8 @@ INTERFACE WEAK struct SCUDO_MALLINFO SCUDO_PREFIX(mallinfo)(void) {
   return Info;
 }
 
+// On Android, mallinfo2 is an alias of mallinfo, so don't define both.
+#if !SCUDO_ANDROID
 INTERFACE WEAK struct __scudo_mallinfo2 SCUDO_PREFIX(mallinfo2)(void) {
   struct __scudo_mallinfo2 Info = {};
   scudo::StatCounters Stats;
@@ -70,6 +72,7 @@ INTERFACE WEAK struct __scudo_mallinfo2 SCUDO_PREFIX(mallinfo2)(void) {
   Info.fordblks = Info.fsmblks;
   return Info;
 }
+#endif
 
 INTERFACE WEAK void *SCUDO_PREFIX(malloc)(size_t size) {
   return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
@@ -91,7 +94,7 @@ INTERFACE WEAK void *SCUDO_PREFIX(memalign)(size_t alignment, size_t size) {
       alignment = 1U;
     } else {
       if (UNLIKELY(!scudo::isPowerOfTwo(alignment)))
-        alignment = scudo::roundUpToPowerOfTwo(alignment);
+        alignment = scudo::roundUpPowerOfTwo(alignment);
     }
   } else {
     if (UNLIKELY(!scudo::isPowerOfTwo(alignment))) {
@@ -131,9 +134,9 @@ INTERFACE WEAK void *SCUDO_PREFIX(pvalloc)(size_t size) {
     scudo::reportPvallocOverflow(size);
   }
   // pvalloc(0) should allocate one page.
-  return scudo::setErrnoOnNull(SCUDO_ALLOCATOR.allocate(
-      size ? scudo::roundUpTo(size, PageSize) : PageSize,
-      scudo::Chunk::Origin::Memalign, PageSize));
+  return scudo::setErrnoOnNull(
+      SCUDO_ALLOCATOR.allocate(size ? scudo::roundUp(size, PageSize) : PageSize,
+                               scudo::Chunk::Origin::Memalign, PageSize));
 }
 
 INTERFACE WEAK void *SCUDO_PREFIX(realloc)(void *ptr, size_t size) {
@@ -188,7 +191,10 @@ INTERFACE WEAK int SCUDO_PREFIX(mallopt)(int param, int value) {
                               static_cast<scudo::sptr>(value));
     return 1;
   } else if (param == M_PURGE) {
-    SCUDO_ALLOCATOR.releaseToOS();
+    SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::Force);
+    return 1;
+  } else if (param == M_PURGE_ALL) {
+    SCUDO_ALLOCATOR.releaseToOS(scudo::ReleaseToOS::ForceAll);
     return 1;
   } else {
     scudo::Option option;
@@ -238,7 +244,10 @@ INTERFACE WEAK int SCUDO_PREFIX(malloc_info)(UNUSED int options, FILE *stream) {
     if (size < max_size)
       sizes[size]++;
   };
+
+  SCUDO_ALLOCATOR.disable();
   SCUDO_ALLOCATOR.iterateOverChunks(0, -1ul, callback, sizes);
+  SCUDO_ALLOCATOR.enable();
 
   fputs("<malloc version=\"scudo-1\">\n", stream);
   for (scudo::uptr i = 0; i != max_size; ++i)

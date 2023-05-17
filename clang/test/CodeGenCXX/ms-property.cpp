@@ -23,6 +23,12 @@ public:
   __declspec(property(get=GetX,put=PutX)) int x[];
   int GetX(int i, int j) { return i+j; }
   void PutX(int i, int j, int k) { j = i = k; }
+  __declspec(property(get=GetY,put=PutY)) int y[][];
+  int GetY(int i, int j) { return i+j; }
+  void PutY(int i, int j, int k) { j = i = k; }
+  __declspec(property(get=GetZ,put=PutZ)) int z[][][];
+  int GetZ(int i, int j, int k) { return i+j+k; }
+  void PutZ(int i, int j, int k, int v) { j = i = k = v; }
 };
 
 template <typename T>
@@ -58,6 +64,16 @@ int main(int argc, char **argv) {
   // CHECK: [[J:%.+]] = load i32, i32* %
   // CHECK-NEXT: call void @"?PutX@S@@QEAAXHHH@Z"(%class.S* {{[^,]*}} %{{.+}}, i32 noundef 23, i32 noundef 1, i32 noundef [[J]])
   p1->x[23][1] = j;
+  // CHECK: call noundef i32 @"?GetY@S@@QEAAHHH@Z"(%class.S* {{[^,]*}} %{{.+}}, i32 noundef 123, i32 noundef 22)
+  int k = p1->y[123][22];
+  // CHECK: [[K:%.+]] = load i32, i32* %
+  // CHECK-NEXT: call void @"?PutY@S@@QEAAXHHH@Z"(%class.S* {{[^,]*}} %{{.+}}, i32 noundef 16, i32 noundef 2, i32 noundef [[K]])
+  p1->y[16][2] = k;
+  // CHECK: call noundef i32 @"?GetZ@S@@QEAAHHHH@Z"(%class.S* {{[^,]*}} %{{.+}}, i32 noundef 123, i32 noundef 22, i32 noundef 44)
+  k = p1->z[123][22][44];
+  // CHECK: [[K:%.+]] = load i32, i32* %
+  // CHECK-NEXT: call void @"?PutZ@S@@QEAAXHHHH@Z"(%class.S* {{[^,]*}} %{{.+}}, i32 noundef 16, i32 noundef 2, i32 noundef 32, i32 noundef [[K]])
+  p1->z[16][2][32] = k;
   // CHECK: call noundef float @"?GetX@?$St@M@@QEAAMMM@Z"(%class.St* {{[^,]*}} %{{.+}}, float noundef 2.230000e+02, float noundef 1.100000e+01)
   float j1 = p2->x[223][11];
   // CHECK: [[J1:%.+]] = load float, float* %

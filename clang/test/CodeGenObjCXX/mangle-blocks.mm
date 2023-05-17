@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -emit-llvm -fblocks -o - -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 %s | FileCheck %s
+// RUN: %clang_cc1 -emit-llvm -fblocks -o - -triple x86_64-apple-darwin10 -fobjc-runtime=macosx-fragile-10.5 %s | FileCheck %s
 
 // CHECK-DAG: @_ZZZN26externally_visible_statics1S3fooEiEd_Ub_E1k = linkonce_odr global i32 0
 // CHECK-DAG: @_ZZZN26externally_visible_statics10inlinefuncEvEUb_E1i = linkonce_odr global i32 0
@@ -9,7 +9,7 @@ int f();
 
 void foo() {
   // CHECK-LABEL: define internal noundef i32 @___Z3foov_block_invoke
-  // CHECK: call i32 @__cxa_guard_acquire(i64* @_ZGVZZ3foovEUb_E5value
+  // CHECK: call i32 @__cxa_guard_acquire(ptr @_ZGVZZ3foovEUb_E5value
   (void)^(int x) { 
     static int value = f();
     return x + value;

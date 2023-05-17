@@ -161,6 +161,12 @@ OPTIONS
  coverage for the optimized target. This option can only be used with
  sample-based profile in extbinary format.
 
+.. option:: --convert-sample-profile-layout=[nest|flat]
+
+ Convert the merged profile into a profile with a new layout. Supported
+ layout are ``nest`` (Nested profile, the input should be CS flat profile) and
+ ``flat`` (Profile with nested inlinees flattened out).
+
 .. option:: --supplement-instr-with-sample=<file>
 
  Supplement an instrumentation profile with sample profile. The sample profile
@@ -191,6 +197,18 @@ OPTIONS
  When ``-debug-info-correlate`` was used for instrumentation, use this option
  to correlate the raw profile.
 
+.. option:: --temporal-profile-trace-reservoir-size
+
+ The maximum number of temporal profile traces to be stored in the output
+ profile. If more traces are added, we will use reservoir sampling to select
+ which traces to keep. Note that changing this value between different merge
+ invocations on the same indexed profile could result in sample bias. The
+ default value is 100.
+
+.. option:: --temporal-profile-max-trace-length
+
+ The maximum number of functions in a single temporal profile trace. Longer
+ traces will be truncated. The default value is 1000.
 
 EXAMPLES
 ^^^^^^^^
@@ -245,9 +263,17 @@ OPTIONS
 
  Print details for every function.
 
+.. option:: --binary-ids
+
+ Print embedded binary ids in a profile.
+
 .. option:: --counts
 
  Print the counter values for the displayed functions.
+
+.. option:: --show-format=<text|json|yaml>
+
+ Emit output in the selected format if supported by the provided profile type.
 
 .. option:: --function=<string>
 
@@ -297,6 +323,10 @@ OPTIONS
  Only output names of functions whose max count value are below the cutoff
  value.
 
+.. option:: --profile-version
+
+ Print profile version.
+
 .. option:: --showcs
 
  Only show context sensitive profile counts. The default is to filter all
@@ -311,6 +341,17 @@ OPTIONS
 
  Show basic information about each section in the profile. This option is
  only meaningful for sample-based profile in extbinary format.
+
+.. option:: --debug-info=<path>
+
+ Specify the executable or ``.dSYM`` that contains debug info for the raw profile.
+ When ``-debug-info-correlate`` was used for instrumentation, use this option
+ to show the correlated functions from the raw profile.
+
+.. option:: --covered
+
+ Show only the functions that have been executed, i.e., functions with non-zero
+ counts.
 
 .. program:: llvm-profdata overlap
 

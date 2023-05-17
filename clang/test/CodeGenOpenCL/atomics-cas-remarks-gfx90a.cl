@@ -1,8 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:     -Rpass=atomic-expand -S -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=REMARK
 
-// RUN: %clang_cc1 -no-opaque-pointers %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
+// RUN: %clang_cc1 %s -cl-std=CL2.0 -O0 -triple=amdgcn-amd-amdhsa -target-cpu gfx90a \
 // RUN:     -Rpass=atomic-expand -S -emit-llvm -o - 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=GFX90A-CAS
 
@@ -31,10 +31,10 @@ typedef enum memory_scope {
 // REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at one-as memory scope [-Rpass=atomic-expand]
 // REMARK: remark: A compare and swap loop was generated for an atomic fadd operation at wavefront-one-as memory scope [-Rpass=atomic-expand]
 // GFX90A-CAS-LABEL: @atomic_cas
-// GFX90A-CAS: atomicrmw fadd float addrspace(1)* {{.*}} syncscope("workgroup-one-as") monotonic
-// GFX90A-CAS: atomicrmw fadd float addrspace(1)* {{.*}} syncscope("agent-one-as") monotonic
-// GFX90A-CAS: atomicrmw fadd float addrspace(1)* {{.*}} syncscope("one-as") monotonic
-// GFX90A-CAS: atomicrmw fadd float addrspace(1)* {{.*}} syncscope("wavefront-one-as") monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("workgroup-one-as") monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("agent-one-as") monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("one-as") monotonic
+// GFX90A-CAS: atomicrmw fadd ptr addrspace(1) {{.*}} syncscope("wavefront-one-as") monotonic
 float atomic_cas(__global atomic_float *d, float a) {
   float ret1 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_work_group);
   float ret2 = __opencl_atomic_fetch_add(d, a, memory_order_relaxed, memory_scope_device);

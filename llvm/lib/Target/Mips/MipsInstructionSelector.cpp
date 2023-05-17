@@ -105,7 +105,7 @@ bool MipsInstructionSelector::isRegInFprb(Register Reg,
 bool MipsInstructionSelector::selectCopy(MachineInstr &I,
                                          MachineRegisterInfo &MRI) const {
   Register DstReg = I.getOperand(0).getReg();
-  if (Register::isPhysicalRegister(DstReg))
+  if (DstReg.isPhysical())
     return true;
 
   const TargetRegisterClass *RC = getRegClassForTypeOnBank(DstReg, MRI);
@@ -427,7 +427,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     const Register DestReg = I.getOperand(0).getReg();
 
     const TargetRegisterClass *DefRC = nullptr;
-    if (Register::isPhysicalRegister(DestReg))
+    if (DestReg.isPhysical())
       DefRC = TRI.getRegClass(DestReg);
     else
       DefRC = getRegClassForTypeOnBank(DestReg, MRI);

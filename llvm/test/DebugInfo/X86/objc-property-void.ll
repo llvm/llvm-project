@@ -25,41 +25,41 @@ target triple = "x86_64-apple-macosx10.9.0"
 
 %0 = type opaque
 %struct._objc_cache = type opaque
-%struct._class_t = type { %struct._class_t*, %struct._class_t*, %struct._objc_cache*, i8* (i8*, i8*)**, %struct._class_ro_t* }
-%struct._class_ro_t = type { i32, i32, i32, i8*, i8*, %struct.__method_list_t*, %struct._objc_protocol_list*, %struct._ivar_list_t*, i8*, %struct._prop_list_t* }
+%struct._class_t = type { ptr, ptr, ptr, ptr, ptr }
+%struct._class_ro_t = type { i32, i32, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr }
 %struct.__method_list_t = type { i32, i32, [0 x %struct._objc_method] }
-%struct._objc_method = type { i8*, i8*, i8* }
-%struct._objc_protocol_list = type { i64, [0 x %struct._protocol_t*] }
-%struct._protocol_t = type { i8*, i8*, %struct._objc_protocol_list*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct.__method_list_t*, %struct._prop_list_t*, i32, i32, i8** }
+%struct._objc_method = type { ptr, ptr, ptr }
+%struct._objc_protocol_list = type { i64, [0 x ptr] }
+%struct._protocol_t = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, ptr }
 %struct._ivar_list_t = type { i32, i32, [0 x %struct._ivar_t] }
-%struct._ivar_t = type { i64*, i8*, i8*, i32, i32 }
+%struct._ivar_t = type { ptr, ptr, ptr, i32, i32 }
 %struct._prop_list_t = type { i32, i32, [0 x %struct._prop_t] }
-%struct._prop_t = type { i8*, i8* }
+%struct._prop_t = type { ptr, ptr }
 
 @_objc_empty_cache = external global %struct._objc_cache
-@"OBJC_CLASS_$_Foo" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_Foo", %struct._class_t* null, %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** null, %struct._class_ro_t* @"\01l_OBJC_CLASS_RO_$_Foo" }, section "__DATA, __objc_data", align 8
-@"OBJC_METACLASS_$_Foo" = global %struct._class_t { %struct._class_t* @"OBJC_METACLASS_$_Foo", %struct._class_t* @"OBJC_CLASS_$_Foo", %struct._objc_cache* @_objc_empty_cache, i8* (i8*, i8*)** null, %struct._class_ro_t* @"\01l_OBJC_METACLASS_RO_$_Foo" }, section "__DATA, __objc_data", align 8
+@"OBJC_CLASS_$_Foo" = global %struct._class_t { ptr @"OBJC_METACLASS_$_Foo", ptr null, ptr @_objc_empty_cache, ptr null, ptr @"\01l_OBJC_CLASS_RO_$_Foo" }, section "__DATA, __objc_data", align 8
+@"OBJC_METACLASS_$_Foo" = global %struct._class_t { ptr @"OBJC_METACLASS_$_Foo", ptr @"OBJC_CLASS_$_Foo", ptr @_objc_empty_cache, ptr null, ptr @"\01l_OBJC_METACLASS_RO_$_Foo" }, section "__DATA, __objc_data", align 8
 @"\01L_OBJC_CLASS_NAME_" = internal global [4 x i8] c"Foo\00", section "__TEXT,__objc_classname,cstring_literals", align 1
-@"\01l_OBJC_METACLASS_RO_$_Foo" = internal global %struct._class_ro_t { i32 3, i32 40, i32 40, i8* null, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_CLASS_NAME_", i32 0, i32 0), %struct.__method_list_t* null, %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* null }, section "__DATA, __objc_const", align 8
+@"\01l_OBJC_METACLASS_RO_$_Foo" = internal global %struct._class_ro_t { i32 3, i32 40, i32 40, ptr null, ptr @"\01L_OBJC_CLASS_NAME_", ptr null, ptr null, ptr null, ptr null, ptr null }, section "__DATA, __objc_const", align 8
 @"\01L_OBJC_METH_VAR_NAME_" = internal global [4 x i8] c"foo\00", section "__TEXT,__objc_methname,cstring_literals", align 1
 @"\01L_OBJC_METH_VAR_TYPE_" = internal global [8 x i8] c"v16@0:8\00", section "__TEXT,__objc_methtype,cstring_literals", align 1
-@"\01l_OBJC_$_INSTANCE_METHODS_Foo" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @"\01L_OBJC_METH_VAR_TYPE_", i32 0, i32 0), i8* bitcast (void (%0*, i8*)* @"\01-[Foo foo]" to i8*) }] }, section "__DATA, __objc_const", align 8
+@"\01l_OBJC_$_INSTANCE_METHODS_Foo" = internal global { i32, i32, [1 x %struct._objc_method] } { i32 24, i32 1, [1 x %struct._objc_method] [%struct._objc_method { ptr @"\01L_OBJC_METH_VAR_NAME_", ptr @"\01L_OBJC_METH_VAR_TYPE_", ptr @"\01-[Foo foo]" }] }, section "__DATA, __objc_const", align 8
 @"\01L_OBJC_PROP_NAME_ATTR_" = internal global [4 x i8] c"foo\00", section "__TEXT,__cstring,cstring_literals", align 1
 @"\01L_OBJC_PROP_NAME_ATTR_1" = internal global [7 x i8] c"Tv,R,N\00", section "__TEXT,__cstring,cstring_literals", align 1
-@"\01l_OBJC_$_PROP_LIST_Foo" = internal global { i32, i32, [1 x %struct._prop_t] } { i32 16, i32 1, [1 x %struct._prop_t] [%struct._prop_t { i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_PROP_NAME_ATTR_", i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_PROP_NAME_ATTR_1", i32 0, i32 0) }] }, section "__DATA, __objc_const", align 8
-@"\01l_OBJC_CLASS_RO_$_Foo" = internal global %struct._class_ro_t { i32 2, i32 0, i32 0, i8* null, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_CLASS_NAME_", i32 0, i32 0), %struct.__method_list_t* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_INSTANCE_METHODS_Foo" to %struct.__method_list_t*), %struct._objc_protocol_list* null, %struct._ivar_list_t* null, i8* null, %struct._prop_list_t* bitcast ({ i32, i32, [1 x %struct._prop_t] }* @"\01l_OBJC_$_PROP_LIST_Foo" to %struct._prop_list_t*) }, section "__DATA, __objc_const", align 8
-@"\01L_OBJC_LABEL_CLASS_$" = internal global [1 x i8*] [i8* bitcast (%struct._class_t* @"OBJC_CLASS_$_Foo" to i8*)], section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
-@llvm.used = appending global [8 x i8*] [i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_CLASS_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_METH_VAR_NAME_", i32 0, i32 0), i8* getelementptr inbounds ([8 x i8], [8 x i8]* @"\01L_OBJC_METH_VAR_TYPE_", i32 0, i32 0), i8* bitcast ({ i32, i32, [1 x %struct._objc_method] }* @"\01l_OBJC_$_INSTANCE_METHODS_Foo" to i8*), i8* getelementptr inbounds ([4 x i8], [4 x i8]* @"\01L_OBJC_PROP_NAME_ATTR_", i32 0, i32 0), i8* getelementptr inbounds ([7 x i8], [7 x i8]* @"\01L_OBJC_PROP_NAME_ATTR_1", i32 0, i32 0), i8* bitcast ({ i32, i32, [1 x %struct._prop_t] }* @"\01l_OBJC_$_PROP_LIST_Foo" to i8*), i8* bitcast ([1 x i8*]* @"\01L_OBJC_LABEL_CLASS_$" to i8*)], section "llvm.metadata"
+@"\01l_OBJC_$_PROP_LIST_Foo" = internal global { i32, i32, [1 x %struct._prop_t] } { i32 16, i32 1, [1 x %struct._prop_t] [%struct._prop_t { ptr @"\01L_OBJC_PROP_NAME_ATTR_", ptr @"\01L_OBJC_PROP_NAME_ATTR_1" }] }, section "__DATA, __objc_const", align 8
+@"\01l_OBJC_CLASS_RO_$_Foo" = internal global %struct._class_ro_t { i32 2, i32 0, i32 0, ptr null, ptr @"\01L_OBJC_CLASS_NAME_", ptr @"\01l_OBJC_$_INSTANCE_METHODS_Foo", ptr null, ptr null, ptr null, ptr @"\01l_OBJC_$_PROP_LIST_Foo" }, section "__DATA, __objc_const", align 8
+@"\01L_OBJC_LABEL_CLASS_$" = internal global [1 x ptr] [ptr @"OBJC_CLASS_$_Foo"], section "__DATA, __objc_classlist, regular, no_dead_strip", align 8
+@llvm.used = appending global [8 x ptr] [ptr @"\01L_OBJC_CLASS_NAME_", ptr @"\01L_OBJC_METH_VAR_NAME_", ptr @"\01L_OBJC_METH_VAR_TYPE_", ptr @"\01l_OBJC_$_INSTANCE_METHODS_Foo", ptr @"\01L_OBJC_PROP_NAME_ATTR_", ptr @"\01L_OBJC_PROP_NAME_ATTR_1", ptr @"\01l_OBJC_$_PROP_LIST_Foo", ptr @"\01L_OBJC_LABEL_CLASS_$"], section "llvm.metadata"
 
 ; Function Attrs: ssp uwtable
-define internal void @"\01-[Foo foo]"(%0* %self, i8* %_cmd) #0 !dbg !10 {
+define internal void @"\01-[Foo foo]"(ptr %self, ptr %_cmd) #0 !dbg !10 {
 entry:
-  %self.addr = alloca %0*, align 8
-  %_cmd.addr = alloca i8*, align 8
-  store %0* %self, %0** %self.addr, align 8
-  call void @llvm.dbg.declare(metadata %0** %self.addr, metadata !24, metadata !DIExpression()), !dbg !26
-  store i8* %_cmd, i8** %_cmd.addr, align 8
-  call void @llvm.dbg.declare(metadata i8** %_cmd.addr, metadata !27, metadata !DIExpression()), !dbg !26
+  %self.addr = alloca ptr, align 8
+  %_cmd.addr = alloca ptr, align 8
+  store ptr %self, ptr %self.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %self.addr, metadata !24, metadata !DIExpression()), !dbg !26
+  store ptr %_cmd, ptr %_cmd.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %_cmd.addr, metadata !27, metadata !DIExpression()), !dbg !26
   ret void, !dbg !29
 }
 

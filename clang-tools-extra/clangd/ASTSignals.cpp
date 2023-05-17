@@ -9,13 +9,18 @@
 #include "ASTSignals.h"
 #include "AST.h"
 #include "FindTarget.h"
+#include "Headers.h"
 #include "support/Trace.h"
+#include "clang/AST/DeclObjC.h"
 
 namespace clang {
 namespace clangd {
 ASTSignals ASTSignals::derive(const ParsedAST &AST) {
   trace::Span Span("ASTSignals::derive");
   ASTSignals Signals;
+  Signals.InsertionDirective = preferredIncludeDirective(
+      AST.tuPath(), AST.getLangOpts(),
+      AST.getIncludeStructure().MainFileIncludes, AST.getLocalTopLevelDecls());
   const SourceManager &SM = AST.getSourceManager();
   findExplicitReferences(
       AST.getASTContext(),

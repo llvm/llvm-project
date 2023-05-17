@@ -203,12 +203,12 @@ TEST_F(SmallStringTest, Realloc) {
 }
 
 TEST_F(SmallStringTest, Comparisons) {
-  EXPECT_EQ(-1, SmallString<10>("aab").compare("aad"));
+  EXPECT_GT( 0, SmallString<10>("aab").compare("aad"));
   EXPECT_EQ( 0, SmallString<10>("aab").compare("aab"));
-  EXPECT_EQ( 1, SmallString<10>("aab").compare("aaa"));
-  EXPECT_EQ(-1, SmallString<10>("aab").compare("aabb"));
-  EXPECT_EQ( 1, SmallString<10>("aab").compare("aa"));
-  EXPECT_EQ( 1, SmallString<10>("\xFF").compare("\1"));
+  EXPECT_LT( 0, SmallString<10>("aab").compare("aaa"));
+  EXPECT_GT( 0, SmallString<10>("aab").compare("aabb"));
+  EXPECT_LT( 0, SmallString<10>("aab").compare("aa"));
+  EXPECT_LT( 0, SmallString<10>("\xFF").compare("\1"));
 
   EXPECT_EQ(-1, SmallString<10>("AaB").compare_insensitive("aAd"));
   EXPECT_EQ( 0, SmallString<10>("AaB").compare_insensitive("aab"));

@@ -69,7 +69,7 @@ Since the initial implementation, the design has evolved with, and partially
 driven the evolution of the core MLIR infrastructure to use
 [Regions](../LangRef.md/#regions),
 [OpInterfaces](../Interfaces.md),
-[ODS](../OpDefinitions.md) and
+[ODS](../DefiningDialects/Operations.md) and
 [Declarative Rewrite Rules](../DeclarativeRewrites.md)
 among others. The approach adopted by Linalg was extended to become
 [StructuredOps abstractions](

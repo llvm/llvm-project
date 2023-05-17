@@ -11,11 +11,11 @@
 
   define void @f0() #0 {
   b0:
-    tail call fastcc void @f1(float* inttoptr (i64 add (i64 ptrtoint ([0 x i8]* @0 to i64), i64 128) to float*), i64* getelementptr inbounds ([2 x i64], [2 x i64]* @1, i32 0, i32 0))
+    tail call fastcc void @f1(ptr inttoptr (i64 add (i64 ptrtoint (ptr @0 to i64), i64 128) to ptr), ptr @1)
     ret void
   }
 
-  declare fastcc void @f1(float* nocapture readonly, i64* nocapture readonly) #1
+  declare fastcc void @f1(ptr nocapture readonly, ptr nocapture readonly) #1
 
   attributes #0 = { alwaysinline nounwind "target-cpu"="hexagonv60" }
   attributes #1 = { noinline norecurse nounwind "target-cpu"="hexagonv60" }

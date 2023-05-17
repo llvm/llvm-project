@@ -16,10 +16,6 @@ void foo(int a)
     throw ExcC();
 }
 
-void filter_only(int a) throw (ExcA, ExcB, ExcC, ExcD, ExcE, ExcF) {
-  foo(a);
-}
-
 int main(int argc, char **argv)
 {
   asm volatile ("nop;nop;nop;nop;nop");
@@ -41,7 +37,7 @@ int main(int argc, char **argv)
     asm volatile ("nop;nop;nop;nop;nop");
     try {
       asm volatile ("nop;nop;nop;nop;nop");
-      filter_only(argc);
+      foo(argc);
     } catch (ExcC) {
       asm volatile ("nop;nop;nop;nop;nop");
       printf("caught ExcC\n");

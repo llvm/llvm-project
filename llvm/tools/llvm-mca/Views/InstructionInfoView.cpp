@@ -55,10 +55,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
   }
 
-  int Index = 0;
-  for (const auto &I : enumerate(zip(IIVD, Source))) {
-    const InstructionInfoViewData &IIVDEntry = std::get<0>(I.value());
-
+  for (const auto &[Index, IIVDEntry, Inst] : enumerate(IIVD, Source)) {
     TempStream << ' ' << IIVDEntry.NumMicroOpcodes << "    ";
     if (IIVDEntry.NumMicroOpcodes < 10)
       TempStream << "  ";
@@ -70,8 +67,8 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     else if (IIVDEntry.Latency < 100)
       TempStream << ' ';
 
-    if (IIVDEntry.RThroughput.hasValue()) {
-      double RT = IIVDEntry.RThroughput.getValue();
+    if (IIVDEntry.RThroughput) {
+      double RT = *IIVDEntry.RThroughput;
       TempStream << format("%.2f", RT) << ' ';
       if (RT < 10.0)
         TempStream << "  ";
@@ -92,7 +89,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
     }
 
     if (PrintEncodings) {
-      StringRef Encoding(CE.getEncoding(I.index()));
+      StringRef Encoding(CE.getEncoding(Index));
       unsigned EncodingSize = Encoding.size();
       TempStream << " " << EncodingSize
                  << (EncodingSize < 10 ? "     " : "    ");
@@ -104,9 +101,7 @@ void InstructionInfoView::printView(raw_ostream &OS) const {
       FOS.flush();
     }
 
-    const MCInst &Inst = std::get<1>(I.value());
     TempStream << printInstructionString(Inst) << '\n';
-    ++Index;
   }
 
   TempStream.flush();
@@ -152,7 +147,7 @@ InstructionInfoView::toJSON(const InstructionInfoViewData &IIVD) const {
                    {"mayLoad", IIVD.mayLoad},
                    {"mayStore", IIVD.mayStore},
                    {"hasUnmodeledSideEffects", IIVD.hasUnmodeledSideEffects}});
-  JO.try_emplace("RThroughput", IIVD.RThroughput.getValueOr(0.0));
+  JO.try_emplace("RThroughput", IIVD.RThroughput.value_or(0.0));
   return JO;
 }
 

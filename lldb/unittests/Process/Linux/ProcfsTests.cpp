@@ -18,7 +18,7 @@ using namespace process_linux;
 using namespace llvm;
 
 TEST(Perf, HardcodedLogicalCoreIDs) {
-  Expected<std::vector<lldb::core_id_t>> core_ids =
+  Expected<std::vector<lldb::cpu_id_t>> cpu_ids =
       GetAvailableLogicalCoreIDs(R"(processor       : 13
 vendor_id       : GenuineIntel
 cpu family      : 6
@@ -87,8 +87,8 @@ apicid          : 121
 power management:
 )");
 
-  ASSERT_TRUE((bool)core_ids);
-  ASSERT_THAT(*core_ids, ::testing::ElementsAre(13, 24, 35, 79));
+  ASSERT_TRUE((bool)cpu_ids);
+  ASSERT_THAT(*cpu_ids, ::testing::ElementsAre(13, 24, 35, 79));
 }
 
 TEST(Perf, RealLogicalCoreIDs) {
@@ -98,7 +98,23 @@ TEST(Perf, RealLogicalCoreIDs) {
     GTEST_SKIP() << toString(buffer_or_error.takeError());
 
   // At this point we shouldn't fail parsing the core ids
-  Expected<ArrayRef<lldb::core_id_t>> core_ids = GetAvailableLogicalCoreIDs();
-  ASSERT_TRUE((bool)core_ids);
-  ASSERT_GT((int)core_ids->size(), 0) << "We must see at least one core";
+  Expected<ArrayRef<lldb::cpu_id_t>> cpu_ids = GetAvailableLogicalCoreIDs();
+  ASSERT_TRUE((bool)cpu_ids);
+  ASSERT_GT((int)cpu_ids->size(), 0) << "We must see at least one core";
+}
+
+TEST(Perf, RealPtraceScope) {
+  // We first check we can read /proc/sys/kernel/yama/ptrace_scope
+  auto buffer_or_error =
+      errorOrToExpected(getProcFile("sys/kernel/yama/ptrace_scope"));
+  if (!buffer_or_error)
+    GTEST_SKIP() << toString(buffer_or_error.takeError());
+
+  // At this point we shouldn't fail parsing the ptrace_scope value.
+  Expected<int> ptrace_scope = GetPtraceScope();
+  ASSERT_TRUE((bool)ptrace_scope) << ptrace_scope.takeError();
+  ASSERT_GE(*ptrace_scope, 0)
+      << "Sensible values of ptrace_scope are between 0 and 3";
+  ASSERT_LE(*ptrace_scope, 3)
+      << "Sensible values of ptrace_scope are between 0 and 3";
 }

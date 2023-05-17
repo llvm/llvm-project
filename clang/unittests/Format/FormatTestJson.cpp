@@ -159,6 +159,27 @@ TEST_F(FormatTestJson, JsonArray) {
                "]");
 }
 
+TEST_F(FormatTestJson, JsonArrayOneLine) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Json);
+  Style.BreakArrays = false;
+  Style.SpacesInContainerLiterals = false;
+  verifyFormat("[]", Style);
+  verifyFormat("[1]", Style);
+  verifyFormat("[1, 2]", Style);
+  verifyFormat("[1, 2, 3]", Style);
+  verifyFormat("[1, 2, 3, 4]", Style);
+  verifyFormat("[1, 2, 3, 4, 5]", Style);
+
+  verifyFormat("[\n"
+               "  1,\n"
+               "  2,\n"
+               "  {\n"
+               "    A: 1\n"
+               "  }\n"
+               "]",
+               Style);
+}
+
 TEST_F(FormatTestJson, JsonNoStringSplit) {
   FormatStyle Style = getLLVMStyle(FormatStyle::LK_Json);
   Style.IndentWidth = 4;
@@ -213,6 +234,41 @@ TEST_F(FormatTestJson, DisableJsonFormat) {
                      "  \"name\": 1\n"
                      "}",
                      Style);
+}
+
+TEST_F(FormatTestJson, SpaceBeforeJsonColon) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Json);
+  verifyFormatStable("{\n"
+                     "  \"name\": 1\n"
+                     "}",
+                     Style);
+
+  Style.SpaceBeforeJsonColon = true;
+  verifyFormatStable("{}", Style);
+  verifyFormatStable("{\n"
+                     "  \"name\" : 1\n"
+                     "}",
+                     Style);
+}
+
+TEST_F(FormatTestJson, StartsWithWhitespaces) {
+  FormatStyle Style = getLLVMStyle(FormatStyle::LK_Json);
+  EXPECT_EQ("{\n"
+            "  \"name\": 1\n"
+            "}",
+            format(" {\n"
+                   "  \"name\": 1\n"
+                   "}",
+                   Style));
+
+  // FIXME: The block below is over-indented.
+  EXPECT_EQ("    {\n"
+            "      \"name\": 1\n"
+            "    }",
+            format("\n{\n"
+                   "  \"name\": 1\n"
+                   "}",
+                   Style));
 }
 
 } // namespace format

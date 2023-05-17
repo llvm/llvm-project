@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -Wauto-import -Wno-private-module -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs %s -verify -fmodule-feature custom_req1
-// RUN: %clang_cc1 -Wauto-import -Wno-private-module -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs %s -verify -std=c89 -DTEST_C_FEATURES
+// RUN: %clang_cc1 -Rmodule-include-translation -Wno-private-module -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs %s -verify -fmodule-feature custom_req1
+// RUN: %clang_cc1 -Rmodule-include-translation -Wno-private-module -fmodules-cache-path=%t -fmodules -fimplicit-module-maps -F %S/Inputs -I %S/Inputs %s -verify -std=c89 -DTEST_C_FEATURES
 #ifndef TEST_C_FEATURES
 // expected-error@DependsOnModule.framework/module.map:7 {{module 'DependsOnModule.CXX' requires feature 'cplusplus'}}
 @import DependsOnModule.CXX; // expected-note {{module imported here}}
@@ -22,11 +22,17 @@
 @import DependsOnModule.CXX14; // expected-note {{module imported here}}
 // expected-error@DependsOnModule.framework/module.map:46 {{module 'DependsOnModule.CXX17' requires feature 'cplusplus17'}}
 @import DependsOnModule.CXX17; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:49 {{module 'DependsOnModule.CXX20' requires feature 'cplusplus20'}}
+@import DependsOnModule.CXX20; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:52 {{module 'DependsOnModule.CXX23' requires feature 'cplusplus23'}}
+@import DependsOnModule.CXX23; // expected-note {{module imported here}}
+// expected-error@DependsOnModule.framework/module.map:55 {{module 'DependsOnModule.CXX26' requires feature 'cplusplus26'}}
+@import DependsOnModule.CXX26; // expected-note {{module imported here}}
 #else
-// expected-error@DependsOnModule.framework/module.map:49 {{module 'DependsOnModule.C99' requires feature 'c99'}}
+// expected-error@DependsOnModule.framework/module.map:58 {{module 'DependsOnModule.C99' requires feature 'c99'}}
 @import DependsOnModule.C99; // expected-note {{module imported here}}
-// expected-error@DependsOnModule.framework/module.map:52 {{module 'DependsOnModule.C11' requires feature 'c11'}}
+// expected-error@DependsOnModule.framework/module.map:61 {{module 'DependsOnModule.C11' requires feature 'c11'}}
 @import DependsOnModule.C11; // expected-note {{module imported here}}
-// expected-error@DependsOnModule.framework/module.map:55 {{module 'DependsOnModule.C17' requires feature 'c17'}}
+// expected-error@DependsOnModule.framework/module.map:64 {{module 'DependsOnModule.C17' requires feature 'c17'}}
 @import DependsOnModule.C17; // expected-note {{module imported here}}
 #endif

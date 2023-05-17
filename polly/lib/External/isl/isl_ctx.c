@@ -291,7 +291,7 @@ void isl_ctx_free(struct isl_ctx *ctx)
 		return;
 	if (ctx->ref != 0)
 		isl_die(ctx, isl_error_invalid,
-			"isl_ctx freed, but some objects still reference it",
+			"isl_ctx not freed as some objects still reference it",
 			return);
 
 	if (ctx->opt->print_stats)

@@ -75,9 +75,9 @@ M68kRegisterInfo::getRegsForTailCall(const MachineFunction &MF) const {
 unsigned
 M68kRegisterInfo::getMatchingMegaReg(unsigned Reg,
                                      const TargetRegisterClass *RC) const {
-  for (MCSuperRegIterator Super(Reg, this); Super.isValid(); ++Super)
-    if (RC->contains(*Super))
-      return *Super;
+  for (MCPhysReg Super : superregs(Reg))
+    if (RC->contains(Super))
+      return Super;
   return 0;
 }
 
@@ -129,8 +129,8 @@ BitVector M68kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
     for (MCRegAliasIterator I(Reg, this, /* self */ true); I.isValid(); ++I) {
       Reserved.set(*I);
     }
-    for (MCSubRegIterator I(Reg, this, /* self */ true); I.isValid(); ++I) {
-      Reserved.set(*I);
+    for (MCPhysReg I : subregs_inclusive(Reg)) {
+      Reserved.set(I);
     }
   };
 
@@ -162,7 +162,7 @@ BitVector M68kRegisterInfo::getReservedRegs(const MachineFunction &MF) const {
   return Reserved;
 }
 
-void M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+bool M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                            int SPAdj, unsigned FIOperandNum,
                                            RegScavenger *RS) const {
   MachineInstr &MI = *II;
@@ -208,6 +208,7 @@ void M68kRegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     FIOffset += SPAdj;
 
   Disp.ChangeToImmediate(FIOffset + Imm);
+  return false;
 }
 
 bool M68kRegisterInfo::requiresRegisterScavenging(

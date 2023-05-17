@@ -4,8 +4,8 @@
 define void @invert_condition(i1 %arg) {
 ; CHECK-LABEL: @invert_condition(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = load volatile float, float addrspace(1)* undef
-; CHECK-NEXT:    [[TMP1:%.*]] = load volatile float, float addrspace(1)* undef
+; CHECK-NEXT:    [[TMP:%.*]] = load volatile float, ptr addrspace(1) undef
+; CHECK-NEXT:    [[TMP1:%.*]] = load volatile float, ptr addrspace(1) undef
 ; CHECK-NEXT:    br label [[BB2:%.*]]
 ; CHECK:       bb2:
 ; CHECK-NEXT:    [[TMP3:%.*]] = fcmp oge float [[TMP]], [[TMP1]]
@@ -16,8 +16,8 @@ define void @invert_condition(i1 %arg) {
 ; CHECK-NEXT:    ret void
 ;
 bb:
-  %tmp = load volatile float, float addrspace(1)* undef
-  %tmp1 = load volatile float, float addrspace(1)* undef
+  %tmp = load volatile float, ptr addrspace(1) undef
+  %tmp1 = load volatile float, ptr addrspace(1) undef
   br label %bb2
 
 bb2:                                              ; preds = %bb2, %bb

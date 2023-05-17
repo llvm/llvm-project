@@ -1,0 +1,52 @@
+# REQUIRES: system-aix
+## Test default "-X" option and environment variable "OBJECT_MODE" on AIX OS.
+
+# RUN: yaml2obj -DFLAG=0x1DF %s -o %t_xcoff32.o
+# RUN: yaml2obj -DFLAG=0x1F7 %s -o %t_xcoff64.o
+# RUN: rm -rf %t.a
+# RUN: unset OBJECT_MODE
+# RUN: env OBJECT_MODE=any llvm-ar -q -c %t.a %t_xcoff32.o %t_xcoff64.o
+
+## Test default "-X" option.
+# RUN: llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck -DFILE32=%t_xcoff32.o --check-prefixes=XCOFF32 %s --implicit-check-not={{.}}
+
+## Test environment variable "OBJECT_MODE".
+# RUN: env OBJECT_MODE=32 llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck -DFILE32=%t_xcoff32.o --check-prefixes=XCOFF32 %s --implicit-check-not={{.}}
+# RUN: env OBJECT_MODE=64 llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck -DFILE64=%t_xcoff64.o --check-prefixes=XCOFF64 %s --implicit-check-not={{.}}
+# RUN: env OBJECT_MODE=32_64 llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=XCOFF32,XCOFF64 %s -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --match-full-lines
+# RUN: env OBJECT_MODE=any llvm-nm --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=XCOFF32,XCOFF64 %s -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --match-full-lines
+# RUN: env OBJECT_MODE=32 llvm-nm --format=just-symbols %t.a | \
+# RUN:   FileCheck -DFILE=%basename_t --check-prefixes=ARC32 %s --implicit-check-not={{.}}
+# RUN: env OBJECT_MODE=64 llvm-nm --format=just-symbols %t.a | \
+# RUN:   FileCheck -DFILE=%basename_t --check-prefixes=ARC64 %s --implicit-check-not={{.}}
+
+## Test -X option overrides environment variable "OBJECT_MODE".
+# RUN: env OBJECT_MODE=any llvm-nm -X32 --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck -DFILE32=%t_xcoff32.o --check-prefixes=XCOFF32 %s --implicit-check-not={{.}}
+# RUN: env OBJECT_MODE=any llvm-nm -X64 --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck -DFILE64=%t_xcoff64.o --check-prefixes=XCOFF64 %s --implicit-check-not={{.}}
+# RUN: env OBJECT_MODE=any llvm-nm -X32_64 --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=XCOFF32,XCOFF64 %s -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --match-full-lines
+# RUN: env OBJECT_MODE=32 llvm-nm -Xany --format=just-symbols %t_xcoff32.o %t_xcoff64.o | \
+# RUN:   FileCheck --check-prefixes=XCOFF32,XCOFF64 %s -DFILE32=%t_xcoff32.o -DFILE64=%t_xcoff64.o --match-full-lines
+
+# XCOFF32:           [[FILE32]]:
+# XCOFF32-NEXT:      var_0x1DF
+# XCOFF64:           [[FILE64]]:
+# XCOFF64-NEXT:      var_0x1F7
+
+# ARC32:           [[FILE]].tmp_xcoff32.o:
+# ARC32-NEXT:      var_0x1DF
+# ARC64:           [[FILE]].tmp_xcoff64.o:
+# ARC64-NEXT:      var_0x1F7
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       [[FLAG]]
+Symbols:
+  - Name:            var_[[FLAG]]

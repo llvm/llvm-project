@@ -336,21 +336,21 @@ define { <4 x i32>, i32 } @test_vfaezfs(<4 x i32> %a, <4 x i32> %b, i32 %c) {
   ret { <4 x i32>, i32 } %res
 }
 
-declare i32 @llvm.s390.lcbb(i8 *, i32)
-define i32 @test_lcbb(i8* %a, i32 %b) {
+declare i32 @llvm.s390.lcbb(ptr, i32)
+define i32 @test_lcbb(ptr %a, i32 %b) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %b
-  ; CHECK-NEXT: %res = call i32 @llvm.s390.lcbb(i8* %a, i32 %b)
-  %res = call i32 @llvm.s390.lcbb(i8* %a, i32 %b)
+  ; CHECK-NEXT: %res = call i32 @llvm.s390.lcbb(ptr %a, i32 %b)
+  %res = call i32 @llvm.s390.lcbb(ptr %a, i32 %b)
   ret i32 %res
 }
 
-declare <16 x i8> @llvm.s390.vlbb(i8 *, i32)
-define <16 x i8> @test_vlbb(i8* %a, i32 %b) {
+declare <16 x i8> @llvm.s390.vlbb(ptr, i32)
+define <16 x i8> @test_vlbb(ptr %a, i32 %b) {
   ; CHECK: immarg operand has non-immediate parameter
   ; CHECK-NEXT: i32 %b
-  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vlbb(i8* %a, i32 %b)
-  %res = call <16 x i8> @llvm.s390.vlbb(i8* %a, i32 %b)
+  ; CHECK-NEXT: %res = call <16 x i8> @llvm.s390.vlbb(ptr %a, i32 %b)
+  %res = call <16 x i8> @llvm.s390.vlbb(ptr %a, i32 %b)
   ret <16 x i8> %res
 }
 

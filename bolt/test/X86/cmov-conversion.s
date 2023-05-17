@@ -4,9 +4,9 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -data %t.fdata -o %t -lite=0 -v=2 \
-# RUN:   -cmov-conversion -cmov-conversion-misprediction-threshold=-1 \
-# RUN:   -cmov-conversion-bias-threshold=-1 -print-all | FileCheck %s
+# RUN: llvm-bolt %t.exe --data %t.fdata -o %t --lite=0 -v=2 \
+# RUN:   --cmov-conversion --cmov-conversion-misprediction-threshold=-1 \
+# RUN:   --cmov-conversion-bias-threshold=-1 --print-all | FileCheck %s
 # CHECK: BOLT-INFO: CMOVConversion: CmovInHotPath, converted static 1/1
 # CHECK: BOLT-INFO: CMOVConversion: CmovNotInHotPath, converted static 1/1
 # CHECK: BOLT-INFO: CMOVConversion: MaxIndex, converted static 1/1

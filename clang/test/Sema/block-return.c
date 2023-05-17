@@ -81,7 +81,7 @@ static int funk(char *s) {
 void next(void);
 void foo4(void) {
   int (^xx)(const char *s) = ^(char *s) { return 1; }; // expected-error {{incompatible block pointer types initializing 'int (^)(const char *)' with an expression of type 'int (^)(char *)'}}
-  int (*yy)(const char *s) = funk; // expected-warning {{incompatible function pointer types initializing 'int (*)(const char *)' with an expression of type 'int (char *)'}}
+  int (*yy)(const char *s) = funk; // expected-error {{incompatible function pointer types initializing 'int (*)(const char *)' with an expression of type 'int (char *)'}}
 
   int (^nested)(char *s) = ^(char *str) { void (^nest)(void) = ^(void) { printf("%s\n", str); }; next(); return 1; };
 }
@@ -98,7 +98,7 @@ bptr foo5(int j) {
 }
 
 int (*funcptr3[5])(long);
-int sz8 = sizeof(^int (*[5])(long) {return funcptr3;}); // expected-error {{block cannot return array type}} expected-warning {{incompatible pointer to integer conversion}}
+int sz8 = sizeof(^int (*[5])(long) {return funcptr3;}); // expected-error {{block cannot return array type}} expected-error {{incompatible pointer to integer conversion}}
 int sz9 = sizeof(^int(*())()[3]{ }); // expected-error {{function cannot return array type}}
                                      // expected-warning@-1 {{a function declaration without a prototype is deprecated in all versions of C}}
 

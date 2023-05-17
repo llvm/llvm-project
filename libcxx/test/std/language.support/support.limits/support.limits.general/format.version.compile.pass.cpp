@@ -17,8 +17,9 @@
 
 // Test the feature test macros defined by <format>
 
-/*  Constant            Value
-    __cpp_lib_format    202106L [C++20]
+/*  Constant                   Value
+    __cpp_lib_format           202106L [C++20]
+    __cpp_lib_format_ranges    202207L [C++2b]
 */
 
 #include <format>
@@ -30,16 +31,28 @@
 #   error "__cpp_lib_format should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_format_ranges
+#   error "__cpp_lib_format_ranges should not be defined before c++2b"
+# endif
+
 #elif TEST_STD_VER == 14
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_format_ranges
+#   error "__cpp_lib_format_ranges should not be defined before c++2b"
+# endif
+
 #elif TEST_STD_VER == 17
 
 # ifdef __cpp_lib_format
 #   error "__cpp_lib_format should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_format_ranges
+#   error "__cpp_lib_format_ranges should not be defined before c++2b"
 # endif
 
 #elif TEST_STD_VER == 20
@@ -57,6 +70,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_format_ranges
+#   error "__cpp_lib_format_ranges should not be defined before c++2b"
+# endif
+
 #elif TEST_STD_VER > 20
 
 # if !defined(_LIBCPP_VERSION)
@@ -69,6 +86,19 @@
 # else // _LIBCPP_VERSION
 #   ifdef __cpp_lib_format
 #     error "__cpp_lib_format should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
+# if !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#   ifndef __cpp_lib_format_ranges
+#     error "__cpp_lib_format_ranges should be defined in c++2b"
+#   endif
+#   if __cpp_lib_format_ranges != 202207L
+#     error "__cpp_lib_format_ranges should have the value 202207L in c++2b"
+#   endif
+# else
+#   ifdef __cpp_lib_format_ranges
+#     error "__cpp_lib_format_ranges should not be defined when the requirement '!defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)' is not met!"
 #   endif
 # endif
 

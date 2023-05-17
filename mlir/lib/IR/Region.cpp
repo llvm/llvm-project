@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/IR/Region.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Operation.h"
 using namespace mlir;
 
@@ -67,14 +67,14 @@ unsigned Region::getRegionNumber() {
 
 /// Clone the internal blocks from this region into `dest`. Any
 /// cloned blocks are appended to the back of dest.
-void Region::cloneInto(Region *dest, BlockAndValueMapping &mapper) {
+void Region::cloneInto(Region *dest, IRMapping &mapper) {
   assert(dest && "expected valid region to clone into");
   cloneInto(dest, dest->end(), mapper);
 }
 
 /// Clone this region into 'dest' before the given position in 'dest'.
 void Region::cloneInto(Region *dest, Region::iterator destPos,
-                       BlockAndValueMapping &mapper) {
+                       IRMapping &mapper) {
   assert(dest && "expected valid region to clone into");
   assert(this != dest && "cannot clone region into itself");
 

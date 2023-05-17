@@ -50,53 +50,60 @@ def LoopLikeOpInterface : OpInterface<"LoopLikeOpInterface"> {
     >,
     InterfaceMethod<[{
         If there is a single induction variable return it, otherwise return
-        llvm::None.
+        std::nullopt.
       }],
-      /*retTy=*/"::mlir::Optional<::mlir::Value>",
+      /*retTy=*/"::std::optional<::mlir::Value>",
       /*methodName=*/"getSingleInductionVar",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
         Return the single lower bound value or attribute if it exists, otherwise
-        return llvm::None.
+        return std::nullopt.
       }],
-      /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
+      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
       /*methodName=*/"getSingleLowerBound",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
         Return the single step value or attribute if it exists, otherwise
-        return llvm::None.
+        return std::nullopt.
       }],
-      /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
+      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
       /*methodName=*/"getSingleStep",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
     InterfaceMethod<[{
         Return the single upper bound value or attribute if it exists, otherwise
-        return llvm::None.
+        return std::nullopt.
       }],
-      /*retTy=*/"::mlir::Optional<::mlir::OpFoldResult>",
+      /*retTy=*/"::std::optional<::mlir::OpFoldResult>",
       /*methodName=*/"getSingleUpperBound",
       /*args=*/(ins),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
-        return llvm::None;
+        return std::nullopt;
       }]
     >,
   ];
+
+  let extraClassDeclaration = [{
+    /// Returns if a block is inside a loop (within the current function). This
+    /// can either be because the block is nested inside a LoopLikeInterface, or
+    /// because the control flow graph is cyclic
+    static bool blockIsInLoop(Block *block);
+  }];
 }
 
 #endif // MLIR_INTERFACES_LOOPLIKEINTERFACE

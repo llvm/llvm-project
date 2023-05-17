@@ -159,8 +159,8 @@ define dso_local double @fprs_and_gprs(i32 signext %i) {
 ; MIR64: liveins: $x3, $x14, $x25, $x31, $f14, $f19, $f21, $f31
 
 ; MIR64:       $x0 = MFLR8 implicit $lr8
-; MIR64-NEXT:  STD killed $x0, 16, $x1
 ; MIR64-NEXT:  $x1 = STDU $x1, -400, $x1
+; MIR64-NEXT:  STD killed $x0, 416, $x1
 ; MIR64-DAG:   STD killed $x14, 112, $x1 :: (store (s64) into %fixed-stack.6, align 16)
 ; MIR64-DAG:   STD killed $x25, 200, $x1 :: (store (s64) into %fixed-stack.5)
 ; MIR64-DAG:   STD killed $x31, 248, $x1 :: (store (s64) into %fixed-stack.4)
@@ -188,8 +188,8 @@ define dso_local double @fprs_and_gprs(i32 signext %i) {
 ; MIR32: liveins: $r3, $r13, $r14, $r25, $r31, $f14, $f19, $f21, $f31
 
 ; MIR32:      $r0 = MFLR implicit $lr
-; MIR32-NEXT: STW killed $r0, 8, $r1
 ; MIR32-NEXT: $r1 = STWU $r1, -288, $r1
+; MIR32-NEXT: STW killed $r0, 296, $r1
 ; MIR32-DAG:  STW killed $r13, 68, $r1 :: (store (s32) into %fixed-stack.7)
 ; MIR32-DAG:  STW killed $r14, 72, $r1 :: (store (s32) into %fixed-stack.6, align 8)
 ; MIR32-DAG:  STW killed $r25, 116, $r1 :: (store (s32) into %fixed-stack.5)
@@ -217,8 +217,8 @@ define dso_local double @fprs_and_gprs(i32 signext %i) {
 
 ; ASM64-LABEL: .fprs_and_gprs:
 ; ASM64:         mflr 0
-; ASM64-NEXT:    std 0, 16(1)
 ; ASM64-NEXT:    stdu 1, -400(1)
+; ASM64-NEXT:    std 0, 416(1)
 ; ASM64-DAG:     std 14, 112(1)                  # 8-byte Folded Spill
 ; ASM64-DAG:     std 25, 200(1)                  # 8-byte Folded Spill
 ; ASM64-DAG:     std 31, 248(1)                  # 8-byte Folded Spill
@@ -243,8 +243,8 @@ define dso_local double @fprs_and_gprs(i32 signext %i) {
 
 ; ASM32-LABEL: .fprs_and_gprs:
 ; ASM32:         mflr 0
-; ASM32-NEXT:    stw 0, 8(1)
 ; ASM32-NEXT:    stwu 1, -288(1)
+; ASM32-NEXT:    stw 0, 296(1)
 ; ASM32-DAG:     stw 13, 68(1)                   # 4-byte Folded Spill
 ; ASM32-DAG:     stw 14, 72(1)                   # 4-byte Folded Spill
 ; ASM32-DAG:     stw 25, 116(1)                  # 4-byte Folded Spill

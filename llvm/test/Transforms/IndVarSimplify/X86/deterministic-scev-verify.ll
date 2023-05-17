@@ -1,11 +1,11 @@
-; RUN: opt -indvars -S < %s | FileCheck %s
+; RUN: opt -passes=indvars -S < %s | FileCheck %s
 
 ; Check that IndVarSimplify's result is not influenced by stray calls to
-; ScalarEvolution in debug builds. However, -verify-indvars may still do
+; ScalarEvolution in debug builds. However, -verify-passes=indvars may still do
 ; such calls.
 ; llvm.org/PR44815
 
-; In this test, adding -verify-indvars causes %tmp13 to not be optimized away.
+; In this test, adding -verify-passes=indvars causes %tmp13 to not be optimized away.
 ; CHECK-LABEL: @foo
 ; CHECK-NOT:   phi i32
 
@@ -19,7 +19,7 @@ tmp0:
 
 tmp7:
   %tmp8 = add nuw nsw i32 %tmp13, 1
-  store i32 undef, i32* @b
+  store i32 undef, ptr @b
   br label %tmp12
 
 tmp12:

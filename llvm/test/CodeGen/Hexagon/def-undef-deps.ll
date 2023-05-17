@@ -9,7 +9,7 @@
 ; that happens after register allocation. The undef flags need to be cleared
 ; earlier to avoid this issue.
 
-%0 = type <{ i8*, i8*, i16, i8, i8, i8 }>
+%0 = type <{ ptr, ptr, i16, i8, i8, i8 }>
 %1 = type { %2, %5, [3 x %3] }
 %2 = type { %3, %4, i16, i16 }
 %3 = type { i32, i32, i8, i8 }
@@ -23,15 +23,15 @@
 ; Function Attrs: nounwind readnone
 declare i32 @llvm.hexagon.M2.mpy.up(i32, i32) #1
 
-declare void @f0(%0*, i32, i32, i32, i32, i32)
+declare void @f0(ptr, i32, i32, i32, i32, i32)
 
-define void @f1(i8 zeroext %a0, %1* nocapture %a1, i8 zeroext %a2, i8 zeroext %a3) #0 {
+define void @f1(i8 zeroext %a0, ptr nocapture %a1, i8 zeroext %a2, i8 zeroext %a3) #0 {
 b0:
-  %v0 = getelementptr inbounds %1, %1* %a1, i32 0, i32 1, i32 9
-  %v1 = load i8, i8* %v0, align 1
+  %v0 = getelementptr inbounds %1, ptr %a1, i32 0, i32 1, i32 9
+  %v1 = load i8, ptr %v0, align 1
   %v2 = zext i8 %v1 to i32
-  %v3 = getelementptr inbounds %1, %1* %a1, i32 0, i32 2, i32 %v2
-  %v4 = tail call %6* @f2(i32 undef, i8 zeroext 0)
+  %v3 = getelementptr inbounds %1, ptr %a1, i32 0, i32 2, i32 %v2
+  %v4 = tail call ptr @f2(i32 undef, i8 zeroext 0)
   br i1 undef, label %b1, label %b5
 
 b1:                                               ; preds = %b0
@@ -42,13 +42,12 @@ b1:                                               ; preds = %b0
   %v9 = add nuw nsw i64 %v8, %v7
   %v10 = lshr i64 %v9, 5
   %v11 = trunc i64 %v10 to i32
-  store i32 %v11, i32* undef, align 4
+  store i32 %v11, ptr undef, align 4
   br i1 undef, label %b3, label %b2
 
 b2:                                               ; preds = %b1
-  %v12 = getelementptr inbounds %3, %3* %v3, i32 0, i32 0
-  store i32 0, i32* %v12, align 4
-  tail call void @f0(%0* @g0, i32 undef, i32 0, i32 undef, i32 undef, i32 undef)
+  store i32 0, ptr %v3, align 4
+  tail call void @f0(ptr @g0, i32 undef, i32 0, i32 undef, i32 undef, i32 undef)
   br label %b4
 
 b3:                                               ; preds = %b1
@@ -67,7 +66,7 @@ b7:                                               ; preds = %b5
   unreachable
 }
 
-declare %6* @f2(i32, i8 zeroext)
+declare ptr @f2(i32, i8 zeroext)
 
 attributes #0 = { nounwind "target-cpu"="hexagonv55" }
 attributes #1 = { nounwind readnone }

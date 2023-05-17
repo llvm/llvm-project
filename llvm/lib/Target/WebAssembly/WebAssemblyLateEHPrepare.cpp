@@ -73,9 +73,8 @@ WebAssemblyLateEHPrepare::getMatchingEHPad(MachineInstr *MI) {
   MachineBasicBlock *EHPad = nullptr;
   while (!WL.empty()) {
     MachineBasicBlock *MBB = WL.pop_back_val();
-    if (Visited.count(MBB))
+    if (!Visited.insert(MBB).second)
       continue;
-    Visited.insert(MBB);
     if (MBB->isEHPad()) {
       if (EHPad && EHPad != MBB)
         return nullptr;

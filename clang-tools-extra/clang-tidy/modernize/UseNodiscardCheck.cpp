@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 static bool doesNoDiscardMacroExist(ASTContext &Context,
                                     const llvm::StringRef &MacroId) {
@@ -91,20 +89,20 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
   // warn on unused result.
   Finder->addMatcher(
       cxxMethodDecl(
-          allOf(isConst(), isDefinitionOrInline(),
-                unless(anyOf(
-                    returns(voidType()),
-                    returns(hasDeclaration(decl(hasAttr(clang::attr::WarnUnusedResult)))),
-                    isNoReturn(), isOverloadedOperator(),
-                    isVariadic(), hasTemplateReturnType(),
-                    hasClassMutableFields(), isConversionOperator(),
-                    hasAttr(clang::attr::WarnUnusedResult),
-                    hasType(isInstantiationDependentType()),
-                    hasAnyParameter(anyOf(
-                        parmVarDecl(anyOf(hasType(FunctionObj),
+          isConst(), isDefinitionOrInline(),
+          unless(anyOf(
+              returns(voidType()),
+              returns(
+                  hasDeclaration(decl(hasAttr(clang::attr::WarnUnusedResult)))),
+              isNoReturn(), isOverloadedOperator(), isVariadic(),
+              hasTemplateReturnType(), hasClassMutableFields(),
+              isConversionOperator(), hasAttr(clang::attr::WarnUnusedResult),
+              hasType(isInstantiationDependentType()),
+              hasAnyParameter(
+                  anyOf(parmVarDecl(anyOf(hasType(FunctionObj),
                                           hasType(references(FunctionObj)))),
                         hasType(isNonConstReferenceOrPointer()),
-                        hasParameterPack()))))))
+                        hasParameterPack())))))
           .bind("no_discard"),
       this);
 }
@@ -146,6 +144,4 @@ bool UseNodiscardCheck::isLanguageVersionSupported(
   return LangOpts.CPlusPlus;
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

@@ -23,7 +23,6 @@
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
@@ -108,11 +107,10 @@ public:
   friend class ASTNodeImporter;
   friend TrailingObjects;
 
-  static FriendDecl *Create(ASTContext &C, DeclContext *DC,
-                            SourceLocation L, FriendUnion Friend_,
-                            SourceLocation FriendL,
-                            ArrayRef<TemplateParameterList*> FriendTypeTPLists
-                            = None);
+  static FriendDecl *
+  Create(ASTContext &C, DeclContext *DC, SourceLocation L, FriendUnion Friend_,
+         SourceLocation FriendL,
+         ArrayRef<TemplateParameterList *> FriendTypeTPLists = std::nullopt);
   static FriendDecl *CreateDeserialized(ASTContext &C, unsigned ID,
                                         unsigned FriendTypeNumTPLists);
 

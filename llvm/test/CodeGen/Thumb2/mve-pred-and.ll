@@ -122,8 +122,9 @@ entry:
 define arm_aapcs_vfpcc <4 x i32> @cmpulez_v4i1(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: cmpulez_v4i1:
 ; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmov.i32 q2, #0x0
 ; CHECK-NEXT:    vpt.i32 eq, q0, zr
-; CHECK-NEXT:    vcmpt.u32 cs, q1, zr
+; CHECK-NEXT:    vcmpt.u32 cs, q2, q1
 ; CHECK-NEXT:    vpsel q0, q0, q1
 ; CHECK-NEXT:    bx lr
 entry:
@@ -604,11 +605,11 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    eors r0, r2
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d0
-; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    vmov r12, r2, d5
 ; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r0, zr, r1, ne
 ; CHECK-NEXT:    movs r1, #0
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #0, #8
@@ -617,10 +618,10 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeq_v2i1(<2 x i64> %a, <2 x i64> %b, <2 x i6
 ; CHECK-NEXT:    eor.w r2, r3, r12
 ; CHECK-NEXT:    orrs r0, r2
 ; CHECK-NEXT:    vmov r2, r3, d1
-; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    cset r2, eq
-; CHECK-NEXT:    ands r0, r2
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r0, zr, r2, ne
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r1, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r1
@@ -640,13 +641,13 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqr_v2i1(<2 x i64> %a, <2 x i64> %b, i64 %c
 ; CHECK-NEXT:    vmov r2, r3, d2
 ; CHECK-NEXT:    eors r3, r1
 ; CHECK-NEXT:    eors r2, r0
-; CHECK-NEXT:    orrs r2, r3
+; CHECK-NEXT:    orr.w r12, r2, r3
 ; CHECK-NEXT:    vmov r3, r2, d0
-; CHECK-NEXT:    cset r12, eq
 ; CHECK-NEXT:    orrs r2, r3
 ; CHECK-NEXT:    mov.w r3, #0
 ; CHECK-NEXT:    cset r2, eq
-; CHECK-NEXT:    and.w r2, r2, r12
+; CHECK-NEXT:    cmp.w r12, #0
+; CHECK-NEXT:    csel r2, zr, r2, ne
 ; CHECK-NEXT:    rsbs r2, r2, #0
 ; CHECK-NEXT:    bfi r3, r2, #0, #8
 ; CHECK-NEXT:    vmov r12, r2, d3
@@ -654,10 +655,10 @@ define arm_aapcs_vfpcc <2 x i64> @cmpeqr_v2i1(<2 x i64> %a, <2 x i64> %b, i64 %c
 ; CHECK-NEXT:    eor.w r0, r0, r12
 ; CHECK-NEXT:    orrs r0, r1
 ; CHECK-NEXT:    vmov r1, r2, d1
-; CHECK-NEXT:    cset r0, eq
 ; CHECK-NEXT:    orrs r1, r2
 ; CHECK-NEXT:    cset r1, eq
-; CHECK-NEXT:    ands r0, r1
+; CHECK-NEXT:    cmp r0, #0
+; CHECK-NEXT:    csel r0, zr, r1, ne
 ; CHECK-NEXT:    rsbs r0, r0, #0
 ; CHECK-NEXT:    bfi r3, r0, #8, #8
 ; CHECK-NEXT:    vmsr p0, r3

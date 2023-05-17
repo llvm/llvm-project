@@ -78,6 +78,18 @@ define <4 x i32> @combine_mul_self_demandedbits_vector(<4 x i32> %x) {
   ret <4 x i32> %3
 }
 
+define <vscale x 2 x i32> @combine_mul_self_demandedbits_vector2(<vscale x 2 x i32> %x) {
+; CHECK-LABEL: @combine_mul_self_demandedbits_vector2(
+; CHECK-NEXT:    [[TMP1:%.*]] = freeze <vscale x 2 x i32> [[X:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = mul <vscale x 2 x i32> [[TMP1]], [[TMP1]]
+; CHECK-NEXT:    ret <vscale x 2 x i32> [[TMP2]]
+;
+  %1 = freeze <vscale x 2 x i32> %x
+  %2 = mul <vscale x 2 x i32> %1, %1
+  %3 = and <vscale x 2 x i32> %2, shufflevector (<vscale x 2 x i32> insertelement (<vscale x 2 x i32> poison, i32 -3, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer)
+  ret <vscale x 2 x i32> %3
+}
+
 define i8 @one_demanded_bit(i8 %x) {
 ; CHECK-LABEL: @one_demanded_bit(
 ; CHECK-NEXT:    [[M:%.*]] = shl i8 [[X:%.*]], 6

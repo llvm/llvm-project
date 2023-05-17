@@ -34,10 +34,8 @@ int main(int, char**)
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<char8_t, false>();
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<char16_t, false>();
     test<char32_t, false>();
-#endif
     test<short, false>();
     test<unsigned short, false>();
     test<int, false>();
@@ -52,7 +50,7 @@ int main(int, char**)
 #endif
     test<float, true>();
     test<double, true>();
-#if (defined(__ppc__) || defined(__ppc64__))
+#if defined(__powerpc__) && defined(__LONG_DOUBLE_IBM128__)
     test<long double, false>();
 #else
     test<long double, true>();

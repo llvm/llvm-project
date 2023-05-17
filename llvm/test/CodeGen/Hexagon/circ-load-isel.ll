@@ -8,11 +8,11 @@ target triple = "hexagon"
 ; Function Attrs: nounwind optsize
 define void @circ2() #0 {
 entry:
-  store i32 0, i32* @l, align 4
-  %0 = tail call i8* @llvm.hexagon.circ.ldw(i8* undef, i8* undef, i32 150995968, i32 4)
-  unreachable
+  store i32 0, ptr @l, align 4
+  %0 = tail call ptr @llvm.hexagon.circ.ldw(ptr undef, ptr undef, i32 150995968, i32 4)
+  ret void
 }
 
-declare i8* @llvm.hexagon.circ.ldw(i8*, i8*, i32, i32) #1
+declare ptr @llvm.hexagon.circ.ldw(ptr, ptr, i32, i32) #1
 attributes #0 = { nounwind optsize }
 attributes #1 = { argmemonly nounwind }

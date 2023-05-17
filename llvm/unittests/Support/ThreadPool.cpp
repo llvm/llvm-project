@@ -11,12 +11,16 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/Program.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/Threading.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
+
+#ifdef _WIN32
+#include "llvm/Support/Windows/WindowsSupport.h"
+#endif
 
 #include <chrono>
 #include <thread>
@@ -223,7 +227,7 @@ TEST_F(ThreadPoolTest, Groups) {
   // might block a thread until all tasks in group1 finish.
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
-    return;
+    GTEST_SKIP();
   ThreadPool Pool(S);
   PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group1(Pool);
@@ -296,7 +300,7 @@ TEST_F(ThreadPoolTest, RecursiveWaitDeadlock) {
   CHECK_UNSUPPORTED();
   ThreadPoolStrategy S = hardware_concurrency(2);
   if (S.compute_thread_count() < 2)
-    return;
+    GTEST_SKIP();
   ThreadPool Pool(S);
   PhaseResetHelper Helper(this);
   ThreadPoolTaskGroup Group(Pool);
@@ -378,12 +382,22 @@ ThreadPoolTest::RunOnAllSockets(ThreadPoolStrategy S) {
 
 TEST_F(ThreadPoolTest, AllThreads_UseAllRessources) {
   CHECK_UNSUPPORTED();
+  // After Windows 11, the OS is free to deploy the threads on any CPU socket.
+  // We cannot relibly ensure that all thread affinity mask are covered,
+  // therefore this test should not run.
+  if (llvm::RunningWindows11OrGreater())
+    GTEST_SKIP();
   std::vector<llvm::BitVector> ThreadsUsed = RunOnAllSockets({});
   ASSERT_EQ(llvm::get_cpus(), ThreadsUsed.size());
 }
 
 TEST_F(ThreadPoolTest, AllThreads_OneThreadPerCore) {
   CHECK_UNSUPPORTED();
+  // After Windows 11, the OS is free to deploy the threads on any CPU socket.
+  // We cannot relibly ensure that all thread affinity mask are covered,
+  // therefore this test should not run.
+  if (llvm::RunningWindows11OrGreater())
+    GTEST_SKIP();
   std::vector<llvm::BitVector> ThreadsUsed =
       RunOnAllSockets(llvm::heavyweight_hardware_concurrency());
   ASSERT_EQ(llvm::get_cpus(), ThreadsUsed.size());

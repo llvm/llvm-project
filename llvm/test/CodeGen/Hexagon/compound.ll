@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj -ifcvt-limit=0 -o - %s | llvm-objdump -d - | FileCheck %s
+; RUN: llc -march=hexagon -filetype=obj -ifcvt-limit=0 -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK: p0 = cmp.gt(r0,#-1); if (!p0.new) jump:nt
 

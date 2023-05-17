@@ -9,7 +9,7 @@
 !dir$ free
 
   integer, parameter :: omp_integer_kind = selected_int_kind(9) ! 32-bit int
-  integer, parameter :: omp_logical_kind = kind(.true.)
+  integer, parameter :: omp_logical_kind = 1 ! C_BOOL
 
   integer, parameter :: omp_sched_kind = omp_integer_kind
   integer, parameter :: omp_proc_bind_kind = omp_integer_kind

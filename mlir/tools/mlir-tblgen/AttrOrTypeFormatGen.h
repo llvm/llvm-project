@@ -20,11 +20,6 @@ class AttrOrTypeDef;
 void generateAttrOrTypeFormat(const AttrOrTypeDef &def, MethodBody &parser,
                               MethodBody &printer);
 
-/// From the parameter name, get the name of the accessor function in camelcase.
-/// The first letter of the parameter is upper-cased and prefixed with "get".
-/// E.g. 'value' -> 'getValue'.
-std::string getParameterAccessorName(llvm::StringRef name);
-
 } // namespace tblgen
 } // namespace mlir
 

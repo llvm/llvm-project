@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -fno-rtti -disable-O0-optnone -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x i8*] } { [7 x i8*] [i8* null, i8* null, i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiED1Ev to i8*), i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiED0Ev to i8*), i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiE1fEv to i8*), i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiE1gEv to i8*), i8* null] }
+// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [7 x ptr] } { [7 x ptr] [ptr null, ptr null, ptr @_ZN5TemplIiED1Ev, ptr @_ZN5TemplIiED0Ev, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
 
 struct B1 { 
   virtual ~B1(); 
@@ -12,11 +12,11 @@ void DELETE(B1 *pb1) {
   pb1->B1::~B1();
 }
 // CHECK-LABEL: define{{.*}} void @_ZN2B1D0Ev
-// CHECK: [[T1:%.*]] = load void (%struct.B1*)*, void (%struct.B1*)** getelementptr inbounds (void (%struct.B1*)*, void (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to void (%struct.B1*)**), i64 2)
-// CHECK-NEXT: call void [[T1]](%struct.B1* {{[^,]*}} [[T2:%.*]])
+// CHECK: [[T1:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
+// CHECK-NEXT: call void [[T1]](ptr {{[^,]*}} [[T2:%.*]])
 // CHECK-LABEL: define{{.*}} void @_Z6DELETEP2B1
-// CHECK: [[T3:%.*]] = load void (%struct.B1*)*, void (%struct.B1*)** getelementptr inbounds (void (%struct.B1*)*, void (%struct.B1*)** bitcast ({ [5 x i8*] }* @_ZTV2B1 to void (%struct.B1*)**), i64 2)
-// CHECK-NEXT:  call void [[T3]](%struct.B1* {{[^,]*}} [[T4:%.*]])
+// CHECK: [[T3:%.*]] = load ptr, ptr getelementptr inbounds (ptr, ptr @_ZTV2B1, i64 2)
+// CHECK-NEXT:  call void [[T3]](ptr {{[^,]*}} [[T4:%.*]])
 
 template<class T>
 struct Templ {
@@ -42,7 +42,7 @@ void f(SubTempl<int>* t) {
   t->Templ::~Templ();
 }
 
-// CHECK: getelementptr inbounds (void (%struct.Templ*)*, void (%struct.Templ*)** bitcast ({ [7 x i8*] }* @_ZTV5TemplIiE to void (%struct.Templ*)**), i64 2)
-// CHECK: declare void @_ZN5TemplIiED0Ev(%struct.Templ* {{[^,]*}})
-// CHECK: define internal void @_ZN5TemplIiE1fEv(%struct.Templ* {{[^,]*}} %this)
-// CHECK: define internal void @_ZN5TemplIiE1gEv(%struct.Templ* {{[^,]*}} %this)
+// CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
+// CHECK: declare void @_ZN5TemplIiED0Ev(ptr {{[^,]*}})
+// CHECK: define internal void @_ZN5TemplIiE1fEv(ptr {{[^,]*}} %this)
+// CHECK: define internal void @_ZN5TemplIiE1gEv(ptr {{[^,]*}} %this)

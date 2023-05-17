@@ -11,7 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Conversion/TosaToArith/TosaToArith.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
@@ -28,20 +28,20 @@ public:
 
   LogicalResult matchAndRewrite(tosa::ConstOp op,
                                 PatternRewriter &rewriter) const final {
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.value());
+    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op, op.getValue());
     return success();
   }
 };
 
 Type matchContainerType(Type element, Type container) {
-  if (auto shapedTy = container.dyn_cast<ShapedType>())
+  if (auto shapedTy = dyn_cast<ShapedType>(container))
     return shapedTy.clone(element);
 
   return element;
 }
 
-Attribute getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
-  if (auto shapedTy = type.dyn_cast<ShapedType>()) {
+TypedAttr getConstantAttr(Type type, int64_t value, PatternRewriter &rewriter) {
+  if (auto shapedTy = dyn_cast<ShapedType>(type)) {
     Type eTy = shapedTy.getElementType();
     APInt valueInt(eTy.getIntOrFloatBitWidth(), value);
     return DenseIntElementsAttr::get(shapedTy, valueInt);
@@ -66,8 +66,8 @@ public:
   LogicalResult matchAndRewrite(tosa::ApplyScaleOp op,
                                 PatternRewriter &rewriter) const final {
     Location loc = op.getLoc();
-    Value value = op.value();
-    Value multiplier32 = op.multiplier();
+    Value value = op.getValue();
+    Value multiplier32 = op.getMultiplier();
 
     Type resultTy = op.getType();
     Type valueTy = value.getType();
@@ -78,7 +78,7 @@ public:
     Value one64 = getConstantValue(loc, i64Ty, 1, rewriter);
     Value thirtyOne32 = getConstantValue(loc, i32Ty, 31, rewriter);
 
-    Value shift32 = rewriter.create<arith::ExtUIOp>(loc, i32Ty, op.shift());
+    Value shift32 = rewriter.create<arith::ExtUIOp>(loc, i32Ty, op.getShift());
 
     // Compute the multiplication in 64-bits then select the high / low parts.
     Value value64 = rewriter.create<arith::ExtSIOp>(loc, i64Ty, value);
@@ -94,7 +94,7 @@ public:
     multiply64 = rewriter.create<arith::AddIOp>(loc, multiply64, round);
 
     // Apply double rounding if necessary.
-    if (op.double_round()) {
+    if (op.getDoubleRound()) {
       int64_t roundInt = 1 << 30;
       Value roundUp = getConstantValue(loc, i64Ty, roundInt, rewriter);
       Value roundDown = getConstantValue(loc, i64Ty, -roundInt, rewriter);
@@ -127,16 +127,15 @@ public:
 
     Type resultTy = op.getType();
     Type i32Ty = matchContainerType(rewriter.getI32Type(), resultTy);
-    Type i64Ty = matchContainerType(rewriter.getI64Type(), resultTy);
 
-    Value value = op.value();
+    Value value = op.getValue();
     if (getElementTypeOrSelf(value.getType()).getIntOrFloatBitWidth() > 32) {
       return failure();
     }
 
-    Value value32 = op.value();
-    Value multiplier32 = op.multiplier();
-    Value shift32 = rewriter.create<arith::ExtUIOp>(loc, i32Ty, op.shift());
+    Value value32 = op.getValue();
+    Value multiplier32 = op.getMultiplier();
+    Value shift32 = rewriter.create<arith::ExtUIOp>(loc, i32Ty, op.getShift());
 
     // Constants used during the scaling operation.
     Value zero32 = getConstantValue(loc, i32Ty, 0, rewriter);
@@ -144,20 +143,13 @@ public:
     Value two32 = getConstantValue(loc, i32Ty, 2, rewriter);
     Value thirty32 = getConstantValue(loc, i32Ty, 30, rewriter);
     Value thirtyTwo32 = getConstantValue(loc, i32Ty, 32, rewriter);
-    Value thirtyTwo64 = getConstantValue(loc, i64Ty, 32, rewriter);
 
     // Compute the multiplication in 64-bits then select the high / low parts.
-    Value value64 = rewriter.create<arith::ExtSIOp>(loc, i64Ty, value32);
-    Value multiplier64 =
-        rewriter.create<arith::ExtSIOp>(loc, i64Ty, multiplier32);
-    Value multiply64 =
-        rewriter.create<arith::MulIOp>(loc, value64, multiplier64);
-
     // Grab out the high/low of the computation
-    Value high64 =
-        rewriter.create<arith::ShRUIOp>(loc, multiply64, thirtyTwo64);
-    Value high32 = rewriter.create<arith::TruncIOp>(loc, i32Ty, high64);
-    Value low32 = rewriter.create<arith::MulIOp>(loc, value32, multiplier32);
+    auto value64 =
+        rewriter.create<arith::MulSIExtendedOp>(loc, value32, multiplier32);
+    Value low32 = value64.getLow();
+    Value high32 = value64.getHigh();
 
     // Determine the direction and amount to shift the high bits.
     Value shiftOver32 = rewriter.create<arith::CmpIOp>(
@@ -176,7 +168,7 @@ public:
         rewriter.create<arith::SelectOp>(loc, shiftOver32, shiftHighR, zero32);
 
     // Conditionally perform our double round.
-    if (op.double_round()) {
+    if (op.getDoubleRound()) {
       Value negOne32 = getConstantValue(loc, i32Ty, -1, rewriter);
       Value valuePositive = rewriter.create<arith::CmpIOp>(
           loc, arith::CmpIPredicate::sge, value32, zero32);

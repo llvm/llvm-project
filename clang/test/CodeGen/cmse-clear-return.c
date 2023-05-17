@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-LE-NOPT,CHECK-SOFT
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbebv8m.main -O0 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbebv8m.main -O0 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-BE,CHECK-SOFT
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.main   -O2 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbv8m.main   -O2 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-LE-OPT,CHECK-SOFT
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbebv8m.main -O2 -mcmse -S -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple thumbebv8m.main -O2 -mcmse -S -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-BE,CHECK-BE-OPT,CHECK-SOFT
-// RUN: %clang_cc1 -no-opaque-pointers -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - \
+// RUN: %clang_cc1 -triple thumbv8m.main   -O0 -mcmse -S -emit-llvm %s -o - \
 // RUN:            -mfloat-abi hard | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-LE,CHECK-LE-NOPT,CHECK-HARD
 
@@ -193,11 +193,11 @@ typedef struct T12 {
 T12 t12;
 __attribute__((cmse_nonsecure_entry)) T12 f12(void) { return t12; }
 // CHECK:    define {{.*}} @f12()
-// CHECK-LE-OPT:  %[[V0:.*]] = load i24, i24* bitcast (%struct.T12* @t12
+// CHECK-LE-OPT:  %[[V0:.*]] = load i24, ptr @t12
 // CHECK-LE-OPT:  %[[R:.*]] = zext i24 %[[V0]] to i32
 // CHECK-LE-NOPT: %[[R:.*]] = and i32 %{{.*}}, 16777215
 
-// CHECK-BE-OPT:  %[[V0:.*]] = load i24, i24* bitcast (%struct.T12* @t12
+// CHECK-BE-OPT:  %[[V0:.*]] = load i24, ptr @t12
 // CHECK-BE-OPT:  %[[V1:.*]] = zext i24 %[[V0]] to i32
 // CHECK-BE-OPT:  %[[R:.*]] = shl nuw i32 %[[V1]], 8
 // CHECK:         ret i32 %[[R]]
@@ -212,11 +212,11 @@ typedef struct __attribute__((packed)) T13 {
 T13 t13;
 __attribute__((cmse_nonsecure_entry)) T13 f13(void) { return t13; }
 // CHECK:         define {{.*}} @f13()
-// CHECK-LE-OPT:  %[[V0:.*]] = load i24, i24* bitcast (%struct.T13* @t13
+// CHECK-LE-OPT:  %[[V0:.*]] = load i24, ptr @t13
 // CHECK-LE-OPT:  %[[R:.*]] = zext i24 %[[V0]] to i32
 // CHECK-LE-NOPT: %[[R:.*]] = and i32 %{{.*}}, 16777215
 
-// CHECK-BE-OPT:  %[[V0:.*]] = load i24, i24* bitcast (%struct.T13* @t13
+// CHECK-BE-OPT:  %[[V0:.*]] = load i24, ptr @t13
 // CHECK-BE-OPT:  %[[V1:.*]] = zext i24 %[[V0]] to i32
 // CHECK-BE-OPT:  %[[R:.*]] = shl nuw i32 %[[V1]], 8
 // CHECK:         ret i32 %[[R]]

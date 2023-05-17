@@ -1,9 +1,8 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-windows -fms-extensions -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-windows -fms-extensions -Wno-implicit-function-declaration -S -emit-llvm %s -o - | FileCheck %s
 
-// CHECK: %[[dst:[0-9-]+]] = call i8* @llvm.eh.recoverfp(i8* bitcast (void (i8, i8*)* @"?fin$0@0@main@@" to i8*), i8* %frame_pointer)
-// CHECK-NEXT: %[[dst1:[0-9-]+]] = call i8* @llvm.localrecover(i8* bitcast (void (i8, i8*)* @"?fin$0@0@main@@" to i8*), i8* %[[dst]], i32 0)
-// CHECK-NEXT: %[[dst2:[0-9-]+]] = bitcast i8* %[[dst1]] to i8**
-// CHECK-NEXT: = load i8*, i8** %[[dst2]], align 8
+// CHECK: %[[dst:[0-9-]+]] = call ptr @llvm.eh.recoverfp(ptr @"?fin$0@0@main@@", ptr %frame_pointer)
+// CHECK-NEXT: %[[dst1:[0-9-]+]] = call ptr @llvm.localrecover(ptr @"?fin$0@0@main@@", ptr %[[dst]], i32 0)
+// CHECK-NEXT: = load ptr, ptr %[[dst1]], align 8
 
 int
 main(int argc, char *argv[])

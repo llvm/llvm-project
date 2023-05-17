@@ -116,7 +116,7 @@ struct DOTGraphTraitsPrinter
   /// An implementation of this class my override this function to indicate that
   /// only certain functions should be viewed.
   ///
-  /// @param Analysis The current analysis result for this function.
+  /// @param Result The current analysis result for this function.
   virtual bool processFunction(Function &F,
                                const typename AnalysisT::Result &Result) {
     return true;

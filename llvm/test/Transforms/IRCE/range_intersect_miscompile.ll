@@ -1,4 +1,4 @@
-; RUN: opt -verify-loop-info -irce-print-changed-loops -irce -S < %s 2>&1 | FileCheck %s
+; RUN: opt -verify-loop-info -irce-print-changed-loops -passes=irce -S < %s 2>&1 | FileCheck %s
 ; RUN: opt -verify-loop-info -irce-print-changed-loops -passes='require<branch-prob>,irce' -S < %s 2>&1 | FileCheck %s
 
 ; CHECK-LABEL: irce: in function test_01: constrained Loop at depth 1 containing:
@@ -171,7 +171,7 @@ deopt:                                          ; preds = %range_check_block
 ; We can also properly eliminate range check against %n which is not always
 ; known positive.
 
-define void @test_04(i32* %p) {
+define void @test_04(ptr %p) {
 
 ; CHECK-LABEL: test_04
 ; CHECK:       entry
@@ -184,7 +184,7 @@ define void @test_04(i32* %p) {
 ; CHECK:       postloop:
 
 entry:
-  %n = load i32, i32* %p
+  %n = load i32, ptr %p
   br label %loop_header
 
 loop_header:                            ; preds = %loop_latch, %entry
@@ -221,12 +221,12 @@ deopt:                                          ; preds = %range_check_block
 ; Same as test_04, but range guarantees that %n is positive. So we can safely
 ; intersect ranges (with insertion of postloop).
 
-define void @test_05(i32* %p) {
+define void @test_05(ptr %p) {
 
 ; CHECK-LABEL: test_05
 ; CHECK-NOT:     preloop
 ; CHECK:         entry:
-; CHECK-NEXT:      %n = load i32, i32* %p, align 4, !range !
+; CHECK-NEXT:      %n = load i32, ptr %p, align 4, !range !
 ; CHECK-NEXT:      %exit.mainloop.at = call i32 @llvm.umax.i32(i32 %n, i32 2)
 ; CHECK-NEXT:      [[CMP_2:%[^ ]+]] = icmp ult i32 2, %exit.mainloop.at
 ; CHECK-NEXT:      br i1 [[CMP_2]], label %loop_header.preheader, label %main.pseudo.exit
@@ -249,7 +249,7 @@ define void @test_05(i32* %p) {
 ; CHECK-NEXT:      br i1 %loop_cond.postloop, label %loop_header.postloop, label %exit.loopexit
 
 entry:
-  %n = load i32, i32* %p, !range !0
+  %n = load i32, ptr %p, !range !0
   br label %loop_header
 
 loop_header:                            ; preds = %loop_latch, %entry

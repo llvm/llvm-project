@@ -15,7 +15,7 @@ target datalayout = "E-m:a-p:32:32-i64:64-n32"
 define i32 @main() #0 !dbg !8 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   ret i32 0, !dbg !12
 }
 

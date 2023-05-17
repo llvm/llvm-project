@@ -1,6 +1,3 @@
 # RUN: cp -f %S/Inputs/prefix-never-matches.ll %t.ll
-# RUN: %update_test_checks %t.ll 2>&1 | FileCheck %s
-# RUN: FileCheck --input-file=%t.ll %s --check-prefix=OUTPUT
-
-# CHECK: WARNING: Prefix A had conflicting output
-# OUTPUT-NOT: A:
+# RUN: %update_test_checks %t.ll
+# RUN: diff -u %t.ll %S/Inputs/prefix-never-matches.ll.expected

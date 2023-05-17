@@ -217,7 +217,7 @@ exit:                                             ; preds = %if.end
   ret i16 %unrelated
 }
 
-define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, i8* %res) {
+define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, ptr %res) {
 ; CHECK-LABEL: promote_arg_return:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    add w8, w0, w0, lsl #1
@@ -230,11 +230,11 @@ define i16 @promote_arg_return(i16 zeroext %arg1, i16 zeroext %arg2, i8* %res) {
   %mul = mul nuw nsw i16 %add, 3
   %cmp = icmp ult i16 %mul, %arg2
   %conv = zext i1 %cmp to i8
-  store i8 %conv, i8* %res, align 1
+  store i8 %conv, ptr %res, align 1
   ret i16 %arg1
 }
 
-define i16 @signext_bitcast_phi_select(i16 signext %start, i16* %in) {
+define i16 @signext_bitcast_phi_select(i16 signext %start, ptr %in) {
 ; CHECK-LABEL: signext_bitcast_phi_select:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    and w8, w0, #0xffff
@@ -267,8 +267,8 @@ for.body:                                         ; preds = %if.else, %entry
   br i1 %cmp.i, label %exit, label %if.then
 
 if.then:                                          ; preds = %for.body
-  %idx.next = getelementptr i16, i16* %in, i16 %idx
-  %ld = load i16, i16* %idx.next, align 2
+  %idx.next = getelementptr i16, ptr %in, i16 %idx
+  %ld = load i16, ptr %idx.next, align 2
   %cmp1.i = icmp eq i16 %ld, %idx
   br i1 %cmp1.i, label %exit, label %if.else
 

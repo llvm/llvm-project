@@ -10,21 +10,28 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <optional>
 #include <type_traits>
 
 #include "mlir/Conversion/VectorToSCF/VectorToSCF.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/Tensor/IR/Tensor.h"
+#include "mlir/Dialect/Vector/Transforms/LoweringPatterns.h"
 #include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/ImplicitLocOpBuilder.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTVECTORTOSCF
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using vector::TransferReadOp;
@@ -48,9 +55,9 @@ struct VectorToSCFPattern : public OpRewritePattern<OpTy> {
 
 /// Given a vector transfer op, calculate which dimension of the `source`
 /// memref should be unpacked in the next application of TransferOpConversion.
-/// A return value of None indicates a broadcast.
+/// A return value of std::nullopt indicates a broadcast.
 template <typename OpTy>
-static Optional<int64_t> unpackedDim(OpTy xferOp) {
+static std::optional<int64_t> unpackedDim(OpTy xferOp) {
   // TODO: support 0-d corner case.
   assert(xferOp.getTransferRank() > 0 && "unexpected 0-d transfer");
   auto map = xferOp.getPermutationMap();
@@ -59,7 +66,7 @@ static Optional<int64_t> unpackedDim(OpTy xferOp) {
   }
   assert(xferOp.isBroadcastDim(0) &&
          "Expected AffineDimExpr or AffineConstantExpr");
-  return None;
+  return std::nullopt;
 }
 
 /// Compute the permutation map for the new (N-1)-D vector transfer op. This
@@ -90,13 +97,13 @@ static void getXferIndices(OpBuilder &b, OpTy xferOp, Value iv,
   indices.append(prevIndices.begin(), prevIndices.end());
 
   Location loc = xferOp.getLoc();
-  bool isBroadcast = !dim.hasValue();
+  bool isBroadcast = !dim.has_value();
   if (!isBroadcast) {
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
-    Value offset = adaptor.getIndices()[dim.getValue()];
-    indices[dim.getValue()] =
-        makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    Value offset = adaptor.getIndices()[*dim];
+    indices[*dim] =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
   }
 }
 
@@ -155,7 +162,7 @@ static Value generateMaskCheck(OpBuilder &b, OpTy xferOp, Value iv) {
 /// `resultTypes`.
 template <typename OpTy>
 static Value generateInBoundsCheck(
-    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    OpBuilder &b, OpTy xferOp, Value iv, std::optional<int64_t> dim,
     TypeRange resultTypes,
     function_ref<Value(OpBuilder &, Location)> inBoundsCase,
     function_ref<Value(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
@@ -163,7 +170,7 @@ static Value generateInBoundsCheck(
   Value cond; // Condition to be built...
 
   // Condition check 1: Access in-bounds?
-  bool isBroadcast = !dim.hasValue(); // No in-bounds check for broadcasts.
+  bool isBroadcast = !dim; // No in-bounds check for broadcasts.
   Location loc = xferOp.getLoc();
   ImplicitLocOpBuilder lb(xferOp.getLoc(), b);
   if (!xferOp.isDimInBounds(0) && !isBroadcast) {
@@ -171,8 +178,9 @@ static Value generateInBoundsCheck(
         vector::createOrFoldDimOp(b, loc, xferOp.getSource(), *dim);
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
-    Value base = xferOp.getIndices()[dim.getValue()];
-    Value memrefIdx = makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
+    Value base = xferOp.getIndices()[*dim];
+    Value memrefIdx =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {base, iv});
     cond = lb.create<arith::CmpIOp>(arith::CmpIPredicate::sgt, memrefDim,
                                     memrefIdx);
   }
@@ -188,7 +196,7 @@ static Value generateInBoundsCheck(
   // If the condition is non-empty, generate an SCF::IfOp.
   if (cond) {
     auto check = lb.create<scf::IfOp>(
-        resultTypes, cond,
+        cond,
         /*thenBuilder=*/
         [&](OpBuilder &b, Location loc) {
           maybeYieldValue(b, loc, hasRetVal, inBoundsCase(b, loc));
@@ -213,7 +221,7 @@ static Value generateInBoundsCheck(
 /// a return value. Consequently, this function does not have a return value.
 template <typename OpTy>
 static void generateInBoundsCheck(
-    OpBuilder &b, OpTy xferOp, Value iv, Optional<int64_t> dim,
+    OpBuilder &b, OpTy xferOp, Value iv, std::optional<int64_t> dim,
     function_ref<void(OpBuilder &, Location)> inBoundsCase,
     function_ref<void(OpBuilder &, Location)> outOfBoundsCase = nullptr) {
   generateInBoundsCheck(
@@ -250,7 +258,7 @@ static void maybeApplyPassLabel(OpBuilder &b, OpTy newXferOp,
 /// Return true if this transfer op operates on a source tensor.
 template <typename OpTy>
 static bool isTensorOp(OpTy xferOp) {
-  if (xferOp.getShapedType().template isa<RankedTensorType>()) {
+  if (isa<RankedTensorType>(xferOp.getShapedType())) {
     if (xferOp.getOperationName().equals(TransferWriteOp::getOperationName())) {
       // TransferWriteOps on tensors have a result.
       assert(xferOp->getNumResults() > 0);
@@ -295,7 +303,7 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
     auto maskBuffer = b.create<memref::AllocaOp>(loc, maskType);
     b.setInsertionPoint(xferOp);
     b.create<memref::StoreOp>(loc, xferOp.getMask(), maskBuffer);
-    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer);
+    result.maskBuffer = b.create<memref::LoadOp>(loc, maskBuffer, ValueRange());
   }
 
   return result;
@@ -306,7 +314,7 @@ static BufferAllocs allocBuffers(OpBuilder &b, OpTy xferOp) {
 ///
 /// E.g.: memref<9xvector<5x6xf32>> --> memref<9x5xvector<6xf32>>
 static MemRefType unpackOneDim(MemRefType type) {
-  auto vectorType = type.getElementType().dyn_cast<VectorType>();
+  auto vectorType = dyn_cast<VectorType>(type.getElementType());
   auto memrefShape = type.getShape();
   SmallVector<int64_t, 8> newMemrefShape;
   newMemrefShape.append(memrefShape.begin(), memrefShape.end());
@@ -357,7 +365,7 @@ struct Strategy<TransferReadOp> {
   static void getBufferIndices(TransferReadOp xferOp,
                                SmallVector<Value, 8> &indices) {
     auto storeOp = getStoreOp(xferOp);
-    auto prevIndices = memref::StoreOpAdaptor(storeOp).indices();
+    auto prevIndices = memref::StoreOpAdaptor(storeOp).getIndices();
     indices.append(prevIndices.begin(), prevIndices.end());
   }
 
@@ -400,8 +408,8 @@ struct Strategy<TransferReadOp> {
     getXferIndices(b, xferOp, iv, xferIndices);
 
     Location loc = xferOp.getLoc();
-    auto bufferType = buffer.getType().dyn_cast<ShapedType>();
-    auto vecType = bufferType.getElementType().dyn_cast<VectorType>();
+    auto bufferType = dyn_cast<ShapedType>(buffer.getType());
+    auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
     auto inBoundsAttr = dropFirstElem(b, xferOp.getInBoundsAttr());
     auto newXferOp = b.create<vector::TransferReadOp>(
         loc, vecType, xferOp.getSource(), xferIndices,
@@ -424,8 +432,8 @@ struct Strategy<TransferReadOp> {
     storeIndices.push_back(iv);
 
     Location loc = xferOp.getLoc();
-    auto bufferType = buffer.getType().dyn_cast<ShapedType>();
-    auto vecType = bufferType.getElementType().dyn_cast<VectorType>();
+    auto bufferType = dyn_cast<ShapedType>(buffer.getType());
+    auto vecType = dyn_cast<VectorType>(bufferType.getElementType());
     auto vec = b.create<vector::SplatOp>(loc, vecType, xferOp.getPadding());
     b.create<memref::StoreOp>(loc, vec, buffer, storeIndices);
 
@@ -463,7 +471,7 @@ struct Strategy<TransferWriteOp> {
   static void getBufferIndices(TransferWriteOp xferOp,
                                SmallVector<Value, 8> &indices) {
     auto loadOp = xferOp.getVector().getDefiningOp<memref::LoadOp>();
-    auto prevIndices = memref::LoadOpAdaptor(loadOp).indices();
+    auto prevIndices = memref::LoadOpAdaptor(loadOp).getIndices();
     indices.append(prevIndices.begin(), prevIndices.end());
   }
 
@@ -690,7 +698,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     // Find and cast data buffer. How the buffer can be found depends on OpTy.
     ImplicitLocOpBuilder locB(xferOp.getLoc(), rewriter);
     auto dataBuffer = Strategy<OpTy>::getBuffer(xferOp);
-    auto dataBufferType = dataBuffer.getType().template dyn_cast<MemRefType>();
+    auto dataBufferType = dyn_cast<MemRefType>(dataBuffer.getType());
     auto castedDataType = unpackOneDim(dataBufferType);
     auto castedDataBuffer =
         locB.create<vector::TypeCastOp>(castedDataType, dataBuffer);
@@ -699,8 +707,7 @@ struct TransferOpConversion : public VectorToSCFPattern<OpTy> {
     Value castedMaskBuffer;
     if (xferOp.getMask()) {
       auto maskBuffer = getMaskBuffer(xferOp);
-      auto maskBufferType =
-          maskBuffer.getType().template dyn_cast<MemRefType>();
+      auto maskBufferType = dyn_cast<MemRefType>(maskBuffer.getType());
       if (xferOp.isBroadcastDim(0) || xferOp.getMaskType().getRank() == 1) {
         // Do not unpack a dimension of the mask, if:
         // * To-be-unpacked transfer op dimension is a broadcast.
@@ -880,9 +887,8 @@ struct UnrollTransferReadConversion
   void getInsertionIndices(TransferReadOp xferOp,
                            SmallVector<int64_t, 8> &indices) const {
     if (auto insertOp = getInsertOp(xferOp)) {
-      llvm::for_each(insertOp.getPosition(), [&](Attribute attr) {
-        indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
-      });
+      for (Attribute attr : insertOp.getPosition())
+        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
     }
   }
 
@@ -901,7 +907,7 @@ struct UnrollTransferReadConversion
 
     auto insertOp = getInsertOp(xferOp);
     auto vec = getResultVector(xferOp, rewriter);
-    auto vecType = vec.getType().dyn_cast<VectorType>();
+    auto vecType = dyn_cast<VectorType>(vec.getType());
     auto xferVecType = xferOp.getVectorType();
     auto newXferVecType = VectorType::get(xferVecType.getShape().drop_front(),
                                           xferVecType.getElementType());
@@ -1008,9 +1014,8 @@ struct UnrollTransferWriteConversion
   void getExtractionIndices(TransferWriteOp xferOp,
                             SmallVector<int64_t, 8> &indices) const {
     if (auto extractOp = getExtractOp(xferOp)) {
-      llvm::for_each(extractOp.getPosition(), [&](Attribute attr) {
-        indices.push_back(attr.dyn_cast<IntegerAttr>().getInt());
-      });
+      for (Attribute attr : extractOp.getPosition())
+        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
     }
   }
 
@@ -1030,7 +1035,7 @@ struct UnrollTransferWriteConversion
     auto vec = getDataVector(xferOp);
     auto xferVecType = xferOp.getVectorType();
     int64_t dimSize = xferVecType.getShape()[0];
-    auto source = xferOp.getSource(); // memref or tensor to be written to.
+    Value source = xferOp.getSource(); // memref or tensor to be written to.
     auto sourceType = isTensorOp(xferOp) ? xferOp.getShapedType() : Type();
 
     // Generate fully unrolled loop of transfer ops.
@@ -1088,9 +1093,10 @@ namespace lowering_1_d {
 
 /// Compute the indices into the memref for the LoadOp/StoreOp generated as
 /// part of TransferOp1dConversion. Return the memref dimension on which
-/// the transfer is operating. A return value of None indicates a broadcast.
+/// the transfer is operating. A return value of std::nullopt indicates a
+/// broadcast.
 template <typename OpTy>
-static Optional<int64_t>
+static std::optional<int64_t>
 get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
                    SmallVector<Value, 8> &memrefIndices) {
   auto indices = xferOp.getIndices();
@@ -1106,13 +1112,14 @@ get1dMemrefIndices(OpBuilder &b, OpTy xferOp, Value iv,
     AffineExpr d0, d1;
     bindDims(xferOp.getContext(), d0, d1);
     Value offset = memrefIndices[dim];
-    memrefIndices[dim] = makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
+    memrefIndices[dim] =
+        affine::makeComposedAffineApply(b, loc, d0 + d1, {offset, iv});
     return dim;
   }
 
   assert(xferOp.isBroadcastDim(0) &&
          "Expected AffineDimExpr or AffineConstantExpr");
-  return None;
+  return std::nullopt;
 }
 
 /// Codegen strategy for TransferOp1dConversion, depending on the
@@ -1227,7 +1234,7 @@ struct TransferOp1dConversion : public VectorToSCFPattern<OpTy> {
     if (xferOp.getTransferRank() == 0)
       return failure();
     auto map = xferOp.getPermutationMap();
-    auto memRefType = xferOp.getShapedType().template dyn_cast<MemRefType>();
+    auto memRefType = dyn_cast<MemRefType>(xferOp.getShapedType());
 
     if (!memRefType)
       return failure();
@@ -1283,12 +1290,11 @@ void mlir::populateVectorToSCFConversionPatterns(
 namespace {
 
 struct ConvertVectorToSCFPass
-    : public ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
+    : public impl::ConvertVectorToSCFBase<ConvertVectorToSCFPass> {
   ConvertVectorToSCFPass() = default;
   ConvertVectorToSCFPass(const VectorTransferToSCFOptions &options) {
     this->fullUnroll = options.unroll;
     this->targetRank = options.targetRank;
-    this->lowerPermutationMaps = options.lowerPermutationMaps;
     this->lowerTensors = options.lowerTensors;
   }
 
@@ -1296,17 +1302,14 @@ struct ConvertVectorToSCFPass
     VectorTransferToSCFOptions options;
     options.unroll = fullUnroll;
     options.targetRank = targetRank;
-    options.lowerPermutationMaps = lowerPermutationMaps;
     options.lowerTensors = lowerTensors;
 
     // Lower permutation maps first.
-    if (lowerPermutationMaps) {
-      RewritePatternSet lowerTransferPatterns(&getContext());
-      mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
-          lowerTransferPatterns);
-      (void)applyPatternsAndFoldGreedily(getOperation(),
-                                         std::move(lowerTransferPatterns));
-    }
+    RewritePatternSet lowerTransferPatterns(&getContext());
+    mlir::vector::populateVectorTransferPermutationMapLoweringPatterns(
+        lowerTransferPatterns);
+    (void)applyPatternsAndFoldGreedily(getOperation(),
+                                       std::move(lowerTransferPatterns));
 
     RewritePatternSet patterns(&getContext());
     populateVectorToSCFConversionPatterns(patterns, options);

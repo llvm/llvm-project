@@ -21,6 +21,19 @@ StringRef CodeGenHwModes::DefaultModeName = "DefaultMode";
 HwMode::HwMode(Record *R) {
   Name = R->getName();
   Features = std::string(R->getValueAsString("Features"));
+
+  std::vector<Record *> PredicateRecs = R->getValueAsListOfDefs("Predicates");
+  SmallString<128> PredicateCheck;
+  raw_svector_ostream OS(PredicateCheck);
+  ListSeparator LS(" && ");
+  for (Record *Pred : PredicateRecs) {
+    StringRef CondString = Pred->getValueAsString("CondString");
+    if (CondString.empty())
+      continue;
+    OS << LS << '(' << CondString << ')';
+  }
+
+  Predicates = std::string(PredicateCheck);
 }
 
 LLVM_DUMP_METHOD
@@ -38,7 +51,7 @@ HwModeSelect::HwModeSelect(Record *R, CodeGenHwModes &CGH) {
     report_fatal_error("error in target description.");
   }
   for (unsigned i = 0, e = Modes.size(); i != e; ++i) {
-    unsigned ModeId = CGH.getHwModeId(Modes[i]->getName());
+    unsigned ModeId = CGH.getHwModeId(Modes[i]);
     Items.push_back(std::make_pair(ModeId, Objects[i]));
   }
 }
@@ -52,34 +65,26 @@ void HwModeSelect::dump() const {
 }
 
 CodeGenHwModes::CodeGenHwModes(RecordKeeper &RK) : Records(RK) {
-  std::vector<Record*> MRs = Records.getAllDerivedDefinitions("HwMode");
-  // The default mode needs a definition in the .td sources for TableGen
-  // to accept references to it. We need to ignore the definition here.
-  for (auto I = MRs.begin(), E = MRs.end(); I != E; ++I) {
-    if ((*I)->getName() != DefaultModeName)
+  for (Record *R : Records.getAllDerivedDefinitions("HwMode")) {
+    // The default mode needs a definition in the .td sources for TableGen
+    // to accept references to it. We need to ignore the definition here.
+    if (R->getName() == DefaultModeName)
       continue;
-    MRs.erase(I);
-    break;
-  }
-
-  for (Record *R : MRs) {
     Modes.emplace_back(R);
-    unsigned NewId = Modes.size();
-    ModeIds.insert(std::make_pair(Modes[NewId-1].Name, NewId));
+    ModeIds.insert(std::make_pair(R, Modes.size()));
   }
 
-  std::vector<Record*> MSs = Records.getAllDerivedDefinitions("HwModeSelect");
-  for (Record *R : MSs) {
+  for (Record *R : Records.getAllDerivedDefinitions("HwModeSelect")) {
     auto P = ModeSelects.emplace(std::make_pair(R, HwModeSelect(R, *this)));
     assert(P.second);
     (void)P;
   }
 }
 
-unsigned CodeGenHwModes::getHwModeId(StringRef Name) const {
-  if (Name == DefaultModeName)
+unsigned CodeGenHwModes::getHwModeId(Record *R) const {
+  if (R->getName() == DefaultModeName)
     return DefaultMode;
-  auto F = ModeIds.find(Name);
+  auto F = ModeIds.find(R);
   assert(F != ModeIds.end() && "Unknown mode name");
   return F->second;
 }
@@ -101,7 +106,7 @@ void CodeGenHwModes::dump() const {
 
   dbgs() << "ModeIds: {\n";
   for (const auto &P : ModeIds)
-    dbgs() << "  " << P.first() << " -> " << P.second << '\n';
+    dbgs() << "  " << P.first->getName() << " -> " << P.second << '\n';
   dbgs() << "}\n";
 
   dbgs() << "ModeSelects: {\n";

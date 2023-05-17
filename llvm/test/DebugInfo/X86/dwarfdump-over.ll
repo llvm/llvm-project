@@ -39,12 +39,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @MAIN_() !dbg !5 {
 L.entry:
-  %.Z0655_362 = alloca i32*, align 8
+  %.Z0655_362 = alloca ptr, align 8
   %"arr$sd1_379" = alloca [28 x i64], align 8
-  call void @llvm.dbg.declare(metadata i32** %.Z0655_362, metadata !8, metadata !DIExpression()), !dbg !11
-  call void @llvm.dbg.declare(metadata i32** %.Z0655_362, metadata !12, metadata !DIExpression()), !dbg !11
-  call void @llvm.dbg.declare(metadata [28 x i64]* %"arr$sd1_379", metadata !14, metadata !DIExpression()), !dbg !11
-  call void @llvm.dbg.declare(metadata [28 x i64]* %"arr$sd1_379", metadata !19, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %.Z0655_362, metadata !8, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %.Z0655_362, metadata !12, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_379", metadata !14, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.declare(metadata ptr %"arr$sd1_379", metadata !19, metadata !DIExpression()), !dbg !11
   ret void, !dbg !25
 }
 

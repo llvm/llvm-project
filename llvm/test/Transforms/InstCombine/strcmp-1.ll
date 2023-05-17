@@ -10,51 +10,49 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 @bell = constant [5 x i8] c"bell\00"
 @null = constant [1 x i8] zeroinitializer
 
-declare i32 @strcmp(i8*, i8*)
+declare i32 @strcmp(ptr, ptr)
 
 ; strcmp("", x) -> -*x
-define i32 @test1(i8* %str2) {
+define i32 @test1(ptr %str2) {
 ; CHECK-LABEL: @test1(
-; CHECK: %strcmpload = load i8, i8* %str
+; CHECK: %strcmpload = load i8, ptr %str
 ; CHECK: %1 = zext i8 %strcmpload to i32
 ; CHECK: %2 = sub nsw i32 0, %1
 ; CHECK: ret i32 %2
 ; NOBCMP-LABEL: @test1(
-; NOBCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, i8* [[STR2:%.*]], align 1
+; NOBCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR2:%.*]], align 1
 ; NOBCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; NOBCMP-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
-; NOBCMP-NEXT:    ret i32 [[TMP2]]
+; NOBCMP-NEXT:    [[TEMP1:%.*]] = sub nsw i32 0, [[TMP1]]
+; NOBCMP-NEXT:    ret i32 [[TEMP1]]
 ;
 ; BCMP-LABEL: @test1(
-; BCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, i8* [[STR2:%.*]], align 1
+; BCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR2:%.*]], align 1
 ; BCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; BCMP-NEXT:    [[TMP2:%.*]] = sub nsw i32 0, [[TMP1]]
-; BCMP-NEXT:    ret i32 [[TMP2]]
+; BCMP-NEXT:    [[TEMP1:%.*]] = sub nsw i32 0, [[TMP1]]
+; BCMP-NEXT:    ret i32 [[TEMP1]]
 ;
-  %str1 = getelementptr inbounds [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %temp1 = call i32 @strcmp(i8* %str1, i8* %str2)
+  %temp1 = call i32 @strcmp(ptr @null, ptr %str2)
   ret i32 %temp1
 
 }
 
 ; strcmp(x, "") -> *x
-define i32 @test2(i8* %str1) {
+define i32 @test2(ptr %str1) {
 ; CHECK-LABEL: @test2(
-; CHECK: %strcmpload = load i8, i8* %str
+; CHECK: %strcmpload = load i8, ptr %str
 ; CHECK: %1 = zext i8 %strcmpload to i32
 ; CHECK: ret i32 %1
 ; NOBCMP-LABEL: @test2(
-; NOBCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, i8* [[STR1:%.*]], align 1
-; NOBCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; NOBCMP-NEXT:    ret i32 [[TMP1]]
+; NOBCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR1:%.*]], align 1
+; NOBCMP-NEXT:    [[TEMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
+; NOBCMP-NEXT:    ret i32 [[TEMP1]]
 ;
 ; BCMP-LABEL: @test2(
-; BCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, i8* [[STR1:%.*]], align 1
-; BCMP-NEXT:    [[TMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
-; BCMP-NEXT:    ret i32 [[TMP1]]
+; BCMP-NEXT:    [[STRCMPLOAD:%.*]] = load i8, ptr [[STR1:%.*]], align 1
+; BCMP-NEXT:    [[TEMP1:%.*]] = zext i8 [[STRCMPLOAD]] to i32
+; BCMP-NEXT:    ret i32 [[TEMP1]]
 ;
-  %str2 = getelementptr inbounds [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %temp1 = call i32 @strcmp(i8* %str1, i8* %str2)
+  %temp1 = call i32 @strcmp(ptr %str1, ptr @null)
   ret i32 %temp1
 }
 
@@ -68,9 +66,7 @@ define i32 @test3() {
 ; BCMP-LABEL: @test3(
 ; BCMP-NEXT:    ret i32 -1
 ;
-  %str1 = getelementptr inbounds [5 x i8], [5 x i8]* @hell, i32 0, i32 0
-  %str2 = getelementptr inbounds [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %temp1 = call i32 @strcmp(i8* %str1, i8* %str2)
+  %temp1 = call i32 @strcmp(ptr @hell, ptr @hello)
   ret i32 %temp1
 }
 
@@ -83,9 +79,7 @@ define i32 @test4() {
 ; BCMP-LABEL: @test4(
 ; BCMP-NEXT:    ret i32 1
 ;
-  %str1 = getelementptr inbounds [5 x i8], [5 x i8]* @hell, i32 0, i32 0
-  %str2 = getelementptr inbounds [1 x i8], [1 x i8]* @null, i32 0, i32 0
-  %temp1 = call i32 @strcmp(i8* %str1, i8* %str2)
+  %temp1 = call i32 @strcmp(ptr @hell, ptr @null)
   ret i32 %temp1
 }
 
@@ -93,28 +87,25 @@ define i32 @test4() {
 ; (This transform is rather difficult to trigger in a useful manner)
 define i32 @test5(i1 %b) {
 ; CHECK-LABEL: @test5(
-; CHECK: %memcmp = call i32 @memcmp(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* %str2, i32 5)
+; CHECK: %memcmp = call i32 @memcmp(ptr @hello, ptr %str2, i32 5)
 ; CHECK: ret i32 %memcmp
 ; NOBCMP-LABEL: @test5(
-; NOBCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; NOBCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], ptr @hell, ptr @bell
+; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(5) @hello, ptr noundef nonnull dereferenceable(5) [[STR2]], i32 5)
 ; NOBCMP-NEXT:    ret i32 [[MEMCMP]]
 ;
 ; BCMP-LABEL: @test5(
-; BCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; BCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; BCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], ptr @hell, ptr @bell
+; BCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(5) @hello, ptr noundef nonnull dereferenceable(5) [[STR2]], i32 5)
 ; BCMP-NEXT:    ret i32 [[MEMCMP]]
 ;
-  %str1 = getelementptr inbounds [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %temp1 = getelementptr inbounds [5 x i8], [5 x i8]* @hell, i32 0, i32 0
-  %temp2 = getelementptr inbounds [5 x i8], [5 x i8]* @bell, i32 0, i32 0
-  %str2 = select i1 %b, i8* %temp1, i8* %temp2
-  %temp3 = call i32 @strcmp(i8* %str1, i8* %str2)
+  %str2 = select i1 %b, ptr @hell, ptr @bell
+  %temp3 = call i32 @strcmp(ptr @hello, ptr %str2)
   ret i32 %temp3
 }
 
 ; strcmp(x,x)  -> 0
-define i32 @test6(i8* %str) {
+define i32 @test6(ptr %str) {
 ; CHECK-LABEL: @test6(
 ; CHECK: ret i32 0
 ; NOBCMP-LABEL: @test6(
@@ -123,31 +114,28 @@ define i32 @test6(i8* %str) {
 ; BCMP-LABEL: @test6(
 ; BCMP-NEXT:    ret i32 0
 ;
-  %temp1 = call i32 @strcmp(i8* %str, i8* %str)
+  %temp1 = call i32 @strcmp(ptr %str, ptr %str)
   ret i32 %temp1
 }
 
 ; strcmp(x, y) == 0  -> bcmp(x, y, <known length>)
 define i1 @test7(i1 %b) {
 ; NOBCMP-LABEL: @test7(
-; NOBCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; NOBCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], ptr @hell, ptr @bell
+; NOBCMP-NEXT:    [[MEMCMP:%.*]] = call i32 @memcmp(ptr noundef nonnull dereferenceable(5) @hello, ptr noundef nonnull dereferenceable(5) [[STR2]], i32 5)
 ; NOBCMP-NEXT:    [[RES:%.*]] = icmp eq i32 [[MEMCMP]], 0
 ; NOBCMP-NEXT:    ret i1 [[RES]]
 ;
 ; BCMP-LABEL: @test7(
-; BCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], i8* getelementptr inbounds ([5 x i8], [5 x i8]* @hell, i32 0, i32 0), i8* getelementptr inbounds ([5 x i8], [5 x i8]* @bell, i32 0, i32 0)
-; BCMP-NEXT:    [[BCMP:%.*]] = call i32 @bcmp(i8* noundef nonnull dereferenceable(5) getelementptr inbounds ([6 x i8], [6 x i8]* @hello, i32 0, i32 0), i8* noundef nonnull dereferenceable(5) [[STR2]], i32 5)
+; BCMP-NEXT:    [[STR2:%.*]] = select i1 [[B:%.*]], ptr @hell, ptr @bell
+; BCMP-NEXT:    [[BCMP:%.*]] = call i32 @bcmp(ptr noundef nonnull dereferenceable(5) @hello, ptr noundef nonnull dereferenceable(5) [[STR2]], i32 5)
 ; BCMP-NEXT:    [[RES:%.*]] = icmp eq i32 [[BCMP]], 0
 ; BCMP-NEXT:    ret i1 [[RES]]
 ;
 
 
-  %str1 = getelementptr inbounds [6 x i8], [6 x i8]* @hello, i32 0, i32 0
-  %temp1 = getelementptr inbounds [5 x i8], [5 x i8]* @hell, i32 0, i32 0
-  %temp2 = getelementptr inbounds [5 x i8], [5 x i8]* @bell, i32 0, i32 0
-  %str2 = select i1 %b, i8* %temp1, i8* %temp2
-  %temp3 = call i32 @strcmp(i8* %str1, i8* %str2)
+  %str2 = select i1 %b, ptr @hell, ptr @bell
+  %temp3 = call i32 @strcmp(ptr @hello, ptr %str2)
   %res = icmp eq i32 %temp3, 0
   ret i1 %res
 }

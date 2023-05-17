@@ -789,7 +789,11 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     }
 
     if (!frame_sp) {
-      frame_sp = thread->GetSelectedFrame();
+      // We don't want to run SelectMostRelevantFrame here, for instance if
+      // you called a sequence of StepOverUntil's you wouldn't want the
+      // frame changed out from under you because you stepped into a
+      // recognized frame.
+      frame_sp = thread->GetSelectedFrame(DoNoSelectMostRelevantFrame);
       if (!frame_sp)
         frame_sp = thread->GetStackFrameAtIndex(0);
     }
@@ -837,26 +841,20 @@ SBError SBThread::StepOverUntil(lldb::SBFrame &sb_frame,
     const bool stop_other_threads = false;
     // TODO: Handle SourceLocationSpec column information
     SourceLocationSpec location_spec(
-        step_file_spec, line, /*column=*/llvm::None, /*check_inlines=*/true,
+        step_file_spec, line, /*column=*/std::nullopt, /*check_inlines=*/true,
         /*exact_match=*/false);
 
     SymbolContextList sc_list;
     frame_sc.comp_unit->ResolveSymbolContext(location_spec,
                                              eSymbolContextLineEntry, sc_list);
-    const uint32_t num_matches = sc_list.GetSize();
-    if (num_matches > 0) {
-      SymbolContext sc;
-      for (uint32_t i = 0; i < num_matches; ++i) {
-        if (sc_list.GetContextAtIndex(i, sc)) {
-          addr_t step_addr =
-              sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
-          if (step_addr != LLDB_INVALID_ADDRESS) {
-            if (fun_range.ContainsLoadAddress(step_addr, target))
-              step_over_until_addrs.push_back(step_addr);
-            else
-              all_in_function = false;
-          }
-        }
+    for (const SymbolContext &sc : sc_list) {
+      addr_t step_addr =
+          sc.line_entry.range.GetBaseAddress().GetLoadAddress(target);
+      if (step_addr != LLDB_INVALID_ADDRESS) {
+        if (fun_range.ContainsLoadAddress(step_addr, target))
+          step_over_until_addrs.push_back(step_addr);
+        else
+          all_in_function = false;
       }
     }
 
@@ -1133,7 +1131,8 @@ lldb::SBFrame SBThread::GetSelectedFrame() {
   if (exe_ctx.HasThreadScope()) {
     Process::StopLocker stop_locker;
     if (stop_locker.TryLock(&exe_ctx.GetProcessPtr()->GetRunLock())) {
-      frame_sp = exe_ctx.GetThreadPtr()->GetSelectedFrame();
+      frame_sp =
+          exe_ctx.GetThreadPtr()->GetSelectedFrame(SelectMostRelevantFrame);
       sb_frame.SetFrameSP(frame_sp);
     }
   }

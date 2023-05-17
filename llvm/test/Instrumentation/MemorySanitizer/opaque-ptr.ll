@@ -13,7 +13,7 @@ define void @test_memcpy(ptr %p, ptr byval(i32) %p2) sanitize_memory {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @__msan_memcpy(ptr [[P:%.*]], ptr [[P2]], i64 4)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.memcpy.p0.p0.i64(i8* %p, i8* %p2, i64 4, i1 false)
+  call void @llvm.memcpy.p0.p0.i64(ptr %p, ptr %p2, i64 4, i1 false)
   ret void
 }
 
@@ -27,9 +27,9 @@ define void @test_memmove(ptr %p, ptr byval(i32) %p2) sanitize_memory {
 ; CHECK-NEXT:    [[TMP4:%.*]] = call ptr @__msan_memmove(ptr [[P:%.*]], ptr [[P2]], i64 4)
 ; CHECK-NEXT:    ret void
 ;
-  call void @llvm.memmove.p0.p0.i64(i8* %p, i8* %p2, i64 4, i1 false)
+  call void @llvm.memmove.p0.p0.i64(ptr %p, ptr %p2, i64 4, i1 false)
   ret void
 }
 
-declare void @llvm.memcpy.p0.p0.i64(i8*, i8*, i64, i1)
-declare void @llvm.memmove.p0.p0.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)
+declare void @llvm.memmove.p0.p0.i64(ptr, ptr, i64, i1)

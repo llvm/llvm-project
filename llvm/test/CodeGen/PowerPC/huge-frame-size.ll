@@ -4,7 +4,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-ibm-aix-xcoff < %s \
 ; RUN:   2>&1 | FileCheck --check-prefix=CHECK-BE %s
 
-declare void @bar(i8*)
+declare void @bar(ptr)
 
 define void @foo(i8 %x) {
 ; CHECK-LE-LABEL: foo:
@@ -47,11 +47,10 @@ define void @foo(i8 %x) {
 ; CHECK-BE-NEXT:    blr
 entry:
   %a = alloca i8, i64 4294967296, align 16
-  %b = getelementptr i8, i8* %a, i64 0
-  %c = getelementptr i8, i8* %a, i64 2147483648
-  %d = getelementptr i8, i8* %a, i64 4294967295
-  store volatile i8 %x, i8* %b
-  store volatile i8 %x, i8* %c
-  store volatile i8 %x, i8* %d
+  %c = getelementptr i8, ptr %a, i64 2147483648
+  %d = getelementptr i8, ptr %a, i64 4294967295
+  store volatile i8 %x, ptr %a
+  store volatile i8 %x, ptr %c
+  store volatile i8 %x, ptr %d
   ret void
 }

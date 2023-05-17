@@ -71,11 +71,11 @@ public:
 
   /// @name ModulePass interface
   //@{
-  virtual void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
+  void getAnalysisUsage(llvm::AnalysisUsage &AU) const override {
     AU.setPreservesAll();
   }
 
-  virtual bool runOnModule(llvm::Module &M) override {
+  bool runOnModule(llvm::Module &M) override {
     runDumpModule(M, Filename, IsSuffix);
     return false;
   }

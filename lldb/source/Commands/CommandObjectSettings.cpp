@@ -13,6 +13,7 @@
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandCompletions.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Interpreter/OptionValueProperties.h"
 
@@ -119,7 +120,7 @@ insert-before or insert-after.");
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_set_options);
+      return llvm::ArrayRef(g_settings_set_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -153,15 +154,15 @@ insert-before or insert-after.");
       return;
 
     // Complete option name
-    if (arg[0] != '-')
+    if (arg[0] == '-')
       return;
 
     // Complete setting value
     const char *setting_var_name =
         request.GetParsedLine().GetArgumentAtIndex(setting_var_idx);
     Status error;
-    lldb::OptionValueSP value_sp(GetDebugger().GetPropertyValue(
-        &m_exe_ctx, setting_var_name, false, error));
+    lldb::OptionValueSP value_sp(
+        GetDebugger().GetPropertyValue(&m_exe_ctx, setting_var_name, error));
     if (!value_sp)
       return;
     value_sp->AutoComplete(m_interpreter, request);
@@ -358,7 +359,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_write_options);
+      return llvm::ArrayRef(g_settings_write_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -452,7 +453,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_read_options);
+      return llvm::ArrayRef(g_settings_read_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -519,7 +520,6 @@ protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
-    const bool will_modify = false;
     const size_t argc = args.GetArgumentCount();
     if (argc > 0) {
       const bool dump_qualified_name = true;
@@ -529,7 +529,7 @@ protected:
 
         const Property *property =
             GetDebugger().GetValueProperties()->GetPropertyAtPath(
-                &m_exe_ctx, will_modify, property_path);
+                &m_exe_ctx, property_path);
 
         if (property) {
           property->DumpDescription(m_interpreter, result.GetOutputStream(), 0,
@@ -1082,7 +1082,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_settings_clear_options);
+      return llvm::ArrayRef(g_settings_clear_options);
     }
 
     bool m_clear_all = false;

@@ -2,5 +2,5 @@
 // CHECK: error: unknown type name 'invalid'
 // CHECK-NOT: clang: error: assembler command failed
 // CHECK-NOT: clang: error: linker command failed
-// XFAIL: windows-msvc, ps5
+// XFAIL: target={{.*-windows-msvc}}, target={{.*-ps5}}
 invalid C code!

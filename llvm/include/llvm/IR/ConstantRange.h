@@ -44,7 +44,7 @@ class raw_ostream;
 struct KnownBits;
 
 /// This class represents a range of values.
-class LLVM_NODISCARD ConstantRange {
+class [[nodiscard]] ConstantRange {
   APInt Lower, Upper;
 
   /// Create empty constant range with same bitwidth.
@@ -333,12 +333,13 @@ public:
                           PreferredRangeType Type = Smallest) const;
 
   /// Intersect the two ranges and return the result if it can be represented
-  /// exactly, otherwise return None.
-  Optional<ConstantRange> exactIntersectWith(const ConstantRange &CR) const;
+  /// exactly, otherwise return std::nullopt.
+  std::optional<ConstantRange>
+  exactIntersectWith(const ConstantRange &CR) const;
 
   /// Union the two ranges and return the result if it can be represented
-  /// exactly, otherwise return None.
-  Optional<ConstantRange> exactUnionWith(const ConstantRange &CR) const;
+  /// exactly, otherwise return std::nullopt.
+  std::optional<ConstantRange> exactUnionWith(const ConstantRange &CR) const;
 
   /// Return a new range representing the possible values resulting
   /// from an application of the specified cast operator to this range. \p
@@ -524,6 +525,10 @@ public:
   /// min, then the resulting range will contain signed min if and only if
   /// \p IntMinIsPoison is false.
   ConstantRange abs(bool IntMinIsPoison = false) const;
+
+  /// Calculate ctlz range. If \p ZeroIsPoison is set, the range is computed
+  /// ignoring a possible zero value contained in the input range.
+  ConstantRange ctlz(bool ZeroIsPoison = false) const;
 
   /// Represents whether an operation on the given constant range is known to
   /// always or never overflow.

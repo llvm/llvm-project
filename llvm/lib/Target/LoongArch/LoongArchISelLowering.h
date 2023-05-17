@@ -27,10 +27,77 @@ enum NodeType : unsigned {
   FIRST_NUMBER = ISD::BUILTIN_OP_END,
 
   // TODO: add more LoongArchISDs
+  CALL,
   RET,
+  TAIL,
 
+  // 32-bit shifts, directly matching the semantics of the named LoongArch
+  // instructions.
+  SLL_W,
+  SRA_W,
+  SRL_W,
+
+  ROTL_W,
+  ROTR_W,
+
+  // FPR<->GPR transfer operations
+  MOVGR2FR_W_LA64,
+  MOVFR2GR_S_LA64,
+  MOVFCSR2GR,
+  MOVGR2FCSR,
+
+  FTINT,
+
+  // Bit counting operations
+  CLZ_W,
+  CTZ_W,
+
+  BSTRINS,
+  BSTRPICK,
+
+  // Byte-swapping and bit-reversal
+  REVB_2H,
+  REVB_2W,
+  BITREV_4B,
+  BITREV_W,
+
+  // Intrinsic operations start ============================================
+  BREAK,
+  CACOP_D,
+  CACOP_W,
+  DBAR,
+  IBAR,
+  SYSCALL,
+
+  // CRC check operations
+  CRC_W_B_W,
+  CRC_W_H_W,
+  CRC_W_W_W,
+  CRC_W_D_W,
+  CRCC_W_B_W,
+  CRCC_W_H_W,
+  CRCC_W_W_W,
+  CRCC_W_D_W,
+
+  CSRRD,
+  CSRWR,
+  CSRXCHG,
+
+  // IOCSR access operations
+  IOCSRRD_B,
+  IOCSRRD_W,
+  IOCSRRD_H,
+  IOCSRRD_D,
+  IOCSRWR_B,
+  IOCSRWR_H,
+  IOCSRWR_W,
+  IOCSRWR_D,
+
+  // Read CPU configuration information operation
+  CPUCFG,
+  // Intrinsic operations end =============================================
 };
-} // namespace LoongArchISD
+} // end namespace LoongArchISD
 
 class LoongArchTargetLowering : public TargetLowering {
   const LoongArchSubtarget &Subtarget;
@@ -40,6 +107,15 @@ public:
                                    const LoongArchSubtarget &STI);
 
   const LoongArchSubtarget &getSubtarget() const { return Subtarget; }
+
+  bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
+
+  // Provide custom lowering hooks for some operations.
+  SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
+  void ReplaceNodeResults(SDNode *N, SmallVectorImpl<SDValue> &Results,
+                          SelectionDAG &DAG) const override;
+
+  SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
 
   // This method returns the name of a target specific DAG node.
   const char *getTargetNodeName(unsigned Opcode) const override;
@@ -58,19 +134,129 @@ public:
                       const SmallVectorImpl<ISD::OutputArg> &Outs,
                       const SmallVectorImpl<SDValue> &OutVals, const SDLoc &DL,
                       SelectionDAG &DAG) const override;
+  SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
+                    SmallVectorImpl<SDValue> &InVals) const override;
+  bool isCheapToSpeculateCttz(Type *Ty) const override;
+  bool isCheapToSpeculateCtlz(Type *Ty) const override;
+  bool hasAndNot(SDValue Y) const override;
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+
+  Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder, AtomicRMWInst *AI,
+                                      Value *AlignedAddr, Value *Incr,
+                                      Value *Mask, Value *ShiftAmt,
+                                      AtomicOrdering Ord) const override;
+
+  EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
+                         EVT VT) const override;
+  TargetLowering::AtomicExpansionKind
+  shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *CI) const override;
+  Value *emitMaskedAtomicCmpXchgIntrinsic(IRBuilderBase &Builder,
+                                          AtomicCmpXchgInst *CI,
+                                          Value *AlignedAddr, Value *CmpVal,
+                                          Value *NewVal, Value *Mask,
+                                          AtomicOrdering Ord) const override;
+
+  bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallInst &I,
+                          MachineFunction &MF,
+                          unsigned Intrinsic) const override;
+
+  bool isFMAFasterThanFMulAndFAdd(const MachineFunction &MF,
+                                  EVT VT) const override;
+
+  Register
+  getExceptionPointerRegister(const Constant *PersonalityFn) const override;
+
+  Register
+  getExceptionSelectorRegister(const Constant *PersonalityFn) const override;
+
+  ISD::NodeType getExtendForAtomicOps() const override {
+    return ISD::SIGN_EXTEND;
+  }
+
+  Register getRegisterByName(const char *RegName, LLT VT,
+                             const MachineFunction &MF) const override;
+  bool mayBeEmittedAsTailCall(const CallInst *CI) const override;
+
+  bool decomposeMulByConstant(LLVMContext &Context, EVT VT,
+                              SDValue C) const override;
+
+  bool isUsedByReturnOnly(SDNode *N, SDValue &Chain) const override;
+
+  bool isLegalAddressingMode(const DataLayout &DL, const AddrMode &AM, Type *Ty,
+                             unsigned AS,
+                             Instruction *I = nullptr) const override;
+
+  bool hasAndNotCompare(SDValue Y) const override;
+
+  bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
 
 private:
   /// Target-specific function used to lower LoongArch calling conventions.
-  typedef bool LoongArchCCAssignFn(unsigned ValNo, MVT ValVT,
+  typedef bool LoongArchCCAssignFn(const DataLayout &DL, LoongArchABI::ABI ABI,
+                                   unsigned ValNo, MVT ValVT,
                                    CCValAssign::LocInfo LocInfo,
-                                   CCState &State);
+                                   ISD::ArgFlagsTy ArgFlags, CCState &State,
+                                   bool IsFixed, bool IsReg, Type *OrigTy);
 
-  void analyzeInputArgs(CCState &CCInfo,
-                        const SmallVectorImpl<ISD::InputArg> &Ins,
+  void analyzeInputArgs(MachineFunction &MF, CCState &CCInfo,
+                        const SmallVectorImpl<ISD::InputArg> &Ins, bool IsRet,
                         LoongArchCCAssignFn Fn) const;
-  void analyzeOutputArgs(CCState &CCInfo,
+  void analyzeOutputArgs(MachineFunction &MF, CCState &CCInfo,
                          const SmallVectorImpl<ISD::OutputArg> &Outs,
+                         bool IsRet, CallLoweringInfo *CLI,
                          LoongArchCCAssignFn Fn) const;
+
+  template <class NodeTy>
+  SDValue getAddr(NodeTy *N, SelectionDAG &DAG, bool IsLocal = true) const;
+  SDValue getStaticTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
+                           unsigned Opc) const;
+  SDValue getDynamicTLSAddr(GlobalAddressSDNode *N, SelectionDAG &DAG,
+                            unsigned Opc) const;
+  SDValue lowerGlobalAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBlockAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerJumpTable(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerShiftLeftParts(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerShiftRightParts(SDValue Op, SelectionDAG &DAG, bool IsSRA) const;
+
+  MachineBasicBlock *
+  EmitInstrWithCustomInserter(MachineInstr &MI,
+                              MachineBasicBlock *BB) const override;
+  SDValue lowerConstantPool(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerEH_DWARF_CFA(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFP_TO_SINT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerBITCAST(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerUINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerSINT_TO_FP(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerVASTART(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINTRINSIC_W_CHAIN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerINTRINSIC_VOID(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFRAMEADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerWRITE_REGISTER(SDValue Op, SelectionDAG &DAG) const;
+
+  bool isFPImmLegal(const APFloat &Imm, EVT VT,
+                    bool ForCodeSize) const override;
+
+  bool shouldInsertFencesForAtomic(const Instruction *I) const override;
+
+  ConstraintType getConstraintType(StringRef Constraint) const override;
+
+  unsigned getInlineAsmMemConstraint(StringRef ConstraintCode) const override;
+
+  std::pair<unsigned, const TargetRegisterClass *>
+  getRegForInlineAsmConstraint(const TargetRegisterInfo *TRI,
+                               StringRef Constraint, MVT VT) const override;
+
+  void LowerAsmOperandForConstraint(SDValue Op, std::string &Constraint,
+                                    std::vector<SDValue> &Ops,
+                                    SelectionDAG &DAG) const override;
+
+  bool isEligibleForTailCallOptimization(
+      CCState &CCInfo, CallLoweringInfo &CLI, MachineFunction &MF,
+      const SmallVectorImpl<CCValAssign> &ArgLocs) const;
 };
 
 } // end namespace llvm

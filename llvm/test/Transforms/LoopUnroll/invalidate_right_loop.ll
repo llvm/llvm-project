@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars -loop-unroll -verify-dom-info | FileCheck %s
+; RUN: opt < %s -S -passes='loop(indvars),loop-unroll' -verify-dom-info | FileCheck %s
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128-ni:1"
 target triple = "x86_64-unknown-linux-gnu"
@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Make sure that this test doesn't crash because of dangling pointer in SCEV.
 declare void @llvm.experimental.guard(i1, ...)
 
-define void @test(i32* %p, i8** %p2, i64* %dest) {
+define void @test(ptr %p, ptr %p2, ptr %dest) {
 
 ; CHECK-LABEL: @test(
 
@@ -29,7 +29,7 @@ inner.loop:                                           ; preds = %inner.latch, %o
   br label %innermost.loop
 
 store.block:                                          ; preds = %innermost.loop
-  store i64 %tmp20, i64* %dest, align 8
+  store i64 %tmp20, ptr %dest, align 8
   br i1 %tmp1, label %exit, label %inner.latch
 
 inner.latch:                                   ; preds = %store.block

@@ -28,8 +28,6 @@
 namespace llvm {
 
 class Triple;
-class FunctionPass;
-class ModulePass;
 class OptimizationRemarkEmitter;
 class Comdat;
 class CallBase;
@@ -79,8 +77,6 @@ struct GCOVOptions {
   std::string Exclude;
 };
 
-ModulePass *createCGProfileLegacyPass();
-
 // The pgo-specific indirect call promotion function declared below is used by
 // the pgo-driven indirect call promotion and sample profile passes. It's a
 // wrapper around llvm::promoteCall, et al. that additionally computes !prof
@@ -126,17 +122,6 @@ struct InstrProfOptions {
   InstrProfOptions() = default;
 };
 
-/// Insert frontend instrumentation based profiling. Parameter IsCS indicates if
-// this is the context sensitive instrumentation.
-ModulePass *createInstrProfilingLegacyPass(
-    const InstrProfOptions &Options = InstrProfOptions(), bool IsCS = false);
-
-ModulePass *createInstrOrderFilePass();
-
-// Insert DataFlowSanitizer (dynamic data flow analysis) instrumentation
-ModulePass *createDataFlowSanitizerLegacyPassPass(
-    const std::vector<std::string> &ABIListFiles = std::vector<std::string>());
-
 // Options for sanitizer coverage instrumentation.
 struct SanitizerCoverageOptions {
   enum Type {
@@ -160,6 +145,7 @@ struct SanitizerCoverageOptions {
   bool StackDepth = false;
   bool TraceLoads = false;
   bool TraceStores = false;
+  bool CollectControlFlow = false;
 
   SanitizerCoverageOptions() = default;
 };

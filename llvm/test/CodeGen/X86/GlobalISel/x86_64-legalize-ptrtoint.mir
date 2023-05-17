@@ -3,33 +3,33 @@
 
 --- |
 
-  define i1 @ptrtoint_s1_p0(i64* %p) {
+  define i1 @ptrtoint_s1_p0(ptr %p) {
   entry:
-    %0 = ptrtoint i64* %p to i1
+    %0 = ptrtoint ptr %p to i1
     ret i1 %0
   }
 
-  define i8 @ptrtoint_s8_p0(i64* %p) {
+  define i8 @ptrtoint_s8_p0(ptr %p) {
   entry:
-    %0 = ptrtoint i64* %p to i8
+    %0 = ptrtoint ptr %p to i8
     ret i8 %0
   }
 
-  define i16 @ptrtoint_s16_p0(i64* %p) {
+  define i16 @ptrtoint_s16_p0(ptr %p) {
   entry:
-    %0 = ptrtoint i64* %p to i16
+    %0 = ptrtoint ptr %p to i16
     ret i16 %0
   }
 
-  define i32 @ptrtoint_s32_p0(i64* %p) {
+  define i32 @ptrtoint_s32_p0(ptr %p) {
   entry:
-    %0 = ptrtoint i64* %p to i32
+    %0 = ptrtoint ptr %p to i32
     ret i32 %0
   }
 
-  define i64 @ptrtoint_s64_p0(i64* %p) {
+  define i64 @ptrtoint_s64_p0(ptr %p) {
   entry:
-    %0 = ptrtoint i64* %p to i64
+    %0 = ptrtoint ptr %p to i64
     ret i64 %0
   }
 

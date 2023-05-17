@@ -9,147 +9,102 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMCPY_IMPLEMENTATIONS_H
 
-#include "src/__support/architectures.h"
-#include "src/__support/common.h"
-#include "src/string/memory_utils/elements.h"
+#include "src/__support/macros/config.h"       // LIBC_INLINE
+#include "src/__support/macros/optimization.h" // LIBC_LOOP_NOUNROLL
+#include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/op_builtin.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
-// Design rationale
-// ================
-//
-// Using a profiler to observe size distributions for calls into libc
-// functions, it was found most operations act on a small number of bytes.
-// This makes it important to favor small sizes.
-//
-// The tests for `count` are in ascending order so the cost of branching is
-// proportional to the cost of copying.
-//
-// The function is written in C++ for several reasons:
-// - The compiler can __see__ the code, this is useful when performing Profile
-//   Guided Optimization as the optimized code can take advantage of branching
-//   probabilities.
-// - It also allows for easier customization and favors testing multiple
-//   implementation parameters.
-// - As compilers and processors get better, the generated code is improved
-//   with little change on the code side.
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+#include "src/string/memory_utils/x86_64/memcpy_implementations.h"
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+#include "src/string/memory_utils/aarch64/memcpy_implementations.h"
+#endif
 
 namespace __llvm_libc {
 
-static inline void inline_memcpy(char *__restrict dst,
-                                 const char *__restrict src, size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_X86
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::x86;
+[[maybe_unused]] LIBC_INLINE void
+inline_memcpy_byte_per_byte(Ptr dst, CPtr src, size_t offset, size_t count) {
+  LIBC_LOOP_NOUNROLL
+  for (; offset < count; ++offset)
+    dst[offset] = src[offset];
+}
 
-  // Whether to use only rep;movsb.
-  constexpr bool USE_ONLY_REP_MOVSB =
-      LLVM_LIBC_IS_DEFINED(LLVM_LIBC_MEMCPY_X86_USE_ONLY_REPMOVSB);
+[[maybe_unused]] LIBC_INLINE void
+inline_memcpy_aligned_access_32bit(Ptr __restrict dst, CPtr __restrict src,
+                                   size_t count) {
+  constexpr size_t kAlign = sizeof(uint32_t);
+  if (count <= 2 * kAlign)
+    return inline_memcpy_byte_per_byte(dst, src, 0, count);
+  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
+  inline_memcpy_byte_per_byte(dst, src, 0, bytes_to_dst_align);
+  size_t offset = bytes_to_dst_align;
+  size_t src_alignment = distance_to_align_down<kAlign>(src + offset);
+  for (; offset < count - kAlign; offset += kAlign) {
+    uint32_t value;
+    if (src_alignment == 0)
+      value = load32_aligned<uint32_t>(src, offset);
+    else if (src_alignment == 2)
+      value = load32_aligned<uint16_t, uint16_t>(src, offset);
+    else
+      value = load32_aligned<uint8_t, uint16_t, uint8_t>(src, offset);
+    store32_aligned<uint32_t>(value, dst, offset);
+  }
+  // remainder
+  inline_memcpy_byte_per_byte(dst, src, offset, count);
+}
 
-  // kRepMovsBSize == -1 : Only CopyAligned is used.
-  // kRepMovsBSize ==  0 : Only RepMovsb is used.
-  // else CopyAligned is used up to kRepMovsBSize and then RepMovsb.
-  constexpr size_t REP_MOVS_B_SIZE =
-#if defined(LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE)
-      LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE;
+[[maybe_unused]] LIBC_INLINE void
+inline_memcpy_aligned_access_64bit(Ptr __restrict dst, CPtr __restrict src,
+                                   size_t count) {
+  constexpr size_t kAlign = sizeof(uint64_t);
+  if (count <= 2 * kAlign)
+    return inline_memcpy_byte_per_byte(dst, src, 0, count);
+  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
+  inline_memcpy_byte_per_byte(dst, src, 0, bytes_to_dst_align);
+  size_t offset = bytes_to_dst_align;
+  size_t src_alignment = distance_to_align_down<kAlign>(src + offset);
+  for (; offset < count - kAlign; offset += kAlign) {
+    uint64_t value;
+    if (src_alignment == 0)
+      value = load64_aligned<uint64_t>(src, offset);
+    else if (src_alignment == 4)
+      value = load64_aligned<uint32_t, uint32_t>(src, offset);
+    else if (src_alignment == 2)
+      value =
+          load64_aligned<uint16_t, uint16_t, uint16_t, uint16_t>(src, offset);
+    else
+      value = load64_aligned<uint8_t, uint16_t, uint16_t, uint16_t, uint8_t>(
+          src, offset);
+    store64_aligned<uint64_t>(value, dst, offset);
+  }
+  // remainder
+  inline_memcpy_byte_per_byte(dst, src, offset, count);
+}
+
+LIBC_INLINE void inline_memcpy(Ptr __restrict dst, CPtr __restrict src,
+                               size_t count) {
+  using namespace __llvm_libc::builtin;
+#if defined(LIBC_COPT_MEMCPY_USE_EMBEDDED_TINY)
+  return inline_memcpy_byte_per_byte(dst, src, 0, count);
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
+  return inline_memcpy_x86_maybe_interpose_repmovsb(dst, src, count);
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+  return inline_memcpy_aarch64(dst, src, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  return inline_memcpy_aligned_access_64bit(dst, src, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
+  return inline_memcpy_aligned_access_32bit(dst, src, count);
 #else
-      -1;
-#endif // LLVM_LIBC_MEMCPY_X86_USE_REPMOVSB_FROM_SIZE
-
-  // Whether target supports AVX instructions.
-  constexpr bool HAS_AVX = LLVM_LIBC_IS_DEFINED(__AVX__);
-
-#if defined(__AVX__)
-  using LoopBlockSize = _64;
-#else
-  using LoopBlockSize = _32;
+  return inline_memcpy_byte_per_byte(dst, src, 0, count);
 #endif
+}
 
-  if (USE_ONLY_REP_MOVSB)
-    return copy<Accelerator>(dst, src, count);
-
-  if (count == 0)
-    return;
-  if (count == 1)
-    return copy<_1>(dst, src);
-  if (count == 2)
-    return copy<_2>(dst, src);
-  if (count == 3)
-    return copy<_3>(dst, src);
-  if (count == 4)
-    return copy<_4>(dst, src);
-  if (count < 8)
-    return copy<HeadTail<_4>>(dst, src, count);
-  if (count < 16)
-    return copy<HeadTail<_8>>(dst, src, count);
-  if (count < 32)
-    return copy<HeadTail<_16>>(dst, src, count);
-  if (count < 64)
-    return copy<HeadTail<_32>>(dst, src, count);
-  if (count < 128)
-    return copy<HeadTail<_64>>(dst, src, count);
-  if (HAS_AVX && count < 256)
-    return copy<HeadTail<_128>>(dst, src, count);
-  if (count <= REP_MOVS_B_SIZE)
-    return copy<Align<_32, Arg::Dst>::Then<Loop<LoopBlockSize>>>(dst, src,
-                                                                 count);
-  return copy<Accelerator>(dst, src, count);
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_AARCH64
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::scalar;
-  if (count == 0)
-    return;
-  if (count == 1)
-    return copy<_1>(dst, src);
-  if (count == 2)
-    return copy<_2>(dst, src);
-  if (count == 3)
-    return copy<_3>(dst, src);
-  if (count == 4)
-    return copy<_4>(dst, src);
-  if (count < 8)
-    return copy<HeadTail<_4>>(dst, src, count);
-  if (count < 16)
-    return copy<HeadTail<_8>>(dst, src, count);
-  if (count < 32)
-    return copy<HeadTail<_16>>(dst, src, count);
-  if (count < 64)
-    return copy<HeadTail<_32>>(dst, src, count);
-  if (count < 128)
-    return copy<HeadTail<_64>>(dst, src, count);
-  return copy<Align<_16, Arg::Src>::Then<Loop<_64>>>(dst, src, count);
-#else
-  /////////////////////////////////////////////////////////////////////////////
-  // Default
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::scalar;
-  if (count == 0)
-    return;
-  if (count == 1)
-    return copy<_1>(dst, src);
-  if (count == 2)
-    return copy<_2>(dst, src);
-  if (count == 3)
-    return copy<_3>(dst, src);
-  if (count == 4)
-    return copy<_4>(dst, src);
-  if (count < 8)
-    return copy<HeadTail<_4>>(dst, src, count);
-  if (count < 16)
-    return copy<HeadTail<_8>>(dst, src, count);
-  if (count < 32)
-    return copy<HeadTail<_16>>(dst, src, count);
-  if (count < 64)
-    return copy<HeadTail<_32>>(dst, src, count);
-  if (count < 128)
-    return copy<HeadTail<_64>>(dst, src, count);
-  return copy<Align<_32, Arg::Src>::Then<Loop<_32>>>(dst, src, count);
-#endif
+LIBC_INLINE void inline_memcpy(void *__restrict dst, const void *__restrict src,
+                               size_t count) {
+  inline_memcpy(reinterpret_cast<Ptr>(dst), reinterpret_cast<CPtr>(src), count);
 }
 
 } // namespace __llvm_libc

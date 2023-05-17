@@ -59,7 +59,7 @@ def main() {
 
   # A new call with <3, 2> (instead of <2, 3>) for both dimensions will
   # trigger another specialization of `multiply_transpose`.
-  var e = multiply_transpose(b, c);
+  var e = multiply_transpose(c, d);
 
   # Finally, calling into `multiply_transpose` with incompatible shape will
   # trigger a shape inference error.
@@ -106,8 +106,8 @@ Module:
         ]
       VarDecl e<> @test/Examples/Toy/Ch1/ast.toy:25:3
         Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:25:11
-          var: b @test/Examples/Toy/Ch1/ast.toy:25:30
-          var: c @test/Examples/Toy/Ch1/ast.toy:25:33
+          var: c @test/Examples/Toy/Ch1/ast.toy:25:30
+          var: d @test/Examples/Toy/Ch1/ast.toy:25:33
         ]
       VarDecl f<> @test/Examples/Toy/Ch1/ast.toy:28:3
         Call 'multiply_transpose' [ @test/Examples/Toy/Ch1/ast.toy:28:11

@@ -17,7 +17,6 @@
 #include "toy/AST.h"
 #include "toy/Lexer.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -25,6 +24,7 @@
 #include <map>
 #include <utility>
 #include <vector>
+#include <optional>
 
 namespace toy {
 
@@ -81,7 +81,7 @@ private:
     lexer.consume(tok_return);
 
     // return takes an optional argument
-    llvm::Optional<std::unique_ptr<ExprAST>> expr;
+    std::optional<std::unique_ptr<ExprAST>> expr;
     if (lexer.getCurToken() != ';') {
       expr = parseExpression();
       if (!expr)

@@ -22,7 +22,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Option/ArgList.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 using namespace clang;
 using namespace llvm::opt;
 
@@ -52,6 +52,9 @@ clang::createInvocation(ArrayRef<const char *> ArgList,
 
   std::unique_ptr<driver::Compilation> C(TheDriver.BuildCompilation(Args));
   if (!C)
+    return nullptr;
+
+  if (C->getArgs().hasArg(driver::options::OPT_fdriver_only))
     return nullptr;
 
   // Just print the cc1 options if -### was present.

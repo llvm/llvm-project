@@ -1,4 +1,4 @@
-; RUN: opt < %s -reassociate -S | FileCheck %s
+; RUN: opt < %s -passes=reassociate -S | FileCheck %s
 ; PR12169
 ; PR12764
 ; XFAIL: *

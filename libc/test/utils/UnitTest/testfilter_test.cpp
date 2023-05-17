@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/UnitTest/LibcTest.h"
+#include "test/UnitTest/LibcTest.h"
 
 TEST(LlvmLibcTestFilterTest, CorrectFilter) {}
 

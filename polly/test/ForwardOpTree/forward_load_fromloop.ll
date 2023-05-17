@@ -14,7 +14,7 @@
 ;   A[j] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A, double* noalias nonnull %B) {
+define void @func(i32 %n, ptr noalias nonnull %A, ptr noalias nonnull %B) {
 entry:
   br label %for
 
@@ -25,15 +25,15 @@ for:
 
     bodyA:
       %i = phi i32 [0, %for], [%i.inc, %bodyA]
-      %B_idx = getelementptr inbounds double, double* %B, i32 %i
-      %val = load double, double* %B_idx
+      %B_idx = getelementptr inbounds double, ptr %B, i32 %i
+      %val = load double, ptr %B_idx
       %i.inc = add nuw nsw i32 %i, 1
       %i.cmp = icmp slt i32 %i, %n
       br i1 %i.cmp, label %bodyA, label %bodyB
 
     bodyB:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %val, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %val, ptr %A_idx
       br label %inc
 
 inc:
@@ -61,7 +61,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 1]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyA[i0, i1] -> MemRef_val[] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
+; CHECK-NEXT:                   %val = load double, ptr %B_idx, align 8
 ; CHECK-NEXT:                   %i.cmp = icmp slt i32 %i, %n
 ; CHECK-NEXT:             }
 ; CHECK-NEXT:     Stmt_bodyB
@@ -71,7 +71,7 @@ return:
 ; CHECK-NEXT:             MustWriteAccess :=  [Reduction Type: NONE] [Scalar: 0]
 ; CHECK-NEXT:                 [n] -> { Stmt_bodyB[i0] -> MemRef_A[i0] };
 ; CHECK-NEXT:             Instructions {
-; CHECK-NEXT:                   %val = load double, double* %B_idx, align 8
-; CHECK-NEXT:                   store double %val, double* %A_idx, align 8
+; CHECK-NEXT:                   %val = load double, ptr %B_idx, align 8
+; CHECK-NEXT:                   store double %val, ptr %A_idx, align 8
 ; CHECK-NEXT:             }
 ; CHECK-NEXT: }

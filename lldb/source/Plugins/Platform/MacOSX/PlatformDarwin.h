@@ -10,25 +10,25 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_PLATFORMDARWIN_H
 
 #include "Plugins/Platform/POSIX/PlatformPOSIX.h"
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/ProcessLaunchInfo.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/StructuredData.h"
 #include "lldb/Utility/XcodeSDK.h"
 #include "lldb/lldb-forward.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/VersionTuple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -51,7 +51,7 @@ public:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
 
   static void DebuggerInitialize(lldb_private::Debugger &debugger);
-  
+
   static void Initialize();
 
   static void Terminate();
@@ -87,7 +87,7 @@ public:
 
   void
   ARMGetSupportedArchitectures(std::vector<ArchSpec> &archs,
-                               llvm::Optional<llvm::Triple::OSType> os = {});
+                               std::optional<llvm::Triple::OSType> os = {});
 
   void x86GetSupportedArchitectures(std::vector<ArchSpec> &archs);
 
@@ -108,7 +108,7 @@ public:
   FileSpec LocateExecutable(const char *basename) override;
 
   Status LaunchProcess(ProcessLaunchInfo &launch_info) override;
-  
+
   Args GetExtraStartupCommands() override;
 
   static std::tuple<llvm::VersionTuple, llvm::StringRef>
@@ -153,6 +153,10 @@ protected:
   ///     module spec, its UUID, the crash messages and the abort cause.
   ///     \b nullptr if process has no crash information annotations.
   StructuredData::ArraySP ExtractCrashInfoAnnotations(Process &process);
+
+  /// Extract the `Application Specific Information` messages from a crash
+  /// report.
+  StructuredData::DictionarySP ExtractAppSpecificInfo(Process &process);
 
   void ReadLibdispatchOffsetsAddress(Process *process);
 

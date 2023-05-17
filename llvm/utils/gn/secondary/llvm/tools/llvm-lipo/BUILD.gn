@@ -1,5 +1,6 @@
 import("//llvm/tools/cctools_symlinks.gni")
 import("//llvm/utils/TableGen/tablegen.gni")
+import("//llvm/utils/gn/build/driver_executable.gni")
 import("//llvm/utils/gn/build/symlink_or_copy.gni")
 
 tablegen("LipoOpts") {
@@ -23,13 +24,14 @@ group("symlinks") {
   }
 }
 
-executable("llvm-lipo") {
+driver_executable("llvm-lipo") {
   deps = [
     ":LipoOpts",
     "//llvm/lib/Object",
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   sources = [ "llvm-lipo.cpp" ]
 }

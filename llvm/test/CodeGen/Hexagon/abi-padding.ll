@@ -1,5 +1,4 @@
 ; RUN: llc -march=hexagon -mcpu=hexagonv65 < %s | FileCheck %s
-; REQUIRES: hexagon
 
 ; C file was:
 ; struct S { int a[3];};
@@ -28,19 +27,17 @@
 define dso_local void @bar() local_unnamed_addr #0 {
 entry:
   %s = alloca %struct.S, align 4
-  %0 = bitcast %struct.S* %s to i8*
-  call void @llvm.lifetime.start.p0i8(i64 12, i8* nonnull %0) #3
-  %arrayidx = getelementptr inbounds %struct.S, %struct.S* %s, i32 0, i32 0, i32 0
-  store i32 9, i32* %arrayidx, align 4
-  tail call void @foo(i32 42, %struct.S* nonnull byval(%struct.S) align 4 %s, %struct.S* nonnull byval(%struct.S) align 4 %s) #3
-  call void @llvm.lifetime.end.p0i8(i64 12, i8* nonnull %0) #3
+  call void @llvm.lifetime.start.p0(i64 12, ptr nonnull %s) #3
+  store i32 9, ptr %s, align 4
+  tail call void @foo(i32 42, ptr nonnull byval(%struct.S) align 4 %s, ptr nonnull byval(%struct.S) align 4 %s) #3
+  call void @llvm.lifetime.end.p0(i64 12, ptr nonnull %s) #3
   ret void
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
-declare dso_local void @foo(i32, %struct.S* byval(%struct.S) align 4, %struct.S* byval(%struct.S) align 4) local_unnamed_addr #2
+declare dso_local void @foo(i32, ptr byval(%struct.S) align 4, ptr byval(%struct.S) align 4) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1

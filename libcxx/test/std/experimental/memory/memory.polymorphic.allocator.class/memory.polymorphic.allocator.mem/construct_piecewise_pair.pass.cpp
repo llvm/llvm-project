@@ -8,6 +8,11 @@
 
 // UNSUPPORTED: c++03
 
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/memory_resource>
 
 // template <class T> class polymorphic_allocator
@@ -15,6 +20,8 @@
 // template <class U1, class U2, class ...Args1, class ...Args2>
 // void polymorphic_allocator<T>::construct(pair<U1, U2>*, piecewise_construct_t
 //                                          tuple<Args1...>, tuple<Args2...>)
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

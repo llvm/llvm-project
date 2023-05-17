@@ -32,6 +32,6 @@ target triple = "x86_64-unknown-linux-gnu"
 
 @x = thread_local global i32 0
 define i32 @foo() "frame-pointer"="non-leaf" {
-  %a = load i32, i32* @x, align 4
+  %a = load i32, ptr @x, align 4
   ret i32 %a
 }

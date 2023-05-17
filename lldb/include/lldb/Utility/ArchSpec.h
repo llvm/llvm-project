@@ -10,13 +10,11 @@
 #define LLDB_UTILITY_ARCHSPEC_H
 
 #include "lldb/Utility/CompletionRequest.h"
-#include "lldb/Utility/ConstString.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-private-enumerations.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/YAMLTraits.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -109,6 +107,12 @@ public:
     eRISCVSubType_riscv64,
   };
 
+  enum LoongArchSubType {
+    eLoongArchSubType_unknown,
+    eLoongArchSubType_loongarch32,
+    eLoongArchSubType_loongarch64,
+  };
+
   enum Core {
     eCore_arm_generic,
     eCore_arm_armv4,
@@ -167,6 +171,8 @@ public:
     eCore_mips64r5el,
     eCore_mips64r6el,
 
+    eCore_msp430,
+
     eCore_ppc_generic,
     eCore_ppc_ppc601,
     eCore_ppc_ppc602,
@@ -204,6 +210,9 @@ public:
 
     eCore_riscv32,
     eCore_riscv64,
+
+    eCore_loongarch32,
+    eCore_loongarch64,
 
     eCore_uknownMach32,
     eCore_uknownMach64,
@@ -331,20 +340,6 @@ public:
   ///
   /// \return An LLVM arch type.
   llvm::Triple::ArchType GetMachine() const;
-
-  /// Returns the distribution id of the architecture.
-  ///
-  /// This will be something like "ubuntu", "fedora", etc. on Linux.
-  ///
-  /// \return A ConstString ref containing the distribution id,
-  ///         potentially empty.
-  ConstString GetDistributionId() const;
-
-  /// Set the distribution id of the architecture.
-  ///
-  /// This will be something like "ubuntu", "fedora", etc. on Linux. This
-  /// should be the same value returned by HostInfo::GetDistributionId ().
-  void SetDistributionId(const char *distribution_id);
 
   /// Tests if this ArchSpec is valid.
   ///
@@ -488,19 +483,25 @@ public:
   ///         architecture and false otherwise.
   bool CharIsSignedByDefault() const;
 
-  /// Compare an ArchSpec to another ArchSpec, requiring an exact cpu type
-  /// match between them. e.g. armv7s is not an exact match with armv7 - this
-  /// would return false
+  enum MatchType : bool { CompatibleMatch, ExactMatch };
+
+  /// Compare this ArchSpec to another ArchSpec. \a match specifies the kind of
+  /// matching that is to be done. CompatibleMatch requires only a compatible
+  /// cpu type (e.g., armv7s is compatible with armv7). ExactMatch requires an
+  /// exact match (armv7s is not an exact match with armv7).
   ///
   /// \return true if the two ArchSpecs match.
-  bool IsExactMatch(const ArchSpec &rhs) const;
+  bool IsMatch(const ArchSpec &rhs, MatchType match) const;
 
-  /// Compare an ArchSpec to another ArchSpec, requiring a compatible cpu type
-  /// match between them. e.g. armv7s is compatible with armv7 - this method
-  /// would return true
-  ///
-  /// \return true if the two ArchSpecs are compatible
-  bool IsCompatibleMatch(const ArchSpec &rhs) const;
+  /// Shorthand for IsMatch(rhs, ExactMatch).
+  bool IsExactMatch(const ArchSpec &rhs) const {
+    return IsMatch(rhs, ExactMatch);
+  }
+
+  /// Shorthand for IsMatch(rhs, CompatibleMatch).
+  bool IsCompatibleMatch(const ArchSpec &rhs) const {
+    return IsMatch(rhs, CompatibleMatch);
+  }
 
   bool IsFullySpecifiedTriple() const;
 
@@ -529,7 +530,6 @@ public:
   void SetFlags(const std::string &elf_abi);
 
 protected:
-  bool IsEqualTo(const ArchSpec &rhs, bool exact_match) const;
   void UpdateCore();
 
   llvm::Triple m_triple;
@@ -539,8 +539,6 @@ protected:
   // Additional arch flags which we cannot get from triple and core For MIPS
   // these are application specific extensions like micromips, mips16 etc.
   uint32_t m_flags = 0;
-
-  ConstString m_distribution_id;
 
   // Called when m_def or m_entry are changed.  Fills in all remaining members
   // with default values.
@@ -562,17 +560,5 @@ bool operator==(const ArchSpec &lhs, const ArchSpec &rhs);
 bool ParseMachCPUDashSubtypeTriple(llvm::StringRef triple_str, ArchSpec &arch);
 
 } // namespace lldb_private
-
-namespace llvm {
-namespace yaml {
-template <> struct ScalarTraits<lldb_private::ArchSpec> {
-  static void output(const lldb_private::ArchSpec &, void *, raw_ostream &);
-  static StringRef input(StringRef, void *, lldb_private::ArchSpec &);
-  static QuotingType mustQuote(StringRef S) { return QuotingType::Double; }
-};
-} // namespace yaml
-} // namespace llvm
-
-LLVM_YAML_IS_SEQUENCE_VECTOR(lldb_private::ArchSpec)
 
 #endif // LLDB_UTILITY_ARCHSPEC_H

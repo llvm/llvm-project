@@ -12,10 +12,12 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/OptimizationRemarkEmitter.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -45,7 +47,8 @@ struct Lowerer : coro::LowererBase {
                             AAResults &AA);
   bool shouldElide(Function *F, DominatorTree &DT) const;
   void collectPostSplitCoroIds(Function *F);
-  bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT);
+  bool processCoroId(CoroIdInst *, AAResults &AA, DominatorTree &DT,
+                     OptimizationRemarkEmitter &ORE);
   bool hasEscapePath(const CoroBeginInst *,
                      const SmallPtrSetImpl<BasicBlock *> &) const;
 };
@@ -101,11 +104,12 @@ static void removeTailCallAttribute(AllocaInst *Frame, AAResults &AA) {
 
 // Given a resume function @f.resume(%f.frame* %frame), returns the size
 // and expected alignment of %f.frame type.
-static Optional<std::pair<uint64_t, Align>> getFrameLayout(Function *Resume) {
+static std::optional<std::pair<uint64_t, Align>>
+getFrameLayout(Function *Resume) {
   // Pull information from the function attributes.
   auto Size = Resume->getParamDereferenceableBytes(0);
   if (!Size)
-    return None;
+    return std::nullopt;
   return std::make_pair(Size, Resume->getParamAlign(0).valueOrOne());
 }
 
@@ -244,7 +248,7 @@ bool Lowerer::shouldElide(Function *F, DominatorTree &DT) const {
 
   // Filter out the coro.destroy that lie along exceptional paths.
   SmallPtrSet<CoroBeginInst *, 8> ReferencedCoroBegins;
-  for (auto &It : DestroyAddr) {
+  for (const auto &It : DestroyAddr) {
     // If there is any coro.destroy dominates all of the terminators for the
     // coro.begin, we could know the corresponding coro.begin wouldn't escape.
     for (Instruction *DA : It.second) {
@@ -297,7 +301,7 @@ void Lowerer::collectPostSplitCoroIds(Function *F) {
 }
 
 bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
-                            DominatorTree &DT) {
+                            DominatorTree &DT, OptimizationRemarkEmitter &ORE) {
   CoroBegins.clear();
   CoroAllocs.clear();
   ResumeAddr.clear();
@@ -336,14 +340,31 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
   assert(Resumers && "PostSplit coro.id Info argument must refer to an array"
                      "of coroutine subfunctions");
   auto *ResumeAddrConstant =
-      ConstantExpr::getExtractValue(Resumers, CoroSubFnInst::ResumeIndex);
+      Resumers->getAggregateElement(CoroSubFnInst::ResumeIndex);
 
   replaceWithConstant(ResumeAddrConstant, ResumeAddr);
 
   bool ShouldElide = shouldElide(CoroId->getFunction(), DT);
+  if (!ShouldElide)
+    ORE.emit([&]() {
+      if (auto FrameSizeAndAlign =
+              getFrameLayout(cast<Function>(ResumeAddrConstant)))
+        return OptimizationRemarkMissed(DEBUG_TYPE, "CoroElide", CoroId)
+               << "'" << ore::NV("callee", CoroId->getCoroutine()->getName())
+               << "' not elided in '"
+               << ore::NV("caller", CoroId->getFunction()->getName())
+               << "' (frame_size="
+               << ore::NV("frame_size", FrameSizeAndAlign->first) << ", align="
+               << ore::NV("align", FrameSizeAndAlign->second.value()) << ")";
+      else
+        return OptimizationRemarkMissed(DEBUG_TYPE, "CoroElide", CoroId)
+               << "'" << ore::NV("callee", CoroId->getCoroutine()->getName())
+               << "' not elided in '"
+               << ore::NV("caller", CoroId->getFunction()->getName())
+               << "' (frame_size=unknown, align=unknown)";
+    });
 
-  auto *DestroyAddrConstant = ConstantExpr::getExtractValue(
-      Resumers,
+  auto *DestroyAddrConstant = Resumers->getAggregateElement(
       ShouldElide ? CoroSubFnInst::CleanupIndex : CoroSubFnInst::DestroyIndex);
 
   for (auto &It : DestroyAddr)
@@ -362,6 +383,23 @@ bool Lowerer::processCoroId(CoroIdInst *CoroId, AAResults &AA,
             << "Elide " << CoroId->getCoroutine()->getName() << " in "
             << CoroId->getFunction()->getName() << "\n";
 #endif
+      ORE.emit([&]() {
+        return OptimizationRemark(DEBUG_TYPE, "CoroElide", CoroId)
+               << "'" << ore::NV("callee", CoroId->getCoroutine()->getName())
+               << "' elided in '"
+               << ore::NV("caller", CoroId->getFunction()->getName())
+               << "' (frame_size="
+               << ore::NV("frame_size", FrameSizeAndAlign->first) << ", align="
+               << ore::NV("align", FrameSizeAndAlign->second.value()) << ")";
+      });
+    } else {
+      ORE.emit([&]() {
+        return OptimizationRemarkMissed(DEBUG_TYPE, "CoroElide", CoroId)
+               << "'" << ore::NV("callee", CoroId->getCoroutine()->getName())
+               << "' not elided in '"
+               << ore::NV("caller", CoroId->getFunction()->getName())
+               << "' (frame_size=unknown, align=unknown)";
+      });
     }
   }
 
@@ -386,10 +424,11 @@ PreservedAnalyses CoroElidePass::run(Function &F, FunctionAnalysisManager &AM) {
 
   AAResults &AA = AM.getResult<AAManager>(F);
   DominatorTree &DT = AM.getResult<DominatorTreeAnalysis>(F);
+  auto &ORE = AM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
   bool Changed = false;
   for (auto *CII : L.CoroIds)
-    Changed |= L.processCoroId(CII, AA, DT);
+    Changed |= L.processCoroId(CII, AA, DT, ORE);
 
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
 }

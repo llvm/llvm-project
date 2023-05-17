@@ -24,6 +24,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "body-farm"
 
@@ -134,7 +135,8 @@ BinaryOperator *ASTMaker::makeComparison(const Expr *LHS, const Expr *RHS,
 }
 
 CompoundStmt *ASTMaker::makeCompound(ArrayRef<Stmt *> Stmts) {
-  return CompoundStmt::Create(C, Stmts, SourceLocation(), SourceLocation());
+  return CompoundStmt::Create(C, Stmts, FPOptionsOverride(), SourceLocation(),
+                              SourceLocation());
 }
 
 DeclRefExpr *ASTMaker::makeDeclRefExpr(
@@ -540,7 +542,7 @@ static Stmt *create_dispatch_once(ASTContext &C, const FunctionDecl *D) {
   CallExpr *CE = CallExpr::Create(
       /*ASTContext=*/C,
       /*StmtClass=*/M.makeLvalueToRvalue(/*Expr=*/Block),
-      /*Args=*/None,
+      /*Args=*/std::nullopt,
       /*QualType=*/C.VoidTy,
       /*ExprValueType=*/VK_PRValue,
       /*SourceLocation=*/SourceLocation(), FPOptionsOverride());
@@ -608,7 +610,7 @@ static Stmt *create_dispatch_sync(ASTContext &C, const FunctionDecl *D) {
   ASTMaker M(C);
   DeclRefExpr *DR = M.makeDeclRefExpr(PV);
   ImplicitCastExpr *ICE = M.makeLvalueToRvalue(DR, Ty);
-  CallExpr *CE = CallExpr::Create(C, ICE, None, C.VoidTy, VK_PRValue,
+  CallExpr *CE = CallExpr::Create(C, ICE, std::nullopt, C.VoidTy, VK_PRValue,
                                   SourceLocation(), FPOptionsOverride());
   return CE;
 }
@@ -696,9 +698,9 @@ static Stmt *create_OSAtomicCompareAndSwap(ASTContext &C, const FunctionDecl *D)
 }
 
 Stmt *BodyFarm::getBody(const FunctionDecl *D) {
-  Optional<Stmt *> &Val = Bodies[D];
-  if (Val.hasValue())
-    return Val.getValue();
+  std::optional<Stmt *> &Val = Bodies[D];
+  if (Val)
+    return *Val;
 
   Val = nullptr;
 
@@ -715,6 +717,7 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
     switch (BuiltinID) {
     case Builtin::BIas_const:
     case Builtin::BIforward:
+    case Builtin::BIforward_like:
     case Builtin::BImove:
     case Builtin::BImove_if_noexcept:
       FF = create_std_move_forward;
@@ -737,7 +740,7 @@ Stmt *BodyFarm::getBody(const FunctionDecl *D) {
 
   if (FF) { Val = FF(C, D); }
   else if (Injector) { Val = Injector->getBody(D); }
-  return Val.getValue();
+  return *Val;
 }
 
 static const ObjCIvarDecl *findBackingIvar(const ObjCPropertyDecl *Prop) {
@@ -871,9 +874,9 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
   if (!D->isImplicit())
     return nullptr;
 
-  Optional<Stmt *> &Val = Bodies[D];
-  if (Val.hasValue())
-    return Val.getValue();
+  std::optional<Stmt *> &Val = Bodies[D];
+  if (Val)
+    return *Val;
   Val = nullptr;
 
   // For now, we only synthesize getters.
@@ -900,5 +903,5 @@ Stmt *BodyFarm::getBody(const ObjCMethodDecl *D) {
 
   Val = createObjCPropertyGetter(C, D);
 
-  return Val.getValue();
+  return *Val;
 }

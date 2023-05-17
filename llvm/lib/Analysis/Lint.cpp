@@ -40,11 +40,14 @@
 #include "llvm/ADT/Twine.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/AssumptionCache.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include "llvm/Analysis/ConstantFolding.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/MemoryLocation.h"
+#include "llvm/Analysis/ScopedNoAliasAA.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
+#include "llvm/Analysis/TypeBasedAliasAnalysis.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
@@ -60,13 +63,10 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/IR/LegacyPassManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
@@ -187,8 +187,8 @@ void Lint::visitFunction(Function &F) {
 void Lint::visitCallBase(CallBase &I) {
   Value *Callee = I.getCalledOperand();
 
-  visitMemoryReference(I, MemoryLocation::getAfter(Callee), None, nullptr,
-                       MemRef::Callee);
+  visitMemoryReference(I, MemoryLocation::getAfter(Callee), std::nullopt,
+                       nullptr, MemRef::Callee);
 
   if (Function *F = dyn_cast<Function>(findValue(Callee,
                                                  /*OffsetOk=*/false))) {
@@ -229,7 +229,7 @@ void Lint::visitCallBase(CallBase &I) {
         if (Formal->hasNoAliasAttr() && Actual->getType()->isPointerTy()) {
           AttributeList PAL = I.getAttributes();
           unsigned ArgNo = 0;
-          for (auto BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
+          for (auto *BI = I.arg_begin(); BI != AE; ++BI, ++ArgNo) {
             // Skip ByVal arguments since they will be memcpy'd to the callee's
             // stack so we're not really passing the pointer anyway.
             if (PAL.hasParamAttr(ArgNo, Attribute::ByVal))
@@ -335,32 +335,38 @@ void Lint::visitCallBase(CallBase &I) {
                            MSI->getDestAlign(), nullptr, MemRef::Write);
       break;
     }
+    case Intrinsic::memset_inline: {
+      MemSetInlineInst *MSII = cast<MemSetInlineInst>(&I);
+      visitMemoryReference(I, MemoryLocation::getForDest(MSII),
+                           MSII->getDestAlign(), nullptr, MemRef::Write);
+      break;
+    }
 
     case Intrinsic::vastart:
       Check(I.getParent()->getParent()->isVarArg(),
             "Undefined behavior: va_start called in a non-varargs function",
             &I);
 
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
     case Intrinsic::vacopy:
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Write);
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 1, TLI), None,
-                           nullptr, MemRef::Read);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 1, TLI),
+                           std::nullopt, nullptr, MemRef::Read);
       break;
     case Intrinsic::vaend:
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
 
     case Intrinsic::stackrestore:
       // Stackrestore doesn't read or write memory, but it sets the
       // stack pointer, which the compiler may read from or write to
       // at any time, so check it for both readability and writeability.
-      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI), None,
-                           nullptr, MemRef::Read | MemRef::Write);
+      visitMemoryReference(I, MemoryLocation::getForArgument(&I, 0, TLI),
+                           std::nullopt, nullptr, MemRef::Read | MemRef::Write);
       break;
     case Intrinsic::get_active_lane_mask:
       if (auto *TripCount = dyn_cast<ConstantInt>(I.getArgOperand(1)))
@@ -582,13 +588,13 @@ void Lint::visitAllocaInst(AllocaInst &I) {
 }
 
 void Lint::visitVAArgInst(VAArgInst &I) {
-  visitMemoryReference(I, MemoryLocation::get(&I), None, nullptr,
+  visitMemoryReference(I, MemoryLocation::get(&I), std::nullopt, nullptr,
                        MemRef::Read | MemRef::Write);
 }
 
 void Lint::visitIndirectBrInst(IndirectBrInst &I) {
-  visitMemoryReference(I, MemoryLocation::getAfter(I.getAddress()), None,
-                       nullptr, MemRef::Branchee);
+  visitMemoryReference(I, MemoryLocation::getAfter(I.getAddress()),
+                       std::nullopt, nullptr, MemRef::Branchee);
 
   Check(I.getNumDestinations() != 0,
         "Undefined behavior: indirectbr with no destinations", &I);
@@ -680,11 +686,6 @@ Value *Lint::findValueImpl(Value *V, bool OffsetOk,
                                CE->getOperand(0)->getType(), CE->getType(),
                                *DL))
         return findValueImpl(CE->getOperand(0), OffsetOk, Visited);
-    } else if (CE->getOpcode() == Instruction::ExtractValue) {
-      ArrayRef<unsigned> Indices = CE->getIndices();
-      if (Value *W = FindInsertedValue(CE->getOperand(0), Indices))
-        if (W != V)
-          return findValueImpl(W, OffsetOk, Visited);
     }
   }
 
@@ -714,55 +715,9 @@ PreservedAnalyses LintPass::run(Function &F, FunctionAnalysisManager &AM) {
   return PreservedAnalyses::all();
 }
 
-namespace {
-class LintLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  LintLegacyPass() : FunctionPass(ID) {
-    initializeLintLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesAll();
-    AU.addRequired<AAResultsWrapperPass>();
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<TargetLibraryInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-  }
-  void print(raw_ostream &O, const Module *M) const override {}
-};
-} // namespace
-
-char LintLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LintLegacyPass, "lint", "Statically lint-checks LLVM IR",
-                      false, true)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
-INITIALIZE_PASS_END(LintLegacyPass, "lint", "Statically lint-checks LLVM IR",
-                    false, true)
-
-bool LintLegacyPass::runOnFunction(Function &F) {
-  auto *Mod = F.getParent();
-  auto *DL = &F.getParent()->getDataLayout();
-  auto *AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
-  auto *AC = &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-  auto *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto *TLI = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  Lint L(Mod, DL, AA, AC, DT, TLI);
-  L.visit(F);
-  dbgs() << L.MessagesStr.str();
-  return false;
-}
-
 //===----------------------------------------------------------------------===//
 //  Implement the public interfaces to this file...
 //===----------------------------------------------------------------------===//
-
-FunctionPass *llvm::createLintLegacyPassPass() { return new LintLegacyPass(); }
 
 /// lintFunction - Check a function for errors, printing messages on stderr.
 ///
@@ -770,17 +725,25 @@ void llvm::lintFunction(const Function &f) {
   Function &F = const_cast<Function &>(f);
   assert(!F.isDeclaration() && "Cannot lint external functions");
 
-  legacy::FunctionPassManager FPM(F.getParent());
-  auto *V = new LintLegacyPass();
-  FPM.add(V);
-  FPM.run(F);
+  FunctionAnalysisManager FAM;
+  FAM.registerPass([&] { return TargetLibraryAnalysis(); });
+  FAM.registerPass([&] { return DominatorTreeAnalysis(); });
+  FAM.registerPass([&] { return AssumptionAnalysis(); });
+  FAM.registerPass([&] {
+    AAManager AA;
+    AA.registerFunctionAnalysis<BasicAA>();
+    AA.registerFunctionAnalysis<ScopedNoAliasAA>();
+    AA.registerFunctionAnalysis<TypeBasedAA>();
+    return AA;
+  });
+  LintPass().run(F, FAM);
 }
 
 /// lintModule - Check a module for errors, printing messages on stderr.
 ///
 void llvm::lintModule(const Module &M) {
-  legacy::PassManager PM;
-  auto *V = new LintLegacyPass();
-  PM.add(V);
-  PM.run(const_cast<Module &>(M));
+  for (const Function &F : M) {
+    if (!F.isDeclaration())
+      lintFunction(F);
+  }
 }

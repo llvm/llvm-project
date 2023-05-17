@@ -7,11 +7,11 @@ target triple = "wasm32-unknown-unknown"
 ; correctly and does not crash.
 ; CHECK-LABEL: @resume_only
 ; CHECK: call void @__resumeException
-define void @resume_only() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define void @resume_only() personality ptr @__gxx_personality_v0 {
 entry:
-  %val0 = insertvalue { i8*, i32 } undef, i8* null, 0
-  %val1 = insertvalue { i8*, i32} %val0, i32 0, 1
-  resume { i8*, i32 } %val1
+  %val0 = insertvalue { ptr, i32 } undef, ptr null, 0
+  %val1 = insertvalue { ptr, i32} %val0, i32 0, 1
+  resume { ptr, i32 } %val1
 }
 
 declare i32 @__gxx_personality_v0(...)

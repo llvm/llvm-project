@@ -17,11 +17,11 @@
 ; CHECK: Other: 0
 ; CHECK: Section: .text (0x2)
 ; CHECK: }
-define amdgpu_kernel void @test_constant_array_fixup(i32 addrspace(1)* nocapture %out, i32 %idx) #0 {
+define amdgpu_kernel void @test_constant_array_fixup(ptr addrspace(1) nocapture %out, i32 %idx) #0 {
 entry:
-  %arrayidx = getelementptr inbounds [4 x i32], [4 x i32] addrspace(4)* @arr, i32 0, i32 %idx
-  %val = load i32, i32 addrspace(4)* %arrayidx
-  store i32 %val, i32 addrspace(1)* %out, align 4
+  %arrayidx = getelementptr inbounds [4 x i32], ptr addrspace(4) @arr, i32 0, i32 %idx
+  %val = load i32, ptr addrspace(4) %arrayidx
+  store i32 %val, ptr addrspace(1) %out, align 4
   ret void
 }
 

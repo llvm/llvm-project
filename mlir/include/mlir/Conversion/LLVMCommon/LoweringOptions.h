@@ -33,7 +33,7 @@ public:
   LowerToLLVMOptions(MLIRContext *ctx, const DataLayout &dl);
 
   bool useBarePtrCallConv = false;
-  bool emitCWrappers = false;
+  bool useOpaquePointers = true;
 
   enum class AllocLowering {
     /// Use malloc for for heap allocations.
@@ -48,6 +48,8 @@ public:
   };
 
   AllocLowering allocLowering = AllocLowering::Malloc;
+
+  bool useGenericFunctions = false;
 
   /// The data layout of the module to produce. This must be consistent with the
   /// data layout used in the upper levels of the lowering pipeline.

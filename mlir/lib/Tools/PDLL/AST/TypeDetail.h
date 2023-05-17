@@ -115,9 +115,9 @@ struct TupleTypeStorage
             std::pair<ArrayRef<Type>, ArrayRef<StringRef>> key) {
     SmallVector<StringRef> names = llvm::to_vector(llvm::map_range(
         key.second, [&](StringRef name) { return alloc.copyInto(name); }));
-    return new (alloc.allocate<TupleTypeStorage>()) TupleTypeStorage(
-        std::make_pair(alloc.copyInto(key.first),
-                       alloc.copyInto(llvm::makeArrayRef(names))));
+    return new (alloc.allocate<TupleTypeStorage>())
+        TupleTypeStorage(std::make_pair(alloc.copyInto(key.first),
+                                        alloc.copyInto(llvm::ArrayRef(names))));
   }
 };
 

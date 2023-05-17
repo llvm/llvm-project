@@ -5,24 +5,24 @@
 --- |
   target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-  define i64 @test(i64 %arg, i8* %arg1) optsize {
+  define i64 @test(i64 %arg, ptr %arg1) optsize {
     %tmp = icmp ult i64 %arg, 100
     br i1 %tmp, label %1, label %4
 
     %tmp3 = icmp ult i64 %arg, 10
     br i1 %tmp3, label %2, label %3
 
-    %tmp5 = tail call i64 @f1(i8* %arg1, i64 %arg)
+    %tmp5 = tail call i64 @f1(ptr %arg1, i64 %arg)
     ret i64 %tmp5
 
-    %tmp7 = tail call i64 @f2(i8* %arg1, i64 %arg)
+    %tmp7 = tail call i64 @f2(ptr %arg1, i64 %arg)
     ret i64 %tmp7
 
     ret i64 123
   }
 
-  declare i64 @f1(i8*, i64)
-  declare i64 @f2(i8*, i64)
+  declare i64 @f1(ptr, i64)
+  declare i64 @f2(ptr, i64)
 
 ...
 ---

@@ -9,15 +9,13 @@
 #include "src/string/strcmp.h"
 
 #include "src/__support/common.h"
+#include "src/string/memory_utils/strcmp_implementations.h"
 
 namespace __llvm_libc {
 
-// TODO: Look at benefits for comparing words at a time.
 LLVM_LIBC_FUNCTION(int, strcmp, (const char *left, const char *right)) {
-  for (; *left && *left == *right; ++left, ++right)
-    ;
-  return *reinterpret_cast<const unsigned char *>(left) -
-         *reinterpret_cast<const unsigned char *>(right);
+  auto comp = [](char l, char r) -> int { return l - r; };
+  return strcmp_implementation(left, right, comp);
 }
 
 } // namespace __llvm_libc

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<forward_iterator I, sentinel_for<I> S, class T, class Proj = identity,
 //          indirect_strict_weak_order<const T*, projected<I, Proj>> Comp = ranges::less>
@@ -131,6 +130,13 @@ constexpr void test_iterators() {
     assert(std::ranges::binary_search(It(a), Sent(It(a + 5)), 1));
     auto range = std::ranges::subrange(It(a), Sent(It(a + 5)));
     assert(std::ranges::binary_search(range, 1));
+  }
+
+  { // check that false is returned when the element doesn't exist, but an element with a greater value is in the range
+    int a[] = {1, 2, 4};
+    assert(!std::ranges::binary_search(It(a), Sent(It(a + 3)), 3));
+    auto range = std::ranges::subrange(It(a), Sent(It(a + 3)));
+    assert(!std::ranges::binary_search(range, 3));
   }
 }
 

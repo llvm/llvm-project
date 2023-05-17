@@ -43,14 +43,15 @@
 #include "llvm/Option/OptTable.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 #include <cassert>
 #include <cstring>
 #include <memory>
@@ -98,7 +99,7 @@ static bool ignoreExtraCC1Commands(const driver::Compilation *Compilation) {
       OffloadCompilation = true;
 
   if (Jobs.size() > 1) {
-    for (auto A : Actions){
+    for (auto *A : Actions){
       // On MacOSX real actions may end up being wrapped in BindArchAction
       if (isa<driver::BindArchAction>(A))
         A = *A->input_begin();
@@ -161,7 +162,7 @@ getCC1Arguments(DiagnosticsEngine *Diagnostics,
 
 /// Returns a clang build invocation initialized from the CC1 flags.
 CompilerInvocation *newInvocation(DiagnosticsEngine *Diagnostics,
-                                  const llvm::opt::ArgStringList &CC1Args,
+                                  ArrayRef<const char *> CC1Args,
                                   const char *const BinaryName) {
   assert(!CC1Args.empty() && "Must at least contain the program name!");
   CompilerInvocation *Invocation = new CompilerInvocation;
@@ -299,6 +300,31 @@ void addTargetAndModeForProgramName(std::vector<std::string> &CommandLine,
   }
 }
 
+void addExpandedResponseFiles(std::vector<std::string> &CommandLine,
+                              llvm::StringRef WorkingDir,
+                              llvm::cl::TokenizerCallback Tokenizer,
+                              llvm::vfs::FileSystem &FS) {
+  bool SeenRSPFile = false;
+  llvm::SmallVector<const char *, 20> Argv;
+  Argv.reserve(CommandLine.size());
+  for (auto &Arg : CommandLine) {
+    Argv.push_back(Arg.c_str());
+    if (!Arg.empty())
+      SeenRSPFile |= Arg.front() == '@';
+  }
+  if (!SeenRSPFile)
+    return;
+  llvm::BumpPtrAllocator Alloc;
+  llvm::cl::ExpansionContext ECtx(Alloc, Tokenizer);
+  llvm::Error Err =
+      ECtx.setVFS(&FS).setCurrentDir(WorkingDir).expandResponseFiles(Argv);
+  if (Err)
+    llvm::errs() << Err;
+  // Don't assign directly, Argv aliases CommandLine.
+  std::vector<std::string> ExpandedArgv(Argv.begin(), Argv.end());
+  CommandLine = std::move(ExpandedArgv);
+}
+
 } // namespace tooling
 } // namespace clang
 
@@ -339,7 +365,7 @@ ToolInvocation::~ToolInvocation() {
 }
 
 bool ToolInvocation::run() {
-  std::vector<const char*> Argv;
+  llvm::opt::ArgStringList Argv;
   for (const std::string &Str : CommandLine)
     Argv.push_back(Str.c_str());
   const char *const BinaryName = Argv[0];
@@ -362,6 +388,17 @@ bool ToolInvocation::run() {
   SourceManager SrcMgr(*Diagnostics, *Files);
   Diagnostics->setSourceManager(&SrcMgr);
 
+  // We already have a cc1, just create an invocation.
+  if (CommandLine.size() >= 2 && CommandLine[1] == "-cc1") {
+    ArrayRef<const char *> CC1Args = ArrayRef(Argv).drop_front();
+    std::unique_ptr<CompilerInvocation> Invocation(
+        newInvocation(&*Diagnostics, CC1Args, BinaryName));
+    if (Diagnostics->hasErrorOccurred())
+      return false;
+    return Action->runInvocation(std::move(Invocation), Files,
+                                 std::move(PCHContainerOps), DiagConsumer);
+  }
+
   const std::unique_ptr<driver::Driver> Driver(
       newDriver(&*Diagnostics, BinaryName, &Files->getVirtualFileSystem()));
   // The "input file not found" diagnostics from the driver are useful.
@@ -371,7 +408,7 @@ bool ToolInvocation::run() {
   if (!Files->getFileSystemOpts().WorkingDir.empty())
     Driver->setCheckInputsExist(false);
   const std::unique_ptr<driver::Compilation> Compilation(
-      Driver->BuildCompilation(llvm::makeArrayRef(Argv)));
+      Driver->BuildCompilation(llvm::ArrayRef(Argv)));
   if (!Compilation)
     return false;
   const llvm::opt::ArgStringList *const CC1Args = getCC1Arguments(
@@ -673,7 +710,7 @@ std::unique_ptr<ASTUnit> buildASTFromCodeWithArgs(
 
   if (!Invocation.run())
     return nullptr;
- 
+
   assert(ASTs.size() == 1);
   return std::move(ASTs[0]);
 }

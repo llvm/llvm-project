@@ -11,12 +11,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Tooling/FixIt.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 void DurationAdditionCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -38,7 +37,7 @@ void DurationAdditionCheck::check(const MatchFinder::MatchResult &Result) {
   if (Binop->getExprLoc().isMacroID() || Binop->getExprLoc().isInvalid())
     return;
 
-  llvm::Optional<DurationScale> Scale = getScaleForTimeInverse(
+  std::optional<DurationScale> Scale = getScaleForTimeInverse(
       Result.Nodes.getNodeAs<clang::FunctionDecl>("function_decl")->getName());
   if (!Scale)
     return;
@@ -68,6 +67,4 @@ void DurationAdditionCheck::check(const MatchFinder::MatchResult &Result) {
   diag(Binop->getBeginLoc(), "perform addition in the duration domain") << Hint;
 }
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil

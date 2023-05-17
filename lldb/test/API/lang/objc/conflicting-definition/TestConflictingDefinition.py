@@ -10,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class TestRealDefinition(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_frame_var_after_stop_at_implementation(self):
         """Test that we can find the implementation for an objective C type"""
         if self.getArchitecture() == 'i386':

@@ -136,7 +136,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; CHECK-NEXT:  .LCPI3_2:
 ; CHECK-NEXT:    .long 3 @ 0x3
 ; CHECK-NEXT:    .long 0 @ 0x0
-; CHECK-NEXT:    .zero 4
+; CHECK-NEXT:    .long 0 @ 0x0
 ; CHECK-NEXT:    .long 0 @ 0x0
   %srem = srem <3 x i33> %X, <i33 9, i33 9, i33 -9>
   %cmp = icmp ne <3 x i33> %srem, <i33 3, i33 -3, i33 3>

@@ -125,7 +125,8 @@
 ; CODEVIEW-NEXT:     BytesOfCalleeSavedRegisters: 0xC
 ; CODEVIEW-NEXT:     OffsetOfExceptionHandler: 0x0
 ; CODEVIEW-NEXT:     SectionIdOfExceptionHandler: 0x0
-; CODEVIEW-NEXT:     Flags [ (0x14000)
+; CODEVIEW-NEXT:     Flags [ (0x16000)
+; CODEVIEW-NEXT:       SafeBuffers (0x2000)
 ; CODEVIEW-NEXT:     ]
 ; CODEVIEW-NEXT:     LocalFramePtrReg: VFRAME (0x7536)
 ; CODEVIEW-NEXT:     ParamFramePtrReg: VFRAME (0x7536)
@@ -186,45 +187,42 @@ entry:
   %a = alloca i32, align 4
   %b = alloca i32, align 4
   %c = alloca i32, align 4
-  %0 = bitcast i32* %a to i8*, !dbg !16
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %0) #4, !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !13, metadata !DIExpression()), !dbg !16
-  store i32 1, i32* %a, align 4, !dbg !16, !tbaa !17
-  %1 = bitcast i32* %b to i8*, !dbg !21
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %1) #4, !dbg !21
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !14, metadata !DIExpression()), !dbg !21
-  store i32 2, i32* %b, align 4, !dbg !21, !tbaa !17
-  %2 = bitcast i32* %c to i8*, !dbg !22
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %2) #4, !dbg !22
-  call void @llvm.dbg.declare(metadata i32* %c, metadata !15, metadata !DIExpression()), !dbg !22
-  store i32 3, i32* %c, align 4, !dbg !22, !tbaa !17
-  call void @"?f@@YAXAAH0@Z"(i32* nonnull dereferenceable(4) %a, i32* nonnull dereferenceable(4) %b) #5, !dbg !23
-  call void @"?g@@YAXAAH00@Z"(i32* nonnull dereferenceable(4) %a, i32* nonnull dereferenceable(4) %b, i32* nonnull dereferenceable(4) %c) #5, !dbg !24
-  %3 = load i32, i32* %a, align 4, !dbg !25, !tbaa !17
-  %4 = load i32, i32* %b, align 4, !dbg !25, !tbaa !17
-  %add = add nsw i32 %4, %3, !dbg !25
-  %5 = load i32, i32* %c, align 4, !dbg !25, !tbaa !17
-  %add1 = add nsw i32 %add, %5, !dbg !25
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %2) #4, !dbg !26
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %1) #4, !dbg !26
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %0) #4, !dbg !26
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %a) #4, !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !13, metadata !DIExpression()), !dbg !16
+  store i32 1, ptr %a, align 4, !dbg !16, !tbaa !17
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %b) #4, !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !14, metadata !DIExpression()), !dbg !21
+  store i32 2, ptr %b, align 4, !dbg !21, !tbaa !17
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %c) #4, !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %c, metadata !15, metadata !DIExpression()), !dbg !22
+  store i32 3, ptr %c, align 4, !dbg !22, !tbaa !17
+  call void @"?f@@YAXAAH0@Z"(ptr nonnull dereferenceable(4) %a, ptr nonnull dereferenceable(4) %b) #5, !dbg !23
+  call void @"?g@@YAXAAH00@Z"(ptr nonnull dereferenceable(4) %a, ptr nonnull dereferenceable(4) %b, ptr nonnull dereferenceable(4) %c) #5, !dbg !24
+  %0 = load i32, ptr %a, align 4, !dbg !25, !tbaa !17
+  %1 = load i32, ptr %b, align 4, !dbg !25, !tbaa !17
+  %add = add nsw i32 %1, %0, !dbg !25
+  %2 = load i32, ptr %c, align 4, !dbg !25, !tbaa !17
+  %add1 = add nsw i32 %add, %2, !dbg !25
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %c) #4, !dbg !26
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %b) #4, !dbg !26
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %a) #4, !dbg !26
   ret i32 %add1, !dbg !25
 }
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: optsize
-declare dso_local void @"?f@@YAXAAH0@Z"(i32* dereferenceable(4), i32* dereferenceable(4)) local_unnamed_addr #3
+declare dso_local void @"?f@@YAXAAH0@Z"(ptr dereferenceable(4), ptr dereferenceable(4)) local_unnamed_addr #3
 
 ; Function Attrs: optsize
-declare dso_local void @"?g@@YAXAAH00@Z"(i32* dereferenceable(4), i32* dereferenceable(4), i32* dereferenceable(4)) local_unnamed_addr #3
+declare dso_local void @"?g@@YAXAAH00@Z"(ptr dereferenceable(4), ptr dereferenceable(4), ptr dereferenceable(4)) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #1
 
 attributes #0 = { norecurse optsize "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { argmemonly nounwind }

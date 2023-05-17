@@ -12,10 +12,12 @@
 #include "clang/Tooling/Transformer/RangeSelector.h"
 #include "clang/Tooling/Transformer/RewriteRule.h"
 #include "clang/Tooling/Transformer/Stencil.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace clang;
 using namespace tooling;
@@ -82,7 +84,7 @@ static std::string format(StringRef Code) {
 }
 
 static void compareSnippets(StringRef Expected,
-                            const llvm::Optional<std::string> &MaybeActual) {
+                            const std::optional<std::string> &MaybeActual) {
   ASSERT_TRUE(MaybeActual) << "Rewrite failed. Expecting: " << Expected;
   auto Actual = *MaybeActual;
   std::string HL = "#include \"header.h\"\n";
@@ -101,7 +103,7 @@ protected:
     FileContents.emplace_back(std::string(Filename), std::string(Content));
   }
 
-  llvm::Optional<std::string> rewrite(StringRef Input) {
+  std::optional<std::string> rewrite(StringRef Input) {
     std::string Code = ("#include \"header.h\"\n" + Input).str();
     auto Factory = newFrontendActionFactory(&MatchFinder);
     if (!runToolOnCodeWithArgs(
@@ -109,18 +111,18 @@ protected:
             "clang-tool", std::make_shared<PCHContainerOperations>(),
             FileContents)) {
       llvm::errs() << "Running tool failed.\n";
-      return None;
+      return std::nullopt;
     }
     if (ErrorCount != 0) {
       llvm::errs() << "Generating changes failed.\n";
-      return None;
+      return std::nullopt;
     }
     auto ChangedCode =
         applyAtomicChanges("input.cc", Code, Changes, ApplyChangesSpec());
     if (!ChangedCode) {
       llvm::errs() << "Applying changes failed: "
                    << llvm::toString(ChangedCode.takeError()) << "\n";
-      return None;
+      return std::nullopt;
     }
     return *ChangedCode;
   }
@@ -805,7 +807,7 @@ TEST_F(TransformerTest, WithMetadata) {
       "clang-tool", std::make_shared<PCHContainerOperations>(), {}));
   ASSERT_EQ(Changes.size(), 1u);
   const llvm::Any &Metadata = Changes[0].getMetadata();
-  ASSERT_TRUE(llvm::any_isa<int>(Metadata));
+  ASSERT_TRUE(llvm::any_cast<int>(&Metadata));
   EXPECT_THAT(llvm::any_cast<int>(Metadata), 5);
 }
 
@@ -1617,10 +1619,9 @@ TEST_F(TransformerTest, MultipleFiles) {
       "clang-tool", std::make_shared<PCHContainerOperations>(),
       {{"input.h", Header}}));
 
-  std::sort(Changes.begin(), Changes.end(),
-            [](const AtomicChange &L, const AtomicChange &R) {
-              return L.getFilePath() < R.getFilePath();
-            });
+  llvm::sort(Changes, [](const AtomicChange &L, const AtomicChange &R) {
+    return L.getFilePath() < R.getFilePath();
+  });
 
   ASSERT_EQ(Changes[0].getFilePath(), "./input.h");
   EXPECT_THAT(Changes[0].getInsertedHeaders(), IsEmpty());

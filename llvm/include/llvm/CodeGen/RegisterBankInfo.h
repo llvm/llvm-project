@@ -18,9 +18,9 @@
 #include "llvm/ADT/Hashing.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/iterator_range.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/Register.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include <cassert>
 #include <initializer_list>
 #include <memory>
@@ -435,7 +435,7 @@ protected:
 
   /// Get the MinimalPhysRegClass for Reg.
   /// \pre Reg is a physical register.
-  const TargetRegisterClass &
+  const TargetRegisterClass *
   getMinimalPhysRegClass(Register Reg, const TargetRegisterInfo &TRI) const;
 
   /// Try to get the mapping of \p MI.
@@ -586,6 +586,11 @@ public:
 
   /// Get the total number of register banks.
   unsigned getNumRegBanks() const { return NumRegBanks; }
+
+  /// Returns true if the register bank is considered divergent.
+  virtual bool isDivergentRegBank(const RegisterBank *RB) const {
+    return false;
+  }
 
   /// Get a register bank that covers \p RC.
   ///

@@ -31,8 +31,8 @@ main_body:
   %6 = extractelement <4 x float> %reg3, i32 0
   %7 = extractelement <4 x float> %reg3, i32 1
   %8 = extractelement <4 x float> %reg3, i32 2
-  %9 = load <4 x float>, <4 x float> addrspace(8)* null
-  %10 = load <4 x float>, <4 x float> addrspace(8)* getelementptr ([1024 x <4 x float>], [1024 x <4 x float>] addrspace(8)* null, i64 0, i32 1)
+  %9 = load <4 x float>, ptr addrspace(8) null
+  %10 = load <4 x float>, ptr addrspace(8) getelementptr ([1024 x <4 x float>], ptr addrspace(8) null, i64 0, i32 1)
   %11 = call float @llvm.r600.dot4(<4 x float> %9, <4 x float> %9)
   %12 = fmul float %0, %3
   %13 = fadd float %12, %6

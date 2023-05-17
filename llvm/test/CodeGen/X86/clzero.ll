@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-linux -mattr=+clzero | FileCheck %s --check-prefix=X64
 ; RUN: llc < %s -mtriple=i386-pc-linux -mattr=+clzero | FileCheck %s --check-prefix=X86
 
-define void @foo(i8* %p) #0 {
+define void @foo(ptr %p) #0 {
 ; X64-LABEL: foo:
 ; X64:       # %bb.0: # %entry
 ; X64-NEXT:    movq %rdi, %rax
@@ -15,8 +15,8 @@ define void @foo(i8* %p) #0 {
 ; X86-NEXT:    clzero
 ; X86-NEXT:    retl
 entry:
-  tail call void @llvm.x86.clzero(i8* %p) #1
+  tail call void @llvm.x86.clzero(ptr %p) #1
   ret void
 }
 
-declare void @llvm.x86.clzero(i8*) #1
+declare void @llvm.x86.clzero(ptr) #1

@@ -8,8 +8,8 @@
   (for whatever reason) the set must be consistent with previously
   set values.
 */
-#include <stdio.h>
 #include <omp.h>
+#include <stdio.h>
 
 // ---------------------------------------------------------------------------
 // Various definitions copied from OpenMP RTL

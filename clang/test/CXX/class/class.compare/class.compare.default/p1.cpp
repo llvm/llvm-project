@@ -11,7 +11,7 @@ struct A {
   friend bool operator!=(const B&, const B&) = default; // expected-error {{invalid parameter type for defaulted equality comparison}}
   friend bool operator<(const A&, const A&);
   friend bool operator<(const B&, const B&) = default; // expected-error {{invalid parameter type for defaulted relational comparison}}
-  friend bool operator>(A, A) = default; // expected-warning {{implicitly deleted}}
+  friend bool operator>(A, A) = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
 
   bool operator<(const A&) const;
   bool operator<=(const A&) const = default;
@@ -29,8 +29,8 @@ struct A {
 
 template<typename T> struct Dependent {
   using U = typename T::type;
-  bool operator==(U) const = default; // expected-error {{found 'Dependent<Bad>::U'}}
-  friend bool operator==(U, U) = default; // expected-error {{found 'Dependent<Bad>::U'}}
+  bool operator==(U) const = default; // expected-error {{found 'U'}}
+  friend bool operator==(U, U) = default; // expected-error {{found 'U'}}
 };
 
 struct Good { using type = const Dependent<Good>&; };
@@ -87,11 +87,11 @@ namespace LookupContext {
       bool operator>=(const B&, const B&); // expected-note 2{{best match}}
 
       struct B {
-        bool operator!=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator<(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator<=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator>(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
-        bool operator>=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}}
+        bool operator!=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator<(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator<=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator>(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
+        bool operator>=(const B&) const = default; // expected-warning {{implicitly deleted}} expected-note {{deleted here}} expected-note{{replace 'default'}}
       };
       return B();
     }
@@ -144,7 +144,7 @@ namespace P1946 {
   struct B {
     A a; // expected-note {{no viable three-way comparison}}
     friend bool operator==(B, B) = default; // ok
-    friend bool operator==(const B&, const B&) = default; // expected-warning {{deleted}}
+    friend bool operator==(const B&, const B&) = default; // expected-warning {{deleted}} expected-note{{replace 'default'}}
   };
 }
 
@@ -178,6 +178,12 @@ bool operator==(S4 const &, S4 const &) = default; // expected-error{{not a frie
 
 struct S5;                         // expected-note 3{{forward declaration}}
 bool operator==(S5, S5) = default; // expected-error{{not a friend}} expected-error 2{{has incomplete type}}
+
+struct S6;
+bool operator==(const S6&, const S6&); // expected-note {{previous declaration}}
+struct S6 {
+    friend bool operator==(const S6&, const S6&) = default; // expected-error {{because it was already declared outside}}
+};
 
 enum e {};
 bool operator==(e, int) = default; // expected-error{{expected class or reference to a constant class}}
@@ -220,3 +226,26 @@ void f2() {
   (void)(b == 0);
 }
 } // namespace p2085_2
+
+namespace GH61417 {
+struct A {
+  unsigned x : 1;
+  unsigned   : 0;
+  unsigned y : 1;
+
+  constexpr A() : x(0), y(0) {}
+  bool operator==(const A& rhs) const noexcept = default;
+};
+
+void f1() {
+  constexpr A a, b;
+  constexpr bool c = (a == b); // no diagnostic, we should not be comparing the
+                               // unnamed bit-field which is indeterminate
+}
+
+void f2() {
+    A a, b;
+    bool c = (a == b); // no diagnostic nor crash during codegen attempting to
+                       // access info for unnamed bit-field
+}
+}

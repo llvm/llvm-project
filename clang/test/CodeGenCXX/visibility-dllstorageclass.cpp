@@ -4,14 +4,14 @@
 // and that it overrides the effect of visibility options and annotations.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
-// RUN:     -fvisibility hidden \
+// RUN:     -fvisibility=hidden \
 // RUN:     -fapply-global-visibility-to-externs \
 // RUN:     -fvisibility-from-dllstorageclass \
 // RUN:     -x c++ %s -S -emit-llvm -o - | \
 // RUN:   FileCheck %s --check-prefixes=DEFAULTS
 
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
-// RUN:     -fvisibility hidden \
+// RUN:     -fvisibility=hidden \
 // RUN:     -fapply-global-visibility-to-externs \
 // RUN:     -fvisibility-from-dllstorageclass \
 // RUN:     -fvisibility-dllexport=hidden \
@@ -22,7 +22,7 @@
 // RUN:   FileCheck %s --check-prefixes=EXPLICIT
 
 // RUN: %clang_cc1 -triple x86_64-unknown-windows-itanium -fdeclspec \
-// RUN:     -fvisibility hidden \
+// RUN:     -fvisibility=hidden \
 // RUN:     -fapply-global-visibility-to-externs \
 // RUN:     -fvisibility-from-dllstorageclass \
 // RUN:     -fvisibility-dllexport=default \

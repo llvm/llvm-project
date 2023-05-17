@@ -1,6 +1,6 @@
-; RUN: opt -S -mergefunc < %s | FileCheck %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck %s
 
-; RUN: opt -S -mergefunc < %s | FileCheck -check-prefix=NOPLUS %s
+; RUN: opt -S -passes=mergefunc < %s | FileCheck -check-prefix=NOPLUS %s
 
 ; This makes sure that zeros in constants don't cause problems with string based
 ; memory comparisons

@@ -10,7 +10,7 @@
 ; or into
 ;   x ^ (~y)
 
-; While -reassociate does handle this simple pattern, it does not handle
+; While -passes=reassociate does handle this simple pattern, it does not handle
 ; the more complicated motivating pattern.
 
 ; ============================================================================ ;

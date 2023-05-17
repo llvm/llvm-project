@@ -5,7 +5,7 @@
 target triple = "arm64-apple-ios13.4.0"
 define void @foo() !dbg !6 {
   ; CHECK: DBG_VALUE $noreg, $noreg, !"1", !DIExpression()
-  call void @llvm.dbg.value(metadata i32* undef, metadata !9, metadata !DIExpression()), !dbg !11
+  call void @llvm.dbg.value(metadata ptr undef, metadata !9, metadata !DIExpression()), !dbg !11
   ret void, !dbg !12
 }
 

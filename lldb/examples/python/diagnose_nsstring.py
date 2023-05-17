@@ -4,8 +4,6 @@
 # decisions it did and  providing some useful context information that can
 # be used for improving the formatter
 
-from __future__ import print_function
-
 import lldb
 
 
@@ -177,7 +175,7 @@ struct $__lldb__CFString {\
 
 def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
-        "command script add -f %s.diagnose_nsstring_Command_Impl diagnose-nsstring" %
+        "command script add -o -f %s.diagnose_nsstring_Command_Impl diagnose-nsstring" %
         __name__)
     print('The "diagnose-nsstring" command has been installed, type "help diagnose-nsstring" for detailed help.')
 

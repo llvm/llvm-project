@@ -12,74 +12,55 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/LowLevelType.h"
-#include "llvm/ADT/APFloat.h"
-#include "llvm/IR/DataLayout.h"
-#include "llvm/IR/DerivedTypes.h"
+#include "llvm/Support/raw_ostream.h"
 using namespace llvm;
 
-LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
-  if (auto VTy = dyn_cast<VectorType>(&Ty)) {
-    auto EC = VTy->getElementCount();
-    LLT ScalarTy = getLLTForType(*VTy->getElementType(), DL);
-    if (EC.isScalar())
-      return ScalarTy;
-    return LLT::vector(EC, ScalarTy);
-  }
-
-  if (auto PTy = dyn_cast<PointerType>(&Ty)) {
-    unsigned AddrSpace = PTy->getAddressSpace();
-    return LLT::pointer(AddrSpace, DL.getPointerSizeInBits(AddrSpace));
-  }
-
-  if (Ty.isSized()) {
+LLT::LLT(MVT VT) {
+  if (VT.isVector()) {
+    bool asVector = VT.getVectorMinNumElements() > 1;
+    init(/*IsPointer=*/false, asVector, /*IsScalar=*/!asVector,
+         VT.getVectorElementCount(), VT.getVectorElementType().getSizeInBits(),
+         /*AddressSpace=*/0);
+  } else if (VT.isValid() && !VT.isScalableTargetExtVT()) {
     // Aggregates are no different from real scalars as far as GlobalISel is
     // concerned.
-    auto SizeInBits = DL.getTypeSizeInBits(&Ty);
-    assert(SizeInBits != 0 && "invalid zero-sized type");
-    return LLT::scalar(SizeInBits);
+    init(/*IsPointer=*/false, /*IsVector=*/false, /*IsScalar=*/true,
+         ElementCount::getFixed(0), VT.getSizeInBits(), /*AddressSpace=*/0);
+  } else {
+    IsScalar = false;
+    IsPointer = false;
+    IsVector = false;
+    RawData = 0;
   }
-
-  return LLT();
 }
 
-MVT llvm::getMVTForLLT(LLT Ty) {
-  if (!Ty.isVector())
-    return MVT::getIntegerVT(Ty.getSizeInBits());
-
-  return MVT::getVectorVT(
-      MVT::getIntegerVT(Ty.getElementType().getSizeInBits()),
-      Ty.getNumElements());
+void LLT::print(raw_ostream &OS) const {
+  if (isVector()) {
+    OS << "<";
+    OS << getElementCount() << " x " << getElementType() << ">";
+  } else if (isPointer())
+    OS << "p" << getAddressSpace();
+  else if (isValid()) {
+    assert(isScalar() && "unexpected type");
+    OS << "s" << getScalarSizeInBits();
+  } else
+    OS << "LLT_invalid";
 }
 
-EVT llvm::getApproximateEVTForLLT(LLT Ty, const DataLayout &DL,
-                                  LLVMContext &Ctx) {
-  if (Ty.isVector()) {
-    EVT EltVT = getApproximateEVTForLLT(Ty.getElementType(), DL, Ctx);
-    return EVT::getVectorVT(Ctx, EltVT, Ty.getElementCount());
-  }
-
-  return EVT::getIntegerVT(Ctx, Ty.getSizeInBits());
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void LLT::dump() const {
+  print(dbgs());
+  dbgs() << '\n';
 }
+#endif
 
-LLT llvm::getLLTForMVT(MVT Ty) {
-  if (!Ty.isVector())
-    return LLT::scalar(Ty.getSizeInBits());
-
-  return LLT::scalarOrVector(Ty.getVectorElementCount(),
-                             Ty.getVectorElementType().getSizeInBits());
-}
-
-const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
-  assert(Ty.isScalar() && "Expected a scalar type.");
-  switch (Ty.getSizeInBits()) {
-  case 16:
-    return APFloat::IEEEhalf();
-  case 32:
-    return APFloat::IEEEsingle();
-  case 64:
-    return APFloat::IEEEdouble();
-  case 128:
-    return APFloat::IEEEquad();
-  }
-  llvm_unreachable("Invalid FP type size.");
-}
+const constexpr LLT::BitFieldInfo LLT::ScalarSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerAddressSpaceFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::VectorElementsFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::VectorScalableFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::VectorSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorElementsFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorScalableFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorSizeFieldInfo;
+const constexpr LLT::BitFieldInfo LLT::PointerVectorAddressSpaceFieldInfo;

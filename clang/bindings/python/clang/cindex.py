@@ -286,6 +286,11 @@ class SourceLocation(Structure):
         """Get the file offset represented by this source location."""
         return self._get_instantiation()[3]
 
+    @property
+    def is_in_system_header(self):
+        """Returns true if the given source location is in a system header."""
+        return conf.lib.clang_Location_isInSystemHeader(self)
+
     def __eq__(self, other):
         return conf.lib.clang_equalLocations(self, other)
 
@@ -1152,7 +1157,7 @@ CursorKind.OBJC_AT_THROW_STMT = CursorKind(219)
 # Objective-C's @synchronized statement.
 CursorKind.OBJC_AT_SYNCHRONIZED_STMT = CursorKind(220)
 
-# Objective-C's autorealease pool statement.
+# Objective-C's autorelease pool statement.
 CursorKind.OBJC_AUTORELEASE_POOL_STMT = CursorKind(221)
 
 # Objective-C's for collection statement.
@@ -1312,7 +1317,7 @@ CursorKind.OMP_TEAMS_DISTRIBUTE_DIRECTIVE = CursorKind(271)
 #
 # The translation unit cursor exists primarily to act as the root cursor for
 # traversing the contents of a translation unit.
-CursorKind.TRANSLATION_UNIT = CursorKind(300)
+CursorKind.TRANSLATION_UNIT = CursorKind(350)
 
 ###
 # Attributes
@@ -1472,6 +1477,107 @@ class Cursor(Structure):
         function template that is declared '= default'.
         """
         return conf.lib.clang_CXXMethod_isDefaulted(self)
+
+    def is_deleted_method(self):
+        """Returns True if the cursor refers to a C++ member function or member
+        function template that is declared '= delete'.
+        """
+        return conf.lib.clang_CXXMethod_isDeleted(self)
+
+    def is_copy_assignment_operator_method(self):
+        """Returnrs True if the cursor refers to a copy-assignment operator.
+
+        A copy-assignment operator `X::operator=` is a non-static,
+        non-template member function of _class_ `X` with exactly one
+        parameter of type `X`, `X&`, `const X&`, `volatile X&` or `const
+        volatile X&`.
+
+
+        That is, for example, the `operator=` in:
+
+           class Foo {
+               bool operator=(const volatile Foo&);
+           };
+
+        Is a copy-assignment operator, while the `operator=` in:
+
+           class Bar {
+               bool operator=(const int&);
+           };
+
+        Is not.
+        """
+        return conf.lib.clang_CXXMethod_isCopyAssignmentOperator(self)
+
+    def is_move_assignment_operator_method(self):
+        """Returnrs True if the cursor refers to a move-assignment operator.
+
+        A move-assignment operator `X::operator=` is a non-static,
+        non-template member function of _class_ `X` with exactly one
+        parameter of type `X&&`, `const X&&`, `volatile X&&` or `const
+        volatile X&&`.
+
+
+        That is, for example, the `operator=` in:
+
+           class Foo {
+               bool operator=(const volatile Foo&&);
+           };
+
+        Is a move-assignment operator, while the `operator=` in:
+
+           class Bar {
+               bool operator=(const int&&);
+           };
+
+        Is not.
+        """
+        return conf.lib.clang_CXXMethod_isMoveAssignmentOperator(self)
+
+    def is_explicit_method(self):
+        """Determines if a C++ constructor or conversion function is
+        explicit, returning 1 if such is the case and 0 otherwise.
+
+        Constructors or conversion functions are declared explicit through
+        the use of the explicit specifier.
+
+        For example, the following constructor and conversion function are
+        not explicit as they lack the explicit specifier:
+
+            class Foo {
+                Foo();
+                operator int();
+            };
+
+        While the following constructor and conversion function are
+        explicit as they are declared with the explicit specifier.
+
+            class Foo {
+                explicit Foo();
+                explicit operator int();
+            };
+
+        This method will return 0 when given a cursor pointing to one of
+        the former declarations and it will return 1 for a cursor pointing
+        to the latter declarations.
+
+        The explicit specifier allows the user to specify a
+        conditional compile-time expression whose value decides
+        whether the marked element is explicit or not.
+
+        For example:
+
+            constexpr bool foo(int i) { return i % 2 == 0; }
+
+            class Foo {
+                 explicit(foo(1)) Foo();
+                 explicit(foo(2)) operator int();
+            }
+
+        This method will return 0 for the constructor and 1 for
+        the conversion function.
+        """
+        return conf.lib.clang_CXXMethod_isExplicit(self)
 
     def is_mutable_field(self):
         """Returns True if the cursor refers to a C++ field that is declared
@@ -3426,6 +3532,22 @@ functionList = [
    [Cursor],
    bool),
 
+  ("clang_CXXMethod_isDeleted",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isCopyAssignmentOperator",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isMoveAssignmentOperator",
+   [Cursor],
+   bool),
+
+  ("clang_CXXMethod_isExplicit",
+   [Cursor],
+   bool),
+
   ("clang_CXXMethod_isPureVirtual",
    [Cursor],
    bool),
@@ -4013,6 +4135,10 @@ functionList = [
   ("clang_Cursor_getOffsetOfField",
    [Cursor],
    c_longlong),
+
+  ("clang_Location_isInSystemHeader",
+   [SourceLocation],
+   bool),
 
   ("clang_Type_getAlignOf",
    [Type],

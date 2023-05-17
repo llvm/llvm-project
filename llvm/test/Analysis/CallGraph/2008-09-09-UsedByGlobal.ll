@@ -1,6 +1,6 @@
-; RUN: opt < %s -print-callgraph -disable-output 2>&1 | FileCheck %s
+; RUN: opt < %s -passes=print-callgraph -disable-output 2>&1 | FileCheck %s
 
-@a = global void ()* @f		; <void ()**> [#uses=0]
+@a = global ptr @f		; <ptr> [#uses=0]
 
 ; CHECK: calls function 'f'
 

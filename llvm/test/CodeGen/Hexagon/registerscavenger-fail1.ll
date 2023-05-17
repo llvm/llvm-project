@@ -3,16 +3,16 @@
 
 target triple = "hexagon-unknown-linux-gnu"
 
-%s.0 = type { double, double, double, double, double, double, i32, double, double, double, double, i8*, i8, [9 x i8], double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, [200 x i8*], [32 x i8*], [32 x i8], i32 }
+%s.0 = type { double, double, double, double, double, double, i32, double, double, double, double, ptr, i8, [9 x i8], double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, double, [200 x ptr], [32 x ptr], [32 x i8], i32 }
 
 @g0 = external unnamed_addr constant [6 x i8], align 8
 
 ; Function Attrs: nounwind
 define i32 @f0(double %a0) #0 {
 b0:
-  %v0 = call double bitcast (double (...)* @f1 to double (i8*)*)(i8* getelementptr inbounds ([6 x i8], [6 x i8]* @g0, i32 0, i32 0)) #0
-  %v1 = call i32 bitcast (i32 (...)* @f2 to i32 ()*)() #0
-  %v2 = call i8* @f3(i32 undef)
+  %v0 = call double @f1(ptr @g0) #0
+  %v1 = call i32 @f2() #0
+  %v2 = call ptr @f3(i32 undef)
   br i1 undef, label %b1, label %b2
 
 b1:                                               ; preds = %b0
@@ -32,7 +32,7 @@ b5:                                               ; preds = %b4
   ret i32 0
 
 b6:                                               ; preds = %b4
-  %v4 = call i32 bitcast (i32 (...)* @f2 to i32 ()*)() #0
+  %v4 = call i32 @f2() #0
   br i1 undef, label %b7, label %b24
 
 b7:                                               ; preds = %b6
@@ -65,7 +65,7 @@ b13:                                              ; preds = %b12, %b7
   unreachable
 
 b14:                                              ; preds = %b7
-  %v5 = call %s.0* bitcast (%s.0* (...)* @f4 to %s.0* (i32)*)(i32 0) #0
+  %v5 = call ptr @f4(i32 0) #0
   %v6 = icmp ult i32 %v4, 8
   br i1 %v6, label %b16, label %b15
 
@@ -94,18 +94,15 @@ b20:                                              ; preds = %b19
   br i1 %v12, label %b21, label %b22
 
 b21:                                              ; preds = %b20
-  %v13 = getelementptr i8, i8* %v2, i32 0
-  %v14 = bitcast i8* %v13 to double*
   %v15 = or i32 0, 16
-  %v16 = getelementptr i8, i8* %v2, i32 %v15
-  %v17 = bitcast i8* %v16 to double*
-  %v18 = load double, double* undef, align 8, !tbaa !0
+  %v16 = getelementptr i8, ptr %v2, i32 %v15
+  %v18 = load double, ptr undef, align 8, !tbaa !0
   %v19 = fcmp olt double -1.000000e+11, %v18
   %v20 = select i1 %v19, double %v18, double -1.000000e+11
-  %v21 = load double, double* %v14, align 8, !tbaa !0
+  %v21 = load double, ptr %v2, align 8, !tbaa !0
   %v22 = fcmp olt double -1.000000e+11, %v21
   %v23 = select i1 %v22, double %v21, double -1.000000e+11
-  %v24 = load double, double* %v17, align 8, !tbaa !0
+  %v24 = load double, ptr %v16, align 8, !tbaa !0
   %v25 = fcmp olt double -1.000000e+11, %v24
   %v26 = select i1 %v25, double %v24, double -1.000000e+11
   %v27 = fcmp ogt double 1.000000e+11, %v18
@@ -115,7 +112,7 @@ b21:                                              ; preds = %b20
   %v31 = fcmp ogt double 1.000000e+11, %v24
   %v32 = select i1 %v31, double %v24, double 1.000000e+11
   %v33 = add i32 0, 1
-  %v34 = getelementptr i8, i8* %v2, i32 32
+  %v34 = getelementptr i8, ptr %v2, i32 32
   br label %b22
 
 b22:                                              ; preds = %b21, %b20
@@ -125,19 +122,17 @@ b22:                                              ; preds = %b21, %b20
   %v38 = phi double [ %v30, %b21 ], [ 1.000000e+11, %b20 ]
   %v39 = phi double [ %v26, %b21 ], [ -1.000000e+11, %b20 ]
   %v40 = phi double [ %v32, %b21 ], [ 1.000000e+11, %b20 ]
-  %v41 = phi i8* [ %v34, %b21 ], [ %v2, %b20 ]
+  %v41 = phi ptr [ %v34, %b21 ], [ %v2, %b20 ]
   %v42 = phi i32 [ %v33, %b21 ], [ 0, %b20 ]
   %v43 = shl nsw i32 %v42, 5
-  %v44 = bitcast i8* %v41 to double*
   %v45 = or i32 %v43, 8
-  %v46 = getelementptr i8, i8* %v2, i32 %v45
-  %v47 = bitcast i8* %v46 to double*
-  %v48 = load double, double* %v44, align 8, !tbaa !0
+  %v46 = getelementptr i8, ptr %v2, i32 %v45
+  %v48 = load double, ptr %v41, align 8, !tbaa !0
   %v49 = select i1 undef, double %v48, double %v35
-  %v50 = load double, double* %v47, align 8, !tbaa !0
+  %v50 = load double, ptr %v46, align 8, !tbaa !0
   %v51 = fcmp olt double %v37, %v50
   %v52 = select i1 %v51, double %v50, double %v37
-  %v53 = load double, double* undef, align 8, !tbaa !0
+  %v53 = load double, ptr undef, align 8, !tbaa !0
   %v54 = fcmp olt double %v39, %v53
   %v55 = select i1 %v54, double %v53, double %v39
   %v56 = fcmp ogt double %v36, %v48
@@ -153,19 +148,18 @@ b23:                                              ; preds = %b23, %b22, %b19
   %v63 = phi double [ %v81, %b23 ], [ 1.000000e+11, %b19 ], [ %v59, %b22 ]
   %v64 = phi i32 [ %v82, %b23 ], [ 0, %b19 ], [ %v61, %b22 ]
   %v65 = shl i32 %v64, 5
-  %v66 = load double, double* undef, align 8, !tbaa !0
-  %v67 = load double, double* undef, align 8, !tbaa !0
+  %v66 = load double, ptr undef, align 8, !tbaa !0
+  %v67 = load double, ptr undef, align 8, !tbaa !0
   %v68 = select i1 undef, double %v66, double %v62
   %v69 = select i1 undef, double %v67, double %v63
-  %v70 = load double, double* undef, align 8, !tbaa !0
+  %v70 = load double, ptr undef, align 8, !tbaa !0
   %v71 = select i1 false, double 0.000000e+00, double %v68
   %v72 = select i1 undef, double %v70, double %v69
-  %v73 = bitcast i8* undef to double*
-  %v74 = load double, double* undef, align 8, !tbaa !0
+  %v74 = load double, ptr undef, align 8, !tbaa !0
   %v75 = fcmp ogt double %v71, 0.000000e+00
   %v76 = select i1 %v75, double 0.000000e+00, double %v71
   %v77 = select i1 undef, double %v74, double %v72
-  %v78 = load double, double* undef, align 8, !tbaa !0
+  %v78 = load double, ptr undef, align 8, !tbaa !0
   %v79 = select i1 undef, double %v78, double %v76
   %v80 = fcmp ogt double %v77, 0.000000e+00
   %v81 = select i1 %v80, double 0.000000e+00, double %v77
@@ -197,14 +191,14 @@ b25:                                              ; preds = %b24
   %v101 = fptosi double %v100 to i32
   %v102 = fadd double undef, 1.000000e+00
   %v103 = fptosi double %v102 to i32
-  %v104 = call i8* @f3(i32 undef)
+  %v104 = call ptr @f3(i32 undef)
   br i1 false, label %b26, label %b27
 
 b26:                                              ; preds = %b25
   unreachable
 
 b27:                                              ; preds = %b25, %b24
-  %v105 = phi i8* [ %v104, %b25 ], [ undef, %b24 ]
+  %v105 = phi ptr [ %v104, %b25 ], [ undef, %b24 ]
   %v106 = phi i32 [ %v103, %b25 ], [ %v95, %b24 ]
   %v107 = phi i32 [ %v101, %b25 ], [ %v91, %b24 ]
   %v108 = phi i32 [ %v98, %b25 ], [ undef, %b24 ]
@@ -244,9 +238,8 @@ b30:                                              ; preds = %b34, %b29
 
 b31:                                              ; preds = %b30
   %v129 = add i32 %v123, 0
-  %v130 = getelementptr i8, i8* %v105, i32 %v129
-  %v131 = bitcast i8* %v130 to double*
-  store double %v128, double* %v131, align 8, !tbaa !0
+  %v130 = getelementptr i8, ptr %v105, i32 %v129
+  store double %v128, ptr %v130, align 8, !tbaa !0
   br label %b32
 
 b32:                                              ; preds = %b31, %b30
@@ -257,14 +250,13 @@ b33:                                              ; preds = %b33, %b32, %b30
   %v133 = phi i32 [ %v142, %b33 ], [ 0, %b30 ], [ %v132, %b32 ]
   %v134 = mul i32 %v113, %v133
   %v135 = add i32 %v124, %v134
-  %v136 = getelementptr i8, i8* %v105, i32 %v135
-  %v137 = bitcast i8* %v136 to double*
+  %v136 = getelementptr i8, ptr %v105, i32 %v135
   %v138 = sitofp i32 %v133 to double
-  store double undef, double* %v137, align 8, !tbaa !0
+  store double undef, ptr %v136, align 8, !tbaa !0
   %v139 = fmul double undef, %v109
   %v140 = fadd double %v139, %v114
   %v141 = fadd double %v140, %v87
-  store double %v141, double* undef, align 8, !tbaa !0
+  store double %v141, ptr undef, align 8, !tbaa !0
   %v142 = add nsw i32 %v133, 4
   %v143 = icmp eq i32 %v142, %v106
   br i1 %v143, label %b34, label %b33
@@ -284,9 +276,9 @@ declare double @f1(...)
 declare i32 @f2(...)
 
 ; Function Attrs: nounwind
-declare noalias i8* @f3(i32) #0
+declare noalias ptr @f3(i32) #0
 
-declare %s.0* @f4(...)
+declare ptr @f4(...)
 
 attributes #0 = { nounwind }
 

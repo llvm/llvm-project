@@ -1,6 +1,5 @@
 /// Checks proper linker prefixing for PS4 and PS5.
 // UNSUPPORTED: system-windows
-// REQUIRES: x86-registered-target
 
 // RUN: mkdir -p %t
 // RUN: rm -f %t/orbis-ld

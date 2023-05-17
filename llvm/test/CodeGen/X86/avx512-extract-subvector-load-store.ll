@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl,+fast-variable-crosslane-shuffle,+fast-variable-perlane-shuffle -O2 | FileCheck %s --check-prefixes=AVX512NOTDQ,AVX512NOTDQ-FAST
 ; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+avx512f,+avx512bw,+avx512vl,+fast-variable-perlane-shuffle -O2 | FileCheck %s --check-prefixes=AVX512NOTDQ,AVX512NOTDQ-FAST-PERLANE
 
-define void @load_v8i1_broadcast_4_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v8i1_broadcast_4_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v8i1_broadcast_4_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -28,13 +28,13 @@ define void @load_v8i1_broadcast_4_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x doub
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <8 x i1>, <8 x i1>* %a0
+    %d0 = load <8 x i1>, ptr %a0
     %d1 = shufflevector <8 x i1> %d0,<8 x i1> undef,<2 x i32><i32 4,i32 4>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v8i1_broadcast_7_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v8i1_broadcast_7_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v8i1_broadcast_7_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -58,13 +58,13 @@ define void @load_v8i1_broadcast_7_v2i1(<8 x i1>* %a0,<2 x double> %a1,<2 x doub
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <8 x i1>, <8 x i1>* %a0
+    %d0 = load <8 x i1>, ptr %a0
     %d1 = shufflevector <8 x i1> %d0,<8 x i1> undef,<2 x i32><i32 7,i32 7>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v16i1_broadcast_8_v2i1(<16 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v16i1_broadcast_8_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v16i1_broadcast_8_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -87,13 +87,13 @@ define void @load_v16i1_broadcast_8_v2i1(<16 x i1>* %a0,<2 x double> %a1,<2 x do
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<2 x i32><i32 8,i32 8>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v16i1_broadcast_8_v4i1(<16 x i1>* %a0,<4 x float> %a1,<4 x float> %a2,<4 x float>* %a3) {
+define void @load_v16i1_broadcast_8_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v16i1_broadcast_8_v4i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -116,13 +116,13 @@ define void @load_v16i1_broadcast_8_v4i1(<16 x i1>* %a0,<4 x float> %a1,<4 x flo
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<4 x i32><i32 8,i32 8,i32 8,i32 8>
     %d2 = select <4 x i1> %d1, <4 x float> %a1, <4 x float> %a2
-    store <4 x float> %d2, <4 x float>* %a3
+    store <4 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v16i1_broadcast_15_v2i1(<16 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v16i1_broadcast_15_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v16i1_broadcast_15_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -145,13 +145,13 @@ define void @load_v16i1_broadcast_15_v2i1(<16 x i1>* %a0,<2 x double> %a1,<2 x d
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<2 x i32><i32 15,i32 15>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v16i1_broadcast_15_v4i1(<16 x i1>* %a0,<4 x float> %a1,<4 x float> %a2,<4 x float>* %a3) {
+define void @load_v16i1_broadcast_15_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v16i1_broadcast_15_v4i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -174,13 +174,13 @@ define void @load_v16i1_broadcast_15_v4i1(<16 x i1>* %a0,<4 x float> %a1,<4 x fl
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<4 x i32><i32 15,i32 15,i32 15,i32 15>
     %d2 = select <4 x i1> %d1, <4 x float> %a1, <4 x float> %a2
-    store <4 x float> %d2, <4 x float>* %a3
+    store <4 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v32i1_broadcast_16_v2i1(<32 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v32i1_broadcast_16_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v32i1_broadcast_16_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -203,13 +203,13 @@ define void @load_v32i1_broadcast_16_v2i1(<32 x i1>* %a0,<2 x double> %a1,<2 x d
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<2 x i32><i32 16,i32 16>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v32i1_broadcast_16_v4i1(<32 x i1>* %a0,<4 x float> %a1,<4 x float> %a2,<4 x float>* %a3) {
+define void @load_v32i1_broadcast_16_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v32i1_broadcast_16_v4i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -232,13 +232,13 @@ define void @load_v32i1_broadcast_16_v4i1(<32 x i1>* %a0,<4 x float> %a1,<4 x fl
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<4 x i32><i32 16,i32 16,i32 16,i32 16>
     %d2 = select <4 x i1> %d1, <4 x float> %a1, <4 x float> %a2
-    store <4 x float> %d2, <4 x float>* %a3
+    store <4 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v32i1_broadcast_16_v8i1(<32 x i1>* %a0,<8 x float> %a1,<8 x float> %a2,<8 x float>* %a3) {
+define void @load_v32i1_broadcast_16_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v32i1_broadcast_16_v8i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb 2(%rdi), %k0
@@ -261,13 +261,13 @@ define void @load_v32i1_broadcast_16_v8i1(<32 x i1>* %a0,<8 x float> %a1,<8 x fl
 ; AVX512NOTDQ-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    vzeroupper
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<8 x i32><i32 16,i32 16,i32 16,i32 16,i32 16,i32 16,i32 16,i32 16>
     %d2 = select <8 x i1> %d1, <8 x float> %a1, <8 x float> %a2
-    store <8 x float> %d2, <8 x float>* %a3
+    store <8 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v32i1_broadcast_31_v2i1(<32 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v32i1_broadcast_31_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v32i1_broadcast_31_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -290,13 +290,13 @@ define void @load_v32i1_broadcast_31_v2i1(<32 x i1>* %a0,<2 x double> %a1,<2 x d
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<2 x i32><i32 31,i32 31>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v32i1_broadcast_31_v4i1(<32 x i1>* %a0,<4 x float> %a1,<4 x float> %a2,<4 x float>* %a3) {
+define void @load_v32i1_broadcast_31_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v32i1_broadcast_31_v4i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -319,13 +319,13 @@ define void @load_v32i1_broadcast_31_v4i1(<32 x i1>* %a0,<4 x float> %a1,<4 x fl
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<4 x i32><i32 31,i32 31,i32 31,i32 31>
     %d2 = select <4 x i1> %d1, <4 x float> %a1, <4 x float> %a2
-    store <4 x float> %d2, <4 x float>* %a3
+    store <4 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v32i1_broadcast_31_v8i1(<32 x i1>* %a0,<8 x float> %a1,<8 x float> %a2,<8 x float>* %a3) {
+define void @load_v32i1_broadcast_31_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a2,ptr %a3) {
 ; AVX512-FAST-LABEL: load_v32i1_broadcast_31_v8i1:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovb 3(%rdi), %k0
@@ -377,13 +377,13 @@ define void @load_v32i1_broadcast_31_v8i1(<32 x i1>* %a0,<8 x float> %a1,<8 x fl
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<8 x i32><i32 31,i32 31,i32 31,i32 31,i32 31,i32 31,i32 31,i32 31>
     %d2 = select <8 x i1> %d1, <8 x float> %a1, <8 x float> %a2
-    store <8 x float> %d2, <8 x float>* %a3
+    store <8 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_32_v2i1(<64 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v64i1_broadcast_32_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -406,13 +406,13 @@ define void @load_v64i1_broadcast_32_v2i1(<64 x i1>* %a0,<2 x double> %a1,<2 x d
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<2 x i32><i32 32,i32 32>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_32_v4i1(<64 x i1>* %a0,<4 x float> %a1,<4 x float> %a2,<4 x float>* %a3) {
+define void @load_v64i1_broadcast_32_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v4i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -435,13 +435,13 @@ define void @load_v64i1_broadcast_32_v4i1(<64 x i1>* %a0,<4 x float> %a1,<4 x fl
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<4 x i32><i32 32,i32 32,i32 32,i32 32>
     %d2 = select <4 x i1> %d1, <4 x float> %a1, <4 x float> %a2
-    store <4 x float> %d2, <4 x float>* %a3
+    store <4 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_32_v8i1(<64 x i1>* %a0,<8 x float> %a1,<8 x float> %a2,<8 x float>* %a3) {
+define void @load_v64i1_broadcast_32_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v8i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb 4(%rdi), %k0
@@ -464,13 +464,13 @@ define void @load_v64i1_broadcast_32_v8i1(<64 x i1>* %a0,<8 x float> %a1,<8 x fl
 ; AVX512NOTDQ-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    vzeroupper
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<8 x i32><i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32>
     %d2 = select <8 x i1> %d1, <8 x float> %a1, <8 x float> %a2
-    store <8 x float> %d2, <8 x float>* %a3
+    store <8 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_32_v16i1(<64 x i1>* %a0,<16 x float> %a1,<16 x float> %a2,<16 x float>* %a3) {
+define void @load_v64i1_broadcast_32_v16i1(ptr %a0,<16 x float> %a1,<16 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v16i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw 4(%rdi), %k0
@@ -492,13 +492,13 @@ define void @load_v64i1_broadcast_32_v16i1(<64 x i1>* %a0,<16 x float> %a1,<16 x
 ; AVX512NOTDQ-NEXT:    vmovaps %zmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    vzeroupper
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<16 x i32><i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32>
     %d2 = select <16 x i1> %d1, <16 x float> %a1, <16 x float> %a2
-    store <16 x float> %d2, <16 x float>* %a3
+    store <16 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_63_v2i1(<64 x i1>* %a0,<2 x double> %a1,<2 x double> %a2,<2 x double>* %a3) {
+define void @load_v64i1_broadcast_63_v2i1(ptr %a0,<2 x double> %a1,<2 x double> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v64i1_broadcast_63_v2i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -521,13 +521,13 @@ define void @load_v64i1_broadcast_63_v2i1(<64 x i1>* %a0,<2 x double> %a1,<2 x d
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovapd %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<2 x i32><i32 63,i32 63>
     %d2 = select <2 x i1> %d1, <2 x double> %a1, <2 x double> %a2
-    store <2 x double> %d2, <2 x double>* %a3
+    store <2 x double> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_63_v4i1(<64 x i1>* %a0,<4 x float> %a1,<4 x float> %a2,<4 x float>* %a3) {
+define void @load_v64i1_broadcast_63_v4i1(ptr %a0,<4 x float> %a1,<4 x float> %a2,ptr %a3) {
 ; AVX512-LABEL: load_v64i1_broadcast_63_v4i1:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -550,13 +550,13 @@ define void @load_v64i1_broadcast_63_v4i1(<64 x i1>* %a0,<4 x float> %a1,<4 x fl
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm0, %xmm1 {%k1}
 ; AVX512NOTDQ-NEXT:    vmovaps %xmm1, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<4 x i32><i32 63,i32 63,i32 63,i32 63>
     %d2 = select <4 x i1> %d1, <4 x float> %a1, <4 x float> %a2
-    store <4 x float> %d2, <4 x float>* %a3
+    store <4 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_63_v8i1(<64 x i1>* %a0,<8 x float> %a1,<8 x float> %a2,<8 x float>* %a3) {
+define void @load_v64i1_broadcast_63_v8i1(ptr %a0,<8 x float> %a1,<8 x float> %a2,ptr %a3) {
 ; AVX512-FAST-LABEL: load_v64i1_broadcast_63_v8i1:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovb 7(%rdi), %k0
@@ -608,13 +608,13 @@ define void @load_v64i1_broadcast_63_v8i1(<64 x i1>* %a0,<8 x float> %a1,<8 x fl
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vmovaps %ymm1, (%rsi)
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<8 x i32><i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63>
     %d2 = select <8 x i1> %d1, <8 x float> %a1, <8 x float> %a2
-    store <8 x float> %d2, <8 x float>* %a3
+    store <8 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v64i1_broadcast_63_v16i1(<64 x i1>* %a0,<16 x float> %a1,<16 x float> %a2,<16 x float>* %a3) {
+define void @load_v64i1_broadcast_63_v16i1(ptr %a0,<16 x float> %a1,<16 x float> %a2,ptr %a3) {
 ; AVX512-FAST-LABEL: load_v64i1_broadcast_63_v16i1:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovw 6(%rdi), %k0
@@ -662,13 +662,13 @@ define void @load_v64i1_broadcast_63_v16i1(<64 x i1>* %a0,<16 x float> %a1,<16 x
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vmovaps %zmm1, (%rsi)
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<16 x i32><i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63>
     %d2 = select <16 x i1> %d1, <16 x float> %a1, <16 x float> %a2
-    store <16 x float> %d2, <16 x float>* %a3
+    store <16 x float> %d2, ptr %a3
     ret void
 }
-define void @load_v2i1_broadcast_1_v1i1_store(<2 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v2i1_broadcast_1_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v2i1_broadcast_1_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -688,15 +688,15 @@ define void @load_v2i1_broadcast_1_v1i1_store(<2 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <2 x i1>, <2 x i1>* %a0
+    %d0 = load <2 x i1>, ptr %a0
     %d1 = shufflevector <2 x i1> %d0,<2 x i1> undef,<1 x i32><i32 1>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v3i1_broadcast_1_v1i1_store(<3 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v3i1_broadcast_1_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v3i1_broadcast_1_v1i1_store:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    movb (%rdi), %al
+; AVX512-NEXT:    movzbl (%rdi), %eax
 ; AVX512-NEXT:    shrb %al
 ; AVX512-NEXT:    xorl %ecx, %ecx
 ; AVX512-NEXT:    testb $1, %al
@@ -711,7 +711,7 @@ define void @load_v3i1_broadcast_1_v1i1_store(<3 x i1>* %a0,<1 x i1>* %a1) {
 ;
 ; AVX512NOTDQ-LABEL: load_v3i1_broadcast_1_v1i1_store:
 ; AVX512NOTDQ:       # %bb.0:
-; AVX512NOTDQ-NEXT:    movb (%rdi), %al
+; AVX512NOTDQ-NEXT:    movzbl (%rdi), %eax
 ; AVX512NOTDQ-NEXT:    shrb %al
 ; AVX512NOTDQ-NEXT:    xorl %ecx, %ecx
 ; AVX512NOTDQ-NEXT:    testb $1, %al
@@ -724,12 +724,12 @@ define void @load_v3i1_broadcast_1_v1i1_store(<3 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <3 x i1>, <3 x i1>* %a0
+    %d0 = load <3 x i1>, ptr %a0
     %d1 = shufflevector <3 x i1> %d0,<3 x i1> undef,<1 x i32><i32 1>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v3i1_broadcast_2_v1i1_store(<3 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v3i1_broadcast_2_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v3i1_broadcast_2_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    xorl %eax, %eax
@@ -756,12 +756,12 @@ define void @load_v3i1_broadcast_2_v1i1_store(<3 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <3 x i1>, <3 x i1>* %a0
+    %d0 = load <3 x i1>, ptr %a0
     %d1 = shufflevector <3 x i1> %d0,<3 x i1> undef,<1 x i32><i32 2>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v4i1_broadcast_2_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v4i1_broadcast_2_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v4i1_broadcast_2_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -781,12 +781,12 @@ define void @load_v4i1_broadcast_2_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <4 x i1>, <4 x i1>* %a0
+    %d0 = load <4 x i1>, ptr %a0
     %d1 = shufflevector <4 x i1> %d0,<4 x i1> undef,<1 x i32><i32 2>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v4i1_broadcast_3_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v4i1_broadcast_3_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v4i1_broadcast_3_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -806,12 +806,12 @@ define void @load_v4i1_broadcast_3_v1i1_store(<4 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <4 x i1>, <4 x i1>* %a0
+    %d0 = load <4 x i1>, ptr %a0
     %d1 = shufflevector <4 x i1> %d0,<4 x i1> undef,<1 x i32><i32 3>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v8i1_broadcast_4_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v8i1_broadcast_4_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_4_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -831,12 +831,12 @@ define void @load_v8i1_broadcast_4_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <8 x i1>, <8 x i1>* %a0
+    %d0 = load <8 x i1>, ptr %a0
     %d1 = shufflevector <8 x i1> %d0,<8 x i1> undef,<1 x i32><i32 4>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v8i1_broadcast_4_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v8i1_broadcast_4_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_4_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -859,12 +859,12 @@ define void @load_v8i1_broadcast_4_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <8 x i1>, <8 x i1>* %a0
+    %d0 = load <8 x i1>, ptr %a0
     %d1 = shufflevector <8 x i1> %d0,<8 x i1> undef,<2 x i32><i32 4,i32 4>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v8i1_broadcast_7_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v8i1_broadcast_7_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_7_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -884,12 +884,12 @@ define void @load_v8i1_broadcast_7_v1i1_store(<8 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <8 x i1>, <8 x i1>* %a0
+    %d0 = load <8 x i1>, ptr %a0
     %d1 = shufflevector <8 x i1> %d0,<8 x i1> undef,<1 x i32><i32 7>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v8i1_broadcast_7_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v8i1_broadcast_7_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v8i1_broadcast_7_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb (%rdi), %k0
@@ -912,12 +912,12 @@ define void @load_v8i1_broadcast_7_v2i1_store(<8 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <8 x i1>, <8 x i1>* %a0
+    %d0 = load <8 x i1>, ptr %a0
     %d1 = shufflevector <8 x i1> %d0,<8 x i1> undef,<2 x i32><i32 7,i32 7>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v16i1_broadcast_8_v1i1_store(<16 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v16i1_broadcast_8_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v16i1_broadcast_8_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -936,12 +936,12 @@ define void @load_v16i1_broadcast_8_v1i1_store(<16 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<1 x i32><i32 8>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v16i1_broadcast_8_v2i1_store(<16 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v16i1_broadcast_8_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v16i1_broadcast_8_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -963,12 +963,12 @@ define void @load_v16i1_broadcast_8_v2i1_store(<16 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<2 x i32><i32 8,i32 8>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v16i1_broadcast_8_v4i1_store(<16 x i1>* %a0,<4 x i1>* %a1) {
+define void @load_v16i1_broadcast_8_v4i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v16i1_broadcast_8_v4i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -990,12 +990,12 @@ define void @load_v16i1_broadcast_8_v4i1_store(<16 x i1>* %a0,<4 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<4 x i32><i32 8,i32 8,i32 8,i32 8>
-    store <4 x i1> %d1, <4 x i1>* %a1
+    store <4 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v16i1_broadcast_15_v1i1_store(<16 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v16i1_broadcast_15_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v16i1_broadcast_15_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -1014,12 +1014,12 @@ define void @load_v16i1_broadcast_15_v1i1_store(<16 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<1 x i32><i32 15>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v16i1_broadcast_15_v2i1_store(<16 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v16i1_broadcast_15_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v16i1_broadcast_15_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -1041,12 +1041,12 @@ define void @load_v16i1_broadcast_15_v2i1_store(<16 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<2 x i32><i32 15,i32 15>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v16i1_broadcast_15_v4i1_store(<16 x i1>* %a0,<4 x i1>* %a1) {
+define void @load_v16i1_broadcast_15_v4i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v16i1_broadcast_15_v4i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw (%rdi), %k0
@@ -1068,12 +1068,12 @@ define void @load_v16i1_broadcast_15_v4i1_store(<16 x i1>* %a0,<4 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <16 x i1>, <16 x i1>* %a0
+    %d0 = load <16 x i1>, ptr %a0
     %d1 = shufflevector <16 x i1> %d0,<16 x i1> undef,<4 x i32><i32 15,i32 15,i32 15,i32 15>
-    store <4 x i1> %d1, <4 x i1>* %a1
+    store <4 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_16_v1i1_store(<32 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v32i1_broadcast_16_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v32i1_broadcast_16_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -1092,12 +1092,12 @@ define void @load_v32i1_broadcast_16_v1i1_store(<32 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<1 x i32><i32 16>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_16_v2i1_store(<32 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v32i1_broadcast_16_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v32i1_broadcast_16_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -1119,12 +1119,12 @@ define void @load_v32i1_broadcast_16_v2i1_store(<32 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<2 x i32><i32 16,i32 16>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_16_v4i1_store(<32 x i1>* %a0,<4 x i1>* %a1) {
+define void @load_v32i1_broadcast_16_v4i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v32i1_broadcast_16_v4i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -1146,12 +1146,12 @@ define void @load_v32i1_broadcast_16_v4i1_store(<32 x i1>* %a0,<4 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<4 x i32><i32 16,i32 16,i32 16,i32 16>
-    store <4 x i1> %d1, <4 x i1>* %a1
+    store <4 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_16_v8i1_store(<32 x i1>* %a0,<8 x i1>* %a1) {
+define void @load_v32i1_broadcast_16_v8i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v32i1_broadcast_16_v8i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb 2(%rdi), %k0
@@ -1173,12 +1173,12 @@ define void @load_v32i1_broadcast_16_v8i1_store(<32 x i1>* %a0,<8 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    vzeroupper
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<8 x i32><i32 16,i32 16,i32 16,i32 16,i32 16,i32 16,i32 16,i32 16>
-    store <8 x i1> %d1, <8 x i1>* %a1
+    store <8 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_31_v1i1_store(<32 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v32i1_broadcast_31_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v32i1_broadcast_31_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -1197,12 +1197,12 @@ define void @load_v32i1_broadcast_31_v1i1_store(<32 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<1 x i32><i32 31>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_31_v2i1_store(<32 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v32i1_broadcast_31_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v32i1_broadcast_31_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -1224,12 +1224,12 @@ define void @load_v32i1_broadcast_31_v2i1_store(<32 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<2 x i32><i32 31,i32 31>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_31_v4i1_store(<32 x i1>* %a0,<4 x i1>* %a1) {
+define void @load_v32i1_broadcast_31_v4i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v32i1_broadcast_31_v4i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovd (%rdi), %k0
@@ -1251,12 +1251,12 @@ define void @load_v32i1_broadcast_31_v4i1_store(<32 x i1>* %a0,<4 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<4 x i32><i32 31,i32 31,i32 31,i32 31>
-    store <4 x i1> %d1, <4 x i1>* %a1
+    store <4 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v32i1_broadcast_31_v8i1_store(<32 x i1>* %a0,<8 x i1>* %a1) {
+define void @load_v32i1_broadcast_31_v8i1_store(ptr %a0,ptr %a1) {
 ; AVX512-FAST-LABEL: load_v32i1_broadcast_31_v8i1_store:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovb 3(%rdi), %k0
@@ -1306,12 +1306,12 @@ define void @load_v32i1_broadcast_31_v8i1_store(<32 x i1>* %a0,<8 x i1>* %a1) {
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    retq
-    %d0 = load <32 x i1>, <32 x i1>* %a0
+    %d0 = load <32 x i1>, ptr %a0
     %d1 = shufflevector <32 x i1> %d0,<32 x i1> undef,<8 x i32><i32 31,i32 31,i32 31,i32 31,i32 31,i32 31,i32 31,i32 31>
-    store <8 x i1> %d1, <8 x i1>* %a1
+    store <8 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_32_v1i1_store(<64 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v64i1_broadcast_32_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -1330,12 +1330,12 @@ define void @load_v64i1_broadcast_32_v1i1_store(<64 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<1 x i32><i32 32>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_32_v2i1_store(<64 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v64i1_broadcast_32_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -1357,12 +1357,12 @@ define void @load_v64i1_broadcast_32_v2i1_store(<64 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<2 x i32><i32 32,i32 32>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_32_v4i1_store(<64 x i1>* %a0,<4 x i1>* %a1) {
+define void @load_v64i1_broadcast_32_v4i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v4i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -1384,12 +1384,12 @@ define void @load_v64i1_broadcast_32_v4i1_store(<64 x i1>* %a0,<4 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<4 x i32><i32 32,i32 32,i32 32,i32 32>
-    store <4 x i1> %d1, <4 x i1>* %a1
+    store <4 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_32_v8i1_store(<64 x i1>* %a0,<8 x i1>* %a1) {
+define void @load_v64i1_broadcast_32_v8i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v8i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovb 4(%rdi), %k0
@@ -1411,12 +1411,12 @@ define void @load_v64i1_broadcast_32_v8i1_store(<64 x i1>* %a0,<8 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    vzeroupper
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<8 x i32><i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32>
-    store <8 x i1> %d1, <8 x i1>* %a1
+    store <8 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_32_v16i1_store(<64 x i1>* %a0,<16 x i1>* %a1) {
+define void @load_v64i1_broadcast_32_v16i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_32_v16i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovw 4(%rdi), %k0
@@ -1436,12 +1436,12 @@ define void @load_v64i1_broadcast_32_v16i1_store(<64 x i1>* %a0,<16 x i1>* %a1) 
 ; AVX512NOTDQ-NEXT:    kmovw %k0, (%rsi)
 ; AVX512NOTDQ-NEXT:    vzeroupper
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<16 x i32><i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32,i32 32>
-    store <16 x i1> %d1, <16 x i1>* %a1
+    store <16 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_63_v1i1_store(<64 x i1>* %a0,<1 x i1>* %a1) {
+define void @load_v64i1_broadcast_63_v1i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_63_v1i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -1460,12 +1460,12 @@ define void @load_v64i1_broadcast_63_v1i1_store(<64 x i1>* %a0,<1 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<1 x i32><i32 63>
-    store <1 x i1> %d1, <1 x i1>* %a1
+    store <1 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_63_v2i1_store(<64 x i1>* %a0,<2 x i1>* %a1) {
+define void @load_v64i1_broadcast_63_v2i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_63_v2i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -1487,12 +1487,12 @@ define void @load_v64i1_broadcast_63_v2i1_store(<64 x i1>* %a0,<2 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<2 x i32><i32 63,i32 63>
-    store <2 x i1> %d1, <2 x i1>* %a1
+    store <2 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_63_v4i1_store(<64 x i1>* %a0,<4 x i1>* %a1) {
+define void @load_v64i1_broadcast_63_v4i1_store(ptr %a0,ptr %a1) {
 ; AVX512-LABEL: load_v64i1_broadcast_63_v4i1_store:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    kmovq (%rdi), %k0
@@ -1514,12 +1514,12 @@ define void @load_v64i1_broadcast_63_v4i1_store(<64 x i1>* %a0,<4 x i1>* %a1) {
 ; AVX512NOTDQ-NEXT:    kmovd %k0, %eax
 ; AVX512NOTDQ-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<4 x i32><i32 63,i32 63,i32 63,i32 63>
-    store <4 x i1> %d1, <4 x i1>* %a1
+    store <4 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_63_v8i1_store(<64 x i1>* %a0,<8 x i1>* %a1) {
+define void @load_v64i1_broadcast_63_v8i1_store(ptr %a0,ptr %a1) {
 ; AVX512-FAST-LABEL: load_v64i1_broadcast_63_v8i1_store:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovb 7(%rdi), %k0
@@ -1569,12 +1569,12 @@ define void @load_v64i1_broadcast_63_v8i1_store(<64 x i1>* %a0,<8 x i1>* %a1) {
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    movb %al, (%rsi)
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<8 x i32><i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63>
-    store <8 x i1> %d1, <8 x i1>* %a1
+    store <8 x i1> %d1, ptr %a1
     ret void
 }
-define void @load_v64i1_broadcast_63_v16i1_store(<64 x i1>* %a0,<16 x i1>* %a1) {
+define void @load_v64i1_broadcast_63_v16i1_store(ptr %a0,ptr %a1) {
 ; AVX512-FAST-LABEL: load_v64i1_broadcast_63_v16i1_store:
 ; AVX512-FAST:       # %bb.0:
 ; AVX512-FAST-NEXT:    kmovw 6(%rdi), %k0
@@ -1618,9 +1618,9 @@ define void @load_v64i1_broadcast_63_v16i1_store(<64 x i1>* %a0,<16 x i1>* %a1) 
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    kmovw %k0, (%rsi)
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    vzeroupper
 ; AVX512NOTDQ-FAST-PERLANE-NEXT:    retq
-    %d0 = load <64 x i1>, <64 x i1>* %a0
+    %d0 = load <64 x i1>, ptr %a0
     %d1 = shufflevector <64 x i1> %d0,<64 x i1> undef,<16 x i32><i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63,i32 63>
-    store <16 x i1> %d1, <16 x i1>* %a1
+    store <16 x i1> %d1, ptr %a1
     ret void
 }
 

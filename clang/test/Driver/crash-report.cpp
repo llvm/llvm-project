@@ -1,3 +1,4 @@
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -rf %t
 // RUN: mkdir %t
 
@@ -24,6 +25,29 @@
 // RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                  \
 // RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                         \
 // RUN:  not %clang %s @%t.rsp -DFATAL 2>&1 | FileCheck %s
+// RUN: cat %t/crash-report-*.cpp | FileCheck --check-prefix=CHECKSRC %s
+// RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
+
+// Test manually specifying -fcrash-diagnostics[=[compiler|all]] emits
+// diagnostics
+// RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                  \
+// RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                         \
+// RUN:  not %clang %s @%t.rsp -DFATAL -fcrash-diagnostics 2>&1 |        \
+// RUN:  FileCheck %s
+// RUN: cat %t/crash-report-*.cpp | FileCheck --check-prefix=CHECKSRC %s
+// RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
+
+// RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                   \
+// RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                          \
+// RUN:  not %clang %s @%t.rsp -DFATAL -fcrash-diagnostics=compiler 2>&1 |\
+// RUN:  FileCheck %s
+// RUN: cat %t/crash-report-*.cpp | FileCheck --check-prefix=CHECKSRC %s
+// RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
+
+// RUN: env TMPDIR=%t TEMP=%t TMP=%t RC_DEBUG_OPTIONS=1                  \
+// RUN:  CC_PRINT_HEADERS=1 CC_LOG_DIAGNOSTICS=1                         \
+// RUN:  not %clang %s @%t.rsp -DFATAL -fcrash-diagnostics=all 2>&1 |    \
+// RUN:  FileCheck %s
 // RUN: cat %t/crash-report-*.cpp | FileCheck --check-prefix=CHECKSRC %s
 // RUN: cat %t/crash-report-*.sh | FileCheck --check-prefix=CHECKSH %s
 

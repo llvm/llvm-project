@@ -20,12 +20,11 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymExpr.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/ImmutableList.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/Support/Casting.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <utility>
 
 //==------------------------------------------------------------------------==//
@@ -40,7 +39,6 @@ class LabelDecl;
 
 namespace ento {
 
-class BasicValueFactory;
 class CompoundValData;
 class LazyCompoundValData;
 class MemRegion;
@@ -98,19 +96,12 @@ public:
 
   /// Convert to the specified SVal type, asserting that this SVal is of
   /// the desired type.
-  template<typename T>
-  T castAs() const {
-    assert(T::classof(*this));
-    return *static_cast<const T *>(this);
-  }
+  template <typename T> T castAs() const { return llvm::cast<T>(*this); }
 
-  /// Convert to the specified SVal type, returning None if this SVal is
+  /// Convert to the specified SVal type, returning std::nullopt if this SVal is
   /// not of the desired type.
-  template<typename T>
-  Optional<T> getAs() const {
-    if (!T::classof(*this))
-      return None;
-    return *static_cast<const T *>(this);
+  template <typename T> std::optional<T> getAs() const {
+    return llvm::dyn_cast<T>(*this);
   }
 
   unsigned getRawKind() const { return Kind; }
@@ -175,6 +166,11 @@ public:
   /// \param IncludeBaseRegions The boolean that controls whether the search
   /// should continue to the base regions if the region is not symbolic.
   SymbolRef getAsSymbol(bool IncludeBaseRegions = false) const;
+
+  /// If this SVal is loc::ConcreteInt or nonloc::ConcreteInt,
+  /// return a pointer to APSInt which is held in it.
+  /// Otherwise, return nullptr.
+  const llvm::APSInt *getAsInteger() const;
 
   const MemRegion *getAsRegion() const;
 
@@ -337,11 +333,6 @@ public:
   const llvm::APSInt& getValue() const {
     return *static_cast<const llvm::APSInt *>(Data);
   }
-
-  // Transfer functions for unary operations on ConcreteInts.
-  ConcreteInt evalComplement(SValBuilder &svalBuilder) const;
-
-  ConcreteInt evalMinus(SValBuilder &svalBuilder) const;
 
   static bool classof(SVal V) {
     return V.getBaseKind() == NonLocKind && V.getSubKind() == ConcreteIntKind;
@@ -563,5 +554,29 @@ public:
 } // namespace loc
 } // namespace ento
 } // namespace clang
+
+namespace llvm {
+template <typename To, typename From>
+struct CastInfo<
+    To, From,
+    std::enable_if_t<std::is_base_of<::clang::ento::SVal, From>::value>>
+    : public CastIsPossible<To, ::clang::ento::SVal> {
+  using Self = CastInfo<
+      To, From,
+      std::enable_if_t<std::is_base_of<::clang::ento::SVal, From>::value>>;
+  static bool isPossible(const From &V) {
+    return To::classof(*static_cast<const ::clang::ento::SVal *>(&V));
+  }
+  static std::optional<To> castFailed() { return std::optional<To>{}; }
+  static To doCast(const From &f) {
+    return *static_cast<const To *>(cast<::clang::ento::SVal>(&f));
+  }
+  static std::optional<To> doCastIfPossible(const From &f) {
+    if (!Self::isPossible(f))
+      return Self::castFailed();
+    return doCast(f);
+  }
+};
+} // namespace llvm
 
 #endif // LLVM_CLANG_STATICANALYZER_CORE_PATHSENSITIVE_SVALS_H

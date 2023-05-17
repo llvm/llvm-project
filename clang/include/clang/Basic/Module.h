@@ -20,7 +20,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetVector.h"
@@ -33,6 +32,7 @@
 #include <cstdint>
 #include <ctime>
 #include <iterator>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -93,7 +93,9 @@ struct ASTFileSignature : std::array<uint8_t, 20> {
 };
 
 /// Describes a module or submodule.
-class Module {
+///
+/// Aligned to 8 bytes to allow for llvm::PointerIntPair<Module *, 3>.
+class alignas(8) Module {
 public:
   /// The name of this module.
   std::string Name;
@@ -101,16 +103,22 @@ public:
   /// The location of the module definition.
   SourceLocation DefinitionLoc;
 
+  // FIXME: Consider if reducing the size of this enum (having Partition and
+  // Named modules only) then representing interface/implementation separately
+  // is more efficient.
   enum ModuleKind {
     /// This is a module that was defined by a module map and built out
     /// of header files.
     ModuleMapModule,
 
+    /// This is a C++ 20 header unit.
+    ModuleHeaderUnit,
+
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
-    /// This is a C++ 20 header unit.
-    ModuleHeaderUnit,
+    /// This is a C++20 module implementation unit.
+    ModuleImplementationUnit,
 
     /// This is a C++ 20 module partition interface.
     ModulePartitionInterface,
@@ -118,11 +126,17 @@ public:
     /// This is a C++ 20 module partition implementation.
     ModulePartitionImplementation,
 
-    /// This is a fragment of the global module within some C++ module.
-    GlobalModuleFragment,
+    /// This is the explicit Global Module Fragment of a modular TU.
+    /// As per C++ [module.global.frag].
+    ExplicitGlobalModuleFragment,
 
     /// This is the private module fragment within some C++ module.
     PrivateModuleFragment,
+
+    /// This is an implicit fragment of the global module which contains
+    /// only language linkage declarations (made in the purview of the
+    /// named module).
+    ImplicitGlobalModuleFragment,
   };
 
   /// The kind of this module.
@@ -142,7 +156,8 @@ public:
   std::string PresumedModuleMapFile;
 
   /// The umbrella header or directory.
-  llvm::PointerUnion<const FileEntry *, const DirectoryEntry *> Umbrella;
+  llvm::PointerUnion<const FileEntryRef::MapEntry *, const DirectoryEntry *>
+      Umbrella;
 
   /// The module signature.
   ASTFileSignature Signature;
@@ -157,18 +172,36 @@ public:
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
 
-  /// Does this Module scope describe part of the purview of a named C++ module?
+  /// Does this Module scope describe part of the purview of a standard named
+  /// C++ module?
   bool isModulePurview() const {
-    return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface ||
-           Kind == ModulePartitionImplementation ||
-           Kind == PrivateModuleFragment;
+    switch (Kind) {
+    case ModuleInterfaceUnit:
+    case ModuleImplementationUnit:
+    case ModulePartitionInterface:
+    case ModulePartitionImplementation:
+    case PrivateModuleFragment:
+      return true;
+    default:
+      return false;
+    }
   }
 
   /// Does this Module scope describe a fragment of the global module within
   /// some C++ module.
-  bool isGlobalModule() const { return Kind == GlobalModuleFragment; }
+  bool isGlobalModule() const {
+    return isExplicitGlobalModule() || isImplicitGlobalModule();
+  }
+  bool isExplicitGlobalModule() const {
+    return Kind == ExplicitGlobalModuleFragment;
+  }
+  bool isImplicitGlobalModule() const {
+    return Kind == ImplicitGlobalModuleFragment;
+  }
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
+
+  bool isModuleMapModule() const { return Kind == ModuleMapModule; }
 
 private:
   /// The submodules of this module, indexed by name.
@@ -180,7 +213,7 @@ private:
 
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
-  Optional<FileEntryRef> ASTFile;
+  OptionalFileEntryRef ASTFile;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<const FileEntry *, 2> TopHeaders;
@@ -209,9 +242,9 @@ public:
   struct Header {
     std::string NameAsWritten;
     std::string PathRelativeToRootModuleDirectory;
-    const FileEntry *Entry;
+    OptionalFileEntryRefDegradesToFileEntryPtr Entry;
 
-    explicit operator bool() { return Entry; }
+    explicit operator bool() { return Entry.has_value(); }
   };
 
   /// Information about a directory name as found in the module map
@@ -235,8 +268,8 @@ public:
     std::string FileName;
     bool IsUmbrella = false;
     bool HasBuiltinHeader = false;
-    Optional<off_t> Size;
-    Optional<time_t> ModTime;
+    std::optional<off_t> Size;
+    std::optional<time_t> ModTime;
   };
 
   /// Headers that are mentioned in the module map file but that we have not
@@ -342,6 +375,10 @@ public:
   /// The set of modules imported by this module, and on which this
   /// module depends.
   llvm::SmallSetVector<Module *, 2> Imports;
+
+  /// The set of top-level modules that affected the compilation of this module,
+  /// but were not imported.
+  llvm::SmallSetVector<Module *, 2> AffectingClangModules;
 
   /// Describes an exported module.
   ///
@@ -459,6 +496,9 @@ public:
   bool isUnimportable(const LangOptions &LangOpts, const TargetInfo &Target,
                       Requirement &Req, Module *&ShadowingModule) const;
 
+  /// Determine whether this module can be built in this compilation.
+  bool isForBuilding(const LangOptions &LangOpts) const;
+
   /// Determine whether this module is available for use within the
   /// current translation unit.
   bool isAvailable() const { return IsAvailable; }
@@ -523,10 +563,20 @@ public:
     Parent->SubModules.push_back(this);
   }
 
+  /// Is this module have similar semantics as headers.
+  bool isHeaderLikeModule() const {
+    return isModuleMapModule() || isHeaderUnit();
+  }
+
   /// Is this a module partition.
   bool isModulePartition() const {
     return Kind == ModulePartitionInterface ||
            Kind == ModulePartitionImplementation;
+  }
+
+  /// Is this a module implementation.
+  bool isModuleImplementation() const {
+    return Kind == ModuleImplementationUnit;
   }
 
   /// Is this module a header unit.
@@ -534,6 +584,10 @@ public:
   // Is this a C++20 module interface or a partition.
   bool isInterfaceOrPartition() const {
     return Kind == ModuleInterfaceUnit || isModulePartition();
+  }
+
+  bool isModuleInterfaceUnit() const {
+    return Kind == ModuleInterfaceUnit || Kind == ModulePartitionInterface;
   }
 
   /// Get the primary module interface name from a partition.
@@ -592,9 +646,8 @@ public:
   }
 
   /// Set the serialized AST file for the top-level module of this module.
-  void setASTFile(Optional<FileEntryRef> File) {
-    assert((!File || !getASTFile() || getASTFile() == File) &&
-           "file path changed");
+  void setASTFile(OptionalFileEntryRef File) {
+    assert((!getASTFile() || getASTFile() == File) && "file path changed");
     getTopLevelModule()->ASTFile = File;
   }
 
@@ -605,9 +658,9 @@ public:
   /// Retrieve the header that serves as the umbrella header for this
   /// module.
   Header getUmbrellaHeader() const {
-    if (auto *FE = Umbrella.dyn_cast<const FileEntry *>())
+    if (auto *ME = Umbrella.dyn_cast<const FileEntryRef::MapEntry *>())
       return Header{UmbrellaAsWritten, UmbrellaRelativeToRootModuleDirectory,
-                    FE};
+                    FileEntryRef(*ME)};
     return Header{};
   }
 
@@ -659,6 +712,18 @@ public:
   Module *findSubmodule(StringRef Name) const;
   Module *findOrInferSubmodule(StringRef Name);
 
+  /// Get the Global Module Fragment (sub-module) for this module, it there is
+  /// one.
+  ///
+  /// \returns The GMF sub-module if found, or NULL otherwise.
+  Module *getGlobalModuleFragment() { return findSubmodule("<global>"); }
+
+  /// Get the Private Module Fragment (sub-module) for this module, it there is
+  /// one.
+  ///
+  /// \returns The PMF sub-module if found, or NULL otherwise.
+  Module *getPrivateModuleFragment() { return findSubmodule("<private>"); }
+
   /// Determine whether the specified module would be visible to
   /// a lookup at the end of this module.
   ///
@@ -676,16 +741,11 @@ public:
   using submodule_iterator = std::vector<Module *>::iterator;
   using submodule_const_iterator = std::vector<Module *>::const_iterator;
 
-  submodule_iterator submodule_begin() { return SubModules.begin(); }
-  submodule_const_iterator submodule_begin() const {return SubModules.begin();}
-  submodule_iterator submodule_end()   { return SubModules.end(); }
-  submodule_const_iterator submodule_end() const { return SubModules.end(); }
-
   llvm::iterator_range<submodule_iterator> submodules() {
-    return llvm::make_range(submodule_begin(), submodule_end());
+    return llvm::make_range(SubModules.begin(), SubModules.end());
   }
   llvm::iterator_range<submodule_const_iterator> submodules() const {
-    return llvm::make_range(submodule_begin(), submodule_end());
+    return llvm::make_range(SubModules.begin(), SubModules.end());
   }
 
   /// Appends this module's list of exported modules to \p Exported.

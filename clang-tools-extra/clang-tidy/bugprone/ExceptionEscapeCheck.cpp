@@ -23,8 +23,7 @@ AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
 }
 } // namespace
 
-namespace tidy {
-namespace bugprone {
+namespace tidy::bugprone {
 ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), RawFunctionsThatShouldNotThrow(Options.get(
@@ -53,7 +52,8 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
-      functionDecl(anyOf(isNoThrow(), cxxDestructorDecl(),
+      functionDecl(isDefinition(),
+                   anyOf(isNoThrow(), cxxDestructorDecl(),
                          cxxConstructorDecl(isMoveConstructor()),
                          cxxMethodDecl(isMoveAssignmentOperator()),
                          hasName("main"), hasName("swap"),
@@ -77,6 +77,5 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
         << MatchedDecl;
 }
 
-} // namespace bugprone
-} // namespace tidy
+} // namespace tidy::bugprone
 } // namespace clang

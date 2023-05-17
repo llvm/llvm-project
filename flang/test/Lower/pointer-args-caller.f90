@@ -26,7 +26,7 @@ contains
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<i32>>> {fir.bindc_name = "p"}) {
 subroutine test_ptr_to_scalar_ptr(p)
   integer, pointer :: p
-! CHECK:  fir.call @_QPscalar_ptr(%[[VAL_0]]) : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> ()
+! CHECK:  fir.call @_QPscalar_ptr(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> ()
   call scalar_ptr(p)
 end subroutine
 
@@ -41,7 +41,7 @@ end subroutine
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>> {fir.bindc_name = "p"}) {
 subroutine test_ptr_to_char_array_ptr(p)
   character(:), pointer :: p(:)
-! CHECK:  fir.call @_QPchar_array_ptr(%[[VAL_0]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> ()
+! CHECK:  fir.call @_QPchar_array_ptr(%[[VAL_0]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> ()
   call char_array_ptr(p)
 end subroutine
 
@@ -51,7 +51,7 @@ subroutine test_ptr_to_non_deferred_char_array_ptr(p, n)
   integer :: n
   character(n), pointer :: p(:)
 ! CHECK:  %[[VAL_1:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>
-! CHECK:  fir.call @_QPnon_deferred_char_array_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>) -> ()
+! CHECK:  fir.call @_QPnon_deferred_char_array_ptr(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>) -> ()
   call non_deferred_char_array_ptr(p)
 end subroutine
 
@@ -66,7 +66,7 @@ subroutine test_non_ptr_to_scalar_ptr(p)
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<i32>>
 ! CHECK:  %[[VAL_2:.*]] = fir.embox %[[VAL_0]] : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
 ! CHECK:  fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:  fir.call @_QPscalar_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> ()
+! CHECK:  fir.call @_QPscalar_ptr(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> ()
   call scalar_ptr(p)
 end subroutine
 
@@ -77,7 +77,7 @@ subroutine test_non_ptr_to_array_ptr(p)
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:  %[[VAL_2:.*]] = fir.rebox %[[VAL_0]] : (!fir.box<!fir.array<?xi32>>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
 ! CHECK:  fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-! CHECK:  fir.call @_QParray_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> ()
+! CHECK:  fir.call @_QParray_ptr(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> ()
   call array_ptr(p)
 end subroutine
 
@@ -92,7 +92,7 @@ subroutine test_non_ptr_to_array_ptr_lower_bounds(p)
   ! CHECK:  %[[VAL_4:.*]] = fir.shift %[[VAL_3]] : (index) -> !fir.shift<1>
   ! CHECK:  %[[VAL_5:.*]] = fir.rebox %[[VAL_0]](%[[VAL_4]]) : (!fir.box<!fir.array<?xi32>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
   ! CHECK:  fir.store %[[VAL_5]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-  ! CHECK:  fir.call @_QParray_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> ()
+  ! CHECK:  fir.call @_QParray_ptr(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> ()
   call array_ptr(p)
 end subroutine
 
@@ -109,7 +109,7 @@ subroutine test_non_ptr_to_char_array_ptr(p)
 ! CHECK:  %[[VAL_7:.*]] = fir.convert %[[VAL_4]] : (!fir.ref<!fir.array<10x!fir.char<1,10>>>) -> !fir.ref<!fir.array<?x!fir.char<1,?>>>
 ! CHECK:  %[[VAL_8:.*]] = fir.embox %[[VAL_7]](%[[VAL_6]]) typeparams %[[VAL_3]] : (!fir.ref<!fir.array<?x!fir.char<1,?>>>, !fir.shape<1>, index) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>
 ! CHECK:  fir.store %[[VAL_8]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
-! CHECK:  fir.call @_QPchar_array_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> ()
+! CHECK:  fir.call @_QPchar_array_ptr(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>) -> ()
   call char_array_ptr(p)
 end subroutine
 
@@ -120,7 +120,7 @@ subroutine test_non_ptr_to_non_deferred_char_array_ptr(p)
 ! CHECK:  %[[VAL_1:.*]] = fir.alloca !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>
 ! CHECK:  %[[VAL_2:.*]] = fir.rebox %[[VAL_0]] : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> !fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>
 ! CHECK:  fir.store %[[VAL_2]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>
-! CHECK:  fir.call @_QPnon_deferred_char_array_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>) -> ()
+! CHECK:  fir.call @_QPnon_deferred_char_array_ptr(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,10>>>>>) -> ()
   call non_deferred_char_array_ptr(p)
 end subroutine
 
@@ -137,7 +137,7 @@ subroutine test_allocatable_to_array_ptr(p)
   ! CHECK:  %[[VAL_6:.*]] = fir.shape_shift %[[VAL_4]]#0, %[[VAL_4]]#1 : (index, index) -> !fir.shapeshift<1>
   ! CHECK:  %[[VAL_7:.*]] = fir.embox %[[VAL_5]](%[[VAL_6]]) : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xi32>>>
   ! CHECK:  fir.store %[[VAL_7]] to %[[VAL_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
-  ! CHECK:  fir.call @_QParray_ptr(%[[VAL_1]]) : (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> ()
+  ! CHECK:  fir.call @_QParray_ptr(%[[VAL_1]]) {{.*}}: (!fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>) -> ()
 end subroutine
 
 end module

@@ -9,7 +9,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @foo(float* %A, i64 %n, i64 %p) {
+define void @foo(ptr %A, i64 %n, i64 %p) {
 bb:
   br label %bb1
 
@@ -20,10 +20,10 @@ bb1:                                              ; preds = %bb6, %bb
 
 bb2:                                              ; preds = %bb1
   %tmp = srem i64 %n, %p
-  %tmp3 = getelementptr inbounds float, float* %A, i64 %tmp
-  %tmp4 = load float, float* %tmp3, align 4
+  %tmp3 = getelementptr inbounds float, ptr %A, i64 %tmp
+  %tmp4 = load float, ptr %tmp3, align 4
   %tmp5 = fadd float %tmp4, 1.000000e+00
-  store float %tmp5, float* %tmp3, align 4
+  store float %tmp5, ptr %tmp3, align 4
   br label %bb6
 
 bb6:                                              ; preds = %bb2

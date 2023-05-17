@@ -101,7 +101,7 @@ void msp430::getMSP430TargetFeatures(const Driver &D, const ArgList &Args,
     Features.push_back("+hwmultf5");
   } else {
     D.Diag(clang::diag::err_drv_unsupported_option_argument)
-        << HWMultArg->getOption().getName() << HWMult;
+        << HWMultArg->getSpelling() << HWMult;
   }
 }
 

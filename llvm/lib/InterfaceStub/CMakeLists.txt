@@ -8,4 +8,5 @@ add_llvm_component_library(LLVMInterfaceStub
   MC
   Object
   Support
+  TargetParser
 )

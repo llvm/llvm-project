@@ -9,7 +9,7 @@ entry:
   br i1 undef, label %if.end, label %UnifiedReturnBlock
 
 if.end:                                           ; preds = %entry
-  %tmp1067 = load <16 x i32>, <16 x i32> addrspace(1)* null, align 64
+  %tmp1067 = load <16 x i32>, ptr addrspace(1) null, align 64
   %tmp1082 = shufflevector         <16 x i32> <i32 0, i32 0, i32 0, i32 undef, i32 undef, i32 0, i32 0, i32 undef, i32 0, i32 0, i32 undef, i32 undef, i32 0, i32 undef, i32 undef, i32 undef>, 
                                                                                                                 <16 x i32> %tmp1067, 
                                                                                                                 <16 x i32> <i32 0, i32 1, i32 2, i32 undef, i32 26, i32 5, i32 6, i32 undef, i32 8, i32 9, i32 31, i32 30, i32 12, i32 undef, i32 undef, i32 undef>
@@ -22,7 +22,7 @@ if.end:                                           ; preds = %entry
                                                                                                                 <16 x i32> %tmp1067, 
                                                                                                                 <16 x i32> <i32 0, i32 1, i32 2, i32 24, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 18, i32 15>
   
-  store <16 x i32> %tmp1112, <16 x i32> addrspace(1)* undef, align 64
+  store <16 x i32> %tmp1112, ptr addrspace(1) undef, align 64
   
   ret void
 

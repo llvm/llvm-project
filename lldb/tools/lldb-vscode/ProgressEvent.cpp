@@ -9,6 +9,7 @@
 #include "ProgressEvent.h"
 
 #include "JSONUtils.h"
+#include <optional>
 
 using namespace lldb_vscode;
 using namespace llvm;
@@ -21,7 +22,8 @@ const std::chrono::duration<double> kStartProgressEventReportDelay =
 const std::chrono::duration<double> kUpdateProgressEventReportDelay =
     std::chrono::milliseconds(250);
 
-ProgressEvent::ProgressEvent(uint64_t progress_id, Optional<StringRef> message,
+ProgressEvent::ProgressEvent(uint64_t progress_id,
+                             std::optional<StringRef> message,
                              uint64_t completed, uint64_t total,
                              const ProgressEvent *prev_event)
     : m_progress_id(progress_id) {
@@ -62,21 +64,20 @@ ProgressEvent::ProgressEvent(uint64_t progress_id, Optional<StringRef> message,
   }
 }
 
-Optional<ProgressEvent> ProgressEvent::Create(uint64_t progress_id,
-                                              Optional<StringRef> message,
-                                              uint64_t completed,
-                                              uint64_t total,
-                                              const ProgressEvent *prev_event) {
+std::optional<ProgressEvent>
+ProgressEvent::Create(uint64_t progress_id, std::optional<StringRef> message,
+                      uint64_t completed, uint64_t total,
+                      const ProgressEvent *prev_event) {
   // If it's an update without a previous event, we abort
   if (completed > 0 && completed < total && !prev_event)
-    return None;
+    return std::nullopt;
   ProgressEvent event(progress_id, message, completed, total, prev_event);
   // We shouldn't show unnamed start events in the IDE
   if (event.GetEventType() == progressStart && event.GetEventName().empty())
-    return None;
+    return std::nullopt;
 
   if (prev_event && prev_event->EqualsForIDE(event))
-    return None;
+    return std::nullopt;
 
   return event;
 }
@@ -162,8 +163,8 @@ const ProgressEvent &ProgressEventManager::GetMostRecentEvent() const {
 
 void ProgressEventManager::Update(uint64_t progress_id, uint64_t completed,
                                   uint64_t total) {
-  if (Optional<ProgressEvent> event = ProgressEvent::Create(
-          progress_id, None, completed, total, &GetMostRecentEvent())) {
+  if (std::optional<ProgressEvent> event = ProgressEvent::Create(
+          progress_id, std::nullopt, completed, total, &GetMostRecentEvent())) {
     if (event->GetEventType() == progressEnd)
       m_finished = true;
 
@@ -215,8 +216,8 @@ void ProgressEventReporter::Push(uint64_t progress_id, const char *message,
 
   auto it = m_event_managers.find(progress_id);
   if (it == m_event_managers.end()) {
-    if (Optional<ProgressEvent> event =
-            ProgressEvent::Create(progress_id, StringRef(message), completed, total)) {
+    if (std::optional<ProgressEvent> event = ProgressEvent::Create(
+            progress_id, StringRef(message), completed, total)) {
       ProgressEventManagerSP event_manager =
           std::make_shared<ProgressEventManager>(*event, m_report_callback);
       m_event_managers.insert({progress_id, event_manager});

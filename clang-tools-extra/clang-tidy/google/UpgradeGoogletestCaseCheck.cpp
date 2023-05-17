@@ -11,18 +11,17 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace google {
+namespace clang::tidy::google {
 
 static const llvm::StringRef RenameCaseToSuiteMessage =
     "Google Test APIs named with 'case' are deprecated; use equivalent APIs "
     "named with 'suite'";
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 getNewMacroName(llvm::StringRef MacroName) {
   std::pair<llvm::StringRef, llvm::StringRef> ReplacementMap[] = {
       {"TYPED_TEST_CASE", "TYPED_TEST_SUITE"},
@@ -37,7 +36,7 @@ getNewMacroName(llvm::StringRef MacroName) {
       return Mapping.second;
   }
 
-  return llvm::None;
+  return std::nullopt;
 }
 
 namespace {
@@ -97,7 +96,7 @@ private:
 
     std::string Name = PP->getSpelling(MacroNameTok);
 
-    llvm::Optional<llvm::StringRef> Replacement = getNewMacroName(Name);
+    std::optional<llvm::StringRef> Replacement = getNewMacroName(Name);
     if (!Replacement)
       return;
 
@@ -349,6 +348,4 @@ void UpgradeGoogletestCaseCheck::check(const MatchFinder::MatchResult &Result) {
   Diag << FixItHint::CreateReplacement(ReplacementRange, ReplacementText);
 }
 
-} // namespace google
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::google

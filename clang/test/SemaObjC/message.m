@@ -87,7 +87,7 @@ struct S { int X; } S;
 int test5(int X) {
   int a = [X somemsg];  // expected-warning {{receiver type 'int' is not 'id'}} \
                            expected-warning {{method '-somemsg' not found}} \
-                           expected-warning {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'id'}}
+                           expected-error {{incompatible pointer to integer conversion initializing 'int' with an expression of type 'id'}}
   int b = [S somemsg];  // expected-error {{bad receiver type 'struct S'}}
 }
 

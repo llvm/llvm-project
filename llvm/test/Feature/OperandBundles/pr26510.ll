@@ -1,4 +1,4 @@
-; RUN: opt -S -globals-aa -function-attrs < %s | FileCheck %s
+; RUN: opt -S -passes='require<globals-aa>,function-attrs' < %s | FileCheck %s
 ; RUN: opt -S -O3 < %s | FileCheck %s
 
 ; Apart from checking for the direct cause of the bug, we also check
@@ -10,18 +10,18 @@
 
 declare void @foo() readnone
 
-; CHECK-LABEL: define i8* @test(i8* %p)
-; CHECK:   %a = alloca i8*, align 8
-; CHECK:   store i8* %p, i8** %a, align 8
-; CHECK:   call void @foo() [ "abc"(i8** %a) ]
-; CHECK:   %reload = load i8*, i8** %a, align 8
-; CHECK:   ret i8* %reload
+; CHECK-LABEL: define ptr @test(ptr %p)
+; CHECK:   %a = alloca ptr, align 8
+; CHECK:   store ptr %p, ptr %a, align 8
+; CHECK:   call void @foo() [ "abc"(ptr %a) ]
+; CHECK:   %reload = load ptr, ptr %a, align 8
+; CHECK:   ret ptr %reload
 ; CHECK: }
 
-define i8* @test(i8* %p) {
-  %a = alloca i8*, align 8
-  store i8* %p, i8** %a, align 8
-  call void @foo() ["abc" (i8** %a)]
-  %reload = load i8*, i8** %a, align 8
-  ret i8* %reload
+define ptr @test(ptr %p) {
+  %a = alloca ptr, align 8
+  store ptr %p, ptr %a, align 8
+  call void @foo() ["abc" (ptr %a)]
+  %reload = load ptr, ptr %a, align 8
+  ret ptr %reload
 }

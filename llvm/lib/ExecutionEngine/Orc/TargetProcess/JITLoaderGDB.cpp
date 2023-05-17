@@ -11,7 +11,6 @@
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/Support/BinaryStreamReader.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/ManagedStatic.h"
 
 #include <cstdint>
 #include <mutex>
@@ -67,13 +66,10 @@ LLVM_ATTRIBUTE_NOINLINE void __jit_debug_register_code() {
 using namespace llvm;
 using namespace llvm::orc;
 
-// Serialize rendezvous with the debugger as well as access to shared data.
-ManagedStatic<std::mutex> JITDebugLock;
-
 // Register debug object, return error message or null for success.
-static void registerJITLoaderGDBImpl(const char *ObjAddr, size_t Size) {
+static void appendJITDebugDescriptor(const char *ObjAddr, size_t Size) {
   LLVM_DEBUG({
-    dbgs() << "Registering debug object with GDB JIT interface "
+    dbgs() << "Adding debug object to GDB JIT interface "
            << formatv("([{0:x16} -- {1:x16}])",
                       reinterpret_cast<uintptr_t>(ObjAddr),
                       reinterpret_cast<uintptr_t>(ObjAddr + Size))
@@ -85,7 +81,9 @@ static void registerJITLoaderGDBImpl(const char *ObjAddr, size_t Size) {
   E->symfile_size = Size;
   E->prev_entry = nullptr;
 
-  std::lock_guard<std::mutex> Lock(*JITDebugLock);
+  // Serialize rendezvous with the debugger as well as access to shared data.
+  static std::mutex JITDebugLock;
+  std::lock_guard<std::mutex> Lock(JITDebugLock);
 
   // Insert this entry at the head of the list.
   jit_code_entry *NextEntry = __jit_debug_descriptor.first_entry;
@@ -96,20 +94,20 @@ static void registerJITLoaderGDBImpl(const char *ObjAddr, size_t Size) {
 
   __jit_debug_descriptor.first_entry = E;
   __jit_debug_descriptor.relevant_entry = E;
-
-  // Run into the rendezvous breakpoint.
   __jit_debug_descriptor.action_flag = JIT_REGISTER_FN;
-  __jit_debug_register_code();
 }
 
 extern "C" orc::shared::CWrapperFunctionResult
 llvm_orc_registerJITLoaderGDBAllocAction(const char *Data, size_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
+  return WrapperFunction<SPSError(SPSExecutorAddrRange, bool)>::handle(
              Data, Size,
-             [](ExecutorAddrRange R) {
-               registerJITLoaderGDBImpl(R.Start.toPtr<const char *>(),
+             [](ExecutorAddrRange R, bool AutoRegisterCode) {
+               appendJITDebugDescriptor(R.Start.toPtr<const char *>(),
                                         R.size());
+               // Run into the rendezvous breakpoint.
+               if (AutoRegisterCode)
+                 __jit_debug_register_code();
                return Error::success();
              })
       .release();
@@ -118,11 +116,14 @@ llvm_orc_registerJITLoaderGDBAllocAction(const char *Data, size_t Size) {
 extern "C" orc::shared::CWrapperFunctionResult
 llvm_orc_registerJITLoaderGDBWrapper(const char *Data, uint64_t Size) {
   using namespace orc::shared;
-  return WrapperFunction<SPSError(SPSExecutorAddrRange)>::handle(
+  return WrapperFunction<SPSError(SPSExecutorAddrRange, bool)>::handle(
              Data, Size,
-             [](ExecutorAddrRange R) {
-               registerJITLoaderGDBImpl(R.Start.toPtr<const char *>(),
+             [](ExecutorAddrRange R, bool AutoRegisterCode) {
+               appendJITDebugDescriptor(R.Start.toPtr<const char *>(),
                                         R.size());
+               // Run into the rendezvous breakpoint.
+               if (AutoRegisterCode)
+                 __jit_debug_register_code();
                return Error::success();
              })
       .release();

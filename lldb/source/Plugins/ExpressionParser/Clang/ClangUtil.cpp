@@ -19,7 +19,7 @@ bool ClangUtil::IsClangType(const CompilerType &ct) {
   if (!ct)
     return false;
 
-  if (llvm::dyn_cast_or_null<TypeSystemClang>(ct.GetTypeSystem()) == nullptr)
+  if (!ct.GetTypeSystem().dyn_cast_or_null<TypeSystemClang>())
     return false;
 
   if (!ct.GetOpaqueQualType())

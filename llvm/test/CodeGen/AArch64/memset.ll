@@ -8,11 +8,11 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT: stp
 ; CHECK-NEXT: stp
 ; CHECK-NEXT: ret
-define void @memset_call(i8* %0, i32 %1) {
+define void @memset_call(ptr %0, i32 %1) {
   %3 = trunc i32 %1 to i8
-  call void @llvm.memset.p0i8.i64(i8* %0, i8 %3, i64 64, i1 false)
+  call void @llvm.memset.p0.i64(ptr %0, i8 %3, i64 64, i1 false)
   ret void
 }
 
-declare void @llvm.memset.p0i8.i64(i8*, i8, i64, i1 immarg)
+declare void @llvm.memset.p0.i64(ptr, i8, i64, i1 immarg)
 

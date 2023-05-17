@@ -3,12 +3,12 @@
 target datalayout = "e-m:e-p:32:32-Fi8-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "thumbv8.1m.main-arm-unknown-eabi"
 
-@p = hidden local_unnamed_addr global i32 (i32, i32, i32, i32)* null, align 4
+@p = hidden local_unnamed_addr global ptr null, align 4
 
 define hidden i32 @f(i32 %a, i32 %b, i32 %c, i32 %d) local_unnamed_addr #0 {
 entry:
   %call = tail call i32 @g(i32 %a) #0
-  %0 = load i32 (i32, i32, i32, i32)*, i32 (i32, i32, i32, i32)** @p, align 4
+  %0 = load ptr, ptr @p, align 4
   %call1 = tail call i32 %0(i32 %call, i32 %b, i32 %c, i32 %d) #0
   ret i32 %call1
 }

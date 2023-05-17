@@ -84,12 +84,19 @@ def main():
       if not re.match('^%s$' % args.iregex, filename, re.IGNORECASE):
         continue
 
-    match = re.search(r'^@@.*\+(\d+)(,(\d+))?', line)
+    match = re.search(r'^@@.*\+(\d+)(?:,(\d+))?', line)
     if match:
       start_line = int(match.group(1))
       line_count = 1
-      if match.group(3):
-        line_count = int(match.group(3))
+      if match.group(2):
+        line_count = int(match.group(2))
+        # The input is something like
+        #
+        # @@ -1, +0,0 @@
+        #
+        # which means no lines were added.
+        if line_count == 0:
+          continue
       # Also format lines range if line_count is 0 in case of deleting
       # surrounding statements.
       end_line = start_line

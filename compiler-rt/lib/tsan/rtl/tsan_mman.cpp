@@ -15,6 +15,7 @@
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_placement_new.h"
+#include "tsan_interface.h"
 #include "tsan_mman.h"
 #include "tsan_rtl.h"
 #include "tsan_report.h"
@@ -351,6 +352,20 @@ void *user_pvalloc(ThreadState *thr, uptr pc, uptr sz) {
   return SetErrnoOnNull(user_alloc_internal(thr, pc, sz, PageSize));
 }
 
+static const void *user_alloc_begin(const void *p) {
+  if (p == nullptr || !IsAppMem((uptr)p))
+    return nullptr;
+  void *beg = allocator()->GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+
+  MBlock *b = ctx->metamap.GetBlock((uptr)beg);
+  if (!b)
+    return nullptr;  // Not a valid pointer.
+
+  return (const void *)beg;
+}
+
 uptr user_alloc_usable_size(const void *p) {
   if (p == 0 || !IsAppMem((uptr)p))
     return 0;
@@ -427,6 +442,10 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) {
 
 int __sanitizer_get_ownership(const void *p) {
   return allocator()->GetBlockBegin(p) != 0;
+}
+
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return user_alloc_begin(p);
 }
 
 uptr __sanitizer_get_allocated_size(const void *p) {

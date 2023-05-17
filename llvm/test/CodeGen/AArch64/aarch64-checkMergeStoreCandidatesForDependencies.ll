@@ -8,16 +8,16 @@
 ;
 ;   SelectionDAG has 16 nodes:
 ;     t0: ch = EntryToken
-;       t3: i64 = add nuw GlobalAddress:i64<%str0* @g0> 0, Constant:i64<8>
+;       t3: i64 = add nuw GlobalAddress:i64<ptr @g0> 0, Constant:i64<8>
 ;     t6: ch = store<(store (s64) into %ir.sp1, align 1, !tbaa !1)> t0, Constant:i64<0>, t3, undef:i64
-;     t7: i64,ch = load<(load (s64) from `%str1** undef`, align 1)> t6, undef:i64, undef:i64
+;     t7: i64,ch = load<(load (s64) from `ptr undef`, align 1)> t6, undef:i64, undef:i64
 ;       t8: i64 = add nuw t7, Constant:i64<8>
 ;     t9: i64,ch = load<(load (s64) from %ir.lp0, align 1)> t6, t8, undef:i64
-;         t21: ch = store<(store (s64) into %ir.sp01, align 1)> t19:1, Constant:i64<0>, GlobalAddress:i64<%str0* @g0> 0, undef:i64
+;         t21: ch = store<(store (s64) into %ir.sp01, align 1)> t19:1, Constant:i64<0>, GlobalAddress:i64<ptr @g0> 0, undef:i64
 ;       t24: ch = TokenFactor t7:1, t9:1, t21
 ;     t14: ch,glue = CopyToReg t24, Register:i64 $x0, t19
 ;     t19: i64,ch = load<(load (s64) from %ir.lp12, align 1, !tbaa !7)> t0, t9, undef:i64
-;     t15: ch = AArch64ISD::RET_FLAG t14, Register:i64 $x0, t14:1
+;     t15: ch = AArch64ISD::RET_GLUE t14, Register:i64 $x0, t14:1
 ;
 ; The t21 store depends on t19 (via a chain dependency),
 ; t19 load depends on t9 (via address operand),
@@ -33,7 +33,7 @@
 ; performed.
 
 %str0 = type { i64, i64 }
-%str1 = type { i64, %str1* }
+%str1 = type { i64, ptr }
 
 @g0 = external global %str0, align 1
 
@@ -49,15 +49,13 @@ define i64 @foo() {
 ; CHECK-NEXT:    str xzr, [x8]
 ; CHECK-NEXT:    ret
 entry:
-  %sp0 = getelementptr inbounds %str0, %str0* @g0, i32 0, i32 0
-  %sp1 = getelementptr inbounds %str0, %str0* @g0, i32 0, i32 1
-  store i64 0, i64* %sp1, align 1, !tbaa !1
-  %l0 = load %str1*, %str1** undef, align 1
-  %lp0 = getelementptr inbounds %str1, %str1* %l0, i32 0, i32 1
-  %l1 = load %str1*, %str1** %lp0, align 1
-  %lp1 = getelementptr inbounds %str1, %str1* %l1, i32 0, i32 0
-  %l2 = load i64, i64* %lp1, align 1, !tbaa !7
-  store i64 0, i64* %sp0, align 1
+  %sp1 = getelementptr inbounds %str0, ptr @g0, i32 0, i32 1
+  store i64 0, ptr %sp1, align 1, !tbaa !1
+  %l0 = load ptr, ptr undef, align 1
+  %lp0 = getelementptr inbounds %str1, ptr %l0, i32 0, i32 1
+  %l1 = load ptr, ptr %lp0, align 1
+  %l2 = load i64, ptr %l1, align 1, !tbaa !7
+  store i64 0, ptr @g0, align 1
   ret i64 %l2
 }
 

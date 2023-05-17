@@ -47,8 +47,6 @@ void MachineModuleInfo::initialize() {
 }
 
 void MachineModuleInfo::finalize() {
-  Personalities.clear();
-
   Context.reset();
   // We don't clear the ExternalContext.
 
@@ -58,11 +56,10 @@ void MachineModuleInfo::finalize() {
 
 MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
     : TM(std::move(MMI.TM)),
-      Context(MMI.TM.getTargetTriple(), MMI.TM.getMCAsmInfo(),
-              MMI.TM.getMCRegisterInfo(), MMI.TM.getMCSubtargetInfo(), nullptr,
-              nullptr, false),
+      Context(TM.getTargetTriple(), TM.getMCAsmInfo(), TM.getMCRegisterInfo(),
+              TM.getMCSubtargetInfo(), nullptr, &TM.Options.MCOptions, false),
       MachineFunctions(std::move(MMI.MachineFunctions)) {
-  Context.setObjectFileInfo(MMI.TM.getObjFileLowering());
+  Context.setObjectFileInfo(TM.getObjFileLowering());
   ObjFileMMI = MMI.ObjFileMMI;
   CurCallSite = MMI.CurCallSite;
   ExternalContext = MMI.ExternalContext;
@@ -72,7 +69,7 @@ MachineModuleInfo::MachineModuleInfo(MachineModuleInfo &&MMI)
 MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, nullptr, false) {
+                       nullptr, &TM->Options.MCOptions, false) {
   Context.setObjectFileInfo(TM->getObjFileLowering());
   initialize();
 }
@@ -81,23 +78,13 @@ MachineModuleInfo::MachineModuleInfo(const LLVMTargetMachine *TM,
                                      MCContext *ExtContext)
     : TM(*TM), Context(TM->getTargetTriple(), TM->getMCAsmInfo(),
                        TM->getMCRegisterInfo(), TM->getMCSubtargetInfo(),
-                       nullptr, nullptr, false),
+                       nullptr, &TM->Options.MCOptions, false),
       ExternalContext(ExtContext) {
   Context.setObjectFileInfo(TM->getObjFileLowering());
   initialize();
 }
 
 MachineModuleInfo::~MachineModuleInfo() { finalize(); }
-
-/// \name Exception Handling
-/// \{
-
-void MachineModuleInfo::addPersonality(const Function *Personality) {
-  if (!llvm::is_contained(Personalities, Personality))
-    Personalities.push_back(Personality);
-}
-
-/// \}
 
 MachineFunction *
 MachineModuleInfo::getMachineFunction(const Function &F) const {
@@ -118,6 +105,7 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
     // No pre-existing machine function, create a new one.
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
     MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
+    MF->initTargetMachineFunctionInfo(STI);
     // Update the set entry.
     I.first->second.reset(MF);
   } else {

@@ -14,7 +14,7 @@
 
 // RUN: %clang -target arm -Wa,-mcpu=bogus -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-BOGUS-CPU %s
-// CHECK-BOGUS-CPU: error: {{.*}} does not support '-Wa,-mcpu=bogus'
+// CHECK-BOGUS-CPU: error: unsupported argument '-mcpu=bogus' to option '-Wa,'
 
 // RUN: %clang -target arm -mcpu=cortex-a8 -Wa,-mcpu=cortex-a15 -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-DUP-CPU %s
@@ -38,7 +38,7 @@
 
 // RUN: %clang -target arm -Wa,-march=armbogusv6 -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-BOGUS-ARCH %s
-// CHECK-BOGUS-ARCH: error: {{.*}} does not support '-Wa,-march=armbogusv6'
+// CHECK-BOGUS-ARCH: error: unsupported argument '-march=armbogusv6' to option '-Wa,'
 
 // RUN: %clang -target arm -march=armv7 -Wa,-march=armv6 -c %s -### 2>&1 \
 // RUN:   | FileCheck -check-prefix=CHECK-DUP-ARCH %s

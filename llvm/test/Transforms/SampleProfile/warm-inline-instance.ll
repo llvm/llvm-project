@@ -1,4 +1,3 @@
-; RUN: opt < %s -sample-profile -sample-profile-file=%S/Inputs/warm-inline-instance.prof -S | FileCheck %s
 ; RUN: opt < %s -passes=sample-profile -sample-profile-file=%S/Inputs/warm-inline-instance.prof -S | FileCheck %s
 
 @.str = private unnamed_addr constant [11 x i8] c"sum is %d\0A\00", align 1
@@ -8,10 +7,10 @@ define i32 @foo(i32 %x, i32 %y) #0 !dbg !4 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %t0 = load i32, i32* %x.addr, align 4, !dbg !11
-  %t1 = load i32, i32* %y.addr, align 4, !dbg !11
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %t0 = load i32, ptr %x.addr, align 4, !dbg !11
+  %t1 = load i32, ptr %y.addr, align 4, !dbg !11
   %add = add nsw i32 %t0, %t1, !dbg !11
   ret i32 %add, !dbg !11
 }
@@ -20,10 +19,10 @@ define i32 @goo(i32 %x, i32 %y) #0 {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %t0 = load i32, i32* %x.addr, align 4, !dbg !11
-  %t1 = load i32, i32* %y.addr, align 4, !dbg !11
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %t0 = load i32, ptr %x.addr, align 4, !dbg !11
+  %t1 = load i32, ptr %y.addr, align 4, !dbg !11
   %add = add nsw i32 %t0, %t1, !dbg !11
   ret i32 %add, !dbg !11
 }
@@ -34,25 +33,25 @@ entry:
   %retval = alloca i32, align 4
   %s = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 0, i32* %retval
-  store i32 0, i32* %i, align 4, !dbg !12
+  store i32 0, ptr %retval
+  store i32 0, ptr %i, align 4, !dbg !12
   br label %while.cond, !dbg !13
 
 while.cond:                                       ; preds = %if.end, %entry
-  %t0 = load i32, i32* %i, align 4, !dbg !14
+  %t0 = load i32, ptr %i, align 4, !dbg !14
   %inc = add nsw i32 %t0, 1, !dbg !14
-  store i32 %inc, i32* %i, align 4, !dbg !14
+  store i32 %inc, ptr %i, align 4, !dbg !14
   %cmp = icmp slt i32 %t0, 400000000, !dbg !14
   br i1 %cmp, label %while.body, label %while.end, !dbg !14
 
 while.body:                                       ; preds = %while.cond
-  %t1 = load i32, i32* %i, align 4, !dbg !16
+  %t1 = load i32, ptr %i, align 4, !dbg !16
   %cmp1 = icmp ne i32 %t1, 100, !dbg !16
   br i1 %cmp1, label %if.then, label %if.else, !dbg !16
 
 if.then:                                          ; preds = %while.body
-  %t2 = load i32, i32* %i, align 4, !dbg !18
-  %t3 = load i32, i32* %s, align 4, !dbg !18
+  %t2 = load i32, ptr %i, align 4, !dbg !18
+  %t3 = load i32, ptr %s, align 4, !dbg !18
 ; Although the ratio of total samples of @foo vs total samples of @main is
 ; small, since the total samples count is larger than hot cutoff computed by
 ; ProfileSummaryInfo, we will still regard the callsite of foo as hot and
@@ -60,7 +59,7 @@ if.then:                                          ; preds = %while.body
 ; CHECK-LABEL: @main(
 ; CHECK-NOT: call i32 @foo(i32 %t2, i32 %t3)
   %call1 = call i32 @foo(i32 %t2, i32 %t3), !dbg !18
-  store i32 %call1, i32* %s, align 4, !dbg !18
+  store i32 %call1, ptr %s, align 4, !dbg !18
   br label %if.end, !dbg !18
 
 if.else:                                          ; preds = %while.body
@@ -69,19 +68,19 @@ if.else:                                          ; preds = %while.body
 ; CHECK-NOT: !prof
 ; CHECK-SAME: {{$}}
   %call2 = call i32 @goo(i32 2, i32 3), !dbg !26
-  store i32 %call2, i32* %s, align 4, !dbg !20
+  store i32 %call2, ptr %s, align 4, !dbg !20
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
   br label %while.cond, !dbg !22
 
 while.end:                                        ; preds = %while.cond
-  %t4 = load i32, i32* %s, align 4, !dbg !24
-  %call3 = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0), i32 %t4), !dbg !24
+  %t4 = load i32, ptr %s, align 4, !dbg !24
+  %call3 = call i32 (ptr, ...) @printf(ptr @.str, i32 %t4), !dbg !24
   ret i32 0, !dbg !25
 }
 
-declare i32 @printf(i8*, ...) #2
+declare i32 @printf(ptr, ...) #2
 
 attributes #0 = { "use-sample-profile" }
 

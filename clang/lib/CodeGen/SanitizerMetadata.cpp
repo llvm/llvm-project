@@ -24,39 +24,55 @@ SanitizerMetadata::SanitizerMetadata(CodeGenModule &CGM) : CGM(CGM) {}
 
 static bool isAsanHwasanOrMemTag(const SanitizerSet &SS) {
   return SS.hasOneOf(SanitizerKind::Address | SanitizerKind::KernelAddress |
-                     SanitizerKind::HWAddress | SanitizerKind::KernelHWAddress |
-                     SanitizerKind::MemTag);
+                     SanitizerKind::HWAddress | SanitizerKind::MemTag);
+}
+
+SanitizerMask expandKernelSanitizerMasks(SanitizerMask Mask) {
+  if (Mask & (SanitizerKind::Address | SanitizerKind::KernelAddress))
+    Mask |= SanitizerKind::Address | SanitizerKind::KernelAddress;
+  // Note: KHWASan doesn't support globals.
+  return Mask;
 }
 
 void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
                                      SourceLocation Loc, StringRef Name,
-                                     QualType Ty, bool IsDynInit,
-                                     bool IsExcluded) {
-  IsDynInit &= !CGM.isInNoSanitizeList(GV, Loc, Ty, "init");
-  IsExcluded |= CGM.isInNoSanitizeList(GV, Loc, Ty);
+                                     QualType Ty,
+                                     SanitizerMask NoSanitizeAttrMask,
+                                     bool IsDynInit) {
+  SanitizerSet FsanitizeArgument = CGM.getLangOpts().Sanitize;
+  if (!isAsanHwasanOrMemTag(FsanitizeArgument))
+    return;
 
-  llvm::Metadata *LocDescr = nullptr;
-  llvm::Metadata *GlobalName = nullptr;
-  llvm::LLVMContext &VMContext = CGM.getLLVMContext();
-  if (!IsExcluded) {
-    // Don't generate source location and global name if it is on
-    // the NoSanitizeList - it won't be instrumented anyway.
-    LocDescr = getLocationMetadata(Loc);
-    if (!Name.empty())
-      GlobalName = llvm::MDString::get(VMContext, Name);
-  }
+  FsanitizeArgument.Mask = expandKernelSanitizerMasks(FsanitizeArgument.Mask);
+  NoSanitizeAttrMask = expandKernelSanitizerMasks(NoSanitizeAttrMask);
+  SanitizerSet NoSanitizeAttrSet = {NoSanitizeAttrMask &
+                                    FsanitizeArgument.Mask};
 
-  llvm::Metadata *GlobalMetadata[] = {
-      llvm::ConstantAsMetadata::get(GV), LocDescr, GlobalName,
-      llvm::ConstantAsMetadata::get(
-          llvm::ConstantInt::get(llvm::Type::getInt1Ty(VMContext), IsDynInit)),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          llvm::Type::getInt1Ty(VMContext), IsExcluded))};
+  llvm::GlobalVariable::SanitizerMetadata Meta;
+  if (GV->hasSanitizerMetadata())
+    Meta = GV->getSanitizerMetadata();
 
-  llvm::MDNode *ThisGlobal = llvm::MDNode::get(VMContext, GlobalMetadata);
-  llvm::NamedMDNode *AsanGlobals =
-      CGM.getModule().getOrInsertNamedMetadata("llvm.asan.globals");
-  AsanGlobals->addOperand(ThisGlobal);
+  Meta.NoAddress |= NoSanitizeAttrSet.hasOneOf(SanitizerKind::Address);
+  Meta.NoAddress |= CGM.isInNoSanitizeList(
+      FsanitizeArgument.Mask & SanitizerKind::Address, GV, Loc, Ty);
+
+  Meta.NoHWAddress |= NoSanitizeAttrSet.hasOneOf(SanitizerKind::HWAddress);
+  Meta.NoHWAddress |= CGM.isInNoSanitizeList(
+      FsanitizeArgument.Mask & SanitizerKind::HWAddress, GV, Loc, Ty);
+
+  Meta.Memtag |=
+      static_cast<bool>(FsanitizeArgument.Mask & SanitizerKind::MemtagGlobals);
+  Meta.Memtag &= !NoSanitizeAttrSet.hasOneOf(SanitizerKind::MemTag);
+  Meta.Memtag &= !CGM.isInNoSanitizeList(
+      FsanitizeArgument.Mask & SanitizerKind::MemTag, GV, Loc, Ty);
+
+  Meta.IsDynInit = IsDynInit && !Meta.NoAddress &&
+                   FsanitizeArgument.has(SanitizerKind::Address) &&
+                   !CGM.isInNoSanitizeList(SanitizerKind::Address |
+                                               SanitizerKind::KernelAddress,
+                                           GV, Loc, Ty, "init");
+
+  GV->setSanitizerMetadata(Meta);
 }
 
 void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
@@ -77,41 +93,16 @@ void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV, const VarDecl &D,
 
     return NoSanitizeMask;
   };
-  reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), IsDynInit,
-               SanitizerSet{getNoSanitizeMask(D)}.has(SanitizerKind::Address));
-}
 
-void SanitizerMetadata::reportGlobal(llvm::GlobalVariable *GV,
-                                     SourceLocation Loc, StringRef Name,
-                                     QualType Ty, bool IsDynInit) {
-  if (!isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    return;
-  reportGlobal(GV, Loc, Name, Ty, IsDynInit, false);
+  reportGlobal(GV, D.getLocation(), OS.str(), D.getType(), getNoSanitizeMask(D),
+               IsDynInit);
 }
 
 void SanitizerMetadata::disableSanitizerForGlobal(llvm::GlobalVariable *GV) {
-  // For now, just make sure the global is not modified by the ASan
-  // instrumentation.
-  if (isAsanHwasanOrMemTag(CGM.getLangOpts().Sanitize))
-    reportGlobal(GV, SourceLocation(), "", QualType(), false, true);
+  reportGlobal(GV, SourceLocation(), "", QualType(), SanitizerKind::All);
 }
 
 void SanitizerMetadata::disableSanitizerForInstruction(llvm::Instruction *I) {
   I->setMetadata(llvm::LLVMContext::MD_nosanitize,
-                 llvm::MDNode::get(CGM.getLLVMContext(), None));
-}
-
-llvm::MDNode *SanitizerMetadata::getLocationMetadata(SourceLocation Loc) {
-  PresumedLoc PLoc = CGM.getContext().getSourceManager().getPresumedLoc(Loc);
-  if (!PLoc.isValid())
-    return nullptr;
-  llvm::LLVMContext &VMContext = CGM.getLLVMContext();
-  llvm::Metadata *LocMetadata[] = {
-      llvm::MDString::get(VMContext, PLoc.getFilename()),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          llvm::Type::getInt32Ty(VMContext), PLoc.getLine())),
-      llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
-          llvm::Type::getInt32Ty(VMContext), PLoc.getColumn())),
-  };
-  return llvm::MDNode::get(VMContext, LocMetadata);
+                 llvm::MDNode::get(CGM.getLLVMContext(), std::nullopt));
 }

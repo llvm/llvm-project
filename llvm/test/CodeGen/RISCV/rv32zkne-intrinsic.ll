@@ -5,10 +5,10 @@
 declare i32 @llvm.riscv.aes32esi(i32, i32, i8);
 
 define i32 @aes32esi(i32 %a, i32 %b) nounwind {
-; RV32ZKNE-LABEL: aes32esi
-; RV32ZKNE: # %bb.0:
-; RV32ZKNE-NEXT: aes32esi a0, a0, a1, 2
-; RV32ZKNE-NEXT: ret
+; RV32ZKNE-LABEL: aes32esi:
+; RV32ZKNE:       # %bb.0:
+; RV32ZKNE-NEXT:    aes32esi a0, a0, a1, 2
+; RV32ZKNE-NEXT:    ret
     %val = call i32 @llvm.riscv.aes32esi(i32 %a, i32 %b, i8 2)
     ret i32 %val
 }
@@ -16,10 +16,10 @@ define i32 @aes32esi(i32 %a, i32 %b) nounwind {
 declare i32 @llvm.riscv.aes32esmi(i32, i32, i8);
 
 define i32 @aes32esmi(i32 %a, i32 %b) nounwind {
-; RV32ZKNE-LABEL: aes32esmi
-; RV32ZKNE: # %bb.0:
-; RV32ZKNE-NEXT: aes32esmi a0, a0, a1, 3
-; RV32ZKNE-NEXT: ret
+; RV32ZKNE-LABEL: aes32esmi:
+; RV32ZKNE:       # %bb.0:
+; RV32ZKNE-NEXT:    aes32esmi a0, a0, a1, 3
+; RV32ZKNE-NEXT:    ret
     %val = call i32 @llvm.riscv.aes32esmi(i32 %a, i32 %b, i8 3)
     ret i32 %val
 }

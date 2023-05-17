@@ -10,8 +10,8 @@ define i32 @load_unscaled_zext_i8_to_i32(i64 %a) {
 ; CHECK:       ldurb w0, [x0, #-8]
 ; CHECK-NOT:   uxtb
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -24,8 +24,8 @@ define i32 @load_unscaled_zext_i16_to_i32(i64 %a) {
 ; CHECK:       ldurh w0, [x0, #-8]
 ; CHECK-NOT:   uxth
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -38,8 +38,8 @@ define i64 @load_unscaled_zext_i8_to_i64(i64 %a) {
 ; CHECK:       ldurb w0, [x0, #-8]
 ; CHECK-NOT:   uxtb
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -52,8 +52,8 @@ define i64 @load_unscaled_zext_i16_to_i64(i64 %a) {
 ; CHECK:       ldurh w0, [x0, #-8]
 ; CHECK-NOT:   uxth
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -66,8 +66,8 @@ define i64 @load_unscaled_zext_i32_to_i64(i64 %a) {
 ; CHECK:       ldur w0, [x0, #-8]
 ; CHECK-NOT:   uxtw
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i32*
-  %3 = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i32, ptr %2
   br label %bb2
 
 bb2:
@@ -80,8 +80,8 @@ define i32 @load_unscaled_sext_i8_to_i32(i64 %a) {
 ; CHECK:       ldursb w0, [x0, #-8]
 ; CHECK-NOT:   sxtb
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -94,8 +94,8 @@ define i32 @load_unscaled_sext_i16_to_i32(i64 %a) {
 ; CHECK:       ldursh w0, [x0, #-8]
 ; CHECK-NOT:   sxth
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -108,8 +108,8 @@ define i64 @load_unscaled_sext_i8_to_i64(i64 %a) {
 ; CHECK:       ldursb x0, [x0, #-8]
 ; CHECK-NOT:   sxtb
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -122,8 +122,8 @@ define i64 @load_unscaled_sext_i16_to_i64(i64 %a) {
 ; CHECK:       ldursh x0, [x0, #-8]
 ; CHECK-NOT:   sxth
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -136,8 +136,8 @@ define i64 @load_unscaled_sext_i32_to_i64(i64 %a) {
 ; CHECK:       ldursw x0, [x0, #-8]
 ; CHECK-NOT:   sxtw
   %1 = sub i64 %a, 8
-  %2 = inttoptr i64 %1 to i32*
-  %3 = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i32, ptr %2
   br label %bb2
 
 bb2:
@@ -151,8 +151,8 @@ define i32 @load_register_zext_i8_to_i32(i64 %a, i64 %b) {
 ; CHECK:       ldrb w0, [x0, x1]
 ; CHECK-NOT:   uxtb
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -165,8 +165,8 @@ define i32 @load_register_zext_i16_to_i32(i64 %a, i64 %b) {
 ; CHECK:       ldrh w0, [x0, x1]
 ; CHECK-NOT:   uxth
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -179,8 +179,8 @@ define i64 @load_register_zext_i8_to_i64(i64 %a, i64 %b) {
 ; CHECK:       ldrb w0, [x0, x1]
 ; CHECK-NOT:   uxtb
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -193,8 +193,8 @@ define i64 @load_register_zext_i16_to_i64(i64 %a, i64 %b) {
 ; CHECK:       ldrh w0, [x0, x1]
 ; CHECK-NOT:   uxth
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -207,8 +207,8 @@ define i64 @load_register_zext_i32_to_i64(i64 %a, i64 %b) {
 ; CHECK:       ldr w0, [x0, x1]
 ; CHECK-NOT:   uxtw
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i32*
-  %3 = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i32, ptr %2
   br label %bb2
 
 bb2:
@@ -221,8 +221,8 @@ define i32 @load_register_sext_i8_to_i32(i64 %a, i64 %b) {
 ; CHECK:       ldrsb w0, [x0, x1]
 ; CHECK-NOT:   sxtb
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -235,8 +235,8 @@ define i32 @load_register_sext_i16_to_i32(i64 %a, i64 %b) {
 ; CHECK:       ldrsh w0, [x0, x1]
 ; CHECK-NOT:   sxth
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -249,8 +249,8 @@ define i64 @load_register_sext_i8_to_i64(i64 %a, i64 %b) {
 ; CHECK:       ldrsb x0, [x0, x1]
 ; CHECK-NOT:   sxtb
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i8*
-  %3 = load i8, i8* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i8, ptr %2
   br label %bb2
 
 bb2:
@@ -263,8 +263,8 @@ define i64 @load_register_sext_i16_to_i64(i64 %a, i64 %b) {
 ; CHECK:       ldrsh x0, [x0, x1]
 ; CHECK-NOT:   sxth
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i16*
-  %3 = load i16, i16* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i16, ptr %2
   br label %bb2
 
 bb2:
@@ -277,8 +277,8 @@ define i64 @load_register_sext_i32_to_i64(i64 %a, i64 %b) {
 ; CHECK:       ldrsw x0, [x0, x1]
 ; CHECK-NOT:   sxtw
   %1 = add i64 %a, %b
-  %2 = inttoptr i64 %1 to i32*
-  %3 = load i32, i32* %2
+  %2 = inttoptr i64 %1 to ptr
+  %3 = load i32, ptr %2
   br label %bb2
 
 bb2:
@@ -293,8 +293,8 @@ define i32 @load_extend_zext_i8_to_i32(i64 %a, i32 %b) {
 ; CHECK-NOT:   uxtb
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i8*
-  %4 = load i8, i8* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i8, ptr %3
   br label %bb2
 
 bb2:
@@ -308,8 +308,8 @@ define i32 @load_extend_zext_i16_to_i32(i64 %a, i32 %b) {
 ; CHECK-NOT:   uxth
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i16*
-  %4 = load i16, i16* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i16, ptr %3
   br label %bb2
 
 bb2:
@@ -323,8 +323,8 @@ define i64 @load_extend_zext_i8_to_i64(i64 %a, i32 %b) {
 ; CHECK-NOT:   uxtb
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i8*
-  %4 = load i8, i8* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i8, ptr %3
   br label %bb2
 
 bb2:
@@ -338,8 +338,8 @@ define i64 @load_extend_zext_i16_to_i64(i64 %a, i32 %b) {
 ; CHECK-NOT:   uxth
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i16*
-  %4 = load i16, i16* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i16, ptr %3
   br label %bb2
 
 bb2:
@@ -353,8 +353,8 @@ define i64 @load_extend_zext_i32_to_i64(i64 %a, i32 %b) {
 ; CHECK-NOT:   uxtw
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i32*
-  %4 = load i32, i32* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i32, ptr %3
   br label %bb2
 
 bb2:
@@ -368,8 +368,8 @@ define i32 @load_extend_sext_i8_to_i32(i64 %a, i32 %b) {
 ; CHECK-NOT:   sxtb
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i8*
-  %4 = load i8, i8* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i8, ptr %3
   br label %bb2
 
 bb2:
@@ -383,8 +383,8 @@ define i32 @load_extend_sext_i16_to_i32(i64 %a, i32 %b) {
 ; CHECK-NOT:   sxth
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i16*
-  %4 = load i16, i16* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i16, ptr %3
   br label %bb2
 
 bb2:
@@ -398,8 +398,8 @@ define i64 @load_extend_sext_i8_to_i64(i64 %a, i32 %b) {
 ; CHECK-NOT:   sxtb
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i8*
-  %4 = load i8, i8* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i8, ptr %3
   br label %bb2
 
 bb2:
@@ -413,8 +413,8 @@ define i64 @load_extend_sext_i16_to_i64(i64 %a, i32 %b) {
 ; CHECK-NOT:   sxth
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i16*
-  %4 = load i16, i16* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i16, ptr %3
   br label %bb2
 
 bb2:
@@ -428,8 +428,8 @@ define i64 @load_extend_sext_i32_to_i64(i64 %a, i32 %b) {
 ; CHECK-NOT:   sxtw
   %1 = sext i32 %b to i64
   %2 = add i64 %a, %1
-  %3 = inttoptr i64 %2 to i32*
-  %4 = load i32, i32* %3
+  %3 = inttoptr i64 %2 to ptr
+  %4 = load i32, ptr %3
   br label %bb2
 
 bb2:

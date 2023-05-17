@@ -1,7 +1,0 @@
-# FIXME: Nothing depends on this yet.
-static_library("cxx") {
-  output_name = "clangPseudoCXX"
-  configs += [ "//llvm/utils/gn/build:clang_code" ]
-  deps = [ "//clang-tools-extra/pseudo/lib/grammar" ]
-  sources = [ "CXX.cpp" ]
-}

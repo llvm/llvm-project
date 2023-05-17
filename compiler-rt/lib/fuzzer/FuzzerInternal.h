@@ -29,12 +29,11 @@ namespace fuzzer {
 
 using namespace std::chrono;
 
-class Fuzzer {
+class Fuzzer final {
 public:
-
   Fuzzer(UserCallback CB, InputCorpus &Corpus, MutationDispatcher &MD,
-         FuzzingOptions Options);
-  ~Fuzzer();
+         const FuzzingOptions &Options);
+  ~Fuzzer() = delete;
   void Loop(std::vector<SizedFile> &CorporaFiles);
   void ReadAndExecuteSeedCorpora(std::vector<SizedFile> &CorporaFiles);
   void MinimizeCrashLoop(const Unit &U);
@@ -65,7 +64,10 @@ public:
   static void StaticFileSizeExceedCallback();
   static void StaticGracefulExitCallback();
 
-  void ExecuteCallback(const uint8_t *Data, size_t Size);
+  // Executes the target callback on {Data, Size} once.
+  // Returns false if the input was rejected by the target (target returned -1),
+  // and true otherwise.
+  bool ExecuteCallback(const uint8_t *Data, size_t Size);
   bool RunOne(const uint8_t *Data, size_t Size, bool MayDeleteFile = false,
               InputInfo *II = nullptr, bool ForceAddToCorpus = false,
               bool *FoundUniqFeatures = nullptr);
@@ -88,6 +90,7 @@ public:
 
   void HandleMalloc(size_t Size);
   static void MaybeExitGracefully();
+  static int InterruptExitCode();
   std::string WriteToOutputCorpus(const Unit &U);
 
 private:

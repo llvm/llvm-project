@@ -9,7 +9,7 @@
 ; Just examine to see that we read something from $rsp.
 ; CHECK-LABEL: bb.1.if.then:
 ; CHECK:       DBG_PHI $rsp, 1
-; CHECK:       DBG_INSTR_REF 1, 0
+; CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(1, 0)
 
 source_filename = "tlb-9e7172.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
@@ -20,7 +20,7 @@ target triple = "x86_64-cros-linux-gnu"
 ; Function Attrs: noredzone nounwind null_pointer_is_valid optsize sspstrong
 define dso_local void @switch_mm_irqs_off() local_unnamed_addr #0 !dbg !16 {
 entry:
-  %0 = load i32, i32* @c, align 4, !dbg !24
+  %0 = load i32, ptr @c, align 4, !dbg !24
   %tobool.not = icmp eq i32 %0, 0, !dbg !24
   br i1 %tobool.not, label %if.end, label %if.then, !dbg !25
 

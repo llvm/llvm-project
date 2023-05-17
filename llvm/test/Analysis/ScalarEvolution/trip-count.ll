@@ -10,7 +10,8 @@ define void @PR1101(i32 %N) {
 ; CHECK-LABEL: 'PR1101'
 ; CHECK-NEXT:  Determining loop execution counts for: @PR1101
 ; CHECK-NEXT:  Loop %bb3: backedge-taken count is 10000
-; CHECK-NEXT:  Loop %bb3: max backedge-taken count is 10000
+; CHECK-NEXT:  Loop %bb3: constant max backedge-taken count is 10000
+; CHECK-NEXT:  Loop %bb3: symbolic max backedge-taken count is 10000
 ; CHECK-NEXT:  Loop %bb3: Predicated backedge-taken count is 10000
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb3: Trip multiple is 10001
@@ -19,8 +20,8 @@ entry:
   br label %bb3
 
 bb:             ; preds = %bb3
-  %tmp = getelementptr [1000 x i32], [1000 x i32]* @A, i32 0, i32 %i.0          ; <i32*> [#uses=1]
-  store i32 123, i32* %tmp
+  %tmp = getelementptr [1000 x i32], ptr @A, i32 0, i32 %i.0          ; <ptr> [#uses=1]
+  store i32 123, ptr %tmp
   %tmp2 = add i32 %i.0, 1         ; <i32> [#uses=1]
   br label %bb3
 
@@ -40,15 +41,15 @@ define i32 @PR22795() {
 ; CHECK-LABEL: 'PR22795'
 ; CHECK-NEXT:  Determining loop execution counts for: @PR22795
 ; CHECK-NEXT:  Loop %preheader: backedge-taken count is 7
-; CHECK-NEXT:  Loop %preheader: max backedge-taken count is 7
+; CHECK-NEXT:  Loop %preheader: constant max backedge-taken count is 7
+; CHECK-NEXT:  Loop %preheader: symbolic max backedge-taken count is 7
 ; CHECK-NEXT:  Loop %preheader: Predicated backedge-taken count is 7
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %preheader: Trip multiple is 8
 ;
 entry:
   %bins = alloca [16 x i64], align 16
-  %0 = bitcast [16 x i64]* %bins to i8*
-  call void @llvm.memset.p0i8.i64(i8* align 16 %0, i8 0, i64 128, i1 false)
+  call void @llvm.memset.p0.i64(ptr align 16 %bins, i8 0, i64 128, i1 false)
   br label %preheader
 
 preheader:                                        ; preds = %for.inc.1, %entry
@@ -59,11 +60,11 @@ preheader:                                        ; preds = %for.inc.1, %entry
 
 for.body:                                         ; preds = %preheader
   %zext = zext i32 %iv to i64
-  %arrayidx = getelementptr [16 x i64], [16 x i64]* %bins, i64 0, i64 %v11
-  %loaded = load i64, i64* %arrayidx, align 8
+  %arrayidx = getelementptr [16 x i64], ptr %bins, i64 0, i64 %v11
+  %loaded = load i64, ptr %arrayidx, align 8
   %add = add i64 %loaded, 1
   %add2 = add i64 %add, %zext
-  store i64 %add2, i64* %arrayidx, align 8
+  store i64 %add2, ptr %arrayidx, align 8
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %preheader
@@ -72,19 +73,19 @@ for.inc:                                          ; preds = %for.body, %preheade
   br i1 true, label %for.body.1, label %for.inc.1
 
 end:                                              ; preds = %for.inc.1
-  %arrayidx8 = getelementptr [16 x i64], [16 x i64]* %bins, i64 0, i64 2
-  %load = load i64, i64* %arrayidx8, align 16
+  %arrayidx8 = getelementptr [16 x i64], ptr %bins, i64 0, i64 2
+  %load = load i64, ptr %arrayidx8, align 16
   %shr4 = lshr i64 %load, 32
   %conv = trunc i64 %shr4 to i32
   ret i32 %conv
 
 for.body.1:                                       ; preds = %for.inc
   %zext.1 = zext i32 %next to i64
-  %arrayidx.1 = getelementptr [16 x i64], [16 x i64]* %bins, i64 0, i64 %next12
-  %loaded.1 = load i64, i64* %arrayidx.1, align 8
+  %arrayidx.1 = getelementptr [16 x i64], ptr %bins, i64 0, i64 %next12
+  %loaded.1 = load i64, ptr %arrayidx.1, align 8
   %add.1 = add i64 %loaded.1, 1
   %add2.1 = add i64 %add.1, %zext.1
-  store i64 %add2.1, i64* %arrayidx.1, align 8
+  store i64 %add2.1, ptr %arrayidx.1, align 8
   br label %for.inc.1
 
 for.inc.1:                                        ; preds = %for.body.1, %for.inc
@@ -95,7 +96,7 @@ for.inc.1:                                        ; preds = %for.body.1, %for.in
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture, i8, i64, i1) #0
+declare void @llvm.memset.p0.i64(ptr nocapture, i8, i64, i1) #0
 
 declare void @may_exit() nounwind
 
@@ -103,7 +104,8 @@ define void @pr28012(i32 %n) {
 ; CHECK-LABEL: 'pr28012'
 ; CHECK-NEXT:  Determining loop execution counts for: @pr28012
 ; CHECK-NEXT:  Loop %loop: backedge-taken count is -1431655751
-; CHECK-NEXT:  Loop %loop: max backedge-taken count is -1431655751
+; CHECK-NEXT:  Loop %loop: constant max backedge-taken count is -1431655751
+; CHECK-NEXT:  Loop %loop: symbolic max backedge-taken count is -1431655751
 ; CHECK-NEXT:  Loop %loop: Predicated backedge-taken count is -1431655751
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %loop: Trip multiple is 2863311546

@@ -1,3 +1,4 @@
+// RUN: export LSAN_OPTIONS=detect_leaks=0
 // RUN: rm -f "%t.d" "%t1.s" "%t2.s" "%t3.s" "%t4.s" "%t5.s"
 //
 // RUN: touch %t.s

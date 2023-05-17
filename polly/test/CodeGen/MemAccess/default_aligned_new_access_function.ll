@@ -14,7 +14,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @simple_stride(i32* noalias %A, i32* noalias %B) {
+define void @simple_stride(ptr noalias %A, ptr noalias %B) {
 entry:
   br label %for.cond
 
@@ -25,11 +25,11 @@ for.cond:                                         ; preds = %for.inc, %entry
 
 for.body:                                         ; preds = %for.cond
   %tmp = shl nsw i64 %indvars.iv, 1
-  %arrayidx = getelementptr inbounds i32, i32* %B, i64 %tmp
-  %tmp4 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %B, i64 %tmp
+  %tmp4 = load i32, ptr %arrayidx, align 4
   %tmp5 = shl nsw i64 %indvars.iv, 1
-  %arrayidx3 = getelementptr inbounds i32, i32* %A, i64 %tmp5
-  store i32 %tmp4, i32* %arrayidx3, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %A, i64 %tmp5
+  store i32 %tmp4, ptr %arrayidx3, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

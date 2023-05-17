@@ -13,7 +13,7 @@ entry:
 
 for.body:
   %loopIdx.051 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  store i32 1, i32* @g, align 4
+  store i32 1, ptr @g, align 4
   %inc = add i32 %loopIdx.051, 1
   %cmp9 = icmp ult i32 %inc, 5
   br i1 %cmp9, label %for.body, label %if.end38

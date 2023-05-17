@@ -1,18 +1,9 @@
-; Legacy pass manager
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadPolly -enable-new-pm=0 -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-;
-; New pass manager
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
-; RUN: opt %loadNPMPolly -enable-new-pm=1 -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -O0 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -O1 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -O2 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -O3 -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=ON
+; RUN: opt %loadNPMPolly -polly -Os -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
+; RUN: opt %loadNPMPolly -polly -Oz -S < %s | FileCheck %s --check-prefix=CHECK --check-prefix=OFF
 ;
 ; Check that Polly's default pipeline works from detection to code generation
 ; with either pass manager.
@@ -24,7 +15,7 @@
 ;   A[0] = 42.0;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -34,7 +25,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 42.0, double* %A
+      store double 42.0, ptr %A
       br label %inc
 
 inc:
@@ -51,5 +42,5 @@ return:
 
 ; CHECK-LABEL: define void @func(
 ; ON:       polly.stmt.body.lr.ph:
-; ON-NEXT:    store double 4.200000e+01, double* %A, align 8
+; ON-NEXT:    store double 4.200000e+01, ptr %A, align 8
 ; OFF-NOT:  polly

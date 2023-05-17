@@ -1,6 +1,3 @@
-from __future__ import print_function
-
-
 def bar_function(debugger, args, result, dict):
     global UtilityModule
     print(UtilityModule.barutil_function("bar told me " + args), file=result)

@@ -29,48 +29,48 @@ using namespace minidump;
   {                                                                            \
     "x" #i, nullptr, 8, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,          \
         {arm64_dwarf::x##i, arm64_dwarf::x##i, INV, INV, reg_x##i},            \
-        nullptr, nullptr,                                                      \
+        nullptr, nullptr, nullptr,                                             \
   }
 
 #define DEF_W(i)                                                               \
   {                                                                            \
     "w" #i, nullptr, 4, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,          \
-        {INV, INV, INV, INV, reg_w##i}, nullptr, nullptr,                      \
+        {INV, INV, INV, INV, reg_w##i}, nullptr, nullptr, nullptr,             \
   }
 
 #define DEF_X_ARG(i, n)                                                        \
   {                                                                            \
     "x" #i, "arg" #n, 8, OFFSET(x) + i * 8, eEncodingUint, eFormatHex,         \
         {arm64_dwarf::x##i, arm64_dwarf::x##i, LLDB_REGNUM_GENERIC_ARG1 + i,   \
-         INV, reg_x##i}, nullptr, nullptr,                                     \
+         INV, reg_x##i}, nullptr, nullptr, nullptr,                            \
   }
 
 #define DEF_V(i)                                                               \
   {                                                                            \
     "v" #i, nullptr, 16, OFFSET(v) + i * 16, eEncodingVector,                  \
         eFormatVectorOfUInt8, {arm64_dwarf::v##i, arm64_dwarf::v##i, INV, INV, \
-        reg_v##i}, nullptr, nullptr,                                           \
+        reg_v##i}, nullptr, nullptr, nullptr,                                  \
   }
 
 #define DEF_D(i)                                                               \
   {                                                                            \
     "d" #i, nullptr, 8, OFFSET(v) + i * 16, eEncodingVector,                   \
         eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_d##i}, nullptr,         \
-        nullptr,                                                               \
+        nullptr, nullptr,                                                      \
   }
 
 #define DEF_S(i)                                                               \
   {                                                                            \
     "s" #i, nullptr, 4, OFFSET(v) + i * 16, eEncodingVector,                   \
         eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_s##i}, nullptr,         \
-        nullptr,                                                               \
+        nullptr, nullptr,                                                      \
   }
 
 #define DEF_H(i)                                                               \
   {                                                                            \
     "h" #i, nullptr, 2, OFFSET(v) + i * 16, eEncodingVector,                   \
         eFormatVectorOfUInt8, {INV, INV, INV, INV, reg_h##i}, nullptr,         \
-        nullptr,                                                               \
+        nullptr, nullptr,                                                      \
   }
 
 // Zero based LLDB register numbers for this register context
@@ -316,6 +316,7 @@ static RegisterInfo g_reg_infos[] = {
      {arm64_dwarf::x29, arm64_dwarf::x29, LLDB_REGNUM_GENERIC_FP, INV, reg_fp},
      nullptr,
      nullptr,
+     nullptr,
     },
     {"lr",
      "x30",
@@ -324,6 +325,7 @@ static RegisterInfo g_reg_infos[] = {
      eEncodingUint,
      eFormatHex,
      {arm64_dwarf::x30, arm64_dwarf::x30, LLDB_REGNUM_GENERIC_RA, INV, reg_lr},
+     nullptr,
      nullptr,
      nullptr,
     },
@@ -336,6 +338,7 @@ static RegisterInfo g_reg_infos[] = {
      {arm64_dwarf::x31, arm64_dwarf::x31, LLDB_REGNUM_GENERIC_SP, INV, reg_sp},
      nullptr,
      nullptr,
+     nullptr,
     },
     {"pc",
      nullptr,
@@ -344,6 +347,7 @@ static RegisterInfo g_reg_infos[] = {
      eEncodingUint,
      eFormatHex,
      {arm64_dwarf::pc, arm64_dwarf::pc, LLDB_REGNUM_GENERIC_PC, INV, reg_pc},
+     nullptr,
      nullptr,
      nullptr,
     },
@@ -389,6 +393,7 @@ static RegisterInfo g_reg_infos[] = {
      {INV, arm64_dwarf::cpsr, LLDB_REGNUM_GENERIC_FLAGS, INV, reg_cpsr},
      nullptr,
      nullptr,
+     nullptr,
     },
     {"fpsr",
      nullptr,
@@ -399,6 +404,7 @@ static RegisterInfo g_reg_infos[] = {
      {INV, INV, INV, INV, reg_fpsr},
      nullptr,
      nullptr,
+     nullptr,
     },
     {"fpcr",
      nullptr,
@@ -407,6 +413,7 @@ static RegisterInfo g_reg_infos[] = {
      eEncodingUint,
      eFormatHex,
      {INV, INV, INV, INV, reg_fpcr},
+     nullptr,
      nullptr,
      nullptr,
     },
@@ -544,7 +551,7 @@ static RegisterInfo g_reg_infos[] = {
     DEF_H(31),
 };
 
-constexpr size_t k_num_reg_infos = llvm::array_lengthof(g_reg_infos);
+constexpr size_t k_num_reg_infos = std::size(g_reg_infos);
 
 // ARM64 general purpose registers.
 const uint32_t g_gpr_regnums[] = {
@@ -751,15 +758,15 @@ const uint32_t g_fpu_regnums[] = {
 };
 
 // Skip the last LLDB_INVALID_REGNUM in each count below by subtracting 1
-constexpr size_t k_num_gpr_regs = llvm::array_lengthof(g_gpr_regnums) - 1;
-constexpr size_t k_num_fpu_regs = llvm::array_lengthof(g_fpu_regnums) - 1;
+constexpr size_t k_num_gpr_regs = std::size(g_gpr_regnums) - 1;
+constexpr size_t k_num_fpu_regs = std::size(g_fpu_regnums) - 1;
 
 static RegisterSet g_reg_sets[] = {
     {"General Purpose Registers", "gpr", k_num_gpr_regs, g_gpr_regnums},
     {"Floating Point Registers", "fpu", k_num_fpu_regs, g_fpu_regnums},
 };
 
-constexpr size_t k_num_reg_sets = llvm::array_lengthof(g_reg_sets);
+constexpr size_t k_num_reg_sets = std::size(g_reg_sets);
 
 RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
     lldb_private::Thread &thread, const DataExtractor &data)
@@ -775,7 +782,7 @@ RegisterContextMinidump_ARM64::RegisterContextMinidump_ARM64(
   auto regs_data = data.GetData(&offset, sizeof(m_regs.v));
   if (regs_data)
     memcpy(m_regs.v, regs_data, sizeof(m_regs.v));
-  static_assert(k_num_regs == k_num_reg_infos, "");
+  static_assert(k_num_regs == k_num_reg_infos);
 }
 size_t RegisterContextMinidump_ARM64::GetRegisterCount() { return k_num_regs; }
 
@@ -806,7 +813,7 @@ bool RegisterContextMinidump_ARM64::ReadRegister(const RegisterInfo *reg_info,
                                                  RegisterValue &reg_value) {
   Status error;
   reg_value.SetFromMemoryData(
-      reg_info, (const uint8_t *)&m_regs + reg_info->byte_offset,
+      *reg_info, (const uint8_t *)&m_regs + reg_info->byte_offset,
       reg_info->byte_size, lldb::eByteOrderLittle, error);
   return error.Success();
 }

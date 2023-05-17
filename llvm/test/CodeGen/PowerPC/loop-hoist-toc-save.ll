@@ -2,7 +2,7 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-linux-gnu -hoist-const-stores -ppc-stack-ptr-caller-preserved < %s | FileCheck %s -check-prefix=CHECKBE
 
 ; Test hoist out of single loop
-define signext i32 @test1(i32 signext %lim, i32 (i32)* nocapture %Func) {
+define signext i32 @test1(i32 signext %lim, ptr nocapture %Func) {
 entry:
 ; CHECK-LABEL: test1
 ; CHECK: for.body.preheader
@@ -36,7 +36,7 @@ for.body:                                         ; preds = %for.body.preheader,
 }
 
 ; Test hoist of nested loop goes to outter loop preheader
-define signext i32 @test2(i32 signext %lim, i32 (i32)* nocapture %Func) {
+define signext i32 @test2(i32 signext %lim, ptr nocapture %Func) {
 entry:
 ; CHECK-LABEL: test2
 ; CHECK: for.body4.lr.ph.preheader
@@ -82,7 +82,7 @@ for.body4:                                        ; preds = %for.body4, %for.bod
 ; Test hoist out of if statement with low branch probability
 ; FIXME: we shouldn't hoist in such cases as it could increase the number
 ; of stores after hoisting.
-define signext i32 @test3(i32 signext %lim, i32 (i32)* nocapture %Func) {
+define signext i32 @test3(i32 signext %lim, ptr nocapture %Func) {
 entry:
 ; CHECK-LABEL: test3
 ; CHECK: %for.body.lr.ph

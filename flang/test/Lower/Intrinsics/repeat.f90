@@ -13,7 +13,7 @@ subroutine repeat_test(c, n)
   ! CHECK-DAG: %[[cBox:.*]] = fir.embox %[[c]]#0 typeparams %[[c]]#1 : (!fir.ref<!fir.char<1,?>>, index) -> !fir.box<!fir.char<1,?>>
   ! CHECK-DAG: %[[cBoxNone:.*]] = fir.convert %[[cBox]] : (!fir.box<!fir.char<1,?>>) -> !fir.box<none>
   ! CHECK-DAG: %[[resBox:.*]] = fir.convert %[[tmpBox]] : (!fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>) -> !fir.ref<!fir.box<none>>
-  ! CHECK: fir.call @{{.*}}Repeat(%[[resBox]], %[[cBoxNone]], %[[n]], {{.*}}, {{.*}}) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
+  ! CHECK: fir.call @{{.*}}Repeat(%[[resBox]], %[[cBoxNone]], %[[n]], {{.*}}, {{.*}}) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.box<none>, i64, !fir.ref<i8>, i32) -> none
   ! CHECK-DAG: %[[tmpAddr:.*]] = fir.box_addr
   ! CHECK-DAG: fir.box_elesize
   ! CHECK: fir.call @{{.*}}bar_repeat_test

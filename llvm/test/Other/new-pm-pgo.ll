@@ -10,7 +10,7 @@
 ; RUN:     |FileCheck %s --check-prefixes=SAMPLE_USE,SAMPLE_USE_PRE_LINK
 ; RUN: opt -debug-pass-manager -passes='thinlto<O2>' -pgo-kind=pgo-sample-use-pipeline -profile-file='%S/Inputs/new-pm-pgo.prof' %s 2>&1 \
 ; RUN:     |FileCheck %s --check-prefixes=SAMPLE_USE,SAMPLE_USE_POST_LINK
-; RUN: opt -debug-pass-manager -passes='default<O2>' -new-pm-debug-info-for-profiling %s 2>&1 |FileCheck %s --check-prefixes=SAMPLE_GEN
+; RUN: opt -debug-pass-manager -passes='default<O2>' -debug-info-for-profiling %s 2>&1 |FileCheck %s --check-prefixes=SAMPLE_GEN
 ;
 ; GEN: Running pass: PGOInstrumentationGen
 ; USE: Running pass: PGOInstrumentationUse
@@ -24,7 +24,6 @@
 ; SAMPLE_USE: Running pass: SimplifyCFGPass
 ; SAMPLE_USE: Running pass: SROAPass
 ; SAMPLE_USE: Running pass: EarlyCSEPass
-; SAMPLE_USE_POST_LINK: Running pass: InstCombinePass
 ; SAMPLE_USE: Running pass: SampleProfileLoaderPass
 ; SAMPLE_USE_O: Running pass: PGOIndirectCallPromotion
 ; SAMPLE_USE_POST_LINK-NOT: Running pass: GlobalOptPass

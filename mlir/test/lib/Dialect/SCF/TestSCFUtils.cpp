@@ -10,17 +10,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/MemRef/IR/MemRef.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-
-#include "llvm/ADT/SetVector.h"
 
 using namespace mlir;
 
@@ -37,7 +36,7 @@ struct TestSCFForUtilsPass
   Option<bool> testReplaceWithNewYields{
       *this, "test-replace-with-new-yields",
       llvm::cl::desc("Test replacing a loop with a new loop that returns new "
-                     "additional yeild values"),
+                     "additional yield values"),
       llvm::cl::init(false)};
 
   void runOnOperation() override {
@@ -133,6 +132,7 @@ struct TestSCFPipeliningPass
               std::vector<std::pair<Operation *, unsigned>> &schedule) {
     if (!forOp->hasAttr(kTestPipeliningLoopMarker))
       return;
+
     schedule.resize(forOp.getBody()->getOperations().size() - 1);
     forOp.walk([&schedule](Operation *op) {
       auto attrStage =
@@ -140,6 +140,8 @@ struct TestSCFPipeliningPass
       auto attrCycle =
           op->getAttrOfType<IntegerAttr>(kTestPipeliningOpOrderMarker);
       if (attrCycle && attrStage) {
+        // TODO: Index can be out-of-bounds if ops of the loop body disappear
+        // due to folding.
         schedule[attrCycle.getInt()] =
             std::make_pair(op, unsigned(attrStage.getInt()));
       }
@@ -148,24 +150,37 @@ struct TestSCFPipeliningPass
 
   /// Helper to generate "predicated" version of `op`. For simplicity we just
   /// wrap the operation in a scf.ifOp operation.
-  static Operation *predicateOp(Operation *op, Value pred,
-                                PatternRewriter &rewriter) {
+  static Operation *predicateOp(RewriterBase &rewriter, Operation *op,
+                                Value pred) {
     Location loc = op->getLoc();
     auto ifOp =
         rewriter.create<scf::IfOp>(loc, op->getResultTypes(), pred, true);
     // True branch.
     op->moveBefore(&ifOp.getThenRegion().front(),
-                   ifOp.getThenRegion().front().end());
+                   ifOp.getThenRegion().front().begin());
     rewriter.setInsertionPointAfter(op);
-    rewriter.create<scf::YieldOp>(loc, op->getResults());
+    if (op->getNumResults() > 0)
+      rewriter.create<scf::YieldOp>(loc, op->getResults());
     // False branch.
     rewriter.setInsertionPointToStart(&ifOp.getElseRegion().front());
-    SmallVector<Value> zeros;
-    for (Type type : op->getResultTypes()) {
-      zeros.push_back(
-          rewriter.create<arith::ConstantOp>(loc, rewriter.getZeroAttr(type)));
+    SmallVector<Value> elseYieldOperands;
+    elseYieldOperands.reserve(ifOp.getNumResults());
+    if (auto viewOp = dyn_cast<memref::SubViewOp>(op)) {
+      // For sub-views, just clone the op.
+      // NOTE: This is okay in the test because we use dynamic memref sizes, so
+      // the verifier will not complain. Otherwise, we may create a logically
+      // out-of-bounds view and a different technique should be used.
+      Operation *opClone = rewriter.clone(*op);
+      elseYieldOperands.append(opClone->result_begin(), opClone->result_end());
+    } else {
+      // Default to assuming constant numeric values.
+      for (Type type : op->getResultTypes()) {
+        elseYieldOperands.push_back(rewriter.create<arith::ConstantOp>(
+            loc, rewriter.getZeroAttr(type)));
+      }
     }
-    rewriter.create<scf::YieldOp>(loc, zeros);
+    if (op->getNumResults() > 0)
+      rewriter.create<scf::YieldOp>(loc, elseYieldOperands);
     return ifOp.getOperation();
   }
 
@@ -189,7 +204,7 @@ struct TestSCFPipeliningPass
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
-    registry.insert<arith::ArithmeticDialect>();
+    registry.insert<arith::ArithDialect, memref::MemRefDialect>();
   }
 
   void runOnOperation() override {

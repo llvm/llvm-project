@@ -175,7 +175,7 @@ module attributes {gpu.container_module} {
     // CHECK: %[[t0:.*]] = gpu.wait async
     // CHECK-NOT: [{{.*}}]
     %t0 = gpu.wait async
-    // CHECK: %[[t1:.*]] = gpu.wait async [%[[t0]], %[[t0]]]
+    // CHECK: %[[t1:.*]] = gpu.wait async [%[[t0]]]
     %t1 = gpu.wait async [%t0]
     // CHECK: %[[m:.*]], %[[t2:.*]] = gpu.alloc async [%[[t1]], %[[t0]]] ()
     %0 = gpu.alloc [%t0] () : memref<7xf32>

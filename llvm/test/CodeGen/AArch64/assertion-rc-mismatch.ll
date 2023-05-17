@@ -7,18 +7,18 @@ cmp:
   %lnot.i.i = icmp eq i64 %encodedBase, 0
   br i1 %lnot.i.i, label %if, label %else
 if:
-  %tmp1 = call i8* @llvm.returnaddress(i32 0)
+  %tmp1 = call ptr @llvm.returnaddress(i32 0)
   br label %end
 else:
-  %tmp3 = call i8* @llvm.returnaddress(i32 0)
-  %ptr = getelementptr inbounds i8, i8* %tmp3, i64 -16
-  %ld = load i8, i8* %ptr, align 4
-  %tmp2 = inttoptr i8 %ld to i8*
+  %tmp3 = call ptr @llvm.returnaddress(i32 0)
+  %ptr = getelementptr inbounds i8, ptr %tmp3, i64 -16
+  %ld = load i8, ptr %ptr, align 4
+  %tmp2 = inttoptr i8 %ld to ptr
   br label %end
 end:
-  %tmp = phi i8* [ %tmp1, %if ], [ %tmp2, %else ]
-  %coerce.val.pi56 = ptrtoint i8* %tmp to i64
+  %tmp = phi ptr [ %tmp1, %if ], [ %tmp2, %else ]
+  %coerce.val.pi56 = ptrtoint ptr %tmp to i64
   ret i64 %coerce.val.pi56
 }
 
-declare i8* @llvm.returnaddress(i32)
+declare ptr @llvm.returnaddress(i32)

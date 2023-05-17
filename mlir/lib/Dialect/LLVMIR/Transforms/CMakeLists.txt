@@ -1,14 +1,17 @@
 add_mlir_dialect_library(MLIRLLVMIRTransforms
+  DIScopeForLLVMFuncOp.cpp
   LegalizeForExport.cpp
   OptimizeForNVVM.cpp
+  RequestCWrappers.cpp
 
   DEPENDS
   MLIRLLVMPassIncGen
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRLLVMIR
+  MLIRFuncDialect
+  MLIRLLVMDialect
   MLIRPass
   MLIRTransforms
-  MLIRNVVMIR
+  MLIRNVVMDialect
   )

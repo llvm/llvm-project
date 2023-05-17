@@ -13,7 +13,7 @@ add_mlir_conversion_library(MLIRPDLToPDLInterp
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRInferTypeOpInterface
-  MLIRPDL
-  MLIRPDLInterp
+  MLIRPDLDialect
+  MLIRPDLInterpDialect
   MLIRPass
   )

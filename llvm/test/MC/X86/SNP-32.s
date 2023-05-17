@@ -6,4 +6,4 @@ pvalidate
 
 // CHECK: pvalidate
 // CHECK: encoding: [0xf2,0x0f,0x01,0xff]
-pvalidate	%eax
+pvalidate	%eax, %ecx, %edx

@@ -2,6 +2,7 @@
 #include "testing.h"
 #include "flang/Evaluate/fold.h"
 #include "flang/Evaluate/intrinsics.h"
+#include "flang/Evaluate/target.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/message.h"
 #include <cstdio>
@@ -20,8 +21,9 @@ int main() {
   MATCH("2_4+3_4*(-4_4)", ex1.AsFortran());
   Fortran::common::IntrinsicTypeDefaultKinds defaults;
   auto intrinsics{Fortran::evaluate::IntrinsicProcTable::Configure(defaults)};
-  FoldingContext context{
-      Fortran::parser::ContextualMessages{nullptr}, defaults, intrinsics};
+  TargetCharacteristics targetCharacteristics;
+  FoldingContext context{Fortran::parser::ContextualMessages{nullptr}, defaults,
+      intrinsics, targetCharacteristics};
   ex1 = Fold(context, std::move(ex1));
   MATCH("-10_4", ex1.AsFortran());
   MATCH("1_4/2_4", (DefaultIntegerExpr{1} / DefaultIntegerExpr{2}).AsFortran());

@@ -1,9 +1,9 @@
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2  %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-amdhsa --amdhsa-code-object-version=2 -mcpu=carrizo -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,CO-V2  %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
-; RUN: llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs < %s | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
-; RUN: llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs < %s | FileCheck -check-prefixes=ALL,CO-V2 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2  %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -global-isel -mtriple=amdgcn-unknown-amdhsa -mcpu=carrizo -verify-machineinstrs | FileCheck --check-prefixes=ALL,CO-V2  %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel -mtriple=amdgcn-- -mcpu=hawaii -verify-machineinstrs | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel -mtriple=amdgcn-- -mcpu=tonga -verify-machineinstrs | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii -verify-machineinstrs | FileCheck -check-prefixes=ALL,CO-V2 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -global-isel -mtriple=amdgcn-unknown-mesa3d -mcpu=tonga -verify-machineinstrs | FileCheck -check-prefixes=ALL,CO-V2 %s
 
 declare i32 @llvm.amdgcn.workgroup.id.x() #0
 declare i32 @llvm.amdgcn.workgroup.id.y() #0
@@ -34,9 +34,9 @@ declare i32 @llvm.amdgcn.workgroup.id.z() #0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_x(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_x(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.x()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
@@ -61,9 +61,9 @@ define amdgpu_kernel void @test_workgroup_id_x(i32 addrspace(1)* %out) #1 {
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_y(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_y(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.y()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
@@ -96,11 +96,14 @@ define amdgpu_kernel void @test_workgroup_id_y(i32 addrspace(1)* %out) #1 {
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Y_EN: 0
 ; ALL: COMPUTE_PGM_RSRC2:TGID_Z_EN: 1
 ; ALL: COMPUTE_PGM_RSRC2:TIDIG_COMP_CNT: 0
-define amdgpu_kernel void @test_workgroup_id_z(i32 addrspace(1)* %out) #1 {
+define amdgpu_kernel void @test_workgroup_id_z(ptr addrspace(1) %out) #1 {
   %id = call i32 @llvm.amdgcn.workgroup.id.z()
-  store i32 %id, i32 addrspace(1)* %out
+  store i32 %id, ptr addrspace(1) %out
   ret void
 }
 
 attributes #0 = { nounwind readnone }
 attributes #1 = { nounwind }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

@@ -9,10 +9,10 @@
 	ldr32.w r3, (rgb, r3 << 0)
 	jsr16 r3
 
-# CHECK:            0:      	lrw16	r0, 0x10 <$d.0>
+# CHECK:            0:      	lrw16	r0, 0x10
 # CHECK-NEXT:       2:      	grs32	r2, 0x0
 # CHECK-NEXT:       6:      	addu16	r0, r0, r2
-# CHECK-NEXT:       8:      	lrw16	r3, 0x14  <$d.0+0x4>
+# CHECK-NEXT:       8:      	lrw16	r3, 0x14
 # CHECK-NEXT:       a:      	ldr32.w	r3, (r28, r3 << 0)
 # CHECK-NEXT:       e:      	jsr16	r3
 

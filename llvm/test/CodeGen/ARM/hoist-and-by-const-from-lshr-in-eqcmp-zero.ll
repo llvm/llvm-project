@@ -970,9 +970,8 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM6:       @ %bb.0:
 ; ARM6-NEXT:    uxtb r1, r1
 ; ARM6-NEXT:    mov r2, #24
-; ARM6-NEXT:    and r1, r0, r2, lsr r1
+; ARM6-NEXT:    ands r0, r0, r2, lsr r1
 ; ARM6-NEXT:    mov r0, #0
-; ARM6-NEXT:    cmp r1, #0
 ; ARM6-NEXT:    movmi r0, #1
 ; ARM6-NEXT:    bx lr
 ;
@@ -980,9 +979,8 @@ define i1 @negative_scalar_i8_bitsinmiddle_slt(i8 %x, i8 %y) nounwind {
 ; ARM78:       @ %bb.0:
 ; ARM78-NEXT:    uxtb r1, r1
 ; ARM78-NEXT:    mov r2, #24
-; ARM78-NEXT:    and r1, r0, r2, lsr r1
+; ARM78-NEXT:    ands r0, r0, r2, lsr r1
 ; ARM78-NEXT:    mov r0, #0
-; ARM78-NEXT:    cmp r1, #0
 ; ARM78-NEXT:    movwmi r0, #1
 ; ARM78-NEXT:    bx lr
 ;

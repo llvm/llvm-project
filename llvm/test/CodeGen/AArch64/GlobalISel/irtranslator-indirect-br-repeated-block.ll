@@ -16,7 +16,7 @@ define void @foo() {
   ; CHECK:   successors:
   ; CHECK: bb.4 (%ir-block.3):
   ; CHECK:   RET_ReallyLR
-  indirectbr i8* undef, [label %1, label %3, label %2, label %3, label %3]
+  indirectbr ptr undef, [label %1, label %3, label %2, label %3, label %3]
 1:
   unreachable
 2:

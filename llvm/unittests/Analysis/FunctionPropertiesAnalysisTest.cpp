@@ -17,6 +17,7 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/Passes/PassBuilder.h"
+#include "llvm/Passes/StandardInstrumentations.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "gtest/gtest.h"
@@ -26,14 +27,25 @@ using namespace llvm;
 namespace {
 
 class FunctionPropertiesAnalysisTest : public testing::Test {
+public:
+  FunctionPropertiesAnalysisTest() {
+    FAM.registerPass([&] { return DominatorTreeAnalysis(); });
+    FAM.registerPass([&] { return LoopAnalysis(); });
+    FAM.registerPass([&] { return PassInstrumentationAnalysis(); });
+  }
+
 protected:
   std::unique_ptr<DominatorTree> DT;
   std::unique_ptr<LoopInfo> LI;
+  FunctionAnalysisManager FAM;
 
   FunctionPropertiesInfo buildFPI(Function &F) {
-    DT.reset(new DominatorTree(F));
-    LI.reset(new LoopInfo(*DT));
-    return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, *LI);
+    return FunctionPropertiesInfo::getFunctionPropertiesInfo(F, FAM);
+  }
+
+  void invalidate(Function &F) {
+    PreservedAnalyses PA = PreservedAnalyses::none();
+    FAM.invalidate(F, PA);
   }
 
   std::unique_ptr<Module> makeLLVMModule(LLVMContext &C, const char *IR) {
@@ -145,7 +157,8 @@ define i32 @f2(i32 %a) {
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  FPU.finish(*LI);
+  invalidate(*F1);
+  FPU.finish(FAM);
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -198,7 +211,8 @@ define i32 @f2(i32 %a) {
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  FPU.finish(*LI);
+  invalidate(*F1);
+  FPU.finish(FAM);
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -264,9 +278,8 @@ exit:
 
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  DominatorTree DTNew(*F1);
-  LoopInfo LINew(DTNew);
-  FPU.finish(LINew);
+  invalidate(*F1);
+  FPU.finish(FAM);
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
@@ -310,11 +323,9 @@ declare i32 @__gxx_personality_v0(...)
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  DominatorTree DTNew(*F1);
-  LoopInfo LINew(DTNew);
-  FPU.finish(LINew);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size());
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size());
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount());
 }
@@ -365,14 +376,12 @@ declare i32 @__gxx_personality_v0(...)
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  DominatorTree DTNew(*F1);
-  LoopInfo LINew(DTNew);
-  FPU.finish(LINew);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
-  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, LINew));
+  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, Rethrow) {
@@ -421,14 +430,12 @@ declare i32 @__gxx_personality_v0(...)
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  DominatorTree DTNew(*F1);
-  LoopInfo LINew(DTNew);
-  FPU.finish(LINew);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
-  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, LINew));
+  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, LPadChanges) {
@@ -475,14 +482,12 @@ lpad:
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  DominatorTree DTNew(*F1);
-  LoopInfo LINew(DTNew);
-  FPU.finish(LINew);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
-  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, LINew));
+  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, LPadChangesConditional) {
@@ -533,14 +538,12 @@ lpad:
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  DominatorTree DTNew(*F1);
-  LoopInfo LINew(DTNew);
-  FPU.finish(LINew);
-  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount),
-            F1->getBasicBlockList().size() - 1);
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(static_cast<size_t>(FPI.BasicBlockCount), F1->size() - 1);
   EXPECT_EQ(static_cast<size_t>(FPI.TotalInstructionCount),
             F1->getInstructionCount() - 2);
-  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, LINew));
+  EXPECT_EQ(FPI, FunctionPropertiesInfo::getFunctionPropertiesInfo(*F1, FAM));
 }
 
 TEST_F(FunctionPropertiesAnalysisTest, InlineSameLoopBB) {
@@ -606,8 +609,135 @@ end:
   InlineFunctionInfo IFI;
   auto IR = llvm::InlineFunction(*CB, IFI);
   EXPECT_TRUE(IR.isSuccess());
-  FPU.finish(*LI);
+  invalidate(*F1);
+  FPU.finish(FAM);
   EXPECT_EQ(FPI, ExpectedFinal);
 }
 
+TEST_F(FunctionPropertiesAnalysisTest, Unreachable) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+define i64 @f1(i32 noundef %value) {
+entry:
+  br i1 true, label %cond.true, label %cond.false
+
+cond.true:                                        ; preds = %entry
+  %conv2 = sext i32 %value to i64
+  br label %cond.end
+
+cond.false:                                       ; preds = %entry
+  %call3 = call noundef i64 @f2()
+  br label %extra
+
+extra:
+  br label %extra2
+
+extra2:
+  br label %cond.end
+
+cond.end:                                         ; preds = %cond.false, %cond.true
+  %cond = phi i64 [ %conv2, %cond.true ], [ %call3, %extra ]
+  ret i64 %cond
+}
+
+define i64 @f2() {
+entry:
+  tail call void @llvm.trap()
+  unreachable
+}
+
+declare void @llvm.trap()
+)IR");
+
+  Function *F1 = M->getFunction("f1");
+  CallBase *CB = findCall(*F1);
+  EXPECT_NE(CB, nullptr);
+
+  FunctionPropertiesInfo ExpectedInitial;
+  ExpectedInitial.BasicBlockCount = 6;
+  ExpectedInitial.TotalInstructionCount = 9;
+  ExpectedInitial.BlocksReachedFromConditionalInstruction = 2;
+  ExpectedInitial.Uses = 1;
+  ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+  
+  FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
+  ExpectedFinal.BasicBlockCount = 4;
+  ExpectedFinal.DirectCallsToDefinedFunctions = 0;
+  ExpectedFinal.TotalInstructionCount = 7;
+
+  auto FPI = buildFPI(*F1);
+  EXPECT_EQ(FPI, ExpectedInitial);
+
+  FunctionPropertiesUpdater FPU(FPI, *CB);
+  InlineFunctionInfo IFI;
+  auto IR = llvm::InlineFunction(*CB, IFI);
+  EXPECT_TRUE(IR.isSuccess());
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(FPI, ExpectedFinal);
+}
+
+TEST_F(FunctionPropertiesAnalysisTest, InvokeSkipLP) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = makeLLVMModule(C,
+                                             R"IR(
+target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
+target triple = "x86_64-pc-linux-gnu"
+
+define i64 @f1(i32 noundef %value) {
+entry:
+  invoke fastcc void @f2() to label %cont unwind label %lpad
+cont:
+  ret i64 1
+lpad:
+  %lp = landingpad i32 cleanup
+  br label %ehcleanup
+ehcleanup:
+  resume i32 0
+}
+define void @f2() {
+  invoke noundef void @f3() to label %exit unwind label %lpad
+exit:
+  ret void
+lpad:
+  %lp = landingpad i32 cleanup
+  resume i32 %lp
+}
+declare void @f3()
+)IR");
+
+  // The outcome of inlining will be that lpad becomes unreachable. The landing
+  // pad of the invoke inherited from f2 will land on a new bb which will branch
+  // to a bb containing the body of lpad.
+  Function *F1 = M->getFunction("f1");
+  CallBase *CB = findCall(*F1);
+  EXPECT_NE(CB, nullptr);
+
+  FunctionPropertiesInfo ExpectedInitial;
+  ExpectedInitial.BasicBlockCount = 4;
+  ExpectedInitial.TotalInstructionCount = 5;
+  ExpectedInitial.BlocksReachedFromConditionalInstruction = 0;
+  ExpectedInitial.Uses = 1;
+  ExpectedInitial.DirectCallsToDefinedFunctions = 1;
+
+  FunctionPropertiesInfo ExpectedFinal = ExpectedInitial;
+  ExpectedFinal.BasicBlockCount = 6;
+  ExpectedFinal.DirectCallsToDefinedFunctions = 0;
+  ExpectedFinal.TotalInstructionCount = 8;
+
+  auto FPI = buildFPI(*F1);
+  EXPECT_EQ(FPI, ExpectedInitial);
+
+  FunctionPropertiesUpdater FPU(FPI, *CB);
+  InlineFunctionInfo IFI;
+  auto IR = llvm::InlineFunction(*CB, IFI);
+  EXPECT_TRUE(IR.isSuccess());
+  invalidate(*F1);
+  FPU.finish(FAM);
+  EXPECT_EQ(FPI, ExpectedFinal);
+}
 } // end anonymous namespace

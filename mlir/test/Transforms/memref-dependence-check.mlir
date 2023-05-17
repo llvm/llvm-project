@@ -636,7 +636,7 @@ func.func @mod_deps() {
   affine.for %i0 = 0 to 10 {
     %a0 = affine.apply affine_map<(d0) -> (d0 mod 2)> (%i0)
     // Results are conservative here since we currently don't have a way to
-    // represent strided sets in FlatAffineConstraints.
+    // represent strided sets in FlatAffineValueConstraints.
     %v0 = affine.load %m[%a0] : memref<100xf32>
     // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
     // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
@@ -1062,5 +1062,87 @@ func.func @test_interleaved_affine_for_if() {
     }
   }
 
+  return
+}
+
+// -----
+// CHECK-LABEL: func @dependent_parallel() {
+func.func @dependent_parallel() {
+  %0 = memref.alloc() : memref<10xf32>
+  %cst = arith.constant 7.000000e+00 : f32
+  affine.parallel (%i0) = (0) to (10) {
+    affine.store %cst, %0[%i0] : memref<10xf32>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = true}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+  }
+  affine.parallel (%i1) = (0) to (10) {
+    %1 = affine.load %0[%i1] : memref<10xf32>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+  }
+  return
+}
+
+// -----
+
+func.func @affine_if_no_dependence() {
+  %c1 = arith.constant 1 : index
+  %alloc = memref.alloc() : memref<15xi1>
+  %true = arith.constant true
+  affine.store %true, %alloc[%c1] : memref<15xi1>
+  // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+  // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+  // This set is empty.
+  affine.if affine_set<(d0, d1, d2, d3) : ((d0 + 1) mod 8 >= 0, d0 * -8 >= 0)>(%c1, %c1, %c1, %c1){
+    %265 = affine.load %alloc[%c1] : memref<15xi1>
+    // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+  }
+  return
+}
+
+// -----
+
+func.func @affine_parallel_dep_check_1() {
+  %memref_23 = memref.alloc() : memref<1x130xf32>
+  %memref_25 = memref.alloc() : memref<1x130x130xf32>
+  %cst = arith.constant 0.0 : f32
+  affine.parallel (%arg4, %arg5) = (0, 0) to (1, 130) {
+    affine.store %cst, %memref_25[%arg4, %arg5, 129] : memref<1x130x130xf32>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 3 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = true}}
+  }
+  %memref_27 = memref.alloc() : memref<1x128x128xf32>
+  affine.parallel (%arg4) = (0) to (130) {
+    affine.parallel (%arg5, %arg6) = (0, 0) to (1, 130) {
+      affine.load %memref_25[0, %arg4 + %arg5, %arg6] : memref<1x130x130xf32>
+      // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 2 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 3 = false}}
+      // expected-remark@above {{dependence from 1 to 1 at depth 4 = false}}
+      // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
+    }
+  }
+  return
+}
+
+// -----
+
+func.func @affine_parallel_dep_check_2() {
+  %m = memref.alloc() : memref<128xf32>
+  %cst = arith.constant 0.0 : f32
+  affine.parallel (%arg4) = (0) to (127) {
+    affine.store %cst, %m[%arg4] : memref<128xf32>
+    // expected-remark@above {{dependence from 0 to 0 at depth 1 = false}}
+    // expected-remark@above {{dependence from 0 to 0 at depth 2 = false}}
+    // expected-remark@above {{dependence from 0 to 1 at depth 1 = false}}
+  }
+  affine.load %m[127]: memref<128xf32>
+  // expected-remark@above {{dependence from 1 to 1 at depth 1 = false}}
+  // expected-remark@above {{dependence from 1 to 0 at depth 1 = false}}
   return
 }

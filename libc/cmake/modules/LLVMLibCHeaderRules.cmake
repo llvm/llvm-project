@@ -35,10 +35,25 @@ function(add_header target_name)
 
   if(ADD_HEADER_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_HEADER_DEPENDS})
+    # Dependencies of a add_header target can only be another add_header target
+    # or an add_gen_header target.
+    foreach(dep IN LISTS fq_deps_list)
+      get_target_property(header_file ${dep} HEADER_FILE_PATH)
+      if(NOT header_file)
+        message(FATAL_ERROR "Invalid dependency '${dep}' for '${fq_target_name}'.")
+      endif()
+    endforeach()
     add_dependencies(
       ${fq_target_name} ${fq_deps_list}
     )
   endif()
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      HEADER_FILE_PATH ${dest_file}
+      DEPS "${fq_deps_list}"
+  )
 endfunction(add_header)
 
 # A rule for generated header file targets.
@@ -53,7 +68,7 @@ endfunction(add_header)
 function(add_gen_header target_name)
   cmake_parse_arguments(
     "ADD_GEN_HDR"
-    "" # No optional arguments
+    "PUBLIC" # No optional arguments
     "DEF_FILE;GEN_HDR" # Single value arguments
     "PARAMS;DATA_FILES;DEPENDS"     # Multi value arguments
     ${ARGN}
@@ -93,9 +108,15 @@ function(add_gen_header target_name)
   set(ENTRYPOINT_NAME_LIST_ARG ${TARGET_ENTRYPOINT_NAME_LIST})
   list(TRANSFORM ENTRYPOINT_NAME_LIST_ARG PREPEND "--e=")
 
+  if(LIBC_HDRGEN_EXE)
+    set(hdrgen_exe ${LIBC_HDRGEN_EXE})
+  else()
+    set(hdrgen_exe ${LIBC_TABLEGEN_EXE})
+    set(hdrgen_deps "${LIBC_TABLEGEN_EXE};${LIBC_TABLEGEN_TARGET}")
+  endif()
   add_custom_command(
     OUTPUT ${out_file}
-    COMMAND ${LIBC_TABLEGEN_EXE} -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
+    COMMAND ${hdrgen_exe} -o ${out_file} --header ${ADD_GEN_HDR_GEN_HDR}
             --def ${in_file} ${replacement_params} -I ${LIBC_SOURCE_DIR}
            ${ENTRYPOINT_NAME_LIST_ARG}
            ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
@@ -103,14 +124,29 @@ function(add_gen_header target_name)
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     DEPENDS ${in_file} ${fq_data_files} ${td_includes}
             ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
-            ${LIBC_TABLEGEN_EXE} ${LIBC_TABLEGEN_TARGET}
+            ${hdrgen_deps}
   )
 
   if(ADD_GEN_HDR_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
+    # Dependencies of a add_header target can only be another add_gen_header target
+    # or an add_header target.
+    foreach(dep IN LISTS fq_deps_list)
+      get_target_property(header_file ${dep} HEADER_FILE_PATH)
+      if(NOT header_file)
+        message(FATAL_ERROR "Invalid dependency '${dep}' for '${fq_target_name}'.")
+      endif()
+    endforeach()
   endif()
   add_custom_target(
     ${fq_target_name}
     DEPENDS ${out_file} ${fq_deps_list}
+  )
+
+  set_target_properties(
+    ${fq_target_name}
+    PROPERTIES
+      HEADER_FILE_PATH ${out_file}
+      DEPS "${fq_deps_list}"
   )
 endfunction(add_gen_header)

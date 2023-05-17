@@ -85,19 +85,19 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
     numOfFourHundredYearCycles--;
   }
 
-  // The reminder number of years after computing number of
+  // The remaining number of years after computing the number of
   // "four hundred year cycles" will be 4 hundred year cycles or less in 400
   // years.
   int64_t numOfHundredYearCycles = computeRemainingYears(
       TimeConstants::DAYS_PER100_YEARS, 4, &remainingDays);
 
-  // The reminder number of years after computing number of
+  // The remaining number of years after computing the number of
   // "hundred year cycles" will be 25 four year cycles or less in 100 years.
   int64_t numOfFourYearCycles =
       computeRemainingYears(TimeConstants::DAYS_PER4_YEARS, 25, &remainingDays);
 
-  // The reminder number of years after computing number of "four year cycles"
-  // will be 4 one year cycles or less in 4 years.
+  // The remaining number of years after computing the number of
+  // "four year cycles" will be 4 one year cycles or less in 4 years.
   int64_t remainingYears = computeRemainingYears(
       TimeConstants::DAYS_PER_NON_LEAP_YEAR, 4, &remainingDays);
 
@@ -109,6 +109,8 @@ int64_t update_from_seconds(int64_t total_seconds, struct tm *tm) {
   int leapDay =
       !remainingYears && (numOfFourYearCycles || !numOfHundredYearCycles);
 
+  // We add 31 and 28 for the number of days in January and February, since our
+  // starting point was March 1st.
   int64_t yday = remainingDays + 31 + 28 + leapDay;
   if (yday >= TimeConstants::DAYS_PER_NON_LEAP_YEAR + leapDay)
     yday -= TimeConstants::DAYS_PER_NON_LEAP_YEAR + leapDay;

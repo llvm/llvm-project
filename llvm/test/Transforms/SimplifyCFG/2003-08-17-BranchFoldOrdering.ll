@@ -3,7 +3,7 @@
 ; due to the fact that the SimplifyCFG function does not use
 ; the ConstantFoldTerminator function.
 
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; CHECK-NOT: br i1 %c2
 

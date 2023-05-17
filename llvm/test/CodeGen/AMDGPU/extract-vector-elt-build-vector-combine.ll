@@ -13,32 +13,32 @@
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32(<4 x i32> addrspace(1)* noalias %out0,
-                                                    <4 x i32> addrspace(1)* noalias %out1,
-                                                    i32 addrspace(1)* noalias %out2,
-                                                    i32 addrspace(1)* %in) {
-  %elt0 = load volatile i32, i32 addrspace(1)* %in
-  %elt1 = load volatile i32, i32 addrspace(1)* %in
-  %elt2 = load volatile i32, i32 addrspace(1)* %in
-  %elt3 = load volatile i32, i32 addrspace(1)* %in
+define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32(ptr addrspace(1) noalias %out0,
+                                                    ptr addrspace(1) noalias %out1,
+                                                    ptr addrspace(1) noalias %out2,
+                                                    ptr addrspace(1) %in) {
+  %elt0 = load volatile i32, ptr addrspace(1) %in
+  %elt1 = load volatile i32, ptr addrspace(1) %in
+  %elt2 = load volatile i32, ptr addrspace(1) %in
+  %elt3 = load volatile i32, ptr addrspace(1) %in
 
   %vec0 = insertelement <4 x i32> undef, i32 %elt0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %elt1, i32 1
   %vec2 = insertelement <4 x i32> %vec1, i32 %elt2, i32 2
   %vec3 = insertelement <4 x i32> %vec2, i32 %elt3, i32 3
 
-  store <4 x i32> %vec3, <4 x i32> addrspace(1)* %out0
-  store <4 x i32> %vec3, <4 x i32> addrspace(1)* %out1
+  store <4 x i32> %vec3, ptr addrspace(1) %out0
+  store <4 x i32> %vec3, ptr addrspace(1) %out1
 
   %extract0 = extractelement <4 x i32> %vec3, i32 0
   %extract1 = extractelement <4 x i32> %vec3, i32 1
   %extract2 = extractelement <4 x i32> %vec3, i32 2
   %extract3 = extractelement <4 x i32> %vec3, i32 3
 
-  store volatile i32 %extract0, i32 addrspace(1)* %out2
-  store volatile i32 %extract1, i32 addrspace(1)* %out2
-  store volatile i32 %extract2, i32 addrspace(1)* %out2
-  store volatile i32 %extract3, i32 addrspace(1)* %out2
+  store volatile i32 %extract0, ptr addrspace(1) %out2
+  store volatile i32 %extract1, ptr addrspace(1) %out2
+  store volatile i32 %extract2, ptr addrspace(1) %out2
+  store volatile i32 %extract3, ptr addrspace(1) %out2
 
   ret void
 }
@@ -55,14 +55,14 @@ define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32(<4 x i32> addr
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
 ; GCN: buffer_store_dword
-define amdgpu_kernel void @store_build_vector_multiple_extract_uses_v4i32(<4 x i32> addrspace(1)* noalias %out0,
-                                                            <4 x i32> addrspace(1)* noalias %out1,
-                                                            i32 addrspace(1)* noalias %out2,
-                                                            i32 addrspace(1)* %in) {
-  %elt0 = load volatile i32, i32 addrspace(1)* %in
-  %elt1 = load volatile i32, i32 addrspace(1)* %in
-  %elt2 = load volatile i32, i32 addrspace(1)* %in
-  %elt3 = load volatile i32, i32 addrspace(1)* %in
+define amdgpu_kernel void @store_build_vector_multiple_extract_uses_v4i32(ptr addrspace(1) noalias %out0,
+                                                            ptr addrspace(1) noalias %out1,
+                                                            ptr addrspace(1) noalias %out2,
+                                                            ptr addrspace(1) %in) {
+  %elt0 = load volatile i32, ptr addrspace(1) %in
+  %elt1 = load volatile i32, ptr addrspace(1) %in
+  %elt2 = load volatile i32, ptr addrspace(1) %in
+  %elt3 = load volatile i32, ptr addrspace(1) %in
 
   %vec0 = insertelement <4 x i32> undef, i32 %elt0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %elt1, i32 1
@@ -79,12 +79,12 @@ define amdgpu_kernel void @store_build_vector_multiple_extract_uses_v4i32(<4 x i
   %op2 = xor i32 %extract2, 1231412
   %op3 = and i32 %extract3, 258233412312
 
-  store <4 x i32> %vec3, <4 x i32> addrspace(1)* %out0
+  store <4 x i32> %vec3, ptr addrspace(1) %out0
 
-  store volatile i32 %op0, i32 addrspace(1)* %out2
-  store volatile i32 %op1, i32 addrspace(1)* %out2
-  store volatile i32 %op2, i32 addrspace(1)* %out2
-  store volatile i32 %op3, i32 addrspace(1)* %out2
+  store volatile i32 %op0, ptr addrspace(1) %out2
+  store volatile i32 %op1, ptr addrspace(1) %out2
+  store volatile i32 %op2, ptr addrspace(1) %out2
+  store volatile i32 %op3, ptr addrspace(1) %out2
 
   ret void
 }
@@ -99,14 +99,14 @@ define amdgpu_kernel void @store_build_vector_multiple_extract_uses_v4i32(<4 x i
 
 ; GCN: buffer_store_dwordx2
 ; GCN: buffer_store_dwordx2
-define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32_bitcast_to_v2i64(<2 x i64> addrspace(1)* noalias %out0,
-                                                                     <4 x i32> addrspace(1)* noalias %out1,
-                                                                     i64 addrspace(1)* noalias %out2,
-                                                                     i32 addrspace(1)* %in) {
-  %elt0 = load volatile i32, i32 addrspace(1)* %in
-  %elt1 = load volatile i32, i32 addrspace(1)* %in
-  %elt2 = load volatile i32, i32 addrspace(1)* %in
-  %elt3 = load volatile i32, i32 addrspace(1)* %in
+define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32_bitcast_to_v2i64(ptr addrspace(1) noalias %out0,
+                                                                     ptr addrspace(1) noalias %out1,
+                                                                     ptr addrspace(1) noalias %out2,
+                                                                     ptr addrspace(1) %in) {
+  %elt0 = load volatile i32, ptr addrspace(1) %in
+  %elt1 = load volatile i32, ptr addrspace(1) %in
+  %elt2 = load volatile i32, ptr addrspace(1) %in
+  %elt3 = load volatile i32, ptr addrspace(1) %in
 
   %vec0 = insertelement <4 x i32> undef, i32 %elt0, i32 0
   %vec1 = insertelement <4 x i32> %vec0, i32 %elt1, i32 1
@@ -114,13 +114,13 @@ define amdgpu_kernel void @store_build_vector_multiple_uses_v4i32_bitcast_to_v2i
   %vec3 = insertelement <4 x i32> %vec2, i32 %elt3, i32 3
 
   %bc.vec3 = bitcast <4 x i32> %vec3 to <2 x i64>
-  store <2 x i64> %bc.vec3, <2 x i64> addrspace(1)* %out0
+  store <2 x i64> %bc.vec3, ptr addrspace(1) %out0
 
   %extract0 = extractelement <2 x i64> %bc.vec3, i32 0
   %extract1 = extractelement <2 x i64> %bc.vec3, i32 1
 
-  store volatile i64 %extract0, i64 addrspace(1)* %out2
-  store volatile i64 %extract1, i64 addrspace(1)* %out2
+  store volatile i64 %extract0, ptr addrspace(1) %out2
+  store volatile i64 %extract1, ptr addrspace(1) %out2
 
   ret void
 }

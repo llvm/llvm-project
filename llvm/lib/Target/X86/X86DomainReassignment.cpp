@@ -240,7 +240,7 @@ public:
       // Physical registers will not be converted. Assume that converting the
       // COPY to the destination domain will eventually result in a actual
       // instruction.
-      if (Register::isPhysicalRegister(MO.getReg()))
+      if (MO.getReg().isPhysical())
         return 1;
 
       RegDomain OpDomain = getDomain(MRI->getRegClass(MO.getReg()),

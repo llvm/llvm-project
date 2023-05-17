@@ -73,7 +73,7 @@ define dso_local void @test_igeui_store(i32 zeroext %a, i32 zeroext %b) {
 entry:
   %cmp = icmp uge i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @glob
+  store i32 %conv, ptr @glob
   ret void
 }
 
@@ -90,7 +90,7 @@ define dso_local void @test_igeui_sext_store(i32 zeroext %a, i32 zeroext %b) {
 entry:
   %cmp = icmp uge i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 
@@ -105,7 +105,7 @@ define dso_local void @test_igeui_z_store(i32 zeroext %a) {
 entry:
   %cmp = icmp uge i32 %a, 0
   %conv1 = zext i1 %cmp to i32
-  store i32 %conv1, i32* @glob
+  store i32 %conv1, ptr @glob
   ret void
 }
 
@@ -120,7 +120,7 @@ define dso_local void @test_igeui_sext_z_store(i32 zeroext %a) {
 entry:
   %cmp = icmp uge i32 %a, 0
   %conv1 = sext i1 %cmp to i32
-  store i32 %conv1, i32* @glob
+  store i32 %conv1, ptr @glob
   ret void
 }
 

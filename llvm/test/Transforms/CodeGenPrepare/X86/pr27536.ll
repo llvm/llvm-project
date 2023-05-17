@@ -4,18 +4,17 @@ target triple = "x86_64-pc-windows-msvc"
 
 @rtti = external global i8
 
-define void @test1() personality i32 (...)* @__CxxFrameHandler3 {
+define void @test1() personality ptr @__CxxFrameHandler3 {
 entry:
   %e = alloca i8
-  %tmpcast = bitcast i8* %e to i16*
-  invoke void @_CxxThrowException(i8* null, i8* null)
+  invoke void @_CxxThrowException(ptr null, ptr null)
           to label %catchret.dest unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* @rtti, i32 0, i16* %tmpcast]
+  %1 = catchpad within %0 [ptr @rtti, i32 0, ptr %e]
   catchret from %1 to label %catchret.dest
 
 catchret.dest:                                    ; preds = %catch
@@ -23,10 +22,9 @@ catchret.dest:                                    ; preds = %catch
 }
 ; CHECK-LABEL: define void @test1(
 ; CHECK: %[[alloca:.*]] = alloca i8
-; CHECK-NEXT: %[[bc:.*]] = bitcast i8* %[[alloca]] to i16*
 
-; CHECK: catchpad within {{.*}} [i8* @rtti, i32 0, i16* %[[bc]]]
+; CHECK: catchpad within {{.*}} [ptr @rtti, i32 0, ptr %[[alloca]]]
 
-declare void @_CxxThrowException(i8*, i8*)
+declare void @_CxxThrowException(ptr, ptr)
 
 declare i32 @__CxxFrameHandler3(...)

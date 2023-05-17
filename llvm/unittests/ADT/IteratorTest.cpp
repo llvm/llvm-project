@@ -6,34 +6,37 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/ADT/ilist.h"
 #include "llvm/ADT/iterator.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/ilist.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
+#include <type_traits>
+#include <vector>
 
 using namespace llvm;
+using testing::ElementsAre;
 
 namespace {
 
 template <int> struct Shadow;
 
-struct WeirdIter : std::iterator<std::input_iterator_tag, Shadow<0>, Shadow<1>,
-                                 Shadow<2>, Shadow<3>> {};
+struct WeirdIter
+    : llvm::iterator_facade_base<WeirdIter, std::input_iterator_tag, Shadow<0>,
+                                 Shadow<1>, Shadow<2>, Shadow<3>> {};
 
 struct AdaptedIter : iterator_adaptor_base<AdaptedIter, WeirdIter> {};
 
 // Test that iterator_adaptor_base forwards typedefs, if value_type is
 // unchanged.
-static_assert(std::is_same<typename AdaptedIter::value_type, Shadow<0>>::value,
+static_assert(std::is_same_v<typename AdaptedIter::value_type, Shadow<0>>, "");
+static_assert(std::is_same_v<typename AdaptedIter::difference_type, Shadow<1>>,
               "");
-static_assert(
-    std::is_same<typename AdaptedIter::difference_type, Shadow<1>>::value, "");
-static_assert(std::is_same<typename AdaptedIter::pointer, Shadow<2>>::value,
-              "");
-static_assert(std::is_same<typename AdaptedIter::reference, Shadow<3>>::value,
-              "");
+static_assert(std::is_same_v<typename AdaptedIter::pointer, Shadow<2>>, "");
+static_assert(std::is_same_v<typename AdaptedIter::reference, Shadow<3>>, "");
 
 // Ensure that pointe{e,r}_iterator adaptors correctly forward the category of
 // the underlying iterator.
@@ -86,13 +89,12 @@ static_assert(&IntIterator::operator* == &IntIterator::operator*, "");
 static_assert(&IntIterator::operator-> == &IntIterator::operator->, "");
 static_assert(&IntIterator::operator[] == &IntIterator::operator[], "");
 
-template <class T,
-          std::enable_if_t<std::is_assignable<T, int>::value, bool> = false>
+template <class T, std::enable_if_t<std::is_assignable_v<T, int>, bool> = false>
 constexpr bool canAssignFromInt(T &&) {
   return true;
 }
 template <class T,
-          std::enable_if_t<!std::is_assignable<T, int>::value, bool> = false>
+          std::enable_if_t<!std::is_assignable_v<T, int>, bool> = false>
 constexpr bool canAssignFromInt(T &&) {
   return false;
 }
@@ -398,17 +400,155 @@ TEST(ZipIteratorTest, Basic) {
   const SmallVector<unsigned, 6> pi{3, 1, 4, 1, 5, 9};
   SmallVector<bool, 6> odd{1, 1, 0, 1, 1, 1};
   const char message[] = "yynyyy\0";
+  std::array<int, 2> shortArr = {42, 43};
 
   for (auto tup : zip(pi, odd, message)) {
     EXPECT_EQ(get<0>(tup) & 0x01, get<1>(tup));
     EXPECT_EQ(get<0>(tup) & 0x01 ? 'y' : 'n', get<2>(tup));
   }
 
-  // note the rvalue
+  // Note the rvalue.
   for (auto tup : zip(pi, SmallVector<bool, 0>{1, 1, 0, 1, 1})) {
     EXPECT_EQ(get<0>(tup) & 0x01, get<1>(tup));
   }
+
+  // Iterate until we run out elements in the *shortest* range.
+  for (auto [idx, elem] : enumerate(zip(odd, shortArr))) {
+    EXPECT_LT(idx, static_cast<size_t>(2));
+  }
+  for (auto [idx, elem] : enumerate(zip(shortArr, odd))) {
+    EXPECT_LT(idx, static_cast<size_t>(2));
+  }
 }
+
+TEST(ZipIteratorTest, ZipEqualBasic) {
+  const SmallVector<unsigned, 6> pi = {3, 1, 4, 1, 5, 8};
+  const SmallVector<bool, 6> vals = {1, 1, 0, 1, 1, 0};
+  unsigned iters = 0;
+
+  for (auto [lhs, rhs] : zip_equal(vals, pi)) {
+    EXPECT_EQ(lhs, rhs & 0x01);
+    ++iters;
+  }
+
+  EXPECT_EQ(iters, 6u);
+}
+
+template <typename T>
+constexpr bool IsConstRef =
+    std::is_reference_v<T> && std::is_const_v<std::remove_reference_t<T>>;
+
+template <typename T>
+constexpr bool IsBoolConstRef =
+    std::is_same_v<llvm::remove_cvref_t<T>, std::vector<bool>::const_reference>;
+
+/// Returns a `const` copy of the passed value. The `const` on the returned
+/// value is intentional here so that `MakeConst` can be used in range-for
+/// loops.
+template <typename T> const T MakeConst(T &&value) {
+  return std::forward<T>(value);
+}
+
+TEST(ZipIteratorTest, ZipEqualConstCorrectness) {
+  const std::vector<unsigned> c_first = {3, 1, 4};
+  std::vector<unsigned> first = c_first;
+  const SmallVector<bool> c_second = {1, 1, 0};
+  SmallVector<bool> second = c_second;
+
+  for (auto [a, b, c, d] : zip_equal(c_first, first, c_second, second)) {
+    b = 0;
+    d = true;
+    static_assert(IsConstRef<decltype(a)>);
+    static_assert(!IsConstRef<decltype(b)>);
+    static_assert(IsConstRef<decltype(c)>);
+    static_assert(!IsConstRef<decltype(d)>);
+  }
+
+  EXPECT_THAT(first, ElementsAre(0, 0, 0));
+  EXPECT_THAT(second, ElementsAre(true, true, true));
+
+  std::vector<bool> nemesis = {true, false, true};
+  const std::vector<bool> c_nemesis = nemesis;
+
+  for (auto &&[a, b, c, d] : zip_equal(first, c_first, nemesis, c_nemesis)) {
+    a = 2;
+    c = true;
+    static_assert(!IsConstRef<decltype(a)>);
+    static_assert(IsConstRef<decltype(b)>);
+    static_assert(!IsBoolConstRef<decltype(c)>);
+    static_assert(IsBoolConstRef<decltype(d)>);
+  }
+
+  EXPECT_THAT(first, ElementsAre(2, 2, 2));
+  EXPECT_THAT(nemesis, ElementsAre(true, true, true));
+
+  unsigned iters = 0;
+  for (const auto &[a, b, c, d] :
+       zip_equal(first, c_first, nemesis, c_nemesis)) {
+    static_assert(!IsConstRef<decltype(a)>);
+    static_assert(IsConstRef<decltype(b)>);
+    static_assert(!IsBoolConstRef<decltype(c)>);
+    static_assert(IsBoolConstRef<decltype(d)>);
+    ++iters;
+  }
+  EXPECT_EQ(iters, 3u);
+  iters = 0;
+
+  for (const auto &[a, b, c, d] :
+       MakeConst(zip_equal(first, c_first, nemesis, c_nemesis))) {
+    static_assert(!IsConstRef<decltype(a)>);
+    static_assert(IsConstRef<decltype(b)>);
+    static_assert(!IsBoolConstRef<decltype(c)>);
+    static_assert(IsBoolConstRef<decltype(d)>);
+    ++iters;
+  }
+  EXPECT_EQ(iters, 3u);
+}
+
+TEST(ZipIteratorTest, ZipEqualTemporaries) {
+  unsigned iters = 0;
+
+  // These temporary ranges get moved into the `tuple<...> storage;` inside
+  // `zippy`. From then on, we can use references obtained from this storage to
+  // access them. This does not rely on any lifetime extensions on the
+  // temporaries passed to `zip_equal`.
+  for (auto [a, b, c] : zip_equal(SmallVector<int>{1, 2, 3}, std::string("abc"),
+                                  std::vector<bool>{true, false, true})) {
+    a = 3;
+    b = 'c';
+    c = false;
+    static_assert(!IsConstRef<decltype(a)>);
+    static_assert(!IsConstRef<decltype(b)>);
+    static_assert(!IsBoolConstRef<decltype(c)>);
+    ++iters;
+  }
+  EXPECT_EQ(iters, 3u);
+  iters = 0;
+
+  for (auto [a, b, c] :
+       MakeConst(zip_equal(SmallVector<int>{1, 2, 3}, std::string("abc"),
+                           std::vector<bool>{true, false, true}))) {
+    static_assert(IsConstRef<decltype(a)>);
+    static_assert(IsConstRef<decltype(b)>);
+    static_assert(IsBoolConstRef<decltype(c)>);
+    ++iters;
+  }
+  EXPECT_EQ(iters, 3u);
+}
+
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+// Check that an assertion is triggered when ranges passed to `zip_equal` differ
+// in length.
+TEST(ZipIteratorTest, ZipEqualNotEqual) {
+  const SmallVector<unsigned, 6> pi = {3, 1, 4, 1, 5, 8};
+  const SmallVector<bool, 2> vals = {1, 1};
+
+  EXPECT_DEATH(zip_equal(pi, vals), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(vals, pi), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(pi, pi, vals), "Iteratees do not have equal length");
+  EXPECT_DEATH(zip_equal(vals, vals, pi), "Iteratees do not have equal length");
+}
+#endif
 
 TEST(ZipIteratorTest, ZipFirstBasic) {
   using namespace std;
@@ -423,6 +563,21 @@ TEST(ZipIteratorTest, ZipFirstBasic) {
   EXPECT_EQ(iters, 4u);
 }
 
+#if !defined(NDEBUG) && GTEST_HAS_DEATH_TEST
+// Make sure that we can detect when the first range is not the shortest.
+TEST(ZipIteratorTest, ZipFirstNotShortest) {
+  const std::array<unsigned, 6> longer = {};
+  const std::array<unsigned, 4> shorter = {};
+
+  EXPECT_DEATH(zip_first(longer, shorter),
+               "First iteratee is not the shortest");
+  EXPECT_DEATH(zip_first(longer, shorter, longer),
+               "First iteratee is not the shortest");
+  EXPECT_DEATH(zip_first(longer, longer, shorter),
+               "First iteratee is not the shortest");
+}
+#endif
+
 TEST(ZipIteratorTest, ZipLongestBasic) {
   using namespace std;
   const vector<unsigned> pi{3, 1, 4, 1, 5, 9};
@@ -430,10 +585,10 @@ TEST(ZipIteratorTest, ZipLongestBasic) {
 
   {
     // Check left range longer than right.
-    const vector<tuple<Optional<unsigned>, Optional<StringRef>>> expected{
+    const vector<tuple<optional<unsigned>, optional<StringRef>>> expected{
         make_tuple(3, StringRef("2")), make_tuple(1, StringRef("7")),
         make_tuple(4, StringRef("1")), make_tuple(1, StringRef("8")),
-        make_tuple(5, None),           make_tuple(9, None)};
+        make_tuple(5, std::nullopt),   make_tuple(9, std::nullopt)};
     size_t iters = 0;
     for (auto tup : zip_longest(pi, e)) {
       EXPECT_EQ(tup, expected[iters]);
@@ -444,10 +599,10 @@ TEST(ZipIteratorTest, ZipLongestBasic) {
 
   {
     // Check right range longer than left.
-    const vector<tuple<Optional<StringRef>, Optional<unsigned>>> expected{
+    const vector<tuple<optional<StringRef>, optional<unsigned>>> expected{
         make_tuple(StringRef("2"), 3), make_tuple(StringRef("7"), 1),
         make_tuple(StringRef("1"), 4), make_tuple(StringRef("8"), 1),
-        make_tuple(None, 5),           make_tuple(None, 9)};
+        make_tuple(std::nullopt, 5),   make_tuple(std::nullopt, 9)};
     size_t iters = 0;
     for (auto tup : zip_longest(e, pi)) {
       EXPECT_EQ(tup, expected[iters]);
@@ -537,6 +692,49 @@ TEST(ZipIteratorTest, Reverse) {
   EXPECT_TRUE(all_of(ascending, [](unsigned n) { return (n & 0x01) == 0; }));
 }
 
+// Int iterator that keeps track of the number of its copies.
+struct CountingIntIterator : IntIterator {
+  unsigned *cnt;
+
+  CountingIntIterator(int *it, unsigned &counter)
+      : IntIterator(it), cnt(&counter) {}
+
+  CountingIntIterator(const CountingIntIterator &other)
+      : IntIterator(other.I), cnt(other.cnt) {
+    ++(*cnt);
+  }
+  CountingIntIterator &operator=(const CountingIntIterator &other) {
+    this->I = other.I;
+    this->cnt = other.cnt;
+    ++(*cnt);
+    return *this;
+  }
+};
+
+// Check that the iterators do not get copied with each `zippy` iterator
+// increment.
+TEST(ZipIteratorTest, IteratorCopies) {
+  std::vector<int> ints(1000, 42);
+  unsigned total_copy_count = 0;
+  CountingIntIterator begin(ints.data(), total_copy_count);
+  CountingIntIterator end(ints.data() + ints.size(), total_copy_count);
+
+  size_t iters = 0;
+  auto zippy = zip_equal(ints, llvm::make_range(begin, end));
+  const unsigned creation_copy_count = total_copy_count;
+
+  for (auto [a, b] : zippy) {
+    EXPECT_EQ(a, b);
+    ++iters;
+  }
+  EXPECT_EQ(iters, ints.size());
+
+  // We expect the number of copies to be much smaller than the number of loop
+  // iterations.
+  unsigned loop_copy_count = total_copy_count - creation_copy_count;
+  EXPECT_LT(loop_copy_count, 10u);
+}
+
 TEST(RangeTest, Distance) {
   std::vector<int> v1;
   std::vector<int> v2{1, 2, 3};
@@ -545,4 +743,65 @@ TEST(RangeTest, Distance) {
   EXPECT_EQ(std::distance(v2.begin(), v2.end()), size(v2));
 }
 
+TEST(RangeSizeTest, CommonRangeTypes) {
+  SmallVector<int> v1 = {1, 2, 3};
+  EXPECT_EQ(range_size(v1), 3u);
+
+  std::map<int, int> m1 = {{1, 1}, {2, 2}};
+  EXPECT_EQ(range_size(m1), 2u);
+
+  auto it_range = llvm::make_range(m1.begin(), m1.end());
+  EXPECT_EQ(range_size(it_range), 2u);
+
+  static constexpr int c_arr[5] = {};
+  static_assert(range_size(c_arr) == 5u);
+
+  static constexpr std::array<int, 6> cpp_arr = {};
+  static_assert(range_size(cpp_arr) == 6u);
+}
+
+struct FooWithMemberSize {
+  size_t size() const { return 42; }
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+TEST(RangeSizeTest, MemberSize) {
+  // Make sure that member `.size()` is preferred over the free fuction and
+  // `std::distance`.
+  FooWithMemberSize container;
+  EXPECT_EQ(range_size(container), 42u);
+}
+
+struct FooWithFreeSize {
+  friend size_t size(const FooWithFreeSize &) { return 13; }
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+TEST(RangeSizeTest, FreeSize) {
+  // Make sure that `size(x)` is preferred over `std::distance`.
+  FooWithFreeSize container;
+  EXPECT_EQ(range_size(container), 13u);
+}
+
+struct FooWithDistance {
+  auto begin() { return Data.begin(); }
+  auto end() { return Data.end(); }
+
+  std::set<int> Data;
+};
+
+TEST(RangeSizeTest, Distance) {
+  // Make sure that we can fall back to `std::distance` even the iterator is not
+  // random-access.
+  FooWithDistance container;
+  EXPECT_EQ(range_size(container), 0u);
+  container.Data = {1, 2, 3, 4};
+  EXPECT_EQ(range_size(container), 4u);
+}
 } // anonymous namespace

@@ -53,15 +53,19 @@ public:
 };
 
 bool operator==(thread::id x, thread::id y) noexcept;
-bool operator!=(thread::id x, thread::id y) noexcept;
-bool operator< (thread::id x, thread::id y) noexcept;
-bool operator<=(thread::id x, thread::id y) noexcept;
-bool operator> (thread::id x, thread::id y) noexcept;
-bool operator>=(thread::id x, thread::id y) noexcept;
+bool operator!=(thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator< (thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator<=(thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator> (thread::id x, thread::id y) noexcept;             // removed in C++20
+bool operator>=(thread::id x, thread::id y) noexcept;             // removed in C++20
+strong_ordering operator<=>(thread::id x, thread::id y) noexcept; // C++20
 
 template<class charT, class traits>
 basic_ostream<charT, traits>&
 operator<<(basic_ostream<charT, traits>& out, thread::id id);
+
+template<class charT>
+struct formatter<thread::id, charT>;
 
 namespace this_thread
 {
@@ -83,20 +87,39 @@ void sleep_for(const chrono::duration<Rep, Period>& rel_time);
 */
 
 #include <__assert> // all public C++ headers provide the assertion handler
+#include <__availability>
+#include <__chrono/steady_clock.h>
+#include <__chrono/time_point.h>
+#include <__concepts/arithmetic.h>
+#include <__condition_variable/condition_variable.h>
 #include <__config>
+#include <__exception/terminate.h>
+#include <__format/concepts.h>
+#include <__format/format_parse_context.h>
+#include <__format/formatter.h>
+#include <__format/formatter_integral.h>
+#include <__format/parser_std_format_spec.h>
 #include <__functional/hash.h>
-#include <__mutex_base>
+#include <__functional/unary_function.h>
+#include <__memory/addressof.h>
+#include <__memory/unique_ptr.h>
+#include <__mutex/mutex.h>
+#include <__mutex/unique_lock.h>
+#include <__system_error/system_error.h>
 #include <__thread/poll_with_backoff.h>
 #include <__thread/timed_backoff_policy.h>
 #include <__threading_support>
 #include <__utility/forward.h>
 #include <cstddef>
+#include <cstdint>
 #include <iosfwd>
-#include <memory>
-#include <system_error>
 #include <tuple>
-#include <type_traits>
 #include <version>
+
+// standard-mandated includes
+
+// [thread.syn]
+#include <compare>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -193,12 +216,12 @@ __thread_specific_ptr<_Tp>::set_pointer(pointer __p)
 {
     _LIBCPP_ASSERT(get() == nullptr,
                    "Attempting to overwrite thread local data");
-    __libcpp_tls_set(__key_, __p);
+    std::__libcpp_tls_set(__key_, __p);
 }
 
 template<>
 struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>
-    : public unary_function<__thread_id, size_t>
+    : public __unary_function<__thread_id, size_t>
 {
     _LIBCPP_INLINE_VISIBILITY
     size_t operator()(__thread_id __v) const _NOEXCEPT
@@ -212,6 +235,46 @@ _LIBCPP_INLINE_VISIBILITY
 basic_ostream<_CharT, _Traits>&
 operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id)
 {return __os << __id.__id_;}
+
+#if _LIBCPP_STD_VER >= 23
+template <__fmt_char_type _CharT>
+struct _LIBCPP_TEMPLATE_VIS formatter<__thread_id, _CharT> {
+  public:
+    template <class _ParseContext>
+    _LIBCPP_HIDE_FROM_ABI constexpr typename _ParseContext::iterator parse(_ParseContext& __ctx) {
+        return __parser_.__parse(__ctx, __format_spec::__fields_fill_align_width);
+    }
+
+    template <class _FormatContext>
+    _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator format(__thread_id __id, _FormatContext& __ctx) const {
+        // In __threading_support __libcpp_thread_id is either a
+        // unsigned long long or a pthread_t.
+        //
+        // The type of pthread_t is left unspecified in POSIX so it can be any
+        // type. The most logical types are an integral or pointer.
+        // On Linux systems pthread_t is an unsigned long long.
+        // On Apple systems pthread_t is a pointer type.
+        //
+        // Note the output should match what the stream operator does. Since
+        // the ostream operator has been shipped years before this formatter
+        // was added to the Standard, this formatter does what the stream
+        // operator does. This may require platform specific changes.
+
+        using _Tp = decltype(__get_underlying_id(__id));
+        using _Cp = conditional_t<integral<_Tp>, _Tp, conditional_t<is_pointer_v<_Tp>, uintptr_t, void>>;
+        static_assert(!is_same_v<_Cp, void>, "unsupported thread::id type, please file a bug report");
+
+        __format_spec::__parsed_specifications<_CharT> __specs = __parser_.__get_parsed_std_specifications(__ctx);
+        if constexpr (is_pointer_v<_Tp>) {
+          __specs.__std_.__alternate_form_ = true;
+          __specs.__std_.__type_           = __format_spec::__type::__hexadecimal_lower_case;
+        }
+        return __formatter::__format_integer(reinterpret_cast<_Cp>(__get_underlying_id(__id)), __ctx, __specs);
+    }
+
+    __format_spec::__parser<_CharT> __parser_{.__alignment_ = __format_spec::__alignment::__right};
+};
+#endif // _LIBCPP_STD_VER >= 23
 
 class _LIBCPP_TYPE_VIS thread
 {
@@ -227,7 +290,7 @@ public:
     thread() _NOEXCEPT : __t_(_LIBCPP_NULL_THREAD) {}
 #ifndef _LIBCPP_CXX03_LANG
     template <class _Fp, class ..._Args,
-              class = __enable_if_t<!is_same<__uncvref_t<_Fp>, thread>::value> >
+              class = __enable_if_t<!is_same<__remove_cvref_t<_Fp>, thread>::value> >
         _LIBCPP_METHOD_TEMPLATE_IMPLICIT_INSTANTIATION_VIS
         explicit thread(_Fp&& __f, _Args&&... __args);
 #else  // _LIBCPP_CXX03_LANG
@@ -295,7 +358,7 @@ thread::thread(_Fp&& __f, _Args&&... __args)
 {
     typedef unique_ptr<__thread_struct> _TSPtr;
     _TSPtr __tsp(new __thread_struct);
-    typedef tuple<_TSPtr, typename decay<_Fp>::type, typename decay<_Args>::type...> _Gp;
+    typedef tuple<_TSPtr, __decay_t<_Fp>, __decay_t<_Args>...> _Gp;
     unique_ptr<_Gp> __p(
             new _Gp(_VSTD::move(__tsp),
                     _VSTD::forward<_Fp>(__f),
@@ -314,13 +377,13 @@ struct __thread_invoke_pair {
     // This type is used to pass memory for thread local storage and a functor
     // to a newly created thread because std::pair doesn't work with
     // std::unique_ptr in C++03.
-    __thread_invoke_pair(_Fp& __f) : __tsp_(new __thread_struct), __fn_(__f) {}
+    _LIBCPP_HIDE_FROM_ABI __thread_invoke_pair(_Fp& __f) : __tsp_(new __thread_struct), __fn_(__f) {}
     unique_ptr<__thread_struct> __tsp_;
     _Fp __fn_;
 };
 
 template <class _Fp>
-void* __thread_proxy_cxx03(void* __vp)
+_LIBCPP_HIDE_FROM_ABI void* __thread_proxy_cxx03(void* __vp)
 {
     unique_ptr<_Fp> __p(static_cast<_Fp*>(__vp));
     __thread_local_data().set_pointer(__p->__tsp_.release());
@@ -353,7 +416,7 @@ namespace this_thread
 _LIBCPP_FUNC_VIS void sleep_for(const chrono::nanoseconds& __ns);
 
 template <class _Rep, class _Period>
-void
+_LIBCPP_HIDE_FROM_ABI void
 sleep_for(const chrono::duration<_Rep, _Period>& __d)
 {
     if (__d > chrono::duration<_Rep, _Period>::zero())
@@ -361,10 +424,10 @@ sleep_for(const chrono::duration<_Rep, _Period>& __d)
         // The standard guarantees a 64bit signed integer resolution for nanoseconds,
         // so use INT64_MAX / 1e9 as cut-off point. Use a constant to avoid <climits>
         // and issues with long double folding on PowerPC with GCC.
-        _LIBCPP_CONSTEXPR chrono::duration<long double> _Max =
+        _LIBCPP_CONSTEXPR chrono::duration<long double> __max =
             chrono::duration<long double>(9223372036.0L);
         chrono::nanoseconds __ns;
-        if (__d < _Max)
+        if (__d < __max)
         {
             __ns = chrono::duration_cast<chrono::nanoseconds>(__d);
             if (__ns < __d)
@@ -377,7 +440,7 @@ sleep_for(const chrono::duration<_Rep, _Period>& __d)
 }
 
 template <class _Clock, class _Duration>
-void
+_LIBCPP_HIDE_FROM_ABI void
 sleep_until(const chrono::time_point<_Clock, _Duration>& __t)
 {
     mutex __mut;
@@ -403,5 +466,16 @@ void yield() _NOEXCEPT {__libcpp_thread_yield();}
 _LIBCPP_END_NAMESPACE_STD
 
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 17
+#  include <chrono>
+#endif
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <cstring>
+#  include <functional>
+#  include <new>
+#  include <system_error>
+#endif
 
 #endif // _LIBCPP_THREAD

@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt < %s -div-rem-pairs -debug-counter=div-rem-pairs-transform-skip=1,div-rem-pairs-transform-count=1 \
+; RUN: opt < %s -passes=div-rem-pairs -debug-counter=div-rem-pairs-transform-skip=1,div-rem-pairs-transform-count=1 \
 ; RUN: -S -mtriple=x86_64-unknown-unknown    | FileCheck %s
 ;; Test that, with debug counters on, we only skip the first div-rem-pairs opportunity, optimize one after it,
 ;; and then ignore all the others. There is 1 optimization opportunity in f1, 2 in f2, and another 1 in f3,

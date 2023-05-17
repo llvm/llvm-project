@@ -258,16 +258,6 @@ struct UUIDv4 {
   UUIDv4(const Target &TargetID, const std::string &Value)
       : TargetID(TargetID), Value(Value) {}
 };
-
-// clang-format off
-enum TBDFlags : unsigned {
-  None                         = 0U,
-  FlatNamespace                = 1U << 0,
-  NotApplicationExtensionSafe  = 1U << 1,
-  InstallAPI                   = 1U << 2,
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/InstallAPI),
-};
-// clang-format on
 } // end anonymous namespace.
 
 LLVM_YAML_IS_FLOW_SEQUENCE_VECTOR(Architecture)
@@ -466,7 +456,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
         ArchSet.insert(Library.getArchitectures());
 
       std::map<const Symbol *, ArchitectureSet> SymbolToArchSet;
-      for (const auto *Symbol : File->exports()) {
+      for (const auto *Symbol : File->symbols()) {
         auto Architectures = Symbol->getArchitectures();
         SymbolToArchSet[Symbol] = Architectures;
         ArchSet.insert(Architectures);
@@ -843,13 +833,10 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
       auto handleSymbols =
           [](SectionList &CurrentSections,
-             InterfaceFile::const_filtered_symbol_range Symbols,
-             std::function<bool(const Symbol *)> Pred) {
+             InterfaceFile::const_filtered_symbol_range Symbols) {
             std::set<TargetList> TargetSet;
             std::map<const Symbol *, TargetList> SymbolToTargetList;
             for (const auto *Symbol : Symbols) {
-              if (!Pred(Symbol))
-                continue;
               TargetList Targets(Symbol->targets());
               SymbolToTargetList[Symbol] = Targets;
               TargetSet.emplace(std::move(Targets));
@@ -894,14 +881,9 @@ template <> struct MappingTraits<const InterfaceFile *> {
             }
           };
 
-      handleSymbols(Exports, File->exports(), [](const Symbol *Symbol) {
-        return !Symbol->isReexported();
-      });
-      handleSymbols(Reexports, File->exports(), [](const Symbol *Symbol) {
-        return Symbol->isReexported();
-      });
-      handleSymbols(Undefineds, File->undefineds(),
-                    [](const Symbol *Symbol) { return true; });
+      handleSymbols(Exports, File->exports());
+      handleSymbols(Reexports, File->reexports());
+      handleSymbols(Undefineds, File->undefineds());
     }
 
     const InterfaceFile *denormalize(IO &IO) {
@@ -947,24 +929,28 @@ template <> struct MappingTraits<const InterfaceFile *> {
 
           for (auto &sym : CurrentSection.Classes)
             File->addSymbol(SymbolKind::ObjectiveCClass, sym,
-                            CurrentSection.Targets);
+                            CurrentSection.Targets, Flag);
 
           for (auto &sym : CurrentSection.ClassEHs)
             File->addSymbol(SymbolKind::ObjectiveCClassEHType, sym,
-                            CurrentSection.Targets);
+                            CurrentSection.Targets, Flag);
 
           for (auto &sym : CurrentSection.Ivars)
             File->addSymbol(SymbolKind::ObjectiveCInstanceVariable, sym,
-                            CurrentSection.Targets);
+                            CurrentSection.Targets, Flag);
 
-          for (auto &sym : CurrentSection.WeakSymbols)
+          SymbolFlags SymFlag = (Flag == SymbolFlags::Undefined)
+                                    ? SymbolFlags::WeakReferenced
+                                    : SymbolFlags::WeakDefined;
+          for (auto &sym : CurrentSection.WeakSymbols) {
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
-                            CurrentSection.Targets, SymbolFlags::WeakDefined);
+                            CurrentSection.Targets, Flag | SymFlag);
+          }
 
           for (auto &sym : CurrentSection.TlvSymbols)
             File->addSymbol(SymbolKind::GlobalSymbol, sym,
                             CurrentSection.Targets,
-                            SymbolFlags::ThreadLocalValue);
+                            Flag | SymbolFlags::ThreadLocalValue);
         }
       };
 
@@ -1105,10 +1091,49 @@ static void DiagHandler(const SMDiagnostic &Diag, void *Context) {
   File->ErrorMessage = ("malformed file\n" + Message).str();
 }
 
+namespace {
+
+Expected<FileType> canReadFileType(MemoryBufferRef InputBuffer) {
+  auto TAPIFile = InputBuffer.getBuffer().trim();
+  if (TAPIFile.startswith("{") && TAPIFile.endswith("}"))
+    return FileType::TBD_V5;
+
+  if (!TAPIFile.endswith("..."))
+    return createStringError(std::errc::not_supported, "unsupported file type");
+
+  if (TAPIFile.startswith("--- !tapi-tbd\n"))
+    return FileType::TBD_V4;
+
+  if (TAPIFile.startswith("--- !tapi-tbd-v3\n"))
+    return FileType::TBD_V3;
+
+  if (TAPIFile.startswith("--- !tapi-tbd-v2\n"))
+    return FileType::TBD_V2;
+
+  if (TAPIFile.startswith("--- !tapi-tbd-v1\n") ||
+      TAPIFile.startswith("---\narchs:"))
+    return FileType::TBD_V1;
+
+  return createStringError(std::errc::not_supported, "unsupported file type");
+}
+} // namespace
+
 Expected<std::unique_ptr<InterfaceFile>>
 TextAPIReader::get(MemoryBufferRef InputBuffer) {
   TextAPIContext Ctx;
   Ctx.Path = std::string(InputBuffer.getBufferIdentifier());
+  if (auto FTOrErr = canReadFileType(InputBuffer))
+    Ctx.FileKind = *FTOrErr;
+  else
+    return FTOrErr.takeError();
+
+  // Handle JSON Format.
+  if (Ctx.FileKind >= FileType::TBD_V5) {
+    auto FileOrErr = getInterfaceFileFromJSON(InputBuffer.getBuffer());
+    if (!FileOrErr)
+      return FileOrErr.takeError();
+    return std::move(*FileOrErr);
+  }
   yaml::Input YAMLIn(InputBuffer.getBuffer(), &Ctx, DiagHandler, &Ctx);
 
   // Fill vector with interface file objects created by parsing the YAML file.
@@ -1130,10 +1155,17 @@ TextAPIReader::get(MemoryBufferRef InputBuffer) {
   return std::move(File);
 }
 
-Error TextAPIWriter::writeToStream(raw_ostream &OS, const InterfaceFile &File) {
+Error TextAPIWriter::writeToStream(raw_ostream &OS, const InterfaceFile &File,
+                                   bool Compact) {
   TextAPIContext Ctx;
   Ctx.Path = std::string(File.getPath());
   Ctx.FileKind = File.getFileType();
+
+  // Write out in JSON format.
+  if (Ctx.FileKind >= FileType::TBD_V5) {
+    return serializeInterfaceFileToJSON(OS, File, Compact);
+  }
+
   llvm::yaml::Output YAMLOut(OS, &Ctx, /*WrapColumn=*/80);
 
   std::vector<const InterfaceFile *> Files;

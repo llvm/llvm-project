@@ -89,9 +89,9 @@ public:
 
     ~ThreadEventData() override;
 
-    static ConstString GetFlavorString();
+    static llvm::StringRef GetFlavorString();
 
-    ConstString GetFlavor() const override {
+    llvm::StringRef GetFlavor() const override {
       return ThreadEventData::GetFlavorString();
     }
 
@@ -217,8 +217,6 @@ public:
 
   virtual void RefreshStateAfterStop() = 0;
 
-  void SelectMostRelevantFrame();
-
   std::string GetStopDescription();
 
   std::string GetStopDescriptionRaw();
@@ -240,6 +238,7 @@ public:
   // this just calls through to the ThreadSpec's ThreadPassesBasicTests method.
   virtual bool MatchesSpec(const ThreadSpec *spec);
 
+  // Get the current public stop info, calculating it if necessary.
   lldb::StopInfoSP GetStopInfo();
 
   lldb::StopReason GetStopReason();
@@ -427,11 +426,16 @@ public:
     return lldb::StackFrameSP();
   }
 
-  uint32_t GetSelectedFrameIndex() {
-    return GetStackFrameList()->GetSelectedFrameIndex();
+  // Only pass true to select_most_relevant if you are fulfilling an explicit
+  // user request for GetSelectedFrameIndex.  The most relevant frame is only
+  // for showing to the user, and can do arbitrary work, so we don't want to
+  // call it internally.
+  uint32_t GetSelectedFrameIndex(SelectMostRelevant select_most_relevant) {
+    return GetStackFrameList()->GetSelectedFrameIndex(select_most_relevant);
   }
 
-  lldb::StackFrameSP GetSelectedFrame();
+  lldb::StackFrameSP
+  GetSelectedFrame(SelectMostRelevant select_most_relevant);
 
   uint32_t SetSelectedFrame(lldb_private::StackFrame *frame,
                             bool broadcast = false);
@@ -1121,7 +1125,7 @@ public:
   // "checkpointed and restored" stop info, so if it is still around it is
   // right even if you have not calculated this yourself, or if it disagrees
   // with what you might have calculated.
-  virtual lldb::StopInfoSP GetPrivateStopInfo();
+  virtual lldb::StopInfoSP GetPrivateStopInfo(bool calculate = true);
 
   // Calculate the stop info that will be shown to lldb clients.  For instance,
   // a "step out" is implemented by running to a breakpoint on the function
@@ -1165,6 +1169,14 @@ public:
   void ResetStopInfo();
 
   void SetShouldReportStop(Vote vote);
+  
+  void SetShouldRunBeforePublicStop(bool newval) { 
+      m_should_run_before_public_stop = newval; 
+  }
+  
+  bool ShouldRunBeforePublicStop() {
+      return m_should_run_before_public_stop;
+  }
 
   /// Sets the extended backtrace token for this thread
   ///
@@ -1254,6 +1266,9 @@ protected:
   uint32_t m_stop_info_override_stop_id; // The stop ID containing the last time
                                          // the stop info was checked against
                                          // the stop info override
+  bool m_should_run_before_public_stop;  // If this thread has "stop others" 
+                                         // private work to do, then it will
+                                         // set this.
   const uint32_t m_index_id; ///< A unique 1 based index assigned to each thread
                              /// for easy UI/command line access.
   lldb::RegisterContextSP m_reg_context_sp; ///< The register context for this

@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=riscv32 < %s | FileCheck --check-prefix=RV32 %s
 ; RUN: llc -mtriple=riscv64 < %s | FileCheck --check-prefix=RV64 %s
 
-define void @bool_eq(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwind {
+define void @bool_eq(i1 zeroext %a, i1 zeroext %b, ptr nocapture %c) nounwind {
 ; RV32-LABEL: bool_eq:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    beq a0, a1, .LBB0_2
@@ -30,7 +30,7 @@ if.end:
   ret void
 }
 
-define void @bool_ne(i1 zeroext %a, i1 zeroext %b, void ()* nocapture %c) nounwind {
+define void @bool_ne(i1 zeroext %a, i1 zeroext %b, ptr nocapture %c) nounwind {
 ; RV32-LABEL: bool_ne:
 ; RV32:       # %bb.0: # %entry
 ; RV32-NEXT:    beq a0, a1, .LBB1_2

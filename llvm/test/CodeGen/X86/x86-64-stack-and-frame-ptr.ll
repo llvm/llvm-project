@@ -21,11 +21,11 @@
 ; NACL: popq %rbp
 
 
-define void @foo(i32* %a) #0 {
+define void @foo(ptr %a) #0 {
 entry:
-  %a.addr = alloca i32*, align 4
-  %b = alloca i32*, align 4
-  store i32* %a, i32** %a.addr, align 4
+  %a.addr = alloca ptr, align 4
+  %b = alloca ptr, align 4
+  store ptr %a, ptr %a.addr, align 4
   ret void
 }
 

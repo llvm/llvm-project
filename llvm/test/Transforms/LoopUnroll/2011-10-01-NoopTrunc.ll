@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -loop-unroll -unroll-threshold=150 | FileCheck %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-threshold=150 | FileCheck %s
 ;
 ; Verify that trunc i64 to i32 is considered free by loop unrolling
 ; heuristics when i32 is a native type.
@@ -14,15 +14,15 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; CHECK: %add.1 = add nsw i32 %conv.1, %conv
 ; CHECK: %add.18 = add nsw i32 %conv.18, %add.17
 ; CHECK: ret i32 %add.18
-define i32 @test(i8* %arr) nounwind uwtable readnone {
+define i32 @test(ptr %arr) nounwind uwtable readnone {
 entry:
   br label %for.body
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
   %sum.02 = phi i32 [ 0, %entry ], [ %add, %for.body ]
-  %arrayidx = getelementptr inbounds i8, i8* %arr, i64 %indvars.iv
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %arr, i64 %indvars.iv
+  %0 = load i8, ptr %arrayidx, align 1
   %conv = sext i8 %0 to i32
   %add = add nsw i32 %conv, %sum.02
   %indvars.iv.next = add i64 %indvars.iv, 1

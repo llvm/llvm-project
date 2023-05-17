@@ -17,16 +17,18 @@ using namespace mlir;
 /// Include the definitions of the loop-like interfaces.
 #include "mlir/Interfaces/ViewLikeInterface.cpp.inc"
 
-LogicalResult mlir::verifyListOfOperandsOrIntegers(
-    Operation *op, StringRef name, unsigned numElements, ArrayAttr attr,
-    ValueRange values, llvm::function_ref<bool(int64_t)> isDynamic) {
-  /// Check static and dynamic offsets/sizes/strides does not overflow type.
-  if (attr.size() != numElements)
-    return op->emitError("expected ")
-           << numElements << " " << name << " values";
+LogicalResult mlir::verifyListOfOperandsOrIntegers(Operation *op,
+                                                   StringRef name,
+                                                   unsigned numElements,
+                                                   ArrayRef<int64_t> staticVals,
+                                                   ValueRange values) {
+  // Check static and dynamic offsets/sizes/strides does not overflow type.
+  if (staticVals.size() != numElements)
+    return op->emitError("expected ") << numElements << " " << name
+                                      << " values, got " << staticVals.size();
   unsigned expectedNumDynamicEntries =
-      llvm::count_if(attr.getValue(), [&](Attribute attr) {
-        return isDynamic(attr.cast<IntegerAttr>().getInt());
+      llvm::count_if(staticVals, [&](int64_t staticVal) {
+        return ShapedType::isDynamic(staticVal);
       });
   if (values.size() != expectedNumDynamicEntries)
     return op->emitError("expected ")
@@ -41,7 +43,7 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
   //   1. Either single entry (when maxRanks == 1).
   //   2. Or as an array whose rank must match that of the mixed sizes.
   // So that the result type is well-formed.
-  if (!(op.getMixedOffsets().size() == 1 && maxRanks[0] == 1) &&
+  if (!(op.getMixedOffsets().size() == 1 && maxRanks[0] == 1) && // NOLINT
       op.getMixedOffsets().size() != op.getMixedSizes().size())
     return op->emitError(
                "expected mixed offsets rank to match mixed sizes rank (")
@@ -55,107 +57,103 @@ mlir::detail::verifyOffsetSizeAndStrideOp(OffsetSizeAndStrideOpInterface op) {
            << op.getMixedSizes().size() << " vs " << op.getMixedStrides().size()
            << ") so the rank of the result type is well-formed.";
 
-  if (failed(verifyListOfOperandsOrIntegers(
-          op, "offset", maxRanks[0], op.static_offsets(), op.offsets(),
-          ShapedType::isDynamicStrideOrOffset)))
+  if (failed(verifyListOfOperandsOrIntegers(op, "offset", maxRanks[0],
+                                            op.static_offsets(), op.offsets())))
     return failure();
   if (failed(verifyListOfOperandsOrIntegers(op, "size", maxRanks[1],
-                                            op.static_sizes(), op.sizes(),
-                                            ShapedType::isDynamic)))
+                                            op.static_sizes(), op.sizes())))
     return failure();
-  if (failed(verifyListOfOperandsOrIntegers(
-          op, "stride", maxRanks[2], op.static_strides(), op.strides(),
-          ShapedType::isDynamicStrideOrOffset)))
+  if (failed(verifyListOfOperandsOrIntegers(op, "stride", maxRanks[2],
+                                            op.static_strides(), op.strides())))
     return failure();
   return success();
 }
 
-template <int64_t dynVal>
-static void printOperandsOrIntegersListImpl(OpAsmPrinter &p, ValueRange values,
-                                            ArrayAttr arrayAttr) {
-  p << '[';
-  if (arrayAttr.empty()) {
-    p << "]";
+static char getLeftDelimiter(AsmParser::Delimiter delimiter) {
+  switch (delimiter) {
+  case AsmParser::Delimiter::Paren:
+    return '(';
+  case AsmParser::Delimiter::LessGreater:
+    return '<';
+  case AsmParser::Delimiter::Square:
+    return '[';
+  case AsmParser::Delimiter::Braces:
+    return '{';
+  default:
+    llvm_unreachable("unsupported delimiter");
+  }
+}
+
+static char getRightDelimiter(AsmParser::Delimiter delimiter) {
+  switch (delimiter) {
+  case AsmParser::Delimiter::Paren:
+    return ')';
+  case AsmParser::Delimiter::LessGreater:
+    return '>';
+  case AsmParser::Delimiter::Square:
+    return ']';
+  case AsmParser::Delimiter::Braces:
+    return '}';
+  default:
+    llvm_unreachable("unsupported delimiter");
+  }
+}
+
+void mlir::printDynamicIndexList(OpAsmPrinter &printer, Operation *op,
+                                 OperandRange values,
+                                 ArrayRef<int64_t> integers,
+                                 TypeRange valueTypes,
+                                 AsmParser::Delimiter delimiter) {
+  char leftDelimiter = getLeftDelimiter(delimiter);
+  char rightDelimiter = getRightDelimiter(delimiter);
+  printer << leftDelimiter;
+  if (integers.empty()) {
+    printer << rightDelimiter;
     return;
   }
   unsigned idx = 0;
-  llvm::interleaveComma(arrayAttr, p, [&](Attribute a) {
-    int64_t val = a.cast<IntegerAttr>().getInt();
-    if (val == dynVal)
-      p << values[idx++];
-    else
-      p << val;
+  llvm::interleaveComma(integers, printer, [&](int64_t integer) {
+    if (ShapedType::isDynamic(integer)) {
+      printer << values[idx];
+      if (!valueTypes.empty())
+        printer << " : " << valueTypes[idx];
+      ++idx;
+    } else {
+      printer << integer;
+    }
   });
-  p << ']';
+  printer << rightDelimiter;
 }
 
-void mlir::printOperandsOrIntegersOffsetsOrStridesList(OpAsmPrinter &p,
-                                                       Operation *op,
-                                                       OperandRange values,
-                                                       ArrayAttr integers) {
-  return printOperandsOrIntegersListImpl<ShapedType::kDynamicStrideOrOffset>(
-      p, values, integers);
-}
-
-void mlir::printOperandsOrIntegersSizesList(OpAsmPrinter &p, Operation *op,
-                                            OperandRange values,
-                                            ArrayAttr integers) {
-  return printOperandsOrIntegersListImpl<ShapedType::kDynamicSize>(p, values,
-                                                                   integers);
-}
-
-template <int64_t dynVal>
-static ParseResult parseOperandsOrIntegersImpl(
+ParseResult mlir::parseDynamicIndexList(
     OpAsmParser &parser,
     SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    ArrayAttr &integers) {
-  if (failed(parser.parseLSquare()))
-    return failure();
-  // 0-D.
-  if (succeeded(parser.parseOptionalRSquare())) {
-    integers = parser.getBuilder().getArrayAttr({});
-    return success();
-  }
+    DenseI64ArrayAttr &integers, SmallVectorImpl<Type> *valueTypes,
+    AsmParser::Delimiter delimiter) {
 
-  SmallVector<int64_t, 4> attrVals;
-  while (true) {
+  SmallVector<int64_t, 4> integerVals;
+  auto parseIntegerOrValue = [&]() {
     OpAsmParser::UnresolvedOperand operand;
     auto res = parser.parseOptionalOperand(operand);
-    if (res.hasValue() && succeeded(res.getValue())) {
+    if (res.has_value() && succeeded(res.value())) {
       values.push_back(operand);
-      attrVals.push_back(dynVal);
+      integerVals.push_back(ShapedType::kDynamic);
+      if (valueTypes && parser.parseColonType(valueTypes->emplace_back()))
+        return failure();
     } else {
-      IntegerAttr attr;
-      if (failed(parser.parseAttribute<IntegerAttr>(attr)))
-        return parser.emitError(parser.getNameLoc())
-               << "expected SSA value or integer";
-      attrVals.push_back(attr.getInt());
+      int64_t integer;
+      if (failed(parser.parseInteger(integer)))
+        return failure();
+      integerVals.push_back(integer);
     }
-
-    if (succeeded(parser.parseOptionalComma()))
-      continue;
-    if (failed(parser.parseRSquare()))
-      return failure();
-    break;
-  }
-  integers = parser.getBuilder().getI64ArrayAttr(attrVals);
+    return success();
+  };
+  if (parser.parseCommaSeparatedList(delimiter, parseIntegerOrValue,
+                                     " in dynamic index list"))
+    return parser.emitError(parser.getNameLoc())
+           << "expected SSA value or integer";
+  integers = parser.getBuilder().getDenseI64ArrayAttr(integerVals);
   return success();
-}
-
-ParseResult mlir::parseOperandsOrIntegersOffsetsOrStridesList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    ArrayAttr &integers) {
-  return parseOperandsOrIntegersImpl<ShapedType::kDynamicStrideOrOffset>(
-      parser, values, integers);
-}
-
-ParseResult mlir::parseOperandsOrIntegersSizesList(
-    OpAsmParser &parser,
-    SmallVectorImpl<OpAsmParser::UnresolvedOperand> &values,
-    ArrayAttr &integers) {
-  return parseOperandsOrIntegersImpl<ShapedType::kDynamicSize>(parser, values,
-                                                               integers);
 }
 
 bool mlir::detail::sameOffsetsSizesAndStrides(
@@ -177,68 +175,4 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
     if (!cmp(std::get<0>(it), std::get<1>(it)))
       return false;
   return true;
-}
-
-void OffsetSizeAndStrideOpInterface::expandToRank(
-    Value target, SmallVector<OpFoldResult> &offsets,
-    SmallVector<OpFoldResult> &sizes, SmallVector<OpFoldResult> &strides,
-    llvm::function_ref<OpFoldResult(Value, int64_t)> createOrFoldDim) {
-  auto shapedType = target.getType().cast<ShapedType>();
-  unsigned rank = shapedType.getRank();
-  assert(offsets.size() == sizes.size() && "mismatched lengths");
-  assert(offsets.size() == strides.size() && "mismatched lengths");
-  assert(offsets.size() <= rank && "rank overflow");
-  MLIRContext *ctx = target.getContext();
-  Attribute zero = IntegerAttr::get(IndexType::get(ctx), APInt(64, 0));
-  Attribute one = IntegerAttr::get(IndexType::get(ctx), APInt(64, 1));
-  for (unsigned i = offsets.size(); i < rank; ++i) {
-    offsets.push_back(zero);
-    sizes.push_back(createOrFoldDim(target, i));
-    strides.push_back(one);
-  }
-}
-
-SmallVector<OpFoldResult, 4>
-mlir::getMixedOffsets(OffsetSizeAndStrideOpInterface op,
-                      ArrayAttr staticOffsets, ValueRange offsets) {
-  SmallVector<OpFoldResult, 4> res;
-  unsigned numDynamic = 0;
-  unsigned count = static_cast<unsigned>(staticOffsets.size());
-  for (unsigned idx = 0; idx < count; ++idx) {
-    if (op.isDynamicOffset(idx))
-      res.push_back(offsets[numDynamic++]);
-    else
-      res.push_back(staticOffsets[idx]);
-  }
-  return res;
-}
-
-SmallVector<OpFoldResult, 4>
-mlir::getMixedSizes(OffsetSizeAndStrideOpInterface op, ArrayAttr staticSizes,
-                    ValueRange sizes) {
-  SmallVector<OpFoldResult, 4> res;
-  unsigned numDynamic = 0;
-  unsigned count = static_cast<unsigned>(staticSizes.size());
-  for (unsigned idx = 0; idx < count; ++idx) {
-    if (op.isDynamicSize(idx))
-      res.push_back(sizes[numDynamic++]);
-    else
-      res.push_back(staticSizes[idx]);
-  }
-  return res;
-}
-
-SmallVector<OpFoldResult, 4>
-mlir::getMixedStrides(OffsetSizeAndStrideOpInterface op,
-                      ArrayAttr staticStrides, ValueRange strides) {
-  SmallVector<OpFoldResult, 4> res;
-  unsigned numDynamic = 0;
-  unsigned count = static_cast<unsigned>(staticStrides.size());
-  for (unsigned idx = 0; idx < count; ++idx) {
-    if (op.isDynamicStride(idx))
-      res.push_back(strides[numDynamic++]);
-    else
-      res.push_back(staticStrides[idx]);
-  }
-  return res;
 }

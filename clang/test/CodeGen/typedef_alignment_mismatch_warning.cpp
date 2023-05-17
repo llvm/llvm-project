@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -fdata-sections -fcolor-diagnostics
+// RUN: %clang_cc1 %s -fsyntax-only -verify=expected,precxx17 %std_cxx11-14 -fdata-sections -fcolor-diagnostics
+// RUN: %clang_cc1 %s -fsyntax-only -verify %std_cxx17- -fdata-sections -fcolor-diagnostics
 
 // Warn for any function that
 //   * takes a pointer or a reference to an object (including "this" pointer),
@@ -214,10 +215,10 @@ void test8() {
   TypedefAligned4 TA8b(11);            // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   TypedefAligned4 TA8c = TA8a + TA8b;  // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator+' may result in an unaligned pointer access}}
                                        // expected-warning@-1 {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator+' may result in an unaligned pointer access}}
-                                       // expected-warning@-2 {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+                                       // precxx17-warning@-2 {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   TypedefAligned4 TA8d = TA8a - &TA8b; // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator-' may result in an unaligned pointer access}}
                                        // expected-warning@-1 {{passing 4-byte aligned argument to 8-byte aligned parameter 1 of 'operator-' may result in an unaligned pointer access}}
-                                       // expected-warning@-2 {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
+                                       // precxx17-warning@-2 {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'StructAligned8' may result in an unaligned pointer access}}
   ++TA8d;                              // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator++' may result in an unaligned pointer access}}
   --TA8c;                              // expected-warning {{passing 4-byte aligned argument to 8-byte aligned parameter 'this' of 'operator--' may result in an unaligned pointer access}}
   UsingAligned4 UA8a(11);

@@ -11,12 +11,13 @@ declare void @external_void_func_i32(i32) #0
 ; GCN: s_waitcnt
 
 ; Spill CSR VGPR used for SGPR spilling
-; GCN: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN: s_mov_b32 [[FP_SCRATCH_COPY:s[0-9]+]], s33
+; GCN-NEXT: s_mov_b32 s33, s32
+; GCN-NEXT: s_or_saveexec_b64 [[COPY_EXEC0:s\[[0-9]+:[0-9]+\]]], -1{{$}}
+; GCN-NEXT: buffer_store_dword v40, off, s[0:3], s33 ; 4-byte Folded Spill
+; GCN-NEXT: buffer_store_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC0]]
-; GCN-DAG: v_writelane_b32 v40, s33, 2
-; GCN-DAG: s_mov_b32 s33, s32
-; GCN-DAG: s_addk_i32 s32, 0x400
+; GCN-DAG: v_writelane_b32 v41, [[FP_SCRATCH_COPY]], 0
 ; GCN-DAG: v_writelane_b32 v40, s30, 0
 ; GCN-DAG: v_writelane_b32 v40, s31, 1
 
@@ -25,11 +26,13 @@ declare void @external_void_func_i32(i32) #0
 ; GCN: v_readlane_b32 s31, v40, 1
 ; GCN: v_readlane_b32 s30, v40, 0
 
-; GCN-NEXT: s_addk_i32 s32, 0xfc00
-; GCN-NEXT: v_readlane_b32 s33, v40, 2
+; GCN-NEXT: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v41, 0
 ; GCN: s_or_saveexec_b64 [[COPY_EXEC1:s\[[0-9]+:[0-9]+\]]], -1{{$}}
-; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s32 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v40, off, s[0:3], s33 ; 4-byte Folded Reload
+; GCN-NEXT: buffer_load_dword v41, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT: s_mov_b64 exec, [[COPY_EXEC1]]
+; GCN-NEXT: s_addk_i32 s32, 0xfc00
+; GCN-NEXT: s_mov_b32 s33, [[FP_SCRATCH_COPY]]
 ; GCN-NEXT: s_waitcnt vmcnt(0)
 ; GCN-NEXT: s_setpc_b64 s[30:31]
 define void @test_func_call_external_void_func_i32_imm() #0 {
@@ -47,10 +50,9 @@ define void @test_func_call_external_void_func_i32_imm() #0 {
 ; GCN: s_setpc_b64
 define void @test_func_call_external_void_func_i32_imm_stack_use() #0 {
   %alloca = alloca [16 x i32], align 4, addrspace(5)
-  %gep0 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 0
-  %gep15 = getelementptr inbounds [16 x i32], [16 x i32] addrspace(5)* %alloca, i32 0, i32 16
-  store volatile i32 0, i32 addrspace(5)* %gep0
-  store volatile i32 0, i32 addrspace(5)* %gep15
+  %gep15 = getelementptr inbounds [16 x i32], ptr addrspace(5) %alloca, i32 0, i32 16
+  store volatile i32 0, ptr addrspace(5) %alloca
+  store volatile i32 0, ptr addrspace(5) %gep15
   call void @external_void_func_i32(i32 42)
   ret void
 }

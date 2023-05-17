@@ -13,12 +13,12 @@ target triple = "powerpc64le-unknown-linux-gnu"
 ; CHECK: bclr
 ; CHECK: # %if.then
 ; Function Attrs: nounwind
-define void @__fmax_double3_3D_exec(<2 x double>* %input6, i1 %bool1, i1 %bool2) #0 {
+define void @__fmax_double3_3D_exec(ptr %input6, i1 %bool1, i1 %bool2) #0 {
 entry:
   br i1 %bool1, label %if.then.i, label %fmax_double3.exit
 
 if.then.i:                                        ; preds = %entry
-  store <2 x double> zeroinitializer, <2 x double>* %input6, align 32
+  store <2 x double> zeroinitializer, ptr %input6, align 32
   br label %fmax_double3.exit
 
 fmax_double3.exit:                                ; preds = %if.then.i, %entry

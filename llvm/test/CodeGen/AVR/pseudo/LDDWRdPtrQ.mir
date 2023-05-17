@@ -1,4 +1,5 @@
-# RUN: llc -O0  %s -o - -march=avr | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo %s -o - | FileCheck %s
+# RUN: llc -O0 -run-pass=avr-expand-pseudo -mattr=avrtiny %s -o - | FileCheck %s --check-prefix=CHECK-TINY
 
 # This test checks the expansion of the 16-bit 'LDDWRdPtrQ' pseudo instruction.
 
@@ -19,8 +20,15 @@ body: |
 
     ; CHECK-LABEL: test_lddwrdptrq
 
-    ; CHECK:      ldd     r24, Z+10
-    ; CHECK-NEXT: ldd     r25, Z+11
+    ; CHECK:      $r24 = LDDRdPtrQ $r31r30, 10
+    ; CHECK-NEXT: $r25 = LDDRdPtrQ $r31r30, 11
+
+    ; CHECK-TINY:      $r30 = SUBIRdK $r30, 246, implicit-def $sreg
+    ; CHECK-TINY-NEXT: $r31 = SBCIRdK $r31, 255, implicit-def $sreg, implicit killed $sreg
+    ; CHECK-TINY-NEXT: $r24, $r31r30 = LDRdPtrPi killed $r31r30
+    ; CHECK-TINY-NEXT: $r25, $r31r30 = LDRdPtrPi killed $r31r30
+    ; CHECK-TINY-NEXT: $r30 = SUBIRdK $r30, 12, implicit-def $sreg
+    ; CHECK-TINY-NEXT: $r31 = SBCIRdK $r31, 0, implicit-def $sreg, implicit killed $sreg
 
     early-clobber $r25r24 = LDDWRdPtrQ undef $r31r30, 10
 ...

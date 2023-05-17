@@ -16,6 +16,9 @@
 #include "MCTargetDesc/AVRMCTargetDesc.h"
 #include "TargetInfo/AVRTargetInfo.h"
 
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
+
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCDecoderOps.h"
@@ -122,6 +125,13 @@ static DecodeStatus decodeFMUL2RdRr(MCInst &Inst, unsigned Insn,
 
 static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
                                 const MCDisassembler *Decoder);
+
+static DecodeStatus decodeFBRk(MCInst &Inst, unsigned Insn, uint64_t Address,
+                               const MCDisassembler *Decoder);
+
+static DecodeStatus decodeCondBranch(MCInst &Inst, unsigned Insn,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder);
 
 static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
@@ -265,6 +275,59 @@ static DecodeStatus decodeMemri(MCInst &Inst, unsigned Insn, uint64_t Address,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus decodeFBRk(MCInst &Inst, unsigned Insn, uint64_t Address,
+                               const MCDisassembler *Decoder) {
+  // Decode the opcode.
+  switch (Insn & 0xf000) {
+  case 0xc000:
+    Inst.setOpcode(AVR::RJMPk);
+    break;
+  case 0xd000:
+    Inst.setOpcode(AVR::RCALLk);
+    break;
+  default: // Unknown relative branch instruction.
+    return MCDisassembler::Fail;
+  }
+  // Decode the relative offset.
+  int16_t Offset = ((int16_t)((Insn & 0xfff) << 4)) >> 3;
+  Inst.addOperand(MCOperand::createImm(Offset));
+  return MCDisassembler::Success;
+}
+
+static DecodeStatus decodeCondBranch(MCInst &Inst, unsigned Insn,
+                                     uint64_t Address,
+                                     const MCDisassembler *Decoder) {
+  // These 8 instructions are not defined as aliases of BRBS/BRBC.
+  DenseMap<unsigned, unsigned> brInsts = {
+      {0x000, AVR::BRLOk}, {0x400, AVR::BRSHk}, {0x001, AVR::BREQk},
+      {0x401, AVR::BRNEk}, {0x002, AVR::BRMIk}, {0x402, AVR::BRPLk},
+      {0x004, AVR::BRLTk}, {0x404, AVR::BRGEk}};
+
+  // Get the relative offset.
+  int16_t Offset = ((int16_t)((Insn & 0x3f8) << 6)) >> 8;
+
+  // Search the instruction pattern.
+  auto NotAlias = [&Insn](const std::pair<unsigned, unsigned> &I) {
+    return (Insn & 0x407) != I.first;
+  };
+  llvm::partition(brInsts, NotAlias);
+  auto It = llvm::partition_point(brInsts, NotAlias);
+
+  // Decode the instruction.
+  if (It != brInsts.end()) {
+    // This instruction is not an alias of BRBC/BRBS.
+    Inst.setOpcode(It->second);
+    Inst.addOperand(MCOperand::createImm(Offset));
+  } else {
+    // Fall back to an ordinary BRBS/BRBC.
+    Inst.setOpcode(Insn & 0x400 ? AVR::BRBCsk : AVR::BRBSsk);
+    Inst.addOperand(MCOperand::createImm(Insn & 7));
+    Inst.addOperand(MCOperand::createImm(Offset));
+  }
+
+  return MCDisassembler::Success;
+}
+
 static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
                                     uint64_t Address,
                                     const MCDisassembler *Decoder) {
@@ -275,7 +338,7 @@ static DecodeStatus decodeLoadStore(MCInst &Inst, unsigned Insn,
   if ((Insn & 0xf000) == 0x8000) {
     unsigned RegBase = (Insn & 0x8) ? AVR::R29R28 : AVR::R31R30;
     unsigned Offset = Insn & 7; // We need not consider offset > 7.
-    if ((Insn & 0x200) == 0) { // Decode LDD.
+    if ((Insn & 0x200) == 0) {  // Decode LDD.
       Inst.setOpcode(AVR::LDDRdPtrQ);
       Inst.addOperand(MCOperand::createReg(RegVal));
       Inst.addOperand(MCOperand::createReg(RegBase));
@@ -424,6 +487,14 @@ DecodeStatus AVRDisassembler::getInstruction(MCInst &Instr, uint64_t &Size,
 
     if (Result == MCDisassembler::Fail)
       return MCDisassembler::Fail;
+
+    // Try to decode AVRTiny instructions.
+    if (STI.hasFeature(AVR::FeatureTinyEncoding)) {
+      Result = decodeInstruction(DecoderTableAVRTiny16, Instr, Insn, Address,
+                                 this, STI);
+      if (Result != MCDisassembler::Fail)
+        return Result;
+    }
 
     // Try to auto-decode a 16-bit instruction.
     Result = decodeInstruction(getDecoderTable(Size), Instr, Insn, Address,

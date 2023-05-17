@@ -1,0 +1,35 @@
+# RUN: llc -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -run-pass=x86-optimize-LEAs -o - %s | FileCheck %s
+
+# This test case used to trigger the assertion in the LEA optimization pass:
+#
+#   assert(MRI->use_empty(LastVReg) &&
+#          "The LEA's def register must have no uses");
+
+# CHECK:     LEA64r
+# CHECK-NOT: LEA64r
+# CHECK:     DBG_VALUE_LIST
+
+--- |
+  define void @foo() {
+    ret void
+  }
+
+  !0 = !DIFile(filename: "a", directory: "/proc/self/cwd")
+  !1 = distinct !DISubprogram(name: "c", scope: null, file: !0, line: 3)
+  !2 = !DILocalVariable(name: "r", scope: !1, file: !0, line: 4)
+  !3 = !DILocation(line: 5, scope: !1)
+...
+---
+name: foo
+alignment: 16
+tracksRegLiveness: true
+stack:
+  - { id: 0, size: 40, alignment: 8 }
+body: |
+  bb.0:
+    %0:gr64 = LEA64r %stack.0, 1, $noreg, 0, $noreg
+    %1:gr64 = LEA64r %stack.0, 1, $noreg, 40, $noreg
+    DBG_VALUE_LIST !2, !DIExpression(DW_OP_LLVM_arg, 0), %1:gr64, %1:gr64, debug-location !3
+    %2:vr128 = MOVUPSrm %1:gr64, 1, $noreg, 0, $noreg
+    RET64
+...

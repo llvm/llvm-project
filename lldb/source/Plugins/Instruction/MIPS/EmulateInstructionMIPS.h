@@ -26,6 +26,7 @@ namespace lldb_private {
 
 #include "lldb/Core/EmulateInstruction.h"
 #include "lldb/Utility/Status.h"
+#include <optional>
 
 class EmulateInstructionMIPS : public lldb_private::EmulateInstruction {
 public:
@@ -80,8 +81,8 @@ public:
     return false;
   }
 
-  bool GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num,
-                       lldb_private::RegisterInfo &reg_info) override;
+  std::optional<lldb_private::RegisterInfo>
+  GetRegisterInfo(lldb::RegisterKind reg_kind, uint32_t reg_num) override;
 
   bool
   CreateFunctionEntryUnwind(lldb_private::UnwindPlan &unwind_plan) override;

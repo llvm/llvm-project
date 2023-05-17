@@ -12,7 +12,7 @@
 ;        subl    %eax, %ecx
 
 ; C - (A + B)   -->    C - A - B
-define i32 @test1(i32* %p, i32 %a, i32 %b, i32 %c) {
+define i32 @test1(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
@@ -26,13 +26,13 @@ define i32 @test1(i32* %p, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = add i32 %b, %a
   %sub = sub i32 %c, %0
-  store i32 %sub, i32* %p, align 4
+  store i32 %sub, ptr %p, align 4
   %sub1 = sub i32 %a, %b
   ret i32 %sub1
 }
 
 ; (A + B) + C   -->    C + A + B
-define i32 @test2(i32* %p, i32 %a, i32 %b, i32 %c) {
+define i32 @test2(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
@@ -46,13 +46,13 @@ define i32 @test2(i32* %p, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = add i32 %a, %b
   %1 = add i32 %c, %0
-  store i32 %1, i32* %p, align 4
+  store i32 %1, ptr %p, align 4
   %sub1 = sub i32 %a, %b
   ret i32 %sub1
 }
 
 ; C + (A + B)   -->    C + A + B
-define i32 @test3(i32* %p, i32 %a, i32 %b, i32 %c) {
+define i32 @test3(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
@@ -66,14 +66,14 @@ define i32 @test3(i32* %p, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = add i32 %a, %b
   %1 = add i32 %0, %c
-  store i32 %1, i32* %p, align 4
+  store i32 %1, ptr %p, align 4
   %sub1 = sub i32 %a, %b
   ret i32 %sub1
 }
 
 ; (A + B) - C
 ; Can't be converted to A - C + B without introduce MOV
-define i32 @test4(i32* %p, i32 %a, i32 %b, i32 %c) {
+define i32 @test4(ptr %p, i32 %a, i32 %b, i32 %c) {
 ; CHECK-LABEL: test4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    # kill: def $edx killed $edx def $rdx
@@ -87,12 +87,12 @@ define i32 @test4(i32* %p, i32 %a, i32 %b, i32 %c) {
 entry:
   %0 = add i32 %b, %a
   %sub = sub i32 %0, %c
-  store i32 %sub, i32* %p, align 4
+  store i32 %sub, ptr %p, align 4
   %sub1 = sub i32 %a, %b
   ret i32 %sub1
 }
 
-define i64 @test5(i64* %p, i64 %a, i64 %b, i64 %c) {
+define i64 @test5(ptr %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -102,15 +102,15 @@ define i64 @test5(i64* %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
-  %ld = load i64, i64* %p, align 8
+  %ld = load i64, ptr %p, align 8
   %0 = add i64 %b, %ld
   %sub = sub i64 %c, %0
-  store i64 %sub, i64* %p, align 8
+  store i64 %sub, ptr %p, align 8
   %sub1 = sub i64 %ld, %b
   ret i64 %sub1
 }
 
-define i64 @test6(i64* %p, i64 %a, i64 %b, i64 %c) {
+define i64 @test6(ptr %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -120,15 +120,15 @@ define i64 @test6(i64* %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
-  %ld = load i64, i64* %p, align 8
+  %ld = load i64, ptr %p, align 8
   %0 = add i64 %b, %ld
   %1 = add i64 %0, %c
-  store i64 %1, i64* %p, align 8
+  store i64 %1, ptr %p, align 8
   %sub1 = sub i64 %ld, %b
   ret i64 %sub1
 }
 
-define i64 @test7(i64* %p, i64 %a, i64 %b, i64 %c) {
+define i64 @test7(ptr %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -138,17 +138,17 @@ define i64 @test7(i64* %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
-  %ld = load i64, i64* %p, align 8
+  %ld = load i64, ptr %p, align 8
   %0 = add i64 %b, %ld
   %1 = add i64 %c, %0
-  store i64 %1, i64* %p, align 8
+  store i64 %1, ptr %p, align 8
   %sub1 = sub i64 %ld, %b
   ret i64 %sub1
 }
 
 ; The sub instruction generated flags is used by following branch,
 ; so it should not be transformed.
-define i64 @test8(i64* %p, i64 %a, i64 %b, i64 %c) {
+define i64 @test8(ptr %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-LABEL: test8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movq (%rdi), %rax
@@ -164,18 +164,18 @@ define i64 @test8(i64* %p, i64 %a, i64 %b, i64 %c) {
 ; CHECK-NEXT:    subq %rdx, %rax
 ; CHECK-NEXT:    retq
 entry:
-  %ld = load i64, i64* %p, align 8
+  %ld = load i64, ptr %p, align 8
   %0 = add i64 %b, %ld
   %sub = sub i64 %c, %0
   %cond = icmp ule i64 %c, %0
   br i1 %cond, label %then, label %else
 
 then:
-  store i64 %sub, i64* %p, align 8
+  store i64 %sub, ptr %p, align 8
   br label %endif
 
 else:
-  store i64 0, i64* %p, align 8
+  store i64 0, ptr %p, align 8
   br label %endif
 
 endif:
@@ -229,15 +229,15 @@ define void @test10() {
 ; CHECK-NEXT:    movl %esi, (%rax)
 ; CHECK-NEXT:    retq
 entry:
-  %tmp = load i32, i32* undef, align 4
+  %tmp = load i32, ptr undef, align 4
   %tmp3 = sdiv i32 undef, 6
-  %tmp4 = load i32, i32* undef, align 4
+  %tmp4 = load i32, ptr undef, align 4
   %tmp5 = icmp eq i32 %tmp4, 4
   %tmp6 = select i1 %tmp5, i32 %tmp3, i32 %tmp
-  %tmp10 = load i16, i16* undef, align 2
+  %tmp10 = load i16, ptr undef, align 2
   %tmp11 = zext i16 %tmp10 to i32
   %tmp13 = zext i16 undef to i32
-  %tmp15 = load i16, i16* undef, align 2
+  %tmp15 = load i16, ptr undef, align 2
   %tmp16 = zext i16 %tmp15 to i32
   %tmp19 = shl nsw i32 undef, 1
   %tmp25 = shl nsw i32 undef, 1
@@ -248,14 +248,14 @@ entry:
   %tmp31 = sub nsw i32 %tmp11, %tmp26
   %tmp32 = shl nsw i32 %tmp30, 1
   %tmp33 = add nsw i32 %tmp32, %tmp31
-  store i32 %tmp33, i32* undef, align 4
+  store i32 %tmp33, ptr undef, align 4
   %tmp34 = mul nsw i32 %tmp31, -2
   %tmp35 = add nsw i32 %tmp34, %tmp30
-  store i32 %tmp35, i32* undef, align 4
+  store i32 %tmp35, ptr undef, align 4
   %tmp36 = select i1 %tmp5, i32 undef, i32 undef
-  %tmp38 = load i32, i32* undef, align 4
+  %tmp38 = load i32, ptr undef, align 4
   %tmp39 = ashr i32 %tmp38, %tmp6
-  store i32 %tmp39, i32* undef, align 4
+  store i32 %tmp39, ptr undef, align 4
   ret void
 }
 

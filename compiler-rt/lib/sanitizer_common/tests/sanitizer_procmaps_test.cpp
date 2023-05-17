@@ -65,11 +65,11 @@ TEST(MemoryMapping, LoadedModuleArchAndUUID) {
     memory_mapping.DumpListOfModules(&modules);
     for (uptr i = 0; i < modules.size(); ++i) {
       ModuleArch arch = modules[i].arch();
-      // Darwin unit tests are only run on i386/x86_64/x86_64h.
+      // Darwin unit tests are only run on i386/x86_64/x86_64h/arm64.
       if (SANITIZER_WORDSIZE == 32) {
         EXPECT_EQ(arch, kModuleArchI386);
       } else if (SANITIZER_WORDSIZE == 64) {
-        EXPECT_TRUE(arch == kModuleArchX86_64 || arch == kModuleArchX86_64H);
+        EXPECT_TRUE(arch == kModuleArchX86_64 || arch == kModuleArchX86_64H || arch == kModuleArchARM64);
       }
       const u8 *uuid = modules[i].uuid();
       u8 null_uuid[kModuleUUIDSize] = {0};

@@ -10,7 +10,7 @@ import abc
 import imp
 import os
 import sys
-from pathlib import PurePath
+from pathlib import PurePath, Path
 from collections import defaultdict, namedtuple
 
 from dex.command.CommandBase import StepExpectInfo
@@ -249,7 +249,13 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         assert False, "Couldn't find property {}".format(name)
 
     def launch(self, cmdline):
+        exe_path = Path(self.context.options.executable)
+        self.context.logger.note(f"VS: Using executable: '{exe_path}'")
         cmdline_str = ' '.join(cmdline)
+        if self.context.options.target_run_args:
+          cmdline_str += f" {self.context.options.target_run_args}"
+        if cmdline_str:
+          self.context.logger.note(f"VS: Using executable args: '{cmdline_str}'")
 
         # In a slightly baroque manner, lookup the VS project that runs when
         # you click "run", and set its command line options to the desired
@@ -259,13 +265,14 @@ class VisualStudio(DebuggerBase, metaclass=abc.ABCMeta):  # pylint: disable=abst
         ActiveConfiguration = self._fetch_property(project.Properties, 'ActiveConfiguration').Object
         ActiveConfiguration.DebugSettings.CommandArguments = cmdline_str
 
-        self._fn_go()
+        self.context.logger.note("Launching VS debugger...")
+        self._fn_go(False)
 
     def step(self):
-        self._fn_step()
+        self._fn_step(False)
 
     def go(self) -> ReturnCode:
-        self._fn_go()
+        self._fn_go(False)
         return ReturnCode.OK
 
     def set_current_stack_frame(self, idx: int = 0):

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugFrame.h"
@@ -30,6 +29,7 @@
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
 
@@ -135,7 +135,7 @@ SmallString<0> DWARFExpressionCopyBytesTest::emitObjFile(StringRef ExprBytes) {
   C.Streamer->initSections(false, *STI);
   MCSection *Section = C.MOFI->getTextSection();
   Section->setHasInstructions(true);
-  C.Streamer->SwitchSection(Section);
+  C.Streamer->switchSection(Section);
   C.Streamer->emitCFIStartProc(true);
   auto Str = EncodeDefCfaExpr(ExprBytes);
   C.Streamer->emitCFIEscape(Str);
@@ -147,8 +147,8 @@ SmallString<0> DWARFExpressionCopyBytesTest::emitObjFile(StringRef ExprBytes) {
 
 void DWARFExpressionCopyBytesTest::parseCFIsAndCheckExpression(
     const llvm::object::ObjectFile &E, ArrayRef<uint8_t> Expected) {
-  auto FetchFirstCfaExpression =
-      [](const DWARFDebugFrame &EHFrame) -> Optional<CFIProgram::Instruction> {
+  auto FetchFirstCfaExpression = [](const DWARFDebugFrame &EHFrame)
+      -> std::optional<CFIProgram::Instruction> {
     for (const dwarf::FrameEntry &Entry : EHFrame.entries()) {
       const auto *CurFDE = dyn_cast<dwarf::FDE>(&Entry);
       if (!CurFDE)
@@ -159,7 +159,7 @@ void DWARFExpressionCopyBytesTest::parseCFIsAndCheckExpression(
         return Instr;
       }
     }
-    return NoneType();
+    return std::nullopt;
   };
 
   std::unique_ptr<DWARFContext> Ctx = DWARFContext::create(E);

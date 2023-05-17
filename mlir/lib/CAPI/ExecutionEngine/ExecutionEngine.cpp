@@ -11,6 +11,7 @@
 #include "mlir/CAPI/IR.h"
 #include "mlir/CAPI/Support.h"
 #include "mlir/ExecutionEngine/OptUtils.h"
+#include "mlir/Target/LLVMIR/Dialect/Builtin/BuiltinToLLVMIRTranslation.h"
 #include "mlir/Target/LLVMIR/Dialect/LLVMIR/LLVMToLLVMIRTranslation.h"
 #include "llvm/ExecutionEngine/Orc/Mangling.h"
 #include "llvm/Support/TargetSelect.h"
@@ -19,7 +20,8 @@ using namespace mlir;
 
 extern "C" MlirExecutionEngine
 mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
-                          const MlirStringRef *sharedLibPaths) {
+                          const MlirStringRef *sharedLibPaths,
+                          bool enableObjectDump) {
   static bool initOnce = [] {
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmParser(); // needed for inline_asm
@@ -28,7 +30,9 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   }();
   (void)initOnce;
 
-  mlir::registerLLVMDialectTranslation(*unwrap(op)->getContext());
+  auto &ctx = *unwrap(op)->getContext();
+  mlir::registerBuiltinDialectTranslation(ctx);
+  mlir::registerLLVMDialectTranslation(ctx);
 
   auto tmBuilderOrError = llvm::orc::JITTargetMachineBuilder::detectHost();
   if (!tmBuilderOrError) {
@@ -54,6 +58,7 @@ mlirExecutionEngineCreate(MlirModule op, int optLevel, int numPaths,
   jitOptions.transformer = transformer;
   jitOptions.jitCodeGenOptLevel = llvmOptLevel;
   jitOptions.sharedLibPaths = libPaths;
+  jitOptions.enableObjectDump = enableObjectDump;
   auto jitOrError = ExecutionEngine::create(unwrap(op), jitOptions);
   if (!jitOrError) {
     consumeError(jitOrError.takeError());
@@ -99,7 +104,8 @@ extern "C" void mlirExecutionEngineRegisterSymbol(MlirExecutionEngine jit,
   unwrap(jit)->registerSymbols([&](llvm::orc::MangleAndInterner interner) {
     llvm::orc::SymbolMap symbolMap;
     symbolMap[interner(unwrap(name))] =
-        llvm::JITEvaluatedSymbol::fromPointer(sym);
+        { llvm::orc::ExecutorAddr::fromPtr(sym),
+          llvm::JITSymbolFlags::Exported };
     return symbolMap;
   });
 }

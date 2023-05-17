@@ -3,17 +3,17 @@
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 target triple = "armv4t-none-unknown-eabi"
 
-@foo.coefficient1 = internal unnamed_addr global i32* null, align 4, !dbg !0
-@iirLow1 = external dso_local local_unnamed_addr global i32*, align 4
+@foo.coefficient1 = internal unnamed_addr global ptr null, align 4, !dbg !0
+@iirLow1 = external dso_local local_unnamed_addr global ptr, align 4
 
 ; Function Attrs: nounwind
 define dso_local void @foo(i32 %i2) local_unnamed_addr #0 !dbg !2 {
 entry:
   call void @llvm.dbg.value(metadata i32 %i2, metadata !11, metadata !DIExpression()), !dbg !18
-  %0 = load i32*, i32** @iirLow1, align 4, !dbg !19
-  store i32 0, i32* %0, align 4, !dbg !24
-  %1 = ptrtoint i32* %0 to i32, !dbg !27
-  store i32 %1, i32* bitcast (i32** @foo.coefficient1 to i32*), align 4, !dbg !28
+  %0 = load ptr, ptr @iirLow1, align 4, !dbg !19
+  store i32 0, ptr %0, align 4, !dbg !24
+  %1 = ptrtoint ptr %0 to i32, !dbg !27
+  store i32 %1, ptr @foo.coefficient1, align 4, !dbg !28
   ret void, !dbg !29
 }
 
@@ -52,5 +52,5 @@ attributes #1 = { nounwind readnone speculatable }
 !28 = !DILocation(line: 9, column: 18, scope: !2)
 !29 = !DILocation(line: 10, column: 1, scope: !2)
 
-; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn }
+; CHECK: attributes #0 = { mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: write, inaccessiblemem: none) }
 ; CHECK-NOT: foo.coefficient1

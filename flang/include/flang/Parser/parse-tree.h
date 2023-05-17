@@ -179,6 +179,7 @@ struct EquivalenceStmt; // R870
 struct CommonStmt; // R873
 struct Substring; // R908
 struct CharLiteralConstantSubstring;
+struct SubstringInquiry;
 struct DataRef; // R911
 struct StructureComponent; // R913
 struct CoindexedNamedObject; // R914
@@ -269,7 +270,9 @@ using Location = const char *;
 
 // A parse tree node with provenance only
 struct Verbatim {
-  BOILERPLATE(Verbatim);
+  // Allow a no-arg constructor for Verbatim so parsers can return `RESULT{}`.
+  constexpr Verbatim() {}
+  COPY_AND_ASSIGN_BOILERPLATE(Verbatim);
   using EmptyTrait = std::true_type;
   CharBlock source;
 };
@@ -1355,10 +1358,8 @@ struct TypeDeclarationStmt {
 };
 
 // R828 access-id -> access-name | generic-spec
-struct AccessId {
-  UNION_CLASS_BOILERPLATE(AccessId);
-  std::variant<Name, common::Indirection<GenericSpec>> u;
-};
+// "access-name" is ambiguous with "generic-spec", so that's what's parsed
+WRAPPER_CLASS(AccessId, common::Indirection<GenericSpec>);
 
 // R827 access-stmt -> access-spec [[::] access-id-list]
 struct AccessStmt {
@@ -1734,7 +1735,7 @@ struct Expr {
       StructureConstructor, common::Indirection<FunctionReference>, Parentheses,
       UnaryPlus, Negate, NOT, PercentLoc, DefinedUnary, Power, Multiply, Divide,
       Add, Subtract, Concat, LT, LE, EQ, NE, GE, GT, AND, OR, EQV, NEQV,
-      DefinedBinary, ComplexConstructor>
+      DefinedBinary, ComplexConstructor, common::Indirection<SubstringInquiry>>
       u;
 };
 
@@ -1776,6 +1777,15 @@ struct Substring {
 struct CharLiteralConstantSubstring {
   TUPLE_CLASS_BOILERPLATE(CharLiteralConstantSubstring);
   std::tuple<CharLiteralConstant, SubstringRange> t;
+};
+
+// substring%KIND/LEN type parameter inquiry for cases that could not be
+// parsed as part-refs and fixed up afterwards.  N.B. we only have to
+// handle inquiries into designator-based substrings, not those based on
+// char-literal-constants.
+struct SubstringInquiry {
+  CharBlock source;
+  WRAPPER_CLASS_BOILERPLATE(SubstringInquiry, Substring);
 };
 
 // R901 designator -> object-name | array-element | array-section |
@@ -3220,20 +3230,24 @@ struct StmtFunctionStmt {
 };
 
 // Compiler directives
-// !DIR$ IGNORE_TKR [ [(tkr...)] name ]...
+// !DIR$ IGNORE_TKR [ [(tkrdmac...)] name ]...
+// !DIR$ LOOP COUNT (n1[, n2]...)
 // !DIR$ name...
 struct CompilerDirective {
   UNION_CLASS_BOILERPLATE(CompilerDirective);
   struct IgnoreTKR {
     TUPLE_CLASS_BOILERPLATE(IgnoreTKR);
-    std::tuple<std::list<const char *>, Name> t;
+    std::tuple<std::optional<std::list<const char *>>, Name> t;
+  };
+  struct LoopCount {
+    WRAPPER_CLASS_BOILERPLATE(LoopCount, std::list<std::uint64_t>);
   };
   struct NameValue {
     TUPLE_CLASS_BOILERPLATE(NameValue);
     std::tuple<Name, std::optional<std::uint64_t>> t;
   };
   CharBlock source;
-  std::variant<std::list<IgnoreTKR>, std::list<NameValue>> u;
+  std::variant<std::list<IgnoreTKR>, LoopCount, std::list<NameValue>> u;
 };
 
 // Legacy extensions
@@ -3375,6 +3389,19 @@ struct OmpScheduleClause {
       t;
 };
 
+// device([ device-modifier :] scalar-integer-expression)
+struct OmpDeviceClause {
+  TUPLE_CLASS_BOILERPLATE(OmpDeviceClause);
+  ENUM_CLASS(DeviceModifier, Ancestor, Device_Num)
+  std::tuple<std::optional<DeviceModifier>, ScalarIntExpr> t;
+};
+
+// device_type(any | host | nohost)
+struct OmpDeviceTypeClause {
+  ENUM_CLASS(Type, Any, Host, Nohost)
+  WRAPPER_CLASS_BOILERPLATE(OmpDeviceTypeClause, Type);
+};
+
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
@@ -3388,6 +3415,19 @@ struct OmpAlignedClause {
   TUPLE_CLASS_BOILERPLATE(OmpAlignedClause);
   CharBlock source;
   std::tuple<std::list<Name>, std::optional<ScalarIntConstantExpr>> t;
+};
+
+// 2.9.5 order-clause -> ORDER ([order-modifier :]concurrent)
+struct OmpOrderModifier {
+  UNION_CLASS_BOILERPLATE(OmpOrderModifier);
+  ENUM_CLASS(Kind, Reproducible, Unconstrained)
+  std::variant<Kind> u;
+};
+
+struct OmpOrderClause {
+  TUPLE_CLASS_BOILERPLATE(OmpOrderClause);
+  ENUM_CLASS(Type, Concurrent)
+  std::tuple<std::optional<OmpOrderModifier>, Type> t;
 };
 
 // 2.15.3.7 linear-modifier -> REF | VAL | UVAL
@@ -3442,10 +3482,23 @@ struct OmpInReductionClause {
 };
 
 // OMP 5.0 2.11.4 allocate-clause -> ALLOCATE ([allocator:] variable-name-list)
+// OMP 5.2 2.13.4 allocate-clause -> ALLOCATE ([allocate-modifier [,
+//  	                               allocate-modifier] :]
+//                                   variable-name-list)
+//                allocate-modifier -> allocator | align
 struct OmpAllocateClause {
   TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
-  WRAPPER_CLASS(Allocator, ScalarIntExpr);
-  std::tuple<std::optional<Allocator>, OmpObjectList> t;
+  struct AllocateModifier {
+    UNION_CLASS_BOILERPLATE(AllocateModifier);
+    WRAPPER_CLASS(Allocator, ScalarIntExpr);
+    WRAPPER_CLASS(Align, ScalarIntExpr);
+    struct ComplexModifier {
+      TUPLE_CLASS_BOILERPLATE(ComplexModifier);
+      std::tuple<Allocator, Align> t;
+    };
+    std::variant<Allocator, ComplexModifier, Align> u;
+  };
+  std::tuple<std::optional<AllocateModifier>, OmpObjectList> t;
 };
 
 // 2.13.9 depend-vec-length -> +/- non-negative-constant
@@ -3477,6 +3530,14 @@ struct OmpDependClause {
     std::tuple<OmpDependenceType, std::list<Designator>> t;
   };
   std::variant<Source, Sink, InOut> u;
+};
+
+// OMP 5.0 2.4 atomic-default-mem-order-clause ->
+//                 ATOMIC_DEFAULT_MEM_ORDER (SEQ_CST | ACQ_REL |
+//                                           RELAXED)
+struct OmpAtomicDefaultMemOrderClause {
+  ENUM_CLASS(Type, SeqCst, AcqRel, Relaxed)
+  WRAPPER_CLASS_BOILERPLATE(OmpAtomicDefaultMemOrderClause, Type);
 };
 
 // OpenMP Clauses
@@ -3596,6 +3657,13 @@ struct OpenMPDeclareSimdConstruct {
   std::tuple<Verbatim, std::optional<Name>, OmpClauseList> t;
 };
 
+// 2.4 requires -> REQUIRES requires-clause[ [ [,] requires-clause]...]
+struct OpenMPRequiresConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPRequiresConstruct);
+  CharBlock source;
+  std::tuple<Verbatim, OmpClauseList> t;
+};
+
 // 2.15.2 threadprivate -> THREADPRIVATE (variable-name-list)
 struct OpenMPThreadprivate {
   TUPLE_CLASS_BOILERPLATE(OpenMPThreadprivate);
@@ -3615,7 +3683,7 @@ struct OpenMPDeclarativeConstruct {
   CharBlock source;
   std::variant<OpenMPDeclarativeAllocate, OpenMPDeclareReductionConstruct,
       OpenMPDeclareSimdConstruct, OpenMPDeclareTargetConstruct,
-      OpenMPThreadprivate>
+      OpenMPThreadprivate, OpenMPRequiresConstruct>
       u;
 };
 
@@ -3645,6 +3713,20 @@ struct OpenMPExecutableAllocate {
   std::tuple<Verbatim, std::optional<OmpObjectList>, OmpClauseList,
       std::optional<std::list<OpenMPDeclarativeAllocate>>,
       Statement<AllocateStmt>>
+      t;
+};
+
+EMPTY_CLASS(OmpEndAllocators);
+
+// 6.7 Allocators construct [OpenMP 5.2]
+//     allocators-construct -> ALLOCATORS [allocate-clause [,]]
+//                                allocate-stmt
+//                             [omp-end-allocators-construct]
+struct OpenMPAllocatorsConstruct {
+  TUPLE_CLASS_BOILERPLATE(OpenMPAllocatorsConstruct);
+  CharBlock source;
+  std::tuple<Verbatim, OmpClauseList, Statement<AllocateStmt>,
+      std::optional<OmpEndAllocators>>
       t;
 };
 
@@ -3834,7 +3916,8 @@ struct OpenMPConstruct {
   std::variant<OpenMPStandaloneConstruct, OpenMPSectionsConstruct,
       OpenMPSectionConstruct, OpenMPLoopConstruct, OpenMPBlockConstruct,
       OpenMPAtomicConstruct, OpenMPDeclarativeAllocate,
-      OpenMPExecutableAllocate, OpenMPCriticalConstruct>
+      OpenMPExecutableAllocate, OpenMPAllocatorsConstruct,
+      OpenMPCriticalConstruct>
       u;
 };
 
@@ -3913,6 +3996,17 @@ struct AccObjectListWithReduction {
 struct AccWaitArgument {
   TUPLE_CLASS_BOILERPLATE(AccWaitArgument);
   std::tuple<std::optional<ScalarIntExpr>, std::list<ScalarIntExpr>> t;
+};
+
+struct AccDeviceTypeExpr {
+  TUPLE_CLASS_BOILERPLATE(AccDeviceTypeExpr);
+  CharBlock source;
+  std::tuple<std::optional<ScalarIntExpr>> t; // if null then *
+};
+
+struct AccDeviceTypeExprList {
+  WRAPPER_CLASS_BOILERPLATE(
+      AccDeviceTypeExprList, std::list<AccDeviceTypeExpr>);
 };
 
 struct AccTileExpr {

@@ -167,10 +167,10 @@ TEST_F(ASTUnitTest, LoadFromCommandLineEarlyError) {
   std::unique_ptr<clang::ASTUnit> ErrUnit;
 
   ASTUnit *AST = ASTUnit::LoadFromCommandLine(
-      &Args[0], &Args[4], PCHContainerOps, Diags, "", false,
-      CaptureDiagsKind::All, None, true, 0, TU_Complete, false, false, false,
-      SkipFunctionBodiesScope::None, false, true, false, false, None, &ErrUnit,
-      nullptr);
+      &Args[0], &Args[4], PCHContainerOps, Diags, "", false, "", false,
+      CaptureDiagsKind::All, std::nullopt, true, 0, TU_Complete, false, false,
+      false, SkipFunctionBodiesScope::None, false, true, false, false,
+      std::nullopt, &ErrUnit, nullptr);
 
   ASSERT_EQ(AST, nullptr);
   ASSERT_NE(ErrUnit, nullptr);

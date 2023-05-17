@@ -6,8 +6,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class TestVLA(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(compiler="clang", compiler_version=['<', '8.0'])
     def test_variable_list(self):
         self.build()

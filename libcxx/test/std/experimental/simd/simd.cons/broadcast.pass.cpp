@@ -37,43 +37,43 @@ template <class T>
 void supported_native_simd_ctor(...) = delete;
 
 void compile_narrowing_conversion() {
-  supported_native_simd_ctor<int8_t>(3);
-  supported_native_simd_ctor<int16_t>(3);
-  supported_native_simd_ctor<int32_t>(3);
-  supported_native_simd_ctor<int64_t>(3);
-  supported_native_simd_ctor<uint8_t>(3);
-  supported_native_simd_ctor<uint16_t>(3);
-  supported_native_simd_ctor<uint32_t>(3);
-  supported_native_simd_ctor<uint64_t>(3);
+  supported_native_simd_ctor<std::int8_t>(3);
+  supported_native_simd_ctor<std::int16_t>(3);
+  supported_native_simd_ctor<std::int32_t>(3);
+  supported_native_simd_ctor<std::int64_t>(3);
+  supported_native_simd_ctor<std::uint8_t>(3);
+  supported_native_simd_ctor<std::uint16_t>(3);
+  supported_native_simd_ctor<std::uint32_t>(3);
+  supported_native_simd_ctor<std::uint64_t>(3);
   supported_native_simd_ctor<float>(3.f);
   supported_native_simd_ctor<double>(3.);
   supported_native_simd_ctor<long double>(3.);
 
   not_supported_native_simd_ctor<float>(3.);
-  not_supported_native_simd_ctor<int8_t>(long(3));
+  not_supported_native_simd_ctor<std::int8_t>(long(3));
   not_supported_native_simd_ctor<float>(long(3));
   not_supported_native_simd_ctor<int>(3.);
 }
 
 void compile_convertible() {
   struct ConvertibleToInt {
-    operator int64_t() const;
+    operator std::int64_t() const;
   };
-  supported_native_simd_ctor<int64_t>(ConvertibleToInt());
+  supported_native_simd_ctor<std::int64_t>(ConvertibleToInt());
 
   struct NotConvertibleToInt {};
-  not_supported_native_simd_ctor<int64_t>(NotConvertibleToInt());
+  not_supported_native_simd_ctor<std::int64_t>(NotConvertibleToInt());
 }
 
 void compile_unsigned() {
   not_supported_native_simd_ctor<int>(3u);
-  supported_native_simd_ctor<uint16_t>(3u);
+  supported_native_simd_ctor<std::uint16_t>(3u);
 }
 
 template <typename SimdType>
 void test_broadcast() {
   SimdType a(3);
-  for (size_t i = 0; i < a.size(); i++) {
+  for (std::size_t i = 0; i < a.size(); i++) {
     assert(a[i] == 3);
   }
 }

@@ -7,7 +7,7 @@
 define <vscale x 1 x double> @vfwmul_vv_nxv1f64(<vscale x 1 x float> %va, <vscale x 1 x float> %vb) {
 ; CHECK-LABEL: vfwmul_vv_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmul.vv v10, v8, v9
 ; CHECK-NEXT:    vmv1r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -20,7 +20,7 @@ define <vscale x 1 x double> @vfwmul_vv_nxv1f64(<vscale x 1 x float> %va, <vscal
 define <vscale x 1 x double> @vfwmul_vf_nxv1f64(<vscale x 1 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv1f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v9, v8, fa0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -35,7 +35,7 @@ define <vscale x 1 x double> @vfwmul_vf_nxv1f64(<vscale x 1 x float> %va, float 
 define <vscale x 1 x double> @vfwmul_vf_nxv1f64_2(<vscale x 1 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv1f64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v9, v8, fa0
 ; CHECK-NEXT:    vmv1r.v v8, v9
 ; CHECK-NEXT:    ret
@@ -50,7 +50,7 @@ define <vscale x 1 x double> @vfwmul_vf_nxv1f64_2(<vscale x 1 x float> %va, floa
 define <vscale x 2 x double> @vfwmul_vv_nxv2f64(<vscale x 2 x float> %va, <vscale x 2 x float> %vb) {
 ; CHECK-LABEL: vfwmul_vv_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwmul.vv v10, v8, v9
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -63,7 +63,7 @@ define <vscale x 2 x double> @vfwmul_vv_nxv2f64(<vscale x 2 x float> %va, <vscal
 define <vscale x 2 x double> @vfwmul_vf_nxv2f64(<vscale x 2 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv2f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v10, v8, fa0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -78,7 +78,7 @@ define <vscale x 2 x double> @vfwmul_vf_nxv2f64(<vscale x 2 x float> %va, float 
 define <vscale x 2 x double> @vfwmul_vf_nxv2f64_2(<vscale x 2 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv2f64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v10, v8, fa0
 ; CHECK-NEXT:    vmv2r.v v8, v10
 ; CHECK-NEXT:    ret
@@ -93,7 +93,7 @@ define <vscale x 2 x double> @vfwmul_vf_nxv2f64_2(<vscale x 2 x float> %va, floa
 define <vscale x 4 x double> @vfwmul_vv_nxv4f64(<vscale x 4 x float> %va, <vscale x 4 x float> %vb) {
 ; CHECK-LABEL: vfwmul_vv_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwmul.vv v12, v8, v10
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -106,7 +106,7 @@ define <vscale x 4 x double> @vfwmul_vv_nxv4f64(<vscale x 4 x float> %va, <vscal
 define <vscale x 4 x double> @vfwmul_vf_nxv4f64(<vscale x 4 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v12, v8, fa0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -121,7 +121,7 @@ define <vscale x 4 x double> @vfwmul_vf_nxv4f64(<vscale x 4 x float> %va, float 
 define <vscale x 4 x double> @vfwmul_vf_nxv4f64_2(<vscale x 4 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv4f64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v12, v8, fa0
 ; CHECK-NEXT:    vmv4r.v v8, v12
 ; CHECK-NEXT:    ret
@@ -136,7 +136,7 @@ define <vscale x 4 x double> @vfwmul_vf_nxv4f64_2(<vscale x 4 x float> %va, floa
 define <vscale x 8 x double> @vfwmul_vv_nxv8f64(<vscale x 8 x float> %va, <vscale x 8 x float> %vb) {
 ; CHECK-LABEL: vfwmul_vv_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwmul.vv v16, v8, v12
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -149,7 +149,7 @@ define <vscale x 8 x double> @vfwmul_vv_nxv8f64(<vscale x 8 x float> %va, <vscal
 define <vscale x 8 x double> @vfwmul_vf_nxv8f64(<vscale x 8 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv8f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v16, v8, fa0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret
@@ -164,7 +164,7 @@ define <vscale x 8 x double> @vfwmul_vf_nxv8f64(<vscale x 8 x float> %va, float 
 define <vscale x 8 x double> @vfwmul_vf_nxv8f64_2(<vscale x 8 x float> %va, float %b) {
 ; CHECK-LABEL: vfwmul_vf_nxv8f64_2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
 ; CHECK-NEXT:    vfwmul.vf v16, v8, fa0
 ; CHECK-NEXT:    vmv8r.v v8, v16
 ; CHECK-NEXT:    ret

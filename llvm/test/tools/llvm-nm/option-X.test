@@ -8,8 +8,6 @@
 # RUN:   FileCheck %s -DFILE1=%t32.bc --check-prefixes=BITCODE32 --implicit-check-not={{.}}
 # RUN: llvm-nm --format=just-symbols -X64 %t32.bc %t64.bc | \
 # RUN:   FileCheck %s -DFILE2=%t64.bc --check-prefixes=BITCODE64 --implicit-check-not={{.}}
-# RUN: llvm-nm --format=just-symbols %t32.bc %t64.bc | \
-# RUN:   FileCheck %s -DFILE1=%t32.bc -DFILE2=%t64.bc --check-prefixes=BITCODE32,BITCODE64
 # RUN: llvm-nm --format=just-symbols -X32_64 %t32.bc %t64.bc | \
 # RUN:   FileCheck %s -DFILE1=%t32.bc -DFILE2=%t64.bc --check-prefixes=BITCODE32,BITCODE64
 # RUN: llvm-nm --format=just-symbols -Xany %t32.bc %t64.bc | \
@@ -32,8 +30,6 @@
 # RUN:   FileCheck %s -DFILE32=%t_elf32.o --check-prefixes=ELF32 --implicit-check-not={{.}}
 # RUN: llvm-nm --format=just-symbols -X64 %t_elf32.o %t_elf64.o | \
 # RUN:   FileCheck %s -DFILE64=%t_elf64.o --check-prefixes=ELF64 --implicit-check-not={{.}}
-# RUN: llvm-nm --format=just-symbols %t_elf32.o %t_elf64.o | \
-# RUN:   FileCheck %s -DFILE32=%t_elf32.o -DFILE64=%t_elf64.o --check-prefixes=ELF32,ELF64
 # RUN: llvm-nm --format=just-symbols -X32_64 %t_elf32.o %t_elf64.o | \
 # RUN:   FileCheck %s -DFILE32=%t_elf32.o -DFILE64=%t_elf64.o --check-prefixes=ELF32,ELF64
 # RUN: llvm-nm --format=just-symbols -Xany %t_elf32.o %t_elf64.o | \
@@ -85,8 +81,6 @@ Symbols:
 # BOTH-NEXT:   [[FILE64]]:
 # BOTH-NEXT:   var_0x1F7
 
-# RUN: llvm-nm --format=just-symbols %t.a | \
-# RUN:   FileCheck --check-prefixes=ARCHIVE-BOTH -DFILE=%basename_t --match-full-lines %s
 # RUN: llvm-nm --format=just-symbols -X32_64 %t.a | \
 # RUN:   FileCheck --check-prefixes=ARCHIVE-BOTH -DFILE=%basename_t --match-full-lines %s
 # RUN: llvm-nm --format=just-symbols -Xany %t.a | \

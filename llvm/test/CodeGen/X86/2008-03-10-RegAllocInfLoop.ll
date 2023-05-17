@@ -1,14 +1,14 @@
 ; RUN: llc < %s -mtriple=i386-pc-linux-gnu -relocation-model=pic -frame-pointer=all
 ; PR2134
 
-declare fastcc i8* @w_addchar(i8*, i32*, i32*, i8 signext ) nounwind 
+declare fastcc ptr @w_addchar(ptr, ptr, ptr, i8 signext ) nounwind 
 
-define x86_stdcallcc i32 @parse_backslash(i8** inreg  %word, i32* inreg  %word_length, i32* inreg  %max_length) nounwind  {
+define x86_stdcallcc i32 @parse_backslash(ptr inreg  %word, ptr inreg  %word_length, ptr inreg  %max_length) nounwind  {
 entry:
-	%tmp6 = load i8, i8* null, align 1		; <i8> [#uses=1]
+	%tmp6 = load i8, ptr null, align 1		; <i8> [#uses=1]
 	br label %bb13
 bb13:		; preds = %entry
-	%tmp26 = call fastcc i8* @w_addchar( i8* null, i32* %word_length, i32* %max_length, i8 signext  %tmp6 ) nounwind 		; <i8*> [#uses=1]
-	store i8* %tmp26, i8** %word, align 4
+	%tmp26 = call fastcc ptr @w_addchar( ptr null, ptr %word_length, ptr %max_length, i8 signext  %tmp6 ) nounwind 		; <ptr> [#uses=1]
+	store ptr %tmp26, ptr %word, align 4
 	ret i32 0
 }

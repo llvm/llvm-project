@@ -56,6 +56,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseSet<Instruction *> AggrStores;
   void preprocessCompositeConstants();
+  void preprocessUndefs();
   CallInst *buildIntrWithMD(Intrinsic::ID IntrID, ArrayRef<Type *> Types,
                             Value *Arg, Value *Arg2) {
     ConstantAsMetadata *CM = ValueAsMetadata::getConstant(Arg);
@@ -87,6 +88,8 @@ public:
   Instruction *visitLoadInst(LoadInst &I);
   Instruction *visitStoreInst(StoreInst &I);
   Instruction *visitAllocaInst(AllocaInst &I);
+  Instruction *visitAtomicCmpXchgInst(AtomicCmpXchgInst &I);
+  Instruction *visitUnreachableInst(UnreachableInst &I);
   bool runOnFunction(Function &F) override;
 };
 } // namespace
@@ -103,7 +106,7 @@ static inline bool isAssignTypeInstr(const Instruction *I) {
 
 static bool isMemInstrToReplace(Instruction *I) {
   return isa<StoreInst>(I) || isa<LoadInst>(I) || isa<InsertValueInst>(I) ||
-         isa<ExtractValueInst>(I);
+         isa<ExtractValueInst>(I) || isa<AtomicCmpXchgInst>(I);
 }
 
 static bool isAggrToReplace(const Value *V) {
@@ -134,18 +137,42 @@ void SPIRVEmitIntrinsics::replaceMemInstrUses(Instruction *Old,
                                               Instruction *New) {
   while (!Old->user_empty()) {
     auto *U = Old->user_back();
-    if (isMemInstrToReplace(U) || isa<ReturnInst>(U)) {
-      U->replaceUsesOfWith(Old, New);
-    } else if (isAssignTypeInstr(U)) {
+    if (isAssignTypeInstr(U)) {
       IRB->SetInsertPoint(U);
       SmallVector<Value *, 2> Args = {New, U->getOperand(1)};
       IRB->CreateIntrinsic(Intrinsic::spv_assign_type, {New->getType()}, Args);
       U->eraseFromParent();
+    } else if (isMemInstrToReplace(U) || isa<ReturnInst>(U) ||
+               isa<CallInst>(U)) {
+      U->replaceUsesOfWith(Old, New);
     } else {
       llvm_unreachable("illegal aggregate intrinsic user");
     }
   }
   Old->eraseFromParent();
+}
+
+void SPIRVEmitIntrinsics::preprocessUndefs() {
+  std::queue<Instruction *> Worklist;
+  for (auto &I : instructions(F))
+    Worklist.push(&I);
+
+  while (!Worklist.empty()) {
+    Instruction *I = Worklist.front();
+    Worklist.pop();
+
+    for (auto &Op : I->operands()) {
+      auto *AggrUndef = dyn_cast<UndefValue>(Op);
+      if (!AggrUndef || !Op->getType()->isAggregateType())
+        continue;
+
+      IRB->SetInsertPoint(I);
+      auto *IntrUndef = IRB->CreateIntrinsic(Intrinsic::spv_undef, {}, {});
+      Worklist.push(IntrUndef);
+      I->replaceUsesOfWith(Op, IntrUndef);
+      AggrConsts[IntrUndef] = AggrUndef;
+    }
+  }
 }
 
 void SPIRVEmitIntrinsics::preprocessCompositeConstants() {
@@ -195,6 +222,7 @@ Instruction *SPIRVEmitIntrinsics::visitSwitchInst(SwitchInst &I) {
   for (auto &Op : I.operands())
     if (Op.get()->getType()->isSized())
       Args.push_back(Op);
+  IRB->SetInsertPoint(&I);
   IRB->CreateIntrinsic(Intrinsic::spv_switch, {I.getOperand(0)->getType()},
                        {Args});
   return &I;
@@ -288,7 +316,7 @@ Instruction *SPIRVEmitIntrinsics::visitLoadInst(LoadInst &I) {
   auto *NewI =
       IRB->CreateIntrinsic(Intrinsic::spv_load, {I.getOperand(0)->getType()},
                            {I.getPointerOperand(), IRB->getInt16(Flags),
-                            IRB->getInt8(I.getAlignment())});
+                            IRB->getInt8(I.getAlign().value())});
   replaceMemInstrUses(&I, NewI);
   return NewI;
 }
@@ -301,16 +329,44 @@ Instruction *SPIRVEmitIntrinsics::visitStoreInst(StoreInst &I) {
   MachineMemOperand::Flags Flags =
       TLI->getStoreMemOperandFlags(I, F->getParent()->getDataLayout());
   auto *PtrOp = I.getPointerOperand();
-  auto *NewI =
-      IRB->CreateIntrinsic(Intrinsic::spv_store, {PtrOp->getType()},
-                           {I.getValueOperand(), PtrOp, IRB->getInt16(Flags),
-                            IRB->getInt8(I.getAlignment())});
+  auto *NewI = IRB->CreateIntrinsic(
+      Intrinsic::spv_store, {I.getValueOperand()->getType(), PtrOp->getType()},
+      {I.getValueOperand(), PtrOp, IRB->getInt16(Flags),
+       IRB->getInt8(I.getAlign().value())});
   I.eraseFromParent();
   return NewI;
 }
 
 Instruction *SPIRVEmitIntrinsics::visitAllocaInst(AllocaInst &I) {
   TrackConstants = false;
+  Type *PtrTy = I.getType();
+  auto *NewI = IRB->CreateIntrinsic(Intrinsic::spv_alloca, {PtrTy}, {});
+  std::string InstName = I.hasName() ? I.getName().str() : "";
+  I.replaceAllUsesWith(NewI);
+  I.eraseFromParent();
+  NewI->setName(InstName);
+  return NewI;
+}
+
+Instruction *SPIRVEmitIntrinsics::visitAtomicCmpXchgInst(AtomicCmpXchgInst &I) {
+  assert(I.getType()->isAggregateType() && "Aggregate result is expected");
+  SmallVector<Value *> Args;
+  for (auto &Op : I.operands())
+    Args.push_back(Op);
+  Args.push_back(IRB->getInt32(I.getSyncScopeID()));
+  Args.push_back(IRB->getInt32(
+      static_cast<uint32_t>(getMemSemantics(I.getSuccessOrdering()))));
+  Args.push_back(IRB->getInt32(
+      static_cast<uint32_t>(getMemSemantics(I.getFailureOrdering()))));
+  auto *NewI = IRB->CreateIntrinsic(Intrinsic::spv_cmpxchg,
+                                    {I.getPointerOperand()->getType()}, {Args});
+  replaceMemInstrUses(&I, NewI);
+  return NewI;
+}
+
+Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
+  IRB->SetInsertPoint(&I);
+  IRB->CreateIntrinsic(Intrinsic::spv_unreachable, {}, {});
   return &I;
 }
 
@@ -337,7 +393,8 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
     setInsertPointSkippingPhis(*IRB, I->getNextNode());
     Type *TypeToAssign = Ty;
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
-      if (II->getIntrinsicID() == Intrinsic::spv_const_composite) {
+      if (II->getIntrinsicID() == Intrinsic::spv_const_composite ||
+          II->getIntrinsicID() == Intrinsic::spv_undef) {
         auto t = AggrConsts.find(II);
         assert(t != AggrConsts.end());
         TypeToAssign = t->second->getType();
@@ -350,15 +407,14 @@ void SPIRVEmitIntrinsics::insertAssignTypeIntrs(Instruction *I) {
     if (isa<ConstantPointerNull>(Op) || isa<UndefValue>(Op) ||
         // Check GetElementPtrConstantExpr case.
         (isa<ConstantExpr>(Op) && isa<GEPOperator>(Op))) {
-      IRB->SetInsertPoint(I);
-      buildIntrWithMD(Intrinsic::spv_assign_type, {Op->getType()}, Op, Op);
+      setInsertPointSkippingPhis(*IRB, I);
+      if (isa<UndefValue>(Op) && Op->getType()->isAggregateType())
+        buildIntrWithMD(Intrinsic::spv_assign_type, {IRB->getInt32Ty()}, Op,
+                        UndefValue::get(IRB->getInt32Ty()));
+      else
+        buildIntrWithMD(Intrinsic::spv_assign_type, {Op->getType()}, Op, Op);
     }
   }
-  // StoreInst's operand type can be changed in the next stage so we need to
-  // store it in the set.
-  if (isa<StoreInst>(I) &&
-      cast<StoreInst>(I)->getValueOperand()->getType()->isAggregateType())
-    AggrStores.insert(I);
 }
 
 void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I) {
@@ -378,7 +434,7 @@ void SPIRVEmitIntrinsics::processInstrAfterVisit(Instruction *I) {
     if ((isa<ConstantAggregateZero>(Op) && Op->getType()->isVectorTy()) ||
         isa<PHINode>(I) || isa<SwitchInst>(I))
       TrackConstants = false;
-    if (isa<ConstantData>(Op) && TrackConstants) {
+    if ((isa<ConstantData>(Op) || isa<ConstantExpr>(Op)) && TrackConstants) {
       unsigned OpNo = Op.getOperandNo();
       if (II && ((II->getIntrinsicID() == Intrinsic::spv_gep && OpNo == 0) ||
                  (II->paramHasAttr(OpNo, Attribute::ImmArg))))
@@ -405,11 +461,24 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   AggrConsts.clear();
   AggrStores.clear();
 
-  IRB->SetInsertPoint(&Func.getEntryBlock().front());
+  // StoreInst's operand type can be changed during the next transformations,
+  // so we need to store it in the set. Also store already transformed types.
+  for (auto &I : instructions(Func)) {
+    StoreInst *SI = dyn_cast<StoreInst>(&I);
+    if (!SI)
+      continue;
+    Type *ElTy = SI->getValueOperand()->getType();
+    PointerType *PTy = cast<PointerType>(SI->getOperand(1)->getType());
+    if (ElTy->isAggregateType() || ElTy->isVectorTy() ||
+        !PTy->isOpaqueOrPointeeTypeMatches(ElTy))
+      AggrStores.insert(&I);
+  }
 
+  IRB->SetInsertPoint(&Func.getEntryBlock().front());
   for (auto &GV : Func.getParent()->globals())
     processGlobalValue(GV);
 
+  preprocessUndefs();
   preprocessCompositeConstants();
   SmallVector<Instruction *> Worklist;
   for (auto &I : instructions(Func))

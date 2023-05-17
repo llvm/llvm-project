@@ -347,12 +347,12 @@ public:
 
 private:
   ConstString m_name;
-  uint8_t m_pointer_size;
-  bool m_valid;
-  uint64_t m_info_bits;
-  uint64_t m_value_bits;
-  int64_t m_value_bits_signed;
-  uint64_t m_payload;
+  uint8_t m_pointer_size = 0;
+  bool m_valid = false;
+  uint64_t m_info_bits = 0;
+  uint64_t m_value_bits = 0;
+  int64_t m_value_bits_signed = 0;
+  uint64_t m_payload = 0;
 };
 
 } // namespace lldb_private

@@ -27,7 +27,7 @@ public:
   }
   void destroy() {
     if (Data != &LocalData[0])
-      unmap(Data, CapacityBytes);
+      unmap(Data, CapacityBytes, 0, &MapData);
   }
   T &operator[](uptr I) {
     DCHECK_LT(I, Size);
@@ -40,7 +40,7 @@ public:
   void push_back(const T &Element) {
     DCHECK_LE(Size, capacity());
     if (Size == capacity()) {
-      const uptr NewCapacity = roundUpToPowerOfTwo(Size + 1);
+      const uptr NewCapacity = roundUpPowerOfTwo(Size + 1);
       reallocate(NewCapacity);
     }
     memcpy(&Data[Size++], &Element, sizeof(T));
@@ -82,9 +82,9 @@ private:
   void reallocate(uptr NewCapacity) {
     DCHECK_GT(NewCapacity, 0);
     DCHECK_LE(Size, NewCapacity);
-    NewCapacity = roundUpTo(NewCapacity * sizeof(T), getPageSizeCached());
-    T *NewData =
-        reinterpret_cast<T *>(map(nullptr, NewCapacity, "scudo:vector"));
+    NewCapacity = roundUp(NewCapacity * sizeof(T), getPageSizeCached());
+    T *NewData = reinterpret_cast<T *>(
+        map(nullptr, NewCapacity, "scudo:vector", 0, &MapData));
     memcpy(NewData, Data, Size * sizeof(T));
     destroy();
     Data = NewData;
@@ -95,6 +95,7 @@ private:
   T LocalData[256 / sizeof(T)] = {};
   uptr CapacityBytes = 0;
   uptr Size = 0;
+  [[no_unique_address]] MapPlatformData MapData = {};
 };
 
 template <typename T> class Vector : public VectorNoCtor<T> {

@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=i386-apple-darwin
 ; PR2757
 
-@g_3 = external global i32		; <i32*> [#uses=1]
+@g_3 = external global i32		; <ptr> [#uses=1]
 
 define i32 @func_125(i32 %p_126, i32 %p_128, i32 %p_129) nounwind {
 entry:
-	%tmp2.i = load i32, i32* @g_3		; <i32> [#uses=2]
+	%tmp2.i = load i32, ptr @g_3		; <i32> [#uses=2]
 	%conv = trunc i32 %tmp2.i to i16		; <i16> [#uses=3]
 	br label %forcond1.preheader.i.i7
 

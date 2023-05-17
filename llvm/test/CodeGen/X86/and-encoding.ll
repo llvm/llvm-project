@@ -19,25 +19,25 @@ define void @f1() nounwind {
   ret void
 }
 
-define void @f2(i16 %x, i1 *%y) nounwind  {
+define void @f2(i16 %x, ptr%y) nounwind  {
 ; CHECK-LABEL: f2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi # encoding: [0x83,0xe7,0x01]
 ; CHECK-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %c = trunc i16 %x to i1
-  store i1 %c, i1* %y
+  store i1 %c, ptr %y
   ret void
 }
 
-define void @f3(i32 %x, i1 *%y) nounwind {
+define void @f3(i32 %x, ptr%y) nounwind {
 ; CHECK-LABEL: f3:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andl $1, %edi # encoding: [0x83,0xe7,0x01]
 ; CHECK-NEXT:    movb %dil, (%rsi) # encoding: [0x40,0x88,0x3e]
 ; CHECK-NEXT:    retq # encoding: [0xc3]
   %c = trunc i32 %x to i1
-  store i1 %c, i1* %y
+  store i1 %c, ptr %y
   ret void
 }
 

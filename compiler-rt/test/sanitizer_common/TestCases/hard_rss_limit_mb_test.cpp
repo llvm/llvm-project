@@ -12,10 +12,10 @@
 //
 // Ubsan does not intercept pthread_create.
 // XFAIL: ubsan
-// UNSUPPORTED: freebsd, solaris, darwin
+// UNSUPPORTED: target={{.*(freebsd|solaris).*}}, darwin
 
 // THUMB starts background thead only for Asan.
-// XFAIL: thumb && !asan
+// XFAIL: target=thumb{{.*}} && !asan
 
 #include <string.h>
 #include <stdio.h>

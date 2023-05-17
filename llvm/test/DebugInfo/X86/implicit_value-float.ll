@@ -36,7 +36,7 @@ target triple = "x86_64-unknown-linux-gnu"
 define dso_local i32 @main() local_unnamed_addr #0 !dbg !7 {
 entry:
   call void @llvm.dbg.value(metadata float 0x40091EB860000000, metadata !12, metadata !DIExpression()), !dbg !14
-  %puts = call i32 @puts(i8* nonnull dereferenceable(1) getelementptr inbounds ([6 x i8], [6 x i8]* @str, i64 0, i64 0)), !dbg !15
+  %puts = call i32 @puts(ptr nonnull dereferenceable(1) @str), !dbg !15
   call void @llvm.dbg.value(metadata float undef, metadata !12, metadata !DIExpression()), !dbg !14
   ret i32 0, !dbg !16
 }
@@ -45,7 +45,7 @@ entry:
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1
 
 ; Function Attrs: nofree nounwind
-declare i32 @puts(i8* nocapture readonly) local_unnamed_addr #2
+declare i32 @puts(ptr nocapture readonly) local_unnamed_addr #2
 
 attributes #0 = { nofree nounwind uwtable }
 attributes #1 = { nounwind readnone speculatable willreturn }

@@ -6,7 +6,7 @@
 
 target triple = "hexagon"
 
-define void @fred(i32 %n, i32* %bp) #0 {
+define void @fred(i32 %n, ptr %bp) #0 {
 entry:
   %cmp16 = icmp eq i32 %n, 0
   br i1 %cmp16, label %for.end, label %for.body.lr.ph
@@ -17,22 +17,22 @@ for.body.lr.ph:                                   ; preds = %entry
 
 for.body:                                         ; preds = %for.inc, %for.body.lr.ph
   %i.017 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.inc ]
-  %call = tail call i32 @foo(i32* %bp) nounwind
-  %call1 = tail call i32 @bar(i32* %bp) nounwind
+  %call = tail call i32 @foo(ptr %bp) nounwind
+  %call1 = tail call i32 @bar(ptr %bp) nounwind
   br i1 %cmp2, label %if.then, label %if.else
 
 if.then:                                          ; preds = %for.body
-  %arrayidx = getelementptr inbounds i32, i32* %bp, i32 %i.017
-  store i32 %call, i32* %arrayidx, align 4, !tbaa !0
+  %arrayidx = getelementptr inbounds i32, ptr %bp, i32 %i.017
+  store i32 %call, ptr %arrayidx, align 4, !tbaa !0
   %add = add i32 %i.017, 2
-  %arrayidx3 = getelementptr inbounds i32, i32* %bp, i32 %add
-  store i32 %call1, i32* %arrayidx3, align 4, !tbaa !0
+  %arrayidx3 = getelementptr inbounds i32, ptr %bp, i32 %add
+  store i32 %call1, ptr %arrayidx3, align 4, !tbaa !0
   br label %for.inc
 
 if.else:                                          ; preds = %for.body
   %or = or i32 %call1, %call
-  %arrayidx4 = getelementptr inbounds i32, i32* %bp, i32 %i.017
-  store i32 %or, i32* %arrayidx4, align 4, !tbaa !0
+  %arrayidx4 = getelementptr inbounds i32, ptr %bp, i32 %i.017
+  store i32 %or, ptr %arrayidx4, align 4, !tbaa !0
   br label %for.inc
 
 for.inc:                                          ; preds = %if.then, %if.else
@@ -47,9 +47,9 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret void
 }
 
-declare i32 @foo(i32*) nounwind
+declare i32 @foo(ptr) nounwind
 
-declare i32 @bar(i32*) nounwind
+declare i32 @bar(ptr) nounwind
 
 attributes #0 = { nounwind "target-cpu"="hexagonv5" }
 

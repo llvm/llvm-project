@@ -2,7 +2,7 @@
 
 define cc 92 < 9 x i64 > @clobber() {
   %1 = alloca i64
-  %2 = load volatile i64, i64* %1
+  %2 = load volatile i64, ptr %1
   ret < 9 x i64 > undef
   ; CHECK-LABEL: clobber:
   ; CHECK-NOT: popq %rsp

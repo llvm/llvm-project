@@ -1,0 +1,98 @@
+name: LLVM Project Tests
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+    inputs:
+      build_target:
+        required: false
+      projects:
+        required: false
+  workflow_call:
+    inputs:
+      build_target:
+        required: true
+        type: string
+
+      projects:
+        required: true
+        type: string
+
+concurrency:
+  # Skip intermediate builds: always.
+  # Cancel intermediate builds: only if it is a pull request build.
+  # If the group name here is the same as the group name in the workflow that includes
+  # this one, then the action will try to wait on itself and get stuck.
+  group: llvm-project-${{ github.workflow }}-${{ inputs.projects }}${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  lit-tests:
+    name: Lit Tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          # Use windows-2019 due to:
+          # https://developercommunity.visualstudio.com/t/Prev-Issue---with-__assume-isnan-/1597317
+          - windows-2019
+          # We're using a specific version of macOS due to:
+          # https://github.com/actions/virtual-environments/issues/5900
+          - macOS-11
+    steps:
+      - name: Setup Windows
+        if: startsWith(matrix.os, 'windows')
+        uses: llvm/actions/setup-windows@main
+        with:
+          arch: amd64
+      # On Windows, starting with win19/20220814.1, cmake choose the 32-bit
+      # python3.10.6 libraries instead of the 64-bit libraries when building
+      # lldb.  Using this setup-python action to make 3.10 the default
+      # python fixes this.
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+      - name: Install Ninja
+        uses: llvm/actions/install-ninja@main
+      # actions/checkout deletes any existing files in the new git directory,
+      # so this needs to either run before ccache-action or it has to use
+      # clean: false.
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 250
+      - name: Setup ccache
+        uses: hendrikmuhs/ccache-action@v1
+        with:
+          # A full build of llvm, clang, lld, and lldb takes about 250MB
+          # of ccache space. There's not much reason to have more than this,
+          # because we usually won't need to save cache entries from older
+          # builds.  Also, there is an overall 10GB cache limit, and each
+          # run creates a new cache entry so we want to ensure that we have
+          # enough cache space for all the tests to run at once and still
+          # fit under the 10 GB limit.
+          max-size: 500M
+          key: sccache-${{ matrix.os }}
+          variant: sccache
+      - name: Build and Test
+        uses: llvm/actions/build-test-llvm-project@main
+        env:
+          # Workaround for https://github.com/actions/virtual-environments/issues/5900.
+          # This should be a no-op for non-mac OSes
+          PKG_CONFIG_PATH: /usr/local/Homebrew/Library/Homebrew/os/mac/pkgconfig//12
+        with:
+          cmake_args: '-GNinja -DLLVM_ENABLE_PROJECTS="${{ inputs.projects }}" -DCMAKE_BUILD_TYPE=Release -DLLDB_INCLUDE_TESTS=OFF -DCMAKE_C_COMPILER_LAUNCHER=sccache -DCMAKE_CXX_COMPILER_LAUNCHER=sccache'
+          build_target: '${{ inputs.build_target }}'
+
+      - name: Build and Test libclc
+        if: "!startsWith(matrix.os, 'windows') && contains(inputs.projects, 'libclc')"
+        run: |
+          # Make sure all of LLVM libraries that llvm-config needs are built.
+          ninja -C build
+          cmake -G Ninja -S libclc -B libclc-build -DLLVM_DIR=$(pwd)/build/lib/cmake/llvm -DLIBCLC_TARGETS_TO_BUILD="amdgcn--;amdgcn--amdhsa;r600--;nvptx--;nvptx64--;nvptx--nvidiacl;nvptx64--nvidiacl"
+          ninja -C libclc-build
+          ninja -C libclc-build test

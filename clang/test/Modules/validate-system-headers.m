@@ -34,8 +34,8 @@
 // RUN: %clang_cc1 -isystem %t/Inputs/usr/include -fmodules -fimplicit-module-maps -fmodules-cache-path=%t/ModuleCache -fdisable-module-hash -x objective-c-header -fsyntax-only %s -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session
 // RUN: diff %t/ModuleCache/Foo.pcm %t/Foo.pcm.saved
 
-// Now add -fmodules-validate-system-headers and rebuild
+// Now add -fmodules-validate-system-headers and rebuild. No recompilation due to -fmodules-validate-once-per-build-session
 // RUN: %clang_cc1 -isystem %t/Inputs/usr/include -fmodules -fimplicit-module-maps -fmodules-validate-system-headers -fmodules-cache-path=%t/ModuleCache -fdisable-module-hash -x objective-c-header -fsyntax-only %s -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session
-// RUN: not diff %t/ModuleCache/Foo.pcm %t/Foo.pcm.saved
+// RUN: diff %t/ModuleCache/Foo.pcm %t/Foo.pcm.saved
 
 @import Foo;

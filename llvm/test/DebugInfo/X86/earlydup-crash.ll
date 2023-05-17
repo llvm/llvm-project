@@ -2,11 +2,11 @@
 
 ; This used to crash because early dup was not ignoring debug instructions.
 
-%struct.cpp_dir = type { %struct.cpp_dir*, i8*, i32, i8, i8**, i8*, i8* (i8*, %struct.cpp_dir*)*, i64, i32, i8 }
+%struct.cpp_dir = type { ptr, ptr, i32, i8, ptr, ptr, ptr, i64, i32, i8 }
 
 declare void @llvm.dbg.value(metadata, metadata, metadata) nounwind readnone
 
-define internal i8* @framework_construct_pathname(i8* %fname, %struct.cpp_dir* %dir) nounwind ssp !dbg !2 {
+define internal ptr @framework_construct_pathname(ptr %fname, ptr %dir) nounwind ssp !dbg !2 {
 entry:
   br i1 undef, label %bb33, label %bb
 
@@ -17,7 +17,6 @@ bb:                                               ; preds = %entry
   br i1 undef, label %bb18, label %bb31.preheader
 
 bb31.preheader:                                   ; preds = %bb19, %bb
-  %tmp2 = getelementptr inbounds i8, i8* %fname, i32 0
   br label %bb31
 
 bb18:                                             ; preds = %bb
@@ -37,7 +36,7 @@ bb31:                                             ; preds = %bb22, %bb31.prehead
   br i1 false, label %bb33, label %bb22
 
 bb33:                                             ; preds = %bb31, %bb22, %bb18, %entry
-  ret i8* undef
+  ret ptr undef
 }
 
 declare void @foobar(i32)

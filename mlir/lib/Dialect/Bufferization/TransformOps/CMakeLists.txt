@@ -9,10 +9,10 @@ add_mlir_dialect_library(MLIRBufferizationTransformOps
 
   LINK_LIBS PUBLIC
   MLIRIR
-  MLIRBufferization
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRParser
-  MLIRPDL
+  MLIRPDLDialect
   MLIRSideEffectInterfaces
   MLIRTransformDialect
   )

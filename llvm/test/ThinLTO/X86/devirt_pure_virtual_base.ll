@@ -57,50 +57,47 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-grtev4-linux-gnu"
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 %struct.B = type { %struct.A }
 
-@_ZTV1A = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (void ()* @__cxa_pure_virtual to i8*), i8* bitcast (void ()* @__cxa_pure_virtual to i8*)] }, !type !0, !vcall_visibility !2
-@_ZTV1B = linkonce_odr unnamed_addr constant { [4 x i8*] } { [4 x i8*] [i8* null, i8* undef, i8* bitcast (i32 (%struct.B*, i32)* @_ZN1B1fEi to i8*), i8* bitcast (i32 (%struct.A*, i32)* @_ZN1A1nEi to i8*)] }, !type !0, !type !1, !vcall_visibility !2
+@_ZTV1A = linkonce_odr unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @__cxa_pure_virtual, ptr @__cxa_pure_virtual] }, !type !0, !vcall_visibility !2
+@_ZTV1B = linkonce_odr unnamed_addr constant { [4 x ptr] } { [4 x ptr] [ptr null, ptr undef, ptr @_ZN1B1fEi, ptr @_ZN1A1nEi] }, !type !0, !type !1, !vcall_visibility !2
 
 ;; Prevent the vtables from being dead code eliminated.
-@llvm.used = appending global [2 x i8*] [ i8* bitcast ( { [4 x i8*] }* @_ZTV1A to i8*), i8* bitcast ( { [4 x i8*] }* @_ZTV1B to i8*)]
+@llvm.used = appending global [2 x ptr] [ ptr @_ZTV1A, ptr @_ZTV1B]
 
 ; CHECK-IR-LABEL: define dso_local i32 @_start
-define i32 @_start(%struct.A* %obj, i32 %a) {
+define i32 @_start(ptr %obj, i32 %a) {
 entry:
-  %0 = bitcast %struct.A* %obj to i8***
-  %vtable = load i8**, i8*** %0
-  %1 = bitcast i8** %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %1, metadata !"_ZTS1A")
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"_ZTS1A")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr i8*, i8** %vtable, i32 1
-  %2 = bitcast i8** %fptrptr to i32 (%struct.A*, i32)**
-  %fptr1 = load i32 (%struct.A*, i32)*, i32 (%struct.A*, i32)** %2, align 8
+  %fptrptr = getelementptr ptr, ptr %vtable, i32 1
+  %fptr1 = load ptr, ptr %fptrptr, align 8
 
   ;; Check that the call was devirtualized.
   ; CHECK-IR: %call = tail call i32 @_ZN1A1nEi
   ; CHECK-NODEVIRT-IR: %call = tail call i32 %fptr1
-  %call = tail call i32 %fptr1(%struct.A* nonnull %obj, i32 %a)
+  %call = tail call i32 %fptr1(ptr nonnull %obj, i32 %a)
 
   ret i32 %call
 }
 ; CHECK-IR-LABEL: ret i32
 ; CHECK-IR-NEXT: }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 declare void @__cxa_pure_virtual() unnamed_addr
 
-define linkonce_odr i32 @_ZN1A1fEi(%struct.A* %this, i32 %a) #0 {
+define linkonce_odr i32 @_ZN1A1fEi(ptr %this, i32 %a) #0 {
    ret i32 0
 }
 
-define linkonce_odr i32 @_ZN1A1nEi(%struct.A* %this, i32 %a) #0 {
+define linkonce_odr i32 @_ZN1A1nEi(ptr %this, i32 %a) #0 {
    ret i32 0
 }
 
-define linkonce_odr i32 @_ZN1B1fEi(%struct.B* %this, i32 %a) #0 {
+define linkonce_odr i32 @_ZN1B1fEi(ptr %this, i32 %a) #0 {
    ret i32 0
 }
 

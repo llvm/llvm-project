@@ -37,9 +37,9 @@ class AArch64CompressJumpTables : public MachineFunctionPass {
   MachineFunction *MF;
   SmallVector<int, 8> BlockInfo;
 
-  /// Returns the size in instructions of the block \p MBB, or None if we
-  /// couldn't get a safe upper bound.
-  Optional<int> computeBlockSize(MachineBasicBlock &MBB);
+  /// Returns the size in instructions of the block \p MBB, or std::nullopt if
+  /// we couldn't get a safe upper bound.
+  std::optional<int> computeBlockSize(MachineBasicBlock &MBB);
 
   /// Gather information about the function, returns false if we can't perform
   /// this optimization for some reason.
@@ -69,7 +69,7 @@ char AArch64CompressJumpTables::ID = 0;
 INITIALIZE_PASS(AArch64CompressJumpTables, DEBUG_TYPE,
                 "AArch64 compress jump tables pass", false, false)
 
-Optional<int>
+std::optional<int>
 AArch64CompressJumpTables::computeBlockSize(MachineBasicBlock &MBB) {
   int Size = 0;
   for (const MachineInstr &MI : MBB) {
@@ -78,7 +78,7 @@ AArch64CompressJumpTables::computeBlockSize(MachineBasicBlock &MBB) {
     // computing a size and bail out.
     if (MI.getOpcode() == AArch64::INLINEASM ||
         MI.getOpcode() == AArch64::INLINEASM_BR)
-      return None;
+      return std::nullopt;
     Size += TII->getInstSizeInBytes(MI);
   }
   return Size;

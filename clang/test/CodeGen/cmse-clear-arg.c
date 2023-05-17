@@ -27,7 +27,7 @@ void f0(void) { g0(t0); }
 // CHECK:    define {{.*}} @f0()
 // CHECK-LE: %[[V0:.*]] = and i32 {{.*}}, 1
 // CHECK-BE: %[[V0:.*]] = and i32 {{.*}}, -2147483648
-// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] undef, i32 %[[V0]], 0
+// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] poison, i32 %[[V0]], 0
 // CHECK:    call {{.*}} void %0([1 x i32] %[[V1]])
 
 // LE: 11111111 111111.. 11111111 11111111 0xfffffcff/-769
@@ -46,7 +46,7 @@ void f8(void) { g8(t8); }
 // CHECK:    define {{.*}} @f8()
 // CHECK-LE: %[[V0:.*]] = and i32 {{.*}}, -769
 // CHECK-BE: %[[V0:.*]] = and i32 {{.*}}, -12582913
-// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] undef, i32 %[[V0]], 0
+// CHECK:    %[[V1:.*]] = insertvalue [1 x i32] poison, i32 %[[V0]], 0
 // CHECK:    call {{.*}} void %0([1 x i32] %[[V1]])
 
 // LE(0): 11111111 ........ 11111111 11111111 0xffff00ff/-65281
@@ -69,7 +69,7 @@ void f15_0(void) {
 // CHECK: %[[FN:.*]] = load {{.*}} @g15_0
 // CHECK-LE:  %cmse.clear = and i32 {{.*}}, -65281
 // CHECK-BE:  %cmse.clear = and i32 {{.*}}, -16711681
-// CHECK: %[[R0:.*]] = insertvalue [2 x i32] undef, i32 %cmse.clear, 0
+// CHECK: %[[R0:.*]] = insertvalue [2 x i32] poison, i32 %cmse.clear, 0
 // CHECK-LE: %cmse.clear1 = and i32 {{.*}}, 134215708
 // CHECK-BE: %cmse.clear1 = and i32 {{.*}}, 941621216
 // CHECK: %[[R1:.*]] = insertvalue [2 x i32] %[[R0]], i32 %cmse.clear1, 1
@@ -83,7 +83,7 @@ void f15_1(void) {
 // CHECK: %[[FN:.*]] = load {{.*}} @g15_1
 // CHECK-LE:  %cmse.clear = and i32 {{.*}}, -65281
 // CHECK-BE:  %cmse.clear = and i32 {{.*}}, -16711681
-// CHECK: %[[R0:.*]] = insertvalue [2 x i32] undef, i32 %cmse.clear, 0
+// CHECK: %[[R0:.*]] = insertvalue [2 x i32] poison, i32 %cmse.clear, 0
 // CHECK-LE: %cmse.clear1 = and i32 {{.*}}, 134215708
 // CHECK-BE: %cmse.clear1 = and i32 {{.*}}, 941621216
 // CHECK: %[[R1:.*]] = insertvalue [2 x i32] %[[R0]], i32 %cmse.clear1, 1
@@ -110,7 +110,7 @@ void f16_0(void) {
 // CHECK: %[[FN:.*]] = load {{.*}} @g16_0
 // CHECK-LE: %cmse.clear = and i64 {{.*}}, 9079291968726434047
 // CHECK-BE: %cmse.clear = and i64 {{.*}}, -71776123088273282
-// CHECK: %[[R:.*]] = insertvalue [1 x i64] undef, i64 %cmse.clear, 0
+// CHECK: %[[R:.*]] = insertvalue [1 x i64] poison, i64 %cmse.clear, 0
 // CHECK: call {{.*}} void %0([1 x i64] %[[R]])
 
 
@@ -140,7 +140,7 @@ void f18(void) {
 // CHECK:    %[[FN:.*]] = load {{.*}} @g18
 // CHECK-LE: %cmse.clear = and i32 {{.*}}, 32702963
 // CHECK-BE: %cmse.clear = and i32 {{.*}}, -813641856
-// CHECK:    %[[R0:.*]] = insertvalue [4 x i32] undef, i32 %cmse.clear, 0
+// CHECK:    %[[R0:.*]] = insertvalue [4 x i32] poison, i32 %cmse.clear, 0
 // CHECK-LE: %cmse.clear1 = and i32 {{.*}}, 32702963
 // CHECK-BE: %cmse.clear1 = and i32 {{.*}}, -813641856
 // CHECK:    %[[R1:.*]] = insertvalue [4 x i32] %[[R0]], i32 %cmse.clear1, 1
@@ -170,7 +170,7 @@ void f19(void) {
 // CHECK:    %[[FN:.*]] = load {{.*}} @g19
 // CHECK-LE: %cmse.clear = and i32 {{.*}}, 943259647
 // CHECK-BE: %cmse.clear = and i32 {{.*}}, -58340
-// CHECK:    %[[R:.*]] = insertvalue [1 x i32] undef, i32 %cmse.clear, 0
+// CHECK:    %[[R:.*]] = insertvalue [1 x i32] poison, i32 %cmse.clear, 0
 // CHECK:    call {{.*}} void %[[FN]]([1 x i32] %[[R]])
 
 

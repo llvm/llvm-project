@@ -206,7 +206,7 @@ define <8 x double> @test_8f64_fnmsub(<8 x double> %a0, <8 x double> %a1, <8 x d
 ; Load Folding Patterns
 ;
 
-define <16 x float> @test_16f32_fmadd_load(<16 x float>* %a0, <16 x float> %a1, <16 x float> %a2) {
+define <16 x float> @test_16f32_fmadd_load(ptr %a0, <16 x float> %a1, <16 x float> %a2) {
 ; FMA-LABEL: test_16f32_fmadd_load:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmadd132ps {{.*#+}} ymm0 = (ymm0 * mem) + ymm2
@@ -223,13 +223,13 @@ define <16 x float> @test_16f32_fmadd_load(<16 x float>* %a0, <16 x float> %a1, 
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmadd132ps {{.*#+}} zmm0 = (zmm0 * mem) + zmm1
 ; AVX512-NEXT:    retq
-  %x = load <16 x float>, <16 x float>* %a0
+  %x = load <16 x float>, ptr %a0
   %y = fmul <16 x float> %x, %a1
   %res = fadd <16 x float> %y, %a2
   ret <16 x float> %res
 }
 
-define <8 x double> @test_8f64_fmsub_load(<8 x double>* %a0, <8 x double> %a1, <8 x double> %a2) {
+define <8 x double> @test_8f64_fmsub_load(ptr %a0, <8 x double> %a1, <8 x double> %a2) {
 ; FMA-LABEL: test_8f64_fmsub_load:
 ; FMA:       # %bb.0:
 ; FMA-NEXT:    vfmsub132pd {{.*#+}} ymm0 = (ymm0 * mem) - ymm2
@@ -246,7 +246,7 @@ define <8 x double> @test_8f64_fmsub_load(<8 x double>* %a0, <8 x double> %a1, <
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vfmsub132pd {{.*#+}} zmm0 = (zmm0 * mem) - zmm1
 ; AVX512-NEXT:    retq
-  %x = load <8 x double>, <8 x double>* %a0
+  %x = load <8 x double>, ptr %a0
   %y = fmul <8 x double> %x, %a1
   %res = fsub <8 x double> %y, %a2
   ret <8 x double> %res

@@ -1,30 +1,30 @@
-; RUN: opt < %s -mtriple=powerpc64le-unknown-linux-gnu -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true -S | FileCheck %s
+; RUN: opt < %s -mtriple=powerpc64le-unknown-linux-gnu -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -hoist-common-insts=true -S | FileCheck %s
 
-define float @foo(float* %src, float* %dest, i32 signext %count, i32 signext %cond) {
+define float @foo(ptr %src, ptr %dest, i32 signext %count, i32 signext %cond) {
 ; CHECK-LABEL: @foo(
 ; CHECK-LABEL: entry:
 ; CHECK-NOT:  load float
 entry:
   %cmp = icmp sgt i32 %cond, 10
   %idxprom = sext i32 %count to i64
-  %arrayidx = getelementptr inbounds float, float* %src, i64 %idxprom
+  %arrayidx = getelementptr inbounds float, ptr %src, i64 %idxprom
   br i1 %cmp, label %if.then, label %if.else
 
 ; CHECK-LABEL: if.then:
-; CHECK:  %0 = load float, float* %arrayidx, align 4
+; CHECK:  %0 = load float, ptr %arrayidx, align 4
 if.then:                                          ; preds = %entry
-  %0 = load float, float* %arrayidx, align 4
+  %0 = load float, ptr %arrayidx, align 4
   %res = fmul float %0, 3.000000e+00
   br label %if.end
 
 ; CHECK-LABEL: if.else:
-; CHECK:   %1 = load float, float* %arrayidx, align 4
-; CHECK:   store float %1, float* %arrayidx4, align 4
+; CHECK:   %1 = load float, ptr %arrayidx, align 4
+; CHECK:   store float %1, ptr %arrayidx4, align 4
 if.else:                                          ; preds = %entry
-  %1 = load float, float* %arrayidx, align 4
+  %1 = load float, ptr %arrayidx, align 4
   %idxprom3 = sext i32 %count to i64
-  %arrayidx4 = getelementptr inbounds float, float* %dest, i64 %idxprom3
-  store float %1, float* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds float, ptr %dest, i64 %idxprom3
+  store float %1, ptr %arrayidx4, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

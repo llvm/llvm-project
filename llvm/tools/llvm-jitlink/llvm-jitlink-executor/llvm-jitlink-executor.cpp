@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/ExecutorSharedMemoryMapperService.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/RegisterEHFrames.h"
 #include "llvm/ExecutionEngine/Orc/TargetProcess/SimpleExecutorMemoryManager.h"
@@ -39,7 +40,8 @@ ExitOnError ExitOnErr;
 LLVM_ATTRIBUTE_USED void linkComponents() {
   errs() << (void *)&llvm_orc_registerEHFrameSectionWrapper
          << (void *)&llvm_orc_deregisterEHFrameSectionWrapper
-         << (void *)&llvm_orc_registerJITLoaderGDBWrapper;
+         << (void *)&llvm_orc_registerJITLoaderGDBWrapper
+         << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
 }
 
 void printErrorAndExit(Twine ErrMsg) {
@@ -163,6 +165,9 @@ int main(int argc, char *argv[]) {
                 SimpleRemoteEPCServer::defaultBootstrapSymbols();
             S.services().push_back(
                 std::make_unique<rt_bootstrap::SimpleExecutorMemoryManager>());
+            S.services().push_back(
+                std::make_unique<
+                    rt_bootstrap::ExecutorSharedMemoryMapperService>());
             return Error::success();
           },
           InFD, OutFD));

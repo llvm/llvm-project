@@ -6,7 +6,7 @@
 ; 128-bit Vectors
 ;
 
-define void @test_demanded_haddps_128(<4 x float> %a0, <4 x float> %a1, float *%a2) nounwind {
+define void @test_demanded_haddps_128(<4 x float> %a0, <4 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddps_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -22,11 +22,11 @@ define void @test_demanded_haddps_128(<4 x float> %a0, <4 x float> %a1, float *%
   %1 = shufflevector <4 x float> %a1, <4 x float> undef, <4 x i32> zeroinitializer
   %2 = call <4 x float> @llvm.x86.sse3.hadd.ps(<4 x float> %a0, <4 x float> %1)
   %3 = extractelement <4 x float> %2, i32 0
-  store float %3, float *%a2
+  store float %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_hsubps_128(<4 x float> %a0, <4 x float> %a1, float *%a2) nounwind {
+define void @test_demanded_hsubps_128(<4 x float> %a0, <4 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubps_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -42,11 +42,11 @@ define void @test_demanded_hsubps_128(<4 x float> %a0, <4 x float> %a1, float *%
   %1 = shufflevector <4 x float> %a0, <4 x float> undef, <4 x i32> zeroinitializer
   %2 = call <4 x float> @llvm.x86.sse3.hsub.ps(<4 x float> %1, <4 x float> %a1)
   %3 = extractelement <4 x float> %2, i32 2
-  store float %3, float *%a2
+  store float %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_haddpd_128(<2 x double> %a0, <2 x double> %a1, double *%a2) nounwind {
+define void @test_demanded_haddpd_128(<2 x double> %a0, <2 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddpd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -62,11 +62,11 @@ define void @test_demanded_haddpd_128(<2 x double> %a0, <2 x double> %a1, double
   %1 = shufflevector <2 x double> %a1, <2 x double> undef, <2 x i32> zeroinitializer
   %2 = call <2 x double> @llvm.x86.sse3.hadd.pd(<2 x double> %a0, <2 x double> %1)
   %3 = extractelement <2 x double> %2, i32 0
-  store double %3, double *%a2
+  store double %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_hsubpd_128(<2 x double> %a0, <2 x double> %a1, double *%a2) nounwind {
+define void @test_demanded_hsubpd_128(<2 x double> %a0, <2 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubpd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -82,11 +82,11 @@ define void @test_demanded_hsubpd_128(<2 x double> %a0, <2 x double> %a1, double
   %1 = shufflevector <2 x double> %a1, <2 x double> undef, <2 x i32> zeroinitializer
   %2 = call <2 x double> @llvm.x86.sse3.hsub.pd(<2 x double> %a0, <2 x double> %1)
   %3 = extractelement <2 x double> %2, i32 0
-  store double %3, double *%a2
+  store double %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phaddd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) nounwind {
+define void @test_demanded_phaddd_128(<4 x i32> %a0, <4 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -102,11 +102,11 @@ define void @test_demanded_phaddd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) no
   %1 = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> zeroinitializer
   %2 = call <4 x i32> @llvm.x86.ssse3.phadd.d.128(<4 x i32> %a0, <4 x i32> %1)
   %3 = extractelement <4 x i32> %2, i32 0
-  store i32 %3, i32 *%a2
+  store i32 %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phsubd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) nounwind {
+define void @test_demanded_phsubd_128(<4 x i32> %a0, <4 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubd_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -122,11 +122,11 @@ define void @test_demanded_phsubd_128(<4 x i32> %a0, <4 x i32> %a1, i32 *%a2) no
   %1 = shufflevector <4 x i32> %a1, <4 x i32> undef, <4 x i32> zeroinitializer
   %2 = call <4 x i32> @llvm.x86.ssse3.phsub.d.128(<4 x i32> %a0, <4 x i32> %1)
   %3 = extractelement <4 x i32> %2, i32 1
-  store i32 %3, i32 *%a2
+  store i32 %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phaddw_128(<8 x i16> %a0, <8 x i16> %a1, i16 *%a2) nounwind {
+define void @test_demanded_phaddw_128(<8 x i16> %a0, <8 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddw_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -142,11 +142,11 @@ define void @test_demanded_phaddw_128(<8 x i16> %a0, <8 x i16> %a1, i16 *%a2) no
   %1 = shufflevector <8 x i16> %a1, <8 x i16> undef, <8 x i32> zeroinitializer
   %2 = call <8 x i16> @llvm.x86.ssse3.phadd.w.128(<8 x i16> %a0, <8 x i16> %1)
   %3 = extractelement <8 x i16> %2, i16 0
-  store i16 %3, i16 *%a2
+  store i16 %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phsubw_128(<8 x i16> %a0, <8 x i16> %a1, i16 *%a2) nounwind {
+define void @test_demanded_phsubw_128(<8 x i16> %a0, <8 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubw_128:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -162,7 +162,7 @@ define void @test_demanded_phsubw_128(<8 x i16> %a0, <8 x i16> %a1, i16 *%a2) no
   %1 = shufflevector <8 x i16> %a1, <8 x i16> undef, <8 x i32> zeroinitializer
   %2 = call <8 x i16> @llvm.x86.ssse3.phsub.w.128(<8 x i16> %a0, <8 x i16> %1)
   %3 = extractelement <8 x i16> %2, i16 2
-  store i16 %3, i16 *%a2
+  store i16 %3, ptr%a2
   ret void
 }
 
@@ -170,7 +170,7 @@ define void @test_demanded_phsubw_128(<8 x i16> %a0, <8 x i16> %a1, i16 *%a2) no
 ; 256-bit Vectors
 ;
 
-define void @test_demanded_haddps_256(<8 x float> %a0, <8 x float> %a1, float *%a2) nounwind {
+define void @test_demanded_haddps_256(<8 x float> %a0, <8 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddps_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -190,11 +190,11 @@ define void @test_demanded_haddps_256(<8 x float> %a0, <8 x float> %a1, float *%
   %1 = shufflevector <8 x float> %a1, <8 x float> undef, <8 x i32> zeroinitializer
   %2 = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> %a0, <8 x float> %1)
   %3 = extractelement <8 x float> %2, i32 4
-  store float %3, float *%a2
+  store float %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_hsubps_256(<8 x float> %a0, <8 x float> %a1, float *%a2) nounwind {
+define void @test_demanded_hsubps_256(<8 x float> %a0, <8 x float> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubps_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -214,11 +214,11 @@ define void @test_demanded_hsubps_256(<8 x float> %a0, <8 x float> %a1, float *%
   %1 = shufflevector <8 x float> %a0, <8 x float> undef, <8 x i32> zeroinitializer
   %2 = call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> %1, <8 x float> %a1)
   %3 = extractelement <8 x float> %2, i32 7
-  store float %3, float *%a2
+  store float %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_haddpd_256(<4 x double> %a0, <4 x double> %a1, double *%a2) nounwind {
+define void @test_demanded_haddpd_256(<4 x double> %a0, <4 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_haddpd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -238,11 +238,11 @@ define void @test_demanded_haddpd_256(<4 x double> %a0, <4 x double> %a1, double
   %1 = shufflevector <4 x double> %a1, <4 x double> undef, <4 x i32> zeroinitializer
   %2 = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> %a0, <4 x double> %1)
   %3 = extractelement <4 x double> %2, i32 2
-  store double %3, double *%a2
+  store double %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, double *%a2) nounwind {
+define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_hsubpd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -262,11 +262,11 @@ define void @test_demanded_hsubpd_256(<4 x double> %a0, <4 x double> %a1, double
   %1 = shufflevector <4 x double> %a1, <4 x double> undef, <4 x i32> zeroinitializer
   %2 = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> %a0, <4 x double> %1)
   %3 = extractelement <4 x double> %2, i32 2
-  store double %3, double *%a2
+  store double %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) nounwind {
+define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -286,11 +286,11 @@ define void @test_demanded_phaddd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) no
   %1 = shufflevector <8 x i32> %a0, <8 x i32> undef, <8 x i32> zeroinitializer
   %2 = call <8 x i32> @llvm.x86.avx2.phadd.d(<8 x i32> %1, <8 x i32> %a1)
   %3 = extractelement <8 x i32> %2, i32 7
-  store i32 %3, i32 *%a2
+  store i32 %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) nounwind {
+define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubd_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -310,11 +310,11 @@ define void @test_demanded_phsubd_256(<8 x i32> %a0, <8 x i32> %a1, i32 *%a2) no
   %1 = shufflevector <8 x i32> %a1, <8 x i32> undef, <8 x i32> zeroinitializer
   %2 = call <8 x i32> @llvm.x86.avx2.phsub.d(<8 x i32> %a0, <8 x i32> %1)
   %3 = extractelement <8 x i32> %2, i32 5
-  store i32 %3, i32 *%a2
+  store i32 %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phaddw_256(<16 x i16> %a0, <16 x i16> %a1, i16 *%a2) nounwind {
+define void @test_demanded_phaddw_256(<16 x i16> %a0, <16 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phaddw_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -334,11 +334,11 @@ define void @test_demanded_phaddw_256(<16 x i16> %a0, <16 x i16> %a1, i16 *%a2) 
   %1 = shufflevector <16 x i16> %a1, <16 x i16> undef, <16 x i32> zeroinitializer
   %2 = call <16 x i16> @llvm.x86.avx2.phadd.w(<16 x i16> %a0, <16 x i16> %1)
   %3 = extractelement <16 x i16> %2, i32 4
-  store i16 %3, i16 *%a2
+  store i16 %3, ptr%a2
   ret void
 }
 
-define void @test_demanded_phsubw_256(<16 x i16> %a0, <16 x i16> %a1, i16 *%a2) nounwind {
+define void @test_demanded_phsubw_256(<16 x i16> %a0, <16 x i16> %a1, ptr%a2) nounwind {
 ; X86-LABEL: test_demanded_phsubw_256:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -356,7 +356,7 @@ define void @test_demanded_phsubw_256(<16 x i16> %a0, <16 x i16> %a1, i16 *%a2) 
   %1 = shufflevector <16 x i16> %a0, <16 x i16> undef, <16 x i32> zeroinitializer
   %2 = call <16 x i16> @llvm.x86.avx2.phsub.w(<16 x i16> %1, <16 x i16> %a1)
   %3 = extractelement <16 x i16> %2, i32 6
-  store i16 %3, i16 *%a2
+  store i16 %3, ptr%a2
   ret void
 }
 

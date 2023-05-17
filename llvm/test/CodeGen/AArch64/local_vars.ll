@@ -11,7 +11,7 @@
 ; implemented.
 
 @var = global i64 0
-@local_addr = global i64* null
+@local_addr = global ptr null
 
 declare void @foo()
 
@@ -60,11 +60,11 @@ define void @stack_local() {
 ; CHECK-LABEL: stack_local:
 ; CHECK: sub sp, sp, #16
 
-  %val = load i64, i64* @var
-  store i64 %val, i64* %local_var
+  %val = load i64, ptr @var
+  store i64 %val, ptr %local_var
 ; CHECK-DAG: str {{x[0-9]+}}, [sp, #{{[0-9]+}}]
 
-  store i64* %local_var, i64** @local_addr
+  store ptr %local_var, ptr @local_addr
 ; CHECK-DAG: add {{x[0-9]+}}, sp, #{{[0-9]+}}
 
   ret void

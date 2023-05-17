@@ -101,7 +101,8 @@ bool InstructionSelector::executeMatchTable(
       break;
     }
 
-    case GIM_RecordInsn: {
+    case GIM_RecordInsn:
+    case GIM_RecordInsnIgnoreCopies: {
       int64_t NewInsnID = MatchTable[CurrentIdx++];
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
@@ -118,7 +119,7 @@ bool InstructionSelector::executeMatchTable(
           return false;
         break;
       }
-      if (Register::isPhysicalRegister(MO.getReg())) {
+      if (MO.getReg().isPhysical()) {
         DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                         dbgs() << CurrentIdx << ": Is a physical register\n");
         if (handleReject() == RejectAndGiveUp)
@@ -126,7 +127,12 @@ bool InstructionSelector::executeMatchTable(
         break;
       }
 
-      MachineInstr *NewMI = MRI.getVRegDef(MO.getReg());
+      MachineInstr *NewMI;
+      if (MatcherOpcode == GIM_RecordInsnIgnoreCopies)
+        NewMI = getDefIgnoringCopies(MO.getReg(), MRI);
+      else
+        NewMI = MRI.getVRegDef(MO.getReg());
+
       if ((size_t)NewInsnID < State.MIs.size())
         State.MIs[NewInsnID] = NewMI;
       else {
@@ -377,6 +383,25 @@ bool InstructionSelector::executeMatchTable(
                               State.RecordedOperands))
         if (handleReject() == RejectAndGiveUp)
           return false;
+      break;
+    }
+    case GIM_CheckHasNoUse: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx << ": GIM_CheckHasNoUse(MIs["
+                             << InsnID << "]\n");
+
+      const MachineInstr *MI = State.MIs[InsnID];
+      assert(MI && "Used insn before defined");
+      assert(MI->getNumDefs() > 0 && "No defs");
+      const Register Res = MI->getOperand(0).getReg();
+
+      if (!MRI.use_nodbg_empty(Res)) {
+        if (handleReject() == RejectAndGiveUp)
+          return false;
+      }
+
       break;
     }
     case GIM_CheckAtomicOrdering: {
@@ -674,8 +699,8 @@ bool InstructionSelector::executeMatchTable(
       ComplexRendererFns Renderer =
           (ISel.*ISelInfo.ComplexPredicates[ComplexPredicateID])(
               State.MIs[InsnID]->getOperand(OpIdx));
-      if (Renderer.hasValue())
-        State.Renderers[RendererID] = Renderer.getValue();
+      if (Renderer)
+        State.Renderers[RendererID] = *Renderer;
       else
         if (handleReject() == RejectAndGiveUp)
           return false;
@@ -797,7 +822,8 @@ bool InstructionSelector::executeMatchTable(
       }
       break;
     }
-    case GIM_CheckIsSameOperand: {
+    case GIM_CheckIsSameOperand:
+    case GIM_CheckIsSameOperandIgnoreCopies: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t OpIdx = MatchTable[CurrentIdx++];
       int64_t OtherInsnID = MatchTable[CurrentIdx++];
@@ -808,8 +834,20 @@ bool InstructionSelector::executeMatchTable(
                              << OtherInsnID << "][" << OtherOpIdx << "])\n");
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(State.MIs[OtherInsnID] != nullptr && "Used insn before defined");
-      if (!State.MIs[InsnID]->getOperand(OpIdx).isIdenticalTo(
-              State.MIs[OtherInsnID]->getOperand(OtherOpIdx))) {
+
+      MachineOperand &Op = State.MIs[InsnID]->getOperand(OpIdx);
+      MachineOperand &OtherOp = State.MIs[OtherInsnID]->getOperand(OtherOpIdx);
+
+      if (MatcherOpcode == GIM_CheckIsSameOperandIgnoreCopies) {
+        if (Op.isReg() && OtherOp.isReg()) {
+          MachineInstr *MI = getDefIgnoringCopies(Op.getReg(), MRI);
+          MachineInstr *OtherMI = getDefIgnoringCopies(OtherOp.getReg(), MRI);
+          if (MI && MI == OtherMI)
+            break;
+        }
+      }
+
+      if (!Op.isIdenticalTo(OtherOp)) {
         if (handleReject() == RejectAndGiveUp)
           return false;
       }
@@ -846,7 +884,7 @@ bool InstructionSelector::executeMatchTable(
         OutMIs.resize(NewInsnID + 1);
 
       OutMIs[NewInsnID] = BuildMI(*State.MIs[0]->getParent(), State.MIs[0],
-                                  State.MIs[0]->getDebugLoc(), TII.get(Opcode));
+                                  MIMetadata(*State.MIs[0]), TII.get(Opcode));
       DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
                       dbgs() << CurrentIdx << ": GIR_BuildMI(OutMIs["
                              << NewInsnID << "], " << Opcode << ")\n");
@@ -989,6 +1027,22 @@ bool InstructionSelector::executeMatchTable(
                              << ": GIR_ComplexSubOperandRenderer(OutMIs["
                              << InsnID << "], " << RendererID << ", "
                              << RenderOpID << ")\n");
+      break;
+    }
+    case GIR_ComplexSubOperandSubRegRenderer: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t RendererID = MatchTable[CurrentIdx++];
+      int64_t RenderOpID = MatchTable[CurrentIdx++];
+      int64_t SubRegIdx = MatchTable[CurrentIdx++];
+      MachineInstrBuilder &MI = OutMIs[InsnID];
+      assert(MI && "Attempted to add to undefined instruction");
+      State.Renderers[RendererID][RenderOpID](MI);
+      MI->getOperand(MI->getNumOperands() - 1).setSubReg(SubRegIdx);
+      DEBUG_WITH_TYPE(TgtInstructionSelector::getName(),
+                      dbgs() << CurrentIdx
+                             << ": GIR_ComplexSubOperandSubRegRenderer(OutMIs["
+                             << InsnID << "], " << RendererID << ", "
+                             << RenderOpID << ", " << SubRegIdx << ")\n");
       break;
     }
 

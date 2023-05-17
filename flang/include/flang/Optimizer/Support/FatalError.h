@@ -19,11 +19,14 @@
 namespace fir {
 
 /// Fatal error reporting helper. Report a fatal error with a source location
-/// and immediately abort flang.
+/// and immediately interrupt flang. If `genCrashDiag` is true, then
+/// the execution is aborted and the backtrace is printed, otherwise,
+/// flang exits with non-zero exit code and without backtrace printout.
 [[noreturn]] inline void emitFatalError(mlir::Location loc,
-                                        const llvm::Twine &message) {
+                                        const llvm::Twine &message,
+                                        bool genCrashDiag = true) {
   mlir::emitError(loc, message);
-  llvm::report_fatal_error("aborting");
+  llvm::report_fatal_error("aborting", genCrashDiag);
 }
 
 } // namespace fir

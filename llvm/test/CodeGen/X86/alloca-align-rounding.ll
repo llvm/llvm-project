@@ -1,11 +1,11 @@
 ; RUN: llc < %s -mtriple=x86_64-pc-linux -enable-misched=false | FileCheck %s
 ; RUN: llc < %s -mtriple=x86_64-pc-linux-gnux32 -enable-misched=false | FileCheck %s -check-prefix=X32ABI
 
-declare void @bar(<2 x i64>* %n)
+declare void @bar(ptr %n)
 
 define void @foo(i64 %h) {
   %p = alloca <2 x i64>, i64 %h
-  call void @bar(<2 x i64>* %p)
+  call void @bar(ptr %p)
   ret void
 ; CHECK-LABEL: foo
 ; CHECK-NOT: andq $-32, %rax
@@ -15,7 +15,7 @@ define void @foo(i64 %h) {
 
 define void @foo2(i64 %h) {
   %p = alloca <2 x i64>, i64 %h, align 32
-  call void @bar(<2 x i64>* %p)
+  call void @bar(ptr %p)
   ret void
 ; CHECK-LABEL: foo2
 ; CHECK: andq $-32, %rsp

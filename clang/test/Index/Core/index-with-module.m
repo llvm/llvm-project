@@ -23,5 +23,5 @@ void foo() {
 // CHECK-DAG: 2:6 | function/C | ModA_func | c:@F@ModA_func | {{.*}} | Decl | rel: 0
 // CHECK-DAG: 2:6 | function/C | SubModA_func | c:@F@SubModA_func | {{.*}} | Decl | rel: 0
 // CHECK: ---- Module Inputs ----
-// CHECK: user | {{.*}}ModA.h
 // CHECK: user | {{.*}}module.modulemap
+// CHECK: user | {{.*}}ModA.h

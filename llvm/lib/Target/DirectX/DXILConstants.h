@@ -13,17 +13,13 @@
 #define LLVM_LIB_TARGET_DIRECTX_DXILCONSTANTS_H
 
 namespace llvm {
-namespace DXIL {
-// Enumeration for operations specified by DXIL
-enum class OpCode : unsigned {
-  Sin = 13, // returns sine(theta) for theta in radians.
-};
-// Groups for DXIL operations with equivalent function templates
-enum class OpCodeClass : unsigned {
-  Unary,
-};
+namespace dxil {
 
-} // namespace DXIL
+#define DXIL_OP_ENUM
+#include "DXILOperation.inc"
+#undef DXIL_OP_ENUM
+
+} // namespace dxil
 } // namespace llvm
 
 #endif

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -verify -triple x86_64-unknown-unknown
+// RUN: %clang_cc1 %s -fsyntax-only -verify -triple riscv64-unknown-unknown
 
 // GH50171
 // This would previously crash when __bf16 was not a supported type.

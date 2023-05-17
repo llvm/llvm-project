@@ -3,8 +3,6 @@
 Test lldb data formatter subsystem.
 """
 
-from __future__ import print_function
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -26,6 +24,8 @@ class ObjCDataFormatterNSNumber(ObjCDataFormatterTestCase):
         self.appkit_tester_impl(self.nscontainers_data_formatter_commands, False)
 
     def nscontainers_data_formatter_commands(self):
+        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
+
         self.expect(
             'frame variable newArray nsDictionary newDictionary nscfDictionary cfDictionaryRef newMutableDictionary cfarray_ref mutable_array_ref',
             substrs=[

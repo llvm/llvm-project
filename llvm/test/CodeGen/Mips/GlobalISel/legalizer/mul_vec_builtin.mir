@@ -3,16 +3,16 @@
 --- |
 
   declare <16 x i8> @llvm.mips.mulv.b(<16 x i8>, <16 x i8>)
-  define void @mul_v16i8_builtin(<16 x i8>* %a, <16 x i8>* %b, <16 x i8>* %c) { entry: ret void }
+  define void @mul_v16i8_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <8 x i16> @llvm.mips.mulv.h(<8 x i16>, <8 x i16>)
-  define void @mul_v8i16_builtin(<8 x i16>* %a, <8 x i16>* %b, <8 x i16>* %c) { entry: ret void }
+  define void @mul_v8i16_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <4 x i32> @llvm.mips.mulv.w(<4 x i32>, <4 x i32>)
-  define void @mul_v4i32_builtin(<4 x i32>* %a, <4 x i32>* %b, <4 x i32>* %c) { entry: ret void }
+  define void @mul_v4i32_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
   declare <2 x i64> @llvm.mips.mulv.d(<2 x i64>, <2 x i64>)
-  define void @mul_v2i64_builtin(<2 x i64>* %a, <2 x i64>* %b, <2 x i64>* %c) { entry: ret void }
+  define void @mul_v2i64_builtin(ptr %a, ptr %b, ptr %c) { entry: ret void }
 
 ...
 ---

@@ -14,6 +14,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include <mutex>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -32,8 +33,8 @@ public:
   };
 
   /// \return Contents of the stored document.
-  /// For untracked files, a llvm::None is returned.
-  llvm::Optional<Draft> getDraft(PathRef File) const;
+  /// For untracked files, a std::nullopt is returned.
+  std::optional<Draft> getDraft(PathRef File) const;
 
   /// \return List of names of the drafts in this store.
   std::vector<Path> getActiveFiles() const;

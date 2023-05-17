@@ -12,7 +12,7 @@
 ; - CHECK-SHIFT2 makes sure that %b is shifted into the high part of the word
 ;   before being used, and that the low bits are set to 1.  This sequence is
 ;   independent of the other loop prologue instructions.
-define i16 @f1(i16 *%src, i16 %b) {
+define i16 @f1(ptr %src, i16 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-DAG: sll %r2, 3
@@ -43,12 +43,12 @@ define i16 @f1(i16 *%src, i16 %b) {
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw nand i16 *%src, i16 %b seq_cst
+  %res = atomicrmw nand ptr %src, i16 %b seq_cst
   ret i16 %res
 }
 
 ; Check the minimum signed value.  We AND the rotated word with 0x8000ffff.
-define i16 @f2(i16 *%src) {
+define i16 @f2(ptr %src) {
 ; CHECK-LABEL: f2:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-DAG: sll %r2, 3
@@ -73,12 +73,12 @@ define i16 @f2(i16 *%src) {
 ;
 ; CHECK-SHIFT2-LABEL: f2:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw nand i16 *%src, i16 -32768 seq_cst
+  %res = atomicrmw nand ptr %src, i16 -32768 seq_cst
   ret i16 %res
 }
 
 ; Check NANDs of -2 (-1 isn't useful).  We AND the rotated word with 0xfffeffff.
-define i16 @f3(i16 *%src) {
+define i16 @f3(ptr %src) {
 ; CHECK-LABEL: f3:
 ; CHECK: nilh [[ROT]], 65534
 ; CHECK: xilf [[ROT]], 4294901760
@@ -88,12 +88,12 @@ define i16 @f3(i16 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f3:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw nand i16 *%src, i16 -2 seq_cst
+  %res = atomicrmw nand ptr %src, i16 -2 seq_cst
   ret i16 %res
 }
 
 ; Check ANDs of 1.  We AND the rotated word with 0x0001ffff.
-define i16 @f4(i16 *%src) {
+define i16 @f4(ptr %src) {
 ; CHECK-LABEL: f4:
 ; CHECK: nilh [[ROT]], 1
 ; CHECK: xilf [[ROT]], 4294901760
@@ -103,12 +103,12 @@ define i16 @f4(i16 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f4:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw nand i16 *%src, i16 1 seq_cst
+  %res = atomicrmw nand ptr %src, i16 1 seq_cst
   ret i16 %res
 }
 
 ; Check the maximum signed value.  We AND the rotated word with 0x7fffffff.
-define i16 @f5(i16 *%src) {
+define i16 @f5(ptr %src) {
 ; CHECK-LABEL: f5:
 ; CHECK: nilh [[ROT]], 32767
 ; CHECK: xilf [[ROT]], 4294901760
@@ -118,13 +118,13 @@ define i16 @f5(i16 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f5:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw nand i16 *%src, i16 32767 seq_cst
+  %res = atomicrmw nand ptr %src, i16 32767 seq_cst
   ret i16 %res
 }
 
 ; Check NANDs of a large unsigned value.  We AND the rotated word with
 ; 0xfffdffff.
-define i16 @f6(i16 *%src) {
+define i16 @f6(ptr %src) {
 ; CHECK-LABEL: f6:
 ; CHECK: nilh [[ROT]], 65533
 ; CHECK: xilf [[ROT]], 4294901760
@@ -134,6 +134,6 @@ define i16 @f6(i16 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f6:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw nand i16 *%src, i16 65533 seq_cst
+  %res = atomicrmw nand ptr %src, i16 65533 seq_cst
   ret i16 %res
 }

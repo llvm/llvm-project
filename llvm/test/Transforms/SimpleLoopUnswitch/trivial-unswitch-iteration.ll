@@ -3,7 +3,7 @@
 
 declare void @some_func() noreturn
 
-define i32 @test1(i32* %var, i1 %cond1, i1 %cond2) {
+define i32 @test1(ptr %var, i1 %cond1, i1 %cond2) {
 ; CHECK-LABEL: @test1(
 entry:
   br label %loop_begin
@@ -20,7 +20,7 @@ loop_begin:
   br i1 %cond1, label %continue, label %loop_exit ; first trivial condition
 
 continue:
-  %var_val = load i32, i32* %var
+  %var_val = load i32, ptr %var
   %var_cond = trunc i32 %var_val to i1
   %maybe_cond = select i1 %cond1, i1 %cond2, i1 %var_cond
   br i1 %maybe_cond, label %do_something, label %loop_exit ; second trivial condition

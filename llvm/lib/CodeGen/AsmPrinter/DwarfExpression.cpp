@@ -99,7 +99,7 @@ void DwarfExpression::addAnd(unsigned Mask) {
 bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
                                     llvm::Register MachineReg,
                                     unsigned MaxSize) {
-  if (!llvm::Register::isPhysicalRegister(MachineReg)) {
+  if (!MachineReg.isPhysical()) {
     if (isFrameRegister(TRI, MachineReg)) {
       DwarfRegs.push_back(Register::createRegister(-1, nullptr));
       return true;
@@ -117,10 +117,10 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
 
   // Walk up the super-register chain until we find a valid number.
   // For example, EAX on x86_64 is a 32-bit fragment of RAX with offset 0.
-  for (MCSuperRegIterator SR(MachineReg, &TRI); SR.isValid(); ++SR) {
-    Reg = TRI.getDwarfRegNum(*SR, false);
+  for (MCPhysReg SR : TRI.superregs(MachineReg)) {
+    Reg = TRI.getDwarfRegNum(SR, false);
     if (Reg >= 0) {
-      unsigned Idx = TRI.getSubRegIndex(*SR, MachineReg);
+      unsigned Idx = TRI.getSubRegIndex(SR, MachineReg);
       unsigned Size = TRI.getSubRegIdxSize(Idx);
       unsigned RegOffset = TRI.getSubRegIdxOffset(Idx);
       DwarfRegs.push_back(Register::createRegister(Reg, "super-register"));
@@ -142,11 +142,11 @@ bool DwarfExpression::addMachineReg(const TargetRegisterInfo &TRI,
   // this doesn't find a combination of subregisters that fully cover
   // the register (even though one may exist).
   SmallBitVector Coverage(RegSize, false);
-  for (MCSubRegIterator SR(MachineReg, &TRI); SR.isValid(); ++SR) {
-    unsigned Idx = TRI.getSubRegIndex(MachineReg, *SR);
+  for (MCPhysReg SR : TRI.subregs(MachineReg)) {
+    unsigned Idx = TRI.getSubRegIndex(MachineReg, SR);
     unsigned Size = TRI.getSubRegIdxSize(Idx);
     unsigned Offset = TRI.getSubRegIdxOffset(Idx);
-    Reg = TRI.getDwarfRegNum(*SR, false);
+    Reg = TRI.getDwarfRegNum(SR, false);
     if (Reg < 0)
       continue;
 
@@ -494,7 +494,7 @@ bool DwarfExpression::addExpression(
   // and not any other parts of the following DWARF expression.
   assert(!IsEmittingEntryValue && "Can't emit entry value around expression");
 
-  Optional<DIExpression::ExprOperand> PrevConvertOp = None;
+  std::optional<DIExpression::ExprOperand> PrevConvertOp;
 
   while (ExprCursor) {
     auto Op = ExprCursor.take();
@@ -604,7 +604,7 @@ bool DwarfExpression::addExpression(
             emitLegacySExt(PrevConvertOp->getArg(0));
           else if (Encoding == dwarf::DW_ATE_unsigned)
             emitLegacyZExt(PrevConvertOp->getArg(0));
-          PrevConvertOp = None;
+          PrevConvertOp = std::nullopt;
         } else {
           PrevConvertOp = Op;
         }

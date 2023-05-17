@@ -7,14 +7,14 @@
 target datalayout = "E-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux"
 
-%struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713 = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker.118.8248.32638.195238.200116.211498.218002.221254.222880.224506.226132.240766.244018.245644.248896.260278.271660.281416.283042.302554.304180.325318.326944.344712*, %struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713*, i32, i32, i64, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
-%struct._IO_marker.118.8248.32638.195238.200116.211498.218002.221254.222880.224506.226132.240766.244018.245644.248896.260278.271660.281416.283042.302554.304180.325318.326944.344712 = type { %struct._IO_marker.118.8248.32638.195238.200116.211498.218002.221254.222880.224506.226132.240766.244018.245644.248896.260278.271660.281416.283042.302554.304180.325318.326944.344712*, %struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713*, i32 }
+%struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713 = type { i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i64, i16, i8, [1 x i8], ptr, i64, ptr, ptr, ptr, ptr, i64, i32, [20 x i8] }
+%struct._IO_marker.118.8248.32638.195238.200116.211498.218002.221254.222880.224506.226132.240766.244018.245644.248896.260278.271660.281416.283042.302554.304180.325318.326944.344712 = type { ptr, ptr, i32 }
 
 @.str236 = external unnamed_addr constant [121 x i8], align 1
 @.str294 = external unnamed_addr constant [49 x i8], align 1
 
 ; Function Attrs: nounwind
-declare void @fprintf(%struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713* nocapture, i8* nocapture readonly, ...) #0
+declare void @fprintf(ptr nocapture, ptr nocapture readonly, ...) #0
 
 ; Function Attrs: inlinehint nounwind
 define void @_ZN4PAMI6Device2MU15ResourceManager46calculatePerCoreMUResourcesBasedOnAvailabilityEv(i32 %inp32, i64 %inp64) #1 align 2 {
@@ -23,7 +23,7 @@ define void @_ZN4PAMI6Device2MU15ResourceManager46calculatePerCoreMUResourcesBas
 
 entry:
   %numFreeResourcesInSubgroup = alloca i32, align 4
-  %0 = ptrtoint i32* %numFreeResourcesInSubgroup to i64
+  %0 = ptrtoint ptr %numFreeResourcesInSubgroup to i64
   br label %for.cond2.preheader
 
 for.cond2.preheader:                              ; preds = %if.end23.3, %entry
@@ -39,7 +39,7 @@ if.then:                                          ; preds = %if.end23.2, %if.end
   unreachable
 
 if.end:                                           ; preds = %for.cond2.preheader
-  %1 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %1 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %conv = zext i32 %1 to i64
   %2 = call { i64, i64, i64, i64 } asm sideeffect "sc", "=&{r0},=&{r3},=&{r4},=&{r5},{r0},{r3},{r4},{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{cr0},~{memory}"(i64 1034, i64 %indvars.iv, i64 %0, i64 %inp64) #2
   %cmp10 = icmp eq i32 0, 0
@@ -49,19 +49,19 @@ if.then11:                                        ; preds = %if.end.3, %if.end.2
   unreachable
 
 if.end14:                                         ; preds = %if.end
-  %3 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %3 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %cmp19 = icmp eq i32 %inp32, 0
   br i1 %cmp19, label %if.end23, label %if.then20
 
 if.then20:                                        ; preds = %if.end14.3, %if.end14.2, %if.end14.1, %if.end14
   %conv4.i65.lcssa = phi i32 [ %inp32, %if.end14 ], [ 0, %if.end14.1 ], [ %conv4.i65.2, %if.end14.2 ], [ %conv4.i65.3, %if.end14.3 ]
-  call void (%struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713*, i8*, ...) @fprintf(%struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713* undef, i8* getelementptr inbounds ([121 x i8], [121 x i8]* @.str236, i64 0, i64 0), i32 signext 2503) #3
-  call void (%struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713*, i8*, ...) @fprintf(%struct._IO_FILE.119.8249.32639.195239.200117.211499.218003.221255.222881.224507.226133.240767.244019.245645.248897.260279.271661.281417.283043.302555.304181.325319.326945.344713* undef, i8* getelementptr inbounds ([49 x i8], [49 x i8]* @.str294, i64 0, i64 0), i32 signext %conv4.i65.lcssa) #3
+  call void (ptr, ptr, ...) @fprintf(ptr undef, ptr @.str236, i32 signext 2503) #3
+  call void (ptr, ptr, ...) @fprintf(ptr undef, ptr @.str294, i32 signext %conv4.i65.lcssa) #3
   unreachable
 
 if.end23:                                         ; preds = %if.end14
   %conv15 = zext i32 %3 to i64
-  %4 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %4 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %conv24 = zext i32 %4 to i64
   %5 = call { i64, i64, i64, i64 } asm sideeffect "sc", "=&{r0},=&{r3},=&{r4},=&{r5},{r0},{r3},{r4},{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{cr0},~{memory}"(i64 1033, i64 0, i64 %0, i64 %inp64) #2
   %cmp5.1 = icmp eq i32 0, 0
@@ -71,7 +71,7 @@ for.end38:                                        ; preds = %if.end23.3
   ret void
 
 if.end.1:                                         ; preds = %if.end23
-  %6 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %6 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %conv.1 = zext i32 %6 to i64
   %add.1 = add nuw nsw i64 %conv.1, %conv
   %7 = call { i64, i64, i64, i64 } asm sideeffect "sc", "=&{r0},=&{r3},=&{r4},=&{r5},{r0},{r3},{r4},{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{cr0},~{memory}"(i64 1034, i64 0, i64 %0, i64 %inp64) #2
@@ -79,21 +79,21 @@ if.end.1:                                         ; preds = %if.end23
   br i1 %cmp10.1, label %if.end14.1, label %if.then11
 
 if.end14.1:                                       ; preds = %if.end.1
-  %8 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %8 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %cmp19.1 = icmp eq i32 0, 0
   br i1 %cmp19.1, label %if.end23.1, label %if.then20
 
 if.end23.1:                                       ; preds = %if.end14.1
   %conv15.1 = zext i32 %8 to i64
   %add16.1 = add nuw nsw i64 %conv15.1, %conv15
-  %9 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %9 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %conv24.1 = zext i32 %9 to i64
   %add25.1 = add nuw nsw i64 %conv24.1, %conv24
   %cmp5.2 = icmp eq i32 %inp32, 0
   br i1 %cmp5.2, label %if.end.2, label %if.then
 
 if.end.2:                                         ; preds = %if.end23.1
-  %10 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %10 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %conv.2 = zext i32 %10 to i64
   %add.2 = add nuw nsw i64 %conv.2, %add.1
   %11 = call { i64, i64, i64, i64 } asm sideeffect "sc", "=&{r0},=&{r3},=&{r4},=&{r5},{r0},{r3},{r4},{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{cr0},~{memory}"(i64 1034, i64 %inp64, i64 %0, i64 %inp64) #2
@@ -101,7 +101,7 @@ if.end.2:                                         ; preds = %if.end23.1
   br i1 %cmp10.2, label %if.end14.2, label %if.then11
 
 if.end14.2:                                       ; preds = %if.end.2
-  %12 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %12 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %13 = call { i64, i64, i64, i64 } asm sideeffect "sc", "=&{r0},=&{r3},=&{r4},=&{r5},{r0},{r3},{r4},{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{cr0},~{memory}"(i64 1035, i64 %inp64, i64 %0, i64 0) #2
   %asmresult1.i64.2 = extractvalue { i64, i64, i64, i64 } %13, 1
   %conv4.i65.2 = trunc i64 %asmresult1.i64.2 to i32
@@ -111,21 +111,21 @@ if.end14.2:                                       ; preds = %if.end.2
 if.end23.2:                                       ; preds = %if.end14.2
   %conv15.2 = zext i32 %12 to i64
   %add16.2 = add nuw nsw i64 %conv15.2, %add16.1
-  %14 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %14 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %conv24.2 = zext i32 %14 to i64
   %add25.2 = add nuw nsw i64 %conv24.2, %add25.1
   %cmp5.3 = icmp eq i32 0, 0
   br i1 %cmp5.3, label %if.end.3, label %if.then
 
 if.end.3:                                         ; preds = %if.end23.2
-  %15 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %15 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %conv.3 = zext i32 %15 to i64
   %add.3 = add nuw nsw i64 %conv.3, %add.2
   %cmp10.3 = icmp eq i32 %inp32, 0
   br i1 %cmp10.3, label %if.end14.3, label %if.then11
 
 if.end14.3:                                       ; preds = %if.end.3
-  %16 = load i32, i32* %numFreeResourcesInSubgroup, align 4
+  %16 = load i32, ptr %numFreeResourcesInSubgroup, align 4
   %17 = call { i64, i64, i64, i64 } asm sideeffect "sc", "=&{r0},=&{r3},=&{r4},=&{r5},{r0},{r3},{r4},{r5},~{r6},~{r7},~{r8},~{r9},~{r10},~{r11},~{r12},~{cr0},~{memory}"(i64 1035, i64 0, i64 %0, i64 0) #2
   %asmresult1.i64.3 = extractvalue { i64, i64, i64, i64 } %17, 1
   %conv4.i65.3 = trunc i64 %asmresult1.i64.3 to i32

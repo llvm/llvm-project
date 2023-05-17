@@ -36,7 +36,6 @@ define amdgpu_cs void @if_then(<4 x i32> inreg %input, <4 x i32> inreg %output, 
 .entry:
   %LocalInvocationId.i0 = extractelement <3 x i32> %LocalInvocationId, i32 0
   %.not10002 = icmp eq i32 %LocalInvocationId.i0, 0
-  %i530 = icmp ult i32 %LocalInvocationId.i0, 4
   br i1 %.not10002, label %.merge, label %.bb0
 
 .bb0:
@@ -44,6 +43,7 @@ define amdgpu_cs void @if_then(<4 x i32> inreg %input, <4 x i32> inreg %output, 
 
 .merge:
   %src = phi i32 [ 0, %.entry ], [ 1, %.bb0 ]
+  %i530 = icmp ult i32 %LocalInvocationId.i0, 4
   br i1 %i530, label %.end, label %.then
 
 .then:
@@ -73,8 +73,13 @@ define amdgpu_cs void @if_else_vgpr_opt(<4 x i32> inreg %input, <4 x i32> inreg 
 ; GCN-NEXT:    v_cmp_lt_u32_e32 vcc_lo, 3, v0
 ; GCN-NEXT:    s_and_saveexec_b32 s0, vcc_lo
 ; GCN-NEXT:    s_xor_b32 s0, exec_lo, s0
-; GCN-NEXT:    s_cbranch_execz .LBB1_4
-; GCN-NEXT:  ; %bb.3: ; %.else
+; GCN-NEXT:    s_cbranch_execnz .LBB1_5
+; GCN-NEXT:  ; %bb.3: ; %Flow
+; GCN-NEXT:    s_andn2_saveexec_b32 s0, s0
+; GCN-NEXT:    s_cbranch_execnz .LBB1_6
+; GCN-NEXT:  .LBB1_4: ; %.end
+; GCN-NEXT:    s_endpgm
+; GCN-NEXT:  .LBB1_5: ; %.else
 ; GCN-NEXT:    s_or_saveexec_b32 s1, -1
 ; GCN-NEXT:    v_mov_b32_e32 v1, 0
 ; GCN-NEXT:    s_mov_b32 exec_lo, s1
@@ -89,20 +94,15 @@ define amdgpu_cs void @if_else_vgpr_opt(<4 x i32> inreg %input, <4 x i32> inreg 
 ; GCN-NEXT:    v_mov_b32_e32 v3, -1
 ; GCN-NEXT:    buffer_store_dword v3, v0, s[4:7], 0 offen
 ; GCN-NEXT:    ; implicit-def: $vgpr3
-; GCN-NEXT:  .LBB1_4: ; %Flow
-; GCN-NEXT:    s_or_saveexec_b32 s0, s0
-; GCN-NEXT:    s_waitcnt_depctr 0xffe3
-; GCN-NEXT:    s_xor_b32 exec_lo, exec_lo, s0
-; GCN-NEXT:    s_cbranch_execz .LBB1_6
-; GCN-NEXT:  ; %bb.5: ; %.then
+; GCN-NEXT:    s_andn2_saveexec_b32 s0, s0
+; GCN-NEXT:    s_cbranch_execz .LBB1_4
+; GCN-NEXT:  .LBB1_6: ; %.then
 ; GCN-NEXT:    v_mov_b32_e32 v0, -1
 ; GCN-NEXT:    buffer_store_dword v0, v3, s[4:7], 0 offen
-; GCN-NEXT:  .LBB1_6: ; %.end
 ; GCN-NEXT:    s_endpgm
 .entry:
   %LocalInvocationId.i0 = extractelement <3 x i32> %LocalInvocationId, i32 0
   %.not10002 = icmp eq i32 %LocalInvocationId.i0, 0
-  %i530 = icmp ult i32 %LocalInvocationId.i0, 4
   br i1 %.not10002, label %.merge, label %.bb0
 
 .bb0:
@@ -110,6 +110,7 @@ define amdgpu_cs void @if_else_vgpr_opt(<4 x i32> inreg %input, <4 x i32> inreg 
 
 .merge:
   %src = phi i32 [ 0, %.entry ], [ 1, %.bb0 ]
+  %i530 = icmp ult i32 %LocalInvocationId.i0, 4
   br i1 %i530, label %.then, label %.else
 
 .then:

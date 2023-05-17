@@ -2,7 +2,8 @@
 
 # RUN: echo "VERSION_1.0 { global: bar; };" > %t.script
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t.o
-# RUN: ld.lld --version-script %t.script -shared %t.o -o /dev/null --fatal-warnings
+# RUN: not ld.lld --version-script %t.script -shared %t.o -o /dev/null \
+# RUN:    --fatal-warnings 2>&1 | FileCheck -check-prefix=ERR1 %s
 # RUN: ld.lld --version-script %t.script -shared --undefined-version %t.o -o %t.so
 # RUN: not ld.lld --version-script %t.script -shared --no-undefined-version \
 # RUN:   %t.o -o %t.so 2>&1 | FileCheck -check-prefix=ERR1 %s

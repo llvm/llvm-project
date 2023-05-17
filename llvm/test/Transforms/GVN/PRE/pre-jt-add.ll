@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-pre -jump-threading -S | FileCheck %s
+; RUN: opt < %s -passes=gvn,jump-threading -enable-pre -S | FileCheck %s
 
 @H = common global i32 0
 @G = common global i32 0
@@ -12,7 +12,7 @@ bb:
 ; CHECK: store
 ; CHECK-NOT: br label %return
   %add.1 = add nuw nsw i32 %v, -1
-  store i32 %add.1, i32* @G, align 4
+  store i32 %add.1, ptr @G, align 4
   br label %merge
 
 bb1:
@@ -26,7 +26,7 @@ merge:
 action:
 ; CHECK: store
 ; CHECK-NEXT: br label %return
-  store i32 %add.2, i32* @H, align 4
+  store i32 %add.2, ptr @H, align 4
   br label %return
 
 return:

@@ -11,13 +11,14 @@
 
 // Computes an integer power of a real or complex value.
 
-#include "flang/Evaluate/common.h"
+#include "flang/Evaluate/target.h"
 
 namespace Fortran::evaluate {
 
 template <typename REAL, typename INT>
 ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
-    const INT &power, Rounding rounding = defaultRounding) {
+    const INT &power,
+    Rounding rounding = TargetCharacteristics::defaultRounding) {
   ValueWithRealFlags<REAL> result{factor};
   if (base.IsNotANumber()) {
     result.value = REAL::NotANumber();
@@ -49,8 +50,8 @@ ValueWithRealFlags<REAL> TimesIntPowerOf(const REAL &factor, const REAL &base,
 }
 
 template <typename REAL, typename INT>
-ValueWithRealFlags<REAL> IntPower(
-    const REAL &base, const INT &power, Rounding rounding = defaultRounding) {
+ValueWithRealFlags<REAL> IntPower(const REAL &base, const INT &power,
+    Rounding rounding = TargetCharacteristics::defaultRounding) {
   REAL one{REAL::FromInteger(INT{1}).value};
   return TimesIntPowerOf(one, base, power, rounding);
 }

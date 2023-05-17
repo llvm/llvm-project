@@ -24,7 +24,7 @@
 #include "test_macros.h"
 
 template<typename CharT>
-void test1(std::basic_string_view<CharT> sv, size_t n, size_t pos) {
+void test1(std::basic_string_view<CharT> sv, std::size_t n, size_t pos) {
     std::basic_string_view<CharT> sv1;
 #ifdef TEST_HAS_NO_EXCEPTIONS
     if (pos > sv.size())
@@ -40,9 +40,9 @@ void test1(std::basic_string_view<CharT> sv, size_t n, size_t pos) {
         return ;
     }
 #endif
-    const size_t rlen = std::min(n, sv.size() - pos);
+    const std::size_t rlen = std::min(n, sv.size() - pos);
     assert (sv1.size() == rlen);
-    for (size_t i = 0; i < rlen; ++i)
+    for (std::size_t i = 0; i < rlen; ++i)
         assert(sv[pos+i] == sv1[i]);
 }
 
@@ -77,10 +77,12 @@ int main(int, char**) {
     test ( "a" );
     test ( "" );
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     test ( L"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE" );
     test ( L"ABCDE" );
     test ( L"a" );
     test ( L"" );
+#endif
 
 #if TEST_STD_VER >= 11
     test ( u"ABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDEABCDE" );

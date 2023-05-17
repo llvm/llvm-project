@@ -161,7 +161,7 @@ public:
       uint32_t start_idx, const std::vector<uint32_t> &file_idx,
       const SourceLocationSpec &src_location_spec, LineEntry *line_entry_ptr);
 
-  size_t FineLineEntriesForFileIndex(uint32_t file_idx, bool append,
+  size_t FindLineEntriesForFileIndex(uint32_t file_idx, bool append,
                                      SymbolContextList &sc_list);
 
   /// Get the line entry from the line table at index \a idx.
@@ -350,9 +350,9 @@ private:
     if (!line_entry_ptr)
       return best_match;
 
-    const uint32_t line = src_location_spec.GetLine().getValueOr(0);
+    const uint32_t line = src_location_spec.GetLine().value_or(0);
     const uint16_t column =
-        src_location_spec.GetColumn().getValueOr(LLDB_INVALID_COLUMN_NUMBER);
+        src_location_spec.GetColumn().value_or(LLDB_INVALID_COLUMN_NUMBER);
     const bool exact_match = src_location_spec.GetExactMatch();
 
     for (size_t idx = start_idx; idx < count; ++idx) {

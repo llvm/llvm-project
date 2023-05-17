@@ -395,9 +395,9 @@ def cmov : PatFrag<(ops node:$op1, node:$op2, node:$cc),
 let Uses = [STATUS32], isAsCheapAsAMove = 1, isPredicable=1,
 	  isReMaterializable = 0, Constraints = "$B = $B2" in {
   def MOV_cc : F32_DOP_CC_RR<0b00100, 0b001010, 0,
-                 (outs GPR32:$B), (ins GPR32:$C, GPR32:$B2, cmovpred:$cc),
+                 (outs GPR32:$B), (ins GPR32:$C, GPR32:$B2, CCOp:$cc),
                  "mov.$cc\t$B, $C",
-                 [(set GPR32:$B, (cmov i32:$C, i32:$B2, cmovpred:$cc))]>;
+                 [(set GPR32:$B, (cmov i32:$C, i32:$B2, timm:$cc))]>;
 
   def MOV_cc_ru6 : F32_DOP_CC_RU6<0b00100, 0b001010, 0,
                  (outs GPR32:$B), (ins u6:$C, CCOp:$cc, GPR32:$B2),

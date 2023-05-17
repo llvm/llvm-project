@@ -26,11 +26,14 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/YAMLTraits.h"
 
 #include <limits>
 #include <memory>
+#include <optional>
 #include <utility>
+#include <vector>
 
 #define DEBUG_TYPE "taint-checker"
 
@@ -92,10 +95,8 @@ bool isStdin(SVal Val, const ASTContext &ACtx) {
     return false;
 
   // Get it's symbol and find the declaration region it's pointing to.
-  const auto *Sm = dyn_cast<SymbolRegionValue>(SymReg->getSymbol());
-  if (!Sm)
-    return false;
-  const auto *DeclReg = dyn_cast<DeclRegion>(Sm->getRegion());
+  const auto *DeclReg =
+      dyn_cast_or_null<DeclRegion>(SymReg->getSymbol()->getOriginRegion());
   if (!DeclReg)
     return false;
 
@@ -115,46 +116,110 @@ bool isStdin(SVal Val, const ASTContext &ACtx) {
   return false;
 }
 
-SVal getPointeeOf(const CheckerContext &C, Loc LValue) {
-  const QualType ArgTy = LValue.getType(C.getASTContext());
+SVal getPointeeOf(ProgramStateRef State, Loc LValue) {
+  const QualType ArgTy = LValue.getType(State->getStateManager().getContext());
   if (!ArgTy->isPointerType() || !ArgTy->getPointeeType()->isVoidType())
-    return C.getState()->getSVal(LValue);
+    return State->getSVal(LValue);
 
   // Do not dereference void pointers. Treat them as byte pointers instead.
   // FIXME: we might want to consider more than just the first byte.
-  return C.getState()->getSVal(LValue, C.getASTContext().CharTy);
+  return State->getSVal(LValue, State->getStateManager().getContext().CharTy);
 }
 
 /// Given a pointer/reference argument, return the value it refers to.
-Optional<SVal> getPointeeOf(const CheckerContext &C, SVal Arg) {
+std::optional<SVal> getPointeeOf(ProgramStateRef State, SVal Arg) {
   if (auto LValue = Arg.getAs<Loc>())
-    return getPointeeOf(C, *LValue);
-  return None;
+    return getPointeeOf(State, *LValue);
+  return std::nullopt;
 }
 
 /// Given a pointer, return the SVal of its pointee or if it is tainted,
 /// otherwise return the pointer's SVal if tainted.
 /// Also considers stdin as a taint source.
-Optional<SVal> getTaintedPointeeOrPointer(const CheckerContext &C, SVal Arg) {
-  const ProgramStateRef State = C.getState();
-
-  if (auto Pointee = getPointeeOf(C, Arg))
+std::optional<SVal> getTaintedPointeeOrPointer(ProgramStateRef State,
+                                               SVal Arg) {
+  if (auto Pointee = getPointeeOf(State, Arg))
     if (isTainted(State, *Pointee)) // FIXME: isTainted(...) ? Pointee : None;
       return Pointee;
 
   if (isTainted(State, Arg))
     return Arg;
-
-  // FIXME: This should be done by the isTainted() API.
-  if (isStdin(Arg, C.getASTContext()))
-    return Arg;
-
-  return None;
+  return std::nullopt;
 }
 
-bool isTaintedOrPointsToTainted(const Expr *E, const ProgramStateRef &State,
-                                CheckerContext &C) {
-  return getTaintedPointeeOrPointer(C, C.getSVal(E)).hasValue();
+bool isTaintedOrPointsToTainted(ProgramStateRef State, SVal ExprSVal) {
+  return getTaintedPointeeOrPointer(State, ExprSVal).has_value();
+}
+
+/// Helps in printing taint diagnostics.
+/// Marks the incoming parameters of a function interesting (to be printed)
+/// when the return value, or the outgoing parameters are tainted.
+const NoteTag *taintOriginTrackerTag(CheckerContext &C,
+                                     std::vector<SymbolRef> TaintedSymbols,
+                                     std::vector<ArgIdxTy> TaintedArgs,
+                                     const LocationContext *CallLocation) {
+  return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
+                       TaintedArgs = std::move(TaintedArgs), CallLocation](
+                          PathSensitiveBugReport &BR) -> std::string {
+    SmallString<256> Msg;
+    // We give diagnostics only for taint related reports
+    if (!BR.isInteresting(CallLocation) ||
+        BR.getBugType().getCategory() != categories::TaintedData) {
+      return "";
+    }
+    if (TaintedSymbols.empty())
+      return "Taint originated here";
+
+    for (auto Sym : TaintedSymbols) {
+      BR.markInteresting(Sym);
+    }
+    LLVM_DEBUG(for (auto Arg
+                    : TaintedArgs) {
+      llvm::dbgs() << "Taint Propagated from argument " << Arg + 1 << "\n";
+    });
+    return "";
+  });
+}
+
+/// Helps in printing taint diagnostics.
+/// Marks the function interesting (to be printed)
+/// when the return value, or the outgoing parameters are tainted.
+const NoteTag *taintPropagationExplainerTag(
+    CheckerContext &C, std::vector<SymbolRef> TaintedSymbols,
+    std::vector<ArgIdxTy> TaintedArgs, const LocationContext *CallLocation) {
+  assert(TaintedSymbols.size() == TaintedArgs.size());
+  return C.getNoteTag([TaintedSymbols = std::move(TaintedSymbols),
+                       TaintedArgs = std::move(TaintedArgs), CallLocation](
+                          PathSensitiveBugReport &BR) -> std::string {
+    SmallString<256> Msg;
+    llvm::raw_svector_ostream Out(Msg);
+    // We give diagnostics only for taint related reports
+    if (TaintedSymbols.empty() ||
+        BR.getBugType().getCategory() != categories::TaintedData) {
+      return "";
+    }
+    int nofTaintedArgs = 0;
+    for (auto [Idx, Sym] : llvm::enumerate(TaintedSymbols)) {
+      if (BR.isInteresting(Sym)) {
+        BR.markInteresting(CallLocation);
+        if (TaintedArgs[Idx] != ReturnValueIndex) {
+          LLVM_DEBUG(llvm::dbgs() << "Taint Propagated to argument "
+                                  << TaintedArgs[Idx] + 1 << "\n");
+          if (nofTaintedArgs == 0)
+            Out << "Taint propagated to the ";
+          else
+            Out << ", ";
+          Out << TaintedArgs[Idx] + 1
+              << llvm::getOrdinalSuffix(TaintedArgs[Idx] + 1) << " argument";
+          nofTaintedArgs++;
+        } else {
+          LLVM_DEBUG(llvm::dbgs() << "Taint Propagated to return value.\n");
+          Out << "Taint propagated to the return value";
+        }
+      }
+    }
+    return std::string(Out.str());
+  });
 }
 
 /// ArgSet is used to describe arguments relevant for taint detection or
@@ -163,7 +228,8 @@ bool isTaintedOrPointsToTainted(const Expr *E, const ProgramStateRef &State,
 class ArgSet {
 public:
   ArgSet() = default;
-  ArgSet(ArgVecTy &&DiscreteArgs, Optional<ArgIdxTy> VariadicIndex = None)
+  ArgSet(ArgVecTy &&DiscreteArgs,
+         std::optional<ArgIdxTy> VariadicIndex = std::nullopt)
       : DiscreteArgs(std::move(DiscreteArgs)),
         VariadicIndex(std::move(VariadicIndex)) {}
 
@@ -176,18 +242,9 @@ public:
 
   bool isEmpty() const { return DiscreteArgs.empty() && !VariadicIndex; }
 
-  ArgVecTy ArgsUpTo(ArgIdxTy LastArgIdx) const {
-    ArgVecTy Args;
-    for (ArgIdxTy I = ReturnValueIndex; I <= LastArgIdx; ++I) {
-      if (contains(I))
-        Args.push_back(I);
-    }
-    return Args;
-  }
-
 private:
   ArgVecTy DiscreteArgs;
-  Optional<ArgIdxTy> VariadicIndex;
+  std::optional<ArgIdxTy> VariadicIndex;
 };
 
 /// A struct used to specify taint propagation rules for a function.
@@ -201,19 +258,19 @@ class GenericTaintRule {
   ArgSet SinkArgs;
   /// Arguments which should be sanitized on function return.
   ArgSet FilterArgs;
-  /// Arguments which can participate in taint propagationa. If any of the
+  /// Arguments which can participate in taint propagation. If any of the
   /// arguments in PropSrcArgs is tainted, all arguments in  PropDstArgs should
   /// be tainted.
   ArgSet PropSrcArgs;
   ArgSet PropDstArgs;
 
   /// A message that explains why the call is sensitive to taint.
-  Optional<StringRef> SinkMsg;
+  std::optional<StringRef> SinkMsg;
 
   GenericTaintRule() = default;
 
   GenericTaintRule(ArgSet &&Sink, ArgSet &&Filter, ArgSet &&Src, ArgSet &&Dst,
-                   Optional<StringRef> SinkMsg = None)
+                   std::optional<StringRef> SinkMsg = std::nullopt)
       : SinkArgs(std::move(Sink)), FilterArgs(std::move(Filter)),
         PropSrcArgs(std::move(Src)), PropDstArgs(std::move(Dst)),
         SinkMsg(SinkMsg) {}
@@ -222,7 +279,7 @@ public:
   /// Make a rule that reports a warning if taint reaches any of \p FilterArgs
   /// arguments.
   static GenericTaintRule Sink(ArgSet &&SinkArgs,
-                               Optional<StringRef> Msg = None) {
+                               std::optional<StringRef> Msg = std::nullopt) {
     return {std::move(SinkArgs), {}, {}, {}, Msg};
   }
 
@@ -243,9 +300,9 @@ public:
   }
 
   /// Make a rule that taints all PropDstArgs if any of PropSrcArgs is tainted.
-  static GenericTaintRule SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs,
-                                   ArgSet &&DstArgs,
-                                   Optional<StringRef> Msg = None) {
+  static GenericTaintRule
+  SinkProp(ArgSet &&SinkArgs, ArgSet &&SrcArgs, ArgSet &&DstArgs,
+           std::optional<StringRef> Msg = std::nullopt) {
     return {
         std::move(SinkArgs), {}, std::move(SrcArgs), std::move(DstArgs), Msg};
   }
@@ -313,7 +370,7 @@ struct GenericTaintRuleParser {
                                  TaintConfiguration &&Config) const;
 
 private:
-  using NamePartsTy = llvm::SmallVector<SmallString<32>, 2>;
+  using NamePartsTy = llvm::SmallVector<StringRef, 2>;
 
   /// Validate part of the configuration, which contains a list of argument
   /// indexes.
@@ -340,11 +397,6 @@ private:
 
 class GenericTaintChecker : public Checker<check::PreCall, check::PostCall> {
 public:
-  static void *getTag() {
-    static int Tag;
-    return &Tag;
-  }
-
   void checkPreCall(const CallEvent &Call, CheckerContext &C) const;
   void checkPostCall(const CallEvent &Call, CheckerContext &C) const;
 
@@ -356,7 +408,7 @@ public:
                                CheckerContext &C) const;
 
 private:
-  const BugType BT{this, "Use of Untrusted Data", "Untrusted Data"};
+  const BugType BT{this, "Use of Untrusted Data", categories::TaintedData};
 
   bool checkUncontrolledFormatString(const CallEvent &Call,
                                      CheckerContext &C) const;
@@ -364,7 +416,7 @@ private:
   void taintUnsafeSocketProtocol(const CallEvent &Call,
                                  CheckerContext &C) const;
 
-  /// Default taint rules are initilized with the help of a CheckerContext to
+  /// Default taint rules are initalized with the help of a CheckerContext to
   /// access the names of built-in functions like memcpy.
   void initTaintRules(CheckerContext &C) const;
 
@@ -375,8 +427,8 @@ private:
   // TODO: Remove separation to simplify matching logic once CallDescriptions
   // are more expressive.
 
-  mutable Optional<RuleLookupTy> StaticTaintRules;
-  mutable Optional<RuleLookupTy> DynamicTaintRules;
+  mutable std::optional<RuleLookupTy> StaticTaintRules;
+  mutable std::optional<RuleLookupTy> DynamicTaintRules;
 };
 } // end of anonymous namespace
 
@@ -458,10 +510,8 @@ GenericTaintRuleParser::parseNameParts(const Config &C) {
   if (!C.Scope.empty()) {
     // If the Scope argument contains multiple "::" parts, those are considered
     // namespace identifiers.
-    llvm::SmallVector<StringRef, 2> NSParts;
-    StringRef{C.Scope}.split(NSParts, "::", /*MaxSplit*/ -1,
+    StringRef{C.Scope}.split(NameParts, "::", /*MaxSplit*/ -1,
                              /*KeepEmpty*/ false);
-    NameParts.append(NSParts.begin(), NSParts.end());
   }
   NameParts.emplace_back(C.Name);
   return NameParts;
@@ -472,10 +522,7 @@ void GenericTaintRuleParser::consumeRulesFromConfig(const Config &C,
                                                     GenericTaintRule &&Rule,
                                                     RulesContTy &Rules) {
   NamePartsTy NameParts = parseNameParts(C);
-  llvm::SmallVector<const char *, 2> CallDescParts{NameParts.size()};
-  llvm::transform(NameParts, CallDescParts.begin(),
-                  [](SmallString<32> &S) { return S.c_str(); });
-  Rules.emplace_back(CallDescription(CallDescParts), std::move(Rule));
+  Rules.emplace_back(CallDescription(NameParts), std::move(Rule));
 }
 
 void GenericTaintRuleParser::parseConfig(const std::string &Option,
@@ -501,10 +548,12 @@ void GenericTaintRuleParser::parseConfig(const std::string &Option,
   validateArgVector(Option, P.DstArgs);
   bool IsSrcVariadic = P.VarType == TaintConfiguration::VariadicType::Src;
   bool IsDstVariadic = P.VarType == TaintConfiguration::VariadicType::Dst;
-  Optional<ArgIdxTy> JustVarIndex = P.VarIndex;
+  std::optional<ArgIdxTy> JustVarIndex = P.VarIndex;
 
-  ArgSet SrcDesc(std::move(P.SrcArgs), IsSrcVariadic ? JustVarIndex : None);
-  ArgSet DstDesc(std::move(P.DstArgs), IsDstVariadic ? JustVarIndex : None);
+  ArgSet SrcDesc(std::move(P.SrcArgs),
+                 IsSrcVariadic ? JustVarIndex : std::nullopt);
+  ArgSet DstDesc(std::move(P.DstArgs),
+                 IsDstVariadic ? JustVarIndex : std::nullopt);
 
   consumeRulesFromConfig(
       P, GenericTaintRule::Prop(std::move(SrcDesc), std::move(DstDesc)), Rules);
@@ -543,128 +592,128 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
 
   RulesConstructionTy GlobalCRules{
       // Sources
-      {{"fdopen"}, TR::Source({{ReturnValueIndex}})},
-      {{"fopen"}, TR::Source({{ReturnValueIndex}})},
-      {{"freopen"}, TR::Source({{ReturnValueIndex}})},
-      {{"getch"}, TR::Source({{ReturnValueIndex}})},
-      {{"getchar"}, TR::Source({{ReturnValueIndex}})},
-      {{"getchar_unlocked"}, TR::Source({{ReturnValueIndex}})},
-      {{"gets"}, TR::Source({{0}, ReturnValueIndex})},
-      {{"gets_s"}, TR::Source({{0}, ReturnValueIndex})},
-      {{"scanf"}, TR::Source({{}, 1})},
-      {{"scanf_s"}, TR::Source({{}, {1}})},
-      {{"wgetch"}, TR::Source({{}, ReturnValueIndex})},
+      {{{"fdopen"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"fopen"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"freopen"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"getch"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"getchar"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"getchar_unlocked"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"gets"}}, TR::Source({{0}, ReturnValueIndex})},
+      {{{"gets_s"}}, TR::Source({{0}, ReturnValueIndex})},
+      {{{"scanf"}}, TR::Source({{}, 1})},
+      {{{"scanf_s"}}, TR::Source({{}, {1}})},
+      {{{"wgetch"}}, TR::Source({{}, ReturnValueIndex})},
       // Sometimes the line between taint sources and propagators is blurry.
       // _IO_getc is choosen to be a source, but could also be a propagator.
       // This way it is simpler, as modeling it as a propagator would require
       // to model the possible sources of _IO_FILE * values, which the _IO_getc
       // function takes as parameters.
-      {{"_IO_getc"}, TR::Source({{ReturnValueIndex}})},
-      {{"getcwd"}, TR::Source({{0, ReturnValueIndex}})},
-      {{"getwd"}, TR::Source({{0, ReturnValueIndex}})},
-      {{"readlink"}, TR::Source({{1, ReturnValueIndex}})},
-      {{"readlinkat"}, TR::Source({{2, ReturnValueIndex}})},
-      {{"get_current_dir_name"}, TR::Source({{ReturnValueIndex}})},
-      {{"gethostname"}, TR::Source({{0}})},
-      {{"getnameinfo"}, TR::Source({{2, 4}})},
-      {{"getseuserbyname"}, TR::Source({{1, 2}})},
-      {{"getgroups"}, TR::Source({{1, ReturnValueIndex}})},
-      {{"getlogin"}, TR::Source({{ReturnValueIndex}})},
-      {{"getlogin_r"}, TR::Source({{0}})},
+      {{{"_IO_getc"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"getcwd"}}, TR::Source({{0, ReturnValueIndex}})},
+      {{{"getwd"}}, TR::Source({{0, ReturnValueIndex}})},
+      {{{"readlink"}}, TR::Source({{1, ReturnValueIndex}})},
+      {{{"readlinkat"}}, TR::Source({{2, ReturnValueIndex}})},
+      {{{"get_current_dir_name"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"gethostname"}}, TR::Source({{0}})},
+      {{{"getnameinfo"}}, TR::Source({{2, 4}})},
+      {{{"getseuserbyname"}}, TR::Source({{1, 2}})},
+      {{{"getgroups"}}, TR::Source({{1, ReturnValueIndex}})},
+      {{{"getlogin"}}, TR::Source({{ReturnValueIndex}})},
+      {{{"getlogin_r"}}, TR::Source({{0}})},
 
       // Props
-      {{"atoi"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"atol"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"atoll"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"fgetc"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"fgetln"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"fgets"}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
-      {{"fscanf"}, TR::Prop({{0}}, {{}, 2})},
-      {{"fscanf_s"}, TR::Prop({{0}}, {{}, {2}})},
-      {{"sscanf"}, TR::Prop({{0}}, {{}, 2})},
+      {{{"atoi"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"atol"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"atoll"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"fgetc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"fgetln"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"fgets"}}, TR::Prop({{2}}, {{0, ReturnValueIndex}})},
+      {{{"fscanf"}}, TR::Prop({{0}}, {{}, 2})},
+      {{{"fscanf_s"}}, TR::Prop({{0}}, {{}, {2}})},
+      {{{"sscanf"}}, TR::Prop({{0}}, {{}, 2})},
 
-      {{"getc"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"getc_unlocked"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"getdelim"}, TR::Prop({{3}}, {{0}})},
-      {{"getline"}, TR::Prop({{2}}, {{0}})},
-      {{"getw"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"pread"}, TR::Prop({{0, 1, 2, 3}}, {{1, ReturnValueIndex}})},
-      {{"read"}, TR::Prop({{0, 2}}, {{1, ReturnValueIndex}})},
-      {{"strchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"strrchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"tolower"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"toupper"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"fread"}, TR::Prop({{3}}, {{0, ReturnValueIndex}})},
-      {{"recv"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{"recvfrom"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{{"getc"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"getc_unlocked"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"getdelim"}}, TR::Prop({{3}}, {{0}})},
+      {{{"getline"}}, TR::Prop({{2}}, {{0}})},
+      {{{"getw"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"pread"}}, TR::Prop({{0, 1, 2, 3}}, {{1, ReturnValueIndex}})},
+      {{{"read"}}, TR::Prop({{0, 2}}, {{1, ReturnValueIndex}})},
+      {{{"strchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strrchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"tolower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"toupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"fread"}}, TR::Prop({{3}}, {{0, ReturnValueIndex}})},
+      {{{"recv"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{{"recvfrom"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
 
-      {{"ttyname"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"ttyname_r"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{{"ttyname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"ttyname_r"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
 
-      {{"basename"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"dirname"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"fnmatch"}, TR::Prop({{1}}, {{ReturnValueIndex}})},
-      {{"memchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"memrchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"rawmemchr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"basename"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"dirname"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"fnmatch"}}, TR::Prop({{1}}, {{ReturnValueIndex}})},
+      {{{"memchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"memrchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"rawmemchr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{"mbtowc"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{"wctomb"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{"wcwidth"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"mbtowc"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{{"wctomb"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{{"wcwidth"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{"memcmp"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{"memcpy"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{"memmove"}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{{"memcmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{{"memcpy"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
+      {{{"memmove"}}, TR::Prop({{1}}, {{0, ReturnValueIndex}})},
       // If memmem was called with a tainted needle and the search was
       // successful, that would mean that the value pointed by the return value
       // has the same content as the needle. If we choose to go by the policy of
       // content equivalence implies taintedness equivalence, that would mean
       // haystack should be considered a propagation source argument.
-      {{"memmem"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"memmem"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
       // The comment for memmem above also applies to strstr.
-      {{"strstr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"strcasestr"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strstr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strcasestr"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{"strchrnul"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strchrnul"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
-      {{"index"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"rindex"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"index"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"rindex"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
       // FIXME: In case of arrays, only the first element of the array gets
       // tainted.
-      {{"qsort"}, TR::Prop({{0}}, {{0}})},
-      {{"qsort_r"}, TR::Prop({{0}}, {{0}})},
+      {{{"qsort"}}, TR::Prop({{0}}, {{0}})},
+      {{{"qsort_r"}}, TR::Prop({{0}}, {{0}})},
 
-      {{"strcmp"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{"strcasecmp"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{"strncmp"}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
-      {{"strncasecmp"}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
-      {{"strspn"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{"strcspn"}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
-      {{"strpbrk"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"strndup"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"strndupa"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"strlen"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"strnlen"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"strtol"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{"strtoll"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{"strtoul"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
-      {{"strtoull"}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{{"strcmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{{"strcasecmp"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{{"strncmp"}}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
+      {{{"strncasecmp"}}, TR::Prop({{0, 1, 2}}, {{ReturnValueIndex}})},
+      {{{"strspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{{"strcspn"}}, TR::Prop({{0, 1}}, {{ReturnValueIndex}})},
+      {{{"strpbrk"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strndup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strndupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strnlen"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"strtol"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{{"strtoll"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{{"strtoul"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
+      {{{"strtoull"}}, TR::Prop({{0}}, {{1, ReturnValueIndex}})},
 
-      {{"isalnum"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isalpha"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isascii"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isblank"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"iscntrl"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isdigit"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isgraph"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"islower"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isprint"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"ispunct"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isspace"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isupper"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{"isxdigit"}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isalnum"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isalpha"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isascii"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isblank"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"iscntrl"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isgraph"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"islower"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isprint"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"ispunct"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isspace"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isupper"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{{"isxdigit"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
       {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrncat)}},
        TR::Prop({{1, 2}}, {{0, ReturnValueIndex}})},
@@ -672,37 +721,40 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
        TR::Prop({{1, 2}}, {{0}})},
       {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrlcat)}},
        TR::Prop({{1, 2}}, {{0}})},
-      {{CDF_MaybeBuiltin, {"snprintf"}},
+      {{CDF_MaybeBuiltin, {{"snprintf"}}},
        TR::Prop({{1}, 3}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"sprintf"}},
+      {{CDF_MaybeBuiltin, {{"sprintf"}}},
        TR::Prop({{1}, 2}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"strcpy"}},
+      {{CDF_MaybeBuiltin, {{"strcpy"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"stpcpy"}},
+      {{CDF_MaybeBuiltin, {{"stpcpy"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"strcat"}},
+      {{CDF_MaybeBuiltin, {{"strcat"}}},
        TR::Prop({{1}}, {{0, ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"strdup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"strdupa"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
-      {{CDF_MaybeBuiltin, {"wcsdup"}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {{"strdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {{"strdupa"}}},
+       TR::Prop({{0}}, {{ReturnValueIndex}})},
+      {{CDF_MaybeBuiltin, {{"wcsdup"}}}, TR::Prop({{0}}, {{ReturnValueIndex}})},
 
       // Sinks
-      {{"system"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"popen"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"execl"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"execle"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"execlp"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"execvp"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"execvP"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"execve"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{"dlopen"}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
-      {{CDF_MaybeBuiltin, {"malloc"}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {"calloc"}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {"alloca"}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {"memccpy"}}, TR::Sink({{3}}, MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {"realloc"}}, TR::Sink({{1}}, MsgTaintedBufferSize)},
-      {{{"setproctitle"}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
-      {{{"setproctitle_fast"}},
+      {{{"system"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"popen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execl"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execle"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execlp"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execvp"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execvP"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"execve"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{{"dlopen"}}, TR::Sink({{0}}, MsgSanitizeSystemArgs)},
+      {{CDF_MaybeBuiltin, {{"malloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
+      {{CDF_MaybeBuiltin, {{"calloc"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
+      {{CDF_MaybeBuiltin, {{"alloca"}}}, TR::Sink({{0}}, MsgTaintedBufferSize)},
+      {{CDF_MaybeBuiltin, {{"memccpy"}}},
+       TR::Sink({{3}}, MsgTaintedBufferSize)},
+      {{CDF_MaybeBuiltin, {{"realloc"}}},
+       TR::Sink({{1}}, MsgTaintedBufferSize)},
+      {{{{"setproctitle"}}}, TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
+      {{{{"setproctitle_fast"}}},
        TR::Sink({{0}, 1}, MsgUncontrolledFormatString)},
 
       // SinkProps
@@ -718,7 +770,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
       {{CDF_MaybeBuiltin, {BI.getName(Builtin::BIstrndup)}},
        TR::SinkProp({{1}}, {{0, 1}}, {{ReturnValueIndex}},
                     MsgTaintedBufferSize)},
-      {{CDF_MaybeBuiltin, {"bcopy"}},
+      {{CDF_MaybeBuiltin, {{"bcopy"}}},
        TR::SinkProp({{2}}, {{0, 2}}, {{1}}, MsgTaintedBufferSize)}};
 
   // `getenv` returns taint only in untrusted environments.
@@ -726,7 +778,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
     // void setproctitle_init(int argc, char *argv[], char *envp[])
     GlobalCRules.push_back(
         {{{"setproctitle_init"}}, TR::Sink({{1, 2}}, MsgCustomSink)});
-    GlobalCRules.push_back({{"getenv"}, TR::Source({{ReturnValueIndex}})});
+    GlobalCRules.push_back({{{"getenv"}}, TR::Source({{ReturnValueIndex}})});
   }
 
   StaticTaintRules.emplace(std::make_move_iterator(GlobalCRules.begin()),
@@ -739,7 +791,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   std::string Option{"Config"};
   StringRef ConfigFile =
       Mgr->getAnalyzerOptions().getCheckerStringOption(this, Option);
-  llvm::Optional<TaintConfiguration> Config =
+  std::optional<TaintConfiguration> Config =
       getConfiguration<TaintConfiguration>(*Mgr, this, Option, ConfigFile);
   if (!Config) {
     // We don't have external taint config, no parsing required.
@@ -748,7 +800,7 @@ void GenericTaintChecker::initTaintRules(CheckerContext &C) const {
   }
 
   GenericTaintRuleParser::RulesContTy Rules{
-      ConfigParser.parseConfiguration(Option, std::move(Config.getValue()))};
+      ConfigParser.parseConfiguration(Option, std::move(*Config))};
 
   DynamicTaintRules.emplace(std::make_move_iterator(Rules.begin()),
                             std::make_move_iterator(Rules.end()));
@@ -801,22 +853,39 @@ void GenericTaintChecker::checkPostCall(const CallEvent &Call,
     llvm::dbgs() << "> actually wants to taint arg index: " << I << '\n';
   });
 
+  const NoteTag *InjectionTag = nullptr;
+  std::vector<SymbolRef> TaintedSymbols;
+  std::vector<ArgIdxTy> TaintedIndexes;
   for (ArgIdxTy ArgNum : *TaintArgs) {
     // Special handling for the tainted return value.
     if (ArgNum == ReturnValueIndex) {
       State = addTaint(State, Call.getReturnValue());
+      std::vector<SymbolRef> TaintedSyms =
+          getTaintedSymbols(State, Call.getReturnValue());
+      if (!TaintedSyms.empty()) {
+        TaintedSymbols.push_back(TaintedSyms[0]);
+        TaintedIndexes.push_back(ArgNum);
+      }
       continue;
     }
-
     // The arguments are pointer arguments. The data they are pointing at is
     // tainted after the call.
-    if (auto V = getPointeeOf(C, Call.getArgSVal(ArgNum)))
+    if (auto V = getPointeeOf(State, Call.getArgSVal(ArgNum))) {
       State = addTaint(State, *V);
+      std::vector<SymbolRef> TaintedSyms = getTaintedSymbols(State, *V);
+      if (!TaintedSyms.empty()) {
+        TaintedSymbols.push_back(TaintedSyms[0]);
+        TaintedIndexes.push_back(ArgNum);
+      }
+    }
   }
-
+  // Create a NoteTag callback, which prints to the user where the taintedness
+  // was propagated to.
+  InjectionTag = taintPropagationExplainerTag(C, TaintedSymbols, TaintedIndexes,
+                                              Call.getCalleeStackFrame(0));
   // Clear up the taint info from the state.
   State = State->remove<TaintArgsOnPostVisit>(CurrentFrame);
-  C.addTransition(State);
+  C.addTransition(State, InjectionTag);
 }
 
 void GenericTaintChecker::printState(raw_ostream &Out, ProgramStateRef State,
@@ -839,15 +908,19 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
 
   /// Check for taint sinks.
   ForEachCallArg([this, &Checker, &C, &State](ArgIdxTy I, const Expr *E, SVal) {
-    if (SinkArgs.contains(I) && isTaintedOrPointsToTainted(E, State, C))
-      Checker.generateReportIfTainted(E, SinkMsg.getValueOr(MsgCustomSink), C);
+    // Add taintedness to stdin parameters
+    if (isStdin(C.getSVal(E), C.getASTContext())) {
+      State = addTaint(State, C.getSVal(E));
+    }
+    if (SinkArgs.contains(I) && isTaintedOrPointsToTainted(State, C.getSVal(E)))
+      Checker.generateReportIfTainted(E, SinkMsg.value_or(MsgCustomSink), C);
   });
 
   /// Check for taint filters.
-  ForEachCallArg([this, &C, &State](ArgIdxTy I, const Expr *E, SVal S) {
+  ForEachCallArg([this, &State](ArgIdxTy I, const Expr *E, SVal S) {
     if (FilterArgs.contains(I)) {
       State = removeTaint(State, S);
-      if (auto P = getPointeeOf(C, S))
+      if (auto P = getPointeeOf(State, S))
         State = removeTaint(State, *P);
     }
   });
@@ -856,17 +929,31 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
   /// A rule is relevant if PropSrcArgs is empty, or if any of its signified
   /// args are tainted in context of the current CallEvent.
   bool IsMatching = PropSrcArgs.isEmpty();
-  ForEachCallArg(
-      [this, &C, &IsMatching, &State](ArgIdxTy I, const Expr *E, SVal) {
-        IsMatching = IsMatching || (PropSrcArgs.contains(I) &&
-                                    isTaintedOrPointsToTainted(E, State, C));
-      });
+  std::vector<SymbolRef> TaintedSymbols;
+  std::vector<ArgIdxTy> TaintedIndexes;
+  ForEachCallArg([this, &C, &IsMatching, &State, &TaintedSymbols,
+                  &TaintedIndexes](ArgIdxTy I, const Expr *E, SVal) {
+    std::optional<SVal> TaintedSVal =
+        getTaintedPointeeOrPointer(State, C.getSVal(E));
+    IsMatching =
+        IsMatching || (PropSrcArgs.contains(I) && TaintedSVal.has_value());
+
+    // We track back tainted arguments except for stdin
+    if (TaintedSVal && !isStdin(*TaintedSVal, C.getASTContext())) {
+      std::vector<SymbolRef> TaintedArgSyms =
+          getTaintedSymbols(State, *TaintedSVal);
+      if (!TaintedArgSyms.empty()) {
+        llvm::append_range(TaintedSymbols, TaintedArgSyms);
+        TaintedIndexes.push_back(I);
+      }
+    }
+  });
 
   if (!IsMatching)
     return;
 
   const auto WouldEscape = [](SVal V, QualType Ty) -> bool {
-    if (!V.getAs<Loc>())
+    if (!isa<Loc>(V))
       return false;
 
     const bool IsNonConstRef = Ty->isReferenceType() && !Ty.isConstQualified();
@@ -903,7 +990,10 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
 
   if (!Result.isEmpty())
     State = State->set<TaintArgsOnPostVisit>(C.getStackFrame(), Result);
-  C.addTransition(State);
+  const NoteTag *InjectionTag = taintOriginTrackerTag(
+      C, std::move(TaintedSymbols), std::move(TaintedIndexes),
+      Call.getCalleeStackFrame(0));
+  C.addTransition(State, InjectionTag);
 }
 
 bool GenericTaintRule::UntrustedEnv(CheckerContext &C) {
@@ -915,7 +1005,8 @@ bool GenericTaintRule::UntrustedEnv(CheckerContext &C) {
 bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
                                                   CheckerContext &C) const {
   assert(E);
-  Optional<SVal> TaintedSVal{getTaintedPointeeOrPointer(C, C.getSVal(E))};
+  std::optional<SVal> TaintedSVal =
+      getTaintedPointeeOrPointer(C.getState(), C.getSVal(E));
 
   if (!TaintedSVal)
     return false;
@@ -924,7 +1015,10 @@ bool GenericTaintChecker::generateReportIfTainted(const Expr *E, StringRef Msg,
   if (ExplodedNode *N = C.generateNonFatalErrorNode()) {
     auto report = std::make_unique<PathSensitiveBugReport>(BT, Msg, N);
     report->addRange(E->getSourceRange());
-    report->addVisitor(std::make_unique<TaintBugVisitor>(*TaintedSVal));
+    for (auto TaintedSym : getTaintedSymbols(C.getState(), *TaintedSVal)) {
+      report->markInteresting(TaintedSym);
+    }
+
     C.emitReport(std::move(report));
     return true;
   }

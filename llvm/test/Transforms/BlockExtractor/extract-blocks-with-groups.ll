@@ -3,7 +3,7 @@
 ; Make sure we can still extract a single basic block
 ; RUN: echo 'foo end' >> %t
 ; RUN: echo 'bar bb14;bb20' >> %t
-; RUN: opt -S -extract-blocks -extract-blocks-file=%t %s | FileCheck %s
+; RUN: opt -S -passes=extract-blocks -extract-blocks-file=%t %s | FileCheck %s
 
 ; CHECK-LABEL: foo
 ;

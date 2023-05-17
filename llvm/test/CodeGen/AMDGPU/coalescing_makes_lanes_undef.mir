@@ -12,19 +12,25 @@ tracksRegLiveness: true
 body:             |
   ; CHECK-LABEL: name: coalescing_makes_lane_undefined
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
-  ; CHECK:   S_CBRANCH_SCC0 %bb.2, implicit undef $scc
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   undef %0.sub0:sgpr_64 = S_MOV_B32 1
-  ; CHECK:   %0.sub1:sgpr_64 = S_MOV_B32 2
-  ; CHECK:   S_BRANCH %bb.3
-  ; CHECK: bb.2:
-  ; CHECK:   successors: %bb.3(0x80000000)
-  ; CHECK:   undef %0.sub0:sgpr_64 = IMPLICIT_DEF
-  ; CHECK: bb.3:
-  ; CHECK:   S_NOP 0, implicit %0.sub0
-  ; CHECK:   S_NOP 0, implicit %0
+  ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   S_CBRANCH_SCC0 %bb.2, implicit undef $scc
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %0.sub0:sgpr_64 = S_MOV_B32 1
+  ; CHECK-NEXT:   %0.sub1:sgpr_64 = S_MOV_B32 2
+  ; CHECK-NEXT:   S_BRANCH %bb.3
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %0.sub0:sgpr_64 = IMPLICIT_DEF
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.3:
+  ; CHECK-NEXT:   S_NOP 0, implicit %0.sub0
+  ; CHECK-NEXT:   S_NOP 0, implicit %0
   bb.0:
     successors: %bb.1, %bb.2
     S_CBRANCH_SCC0 %bb.2, implicit undef $scc

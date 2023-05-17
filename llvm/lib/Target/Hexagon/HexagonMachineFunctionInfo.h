@@ -27,8 +27,7 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
   // returning the value of the returned struct in a register. This field
   // holds the virtual register into which the sret argument is passed.
   unsigned SRetReturnReg = 0;
-  unsigned StackAlignBaseVReg = 0;    // Aligned-stack base register (virtual)
-  unsigned StackAlignBasePhysReg = 0; //                             (physical)
+  Register StackAlignBaseReg = 0;    // Aligned-stack base register
   int VarArgsFrameIndex;
   int RegSavedAreaStartFrameIndex;
   int FirstNamedArgFrameIndex;
@@ -41,7 +40,9 @@ class HexagonMachineFunctionInfo : public MachineFunctionInfo {
 public:
   HexagonMachineFunctionInfo() = default;
 
-  HexagonMachineFunctionInfo(MachineFunction &MF) {}
+  HexagonMachineFunctionInfo(const Function &F,
+                             const TargetSubtargetInfo *STI) {}
+
   MachineFunctionInfo *
   clone(BumpPtrAllocator &Allocator, MachineFunction &DestMF,
         const DenseMap<MachineBasicBlock *, MachineBasicBlock *> &Src2DstMBB)
@@ -82,11 +83,8 @@ public:
   bool hasEHReturn() const { return HasEHReturn; };
   void setHasEHReturn(bool H = true) { HasEHReturn = H; };
 
-  void setStackAlignBaseVReg(unsigned R) { StackAlignBaseVReg = R; }
-  unsigned getStackAlignBaseVReg() const { return StackAlignBaseVReg; }
-
-  void setStackAlignBasePhysReg(unsigned R) { StackAlignBasePhysReg = R; }
-  unsigned getStackAlignBasePhysReg() const { return StackAlignBasePhysReg; }
+  void setStackAlignBaseReg(Register R) { StackAlignBaseReg = R; }
+  Register getStackAlignBaseReg() const { return StackAlignBaseReg; }
 };
 
 } // end namespace llvm

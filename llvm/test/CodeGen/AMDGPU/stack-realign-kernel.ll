@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji --amdhsa-code-object-version=3 < %s | FileCheck -check-prefix=VI %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 < %s | FileCheck -check-prefix=GFX9 %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=fiji < %s | FileCheck -check-prefix=VI %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck -check-prefix=GFX9 %s
 
 ; Make sure the stack is never realigned for entry functions.
 
@@ -102,7 +102,7 @@ define amdgpu_kernel void @max_alignment_128() #0 {
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
   %alloca.align = alloca i32, align 128, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 128
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 128
   ret void
 }
 
@@ -205,7 +205,7 @@ define amdgpu_kernel void @stackrealign_attr() #1 {
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
   %alloca.align = alloca i32, align 4, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 4
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 4
   ret void
 }
 
@@ -308,10 +308,13 @@ define amdgpu_kernel void @alignstack_attr() #2 {
 ; GFX9-NEXT:    .end_amdhsa_kernel
 ; GFX9-NEXT:    .text
   %alloca.align = alloca i32, align 4, addrspace(5)
-  store volatile i32 9, i32 addrspace(5)* %alloca.align, align 4
+  store volatile i32 9, ptr addrspace(5) %alloca.align, align 4
   ret void
 }
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "stackrealign" }
 attributes #2 = { nounwind alignstack=128 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 300}

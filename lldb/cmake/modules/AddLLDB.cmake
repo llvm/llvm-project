@@ -37,12 +37,32 @@ function(add_lldb_library name)
   # only supported parameters to this macro are the optional
   # MODULE;SHARED;STATIC library type and source files
   cmake_parse_arguments(PARAM
-    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK"
+    "MODULE;SHARED;STATIC;OBJECT;PLUGIN;FRAMEWORK;NO_INTERNAL_DEPENDENCIES;NO_PLUGIN_DEPENDENCIES"
     "INSTALL_PREFIX;ENTITLEMENTS"
     "EXTRA_CXXFLAGS;DEPENDS;LINK_LIBS;LINK_COMPONENTS;CLANG_LIBS"
     ${ARGN})
   llvm_process_sources(srcs ${PARAM_UNPARSED_ARGUMENTS})
   list(APPEND LLVM_LINK_COMPONENTS ${PARAM_LINK_COMPONENTS})
+
+  if(PARAM_NO_INTERNAL_DEPENDENCIES)
+    foreach(link_lib ${PARAM_LINK_LIBS})
+      if (link_lib MATCHES "^lldb")
+        message(FATAL_ERROR
+          "Library ${name} cannot depend on any other lldb libs "
+          "(Found ${link_lib} in LINK_LIBS)")
+      endif()
+    endforeach()
+  endif()
+
+  if(PARAM_NO_PLUGIN_DEPENDENCIES)
+    foreach(link_lib ${PARAM_LINK_LIBS})
+      if (link_lib MATCHES "^lldbPlugin")
+        message(FATAL_ERROR
+          "Library ${name} cannot depend on a plugin (Found ${link_lib} in "
+          "LINK_LIBS)")
+      endif()
+    endforeach()
+  endif()
 
   if(PARAM_PLUGIN)
     set_property(GLOBAL APPEND PROPERTY LLDB_PLUGINS ${name})
@@ -105,7 +125,7 @@ function(add_lldb_library name)
   # this may result in the wrong install DESTINATION. The FRAMEWORK property
   # must be set earlier.
   if(PARAM_FRAMEWORK)
-    set_target_properties(liblldb PROPERTIES FRAMEWORK ON)
+    set_target_properties(${name} PROPERTIES FRAMEWORK ON)
   endif()
 
   if(PARAM_SHARED)
@@ -144,6 +164,13 @@ function(add_lldb_library name)
     endif()
   else()
     set_target_properties(${name} PROPERTIES FOLDER "lldb libraries")
+  endif()
+
+  # If we want to export all lldb symbols (i.e LLDB_EXPORT_ALL_SYMBOLS=ON), we
+  # need to use default visibility for all LLDB libraries even if a global
+  # `CMAKE_CXX_VISIBILITY_PRESET=hidden`is present.
+  if (LLDB_EXPORT_ALL_SYMBOLS)
+    set_target_properties(${name} PROPERTIES CXX_VISIBILITY_PRESET default)
   endif()
 endfunction(add_lldb_library)
 
@@ -243,6 +270,14 @@ function(lldb_add_to_buildtree_lldb_framework name subdir)
     COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${name}> ${copy_dest}
     COMMENT "Copy ${name} to ${copy_dest}"
   )
+
+  # Create a custom target to remove the copy again from LLDB.framework in the
+  # build tree.
+  add_custom_target(${name}-cleanup
+    COMMAND ${CMAKE_COMMAND} -E remove ${copy_dest}
+    COMMENT "Removing ${name} from LLDB.framework")
+  add_dependencies(lldb-framework-cleanup
+    ${name}-cleanup)
 endfunction()
 
 # Add extra install steps for dSYM creation and stripping for the given target.
@@ -338,6 +373,25 @@ function(lldb_find_system_debugserver path)
       message(WARNING "System debugserver requested, but not found. "
                       "Candidates don't exist: ${path_shared}\n${path_private}")
     endif()
+  endif()
+endfunction()
+
+function(lldb_find_python_module module)
+  set(MODULE_FOUND PY_${module}_FOUND)
+  if (DEFINED ${MODULE_FOUND})
+    return()
+  endif()
+
+  execute_process(COMMAND "${Python3_EXECUTABLE}" "-c" "import ${module}"
+    RESULT_VARIABLE status
+    ERROR_QUIET)
+
+  if (status)
+    set(${MODULE_FOUND} OFF CACHE BOOL "Failed to find python module '${module}'")
+    message(STATUS "Could NOT find Python module '${module}'")
+  else()
+    set(${MODULE_FOUND} ON CACHE BOOL "Found python module '${module}'")
+    message(STATUS "Found Python module '${module}'")
   endif()
 endfunction()
 

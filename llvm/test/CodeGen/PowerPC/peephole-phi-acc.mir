@@ -8,7 +8,7 @@
 # with an unprimed accumulator PHI node cycle.
 
 --- |
-  define dso_local void @phiCopy(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiCopy(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %0 = tail call <512 x i1> @llvm.ppc.mma.xxsetaccz()
     %tobool.not = icmp eq i32 %i, 0
@@ -20,7 +20,7 @@
 
   if.end:
     %vq.0 = phi <512 x i1> [ %1, %if.then ], [ %0, %entry ]
-    store <512 x i1> %vq.0, <512 x i1>* %ptr, align 64
+    store <512 x i1> %vq.0, ptr %ptr, align 64
     ret void
   }
 
@@ -28,7 +28,7 @@
 
   declare <512 x i1> @llvm.ppc.mma.xvf32gerpp(<512 x i1>, <16 x i8>, <16 x i8>)
 
-  define dso_local void @phiCopyUndef(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiCopyUndef(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %tobool.not = icmp eq i32 %i, 0
     br i1 %tobool.not, label %if.end, label %if.then
@@ -39,11 +39,11 @@
 
   if.end:
     %vq.0 = phi <512 x i1> [ %0, %if.then ], [ undef, %entry ]
-    store <512 x i1> %vq.0, <512 x i1>* %ptr, align 64
+    store <512 x i1> %vq.0, ptr %ptr, align 64
     ret void
   }
 
-  define dso_local void @phiPhis(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiPhis(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %cmp6 = icmp sgt i32 %i, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -83,8 +83,8 @@
 
   for.cond.cleanup:
     %vq.0.lcssa = phi <512 x i1> [ undef, %entry ], [ %vq.07.unr, %for.cond.cleanup.loopexit.unr-lcssa ], [ %9, %for.body.epil ]
-    %add.ptr = getelementptr inbounds <512 x i1>, <512 x i1>* %ptr, i64 1
-    store <512 x i1> %vq.0.lcssa, <512 x i1>* %add.ptr, align 64
+    %add.ptr = getelementptr inbounds <512 x i1>, ptr %ptr, i64 1
+    store <512 x i1> %vq.0.lcssa, ptr %add.ptr, align 64
     ret void
 
   for.body:
@@ -101,7 +101,7 @@
     br i1 %19, label %for.body, label %for.cond.cleanup.loopexit.unr-lcssa
   }
 
-  define dso_local void @phiCycle(i32 signext %i, <16 x i8> %vc, <512 x i1>* nocapture %ptr) {
+  define dso_local void @phiCycle(i32 signext %i, <16 x i8> %vc, ptr nocapture %ptr) {
   entry:
     %cmp6 = icmp sgt i32 %i, 0
     br i1 %cmp6, label %for.body.preheader, label %for.cond.cleanup
@@ -143,8 +143,8 @@
 
   for.cond.cleanup:
     %vq.0.lcssa = phi <512 x i1> [ undef, %entry ], [ %vq.07.unr, %for.cond.cleanup.loopexit.unr-lcssa ]
-    %add.ptr = getelementptr inbounds <512 x i1>, <512 x i1>* %ptr, i64 1
-    store <512 x i1> %vq.0.lcssa, <512 x i1>* %add.ptr, align 64
+    %add.ptr = getelementptr inbounds <512 x i1>, ptr %ptr, i64 1
+    store <512 x i1> %vq.0.lcssa, ptr %add.ptr, align 64
     ret void
 
   for.body:

@@ -60,7 +60,8 @@ public:
 
 #include <__assert>
 #include <__config>
-#include <memory>
+#include <__memory/allocator_traits.h>
+#include <__memory/pointer_traits.h>
 #include <optional>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -69,7 +70,7 @@ public:
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 
 // Specialized in __tree & __hash_table for their _NodeType.
 template <class _NodeType, class _Alloc>
@@ -90,8 +91,8 @@ class _LIBCPP_TEMPLATE_VIS __basic_node_handle
         _NodeType, __basic_node_handle<_NodeType, _Alloc, _MapOrSetSpecifics>>;
 
     typedef allocator_traits<_Alloc> __alloc_traits;
-    typedef typename __rebind_pointer<typename __alloc_traits::void_pointer,
-                                      _NodeType>::type
+    typedef __rebind_pointer_t<typename __alloc_traits::void_pointer,
+                                      _NodeType>
         __node_pointer_type;
 
 public:
@@ -246,7 +247,7 @@ struct _LIBCPP_TEMPLATE_VIS __insert_return_type
     _NodeType node;
 };
 
-#endif // _LIBCPP_STD_VER > 14
+#endif // _LIBCPP_STD_VER >= 17
 
 _LIBCPP_END_NAMESPACE_STD
 

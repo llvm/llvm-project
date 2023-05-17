@@ -12,7 +12,7 @@ entry:
   %0 = add i1 %a, %b
 ; ARM: add r0, r0, r1
 ; THUMB: add r0, r1
-  store i1 %0, i1* %a.addr, align 4
+  store i1 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -24,7 +24,7 @@ entry:
   %0 = add i8 %a, %b
 ; ARM: add r0, r0, r1
 ; THUMB: add r0, r1
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -36,7 +36,7 @@ entry:
   %0 = add i16 %a, %b
 ; ARM: add r0, r0, r1
 ; THUMB: add r0, r1
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -50,7 +50,7 @@ entry:
   %0 = or i1 %a, %b
 ; ARM: orr r0, r0, r1
 ; THUMB: orrs r0, r1
-  store i1 %0, i1* %a.addr, align 4
+  store i1 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -62,7 +62,7 @@ entry:
   %0 = or i8 %a, %b
 ; ARM: orr r0, r0, r1
 ; THUMB: orrs r0, r1
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -74,7 +74,7 @@ entry:
   %0 = or i16 %a, %b
 ; ARM: orr r0, r0, r1
 ; THUMB: orrs r0, r1
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -88,7 +88,7 @@ entry:
   %0 = sub i1 %a, %b
 ; ARM: sub r0, r0, r1
 ; THUMB: subs r0, r0, r1
-  store i1 %0, i1* %a.addr, align 4
+  store i1 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -100,7 +100,7 @@ entry:
   %0 = sub i8 %a, %b
 ; ARM: sub r0, r0, r1
 ; THUMB: subs r0, r0, r1
-  store i8 %0, i8* %a.addr, align 4
+  store i8 %0, ptr %a.addr, align 4
   ret void
 }
 
@@ -112,6 +112,6 @@ entry:
   %0 = sub i16 %a, %b
 ; ARM: sub r0, r0, r1
 ; THUMB: subs r0, r0, r1
-  store i16 %0, i16* %a.addr, align 4
+  store i16 %0, ptr %a.addr, align 4
   ret void
 }

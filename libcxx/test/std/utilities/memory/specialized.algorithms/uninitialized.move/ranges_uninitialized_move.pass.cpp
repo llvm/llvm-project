@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // <memory>
 //
@@ -18,6 +17,7 @@
 
 
 #include <algorithm>
+#include <array>
 #include <cassert>
 #include <iterator>
 #include <memory>
@@ -27,6 +27,7 @@
 
 #include "../buffer.h"
 #include "../counted.h"
+#include "MoveOnly.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -389,6 +390,49 @@ int main(int, char**) {
     std::ranges::uninitialized_move(range, out);
     assert(iter_moves == 3);
     iter_moves = 0;
+  }
+
+  // Move-only iterators are supported.
+  {
+    using MoveOnlyIter = cpp20_input_iterator<const int*>;
+    static_assert(!std::is_copy_constructible_v<MoveOnlyIter>);
+
+    constexpr int N = 3;
+    struct MoveOnlyRange {
+      int buffer[N] = {1, 2, 3};
+      auto begin() const { return MoveOnlyIter(buffer); }
+      auto end() const { return sentinel_wrapper<MoveOnlyIter>(MoveOnlyIter(buffer)); }
+    };
+    static_assert(std::ranges::input_range<MoveOnlyRange>);
+    MoveOnlyRange in;
+
+    // (iter, sentinel) overload.
+    {
+      Buffer<int, N> out;
+      std::ranges::uninitialized_move(in.begin(), in.end(), out.begin(), out.end());
+    }
+
+    // (range) overload.
+    {
+      Buffer<int, N> out;
+      std::ranges::uninitialized_move(in, out);
+    }
+  }
+
+  // MoveOnly types are supported
+  {
+    {
+      MoveOnly a[] = {1, 2, 3, 4};
+      Buffer<MoveOnly, 4> out;
+      std::ranges::uninitialized_move(std::begin(a), std::end(a), std::begin(out), std::end(out));
+      assert(std::ranges::equal(out, std::array<MoveOnly, 4>{1, 2, 3, 4}));
+    }
+    {
+      MoveOnly a[] = {1, 2, 3, 4};
+      Buffer<MoveOnly, 4> out;
+      std::ranges::uninitialized_move(a, out);
+      assert(std::ranges::equal(out, std::array<MoveOnly, 4>{1, 2, 3, 4}));
+    }
   }
 
   return 0;

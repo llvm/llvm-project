@@ -61,10 +61,12 @@ static_library("MCTargetDesc") {
     ":AArch64GenAsmWriter",
     ":AArch64GenAsmWriter1",
     ":AArch64GenMCCodeEmitter",
+    "//llvm/lib/CodeGen",
     "//llvm/lib/MC",
     "//llvm/lib/Support",
     "//llvm/lib/Target/AArch64/TargetInfo",
     "//llvm/lib/Target/AArch64/Utils",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [ ".." ]
   sources = [

@@ -575,13 +575,13 @@ define <8 x half> @test_int_x86_avx512_mask_cvt_pd2ph_256(<4 x double> %x0, <8 x
   ret <8 x half> %res
 }
 
-define <8 x half> @test_int_x86_avx512_mask_cvt_pd2ph_256_load(<4 x double>* %px0, <8 x half> %x1, i8 %x2) {
+define <8 x half> @test_int_x86_avx512_mask_cvt_pd2ph_256_load(ptr %px0, <8 x half> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_cvt_pd2ph_256_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vcvtpd2phy (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %x0 = load <4 x double>, <4 x double>* %px0, align 32
+  %x0 = load <4 x double>, ptr %px0, align 32
   %res = call <8 x half> @llvm.x86.avx512fp16.mask.vcvtpd2ph.256(<4 x double> %x0, <8 x half> %x1, i8 %x2)
   ret <8 x half> %res
 }
@@ -599,13 +599,13 @@ define <8 x half> @test_int_x86_avx512_mask_cvt_pd2ph_128(<2 x double> %x0, <8 x
   ret <8 x half> %res
 }
 
-define <8 x half> @test_int_x86_avx512_mask_cvt_pd2ph_128_load(<2 x double>* %px0, <8 x half> %x1, i8 %x2) {
+define <8 x half> @test_int_x86_avx512_mask_cvt_pd2ph_128_load(ptr %px0, <8 x half> %x1, i8 %x2) {
 ; CHECK-LABEL: test_int_x86_avx512_mask_cvt_pd2ph_128_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    kmovd %esi, %k1
 ; CHECK-NEXT:    vcvtpd2phx (%rdi), %xmm0 {%k1}
 ; CHECK-NEXT:    retq
-  %x0 = load <2 x double>, <2 x double>* %px0, align 16
+  %x0 = load <2 x double>, ptr %px0, align 16
   %res = call <8 x half> @llvm.x86.avx512fp16.mask.vcvtpd2ph.128(<2 x double> %x0, <8 x half> %x1, i8 %x2)
   ret <8 x half> %res
 }

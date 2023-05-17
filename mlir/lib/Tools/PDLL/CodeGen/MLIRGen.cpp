@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Tools/PDLL/CodeGen/MLIRGen.h"
+#include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
 #include "mlir/Dialect/PDL/IR/PDLOps.h"
 #include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Verifier.h"
-#include "mlir/Parser/Parser.h"
 #include "mlir/Tools/PDLL/AST/Context.h"
 #include "mlir/Tools/PDLL/AST/Nodes.h"
 #include "mlir/Tools/PDLL/AST/Types.h"
@@ -22,6 +22,7 @@
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::pdll;
@@ -97,6 +98,7 @@ private:
   SmallVector<Value> genExprImpl(const ast::DeclRefExpr *expr);
   Value genExprImpl(const ast::MemberAccessExpr *expr);
   Value genExprImpl(const ast::OperationExpr *expr);
+  Value genExprImpl(const ast::RangeExpr *expr);
   SmallVector<Value> genExprImpl(const ast::TupleExpr *expr);
   Value genExprImpl(const ast::TypeExpr *expr);
 
@@ -203,7 +205,7 @@ static void checkAndNestUnderRewriteOp(OpBuilder &builder, Value rootExpr,
     pdl::RewriteOp rewrite =
         builder.create<pdl::RewriteOp>(loc, rootExpr, /*name=*/StringAttr(),
                                        /*externalArgs=*/ValueRange());
-    builder.createBlock(&rewrite.body());
+    builder.createBlock(&rewrite.getBodyRegion());
   }
 }
 
@@ -237,7 +239,7 @@ void CodeGen::genImpl(const ast::ReplaceStmt *stmt) {
   // replacement values.
   bool usesReplOperation =
       replValues.size() == 1 &&
-      replValues.front().getType().isa<pdl::OperationType>();
+      isa<pdl::OperationType>(replValues.front().getType());
   builder.create<pdl::ReplaceOp>(
       loc, rootExpr, usesReplOperation ? replValues[0] : Value(),
       usesReplOperation ? ValueRange() : ValueRange(replValues));
@@ -281,7 +283,8 @@ void CodeGen::genImpl(const ast::PatternDecl *decl) {
   // here.
   pdl::PatternOp pattern = builder.create<pdl::PatternOp>(
       genLoc(decl->getLoc()), decl->getBenefit(),
-      name ? Optional<StringRef>(name->getName()) : Optional<StringRef>());
+      name ? std::optional<StringRef>(name->getName())
+           : std::optional<StringRef>());
 
   OpBuilder::InsertionGuard savedInsertPoint(builder);
   builder.setInsertionPointToStart(pattern.getBody());
@@ -345,8 +348,8 @@ Value CodeGen::genNonInitializerVar(const ast::VariableDecl *varDecl,
     Value results = builder.create<pdl::TypesOp>(
         loc, pdl::RangeType::get(builder.getType<pdl::TypeType>()),
         /*types=*/ArrayAttr());
-    return builder.create<pdl::OperationOp>(loc, opType.getName(), operands,
-                                            llvm::None, ValueRange(), results);
+    return builder.create<pdl::OperationOp>(
+        loc, opType.getName(), operands, std::nullopt, ValueRange(), results);
   }
 
   if (ast::RangeType rangeTy = type.dyn_cast<ast::RangeType>()) {
@@ -377,7 +380,8 @@ void CodeGen::applyVarConstraints(const ast::VariableDecl *varDecl,
 Value CodeGen::genSingleExpr(const ast::Expr *expr) {
   return TypeSwitch<const ast::Expr *, Value>(expr)
       .Case<const ast::AttributeExpr, const ast::MemberAccessExpr,
-            const ast::OperationExpr, const ast::TypeExpr>(
+            const ast::OperationExpr, const ast::RangeExpr,
+            const ast::TypeExpr>(
           [&](auto derivedNode) { return this->genExprImpl(derivedNode); })
       .Case<const ast::CallExpr, const ast::DeclRefExpr, const ast::TupleExpr>(
           [&](auto derivedNode) {
@@ -437,7 +441,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
   if (ast::OperationType opType = parentType.dyn_cast<ast::OperationType>()) {
     if (isa<ast::AllResultsMemberAccessExpr>(expr)) {
       Type mlirType = genType(expr->getType());
-      if (mlirType.isa<pdl::ValueType>())
+      if (isa<pdl::ValueType>(mlirType))
         return builder.create<pdl::ResultOp>(loc, mlirType, parentExprs[0],
                                              builder.getI32IntegerAttr(0));
       return builder.create<pdl::ResultsOp>(loc, mlirType, parentExprs[0]);
@@ -493,7 +497,7 @@ Value CodeGen::genExprImpl(const ast::MemberAccessExpr *expr) {
 
 Value CodeGen::genExprImpl(const ast::OperationExpr *expr) {
   Location loc = genLoc(expr->getLoc());
-  Optional<StringRef> opName = expr->getName();
+  std::optional<StringRef> opName = expr->getName();
 
   // Operands.
   SmallVector<Value> operands;
@@ -515,6 +519,15 @@ Value CodeGen::genExprImpl(const ast::OperationExpr *expr) {
 
   return builder.create<pdl::OperationOp>(loc, opName, operands, attrNames,
                                           attrValues, results);
+}
+
+Value CodeGen::genExprImpl(const ast::RangeExpr *expr) {
+  SmallVector<Value> elements;
+  for (const ast::Expr *element : expr->getElements())
+    llvm::append_range(elements, genExpr(element));
+
+  return builder.create<pdl::RangeOp>(genLoc(expr->getLoc()),
+                                      genType(expr->getType()), elements);
 }
 
 SmallVector<Value> CodeGen::genExprImpl(const ast::TupleExpr *expr) {

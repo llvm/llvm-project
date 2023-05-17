@@ -328,14 +328,16 @@ optimization pipeline before dead-code elimination.
 
 The NVPTX TargetMachine knows how to schedule ``NVVMReflect`` at the beginning
 of your pass manager; just use the following code when setting up your pass
-manager:
+manager and the PassBuilder will use ``registerPassBuilderCallbacks`` to let
+NVPTXTargetMachine::registerPassBuilderCallbacks add the the pass to the
+pass manager:
 
 .. code-block:: c++
 
     std::unique_ptr<TargetMachine> TM = ...;
-    PassManagerBuilder PMBuilder(...);
-    if (TM)
-      TM->adjustPassManager(PMBuilder);
+    PassBuilder PB(TM);
+    ModulePassManager MPM;
+    PB.parsePassPipeline(MPM, ...);
 
 Reflection Parameters
 ---------------------

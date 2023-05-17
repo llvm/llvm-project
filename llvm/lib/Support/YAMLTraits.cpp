@@ -435,6 +435,11 @@ std::unique_ptr<Input::HNode> Input::createHNodes(Node *N) {
         // Copy string to permanent storage
         KeyStr = StringStorage.str().copy(StringAllocator);
       }
+      if (mapHNode->Mapping.count(KeyStr))
+        // From YAML spec: "The content of a mapping node is an unordered set of
+        // key/value node pairs, with the restriction that each of the keys is
+        // unique."
+        setError(KeyNode, Twine("duplicated mapping key '") + KeyStr + "'");
       auto ValueHNode = createHNodes(Value);
       if (EC)
         break;
@@ -886,7 +891,7 @@ void ScalarTraits<bool>::output(const bool &Val, void *, raw_ostream &Out) {
 }
 
 StringRef ScalarTraits<bool>::input(StringRef Scalar, void *, bool &Val) {
-  if (llvm::Optional<bool> Parsed = parseBool(Scalar)) {
+  if (std::optional<bool> Parsed = parseBool(Scalar)) {
     Val = *Parsed;
     return StringRef();
   }

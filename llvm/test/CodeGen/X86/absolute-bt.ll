@@ -10,11 +10,11 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @f()
 
-define void @foo32(i32* %ptr) {
-  %load = load i32, i32* %ptr
+define void @foo32(ptr %ptr) {
+  %load = load i32, ptr %ptr
   %and = and i32 %load, 31
   %shl = shl i32 1, %and
-  %and2 = and i32 %shl, ptrtoint (i8* @bit_mask32 to i32)
+  %and2 = and i32 %shl, ptrtoint (ptr @bit_mask32 to i32)
   ; CHECK: movl $bit_mask32, %eax
   ; CHECK: btl %ecx, %eax
   %icmp = icmp eq i32 %and2, 0
@@ -28,11 +28,11 @@ f:
   ret void
 }
 
-define void @foo64(i64* %ptr) {
-  %load = load i64, i64* %ptr
+define void @foo64(ptr %ptr) {
+  %load = load i64, ptr %ptr
   %and = and i64 %load, 63
   %shl = shl i64 1, %and
-  %and2 = and i64 %shl, ptrtoint (i8* @bit_mask64 to i64)
+  %and2 = and i64 %shl, ptrtoint (ptr @bit_mask64 to i64)
   ; CHECK: movabsq $bit_mask64, %rax
   ; CHECK: btq %rcx, %rax
   %icmp = icmp eq i64 %and2, 0

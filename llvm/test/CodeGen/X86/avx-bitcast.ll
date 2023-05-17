@@ -8,7 +8,7 @@ define i64 @bitcasti64tof64() {
 ; CHECK-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; CHECK-NEXT:    vmovq %xmm0, %rax
 ; CHECK-NEXT:    retq
-  %a = load double, double* undef
+  %a = load double, ptr undef
   %b = bitcast double %a to i64
   ret i64 %b
 }

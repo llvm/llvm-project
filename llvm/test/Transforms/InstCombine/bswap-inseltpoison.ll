@@ -17,14 +17,13 @@ define i32 @shuf_4bytes(<4 x i8> %x) {
   ret i32 %cast
 }
 
-define i32 @shuf_load_4bytes(<4 x i8>* %p) {
+define i32 @shuf_load_4bytes(ptr %p) {
 ; CHECK-LABEL: @shuf_load_4bytes(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8>* [[P:%.*]] to i32*
-; CHECK-NEXT:    [[X1:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CAST:%.*]] = call i32 @llvm.bswap.i32(i32 [[X1]])
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
-  %x = load <4 x i8>, <4 x i8>* %p
+  %x = load <4 x i8>, ptr %p
   %bswap = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 3, i32 2, i32 undef, i32 0>
   %cast = bitcast <4 x i8> %bswap to i32
   ret i32 %cast
@@ -74,7 +73,7 @@ define i128 @shuf_16bytes(<16 x i8> %x) {
 
 define i32 @shuf_2bytes_widening(<2 x i8> %x) {
 ; CHECK-LABEL: @shuf_2bytes_widening(
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> poison, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> poison, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;

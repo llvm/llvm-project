@@ -87,8 +87,10 @@ TEST(MapVectorTest, erase) {
   MV.insert(std::make_pair(5, 6));
   ASSERT_EQ(MV.size(), 3u);
 
+  ASSERT_TRUE(MV.contains(1));
   MV.erase(MV.find(1));
   ASSERT_EQ(MV.size(), 2u);
+  ASSERT_FALSE(MV.contains(1));
   ASSERT_EQ(MV.find(1), MV.end());
   ASSERT_EQ(MV[3], 4);
   ASSERT_EQ(MV[5], 6);

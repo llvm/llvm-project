@@ -142,7 +142,10 @@ void RTNAME(PauseStatementText)(const char *code, std::size_t length) {
   std::exit(status);
 }
 
-[[noreturn]] void RTNAME(Abort)() { std::abort(); }
+[[noreturn]] void RTNAME(Abort)() {
+  // TODO: Add backtrace call, unless with `-fno-backtrace`.
+  std::abort();
+}
 
 [[noreturn]] void RTNAME(ReportFatalUserError)(
     const char *message, const char *source, int line) {

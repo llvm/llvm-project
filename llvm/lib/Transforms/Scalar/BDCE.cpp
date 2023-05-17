@@ -23,11 +23,8 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Local.h"
 using namespace llvm;
 
@@ -116,7 +113,7 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
       const uint32_t SrcBitSize = SE->getSrcTy()->getScalarSizeInBits();
       auto *const DstTy = SE->getDestTy();
       const uint32_t DestBitSize = DstTy->getScalarSizeInBits();
-      if (Demanded.countLeadingZeros() >= (DestBitSize - SrcBitSize)) {
+      if (Demanded.countl_zero() >= (DestBitSize - SrcBitSize)) {
         clearAssumptionsOfUsers(SE, DB);
         IRBuilder<> Builder(SE);
         I.replaceAllUsesWith(
@@ -143,9 +140,8 @@ static bool bitTrackingDCE(Function &F, DemandedBits &DB) {
 
       clearAssumptionsOfUsers(&I, DB);
 
-      // FIXME: In theory we could substitute undef here instead of zero.
-      // This should be reconsidered once we settle on the semantics of
-      // undef, poison, etc.
+      // Substitute all uses with zero. In theory we could use `freeze poison`
+      // instead, but that seems unlikely to be profitable.
       U.set(ConstantInt::get(U->getType(), 0));
       ++NumSimplified;
       Changed = true;
@@ -174,34 +170,3 @@ PreservedAnalyses BDCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   PA.preserveSet<CFGAnalyses>();
   return PA;
 }
-
-namespace {
-struct BDCELegacyPass : public FunctionPass {
-  static char ID; // Pass identification, replacement for typeid
-  BDCELegacyPass() : FunctionPass(ID) {
-    initializeBDCELegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-    auto &DB = getAnalysis<DemandedBitsWrapperPass>().getDemandedBits();
-    return bitTrackingDCE(F, DB);
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.setPreservesCFG();
-    AU.addRequired<DemandedBitsWrapperPass>();
-    AU.addPreserved<GlobalsAAWrapperPass>();
-  }
-};
-}
-
-char BDCELegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(BDCELegacyPass, "bdce",
-                      "Bit-Tracking Dead Code Elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(DemandedBitsWrapperPass)
-INITIALIZE_PASS_END(BDCELegacyPass, "bdce",
-                    "Bit-Tracking Dead Code Elimination", false, false)
-
-FunctionPass *llvm::createBitTrackingDCEPass() { return new BDCELegacyPass(); }

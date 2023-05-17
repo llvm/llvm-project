@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -emit-llvm -o %t.ll -triple=x86_64-apple-darwin10
+// RUN: %clang_cc1 %s -emit-llvm -o %t.ll -triple=x86_64-apple-darwin10
 // RUN: FileCheck %s < %t.ll
 // RUN: FileCheck -check-prefix=CHECK-GLOBAL %s < %t.ll
 
@@ -70,21 +70,21 @@ int A::*pa;
 int C::*pc;
 
 void f() {
-  // CHECK:      store i64 -1, i64* @_ZN5Casts2paE
+  // CHECK:      store i64 -1, ptr @_ZN5Casts2paE
   pa = 0;
 
-  // CHECK-NEXT: [[TMP:%.*]] = load i64, i64* @_ZN5Casts2paE, align 8
+  // CHECK-NEXT: [[TMP:%.*]] = load i64, ptr @_ZN5Casts2paE, align 8
   // CHECK-NEXT: [[ADJ:%.*]] = add nsw i64 [[TMP]], 4
   // CHECK-NEXT: [[ISNULL:%.*]] = icmp eq i64 [[TMP]], -1
   // CHECK-NEXT: [[RES:%.*]] = select i1 [[ISNULL]], i64 [[TMP]], i64 [[ADJ]]
-  // CHECK-NEXT: store i64 [[RES]], i64* @_ZN5Casts2pcE
+  // CHECK-NEXT: store i64 [[RES]], ptr @_ZN5Casts2pcE
   pc = pa;
 
-  // CHECK-NEXT: [[TMP:%.*]] = load i64, i64* @_ZN5Casts2pcE, align 8
+  // CHECK-NEXT: [[TMP:%.*]] = load i64, ptr @_ZN5Casts2pcE, align 8
   // CHECK-NEXT: [[ADJ:%.*]] = sub nsw i64 [[TMP]], 4
   // CHECK-NEXT: [[ISNULL:%.*]] = icmp eq i64 [[TMP]], -1
   // CHECK-NEXT: [[RES:%.*]] = select i1 [[ISNULL]], i64 [[TMP]], i64 [[ADJ]]
-  // CHECK-NEXT: store i64 [[RES]], i64* @_ZN5Casts2paE
+  // CHECK-NEXT: store i64 [[RES]], ptr @_ZN5Casts2paE
   pa = static_cast<int A::*>(pc);
 }
 
@@ -122,8 +122,8 @@ struct A {
   A();
 };
 
-// CHECK-LABEL: define{{.*}} void @_ZN9ValueInit1AC2Ev(%"struct.ValueInit::A"* {{[^,]*}} %this) unnamed_addr
-// CHECK: store i64 -1, i64*
+// CHECK-LABEL: define{{.*}} void @_ZN9ValueInit1AC2Ev(ptr {{[^,]*}} %this) unnamed_addr
+// CHECK: store i64 -1, ptr
 // CHECK: ret void
 A::A() : a() {}
 
@@ -136,15 +136,15 @@ struct A {
   int A::*i;
 };
 
-// CHECK-GLOBAL: @_ZN12VirtualBases1bE ={{.*}} global %"struct.VirtualBases::B" { i32 (...)** null, %"struct.VirtualBases::A" { i8 0, i64 -1 } }, align 8
+// CHECK-GLOBAL: @_ZN12VirtualBases1bE ={{.*}} global %"struct.VirtualBases::B" { ptr null, %"struct.VirtualBases::A" { i8 0, i64 -1 } }, align 8
 struct B : virtual A { };
 B b;
 
-// CHECK-GLOBAL: @_ZN12VirtualBases1cE ={{.*}} global %"struct.VirtualBases::C" { i32 (...)** null, i64 -1, %"struct.VirtualBases::A" { i8 0, i64 -1 } }, align 8
+// CHECK-GLOBAL: @_ZN12VirtualBases1cE ={{.*}} global %"struct.VirtualBases::C" { ptr null, i64 -1, %"struct.VirtualBases::A" { i8 0, i64 -1 } }, align 8
 struct C : virtual A { int A::*i; };
 C c;
 
-// CHECK-GLOBAL: @_ZN12VirtualBases1dE ={{.*}} global %"struct.VirtualBases::D" { %"struct.VirtualBases::C.base" { i32 (...)** null, i64 -1 }, i64 -1, %"struct.VirtualBases::A" { i8 0, i64 -1 } }, align 8
+// CHECK-GLOBAL: @_ZN12VirtualBases1dE ={{.*}} global %"struct.VirtualBases::D" { %"struct.VirtualBases::C.base" { ptr null, i64 -1 }, i64 -1, %"struct.VirtualBases::A" { i8 0, i64 -1 } }, align 8
 struct D : C { int A::*i; };
 D d;
 
@@ -166,11 +166,10 @@ namespace BoolPtrToMember {
     bool member;
   };
 
-  // CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) i8* @_ZN15BoolPtrToMember1fERNS_1XEMS0_b
+  // CHECK-LABEL: define{{.*}} nonnull align {{[0-9]+}} dereferenceable({{[0-9]+}}) ptr @_ZN15BoolPtrToMember1fERNS_1XEMS0_b
   bool &f(X &x, bool X::*member) {
-    // CHECK: {{bitcast.* to i8\*}}
-    // CHECK-NEXT: getelementptr inbounds i8, i8*
-    // CHECK-NEXT: ret i8*
+    // CHECK: getelementptr inbounds i8, ptr
+    // CHECK-NEXT: ret ptr
     return x.*member;
   }
 }
@@ -191,7 +190,7 @@ namespace test4 {
   struct C : virtual B { int    *C_p; };
   struct D :         C { int    *D_p; };
 
-  // CHECK-GLOBAL: @_ZN5test41dE ={{.*}} global %"struct.test4::D" { %"struct.test4::C.base" zeroinitializer, i32* null, %"struct.test4::B.base" { i32 (...)** null, i64 -1 }, %"struct.test4::A" zeroinitializer }, align 8
+  // CHECK-GLOBAL: @_ZN5test41dE ={{.*}} global %"struct.test4::D" { %"struct.test4::C.base" zeroinitializer, ptr null, %"struct.test4::B.base" { ptr null, i64 -1 }, %"struct.test4::A" zeroinitializer }, align 8
   D d;
 }
 

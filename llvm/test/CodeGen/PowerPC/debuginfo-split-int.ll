@@ -34,7 +34,7 @@ define void @bar() local_unnamed_addr #0 !dbg !6 {
   %1 = alloca i64, align 8
   %2 = tail call i64 @foo()
   tail call void @llvm.dbg.value(metadata i64 %2, metadata !10, metadata !DIExpression()), !dbg !13
-  store volatile i64 %2, i64* %1, align 8
+  store volatile i64 %2, ptr %1, align 8
   ret void
 }
 

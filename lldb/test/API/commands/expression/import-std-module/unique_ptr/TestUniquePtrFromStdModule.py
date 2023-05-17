@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class TestUniquePtr(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(["libc++"])
     @skipIf(compiler=no_match("clang"))
     @skipIf(compiler="clang", compiler_version=['<', '9.0'])
@@ -24,11 +22,16 @@ class TestUniquePtr(TestBase):
 
         self.runCmd("settings set target.import-std-module true")
 
+        if self.expectedCompiler(["clang"]) and self.expectedCompilerVersion(['>', '16.0']):
+            ptr_type = "std::unique_ptr<int>"
+        else:
+            ptr_type = "std::unique_ptr<int, std::default_delete<int> >"
+
         self.expect_expr(
             "s",
-            result_type="std::unique_ptr<int>",
+            result_type=ptr_type,
             result_summary="3",
-            result_children=[ValueCheck(name="__value_")])
+            result_children=[ValueCheck(name="pointer")])
         self.expect_expr("*s", result_type="int", result_value="3")
         self.expect_expr("*s = 5", result_type="int", result_value="5")
         self.expect_expr("*s", result_type="int", result_value="5")

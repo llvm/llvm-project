@@ -38,7 +38,8 @@ public:
 
           LookupResult Result;
           for (auto &KV : *InternedResult)
-            Result[*KV.first] = std::move(KV.second);
+            Result[*KV.first] = {KV.second.getAddress().getValue(),
+                                 KV.second.getFlags()};
           OnResolved(Result);
         };
 
@@ -81,7 +82,7 @@ using BaseT = RTTIExtends<RTDyldObjectLinkingLayer, ObjectLayer>;
 
 RTDyldObjectLinkingLayer::RTDyldObjectLinkingLayer(
     ExecutionSession &ES, GetMemoryManagerFunction GetMemoryManager)
-    : BaseT(ES), GetMemoryManager(GetMemoryManager) {
+    : BaseT(ES), GetMemoryManager(std::move(GetMemoryManager)) {
   ES.registerResourceManager(*this);
 }
 
@@ -108,6 +109,7 @@ void RTDyldObjectLinkingLayer::emit(
   // filter these later.
   auto InternalSymbols = std::make_shared<std::set<StringRef>>();
   {
+    SymbolFlagsMap ExtraSymbolsToClaim;
     for (auto &Sym : (*Obj)->symbols()) {
 
       // Skip file symbols.
@@ -128,6 +130,33 @@ void RTDyldObjectLinkingLayer::emit(
         return;
       }
 
+      // Try to claim responsibility of weak symbols
+      // if AutoClaimObjectSymbols flag is set.
+      if (AutoClaimObjectSymbols &&
+          (*SymFlagsOrErr & object::BasicSymbolRef::SF_Weak)) {
+        auto SymName = Sym.getName();
+        if (!SymName) {
+          ES.reportError(SymName.takeError());
+          R->failMaterialization();
+          return;
+        }
+
+        // Already included in responsibility set, skip it
+        SymbolStringPtr SymbolName = ES.intern(*SymName);
+        if (R->getSymbols().count(SymbolName))
+          continue;
+
+        auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+        if (!SymFlags) {
+          ES.reportError(SymFlags.takeError());
+          R->failMaterialization();
+          return;
+        }
+
+        ExtraSymbolsToClaim[SymbolName] = *SymFlags;
+        continue;
+      }
+
       // Don't include symbols that aren't global.
       if (!(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global)) {
         if (auto SymName = Sym.getName())
@@ -137,6 +166,13 @@ void RTDyldObjectLinkingLayer::emit(
           R->failMaterialization();
           return;
         }
+      }
+    }
+
+    if (!ExtraSymbolsToClaim.empty()) {
+      if (auto Err = R->defineMaterializing(ExtraSymbolsToClaim)) {
+        ES.reportError(std::move(Err));
+        R->failMaterialization();
       }
     }
   }
@@ -224,6 +260,46 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
       if (COFFSec.Characteristics & COFF::IMAGE_SCN_LNK_COMDAT)
         I->second.setFlags(I->second.getFlags() | JITSymbolFlags::Weak);
     }
+
+    // Handle any aliases.
+    for (auto &Sym : COFFObj->symbols()) {
+      uint32_t SymFlags = cantFail(Sym.getFlags());
+      if (SymFlags & object::BasicSymbolRef::SF_Undefined)
+        continue;
+      auto Name = Sym.getName();
+      if (!Name)
+        return Name.takeError();
+      auto I = Resolved.find(*Name);
+
+      // Skip already-resolved symbols, and symbols that we're not responsible
+      // for.
+      if (I != Resolved.end() || !R.getSymbols().count(ES.intern(*Name)))
+        continue;
+
+      // Skip anything other than weak externals.
+      auto COFFSym = COFFObj->getCOFFSymbol(Sym);
+      if (!COFFSym.isWeakExternal())
+        continue;
+      auto *WeakExternal = COFFSym.getAux<object::coff_aux_weak_external>();
+      if (WeakExternal->Characteristics != COFF::IMAGE_WEAK_EXTERN_SEARCH_ALIAS)
+        continue;
+
+      // We found an alias. Reuse the resolution of the alias target for the
+      // alias itself.
+      Expected<object::COFFSymbolRef> TargetSymbol =
+          COFFObj->getSymbol(WeakExternal->TagIndex);
+      if (!TargetSymbol)
+        return TargetSymbol.takeError();
+      Expected<StringRef> TargetName = COFFObj->getSymbolName(*TargetSymbol);
+      if (!TargetName)
+        return TargetName.takeError();
+      auto J = Resolved.find(*TargetName);
+      if (J == Resolved.end())
+        return make_error<StringError>("Could alias target " + *TargetName +
+                                           " not resolved",
+                                       inconvertibleErrorCode());
+      Resolved[*Name] = J->second;
+    }
   }
 
   for (auto &KV : Resolved) {
@@ -235,19 +311,23 @@ Error RTDyldObjectLinkingLayer::onObjLoad(
 
     auto InternedName = getExecutionSession().intern(KV.first);
     auto Flags = KV.second.getFlags();
-
-    // Override object flags and claim responsibility for symbols if
-    // requested.
-    if (OverrideObjectFlags || AutoClaimObjectSymbols) {
-      auto I = R.getSymbols().find(InternedName);
-
-      if (OverrideObjectFlags && I != R.getSymbols().end())
+    auto I = R.getSymbols().find(InternedName);
+    if (I != R.getSymbols().end()) {
+      // Override object flags and claim responsibility for symbols if
+      // requested.
+      if (OverrideObjectFlags)
         Flags = I->second;
-      else if (AutoClaimObjectSymbols && I == R.getSymbols().end())
-        ExtraSymbolsToClaim[InternedName] = Flags;
-    }
+      else {
+        // RuntimeDyld/MCJIT's weak tracking isn't compatible with ORC's. Even
+        // if we're not overriding flags in general we should set the weak flag
+        // according to the MaterializationResponsibility object symbol table.
+        if (I->second.isWeak())
+          Flags |= JITSymbolFlags::Weak;
+      }
+    } else if (AutoClaimObjectSymbols)
+      ExtraSymbolsToClaim[InternedName] = Flags;
 
-    Symbols[InternedName] = JITEvaluatedSymbol(KV.second.getAddress(), Flags);
+    Symbols[InternedName] = {ExecutorAddr(KV.second.getAddress()), Flags};
   }
 
   if (!ExtraSymbolsToClaim.empty()) {
@@ -311,7 +391,8 @@ void RTDyldObjectLinkingLayer::onObjEmit(
   }
 }
 
-Error RTDyldObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
+Error RTDyldObjectLinkingLayer::handleRemoveResources(JITDylib &JD,
+                                                      ResourceKey K) {
 
   std::vector<MemoryManagerUP> MemMgrsToRemove;
 
@@ -335,7 +416,8 @@ Error RTDyldObjectLinkingLayer::handleRemoveResources(ResourceKey K) {
   return Error::success();
 }
 
-void RTDyldObjectLinkingLayer::handleTransferResources(ResourceKey DstKey,
+void RTDyldObjectLinkingLayer::handleTransferResources(JITDylib &JD,
+                                                       ResourceKey DstKey,
                                                        ResourceKey SrcKey) {
   auto I = MemMgrs.find(SrcKey);
   if (I != MemMgrs.end()) {

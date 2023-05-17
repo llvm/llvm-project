@@ -82,6 +82,7 @@ private:
       m_opaque_up;
 };
 
+#ifndef SWIG
 class LLDB_API SBCommandInterpreterRunResult {
   friend class SBDebugger;
   friend class SBCommandInterpreter;
@@ -104,6 +105,7 @@ private:
   // This is set in the constructor and will always be valid.
   std::unique_ptr<lldb_private::CommandInterpreterRunResult> m_opaque_up;
 };
+#endif
 
 } // namespace lldb
 

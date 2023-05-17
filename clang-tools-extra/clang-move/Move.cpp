@@ -131,7 +131,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token & /*IncludeTok*/,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> /*File*/, StringRef SearchPath,
+                          OptionalFileEntryRef /*File*/, StringRef SearchPath,
                           StringRef /*RelativePath*/,
                           const Module * /*Imported*/,
                           SrcMgr::CharacteristicKind /*FileType*/) override {
@@ -920,8 +920,7 @@ void ClangMoveTool::onEndOfTranslationUnit() {
       return false;
     }
   };
-  if (std::none_of(UnremovedDeclsInOldHeader.begin(),
-                   UnremovedDeclsInOldHeader.end(), IsSupportedKind) &&
+  if (llvm::none_of(UnremovedDeclsInOldHeader, IsSupportedKind) &&
       !Context->Spec.OldHeader.empty()) {
     auto &SM = RemovedDecls[0]->getASTContext().getSourceManager();
     moveAll(SM, Context->Spec.OldHeader, Context->Spec.NewHeader);

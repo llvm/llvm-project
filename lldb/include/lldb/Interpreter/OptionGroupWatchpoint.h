@@ -43,6 +43,7 @@ public:
   WatchType watch_type;
   uint32_t watch_size;
   bool watch_type_specified;
+  lldb::LanguageType language_type;
 
 private:
   OptionGroupWatchpoint(const OptionGroupWatchpoint &) = delete;

@@ -11,21 +11,27 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Analysis/DataFlowAnalysis.h"
+#include "mlir/Dialect/Tosa/Transforms/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
-#include "mlir/Dialect/Tosa/Transforms/PassDetail.h"
-#include "mlir/Dialect/Tosa/Transforms/Passes.h"
 #include "mlir/Dialect/Tosa/Utils/ShapeUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/Matchers.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/FormatVariadic.h"
+
+namespace mlir {
+namespace tosa {
+#define GEN_PASS_DEF_TOSAINFERSHAPES
+#include "mlir/Dialect/Tosa/Transforms/Passes.h.inc"
+} // namespace tosa
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::tosa;
@@ -48,7 +54,7 @@ void propagateShapesToTosaIf(
     for (unsigned int i = 1, s = op.getNumOperands(); i < s; i++) {
       auto inferredTy = shapesStorage[op.getOperand(i)];
       auto blockArg = frontBlock.getArgument(i - 1);
-      auto oldType = blockArg.getType().cast<ShapedType>();
+      auto oldType = cast<ShapedType>(blockArg.getType());
 
       if (inferredTy.hasRank()) {
         Type newType = oldType.clone(inferredTy.getDims());
@@ -83,7 +89,7 @@ void propagateShapesToTosaWhile(
   // loop body / condition for tosa.while.
   llvm::SmallVector<Type> argTypes;
   for (auto operand : op.getOperands()) {
-    auto operandTy = operand.getType().cast<ShapedType>();
+    auto operandTy = cast<ShapedType>(operand.getType());
     auto shapedTypeComponent = shapesStorage[operand];
     if (shapedTypeComponent.hasRank()) {
       auto newTy = operandTy.clone(shapedTypeComponent.getDims());
@@ -182,7 +188,7 @@ void propagateShapesToTosaWhile(
 void propagateShapesInRegion(Region &region) {
   DenseMap<Value, ShapedTypeComponents> shapesStorage;
   auto setShapes = [&](Value val, Type t) {
-    if (auto st = t.dyn_cast<ShapedType>())
+    if (auto st = dyn_cast<ShapedType>(t))
       shapesStorage[val] = st;
     else
       shapesStorage[val] = t;
@@ -213,7 +219,8 @@ void propagateShapesInRegion(Region &region) {
       ValueShapeRange range(op.getOperands(), operandShape);
       if (shapeInterface
               .inferReturnTypeComponents(op.getContext(), op.getLoc(), range,
-                                         op.getAttrDictionary(),
+                                         op.getDiscardableAttrDictionary(),
+                                         op.getPropertiesStorage(),
                                          op.getRegions(), returnedShapes)
               .succeeded()) {
         for (auto it : llvm::zip(op.getResults(), returnedShapes)) {
@@ -241,8 +248,7 @@ void propagateShapesInRegion(Region &region) {
 
           // Compute the knowledge based on the inferred type.
           auto inferredKnowledge = ValueKnowledge::getPessimisticValueState();
-          inferredKnowledge.dtype =
-              resultTy.cast<ShapedType>().getElementType();
+          inferredKnowledge.dtype = cast<ShapedType>(resultTy).getElementType();
           inferredKnowledge.hasRank = predictedShape.hasRank();
           if (predictedShape.hasRank()) {
             for (auto dim : predictedShape.getDims()) {
@@ -268,7 +274,7 @@ void propagateShapesInRegion(Region &region) {
   for (auto it : shapesStorage) {
     auto result = it.second;
     if (result.hasRank()) {
-      Type t = it.first.getType().cast<ShapedType>().clone(result.getDims());
+      Type t = cast<ShapedType>(it.first.getType()).clone(result.getDims());
       it.first.setType(t);
     }
   }
@@ -276,7 +282,8 @@ void propagateShapesInRegion(Region &region) {
 
 /// Pass that performs shape propagation across TOSA operations. This includes
 /// migrating to within the regions of if/while operations.
-struct TosaInferShapes : public TosaInferShapesBase<TosaInferShapes> {
+struct TosaInferShapes
+    : public tosa::impl::TosaInferShapesBase<TosaInferShapes> {
 public:
   void runOnOperation() override {
     func::FuncOp func = getOperation();

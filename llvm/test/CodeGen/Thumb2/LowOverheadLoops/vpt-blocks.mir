@@ -5,7 +5,7 @@
   @_ZL3arr = internal global [10 x i32] [i32 1, i32 2, i32 3, i32 5, i32 5, i32 5, i32 -2, i32 0, i32 -8, i32 -1], align 4
   @.str = private unnamed_addr constant [5 x i8] c"%d, \00", align 1
 
-  define arm_aapcs_vfpcc void @vpt_block(i32* nocapture %A, i32 %n, i32 %x) {
+  define arm_aapcs_vfpcc void @vpt_block(ptr nocapture %A, i32 %n, i32 %x) {
   entry:
     %cmp9 = icmp sgt i32 %n, 0
     %0 = add i32 %n, 3
@@ -22,13 +22,12 @@
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
-    %lsr.iv1 = phi i32* [ %scevgep, %vector.body ], [ %A, %vector.ph ]
+    %lsr.iv1 = phi ptr [ %scevgep, %vector.body ], [ %A, %vector.ph ]
     %6 = phi i32 [ %start, %vector.ph ], [ %18, %vector.body ]
     %7 = phi i32 [ %n, %vector.ph ], [ %9, %vector.body ]
-    %lsr.iv12 = bitcast i32* %lsr.iv1 to <4 x i32>*
     %8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %7)
     %9 = sub i32 %7, 4
-    %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv12, i32 4, <4 x i1> %8, <4 x i32> undef)
+    %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %lsr.iv1, i32 4, <4 x i1> %8, <4 x i32> undef)
     %10 = insertelement <4 x i32> undef, i32 %x, i32 0
     %11 = shufflevector <4 x i32> %10, <4 x i32> undef, <4 x i32> zeroinitializer
     %12 = icmp slt <4 x i32> %wide.masked.load, %11
@@ -37,8 +36,8 @@
     %15 = icmp sgt <4 x i32> %wide.masked.load, %14
     %16 = and <4 x i1> %12, %15
     %17 = and <4 x i1> %16, %8
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> zeroinitializer, <4 x i32>* %lsr.iv12, i32 4, <4 x i1> %17)
-    %scevgep = getelementptr i32, i32* %lsr.iv1, i32 4
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr %lsr.iv1, i32 4, <4 x i1> %17)
+    %scevgep = getelementptr i32, ptr %lsr.iv1, i32 4
     %18 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %6, i32 1)
     %19 = icmp ne i32 %18, 0
     br i1 %19, label %vector.body, label %for.cond.cleanup
@@ -47,7 +46,7 @@
     ret void
   }
 
-  define arm_aapcs_vfpcc void @different_vcpt_reaching_def(i32* nocapture %A, i32 %n, i32 %x) {
+  define arm_aapcs_vfpcc void @different_vcpt_reaching_def(ptr nocapture %A, i32 %n, i32 %x) {
     ; Intentionally left blank - see MIR sequence below.
     entry:
       unreachable
@@ -59,7 +58,7 @@
       unreachable
   }
 
-  define arm_aapcs_vfpcc void @different_vcpt_operand(i32* nocapture %A, i32 %n, i32 %x) {
+  define arm_aapcs_vfpcc void @different_vcpt_operand(ptr nocapture %A, i32 %n, i32 %x) {
     ; Intentionally left blank - see MIR sequence below.
     entry:
       unreachable
@@ -71,7 +70,7 @@
       unreachable
   }
 
-  define arm_aapcs_vfpcc void @else_vcpt(i32* nocapture %data, i32 %N, i32 %T) {
+  define arm_aapcs_vfpcc void @else_vcpt(ptr nocapture %data, i32 %N, i32 %T) {
   entry:
     %cmp9 = icmp sgt i32 %N, 0
     %0 = add i32 %N, 3
@@ -88,13 +87,12 @@
     br label %vector.body
 
   vector.body:                                      ; preds = %vector.body, %vector.ph
-    %lsr.iv1 = phi i32* [ %scevgep, %vector.body ], [ %data, %vector.ph ]
+    %lsr.iv1 = phi ptr [ %scevgep, %vector.body ], [ %data, %vector.ph ]
     %6 = phi i32 [ %start, %vector.ph ], [ %18, %vector.body ]
     %7 = phi i32 [ %N, %vector.ph ], [ %9, %vector.body ]
-    %lsr.iv12 = bitcast i32* %lsr.iv1 to <4 x i32>*
     %8 = call <4 x i1> @llvm.arm.mve.vctp32(i32 %7)
     %9 = sub i32 %7, 4
-    %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %lsr.iv12, i32 4, <4 x i1> %8, <4 x i32> undef)
+    %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %lsr.iv1, i32 4, <4 x i1> %8, <4 x i32> undef)
     %10 = insertelement <4 x i32> undef, i32 %T, i32 0
     %11 = shufflevector <4 x i32> %10, <4 x i32> undef, <4 x i32> zeroinitializer
     %12 = icmp slt <4 x i32> %wide.masked.load, %11
@@ -103,8 +101,8 @@
     %15 = icmp sgt <4 x i32> %wide.masked.load, %14
     %16 = or <4 x i1> %12, %15
     %17 = and <4 x i1> %16, %8
-    call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> zeroinitializer, <4 x i32>* %lsr.iv12, i32 4, <4 x i1> %17)
-    %scevgep = getelementptr i32, i32* %lsr.iv1, i32 4
+    call void @llvm.masked.store.v4i32.p0(<4 x i32> zeroinitializer, ptr %lsr.iv1, i32 4, <4 x i1> %17)
+    %scevgep = getelementptr i32, ptr %lsr.iv1, i32 4
     %18 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %6, i32 1)
     %19 = icmp ne i32 %18, 0
     br i1 %19, label %vector.body, label %for.cond.cleanup
@@ -113,7 +111,7 @@
     ret void
   }
 
-  define arm_aapcs_vfpcc void @loop_invariant_vpt_operands(i32* nocapture %A, i32 %n, i32 %x) {
+  define arm_aapcs_vfpcc void @loop_invariant_vpt_operands(ptr nocapture %A, i32 %n, i32 %x) {
     ; Intentionally left blank - see MIR sequence below.
     entry:
       unreachable
@@ -125,7 +123,7 @@
       unreachable
   }
 
-  define arm_aapcs_vfpcc void @vctp_before_vpt(i32* nocapture %A, i32 %n, i32 %x) {
+  define arm_aapcs_vfpcc void @vctp_before_vpt(ptr nocapture %A, i32 %n, i32 %x) {
     ; Intentionally left blank - see MIR sequence below.
     entry:
       unreachable
@@ -137,7 +135,7 @@
       unreachable
   }
 
-  define arm_aapcs_vfpcc void @vpt_load_vctp_store(i32* nocapture %A, i32 %n, i32 %x) {
+  define arm_aapcs_vfpcc void @vpt_load_vctp_store(ptr nocapture %A, i32 %n, i32 %x) {
     ; Intentionally left blank - see MIR sequence below.
     entry:
       unreachable
@@ -159,8 +157,8 @@
     unreachable
   }
 
-  declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-  declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
+  declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
+  declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)
   declare i32 @llvm.start.loop.iterations.i32(i32)
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32)
   declare <4 x i1> @llvm.arm.mve.vctp32(i32)

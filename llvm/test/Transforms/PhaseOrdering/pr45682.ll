@@ -12,16 +12,16 @@ define void @PR45682(i32 %x, i32 %y) {
 entry:
   %x.addr = alloca i32, align 4
   %y.addr = alloca i32, align 4
-  store i32 %x, i32* %x.addr, align 4
-  store i32 %y, i32* %y.addr, align 4
-  %0 = load i32, i32* %y.addr, align 4
+  store i32 %x, ptr %x.addr, align 4
+  store i32 %y, ptr %y.addr, align 4
+  %0 = load i32, ptr %y.addr, align 4
   %cmp = icmp sgt i32 %0, 0
   call void @llvm.assume(i1 %cmp)
-  %1 = load i32, i32* %y.addr, align 4
-  %2 = load i32, i32* %x.addr, align 4
+  %1 = load i32, ptr %y.addr, align 4
+  %2 = load i32, ptr %x.addr, align 4
   %add = add nsw i32 %2, %1
-  store i32 %add, i32* %x.addr, align 4
-  %3 = load i32, i32* %x.addr, align 4
+  store i32 %add, ptr %x.addr, align 4
+  %3 = load i32, ptr %x.addr, align 4
   %cmp1 = icmp eq i32 %3, -2147483648
   br i1 %cmp1, label %if.then, label %if.end
 

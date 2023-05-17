@@ -93,7 +93,7 @@ class TargetRegisterInfo;
     /// The time associated with this edge. Often this is just the value of the
     /// Latency field of the predecessor, however advanced models may provide
     /// additional information about specific edges.
-    unsigned Latency;
+    unsigned Latency = 0u;
 
   public:
     /// Constructs a null SDep. This is only for use by container classes which
@@ -525,9 +525,8 @@ class TargetRegisterInfo;
     virtual void push(SUnit *U) = 0;
 
     void push_all(const std::vector<SUnit *> &Nodes) {
-      for (std::vector<SUnit *>::const_iterator I = Nodes.begin(),
-           E = Nodes.end(); I != E; ++I)
-        push(*I);
+      for (SUnit *SU : Nodes)
+        push(SU);
     }
 
     virtual SUnit *pop() = 0;

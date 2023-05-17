@@ -10,12 +10,12 @@ define i64 @bzhi64(i64 %x, i64 %y)   {
   ret i64 %tmp
 }
 
-define i64 @bzhi64_load(i64* %x, i64 %y)   {
+define i64 @bzhi64_load(ptr %x, i64 %y)   {
 ; CHECK-LABEL: bzhi64_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    bzhiq %rsi, (%rdi), %rax
 ; CHECK-NEXT:    retq
-  %x1 = load i64, i64* %x
+  %x1 = load i64, ptr %x
   %tmp = tail call i64 @llvm.x86.bmi.bzhi.64(i64 %x1, i64 %y)
   ret i64 %tmp
 }
@@ -31,12 +31,12 @@ define i64 @pdep64(i64 %x, i64 %y)   {
   ret i64 %tmp
 }
 
-define i64 @pdep64_load(i64 %x, i64* %y)   {
+define i64 @pdep64_load(i64 %x, ptr %y)   {
 ; CHECK-LABEL: pdep64_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pdepq (%rsi), %rdi, %rax
 ; CHECK-NEXT:    retq
-  %y1 = load i64, i64* %y
+  %y1 = load i64, ptr %y
   %tmp = tail call i64 @llvm.x86.bmi.pdep.64(i64 %x, i64 %y1)
   ret i64 %tmp
 }
@@ -64,12 +64,12 @@ define i64 @pext64(i64 %x, i64 %y)   {
   ret i64 %tmp
 }
 
-define i64 @pext64_load(i64 %x, i64* %y)   {
+define i64 @pext64_load(i64 %x, ptr %y)   {
 ; CHECK-LABEL: pext64_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pextq (%rsi), %rdi, %rax
 ; CHECK-NEXT:    retq
-  %y1 = load i64, i64* %y
+  %y1 = load i64, ptr %y
   %tmp = tail call i64 @llvm.x86.bmi.pext.64(i64 %x, i64 %y1)
   ret i64 %tmp
 }
@@ -87,7 +87,7 @@ define i64 @pext64_knownbits(i64 %x, i64 %y)   {
 
 declare i64 @llvm.x86.bmi.pext.64(i64, i64)
 
-define i64 @mulx64(i64 %x, i64 %y, i64* %p)   {
+define i64 @mulx64(i64 %x, i64 %y, ptr %p)   {
 ; CHECK-LABEL: mulx64:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
@@ -101,11 +101,11 @@ define i64 @mulx64(i64 %x, i64 %y, i64* %p)   {
   %h1 = lshr i128 %r1, 64
   %h  = trunc i128 %h1 to i64
   %l  = trunc i128 %r1 to i64
-  store i64 %h, i64* %p
+  store i64 %h, ptr %p
   ret i64 %l
 }
 
-define i64 @mulx64_load(i64 %x, i64* %y, i64* %p)   {
+define i64 @mulx64_load(i64 %x, ptr %y, ptr %p)   {
 ; CHECK-LABEL: mulx64_load:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    movq %rdx, %rcx
@@ -113,13 +113,13 @@ define i64 @mulx64_load(i64 %x, i64* %y, i64* %p)   {
 ; CHECK-NEXT:    mulxq (%rsi), %rax, %rdx
 ; CHECK-NEXT:    movq %rdx, (%rcx)
 ; CHECK-NEXT:    retq
-  %y1 = load i64, i64* %y
+  %y1 = load i64, ptr %y
   %x2 = zext i64 %x to i128
   %y2 = zext i64 %y1 to i128
   %r1 = mul i128 %x2, %y2
   %h1 = lshr i128 %r1, 64
   %h  = trunc i128 %h1 to i64
   %l  = trunc i128 %r1 to i64
-  store i64 %h, i64* %p
+  store i64 %h, ptr %p
   ret i64 %l
 }

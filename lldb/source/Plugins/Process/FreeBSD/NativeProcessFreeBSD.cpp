@@ -51,9 +51,8 @@ static Status EnsureFDFlags(int fd, int flags) {
 // Public Static Methods
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessFreeBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
-                                      NativeDelegate &native_delegate,
-                                      MainLoop &mainloop) const {
+NativeProcessFreeBSD::Manager::Launch(ProcessLaunchInfo &launch_info,
+                                      NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
 
   Status status;
@@ -91,7 +90,7 @@ NativeProcessFreeBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
       pid, launch_info.GetPTY().ReleasePrimaryFileDescriptor(), native_delegate,
-      Info.GetArchitecture(), mainloop));
+      Info.GetArchitecture(), m_mainloop));
 
   status = process_up->SetupTrace();
   if (status.Fail())
@@ -105,9 +104,8 @@ NativeProcessFreeBSD::Factory::Launch(ProcessLaunchInfo &launch_info,
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessFreeBSD::Factory::Attach(
-    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-    MainLoop &mainloop) const {
+NativeProcessFreeBSD::Manager::Attach(
+    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) {
   Log *log = GetLog(POSIXLog::Process);
   LLDB_LOG(log, "pid = {0:x}", pid);
 
@@ -119,7 +117,7 @@ NativeProcessFreeBSD::Factory::Attach(
   }
 
   std::unique_ptr<NativeProcessFreeBSD> process_up(new NativeProcessFreeBSD(
-      pid, -1, native_delegate, Info.GetArchitecture(), mainloop));
+      pid, -1, native_delegate, Info.GetArchitecture(), m_mainloop));
 
   Status status = process_up->Attach();
   if (!status.Success())
@@ -129,7 +127,7 @@ NativeProcessFreeBSD::Factory::Attach(
 }
 
 NativeProcessFreeBSD::Extension
-NativeProcessFreeBSD::Factory::GetSupportedExtensions() const {
+NativeProcessFreeBSD::Manager::GetSupportedExtensions() const {
   return
 #if defined(PT_COREDUMP)
       Extension::savecore |
@@ -417,9 +415,9 @@ NativeProcessFreeBSD::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
   case llvm::Triple::arm:
     switch (size_hint) {
     case 2:
-      return llvm::makeArrayRef(g_thumb_opcode);
+      return llvm::ArrayRef(g_thumb_opcode);
     case 4:
-      return llvm::makeArrayRef(g_arm_opcode);
+      return llvm::ArrayRef(g_arm_opcode);
     default:
       return llvm::createStringError(llvm::inconvertibleErrorCode(),
                                      "Unrecognised trap opcode size hint!");

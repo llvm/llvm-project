@@ -11,25 +11,25 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: insert_s512_s32
     ; CHECK: [[DEF:%[0-9]+]]:sgpr_512 = IMPLICIT_DEF
-    ; CHECK: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[DEF]], [[DEF1]], %subreg.sub0
-    ; CHECK: [[INSERT_SUBREG1:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG]], [[DEF1]], %subreg.sub1
-    ; CHECK: [[INSERT_SUBREG2:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG1]], [[DEF1]], %subreg.sub2
-    ; CHECK: [[INSERT_SUBREG3:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG2]], [[DEF1]], %subreg.sub3
-    ; CHECK: [[INSERT_SUBREG4:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG3]], [[DEF1]], %subreg.sub4
-    ; CHECK: [[INSERT_SUBREG5:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG4]], [[DEF1]], %subreg.sub5
-    ; CHECK: [[INSERT_SUBREG6:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG5]], [[DEF1]], %subreg.sub6
-    ; CHECK: [[INSERT_SUBREG7:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG6]], [[DEF1]], %subreg.sub7
-    ; CHECK: [[INSERT_SUBREG8:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG7]], [[DEF1]], %subreg.sub8
-    ; CHECK: [[INSERT_SUBREG9:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG8]], [[DEF1]], %subreg.sub9
-    ; CHECK: [[INSERT_SUBREG10:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG9]], [[DEF1]], %subreg.sub10
-    ; CHECK: [[INSERT_SUBREG11:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG10]], [[DEF1]], %subreg.sub11
-    ; CHECK: [[INSERT_SUBREG12:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG11]], [[DEF1]], %subreg.sub12
-    ; CHECK: [[INSERT_SUBREG13:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG12]], [[DEF1]], %subreg.sub13
-    ; CHECK: [[INSERT_SUBREG14:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG13]], [[DEF1]], %subreg.sub14
-    ; CHECK: [[INSERT_SUBREG15:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG14]], [[DEF1]], %subreg.sub15
-    ; CHECK: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[INSERT_SUBREG15]]
-    ; CHECK: SI_RETURN_TO_EPILOG $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:sreg_32 = IMPLICIT_DEF
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[DEF]], [[DEF1]], %subreg.sub0
+    ; CHECK-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG]], [[DEF1]], %subreg.sub1
+    ; CHECK-NEXT: [[INSERT_SUBREG2:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG1]], [[DEF1]], %subreg.sub2
+    ; CHECK-NEXT: [[INSERT_SUBREG3:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG2]], [[DEF1]], %subreg.sub3
+    ; CHECK-NEXT: [[INSERT_SUBREG4:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG3]], [[DEF1]], %subreg.sub4
+    ; CHECK-NEXT: [[INSERT_SUBREG5:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG4]], [[DEF1]], %subreg.sub5
+    ; CHECK-NEXT: [[INSERT_SUBREG6:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG5]], [[DEF1]], %subreg.sub6
+    ; CHECK-NEXT: [[INSERT_SUBREG7:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG6]], [[DEF1]], %subreg.sub7
+    ; CHECK-NEXT: [[INSERT_SUBREG8:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG7]], [[DEF1]], %subreg.sub8
+    ; CHECK-NEXT: [[INSERT_SUBREG9:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG8]], [[DEF1]], %subreg.sub9
+    ; CHECK-NEXT: [[INSERT_SUBREG10:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG9]], [[DEF1]], %subreg.sub10
+    ; CHECK-NEXT: [[INSERT_SUBREG11:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG10]], [[DEF1]], %subreg.sub11
+    ; CHECK-NEXT: [[INSERT_SUBREG12:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG11]], [[DEF1]], %subreg.sub12
+    ; CHECK-NEXT: [[INSERT_SUBREG13:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG12]], [[DEF1]], %subreg.sub13
+    ; CHECK-NEXT: [[INSERT_SUBREG14:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG13]], [[DEF1]], %subreg.sub14
+    ; CHECK-NEXT: [[INSERT_SUBREG15:%[0-9]+]]:sgpr_512 = INSERT_SUBREG [[INSERT_SUBREG14]], [[DEF1]], %subreg.sub15
+    ; CHECK-NEXT: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15 = COPY [[INSERT_SUBREG15]]
+    ; CHECK-NEXT: SI_RETURN_TO_EPILOG $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7_sgpr8_sgpr9_sgpr10_sgpr11_sgpr12_sgpr13_sgpr14_sgpr15
     %0:sgpr(s512) = G_IMPLICIT_DEF
     %1:sgpr(s32) = G_IMPLICIT_DEF
     %2:sgpr(s512) = G_INSERT %0:sgpr, %1:sgpr(s32), 0
@@ -62,10 +62,12 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1, $vgpr2
     ; CHECK-LABEL: name: insert_v_s64_v_s32_0
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_INSERT %0, %1, 0
@@ -82,10 +84,12 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1, $vgpr2
     ; CHECK-LABEL: name: insert_v_s64_v_s32_32
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1, $vgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_INSERT %0, %1, 32
@@ -102,10 +106,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1, $sgpr2
     ; CHECK-LABEL: name: insert_s_s64_s_s32_0
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s32) = COPY $sgpr2
     %2:sgpr(s64) = G_INSERT %0, %1, 0
@@ -122,10 +128,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1, $sgpr2
     ; CHECK-LABEL: name: insert_s_s64_s_s32_32
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1, $sgpr2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr2
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:sgpr(s32) = COPY $sgpr2
     %2:sgpr(s64) = G_INSERT %0, %1, 32
@@ -142,10 +150,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1, $vgpr0
     ; CHECK-LABEL: name: insert_s_s64_v_s32_32
-    ; CHECK: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1, $vgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0_sgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY $vgpr2
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s64) = COPY $sgpr0_sgpr1
     %1:vgpr(s32) = COPY $vgpr2
     %2:vgpr(s64) = G_INSERT %0, %1, 32
@@ -162,10 +172,12 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1, $sgpr0
     ; CHECK-LABEL: name: insert_v_s64_s_s32_32
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1, $sgpr0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_32 = COPY $sgpr0
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_64 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s64) = COPY $vgpr0_vgpr1
     %1:sgpr(s32) = COPY $sgpr0
     %2:vgpr(s64) = G_INSERT %0, %1, 32
@@ -182,10 +194,12 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-LABEL: name: insert_v_s96_v_s64_0
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_96 = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_96 = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s96) = COPY $vgpr0_vgpr1_vgpr2
     %1:vgpr(s64) = COPY $vgpr3_vgpr4
     %2:vgpr(s96) = G_INSERT %0, %1, 0
@@ -202,10 +216,12 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4
     ; CHECK-LABEL: name: insert_v_s96_v_s64_32
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_96 = COPY $vgpr0_vgpr1_vgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2, $vgpr3_vgpr4
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_96 = COPY $vgpr0_vgpr1_vgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr3_vgpr4
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s96) = COPY $vgpr0_vgpr1_vgpr2
     %1:vgpr(s64) = COPY $vgpr3_vgpr4
     %2:vgpr(s96) = G_INSERT %0, %1, 32
@@ -222,10 +238,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s96_s_s64_0
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_96_with_sub0_sub1 = COPY $sgpr0_sgpr1_sgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2, $sgpr4_sgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_96_with_sub0_sub1 = COPY $sgpr0_sgpr1_sgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
     %1:sgpr(s64) = COPY $sgpr4_sgpr5
     %2:sgpr(s96) = G_INSERT %0, %1, 0
@@ -242,10 +260,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s96_s_s64_32
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_96_with_sub1_sub2 = COPY $sgpr0_sgpr1_sgpr2
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2, $sgpr4_sgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_96_with_sub1_sub2 = COPY $sgpr0_sgpr1_sgpr2
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_96 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s96) = COPY $sgpr0_sgpr1_sgpr2
     %1:sgpr(s64) = COPY $sgpr4_sgpr5
     %2:sgpr(s96) = G_INSERT %0, %1, 32
@@ -262,10 +282,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s128_s_s64_0
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:sgpr(s64) = COPY $sgpr4_sgpr5
     %2:sgpr(s128) = G_INSERT %0, %1, 0
@@ -297,10 +319,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5
     ; CHECK-LABEL: name: insert_s_s128_s_s64_64
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub2_sub3
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr4_sgpr5
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_128 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub2_sub3
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:sgpr(s64) = COPY $sgpr4_sgpr5
     %2:sgpr(s128) = G_INSERT %0, %1, 64
@@ -317,10 +341,12 @@ body: |
   bb.0:
     liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9
     ; CHECK-LABEL: name: insert_s_v256_v_s64_96
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr8_vgpr9
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub3_sub4
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_64 = COPY $vgpr8_vgpr9
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub3_sub4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:vgpr(s64) = COPY $vgpr8_vgpr9
     %2:vgpr(s256) = G_INSERT %0, %1, 96
@@ -337,10 +363,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9
     ; CHECK-LABEL: name: insert_s_s256_s_s64_128
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub4_sub5
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sreg_64 = COPY $sgpr4_sgpr5
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub4_sub5
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s256) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     %1:sgpr(s64) = COPY $sgpr4_sgpr5
     %2:sgpr(s256) = G_INSERT %0, %1, 128
@@ -372,10 +400,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr6_sgpr7_sgpr8
     ; CHECK-LABEL: name: insert_s_s128_s_s96_0
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_128_with_sub0_sub1_sub2 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1_sub2
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_128_with_sub0_sub1_sub2 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1_sub2
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:sgpr(s96) = COPY $sgpr6_sgpr7_sgpr8
     %2:sgpr(s128) = G_INSERT %0, %1, 0
@@ -392,10 +422,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr6_sgpr7_sgpr8
     ; CHECK-LABEL: name: insert_s_s128_s_s96_32
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_128_with_sub1_sub2_sub3 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2_sub3
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3, $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_128_with_sub1_sub2_sub3 = COPY $sgpr0_sgpr1_sgpr2_sgpr3
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_128 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2_sub3
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s128) = COPY $sgpr0_sgpr1_sgpr2_sgpr3
     %1:sgpr(s96) = COPY $sgpr6_sgpr7_sgpr8
     %2:sgpr(s128) = G_INSERT %0, %1, 32
@@ -412,10 +444,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr6_sgpr7_sgpr8
     ; CHECK-LABEL: name: insert_s_s160_s_s96_0
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_160_with_sub0_sub1_sub2 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_160 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1_sub2
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_160_with_sub0_sub1_sub2 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_160 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1_sub2
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s160) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
     %1:sgpr(s96) = COPY $sgpr6_sgpr7_sgpr8
     %2:sgpr(s160) = G_INSERT %0, %1, 0
@@ -432,10 +466,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr6_sgpr7_sgpr8
     ; CHECK-LABEL: name: insert_s_s160_s_s96_32
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_160_with_sub1_sub2_sub3 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_160 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2_sub3
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_160_with_sub1_sub2_sub3 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_160 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2_sub3
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s160) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
     %1:sgpr(s96) = COPY $sgpr6_sgpr7_sgpr8
     %2:sgpr(s160) = G_INSERT %0, %1, 32
@@ -452,10 +488,12 @@ body: |
   bb.0:
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr6_sgpr7_sgpr8
     ; CHECK-LABEL: name: insert_s_s160_s_s96_64
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_160_with_sub2_sub3_sub4 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_160 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub2_sub3_sub4
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4, $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_160_with_sub2_sub3_sub4 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_96 = COPY $sgpr6_sgpr7_sgpr8
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_160 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub2_sub3_sub4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s160) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4
     %1:sgpr(s96) = COPY $sgpr6_sgpr7_sgpr8
     %2:sgpr(s160) = G_INSERT %0, %1, 64
@@ -473,10 +511,12 @@ body: |
     liveins:  $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11
 
     ; CHECK-LABEL: name: insert_s_s256_s_s128_0
-    ; CHECK: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:sgpr_128 = COPY $sgpr8_sgpr9_sgpr10_sgpr11
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:sgpr_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1_sub2_sub3
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, $sgpr8_sgpr9_sgpr10_sgpr11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:sgpr_256 = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:sgpr_128 = COPY $sgpr8_sgpr9_sgpr10_sgpr11
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:sgpr_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub0_sub1_sub2_sub3
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:sgpr(s256) = COPY $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7
     %1:sgpr(s128) = COPY $sgpr8_sgpr9_sgpr10_sgpr11
     %2:sgpr(s256) = G_INSERT %0, %1, 0
@@ -494,10 +534,12 @@ body: |
     liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
 
     ; CHECK-LABEL: name: insert_v_s256_v_s128_32
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2_sub3_sub4
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub1_sub2_sub3_sub4
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:vgpr(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
     %2:vgpr(s256) = G_INSERT %0, %1, 32
@@ -515,10 +557,12 @@ body: |
     liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
 
     ; CHECK-LABEL: name: insert_v_s256_v_s128_64
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub2_sub3_sub4_sub5
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub2_sub3_sub4_sub5
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:vgpr(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
     %2:vgpr(s256) = G_INSERT %0, %1, 64
@@ -536,10 +580,12 @@ body: |
     liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
 
     ; CHECK-LABEL: name: insert_v_s256_v_s128_96
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub3_sub4_sub5_sub6
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub3_sub4_sub5_sub6
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:vgpr(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
     %2:vgpr(s256) = G_INSERT %0, %1, 96
@@ -557,10 +603,12 @@ body: |
     liveins:  $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
 
     ; CHECK-LABEL: name: insert_v_s256_v_s128_128
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
-    ; CHECK: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
-    ; CHECK: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub4_sub5_sub6_sub7
-    ; CHECK: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
+    ; CHECK: liveins: $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7, $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_256 = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:vreg_128 = COPY $vgpr8_vgpr9_vgpr10_vgpr11
+    ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:vreg_256 = INSERT_SUBREG [[COPY]], [[COPY1]], %subreg.sub4_sub5_sub6_sub7
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[INSERT_SUBREG]]
     %0:vgpr(s256) = COPY $vgpr0_vgpr1_vgpr2_vgpr3_vgpr4_vgpr5_vgpr6_vgpr7
     %1:vgpr(s128) = COPY $vgpr8_vgpr9_vgpr10_vgpr11
     %2:vgpr(s256) = G_INSERT %0, %1, 128

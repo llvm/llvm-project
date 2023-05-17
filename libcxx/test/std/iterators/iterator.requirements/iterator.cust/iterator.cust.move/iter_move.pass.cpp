@@ -11,11 +11,11 @@
 // template<class I>
 // unspecified iter_move;
 
-#include <iterator>
-
-#include <array>
 #include <algorithm>
+#include <array>
 #include <cassert>
+#include <iterator>
+#include <type_traits>
 #include <utility>
 
 #include "../unqualified_lookup_wrapper.h"
@@ -49,6 +49,9 @@ public:
 private:
   I base_ = I{};
 };
+
+template <class I>
+iterator_wrapper(I) -> iterator_wrapper<I>;
 
 template <typename It, typename Out>
 constexpr void unqualified_lookup_move(It first_, It last_, Out result_first_, Out result_last_) {

@@ -1,4 +1,4 @@
-; RUN: opt < %s -domfrontier -loop-simplify -domfrontier -verify-dom-info
+; RUN: opt < %s -passes='require<domfrontier>,loop-simplify,require<domfrontier>' -verify-dom-info
 
 
 define void @a() nounwind {

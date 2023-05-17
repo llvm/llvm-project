@@ -5,6 +5,7 @@
 // RUN: %clangxx_hwasan_oldrt -static-libstdc++ %s -mllvm -hwasan-instrument-landing-pads=0 -o %t && not %run %t 2>&1 | FileCheck %s --check-prefix=BAD
 
 // C++ tests on x86_64 require instrumented libc++/libstdc++.
+// RISC-V target doesn't support oldrt
 // REQUIRES: aarch64-target-arch
 
 #include <stdexcept>

@@ -9,8 +9,8 @@ static_library("Inclusions") {
     "//llvm/lib/Support",
   ]
   sources = [
+    "HeaderAnalysis.cpp",
     "HeaderIncludes.cpp",
     "IncludeStyle.cpp",
-    "StandardLibrary.cpp",
   ]
 }

@@ -11,10 +11,10 @@ add_mlir_conversion_library(MLIRArmNeon2dToIntr
   Core
 
   LINK_LIBS PUBLIC
-  MLIRArithmetic
-  MLIRArmNeon
+  MLIRArithDialect
+  MLIRArmNeonDialect
   MLIRPass
   MLIRTransforms
   MLIRIR
-  MLIRVector
+  MLIRVectorDialect
   )

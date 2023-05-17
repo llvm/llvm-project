@@ -28,14 +28,17 @@ def testParseSuccess():
 
 # Verify parse error.
 # CHECK-LABEL: TEST: testParseError
-# CHECK: testParseError: Unable to parse module assembly (see diagnostics)
+# CHECK: testParseError: <
+# CHECK:   Unable to parse module assembly:
+# CHECK:   error: "-":1:1: expected operation name in quotes
+# CHECK: >
 @run
 def testParseError():
   ctx = Context()
   try:
     module = Module.parse(r"""}SYNTAX ERROR{""", ctx)
-  except ValueError as e:
-    print("testParseError:", e)
+  except MLIRError as e:
+    print(f"testParseError: <{e}>")
   else:
     print("Exception not produced")
 

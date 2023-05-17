@@ -1,4 +1,4 @@
-; RUN: opt < %s -gvn -enable-load-pre -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -enable-load-pre -S | FileCheck %s
 ; RUN: opt < %s -passes="gvn<load-pre>" -enable-load-pre=false -S | FileCheck %s
 ; This testcase assumed we'll PRE the load into %for.cond, but we don't actually
 ; verify that doing so is safe.  If there didn't _happen_ to be a load in
@@ -24,11 +24,11 @@ for.cond.for.end_crit_edge:		; preds = %for.cond
 	br label %for.end
 
 ; CHECK: for.body:
-; CHECK-NEXT: %tmp3 = load i32, i32* @p
+; CHECK-NEXT: %tmp3 = load i32, ptr @p
 for.body:		; preds = %for.cond
-	%tmp3 = load i32, i32* @p		; <i32> [#uses=1]
+	%tmp3 = load i32, ptr @p		; <i32> [#uses=1]
 	%dec = add i32 %tmp3, -1		; <i32> [#uses=2]
-	store i32 %dec, i32* @p
+	store i32 %dec, ptr @p
 	%cmp6 = icmp slt i32 %dec, 0		; <i1> [#uses=1]
 	br i1 %cmp6, label %for.body.for.end_crit_edge, label %for.inc
 
@@ -41,6 +41,6 @@ for.inc:		; preds = %for.body
 	br label %for.cond
 
 for.end:		; preds = %for.body.for.end_crit_edge, %for.cond.for.end_crit_edge
-	%tmp9 = load i32, i32* @p		; <i32> [#uses=1]
+	%tmp9 = load i32, ptr @p		; <i32> [#uses=1]
 	ret i32 %tmp9
 }

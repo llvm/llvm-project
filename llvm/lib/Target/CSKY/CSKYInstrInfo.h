@@ -44,12 +44,14 @@ public:
                            MachineBasicBlock::iterator MI, Register SrcReg,
                            bool IsKill, int FrameIndex,
                            const TargetRegisterClass *RC,
-                           const TargetRegisterInfo *TRI) const override;
+                           const TargetRegisterInfo *TRI,
+                           Register VReg) const override;
 
   void loadRegFromStackSlot(MachineBasicBlock &MBB,
                             MachineBasicBlock::iterator MI, Register DestReg,
                             int FrameIndex, const TargetRegisterClass *RC,
-                            const TargetRegisterInfo *TRI) const override;
+                            const TargetRegisterInfo *TRI,
+                            Register VReg) const override;
 
   void copyPhysReg(MachineBasicBlock &MBB, MachineBasicBlock::iterator MI,
                    const DebugLoc &DL, MCRegister DestReg, MCRegister SrcReg,
@@ -79,7 +81,7 @@ public:
 
   // Materializes the given integer Val into DstReg.
   Register movImm(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
-                  const DebugLoc &DL, int64_t Val,
+                  const DebugLoc &DL, uint64_t Val,
                   MachineInstr::MIFlag Flag = MachineInstr::NoFlags) const;
 };
 

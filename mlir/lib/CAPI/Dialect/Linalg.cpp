@@ -29,9 +29,9 @@ void mlirLinalgFillBuiltinNamedOpRegion(MlirOperation mlirOp) {
 
   SmallVector<Type, 8> argTypes;
   SmallVector<Location, 8> argLocs;
-  for (OpOperand *opOperand : linalgOp.getInputAndOutputOperands()) {
-    argTypes.push_back(getElementTypeOrSelf(opOperand->get().getType()));
-    argLocs.push_back(opOperand->get().getLoc());
+  for (OpOperand &opOperand : linalgOp->getOpOperands()) {
+    argTypes.push_back(getElementTypeOrSelf(opOperand.get().getType()));
+    argLocs.push_back(opOperand.get().getLoc());
   }
 
   ImplicitLocOpBuilder b(op->getLoc(), op->getContext());

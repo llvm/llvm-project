@@ -11,9 +11,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenHwModes.h"
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "InfoByHwMode.h"
+#include "TableGenBackends.h"
 #include "VarLenCodeEmitterGen.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -127,17 +129,8 @@ class DecoderEmitter {
   std::vector<EncodingAndInst> NumberedEncodings;
 
 public:
-  // Defaults preserved here for documentation, even though they aren't
-  // strictly necessary given the way that this is currently being called.
-  DecoderEmitter(RecordKeeper &R, std::string PredicateNamespace,
-                 std::string GPrefix = "if (",
-                 std::string GPostfix = " == MCDisassembler::Fail)",
-                 std::string ROK = "MCDisassembler::Success",
-                 std::string RFail = "MCDisassembler::Fail", std::string L = "")
-      : RK(R), Target(R), PredicateNamespace(std::move(PredicateNamespace)),
-        GuardPrefix(std::move(GPrefix)), GuardPostfix(std::move(GPostfix)),
-        ReturnOK(std::move(ROK)), ReturnFail(std::move(RFail)),
-        Locals(std::move(L)) {}
+  DecoderEmitter(RecordKeeper &R, std::string PredicateNamespace)
+      : RK(R), Target(R), PredicateNamespace(std::move(PredicateNamespace)) {}
 
   // Emit the decoder state machine table.
   void emitTable(formatted_raw_ostream &o, DecoderTable &Table,
@@ -160,9 +153,6 @@ private:
 
 public:
   std::string PredicateNamespace;
-  std::string GuardPrefix, GuardPostfix;
-  std::string ReturnOK, ReturnFail;
-  std::string Locals;
 };
 
 } // end anonymous namespace
@@ -509,6 +499,8 @@ protected:
   // Returns true if predicate matches were emitted, false otherwise.
   bool emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
                           unsigned Opc) const;
+  bool emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
+                             raw_ostream &OS) const;
 
   bool doesOpcodeNeedPredicate(unsigned Opc) const;
   unsigned getPredicateIndex(DecoderTableInfo &TableInfo, StringRef P) const;
@@ -1168,11 +1160,11 @@ void FilterChooser::emitBinaryParser(raw_ostream &o, unsigned &Indentation,
 
   if (Decoder != "") {
     OpHasCompleteDecoder = OpInfo.HasCompleteDecoder;
-    o.indent(Indentation) << Emitter->GuardPrefix << Decoder
-      << "(MI, tmp, Address, Decoder)"
-      << Emitter->GuardPostfix
-      << " { " << (OpHasCompleteDecoder ? "" : "DecodeComplete = false; ")
-      << "return MCDisassembler::Fail; }\n";
+    o.indent(Indentation) << "if (!Check(S, " << Decoder
+                          << "(MI, tmp, Address, Decoder))) { "
+                          << (OpHasCompleteDecoder ? ""
+                                                   : "DecodeComplete = false; ")
+                          << "return MCDisassembler::Fail; }\n";
   } else {
     OpHasCompleteDecoder = true;
     o.indent(Indentation) << "MI.addOperand(MCOperand::createImm(tmp));\n";
@@ -1187,11 +1179,11 @@ void FilterChooser::emitDecoder(raw_ostream &OS, unsigned Indentation,
     // If a custom instruction decoder was specified, use that.
     if (Op.numFields() == 0 && !Op.Decoder.empty()) {
       HasCompleteDecoder = Op.HasCompleteDecoder;
-      OS.indent(Indentation) << Emitter->GuardPrefix << Op.Decoder
-        << "(MI, insn, Address, Decoder)"
-        << Emitter->GuardPostfix
-        << " { " << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
-        << "return MCDisassembler::Fail; }\n";
+      OS.indent(Indentation)
+          << "if (!Check(S, " << Op.Decoder
+          << "(MI, insn, Address, Decoder))) { "
+          << (HasCompleteDecoder ? "" : "DecodeComplete = false; ")
+          << "return MCDisassembler::Fail; }\n";
       break;
     }
 
@@ -1226,6 +1218,40 @@ unsigned FilterChooser::getDecoderIndex(DecoderSet &Decoders,
   return (unsigned)(P - Decoders.begin());
 }
 
+// If ParenIfBinOp is true, print a surrounding () if Val uses && or ||.
+bool FilterChooser::emitPredicateMatchAux(const Init &Val, bool ParenIfBinOp,
+                                          raw_ostream &OS) const {
+  if (auto *D = dyn_cast<DefInit>(&Val)) {
+    if (!D->getDef()->isSubClassOf("SubtargetFeature"))
+      return true;
+    OS << "Bits[" << Emitter->PredicateNamespace << "::" << D->getAsString()
+       << "]";
+    return false;
+  }
+  if (auto *D = dyn_cast<DagInit>(&Val)) {
+    std::string Op = D->getOperator()->getAsString();
+    if (Op == "not" && D->getNumArgs() == 1) {
+      OS << '!';
+      return emitPredicateMatchAux(*D->getArg(0), true, OS);
+    }
+    if ((Op == "any_of" || Op == "all_of") && D->getNumArgs() > 0) {
+      bool Paren = D->getNumArgs() > 1 && std::exchange(ParenIfBinOp, true);
+      if (Paren)
+        OS << '(';
+      ListSeparator LS(Op == "any_of" ? " || " : " && ");
+      for (auto *Arg : D->getArgs()) {
+        OS << LS;
+        if (emitPredicateMatchAux(*Arg, ParenIfBinOp, OS))
+          return true;
+      }
+      if (Paren)
+        OS << ')';
+      return false;
+    }
+  }
+  return true;
+}
+
 bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
                                        unsigned Opc) const {
   ListInit *Predicates =
@@ -1239,40 +1265,11 @@ bool FilterChooser::emitPredicateMatch(raw_ostream &o, unsigned &Indentation,
     if (!isa<DagInit>(Pred->getValue("AssemblerCondDag")->getValue()))
       continue;
 
-    const DagInit *D = Pred->getValueAsDag("AssemblerCondDag");
-    std::string CombineType = D->getOperator()->getAsString();
-    if (CombineType != "any_of" && CombineType != "all_of")
-      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-    if (D->getNumArgs() == 0)
-      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-    bool IsOr = CombineType == "any_of";
-
     if (!IsFirstEmission)
       o << " && ";
-
-    if (IsOr)
-      o << "(";
-
-    ListSeparator LS(IsOr ? " || " : " && ");
-    for (auto *Arg : D->getArgs()) {
-      o << LS;
-      if (auto *NotArg = dyn_cast<DagInit>(Arg)) {
-        if (NotArg->getOperator()->getAsString() != "not" ||
-            NotArg->getNumArgs() != 1)
-          PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-        Arg = NotArg->getArg(0);
-        o << "!";
-      }
-      if (!isa<DefInit>(Arg) ||
-          !cast<DefInit>(Arg)->getDef()->isSubClassOf("SubtargetFeature"))
-        PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
-      o << "Bits[" << Emitter->PredicateNamespace << "::" << Arg->getAsString()
-        << "]";
-    }
-
-    if (IsOr)
-      o << ")";
-
+    if (emitPredicateMatchAux(*Pred->getValueAsDag("AssemblerCondDag"),
+                              Predicates->size() > 1, o))
+      PrintFatalError(Pred->getLoc(), "Invalid AssemblerCondDag!");
     IsFirstEmission = false;
   }
   return !Predicates->empty();
@@ -1898,6 +1895,8 @@ void parseVarLenInstOperand(const Record &Def,
               OpName);
       unsigned OpIdx = CGI.Operands.getFlattenedOperandNumber(OpSubOpPair);
       Operands[OpIdx].addField(CurrBitPos, EncodingSegment.BitWidth, Offset);
+      if (!EncodingSegment.CustomDecoder.empty())
+        Operands[OpIdx].Decoder = EncodingSegment.CustomDecoder.str();
 
       int TiedReg = TiedTo[OpSubOpPair.first];
       if (TiedReg != -1) {
@@ -1908,6 +1907,55 @@ void parseVarLenInstOperand(const Record &Def,
     }
 
     CurrBitPos += EncodingSegment.BitWidth;
+  }
+}
+
+static void debugDumpRecord(const Record &Rec) {
+  // Dump the record, so we can see what's going on...
+  std::string E;
+  raw_string_ostream S(E);
+  S << "Dumping record for previous error:\n";
+  S << Rec;
+  PrintNote(E);
+}
+
+/// For an operand field named OpName: populate OpInfo.InitValue with the
+/// constant-valued bit values, and OpInfo.Fields with the ranges of bits to
+/// insert from the decoded instruction.
+static void addOneOperandFields(const Record &EncodingDef, const BitsInit &Bits,
+                                std::map<std::string, std::string> &TiedNames,
+                                StringRef OpName, OperandInfo &OpInfo) {
+  // Some bits of the operand may be required to be 1 depending on the
+  // instruction's encoding. Collect those bits.
+  if (const RecordVal *EncodedValue = EncodingDef.getValue(OpName))
+    if (const BitsInit *OpBits = dyn_cast<BitsInit>(EncodedValue->getValue()))
+      for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
+        if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
+          if (OpBit->getValue())
+            OpInfo.InitValue |= 1ULL << I;
+
+  for (unsigned I = 0, J = 0; I != Bits.getNumBits(); I = J) {
+    VarInit *Var;
+    unsigned Offset = 0;
+    for (; J != Bits.getNumBits(); ++J) {
+      VarBitInit *BJ = dyn_cast<VarBitInit>(Bits.getBit(J));
+      if (BJ) {
+        Var = dyn_cast<VarInit>(BJ->getBitVar());
+        if (I == J)
+          Offset = BJ->getBitNum();
+        else if (BJ->getBitNum() != Offset + J - I)
+          break;
+      } else {
+        Var = dyn_cast<VarInit>(Bits.getBit(J));
+      }
+      if (!Var || (Var->getName() != OpName &&
+                   Var->getName() != TiedNames[std::string(OpName)]))
+        break;
+    }
+    if (I == J)
+      ++J;
+    else
+      OpInfo.addField(I, J - I, Offset);
   }
 }
 
@@ -1959,267 +2007,107 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
   // operands that are not explicitly represented in the encoding.
   std::map<std::string, std::string> TiedNames;
   for (unsigned i = 0; i < CGI.Operands.size(); ++i) {
-    int tiedTo = CGI.Operands[i].getTiedRegister();
-    if (tiedTo != -1) {
-      std::pair<unsigned, unsigned> SO =
-        CGI.Operands.getSubOperandNumber(tiedTo);
-      TiedNames[std::string(InOutOperands[i].second)] =
-          std::string(InOutOperands[SO.first].second);
-      TiedNames[std::string(InOutOperands[SO.first].second)] =
-          std::string(InOutOperands[i].second);
+    auto &Op = CGI.Operands[i];
+    for (unsigned j = 0; j < Op.Constraints.size(); ++j) {
+      const CGIOperandList::ConstraintInfo &CI = Op.Constraints[j];
+      if (CI.isTied()) {
+        int tiedTo = CI.getTiedOperand();
+        std::pair<unsigned, unsigned> SO =
+            CGI.Operands.getSubOperandNumber(tiedTo);
+        std::string TiedName = CGI.Operands[SO.first].SubOpNames[SO.second];
+        if (TiedName.empty())
+          TiedName = CGI.Operands[SO.first].Name;
+        std::string MyName = Op.SubOpNames[j];
+        if (MyName.empty())
+          MyName = Op.Name;
+
+        TiedNames[MyName] = TiedName;
+        TiedNames[TiedName] = MyName;
+      }
     }
   }
 
   if (IsVarLenInst) {
     parseVarLenInstOperand(EncodingDef, InsnOperands, CGI);
   } else {
-    std::map<std::string, std::vector<OperandInfo>> NumberedInsnOperands;
-    std::set<std::string> NumberedInsnOperandsNoTie;
-    if (Target.getInstructionSet()->getValueAsBit(
-            "decodePositionallyEncodedOperands")) {
-      const std::vector<RecordVal> &Vals = Def.getValues();
-      unsigned NumberedOp = 0;
-
-      std::set<unsigned> NamedOpIndices;
-      if (Target.getInstructionSet()->getValueAsBit(
-              "noNamedPositionallyEncodedOperands"))
-        // Collect the set of operand indices that might correspond to named
-        // operand, and skip these when assigning operands based on position.
-        for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
-          unsigned OpIdx;
-          if (!CGI.Operands.hasOperandNamed(Vals[i].getName(), OpIdx))
-            continue;
-
-          NamedOpIndices.insert(OpIdx);
-        }
-
-      for (unsigned i = 0, e = Vals.size(); i != e; ++i) {
-        // Ignore fixed fields in the record, we're looking for values like:
-        //    bits<5> RST = { ?, ?, ?, ?, ? };
-        if (Vals[i].isNonconcreteOK() || Vals[i].getValue()->isComplete())
-          continue;
-
-        // Determine if Vals[i] actually contributes to the Inst encoding.
-        unsigned bi = 0;
-        for (; bi < Bits.getNumBits(); ++bi) {
-          VarInit *Var = nullptr;
-          VarBitInit *BI = dyn_cast<VarBitInit>(Bits.getBit(bi));
-          if (BI)
-            Var = dyn_cast<VarInit>(BI->getBitVar());
-          else
-            Var = dyn_cast<VarInit>(Bits.getBit(bi));
-
-          if (Var && Var->getName() == Vals[i].getName())
-            break;
-        }
-
-        if (bi == Bits.getNumBits())
-          continue;
-
-        // Skip variables that correspond to explicitly-named operands.
-        unsigned OpIdx;
-        if (CGI.Operands.hasOperandNamed(Vals[i].getName(), OpIdx))
-          continue;
-
-        // Get the bit range for this operand:
-        unsigned bitStart = bi++, bitWidth = 1;
-        for (; bi < Bits.getNumBits(); ++bi) {
-          VarInit *Var = nullptr;
-          VarBitInit *BI = dyn_cast<VarBitInit>(Bits.getBit(bi));
-          if (BI)
-            Var = dyn_cast<VarInit>(BI->getBitVar());
-          else
-            Var = dyn_cast<VarInit>(Bits.getBit(bi));
-
-          if (!Var)
-            break;
-
-          if (Var->getName() != Vals[i].getName())
-            break;
-
-          ++bitWidth;
-        }
-
-        unsigned NumberOps = CGI.Operands.size();
-        while (NumberedOp < NumberOps &&
-               (CGI.Operands.isFlatOperandNotEmitted(NumberedOp) ||
-                (!NamedOpIndices.empty() &&
-                 NamedOpIndices.count(
-                     CGI.Operands.getSubOperandNumber(NumberedOp).first))))
-          ++NumberedOp;
-
-        OpIdx = NumberedOp++;
-
-        // OpIdx now holds the ordered operand number of Vals[i].
-        std::pair<unsigned, unsigned> SO =
-            CGI.Operands.getSubOperandNumber(OpIdx);
-        const std::string &Name = CGI.Operands[SO.first].Name;
-
-        LLVM_DEBUG(dbgs() << "Numbered operand mapping for " << Def.getName()
-                          << ": " << Name << "(" << SO.first << ", "
-                          << SO.second << ") => " << Vals[i].getName() << "\n");
-
-        std::string Decoder;
-        Record *TypeRecord = CGI.Operands[SO.first].Rec;
-
-        RecordVal *DecoderString = TypeRecord->getValue("DecoderMethod");
-        StringInit *String =
-            DecoderString ? dyn_cast<StringInit>(DecoderString->getValue())
-                          : nullptr;
-        if (String && String->getValue() != "")
-          Decoder = std::string(String->getValue());
-
-        if (Decoder == "" && CGI.Operands[SO.first].MIOperandInfo &&
-            CGI.Operands[SO.first].MIOperandInfo->getNumArgs()) {
-          Init *Arg = CGI.Operands[SO.first].MIOperandInfo->getArg(SO.second);
-          if (DefInit *DI = cast<DefInit>(Arg))
-            TypeRecord = DI->getDef();
-        }
-
-        bool isReg = false;
-        if (TypeRecord->isSubClassOf("RegisterOperand"))
-          TypeRecord = TypeRecord->getValueAsDef("RegClass");
-        if (TypeRecord->isSubClassOf("RegisterClass")) {
-          Decoder = "Decode" + TypeRecord->getName().str() + "RegisterClass";
-          isReg = true;
-        } else if (TypeRecord->isSubClassOf("PointerLikeRegClass")) {
-          Decoder = "DecodePointerLikeRegClass" +
-                    utostr(TypeRecord->getValueAsInt("RegClassKind"));
-          isReg = true;
-        }
-
-        DecoderString = TypeRecord->getValue("DecoderMethod");
-        String = DecoderString ? dyn_cast<StringInit>(DecoderString->getValue())
-                               : nullptr;
-        if (!isReg && String && String->getValue() != "")
-          Decoder = std::string(String->getValue());
-
-        RecordVal *HasCompleteDecoderVal =
-            TypeRecord->getValue("hasCompleteDecoder");
-        BitInit *HasCompleteDecoderBit =
-            HasCompleteDecoderVal
-                ? dyn_cast<BitInit>(HasCompleteDecoderVal->getValue())
-                : nullptr;
-        bool HasCompleteDecoder =
-            HasCompleteDecoderBit ? HasCompleteDecoderBit->getValue() : true;
-
-        OperandInfo OpInfo(Decoder, HasCompleteDecoder);
-        OpInfo.addField(bitStart, bitWidth, 0);
-
-        NumberedInsnOperands[Name].push_back(OpInfo);
-
-        // FIXME: For complex operands with custom decoders we can't handle tied
-        // sub-operands automatically. Skip those here and assume that this is
-        // fixed up elsewhere.
-        if (CGI.Operands[SO.first].MIOperandInfo &&
-            CGI.Operands[SO.first].MIOperandInfo->getNumArgs() > 1 && String &&
-            String->getValue() != "")
-          NumberedInsnOperandsNoTie.insert(Name);
-      }
-    }
-
     // For each operand, see if we can figure out where it is encoded.
     for (const auto &Op : InOutOperands) {
-      if (!NumberedInsnOperands[std::string(Op.second)].empty()) {
-        llvm::append_range(InsnOperands,
-                           NumberedInsnOperands[std::string(Op.second)]);
-        continue;
-      }
-      if (!NumberedInsnOperands[TiedNames[std::string(Op.second)]].empty()) {
-        if (!NumberedInsnOperandsNoTie.count(
-                TiedNames[std::string(Op.second)])) {
-          // Figure out to which (sub)operand we're tied.
-          unsigned i =
-              CGI.Operands.getOperandNamed(TiedNames[std::string(Op.second)]);
-          int tiedTo = CGI.Operands[i].getTiedRegister();
-          if (tiedTo == -1) {
-            i = CGI.Operands.getOperandNamed(Op.second);
-            tiedTo = CGI.Operands[i].getTiedRegister();
-          }
+      Init *OpInit = Op.first;
+      StringRef OpName = Op.second;
 
-          if (tiedTo != -1) {
-            std::pair<unsigned, unsigned> SO =
-                CGI.Operands.getSubOperandNumber(tiedTo);
+      // We're ready to find the instruction encoding locations for this operand.
 
-            InsnOperands.push_back(
-                NumberedInsnOperands[TiedNames[std::string(Op.second)]]
-                                    [SO.second]);
-          }
-        }
-        continue;
-      }
+      // First, find the operand type ("OpInit"), and sub-op names
+      // ("SubArgDag") if present.
+      DagInit *SubArgDag = dyn_cast<DagInit>(OpInit);
+      if (SubArgDag)
+        OpInit = SubArgDag->getOperator();
+      Record *OpTypeRec = cast<DefInit>(OpInit)->getDef();
+      // Lookup the sub-operands from the operand type record (note that only
+      // Operand subclasses have MIOperandInfo, see CodeGenInstruction.cpp).
+      DagInit *SubOps = OpTypeRec->isSubClassOf("Operand")
+                            ? OpTypeRec->getValueAsDag("MIOperandInfo")
+                            : nullptr;
 
-      // At this point, we can locate the decoder field, but we need to know how
-      // to interpret it.  As a first step, require the target to provide
-      // callbacks for decoding register classes.
+      // Lookup the decoder method and construct a new OperandInfo to hold our result.
+      OperandInfo OpInfo = getOpInfo(OpTypeRec);
 
-      OperandInfo OpInfo = getOpInfo(cast<DefInit>(Op.first)->getDef());
-
-      // Some bits of the operand may be required to be 1 depending on the
-      // instruction's encoding. Collect those bits.
-      if (const RecordVal *EncodedValue = EncodingDef.getValue(Op.second))
-        if (const BitsInit *OpBits =
-                dyn_cast<BitsInit>(EncodedValue->getValue()))
-          for (unsigned I = 0; I < OpBits->getNumBits(); ++I)
-            if (const BitInit *OpBit = dyn_cast<BitInit>(OpBits->getBit(I)))
-              if (OpBit->getValue())
-                OpInfo.InitValue |= 1ULL << I;
-
-      unsigned Base = ~0U;
-      unsigned Width = 0;
-      unsigned Offset = 0;
-
-      for (unsigned bi = 0; bi < Bits.getNumBits(); ++bi) {
-        VarInit *Var = nullptr;
-        VarBitInit *BI = dyn_cast<VarBitInit>(Bits.getBit(bi));
-        if (BI)
-          Var = dyn_cast<VarInit>(BI->getBitVar());
-        else
-          Var = dyn_cast<VarInit>(Bits.getBit(bi));
-
-        if (!Var) {
-          if (Base != ~0U) {
-            OpInfo.addField(Base, Width, Offset);
-            Base = ~0U;
-            Width = 0;
-            Offset = 0;
-          }
+      // If we have named sub-operands...
+      if (SubArgDag) {
+        // Then there should not be a custom decoder specified on the top-level
+        // type.
+        if (!OpInfo.Decoder.empty()) {
+          PrintError(EncodingDef.getLoc(),
+                     "DecoderEmitter: operand \"" + OpName + "\" has type \"" +
+                         OpInit->getAsString() +
+                         "\" with a custom DecoderMethod, but also named "
+                         "sub-operands.");
           continue;
         }
 
-        if ((Var->getName() != Op.second &&
-             Var->getName() != TiedNames[std::string(Op.second)])) {
-          if (Base != ~0U) {
-            OpInfo.addField(Base, Width, Offset);
-            Base = ~0U;
-            Width = 0;
-            Offset = 0;
-          }
-          continue;
-        }
+        // Decode each of the sub-ops separately.
+        assert(SubOps && SubArgDag->getNumArgs() == SubOps->getNumArgs());
+        for (unsigned i = 0; i < SubOps->getNumArgs(); ++i) {
+          StringRef SubOpName = SubArgDag->getArgNameStr(i);
+          OperandInfo SubOpInfo =
+              getOpInfo(cast<DefInit>(SubOps->getArg(i))->getDef());
 
-        if (Base == ~0U) {
-          Base = bi;
-          Width = 1;
-          Offset = BI ? BI->getBitNum() : 0;
-        } else if (BI && BI->getBitNum() != Offset + Width) {
-          OpInfo.addField(Base, Width, Offset);
-          Base = bi;
-          Width = 1;
-          Offset = BI->getBitNum();
-        } else {
-          ++Width;
+          addOneOperandFields(EncodingDef, Bits, TiedNames, SubOpName,
+                              SubOpInfo);
+          InsnOperands.push_back(SubOpInfo);
+        }
+        continue;
+      }
+
+      // Otherwise, if we have an operand with sub-operands, but they aren't
+      // named...
+      if (SubOps && OpInfo.Decoder.empty()) {
+        // If it's a single sub-operand, and no custom decoder, use the decoder
+        // from the one sub-operand.
+        if (SubOps->getNumArgs() == 1)
+          OpInfo = getOpInfo(cast<DefInit>(SubOps->getArg(0))->getDef());
+
+        // If we have multiple sub-ops, there'd better have a custom
+        // decoder. (Otherwise we don't know how to populate them properly...)
+        if (SubOps->getNumArgs() > 1) {
+          PrintError(EncodingDef.getLoc(),
+                     "DecoderEmitter: operand \"" + OpName +
+                         "\" uses MIOperandInfo with multiple ops, but doesn't "
+                         "have a custom decoder!");
+          debugDumpRecord(EncodingDef);
+          continue;
         }
       }
 
-      if (Base != ~0U)
-        OpInfo.addField(Base, Width, Offset);
-
+      addOneOperandFields(EncodingDef, Bits, TiedNames, OpName, OpInfo);
+      // FIXME: it should be an error not to find a definition for a given
+      // operand, rather than just failing to add it to the resulting
+      // instruction! (This is a longstanding bug, which will be addressed in an
+      // upcoming change.)
       if (OpInfo.numFields() > 0)
         InsnOperands.push_back(OpInfo);
     }
   }
-
   Operands[Opc] = InsnOperands;
 
 #if 0
@@ -2247,7 +2135,7 @@ populateInstruction(CodeGenTarget &Target, const Record &EncodingDef,
 // fieldFromInstruction().
 // On Windows we make sure that this function is not inlined when
 // using the VS compiler. It has a bug which causes the function
-// to be optimized out in some circustances. See llvm.org/pr38292
+// to be optimized out in some circumstances. See llvm.org/pr38292
 static void emitFieldFromInstruction(formatted_raw_ostream &OS) {
   OS << "// Helper functions for extracting fields from encoded instructions.\n"
      << "// InsnType must either be integral or an APInt-like object that "
@@ -2513,6 +2401,17 @@ static void emitDecodeInstruction(formatted_raw_ostream &OS,
      << "}\n\n";
 }
 
+// Helper to propagate SoftFail status. Returns false if the status is Fail;
+// callers are expected to early-exit in that condition. (Note, the '&' operator
+// is correct to propagate the values of this enum; see comment on 'enum
+// DecodeStatus'.)
+static void emitCheck(formatted_raw_ostream &OS) {
+  OS << "static bool Check(DecodeStatus &Out, DecodeStatus In) {\n"
+     << "  Out = static_cast<DecodeStatus>(Out & In);\n"
+     << "  return Out != MCDisassembler::Fail;\n"
+     << "}\n\n";
+}
+
 // Emits disassembler code for instruction decoding.
 void DecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
@@ -2529,6 +2428,7 @@ void DecoderEmitter::run(raw_ostream &o) {
 
   emitFieldFromInstruction(OS);
   emitInsertBits(OS);
+  emitCheck(OS);
 
   Target.reverseBitsForLittleEndianEncoding();
 
@@ -2664,7 +2564,6 @@ void DecoderEmitter::run(raw_ostream &o) {
 
     // Print the table to the output stream.
     emitTable(OS, TableInfo.Table, 0, FC.getBitWidth(), Opc.first.first);
-    OS.flush();
   }
 
   // For variable instruction, we emit a instruction length table
@@ -2687,12 +2586,8 @@ void DecoderEmitter::run(raw_ostream &o) {
 namespace llvm {
 
 void EmitDecoder(RecordKeeper &RK, raw_ostream &OS,
-                 const std::string &PredicateNamespace,
-                 const std::string &GPrefix, const std::string &GPostfix,
-                 const std::string &ROK, const std::string &RFail,
-                 const std::string &L) {
-  DecoderEmitter(RK, PredicateNamespace, GPrefix, GPostfix, ROK, RFail, L)
-      .run(OS);
+                 const std::string &PredicateNamespace) {
+  DecoderEmitter(RK, PredicateNamespace).run(OS);
 }
 
 } // end namespace llvm

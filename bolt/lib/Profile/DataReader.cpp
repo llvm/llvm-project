@@ -41,17 +41,6 @@ DumpData("dump-data",
 namespace llvm {
 namespace bolt {
 
-Optional<StringRef> getLTOCommonName(const StringRef Name) {
-  size_t LTOSuffixPos = Name.find(".lto_priv.");
-  if (LTOSuffixPos != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 10);
-  if ((LTOSuffixPos = Name.find(".constprop.")) != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 11);
-  if ((LTOSuffixPos = Name.find(".llvm.")) != StringRef::npos)
-    return Name.substr(0, LTOSuffixPos + 6);
-  return NoneType();
-}
-
 namespace {
 
 /// Return true if the function name can change across compilations.
@@ -95,7 +84,7 @@ void FuncBranchData::appendFrom(const FuncBranchData &FBD, uint64_t Offset) {
       I->To.Offset += Offset;
     }
   }
-  std::stable_sort(Data.begin(), Data.end());
+  llvm::stable_sort(Data);
   ExecutionCount += FBD.ExecutionCount;
   for (auto I = FBD.EntryData.begin(), E = FBD.EntryData.end(); I != E; ++I) {
     assert(I->To.Name == FBD.Name);
@@ -123,7 +112,7 @@ void SampleInfo::print(raw_ostream &OS) const {
 }
 
 uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
-  assert(std::is_sorted(Data.begin(), Data.end()));
+  assert(llvm::is_sorted(Data));
   struct Compare {
     bool operator()(const SampleInfo &SI, const uint64_t Val) const {
       return SI.Loc.Offset < Val;
@@ -133,8 +122,8 @@ uint64_t FuncSampleData::getSamples(uint64_t Start, uint64_t End) const {
     }
   };
   uint64_t Result = 0;
-  for (auto I = std::lower_bound(Data.begin(), Data.end(), Start, Compare()),
-            E = std::lower_bound(Data.begin(), Data.end(), End, Compare());
+  for (auto I = llvm::lower_bound(Data, Start, Compare()),
+            E = llvm::lower_bound(Data, End, Compare());
        I != E; ++I)
     Result += I->Hits;
   return Result;
@@ -328,9 +317,11 @@ Error DataReader::readProfile(BinaryContext &BC) {
   }
 
   uint64_t NumUnused = 0;
-  for (const StringMapEntry<FuncBranchData> &FuncData : NamesToBranches)
-    if (!FuncData.getValue().Used)
+  for (const auto &KV : NamesToBranches) {
+    const FuncBranchData &FBD = KV.second;
+    if (!FBD.Used)
       ++NumUnused;
+  }
   BC.setNumUnusedProfiledObjects(NumUnused);
 
   return Error::success();
@@ -588,21 +579,21 @@ void DataReader::readSampleData(BinaryFunction &BF) {
   }
   uint64_t LastOffset = BF.getSize();
   uint64_t TotalEntryCount = 0;
-  for (auto I = BF.BasicBlockOffsets.rbegin(), E = BF.BasicBlockOffsets.rend();
-       I != E; ++I) {
-    uint64_t CurOffset = I->first;
+  for (BinaryFunction::BasicBlockOffset &BBOffset :
+       llvm::reverse(BF.BasicBlockOffsets)) {
+    uint64_t CurOffset = BBOffset.first;
     // Always work with samples multiplied by 1000 to avoid losing them if we
     // later need to normalize numbers
     uint64_t NumSamples =
         SampleDataOrErr->getSamples(CurOffset, LastOffset) * 1000;
-    if (NormalizeByInsnCount && I->second->getNumNonPseudos()) {
-      NumSamples /= I->second->getNumNonPseudos();
+    if (NormalizeByInsnCount && BBOffset.second->getNumNonPseudos()) {
+      NumSamples /= BBOffset.second->getNumNonPseudos();
     } else if (NormalizeByCalls) {
-      uint32_t NumCalls = I->second->getNumCalls();
+      uint32_t NumCalls = BBOffset.second->getNumCalls();
       NumSamples /= NumCalls + 1;
     }
-    I->second->setExecutionCount(NumSamples);
-    if (I->second->isEntryPoint())
+    BBOffset.second->setExecutionCount(NumSamples);
+    if (BBOffset.second->isEntryPoint())
       TotalEntryCount += NumSamples;
     LastOffset = CurOffset;
   }
@@ -674,7 +665,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
   BinaryContext &BC = BF.getBinaryContext();
 
   BinaryBasicBlock *FromBB = BF.getBasicBlockContainingOffset(From);
-  BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
+  const BinaryBasicBlock *ToBB = BF.getBasicBlockContainingOffset(To);
 
   if (!FromBB || !ToBB) {
     LLVM_DEBUG(dbgs() << "failed to get block for recorded branch\n");
@@ -703,7 +694,7 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
   if (!OffsetMatches) {
     // Skip the nops to support old .fdata
     uint64_t Offset = ToBB->getOffset();
-    for (MCInst &Instr : *ToBB) {
+    for (const MCInst &Instr : *ToBB) {
       if (!BC.MIB->isNoop(Instr))
         break;
 
@@ -737,9 +728,10 @@ bool DataReader::recordBranch(BinaryFunction &BF, uint64_t From, uint64_t To,
     }
 
     // The real destination is the layout successor of the detected ToBB.
-    if (ToBB == BF.BasicBlocksLayout.back())
+    if (ToBB == BF.getLayout().block_back())
       return false;
-    BinaryBasicBlock *NextBB = BF.BasicBlocksLayout[ToBB->getIndex() + 1];
+    const BinaryBasicBlock *NextBB =
+        BF.getLayout().getBlock(ToBB->getIndex() + 1);
     assert((NextBB && NextBB->getOffset() > ToBB->getOffset()) && "bad layout");
     ToBB = NextBB;
   }
@@ -866,7 +858,7 @@ ErrorOr<StringRef> DataReader::parseString(char EndChar, bool EndNl) {
       break;
 
     StringEnd += 2;
-  } while (1);
+  } while (true);
 
   StringRef Str = ParsingBuf.substr(0, StringEnd);
 
@@ -1126,8 +1118,8 @@ std::error_code DataReader::parseInNoLBRMode() {
     if (!SI.Loc.IsSymbol)
       continue;
 
-    StringMapIterator<FuncSampleData> I = GetOrCreateFuncEntry(SI.Loc.Name);
-    I->getValue().Data.emplace_back(std::move(SI));
+    auto I = GetOrCreateFuncEntry(SI.Loc.Name);
+    I->second.Data.emplace_back(std::move(SI));
   }
 
   while (hasMemData()) {
@@ -1141,17 +1133,15 @@ std::error_code DataReader::parseInNoLBRMode() {
     if (!MI.Offset.IsSymbol)
       continue;
 
-    StringMapIterator<FuncMemData> I = GetOrCreateFuncMemEntry(MI.Offset.Name);
-    I->getValue().Data.emplace_back(std::move(MI));
+    auto I = GetOrCreateFuncMemEntry(MI.Offset.Name);
+    I->second.Data.emplace_back(std::move(MI));
   }
 
-  for (StringMapEntry<FuncSampleData> &FuncSamples : NamesToSamples)
-    std::stable_sort(FuncSamples.second.Data.begin(),
-                     FuncSamples.second.Data.end());
+  for (auto &FuncSamples : NamesToSamples)
+    llvm::stable_sort(FuncSamples.second.Data);
 
-  for (StringMapEntry<FuncMemData> &MemEvents : NamesToMemEvents)
-    std::stable_sort(MemEvents.second.Data.begin(),
-                     MemEvents.second.Data.end());
+  for (auto &MemEvents : NamesToMemEvents)
+    llvm::stable_sort(MemEvents.second.Data);
 
   return std::error_code();
 }
@@ -1211,15 +1201,15 @@ std::error_code DataReader::parse() {
     if (!BI.From.IsSymbol && !BI.To.IsSymbol)
       continue;
 
-    StringMapIterator<FuncBranchData> I = GetOrCreateFuncEntry(BI.From.Name);
-    I->getValue().Data.emplace_back(std::move(BI));
+    auto I = GetOrCreateFuncEntry(BI.From.Name);
+    I->second.Data.emplace_back(std::move(BI));
 
     // Add entry data for branches to another function or branches
     // to entry points (including recursive calls)
     if (BI.To.IsSymbol &&
         (!BI.From.Name.equals(BI.To.Name) || BI.To.Offset == 0)) {
       I = GetOrCreateFuncEntry(BI.To.Name);
-      I->getValue().EntryData.emplace_back(std::move(BI));
+      I->second.EntryData.emplace_back(std::move(BI));
     }
 
     // If destination is the function start - update execution count.
@@ -1227,7 +1217,7 @@ std::error_code DataReader::parse() {
     //     branches to the function start.
     if (BI.To.IsSymbol && BI.To.Offset == 0) {
       I = GetOrCreateFuncEntry(BI.To.Name);
-      I->getValue().ExecutionCount += BI.Branches;
+      I->second.ExecutionCount += BI.Branches;
     }
   }
 
@@ -1242,99 +1232,95 @@ std::error_code DataReader::parse() {
     if (!MI.Offset.IsSymbol)
       continue;
 
-    StringMapIterator<FuncMemData> I = GetOrCreateFuncMemEntry(MI.Offset.Name);
-    I->getValue().Data.emplace_back(std::move(MI));
+    auto I = GetOrCreateFuncMemEntry(MI.Offset.Name);
+    I->second.Data.emplace_back(std::move(MI));
   }
 
-  for (StringMapEntry<FuncBranchData> &FuncBranches : NamesToBranches)
-    std::stable_sort(FuncBranches.second.Data.begin(),
-                     FuncBranches.second.Data.end());
+  for (auto &FuncBranches : NamesToBranches)
+    llvm::stable_sort(FuncBranches.second.Data);
 
-  for (StringMapEntry<FuncMemData> &MemEvents : NamesToMemEvents)
-    std::stable_sort(MemEvents.second.Data.begin(),
-                     MemEvents.second.Data.end());
+  for (auto &MemEvents : NamesToMemEvents)
+    llvm::stable_sort(MemEvents.second.Data);
 
   return std::error_code();
 }
 
 void DataReader::buildLTONameMaps() {
-  for (StringMapEntry<FuncBranchData> &FuncData : NamesToBranches) {
-    const StringRef FuncName = FuncData.getKey();
-    const Optional<StringRef> CommonName = getLTOCommonName(FuncName);
+  for (auto &FuncData : NamesToBranches) {
+    const StringRef FuncName = FuncData.first;
+    const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
-      LTOCommonNameMap[*CommonName].push_back(&FuncData.getValue());
+      LTOCommonNameMap[*CommonName].push_back(&FuncData.second);
   }
 
-  for (StringMapEntry<FuncMemData> &FuncData : NamesToMemEvents) {
-    const StringRef FuncName = FuncData.getKey();
-    const Optional<StringRef> CommonName = getLTOCommonName(FuncName);
+  for (auto &FuncData : NamesToMemEvents) {
+    const StringRef FuncName = FuncData.first;
+    const std::optional<StringRef> CommonName = getLTOCommonName(FuncName);
     if (CommonName)
-      LTOCommonNameMemMap[*CommonName].push_back(&FuncData.getValue());
+      LTOCommonNameMemMap[*CommonName].push_back(&FuncData.second);
   }
 }
 
-namespace {
 template <typename MapTy>
-decltype(MapTy::MapEntryTy::second) *
+static typename MapTy::mapped_type *
 fetchMapEntry(MapTy &Map, const std::vector<MCSymbol *> &Symbols) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
-  for (auto SI = Symbols.rbegin(), SE = Symbols.rend(); SI != SE; ++SI) {
-    auto I = Map.find(normalizeName((*SI)->getName()));
+  for (const MCSymbol *Symbol : llvm::reverse(Symbols)) {
+    auto I = Map.find(normalizeName(Symbol->getName()));
     if (I != Map.end())
-      return &I->getValue();
+      return &I->second;
   }
   return nullptr;
 }
 
 template <typename MapTy>
-decltype(MapTy::MapEntryTy::second) *
+static typename MapTy::mapped_type *
 fetchMapEntry(MapTy &Map, const std::vector<StringRef> &FuncNames) {
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
-  for (auto FI = FuncNames.rbegin(), FE = FuncNames.rend(); FI != FE; ++FI) {
-    auto I = Map.find(normalizeName(*FI));
+  for (StringRef Name : llvm::reverse(FuncNames)) {
+    auto I = Map.find(normalizeName(Name));
     if (I != Map.end())
-      return &I->getValue();
+      return &I->second;
   }
   return nullptr;
 }
 
 template <typename MapTy>
-std::vector<decltype(MapTy::MapEntryTy::second) *> fetchMapEntriesRegex(
-    MapTy &Map,
-    const StringMap<std::vector<decltype(MapTy::MapEntryTy::second) *>>
-        &LTOCommonNameMap,
-    const std::vector<StringRef> &FuncNames) {
-  std::vector<decltype(MapTy::MapEntryTy::second) *> AllData;
+static std::vector<typename MapTy::mapped_type *>
+fetchMapEntriesRegex(MapTy &Map,
+                     const StringMap<std::vector<typename MapTy::mapped_type *>>
+                         &LTOCommonNameMap,
+                     const std::vector<StringRef> &FuncNames) {
+  std::vector<typename MapTy::mapped_type *> AllData;
   // Do a reverse order iteration since the name in profile has a higher chance
   // of matching a name at the end of the list.
-  for (auto FI = FuncNames.rbegin(), FE = FuncNames.rend(); FI != FE; ++FI) {
-    std::string Name = normalizeName(*FI);
-    const Optional<StringRef> LTOCommonName = getLTOCommonName(Name);
+  for (StringRef FuncName : llvm::reverse(FuncNames)) {
+    std::string Name = normalizeName(FuncName);
+    const std::optional<StringRef> LTOCommonName = getLTOCommonName(Name);
     if (LTOCommonName) {
       auto I = LTOCommonNameMap.find(*LTOCommonName);
       if (I != LTOCommonNameMap.end()) {
-        const std::vector<decltype(MapTy::MapEntryTy::second) *> &CommonData =
-            I->getValue();
+        const std::vector<typename MapTy::mapped_type *> &CommonData =
+            I->second;
         AllData.insert(AllData.end(), CommonData.begin(), CommonData.end());
       }
     } else {
       auto I = Map.find(Name);
       if (I != Map.end())
-        return {&I->getValue()};
+        return {&I->second};
     }
   }
   return AllData;
-}
-
 }
 
 bool DataReader::mayHaveProfileData(const BinaryFunction &Function) {
   if (getBranchData(Function) || getMemData(Function))
     return true;
 
-  if (getBranchDataForNames(Function.getNames()) ||
+  if (getFuncSampleData(Function.getNames()) ||
+      getBranchDataForNames(Function.getNames()) ||
       getMemDataForNames(Function.getNames()))
     return true;
 
@@ -1385,8 +1371,8 @@ DataReader::getMemDataForNamesRegex(const std::vector<StringRef> &FuncNames) {
 }
 
 bool DataReader::hasLocalsWithFileName() const {
-  for (const StringMapEntry<FuncBranchData> &Func : NamesToBranches) {
-    const StringRef &FuncName = Func.getKey();
+  for (const auto &Func : NamesToBranches) {
+    const StringRef &FuncName = Func.first;
     if (FuncName.count('/') == 2 && FuncName[0] != '/')
       return true;
   }
@@ -1394,13 +1380,15 @@ bool DataReader::hasLocalsWithFileName() const {
 }
 
 void DataReader::dump() const {
-  for (const StringMapEntry<FuncBranchData> &Func : NamesToBranches) {
-    Diag << Func.getKey() << " branches:\n";
-    for (const BranchInfo &BI : Func.getValue().Data)
+  for (const auto &KV : NamesToBranches) {
+    const StringRef Name = KV.first;
+    const FuncBranchData &FBD = KV.second;
+    Diag << Name << " branches:\n";
+    for (const BranchInfo &BI : FBD.Data)
       Diag << BI.From.Name << " " << BI.From.Offset << " " << BI.To.Name << " "
            << BI.To.Offset << " " << BI.Mispreds << " " << BI.Branches << "\n";
-    Diag << Func.getKey() << " entry points:\n";
-    for (const BranchInfo &BI : Func.getValue().EntryData)
+    Diag << Name << " entry points:\n";
+    for (const BranchInfo &BI : FBD.EntryData)
       Diag << BI.From.Name << " " << BI.From.Offset << " " << BI.To.Name << " "
            << BI.To.Offset << " " << BI.Mispreds << " " << BI.Branches << "\n";
   }
@@ -1409,16 +1397,20 @@ void DataReader::dump() const {
     StringRef Event = I->getKey();
     Diag << "Data was collected with event: " << Event << "\n";
   }
-  for (const StringMapEntry<FuncSampleData> &Func : NamesToSamples) {
-    Diag << Func.getKey() << " samples:\n";
-    for (const SampleInfo &SI : Func.getValue().Data)
+  for (const auto &KV : NamesToSamples) {
+    const StringRef Name = KV.first;
+    const FuncSampleData &FSD = KV.second;
+    Diag << Name << " samples:\n";
+    for (const SampleInfo &SI : FSD.Data)
       Diag << SI.Loc.Name << " " << SI.Loc.Offset << " " << SI.Hits << "\n";
   }
 
-  for (const StringMapEntry<FuncMemData> &Func : NamesToMemEvents) {
-    Diag << "Memory events for " << Func.getValue().Name;
+  for (const auto &KV : NamesToMemEvents) {
+    const StringRef Name = KV.first;
+    const FuncMemData &FMD = KV.second;
+    Diag << "Memory events for " << Name;
     Location LastOffset(0);
-    for (const MemInfo &MI : Func.getValue().Data) {
+    for (const MemInfo &MI : FMD.Data) {
       if (MI.Offset == LastOffset)
         Diag << ", " << MI.Addr << "/" << MI.Count;
       else

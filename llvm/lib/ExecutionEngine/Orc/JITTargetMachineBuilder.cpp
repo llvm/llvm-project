@@ -9,8 +9,8 @@
 #include "llvm/ExecutionEngine/Orc/JITTargetMachineBuilder.h"
 
 #include "llvm/MC/TargetRegistry.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 namespace llvm {
 namespace orc {
@@ -18,7 +18,6 @@ namespace orc {
 JITTargetMachineBuilder::JITTargetMachineBuilder(Triple TT)
     : TT(std::move(TT)) {
   Options.EmulatedTLS = true;
-  Options.ExplicitEmulatedTLS = true;
   Options.UseInitArray = true;
 }
 
@@ -47,6 +46,10 @@ JITTargetMachineBuilder::createTargetMachine() {
   auto *TheTarget = TargetRegistry::lookupTarget(TT.getTriple(), ErrMsg);
   if (!TheTarget)
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
+
+  if (!TheTarget->hasJIT())
+    return make_error<StringError>("Target has no JIT support",
+                                   inconvertibleErrorCode());
 
   auto *TM =
       TheTarget->createTargetMachine(TT.getTriple(), CPU, Features.getString(),

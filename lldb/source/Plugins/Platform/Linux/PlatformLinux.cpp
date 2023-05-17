@@ -123,7 +123,7 @@ PlatformLinux::PlatformLinux(bool is_host)
         {llvm::Triple::x86_64, llvm::Triple::x86, llvm::Triple::arm,
          llvm::Triple::aarch64, llvm::Triple::mips64, llvm::Triple::mips64,
          llvm::Triple::hexagon, llvm::Triple::mips, llvm::Triple::mips64el,
-         llvm::Triple::mipsel, llvm::Triple::systemz},
+         llvm::Triple::mipsel, llvm::Triple::msp430, llvm::Triple::systemz},
         llvm::Triple::Linux);
   }
 }
@@ -312,9 +312,12 @@ MmapArgList PlatformLinux::GetMmapArgumentList(const ArchSpec &arch,
 }
 
 CompilerType PlatformLinux::GetSiginfoType(const llvm::Triple &triple) {
-  if (!m_type_system_up)
-    m_type_system_up.reset(new TypeSystemClang("siginfo", triple));
-  TypeSystemClang *ast = m_type_system_up.get();
+  {
+    std::lock_guard<std::mutex> guard(m_mutex);
+    if (!m_type_system)
+      m_type_system = std::make_shared<TypeSystemClang>("siginfo", triple);
+  }
+  TypeSystemClang *ast = m_type_system.get();
 
   bool si_errno_then_code = true;
 

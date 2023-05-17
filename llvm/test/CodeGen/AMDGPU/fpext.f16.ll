@@ -8,12 +8,12 @@
 ; GCN: buffer_store_dword v[[R_F32]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = fpext half %a.val to float
-  store float %r.val, float addrspace(1)* %r
+  store float %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -24,12 +24,12 @@ entry:
 ; GCN: buffer_store_dwordx2 v[[[R_F64_0]]:[[R_F64_1]]]
 ; GCN: s_endpgm
 define amdgpu_kernel void @fpext_f16_to_f64(
-    double addrspace(1)* %r,
-    half addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %r.val = fpext half %a.val to double
-  store double %r.val, double addrspace(1)* %r
+  store double %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -43,12 +43,12 @@ entry:
 ; GCN: s_endpgm
 
 define amdgpu_kernel void @fpext_v2f16_to_v2f32(
-    <2 x float> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) #0 {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) #0 {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = fpext <2 x half> %a.val to <2 x float>
-  store <2 x float> %r.val, <2 x float> addrspace(1)* %r
+  store <2 x float> %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -65,23 +65,23 @@ entry:
 ; GCN: s_endpgm
 
 define amdgpu_kernel void @fpext_v2f16_to_v2f64(
-    <2 x double> addrspace(1)* %r,
-    <2 x half> addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load <2 x half>, <2 x half> addrspace(1)* %a
+  %a.val = load <2 x half>, ptr addrspace(1) %a
   %r.val = fpext <2 x half> %a.val to <2 x double>
-  store <2 x double> %r.val, <2 x double> addrspace(1)* %r
+  store <2 x double> %r.val, ptr addrspace(1) %r
   ret void
 }
 
 ; GCN-LABEL: {{^}}s_fneg_fpext_f16_to_f32:
 ; GCN: v_cvt_f32_f16_e32 v{{[0-9]+}}, s{{[0-9]+}}
-define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(float addrspace(1)* %r, i32 %a) {
+define amdgpu_kernel void @s_fneg_fpext_f16_to_f32(ptr addrspace(1) %r, i32 %a) {
 entry:
   %a.trunc = trunc i32 %a to i16
   %a.val = bitcast i16 %a.trunc to half
   %r.val = fpext half %a.val to float
-  store float %r.val, float addrspace(1)* %r
+  store float %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -89,13 +89,13 @@ entry:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN: v_cvt_f32_f16_e64 v{{[0-9]+}}, -[[A]]
 define amdgpu_kernel void @fneg_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.neg = fsub half -0.0, %a.val
   %r.val = fpext half %a.neg to float
-  store float %r.val, float addrspace(1)* %r
+  store float %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -103,13 +103,13 @@ entry:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN: v_cvt_f32_f16_e64 v{{[0-9]+}}, |[[A]]|
 define amdgpu_kernel void @fabs_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.fabs = call half @llvm.fabs.f16(half %a.val)
   %r.val = fpext half %a.fabs to float
-  store float %r.val, float addrspace(1)* %r
+  store float %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -117,14 +117,14 @@ entry:
 ; GCN: {{buffer|flat}}_load_ushort [[A:v[0-9]+]]
 ; GCN: v_cvt_f32_f16_e64 v{{[0-9]+}}, -|[[A]]|
 define amdgpu_kernel void @fneg_fabs_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.fabs = call half @llvm.fabs.f16(half %a.val)
   %a.fneg.fabs = fsub half -0.0, %a.fabs
   %r.val = fpext half %a.fneg.fabs to float
-  store float %r.val, float addrspace(1)* %r
+  store float %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -139,14 +139,14 @@ entry:
 ; GCN: store_dword [[CVT]]
 ; GCN: store_short [[XOR]]
 define amdgpu_kernel void @fneg_multi_use_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.neg = fsub half -0.0, %a.val
   %r.val = fpext half %a.neg to float
-  store volatile float %r.val, float addrspace(1)* %r
-  store volatile half %a.neg, half addrspace(1)* undef
+  store volatile float %r.val, ptr addrspace(1) %r
+  store volatile half %a.neg, ptr addrspace(1) undef
   ret void
 }
 
@@ -163,15 +163,15 @@ entry:
 ; GCN: buffer_store_dword [[CVTA_NEG]]
 ; GCN: buffer_store_short [[MUL]]
 define amdgpu_kernel void @fneg_multi_foldable_use_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.neg = fsub half -0.0, %a.val
   %r.val = fpext half %a.neg to float
   %mul = fmul half %a.neg, %a.val
-  store volatile float %r.val, float addrspace(1)* %r
-  store volatile half %mul, half addrspace(1)* undef
+  store volatile float %r.val, ptr addrspace(1) %r
+  store volatile half %mul, ptr addrspace(1) undef
   ret void
 }
 
@@ -185,14 +185,14 @@ entry:
 ; GCN: store_dword [[CVT]]
 ; GCN: store_short [[XOR]]
 define amdgpu_kernel void @fabs_multi_use_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.fabs = call half @llvm.fabs.f16(half %a.val)
   %r.val = fpext half %a.fabs to float
-  store volatile float %r.val, float addrspace(1)* %r
-  store volatile half %a.fabs, half addrspace(1)* undef
+  store volatile float %r.val, ptr addrspace(1) %r
+  store volatile half %a.fabs, ptr addrspace(1) undef
   ret void
 }
 
@@ -209,15 +209,15 @@ entry:
 ; GCN: buffer_store_dword [[ABS_A]]
 ; GCN: buffer_store_short [[MUL]]
 define amdgpu_kernel void @fabs_multi_foldable_use_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.fabs = call half @llvm.fabs.f16(half %a.val)
   %r.val = fpext half %a.fabs to float
   %mul = fmul half %a.fabs, %a.val
-  store volatile float %r.val, float addrspace(1)* %r
-  store volatile half %mul, half addrspace(1)* undef
+  store volatile float %r.val, ptr addrspace(1) %r
+  store volatile half %mul, ptr addrspace(1) undef
   ret void
 }
 
@@ -231,15 +231,15 @@ entry:
 ; GCN: buffer_store_dword [[CVT]]
 ; GCN: buffer_store_short [[OR]]
 define amdgpu_kernel void @fabs_fneg_multi_use_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.fabs = call half @llvm.fabs.f16(half %a.val)
   %a.fneg.fabs = fsub half -0.0, %a.fabs
   %r.val = fpext half %a.fneg.fabs to float
-  store volatile float %r.val, float addrspace(1)* %r
-  store volatile half %a.fneg.fabs, half addrspace(1)* undef
+  store volatile float %r.val, ptr addrspace(1) %r
+  store volatile half %a.fneg.fabs, ptr addrspace(1) undef
   ret void
 }
 
@@ -256,16 +256,16 @@ entry:
 ; GCN: buffer_store_dword [[FABS_FNEG]]
 ; GCN: buffer_store_short [[MUL]]
 define amdgpu_kernel void @fabs_fneg_multi_foldable_use_fpext_f16_to_f32(
-    float addrspace(1)* %r,
-    half addrspace(1)* %a) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a) {
 entry:
-  %a.val = load half, half addrspace(1)* %a
+  %a.val = load half, ptr addrspace(1) %a
   %a.fabs = call half @llvm.fabs.f16(half %a.val)
   %a.fneg.fabs = fsub half -0.0, %a.fabs
   %r.val = fpext half %a.fneg.fabs to float
   %mul = fmul half %a.fneg.fabs, %a.val
-  store volatile float %r.val, float addrspace(1)* %r
-  store volatile half %mul, half addrspace(1)* undef
+  store volatile float %r.val, ptr addrspace(1) %r
+  store volatile half %mul, ptr addrspace(1) undef
   ret void
 }
 

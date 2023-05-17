@@ -122,22 +122,22 @@
   ;
   ; RV64-LABEL: rvv_stack_align32:
   ; RV64:       # %bb.0:
-  ; RV64-NEXT:    addi sp, sp, -48
-  ; RV64-NEXT:    sd ra, 40(sp) # 8-byte Folded Spill
-  ; RV64-NEXT:    sd s0, 32(sp) # 8-byte Folded Spill
-  ; RV64-NEXT:    addi s0, sp, 48
+  ; RV64-NEXT:    addi sp, sp, -80
+  ; RV64-NEXT:    sd ra, 72(sp) # 8-byte Folded Spill
+  ; RV64-NEXT:    sd s0, 64(sp) # 8-byte Folded Spill
+  ; RV64-NEXT:    addi s0, sp, 80
   ; RV64-NEXT:    csrr a0, vlenb
   ; RV64-NEXT:    slli a0, a0, 2
   ; RV64-NEXT:    sub sp, sp, a0
   ; RV64-NEXT:    andi sp, sp, -32
-  ; RV64-NEXT:    addi a0, sp, 32
-  ; RV64-NEXT:    addi a1, sp, 8
-  ; RV64-NEXT:    mv a2, sp
+  ; RV64-NEXT:    addi a0, sp, 64
+  ; RV64-NEXT:    addi a1, sp, 40
+  ; RV64-NEXT:    addi a2, sp, 32
   ; RV64-NEXT:    call extern@plt
-  ; RV64-NEXT:    addi sp, s0, -48
-  ; RV64-NEXT:    ld ra, 40(sp) # 8-byte Folded Reload
-  ; RV64-NEXT:    ld s0, 32(sp) # 8-byte Folded Reload
-  ; RV64-NEXT:    addi sp, sp, 48
+  ; RV64-NEXT:    addi sp, s0, -80
+  ; RV64-NEXT:    ld ra, 72(sp) # 8-byte Folded Reload
+  ; RV64-NEXT:    ld s0, 64(sp) # 8-byte Folded Reload
+  ; RV64-NEXT:    addi sp, sp, 80
   ; RV64-NEXT:    ret
     %a = alloca <vscale x 4 x i32>, align 32
     %b = alloca i64

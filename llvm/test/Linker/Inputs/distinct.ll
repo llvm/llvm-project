@@ -4,10 +4,10 @@
 
 !0 = !{}
 !1 = !{!0}
-!2 = !{i32* @global}
+!2 = !{ptr @global}
 !3 = distinct !{}
 !4 = distinct !{!0}
-!5 = distinct !{i32* @global}
+!5 = distinct !{ptr @global}
 !6 = !{!3}
 !7 = !{!4}
 !8 = !{!5}

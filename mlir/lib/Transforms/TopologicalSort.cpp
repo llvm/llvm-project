@@ -6,18 +6,25 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/IR/RegionKindInterface.h"
 #include "mlir/Transforms/TopologicalSortUtils.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_TOPOLOGICALSORT
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
-struct TopologicalSortPass : public TopologicalSortBase<TopologicalSortPass> {
+struct TopologicalSortPass
+    : public impl::TopologicalSortBase<TopologicalSortPass> {
   void runOnOperation() override {
     // Topologically sort the regions of the operation without SSA dominance.
     getOperation()->walk([](RegionKindInterface op) {
-      for (auto &it : llvm::enumerate(op->getRegions())) {
+      for (auto it : llvm::enumerate(op->getRegions())) {
         if (op.hasSSADominance(it.index()))
           continue;
         for (Block &block : it.value())

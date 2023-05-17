@@ -221,13 +221,21 @@ namespace test6 {
 #if __cplusplus >= 201103L
       constexpr
 #endif
-      A::A();
+      A::A()
+#if __cplusplus >= 201703L
+      noexcept
+#endif
+      ;
     friend A::~A();
     friend
 #if __cplusplus >= 201402L
       constexpr
 #endif
-      A &A::operator=(const A&);
+      A &A::operator=(const A&)
+#if __cplusplus >= 201703L
+      noexcept
+#endif
+      ;
   };
 }
 
@@ -246,7 +254,11 @@ namespace test7 {
 #if __cplusplus >= 201103L
       constexpr
 #endif
-      X<int>::X(const X&);
+      X<int>::X(const X&)
+#if __cplusplus >= 201703L
+      noexcept
+#endif
+      ;
 
   private:
     A(); // expected-note 2 {{declared private here}}

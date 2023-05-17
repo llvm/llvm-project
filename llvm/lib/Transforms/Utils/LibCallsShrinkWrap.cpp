@@ -37,36 +37,16 @@
 #include "llvm/IR/InstVisitor.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/MDBuilder.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+
+#include <cmath>
+
 using namespace llvm;
 
 #define DEBUG_TYPE "libcalls-shrinkwrap"
 
 STATISTIC(NumWrappedOneCond, "Number of One-Condition Wrappers Inserted");
 STATISTIC(NumWrappedTwoCond, "Number of Two-Condition Wrappers Inserted");
-
-namespace {
-class LibCallsShrinkWrapLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification, replacement for typeid
-  explicit LibCallsShrinkWrapLegacyPass() : FunctionPass(ID) {
-    initializeLibCallsShrinkWrapLegacyPassPass(
-        *PassRegistry::getPassRegistry());
-  }
-  void getAnalysisUsage(AnalysisUsage &AU) const override;
-  bool runOnFunction(Function &F) override;
-};
-}
-
-char LibCallsShrinkWrapLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LibCallsShrinkWrapLegacyPass, "libcalls-shrinkwrap",
-                      "Conditionally eliminate dead library calls", false,
-                      false)
-INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
-INITIALIZE_PASS_END(LibCallsShrinkWrapLegacyPass, "libcalls-shrinkwrap",
-                    "Conditionally eliminate dead library calls", false, false)
 
 namespace {
 class LibCallsShrinkWrap : public InstVisitor<LibCallsShrinkWrap> {
@@ -493,7 +473,7 @@ void LibCallsShrinkWrap::shrinkWrapCI(CallInst *CI, Value *Cond) {
   assert(SuccBB && "The split block should have a single successor");
   SuccBB->setName("cdce.end");
   CI->removeFromParent();
-  CallBB->getInstList().insert(CallBB->getFirstInsertionPt(), CI);
+  CI->insertInto(CallBB, CallBB->getFirstInsertionPt());
   LLVM_DEBUG(dbgs() << "== Basic Block After ==");
   LLVM_DEBUG(dbgs() << *CallBB->getSinglePredecessor() << *CallBB
                     << *CallBB->getSingleSuccessor() << "\n");
@@ -512,12 +492,6 @@ bool LibCallsShrinkWrap::perform(CallInst *CI) {
   return performCallErrors(CI, Func);
 }
 
-void LibCallsShrinkWrapLegacyPass::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addPreserved<DominatorTreeWrapperPass>();
-  AU.addPreserved<GlobalsAAWrapperPass>();
-  AU.addRequired<TargetLibraryInfoWrapperPass>();
-}
-
 static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
                     DominatorTree *DT) {
   if (F.hasFnAttribute(Attribute::OptimizeForSize))
@@ -531,21 +505,6 @@ static bool runImpl(Function &F, const TargetLibraryInfo &TLI,
   return Changed;
 }
 
-bool LibCallsShrinkWrapLegacyPass::runOnFunction(Function &F) {
-  auto &TLI = getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
-  auto *DTWP = getAnalysisIfAvailable<DominatorTreeWrapperPass>();
-  auto *DT = DTWP ? &DTWP->getDomTree() : nullptr;
-  return runImpl(F, TLI, DT);
-}
-
-namespace llvm {
-char &LibCallsShrinkWrapPassID = LibCallsShrinkWrapLegacyPass::ID;
-
-// Public interface to LibCallsShrinkWrap pass.
-FunctionPass *createLibCallsShrinkWrapPass() {
-  return new LibCallsShrinkWrapLegacyPass();
-}
-
 PreservedAnalyses LibCallsShrinkWrapPass::run(Function &F,
                                               FunctionAnalysisManager &FAM) {
   auto &TLI = FAM.getResult<TargetLibraryAnalysis>(F);
@@ -555,5 +514,4 @@ PreservedAnalyses LibCallsShrinkWrapPass::run(Function &F,
   auto PA = PreservedAnalyses();
   PA.preserve<DominatorTreeAnalysis>();
   return PA;
-}
 }

@@ -15,6 +15,7 @@
 #include "mlir-c/AffineMap.h"
 #include "mlir-c/Bindings/Python/Interop.h"
 #include "mlir-c/IntegerSet.h"
+#include "llvm/ADT/Hashing.h"
 
 namespace py = pybind11;
 using namespace mlir;
@@ -346,7 +347,7 @@ public:
 
 } // namespace
 
-bool PyAffineExpr::operator==(const PyAffineExpr &other) {
+bool PyAffineExpr::operator==(const PyAffineExpr &other) const {
   return mlirAffineExprEqual(affineExpr, other.affineExpr);
 }
 
@@ -385,9 +386,13 @@ public:
                   step),
         affineMap(map) {}
 
-  intptr_t getNumElements() { return mlirAffineMapGetNumResults(affineMap); }
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyAffineMapExprList, PyAffineExpr>;
 
-  PyAffineExpr getElement(intptr_t pos) {
+  intptr_t getRawNumElements() { return mlirAffineMapGetNumResults(affineMap); }
+
+  PyAffineExpr getRawElement(intptr_t pos) {
     return PyAffineExpr(affineMap.getContext(),
                         mlirAffineMapGetResult(affineMap, pos));
   }
@@ -397,12 +402,11 @@ public:
     return PyAffineMapExprList(affineMap, startIndex, length, step);
   }
 
-private:
   PyAffineMap affineMap;
 };
 } // namespace
 
-bool PyAffineMap::operator==(const PyAffineMap &other) {
+bool PyAffineMap::operator==(const PyAffineMap &other) const {
   return mlirAffineMapEqual(affineMap, other.affineMap);
 }
 
@@ -460,9 +464,13 @@ public:
                   step),
         set(set) {}
 
-  intptr_t getNumElements() { return mlirIntegerSetGetNumConstraints(set); }
+private:
+  /// Give the parent CRTP class access to hook implementations below.
+  friend class Sliceable<PyIntegerSetConstraintList, PyIntegerSetConstraint>;
 
-  PyIntegerSetConstraint getElement(intptr_t pos) {
+  intptr_t getRawNumElements() { return mlirIntegerSetGetNumConstraints(set); }
+
+  PyIntegerSetConstraint getRawElement(intptr_t pos) {
     return PyIntegerSetConstraint(set, pos);
   }
 
@@ -471,12 +479,11 @@ public:
     return PyIntegerSetConstraintList(set, startIndex, length, step);
   }
 
-private:
   PyIntegerSet set;
 };
 } // namespace
 
-bool PyIntegerSet::operator==(const PyIntegerSet &other) {
+bool PyIntegerSet::operator==(const PyIntegerSet &other) const {
   return mlirIntegerSetEqual(integerSet, other.integerSet);
 }
 

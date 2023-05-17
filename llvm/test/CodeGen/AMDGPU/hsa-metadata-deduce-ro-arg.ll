@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck %s
 
 ; CHECK:      - Name:            test_ro_arg
 ; CHECK-NEXT:   SymbolName:      'test_ro_arg@kd'
@@ -20,7 +20,7 @@
 ; CHECK-NEXT:   AddrSpaceQual:   Global
 ; CHECK-NEXT:   AccQual:         Default
 
-define amdgpu_kernel void @test_ro_arg(float addrspace(1)* noalias readonly %in, float addrspace(1)* %out)
+define amdgpu_kernel void @test_ro_arg(ptr addrspace(1) noalias readonly %in, ptr addrspace(1) %out)
     !kernel_arg_addr_space !0 !kernel_arg_access_qual !1 !kernel_arg_type !2
     !kernel_arg_base_type !2 !kernel_arg_type_qual !3 {
   ret void
@@ -30,3 +30,6 @@ define amdgpu_kernel void @test_ro_arg(float addrspace(1)* noalias readonly %in,
 !1 = !{!"none", !"none"}
 !2 = !{!"float*", !"float*"}
 !3 = !{!"const restrict", !""}
+
+!llvm.module.flags = !{!99}
+!99 = !{i32 1, !"amdgpu_code_object_version", i32 200}

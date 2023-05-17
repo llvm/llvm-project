@@ -97,12 +97,7 @@ private:
 
   /// Translates the given pointer type.
   Type translate(llvm::PointerType *type) {
-    if (type->isOpaque())
-      return LLVM::LLVMPointerType::get(&context, type->getAddressSpace());
-
-    return LLVM::LLVMPointerType::get(
-        translateType(type->getNonOpaquePointerElementType()),
-        type->getAddressSpace());
+    return LLVM::LLVMPointerType::get(&context, type->getAddressSpace());
   }
 
   /// Translates the given structure type.

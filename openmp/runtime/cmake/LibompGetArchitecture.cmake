@@ -35,7 +35,7 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=arm
     #elif defined(__arm__) || defined(_M_ARM) || defined(_ARM)
       #error ARCHITECTURE=arm
-    #elif defined(__aarch64__)
+    #elif defined(__aarch64__) || defined(_M_ARM64)
       #error ARCHITECTURE=aarch64
     #elif defined(__powerpc64__) && defined(__LITTLE_ENDIAN__)
       #error ARCHITECTURE=ppc64le
@@ -47,6 +47,8 @@ function(libomp_get_architecture return_arch)
       #error ARCHITECTURE=mips
     #elif defined(__riscv) && __riscv_xlen == 64
       #error ARCHITECTURE=riscv64
+    #elif defined(__loongarch__) && __loongarch_grlen == 64
+      #error ARCHITECTURE=loongarch64
     #else
       #error ARCHITECTURE=UnknownArchitecture
     #endif

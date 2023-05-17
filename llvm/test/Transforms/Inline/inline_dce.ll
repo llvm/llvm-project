@@ -1,7 +1,7 @@
-; This checks to ensure that the inline pass deletes functions if they get 
+; This checks to ensure that the inline pass deletes functions if they get
 ; inlined into all of their callers.
 
-; RUN: opt < %s -inline -S | \
+; RUN: opt < %s -passes=inline -S | \
 ; RUN:   not grep @reallysmall
 
 define internal i32 @reallysmall(i32 %A) {

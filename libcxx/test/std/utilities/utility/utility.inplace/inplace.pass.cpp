@@ -29,11 +29,10 @@
 // template <size_t I>
 //   inline constexpr in_place_index_t<I> in_place_index{};
 
-#include <utility>
 #include <cassert>
 #include <memory>
-
-#include "test_macros.h"
+#include <type_traits>
+#include <utility>
 
 template <class Tp, class Up>
 constexpr bool check_tag(Up) {
@@ -62,12 +61,12 @@ int main(int, char**) {
     {
         using T1 = std::in_place_index_t<0>;
         using T2 = std::in_place_index_t<1>;
-        using T3 = std::in_place_index_t<static_cast<size_t>(-1)>;
+        using T3 = std::in_place_index_t<static_cast<std::size_t>(-1)>;
         static_assert(!std::is_same<T1, T2>::value && !std::is_same<T1, T3>::value);
         static_assert(!std::is_same<T2, T3>::value);
         static_assert(check_tag<T1>(std::in_place_index<0>));
         static_assert(check_tag<T2>(std::in_place_index<1>));
-        static_assert(check_tag<T3>(std::in_place_index<static_cast<size_t>(-1)>));
+        static_assert(check_tag<T3>(std::in_place_index<static_cast<std::size_t>(-1)>));
     }
 
   return 0;

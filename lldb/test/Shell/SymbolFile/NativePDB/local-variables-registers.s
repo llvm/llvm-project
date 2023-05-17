@@ -34,39 +34,38 @@
 
 # CHECK:      (lldb) image lookup -a 0x140001000 -v
 # CHECK:          LineEntry: [0x0000000140001000-0x0000000140001003): C:\src\test\a.cpp:10
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "p1", type = "int", valid ranges = [0x0000000140001000-0x0000000140001003), location = DW_OP_reg26 XMM9
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "p2", type = "char", valid ranges = [0x0000000140001000-0x0000000140001006), location = DW_OP_regx 0x3f
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "p1", type = "int", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001003) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "p2", type = "char", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001006) -> DW_OP_regx 0x3f
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001003 -v
 # CHECK:          LineEntry: [0x0000000140001003-0x0000000140001006): C:\src\test\a.cpp:11
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "p2", type = "char", valid ranges = [0x0000000140001000-0x0000000140001006), location = DW_OP_regx 0x3f
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "p2", type = "char", valid ranges = <block>, location = [0x0000000140001000, 0x0000000140001006) -> DW_OP_regx 0x3f
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = <block>, location = [0x0000000140001003, 0x0000000140001006) -> DW_OP_piece 0x4, DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001006 -v
 # CHECK:          LineEntry: [0x0000000140001006-0x0000000140001011): C:\src\test\a.cpp:12
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = [0x0000000140001006-0x0000000140001011), location = DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_regx 0x3f, DW_OP_piece 0x1
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = <block>, location = [0x0000000140001006, 0x0000000140001011) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001011 -v
 # CHECK:          LineEntry: [0x0000000140001011-0x0000000140001015): C:\src\test\a.cpp:15
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = [0x0000000140001011-0x0000000140001017), location = DW_OP_reg26 XMM9
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = [0x0000000140001011-0x0000000140001019), location = DW_OP_reg3 RBX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "argc", type = "int", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001017) -> DW_OP_reg26 XMM9
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001019) -> DW_OP_reg3 RBX
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001017 -v
 # CHECK:          LineEntry: [0x0000000140001017-0x000000014000101e): C:\src\test\a.cpp:17
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = [0x0000000140001011-0x0000000140001019), location = DW_OP_reg3 RBX
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = [0x0000000140001017-0x000000014000101e), location = DW_OP_reg26 XMM9
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "argv", type = "char **", valid ranges = <block>, location = [0x0000000140001011, 0x0000000140001019) -> DW_OP_reg3 RBX
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = <block>, location = [0x0000000140001017, 0x000000014000101e) -> DW_OP_reg26 XMM9
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x140001019 -v
 # CHECK:          LineEntry: [0x0000000140001017-0x000000014000101e): C:\src\test\a.cpp:17
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = [0x0000000140001017-0x000000014000101e), location = DW_OP_reg26 XMM9
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "local", type = "int", valid ranges = <block>, location = [0x0000000140001017, 0x000000014000101e) -> DW_OP_reg26 XMM9
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x14000101e -v
 # CHECK:          LineEntry: [0x000000014000101e-0x0000000140001031): C:\src\test\a.cpp:18
-# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = [0x000000014000101e-0x000000014000102c), location = DW_OP_reg24 XMM7, DW_OP_piece 0x4, DW_OP_piece 0x1
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "s", type = "S", valid ranges = <block>, location = [0x000000014000101e, 0x000000014000102c) -> DW_OP_reg24 XMM7, DW_OP_piece 0x4, DW_OP_piece 0x4
 # CHECK-EMPTY:
 # CHECK:      (lldb) image lookup -a 0x14000102c -v
 # CHECK:          LineEntry: [0x000000014000101e-0x0000000140001031): C:\src\test\a.cpp:18
-# CHECK-EMPTY:
-
 
 	.text
 	.def	 @feat.00;
@@ -153,6 +152,75 @@ main:                                   # @main
 .Ltmp7:
 	add	rsp, 40
 	ret
+# Manually created for testing purpose.
+.L31:
+	.cv_loc	1 1 1000 0                        # a.cpp:1000:0
+	ret
+.L32:
+	ret
+.L33:
+	ret
+.L34:
+	.cv_loc	1 1 1001 0                        # a.cpp:1001:0
+	ret
+.L35:
+	ret
+.L36:
+	ret
+.L37:
+	ret
+.L38:
+	ret
+.L39:
+	ret
+.L3a:
+	ret
+.L3b:
+	.cv_loc	1 1 1002 0                        # a.cpp:1002:0
+	ret
+.L3c:
+	ret
+.L3d:
+	ret
+.L3e:
+	ret
+.L3f:
+	ret
+.L40:
+	ret
+.L41:
+	ret
+.L42:
+	ret
+.L43:
+	ret
+.L44:
+	ret
+.L45:
+	.cv_loc	1 1 1003 0                        # a.cpp:1003:0
+	ret
+.L46:
+	ret
+.L47:
+	ret
+.L48:
+	ret
+.L49:
+	ret
+.L4a:
+	ret
+.L4b:
+	ret
+.L4c:
+	ret
+.L4d:
+	ret
+.L4e:
+	.cv_loc	1 1 1004 0                        # a.cpp:1004:0
+	ret
+.L4f:
+	ret
+.L50:
 .Ltmp8:
 .Lfunc_end1:
 	.seh_endproc
@@ -322,8 +390,172 @@ main:                                   # @main
 	.p2align	2
 .Ltmp38:
 	.cv_def_range	 .Ltmp6 .Ltmp7, subfield_reg, 17, 0
-	.short	2                               # Record length
+ 	.short	.Ltmp101-.Ltmp100
+# Manually created debug info for testing purpose.
+# 1. Test non-overlapped ranges.
+.Ltmp100:
+	.short	4414                            # Record kind: S_LOCAL
+	.long	4109                            # TypeIndex
+	.short	0                               # Flags
+	.asciz	"non_overlapped_ranges"
+	.p2align	2
+.Ltmp101:
+	.cv_def_range	.L31 .L32, reg, 331
+	.cv_def_range	.L32 .L33, reg, 330
+	.cv_def_range	.L33 .L34, reg, 336
+	.short	.Ltmp103-.Ltmp102
+# CHECK:      (lldb) image lookup -a 0x140001031 -v
+# CHECK:          LineEntry: [0x0000000140001031-0x0000000140001034): C:\src\test\a.cpp:1000
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "non_overlapped_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001031, 0x0000000140001032) -> DW_OP_reg3 RBX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001032 -v
+# CHECK:          LineEntry: [0x0000000140001031-0x0000000140001034): C:\src\test\a.cpp:1000
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "non_overlapped_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001032, 0x0000000140001033) -> DW_OP_reg2 RCX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001033 -v
+# CHECK:          LineEntry: [0x0000000140001031-0x0000000140001034): C:\src\test\a.cpp:1000
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "non_overlapped_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001033, 0x0000000140001034) -> DW_OP_reg8 R8
+# CHECK-EMPTY:
+
+# 2. Test overlapped subfield ranges at different offsets.
+.Ltmp102:
+ 	.short	4414                            # Record kind: S_LOCAL
+ 	.long	4109                            # TypeIndex
+ 	.short	0                               # Flags
+ 	.asciz	"overlapped_subfield_ranges"
+ 	.p2align	2
+.Ltmp103:
+ 	.cv_def_range	 .L34 .L36, subfield_reg, 3, 0
+ 	.cv_def_range	 .L35 .L37, subfield_reg, 17, 4
+ 	.cv_def_range	 .L37 .L39, subfield_reg, 18, 4
+ 	.short	.Ltmp105-.Ltmp104
+# CHECK:      (lldb) image lookup -a 0x140001034 -v
+# CHECK:          LineEntry: [0x0000000140001034-0x000000014000103b): C:\src\test\a.cpp:1001
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001034, 0x0000000140001035) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x7
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001035 -v
+# CHECK:          LineEntry: [0x0000000140001034-0x000000014000103b): C:\src\test\a.cpp:1001
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001035, 0x0000000140001036) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001036 -v
+# CHECK:          LineEntry: [0x0000000140001034-0x000000014000103b): C:\src\test\a.cpp:1001
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001036, 0x0000000140001037) -> DW_OP_piece 0x4, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001037 -v
+# CHECK:          LineEntry: [0x0000000140001034-0x000000014000103b): C:\src\test\a.cpp:1001
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_subfield_ranges", type = "S1", valid ranges = <block>, location = [0x0000000140001037, 0x0000000140001039) -> DW_OP_piece 0x4, DW_OP_reg26 XMM9, DW_OP_piece 0x4
+# CHECK-EMPTY:
+
+# 3. Test overlapped ranges for the whole value.
+.Ltmp104:
+	.short	4414                            # Record kind: S_LOCAL
+	.long	4109                            # TypeIndex
+	.short	0                               # Flags
+	.asciz	"overlapped_ranges_2"
+	.p2align	2
+.Ltmp105:
+	.cv_def_range	.L3b .L3d, reg, 331
+	.cv_def_range	.L3c .L3e, reg, 330
+	.cv_def_range	.L3f .L44, reg, 339
+	.cv_def_range   .L41 .L43, reg, 328
+	.short	.Ltmp107-.Ltmp106
+# CHECK:      (lldb) image lookup -a 0x14000103b -v
+# CHECK:          LineEntry: [0x000000014000103b-0x0000000140001045): C:\src\test\a.cpp:1002
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_2", type = "S1", valid ranges = <block>, location = [0x000000014000103b, 0x000000014000103c) -> DW_OP_reg3 RBX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x14000103d -v
+# CHECK:          LineEntry: [0x000000014000103b-0x0000000140001045): C:\src\test\a.cpp:1002
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_2", type = "S1", valid ranges = <block>, location = [0x000000014000103c, 0x000000014000103e) -> DW_OP_reg2 RCX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x14000103f -v
+# CHECK:          LineEntry: [0x000000014000103b-0x0000000140001045): C:\src\test\a.cpp:1002
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_2", type = "S1", valid ranges = <block>, location = [0x000000014000103f, 0x0000000140001041) -> DW_OP_reg11 R11
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001041 -v
+# CHECK:          LineEntry: [0x000000014000103b-0x0000000140001045): C:\src\test\a.cpp:1002
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_2", type = "S1", valid ranges = <block>, location = [0x0000000140001041, 0x0000000140001043) -> DW_OP_reg0 RAX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001043 -v
+# CHECK:          LineEntry: [0x000000014000103b-0x0000000140001045): C:\src\test\a.cpp:1002
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_2", type = "S1", valid ranges = <block>, location = [0x0000000140001043, 0x0000000140001044) -> DW_OP_reg11 R11
+# CHECK-EMPTY:
+
+# 4. Test overlapped ranges for both subfield and whole value.
+.Ltmp106:
+	.short	4414                            # Record kind: S_LOCAL
+	.long	4109                            # TypeIndex
+	.short	0                               # Flags
+	.asciz	"overlapped_ranges_3"
+	.p2align	2
+.Ltmp107:
+	# The following two lines result:
+	# [.L45, .L46) -> value at offset 0 is at reg 3.
+	# [.L46, .L49) -> value at offset 0 is at reg 3 and value at offset 4 is at reg 17.
+	# [.L49, .L4a) -> value at offset 4 is at reg 17.
+	.cv_def_range	.L46 .L4a, subfield_reg, 17, 4
+	.cv_def_range	.L45 .L49, subfield_reg, 3, 0
+	# The following overwrites range [.L47, .L48) and [.L49 .L4a) because whole
+	# value location is preferred over composited value locations.
+	.cv_def_range	.L47 .L48, reg, 331
+	.cv_def_range	.L49 .L4a, reg, 328
+	# For the same reason, reg 330 wins in following example.
+	.cv_def_range   .L4b .L4e, reg, 330
+	.cv_def_range	.L4b .L4d, subfield_reg, 17, 4
+	.cv_def_range	.L4c .L4e, subfield_reg, 3, 0
+ 	.short .Ltmp109-.Ltmp108
+# CHECK:      (lldb) image lookup -a 0x140001045 -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001045, 0x0000000140001046) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x7
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001046 -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001046, 0x0000000140001047) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001047 -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001047, 0x0000000140001048) -> DW_OP_reg3 RBX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001048 -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001048, 0x0000000140001049) -> DW_OP_regx 0x3f, DW_OP_piece 0x1, DW_OP_piece 0x3, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x140001049 -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x0000000140001049, 0x000000014000104a) -> DW_OP_reg0 RAX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x14000104a -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x14000104b -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x000000014000104b, 0x000000014000104e) -> DW_OP_reg2 RCX
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x14000104c -v
+# CHECK:          LineEntry: [0x0000000140001045-0x000000014000104e): C:\src\test\a.cpp:1003
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "overlapped_ranges_3", type = "S1", valid ranges = <block>, location = [0x000000014000104b, 0x000000014000104e) -> DW_OP_reg2 RCX
+# CHECK-EMPTY:
+
+# 5. Simple type with subfield.
+.Ltmp108:
+	.short	4414                            # Record kind: S_LOCAL
+	.long	19                              # TypeIndex
+	.short	0                               # Flags
+	.asciz	"simple_type1"
+	.p2align	2
+.Ltmp109:
+	.cv_def_range	 .L4e .L4f, subfield_reg, 17, 4
+	.cv_def_range	 .L4e .L50, subfield_reg, 18, 0
+	.short 2
 	.short	4431                            # Record kind: S_PROC_ID_END
+# CHECK:      (lldb) image lookup -a 0x14000104e -v
+# CHECK:          LineEntry: [0x000000014000104e-0x0000000140001050): C:\src\test\a.cpp:1004
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "int64_t", valid ranges = <block>, location = [0x000000014000104e, 0x000000014000104f) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_reg24 XMM7, DW_OP_piece 0x4
+# CHECK-EMPTY:
+# CHECK:      (lldb) image lookup -a 0x14000104f -v
+# CHECK:          LineEntry: [0x000000014000104e-0x0000000140001050): C:\src\test\a.cpp:1004
+# CHECK-NEXT:      Variable: id = {{.*}}, name = "simple_type1", type = "int64_t", valid ranges = <block>, location = [0x000000014000104f, 0x0000000140001050) -> DW_OP_reg26 XMM9, DW_OP_piece 0x4, DW_OP_piece 0x4
+# CHECK-EMPTY:
+
 .Ltmp26:
 	.p2align	2
 	.cv_linetable	1, main, .Lfunc_end1
@@ -452,25 +684,38 @@ main:                                   # @main
 	.byte	243
 	.byte	242
 	.byte	241
-	# StringId (0x100C)
-	.short	0x12                            # Record length
-	.short	0x1605                          # Record kind: LF_STRING_ID
-	.long	0x0                             # Id
-	.asciz	"C:\\src\\test"                 # StringData
-	# StringId (0x100D)
-	.short	0xe                             # Record length
-	.short	0x1605                          # Record kind: LF_STRING_ID
-	.long	0x0                             # Id
-	.asciz	"a.cpp"                         # StringData
-	.byte	242
-	.byte	241
+	# Manually created debug info for testing purpose, FieldList (0x100C) and Struct (0x100D)
+	# FieldList (0x100C)
+	.short	0x1a                            # Record length
+	.short	0x1203                          # Record kind: LF_FIELDLIST
+	.short	0x150d                          # Member kind: DataMember ( LF_MEMBER )
+	.short	0x3                             # Attrs: Public
+	.long	0x70                            # Type: char
+	.short	0x0                             # FieldOffset
+	.asciz	"c"                             # Name
+	.short	0x150d                          # Member kind: DataMember ( LF_MEMBER )
+	.short	0x3                             # Attrs: Public
+	.long	0x74                            # Type: int
+	.short	0x4                             # FieldOffset
+	.asciz	"i"                             # Name
+	# Struct (0x100D)
+	.short	0x20                            # Record length
+	.short	0x1505                          # Record kind: LF_STRUCTURE
+	.short	0x2                             # MemberCount
+	.short	0x200                           # Properties ( HasUniqueName (0x200) )
+	.long	0x100c                          # FieldList: <field list>
+	.long	0x0                             # DerivedFrom
+	.long	0x0                             # VShape
+	.short	0x8                             # SizeOf
+	.asciz	"S1"                            # Name
+	.asciz	".?AUS1@@"                      # LinkageName
 	# BuildInfo (0x100E)
 	.short	0x1a                            # Record length
 	.short	0x1603                          # Record kind: LF_BUILDINFO
-	.short	0x5                             # NumArgs
-	.long	0x100c                          # Argument: C:\src\test
+	.short	0x1                             # NumArgs
 	.long	0x0                             # Argument
-	.long	0x100d                          # Argument: a.cpp
+	.long	0x0                             # Argument
+	.long	0x0                             # Argument
 	.long	0x0                             # Argument
 	.long	0x0                             # Argument
 	.byte	242

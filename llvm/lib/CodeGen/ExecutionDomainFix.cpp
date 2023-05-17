@@ -318,7 +318,7 @@ void ExecutionDomainFix::visitSoftInstr(MachineInstr *mi, unsigned mask) {
 
   // If the collapsed operands force a single domain, propagate the collapse.
   if (isPowerOf2_32(available)) {
-    unsigned domain = countTrailingZeros(available);
+    unsigned domain = llvm::countr_zero(available);
     TII->setExecutionDomain(*mi, domain);
     visitHardInstr(mi, domain);
     return;

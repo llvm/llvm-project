@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=i686 %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %t.so
 # RUN: llvm-readobj --sections -r %t.so | FileCheck %s
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=DIS
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s --check-prefix=DIS
 
 .type tls0,@object
 .section .tbss,"awT",@nobits

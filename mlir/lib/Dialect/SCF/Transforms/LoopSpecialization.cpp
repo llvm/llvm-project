@@ -11,22 +11,30 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SCF/Transforms/Passes.h"
+
 #include "mlir/Dialect/Affine/Analysis/AffineStructures.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
-#include "mlir/Dialect/SCF/Passes.h"
-#include "mlir/Dialect/SCF/SCF.h"
-#include "mlir/Dialect/SCF/Transforms.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Dialect/SCF/Transforms/Transforms.h"
 #include "mlir/Dialect/SCF/Utils/AffineCanonicalizationUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExpr.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/DenseMap.h"
 
+namespace mlir {
+#define GEN_PASS_DEF_SCFFORLOOPPEELING
+#define GEN_PASS_DEF_SCFFORLOOPSPECIALIZATION
+#define GEN_PASS_DEF_SCFPARALLELLOOPSPECIALIZATION
+#include "mlir/Dialect/SCF/Transforms/Passes.h.inc"
+} // namespace mlir
+
 using namespace mlir;
+using namespace mlir::affine;
 using scf::ForOp;
 using scf::ParallelOp;
 
@@ -42,7 +50,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
     if (!minOp)
       return;
     int64_t minConstant = std::numeric_limits<int64_t>::max();
-    for (AffineExpr expr : minOp.map().getResults()) {
+    for (AffineExpr expr : minOp.getMap().getResults()) {
       if (auto constantIndex = expr.dyn_cast<AffineConstantExpr>())
         minConstant = std::min(minConstant, constantIndex.getValue());
     }
@@ -52,7 +60,7 @@ static void specializeParallelLoopForUnrolling(ParallelOp op) {
   }
 
   OpBuilder b(op);
-  BlockAndValueMapping map;
+  IRMapping map;
   Value cond;
   for (auto bound : llvm::zip(op.getUpperBound(), constantIndices)) {
     Value constant =
@@ -78,7 +86,7 @@ static void specializeForLoopForUnrolling(ForOp op) {
   if (!minOp)
     return;
   int64_t minConstant = std::numeric_limits<int64_t>::max();
-  for (AffineExpr expr : minOp.map().getResults()) {
+  for (AffineExpr expr : minOp.getMap().getResults()) {
     if (auto constantIndex = expr.dyn_cast<AffineConstantExpr>())
       minConstant = std::min(minConstant, constantIndex.getValue());
   }
@@ -86,7 +94,7 @@ static void specializeForLoopForUnrolling(ForOp op) {
     return;
 
   OpBuilder b(op);
-  BlockAndValueMapping map;
+  IRMapping map;
   Value constant = b.create<arith::ConstantIndexOp>(op.getLoc(), minConstant);
   Value cond = b.create<arith::CmpIOp>(op.getLoc(), arith::CmpIPredicate::eq,
                                        bound, constant);
@@ -137,7 +145,7 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   b.setInsertionPointAfter(forOp);
   partialIteration = cast<ForOp>(b.clone(*forOp.getOperation()));
   partialIteration.getLowerBoundMutable().assign(splitBound);
-  forOp.replaceAllUsesWith(partialIteration->getResults());
+  b.replaceAllUsesWith(forOp.getResults(), partialIteration->getResults());
   partialIteration.getInitArgsMutable().assign(forOp->getResults());
 
   // Set new upper loop bound.
@@ -147,7 +155,6 @@ static LogicalResult peelForLoop(RewriterBase &b, ForOp forOp,
   return success();
 }
 
-template <typename OpTy, bool IsMin>
 static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
                                         ForOp partialIteration,
                                         Value previousUb) {
@@ -157,34 +164,33 @@ static void rewriteAffineOpAfterPeeling(RewriterBase &rewriter, ForOp forOp,
          "expected same step in main and partial loop");
   Value step = forOp.getStep();
 
-  forOp.walk([&](OpTy affineOp) {
-    AffineMap map = affineOp.getAffineMap();
-    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
-                                     affineOp.operands(), IsMin, mainIv,
-                                     previousUb, step,
+  forOp.walk([&](Operation *affineOp) {
+    if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+      return WalkResult::advance();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, mainIv, previousUb,
+                                     step,
                                      /*insideLoop=*/true);
+    return WalkResult::advance();
   });
-  partialIteration.walk([&](OpTy affineOp) {
-    AffineMap map = affineOp.getAffineMap();
-    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, map,
-                                     affineOp.operands(), IsMin, partialIv,
-                                     previousUb, step, /*insideLoop=*/false);
+  partialIteration.walk([&](Operation *affineOp) {
+    if (!isa<AffineMinOp, AffineMaxOp>(affineOp))
+      return WalkResult::advance();
+    (void)scf::rewritePeeledMinMaxOp(rewriter, affineOp, partialIv, previousUb,
+                                     step, /*insideLoop=*/false);
+    return WalkResult::advance();
   });
 }
 
-LogicalResult mlir::scf::peelAndCanonicalizeForLoop(RewriterBase &rewriter,
-                                                    ForOp forOp,
-                                                    ForOp &partialIteration) {
+LogicalResult mlir::scf::peelForLoopAndSimplifyBounds(RewriterBase &rewriter,
+                                                      ForOp forOp,
+                                                      ForOp &partialIteration) {
   Value previousUb = forOp.getUpperBound();
   Value splitBound;
   if (failed(peelForLoop(rewriter, forOp, partialIteration, splitBound)))
     return failure();
 
   // Rewrite affine.min and affine.max ops.
-  rewriteAffineOpAfterPeeling<AffineMinOp, /*IsMin=*/true>(
-      rewriter, forOp, partialIteration, previousUb);
-  rewriteAffineOpAfterPeeling<AffineMaxOp, /*IsMin=*/false>(
-      rewriter, forOp, partialIteration, previousUb);
+  rewriteAffineOpAfterPeeling(rewriter, forOp, partialIteration, previousUb);
 
   return success();
 }
@@ -213,14 +219,16 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
     }
     // Apply loop peeling.
     scf::ForOp partialIteration;
-    if (failed(peelAndCanonicalizeForLoop(rewriter, forOp, partialIteration)))
+    if (failed(peelForLoopAndSimplifyBounds(rewriter, forOp, partialIteration)))
       return failure();
     // Apply label, so that the same loop is not rewritten a second time.
-    partialIteration->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+    rewriter.updateRootInPlace(partialIteration, [&]() {
+      partialIteration->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
+      partialIteration->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
+    });
     rewriter.updateRootInPlace(forOp, [&]() {
       forOp->setAttr(kPeeledLoopLabel, rewriter.getUnitAttr());
     });
-    partialIteration->setAttr(kPartialIterationLabel, rewriter.getUnitAttr());
     return success();
   }
 
@@ -235,30 +243,31 @@ struct ForLoopPeelingPattern : public OpRewritePattern<ForOp> {
 
 namespace {
 struct ParallelLoopSpecialization
-    : public SCFParallelLoopSpecializationBase<ParallelLoopSpecialization> {
+    : public impl::SCFParallelLoopSpecializationBase<
+          ParallelLoopSpecialization> {
   void runOnOperation() override {
-    getOperation().walk(
+    getOperation()->walk(
         [](ParallelOp op) { specializeParallelLoopForUnrolling(op); });
   }
 };
 
 struct ForLoopSpecialization
-    : public SCFForLoopSpecializationBase<ForLoopSpecialization> {
+    : public impl::SCFForLoopSpecializationBase<ForLoopSpecialization> {
   void runOnOperation() override {
-    getOperation().walk([](ForOp op) { specializeForLoopForUnrolling(op); });
+    getOperation()->walk([](ForOp op) { specializeForLoopForUnrolling(op); });
   }
 };
 
-struct ForLoopPeeling : public SCFForLoopPeelingBase<ForLoopPeeling> {
+struct ForLoopPeeling : public impl::SCFForLoopPeelingBase<ForLoopPeeling> {
   void runOnOperation() override {
-    func::FuncOp funcOp = getOperation();
-    MLIRContext *ctx = funcOp.getContext();
+    auto *parentOp = getOperation();
+    MLIRContext *ctx = parentOp->getContext();
     RewritePatternSet patterns(ctx);
     patterns.add<ForLoopPeelingPattern>(ctx, skipPartial);
-    (void)applyPatternsAndFoldGreedily(funcOp, std::move(patterns));
+    (void)applyPatternsAndFoldGreedily(parentOp, std::move(patterns));
 
     // Drop the markers.
-    funcOp.walk([](Operation *op) {
+    parentOp->walk([](Operation *op) {
       op->removeAttr(kPeeledLoopLabel);
       op->removeAttr(kPartialIterationLabel);
     });

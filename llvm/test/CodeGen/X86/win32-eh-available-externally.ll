@@ -2,7 +2,7 @@
 ; RUN: llc < %s | FileCheck %s --check-prefix=ASM
 
 ; IR-NOT: define.*__ehhandler
-; IR: define available_externally void @foo(void ()* %0)
+; IR: define available_externally void @foo(ptr %0)
 ; IR-NOT: define.*__ehhandler
 
 ; No code should be emitted.
@@ -14,7 +14,7 @@ target triple = "i686-pc-windows-msvc"
 
 declare i32 @__CxxFrameHandler3(...) unnamed_addr
 
-define available_externally void @foo(void ()*) personality i32 (...)* @__CxxFrameHandler3 {
+define available_externally void @foo(ptr) personality ptr @__CxxFrameHandler3 {
 start:
   invoke void %0()
           to label %good unwind label %bad

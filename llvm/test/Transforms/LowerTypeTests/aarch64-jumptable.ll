@@ -1,12 +1,12 @@
-; RUN: opt -S -lowertypetests -mtriple=aarch64-unknown-linux-gnu < %s | FileCheck --check-prefixes=AARCH64 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=aarch64-unknown-linux-gnu %s | FileCheck --check-prefixes=AARCH64 %s
 
 ; Test for the jump table generation with branch protection on AArch64
 
 target datalayout = "e-p:64:64"
 
-@0 = private unnamed_addr constant [2 x void (...)*] [void (...)* bitcast (void ()* @f to void (...)*), void (...)* bitcast (void ()* @g to void (...)*)], align 16
+@0 = private unnamed_addr constant [2 x ptr] [ptr @f, ptr @g], align 16
 
-; AARCH64: @f = alias void (), void ()* @[[JT:.*]]
+; AARCH64: @f = alias void (), ptr @[[JT:.*]]
 
 define void @f() !type !0 {
   ret void
@@ -18,10 +18,10 @@ define internal void @g() !type !0 {
 
 !0 = !{i32 0, !"typeid1"}
 
-declare i1 @llvm.type.test(i8* %ptr, metadata %bitset) nounwind readnone
+declare i1 @llvm.type.test(ptr %ptr, metadata %bitset) nounwind readnone
 
-define i1 @foo(i8* %p) {
-  %x = call i1 @llvm.type.test(i8* %p, metadata !"typeid1")
+define i1 @foo(ptr %p) {
+  %x = call i1 @llvm.type.test(ptr %p, metadata !"typeid1")
   ret i1 %x
 }
 

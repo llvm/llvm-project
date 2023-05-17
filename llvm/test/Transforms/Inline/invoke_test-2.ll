@@ -1,11 +1,11 @@
 ; Test that if an invoked function is inlined, and if that function cannot
 ; throw, that the dead handler is now unreachable.
 
-; RUN: opt < %s -inline -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s  -passes=inline,simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 declare void @might_throw()
 
-define internal i32 @callee() personality i32 (...)* @__gxx_personality_v0 {
+define internal i32 @callee() personality ptr @__gxx_personality_v0 {
 enrty:
   invoke void @might_throw()
       to label %cont unwind label %exc
@@ -14,14 +14,14 @@ cont:
   ret i32 0
 
 exc:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 1
 }
 
 ; caller returns true if might_throw throws an exception... callee cannot throw.
-define i32 @caller() personality i32 (...)* @__gxx_personality_v0 {
-; CHECK-LABEL: define i32 @caller() personality i32 (...)* @__gxx_personality_v0
+define i32 @caller() personality ptr @__gxx_personality_v0 {
+; CHECK-LABEL: define i32 @caller() personality ptr @__gxx_personality_v0
 enrty:
   %X = invoke i32 @callee()
            to label %cont unwind label %UnreachableExceptionHandler
@@ -42,7 +42,7 @@ cont:
 
 UnreachableExceptionHandler:
 ; CHECK-NOT: UnreachableExceptionHandler:
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
          cleanup
   ret i32 -1
 ; CHECK-NOT: ret i32 -1

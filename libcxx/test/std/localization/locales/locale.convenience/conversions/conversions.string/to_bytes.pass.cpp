@@ -8,6 +8,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // wstring_convert<Codecvt, Elem, Wide_alloc, Byte_alloc>
 
 // byte_string to_bytes(Elem wchar);
@@ -23,7 +25,7 @@
 
 #include "test_macros.h"
 
-template <class CharT, size_t = sizeof(CharT)>
+template <class CharT, std::size_t = sizeof(CharT)>
 struct TestHelper;
 template <class CharT>
 struct TestHelper<CharT, 2> {

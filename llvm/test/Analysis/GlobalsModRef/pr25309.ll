@@ -5,21 +5,21 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; @o and @m are initialized to @i, so they should not be classed as
 ; indirect globals referring only to allocation functions.
-@o = internal global i32* @i, align 8
-@m = internal global i32* @i, align 8
+@o = internal global ptr @i, align 8
+@m = internal global ptr @i, align 8
 @i = internal global i32 0, align 4
 
 ; CHECK-LABEL: @f
 define i1 @f() {
 entry:
-  %0 = load i32*, i32** @o, align 8
-  store i32 0, i32* %0, align 4
-  %1 = load volatile i32*, i32** @m, align 8
-  store i32 1, i32* %1, align 4
-  ; CHECK: %[[a:.*]] = load i32*
-  %2 = load i32*, i32** @o, align 8
-  ; CHECK: %[[b:.*]] = load i32, i32* %[[a]]
-  %3 = load i32, i32* %2, align 4
+  %0 = load ptr, ptr @o, align 8
+  store i32 0, ptr %0, align 4
+  %1 = load volatile ptr, ptr @m, align 8
+  store i32 1, ptr %1, align 4
+  ; CHECK: %[[a:.*]] = load ptr
+  %2 = load ptr, ptr @o, align 8
+  ; CHECK: %[[b:.*]] = load i32, ptr %[[a]]
+  %3 = load i32, ptr %2, align 4
   ; CHECK: %[[c:.*]] = icmp ne i32 %[[b]], 0
   %tobool.i = icmp ne i32 %3, 0
   ; CHECK: ret i1 %[[c]]

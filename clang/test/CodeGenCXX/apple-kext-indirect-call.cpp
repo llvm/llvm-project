@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -fapple-kext -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fapple-kext -emit-llvm -o - %s | FileCheck %s
 
-// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [5 x i8*] } { [5 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI5TemplIiE to i8*), i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiE1fEv to i8*), i8* bitcast (void (%struct.Templ*)* @_ZN5TemplIiE1gEv to i8*), i8* null] }
+// CHECK: @_ZTV5TemplIiE = internal unnamed_addr constant { [5 x ptr] } { [5 x ptr] [ptr null, ptr @_ZTI5TemplIiE, ptr @_ZN5TemplIiE1fEv, ptr @_ZN5TemplIiE1gEv, ptr null] }
 
 struct Base { 
   virtual void abc(void) const; 
@@ -12,7 +12,7 @@ void FUNC(Base* p) {
   p->Base::abc();
 }
 
-// CHECK: getelementptr inbounds (void (%struct.Base*)*, void (%struct.Base*)** bitcast ({ [4 x i8*] }* @_ZTV4Base to void (%struct.Base*)**), i64 2)
+// CHECK: getelementptr inbounds (ptr, ptr @_ZTV4Base, i64 2)
 // CHECK-NOT: call void @_ZNK4Base3abcEv
 
 template<class T>
@@ -37,6 +37,6 @@ void f(SubTempl<int>* t) {
   t->Templ::f();
 }
 
-// CHECK: getelementptr inbounds (void (%struct.Templ*)*, void (%struct.Templ*)** bitcast ({ [5 x i8*] }* @_ZTV5TemplIiE to void (%struct.Templ*)**), i64 2)
-// CHECK: define internal void @_ZN5TemplIiE1fEv(%struct.Templ* {{[^,]*}} %this)
-// CHECK: define internal void @_ZN5TemplIiE1gEv(%struct.Templ* {{[^,]*}} %this)
+// CHECK: getelementptr inbounds (ptr, ptr @_ZTV5TemplIiE, i64 2)
+// CHECK: define internal void @_ZN5TemplIiE1fEv(ptr {{[^,]*}} %this)
+// CHECK: define internal void @_ZN5TemplIiE1gEv(ptr {{[^,]*}} %this)

@@ -83,7 +83,7 @@ cleanup:                                          ; preds = %for.end10, %for.bod
 if.end15:                                         ; preds = %cleanup, %if.then, %for.cond1
   %retval.2 = phi i16 [ %retval.1, %cleanup ], [ %retval.0, %if.then ], [ %retval.0, %for.cond1 ]
   %i.2 = phi i16 [ %i.128, %cleanup ], [ %i.0, %if.then ], [ %i.0, %for.cond1 ]
-  store i16 0, i16* @a, align 1
+  store i16 0, ptr @a, align 1
   br label %cleanup16
 
 cleanup16:                                        ; preds = %if.end15, %cleanup

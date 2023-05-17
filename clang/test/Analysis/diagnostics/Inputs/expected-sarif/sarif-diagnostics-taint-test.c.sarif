@@ -1,11 +1,12 @@
 {
-  "$schema": "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json",
+  "$schema": "https://docs.oasis-open.org/sarif/sarif/v2.1.0/cos02/schemas/sarif-schema-2.1.0.json",
   "runs": [
     {
       "artifacts": [
         {
           "length": 434,
           "location": {
+            "index": 0,
           },
           "mimeType": "text/plain",
           "roles": [
@@ -64,6 +65,7 @@
               ]
             }
           ],
+          "level": "warning",
           "locations": [
             {
               "physicalLocation": {
@@ -89,10 +91,16 @@
       "tool": {
         "driver": {
           "fullName": "clang static analyzer",
+          "informationUri": "https://clang.llvm.org/docs/UsersManual.html",
           "language": "en-US",
           "name": "clang",
           "rules": [
             {
+              "defaultConfiguration": {
+                "enabled": true,
+                "level": "warning",
+                "rank": -1
+              },
               "fullDescription": {
                 "text": "Mark tainted symbols as such."
               },

@@ -18,23 +18,14 @@ Features
 - LLD is a drop-in replacement for the GNU linkers that accepts the
   same command line arguments and linker scripts as GNU.
 
-  We are currently working closely with the FreeBSD project to make
-  LLD default system linker in future versions of the operating
-  system, so we are serious about addressing compatibility issues. As
-  of February 2017, LLD is able to link the entire FreeBSD/amd64 base
-  system including the kernel. With a few work-in-progress patches it
-  can link approximately 95% of the ports collection on AMD64. For the
-  details, see `FreeBSD quarterly status report
-  <https://www.freebsd.org/news/status/report-2016-10-2016-12.html#Using-LLVM%27s-LLD-Linker-as-FreeBSD%27s-System-Linker>`_.
-
 - LLD is very fast. When you link a large program on a multicore
   machine, you can expect that LLD runs more than twice as fast as the GNU
   gold linker. Your mileage may vary, though.
 
 - It supports various CPUs/ABIs including AArch64, AMDGPU, ARM, Hexagon, MIPS
   32/64 big/little-endian, PowerPC, PowerPC64, RISC-V, SPARC V9, x86-32 and
-  x86-64. Among these, AArch64, ARM (>= v6), PowerPC, PowerPC64, x86-32 and
-  x86-64 have production quality. MIPS seems decent too.
+  x86-64. Among these, AArch64, ARM (>= v4), PowerPC, PowerPC64, RISC-V, x86-32
+  and x86-64 have production quality. MIPS seems decent too.
 
 - It is always a cross-linker, meaning that it always supports all the
   above targets however it was built. In fact, we don't provide a
@@ -177,3 +168,4 @@ document soon.
    ELF/linker_script
    ELF/start-stop-gc
    ELF/warn_backrefs
+   MachO/index

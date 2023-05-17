@@ -14,33 +14,33 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @hoge(i64 %p0, i64 %p1, i64 %p2, i64 %p3, float* %A) {
+define void @hoge(i64 %p0, i64 %p1, i64 %p2, i64 %p3, ptr %A) {
 entry:
   br label %loopA
 
 loopA:
   %tmp4 = phi i64 [ 0, %entry ], [ 0, %loopB]
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   %cmp0 = icmp sle i64 %p0, 100
   br i1 %cmp0, label %loopB, label %bbB
 
 loopB:
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   %cmp1 = icmp sle i64 %p1, 100
   br i1 %cmp1, label %loopA, label %bbA
 
 bbA:
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   %cmpbbA = icmp sle i64 %p2, 50
   br i1 %cmpbbA, label %bbMerge, label %exit
 
 bbB:
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   %cmpbbB= icmp sle i64 %p3, 200
   br i1 %cmpbbB, label %exit, label %bbMerge
 
 bbMerge:
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   br label %exit
 
 exit:

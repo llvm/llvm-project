@@ -37,9 +37,9 @@ define amdgpu_cs void @atomic_add(<4 x i32> inreg %arg)  {
 ; GCN-NEXT:    s_cbranch_execz .LBB0_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    buffer_atomic_add v0, v1, s[0:3], 0 idxen glc
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    buffer_atomic_add v1, v0, s[0:3], 0 idxen
 ; GCN-NEXT:  .LBB0_2:
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -64,7 +64,7 @@ define amdgpu_cs void @atomic_add_and_format(<4 x i32> inreg %arg) {
 ; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.add.i32(i32 [[TMP7]], <4 x i32> [[ARG:%.*]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label [[TMP11]]
 ; IR:       11:
-; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ undef, [[DOTENTRY:%.*]] ], [ [[TMP10]], [[TMP9]] ]
+; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], [[TMP9]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP12]])
 ; IR-NEXT:    [[TMP14:%.*]] = add i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4i32(<4 x i32> [[ARG]], <4 x i32> [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0)
@@ -131,9 +131,9 @@ define amdgpu_cs void @atomic_sub(<4 x i32> inreg %arg)  {
 ; GCN-NEXT:    s_cbranch_execz .LBB2_2
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    buffer_atomic_sub v0, v1, s[0:3], 0 idxen glc
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    buffer_atomic_sub v1, v0, s[0:3], 0 idxen
 ; GCN-NEXT:  .LBB2_2:
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -158,7 +158,7 @@ define amdgpu_cs void @atomic_sub_and_format(<4 x i32> inreg %arg) {
 ; IR-NEXT:    [[TMP10:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.sub.i32(i32 [[TMP7]], <4 x i32> [[ARG:%.*]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label [[TMP11]]
 ; IR:       11:
-; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ undef, [[DOTENTRY:%.*]] ], [ [[TMP10]], [[TMP9]] ]
+; IR-NEXT:    [[TMP12:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP10]], [[TMP9]] ]
 ; IR-NEXT:    [[TMP13:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP12]])
 ; IR-NEXT:    [[TMP14:%.*]] = sub i32 [[TMP13]], [[TMP5]]
 ; IR-NEXT:    call void @llvm.amdgcn.struct.buffer.store.format.v4i32(<4 x i32> [[ARG]], <4 x i32> [[ARG]], i32 [[TMP14]], i32 0, i32 0, i32 0)
@@ -227,9 +227,9 @@ define amdgpu_cs void @atomic_xor(<4 x i32> inreg %arg)  {
 ; GCN-NEXT:  ; %bb.1:
 ; GCN-NEXT:    s_bcnt1_i32_b64 s4, s[4:5]
 ; GCN-NEXT:    s_and_b32 s4, s4, 1
-; GCN-NEXT:    v_mov_b32_e32 v0, s4
-; GCN-NEXT:    v_mov_b32_e32 v1, 0
-; GCN-NEXT:    buffer_atomic_xor v0, v1, s[0:3], 0 idxen glc
+; GCN-NEXT:    v_mov_b32_e32 v0, 0
+; GCN-NEXT:    v_mov_b32_e32 v1, s4
+; GCN-NEXT:    buffer_atomic_xor v1, v0, s[0:3], 0 idxen
 ; GCN-NEXT:  .LBB4_2:
 ; GCN-NEXT:    s_endpgm
 .entry:
@@ -255,7 +255,7 @@ define amdgpu_cs void @atomic_xor_and_format(<4 x i32> inreg %arg) {
 ; IR-NEXT:    [[TMP11:%.*]] = call i32 @llvm.amdgcn.struct.buffer.atomic.xor.i32(i32 [[TMP8]], <4 x i32> [[ARG:%.*]], i32 0, i32 0, i32 0, i32 0)
 ; IR-NEXT:    br label [[TMP12]]
 ; IR:       12:
-; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ undef, [[DOTENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
+; IR-NEXT:    [[TMP13:%.*]] = phi i32 [ poison, [[DOTENTRY:%.*]] ], [ [[TMP11]], [[TMP10]] ]
 ; IR-NEXT:    [[TMP14:%.*]] = call i32 @llvm.amdgcn.readfirstlane(i32 [[TMP13]])
 ; IR-NEXT:    [[TMP15:%.*]] = and i32 [[TMP5]], 1
 ; IR-NEXT:    [[TMP16:%.*]] = xor i32 [[TMP14]], [[TMP15]]

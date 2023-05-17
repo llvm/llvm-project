@@ -55,6 +55,23 @@ struct C
 
 int C::count = 0;
 
+// https://llvm.org/PR60258
+// Invalid constructor SFINAE for std::shared_ptr's array ctors
+static_assert(!std::is_constructible<std::shared_ptr<int>,     std::shared_ptr<long>&&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<B>,       std::shared_ptr<A>&&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<const A>, std::shared_ptr<A>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<A>,       std::shared_ptr<const A>&&>::value, "");
+
+#if TEST_STD_VER >= 17
+static_assert(!std::is_constructible<std::shared_ptr<int>,     std::shared_ptr<int[]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int>,     std::shared_ptr<int[5]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[]>,   std::shared_ptr<int>&&>::value, "");
+static_assert( std::is_constructible<std::shared_ptr<int[]>,   std::shared_ptr<int[5]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::shared_ptr<int>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[5]>,  std::shared_ptr<int[]>&&>::value, "");
+static_assert(!std::is_constructible<std::shared_ptr<int[7]>,  std::shared_ptr<int[5]>&&>::value, "");
+#endif
+
 int main(int, char**)
 {
     static_assert(( std::is_convertible<std::shared_ptr<A>, std::shared_ptr<B> >::value), "");

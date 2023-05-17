@@ -3,13 +3,13 @@
 declare void @llvm.trap()
 declare arm_aapcs_vfpcc zeroext i1 @g()
 
-define arm_aapcs_vfpcc i8* @f() {
+define arm_aapcs_vfpcc ptr @f() {
 entry:
   %call = tail call arm_aapcs_vfpcc zeroext i1 @g()
   br i1 %call, label %if.then, label %if.end
 
 if.then:
-  ret i8* bitcast (i1 ()* @g to i8*)
+  ret ptr @g
 
 if.end:
   tail call void @llvm.trap()

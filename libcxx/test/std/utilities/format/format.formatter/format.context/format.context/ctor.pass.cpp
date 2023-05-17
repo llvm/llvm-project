@@ -18,33 +18,24 @@
 // basic_format_context(Out out,
 //                      basic_format_args<basic_format_context> args,
 //                      std::optional<std::::locale>&& loc = std::nullopt);
-// If compliled with -D_LIBCPP_HAS_NO_LOCALIZATION
+// If compiled with -D_LIBCPP_HAS_NO_LOCALIZATION
 // basic_format_context(Out out,
 //                      basic_format_args<basic_format_context> args);
 
 #include <format>
 #include <cassert>
+#include <iterator>
 #include <type_traits>
 
 #include "test_basic_format_arg.h"
 #include "test_format_context.h"
+#include "test_iterators.h"
 #include "make_string.h"
 #include "platform_support.h" // locale name macros
 #include "test_macros.h"
 
 template <class OutIt, class CharT>
 void test() {
-  static_assert(
-      !std::is_copy_constructible_v<std::basic_format_context<OutIt, CharT>>);
-  static_assert(
-      !std::is_copy_assignable_v<std::basic_format_context<OutIt, CharT>>);
-  // The move operations are implicitly deleted due to the
-  // deleted copy operations.
-  static_assert(
-      !std::is_move_constructible_v<std::basic_format_context<OutIt, CharT>>);
-  static_assert(
-      !std::is_move_assignable_v<std::basic_format_context<OutIt, CharT>>);
-
   std::basic_string<CharT> string = MAKE_STRING(CharT, "string");
   // The type of the object is an exposition only type. The temporary is needed
   // to extend the lifetype of the object since args stores a pointer to the
@@ -55,8 +46,7 @@ void test() {
   {
     std::basic_string<CharT> output;
     OutIt out_it{output};
-    std::basic_format_context context =
-        test_format_context_create(out_it, args);
+    std::basic_format_context context = test_format_context_create(out_it, args);
     LIBCPP_ASSERT(args.__size() == 4);
 
     assert(test_basic_format_arg(context.arg(0), true));
@@ -80,8 +70,7 @@ void test() {
   {
     std::basic_string<CharT> output;
     OutIt out_it{output};
-    std::basic_format_context context =
-        test_format_context_create(out_it, args, en_US);
+    std::basic_format_context context = test_format_context_create(out_it, args, en_US);
 
     LIBCPP_ASSERT(args.__size() == 4);
     assert(test_basic_format_arg(context.arg(0), true));
@@ -101,8 +90,7 @@ void test() {
   {
     std::basic_string<CharT> output;
     OutIt out_it{output};
-    std::basic_format_context context =
-        test_format_context_create(out_it, args, fr_FR);
+    std::basic_format_context context = test_format_context_create(out_it, args, fr_FR);
 
     LIBCPP_ASSERT(args.__size() == 4);
     assert(test_basic_format_arg(context.arg(0), true));
@@ -120,6 +108,20 @@ void test() {
   }
 #endif
 }
+
+// std::back_insert_iterator<std::string>, copyable
+static_assert(std::is_copy_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+static_assert(std::is_copy_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+
+static_assert(std::is_move_constructible_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+static_assert(std::is_move_assignable_v<std::basic_format_context<std::back_insert_iterator<std::string>, char>>);
+
+// cpp20_output_iterator, move only
+static_assert(!std::is_copy_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+static_assert(!std::is_copy_assignable_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+
+static_assert(std::is_move_constructible_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
+static_assert(std::is_move_assignable_v<std::basic_format_context<cpp20_output_iterator<int*>, char>>);
 
 int main(int, char**) {
   test<std::back_insert_iterator<std::basic_string<char>>, char>();

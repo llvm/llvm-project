@@ -30,8 +30,8 @@
     ret i64 -1
   }
 
-  define void @main(i32** %data) {
-    store i32* null, i32** %data, align 8
+  define void @main(ptr %data) {
+    store ptr null, ptr %data, align 8
     ret void
   }
 

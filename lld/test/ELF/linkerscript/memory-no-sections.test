@@ -1,0 +1,26 @@
+REQUIRES: x86
+
+## Check that we respect MEMORY commands in linker scripts without
+## SECTIONS commands.
+
+RUN: split-file %s %ts
+RUN: llvm-mc -filetype=obj -triple=x86_64 %ts/asm.s -o %t.o
+RUN: ld.lld -o %t -T %ts/script %t.o
+RUN: llvm-readelf -S %t | FileCheck %s
+
+CHECK: .text             PROGBITS        0000000000001000
+CHECK: .data             PROGBITS        0000000010000000
+
+#--- script
+
+MEMORY {
+  flash (rx!w): org = 0x1000, len = 0x3000
+  ram (rwx): org = 0x10000000, len = 0x1000
+}
+
+#--- asm.s
+
+.text
+.byte 1
+.data
+.byte 2

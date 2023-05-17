@@ -26,8 +26,6 @@
 #include "llvm/IR/Dominators.h"
 
 #include "llvm/IR/PatternMatch.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Scalar/LoopPassManager.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 
@@ -73,7 +71,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // of the loop.
   bool AllEntriesInvariant = true;
   bool AllOutgoingValuesSame = true;
-  if (!L->hasNoExitBlocks()) {
+  if (ExitBlock) {
     for (PHINode &P : ExitBlock->phis()) {
       Value *incoming = P.getIncomingValueForBlock(ExitingBlocks[0]);
 
@@ -82,23 +80,22 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
       // blocks, then it is impossible to statically determine which value
       // should be used.
       AllOutgoingValuesSame =
-          all_of(makeArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
+          all_of(ArrayRef(ExitingBlocks).slice(1), [&](BasicBlock *BB) {
             return incoming == P.getIncomingValueForBlock(BB);
           });
 
       if (!AllOutgoingValuesSame)
         break;
 
-      if (Instruction *I = dyn_cast<Instruction>(incoming))
-        if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator())) {
+      if (Instruction *I = dyn_cast<Instruction>(incoming)) {
+        if (!L->makeLoopInvariant(I, Changed, Preheader->getTerminator(),
+                                  /*MSSAU=*/nullptr, &SE)) {
           AllEntriesInvariant = false;
           break;
         }
+      }
     }
   }
-
-  if (Changed)
-    SE.forgetLoopDispositions(L);
 
   if (!AllEntriesInvariant || !AllOutgoingValuesSame)
     return false;
@@ -106,7 +103,7 @@ static bool isLoopDead(Loop *L, ScalarEvolution &SE,
   // Make sure that no instructions in the block have potential side-effects.
   // This includes instructions that could write to memory, and loads that are
   // marked volatile.
-  for (auto &I : L->blocks())
+  for (const auto &I : L->blocks())
     if (any_of(*I, [](Instruction &I) {
           return I.mayHaveSideEffects() && !I.isDroppable();
         }))
@@ -456,15 +453,15 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
   BasicBlock *ExitBlock = L->getUniqueExitBlock();
 
   if (ExitBlock && isLoopNeverExecuted(L)) {
-    LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!");
+    LLVM_DEBUG(dbgs() << "Loop is proven to never execute, delete it!\n");
     // We need to forget the loop before setting the incoming values of the exit
-    // phis to undef, so we properly invalidate the SCEV expressions for those
+    // phis to poison, so we properly invalidate the SCEV expressions for those
     // phis.
     SE.forgetLoop(L);
-    // Set incoming value to undef for phi nodes in the exit block.
+    // Set incoming value to poison for phi nodes in the exit block.
     for (PHINode &P : ExitBlock->phis()) {
       std::fill(P.incoming_values().begin(), P.incoming_values().end(),
-                UndefValue::get(P.getType()));
+                PoisonValue::get(P.getType()));
     }
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "NeverExecutes", L->getStartLoc(),
@@ -489,6 +486,14 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
     LLVM_DEBUG(dbgs() << "Deletion requires at most one exit block.\n");
     return LoopDeletionResult::Unmodified;
   }
+
+  // We can't directly branch to an EH pad. Don't bother handling this edge
+  // case.
+  if (ExitBlock && ExitBlock->isEHPad()) {
+    LLVM_DEBUG(dbgs() << "Cannot delete loop exiting to EH pad.\n");
+    return LoopDeletionResult::Unmodified;
+  }
+
   // Finally, we have to check that the loop really is dead.
   bool Changed = false;
   if (!isLoopDead(L, SE, ExitingBlocks, ExitBlock, Changed, Preheader, LI)) {
@@ -497,7 +502,7 @@ static LoopDeletionResult deleteLoopIfDead(Loop *L, DominatorTree &DT,
                    : LoopDeletionResult::Unmodified;
   }
 
-  LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!");
+  LLVM_DEBUG(dbgs() << "Loop is invariant, delete it!\n");
   ORE.emit([&]() {
     return OptimizationRemark(DEBUG_TYPE, "Invariant", L->getStartLoc(),
                               L->getHeader())
@@ -539,63 +544,4 @@ PreservedAnalyses LoopDeletionPass::run(Loop &L, LoopAnalysisManager &AM,
   if (AR.MSSA)
     PA.preserve<MemorySSAAnalysis>();
   return PA;
-}
-
-namespace {
-class LoopDeletionLegacyPass : public LoopPass {
-public:
-  static char ID; // Pass ID, replacement for typeid
-  LoopDeletionLegacyPass() : LoopPass(ID) {
-    initializeLoopDeletionLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  // Possibly eliminate loop L if it is dead.
-  bool runOnLoop(Loop *L, LPPassManager &) override;
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addPreserved<MemorySSAWrapperPass>();
-    getLoopAnalysisUsage(AU);
-  }
-};
-}
-
-char LoopDeletionLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(LoopDeletionLegacyPass, "loop-deletion",
-                      "Delete dead loops", false, false)
-INITIALIZE_PASS_DEPENDENCY(LoopPass)
-INITIALIZE_PASS_END(LoopDeletionLegacyPass, "loop-deletion",
-                    "Delete dead loops", false, false)
-
-Pass *llvm::createLoopDeletionPass() { return new LoopDeletionLegacyPass(); }
-
-bool LoopDeletionLegacyPass::runOnLoop(Loop *L, LPPassManager &LPM) {
-  if (skipLoop(L))
-    return false;
-  DominatorTree &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  LoopInfo &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  auto *MSSAAnalysis = getAnalysisIfAvailable<MemorySSAWrapperPass>();
-  MemorySSA *MSSA = nullptr;
-  if (MSSAAnalysis)
-    MSSA = &MSSAAnalysis->getMSSA();
-  // For the old PM, we can't use OptimizationRemarkEmitter as an analysis
-  // pass.  Function analyses need to be preserved across loop transformations
-  // but ORE cannot be preserved (see comment before the pass definition).
-  OptimizationRemarkEmitter ORE(L->getHeader()->getParent());
-
-  LLVM_DEBUG(dbgs() << "Analyzing Loop for deletion: ");
-  LLVM_DEBUG(L->dump());
-
-  LoopDeletionResult Result = deleteLoopIfDead(L, DT, SE, LI, MSSA, ORE);
-
-  // If we can prove the backedge isn't taken, just break it and be done.  This
-  // leaves the loop structure in place which means it can handle dispatching
-  // to the right exit based on whatever loop invariant structure remains.
-  if (Result != LoopDeletionResult::Deleted)
-    Result = merge(Result, breakBackedgeIfNotTaken(L, DT, SE, LI, MSSA, ORE));
-
-  if (Result == LoopDeletionResult::Deleted)
-    LPM.markLoopAsDeleted(*L);
-
-  return Result != LoopDeletionResult::Unmodified;
 }

@@ -7,12 +7,16 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ExecutionEngine/Orc/ObjectFileInterface.h"
+#include "llvm/ExecutionEngine/Orc/COFFPlatform.h"
 #include "llvm/ExecutionEngine/Orc/ELFNixPlatform.h"
 #include "llvm/ExecutionEngine/Orc/MachOPlatform.h"
+#include "llvm/ExecutionEngine/Orc/Shared/ObjectFormats.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/ELFObjectFile.h"
 #include "llvm/Object/MachO.h"
 #include "llvm/Object/ObjectFile.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "orc"
 
@@ -82,7 +86,7 @@ getMachOObjectFileSymbolInfo(ExecutionSession &ES,
     }
     auto SegName = Obj.getSectionFinalSegmentName(Sec.getRawDataRefImpl());
     auto SecName = cantFail(Obj.getSectionName(Sec.getRawDataRefImpl()));
-    if (MachOPlatform::isInitializerSection(SegName, SecName)) {
+    if (isMachOInitializerSection(SegName, SecName)) {
       addInitSymbol(I, ES, Obj.getFileName());
       break;
     }
@@ -135,11 +139,93 @@ getELFObjectFileSymbolInfo(ExecutionSession &ES,
   SymbolStringPtr InitSymbol;
   for (auto &Sec : Obj.sections()) {
     if (auto SecName = Sec.getName()) {
-      if (ELFNixPlatform::isInitializerSection(*SecName)) {
+      if (isELFInitializerSection(*SecName)) {
         addInitSymbol(I, ES, Obj.getFileName());
         break;
       }
     }
+  }
+
+  return I;
+}
+
+static Expected<MaterializationUnit::Interface>
+getCOFFObjectFileSymbolInfo(ExecutionSession &ES,
+                            const object::COFFObjectFile &Obj) {
+  MaterializationUnit::Interface I;
+  std::vector<std::optional<object::coff_aux_section_definition>> ComdatDefs(
+      Obj.getNumberOfSections() + 1);
+  for (auto &Sym : Obj.symbols()) {
+    Expected<uint32_t> SymFlagsOrErr = Sym.getFlags();
+    if (!SymFlagsOrErr)
+      // TODO: Test this error.
+      return SymFlagsOrErr.takeError();
+
+    // Handle comdat symbols
+    auto COFFSym = Obj.getCOFFSymbol(Sym);
+    bool IsWeak = false;
+    if (auto *Def = COFFSym.getSectionDefinition()) {
+      auto Sec = Obj.getSection(COFFSym.getSectionNumber());
+      if (!Sec)
+        return Sec.takeError();
+      if (((*Sec)->Characteristics & COFF::IMAGE_SCN_LNK_COMDAT) &&
+          Def->Selection != COFF::IMAGE_COMDAT_SELECT_ASSOCIATIVE) {
+        ComdatDefs[COFFSym.getSectionNumber()] = *Def;
+        continue;
+      }
+    }
+    if (!COFF::isReservedSectionNumber(COFFSym.getSectionNumber()) &&
+        ComdatDefs[COFFSym.getSectionNumber()]) {
+      auto Def = ComdatDefs[COFFSym.getSectionNumber()];
+      if (Def->Selection != COFF::IMAGE_COMDAT_SELECT_NODUPLICATES) {
+        IsWeak = true;
+      }
+      ComdatDefs[COFFSym.getSectionNumber()] = std::nullopt;
+    } else {
+      // Skip symbols not defined in this object file.
+      if (*SymFlagsOrErr & object::BasicSymbolRef::SF_Undefined)
+        continue;
+    }
+
+    // Skip symbols that are not global.
+    if (!(*SymFlagsOrErr & object::BasicSymbolRef::SF_Global))
+      continue;
+
+    // Skip symbols that have type SF_File.
+    if (auto SymType = Sym.getType()) {
+      if (*SymType == object::SymbolRef::ST_File)
+        continue;
+    } else
+      return SymType.takeError();
+
+    auto Name = Sym.getName();
+    if (!Name)
+      return Name.takeError();
+
+    auto SymFlags = JITSymbolFlags::fromObjectSymbol(Sym);
+    if (!SymFlags)
+      return SymFlags.takeError();
+    *SymFlags |= JITSymbolFlags::Exported;
+
+    // Weak external is always a function
+    if (COFFSym.isWeakExternal())
+      *SymFlags |= JITSymbolFlags::Callable;
+
+    if (IsWeak)
+      *SymFlags |= JITSymbolFlags::Weak;
+
+    I.SymbolFlags[ES.intern(*Name)] = std::move(*SymFlags);
+  }
+
+  SymbolStringPtr InitSymbol;
+  for (auto &Sec : Obj.sections()) {
+    if (auto SecName = Sec.getName()) {
+      if (isCOFFInitializerSection(*SecName)) {
+        addInitSymbol(I, ES, Obj.getFileName());
+        break;
+      }
+    } else
+      return SecName.takeError();
   }
 
   return I;
@@ -196,6 +282,8 @@ getObjectFileInterface(ExecutionSession &ES, MemoryBufferRef ObjBuffer) {
     return getMachOObjectFileSymbolInfo(ES, *MachOObj);
   else if (auto *ELFObj = dyn_cast<object::ELFObjectFileBase>(Obj->get()))
     return getELFObjectFileSymbolInfo(ES, *ELFObj);
+  else if (auto *COFFObj = dyn_cast<object::COFFObjectFile>(Obj->get()))
+    return getCOFFObjectFileSymbolInfo(ES, *COFFObj);
 
   return getGenericObjectFileSymbolInfo(ES, **Obj);
 }

@@ -48,12 +48,12 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define void @some_code() !dbg !13 {
 entry:
-  %0 = load i32, i32* @some_data, align 4, !dbg !16
-  %1 = load i32, i32* @some_other, align 4, !dbg !16
+  %0 = load i32, ptr @some_data, align 4, !dbg !16
+  %1 = load i32, ptr @some_other, align 4, !dbg !16
   %add = add nsw i32 %0, %1, !dbg !16
-  %2 = load i32, i32* @some_bss, align 4, !dbg !16
+  %2 = load i32, ptr @some_bss, align 4, !dbg !16
   %add1 = add nsw i32 %2, %add, !dbg !16
-  store i32 %add1, i32* @some_bss, align 4, !dbg !16
+  store i32 %add1, ptr @some_bss, align 4, !dbg !16
   ret void, !dbg !17
 }
 

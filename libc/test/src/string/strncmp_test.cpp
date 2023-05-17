@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/strncmp.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 // This group is just copies of the strcmp tests, since all the same cases still
 // need to be tested.
@@ -155,4 +155,15 @@ TEST(LlvmLibcStrNCmpTest, StringComparisonEndsOnNullByteEvenWithLongerLength) {
   // Verify operands reversed.
   result = __llvm_libc::strncmp(s2, s1, 7);
   ASSERT_EQ(result, 0);
+}
+
+TEST(LlvmLibcStrNCmpTest, Case) {
+  const char *s1 = "aB";
+  const char *s2 = "ab";
+  int result = __llvm_libc::strncmp(s1, s2, 2);
+  ASSERT_LT(result, 0);
+
+  // Verify operands reversed.
+  result = __llvm_libc::strncmp(s2, s1, 2);
+  ASSERT_GT(result, 0);
 }

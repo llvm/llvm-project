@@ -16,10 +16,12 @@ set(LLVM_LINK_COMPONENTS
   OrcTargetProcess
   RuntimeDyld
   Support
+  TargetParser
   )
 
 add_llvm_tool(llvm-jitlink
   llvm-jitlink.cpp
+  llvm-jitlink-coff.cpp
   llvm-jitlink-elf.cpp
   llvm-jitlink-macho.cpp
   )

@@ -13,7 +13,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/Binary.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/MemoryBufferRef.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -483,18 +483,12 @@ Error COFFObjectFile::getRvaPtr(uint32_t Addr, uintptr_t &Res,
       // fail, otherwise it will be impossible to use this object as debug info
       // in LLDB. Return SectionStrippedError here so that
       // COFFObjectFile::initialize can ignore the error.
-      if (Section->SizeOfRawData == 0)
-        return make_error<SectionStrippedError>();
+      // Somewhat common binaries may have RVAs pointing outside of the
+      // provided raw data. Instead of rejecting the binaries, just
+      // treat the section as stripped for these purposes.
       if (Section->SizeOfRawData < Section->VirtualSize &&
           Addr >= SectionStart + Section->SizeOfRawData) {
-        if (ErrorContext)
-          return createStringError(object_error::parse_failed,
-                                   "RVA 0x%" PRIx32
-                                   " for %s found but data is incomplete",
-                                   Addr, ErrorContext);
-        return createStringError(
-            object_error::parse_failed,
-            "RVA 0x%" PRIx32 " found but data is incomplete", Addr);
+        return make_error<SectionStrippedError>();
       }
       uint32_t Offset = Addr - SectionStart;
       Res = reinterpret_cast<uintptr_t>(base()) + Section->PointerToRawData +
@@ -1020,6 +1014,10 @@ StringRef COFFObjectFile::getFileFormatName() const {
     return "COFF-ARM";
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return "COFF-ARM64";
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return "COFF-ARM64EC";
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return "COFF-ARM64X";
   default:
     return "COFF-<unknown arch>";
   }
@@ -1034,6 +1032,8 @@ Triple::ArchType COFFObjectFile::getArch() const {
   case COFF::IMAGE_FILE_MACHINE_ARMNT:
     return Triple::thumb;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
     return Triple::aarch64;
   default:
     return Triple::UnknownArch;
@@ -1137,7 +1137,7 @@ COFFObjectFile::getSymbolAuxData(COFFSymbolRef Symbol) const {
            "Aux Symbol data did not point to the beginning of a symbol");
 #endif
   }
-  return makeArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
+  return ArrayRef(Aux, Symbol.getNumberOfAuxSymbols() * SymbolSize);
 }
 
 uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
@@ -1152,13 +1152,7 @@ uint32_t COFFObjectFile::getSymbolIndex(COFFSymbolRef Symbol) const {
 
 Expected<StringRef>
 COFFObjectFile::getSectionName(const coff_section *Sec) const {
-  StringRef Name;
-  if (Sec->Name[COFF::NameSize - 1] == 0)
-    // Null terminated, let ::strlen figure out the length.
-    Name = Sec->Name;
-  else
-    // Not null terminated, use all 8 bytes.
-    Name = StringRef(Sec->Name, COFF::NameSize);
+  StringRef Name = StringRef(Sec->Name, COFF::NameSize).split('\0').first;
 
   // Check for string table entry. First byte is '/'.
   if (Name.startswith("/")) {
@@ -1168,7 +1162,7 @@ COFFObjectFile::getSectionName(const coff_section *Sec) const {
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
     } else {
-      if (Name.substr(1).consumeInteger(10, Offset))
+      if (Name.substr(1).getAsInteger(10, Offset))
         return createStringError(object_error::parse_failed,
                                  "invalid section name");
     }
@@ -1208,7 +1202,7 @@ Error COFFObjectFile::getSectionContents(const coff_section *Sec,
   uint32_t SectionSize = getSectionSize(Sec);
   if (Error E = checkOffset(Data, ConStart, SectionSize))
     return E;
-  Res = makeArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
+  Res = ArrayRef(reinterpret_cast<const uint8_t *>(ConStart), SectionSize);
   return Error::success();
 }
 
@@ -1326,6 +1320,8 @@ StringRef COFFObjectFile::getRelocationTypeName(uint16_t Type) const {
     }
     break;
   case COFF::IMAGE_FILE_MACHINE_ARM64:
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
     switch (Type) {
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ABSOLUTE);
     LLVM_COFF_SWITCH_RELOC_TYPE_NAME(IMAGE_REL_ARM64_ADDR32);
@@ -1908,6 +1904,8 @@ ResourceSectionRef::getContents(const coff_resource_data_entry &Entry) {
       RVAReloc = COFF::IMAGE_REL_ARM_ADDR32NB;
       break;
     case COFF::IMAGE_FILE_MACHINE_ARM64:
+    case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    case COFF::IMAGE_FILE_MACHINE_ARM64X:
       RVAReloc = COFF::IMAGE_REL_ARM64_ADDR32NB;
       break;
     default:

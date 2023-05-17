@@ -31,8 +31,7 @@ struct FIRInlinerInterface : public mlir::DialectInlinerInterface {
   /// This hook checks to see if the operation `op` is legal to inline into the
   /// given region `reg`.
   bool isLegalToInline(mlir::Operation *op, mlir::Region *reg,
-                       bool wouldBeCloned,
-                       mlir::BlockAndValueMapping &map) const final {
+                       bool wouldBeCloned, mlir::IRMapping &map) const final {
     return fir::canLegallyInline(op, reg, wouldBeCloned, map);
   }
 

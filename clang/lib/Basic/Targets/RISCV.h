@@ -1,4 +1,4 @@
-//===--- RISCV.h - Declare RISCV target feature support ---------*- C++ -*-===//
+//===--- RISCV.h - Declare RISC-V target feature support --------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file declares RISCV TargetInfo objects.
+// This file declares RISC-V TargetInfo objects.
 //
 //===----------------------------------------------------------------------===//
 
@@ -15,9 +15,10 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/RISCVISAInfo.h"
+#include "llvm/TargetParser/Triple.h"
+#include <optional>
 
 namespace clang {
 namespace targets {
@@ -27,7 +28,6 @@ class RISCVTargetInfo : public TargetInfo {
 protected:
   std::string ABI, CPU;
   std::unique_ptr<llvm::RISCVISAInfo> ISAInfo;
-  static const Builtin::Info BuiltinInfo[];
 
 public:
   RISCVTargetInfo(const llvm::Triple &Triple, const TargetOptions &)
@@ -41,6 +41,7 @@ public:
     HasRISCVVTypes = true;
     MCountName = "_mcount";
     HasFloat16 = true;
+    HasStrictFP = true;
   }
 
   bool setCPU(const std::string &Name) override {
@@ -60,7 +61,7 @@ public:
     return TargetInfo::VoidPtrBuiltinVaList;
   }
 
-  const char *getClobbers() const override { return ""; }
+  std::string_view getClobbers() const override { return ""; }
 
   StringRef getConstraintRegister(StringRef Constraint,
                                   StringRef Expression) const override {
@@ -90,6 +91,9 @@ public:
                  StringRef CPU,
                  const std::vector<std::string> &FeaturesVec) const override;
 
+  std::optional<std::pair<unsigned, unsigned>>
+  getVScaleRange(const LangOptions &LangOpts) const override;
+
   bool hasFeature(StringRef Feature) const override;
 
   bool handleTargetFeatures(std::vector<std::string> &Features,
@@ -100,6 +104,11 @@ public:
   bool useFP16ConversionIntrinsics() const override {
     return false;
   }
+
+  bool isValidCPUName(StringRef Name) const override;
+  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+  bool isValidTuneCPUName(StringRef Name) const override;
+  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 };
 class LLVM_LIBRARY_VISIBILITY RISCV32TargetInfo : public RISCVTargetInfo {
 public:
@@ -119,11 +128,6 @@ public:
     return false;
   }
 
-  bool isValidCPUName(StringRef Name) const override;
-  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-  bool isValidTuneCPUName(StringRef Name) const override;
-  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
-
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;
 
@@ -137,7 +141,7 @@ public:
       : RISCVTargetInfo(Triple, Opts) {
     LongWidth = LongAlign = PointerWidth = PointerAlign = 64;
     IntMaxType = Int64Type = SignedLong;
-    resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n64-S128");
+    resetDataLayout("e-m:e-p:64:64-i64:64-i128:128-n32:64-S128");
   }
 
   bool setABI(const std::string &Name) override {
@@ -147,11 +151,6 @@ public:
     }
     return false;
   }
-
-  bool isValidCPUName(StringRef Name) const override;
-  void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
-  bool isValidTuneCPUName(StringRef Name) const override;
-  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 
   void setMaxAtomicWidth() override {
     MaxAtomicPromoteWidth = 128;

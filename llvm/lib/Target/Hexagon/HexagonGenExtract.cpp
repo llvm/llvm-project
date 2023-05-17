@@ -178,7 +178,7 @@ bool HexagonGenExtract::convert(Instruction *In) {
   // CM is the shifted-left mask. Shift it back right to remove the zero
   // bits on least-significant positions.
   APInt M = CM->getValue().lshr(SL);
-  uint32_t T = M.countTrailingOnes();
+  uint32_t T = M.countr_one();
 
   // During the shifts some of the bits will be lost. Calculate how many
   // of the original value will remain after shift right and then left.

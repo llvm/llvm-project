@@ -4,11 +4,11 @@ target triple = "x86_64-apple-darwin10.0.0"
 
 ; This test exercises the alias checking in SimpleRegisterCoalescing::RemoveCopyByCommutingDef.
 
-define void @f(i32* %w, i32* %h, i8* %_this, i8* %image) nounwind ssp {
-  %x1 = tail call i64 @g(i8* %_this, i8* %image) nounwind ; <i64> [#uses=3]
+define void @f(ptr %w, ptr %h, ptr %_this, ptr %image) nounwind ssp {
+  %x1 = tail call i64 @g(ptr %_this, ptr %image) nounwind ; <i64> [#uses=3]
   %tmp1 = trunc i64 %x1 to i32                     ; <i32> [#uses=1]
 ; CHECK: movl (%r{{.*}}), %
-  %x4 = load i32, i32* %h, align 4                      ; <i32> [#uses=1]
+  %x4 = load i32, ptr %h, align 4                      ; <i32> [#uses=1]
 
 ; The imull clobbers a 32-bit register.
 ; CHECK: imull %{{...}}, %e[[CLOBBER:..]]
@@ -21,8 +21,8 @@ define void @f(i32* %w, i32* %h, i8* %_this, i8* %image) nounwind ssp {
 
 ; CHECK: idiv
   %x6 = sdiv i32 %x5, %btmp4                         ; <i32> [#uses=1]
-  store i32 %x6, i32* %w, align 4
+  store i32 %x6, ptr %w, align 4
   ret void
 }
 
-declare i64 @g(i8*, i8*)
+declare i64 @g(ptr, ptr)

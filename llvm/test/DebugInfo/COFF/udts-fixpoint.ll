@@ -35,13 +35,13 @@ target triple = "x86_64-pc-windows-msvc19.16.0"
 %class.c = type { { i32, i32, i32 } }
 
 ; Function Attrs: noinline nounwind optnone
-define dso_local %class.c* @"??0c@@AEAA@XZ"(%class.c* returned %this) unnamed_addr #0 align 2 !dbg !7 {
+define dso_local ptr @"??0c@@AEAA@XZ"(ptr returned %this) unnamed_addr #0 align 2 !dbg !7 {
 entry:
-  %this.addr = alloca %class.c*, align 8
-  store %class.c* %this, %class.c** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %class.c** %this.addr, metadata !20, metadata !DIExpression()), !dbg !22
-  %this1 = load %class.c*, %class.c** %this.addr, align 8
-  ret %class.c* %this1, !dbg !23
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !20, metadata !DIExpression()), !dbg !22
+  %this1 = load ptr, ptr %this.addr, align 8
+  ret ptr %this1, !dbg !23
 }
 
 ; Function Attrs: nounwind readnone speculatable willreturn

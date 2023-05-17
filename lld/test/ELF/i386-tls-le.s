@@ -2,9 +2,9 @@
 # RUN: llvm-mc -filetype=obj -triple=i686 %s -o %t.o
 # RUN: ld.lld %t.o -o %t
 # RUN: ld.lld %t.o -pie -o %t.pie
-# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DIS
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s --check-prefix=DIS
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=RELOC
-# RUN: llvm-objdump -d --no-show-raw-insn %t.pie | FileCheck %s --check-prefix=DIS
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.pie | FileCheck %s --check-prefix=DIS
 # RUN: llvm-readobj -r %t.pie | FileCheck %s --check-prefix=RELOC
 
 ## Reject local-exec TLS relocations for -shared.

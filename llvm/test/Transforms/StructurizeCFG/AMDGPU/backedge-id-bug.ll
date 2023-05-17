@@ -14,21 +14,21 @@
 ; headers are identified in RPO order, it finds the wrong set of back
 ; edges.
 
-define amdgpu_kernel void @loop_backedge_misidentified(i32 addrspace(1)* %arg0) #0 {
+define amdgpu_kernel void @loop_backedge_misidentified(ptr addrspace(1) %arg0) #0 {
 ; CHECK-LABEL: @loop_backedge_misidentified(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP:%.*]] = load volatile <2 x i32>, <2 x i32> addrspace(1)* undef, align 16
-; CHECK-NEXT:    [[LOAD1:%.*]] = load volatile <2 x float>, <2 x float> addrspace(1)* undef
+; CHECK-NEXT:    [[TMP:%.*]] = load volatile <2 x i32>, ptr addrspace(1) undef, align 16
+; CHECK-NEXT:    [[LOAD1:%.*]] = load volatile <2 x float>, ptr addrspace(1) undef
 ; CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, i32 addrspace(1)* [[ARG0:%.*]], i32 [[TID]]
-; CHECK-NEXT:    [[I_INITIAL:%.*]] = load volatile i32, i32 addrspace(1)* [[GEP]], align 4
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr addrspace(1) [[ARG0:%.*]], i32 [[TID]]
+; CHECK-NEXT:    [[I_INITIAL:%.*]] = load volatile i32, ptr addrspace(1) [[GEP]], align 4
 ; CHECK-NEXT:    br label [[LOOP_HEADER:%.*]]
 ; CHECK:       LOOP.HEADER:
 ; CHECK-NEXT:    [[I:%.*]] = phi i32 [ [[I_INITIAL]], [[ENTRY:%.*]] ], [ [[TMP10:%.*]], [[FLOW4:%.*]] ]
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 0x100b
 ; CHECK-NEXT:    [[TMP12:%.*]] = zext i32 [[I]] to i64
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* null, i64 [[TMP12]]
-; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x i32>, <4 x i32> addrspace(1)* [[TMP13]], align 16
+; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds <4 x i32>, ptr addrspace(1) null, i64 [[TMP12]]
+; CHECK-NEXT:    [[TMP14:%.*]] = load <4 x i32>, ptr addrspace(1) [[TMP13]], align 16
 ; CHECK-NEXT:    [[TMP15:%.*]] = extractelement <4 x i32> [[TMP14]], i64 0
 ; CHECK-NEXT:    [[TMP16:%.*]] = and i32 [[TMP15]], 65535
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[TMP16]], 1
@@ -88,23 +88,23 @@ define amdgpu_kernel void @loop_backedge_misidentified(i32 addrspace(1)* %arg0) 
 ; CHECK-NEXT:    br i1 [[TMP11]], label [[RETURN:%.*]], label [[LOOP_HEADER]]
 ; CHECK:       RETURN:
 ; CHECK-NEXT:    call void asm sideeffect "s_nop 0x99
-; CHECK-NEXT:    store volatile <2 x float> [[LOAD1]], <2 x float> addrspace(1)* undef, align 8
+; CHECK-NEXT:    store volatile <2 x float> [[LOAD1]], ptr addrspace(1) undef, align 8
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %tmp = load volatile <2 x i32>, <2 x i32> addrspace(1)* undef, align 16
-  %load1 = load volatile <2 x float>, <2 x float> addrspace(1)* undef
+  %tmp = load volatile <2 x i32>, ptr addrspace(1) undef, align 16
+  %load1 = load volatile <2 x float>, ptr addrspace(1) undef
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %gep = getelementptr inbounds i32, i32 addrspace(1)* %arg0, i32 %tid
-  %i.initial = load volatile i32, i32 addrspace(1)* %gep, align 4
+  %gep = getelementptr inbounds i32, ptr addrspace(1) %arg0, i32 %tid
+  %i.initial = load volatile i32, ptr addrspace(1) %gep, align 4
   br label %LOOP.HEADER
 
 LOOP.HEADER:
   %i = phi i32 [ %i.final, %END_ELSE_BLOCK ], [ %i.initial, %entry ]
   call void asm sideeffect "s_nop 0x100b ; loop $0 ", "r,~{memory}"(i32 %i) #0
   %tmp12 = zext i32 %i to i64
-  %tmp13 = getelementptr inbounds <4 x i32>, <4 x i32> addrspace(1)* null, i64 %tmp12
-  %tmp14 = load <4 x i32>, <4 x i32> addrspace(1)* %tmp13, align 16
+  %tmp13 = getelementptr inbounds <4 x i32>, ptr addrspace(1) null, i64 %tmp12
+  %tmp14 = load <4 x i32>, ptr addrspace(1) %tmp13, align 16
   %tmp15 = extractelement <4 x i32> %tmp14, i64 0
   %tmp16 = and i32 %tmp15, 65535
   %tmp17 = icmp eq i32 %tmp16, 1
@@ -150,7 +150,7 @@ END_ELSE_BLOCK:
 
 RETURN:
   call void asm sideeffect "s_nop 0x99 ; ClosureEval return", "~{memory}"() #0
-  store volatile <2 x float> %load1, <2 x float> addrspace(1)* undef, align 8
+  store volatile <2 x float> %load1, ptr addrspace(1) undef, align 8
   ret void
 }
 

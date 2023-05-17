@@ -2,7 +2,7 @@
 // RUN: %clang_cc1 -triple thumbv8.1m.main-none-none-eabi \
 // RUN:   -target-feature +cdecp0 -target-feature +cdecp1 \
 // RUN:   -mfloat-abi hard -O0 -disable-O0-optnone \
-// RUN:   -S -emit-llvm -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:   -S -emit-llvm -o - %s | opt -S -passes=mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

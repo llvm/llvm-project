@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=2 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,HSA %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa --amdhsa-code-object-version=5 -mcpu=kaveri -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,COV5 %s
-; RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs < %s | FileCheck -check-prefixes=GCN,MESA %s
+; RUN: sed 's/CODE_OBJECT_VERSION/200/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN,HSA %s
+; RUN: sed 's/CODE_OBJECT_VERSION/500/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=kaveri -verify-machineinstrs | FileCheck -check-prefixes=GCN,COV5 %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-mesa-mesa3d -mcpu=tahiti -verify-machineinstrs | FileCheck -check-prefixes=GCN,MESA %s
 
 ; GCN-LABEL: {{^}}kernel_implicitarg_ptr_empty:
 ; HSA: enable_sgpr_kernarg_segment_ptr = 1
@@ -15,9 +15,8 @@
 
 ; COV5: .amdhsa_kernarg_size 256
 define amdgpu_kernel void @kernel_implicitarg_ptr_empty() #0 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -37,9 +36,8 @@ define amdgpu_kernel void @kernel_implicitarg_ptr_empty() #0 {
 
 ; COV5: .amdhsa_kernarg_size 0
 define amdgpu_kernel void @kernel_implicitarg_ptr_empty_0implicit() #3 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -57,9 +55,8 @@ define amdgpu_kernel void @kernel_implicitarg_ptr_empty_0implicit() #3 {
 
 ; COV5: .amdhsa_kernarg_size 48
 define amdgpu_kernel void @opencl_kernel_implicitarg_ptr_empty() #1 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -77,9 +74,8 @@ define amdgpu_kernel void @opencl_kernel_implicitarg_ptr_empty() #1 {
 
 ; COV5: .amdhsa_kernarg_size 368
 define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) #0 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -97,9 +93,8 @@ define amdgpu_kernel void @kernel_implicitarg_ptr([112 x i8]) #0 {
 
 ; COV5: .amdhsa_kernarg_size 160
 define amdgpu_kernel void @opencl_kernel_implicitarg_ptr([112 x i8]) #1 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -109,9 +104,8 @@ define amdgpu_kernel void @opencl_kernel_implicitarg_ptr([112 x i8]) #1 {
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @func_implicitarg_ptr() #0 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -121,9 +115,8 @@ define void @func_implicitarg_ptr() #0 {
 ; GCN-NEXT: s_waitcnt
 ; GCN-NEXT: s_setpc_b64
 define void @opencl_func_implicitarg_ptr() #0 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -249,12 +242,10 @@ define void @opencl_func_call_implicitarg_ptr_func() #0 {
 ; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
 ; GCN: s_waitcnt lgkmcnt(0)
 define void @func_kernarg_implicitarg_ptr() #0 {
-  %kernarg.segment.ptr = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast.kernarg.segment.ptr = bitcast i8 addrspace(4)* %kernarg.segment.ptr to i32 addrspace(4)*
-  %cast.implicitarg = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load0 = load volatile i32, i32 addrspace(4)* %cast.kernarg.segment.ptr
-  %load1 = load volatile i32, i32 addrspace(4)* %cast.implicitarg
+  %kernarg.segment.ptr = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load0 = load volatile i32, ptr addrspace(4) %kernarg.segment.ptr
+  %load1 = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -265,12 +256,10 @@ define void @func_kernarg_implicitarg_ptr() #0 {
 ; GCN: s_load_dword s{{[0-9]+}}, s[8:9], 0x0
 ; GCN: s_waitcnt lgkmcnt(0)
 define void @opencl_func_kernarg_implicitarg_ptr() #0 {
-  %kernarg.segment.ptr = call i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr()
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast.kernarg.segment.ptr = bitcast i8 addrspace(4)* %kernarg.segment.ptr to i32 addrspace(4)*
-  %cast.implicitarg = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load0 = load volatile i32, i32 addrspace(4)* %cast.kernarg.segment.ptr
-  %load1 = load volatile i32, i32 addrspace(4)* %cast.implicitarg
+  %kernarg.segment.ptr = call ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr()
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load0 = load volatile i32, ptr addrspace(4) %kernarg.segment.ptr
+  %load1 = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -291,9 +280,8 @@ define amdgpu_kernel void @kernel_call_kernarg_implicitarg_ptr_func([112 x i8]) 
 
 ; COV5: .amdhsa_kernarg_size 120
 define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>, i32) #1 {
-  %implicitarg.ptr = call i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr()
-  %cast = bitcast i8 addrspace(4)* %implicitarg.ptr to i32 addrspace(4)*
-  %load = load volatile i32, i32 addrspace(4)* %cast
+  %implicitarg.ptr = call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %load = load volatile i32, ptr addrspace(4) %implicitarg.ptr
   ret void
 }
 
@@ -396,10 +384,13 @@ define amdgpu_kernel void @kernel_implicitarg_no_struct_align_padding(<16 x i32>
 ; COV5-NEXT:    .kernarg_segment_size: 120
 ; COV5-LABEL:   .name:           kernel_implicitarg_no_struct_align_padding
 
-declare i8 addrspace(4)* @llvm.amdgcn.implicitarg.ptr() #2
-declare i8 addrspace(4)* @llvm.amdgcn.kernarg.segment.ptr() #2
+declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #2
+declare ptr addrspace(4) @llvm.amdgcn.kernarg.segment.ptr() #2
 
 attributes #0 = { nounwind noinline }
 attributes #1 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="48" }
 attributes #2 = { nounwind readnone speculatable }
 attributes #3 = { nounwind noinline "amdgpu-implicitarg-num-bytes"="0" }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

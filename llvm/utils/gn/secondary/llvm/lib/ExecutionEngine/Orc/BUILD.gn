@@ -10,9 +10,13 @@ static_library("Orc") {
     "//llvm/lib/Object",
     "//llvm/lib/Passes",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
     "//llvm/lib/Transforms/Utils",
+    "//llvm/lib/WindowsDriver",
   ]
   sources = [
+    "COFFPlatform.cpp",
+    "COFFVCRuntimeSupport.cpp",
     "CompileOnDemandLayer.cpp",
     "CompileUtils.cpp",
     "Core.cpp",
@@ -39,6 +43,8 @@ static_library("Orc") {
     "LookupAndRecordAddrs.cpp",
     "MachOPlatform.cpp",
     "Mangling.cpp",
+    "MapperJITLinkMemoryManager.cpp",
+    "MemoryMapper.cpp",
     "ObjectFileInterface.cpp",
     "ObjectLinkingLayer.cpp",
     "ObjectTransformLayer.cpp",

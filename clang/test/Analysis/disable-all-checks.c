@@ -1,12 +1,12 @@
-// RUN: %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region \
+// RUN: %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:   -analyzer-disable-all-checks -verify %s
 //
 // RUN: %clang_analyze_cc1 -analyzer-disable-all-checks -analyzer-checker=core \
-// RUN:   -analyzer-store=region -verify %s
+// RUN:   -verify %s
 //
 // RUN: %clang_analyze_cc1 -analyzer-disable-all-checks -verify %s
 //
-// RUN: not %clang_analyze_cc1 -analyzer-checker=core -analyzer-store=region \
+// RUN: not %clang_analyze_cc1 -analyzer-checker=core \
 // RUN:   -analyzer-disable-checker non.existant.Checker -verify %s 2>&1 \
 // RUN:   | FileCheck %s
 //

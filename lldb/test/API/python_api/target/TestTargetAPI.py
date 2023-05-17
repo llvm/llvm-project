@@ -2,10 +2,6 @@
 Test SBTarget APIs.
 """
 
-from __future__ import print_function
-
-
-import unittest2
 import os
 import lldb
 from lldbsuite.test.decorators import *
@@ -14,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 
 class TargetAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -34,7 +28,6 @@ class TargetAPITestCase(TestBase):
     #
     # It does not segfaults now.  But for dwarf, the variable value is None if
     # the inferior process does not exist yet.  The radar has been updated.
-    #@unittest232.skip("segmentation fault -- skipping")
     def test_find_global_variables(self):
         """Exercise SBTarget.FindGlobalVariables() API."""
         d = {'EXE': 'b.out'}
@@ -49,7 +42,6 @@ class TargetAPITestCase(TestBase):
         self.setTearDownCleanup(dictionary=d)
         self.find_compile_units(self.getBuildArtifact('b.out'))
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test_find_functions(self):
         """Exercise SBTarget.FindFunctions() API."""
         d = {'EXE': 'b.out'}
@@ -62,7 +54,6 @@ class TargetAPITestCase(TestBase):
         self.build()
         self.get_description()
 
-    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test_resolve_symbol_context_with_address(self):
         """Exercise SBTarget.ResolveSymbolContextForAddress() API."""
         self.build()
@@ -120,7 +111,7 @@ class TargetAPITestCase(TestBase):
 
         abi_pre_launch = target.GetABIName()
         self.assertTrue(len(abi_pre_launch) != 0, "Got an ABI string")
-        
+
         breakpoint = target.BreakpointCreateByLocation(
             "main.c", self.line_main)
         self.assertTrue(breakpoint, VALID_BREAKPOINT)
@@ -133,7 +124,8 @@ class TargetAPITestCase(TestBase):
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         abi_after_launch = target.GetABIName()
-        self.assertEqual(abi_pre_launch, abi_after_launch, "ABI's match before and during run")
+        self.assertEqual(abi_pre_launch, abi_after_launch,
+                         "ABI's match before and during run")
 
     def test_read_memory(self):
         d = {'EXE': 'b.out'}
@@ -162,7 +154,6 @@ class TargetAPITestCase(TestBase):
         self.assertSuccess(error, "Make sure memory read succeeded")
         self.assertEqual(len(content), 1)
 
-
     @skipIfWindows  # stdio manipulation unsupported on Windows
     @skipIfRemote   # stdio manipulation unsupported on remote iOS devices<rdar://problem/54581135>
     @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
@@ -180,7 +171,7 @@ class TargetAPITestCase(TestBase):
         process = target.LaunchSimple(
             ['foo', 'bar'], ['baz'], self.get_process_working_directory())
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn('arg: foo', output)
         self.assertIn('arg: bar', output)
@@ -191,16 +182,25 @@ class TargetAPITestCase(TestBase):
         process = target.LaunchSimple(None, None,
                                       self.get_process_working_directory())
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertIn('arg: foo', output)
         self.assertIn('env: bar=baz', output)
+
+        # Clear all the run args set above.
+        self.runCmd("setting clear target.run-args")
+        process = target.LaunchSimple(None, None,
+                                      self.get_process_working_directory())
+        process.Continue()
+        self.assertEqual(process.GetState(), lldb.eStateExited)
+        output = process.GetSTDOUT(9999)
+        self.assertNotIn('arg: foo', output)
 
         self.runCmd("settings set target.disable-stdio true")
         process = target.LaunchSimple(
             None, None, self.get_process_working_directory())
         process.Continue()
-        self.assertEqual(process.GetState(), lldb.eStateExited)
+        self.assertState(process.GetState(), lldb.eStateExited)
         output = process.GetSTDOUT(9999)
         self.assertEqual(output, "")
 
@@ -367,7 +367,7 @@ class TargetAPITestCase(TestBase):
 
         if lldb.remote_platform:
             stdout_path = lldbutil.append_to_process_working_directory(self,
-                "lldb-stdout-redirect.txt")
+                                                                       "lldb-stdout-redirect.txt")
         else:
             stdout_path = local_path
         error = lldb.SBError()
@@ -488,15 +488,16 @@ class TargetAPITestCase(TestBase):
         """ Test the other two target create methods using LLDB_ARCH_DEFAULT. """
         self.build()
         exe = self.getBuildArtifact("a.out")
-        target = self.dbg.CreateTargetWithFileAndArch(exe, lldb.LLDB_ARCH_DEFAULT)
+        target = self.dbg.CreateTargetWithFileAndArch(
+            exe, lldb.LLDB_ARCH_DEFAULT)
         self.assertTrue(target.IsValid(), "Default arch made a valid target.")
         # This should also work with the target's triple:
         target2 = self.dbg.CreateTargetWithFileAndArch(exe, target.GetTriple())
         self.assertTrue(target2.IsValid(), "Round trip with triple works")
         # And this triple should work for the FileAndTriple API:
-        target3 = self.dbg.CreateTargetWithFileAndTargetTriple(exe, target.GetTriple())
+        target3 = self.dbg.CreateTargetWithFileAndTargetTriple(
+            exe, target.GetTriple())
         self.assertTrue(target3.IsValid())
-
 
     @skipIfWindows
     def test_is_loaded(self):

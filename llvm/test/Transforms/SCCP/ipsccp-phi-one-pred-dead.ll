@@ -5,17 +5,13 @@ target triple = "x86_64-unknown-linux-gnu"
 define void @test() {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label %Flow5.pre
+; CHECK-NEXT:    br label [[FLOW5_PRE:%.*]]
 ; CHECK:       Flow6:
-; CHECK-NEXT:    br i1 undef, label %end1, label %end2
+; CHECK-NEXT:    unreachable
 ; CHECK:       Flow5.pre:
-; CHECK-NEXT:    br label %Flow5
+; CHECK-NEXT:    br label [[FLOW5:%.*]]
 ; CHECK:       Flow5:
-; CHECK-NEXT:    br label %Flow6
-; CHECK:       end1:
-; CHECK-NEXT:    unreachable
-; CHECK:       end2:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br label [[FLOW6:%.*]]
 ;
 entry:
   br i1 true, label %Flow5.pre, label %Flow5.pre.unreachable

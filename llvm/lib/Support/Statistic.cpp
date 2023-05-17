@@ -120,8 +120,9 @@ void TrackingStatistic::RegisterStatistic() {
 }
 
 StatisticInfo::StatisticInfo() {
-  // Ensure timergroup lists are created first so they are destructed after us.
-  TimerGroup::ConstructTimerLists();
+  // Ensure that necessary timer global objects are created first so they are
+  // destructed after us.
+  TimerGroup::constructForStatistics();
 }
 
 // Print information when destroyed, iff command line option is specified.
@@ -192,7 +193,7 @@ void llvm::PrintStatistics(raw_ostream &OS) {
 
   // Print all of the statistics.
   for (TrackingStatistic *Stat : Stats.Stats)
-    OS << format("%*u %-*s - %s\n", MaxValLen, Stat->getValue(),
+    OS << format("%*" PRIu64 " %-*s - %s\n", MaxValLen, Stat->getValue(),
                  MaxDebugTypeLen, Stat->getDebugType(), Stat->getDesc());
 
   OS << '\n';  // Flush the output stream.
@@ -253,9 +254,9 @@ void llvm::PrintStatistics() {
 #endif
 }
 
-const std::vector<std::pair<StringRef, unsigned>> llvm::GetStatistics() {
+std::vector<std::pair<StringRef, uint64_t>> llvm::GetStatistics() {
   sys::SmartScopedLock<true> Reader(*StatLock);
-  std::vector<std::pair<StringRef, unsigned>> ReturnStats;
+  std::vector<std::pair<StringRef, uint64_t>> ReturnStats;
 
   for (const auto &Stat : StatInfo->statistics())
     ReturnStats.emplace_back(Stat->getName(), Stat->getValue());

@@ -15,17 +15,11 @@
 
 #include "mlir/IR/Types.h"
 #include "mlir/IR/Value.h"
+#include "mlir/IR/ValueRange.h"
 #include "llvm/ADT/PointerUnion.h"
 #include "llvm/ADT/Sequence.h"
 
 namespace mlir {
-class OperandRange;
-class ResultRange;
-class Type;
-class Value;
-class ValueRange;
-template <typename ValueRangeT>
-class ValueTypeRange;
 
 //===----------------------------------------------------------------------===//
 // TypeRange
@@ -42,20 +36,16 @@ class TypeRange : public llvm::detail::indexed_accessor_range_base<
                       Type, Type, Type> {
 public:
   using RangeBaseT::RangeBaseT;
-  TypeRange(ArrayRef<Type> types = llvm::None);
+  TypeRange(ArrayRef<Type> types = std::nullopt);
   explicit TypeRange(OperandRange values);
   explicit TypeRange(ResultRange values);
   explicit TypeRange(ValueRange values);
-  explicit TypeRange(ArrayRef<Value> values);
-  explicit TypeRange(ArrayRef<BlockArgument> values)
-      : TypeRange(ArrayRef<Value>(values.data(), values.size())) {}
   template <typename ValueRangeT>
   TypeRange(ValueTypeRange<ValueRangeT> values)
-      : TypeRange(ValueRangeT(values.begin().getCurrent(),
-                              values.end().getCurrent())) {}
-  template <typename Arg,
-            typename = typename std::enable_if_t<
-                std::is_constructible<ArrayRef<Type>, Arg>::value>>
+      : TypeRange(ValueRange(ValueRangeT(values.begin().getCurrent(),
+                                         values.end().getCurrent()))) {}
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<Type>, Arg>::value>>
   TypeRange(Arg &&arg) : TypeRange(ArrayRef<Type>(std::forward<Arg>(arg))) {}
   TypeRange(std::initializer_list<Type> types)
       : TypeRange(ArrayRef<Type>(types)) {}
@@ -174,6 +164,23 @@ inline bool operator==(ArrayRef<Type> lhs, const ValueTypeRange<RangeT> &rhs) {
   return lhs.size() == static_cast<size_t>(llvm::size(rhs)) &&
          std::equal(lhs.begin(), lhs.end(), rhs.begin());
 }
+
+//===----------------------------------------------------------------------===//
+// SubElements
+//===----------------------------------------------------------------------===//
+
+/// Enable TypeRange to be introspected for sub-elements.
+template <>
+struct AttrTypeSubElementHandler<TypeRange> {
+  static void walk(TypeRange param, AttrTypeImmediateSubElementWalker &walker) {
+    walker.walkRange(param);
+  }
+  static TypeRange replace(TypeRange param,
+                           AttrSubElementReplacements &attrRepls,
+                           TypeSubElementReplacements &typeRepls) {
+    return typeRepls.take_front(param.size());
+  }
+};
 
 } // namespace mlir
 

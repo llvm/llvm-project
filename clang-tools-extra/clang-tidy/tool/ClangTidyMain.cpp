@@ -19,15 +19,21 @@
 #include "../ClangTidyForceLinker.h"
 #include "../GlobList.h"
 #include "clang/Tooling/CommonOptionsParser.h"
+#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/Signals.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/WithColor.h"
+#include <optional>
 
 using namespace clang::tooling;
 using namespace llvm;
+
+static cl::desc desc(StringRef description) {
+  return cl::desc(description.ltrim());
+}
 
 static cl::OptionCategory ClangTidyCategory("clang-tidy options");
 
@@ -36,23 +42,55 @@ static cl::extrahelp ClangTidyHelp(R"(
 Configuration files:
   clang-tidy attempts to read configuration for each source file from a
   .clang-tidy file located in the closest parent directory of the source
-  file. If InheritParentConfig is true in a config file, the configuration file
-  in the parent directory (if any exists) will be taken and current config file
-  will be applied on top of the parent one. If any configuration options have
-  a corresponding command-line option, command-line option takes precedence.
-  The effective configuration can be inspected using -dump-config:
+  file. The .clang-tidy file is specified in YAML format. If any configuration
+  options have a corresponding command-line option, command-line option takes
+  precedence.
 
-    $ clang-tidy -dump-config
+  The following configuration options may be used in a .clang-tidy file:
+
+  CheckOptions                 - List of key-value pairs defining check-specific
+                                 options. Example:
+                                   CheckOptions:
+                                     some-check.SomeOption: 'some value'
+  Checks                       - Same as '--checks'. Additionally, the list of
+                                 globs can be specified as a list instead of a
+                                 string.
+  ExtraArgs                    - Same as '--extra-args'.
+  ExtraArgsBefore              - Same as '--extra-args-before'.
+  FormatStyle                  - Same as '--format-style'.
+  HeaderFileExtensions         - File extensions to consider to determine if a
+                                 given diagnostic is located in a header file.
+  HeaderFilterRegex            - Same as '--header-filter-regex'.
+  ImplementationFileExtensions - File extensions to consider to determine if a
+                                 given diagnostic is located in an
+                                 implementation file.
+  InheritParentConfig          - If this option is true in a config file, the
+                                 configuration file in the parent directory
+                                 (if any exists) will be taken and the current
+                                 config file will be applied on top of the
+                                 parent one.
+  SystemHeaders                - Same as '--system-headers'.
+  UseColor                     - Same as '--use-color'.
+  User                         - Specifies the name or e-mail of the user
+                                 running clang-tidy. This option is used, for
+                                 example, to place the correct user name in
+                                 TODO() comments in the relevant check.
+  WarningsAsErrors             - Same as '--warnings-as-errors'.
+
+  The effective configuration can be inspected using --dump-config:
+
+    $ clang-tidy --dump-config
     ---
-    Checks:              '-*,some-check'
-    WarningsAsErrors:    ''
-    HeaderFilterRegex:   ''
-    FormatStyle:         none
-    InheritParentConfig: true
-    User:                user
+    Checks:                       '-*,some-check'
+    WarningsAsErrors:             ''
+    HeaderFileExtensions:         ['', 'h','hh','hpp','hxx']
+    ImplementationFileExtensions: ['c','cc','cpp','cxx']
+    HeaderFilterRegex:            ''
+    FormatStyle:                  none
+    InheritParentConfig:          true
+    User:                         user
     CheckOptions:
-      - key:             some-check.SomeOption
-        value:           'some value'
+      some-check.SomeOption: 'some value'
     ...
 
 )");
@@ -61,7 +99,7 @@ const char DefaultChecks[] = // Enable these checks by default:
     "clang-diagnostic-*,"    //   * compiler diagnostics
     "clang-analyzer-*";      //   * Static Analyzer checks
 
-static cl::opt<std::string> Checks("checks", cl::desc(R"(
+static cl::opt<std::string> Checks("checks", desc(R"(
 Comma-separated list of globs with optional '-'
 prefix. Globs are processed in order of
 appearance in the list. Globs without '-'
@@ -74,7 +112,7 @@ file, if any.
 )"),
                                    cl::init(""), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> WarningsAsErrors("warnings-as-errors", cl::desc(R"(
+static cl::opt<std::string> WarningsAsErrors("warnings-as-errors", desc(R"(
 Upgrades warnings to errors. Same format as
 '-checks'.
 This option's value is appended to the value of
@@ -84,7 +122,7 @@ file, if any.
                                              cl::init(""),
                                              cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> HeaderFilter("header-filter", cl::desc(R"(
+static cl::opt<std::string> HeaderFilter("header-filter", desc(R"(
 Regular expression matching the names of the
 headers to output diagnostics from. Diagnostics
 from the main file of each translation unit are
@@ -96,11 +134,14 @@ option in .clang-tidy file, if any.
                                          cl::init(""),
                                          cl::cat(ClangTidyCategory));
 
-static cl::opt<bool>
-    SystemHeaders("system-headers",
-                  cl::desc("Display the errors from system headers."),
-                  cl::init(false), cl::cat(ClangTidyCategory));
-static cl::opt<std::string> LineFilter("line-filter", cl::desc(R"(
+static cl::opt<bool> SystemHeaders("system-headers", desc(R"(
+Display the errors from system headers.
+This option overrides the 'SystemHeaders' option
+in .clang-tidy file, if any.
+)"),
+                                   cl::init(false), cl::cat(ClangTidyCategory));
+
+static cl::opt<std::string> LineFilter("line-filter", desc(R"(
 List of files with line ranges to filter the
 warnings. Can be used together with
 -header-filter. The format of the list is a
@@ -113,14 +154,14 @@ JSON array of objects:
                                        cl::init(""),
                                        cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> Fix("fix", cl::desc(R"(
+static cl::opt<bool> Fix("fix", desc(R"(
 Apply suggested fixes. Without -fix-errors
 clang-tidy will bail out if any compilation
 errors were found.
 )"),
                          cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> FixErrors("fix-errors", cl::desc(R"(
+static cl::opt<bool> FixErrors("fix-errors", desc(R"(
 Apply suggested fixes even if compilation
 errors were found. If compiler errors have
 attached fix-its, clang-tidy will apply them as
@@ -128,16 +169,16 @@ well.
 )"),
                                cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> FixNotes("fix-notes", cl::desc(R"(
-If a warning has no fix, but a single fix can 
-be found through an associated diagnostic note, 
-apply the fix. 
-Specifying this flag will implicitly enable the 
+static cl::opt<bool> FixNotes("fix-notes", desc(R"(
+If a warning has no fix, but a single fix can
+be found through an associated diagnostic note,
+apply the fix.
+Specifying this flag will implicitly enable the
 '--fix' flag.
 )"),
                               cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> FormatStyle("format-style", cl::desc(R"(
+static cl::opt<std::string> FormatStyle("format-style", desc(R"(
 Style for formatting code around applied fixes:
   - 'none' (default) turns off formatting
   - 'file' (literally 'file', not a placeholder)
@@ -151,34 +192,33 @@ information about formatting styles and options.
 This option overrides the 'FormatStyle` option in
 .clang-tidy file, if any.
 )"),
-                                   cl::init("none"),
-                                   cl::cat(ClangTidyCategory));
+                                        cl::init("none"),
+                                        cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> ListChecks("list-checks", cl::desc(R"(
+static cl::opt<bool> ListChecks("list-checks", desc(R"(
 List all enabled checks and exit. Use with
 -checks=* to list all available checks.
 )"),
                                 cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> ExplainConfig("explain-config", cl::desc(R"(
+static cl::opt<bool> ExplainConfig("explain-config", desc(R"(
 For each enabled check explains, where it is
 enabled, i.e. in clang-tidy binary, command
 line or a specific configuration file.
 )"),
                                    cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> Config("config", cl::desc(R"(
+static cl::opt<std::string> Config("config", desc(R"(
 Specifies a configuration in YAML/JSON format:
   -config="{Checks: '*',
-            CheckOptions: [{key: x,
-                            value: y}]}"
+            CheckOptions: {x: y}}"
 When the value is empty, clang-tidy will
 attempt to find a file named .clang-tidy for
 each source file in its parent directories.
 )"),
                                    cl::init(""), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> ConfigFile("config-file", cl::desc(R"(
+static cl::opt<std::string> ConfigFile("config-file", desc(R"(
 Specify the path of .clang-tidy or custom config file:
  e.g. --config-file=/some/path/myTidyConfigFile
 This option internally works exactly the same way as
@@ -188,7 +228,7 @@ Use either --config-file or --config, not both.
                                        cl::init(""),
                                        cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> DumpConfig("dump-config", cl::desc(R"(
+static cl::opt<bool> DumpConfig("dump-config", desc(R"(
 Dumps configuration in the YAML format to
 stdout. This option can be used along with a
 file name (and '--' if the file is outside of a
@@ -200,15 +240,14 @@ configuration of all checks.
 )"),
                                 cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> EnableCheckProfile("enable-check-profile", cl::desc(R"(
+static cl::opt<bool> EnableCheckProfile("enable-check-profile", desc(R"(
 Enable per-check timing profiles, and print a
 report to stderr.
 )"),
                                         cl::init(false),
                                         cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> StoreCheckProfile("store-check-profile",
-                                              cl::desc(R"(
+static cl::opt<std::string> StoreCheckProfile("store-check-profile", desc(R"(
 By default reports are printed in tabulated
 format to stderr. When this option is passed,
 these per-TU profiles are instead stored as JSON.
@@ -224,7 +263,7 @@ static cl::opt<bool>
                                        cl::init(false), cl::Hidden,
                                        cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> ExportFixes("export-fixes", cl::desc(R"(
+static cl::opt<std::string> ExportFixes("export-fixes", desc(R"(
 YAML file to store suggested fixes in. The
 stored fixes can be applied to the input source
 code with clang-apply-replacements.
@@ -232,23 +271,22 @@ code with clang-apply-replacements.
                                         cl::value_desc("filename"),
                                         cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> Quiet("quiet", cl::desc(R"(
+static cl::opt<bool> Quiet("quiet", desc(R"(
 Run clang-tidy in quiet mode. This suppresses
 printing statistics about ignored warnings and
 warnings treated as errors if the respective
 options are specified.
 )"),
-                           cl::init(false),
-                           cl::cat(ClangTidyCategory));
+                           cl::init(false), cl::cat(ClangTidyCategory));
 
-static cl::opt<std::string> VfsOverlay("vfsoverlay", cl::desc(R"(
+static cl::opt<std::string> VfsOverlay("vfsoverlay", desc(R"(
 Overlay the virtual filesystem described by file
 over the real file system.
 )"),
                                        cl::value_desc("filename"),
                                        cl::cat(ClangTidyCategory));
 
-static cl::opt<bool> UseColor("use-color", cl::desc(R"(
+static cl::opt<bool> UseColor("use-color", desc(R"(
 Use colors in diagnostics. If not set, colors
 will be used if the terminal connected to
 standard output supports colors.
@@ -257,8 +295,13 @@ This option overrides the 'UseColor' option in
 )"),
                               cl::init(false), cl::cat(ClangTidyCategory));
 
-namespace clang {
-namespace tidy {
+static cl::opt<bool> VerifyConfig("verify-config", desc(R"(
+Check the config files to ensure each check and
+option is recognized.
+)"),
+                                  cl::init(false), cl::cat(ClangTidyCategory));
+
+namespace clang::tidy {
 
 static void printStats(const ClangTidyStats &Stats) {
   if (Stats.errorsIgnored()) {
@@ -385,6 +428,94 @@ getVfsFromFile(const std::string &OverlayFile,
   return FS;
 }
 
+static StringRef closest(StringRef Value, const StringSet<> &Allowed) {
+  unsigned MaxEdit = 5U;
+  StringRef Closest;
+  for (auto Item : Allowed.keys()) {
+    unsigned Cur = Value.edit_distance_insensitive(Item, true, MaxEdit);
+    if (Cur < MaxEdit) {
+      Closest = Item;
+      MaxEdit = Cur;
+    }
+  }
+  return Closest;
+}
+
+static constexpr StringLiteral VerifyConfigWarningEnd = " [-verify-config]\n";
+
+static bool verifyChecks(const StringSet<> &AllChecks, StringRef CheckGlob,
+                         StringRef Source) {
+  llvm::StringRef Cur, Rest;
+  bool AnyInvalid = false;
+  for (std::tie(Cur, Rest) = CheckGlob.split(',');
+       !(Cur.empty() && Rest.empty()); std::tie(Cur, Rest) = Rest.split(',')) {
+    Cur = Cur.trim();
+    if (Cur.empty())
+      continue;
+    Cur.consume_front("-");
+    if (Cur.startswith("clang-diagnostic"))
+      continue;
+    if (Cur.contains('*')) {
+      SmallString<128> RegexText("^");
+      StringRef MetaChars("()^$|*+?.[]\\{}");
+      for (char C : Cur) {
+        if (C == '*')
+          RegexText.push_back('.');
+        else if (MetaChars.contains(C))
+          RegexText.push_back('\\');
+        RegexText.push_back(C);
+      }
+      RegexText.push_back('$');
+      llvm::Regex Glob(RegexText);
+      std::string Error;
+      if (!Glob.isValid(Error)) {
+        AnyInvalid = true;
+        llvm::WithColor::error(llvm::errs(), Source)
+            << "building check glob '" << Cur << "' " << Error << "'\n";
+        continue;
+      }
+      if (llvm::none_of(AllChecks.keys(),
+                        [&Glob](StringRef S) { return Glob.match(S); })) {
+        AnyInvalid = true;
+        llvm::WithColor::warning(llvm::errs(), Source)
+            << "check glob '" << Cur << "' doesn't match any known check"
+            << VerifyConfigWarningEnd;
+      }
+    } else {
+      if (AllChecks.contains(Cur))
+        continue;
+      AnyInvalid = true;
+      llvm::raw_ostream &Output = llvm::WithColor::warning(llvm::errs(), Source)
+                                  << "unknown check '" << Cur << '\'';
+      llvm::StringRef Closest = closest(Cur, AllChecks);
+      if (!Closest.empty())
+        Output << "; did you mean '" << Closest << '\'';
+      Output << VerifyConfigWarningEnd;
+    }
+  }
+  return AnyInvalid;
+}
+
+static bool verifyFileExtensions(
+    const std::vector<std::string> &HeaderFileExtensions,
+    const std::vector<std::string> &ImplementationFileExtensions,
+    StringRef Source) {
+  bool AnyInvalid = false;
+  for (const auto &HeaderExtension : HeaderFileExtensions) {
+    for (const auto &ImplementationExtension : ImplementationFileExtensions) {
+      if (HeaderExtension == ImplementationExtension) {
+        AnyInvalid = true;
+        auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
+                       << "HeaderFileExtension '" << HeaderExtension << '\''
+                       << " is the same as ImplementationFileExtension '"
+                       << ImplementationExtension << '\'';
+        Output << VerifyConfigWarningEnd;
+      }
+    }
+  }
+  return AnyInvalid;
+}
+
 int clangTidyMain(int argc, const char **argv) {
   llvm::InitLLVM X(argc, argv);
 
@@ -446,9 +577,9 @@ int clangTidyMain(int argc, const char **argv) {
     std::vector<clang::tidy::ClangTidyOptionsProvider::OptionsSource>
         RawOptions = OptionsProvider->getRawOptions(FilePath);
     for (const std::string &Check : EnabledChecks) {
-      for (auto It = RawOptions.rbegin(); It != RawOptions.rend(); ++It) {
-        if (It->first.Checks && GlobList(*It->first.Checks).contains(Check)) {
-          llvm::outs() << "'" << Check << "' is enabled in the " << It->second
+      for (const auto &[Opts, Source] : llvm::reverse(RawOptions)) {
+        if (Opts.Checks && GlobList(*Opts.Checks).contains(Check)) {
+          llvm::outs() << "'" << Check << "' is enabled in the " << Source
                        << ".\n";
           break;
         }
@@ -478,6 +609,39 @@ int clangTidyMain(int argc, const char **argv) {
     return 0;
   }
 
+  if (VerifyConfig) {
+    std::vector<ClangTidyOptionsProvider::OptionsSource> RawOptions =
+        OptionsProvider->getRawOptions(FileName);
+    NamesAndOptions Valid =
+        getAllChecksAndOptions(AllowEnablingAnalyzerAlphaCheckers);
+    bool AnyInvalid = false;
+    for (const auto &[Opts, Source] : RawOptions) {
+      if (Opts.Checks)
+        AnyInvalid |= verifyChecks(Valid.Names, *Opts.Checks, Source);
+
+      if (Opts.HeaderFileExtensions && Opts.ImplementationFileExtensions)
+        AnyInvalid |=
+            verifyFileExtensions(*Opts.HeaderFileExtensions,
+                                 *Opts.ImplementationFileExtensions, Source);
+
+      for (auto Key : Opts.CheckOptions.keys()) {
+        if (Valid.Options.contains(Key))
+          continue;
+        AnyInvalid = true;
+        auto &Output = llvm::WithColor::warning(llvm::errs(), Source)
+                       << "unknown check option '" << Key << '\'';
+        llvm::StringRef Closest = closest(Key, Valid.Options);
+        if (!Closest.empty())
+          Output << "; did you mean '" << Closest << '\'';
+        Output << VerifyConfigWarningEnd;
+      }
+    }
+    if (AnyInvalid)
+      return 1;
+    llvm::outs() << "No config errors detected.\n";
+    return 0;
+  }
+
   if (EnabledChecks.empty()) {
     llvm::errs() << "Error: no checks enabled.\n";
     llvm::cl::PrintHelpMessage(/*Hidden=*/false, /*Categorized=*/true);
@@ -499,9 +663,9 @@ int clangTidyMain(int argc, const char **argv) {
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix);
-  bool FoundErrors = llvm::find_if(Errors, [](const ClangTidyError &E) {
-                       return E.DiagLevel == ClangTidyError::Error;
-                     }) != Errors.end();
+  bool FoundErrors = llvm::any_of(Errors, [](const ClangTidyError &E) {
+    return E.DiagLevel == ClangTidyError::Error;
+  });
 
   // --fix-errors and --fix-notes imply --fix.
   FixBehaviour Behaviour = FixNotes             ? FB_FixNotes
@@ -558,5 +722,4 @@ int clangTidyMain(int argc, const char **argv) {
   return 0;
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

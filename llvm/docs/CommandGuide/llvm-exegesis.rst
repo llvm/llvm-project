@@ -19,15 +19,52 @@ Given an LLVM opcode name and a benchmarking mode, :program:`llvm-exegesis`
 generates a code snippet that makes execution as serial (resp. as parallel) as
 possible so that we can measure the latency (resp. inverse throughput/uop decomposition)
 of the instruction.
-The code snippet is jitted and executed on the host subtarget. The time taken
-(resp. resource usage) is measured using hardware performance counters. The
-result is printed out as YAML to the standard output.
+The code snippet is jitted and, unless requested not to, executed on the
+host subtarget. The time taken (resp. resource usage) is measured using
+hardware performance counters. The result is printed out as YAML
+to the standard output.
 
 The main goal of this tool is to automatically (in)validate the LLVM's TableDef
 scheduling models. To that end, we also provide analysis of the results.
 
 :program:`llvm-exegesis` can also benchmark arbitrary user-provided code
 snippets.
+
+SUPPORTED PLATFORMS
+-------------------
+
+:program:`llvm-exegesis` currently only supports X86 (64-bit only), ARM (AArch64
+only), MIPS, and PowerPC (PowerPC64LE only) on Linux for benchmarking. Not all
+benchmarking functionality is guaranteed to work on every platform.
+:program:`llvm-exegesis` also has a separate analysis mode that is supported
+on every platform on which LLVM is.
+
+SNIPPET ANNOTATIONS
+-------------------
+
+:program:`llvm-exegesis` supports benchmarking arbitrary snippets of assembly.
+However, benchmarking these snippets often requires some setup so that they
+can execute properly. :program:`llvm-exegesis` has two annotations and some
+additional utilities to help with setup so that snippets can be benchmarked
+properly.
+
+* `LLVM-EXEGESIS-DEFREG <register name>` - Adding this annotation to the text
+  assembly snippet to be benchmarked marks the register as requiring a definition.
+  A value will automatically be provided unless a second parameter, a hex value,
+  is passed in. This is done with the `LLVM-EXEGESIS-DEFREG <register name> <hex value>`
+  format. `<hex value>` is a bit pattern used to fill the register. If it is a
+  value smaller than the register, it is sign extended to match the size of the
+  register.
+* `LLVM-EXEGESIS-LIVEIN <register name>` - This annotation allows specifying
+  registers that should keep their value upon starting the benchmark. Values
+  can be passed through registers from the benchmarking setup in some cases.
+  The registers and the values assigned to them that can be utilized in the
+  benchmarking script with a `LLVM-EXEGESIS-LIVEIN` are as follows:
+
+  * Scratch memory register - The specific register that this value is put in
+    is platform dependent (e.g., it is the RDI register on X86 Linux). Setting
+    this register as a live in ensures that a pointer to a block of memory (1MB)
+    is placed within this register that can be used by the snippet.
 
 EXAMPLE 1: benchmarking instructions
 ------------------------------------
@@ -89,16 +126,8 @@ To measure the latency/uops of a custom piece of code, you can specify the
 Real-life code snippets typically depend on registers or memory.
 :program:`llvm-exegesis` checks the liveliness of registers (i.e. any register
 use has a corresponding def or is a "live in"). If your code depends on the
-value of some registers, you have two options:
-
-- Mark the register as requiring a definition. :program:`llvm-exegesis` will
-  automatically assign a value to the register. This can be done using the
-  directive `LLVM-EXEGESIS-DEFREG <reg name> <hex_value>`, where `<hex_value>`
-  is a bit pattern used to fill `<reg_name>`. If `<hex_value>` is smaller than
-  the register width, it will be sign-extended.
-- Mark the register as a "live in". :program:`llvm-exegesis` will benchmark
-  using whatever value was in this registers on entry. This can be done using
-  the directive `LLVM-EXEGESIS-LIVEIN <reg name>`.
+value of some registers, you need to use snippet annotations to ensure setup
+is performed properly.
 
 For example, the following code snippet depends on the values of XMM1 (which
 will be set by the tool) and the memory buffer passed in RDI (live in).
@@ -195,6 +224,17 @@ OPTIONS
  In `analysis` mode, you also need to specify at least one of the
  `-analysis-clusters-output-file=` and `-analysis-inconsistencies-output-file=`.
 
+.. option:: --benchmark-phase=[prepare-snippet|prepare-and-assemble-snippet|assemble-measured-code|measure]
+
+  By default, when `-mode=` is specified, the generated snippet will be executed
+  and measured, and that requires that we are running on the hardware for which
+  the snippet was generated, and that supports performance measurements.
+  However, it is possible to stop at some stage before measuring. Choices are:
+  * ``prepare-snippet``: Only generate the minimal instruction sequence.
+  * ``prepare-and-assemble-snippet``: Same as ``prepare-snippet``, but also dumps an excerpt of the sequence (hex encoded).
+  * ``assemble-measured-code``: Same as ``prepare-and-assemble-snippet``. but also creates the full sequence that can be dumped to a file using ``--dump-object-to-disk``.
+  * ``measure``: Same as ``assemble-measured-code``, but also runs the measurement.
+
 .. option:: -x86-lbr-sample-period=<nBranches/sample>
 
   Specify the LBR sampling period - how many branches before we take a sample.
@@ -203,6 +243,15 @@ OPTIONS
   On choosing the "right" sampling period, a small value is preferred, but throttling
   could occur if the sampling is too frequent. A prime number should be used to
   avoid consistently skipping certain blocks.
+
+.. option:: -x86-disable-upper-sse-registers
+
+  Using the upper xmm registers (xmm8-xmm15) forces a longer instruction encoding
+  which may put greater pressure on the frontend fetch and decode stages,
+  potentially reducing the rate that instructions are dispatched to the backend,
+  particularly on older hardware. Comparing baseline results with this mode
+  enabled can help determine the effects of the frontend and can be used to
+  improve latency and throughput estimates.
 
 .. option:: -repetition-mode=[duplicate|loop|min]
 
@@ -260,6 +309,14 @@ OPTIONS
  If non-empty, write inconsistencies found during analysis to this file. `-`
  prints to stdout. By default, this analysis is not run.
 
+.. option:: -analysis-filter=[all|reg-only|mem-only]
+
+ By default, all benchmark results are analysed, but sometimes it may be useful
+ to only look at those that to not involve memory, or vice versa. This option
+ allows to either keep all benchmarks, or filter out (ignore) either all the
+ ones that do involve memory (involve instructions that may read or write to
+ memory), or the opposite, to only keep such benchmarks.
+
 .. option:: -analysis-clustering=[dbscan,naive]
 
  Specify the clustering algorithm to use. By default DBSCAN will be used.
@@ -293,16 +350,33 @@ OPTIONS
 
  If set, ignore instructions that do not have a sched class (class idx = 0).
 
+.. option:: -mtriple=<triple name>
+
+ Target triple. See `-version` for available targets.
+
 .. option:: -mcpu=<cpu name>
 
  If set, measure the cpu characteristics using the counters for this CPU. This
  is useful when creating new sched models (the host CPU is unknown to LLVM).
+ (`-mcpu=help` for details)
+
+.. option:: --analysis-override-benchmark-triple-and-cpu
+
+  By default, llvm-exegesis will analyze the benchmarks for the triple/CPU they
+  were measured for, but if you want to analyze them for some other combination
+  (specified via `-mtriple`/`-mcpu`), you can pass this flag.
 
 .. option:: --dump-object-to-disk=true
 
- By default, llvm-exegesis will dump the generated code to a temporary file to
- enable code inspection. You may disable it to speed up the execution and save
- disk space.
+ If set,  llvm-exegesis will dump the generated code to a temporary file to
+ enable code inspection. Disabled by default.
+
+.. option:: --use-dummy-perf-counters
+
+ If set, llvm-exegesis will not read any real performance counters and
+ return a dummy value instead. This can be used to ensure a snippet doesn't
+ crash when hardware performance counters are unavailable and for
+ debugging :program:`llvm-exegesis` itself.
 
 EXIT STATUS
 -----------

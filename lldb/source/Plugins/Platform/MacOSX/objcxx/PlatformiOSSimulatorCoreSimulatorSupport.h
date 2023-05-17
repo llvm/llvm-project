@@ -11,6 +11,7 @@
 #define LLDB_SOURCE_PLUGINS_PLATFORM_MACOSX_OBJCXX_PLATFORMIOSSIMULATORCORESIMULATORSUPPORT_H
 
 #include <functional>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <vector>
@@ -24,7 +25,6 @@ typedef void *id;
 #include "lldb/Utility/ConstString.h"
 #include "lldb/Utility/Status.h"
 
-#include "llvm/ADT/Optional.h"
 
 // And now the actual magic
 namespace CoreSimulatorSupport {
@@ -94,7 +94,7 @@ public:
 
 private:
   id m_dev = nullptr;
-  llvm::Optional<ModelIdentifier> m_model_identifier;
+  std::optional<ModelIdentifier> m_model_identifier;
 };
 
 class OSVersion {
@@ -130,7 +130,7 @@ public:
 
 private:
   id m_dev = nullptr;
-  llvm::Optional<OSVersion> m_os_version;
+  std::optional<OSVersion> m_os_version;
 };
 
 class Device {
@@ -170,8 +170,8 @@ public:
 
 private:
   id m_dev = nullptr;
-  llvm::Optional<DeviceType> m_dev_type;
-  llvm::Optional<DeviceRuntime> m_dev_runtime;
+  std::optional<DeviceType> m_dev_type;
+  std::optional<DeviceRuntime> m_dev_runtime;
 
   friend class DeviceSet;
 };

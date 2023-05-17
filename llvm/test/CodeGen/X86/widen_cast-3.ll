@@ -4,7 +4,7 @@
 
 ; bitcast v12i8 to v3i32
 
-define void @convert(<12 x i8>* %dst.addr, <3 x i32> %src) nounwind {
+define void @convert(ptr %dst.addr, <3 x i32> %src) nounwind {
 ; X86-LABEL: convert:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -24,6 +24,6 @@ define void @convert(<12 x i8>* %dst.addr, <3 x i32> %src) nounwind {
 ; X64-NEXT:    retq
 	%add = add <3 x i32> %src, < i32 1, i32 1, i32 1 >
 	%conv = bitcast <3 x i32> %add to <12 x i8>
-	store <12 x i8> %conv, <12 x i8>* %dst.addr
+	store <12 x i8> %conv, ptr %dst.addr
 	ret void
 }

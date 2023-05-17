@@ -22,7 +22,7 @@
 define void @call_test_byval_1Byte() {
 entry:
   %s0 = alloca %struct.S0, align 8
-  %call = call zeroext i8 @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 @gS1)
+  %call = call zeroext i8 @test_byval_1Byte(ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S1) align 1 @gS1)
   ret void
 }
 
@@ -40,6 +40,7 @@ entry:
 
 ; ASM32:       stwu 1, -64(1)
 ; ASM32-NEXT:  lwz [[REG:[0-9]+]], L..C{{[0-9]+}}(2)
+; ASM32-NEXT:  stw 0, 72(1)
 ; ASM32-NEXT:  lbz 3, 0([[REG]])
 ; ASM32-NEXT:  slwi 3, 3, 24
 ; ASM32-NEXT:  bl .test_byval_1Byte
@@ -53,9 +54,9 @@ entry:
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_1Byte>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x2, implicit-def $r1
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
-; ASM64:       std 0, 16(1)
-; ASM64-NEXT:  stdu 1, -128(1)
+; ASM64:       stdu 1, -128(1)
 ; ASM64-NEXT:  ld [[REG:[0-9]+]], L..C{{[0-9]+}}(2)
+; ASM64-NEXT:  std 0, 144(1)
 ; ASM64-NEXT:  lbz 3, 0([[REG]])
 ; ASM64-NEXT:  sldi 3, 3, 56
 ; ASM64-NEXT:  bl .test_byval_1Byte
@@ -63,10 +64,9 @@ entry:
 ; ASM64-NEXT:  addi 1, 1, 128
 
 
-define zeroext i8 @test_byval_1Byte(%struct.S0* byval(%struct.S0) align 1 %s0, %struct.S1* byval(%struct.S1) align 1 %s) {
+define zeroext i8 @test_byval_1Byte(ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S1) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S1, %struct.S1* %s, i32 0, i32 0, i32 0
-  %0 = load i8, i8* %arrayidx, align 1
+  %0 = load i8, ptr %s, align 1
   ret i8 %0
 }
 
@@ -80,8 +80,9 @@ entry:
 
 ; 32BIT:       bb.0.entry:
 ; 32BIT-NEXT:    liveins: $r3
-; 32BIT:         STW killed renamable $r3, 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0, align 8)
-; 32BIT-NEXT:    renamable $r3 = LBZ 0,  %fixed-stack.0 :: (dereferenceable load (s8)
+; 32BIT:         renamable $r4 = COPY $r3
+; 32BIT:         renamable $r3 = RLWINM $r3, 8, 24, 31
+; 32BIT:         STW killed renamable $r4, 0, %fixed-stack.0 :: (store (s32) into %fixed-stack.0, align 8)
 ; 32BIT-NEXT:    BLR
 
 ; 64BIT:       fixedStack:
@@ -92,18 +93,21 @@ entry:
 
 ; 64BIT:      bb.0.entry:
 ; 64BIT-NEXT:   liveins: $x3
-; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
-; 64BIT-NEXT:   renamable $x3 = LBZ8 0, %fixed-stack.0 :: (dereferenceable load (s8)
+; 64BIT:        renamable $x4 = COPY $x3
+; 64BIT:        renamable $x3 = RLDICL $x3, 8, 56
+; 64BIT:        STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0, align 16)
 
 ; CHECKASM-LABEL: .test_byval_1Byte:
 
-; ASM32:        stw 3, 24(1)
-; ASM32-NEXT:   lbz 3, 24(1)
-; ASM32-NEXT:   blr
+; ASM32:      mr 4, 3
+; ASM32-NEXT: srwi 3, 3, 24
+; ASM32-NEXT: stw 4, 24(1)
+; ASM32-NEXT: blr
 
-; ASM64:        std 3, 48(1)
-; ASM64-NEXT:   lbz 3, 48(1)
-; ASM64-NEXT:   blr
+; ASM64:      mr 4, 3
+; ASM64-NEXT: rldicl 3, 3, 8, 56
+; ASM64-NEXT: std 4, 48(1)
+; ASM64-NEXT: blr
 
 
 @f = common global float 0.000000e+00, align 4
@@ -114,8 +118,8 @@ entry:
 
 define void @call_test_byval_2Byte() {
 entry:
-  %0 = load float, float* @f, align 4
-  %call = call zeroext i8 @test_byval_2Byte(i32 signext 42, float %0, %struct.S2* byval(%struct.S2) align 1 @gS2, float %0, i32 signext 43)
+  %0 = load float, ptr @f, align 4
+  %call = call zeroext i8 @test_byval_2Byte(i32 signext 42, float %0, ptr byval(%struct.S2) align 1 @gS2, float %0, i32 signext 43)
   ret void
 }
 
@@ -164,8 +168,8 @@ entry:
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
-; ASM64:       std 0, 16(1)
-; ASM64-NEXT:  stdu 1, -112(1)
+; ASM64:       stdu 1, -112(1)
+; ASM64-DAG:   std 0, 128(1)
 ; ASM64-DAG:   li 3, 42
 ; ASM64-DAG:   ld [[REG1:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64-DAG:   lfs 1, 0([[REG1]])
@@ -178,10 +182,10 @@ entry:
 ; ASM64-NEXT:  nop
 ; ASM64-NEXT:  addi 1, 1, 112
 
-define zeroext i8 @test_byval_2Byte(i32, float, %struct.S2* byval(%struct.S2) align 1 %s, float, i32) {
+define zeroext i8 @test_byval_2Byte(i32, float, ptr byval(%struct.S2) align 1 %s, float, i32) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S2, %struct.S2* %s, i32 0, i32 0, i32 1
-  %4 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S2, ptr %s, i32 0, i32 0, i32 1
+  %4 = load i8, ptr %arrayidx, align 1
   ret i8 %4
 }
 
@@ -218,7 +222,7 @@ entry:
 
 define void @call_test_byval_3Byte() {
 entry:
-  %call = call zeroext i16 @test_byval_3Byte(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, %struct.S3* byval(%struct.S3) align 1 @gS3, i32 42)
+  %call = call zeroext i16 @test_byval_3Byte(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, ptr byval(%struct.S3) align 1 @gS3, i32 42)
   ret void
 }
 
@@ -303,10 +307,10 @@ entry:
 ; ASM64-NEXT:  nop
 
 
-define zeroext i16 @test_byval_3Byte(i32, i32, i32, i32, i32, i32, i32, %struct.S3* byval(%struct.S3) align 1 %s, i32) {
+define zeroext i16 @test_byval_3Byte(i32, i32, i32, i32, i32, i32, i32, ptr byval(%struct.S3) align 1 %s, i32) {
 entry:
-  %gep = getelementptr inbounds %struct.S3, %struct.S3* %s, i32 0, i32 1
-  %8 = load i16, i16* %gep, align 1
+  %gep = getelementptr inbounds %struct.S3, ptr %s, i32 0, i32 1
+  %8 = load i16, ptr %gep, align 1
   ret i16 %8
 }
 
@@ -349,8 +353,8 @@ entry:
 define void @call_test_byval_4Byte() {
 entry:
   %s0 = alloca %struct.S0, align 8
-  %s4a = alloca %struct.S4A, align 4
-  %call = call signext i32 @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 @gS4, %struct.S0* byval(%struct.S0) align 1 %s0, %struct.S4A* byval(%struct.S4A) align 4 %s4a)
+  %s4a = alloca %struct.S4A, align 8
+  %call = call signext i32 @test_byval_4Byte(ptr byval(%struct.S4) align 1 @gS4, ptr byval(%struct.S0) align 1 %s0, ptr byval(%struct.S4A) align 4 %s4a)
   ret void
 }
 
@@ -393,12 +397,11 @@ entry:
 ; ASM64-NEXT:  addi 1, 1, 128
 
 
-define signext i32 @test_byval_4Byte(%struct.S4* byval(%struct.S4) align 1 %s, %struct.S0* byval(%struct.S0) align 1, %struct.S4A* byval(%struct.S4A) align 4 %s4a) {
+define signext i32 @test_byval_4Byte(ptr byval(%struct.S4) align 1 %s, ptr byval(%struct.S0) align 1, ptr byval(%struct.S4A) align 4 %s4a) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S4, %struct.S4* %s, i32 0, i32 0, i32 3
-  %gep = getelementptr inbounds %struct.S4A, %struct.S4A* %s4a, i32 0, i32 0
-  %1 = load i8, i8* %arrayidx, align 1
-  %2 = load i32, i32* %gep, align 4
+  %arrayidx = getelementptr inbounds %struct.S4, ptr %s, i32 0, i32 0, i32 3
+  %1 = load i8, ptr %arrayidx, align 1
+  %2 = load i32, ptr %s4a, align 4
   %conv = zext i8 %1 to i32
   %add = add nsw i32 %2, %conv
   ret i32 %add
@@ -433,10 +436,10 @@ entry:
 ; 64BIT:      bb.0.entry:
 ; 64BIT-NEXT:   liveins: $x3
 ; 64BIT:        STD killed renamable $x3, 0, %fixed-stack.2 :: (store (s64) into %fixed-stack.2, align 16)
-; 64BIT-NEXT:   STD killed renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
+; 64BIT:        STD renamable $x4, 0, %fixed-stack.0 :: (store (s64) into %fixed-stack.0)
 ; 64BIT-DAG:    renamable $r[[SCRATCH1:[0-9]+]] = LBZ 3, %fixed-stack.2 :: (dereferenceable load (s8)
-; 64BIT-DAG:    renamable $r[[SCRATCH2:[0-9]+]] = LWZ 0, %fixed-stack.0 :: (dereferenceable load (s32)
-; 64BIT-NEXT:   renamable $r[[SCRATCH3:[0-9]+]] = nsw ADD4 killed renamable $r[[SCRATCH2]], killed renamable $r[[SCRATCH1]]
+; 64BIT-DAG:    renamable $x[[SCRATCH2:[0-9]+]] = RLDICL killed renamable $x4, 32, 32
+; 64BIT-NEXT:   renamable $r[[SCRATCH3:[0-9]+]] = nsw ADD4 renamable $r[[SCRATCH2]], killed renamable $r[[SCRATCH1]], implicit killed $x[[SCRATCH2]]
 ; 64BIT-NEXT:   renamable $x3 = EXTSW_32_64 killed renamable $r[[SCRATCH3]]
 ; 64BIT-NEXT:   BLR8
 
@@ -449,9 +452,9 @@ entry:
 ; ASM32-NEXT:   blr
 
 ; ASM64:        std 3, 48(1)
+; ASM64-NEXT:   lbz [[SCRATCH1:[0-9]+]], 51(1)
 ; ASM64-NEXT:   std 4, 56(1)
-; ASM64-DAG:    lbz [[SCRATCH1:[0-9]+]], 51(1)
-; ASM64-DAG:    lwz [[SCRATCH2:[0-9]+]], 56(1)
+; ASM64-NEXT:   rldicl [[SCRATCH2:[0-9]+]], 4, 32, 32
 ; ASM64-NEXT:   add [[SCRATCH3:[0-9]+]], [[SCRATCH2]], [[SCRATCH1]]
 ; ASM64-NEXT:   extsw 3, [[SCRATCH3]]
 ; ASM64-NEXT:   blr
@@ -463,11 +466,11 @@ entry:
 
 define void @call_test_byval_5Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1 @gS5)
+  %call = call zeroext i8 @test_byval_5Byte(ptr byval(%struct.S5) align 1 @gS5)
   ret void
 }
 
-declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
+declare zeroext i8 @test_byval_5Byte(ptr byval(%struct.S5) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_5Byte{{.*}}
 
@@ -518,11 +521,11 @@ declare zeroext i8 @test_byval_5Byte(%struct.S5* byval(%struct.S5) align 1)
 
 define void @call_test_byval_6Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1 @gS6)
+  %call = call zeroext i8 @test_byval_6Byte(ptr byval(%struct.S6) align 1 @gS6)
   ret void
 }
 
-declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
+declare zeroext i8 @test_byval_6Byte(ptr byval(%struct.S6) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_6Byte{{.*}}
 
@@ -573,11 +576,11 @@ declare zeroext i8 @test_byval_6Byte(%struct.S6* byval(%struct.S6) align 1)
 
 define void @call_test_byval_7Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1 @gS7)
+  %call = call zeroext i8 @test_byval_7Byte(ptr byval(%struct.S7) align 1 @gS7)
   ret void
 }
 
-declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
+declare zeroext i8 @test_byval_7Byte(ptr byval(%struct.S7) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_7Byte{{.*}}
 
@@ -636,11 +639,11 @@ declare zeroext i8 @test_byval_7Byte(%struct.S7* byval(%struct.S7) align 1)
 
 define void @call_test_byval_8Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1 @gS8)
+  %call = call zeroext i8 @test_byval_8Byte(ptr byval(%struct.S8) align 1 @gS8)
   ret void
 }
 
-declare zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1)
+declare zeroext i8 @test_byval_8Byte(ptr byval(%struct.S8) align 1)
 
 ; CHECK-LABEL: name: call_test_byval_8Byte{{.*}}
 
@@ -670,6 +673,7 @@ declare zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1)
 
 ; ASM64:       stdu 1, -112(1)
 ; ASM64-NEXT:  ld [[REGADDR:[0-9]+]], L..C{{[0-9]+}}(2)
+; ASM64-NEXT:  std 0, 128(1)
 ; ASM64-NEXT:  ld 3, 0([[REGADDR]])
 ; ASM64-NEXT:  bl .test_byval_8Byte[PR]
 ; ASM64-NEXT:  nop
@@ -681,7 +685,7 @@ declare zeroext i8 @test_byval_8Byte(%struct.S8* byval(%struct.S8) align 1)
 
 define void @call_test_byval_32Byte() {
 entry:
-  %call = call zeroext i8 @test_byval_32Byte(%struct.S32* byval(%struct.S32) align 1 @gS32)
+  %call = call zeroext i8 @test_byval_32Byte(ptr byval(%struct.S32) align 1 @gS32)
   ret void
 }
 
@@ -736,10 +740,10 @@ entry:
 ; ASM64-NEXT:  bl .test_byval_32Byte
 ; ASM64-NEXT:  nop
 
-define zeroext i8 @test_byval_32Byte(%struct.S32* byval(%struct.S32) align 1 %s) {
+define zeroext i8 @test_byval_32Byte(ptr byval(%struct.S32) align 1 %s) {
 entry:
-  %arrayidx = getelementptr inbounds %struct.S32, %struct.S32* %s, i32 0, i32 0, i32 21
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds %struct.S32, ptr %s, i32 0, i32 0, i32 21
+  %0 = load i8, ptr %arrayidx, align 1
   ret i8 %0
 }
 
@@ -804,7 +808,7 @@ entry:
 
 define void @call_test_byval_31Byte() {
 entry:
-  %call = call double @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1 @gS31)
+  %call = call double @test_byval_31Byte(ptr byval(%struct.S31) align 1 @gS31)
   ret void
 }
 
@@ -878,10 +882,10 @@ entry:
 
 
 
-define double @test_byval_31Byte(%struct.S31* byval(%struct.S31) align 1 %s) {
+define double @test_byval_31Byte(ptr byval(%struct.S31) align 1 %s) {
 entry:
-  %gep = getelementptr inbounds %struct.S31, %struct.S31* %s, i32 0, i32 3
-  %load = load double, double* %gep, align 1
+  %gep = getelementptr inbounds %struct.S31, ptr %s, i32 0, i32 3
+  %load = load double, ptr %gep, align 1
   ret double %load
 }
 
@@ -941,47 +945,46 @@ entry:
 
 define i32 @call_test_byval_homogeneous_float_struct() {
 entry:
-  %s = alloca %struct.F, align 4
-  %0 = bitcast %struct.F* %s to i8*
-  call void @llvm.memset.p0i8.i32(i8* align 4 %0, i8 0, i32 12, i1 false)
-  %call = call i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) align 4 %s)
+  %s = alloca %struct.F, align 8
+  call void @llvm.memset.p0.i32(ptr align 4 %s, i8 0, i32 12, i1 false)
+  %call = call i32 @test_byval_homogeneous_float_struct(ptr byval(%struct.F) align 4 %s)
   ret i32 %call
 }
 
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg)
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 
-declare i32 @test_byval_homogeneous_float_struct(%struct.F* byval(%struct.F) align 4)
+declare i32 @test_byval_homogeneous_float_struct(ptr byval(%struct.F) align 4)
 
 ; CHECK-LABEL: name: call_test_byval_homogeneous_float_struct{{.*}}
 
 ; 32BIT:       ADJCALLSTACKDOWN 56, 0, implicit-def dead $r1, implicit $r1
-; 32BIT-DAG:   renamable $r3 = LWZ 0, %stack.0.s :: (load (s32) from %stack.0.s, align 8)
 ; 32BIT-DAG:   renamable $r4 = LWZ 4, %stack.0.s :: (load (s32) from %stack.0.s + 4)
 ; 32BIT-DAG:   renamable $r5 = LWZ 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
+; 32BIT-DAG:   $r3 = LI 0
 ; 32BIT-NEXT:  BL_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:  ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 
 ; CHECKASM-LABEL: .call_test_byval_homogeneous_float_struct:
 
 ; ASM32:       stwu 1, -80(1)
-; ASM32-DAG:   lwz 3, 64(1)
 ; ASM32-DAG:   lwz 4, 68(1)
 ; ASM32-DAG:   lwz 5, 72(1)
+; ASM32-DAG:   stw 3, 64(1)
 ; ASM32-NEXT:  bl .test_byval_homogeneous_float_struct[PR]
 ; ASM32-NEXT:  nop
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; 64BIT:       ADJCALLSTACKDOWN 112, 0, implicit-def dead $r1, implicit $r1
-; 64BIT-DAG:   renamable $x3 = LD 0, %stack.0.s :: (load (s64) from %stack.0.s)
-; 64BIT-DAG:   renamable $x4 = LWZ8 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
-; 64BIT-DAG:   renamable $x4 = RLDICR killed renamable $x4, 32, 31
+; 64BIT:       renamable $x3 = LWZ8 8, %stack.0.s :: (load (s32) from %stack.0.s + 8, align 8)
+; 64BIT-NEXT:  renamable $x4 = RLDICR killed renamable $x3, 32, 31
+; 64BIT-NEXT:  $x3 = LI8 0
 ; 64BIT-NEXT:  BL8_NOP <mcsymbol .test_byval_homogeneous_float_struct[PR]>, csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:  ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 
 ; The DAG block permits some invalid inputs for the benefit of allowing more valid orderings.
 ; ASM64:       stdu 1, -128(1)
-; ASM64-DAG:   ld 3, 112(1)
-; ASM64-DAG:   lwz 4, 120(1)
-; ASM64-DAG:   sldi 4, 4, 32
+; ASM64:       lwz 3, 120(1)
+; ASM64-NEXT:  sldi 4, 3, 32
+; ASM64-NEXT:  li 3, 0
 ; ASM64-NEXT:  bl .test_byval_homogeneous_float_struct[PR]
 ; ASM64-NEXT:  nop

@@ -1,4 +1,4 @@
-; RUN: opt < %s -extract-blocks -disable-output
+; RUN: opt < %s -passes=extract-blocks -disable-output
 
 define void @test1() {
 no_exit.0.i:

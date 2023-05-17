@@ -41,7 +41,7 @@ E: hans@chromium.org
 T: x86
 O: Windows
 
-N: Diana Picus, Yvan Roux
-E: diana.picus@linaro.org, yvan.roux@linaro.org
+N: Linaro Toolchain Working Group
+E: linaro-toolchain@lists.linaro.org
 T: ARM, AArch64
-O: Linux
+O: Linux, Windows (AArch64 only)

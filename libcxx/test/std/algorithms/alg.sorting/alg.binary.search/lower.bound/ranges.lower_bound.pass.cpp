@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<forward_iterator I, sentinel_for<I> S, class T, class Proj = identity,
 //          indirect_strict_weak_order<const T*, projected<I, Proj>> Comp = ranges::less>
@@ -193,6 +192,22 @@ constexpr void test_iterators() {
       auto range = std::ranges::subrange(It(a), It(a + 6));
       auto ret = std::ranges::lower_bound(range, 1);
       assert(base(ret) == a);
+    }
+  }
+
+  { // check that the middle of a range is returned when there are smaller and larger elements
+    {
+      int a[] = {1, 2, 3, 4, 6, 7, 8};
+      auto ret = std::ranges::lower_bound(It(a), It(a + 7), 5);
+      assert(base(ret) == a + 4);
+      assert(*ret == 6);
+    }
+    {
+      int a[] = {1, 2, 3, 4, 6, 7, 8};
+      auto range = std::ranges::subrange(It(a), It(a + 7));
+      auto ret = std::ranges::lower_bound(range, 5);
+      assert(base(ret) == a + 4);
+      assert(*ret == 6);
     }
   }
 }

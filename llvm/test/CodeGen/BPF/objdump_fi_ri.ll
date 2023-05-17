@@ -1,5 +1,5 @@
 ; RUN: llc -march=bpfel -filetype=obj -o - %s \
-; RUN:     | llvm-objdump --arch=bpfel --section=foo -d - \
+; RUN:     | llvm-objdump --no-print-imm-hex --arch=bpfel --section=foo -d - \
 ; RUN:     | FileCheck %s
 
 ; This test was added because "isPseudo" flag was missing in FI_ri

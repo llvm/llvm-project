@@ -27,9 +27,6 @@ namespace SystemZ {
 
   const unsigned XPLINK64NumArgFPRs = 4;
   extern const MCPhysReg XPLINK64ArgFPRs[XPLINK64NumArgFPRs];
-
-  const unsigned XPLINK64NumArgVRs = 8;
-  extern const MCPhysReg XPLINK64ArgVRs[XPLINK64NumArgVRs];
 } // end namespace SystemZ
 
 class SystemZCCState : public CCState {
@@ -201,41 +198,6 @@ inline bool CC_XPLINK64_Allocate128BitVararg(unsigned &ValNo, MVT &ValVT,
           CCValAssign::getCustomMem(ValNo, ValVT, Offset, LocVT, LocInfo));
     return true;
   }
-
-  return false;
-}
-
-inline bool CC_XPLINK64_Shadow_Stack(unsigned &ValNo, MVT &ValVT, MVT &LocVT,
-                                     CCValAssign::LocInfo &LocInfo,
-                                     ISD::ArgFlagsTy &ArgFlags,
-                                     CCState &State) {
-  ArrayRef<MCPhysReg> RegList;
-
-  switch (LocVT.SimpleTy) {
-  case MVT::i64:
-    RegList = SystemZ::XPLINK64ArgGPRs;
-    break;
-  case MVT::v16i8:
-  case MVT::v8i16:
-  case MVT::v4i32:
-  case MVT::v2i64:
-  case MVT::v4f32:
-  case MVT::v2f64:
-    RegList = SystemZ::XPLINK64ArgVRs;
-    break;
-  case MVT::f32:
-  case MVT::f64:
-  case MVT::f128:
-    RegList = SystemZ::XPLINK64ArgFPRs;
-    break;
-  default:
-    return false;
-  }
-
-  unsigned UnallocatedRegisterIndex = State.getFirstUnallocated(RegList);
-  // Every time we can allocate a register, allocate on the stack.
-  if (UnallocatedRegisterIndex < RegList.size())
-    State.AllocateStack(LocVT.getSizeInBits() / 8, Align(8));
 
   return false;
 }

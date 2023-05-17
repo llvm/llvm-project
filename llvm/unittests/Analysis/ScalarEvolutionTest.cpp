@@ -58,11 +58,11 @@ protected:
     Test(*F, *LI, SE);
   }
 
-  static Optional<APInt> computeConstantDifference(ScalarEvolution &SE,
-                                                   const SCEV *LHS,
-                                                   const SCEV *RHS) {
-    return SE.computeConstantDifference(LHS, RHS);
-  }
+static std::optional<APInt> computeConstantDifference(ScalarEvolution &SE,
+                                                      const SCEV *LHS,
+                                                      const SCEV *RHS) {
+  return SE.computeConstantDifference(LHS, RHS);
+}
 
   static bool matchURem(ScalarEvolution &SE, const SCEV *Expr, const SCEV *&LHS,
                         const SCEV *&RHS) {
@@ -1148,10 +1148,10 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     auto *ScevXB = SE.getSCEV(getInstructionByName(F, "xb")); // {%pp,+,1}
     auto *ScevIVNext = SE.getSCEV(getInstructionByName(F, "iv.next")); // {1,+,1}
 
-    auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> Optional<int> {
+    auto diff = [&SE](const SCEV *LHS, const SCEV *RHS) -> std::optional<int> {
       auto ConstantDiffOrNone = computeConstantDifference(SE, LHS, RHS);
       if (!ConstantDiffOrNone)
-        return None;
+        return std::nullopt;
 
       auto ExtDiff = ConstantDiffOrNone->getSExtValue();
       int Diff = ExtDiff;
@@ -1170,9 +1170,9 @@ TEST_F(ScalarEvolutionsTest, SCEVComputeConstantDifference) {
     EXPECT_EQ(diff(ScevIV, ScevIVNext), -1);
     EXPECT_EQ(diff(ScevIVNext, ScevIV), 1);
     EXPECT_EQ(diff(ScevIVNext, ScevIVNext), 0);
-    EXPECT_EQ(diff(ScevV0, ScevIV), None);
-    EXPECT_EQ(diff(ScevIVNext, ScevV3), None);
-    EXPECT_EQ(diff(ScevYY, ScevV3), None);
+    EXPECT_EQ(diff(ScevV0, ScevIV), std::nullopt);
+    EXPECT_EQ(diff(ScevIVNext, ScevV3), std::nullopt);
+    EXPECT_EQ(diff(ScevYY, ScevV3), std::nullopt);
   });
 }
 
@@ -1741,6 +1741,60 @@ TEST_F(ScalarEvolutionsTest, ComputeMaxTripCountFromMultiDemArray) {
 
     const SCEV *ITC = SE.getConstantMaxTripCountFromArray(L);
     EXPECT_TRUE(isa<SCEVCouldNotCompute>(ITC));
+  });
+}
+
+TEST_F(ScalarEvolutionsTest, CheckGetPowerOfTwo) {
+  Module M("CheckGetPowerOfTwo", Context);
+  FunctionType *FTy = FunctionType::get(Type::getVoidTy(Context), {}, false);
+  Function *F = Function::Create(FTy, Function::ExternalLinkage, "foo", M);
+  BasicBlock *Entry = BasicBlock::Create(Context, "entry", F);
+  IRBuilder<> Builder(Entry);
+  Builder.CreateRetVoid();
+  ScalarEvolution SE = buildSE(*F);
+
+  for (unsigned short i = 0; i < 64; ++i)
+    EXPECT_TRUE(
+        dyn_cast<SCEVConstant>(SE.getPowerOfTwo(Type::getInt64Ty(Context), i))
+            ->getValue()
+            ->equalsInt(1ULL << i));
+}
+
+TEST_F(ScalarEvolutionsTest, ApplyLoopGuards) {
+  LLVMContext C;
+  SMDiagnostic Err;
+  std::unique_ptr<Module> M = parseAssemblyString(
+      "declare void @llvm.assume(i1)\n"
+      "define void @test(i32 %num) {\n"
+      "entry:\n"
+      "  %u = urem i32 %num, 4\n"
+      "  %cmp = icmp eq i32 %u, 0\n"
+      "  tail call void @llvm.assume(i1 %cmp)\n"
+      "  %cmp.1 = icmp ugt i32 %num, 0\n"
+      "  tail call void @llvm.assume(i1 %cmp.1)\n"
+      "  br label %for.body\n"
+      "for.body:\n"
+      "  %i.010 = phi i32 [ 0, %entry ], [ %inc, %for.body ]\n"
+      "  %inc = add nuw nsw i32 %i.010, 1\n"
+      "  %cmp2 = icmp ult i32 %inc, %num\n"
+      "  br i1 %cmp2, label %for.body, label %exit\n"
+      "exit:\n"
+      "  ret void\n"
+      "}\n",
+      Err, C);
+
+  ASSERT_TRUE(M && "Could not parse module?");
+  ASSERT_TRUE(!verifyModule(*M) && "Must have been well formed!");
+
+  runWithSE(*M, "test", [](Function &F, LoopInfo &LI, ScalarEvolution &SE) {
+    auto *TCScev = SE.getSCEV(getArgByName(F, "num"));
+    auto *ApplyLoopGuardsTC = SE.applyLoopGuards(TCScev, *LI.begin());
+    // Assert that the new TC is (4 * ((4 umax %num) /u 4))
+    APInt Four(32, 4);
+    auto *Constant4 = SE.getConstant(Four);
+    auto *Max = SE.getUMaxExpr(TCScev, Constant4);
+    auto *Mul = SE.getMulExpr(SE.getUDivExpr(Max, Constant4), Constant4);
+    ASSERT_TRUE(Mul == ApplyLoopGuardsTC);
   });
 }
 

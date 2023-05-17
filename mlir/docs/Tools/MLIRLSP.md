@@ -58,6 +58,24 @@ any generated diagnostics in-place.
 
 ![IMG](/mlir-lsp-server/diagnostics.png)
 
+##### Automatically insert `expected-` diagnostic checks
+
+MLIR provides
+[infrastructure](https://mlir.llvm.org/docs/Diagnostics/#sourcemgr-diagnostic-verifier-handler)
+for checking expected diagnostics, which is heavily utilized when defining IR
+parsing and verification. The language server provides code actions for
+automatically inserting the checks for diagnostics it knows about.
+
+![IMG](/mlir-lsp-server/diagnostics_action.gif)
+
+#### Code completion
+
+The language server provides suggestions as you type, offering completions for
+dialect constructs (such as attributes, operations, and types), block names, SSA
+value names, keywords, and more.
+
+![IMG](/mlir-lsp-server/code_complete.gif)
+
 #### Cross-references
 
 Cross references allow for navigating the use/def chains of SSA values (i.e.
@@ -105,6 +123,14 @@ symbol, such as a `func.func`, within the file.
 
 ![IMG](/mlir-lsp-server/navigation.gif)
 
+#### Bytecode Editing and Inspection
+
+The language server provides support for interacting with MLIR bytecode files,
+enabling IDEs to transparently view and edit bytecode files in the same way
+as textual `.mlir` files.
+
+![IMG](/mlir-lsp-server/bytecode_edit.gif)
+
 ## PDLL LSP Language Server : `mlir-pdll-lsp-server`
 
 MLIR provides an implementation of an LSP language server for `.pdll` text files
@@ -132,12 +158,13 @@ Example:
 
 ```yaml
 --- !FileInfo:
-  filepath: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR/ArithmeticCanonicalization.pdll"
-  includes: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR;/home/user/llvm/mlir/include"
+  filepath: "/home/user/llvm/mlir/lib/Dialect/Arith/IR/ArithCanonicalization.pdll"
+  includes: "/home/user/llvm/mlir/lib/Dialect/Arith/IR;/home/user/llvm/mlir/include"
 ```
 
 - filepath: <string> - Absolute file path of the file.
-- includes: <string> - Semi-colon delimited list of absolute include directories.
+- includes: <string> - Semi-colon delimited list of absolute include
+  directories.
 
 #### Build System Integration
 
@@ -225,9 +252,9 @@ The language server provides additional information inline with the source code.
 Editors usually render this using read-only virtual text snippets interspersed
 with code. Hints may be shown for:
 
-* types of local variables
-* names of operand and result groups
-* constraint and rewrite arguments
+- types of local variables
+- names of operand and result groups
+- constraint and rewrite arguments
 
 ![IMG](/mlir-pdll-lsp-server/inlay_hints.png)
 
@@ -257,12 +284,13 @@ Example:
 
 ```yaml
 --- !FileInfo:
-  filepath: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR/ArithmeticCanonicalization.td"
-  includes: "/home/user/llvm/mlir/lib/Dialect/Arithmetic/IR;/home/user/llvm/mlir/include"
+  filepath: "/home/user/llvm/mlir/lib/Dialect/Arith/IR/ArithCanonicalization.td"
+  includes: "/home/user/llvm/mlir/lib/Dialect/Arith/IR;/home/user/llvm/mlir/include"
 ```
 
 - filepath: <string> - Absolute file path of the file.
-- includes: <string> - Semi-colon delimited list of absolute include directories.
+- includes: <string> - Semi-colon delimited list of absolute include
+  directories.
 
 #### Build System Integration
 
@@ -301,6 +329,18 @@ Jump to the definition of a symbol under the cursor:
 Show all references of the symbol under the cursor.
 
 ![IMG](/tblgen-lsp-server/find_references.gif)
+
+#### Hover
+
+Hover over a symbol to see more information about it, such as its type,
+documentation, and more.
+
+![IMG](/tblgen-lsp-server/hover_def.png)
+
+Hovering over an overridden field will also show you information such as
+documentation from the base value:
+
+![IMG](/tblgen-lsp-server/hover_field.png)
 
 ## Language Server Design
 
@@ -368,6 +408,7 @@ The MLIR extension adds language support for the
 - go-to-definition and cross references
 - Detailed information when hovering over IR entities
 - Outline and navigation of symbols and symbol tables
+- Code completion
 - Live parser and verifier diagnostics
 
 [mlir-vscode features]: #
@@ -428,6 +469,7 @@ The MLIR extension adds language support for the
 
 - Syntax highlighting for `.td` files and `tablegen` markdown blocks
 - go-to-definition and cross references
+- Types and documentation on hover
 
 [tablegen-vscode features]: #
 

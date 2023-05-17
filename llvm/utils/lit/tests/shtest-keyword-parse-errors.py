@@ -12,4 +12,4 @@
 # CHECK:       {{^}}Test has more than one ALLOW_RETRIES lines{{$}}
 
 # CHECK-LABEL: UNRESOLVED: shtest-keyword-parse-errors :: unterminated-run.txt
-# CHECK:       {{^}}Test has unterminated 'RUN:' lines (with '\'){{$}}
+# CHECK:       {{^}}Test has unterminated 'RUN:' directive (with '\') at line 1{{$}}

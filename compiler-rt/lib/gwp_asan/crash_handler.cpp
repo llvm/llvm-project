@@ -31,7 +31,15 @@ bool __gwp_asan_error_is_mine(const gwp_asan::AllocatorState *State,
 }
 
 uintptr_t
-__gwp_asan_get_internal_crash_address(const gwp_asan::AllocatorState *State) {
+__gwp_asan_get_internal_crash_address(const gwp_asan::AllocatorState *State,
+                                      uintptr_t ErrorPtr) {
+  // There can be a race between internally- and externally-raised faults. The
+  // fault address from the signal handler is used to discriminate whether it's
+  // internally- or externally-raised, and the pool maintains a special page at
+  // the end of the GuardedPagePool specifically for the internally-raised
+  // faults.
+  if (ErrorPtr != State->internallyDetectedErrorFaultAddress())
+    return 0u;
   return State->FailureAddress;
 }
 
@@ -52,7 +60,14 @@ __gwp_asan_diagnose_error(const gwp_asan::AllocatorState *State,
   if (State->FailureType != Error::UNKNOWN)
     return State->FailureType;
 
-  // Let's try and figure out what the source of this error is.
+  // Check for use-after-free.
+  if (addrToMetadata(State, Metadata, ErrorPtr)->IsDeallocated)
+    return Error::USE_AFTER_FREE;
+
+  // Check for buffer-overflow. Because of allocation alignment or left/right
+  // page placement, we can have buffer-overflows that don't touch a guarded
+  // page, but these are not possible to detect unless it's also a
+  // use-after-free, which is handled above.
   if (State->isGuardPage(ErrorPtr)) {
     size_t Slot = State->getNearestSlot(ErrorPtr);
     const AllocationMetadata *SlotMeta =
@@ -65,13 +80,6 @@ __gwp_asan_diagnose_error(const gwp_asan::AllocatorState *State,
     if (SlotMeta->Addr < ErrorPtr)
       return Error::BUFFER_OVERFLOW;
     return Error::BUFFER_UNDERFLOW;
-  }
-
-  // Access wasn't a guard page, check for use-after-free.
-  const AllocationMetadata *SlotMeta =
-      addrToMetadata(State, Metadata, ErrorPtr);
-  if (SlotMeta->IsDeallocated) {
-    return Error::USE_AFTER_FREE;
   }
 
   // If we have reached here, the error is still unknown.

@@ -89,22 +89,8 @@ public:
 /// state. Let's store it in the ProgramState.
 REGISTER_MAP_WITH_PROGRAMSTATE(StreamMap, SymbolRef, StreamState)
 
-namespace {
-class StopTrackingCallback final : public SymbolVisitor {
-  ProgramStateRef state;
-public:
-  StopTrackingCallback(ProgramStateRef st) : state(std::move(st)) {}
-  ProgramStateRef getState() const { return state; }
-
-  bool VisitSymbol(SymbolRef sym) override {
-    state = state->remove<StreamMap>(sym);
-    return true;
-  }
-};
-} // end anonymous namespace
-
 SimpleStreamChecker::SimpleStreamChecker()
-    : OpenFn("fopen"), CloseFn("fclose", 1) {
+    : OpenFn({"fopen"}), CloseFn({"fclose"}, 1) {
   // Initialize the bug types.
   DoubleCloseBugType.reset(
       new BugType(this, "Double fclose", "Unix Stream API Error"));

@@ -5,64 +5,64 @@
 
 @Glob = global i64 4
 
-define i32* @test0(i32* %X, i32* %dest) nounwind {
-	%Y = getelementptr i32, i32* %X, i32 4
-	%A = load i32, i32* %Y
-	store i32 %A, i32* %dest
-	ret i32* %Y
+define ptr @test0(ptr %X, ptr %dest) nounwind {
+	%Y = getelementptr i32, ptr %X, i32 4
+	%A = load i32, ptr %Y
+	store i32 %A, ptr %dest
+	ret ptr %Y
 }
 
-define i32* @test1(i32* %X, i32* %dest) nounwind {
-	%Y = getelementptr i32, i32* %X, i32 4
-	%A = load i32, i32* %Y
-	store i32 %A, i32* %dest
-	ret i32* %Y
+define ptr @test1(ptr %X, ptr %dest) nounwind {
+	%Y = getelementptr i32, ptr %X, i32 4
+	%A = load i32, ptr %Y
+	store i32 %A, ptr %dest
+	ret ptr %Y
 }
 
-define i16* @test2(i16* %X, i32* %dest) nounwind {
-	%Y = getelementptr i16, i16* %X, i32 4
-	%A = load i16, i16* %Y
+define ptr @test2(ptr %X, ptr %dest) nounwind {
+	%Y = getelementptr i16, ptr %X, i32 4
+	%A = load i16, ptr %Y
 	%B = sext i16 %A to i32
-	store i32 %B, i32* %dest
-	ret i16* %Y
+	store i32 %B, ptr %dest
+	ret ptr %Y
 }
 
-define i16* @test3(i16* %X, i32* %dest) nounwind {
-	%Y = getelementptr i16, i16* %X, i32 4
-	%A = load i16, i16* %Y
+define ptr @test3(ptr %X, ptr %dest) nounwind {
+	%Y = getelementptr i16, ptr %X, i32 4
+	%A = load i16, ptr %Y
 	%B = zext i16 %A to i32
-	store i32 %B, i32* %dest
-	ret i16* %Y
+	store i32 %B, ptr %dest
+	ret ptr %Y
 }
 
-define i16* @test3a(i16* %X, i64* %dest) nounwind {
-	%Y = getelementptr i16, i16* %X, i32 4
-	%A = load i16, i16* %Y
+define ptr @test3a(ptr %X, ptr %dest) nounwind {
+	%Y = getelementptr i16, ptr %X, i32 4
+	%A = load i16, ptr %Y
 	%B = sext i16 %A to i64
-	store i64 %B, i64* %dest
-	ret i16* %Y
+	store i64 %B, ptr %dest
+	ret ptr %Y
 }
 
-define i64* @test4(i64* %X, i64* %dest) nounwind {
-	%Y = getelementptr i64, i64* %X, i32 4
-	%A = load i64, i64* %Y
-	store i64 %A, i64* %dest
-	ret i64* %Y
+define ptr @test4(ptr %X, ptr %dest) nounwind {
+	%Y = getelementptr i64, ptr %X, i32 4
+	%A = load i64, ptr %Y
+	store i64 %A, ptr %dest
+	ret ptr %Y
 }
 
-define i16* @test5(i16* %X) nounwind {
-	%Y = getelementptr i16, i16* %X, i32 4
-	store i16 7, i16* %Y
-	ret i16* %Y
+define ptr @test5(ptr %X) nounwind {
+	%Y = getelementptr i16, ptr %X, i32 4
+	store i16 7, ptr %Y
+	ret ptr %Y
 }
 
-define i64* @test6(i64* %X, i64 %A) nounwind {
-	%Y = getelementptr i64, i64* %X, i32 4
-	store i64 %A, i64* %Y
-	ret i64* %Y
+define ptr @test6(ptr %X, i64 %A) nounwind {
+	%Y = getelementptr i64, ptr %X, i32 4
+	store i64 %A, ptr %Y
+	ret ptr %Y
 }
 
-define i64* @test7(i64* %X, i64 %A) nounwind {
-	store i64 %A, i64* @Glob
-	ret i64* @Glob
+define ptr @test7(ptr %X, i64 %A) nounwind {
+	store i64 %A, ptr @Glob
+	ret ptr @Glob
 }

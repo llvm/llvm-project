@@ -2,7 +2,7 @@
 
 ; CHECK-LABEL: test:
 ; CHECK-LABEL: %cond.false12.i
-; CHECK:         b.gt	
+; CHECK:         b.gt
 ; CHECK-NEXT:  LBB0_8:
 ; CHECK-NEXT:    mov	 x8, x9
 ; CHECK-NEXT:  LBB0_9:
@@ -58,5 +58,5 @@ for.end:                                          ; preds = %for.end.loopexit, %
   %j.2 = add i64 %j.0.lcssa, %n
   %j.3 = mul i64 %j.2, %n
   %j.4 = add i64 %j.3, 10
-  ret i64 %j.4 
+  ret i64 %j.4
 }

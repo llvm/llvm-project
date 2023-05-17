@@ -19,6 +19,7 @@
 #include "flang/Frontend/FrontendActions.h"
 #include "flang/Frontend/FrontendPluginRegistry.h"
 
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
 #include "clang/Driver/Options.h"
@@ -81,7 +82,7 @@ createFrontendAction(CompilerInstance &ci) {
     return std::make_unique<InitOnlyAction>();
   case PluginAction: {
     for (const FrontendPluginRegistry::entry &plugin :
-        FrontendPluginRegistry::entries()) {
+         FrontendPluginRegistry::entries()) {
       if (plugin.getName() == ci.getFrontendOpts().actionName) {
         std::unique_ptr<PluginParseTreeAction> p(plugin.instantiate());
         return std::move(p);
@@ -100,8 +101,9 @@ createFrontendAction(CompilerInstance &ci) {
 bool executeCompilerInvocation(CompilerInstance *flang) {
   // Honor -help.
   if (flang->getFrontendOpts().showHelp) {
-    clang::driver::getDriverOptTable().printHelp(llvm::outs(),
-        "flang-new -fc1 [options] file...", "LLVM 'Flang' Compiler",
+    clang::driver::getDriverOptTable().printHelp(
+        llvm::outs(), "flang-new -fc1 [options] file...",
+        "LLVM 'Flang' Compiler",
         /*Include=*/clang::driver::options::FC1Option,
         /*Exclude=*/llvm::opt::DriverFlag::HelpHidden,
         /*ShowAllAliases=*/false);
@@ -142,6 +144,7 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   if (!flang->getFrontendOpts().mlirArgs.empty()) {
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
+    mlir::registerAsmPrinterCLOptions();
     unsigned numArgs = flang->getFrontendOpts().mlirArgs.size();
     auto args = std::make_unique<const char *[]>(numArgs + 2);
     args[0] = "flang (MLIR option parsing)";
@@ -157,6 +160,9 @@ bool executeCompilerInvocation(CompilerInstance *flang) {
   if (flang->getDiagnostics().hasErrorOccurred()) {
     return false;
   }
+
+  // Honor color diagnostics.
+  flang->getDiagnosticOpts().ShowColors = flang->getFrontendOpts().showColors;
 
   // Create and execute the frontend action.
   std::unique_ptr<FrontendAction> act(createFrontendAction(*flang));

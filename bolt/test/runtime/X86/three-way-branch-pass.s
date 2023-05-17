@@ -4,8 +4,8 @@
 # RUN:   %s -o %t.o
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -data %t.fdata -print-finalized \
-# RUN: -o %t.out -three-way-branch | FileCheck %s
+# RUN: llvm-bolt %t.exe --data %t.fdata --print-finalized \
+# RUN: -o %t.out --three-way-branch | FileCheck %s
 # RUN: %t.exe
 # RUN: %t.out
 

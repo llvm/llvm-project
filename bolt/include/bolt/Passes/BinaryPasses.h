@@ -71,7 +71,8 @@ public:
   bool shouldPrint(const BinaryFunction &BF) const override { return false; }
 
   void runOnFunctions(BinaryContext &BC) override {
-    const DynoStats NewDynoStats = getDynoStats(BC.getBinaryFunctions());
+    const DynoStats NewDynoStats =
+        getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
     const bool Changed = (NewDynoStats != PrevDynoStats);
     outs() << "BOLT-INFO: program-wide dynostats " << Title
            << (Changed ? "" : " (no change)") << ":\n\n"
@@ -151,7 +152,9 @@ public:
   };
 
 private:
-  void modifyFunctionLayout(BinaryFunction &Function, LayoutType Type,
+  /// Run the specified layout algorithm on the given function. Returns `true`
+  /// if the order of blocks was changed.
+  bool modifyFunctionLayout(BinaryFunction &Function, LayoutType Type,
                             bool MinBranchClusters) const;
 
 public:
@@ -207,6 +210,16 @@ public:
       : BinaryFunctionPass(PrintPass) {}
 
   const char *getName() const override { return "lower-annotations"; }
+  void runOnFunctions(BinaryContext &BC) override;
+};
+
+/// Clean the state of the MC representation before sending it to emission
+class CleanMCState : public BinaryFunctionPass {
+public:
+  explicit CleanMCState(const cl::opt<bool> &PrintPass)
+      : BinaryFunctionPass(PrintPass) {}
+
+  const char *getName() const override { return "clean-mc-state"; }
   void runOnFunctions(BinaryContext &BC) override;
 };
 

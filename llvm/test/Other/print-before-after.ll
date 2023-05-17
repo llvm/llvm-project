@@ -33,12 +33,12 @@
 ; CHECK-LV: *** IR Dump After LoopVectorizePass on bar ***
 
 ; Verify that we can handle loop passes with params.
-; CHECK-UNSWITCH: *** IR Dump Before SimpleLoopUnswitchPass on Loop at depth 1 containing
-; CHECK-UNSWITCH: *** IR Dump After SimpleLoopUnswitchPass on Loop at depth 1 containing
-; CHECK-UNSWITCH: *** IR Dump Before SimpleLoopUnswitchPass on Loop at depth 1 containing
-; CHECK-UNSWITCH: *** IR Dump After SimpleLoopUnswitchPass on Loop at depth 1 containing
-; CHECK-UNSWITCH: *** IR Dump Before SimpleLoopUnswitchPass on Loop at depth 1 containing
-; CHECK-UNSWITCH: *** IR Dump After SimpleLoopUnswitchPass on Loop at depth 1 containing
+; CHECK-UNSWITCH: *** IR Dump Before SimpleLoopUnswitchPass on loop
+; CHECK-UNSWITCH: *** IR Dump After SimpleLoopUnswitchPass on loop
+; CHECK-UNSWITCH: *** IR Dump Before SimpleLoopUnswitchPass on loop
+; CHECK-UNSWITCH: *** IR Dump After SimpleLoopUnswitchPass on loop
+; CHECK-UNSWITCH: *** IR Dump Before SimpleLoopUnswitchPass on loop
+; CHECK-UNSWITCH: *** IR Dump After SimpleLoopUnswitchPass on loop
 
 define void @foo() {
   ret void

@@ -179,7 +179,7 @@ void __kmp_print_version_1(void) {
       &buffer, "%sthread affinity support: %s\n", KMP_VERSION_PREF_STR,
 #if KMP_AFFINITY_SUPPORTED
       (KMP_AFFINITY_CAPABLE()
-           ? (__kmp_affinity_type == affinity_none ? "not used" : "yes")
+           ? (__kmp_affinity.type == affinity_none ? "not used" : "yes")
            : "no")
 #else
       "no"

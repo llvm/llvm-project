@@ -34,6 +34,7 @@
 #include <cassert>
 #include <cstddef>
 #include <forward_list>
+#include <optional>
 
 namespace polly {
 using llvm::AnalysisInfoMixin;
@@ -51,7 +52,6 @@ using llvm::LoadInst;
 using llvm::make_range;
 using llvm::MapVector;
 using llvm::MemIntrinsic;
-using llvm::Optional;
 using llvm::PassInfoMixin;
 using llvm::PHINode;
 using llvm::RegionNode;
@@ -1359,8 +1359,7 @@ public:
     if (!Inst)
       return false;
     if (isBlockStmt())
-      return std::find(Instructions.begin(), Instructions.end(), Inst) !=
-             Instructions.end();
+      return llvm::is_contained(Instructions, Inst);
     return represents(Inst->getParent());
   }
 
@@ -1663,7 +1662,7 @@ private:
   Region &R;
 
   /// The name of the SCoP (identical to the regions name)
-  Optional<std::string> name;
+  std::optional<std::string> name;
 
   // Access functions of the SCoP.
   //
@@ -1684,9 +1683,6 @@ private:
 
   /// Number of copy statements.
   unsigned CopyStmtsNum = 0;
-
-  /// Flag to indicate if the Scop is to be skipped.
-  bool SkipScop = false;
 
   using StmtSet = std::list<ScopStmt>;
 
@@ -2144,12 +2140,6 @@ public:
 
   /// Check if the SCoP has been optimized by the scheduler.
   bool isOptimized() const { return IsOptimized; }
-
-  /// Mark the SCoP to be skipped by ScopPass passes.
-  void markAsToBeSkipped() { SkipScop = true; }
-
-  /// Check if the SCoP is to be skipped by ScopPass passes.
-  bool isToBeSkipped() const { return SkipScop; }
 
   /// Return the ID of the Scop
   int getID() const { return ID; }

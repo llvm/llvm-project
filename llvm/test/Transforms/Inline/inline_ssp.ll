@@ -1,4 +1,4 @@
-; RUN: opt -inline %s -S | FileCheck %s
+; RUN: opt -passes=inline %s -S | FileCheck %s
 ; RUN: opt -passes='cgscc(inline)' %s -S | FileCheck %s
 ; Ensure SSP attributes are propagated correctly when inlining.
 
@@ -16,31 +16,31 @@
 
 define internal void @fun_sspreq() sspreq {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str3, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str3)
   ret void
 }
 
 define internal void @fun_sspreq_alwaysinline() sspreq alwaysinline {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str3, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str3)
   ret void
 }
 
 define internal void @fun_sspstrong() sspstrong {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([15 x i8], [15 x i8]* @.str2, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str2)
   ret void
 }
 
 define internal void @fun_ssp() ssp {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([9 x i8], [9 x i8]* @.str1, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str1)
   ret void
 }
 
 define internal void @fun_nossp() {
 entry:
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([11 x i8], [11 x i8]* @.str, i32 0, i32 0))
+  %call = call i32 (ptr, ...) @printf(ptr @.str)
   ret void
 }
 
@@ -168,7 +168,7 @@ entry:
   ret void
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)
 
 ; CHECK: attributes #[[SSPREQ]] = { sspreq }
 ; CHECK: attributes #[[SSPSTRONG]] = { sspstrong }

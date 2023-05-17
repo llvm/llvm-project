@@ -13,6 +13,10 @@
 
 // explicit basic_ifstream(const wchar_t* s, ios_base::openmode mode = ios_base::in);
 
+// This extension is only provided on Windows.
+// REQUIRES: windows
+// UNSUPPORTED: no-wide-characters
+
 // FILE_DEPENDENCIES: test.dat
 
 #include <fstream>
@@ -20,9 +24,7 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
-{
-#ifdef _LIBCPP_HAS_OPEN_WITH_WCHAR
+int main(int, char**) {
     {
         std::ifstream fs(L"test.dat");
         double x = 0;
@@ -41,7 +43,6 @@ int main(int, char**)
     // std::wifstream(const wchar_t*, std::ios_base::openmode) is tested in
     // test/libcxx/input.output/file.streams/fstreams/ofstream.cons/wchar_pointer.pass.cpp
     // which creates writable files.
-#endif
 
-  return 0;
+    return 0;
 }

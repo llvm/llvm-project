@@ -55,7 +55,7 @@ b11:                                              ; preds = %b10, %b8
   %v11 = tail call <16 x i32> @llvm.hexagon.V6.vor(<16 x i32> %v10, <16 x i32> undef)
   %v12 = tail call <64 x i1> @llvm.hexagon.V6.vandvrt(<16 x i32> %v11, i32 -1)
   %v13 = tail call <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1> %v12, i32 undef)
-  tail call void @llvm.hexagon.V6.vmaskedstoreq(<64 x i1> undef, i8* undef, <16 x i32> %v13)
+  tail call void @llvm.hexagon.V6.vmaskedstoreq(<64 x i1> undef, ptr undef, <16 x i32> %v13)
   unreachable
 
 b12:                                              ; preds = %b12, %b9
@@ -81,7 +81,7 @@ declare <16 x i32> @llvm.hexagon.V6.valignb(<16 x i32>, <16 x i32>, i32) #1
 declare <16 x i32> @llvm.hexagon.V6.vandqrt(<64 x i1>, i32) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.hexagon.V6.vmaskedstoreq(<64 x i1>, i8*, <16 x i32>) #2
+declare void @llvm.hexagon.V6.vmaskedstoreq(<64 x i1>, ptr, <16 x i32>) #2
 
 ; Function Attrs: nounwind readnone
 declare <16 x i32> @llvm.hexagon.V6.vaddbq(<64 x i1>, <16 x i32>, <16 x i32>) #1

@@ -1,5 +1,5 @@
-;RUN: opt %s -aa-pipeline= -passes='adce,loop(loop-rotate),adce' -S -verify-cfg-preserved=0 -debug-pass-manager -debug-only=loop-rotate 2>&1 | FileCheck %s
-;RUN: opt %s -aa-pipeline= -passes='adce,loop-mssa(loop-rotate),adce' -S -verify-cfg-preserved=0 -debug-pass-manager -debug-only=loop-rotate -verify-memoryssa 2>&1 | FileCheck %s --check-prefix=MSSA
+;RUN: opt %s -aa-pipeline= -passes='adce,loop(loop-rotate),adce' -S -verify-analysis-invalidation=0 -debug-pass-manager -debug-only=loop-rotate 2>&1 | FileCheck %s
+;RUN: opt %s -aa-pipeline= -passes='adce,loop-mssa(loop-rotate),adce' -S -verify-analysis-invalidation=0 -debug-pass-manager -debug-only=loop-rotate -verify-memoryssa 2>&1 | FileCheck %s --check-prefix=MSSA
 ;REQUIRES: asserts
 
 ; This test is to make sure we invalidate the post dominator pass after loop rotate simplifies the loop latch.
@@ -17,7 +17,7 @@
 ; CHECK-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; CHECK-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; CHECK-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
-; CHECK-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
+; CHECK-NEXT: Running pass: LoopRotatePass on bb
 ; CHECK-NEXT: Folding loop latch bb4 into bb
 ; CHECK-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; CHECK-NEXT: Running pass: ADCEPass on f
@@ -36,7 +36,7 @@
 ; MSSA-NEXT: Running analysis: TargetLibraryAnalysis on f
 ; MSSA-NEXT: Running analysis: ScalarEvolutionAnalysis on f
 ; MSSA-NEXT: Running analysis: InnerAnalysisManagerProxy{{.*}} on f
-; MSSA-NEXT: Running pass: LoopRotatePass on Loop at depth 1 containing: %bb<header><exiting>,%bb4<latch>
+; MSSA-NEXT: Running pass: LoopRotatePass on bb
 ; MSSA-NEXT: Folding loop latch bb4 into bb
 ; MSSA-NEXT: Invalidating analysis: PostDominatorTreeAnalysis on f
 ; MSSA-NEXT: Running pass: ADCEPass on f

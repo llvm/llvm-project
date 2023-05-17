@@ -25,22 +25,25 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Driver.h"
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/CrashRecoveryContext.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/PluginLoader.h"
 #include "llvm/Support/Process.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstdlib>
+#include <optional>
 
 using namespace lld;
 using namespace llvm;
@@ -89,7 +92,9 @@ static bool isPETarget(std::vector<const char *> &v) {
   SmallVector<const char *, 256> expandedArgs(v.data(), v.data() + v.size());
   BumpPtrAllocator a;
   StringSaver saver(a);
-  cl::ExpandResponseFiles(saver, getDefaultQuotingStyle(), expandedArgs);
+  cl::ExpansionContext ECtx(saver.getAllocator(), getDefaultQuotingStyle());
+  if (Error Err = ECtx.expandResponseFiles(expandedArgs))
+    die(toString(std::move(Err)));
   for (auto it = expandedArgs.begin(); it + 1 != expandedArgs.end(); ++it) {
     if (StringRef(*it) != "-m")
       continue;
@@ -131,7 +136,7 @@ static Flavor parseFlavor(std::vector<const char *> &v) {
 
   // Deduct the flavor from argv[0].
   StringRef arg0 = path::filename(v[0]);
-  if (arg0.endswith_insensitive(".exe"))
+  if (arg0.ends_with_insensitive(".exe"))
     arg0 = arg0.drop_back(4);
   return parseProgname(arg0);
 }
@@ -210,16 +215,23 @@ static unsigned inTestVerbosity() {
   return v;
 }
 
-int main(int argc, const char **argv) {
+int lld_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM x(argc, argv);
   sys::Process::UseANSIEscapeCodes(true);
+
+  if (::getenv("FORCE_LLD_DIAGNOSTICS_CRASH")) {
+    llvm::errs()
+        << "crashing due to environment variable FORCE_LLD_DIAGNOSTICS_CRASH\n";
+    LLVM_BUILTIN_TRAP;
+  }
 
   // Not running in lit tests, just take the shortest codepath with global
   // exception handling and no memory cleanup on exit.
   if (!inTestVerbosity())
-    return lldMain(argc, argv, llvm::outs(), llvm::errs());
+    return lldMain(argc, const_cast<const char **>(argv), llvm::outs(),
+                   llvm::errs());
 
-  Optional<int> mainRet;
+  std::optional<int> mainRet;
   CrashRecoveryContext::Enable();
 
   for (unsigned i = inTestVerbosity(); i > 0; --i) {
@@ -227,7 +239,8 @@ int main(int argc, const char **argv) {
     inTestOutputDisabled = (i != 1);
 
     // Execute one iteration.
-    auto r = safeLldMain(argc, argv, llvm::outs(), llvm::errs());
+    auto r = safeLldMain(argc, const_cast<const char **>(argv), llvm::outs(),
+                         llvm::errs());
     if (!r.canRunAgain)
       exitLld(r.ret); // Exit now, can't re-execute again.
 

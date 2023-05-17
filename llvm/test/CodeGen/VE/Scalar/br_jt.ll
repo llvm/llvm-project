@@ -123,8 +123,8 @@ define signext i32 @br_jt4(i32 signext %0) {
 
 4:                                                ; preds = %1
   %5 = sext i32 %2 to i64
-  %6 = getelementptr inbounds [4 x i32], [4 x i32]* @switch.table.br_jt4, i64 0, i64 %5
-  %7 = load i32, i32* %6, align 4
+  %6 = getelementptr inbounds [4 x i32], ptr @switch.table.br_jt4, i64 0, i64 %5
+  %7 = load i32, ptr %6, align 4
   ret i32 %7
 
 8:                                                ; preds = %1
@@ -204,8 +204,8 @@ define signext i32 @br_jt7(i32 signext %0) {
 
 9:                                                ; preds = %4
   %10 = sext i32 %2 to i64
-  %11 = getelementptr inbounds [9 x i32], [9 x i32]* @switch.table.br_jt7, i64 0, i64 %10
-  %12 = load i32, i32* %11, align 4
+  %11 = getelementptr inbounds [9 x i32], ptr @switch.table.br_jt7, i64 0, i64 %10
+  %12 = load i32, ptr %11, align 4
   ret i32 %12
 
 13:                                               ; preds = %1, %4
@@ -285,8 +285,8 @@ define signext i32 @br_jt8(i32 signext %0) {
 
 9:                                                ; preds = %4
   %10 = sext i32 %2 to i64
-  %11 = getelementptr inbounds [9 x i32], [9 x i32]* @switch.table.br_jt8, i64 0, i64 %10
-  %12 = load i32, i32* %11, align 4
+  %11 = getelementptr inbounds [9 x i32], ptr @switch.table.br_jt8, i64 0, i64 %10
+  %12 = load i32, ptr %11, align 4
   ret i32 %12
 
 13:                                               ; preds = %1, %4

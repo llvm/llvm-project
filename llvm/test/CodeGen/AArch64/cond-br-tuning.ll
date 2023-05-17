@@ -6,7 +6,7 @@ target triple = "aarch64-linaro-linux-gnueabi"
 
 ; CMN is an alias of ADDS.
 
-define void @test_add_cbz(i32 %a, i32 %b, i32* %ptr) {
+define void @test_add_cbz(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_add_cbz:
 ; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    cmn w0, w1
@@ -17,32 +17,33 @@ define void @test_add_cbz(i32 %a, i32 %b, i32* %ptr) {
   %d = icmp ne i32 %c, 0
   br i1 %d, label %L1, label %L2
 L1:
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   ret void
 L2:
-  store i32 1, i32* %ptr, align 4
+  store i32 1, ptr %ptr, align 4
   ret void
 }
 
-define void @test_add_cbz_multiple_use(i32 %a, i32 %b, i32* %ptr) {
+define void @test_add_cbz_multiple_use(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_add_cbz_multiple_use:
 ; CHECK:       // %bb.0: // %common.ret
-; CHECK-NEXT:    adds w8, w0, w1
-; CHECK-NEXT:    csel w8, wzr, w8, ne
+; CHECK-NEXT:    mov w8, #10
+; CHECK-NEXT:    adds w9, w0, w1
+; CHECK-NEXT:    csel w8, w8, w9, ne
 ; CHECK-NEXT:    str w8, [x2]
 ; CHECK-NEXT:    ret
   %c = add nsw i32 %a, %b
   %d = icmp ne i32 %c, 0
   br i1 %d, label %L1, label %L2
 L1:
-  store i32 0, i32* %ptr, align 4
+  store i32 10, ptr %ptr, align 4
   ret void
 L2:
-  store i32 %c, i32* %ptr, align 4
+  store i32 %c, ptr %ptr, align 4
   ret void
 }
 
-define void @test_add_cbz_64(i64 %a, i64 %b, i64* %ptr) {
+define void @test_add_cbz_64(i64 %a, i64 %b, ptr %ptr) {
 ; CHECK-LABEL: test_add_cbz_64:
 ; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    cmn x0, x1
@@ -53,14 +54,14 @@ define void @test_add_cbz_64(i64 %a, i64 %b, i64* %ptr) {
   %d = icmp ne i64 %c, 0
   br i1 %d, label %L1, label %L2
 L1:
-  store i64 0, i64* %ptr, align 4
+  store i64 0, ptr %ptr, align 4
   ret void
 L2:
-  store i64 1, i64* %ptr, align 4
+  store i64 1, ptr %ptr, align 4
   ret void
 }
 
-define void @test_and_cbz(i32 %a, i32* %ptr) {
+define void @test_and_cbz(i32 %a, ptr %ptr) {
 ; CHECK-LABEL: test_and_cbz:
 ; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    tst w0, #0x6
@@ -71,14 +72,14 @@ define void @test_and_cbz(i32 %a, i32* %ptr) {
   %d = icmp ne i32 %c, 0
   br i1 %d, label %L1, label %L2
 L1:
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   ret void
 L2:
-  store i32 1, i32* %ptr, align 4
+  store i32 1, ptr %ptr, align 4
   ret void
 }
 
-define void @test_bic_cbnz(i32 %a, i32 %b, i32* %ptr) {
+define void @test_bic_cbnz(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_bic_cbnz:
 ; CHECK:       // %bb.0: // %common.ret
 ; CHECK-NEXT:    bics wzr, w1, w0
@@ -89,14 +90,14 @@ define void @test_bic_cbnz(i32 %a, i32 %b, i32* %ptr) {
   %d = icmp eq i32 %c, %b
   br i1 %d, label %L1, label %L2
 L1:
-  store i32 0, i32* %ptr, align 4
+  store i32 0, ptr %ptr, align 4
   ret void
 L2:
-  store i32 1, i32* %ptr, align 4
+  store i32 1, ptr %ptr, align 4
   ret void
 }
 
-define void @test_add_tbz(i32 %a, i32 %b, i32* %ptr) {
+define void @test_add_tbz(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_add_tbz:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adds w8, w0, w1
@@ -110,13 +111,13 @@ entry:
   %cmp36 = icmp sge i32 %add, 0
   br i1 %cmp36, label %L2, label %L1
 L1:
-  store i32 %add, i32* %ptr, align 8
+  store i32 %add, ptr %ptr, align 8
   br label %L2
 L2:
   ret void
 }
 
-define void @test_subs_tbz(i32 %a, i32 %b, i32* %ptr) {
+define void @test_subs_tbz(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_subs_tbz:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs w8, w0, w1
@@ -130,13 +131,13 @@ entry:
   %cmp36 = icmp sge i32 %sub, 0
   br i1 %cmp36, label %L2, label %L1
 L1:
-  store i32 %sub, i32* %ptr, align 8
+  store i32 %sub, ptr %ptr, align 8
   br label %L2
 L2:
   ret void
 }
 
-define void @test_add_tbnz(i32 %a, i32 %b, i32* %ptr) {
+define void @test_add_tbnz(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_add_tbnz:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    adds w8, w0, w1
@@ -150,13 +151,13 @@ entry:
   %cmp36 = icmp slt i32 %add, 0
   br i1 %cmp36, label %L2, label %L1
 L1:
-  store i32 %add, i32* %ptr, align 8
+  store i32 %add, ptr %ptr, align 8
   br label %L2
 L2:
   ret void
 }
 
-define void @test_subs_tbnz(i32 %a, i32 %b, i32* %ptr) {
+define void @test_subs_tbnz(i32 %a, i32 %b, ptr %ptr) {
 ; CHECK-LABEL: test_subs_tbnz:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    subs w8, w0, w1
@@ -170,7 +171,7 @@ entry:
   %cmp36 = icmp slt i32 %sub, 0
   br i1 %cmp36, label %L2, label %L1
 L1:
-  store i32 %sub, i32* %ptr, align 8
+  store i32 %sub, ptr %ptr, align 8
   br label %L2
 L2:
   ret void

@@ -1,7 +1,7 @@
-; RUN: opt -mtriple=armv7-linux-android -S -cross-dso-cfi < %s | FileCheck --check-prefix=THUMB %s
-; RUN: opt -mtriple=thumbv7-linux-android -S -cross-dso-cfi < %s | FileCheck --check-prefix=THUMB %s
-; RUN: opt -mtriple=i386-linux -S -cross-dso-cfi < %s | FileCheck --check-prefix=NOTHUMB %s
-; RUN: opt -mtriple=x86_64-linux -S -cross-dso-cfi < %s | FileCheck --check-prefix=NOTHUMB %s
+; RUN: opt -mtriple=armv7-linux-android -S -passes=cross-dso-cfi < %s | FileCheck --check-prefix=THUMB %s
+; RUN: opt -mtriple=thumbv7-linux-android -S -passes=cross-dso-cfi < %s | FileCheck --check-prefix=THUMB %s
+; RUN: opt -mtriple=i386-linux -S -passes=cross-dso-cfi < %s | FileCheck --check-prefix=NOTHUMB %s
+; RUN: opt -mtriple=x86_64-linux -S -passes=cross-dso-cfi < %s | FileCheck --check-prefix=NOTHUMB %s
 
 target datalayout = "e-m:e-p:32:32-i64:64-v128:64:128-a:0:32-n32-S64"
 

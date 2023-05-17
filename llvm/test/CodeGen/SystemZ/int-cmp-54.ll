@@ -7,7 +7,7 @@
 
 ; Function Attrs: nounwind
 define void @main() local_unnamed_addr #0 {
-  %1 = load volatile i88, i88* bitcast (<{ i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i8, i32 }>* @g_2166 to i88*), align 8
+  %1 = load volatile i88, ptr @g_2166, align 8
   %2 = lshr i88 %1, 87
   %3 = trunc i88 %2 to i64
   %4 = icmp sgt i64 %3, 9293
@@ -15,6 +15,6 @@ define void @main() local_unnamed_addr #0 {
   %6 = lshr i32 %5, 0
   %7 = shl i32 %6, 6
   %8 = trunc i32 %7 to i8
-  store i8 %8, i8* getelementptr inbounds ([4 x i8], [4 x i8]* @g_39, i64 0, i64 1), align 1
+  store i8 %8, ptr getelementptr inbounds ([4 x i8], ptr @g_39, i64 0, i64 1), align 1
   unreachable
 }

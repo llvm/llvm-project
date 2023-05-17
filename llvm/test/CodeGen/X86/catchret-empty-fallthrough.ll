@@ -10,7 +10,7 @@ declare i32 @__C_specific_handler(...)
 
 declare void @bar()
 
-define void @foo(i1 %cond) personality i32 (...)* @__C_specific_handler {
+define void @foo(i1 %cond) personality ptr @__C_specific_handler {
 entry:
   br i1 %cond, label %return, label %try
 
@@ -22,7 +22,7 @@ dispatch:                                         ; preds = %try
   %cs1 = catchswitch within none [label %catch] unwind to caller
 
 catch:                                            ; preds = %dispatch
-  %0 = catchpad within %cs1 [i8* null]
+  %0 = catchpad within %cs1 [ptr null]
   catchret from %0 to label %return
 
 fallthrough:                                      ; preds = %try

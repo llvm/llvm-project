@@ -24,7 +24,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 ; Function Attrs: nounwind uwtable
-define void @ImportArrays_Negative_Size(double %beta, [1024 x double]* nocapture readonly %A, [1056 x double]* nocapture %B) local_unnamed_addr {
+define void @ImportArrays_Negative_Size(double %beta, ptr nocapture readonly %A, ptr nocapture %B) local_unnamed_addr {
 entry:
   br label %for.cond1.preheader
 
@@ -34,30 +34,30 @@ for.cond1.preheader:                              ; preds = %for.inc16, %entry
 
 for.cond4.preheader:                              ; preds = %for.inc13, %for.cond1.preheader
   %indvars.iv32 = phi i64 [ 0, %for.cond1.preheader ], [ %indvars.iv.next33, %for.inc13 ]
-  %arrayidx12 = getelementptr inbounds [1056 x double], [1056 x double]* %B, i64 %indvars.iv35, i64 %indvars.iv32
+  %arrayidx12 = getelementptr inbounds [1056 x double], ptr %B, i64 %indvars.iv35, i64 %indvars.iv32
   br label %for.body6
 
 for.body6:                                        ; preds = %for.body6, %for.cond4.preheader
   %indvars.iv = phi i64 [ 0, %for.cond4.preheader ], [ %indvars.iv.next.3, %for.body6 ]
-  %arrayidx8 = getelementptr inbounds [1024 x double], [1024 x double]* %A, i64 %indvars.iv35, i64 %indvars.iv
-  %0 = load double, double* %arrayidx8, align 8
+  %arrayidx8 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv
+  %0 = load double, ptr %arrayidx8, align 8
   %mul = fmul double %0, %beta
-  store double %mul, double* %arrayidx12, align 8
+  store double %mul, ptr %arrayidx12, align 8
   %indvars.iv.next = or i64 %indvars.iv, 1
-  %arrayidx8.1 = getelementptr inbounds [1024 x double], [1024 x double]* %A, i64 %indvars.iv35, i64 %indvars.iv.next
-  %1 = load double, double* %arrayidx8.1, align 8
+  %arrayidx8.1 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next
+  %1 = load double, ptr %arrayidx8.1, align 8
   %mul.1 = fmul double %1, %beta
-  store double %mul.1, double* %arrayidx12, align 8
+  store double %mul.1, ptr %arrayidx12, align 8
   %indvars.iv.next.1 = or i64 %indvars.iv, 2
-  %arrayidx8.2 = getelementptr inbounds [1024 x double], [1024 x double]* %A, i64 %indvars.iv35, i64 %indvars.iv.next.1
-  %2 = load double, double* %arrayidx8.2, align 8
+  %arrayidx8.2 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.1
+  %2 = load double, ptr %arrayidx8.2, align 8
   %mul.2 = fmul double %2, %beta
-  store double %mul.2, double* %arrayidx12, align 8
+  store double %mul.2, ptr %arrayidx12, align 8
   %indvars.iv.next.2 = or i64 %indvars.iv, 3
-  %arrayidx8.3 = getelementptr inbounds [1024 x double], [1024 x double]* %A, i64 %indvars.iv35, i64 %indvars.iv.next.2
-  %3 = load double, double* %arrayidx8.3, align 8
+  %arrayidx8.3 = getelementptr inbounds [1024 x double], ptr %A, i64 %indvars.iv35, i64 %indvars.iv.next.2
+  %3 = load double, ptr %arrayidx8.3, align 8
   %mul.3 = fmul double %3, %beta
-  store double %mul.3, double* %arrayidx12, align 8
+  store double %mul.3, ptr %arrayidx12, align 8
   %indvars.iv.next.3 = add nsw i64 %indvars.iv, 4
   %exitcond.3 = icmp eq i64 %indvars.iv.next.3, 1024
   br i1 %exitcond.3, label %for.inc13, label %for.body6

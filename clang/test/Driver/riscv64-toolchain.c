@@ -15,67 +15,68 @@
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
-// RUN: %clang -### %s -fuse-ld= \
+// RUN: env "PATH=" %clang -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 -no-pie \
 // RUN:   | FileCheck -check-prefix=C-RV64-BAREMETAL-LP64 %s
 
-// C-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
+// C-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
 // C-RV64-BAREMETAL-LP64: "--sysroot={{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf"
+// C-RV64-BAREMETAL-LP64-SAME: "-X"
 // C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
-// C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// C-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
+// C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// C-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1"
 // C-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib"
 // C-RV64-BAREMETAL-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// C-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang -### %s -fuse-ld= \
+// RUN: env "PATH=" %clang -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-BAREMETAL-NOSYSROOT-LP64 %s
 
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf{{/|\\\\}}lib"
+// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
+// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/lib{{/|\\\\}}crt0.o"
+// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// C-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1"
+// C-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu{{/|\\\\}}lib"
 // C-RV64-BAREMETAL-NOSYSROOT-LP64: "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// C-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx -### %s -fuse-ld= \
+// RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree \
 // RUN:   --sysroot=%S/Inputs/basic_riscv64_tree/riscv64-unknown-elf 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV64-BAREMETAL-LP64 %s
 
 // CXX-RV64-BAREMETAL-LP64: "-internal-isystem" "{{.*}}Inputs/basic_riscv64_tree/riscv64-unknown-elf/include/c++{{/|\\\\}}8.0.1"
-// CXX-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
+// CXX-RV64-BAREMETAL-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
 // CXX-RV64-BAREMETAL-LP64: "--sysroot={{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf"
 // CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
-// CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// CXX-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
+// CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// CXX-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1"
 // CXX-RV64-BAREMETAL-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/riscv64-unknown-elf/lib"
-// CXX-RV64-BAREMETAL-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// CXX-RV64-BAREMETAL-LP64: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV64-BAREMETAL-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clangxx -### %s -fuse-ld= \
+// RUN: env "PATH=" %clangxx -### %s -fuse-ld= \
 // RUN:   --target=riscv64-unknown-elf -stdlib=libstdc++ --rtlib=platform \
 // RUN:   --sysroot= \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree 2>&1 \
 // RUN:   | FileCheck -check-prefix=CXX-RV64-BAREMETAL-NOSYSROOT-LP64 %s
 
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-internal-isystem" "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/include/c++{{/|\\\\}}8.0.1"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib{{/|\\\\}}crt0.o"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtbegin.o"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-elf/lib"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
-// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-elf/8.0.1{{/|\\\\}}crtend.o"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-internal-isystem" "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/include/c++{{/|\\\\}}8.0.1"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}bin{{/|\\\\}}riscv64-unknown-elf-ld"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/lib{{/|\\\\}}crt0.o"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtbegin.o"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-L{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/lib"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "-lstdc++" "-lm" "--start-group" "-lc" "-lgloss" "--end-group" "-lgcc"
+// CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
-// RUN: %clang -### %s -fuse-ld= -no-pie \
+// RUN: env "PATH=" %clang -### %s -fuse-ld= -no-pie \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
@@ -83,14 +84,14 @@
 
 // C-RV64-LINUX-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/../../..{{/|\\\\}}..{{/|\\\\}}riscv64-unknown-linux-gnu/bin{{/|\\\\}}ld"
 // C-RV64-LINUX-MULTI-LP64: "--sysroot={{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot"
-// C-RV64-LINUX-MULTI-LP64: "-m" "elf64lriscv"
+// C-RV64-LINUX-MULTI-LP64: "-m" "elf64lriscv" "-X"
 // C-RV64-LINUX-MULTI-LP64: "-dynamic-linker" "/lib/ld-linux-riscv64-lp64.so.1"
 // C-RV64-LINUX-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64{{/|\\\\}}crtbegin.o"
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/lib/gcc/riscv64-unknown-linux-gnu/7.2.0/lib64/lp64"
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/lib64/lp64"
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64"
 
-// RUN: %clang -### %s -fuse-ld=ld -no-pie \
+// RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
 // RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -march=rv64imafd \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
@@ -159,14 +160,14 @@
 // RUN:   -resource-dir=%s/Inputs/resource_dir 2>&1 \
 // RUN:   | FileCheck -check-prefix=RESOURCE-INC %s
 // RESOURCE-INC: "-internal-isystem" "{{.*}}/Inputs/resource_dir{{/|\\\\}}include"
-// RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv64_tree/{{.*}}riscv64-unknown-elf{{/|\\\\}}include"
+// RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv64_tree/{{.*}}riscv64-unknown-linux-gnu{{/|\\\\}}include"
 
 // RUN: %clang -### %s --target=riscv64 \
 // RUN:   --gcc-toolchain=%S/Inputs/basic_riscv64_tree --sysroot= \
 // RUN:   -resource-dir=%s/Inputs/resource_dir -nobuiltininc 2>&1 \
 // RUN:   | FileCheck -check-prefix=NO-RESOURCE-INC %s
 // NO-RESOURCE-INC-NOT: "-internal-isystem" "{{.*}}Inputs/resource_dir{{/|\\\\}}include"
-// NO-RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv64_tree/{{.*}}riscv64-unknown-elf{{/|\\\\}}include"
+// NO-RESOURCE-INC: "-internal-isystem" "{{.*}}/basic_riscv64_tree/{{.*}}riscv64-unknown-linux-gnu{{/|\\\\}}include"
 
 // RUN: %clang --target=riscv64 %s -emit-llvm -S -o - | FileCheck %s
 
@@ -203,6 +204,9 @@ int align_ll = __alignof(long long);
 // CHECK: @align_p = dso_local global i32 8
 int align_p = __alignof(void*);
 
+// CHECK: @align_f16 = dso_local global i32 2
+int align_f16 = __alignof(_Float16);
+
 // CHECK: @align_f = dso_local global i32 4
 int align_f = __alignof(float);
 
@@ -238,6 +242,9 @@ int align_a_ll = __alignof(_Atomic(long long));
 
 // CHECK: @align_a_p = dso_local global i32 8
 int align_a_p = __alignof(_Atomic(void*));
+
+// CHECK: @align_a_f16 = dso_local global i32 2
+int align_a_f16 = __alignof(_Atomic(_Float16));
 
 // CHECK: @align_a_f = dso_local global i32 4
 int align_a_f = __alignof(_Atomic(float));
@@ -287,6 +294,9 @@ int size_a_ll = sizeof(_Atomic(long long));
 // CHECK: @size_a_p = dso_local global i32 8
 int size_a_p = sizeof(_Atomic(void*));
 
+// CHECK: @size_a_f16 = dso_local global i32 2
+int size_a_f16 = sizeof(_Atomic(_Float16));
+
 // CHECK: @size_a_f = dso_local global i32 4
 int size_a_f = sizeof(_Atomic(float));
 
@@ -334,6 +344,9 @@ unsigned long long check_ulonglong(void) { return 0; }
 
 // CHECK: define dso_local i64 @check_size_t()
 size_t check_size_t(void) { return 0; }
+
+// CHECK: define dso_local half @check_float16()
+_Float16 check_float16(void) { return 0; }
 
 // CHECK: define dso_local float @check_float()
 float check_float(void) { return 0; }

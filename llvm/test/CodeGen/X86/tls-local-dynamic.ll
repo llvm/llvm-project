@@ -5,9 +5,9 @@
 
 ; get_x and get_y are here to prevent x and y to be optimized away as 0
 
-define i32* @get_x() {
+define ptr @get_x() {
 entry:
-  ret i32* @x
+  ret ptr @x
 ; FIXME: This function uses a single thread-local variable,
 ; so we might want to fall back to general-dynamic here.
 ; CHECK-LABEL:       get_x:
@@ -16,9 +16,9 @@ entry:
 ; CHECK:       x@DTPOFF
 }
 
-define i32* @get_y() {
+define ptr @get_y() {
 entry:
-  ret i32* @y
+  ret ptr @y
 }
 
 define i32 @f(i32 %i) {
@@ -32,7 +32,7 @@ entry:
 
 
 if.else:
-  %0 = load i32, i32* @x, align 4
+  %0 = load i32, ptr @x, align 4
   %cmp1 = icmp eq i32 %i, 2
   br i1 %cmp1, label %if.then2, label %return
 ; Now we call __tls_get_addr.
@@ -43,7 +43,7 @@ if.else:
 
 
 if.then2:
-  %1 = load i32, i32* @y, align 4
+  %1 = load i32, ptr @y, align 4
   %add = add nsw i32 %1, %0
   br label %return
 ; This accesses TLS, but is dominated by the previous block,

@@ -127,13 +127,13 @@ inline static bool mlirLogicalResultIsFailure(MlirLogicalResult res) {
 }
 
 /// Creates a logical result representing a success.
-inline static MlirLogicalResult mlirLogicalResultSuccess() {
+inline static MlirLogicalResult mlirLogicalResultSuccess(void) {
   MlirLogicalResult res = {1};
   return res;
 }
 
 /// Creates a logical result representing a failure.
-inline static MlirLogicalResult mlirLogicalResultFailure() {
+inline static MlirLogicalResult mlirLogicalResultFailure(void) {
   MlirLogicalResult res = {0};
   return res;
 }
@@ -160,7 +160,7 @@ MLIR_CAPI_EXPORTED size_t mlirTypeIDHashValue(MlirTypeID typeID);
 //===----------------------------------------------------------------------===//
 
 /// Creates a type id allocator for dynamic type id creation
-MLIR_CAPI_EXPORTED MlirTypeIDAllocator mlirTypeIDAllocatorCreate();
+MLIR_CAPI_EXPORTED MlirTypeIDAllocator mlirTypeIDAllocatorCreate(void);
 
 /// Deallocates the allocator and all allocated type ids
 MLIR_CAPI_EXPORTED void

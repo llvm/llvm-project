@@ -149,7 +149,7 @@ public:
     if (auto EC = checkOffsetForWrite(Offset, Buffer.size()))
       return EC;
 
-    Buffer = makeArrayRef(Data).slice(Offset, Size);
+    Buffer = ArrayRef(Data).slice(Offset, Size);
     return Error::success();
   }
 
@@ -162,7 +162,7 @@ public:
     if (auto EC = checkOffsetForWrite(Offset, 1))
       return EC;
 
-    Buffer = makeArrayRef(Data).slice(Offset);
+    Buffer = ArrayRef(Data).slice(Offset);
     return Error::success();
   }
 
@@ -192,9 +192,7 @@ public:
   Error commit() override { return Error::success(); }
 
   /// Return the properties of this stream.
-  virtual BinaryStreamFlags getFlags() const override {
-    return BSF_Write | BSF_Append;
-  }
+  BinaryStreamFlags getFlags() const override { return BSF_Write | BSF_Append; }
 
   MutableArrayRef<uint8_t> data() { return Data; }
 };

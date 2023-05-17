@@ -1,5 +1,4 @@
 ; __stack_chk_guard and __stack_chk_fail should not be internalized.
-; RUN: opt < %s -internalize -S | FileCheck %s
 ; RUN: opt < %s -passes=internalize -S | FileCheck %s
 ; RUN: opt -mtriple=powerpc64-ibm-aix-xcoff < %s -passes=internalize -S | FileCheck %s --check-prefix=AIX
 

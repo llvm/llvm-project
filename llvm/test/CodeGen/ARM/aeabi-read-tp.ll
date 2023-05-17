@@ -7,7 +7,7 @@
 
 define dso_local i32 @f() local_unnamed_addr {
 entry:
-  %0 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @i, align 4
   ret i32 %0
 }
 

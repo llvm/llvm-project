@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace hicpp {
+namespace clang::tidy::hicpp {
 
 void ExceptionBaseclassCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -52,12 +50,10 @@ void ExceptionBaseclassCheck::check(const MatchFinder::MatchResult &Result) {
     diag(BadThrow->getSubExpr()->getBeginLoc(),
          "type %0 is a template instantiation of %1", DiagnosticIDs::Note)
         << BadThrow->getSubExpr()->getType()
-        << Template->getReplacedParameter()->getDecl();
+        << Template->getReplacedParameter();
 
   if (const auto *TypeDecl = Result.Nodes.getNodeAs<NamedDecl>("decl"))
     diag(TypeDecl->getBeginLoc(), "type defined here", DiagnosticIDs::Note);
 }
 
-} // namespace hicpp
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::hicpp

@@ -25,9 +25,9 @@ class IRBuilderBase;
 
 /// A helper struct to create IR loop nests for tiling in IR of the following
 /// form:
-///   for CurrentColumn = 0..NumColumns
-///     for CurrentRow = 0..NumRows
-///       for CurrentInner = 0..NumInner
+///   for ColumnLoop.Index = 0..NumColumns
+///     for RowLoop.Index = 0..NumRows
+///       for KLoop.Index = 0..NumInner
 struct TileInfo {
   /// Number of rows of the matrix.
   unsigned NumRows;
@@ -42,26 +42,21 @@ struct TileInfo {
   /// Number of rows/columns in a tile.
   unsigned TileSize = -1;
 
-  /// Start row of the current tile to compute.
-  Value *CurrentRow;
+  /// Properties of a single loop used when generating the tiled loop nest.
+  struct MatrixLoop {
+    /// The index updated on every iteration.
+    Value *Index = nullptr;
+    /// The header and latch of the loop.
+    BasicBlock *Header = nullptr;
+    BasicBlock *Latch = nullptr;
+  };
 
-  /// Start column of the current tile to compute.
-  Value *CurrentCol;
-
-  /// Current tile offset during the tile computation.
-  Value *CurrentK;
-
-  /// Header of the outermost loop iterating from 0..NumColumns.
-  BasicBlock *ColumnLoopHeader = nullptr;
-
-  /// Header of the second loop iterating from 0..NumRows.
-  BasicBlock *RowLoopHeader = nullptr;
-  /// Latch of the second loop iterating from 0..NumRows.
-  BasicBlock *RowLoopLatch = nullptr;
-  /// Header of the innermost loop iterating from 0..NumInner.
-  BasicBlock *InnerLoopHeader = nullptr;
-  /// Latch of the innermost loop iterating from 0..NumInner.
-  BasicBlock *InnerLoopLatch = nullptr;
+  /// The loop iterating on the rows.
+  MatrixLoop RowLoop;
+  /// The loop iterating on the columns.
+  MatrixLoop ColumnLoop;
+  /// The loop iterating on k (inner dimension).
+  MatrixLoop KLoop;
 
   TileInfo(unsigned NumRows, unsigned NumColumns, unsigned NumInner,
            unsigned TileSize)
@@ -72,9 +67,9 @@ struct TileInfo {
   /// for the inner loop body and sets {Column,Row,Inner}LoopHeader/Latch
   /// fields.
   ///
-  /// for CurrentColumn = 0..NumColumns
-  ///   for CurrentRow = 0..NumRows
-  ///     for CurrentInner = 0..NumInner
+  /// for ColumnLoop.Index = 0..NumColumns
+  ///   for RowLoop.Index = 0..NumRows
+  ///     for InnerLoop.Index = 0..NumInner
   BasicBlock *CreateTiledLoops(BasicBlock *Start, BasicBlock *End,
                                IRBuilderBase &B, DomTreeUpdater &DTU,
                                LoopInfo &LI);

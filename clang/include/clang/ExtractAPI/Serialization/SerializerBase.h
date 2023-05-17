@@ -15,6 +15,7 @@
 #define LLVM_CLANG_EXTRACTAPI_SERIALIZATION_SERIALIZERBASE_H
 
 #include "clang/ExtractAPI/API.h"
+#include "clang/ExtractAPI/APIIgnoresList.h"
 #include "llvm/Support/raw_ostream.h"
 
 namespace clang {
@@ -35,10 +36,10 @@ public:
 protected:
   const APISet &API;
 
-  /// The product name of API.
+  /// The list of symbols to ignore.
   ///
-  /// Note: This should be used for populating metadata about the API.
-  StringRef ProductName;
+  /// Note: This should be consulted before emitting a symbol.
+  const APIIgnoresList &IgnoresList;
 
   APISerializerOption Options;
 
@@ -50,9 +51,9 @@ public:
   APISerializer &operator=(APISerializer &&) = delete;
 
 protected:
-  APISerializer(const APISet &API, StringRef ProductName,
+  APISerializer(const APISet &API, const APIIgnoresList &IgnoresList,
                 APISerializerOption Options = {})
-      : API(API), ProductName(ProductName), Options(Options) {}
+      : API(API), IgnoresList(IgnoresList), Options(Options) {}
 
   virtual ~APISerializer() = default;
 };

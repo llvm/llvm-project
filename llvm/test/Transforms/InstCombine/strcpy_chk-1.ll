@@ -12,147 +12,128 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f3
 
 ; Check cases where slen >= strlen (src).
 
-define i8* @test_simplify1() {
+define ptr @test_simplify1() {
 ; CHECK-LABEL: @test_simplify1(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-  %ret = call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 60)
-  ret i8* %ret
+  %ret = call ptr @__strcpy_chk(ptr @a, ptr @.str, i32 60)
+  ret ptr %ret
 }
 
-define i8* @test_simplify1_tail() {
+define ptr @test_simplify1_tail() {
 ; CHECK-LABEL: @test_simplify1_tail(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    tail call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-  %ret = tail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 60)
-  ret i8* %ret
+  %ret = tail call ptr @__strcpy_chk(ptr @a, ptr @.str, i32 60)
+  ret ptr %ret
 }
 
-define i8* @test_simplify2() {
+define ptr @test_simplify2() {
 ; CHECK-LABEL: @test_simplify2(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-  %ret = call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 12)
-  ret i8* %ret
+  %ret = call ptr @__strcpy_chk(ptr @a, ptr @.str, i32 12)
+  ret ptr %ret
 }
 
-define i8* @test_simplify3() {
+define ptr @test_simplify3() {
 ; CHECK-LABEL: @test_simplify3(
-; CHECK-NEXT:    call void @llvm.memcpy.p0i8.p0i8.i32(i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull align 1 dereferenceable(12) getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i1 false)
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr noundef nonnull align 1 dereferenceable(12) @a, ptr noundef nonnull align 1 dereferenceable(12) @.str, i32 12, i1 false)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-  %ret = call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 -1)
-  ret i8* %ret
+  %ret = call ptr @__strcpy_chk(ptr @a, ptr @.str, i32 -1)
+  ret ptr %ret
 }
 
 ; Check cases where there are no string constants.
 
-define i8* @test_simplify4() {
+define ptr @test_simplify4() {
 ; CHECK-LABEL: @test_simplify4(
-; CHECK-NEXT:    [[STRCPY:%.*]] = call i8* @strcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    [[STRCPY:%.*]] = call ptr @strcpy(ptr noundef nonnull dereferenceable(1) @a, ptr noundef nonnull dereferenceable(1) @b)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
 
-  %ret = call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 -1)
-  ret i8* %ret
+  %ret = call ptr @__strcpy_chk(ptr @a, ptr @b, i32 -1)
+  ret ptr %ret
 }
 
-define i8* @test_simplify4_tail() {
+define ptr @test_simplify4_tail() {
 ; CHECK-LABEL: @test_simplify4_tail(
-; CHECK-NEXT:    [[STRCPY:%.*]] = tail call i8* @strcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    [[STRCPY:%.*]] = tail call ptr @strcpy(ptr noundef nonnull dereferenceable(1) @a, ptr noundef nonnull dereferenceable(1) @b)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
 
-  %ret = tail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 -1)
-  ret i8* %ret
+  %ret = tail call ptr @__strcpy_chk(ptr @a, ptr @b, i32 -1)
+  ret ptr %ret
 }
 
 ; Check case where the string length is not constant.
 
-define i8* @test_simplify5() {
+define ptr @test_simplify5() {
 ; CHECK-LABEL: @test_simplify5(
-; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false, i1 false)
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8* @__memcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([12 x i8], [12 x i8]* @.str, i32 0, i32 0), i32 12, i32 [[LEN]])
-; CHECK-NEXT:    ret i8* [[TMP1]]
+; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @__memcpy_chk(ptr nonnull @a, ptr nonnull @.str, i32 12, i32 [[LEN]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [12 x i8], [12 x i8]* @.str, i32 0, i32 0
 
-  %len = call i32 @llvm.objectsize.i32.p0i8(i8* %dst, i1 false, i1 false, i1 false)
-  %ret = call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 %len)
-  ret i8* %ret
+  %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
+  %ret = call ptr @__strcpy_chk(ptr @a, ptr @.str, i32 %len)
+  ret ptr %ret
 }
 
 ; Check case where the source and destination are the same.
 
-define i8* @test_simplify6() {
+define ptr @test_simplify6() {
 ; CHECK-LABEL: @test_simplify6(
-; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0i8(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i1 false, i1 false, i1 false)
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @__strcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i32 [[LEN]])
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[LEN:%.*]] = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @__strcpy_chk(ptr nonnull @a, ptr nonnull @a, i32 [[LEN]])
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
 
-  %len = call i32 @llvm.objectsize.i32.p0i8(i8* %dst, i1 false, i1 false, i1 false)
-  %ret = call i8* @__strcpy_chk(i8* %dst, i8* %dst, i32 %len)
-  ret i8* %ret
+  %len = call i32 @llvm.objectsize.i32.p0(ptr @a, i1 false, i1 false, i1 false)
+  %ret = call ptr @__strcpy_chk(ptr @a, ptr @a, i32 %len)
+  ret ptr %ret
 }
 
 ; Check cases where there are no string constants, and is a tail call.
 
-define i8* @test_simplify7() {
+define ptr @test_simplify7() {
 ; CHECK-LABEL: @test_simplify7(
-; CHECK-NEXT:    [[STRCPY:%.*]] = tail call i8* @strcpy(i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* noundef nonnull dereferenceable(1) getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0))
-; CHECK-NEXT:    ret i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0)
+; CHECK-NEXT:    [[STRCPY:%.*]] = tail call ptr @strcpy(ptr noundef nonnull dereferenceable(1) @a, ptr noundef nonnull dereferenceable(1) @b)
+; CHECK-NEXT:    ret ptr @a
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
 
-  %ret = tail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 -1)
-  ret i8* %ret
+  %ret = tail call ptr @__strcpy_chk(ptr @a, ptr @b, i32 -1)
+  ret ptr %ret
 }
 
 ; Check case where slen < strlen (src).
 
-define i8* @test_no_simplify1() {
+define ptr @test_no_simplify1() {
 ; CHECK-LABEL: @test_no_simplify1(
-; CHECK-NEXT:    [[RET:%.*]] = call i8* @__strcpy_chk(i8* getelementptr inbounds ([60 x i8], [60 x i8]* @a, i32 0, i32 0), i8* getelementptr inbounds ([60 x i8], [60 x i8]* @b, i32 0, i32 0), i32 8)
-; CHECK-NEXT:    ret i8* [[RET]]
+; CHECK-NEXT:    [[RET:%.*]] = call ptr @__strcpy_chk(ptr nonnull @a, ptr nonnull @b, i32 8)
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %dst = getelementptr inbounds [60 x i8], [60 x i8]* @a, i32 0, i32 0
-  %src = getelementptr inbounds [60 x i8], [60 x i8]* @b, i32 0, i32 0
 
-  %ret = call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 8)
-  ret i8* %ret
+  %ret = call ptr @__strcpy_chk(ptr @a, ptr @b, i32 8)
+  ret ptr %ret
 }
 
-define i8* @test_no_simplify2(i8* %dst, i8* %src, i32 %a) {
+define ptr @test_no_simplify2(ptr %dst, ptr %src, i32 %a) {
 ; CHECK-LABEL: @test_no_simplify2(
-; CHECK-NEXT:    %ret = musttail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 60)
-; CHECK-NEXT:    ret i8* %ret
+; CHECK-NEXT:    [[RET:%.*]] = musttail call ptr @__strcpy_chk(ptr [[DST:%.*]], ptr [[SRC:%.*]], i32 60)
+; CHECK-NEXT:    ret ptr [[RET]]
 ;
-  %ret = musttail call i8* @__strcpy_chk(i8* %dst, i8* %src, i32 60)
-  ret i8* %ret
+  %ret = musttail call ptr @__strcpy_chk(ptr %dst, ptr %src, i32 60)
+  ret ptr %ret
 }
 
-declare i8* @__strcpy_chk(i8*, i8*, i32) nounwind
-declare i32 @llvm.objectsize.i32.p0i8(i8*, i1, i1, i1) nounwind readonly
+declare ptr @__strcpy_chk(ptr, ptr, i32) nounwind
+declare i32 @llvm.objectsize.i32.p0(ptr, i1, i1, i1) nounwind readonly

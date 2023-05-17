@@ -15,7 +15,7 @@
 
 #include "Types.h"
 
-namespace _OMP {
+namespace ompx {
 namespace config {
 
 enum DebugKind : uint32_t {
@@ -28,8 +28,7 @@ enum DebugKind : uint32_t {
 /// host by omp_get_num_devices.
 uint32_t getNumDevices();
 
-/// Return the number of devices in the system, same number as returned on the
-/// host by omp_get_num_devices.
+/// Return the device number in the system for omp_get_device_num.
 uint32_t getDeviceNum();
 
 /// Return the user choosen debug level.
@@ -45,7 +44,11 @@ bool isDebugMode(DebugKind Level);
 /// explicitly disabled by the user.
 bool mayUseThreadStates();
 
+/// Indicates if this kernel may require data environments for nested
+/// parallelism, or if it was explicitly disabled by the user.
+bool mayUseNestedParallelism();
+
 } // namespace config
-} // namespace _OMP
+} // namespace ompx
 
 #endif

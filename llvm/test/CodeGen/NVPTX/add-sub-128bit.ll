@@ -7,10 +7,9 @@ target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 ; COMMON-LABEL: test_add
 define i128 @test_add(i128 %a, i128 %b) {
 ; NOCARRY:        add.s64
-; NOCARRY-NEXT:   setp.lt.u64
+; NOCARRY-NEXT:   add.s64
 ; NOCARRY-NEXT:   setp.lt.u64
 ; NOCARRY-NEXT:   selp.u64
-; NOCARRY-NEXT:   selp.b64
 ; NOCARRY-NEXT:   add.s64
 
 ; CARRY:          add.cc.s64

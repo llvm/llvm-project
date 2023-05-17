@@ -1,4 +1,4 @@
-; RUN: opt -function-specialization -func-specialization-avg-iters-cost=3 -func-specialization-size-threshold=10 -S < %s | FileCheck %s
+; RUN: opt -passes="ipsccp<func-spec>" -funcspec-avg-loop-iters=3 -funcspec-min-function-size=10 -S < %s | FileCheck %s
 
 ; CHECK-NOT: foo.{{[0-9]+}}
 
@@ -13,7 +13,7 @@ declare i1 @cond_begin()
 declare i1 @cond_end()
 declare i1 @getCond()
 
-define internal i32 @foo(i32 %x, i32* %b, i32* %c) alwaysinline {
+define internal i32 @foo(i32 %x, ptr %b, ptr %c) alwaysinline {
 entry:
   br label %loop.entry
 
@@ -24,8 +24,8 @@ loop2.entry:
   br label %loop2.body
 
 loop2.body:
-  %0 = load i32, i32* %b, align 4
-  %1 = load i32, i32* %c, align 4
+  %0 = load i32, ptr %b, align 4
+  %1 = load i32, ptr %c, align 4
   %add.0 = add nsw i32 %0, %1
   %add = add nsw i32 %add.0, %x
   br label %loop2.end
@@ -48,11 +48,11 @@ entry:
   br i1 %tobool, label %if.then, label %if.else
 
 if.then:
-  %call = call i32 @foo(i32 %x, i32* @A, i32* @C)
+  %call = call i32 @foo(i32 %x, ptr @A, ptr @C)
   br label %return
 
 if.else:
-  %call1 = call i32 @foo(i32 %y, i32* @B, i32* @D)
+  %call1 = call i32 @foo(i32 %y, ptr @B, ptr @D)
   br label %return
 
 return:

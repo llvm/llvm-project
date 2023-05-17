@@ -97,7 +97,7 @@ struct MemfunctionBenchmarkBase : public BenchmarkSetup {
   CircularArrayRef<ParameterBatch::ParameterType>
   generateBatch(size_t Iterations) {
     randomize();
-    return cycle(makeArrayRef(Parameters), Iterations);
+    return cycle(ArrayRef(Parameters), Iterations);
   }
 
 protected:

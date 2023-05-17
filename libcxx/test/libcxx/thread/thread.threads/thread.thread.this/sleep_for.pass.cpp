@@ -11,7 +11,7 @@
 // Until 58a0a70fb2f1, this_thread::sleep_for could sometimes get interrupted
 // by signals and this test would fail spuriously. Disable the test on the
 // corresponding system libraries.
-// UNSUPPORTED: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11}}
+// UNSUPPORTED: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.{{9|10|11}}
 
 // ALLOW_RETRIES: 3
 

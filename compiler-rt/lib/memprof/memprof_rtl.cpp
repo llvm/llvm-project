@@ -50,6 +50,14 @@ static void MemprofDie() {
   }
 }
 
+static void MemprofOnDeadlySignal(int signo, void *siginfo, void *context) {
+  // We call StartReportDeadlySignal not HandleDeadlySignal so we get the
+  // deadly signal message to stderr but no writing to the profile output file
+  StartReportDeadlySignal();
+  __memprof_profile_dump();
+  Die();
+}
+
 static void CheckUnwind() {
   GET_STACK_TRACE(kStackTraceMax, common_flags()->fast_unwind_on_check);
   stack.Print();
@@ -57,7 +65,6 @@ static void CheckUnwind() {
 
 // -------------------------- Globals --------------------- {{{1
 int memprof_inited;
-int memprof_init_done;
 bool memprof_init_is_running;
 int memprof_timestamp_inited;
 long memprof_init_timestamp_s;
@@ -170,9 +177,6 @@ static void MemprofInitInternal() {
 
   __sanitizer::InitializePlatformEarly();
 
-  // Re-exec ourselves if we need to set additional env or command line args.
-  MaybeReexec();
-
   // Setup internal allocator callback.
   SetLowLevelAllocateMinAlignment(SHADOW_GRANULARITY);
 
@@ -186,13 +190,9 @@ static void MemprofInitInternal() {
   InitializeShadowMemory();
 
   TSDInit(PlatformTSDDtor);
+  InstallDeadlySignalHandlers(MemprofOnDeadlySignal);
 
   InitializeAllocator();
-
-  // On Linux MemprofThread::ThreadStart() calls malloc() that's why
-  // memprof_inited should be set to 1 prior to initializing the threads.
-  memprof_inited = 1;
-  memprof_init_is_running = false;
 
   if (flags()->atexit)
     Atexit(memprof_atexit);
@@ -212,7 +212,8 @@ static void MemprofInitInternal() {
 
   VReport(1, "MemProfiler Init done\n");
 
-  memprof_init_done = 1;
+  memprof_init_is_running = false;
+  memprof_inited = 1;
 }
 
 void MemprofInitTime() {

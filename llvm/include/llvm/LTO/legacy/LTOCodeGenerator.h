@@ -24,6 +24,7 @@
 //   As of this writing, we don't separate IPO and the Post-IPO SOPT. They
 // are intermingled together, and are driven by a single pass manager (see
 // PassManagerBuilder::populateLTOPassManager()).
+//   FIXME: populateLTOPassManager no longer exists.
 //
 //   The "LTOCodeGenerator" is the driver for the IPO and Post-IPO stages.
 // The "CodeGenerator" here is bit confusing. Don't confuse the "CodeGenerator"
@@ -51,9 +52,6 @@
 #include <string>
 #include <vector>
 
-/// Enable global value internalization in LTO.
-extern llvm::cl::opt<bool> EnableLTOInternalization;
-
 namespace llvm {
 template <typename T> class ArrayRef;
   class LLVMContext;
@@ -65,6 +63,9 @@ template <typename T> class ArrayRef;
   class TargetMachine;
   class raw_ostream;
   class raw_pwrite_stream;
+
+/// Enable global value internalization in LTO.
+extern cl::opt<bool> EnableLTOInternalization;
 
 //===----------------------------------------------------------------------===//
 /// C++ class which implements the opaque lto_code_gen_t type.
@@ -88,7 +89,7 @@ struct LTOCodeGenerator {
   void setAsmUndefinedRefs(struct LTOModule *);
   void setTargetOptions(const TargetOptions &Options);
   void setDebugInfo(lto_debug_model);
-  void setCodePICModel(Optional<Reloc::Model> Model) {
+  void setCodePICModel(std::optional<Reloc::Model> Model) {
     Config.RelocModel = Model;
   }
 
@@ -102,6 +103,9 @@ struct LTOCodeGenerator {
 
   void setShouldInternalize(bool Value) { ShouldInternalize = Value; }
   void setShouldEmbedUselists(bool Value) { ShouldEmbedUselists = Value; }
+  void setSaveIRBeforeOptPath(std::string Value) {
+    SaveIRBeforeOptPath = Value;
+  }
 
   /// Restore linkage of globals
   ///
@@ -210,6 +214,9 @@ private:
   bool determineTarget();
   std::unique_ptr<TargetMachine> createTargetMachine();
 
+  bool useAIXSystemAssembler();
+  bool runAIXSystemAssembler(SmallString<128> &AssemblyFile);
+
   void emitError(const std::string &ErrMsg);
   void emitWarning(const std::string &ErrMsg);
 
@@ -237,6 +244,7 @@ private:
   bool ShouldRestoreGlobalsLinkage = false;
   std::unique_ptr<ToolOutputFile> DiagnosticOutputFile;
   std::unique_ptr<ToolOutputFile> StatsFile = nullptr;
+  std::string SaveIRBeforeOptPath;
 
   lto::Config Config;
 };

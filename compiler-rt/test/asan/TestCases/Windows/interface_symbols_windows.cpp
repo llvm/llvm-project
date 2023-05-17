@@ -1,3 +1,5 @@
+// UNSUPPORTED: target={{.*-windows-gnu}}
+
 // Check that the interface exported by asan static lib matches the list of
 // functions mentioned in sanitizer_interface.inc.
 //
@@ -15,18 +17,20 @@
 // [BEWARE: be really careful with the sed commands, as this test can be run
 //  from different environments with different shells and seds]
 //
-// RUN: grep -e "^INTERFACE_FUNCTION"                                          \
+// RUN: sed ':a;N;$!ba;s/([\n ]*/(/g'                                          \
 // RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc  \
+// RUN:  | grep -e "^INTERFACE_FUNCTION"                                       \
 // RUN:  | sed -e "s/.*(//" -e "s/).*//" > %t.imports1
 //
-// RUN: grep -e "^INTERFACE_WEAK_FUNCTION"                                     \
+// RUN: sed ':a;N;$!ba;s/([\n ]*/(/g'                                          \
 // RUN:  %p/../../../../lib/asan/asan_interface.inc                            \
 // RUN:  %p/../../../../lib/ubsan/ubsan_interface.inc                          \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_common_interface.inc    \
 // RUN:  %p/../../../../lib/sanitizer_common/sanitizer_coverage_interface.inc  \
+// RUN:  | grep -e "^INTERFACE_WEAK_FUNCTION"                                  \
 // RUN:  | sed -e "s/.*(//" -e "s/).*/__dll/" > %t.imports2
 //
 // Add functions not included in the interface lists:
@@ -38,7 +42,6 @@
 // IMPORT: __asan_set_seh_filter
 // IMPORT: __asan_unhandled_exception_filter
 // IMPORT: __asan_test_only_reported_buggy_pointer
-// IMPORT: __sancov_lowest_stack
 // IMPORT: __ubsan_vptr_type_cache
 //
 // RUN: cat %t.imports1 %t.imports2 %t.imports3 | sort | uniq > %t.imports-sorted

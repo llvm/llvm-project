@@ -20,6 +20,7 @@
 #include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -46,7 +47,7 @@ protected:
   }
 
   LSPClient &start() {
-    EXPECT_FALSE(Server.hasValue()) << "Already initialized";
+    EXPECT_FALSE(Server) << "Already initialized";
     Server.emplace(Client.transport(), FS, Opts);
     ServerThread.emplace([&] { EXPECT_TRUE(Server->run()); });
     Client.call("initialize", llvm::json::Object{});
@@ -97,8 +98,8 @@ private:
 
   Logger L;
   LoggingSession LogSession;
-  llvm::Optional<ClangdLSPServer> Server;
-  llvm::Optional<std::thread> ServerThread;
+  std::optional<ClangdLSPServer> Server;
+  std::optional<std::thread> ServerThread;
   LSPClient Client;
 };
 
@@ -261,10 +262,11 @@ TEST_F(LSPTest, ModulesTest) {
               ElementsAre(llvm::json::Value(2), llvm::json::Value(10)));
 }
 
-// Creates a Callback that writes its received value into an Optional<Expected>.
+// Creates a Callback that writes its received value into an
+// std::optional<Expected>.
 template <typename T>
 llvm::unique_function<void(llvm::Expected<T>)>
-capture(llvm::Optional<llvm::Expected<T>> &Out) {
+capture(std::optional<llvm::Expected<T>> &Out) {
   Out.reset();
   return [&Out](llvm::Expected<T> V) { Out.emplace(std::move(V)); };
 }

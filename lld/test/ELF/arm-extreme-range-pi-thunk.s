@@ -5,11 +5,11 @@
 // RUN: echo "          .text_high 0xf0000000 : AT(0x1000) { *(.text_high) }" >> %t.script
 // RUN: echo "       } " >> %t.script
 // RUN: ld.lld --script %t.script --pie --static %t -o %t2
-// RUN: llvm-objdump -d --triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t2 | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --triple=armv7a-none-linux-gnueabi --no-show-raw-insn %t2 | FileCheck %s
 
 // RUN: llvm-mc -arm-add-build-attributes -filetype=obj -triple=thumbv7a-none-linux-gnueabi %s -o %t3
 // RUN: ld.lld --script %t.script --pie %t3 -o %t4
-// RUN: llvm-objdump -d --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECK-THUMB %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t4 | FileCheck --check-prefix=CHECK-THUMB %s
 
 // Check that we can create Arm and Thumb v7a Position Independent Thunks that
 // can span the address space without triggering overflow errors. We use an

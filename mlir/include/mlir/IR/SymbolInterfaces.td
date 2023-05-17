@@ -40,7 +40,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
       }]
     >,
     InterfaceMethod<"Sets the name of this symbol.",
-      "void", "setName", (ins "StringAttr":$name), [{}],
+      "void", "setName", (ins "::mlir::StringAttr":$name), [{}],
       /*defaultImplementation=*/[{
         this->getOperation()->setAttr(
             mlir::SymbolTable::getSymbolAttrName(), name);
@@ -99,8 +99,8 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         given operation 'from'.
         Note: See mlir::SymbolTable::getSymbolUses for more details.
       }],
-      "Optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
-      (ins "Operation *":$from), [{}],
+      "::std::optional<::mlir::SymbolTable::UseRange>", "getSymbolUses",
+      (ins "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::getSymbolUses(this->getOperation(), from);
       }]
@@ -110,7 +110,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         within the given operation 'from'.
         Note: See mlir::SymbolTable::symbolKnownUseEmpty for more details.
       }],
-      "bool", "symbolKnownUseEmpty", (ins "Operation *":$from), [{}],
+      "bool", "symbolKnownUseEmpty", (ins "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::symbolKnownUseEmpty(this->getOperation(),
                                                         from);
@@ -121,8 +121,8 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
         symbol 'newSymbol' that are nested within the given operation 'from'.
         Note: See mlir::SymbolTable::replaceAllSymbolUses for more details.
       }],
-      "LogicalResult", "replaceAllSymbolUses", (ins "StringAttr":$newSymbol,
-                                                    "Operation *":$from), [{}],
+      "::mlir::LogicalResult", "replaceAllSymbolUses",
+      (ins "::mlir::StringAttr":$newSymbol, "::mlir::Operation *":$from), [{}],
       /*defaultImplementation=*/[{
         return ::mlir::SymbolTable::replaceAllSymbolUses(this->getOperation(),
                                                          newSymbol, from);
@@ -174,28 +174,7 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     return success();
   }];
 
-  let extraClassDeclaration = [{
-    /// Convenience version of `getNameAttr` that returns a StringRef.
-    StringRef getName() {
-      return getNameAttr().getValue();
-    }
-
-    /// Convenience version of `setName` that take a StringRef.
-    void setName(StringRef name) {
-      setName(StringAttr::get(this->getContext(), name));
-    }
-
-    /// Custom classof that handles the case where the symbol is optional.
-    static bool classof(Operation *op) {
-      auto *opConcept = getInterfaceFor(op);
-      if (!opConcept)
-        return false;
-      return !opConcept->isOptionalSymbol(opConcept, op) ||
-             op->getAttr(::mlir::SymbolTable::getSymbolAttrName());
-    }
-  }];
-
-  let extraTraitClassDeclaration = [{
+  let extraSharedClassDeclaration = [{
     using Visibility = mlir::SymbolTable::Visibility;
 
     /// Convenience version of `getNameAttr` that returns a StringRef.
@@ -207,6 +186,11 @@ def Symbol : OpInterface<"SymbolOpInterface"> {
     void setName(StringRef name) {
       setName(StringAttr::get($_op->getContext(), name));
     }
+  }];
+
+  // Add additional classof checks to properly handle "optional" symbols.
+  let extraClassOf = [{
+    return $_op->hasAttr(::mlir::SymbolTable::getSymbolAttrName());
   }];
 }
 

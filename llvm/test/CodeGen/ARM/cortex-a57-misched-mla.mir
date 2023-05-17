@@ -11,7 +11,6 @@
 # CHECK-NEXT:  Height
 # CHECK-NEXT:  Predecessors:
 # CHECK-NEXT:    SU({{.*}}): Data Latency=1 Reg=
-# CHECK-NEXT:    SU({{.*}}): Out  Latency=
 # CHECK-NEXT:    SU({{.*}}): Data Latency=1 Reg=
 # CHECK-NEXT:  Successors:
 # CHECK-NEXT:    SU([[SMLA_SU:[0-9]+]]): Data Latency=1 Reg=%[[RES]]

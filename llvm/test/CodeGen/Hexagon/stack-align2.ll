@@ -14,14 +14,10 @@ entry:
   %y = alloca i32, align 32
   %z = alloca i32, align 64
   %w = alloca i32, align 128
-  %0 = bitcast i32* %x to i8*
-  %1 = bitcast i32* %y to i8*
-  %2 = bitcast i32* %z to i8*
-  %3 = bitcast i32* %w to i8*
-  call void @bar(i8* %0, i8* %1, i8* %2, i8* %3)
+  call void @bar(ptr %x, ptr %y, ptr %z, ptr %w)
   ret void
 }
 
-declare void @bar(i8*, i8*, i8*, i8*) #0
+declare void @bar(ptr, ptr, ptr, ptr) #0
 
 attributes #0 = { nounwind }

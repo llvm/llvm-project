@@ -369,7 +369,7 @@ subroutine s11()
   ! fails because you can only deallocate a variable that's allocatable.
   do concurrent (ivar = 1:10)
     print *, "hello"
-!ERROR: name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
+!ERROR: Name in DEALLOCATE statement must have the ALLOCATABLE or POINTER attribute
     deallocate(ivar)
   end do
 
@@ -392,6 +392,7 @@ subroutine s12()
 
   call intentInOutSub(jvar, ivar)
   do ivar = 1,10
+    !WARNING: Possible redefinition of DO variable 'ivar'
     call intentInOutSub(jvar, ivar)
   end do
 
@@ -428,15 +429,15 @@ subroutine s13()
     jvar = intentOutFunc(ivar)
   end do
 
-  ! Error for passing a DO variable to an INTENT(OUT) dummy, more complex 
+  ! Error for passing a DO variable to an INTENT(OUT) dummy, more complex
   ! expression
   do ivar = 1, 10
 !ERROR: Cannot redefine DO variable 'ivar'
     jvar = 83 + intentInFunc(intentOutFunc(ivar))
   end do
 
-  ! Warning for passing a DO variable to an INTENT(INOUT) dummy
   do ivar = 1, 10
+    !WARNING: Possible redefinition of DO variable 'ivar'
     jvar = intentInOutFunc(ivar)
   end do
 

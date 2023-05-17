@@ -12,15 +12,13 @@
 #include "../ClangTidyCheck.h"
 #include <string>
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 /// Finds base classes whose destructor is neither public and virtual
 /// nor protected and non-virtual.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines-virtual-class-destructor.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cppcoreguidelines/virtual-class-destructor.html
 class VirtualClassDestructorCheck : public ClangTidyCheck {
 public:
   VirtualClassDestructorCheck(StringRef Name, ClangTidyContext *Context)
@@ -34,8 +32,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CPPCOREGUIDELINES_VIRTUALCLASSDESTRUCTORCHECK_H

@@ -1,3 +1,0 @@
-struct Bar {
-  int success;
-};

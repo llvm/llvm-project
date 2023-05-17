@@ -16,36 +16,55 @@
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Verifier.h"
 #include "mlir/Parser/Parser.h"
+#include "mlir/Tools/ParseUtilities.h"
 #include "llvm/Support/SourceMgr.h"
+#include <optional>
 
 using namespace mlir;
+
+//===----------------------------------------------------------------------===//
+// Translation CommandLine Options
+//===----------------------------------------------------------------------===//
+
+struct TranslationOptions {
+  llvm::cl::opt<bool> noImplicitModule{
+      "no-implicit-module",
+      llvm::cl::desc("Disable the parsing of an implicit top-level module op"),
+      llvm::cl::init(false)};
+};
+
+static llvm::ManagedStatic<TranslationOptions> clOptions;
+
+void mlir::registerTranslationCLOptions() { *clOptions; }
 
 //===----------------------------------------------------------------------===//
 // Translation Registry
 //===----------------------------------------------------------------------===//
 
-/// Get the mutable static map between registered file-to-file MLIR translations
-/// and the TranslateFunctions that perform those translations.
-static llvm::StringMap<TranslateFunction> &getTranslationRegistry() {
-  static llvm::StringMap<TranslateFunction> translationRegistry;
-  return translationRegistry;
+/// Get the mutable static map between registered file-to-file MLIR
+/// translations.
+static llvm::StringMap<Translation> &getTranslationRegistry() {
+  static llvm::StringMap<Translation> translationBundle;
+  return translationBundle;
 }
 
 /// Register the given translation.
-static void registerTranslation(StringRef name,
+static void registerTranslation(StringRef name, StringRef description,
+                                std::optional<llvm::Align> inputAlignment,
                                 const TranslateFunction &function) {
-  auto &translationRegistry = getTranslationRegistry();
-  if (translationRegistry.find(name) != translationRegistry.end())
+  auto &registry = getTranslationRegistry();
+  if (registry.count(name))
     llvm::report_fatal_error(
         "Attempting to overwrite an existing <file-to-file> function");
   assert(function &&
          "Attempting to register an empty translate <file-to-file> function");
-  translationRegistry[name] = function;
+  registry[name] = Translation(function, description, inputAlignment);
 }
 
 TranslateRegistration::TranslateRegistration(
-    StringRef name, const TranslateFunction &function) {
-  registerTranslation(name, function);
+    StringRef name, StringRef description, const TranslateFunction &function) {
+  registerTranslation(name, description, /*inputAlignment=*/std::nullopt,
+                      function);
 }
 
 //===----------------------------------------------------------------------===//
@@ -55,31 +74,56 @@ TranslateRegistration::TranslateRegistration(
 // Puts `function` into the to-MLIR translation registry unless there is already
 // a function registered for the same name.
 static void registerTranslateToMLIRFunction(
-    StringRef name, const TranslateSourceMgrToMLIRFunction &function) {
-  auto wrappedFn = [function](llvm::SourceMgr &sourceMgr, raw_ostream &output,
-                              MLIRContext *context) {
-    OwningOpRef<ModuleOp> module = function(sourceMgr, context);
-    if (!module || failed(verify(*module)))
+    StringRef name, StringRef description,
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment,
+    const TranslateSourceMgrToMLIRFunction &function) {
+  auto wrappedFn = [function, dialectRegistration](
+                       const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                       raw_ostream &output, MLIRContext *context) {
+    DialectRegistry registry;
+    dialectRegistration(registry);
+    context->appendDialectRegistry(registry);
+    OwningOpRef<Operation *> op = function(sourceMgr, context);
+    if (!op || failed(verify(*op)))
       return failure();
-    module->print(output);
+    op.get()->print(output);
     return success();
   };
-  registerTranslation(name, wrappedFn);
+  registerTranslation(name, description, inputAlignment, wrappedFn);
 }
 
 TranslateToMLIRRegistration::TranslateToMLIRRegistration(
-    StringRef name, const TranslateSourceMgrToMLIRFunction &function) {
-  registerTranslateToMLIRFunction(name, function);
+    StringRef name, StringRef description,
+    const TranslateSourceMgrToMLIRFunction &function,
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment) {
+  registerTranslateToMLIRFunction(name, description, dialectRegistration,
+                                  inputAlignment, function);
 }
-
+TranslateToMLIRRegistration::TranslateToMLIRRegistration(
+    StringRef name, StringRef description,
+    const TranslateRawSourceMgrToMLIRFunction &function,
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment) {
+  registerTranslateToMLIRFunction(
+      name, description, dialectRegistration, inputAlignment,
+      [function](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                 MLIRContext *ctx) { return function(*sourceMgr, ctx); });
+}
 /// Wraps `function` with a lambda that extracts a StringRef from a source
 /// manager and registers the wrapper lambda as a to-MLIR conversion.
 TranslateToMLIRRegistration::TranslateToMLIRRegistration(
-    StringRef name, const TranslateStringRefToMLIRFunction &function) {
+    StringRef name, StringRef description,
+    const TranslateStringRefToMLIRFunction &function,
+    const DialectRegistrationFunction &dialectRegistration,
+    std::optional<llvm::Align> inputAlignment) {
   registerTranslateToMLIRFunction(
-      name, [function](llvm::SourceMgr &sourceMgr, MLIRContext *ctx) {
+      name, description, dialectRegistration, inputAlignment,
+      [function](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                 MLIRContext *ctx) {
         const llvm::MemoryBuffer *buffer =
-            sourceMgr.getMemoryBuffer(sourceMgr.getMainFileID());
+            sourceMgr->getMemoryBuffer(sourceMgr->getMainFileID());
         return function(buffer->getBuffer(), ctx);
       });
 }
@@ -89,19 +133,25 @@ TranslateToMLIRRegistration::TranslateToMLIRRegistration(
 //===----------------------------------------------------------------------===//
 
 TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
-    StringRef name, const TranslateFromMLIRFunction &function,
-    const std::function<void(DialectRegistry &)> &dialectRegistration) {
-  registerTranslation(name, [function, dialectRegistration](
-                                llvm::SourceMgr &sourceMgr, raw_ostream &output,
-                                MLIRContext *context) {
-    DialectRegistry registry;
-    dialectRegistration(registry);
-    context->appendDialectRegistry(registry);
-    auto module = parseSourceFile<ModuleOp>(sourceMgr, context);
-    if (!module || failed(verify(*module)))
-      return failure();
-    return function(module.get(), output);
-  });
+    StringRef name, StringRef description,
+    const TranslateFromMLIRFunction &function,
+    const DialectRegistrationFunction &dialectRegistration) {
+  registerTranslation(
+      name, description, /*inputAlignment=*/std::nullopt,
+      [function,
+       dialectRegistration](const std::shared_ptr<llvm::SourceMgr> &sourceMgr,
+                            raw_ostream &output, MLIRContext *context) {
+        DialectRegistry registry;
+        dialectRegistration(registry);
+        context->appendDialectRegistry(registry);
+        bool implicitModule =
+            (!clOptions.isConstructed() || !clOptions->noImplicitModule);
+        OwningOpRef<Operation *> op =
+            parseSourceFileForTool(sourceMgr, context, implicitModule);
+        if (!op || failed(verify(*op)))
+          return failure();
+        return function(op.get(), output);
+      });
 }
 
 //===----------------------------------------------------------------------===//
@@ -109,9 +159,9 @@ TranslateFromMLIRRegistration::TranslateFromMLIRRegistration(
 //===----------------------------------------------------------------------===//
 
 TranslationParser::TranslationParser(llvm::cl::Option &opt)
-    : llvm::cl::parser<const TranslateFunction *>(opt) {
+    : llvm::cl::parser<const Translation *>(opt) {
   for (const auto &kv : getTranslationRegistry())
-    addLiteralOption(kv.first(), &kv.second, kv.first());
+    addLiteralOption(kv.first(), &kv.second, kv.second.getDescription());
 }
 
 void TranslationParser::printOptionInfo(const llvm::cl::Option &o,
@@ -122,5 +172,5 @@ void TranslationParser::printOptionInfo(const llvm::cl::Option &o,
                           const TranslationParser::OptionInfo *rhs) {
                          return lhs->Name.compare(rhs->Name);
                        });
-  llvm::cl::parser<const TranslateFunction *>::printOptionInfo(o, globalWidth);
+  llvm::cl::parser<const Translation *>::printOptionInfo(o, globalWidth);
 }

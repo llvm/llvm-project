@@ -17,7 +17,7 @@
 using namespace llvm;
 using namespace llvm::codeview;
 
-Error CodeViewRecordIO::beginRecord(Optional<uint32_t> MaxLength) {
+Error CodeViewRecordIO::beginRecord(std::optional<uint32_t> MaxLength) {
   RecordLimit Limit;
   Limit.MaxLength = MaxLength;
   Limit.BeginOffset = getCurrentOffset();
@@ -67,13 +67,13 @@ uint32_t CodeViewRecordIO::maxFieldLength() const {
   // ever be at most 1 sub-record deep (in a FieldList), but this works for
   // the general case.
   uint32_t Offset = getCurrentOffset();
-  Optional<uint32_t> Min = Limits.front().bytesRemaining(Offset);
-  for (auto X : makeArrayRef(Limits).drop_front()) {
-    Optional<uint32_t> ThisMin = X.bytesRemaining(Offset);
-    if (ThisMin.hasValue())
-      Min = (Min.hasValue()) ? std::min(*Min, *ThisMin) : *ThisMin;
+  std::optional<uint32_t> Min = Limits.front().bytesRemaining(Offset);
+  for (auto X : ArrayRef(Limits).drop_front()) {
+    std::optional<uint32_t> ThisMin = X.bytesRemaining(Offset);
+    if (ThisMin)
+      Min = Min ? std::min(*Min, *ThisMin) : *ThisMin;
   }
-  assert(Min.hasValue() && "Every field must have a maximum length!");
+  assert(Min && "Every field must have a maximum length!");
 
   return *Min;
 }

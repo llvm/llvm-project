@@ -9,15 +9,9 @@
 ! RUN: %flang_fc1 -fsyntax-only %s  2>&1 | FileCheck %s --allow-empty --check-prefix=WITHOUT
 ! RUN: not %flang_fc1 -fsyntax-only -fintrinsic-modules-path %S/Inputs/ %s  2>&1 | FileCheck %s --check-prefix=GIVEN
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITHOUT
-!-----------------------------------------
 ! WITHOUT-NOT: 'ieee_arithmetic.mod' was not found
 ! WITHOUT-NOT: 'iso_fortran_env.mod' was not found
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITH
-!-----------------------------------------
 ! GIVEN: error: Cannot read module file for module 'ieee_arithmetic': File has invalid checksum
 ! GIVEN: error: Cannot read module file for module 'iso_fortran_env': File has invalid checksum
 

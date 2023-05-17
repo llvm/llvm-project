@@ -17,6 +17,6 @@ define dso_local void @test(float %0) local_unnamed_addr {
 ; CHECK-NEXT:    blr
 entry:
   %1 = fptosi float %0 to i32
-  store i32 %1, i32* @Global, align 4
+  store i32 %1, ptr @Global, align 4
   ret void
 }

@@ -61,7 +61,7 @@ int use = foo();
 }
 
 #if __cplusplus >= 201402L
-// CXX14-LABEL: define internal void @"_ZZZN32lambda_capture_in_generic_lambda3fooIiEEDavENKUlT_E_clIZNS_L1fEvE3$_1EEDaS1_ENKUlvE_clEv"
+// CXX14-LABEL: define internal void @"_ZZZN32lambda_capture_in_generic_lambda3fooIiEEDavENKUlT_E_clIZNS_L1fEvE3$_0EEDaS1_ENKUlvE_clEv"
 namespace lambda_capture_in_generic_lambda {
 template <typename T> auto foo() {
   return [](auto func) {

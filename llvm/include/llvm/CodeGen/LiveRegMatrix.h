@@ -38,9 +38,9 @@ class TargetRegisterInfo;
 class VirtRegMap;
 
 class LiveRegMatrix : public MachineFunctionPass {
-  const TargetRegisterInfo *TRI;
-  LiveIntervals *LIS;
-  VirtRegMap *VRM;
+  const TargetRegisterInfo *TRI = nullptr;
+  LiveIntervals *LIS = nullptr;
+  VirtRegMap *VRM = nullptr;
 
   // UserTag changes whenever virtual registers have been modified.
   unsigned UserTag = 0;

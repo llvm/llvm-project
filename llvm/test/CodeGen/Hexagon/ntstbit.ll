@@ -43,16 +43,16 @@ b0:
   br i1 %v2, label %b2, label %b1
 
 b1:                                               ; preds = %b0
-  tail call void bitcast (void (...)* @f1 to void ()*)() #0
+  tail call void @f1() #0
   br label %b3
 
 b2:                                               ; preds = %b0
-  %v3 = tail call i32 bitcast (i32 (...)* @f2 to i32 ()*)() #0
+  %v3 = tail call i32 @f2() #0
   br label %b3
 
 b3:                                               ; preds = %b2, %b1
   %v4 = add nsw i32 %a1, 2
-  %v5 = tail call i32 bitcast (i32 (...)* @f3 to i32 (i32, i32)*)(i32 %a0, i32 %v4) #0
+  %v5 = tail call i32 @f3(i32 %a0, i32 %v4) #0
   ret i32 0
 }
 

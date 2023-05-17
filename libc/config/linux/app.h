@@ -9,26 +9,35 @@
 #ifndef LLVM_LIBC_CONFIG_LINUX_APP_H
 #define LLVM_LIBC_CONFIG_LINUX_APP_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #include <stdint.h>
 
 namespace __llvm_libc {
 
-// Data structure to capture properties of the linux/ELF TLS.
-struct TLS {
+// Data structure to capture properties of the linux/ELF TLS image.
+struct TLSImage {
   // The load address of the TLS.
   uintptr_t address;
 
-  // The bytes size of the TLS.
+  // The byte size of the TLS image consisting of both initialized and
+  // uninitialized memory. In ELF executables, it is size of .tdata + size of
+  // .tbss. Put in another way, it is the memsz field of the PT_TLS header.
   uintptr_t size;
+
+  // The byte size of initialized memory in the TLS image. In ELF exectubles,
+  // this is the size of .tdata. Put in another way, it is the filesz of the
+  // PT_TLS header.
+  uintptr_t init_size;
 
   // The alignment of the TLS layout. It assumed that the alignment
   // value is a power of 2.
   uintptr_t align;
 };
 
-#if defined(LLVM_LIBC_ARCH_X86_64) || defined(LLVM_LIBC_ARCH_AARCH64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64) ||                                     \
+    defined(LIBC_TARGET_ARCH_IS_AARCH64) ||                                    \
+    defined(LIBC_TARGET_ARCH_IS_RISCV64)
 // At the language level, argc is an int. But we use uint64_t as the x86_64
 // ABI specifies it as an 8 byte value. Likewise, in the ARM64 ABI, arguments
 // are usually passed in registers.  x0 is a doubleword register, so this is
@@ -61,8 +70,8 @@ struct AppProperties {
 
   Args *args;
 
-  // The properties of an application's TLS.
-  TLS tls;
+  // The properties of an application's TLS image.
+  TLSImage tls;
 
   // Environment data.
   uint64_t *envPtr;
@@ -70,9 +79,29 @@ struct AppProperties {
 
 extern AppProperties app;
 
-// Creates and initializes the TLS area for the current thread. Should not
+// The descriptor of a thread's TLS area.
+struct TLSDescriptor {
+  // The size of the TLS area.
+  uintptr_t size = 0;
+
+  // The address of the TLS area. This address can be passed to cleanup
+  // functions like munmap.
+  uintptr_t addr = 0;
+
+  // The value the thread pointer register should be initialized to.
+  // Note that, dependending the target architecture ABI, it can be the
+  // same as |addr| or something else.
+  uintptr_t tp = 0;
+
+  constexpr TLSDescriptor() = default;
+};
+
+// Create and initialize the TLS area for the current thread. Should not
 // be called before app.tls has been initialized.
-void initTLS();
+void init_tls(TLSDescriptor &tls);
+
+// Cleanup the TLS area as described in |tls_descriptor|.
+void cleanup_tls(uintptr_t tls_addr, uintptr_t tls_size);
 
 } // namespace __llvm_libc
 

@@ -1,6 +1,6 @@
-; RUN: opt -module-summary -o %t0.o %S/Inputs/type-mapping-bug4_0.ll
-; RUN: opt -module-summary -o %t1.o %S/Inputs/type-mapping-bug4_1.ll
-; RUN: opt -module-summary -o %t2.o %s
+; RUN: opt -opaque-pointers=0 -module-summary -o %t0.o %S/Inputs/type-mapping-bug4_0.ll
+; RUN: opt -opaque-pointers=0 -module-summary -o %t1.o %S/Inputs/type-mapping-bug4_1.ll
+; RUN: opt -opaque-pointers=0 -module-summary -o %t2.o %s
 ; RUN: llvm-lto2 run -save-temps -o %t3 %t0.o %t1.o %t2.o -r %t1.o,a,px -r %t2.o,d,px -r %t1.o,h,x -r %t2.o,h,x -r %t1.o,j,px
 ; RUN: llvm-dis < %t3.0.0.preopt.bc | FileCheck %s
 

@@ -115,6 +115,11 @@ public:
     Data.push_back(DIEAbbrevData(Attribute, Value));
   }
 
+  /// Adds another set of attribute information to the abbreviation.
+  void AddAttribute(const DIEAbbrevData &AbbrevData) {
+    Data.push_back(AbbrevData);
+  }
+
   /// Used to gather unique data for the abbreviation folding set.
   void Profile(FoldingSetNodeID &ID) const;
 
@@ -459,6 +464,8 @@ public:
   }
 
   DIEValue &operator=(const DIEValue &X) {
+    if (this == &X)
+      return *this;
     destroyVal();
     Ty = X.Ty;
     Attribute = X.Attribute;

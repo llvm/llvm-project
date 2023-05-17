@@ -1,18 +1,17 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 
 %t = type { i32 }
-declare void @test1f(i8*)
+declare void @test1f(ptr)
 
-define void @test1(%t* noalias %stuff ) {
-    %p = getelementptr inbounds %t, %t* %stuff, i32 0, i32 0
-    %before = load i32, i32* %p
+define void @test1(ptr noalias %stuff ) {
+    %before = load i32, ptr %stuff
 
-    call void @test1f(i8* null)
+    call void @test1f(ptr null)
 
-    %after = load i32, i32* %p ; <--- This should be a dead load
+    %after = load i32, ptr %stuff ; <--- This should be a dead load
     %sum = add i32 %before, %after
 
-    store i32 %sum, i32* %p
+    store i32 %sum, ptr %stuff
     ret void
 ; CHECK: load
 ; CHECK-NOT: load

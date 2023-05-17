@@ -36,7 +36,7 @@ entry:
   ret void
 }
 
-define void @test_ptwrite32p(i32* %pointer) {
+define void @test_ptwrite32p(ptr %pointer) {
 ; X86-LABEL: test_ptwrite32p:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -48,7 +48,7 @@ define void @test_ptwrite32p(i32* %pointer) {
 ; X86_64-NEXT:    ptwritel (%rdi)
 ; X86_64-NEXT:    retq
 entry:
-  %value = load i32, i32* %pointer, align 4
+  %value = load i32, ptr %pointer, align 4
   call void @llvm.x86.ptwrite32(i32 %value)
   ret void
 }

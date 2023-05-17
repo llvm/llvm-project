@@ -40,7 +40,7 @@ int B::count_ = 0;
 struct Nasty
 {
     Nasty() : i_ ( counter_++ ) {}
-    Nasty * operator &() const { return NULL; }
+    Nasty * operator &() const { return nullptr; }
     int i_;
     static int counter_;
 };

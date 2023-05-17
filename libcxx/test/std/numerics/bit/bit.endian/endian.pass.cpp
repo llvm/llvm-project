@@ -12,9 +12,10 @@
 // <bit>
 
 #include <bit>
-#include <cstring>
 #include <cassert>
 #include <cstdint>
+#include <cstring>
+#include <type_traits>
 
 #include "test_macros.h"
 
@@ -37,7 +38,7 @@ int main(int, char**) {
 
 //  Try to check at runtime
     {
-    uint32_t i = 0x01020304;
+    std::uint32_t i = 0x01020304;
     char c[4];
     static_assert(sizeof(i) == sizeof(c));
     std::memcpy(c, &i, sizeof(c));

@@ -36,10 +36,10 @@
 // The two tests for each of these points are one for importing, and one for
 // exporting.
 
-// RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-unknown-windows-itanium -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s -check-prefix=WI
-// RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-scei-windows-itanium -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_WI
-// RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-scei-ps4 -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_PS4
-// RUN: %clang_cc1 -no-opaque-pointers -I%S -fdeclspec -triple x86_64-sie-ps5  -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_PS4
+// RUN: %clang_cc1 -I%S -fdeclspec -triple x86_64-unknown-windows-itanium -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s -check-prefix=WI
+// RUN: %clang_cc1 -I%S -fdeclspec -triple x86_64-scei-windows-itanium -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_WI
+// RUN: %clang_cc1 -I%S -fdeclspec -triple x86_64-scei-ps4 -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_PS4
+// RUN: %clang_cc1 -I%S -fdeclspec -triple x86_64-sie-ps5  -emit-llvm -o - %s -fhalf-no-semantic-interposition | FileCheck %s --check-prefixes=PS4,SCEI_PS4
 
 #include <typeinfo>
 
@@ -49,7 +49,7 @@
 // (as described in the "Side note", above).
 //
 // PS4-DAG: @_ZTI10FullImport = {{.*}}dllimport
-// WI-DAG: @_ZTI10FullImport = external dllimport constant i8*
+// WI-DAG: @_ZTI10FullImport = external dllimport constant ptr
 struct __declspec(dllimport) FullImport
 {
   virtual void getId() {}
@@ -168,7 +168,7 @@ void FooExport::Bump()
 //
 // CHECK-PS4: @_ZTV11FooNoImport = external dso_local unnamed_addr constant {
 // CHECK-WI:  @_ZTV11FooNoImport = linkonce_odr dso_local unnamed_addr constant {
-// CHECK-PS4: @_ZTI11FooNoImport = external dso_local constant i8*{{$}}
+// CHECK-PS4: @_ZTI11FooNoImport = external dso_local constant ptr{{$}}
 // CHECK-WI:  @_ZTI11FooNoImport = linkonce_odr dso_local constant {
 struct FooNoImport
 {

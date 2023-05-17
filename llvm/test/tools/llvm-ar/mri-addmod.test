@@ -1,16 +1,36 @@
 ## Test the ADDMOD MRI command.
 
-# RUN: rm -rf %t && mkdir -p %t
-# RUN: yaml2obj %s -o %t/f.o
+# RUN: rm -rf %t && split-file %s %t
+# RUN: cd %t
+# RUN: yaml2obj %s -o f.o
 
-# RUN: echo "CREATE %t/addmod.a" > %t/addmod.mri
-# RUN: echo "ADDMOD %t/f.o" >> %t/addmod.mri
-# RUN: echo "SAVE" >> %t/addmod.mri
-# RUN: llvm-ar -M < %t/addmod.mri
-# RUN: llvm-nm --print-armap %t/addmod.a | FileCheck %s
+# RUN: llvm-ar -M < add-mod.mri
+# RUN: llvm-nm --print-armap add-mod.a | FileCheck --check-prefix=SYMS %s
+# RUN: llvm-ar t add-mod.a | FileCheck --check-prefix=FILES %s
 
-# CHECK: f in f.o
+# SYMS: f in {{.*}}
+# FILES: f.o
 
+## No create command.
+# RUN: not llvm-ar -M < no-create.mri 2>&1 | FileCheck --check-prefix=NOCREATE %s
+
+# NOCREATE: error: script line 1: no output archive has been opened
+
+## ADDMOD with missing file.
+# RUN: not llvm-ar -M < missing.mri 2>&1 | FileCheck -DMSG=%errc_ENOENT %s --check-prefix=MISSING
+# RUN: not ls missing.a
+
+# MISSING: error: script line 2: missing.o: [[MSG]]
+
+## ADD same file twice.
+# RUN: llvm-ar -M < duplicate.mri
+# RUN: llvm-nm --print-armap duplicate.a | FileCheck --check-prefix=SYMS2 %s
+# RUN: llvm-ar t duplicate.a | FileCheck --check-prefix=FILES2 %s
+
+# SYMS2-COUNT-2: f in {{.*}}
+# FILES2-COUNT-2: f.o
+
+#--- f.yaml
 --- !ELF
 FileHeader:
   Class:   ELFCLASS64
@@ -25,3 +45,22 @@ Symbols:
       Binding: STB_GLOBAL
       Section: .text
 ...
+#--- add-mod.mri
+CREATE add-mod.a
+ADDMOD f.o
+SAVE
+
+#--- no-create.mri
+ADDMOD f.o
+SAVE
+
+#--- missing.mri
+CREATE missing.a
+ADDMOD missing.o
+SAVE
+
+#--- duplicate.mri
+CREATE duplicate.a
+ADDMOD f.o
+ADDMOD f.o
+SAVE

@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace llvm_libc {
+namespace clang::tidy::llvm_libc {
 
 const static StringRef RequiredNamespace = "__llvm_libc";
 void ImplementationInNamespaceCheck::registerMatchers(MatchFinder *Finder) {
@@ -43,6 +41,4 @@ void ImplementationInNamespaceCheck::check(
       << RequiredNamespace;
 }
 
-} // namespace llvm_libc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::llvm_libc

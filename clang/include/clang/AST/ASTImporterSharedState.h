@@ -18,6 +18,7 @@
 #include "clang/AST/ASTImporterLookupTable.h"
 #include "clang/AST/Decl.h"
 #include "llvm/ADT/DenseMap.h"
+#include <optional>
 
 namespace clang {
 
@@ -36,7 +37,7 @@ class ASTImporterSharedState {
   /// imported. The same declaration may or may not be included in
   /// ImportedFromDecls. This map is updated continuously during imports and
   /// never cleared (like ImportedFromDecls).
-  llvm::DenseMap<Decl *, ImportError> ImportErrors;
+  llvm::DenseMap<Decl *, ASTImportError> ImportErrors;
 
   /// Set of the newly created declarations.
   llvm::DenseSet<Decl *> NewDecls;
@@ -65,15 +66,15 @@ public:
         LookupTable->remove(ND);
   }
 
-  llvm::Optional<ImportError> getImportDeclErrorIfAny(Decl *ToD) const {
+  std::optional<ASTImportError> getImportDeclErrorIfAny(Decl *ToD) const {
     auto Pos = ImportErrors.find(ToD);
     if (Pos != ImportErrors.end())
       return Pos->second;
     else
-      return Optional<ImportError>();
+      return std::nullopt;
   }
 
-  void setImportDeclError(Decl *To, ImportError Error) {
+  void setImportDeclError(Decl *To, ASTImportError Error) {
     ImportErrors[To] = Error;
   }
 

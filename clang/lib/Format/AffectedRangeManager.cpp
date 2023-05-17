@@ -135,7 +135,7 @@ bool AffectedRangeManager::nonPPLineAffected(
                    Line->First->NewlinesBefore == 0;
 
   bool IsContinuedComment =
-      Line->First->is(tok::comment) && Line->First->Next == nullptr &&
+      Line->First->is(tok::comment) && !Line->First->Next &&
       Line->First->NewlinesBefore < 2 && PreviousLine &&
       PreviousLine->Affected && PreviousLine->Last->is(tok::comment);
 

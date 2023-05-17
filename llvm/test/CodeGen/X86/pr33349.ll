@@ -5,7 +5,7 @@
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
- define void @test(<4 x i1> %m, <4 x x86_fp80> %v, <4 x x86_fp80>*%p) local_unnamed_addr {
+ define void @test(<4 x i1> %m, <4 x x86_fp80> %v, ptr%p) local_unnamed_addr {
 ; KNL-LABEL: test:
 ; KNL:       # %bb.0: # %bb
 ; KNL-NEXT:    vpslld $31, %xmm0, %xmm0
@@ -78,7 +78,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; SKX-NEXT:    retq
  bb:
    %tmp = select <4 x i1> %m, <4 x x86_fp80> <x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80 0xK3FFF8000000000000000, x86_fp80             0xK3FFF8000000000000000>, <4 x x86_fp80> zeroinitializer
-   store <4 x x86_fp80> %tmp, <4 x x86_fp80>* %p, align 16
+   store <4 x x86_fp80> %tmp, ptr %p, align 16
    ret void
  }
 

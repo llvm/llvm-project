@@ -16,15 +16,15 @@ declare i32 @call_foo(i32, ...)
 
 define i32 @foo() {
 entry:
-  %0 = load i32, i32* @bar, align 4
+  %0 = load i32, ptr @bar, align 4
   %call = call i32 (i32, ...) @call_foo(i32 %0, i32 0, i32 1, i32 2, i32 4, i32 8, i32 16, i32 32, i32 64)
   ret i32 %0
 }
 
 define i32 @load() {
 entry:
-  %0 = load i32, i32* @bar1
-  %1 = load i32, i32* @bar2
+  %0 = load i32, ptr @bar1
+  %1 = load i32, ptr @bar2
   %2 = add i32 %0, %1
   ret i32 %2
 }

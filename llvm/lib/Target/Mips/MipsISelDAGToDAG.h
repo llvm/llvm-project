@@ -30,13 +30,12 @@ namespace llvm {
 
 class MipsDAGToDAGISel : public SelectionDAGISel {
 public:
-  explicit MipsDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
-      : SelectionDAGISel(TM, OL), Subtarget(nullptr) {}
+  static char ID;
 
-  // Pass Name
-  StringRef getPassName() const override {
-    return "MIPS DAG->DAG Pattern Instruction Selection";
-  }
+  MipsDAGToDAGISel() = delete;
+
+  explicit MipsDAGToDAGISel(MipsTargetMachine &TM, CodeGenOpt::Level OL)
+      : SelectionDAGISel(ID, TM, OL), Subtarget(nullptr) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

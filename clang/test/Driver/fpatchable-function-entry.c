@@ -2,6 +2,8 @@
 // RUN: %clang -target x86_64 %s -fpatchable-function-entry=1 -c -### 2>&1 | FileCheck %s
 // RUN: %clang -target aarch64 %s -fpatchable-function-entry=1 -c -### 2>&1 | FileCheck %s
 // RUN: %clang -target aarch64 %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
+// RUN: %clang -target loongarch32 %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
+// RUN: %clang -target loongarch64 %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
 // RUN: %clang -target riscv32 %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
 // RUN: %clang -target riscv64 %s -fpatchable-function-entry=1,0 -c -### 2>&1 | FileCheck %s
 // CHECK: "-fpatchable-function-entry=1"

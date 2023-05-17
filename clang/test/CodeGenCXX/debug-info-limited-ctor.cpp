@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -debug-info-kind=constructor -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=constructor -triple x86_64-linux-gnu -emit-llvm %s -o - | FileCheck --check-prefix=CHECK --check-prefix=ITANIUM %s
 
 // CHECK-DAG: !DICompositeType(tag: DW_TAG_structure_type, name: "A"{{.*}}DIFlagTypePassByValue
 struct A {
@@ -67,6 +68,21 @@ class K {
 };
 void f(K k) {}
 
+// CHECK-DAG: !DICompositeType({{.*}}name: "DeletedCtors",{{.*}}DIFlagTypePassBy
+struct NonTrivial {
+  NonTrivial();
+};
+struct DeletedCtors {
+  DeletedCtors() = delete;
+  DeletedCtors(const DeletedCtors &) = default;
+  void f1();
+  NonTrivial t;
+};
+
+const NonTrivial &f(const DeletedCtors &D) {
+  return D.t;
+}
+
 // Test that we don't use constructor homing on lambdas.
 // CHECK-DAG: ![[L:.*]] ={{.*}}!DISubprogram({{.*}}name: "L"
 // CHECK-DAG: !DICompositeType({{.*}}scope: ![[L]], {{.*}}DIFlagTypePassByValue
@@ -77,3 +93,15 @@ void L() {
 // Check that types are being added to retained types list.
 // CHECK-DAG: !DICompileUnit{{.*}}retainedTypes: ![[RETAINED:[0-9]+]]
 // CHECK-DAG: ![[RETAINED]] = {{.*}}![[C]]
+
+
+struct VTableAndCtor {
+  virtual void f1();
+  VTableAndCtor();
+};
+
+VTableAndCtor::VTableAndCtor() {
+}
+
+// ITANIUM-DAG: !DICompositeType({{.*}}name: "VTableAndCtor", {{.*}}flags: DIFlagFwdDecl
+

@@ -9,7 +9,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/MachO.h"
 #include "llvm/MC/MCContext.h"
@@ -27,6 +26,7 @@
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -472,7 +472,7 @@ public:
 } // end anonymous namespace
 
 bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
-                                         unsigned TAA, unsigned Align,
+                                         unsigned TAA, unsigned Alignment,
                                          unsigned StubSize) {
   if (getLexer().isNot(AsmToken::EndOfStatement))
     return TokError("unexpected token in section switching directive");
@@ -480,7 +480,7 @@ bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
 
   // FIXME: Arch specific.
   bool isText = TAA & MachO::S_ATTR_PURE_INSTRUCTIONS;
-  getStreamer().SwitchSection(getContext().getMachOSection(
+  getStreamer().switchSection(getContext().getMachOSection(
       Segment, Section, TAA, StubSize,
       isText ? SectionKind::getText() : SectionKind::getData()));
 
@@ -492,8 +492,8 @@ bool DarwinAsmParser::parseSectionSwitch(StringRef Segment, StringRef Section,
   // the section. However, this is arguably more reasonable behavior, and there
   // is no good reason for someone to intentionally emit incorrectly sized
   // values into the implicitly aligned sections.
-  if (Align)
-    getStreamer().emitValueToAlignment(Align);
+  if (Alignment)
+    getStreamer().emitValueToAlignment(Align(Alignment));
 
   return false;
 }
@@ -719,7 +719,7 @@ bool DarwinAsmParser::parseDirectiveSection(StringRef, SMLoc) {
 
   // FIXME: Arch specific.
   bool isText = Segment == "__TEXT";  // FIXME: Hack.
-  getStreamer().SwitchSection(getContext().getMachOSection(
+  getStreamer().switchSection(getContext().getMachOSection(
       Segment, Section, TAA, StubSize,
       isText ? SectionKind::getText() : SectionKind::getData()));
   return false;
@@ -752,7 +752,7 @@ bool DarwinAsmParser::parseDirectivePrevious(StringRef DirName, SMLoc) {
   MCSectionSubPair PreviousSection = getStreamer().getPreviousSection();
   if (!PreviousSection.first)
     return TokError(".previous without corresponding .section");
-  getStreamer().SwitchSection(PreviousSection.first, PreviousSection.second);
+  getStreamer().switchSection(PreviousSection.first, PreviousSection.second);
   return false;
 }
 
@@ -767,8 +767,8 @@ bool DarwinAsmParser::parseDirectiveSecureLogUnique(StringRef, SMLoc IDLoc) {
     return Error(IDLoc, ".secure_log_unique specified multiple times");
 
   // Get the secure log path.
-  const char *SecureLogFile = getContext().getSecureLogFile();
-  if (!SecureLogFile)
+  StringRef SecureLogFile = getContext().getSecureLogFile();
+  if (SecureLogFile.empty())
     return Error(IDLoc, ".secure_log_unique used but AS_SECURE_LOG_FILE "
                  "environment variable unset.");
 
@@ -776,9 +776,8 @@ bool DarwinAsmParser::parseDirectiveSecureLogUnique(StringRef, SMLoc IDLoc) {
   raw_fd_ostream *OS = getContext().getSecureLog();
   if (!OS) {
     std::error_code EC;
-    auto NewOS = std::make_unique<raw_fd_ostream>(StringRef(SecureLogFile), EC,
-                                                  sys::fs::OF_Append |
-                                                      sys::fs::OF_TextWithCRLF);
+    auto NewOS = std::make_unique<raw_fd_ostream>(
+        SecureLogFile, EC, sys::fs::OF_Append | sys::fs::OF_TextWithCRLF);
     if (EC)
        return Error(IDLoc, Twine("can't open secure log file: ") +
                                SecureLogFile + " (" + EC.message() + ")");
@@ -873,7 +872,7 @@ bool DarwinAsmParser::parseDirectiveTBSS(StringRef, SMLoc) {
       getContext().getMachOSection("__DATA", "__thread_bss",
                                    MachO::S_THREAD_LOCAL_ZEROFILL, 0,
                                    SectionKind::getThreadBSS()),
-      Sym, Size, 1 << Pow2Alignment);
+      Sym, Size, Align(1ULL << Pow2Alignment));
 
   return false;
 }
@@ -903,7 +902,7 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
     getStreamer().emitZerofill(
         getContext().getMachOSection(Segment, Section, MachO::S_ZEROFILL, 0,
                                      SectionKind::getBSS()),
-        /*Symbol=*/nullptr, /*Size=*/0, /*ByteAlignment=*/0, SectionLoc);
+        /*Symbol=*/nullptr, /*Size=*/0, Align(1), SectionLoc);
     return false;
   }
 
@@ -959,10 +958,10 @@ bool DarwinAsmParser::parseDirectiveZerofill(StringRef, SMLoc) {
   // Create the zerofill Symbol with Size and Pow2Alignment
   //
   // FIXME: Arch specific.
-  getStreamer().emitZerofill(getContext().getMachOSection(
-                               Segment, Section, MachO::S_ZEROFILL,
-                               0, SectionKind::getBSS()),
-                             Sym, Size, 1 << Pow2Alignment, SectionLoc);
+  getStreamer().emitZerofill(
+      getContext().getMachOSection(Segment, Section, MachO::S_ZEROFILL, 0,
+                                   SectionKind::getBSS()),
+      Sym, Size, Align(1ULL << Pow2Alignment), SectionLoc);
 
   return false;
 }
@@ -1131,7 +1130,7 @@ bool DarwinAsmParser::parseVersionMin(StringRef Directive, SMLoc Loc,
   if (isSDKVersionToken(getLexer().getTok()) && parseSDKVersion(SDKVersion))
     return true;
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(Twine(" in '") + Directive + "' directive");
 
   Triple::OSType ExpectedOS = getOSTypeFromMCVM(Type);
@@ -1192,7 +1191,7 @@ bool DarwinAsmParser::parseBuildVersion(StringRef Directive, SMLoc Loc) {
   if (isSDKVersionToken(getLexer().getTok()) && parseSDKVersion(SDKVersion))
     return true;
 
-  if (parseToken(AsmToken::EndOfStatement))
+  if (parseEOL())
     return addErrorSuffix(" in '.build_version' directive");
 
   Triple::OSType ExpectedOS

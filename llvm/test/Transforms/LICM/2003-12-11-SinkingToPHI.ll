@@ -1,4 +1,4 @@
-; RUN: opt < %s -licm | lli -jit-kind=mcjit -force-interpreter
+; RUN: opt < %s -passes=licm | lli -jit-kind=mcjit -force-interpreter
 
 define i32 @main() {
 entry:

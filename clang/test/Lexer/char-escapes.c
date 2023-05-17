@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -fsyntax-only -pedantic -fexperimental-new-constant-interpreter -verify %s
 
 int test['\\' == 92 ? 1 : -1];
 int test['\"' == 34 ? 1 : -1];

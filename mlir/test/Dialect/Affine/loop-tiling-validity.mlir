@@ -4,8 +4,8 @@
 
 // There is no dependence violated in this case. No error should be raised.
 
-// CHECK-DAG: [[$LB:#map[0-9]+]] = affine_map<(d0) -> (d0)>
-// CHECK-DAG: [[$UB:#map[0-9]+]] = affine_map<(d0) -> (d0 + 32)>
+// CHECK-DAG: [[$LB:#map[0-9]*]] = affine_map<(d0) -> (d0)>
+// CHECK-DAG: [[$UB:#map[0-9]*]] = affine_map<(d0) -> (d0 + 32)>
 
 // CHECK-LABEL: func @legal_loop()
 func.func @legal_loop() {

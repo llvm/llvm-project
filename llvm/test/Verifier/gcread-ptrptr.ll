@@ -1,13 +1,13 @@
 ; RUN: not llvm-as < %s > /dev/null 2>&1
 ; PR1633
 
-%meta = type { i8* }
-%obj = type { %meta* }
+%meta = type { ptr }
+%obj = type { ptr }
 
-declare %obj* @llvm.gcread(%obj*, %obj*)
+declare ptr @llvm.gcread(ptr, ptr)
 
-define %obj* @f() {
+define ptr @f() {
 entry:
-	%x = call %obj* @llvm.gcread(%obj* null, %obj* null)
-	ret %obj* %x
+	%x = call ptr @llvm.gcread(ptr null, ptr null)
+	ret ptr %x
 }

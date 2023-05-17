@@ -49,6 +49,7 @@
 #include <memory>
 #include <mutex>
 #include <numeric>
+#include <optional>
 #include <queue>
 #include <random>
 #include <string>
@@ -123,7 +124,7 @@ BackgroundQueue::Task BackgroundIndex::changedFilesTask(
   BackgroundQueue::Task T([this, ChangedFiles] {
     trace::Span Tracer("BackgroundIndexEnqueue");
 
-    llvm::Optional<WithContext> WithProvidedContext;
+    std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
       WithProvidedContext.emplace(ContextProvider(/*Path=*/""));
 
@@ -156,7 +157,7 @@ BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
   std::string Tag = filenameWithoutExtension(Path).str();
   uint64_t Key = llvm::xxHash64(Path);
   BackgroundQueue::Task T([this, Path(std::move(Path))] {
-    llvm::Optional<WithContext> WithProvidedContext;
+    std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)
       WithProvidedContext.emplace(ContextProvider(Path));
     auto Cmd = CDB.getCompileCommand(Path);
@@ -287,10 +288,10 @@ llvm::Error BackgroundIndex::index(tooling::CompileCommand Cmd) {
   // digests.
   IndexOpts.FileFilter = [&ShardVersionsSnapshot](const SourceManager &SM,
                                                   FileID FID) {
-    const auto *F = SM.getFileEntryForID(FID);
+    const auto F = SM.getFileEntryRefForID(FID);
     if (!F)
       return false; // Skip invalid files.
-    auto AbsPath = getCanonicalPath(F, SM);
+    auto AbsPath = getCanonicalPath(*F, SM);
     if (!AbsPath)
       return false; // Skip files without absolute path.
     auto Digest = digestFile(SM, FID);
@@ -396,7 +397,7 @@ BackgroundIndex::loadProject(std::vector<std::string> MainFiles) {
   Rebuilder.loadedShard(LoadedShards);
   Rebuilder.doneLoading();
 
-  auto FS = TFS.view(/*CWD=*/llvm::None);
+  auto FS = TFS.view(/*CWD=*/std::nullopt);
   llvm::DenseSet<PathRef> TUsToIndex;
   // We'll accept data from stale shards, but ensure the files get reindexed
   // soon.

@@ -1,0 +1,7 @@
+## This test checks the error message displayed if input file
+## has unsupported format.
+
+# RUN: echo "!<thin>" > %t1
+# RUN: not llvm-dwarfutil --garbage-collection %t1 - 2>&1 | FileCheck %s -DFILE=%t1
+
+# CHECK: error: '[[FILE]]': unsupported input file

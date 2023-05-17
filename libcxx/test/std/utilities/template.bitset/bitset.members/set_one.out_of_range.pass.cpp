@@ -8,7 +8,7 @@
 
 // UNSUPPORTED: no-exceptions
 
-// test bitset<N>& set(size_t pos, bool val = true);
+// bitset<N>& set(size_t pos, bool val = true); // constexpr since C++23
 
 // Make sure we throw std::out_of_range when calling set() on an OOB index.
 

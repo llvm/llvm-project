@@ -70,7 +70,7 @@ struct rect windows[] = {
 int windows_size[((sizeof(windows) / sizeof(struct rect)) == 6)? 1 : -1];
 
 struct rect windows_bad[3] = {
-  [2].top_left = { { .x = 1.1 } }, // expected-error{{designator in initializer for scalar type}}
+  [2].top_left = { { .x = 1.1 } }, // expected-error{{initialization of non-aggregate type 'double' with a designated initializer list}}
   [1].top_left = { .x = 1.1 }
 };
 

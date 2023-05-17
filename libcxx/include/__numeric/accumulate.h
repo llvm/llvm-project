@@ -20,12 +20,12 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIterator, class _Tp>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _Tp
 accumulate(_InputIterator __first, _InputIterator __last, _Tp __init)
 {
     for (; __first != __last; ++__first)
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
         __init = _VSTD::move(__init) + *__first;
 #else
         __init = __init + *__first;
@@ -34,12 +34,12 @@ accumulate(_InputIterator __first, _InputIterator __last, _Tp __init)
 }
 
 template <class _InputIterator, class _Tp, class _BinaryOperation>
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX17
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20
 _Tp
 accumulate(_InputIterator __first, _InputIterator __last, _Tp __init, _BinaryOperation __binary_op)
 {
     for (; __first != __last; ++__first)
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
         __init = __binary_op(_VSTD::move(__init), *__first);
 #else
         __init = __binary_op(__init, *__first);

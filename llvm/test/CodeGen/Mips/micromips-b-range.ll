@@ -1,5 +1,5 @@
 ; RUN: llc -march=mips -relocation-model=pic -mattr=+micromips \
-; RUN:     -filetype=obj -o - %s | llvm-objdump -d - | FileCheck %s
+; RUN:     -filetype=obj -o - %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 ; CHECK-LABEL: <foo>:
 ; CHECK-NEXT:     0:	41 a2 00 00 	lui	$2, 0
@@ -61,7 +61,7 @@
 @x = external global i32, align 4
 
 define void @foo() {
-  %1 = load i32, i32* @x, align 4
+  %1 = load i32, ptr @x, align 4
   %2 = icmp sgt i32 %1, 0
   br i1 %2, label %la, label %lf
 

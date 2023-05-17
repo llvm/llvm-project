@@ -8,7 +8,7 @@ declare void @other(ppc_fp128 %tmp70)
 
 define void @bug() {
 entry:
-  %x = load ppc_fp128, ppc_fp128* @ld2, align 16
+  %x = load ppc_fp128, ptr @ld2, align 16
   %tmp70 = frem ppc_fp128 0xM00000000000000000000000000000000, %x
   call void @other(ppc_fp128 %tmp70)
   unreachable

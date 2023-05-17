@@ -139,7 +139,7 @@ lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::GetChildAtIndex(
 
 size_t lldb_private::formatters::LibcxxStdAtomicSyntheticFrontEnd::
     GetIndexOfChildWithName(ConstString name) {
-  return formatters::ExtractIndexFromString(name.GetCString());
+  return name == "Value" ? 0 : UINT32_MAX;
 }
 
 SyntheticChildrenFrontEnd *

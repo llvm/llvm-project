@@ -264,6 +264,9 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
          "Cannot emit MC with limited codegen pipeline");
 
   Ctx = &MMIWP->getMMI().getContext();
+  // libunwind is unable to load compact unwind dynamically, so we must generate
+  // DWARF unwind info for the JIT.
+  Options.MCOptions.EmitDwarfUnwind = EmitDwarfUnwindType::Always;
   if (Options.MCOptions.MCSaveTempLabels)
     Ctx->setAllowTemporaryLabels(false);
 
@@ -271,16 +274,17 @@ bool LLVMTargetMachine::addPassesToEmitMC(PassManagerBase &PM, MCContext *&Ctx,
   // emission fails.
   const MCSubtargetInfo &STI = *getMCSubtargetInfo();
   const MCRegisterInfo &MRI = *getMCRegisterInfo();
-  MCCodeEmitter *MCE = getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx);
-  MCAsmBackend *MAB =
-      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions);
+  std::unique_ptr<MCCodeEmitter> MCE(
+      getTarget().createMCCodeEmitter(*getMCInstrInfo(), *Ctx));
+  std::unique_ptr<MCAsmBackend> MAB(
+      getTarget().createMCAsmBackend(STI, MRI, Options.MCOptions));
   if (!MCE || !MAB)
     return true;
 
   const Triple &T = getTargetTriple();
   std::unique_ptr<MCStreamer> AsmStreamer(getTarget().createMCObjectStreamer(
-      T, *Ctx, std::unique_ptr<MCAsmBackend>(MAB), MAB->createObjectWriter(Out),
-      std::unique_ptr<MCCodeEmitter>(MCE), STI, Options.MCOptions.MCRelaxAll,
+      T, *Ctx, std::move(MAB), MAB->createObjectWriter(Out), std::move(MCE),
+      STI, Options.MCOptions.MCRelaxAll,
       Options.MCOptions.MCIncrementalLinkerCompatible,
       /*DWARFMustBeAtTheEnd*/ true));
 

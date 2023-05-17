@@ -5,11 +5,11 @@
 %M = type opaque
 
 ; GLobal using the resolved function prototype
-@0 = global void (%M*)* @foo		; <void (%M*)**>:0 [#uses=0]
+@0 = global ptr @foo		; <ptr>:0 [#uses=0]
 
-define void @foo.upgrd.1(i32* %V) {
+define void @foo.upgrd.1(ptr %V) {
 	ret void
 }
 
-declare void @foo(%M*)
+declare void @foo(ptr)
 

@@ -26,9 +26,9 @@
 ; RUN: -mtriple=powerpc64-ibm-aix-xcoff -frame-pointer=all | FileCheck %s \
 ; RUN: -check-prefix=PPC64-AIX-FP
 
-define i32* @f1() nounwind {
-        %tmp = alloca i32, i32 8191             ; <i32*> [#uses=1]
-        ret i32* %tmp
+define ptr @f1() nounwind {
+        %tmp = alloca i32, i32 8191             ; <ptr> [#uses=1]
+        ret ptr %tmp
 }
 
 ;   - The stdux is used to update the back-chain link when allocated frame is large

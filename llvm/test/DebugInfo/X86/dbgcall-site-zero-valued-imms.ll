@@ -8,9 +8,9 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Based on the following reproducer:
 ;
 ; #include <stdint.h>
-; extern void callee(uint8_t, uint16_t, uint32_t, void *);
+; extern void callee(uint8_t, uint16_t, uint32_t, ptr);
 ; int caller() {
-;   callee(0, 0, 0, (void *)0);
+;   callee(0, 0, 0, (ptr)0);
 ;   return 1;
 ; }
 
@@ -33,11 +33,11 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: nounwind uwtable
 define i32 @caller() #0 !dbg !15 {
 entry:
-  tail call void @callee(i8 zeroext 0, i16 zeroext 0, i32 0, i8* null), !dbg !19
+  tail call void @callee(i8 zeroext 0, i16 zeroext 0, i32 0, ptr null), !dbg !19
   ret i32 1, !dbg !20
 }
 
-declare !dbg !5 void @callee(i8 zeroext, i16 zeroext, i32, i8*)
+declare !dbg !5 void @callee(i8 zeroext, i16 zeroext, i32, ptr)
 
 attributes #0 = { nounwind uwtable }
 

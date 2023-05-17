@@ -9,20 +9,24 @@ tracksRegLiveness: true
 body: |
   ; CHECK-LABEL: name: f
   ; CHECK: bb.0:
-  ; CHECK:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; CHECK:   liveins: $sgpr0
-  ; CHECK:   undef %4.sub0:vreg_96 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   %4.sub1:vreg_96 = V_MOV_B32_e32 0, implicit $exec
-  ; CHECK:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0
-  ; CHECK:   $exec = S_MOV_B64_term [[COPY]]
-  ; CHECK:   S_CBRANCH_EXECZ %bb.2, implicit $exec
-  ; CHECK:   S_BRANCH %bb.1
-  ; CHECK: bb.1:
-  ; CHECK:   successors: %bb.2(0x80000000)
-  ; CHECK:   %4.sub0:vreg_96 = V_MUL_F32_e32 %4.sub0, %4.sub0, implicit $mode, implicit $exec
-  ; CHECK:   %4.sub1:vreg_96 = V_MUL_F32_e32 %4.sub1, %4.sub1, implicit $mode, implicit $exec
-  ; CHECK: bb.2:
-  ; CHECK:   S_ENDPGM 0, implicit %4
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
+  ; CHECK-NEXT:   liveins: $sgpr0
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   undef %4.sub0:vreg_96 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   %4.sub1:vreg_96 = V_MOV_B32_e32 0, implicit $exec
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:sreg_64 = COPY $sgpr0
+  ; CHECK-NEXT:   $exec = S_MOV_B64_term [[COPY]]
+  ; CHECK-NEXT:   S_CBRANCH_EXECZ %bb.2, implicit $exec
+  ; CHECK-NEXT:   S_BRANCH %bb.1
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x80000000)
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT:   %4.sub0:vreg_96 = V_MUL_F32_e32 %4.sub0, %4.sub0, implicit $mode, implicit $exec
+  ; CHECK-NEXT:   %4.sub1:vreg_96 = V_MUL_F32_e32 %4.sub1, %4.sub1, implicit $mode, implicit $exec
+  ; CHECK-NEXT: {{  $}}
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   S_ENDPGM 0, implicit %4
   bb.0:
     liveins: $sgpr0
     %0:vgpr_32 = V_MOV_B32_e32 0, implicit $exec

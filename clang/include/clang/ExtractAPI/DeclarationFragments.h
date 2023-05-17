@@ -87,26 +87,51 @@ public:
     /// The USR of the fragment symbol, if applicable.
     std::string PreciseIdentifier;
 
-    Fragment(StringRef Spelling, FragmentKind Kind, StringRef PreciseIdentifier)
-        : Spelling(Spelling), Kind(Kind), PreciseIdentifier(PreciseIdentifier) {
-    }
+    /// The associated declaration, if applicable. This is not intended to be
+    /// used outside of libclang.
+    const Decl *Declaration;
+
+    Fragment(StringRef Spelling, FragmentKind Kind, StringRef PreciseIdentifier,
+             const Decl *Declaration)
+        : Spelling(Spelling), Kind(Kind), PreciseIdentifier(PreciseIdentifier),
+          Declaration(Declaration) {}
   };
 
   const std::vector<Fragment> &getFragments() const { return Fragments; }
+
+  // Add a new Fragment to the beginning of the Fragments.
+  DeclarationFragments &appendFront(StringRef Spelling, FragmentKind Kind,
+                                    StringRef PreciseIdentifier = "",
+                                    const Decl *Declaration = nullptr) {
+    Fragments.emplace(Fragments.begin(), Spelling, Kind, PreciseIdentifier,
+                      Declaration);
+    return *this;
+  }
+
+  DeclarationFragments &appendFront(DeclarationFragments &&Other) {
+    Fragments.insert(Fragments.begin(),
+                     std::make_move_iterator(Other.Fragments.begin()),
+                     std::make_move_iterator(Other.Fragments.end()));
+    Other.Fragments.clear();
+    return *this;
+  }
+
+  void removeLast() { Fragments.pop_back(); }
 
   /// Append a new Fragment to the end of the Fragments.
   ///
   /// \returns a reference to the DeclarationFragments object itself after
   /// appending to chain up consecutive appends.
   DeclarationFragments &append(StringRef Spelling, FragmentKind Kind,
-                               StringRef PreciseIdentifier = "") {
+                               StringRef PreciseIdentifier = "",
+                               const Decl *Declaration = nullptr) {
     if (Kind == FragmentKind::Text && !Fragments.empty() &&
         Fragments.back().Kind == FragmentKind::Text) {
       // If appending a text fragment, and the last fragment is also text,
       // merge into the last fragment.
       Fragments.back().Spelling.append(Spelling.data(), Spelling.size());
     } else {
-      Fragments.emplace_back(Spelling, Kind, PreciseIdentifier);
+      Fragments.emplace_back(Spelling, Kind, PreciseIdentifier, Declaration);
     }
     return *this;
   }

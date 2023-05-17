@@ -19,6 +19,44 @@ func.func @mma_sync(%arg0: vector<4x2xf16>,
   return %d : vector<2x2xf16>
 }
 
+// CHECK-LABEL: func @mma_sp_sync_f16_16832(
+func.func @mma_sp_sync_f16_16832(%arg0: vector<4x2xf16>,
+                                 %arg1: vector<4x2xf16>,
+                                 %arg2: vector<2x2xf16>,
+                                 %arg3: vector<2xi16>) -> vector<2x2xf16> {
+  //      CHECK: nvgpu.mma.sp.sync(%{{.*}}, %{{.*}}, %{{.*}}) metadata(%{{.+}}) {
+  // CHECK-SAME:   mmaShape = [16, 8, 32]
+  // CHECK-SAME: (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 32]} :
+    (vector<4x2xf16>, vector<4x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// CHECK-LABEL: func @mma_sp_sync_f16_16816(
+func.func @mma_sp_sync_f16_16816(%arg0: vector<2x2xf16>,
+                                 %arg1: vector<2x2xf16>,
+                                 %arg2: vector<2x2xf16>,
+                                 %arg3: vector<2xi16>) -> vector<2x2xf16> {
+  //      CHECK: nvgpu.mma.sp.sync(%{{.*}}, %{{.*}}, %{{.*}}) metadata(%{{.+}}) {
+  // CHECK-SAME:   mmaShape = [16, 8, 16]
+  // CHECK-SAME: (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 16]} :
+    (vector<2x2xf16>, vector<2x2xf16>, vector<2x2xf16>) -> vector<2x2xf16>
+  return %d : vector<2x2xf16>
+}
+
+// CHECK-LABEL: func @mma_sp_sync_i8_16864(
+func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
+                                %arg1: vector<4x4xi8>,
+                                %arg2: vector<2x2xi32>,
+                                %arg3: vector<2xi16>) -> vector<2x2xi32> {
+  //      CHECK: nvgpu.mma.sp.sync(%{{.*}}, %{{.*}}, %{{.*}}) metadata(%{{.+}}) {
+  // CHECK-SAME:   mmaShape = [16, 8, 64]
+  // CHECK-SAME: (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
+  %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 64]} :
+    (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
+  return %d : vector<2x2xi32>
+}
 
 func.func @async_cp(%dst : memref<2x7x5xf32, 3>, %src : memref<4x5xf32>){
   // CHECK-LABEL: func @async_cp

@@ -5,10 +5,10 @@
 ; CHECK: bl f0
 ; CHECK: retsp 1
 %struct.st0 = type { [0 x i32] }
-declare void @f0(%struct.st0*) nounwind
-define void @f0Test(%struct.st0* byval(%struct.st0) %s0) nounwind {
+declare void @f0(ptr) nounwind
+define void @f0Test(ptr byval(%struct.st0) %s0) nounwind {
 entry:
-  call void @f0(%struct.st0* %s0) nounwind
+  call void @f0(ptr %s0) nounwind
   ret void
 }
 
@@ -28,10 +28,10 @@ entry:
 ; CHECK: ldw r4, sp[12]
 ; CHECK: retsp 13
 %struct.st1 = type { [10 x i32] }
-declare void @f1(%struct.st1*) nounwind
-define i32 @f1Test(i32 %i, %struct.st1* byval(%struct.st1) %s1) nounwind {
+declare void @f1(ptr) nounwind
+define i32 @f1Test(i32 %i, ptr byval(%struct.st1) %s1) nounwind {
 entry:
-  call void @f1(%struct.st1* %s1) nounwind
+  call void @f1(ptr %s1) nounwind
   ret i32 %i
 }
 
@@ -50,10 +50,10 @@ entry:
 ; CHECK: ldaw sp, sp[4]
 ; CHECK: retsp 0
 %struct.st2 = type { i32 }
-declare void @f2(i32, %struct.st2*) nounwind
-define void @f2Test(%struct.st2* byval(%struct.st2) %s2, i32 %i, ...) nounwind {
+declare void @f2(i32, ptr) nounwind
+define void @f2Test(ptr byval(%struct.st2) %s2, i32 %i, ...) nounwind {
 entry:
-  call void @f2(i32 %i, %struct.st2* %s2)
+  call void @f2(i32 %i, ptr %s2)
   ret void
 }
 
@@ -65,9 +65,9 @@ entry:
 ; CHECK: st8 r2, r0[r1]
 ; CHECK: bl f
 ; CHECK: retsp 2
-declare void @f3(i8*) nounwind
-define void @f3Test(i8* byval(i8) %v) nounwind {
+declare void @f3(ptr) nounwind
+define void @f3Test(ptr byval(i8) %v) nounwind {
 entry:
-  call void @f3(i8* %v) nounwind
+  call void @f3(ptr %v) nounwind
   ret void
 }

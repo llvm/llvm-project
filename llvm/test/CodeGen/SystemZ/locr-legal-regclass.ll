@@ -3,10 +3,10 @@
 ; Test that early if conversion produces LOCR with operands of the right
 ; register classes.
 
-define void @autogen_SD4739(i8*) {
+define void @autogen_SD4739(ptr) {
 ; CHECK-NOT: Expected a GR32Bit register, but got a GRX32Bit register
 BB:
-  %L34 = load i8, i8* %0
+  %L34 = load i8, ptr %0
   %Cmp56 = icmp sgt i8 undef, %L34
   br label %CF246
 
@@ -15,6 +15,6 @@ CF246:                                            ; preds = %CF246, %BB
   br i1 undef, label %CF246, label %CF248
 
 CF248:                                            ; preds = %CF248, %CF246
-  store i8 %Sl163, i8* %0
+  store i8 %Sl163, ptr %0
   br label %CF248
 }

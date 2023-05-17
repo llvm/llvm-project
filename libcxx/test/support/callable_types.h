@@ -18,7 +18,7 @@
 
 constexpr bool returns_true() { return true; }
 
-template <class Ret = bool>
+template <class Ret>
 struct MoveOnlyCallable {
   MoveOnlyCallable(MoveOnlyCallable const&) = delete;
   constexpr MoveOnlyCallable(MoveOnlyCallable&& other)
@@ -32,7 +32,7 @@ struct MoveOnlyCallable {
   Ret value;
 };
 
-template <class Ret = bool>
+template <class Ret>
 struct CopyCallable {
   constexpr CopyCallable(CopyCallable const& other)
       : value(other.value) {}
@@ -48,7 +48,7 @@ struct CopyCallable {
 };
 
 
-template <class Ret = bool>
+template <class Ret>
 struct ConstCallable {
   constexpr ConstCallable(ConstCallable const& other)
       : value(other.value) {}
@@ -65,7 +65,7 @@ struct ConstCallable {
 
 
 
-template <class Ret = bool>
+template <class Ret>
 struct NoExceptCallable {
   constexpr NoExceptCallable(NoExceptCallable const& other)
       : value(other.value) {}

@@ -11,7 +11,9 @@
 
 #include <__algorithm/half_positive.h>
 #include <__config>
-#include <iterator>
+#include <__iterator/advance.h>
+#include <__iterator/distance.h>
+#include <__iterator/iterator_traits.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,7 +22,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _ForwardIterator, class _Predicate>
-_LIBCPP_CONSTEXPR_AFTER_CXX17 _ForwardIterator
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _ForwardIterator
 partition_point(_ForwardIterator __first, _ForwardIterator __last, _Predicate __pred)
 {
     typedef typename iterator_traits<_ForwardIterator>::difference_type difference_type;

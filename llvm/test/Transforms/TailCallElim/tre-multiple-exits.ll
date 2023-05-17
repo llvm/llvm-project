@@ -33,7 +33,7 @@
 ; }
 
 ; Function Attrs: noinline optnone uwtable
-declare void @_Z11capture_argPi(i32* %param) #0
+declare void @_Z11capture_argPi(ptr %param) #0
 
 ; Function Attrs: noinline optnone uwtable
 declare void @_Z4funcv() #0
@@ -49,12 +49,11 @@ define dso_local void @_Z19test_multiple_exitsi(i32 %param) local_unnamed_addr #
 ; CHECK-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[PARAM_TR]], 10
 ; CHECK-NEXT:    br i1 [[TMP0]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CHECK:       if.then:
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32* [[TEMP]] to i8*
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull [[TMP1]]) #1
-; CHECK-NEXT:    call void @_Z11capture_argPi(i32* nonnull [[TEMP]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[TEMP]]) #1
+; CHECK-NEXT:    call void @_Z11capture_argPi(ptr nonnull [[TEMP]])
 ; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i32 [[PARAM_TR]], 1
 ; CHECK-NEXT:    call void @_Z19test_multiple_exitsi(i32 [[ADD]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull [[TMP1]]) #1
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[TEMP]]) #1
 ; CHECK-NEXT:    br label [[IF_END14:%.*]]
 ; CHECK:       if.else:
 ; CHECK-NEXT:    [[PARAM_OFF:%.*]] = add i32 [[PARAM_TR]], -10
@@ -81,18 +80,17 @@ entry:
   br i1 %0, label %if.then, label %if.else
 
 if.then:                                          ; preds = %entry
-  %1 = bitcast i32* %temp to i8*
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* nonnull %1) #2
-  call void @_Z11capture_argPi(i32* nonnull %temp)
+  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %temp) #2
+  call void @_Z11capture_argPi(ptr nonnull %temp)
   %add = add nuw nsw i32 %param, 1
   call void @_Z19test_multiple_exitsi(i32 %add)
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* nonnull %1) #2
+  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %temp) #2
   br label %if.end14
 
 if.else:                                          ; preds = %entry
   %param.off = add i32 %param, -10
-  %2 = icmp ult i32 %param.off, 10
-  br i1 %2, label %if.then5, label %if.else7
+  %1 = icmp ult i32 %param.off, 10
+  br i1 %1, label %if.then5, label %if.else7
 
 if.then5:                                         ; preds = %if.else
   %add6 = add nuw nsw i32 %param, 1
@@ -100,9 +98,9 @@ if.then5:                                         ; preds = %if.else
   br label %if.end14
 
 if.else7:                                         ; preds = %if.else
-  %3 = and i32 %param, -2
-  %4 = icmp eq i32 %3, 20
-  br i1 %4, label %if.then11, label %if.end14
+  %2 = and i32 %param, -2
+  %3 = icmp eq i32 %2, 20
+  br i1 %3, label %if.then11, label %if.end14
 
 if.then11:                                        ; preds = %if.else7
   %add12 = add nsw i32 %param, 1
@@ -115,10 +113,10 @@ if.end14:                                         ; preds = %if.then5, %if.then1
 }
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #2
 
 ; Function Attrs: argmemonly nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #2
 
 attributes #0 = { nofree noinline norecurse nounwind uwtable }
 attributes #1 = { nounwind uwtable }

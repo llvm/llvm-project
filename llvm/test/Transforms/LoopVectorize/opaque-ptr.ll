@@ -78,7 +78,7 @@ define void @store_pointer_induction(ptr %start, ptr %end) {
 ; CHECK-NEXT:    store ptr [[IV]], ptr [[IV]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = getelementptr inbounds ptr, ptr [[IV]], i32 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq ptr [[IV_NEXT]], [[END]]
-; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
+; CHECK-NEXT:    br i1 [[EXITCOND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;

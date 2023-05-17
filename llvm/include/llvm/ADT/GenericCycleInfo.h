@@ -28,16 +28,12 @@
 #ifndef LLVM_ADT_GENERICCYCLEINFO_H
 #define LLVM_ADT_GENERICCYCLEINFO_H
 
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/GenericSSAContext.h"
 #include "llvm/ADT/GraphTraits.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/iterator.h"
+#include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Printable.h"
 #include "llvm/Support/raw_ostream.h"
-#include <vector>
 
 namespace llvm {
 
@@ -67,7 +63,9 @@ private:
 
   /// Basic blocks that are contained in the cycle, including entry blocks,
   /// and including blocks that are part of a child cycle.
-  std::vector<BlockT *> Blocks;
+  using BlockSetVectorT = SetVector<BlockT *, SmallVector<BlockT *, 8>,
+                                    SmallPtrSet<const BlockT *, 8>>;
+  BlockSetVectorT Blocks;
 
   /// Depth of the cycle in the tree. The root "cycle" is at depth 0.
   ///
@@ -85,7 +83,7 @@ private:
   }
 
   void appendEntry(BlockT *Block) { Entries.push_back(Block); }
-  void appendBlock(BlockT *Block) { Blocks.push_back(Block); }
+  void appendBlock(BlockT *Block) { Blocks.insert(Block); }
 
   GenericCycle(const GenericCycle &) = delete;
   GenericCycle &operator=(const GenericCycle &) = delete;
@@ -105,12 +103,12 @@ public:
   }
 
   /// \brief Return whether \p Block is an entry block of the cycle.
-  bool isEntry(BlockT *Block) const { return is_contained(Entries, Block); }
+  bool isEntry(const BlockT *Block) const {
+    return is_contained(Entries, Block);
+  }
 
   /// \brief Return whether \p Block is contained in the cycle.
-  bool contains(const BlockT *Block) const {
-    return is_contained(Blocks, Block);
-  }
+  bool contains(const BlockT *Block) const { return Blocks.contains(Block); }
 
   /// \brief Returns true iff this cycle contains \p C.
   ///
@@ -169,7 +167,7 @@ public:
 
   /// Iteration over blocks in the cycle (including entry blocks).
   //@{
-  using const_block_iterator = typename std::vector<BlockT *>::const_iterator;
+  using const_block_iterator = typename BlockSetVectorT::const_iterator;
 
   const_block_iterator block_begin() const {
     return const_block_iterator{Blocks.begin()};
@@ -232,14 +230,23 @@ public:
 private:
   ContextT Context;
 
-  /// Map basic blocks to their inner-most containing loop.
+  /// Map basic blocks to their inner-most containing cycle.
   DenseMap<BlockT *, CycleT *> BlockMap;
 
-  /// Outermost cycles discovered by any DFS.
+  /// Map basic blocks to their top level containing cycle.
+  DenseMap<BlockT *, CycleT *> BlockMapTopLevel;
+
+  /// Top-level cycles discovered by any DFS.
   ///
   /// Note: The implementation treats the nullptr as the parent of
   /// every top-level cycle. See \ref contains for an example.
   std::vector<std::unique_ptr<CycleT>> TopLevelCycles;
+
+  /// Move \p Child to \p NewParent by manipulating Children vectors.
+  ///
+  /// Note: This is an incomplete operation that does not update the depth of
+  /// the subtree.
+  void moveTopLevelCycleToNewParent(CycleT *NewParent, CycleT *Child);
 
 public:
   GenericCycleInfo() = default;
@@ -254,13 +261,7 @@ public:
 
   CycleT *getCycle(const BlockT *Block) const;
   unsigned getCycleDepth(const BlockT *Block) const;
-  CycleT *getTopLevelParentCycle(const BlockT *Block) const;
-
-  /// Move \p Child to \p NewParent by manipulating Children vectors.
-  ///
-  /// Note: This is an incomplete operation that does not update the
-  /// list of blocks in the new parent or the depth of the subtree.
-  void moveToNewParent(CycleT *NewParent, CycleT *Child);
+  CycleT *getTopLevelParentCycle(BlockT *Block);
 
   /// Methods for debug and self-test.
   //@{

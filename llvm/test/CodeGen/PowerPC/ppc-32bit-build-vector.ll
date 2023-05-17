@@ -59,7 +59,7 @@ define dso_local fastcc void @BuildVectorICE() unnamed_addr {
      while.body:                                       ; preds = %while.body, %entry
      %newelement = phi i32 [ 0, %entry ], [ %5, %while.body ]
      %0 = insertelement <4 x i32> <i32 undef, i32 0, i32 0, i32 0>, i32 %newelement, i32 0
-     %1 = load <4 x i32>, <4 x i32>* undef, align 1
+     %1 = load <4 x i32>, ptr undef, align 1
      %2 = add <4 x i32> %1, %0
      %3 = shufflevector <4 x i32> %2, <4 x i32> undef, <4 x i32> <i32 1, i32 undef, i32 undef, i32 undef>
      %4 = add <4 x i32> %2, %3

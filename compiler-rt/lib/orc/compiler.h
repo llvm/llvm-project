@@ -15,8 +15,15 @@
 #ifndef ORC_RT_COMPILER_H
 #define ORC_RT_COMPILER_H
 
+#if defined(_WIN32)
+#define ORC_RT_INTERFACE extern "C"
+#define ORC_RT_HIDDEN
+#define ORC_RT_IMPORT extern "C" __declspec(dllimport)
+#else
 #define ORC_RT_INTERFACE extern "C" __attribute__((visibility("default")))
 #define ORC_RT_HIDDEN __attribute__((visibility("hidden")))
+#define ORC_RT_IMPORT extern "C"
+#endif
 
 #ifndef __has_builtin
 # define __has_builtin(x) 0
@@ -56,8 +63,10 @@
 #define ORC_RT_UNLIKELY(EXPR) (EXPR)
 #endif
 
-#ifdef __APPLE__
+#if defined(__APPLE__)
 #define ORC_RT_WEAK_IMPORT __attribute__((weak_import))
+#elif defined(_WIN32)
+#define ORC_RT_WEAK_IMPORT
 #else
 #define ORC_RT_WEAK_IMPORT __attribute__((weak))
 #endif

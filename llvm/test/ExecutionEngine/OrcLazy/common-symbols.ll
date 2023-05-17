@@ -8,11 +8,11 @@
 define i32 @main() {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
-  store i32 7, i32* @x, align 4
-  %0 = load i32, i32* @x, align 4
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([4 x i8], [4 x i8]* @.str, i32 0, i32 0), i32 %0)
+  store i32 0, ptr %retval, align 4
+  store i32 7, ptr @x, align 4
+  %0 = load i32, ptr @x, align 4
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 %0)
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

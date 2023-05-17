@@ -7,7 +7,7 @@
 
 define dso_local i32 @read_i32_local_linkage() {
   entry:
-    %0 = load i32, i32* @ilocal, align 4
+    %0 = load i32, ptr @ilocal, align 4
     ret i32 %0
 }
 

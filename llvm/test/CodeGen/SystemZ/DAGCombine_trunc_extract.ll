@@ -13,6 +13,6 @@ entry:
 loop:                                            ; preds = %CF249, %CF247
   %Shuff = shufflevector <2 x i8> undef, <2 x i8> %Arg, <2 x i32> <i32 3, i32 1>
   %E = extractelement <2 x i8> %Shuff, i32 0
-  store i8 %E, i8* undef
+  store i8 %E, ptr undef
   br label %loop
 }

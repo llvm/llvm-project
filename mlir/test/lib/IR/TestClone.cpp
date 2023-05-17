@@ -41,7 +41,7 @@ struct ClonePass
     if (terminator->getNumOperands() != regionEntry.getNumArguments())
       return;
 
-    BlockAndValueMapping map;
+    IRMapping map;
     for (auto tup :
          llvm::zip(terminator->getOperands(), regionEntry.getArguments())) {
       if (std::get<0>(tup).getType() != std::get<1>(tup).getType())

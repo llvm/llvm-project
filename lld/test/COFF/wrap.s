@@ -18,16 +18,16 @@
 // RUN: FileCheck --check-prefix=SYM2 %s < %t.dump
 // RUN: FileCheck --check-prefix=SYM3 %s < %t.dump
 
-// foo = 0xC0011000 = 3221295104
-// __wrap_foo = 0xC0011010 = 3221295120
+// foo = 0x00011000 = 69632
+// __wrap_foo = 0x00011010 = 69648
 // SYM1:      Name: foo
-// SYM1-NEXT: Value: 3221295104
+// SYM1-NEXT: Value: 69632
 // SYM1-NEXT: Section: IMAGE_SYM_ABSOLUTE
 // SYM1-NEXT: BaseType: Null
 // SYM1-NEXT: ComplexType: Null
 // SYM1-NEXT: StorageClass: External
 // SYM2:      Name: __wrap_foo
-// SYM2-NEXT: Value: 3221295120
+// SYM2-NEXT: Value: 69648
 // SYM2-NEXT: Section: IMAGE_SYM_ABSOLUTE
 // SYM2-NEXT: BaseType: Null
 // SYM2-NEXT: ComplexType: Null

@@ -11,12 +11,12 @@
 
 #include <map>
 #include <mutex>
+#include <optional>
 #include <set>
 
 #include "GDBRemoteCommunicationServerCommon.h"
 #include "lldb/Host/Socket.h"
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/Error.h"
 
 namespace lldb_private {
@@ -90,7 +90,7 @@ public:
   // Set port if you want to use a specific port number.
   // Otherwise port will be set to the port that was chosen for you.
   Status LaunchGDBServer(const lldb_private::Args &args, std::string hostname,
-                         lldb::pid_t &pid, llvm::Optional<uint16_t> &port,
+                         lldb::pid_t &pid, std::optional<uint16_t> &port,
                          std::string &socket_name);
 
   void SetPendingGdbServer(lldb::pid_t pid, uint16_t port,

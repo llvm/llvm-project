@@ -21,6 +21,8 @@ Built-in types are handled specially to decrease the overall query cost.
 Similarly, built-in `ModuleOp` supports data layouts without going through the
 interface.
 
+[TOC]
+
 ## Usage
 
 ### Scoping

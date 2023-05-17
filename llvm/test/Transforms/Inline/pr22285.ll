@@ -1,4 +1,3 @@
-; RUN: opt < %s -inline -S -enable-new-pm=0 | FileCheck %s
 ; RUN: opt < %s -passes='cgscc(inline),globaldce' -S | FileCheck %s
 
 $f1 = comdat any

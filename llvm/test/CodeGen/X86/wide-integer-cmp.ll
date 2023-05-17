@@ -99,8 +99,8 @@ define i32 @test_wide(i128 %a, i128 %b) {
 ; CHECK-NEXT:    movl {{[0-9]+}}(%esp), %esi
 ; CHECK-NEXT:    cmpl {{[0-9]+}}(%esp), %edx
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %esi
-; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %eax
+; CHECK-NEXT:    sbbl {{[0-9]+}}(%esp), %ecx
 ; CHECK-NEXT:    jge .LBB4_2
 ; CHECK-NEXT:  # %bb.1: # %bb1
 ; CHECK-NEXT:    movl $1, %eax

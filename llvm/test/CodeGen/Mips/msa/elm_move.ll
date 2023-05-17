@@ -9,9 +9,9 @@
 
 define void @llvm_mips_move_vb_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_move_vb_ARG1
+  %0 = load <16 x i8>, ptr @llvm_mips_move_vb_ARG1
   %1 = tail call <16 x i8> @llvm.mips.move.v(<16 x i8> %0)
-  store <16 x i8> %1, <16 x i8>* @llvm_mips_move_vb_RES
+  store <16 x i8> %1, ptr @llvm_mips_move_vb_RES
   ret void
 }
 

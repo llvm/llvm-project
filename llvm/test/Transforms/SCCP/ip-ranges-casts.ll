@@ -7,8 +7,8 @@ define internal i1 @f.trunc(i32 %x) {
 ; CHECK-NEXT:    [[T_1:%.*]] = trunc i32 [[X:%.*]] to i16
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i16 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i16 [[T_1]], 101
-; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[T_2:%.*]] = trunc i32 [[X]] to i8
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp sgt i8 [[T_2]], 44
@@ -62,8 +62,8 @@ define internal i1 @f.zext(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[T_1:%.*]] = zext i32 [[X:%.*]] to i64
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
 ; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
-; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], false
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[T_2:%.*]] = zext i32 [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[C_5:%.*]] = icmp sgt i64 [[T_2]], 300
@@ -71,7 +71,7 @@ define internal i1 @f.zext(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i64 [[T_2]], 1
 ; CHECK-NEXT:    [[RES_4:%.*]] = add i1 [[RES_3]], [[C_5]]
 ; CHECK-NEXT:    [[RES_5:%.*]] = add i1 [[RES_4]], [[C_6]]
-; CHECK-NEXT:    [[RES_6:%.*]] = add i1 [[RES_5]], false
+; CHECK-NEXT:    [[RES_6:%.*]] = add nuw nsw i1 [[RES_5]], false
 ; CHECK-NEXT:    [[RES_7:%.*]] = add i1 [[RES_6]], [[C_8]]
 ; CHECK-NEXT:    ret i1 [[RES_7]]
 ;
@@ -112,18 +112,18 @@ define i1 @caller.zext() {
 ; x = [100, 301)
 define internal i1 @f.sext(i32 %x, i32 %y) {
 ; CHECK-LABEL: @f.sext(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[TMP1]], 299
-; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[TMP1]], 101
-; CHECK-NEXT:    [[RES_1:%.*]] = add i1 false, [[C_2]]
-; CHECK-NEXT:    [[RES_2:%.*]] = add i1 [[RES_1]], false
+; CHECK-NEXT:    [[T_1:%.*]] = zext i32 [[X:%.*]] to i64
+; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[T_1]], 299
+; CHECK-NEXT:    [[C_4:%.*]] = icmp slt i64 [[T_1]], 101
+; CHECK-NEXT:    [[RES_1:%.*]] = add nuw nsw i1 false, [[C_2]]
+; CHECK-NEXT:    [[RES_2:%.*]] = add nuw nsw i1 [[RES_1]], false
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    [[T_2:%.*]] = sext i32 [[Y:%.*]] to i64
 ; CHECK-NEXT:    [[C_6:%.*]] = icmp sgt i64 [[T_2]], 899
 ; CHECK-NEXT:    [[C_8:%.*]] = icmp slt i64 [[T_2]], -119
-; CHECK-NEXT:    [[RES_4:%.*]] = add i1 [[RES_3]], false
+; CHECK-NEXT:    [[RES_4:%.*]] = add nuw nsw i1 [[RES_3]], false
 ; CHECK-NEXT:    [[RES_5:%.*]] = add i1 [[RES_4]], [[C_6]]
-; CHECK-NEXT:    [[RES_6:%.*]] = add i1 [[RES_5]], false
+; CHECK-NEXT:    [[RES_6:%.*]] = add nuw nsw i1 [[RES_5]], false
 ; CHECK-NEXT:    [[RES_7:%.*]] = add i1 [[RES_6]], [[C_8]]
 ; CHECK-NEXT:    ret i1 [[RES_7]]
 ;
@@ -246,8 +246,8 @@ define i1 @caller.fpext() {
 ; There's nothing we can do besides going to the full range or overdefined.
 define internal i1 @f.inttoptr.ptrtoint(i64 %x) {
 ; CHECK-LABEL: @f.inttoptr.ptrtoint(
-; CHECK-NEXT:    [[TO_PTR:%.*]] = inttoptr i64 [[X:%.*]] to i8*
-; CHECK-NEXT:    [[TO_I64:%.*]] = ptrtoint i8* [[TO_PTR]] to i64
+; CHECK-NEXT:    [[TO_PTR:%.*]] = inttoptr i64 [[X:%.*]] to ptr
+; CHECK-NEXT:    [[TO_I64:%.*]] = ptrtoint ptr [[TO_PTR]] to i64
 ; CHECK-NEXT:    [[C_1:%.*]] = icmp sgt i64 [[TO_I64]], 300
 ; CHECK-NEXT:    [[C_2:%.*]] = icmp sgt i64 [[TO_I64]], 299
 ; CHECK-NEXT:    [[C_3:%.*]] = icmp slt i64 [[TO_I64]], 100
@@ -257,8 +257,8 @@ define internal i1 @f.inttoptr.ptrtoint(i64 %x) {
 ; CHECK-NEXT:    [[RES_3:%.*]] = add i1 [[RES_2]], [[C_4]]
 ; CHECK-NEXT:    ret i1 [[RES_3]]
 ;
-  %to.ptr = inttoptr i64 %x to i8*
-  %to.i64 = ptrtoint i8* %to.ptr to i64
+  %to.ptr = inttoptr i64 %x to ptr
+  %to.i64 = ptrtoint ptr %to.ptr to i64
   %c.1 = icmp sgt i64 %to.i64, 300
   %c.2 = icmp sgt i64 %to.i64, 299
   %c.3 = icmp slt i64 %to.i64, 100
@@ -286,16 +286,16 @@ define i1 @caller.inttoptr.ptrtoint() {
 define i1 @int_range_to_double_cast(i32 %a) {
 ; CHECK-LABEL: @int_range_to_double_cast(
 ; CHECK-NEXT:    [[R:%.*]] = and i32 [[A:%.*]], 255
-; CHECK-NEXT:    [[TMP4:%.*]] = sitofp i32 [[R]] to double
-; CHECK-NEXT:    [[TMP10:%.*]] = fadd double 0.000000e+00, [[TMP4]]
-; CHECK-NEXT:    [[TMP11:%.*]] = fcmp olt double [[TMP4]], [[TMP10]]
-; CHECK-NEXT:    ret i1 [[TMP11]]
+; CHECK-NEXT:    [[T4:%.*]] = sitofp i32 [[R]] to double
+; CHECK-NEXT:    [[T10:%.*]] = fadd double 0.000000e+00, [[T4]]
+; CHECK-NEXT:    [[T11:%.*]] = fcmp olt double [[T4]], [[T10]]
+; CHECK-NEXT:    ret i1 [[T11]]
 ;
   %r = and i32 %a, 255
-  %tmp4 = sitofp i32 %r to double
-  %tmp10 = fadd double 0.000000e+00, %tmp4
-  %tmp11 = fcmp olt double %tmp4, %tmp10
-  ret i1 %tmp11
+  %t4 = sitofp i32 %r to double
+  %t10 = fadd double 0.000000e+00, %t4
+  %t11 = fcmp olt double %t4, %t10
+  ret i1 %t11
 }
 
 ; Make sure we do not use ranges to propagate info from vectors.
@@ -318,8 +318,8 @@ entry:
 
 define internal i64 @f.sext_to_zext(i32 %t) {
 ; CHECK-LABEL: @f.sext_to_zext(
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[T:%.*]] to i64
-; CHECK-NEXT:    ret i64 [[TMP1]]
+; CHECK-NEXT:    [[A:%.*]] = zext i32 [[T:%.*]] to i64
+; CHECK-NEXT:    ret i64 [[A]]
 ;
   %a = sext i32 %t to i64
   ret i64 %a

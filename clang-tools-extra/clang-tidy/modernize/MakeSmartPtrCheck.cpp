@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 namespace {
 
@@ -283,7 +281,7 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
     return false;
 
   std::string ArraySizeExpr;
-  if (const auto* ArraySize = New->getArraySize().getValueOr(nullptr)) {
+  if (const auto *ArraySize = New->getArraySize().value_or(nullptr)) {
     ArraySizeExpr = Lexer::getSourceText(CharSourceRange::getTokenRange(
                                              ArraySize->getSourceRange()),
                                          SM, getLangOpts())
@@ -411,10 +409,10 @@ bool MakeSmartPtrCheck::replaceNew(DiagnosticBuilder &Diag,
       // stop generating fixes -- as the C++ rule is complicated and we are less
       // certain about the correct fixes.
       if (const CXXRecordDecl *RD = New->getType()->getPointeeCXXRecordDecl()) {
-        if (llvm::find_if(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
+        if (llvm::any_of(RD->ctors(), [](const CXXConstructorDecl *Ctor) {
               return Ctor->isCopyOrMoveConstructor() &&
                      (Ctor->isDeleted() || Ctor->getAccess() == AS_private);
-            }) != RD->ctor_end()) {
+            })) {
           return false;
         }
       }
@@ -439,6 +437,4 @@ void MakeSmartPtrCheck::insertHeader(DiagnosticBuilder &Diag, FileID FD) {
   Diag << Inserter.createIncludeInsertion(FD, MakeSmartPtrFunctionHeader);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

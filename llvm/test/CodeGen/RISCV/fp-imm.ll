@@ -8,7 +8,7 @@
 ; RUN: llc -mtriple=riscv64 -target-abi lp64d -mattr=+f,+d < %s \
 ; RUN:     | FileCheck --check-prefix=RV64D %s
 
-define float @f32_positive_zero(float *%pf) nounwind {
+define float @f32_positive_zero(ptr %pf) nounwind {
 ; RV32F-LABEL: f32_positive_zero:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    fmv.w.x fa0, zero
@@ -31,34 +31,34 @@ define float @f32_positive_zero(float *%pf) nounwind {
   ret float 0.0
 }
 
-define float @f32_negative_zero(float *%pf) nounwind {
+define float @f32_negative_zero(ptr %pf) nounwind {
 ; RV32F-LABEL: f32_negative_zero:
 ; RV32F:       # %bb.0:
-; RV32F-NEXT:    fmv.w.x ft0, zero
-; RV32F-NEXT:    fneg.s fa0, ft0
+; RV32F-NEXT:    lui a0, 524288
+; RV32F-NEXT:    fmv.w.x fa0, a0
 ; RV32F-NEXT:    ret
 ;
 ; RV32D-LABEL: f32_negative_zero:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    fmv.w.x ft0, zero
-; RV32D-NEXT:    fneg.s fa0, ft0
+; RV32D-NEXT:    lui a0, 524288
+; RV32D-NEXT:    fmv.w.x fa0, a0
 ; RV32D-NEXT:    ret
 ;
 ; RV64F-LABEL: f32_negative_zero:
 ; RV64F:       # %bb.0:
-; RV64F-NEXT:    fmv.w.x ft0, zero
-; RV64F-NEXT:    fneg.s fa0, ft0
+; RV64F-NEXT:    lui a0, 524288
+; RV64F-NEXT:    fmv.w.x fa0, a0
 ; RV64F-NEXT:    ret
 ;
 ; RV64D-LABEL: f32_negative_zero:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.w.x ft0, zero
-; RV64D-NEXT:    fneg.s fa0, ft0
+; RV64D-NEXT:    lui a0, 524288
+; RV64D-NEXT:    fmv.w.x fa0, a0
 ; RV64D-NEXT:    ret
   ret float -0.0
 }
 
-define double @f64_positive_zero(double *%pd) nounwind {
+define double @f64_positive_zero(ptr %pd) nounwind {
 ; RV32F-LABEL: f64_positive_zero:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    li a0, 0
@@ -82,7 +82,7 @@ define double @f64_positive_zero(double *%pd) nounwind {
   ret double 0.0
 }
 
-define double @f64_negative_zero(double *%pd) nounwind {
+define double @f64_negative_zero(ptr %pd) nounwind {
 ; RV32F-LABEL: f64_negative_zero:
 ; RV32F:       # %bb.0:
 ; RV32F-NEXT:    lui a1, 524288
@@ -91,8 +91,8 @@ define double @f64_negative_zero(double *%pd) nounwind {
 ;
 ; RV32D-LABEL: f64_negative_zero:
 ; RV32D:       # %bb.0:
-; RV32D-NEXT:    fcvt.d.w ft0, zero
-; RV32D-NEXT:    fneg.d fa0, ft0
+; RV32D-NEXT:    fcvt.d.w fa5, zero
+; RV32D-NEXT:    fneg.d fa0, fa5
 ; RV32D-NEXT:    ret
 ;
 ; RV64F-LABEL: f64_negative_zero:
@@ -103,8 +103,8 @@ define double @f64_negative_zero(double *%pd) nounwind {
 ;
 ; RV64D-LABEL: f64_negative_zero:
 ; RV64D:       # %bb.0:
-; RV64D-NEXT:    fmv.d.x ft0, zero
-; RV64D-NEXT:    fneg.d fa0, ft0
+; RV64D-NEXT:    fmv.d.x fa5, zero
+; RV64D-NEXT:    fneg.d fa0, fa5
 ; RV64D-NEXT:    ret
   ret double -0.0
 }

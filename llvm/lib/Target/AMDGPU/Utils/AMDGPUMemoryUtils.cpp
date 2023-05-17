@@ -9,7 +9,6 @@
 #include "AMDGPUMemoryUtils.h"
 #include "AMDGPU.h"
 #include "AMDGPUBaseInfo.h"
-#include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/MemorySSA.h"
@@ -32,110 +31,38 @@ Align getAlign(DataLayout const &DL, const GlobalVariable *GV) {
                                        GV->getValueType());
 }
 
-static void collectFunctionUses(User *U, const Function *F,
-                                SetVector<Instruction *> &InstUsers) {
-  SmallVector<User *> Stack{U};
-
-  while (!Stack.empty()) {
-    U = Stack.pop_back_val();
-
-    if (auto *I = dyn_cast<Instruction>(U)) {
-      if (I->getFunction() == F)
-        InstUsers.insert(I);
-      continue;
-    }
-
-    if (!isa<ConstantExpr>(U))
-      continue;
-
-    append_range(Stack, U->users());
-  }
-}
-
-void replaceConstantUsesInFunction(ConstantExpr *C, const Function *F) {
-  SetVector<Instruction *> InstUsers;
-
-  collectFunctionUses(C, F, InstUsers);
-  for (Instruction *I : InstUsers) {
-    convertConstantExprsToInstructions(I, C);
-  }
-}
-
-static bool shouldLowerLDSToStruct(const GlobalVariable &GV,
-                                   const Function *F) {
-  // We are not interested in kernel LDS lowering for module LDS itself.
-  if (F && GV.getName() == "llvm.amdgcn.module.lds")
+bool isDynamicLDS(const GlobalVariable &GV) {
+  // external zero size addrspace(3) without initializer implies cuda/hip extern
+  // __shared__ the semantics for such a variable appears to be that all extern
+  // __shared__ variables alias one another. This hits different handling.
+  const Module *M = GV.getParent();
+  const DataLayout &DL = M->getDataLayout();
+  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
     return false;
-
-  bool Ret = false;
-  SmallPtrSet<const User *, 8> Visited;
-  SmallVector<const User *, 16> Stack(GV.users());
-
-  assert(!F || isKernelCC(F));
-
-  while (!Stack.empty()) {
-    const User *V = Stack.pop_back_val();
-    Visited.insert(V);
-
-    if (isa<GlobalValue>(V)) {
-      // This use of the LDS variable is the initializer of a global variable.
-      // This is ill formed. The address of an LDS variable is kernel dependent
-      // and unknown until runtime. It can't be written to a global variable.
-      continue;
-    }
-
-    if (auto *I = dyn_cast<Instruction>(V)) {
-      const Function *UF = I->getFunction();
-      if (UF == F) {
-        // Used from this kernel, we want to put it into the structure.
-        Ret = true;
-      } else if (!F) {
-        // For module LDS lowering, lowering is required if the user instruction
-        // is from non-kernel function.
-        Ret |= !isKernelCC(UF);
-      }
-      continue;
-    }
-
-    // User V should be a constant, recursively visit users of V.
-    assert(isa<Constant>(V) && "Expected a constant.");
-    append_range(Stack, V->users());
   }
-
-  return Ret;
+  uint64_t AllocSize = DL.getTypeAllocSize(GV.getValueType());
+  return GV.hasExternalLinkage() && AllocSize == 0;
 }
 
-std::vector<GlobalVariable *> findVariablesToLower(Module &M,
-                                                   const Function *F) {
-  std::vector<llvm::GlobalVariable *> LocalVars;
-  for (auto &GV : M.globals()) {
-    if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
-      continue;
-    }
-    if (!GV.hasInitializer()) {
-      // addrspace(3) without initializer implies cuda/hip extern __shared__
-      // the semantics for such a variable appears to be that all extern
-      // __shared__ variables alias one another, in which case this transform
-      // is not required
-      continue;
-    }
-    if (!isa<UndefValue>(GV.getInitializer())) {
-      // Initializers are unimplemented for LDS address space.
-      // Leave such variables in place for consistent error reporting.
-      continue;
-    }
-    if (GV.isConstant()) {
-      // A constant undef variable can't be written to, and any load is
-      // undef, so it should be eliminated by the optimizer. It could be
-      // dropped by the back end if not. This pass skips over it.
-      continue;
-    }
-    if (!shouldLowerLDSToStruct(GV, F)) {
-      continue;
-    }
-    LocalVars.push_back(&GV);
+bool isLDSVariableToLower(const GlobalVariable &GV) {
+  if (GV.getType()->getPointerAddressSpace() != AMDGPUAS::LOCAL_ADDRESS) {
+    return false;
   }
-  return LocalVars;
+  if (isDynamicLDS(GV)) {
+    return true;
+  }
+  if (GV.isConstant()) {
+    // A constant undef variable can't be written to, and any load is
+    // undef, so it should be eliminated by the optimizer. It could be
+    // dropped by the back end if not. This pass skips over it.
+    return false;
+  }
+  if (GV.hasInitializer() && !isa<UndefValue>(GV.getInitializer())) {
+    // Initializers are unimplemented for LDS address space.
+    // Leave such variables in place for consistent error reporting.
+    return false;
+  }
+  return true;
 }
 
 bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
@@ -149,6 +76,7 @@ bool isReallyAClobber(const Value *Ptr, MemoryDef *Def, AAResults *AA) {
     case Intrinsic::amdgcn_s_barrier:
     case Intrinsic::amdgcn_wave_barrier:
     case Intrinsic::amdgcn_sched_barrier:
+    case Intrinsic::amdgcn_sched_group_barrier:
       return false;
     default:
       break;
@@ -207,7 +135,7 @@ bool isClobberedInFunction(const LoadInst *Load, MemorySSA *MSSA,
     }
 
     const MemoryPhi *Phi = cast<MemoryPhi>(MA);
-    for (auto &Use : Phi->incoming_values())
+    for (const auto &Use : Phi->incoming_values())
       WorkList.push_back(cast<MemoryAccess>(&Use));
   }
 

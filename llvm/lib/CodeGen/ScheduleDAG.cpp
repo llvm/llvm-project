@@ -183,8 +183,6 @@ void SUnit::removePred(const SDep &D) {
   SUnit *N = D.getSUnit();
   SmallVectorImpl<SDep>::iterator Succ = llvm::find(N->Succs, P);
   assert(Succ != N->Succs.end() && "Mismatching preds / succs lists!");
-  N->Succs.erase(Succ);
-  Preds.erase(I);
   // Update the bookkeeping.
   if (P.getKind() == SDep::Data) {
     assert(NumPreds > 0 && "NumPreds will underflow!");
@@ -193,21 +191,25 @@ void SUnit::removePred(const SDep &D) {
     --N->NumSuccs;
   }
   if (!N->isScheduled) {
-    if (D.isWeak())
+    if (D.isWeak()) {
+      assert(WeakPredsLeft > 0 && "WeakPredsLeft will underflow!");
       --WeakPredsLeft;
-    else {
+    } else {
       assert(NumPredsLeft > 0 && "NumPredsLeft will underflow!");
       --NumPredsLeft;
     }
   }
   if (!isScheduled) {
-    if (D.isWeak())
+    if (D.isWeak()) {
+      assert(WeakSuccsLeft > 0 && "WeakSuccsLeft will underflow!");
       --N->WeakSuccsLeft;
-    else {
+    } else {
       assert(N->NumSuccsLeft > 0 && "NumSuccsLeft will underflow!");
       --N->NumSuccsLeft;
     }
   }
+  N->Succs.erase(Succ);
+  Preds.erase(I);
   if (P.getLatency() != 0) {
     this->setDepthDirty();
     N->setHeightDirty();
@@ -722,6 +724,8 @@ void ScheduleDAGTopologicalSort::AddSUnitWithoutPredecessors(const SUnit *SU) {
 
 bool ScheduleDAGTopologicalSort::IsReachable(const SUnit *SU,
                                              const SUnit *TargetSU) {
+  assert(TargetSU != nullptr && "Invalid target SUnit");
+  assert(SU != nullptr && "Invalid SUnit");
   FixOrder();
   // If insertion of the edge SU->TargetSU would create a cycle
   // then there is a path from TargetSU to SU.

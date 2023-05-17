@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_H
 #define LLVM_LIBC_SRC_PTHREAD_PTHREAD_MUTEXATTR_H
 
+#include "src/__support/common.h"
+
 #include <pthread.h>
 
 namespace __llvm_libc {
@@ -31,12 +33,12 @@ constexpr pthread_mutexattr_t DEFAULT_MUTEXATTR =
     PTHREAD_MUTEX_STALLED << unsigned(PThreadMutexAttrPos::ROBUST_SHIFT) |
     PTHREAD_PROCESS_PRIVATE << unsigned(PThreadMutexAttrPos::PSHARED_SHIFT);
 
-static inline int get_mutexattr_type(pthread_mutexattr_t attr) {
+LIBC_INLINE int get_mutexattr_type(pthread_mutexattr_t attr) {
   return (attr & unsigned(PThreadMutexAttrPos::TYPE_MASK)) >>
          unsigned(PThreadMutexAttrPos::TYPE_SHIFT);
 }
 
-static inline int get_mutexattr_robust(pthread_mutexattr_t attr) {
+LIBC_INLINE int get_mutexattr_robust(pthread_mutexattr_t attr) {
   return (attr & unsigned(PThreadMutexAttrPos::ROBUST_MASK)) >>
          unsigned(PThreadMutexAttrPos::ROBUST_SHIFT);
 }

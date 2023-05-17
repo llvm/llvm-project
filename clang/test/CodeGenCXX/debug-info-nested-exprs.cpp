@@ -1,12 +1,12 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-pc-windows-msvc -debug-info-kind=limited \
+// RUN: %clang_cc1 -triple=x86_64-pc-windows-msvc -debug-info-kind=limited \
 // RUN:    -std=c++11 -gcodeview -gno-column-info -emit-llvm -o - %s \
 // RUN:    | FileCheck -check-prefix=NONEST %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-pc-windows-msvc -debug-info-kind=limited \
+// RUN: %clang_cc1 -triple=x86_64-pc-windows-msvc -debug-info-kind=limited \
 // RUN:    -std=c++11 -gcodeview -emit-llvm -o - %s \
 // RUN:    | FileCheck -check-prefix=COLUMNS %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -debug-info-kind=limited \
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -debug-info-kind=limited \
 // RUN:    -std=c++11 -gno-column-info -emit-llvm -o - %s | FileCheck -check-prefix=NESTED %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple=x86_64-unknown-linux-gnu -debug-info-kind=limited \
+// RUN: %clang_cc1 -triple=x86_64-unknown-linux-gnu -debug-info-kind=limited \
 // RUN:    -std=c++11 -emit-llvm -o - %s \
 // RUN:    | FileCheck -check-prefix=COLUMNS %s
 
@@ -33,37 +33,37 @@ int foo(int x, int y, int z) {
   // NONEST: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[LOC:[0-9]+]]
   // NONEST: call noundef i32 @{{.*}}baz{{.*}}, !dbg ![[LOC]]
   // NONEST: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[LOC]]
-  // NONEST: store i32 {{.*}}, i32* %a,{{.*}} !dbg ![[LOC]]
+  // NONEST: store i32 {{.*}}, ptr %a,{{.*}} !dbg ![[LOC]]
   // NESTED: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[BAR:[0-9]+]]
   // NESTED: call noundef i32 @{{.*}}baz{{.*}}, !dbg ![[BAZ:[0-9]+]]
   // NESTED: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[QUX:[0-9]+]]
-  // NESTED: store i32 {{.*}}, i32* %a,{{.*}} !dbg ![[BAR]]
+  // NESTED: store i32 {{.*}}, ptr %a,{{.*}} !dbg ![[BAR]]
   // COLUMNS: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[BAR:[0-9]+]]
   // COLUMNS: call noundef i32 @{{.*}}baz{{.*}}, !dbg ![[BAZ:[0-9]+]]
   // COLUMNS: call noundef i32 @{{.*}}qux{{.*}}, !dbg ![[QUX:[0-9]+]]
-  // COLUMNS: store i32 {{.*}}, i32* %a,{{.*}} !dbg ![[DECLA:[0-9]+]]
+  // COLUMNS: store i32 {{.*}}, ptr %a,{{.*}} !dbg ![[DECLA:[0-9]+]]
 
   int i = 1, b = 0, c = 0;
-  // NONEST: store i32 1, i32* %i,{{.*}} !dbg ![[ILOC:[0-9]+]]
-  // NONEST: store i32 0, i32* %b,{{.*}} !dbg ![[ILOC]]
-  // NONEST: store i32 0, i32* %c,{{.*}} !dbg ![[ILOC]]
-  // NESTED: store i32 1, i32* %i,{{.*}} !dbg ![[ILOC:[0-9]+]]
-  // NESTED: store i32 0, i32* %b,{{.*}} !dbg ![[ILOC]]
-  // NESTED: store i32 0, i32* %c,{{.*}} !dbg ![[ILOC]]
-  // COLUMNS: store i32 1, i32* %i,{{.*}} !dbg ![[ILOC:[0-9]+]]
-  // COLUMNS: store i32 0, i32* %b,{{.*}} !dbg ![[BLOC:[0-9]+]]
-  // COLUMNS: store i32 0, i32* %c,{{.*}} !dbg ![[CLOC:[0-9]+]]
+  // NONEST: store i32 1, ptr %i,{{.*}} !dbg ![[ILOC:[0-9]+]]
+  // NONEST: store i32 0, ptr %b,{{.*}} !dbg ![[ILOC]]
+  // NONEST: store i32 0, ptr %c,{{.*}} !dbg ![[ILOC]]
+  // NESTED: store i32 1, ptr %i,{{.*}} !dbg ![[ILOC:[0-9]+]]
+  // NESTED: store i32 0, ptr %b,{{.*}} !dbg ![[ILOC]]
+  // NESTED: store i32 0, ptr %c,{{.*}} !dbg ![[ILOC]]
+  // COLUMNS: store i32 1, ptr %i,{{.*}} !dbg ![[ILOC:[0-9]+]]
+  // COLUMNS: store i32 0, ptr %b,{{.*}} !dbg ![[BLOC:[0-9]+]]
+  // COLUMNS: store i32 0, ptr %c,{{.*}} !dbg ![[CLOC:[0-9]+]]
 
   while (i > 0) {
     b = bar(a, b);
     --i;
   }
   // NONEST: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
-  // NONEST: store i32 %{{[^,]+}}, i32* %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
+  // NONEST: store i32 %{{[^,]+}}, ptr %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
   // NESTED: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
-  // NESTED: store i32 %{{[^,]+}}, i32* %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
+  // NESTED: store i32 %{{[^,]+}}, ptr %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
   // COLUMNS: call noundef i32 @{{.*}}bar{{.*}}, !dbg ![[WHILE1:[0-9]+]]
-  // COLUMNS: store i32 %{{[^,]+}}, i32* %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
+  // COLUMNS: store i32 %{{[^,]+}}, ptr %i,{{.*}} !dbg ![[WHILE2:[0-9]+]]
 
   for (i = 0; i < 1; i++) {
     b = bar(a, b);
@@ -81,38 +81,38 @@ int foo(int x, int y, int z) {
     a = b;
     b = t;
   }
-  // NONEST: store i32 %{{[^,]+}}, i32* %t,{{.*}} !dbg ![[IF1:[0-9]+]]
-  // NONEST: store i32 %{{[^,]+}}, i32* %a,{{.*}} !dbg ![[IF2:[0-9]+]]
-  // NONEST: store i32 %{{[^,]+}}, i32* %b,{{.*}} !dbg ![[IF3:[0-9]+]]
-  // NESTED: store i32 %{{[^,]+}}, i32* %t,{{.*}} !dbg ![[IF1:[0-9]+]]
-  // NESTED: store i32 %{{[^,]+}}, i32* %a,{{.*}} !dbg ![[IF2:[0-9]+]]
-  // NESTED: store i32 %{{[^,]+}}, i32* %b,{{.*}} !dbg ![[IF3:[0-9]+]]
-  // COLUMNS: store i32 %{{[^,]+}}, i32* %t,{{.*}} !dbg ![[IF1:[0-9]+]]
-  // COLUMNS: store i32 %{{[^,]+}}, i32* %a,{{.*}} !dbg ![[IF2:[0-9]+]]
-  // COLUMNS: store i32 %{{[^,]+}}, i32* %b,{{.*}} !dbg ![[IF3:[0-9]+]]
+  // NONEST: store i32 %{{[^,]+}}, ptr %t,{{.*}} !dbg ![[IF1:[0-9]+]]
+  // NONEST: store i32 %{{[^,]+}}, ptr %a,{{.*}} !dbg ![[IF2:[0-9]+]]
+  // NONEST: store i32 %{{[^,]+}}, ptr %b,{{.*}} !dbg ![[IF3:[0-9]+]]
+  // NESTED: store i32 %{{[^,]+}}, ptr %t,{{.*}} !dbg ![[IF1:[0-9]+]]
+  // NESTED: store i32 %{{[^,]+}}, ptr %a,{{.*}} !dbg ![[IF2:[0-9]+]]
+  // NESTED: store i32 %{{[^,]+}}, ptr %b,{{.*}} !dbg ![[IF3:[0-9]+]]
+  // COLUMNS: store i32 %{{[^,]+}}, ptr %t,{{.*}} !dbg ![[IF1:[0-9]+]]
+  // COLUMNS: store i32 %{{[^,]+}}, ptr %a,{{.*}} !dbg ![[IF2:[0-9]+]]
+  // COLUMNS: store i32 %{{[^,]+}}, ptr %b,{{.*}} !dbg ![[IF3:[0-9]+]]
 
   int d = onearg(
       noargs());
   // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[DECLD:[0-9]+]]
   // NONEST: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[DECLD]]
-  // NONEST: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[DECLD]]
+  // NONEST: store i32 %{{[^,]+}}, ptr %d,{{.*}} !dbg ![[DECLD]]
   // NESTED: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[DNOARGS:[0-9]+]]
   // NESTED: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[DECLD:[0-9]+]]
-  // NESTED: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[DECLD]]
+  // NESTED: store i32 %{{[^,]+}}, ptr %d,{{.*}} !dbg ![[DECLD]]
   // COLUMNS: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[DNOARGS:[0-9]+]]
   // COLUMNS: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[DONEARG:[0-9]+]]
-  // COLUMNS: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[DECLD:[0-9]+]]
+  // COLUMNS: store i32 %{{[^,]+}}, ptr %d,{{.*}} !dbg ![[DECLD:[0-9]+]]
   
   d = onearg(noargs());
   // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[SETD:[0-9]+]]
   // NONEST: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[SETD]]
-  // NONEST: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[SETD]]
+  // NONEST: store i32 %{{[^,]+}}, ptr %d,{{.*}} !dbg ![[SETD]]
   // NESTED: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[SETD:[0-9]+]]
   // NESTED: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[SETD]]
-  // NESTED: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[SETD]]
+  // NESTED: store i32 %{{[^,]+}}, ptr %d,{{.*}} !dbg ![[SETD]]
   // COLUMNS: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[SETDNOARGS:[0-9]+]]
   // COLUMNS: call noundef i32 @{{.*}}onearg{{.*}}, !dbg ![[SETDONEARG:[0-9]+]]
-  // COLUMNS: store i32 %{{[^,]+}}, i32* %d,{{.*}} !dbg ![[SETD:[0-9]+]]
+  // COLUMNS: store i32 %{{[^,]+}}, ptr %d,{{.*}} !dbg ![[SETD:[0-9]+]]
 
   for (const auto x : range(noargs())) noargs1();
   // NONEST: call noundef i32 @{{.*}}noargs{{.*}}, !dbg ![[RANGEFOR:[0-9]+]]

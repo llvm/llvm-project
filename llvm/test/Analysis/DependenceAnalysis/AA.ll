@@ -5,9 +5,9 @@
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
-define void @test_no_noalias(i32* %A, i32* %B) {
-  store i32 1, i32* %A
-  store i32 2, i32* %B
+define void @test_no_noalias(ptr %A, ptr %B) {
+  store i32 1, ptr %A
+  store i32 2, ptr %B
   ret void
 }
 
@@ -15,9 +15,9 @@ define void @test_no_noalias(i32* %A, i32* %B) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
-define void @test_one_noalias(i32* noalias %A, i32* %B) {
-  store i32 1, i32* %A
-  store i32 2, i32* %B
+define void @test_one_noalias(ptr noalias %A, ptr %B) {
+  store i32 1, ptr %A
+  store i32 2, ptr %B
   ret void
 }
 
@@ -25,9 +25,9 @@ define void @test_one_noalias(i32* noalias %A, i32* %B) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
-define void @test_two_noalias(i32* noalias %A, i32* noalias %B) {
-  store i32 1, i32* %A
-  store i32 2, i32* %B
+define void @test_two_noalias(ptr noalias %A, ptr noalias %B) {
+  store i32 1, ptr %A
+  store i32 2, ptr %B
   ret void
 }
 
@@ -36,9 +36,9 @@ define void @test_two_noalias(i32* noalias %A, i32* noalias %B) {
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
 @g = global i32 5
-define void @test_global_alias(i32* %A) {
-  store i32 1, i32* %A
-  store i32 2, i32* @g
+define void @test_global_alias(ptr %A) {
+  store i32 1, ptr %A
+  store i32 2, ptr @g
   ret void
 }
 
@@ -46,9 +46,9 @@ define void @test_global_alias(i32* %A) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
-define void @test_global_noalias(i32* noalias %A) {
-  store i32 1, i32* %A
-  store i32 2, i32* @g
+define void @test_global_noalias(ptr noalias %A) {
+  store i32 1, ptr %A
+  store i32 2, ptr @g
   ret void
 }
 
@@ -61,11 +61,11 @@ define void @test_global_noalias(i32* noalias %A) {
 ; CHECK: da analyze - none!
 
 @a = global i16 5, align 2
-@b = global i16* @a, align 4
+@b = global ptr @a, align 4
 define void @test_global_size() {
-  %l0 = load i16*, i16** @b, align 4
-  %l1 = load i16, i16* %l0, align 2
-  store i16 1, i16* @a, align 2
+  %l0 = load ptr, ptr @b, align 4
+  %l1 = load i16, ptr %l0, align 2
+  store i16 1, ptr @a, align 2
   ret void
 }
 
@@ -73,9 +73,9 @@ define void @test_global_size() {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - confused!
 ; CHECK: da analyze - none!
-define void @test_tbaa_same(i32* %A, i32* %B) {
-  store i32 1, i32* %A, !tbaa !5
-  store i32 2, i32* %B, !tbaa !5
+define void @test_tbaa_same(ptr %A, ptr %B) {
+  store i32 1, ptr %A, !tbaa !5
+  store i32 2, ptr %B, !tbaa !5
   ret void
 }
 
@@ -83,9 +83,9 @@ define void @test_tbaa_same(i32* %A, i32* %B) {
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
 ; CHECK: da analyze - none!
-define void @test_tbaa_diff(i32* %A, i16* %B) {
-  store i32 1, i32* %A, !tbaa !5
-  store i16 2, i16* %B, !tbaa !9
+define void @test_tbaa_diff(ptr %A, ptr %B) {
+  store i32 1, ptr %A, !tbaa !5
+  store i16 2, ptr %B, !tbaa !9
   ret void
 }
 
@@ -93,7 +93,7 @@ define void @test_tbaa_diff(i32* %A, i16* %B) {
 ; CHECK: da analyze - input
 ; CHECK: da analyze - none
 ; CHECK: da analyze - output
-define void @tbaa_loop(i32 %I, i32 %J, i32* nocapture %A, i16* nocapture readonly %B) {
+define void @tbaa_loop(i32 %I, i32 %J, ptr nocapture %A, ptr nocapture readonly %B) {
 entry:
   %cmp = icmp ne i32 %J, 0
   %cmp122 = icmp ne i32 %I, 0
@@ -110,8 +110,8 @@ for.outer:
 for.inner:
   %j.us = phi i32 [ 0, %for.outer ], [ %inc.us, %for.inner ]
   %sum1.us = phi i32 [ 0, %for.outer ], [ %add.us, %for.inner ]
-  %arrayidx.us = getelementptr inbounds i16, i16* %B, i32 %j.us
-  %0 = load i16, i16* %arrayidx.us, align 4, !tbaa !9
+  %arrayidx.us = getelementptr inbounds i16, ptr %B, i32 %j.us
+  %0 = load i16, ptr %arrayidx.us, align 4, !tbaa !9
   %sext = sext i16 %0 to i32
   %add.us = add i32 %sext, %sum1.us
   %inc.us = add nuw i32 %j.us, 1
@@ -120,8 +120,8 @@ for.inner:
 
 for.latch:
   %add.us.lcssa = phi i32 [ %add.us, %for.inner ]
-  %arrayidx6.us = getelementptr inbounds i32, i32* %A, i32 %i.us
-  store i32 %add.us.lcssa, i32* %arrayidx6.us, align 4, !tbaa !5
+  %arrayidx6.us = getelementptr inbounds i32, ptr %A, i32 %i.us
+  store i32 %add.us.lcssa, ptr %arrayidx6.us, align 4, !tbaa !5
   %add8.us = add nuw i32 %i.us, 1
   %exitcond25 = icmp eq i32 %add8.us, %I
   br i1 %exitcond25, label %for.end.loopexit, label %for.outer

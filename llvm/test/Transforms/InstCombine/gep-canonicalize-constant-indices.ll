@@ -10,7 +10,7 @@ declare void @use(i1)
 
 ; The constant-indexed GEP instruction should be swapped to the end, even
 ; without merging.
-; result = (((i32*) p + a) + b) + 1
+; result = (((ptr) p + a) + b) + 1
 define ptr @basic(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @basic(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
@@ -47,7 +47,7 @@ define ptr @partialConstant2(ptr %p, i64 %a, i64 %b) {
 }
 
 ; Constant-indexed GEP are merged after swawpping.
-; result = ((i32*) p + a) + 3
+; result = ((ptr) p + a) + 3
 define ptr @merge(ptr %p, i64 %a) {
 ; CHECK-LABEL: @merge(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i32, ptr [[P:%.*]], i64 1
@@ -64,7 +64,7 @@ define ptr @merge(ptr %p, i64 %a) {
 ; Multiple constant-indexed GEP. Note that the first two cannot be merged at
 ; first, but after the second and third are merged, the result can be merged
 ; with the first one on the next pass.
-; result = (<3 x i32>*) ((i16*) ((i8*) ptr + a) + (a * b)) + 9
+; result = (ptr) ((ptr) ((ptr) ptr + a) + (a * b)) + 9
 define ptr @nested(ptr %p, i64 %a, i64 %b) {
 ; CHECK-LABEL: @nested(
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds <3 x i32>, ptr [[P:%.*]], i64 1

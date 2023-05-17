@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "LoopConvertUtils.h"
+#include "../utils/ASTUtils.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/Lambda.h"
@@ -21,14 +22,13 @@
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
+#include <optional>
 #include <string>
 #include <utility>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Tracks a stack of parent statements during traversal.
 ///
@@ -191,13 +191,7 @@ const Expr *digThroughConstructorsConversions(const Expr *E) {
 
 /// Returns true when two Exprs are equivalent.
 bool areSameExpr(ASTContext *Context, const Expr *First, const Expr *Second) {
-  if (!First || !Second)
-    return false;
-
-  llvm::FoldingSetNodeID FirstID, SecondID;
-  First->Profile(FirstID, *Context, true);
-  Second->Profile(SecondID, *Context, true);
-  return FirstID == SecondID;
+  return utils::areStatementsIdentical(First, Second, *Context, true);
 }
 
 /// Returns the DeclRefExpr represented by E, or NULL if there isn't one.
@@ -444,7 +438,7 @@ static bool arrayMatchesBoundExpr(ASTContext *Context,
       Context->getAsConstantArrayType(ArrayType);
   if (!ConstType)
     return false;
-  Optional<llvm::APSInt> ConditionSize =
+  std::optional<llvm::APSInt> ConditionSize =
       ConditionExpr->getIntegerConstantExpr(*Context);
   if (!ConditionSize)
     return false;
@@ -785,8 +779,8 @@ bool ForLoopIndexUseVisitor::TraverseLambdaCapture(LambdaExpr *LE,
                                                    const LambdaCapture *C,
                                                    Expr *Init) {
   if (C->capturesVariable()) {
-    const VarDecl *VDecl = C->getCapturedVar();
-    if (areSameVariable(IndexVar, cast<ValueDecl>(VDecl))) {
+    const ValueDecl *VDecl = C->getCapturedVar();
+    if (areSameVariable(IndexVar, VDecl)) {
       // FIXME: if the index is captured, it will count as an usage and the
       // alias (if any) won't work, because it is only used in case of having
       // exactly one usage.
@@ -910,6 +904,4 @@ bool VariableNamer::declarationExists(StringRef Symbol) {
   return DeclFinder.findUsages(SourceStmt);
 }
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize

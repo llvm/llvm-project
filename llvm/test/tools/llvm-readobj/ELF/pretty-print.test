@@ -9,14 +9,12 @@
 
 #      NO-PRETTY:[
 # NO-PRETTY-SAME:{
-# NO-PRETTY-SAME:"{{.*}}.pretty":{
 # NO-PRETTY-SAME:"FileSummary":{
 # NO-PRETTY-SAME:"File":"{{.*}}.pretty",
 # NO-PRETTY-SAME:"Format":"elf64-x86-64",
 # NO-PRETTY-SAME:"Arch":"x86_64",
 # NO-PRETTY-SAME:"AddressSize":"64bit",
 # NO-PRETTY-SAME:"LoadName":"<Not found>"
-# NO-PRETTY-SAME:}
 # NO-PRETTY-SAME:}
 # NO-PRETTY-SAME:}
 # NO-PRETTY-SAME:]
@@ -28,14 +26,12 @@
 
 #      PRETTY:[
 # PRETTY-NEXT:  {
-# PRETTY-NEXT:    "{{.*}}.pretty": {
-# PRETTY-NEXT:      "FileSummary": {
-# PRETTY-NEXT:        "File": "{{.*}}.pretty",
-# PRETTY-NEXT:        "Format": "elf64-x86-64",
-# PRETTY-NEXT:        "Arch": "x86_64",
-# PRETTY-NEXT:        "AddressSize": "64bit",
-# PRETTY-NEXT:        "LoadName": "<Not found>"
-# PRETTY-NEXT:      }
+# PRETTY-NEXT:    "FileSummary": {
+# PRETTY-NEXT:      "File": "{{.*}}.pretty",
+# PRETTY-NEXT:      "Format": "elf64-x86-64",
+# PRETTY-NEXT:      "Arch": "x86_64",
+# PRETTY-NEXT:      "AddressSize": "64bit",
+# PRETTY-NEXT:      "LoadName": "<Not found>"
 # PRETTY-NEXT:    }
 # PRETTY-NEXT:  }
 # PRETTY-NEXT:]

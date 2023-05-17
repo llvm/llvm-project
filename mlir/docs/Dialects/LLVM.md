@@ -105,6 +105,7 @@ values for thread-safety and concept parsimony reasons. Instead, regular values
 are produced by dedicated operations that have the corresponding semantics:
 [`llvm.mlir.constant`](#llvmmlirconstant-mlirllvmconstantop),
 [`llvm.mlir.undef`](#llvmmlirundef-mlirllvmundefop),
+[`llvm.mlir.poison`](#llvmmlirpoison-mlirllvmpoisonop),
 [`llvm.mlir.null`](#llvmmlirnull-mlirllvmnullop). Note how these operations are
 prefixed with `mlir.` to indicate that they don't belong to LLVM IR but are only
 necessary to model it in MLIR. The values produced by these operations are
@@ -159,6 +160,10 @@ is present, `external` linkage is assumed by default. Linkage is _distinct_ from
 MLIR symbol visibility.
 
 ### Attribute Pass-Through
+
+**WARNING:** this feature MUST NOT be used for any real workload. It is
+exclusively intended for quick prototyping. After that, attributes must be
+introduced as proper first-class concepts in the dialect.
 
 The LLVM dialect provides a mechanism to forward function-level attributes to
 LLVM IR using the `passthrough` attribute. This is an array attribute containing
@@ -482,3 +487,13 @@ modeled as first-class operations in the LLVM dialect. Target-specific LLVM IR
 intrinsics, e.g., NVVM or ROCDL, are modeled as separate dialects.
 
 [include "Dialects/LLVMIntrinsicOps.md"]
+
+### Debug Info
+
+Debug information within the LLVM dialect is represented using locations in
+combination with a set of attributes that mirror the DINode structure defined by
+the debug info metadata within LLVM IR. Debug scoping information is attached
+to LLVM IR dialect operations using a fused location (`FusedLoc`) whose metadata
+holds the DIScopeAttr representing the debug scope. Similarly, the subprogram
+of LLVM IR dialect `FuncOp` operations is attached using a fused location whose
+metadata is a DISubprogramAttr.

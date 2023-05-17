@@ -6,7 +6,7 @@
 
 ; unsigned to float v7i16 to v7f32
 
-define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwind {
+define void @convert_v7i16_v7f32(ptr %dst.addr, <7 x i16> %src) nounwind {
 ; X86-SSE2-LABEL: convert_v7i16_v7f32:
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -66,13 +66,13 @@ define void @convert_v7i16_v7f32(<7 x float>* %dst.addr, <7 x i16> %src) nounwin
 ; X64-SSE42-NEXT:    retq
 entry:
 	%val = uitofp <7 x i16> %src to <7 x float>
-	store <7 x float> %val, <7 x float>* %dst.addr, align 4
+	store <7 x float> %val, ptr %dst.addr, align 4
 	ret void
 }
 
 ; unsigned to float v3i8 to v3f32
 
-define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) nounwind {
+define void @convert_v3i8_to_v3f32(ptr %dst.addr, ptr %src.addr) nounwind {
 ; X86-SSE2-LABEL: convert_v3i8_to_v3f32:
 ; X86-SSE2:       # %bb.0: # %entry
 ; X86-SSE2-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -143,8 +143,8 @@ define void @convert_v3i8_to_v3f32(<3 x float>* %dst.addr, <3 x i8>* %src.addr) 
 ; X64-SSE42-NEXT:    movlps %xmm0, (%rdi)
 ; X64-SSE42-NEXT:    retq
 entry:
-	%load = load <3 x i8>, <3 x i8>* %src.addr, align 1
+	%load = load <3 x i8>, ptr %src.addr, align 1
 	%cvt = uitofp <3 x i8> %load to <3 x float>
-	store <3 x float> %cvt, <3 x float>* %dst.addr, align 4
+	store <3 x float> %cvt, ptr %dst.addr, align 4
 	ret void
 }

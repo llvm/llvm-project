@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++2b -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++23 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++20 -fsyntax-only -verify %s
 // RUN: %clang_cc1 -fcxx-exceptions -fexceptions -std=c++11 -fsyntax-only -verify %s
 class X {
@@ -38,7 +38,7 @@ namespace PR10142 {
       X x2;
       if (i)
         throw x2; // okay
-      throw x; // expected-error{{call to deleted constructor of 'PR10142::X'}}
+      throw x; // expected-error{{call to deleted constructor of 'X'}}
     } catch (...) {
     }
   }

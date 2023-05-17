@@ -406,7 +406,7 @@ void ThreadPlanStackMap::Update(ThreadList &current_threads,
     for (auto thread : current_threads.Threads()) {
       lldb::tid_t cur_tid = thread->GetID();
       if (!Find(cur_tid)) {
-        AddThread(*thread.get());
+        AddThread(*thread);
         thread->QueueBasePlan(true);
       }
     }

@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
@@ -128,7 +127,7 @@ void ArgList::AddAllArgsExcept(ArgStringList &Output,
 /// This is a nicer interface when you don't have a list of Ids to exclude.
 void ArgList::AddAllArgs(ArgStringList &Output,
                          ArrayRef<OptSpecifier> Ids) const {
-  ArrayRef<OptSpecifier> Exclude = None;
+  ArrayRef<OptSpecifier> Exclude = std::nullopt;
   AddAllArgsExcept(Output, Ids, Exclude);
 }
 
@@ -136,7 +135,7 @@ void ArgList::AddAllArgs(ArgStringList &Output,
 /// that accepts a single specifier, given the above which accepts any number.
 void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
                          OptSpecifier Id1, OptSpecifier Id2) const {
-  for (auto Arg: filtered(Id0, Id1, Id2)) {
+  for (auto *Arg : filtered(Id0, Id1, Id2)) {
     Arg->claim();
     Arg->render(*this, Output);
   }
@@ -144,7 +143,7 @@ void ArgList::AddAllArgs(ArgStringList &Output, OptSpecifier Id0,
 
 void ArgList::AddAllArgValues(ArgStringList &Output, OptSpecifier Id0,
                               OptSpecifier Id1, OptSpecifier Id2) const {
-  for (auto Arg : filtered(Id0, Id1, Id2)) {
+  for (auto *Arg : filtered(Id0, Id1, Id2)) {
     Arg->claim();
     const auto &Values = Arg->getValues();
     Output.append(Values.begin(), Values.end());
@@ -154,7 +153,7 @@ void ArgList::AddAllArgValues(ArgStringList &Output, OptSpecifier Id0,
 void ArgList::AddAllArgsTranslated(ArgStringList &Output, OptSpecifier Id0,
                                    const char *Translation,
                                    bool Joined) const {
-  for (auto Arg: filtered(Id0)) {
+  for (auto *Arg : filtered(Id0)) {
     Arg->claim();
 
     if (Joined) {

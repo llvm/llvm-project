@@ -27,20 +27,19 @@ entry:
   call void @llvm.dbg.value(metadata i32 %arg1, metadata !15, metadata !DIExpression()), !dbg !19
   call void @llvm.dbg.value(metadata i32 %arg2, metadata !16, metadata !DIExpression()), !dbg !20
   call void @llvm.dbg.value(metadata i32 %arg3, metadata !17, metadata !DIExpression()), !dbg !21
-  %0 = bitcast i32* %local1 to i8*, !dbg !22
   %call = tail call i32 (...) @getVal(), !dbg !23
   call void @llvm.dbg.value(metadata i32 %call, metadata !18, metadata !DIExpression()), !dbg !24
-  store i32 %call, i32* %local1, align 4, !dbg !24
+  store i32 %call, ptr %local1, align 4, !dbg !24
   %add = add nsw i32 %arg3, 3, !dbg !24
   %add1 = add nsw i32 %arg2, %arg1, !dbg !24
-  call void @llvm.dbg.value(metadata i32* %local1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !24
-  call void @foo(i32* nonnull %local1, i32 %arg2, i32 10, i32 15, i32 %add, i32 %add1), !dbg !24
+  call void @llvm.dbg.value(metadata ptr %local1, metadata !18, metadata !DIExpression(DW_OP_deref)), !dbg !24
+  call void @foo(ptr nonnull %local1, i32 %arg2, i32 10, i32 15, i32 %add, i32 %add1), !dbg !24
   ret void, !dbg !24
 }
 
 declare !dbg !4 dso_local i32 @getVal(...) local_unnamed_addr
 
-declare !dbg !5 dso_local void @foo(i32*, i32, i32, i32, i32, i32) local_unnamed_addr
+declare !dbg !5 dso_local void @foo(ptr, i32, i32, i32, i32, i32) local_unnamed_addr
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata)

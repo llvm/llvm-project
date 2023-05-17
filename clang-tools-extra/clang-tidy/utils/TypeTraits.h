@@ -11,15 +11,12 @@
 
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Type.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace utils {
-namespace type_traits {
+namespace clang::tidy::utils::type_traits {
 
 /// Returns `true` if `Type` is expensive to copy.
-llvm::Optional<bool> isExpensiveToCopy(QualType Type,
-                                       const ASTContext &Context);
+std::optional<bool> isExpensiveToCopy(QualType Type, const ASTContext &Context);
 
 /// Returns `true` if `Type` is trivially default constructible.
 bool isTriviallyDefaultConstructible(QualType Type, const ASTContext &Context);
@@ -37,9 +34,6 @@ bool hasNonTrivialMoveConstructor(QualType Type);
 /// Return true if `Type` has a non-trivial move assignment operator.
 bool hasNonTrivialMoveAssignment(QualType Type);
 
-} // namespace type_traits
-} // namespace utils
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::utils::type_traits
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_TYPETRAITS_H

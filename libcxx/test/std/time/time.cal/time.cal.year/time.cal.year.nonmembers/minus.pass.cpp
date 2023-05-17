@@ -17,7 +17,7 @@
 //   Returns: If x.ok() == true and y.ok() == true, returns a value m in the range
 //   [years{0}, years{11}] satisfying y + m == x.
 //   Otherwise the value returned is unspecified.
-//   [Example: January - February == years{11}. —end example]
+//   [Example: January - February == years{11}. -end example]
 
 #include <chrono>
 #include <type_traits>

@@ -5,7 +5,7 @@
 declare i32 @foo()
 
 ; Test register division.  The result is in the second of the two registers.
-define void @f1(i32 %dummy, i32 %a, i32 %b, i32 *%dest) {
+define void @f1(i32 %dummy, i32 %a, i32 %b, ptr %dest) {
 ; CHECK-LABEL: f1:
 ; CHECK-NOT: %r3
 ; CHECK: {{llill|lhi}} %r2, 0
@@ -14,12 +14,12 @@ define void @f1(i32 %dummy, i32 %a, i32 %b, i32 *%dest) {
 ; CHECK: st %r3, 0(%r5)
 ; CHECK: br %r14
   %div = udiv i32 %a, %b
-  store i32 %div, i32 *%dest
+  store i32 %div, ptr %dest
   ret void
 }
 
 ; Test register remainder.  The result is in the first of the two registers.
-define void @f2(i32 %dummy, i32 %a, i32 %b, i32 *%dest) {
+define void @f2(i32 %dummy, i32 %a, i32 %b, ptr %dest) {
 ; CHECK-LABEL: f2:
 ; CHECK-NOT: %r3
 ; CHECK: {{llill|lhi}} %r2, 0
@@ -28,7 +28,7 @@ define void @f2(i32 %dummy, i32 %a, i32 %b, i32 *%dest) {
 ; CHECK: st %r2, 0(%r5)
 ; CHECK: br %r14
   %rem = urem i32 %a, %b
-  store i32 %rem, i32 *%dest
+  store i32 %rem, ptr %dest
   ret void
 }
 
@@ -49,7 +49,7 @@ define i32 @f3(i32 %dummy1, i32 %a, i32 %b) {
 }
 
 ; Test memory division with no displacement.
-define void @f4(i32 %dummy, i32 %a, i32 *%src, i32 *%dest) {
+define void @f4(i32 %dummy, i32 %a, ptr %src, ptr %dest) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: %r3
 ; CHECK: {{llill|lhi}} %r2, 0
@@ -57,14 +57,14 @@ define void @f4(i32 %dummy, i32 %a, i32 *%src, i32 *%dest) {
 ; CHECK: dl %r2, 0(%r4)
 ; CHECK: st %r3, 0(%r5)
 ; CHECK: br %r14
-  %b = load i32, i32 *%src
+  %b = load i32, ptr %src
   %div = udiv i32 %a, %b
-  store i32 %div, i32 *%dest
+  store i32 %div, ptr %dest
   ret void
 }
 
 ; Test memory remainder with no displacement.
-define void @f5(i32 %dummy, i32 %a, i32 *%src, i32 *%dest) {
+define void @f5(i32 %dummy, i32 %a, ptr %src, ptr %dest) {
 ; CHECK-LABEL: f5:
 ; CHECK-NOT: %r3
 ; CHECK: {{llill|lhi}} %r2, 0
@@ -72,14 +72,14 @@ define void @f5(i32 %dummy, i32 %a, i32 *%src, i32 *%dest) {
 ; CHECK: dl %r2, 0(%r4)
 ; CHECK: st %r2, 0(%r5)
 ; CHECK: br %r14
-  %b = load i32, i32 *%src
+  %b = load i32, ptr %src
   %rem = urem i32 %a, %b
-  store i32 %rem, i32 *%dest
+  store i32 %rem, ptr %dest
   ret void
 }
 
 ; Test both memory division and memory remainder.
-define i32 @f6(i32 %dummy, i32 %a, i32 *%src) {
+define i32 @f6(i32 %dummy, i32 %a, ptr %src) {
 ; CHECK-LABEL: f6:
 ; CHECK-NOT: %r3
 ; CHECK: {{llill|lhi}} %r2, 0
@@ -88,7 +88,7 @@ define i32 @f6(i32 %dummy, i32 %a, i32 *%src) {
 ; CHECK-NOT: {{dl|dlr}}
 ; CHECK: or %r2, %r3
 ; CHECK: br %r14
-  %b = load i32, i32 *%src
+  %b = load i32, ptr %src
   %div = udiv i32 %a, %b
   %rem = urem i32 %a, %b
   %or = or i32 %rem, %div
@@ -96,60 +96,60 @@ define i32 @f6(i32 %dummy, i32 %a, i32 *%src) {
 }
 
 ; Check the high end of the DL range.
-define i32 @f7(i32 %dummy, i32 %a, i32 *%src) {
+define i32 @f7(i32 %dummy, i32 %a, ptr %src) {
 ; CHECK-LABEL: f7:
 ; CHECK: dl %r2, 524284(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131071
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131071
+  %b = load i32, ptr %ptr
   %rem = urem i32 %a, %b
   ret i32 %rem
 }
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define i32 @f8(i32 %dummy, i32 %a, i32 *%src) {
+define i32 @f8(i32 %dummy, i32 %a, ptr %src) {
 ; CHECK-LABEL: f8:
 ; CHECK: agfi %r4, 524288
 ; CHECK: dl %r2, 0(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 131072
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 131072
+  %b = load i32, ptr %ptr
   %rem = urem i32 %a, %b
   ret i32 %rem
 }
 
 ; Check the high end of the negative aligned DL range.
-define i32 @f9(i32 %dummy, i32 %a, i32 *%src) {
+define i32 @f9(i32 %dummy, i32 %a, ptr %src) {
 ; CHECK-LABEL: f9:
 ; CHECK: dl %r2, -4(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 -1
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 -1
+  %b = load i32, ptr %ptr
   %rem = urem i32 %a, %b
   ret i32 %rem
 }
 
 ; Check the low end of the DL range.
-define i32 @f10(i32 %dummy, i32 %a, i32 *%src) {
+define i32 @f10(i32 %dummy, i32 %a, ptr %src) {
 ; CHECK-LABEL: f10:
 ; CHECK: dl %r2, -524288(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 -131072
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 -131072
+  %b = load i32, ptr %ptr
   %rem = urem i32 %a, %b
   ret i32 %rem
 }
 
 ; Check the next word down, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define i32 @f11(i32 %dummy, i32 %a, i32 *%src) {
+define i32 @f11(i32 %dummy, i32 %a, ptr %src) {
 ; CHECK-LABEL: f11:
 ; CHECK: agfi %r4, -524292
 ; CHECK: dl %r2, 0(%r4)
 ; CHECK: br %r14
-  %ptr = getelementptr i32, i32 *%src, i64 -131073
-  %b = load i32, i32 *%ptr
+  %ptr = getelementptr i32, ptr %src, i64 -131073
+  %b = load i32, ptr %ptr
   %rem = urem i32 %a, %b
   ret i32 %rem
 }
@@ -161,38 +161,38 @@ define i32 @f12(i32 %dummy, i32 %a, i64 %src, i64 %index) {
 ; CHECK: br %r14
   %add1 = add i64 %src, %index
   %add2 = add i64 %add1, 524287
-  %ptr = inttoptr i64 %add2 to i32 *
-  %b = load i32, i32 *%ptr
+  %ptr = inttoptr i64 %add2 to ptr
+  %b = load i32, ptr %ptr
   %rem = urem i32 %a, %b
   ret i32 %rem
 }
 
 ; Check that divisions of spilled values can use DL rather than DLR.
-define i32 @f13(i32 *%ptr0) {
+define i32 @f13(ptr %ptr0) {
 ; CHECK-LABEL: f13:
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: dl {{%r[0-9]+}}, 16{{[04]}}(%r15)
 ; CHECK: br %r14
-  %ptr1 = getelementptr i32, i32 *%ptr0, i64 2
-  %ptr2 = getelementptr i32, i32 *%ptr0, i64 4
-  %ptr3 = getelementptr i32, i32 *%ptr0, i64 6
-  %ptr4 = getelementptr i32, i32 *%ptr0, i64 8
-  %ptr5 = getelementptr i32, i32 *%ptr0, i64 10
-  %ptr6 = getelementptr i32, i32 *%ptr0, i64 12
-  %ptr7 = getelementptr i32, i32 *%ptr0, i64 14
-  %ptr8 = getelementptr i32, i32 *%ptr0, i64 16
-  %ptr9 = getelementptr i32, i32 *%ptr0, i64 18
+  %ptr1 = getelementptr i32, ptr %ptr0, i64 2
+  %ptr2 = getelementptr i32, ptr %ptr0, i64 4
+  %ptr3 = getelementptr i32, ptr %ptr0, i64 6
+  %ptr4 = getelementptr i32, ptr %ptr0, i64 8
+  %ptr5 = getelementptr i32, ptr %ptr0, i64 10
+  %ptr6 = getelementptr i32, ptr %ptr0, i64 12
+  %ptr7 = getelementptr i32, ptr %ptr0, i64 14
+  %ptr8 = getelementptr i32, ptr %ptr0, i64 16
+  %ptr9 = getelementptr i32, ptr %ptr0, i64 18
 
-  %val0 = load i32, i32 *%ptr0
-  %val1 = load i32, i32 *%ptr1
-  %val2 = load i32, i32 *%ptr2
-  %val3 = load i32, i32 *%ptr3
-  %val4 = load i32, i32 *%ptr4
-  %val5 = load i32, i32 *%ptr5
-  %val6 = load i32, i32 *%ptr6
-  %val7 = load i32, i32 *%ptr7
-  %val8 = load i32, i32 *%ptr8
-  %val9 = load i32, i32 *%ptr9
+  %val0 = load i32, ptr %ptr0
+  %val1 = load i32, ptr %ptr1
+  %val2 = load i32, ptr %ptr2
+  %val3 = load i32, ptr %ptr3
+  %val4 = load i32, ptr %ptr4
+  %val5 = load i32, ptr %ptr5
+  %val6 = load i32, ptr %ptr6
+  %val7 = load i32, ptr %ptr7
+  %val8 = load i32, ptr %ptr8
+  %val9 = load i32, ptr %ptr9
 
   %ret = call i32 @foo()
 

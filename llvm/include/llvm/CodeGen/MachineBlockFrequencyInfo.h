@@ -13,11 +13,11 @@
 #ifndef LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H
 #define LLVM_CODEGEN_MACHINEBLOCKFREQUENCYINFO_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/Support/BlockFrequency.h"
 #include <cstdint>
 #include <memory>
+#include <optional>
 
 namespace llvm {
 
@@ -66,11 +66,13 @@ public:
   /// Compute the frequency of the block, relative to the entry block.
   /// This API assumes getEntryFreq() is non-zero.
   float getBlockFreqRelativeToEntryBlock(const MachineBasicBlock *MBB) const {
+    assert(getEntryFreq() != 0 && "getEntryFreq() should not return 0 here!");
     return getBlockFreq(MBB).getFrequency() * (1.0f / getEntryFreq());
   }
 
-  Optional<uint64_t> getBlockProfileCount(const MachineBasicBlock *MBB) const;
-  Optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
+  std::optional<uint64_t>
+  getBlockProfileCount(const MachineBasicBlock *MBB) const;
+  std::optional<uint64_t> getProfileCountFromFreq(uint64_t Freq) const;
 
   bool isIrrLoopHeader(const MachineBasicBlock *MBB) const;
 

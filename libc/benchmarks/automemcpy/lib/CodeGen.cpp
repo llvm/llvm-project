@@ -37,11 +37,11 @@
 
 #include "automemcpy/CodeGen.h"
 #include <cassert>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/STLExtras.h>
 #include <llvm/ADT/StringSet.h>
 #include <llvm/Support/FormatVariadic.h>
 #include <llvm/Support/raw_ostream.h>
+#include <optional>
 #include <set>
 
 namespace llvm {
@@ -117,8 +117,6 @@ struct Context {
   StringRef ElementOp; // copy, three_way_compare, splat_set, ...
   StringRef FixedSizeArgs;
   StringRef RuntimeSizeArgs;
-  StringRef AlignArg1;
-  StringRef AlignArg2;
   StringRef DefaultReturnValue;
 };
 // A detailed representation of the function implementation mapped from the
@@ -128,9 +126,9 @@ struct FunctionImplementation {
   StringRef Name;
   std::vector<Individual> Individuals;
   std::vector<Overlap> Overlaps;
-  Optional<Loop> Loop;
-  Optional<AlignedLoop> AlignedLoop;
-  Optional<Accelerator> Accelerator;
+  std::optional<Loop> Loop;
+  std::optional<AlignedLoop> AlignedLoop;
+  std::optional<Accelerator> Accelerator;
   ElementTypeClass ElementClass;
 };
 
@@ -143,8 +141,6 @@ static Context getCtx(FunctionType FT) {
             "copy",
             "(dst, src)",
             "(dst, src, size)",
-            "Arg::Dst",
-            "Arg::Src",
             ""};
   case FunctionType::MEMCMP:
     return {"int",
@@ -152,8 +148,6 @@ static Context getCtx(FunctionType FT) {
             "three_way_compare",
             "(lhs, rhs)",
             "(lhs, rhs, size)",
-            "Arg::Lhs",
-            "Arg::Rhs",
             "0"};
   case FunctionType::MEMSET:
     return {"void",
@@ -161,25 +155,22 @@ static Context getCtx(FunctionType FT) {
             "splat_set",
             "(dst, value)",
             "(dst, value, size)",
-            "Arg::Dst",
-            "Arg::Src",
             ""};
   case FunctionType::BZERO:
     return {"void",           "(char * dst, size_t size)",
             "splat_set",      "(dst, 0)",
-            "(dst, 0, size)", "Arg::Dst",
-            "Arg::Src",       ""};
+            "(dst, 0, size)", ""};
   default:
     report_fatal_error("Not yet implemented");
   }
 }
 
-static StringRef getAligntoString(const Context &Ctx, const AlignArg &AlignTo) {
+static StringRef getAligntoString(const AlignArg &AlignTo) {
   switch (AlignTo) {
   case AlignArg::_1:
-    return Ctx.AlignArg1;
+    return "Arg::P1";
   case AlignArg::_2:
-    return Ctx.AlignArg2;
+    return "Arg::P2";
   case AlignArg::ARRAY_SIZE:
     report_fatal_error("logic error");
   }
@@ -295,9 +286,9 @@ getImplementation(const NamedFunctionDescriptor &NamedFD) {
   if (const auto &L = FD.Loop)
     Impl.Loop = Loop{L->Span.End, ElementType{L->BlockSize}};
   if (const auto &AL = FD.AlignedLoop)
-    Impl.AlignedLoop = AlignedLoop{
-        AL->Loop.Span.End, ElementType{AL->Loop.BlockSize},
-        ElementType{AL->Alignment}, getAligntoString(Impl.Ctx, AL->AlignTo)};
+    Impl.AlignedLoop =
+        AlignedLoop{AL->Loop.Span.End, ElementType{AL->Loop.BlockSize},
+                    ElementType{AL->Alignment}, getAligntoString(AL->AlignTo)};
   if (const auto &A = FD.Accelerator)
     Impl.Accelerator = Accelerator{A->Span.End};
   return Impl;
@@ -319,11 +310,11 @@ namespace descriptors {
 // e.g.
 // ArrayRef<NamedFunctionDescriptor> getFunctionDescriptors() {
 //   static constexpr NamedFunctionDescriptor kDescriptors[] = {
-//     {"memcpy_0xE00E29EE73994E2B",{FunctionType::MEMCPY,llvm::None,llvm::None,llvm::None,llvm::None,Accelerator{{0,kMaxSize}},ElementTypeClass::NATIVE}},
-//     {"memcpy_0x8661D80472487AB5",{FunctionType::MEMCPY,Contiguous{{0,1}},llvm::None,llvm::None,llvm::None,Accelerator{{1,kMaxSize}},ElementTypeClass::NATIVE}},
+//     {"memcpy_0xE00E29EE73994E2B",{FunctionType::MEMCPY,std::nullopt,std::nullopt,std::nullopt,std::nullopt,Accelerator{{0,kMaxSize}},ElementTypeClass::NATIVE}},
+//     {"memcpy_0x8661D80472487AB5",{FunctionType::MEMCPY,Contiguous{{0,1}},std::nullopt,std::nullopt,std::nullopt,Accelerator{{1,kMaxSize}},ElementTypeClass::NATIVE}},
 //     ...
 //   };
-//   return makeArrayRef(kDescriptors);
+//   return ArrayRef(kDescriptors);
 // }
 
 static raw_ostream &operator<<(raw_ostream &Stream, const SizeSpan &SS) {
@@ -386,10 +377,10 @@ static raw_ostream &operator<<(raw_ostream &Stream, const FunctionType &T) {
 }
 template <typename T>
 static raw_ostream &operator<<(raw_ostream &Stream,
-                               const llvm::Optional<T> &MaybeT) {
+                               const std::optional<T> &MaybeT) {
   if (MaybeT)
     return Stream << *MaybeT;
-  return Stream << "llvm::None";
+  return Stream << "std::nullopt";
 }
 static raw_ostream &operator<<(raw_ostream &Stream,
                                const FunctionDescriptor &FD) {
@@ -424,7 +415,7 @@ static void Serialize(raw_ostream &Stream,
     Stream << kIndent << kIndent << Descriptors[I] << ",\n";
   }
   Stream << R"(  };
-  return makeArrayRef(kDescriptors);
+  return ArrayRef(kDescriptors);
 }
 )";
 }
@@ -443,7 +434,7 @@ namespace configurations {
 //     {Wrap<memcpy_0x8661D80472487AB5>, "memcpy_0x8661D80472487AB5"},
 //     ...
 //   };
-//   return llvm::makeArrayRef(kConfigurations);
+//   return llvm::ArrayRef(kConfigurations);
 // }
 
 // The `Wrap` template function is provided in the `Main` function below.
@@ -518,7 +509,7 @@ static raw_ostream &operator<<(raw_ostream &Stream, const Configuration &C) {
            << " kConfigurations[] = {\n";
     Stream << C.Descriptors;
     Stream << kIndent << "};\n";
-    Stream << kIndent << "return llvm::makeArrayRef(kConfigurations);\n";
+    Stream << kIndent << "return llvm::ArrayRef(kConfigurations);\n";
   }
   Stream << "}\n";
   return Stream;

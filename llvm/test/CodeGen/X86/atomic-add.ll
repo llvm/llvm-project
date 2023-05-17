@@ -4,7 +4,7 @@
 
 ; rdar://7103704
 
-define void @sub1(i32* nocapture %p, i32 %v) nounwind ssp {
+define void @sub1(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: sub1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock subl %esi, (%rdi)
@@ -15,11 +15,11 @@ define void @sub1(i32* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subl %esi, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i32* %p, i32 %v monotonic
+  %0 = atomicrmw sub ptr %p, i32 %v monotonic
   ret void
 }
 
-define void @inc4(i64* nocapture %p) nounwind ssp {
+define void @inc4(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: inc4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock incq (%rdi)
@@ -30,11 +30,11 @@ define void @inc4(i64* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addq $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i64* %p, i64 1 monotonic
+  %0 = atomicrmw add ptr %p, i64 1 monotonic
   ret void
 }
 
-define void @add8(i64* nocapture %p) nounwind ssp {
+define void @add8(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: add8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock addq $2, (%rdi)
@@ -45,11 +45,11 @@ define void @add8(i64* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addq $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i64* %p, i64 2 monotonic
+  %0 = atomicrmw add ptr %p, i64 2 monotonic
   ret void
 }
 
-define void @add4(i64* nocapture %p, i32 %v) nounwind ssp {
+define void @add4(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: add4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %esi, %rax
@@ -63,11 +63,11 @@ define void @add4(i64* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    retq
 entry:
   %0 = sext i32 %v to i64		; <i64> [#uses=1]
-  %1 = atomicrmw add i64* %p, i64 %0 monotonic
+  %1 = atomicrmw add ptr %p, i64 %0 monotonic
   ret void
 }
 
-define void @inc3(i8* nocapture %p) nounwind ssp {
+define void @inc3(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: inc3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock incb (%rdi)
@@ -78,11 +78,11 @@ define void @inc3(i8* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addb $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i8* %p, i8 1 monotonic
+  %0 = atomicrmw add ptr %p, i8 1 monotonic
   ret void
 }
 
-define void @add7(i8* nocapture %p) nounwind ssp {
+define void @add7(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: add7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock addb $2, (%rdi)
@@ -93,11 +93,11 @@ define void @add7(i8* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addb $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i8* %p, i8 2 monotonic
+  %0 = atomicrmw add ptr %p, i8 2 monotonic
   ret void
 }
 
-define void @add3(i8* nocapture %p, i32 %v) nounwind ssp {
+define void @add3(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: add3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock addb %sil, (%rdi)
@@ -109,11 +109,11 @@ define void @add3(i8* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    retq
 entry:
   %0 = trunc i32 %v to i8		; <i8> [#uses=1]
-  %1 = atomicrmw add i8* %p, i8 %0 monotonic
+  %1 = atomicrmw add ptr %p, i8 %0 monotonic
   ret void
 }
 
-define void @inc2(i16* nocapture %p) nounwind ssp {
+define void @inc2(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: inc2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock incw (%rdi)
@@ -124,11 +124,11 @@ define void @inc2(i16* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addw $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i16* %p, i16 1 monotonic
+  %0 = atomicrmw add ptr %p, i16 1 monotonic
   ret void
 }
 
-define void @add6(i16* nocapture %p) nounwind ssp {
+define void @add6(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: add6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock addw $2, (%rdi)
@@ -139,11 +139,11 @@ define void @add6(i16* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addw $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i16* %p, i16 2 monotonic
+  %0 = atomicrmw add ptr %p, i16 2 monotonic
   ret void
 }
 
-define void @add2(i16* nocapture %p, i32 %v) nounwind ssp {
+define void @add2(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: add2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock addw %si, (%rdi)
@@ -155,11 +155,11 @@ define void @add2(i16* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    retq
 entry:
 	%0 = trunc i32 %v to i16		; <i16> [#uses=1]
-  %1 = atomicrmw add i16* %p, i16 %0 monotonic
+  %1 = atomicrmw add ptr %p, i16 %0 monotonic
   ret void
 }
 
-define void @inc1(i32* nocapture %p) nounwind ssp {
+define void @inc1(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: inc1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock incl (%rdi)
@@ -170,11 +170,11 @@ define void @inc1(i32* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addl $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i32* %p, i32 1 monotonic
+  %0 = atomicrmw add ptr %p, i32 1 monotonic
   ret void
 }
 
-define void @add5(i32* nocapture %p) nounwind ssp {
+define void @add5(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: add5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock addl $2, (%rdi)
@@ -185,11 +185,11 @@ define void @add5(i32* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addl $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i32* %p, i32 2 monotonic
+  %0 = atomicrmw add ptr %p, i32 2 monotonic
   ret void
 }
 
-define void @add1(i32* nocapture %p, i32 %v) nounwind ssp {
+define void @add1(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: add1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock addl %esi, (%rdi)
@@ -200,11 +200,11 @@ define void @add1(i32* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    lock addl %esi, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw add i32* %p, i32 %v monotonic
+  %0 = atomicrmw add ptr %p, i32 %v monotonic
   ret void
 }
 
-define void @dec4(i64* nocapture %p) nounwind ssp {
+define void @dec4(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: dec4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock decq (%rdi)
@@ -215,11 +215,11 @@ define void @dec4(i64* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subq $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i64* %p, i64 1 monotonic
+  %0 = atomicrmw sub ptr %p, i64 1 monotonic
   ret void
 }
 
-define void @sub8(i64* nocapture %p) nounwind ssp {
+define void @sub8(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: sub8:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock subq $2, (%rdi)
@@ -230,11 +230,11 @@ define void @sub8(i64* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subq $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i64* %p, i64 2 monotonic
+  %0 = atomicrmw sub ptr %p, i64 2 monotonic
   ret void
 }
 
-define void @sub4(i64* nocapture %p, i32 %v) nounwind ssp {
+define void @sub4(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: sub4:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    movslq %esi, %rax
@@ -248,11 +248,11 @@ define void @sub4(i64* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    retq
 entry:
 	%0 = sext i32 %v to i64		; <i64> [#uses=1]
-  %1 = atomicrmw sub i64* %p, i64 %0 monotonic
+  %1 = atomicrmw sub ptr %p, i64 %0 monotonic
   ret void
 }
 
-define void @dec3(i8* nocapture %p) nounwind ssp {
+define void @dec3(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: dec3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock decb (%rdi)
@@ -263,11 +263,11 @@ define void @dec3(i8* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subb $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i8* %p, i8 1 monotonic
+  %0 = atomicrmw sub ptr %p, i8 1 monotonic
   ret void
 }
 
-define void @sub7(i8* nocapture %p) nounwind ssp {
+define void @sub7(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: sub7:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock subb $2, (%rdi)
@@ -278,11 +278,11 @@ define void @sub7(i8* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subb $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i8* %p, i8 2 monotonic
+  %0 = atomicrmw sub ptr %p, i8 2 monotonic
   ret void
 }
 
-define void @sub3(i8* nocapture %p, i32 %v) nounwind ssp {
+define void @sub3(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: sub3:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock subb %sil, (%rdi)
@@ -294,11 +294,11 @@ define void @sub3(i8* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    retq
 entry:
 	%0 = trunc i32 %v to i8		; <i8> [#uses=1]
-  %1 = atomicrmw sub i8* %p, i8 %0 monotonic
+  %1 = atomicrmw sub ptr %p, i8 %0 monotonic
   ret void
 }
 
-define void @dec2(i16* nocapture %p) nounwind ssp {
+define void @dec2(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: dec2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock decw (%rdi)
@@ -309,11 +309,11 @@ define void @dec2(i16* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subw $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i16* %p, i16 1 monotonic
+  %0 = atomicrmw sub ptr %p, i16 1 monotonic
   ret void
 }
 
-define void @sub6(i16* nocapture %p) nounwind ssp {
+define void @sub6(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: sub6:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock subw $2, (%rdi)
@@ -324,11 +324,11 @@ define void @sub6(i16* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subw $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i16* %p, i16 2 monotonic
+  %0 = atomicrmw sub ptr %p, i16 2 monotonic
   ret void
 }
 
-define void @sub2(i16* nocapture %p, i32 %v) nounwind ssp {
+define void @sub2(ptr nocapture %p, i32 %v) nounwind ssp {
 ; CHECK-LABEL: sub2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock subw %si, (%rdi)
@@ -340,11 +340,11 @@ define void @sub2(i16* nocapture %p, i32 %v) nounwind ssp {
 ; SLOW_INC-NEXT:    retq
 entry:
 	%0 = trunc i32 %v to i16		; <i16> [#uses=1]
-  %1 = atomicrmw sub i16* %p, i16 %0 monotonic
+  %1 = atomicrmw sub ptr %p, i16 %0 monotonic
   ret void
 }
 
-define void @dec1(i32* nocapture %p) nounwind ssp {
+define void @dec1(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: dec1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock decl (%rdi)
@@ -355,11 +355,11 @@ define void @dec1(i32* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subl $1, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i32* %p, i32 1 monotonic
+  %0 = atomicrmw sub ptr %p, i32 1 monotonic
   ret void
 }
 
-define void @sub5(i32* nocapture %p) nounwind ssp {
+define void @sub5(ptr nocapture %p) nounwind ssp {
 ; CHECK-LABEL: sub5:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    lock subl $2, (%rdi)
@@ -370,6 +370,6 @@ define void @sub5(i32* nocapture %p) nounwind ssp {
 ; SLOW_INC-NEXT:    lock subl $2, (%rdi)
 ; SLOW_INC-NEXT:    retq
 entry:
-  %0 = atomicrmw sub i32* %p, i32 2 monotonic
+  %0 = atomicrmw sub ptr %p, i32 2 monotonic
   ret void
 }

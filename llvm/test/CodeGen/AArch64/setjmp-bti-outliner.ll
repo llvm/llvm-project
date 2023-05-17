@@ -15,7 +15,7 @@
 
 ; C source
 ; --------
-; extern int setjmp(void*);
+; extern int setjmp(ptr);
 ;
 ; int f(int a, int b, int c, int d) {
 ;   setjmp(0);
@@ -39,7 +39,7 @@ define i32 @f(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) {
 ; NOBTI-NEXT:   bl      OUTLINED_FUNCTION_1
 
 entry:
-  %call = call i32 @setjmp(i8* noundef null) #0
+  %call = call i32 @setjmp(ptr noundef null) #0
   %add = add nsw i32 %b, %a
   %mul = mul nsw i32 %add, %a
   %add1 = add nsw i32 %d, %c
@@ -48,7 +48,7 @@ entry:
   ret i32 %add2
 }
 
-declare i32 @setjmp(i8* noundef) #0
+declare i32 @setjmp(ptr noundef) #0
 
 define i32 @g(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) {
 ; BTI-LABEL: g:
@@ -62,7 +62,7 @@ define i32 @g(i32 noundef %a, i32 noundef %b, i32 noundef %c, i32 noundef %d) {
 ; NOBTI-NEXT:   bl      OUTLINED_FUNCTION_1
 
 entry:
-  %call = call i32 @setjmp(i8* noundef null) #0
+  %call = call i32 @setjmp(ptr noundef null) #0
   %add = add nsw i32 %b, %a
   %mul = mul nsw i32 %add, %a
   %add1 = add nsw i32 %d, %c

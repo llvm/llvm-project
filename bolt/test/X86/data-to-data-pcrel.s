@@ -4,7 +4,7 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: ld.lld %t.o -o %t.exe -q --unresolved-symbols=ignore-all
 # RUN: llvm-readelf -Wr %t.exe | FileCheck %s
-# RUN: llvm-bolt -strict %t.exe -relocs -o /dev/null
+# RUN: llvm-bolt --strict %t.exe --relocs -o /dev/null
 
   .text
   .globl _start

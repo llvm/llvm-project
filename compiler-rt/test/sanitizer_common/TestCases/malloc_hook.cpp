@@ -1,8 +1,13 @@
 // RUN: %clangxx -O2 %s -o %t && %run %t 2>&1 | FileCheck %s
 
 // Malloc/free hooks are not supported on Windows.
-// XFAIL: windows-msvc
+// XFAIL: target={{.*windows-msvc.*}}
+
+// Must not be implemented, no other reason to install interceptors.
 // XFAIL: ubsan
+
+// FIXME: Implement.
+// XFAIL: hwasan
 
 #include <stdlib.h>
 #include <unistd.h>

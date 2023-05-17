@@ -24,7 +24,7 @@ __attribute__((no_sanitize("shadow-call-stack")))
 #endif
 int foo(int *a) { return *a; }
 
-// CHECK: define i32 @foo(i32* %a)
+// CHECK: define i32 @foo(ptr %a)
 
 // IGNORELISTED-NOT: attributes {{.*}}shadowcallstack{{.*}}
 // NOTIGNORELISTED: attributes {{.*}}shadowcallstack{{.*}}

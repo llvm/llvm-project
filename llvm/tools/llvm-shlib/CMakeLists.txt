@@ -39,6 +39,7 @@ if(LLVM_BUILD_LLVM_DYLIB)
      OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "OpenBSD")
      OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "Fuchsia")
      OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "DragonFly")
+     OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "Android")
      OR ("${CMAKE_SYSTEM_NAME}" STREQUAL "SunOS")) # FIXME: It should be "GNU ld for elf"
     configure_file(
     ${CMAKE_CURRENT_SOURCE_DIR}/simple_version_script.map.in
@@ -62,6 +63,10 @@ if(LLVM_BUILD_LLVM_DYLIB)
   endif()
 
   target_link_libraries(LLVM PRIVATE ${LIB_NAMES})
+
+  if(LLVM_ENABLE_THREADS AND NOT HAVE_CXX_ATOMICS64_WITHOUT_LIB)
+    target_link_libraries(LLVM PUBLIC atomic)
+  endif()
 
   if (APPLE)
     set_property(TARGET LLVM APPEND_STRING PROPERTY
@@ -88,7 +93,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND NOT MSVC)
 
   set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_BINARY_DIR}/libllvm-c.exports)
 
-  set(LIB_DIR ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib${LLVM_LIBDIR_SUFFIX})
+  set(LIB_DIR ${LLVM_LIBRARY_DIR})
   set(LIB_NAME ${LIB_DIR}/${CMAKE_SHARED_LIBRARY_PREFIX}LLVM)
   set(LIB_PATH ${LIB_NAME}${CMAKE_SHARED_LIBRARY_SUFFIX})
   set(LIB_EXPORTS_PATH ${LIB_NAME}.exports)
@@ -136,7 +141,7 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
 
   # Get the full name to the libs so the python script understands them.
   foreach(lib ${LIB_NAMES})
-    list(APPEND FULL_LIB_NAMES ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/lib/${lib}.lib)
+    list(APPEND FULL_LIB_NAMES ${LLVM_LIBRARY_DIR}/${lib}.lib)
   endforeach()
 
   # Need to separate lib names with newlines.
@@ -161,21 +166,10 @@ if(LLVM_BUILD_LLVM_C_DYLIB AND MSVC)
   set(GEN_SCRIPT ${CMAKE_CURRENT_SOURCE_DIR}/gen-msvc-exports.py)
 
   set(LLVM_EXPORTED_SYMBOL_FILE ${LLVM_BINARY_DIR}/${CMAKE_CFG_INTDIR}/libllvm-c.exports)
-  if(NOT LLVM_NM)
-    if(CMAKE_CROSSCOMPILING)
-      build_native_tool(llvm-nm llvm_nm)
-      set(llvm_nm_target "${llvm_nm}")
-    else()
-      set(llvm_nm $<TARGET_FILE:llvm-nm>)
-      set(llvm_nm_target llvm-nm)
-    endif()
-  else()
-    set(llvm_nm ${LLVM_NM})
-    set(llvm_nm_target "")
-  endif()
+  get_host_tool_path(llvm-nm LLVM_NM llvm_nm_exe llvm_nm_target)
 
   add_custom_command(OUTPUT ${LLVM_EXPORTED_SYMBOL_FILE}
-    COMMAND "${Python3_EXECUTABLE}" ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
+    COMMAND "${Python3_EXECUTABLE}" ${GEN_SCRIPT} --libsfile ${LIBSFILE} ${GEN_UNDERSCORE} --nm "${llvm_nm_exe}" -o ${LLVM_EXPORTED_SYMBOL_FILE}
     DEPENDS ${LIB_NAMES} ${llvm_nm_target}
     COMMENT "Generating export list for LLVM-C"
     VERBATIM )

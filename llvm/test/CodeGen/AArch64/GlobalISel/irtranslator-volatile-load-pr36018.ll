@@ -7,7 +7,7 @@ declare void @bar(i32)
 define hidden void @foo() {
 ; CHECK-NOT: ldrh
 ; CHECK: ldrsh
-  %1 = load volatile i16, i16* @g, align 2
+  %1 = load volatile i16, ptr @g, align 2
   %2 = sext i16 %1 to i32
   call void @bar(i32 %2)
   ret void

@@ -14,7 +14,6 @@
 #ifndef LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 #define LLVM_DEBUGINFO_SYMBOLIZE_DIPRINTER_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include <memory>
@@ -34,7 +33,7 @@ class SourceCode;
 
 struct Request {
   StringRef ModuleName;
-  Optional<uint64_t> Address;
+  std::optional<uint64_t> Address;
 };
 
 class DIPrinter {
@@ -52,8 +51,7 @@ public:
                                    StringRef Command) = 0;
 
   virtual bool printError(const Request &Request,
-                          const ErrorInfoBase &ErrorInfo,
-                          StringRef ErrorBanner) = 0;
+                          const ErrorInfoBase &ErrorInfo) = 0;
 
   virtual void listBegin() = 0;
   virtual void listEnd() = 0;
@@ -67,10 +65,12 @@ struct PrinterConfig {
   int SourceContextLines;
 };
 
+using ErrorHandler = function_ref<void(const ErrorInfoBase &, StringRef)>;
+
 class PlainPrinterBase : public DIPrinter {
 protected:
   raw_ostream &OS;
-  raw_ostream &ES;
+  ErrorHandler ErrHandler;
   PrinterConfig Config;
 
   void print(const DILineInfo &Info, bool Inlined);
@@ -86,8 +86,8 @@ private:
   void printHeader(uint64_t Address);
 
 public:
-  PlainPrinterBase(raw_ostream &OS, raw_ostream &ES, PrinterConfig &Config)
-      : OS(OS), ES(ES), Config(Config) {}
+  PlainPrinterBase(raw_ostream &OS, ErrorHandler EH, PrinterConfig &Config)
+      : OS(OS), ErrHandler(EH), Config(Config) {}
 
   void print(const Request &Request, const DILineInfo &Info) override;
   void print(const Request &Request, const DIInliningInfo &Info) override;
@@ -97,8 +97,8 @@ public:
 
   void printInvalidCommand(const Request &Request, StringRef Command) override;
 
-  bool printError(const Request &Request, const ErrorInfoBase &ErrorInfo,
-                  StringRef ErrorBanner) override;
+  bool printError(const Request &Request,
+                  const ErrorInfoBase &ErrorInfo) override;
 
   void listBegin() override {}
   void listEnd() override {}
@@ -111,8 +111,8 @@ private:
   void printFooter() override;
 
 public:
-  LLVMPrinter(raw_ostream &OS, raw_ostream &ES, PrinterConfig &Config)
-      : PlainPrinterBase(OS, ES, Config) {}
+  LLVMPrinter(raw_ostream &OS, ErrorHandler EH, PrinterConfig &Config)
+      : PlainPrinterBase(OS, EH, Config) {}
 };
 
 class GNUPrinter : public PlainPrinterBase {
@@ -120,8 +120,9 @@ private:
   void printSimpleLocation(StringRef Filename, const DILineInfo &Info) override;
 
 public:
-  GNUPrinter(raw_ostream &OS, raw_ostream &ES, PrinterConfig &Config)
-      : PlainPrinterBase(OS, ES, Config) {}
+  GNUPrinter(raw_ostream &OS, ErrorHandler EH, PrinterConfig &Config)
+      : PlainPrinterBase(OS, EH, Config) {}
+
 };
 
 class JSONPrinter : public DIPrinter {
@@ -148,8 +149,8 @@ public:
 
   void printInvalidCommand(const Request &Request, StringRef Command) override;
 
-  bool printError(const Request &Request, const ErrorInfoBase &ErrorInfo,
-                  StringRef ErrorBanner) override;
+  bool printError(const Request &Request,
+                  const ErrorInfoBase &ErrorInfo) override;
 
   void listBegin() override;
   void listEnd() override;

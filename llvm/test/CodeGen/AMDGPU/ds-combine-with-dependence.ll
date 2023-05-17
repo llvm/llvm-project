@@ -9,27 +9,23 @@
 ; GCN-DAG: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 ; GCN-DAG: ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:7 offset1:8
 ; GCN: s_waitcnt lgkmcnt({{[0-9]+}})
-define amdgpu_kernel void @ds_combine_nodep(float addrspace(1)* %out, float addrspace(3)* %inptr) {
+define amdgpu_kernel void @ds_combine_nodep(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
 
-  %base = bitcast float addrspace(3)* %inptr to i8 addrspace(3)*
-  %addr0 = getelementptr i8, i8 addrspace(3)* %base, i32 24
-  %tmp0 = bitcast i8 addrspace(3)* %addr0 to float addrspace(3)*
-  %vaddr0 = bitcast float addrspace(3)* %tmp0 to <3 x float> addrspace(3)*
-  %load0 = load <3 x float>, <3 x float> addrspace(3)* %vaddr0, align 4
+  %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 24
+  %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
   %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
-  %tmp2 = getelementptr float, float addrspace(3)* %inptr, i32 26
-  %vaddrs = bitcast float addrspace(3)* %tmp2 to <2 x float> addrspace(3)*
-  store <2 x float> %data, <2 x float> addrspace(3)* %vaddrs, align 4
+  %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26
+  store <2 x float> %data, ptr addrspace(3) %tmp2, align 4
 
-  %vaddr1 = getelementptr float, float addrspace(3)* %inptr, i32 7
-  %v1 = load float, float addrspace(3)* %vaddr1, align 4
+  %vaddr1 = getelementptr float, ptr addrspace(3) %inptr, i32 7
+  %v1 = load float, ptr addrspace(3) %vaddr1, align 4
 
   %sum = fadd float %v0, %v1
-  store float %sum, float addrspace(1)* %out, align 4
+  store float %sum, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -41,27 +37,23 @@ define amdgpu_kernel void @ds_combine_nodep(float addrspace(1)* %out, float addr
 
 ; GCN:      ds_read2_b32 v{{\[[0-9]+:[0-9]+\]}}, v{{[0-9]+}} offset0:7 offset1:27
 ; GCN-NEXT: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
-define amdgpu_kernel void @ds_combine_WAR(float addrspace(1)* %out, float addrspace(3)* %inptr) {
+define amdgpu_kernel void @ds_combine_WAR(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
 
-  %base = bitcast float addrspace(3)* %inptr to i8 addrspace(3)*
-  %addr0 = getelementptr i8, i8 addrspace(3)* %base, i32 100
-  %tmp0 = bitcast i8 addrspace(3)* %addr0 to float addrspace(3)*
-  %vaddr0 = bitcast float addrspace(3)* %tmp0 to <3 x float> addrspace(3)*
-  %load0 = load <3 x float>, <3 x float> addrspace(3)* %vaddr0, align 4
+  %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 100
+  %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
   %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
-  %tmp2 = getelementptr float, float addrspace(3)* %inptr, i32 26
-  %vaddrs = bitcast float addrspace(3)* %tmp2 to <2 x float> addrspace(3)*
-  store <2 x float> %data, <2 x float> addrspace(3)* %vaddrs, align 4
+  %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26
+  store <2 x float> %data, ptr addrspace(3) %tmp2, align 4
 
-  %vaddr1 = getelementptr float, float addrspace(3)* %inptr, i32 7
-  %v1 = load float, float addrspace(3)* %vaddr1, align 4
+  %vaddr1 = getelementptr float, ptr addrspace(3) %inptr, i32 7
+  %v1 = load float, ptr addrspace(3) %vaddr1, align 4
 
   %sum = fadd float %v0, %v1
-  store float %sum, float addrspace(1)* %out, align 4
+  store float %sum, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -75,27 +67,23 @@ define amdgpu_kernel void @ds_combine_WAR(float addrspace(1)* %out, float addrsp
 ; GCN:      ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 ; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:32
 ; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:104
-define amdgpu_kernel void @ds_combine_RAW(float addrspace(1)* %out, float addrspace(3)* %inptr) {
+define amdgpu_kernel void @ds_combine_RAW(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
 
-  %base = bitcast float addrspace(3)* %inptr to i8 addrspace(3)*
-  %addr0 = getelementptr i8, i8 addrspace(3)* %base, i32 24
-  %tmp0 = bitcast i8 addrspace(3)* %addr0 to float addrspace(3)*
-  %vaddr0 = bitcast float addrspace(3)* %tmp0 to <3 x float> addrspace(3)*
-  %load0 = load <3 x float>, <3 x float> addrspace(3)* %vaddr0, align 4
+  %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 24
+  %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
   %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
-  %tmp2 = getelementptr float, float addrspace(3)* %inptr, i32 26
-  %vaddrs = bitcast float addrspace(3)* %tmp2 to <2 x float> addrspace(3)*
-  store <2 x float> %data, <2 x float> addrspace(3)* %vaddrs, align 4
+  %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26
+  store <2 x float> %data, ptr addrspace(3) %tmp2, align 4
 
-  %vaddr1 = getelementptr float, float addrspace(3)* %inptr, i32 26
-  %v1 = load float, float addrspace(3)* %vaddr1, align 4
+  %vaddr1 = getelementptr float, ptr addrspace(3) %inptr, i32 26
+  %v1 = load float, ptr addrspace(3) %vaddr1, align 4
 
   %sum = fadd float %v0, %v1
-  store float %sum, float addrspace(1)* %out, align 4
+  store float %sum, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -108,26 +96,22 @@ define amdgpu_kernel void @ds_combine_RAW(float addrspace(1)* %out, float addrsp
 ; GCN:      ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:108
 ; GCN-NEXT: ds_write2_b32 v{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} offset0:26 offset1:27
 ; GCN-NEXT: ds_read_b32 v{{[0-9]+}}, v{{[0-9]+}} offset:104
-define amdgpu_kernel void @ds_combine_WAR_RAW(float addrspace(1)* %out, float addrspace(3)* %inptr) {
+define amdgpu_kernel void @ds_combine_WAR_RAW(ptr addrspace(1) %out, ptr addrspace(3) %inptr) {
 
-  %base = bitcast float addrspace(3)* %inptr to i8 addrspace(3)*
-  %addr0 = getelementptr i8, i8 addrspace(3)* %base, i32 100
-  %tmp0 = bitcast i8 addrspace(3)* %addr0 to float addrspace(3)*
-  %vaddr0 = bitcast float addrspace(3)* %tmp0 to <3 x float> addrspace(3)*
-  %load0 = load <3 x float>, <3 x float> addrspace(3)* %vaddr0, align 4
+  %addr0 = getelementptr i8, ptr addrspace(3) %inptr, i32 100
+  %load0 = load <3 x float>, ptr addrspace(3) %addr0, align 4
   %v0 = extractelement <3 x float> %load0, i32 2
 
   %tmp1 = insertelement <2 x float> undef, float 1.0, i32 0
   %data = insertelement <2 x float> %tmp1, float 2.0, i32 1
 
-  %tmp2 = getelementptr float, float addrspace(3)* %inptr, i32 26
-  %vaddrs = bitcast float addrspace(3)* %tmp2 to <2 x float> addrspace(3)*
-  store <2 x float> %data, <2 x float> addrspace(3)* %vaddrs, align 4
+  %tmp2 = getelementptr float, ptr addrspace(3) %inptr, i32 26
+  store <2 x float> %data, ptr addrspace(3) %tmp2, align 4
 
-  %vaddr1 = getelementptr float, float addrspace(3)* %inptr, i32 26
-  %v1 = load float, float addrspace(3)* %vaddr1, align 4
+  %vaddr1 = getelementptr float, ptr addrspace(3) %inptr, i32 26
+  %v1 = load float, ptr addrspace(3) %vaddr1, align 4
 
   %sum = fadd float %v0, %v1
-  store float %sum, float addrspace(1)* %out, align 4
+  store float %sum, ptr addrspace(1) %out, align 4
   ret void
 }

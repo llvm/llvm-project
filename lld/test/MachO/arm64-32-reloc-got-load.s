@@ -5,11 +5,11 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64_32-apple-darwin %t/foobar.s -o %t/foobar.o
 
 # RUN: %lld-watchos -lSystem -arch arm64_32 -o %t/static %t/main.o %t/foobar.o
-# RUN: llvm-objdump --macho -d --no-show-raw-insn --syms %t/static | FileCheck %s --check-prefix=STATIC
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --syms %t/static | FileCheck %s --check-prefix=STATIC
 
 # RUN: %lld-watchos -lSystem -arch arm64_32 -dylib -o %t/libfoo.dylib %t/foobar.o
 # RUN: %lld-watchos -lSystem -arch arm64_32 -o %t/main %t/main.o %t/libfoo.dylib
-# RUN: llvm-objdump --macho -d --no-show-raw-insn --section-headers %t/main | FileCheck %s --check-prefix=DYLIB
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --no-show-raw-insn --section-headers %t/main | FileCheck %s --check-prefix=DYLIB
 
 # STATIC-LABEL: _main:
 # STATIC-NEXT:  adrp x8, [[#]] ; 0x[[#%x,PAGE:]]

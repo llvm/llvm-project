@@ -24,6 +24,7 @@ namespace llvm {
 class MCContext;
 class MCInst;
 class MCInstrInfo;
+class MCRegister;
 class MCStreamer;
 class MCSubtargetInfo;
 class MCSymbol;
@@ -59,19 +60,17 @@ const char AsmRewritePrecedence [] = {
   2  // AOK_IntelExpr
 };
 
-// Represnt the various parts which makes up an intel expression,
+// Represent the various parts which make up an intel expression,
 // used for emitting compound intel expressions
 struct IntelExpr {
-  bool NeedBracs;
-  int64_t Imm;
+  bool NeedBracs = false;
+  int64_t Imm = 0;
   StringRef BaseReg;
   StringRef IndexReg;
   StringRef OffsetName;
-  unsigned Scale;
+  unsigned Scale = 1;
 
-  IntelExpr()
-      : NeedBracs(false), Imm(0), BaseReg(StringRef()), IndexReg(StringRef()),
-        OffsetName(StringRef()), Scale(1) {}
+  IntelExpr() = default;
   // [BaseReg + IndexReg * ScaleExpression + OFFSET name + ImmediateExpression]
   IntelExpr(StringRef baseReg, StringRef indexReg, unsigned scale,
             StringRef offsetName, int64_t imm, bool needBracs)
@@ -377,7 +376,7 @@ public:
     return getParser().parsePrimaryExpr(Res, EndLoc, nullptr);
   }
 
-  virtual bool ParseRegister(unsigned &RegNo, SMLoc &StartLoc,
+  virtual bool parseRegister(MCRegister &Reg, SMLoc &StartLoc,
                              SMLoc &EndLoc) = 0;
 
   /// tryParseRegister - parse one register if possible
@@ -386,7 +385,7 @@ public:
   /// location, without failing the entire parse if it can't. Must not consume
   /// tokens if the parse fails.
   virtual OperandMatchResultTy
-  tryParseRegister(unsigned &RegNo, SMLoc &StartLoc, SMLoc &EndLoc) = 0;
+  tryParseRegister(MCRegister &Reg, SMLoc &StartLoc, SMLoc &EndLoc) = 0;
 
   /// ParseInstruction - Parse one assembly instruction.
   ///
@@ -459,13 +458,12 @@ public:
   virtual void convertToMapAndConstraints(unsigned Kind,
                                           const OperandVector &Operands) = 0;
 
-  /// Returns whether two registers are equal and is used by the tied-operands
-  /// checks in the AsmMatcher. This method can be overridden allow e.g. a
-  /// sub- or super-register as the tied operand.
-  virtual bool regsEqual(const MCParsedAsmOperand &Op1,
-                         const MCParsedAsmOperand &Op2) const {
-    assert(Op1.isReg() && Op2.isReg() && "Operands not all regs");
-    return Op1.getReg() == Op2.getReg();
+  /// Returns whether two operands are registers and are equal. This is used
+  /// by the tied-operands checks in the AsmMatcher. This method can be
+  /// overridden to allow e.g. a sub- or super-register as the tied operand.
+  virtual bool areEqualRegs(const MCParsedAsmOperand &Op1,
+                            const MCParsedAsmOperand &Op2) const {
+    return Op1.isReg() && Op2.isReg() && Op1.getReg() == Op2.getReg();
   }
 
   // Return whether this parser uses assignment statements with equals tokens
@@ -482,7 +480,7 @@ public:
   }
 
   // For actions that have to be performed before a label is emitted
-  virtual void doBeforeLabelEmit(MCSymbol *Symbol) {}
+  virtual void doBeforeLabelEmit(MCSymbol *Symbol, SMLoc IDLoc) {}
   
   virtual void onLabelParsed(MCSymbol *Symbol) {}
 

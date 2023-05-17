@@ -1,4 +1,4 @@
-add_libc_testsuite(libc_inttypes_unittests)
+add_custom_target(libc_inttypes_unittests)
 
 add_libc_unittest(
   strtoimax_test
@@ -8,6 +8,7 @@ add_libc_unittest(
     strtoimax_test.cpp
   DEPENDS
     libc.src.inttypes.strtoimax
+    libc.test.src.stdlib.strtol_test_support
 )
 
 add_libc_unittest(
@@ -18,6 +19,7 @@ add_libc_unittest(
     strtoumax_test.cpp
   DEPENDS
     libc.src.inttypes.strtoumax
+    libc.test.src.stdlib.strtol_test_support
 )
 
 add_libc_unittest(
@@ -32,3 +34,17 @@ add_libc_unittest(
     libc.include.stdlib
     libc.src.inttypes.imaxdiv
 )
+
+add_libc_unittest(
+  imaxabs_test
+  SUITE
+    libc_inttypes_unittests
+  SRCS
+    imaxabs_test.cpp
+  HDRS
+    ../stdlib/DivTest.h
+  DEPENDS
+    libc.include.stdlib
+    libc.src.inttypes.imaxabs
+)
+

@@ -12,7 +12,7 @@
 ; RUN: llvm-readobj -r --expand-relocs --syms %t64.o | FileCheck --check-prefixes=RELOC,SYM,RELOC64,SYM64 %s
 
 @common = common global i32 0, align 4
-@pointer = global i32* @common, align 4
+@pointer = global ptr @common, align 4
 
 
 ; CHECK:             .comm   common[RW],4,2

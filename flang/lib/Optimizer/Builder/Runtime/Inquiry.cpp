@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Runtime/RTBuilder.h"
 #include "flang/Runtime/inquiry.h"
+#include "flang/Runtime/support.h"
 
 using namespace Fortran::runtime;
 
@@ -74,4 +75,15 @@ mlir::Value fir::runtime::genSize(fir::FirOpBuilder &builder,
   auto args = fir::runtime::createArguments(builder, loc, fTy, array,
                                             sourceFile, sourceLine);
   return builder.create<fir::CallOp>(loc, sizeFunc, args).getResult(0);
+}
+
+/// Generate call to `Is_contiguous` runtime routine.
+mlir::Value fir::runtime::genIsContiguous(fir::FirOpBuilder &builder,
+                                          mlir::Location loc,
+                                          mlir::Value array) {
+  mlir::func::FuncOp isContiguousFunc =
+      fir::runtime::getRuntimeFunc<mkRTKey(IsContiguous)>(loc, builder);
+  auto fTy = isContiguousFunc.getFunctionType();
+  auto args = fir::runtime::createArguments(builder, loc, fTy, array);
+  return builder.create<fir::CallOp>(loc, isContiguousFunc, args).getResult(0);
 }

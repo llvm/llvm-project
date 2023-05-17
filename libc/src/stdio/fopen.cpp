@@ -9,13 +9,19 @@
 #include "src/stdio/fopen.h"
 #include "src/__support/File/file.h"
 
+#include "src/errno/libc_errno.h"
 #include <stdio.h>
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(::FILE *, fopen,
                    (const char *__restrict name, const char *__restrict mode)) {
-  return reinterpret_cast<::FILE *>(__llvm_libc::openfile(name, mode));
+  auto result = __llvm_libc::openfile(name, mode);
+  if (!result.has_value()) {
+    libc_errno = result.error();
+    return nullptr;
+  }
+  return reinterpret_cast<::FILE *>(result.value());
 }
 
 } // namespace __llvm_libc

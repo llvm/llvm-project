@@ -80,7 +80,7 @@ public:
   ArrayRef<T> copyArray(ArrayRef<T> Source) {
     if (!Source.empty())
       return Source.copy(Allocator);
-    return None;
+    return std::nullopt;
   }
 
   ParagraphComment *actOnParagraphComment(
@@ -193,7 +193,7 @@ private:
   void checkContainerDecl(const BlockCommandComment *Comment);
 
   /// Resolve parameter names to parameter indexes in function declaration.
-  /// Emit diagnostics about unknown parametrs.
+  /// Emit diagnostics about unknown parameters.
   void resolveParamCommandIndexes(const FullComment *FC);
 
   /// \returns \c true if the declaration that this comment is attached to

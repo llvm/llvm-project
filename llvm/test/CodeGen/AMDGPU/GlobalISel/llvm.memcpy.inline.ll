@@ -2,9 +2,9 @@
 ; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs -amdgpu-mem-intrinsic-expand-size=3 %s -o - | FileCheck -check-prefix=GCN %s
 ; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs -amdgpu-mem-intrinsic-expand-size=5 %s -o - | FileCheck -check-prefix=GCN %s
 
-declare void @llvm.memcpy.inline.p1i8.p1i8.i32(i8 addrspace(1)*, i8 addrspace(1)*, i32, i1 immarg)
+declare void @llvm.memcpy.inline.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1 immarg)
 
-define amdgpu_cs void @test(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) {
+define amdgpu_cs void @test(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
 ; GCN-LABEL: test:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_mov_b32 s2, 0
@@ -25,6 +25,6 @@ define amdgpu_cs void @test(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) {
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
 ; GCN-NEXT:    s_endpgm
-  call void @llvm.memcpy.inline.p1i8.p1i8.i32(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i32 4, i1 false)
+  call void @llvm.memcpy.inline.p1.p1.i32(ptr addrspace(1) %dst, ptr addrspace(1) %src, i32 4, i1 false)
   ret void
 }

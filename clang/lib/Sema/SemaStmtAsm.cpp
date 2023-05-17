@@ -24,6 +24,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/MC/MCParser/MCAsmParser.h"
+#include <optional>
 using namespace clang;
 using namespace sema;
 
@@ -254,7 +255,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   SmallVector<TargetInfo::ConstraintInfo, 4> OutputConstraintInfos;
 
   // The parser verifies that there is a string literal here.
-  assert(AsmString->isAscii());
+  assert(AsmString->isOrdinary());
 
   FunctionDecl *FD = dyn_cast<FunctionDecl>(getCurLexicalContext());
   llvm::StringMap<bool> FeatureMap;
@@ -262,7 +263,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   for (unsigned i = 0; i != NumOutputs; i++) {
     StringLiteral *Literal = Constraints[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef OutputName;
     if (Names[i])
@@ -330,7 +331,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
       if (RequireCompleteType(OutputExpr->getBeginLoc(), Exprs[i]->getType(),
                               diag::err_dereference_incomplete_type))
         return StmtError();
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     default:
       return StmtError(Diag(OutputExpr->getBeginLoc(),
                             diag::err_asm_invalid_lvalue_in_output)
@@ -353,7 +354,7 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
 
   for (unsigned i = NumOutputs, e = NumOutputs + NumInputs; i != e; i++) {
     StringLiteral *Literal = Constraints[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef InputName;
     if (Names[i])
@@ -376,6 +377,11 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
     Exprs[i] = ER.get();
 
     Expr *InputExpr = Exprs[i];
+
+    if (InputExpr->getType()->isMemberPointerType())
+      return StmtError(Diag(InputExpr->getBeginLoc(),
+                            diag::err_asm_pmf_through_constraint_not_permitted)
+                       << InputExpr->getSourceRange());
 
     // Referring to parameters is not allowed in naked functions.
     if (CheckNakedParmReference(InputExpr, *this))
@@ -454,12 +460,12 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
              << Info.getConstraintStr();
   }
 
-  Optional<SourceLocation> UnwindClobberLoc;
+  std::optional<SourceLocation> UnwindClobberLoc;
 
   // Check that the clobbers are valid.
   for (unsigned i = 0; i != NumClobbers; i++) {
     StringLiteral *Literal = Clobbers[i];
-    assert(Literal->isAscii());
+    assert(Literal->isOrdinary());
 
     StringRef Clobber = Literal->getString();
 
@@ -733,6 +739,9 @@ StmtResult Sema::ActOnGCCAsmStmt(SourceLocation AsmLoc, bool IsSimple,
   }
   if (NS->isAsmGoto())
     setFunctionHasBranchIntoScope();
+
+  CleanupVarDeclMarking();
+  DiscardCleanupsInEvaluationContext();
   return NS;
 }
 
@@ -929,13 +938,24 @@ StmtResult Sema::ActOnMSAsmStmt(SourceLocation AsmLoc, SourceLocation LBraceLoc,
   bool IsSimple = (NumOutputs != 0 || NumInputs != 0);
   setFunctionHasBranchProtectedScope();
 
+  bool InvalidOperand = false;
   for (uint64_t I = 0; I < NumOutputs + NumInputs; ++I) {
-    if (Exprs[I]->getType()->isBitIntType())
-      return StmtError(
-          Diag(Exprs[I]->getBeginLoc(), diag::err_asm_invalid_type)
-          << Exprs[I]->getType() << (I < NumOutputs)
-          << Exprs[I]->getSourceRange());
+    Expr *E = Exprs[I];
+    if (E->getType()->isBitIntType()) {
+      InvalidOperand = true;
+      Diag(E->getBeginLoc(), diag::err_asm_invalid_type)
+          << E->getType() << (I < NumOutputs)
+          << E->getSourceRange();
+    } else if (E->refersToBitField()) {
+      InvalidOperand = true;
+      FieldDecl *BitField = E->getSourceBitField();
+      Diag(E->getBeginLoc(), diag::err_ms_asm_bitfield_unsupported)
+          << E->getSourceRange();
+      Diag(BitField->getLocation(), diag::note_bitfield_decl);
+    }
   }
+  if (InvalidOperand)
+    return StmtError();
 
   MSAsmStmt *NS =
     new (Context) MSAsmStmt(Context, AsmLoc, LBraceLoc, IsSimple,

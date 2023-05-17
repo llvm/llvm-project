@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("ASTMatchersTests") {
   configs += [ "//llvm/utils/gn/build:clang_code" ]
@@ -10,6 +10,7 @@ unittest("ASTMatchersTests") {
     "//clang/lib/Testing",
     "//clang/lib/Tooling",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "ASTMatchersInternalTest.cpp",

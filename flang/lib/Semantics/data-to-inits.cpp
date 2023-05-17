@@ -30,6 +30,11 @@ static constexpr bool makeDefaultInitializationExplicit{false};
 // objects and pointers.
 static constexpr bool removeOriginalInits{false};
 
+// Impose a hard limit that's more than large enough for real applications but
+// small enough to cause artificial stress tests to fail reasonably instead of
+// crashing the compiler with a memory allocation failure.
+static constexpr auto maxDataInitBytes{std::size_t{1000000000}}; // 1GiB
+
 namespace Fortran::semantics {
 
 // Steps through a list of values in a DATA statement set; implements
@@ -123,6 +128,7 @@ private:
   DataInitializations &inits_;
   evaluate::ExpressionAnalyzer &exprAnalyzer_;
   ValueListIterator<DSV> values_;
+  const Scope *scope_{nullptr};
 };
 
 template <typename DSV>
@@ -141,7 +147,9 @@ bool DataInitializationCompiler<DSV>::Scan(
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
   if (const auto *expr{GetExpr(exprAnalyzer_.context(), var)}) {
-    exprAnalyzer_.GetFoldingContext().messages().SetLocation(var.GetSource());
+    parser::CharBlock at{var.GetSource()};
+    exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
+    scope_ = &exprAnalyzer_.context().FindScope(at);
     if (InitDesignator(*expr)) {
       return true;
     }
@@ -152,9 +160,17 @@ bool DataInitializationCompiler<DSV>::Scan(const parser::Variable &var) {
 template <typename DSV>
 bool DataInitializationCompiler<DSV>::Scan(
     const parser::Designator &designator) {
-  if (auto expr{exprAnalyzer_.Analyze(designator)}) {
-    exprAnalyzer_.GetFoldingContext().messages().SetLocation(
-        parser::FindSourceLocation(designator));
+  MaybeExpr expr;
+  { // The out-of-range subscript errors from the designator folder are a
+    // more specific than the default ones from expression semantics, so
+    // disable those to avoid piling on.
+    auto restorer{exprAnalyzer_.GetContextualMessages().DiscardMessages()};
+    expr = exprAnalyzer_.Analyze(designator);
+  }
+  if (expr) {
+    parser::CharBlock at{parser::FindSourceLocation(designator)};
+    exprAnalyzer_.GetFoldingContext().messages().SetLocation(at);
+    scope_ = &exprAnalyzer_.context().FindScope(at);
     if (InitDesignator(*expr)) {
       return true;
     }
@@ -352,6 +368,13 @@ bool DataInitializationCompiler<DSV>::InitElement(
   const SomeExpr *expr{*values_};
   if (!expr) {
     CHECK(exprAnalyzer_.context().AnyFatalError());
+  } else if (symbol.size() > maxDataInitBytes) {
+    evaluate::AttachDeclaration(
+        exprAnalyzer_.context().Say(
+            "'%s' is too large to initialize with a DATA statement"_todo_en_US,
+            symbol.name()),
+        symbol);
+    return false;
   } else if (isPointer) {
     if (static_cast<std::size_t>(offsetSymbol.offset() + offsetSymbol.size()) >
         symbol.size()) {
@@ -361,7 +384,8 @@ bool DataInitializationCompiler<DSV>::InitElement(
       return true;
     } else if (isProcPointer) {
       if (evaluate::IsProcedure(*expr)) {
-        if (CheckPointerAssignment(context, designator, *expr)) {
+        if (CheckPointerAssignment(
+                exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
           if (lastSymbol->has<ProcEntityDetails>()) {
             GetImage().AddPointer(offsetSymbol.offset(), *expr);
             return true;
@@ -382,7 +406,8 @@ bool DataInitializationCompiler<DSV>::InitElement(
       exprAnalyzer_.Say(
           "Procedure '%s' may not be used to initialize '%s', which is not a procedure pointer"_err_en_US,
           expr->AsFortran(), DescribeElement());
-    } else if (CheckInitialTarget(context, designator, *expr)) {
+    } else if (CheckInitialTarget(
+                   exprAnalyzer_.context(), designator, *expr, DEREF(scope_))) {
       GetImage().AddPointer(offsetSymbol.offset(), *expr);
       return true;
     }
@@ -413,21 +438,25 @@ bool DataInitializationCompiler<DSV>::InitElement(
             DescribeElement(), designatorType->AsFortran());
       }
       auto folded{evaluate::Fold(context, std::move(converted->first))};
-      switch (GetImage().Add(
-          offsetSymbol.offset(), offsetSymbol.size(), folded, context)) {
-      case evaluate::InitialImage::Ok:
+      // Rewritten from a switch() in order to avoid getting complaints
+      // about a missing "default:" from some compilers and complaints
+      // about a redundant "default:" from others.
+      auto status{GetImage().Add(
+          offsetSymbol.offset(), offsetSymbol.size(), folded, context)};
+      if (status == evaluate::InitialImage::Ok) {
         return true;
-      case evaluate::InitialImage::NotAConstant:
+      } else if (status == evaluate::InitialImage::NotAConstant) {
         exprAnalyzer_.Say(
             "DATA statement value '%s' for '%s' is not a constant"_err_en_US,
             folded.AsFortran(), DescribeElement());
-        break;
-      case evaluate::InitialImage::OutOfRange:
+      } else if (status == evaluate::InitialImage::OutOfRange) {
         OutOfRangeError();
-        break;
-      default:
+      } else if (status == evaluate::InitialImage::SizeMismatch) {
+        exprAnalyzer_.Say(
+            "DATA statement value '%s' for '%s' has the wrong length"_warn_en_US,
+            folded.AsFortran(), DescribeElement());
+      } else {
         CHECK(exprAnalyzer_.context().AnyFatalError());
-        break;
       }
     } else {
       exprAnalyzer_.context().Say(
@@ -541,8 +570,9 @@ static void PopulateWithComponentDefaults(SymbolDataInitialization &init,
             if (auto dyType{evaluate::DynamicType::From(component)}) {
               if (auto extents{evaluate::GetConstantExtents(
                       foldingContext, component)}) {
-                if (auto extant{init.image.AsConstant(
-                        foldingContext, *dyType, *extents, componentOffset)}) {
+                if (auto extant{init.image.AsConstant(foldingContext, *dyType,
+                        std::nullopt, *extents, false /*don't pad*/,
+                        componentOffset)}) {
                   initialized = !(*extant == *object->init());
                 }
               }
@@ -673,7 +703,8 @@ static std::size_t ComputeMinElementBytes(
       auto size{static_cast<std::size_t>(
           evaluate::ToInt64(dyType->MeasureSizeInBytes(foldingContext, true))
               .value_or(1))};
-      if (std::size_t alignment{dyType->GetAlignment(foldingContext)}) {
+      if (std::size_t alignment{
+              dyType->GetAlignment(foldingContext.targetCharacteristics())}) {
         size = ((size + alignment - 1) / alignment) * alignment;
       }
       if (&s == &first) {
@@ -753,7 +784,7 @@ static bool CombineEquivalencedInitialization(
     combinedSymbol.set_size(bytes);
     std::size_t minElementBytes{
         ComputeMinElementBytes(associated, foldingContext)};
-    if (!evaluate::IsValidKindOfIntrinsicType(
+    if (!exprAnalyzer.GetFoldingContext().targetCharacteristics().IsTypeEnabled(
             TypeCategory::Integer, minElementBytes) ||
         (bytes % minElementBytes) != 0) {
       minElementBytes = 1;
@@ -820,7 +851,7 @@ static bool ProcessScopes(const Scope &scope,
   case Scope::Kind::MainProgram:
   case Scope::Kind::Subprogram:
   case Scope::Kind::BlockData:
-  case Scope::Kind::Block: {
+  case Scope::Kind::BlockConstruct: {
     std::list<std::list<SymbolRef>> associations{GetStorageAssociations(scope)};
     for (const std::list<SymbolRef> &associated : associations) {
       if (std::find_if(associated.begin(), associated.end(), [](SymbolRef ref) {
@@ -861,7 +892,7 @@ void ConstructInitializer(const Symbol &symbol,
         CHECK(!procDesignator->GetComponent());
         mutableProc.set_init(DEREF(procDesignator->GetSymbol()));
       } else {
-        CHECK(evaluate::IsNullPointer(*expr));
+        CHECK(evaluate::IsNullProcedurePointer(*expr));
         mutableProc.set_init(nullptr);
       }
     } else {
@@ -877,8 +908,8 @@ void ConstructInitializer(const Symbol &symbol,
       }
     } else if (auto symbolType{evaluate::DynamicType::From(symbol)}) {
       if (auto extents{evaluate::GetConstantExtents(context, symbol)}) {
-        mutableObject.set_init(
-            initialization.image.AsConstant(context, *symbolType, *extents));
+        mutableObject.set_init(initialization.image.AsConstant(
+            context, *symbolType, std::nullopt, *extents));
       } else {
         exprAnalyzer.Say(symbol.name(),
             "internal: unknown shape for '%s' while constructing initializer from DATA"_err_en_US,

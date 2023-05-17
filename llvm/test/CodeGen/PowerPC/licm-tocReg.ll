@@ -63,7 +63,7 @@
 
 @ga = external global i32, align 4
 @gb = external global i32, align 4
-define signext i32 @test(i32 (i32)* nocapture %FP) local_unnamed_addr #0 {
+define signext i32 @test(ptr nocapture %FP) local_unnamed_addr #0 {
 ; CHECK-LABEL: test:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
@@ -95,10 +95,10 @@ define signext i32 @test(i32 (i32)* nocapture %FP) local_unnamed_addr #0 {
 ; CHECKAIX32-NOT:    lwz 6, L..C1(2)
 ; CHECK:    blr
 entry:
-  %0 = load volatile i32, i32* @ga, align 4
-  %1 = load volatile i32, i32* @gb, align 4
+  %0 = load volatile i32, ptr @ga, align 4
+  %1 = load volatile i32, ptr @gb, align 4
   %cmp1 = icmp sgt i32 %0, %1
-  %2 = load volatile i32, i32* @ga, align 4
+  %2 = load volatile i32, ptr @ga, align 4
   br i1 %cmp1, label %if.then, label %if.end
 
 if.then:                                          ; preds = %if.end, %entry
@@ -109,10 +109,10 @@ if.then:                                          ; preds = %if.end, %entry
 if.end:                                           ; preds = %entry, %if.end
   %3 = phi i32 [ %6, %if.end ], [ %2, %entry ]
   %inc = add nsw i32 %3, 1
-  store volatile i32 %inc, i32* @ga, align 4
-  %4 = load volatile i32, i32* @ga, align 4
-  %5 = load volatile i32, i32* @gb, align 4
+  store volatile i32 %inc, ptr @ga, align 4
+  %4 = load volatile i32, ptr @ga, align 4
+  %5 = load volatile i32, ptr @gb, align 4
   %cmp = icmp sgt i32 %4, %5
-  %6 = load volatile i32, i32* @ga, align 4
+  %6 = load volatile i32, ptr @ga, align 4
   br i1 %cmp, label %if.then, label %if.end
 }

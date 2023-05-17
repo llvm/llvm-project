@@ -18,6 +18,7 @@
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Host/OptionParser.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/Variable.h"
 #include "lldb/Symbol/VariableList.h"
@@ -28,12 +29,12 @@
 using namespace lldb;
 using namespace lldb_private;
 
-static void AddWatchpointDescription(Stream *s, Watchpoint *wp,
+static void AddWatchpointDescription(Stream &s, Watchpoint &wp,
                                      lldb::DescriptionLevel level) {
-  s->IndentMore();
-  wp->GetDescription(s, level);
-  s->IndentLess();
-  s->EOL();
+  s.IndentMore();
+  wp.GetDescription(&s, level);
+  s.IndentLess();
+  s.EOL();
 }
 
 static bool CheckTargetForWatchpointOperations(Target *target,
@@ -195,7 +196,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_list_options);
+      return llvm::ArrayRef(g_watchpoint_list_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -208,13 +209,13 @@ protected:
     Target *target = &GetSelectedTarget();
 
     if (target->GetProcessSP() && target->GetProcessSP()->IsAlive()) {
-      uint32_t num_supported_hardware_watchpoints;
-      Status error = target->GetProcessSP()->GetWatchpointSupportInfo(
-          num_supported_hardware_watchpoints);
-      if (error.Success())
+      std::optional<uint32_t> num_supported_hardware_watchpoints =
+          target->GetProcessSP()->GetWatchpointSlotCount();
+
+      if (num_supported_hardware_watchpoints)
         result.AppendMessageWithFormat(
             "Number of supported hardware watchpoints: %u\n",
-            num_supported_hardware_watchpoints);
+            *num_supported_hardware_watchpoints);
     }
 
     const WatchpointList &watchpoints = target->GetWatchpointList();
@@ -236,8 +237,8 @@ protected:
       // No watchpoint selected; show info about all currently set watchpoints.
       result.AppendMessage("Current watchpoints:");
       for (size_t i = 0; i < num_watchpoints; ++i) {
-        Watchpoint *wp = watchpoints.GetByIndex(i).get();
-        AddWatchpointDescription(&output_stream, wp, m_options.m_level);
+        WatchpointSP watch_sp = watchpoints.GetByIndex(i);
+        AddWatchpointDescription(output_stream, *watch_sp, m_options.m_level);
       }
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
@@ -251,9 +252,9 @@ protected:
 
       const size_t size = wp_ids.size();
       for (size_t i = 0; i < size; ++i) {
-        Watchpoint *wp = watchpoints.FindByID(wp_ids[i]).get();
-        if (wp)
-          AddWatchpointDescription(&output_stream, wp, m_options.m_level);
+        WatchpointSP watch_sp = watchpoints.FindByID(wp_ids[i]);
+        if (watch_sp)
+          AddWatchpointDescription(output_stream, *watch_sp, m_options.m_level);
         result.SetStatus(eReturnStatusSuccessFinishNoResult);
       }
     }
@@ -478,7 +479,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_delete_options);
+      return llvm::ArrayRef(g_watchpoint_delete_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -604,7 +605,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_ignore_options);
+      return llvm::ArrayRef(g_watchpoint_ignore_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -729,7 +730,7 @@ public:
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_watchpoint_modify_options);
+      return llvm::ArrayRef(g_watchpoint_modify_options);
     }
 
     // Instance variables to hold the values for command options.
@@ -757,8 +758,8 @@ protected:
     }
 
     if (command.GetArgumentCount() == 0) {
-      WatchpointSP wp_sp = target->GetLastCreatedWatchpoint();
-      wp_sp->SetCondition(m_options.m_condition.c_str());
+      WatchpointSP watch_sp = target->GetLastCreatedWatchpoint();
+      watch_sp->SetCondition(m_options.m_condition.c_str());
       result.SetStatus(eReturnStatusSuccessFinishNoResult);
     } else {
       // Particular watchpoints selected; set condition on them.
@@ -772,9 +773,9 @@ protected:
       int count = 0;
       const size_t size = wp_ids.size();
       for (size_t i = 0; i < size; ++i) {
-        WatchpointSP wp_sp = watchpoints.FindByID(wp_ids[i]);
-        if (wp_sp) {
-          wp_sp->SetCondition(m_options.m_condition.c_str());
+        WatchpointSP watch_sp = watchpoints.FindByID(wp_ids[i]);
+        if (watch_sp) {
+          watch_sp->SetCondition(m_options.m_condition.c_str());
           ++count;
         }
       }
@@ -834,8 +835,7 @@ corresponding to the byte size of the data type.");
     m_arguments.push_back(arg);
 
     // Absorb the '-w' and '-s' options into our option group.
-    m_option_group.Append(&m_option_watchpoint, LLDB_OPT_SET_ALL,
-                          LLDB_OPT_SET_1);
+    m_option_group.Append(&m_option_watchpoint, LLDB_OPT_SET_1, LLDB_OPT_SET_1);
     m_option_group.Finalize();
   }
 
@@ -929,7 +929,7 @@ protected:
         // We're in business.
         // Find out the size of this variable.
         size = m_option_watchpoint.watch_size == 0
-                   ? valobj_sp->GetByteSize().getValueOr(0)
+                   ? valobj_sp->GetByteSize().value_or(0)
                    : m_option_watchpoint.watch_size;
       }
       compiler_type = valobj_sp->GetCompilerType();
@@ -948,20 +948,19 @@ protected:
     uint32_t watch_type = m_option_watchpoint.watch_type;
 
     error.Clear();
-    Watchpoint *wp =
-        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error)
-            .get();
-    if (wp) {
-      wp->SetWatchSpec(command.GetArgumentAtIndex(0));
-      wp->SetWatchVariable(true);
+    WatchpointSP watch_sp =
+        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
+    if (watch_sp) {
+      watch_sp->SetWatchSpec(command.GetArgumentAtIndex(0));
+      watch_sp->SetWatchVariable(true);
       if (var_sp && var_sp->GetDeclaration().GetFile()) {
         StreamString ss;
         // True to show fullpath for declaration file.
         var_sp->GetDeclaration().DumpStopContext(&ss, true);
-        wp->SetDeclInfo(std::string(ss.GetString()));
+        watch_sp->SetDeclInfo(std::string(ss.GetString()));
       }
       output_stream.Printf("Watchpoint created: ");
-      wp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
+      watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
       output_stream.EOL();
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {
@@ -990,6 +989,7 @@ public:
       : CommandObjectRaw(
             interpreter, "watchpoint set expression",
             "Set a watchpoint on an address by supplying an expression. "
+            "Use the '-l' option to specify the language of the expression. "
             "Use the '-w' option to specify the type of watchpoint and "
             "the '-s' option to specify the byte size to watch for. "
             "If no '-w' option is specified, it defaults to write. "
@@ -1082,7 +1082,9 @@ protected:
     options.SetUnwindOnError(true);
     options.SetKeepInMemory(false);
     options.SetTryAllThreads(true);
-    options.SetTimeout(llvm::None);
+    options.SetTimeout(std::nullopt);
+    if (m_option_watchpoint.language_type != eLanguageTypeUnknown)
+      options.SetLanguage(m_option_watchpoint.language_type);
 
     ExpressionResults expr_result =
         target->EvaluateExpression(expr, frame, valobj_sp, options);
@@ -1116,13 +1118,13 @@ protected:
     CompilerType compiler_type(valobj_sp->GetCompilerType());
 
     Status error;
-    Watchpoint *wp =
-        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error)
-            .get();
-    if (wp) {
+    WatchpointSP watch_sp =
+        target->CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
+    if (watch_sp) {
+      watch_sp->SetWatchSpec(std::string(expr));
       Stream &output_stream = result.GetOutputStream();
       output_stream.Printf("Watchpoint created: ");
-      wp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
+      watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
       output_stream.EOL();
       result.SetStatus(eReturnStatusSuccessFinishResult);
     } else {

@@ -9,7 +9,8 @@ o test_modify_source_file_while_debugging:
   Test the caching mechanism of the source manager.
 """
 
-from __future__ import print_function
+import os
+import stat
 
 import lldb
 from lldbsuite.test.decorators import *
@@ -25,8 +26,6 @@ def ansi_color_surround_regex(inner_regex_text):
     return "\033\\[3[0-7]m%s\033\\[0m" % inner_regex_text
 
 class SourceManagerTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     NO_DEBUG_INFO_TESTCASE = True
 
@@ -224,6 +223,11 @@ class SourceManagerTestCase(TestBase):
         new_content = original_content.replace('Hello world', 'Hello lldb', 1)
 
         # Modify the source code file.
+        # If the source was read only, the copy will also be read only.
+        # Run "chmod u+w" on it first so we can modify it.
+        statinfo = os.stat(self.file)
+        os.chmod(self.file, statinfo.st_mode | stat.S_IWUSR)
+
         with io.open(self.file, 'w', newline='\n') as f:
             time.sleep(1)
             f.write(new_content)

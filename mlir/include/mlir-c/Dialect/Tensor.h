@@ -10,7 +10,7 @@
 #ifndef MLIR_C_DIALECT_TENSOR_H
 #define MLIR_C_DIALECT_TENSOR_H
 
-#include "mlir-c/Registration.h"
+#include "mlir-c/IR.h"
 
 #ifdef __cplusplus
 extern "C" {

@@ -26,21 +26,50 @@ def Bufferization_Dialect : Dialect {
     deallocation](/docs/BufferDeallocationInternals/).
   }];
   let dependentDialects = [
-    "AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
+    "affine::AffineDialect", "memref::MemRefDialect", "tensor::TensorDialect"
   ];
 
   let extraClassDeclaration = [{
+    /// Verify an attribute from this dialect on the argument at 'argIndex' for
+    /// the region at 'regionIndex' on the given operation. Returns failure if
+    /// the verification failed, success otherwise. This hook may optionally be
+    /// invoked from any operation containing a region.
+    LogicalResult verifyRegionArgAttribute(Operation *,
+                                           unsigned regionIndex,
+                                           unsigned argIndex,
+                                           NamedAttribute) override;
+
     /// An attribute that can override writability of buffers of tensor function
     /// arguments during One-Shot Module Bufferize.
     constexpr const static ::llvm::StringLiteral
         kWritableAttrName = "bufferization.writable";
 
+    /// An attribute for function arguments that describes how the function
+    /// accesses the buffer. Can be one "none", "read", "write" or "read-write".
+    ///
+    /// When no attribute is specified, the analysis tries to infer the access
+    /// behavior from its body. In case of external functions, for which no
+    /// function body is available, "read-write" is assumed by default.
+    constexpr const static ::llvm::StringLiteral
+        kBufferAccessAttrName = "bufferization.access";
+
     /// Attribute name used to mark the bufferization layout for region
     /// arguments during One-Shot Module Bufferize.
     constexpr const static ::llvm::StringLiteral
         kBufferLayoutAttrName = "bufferization.buffer_layout";
+
+    /// Attribute name used to mark escaping behavior of buffer allocations.
+    /// Escaping allocations cannot be deallocated in the same block and must
+    /// be treated specially: They are currently deallocated with the
+    /// BufferDeallocation pass.
+    ///
+    /// Note: Only ops with at least one OpResult that bufferizes to a buffer
+    /// allocation (as per BufferizableOpInterface) may have this attribute.
+    constexpr const static ::llvm::StringLiteral
+        kEscapeAttrName = "bufferization.escape";
   }];
   let hasOperationAttrVerify = 1;
+  let usePropertiesForAttributes = 1;
 }
 
 #endif // BUFFERIZATION_BASE

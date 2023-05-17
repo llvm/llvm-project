@@ -2,10 +2,10 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu | FileCheck %s
 
-declare void @foo(float *)
+declare void @foo(ptr)
 
 ; Test with the loaded value first.
-define void @f1(float *%ptr, float %alt, i32 %limit) {
+define void @f1(ptr %ptr, float %alt, i32 %limit) {
 ; CHECK-LABEL: f1:
 ; CHECK-NOT: %r2
 ; CHECK: blr %r14
@@ -13,14 +13,14 @@ define void @f1(float *%ptr, float %alt, i32 %limit) {
 ; CHECK: ste %f0, 0(%r2)
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; ...and with the loaded value second
-define void @f2(float *%ptr, float %alt, i32 %limit) {
+define void @f2(ptr %ptr, float %alt, i32 %limit) {
 ; CHECK-LABEL: f2:
 ; CHECK-NOT: %r2
 ; CHECK: bher %r14
@@ -28,63 +28,63 @@ define void @f2(float *%ptr, float %alt, i32 %limit) {
 ; CHECK: ste %f0, 0(%r2)
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %alt, float %orig
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; Check the high end of the aligned STE range.
-define void @f3(float *%base, float %alt, i32 %limit) {
+define void @f3(ptr %base, float %alt, i32 %limit) {
 ; CHECK-LABEL: f3:
 ; CHECK-NOT: %r2
 ; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: ste %f0, 4092(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 1023
+  %ptr = getelementptr float, ptr %base, i64 1023
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; Check the next word up, which should use STEY instead of STE.
-define void @f4(float *%base, float %alt, i32 %limit) {
+define void @f4(ptr %base, float %alt, i32 %limit) {
 ; CHECK-LABEL: f4:
 ; CHECK-NOT: %r2
 ; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: stey %f0, 4096(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 1024
+  %ptr = getelementptr float, ptr %base, i64 1024
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; Check the high end of the aligned STEY range.
-define void @f5(float *%base, float %alt, i32 %limit) {
+define void @f5(ptr %base, float %alt, i32 %limit) {
 ; CHECK-LABEL: f5:
 ; CHECK-NOT: %r2
 ; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: stey %f0, 524284(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 131071
+  %ptr = getelementptr float, ptr %base, i64 131071
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; Check the next word up, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f6(float *%base, float %alt, i32 %limit) {
+define void @f6(ptr %base, float %alt, i32 %limit) {
 ; CHECK-LABEL: f6:
 ; CHECK-NOT: %r2
 ; CHECK: blr %r14
@@ -92,33 +92,33 @@ define void @f6(float *%base, float %alt, i32 %limit) {
 ; CHECK: agfi %r2, 524288
 ; CHECK: ste %f0, 0(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 131072
+  %ptr = getelementptr float, ptr %base, i64 131072
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; Check the low end of the STEY range.
-define void @f7(float *%base, float %alt, i32 %limit) {
+define void @f7(ptr %base, float %alt, i32 %limit) {
 ; CHECK-LABEL: f7:
 ; CHECK-NOT: %r2
 ; CHECK: blr %r14
 ; CHECK-NOT: %r2
 ; CHECK: stey %f0, -524288(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 -131072
+  %ptr = getelementptr float, ptr %base, i64 -131072
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; Check the next word down, which needs separate address logic.
 ; Other sequences besides this one would be OK.
-define void @f8(float *%base, float %alt, i32 %limit) {
+define void @f8(ptr %base, float %alt, i32 %limit) {
 ; CHECK-LABEL: f8:
 ; CHECK-NOT: %r2
 ; CHECK: blr %r14
@@ -126,11 +126,11 @@ define void @f8(float *%base, float %alt, i32 %limit) {
 ; CHECK: agfi %r2, -524292
 ; CHECK: ste %f0, 0(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr float, float *%base, i64 -131073
+  %ptr = getelementptr float, ptr %base, i64 -131073
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
@@ -144,16 +144,16 @@ define void @f9(i64 %base, i64 %index, float %alt, i32 %limit) {
 ; CHECK: br %r14
   %add1 = add i64 %base, %index
   %add2 = add i64 %add1, 4096
-  %ptr = inttoptr i64 %add2 to float *
+  %ptr = inttoptr i64 %add2 to ptr
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; Check that volatile loads are not matched.
-define void @f10(float *%ptr, float %alt, i32 %limit) {
+define void @f10(ptr %ptr, float %alt, i32 %limit) {
 ; CHECK-LABEL: f10:
 ; CHECK: le {{%f[0-5]}}, 0(%r2)
 ; CHECK: {{jl|jnl}} [[LABEL:[^ ]*]]
@@ -161,14 +161,14 @@ define void @f10(float *%ptr, float %alt, i32 %limit) {
 ; CHECK: ste {{%f[0-5]}}, 0(%r2)
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
-  %orig = load volatile float, float *%ptr
+  %orig = load volatile float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
+  store float %res, ptr %ptr
   ret void
 }
 
 ; ...likewise stores.  In this case we should have a conditional load into %f0.
-define void @f11(float *%ptr, float %alt, i32 %limit) {
+define void @f11(ptr %ptr, float %alt, i32 %limit) {
 ; CHECK-LABEL: f11:
 ; CHECK: jhe [[LABEL:[^ ]*]]
 ; CHECK: le %f0, 0(%r2)
@@ -176,9 +176,9 @@ define void @f11(float *%ptr, float %alt, i32 %limit) {
 ; CHECK: ste %f0, 0(%r2)
 ; CHECK: br %r14
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store volatile float %res, float *%ptr
+  store volatile float %res, ptr %ptr
   ret void
 }
 
@@ -194,11 +194,11 @@ define void @f12(float %alt, i32 %limit) {
 ; CHECK: brasl %r14, foo@PLT
 ; CHECK: br %r14
   %ptr = alloca float
-  call void @foo(float *%ptr)
+  call void @foo(ptr %ptr)
   %cond = icmp ult i32 %limit, 420
-  %orig = load float, float *%ptr
+  %orig = load float, ptr %ptr
   %res = select i1 %cond, float %orig, float %alt
-  store float %res, float *%ptr
-  call void @foo(float *%ptr)
+  store float %res, ptr %ptr
+  call void @foo(ptr %ptr)
   ret void
 }

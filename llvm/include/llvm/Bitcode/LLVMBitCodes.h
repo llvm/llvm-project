@@ -175,6 +175,8 @@ enum TypeCodes {
   TYPE_CODE_X86_AMX = 24, // X86 AMX
 
   TYPE_CODE_OPAQUE_POINTER = 25, // OPAQUE_POINTER: [addrspace]
+
+  TYPE_CODE_TARGET_TYPE = 26, // TARGET_TYPE
 };
 
 enum OperandBundleTagCode {
@@ -301,6 +303,22 @@ enum GlobalValueSummarySymtabCodes {
   // Range information for accessed offsets for every argument.
   // [n x (paramno, range, numcalls, numcalls x (callee_guid, paramno, range))]
   FS_PARAM_ACCESS = 25,
+  // Summary of per-module memprof callsite metadata.
+  // [valueid, n x stackidindex]
+  FS_PERMODULE_CALLSITE_INFO = 26,
+  // Summary of per-module allocation memprof metadata.
+  // [n x (alloc type, nummib, nummib x stackidindex)]
+  FS_PERMODULE_ALLOC_INFO = 27,
+  // Summary of combined index memprof callsite metadata.
+  // [valueid, numstackindices, numver,
+  //  numstackindices x stackidindex, numver x version]
+  FS_COMBINED_CALLSITE_INFO = 28,
+  // Summary of combined index allocation memprof metadata.
+  // [nummib, numver,
+  //  nummib x (alloc type, numstackids, numstackids x stackidindex),
+  //  numver x version]
+  FS_COMBINED_ALLOC_INFO = 29,
+  FS_STACK_IDS = 30,
 };
 
 enum MetadataCodes {
@@ -349,7 +367,8 @@ enum MetadataCodes {
   // info.
   METADATA_COMMON_BLOCK = 44,     // [distinct, scope, name, variable,...]
   METADATA_GENERIC_SUBRANGE = 45, // [distinct, count, lo, up, stride]
-  METADATA_ARG_LIST = 46          // [n x [type num, value num]]
+  METADATA_ARG_LIST = 46,         // [n x [type num, value num]]
+  METADATA_ASSIGN_ID = 47,        // [distinct, ...]
 };
 
 // The constants block (CONSTANTS_BLOCK_ID) describes emission for each
@@ -458,7 +477,11 @@ enum RMWOperations {
   RMW_UMAX = 9,
   RMW_UMIN = 10,
   RMW_FADD = 11,
-  RMW_FSUB = 12
+  RMW_FSUB = 12,
+  RMW_FMAX = 13,
+  RMW_FMIN = 14,
+  RMW_UINC_WRAP = 15,
+  RMW_UDEC_WRAP = 16
 };
 
 /// OverflowingBinaryOperatorOptionalFlags - Flags for serializing
@@ -685,6 +708,11 @@ enum AttributeKindCodes {
   ATTR_KIND_ALLOC_ALIGN = 80,
   ATTR_KIND_ALLOCATED_POINTER = 81,
   ATTR_KIND_ALLOC_KIND = 82,
+  ATTR_KIND_PRESPLIT_COROUTINE = 83,
+  ATTR_KIND_FNRETTHUNK_EXTERN = 84,
+  ATTR_KIND_SKIP_PROFILE = 85,
+  ATTR_KIND_MEMORY = 86,
+  ATTR_KIND_NOFPCLASS = 87,
 };
 
 enum ComdatSelectionKindCodes {

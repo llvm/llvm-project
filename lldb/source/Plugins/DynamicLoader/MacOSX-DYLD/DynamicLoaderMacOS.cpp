@@ -79,7 +79,8 @@ DynamicLoaderMacOS::DynamicLoaderMacOS(Process *process)
     : DynamicLoaderDarwin(process), m_image_infos_stop_id(UINT32_MAX),
       m_break_id(LLDB_INVALID_BREAK_ID),
       m_dyld_handover_break_id(LLDB_INVALID_BREAK_ID), m_mutex(),
-      m_maybe_image_infos_address(LLDB_INVALID_ADDRESS) {}
+      m_maybe_image_infos_address(LLDB_INVALID_ADDRESS),
+      m_libsystem_fully_initalized(false) {}
 
 // Destructor
 DynamicLoaderMacOS::~DynamicLoaderMacOS() {
@@ -129,6 +130,7 @@ bool DynamicLoaderMacOS::ProcessDidExec() {
   if (did_exec) {
     m_libpthread_module_wp.reset();
     m_pthread_getspecific_addr.Clear();
+    m_libsystem_fully_initalized = false;
   }
   return did_exec;
 }
@@ -144,6 +146,33 @@ void DynamicLoaderMacOS::DoClear() {
 
   m_break_id = LLDB_INVALID_BREAK_ID;
   m_dyld_handover_break_id = LLDB_INVALID_BREAK_ID;
+  m_libsystem_fully_initalized = false;
+}
+
+bool DynamicLoaderMacOS::IsFullyInitialized() {
+  if (m_libsystem_fully_initalized)
+    return true;
+
+  StructuredData::ObjectSP process_state_sp(
+      m_process->GetDynamicLoaderProcessState());
+  if (!process_state_sp)
+    return true;
+  if (process_state_sp->GetAsDictionary()->HasKey("error"))
+    return true;
+  if (!process_state_sp->GetAsDictionary()->HasKey("process_state string"))
+    return true;
+  std::string proc_state = process_state_sp->GetAsDictionary()
+                               ->GetValueForKey("process_state string")
+                               ->GetAsString()
+                               ->GetValue()
+                               .str();
+  if (proc_state == "dyld_process_state_not_started" ||
+      proc_state == "dyld_process_state_dyld_initialized" ||
+      proc_state == "dyld_process_state_terminated_before_inits") {
+    return false;
+  }
+  m_libsystem_fully_initalized = true;
+  return true;
 }
 
 // Check if we have found DYLD yet
@@ -231,9 +260,9 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     // Build up the value array to store the three arguments given above, then
     // get the values from the ABI:
 
-    TypeSystemClang *clang_ast_context =
+    TypeSystemClangSP scratch_ts_sp =
         ScratchTypeSystemClang::GetForTarget(process->GetTarget());
-    if (!clang_ast_context)
+    if (!scratch_ts_sp)
       return false;
 
     ValueList argument_values;
@@ -244,13 +273,13 @@ bool DynamicLoaderMacOS::NotifyBreakpointHit(void *baton,
     Value headers_value; // uint64_t machHeaders[] (aka void*)
 
     CompilerType clang_void_ptr_type =
-        clang_ast_context->GetBasicType(eBasicTypeVoid).GetPointerType();
+        scratch_ts_sp->GetBasicType(eBasicTypeVoid).GetPointerType();
     CompilerType clang_uint32_type =
-        clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
-            lldb::eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint,
+                                                           32);
     CompilerType clang_uint64_type =
-        clang_ast_context->GetBuiltinTypeForEncodingAndBitSize(
-            lldb::eEncodingUint, 32);
+        scratch_ts_sp->GetBuiltinTypeForEncodingAndBitSize(lldb::eEncodingUint,
+                                                           32);
 
     mode_value.SetValueType(Value::ValueType::Scalar);
     mode_value.SetCompilerType(clang_uint32_type);

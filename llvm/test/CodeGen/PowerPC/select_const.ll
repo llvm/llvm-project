@@ -495,7 +495,7 @@ define i8 @sel_constants_urem_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_urem_constant:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    clrldi 3, 3, 63
-; ALL-NEXT:    subfic 3, 3, 3
+; ALL-NEXT:    xori 3, 3, 3
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = urem i8 %sel, 5
@@ -530,7 +530,7 @@ define i8 @sel_constants_and_constant(i1 %cond) {
 ; ALL-LABEL: sel_constants_and_constant:
 ; ALL:       # %bb.0:
 ; ALL-NEXT:    clrldi 3, 3, 63
-; ALL-NEXT:    subfic 3, 3, 5
+; ALL-NEXT:    xori 3, 3, 5
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, i8 -4, i8 23
   %bo = and i8 %sel, 5
@@ -911,10 +911,12 @@ define double @sel_constants_frem_constant(i1 %cond) {
 ; ALL-NEXT:  # %bb.1:
 ; ALL-NEXT:    addis 3, 2, .LCPI48_0@toc@ha
 ; ALL-NEXT:    lfd 1, .LCPI48_0@toc@l(3)
+; ALL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; ALL-NEXT:    blr
 ; ALL-NEXT:  .LBB48_2:
-; ALL-NEXT:    addis 3, 2, .LCPI48_1@toc@ha
-; ALL-NEXT:    lfs 1, .LCPI48_1@toc@l(3)
+; ALL-NEXT:    vspltisw 2, -4
+; ALL-NEXT:    xvcvsxwdp 1, 34
+; ALL-NEXT:    # kill: def $f1 killed $f1 killed $vsl1
 ; ALL-NEXT:    blr
   %sel = select i1 %cond, double -4.0, double 23.3
   %bo = frem double %sel, 5.1

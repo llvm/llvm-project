@@ -4,7 +4,7 @@
 ; RUN: verify-uselistorder < %s
 
 @a = global [4 x i1] [i1 0, i1 1, i1 0, i1 1]
-@b = alias i1, getelementptr ([4 x i1], [4 x i1]* @a, i64 0, i64 2)
+@b = alias i1, getelementptr ([4 x i1], ptr @a, i64 0, i64 2)
 
 ; Check use-list order of constants used by globals.
 @glob1 = global i5 7
@@ -48,9 +48,9 @@ first:
 
 define i1 @loada() {
 entry:
-  %a = load i1, i1* getelementptr ([4 x i1], [4 x i1]* @a, i64 0, i64 2)
+  %a = load i1, ptr getelementptr ([4 x i1], ptr @a, i64 0, i64 2)
   ret i1 %a
 }
 
 uselistorder i5 7, { 1, 0, 2 }
-uselistorder i1* getelementptr ([4 x i1], [4 x i1]* @a, i64 0, i64 2), { 1, 0 }
+uselistorder ptr getelementptr ([4 x i1], ptr @a, i64 0, i64 2), { 1, 0 }

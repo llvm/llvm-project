@@ -19,6 +19,7 @@
 #define LLVM_CLANG_AST_FORMATSTRING_H
 
 #include "clang/AST/CanonicalType.h"
+#include <optional>
 
 namespace clang {
 
@@ -127,8 +128,12 @@ public:
     dArg,
     DArg, // Apple extension
     iArg,
+    // C23 conversion specifiers.
+    bArg,
+    BArg,
+
     IntArgBeg = dArg,
-    IntArgEnd = iArg,
+    IntArgEnd = BArg,
 
     oArg,
     OArg, // Apple extension
@@ -237,7 +242,7 @@ public:
 
   bool isPrintfKind() const { return IsPrintf; }
 
-  Optional<ConversionSpecifier> getStandardSpecifier() const;
+  std::optional<ConversionSpecifier> getStandardSpecifier() const;
 
 protected:
   bool IsPrintf;
@@ -257,8 +262,14 @@ public:
     /// instance, "%d" and float.
     NoMatch = 0,
     /// The conversion specifier and the argument type are compatible. For
-    /// instance, "%d" and _Bool.
+    /// instance, "%d" and int.
     Match = 1,
+    /// The conversion specifier and the argument type are compatible because of
+    /// default argument promotions. For instance, "%hhd" and int.
+    MatchPromotion,
+    /// The conversion specifier and the argument type are compatible but still
+    /// seems likely to be an error. For instanace, "%hhd" and short.
+    NoMatchPromotionTypeConfusion,
     /// The conversion specifier and the argument type are disallowed by the C
     /// standard, but are in practice harmless. For instance, "%p" and int*.
     NoMatchPedantic,
@@ -456,7 +467,7 @@ public:
 
   bool hasStandardLengthModifier() const;
 
-  Optional<LengthModifier> getCorrectedLengthModifier() const;
+  std::optional<LengthModifier> getCorrectedLengthModifier() const;
 
   bool hasStandardConversionSpecifier(const LangOptions &LangOpt) const;
 

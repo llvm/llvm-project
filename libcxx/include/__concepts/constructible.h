@@ -12,7 +12,7 @@
 #include <__concepts/convertible_to.h>
 #include <__concepts/destructible.h>
 #include <__config>
-#include <type_traits>
+#include <__type_traits/is_constructible.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -20,7 +20,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.constructible]
 template<class _Tp, class... _Args>
@@ -49,7 +49,7 @@ concept copy_constructible =
   constructible_from<_Tp, const _Tp&> && convertible_to<const _Tp&, _Tp> &&
   constructible_from<_Tp, const _Tp> && convertible_to<const _Tp, _Tp>;
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

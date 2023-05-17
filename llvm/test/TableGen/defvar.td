@@ -18,6 +18,18 @@ defvar myvar = "foo";
 defvar myvar = "another value";
 #endif
 
+// These variables should be overrided by template arguments.
+defvar a = 2333;
+defvar b = 2333;
+class VarScopeTest<int a, int b> {
+  defvar c = !add(a, b);
+  int value = !add(c, c);
+}
+
+// CHECK: def aaa_scope_test {
+// CHECK-NEXT: int value = 10;
+def aaa_scope_test: VarScopeTest<2, 3>;
+
 multiclass Test<int x> {
   // Refer to a global variable, while inside a local scope like a multiclass.
   def _with_global_string { string s = myvar; }

@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Implememts common Text Stub YAML mappings.
+// Implements common Text Stub YAML mappings.
 //
 //===----------------------------------------------------------------------===//
 
@@ -64,17 +64,17 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
     OS << "macosx";
     break;
   case PLATFORM_IOSSIMULATOR:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PLATFORM_IOS:
     OS << "ios";
     break;
   case PLATFORM_WATCHOSSIMULATOR:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PLATFORM_WATCHOS:
     OS << "watchos";
     break;
   case PLATFORM_TVOSSIMULATOR:
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case PLATFORM_TVOS:
     OS << "tvos";
     break;
@@ -82,7 +82,7 @@ void ScalarTraits<PlatformSet>::output(const PlatformSet &Values, void *IO,
     OS << "bridgeos";
     break;
   case PLATFORM_MACCATALYST:
-    OS << "iosmac";
+    OS << "maccatalyst";
     break;
   case PLATFORM_DRIVERKIT:
     OS << "driverkit";
@@ -112,6 +112,8 @@ StringRef ScalarTraits<PlatformSet>::input(StringRef Scalar, void *IO,
                       .Case("tvos", PLATFORM_TVOS)
                       .Case("bridgeos", PLATFORM_BRIDGEOS)
                       .Case("iosmac", PLATFORM_MACCATALYST)
+                      .Case("maccatalyst", PLATFORM_MACCATALYST)
+                      .Case("driverkit", PLATFORM_DRIVERKIT)
                       .Default(PLATFORM_UNKNOWN);
 
   if (Platform == PLATFORM_MACCATALYST)

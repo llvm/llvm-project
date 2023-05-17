@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -37,6 +38,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <set>
 #include <string>
 #include <utility>
@@ -145,7 +147,7 @@ struct alignas(8) GlobalValueSummaryInfo {
     StringRef Name;
   } U;
 
-  GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
+  inline GlobalValueSummaryInfo(bool HaveGVs);
 
   /// List of global value summary structures for a particular value held
   /// in the GlobalValueMap. Requires a vector in the case of multiple
@@ -283,6 +285,135 @@ template <> struct DenseMapInfo<ValueInfo> {
   }
   static unsigned getHashValue(ValueInfo I) { return (uintptr_t)I.getRef(); }
 };
+
+/// Summary of memprof callsite metadata.
+struct CallsiteInfo {
+  // Actual callee function.
+  ValueInfo Callee;
+
+  // Used to record whole program analysis cloning decisions.
+  // The ThinLTO backend will need to create as many clones as there are entries
+  // in the vector (it is expected and should be confirmed that all such
+  // summaries in the same FunctionSummary have the same number of entries).
+  // Each index records version info for the corresponding clone of this
+  // function. The value is the callee clone it calls (becomes the appended
+  // suffix id). Index 0 is the original version, and a value of 0 calls the
+  // original callee.
+  SmallVector<unsigned> Clones{0};
+
+  // Represents stack ids in this context, recorded as indices into the
+  // StackIds vector in the summary index, which in turn holds the full 64-bit
+  // stack ids. This reduces memory as there are in practice far fewer unique
+  // stack ids than stack id references.
+  SmallVector<unsigned> StackIdIndices;
+
+  CallsiteInfo(ValueInfo Callee, SmallVector<unsigned> StackIdIndices)
+      : Callee(Callee), StackIdIndices(std::move(StackIdIndices)) {}
+  CallsiteInfo(ValueInfo Callee, SmallVector<unsigned> Clones,
+               SmallVector<unsigned> StackIdIndices)
+      : Callee(Callee), Clones(std::move(Clones)),
+        StackIdIndices(std::move(StackIdIndices)) {}
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const CallsiteInfo &SNI) {
+  OS << "Callee: " << SNI.Callee;
+  bool First = true;
+  OS << " Clones: ";
+  for (auto V : SNI.Clones) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << V;
+  }
+  First = true;
+  OS << " StackIds: ";
+  for (auto Id : SNI.StackIdIndices) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << Id;
+  }
+  return OS;
+}
+
+// Allocation type assigned to an allocation reached by a given context.
+// More can be added, now this is cold, notcold and hot.
+// Values should be powers of two so that they can be ORed, in particular to
+// track allocations that have different behavior with different calling
+// contexts.
+enum class AllocationType : uint8_t {
+  None = 0,
+  NotCold = 1,
+  Cold = 2,
+  Hot = 4,
+  All = 7 // This should always be set to the OR of all values.
+};
+
+/// Summary of a single MIB in a memprof metadata on allocations.
+struct MIBInfo {
+  // The allocation type for this profiled context.
+  AllocationType AllocType;
+
+  // Represents stack ids in this context, recorded as indices into the
+  // StackIds vector in the summary index, which in turn holds the full 64-bit
+  // stack ids. This reduces memory as there are in practice far fewer unique
+  // stack ids than stack id references.
+  SmallVector<unsigned> StackIdIndices;
+
+  MIBInfo(AllocationType AllocType, SmallVector<unsigned> StackIdIndices)
+      : AllocType(AllocType), StackIdIndices(std::move(StackIdIndices)) {}
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const MIBInfo &MIB) {
+  OS << "AllocType " << (unsigned)MIB.AllocType;
+  bool First = true;
+  OS << " StackIds: ";
+  for (auto Id : MIB.StackIdIndices) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << Id;
+  }
+  return OS;
+}
+
+/// Summary of memprof metadata on allocations.
+struct AllocInfo {
+  // Used to record whole program analysis cloning decisions.
+  // The ThinLTO backend will need to create as many clones as there are entries
+  // in the vector (it is expected and should be confirmed that all such
+  // summaries in the same FunctionSummary have the same number of entries).
+  // Each index records version info for the corresponding clone of this
+  // function. The value is the allocation type of the corresponding allocation.
+  // Index 0 is the original version. Before cloning, index 0 may have more than
+  // one allocation type.
+  SmallVector<uint8_t> Versions;
+
+  // Vector of MIBs in this memprof metadata.
+  std::vector<MIBInfo> MIBs;
+
+  AllocInfo(std::vector<MIBInfo> MIBs) : MIBs(std::move(MIBs)) {
+    Versions.push_back(0);
+  }
+  AllocInfo(SmallVector<uint8_t> Versions, std::vector<MIBInfo> MIBs)
+      : Versions(std::move(Versions)), MIBs(std::move(MIBs)) {}
+};
+
+inline raw_ostream &operator<<(raw_ostream &OS, const AllocInfo &AE) {
+  bool First = true;
+  OS << "Versions: ";
+  for (auto V : AE.Versions) {
+    if (!First)
+      OS << ", ";
+    First = false;
+    OS << (unsigned)V;
+  }
+  OS << " MIB:\n";
+  for (auto &M : AE.MIBs) {
+    OS << "\t\t" << M << "\n";
+  }
+  return OS;
+}
 
 /// Function and variable summary information to aid decisions and
 /// implementation of importing.
@@ -443,6 +574,8 @@ public:
 
   friend class ModuleSummaryIndex;
 };
+
+GlobalValueSummaryInfo::GlobalValueSummaryInfo(bool HaveGVs) : U(HaveGVs) {}
 
 /// Alias summary information.
 class AliasSummary : public GlobalValueSummary {
@@ -678,7 +811,8 @@ public:
         std::vector<FunctionSummary::VFuncId>(),
         std::vector<FunctionSummary::ConstVCall>(),
         std::vector<FunctionSummary::ConstVCall>(),
-        std::vector<FunctionSummary::ParamAccess>());
+        std::vector<FunctionSummary::ParamAccess>(),
+        std::vector<CallsiteInfo>(), std::vector<AllocInfo>());
   }
 
   /// A dummy node to reference external functions that aren't in the index
@@ -706,6 +840,25 @@ private:
   using ParamAccessesTy = std::vector<ParamAccess>;
   std::unique_ptr<ParamAccessesTy> ParamAccesses;
 
+  /// Optional list of memprof callsite metadata summaries. The correspondence
+  /// between the callsite summary and the callsites in the function is implied
+  /// by the order in the vector (and can be validated by comparing the stack
+  /// ids in the CallsiteInfo to those in the instruction callsite metadata).
+  /// As a memory savings optimization, we only create these for the prevailing
+  /// copy of a symbol when creating the combined index during LTO.
+  using CallsitesTy = std::vector<CallsiteInfo>;
+  std::unique_ptr<CallsitesTy> Callsites;
+
+  /// Optional list of allocation memprof metadata summaries. The correspondence
+  /// between the alloc memprof summary and the allocation callsites in the
+  /// function is implied by the order in the vector (and can be validated by
+  /// comparing the stack ids in the AllocInfo to those in the instruction
+  /// memprof metadata).
+  /// As a memory savings optimization, we only create these for the prevailing
+  /// copy of a symbol when creating the combined index during LTO.
+  using AllocsTy = std::vector<AllocInfo>;
+  std::unique_ptr<AllocsTy> Allocs;
+
 public:
   FunctionSummary(GVFlags Flags, unsigned NumInsts, FFlags FunFlags,
                   uint64_t EntryCount, std::vector<ValueInfo> Refs,
@@ -715,7 +868,8 @@ public:
                   std::vector<VFuncId> TypeCheckedLoadVCalls,
                   std::vector<ConstVCall> TypeTestAssumeConstVCalls,
                   std::vector<ConstVCall> TypeCheckedLoadConstVCalls,
-                  std::vector<ParamAccess> Params)
+                  std::vector<ParamAccess> Params, CallsitesTy CallsiteList,
+                  AllocsTy AllocList)
       : GlobalValueSummary(FunctionKind, Flags, std::move(Refs)),
         InstCount(NumInsts), FunFlags(FunFlags), EntryCount(EntryCount),
         CallGraphEdgeList(std::move(CGEdges)) {
@@ -729,6 +883,10 @@ public:
                      std::move(TypeCheckedLoadConstVCalls)});
     if (!Params.empty())
       ParamAccesses = std::make_unique<ParamAccessesTy>(std::move(Params));
+    if (!CallsiteList.empty())
+      Callsites = std::make_unique<CallsitesTy>(std::move(CallsiteList));
+    if (!AllocList.empty())
+      Allocs = std::make_unique<AllocsTy>(std::move(AllocList));
   }
   // Gets the number of readonly and writeonly refs in RefEdgeList
   std::pair<unsigned, unsigned> specialRefCounts() const;
@@ -831,6 +989,28 @@ public:
   }
 
   const TypeIdInfo *getTypeIdInfo() const { return TIdInfo.get(); };
+
+  ArrayRef<CallsiteInfo> callsites() const {
+    if (Callsites)
+      return *Callsites;
+    return {};
+  }
+
+  CallsitesTy &mutableCallsites() {
+    assert(Callsites);
+    return *Callsites;
+  }
+
+  ArrayRef<AllocInfo> allocs() const {
+    if (Allocs)
+      return *Allocs;
+    return {};
+  }
+
+  AllocsTy &mutableAllocs() {
+    assert(Allocs);
+    return *Allocs;
+  }
 
   friend struct GraphTraits<ValueInfo>;
 };
@@ -1122,8 +1302,14 @@ private:
   /// every summary of a GV is synchronized.
   bool WithDSOLocalPropagation = false;
 
+  /// Indicates that we have whole program visibility.
+  bool WithWholeProgramVisibility = false;
+
   /// Indicates that summary-based synthetic entry count propagation has run
   bool HasSyntheticEntryCounts = false;
+
+  /// Indicates that we linked with allocator supporting hot/cold new operators.
+  bool WithSupportsHotColdNew = false;
 
   /// Indicates that distributed backend should skip compilation of the
   /// module. Flag is suppose to be set by distributed ThinLTO indexing
@@ -1153,12 +1339,27 @@ private:
 
   // Used in cases where we want to record the name of a global, but
   // don't have the string owned elsewhere (e.g. the Strtab on a module).
-  StringSaver Saver;
   BumpPtrAllocator Alloc;
+  StringSaver Saver;
 
   // The total number of basic blocks in the module in the per-module summary or
   // the total number of basic blocks in the LTO unit in the combined index.
+  // FIXME: Putting this in the distributed ThinLTO index files breaks LTO
+  // backend caching on any BB change to any linked file. It is currently not
+  // used except in the case of a SamplePGO partial profile, and should be
+  // reevaluated/redesigned to allow more effective incremental builds in that
+  // case.
   uint64_t BlockCount;
+
+  // List of unique stack ids (hashes). We use a 4B index of the id in the
+  // stack id lists on the alloc and callsite summaries for memory savings,
+  // since the number of unique ids is in practice much smaller than the
+  // number of stack id references in the summaries.
+  std::vector<uint64_t> StackIds;
+
+  // Temporary map while building StackIds list. Clear when index is completely
+  // built via releaseTemporaryMemory.
+  std::map<uint64_t, unsigned> StackIdToIndex;
 
   // YAML I/O support.
   friend yaml::MappingTraits<ModuleSummaryIndex>;
@@ -1202,6 +1403,31 @@ public:
   const_gvsummary_iterator end() const { return GlobalValueMap.end(); }
   size_t size() const { return GlobalValueMap.size(); }
 
+  const std::vector<uint64_t> &stackIds() const { return StackIds; }
+
+  unsigned addOrGetStackIdIndex(uint64_t StackId) {
+    auto Inserted = StackIdToIndex.insert({StackId, StackIds.size()});
+    if (Inserted.second)
+      StackIds.push_back(StackId);
+    return Inserted.first->second;
+  }
+
+  uint64_t getStackIdAtIndex(unsigned Index) const {
+    assert(StackIds.size() > Index);
+    return StackIds[Index];
+  }
+
+  // Facility to release memory from data structures only needed during index
+  // construction (including while building combined index). Currently this only
+  // releases the temporary map used while constructing a correspondence between
+  // stack ids and their index in the StackIds vector. Mostly impactful when
+  // building a large combined index.
+  void releaseTemporaryMemory() {
+    assert(StackIdToIndex.size() == StackIds.size());
+    StackIdToIndex.clear();
+    StackIds.shrink_to_fit();
+  }
+
   /// Convenience function for doing a DFS on a ValueInfo. Marks the function in
   /// the FunctionHasParent map.
   static void discoverNodes(ValueInfo V,
@@ -1220,7 +1446,7 @@ public:
         dyn_cast<FunctionSummary>(V.getSummaryList().front().get());
     assert(F != nullptr && "Expected FunctionSummary node");
 
-    for (auto &C : F->calls()) {
+    for (const auto &C : F->calls()) {
       // Insert node if necessary
       auto S = FunctionHasParent.emplace(C.first, true);
 
@@ -1280,6 +1506,9 @@ public:
   bool withDSOLocalPropagation() const { return WithDSOLocalPropagation; }
   void setWithDSOLocalPropagation() { WithDSOLocalPropagation = true; }
 
+  bool withWholeProgramVisibility() const { return WithWholeProgramVisibility; }
+  void setWithWholeProgramVisibility() { WithWholeProgramVisibility = true; }
+
   bool isReadOnly(const GlobalVarSummary *GVS) const {
     return WithAttributePropagation && GVS->maybeReadOnly();
   }
@@ -1289,6 +1518,9 @@ public:
 
   bool hasSyntheticEntryCounts() const { return HasSyntheticEntryCounts; }
   void setHasSyntheticEntryCounts() { HasSyntheticEntryCounts = true; }
+
+  bool withSupportsHotColdNew() const { return WithSupportsHotColdNew; }
+  void setWithSupportsHotColdNew() { WithSupportsHotColdNew = true; }
 
   bool skipModuleByDistributedBackend() const {
     return SkipModuleByDistributedBackend;
@@ -1459,10 +1691,15 @@ public:
   /// Convenience method for creating a promoted global name
   /// for the given value name of a local, and its original module's ID.
   static std::string getGlobalNameForLocal(StringRef Name, ModuleHash ModHash) {
+    std::string Suffix = utostr((uint64_t(ModHash[0]) << 32) |
+                                ModHash[1]); // Take the first 64 bits
+    return getGlobalNameForLocal(Name, Suffix);
+  }
+
+  static std::string getGlobalNameForLocal(StringRef Name, StringRef Suffix) {
     SmallString<256> NewName(Name);
     NewName += ".llvm.";
-    NewName += utostr((uint64_t(ModHash[0]) << 32) |
-                      ModHash[1]); // Take the first 64 bits
+    NewName += Suffix;
     return std::string(NewName.str());
   }
 
@@ -1543,11 +1780,11 @@ public:
 
   /// For the given \p TypeId, this returns the TypeIdCompatibleVtableMap
   /// entry if present in the summary map. This may be used when importing.
-  Optional<TypeIdCompatibleVtableInfo>
+  std::optional<TypeIdCompatibleVtableInfo>
   getTypeIdCompatibleVtableSummary(StringRef TypeId) const {
     auto I = TypeIdCompatibleVtableMap.find(TypeId);
     if (I == TypeIdCompatibleVtableMap.end())
-      return None;
+      return std::nullopt;
     return I->second;
   }
 
@@ -1561,9 +1798,9 @@ public:
   template <class Map>
   void
   collectDefinedGVSummariesPerModule(Map &ModuleToDefinedGVSummaries) const {
-    for (auto &GlobalList : *this) {
+    for (const auto &GlobalList : *this) {
       auto GUID = GlobalList.first;
-      for (auto &Summary : GlobalList.second.SummaryList) {
+      for (const auto &Summary : GlobalList.second.SummaryList) {
         ModuleToDefinedGVSummaries[Summary->modulePath()][GUID] = Summary.get();
       }
     }
@@ -1587,7 +1824,7 @@ public:
   void propagateAttributes(const DenseSet<GlobalValue::GUID> &PreservedSymbols);
 
   /// Checks if we can import global variable from another module.
-  bool canImportGlobalVar(GlobalValueSummary *S, bool AnalyzeRefs) const;
+  bool canImportGlobalVar(const GlobalValueSummary *S, bool AnalyzeRefs) const;
 };
 
 /// GraphTraits definition to build SCC for the index

@@ -10,7 +10,7 @@
 /// This file implements the COFF-specific dumper for llvm-objdump.
 /// It outputs the Win64 EH data structures as plain text.
 /// The encoding of the unwind codes is described in MSDN:
-/// http://msdn.microsoft.com/en-us/library/ck9asaa9.aspx
+/// https://docs.microsoft.com/en-us/cpp/build/exception-handling-x64
 ///
 //===----------------------------------------------------------------------===//
 
@@ -102,7 +102,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   };
 
   printU16("Magic", Hdr.Magic, "%04x");
-  printOptionalEnumName(Hdr.Magic, makeArrayRef(PEHeaderMagic));
+  printOptionalEnumName(Hdr.Magic, ArrayRef(PEHeaderMagic));
   outs() << '\n';
   print("MajorLinkerVersion", Hdr.MajorLinkerVersion);
   print("MinorLinkerVersion", Hdr.MinorLinkerVersion);
@@ -127,7 +127,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
   printU32("SizeOfHeaders", Hdr.SizeOfHeaders, "%08x\n");
   printU32("CheckSum", Hdr.CheckSum, "%08x\n");
   printU16("Subsystem", Hdr.Subsystem, "%08x");
-  printOptionalEnumName(Hdr.Subsystem, makeArrayRef(PEWindowsSubsystem));
+  printOptionalEnumName(Hdr.Subsystem, ArrayRef(PEWindowsSubsystem));
   outs() << '\n';
 
   printU16("DllCharacteristics", Hdr.DLLCharacteristics, "%08x\n");
@@ -173,7 +173,7 @@ void COFFDumper::printPEHeader(const PEHeader &Hdr) const {
       "Reserved",
   };
   outs() << "\nThe Data Directory\n";
-  for (uint32_t I = 0; I != array_lengthof(DirName); ++I) {
+  for (uint32_t I = 0; I != std::size(DirName); ++I) {
     uint32_t Addr = 0, Size = 0;
     if (const data_directory *Data = Obj.getDataDirectory(I)) {
       Addr = Data->RelativeVirtualAddress;
@@ -194,6 +194,8 @@ static StringRef getUnwindCodeTypeName(uint8_t Code) {
   case UOP_SetFPReg: return "UOP_SetFPReg";
   case UOP_SaveNonVol: return "UOP_SaveNonVol";
   case UOP_SaveNonVolBig: return "UOP_SaveNonVolBig";
+  case UOP_Epilog: return "UOP_Epilog";
+  case UOP_SpareCode: return "UOP_SpareCode";
   case UOP_SaveXMM128: return "UOP_SaveXMM128";
   case UOP_SaveXMM128Big: return "UOP_SaveXMM128Big";
   case UOP_PushMachFrame: return "UOP_PushMachFrame";
@@ -234,9 +236,11 @@ static unsigned getNumUsedSlots(const UnwindCode &UnwindCode) {
     return 1;
   case UOP_SaveNonVol:
   case UOP_SaveXMM128:
+  case UOP_Epilog:
     return 2;
   case UOP_SaveNonVolBig:
   case UOP_SaveXMM128Big:
+  case UOP_SpareCode:
     return 3;
   case UOP_AllocLarge:
     return (UnwindCode.getOpInfo() == 0) ? 2 : 3;
@@ -305,7 +309,7 @@ static void printAllUnwindCodes(ArrayRef<UnwindCode> UCs) {
              << " remaining in buffer";
       return ;
     }
-    printUnwindCode(makeArrayRef(I, E));
+    printUnwindCode(ArrayRef(I, E));
     I += UsedSlots;
   }
 }
@@ -541,11 +545,17 @@ static void printExportTable(const COFFObjectFile *Obj) {
   outs() << " Ordinal base: " << OrdinalBase << "\n";
   outs() << " Ordinal      RVA  Name\n";
   for (; I != E; I = ++I) {
-    uint32_t Ordinal;
-    if (I->getOrdinal(Ordinal))
-      return;
     uint32_t RVA;
     if (I->getExportRVA(RVA))
+      return;
+    StringRef Name;
+    if (I->getSymbolName(Name))
+      continue;
+    if (!RVA && Name.empty())
+      continue;
+
+    uint32_t Ordinal;
+    if (I->getOrdinal(Ordinal))
       return;
     bool IsForwarder;
     if (I->isForwarder(IsForwarder))
@@ -555,14 +565,11 @@ static void printExportTable(const COFFObjectFile *Obj) {
       // Export table entries can be used to re-export symbols that
       // this COFF file is imported from some DLLs. This is rare.
       // In most cases IsForwarder is false.
-      outs() << format("    % 4d         ", Ordinal);
+      outs() << format("   %5d         ", Ordinal);
     } else {
-      outs() << format("    % 4d %# 8x", Ordinal, RVA);
+      outs() << format("   %5d %# 8x", Ordinal, RVA);
     }
 
-    StringRef Name;
-    if (I->getSymbolName(Name))
-      continue;
     if (!Name.empty())
       outs() << "  " << Name;
     if (IsForwarder) {
@@ -651,7 +658,7 @@ static void printWin64EHUnwindInfo(const Win64EH::UnwindInfo *UI) {
   if (UI->NumCodes)
     outs() << "    Unwind Codes:\n";
 
-  printAllUnwindCodes(makeArrayRef(&UI->UnwindCodes[0], UI->NumCodes));
+  printAllUnwindCodes(ArrayRef(&UI->UnwindCodes[0], UI->NumCodes));
 
   outs() << "\n";
   outs().flush();
@@ -800,11 +807,11 @@ void objdump::printCOFFFileHeader(const COFFObjectFile &Obj) {
   printExportTable(&Obj);
 }
 
-void objdump::printCOFFSymbolTable(const object::COFFImportFile *i) {
+void objdump::printCOFFSymbolTable(const object::COFFImportFile &i) {
   unsigned Index = 0;
-  bool IsCode = i->getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
+  bool IsCode = i.getCOFFImportHeader()->getType() == COFF::IMPORT_CODE;
 
-  for (const object::BasicSymbolRef &Sym : i->symbols()) {
+  for (const object::BasicSymbolRef &Sym : i.symbols()) {
     std::string Name;
     raw_string_ostream NS(Name);
 
@@ -823,15 +830,15 @@ void objdump::printCOFFSymbolTable(const object::COFFImportFile *i) {
   }
 }
 
-void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
-  for (unsigned SI = 0, SE = coff->getNumberOfSymbols(); SI != SE; ++SI) {
-    Expected<COFFSymbolRef> Symbol = coff->getSymbol(SI);
+void objdump::printCOFFSymbolTable(const COFFObjectFile &coff) {
+  for (unsigned SI = 0, SE = coff.getNumberOfSymbols(); SI != SE; ++SI) {
+    Expected<COFFSymbolRef> Symbol = coff.getSymbol(SI);
     if (!Symbol)
-      reportError(Symbol.takeError(), coff->getFileName());
+      reportError(Symbol.takeError(), coff.getFileName());
 
-    Expected<StringRef> NameOrErr = coff->getSymbolName(*Symbol);
+    Expected<StringRef> NameOrErr = coff.getSymbolName(*Symbol);
     if (!NameOrErr)
-      reportError(NameOrErr.takeError(), coff->getFileName());
+      reportError(NameOrErr.takeError(), coff.getFileName());
     StringRef Name = *NameOrErr;
 
     outs() << "[" << format("%2d", SI) << "]"
@@ -845,8 +852,7 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
            << Name;
     if (Demangle && Name.startswith("?")) {
       int Status = -1;
-      char *DemangledSymbol =
-          microsoftDemangle(Name.data(), nullptr, nullptr, nullptr, &Status);
+      char *DemangledSymbol = microsoftDemangle(Name.data(), nullptr, &Status);
 
       if (Status == 0 && DemangledSymbol) {
         outs() << " (" << StringRef(DemangledSymbol) << ")";
@@ -861,8 +867,8 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
       if (Symbol->isSectionDefinition()) {
         const coff_aux_section_definition *asd;
         if (Error E =
-                coff->getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
-          reportError(std::move(E), coff->getFileName());
+                coff.getAuxSymbol<coff_aux_section_definition>(SI + 1, asd))
+          reportError(std::move(E), coff.getFileName());
 
         int32_t AuxNumber = asd->getNumber(Symbol->isBigObj());
 
@@ -877,19 +883,19 @@ void objdump::printCOFFSymbolTable(const COFFObjectFile *coff) {
                          , unsigned(asd->Selection));
       } else if (Symbol->isFileRecord()) {
         const char *FileName;
-        if (Error E = coff->getAuxSymbol<char>(SI + 1, FileName))
-          reportError(std::move(E), coff->getFileName());
+        if (Error E = coff.getAuxSymbol<char>(SI + 1, FileName))
+          reportError(std::move(E), coff.getFileName());
 
         StringRef Name(FileName, Symbol->getNumberOfAuxSymbols() *
-                                     coff->getSymbolTableEntrySize());
+                                     coff.getSymbolTableEntrySize());
         outs() << "AUX " << Name.rtrim(StringRef("\0", 1))  << '\n';
 
         SI = SI + Symbol->getNumberOfAuxSymbols();
         break;
       } else if (Symbol->isWeakExternal()) {
         const coff_aux_weak_external *awe;
-        if (Error E = coff->getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
-          reportError(std::move(E), coff->getFileName());
+        if (Error E = coff.getAuxSymbol<coff_aux_weak_external>(SI + 1, awe))
+          reportError(std::move(E), coff.getFileName());
 
         outs() << "AUX " << format("indx %d srch %d\n",
                                    static_cast<uint32_t>(awe->TagIndex),

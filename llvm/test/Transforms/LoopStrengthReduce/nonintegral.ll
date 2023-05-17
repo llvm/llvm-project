@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-reduce < %s | FileCheck %s
+; RUN: opt -opaque-pointers=0 -S -loop-reduce < %s | FileCheck %s
 
 ; Address Space 10 is non-integral. The optimizer is not allowed to use
 ; ptrtoint/inttoptr instructions. Make sure that this doesn't happen

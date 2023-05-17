@@ -544,6 +544,7 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r10, 7
 ; CHECK-PWR9-BE-NEXT:    vextublx r11, r10, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r10, r10, v3
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r9
 ; CHECK-PWR9-BE-NEXT:    clrlwi r11, r11, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r10, r10, 24
 ; CHECK-PWR9-BE-NEXT:    sub r10, r11, r10
@@ -562,7 +563,6 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r12, 9
 ; CHECK-PWR9-BE-NEXT:    vextublx r0, r12, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r12, r12, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r11
 ; CHECK-PWR9-BE-NEXT:    clrlwi r0, r0, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r12, r12, 24
 ; CHECK-PWR9-BE-NEXT:    sub r12, r0, r12
@@ -572,6 +572,7 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r0, 10
 ; CHECK-PWR9-BE-NEXT:    vextublx r30, r0, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r0, r0, v3
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v4, r12
 ; CHECK-PWR9-BE-NEXT:    clrlwi r30, r30, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r0, r0, 24
 ; CHECK-PWR9-BE-NEXT:    sub r0, r30, r0
@@ -599,8 +600,6 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r28, 13
 ; CHECK-PWR9-BE-NEXT:    vextublx r27, r28, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r28, r28, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r29
-; CHECK-PWR9-BE-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    clrlwi r27, r27, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r28, r28, 24
 ; CHECK-PWR9-BE-NEXT:    sub r28, r27, r28
@@ -619,12 +618,14 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    li r26, 15
 ; CHECK-PWR9-BE-NEXT:    vextublx r25, r26, v2
 ; CHECK-PWR9-BE-NEXT:    vextublx r26, r26, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r27
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r27
 ; CHECK-PWR9-BE-NEXT:    addis r27, r2, .LCPI9_0@toc@ha
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r28
+; CHECK-PWR9-BE-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    addi r27, r27, .LCPI9_0@toc@l
 ; CHECK-PWR9-BE-NEXT:    clrlwi r25, r25, 24
 ; CHECK-PWR9-BE-NEXT:    clrlwi r26, r26, 24
-; CHECK-PWR9-BE-NEXT:    lxv v4, 0(r27)
+; CHECK-PWR9-BE-NEXT:    lxv vs1, 0(r27)
 ; CHECK-PWR9-BE-NEXT:    ld r27, -40(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    sub r26, r25, r26
 ; CHECK-PWR9-BE-NEXT:    srawi r25, r26, 31
@@ -633,32 +634,31 @@ define <16 x i8> @sub_absv_8_ext(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR9-BE-NEXT:    ld r25, -56(r1) # 8-byte Folded Reload
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v2, r26
 ; CHECK-PWR9-BE-NEXT:    ld r26, -48(r1) # 8-byte Folded Reload
-; CHECK-PWR9-BE-NEXT:    vperm v2, v3, v2, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r28
-; CHECK-PWR9-BE-NEXT:    ld r28, -32(r1) # 8-byte Folded Reload
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r0
+; CHECK-PWR9-BE-NEXT:    xxperm v2, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r29
+; CHECK-PWR9-BE-NEXT:    ld r29, -24(r1) # 8-byte Folded Reload
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r0
 ; CHECK-PWR9-BE-NEXT:    vmrghh v2, v3, v2
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r30
 ; CHECK-PWR9-BE-NEXT:    ld r30, -16(r1) # 8-byte Folded Reload
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r12
-; CHECK-PWR9-BE-NEXT:    vperm v5, v0, v5, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v0, r3
-; CHECK-PWR9-BE-NEXT:    vmrghh v3, v5, v3
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r7
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f0, r11
+; CHECK-PWR9-BE-NEXT:    xxperm v4, vs0, vs1
+; CHECK-PWR9-BE-NEXT:    vmrghh v3, v4, v3
+; CHECK-PWR9-BE-NEXT:    mtvsrwz v4, r4
 ; CHECK-PWR9-BE-NEXT:    xxmrghw vs0, v3, v2
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v2, r10
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r9
-; CHECK-PWR9-BE-NEXT:    vperm v2, v3, v2, v4
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r8
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r5
+; CHECK-PWR9-BE-NEXT:    xxperm v2, vs2, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r7
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs2, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r5
 ; CHECK-PWR9-BE-NEXT:    vmrghh v2, v3, v2
 ; CHECK-PWR9-BE-NEXT:    mtvsrwz v3, r6
-; CHECK-PWR9-BE-NEXT:    vperm v3, v5, v3, v4
-; CHECK-PWR9-BE-NEXT:    mtvsrwz v5, r4
-; CHECK-PWR9-BE-NEXT:    vperm v4, v0, v5, v4
+; CHECK-PWR9-BE-NEXT:    xxperm v3, vs2, vs1
+; CHECK-PWR9-BE-NEXT:    mtfprwz f2, r3
+; CHECK-PWR9-BE-NEXT:    xxperm v4, vs2, vs1
 ; CHECK-PWR9-BE-NEXT:    vmrghh v3, v4, v3
 ; CHECK-PWR9-BE-NEXT:    xxmrghw vs1, v3, v2
 ; CHECK-PWR9-BE-NEXT:    xxmrghd v2, vs1, vs0
@@ -1246,7 +1246,7 @@ define <4 x i32> @sub_absv_vec_32(<4 x i32> %a, <4 x i32> %b) local_unnamed_addr
 ; CHECK-PWR78-NEXT:    vmaxsw v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <4 x i32> %a, %b
+  %sub = sub nsw <4 x i32> %a, %b
   %sub.i = sub <4 x i32> zeroinitializer, %sub
   %0 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %sub, <4 x i32> %sub.i)
   ret <4 x i32> %0
@@ -1269,7 +1269,7 @@ define <8 x i16> @sub_absv_vec_16(<8 x i16> %a, <8 x i16> %b) local_unnamed_addr
 ; CHECK-PWR78-NEXT:    vmaxsh v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <8 x i16> %a, %b
+  %sub = sub nsw <8 x i16> %a, %b
   %sub.i = sub <8 x i16> zeroinitializer, %sub
   %0 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %sub, <8 x i16> %sub.i)
   ret <8 x i16> %0
@@ -1292,7 +1292,7 @@ define <16 x i8> @sub_absv_vec_8(<16 x i8> %a, <16 x i8> %b) local_unnamed_addr 
 ; CHECK-PWR78-NEXT:    vmaxsb v2, v2, v3
 ; CHECK-PWR78-NEXT:    blr
 entry:
-  %sub = sub <16 x i8> %a, %b
+  %sub = sub nsw <16 x i8> %a, %b
   %sub.i = sub <16 x i8> zeroinitializer, %sub
   %0 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %sub, <16 x i8> %sub.i)
   ret <16 x i8> %0
@@ -1413,6 +1413,170 @@ define <16 x i8> @zext_sub_absd8(<16 x i4>, <16 x i4>) local_unnamed_addr {
 ; CHECK-PWR78-NEXT:    blr
     %3 = zext <16 x i4> %0 to <16 x i8>
     %4 = zext <16 x i4> %1 to <16 x i8>
+    %5 = sub <16 x i8> %3, %4
+    %6 = sub <16 x i8> zeroinitializer, %5
+    %7 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %5, <16 x i8> %6)
+    ret <16 x i8> %7
+}
+
+define <4 x i32> @sext_sub_absd32(<4 x i16>, <4 x i16>) local_unnamed_addr {
+; CHECK-PWR9-LE-LABEL: sext_sub_absd32:
+; CHECK-PWR9-LE:       # %bb.0:
+; CHECK-PWR9-LE-NEXT:    vmrglh v2, v2, v2
+; CHECK-PWR9-LE-NEXT:    vmrglh v3, v3, v3
+; CHECK-PWR9-LE-NEXT:    vextsh2w v2, v2
+; CHECK-PWR9-LE-NEXT:    vextsh2w v3, v3
+; CHECK-PWR9-LE-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-LE-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-LE-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-LE-NEXT:    blr
+;
+; CHECK-PWR9-BE-LABEL: sext_sub_absd32:
+; CHECK-PWR9-BE:       # %bb.0:
+; CHECK-PWR9-BE-NEXT:    vmrghh v2, v2, v2
+; CHECK-PWR9-BE-NEXT:    vmrghh v3, v3, v3
+; CHECK-PWR9-BE-NEXT:    vextsh2w v2, v2
+; CHECK-PWR9-BE-NEXT:    vextsh2w v3, v3
+; CHECK-PWR9-BE-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-BE-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-BE-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-BE-NEXT:    blr
+;
+; CHECK-PWR8-LABEL: sext_sub_absd32:
+; CHECK-PWR8:       # %bb.0:
+; CHECK-PWR8-NEXT:    vmrglh v2, v2, v2
+; CHECK-PWR8-NEXT:    vspltisw v4, 8
+; CHECK-PWR8-NEXT:    vmrglh v3, v3, v3
+; CHECK-PWR8-NEXT:    vadduwm v4, v4, v4
+; CHECK-PWR8-NEXT:    vslw v2, v2, v4
+; CHECK-PWR8-NEXT:    vslw v3, v3, v4
+; CHECK-PWR8-NEXT:    vsraw v2, v2, v4
+; CHECK-PWR8-NEXT:    vsraw v3, v3, v4
+; CHECK-PWR8-NEXT:    vsubuwm v2, v2, v3
+; CHECK-PWR8-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR8-NEXT:    vsubuwm v3, v3, v2
+; CHECK-PWR8-NEXT:    vmaxsw v2, v2, v3
+; CHECK-PWR8-NEXT:    blr
+;
+; CHECK-PWR7-LABEL: sext_sub_absd32:
+; CHECK-PWR7:       # %bb.0:
+; CHECK-PWR7-NEXT:    vmrghh v2, v2, v2
+; CHECK-PWR7-NEXT:    vmrghh v3, v3, v3
+; CHECK-PWR7-NEXT:    vspltisw v4, 8
+; CHECK-PWR7-NEXT:    vadduwm v4, v4, v4
+; CHECK-PWR7-NEXT:    vslw v2, v2, v4
+; CHECK-PWR7-NEXT:    vslw v3, v3, v4
+; CHECK-PWR7-NEXT:    vsraw v2, v2, v4
+; CHECK-PWR7-NEXT:    vsraw v3, v3, v4
+; CHECK-PWR7-NEXT:    vsubuwm v2, v2, v3
+; CHECK-PWR7-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR7-NEXT:    vsubuwm v3, v3, v2
+; CHECK-PWR7-NEXT:    vmaxsw v2, v2, v3
+; CHECK-PWR7-NEXT:    blr
+    %3 = sext <4 x i16> %0 to <4 x i32>
+    %4 = sext <4 x i16> %1 to <4 x i32>
+    %5 = sub <4 x i32> %3, %4
+    %6 = sub <4 x i32> zeroinitializer, %5
+    %7 = tail call <4 x i32> @llvm.ppc.altivec.vmaxsw(<4 x i32> %5, <4 x i32> %6)
+    ret <4 x i32> %7
+}
+
+define <8 x i16> @sext_sub_absd16(<8 x i8>, <8 x i8>) local_unnamed_addr {
+; CHECK-PWR9-LE-LABEL: sext_sub_absd16:
+; CHECK-PWR9-LE:       # %bb.0:
+; CHECK-PWR9-LE-NEXT:    vmrglb v2, v2, v2
+; CHECK-PWR9-LE-NEXT:    vspltish v4, 8
+; CHECK-PWR9-LE-NEXT:    vmrglb v3, v3, v3
+; CHECK-PWR9-LE-NEXT:    vslh v2, v2, v4
+; CHECK-PWR9-LE-NEXT:    vslh v3, v3, v4
+; CHECK-PWR9-LE-NEXT:    vsrah v2, v2, v4
+; CHECK-PWR9-LE-NEXT:    vsrah v3, v3, v4
+; CHECK-PWR9-LE-NEXT:    vsubuhm v2, v2, v3
+; CHECK-PWR9-LE-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR9-LE-NEXT:    vsubuhm v3, v3, v2
+; CHECK-PWR9-LE-NEXT:    vmaxsh v2, v2, v3
+; CHECK-PWR9-LE-NEXT:    blr
+;
+; CHECK-PWR9-BE-LABEL: sext_sub_absd16:
+; CHECK-PWR9-BE:       # %bb.0:
+; CHECK-PWR9-BE-NEXT:    vmrghb v2, v2, v2
+; CHECK-PWR9-BE-NEXT:    vspltish v4, 8
+; CHECK-PWR9-BE-NEXT:    vmrghb v3, v3, v3
+; CHECK-PWR9-BE-NEXT:    vslh v2, v2, v4
+; CHECK-PWR9-BE-NEXT:    vslh v3, v3, v4
+; CHECK-PWR9-BE-NEXT:    vsrah v2, v2, v4
+; CHECK-PWR9-BE-NEXT:    vsrah v3, v3, v4
+; CHECK-PWR9-BE-NEXT:    vsubuhm v2, v2, v3
+; CHECK-PWR9-BE-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR9-BE-NEXT:    vsubuhm v3, v3, v2
+; CHECK-PWR9-BE-NEXT:    vmaxsh v2, v2, v3
+; CHECK-PWR9-BE-NEXT:    blr
+;
+; CHECK-PWR8-LABEL: sext_sub_absd16:
+; CHECK-PWR8:       # %bb.0:
+; CHECK-PWR8-NEXT:    vmrglb v2, v2, v2
+; CHECK-PWR8-NEXT:    vspltish v4, 8
+; CHECK-PWR8-NEXT:    vmrglb v3, v3, v3
+; CHECK-PWR8-NEXT:    vslh v2, v2, v4
+; CHECK-PWR8-NEXT:    vslh v3, v3, v4
+; CHECK-PWR8-NEXT:    vsrah v2, v2, v4
+; CHECK-PWR8-NEXT:    vsrah v3, v3, v4
+; CHECK-PWR8-NEXT:    vsubuhm v2, v2, v3
+; CHECK-PWR8-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR8-NEXT:    vsubuhm v3, v3, v2
+; CHECK-PWR8-NEXT:    vmaxsh v2, v2, v3
+; CHECK-PWR8-NEXT:    blr
+;
+; CHECK-PWR7-LABEL: sext_sub_absd16:
+; CHECK-PWR7:       # %bb.0:
+; CHECK-PWR7-NEXT:    vmrghb v2, v2, v2
+; CHECK-PWR7-NEXT:    vmrghb v3, v3, v3
+; CHECK-PWR7-NEXT:    vspltish v4, 8
+; CHECK-PWR7-NEXT:    vslh v2, v2, v4
+; CHECK-PWR7-NEXT:    vslh v3, v3, v4
+; CHECK-PWR7-NEXT:    vsrah v2, v2, v4
+; CHECK-PWR7-NEXT:    vsrah v3, v3, v4
+; CHECK-PWR7-NEXT:    vsubuhm v2, v2, v3
+; CHECK-PWR7-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR7-NEXT:    vsubuhm v3, v3, v2
+; CHECK-PWR7-NEXT:    vmaxsh v2, v2, v3
+; CHECK-PWR7-NEXT:    blr
+    %3 = sext <8 x i8> %0 to <8 x i16>
+    %4 = sext <8 x i8> %1 to <8 x i16>
+    %5 = sub <8 x i16> %3, %4
+    %6 = sub <8 x i16> zeroinitializer, %5
+    %7 = tail call <8 x i16> @llvm.ppc.altivec.vmaxsh(<8 x i16> %5, <8 x i16> %6)
+    ret <8 x i16> %7
+}
+
+define <16 x i8> @sext_sub_absd8(<16 x i4>, <16 x i4>) local_unnamed_addr {
+; CHECK-PWR9-LABEL: sext_sub_absd8:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xxspltib v4, 4
+; CHECK-PWR9-NEXT:    vslb v2, v2, v4
+; CHECK-PWR9-NEXT:    vslb v3, v3, v4
+; CHECK-PWR9-NEXT:    vsrab v2, v2, v4
+; CHECK-PWR9-NEXT:    vsrab v3, v3, v4
+; CHECK-PWR9-NEXT:    vsububm v2, v2, v3
+; CHECK-PWR9-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR9-NEXT:    vsububm v3, v3, v2
+; CHECK-PWR9-NEXT:    vmaxsb v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: sext_sub_absd8:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vspltisb v4, 4
+; CHECK-PWR78-NEXT:    vslb v2, v2, v4
+; CHECK-PWR78-NEXT:    vslb v3, v3, v4
+; CHECK-PWR78-NEXT:    vsrab v2, v2, v4
+; CHECK-PWR78-NEXT:    vsrab v3, v3, v4
+; CHECK-PWR78-NEXT:    vsububm v2, v2, v3
+; CHECK-PWR78-NEXT:    xxlxor v3, v3, v3
+; CHECK-PWR78-NEXT:    vsububm v3, v3, v2
+; CHECK-PWR78-NEXT:    vmaxsb v2, v2, v3
+; CHECK-PWR78-NEXT:    blr
+    %3 = sext <16 x i4> %0 to <16 x i8>
+    %4 = sext <16 x i4> %1 to <16 x i8>
     %5 = sub <16 x i8> %3, %4
     %6 = sub <16 x i8> zeroinitializer, %5
     %7 = tail call <16 x i8> @llvm.ppc.altivec.vmaxsb(<16 x i8> %5, <16 x i8> %6)
@@ -1661,6 +1825,222 @@ define <16 x i8> @absd_int8_ule(<16 x i8>, <16 x i8>) {
 ; CHECK-PWR78-NEXT:    xxsel v2, v5, v2, v4
 ; CHECK-PWR78-NEXT:    blr
   %3 = icmp ule <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
+  ret <16 x i8> %6
+}
+
+; Tests for ABDS icmp + sub + select sequence
+
+define <4 x i32> @absd_int32_sgt(<4 x i32>, <4 x i32>) {
+; CHECK-PWR9-LABEL: absd_int32_sgt:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_sgt:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v5, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-PWR78-NEXT:    blr
+  %3 = icmp sgt <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
+  ret <4 x i32> %6
+}
+
+define <4 x i32> @absd_int32_sge(<4 x i32>, <4 x i32>) {
+; CHECK-PWR9-LABEL: absd_int32_sge:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_sge:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v3, v2
+; CHECK-PWR78-NEXT:    xxlnor vs0, v4, v4
+; CHECK-PWR78-NEXT:    vsubuwm v4, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v2, v4, vs0
+; CHECK-PWR78-NEXT:    blr
+  %3 = icmp sge <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %4, <4 x i32> %5
+  ret <4 x i32> %6
+}
+
+define <4 x i32> @absd_int32_slt(<4 x i32>, <4 x i32>) {
+; CHECK-PWR9-LABEL: absd_int32_slt:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_slt:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v3, v2
+; CHECK-PWR78-NEXT:    vsubuwm v5, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-PWR78-NEXT:    blr
+  %3 = icmp slt <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+}
+
+define <4 x i32> @absd_int32_sle(<4 x i32>, <4 x i32>) {
+; CHECK-PWR9-LABEL: absd_int32_sle:
+; CHECK-PWR9:       # %bb.0:
+; CHECK-PWR9-NEXT:    xvnegsp v3, v3
+; CHECK-PWR9-NEXT:    xvnegsp v2, v2
+; CHECK-PWR9-NEXT:    vabsduw v2, v2, v3
+; CHECK-PWR9-NEXT:    blr
+;
+; CHECK-PWR78-LABEL: absd_int32_sle:
+; CHECK-PWR78:       # %bb.0:
+; CHECK-PWR78-NEXT:    vcmpgtsw v4, v2, v3
+; CHECK-PWR78-NEXT:    xxlnor vs0, v4, v4
+; CHECK-PWR78-NEXT:    vsubuwm v4, v2, v3
+; CHECK-PWR78-NEXT:    vsubuwm v2, v3, v2
+; CHECK-PWR78-NEXT:    xxsel v2, v4, v2, vs0
+; CHECK-PWR78-NEXT:    blr
+  %3 = icmp sle <4 x i32> %0, %1
+  %4 = sub <4 x i32> %0, %1
+  %5 = sub <4 x i32> %1, %0
+  %6 = select <4 x i1> %3, <4 x i32> %5, <4 x i32> %4
+  ret <4 x i32> %6
+}
+
+define <8 x i16> @absd_int16_sgt(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_sgt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v2, v3
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sgt <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
+  ret <8 x i16> %6
+}
+
+define <8 x i16> @absd_int16_sge(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_sge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v3, v2
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sge <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %4, <8 x i16> %5
+  ret <8 x i16> %6
+}
+
+define <8 x i16> @absd_int16_slt(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_slt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v3, v2
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp slt <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
+  ret <8 x i16> %6
+}
+
+define <8 x i16> @absd_int16_sle(<8 x i16>, <8 x i16>) {
+; CHECK-LABEL: absd_int16_sle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsh v4, v2, v3
+; CHECK-NEXT:    vsubuhm v5, v2, v3
+; CHECK-NEXT:    vsubuhm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sle <8 x i16> %0, %1
+  %4 = sub <8 x i16> %0, %1
+  %5 = sub <8 x i16> %1, %0
+  %6 = select <8 x i1> %3, <8 x i16> %5, <8 x i16> %4
+  ret <8 x i16> %6
+}
+
+define <16 x i8> @absd_int8_sgt(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_sgt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v2, v3
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sgt <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
+  ret <16 x i8> %6
+}
+
+define <16 x i8> @absd_int8_sge(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_sge:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v3, v2
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v2, v5, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sge <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %4, <16 x i8> %5
+  ret <16 x i8> %6
+}
+
+define <16 x i8> @absd_int8_slt(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_slt:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v3, v2
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp slt <16 x i8> %0, %1
+  %4 = sub <16 x i8> %0, %1
+  %5 = sub <16 x i8> %1, %0
+  %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4
+  ret <16 x i8> %6
+}
+
+define <16 x i8> @absd_int8_sle(<16 x i8>, <16 x i8>) {
+; CHECK-LABEL: absd_int8_sle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vcmpgtsb v4, v2, v3
+; CHECK-NEXT:    vsububm v5, v2, v3
+; CHECK-NEXT:    vsububm v2, v3, v2
+; CHECK-NEXT:    xxlnor v4, v4, v4
+; CHECK-NEXT:    xxsel v2, v5, v2, v4
+; CHECK-NEXT:    blr
+  %3 = icmp sle <16 x i8> %0, %1
   %4 = sub <16 x i8> %0, %1
   %5 = sub <16 x i8> %1, %0
   %6 = select <16 x i1> %3, <16 x i8> %5, <16 x i8> %4

@@ -18,7 +18,9 @@
 //                                   IntType b = numeric_limits<IntType>::max()); // C++20
 
 #include <random>
+
 #include <cassert>
+#include <limits>
 
 #include "test_macros.h"
 #if TEST_STD_VER >= 11

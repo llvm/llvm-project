@@ -1,6 +1,6 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-eabi                                    -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple armv7-eabi                                    -emit-llvm %s -o - | \
 // RUN:     FileCheck %s --check-prefixes=CHECK,CHECK-SOFT
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7-eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | \
+// RUN: %clang_cc1 -triple armv7-eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | \
 // RUN:    FileCheck %s --check-prefixes=CHECK,CHECK-HARD
 // REQUIRES: arm-registered-target
 
@@ -76,7 +76,7 @@ double g0call() {
   D0 d = {0.0, };
   return g0(d);
 // CHECK-SOFT: call double @g0([2 x i64]
-// CHECK-HARD: call arm_aapcs_vfpcc double @g0(%struct.D0 %1
+// CHECK-HARD: call arm_aapcs_vfpcc double @g0(%struct.D0 %0
 }
 
 typedef struct {

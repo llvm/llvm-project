@@ -2,8 +2,8 @@
 ; There is no invocation to FileCheck as this
 ; caused a crash in "Post-RA pseudo instruction expansion"
 
-define double @foo(float *%user, float %t17) {
-  %t16 = load float, float* %user, align 8
+define double @foo(ptr %user, float %t17) {
+  %t16 = load float, ptr %user, align 8
   %conv = fpext float %t16 to double
   %cmp26 = fcmp fast oeq float %t17, 0.000000e+00
   %div = fdiv fast float %t16, %t17

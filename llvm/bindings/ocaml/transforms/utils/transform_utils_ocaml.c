@@ -15,9 +15,11 @@
 |*                                                                            *|
 \*===----------------------------------------------------------------------===*/
 
-#include "llvm-c/Core.h"
-#include "caml/mlvalues.h"
+#include "caml/memory.h"
 #include "caml/misc.h"
+#include "caml/mlvalues.h"
+#include "llvm_ocaml.h"
+#include "llvm-c/Core.h"
 
 /*
  * Do not move directly into external. This function is here to pull in
@@ -26,4 +28,6 @@
  */
 
 /* llmodule -> llmodule */
-LLVMModuleRef llvm_clone_module(LLVMModuleRef M) { return LLVMCloneModule(M); }
+value llvm_clone_module(value M) {
+  return to_val(LLVMCloneModule(Module_val(M)));
+}

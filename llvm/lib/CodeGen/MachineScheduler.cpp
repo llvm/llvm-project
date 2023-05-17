@@ -32,6 +32,7 @@
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachinePassRegistry.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/MachineValueType.h"
 #include "llvm/CodeGen/RegisterClassInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 #include "llvm/CodeGen/ScheduleDAG.h"
@@ -56,7 +57,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
-#include "llvm/Support/MachineValueType.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cassert>
@@ -93,8 +93,17 @@ cl::opt<bool> VerifyScheduling(
 cl::opt<bool> ViewMISchedDAGs(
     "view-misched-dags", cl::Hidden,
     cl::desc("Pop up a window to show MISched dags after they are processed"));
+cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
+                        cl::desc("Print schedule DAGs"));
+cl::opt<bool> MISchedDumpReservedCycles(
+    "misched-dump-reserved-cycles", cl::Hidden, cl::init(false),
+    cl::desc("Dump resource usage at schedule boundary."));
 #else
 const bool ViewMISchedDAGs = false;
+const bool PrintDAGs = false;
+#ifdef LLVM_ENABLE_DUMP
+const bool MISchedDumpReservedCycles = false;
+#endif // LLVM_ENABLE_DUMP
 #endif // NDEBUG
 
 } // end namespace llvm
@@ -112,10 +121,6 @@ static cl::opt<std::string> SchedOnlyFunc("misched-only-func", cl::Hidden,
   cl::desc("Only schedule this function"));
 static cl::opt<unsigned> SchedOnlyBlock("misched-only-block", cl::Hidden,
                                         cl::desc("Only schedule this MBB#"));
-static cl::opt<bool> PrintDAGs("misched-print-dags", cl::Hidden,
-                              cl::desc("Print schedule DAGs"));
-#else
-static const bool PrintDAGs = false;
 #endif // NDEBUG
 
 /// Avoid quadratic complexity in unusually large basic blocks by limiting the
@@ -141,6 +146,21 @@ static cl::opt<unsigned>
     FastClusterThreshold("fast-cluster-threshold", cl::Hidden,
                          cl::desc("The threshold for fast cluster"),
                          cl::init(1000));
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static cl::opt<bool> MISchedDumpScheduleTrace(
+    "misched-dump-schedule-trace", cl::Hidden, cl::init(false),
+    cl::desc("Dump resource usage at schedule boundary."));
+static cl::opt<unsigned>
+    HeaderColWidth("misched-dump-schedule-trace-col-header-width", cl::Hidden,
+                   cl::desc("Set width of the columns with "
+                            "the resources and schedule units"),
+                   cl::init(19));
+static cl::opt<unsigned>
+    ColWidth("misched-dump-schedule-trace-col-width", cl::Hidden,
+             cl::desc("Set width of the columns showing resource booking."),
+             cl::init(5));
+#endif
 
 // DAG subtrees must have at least this many nodes.
 static const unsigned MinSubtreeSize = 8;
@@ -751,7 +771,7 @@ void ScheduleDAGMI::moveInstruction(
 }
 
 bool ScheduleDAGMI::checkSchedLimit() {
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS && !defined(NDEBUG)
   if (NumInstrsScheduled == MISchedCutoff && MISchedCutoff != ~0U) {
     CurrentTop = CurrentBottom;
     return false;
@@ -772,7 +792,7 @@ void ScheduleDAGMI::schedule() {
   // Build the DAG.
   buildSchedGraph(AA);
 
-  postprocessDAG();
+  postProcessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);
@@ -839,7 +859,7 @@ void ScheduleDAGMI::schedule() {
 }
 
 /// Apply each ScheduleDAGMutation step in order.
-void ScheduleDAGMI::postprocessDAG() {
+void ScheduleDAGMI::postProcessDAG() {
   for (auto &m : Mutations)
     m->apply(this);
 }
@@ -926,7 +946,152 @@ void ScheduleDAGMI::placeDebugValues() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+static const char *scheduleTableLegend = "  i: issue\n  x: resource booked";
+
+LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceTopDown() const {
+  //  Nothing to show if there is no or just one instruction.
+  if (BB->size() < 2)
+    return;
+
+  dbgs() << " * Schedule table (TopDown):\n";
+  dbgs() << scheduleTableLegend << "\n";
+  const unsigned FirstCycle = getSUnit(&*(std::begin(*this)))->TopReadyCycle;
+  unsigned LastCycle = getSUnit(&*(std::prev(std::end(*this))))->TopReadyCycle;
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU)
+      continue;
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      if (SU->TopReadyCycle + PI->Cycles - 1 > LastCycle)
+        LastCycle = SU->TopReadyCycle + PI->Cycles - 1;
+    }
+  }
+  // Print the header with the cycles
+  dbgs() << llvm::left_justify("Cycle", HeaderColWidth);
+  for (unsigned C = FirstCycle; C <= LastCycle; ++C)
+    dbgs() << llvm::left_justify("| " + std::to_string(C), ColWidth);
+  dbgs() << "|\n";
+
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU) {
+      dbgs() << "Missing SUnit\n";
+      continue;
+    }
+    std::string NodeName("SU(");
+    NodeName += std::to_string(SU->NodeNum) + ")";
+    dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
+    unsigned C = FirstCycle;
+    for (; C <= LastCycle; ++C) {
+      if (C == SU->TopReadyCycle)
+        dbgs() << llvm::left_justify("| i", ColWidth);
+      else
+        dbgs() << llvm::left_justify("|", ColWidth);
+    }
+    dbgs() << "|\n";
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      C = FirstCycle;
+      const std::string ResName =
+          SchedModel.getResourceName(PI->ProcResourceIdx);
+      dbgs() << llvm::left_justify(ResName, HeaderColWidth);
+      for (; C < SU->TopReadyCycle; ++C) {
+        dbgs() << llvm::left_justify("|", ColWidth);
+      }
+      for (unsigned i = 0; i < PI->Cycles; ++i, ++C)
+        dbgs() << llvm::left_justify("| x", ColWidth);
+      while (C++ <= LastCycle)
+        dbgs() << llvm::left_justify("|", ColWidth);
+      // Place end char
+      dbgs() << "| \n";
+    }
+  }
+}
+
+LLVM_DUMP_METHOD void ScheduleDAGMI::dumpScheduleTraceBottomUp() const {
+  //  Nothing to show if there is no or just one instruction.
+  if (BB->size() < 2)
+    return;
+
+  dbgs() << " * Schedule table (BottomUp):\n";
+  dbgs() << scheduleTableLegend << "\n";
+
+  const int FirstCycle = getSUnit(&*(std::begin(*this)))->BotReadyCycle;
+  int LastCycle = getSUnit(&*(std::prev(std::end(*this))))->BotReadyCycle;
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU)
+      continue;
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      if ((int)SU->BotReadyCycle - PI->Cycles + 1 < LastCycle)
+        LastCycle = (int)SU->BotReadyCycle - PI->Cycles + 1;
+    }
+  }
+  // Print the header with the cycles
+  dbgs() << llvm::left_justify("Cycle", HeaderColWidth);
+  for (int C = FirstCycle; C >= LastCycle; --C)
+    dbgs() << llvm::left_justify("| " + std::to_string(C), ColWidth);
+  dbgs() << "|\n";
+
+  for (MachineInstr &MI : *this) {
+    SUnit *SU = getSUnit(&MI);
+    if (!SU) {
+      dbgs() << "Missing SUnit\n";
+      continue;
+    }
+    std::string NodeName("SU(");
+    NodeName += std::to_string(SU->NodeNum) + ")";
+    dbgs() << llvm::left_justify(NodeName, HeaderColWidth);
+    int C = FirstCycle;
+    for (; C >= LastCycle; --C) {
+      if (C == (int)SU->BotReadyCycle)
+        dbgs() << llvm::left_justify("| i", ColWidth);
+      else
+        dbgs() << llvm::left_justify("|", ColWidth);
+    }
+    dbgs() << "|\n";
+    const MCSchedClassDesc *SC = getSchedClass(SU);
+    for (TargetSchedModel::ProcResIter PI = SchedModel.getWriteProcResBegin(SC),
+                                       PE = SchedModel.getWriteProcResEnd(SC);
+         PI != PE; ++PI) {
+      C = FirstCycle;
+      const std::string ResName =
+          SchedModel.getResourceName(PI->ProcResourceIdx);
+      dbgs() << llvm::left_justify(ResName, HeaderColWidth);
+      for (; C > (int)SU->BotReadyCycle; --C) {
+        dbgs() << llvm::left_justify("|", ColWidth);
+      }
+      for (unsigned i = 0; i < PI->Cycles; ++i, --C)
+        dbgs() << llvm::left_justify("| x", ColWidth);
+      while (C-- >= LastCycle)
+        dbgs() << llvm::left_justify("|", ColWidth);
+      // Place end char
+      dbgs() << "| \n";
+    }
+  }
+}
+#endif
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ScheduleDAGMI::dumpSchedule() const {
+  if (MISchedDumpScheduleTrace) {
+    if (ForceTopDown)
+      dumpScheduleTraceTopDown();
+    else if (ForceBottomUp)
+      dumpScheduleTraceBottomUp();
+    else {
+      dbgs() << "* Schedule table (Bidirectional): not implemented\n";
+    }
+  }
+
   for (MachineInstr &MI : *this) {
     if (SUnit *SU = getSUnit(&MI))
       dumpNode(*SU);
@@ -956,7 +1121,7 @@ void ScheduleDAGMILive::collectVRegUses(SUnit &SU) {
       continue;
 
     Register Reg = MO.getReg();
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
 
     // Ignore re-defs.
@@ -1117,7 +1282,7 @@ void ScheduleDAGMILive::updatePressureDiffs(
   for (const RegisterMaskPair &P : LiveUses) {
     Register Reg = P.RegUnit;
     /// FIXME: Currently assuming single-use physregs.
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
 
     if (ShouldTrackLaneMasks) {
@@ -1218,7 +1383,7 @@ void ScheduleDAGMILive::schedule() {
   LLVM_DEBUG(SchedImpl->dumpPolicy());
   buildDAGWithRegPressure();
 
-  postprocessDAG();
+  postProcessDAG();
 
   SmallVector<SUnit*, 8> TopRoots, BotRoots;
   findRootsAndBiasEdges(TopRoots, BotRoots);
@@ -1341,7 +1506,7 @@ unsigned ScheduleDAGMILive::computeCyclicCriticalPath() {
   // Visit each live out vreg def to find def/use pairs that cross iterations.
   for (const RegisterMaskPair &P : RPTracker.getPressure().LiveOutRegs) {
     Register Reg = P.RegUnit;
-    if (!Register::isVirtualRegister(Reg))
+    if (!Reg.isVirtual())
       continue;
     const LiveInterval &LI = LIS->getInterval(Reg);
     const VNInfo *DefVNI = LI.getVNInfoBefore(LIS->getMBBEndIdx(BB));
@@ -1699,7 +1864,7 @@ void BaseMemOpClusterMutation::collectMemOpRecords(
                         << ", Width: " << Width << "\n");
     }
 #ifndef NDEBUG
-    for (auto *Op : BaseOps)
+    for (const auto *Op : BaseOps)
       assert(Op);
 #endif
   }
@@ -1824,12 +1989,12 @@ void CopyConstrain::constrainLocalCopy(SUnit *CopySU, ScheduleDAGMILive *DAG) {
   // Check for pure vreg copies.
   const MachineOperand &SrcOp = Copy->getOperand(1);
   Register SrcReg = SrcOp.getReg();
-  if (!Register::isVirtualRegister(SrcReg) || !SrcOp.readsReg())
+  if (!SrcReg.isVirtual() || !SrcOp.readsReg())
     return;
 
   const MachineOperand &DstOp = Copy->getOperand(0);
   Register DstReg = DstOp.getReg();
-  if (!Register::isVirtualRegister(DstReg) || DstOp.isDead())
+  if (!DstReg.isVirtual() || DstOp.isDead())
     return;
 
   // Check if either the dest or source is local. If it's live across a back
@@ -2590,6 +2755,28 @@ SUnit *SchedBoundary::pickOnlyChoice() {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+
+/// Dump the content of the \ref ReservedCycles vector for the
+/// resources that are used in the basic block.
+///
+LLVM_DUMP_METHOD void SchedBoundary::dumpReservedCycles() const {
+  if (!SchedModel->hasInstrSchedModel())
+    return;
+
+  unsigned ResourceCount = SchedModel->getNumProcResourceKinds();
+  unsigned StartIdx = 0;
+
+  for (unsigned ResIdx = 0; ResIdx < ResourceCount; ++ResIdx) {
+    const unsigned NumUnits = SchedModel->getProcResource(ResIdx)->NumUnits;
+    std::string ResName = SchedModel->getResourceName(ResIdx);
+    for (unsigned UnitIdx = 0; UnitIdx < NumUnits; ++UnitIdx) {
+      dbgs() << ResName << "(" << UnitIdx
+             << ") = " << ReservedCycles[StartIdx + UnitIdx] << "\n";
+    }
+    StartIdx += NumUnits;
+  }
+}
+
 // This is useful information to dump after bumpNode.
 // Note that the Queue contents are more useful before pickNodeFromQueue.
 LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
@@ -2612,6 +2799,8 @@ LLVM_DUMP_METHOD void SchedBoundary::dumpScheduledState() const {
          << "\n  ExpectedLatency: " << ExpectedLatency << "c\n"
          << (IsResourceLimited ? "  - Resource" : "  - Latency")
          << " limited.\n";
+  if (MISchedDumpReservedCycles)
+    dumpReservedCycles();
 }
 #endif
 
@@ -3103,12 +3292,12 @@ int biasPhysReg(const SUnit *SU, bool isTop) {
     unsigned UnscheduledOper = isTop ? 0 : 1;
     // If we have already scheduled the physreg produce/consumer, immediately
     // schedule the copy.
-    if (Register::isPhysicalRegister(MI->getOperand(ScheduledOper).getReg()))
+    if (MI->getOperand(ScheduledOper).getReg().isPhysical())
       return 1;
     // If the physreg is at the boundary, defer it. Otherwise schedule it
     // immediately to free the dependent. We can hoist the copy later.
     bool AtBoundary = isTop ? !SU->NumSuccsLeft : !SU->NumPredsLeft;
-    if (Register::isPhysicalRegister(MI->getOperand(UnscheduledOper).getReg()))
+    if (MI->getOperand(UnscheduledOper).getReg().isPhysical())
       return AtBoundary ? -1 : 1;
   }
 
@@ -3118,7 +3307,7 @@ int biasPhysReg(const SUnit *SU, bool isTop) {
     // physical registers.
     bool DoBias = true;
     for (const MachineOperand &Op : MI->defs()) {
-      if (Op.isReg() && !Register::isPhysicalRegister(Op.getReg())) {
+      if (Op.isReg() && !Op.getReg().isPhysical()) {
         DoBias = false;
         break;
       }

@@ -2,9 +2,9 @@
 ; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs -amdgpu-mem-intrinsic-expand-size=3 %s -o - | FileCheck -check-prefix=LOOP %s
 ; RUN: llc -global-isel -march=amdgcn -verify-machineinstrs -amdgpu-mem-intrinsic-expand-size=5 %s -o - | FileCheck -check-prefix=UNROLL %s
 
-declare void @llvm.memmove.p1i8.p1i8.i32(i8 addrspace(1)*, i8 addrspace(1)*, i32, i1)
+declare void @llvm.memmove.p1.p1.i32(ptr addrspace(1), ptr addrspace(1), i32, i1)
 
-define amdgpu_cs void @memmove_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src) {
+define amdgpu_cs void @memmove_p1i8(ptr addrspace(1) %dst, ptr addrspace(1) %src) {
 ; LOOP-LABEL: memmove_p1i8:
 ; LOOP:       ; %bb.0:
 ; LOOP-NEXT:    v_cmp_ge_u64_e32 vcc, v[2:3], v[0:1]
@@ -32,8 +32,7 @@ define amdgpu_cs void @memmove_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src
 ; LOOP-NEXT:    buffer_store_byte v8, v[6:7], s[0:3], 0 addr64
 ; LOOP-NEXT:    s_cbranch_vccnz .LBB0_2
 ; LOOP-NEXT:  .LBB0_3: ; %Flow14
-; LOOP-NEXT:    s_or_saveexec_b64 s[0:1], s[4:5]
-; LOOP-NEXT:    s_xor_b64 exec, exec, s[0:1]
+; LOOP-NEXT:    s_andn2_saveexec_b64 s[0:1], s[4:5]
 ; LOOP-NEXT:    s_cbranch_execz .LBB0_6
 ; LOOP-NEXT:  ; %bb.4: ; %copy_backwards
 ; LOOP-NEXT:    s_mov_b64 s[4:5], 3
@@ -77,6 +76,6 @@ define amdgpu_cs void @memmove_p1i8(i8 addrspace(1)* %dst, i8 addrspace(1)* %src
 ; UNROLL-NEXT:    s_waitcnt vmcnt(3)
 ; UNROLL-NEXT:    buffer_store_byte v2, v[0:1], s[0:3], 0 addr64 offset:3
 ; UNROLL-NEXT:    s_endpgm
-  call void @llvm.memmove.p1i8.p1i8.i32(i8 addrspace(1)* %dst, i8 addrspace(1)* %src, i32 4, i1 false)
+  call void @llvm.memmove.p1.p1.i32(ptr addrspace(1) %dst, ptr addrspace(1) %src, i32 4, i1 false)
   ret void
 }

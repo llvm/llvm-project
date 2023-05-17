@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/Magic.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/Object/Archive.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/IRObjectFile.h"
 #include "llvm/Object/MachO.h"
@@ -33,6 +34,7 @@
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <cerrno>
 #include <map>
 
 #if !defined(_MSC_VER) && !defined(__MINGW32__)
@@ -42,6 +44,12 @@
 #endif
 
 using namespace llvm;
+
+struct SymMap {
+  bool UseECMap;
+  std::map<std::string, uint16_t> Map;
+  std::map<std::string, uint16_t> ECMap;
+};
 
 NewArchiveMember::NewArchiveMember(MemoryBufferRef BufRef)
     : Buf(MemoryBuffer::getMemBuffer(BufRef, false)),
@@ -69,9 +77,11 @@ object::Archive::Kind NewArchiveMember::detectKindFromObject() const {
     if (auto ObjOrErr = object::SymbolicFile::createSymbolicFile(
             MemBufferRef, file_magic::bitcode, &Context)) {
       auto &IRObject = cast<object::IRObjectFile>(**ObjOrErr);
-      return Triple(IRObject.getTargetTriple()).isOSDarwin()
+      auto TargetTriple = Triple(IRObject.getTargetTriple());
+      return TargetTriple.isOSDarwin()
                  ? object::Archive::K_DARWIN
-                 : object::Archive::K_GNU;
+                 : (TargetTriple.isOSAIX() ? object::Archive::K_AIXBIG
+                                           : object::Archive::K_GNU);
     } else {
       // Squelch the error in case this was not a SymbolicFile.
       consumeError(ObjOrErr.takeError());
@@ -169,18 +179,21 @@ static bool isAIXBigArchive(object::Archive::Kind Kind) {
   return Kind == object::Archive::K_AIXBIG;
 }
 
+static bool isCOFFArchive(object::Archive::Kind Kind) {
+  return Kind == object::Archive::K_COFF;
+}
+
 static bool isBSDLike(object::Archive::Kind Kind) {
   switch (Kind) {
   case object::Archive::K_GNU:
   case object::Archive::K_GNU64:
   case object::Archive::K_AIXBIG:
+  case object::Archive::K_COFF:
     return false;
   case object::Archive::K_BSD:
   case object::Archive::K_DARWIN:
   case object::Archive::K_DARWIN64:
     return true;
-  case object::Archive::K_COFF:
-    break;
   }
   llvm_unreachable("not supported for writting");
 }
@@ -189,6 +202,10 @@ template <class T>
 static void print(raw_ostream &Out, object::Archive::Kind Kind, T Val) {
   support::endian::write(Out, Val,
                          isBSDLike(Kind) ? support::little : support::big);
+}
+
+template <class T> static void printLE(raw_ostream &Out, T Val) {
+  support::endian::write(Out, Val, support::little);
 }
 
 static void printRestOfMemberHeader(
@@ -235,8 +252,8 @@ static void
 printBigArchiveMemberHeader(raw_ostream &Out, StringRef Name,
                             const sys::TimePoint<std::chrono::seconds> &ModTime,
                             unsigned UID, unsigned GID, unsigned Perms,
-                            uint64_t Size, unsigned PrevOffset,
-                            unsigned NextOffset) {
+                            uint64_t Size, uint64_t PrevOffset,
+                            uint64_t NextOffset) {
   unsigned NameLen = Name.size();
 
   printWithSpacePadding(Out, Size, 20);           // File member size
@@ -295,7 +312,11 @@ printMemberHeader(raw_ostream &Out, uint64_t Pos, raw_ostream &StringTable,
     auto Insertion = MemberNames.insert({M.MemberName, uint64_t(0)});
     if (Insertion.second) {
       Insertion.first->second = StringTable.tell();
-      StringTable << M.MemberName << "/\n";
+      StringTable << M.MemberName;
+      if (isCOFFArchive(Kind))
+        StringTable << '\0';
+      else
+        StringTable << "/\n";
     }
     NamePos = Insertion.first->second;
   }
@@ -356,7 +377,7 @@ static void printNBits(raw_ostream &Out, object::Archive::Kind Kind,
 
 static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
                                        uint64_t NumSyms, uint64_t OffsetSize,
-                                       StringRef StringTable,
+                                       uint64_t StringTableSize,
                                        uint32_t *Padding = nullptr) {
   assert((OffsetSize == 4 || OffsetSize == 8) && "Unsupported OffsetSize");
   uint64_t Size = OffsetSize; // Number of entries
@@ -366,7 +387,7 @@ static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
     Size += NumSyms * OffsetSize; // Table
   if (isBSDLike(Kind))
     Size += OffsetSize; // byte count
-  Size += StringTable.size();
+  Size += StringTableSize;
   // ld64 expects the members to be 8-byte aligned for 64-bit content and at
   // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
   // uniformly.
@@ -376,6 +397,36 @@ static uint64_t computeSymbolTableSize(object::Archive::Kind Kind,
   uint32_t Pad = isAIXBigArchive(Kind)
                      ? 0
                      : offsetToAlignment(Size, Align(isBSDLike(Kind) ? 8 : 2));
+
+  Size += Pad;
+  if (Padding)
+    *Padding = Pad;
+  return Size;
+}
+
+static uint64_t computeSymbolMapSize(uint64_t NumObj, SymMap &SymMap,
+                                     uint32_t *Padding = nullptr) {
+  uint64_t Size = sizeof(uint32_t) * 2; // Number of symbols and objects entries
+  Size += NumObj * sizeof(uint32_t);    // Offset table
+
+  for (auto S : SymMap.Map)
+    Size += sizeof(uint16_t) + S.first.length() + 1;
+
+  uint32_t Pad = offsetToAlignment(Size, Align(2));
+  Size += Pad;
+  if (Padding)
+    *Padding = Pad;
+  return Size;
+}
+
+static uint64_t computeECSymbolsSize(SymMap &SymMap,
+                                     uint32_t *Padding = nullptr) {
+  uint64_t Size = sizeof(uint32_t); // Number of symbols
+
+  for (auto S : SymMap.ECMap)
+    Size += sizeof(uint16_t) + S.first.length() + 1;
+
+  uint32_t Pad = offsetToAlignment(Size, Align(2));
   Size += Pad;
   if (Padding)
     *Padding = Pad;
@@ -398,13 +449,38 @@ static void writeSymbolTableHeader(raw_ostream &Out, object::Archive::Kind Kind,
   }
 }
 
+static uint64_t computeHeadersSize(object::Archive::Kind Kind,
+                                   uint64_t NumMembers,
+                                   uint64_t StringMemberSize, uint64_t NumSyms,
+                                   uint64_t SymNamesSize, SymMap *SymMap) {
+  uint32_t OffsetSize = is64BitKind(Kind) ? 8 : 4;
+  uint64_t SymtabSize =
+      computeSymbolTableSize(Kind, NumSyms, OffsetSize, SymNamesSize);
+  auto computeSymbolTableHeaderSize = [=] {
+    SmallString<0> TmpBuf;
+    raw_svector_ostream Tmp(TmpBuf);
+    writeSymbolTableHeader(Tmp, Kind, true, SymtabSize);
+    return TmpBuf.size();
+  };
+  uint32_t HeaderSize = computeSymbolTableHeaderSize();
+  uint64_t Size = strlen("!<arch>\n") + HeaderSize + SymtabSize;
+
+  if (SymMap) {
+    Size += HeaderSize + computeSymbolMapSize(NumMembers, *SymMap);
+    if (SymMap->ECMap.size())
+      Size += HeaderSize + computeECSymbolsSize(*SymMap);
+  }
+
+  return Size + StringMemberSize;
+}
+
 static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
                              bool Deterministic, ArrayRef<MemberData> Members,
-                             StringRef StringTable,
+                             StringRef StringTable, uint64_t MembersOffset,
                              uint64_t PrevMemberOffset = 0) {
   // We don't write a symbol table on an archive with no members -- except on
   // Darwin, where the linker will abort unless the archive has a symbol table.
-  if (StringTable.empty() && !isDarwin(Kind))
+  if (StringTable.empty() && !isDarwin(Kind) && !isCOFFArchive(Kind))
     return;
 
   unsigned NumSyms = 0;
@@ -413,17 +489,16 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
 
   uint64_t OffsetSize = is64BitKind(Kind) ? 8 : 4;
   uint32_t Pad;
-  uint64_t Size = computeSymbolTableSize(Kind, NumSyms, OffsetSize, StringTable, &Pad);
+  uint64_t Size = computeSymbolTableSize(Kind, NumSyms, OffsetSize,
+                                         StringTable.size(), &Pad);
   writeSymbolTableHeader(Out, Kind, Deterministic, Size, PrevMemberOffset);
-
-  uint64_t Pos = isAIXBigArchive(Kind) ? sizeof(object::BigArchive::FixLenHdr)
-                                       : Out.tell() + Size;
 
   if (isBSDLike(Kind))
     printNBits(Out, Kind, NumSyms * 2 * OffsetSize);
   else
     printNBits(Out, Kind, NumSyms);
 
+  uint64_t Pos = MembersOffset;
   for (const MemberData &M : Members) {
     for (unsigned StringOffset : M.Symbols) {
       if (isBSDLike(Kind))
@@ -442,8 +517,70 @@ static void writeSymbolTable(raw_ostream &Out, object::Archive::Kind Kind,
     Out.write(uint8_t(0));
 }
 
+static void writeSymbolMap(raw_ostream &Out, object::Archive::Kind Kind,
+                           bool Deterministic, ArrayRef<MemberData> Members,
+                           SymMap &SymMap, uint64_t MembersOffset) {
+  uint32_t Pad;
+  uint64_t Size = computeSymbolMapSize(Members.size(), SymMap, &Pad);
+  writeSymbolTableHeader(Out, Kind, Deterministic, Size, 0);
+
+  uint32_t Pos = MembersOffset;
+
+  printLE<uint32_t>(Out, Members.size());
+  for (const MemberData &M : Members) {
+    printLE(Out, Pos); // member offset
+    Pos += M.Header.size() + M.Data.size() + M.Padding.size();
+  }
+
+  printLE<uint32_t>(Out, SymMap.Map.size());
+
+  for (auto S : SymMap.Map)
+    printLE(Out, S.second);
+  for (auto S : SymMap.Map)
+    Out << S.first << '\0';
+
+  while (Pad--)
+    Out.write(uint8_t(0));
+}
+
+static void writeECSymbols(raw_ostream &Out, object::Archive::Kind Kind,
+                           bool Deterministic, ArrayRef<MemberData> Members,
+                           SymMap &SymMap) {
+  uint32_t Pad;
+  uint64_t Size = computeECSymbolsSize(SymMap, &Pad);
+  printGNUSmallMemberHeader(Out, "/<ECSYMBOLS>", now(Deterministic), 0, 0, 0,
+                            Size);
+
+  printLE<uint32_t>(Out, SymMap.ECMap.size());
+
+  for (auto S : SymMap.ECMap)
+    printLE(Out, S.second);
+  for (auto S : SymMap.ECMap)
+    Out << S.first << '\0';
+  while (Pad--)
+    Out.write(uint8_t(0));
+}
+
+static bool isECObject(object::SymbolicFile &Obj) {
+  if (Obj.isCOFF())
+    return cast<llvm::object::COFFObjectFile>(&Obj)->getMachine() !=
+           COFF::IMAGE_FILE_MACHINE_ARM64;
+
+  if (Obj.isIR()) {
+    Expected<std::string> TripleStr =
+        getBitcodeTargetTriple(Obj.getMemoryBufferRef());
+    if (!TripleStr)
+      return false;
+    Triple T(*TripleStr);
+    return T.isWindowsArm64EC() || T.getArch() == Triple::x86_64;
+  }
+
+  return false;
+}
+
 static Expected<std::vector<unsigned>>
-getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
+getSymbols(MemoryBufferRef Buf, uint16_t Index, raw_ostream &SymNames,
+           SymMap *SymMap, bool &HasObject) {
   std::vector<unsigned> Ret;
 
   // In the scenario when LLVMContext is populated SymbolicFile will contain a
@@ -468,14 +605,31 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
     Obj = std::move(*ObjOrErr);
   }
 
+  std::map<std::string, uint16_t> *Map = nullptr;
+  if (SymMap)
+    Map = SymMap->UseECMap && isECObject(*Obj) ? &SymMap->ECMap : &SymMap->Map;
   HasObject = true;
   for (const object::BasicSymbolRef &S : Obj->symbols()) {
     if (!isArchiveSymbol(S))
       continue;
-    Ret.push_back(SymNames.tell());
-    if (Error E = S.printName(SymNames))
-      return std::move(E);
-    SymNames << '\0';
+    if (Map) {
+      std::string Name;
+      raw_string_ostream NameStream(Name);
+      if (Error E = S.printName(NameStream))
+        return std::move(E);
+      if (Map->find(Name) != Map->end())
+        continue; // ignore duplicated symbol
+      (*Map)[Name] = Index;
+      if (Map == &SymMap->Map) {
+        Ret.push_back(SymNames.tell());
+        SymNames << Name << '\0';
+      }
+    } else {
+      Ret.push_back(SymNames.tell());
+      if (Error E = S.printName(SymNames))
+        return std::move(E);
+      SymNames << '\0';
+    }
   }
   return Ret;
 }
@@ -483,7 +637,8 @@ getSymbols(MemoryBufferRef Buf, raw_ostream &SymNames, bool &HasObject) {
 static Expected<std::vector<MemberData>>
 computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
                   object::Archive::Kind Kind, bool Thin, bool Deterministic,
-                  bool NeedSymbols, ArrayRef<NewArchiveMember> NewMembers) {
+                  bool NeedSymbols, SymMap *SymMap,
+                  ArrayRef<NewArchiveMember> NewMembers) {
   static char PaddingData[8] = {'\n', '\n', '\n', '\n', '\n', '\n', '\n', '\n'};
 
   uint64_t Pos =
@@ -549,13 +704,16 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
 
   // The big archive format needs to know the offset of the previous member
   // header.
-  unsigned PrevOffset = 0;
+  uint64_t PrevOffset = 0;
+  uint16_t Index = 0;
   for (const NewArchiveMember &M : NewMembers) {
     std::string Header;
     raw_string_ostream Out(Header);
 
     MemoryBufferRef Buf = M.Buf->getMemBufferRef();
     StringRef Data = Thin ? "" : Buf.getBuffer();
+
+    Index++;
 
     // ld64 expects the members to be 8-byte aligned for 64-bit content and at
     // least 4-byte aligned for 32-bit content.  Opt for the larger encoding
@@ -583,7 +741,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     }
 
     if (isAIXBigArchive(Kind)) {
-      unsigned NextOffset = Pos + sizeof(object::BigArMemHdrType) +
+      uint64_t NextOffset = Pos + sizeof(object::BigArMemHdrType) +
                             alignTo(M.MemberName.size(), 2) + alignTo(Size, 2);
       printBigArchiveMemberHeader(Out, M.MemberName, ModTime, M.UID, M.GID,
                                   M.Perms, Size, PrevOffset, NextOffset);
@@ -597,9 +755,9 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
     std::vector<unsigned> Symbols;
     if (NeedSymbols) {
       Expected<std::vector<unsigned>> SymbolsOrErr =
-          getSymbols(Buf, SymNames, HasObject);
-      if (auto E = SymbolsOrErr.takeError())
-        return std::move(E);
+          getSymbols(Buf, Index, SymNames, SymMap, HasObject);
+      if (!SymbolsOrErr)
+        return createFileError(M.MemberName, SymbolsOrErr.takeError());
       Symbols = std::move(*SymbolsOrErr);
     }
 
@@ -609,7 +767,7 @@ computeMemberData(raw_ostream &StringTable, raw_ostream &SymNames,
   // If there are no symbols, emit an empty symbol table, to satisfy Solaris
   // tools, older versions of which expect a symbol table in a non-empty
   // archive, regardless of whether there are any symbols in it.
-  if (HasObject && SymNames.tell() == 0)
+  if (HasObject && SymNames.tell() == 0 && !isCOFFArchive(Kind))
     SymNames << '\0' << '\0' << '\0';
   return Ret;
 }
@@ -660,28 +818,40 @@ Expected<std::string> computeArchiveRelativePath(StringRef From, StringRef To) {
 static Error writeArchiveToStream(raw_ostream &Out,
                                   ArrayRef<NewArchiveMember> NewMembers,
                                   bool WriteSymtab, object::Archive::Kind Kind,
-                                  bool Deterministic, bool Thin) {
+                                  bool Deterministic, bool Thin, bool IsEC) {
   assert((!Thin || !isBSDLike(Kind)) && "Only the gnu format has a thin mode");
 
   SmallString<0> SymNamesBuf;
   raw_svector_ostream SymNames(SymNamesBuf);
   SmallString<0> StringTableBuf;
   raw_svector_ostream StringTable(StringTableBuf);
+  SymMap SymMap;
 
-  Expected<std::vector<MemberData>> DataOrErr =
-      computeMemberData(StringTable, SymNames, Kind, Thin, Deterministic,
-                        WriteSymtab, NewMembers);
+  // COFF symbol map uses 16-bit indexes, so we can't use it if there are too
+  // many members.
+  if (isCOFFArchive(Kind) && NewMembers.size() > 0xfffe)
+    Kind = object::Archive::K_GNU;
+
+  SymMap.UseECMap = IsEC;
+  Expected<std::vector<MemberData>> DataOrErr = computeMemberData(
+      StringTable, SymNames, Kind, Thin, Deterministic, WriteSymtab,
+      isCOFFArchive(Kind) ? &SymMap : nullptr, NewMembers);
   if (Error E = DataOrErr.takeError())
     return E;
   std::vector<MemberData> &Data = *DataOrErr;
 
-  if (!StringTableBuf.empty() && !isAIXBigArchive(Kind))
-    Data.insert(Data.begin(), computeStringTable(StringTableBuf));
+  uint64_t StringTableSize = 0;
+  MemberData StringTableMember;
+  if (!StringTableBuf.empty() && !isAIXBigArchive(Kind)) {
+    StringTableMember = computeStringTable(StringTableBuf);
+    StringTableSize = StringTableMember.Header.size() +
+                      StringTableMember.Data.size() +
+                      StringTableMember.Padding.size();
+  }
 
   // We would like to detect if we need to switch to a 64-bit symbol table.
-  uint64_t LastMemberEndOffset =
-      isAIXBigArchive(Kind) ? sizeof(object::BigArchive::FixLenHdr) : 8;
-  uint64_t LastMemberHeaderOffset = LastMemberEndOffset;
+  uint64_t LastMemberEndOffset = 0;
+  uint64_t LastMemberHeaderOffset = 0;
   uint64_t NumSyms = 0;
   for (const auto &M : Data) {
     // Record the start of the member's offset
@@ -691,19 +861,15 @@ static Error writeArchiveToStream(raw_ostream &Out,
     NumSyms += M.Symbols.size();
   }
 
+  std::optional<uint64_t> HeadersSize;
+
   // The symbol table is put at the end of the big archive file. The symbol
   // table is at the start of the archive file for other archive formats.
-  if (WriteSymtab && !isAIXBigArchive(Kind)) {
+  if (WriteSymtab && !is64BitKind(Kind)) {
     // We assume 32-bit offsets to see if 32-bit symbols are possible or not.
-    uint64_t SymtabSize = computeSymbolTableSize(Kind, NumSyms, 4, SymNamesBuf);
-    auto computeSymbolTableHeaderSize =
-        [=] {
-          SmallString<0> TmpBuf;
-          raw_svector_ostream Tmp(TmpBuf);
-          writeSymbolTableHeader(Tmp, Kind, Deterministic, SymtabSize);
-          return TmpBuf.size();
-        };
-    LastMemberHeaderOffset += computeSymbolTableHeaderSize() + SymtabSize;
+    HeadersSize = computeHeadersSize(Kind, Data.size(), StringTableSize,
+                                     NumSyms, SymNamesBuf.size(),
+                                     isCOFFArchive(Kind) ? &SymMap : nullptr);
 
     // The SYM64 format is used when an archive's member offsets are larger than
     // 32-bits can hold. The need for this shift in format is detected by
@@ -720,11 +886,12 @@ static Error writeArchiveToStream(raw_ostream &Out,
     // If LastMemberHeaderOffset isn't going to fit in a 32-bit varible we need
     // to switch to 64-bit. Note that the file can be larger than 4GB as long as
     // the last member starts before the 4GB offset.
-    if (LastMemberHeaderOffset >= Sym64Threshold) {
+    if (*HeadersSize + LastMemberHeaderOffset >= Sym64Threshold) {
       if (Kind == object::Archive::K_DARWIN)
         Kind = object::Archive::K_DARWIN64;
       else
         Kind = object::Archive::K_GNU64;
+      HeadersSize.reset();
     }
   }
 
@@ -736,11 +903,32 @@ static Error writeArchiveToStream(raw_ostream &Out,
     Out << "!<arch>\n";
 
   if (!isAIXBigArchive(Kind)) {
-    if (WriteSymtab)
-      writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf);
+    if (WriteSymtab) {
+      if (!HeadersSize)
+        HeadersSize = computeHeadersSize(
+            Kind, Data.size(), StringTableSize, NumSyms, SymNamesBuf.size(),
+            isCOFFArchive(Kind) ? &SymMap : nullptr);
+      writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf,
+                       *HeadersSize);
+
+      if (isCOFFArchive(Kind))
+        writeSymbolMap(Out, Kind, Deterministic, Data, SymMap, *HeadersSize);
+    }
+
+    if (StringTableSize)
+      Out << StringTableMember.Header << StringTableMember.Data
+          << StringTableMember.Padding;
+
+    if (WriteSymtab && SymMap.ECMap.size())
+      writeECSymbols(Out, Kind, Deterministic, Data, SymMap);
+
     for (const MemberData &M : Data)
       Out << M.Header << M.Data << M.Padding;
   } else {
+    HeadersSize = sizeof(object::BigArchive::FixLenHdr);
+    LastMemberEndOffset += *HeadersSize;
+    LastMemberHeaderOffset += *HeadersSize;
+
     // For the big archive (AIX) format, compute a table of member names and
     // offsets, used in the member table.
     uint64_t MemberTableNameStrTblSize = 0;
@@ -761,11 +949,11 @@ static Error writeArchiveToStream(raw_ostream &Out,
     }
 
     // AIX member table size.
-    unsigned MemberTableSize = 20 + // Number of members field
+    uint64_t MemberTableSize = 20 + // Number of members field
                                20 * MemberOffsets.size() +
                                MemberTableNameStrTblSize;
 
-    unsigned GlobalSymbolOffset =
+    uint64_t GlobalSymbolOffset =
         (WriteSymtab && NumSyms > 0)
             ? LastMemberEndOffset +
                   alignTo(sizeof(object::BigArMemHdrType) + MemberTableSize, 2)
@@ -776,7 +964,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
                           20); // Offset to member table
     // If there are no file members in the archive, there will be no global
     // symbol table.
-    printWithSpacePadding(Out, NewMembers.size() ? GlobalSymbolOffset : 0, 20);
+    printWithSpacePadding(Out, GlobalSymbolOffset, 20);
     printWithSpacePadding(
         Out, 0,
         20); // Offset to 64 bits global symbol table - Not supported yet
@@ -813,7 +1001,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
 
       if (WriteSymtab && NumSyms > 0)
         writeSymbolTable(Out, Kind, Deterministic, Data, SymNamesBuf,
-                         LastMemberEndOffset);
+                         *HeadersSize, LastMemberEndOffset);
     }
   }
   Out.flush();
@@ -823,7 +1011,7 @@ static Error writeArchiveToStream(raw_ostream &Out,
 Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
                    bool WriteSymtab, object::Archive::Kind Kind,
                    bool Deterministic, bool Thin,
-                   std::unique_ptr<MemoryBuffer> OldArchiveBuf) {
+                   std::unique_ptr<MemoryBuffer> OldArchiveBuf, bool IsEC) {
   Expected<sys::fs::TempFile> Temp =
       sys::fs::TempFile::create(ArcName + ".temp-archive-%%%%%%%.a");
   if (!Temp)
@@ -831,7 +1019,7 @@ Error writeArchive(StringRef ArcName, ArrayRef<NewArchiveMember> NewMembers,
   raw_fd_ostream Out(Temp->FD, false);
 
   if (Error E = writeArchiveToStream(Out, NewMembers, WriteSymtab, Kind,
-                                     Deterministic, Thin)) {
+                                     Deterministic, Thin, IsEC)) {
     if (Error DiscardError = Temp->discard())
       return joinErrors(std::move(E), std::move(DiscardError));
     return E;
@@ -860,7 +1048,7 @@ writeArchiveToBuffer(ArrayRef<NewArchiveMember> NewMembers, bool WriteSymtab,
   raw_svector_ostream ArchiveStream(ArchiveBufferVector);
 
   if (Error E = writeArchiveToStream(ArchiveStream, NewMembers, WriteSymtab,
-                                     Kind, Deterministic, Thin))
+                                     Kind, Deterministic, Thin, false))
     return std::move(E);
 
   return std::make_unique<SmallVectorMemoryBuffer>(

@@ -58,3 +58,20 @@ body:             |
     %logic_op:_(s64) = G_OR %hand1, %hand2
     $x0 = COPY %logic_op(s64)
     RET_ReallyLR implicit $x0
+
+...
+---
+name:            dont_combine_physreg
+tracksRegLiveness: true
+legalized: true
+body:             |
+  bb.0:
+    liveins: $w0, $w1
+    ; Post-legalization, we must not crash here.
+    ;
+    ; CHECK-LABEL: name: dont_combine_physreg
+    %x:_(s32) = COPY $w0
+    %y:_(s32) = COPY $w1
+    %logic_op:_(s32) = G_OR %x, %y
+    $w0 = COPY %logic_op(s32)
+    RET_ReallyLR implicit $w0

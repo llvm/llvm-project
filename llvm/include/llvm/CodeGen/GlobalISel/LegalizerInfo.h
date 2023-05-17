@@ -17,12 +17,12 @@
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/LegacyLegalizerInfo.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/AtomicOrdering.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 #include <cassert>
 #include <cstdint>
 #include <tuple>
@@ -950,6 +950,22 @@ public:
                     changeTo(typeIdx(TypeIdx), Ty));
   }
 
+  /// Ensure the scalar is at least as wide as Ty if condition is met.
+  LegalizeRuleSet &minScalarIf(LegalityPredicate Predicate, unsigned TypeIdx,
+                               const LLT Ty) {
+    using namespace LegalityPredicates;
+    using namespace LegalizeMutations;
+    return actionIf(
+        LegalizeAction::WidenScalar,
+        [=](const LegalityQuery &Query) {
+          const LLT QueryTy = Query.Types[TypeIdx];
+          return QueryTy.isScalar() &&
+                 QueryTy.getSizeInBits() < Ty.getSizeInBits() &&
+                 Predicate(Query);
+        },
+        changeTo(typeIdx(TypeIdx), Ty));
+  }
+
   /// Ensure the scalar is at most as wide as Ty.
   LegalizeRuleSet &maxScalarOrElt(unsigned TypeIdx, const LLT Ty) {
     using namespace LegalityPredicates;
@@ -1040,6 +1056,8 @@ public:
         },
         [=](const LegalityQuery &Query) {
           LLT T = Query.Types[LargeTypeIdx];
+          if (T.isVector() && T.getElementType().isPointer())
+            T = T.changeElementType(LLT::scalar(T.getScalarSizeInBits()));
           return std::make_pair(TypeIdx, T);
         });
   }

@@ -26,6 +26,7 @@ on how to get in touch with us and to learn more about the current status.
    C++style
    FortranForCProgrammers
    GettingInvolved
+   GettingStarted
    ImplementingASemanticCheck
    PullRequestChecklist
 ```
@@ -44,11 +45,14 @@ on how to get in touch with us and to learn more about the current status.
    Directives
    DoConcurrent
    Extensions
+   FIRLangRef
+   FlangCommandLineReference
    FlangDriver
    FortranIR
    FortranLLVMTestSuite
    IORuntimeInternals
    Intrinsics
+   IntrinsicTypes
    LabelResolution
    ModFiles
    OpenMP-4.5-grammar.md

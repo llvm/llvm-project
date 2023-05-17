@@ -24,8 +24,8 @@ A 16-bit message code. The bits of this operand have the following meaning:
 
 This operand may be specified as one of the following:
 
-* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range 0..0xFFFF.
-* A *sendmsg* value described below.
+* An :ref:`integer_number<amdgpu_synid_integer_number>` or an :ref:`absolute_expression<amdgpu_synid_absolute_expression>`. The value must be in the range from 0 to 0xFFFF.
+* A *sendmsg* value which is described below.
 
     ==================================== ====================================================
     Sendmsg Value Syntax                 Description
@@ -40,7 +40,7 @@ This operand may be specified as one of the following:
 
 *Op* may be specified using operation *name* or operation *id*.
 
-Stream *id* is an integer in the range 0..3.
+Stream *id* is an integer in the range from 0 to 3.
 
 Numeric values may be specified as positive :ref:`integer numbers<amdgpu_synid_integer_number>`
 or :ref:`absolute expressions<amdgpu_synid_absolute_expression>`.
@@ -68,7 +68,7 @@ Each message type supports specific operations:
 *Sendmsg* arguments are validated depending on how *type* value is specified:
 
 * If message *type* is specified by name, arguments values must satisfy limitations detailed in the table above.
-* If message *type* is specified as a number, each argument must not exceed corresponding value range (see the first table).
+* If message *type* is specified as a number, each argument must not exceed the corresponding value range (see the first table).
 
 Examples:
 

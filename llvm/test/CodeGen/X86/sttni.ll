@@ -70,7 +70,7 @@ define i32 @pcmpestri_reg_diff_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, 
 ; X86-NEXT:  .LBB2_2: # %compare
 ; X86-NEXT:    movdqa %xmm0, (%esp)
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    movb (%esp,%ecx), %al
+; X86-NEXT:    movzbl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:  .LBB2_3: # %exit
@@ -94,7 +94,7 @@ define i32 @pcmpestri_reg_diff_i8(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, 
 ; X64-NEXT:  .LBB2_2: # %compare
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    movb -24(%rsp,%rcx), %al
+; X64-NEXT:    movzbl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    subb -40(%rsp,%rcx), %al
 ; X64-NEXT:    movzbl %al, %eax
@@ -116,7 +116,7 @@ exit:
   ret i32 %result_ext
 }
 
-define i1 @pcmpestri_mem_eq_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 %rhs_len) nounwind {
+define i1 @pcmpestri_mem_eq_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_eq_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
@@ -140,16 +140,14 @@ define i1 @pcmpestri_mem_eq_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 %rh
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i8* %lhs_ptr to <16 x i8>*
-  %lhs = load <16 x i8>, <16 x i8>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i8* %rhs_ptr to <16 x i8>*
-  %rhs = load <16 x i8>, <16 x i8>* %rhs_vptr, align 1
+  %lhs = load <16 x i8>, ptr %lhs_ptr, align 1
+  %rhs = load <16 x i8>, ptr %rhs_ptr, align 1
   %c = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   %result = icmp eq i32 %c, 0
   ret i1 %result
 }
 
-define i32 @pcmpestri_mem_idx_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 %rhs_len) nounwind {
+define i32 @pcmpestri_mem_idx_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_idx_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
@@ -173,15 +171,13 @@ define i32 @pcmpestri_mem_idx_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 %
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i8* %lhs_ptr to <16 x i8>*
-  %lhs = load <16 x i8>, <16 x i8>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i8* %rhs_ptr to <16 x i8>*
-  %rhs = load <16 x i8>, <16 x i8>* %rhs_vptr, align 1
+  %lhs = load <16 x i8>, ptr %lhs_ptr, align 1
+  %rhs = load <16 x i8>, ptr %rhs_ptr, align 1
   %idx = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   ret i32 %idx
 }
 
-define i32 @pcmpestri_mem_diff_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 %rhs_len) nounwind {
+define i32 @pcmpestri_mem_diff_i8(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_diff_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -204,7 +200,7 @@ define i32 @pcmpestri_mem_diff_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 
 ; X86-NEXT:  .LBB5_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    movb (%esp,%ecx), %al
+; X86-NEXT:    movzbl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:  .LBB5_3: # %exit
@@ -231,16 +227,14 @@ define i32 @pcmpestri_mem_diff_i8(i8* %lhs_ptr, i32 %lhs_len, i8* %rhs_ptr, i32 
 ; X64-NEXT:  .LBB5_2: # %compare
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    movb -24(%rsp,%rcx), %al
+; X64-NEXT:    movzbl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    subb -40(%rsp,%rcx), %al
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i8* %lhs_ptr to <16 x i8>*
-  %lhs = load <16 x i8>, <16 x i8>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i8* %rhs_ptr to <16 x i8>*
-  %rhs = load <16 x i8>, <16 x i8>* %rhs_vptr, align 1
+  %lhs = load <16 x i8>, ptr %lhs_ptr, align 1
+  %rhs = load <16 x i8>, ptr %rhs_ptr, align 1
   %idx = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   %eq = icmp eq i32 %idx, 16
   br i1 %eq, label %exit, label %compare
@@ -371,7 +365,7 @@ exit:
   ret i32 %result_ext
 }
 
-define i1 @pcmpestri_mem_eq_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i32 %rhs_len) nounwind {
+define i1 @pcmpestri_mem_eq_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_eq_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
@@ -395,10 +389,8 @@ define i1 @pcmpestri_mem_eq_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i32 
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i16* %lhs_ptr to <8 x i16>*
-  %lhs = load <8 x i16>, <8 x i16>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i16* %rhs_ptr to <8 x i16>*
-  %rhs = load <8 x i16>, <8 x i16>* %rhs_vptr, align 1
+  %lhs = load <8 x i16>, ptr %lhs_ptr, align 1
+  %rhs = load <8 x i16>, ptr %rhs_ptr, align 1
   %lhs_cast = bitcast <8 x i16> %lhs to <16 x i8>
   %rhs_cast = bitcast <8 x i16> %rhs to <16 x i8>
   %c = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs_cast, i32 %lhs_len, <16 x i8> %rhs_cast, i32 %rhs_len, i8 25)
@@ -406,7 +398,7 @@ entry:
   ret i1 %result
 }
 
-define i32 @pcmpestri_mem_idx_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i32 %rhs_len) nounwind {
+define i32 @pcmpestri_mem_idx_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_idx_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %esi
@@ -430,17 +422,15 @@ define i32 @pcmpestri_mem_idx_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i3
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i16* %lhs_ptr to <8 x i16>*
-  %lhs = load <8 x i16>, <8 x i16>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i16* %rhs_ptr to <8 x i16>*
-  %rhs = load <8 x i16>, <8 x i16>* %rhs_vptr, align 1
+  %lhs = load <8 x i16>, ptr %lhs_ptr, align 1
+  %rhs = load <8 x i16>, ptr %rhs_ptr, align 1
   %lhs_cast = bitcast <8 x i16> %lhs to <16 x i8>
   %rhs_cast = bitcast <8 x i16> %rhs to <16 x i8>
   %idx = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs_cast, i32 %lhs_len, <16 x i8> %rhs_cast, i32 %rhs_len, i8 25)
   ret i32 %idx
 }
 
-define i32 @pcmpestri_mem_diff_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i32 %rhs_len) nounwind {
+define i32 @pcmpestri_mem_diff_i16(ptr %lhs_ptr, i32 %lhs_len, ptr %rhs_ptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_mem_diff_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -497,10 +487,8 @@ define i32 @pcmpestri_mem_diff_i16(i16* %lhs_ptr, i32 %lhs_len, i16* %rhs_ptr, i
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i16* %lhs_ptr to <8 x i16>*
-  %lhs = load <8 x i16>, <8 x i16>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i16* %rhs_ptr to <8 x i16>*
-  %rhs = load <8 x i16>, <8 x i16>* %rhs_vptr, align 1
+  %lhs = load <8 x i16>, ptr %lhs_ptr, align 1
+  %rhs = load <8 x i16>, ptr %rhs_ptr, align 1
   %lhs_cast = bitcast <8 x i16> %lhs to <16 x i8>
   %rhs_cast = bitcast <8 x i16> %rhs to <16 x i8>
   %idx = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs_cast, i32 %lhs_len, <16 x i8> %rhs_cast, i32 %rhs_len, i8 25)
@@ -571,7 +559,7 @@ define i32 @pcmpistri_reg_diff_i8(<16 x i8> %lhs, <16 x i8> %rhs) nounwind {
 ; X86-NEXT:    subl $48, %esp
 ; X86-NEXT:    movdqa %xmm0, (%esp)
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    movb (%esp,%ecx), %al
+; X86-NEXT:    movzbl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm1, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:    movl %ebp, %esp
@@ -592,7 +580,7 @@ define i32 @pcmpistri_reg_diff_i8(<16 x i8> %lhs, <16 x i8> %rhs) nounwind {
 ; X64-NEXT:  .LBB14_2: # %compare
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    movb -24(%rsp,%rcx), %al
+; X64-NEXT:    movzbl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    subb -40(%rsp,%rcx), %al
 ; X64-NEXT:    movzbl %al, %eax
@@ -614,7 +602,7 @@ exit:
   ret i32 %result_ext
 }
 
-define i1 @pcmpistri_mem_eq_i8(i8* %lhs_ptr, i8* %rhs_ptr) nounwind {
+define i1 @pcmpistri_mem_eq_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_eq_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -631,16 +619,14 @@ define i1 @pcmpistri_mem_eq_i8(i8* %lhs_ptr, i8* %rhs_ptr) nounwind {
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i8* %lhs_ptr to <16 x i8>*
-  %lhs = load <16 x i8>, <16 x i8>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i8* %rhs_ptr to <16 x i8>*
-  %rhs = load <16 x i8>, <16 x i8>* %rhs_vptr, align 1
+  %lhs = load <16 x i8>, ptr %lhs_ptr, align 1
+  %rhs = load <16 x i8>, ptr %rhs_ptr, align 1
   %c = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %result = icmp eq i32 %c, 0
   ret i1 %result
 }
 
-define i32 @pcmpistri_mem_idx_i8(i8* %lhs_ptr, i8* %rhs_ptr) nounwind {
+define i32 @pcmpistri_mem_idx_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_idx_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -657,15 +643,13 @@ define i32 @pcmpistri_mem_idx_i8(i8* %lhs_ptr, i8* %rhs_ptr) nounwind {
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i8* %lhs_ptr to <16 x i8>*
-  %lhs = load <16 x i8>, <16 x i8>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i8* %rhs_ptr to <16 x i8>*
-  %rhs = load <16 x i8>, <16 x i8>* %rhs_vptr, align 1
+  %lhs = load <16 x i8>, ptr %lhs_ptr, align 1
+  %rhs = load <16 x i8>, ptr %rhs_ptr, align 1
   %idx = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   ret i32 %idx
 }
 
-define i32 @pcmpistri_mem_diff_i8(i8* %lhs_ptr, i8* %rhs_ptr) nounwind {
+define i32 @pcmpistri_mem_diff_i8(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_diff_i8:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -685,7 +669,7 @@ define i32 @pcmpistri_mem_diff_i8(i8* %lhs_ptr, i8* %rhs_ptr) nounwind {
 ; X86-NEXT:  .LBB17_2: # %compare
 ; X86-NEXT:    movdqa %xmm1, (%esp)
 ; X86-NEXT:    andl $15, %ecx
-; X86-NEXT:    movb (%esp,%ecx), %al
+; X86-NEXT:    movzbl (%esp,%ecx), %eax
 ; X86-NEXT:    movdqa %xmm0, {{[0-9]+}}(%esp)
 ; X86-NEXT:    subb 16(%esp,%ecx), %al
 ; X86-NEXT:  .LBB17_3: # %exit
@@ -709,16 +693,14 @@ define i32 @pcmpistri_mem_diff_i8(i8* %lhs_ptr, i8* %rhs_ptr) nounwind {
 ; X64-NEXT:  .LBB17_2: # %compare
 ; X64-NEXT:    movdqa %xmm1, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    andl $15, %ecx
-; X64-NEXT:    movb -24(%rsp,%rcx), %al
+; X64-NEXT:    movzbl -24(%rsp,%rcx), %eax
 ; X64-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
 ; X64-NEXT:    subb -40(%rsp,%rcx), %al
 ; X64-NEXT:    movzbl %al, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i8* %lhs_ptr to <16 x i8>*
-  %lhs = load <16 x i8>, <16 x i8>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i8* %rhs_ptr to <16 x i8>*
-  %rhs = load <16 x i8>, <16 x i8>* %rhs_vptr, align 1
+  %lhs = load <16 x i8>, ptr %lhs_ptr, align 1
+  %rhs = load <16 x i8>, ptr %rhs_ptr, align 1
   %idx = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %eq = icmp eq i32 %idx, 16
   br i1 %eq, label %exit, label %compare
@@ -837,7 +819,7 @@ exit:
   ret i32 %result_ext
 }
 
-define i1 @pcmpistri_mem_eq_i16(i16* %lhs_ptr, i16* %rhs_ptr) nounwind {
+define i1 @pcmpistri_mem_eq_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_eq_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -854,10 +836,8 @@ define i1 @pcmpistri_mem_eq_i16(i16* %lhs_ptr, i16* %rhs_ptr) nounwind {
 ; X64-NEXT:    setae %al
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i16* %lhs_ptr to <8 x i16>*
-  %lhs = load <8 x i16>, <8 x i16>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i16* %rhs_ptr to <8 x i16>*
-  %rhs = load <8 x i16>, <8 x i16>* %rhs_vptr, align 1
+  %lhs = load <8 x i16>, ptr %lhs_ptr, align 1
+  %rhs = load <8 x i16>, ptr %rhs_ptr, align 1
   %lhs_cast = bitcast <8 x i16> %lhs to <16 x i8>
   %rhs_cast = bitcast <8 x i16> %rhs to <16 x i8>
   %c = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs_cast, <16 x i8> %rhs_cast, i8 25)
@@ -865,7 +845,7 @@ entry:
   ret i1 %result
 }
 
-define i32 @pcmpistri_mem_idx_i16(i16* %lhs_ptr, i16* %rhs_ptr) nounwind {
+define i32 @pcmpistri_mem_idx_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_idx_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -882,17 +862,15 @@ define i32 @pcmpistri_mem_idx_i16(i16* %lhs_ptr, i16* %rhs_ptr) nounwind {
 ; X64-NEXT:    movl %ecx, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i16* %lhs_ptr to <8 x i16>*
-  %lhs = load <8 x i16>, <8 x i16>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i16* %rhs_ptr to <8 x i16>*
-  %rhs = load <8 x i16>, <8 x i16>* %rhs_vptr, align 1
+  %lhs = load <8 x i16>, ptr %lhs_ptr, align 1
+  %rhs = load <8 x i16>, ptr %rhs_ptr, align 1
   %lhs_cast = bitcast <8 x i16> %lhs to <16 x i8>
   %rhs_cast = bitcast <8 x i16> %rhs to <16 x i8>
   %idx = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs_cast, <16 x i8> %rhs_cast, i8 25)
   ret i32 %idx
 }
 
-define i32 @pcmpistri_mem_diff_i16(i16* %lhs_ptr, i16* %rhs_ptr) nounwind {
+define i32 @pcmpistri_mem_diff_i16(ptr %lhs_ptr, ptr %rhs_ptr) nounwind {
 ; X86-LABEL: pcmpistri_mem_diff_i16:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -943,10 +921,8 @@ define i32 @pcmpistri_mem_diff_i16(i16* %lhs_ptr, i16* %rhs_ptr) nounwind {
 ; X64-NEXT:    movzwl %ax, %eax
 ; X64-NEXT:    retq
 entry:
-  %lhs_vptr = bitcast i16* %lhs_ptr to <8 x i16>*
-  %lhs = load <8 x i16>, <8 x i16>* %lhs_vptr, align 1
-  %rhs_vptr = bitcast i16* %rhs_ptr to <8 x i16>*
-  %rhs = load <8 x i16>, <8 x i16>* %rhs_vptr, align 1
+  %lhs = load <8 x i16>, ptr %lhs_ptr, align 1
+  %rhs = load <8 x i16>, ptr %rhs_ptr, align 1
   %lhs_cast = bitcast <8 x i16> %lhs to <16 x i8>
   %rhs_cast = bitcast <8 x i16> %rhs to <16 x i8>
   %idx = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs_cast, <16 x i8> %rhs_cast, i8 25)
@@ -965,7 +941,7 @@ exit:
   ret i32 %result_ext
 }
 
-define void @pcmpestr_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i32* %iptr, i32* %fptr) nounwind {
+define void @pcmpestr_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpestr_index_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
@@ -1000,12 +976,12 @@ define void @pcmpestr_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i
 entry:
   %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   %index = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
-  store i32 %index, i32* %iptr
-  store i32 %flag, i32* %fptr
+  store i32 %index, ptr %iptr
+  store i32 %flag, ptr %fptr
   ret void
 }
 
-define void @pcmpestr_mask_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, <16 x i8>* %mptr, i32* %fptr) nounwind {
+define void @pcmpestr_mask_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, ptr %mptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpestr_mask_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
@@ -1037,12 +1013,12 @@ define void @pcmpestr_mask_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i3
 entry:
   %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   %mask = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
-  store <16 x i8> %mask, <16 x i8>* %mptr
-  store i32 %flag, i32* %fptr
+  store <16 x i8> %mask, ptr %mptr
+  store i32 %flag, ptr %fptr
   ret void
 }
 
-define void @pcmpestr_mask_index(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, <16 x i8>* %mptr, i32* %iptr) nounwind {
+define void @pcmpestr_mask_index(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, ptr %mptr, ptr %iptr) nounwind {
 ; X86-LABEL: pcmpestr_mask_index:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %edi
@@ -1075,12 +1051,12 @@ define void @pcmpestr_mask_index(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i
 entry:
   %index = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   %mask = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
-  store <16 x i8> %mask, <16 x i8>* %mptr
-  store i32 %index, i32* %iptr
+  store <16 x i8> %mask, ptr %mptr
+  store i32 %index, ptr %iptr
   ret void
 }
 
-define void @pcmpestr_mask_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, <16 x i8>* %mptr, i32* %iptr, i32* %fptr) nounwind {
+define void @pcmpestr_mask_index_flag(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, ptr %mptr, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpestr_mask_index_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebp
@@ -1125,13 +1101,13 @@ entry:
   %index = call i32 @llvm.x86.sse42.pcmpestri128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   %mask = call <16 x i8> @llvm.x86.sse42.pcmpestrm128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
-  store <16 x i8> %mask, <16 x i8>* %mptr
-  store i32 %index, i32* %iptr
-  store i32 %flag, i32* %fptr
+  store <16 x i8> %mask, ptr %mptr
+  store i32 %index, ptr %iptr
+  store i32 %flag, ptr %fptr
   ret void
 }
 
-define void @pcmpistr_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, i32* %iptr, i32* %fptr) nounwind {
+define void @pcmpistr_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_index_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
@@ -1156,12 +1132,12 @@ define void @pcmpistr_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, i32* %iptr, i32
 entry:
   %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
-  store i32 %index, i32* %iptr
-  store i32 %flag, i32* %fptr
+  store i32 %index, ptr %iptr
+  store i32 %flag, ptr %fptr
   ret void
 }
 
-define void @pcmpistr_mask_flag(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mptr, i32* %fptr) nounwind {
+define void @pcmpistr_mask_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %mptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1184,12 +1160,12 @@ define void @pcmpistr_mask_flag(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mptr
 entry:
   %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
-  store <16 x i8> %mask, <16 x i8>* %mptr
-  store i32 %flag, i32* %fptr
+  store <16 x i8> %mask, ptr %mptr
+  store i32 %flag, ptr %fptr
   ret void
 }
 
-define void @pcmpistr_mask_index(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mptr, i32* %iptr) nounwind {
+define void @pcmpistr_mask_index(<16 x i8> %lhs, <16 x i8> %rhs, ptr %mptr, ptr %iptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_index:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
@@ -1210,12 +1186,12 @@ define void @pcmpistr_mask_index(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mpt
 entry:
   %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
-  store <16 x i8> %mask, <16 x i8>* %mptr
-  store i32 %index, i32* %iptr
+  store <16 x i8> %mask, ptr %mptr
+  store i32 %index, ptr %iptr
   ret void
 }
 
-define void @pcmpistr_mask_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, <16 x i8>* %mptr, i32* %iptr, i32* %fptr) nounwind {
+define void @pcmpistr_mask_index_flag(<16 x i8> %lhs, <16 x i8> %rhs, ptr %mptr, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_index_flag:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
@@ -1250,14 +1226,14 @@ entry:
   %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
-  store <16 x i8> %mask, <16 x i8>* %mptr
-  store i32 %index, i32* %iptr
-  store i32 %flag, i32* %fptr
+  store <16 x i8> %mask, ptr %mptr
+  store i32 %index, ptr %iptr
+  store i32 %flag, ptr %fptr
   ret void
 }
 
 ; Make sure we don't fold loads when we need to emit pcmpistrm and pcmpistri.
-define void @pcmpistr_mask_index_flag_load(<16 x i8> %lhs, <16 x i8>* %rhsptr, <16 x i8>* %mptr, i32* %iptr, i32* %fptr) nounwind {
+define void @pcmpistr_mask_index_flag_load(<16 x i8> %lhs, ptr %rhsptr, ptr %mptr, ptr %iptr, ptr %fptr) nounwind {
 ; X86-LABEL: pcmpistr_mask_index_flag_load:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
@@ -1293,18 +1269,18 @@ define void @pcmpistr_mask_index_flag_load(<16 x i8> %lhs, <16 x i8>* %rhsptr, <
 ; X64-NEXT:    movl %edi, (%rax)
 ; X64-NEXT:    retq
 entry:
-  %rhs = load <16 x i8>, <16 x i8>* %rhsptr, align 1
+  %rhs = load <16 x i8>, ptr %rhsptr, align 1
   %index = call i32 @llvm.x86.sse42.pcmpistri128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %mask = call <16 x i8> @llvm.x86.sse42.pcmpistrm128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
   %flag = call i32 @llvm.x86.sse42.pcmpistric128(<16 x i8> %lhs, <16 x i8> %rhs, i8 24)
-  store <16 x i8> %mask, <16 x i8>* %mptr
-  store i32 %index, i32* %iptr
-  store i32 %flag, i32* %fptr
+  store <16 x i8> %mask, ptr %mptr
+  store i32 %index, ptr %iptr
+  store i32 %flag, ptr %fptr
   ret void
 }
 
 ; Make sure we don't fold nontemporal loads.
-define i32 @pcmpestri_nontemporal(<16 x i8> %lhs, i32 %lhs_len, <16 x i8>* %rhsptr, i32 %rhs_len) nounwind {
+define i32 @pcmpestri_nontemporal(<16 x i8> %lhs, i32 %lhs_len, ptr %rhsptr, i32 %rhs_len) nounwind {
 ; X86-LABEL: pcmpestri_nontemporal:
 ; X86:       # %bb.0: # %entry
 ; X86-NEXT:    pushl %ebx
@@ -1329,7 +1305,7 @@ define i32 @pcmpestri_nontemporal(<16 x i8> %lhs, i32 %lhs_len, <16 x i8>* %rhsp
 ; X64-NEXT:    movl %esi, %eax
 ; X64-NEXT:    retq
 entry:
-  %rhs = load <16 x i8>, <16 x i8>* %rhsptr, align 16, !nontemporal !0
+  %rhs = load <16 x i8>, ptr %rhsptr, align 16, !nontemporal !0
   %flag = call i32 @llvm.x86.sse42.pcmpestric128(<16 x i8> %lhs, i32 %lhs_len, <16 x i8> %rhs, i32 %rhs_len, i8 24)
   ret i32 %flag
 }

@@ -11,11 +11,15 @@
 
 #include "mlir/Dialect/LLVMIR/Transforms/LegalizeForExport.h"
 #include "mlir/Dialect/LLVMIR/Transforms/OptimizeForNVVM.h"
+#include "mlir/Dialect/LLVMIR/Transforms/RequestCWrappers.h"
 #include "mlir/Pass/Pass.h"
 
 namespace mlir {
 
 namespace LLVM {
+
+/// Create a pass to add DIScope to LLVMFuncOp that are missing it.
+std::unique_ptr<Pass> createDIScopeForLLVMFuncOpPass();
 
 /// Generate the code for registering conversion passes.
 #define GEN_PASS_REGISTRATION

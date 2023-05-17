@@ -38,7 +38,7 @@ public:
   using Base::Base;
   using ValueType = mlir::Type;
 
-  static constexpr llvm::StringRef getAttrName() { return "instance"; }
+  static constexpr llvm::StringRef getAttrName() { return "type_is"; }
   static ExactTypeAttr get(mlir::Type value);
 
   mlir::Type getType() const;
@@ -51,10 +51,19 @@ public:
   using Base::Base;
   using ValueType = mlir::Type;
 
-  static constexpr llvm::StringRef getAttrName() { return "subsumed"; }
+  static constexpr llvm::StringRef getAttrName() { return "class_is"; }
   static SubclassAttr get(mlir::Type value);
 
   mlir::Type getType() const;
+};
+
+/// Attribute which can be applied to a fir.allocmem operation, specifying that
+/// the allocation may not be moved to the heap by passes
+class MustBeHeapAttr : public mlir::BoolAttr {
+public:
+  using BoolAttr::BoolAttr;
+
+  static constexpr llvm::StringRef getAttrName() { return "fir.must_be_heap"; }
 };
 
 // Attributes for building SELECT CASE multiway branches
@@ -141,5 +150,10 @@ void printFirAttribute(FIROpsDialect *dialect, mlir::Attribute attr,
                        mlir::DialectAsmPrinter &p);
 
 } // namespace fir
+
+#include "flang/Optimizer/Dialect/FIREnumAttr.h.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "flang/Optimizer/Dialect/FIRAttr.h.inc"
 
 #endif // FORTRAN_OPTIMIZER_DIALECT_FIRATTR_H

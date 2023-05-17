@@ -63,7 +63,7 @@ void ProcessTrace::DidAttach(ArchSpec &process_arch) {
   SetPrivateState(eStateStopped);
 
   EventSP event_sp;
-  WaitForProcessToStop(llvm::None, &event_sp, true, listener_sp);
+  WaitForProcessToStop(std::nullopt, &event_sp, true, listener_sp);
 
   RestoreProcessEvents();
 

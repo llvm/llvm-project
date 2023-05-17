@@ -45,6 +45,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramStateTrait.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SymbolManager.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -282,11 +283,11 @@ void ObjCDeallocChecker::checkBeginFunction(
       continue;
 
     SVal LVal = State->getLValue(PropImpl->getPropertyIvarDecl(), SelfVal);
-    Optional<Loc> LValLoc = LVal.getAs<Loc>();
+    std::optional<Loc> LValLoc = LVal.getAs<Loc>();
     if (!LValLoc)
       continue;
 
-    SVal InitialVal = State->getSVal(LValLoc.getValue());
+    SVal InitialVal = State->getSVal(*LValLoc);
     SymbolRef Symbol = InitialVal.getAsSymbol();
     if (!Symbol || !isa<SymbolRegionValue>(Symbol))
       continue;
@@ -953,11 +954,11 @@ ObjCDeallocChecker::getValueReleasedByNillingOut(const ObjCMethodCall &M,
   ProgramStateRef State = C.getState();
 
   SVal LVal = State->getLValue(PropIvarDecl, ReceiverVal);
-  Optional<Loc> LValLoc = LVal.getAs<Loc>();
+  std::optional<Loc> LValLoc = LVal.getAs<Loc>();
   if (!LValLoc)
     return nullptr;
 
-  SVal CurrentValInIvar = State->getSVal(LValLoc.getValue());
+  SVal CurrentValInIvar = State->getSVal(*LValLoc);
   return CurrentValInIvar.getAsSymbol();
 }
 
@@ -1004,7 +1005,7 @@ bool ObjCDeallocChecker::instanceDeallocIsOnStack(const CheckerContext &C,
   return false;
 }
 
-/// Returns true if the ID is a class in which which is known to have
+/// Returns true if the ID is a class in which is known to have
 /// a separate teardown lifecycle. In this case, -dealloc warnings
 /// about missing releases should be suppressed.
 bool ObjCDeallocChecker::classHasSeparateTeardown(

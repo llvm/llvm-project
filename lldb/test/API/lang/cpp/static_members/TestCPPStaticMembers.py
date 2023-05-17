@@ -4,7 +4,6 @@ Tests that C++ member and static variables have correct layout and scope.
 
 
 
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     # We fail to lookup static members on Windows.
     @expectedFailureAll(oslist=["windows"])
@@ -42,8 +39,6 @@ class TestCase(TestBase):
         self.expect("expression s_c", error=True,
                     startstr="error: use of undeclared identifier 's_d'")
 
-    # We fail to lookup static members on Windows.
-    @expectedFailureAll(oslist=["windows"])
     def test_no_crash_in_IR_arithmetic(self):
         """
         Test that LLDB doesn't crash on evaluating specific expression involving

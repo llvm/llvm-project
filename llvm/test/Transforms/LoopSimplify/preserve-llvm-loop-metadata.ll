@@ -1,4 +1,4 @@
-; RUN: opt -loop-simplify -S < %s | FileCheck %s
+; RUN: opt -passes=loop-simplify -S < %s | FileCheck %s
 
 ; CHECK-LABEL: @test1
 define void @test1(i32 %n) {
@@ -40,7 +40,7 @@ while.end:                                        ; preds = %while.cond
 ; CHECK: for.body:
 ; CHECK: br i1 %{{.*}}, label %for.body, label %cleanup.loopexit, !llvm.loop !0
 define void @test2(i32 %k)  {
-entry: 
+entry:
   %cmp9 = icmp sgt i32 %k, 0
   br i1 %cmp9, label %for.body.preheader, label %cleanup
 

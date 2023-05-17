@@ -4,7 +4,7 @@
 
 %v4_varying_complex = type { <4 x float>, <4 x float> }
 
-define void @FFT(%v4_varying_complex* noalias nocapture %destination, float* noalias %re, <4 x i32>* noalias nocapture %ptr_cast_for_load) nounwind {
+define void @FFT(ptr noalias nocapture %destination, ptr noalias %re, ptr noalias nocapture %ptr_cast_for_load) nounwind {
 ; X86-LABEL: FFT:
 ; X86:       # %bb.0: # %begin
 ; X86-NEXT:    pushl %ebx
@@ -37,13 +37,13 @@ define void @FFT(%v4_varying_complex* noalias nocapture %destination, float* noa
 ; X64-NEXT:    movdqu (%rdx), %xmm0
 ; X64-NEXT:    pslld $4, %xmm0
 ; X64-NEXT:    movd %xmm0, %eax
-; X64-NEXT:    movslq %eax, %r8
+; X64-NEXT:    cltq
 ; X64-NEXT:    pextrd $1, %xmm0, %ecx
 ; X64-NEXT:    movslq %ecx, %rcx
 ; X64-NEXT:    pextrd $2, %xmm0, %edx
 ; X64-NEXT:    movslq %edx, %rdx
-; X64-NEXT:    pextrd $3, %xmm0, %eax
-; X64-NEXT:    cltq
+; X64-NEXT:    pextrd $3, %xmm0, %r8d
+; X64-NEXT:    movslq %r8d, %r8
 ; X64-NEXT:    movss {{.*#+}} xmm0 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
@@ -54,7 +54,7 @@ define void @FFT(%v4_varying_complex* noalias nocapture %destination, float* noa
 ; X64-NEXT:    movss %xmm3, 236(%rdi)
 ; X64-NEXT:    retq
 begin:
-  %ptr_masked_load79 = load <4 x i32>, <4 x i32>* %ptr_cast_for_load, align 4
+  %ptr_masked_load79 = load <4 x i32>, ptr %ptr_cast_for_load, align 4
   %mul__bitReversedProgramIndex_load = shl <4 x i32> %ptr_masked_load79, <i32 4, i32 4, i32 4, i32 4>
 
   %offset32_1 = extractelement <4 x i32> %mul__bitReversedProgramIndex_load, i32 0
@@ -66,26 +66,22 @@ begin:
   %offset32_4 = extractelement <4 x i32> %mul__bitReversedProgramIndex_load, i32 3
   %ptroffset_4 = sext i32 %offset32_4 to i64
 
-  %ptrcast_1 = getelementptr float, float* %re, i64 %ptroffset_1
-  %val_1 = load float, float* %ptrcast_1, align 4
-  %ptrcast_2 = getelementptr float, float* %re, i64 %ptroffset_2
-  %val_2 = load float, float* %ptrcast_2, align 4
-  %ptrcast_3 = getelementptr float, float* %re, i64 %ptroffset_3
-  %val_3 = load float, float* %ptrcast_3, align 4
-  %ptrcast_4 = getelementptr float, float* %re, i64 %ptroffset_4
-  %val_4 = load float, float* %ptrcast_4, align 4
+  %ptrcast_1 = getelementptr float, ptr %re, i64 %ptroffset_1
+  %val_1 = load float, ptr %ptrcast_1, align 4
+  %ptrcast_2 = getelementptr float, ptr %re, i64 %ptroffset_2
+  %val_2 = load float, ptr %ptrcast_2, align 4
+  %ptrcast_3 = getelementptr float, ptr %re, i64 %ptroffset_3
+  %val_3 = load float, ptr %ptrcast_3, align 4
+  %ptrcast_4 = getelementptr float, ptr %re, i64 %ptroffset_4
+  %val_4 = load float, ptr %ptrcast_4, align 4
 
-  %destination_load_ptr2int_2void = bitcast %v4_varying_complex* %destination to i8*
-  %ptrcast1_1 = getelementptr inbounds %v4_varying_complex, %v4_varying_complex* %destination, i64 4, i32 0, i64 0
-  store float %val_1, float* %ptrcast1_1, align 4
-  %finalptr_2 = getelementptr i8, i8* %destination_load_ptr2int_2void, i64 164
-  %ptrcast1_2 = bitcast i8* %finalptr_2 to float*
-  store float %val_2, float* %ptrcast1_2, align 4
-  %finalptr_3 = getelementptr i8, i8* %destination_load_ptr2int_2void, i64 200
-  %ptrcast1_3 = bitcast i8* %finalptr_3 to float*
-  store float %val_3, float* %ptrcast1_3, align 4
-  %finalptr_4 = getelementptr i8, i8* %destination_load_ptr2int_2void, i64 236
-  %ptrcast1_4 = bitcast i8* %finalptr_4 to float*
-  store float %val_4, float* %ptrcast1_4, align 4
+  %ptrcast1_1 = getelementptr inbounds %v4_varying_complex, ptr %destination, i64 4, i32 0, i64 0
+  store float %val_1, ptr %ptrcast1_1, align 4
+  %finalptr_2 = getelementptr i8, ptr %destination, i64 164
+  store float %val_2, ptr %finalptr_2, align 4
+  %finalptr_3 = getelementptr i8, ptr %destination, i64 200
+  store float %val_3, ptr %finalptr_3, align 4
+  %finalptr_4 = getelementptr i8, ptr %destination, i64 236
+  store float %val_4, ptr %finalptr_4, align 4
   ret void
 }

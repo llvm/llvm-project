@@ -14,6 +14,8 @@
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Profile/ProfileReaderBase.h"
 #include "bolt/Rewrite/RewriteInstance.h"
+#include "bolt/Utils/Utils.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/CommandLine.h"
 
 #undef  DEBUG_TYPE
@@ -183,7 +185,7 @@ class RewriteInstanceDiff {
            RI1.getTotalScore();
   }
 
-  double getNormalizedScore(BinaryBasicBlock::branch_info_iterator BIIter,
+  double getNormalizedScore(BinaryBasicBlock::const_branch_info_iterator BIIter,
                             const RewriteInstance &Ctx) {
     double Score =
         BIIter->Count == BinaryBasicBlock::COUNT_NO_PROFILE ? 0 : BIIter->Count;
@@ -202,7 +204,7 @@ class RewriteInstanceDiff {
       const double Score = getNormalizedScore(Function, RI1);
       LargestBin1.insert(std::make_pair<>(Score, &Function));
       for (const StringRef &Name : Function.getNames()) {
-        if (Optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
+        if (std::optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
           LTOName = *OptionalLTOName;
         NameLookup[Name] = &Function;
       }
@@ -222,7 +224,7 @@ class RewriteInstanceDiff {
       const double Score = getNormalizedScore(Function, RI2);
       LargestBin2.insert(std::make_pair<>(Score, &Function));
       for (const StringRef &Name : Function.getNames()) {
-        if (Optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
+        if (std::optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
           LTOName = *OptionalLTOName;
       }
       if (opts::IgnoreLTOSuffix && !LTOName.empty()) {
@@ -245,7 +247,7 @@ class RewriteInstanceDiff {
       bool Match = false;
       for (const StringRef &Name : Function2.getNames()) {
         auto Iter = NameLookup.find(Name);
-        if (Optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
+        if (std::optional<StringRef> OptionalLTOName = getLTOCommonName(Name))
           LTOName = *OptionalLTOName;
         if (Iter == NameLookup.end())
           continue;
@@ -302,10 +304,10 @@ class RewriteInstanceDiff {
           continue;
         Unmapped.emplace_back(&Function);
       }
-      std::sort(Unmapped.begin(), Unmapped.end(),
-                [&](const BinaryFunction *A, const BinaryFunction *B) {
-                  return A->getFunctionScore() > B->getFunctionScore();
-                });
+      llvm::sort(Unmapped,
+                 [&](const BinaryFunction *A, const BinaryFunction *B) {
+                   return A->getFunctionScore() > B->getFunctionScore();
+                 });
       for (const BinaryFunction *Function : Unmapped) {
         outs() << Function->getPrintName() << " : ";
         outs() << Function->getFunctionScore() << "\n";
@@ -344,14 +346,14 @@ class RewriteInstanceDiff {
       const BinaryFunction *const &Func1 = MapEntry.second;
       const BinaryFunction *const &Func2 = MapEntry.first;
 
-      auto Iter1 = Func1->layout_begin();
-      auto Iter2 = Func2->layout_begin();
+      auto Iter1 = Func1->getLayout().block_begin();
+      auto Iter2 = Func2->getLayout().block_begin();
 
       bool Match = true;
       std::map<const BinaryBasicBlock *, const BinaryBasicBlock *> Map;
       std::map<double, std::pair<EdgeTy, EdgeTy>> EMap;
-      while (Iter1 != Func1->layout_end()) {
-        if (Iter2 == Func2->layout_end()) {
+      while (Iter1 != Func1->getLayout().block_end()) {
+        if (Iter2 == Func2->getLayout().block_end()) {
           Match = false;
           break;
         }
@@ -393,7 +395,7 @@ class RewriteInstanceDiff {
         ++Iter1;
         ++Iter2;
       }
-      if (!Match || Iter2 != Func2->layout_end())
+      if (!Match || Iter2 != Func2->getLayout().block_end())
         continue;
 
       BBMap.insert(Map.begin(), Map.end());
@@ -422,8 +424,8 @@ class RewriteInstanceDiff {
     outs() << "=========================================================\n";
     setRegularColor();
     outs() << " * Functions with different contents do not appear here\n\n";
-    for (auto I = LargestDiffs.rbegin(), E = LargestDiffs.rend(); I != E; ++I) {
-      const BinaryBasicBlock *BB2 = I->second;
+    for (const BinaryBasicBlock *BB2 :
+         llvm::make_second_range(llvm::reverse(LargestDiffs))) {
       const double Score2 = getNormalizedScore(*BB2, RI2);
       const double Score1 = getNormalizedScore(*BBMap[BB2], RI1);
       outs() << "BB " << BB2->getName() << " from "
@@ -452,11 +454,10 @@ class RewriteInstanceDiff {
     outs() << "=========================================================\n";
     setRegularColor();
     outs() << " * Functions with different contents do not appear here\n";
-    for (auto I = EdgeMap.rbegin(), E = EdgeMap.rend(); I != E; ++I) {
-      std::tuple<const BinaryBasicBlock *, const BinaryBasicBlock *, double>
-          &Edge2 = I->second.first;
-      std::tuple<const BinaryBasicBlock *, const BinaryBasicBlock *, double>
-          &Edge1 = I->second.second;
+    for (std::pair<EdgeTy, EdgeTy> &EI :
+         llvm::make_second_range(llvm::reverse(EdgeMap))) {
+      EdgeTy &Edge2 = EI.first;
+      EdgeTy &Edge1 = EI.second;
       const double Score2 = std::get<2>(Edge2);
       const double Score1 = std::get<2>(Edge1);
       outs() << "Edge (" << std::get<0>(Edge2)->getName() << " -> "
@@ -547,9 +548,8 @@ class RewriteInstanceDiff {
            << " largest differences in performance bin 2 -> bin 1:\n";
     outs() << "=========================================================\n";
     setRegularColor();
-    for (auto I = LargestDiffs.rbegin(), E = LargestDiffs.rend(); I != E; ++I) {
-      const std::pair<const BinaryFunction *const, const BinaryFunction *>
-          &MapEntry = I->second;
+    for (decltype(this->FuncMap)::value_type &MapEntry :
+         llvm::make_second_range(llvm::reverse(LargestDiffs))) {
       if (opts::IgnoreUnchanged &&
           MapEntry.second->computeHash(/*UseDFS=*/true) ==
               MapEntry.first->computeHash(/*UseDFS=*/true))
@@ -592,8 +592,8 @@ class RewriteInstanceDiff {
            << " hottest functions in binary 2:\n";
     outs() << "=====================================\n";
     setRegularColor();
-    for (auto I = LargestBin2.rbegin(), E = LargestBin2.rend(); I != E; ++I) {
-      const std::pair<const double, const BinaryFunction *> &MapEntry = *I;
+    for (std::pair<const double, const BinaryFunction *> &MapEntry :
+         llvm::reverse(LargestBin2)) {
       outs() << "Function " << MapEntry.second->getDemangledName() << "\n";
       auto Iter = ScoreMap.find(MapEntry.second);
       if (Iter != ScoreMap.end())
@@ -611,8 +611,8 @@ class RewriteInstanceDiff {
            << " hottest functions in binary 1:\n";
     outs() << "=====================================\n";
     setRegularColor();
-    for (auto I = LargestBin1.rbegin(), E = LargestBin1.rend(); I != E; ++I) {
-      const std::pair<const double, const BinaryFunction *> &MapEntry = *I;
+    for (const std::pair<const double, const BinaryFunction *> &MapEntry :
+         llvm::reverse(LargestBin1)) {
       outs() << "Function " << MapEntry.second->getDemangledName()
              << "\n\tScore bin1 = " << format("%.2f", MapEntry.first * 100.0)
              << "%\n";

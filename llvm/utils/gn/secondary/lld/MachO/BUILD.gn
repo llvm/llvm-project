@@ -16,6 +16,7 @@ static_library("MachO") {
     "//llvm/lib/Option",
     "//llvm/lib/Support",
     "//llvm/lib/Target:TargetsToBuild",
+    "//llvm/lib/TargetParser",
   ]
   include_dirs = [
     ".",
@@ -31,6 +32,7 @@ static_library("MachO") {
     "Driver.cpp",
     "DriverUtils.cpp",
     "Dwarf.cpp",
+    "EhFrame.cpp",
     "ExportTrie.cpp",
     "ICF.cpp",
     "InputFiles.cpp",

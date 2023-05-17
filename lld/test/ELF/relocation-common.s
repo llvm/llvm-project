@@ -1,7 +1,7 @@
 # REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux %s -o %t.o
 # RUN: ld.lld %t.o -o %t
-# RUN: llvm-objdump -t -d %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -t -d %t | FileCheck %s
 
 .global _start
 _start:

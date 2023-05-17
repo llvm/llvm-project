@@ -8,7 +8,7 @@
 int main() {
   // CHECK: x = 98
   int x = 98;
-  #pragma omp target exit data map(from:x)
+#pragma omp target exit data map(from : x)
   printf("x = %d\n", x);
   return 0;
 }

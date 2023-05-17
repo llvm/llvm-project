@@ -24,6 +24,8 @@ void SourceBreakpoint::SetBreakpoint(const llvm::StringRef source_path) {
     SetCondition();
   if (!hitCondition.empty())
     SetHitCondition();
+  if (!logMessage.empty())
+    SetLogMessage();
 }
 
 } // namespace lldb_vscode

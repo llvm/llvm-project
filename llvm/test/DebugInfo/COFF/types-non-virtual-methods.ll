@@ -257,8 +257,8 @@ define void @"\01?foo@@YAXXZ"() #0 !dbg !6 {
 entry:
   %a = alloca %struct.A, align 1
   %b = alloca %class.B, align 1
-  call void @llvm.dbg.declare(metadata %struct.A* %a, metadata !9, metadata !19), !dbg !20
-  call void @llvm.dbg.declare(metadata %class.B* %b, metadata !21, metadata !19), !dbg !36
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !9, metadata !19), !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !21, metadata !19), !dbg !36
   ret void, !dbg !37
 }
 

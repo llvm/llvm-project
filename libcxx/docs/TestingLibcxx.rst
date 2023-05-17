@@ -5,6 +5,8 @@ Testing libc++
 .. contents::
   :local:
 
+.. _testing:
+
 Getting Started
 ===============
 
@@ -27,7 +29,7 @@ Usage
 After building libc++, you can run parts of the libc++ test suite by simply
 running ``llvm-lit`` on a specified test or directory. If you're unsure
 whether the required libraries have been built, you can use the
-`cxx-test-depends` target. For example:
+``cxx-test-depends`` target. For example:
 
 .. code-block:: bash
 
@@ -37,45 +39,52 @@ whether the required libraries have been built, you can use the
   $ <build>/bin/llvm-lit -sv libcxx/test/std/depr/depr.c.headers/stdlib_h.pass.cpp # Run a single test
   $ <build>/bin/llvm-lit -sv libcxx/test/std/atomics libcxx/test/std/threads # Test std::thread and std::atomic
 
+If you used **ninja** as your build system, running ``ninja -C <build> check-cxx`` will run
+all the tests in the libc++ testsuite.
+
+.. note::
+  If you used the Bootstrapping build instead of the default runtimes build, the
+  ``cxx-test-depends`` target is instead named ``runtimes-test-depends``, and
+  you will need to prefix ``<build>/runtimes/runtimes-<target>-bins/`` to the
+  paths of all tests. For example, to run all the libcxx tests you can do
+  ``<build>/bin/llvm-lit -sv <build>/runtimes/runtimes-bins/libcxx/test``.
+
 In the default configuration, the tests are built against headers that form a
 fake installation root of libc++. This installation root has to be updated when
-changes are made to the headers, so you should re-run the `cxx-test-depends`
-target before running the tests manually with `lit` when you make any sort of
-change, including to the headers.
+changes are made to the headers, so you should re-run the ``cxx-test-depends``
+target before running the tests manually with ``lit`` when you make any sort of
+change, including to the headers. We recommend using the provided ``libcxx/utils/libcxx-lit``
+script to automate this so you don't have to think about building test dependencies
+every time:
+
+.. code-block:: bash
+
+  $ cd <monorepo-root>
+  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/re # Build testing dependencies and run all of the std::regex tests
 
 Sometimes you'll want to change the way LIT is running the tests. Custom options
-can be specified using the `--param=<name>=<val>` flag. The most common option
-you'll want to change is the standard dialect (ie -std=c++XX). By default the
+can be specified using the ``--param <name>=<val>`` flag. The most common option
+you'll want to change is the standard dialect (ie ``-std=c++XX``). By default the
 test suite will select the newest C++ dialect supported by the compiler and use
-that. However if you want to manually specify the option like so:
+that. However, you can manually specify the option like so if you want:
 
 .. code-block:: bash
 
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers # Run the tests with the newest -std
-  $ <build>/bin/llvm-lit -sv libcxx/test/std/containers --param=std=c++03 # Run the tests in C++03
+  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers # Run the tests with the newest -std
+  $ libcxx/utils/libcxx-lit <build> -sv libcxx/test/std/containers --param std=c++03 # Run the tests in C++03
 
-Occasionally you'll want to add extra compile or link flags when testing.
-You can do this as follows:
+Other parameters are supported by the test suite. Those are defined in ``libcxx/utils/libcxx/test/params.py``.
+If you want to customize how to run the libc++ test suite beyond what is available
+in ``params.py``, you most likely want to use a custom site configuration instead.
 
-.. code-block:: bash
+The libc++ test suite works by loading a site configuration that defines various
+"base" parameters (via Lit substitutions). These base parameters represent things
+like the compiler to use for running the tests, which default compiler and linker
+flags to use, and how to run an executable. This system is meant to be easily
+extended for custom needs, in particular when porting the libc++ test suite to
+new platforms.
 
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=compile_flags='-Wcustom-warning'
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=link_flags='-L/custom/library/path'
-
-Some other common examples include:
-
-.. code-block:: bash
-
-  # Specify a custom compiler.
-  $ <build>/bin/llvm-lit -sv libcxx/test/std --param=cxx_under_test=/opt/bin/g++
-
-  # Disable warnings in the test suite
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=enable_warnings=False
-
-  # Use UBSAN when running the tests.
-  $ <build>/bin/llvm-lit -sv libcxx/test --param=use_sanitizer=Undefined
-
-Using a custom site configuration
+Using a Custom Site Configuration
 ---------------------------------
 
 By default, the libc++ test suite will use a site configuration that matches
@@ -83,9 +92,9 @@ the current CMake configuration. It does so by generating a ``lit.site.cfg``
 file in the build directory from one of the configuration file templates in
 ``libcxx/test/configs/``, and pointing ``llvm-lit`` (which is a wrapper around
 ``llvm/utils/lit/lit.py``) to that file. So when you're running
-``<build>/bin/llvm-lit``, the generated ``lit.site.cfg`` file is always loaded
-instead of ``libcxx/test/lit.cfg.py``. If you want to use a custom site
-configuration, simply point the CMake build to it using
+``<build>/bin/llvm-lit`` either directly or indirectly, the generated ``lit.site.cfg``
+file is always loaded instead of ``libcxx/test/lit.cfg.py``. If you want to use a
+custom site configuration, simply point the CMake build to it using
 ``-DLIBCXX_TEST_CONFIG=<path-to-site-config>``, and that site configuration
 will be used instead. That file can use CMake variables inside it to make
 configuration easier.
@@ -93,89 +102,38 @@ configuration easier.
    .. code-block:: bash
 
      $ cmake <options> -DLIBCXX_TEST_CONFIG=<path-to-site-config>
-     $ make -C <build> cxx-test-depends
-     $ <build>/bin/llvm-lit -sv libcxx/test # will use your custom config file
+     $ libcxx/utils/libcxx-lit <build> -sv libcxx/test # will use your custom config file
 
+Additional tools
+----------------
 
-LIT Options
-===========
+The libc++ test suite uses a few optional tools to improve the code quality.
 
-:program:`lit` [*options*...] [*filenames*...]
+These tools are:
+- clang-tidy (you might need additional dev packages to compile libc++-specific clang-tidy checks)
 
-Command Line Options
---------------------
+Reproducing CI issues locally
+-----------------------------
 
-To use these options you pass them on the LIT command line as ``--param NAME``
-or ``--param NAME=VALUE``. Some options have default values specified during
-CMake's configuration. Passing the option on the command line will override the
-default.
+Libc++ has extensive CI that tests various configurations of the library. The testing for
+all these configurations is located in ``libcxx/utils/ci/run-buildbot``. Most of our
+CI jobs are being run on a Docker image for reproducibility. The definition of this Docker
+image is located in ``libcxx/utils/ci/Dockerfile``. If you are looking to reproduce the
+failure of a specific CI job locally, you should first drop into a Docker container that
+matches our CI images by running ``libcxx/utils/ci/run-buildbot-container``, and then run
+the specific CI job that you're interested in (from within the container) using the ``run-buildbot``
+script above. If you want to control which compiler is used, you can set the ``CC`` and the
+``CXX`` environment variables before calling ``run-buildbot`` to select the right compiler.
+Take note that some CI jobs are testing the library on specific platforms and are *not* run
+in our Docker image. In the general case, it is not possible to reproduce these failures
+locally, unless they aren't specific to the platform.
 
-.. program:: lit
-
-.. option:: cxx_under_test=<path/to/compiler>
-
-  Specify the compiler used to build the tests.
-
-.. option:: stdlib=<stdlib name>
-
-  **Values**: libc++, libstdc++, msvc
-
-  Specify the C++ standard library being tested. The default is libc++ if this
-  option is not provided. This option is intended to allow running the libc++
-  test suite against other standard library implementations.
-
-.. option:: std=<standard version>
-
-  **Values**: c++03, c++11, c++14, c++17, c++20, c++2b
-
-  Change the standard version used when building the tests.
-
-.. option:: cxx_headers=<path/to/headers>
-
-  Specify the c++ standard library headers that are tested. By default the
-  headers in the source tree are used.
-
-.. option:: cxx_library_root=<path/to/lib/>
-
-  Specify the directory of the libc++ library to be tested. By default the
-  library folder of the build directory is used.
-
-
-.. option:: cxx_runtime_root=<path/to/lib/>
-
-  Specify the directory of the libc++ library to use at runtime. This directory
-  is not added to the linkers search path. This can be used to compile tests
-  against one version of libc++ and run them using another. The default value
-  for this option is `cxx_library_root`.
-
-.. option:: use_system_cxx_lib=<bool>
-
-  **Default**: False
-
-  Enable or disable testing against the installed version of libc++ library.
-  This impacts whether the ``use_system_cxx_lib`` Lit feature is defined or
-  not. The ``cxx_library_root`` and ``cxx_runtime_root`` parameters should
-  still be used to specify the path of the library to link to and run against,
-  respectively.
-
-.. option:: use_sanitizer=<sanitizer name>
-
-  **Values**: Memory, MemoryWithOrigins, Address, Undefined
-
-  Run the tests using the given sanitizer. If LLVM_USE_SANITIZER was given when
-  building libc++ then that sanitizer will be used by default.
-
-.. option:: llvm_unwinder
-
-  Enable the use of LLVM unwinder instead of libgcc.
-
-.. option:: builtins_library
-
-  Path to the builtins library to use instead of libgcc.
-
+Also note that the Docker container shares the same filesystem as your local machine, so
+modifying files on your local machine will also modify what the Docker container sees.
+This is useful for editing source files as you're testing your code in the Docker container.
 
 Writing Tests
--------------
+=============
 
 When writing tests for the libc++ test suite, you should follow a few guidelines.
 This will ensure that your tests can run on a wide variety of hardware and under
@@ -196,6 +154,189 @@ few requirements to the test suite. Here's some stuff you should know:
   For example, requiring Python to run a test is bad, since Python is not
   necessarily available on all devices we may want to run the tests on (even
   though supporting Python is probably trivial for the build-host).
+
+Structure of the testing related directories
+--------------------------------------------
+
+The tests of libc++ are stored in libc++'s testing related subdirectories:
+
+- ``libcxx/test/support`` This directory contains several helper headers with
+  generic parts for the tests. The most important header is ``test_macros.h``.
+  This file contains configuration information regarding the platform used.
+  This is similar to the ``__config`` file in libc++'s ``include`` directory.
+  Since libc++'s tests are used by other Standard libraries, tests should use
+  the ``TEST_FOO`` macros instead of the ``_LIBCPP_FOO`` macros, which are
+  specific to libc++.
+- ``libcxx/test/std`` This directory contains the tests that validate the library under
+  test conforms to the C++ Standard. The paths and the names of the test match
+  the section names in the C++ Standard. Note that the C++ Standard sometimes
+  reorganises its structure, therefore some tests are at a location based on
+  where they appeared historically in the standard. We try to strike a balance
+  between keeping things at up-to-date locations and unnecessary churn.
+- ``libcxx/test/libcxx`` This directory contains the tests that validate libc++
+  specific behavior and implementation details. For example, libc++ has
+  "wrapped iterators" that perform bounds checks. Since those are specific to
+  libc++ and not mandated by the Standard, tests for those are located under
+  ``libcxx/test/libcxx``. The structure of this directories follows the
+  structure of ``libcxx/test/std``.
+
+Structure of a test
+-------------------
+
+Some platforms where libc++ is tested have requirement on the signature of
+``main`` and require ``main`` to explicitly return a value. Therefore the
+typical ``main`` function should look like:
+
+.. code-block:: cpp
+
+  int main(int, char**) {
+    ...
+    return 0;
+  }
+
+
+The C++ Standard has ``constexpr`` requirements. The typical way to test that,
+is to create a helper ``test`` function that returns a ``bool`` and use the
+following ``main`` function:
+
+.. code-block:: cpp
+
+  constexpr bool test() {
+    ...
+    return true;
+  }
+
+  int main(int, char**) {
+    test()
+    static_assert(test());
+
+    return 0;
+  }
+
+Tests in libc++ mainly use ``assert`` and ``static_assert`` for testing. There
+are a few helper macros and function that can be used to make it easier to
+write common tests.
+
+libcxx/test/support/assert_macros.h
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The header contains several macros with user specified log messages. This is
+useful when a normal assertion failure lacks the information to easily
+understand why the test has failed. This usually happens when the test is in a
+helper function. For example the ``std::format`` tests use a helper function
+for its validation. When the test fails it will give the line in the helper
+function with the condition ``out == expected`` failed. Without knowing what
+the value of ``format string``, ``out`` and ``expected`` are it is not easy to
+understand why the test has failed. By logging these three values the point of
+failure can be found without resorting to a debugger.
+
+Several of these macros are documented to take an ``ARG``. This ``ARG``:
+
+ - if it is a ``const char*`` or ``std::string`` its contents are written to
+   the ``stderr``,
+ - otherwise it must be a callable that is invoked without any additional
+   arguments and is expected to produce useful output to e.g. ``stderr``.
+
+This makes it possible to write additional information when a test fails,
+either by supplying a hard-coded string or generate it at runtime.
+
+TEST_FAIL(ARG)
+^^^^^^^^^^^^^^
+
+This macro is an unconditional failure with a log message ``ARG``. The main
+use-case is to fail when code is reached that should be unreachable.
+
+
+TEST_REQUIRE(CONDITION, ARG)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This macro requires its ``CONDITION`` to evaluate to ``true``. If that fails it
+will fail the test with a log message ``ARG``.
+
+
+TEST_LIBCPP_REQUIRE((CONDITION, ARG)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If the library under test is libc++ it behaves like ``TEST_REQUIRE``, else it
+is a no-op. This makes it possible to test libc++ specific behaviour. For
+example testing whether the ``what()`` of an exception thrown matches libc++'s
+expectations. (Usually the Standard requires certain exceptions to be thrown,
+but not the contents of its ``what()`` message.)
+
+
+TEST_DOES_NOT_THROW(EXPR)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Validates execution of ``EXPR`` does not throw an exception.
+
+TEST_THROWS_TYPE(TYPE, EXPR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Validates the execution of ``EXPR`` throws an exception of the type ``TYPE``.
+
+
+TEST_VALIDATE_EXCEPTION(TYPE, PRED, EXPR)
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Validates the execution of ``EXPR`` throws an exception of the type ``TYPE``
+which passes validation of ``PRED``. Using this macro makes it easier to write
+tests using exceptions. The code to write a test manually would be:
+
+
+.. code-block:: cpp
+
+  void test_excption([[maybe_unused]] int arg) {
+  #ifndef TEST_HAS_NO_EXCEPTIONS // do nothing when tests are disabled
+    try {
+      foo(arg);
+      assert(false); // validates foo really throws
+    } catch ([[maybe_unused]] const bar& e) {
+      LIBCPP_ASSERT(e.what() == what);
+      return;
+    }
+    assert(false); // validates bar was thrown
+  #endif
+    }
+
+The same test using a macro:
+
+.. code-block:: cpp
+
+  void test_excption([[maybe_unused]] int arg) {
+    TEST_VALIDATE_EXCEPTION(bar,
+                            [](const bar& e) {
+                              LIBCPP_ASSERT(e.what() == what);
+                            },
+                            foo(arg));
+    }
+
+
+libcxx/test/support/concat_macros.h
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+This file contains a helper macro ``TEST_WRITE_CONCATENATED`` to lazily
+concatenate its arguments to a ``std::string`` and write it to ``stderr``. When
+the output can't be concatenated a default message will be written to
+``stderr``. This is useful for tests where the arguments use different
+character types like ``char`` and ``wchar_t``, the latter can't simply be
+written to ``stderrr``.
+
+This macro is in a different header as ``assert_macros.h`` since it pulls in
+additional headers.
+
+ .. note: This macro can only be used in test using C++20 or newer. The macro
+          was added at a time where most of lib++'s C++17 support was complete.
+          Since it is not expected to add this to existing tests no effort was
+          taken to make it work in earlier language versions.
+
+
+Additional reading
+------------------
+
+The function ``CxxStandardLibraryTest`` in the file
+``libcxx/utils/libcxx/test/format.py`` has documentation about writing test. It
+explains the difference between the test named  ``foo.pass.cpp`` and named
+``foo.verify.cpp`` are.
 
 Benchmarks
 ==========

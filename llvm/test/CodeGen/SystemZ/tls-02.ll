@@ -6,7 +6,7 @@
 
 ; The offset must be loaded from the GOT.  This TLS access model does
 ; not use literal pool constants.
-define i32 *@foo() {
+define ptr@foo() {
 ; CHECK-MAIN-LABEL: foo:
 ; CHECK-MAIN: ear [[HIGH:%r[0-5]]], %a0
 ; CHECK-MAIN: sllg %r2, [[HIGH]], 32
@@ -14,5 +14,5 @@ define i32 *@foo() {
 ; CHECK-MAIN-DAG: larl %r1, x@INDNTPOFF
 ; CHECK-MAIN: ag %r2, 0(%r1)
 ; CHECK-MAIN: br %r14
-  ret i32 *@x
+  ret ptr@x
 }

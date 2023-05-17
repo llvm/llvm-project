@@ -40,6 +40,7 @@
 #include "lldb/Utility/StreamString.h"
 
 #include <map>
+#include <optional>
 
 using namespace llvm;
 using lldb_private::LLDBLog;
@@ -299,7 +300,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
   }
 
   lldb::TargetSP target_sp(m_execution_unit.GetTarget());
-  llvm::Optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
+  std::optional<uint64_t> bit_size = m_result_type.GetBitSize(target_sp.get());
   if (!bit_size) {
     lldb_private::StreamString type_desc_stream;
     m_result_type.DumpTypeDescription(&type_desc_stream);
@@ -323,7 +324,7 @@ bool IRForTarget::CreateResultVariable(llvm::Function &llvm_function) {
 
   LLDB_LOG(log, "Creating a new result global: \"{0}\" with size {1}",
            m_result_name,
-           m_result_type.GetByteSize(target_sp.get()).getValueOr(0));
+           m_result_type.GetByteSize(target_sp.get()).value_or(0));
 
   // Construct a new result global and set up its metadata
 
@@ -475,8 +476,7 @@ bool IRForTarget::RewriteObjCConstString(llvm::GlobalVariable *ns_str,
     string_array = dyn_cast<ConstantDataSequential>(cstr->getInitializer());
 
   Constant *alloc_arg = Constant::getNullValue(i8_ptr_ty);
-  Constant *bytes_arg = cstr ? ConstantExpr::getBitCast(cstr, i8_ptr_ty)
-                             : Constant::getNullValue(i8_ptr_ty);
+  Constant *bytes_arg = cstr ? cstr : Constant::getNullValue(i8_ptr_ty);
   Constant *numBytes_arg = ConstantInt::get(
       m_intptr_ty, cstr ? (string_array->getNumElements() - 1) * string_array->getElementByteSize() : 0, false);
  int encoding_flags = 0;
@@ -820,17 +820,9 @@ bool IRForTarget::RewriteObjCSelector(Instruction *selector_load) {
                           ConstantExpr::getIntToPtr(srN_addr_int, srN_ptr_ty)};
   }
 
-  Value *argument_array[1];
-
-  Constant *omvn_pointer = ConstantExpr::getBitCast(
-      _objc_meth_var_name_, Type::getInt8PtrTy(m_module->getContext()));
-
-  argument_array[0] = omvn_pointer;
-
-  ArrayRef<Value *> srN_arguments(argument_array, 1);
-
-  CallInst *srN_call = CallInst::Create(m_sel_registerName, srN_arguments,
-                                        "sel_registerName", selector_load);
+  CallInst *srN_call =
+      CallInst::Create(m_sel_registerName, _objc_meth_var_name_,
+                       "sel_registerName", selector_load);
 
   // Replace the load with the call in all users
 
@@ -886,14 +878,12 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
   // Unpack the class name from the reference.  In LLVM IR, a reference to an
   // Objective-C class gets represented as
   //
-  // %tmp     = load %struct._objc_class*,
-  //            %struct._objc_class** @OBJC_CLASS_REFERENCES_, align 4
+  // %tmp     = load ptr, ptr @OBJC_CLASS_REFERENCES_, align 4
   //
-  // @"OBJC_CLASS_REFERENCES_ is a bitcast of a character array called
+  // @OBJC_CLASS_REFERENCES_ is a reference to a character array called
   // @OBJC_CLASS_NAME_. @OBJC_CLASS_NAME contains the string.
 
-  // Find the pointer's initializer (a ConstantExpr with opcode BitCast) and
-  // get the string from its target
+  // Find the pointer's initializer and get the string from its target
 
   GlobalVariable *_objc_class_references_ =
       dyn_cast<GlobalVariable>(load->getPointerOperand());
@@ -902,23 +892,10 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
       !_objc_class_references_->hasInitializer())
     return false;
 
-  Constant *ocr_initializer = _objc_class_references_->getInitializer();
-
-  ConstantExpr *ocr_initializer_expr = dyn_cast<ConstantExpr>(ocr_initializer);
-
-  if (!ocr_initializer_expr ||
-      ocr_initializer_expr->getOpcode() != Instruction::BitCast)
-    return false;
-
-  Value *ocr_initializer_base = ocr_initializer_expr->getOperand(0);
-
-  if (!ocr_initializer_base)
-    return false;
-
   // Find the string's initializer (a ConstantArray) and get the string from it
 
   GlobalVariable *_objc_class_name_ =
-      dyn_cast<GlobalVariable>(ocr_initializer_base);
+      dyn_cast<GlobalVariable>(_objc_class_references_->getInitializer());
 
   if (!_objc_class_name_ || !_objc_class_name_->hasInitializer())
     return false;
@@ -970,16 +947,7 @@ bool IRForTarget::RewriteObjCClassReference(Instruction *class_load) {
                        ConstantExpr::getIntToPtr(ogC_addr_int, ogC_ptr_ty)};
   }
 
-  Value *argument_array[1];
-
-  Constant *ocn_pointer = ConstantExpr::getBitCast(
-      _objc_class_name_, Type::getInt8PtrTy(m_module->getContext()));
-
-  argument_array[0] = ocn_pointer;
-
-  ArrayRef<Value *> ogC_arguments(argument_array, 1);
-
-  CallInst *ogC_call = CallInst::Create(m_objc_getClass, ogC_arguments,
+  CallInst *ogC_call = CallInst::Create(m_objc_getClass, _objc_class_name_,
                                         "objc_getClass", class_load);
 
   // Replace the load with the call in all users
@@ -1193,11 +1161,10 @@ bool IRForTarget::MaybeHandleVariable(Value *llvm_value_ptr) {
     }
 
     auto *target = m_execution_unit.GetTarget().get();
-    llvm::Optional<uint64_t> value_size = compiler_type.GetByteSize(target);
+    std::optional<uint64_t> value_size = compiler_type.GetByteSize(target);
     if (!value_size)
       return false;
-    llvm::Optional<size_t> opt_alignment =
-        compiler_type.GetTypeBitAlign(target);
+    std::optional<size_t> opt_alignment = compiler_type.GetTypeBitAlign(target);
     if (!opt_alignment)
       return false;
     lldb::offset_t value_alignment = (*opt_alignment + 7ull) / 8ull;
@@ -1419,19 +1386,7 @@ bool IRForTarget::ResolveExternals(Function &llvm_function) {
 }
 
 static bool isGuardVariableRef(Value *V) {
-  Constant *Old = dyn_cast<Constant>(V);
-
-  if (!Old)
-    return false;
-
-  if (auto CE = dyn_cast<ConstantExpr>(V)) {
-    if (CE->getOpcode() != Instruction::BitCast)
-      return false;
-
-    Old = CE->getOperand(0);
-  }
-
-  GlobalVariable *GV = dyn_cast<GlobalVariable>(Old);
+  GlobalVariable *GV = dyn_cast<GlobalVariable>(V);
 
   if (!GV || !GV->hasName() || !isGuardVariableSymbol(GV->getName()))
     return false;
@@ -1732,19 +1687,12 @@ bool IRForTarget::ReplaceVariables(Function &llvm_function) {
                 int8Ty, argument, offset_int, "", entry_instruction);
 
             if (name == m_result_name && !m_result_is_pointer) {
-              BitCastInst *bit_cast = new BitCastInst(
-                  get_element_ptr, value->getType()->getPointerTo(), "",
-                  entry_instruction);
-
-              LoadInst *load = new LoadInst(value->getType(), bit_cast, "",
-                                            entry_instruction);
+              LoadInst *load = new LoadInst(value->getType(), get_element_ptr,
+                                            "", entry_instruction);
 
               return load;
             } else {
-              BitCastInst *bit_cast = new BitCastInst(
-                  get_element_ptr, value->getType(), "", entry_instruction);
-
-              return bit_cast;
+              return get_element_ptr;
             }
           });
 

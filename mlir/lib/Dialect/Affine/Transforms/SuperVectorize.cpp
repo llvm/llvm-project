@@ -11,22 +11,34 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/Affine/Passes.h"
+
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/LoopAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/NestedMatcher.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/Utils.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/Utils/VectorUtils.h"
-#include "mlir/IR/BlockAndValueMapping.h"
+#include "mlir/IR/IRMapping.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
+
+namespace mlir {
+namespace affine {
+#define GEN_PASS_DEF_AFFINEVECTORIZE
+#include "mlir/Dialect/Affine/Passes.h.inc"
+} // namespace affine
+} // namespace mlir
 
 using namespace mlir;
+using namespace affine;
 using namespace vector;
 
 ///
@@ -573,10 +585,10 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 /// Up to 3-D patterns are supported.
 /// If the command line argument requests a pattern of higher order, returns an
 /// empty pattern list which will conservatively result in no vectorization.
-static Optional<NestedPattern>
+static std::optional<NestedPattern>
 makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
             ArrayRef<int64_t> fastestVaryingPattern) {
-  using matcher::For;
+  using affine::matcher::For;
   int64_t d0 = fastestVaryingPattern.empty() ? -1 : fastestVaryingPattern[0];
   int64_t d1 = fastestVaryingPattern.size() < 2 ? -1 : fastestVaryingPattern[1];
   int64_t d2 = fastestVaryingPattern.size() < 3 ? -1 : fastestVaryingPattern[2];
@@ -591,13 +603,13 @@ makePattern(const DenseSet<Operation *> &parallelLoops, int vectorRank,
                For(isVectorizableLoopPtrFactory(parallelLoops, d1),
                    For(isVectorizableLoopPtrFactory(parallelLoops, d2))));
   default: {
-    return llvm::None;
+    return std::nullopt;
   }
   }
 }
 
 static NestedPattern &vectorTransferPattern() {
-  static auto pattern = matcher::Op([](Operation &op) {
+  static auto pattern = affine::matcher::Op([](Operation &op) {
     return isa<vector::TransferReadOp, vector::TransferWriteOp>(op);
   });
   return pattern;
@@ -607,17 +619,13 @@ namespace {
 
 /// Base state for the vectorize pass.
 /// Command line arguments are preempted by non-empty pass arguments.
-struct Vectorize : public AffineVectorizeBase<Vectorize> {
-  Vectorize() = default;
-  Vectorize(ArrayRef<int64_t> virtualVectorSize);
+struct Vectorize : public affine::impl::AffineVectorizeBase<Vectorize> {
+  using Base::Base;
+
   void runOnOperation() override;
 };
 
 } // namespace
-
-Vectorize::Vectorize(ArrayRef<int64_t> virtualVectorSize) {
-  vectorSizes = virtualVectorSize;
-}
 
 static void vectorizeLoopIfProfitable(Operation *loop, unsigned depthInPattern,
                                       unsigned patternDepth,
@@ -743,10 +751,10 @@ struct VectorizationState {
   // Maps input scalar operations to their vector counterparts.
   DenseMap<Operation *, Operation *> opVectorReplacement;
   // Maps input scalar values to their vector counterparts.
-  BlockAndValueMapping valueVectorReplacement;
+  IRMapping valueVectorReplacement;
   // Maps input scalar values to their new scalar counterparts in the vector
   // loop nest.
-  BlockAndValueMapping valueScalarReplacement;
+  IRMapping valueScalarReplacement;
   // Maps results of reduction loops to their new scalar counterparts.
   DenseMap<Value, Value> loopResultScalarReplacement;
 
@@ -830,7 +838,7 @@ void VectorizationState::registerValueVectorReplacementImpl(Value replaced,
                                                             Value replacement) {
   assert(!valueVectorReplacement.contains(replaced) &&
          "Vector replacement already registered");
-  assert(replacement.getType().isa<VectorType>() &&
+  assert(isa<VectorType>(replacement.getType()) &&
          "Expected vector type in vector replacement");
   valueVectorReplacement.map(replaced, replacement);
 }
@@ -875,7 +883,7 @@ void VectorizationState::registerValueScalarReplacementImpl(Value replaced,
                                                             Value replacement) {
   assert(!valueScalarReplacement.contains(replaced) &&
          "Scalar value replacement already registered");
-  assert(!replacement.getType().isa<VectorType>() &&
+  assert(!isa<VectorType>(replacement.getType()) &&
          "Expected scalar type in scalar replacement");
   valueScalarReplacement.map(replaced, replacement);
 }
@@ -938,7 +946,7 @@ isVectorizableLoopPtrFactory(const DenseSet<Operation *> &parallelLoops,
 /// strategy on the scalar type.
 static VectorType getVectorType(Type scalarTy,
                                 const VectorizationStrategy *strategy) {
-  assert(!scalarTy.isa<VectorType>() && "Expected scalar type");
+  assert(!isa<VectorType>(scalarTy) && "Expected scalar type");
   return VectorType::get(strategy->vectorSizes, scalarTy);
 }
 
@@ -1129,7 +1137,7 @@ static Value vectorizeOperand(Value operand, VectorizationState &state) {
   // An vector operand that is not in the replacement map should never reach
   // this point. Reaching this point could mean that the code was already
   // vectorized and we shouldn't try to vectorize already vectorized code.
-  assert(!operand.getType().isa<VectorType>() &&
+  assert(!isa<VectorType>(operand.getType()) &&
          "Vector op not found in replacement map");
 
   // Vectorize constant.
@@ -1661,9 +1669,9 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
          "Vectorizing reductions is supported only for 1-D vectors");
 
   // Compute 1-D, 2-D or 3-D loop pattern to be matched on the target loops.
-  Optional<NestedPattern> pattern =
+  std::optional<NestedPattern> pattern =
       makePattern(loops, vectorSizes.size(), fastestVaryingPattern);
-  if (!pattern.hasValue()) {
+  if (!pattern) {
     LLVM_DEBUG(dbgs() << "\n[early-vect] pattern couldn't be computed\n");
     return;
   }
@@ -1707,14 +1715,6 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
   }
 
   LLVM_DEBUG(dbgs() << "\n");
-}
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
-  return std::make_unique<Vectorize>(virtualVectorSize);
-}
-std::unique_ptr<OperationPass<func::FuncOp>> createSuperVectorizePass() {
-  return std::make_unique<Vectorize>();
 }
 
 /// Applies vectorization to the current function by searching over a bunch of
@@ -1799,7 +1799,6 @@ verifyLoopNesting(const std::vector<SmallVector<AffineForOp, 2>> &loops) {
   return success();
 }
 
-namespace mlir {
 
 /// External utility to vectorize affine loops in 'loops' using the n-D
 /// vectorization factors in 'vectorSizes'. By default, each vectorization
@@ -1809,10 +1808,10 @@ namespace mlir {
 /// If `reductionLoops` is not empty, the given reduction loops may be
 /// vectorized along the reduction dimension.
 /// TODO: Vectorizing reductions is supported only for 1-D vectorization.
-void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
-                          ArrayRef<int64_t> vectorSizes,
-                          ArrayRef<int64_t> fastestVaryingPattern,
-                          const ReductionLoopMap &reductionLoops) {
+void mlir::affine::vectorizeAffineLoops(
+    Operation *parentOp, DenseSet<Operation *> &loops,
+    ArrayRef<int64_t> vectorSizes, ArrayRef<int64_t> fastestVaryingPattern,
+    const ReductionLoopMap &reductionLoops) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
   vectorizeLoops(parentOp, loops, vectorSizes, fastestVaryingPattern,
@@ -1854,22 +1853,12 @@ void vectorizeAffineLoops(Operation *parentOp, DenseSet<Operation *> &loops,
 /// loops = {{%i2}}, to vectorize only the first innermost loop;
 /// loops = {{%i3}}, to vectorize only the second innermost loop;
 /// loops = {{%i1}}, to vectorize only the middle loop.
-LogicalResult
-vectorizeAffineLoopNest(std::vector<SmallVector<AffineForOp, 2>> &loops,
-                        const VectorizationStrategy &strategy) {
+LogicalResult mlir::affine::vectorizeAffineLoopNest(
+    std::vector<SmallVector<AffineForOp, 2>> &loops,
+    const VectorizationStrategy &strategy) {
   // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
   NestedPatternContext mlContext;
   if (failed(verifyLoopNesting(loops)))
     return failure();
   return vectorizeLoopNest(loops, strategy);
 }
-
-std::unique_ptr<OperationPass<func::FuncOp>>
-createSuperVectorizePass(ArrayRef<int64_t> virtualVectorSize) {
-  return std::make_unique<Vectorize>(virtualVectorSize);
-}
-std::unique_ptr<OperationPass<func::FuncOp>> createSuperVectorizePass() {
-  return std::make_unique<Vectorize>();
-}
-
-} // namespace mlir

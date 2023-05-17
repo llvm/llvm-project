@@ -16,19 +16,19 @@ body:             |
     %2:fpr64 = COPY $d2
     %1:fpr64 = COPY $d1
     %0:fpr64 = COPY $d0
-    %3:fpr64 = FMULv2f32 %0, %1
-    %4:fpr64 = FSUBv2f32 killed %3, %2
+    %3:fpr64 = FMULv2f32 %0, %1, implicit $fpcr
+    %4:fpr64 = FSUBv2f32 killed %3, %2, implicit $fpcr
     $d0 = COPY %4
     RET_ReallyLR implicit $d0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_2s
-# UNPROFITABLE: %3:fpr64 = FMULv2f32 %0, %1
-# UNPROFITABLE-NEXT: FSUBv2f32 killed %3, %2
+# UNPROFITABLE: [[R1:%[0-9]+]]:fpr64 = FNEGv2f32 %2
+# UNPROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1, implicit $fpcr
 #
 # PROFITABLE-LABEL: name: f1_2s
 # PROFITABLE: [[R1:%[0-9]+]]:fpr64 = FNEGv2f32 %2
-# PROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1
+# PROFITABLE-NEXT: FMLAv2f32 killed [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_4s
 registers:
@@ -42,19 +42,19 @@ body:             |
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
-    %3:fpr128 = FMULv4f32 %0, %1
-    %4:fpr128 = FSUBv4f32 killed %3, %2
+    %3:fpr128 = FMULv4f32 %0, %1, implicit $fpcr
+    %4:fpr128 = FSUBv4f32 killed %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_4s
-# UNPROFITABLE: %3:fpr128 = FMULv4f32 %0, %1
-# UNPROFITABLE-NEXT: FSUBv4f32 killed %3, %2
+# UNPROFITABLE: [[R1:%[0-9]+]]:fpr128 = FMULv4f32 %0, %1, implicit $fpcr
+# UNPROFITABLE-NEXT: FSUBv4f32 killed [[R1]], %2, implicit $fpcr
 #
 # PROFITABLE-LABEL: name: f1_4s
 # PROFITABLE: [[R1:%[0-9]+]]:fpr128 = FNEGv4f32 %2
-# PROFITABLE-NEXT: FMLAv4f32 killed [[R1]], %0, %1
+# PROFITABLE-NEXT: FMLAv4f32 killed [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_2d
 registers:
@@ -68,19 +68,19 @@ body:             |
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
-    %3:fpr128 = FMULv2f64 %0, %1
-    %4:fpr128 = FSUBv2f64 killed %3, %2
+    %3:fpr128 = FMULv2f64 %0, %1, implicit $fpcr
+    %4:fpr128 = FSUBv2f64 killed %3, %2, implicit $fpcr
     $q0 = COPY %4
     RET_ReallyLR implicit $q0
 
 ...
 # UNPROFITABLE-LABEL: name: f1_2d
-# UNPROFITABLE: %3:fpr128 = FMULv2f64 %0, %1
-# UNPROFITABLE-NEXT: FSUBv2f64 killed %3, %2
+# UNPROFITABLE: %3:fpr128 = FMULv2f64 %0, %1, implicit $fpcr
+# UNPROFITABLE-NEXT: FSUBv2f64 killed %3, %2, implicit $fpcr
 #
 # PROFITABLE-LABEL: name: f1_2d
 # PROFITABLE: [[R1:%[0-9]+]]:fpr128 = FNEGv2f64 %2
-# PROFITABLE-NEXT: FMLAv2f64 killed [[R1]], %0, %1
+# PROFITABLE-NEXT: FMLAv2f64 killed [[R1]], %0, %1, implicit $fpcr
 ---
 name:            f1_both_fmul_2s
 registers:
@@ -97,16 +97,16 @@ body:             |
     %2:fpr64 = COPY $q2
     %1:fpr64 = COPY $q1
     %0:fpr64 = COPY $q0
-    %4:fpr64 = FMULv2f32 %0, %1
-    %5:fpr64 = FMULv2f32 %2, %3
-    %6:fpr64 = FSUBv2f32 killed %4, %5
+    %4:fpr64 = FMULv2f32 %0, %1, implicit $fpcr
+    %5:fpr64 = FMULv2f32 %2, %3, implicit $fpcr
+    %6:fpr64 = FSUBv2f32 killed %4, %5, implicit $fpcr
     $q0 = COPY %6
     RET_ReallyLR implicit $q0
 
 ...
 # ALL-LABEL: name: f1_both_fmul_2s
-# ALL: %4:fpr64 = FMULv2f32 %0, %1
-# ALL-NEXT: FMLSv2f32 killed %4, %2, %3
+# ALL: %4:fpr64 = FMULv2f32 %0, %1, implicit $fpcr
+# ALL-NEXT: FMLSv2f32 killed %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_4s
 registers:
@@ -123,16 +123,16 @@ body:             |
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
-    %4:fpr128 = FMULv4f32 %0, %1
-    %5:fpr128 = FMULv4f32 %2, %3
-    %6:fpr128 = FSUBv4f32 killed %4, %5
+    %4:fpr128 = FMULv4f32 %0, %1, implicit $fpcr
+    %5:fpr128 = FMULv4f32 %2, %3, implicit $fpcr
+    %6:fpr128 = FSUBv4f32 killed %4, %5, implicit $fpcr
     $q0 = COPY %6
     RET_ReallyLR implicit $q0
 
 ...
 # ALL-LABEL: name: f1_both_fmul_4s
-# ALL: %4:fpr128 = FMULv4f32 %0, %1
-# ALL-NEXT: FMLSv4f32 killed %4, %2, %3
+# ALL: %4:fpr128 = FMULv4f32 %0, %1, implicit $fpcr
+# ALL-NEXT: FMLSv4f32 killed %4, %2, %3, implicit $fpcr
 ---
 name:            f1_both_fmul_2d
 registers:
@@ -149,14 +149,14 @@ body:             |
     %2:fpr128 = COPY $q2
     %1:fpr128 = COPY $q1
     %0:fpr128 = COPY $q0
-    %4:fpr128 = FMULv2f64 %0, %1
-    %5:fpr128 = FMULv2f64 %2, %3
-    %6:fpr128 = FSUBv2f64 killed %4, %5
+    %4:fpr128 = FMULv2f64 %0, %1, implicit $fpcr
+    %5:fpr128 = FMULv2f64 %2, %3, implicit $fpcr
+    %6:fpr128 = FSUBv2f64 killed %4, %5, implicit $fpcr
     $q0 = COPY %6
     RET_ReallyLR implicit $q0
 
 ...
 # ALL-LABEL: name: f1_both_fmul_2d
-# ALL: %4:fpr128 = FMULv2f64 %0, %1
-# ALL-NEXT: FMLSv2f64 killed %4, %2, %3
+# ALL: %4:fpr128 = FMULv2f64 %0, %1, implicit $fpcr
+# ALL-NEXT: FMLSv2f64 killed %4, %2, %3, implicit $fpcr
 

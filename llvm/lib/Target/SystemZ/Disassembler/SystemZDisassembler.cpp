@@ -206,12 +206,6 @@ static DecodeStatus decodeU4ImmOperand(MCInst &Inst, uint64_t Imm,
   return decodeUImmOperand<4>(Inst, Imm);
 }
 
-static DecodeStatus decodeU6ImmOperand(MCInst &Inst, uint64_t Imm,
-                                       uint64_t Address,
-                                       const MCDisassembler *Decoder) {
-  return decodeUImmOperand<6>(Inst, Imm);
-}
-
 static DecodeStatus decodeU8ImmOperand(MCInst &Inst, uint64_t Imm,
                                        uint64_t Address,
                                        const MCDisassembler *Decoder) {

@@ -13,6 +13,8 @@
 //  Issue 3034 added:
 //  The member typedef type shall be a trivial standard-layout type.
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 #include <type_traits>
 #include <cstddef>       // for std::max_align_t
 #include "test_macros.h"
@@ -272,7 +274,7 @@ int main(int, char**)
     static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
 #if TEST_STD_VER >= 11
-    const size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
+    const std::size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
         16 : TEST_ALIGNOF(std::max_align_t);
     static_assert(std::alignment_of<T1>::value == alignment, "");
 #else
@@ -290,7 +292,7 @@ int main(int, char**)
     static_assert(std::is_trivial<T1>::value, "");
     static_assert(std::is_standard_layout<T1>::value, "");
 #if TEST_STD_VER >= 11
-    const size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
+    const std::size_t alignment = TEST_ALIGNOF(std::max_align_t) > 16 ?
         16 : TEST_ALIGNOF(std::max_align_t);
     static_assert(std::alignment_of<T1>::value == alignment, "");
     static_assert(sizeof(T1) == 16 + alignment, "");

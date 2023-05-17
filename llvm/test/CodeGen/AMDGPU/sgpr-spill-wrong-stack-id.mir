@@ -11,9 +11,9 @@
 
 --- |
 
-  define void @sgpr_spill_wrong_stack_id(float addrspace(1)* nocapture readnone %arg, float addrspace(1)* noalias %arg1) {
+  define void @sgpr_spill_wrong_stack_id(ptr addrspace(1) nocapture readnone %arg, ptr addrspace(1) noalias %arg1) {
   bb:
-    %tmp = load i32, i32 addrspace(1)* null, align 4
+    %tmp = load i32, ptr addrspace(1) null, align 4
     call void @func(i32 undef)
     call void @func(i32 %tmp)
     unreachable

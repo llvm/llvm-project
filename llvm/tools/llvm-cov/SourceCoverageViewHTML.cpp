@@ -12,11 +12,11 @@
 
 #include "CoverageReport.h"
 #include "SourceCoverageViewHTML.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/Path.h"
+#include <optional>
 
 using namespace llvm;
 
@@ -533,12 +533,12 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
   //    1 to set the highlight for snippet 2, segment 2 to set the highlight for
   //    snippet 3, and so on.
 
-  Optional<StringRef> Color;
+  std::optional<StringRef> Color;
   SmallVector<std::pair<unsigned, unsigned>, 2> HighlightedRanges;
   auto Highlight = [&](const std::string &Snippet, unsigned LC, unsigned RC) {
     if (getOptions().Debug)
       HighlightedRanges.emplace_back(LC, RC);
-    return tag("span", Snippet, std::string(Color.getValue()));
+    return tag("span", Snippet, std::string(*Color));
   };
 
   auto CheckIfUncovered = [&](const CoverageSegment *S) {
@@ -559,14 +559,14 @@ void SourceCoverageViewHTML::renderLine(raw_ostream &OS, LineRef L,
     else if (CurSeg->Col == ExpansionCol)
       Color = "cyan";
     else
-      Color = None;
+      Color = std::nullopt;
 
-    if (Color.hasValue())
+    if (Color)
       Snippets[I + 1] = Highlight(Snippets[I + 1], CurSeg->Col,
                                   CurSeg->Col + Snippets[I + 1].size());
   }
 
-  if (Color.hasValue() && Segments.empty())
+  if (Color && Segments.empty())
     Snippets.back() = Highlight(Snippets.back(), 1, 1 + Snippets.back().size());
 
   if (getOptions().Debug) {

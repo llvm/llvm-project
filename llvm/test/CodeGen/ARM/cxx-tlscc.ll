@@ -18,9 +18,9 @@
 %class.C = type { i32 }
 @tC = internal thread_local global %class.C zeroinitializer, align 4
 
-declare %struct.S* @_ZN1SC1Ev(%struct.S* returned)
-declare %struct.S* @_ZN1SD1Ev(%struct.S* returned)
-declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
+declare ptr @_ZN1SC1Ev(ptr returned)
+declare ptr @_ZN1SD1Ev(ptr returned)
+declare i32 @_tlv_atexit(ptr, ptr, ptr)
 
 ; Make sure Epilog does not overwrite an explicitly-handled CSR in CXX_FAST_TLS.
 ; THUMB-LABEL: _ZTW2sg
@@ -33,18 +33,18 @@ declare i32 @_tlv_atexit(void (i8*)*, i8*, i8*)
 ; THUMB: blx
 ; THUMB: r4
 ; THUMB: pop {{.*}}r4
-define cxx_fast_tlscc nonnull %struct.S* @_ZTW2sg() nounwind "frame-pointer"="all" {
-  %.b.i = load i1, i1* @__tls_guard, align 1
+define cxx_fast_tlscc nonnull ptr @_ZTW2sg() nounwind "frame-pointer"="all" {
+  %.b.i = load i1, ptr @__tls_guard, align 1
   br i1 %.b.i, label %__tls_init.exit, label %init.i
 
 init.i:
-  store i1 true, i1* @__tls_guard, align 1
-  %call.i.i = tail call %struct.S* @_ZN1SC1Ev(%struct.S* nonnull @sg)
-  %1 = tail call i32 @_tlv_atexit(void (i8*)* nonnull bitcast (%struct.S* (%struct.S*)* @_ZN1SD1Ev to void (i8*)*), i8* nonnull getelementptr inbounds (%struct.S, %struct.S* @sg, i64 0, i32 0), i8* nonnull @__dso_handle)
+  store i1 true, ptr @__tls_guard, align 1
+  %call.i.i = tail call ptr @_ZN1SC1Ev(ptr nonnull @sg)
+  %1 = tail call i32 @_tlv_atexit(ptr nonnull @_ZN1SD1Ev, ptr nonnull @sg, ptr nonnull @__dso_handle)
   br label %__tls_init.exit
 
 __tls_init.exit:
-  ret %struct.S* @sg
+  ret ptr @sg
 }
 
 ; CHECK-LABEL: _ZTW2sg
@@ -95,8 +95,8 @@ __tls_init.exit:
 ; CHECK-O0-NOT: vpop
 ; CHECK-O0-NOT: vldr
 ; CHECK-O0: pop
-define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind "frame-pointer"="all" {
-  ret i32* @sum1
+define cxx_fast_tlscc nonnull ptr @_ZTW4sum1() nounwind "frame-pointer"="all" {
+  ret ptr @sum1
 }
 
 ; Make sure at O0, we don't generate spilling/reloading of the CSRs.
@@ -109,20 +109,20 @@ define cxx_fast_tlscc nonnull i32* @_ZTW4sum1() nounwind "frame-pointer"="all" {
 ; CHECK-O0-NOT: vldr
 ; CHECK-O0: pop
 declare cxx_fast_tlscc void @tls_helper()
-define cxx_fast_tlscc %class.C* @tls_test2() #1 "frame-pointer"="all" {
+define cxx_fast_tlscc ptr @tls_test2() #1 "frame-pointer"="all" {
   call cxx_fast_tlscc void @tls_helper()
-  ret %class.C* @tC
+  ret ptr @tC
 }
 
 ; Make sure we do not allow tail call when caller and callee have different
 ; calling conventions.
-declare %class.C* @_ZN1CD1Ev(%class.C* readnone returned %this)
+declare ptr @_ZN1CD1Ev(ptr readnone returned %this)
 ; CHECK-LABEL: tls_test
 ; CHECK: bl __tlv_atexit
 define cxx_fast_tlscc void @__tls_test() "frame-pointer"="all" {
 entry:
-  store i32 0, i32* getelementptr inbounds (%class.C, %class.C* @tC, i64 0, i32 0), align 4
-  %0 = tail call i32 @_tlv_atexit(void (i8*)* bitcast (%class.C* (%class.C*)* @_ZN1CD1Ev to void (i8*)*), i8* bitcast (%class.C* @tC to i8*), i8* nonnull @__dso_handle) #1
+  store i32 0, ptr @tC, align 4
+  %0 = tail call i32 @_tlv_atexit(ptr @_ZN1CD1Ev, ptr @tC, ptr nonnull @__dso_handle) #1
   ret void
 }
 

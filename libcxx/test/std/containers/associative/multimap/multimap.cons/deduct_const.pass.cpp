@@ -29,6 +29,7 @@
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
+#include <iterator>
 #include <map>
 #include <type_traits>
 

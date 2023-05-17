@@ -56,7 +56,13 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
   if (name == "achar" || name == "char") {
     using IntT = SubscriptInteger;
     return FoldElementalIntrinsic<T, IntT>(context, std::move(funcRef),
-        ScalarFunc<T, IntT>([](const Scalar<IntT> &i) {
+        ScalarFunc<T, IntT>([&](const Scalar<IntT> &i) {
+          if (i.IsNegative() || i.BGE(Scalar<IntT>{0}.IBSET(8 * KIND))) {
+            context.messages().Say(
+                "%s(I=%jd) is out of range for CHARACTER(KIND=%d)"_warn_en_US,
+                parser::ToUpperCaseLetters(name),
+                static_cast<std::intmax_t>(i.ToInt64()), KIND);
+          }
           return CharacterUtils<KIND>::CHAR(i.ToUInt64());
         }));
   } else if (name == "adjustl") {
@@ -91,9 +97,20 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
   } else if (name == "repeat") { // not elemental
     if (auto scalars{GetScalarConstantArguments<T, SubscriptInteger>(
             context, funcRef.arguments())}) {
-      return Expr<T>{Constant<T>{
-          CharacterUtils<KIND>::REPEAT(std::get<Scalar<T>>(*scalars),
-              std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64())}};
+      auto str{std::get<Scalar<T>>(*scalars)};
+      auto n{std::get<Scalar<SubscriptInteger>>(*scalars).ToInt64()};
+      if (n < 0) {
+        context.messages().Say(
+            "NCOPIES= argument to REPEAT() should be nonnegative, but is %jd"_err_en_US,
+            static_cast<std::intmax_t>(n));
+      } else if (static_cast<double>(n) * str.size() >
+          (1 << 20)) { // sanity limit of 1MiB
+        context.messages().Say(
+            "Result of REPEAT() is too large to compute at compilation time (%g characters)"_port_en_US,
+            static_cast<double>(n) * str.size());
+      } else {
+        return Expr<T>{Constant<T>{CharacterUtils<KIND>::REPEAT(str, n)}};
+      }
     }
   } else if (name == "trim") { // not elemental
     if (auto scalar{
@@ -102,7 +119,6 @@ Expr<Type<TypeCategory::Character, KIND>> FoldIntrinsicFunction(
           CharacterUtils<KIND>::TRIM(std::get<Scalar<T>>(*scalar))}};
     }
   }
-  // TODO: transfer
   return Expr<T>{std::move(funcRef)};
 }
 

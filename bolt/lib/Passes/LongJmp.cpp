@@ -31,10 +31,9 @@ static cl::opt<bool> GroupStubs("group-stubs",
 namespace llvm {
 namespace bolt {
 
-namespace {
 constexpr unsigned ColdFragAlign = 16;
 
-void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
+static void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   const BinaryContext &BC = StubBB.getFunction()->getBinaryContext();
   InstructionListType Seq;
   BC.MIB->createShortJmp(Seq, Tgt, BC.Ctx.get());
@@ -42,7 +41,7 @@ void relaxStubToShortJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   StubBB.addInstructions(Seq.begin(), Seq.end());
 }
 
-void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
+static void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   const BinaryContext &BC = StubBB.getFunction()->getBinaryContext();
   InstructionListType Seq;
   BC.MIB->createLongJmp(Seq, Tgt, BC.Ctx.get());
@@ -50,12 +49,14 @@ void relaxStubToLongJmp(BinaryBasicBlock &StubBB, const MCSymbol *Tgt) {
   StubBB.addInstructions(Seq.begin(), Seq.end());
 }
 
-BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
+static BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
   if (!Func.isSplit() || Func.empty())
     return nullptr;
 
   assert(!(*Func.begin()).isCold() && "Entry cannot be cold");
-  for (auto I = Func.layout_begin(), E = Func.layout_end(); I != E; ++I) {
+  for (auto I = Func.getLayout().block_begin(),
+            E = Func.getLayout().block_end();
+       I != E; ++I) {
     auto Next = std::next(I);
     if (Next != E && (*Next)->isCold())
       return *I;
@@ -63,12 +64,10 @@ BinaryBasicBlock *getBBAtHotColdSplitPoint(BinaryFunction &Func) {
   llvm_unreachable("No hot-colt split point found");
 }
 
-bool shouldInsertStub(const BinaryContext &BC, const MCInst &Inst) {
+static bool shouldInsertStub(const BinaryContext &BC, const MCInst &Inst) {
   return (BC.MIB->isBranch(Inst) || BC.MIB->isCall(Inst)) &&
          !BC.MIB->isIndirectBranch(Inst) && !BC.MIB->isIndirectCall(Inst);
 }
-
-} // end anonymous namespace
 
 std::pair<std::unique_ptr<BinaryBasicBlock>, MCSymbol *>
 LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
@@ -77,7 +76,7 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
   const BinaryContext &BC = Func.getBinaryContext();
   const bool IsCold = SourceBB.isCold();
   MCSymbol *StubSym = BC.Ctx->createNamedTempSymbol("Stub");
-  std::unique_ptr<BinaryBasicBlock> StubBB = Func.createBasicBlock(0, StubSym);
+  std::unique_ptr<BinaryBasicBlock> StubBB = Func.createBasicBlock(StubSym);
   MCInst Inst;
   BC.MIB->createUncondBranch(Inst, TgtSym, BC.Ctx.get());
   if (TgtIsFunc)
@@ -89,9 +88,8 @@ LongJmpPass::createNewStub(BinaryBasicBlock &SourceBB, const MCSymbol *TgtSym,
   auto registerInMap = [&](StubGroupsTy &Map) {
     StubGroupTy &StubGroup = Map[TgtSym];
     StubGroup.insert(
-        std::lower_bound(
-            StubGroup.begin(), StubGroup.end(),
-            std::make_pair(AtAddress, nullptr),
+        llvm::lower_bound(
+            StubGroup, std::make_pair(AtAddress, nullptr),
             [&](const std::pair<uint64_t, BinaryBasicBlock *> &LHS,
                 const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
               return LHS.first < RHS.first;
@@ -126,8 +124,8 @@ BinaryBasicBlock *LongJmpPass::lookupStubFromGroup(
   const StubGroupTy &Candidates = CandidatesIter->second;
   if (Candidates.empty())
     return nullptr;
-  auto Cand = std::lower_bound(
-      Candidates.begin(), Candidates.end(), std::make_pair(DotAddress, nullptr),
+  auto Cand = llvm::lower_bound(
+      Candidates, std::make_pair(DotAddress, nullptr),
       [&](const std::pair<uint64_t, BinaryBasicBlock *> &LHS,
           const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
         return LHS.first < RHS.first;
@@ -256,11 +254,7 @@ void LongJmpPass::updateStubGroups() {
     for (auto &KeyVal : StubGroups) {
       for (StubTy &Elem : KeyVal.second)
         Elem.first = BBAddresses[Elem.second];
-      std::sort(KeyVal.second.begin(), KeyVal.second.end(),
-                [&](const std::pair<uint64_t, BinaryBasicBlock *> &LHS,
-                    const std::pair<uint64_t, BinaryBasicBlock *> &RHS) {
-                  return LHS.first < RHS.first;
-                });
+      llvm::sort(KeyVal.second, llvm::less_first());
     }
   };
 
@@ -277,7 +271,7 @@ void LongJmpPass::tentativeBBLayout(const BinaryFunction &Func) {
   uint64_t HotDot = HotAddresses[&Func];
   uint64_t ColdDot = ColdAddresses[&Func];
   bool Cold = false;
-  for (BinaryBasicBlock *BB : Func.layout()) {
+  for (const BinaryBasicBlock *BB : Func.getLayout().blocks()) {
     if (Cold || BB->isCold()) {
       Cold = true;
       BBAddresses[BB] = ColdDot;

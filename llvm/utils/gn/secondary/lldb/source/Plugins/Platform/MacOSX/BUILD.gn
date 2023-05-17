@@ -23,11 +23,14 @@ static_library("MacOSX") {
     "//lldb/source/Core",
     "//lldb/source/Host",
     "//lldb/source/Interpreter",
+    "//lldb/source/Plugins/DynamicLoader/Darwin-Kernel",
+    "//lldb/source/Plugins/ObjectContainer/Mach-O-Fileset",
     "//lldb/source/Plugins/Platform/POSIX",
     "//lldb/source/Symbol",
     "//lldb/source/Target",
     "//lldb/source/Utility",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
 
   # Reaches into Plugins/Platform/POSIX.

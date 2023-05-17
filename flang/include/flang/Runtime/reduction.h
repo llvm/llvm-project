@@ -211,13 +211,67 @@ void RTNAME(Findloc)(Descriptor &, const Descriptor &x,
 void RTNAME(FindlocDim)(Descriptor &, const Descriptor &x,
     const Descriptor &target, int kind, int dim, const char *source, int line,
     const Descriptor *mask = nullptr, bool back = false);
-void RTNAME(Maxloc)(Descriptor &, const Descriptor &x, int kind,
+void RTNAME(MaxlocCharacter)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocInteger1)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocInteger2)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocInteger4)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocInteger8)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocInteger16)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocReal4)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocReal8)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocReal10)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MaxlocReal16)(Descriptor &, const Descriptor &, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
 void RTNAME(MaxlocDim)(Descriptor &, const Descriptor &x, int kind, int dim,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
-void RTNAME(Minloc)(Descriptor &, const Descriptor &x, int kind,
+void RTNAME(MinlocCharacter)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocInteger1)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocInteger2)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocInteger4)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocInteger8)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocInteger16)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocReal4)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocReal8)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocReal10)(Descriptor &, const Descriptor &, int kind,
+    const char *source, int line, const Descriptor *mask = nullptr,
+    bool back = false);
+void RTNAME(MinlocReal16)(Descriptor &, const Descriptor &, int kind,
     const char *source, int line, const Descriptor *mask = nullptr,
     bool back = false);
 void RTNAME(MinlocDim)(Descriptor &, const Descriptor &x, int kind, int dim,
@@ -293,23 +347,23 @@ void RTNAME(MinvalDim)(Descriptor &, const Descriptor &, int dim,
     const char *source, int line, const Descriptor *mask = nullptr);
 
 // NORM2
-float RTNAME(Norm2_2)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
-float RTNAME(Norm2_3)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
-float RTNAME(Norm2_4)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
-double RTNAME(Norm2_8)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
+float RTNAME(Norm2_2)(
+    const Descriptor &, const char *source, int line, int dim = 0);
+float RTNAME(Norm2_3)(
+    const Descriptor &, const char *source, int line, int dim = 0);
+float RTNAME(Norm2_4)(
+    const Descriptor &, const char *source, int line, int dim = 0);
+double RTNAME(Norm2_8)(
+    const Descriptor &, const char *source, int line, int dim = 0);
 #if LDBL_MANT_DIG == 64
-long double RTNAME(Norm2_10)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
+long double RTNAME(Norm2_10)(
+    const Descriptor &, const char *source, int line, int dim = 0);
 #elif LDBL_MANT_DIG == 113
-long double RTNAME(Norm2_16)(const Descriptor &, const char *source, int line,
-    int dim = 0, const Descriptor *mask = nullptr);
+long double RTNAME(Norm2_16)(
+    const Descriptor &, const char *source, int line, int dim = 0);
 #endif
-void RTNAME(Norm2Dim)(Descriptor &, const Descriptor &, int dim,
-    const char *source, int line, const Descriptor *mask = nullptr);
+void RTNAME(Norm2Dim)(
+    Descriptor &, const Descriptor &, int dim, const char *source, int line);
 
 // ALL, ANY, COUNT, & PARITY logical reductions
 bool RTNAME(All)(const Descriptor &, const char *source, int line, int dim = 0);

@@ -1,4 +1,4 @@
-; RUN: opt -S -partial-inliner %s | FileCheck %s
+; RUN: opt -S -passes=partial-inliner %s | FileCheck %s
 
 ; CHECK-LABEL: define void @dipsy(
 ; CHECK-NEXT:   call void @tinkywinky.1.ontrue()

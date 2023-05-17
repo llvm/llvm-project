@@ -5,7 +5,7 @@
 
 declare i32 @llvm.amdgcn.workitem.id.x() #0
 
-define amdgpu_kernel void @lshr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %in) {
+define amdgpu_kernel void @lshr_i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: lshr_i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -20,7 +20,7 @@ define amdgpu_kernel void @lshr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %i
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshrrev_b32_e32 v0, v1, v0
+; SI-NEXT:    v_lshr_b32_e32 v0, v0, v1
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
 ;
@@ -53,15 +53,15 @@ define amdgpu_kernel void @lshr_i32(i32 addrspace(1)* %out, i32 addrspace(1)* %i
 ; EG-NEXT:     LSHR T0.X, T0.X, T0.Y,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %b_ptr = getelementptr i32, i32 addrspace(1)* %in, i32 1
-  %a = load i32, i32 addrspace(1)* %in
-  %b = load i32, i32 addrspace(1)* %b_ptr
+  %b_ptr = getelementptr i32, ptr addrspace(1) %in, i32 1
+  %a = load i32, ptr addrspace(1) %in
+  %b = load i32, ptr addrspace(1) %b_ptr
   %result = lshr i32 %a, %b
-  store i32 %result, i32 addrspace(1)* %out
+  store i32 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lshr_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @lshr_v2i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: lshr_v2i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -113,15 +113,15 @@ define amdgpu_kernel void @lshr_v2i32(<2 x i32> addrspace(1)* %out, <2 x i32> ad
 ; EG-NEXT:     LSHR T0.X, T0.X, T0.Z,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %b_ptr = getelementptr <2 x i32>, <2 x i32> addrspace(1)* %in, i32 1
-  %a = load <2 x i32>, <2 x i32> addrspace(1)* %in
-  %b = load <2 x i32>, <2 x i32> addrspace(1)* %b_ptr
+  %b_ptr = getelementptr <2 x i32>, ptr addrspace(1) %in, i32 1
+  %a = load <2 x i32>, ptr addrspace(1) %in
+  %b = load <2 x i32>, ptr addrspace(1) %b_ptr
   %result = lshr <2 x i32> %a, %b
-  store <2 x i32> %result, <2 x i32> addrspace(1)* %out
+  store <2 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lshr_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> addrspace(1)* %in) {
+define amdgpu_kernel void @lshr_v4i32(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: lshr_v4i32:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -183,15 +183,15 @@ define amdgpu_kernel void @lshr_v4i32(<4 x i32> addrspace(1)* %out, <4 x i32> ad
 ; EG-NEXT:     LSHR T0.X, T0.X, T1.X,
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
-  %b_ptr = getelementptr <4 x i32>, <4 x i32> addrspace(1)* %in, i32 1
-  %a = load <4 x i32>, <4 x i32> addrspace(1)* %in
-  %b = load <4 x i32>, <4 x i32> addrspace(1)* %b_ptr
+  %b_ptr = getelementptr <4 x i32>, ptr addrspace(1) %in, i32 1
+  %a = load <4 x i32>, ptr addrspace(1) %in
+  %b = load <4 x i32>, ptr addrspace(1) %b_ptr
   %result = lshr <4 x i32> %a, %b
-  store <4 x i32> %result, <4 x i32> addrspace(1)* %out
+  store <4 x i32> %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lshr_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
+define amdgpu_kernel void @lshr_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: lshr_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -247,15 +247,15 @@ define amdgpu_kernel void @lshr_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %i
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     CNDE_INT * T0.Y, T1.W, T1.Z, 0.0,
-  %b_ptr = getelementptr i64, i64 addrspace(1)* %in, i64 1
-  %a = load i64, i64 addrspace(1)* %in
-  %b = load i64, i64 addrspace(1)* %b_ptr
+  %b_ptr = getelementptr i64, ptr addrspace(1) %in, i64 1
+  %a = load i64, ptr addrspace(1) %in
+  %b = load i64, ptr addrspace(1) %b_ptr
   %result = lshr i64 %a, %b
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @lshr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> addrspace(1)* %in) {
+define amdgpu_kernel void @lshr_v4i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: lshr_v4i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -266,20 +266,20 @@ define amdgpu_kernel void @lshr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> ad
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s8, s6
 ; SI-NEXT:    s_mov_b32 s9, s7
-; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0 offset:16
-; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:48
-; SI-NEXT:    buffer_load_dwordx4 v[7:10], off, s[8:11], 0
-; SI-NEXT:    buffer_load_dwordx4 v[11:14], off, s[8:11], 0 offset:32
+; SI-NEXT:    buffer_load_dwordx4 v[0:3], off, s[8:11], 0
+; SI-NEXT:    buffer_load_dwordx4 v[4:7], off, s[8:11], 0 offset:16
+; SI-NEXT:    buffer_load_dwordx4 v[8:11], off, s[8:11], 0 offset:32
+; SI-NEXT:    buffer_load_dwordx4 v[11:14], off, s[8:11], 0 offset:48
 ; SI-NEXT:    s_mov_b32 s0, s4
 ; SI-NEXT:    s_mov_b32 s1, s5
-; SI-NEXT:    s_waitcnt vmcnt(2)
-; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], v6
-; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], v4
+; SI-NEXT:    s_waitcnt vmcnt(1)
+; SI-NEXT:    v_lshr_b64 v[2:3], v[2:3], v10
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_lshr_b64 v[9:10], v[9:10], v13
-; SI-NEXT:    v_lshr_b64 v[7:8], v[7:8], v11
-; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0 offset:16
-; SI-NEXT:    buffer_store_dwordx4 v[7:10], off, s[0:3], 0
+; SI-NEXT:    v_lshr_b64 v[6:7], v[6:7], v13
+; SI-NEXT:    v_lshr_b64 v[4:5], v[4:5], v11
+; SI-NEXT:    v_lshr_b64 v[0:1], v[0:1], v8
+; SI-NEXT:    buffer_store_dwordx4 v[4:7], off, s[0:3], 0 offset:16
+; SI-NEXT:    buffer_store_dwordx4 v[0:3], off, s[0:3], 0
 ; SI-NEXT:    s_endpgm
 ;
 ; VI-LABEL: lshr_v4i64:
@@ -358,16 +358,16 @@ define amdgpu_kernel void @lshr_v4i64(<4 x i64> addrspace(1)* %out, <4 x i64> ad
 ; EG-NEXT:     LSHR * T3.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
 ; EG-NEXT:     CNDE_INT * T1.Y, T4.W, T4.Y, 0.0,
-  %b_ptr = getelementptr <4 x i64>, <4 x i64> addrspace(1)* %in, i64 1
-  %a = load <4 x i64>, <4 x i64> addrspace(1)* %in
-  %b = load <4 x i64>, <4 x i64> addrspace(1)* %b_ptr
+  %b_ptr = getelementptr <4 x i64>, ptr addrspace(1) %in, i64 1
+  %a = load <4 x i64>, ptr addrspace(1) %in
+  %b = load <4 x i64>, ptr addrspace(1) %b_ptr
   %result = lshr <4 x i64> %a, %b
-  store <4 x i64> %result, <4 x i64> addrspace(1)* %out
+  store <4 x i64> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; Make sure load width gets reduced to i32 load.
-define amdgpu_kernel void @s_lshr_32_i64(i64 addrspace(1)* %out, [8 x i32], i64 %a) {
+define amdgpu_kernel void @s_lshr_32_i64(ptr addrspace(1) %out, [8 x i32], i64 %a) {
 ; SI-LABEL: s_lshr_32_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dword s4, s[0:1], 0x14
@@ -404,11 +404,11 @@ define amdgpu_kernel void @s_lshr_32_i64(i64 addrspace(1)* %out, [8 x i32], i64 
 ; EG-NEXT:     LSHR * T1.X, KC0[2].Y, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %result = lshr i64 %a, 32
-  store i64 %result, i64 addrspace(1)* %out
+  store i64 %result, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @v_lshr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1)* %in) {
+define amdgpu_kernel void @v_lshr_32_i64(ptr addrspace(1) %out, ptr addrspace(1) %in) {
 ; SI-LABEL: v_lshr_32_i64:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x9
@@ -465,11 +465,11 @@ define amdgpu_kernel void @v_lshr_32_i64(i64 addrspace(1)* %out, i64 addrspace(1
 ; EG-NEXT:     LSHR * T1.X, PV.W, literal.x,
 ; EG-NEXT:    2(2.802597e-45), 0(0.000000e+00)
   %tid = call i32 @llvm.amdgcn.workitem.id.x() #0
-  %gep.in = getelementptr i64, i64 addrspace(1)* %in, i32 %tid
-  %gep.out = getelementptr i64, i64 addrspace(1)* %out, i32 %tid
-  %a = load i64, i64 addrspace(1)* %gep.in
+  %gep.in = getelementptr i64, ptr addrspace(1) %in, i32 %tid
+  %gep.out = getelementptr i64, ptr addrspace(1) %out, i32 %tid
+  %a = load i64, ptr addrspace(1) %gep.in
   %result = lshr i64 %a, 32
-  store i64 %result, i64 addrspace(1)* %gep.out
+  store i64 %result, ptr addrspace(1) %gep.out
   ret void
 }
 

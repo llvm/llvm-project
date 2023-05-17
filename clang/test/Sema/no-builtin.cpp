@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-unknown -fsyntax-only -verify %s
-// UNSUPPORTED: ppc64be
 
 /// Prevent use of all builtins.
 void valid_attribute_all_1() __attribute__((no_builtin)) {}

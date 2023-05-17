@@ -8,7 +8,7 @@
 ; CHECK: ldrdne
 ; CHECK: ldrdne
 
-define void @c(i64* %b) noreturn nounwind {
+define void @c(ptr %b) noreturn nounwind {
 entry:
   br label %for.cond
 
@@ -18,7 +18,7 @@ for.cond:                                         ; preds = %land.end.3, %entry
   br i1 %tobool.not, label %land.end, label %land.rhs
 
 land.rhs:                                         ; preds = %for.cond
-  %0 = load volatile i64, i64* %b, align 8
+  %0 = load volatile i64, ptr %b, align 8
   br label %land.end
 
 land.end:                                         ; preds = %land.rhs, %for.cond
@@ -28,7 +28,7 @@ land.end:                                         ; preds = %land.rhs, %for.cond
   br i1 %tobool.not.1, label %land.end.1, label %land.rhs.1
 
 land.rhs.1:                                       ; preds = %land.end
-  %1 = load volatile i64, i64* %b, align 8
+  %1 = load volatile i64, ptr %b, align 8
   br label %land.end.1
 
 land.end.1:                                       ; preds = %land.rhs.1, %land.end
@@ -38,7 +38,7 @@ land.end.1:                                       ; preds = %land.rhs.1, %land.e
   br i1 %tobool.not.2, label %land.end.2, label %land.rhs.2
 
 land.rhs.2:                                       ; preds = %land.end.1
-  %2 = load volatile i64, i64* %b, align 8
+  %2 = load volatile i64, ptr %b, align 8
   br label %land.end.2
 
 land.end.2:                                       ; preds = %land.rhs.2, %land.end.1
@@ -48,7 +48,7 @@ land.end.2:                                       ; preds = %land.rhs.2, %land.e
   br i1 %tobool.not.3, label %land.end.3, label %land.rhs.3
 
 land.rhs.3:                                       ; preds = %land.end.2
-  %3 = load volatile i64, i64* %b, align 8
+  %3 = load volatile i64, ptr %b, align 8
   br label %land.end.3
 
 land.end.3:                                       ; preds = %land.rhs.3, %land.end.2

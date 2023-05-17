@@ -194,12 +194,12 @@ define <16 x i16> @var_shuffle_v16i16(<16 x i16> %v, <16 x i16> %indices) nounwi
 ; AVX512VLDQ:       # %bb.0:
 ; AVX512VLDQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLDQ-NEXT:    vpermq {{.*#+}} ymm2 = ymm0[2,3,2,3]
+; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm2
 ; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm2, %ymm2
-; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLDQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[2,3,2,3]
+; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm3
+; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; AVX512VLDQ-NEXT:    vpternlogq $202, %ymm2, %ymm3, %ymm0
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v16i16:
@@ -313,9 +313,9 @@ define <32 x i8> @var_shuffle_v32i8(<32 x i8> %v, <32 x i8> %indices) nounwind {
 ; AVX512VLDQ-NEXT:    vpermq {{.*#+}} ymm2 = ymm0[2,3,2,3]
 ; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm2, %ymm2
 ; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLDQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm3
+; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; AVX512VLDQ-NEXT:    vpternlogq $202, %ymm3, %ymm2, %ymm0
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v32i8:
@@ -739,11 +739,11 @@ define <16 x i16> @var_shuffle_v16i16_from_v8i16(<8 x i16> %v, <16 x i16> %indic
 ; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLDQ-NEXT:    vpmullw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
 ; AVX512VLDQ-NEXT:    vpaddw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
 ; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLDQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
+; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm3
+; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; AVX512VLDQ-NEXT:    vpternlogq $202, %ymm2, %ymm3, %ymm0
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v16i16_from_v8i16:
@@ -857,9 +857,9 @@ define <32 x i8> @var_shuffle_v32i8_from_v16i8(<16 x i8> %v, <32 x i8> %indices)
 ; AVX512VLDQ-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
 ; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm2
 ; AVX512VLDQ-NEXT:    vinserti128 $1, %xmm0, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm0
-; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm1
-; AVX512VLDQ-NEXT:    vpblendvb %ymm1, %ymm2, %ymm0, %ymm0
+; AVX512VLDQ-NEXT:    vpshufb %ymm1, %ymm0, %ymm3
+; AVX512VLDQ-NEXT:    vpcmpgtb {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm1, %ymm0
+; AVX512VLDQ-NEXT:    vpternlogq $202, %ymm3, %ymm2, %ymm0
 ; AVX512VLDQ-NEXT:    retq
 ;
 ; AVX512VLBW-LABEL: var_shuffle_v32i8_from_v16i8:
@@ -1184,8 +1184,6 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX2-NEXT:    movq %rsp, %rbp
 ; AVX2-NEXT:    andq $-32, %rsp
 ; AVX2-NEXT:    subq $64, %rsp
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [7,7,7,7]
-; AVX2-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX2-NEXT:    vmovd %xmm1, %eax
 ; AVX2-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX2-NEXT:    andl $3, %eax
@@ -1208,8 +1206,6 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX512-NEXT:    andq $-32, %rsp
 ; AVX512-NEXT:    subq $64, %rsp
 ; AVX512-NEXT:    # kill: def $ymm2 killed $ymm2 def $zmm2
-; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm3 = [7,7,7,7]
-; AVX512-NEXT:    vpand %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmovd %xmm1, %eax
 ; AVX512-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512-NEXT:    andl $3, %eax
@@ -1233,7 +1229,6 @@ define <4 x i64> @PR50356(<4 x i64> %0, <4 x i32> %1, <4 x i64> %2) unnamed_addr
 ; AVX512VL-NEXT:    movq %rsp, %rbp
 ; AVX512VL-NEXT:    andq $-32, %rsp
 ; AVX512VL-NEXT:    subq $64, %rsp
-; AVX512VL-NEXT:    vpandd {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm1, %xmm1
 ; AVX512VL-NEXT:    vmovd %xmm1, %eax
 ; AVX512VL-NEXT:    vmovaps %ymm0, (%rsp)
 ; AVX512VL-NEXT:    andl $3, %eax

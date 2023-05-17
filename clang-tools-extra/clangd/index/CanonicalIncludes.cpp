@@ -9,6 +9,8 @@
 #include "CanonicalIncludes.h"
 #include "Headers.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/Path.h"
@@ -17,8 +19,6 @@
 namespace clang {
 namespace clangd {
 namespace {
-const char IWYUPragma[] = "// IWYU pragma: private, include ";
-
 const std::pair<llvm::StringRef, llvm::StringRef> IncludeMappings[] = {
     {"include/__stddef_max_align_t.h", "<cstddef>"},
     {"include/__wmmintrin_aes.h", "<wmmintrin.h>"},
@@ -701,8 +701,25 @@ llvm::StringRef CanonicalIncludes::mapHeader(FileEntryRef Header) const {
   return "";
 }
 
-llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef QName) const {
-  return StdSymbolMapping ? StdSymbolMapping->lookup(QName) : "";
+llvm::StringRef CanonicalIncludes::mapSymbol(llvm::StringRef Scope,
+                                             llvm::StringRef Name,
+                                             const LangOptions &L) const {
+  tooling::stdlib::Lang Lang;
+  if (L.CPlusPlus)
+    Lang = tooling::stdlib::Lang::CXX;
+  else if (L.C11)
+    Lang = tooling::stdlib::Lang::C;
+  else
+    return "";
+  // FIXME: remove the following special cases when the tooling stdlib supports
+  // them.
+  // There are two std::move()s, this is by far the most common.
+  if (Scope == "std::" && Name == "move")
+    return "<utility>";
+  if (auto StdSym = tooling::stdlib::Symbol::named(Scope, Name, Lang))
+    if (auto Header = StdSym->header())
+      return Header->name();
+  return "";
 }
 
 std::unique_ptr<CommentHandler>
@@ -712,17 +729,17 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
     PragmaCommentHandler(CanonicalIncludes *Includes) : Includes(Includes) {}
 
     bool HandleComment(Preprocessor &PP, SourceRange Range) override {
-      llvm::StringRef Text =
-          Lexer::getSourceText(CharSourceRange::getCharRange(Range),
-                               PP.getSourceManager(), PP.getLangOpts());
-      if (!Text.consume_front(IWYUPragma))
+      auto Pragma = tooling::parseIWYUPragma(
+          PP.getSourceManager().getCharacterData(Range.getBegin()));
+      if (!Pragma || !Pragma->consume_front("private, include "))
         return false;
       auto &SM = PP.getSourceManager();
       // We always insert using the spelling from the pragma.
       if (auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin())))
-        Includes->addMapping(
-            FE->getLastRef(),
-            isLiteralInclude(Text) ? Text.str() : ("\"" + Text + "\"").str());
+        Includes->addMapping(FE->getLastRef(),
+                             isLiteralInclude(*Pragma)
+                                 ? Pragma->str()
+                                 : ("\"" + *Pragma + "\"").str());
       return false;
     }
 
@@ -733,28 +750,6 @@ collectIWYUHeaderMaps(CanonicalIncludes *Includes) {
 }
 
 void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
-  if (Language.CPlusPlus) {
-    static const auto *Symbols = new llvm::StringMap<llvm::StringRef>({
-#define SYMBOL(Name, NameSpace, Header) {#NameSpace #Name, #Header},
-#include "clang/Tooling/Inclusions/StdSymbolMap.inc"
-        // There are two std::move()s, this is by far the most common.
-        SYMBOL(move, std::, <utility>)
-        // There are multiple headers for size_t, pick one.
-        SYMBOL(size_t, std::, <cstddef>)
-#undef SYMBOL
-    });
-    StdSymbolMapping = Symbols;
-  } else if (Language.C11) {
-    static const auto *CSymbols = new llvm::StringMap<llvm::StringRef>({
-#define SYMBOL(Name, NameSpace, Header) {#Name, #Header},
-#include "clang/Tooling/Inclusions/CSymbolMap.inc"
-        // There are multiple headers for size_t, pick one.
-        SYMBOL(size_t, None, <stddef.h>)
-#undef SYMBOL
-    });
-    StdSymbolMapping = CSymbols;
-  }
-
   // FIXME: remove the std header mapping once we support ambiguous symbols, now
   // it serves as a fallback to disambiguate:
   //   - symbols with multiple headers (e.g. std::move)
@@ -777,12 +772,11 @@ void CanonicalIncludes::addSystemHeadersMapping(const LangOptions &Language) {
                llvm::sys::path::end(Path)) <= MaxSuffixComponents;
   }));
   // ... and precise.
-  assert(llvm::find_if(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
-           return std::distance(llvm::sys::path::begin(
-                                    Path, llvm::sys::path::Style::posix),
-                                llvm::sys::path::end(Path)) ==
-                  MaxSuffixComponents;
-         }) != SystemHeaderMap->keys().end());
+  assert(llvm::any_of(SystemHeaderMap->keys(), [](llvm::StringRef Path) {
+    return std::distance(
+               llvm::sys::path::begin(Path, llvm::sys::path::Style::posix),
+               llvm::sys::path::end(Path)) == MaxSuffixComponents;
+  }));
 
   // FIXME: Suffix mapping contains invalid entries for C, so only enable it for
   // CPP.

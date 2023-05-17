@@ -15,9 +15,9 @@
 #include "index/SymbolID.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FunctionExtras.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/JSON.h"
 #include <mutex>
+#include <optional>
 #include <string>
 
 namespace clang {
@@ -39,7 +39,7 @@ struct FuzzyFindRequest {
   bool AnyScope = false;
   /// The number of top candidates to return. The index may choose to
   /// return more than this, e.g. if it doesn't know which candidates are best.
-  llvm::Optional<uint32_t> Limit;
+  std::optional<uint32_t> Limit;
   /// If set to true, only symbols for completion support will be considered.
   bool RestrictForCodeCompletion = false;
   /// Contextually relevant files (e.g. the file we're code-completing in).
@@ -71,7 +71,7 @@ struct RefsRequest {
   /// If set, limit the number of refers returned from the index. The index may
   /// choose to return less than this, e.g. it tries to avoid returning stale
   /// results.
-  llvm::Optional<uint32_t> Limit;
+  std::optional<uint32_t> Limit;
   /// If set, populates the container of the reference.
   /// Index implementations may chose to populate containers no matter what.
   bool WantContainer = false;
@@ -81,7 +81,7 @@ struct RelationsRequest {
   llvm::DenseSet<SymbolID> Subjects;
   RelationKind Predicate;
   /// If set, limit the number of relations returned from the index.
-  llvm::Optional<uint32_t> Limit;
+  std::optional<uint32_t> Limit;
 };
 
 /// Describes what data is covered by an index.

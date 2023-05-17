@@ -14,6 +14,8 @@ add_clang_library(clangLoopProtoToCXX loop_proto_to_cxx.cpp
                   DEPENDS clangCXXLoopProto
                   LINK_LIBS clangCXXLoopProto ${PROTOBUF_LIBRARIES}
                   )
+target_include_directories(clangProtoToCXX PRIVATE .)
+target_include_directories(clangLoopProtoToCXX PRIVATE .)
 
 add_clang_executable(clang-proto-to-cxx proto_to_cxx_main.cpp)
 add_clang_executable(clang-loop-proto-to-cxx loop_proto_to_cxx_main.cpp)

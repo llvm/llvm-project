@@ -56,20 +56,20 @@ declare void @foo4(double)
 
 define void @foo5(i32 %a) nounwind {
 entry:
-  %0 = load i32, i32* @g2, align 4
+  %0 = load i32, ptr @g2, align 4
   %tobool = icmp eq i32 %a, 0
   br i1 %tobool, label %if.else, label %if.then
 
 if.then:
-  %1 = load i32, i32* @g1, align 4
+  %1 = load i32, ptr @g1, align 4
   %add = add nsw i32 %1, %0
-  store i32 %add, i32* @g1, align 4
+  store i32 %add, ptr @g1, align 4
   br label %if.end
 
 if.else:
-  %2 = load i32, i32* @g3, align 4
+  %2 = load i32, ptr @g3, align 4
   %sub = sub nsw i32 %2, %0
-  store i32 %sub, i32* @g3, align 4
+  store i32 %sub, ptr @g3, align 4
   br label %if.end
 
 if.end:
@@ -96,14 +96,14 @@ declare void @foo7(double, float)
 ; STATICO1:      jalr ${{[0-9]+}}
 ; STATICO1-NEXT: sw ${{[0-9]+}}, %lo(g1)
 
-@foo9 = common global void ()* null, align 4
+@foo9 = common global ptr null, align 4
 
 define i32 @foo8(i32 %a) nounwind {
 entry:
-  store i32 %a, i32* @g1, align 4
-  %0 = load void ()*, void ()** @foo9, align 4
+  store i32 %a, ptr @g1, align 4
+  %0 = load ptr, ptr @foo9, align 4
   call void %0() nounwind
-  %1 = load i32, i32* @g1, align 4
+  %1 = load i32, ptr @g1, align 4
   %add = add nsw i32 %1, %a
   ret i32 %add
 }
@@ -121,9 +121,9 @@ define void @foo10() nounwind {
 entry:
   tail call void @foo11() nounwind
   tail call void @foo11() nounwind
-  store i32 0, i32* @g1, align 4
+  store i32 0, ptr @g1, align 4
   tail call void @foo11() nounwind
-  store i32 0, i32* @g1, align 4
+  store i32 0, ptr @g1, align 4
   ret void
 }
 
@@ -138,7 +138,7 @@ declare void @foo11()
 ; SUCCBB:      bnez ${{[0-9]+}}, $BB
 ; SUCCBB-NEXT: addiu
 
-define i32 @succbbs_loop1(i32* nocapture %a, i32 %n) {
+define i32 @succbbs_loop1(ptr nocapture %a, i32 %n) {
 entry:
   %cmp4 = icmp sgt i32 %n, 0
   br i1 %cmp4, label %for.body, label %for.end
@@ -146,8 +146,8 @@ entry:
 for.body:                                         ; preds = %entry, %for.body
   %s.06 = phi i32 [ %add, %for.body ], [ 0, %entry ]
   %i.05 = phi i32 [ %inc, %for.body ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %a, i32 %i.05
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %a, i32 %i.05
+  %0 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %0, %s.06
   %inc = add nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, %n

@@ -86,6 +86,9 @@ static void InitializeFlags() {
     cf.clear_shadow_mmap_threshold = 4096 * (SANITIZER_ANDROID ? 2 : 8);
     // Sigtrap is used in error reporting.
     cf.handle_sigtrap = kHandleSignalExclusive;
+    // For now only tested on Linux. Other plantforms can be turned on as they
+    // become ready.
+    cf.detect_leaks = cf.detect_leaks && SANITIZER_LINUX && !SANITIZER_ANDROID;
 
 #if SANITIZER_ANDROID
     // Let platform handle other signals. It is better at reporting them then we
@@ -106,6 +109,15 @@ static void InitializeFlags() {
   RegisterHwasanFlags(&parser, f);
   RegisterCommonFlags(&parser);
 
+#if CAN_SANITIZE_LEAKS
+  __lsan::Flags *lf = __lsan::flags();
+  lf->SetDefaults();
+
+  FlagParser lsan_parser;
+  __lsan::RegisterLsanFlags(&lsan_parser, lf);
+  RegisterCommonFlags(&lsan_parser);
+#endif
+
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::Flags *uf = __ubsan::flags();
   uf->SetDefaults();
@@ -118,12 +130,18 @@ static void InitializeFlags() {
   // Override from user-specified string.
   if (__hwasan_default_options)
     parser.ParseString(__hwasan_default_options());
+#if CAN_SANITIZE_LEAKS
+  lsan_parser.ParseString(__lsan_default_options());
+#endif
 #if HWASAN_CONTAINS_UBSAN
   const char *ubsan_default_options = __ubsan_default_options();
   ubsan_parser.ParseString(ubsan_default_options);
 #endif
 
   parser.ParseStringFromEnv("HWASAN_OPTIONS");
+#if CAN_SANITIZE_LEAKS
+  lsan_parser.ParseStringFromEnv("LSAN_OPTIONS");
+#endif
 #if HWASAN_CONTAINS_UBSAN
   ubsan_parser.ParseStringFromEnv("UBSAN_OPTIONS");
 #endif
@@ -133,6 +151,12 @@ static void InitializeFlags() {
   if (Verbosity()) ReportUnrecognizedFlags();
 
   if (common_flags()->help) parser.PrintFlagDescriptions();
+  // Flag validation:
+  if (!CAN_SANITIZE_LEAKS && common_flags()->detect_leaks) {
+    Report("%s: detect_leaks is not supported on this platform.\n",
+           SanitizerToolName);
+    Die();
+  }
 }
 
 static void CheckUnwind() {
@@ -218,8 +242,8 @@ void HandleTagMismatch(AccessInfo ai, uptr pc, uptr frame, void *uc,
                     registers_frame);
 }
 
-void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
-                       size_t outsize) {
+void HwasanTagMismatch(uptr addr, uptr pc, uptr frame, uptr access_info,
+                       uptr *registers_frame, size_t outsize) {
   __hwasan::AccessInfo ai;
   ai.is_store = access_info & 0x10;
   ai.is_load = !ai.is_store;
@@ -230,9 +254,7 @@ void HwasanTagMismatch(uptr addr, uptr access_info, uptr *registers_frame,
   else
     ai.size = 1 << (access_info & 0xf);
 
-  HandleTagMismatch(ai, (uptr)__builtin_return_address(0),
-                    (uptr)__builtin_frame_address(0), nullptr, registers_frame);
-  __builtin_unreachable();
+  HandleTagMismatch(ai, pc, frame, nullptr, registers_frame);
 }
 
 Thread *GetCurrentThread() {
@@ -342,7 +364,13 @@ __attribute__((constructor(0))) void __hwasan_init() {
   DisableCoreDumperIfNecessary();
 
   InitInstrumentation();
-  InitLoadedGlobals();
+  if constexpr (!SANITIZER_FUCHSIA) {
+    // Fuchsia's libc provides a hook (__sanitizer_module_loaded) that runs on
+    // the startup path which calls into __hwasan_library_loaded on all
+    // initially loaded modules, so explicitly registering the globals here
+    // isn't needed.
+    InitLoadedGlobals();
+  }
 
   // Needs to be called here because flags()->random_tags might not have been
   // initialized when InitInstrumentation() was called.
@@ -364,9 +392,19 @@ __attribute__((constructor(0))) void __hwasan_init() {
   HwasanAllocatorInit();
   HwasanInstallAtForkHandler();
 
+  if (CAN_SANITIZE_LEAKS) {
+    __lsan::InitCommonLsan();
+    InstallAtExitCheckLeaks();
+  }
+
 #if HWASAN_CONTAINS_UBSAN
   __ubsan::InitAsPlugin();
 #endif
+
+  if (CAN_SANITIZE_LEAKS && common_flags()->detect_leaks) {
+    __lsan::ScopedInterceptorDisabler disabler;
+    Symbolizer::LateInitialize();
+  }
 
   VPrintf(1, "HWAddressSanitizer init done\n");
 
@@ -407,16 +445,32 @@ void __hwasan_print_shadow(const void *p, uptr sz) {
 sptr __hwasan_test_shadow(const void *p, uptr sz) {
   if (sz == 0)
     return -1;
-  tag_t ptr_tag = GetTagFromPointer((uptr)p);
-  uptr ptr_raw = UntagAddr(reinterpret_cast<uptr>(p));
+  uptr ptr = reinterpret_cast<uptr>(p);
+  tag_t ptr_tag = GetTagFromPointer(ptr);
+  uptr ptr_raw = UntagAddr(ptr);
   uptr shadow_first = MemToShadow(ptr_raw);
-  uptr shadow_last = MemToShadow(ptr_raw + sz - 1);
-  for (uptr s = shadow_first; s <= shadow_last; ++s)
-    if (*(tag_t *)s != ptr_tag) {
-      sptr offset = ShadowToMem(s) - ptr_raw;
+  uptr shadow_last = MemToShadow(ptr_raw + sz);
+  for (uptr s = shadow_first; s < shadow_last; ++s) {
+    if (UNLIKELY(*(tag_t *)s != ptr_tag)) {
+      uptr short_size =
+          ShortTagSize(*(tag_t *)s, AddTagToPointer(ShadowToMem(s), ptr_tag));
+      sptr offset = ShadowToMem(s) - ptr_raw + short_size;
       return offset < 0 ? 0 : offset;
     }
-  return -1;
+  }
+
+  uptr end = ptr + sz;
+  uptr tail_sz = end & (kShadowAlignment - 1);
+  if (!tail_sz)
+    return -1;
+
+  uptr short_size =
+      ShortTagSize(*(tag_t *)shadow_last, end & ~(kShadowAlignment - 1));
+  if (LIKELY(tail_sz <= short_size))
+    return -1;
+
+  sptr offset = sz - tail_sz + short_size;
+  return offset < 0 ? 0 : offset;
 }
 
 u16 __sanitizer_unaligned_load16(const uu16 *p) {
@@ -515,7 +569,7 @@ void __hwasan_store16_noabort(uptr p) {
 }
 
 void __hwasan_tag_memory(uptr p, u8 tag, uptr sz) {
-  TagMemoryAligned(p, sz, tag);
+  TagMemoryAligned(UntagAddr(p), sz, tag);
 }
 
 uptr __hwasan_tag_pointer(uptr p, u8 tag) {
@@ -525,7 +579,7 @@ uptr __hwasan_tag_pointer(uptr p, u8 tag) {
 void __hwasan_handle_longjmp(const void *sp_dst) {
   uptr dst = (uptr)sp_dst;
   // HWASan does not support tagged SP.
-  CHECK(GetTagFromPointer(dst) == 0);
+  CHECK_EQ(GetTagFromPointer(dst), 0);
 
   uptr sp = (uptr)__builtin_frame_address(0);
   static const uptr kMaxExpectedCleanupSize = 64 << 20;  // 64M
@@ -576,6 +630,12 @@ u8 __hwasan_generate_tag() {
   return t->GenerateRandomTag();
 }
 
+void __hwasan_add_frame_record(u64 frame_record_info) {
+  Thread *t = GetCurrentThread();
+  if (t)
+    t->stack_allocations()->push(frame_record_info);
+}
+
 #if !SANITIZER_SUPPORTS_WEAK_HOOKS
 extern "C" {
 SANITIZER_INTERFACE_ATTRIBUTE SANITIZER_WEAK_ATTRIBUTE
@@ -594,7 +654,9 @@ void __sanitizer_print_stack_trace() {
 // rest of the mismatch handling code (C++).
 void __hwasan_tag_mismatch4(uptr addr, uptr access_info, uptr *registers_frame,
                             size_t outsize) {
-  __hwasan::HwasanTagMismatch(addr, access_info, registers_frame, outsize);
+  __hwasan::HwasanTagMismatch(addr, (uptr)__builtin_return_address(0),
+                              (uptr)__builtin_frame_address(0), access_info,
+                              registers_frame, outsize);
 }
 
 } // extern "C"

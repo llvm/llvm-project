@@ -43,7 +43,7 @@
 ; WITHOUT-FULL-NEXT:                { Stmt_loop_1[i0] -> MemRef_A[0] };
 ; WITHOUT-FULL-NEXT:    }
 
-define void @foo(float* %A, i32 %p) {
+define void @foo(ptr %A, i32 %p) {
 bb:
   %cmp = icmp eq i32 %p, 42
   br i1 %cmp, label %loop.1, label %loop.2
@@ -51,14 +51,14 @@ bb:
 loop.1:
   %indvar.1 = phi i64 [0, %bb], [%indvar.next.1, %loop.1]
   %indvar.next.1 = add i64 %indvar.1, 1
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   %cmp.1 = icmp sle i64 %indvar.1, 1024
   br i1 %cmp.1, label %loop.1, label %merge
 
 loop.2:
   %indvar.2 = phi i64 [0, %bb], [%indvar.next.2, %loop.2]
   %indvar.next.2 = add i64 %indvar.2, 1
-  store float 42.0, float* %A
+  store float 42.0, ptr %A
   %cmp.2 = icmp sle i64 %indvar.2, 1024
   br i1 %cmp.2, label %loop.2, label %merge
 

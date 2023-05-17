@@ -18,5 +18,10 @@
 //
 // MY_BOOL_UNTERMINATED: a \
 //
+// MY_DEFINE: %{name} = value one
+//
+// MY_REDEFINE: %{name} = value \
+// MY_REDEFINE:           two
+//
 // END.
 // MY_LIST: five

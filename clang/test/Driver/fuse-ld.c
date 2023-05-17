@@ -44,7 +44,7 @@
 // RUN:     -target arm-linux-androideabi \
 // RUN:     -B%S/Inputs/basic_android_tree/bin/arm-linux-androideabi- 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ANDROID-ARM-LD
-// CHECK-ANDROID-ARM-LD: Inputs/basic_android_tree/bin{{/|\\+}}arm-linux-androideabi-ld
+// CHECK-ANDROID-ARM-LD: ld.lld
 
 // RUN: %clang %s -### -fuse-ld=bfd \
 // RUN:     -target arm-linux-androideabi \
@@ -62,7 +62,7 @@
 // RUN:     -target arm-linux-androideabi \
 // RUN:     --gcc-toolchain=%S/Inputs/basic_android_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ANDROID-ARM-LD-TC
-// CHECK-ANDROID-ARM-LD-TC: Inputs/basic_android_tree/lib/gcc/arm-linux-androideabi/4.4.3/../../../../arm-linux-androideabi/bin{{/|\\+}}ld
+// CHECK-ANDROID-ARM-LD-TC: ld.lld
 
 // RUN: %clang %s -### -fuse-ld=bfd \
 // RUN:     -target arm-linux-androideabi \

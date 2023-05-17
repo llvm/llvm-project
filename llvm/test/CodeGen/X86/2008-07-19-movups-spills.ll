@@ -4,38 +4,38 @@
 ; Verify that movups is still generated with an aligned stack for the globals
 ; that must be accessed unaligned
 
-@0 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:0 [#uses=2]
-@1 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:1 [#uses=1]
-@2 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:2 [#uses=1]
-@3 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:3 [#uses=1]
-@4 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:4 [#uses=1]
-@5 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:5 [#uses=1]
-@6 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:6 [#uses=1]
-@7 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:7 [#uses=1]
-@8 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:8 [#uses=1]
-@9 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:9 [#uses=1]
-@10 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:10 [#uses=1]
-@11 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:11 [#uses=1]
-@12 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:12 [#uses=1]
-@13 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:13 [#uses=1]
-@14 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:14 [#uses=1]
-@15 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:15 [#uses=1]
-@16 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:16 [#uses=1]
-@17 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:17 [#uses=1]
-@18 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:18 [#uses=1]
-@19 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:19 [#uses=1]
-@20 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:20 [#uses=1]
-@21 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:21 [#uses=1]
-@22 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:22 [#uses=1]
-@23 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:23 [#uses=1]
-@24 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:24 [#uses=1]
-@25 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:25 [#uses=1]
-@26 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:26 [#uses=1]
-@27 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:27 [#uses=1]
-@28 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:28 [#uses=1]
-@29 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:29 [#uses=1]
-@30 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:30 [#uses=1]
-@31 = external dso_local global <4 x float>, align 1	; <<4 x float>*>:31 [#uses=1]
+@0 = external dso_local global <4 x float>, align 1	; <ptr>:0 [#uses=2]
+@1 = external dso_local global <4 x float>, align 1	; <ptr>:1 [#uses=1]
+@2 = external dso_local global <4 x float>, align 1	; <ptr>:2 [#uses=1]
+@3 = external dso_local global <4 x float>, align 1	; <ptr>:3 [#uses=1]
+@4 = external dso_local global <4 x float>, align 1	; <ptr>:4 [#uses=1]
+@5 = external dso_local global <4 x float>, align 1	; <ptr>:5 [#uses=1]
+@6 = external dso_local global <4 x float>, align 1	; <ptr>:6 [#uses=1]
+@7 = external dso_local global <4 x float>, align 1	; <ptr>:7 [#uses=1]
+@8 = external dso_local global <4 x float>, align 1	; <ptr>:8 [#uses=1]
+@9 = external dso_local global <4 x float>, align 1	; <ptr>:9 [#uses=1]
+@10 = external dso_local global <4 x float>, align 1	; <ptr>:10 [#uses=1]
+@11 = external dso_local global <4 x float>, align 1	; <ptr>:11 [#uses=1]
+@12 = external dso_local global <4 x float>, align 1	; <ptr>:12 [#uses=1]
+@13 = external dso_local global <4 x float>, align 1	; <ptr>:13 [#uses=1]
+@14 = external dso_local global <4 x float>, align 1	; <ptr>:14 [#uses=1]
+@15 = external dso_local global <4 x float>, align 1	; <ptr>:15 [#uses=1]
+@16 = external dso_local global <4 x float>, align 1	; <ptr>:16 [#uses=1]
+@17 = external dso_local global <4 x float>, align 1	; <ptr>:17 [#uses=1]
+@18 = external dso_local global <4 x float>, align 1	; <ptr>:18 [#uses=1]
+@19 = external dso_local global <4 x float>, align 1	; <ptr>:19 [#uses=1]
+@20 = external dso_local global <4 x float>, align 1	; <ptr>:20 [#uses=1]
+@21 = external dso_local global <4 x float>, align 1	; <ptr>:21 [#uses=1]
+@22 = external dso_local global <4 x float>, align 1	; <ptr>:22 [#uses=1]
+@23 = external dso_local global <4 x float>, align 1	; <ptr>:23 [#uses=1]
+@24 = external dso_local global <4 x float>, align 1	; <ptr>:24 [#uses=1]
+@25 = external dso_local global <4 x float>, align 1	; <ptr>:25 [#uses=1]
+@26 = external dso_local global <4 x float>, align 1	; <ptr>:26 [#uses=1]
+@27 = external dso_local global <4 x float>, align 1	; <ptr>:27 [#uses=1]
+@28 = external dso_local global <4 x float>, align 1	; <ptr>:28 [#uses=1]
+@29 = external dso_local global <4 x float>, align 1	; <ptr>:29 [#uses=1]
+@30 = external dso_local global <4 x float>, align 1	; <ptr>:30 [#uses=1]
+@31 = external dso_local global <4 x float>, align 1	; <ptr>:31 [#uses=1]
 
 declare void @abort()
 
@@ -75,38 +75,38 @@ define void @test1() {
 ; CHECK: movups
 ; CHECK: movups
 ; CHECK-NOT: movups
-	load <4 x float>, <4 x float>* @0, align 1		; <<4 x float>>:1 [#uses=2]
-	load <4 x float>, <4 x float>* @1, align 1		; <<4 x float>>:2 [#uses=3]
-	load <4 x float>, <4 x float>* @2, align 1		; <<4 x float>>:3 [#uses=4]
-	load <4 x float>, <4 x float>* @3, align 1		; <<4 x float>>:4 [#uses=5]
-	load <4 x float>, <4 x float>* @4, align 1		; <<4 x float>>:5 [#uses=6]
-	load <4 x float>, <4 x float>* @5, align 1		; <<4 x float>>:6 [#uses=7]
-	load <4 x float>, <4 x float>* @6, align 1		; <<4 x float>>:7 [#uses=8]
-	load <4 x float>, <4 x float>* @7, align 1		; <<4 x float>>:8 [#uses=9]
-	load <4 x float>, <4 x float>* @8, align 1		; <<4 x float>>:9 [#uses=10]
-	load <4 x float>, <4 x float>* @9, align 1		; <<4 x float>>:10 [#uses=11]
-	load <4 x float>, <4 x float>* @10, align 1		; <<4 x float>>:11 [#uses=12]
-	load <4 x float>, <4 x float>* @11, align 1		; <<4 x float>>:12 [#uses=13]
-	load <4 x float>, <4 x float>* @12, align 1		; <<4 x float>>:13 [#uses=14]
-	load <4 x float>, <4 x float>* @13, align 1		; <<4 x float>>:14 [#uses=15]
-	load <4 x float>, <4 x float>* @14, align 1		; <<4 x float>>:15 [#uses=16]
-	load <4 x float>, <4 x float>* @15, align 1		; <<4 x float>>:16 [#uses=17]
-	load <4 x float>, <4 x float>* @16, align 1		; <<4 x float>>:17 [#uses=18]
-	load <4 x float>, <4 x float>* @17, align 1		; <<4 x float>>:18 [#uses=19]
-	load <4 x float>, <4 x float>* @18, align 1		; <<4 x float>>:19 [#uses=20]
-	load <4 x float>, <4 x float>* @19, align 1		; <<4 x float>>:20 [#uses=21]
-	load <4 x float>, <4 x float>* @20, align 1		; <<4 x float>>:21 [#uses=22]
-	load <4 x float>, <4 x float>* @21, align 1		; <<4 x float>>:22 [#uses=23]
-	load <4 x float>, <4 x float>* @22, align 1		; <<4 x float>>:23 [#uses=24]
-	load <4 x float>, <4 x float>* @23, align 1		; <<4 x float>>:24 [#uses=25]
-	load <4 x float>, <4 x float>* @24, align 1		; <<4 x float>>:25 [#uses=26]
-	load <4 x float>, <4 x float>* @25, align 1		; <<4 x float>>:26 [#uses=27]
-	load <4 x float>, <4 x float>* @26, align 1		; <<4 x float>>:27 [#uses=28]
-	load <4 x float>, <4 x float>* @27, align 1		; <<4 x float>>:28 [#uses=29]
-	load <4 x float>, <4 x float>* @28, align 1		; <<4 x float>>:29 [#uses=30]
-	load <4 x float>, <4 x float>* @29, align 1		; <<4 x float>>:30 [#uses=31]
-	load <4 x float>, <4 x float>* @30, align 1		; <<4 x float>>:31 [#uses=32]
-	load <4 x float>, <4 x float>* @31, align 1		; <<4 x float>>:32 [#uses=33]
+	load <4 x float>, ptr @0, align 1		; <<4 x float>>:1 [#uses=2]
+	load <4 x float>, ptr @1, align 1		; <<4 x float>>:2 [#uses=3]
+	load <4 x float>, ptr @2, align 1		; <<4 x float>>:3 [#uses=4]
+	load <4 x float>, ptr @3, align 1		; <<4 x float>>:4 [#uses=5]
+	load <4 x float>, ptr @4, align 1		; <<4 x float>>:5 [#uses=6]
+	load <4 x float>, ptr @5, align 1		; <<4 x float>>:6 [#uses=7]
+	load <4 x float>, ptr @6, align 1		; <<4 x float>>:7 [#uses=8]
+	load <4 x float>, ptr @7, align 1		; <<4 x float>>:8 [#uses=9]
+	load <4 x float>, ptr @8, align 1		; <<4 x float>>:9 [#uses=10]
+	load <4 x float>, ptr @9, align 1		; <<4 x float>>:10 [#uses=11]
+	load <4 x float>, ptr @10, align 1		; <<4 x float>>:11 [#uses=12]
+	load <4 x float>, ptr @11, align 1		; <<4 x float>>:12 [#uses=13]
+	load <4 x float>, ptr @12, align 1		; <<4 x float>>:13 [#uses=14]
+	load <4 x float>, ptr @13, align 1		; <<4 x float>>:14 [#uses=15]
+	load <4 x float>, ptr @14, align 1		; <<4 x float>>:15 [#uses=16]
+	load <4 x float>, ptr @15, align 1		; <<4 x float>>:16 [#uses=17]
+	load <4 x float>, ptr @16, align 1		; <<4 x float>>:17 [#uses=18]
+	load <4 x float>, ptr @17, align 1		; <<4 x float>>:18 [#uses=19]
+	load <4 x float>, ptr @18, align 1		; <<4 x float>>:19 [#uses=20]
+	load <4 x float>, ptr @19, align 1		; <<4 x float>>:20 [#uses=21]
+	load <4 x float>, ptr @20, align 1		; <<4 x float>>:21 [#uses=22]
+	load <4 x float>, ptr @21, align 1		; <<4 x float>>:22 [#uses=23]
+	load <4 x float>, ptr @22, align 1		; <<4 x float>>:23 [#uses=24]
+	load <4 x float>, ptr @23, align 1		; <<4 x float>>:24 [#uses=25]
+	load <4 x float>, ptr @24, align 1		; <<4 x float>>:25 [#uses=26]
+	load <4 x float>, ptr @25, align 1		; <<4 x float>>:26 [#uses=27]
+	load <4 x float>, ptr @26, align 1		; <<4 x float>>:27 [#uses=28]
+	load <4 x float>, ptr @27, align 1		; <<4 x float>>:28 [#uses=29]
+	load <4 x float>, ptr @28, align 1		; <<4 x float>>:29 [#uses=30]
+	load <4 x float>, ptr @29, align 1		; <<4 x float>>:30 [#uses=31]
+	load <4 x float>, ptr @30, align 1		; <<4 x float>>:31 [#uses=32]
+	load <4 x float>, ptr @31, align 1		; <<4 x float>>:32 [#uses=33]
 	fmul <4 x float> %1, %1		; <<4 x float>>:33 [#uses=1]
 	fmul <4 x float> %33, %2		; <<4 x float>>:34 [#uses=1]
 	fmul <4 x float> %34, %3		; <<4 x float>>:35 [#uses=1]
@@ -668,7 +668,7 @@ define void @test1() {
 	fadd <4 x float> %590, %557		; <<4 x float>>:591 [#uses=1]
 	fadd <4 x float> %591, %559		; <<4 x float>>:592 [#uses=1]
 	fadd <4 x float> %592, %560		; <<4 x float>>:593 [#uses=1]
-	store <4 x float> %593, <4 x float>* @0, align 1
+	store <4 x float> %593, ptr @0, align 1
 	ret void
 }
 
@@ -708,38 +708,38 @@ define void @test2() "no-realign-stack" {
 ; CHECK: movups
 ; CHECK: movups
 ; CHECK-NOT: movups
-	load <4 x float>, <4 x float>* @0, align 1
-	load <4 x float>, <4 x float>* @1, align 1
-	load <4 x float>, <4 x float>* @2, align 1
-	load <4 x float>, <4 x float>* @3, align 1
-	load <4 x float>, <4 x float>* @4, align 1
-	load <4 x float>, <4 x float>* @5, align 1
-	load <4 x float>, <4 x float>* @6, align 1
-	load <4 x float>, <4 x float>* @7, align 1
-	load <4 x float>, <4 x float>* @8, align 1
-	load <4 x float>, <4 x float>* @9, align 1
-	load <4 x float>, <4 x float>* @10, align 1
-	load <4 x float>, <4 x float>* @11, align 1
-	load <4 x float>, <4 x float>* @12, align 1
-	load <4 x float>, <4 x float>* @13, align 1
-	load <4 x float>, <4 x float>* @14, align 1
-	load <4 x float>, <4 x float>* @15, align 1
-	load <4 x float>, <4 x float>* @16, align 1
-	load <4 x float>, <4 x float>* @17, align 1
-	load <4 x float>, <4 x float>* @18, align 1
-	load <4 x float>, <4 x float>* @19, align 1
-	load <4 x float>, <4 x float>* @20, align 1
-	load <4 x float>, <4 x float>* @21, align 1
-	load <4 x float>, <4 x float>* @22, align 1
-	load <4 x float>, <4 x float>* @23, align 1
-	load <4 x float>, <4 x float>* @24, align 1
-	load <4 x float>, <4 x float>* @25, align 1
-	load <4 x float>, <4 x float>* @26, align 1
-	load <4 x float>, <4 x float>* @27, align 1
-	load <4 x float>, <4 x float>* @28, align 1
-	load <4 x float>, <4 x float>* @29, align 1
-	load <4 x float>, <4 x float>* @30, align 1
-	load <4 x float>, <4 x float>* @31, align 1
+	load <4 x float>, ptr @0, align 1
+	load <4 x float>, ptr @1, align 1
+	load <4 x float>, ptr @2, align 1
+	load <4 x float>, ptr @3, align 1
+	load <4 x float>, ptr @4, align 1
+	load <4 x float>, ptr @5, align 1
+	load <4 x float>, ptr @6, align 1
+	load <4 x float>, ptr @7, align 1
+	load <4 x float>, ptr @8, align 1
+	load <4 x float>, ptr @9, align 1
+	load <4 x float>, ptr @10, align 1
+	load <4 x float>, ptr @11, align 1
+	load <4 x float>, ptr @12, align 1
+	load <4 x float>, ptr @13, align 1
+	load <4 x float>, ptr @14, align 1
+	load <4 x float>, ptr @15, align 1
+	load <4 x float>, ptr @16, align 1
+	load <4 x float>, ptr @17, align 1
+	load <4 x float>, ptr @18, align 1
+	load <4 x float>, ptr @19, align 1
+	load <4 x float>, ptr @20, align 1
+	load <4 x float>, ptr @21, align 1
+	load <4 x float>, ptr @22, align 1
+	load <4 x float>, ptr @23, align 1
+	load <4 x float>, ptr @24, align 1
+	load <4 x float>, ptr @25, align 1
+	load <4 x float>, ptr @26, align 1
+	load <4 x float>, ptr @27, align 1
+	load <4 x float>, ptr @28, align 1
+	load <4 x float>, ptr @29, align 1
+	load <4 x float>, ptr @30, align 1
+	load <4 x float>, ptr @31, align 1
 	fmul <4 x float> %1, %1
 	fmul <4 x float> %33, %2
 	fmul <4 x float> %34, %3
@@ -1301,6 +1301,6 @@ define void @test2() "no-realign-stack" {
 	fadd <4 x float> %590, %557		; <<4 x float>>:591 [#uses=1]
 	fadd <4 x float> %591, %559		; <<4 x float>>:592 [#uses=1]
 	fadd <4 x float> %592, %560		; <<4 x float>>:593 [#uses=1]
-	store <4 x float> %593, <4 x float>* @0, align 1
+	store <4 x float> %593, ptr @0, align 1
 	ret void
 }

@@ -10,11 +10,11 @@
   target triple = "thumbv7em-arm-none-eabi"
 
   ; Function Attrs: norecurse nounwind optsize readonly
-  define dso_local i32 @test(i32* nocapture readonly %a, i32* nocapture readonly %b) local_unnamed_addr #0 {
+  define dso_local i32 @test(ptr nocapture readonly %a, ptr nocapture readonly %b) local_unnamed_addr #0 {
   entry:
-    %0 = load i32, i32* %a, align 4
+    %0 = load i32, ptr %a, align 4
     %add = add nsw i32 %0, 10
-    %1 = load i32, i32* %b, align 4
+    %1 = load i32, ptr %b, align 4
     %add1 = add nsw i32 %1, 20
     %mul = mul nsw i32 %add1, %add
     ret i32 %mul

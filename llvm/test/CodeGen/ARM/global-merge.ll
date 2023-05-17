@@ -9,28 +9,28 @@
 ; Global variables marked with "used" attribute must be kept
 ; CHECK: g8
 @g8 = internal global i32 0
-@llvm.used = appending global [1 x i8*] [i8* bitcast (i32* @g8 to i8*)], section "llvm.metadata"
+@llvm.used = appending global [1 x ptr] [ptr @g8], section "llvm.metadata"
 
 ; Global used in landing pad instruction must be kept
 ; CHECK: ZTIi
-@_ZTIi = internal global i8* null
+@_ZTIi = internal global ptr null
 
-define i32 @_Z9exceptioni(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_personality_sj0 to i8*) {
+define i32 @_Z9exceptioni(i32 %arg) personality ptr @__gxx_personality_sj0 {
 bb:
   %tmp = invoke i32 @_Z14throwSomethingi(i32 %arg)
           to label %bb9 unwind label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp2 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-  %tmp3 = extractvalue { i8*, i32 } %tmp2, 1
-  %tmp4 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+  %tmp2 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
+  %tmp3 = extractvalue { ptr, i32 } %tmp2, 1
+  %tmp4 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
   %tmp5 = icmp eq i32 %tmp3, %tmp4
   br i1 %tmp5, label %bb6, label %bb10
 
 bb6:                                              ; preds = %bb1
-  %tmp7 = extractvalue { i8*, i32 } %tmp2, 0
-  %tmp8 = tail call i8* @__cxa_begin_catch(i8* %tmp7)
+  %tmp7 = extractvalue { ptr, i32 } %tmp2, 0
+  %tmp8 = tail call ptr @__cxa_begin_catch(ptr %tmp7)
   tail call void @__cxa_end_catch()
   br label %bb9
 
@@ -39,16 +39,16 @@ bb9:                                              ; preds = %bb6, %bb
   ret i32 %res.0
 
 bb10:                                             ; preds = %bb1
-  resume { i8*, i32 } %tmp2
+  resume { ptr, i32 } %tmp2
 }
 
 declare i32 @_Z14throwSomethingi(i32)
 
 declare i32 @__gxx_personality_sj0(...)
 
-declare i32 @llvm.eh.typeid.for(i8*)
+declare i32 @llvm.eh.typeid.for(ptr)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

@@ -21,6 +21,7 @@
 #define DEBUG_TYPE "test-memref-dependence-check"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 namespace {
 
@@ -52,16 +53,14 @@ getDirectionVectorStr(bool ret, unsigned numCommonLoops, unsigned loopNestDepth,
   std::string result;
   for (const auto &dependenceComponent : dependenceComponents) {
     std::string lbStr = "-inf";
-    if (dependenceComponent.lb.hasValue() &&
-        dependenceComponent.lb.getValue() !=
-            std::numeric_limits<int64_t>::min())
-      lbStr = std::to_string(dependenceComponent.lb.getValue());
+    if (dependenceComponent.lb.has_value() &&
+        *dependenceComponent.lb != std::numeric_limits<int64_t>::min())
+      lbStr = std::to_string(*dependenceComponent.lb);
 
     std::string ubStr = "+inf";
-    if (dependenceComponent.ub.hasValue() &&
-        dependenceComponent.ub.getValue() !=
-            std::numeric_limits<int64_t>::max())
-      ubStr = std::to_string(dependenceComponent.ub.getValue());
+    if (dependenceComponent.ub.has_value() &&
+        *dependenceComponent.ub != std::numeric_limits<int64_t>::max())
+      ubStr = std::to_string(*dependenceComponent.ub);
 
     result += "[" + lbStr + ", " + ubStr + "]";
   }
@@ -83,20 +82,22 @@ static void checkDependences(ArrayRef<Operation *> loadsAndStores) {
       unsigned numCommonLoops =
           getNumCommonSurroundingLoops(*srcOpInst, *dstOpInst);
       for (unsigned d = 1; d <= numCommonLoops + 1; ++d) {
-        FlatAffineValueConstraints dependenceConstraints;
         SmallVector<DependenceComponent, 2> dependenceComponents;
         DependenceResult result = checkMemrefAccessDependence(
-            srcAccess, dstAccess, d, &dependenceConstraints,
+            srcAccess, dstAccess, d, /*dependenceConstraints=*/nullptr,
             &dependenceComponents);
-        assert(result.value != DependenceResult::Failure);
-        bool ret = hasDependence(result);
-        // TODO: Print dependence type (i.e. RAW, etc) and print
-        // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
-        // vectors from ([1, 1], [3, 3]) to (1, 3).
-        srcOpInst->emitRemark("dependence from ")
-            << i << " to " << j << " at depth " << d << " = "
-            << getDirectionVectorStr(ret, numCommonLoops, d,
-                                     dependenceComponents);
+        if (result.value == DependenceResult::Failure) {
+          srcOpInst->emitError("dependence check failed");
+        } else {
+          bool ret = hasDependence(result);
+          // TODO: Print dependence type (i.e. RAW, etc) and print
+          // distance vectors as: ([2, 3], [0, 10]). Also, shorten distance
+          // vectors from ([1, 1], [3, 3]) to (1, 3).
+          srcOpInst->emitRemark("dependence from ")
+              << i << " to " << j << " at depth " << d << " = "
+              << getDirectionVectorStr(ret, numCommonLoops, d,
+                                       dependenceComponents);
+        }
       }
     }
   }

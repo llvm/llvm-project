@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 __attribute__((noinline))
@@ -32,6 +33,10 @@ int main(int argc, char **argv) {
     fprintf(stderr, "Parent PID: %d\n", getpid());
     foo();
     bar();
+
+    // Wait for the child process(s) to finish
+    while (wait(NULL) > 0)
+      ;
   }
   return 0;
 }

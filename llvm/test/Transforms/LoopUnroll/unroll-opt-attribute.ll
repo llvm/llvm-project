@@ -1,5 +1,5 @@
-; RUN: opt < %s -S -loop-unroll -unroll-count=4 | FileCheck -check-prefix=CHECK_COUNT4 %s
-; RUN: opt < %s -S -loop-unroll | FileCheck -check-prefix=CHECK_NOCOUNT %s
+; RUN: opt < %s -S -passes=loop-unroll -unroll-count=4 | FileCheck -check-prefix=CHECK_COUNT4 %s
+; RUN: opt < %s -S -passes=loop-unroll | FileCheck -check-prefix=CHECK_NOCOUNT %s
 ; RUN: opt < %s -S -passes='require<profile-summary>,function(loop-unroll)' -pgso | FileCheck -check-prefix=PGSO %s
 ; RUN: opt < %s -S -passes='require<profile-summary>,function(loop-unroll)' -pgso=false | FileCheck -check-prefix=NPGSO %s
 
@@ -69,8 +69,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds [24 x i32], [24 x i32]* @tab, i32 0, i32 %i.05
-  store i32 %i.05, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [24 x i32], ptr @tab, i32 0, i32 %i.05
+  store i32 %i.05, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 24
   br i1 %exitcond, label %for.end, label %for.body
@@ -117,8 +117,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds [24 x i32], [24 x i32]* @tab, i32 0, i32 %i.05
-  store i32 %i.05, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [24 x i32], ptr @tab, i32 0, i32 %i.05
+  store i32 %i.05, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 24
   br i1 %exitcond, label %for.end, label %for.body
@@ -141,8 +141,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds [24 x i32], [24 x i32]* @tab, i32 0, i32 %i.05
-  store i32 %i.05, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [24 x i32], ptr @tab, i32 0, i32 %i.05
+  store i32 %i.05, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 24
   br i1 %exitcond, label %for.end, label %for.body
@@ -169,8 +169,8 @@ entry:
 
 for.body:                                         ; preds = %for.body, %entry
   %i.05 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
-  %arrayidx = getelementptr inbounds [24 x i32], [24 x i32]* @tab, i32 0, i32 %i.05
-  store i32 %i.05, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [24 x i32], ptr @tab, i32 0, i32 %i.05
+  store i32 %i.05, ptr %arrayidx, align 4
   %inc = add nuw nsw i32 %i.05, 1
   %exitcond = icmp eq i32 %inc, 24
   br i1 %exitcond, label %for.end, label %for.body, !llvm.loop !15

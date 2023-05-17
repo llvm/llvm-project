@@ -30,6 +30,10 @@ class MLIRContext;
 class AbstractType {
 public:
   using HasTraitFn = llvm::unique_function<bool(TypeID) const>;
+  using WalkImmediateSubElementsFn = function_ref<void(
+      Type, function_ref<void(Attribute)>, function_ref<void(Type)>)>;
+  using ReplaceImmediateSubElementsFn =
+      function_ref<Type(Type, ArrayRef<Attribute>, ArrayRef<Type>)>;
 
   /// Look up the specified abstract type in the MLIRContext and return a
   /// reference to it.
@@ -40,17 +44,23 @@ public:
   template <typename T>
   static AbstractType get(Dialect &dialect) {
     return AbstractType(dialect, T::getInterfaceMap(), T::getHasTraitFn(),
-                        T::getTypeID());
+                        T::getWalkImmediateSubElementsFn(),
+                        T::getReplaceImmediateSubElementsFn(), T::getTypeID());
   }
 
   /// This method is used by Dialect objects to register types with
   /// custom TypeIDs.
   /// The use of this method is in general discouraged in favor of
   /// 'get<CustomType>(dialect)';
-  static AbstractType get(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
-                          HasTraitFn &&hasTrait, TypeID typeID) {
+  static AbstractType
+  get(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
+      HasTraitFn &&hasTrait,
+      WalkImmediateSubElementsFn walkImmediateSubElementsFn,
+      ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
+      TypeID typeID) {
     return AbstractType(dialect, std::move(interfaceMap), std::move(hasTrait),
-                        typeID);
+                        walkImmediateSubElementsFn,
+                        replaceImmediateSubElementsFn, typeID);
   }
 
   /// Return the dialect this type was registered to.
@@ -59,7 +69,8 @@ public:
   /// Returns an instance of the concept object for the given interface if it
   /// was registered to this type, null otherwise. This should not be used
   /// directly.
-  template <typename T> typename T::Concept *getInterface() const {
+  template <typename T>
+  typename T::Concept *getInterface() const {
     return interfaceMap.lookup<T>();
   }
 
@@ -77,14 +88,29 @@ public:
   /// Returns true if the type has a particular trait.
   bool hasTrait(TypeID traitID) const { return hasTraitFn(traitID); }
 
+  /// Walk the immediate sub-elements of the given type.
+  void walkImmediateSubElements(Type type,
+                                function_ref<void(Attribute)> walkAttrsFn,
+                                function_ref<void(Type)> walkTypesFn) const;
+
+  /// Replace the immediate sub-elements of the given type.
+  Type replaceImmediateSubElements(Type type, ArrayRef<Attribute> replAttrs,
+                                   ArrayRef<Type> replTypes) const;
+
   /// Return the unique identifier representing the concrete type class.
   TypeID getTypeID() const { return typeID; }
 
 private:
   AbstractType(Dialect &dialect, detail::InterfaceMap &&interfaceMap,
-               HasTraitFn &&hasTrait, TypeID typeID)
+               HasTraitFn &&hasTrait,
+               WalkImmediateSubElementsFn walkImmediateSubElementsFn,
+               ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn,
+               TypeID typeID)
       : dialect(dialect), interfaceMap(std::move(interfaceMap)),
-        hasTraitFn(std::move(hasTrait)), typeID(typeID) {}
+        hasTraitFn(std::move(hasTrait)),
+        walkImmediateSubElementsFn(walkImmediateSubElementsFn),
+        replaceImmediateSubElementsFn(replaceImmediateSubElementsFn),
+        typeID(typeID) {}
 
   /// Give StorageUserBase access to the mutable lookup.
   template <typename ConcreteT, typename BaseT, typename StorageT,
@@ -104,6 +130,12 @@ private:
 
   /// Function to check if the type has a particular trait.
   HasTraitFn hasTraitFn;
+
+  /// Function to walk the immediate sub-elements of this type.
+  WalkImmediateSubElementsFn walkImmediateSubElementsFn;
+
+  /// Function to replace the immediate sub-elements of this type.
+  ReplaceImmediateSubElementsFn replaceImmediateSubElementsFn;
 
   /// The unique identifier of the derived Type class.
   const TypeID typeID;
@@ -174,7 +206,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T, typename... Args>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, TypeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID, Args &&...args) {
 #ifndef NDEBUG
@@ -195,7 +227,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'get<T, Args>(ctx, args)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, TypeStorage>::value, T>
   getWithTypeID(MLIRContext *ctx, TypeID typeID) {
 #ifndef NDEBUG
@@ -229,7 +261,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'registerType<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       !std::is_same<typename T::ImplType, TypeStorage>::value>
   registerType(MLIRContext *ctx, TypeID typeID) {
     ctx->getTypeUniquer().registerParametricStorageType<typename T::ImplType>(
@@ -239,7 +271,7 @@ struct TypeUniquer {
   /// The use of this method is in general discouraged in favor of
   /// 'registerType<T>(ctx)'.
   template <typename T>
-  static typename std::enable_if_t<
+  static std::enable_if_t<
       std::is_same<typename T::ImplType, TypeStorage>::value>
   registerType(MLIRContext *ctx, TypeID typeID) {
     ctx->getTypeUniquer().registerSingletonStorageType<TypeStorage>(

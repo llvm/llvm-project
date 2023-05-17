@@ -332,6 +332,37 @@ void __kmpc_fork_call(ident_t *loc, kmp_int32 argc, kmpc_micro microtask, ...) {
 
 /*!
 @ingroup PARALLEL
+@param loc  source location information
+@param microtask  pointer to callback routine consisting of outlined parallel
+construct
+@param cond  condition for running in parallel
+@param args  struct of pointers to shared variables that aren't global
+
+Perform a fork only if the condition is true.
+*/
+void __kmpc_fork_call_if(ident_t *loc, kmp_int32 argc, kmpc_micro microtask,
+                         kmp_int32 cond, void *args) {
+  int gtid = __kmp_entry_gtid();
+  int zero = 0;
+  if (cond) {
+    if (args)
+      __kmpc_fork_call(loc, argc, microtask, args);
+    else
+      __kmpc_fork_call(loc, argc, microtask);
+  } else {
+    __kmpc_serialized_parallel(loc, gtid);
+
+    if (args)
+      microtask(&gtid, &zero, args);
+    else
+      microtask(&gtid, &zero);
+
+    __kmpc_end_serialized_parallel(loc, gtid);
+  }
+}
+
+/*!
+@ingroup PARALLEL
 @param loc source location information
 @param global_tid global thread number
 @param num_teams number of teams requested for the teams construct
@@ -632,6 +663,11 @@ void __kmpc_end_serialized_parallel(ident_t *loc, kmp_int32 global_tid) {
                 "team %p\n",
                 global_tid, this_thr->th.th_task_team, this_thr->th.th_team));
     }
+#if KMP_AFFINITY_SUPPORTED
+    if (this_thr->th.th_team->t.t_level == 0 && __kmp_affinity.flags.reset) {
+      __kmp_reset_root_init_mask(global_tid);
+    }
+#endif
   } else {
     if (__kmp_tasking_mode != tskm_immediate_exec) {
       KA_TRACE(20, ("__kmpc_end_serialized_parallel: T#%d decreasing nesting "
@@ -663,45 +699,7 @@ void __kmpc_flush(ident_t *loc) {
   KC_TRACE(10, ("__kmpc_flush: called\n"));
 
   /* need explicit __mf() here since use volatile instead in library */
-  KMP_MB(); /* Flush all pending memory write invalidates.  */
-
-#if (KMP_ARCH_X86 || KMP_ARCH_X86_64)
-#if KMP_MIC
-// fence-style instructions do not exist, but lock; xaddl $0,(%rsp) can be used.
-// We shouldn't need it, though, since the ABI rules require that
-// * If the compiler generates NGO stores it also generates the fence
-// * If users hand-code NGO stores they should insert the fence
-// therefore no incomplete unordered stores should be visible.
-#else
-  // C74404
-  // This is to address non-temporal store instructions (sfence needed).
-  // The clflush instruction is addressed either (mfence needed).
-  // Probably the non-temporal load monvtdqa instruction should also be
-  // addressed.
-  // mfence is a SSE2 instruction. Do not execute it if CPU is not SSE2.
-  if (!__kmp_cpuinfo.initialized) {
-    __kmp_query_cpuid(&__kmp_cpuinfo);
-  }
-  if (!__kmp_cpuinfo.flags.sse2) {
-    // CPU cannot execute SSE2 instructions.
-  } else {
-#if KMP_COMPILER_ICC || KMP_COMPILER_ICX
-    _mm_mfence();
-#elif KMP_COMPILER_MSVC
-    MemoryBarrier();
-#else
-    __sync_synchronize();
-#endif // KMP_COMPILER_ICC || KMP_COMPILER_ICX
-  }
-#endif // KMP_MIC
-#elif (KMP_ARCH_ARM || KMP_ARCH_AARCH64 || KMP_ARCH_MIPS || KMP_ARCH_MIPS64 || \
-       KMP_ARCH_RISCV64)
-// Nothing to see here move along
-#elif KMP_ARCH_PPC64
-// Nothing needed here (we have a real MB above).
-#else
-#error Unknown or unsupported architecture
-#endif
+  KMP_MFENCE(); /* Flush all pending memory write invalidates.  */
 
 #if OMPT_SUPPORT && OMPT_OPTIONAL
   if (ompt_enabled.ompt_callback_flush) {
@@ -2021,6 +2019,12 @@ void KMP_EXPAND_NAME(ompc_display_affinity)(char const *format) {
   }
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
+#if KMP_AFFINITY_SUPPORTED
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 &&
+      __kmp_affinity.flags.reset) {
+    __kmp_reset_root_init_mask(gtid);
+  }
+#endif
   __kmp_aux_display_affinity(gtid, format);
 }
 
@@ -2034,6 +2038,12 @@ size_t KMP_EXPAND_NAME(ompc_capture_affinity)(char *buffer, size_t buf_size,
   }
   __kmp_assign_root_init_mask();
   gtid = __kmp_get_gtid();
+#if KMP_AFFINITY_SUPPORTED
+  if (__kmp_threads[gtid]->th.th_team->t.t_level == 0 &&
+      __kmp_affinity.flags.reset) {
+    __kmp_reset_root_init_mask(gtid);
+  }
+#endif
   __kmp_str_buf_init(&capture_buf);
   num_required = __kmp_aux_capture_affinity(gtid, format, &capture_buf);
   if (buffer && buf_size) {
@@ -2222,6 +2232,61 @@ void __kmpc_copyprivate(ident_t *loc, kmp_int32 gtid, size_t cpy_size,
     }
 #endif
   }
+}
+
+/* --------------------------------------------------------------------------*/
+/*!
+@ingroup THREADPRIVATE
+@param loc       source location information
+@param gtid      global thread number
+@param cpy_data  pointer to the data to be saved/copied or 0
+@return          the saved pointer to the data
+
+__kmpc_copyprivate_light is a lighter version of __kmpc_copyprivate:
+__kmpc_copyprivate_light only saves the pointer it's given (if it's not 0, so
+coming from single), and returns that pointer in all calls (for single thread
+it's not needed). This version doesn't do any actual data copying. Data copying
+has to be done somewhere else, e.g. inline in the generated code. Due to this,
+this function doesn't have any barrier at the end of the function, like
+__kmpc_copyprivate does, so generated code needs barrier after copying of all
+data was done.
+*/
+void *__kmpc_copyprivate_light(ident_t *loc, kmp_int32 gtid, void *cpy_data) {
+  void **data_ptr;
+
+  KC_TRACE(10, ("__kmpc_copyprivate_light: called T#%d\n", gtid));
+
+  KMP_MB();
+
+  data_ptr = &__kmp_team_from_gtid(gtid)->t.t_copypriv_data;
+
+  if (__kmp_env_consistency_check) {
+    if (loc == 0) {
+      KMP_WARNING(ConstructIdentInvalid);
+    }
+  }
+
+  // ToDo: Optimize the following barrier
+
+  if (cpy_data)
+    *data_ptr = cpy_data;
+
+#if OMPT_SUPPORT
+  ompt_frame_t *ompt_frame;
+  if (ompt_enabled.enabled) {
+    __ompt_get_task_info_internal(0, NULL, NULL, &ompt_frame, NULL, NULL);
+    if (ompt_frame->enter_frame.ptr == NULL)
+      ompt_frame->enter_frame.ptr = OMPT_GET_FRAME_ADDRESS(0);
+    OMPT_STORE_RETURN_ADDRESS(gtid);
+  }
+#endif
+/* This barrier is not a barrier region boundary */
+#if USE_ITT_NOTIFY
+  __kmp_threads[gtid]->th.th_ident = loc;
+#endif
+  __kmp_barrier(bs_plain_barrier, gtid, FALSE, 0, NULL, NULL);
+
+  return *data_ptr;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -4348,7 +4413,7 @@ void *omp_aligned_calloc(size_t align, size_t nmemb, size_t size,
 void *omp_realloc(void *ptr, size_t size, omp_allocator_handle_t allocator,
                   omp_allocator_handle_t free_allocator) {
   return __kmp_realloc(__kmp_entry_gtid(), ptr, size, allocator,
-                        free_allocator);
+                       free_allocator);
 }
 
 void omp_free(void *ptr, omp_allocator_handle_t allocator) {
@@ -4388,7 +4453,7 @@ void __kmpc_error(ident_t *loc, int severity, const char *message) {
   if (loc && loc->psource) {
     kmp_str_loc_t str_loc = __kmp_str_loc_init(loc->psource, false);
     src_loc =
-        __kmp_str_format("%s:%s:%s", str_loc.file, str_loc.line, str_loc.col);
+        __kmp_str_format("%s:%d:%d", str_loc.file, str_loc.line, str_loc.col);
     __kmp_str_loc_free(&str_loc);
   } else {
     src_loc = __kmp_str_format("unknown");

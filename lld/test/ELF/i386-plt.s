@@ -7,9 +7,9 @@
 // RUN: llvm-objdump -d --no-show-raw-insn --print-imm-hex %t | FileCheck --check-prefix=DISASM %s
 // RUN: ld.lld -shared %t.o %t2.so -o %t
 // RUN: llvm-readobj -S -r %t | FileCheck --check-prefix=CHECKSHARED %s
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASMSHARED %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASMSHARED %s
 // RUN: ld.lld -pie %t.o %t2.so -o %t
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASMPIE %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck --check-prefix=DISASMPIE %s
 
 // CHECK:      Name: .plt
 // CHECK-NEXT: Type: SHT_PROGBITS

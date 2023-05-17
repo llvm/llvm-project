@@ -1,4 +1,4 @@
-; RUN: not opt -S -verify < %s 2>&1 | FileCheck %s
+; RUN: not opt -S -passes=verify < %s 2>&1 | FileCheck %s
 
 define i32 @sadd_arg_int(float %x, i32 %y) {
 ; CHECK: Intrinsic has incorrect argument type!

@@ -20,7 +20,7 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gtest/gtest.h"
 
 using namespace clang;
@@ -436,6 +436,47 @@ TEST(UnaryTransformTypeLoc, ParensRange) {
       "typedef __underlying_type(T) type;\n"
       "};",
       loc(unaryTransformType())));
+}
+
+TEST(PointerTypeLoc, StarLoc) {
+  llvm::Annotations Example(R"c(
+    int $star^*var;
+  )c");
+
+  auto AST = tooling::buildASTFromCode(Example.code());
+  SourceManager &SM = AST->getSourceManager();
+  auto &Ctx = AST->getASTContext();
+
+  auto *VD = selectFirst<VarDecl>("vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
+  ASSERT_NE(VD, nullptr);
+
+  auto TL =
+      VD->getTypeSourceInfo()->getTypeLoc().castAs<PointerTypeLoc>();
+  ASSERT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("star"));
+}
+
+TEST(PointerTypeLoc, StarLocBehindSugar) {
+  llvm::Annotations Example(R"c(
+    #define NODEREF __attribute__((noderef))
+    char $1st^* NODEREF _Nonnull $2nd^* var;
+  )c");
+
+  auto AST = tooling::buildASTFromCode(Example.code());
+  SourceManager &SM = AST->getSourceManager();
+  auto &Ctx = AST->getASTContext();
+
+  auto *VD = selectFirst<VarDecl>("vd", match(varDecl(hasName("var")).bind("vd"), Ctx));
+  ASSERT_NE(VD, nullptr);
+
+  auto TL = VD->getTypeSourceInfo()->getTypeLoc().castAs<PointerTypeLoc>();
+  EXPECT_EQ(SM.getFileOffset(TL.getStarLoc()), Example.point("2nd"));
+
+  // Cast intermediate TypeLoc to make sure the structure matches expectations.
+  auto InnerPtrTL = TL.getPointeeLoc().castAs<AttributedTypeLoc>()
+    .getNextTypeLoc().castAs<MacroQualifiedTypeLoc>()
+    .getNextTypeLoc().castAs<AttributedTypeLoc>()
+    .getNextTypeLoc().castAs<PointerTypeLoc>();
+  EXPECT_EQ(SM.getFileOffset(InnerPtrTL.getStarLoc()), Example.point("1st"));
 }
 
 TEST(CXXFunctionalCastExpr, SourceRange) {

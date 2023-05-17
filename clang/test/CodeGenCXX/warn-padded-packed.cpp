@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple=x86_64-none-none -Wpadded -Wpacked -verify %s -emit-llvm-only
+// RUN: %clang_cc1 -triple=x86_64-none-none -Wpadded -Wpacked -verify=expected,top %s -emit-llvm-only
+// RUN: %clang_cc1 -triple=x86_64-none-none -Wpadded -Wpacked -verify=expected,abi15 -fclang-abi-compat=15 %s -emit-llvm-only
 
 struct S1 {
   char c;
@@ -146,8 +147,38 @@ struct S27 { // expected-warning {{padding size of 'S27' with 7 bits to alignmen
   unsigned char b : 8;
 } __attribute__((packed));
 
+struct S28_non_pod {
+ protected:
+  int i;
+};
+struct S28 {
+  char c1;
+  short s1;
+  char c2;
+  S28_non_pod p1; // top-warning {{not packing field 'p1' as it is non-POD for the purposes of layout}}
+} __attribute__((packed));
+
+struct S29_non_pod_align_1 {
+ protected:
+  char c;
+};
+struct S29 {
+  S29_non_pod_align_1 p1;
+  int i;
+} __attribute__((packed)); // no warning
+static_assert(alignof(S29) == 1, "");
+
+struct S30 {
+protected:
+ short s;
+} __attribute__((packed)); // no warning
+struct S30_use { // abi15-warning {{packed attribute is unnecessary for 'S30_use'}}
+  char c;
+  S30 u;
+} __attribute__((packed));
+static_assert(sizeof(S30_use) == 3, "");
 
 // The warnings are emitted when the layout of the structs is computed, so we have to use them.
 void f(S1*, S2*, S3*, S4*, S5*, S6*, S7*, S8*, S9*, S10*, S11*, S12*, S13*,
        S14*, S15*, S16*, S17*, S18*, S19*, S20*, S21*, S22*, S23*, S24*, S25*,
-       S26*, S27*){}
+       S26*, S27*, S28*, S29*){}

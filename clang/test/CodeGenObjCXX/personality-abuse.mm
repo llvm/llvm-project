@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -x objective-c++ -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
+// RUN: %clang_cc1 -x objective-c++ -triple x86_64-apple-darwin10 -emit-llvm -fcxx-exceptions -fexceptions -fobjc-exceptions -o - %s | FileCheck %s
 
 extern "C" {
   int __objc_personality_v0();
@@ -16,4 +16,4 @@ void foo() {
   }
 }
 
-// CHECK: define{{.*}} void @_Z3foov() {{#[0-9]+}} personality i8* bitcast (i32 ()* @__objc_personality_v0 to i8*)
+// CHECK: define{{.*}} void @_Z3foov() {{#[0-9]+}} personality ptr @__objc_personality_v0

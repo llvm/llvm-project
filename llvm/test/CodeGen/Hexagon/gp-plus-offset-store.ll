@@ -13,7 +13,7 @@ b0:
   br i1 %v0, label %b1, label %b2
 
 b1:                                               ; preds = %b0
-  store i8 %a2, i8* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 1), align 1
+  store i8 %a2, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 1), align 1
   br label %b2
 
 b2:                                               ; preds = %b1, %b0
@@ -28,7 +28,7 @@ b0:
   br i1 %v0, label %b1, label %b2
 
 b1:                                               ; preds = %b0
-  store i16 %a2, i16* getelementptr inbounds (%s.0, %s.0* @g0, i32 0, i32 2), align 2
+  store i16 %a2, ptr getelementptr inbounds (%s.0, ptr @g0, i32 0, i32 2), align 2
   br label %b2
 
 b2:                                               ; preds = %b1, %b0

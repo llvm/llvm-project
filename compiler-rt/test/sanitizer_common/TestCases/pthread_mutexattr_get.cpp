@@ -1,7 +1,7 @@
 // RUN: %clangxx -O0 %s -o %t && %run %t
 
 // pthread_mutexattr_setpshared and pthread_mutexattr_getpshared unavailable
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 #include <assert.h>
 #include <pthread.h>

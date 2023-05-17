@@ -71,8 +71,8 @@
   }                                                                            \
   inline __device__ unsigned long long __FnName(                               \
       unsigned long long __val, __Type __offset, int __width = warpSize) {     \
-    return static_cast<unsigned long long>(::__FnName(                         \
-        static_cast<unsigned long long>(__val), __offset, __width));           \
+    return static_cast<unsigned long long>(                                    \
+        ::__FnName(static_cast<long long>(__val), __offset, __width));         \
   }                                                                            \
   inline __device__ double __FnName(double __val, __Type __offset,             \
                                     int __width = warpSize) {                  \
@@ -139,8 +139,8 @@ __MAKE_SHUFFLES(__shfl_xor, __nvvm_shfl_bfly_i32, __nvvm_shfl_bfly_f32, 0x1f,
   inline __device__ unsigned long long __FnName(                               \
       unsigned int __mask, unsigned long long __val, __Type __offset,          \
       int __width = warpSize) {                                                \
-    return static_cast<unsigned long long>(::__FnName(                         \
-        __mask, static_cast<unsigned long long>(__val), __offset, __width));   \
+    return static_cast<unsigned long long>(                                    \
+        ::__FnName(__mask, static_cast<long long>(__val), __offset, __width)); \
   }                                                                            \
   inline __device__ long __FnName(unsigned int __mask, long __val,             \
                                   __Type __offset, int __width = warpSize) {   \

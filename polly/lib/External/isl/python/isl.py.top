@@ -33,5 +33,17 @@ class Context:
             Context.defaultInstance = Context()
         return Context.defaultInstance
 
+    @CFUNCTYPE(None, py_object)
+    def free_user(user):
+        pythonapi.Py_DecRef(py_object(user))
+
 isl.isl_ctx_alloc.restype = c_void_p
 isl.isl_ctx_free.argtypes = [Context]
+isl.isl_id_alloc.restype = c_void_p
+isl.isl_id_alloc.argtypes = [Context, c_char_p, py_object]
+isl.isl_id_set_free_user.restype = c_void_p
+isl.isl_id_set_free_user.argtypes = [c_void_p, c_void_p]
+isl.isl_id_get_free_user.restype = c_void_p
+isl.isl_id_get_free_user.argtypes = [c_void_p]
+isl.isl_id_get_user.restype = py_object
+isl.isl_id_get_user.argtypes = [c_void_p]

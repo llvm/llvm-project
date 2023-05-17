@@ -8,7 +8,12 @@
 
 #include "mlir/Dialect/Utils/StructuredOpsUtils.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/IRMapping.h"
+#include "llvm/ADT/StringSet.h"
+
+#include "mlir/Dialect/Utils/DialectUtilsEnums.cpp.inc"
 
 using namespace mlir;
 
@@ -16,9 +21,9 @@ bool mlir::isRowMajorMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = indexingMaps[0].cast<AffineMapAttr>().getValue();
-  auto map1 = indexingMaps[1].cast<AffineMapAttr>().getValue();
-  auto map2 = indexingMaps[2].cast<AffineMapAttr>().getValue();
+  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 2 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
@@ -42,9 +47,9 @@ bool mlir::isColumnMajorMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = indexingMaps[0].cast<AffineMapAttr>().getValue();
-  auto map1 = indexingMaps[1].cast<AffineMapAttr>().getValue();
-  auto map2 = indexingMaps[2].cast<AffineMapAttr>().getValue();
+  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 2 || map1.getNumResults() != 2 ||
       map2.getNumResults() != 2 || map0.getNumInputs() != 3 ||
@@ -68,9 +73,9 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
   if (indexingMaps.size() != 3)
     return false;
 
-  auto map0 = indexingMaps[0].cast<AffineMapAttr>().getValue();
-  auto map1 = indexingMaps[1].cast<AffineMapAttr>().getValue();
-  auto map2 = indexingMaps[2].cast<AffineMapAttr>().getValue();
+  auto map0 = cast<AffineMapAttr>(indexingMaps[0]).getValue();
+  auto map1 = cast<AffineMapAttr>(indexingMaps[1]).getValue();
+  auto map2 = cast<AffineMapAttr>(indexingMaps[2]).getValue();
 
   if (map0.getNumResults() != 3 || map1.getNumResults() != 3 ||
       map2.getNumResults() != 3 || map0.getNumInputs() != 4 ||
@@ -89,4 +94,37 @@ bool mlir::isRowMajorBatchMatmul(ArrayAttr indexingMaps) {
   auto mapC = AffineMapAttr::get(AffineMap::get(4, 0, {b, m, n}, context));
   auto maps = ArrayAttr::get(context, {mapA, mapB, mapC});
   return indexingMaps == maps;
+}
+
+Operation *mlir::clone(OpBuilder &b, Operation *op, TypeRange newResultTypes,
+                       ValueRange newOperands) {
+  IRMapping bvm;
+  OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
+                       op->getAttrs());
+  for (Region &r : op->getRegions())
+    r.cloneInto(state.addRegion(), bvm);
+  return b.create(state);
+}
+
+Operation *mlir::cloneWithoutRegions(OpBuilder &b, Operation *op,
+                                     TypeRange newResultTypes,
+                                     ValueRange newOperands) {
+  OperationState state(op->getLoc(), op->getName(), newOperands, newResultTypes,
+                       op->getAttrs());
+  for (size_t cnt = 0, e = op->getNumRegions(); cnt < e; ++cnt)
+    state.addRegion();
+  return b.create(state);
+}
+
+SmallVector<NamedAttribute>
+mlir::getPrunedAttributeList(Operation *op, ArrayRef<StringRef> elidedAttrs) {
+  llvm::StringSet<> elidedAttrsSet;
+  elidedAttrsSet.insert(elidedAttrs.begin(), elidedAttrs.end());
+  SmallVector<NamedAttribute> attrs;
+  for (auto attr : op->getAttrs()) {
+    if (elidedAttrsSet.count(attr.getName()))
+      continue;
+    attrs.push_back(attr);
+  }
+  return attrs;
 }

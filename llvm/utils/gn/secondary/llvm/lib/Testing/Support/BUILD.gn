@@ -2,10 +2,9 @@ static_library("Support") {
   output_name = "LLVMTestingSupport"
   deps = [
     "//llvm/lib/Support",
-    "//llvm/utils/unittest:gtest",
+    "//third-party/unittest:gtest",
   ]
   sources = [
-    "Annotations.cpp",
     "Error.cpp",
     "SupportHelpers.cpp",
   ]

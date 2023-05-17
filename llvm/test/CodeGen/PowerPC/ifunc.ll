@@ -7,10 +7,10 @@
 ; RUN: llc %s -o - -mtriple=powerpc64le-unknown-linux-gnu -mcpu=pwr10 \
 ; RUN:   -verify-machineinstrs | FileCheck --check-prefix=LEP10 %s
 
-@ifunc1 = dso_local ifunc void(), void()* ()* @resolver
-@ifunc2 = ifunc void(), void()* ()* @resolver
+@ifunc1 = dso_local ifunc void(), ptr @resolver
+@ifunc2 = ifunc void(), ptr @resolver
 
-define void()* @resolver() { ret void()* null }
+define ptr @resolver() { ret ptr null }
 
 define void @foo() #0 {
   ; REL-LABEL:    foo

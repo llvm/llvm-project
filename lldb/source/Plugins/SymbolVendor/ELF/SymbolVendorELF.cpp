@@ -74,7 +74,7 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   FileSpec fspec = module_sp->GetSymbolFileFileSpec();
   // Otherwise, try gnu_debuglink, if one exists.
   if (!fspec)
-    fspec = obj_file->GetDebugLink().getValueOr(FileSpec());
+    fspec = obj_file->GetDebugLink().value_or(FileSpec());
 
   LLDB_SCOPED_TIMERF("SymbolVendorELF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
@@ -110,6 +110,9 @@ SymbolVendorELF::CreateInstance(const lldb::ModuleSP &module_sp,
   // that.
   SectionList *module_section_list = module_sp->GetSectionList();
   SectionList *objfile_section_list = dsym_objfile_sp->GetSectionList();
+
+  if (!module_section_list || !objfile_section_list)
+    return nullptr;
 
   static const SectionType g_sections[] = {
       eSectionTypeDWARFDebugAbbrev,     eSectionTypeDWARFDebugAddr,

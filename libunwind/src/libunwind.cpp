@@ -77,6 +77,8 @@ _LIBUNWIND_HIDDEN int __unw_init_local(unw_cursor_t *cursor,
 # define REGISTER_KIND Registers_ve
 #elif defined(__s390x__)
 # define REGISTER_KIND Registers_s390x
+#elif defined(__loongarch__) && __loongarch_grlen == 64
+#define REGISTER_KIND Registers_loongarch
 #else
 # error Architecture not supported
 #endif
@@ -117,7 +119,7 @@ _LIBUNWIND_HIDDEN int __unw_set_reg(unw_cursor_t *cursor, unw_regnum_t regNum,
   AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
   if (co->validReg(regNum)) {
     co->setReg(regNum, (pint_t)value);
-    // specical case altering IP to re-find info (being called by personality
+    // special case altering IP to re-find info (being called by personality
     // function)
     if (regNum == UNW_REG_IP) {
       unw_proc_info_t info;
@@ -180,6 +182,15 @@ _LIBUNWIND_HIDDEN int __unw_step(unw_cursor_t *cursor) {
   return co->step();
 }
 _LIBUNWIND_WEAK_ALIAS(__unw_step, unw_step)
+
+// Move cursor to next frame and for stage2 of unwinding.
+// This resets MTE tags of tagged frames to zero.
+extern "C" _LIBUNWIND_HIDDEN int __unw_step_stage2(unw_cursor_t *cursor) {
+  _LIBUNWIND_TRACE_API("__unw_step_stage2(cursor=%p)",
+                       static_cast<void *>(cursor));
+  AbstractUnwindCursor *co = (AbstractUnwindCursor *)cursor;
+  return co->step(true);
+}
 
 /// Get unwind info at cursor position in stack frame.
 _LIBUNWIND_HIDDEN int __unw_get_proc_info(unw_cursor_t *cursor,
@@ -338,7 +349,87 @@ void __unw_remove_dynamic_eh_frame_section(unw_word_t eh_frame_start) {
 #endif // defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
 #endif // !defined(__USING_SJLJ_EXCEPTIONS__)
 
+#ifdef __APPLE__
 
+namespace libunwind {
+
+static constexpr size_t MAX_DYNAMIC_UNWIND_SECTIONS_FINDERS = 8;
+
+static RWMutex findDynamicUnwindSectionsLock;
+static size_t numDynamicUnwindSectionsFinders = 0;
+static unw_find_dynamic_unwind_sections
+    dynamicUnwindSectionsFinders[MAX_DYNAMIC_UNWIND_SECTIONS_FINDERS] = {0};
+
+bool findDynamicUnwindSections(void *addr, unw_dynamic_unwind_sections *info) {
+  bool found = false;
+  findDynamicUnwindSectionsLock.lock_shared();
+  for (size_t i = 0; i != numDynamicUnwindSectionsFinders; ++i) {
+    if (dynamicUnwindSectionsFinders[i]((unw_word_t)addr, info)) {
+      found = true;
+      break;
+    }
+  }
+  findDynamicUnwindSectionsLock.unlock_shared();
+  return found;
+}
+
+} // namespace libunwind
+
+int __unw_add_find_dynamic_unwind_sections(
+    unw_find_dynamic_unwind_sections find_dynamic_unwind_sections) {
+  findDynamicUnwindSectionsLock.lock();
+
+  // Check that we have enough space...
+  if (numDynamicUnwindSectionsFinders == MAX_DYNAMIC_UNWIND_SECTIONS_FINDERS) {
+    findDynamicUnwindSectionsLock.unlock();
+    return UNW_ENOMEM;
+  }
+
+  // Check for value already present...
+  for (size_t i = 0; i != numDynamicUnwindSectionsFinders; ++i) {
+    if (dynamicUnwindSectionsFinders[i] == find_dynamic_unwind_sections) {
+      findDynamicUnwindSectionsLock.unlock();
+      return UNW_EINVAL;
+    }
+  }
+
+  // Success -- add callback entry.
+  dynamicUnwindSectionsFinders[numDynamicUnwindSectionsFinders++] =
+    find_dynamic_unwind_sections;
+  findDynamicUnwindSectionsLock.unlock();
+
+  return UNW_ESUCCESS;
+}
+
+int __unw_remove_find_dynamic_unwind_sections(
+    unw_find_dynamic_unwind_sections find_dynamic_unwind_sections) {
+  findDynamicUnwindSectionsLock.lock();
+
+  // Find index to remove.
+  size_t finderIdx = numDynamicUnwindSectionsFinders;
+  for (size_t i = 0; i != numDynamicUnwindSectionsFinders; ++i) {
+    if (dynamicUnwindSectionsFinders[i] == find_dynamic_unwind_sections) {
+      finderIdx = i;
+      break;
+    }
+  }
+
+  // If no such registration is present then error out.
+  if (finderIdx == numDynamicUnwindSectionsFinders) {
+    findDynamicUnwindSectionsLock.unlock();
+    return UNW_EINVAL;
+  }
+
+  // Remove entry.
+  for (size_t i = finderIdx; i != numDynamicUnwindSectionsFinders - 1; ++i)
+    dynamicUnwindSectionsFinders[i] = dynamicUnwindSectionsFinders[i + 1];
+  dynamicUnwindSectionsFinders[--numDynamicUnwindSectionsFinders] = nullptr;
+
+  findDynamicUnwindSectionsLock.unlock();
+  return UNW_ESUCCESS;
+}
+
+#endif // __APPLE__
 
 // Add logging hooks in Debug builds only
 #ifndef NDEBUG

@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I1, sentinel_for<I1> S1, input_iterator I2, sentinel_for<I2> S2,
 //          class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
@@ -86,6 +85,21 @@ constexpr void test_iterators() {
       auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
       std::same_as<bool> decltype(auto) ret = std::ranges::equal(range1, range2);
       assert(ret);
+    }
+  }
+
+  { // check that false is returned for non-equal ranges
+    {
+      int a[] = {1, 2, 3, 4};
+      int b[]  = {1, 2, 4, 4};
+      assert(!std::ranges::equal(Iter1(a), Sent1(Iter1(a + 4)), Iter2(b), Sent2(Iter2(b + 4))));
+    }
+    {
+      int a[] = {1, 2, 3, 4};
+      int b[] = {1, 2, 4, 4};
+      auto range1 = std::ranges::subrange(Iter1(a), Sent1(Iter1(a + 4)));
+      auto range2 = std::ranges::subrange(Iter2(b), Sent2(Iter2(b + 4)));
+      assert(!std::ranges::equal(range1, range2));
     }
   }
 

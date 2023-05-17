@@ -36,7 +36,7 @@
 // RUN:   | FileCheck %s --check-prefix=CHECK-NULL
 
 // TODO(alekseyshl): win32 is disabled due to failing errno tests, fix it there.
-// UNSUPPORTED: ubsan, windows-msvc
+// UNSUPPORTED: ubsan, target={{.*windows-msvc.*}}
 
 #include <assert.h>
 #include <errno.h>

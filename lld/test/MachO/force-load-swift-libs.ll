@@ -6,7 +6,8 @@
 ; RUN: llvm-as %t/lc-linker-opt.ll -o %t/lc-linker-opt.o
 ; RUN: llvm-as %t/no-lc-linker-opt.ll -o %t/no-lc-linker-opt.o
 
-; RUN: %lld -lSystem -force_load_swift_libs -L%t %t/lc-linker-opt.o -o %t/lc-linker-opt
+; RUN: %lld -lSystem -force_load_swift_libs -L%t %t/lc-linker-opt.o -o \
+; RUN:   %t/lc-linker-opt -why_load 2>&1 | FileCheck %s --check-prefix=WHY-LOAD
 ; RUN: llvm-objdump --macho --syms %t/lc-linker-opt | FileCheck %s --check-prefix=HAS-SWIFT
 
 ; RUN: %lld -lSystem -L%t %t/lc-linker-opt.o -o %t/lc-linker-opt-no-force
@@ -16,6 +17,14 @@
 ; RUN: %lld -lSystem -force_load_swift_libs -lswiftFoo -L%t %t/no-lc-linker-opt.o -o %t/no-lc-linker-opt
 ; RUN: llvm-objdump --macho --syms %t/no-lc-linker-opt | FileCheck %s --check-prefix=NO-SWIFT
 
+;; Moreover, if a Swift library is passed on the CLI, that supersedes any
+;; LC_LINKER_OPTIONs that reference it.
+; RUN: %lld -lSystem -force_load_swift_libs -lswiftFoo -L%t %t/lc-linker-opt.o -o %t/both-cli-and-lc-linker-opt
+; RUN: llvm-objdump --macho --syms  %t/both-cli-and-lc-linker-opt | FileCheck %s --check-prefix=NO-SWIFT
+; RUN: %lld -lSystem -force_load_swift_libs -L%t %t/lc-linker-opt.o -lswiftFoo -o %t/both-cli-and-lc-linker-opt
+; RUN: llvm-objdump --macho --syms  %t/both-cli-and-lc-linker-opt | FileCheck %s --check-prefix=NO-SWIFT
+
+; WHY-LOAD: LC_LINKER_OPTION forced load of {{.*}}libswiftFoo.a(swift-foo.o)
 ; HAS-SWIFT: _swift_foo
 ; NO-SWIFT-NOT: _swift_foo
 

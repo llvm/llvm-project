@@ -48,6 +48,6 @@ bb:
   %tmp9 = lshr i32 %tmp8, 26
   %tmp10 = trunc i32 %tmp9 to i8
   %tmp11 = or i8 %tmp10, 48
-  store i8 %tmp11, i8* undef, align 1
+  store i8 %tmp11, ptr undef, align 1
   ret void
 }

@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
+; RUN: opt -S -passes=loop-fusion -loop-fusion-peel-max-count=3 < %s | FileCheck %s
 
 ; Tests that we do not fuse these two loops together. These loops do not have
 ; the same tripcount, and the first loop is valid candiate for peeling; however
@@ -6,7 +6,7 @@
 ; peeling).
 ; The expected output of this test is the function below.
 
-; CHECK-LABEL: void @function(i32* noalias %arg)
+; CHECK-LABEL: void @function(ptr noalias %arg)
 ; CHECK-NEXT:  for.first.preheader:
 ; CHECK-NEXT:    br label %for.first
 ; CHECK:       for.first:
@@ -28,7 +28,7 @@
 
 @B = common global [1024 x i32] zeroinitializer, align 16
 
-define void @function(i32* noalias %arg) {
+define void @function(ptr noalias %arg) {
 for.first.preheader:
   br label %for.first
 
@@ -41,8 +41,8 @@ for.first:                                       ; preds = %for.first.preheader,
   %tmp10 = mul nsw i32 %tmp, %tmp9
   %tmp11 = trunc i64 %indvars.iv23 to i32
   %tmp12 = srem i32 %tmp10, %tmp11
-  %tmp13 = getelementptr inbounds i32, i32* %arg, i64 %indvars.iv23
-  store i32 %tmp12, i32* %tmp13, align 4
+  %tmp13 = getelementptr inbounds i32, ptr %arg, i64 %indvars.iv23
+  store i32 %tmp12, ptr %tmp13, align 4
   br label %for.first.latch
 
 for.first.latch:                                 ; preds = %for.first
@@ -69,8 +69,8 @@ for.second:                                      ; preds = %for.second.preheader
   %tmp23 = mul nsw i32 %tmp20, %tmp22
   %tmp24 = trunc i64 %indvars.iv1 to i32
   %tmp25 = srem i32 %tmp23, %tmp24
-  %tmp26 = getelementptr inbounds [1024 x i32], [1024 x i32]* @B, i64 0, i64 %indvars.iv1
-  store i32 %tmp25, i32* %tmp26, align 4
+  %tmp26 = getelementptr inbounds [1024 x i32], ptr @B, i64 0, i64 %indvars.iv1
+  store i32 %tmp25, ptr %tmp26, align 4
   br label %for.second.latch
 
 for.second.latch:                                ; preds = %for.second

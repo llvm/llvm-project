@@ -72,7 +72,7 @@ void OptionValueBoolean::AutoComplete(CommandInterpreter &interpreter,
   llvm::StringRef autocomplete_entries[] = {"true", "false", "on", "off",
                                             "yes",  "no",    "1",  "0"};
 
-  auto entries = llvm::makeArrayRef(autocomplete_entries);
+  auto entries = llvm::ArrayRef(autocomplete_entries);
 
   // only suggest "true" or "false" by default
   if (request.GetCursorArgumentPrefix().empty())

@@ -96,11 +96,30 @@ TEST(YAMLIO, TestMapRead) {
     EXPECT_EQ(doc.foo, 3);
     EXPECT_EQ(doc.bar, 5);
   }
+
+  {
+    Input yin("{\"foo\": 3\n, \"bar\": 5}");
+    yin >> doc;
+
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(doc.foo, 3);
+    EXPECT_EQ(doc.bar, 5);
+  }
 }
 
 TEST(YAMLIO, TestMalformedMapRead) {
   FooBar doc;
   Input yin("{foo: 3; bar: 5}", nullptr, suppressErrorMessages);
+  yin >> doc;
+  EXPECT_TRUE(!!yin.error());
+}
+
+TEST(YAMLIO, TestMapDuplicatedKeysRead) {
+  auto testDiagnostic = [](const llvm::SMDiagnostic &Error, void *) {
+    EXPECT_EQ(Error.getMessage(), "duplicated mapping key 'foo'");
+  };
+  FooBar doc;
+  Input yin("{foo: 3, bar: 5, foo: 4}", nullptr, testDiagnostic);
   yin >> doc;
   EXPECT_TRUE(!!yin.error());
 }
@@ -3265,4 +3284,73 @@ TEST(YAMLIO, TestScannerNoNullScanPlainScalarInFlow) {
   Input yin(llvm::StringRef(str.data(), str.size()));
   yin.setCurrentDocument();
   EXPECT_TRUE(yin.error());
+}
+
+struct FixedArray {
+  FixedArray() {
+    // Initialize to int max as a sentinel value.
+    for (auto &v : values)
+      v = std::numeric_limits<int>::max();
+  }
+  int values[4];
+};
+
+namespace llvm {
+namespace yaml {
+  template <>
+  struct MappingTraits<FixedArray> {
+    static void mapping(IO &io, FixedArray& st) {
+      MutableArrayRef<int> array = st.values;
+      io.mapRequired("Values", array);
+    }
+  };
+}
+}
+
+TEST(YAMLIO, FixedSizeArray) {
+  FixedArray faval;
+  Input yin("---\nValues:  [ 1, 2, 3, 4 ]\n...\n");
+  yin >> faval;
+
+  EXPECT_FALSE(yin.error());
+  EXPECT_EQ(faval.values[0], 1);
+  EXPECT_EQ(faval.values[1], 2);
+  EXPECT_EQ(faval.values[2], 3);
+  EXPECT_EQ(faval.values[3], 4);
+
+  std::string serialized;
+  {
+    llvm::raw_string_ostream os(serialized);
+    Output yout(os);
+    yout << faval;
+  }
+  auto expected = "---\n"
+                  "Values:          [ 1, 2, 3, 4 ]\n"
+                  "...\n";
+  ASSERT_EQ(serialized, expected);
+}
+
+TEST(YAMLIO, FixedSizeArrayMismatch) {
+  {
+    FixedArray faval;
+    Input yin("---\nValues:  [ 1, 2, 3 ]\n...\n");
+    yin >> faval;
+
+    // No error for too small, leaves the default initialized value
+    EXPECT_FALSE(yin.error());
+    EXPECT_EQ(faval.values[0], 1);
+    EXPECT_EQ(faval.values[1], 2);
+    EXPECT_EQ(faval.values[2], 3);
+    EXPECT_EQ(faval.values[3], std::numeric_limits<int>::max());
+  }
+
+  {
+    FixedArray faval;
+    Input yin("---\nValues:  [ 1, 2, 3, 4, 5 ]\n...\n");
+    yin >> faval;
+
+    // Error for too many elements.
+    EXPECT_TRUE(!!yin.error());
+  }
+
 }

@@ -67,10 +67,10 @@ define void @bar0() {
 ; CHECK-P9-NOVECTOR-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P9-NOVECTOR-NEXT:    blr
 entry:
-  %0 = load <2 x double>, <2 x double>* @x, align 16
-  %1 = load double, double* @y, align 8
+  %0 = load <2 x double>, ptr @x, align 16
+  %1 = load double, ptr @y, align 8
   %vecins = insertelement <2 x double> %0, double %1, i32 0
-  store <2 x double> %vecins, <2 x double>* @z, align 16
+  store <2 x double> %vecins, ptr @z, align 16
   ret void
 }
 
@@ -121,10 +121,10 @@ define void @bar1() {
 ; CHECK-P9-NOVECTOR-NEXT:    stxvd2x vs0, 0, r3
 ; CHECK-P9-NOVECTOR-NEXT:    blr
 entry:
-  %0 = load <2 x double>, <2 x double>* @x, align 16
-  %1 = load double, double* @y, align 8
+  %0 = load <2 x double>, ptr @x, align 16
+  %1 = load double, ptr @y, align 8
   %vecins = insertelement <2 x double> %0, double %1, i32 1
-  store <2 x double> %vecins, <2 x double>* @z, align 16
+  store <2 x double> %vecins, ptr @z, align 16
   ret void
 }
 

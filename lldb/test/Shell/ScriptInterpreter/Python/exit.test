@@ -1,0 +1,29 @@
+# UNSUPPORTED: system-windows
+
+# RUN: %lldb -o 'script quit' | FileCheck %s --check-prefix SILENT
+# RUN: %lldb -o 'script quit()' | FileCheck %s --check-prefix SILENT
+
+# RUN: %lldb -o 'script exit' | FileCheck %s --check-prefix SILENT
+# RUN: %lldb -o 'script exit()' | FileCheck %s --check-prefix SILENT
+
+# RUN: echo -e 'script\nquit' > %t
+# RUN: cat %t | %lldb | FileCheck %s --check-prefix SILENT
+
+# RUN: echo -e 'script\nexit' > %t
+# RUN: cat %t | %lldb | FileCheck %s --check-prefix SILENT
+
+# SILENT-NOT: Script exited with code
+
+# RUN: %lldb -o 'script quit(100+23)' | FileCheck %s --check-prefix VERBOSE
+# RUN: %lldb -o 'script exit(100+23)' | FileCheck %s --check-prefix VERBOSE
+
+# RUN: echo -e 'script\nexit(100+23)' > %t
+# RUN: cat %t | %lldb | FileCheck %s --check-prefix VERBOSE
+
+# RUN: echo -e 'script\nquit(100+23)' > %t
+# RUN: cat %t | %lldb | FileCheck %s --check-prefix VERBOSE
+
+# VERBOSE: Script exited with code 123
+
+# RUN: %lldb -o 'script print(locals())' | FileCheck %s --check-prefix LOCALS
+# LOCALS: __builtins__

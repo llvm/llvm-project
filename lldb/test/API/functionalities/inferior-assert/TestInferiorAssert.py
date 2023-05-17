@@ -1,8 +1,5 @@
 """Test that lldb functions correctly after the inferior has asserted."""
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test import lldbutil
 from lldbsuite.test import lldbplatformutil
@@ -11,8 +8,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class AssertingInferiorTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @expectedFailureAll(
         oslist=["windows"],
@@ -245,10 +240,10 @@ class AssertingInferiorTestCase(TestBase):
             if 'main' == frame.GetFunctionName():
                 frame_id = frame.GetFrameID()
                 self.runCmd("frame select " + str(frame_id), RUN_SUCCEEDED)
-                self.expect("p argc", substrs=['(int)', ' = 1'])
-                self.expect("p hello_world", substrs=['Hello'])
-                self.expect("p argv[0]", substrs=['a.out'])
-                self.expect("p null_ptr", substrs=['= 0x0'])
+                self.expect("expression argc", substrs=['(int)', ' = 1'])
+                self.expect("expression hello_world", substrs=['Hello'])
+                self.expect("expression argv[0]", substrs=['a.out'])
+                self.expect("expression null_ptr", substrs=['= 0x0'])
                 return True
         return False
 

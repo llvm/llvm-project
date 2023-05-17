@@ -22,7 +22,7 @@
 
 #if TEST_STD_VER > 17
 TEST_CONSTEXPR bool test_constexpr() {
-    const size_t N = 5;
+    const std::size_t N = 5;
     int ib[] = {0, 0, 0, 0, 0, 0}; // one bigger than N
 
     auto it = std::fill_n(std::begin(ib), N, 5);

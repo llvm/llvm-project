@@ -17,10 +17,10 @@ define i32 @main() #0 !dbg !9 {
 entry:
   %retval = alloca i32, align 4
   %i = alloca i32, align 4
-  store i32 0, i32* %retval
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !20, metadata !16), !dbg !21
-  store i32 20, i32* %i, align 4, !dbg !21
-  %0 = load i32, i32* %i, align 4, !dbg !22
+  store i32 0, ptr %retval
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !20, metadata !16), !dbg !21
+  store i32 20, ptr %i, align 4, !dbg !21
+  %0 = load i32, ptr %i, align 4, !dbg !22
   %call = call i32 @foo(i32 %0), !dbg !23
   ret i32 %call, !dbg !24
 }

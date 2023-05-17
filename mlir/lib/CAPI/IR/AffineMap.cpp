@@ -68,7 +68,7 @@ MlirAffineMap mlirAffineMapMinorIdentityGet(MlirContext ctx, intptr_t dims,
 MlirAffineMap mlirAffineMapPermutationGet(MlirContext ctx, intptr_t size,
                                           unsigned *permutation) {
   return wrap(AffineMap::getPermutationMap(
-      llvm::makeArrayRef(permutation, static_cast<size_t>(size)), unwrap(ctx)));
+      llvm::ArrayRef(permutation, static_cast<size_t>(size)), unwrap(ctx)));
 }
 
 bool mlirAffineMapIsIdentity(MlirAffineMap affineMap) {

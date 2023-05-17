@@ -7,10 +7,10 @@
   target datalayout = "e-m:e-i64:64-n32:64"
 
   ; Function Attrs: nounwind
-  define dso_local signext i32 @b(i32 signext %a, i32* nocapture %b) local_unnamed_addr #0 {
+  define dso_local signext i32 @b(i32 signext %a, ptr nocapture %b) local_unnamed_addr #0 {
   entry:
     %call = tail call signext i32 @g(i32 signext %a)
-    store i32 %call, i32* %b, align 4
+    store i32 %call, ptr %b, align 4
     %call1 = tail call signext i32 @g(i32 signext %a)
     ret i32 %call1
   }
@@ -19,7 +19,7 @@
   declare signext i32 @g(i32 signext) local_unnamed_addr #0
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind }
 

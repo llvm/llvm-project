@@ -5,8 +5,6 @@ from lldbsuite.test import lldbutil
 
 class TestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIf(compiler="clang", compiler_version=['<', '11.0'])
     def test(self):
         self.build()
@@ -18,6 +16,6 @@ class TestCase(TestBase):
         # Check that the error message shows file/line/column, prints the relevant
         # line from the source code and mentions the module that failed to build.
         self.expect("expr @import LLDBTestModule", error=True,
-                    substrs=["module.h:4:1: error: unknown type name 'syntax_error_for_lldb_to_find'",
+                    substrs=["module.h:4:1: error: use of undeclared identifier 'syntax_error_for_lldb_to_find'",
                              "syntax_error_for_lldb_to_find // comment that tests source printing",
                              "could not build module 'LLDBTestModule'"])

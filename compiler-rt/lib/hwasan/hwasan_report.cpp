@@ -102,6 +102,15 @@ static StackTrace GetStackTraceFromId(u32 id) {
   return res;
 }
 
+static void MaybePrintAndroidHelpUrl() {
+#if SANITIZER_ANDROID
+  Printf(
+      "Learn more about HWASan reports: "
+      "https://source.android.com/docs/security/test/memory-safety/"
+      "hwasan-reports\n");
+#endif
+}
+
 // A RAII object that holds a copy of the current thread stack ring buffer.
 // The actual stack buffer may change while we are iterating over it (for
 // example, Printf may call syslog() which can itself be built with hwasan).
@@ -309,20 +318,20 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
       whence = "inside";
     } else if (candidate == left) {
       offset = untagged_addr - chunk.End();
-      whence = "to the right of";
+      whence = "after";
     } else {
       offset = chunk.Beg() - untagged_addr;
-      whence = "to the left of";
+      whence = "before";
     }
     Printf("%s", d.Error());
     Printf("\nCause: heap-buffer-overflow\n");
     Printf("%s", d.Default());
     Printf("%s", d.Location());
-    Printf("%p is located %zd bytes %s %zd-byte region [%p,%p)\n",
+    Printf("%p is located %zd bytes %s a %zd-byte region [%p,%p)\n",
            untagged_addr, offset, whence, chunk.UsedSize(), chunk.Beg(),
            chunk.End());
     Printf("%s", d.Allocation());
-    Printf("allocated here:\n");
+    Printf("allocated by thread T%u here:\n", chunk.GetAllocThreadId());
     Printf("%s", d.Default());
     GetStackTraceFromId(chunk.GetAllocStackId()).Print();
     return;
@@ -340,27 +349,27 @@ static void ShowHeapOrGlobalCandidate(uptr untagged_addr, tag_t *candidate,
     Printf("%s", d.Location());
     if (sym->SymbolizeData(mem, &info) && info.start) {
       Printf(
-          "%p is located %zd bytes to the %s of %zd-byte global variable "
+          "%p is located %zd bytes %s a %zd-byte global variable "
           "%s [%p,%p) in %s\n",
           untagged_addr,
           candidate == left ? untagged_addr - (info.start + info.size)
                             : info.start - untagged_addr,
-          candidate == left ? "right" : "left", info.size, info.name,
+          candidate == left ? "after" : "before", info.size, info.name,
           info.start, info.start + info.size, module_name);
     } else {
       uptr size = GetGlobalSizeFromDescriptor(mem);
       if (size == 0)
         // We couldn't find the size of the global from the descriptors.
         Printf(
-            "%p is located to the %s of a global variable in "
+            "%p is located %s a global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate == left ? "right" : "left", mem,
+            untagged_addr, candidate == left ? "after" : "before", mem,
             module_name, module_address);
       else
         Printf(
-            "%p is located to the %s of a %zd-byte global variable in "
+            "%p is located %s a %zd-byte global variable in "
             "\n    #0 0x%x (%s+0x%x)\n",
-            untagged_addr, candidate == left ? "right" : "left", size, mem,
+            untagged_addr, candidate == left ? "after" : "before", size, mem,
             module_name, module_address);
     }
     Printf("%s", d.Default());
@@ -459,17 +468,17 @@ void PrintAddressDescription(
       Printf("%s", d.Error());
       Printf("\nCause: use-after-free\n");
       Printf("%s", d.Location());
-      Printf("%p is located %zd bytes inside of %zd-byte region [%p,%p)\n",
+      Printf("%p is located %zd bytes inside a %zd-byte region [%p,%p)\n",
              untagged_addr, untagged_addr - UntagAddr(har.tagged_addr),
              har.requested_size, UntagAddr(har.tagged_addr),
              UntagAddr(har.tagged_addr) + har.requested_size);
       Printf("%s", d.Allocation());
-      Printf("freed by thread T%zd here:\n", t->unique_id());
+      Printf("freed by thread T%u here:\n", t->unique_id());
       Printf("%s", d.Default());
       GetStackTraceFromId(har.free_context_id).Print();
 
       Printf("%s", d.Allocation());
-      Printf("previously allocated here:\n", t);
+      Printf("previously allocated by thread T%u here:\n", har.alloc_thread_id);
       Printf("%s", d.Default());
       GetStackTraceFromId(har.alloc_context_id).Print();
 
@@ -492,7 +501,8 @@ void PrintAddressDescription(
   }
 
   // Print the remaining threads, as an extra information, 1 line per thread.
-  hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
+  if (flags()->print_live_threads_info)
+    hwasanThreadList().VisitAllLiveThreads([&](Thread *t) { t->Announce(); });
 
   if (!num_descriptions_printed)
     // We exhausted our possibilities. Bail out.
@@ -518,7 +528,7 @@ static void PrintTagInfoAroundAddr(tag_t *tag_ptr, uptr num_rows,
   InternalScopedString s;
   for (tag_t *row = beg_row; row < end_row; row += row_len) {
     s.append("%s", row == center_row_beg ? "=>" : "  ");
-    s.append("%p:", (void *)row);
+    s.append("%p:", (void *)ShadowToMem(reinterpret_cast<uptr>(row)));
     for (uptr i = 0; i < row_len; i++) {
       s.append("%s", row + i == tag_ptr ? "[" : " ");
       print_tag(s, &row[i]);
@@ -600,6 +610,7 @@ void ReportInvalidFree(StackTrace *stack, uptr tagged_addr) {
   if (tag_ptr)
     PrintTagsAroundAddr(tag_ptr);
 
+  MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
 
@@ -660,7 +671,7 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
     s.append("%s ", actual_expected[i] != tail[i] ? "^^" : "  ");
 
   s.append("\nThis error occurs when a buffer overflow overwrites memory\n"
-    "to the right of a heap object, but within the %zd-byte granule, e.g.\n"
+    "after a heap object, but within the %zd-byte granule, e.g.\n"
     "   char *x = new char[20];\n"
     "   x[25] = 42;\n"
     "%s does not detect such bugs in uninstrumented code at the time of write,"
@@ -673,6 +684,7 @@ void ReportTailOverwritten(StackTrace *stack, uptr tagged_addr, uptr orig_size,
   tag_t *tag_ptr = reinterpret_cast<tag_t*>(MemToShadow(untagged_addr));
   PrintTagsAroundAddr(tag_ptr);
 
+  MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
 
@@ -695,7 +707,8 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
 
   sptr offset =
       __hwasan_test_shadow(reinterpret_cast<void *>(tagged_addr), access_size);
-  CHECK(offset >= 0 && offset < static_cast<sptr>(access_size));
+  CHECK_GE(offset, 0);
+  CHECK_LT(offset, static_cast<sptr>(access_size));
   tag_t ptr_tag = GetTagFromPointer(tagged_addr);
   tag_t *tag_ptr =
       reinterpret_cast<tag_t *>(MemToShadow(untagged_addr + offset));
@@ -742,11 +755,12 @@ void ReportTagMismatch(StackTrace *stack, uptr tagged_addr, uptr access_size,
   if (registers_frame)
     ReportRegisters(registers_frame, pc);
 
+  MaybePrintAndroidHelpUrl();
   ReportErrorSummary(bug_type, stack);
 }
 
 // See the frame breakdown defined in __hwasan_tag_mismatch (from
-// hwasan_tag_mismatch_aarch64.S).
+// hwasan_tag_mismatch_{aarch64,riscv64}.S).
 void ReportRegisters(uptr *frame, uptr pc) {
   Printf("Registers where the failure occurred (pc %p):\n", pc);
 
@@ -754,8 +768,13 @@ void ReportRegisters(uptr *frame, uptr pc) {
   // reduce the amount of logcat error messages printed. Each Printf() will
   // result in a new logcat line, irrespective of whether a newline is present,
   // and so we wish to reduce the number of Printf() calls we have to make.
+#if defined(__aarch64__)
   Printf("    x0  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
        frame[0], frame[1], frame[2], frame[3]);
+#elif SANITIZER_RISCV64
+  Printf("    sp  %016llx  x1  %016llx  x2  %016llx  x3  %016llx\n",
+         reinterpret_cast<u8 *>(frame) + 256, frame[1], frame[2], frame[3]);
+#endif
   Printf("    x4  %016llx  x5  %016llx  x6  %016llx  x7  %016llx\n",
        frame[4], frame[5], frame[6], frame[7]);
   Printf("    x8  %016llx  x9  %016llx  x10 %016llx  x11 %016llx\n",
@@ -770,8 +789,14 @@ void ReportRegisters(uptr *frame, uptr pc) {
        frame[24], frame[25], frame[26], frame[27]);
   // hwasan_check* reduces the stack pointer by 256, then __hwasan_tag_mismatch
   // passes it to this function.
+#if defined(__aarch64__)
   Printf("    x28 %016llx  x29 %016llx  x30 %016llx   sp %016llx\n", frame[28],
          frame[29], frame[30], reinterpret_cast<u8 *>(frame) + 256);
+#elif SANITIZER_RISCV64
+  Printf("    x28 %016llx  x29 %016llx  x30 %016llx  x31 %016llx\n", frame[28],
+         frame[29], frame[30], frame[31]);
+#else
+#endif
 }
 
 }  // namespace __hwasan

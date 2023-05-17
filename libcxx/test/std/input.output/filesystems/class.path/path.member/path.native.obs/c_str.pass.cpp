@@ -19,6 +19,7 @@
 #include <type_traits>
 #include <cassert>
 
+#include "assert_macros.h"
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
 

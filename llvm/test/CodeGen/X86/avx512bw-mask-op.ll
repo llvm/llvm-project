@@ -35,32 +35,32 @@ define i64 @mask64(i64 %x) {
   ret i64 %ret
 }
 
-define void @mask32_mem(i32* %ptr) {
+define void @mask32_mem(ptr %ptr) {
 ; CHECK-LABEL: mask32_mem:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd (%rdi), %k0
 ; CHECK-NEXT:    knotd %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, (%rdi)
 ; CHECK-NEXT:    retq
-  %x = load i32, i32* %ptr, align 4
+  %x = load i32, ptr %ptr, align 4
   %m0 = bitcast i32 %x to <32 x i1>
   %m1 = xor <32 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
                             i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
                             i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
                             i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %ret = bitcast <32 x i1> %m1 to i32
-  store i32 %ret, i32* %ptr, align 4
+  store i32 %ret, ptr %ptr, align 4
   ret void
 }
 
-define void @mask64_mem(i64* %ptr) {
+define void @mask64_mem(ptr %ptr) {
 ; CHECK-LABEL: mask64_mem:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq (%rdi), %k0
 ; CHECK-NEXT:    knotq %k0, %k0
 ; CHECK-NEXT:    kmovq %k0, (%rdi)
 ; CHECK-NEXT:    retq
-  %x = load i64, i64* %ptr, align 4
+  %x = load i64, ptr %ptr, align 4
   %m0 = bitcast i64 %x to <64 x i1>
   %m1 = xor <64 x i1> %m0, <i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
                             i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
@@ -71,7 +71,7 @@ define void @mask64_mem(i64* %ptr) {
                             i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1,
                             i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1, i1 -1>
   %ret = bitcast <64 x i1> %m1 to i64
-  store i64 %ret, i64* %ptr, align 4
+  store i64 %ret, ptr %ptr, align 4
   ret void
 }
 
@@ -79,9 +79,7 @@ define i32 @mand32(i32 %x, i32 %y) {
 ; CHECK-LABEL: mand32:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    andl %esi, %eax
-; CHECK-NEXT:    xorl %esi, %edi
-; CHECK-NEXT:    orl %edi, %eax
+; CHECK-NEXT:    orl %esi, %eax
 ; CHECK-NEXT:    retq
   %ma = bitcast i32 %x to <32 x i1>
   %mb = bitcast i32 %y to <32 x i1>
@@ -92,18 +90,16 @@ define i32 @mand32(i32 %x, i32 %y) {
   ret i32 %ret
 }
 
-define i32 @mand32_mem(<32 x i1>* %x, <32 x i1>* %y) {
+define i32 @mand32_mem(ptr %x, ptr %y) {
 ; CHECK-LABEL: mand32_mem:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovd (%rdi), %k0
 ; CHECK-NEXT:    kmovd (%rsi), %k1
-; CHECK-NEXT:    kandd %k1, %k0, %k2
-; CHECK-NEXT:    kxord %k1, %k0, %k0
-; CHECK-NEXT:    kord %k0, %k2, %k0
+; CHECK-NEXT:    kord %k1, %k0, %k0
 ; CHECK-NEXT:    kmovd %k0, %eax
 ; CHECK-NEXT:    retq
-  %ma = load <32 x i1>, <32 x i1>* %x
-  %mb = load <32 x i1>, <32 x i1>* %y
+  %ma = load <32 x i1>, ptr %x
+  %mb = load <32 x i1>, ptr %y
   %mc = and <32 x i1> %ma, %mb
   %md = xor <32 x i1> %ma, %mb
   %me = or <32 x i1> %mc, %md
@@ -115,9 +111,7 @@ define i64 @mand64(i64 %x, i64 %y) {
 ; CHECK-LABEL: mand64:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
-; CHECK-NEXT:    andq %rsi, %rax
-; CHECK-NEXT:    xorq %rsi, %rdi
-; CHECK-NEXT:    orq %rdi, %rax
+; CHECK-NEXT:    orq %rsi, %rax
 ; CHECK-NEXT:    retq
   %ma = bitcast i64 %x to <64 x i1>
   %mb = bitcast i64 %y to <64 x i1>
@@ -128,18 +122,16 @@ define i64 @mand64(i64 %x, i64 %y) {
   ret i64 %ret
 }
 
-define i64 @mand64_mem(<64 x i1>* %x, <64 x i1>* %y) {
+define i64 @mand64_mem(ptr %x, ptr %y) {
 ; CHECK-LABEL: mand64_mem:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    kmovq (%rdi), %k0
 ; CHECK-NEXT:    kmovq (%rsi), %k1
-; CHECK-NEXT:    kandq %k1, %k0, %k2
-; CHECK-NEXT:    kxorq %k1, %k0, %k0
-; CHECK-NEXT:    korq %k0, %k2, %k0
+; CHECK-NEXT:    korq %k1, %k0, %k0
 ; CHECK-NEXT:    kmovq %k0, %rax
 ; CHECK-NEXT:    retq
-  %ma = load <64 x i1>, <64 x i1>* %x
-  %mb = load <64 x i1>, <64 x i1>* %y
+  %ma = load <64 x i1>, ptr %x
+  %mb = load <64 x i1>, ptr %y
   %mc = and <64 x i1> %ma, %mb
   %md = xor <64 x i1> %ma, %mb
   %me = or <64 x i1> %mc, %md

@@ -9,7 +9,6 @@
 #include "Quality.h"
 #include "AST.h"
 #include "ASTSignals.h"
-#include "CompletionModel.h"
 #include "FileDistance.h"
 #include "SourceCode.h"
 #include "index/Symbol.h"
@@ -27,6 +26,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
 #include <cmath>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -304,6 +304,8 @@ void SymbolRelevanceSignals::computeASTSignals(
       (SemaResult.Kind != CodeCompletionResult::RK_Pattern))
     return;
   if (const NamedDecl *ND = SemaResult.getDeclaration()) {
+    if (hasUnstableLinkage(ND))
+      return;
     auto ID = getSymbolID(ND);
     if (!ID)
       return;
@@ -366,19 +368,19 @@ static float scopeProximityScore(unsigned ScopeDistance) {
   return std::max(0.65, 2.0 * std::pow(0.6, ScopeDistance / 2.0));
 }
 
-static llvm::Optional<llvm::StringRef>
+static std::optional<llvm::StringRef>
 wordMatching(llvm::StringRef Name, const llvm::StringSet<> *ContextWords) {
   if (ContextWords)
     for (const auto &Word : ContextWords->keys())
       if (Name.contains_insensitive(Word))
         return Word;
-  return llvm::None;
+  return std::nullopt;
 }
 
 SymbolRelevanceSignals::DerivedSignals
 SymbolRelevanceSignals::calculateDerivedSignals() const {
   DerivedSignals Derived;
-  Derived.NameMatchesContext = wordMatching(Name, ContextWords).hasValue();
+  Derived.NameMatchesContext = wordMatching(Name, ContextWords).has_value();
   Derived.FileProximityDistance = !FileProximityMatch || SymbolURI.empty()
                                       ? FileDistance::Unreachable
                                       : FileProximityMatch->distance(SymbolURI);
@@ -492,7 +494,7 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
   if (S.ContextWords)
     OS << llvm::formatv(
         "\tMatching context word: {0}\n",
-        wordMatching(S.Name, S.ContextWords).getValueOr("<none>"));
+        wordMatching(S.Name, S.ContextWords).value_or("<none>"));
   OS << llvm::formatv("\tForbidden: {0}\n", S.Forbidden);
   OS << llvm::formatv("\tNeedsFixIts: {0}\n", S.NeedsFixIts);
   OS << llvm::formatv("\tIsInstanceMember: {0}\n", S.IsInstanceMember);
@@ -529,73 +531,14 @@ float evaluateSymbolAndRelevance(float SymbolQuality, float SymbolRelevance) {
   return SymbolQuality * SymbolRelevance;
 }
 
-DecisionForestScores
-evaluateDecisionForest(const SymbolQualitySignals &Quality,
-                       const SymbolRelevanceSignals &Relevance, float Base) {
-  Example E;
-  E.setIsDeprecated(Quality.Deprecated);
-  E.setIsReservedName(Quality.ReservedName);
-  E.setIsImplementationDetail(Quality.ImplementationDetail);
-  E.setNumReferences(Quality.References);
-  E.setSymbolCategory(Quality.Category);
-
-  SymbolRelevanceSignals::DerivedSignals Derived =
-      Relevance.calculateDerivedSignals();
-  int NumMatch = 0;
-  if (Relevance.ContextWords) {
-    for (const auto &Word : Relevance.ContextWords->keys()) {
-      if (Relevance.Name.contains_insensitive(Word)) {
-        ++NumMatch;
-      }
-    }
-  }
-  E.setIsNameInContext(NumMatch > 0);
-  E.setNumNameInContext(NumMatch);
-  E.setFractionNameInContext(
-      Relevance.ContextWords && !Relevance.ContextWords->empty()
-          ? NumMatch * 1.0 / Relevance.ContextWords->size()
-          : 0);
-  E.setIsInBaseClass(Relevance.InBaseClass);
-  E.setFileProximityDistanceCost(Derived.FileProximityDistance);
-  E.setSemaFileProximityScore(Relevance.SemaFileProximityScore);
-  E.setSymbolScopeDistanceCost(Derived.ScopeProximityDistance);
-  E.setSemaSaysInScope(Relevance.SemaSaysInScope);
-  E.setScope(Relevance.Scope);
-  E.setContextKind(Relevance.Context);
-  E.setIsInstanceMember(Relevance.IsInstanceMember);
-  E.setHadContextType(Relevance.HadContextType);
-  E.setHadSymbolType(Relevance.HadSymbolType);
-  E.setTypeMatchesPreferred(Relevance.TypeMatchesPreferred);
-
-  DecisionForestScores Scores;
-  // Exponentiating DecisionForest prediction makes the score of each tree a
-  // multiplciative boost (like NameMatch). This allows us to weigh the
-  // prediciton score and NameMatch appropriately.
-  Scores.ExcludingName = pow(Base, Evaluate(E));
-  // Following cases are not part of the generated training dataset:
-  //  - Symbols with `NeedsFixIts`.
-  //  - Forbidden symbols.
-  //  - Keywords: Dataset contains only macros and decls.
-  if (Relevance.NeedsFixIts)
-    Scores.ExcludingName *= 0.5;
-  if (Relevance.Forbidden)
-    Scores.ExcludingName *= 0;
-  if (Quality.Category == SymbolQualitySignals::Keyword)
-    Scores.ExcludingName *= 4;
-
-  // NameMatch should be a multiplier on total score to support rescoring.
-  Scores.Total = Relevance.NameMatch * Scores.ExcludingName;
-  return Scores;
-}
-
 // Produces an integer that sorts in the same order as F.
 // That is: a < b <==> encodeFloat(a) < encodeFloat(b).
 static uint32_t encodeFloat(float F) {
-  static_assert(std::numeric_limits<float>::is_iec559, "");
+  static_assert(std::numeric_limits<float>::is_iec559);
   constexpr uint32_t TopBit = ~(~uint32_t{0} >> 1);
 
   // Get the bits of the float. Endianness is the same as for integers.
-  uint32_t U = llvm::FloatToBits(F);
+  uint32_t U = llvm::bit_cast<uint32_t>(F);
   // IEEE 754 floats compare like sign-magnitude integers.
   if (U & TopBit)    // Negative float.
     return 0 - U;    // Map onto the low half of integers, order reversed.

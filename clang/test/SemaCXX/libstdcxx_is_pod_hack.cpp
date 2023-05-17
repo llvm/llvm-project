@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %std_cxx98-14 %s
 
 // This is a test for an egregious hack in Clang that works around
 // issues with GCC's evolution. libstdc++ 4.2.x uses __is_pod as an

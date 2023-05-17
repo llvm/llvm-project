@@ -53,7 +53,7 @@ void WinException::endModule() {
 
   if (M->getModuleFlag("ehcontguard") && !EHContTargets.empty()) {
     // Emit the symbol index of each ehcont target.
-    OS.SwitchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
+    OS.switchSection(Asm->OutContext.getObjectFileInfo()->getGEHContSection());
     for (const MCSymbol *S : EHContTargets) {
       OS.emitCOFFSymbolIndex(S);
     }
@@ -130,14 +130,6 @@ void WinException::endFunction(const MachineFunction *MF) {
   if (F.hasPersonalityFn())
     Per = classifyEHPersonality(F.getPersonalityFn()->stripPointerCasts());
 
-  // Get rid of any dead landing pads if we're not using funclets. In funclet
-  // schemes, the landing pad is not actually reachable. It only exists so
-  // that we can emit the right table data.
-  if (!isFuncletEHPersonality(Per)) {
-    MachineFunction *NonConstMF = const_cast<MachineFunction*>(MF);
-    NonConstMF->tidyLandingPads();
-  }
-
   endFuncletImpl();
 
   // endFunclet will emit the necessary .xdata tables for table-based SEH.
@@ -150,7 +142,7 @@ void WinException::endFunction(const MachineFunction *MF) {
     // Just switch sections to the right xdata section.
     MCSection *XData = Asm->OutStreamer->getAssociatedXDataSection(
         Asm->OutStreamer->getCurrentSectionOnly());
-    Asm->OutStreamer->SwitchSection(XData);
+    Asm->OutStreamer->switchSection(XData);
 
     // Emit the tables appropriate to the personality function in use. If we
     // don't recognize the personality, assume it uses an Itanium-style LSDA.
@@ -249,7 +241,7 @@ void WinException::beginFunclet(const MachineBasicBlock &MBB,
 void WinException::endFunclet() {
   if (isAArch64 && CurrentFuncletEntry &&
       (shouldEmitMoves || shouldEmitPersonality)) {
-    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
+    Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->emitWinCFIFuncletOrFuncEnd();
   }
   endFuncletImpl();
@@ -301,7 +293,7 @@ void WinException::endFuncletImpl() {
     // Switch back to the funclet start .text section now that we are done
     // writing to .xdata, and emit an .seh_endproc directive to mark the end of
     // the function.
-    Asm->OutStreamer->SwitchSection(CurrentFuncletTextSection);
+    Asm->OutStreamer->switchSection(CurrentFuncletTextSection);
     Asm->OutStreamer->emitWinCFIEndProc();
   }
 
@@ -646,7 +638,7 @@ void WinException::emitSEHActionsForRange(const WinEHFuncInfo &FuncInfo,
     const SEHUnwindMapEntry &UME = FuncInfo.SEHUnwindMap[State];
     const MCExpr *FilterOrFinally;
     const MCExpr *ExceptOrNull;
-    auto *Handler = UME.Handler.get<MachineBasicBlock *>();
+    auto *Handler = cast<MachineBasicBlock *>(UME.Handler);
     if (UME.IsFinally) {
       FilterOrFinally = create32bitRef(getMCSymbolForMBB(Asm, Handler));
       ExceptOrNull = MCConstantExpr::create(0, Ctx);
@@ -736,7 +728,7 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   // EHFlags & 1 -> Synchronous exceptions only, no async exceptions.
   // EHFlags & 2 -> ???
   // EHFlags & 4 -> The function is noexcept(true), unwinding can't continue.
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.emitLabel(FuncInfoXData);
 
   AddComment("MagicNumber");
@@ -770,7 +762,11 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   OS.emitInt32(0);
 
   AddComment("EHFlags");
-  OS.emitInt32(1);
+  if (MMI->getModule()->getModuleFlag("eh-asynch")) {
+    OS.emitInt32(0);
+  } else {
+    OS.emitInt32(1);
+  }
 
   // UnwindMapEntry {
   //   int32_t ToState;
@@ -779,8 +775,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
   if (UnwindMapXData) {
     OS.emitLabel(UnwindMapXData);
     for (const CxxUnwindMapEntry &UME : FuncInfo.CxxUnwindMap) {
-      MCSymbol *CleanupSym =
-          getMCSymbolForMBB(Asm, UME.Cleanup.dyn_cast<MachineBasicBlock *>());
+      MCSymbol *CleanupSym = getMCSymbolForMBB(
+          Asm, dyn_cast_if_present<MachineBasicBlock *>(UME.Cleanup));
       AddComment("ToState");
       OS.emitInt32(UME.ToState);
 
@@ -867,8 +863,8 @@ void WinException::emitCXXFrameHandler3Table(const MachineFunction *MF) {
           FrameAllocOffsetRef = MCConstantExpr::create(0, Asm->OutContext);
         }
 
-        MCSymbol *HandlerSym =
-            getMCSymbolForMBB(Asm, HT.Handler.dyn_cast<MachineBasicBlock *>());
+        MCSymbol *HandlerSym = getMCSymbolForMBB(
+            Asm, dyn_cast_if_present<MachineBasicBlock *>(HT.Handler));
 
         AddComment("Adjectives");
         OS.emitInt32(HT.Adjectives);
@@ -1010,7 +1006,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
 
   // Emit the __ehtable label that we use for llvm.x86.seh.lsda.
   MCSymbol *LSDALabel = Asm->OutContext.getOrCreateLSDASymbol(FLinkageName);
-  OS.emitValueToAlignment(4);
+  OS.emitValueToAlignment(Align(4));
   OS.emitLabel(LSDALabel);
 
   const auto *Per = cast<Function>(F.getPersonalityFn()->stripPointerCasts());
@@ -1073,7 +1069,7 @@ void WinException::emitExceptHandlerTable(const MachineFunction *MF) {
 
   assert(!FuncInfo.SEHUnwindMap.empty());
   for (const SEHUnwindMapEntry &UME : FuncInfo.SEHUnwindMap) {
-    auto *Handler = UME.Handler.get<MachineBasicBlock *>();
+    auto *Handler = cast<MachineBasicBlock *>(UME.Handler);
     const MCSymbol *ExceptOrFinally =
         UME.IsFinally ? getMCSymbolForMBB(Asm, Handler) : Handler->getSymbol();
     // -1 is usually the base state for "unwind to caller", but for
@@ -1144,7 +1140,7 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
   DenseMap<const MachineBasicBlock *, int> HandlerStates;
   for (int State = 0; State < NumStates; ++State) {
     MachineBasicBlock *HandlerBlock =
-        FuncInfo.ClrEHUnwindMap[State].Handler.get<MachineBasicBlock *>();
+        cast<MachineBasicBlock *>(FuncInfo.ClrEHUnwindMap[State].Handler);
     HandlerStates[HandlerBlock] = State;
     // Use this loop through all handlers to verify our assumption (used in
     // the MinEnclosingState computation) that enclosing funclets have lower
@@ -1305,7 +1301,7 @@ void WinException::emitCLRExceptionTable(const MachineFunction *MF) {
     const MCExpr *ClauseEnd = getOffsetPlusOne(Clause.EndLabel, FuncBeginSym);
 
     const ClrEHUnwindMapEntry &Entry = FuncInfo.ClrEHUnwindMap[Clause.State];
-    MachineBasicBlock *HandlerBlock = Entry.Handler.get<MachineBasicBlock *>();
+    MachineBasicBlock *HandlerBlock = cast<MachineBasicBlock *>(Entry.Handler);
     MCSymbol *BeginSym = getMCSymbolForMBB(Asm, HandlerBlock);
     const MCExpr *HandlerBegin = getOffset(BeginSym, FuncBeginSym);
     MCSymbol *EndSym = EndSymbolMap[Clause.State];

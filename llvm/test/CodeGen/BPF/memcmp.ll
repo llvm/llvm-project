@@ -8,7 +8,7 @@
 ;   } __attribute__((aligned(4)));
 ;
 ;   /* try to compute a local build_id */
-;   void bar1(void *);
+;   void bar1(ptr);
 ;
 ;   /* the global build_id to compare */
 ;   struct build_id id2;
@@ -32,31 +32,36 @@
 define dso_local i32 @foo() local_unnamed_addr #0 {
 entry:
   %id11 = alloca [20 x i8], align 4
-  %id11.sub = getelementptr inbounds [20 x i8], [20 x i8]* %id11, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 20, i8* nonnull %id11.sub) #4
-  call void @bar1(i8* noundef nonnull %id11.sub) #4
-  %call = call i32 @memcmp(i8* noundef nonnull dereferenceable(20) %id11.sub, i8* noundef nonnull dereferenceable(20) getelementptr inbounds (%struct.build_id, %struct.build_id* @id2, i64 0, i32 0, i64 0), i64 noundef 20) #4
+  call void @llvm.lifetime.start.p0(i64 20, ptr nonnull %id11) #4
+  call void @bar1(ptr noundef nonnull %id11) #4
+  %call = call i32 @memcmp(ptr noundef nonnull dereferenceable(20) %id11, ptr noundef nonnull dereferenceable(20) @id2, i64 noundef 20) #4
   %cmp = icmp eq i32 %call, 0
   %conv = zext i1 %cmp to i32
-  call void @llvm.lifetime.end.p0i8(i64 20, i8* nonnull %id11.sub) #4
+  call void @llvm.lifetime.end.p0(i64 20, ptr nonnull %id11) #4
   ret i32 %conv
 }
 
-; CHECK:   *(u32 *)(r1 + 0)
-; CHECK:   *(u32 *)(r10 - 20)
-; CHECK:   *(u32 *)(r10 - 12)
-; CHECK:   *(u32 *)(r1 + 8)
+; CHECK-DAG:   *(u32 *)(r1 + 0)
+; CHECK-DAG:   *(u32 *)(r1 + 4)
+; CHECK-DAG:   *(u32 *)(r10 - 16)
+; CHECK-DAG:   *(u32 *)(r10 - 20)
+; CHECK-DAG:   *(u32 *)(r10 - 8)
+; CHECK-DAG:   *(u32 *)(r10 - 12)
+; CHECK-DAG:   *(u32 *)(r1 + 8)
+; CHECK-DAG:   *(u32 *)(r1 + 12)
+; CHECK-DAG:   *(u32 *)(r2 + 16)
+; CHECK-DAG:   *(u32 *)(r10 - 4)
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
-declare dso_local void @bar1(i8* noundef) local_unnamed_addr #2
+declare dso_local void @bar1(ptr noundef) local_unnamed_addr #2
 
 ; Function Attrs: argmemonly mustprogress nofree nounwind readonly willreturn
-declare dso_local i32 @memcmp(i8* nocapture noundef, i8* nocapture noundef, i64 noundef) local_unnamed_addr #3
+declare dso_local i32 @memcmp(ptr nocapture noundef, ptr nocapture noundef, i64 noundef) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly mustprogress nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { argmemonly mustprogress nofree nosync nounwind willreturn }

@@ -1,5 +1,5 @@
-; RUN: opt -S -strip-debug -globals-aa -instcombine < %s | FileCheck %s
-; RUN: opt -S -globals-aa -instcombine < %s | FileCheck %s
+; RUN: opt -S -strip-debug -aa-pipeline=globals-aa,basic-aa -passes='require<globals-aa>,instcombine' < %s | FileCheck %s
+; RUN: opt -S -aa-pipeline=globals-aa,basic-aa -passes='require<globals-aa>,instcombine' < %s | FileCheck %s
 
 ; Having debug info around shouldn't affect what globals-aa and instcombine do.
 
@@ -13,9 +13,9 @@ define void @bar(i8 %p) {
 declare void @gaz(i8 %p)
 
 define void @foo() {
-  store i8 42, i8* @g, align 1
+  store i8 42, ptr @g, align 1
   call void @bar(i8 1)
-  %_tmp = load i8, i8* @g, align 1
+  %_tmp = load i8, ptr @g, align 1
   call void @gaz(i8 %_tmp)
   ret void
 }
@@ -50,7 +50,7 @@ attributes #0 = { nounwind readnone speculatable }
 ; gaz regardless of the dbg.value in bar.
 
 ; CHECK: define void @foo() {
-; CHECK-NEXT:  store i8 42, i8* @g, align 1
+; CHECK-NEXT:  store i8 42, ptr @g, align 1
 ; CHECK-NEXT:  call void @bar(i8 1)
 ; CHECK-NEXT:  call void @gaz(i8 42)
 ; CHECK-NEXT:  ret void

@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class StepAvoidsNoDebugTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @add_test_categories(['pyapi'])
     def test_step_out_with_python(self):
         """Test stepping out using avoid-no-debug with dsyms."""
@@ -70,8 +68,8 @@ class StepAvoidsNoDebugTestCase(TestBase):
 
     def hit_correct_line(self, pattern):
         target_line = line_number(self.main_source, pattern)
-        self.assertTrue(
-            target_line != 0,
+        self.assertNotEqual(
+            target_line, 0,
             "Could not find source pattern " +
             pattern)
         cur_line = self.thread.frames[0].GetLineEntry().GetLine()

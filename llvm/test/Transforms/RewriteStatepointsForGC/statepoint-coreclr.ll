@@ -1,4 +1,3 @@
-; RUN: opt < %s -S -rewrite-statepoints-for-gc | FileCheck %s
 ; RUN: opt < %s -S -passes=rewrite-statepoints-for-gc | FileCheck %s
 
 ; Basic test to make sure that safepoints are placed

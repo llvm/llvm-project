@@ -6,12 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/sys/mman/mmap.h"
 #include "src/sys/mman/munmap.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <sys/mman.h>
 
 using __llvm_libc::testing::ErrnoSetterMatcher::Fails;
@@ -19,10 +19,10 @@ using __llvm_libc::testing::ErrnoSetterMatcher::Succeeds;
 
 TEST(LlvmLibcMMapTest, NoError) {
   size_t alloc_size = 128;
-  errno = 0;
+  libc_errno = 0;
   void *addr = __llvm_libc::mmap(nullptr, alloc_size, PROT_READ,
                                  MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
-  EXPECT_EQ(0, errno);
+  EXPECT_EQ(0, libc_errno);
   EXPECT_NE(addr, MAP_FAILED);
 
   int *array = reinterpret_cast<int *>(addr);
@@ -34,7 +34,7 @@ TEST(LlvmLibcMMapTest, NoError) {
 }
 
 TEST(LlvmLibcMMapTest, Error_InvalidSize) {
-  errno = 0;
+  libc_errno = 0;
   void *addr = __llvm_libc::mmap(nullptr, 0, PROT_READ,
                                  MAP_ANONYMOUS | MAP_PRIVATE, -1, 0);
   EXPECT_THAT(addr, Fails(EINVAL, MAP_FAILED));

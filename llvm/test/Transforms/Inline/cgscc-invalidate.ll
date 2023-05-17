@@ -24,11 +24,11 @@ entry:
   br i1 %flag, label %then, label %else
 
 then:
-  store volatile i8 42, i8* %ptr
+  store volatile i8 42, ptr %ptr
   br label %return
 
 else:
-  store volatile i8 -42, i8* %ptr
+  store volatile i8 -42, ptr %ptr
   br label %return
 
 return:

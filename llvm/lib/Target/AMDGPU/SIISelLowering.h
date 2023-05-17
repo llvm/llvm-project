@@ -48,6 +48,7 @@ private:
   SDValue lowerKernArgParameterPtr(SelectionDAG &DAG, const SDLoc &SL,
                                    SDValue Chain, uint64_t Offset) const;
   SDValue getImplicitArgPtr(SelectionDAG &DAG, const SDLoc &SL) const;
+  SDValue getLDSKernelId(SelectionDAG &DAG, const SDLoc &SL) const;
   SDValue lowerKernargMemParameter(SelectionDAG &DAG, EVT VT, EVT MemVT,
                                    const SDLoc &SL, SDValue Chain,
                                    uint64_t Offset, Align Alignment,
@@ -164,6 +165,8 @@ private:
 
   SDValue performUCharToFloatCombine(SDNode *N,
                                      DAGCombinerInfo &DCI) const;
+  SDValue performFCopySignCombine(SDNode *N, DAGCombinerInfo &DCI) const;
+
   SDValue performSHLPtrCombine(SDNode *N,
                                unsigned AS,
                                EVT MemVT,
@@ -188,7 +191,8 @@ private:
   SDValue performFPMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
                                   SDValue Op0, SDValue Op1) const;
   SDValue performIntMed3ImmCombine(SelectionDAG &DAG, const SDLoc &SL,
-                                   SDValue Op0, SDValue Op1, bool Signed) const;
+                                   SDValue Src, SDValue MinVal, SDValue MaxVal,
+                                   bool Signed) const;
   SDValue performMinMaxCombine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performFMed3Combine(SDNode *N, DAGCombinerInfo &DCI) const;
   SDValue performCvtPkRTZCombine(SDNode *N, DAGCombinerInfo &DCI) const;
@@ -269,6 +273,12 @@ public:
 
   bool isShuffleMaskLegal(ArrayRef<int> /*Mask*/, EVT /*VT*/) const override;
 
+  // While address space 7 should never make it to codegen, it still needs to
+  // have a MVT to prevent some analyses that query this function from breaking,
+  // so, to work around the lack of i160, map it to v5i32.
+  MVT getPointerTy(const DataLayout &DL, unsigned AS) const override;
+  MVT getPointerMemTy(const DataLayout &DL, unsigned AS) const override;
+
   bool getTgtMemIntrinsic(IntrinsicInfo &, const CallInst &,
                           MachineFunction &MF,
                           unsigned IntrinsicID) const override;
@@ -288,14 +298,14 @@ public:
   bool allowsMisalignedMemoryAccessesImpl(
       unsigned Size, unsigned AddrSpace, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const;
+      unsigned *IsFast = nullptr) const;
 
   bool allowsMisalignedMemoryAccesses(
       LLT Ty, unsigned AddrSpace, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const override {
+      unsigned *IsFast = nullptr) const override {
     if (IsFast)
-      *IsFast = false;
+      *IsFast = 0;
     return allowsMisalignedMemoryAccessesImpl(Ty.getSizeInBits(), AddrSpace,
                                               Alignment, Flags, IsFast);
   }
@@ -303,7 +313,7 @@ public:
   bool allowsMisalignedMemoryAccesses(
       EVT VT, unsigned AS, Align Alignment,
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
-      bool *IsFast = nullptr) const override;
+      unsigned *IsFast = nullptr) const override;
 
   EVT getOptimalMemOpType(const MemOp &Op,
                           const AttributeList &FuncAttributes) const override;
@@ -320,6 +330,9 @@ public:
 
   bool shouldConvertConstantLoadToIntImm(const APInt &Imm,
                                         Type *Ty) const override;
+
+  bool isExtractSubvectorCheap(EVT ResVT, EVT SrcVT,
+                               unsigned Index) const override;
 
   bool isTypeDesirableForOp(unsigned Op, EVT VT) const override;
 
@@ -355,7 +368,7 @@ public:
     SmallVectorImpl<SDValue> &MemOpChains,
     SDValue Chain) const;
 
-  SDValue LowerCallResult(SDValue Chain, SDValue InFlag,
+  SDValue LowerCallResult(SDValue Chain, SDValue InGlue,
                           CallingConv::ID CallConv, bool isVarArg,
                           const SmallVectorImpl<ISD::InputArg> &Ins,
                           const SDLoc &DL, SelectionDAG &DAG,
@@ -390,7 +403,7 @@ public:
   EmitInstrWithCustomInserter(MachineInstr &MI,
                               MachineBasicBlock *BB) const override;
 
-  bool hasBitPreservingFPLogic(EVT VT) const override;
+  bool hasAtomicFaddRtnForTy(SDValue &Op) const;
   bool enableAggressiveFMAFusion(EVT VT) const override;
   bool enableAggressiveFMAFusion(LLT Ty) const override;
   EVT getSetCCResultType(const DataLayout &DL, LLVMContext &Context,
@@ -445,6 +458,10 @@ public:
 
   void finalizeLowering(MachineFunction &MF) const override;
 
+  void computeKnownBitsForTargetNode(const SDValue Op, KnownBits &Known,
+                                     const APInt &DemandedElts,
+                                     const SelectionDAG &DAG,
+                                     unsigned Depth = 0) const override;
   void computeKnownBitsForFrameIndex(int FrameIdx,
                                      KnownBits &Known,
                                      const MachineFunction &MF) const override;
@@ -457,8 +474,8 @@ public:
   Align computeKnownAlignForTargetInstr(GISelKnownBits &Analysis, Register R,
                                         const MachineRegisterInfo &MRI,
                                         unsigned Depth = 0) const override;
-  bool isSDNodeSourceOfDivergence(const SDNode *N,
-    FunctionLoweringInfo *FLI, LegacyDivergenceAnalysis *DA) const override;
+  bool isSDNodeSourceOfDivergence(const SDNode *N, FunctionLoweringInfo *FLI,
+                                  UniformityInfo *UA) const override;
 
   bool hasMemSDNodeUser(SDNode *N) const;
 
@@ -472,6 +489,11 @@ public:
   bool denormalsEnabledForType(const SelectionDAG &DAG, EVT VT) const;
   bool denormalsEnabledForType(LLT Ty, MachineFunction &MF) const;
 
+  bool checkForPhysRegDependency(SDNode *Def, SDNode *User, unsigned Op,
+                                 const TargetRegisterInfo *TRI,
+                                 const TargetInstrInfo *TII, unsigned &PhysReg,
+                                 int &Cost) const override;
+
   bool isKnownNeverNaNForTargetNode(SDValue Op,
                                     const SelectionDAG &DAG,
                                     bool SNaN = false,
@@ -481,11 +503,15 @@ public:
   AtomicExpansionKind shouldExpandAtomicStoreInIR(StoreInst *SI) const override;
   AtomicExpansionKind
   shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+  void emitExpandAtomicRMW(AtomicRMWInst *AI) const override;
 
-  virtual const TargetRegisterClass *
-  getRegClassFor(MVT VT, bool isDivergent) const override;
-  virtual bool requiresUniformRegister(MachineFunction &MF,
-                                       const Value *V) const override;
+  LoadInst *
+  lowerIdempotentRMWIntoFencedLoad(AtomicRMWInst *AI) const override;
+
+  const TargetRegisterClass *getRegClassFor(MVT VT,
+                                            bool isDivergent) const override;
+  bool requiresUniformRegister(MachineFunction &MF,
+                               const Value *V) const override;
   Align getPrefLoopAlignment(MachineLoop *ML) const override;
 
   void allocateHSAUserSGPRs(CCState &CCInfo,
@@ -517,9 +543,6 @@ public:
                                       MachineFunction &MF,
                                       const SIRegisterInfo &TRI,
                                       SIMachineFunctionInfo &Info) const;
-
-  std::pair<InstructionCost, MVT> getTypeLegalizationCost(const DataLayout &DL,
-                                                          Type *Ty) const;
 
   MachineMemOperand::Flags
   getTargetMMOFlags(const Instruction &I) const override;

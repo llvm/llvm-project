@@ -11,13 +11,12 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include <optional>
 #include <string>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 AST_MATCHER(CXXRecordDecl, hasPublicVirtualOrProtectedNonVirtualDestructor) {
   // We need to call Node.getDestructor() instead of matching a
@@ -41,27 +40,31 @@ void VirtualClassDestructorCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       cxxRecordDecl(
           anyOf(has(cxxMethodDecl(isVirtual())), InheritsVirtualMethod),
+          unless(isFinal()),
           unless(hasPublicVirtualOrProtectedNonVirtualDestructor()))
           .bind("ProblematicClassOrStruct"),
       this);
 }
 
-static Optional<CharSourceRange>
+static std::optional<CharSourceRange>
 getVirtualKeywordRange(const CXXDestructorDecl &Destructor,
                        const SourceManager &SM, const LangOptions &LangOpts) {
   if (Destructor.getLocation().isMacroID())
-    return None;
+    return std::nullopt;
 
   SourceLocation VirtualBeginLoc = Destructor.getBeginLoc();
-  SourceLocation VirtualEndLoc = VirtualBeginLoc.getLocWithOffset(
-      Lexer::MeasureTokenLength(VirtualBeginLoc, SM, LangOpts));
+  SourceLocation VirtualBeginSpellingLoc =
+      SM.getSpellingLoc(Destructor.getBeginLoc());
+  SourceLocation VirtualEndLoc = VirtualBeginSpellingLoc.getLocWithOffset(
+      Lexer::MeasureTokenLength(VirtualBeginSpellingLoc, SM, LangOpts));
 
   /// Range ends with \c StartOfNextToken so that any whitespace after \c
   /// virtual is included.
-  SourceLocation StartOfNextToken =
-      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts)
-          .getValue()
-          .getLocation();
+  std::optional<Token> NextToken =
+      Lexer::findNextToken(VirtualEndLoc, SM, LangOpts);
+  if (!NextToken)
+    return std::nullopt;
+  SourceLocation StartOfNextToken = NextToken->getLocation();
 
   return CharSourceRange::getCharRange(VirtualBeginLoc, StartOfNextToken);
 }
@@ -213,6 +216,4 @@ void VirtualClassDestructorCheck::check(
       << ProtectedAndVirtual << Fix;
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

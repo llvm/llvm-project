@@ -1,8 +1,8 @@
 # RUN: yaml2obj %s -o %t.o
 # RUN: %lldb -b -o 'target modules lookup -s absolute_symbol' %t.o | FileCheck %s
 # CHECK: 1 symbols match 'absolute_symbol'
-# CHECK:   Address: 0x0000000012345678 (0x0000000012345678)
-# CHECK:   Summary: 0x0000000012345678
+# CHECK:   Name: absolute_symbol
+# CHECK:   Value: 0x0000000012345678
 # Created from:
 #   .globl absolute_symbol
 #   absolute_symbol = 0x12345678
@@ -92,4 +92,3 @@ LinkEditData:
     - ltmp0
     - ''
 ...
-

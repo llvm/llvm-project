@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-vectorize -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize -mtriple=aarch64-linux-gnu -mattr=+sve < %s | FileCheck %s
 
 ; This test is checking that a scalable load inside a loop does not trigger a
 ; TypeSize error in the loop vectorization legality analysis. It is possible for
@@ -20,7 +20,7 @@
 
 ; CHECK-LABEL: @scalable_load_in_loop
 ; CHECK-NOT: vector.body
-define void @scalable_load_in_loop(i64 %n, <vscale x 4 x i32>* %x, <vscale x 4 x i32>* %y) {
+define void @scalable_load_in_loop(i64 %n, ptr %x, ptr %y) {
 entry:
   br label %for.body
 
@@ -31,8 +31,8 @@ for.body:
   br i1 %cmp, label %for.inc, label %if.end
 
 if.end:
-  %0 = load <vscale x 4 x i32>, <vscale x 4 x i32>* %y
-  store <vscale x 4 x i32> %0, <vscale x 4 x i32>* %x
+  %0 = load <vscale x 4 x i32>, ptr %y
+  store <vscale x 4 x i32> %0, ptr %x
   br label %for.inc
 
 for.inc:

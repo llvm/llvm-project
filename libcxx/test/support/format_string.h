@@ -9,7 +9,7 @@
 
 namespace format_string_detail {
 inline std::string format_string_imp(const char* msg, ...) {
-  // we might need a second shot at this, so pre-emptivly make a copy
+  // we might need a second shot at this, so pre-emptively make a copy
   struct GuardVAList {
     va_list& xtarget;
     bool active;

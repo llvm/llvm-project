@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -verify %s -DERRORS
-// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -emit-llvm-only %s
+// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -verify %std_cxx98-14 %s -DERRORS
+// RUN: %clang_cc1 -fexceptions -fcxx-exceptions -emit-llvm-only %std_cxx98-14 %s
 
 #ifdef ERRORS
 template<typename T> void f1(T*) throw(T); // expected-error{{incomplete type 'Incomplete' is not allowed in exception specification}}

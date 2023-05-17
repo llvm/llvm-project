@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -inline -pass-remarks=inline \
+; RUN: opt < %s -S -passes=inline -pass-remarks=inline \
 ; RUN:    -pass-remarks-with-hotness 2>&1 | FileCheck %s
 
 ; RUN: opt < %s -S -passes=inline -pass-remarks-output=%t -pass-remarks=inline \

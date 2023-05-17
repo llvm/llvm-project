@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Runtime/pointer.h"
+#include "assign-impl.h"
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
@@ -53,10 +54,19 @@ void RTNAME(PointerSetDerivedLength)(
   addendum->SetLenParameterValue(which, x);
 }
 
-void RTNAME(PointerApplyMold)(Descriptor &pointer, const Descriptor &mold) {
+void RTNAME(PointerApplyMold)(
+    Descriptor &pointer, const Descriptor &mold, int rank) {
   pointer = mold;
   pointer.set_base_addr(nullptr);
   pointer.raw().attribute = CFI_attribute_pointer;
+  pointer.raw().rank = rank;
+  if (auto *pointerAddendum{pointer.Addendum()}) {
+    if (const auto *moldAddendum{mold.Addendum()}) {
+      if (const auto *derived{moldAddendum->derivedType()}) {
+        pointerAddendum->set_derivedType(derived);
+      }
+    }
+  }
 }
 
 void RTNAME(PointerAssociateScalar)(Descriptor &pointer, void *target) {
@@ -89,18 +99,20 @@ void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
     int sourceLine) {
   pointer = target;
   pointer.raw().attribute = CFI_attribute_pointer;
-  int rank{pointer.rank()};
   Terminator terminator{sourceFile, sourceLine};
   SubscriptValue byteStride{/*captured from first dimension*/};
   std::size_t boundElementBytes{bounds.ElementBytes()};
-  for (int j{0}; j < rank; ++j) {
+  std::size_t boundsRank{
+      static_cast<std::size_t>(bounds.GetDimension(1).Extent())};
+  pointer.raw().rank = boundsRank;
+  for (unsigned j{0}; j < boundsRank; ++j) {
     auto &dim{pointer.GetDimension(j)};
     dim.SetBounds(GetInt64(bounds.ZeroBasedIndexedElement<const char>(2 * j),
                       boundElementBytes, terminator),
         GetInt64(bounds.ZeroBasedIndexedElement<const char>(2 * j + 1),
             boundElementBytes, terminator));
     if (j == 0) {
-      byteStride = dim.ByteStride();
+      byteStride = dim.ByteStride() * dim.Extent();
     } else {
       dim.SetByteStride(byteStride);
       byteStride *= dim.Extent();
@@ -110,6 +122,13 @@ void RTNAME(PointerAssociateRemapping)(Descriptor &pointer,
     terminator.Crash("PointerAssociateRemapping: too many elements in remapped "
                      "pointer (%zd > %zd)",
         pointer.Elements(), target.Elements());
+  }
+  if (auto *pointerAddendum{pointer.Addendum()}) {
+    if (const auto *targetAddendum{target.Addendum()}) {
+      if (const auto *derived{targetAddendum->derivedType()}) {
+        pointerAddendum->set_derivedType(derived);
+      }
+    }
   }
 }
 
@@ -132,6 +151,21 @@ int RTNAME(PointerAllocate)(Descriptor &pointer, bool hasStat,
   return stat;
 }
 
+int RTNAME(PointerAllocateSource)(Descriptor &pointer, const Descriptor &source,
+    bool hasStat, const Descriptor *errMsg, const char *sourceFile,
+    int sourceLine) {
+  if (pointer.Elements() == 0) {
+    return StatOk;
+  }
+  int stat{RTNAME(PointerAllocate)(
+      pointer, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    Terminator terminator{sourceFile, sourceLine};
+    DoFromSourceAssign(pointer, source, terminator);
+  }
+  return stat;
+}
+
 int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
     const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
@@ -144,6 +178,25 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   return ReturnError(terminator, pointer.Destroy(true, true), errMsg, hasStat);
 }
 
+int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,
+    const typeInfo::DerivedType *derivedType, bool hasStat,
+    const Descriptor *errMsg, const char *sourceFile, int sourceLine) {
+  int stat{RTNAME(PointerDeallocate)(
+      pointer, hasStat, errMsg, sourceFile, sourceLine)};
+  if (stat == StatOk) {
+    DescriptorAddendum *addendum{pointer.Addendum()};
+    if (addendum) {
+      addendum->set_derivedType(derivedType);
+    } else {
+      // Unlimited polymorphic descriptors initialized with
+      // PointerNullifyIntrinsic do not have an addendum. Make sure the
+      // derivedType is null in that case.
+      INTERNAL_CHECK(!derivedType);
+    }
+  }
+  return stat;
+}
+
 bool RTNAME(PointerIsAssociated)(const Descriptor &pointer) {
   return pointer.raw().base_addr != nullptr;
 }
@@ -153,7 +206,8 @@ bool RTNAME(PointerIsAssociatedWith)(
   if (!target) {
     return pointer.raw().base_addr != nullptr;
   }
-  if (!target->raw().base_addr || target->ElementBytes() == 0) {
+  if (!target->raw().base_addr ||
+      (target->raw().type != CFI_type_struct && target->ElementBytes() == 0)) {
     return false;
   }
   int rank{pointer.rank()};
@@ -165,15 +219,16 @@ bool RTNAME(PointerIsAssociatedWith)(
   for (int j{0}; j < rank; ++j) {
     const Dimension &pDim{pointer.GetDimension(j)};
     const Dimension &tDim{target->GetDimension(j)};
-    if (pDim.Extent() != tDim.Extent() ||
-        pDim.ByteStride() != tDim.ByteStride()) {
+    auto pExtent{pDim.Extent()};
+    if (pExtent == 0 || pExtent != tDim.Extent() ||
+        (pExtent != 1 && pDim.ByteStride() != tDim.ByteStride())) {
       return false;
     }
   }
   return true;
 }
 
-// TODO: PointerCheckLengthParameter, PointerAllocateSource
+// TODO: PointerCheckLengthParameter
 
 } // extern "C"
 } // namespace Fortran::runtime

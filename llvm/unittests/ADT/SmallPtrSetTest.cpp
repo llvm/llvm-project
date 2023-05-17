@@ -299,7 +299,7 @@ TEST(SmallPtrSetTest, dereferenceAndIterate) {
 
   // Sort.  We should hit the first element just once and the final element N
   // times.
-  llvm::sort(std::begin(Found), std::end(Found));
+  llvm::sort(Found);
   for (auto F = std::begin(Found), E = std::end(Found); F != E; ++F)
     EXPECT_EQ(F - Found + 1, *F);
 }

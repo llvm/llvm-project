@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // x += n;
 // x + n;
@@ -16,8 +15,8 @@
 // x - n;
 // x - y;
 // All the arithmetic operators have the constraint `requires all-random-access<Const, Views...>;`,
-// except `operator-(x, y)` which instead has the constraint 
-//    `requires (sized_­sentinel_­for<iterator_t<maybe-const<Const, Views>>,
+// except `operator-(x, y)` which instead has the constraint
+//    `requires (sized_sentinel_for<iterator_t<maybe-const<Const, Views>>,
 //                                  iterator_t<maybe-const<Const, Views>>> && ...);`
 
 #include <ranges>
@@ -64,7 +63,7 @@ constexpr bool test() {
     assert(&y1 == &(b[3]));
 
     using Iter = decltype(it1);
-    static_assert(canPlusEqual<Iter, intptr_t>);
+    static_assert(canPlusEqual<Iter, std::intptr_t>);
   }
 
   {
@@ -84,7 +83,7 @@ constexpr bool test() {
     assert(&y1 == &(b[2]));
 
     using Iter = decltype(it1);
-    static_assert(canMinusEqual<Iter, intptr_t>);
+    static_assert(canMinusEqual<Iter, std::intptr_t>);
   }
 
   {
@@ -117,12 +116,12 @@ constexpr bool test() {
     // One of the ranges is not random access
     std::ranges::zip_view v(a, b, ForwardSizedView{buffer1});
     using Iter = decltype(v.begin());
-    static_assert(!std::invocable<std::plus<>, Iter, intptr_t>);
-    static_assert(!std::invocable<std::plus<>, intptr_t, Iter>);
-    static_assert(!canPlusEqual<Iter, intptr_t>);
-    static_assert(!std::invocable<std::minus<>, Iter, intptr_t>);
+    static_assert(!std::invocable<std::plus<>, Iter, std::intptr_t>);
+    static_assert(!std::invocable<std::plus<>, std::intptr_t, Iter>);
+    static_assert(!canPlusEqual<Iter, std::intptr_t>);
+    static_assert(!std::invocable<std::minus<>, Iter, std::intptr_t>);
     static_assert(std::invocable<std::minus<>, Iter, Iter>);
-    static_assert(!canMinusEqual<Iter, intptr_t>);
+    static_assert(!canMinusEqual<Iter, std::intptr_t>);
   }
 
   {

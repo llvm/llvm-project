@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -no-opaque-pointers -w -fmerge-all-constants -triple x86_64-elf-gnu -emit-llvm -o - %s -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -no-opaque-pointers -w -fmerge-all-constants -triple x86_64-elf-gnu -emit-llvm -o - %s -std=c++20 | FileCheck -check-prefix=CHECK20 %s
 
 // FIXME: The padding in all these objects should be zero-initialized.
 namespace StructUnion {
@@ -424,6 +425,7 @@ namespace DR2126 {
 // CHECK: @_ZGRN39ClassTemplateWithHiddenStaticDataMember1SIvE1aE_ = linkonce_odr hidden constant i32 5, comdat
 // CHECK: @_ZN39ClassTemplateWithHiddenStaticDataMember3useE ={{.*}} constant i32* @_ZGRN39ClassTemplateWithHiddenStaticDataMember1SIvE1aE_
 // CHECK: @_ZGRZN20InlineStaticConstRef3funEvE1i_ = linkonce_odr constant i32 10, comdat
+// CHECK20: @_ZZN12LocalVarInit4dtorEvE1a = internal constant {{.*}} i32 103
 
 // Constant initialization tests go before this point,
 // dynamic initialization tests go after.
@@ -483,6 +485,14 @@ namespace LocalVarInit {
   // CHECK-NOT: ret i32 103
   // CHECK: }
   int mutable_() { constexpr Mutable a = { f(103) }; return a.k; }
+
+#if __cplusplus >= 202002L
+  // CHECK20: define {{.*}} @_ZN12LocalVarInit4dtorEv
+  // CHECK20-NOT: call
+  // CHECK20: ret i32 103
+  struct Dtor { constexpr Dtor(int n) : k(n) {} constexpr ~Dtor() {} int k; };
+  int dtor() { constexpr Dtor a = { f(103) }; return a.k; }
+#endif
 }
 
 namespace CrossFuncLabelDiff {

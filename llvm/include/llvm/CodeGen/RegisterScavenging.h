@@ -32,9 +32,9 @@ class TargetRegisterClass;
 class TargetRegisterInfo;
 
 class RegScavenger {
-  const TargetRegisterInfo *TRI;
-  const TargetInstrInfo *TII;
-  MachineRegisterInfo* MRI;
+  const TargetRegisterInfo *TRI = nullptr;
+  const TargetInstrInfo *TII = nullptr;
+  MachineRegisterInfo *MRI = nullptr;
   MachineBasicBlock *MBB = nullptr;
   MachineBasicBlock::iterator MBBI;
   unsigned NumRegUnits = 0;
@@ -105,8 +105,8 @@ public:
   /// Move the internal MBB iterator and update register states until
   /// it has processed the specific iterator.
   void forward(MachineBasicBlock::iterator I) {
-    if (!Tracking && MBB->begin() != I) forward();
-    while (MBBI != I) forward();
+    while (!Tracking || MBBI != I)
+      forward();
   }
 
   /// Update internal register state and move MBB iterator backwards.
@@ -146,9 +146,8 @@ public:
 
   /// Query whether a frame index is a scavenging frame index.
   bool isScavengingFrameIndex(int FI) const {
-    for (SmallVectorImpl<ScavengedInfo>::const_iterator I = Scavenged.begin(),
-         IE = Scavenged.end(); I != IE; ++I)
-      if (I->FrameIndex == FI)
+    for (const ScavengedInfo &SI : Scavenged)
+      if (SI.FrameIndex == FI)
         return true;
 
     return false;
@@ -156,10 +155,9 @@ public:
 
   /// Get an array of scavenging frame indices.
   void getScavengingFrameIndices(SmallVectorImpl<int> &A) const {
-    for (SmallVectorImpl<ScavengedInfo>::const_iterator I = Scavenged.begin(),
-         IE = Scavenged.end(); I != IE; ++I)
-      if (I->FrameIndex >= 0)
-        A.push_back(I->FrameIndex);
+    for (const ScavengedInfo &I : Scavenged)
+      if (I.FrameIndex >= 0)
+        A.push_back(I.FrameIndex);
   }
 
   /// Make a register of the specific register class

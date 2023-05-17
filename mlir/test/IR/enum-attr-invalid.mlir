@@ -3,7 +3,7 @@
 func.func @test_invalid_enum_case() -> () {
   // expected-error@+2 {{expected test::TestEnum to be one of: first, second, third}}
   // expected-error@+1 {{failed to parse TestEnumAttr}}
-  test.op_with_enum #test<"enum fourth">
+  test.op_with_enum #test<enum fourth>
 }
 
 // -----

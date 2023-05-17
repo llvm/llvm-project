@@ -37,18 +37,18 @@
 ; CODEGEN:   br label %polly.split_new_and_old
 ;
 ; CODEGEN: polly.preload.begin:
-; CODEGEN-DAG:   %U.load[[f:[.0-9]*]] = load float, float* bitcast (i32* @U to float*)
-; CODEGEN-DAG:   store float %U.load[[f]], float* %U.f.preload.s2a
-; CODEGEN-DAG:   %U.load[[i:[.0-9]*]] = load i32, i32* @U
-; CODEGEN-DAG:   store i32 %U.load[[i]], i32* %U.i.preload.s2a
+; CODEGEN-DAG:   %U.load[[f:[.0-9]*]] = load float, ptr @U
+; CODEGEN-DAG:   store float %U.load[[f]], ptr %U.f.preload.s2a
+; CODEGEN-DAG:   %U.load[[i:[.0-9]*]] = load i32, ptr @U
+; CODEGEN-DAG:   store i32 %U.load[[i]], ptr %U.i.preload.s2a
 ;
 ; CODEGEN:     polly.merge_new_and_old:
 ; CODEGEN-DAG:   %U.f.merge = phi float [ %U.f.final_reload, %polly.exiting ], [ %U.f, %do.cond ]
 ; CODEGEN-DAG:   %U.i.merge = phi i32 [ %U.i.final_reload, %polly.exiting ], [ %U.i, %do.cond ]
 ;
 ; CODEGEN: polly.loop_exit:
-; CODEGEN-DAG:   %U.f.final_reload = load float, float* %U.f.preload.s2a
-; CODEGEN-DAG:   %U.i.final_reload = load i32, i32* %U.i.preload.s2a
+; CODEGEN-DAG:   %U.f.final_reload = load float, ptr %U.f.preload.s2a
+; CODEGEN-DAG:   %U.i.final_reload = load i32, ptr %U.i.preload.s2a
 ;
 ; CODEGEN: polly.stmt.do.body:
 ; CODEGEN:   %p_add = add nsw i32 %U.load[[i]], %p_conv
@@ -57,19 +57,18 @@ target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
 @U = common global i32 0, align 4
 
-define i32 @f(i32* %A) {
+define i32 @f(ptr %A) {
 entry:
   br label %do.body
 
 do.body:                                          ; preds = %do.cond, %entry
   %indvars.iv = phi i64 [ %indvars.iv.next, %do.cond ], [ 0, %entry ]
-  %U.i = load i32, i32* @U, align 4
-  %U.cast = bitcast i32 *@U to float*
-  %U.f = load float, float* %U.cast, align 4
+  %U.i = load i32, ptr @U, align 4
+  %U.f = load float, ptr @U, align 4
   %conv = fptosi float %U.f to i32
   %add = add nsw i32 %U.i, %conv
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  store i32 %add, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  store i32 %add, ptr %arrayidx, align 4
   br label %do.cond
 
 do.cond:                                          ; preds = %do.body

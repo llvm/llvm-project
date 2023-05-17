@@ -60,7 +60,7 @@ x:
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT: 101c0:       00 f0 20 e3     nop
+// CHECK-NEXT: 101c0:       e320f000        nop
 
 /// (0x20224 - 0x101c4) + (0x101c4 - 0x101c0 - 8) = 0x1005c
 // CHECK:      101c4:       5c 00 01 00
@@ -68,7 +68,7 @@ x:
 // CHECK-NEXT: 101cc:       04 00 00 00
 
 // CHECK-EXE:      <_start>:
-// CHECK-EXE-NEXT:   20114:       00 f0 20 e3     nop
+// CHECK-EXE-NEXT:   20114:       e320f000        nop
 // CHECK-EXE:        20118:       0c 00 01 00
 // CHECK-EXE-NEXT:   2011c:       00 00 00 00
 // CHECK-EXE-NEXT:   20120:       04 00 00 00

@@ -125,7 +125,7 @@ define i64 @f8(i64 %a, i64 %b) {
 }
 
 ; Test a vector of 0/-1 results for i64 EQ.
-define void @f9(i64 %a, i64 %b, <2 x i64> *%dest) {
+define void @f9(i64 %a, i64 %b, ptr %dest) {
 ; CHECK-LABEL: f9:
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], -268435456
@@ -136,12 +136,12 @@ define void @f9(i64 %a, i64 %b, <2 x i64> *%dest) {
   %bvec = bitcast i64 %b to <2 x i32>
   %cmp = icmp eq <2 x i32> %avec, %bvec
   %ext = sext <2 x i1> %cmp to <2 x i64>
-  store <2 x i64> %ext, <2 x i64> *%dest
+  store <2 x i64> %ext, ptr %dest
   ret void
 }
 
 ; Test a vector of 0/-1 results for i64 NE.
-define void @f10(i64 %a, i64 %b, <2 x i64> *%dest) {
+define void @f10(i64 %a, i64 %b, ptr %dest) {
 ; CHECK-LABEL: f10:
 ; CHECK: ipm [[REG:%r[0-5]]]
 ; CHECK: afi [[REG]], 1879048192
@@ -152,6 +152,6 @@ define void @f10(i64 %a, i64 %b, <2 x i64> *%dest) {
   %bvec = bitcast i64 %b to <2 x i32>
   %cmp = icmp ne <2 x i32> %avec, %bvec
   %ext = sext <2 x i1> %cmp to <2 x i64>
-  store <2 x i64> %ext, <2 x i64> *%dest
+  store <2 x i64> %ext, ptr %dest
   ret void
 }

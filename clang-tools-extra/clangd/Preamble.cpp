@@ -7,11 +7,17 @@
 //===----------------------------------------------------------------------===//
 
 #include "Preamble.h"
+#include "CollectMacros.h"
 #include "Compiler.h"
 #include "Config.h"
+#include "Diagnostics.h"
 #include "Headers.h"
+#include "Protocol.h"
 #include "SourceCode.h"
+#include "clang-include-cleaner/Record.h"
+#include "index/CanonicalIncludes.h"
 #include "support/Logger.h"
+#include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/AST/DeclTemplate.h"
@@ -23,6 +29,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/PrecompiledPreamble.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/PPCallbacks.h"
@@ -32,10 +39,13 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -43,23 +53,25 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
-#include <iterator>
+#include <cstddef>
+#include <functional>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
+#include <tuple>
 #include <utility>
 #include <vector>
 
 namespace clang {
 namespace clangd {
 namespace {
-constexpr llvm::StringLiteral PreamblePatchHeaderName = "__preamble_patch__.h";
 
 bool compileCommandsAreEqual(const tooling::CompileCommand &LHS,
                              const tooling::CompileCommand &RHS) {
   // We don't check for Output, it should not matter to clangd.
   return LHS.Directory == RHS.Directory && LHS.Filename == RHS.Filename &&
-         llvm::makeArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
+         llvm::ArrayRef(LHS.CommandLine).equals(RHS.CommandLine);
 }
 
 class CppFilePreambleCallbacks : public PreambleCallbacks {
@@ -78,6 +90,9 @@ public:
 
   std::vector<PragmaMark> takeMarks() { return std::move(Marks); }
 
+  include_cleaner::PragmaIncludes takePragmaIncludes() {
+    return std::move(Pragmas);
+  }
   CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   bool isMainFileIncludeGuarded() const { return IsMainFileIncludeGuarded; }
@@ -118,17 +133,19 @@ public:
     CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
+    PP = &CI.getPreprocessor();
     Includes.collect(CI);
+    Pragmas.record(CI);
     if (BeforeExecuteCallback)
       BeforeExecuteCallback(CI);
   }
 
   std::unique_ptr<PPCallbacks> createPPCallbacks() override {
-    assert(SourceMgr && LangOpts &&
-           "SourceMgr and LangOpts must be set at this point");
+    assert(SourceMgr && LangOpts && PP &&
+           "SourceMgr, LangOpts and PP must be set at this point");
 
     return std::make_unique<PPChainedCallbacks>(
-        std::make_unique<CollectMainFileMacros>(*SourceMgr, Macros),
+        std::make_unique<CollectMainFileMacros>(*PP, Macros),
         collectPragmaMarksCallback(*SourceMgr, Marks));
   }
 
@@ -188,12 +205,14 @@ private:
   PreambleParsedCallback ParsedCallback;
   IncludeStructure Includes;
   CanonicalIncludes CanonIncludes;
+  include_cleaner::PragmaIncludes Pragmas;
   MainFileMacros Macros;
   std::vector<PragmaMark> Marks;
   bool IsMainFileIncludeGuarded = false;
   std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
+  const Preprocessor *PP = nullptr;
   PreambleBuildStats *Stats;
   bool ParseForwardingFunctions;
   std::function<void(CompilerInstance &)> BeforeExecuteCallback;
@@ -206,6 +225,9 @@ struct TextualPPDirective {
   // Full text that's representing the directive, including the `#`.
   std::string Text;
   unsigned Offset;
+  tok::PPKeywordKind Directive = tok::PPKeywordKind::pp_not_keyword;
+  // Name of the macro being defined in the case of a #define directive.
+  std::string MacroName;
 
   bool operator==(const TextualPPDirective &RHS) const {
     return std::tie(DirectiveLine, Offset, Text) ==
@@ -276,6 +298,8 @@ struct DirectiveCollector : public PPCallbacks {
       return;
     TextualDirectives.emplace_back();
     TextualPPDirective &TD = TextualDirectives.back();
+    TD.Directive = tok::pp_define;
+    TD.MacroName = MacroNameTok.getIdentifierInfo()->getName().str();
 
     const auto *MI = MD->getMacroInfo();
     TD.Text =
@@ -295,7 +319,11 @@ private:
 struct ScannedPreamble {
   std::vector<Inclusion> Includes;
   std::vector<TextualPPDirective> TextualDirectives;
+  // Literal lines of the preamble contents.
+  std::vector<llvm::StringRef> Lines;
   PreambleBounds Bounds = {0, false};
+  std::vector<PragmaMark> Marks;
+  MainFileMacros Macros;
 };
 
 /// Scans the preprocessor directives in the preamble section of the file by
@@ -313,6 +341,8 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   EmptyFS FS;
   // Build and run Preprocessor over the preamble.
   ParseInputs PI;
+  // Memory buffers below expect null-terminated && non-null strings. So make
+  // sure to always use PI.Contents!
   PI.Contents = Contents.str();
   PI.TFS = &FS;
   PI.CompileCommand = Cmd;
@@ -321,18 +351,18 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   if (!CI)
     return error("failed to create compiler invocation");
   CI->getDiagnosticOpts().IgnoreWarnings = true;
-  auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(Contents);
+  auto ContentsBuffer = llvm::MemoryBuffer::getMemBuffer(PI.Contents);
   // This means we're scanning (though not preprocessing) the preamble section
   // twice. However, it's important to precisely follow the preamble bounds used
   // elsewhere.
   auto Bounds = ComputePreambleBounds(*CI->getLangOpts(), *ContentsBuffer, 0);
-  auto PreambleContents =
-      llvm::MemoryBuffer::getMemBufferCopy(Contents.substr(0, Bounds.Size));
+  auto PreambleContents = llvm::MemoryBuffer::getMemBufferCopy(
+      llvm::StringRef(PI.Contents).take_front(Bounds.Size));
   auto Clang = prepareCompilerInstance(
       std::move(CI), nullptr, std::move(PreambleContents),
       // Provide an empty FS to prevent preprocessor from performing IO. This
       // also implies missing resolved paths for includes.
-      FS.view(llvm::None), IgnoreDiags);
+      FS.view(std::nullopt), IgnoreDiags);
   if (Clang->getFrontendOpts().Inputs.empty())
     return error("compiler instance had no inputs");
   // We are only interested in main file includes.
@@ -342,16 +372,20 @@ scanPreamble(llvm::StringRef Contents, const tooling::CompileCommand &Cmd) {
   if (!Action.BeginSourceFile(*Clang, Clang->getFrontendOpts().Inputs[0]))
     return error("failed BeginSourceFile");
   Preprocessor &PP = Clang->getPreprocessor();
+  const auto &SM = PP.getSourceManager();
   IncludeStructure Includes;
   Includes.collect(*Clang);
   ScannedPreamble SP;
   SP.Bounds = Bounds;
   PP.addPPCallbacks(
       std::make_unique<DirectiveCollector>(PP, SP.TextualDirectives));
+  PP.addPPCallbacks(collectPragmaMarksCallback(SM, SP.Marks));
+  PP.addPPCallbacks(std::make_unique<CollectMainFileMacros>(PP, SP.Macros));
   if (llvm::Error Err = Action.Execute())
     return std::move(Err);
   Action.EndSourceFile();
   SP.Includes = std::move(Includes.MainFileIncludes);
+  llvm::append_range(SP.Lines, llvm::split(Contents, "\n"));
   return SP;
 }
 
@@ -367,12 +401,6 @@ const char *spellingForIncDirective(tok::PPKeywordKind IncludeDirective) {
     break;
   }
   llvm_unreachable("not an include directive");
-}
-
-// Checks whether \p FileName is a valid spelling of main file.
-bool isMainFile(llvm::StringRef FileName, const SourceManager &SM) {
-  auto FE = SM.getFileManager().getFile(FileName);
-  return FE && *FE == SM.getFileEntryForID(SM.getMainFileID());
 }
 
 // Accumulating wall time timer. Similar to llvm::Timer, but much cheaper,
@@ -460,6 +488,93 @@ private:
   WallTimer Timer;
 };
 
+// Helpers for patching diagnostics between two versions of file contents.
+class DiagPatcher {
+  llvm::ArrayRef<llvm::StringRef> OldLines;
+  llvm::ArrayRef<llvm::StringRef> CurrentLines;
+  llvm::StringMap<llvm::SmallVector<int>> CurrentContentsToLine;
+
+  // Translates a range from old lines to current lines.
+  // Finds the consecutive set of lines that corresponds to the same contents in
+  // old and current, and applies the same translation to the range.
+  // Returns true if translation succeeded.
+  bool translateRange(Range &R) {
+    int OldStart = R.start.line;
+    int OldEnd = R.end.line;
+    assert(OldStart <= OldEnd);
+
+    size_t RangeLen = OldEnd - OldStart + 1;
+    auto RangeContents = OldLines.slice(OldStart).take_front(RangeLen);
+    // Make sure the whole range is covered in old contents.
+    if (RangeContents.size() < RangeLen)
+      return false;
+
+    std::optional<int> Closest;
+    for (int AlternateLine : CurrentContentsToLine.lookup(RangeContents[0])) {
+      // Check if AlternateLine matches all lines in the range.
+      if (RangeContents !=
+          CurrentLines.slice(AlternateLine).take_front(RangeLen))
+        continue;
+      int Delta = AlternateLine - OldStart;
+      if (!Closest.has_value() || abs(Delta) < abs(*Closest))
+        Closest = Delta;
+    }
+    // Couldn't find any viable matches in the current contents.
+    if (!Closest.has_value())
+      return false;
+    R.start.line += *Closest;
+    R.end.line += *Closest;
+    return true;
+  }
+
+  // Translates a Note by patching its range when inside main file. Returns true
+  // on success.
+  bool translateNote(Note &N) {
+    if (!N.InsideMainFile)
+      return true;
+    if (translateRange(N.Range))
+      return true;
+    return false;
+  }
+
+  // Tries to translate all the edit ranges inside the fix. Returns true on
+  // success. On failure fixes might be in an invalid state.
+  bool translateFix(Fix &F) {
+    return llvm::all_of(
+        F.Edits, [this](TextEdit &E) { return translateRange(E.range); });
+  }
+
+public:
+  DiagPatcher(llvm::ArrayRef<llvm::StringRef> OldLines,
+              llvm::ArrayRef<llvm::StringRef> CurrentLines) {
+    this->OldLines = OldLines;
+    this->CurrentLines = CurrentLines;
+    for (int Line = 0, E = CurrentLines.size(); Line != E; ++Line) {
+      llvm::StringRef Contents = CurrentLines[Line];
+      CurrentContentsToLine[Contents].push_back(Line);
+    }
+  }
+  // Translate diagnostic by moving its main range to new location (if inside
+  // the main file). Preserve all the notes and fixes that can be translated to
+  // new contents.
+  // Drops the whole diagnostic if main range can't be patched.
+  std::optional<Diag> translateDiag(const Diag &D) {
+    Range NewRange = D.Range;
+    // Patch range if it's inside main file.
+    if (D.InsideMainFile && !translateRange(NewRange)) {
+      // Drop the diagnostic if we couldn't patch the range.
+      return std::nullopt;
+    }
+
+    Diag NewD = D;
+    NewD.Range = NewRange;
+    // Translate ranges inside notes and fixes too, dropping the ones that are
+    // no longer relevant.
+    llvm::erase_if(NewD.Notes, [this](Note &N) { return !translateNote(N); });
+    llvm::erase_if(NewD.Fixes, [this](Fix &F) { return !translateFix(F); });
+    return NewD;
+  }
+};
 } // namespace
 
 std::shared_ptr<const PreambleData>
@@ -538,7 +653,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
-      StoreInMemory, CapturedInfo);
+      StoreInMemory, /*StoragePath=*/StringRef(), CapturedInfo);
   PreambleTimer.stopTimer();
 
   // When building the AST for the main file, we do want the function
@@ -552,15 +667,16 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   }
 
   if (BuiltPreamble) {
-    vlog("Built preamble of size {0} for file {1} version {2} in {3} seconds",
-         BuiltPreamble->getSize(), FileName, Inputs.Version,
-         PreambleTimer.getTime());
+    log("Built preamble of size {0} for file {1} version {2} in {3} seconds",
+        BuiltPreamble->getSize(), FileName, Inputs.Version,
+        PreambleTimer.getTime());
     std::vector<Diag> Diags = PreambleDiagnostics.take();
     auto Result = std::make_shared<PreambleData>(std::move(*BuiltPreamble));
     Result->Version = Inputs.Version;
     Result->CompileCommand = Inputs.CompileCommand;
     Result->Diags = std::move(Diags);
     Result->Includes = CapturedInfo.takeIncludes();
+    Result->Pragmas = CapturedInfo.takePragmaIncludes();
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
     Result->CanonIncludes = CapturedInfo.takeCanonicalIncludes();
@@ -571,6 +687,12 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
 
   elog("Could not build a preamble for file {0} version {1}: {2}", FileName,
        Inputs.Version, BuiltPreamble.getError().message());
+  for (const Diag &D : PreambleDiagnostics.take()) {
+    if (D.Severity < DiagnosticsEngine::Error)
+      continue;
+    // Not an ideal way to show errors, but better than nothing!
+    elog("  error: {0}", D.Message);
+  }
   return nullptr;
 }
 
@@ -600,6 +722,30 @@ void escapeBackslashAndQuotes(llvm::StringRef Text, llvm::raw_ostream &OS) {
   }
 }
 
+// Translate diagnostics from baseline into modified for the lines that have the
+// same spelling.
+static std::vector<Diag> patchDiags(llvm::ArrayRef<Diag> BaselineDiags,
+                                    const ScannedPreamble &BaselineScan,
+                                    const ScannedPreamble &ModifiedScan) {
+  std::vector<Diag> PatchedDiags;
+  if (BaselineDiags.empty())
+    return PatchedDiags;
+  DiagPatcher Patcher(BaselineScan.Lines, ModifiedScan.Lines);
+  for (auto &D : BaselineDiags) {
+    if (auto NewD = Patcher.translateDiag(D))
+      PatchedDiags.emplace_back(std::move(*NewD));
+  }
+  return PatchedDiags;
+}
+
+static std::string getPatchName(llvm::StringRef FileName) {
+  // This shouldn't coincide with any real file name.
+  llvm::SmallString<128> PatchName;
+  llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
+                          PreamblePatch::HeaderName);
+  return PatchName.str().str();
+}
+
 PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
                                     const ParseInputs &Modified,
                                     const PreambleData &Baseline,
@@ -615,9 +761,8 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
   //   whole preamble, which is terribly slow.
   // - If scanning for Modified fails, cannot figure out newly added ones so
   //   there's nothing to do but generate an empty patch.
-  auto BaselineScan = scanPreamble(
-      // Contents needs to be null-terminated.
-      Baseline.Preamble.getContents().str(), Modified.CompileCommand);
+  auto BaselineScan =
+      scanPreamble(Baseline.Preamble.getContents(), Modified.CompileCommand);
   if (!BaselineScan) {
     elog("Failed to scan baseline of {0}: {1}", FileName,
          BaselineScan.takeError());
@@ -638,11 +783,8 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     return PreamblePatch::unmodified(Baseline);
 
   PreamblePatch PP;
-  // This shouldn't coincide with any real file name.
-  llvm::SmallString<128> PatchName;
-  llvm::sys::path::append(PatchName, llvm::sys::path::parent_path(FileName),
-                          PreamblePatchHeaderName);
-  PP.PatchFileName = PatchName.str().str();
+  PP.Baseline = &Baseline;
+  PP.PatchFileName = getPatchName(FileName);
   PP.ModifiedBounds = ModifiedScan->Bounds;
 
   llvm::raw_string_ostream Patch(PP.PatchContents);
@@ -657,10 +799,10 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     // We are only interested in newly added includes, record the ones in
     // Baseline for exclusion.
     llvm::DenseMap<std::pair<tok::PPKeywordKind, llvm::StringRef>,
-                   /*Resolved=*/llvm::StringRef>
+                   const Inclusion *>
         ExistingIncludes;
     for (const auto &Inc : Baseline.Includes.MainFileIncludes)
-      ExistingIncludes[{Inc.Directive, Inc.Written}] = Inc.Resolved;
+      ExistingIncludes[{Inc.Directive, Inc.Written}] = &Inc;
     // There might be includes coming from disabled regions, record these for
     // exclusion too. note that we don't have resolved paths for those.
     for (const auto &Inc : BaselineScan->Includes)
@@ -671,8 +813,16 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
       // Include already present in the baseline preamble. Set resolved path and
       // put into preamble includes.
       if (It != ExistingIncludes.end()) {
-        Inc.Resolved = It->second.str();
-        PP.PreambleIncludes.push_back(Inc);
+        if (It->second) {
+          // If this header is included in an active region of the baseline
+          // preamble, preserve it.
+          auto &PatchedInc = PP.PreambleIncludes.emplace_back();
+          // Copy everything from existing include, apart from the location,
+          // when it's coming from baseline preamble.
+          PatchedInc = *It->second;
+          PatchedInc.HashLine = Inc.HashLine;
+          PatchedInc.HashOffset = Inc.HashOffset;
+        }
         continue;
       }
       // Include is new in the modified preamble. Inject it into the patch and
@@ -682,6 +832,11 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
       Patch << llvm::formatv(
           "#{0} {1}\n", spellingForIncDirective(Inc.Directive), Inc.Written);
     }
+  } else {
+    // Make sure we have the full set of includes available even when we're not
+    // patching. As these are used by features we provide afterwards like hover,
+    // go-to-def or include-cleaner when preamble is stale.
+    PP.PreambleIncludes = Baseline.Includes.MainFileIncludes;
   }
 
   if (DirectivesChanged) {
@@ -697,10 +852,18 @@ PreamblePatch PreamblePatch::create(llvm::StringRef FileName,
     // reduce complexity. The former might cause problems because scanning is
     // imprecise and might pick directives from disabled regions.
     for (const auto &TD : ModifiedScan->TextualDirectives) {
+      // Introduce an #undef directive before #defines to suppress any
+      // re-definition warnings.
+      if (TD.Directive == tok::pp_define)
+        Patch << "#undef " << TD.MacroName << '\n';
       Patch << "#line " << TD.DirectiveLine << '\n';
       Patch << TD.Text << '\n';
     }
   }
+
+  PP.PatchedDiags = patchDiags(Baseline.Diags, *BaselineScan, *ModifiedScan);
+  PP.PatchedMarks = std::move(ModifiedScan->Marks);
+  PP.PatchedMacros = std::move(ModifiedScan->Macros);
   dlog("Created preamble patch: {0}", Patch.str());
   Patch.flush();
   return PP;
@@ -740,30 +903,35 @@ std::vector<Inclusion> PreamblePatch::preambleIncludes() const {
 
 PreamblePatch PreamblePatch::unmodified(const PreambleData &Preamble) {
   PreamblePatch PP;
+  PP.Baseline = &Preamble;
   PP.PreambleIncludes = Preamble.Includes.MainFileIncludes;
   PP.ModifiedBounds = Preamble.Preamble.getBounds();
+  PP.PatchedDiags = Preamble.Diags;
   return PP;
 }
 
-SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
-                                              const SourceManager &SM) {
-  auto DefFile = SM.getFileID(Loc);
-  if (auto FE = SM.getFileEntryRefForID(DefFile)) {
-    auto IncludeLoc = SM.getIncludeLoc(DefFile);
-    // Preamble patch is included inside the builtin file.
-    if (IncludeLoc.isValid() && SM.isWrittenInBuiltinFile(IncludeLoc) &&
-        FE->getName().endswith(PreamblePatchHeaderName)) {
-      auto Presumed = SM.getPresumedLoc(Loc);
-      // Check that line directive is pointing at main file.
-      if (Presumed.isValid() && Presumed.getFileID().isInvalid() &&
-          isMainFile(Presumed.getFilename(), SM)) {
-        Loc = SM.translateLineCol(SM.getMainFileID(), Presumed.getLine(),
-                                  Presumed.getColumn());
-      }
-    }
-  }
-  return Loc;
+bool PreamblePatch::preserveDiagnostics() const {
+  return PatchContents.empty() ||
+         Config::current().Diagnostics.AllowStalePreamble;
+}
+llvm::ArrayRef<PragmaMark> PreamblePatch::marks() const {
+  if (PatchContents.empty())
+    return Baseline->Marks;
+  return PatchedMarks;
 }
 
+const MainFileMacros &PreamblePatch::mainFileMacros() const {
+  if (PatchContents.empty())
+    return Baseline->Macros;
+  return PatchedMacros;
+}
+
+const FileEntry *PreamblePatch::getPatchEntry(llvm::StringRef MainFilePath,
+                                              const SourceManager &SM) {
+  auto PatchFilePath = getPatchName(MainFilePath);
+  if (auto File = SM.getFileManager().getFile(PatchFilePath))
+    return *File;
+  return nullptr;
+}
 } // namespace clangd
 } // namespace clang

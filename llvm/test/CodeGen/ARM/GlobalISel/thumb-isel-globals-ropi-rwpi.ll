@@ -25,7 +25,7 @@ define i32 @test_internal_global() {
 ; RWPI-NOMOVT: [[LABEL]]:
 ; RWPI-NOMOVT-NEXT: .long internal_global(sbrel)
 entry:
-  %v = load i32, i32* @internal_global
+  %v = load i32, ptr @internal_global
   ret i32 %v
 }
 
@@ -49,7 +49,7 @@ define i32 @test_external_global() {
 ; RWPI-NOMOVT: [[LABEL]]:
 ; RWPI-NOMOVT-NEXT: .long external_global(sbrel)
 entry:
-  %v = load i32, i32* @external_global
+  %v = load i32, ptr @external_global
   ret i32 %v
 }
 
@@ -75,7 +75,7 @@ define i32 @test_internal_constant() {
 ; RO-DEFAULT-NOMOVT: [[LABEL]]:
 ; RO-DEFAULT-NOMOVT-NEXT: .long internal_constant
 entry:
-  %v = load i32, i32* @internal_constant
+  %v = load i32, ptr @internal_constant
   ret i32 %v
 }
 
@@ -101,7 +101,7 @@ define i32 @test_external_constant() {
 ; RO-DEFAULT-NOMOVT: [[LABEL]]:
 ; RO-DEFAULT-NOMOVT: .long external_constant
 entry:
-  %v = load i32, i32* @external_constant
+  %v = load i32, ptr @external_constant
   ret i32 %v
 }
 

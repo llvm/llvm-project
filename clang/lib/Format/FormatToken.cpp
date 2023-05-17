@@ -56,7 +56,8 @@ bool FormatToken::isSimpleTypeSpecifier() const {
   case tok::kw___ibm128:
   case tok::kw_wchar_t:
   case tok::kw_bool:
-  case tok::kw___underlying_type:
+#define TRANSFORM_TYPE_TRAIT_DEF(_, Trait) case tok::kw___##Trait:
+#include "clang/Basic/TransformTypeTraits.def"
   case tok::annot_typename:
   case tok::kw_char8_t:
   case tok::kw_char16_t:
@@ -95,7 +96,7 @@ void TokenRole::precomputeFormattingInfos(const FormatToken *Token) {}
 unsigned CommaSeparatedList::formatAfterToken(LineState &State,
                                               ContinuationIndenter *Indenter,
                                               bool DryRun) {
-  if (State.NextToken == nullptr || !State.NextToken->Previous)
+  if (!State.NextToken || !State.NextToken->Previous)
     return 0;
 
   if (Formats.size() == 1)
@@ -264,7 +265,7 @@ void CommaSeparatedList::precomputeFormattingInfos(const FormatToken *Token) {
   // We can never place more than ColumnLimit / 3 items in a row (because of the
   // spaces and the comma).
   unsigned MaxItems = Style.ColumnLimit / 3;
-  std::vector<unsigned> MinSizeInColumn;
+  SmallVector<unsigned> MinSizeInColumn;
   MinSizeInColumn.reserve(MaxItems);
   for (unsigned Columns = 1; Columns <= MaxItems; ++Columns) {
     ColumnFormat Format;

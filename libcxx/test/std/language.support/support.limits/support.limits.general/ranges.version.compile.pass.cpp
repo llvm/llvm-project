@@ -11,14 +11,13 @@
 //
 // clang-format off
 
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
-
 // <ranges>
 
 // Test the feature test macros defined by <ranges>
 
 /*  Constant                      Value
-    __cpp_lib_ranges              201811L [C++20]
+    __cpp_lib_ranges              202106L [C++20]
+    __cpp_lib_ranges_as_rvalue    202207L [C++2b]
     __cpp_lib_ranges_chunk        202202L [C++2b]
     __cpp_lib_ranges_chunk_by     202202L [C++2b]
     __cpp_lib_ranges_join_with    202202L [C++2b]
@@ -33,6 +32,10 @@
 
 # ifdef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should not be defined before c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_chunk
@@ -61,6 +64,10 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_ranges_chunk
 #   error "__cpp_lib_ranges_chunk should not be defined before c++2b"
 # endif
@@ -87,6 +94,10 @@
 #   error "__cpp_lib_ranges should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_ranges_chunk
 #   error "__cpp_lib_ranges_chunk should not be defined before c++2b"
 # endif
@@ -109,17 +120,15 @@
 
 #elif TEST_STD_VER == 20
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should be defined in c++20"
-#   endif
-#   if __cpp_lib_ranges != 201811L
-#     error "__cpp_lib_ranges should have the value 201811L in c++20"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges
+#   error "__cpp_lib_ranges should be defined in c++20"
+# endif
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++20"
+# endif
+
+# ifdef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should not be defined before c++2b"
 # endif
 
 # ifdef __cpp_lib_ranges_chunk
@@ -144,17 +153,18 @@
 
 #elif TEST_STD_VER > 20
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should be defined in c++2b"
-#   endif
-#   if __cpp_lib_ranges != 201811L
-#     error "__cpp_lib_ranges should have the value 201811L in c++2b"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges
-#     error "__cpp_lib_ranges should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges
+#   error "__cpp_lib_ranges should be defined in c++2b"
+# endif
+# if __cpp_lib_ranges != 202106L
+#   error "__cpp_lib_ranges should have the value 202106L in c++2b"
+# endif
+
+# ifndef __cpp_lib_ranges_as_rvalue
+#   error "__cpp_lib_ranges_as_rvalue should be defined in c++2b"
+# endif
+# if __cpp_lib_ranges_as_rvalue != 202207L
+#   error "__cpp_lib_ranges_as_rvalue should have the value 202207L in c++2b"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

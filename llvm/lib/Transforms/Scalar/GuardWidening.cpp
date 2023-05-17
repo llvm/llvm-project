@@ -42,6 +42,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/GuardUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopPass.h"
@@ -68,6 +69,7 @@ using namespace llvm;
 
 STATISTIC(GuardsEliminated, "Number of eliminated guards");
 STATISTIC(CondBranchEliminated, "Number of eliminated conditional branches");
+STATISTIC(FreezeAdded, "Number of freeze instruction introduced");
 
 static cl::opt<bool>
     WidenBranchGuards("guard-widening-widen-branch-guards", cl::Hidden,
@@ -93,7 +95,7 @@ static Value *getCondition(Instruction *I) {
 }
 
 // Set the condition for \p I to \p NewCond. \p I can either be a guard or a
-// conditional branch.  
+// conditional branch.
 static void setCondition(Instruction *I, Value *NewCond) {
   if (IntrinsicInst *GI = dyn_cast<IntrinsicInst>(I)) {
     assert(GI->getIntrinsicID() == Intrinsic::experimental_guard &&
@@ -112,10 +114,28 @@ static void eliminateGuard(Instruction *GuardInst, MemorySSAUpdater *MSSAU) {
   ++GuardsEliminated;
 }
 
+/// Find a point at which the widened condition of \p Guard should be inserted.
+/// When it is represented as intrinsic call, we can do it right before the call
+/// instruction. However, when we are dealing with widenable branch, we must
+/// account for the following situation: widening should not turn a
+/// loop-invariant condition into a loop-variant. It means that if
+/// widenable.condition() call is invariant (w.r.t. any loop), the new wide
+/// condition should stay invariant. Otherwise there can be a miscompile, like
+/// the one described at https://github.com/llvm/llvm-project/issues/60234. The
+/// safest way to do it is to expand the new condition at WC's block.
+static Instruction *findInsertionPointForWideCondition(Instruction *Guard) {
+  Value *Condition, *WC;
+  BasicBlock *IfTrue, *IfFalse;
+  if (parseWidenableBranch(Guard, Condition, WC, IfTrue, IfFalse))
+    return cast<Instruction>(WC);
+  return Guard;
+}
+
 class GuardWideningImpl {
   DominatorTree &DT;
   PostDominatorTree *PDT;
   LoopInfo &LI;
+  AssumptionCache &AC;
   MemorySSAUpdater *MSSAU;
 
   /// Together, these describe the region of interest.  This might be all of
@@ -168,16 +188,16 @@ class GuardWideningImpl {
                                      bool InvertCond);
 
   /// Helper to check if \p V can be hoisted to \p InsertPos.
-  bool isAvailableAt(const Value *V, const Instruction *InsertPos) const {
+  bool canBeHoistedTo(const Value *V, const Instruction *InsertPos) const {
     SmallPtrSet<const Instruction *, 8> Visited;
-    return isAvailableAt(V, InsertPos, Visited);
+    return canBeHoistedTo(V, InsertPos, Visited);
   }
 
-  bool isAvailableAt(const Value *V, const Instruction *InsertPos,
-                     SmallPtrSetImpl<const Instruction *> &Visited) const;
+  bool canBeHoistedTo(const Value *V, const Instruction *InsertPos,
+                      SmallPtrSetImpl<const Instruction *> &Visited) const;
 
   /// Helper to hoist \p V to \p InsertPos.  Guaranteed to succeed if \c
-  /// isAvailableAt returned true.
+  /// canBeHoistedTo returned true.
   void makeAvailableAt(Value *V, Instruction *InsertPos) const;
 
   /// Common helper used by \c widenGuard and \c isWideningCondProfitable.  Try
@@ -189,6 +209,10 @@ class GuardWideningImpl {
   /// InsertPt and return it in \p Result (else no change to the IR is made).
   bool widenCondCommon(Value *Cond0, Value *Cond1, Instruction *InsertPt,
                        Value *&Result, bool InvertCondition);
+
+  /// Adds freeze to Orig and push it as far as possible very aggressively.
+  /// Also replaces all uses of frozen instruction with frozen version.
+  Value *freezeAndPush(Value *Orig, Instruction *InsertPt);
 
   /// Represents a range check of the form \c Base + \c Offset u< \c Length,
   /// with the constraint that \c Length is not negative.  \c CheckInst is the
@@ -261,8 +285,8 @@ class GuardWideningImpl {
   void widenGuard(Instruction *ToWiden, Value *NewCondition,
                   bool InvertCondition) {
     Value *Result;
-    
-    widenCondCommon(getCondition(ToWiden), NewCondition, ToWiden, Result,
+    Instruction *InsertPt = findInsertionPointForWideCondition(ToWiden);
+    widenCondCommon(getCondition(ToWiden), NewCondition, InsertPt, Result,
                     InvertCondition);
     if (isGuardAsWidenableBranch(ToWiden)) {
       setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
@@ -273,10 +297,10 @@ class GuardWideningImpl {
 
 public:
   explicit GuardWideningImpl(DominatorTree &DT, PostDominatorTree *PDT,
-                             LoopInfo &LI, MemorySSAUpdater *MSSAU,
-                             DomTreeNode *Root,
-                             std::function<bool(BasicBlock*)> BlockFilter)
-      : DT(DT), PDT(PDT), LI(LI), MSSAU(MSSAU), Root(Root),
+                             LoopInfo &LI, AssumptionCache &AC,
+                             MemorySSAUpdater *MSSAU, DomTreeNode *Root,
+                             std::function<bool(BasicBlock *)> BlockFilter)
+      : DT(DT), PDT(PDT), LI(LI), AC(AC), MSSAU(MSSAU), Root(Root),
         BlockFilter(BlockFilter) {}
 
   /// The entry point for this pass.
@@ -420,7 +444,10 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
     HoistingOutOfLoop = true;
   }
 
-  if (!isAvailableAt(getCondition(DominatedInstr), DominatingGuard))
+  auto *WideningPoint = findInsertionPointForWideCondition(DominatingGuard);
+  if (!canBeHoistedTo(getCondition(DominatedInstr), WideningPoint))
+    return WS_IllegalOrNegative;
+  if (!canBeHoistedTo(getCondition(DominatingGuard), WideningPoint))
     return WS_IllegalOrNegative;
 
   // If the guard was conditional executed, it may never be reached
@@ -438,37 +465,77 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
   if (HoistingOutOfLoop)
     return WS_Positive;
 
-  // Returns true if we might be hoisting above explicit control flow.  Note
-  // that this completely ignores implicit control flow (guards, calls which
-  // throw, etc...).  That choice appears arbitrary.
-  auto MaybeHoistingOutOfIf = [&]() {
-    auto *DominatingBlock = DominatingGuard->getParent();
-    auto *DominatedBlock = DominatedInstr->getParent();
-    if (isGuardAsWidenableBranch(DominatingGuard))
-      DominatingBlock = cast<BranchInst>(DominatingGuard)->getSuccessor(0);
+  // For a given basic block \p BB, return its successor which is guaranteed or
+  // highly likely will be taken as its successor.
+  auto GetLikelySuccessor = [](const BasicBlock * BB)->const BasicBlock * {
+    if (auto *UniqueSucc = BB->getUniqueSuccessor())
+      return UniqueSucc;
+    auto *Term = BB->getTerminator();
+    Value *Cond = nullptr;
+    const BasicBlock *IfTrue = nullptr, *IfFalse = nullptr;
+    using namespace PatternMatch;
+    if (!match(Term, m_Br(m_Value(Cond), m_BasicBlock(IfTrue),
+                          m_BasicBlock(IfFalse))))
+      return nullptr;
+    // For constant conditions, only one dynamical successor is possible
+    if (auto *ConstCond = dyn_cast<ConstantInt>(Cond))
+      return ConstCond->isAllOnesValue() ? IfTrue : IfFalse;
+    // If one of successors ends with deopt, another one is likely.
+    if (IfFalse->getPostdominatingDeoptimizeCall())
+      return IfTrue;
+    if (IfTrue->getPostdominatingDeoptimizeCall())
+      return IfFalse;
+    // TODO: Use branch frequency metatada to allow hoisting through non-deopt
+    // branches?
+    return nullptr;
+  };
 
-    // Same Block?
+  // Returns true if we might be hoisting above explicit control flow into a
+  // considerably hotter block.  Note that this completely ignores implicit
+  // control flow (guards, calls which throw, etc...).  That choice appears
+  // arbitrary (we assume that implicit control flow exits are all rare).
+  auto MaybeHoistingToHotterBlock = [&]() {
+    const auto *DominatingBlock = DominatingGuard->getParent();
+    const auto *DominatedBlock = DominatedInstr->getParent();
+
+    // Descend as low as we can, always taking the likely successor.
+    assert(DT.isReachableFromEntry(DominatingBlock) && "Unreached code");
+    assert(DT.isReachableFromEntry(DominatedBlock) && "Unreached code");
+    assert(DT.dominates(DominatingBlock, DominatedBlock) && "No dominance");
+    while (DominatedBlock != DominatingBlock) {
+      auto *LikelySucc = GetLikelySuccessor(DominatingBlock);
+      // No likely successor?
+      if (!LikelySucc)
+        break;
+      // Only go down the dominator tree.
+      if (!DT.properlyDominates(DominatingBlock, LikelySucc))
+        break;
+      DominatingBlock = LikelySucc;
+    }
+
+    // Found?
     if (DominatedBlock == DominatingBlock)
       return false;
-    // Obvious successor (common loop header/preheader case)
-    if (DominatedBlock == DominatingBlock->getUniqueSuccessor())
-      return false;
+    // We followed the likely successor chain and went past the dominated
+    // block. It means that the dominated guard is in dead/very cold code.
+    if (!DT.dominates(DominatingBlock, DominatedBlock))
+      return true;
     // TODO: diamond, triangle cases
     if (!PDT) return true;
     return !PDT->dominates(DominatedBlock, DominatingBlock);
   };
 
-  return MaybeHoistingOutOfIf() ? WS_IllegalOrNegative : WS_Neutral;
+  return MaybeHoistingToHotterBlock() ? WS_IllegalOrNegative : WS_Neutral;
 }
 
-bool GuardWideningImpl::isAvailableAt(
+bool GuardWideningImpl::canBeHoistedTo(
     const Value *V, const Instruction *Loc,
     SmallPtrSetImpl<const Instruction *> &Visited) const {
   auto *Inst = dyn_cast<Instruction>(V);
   if (!Inst || DT.dominates(Inst, Loc) || Visited.count(Inst))
     return true;
 
-  if (!isSafeToSpeculativelyExecute(Inst, Loc, &DT) ||
+  if (!isSafeToSpeculativelyExecute(Inst, Loc, &AC, &DT) ||
       Inst->mayReadFromMemory())
     return false;
 
@@ -480,7 +547,7 @@ bool GuardWideningImpl::isAvailableAt(
   assert(DT.isReachableFromEntry(Inst->getParent()) &&
          "We did a DFS from the block entry!");
   return all_of(Inst->operands(),
-                [&](Value *Op) { return isAvailableAt(Op, Loc, Visited); });
+                [&](Value *Op) { return canBeHoistedTo(Op, Loc, Visited); });
 }
 
 void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
@@ -488,15 +555,116 @@ void GuardWideningImpl::makeAvailableAt(Value *V, Instruction *Loc) const {
   if (!Inst || DT.dominates(Inst, Loc))
     return;
 
-  assert(isSafeToSpeculativelyExecute(Inst, Loc, &DT) &&
-         !Inst->mayReadFromMemory() && "Should've checked with isAvailableAt!");
+  assert(isSafeToSpeculativelyExecute(Inst, Loc, &AC, &DT) &&
+         !Inst->mayReadFromMemory() &&
+         "Should've checked with canBeHoistedTo!");
 
   for (Value *Op : Inst->operands())
     makeAvailableAt(Op, Loc);
 
   Inst->moveBefore(Loc);
-  // If we moved instruction before guard we must clean poison generating flags.
-  Inst->dropPoisonGeneratingFlags();
+}
+
+// Return Instruction before which we can insert freeze for the value V as close
+// to def as possible. If there is no place to add freeze, return nullptr.
+static Instruction *getFreezeInsertPt(Value *V, const DominatorTree &DT) {
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return &*DT.getRoot()->getFirstNonPHIOrDbgOrAlloca();
+
+  auto *Res = I->getInsertionPointAfterDef();
+  // If there is no place to add freeze - return nullptr.
+  if (!Res || !DT.dominates(I, Res))
+    return nullptr;
+
+  // If there is a User dominated by original I, then it should be dominated
+  // by Freeze instruction as well.
+  if (any_of(I->users(), [&](User *U) {
+        Instruction *User = cast<Instruction>(U);
+        return Res != User && DT.dominates(I, User) && !DT.dominates(Res, User);
+      }))
+    return nullptr;
+  return Res;
+}
+
+Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
+  if (isGuaranteedNotToBePoison(Orig, nullptr, InsertPt, &DT))
+    return Orig;
+  Instruction *InsertPtAtDef = getFreezeInsertPt(Orig, DT);
+  if (!InsertPtAtDef)
+    return new FreezeInst(Orig, "gw.freeze", InsertPt);
+  if (isa<Constant>(Orig) || isa<GlobalValue>(Orig))
+    return new FreezeInst(Orig, "gw.freeze", InsertPtAtDef);
+
+  SmallSet<Value *, 16> Visited;
+  SmallVector<Value *, 16> Worklist;
+  SmallSet<Instruction *, 16> DropPoisonFlags;
+  SmallVector<Value *, 16> NeedFreeze;
+  DenseMap<Value *, FreezeInst *> CacheOfFreezes;
+
+  // A bit overloaded data structures. Visited contains constant/GV
+  // if we already met it. In this case CacheOfFreezes has a freeze if it is
+  // required.
+  auto handleConstantOrGlobal = [&](Use &U) {
+    Value *Def = U.get();
+    if (!isa<Constant>(Def) && !isa<GlobalValue>(Def))
+      return false;
+
+    if (Visited.insert(Def).second) {
+      if (isGuaranteedNotToBePoison(Def, nullptr, InsertPt, &DT))
+        return true;
+      CacheOfFreezes[Def] = new FreezeInst(Def, Def->getName() + ".gw.fr",
+                                           getFreezeInsertPt(Def, DT));
+    }
+
+    if (CacheOfFreezes.count(Def))
+      U.set(CacheOfFreezes[Def]);
+    return true;
+  };
+
+  Worklist.push_back(Orig);
+  while (!Worklist.empty()) {
+    Value *V = Worklist.pop_back_val();
+    if (!Visited.insert(V).second)
+      continue;
+
+    if (isGuaranteedNotToBePoison(V, nullptr, InsertPt, &DT))
+      continue;
+
+    Instruction *I = dyn_cast<Instruction>(V);
+    if (!I || canCreateUndefOrPoison(cast<Operator>(I),
+                                     /*ConsiderFlagsAndMetadata*/ false)) {
+      NeedFreeze.push_back(V);
+      continue;
+    }
+    // Check all operands. If for any of them we cannot insert Freeze,
+    // stop here. Otherwise, iterate.
+    if (any_of(I->operands(), [&](Value *Op) {
+          return isa<Instruction>(Op) && !getFreezeInsertPt(Op, DT);
+        })) {
+      NeedFreeze.push_back(I);
+      continue;
+    }
+    DropPoisonFlags.insert(I);
+    for (Use &U : I->operands())
+      if (!handleConstantOrGlobal(U))
+        Worklist.push_back(U.get());
+  }
+  for (Instruction *I : DropPoisonFlags)
+    I->dropPoisonGeneratingFlagsAndMetadata();
+
+  Value *Result = Orig;
+  for (Value *V : NeedFreeze) {
+    auto *FreezeInsertPt = getFreezeInsertPt(V, DT);
+    FreezeInst *FI = new FreezeInst(V, V->getName() + ".gw.fr", FreezeInsertPt);
+    ++FreezeAdded;
+    if (V == Orig)
+      Result = FI;
+    V->replaceUsesWithIf(
+        FI, [&](const Use & U)->bool { return U.getUser() != FI; });
+  }
+
+  return Result;
 }
 
 bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
@@ -522,13 +690,16 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
       // Given what we're doing here and the semantics of guards, it would
       // be correct to use a subset intersection, but that may be too
       // aggressive in cases we care about.
-      if (Optional<ConstantRange> Intersect = CR0.exactIntersectWith(CR1)) {
+      if (std::optional<ConstantRange> Intersect =
+              CR0.exactIntersectWith(CR1)) {
         APInt NewRHSAP;
         CmpInst::Predicate Pred;
         if (Intersect->getEquivalentICmp(Pred, NewRHSAP)) {
           if (InsertPt) {
             ConstantInt *NewRHS =
                 ConstantInt::get(Cond0->getContext(), NewRHSAP);
+            assert(canBeHoistedTo(LHS, InsertPt) && "must be");
+            makeAvailableAt(LHS, InsertPt);
             Result = new ICmpInst(InsertPt, Pred, LHS, NewRHS, "wide.chk");
           }
           return true;
@@ -555,6 +726,7 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
         }
         assert(Result && "Failed to find result value");
         Result->setName("wide.chk");
+        Result = freezeAndPush(Result, InsertPt);
       }
       return true;
     }
@@ -567,6 +739,7 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
     makeAvailableAt(Cond1, InsertPt);
     if (InvertCondition)
       Cond1 = BinaryOperator::CreateNot(Cond1, "inverted", InsertPt);
+    Cond1 = freezeAndPush(Cond1, InsertPt);
     Result = BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
   }
 
@@ -764,11 +937,12 @@ PreservedAnalyses GuardWideningPass::run(Function &F,
   auto &DT = AM.getResult<DominatorTreeAnalysis>(F);
   auto &LI = AM.getResult<LoopAnalysis>(F);
   auto &PDT = AM.getResult<PostDominatorTreeAnalysis>(F);
+  auto &AC = AM.getResult<AssumptionAnalysis>(F);
   auto *MSSAA = AM.getCachedResult<MemorySSAAnalysis>(F);
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (MSSAA)
     MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAA->getMSSA());
-  if (!GuardWideningImpl(DT, &PDT, LI, MSSAU ? MSSAU.get() : nullptr,
+  if (!GuardWideningImpl(DT, &PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
                          DT.getRootNode(), [](BasicBlock *) { return true; })
            .run())
     return PreservedAnalyses::all();
@@ -791,8 +965,10 @@ PreservedAnalyses GuardWideningPass::run(Loop &L, LoopAnalysisManager &AM,
   std::unique_ptr<MemorySSAUpdater> MSSAU;
   if (AR.MSSA)
     MSSAU = std::make_unique<MemorySSAUpdater>(AR.MSSA);
-  if (!GuardWideningImpl(AR.DT, nullptr, AR.LI, MSSAU ? MSSAU.get() : nullptr,
-                         AR.DT.getNode(RootBB), BlockFilter).run())
+  if (!GuardWideningImpl(AR.DT, nullptr, AR.LI, AR.AC,
+                         MSSAU ? MSSAU.get() : nullptr, AR.DT.getNode(RootBB),
+                         BlockFilter)
+           .run())
     return PreservedAnalyses::all();
 
   auto PA = getLoopPassPreservedAnalyses();
@@ -814,12 +990,13 @@ struct GuardWideningLegacyPass : public FunctionPass {
       return false;
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
     auto &PDT = getAnalysis<PostDominatorTreeWrapperPass>().getPostDomTree();
     auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
     std::unique_ptr<MemorySSAUpdater> MSSAU;
     if (MSSAWP)
       MSSAU = std::make_unique<MemorySSAUpdater>(&MSSAWP->getMSSA());
-    return GuardWideningImpl(DT, &PDT, LI, MSSAU ? MSSAU.get() : nullptr,
+    return GuardWideningImpl(DT, &PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
                              DT.getRootNode(),
                              [](BasicBlock *) { return true; })
         .run();
@@ -848,6 +1025,8 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
       return false;
     auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
     auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
+    auto &AC = getAnalysis<AssumptionCacheTracker>().getAssumptionCache(
+        *L->getHeader()->getParent());
     auto *PDTWP = getAnalysisIfAvailable<PostDominatorTreeWrapperPass>();
     auto *PDT = PDTWP ? &PDTWP->getPostDomTree() : nullptr;
     auto *MSSAWP = getAnalysisIfAvailable<MemorySSAWrapperPass>();
@@ -861,8 +1040,9 @@ struct LoopGuardWideningLegacyPass : public LoopPass {
     auto BlockFilter = [&](BasicBlock *BB) {
       return BB == RootBB || L->contains(BB);
     };
-    return GuardWideningImpl(DT, PDT, LI, MSSAU ? MSSAU.get() : nullptr,
-                             DT.getNode(RootBB), BlockFilter).run();
+    return GuardWideningImpl(DT, PDT, LI, AC, MSSAU ? MSSAU.get() : nullptr,
+                             DT.getNode(RootBB), BlockFilter)
+        .run();
   }
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {

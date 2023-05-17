@@ -117,7 +117,7 @@ Status NativeProcessWindows::Resume(const ResumeActionList &resume_actions) {
       }
       case eStateSuspended:
       case eStateStopped:
-        llvm_unreachable("Unexpected state");
+        break;
 
       default:
         return Status(
@@ -253,13 +253,12 @@ void NativeProcessWindows::SetStopReasonForThread(NativeThreadWindows &thread,
 
   ThreadStopInfo stop_info;
   stop_info.reason = reason;
-
   // No signal support on Windows but required to provide a 'valid' signum.
+  stop_info.signo = SIGTRAP;
+
   if (reason == StopReason::eStopReasonException) {
     stop_info.details.exception.type = 0;
     stop_info.details.exception.data_count = 0;
-  } else {
-    stop_info.details.signal.signo = SIGTRAP;
   }
 
   thread.SetStopReason(stop_info, description);
@@ -296,11 +295,11 @@ NativeProcessWindows::GetSoftwareBreakpointTrapOpcode(size_t size_hint) {
 
   switch (GetArchitecture().GetMachine()) {
   case llvm::Triple::aarch64:
-    return llvm::makeArrayRef(g_aarch64_opcode);
+    return llvm::ArrayRef(g_aarch64_opcode);
 
   case llvm::Triple::arm:
   case llvm::Triple::thumb:
-    return llvm::makeArrayRef(g_thumb_opcode);
+    return llvm::ArrayRef(g_thumb_opcode);
 
   default:
     return NativeProcessProtocol::GetSoftwareBreakpointTrapOpcode(size_hint);
@@ -379,7 +378,7 @@ Status NativeProcessWindows::GetLoadedModuleFileSpec(const char *module_path,
     }
   }
   return Status("Module (%s) not found in process %" PRIu64 "!",
-                module_file_spec.GetCString(), GetID());
+                module_file_spec.GetPath().c_str(), GetID());
 }
 
 Status
@@ -399,7 +398,7 @@ NativeProcessWindows::GetFileLoadAddress(const llvm::StringRef &file_name,
     }
   }
   return Status("Can't get loaded address of file (%s) in process %" PRIu64 "!",
-                file_spec.GetCString(), GetID());
+                file_spec.GetPath().c_str(), GetID());
 }
 
 void NativeProcessWindows::OnExitProcess(uint32_t exit_code) {
@@ -521,7 +520,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
         SetStopReasonForThread(*thread, StopReason::eStopReasonBreakpoint);
 
       // Do not notify the native delegate (e.g. llgs) since at this moment
-      // the program hasn't returned from Factory::Launch() and the delegate
+      // the program hasn't returned from Manager::Launch() and the delegate
       // might not have an valid native process to operate on.
       SetState(eStateStopped, false);
 
@@ -529,7 +528,7 @@ NativeProcessWindows::OnDebugException(bool first_chance,
       return ExceptionResult::BreakInDebugger;
     }
 
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     LLDB_LOG(log,
              "Debugger thread reported exception {0:x} at address {1:x} "
@@ -604,10 +603,9 @@ void NativeProcessWindows::OnUnloadDll(lldb::addr_t module_addr) {
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessWindows::Factory::Launch(
+NativeProcessWindows::Manager::Launch(
     ProcessLaunchInfo &launch_info,
-    NativeProcessProtocol::NativeDelegate &native_delegate,
-    MainLoop &mainloop) const {
+    NativeProcessProtocol::NativeDelegate &native_delegate) {
   Error E = Error::success();
   auto process_up = std::unique_ptr<NativeProcessWindows>(
       new NativeProcessWindows(launch_info, native_delegate, E));
@@ -617,9 +615,8 @@ NativeProcessWindows::Factory::Launch(
 }
 
 llvm::Expected<std::unique_ptr<NativeProcessProtocol>>
-NativeProcessWindows::Factory::Attach(
-    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate,
-    MainLoop &mainloop) const {
+NativeProcessWindows::Manager::Attach(
+    lldb::pid_t pid, NativeProcessProtocol::NativeDelegate &native_delegate) {
   Error E = Error::success();
   // Set pty primary fd invalid since it is not available.
   auto process_up = std::unique_ptr<NativeProcessWindows>(

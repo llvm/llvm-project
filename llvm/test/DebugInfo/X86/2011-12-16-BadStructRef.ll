@@ -4,85 +4,82 @@
 ; CHECK: b_ref
 ; CHECK-NOT: AT_bit_size
 
-%struct.bar = type { %struct.baz, %struct.baz* }
+%struct.bar = type { %struct.baz, ptr }
 %struct.baz = type { i32 }
 
-define i32 @main(i32 %argc, i8** %argv) uwtable ssp !dbg !29 {
+define i32 @main(i32 %argc, ptr %argv) uwtable ssp !dbg !29 {
 entry:
   %retval = alloca i32, align 4
   %argc.addr = alloca i32, align 4
-  %argv.addr = alloca i8**, align 8
+  %argv.addr = alloca ptr, align 8
   %myBar = alloca %struct.bar, align 8
-  store i32 0, i32* %retval
-  store i32 %argc, i32* %argc.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %argc.addr, metadata !49, metadata !DIExpression()), !dbg !50
-  store i8** %argv, i8*** %argv.addr, align 8
-  call void @llvm.dbg.declare(metadata i8*** %argv.addr, metadata !51, metadata !DIExpression()), !dbg !52
-  call void @llvm.dbg.declare(metadata %struct.bar* %myBar, metadata !53, metadata !DIExpression()), !dbg !55
-  call void @_ZN3barC1Ei(%struct.bar* %myBar, i32 1), !dbg !56
+  store i32 0, ptr %retval
+  store i32 %argc, ptr %argc.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %argc.addr, metadata !49, metadata !DIExpression()), !dbg !50
+  store ptr %argv, ptr %argv.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %argv.addr, metadata !51, metadata !DIExpression()), !dbg !52
+  call void @llvm.dbg.declare(metadata ptr %myBar, metadata !53, metadata !DIExpression()), !dbg !55
+  call void @_ZN3barC1Ei(ptr %myBar, i32 1), !dbg !56
   ret i32 0, !dbg !57
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata) nounwind readnone
 
-define linkonce_odr void @_ZN3barC1Ei(%struct.bar* %this, i32 %x) unnamed_addr uwtable ssp align 2 !dbg !37 {
+define linkonce_odr void @_ZN3barC1Ei(ptr %this, i32 %x) unnamed_addr uwtable ssp align 2 !dbg !37 {
 entry:
-  %this.addr = alloca %struct.bar*, align 8
+  %this.addr = alloca ptr, align 8
   %x.addr = alloca i32, align 4
-  store %struct.bar* %this, %struct.bar** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.bar** %this.addr, metadata !58, metadata !DIExpression()), !dbg !59
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !60, metadata !DIExpression()), !dbg !61
-  %this1 = load %struct.bar*, %struct.bar** %this.addr
-  %0 = load i32, i32* %x.addr, align 4, !dbg !62
-  call void @_ZN3barC2Ei(%struct.bar* %this1, i32 %0), !dbg !62
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !58, metadata !DIExpression()), !dbg !59
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !60, metadata !DIExpression()), !dbg !61
+  %this1 = load ptr, ptr %this.addr
+  %0 = load i32, ptr %x.addr, align 4, !dbg !62
+  call void @_ZN3barC2Ei(ptr %this1, i32 %0), !dbg !62
   ret void, !dbg !62
 }
 
-define linkonce_odr void @_ZN3barC2Ei(%struct.bar* %this, i32 %x) unnamed_addr uwtable ssp align 2 !dbg !40 {
+define linkonce_odr void @_ZN3barC2Ei(ptr %this, i32 %x) unnamed_addr uwtable ssp align 2 !dbg !40 {
 entry:
-  %this.addr = alloca %struct.bar*, align 8
+  %this.addr = alloca ptr, align 8
   %x.addr = alloca i32, align 4
-  store %struct.bar* %this, %struct.bar** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.bar** %this.addr, metadata !63, metadata !DIExpression()), !dbg !64
-  store i32 %x, i32* %x.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %x.addr, metadata !65, metadata !DIExpression()), !dbg !66
-  %this1 = load %struct.bar*, %struct.bar** %this.addr
-  %b = getelementptr inbounds %struct.bar, %struct.bar* %this1, i32 0, i32 0, !dbg !67
-  %0 = load i32, i32* %x.addr, align 4, !dbg !67
-  call void @_ZN3bazC1Ei(%struct.baz* %b, i32 %0), !dbg !67
-  %1 = getelementptr inbounds %struct.bar, %struct.bar* %this1, i32 0, i32 1, !dbg !67
-  %b2 = getelementptr inbounds %struct.bar, %struct.bar* %this1, i32 0, i32 0, !dbg !67
-  store %struct.baz* %b2, %struct.baz** %1, align 8, !dbg !67
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !63, metadata !DIExpression()), !dbg !64
+  store i32 %x, ptr %x.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %x.addr, metadata !65, metadata !DIExpression()), !dbg !66
+  %this1 = load ptr, ptr %this.addr
+  %0 = load i32, ptr %x.addr, align 4, !dbg !67
+  call void @_ZN3bazC1Ei(ptr %this1, i32 %0), !dbg !67
+  %1 = getelementptr inbounds %struct.bar, ptr %this1, i32 0, i32 1, !dbg !67
+  store ptr %this1, ptr %1, align 8, !dbg !67
   ret void, !dbg !68
 }
 
-define linkonce_odr void @_ZN3bazC1Ei(%struct.baz* %this, i32 %a) unnamed_addr uwtable ssp align 2 !dbg !43 {
+define linkonce_odr void @_ZN3bazC1Ei(ptr %this, i32 %a) unnamed_addr uwtable ssp align 2 !dbg !43 {
 entry:
-  %this.addr = alloca %struct.baz*, align 8
+  %this.addr = alloca ptr, align 8
   %a.addr = alloca i32, align 4
-  store %struct.baz* %this, %struct.baz** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.baz** %this.addr, metadata !70, metadata !DIExpression()), !dbg !71
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !72, metadata !DIExpression()), !dbg !73
-  %this1 = load %struct.baz*, %struct.baz** %this.addr
-  %0 = load i32, i32* %a.addr, align 4, !dbg !74
-  call void @_ZN3bazC2Ei(%struct.baz* %this1, i32 %0), !dbg !74
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !70, metadata !DIExpression()), !dbg !71
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !72, metadata !DIExpression()), !dbg !73
+  %this1 = load ptr, ptr %this.addr
+  %0 = load i32, ptr %a.addr, align 4, !dbg !74
+  call void @_ZN3bazC2Ei(ptr %this1, i32 %0), !dbg !74
   ret void, !dbg !74
 }
 
-define linkonce_odr void @_ZN3bazC2Ei(%struct.baz* %this, i32 %a) unnamed_addr nounwind uwtable ssp align 2 !dbg !46 {
+define linkonce_odr void @_ZN3bazC2Ei(ptr %this, i32 %a) unnamed_addr nounwind uwtable ssp align 2 !dbg !46 {
 entry:
-  %this.addr = alloca %struct.baz*, align 8
+  %this.addr = alloca ptr, align 8
   %a.addr = alloca i32, align 4
-  store %struct.baz* %this, %struct.baz** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %struct.baz** %this.addr, metadata !75, metadata !DIExpression()), !dbg !76
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !77, metadata !DIExpression()), !dbg !78
-  %this1 = load %struct.baz*, %struct.baz** %this.addr
-  %h = getelementptr inbounds %struct.baz, %struct.baz* %this1, i32 0, i32 0, !dbg !79
-  %0 = load i32, i32* %a.addr, align 4, !dbg !79
-  store i32 %0, i32* %h, align 4, !dbg !79
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !75, metadata !DIExpression()), !dbg !76
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !77, metadata !DIExpression()), !dbg !78
+  %this1 = load ptr, ptr %this.addr
+  %0 = load i32, ptr %a.addr, align 4, !dbg !79
+  store i32 %0, ptr %this1, align 4, !dbg !79
   ret void, !dbg !80
 }
 

@@ -3,6 +3,7 @@
 //
 
 #include <assert.h>
+#include <stdint.h>
 
 struct A {
   char a[3];
@@ -11,7 +12,7 @@ struct A {
 
 __attribute__((noinline)) void foo(int index, int len) {
   volatile struct A str[len] __attribute__((aligned(32)));
-  assert(!(reinterpret_cast<long>(str) & 31L));
+  assert(!(reinterpret_cast<uintptr_t>(str) & 31L));
   str[index].a[0] = '1'; // BOOM
 // CHECK: ERROR: AddressSanitizer: dynamic-stack-buffer-overflow on address [[ADDR:0x[0-9a-f]+]]
 // CHECK: WRITE of size 1 at [[ADDR]] thread T0

@@ -78,8 +78,8 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT___LONGJMP_CHK 0
 #endif
 
-#if ASAN_HAS_EXCEPTIONS && !SANITIZER_WINDOWS && !SANITIZER_SOLARIS && \
-    !SANITIZER_NETBSD
+#if ASAN_HAS_EXCEPTIONS && !SANITIZER_SOLARIS && !SANITIZER_NETBSD && \
+    (!SANITIZER_WINDOWS || (defined(__MINGW32__) && defined(__i386__)))
 # define ASAN_INTERCEPT___CXA_THROW 1
 # define ASAN_INTERCEPT___CXA_RETHROW_PRIMARY_EXCEPTION 1
 # if defined(_GLIBCXX_SJLJ_EXCEPTIONS) || (SANITIZER_IOS && defined(__arm__))
@@ -112,9 +112,17 @@ void InitializePlatformInterceptors();
 # define ASAN_INTERCEPT___STRDUP 0
 #endif
 
+#if SANITIZER_GLIBC && ASAN_INTERCEPT_PTHREAD_CREATE
+# define ASAN_INTERCEPT_TIMEDJOIN 1
+# define ASAN_INTERCEPT_TRYJOIN 1
+#else
+# define ASAN_INTERCEPT_TIMEDJOIN 0
+# define ASAN_INTERCEPT_TRYJOIN 0
+#endif
+
 #if SANITIZER_LINUX &&                                                \
     (defined(__arm__) || defined(__aarch64__) || defined(__i386__) || \
-     defined(__x86_64__) || SANITIZER_RISCV64)
+     defined(__x86_64__) || SANITIZER_RISCV64 || SANITIZER_LOONGARCH64)
 # define ASAN_INTERCEPT_VFORK 1
 #else
 # define ASAN_INTERCEPT_VFORK 0

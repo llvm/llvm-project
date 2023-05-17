@@ -9,9 +9,9 @@
 // CHECK: __tls_get_addr: static tls
 // CHECK: after
 
-// XFAIL: aarch64
+// XFAIL: target=aarch64{{.*}}
 // binutils 2.26 has a change that causes this test to fail on powerpc64.
-// UNSUPPORTED: powerpc64
+// UNSUPPORTED: target=powerpc64{{.*}}
 
 /// We call __tls_get_addr early in GetTls to work around an issue for glibc<2.25,
 /// so we don't get a log for f().

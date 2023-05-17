@@ -16,14 +16,14 @@
 
 include "mlir/Pass/PassBase.td"
 
-def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::func::FuncOp"> {
+class AbstractResultOptBase<string optExt, string operation> 
+  : Pass<"abstract-result-on-" # optExt # "-opt", operation> {
   let summary = "Convert fir.array, fir.box and fir.rec function result to "
                 "function argument";
   let description = [{
     This pass is required before code gen to the LLVM IR dialect,
     including the pre-cg rewrite pass.
   }];
-  let constructor = "::fir::createAbstractResultOptPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
   ];
@@ -33,6 +33,14 @@ def AbstractResultOpt : Pass<"abstract-result-opt", "mlir::func::FuncOp"> {
            "Pass fir.array<T> result as fir.box<fir.array<T>> argument instead"
            " of fir.ref<fir.array<T>>.">
   ];
+}
+
+def AbstractResultOnFuncOpt : AbstractResultOptBase<"func", "mlir::func::FuncOp"> {
+  let constructor = "::fir::createAbstractResultOnFuncOptPass()";
+}
+
+def AbstractResultOnGlobalOpt : AbstractResultOptBase<"global", "fir::GlobalOp"> {
+  let constructor = "::fir::createAbstractResultOnGlobalOptPass()";
 }
 
 def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
@@ -56,7 +64,8 @@ def AffineDialectPromotion : Pass<"promote-to-affine", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createPromoteToAffinePass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect",
+    "mlir::affine::AffineDialect"
   ];
 }
 
@@ -70,7 +79,8 @@ def AffineDialectDemotion : Pass<"demote-affine", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createAffineDemotionPass()";
   let dependentDialects = [
-    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::AffineDialect"
+    "fir::FIROpsDialect", "mlir::func::FuncDialect",
+    "mlir::affine::AffineDialect"
   ];
 }
 
@@ -109,6 +119,12 @@ def ArrayValueCopy : Pass<"array-value-copy", "::mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createArrayValueCopyPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
+  let options = [
+    Option<"optimizeConflicts", "optimize-conflicts", "bool",
+           /*default=*/"false",
+           "do more detailed conflict analysis to reduce the number "
+           "of temporaries">
+  ];
 }
 
 def CharacterConversion : Pass<"character-conversion"> {
@@ -132,9 +148,9 @@ def CharacterConversion : Pass<"character-conversion"> {
 def CFGConversion : Pass<"cfg-conversion", "::mlir::func::FuncOp"> {
   let summary = "Convert FIR structured control flow ops to CFG ops.";
   let description = [{
-    Transform the `fir.do_loop`, `fir.if`, and `fir.iterate_while` ops into
-    plain old test and branch operations. Removing the high-level control
-    structures can enable other optimizations.
+    Transform the `fir.do_loop`, `fir.if`, `fir.iterate_while` and
+    `fir.select_type` ops into plain old test and branch operations. Removing
+    the high-level control structures can enable other optimizations.
 
     This pass is required before code gen to the LLVM IR dialect.
   }];
@@ -155,6 +171,11 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
     Demangle FIR internal name and mangle them for external interoperability.
   }];
   let constructor = "::fir::createExternalNameConversionPass()";
+  let options = [
+    Option<"appendUnderscore", "append-underscore",
+           "bool", /*default=*/"true",
+           "Append trailing underscore to external names.">
+  ];
 }
 
 def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> {
@@ -167,6 +188,39 @@ def MemRefDataFlowOpt : Pass<"fir-memref-dataflow-opt", "::mlir::func::FuncOp"> 
   let constructor = "::fir::createMemDataFlowOptPass()";
   let dependentDialects = [
     "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+// This needs to be a "mlir::ModuleOp" pass, because we are creating debug for
+// the module in this pass.
+def AddDebugFoundation : Pass<"add-debug-foundation", "mlir::ModuleOp"> {
+  let summary = "Add the foundation for debug info";
+  let description = [{
+    Add the foundation for emitting debug info that can be understood by llvm.
+  }];
+  let constructor = "::fir::createAddDebugFoundationPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::func::FuncDialect", "mlir::LLVM::LLVMDialect"
+  ];
+}
+
+// This needs to be a "mlir::ModuleOp" pass, because it inserts simplified
+// functions into the module, which is invalid if a finer grain mlir::Operation
+// is used as the pass specification says to not touch things outside hte scope
+// of the operation being processed.
+def SimplifyIntrinsics : Pass<"simplify-intrinsics", "mlir::ModuleOp"> {
+  let summary = "Intrinsics simplification";
+  let description = [{
+    Qualifying intrinsics calls are replaced with calls to a specialized and
+    simplified function. The simplified function is added to the current module.
+    This function can be inlined by a general purpose inlining pass.
+  }];
+  let constructor = "::fir::createSimplifyIntrinsicsPass()";
+
+  let options = [
+    Option<"enableExperimental", "enable-experimental", "bool",
+           /*default=*/"false",
+           "Enable experimental code that may not always work correctly">
   ];
 }
 
@@ -188,12 +242,60 @@ def MemoryAllocationOpt : Pass<"memory-allocation-opt", "mlir::func::FuncOp"> {
   let constructor = "::fir::createMemoryAllocationPass()";
 }
 
+def StackArrays : Pass<"stack-arrays", "mlir::ModuleOp"> {
+  let summary = "Move local array allocations from heap memory into stack memory";
+  let description = [{
+    Convert heap allocations for arrays, even those of unknown size, into stack
+    allocations.
+  }];
+  let dependentDialects = [ "fir::FIROpsDialect" ];
+  let constructor = "::fir::createStackArraysPass()";
+}
+
 def SimplifyRegionLite : Pass<"simplify-region-lite", "mlir::ModuleOp"> {
   let summary = "Region simplification";
   let description = [{
     Run region DCE and erase unreachable blocks in regions.
   }];
   let constructor = "::fir::createSimplifyRegionLitePass()";
+}
+
+def AlgebraicSimplification : Pass<"flang-algebraic-simplification"> {
+  let summary = "";
+  let description = [{
+    Run algebraic simplifications for Math/Complex/etc. dialect operations.
+    This is a flang specific pass, because we may want to "tune"
+    the rewrite patterns specifically for Fortran (e.g. increase
+    the limit for constant exponent value that defines the cases
+    when pow(x, constant) is transformed into a set of multiplications, etc.).
+  }];
+  let dependentDialects = [ "mlir::math::MathDialect" ];
+  let constructor = "::fir::createAlgebraicSimplificationPass()";
+}
+
+def PolymorphicOpConversion : Pass<"fir-polymorphic-op", "::mlir::func::FuncOp"> {
+  let summary =
+    "Simplify operations on polymorphic types";
+  let description = [{
+    This pass breaks up the lowering of operations on polymorphic types by 
+    introducing an intermediate FIR level that simplifies code geneation. 
+  }];
+  let constructor = "::fir::createPolymorphicOpConversionPass()";
+  let dependentDialects = [
+    "fir::FIROpsDialect", "mlir::func::FuncDialect"
+  ];
+}
+
+def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
+  let summary = "Loop Versioning";
+  let description = [{
+    Loop Versioning pass adds a check and two variants of a loop when the input
+    array is an assumed shape array, to optimize for the (often common) case where
+    an array has element sized stride. The element sizes stride allows some
+    loops to be vectorized as well as other loop optimizations.
+  }];
+  let constructor = "::fir::createLoopVersioningPass()";
+  let dependentDialects = [ "fir::FIROpsDialect" ];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

@@ -1,6 +1,6 @@
-; RUN: opt < %s -loop-reduce -mtriple=x86_64-- -S | FileCheck %s -check-prefix=BOTH -check-prefix=INSN
-; RUN: opt < %s -loop-reduce -mtriple=x86_64-- -lsr-insns-cost=false -S | FileCheck %s -check-prefix=BOTH -check-prefix=REGS
-; RUN: llc < %s -O2 -mtriple=x86_64-- -lsr-insns-cost -asm-verbose=0 | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -mtriple=x86_64-- -S | FileCheck %s -check-prefix=BOTH -check-prefix=INSN
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -mtriple=x86_64-- -lsr-insns-cost=false -S | FileCheck %s -check-prefix=BOTH -check-prefix=REGS
+; RUN: llc -opaque-pointers=0 < %s -O2 -mtriple=x86_64-- -lsr-insns-cost -asm-verbose=0 | FileCheck %s
 
 ; OPT checks that LSR prefers less instructions to less registers.
 ; For x86 LSR should prefer complicated address to new lsr induction
@@ -21,9 +21,9 @@
 ; LSR should prefer complicated address to additonal add instructions.
 
 ; CHECK:      LBB0_2:
-; CHECK-NEXT:   movl (%r{{.+}},
-; CHECK-NEXT:   addl (%r{{.+}},
-; CHECK-NEXT:   movl %e{{.+}}, (%r{{.+}},
+; CHECK-NEXT:   movl (%r{{.+}},{{.*}}), [[REG:%[a-z0-9]+]]
+; CHECK-NEXT:   addl (%r{{.+}},{{.*}}), [[REG]]
+; CHECK-NEXT:   movl [[REG]], (%{{.*}})
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 

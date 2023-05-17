@@ -39,8 +39,8 @@ define i32 @test_lshr_and1(i32 %x) {
 entry:
   %tmp2 = lshr i32 %x, 2
   %tmp3 = and i32 %tmp2, 3
-  %tmp4 = getelementptr [4 x i32], [4 x i32]* @array, i32 0, i32 %tmp3
-  %tmp5 = load i32, i32* %tmp4, align 4
+  %tmp4 = getelementptr [4 x i32], ptr @array, i32 0, i32 %tmp3
+  %tmp5 = load i32, ptr %tmp4, align 4
   ret i32 %tmp5
 }
 define i32 @test_lshr_and2(i32 %x) {
@@ -83,7 +83,7 @@ entry:
   ret i32 %e
 }
 
-define arm_aapcscc i32 @test_lshr_load1(i16* %a) {
+define arm_aapcscc i32 @test_lshr_load1(ptr %a) {
 ; CHECK-COMMON-LABEL: test_lshr_load1:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrb r0, [r0, #1]
@@ -99,13 +99,13 @@ define arm_aapcscc i32 @test_lshr_load1(i16* %a) {
 ; CHECK-V6M-NEXT:    ldrb r0, [r0, #1]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
+  %0 = load i16, ptr %a, align 2
   %conv1 = zext i16 %0 to i32
   %1 = lshr i32 %conv1, 8
   ret i32 %1
 }
 
-define arm_aapcscc i32 @test_lshr_load1_sext(i16* %a) {
+define arm_aapcscc i32 @test_lshr_load1_sext(ptr %a) {
 ; CHECK-ARM-LABEL: test_lshr_load1_sext:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldrsh r0, [r0]
@@ -137,13 +137,13 @@ define arm_aapcscc i32 @test_lshr_load1_sext(i16* %a) {
 ; CHECK-V6M-NEXT:    lsrs r0, r0, #8
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
+  %0 = load i16, ptr %a, align 2
   %conv1 = sext i16 %0 to i32
   %1 = lshr i32 %conv1, 8
   ret i32 %1
 }
 
-define arm_aapcscc i32 @test_lshr_load1_fail(i16* %a) {
+define arm_aapcscc i32 @test_lshr_load1_fail(ptr %a) {
 ; CHECK-ARM-LABEL: test_lshr_load1_fail:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldrh r0, [r0]
@@ -174,13 +174,13 @@ define arm_aapcscc i32 @test_lshr_load1_fail(i16* %a) {
 ; CHECK-V6M-NEXT:    lsrs r0, r0, #9
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %a, align 2
+  %0 = load i16, ptr %a, align 2
   %conv1 = zext i16 %0 to i32
   %1 = lshr i32 %conv1, 9
   ret i32 %1
 }
 
-define arm_aapcscc i32 @test_lshr_load32(i32* %a) {
+define arm_aapcscc i32 @test_lshr_load32(ptr %a) {
 ; CHECK-ARM-LABEL: test_lshr_load32:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldr r0, [r0]
@@ -211,12 +211,12 @@ define arm_aapcscc i32 @test_lshr_load32(i32* %a) {
 ; CHECK-V6M-NEXT:    lsrs r0, r0, #8
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = lshr i32 %0, 8
   ret i32 %1
 }
 
-define arm_aapcscc i32 @test_lshr_load32_2(i32* %a) {
+define arm_aapcscc i32 @test_lshr_load32_2(ptr %a) {
 ; CHECK-COMMON-LABEL: test_lshr_load32_2:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrh r0, [r0, #2]
@@ -232,12 +232,12 @@ define arm_aapcscc i32 @test_lshr_load32_2(i32* %a) {
 ; CHECK-V6M-NEXT:    ldrh r0, [r0, #2]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = lshr i32 %0, 16
   ret i32 %1
 }
 
-define arm_aapcscc i32 @test_lshr_load32_1(i32* %a) {
+define arm_aapcscc i32 @test_lshr_load32_1(ptr %a) {
 ; CHECK-COMMON-LABEL: test_lshr_load32_1:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrb r0, [r0, #3]
@@ -253,12 +253,12 @@ define arm_aapcscc i32 @test_lshr_load32_1(i32* %a) {
 ; CHECK-V6M-NEXT:    ldrb r0, [r0, #3]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = lshr i32 %0, 24
   ret i32 %1
 }
 
-define arm_aapcscc i32 @test_lshr_load32_fail(i32* %a) {
+define arm_aapcscc i32 @test_lshr_load32_fail(ptr %a) {
 ; CHECK-ARM-LABEL: test_lshr_load32_fail:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldr r0, [r0]
@@ -289,12 +289,12 @@ define arm_aapcscc i32 @test_lshr_load32_fail(i32* %a) {
 ; CHECK-V6M-NEXT:    lsrs r0, r0, #15
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %a, align 4
+  %0 = load i32, ptr %a, align 4
   %1 = lshr i32 %0, 15
   ret i32 %1
 }
 
-define arm_aapcscc i32 @test_lshr_load64_4_unaligned(i64* %a) {
+define arm_aapcscc i32 @test_lshr_load64_4_unaligned(ptr %a) {
 ; CHECK-ARM-LABEL: test_lshr_load64_4_unaligned:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldr r0, [r0, #2]
@@ -325,13 +325,13 @@ define arm_aapcscc i32 @test_lshr_load64_4_unaligned(i64* %a) {
 ; CHECK-V6M-NEXT:    adds r0, r1, r0
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %a, align 8
   %1 = lshr i64 %0, 16
   %conv = trunc i64 %1 to i32
   ret i32 %conv
 }
 
-define arm_aapcscc i32 @test_lshr_load64_1_lsb(i64* %a) {
+define arm_aapcscc i32 @test_lshr_load64_1_lsb(ptr %a) {
 ; CHECK-ARM-LABEL: test_lshr_load64_1_lsb:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldr r0, [r0, #3]
@@ -362,13 +362,13 @@ define arm_aapcscc i32 @test_lshr_load64_1_lsb(i64* %a) {
 ; CHECK-V6M-NEXT:    adds r0, r1, r0
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %a, align 8
   %1 = lshr i64 %0, 24
   %conv = trunc i64 %1 to i32
   ret i32 %conv
 }
 
-define arm_aapcscc i32 @test_lshr_load64_1_msb(i64* %a) {
+define arm_aapcscc i32 @test_lshr_load64_1_msb(ptr %a) {
 ; CHECK-COMMON-LABEL: test_lshr_load64_1_msb:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrb r0, [r0, #7]
@@ -384,13 +384,13 @@ define arm_aapcscc i32 @test_lshr_load64_1_msb(i64* %a) {
 ; CHECK-V6M-NEXT:    ldrb r0, [r0, #7]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %a, align 8
   %1 = lshr i64 %0, 56
   %conv = trunc i64 %1 to i32
   ret i32 %conv
 }
 
-define arm_aapcscc i32 @test_lshr_load64_4(i64* %a) {
+define arm_aapcscc i32 @test_lshr_load64_4(ptr %a) {
 ; CHECK-COMMON-LABEL: test_lshr_load64_4:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldr r0, [r0, #4]
@@ -406,13 +406,13 @@ define arm_aapcscc i32 @test_lshr_load64_4(i64* %a) {
 ; CHECK-V6M-NEXT:    ldr r0, [r0, #4]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %a, align 8
   %1 = lshr i64 %0, 32
   %conv = trunc i64 %1 to i32
   ret i32 %conv
 }
 
-define arm_aapcscc i32 @test_lshr_load64_2(i64* %a) {
+define arm_aapcscc i32 @test_lshr_load64_2(ptr %a) {
 ; CHECK-COMMON-LABEL: test_lshr_load64_2:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrh r0, [r0, #6]
@@ -428,13 +428,13 @@ define arm_aapcscc i32 @test_lshr_load64_2(i64* %a) {
 ; CHECK-V6M-NEXT:    ldrh r0, [r0, #6]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %a, align 8
   %1 = lshr i64 %0, 48
   %conv = trunc i64 %1 to i32
   ret i32 %conv
 }
 
-define arm_aapcscc i32 @test_lshr_load4_fail(i64* %a) {
+define arm_aapcscc i32 @test_lshr_load4_fail(ptr %a) {
 ; CHECK-ARM-LABEL: test_lshr_load4_fail:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldr r0, [r0, #1]
@@ -466,13 +466,13 @@ define arm_aapcscc i32 @test_lshr_load4_fail(i64* %a) {
 ; CHECK-V6M-NEXT:    adds r0, r1, r0
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i64, i64* %a, align 8
+  %0 = load i64, ptr %a, align 8
   %1 = lshr i64 %0, 8
   %conv = trunc i64 %1 to i32
   ret i32 %conv
 }
 
-define arm_aapcscc void @test_shift7_mask8(i32* nocapture %p) {
+define arm_aapcscc void @test_shift7_mask8(ptr nocapture %p) {
 ; CHECK-COMMON-LABEL: test_shift7_mask8:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldr r1, [r0]
@@ -495,14 +495,14 @@ define arm_aapcscc void @test_shift7_mask8(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 7
   %and = and i32 %shl, 255
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift8_mask8(i32* nocapture %p) {
+define arm_aapcscc void @test_shift8_mask8(ptr nocapture %p) {
 ; CHECK-COMMON-LABEL: test_shift8_mask8:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrb r1, [r0, #1]
@@ -521,14 +521,14 @@ define arm_aapcscc void @test_shift8_mask8(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 8
   %and = and i32 %shl, 255
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift8_mask7(i32* nocapture %p) {
+define arm_aapcscc void @test_shift8_mask7(ptr nocapture %p) {
 ; CHECK-COMMON-LABEL: test_shift8_mask7:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldr r1, [r0]
@@ -551,14 +551,14 @@ define arm_aapcscc void @test_shift8_mask7(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 8
   %and = and i32 %shl, 127
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift9_mask8(i32* nocapture %p) {
+define arm_aapcscc void @test_shift9_mask8(ptr nocapture %p) {
 ; CHECK-COMMON-LABEL: test_shift9_mask8:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldr r1, [r0]
@@ -581,14 +581,14 @@ define arm_aapcscc void @test_shift9_mask8(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 9
   %and = and i32 %shl, 255
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift8_mask16(i32* nocapture %p) {
+define arm_aapcscc void @test_shift8_mask16(ptr nocapture %p) {
 ; CHECK-ARM-LABEL: test_shift8_mask16:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldrh r1, [r0, #1]
@@ -622,14 +622,14 @@ define arm_aapcscc void @test_shift8_mask16(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 8
   %and = and i32 %shl, 65535
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift15_mask16(i32* nocapture %p) {
+define arm_aapcscc void @test_shift15_mask16(ptr nocapture %p) {
 ; CHECK-COMMON-LABEL: test_shift15_mask16:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldr r1, [r0]
@@ -652,14 +652,14 @@ define arm_aapcscc void @test_shift15_mask16(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 15
   %and = and i32 %shl, 65535
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift16_mask15(i32* nocapture %p) {
+define arm_aapcscc void @test_shift16_mask15(ptr nocapture %p) {
 ; CHECK-COMMON-LABEL: test_shift16_mask15:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrh r1, [r0, #2]
@@ -686,14 +686,14 @@ define arm_aapcscc void @test_shift16_mask15(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:  .LCPI21_0:
 ; CHECK-V6M-NEXT:    .long 32767 @ 0x7fff
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 16
   %and = and i32 %shl, 32767
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift8_mask24(i32* nocapture %p) {
+define arm_aapcscc void @test_shift8_mask24(ptr nocapture %p) {
 ; CHECK-ARM-LABEL: test_shift8_mask24:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldr r1, [r0]
@@ -729,14 +729,14 @@ define arm_aapcscc void @test_shift8_mask24(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 8
   %and = and i32 %shl, 16777215
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_shift24_mask16(i32* nocapture %p) {
+define arm_aapcscc void @test_shift24_mask16(ptr nocapture %p) {
 ; CHECK-COMMON-LABEL: test_shift24_mask16:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrb r1, [r0, #3]
@@ -755,14 +755,14 @@ define arm_aapcscc void @test_shift24_mask16(i32* nocapture %p) {
 ; CHECK-V6M-NEXT:    str r1, [r0]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %shl = lshr i32 %0, 24
   %and = and i32 %shl, 65535
-  store i32 %and, i32* %p, align 4
+  store i32 %and, ptr %p, align 4
   ret void
 }
 
-define arm_aapcscc void @test_sext_shift8_mask8(i16* %p, i32* %q) {
+define arm_aapcscc void @test_sext_shift8_mask8(ptr %p, ptr %q) {
 ; CHECK-COMMON-LABEL: test_sext_shift8_mask8:
 ; CHECK-COMMON:       @ %bb.0: @ %entry
 ; CHECK-COMMON-NEXT:    ldrb r0, [r0, #1]
@@ -781,15 +781,15 @@ define arm_aapcscc void @test_sext_shift8_mask8(i16* %p, i32* %q) {
 ; CHECK-V6M-NEXT:    str r0, [r1]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %p, align 4
+  %0 = load i16, ptr %p, align 4
   %1 = sext i16 %0 to i32
   %shl = lshr i32 %1, 8
   %and = and i32 %shl, 255
-  store i32 %and, i32* %q, align 4
+  store i32 %and, ptr %q, align 4
   ret void
 }
 
-define arm_aapcscc void @test_sext_shift8_mask16(i16* %p, i32* %q) {
+define arm_aapcscc void @test_sext_shift8_mask16(ptr %p, ptr %q) {
 ; CHECK-ARM-LABEL: test_sext_shift8_mask16:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldrsh r0, [r0]
@@ -827,15 +827,15 @@ define arm_aapcscc void @test_sext_shift8_mask16(i16* %p, i32* %q) {
 ; CHECK-V6M-NEXT:    str r0, [r1]
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %0 = load i16, i16* %p, align 4
+  %0 = load i16, ptr %p, align 4
   %1 = sext i16 %0 to i32
   %shl = lshr i32 %1, 8
   %and = and i32 %shl, 65535
-  store i32 %and, i32* %q, align 4
+  store i32 %and, ptr %q, align 4
   ret void
 }
 
-define i1 @trunc_i64_mask_srl(i32 zeroext %AttrArgNo, i64* %ptr) {
+define i1 @trunc_i64_mask_srl(i32 zeroext %AttrArgNo, ptr %ptr) {
 ; CHECK-ARM-LABEL: trunc_i64_mask_srl:
 ; CHECK-ARM:       @ %bb.0: @ %entry
 ; CHECK-ARM-NEXT:    ldrh r2, [r1, #4]
@@ -886,10 +886,395 @@ define i1 @trunc_i64_mask_srl(i32 zeroext %AttrArgNo, i64* %ptr) {
 ; CHECK-V6M-NEXT:    movs r0, #1
 ; CHECK-V6M-NEXT:    bx lr
 entry:
-  %bf.load.i = load i64, i64* %ptr, align 8
+  %bf.load.i = load i64, ptr %ptr, align 8
   %bf.lshr.i = lshr i64 %bf.load.i, 32
   %0 = trunc i64 %bf.lshr.i to i32
   %bf.cast.i = and i32 %0, 65535
   %cmp.i = icmp ugt i32 %bf.cast.i, %AttrArgNo
   ret i1 %cmp.i
+}
+
+define i64 @or_tree_with_shifts_i64(i64 %a, i64 %b, i64 %c, i64 %d) {
+; CHECK-ARM-LABEL: or_tree_with_shifts_i64:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    .save {r11, lr}
+; CHECK-ARM-NEXT:    push {r11, lr}
+; CHECK-ARM-NEXT:    ldr lr, [sp, #16]
+; CHECK-ARM-NEXT:    orr r0, r0, r2, lsl #16
+; CHECK-ARM-NEXT:    ldr r12, [sp, #8]
+; CHECK-ARM-NEXT:    orr r3, lr, r3
+; CHECK-ARM-NEXT:    orr r1, r1, r3, lsl #16
+; CHECK-ARM-NEXT:    orr r1, r1, r2, lsr #16
+; CHECK-ARM-NEXT:    orr r1, r1, r12
+; CHECK-ARM-NEXT:    pop {r11, pc}
+;
+; CHECK-BE-LABEL: or_tree_with_shifts_i64:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    .save {r11, lr}
+; CHECK-BE-NEXT:    push {r11, lr}
+; CHECK-BE-NEXT:    ldr lr, [sp, #20]
+; CHECK-BE-NEXT:    orr r1, r1, r3, lsl #16
+; CHECK-BE-NEXT:    ldr r12, [sp, #12]
+; CHECK-BE-NEXT:    orr r2, lr, r2
+; CHECK-BE-NEXT:    orr r0, r0, r2, lsl #16
+; CHECK-BE-NEXT:    orr r0, r0, r3, lsr #16
+; CHECK-BE-NEXT:    orr r0, r0, r12
+; CHECK-BE-NEXT:    pop {r11, pc}
+;
+; CHECK-ALIGN-LABEL: or_tree_with_shifts_i64:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    ldr.w r12, [sp, #8]
+; CHECK-ALIGN-NEXT:    orr.w r0, r0, r2, lsl #16
+; CHECK-ALIGN-NEXT:    orr.w r3, r3, r12
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r3, lsl #16
+; CHECK-ALIGN-NEXT:    orr.w r1, r1, r2, lsr #16
+; CHECK-ALIGN-NEXT:    ldr r2, [sp]
+; CHECK-ALIGN-NEXT:    orrs r1, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: or_tree_with_shifts_i64:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    push {r4, lr}
+; CHECK-V6M-NEXT:    lsls r4, r2, #16
+; CHECK-V6M-NEXT:    orrs r0, r4
+; CHECK-V6M-NEXT:    ldr r4, [sp, #16]
+; CHECK-V6M-NEXT:    orrs r4, r3
+; CHECK-V6M-NEXT:    lsls r3, r4, #16
+; CHECK-V6M-NEXT:    orrs r1, r3
+; CHECK-V6M-NEXT:    lsrs r2, r2, #16
+; CHECK-V6M-NEXT:    orrs r1, r2
+; CHECK-V6M-NEXT:    ldr r2, [sp, #8]
+; CHECK-V6M-NEXT:    orrs r1, r2
+; CHECK-V6M-NEXT:    pop {r4, pc}
+  %b.shifted = shl i64 %b, 16
+  %c.shifted = shl i64 %c, 32
+  %d.shifted = shl i64 %d, 48
+  %or.ad = or i64 %a, %d.shifted
+  %or.adb = or i64 %or.ad, %b.shifted
+  %or.adbc = or i64 %or.adb, %c.shifted
+  ret i64 %or.adbc
+}
+
+define i32 @or_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: or_tree_with_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-ARM-NEXT:    orr r0, r0, r3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: or_tree_with_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-BE-NEXT:    orr r0, r0, r3
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: or_tree_with_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    orrs r0, r2
+; CHECK-THUMB-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-THUMB-NEXT:    orrs r0, r3
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: or_tree_with_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-ALIGN-NEXT:    orrs r0, r3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: or_tree_with_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    lsls r0, r0, #16
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r3
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = shl i32 %a, 16
+  %c.shifted = shl i32 %c, 16
+  %or.ab = or i32 %a.shifted, %b
+  %or.cd = or i32 %c.shifted, %d
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define i32 @xor_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: xor_tree_with_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    eor r0, r0, r2
+; CHECK-ARM-NEXT:    eor r0, r1, r0, lsr #16
+; CHECK-ARM-NEXT:    eor r0, r0, r3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: xor_tree_with_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    eor r0, r0, r2
+; CHECK-BE-NEXT:    eor r0, r1, r0, lsr #16
+; CHECK-BE-NEXT:    eor r0, r0, r3
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: xor_tree_with_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    eors r0, r2
+; CHECK-THUMB-NEXT:    eor.w r0, r1, r0, lsr #16
+; CHECK-THUMB-NEXT:    eors r0, r3
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: xor_tree_with_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    eors r0, r2
+; CHECK-ALIGN-NEXT:    eor.w r0, r1, r0, lsr #16
+; CHECK-ALIGN-NEXT:    eors r0, r3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: xor_tree_with_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    eors r0, r2
+; CHECK-V6M-NEXT:    lsrs r0, r0, #16
+; CHECK-V6M-NEXT:    eors r0, r1
+; CHECK-V6M-NEXT:    eors r0, r3
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = lshr i32 %a, 16
+  %c.shifted = lshr i32 %c, 16
+  %xor.ab = xor i32 %a.shifted, %b
+  %xor.cd = xor i32 %d, %c.shifted
+  %r = xor i32 %xor.ab, %xor.cd
+  ret i32 %r
+}
+
+define i32 @and_tree_with_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: and_tree_with_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    and r0, r0, r2
+; CHECK-ARM-NEXT:    and r0, r1, r0, asr #16
+; CHECK-ARM-NEXT:    and r0, r0, r3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: and_tree_with_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    and r0, r0, r2
+; CHECK-BE-NEXT:    and r0, r1, r0, asr #16
+; CHECK-BE-NEXT:    and r0, r0, r3
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: and_tree_with_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    ands r0, r2
+; CHECK-THUMB-NEXT:    and.w r0, r1, r0, asr #16
+; CHECK-THUMB-NEXT:    ands r0, r3
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: and_tree_with_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    ands r0, r2
+; CHECK-ALIGN-NEXT:    and.w r0, r1, r0, asr #16
+; CHECK-ALIGN-NEXT:    ands r0, r3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: and_tree_with_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    ands r0, r2
+; CHECK-V6M-NEXT:    asrs r0, r0, #16
+; CHECK-V6M-NEXT:    ands r0, r1
+; CHECK-V6M-NEXT:    ands r0, r3
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = ashr i32 %a, 16
+  %c.shifted = ashr i32 %c, 16
+  %and.ab = and i32 %b, %a.shifted
+  %and.cd = and i32 %c.shifted, %d
+  %r = and i32 %and.ab, %and.cd
+  ret i32 %r
+}
+
+define i32 @logic_tree_with_shifts_var_i32(i32 %a, i32 %b, i32 %c, i32 %d, i32 %s) {
+; CHECK-ARM-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    ldr r12, [sp]
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl r12
+; CHECK-ARM-NEXT:    orr r0, r0, r3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    ldr r12, [sp]
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl r12
+; CHECK-BE-NEXT:    orr r0, r0, r3
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    ldr r2, [sp]
+; CHECK-ALIGN-NEXT:    lsls r0, r2
+; CHECK-ALIGN-NEXT:    orrs r0, r1
+; CHECK-ALIGN-NEXT:    orrs r0, r3
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: logic_tree_with_shifts_var_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    ldr r2, [sp]
+; CHECK-V6M-NEXT:    lsls r0, r2
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r3
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = shl i32 %a, %s
+  %c.shifted = shl i32 %c, %s
+  %or.ab = or i32 %b, %a.shifted
+  %or.cd = or i32 %d, %c.shifted
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define i32 @logic_tree_with_mismatching_shifts_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    orr r2, r3, r2, lsl #16
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl #15
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    orr r2, r3, r2, lsl #16
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl #15
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    orr.w r2, r3, r2, lsl #16
+; CHECK-THUMB-NEXT:    orr.w r0, r1, r0, lsl #15
+; CHECK-THUMB-NEXT:    orrs r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    orr.w r2, r3, r2, lsl #16
+; CHECK-ALIGN-NEXT:    orr.w r0, r1, r0, lsl #15
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: logic_tree_with_mismatching_shifts_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    lsls r2, r2, #16
+; CHECK-V6M-NEXT:    orrs r2, r3
+; CHECK-V6M-NEXT:    lsls r0, r0, #15
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = shl i32 %a, 15
+  %c.shifted = shl i32 %c, 16
+  %or.ab = or i32 %a.shifted, %b
+  %or.cd = or i32 %c.shifted, %d
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define i32 @logic_tree_with_mismatching_shifts2_i32(i32 %a, i32 %b, i32 %c, i32 %d) {
+; CHECK-ARM-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    orr r2, r3, r2, lsr #16
+; CHECK-ARM-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-ARM-NEXT:    orr r0, r0, r2
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    orr r2, r3, r2, lsr #16
+; CHECK-BE-NEXT:    orr r0, r1, r0, lsl #16
+; CHECK-BE-NEXT:    orr r0, r0, r2
+; CHECK-BE-NEXT:    bx lr
+;
+; CHECK-THUMB-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-THUMB:       @ %bb.0:
+; CHECK-THUMB-NEXT:    orr.w r2, r3, r2, lsr #16
+; CHECK-THUMB-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-THUMB-NEXT:    orrs r0, r2
+; CHECK-THUMB-NEXT:    bx lr
+;
+; CHECK-ALIGN-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-ALIGN:       @ %bb.0:
+; CHECK-ALIGN-NEXT:    orr.w r2, r3, r2, lsr #16
+; CHECK-ALIGN-NEXT:    orr.w r0, r1, r0, lsl #16
+; CHECK-ALIGN-NEXT:    orrs r0, r2
+; CHECK-ALIGN-NEXT:    bx lr
+;
+; CHECK-V6M-LABEL: logic_tree_with_mismatching_shifts2_i32:
+; CHECK-V6M:       @ %bb.0:
+; CHECK-V6M-NEXT:    lsrs r2, r2, #16
+; CHECK-V6M-NEXT:    orrs r2, r3
+; CHECK-V6M-NEXT:    lsls r0, r0, #16
+; CHECK-V6M-NEXT:    orrs r0, r1
+; CHECK-V6M-NEXT:    orrs r0, r2
+; CHECK-V6M-NEXT:    bx lr
+  %a.shifted = shl i32 %a, 16
+  %c.shifted = lshr i32 %c, 16
+  %or.ab = or i32 %a.shifted, %b
+  %or.cd = or i32 %c.shifted, %d
+  %r = or i32 %or.ab, %or.cd
+  ret i32 %r
+}
+
+define <4 x i32> @or_tree_with_shifts_vec_i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
+; CHECK-ARM-LABEL: or_tree_with_shifts_vec_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    vorr q8, q0, q2
+; CHECK-ARM-NEXT:    vshl.i32 q8, q8, #16
+; CHECK-ARM-NEXT:    vorr q8, q8, q1
+; CHECK-ARM-NEXT:    vorr q0, q8, q3
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: or_tree_with_shifts_vec_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vrev64.32 q8, q2
+; CHECK-BE-NEXT:    vrev64.32 q9, q0
+; CHECK-BE-NEXT:    vorr q8, q9, q8
+; CHECK-BE-NEXT:    vrev64.32 q9, q1
+; CHECK-BE-NEXT:    vrev64.32 q10, q3
+; CHECK-BE-NEXT:    vshl.i32 q8, q8, #16
+; CHECK-BE-NEXT:    vorr q8, q8, q9
+; CHECK-BE-NEXT:    vorr q8, q8, q10
+; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    bx lr
+  %a.shifted = shl <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>
+  %c.shifted = shl <4 x i32> %c, <i32 16, i32 16, i32 16, i32 16>
+  %or.ab = or <4 x i32> %a.shifted, %b
+  %or.cd = or <4 x i32> %c.shifted, %d
+  %r = or <4 x i32> %or.ab, %or.cd
+  ret <4 x i32> %r
+}
+
+define <4 x i32> @or_tree_with_mismatching_shifts_vec_i32(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c, <4 x i32> %d) {
+; CHECK-ARM-LABEL: or_tree_with_mismatching_shifts_vec_i32:
+; CHECK-ARM:       @ %bb.0:
+; CHECK-ARM-NEXT:    vshl.i32 q8, q2, #17
+; CHECK-ARM-NEXT:    vshl.i32 q9, q0, #16
+; CHECK-ARM-NEXT:    vorr q8, q8, q3
+; CHECK-ARM-NEXT:    vorr q9, q9, q1
+; CHECK-ARM-NEXT:    vorr q0, q9, q8
+; CHECK-ARM-NEXT:    bx lr
+;
+; CHECK-BE-LABEL: or_tree_with_mismatching_shifts_vec_i32:
+; CHECK-BE:       @ %bb.0:
+; CHECK-BE-NEXT:    vrev64.32 q8, q2
+; CHECK-BE-NEXT:    vrev64.32 q9, q0
+; CHECK-BE-NEXT:    vshl.i32 q8, q8, #17
+; CHECK-BE-NEXT:    vrev64.32 q10, q3
+; CHECK-BE-NEXT:    vshl.i32 q9, q9, #16
+; CHECK-BE-NEXT:    vrev64.32 q11, q1
+; CHECK-BE-NEXT:    vorr q8, q8, q10
+; CHECK-BE-NEXT:    vorr q9, q9, q11
+; CHECK-BE-NEXT:    vorr q8, q9, q8
+; CHECK-BE-NEXT:    vrev64.32 q0, q8
+; CHECK-BE-NEXT:    bx lr
+  %a.shifted = shl <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>
+  %c.shifted = shl <4 x i32> %c, <i32 17, i32 17, i32 17, i32 17>
+  %or.ab = or <4 x i32> %a.shifted, %b
+  %or.cd = or <4 x i32> %c.shifted, %d
+  %r = or <4 x i32> %or.ab, %or.cd
+  ret <4 x i32> %r
 }

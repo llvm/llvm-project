@@ -13,14 +13,14 @@
 #include <__chrono/duration.h>
 #include <__chrono/time_point.h>
 #include <__config>
+#include <__type_traits/common_type.h>
 #include <ratio>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -57,34 +57,35 @@ public:
     _LIBCPP_HIDE_FROM_ABI constexpr hh_mm_ss() noexcept : hh_mm_ss{_Duration::zero()} {}
 
     _LIBCPP_HIDE_FROM_ABI constexpr explicit hh_mm_ss(_Duration __d) noexcept :
-        __is_neg(__d < _Duration(0)),
-        __h(duration_cast<chrono::hours>  (abs(__d))),
-        __m(duration_cast<chrono::minutes>(abs(__d) - hours())),
-        __s(duration_cast<chrono::seconds>(abs(__d) - hours() - minutes())),
-        __f(duration_cast<precision>      (abs(__d) - hours() - minutes() - seconds()))
+        __is_neg_(__d < _Duration(0)),
+        __h_(chrono::duration_cast<chrono::hours>  (chrono::abs(__d))),
+        __m_(chrono::duration_cast<chrono::minutes>(chrono::abs(__d) - hours())),
+        __s_(chrono::duration_cast<chrono::seconds>(chrono::abs(__d) - hours() - minutes())),
+        __f_(chrono::duration_cast<precision>      (chrono::abs(__d) - hours() - minutes() - seconds()))
         {}
 
-    _LIBCPP_HIDE_FROM_ABI constexpr bool is_negative()        const noexcept { return __is_neg; }
-    _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours hours()     const noexcept { return __h; }
-    _LIBCPP_HIDE_FROM_ABI constexpr chrono::minutes minutes() const noexcept { return __m; }
-    _LIBCPP_HIDE_FROM_ABI constexpr chrono::seconds seconds() const noexcept { return __s; }
-    _LIBCPP_HIDE_FROM_ABI constexpr precision subseconds()    const noexcept { return __f; }
+    _LIBCPP_HIDE_FROM_ABI constexpr bool is_negative()        const noexcept { return __is_neg_; }
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::hours hours()     const noexcept { return __h_; }
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::minutes minutes() const noexcept { return __m_; }
+    _LIBCPP_HIDE_FROM_ABI constexpr chrono::seconds seconds() const noexcept { return __s_; }
+    _LIBCPP_HIDE_FROM_ABI constexpr precision subseconds()    const noexcept { return __f_; }
 
     _LIBCPP_HIDE_FROM_ABI constexpr precision to_duration() const noexcept
     {
-        auto __dur = __h + __m + __s + __f;
-        return __is_neg ? -__dur : __dur;
+        auto __dur = __h_ + __m_ + __s_ + __f_;
+        return __is_neg_ ? -__dur : __dur;
     }
 
     _LIBCPP_HIDE_FROM_ABI constexpr explicit operator precision() const noexcept { return to_duration(); }
 
 private:
-    bool            __is_neg;
-    chrono::hours   __h;
-    chrono::minutes __m;
-    chrono::seconds __s;
-    precision       __f;
+    bool            __is_neg_;
+    chrono::hours   __h_;
+    chrono::minutes __m_;
+    chrono::seconds __s_;
+    precision       __f_;
 };
+_LIBCPP_CTAD_SUPPORTED_FOR_TYPE(hh_mm_ss);
 
 _LIBCPP_HIDE_FROM_ABI constexpr bool is_am(const hours& __h) noexcept { return __h >= hours( 0) && __h < hours(12); }
 _LIBCPP_HIDE_FROM_ABI constexpr bool is_pm(const hours& __h) noexcept { return __h >= hours(12) && __h < hours(24); }
@@ -107,6 +108,6 @@ _LIBCPP_HIDE_FROM_ABI constexpr hours make24(const hours& __h, bool __is_pm) noe
 
 _LIBCPP_END_NAMESPACE_STD
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 #endif // _LIBCPP___CHRONO_HH_MM_SS_H

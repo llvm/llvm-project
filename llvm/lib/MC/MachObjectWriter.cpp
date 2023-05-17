@@ -129,7 +129,7 @@ uint64_t MachObjectWriter::getPaddingSize(const MCSection *Sec,
   const MCSection &NextSec = *Layout.getSectionOrder()[Next];
   if (NextSec.isVirtualSection())
     return 0;
-  return offsetToAlignment(EndAddr, Align(NextSec.getAlignment()));
+  return offsetToAlignment(EndAddr, NextSec.getAlign());
 }
 
 void MachObjectWriter::writeHeader(MachO::HeaderFileType Type,
@@ -244,8 +244,7 @@ void MachObjectWriter::writeSection(const MCAsmLayout &Layout,
   }
   W.write<uint32_t>(FileOffset);
 
-  assert(isPowerOf2_32(Section.getAlignment()) && "Invalid alignment!");
-  W.write<uint32_t>(Log2_32(Section.getAlignment()));
+  W.write<uint32_t>(Log2(Section.getAlign()));
   W.write<uint32_t>(NumRelocations ? RelocationsStart : 0);
   W.write<uint32_t>(NumRelocations);
   W.write<uint32_t>(Flags);
@@ -532,9 +531,7 @@ void MachObjectWriter::bindIndirectSymbols(MCAssembler &Asm) {
     // Set the symbol type to undefined lazy, but only on construction.
     //
     // FIXME: Do not hardcode.
-    bool Created;
-    Asm.registerSymbol(*it->Symbol, &Created);
-    if (Created)
+    if (Asm.registerSymbol(*it->Symbol))
       cast<MCSymbolMachO>(it->Symbol)->setReferenceTypeUndefinedLazy(true);
   }
 }
@@ -645,7 +642,7 @@ void MachObjectWriter::computeSectionAddresses(const MCAssembler &Asm,
                                                const MCAsmLayout &Layout) {
   uint64_t StartAddress = 0;
   for (const MCSection *Sec : Layout.getSectionOrder()) {
-    StartAddress = alignTo(StartAddress, Sec->getAlignment());
+    StartAddress = alignTo(StartAddress, Sec->getAlign());
     SectionAddress[Sec] = StartAddress;
     StartAddress += Layout.getSectionAddressSize(Sec);
 
@@ -753,32 +750,29 @@ static MachO::LoadCommandType getLCFromMCVM(MCVersionMinType Type) {
   llvm_unreachable("Invalid mc version min type");
 }
 
-// Encode addrsig data as symbol indexes in variable length encoding.
-void MachObjectWriter::writeAddrsigSection(MCAssembler &Asm) {
+void MachObjectWriter::populateAddrSigSection(MCAssembler &Asm) {
   MCSection *AddrSigSection =
       Asm.getContext().getObjectFileInfo()->getAddrSigSection();
-  MCSection::FragmentListType &fragmentList = AddrSigSection->getFragmentList();
-  if (!fragmentList.size())
-    return;
-
-  assert(fragmentList.size() == 1);
-  MCFragment *pFragment = &*fragmentList.begin();
-  MCDataFragment *pDataFragment = dyn_cast_or_null<MCDataFragment>(pFragment);
-  assert(pDataFragment);
-
-  raw_svector_ostream OS(pDataFragment->getContents());
-  for (const MCSymbol *sym : this->getAddrsigSyms())
-    encodeULEB128(sym->getIndex(), OS);
+  unsigned Log2Size = is64Bit() ? 3 : 2;
+  for (const MCSymbol *S : getAddrsigSyms()) {
+    if (!S->isRegistered())
+      continue;
+    MachO::any_relocation_info MRE;
+    MRE.r_word0 = 0;
+    MRE.r_word1 = (Log2Size << 25) | (MachO::GENERIC_RELOC_VANILLA << 28);
+    addRelocation(S, AddrSigSection, MRE);
+  }
 }
 
 uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
                                        const MCAsmLayout &Layout) {
   uint64_t StartOffset = W.OS.tell();
 
+  populateAddrSigSection(Asm);
+
   // Compute symbol table information and bind symbol indices.
   computeSymbolTable(Asm, LocalSymbolData, ExternalSymbolData,
                      UndefinedSymbolData);
-  writeAddrsigSection(Asm);
 
   if (!Asm.CGProfile.empty()) {
     MCSection *CGProfileSection = Asm.getContext().getMachOSection(
@@ -915,8 +909,8 @@ uint64_t MachObjectWriter::writeObject(MCAssembler &Asm,
       [&](const MCAssembler::VersionInfoType &VersionInfo) {
         auto EncodeVersion = [](VersionTuple V) -> uint32_t {
           assert(!V.empty() && "empty version");
-          unsigned Update = V.getSubminor().getValueOr(0);
-          unsigned Minor = V.getMinor().getValueOr(0);
+          unsigned Update = V.getSubminor().value_or(0);
+          unsigned Minor = V.getMinor().value_or(0);
           assert(Update < 256 && "unencodable update target version");
           assert(Minor < 256 && "unencodable minor target version");
           assert(V.getMajor() < 65536 && "unencodable major target version");

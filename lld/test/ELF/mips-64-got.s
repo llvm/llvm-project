@@ -7,7 +7,7 @@
 # RUN: echo "SECTIONS { . = 0x30000; .text : { *(.text) } }" > %t.script
 # RUN: ld.lld %t.so.o -shared -soname=t.so -o %t.so
 # RUN: ld.lld %t.exe.o --script %t.script %t.so -o %t.exe
-# RUN: llvm-objdump -d -t --no-show-raw-insn %t.exe | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d -t --no-show-raw-insn %t.exe | FileCheck %s
 # RUN: llvm-readelf -r -s -A %t.exe | FileCheck -check-prefix=GOT %s
 
 # CHECK: {{[0-9a-f]+}}1c8 l .text  0000000000000000 foo

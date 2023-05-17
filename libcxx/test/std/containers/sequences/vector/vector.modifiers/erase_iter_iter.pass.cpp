@@ -33,7 +33,7 @@ struct Throws {
 bool Throws::sThrows = false;
 #endif
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     int a1[] = {1, 2, 3};
     {
@@ -140,19 +140,30 @@ int main(int, char**)
         assert(is_contiguous_container_asan_correct(outer[1]));
     }
 #endif
+
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+
 #ifndef TEST_HAS_NO_EXCEPTIONS
 // Test for LWG2853:
 // Throws: Nothing unless an exception is thrown by the assignment operator or move assignment operator of T.
     {
-    Throws arr[] = {1, 2, 3};
-    std::vector<Throws> v(arr, arr+3);
-    Throws::sThrows = true;
-    v.erase(v.begin(), --v.end());
-    assert(v.size() == 1);
-    v.erase(v.begin(), v.end());
-    assert(v.size() == 0);
+        Throws arr[] = {1, 2, 3};
+        std::vector<Throws> v(arr, arr+3);
+        Throws::sThrows = true;
+        v.erase(v.begin(), --v.end());
+        assert(v.size() == 1);
+        v.erase(v.begin(), v.end());
+        assert(v.size() == 0);
     }
 #endif
 
-  return 0;
+    return 0;
 }

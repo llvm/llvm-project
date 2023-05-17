@@ -75,7 +75,7 @@ FunctionPass *llvm::createAArch64StorePairSuppressPass() {
 /// oversaturate the vector units.
 bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) {
   if (!MinInstr)
-    MinInstr = Traces->getEnsemble(MachineTraceMetrics::TS_MinInstrCount);
+    MinInstr = Traces->getEnsemble(MachineTraceStrategy::TS_MinInstrCount);
 
   MachineTraceMetrics::Trace BBTrace = MinInstr->getTrace(BB);
   unsigned ResLength = BBTrace.getResourceLength();
@@ -88,7 +88,7 @@ bool AArch64StorePairSuppress::shouldAddSTPToBlock(const MachineBasicBlock *BB) 
 
   // If a subtarget does not define resources for STPQi, bail here.
   if (SCDesc->isValid() && !SCDesc->isVariant()) {
-    unsigned ResLenWithSTP = BBTrace.getResourceLength(None, SCDesc);
+    unsigned ResLenWithSTP = BBTrace.getResourceLength(std::nullopt, SCDesc);
     if (ResLenWithSTP > ResLength) {
       LLVM_DEBUG(dbgs() << "  Suppress STP in BB: " << BB->getNumber()
                         << " resources " << ResLength << " -> " << ResLenWithSTP

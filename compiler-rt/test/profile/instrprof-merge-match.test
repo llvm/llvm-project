@@ -4,4 +4,4 @@
 // RUN: %run %t
 
 rpath isn't supported on Windows.
-UNSUPPORTED: windows
+UNSUPPORTED: target={{.*windows.*}}

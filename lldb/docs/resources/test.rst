@@ -173,9 +173,9 @@ but often it's easier to find an existing ``Makefile`` that does something
 similar to what you want to do.
 
 Another thing this enables is having different variants for the same test
-case. By default, we run every test for all 3 debug info formats, so once with
-DWARF from the object files, once with gmodules and finally with a dSYM on
-macOS or split DWARF (DWO) on Linux. But there are many more things we can test
+case. By default, we run every test for two debug info formats, once with
+DWARF from the object files and another with a dSYM on macOS or split
+DWARF (DWO) on Linux. But there are many more things we can test
 that are orthogonal to the test itself. On GreenDragon we have a matrix bot
 that runs the test suite under different configurations, with older host
 compilers and different DWARF versions.
@@ -229,7 +229,7 @@ good testing practices.
     time (e.g., C and C++) there is also usually no process necessary to test
     the `SBType`-related parts of the API. With those languages it's also
     possible to test `SBValue` by running expressions with
-    `SBTarget.EvaluateExpression` or the `expect_expr` testing utility.
+    `SBTarget.EvaluateExpression` or the ``expect_expr`` testing utility.
 
     Functionality that always requires a running process is everything that
     tests the `SBProcess`, `SBThread`, and `SBFrame` classes. The same is true
@@ -315,25 +315,27 @@ A better way to write the test above would be using LLDB's testing function
     self.expect_expr("2 + 2", result_value="0")
 
 **Prefer using specific asserts over the generic assertTrue/assertFalse.**.
-    The `self.assertTrue`/`self.assertFalse` functions should always be your
+    The ``self.assertTrue``/``self.assertFalse`` functions should always be your
     last option as they give non-descriptive error messages. The test class has
-    several expressive asserts such as `self.assertIn` that automatically
+    several expressive asserts such as ``self.assertIn`` that automatically
     generate an explanation how the received values differ from the expected
-    ones. Check the documentation of Python's `unittest` module to see what
+    ones. Check the documentation of Python's ``unittest`` module to see what
     asserts are available. LLDB also has a few custom asserts that are tailored
     to our own data types.
 
-+-----------------------------------------------+---------------------------------------------------------------+
-| **Assert**                                    | **Description**                                               |
-+-----------------------------------------------+---------------------------------------------------------------+
-| ``assertSuccess``                             | Assert that an ``lldb.SBError`` is in the "success" state.    |
-+-----------------------------------------------+---------------------------------------------------------------+
-| ``assertState``                               | Assert that two states (``lldb.eState*``) are equal.          |
-+-----------------------------------------------+---------------------------------------------------------------+
++-----------------------------------------------+-----------------------------------------------------------------+
+| **Assert**                                    | **Description**                                                 |
++-----------------------------------------------+-----------------------------------------------------------------+
+| ``assertSuccess``                             | Assert that an ``lldb.SBError`` is in the "success" state.      |
++-----------------------------------------------+-----------------------------------------------------------------+
+| ``assertState``                               | Assert that two states (``lldb.eState*``) are equal.            |
++-----------------------------------------------+-----------------------------------------------------------------+
+| ``assertStopReason``                          | Assert that two stop reasons (``lldb.eStopReason*``) are equal. |
++-----------------------------------------------+-----------------------------------------------------------------+
 
     If you can't find a specific assert that fits your needs and you fall back
     to a generic assert, make sure you put useful information into the assert's
-    `msg` argument that helps explain the failure.
+    ``msg`` argument that helps explain the failure.
 
 ::
 
@@ -596,8 +598,6 @@ line to your ``~/.pdbrc``:
 ::
 
    alias lldb self.dbg.HandleCommand("%*")
-
-::
 
 Debugging Test Failures on Windows
 ``````````````````````````````````

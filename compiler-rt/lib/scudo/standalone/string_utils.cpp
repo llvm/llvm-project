@@ -195,6 +195,28 @@ static int formatString(char *Buffer, uptr BufferLength, const char *Format,
           appendChar(&Buffer, BufferEnd, static_cast<char>(va_arg(Args, int)));
       break;
     }
+    // In Scudo, `s64`/`u64` are supposed to use `lld` and `llu` respectively.
+    // However, `-Wformat` doesn't know we have a different parser for those
+    // placeholders and it keeps complaining the type mismatch on 64-bit
+    // platform which uses `ld`/`lu` for `s64`/`u64`. Therefore, in order to
+    // silence the warning, we turn to use `PRId64`/`PRIu64` for printing
+    // `s64`/`u64` and handle the `ld`/`lu` here.
+    case 'l': {
+      ++Cur;
+      RAW_CHECK(*Cur == 'd' || *Cur == 'u');
+
+      if (*Cur == 'd') {
+        DVal = va_arg(Args, s64);
+        Res +=
+            appendSignedDecimal(&Buffer, BufferEnd, DVal, Width, PadWithZero);
+      } else {
+        UVal = va_arg(Args, u64);
+        Res += appendUnsigned(&Buffer, BufferEnd, UVal, 10, Width, PadWithZero,
+                              false);
+      }
+
+      break;
+    }
     case '%': {
       RAW_CHECK_MSG(!HaveFlags, PrintfFormatsHelp);
       Res += appendChar(&Buffer, BufferEnd, '%');

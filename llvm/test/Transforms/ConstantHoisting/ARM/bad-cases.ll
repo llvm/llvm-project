@@ -1,4 +1,4 @@
-; RUN: opt -consthoist -S < %s | FileCheck %s
+; RUN: opt -passes=consthoist -S < %s | FileCheck %s
 target triple = "thumbv6m-none-eabi"
 
 ; Allocas in the entry block get handled (for free) by
@@ -48,7 +48,7 @@ default:
 
 ; We don't want to convert constant divides because the benefit from converting
 ; them to a mul in the backend is larget than constant materialization savings.
-define void @signed_const_division(i32 %in1, i32 %in2, i32* %addr) {
+define void @signed_const_division(i32 %in1, i32 %in2, ptr %addr) {
 ; CHECK-LABEL: @signed_const_division
 ; CHECK: %res1 = sdiv i32 %l1, 1000000000
 ; CHECK: %res2 = srem i32 %l2, 1000000000
@@ -59,9 +59,9 @@ loop:
   %l1 = phi i32 [%res1, %loop], [%in1, %entry]
   %l2 = phi i32 [%res2, %loop], [%in2, %entry]
   %res1 = sdiv i32 %l1, 1000000000
-  store volatile i32 %res1, i32* %addr
+  store volatile i32 %res1, ptr %addr
   %res2 = srem i32 %l2, 1000000000
-  store volatile i32 %res2, i32* %addr
+  store volatile i32 %res2, ptr %addr
   %again = icmp eq i32 %res1, %res2
   br i1 %again, label %loop, label %end
 
@@ -69,7 +69,7 @@ end:
   ret void
 }
 
-define void @unsigned_const_division(i32 %in1, i32 %in2, i32* %addr) {
+define void @unsigned_const_division(i32 %in1, i32 %in2, ptr %addr) {
 ; CHECK-LABEL: @unsigned_const_division
 ; CHECK: %res1 = udiv i32 %l1, 1000000000
 ; CHECK: %res2 = urem i32 %l2, 1000000000
@@ -81,9 +81,9 @@ loop:
   %l1 = phi i32 [%res1, %loop], [%in1, %entry]
   %l2 = phi i32 [%res2, %loop], [%in2, %entry]
   %res1 = udiv i32 %l1, 1000000000
-  store volatile i32 %res1, i32* %addr
+  store volatile i32 %res1, ptr %addr
   %res2 = urem i32 %l2, 1000000000
-  store volatile i32 %res2, i32* %addr
+  store volatile i32 %res2, ptr %addr
   %again = icmp eq i32 %res1, %res2
   br i1 %again, label %loop, label %end
 
@@ -111,7 +111,7 @@ entry:
 @exception_type = external global i8
 
 ; Constants in inline ASM should not be hoisted.
-define i32 @inline_asm_invoke() personality i8* null {
+define i32 @inline_asm_invoke() personality ptr null {
 ;CHECK-LABEL: @inline_asm_invoke
 ;CHECK-NOT: %const = 214672
 ;CHECK: %X = invoke i32 asm "bswap $0", "=r,r"(i32 214672)
@@ -125,7 +125,7 @@ L:
 lpad:
   %lp = landingpad i32
       cleanup
-      catch i8* @exception_type
+      catch ptr @exception_type
   ret i32 1
 }
 

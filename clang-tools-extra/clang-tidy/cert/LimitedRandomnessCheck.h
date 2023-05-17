@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace cert {
+namespace clang::tidy::cert {
 
 /// Pseudorandom number generators are not genuinely random. The result of the
 /// std::rand() function makes no guarantees as to the quality of the random
@@ -21,7 +19,7 @@ namespace cert {
 /// This check warns for the usage of std::rand() function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/cert-msc50-cpp.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/cert/msc50-cpp.html
 class LimitedRandomnessCheck : public ClangTidyCheck {
 public:
   LimitedRandomnessCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace cert
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cert
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_CERT_LIMITED_RANDOMNESS_H

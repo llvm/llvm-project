@@ -67,19 +67,19 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
     >,
     InterfaceMethod<[{
         Returns the `BlockArgument` corresponding to operand `operandIndex` in
-        some successor, or None if `operandIndex` isn't a successor operand
+        some successor, or std::nullopt if `operandIndex` isn't a successor operand
         index.
       }],
-      "::mlir::Optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",
+      "::std::optional<::mlir::BlockArgument>", "getSuccessorBlockArgument",
       (ins "unsigned":$operandIndex), [{
         ::mlir::Operation *opaqueOp = $_op;
         for (unsigned i = 0, e = opaqueOp->getNumSuccessors(); i != e; ++i) {
-          if (::mlir::Optional<::mlir::BlockArgument> arg = ::mlir::detail::getBranchSuccessorArgument(
+          if (::std::optional<::mlir::BlockArgument> arg = ::mlir::detail::getBranchSuccessorArgument(
                 $_op.getSuccessorOperands(i), operandIndex,
                 opaqueOp->getSuccessor(i)))
             return arg;
         }
-        return ::llvm::None;
+        return ::std::nullopt;
       }]
     >,
     InterfaceMethod<[{
@@ -87,7 +87,7 @@ def BranchOpInterface : OpInterface<"BranchOpInterface"> {
         operands. Returns nullptr if a single successor could not be chosen.
       }],
       "::mlir::Block *", "getSuccessorForOperands",
-      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands), [{}],
+      (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands), [{}],
       /*defaultImplementation=*/[{ return nullptr; }]
     >,
     InterfaceMethod<[{
@@ -134,12 +134,14 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     InterfaceMethod<[{
         Returns the operands of this operation used as the entry arguments when
         entering the region at `index`, which was specified as a successor of
-        this operation by `getSuccessorRegions`. These operands should
-        correspond 1-1 with the successor inputs specified in
+        this operation by `getSuccessorRegions`, or the operands forwarded to
+        the operation's results when it branches back to itself. These operands
+        should correspond 1-1 with the successor inputs specified in
         `getSuccessorRegions`.
       }],
       "::mlir::OperandRange", "getSuccessorEntryOperands",
-      (ins "unsigned":$index), [{}], /*defaultImplementation=*/[{
+      (ins "::std::optional<unsigned>":$index), [{}],
+      /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
         return ::mlir::OperandRange(operandEnd, operandEnd);
       }]
@@ -159,8 +161,8 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         successor region must be non-empty.
       }],
       "void", "getSuccessorRegions",
-      (ins "::mlir::Optional<unsigned>":$index,
-           "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+      (ins "::std::optional<unsigned>":$index,
+           "::llvm::ArrayRef<::mlir::Attribute>":$operands,
            "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
     >,
     InterfaceMethod<[{
@@ -169,7 +171,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         regions yield normally, i.e. do not abort or invoke an infinite loop).
         The minimum number of invocations is at least 0. If the maximum number
         of invocations cannot be statically determined, then it will not have a
-        value (i.e., it is set to `llvm::None`).
+        value (i.e., it is set to `std::nullopt`).
 
         `operands` is a set of optional attributes that either correspond to
         constant values for each operand of this operation or null if that
@@ -181,7 +183,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
         be the region invocations if these were the operands?"
       }],
       "void", "getRegionInvocationBounds",
-      (ins "::mlir::ArrayRef<::mlir::Attribute>":$operands,
+      (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands,
            "::llvm::SmallVectorImpl<::mlir::InvocationBounds> &"
              :$invocationBounds), [{}],
        [{ invocationBounds.append($_op->getNumRegions(),
@@ -206,7 +208,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
 
   let extraClassDeclaration = [{
     /// Convenience helper in case none of the operands is known.
-    void getSuccessorRegions(Optional<unsigned> index,
+    void getSuccessorRegions(std::optional<unsigned> index,
                              SmallVectorImpl<RegionSuccessor> &regions);
 
     /// Return `true` if control flow originating from the given region may
@@ -237,7 +239,7 @@ def RegionBranchTerminatorOpInterface :
         the parent operation.
       }],
       "::mlir::MutableOperandRange", "getMutableSuccessorOperands",
-      (ins "::mlir::Optional<unsigned>":$index)
+      (ins "::std::optional<unsigned>":$index)
     >,
     InterfaceMethod<[{
         Returns a range of operands that are semantically "returned" by passing
@@ -246,7 +248,7 @@ def RegionBranchTerminatorOpInterface :
         operation.
       }],
       "::mlir::OperandRange", "getSuccessorOperands",
-      (ins "::mlir::Optional<unsigned>":$index), [{}],
+      (ins "::std::optional<unsigned>":$index), [{}],
       /*defaultImplementation=*/[{
         return $_op.getMutableSuccessorOperands(index);
       }]

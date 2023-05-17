@@ -5,15 +5,15 @@
 
 @var1 = internal global i32 0, align 4
 @var2 = internal global i32 0, align 4
-@var3 = global i32* @var1, align 4
-@var4 = global i32* @var2, align 4
+@var3 = global ptr @var1, align 4
+@var4 = global ptr @var2, align 4
 
 define i32 @foo() {
 entry:
-  %0 = load i32*, i32** @var3, align 4
-  %1 = load i32, i32* %0, align 4
-  %2 = load i32*, i32** @var4, align 4
-  %3 = load i32, i32* %2, align 4
+  %0 = load ptr, ptr @var3, align 4
+  %1 = load i32, ptr %0, align 4
+  %2 = load ptr, ptr @var4, align 4
+  %3 = load i32, ptr %2, align 4
   %add = add nsw i32 %3, %1
   ret i32 %add
 }

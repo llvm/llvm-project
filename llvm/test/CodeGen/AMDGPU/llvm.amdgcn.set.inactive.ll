@@ -2,7 +2,7 @@
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 ; RUN: llc -march=amdgcn -mcpu=tonga -mattr=-flat-for-global -early-live-intervals -verify-machineinstrs < %s | FileCheck -check-prefix=GCN %s
 
-define amdgpu_kernel void @set_inactive(i32 addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @set_inactive(ptr addrspace(1) %out, i32 %in) {
 ; GCN-LABEL: set_inactive:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dword s4, s[0:1], 0x2c
@@ -17,11 +17,11 @@ define amdgpu_kernel void @set_inactive(i32 addrspace(1)* %out, i32 %in) {
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], 0
 ; GCN-NEXT:    s_endpgm
   %tmp = call i32 @llvm.amdgcn.set.inactive.i32(i32 %in, i32 42) #0
-  store i32 %tmp, i32 addrspace(1)* %out
+  store i32 %tmp, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @set_inactive_64(i64 addrspace(1)* %out, i64 %in) {
+define amdgpu_kernel void @set_inactive_64(ptr addrspace(1) %out, i64 %in) {
 ; GCN-LABEL: set_inactive_64:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -39,11 +39,11 @@ define amdgpu_kernel void @set_inactive_64(i64 addrspace(1)* %out, i64 %in) {
 ; GCN-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; GCN-NEXT:    s_endpgm
   %tmp = call i64 @llvm.amdgcn.set.inactive.i64(i64 %in, i64 0) #0
-  store i64 %tmp, i64 addrspace(1)* %out
+  store i64 %tmp, ptr addrspace(1) %out
   ret void
 }
 
-define amdgpu_kernel void @set_inactive_scc(i32 addrspace(1)* %out, i32 %in, <4 x i32> inreg %desc) {
+define amdgpu_kernel void @set_inactive_scc(ptr addrspace(1) %out, i32 %in, <4 x i32> inreg %desc) {
 ; GCN-LABEL: set_inactive_scc:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x34
@@ -82,12 +82,12 @@ define amdgpu_kernel void @set_inactive_scc(i32 addrspace(1)* %out, i32 %in, <4 
   br i1 %cmp, label %.zero, label %.one
 
 .zero:
-  store i32 %tmp, i32 addrspace(1)* %out
+  store i32 %tmp, ptr addrspace(1) %out
   br label %.exit
 
 .one:
   %tmp.1 = add i32 %tmp, 1
-  store i32 %tmp.1, i32 addrspace(1)* %out
+  store i32 %tmp.1, ptr addrspace(1) %out
   br label %.exit
 
 .exit:

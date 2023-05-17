@@ -16,7 +16,7 @@
 ; CHECK:       Src:  %5 = load float, float* %arrayidx12, align 4 --> Dst:  store float %add13, float* %arrayidx17, align 4
 ; CHECK-NEXT:  da analyze - none!
 
-define void @foo(float* noalias %A, float* noalias %B, i32 signext %m, i32 signext %n, i32 signext %o) {
+define void @foo(ptr noalias %A, ptr noalias %B, i32 signext %m, i32 signext %n, i32 signext %o) {
 entry:
   %cmp5 = icmp sgt i32 %n, 0
   br i1 %cmp5, label %for.body.preheader, label %for.end23
@@ -47,17 +47,17 @@ for.body8:                                        ; preds = %for.body8.preheader
   %indvars.iv = phi i64 [ 0, %for.body8.preheader ], [ %indvars.iv.next, %for.body8 ]
   %0 = sub nsw i64 %indvars.iv19, %indvars.iv12
   %1 = add nsw i64 %0, %indvars.iv
-  %arrayidx = getelementptr inbounds float, float* %A, i64 %1
-  %2 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds float, ptr %A, i64 %1
+  %2 = load float, ptr %arrayidx, align 4
   %3 = add nuw nsw i64 %indvars.iv19, %indvars.iv12
   %4 = add nuw nsw i64 %3, %indvars.iv
-  %arrayidx12 = getelementptr inbounds float, float* %B, i64 %4
-  %5 = load float, float* %arrayidx12, align 4
+  %arrayidx12 = getelementptr inbounds float, ptr %B, i64 %4
+  %5 = load float, ptr %arrayidx12, align 4
   %add13 = fadd fast float %2, %5
   %6 = add nuw nsw i64 %indvars.iv19, %indvars.iv12
   %7 = add nuw nsw i64 %6, %indvars.iv
-  %arrayidx17 = getelementptr inbounds float, float* %A, i64 %7
-  store float %add13, float* %arrayidx17, align 4
+  %arrayidx17 = getelementptr inbounds float, ptr %A, i64 %7
+  store float %add13, ptr %arrayidx17, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp ne i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.body8, label %for.inc18.loopexit

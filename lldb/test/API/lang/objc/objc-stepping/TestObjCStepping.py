@@ -1,8 +1,5 @@
 """Test stepping through ObjC method dispatch in various forms."""
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -10,8 +7,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestObjCStepping(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -159,8 +154,8 @@ class TestObjCStepping(TestBase):
             print("className is %s, newClassName is %s" % (className, newClassName))
             print(mySource_isa)
 
-        self.assertTrue(
-            newClassName != className,
+        self.assertNotEqual(
+            newClassName, className,
             "The isa did indeed change, swizzled!")
 
         # Now step in, that should leave us in the Source randomMethod:

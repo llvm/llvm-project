@@ -407,7 +407,7 @@ public:
     }
   };
 
-private:
+protected:
   /// Helper class used to represent the cost for mapping an instruction.
   /// When mapping an instruction, we may introduce some repairing code.
   /// In most cases, the repairing code is local to the instruction,
@@ -617,7 +617,7 @@ private:
 
 public:
   /// Create a RegBankSelect pass with the specified \p RunningMode.
-  RegBankSelect(Mode RunningMode = Fast);
+  RegBankSelect(char &PassID = ID, Mode RunningMode = Fast);
 
   StringRef getPassName() const override { return "RegBankSelect"; }
 
@@ -638,6 +638,12 @@ public:
     return MachineFunctionProperties()
       .set(MachineFunctionProperties::Property::NoPHIs);
   }
+
+  /// Check that our input is fully legal: we require the function to have the
+  /// Legalized property, so it should be.
+  ///
+  /// FIXME: This should be in the MachineVerifier.
+  bool checkFunctionIsLegal(MachineFunction &MF) const;
 
   /// Walk through \p MF and assign a register bank to every virtual register
   /// that are still mapped to nothing.
@@ -662,6 +668,8 @@ public:
   ///           MIRBuilder.buildInstr(COPY, Tmp, ArgReg)
   ///           inst.getOperand(argument.getOperandNo()).setReg(Tmp)
   /// \endcode
+  bool assignRegisterBanks(MachineFunction &MF);
+
   bool runOnMachineFunction(MachineFunction &MF) override;
 };
 

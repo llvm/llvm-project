@@ -649,7 +649,12 @@ class stddeque_SynthProvider:
     def find_block_size(self):
         # in order to use the deque we must have the block size, or else
         # it's impossible to know what memory addresses are valid
-        self.element_type = self.valobj.GetType().GetTemplateArgumentType(0)
+        obj_type = self.valobj.GetType()
+        if obj_type.IsReferenceType():
+            obj_type = obj_type.GetDereferencedType()
+        elif obj_type.IsPointerType():
+            obj_type = obj_type.GetPointeeType()
+        self.element_type = obj_type.GetTemplateArgumentType(0)
         self.element_size = self.element_type.GetByteSize()
         # The code says this, but there must be a better way:
         # template <class _Tp, class _Allocator>

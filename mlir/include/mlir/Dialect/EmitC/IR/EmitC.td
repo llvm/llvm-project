@@ -37,15 +37,14 @@ def EmitC_ApplyOp : EmitC_Op<"apply", []> {
 
     ```mlir
     // Custom form of applying the & operator.
-    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.opaque<"int32_t*">
+    %0 = emitc.apply "&"(%arg0) : (i32) -> !emitc.ptr<i32>
 
     // Generic form of the same operation.
     %0 = "emitc.apply"(%arg0) {applicableOperator = "&"}
-        : (i32) -> !emitc.opaque<"int32_t*">
+        : (i32) -> !emitc.ptr<i32>
 
     ```
   }];
-  // TODO: Disallow to apply the operator & (address of) to emitc.constant operations.
   let arguments = (ins
     Arg<StrAttr, "the operator to apply">:$applicableOperator,
     AnyType:$operand
@@ -139,16 +138,15 @@ def EmitC_ConstantOp : EmitC_Op<"constant", [ConstantLike]> {
     ```
   }];
 
-  let arguments = (ins AnyAttr:$value);
+  let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
   let results = (outs AnyType);
 
   let hasFolder = 1;
-  // TODO: Disallow empty constants.
   let hasVerifier = 1;
 }
 
 def EmitC_IncludeOp
-    : EmitC_Op<"include", [NoSideEffect, HasParent<"ModuleOp">]> {
+    : EmitC_Op<"include", [HasParent<"ModuleOp">]> {
   let summary = "Include operation";
   let description = [{
     The `include` operation allows to define a source file inclusion via the
@@ -212,7 +210,7 @@ def EmitC_VariableOp : EmitC_Op<"variable", []> {
     ```
   }];
 
-  let arguments = (ins AnyAttr:$value);
+  let arguments = (ins EmitC_OpaqueOrTypedAttr:$value);
   let results = (outs AnyType);
 
   let hasVerifier = 1;

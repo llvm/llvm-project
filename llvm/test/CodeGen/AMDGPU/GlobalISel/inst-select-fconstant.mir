@@ -11,12 +11,12 @@ body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_v_s32
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_MOV_B32_e32_]]
-    ; GCN: $vgpr1 = COPY [[V_MOV_B32_e32_1]]
-    ; GCN: S_ENDPGM 0, implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1065353216, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1090519040, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_MOV_B32_e32_]]
+    ; GCN-NEXT: $vgpr1 = COPY [[V_MOV_B32_e32_1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]]
     %0:vgpr(s32) = G_FCONSTANT float 1.0
     %1:vgpr(s32) = G_FCONSTANT float 8.0
     %2:vgpr(s32) = G_FCONSTANT float 1.0
@@ -36,12 +36,12 @@ body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_s_s32
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 1065353216
-    ; GCN: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1090519040
-    ; GCN: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 3212836864
-    ; GCN: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 3238002688
-    ; GCN: $sgpr0 = COPY [[S_MOV_B32_]]
-    ; GCN: $sgpr1 = COPY [[S_MOV_B32_1]]
-    ; GCN: S_ENDPGM 0, implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]]
+    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1090519040
+    ; GCN-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 3212836864
+    ; GCN-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 3238002688
+    ; GCN-NEXT: $sgpr0 = COPY [[S_MOV_B32_]]
+    ; GCN-NEXT: $sgpr1 = COPY [[S_MOV_B32_1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]]
     %0:sgpr(s32) = G_FCONSTANT float 1.0
     %1:sgpr(s32) = G_FCONSTANT float 8.0
     %2:sgpr(s32) = G_FCONSTANT float -1.0
@@ -62,20 +62,20 @@ body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_v_s64
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1072693248, implicit $exec
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
-    ; GCN: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1075838976, implicit $exec
-    ; GCN: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
-    ; GCN: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1073741824, implicit $exec
-    ; GCN: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
-    ; GCN: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1076101120, implicit $exec
-    ; GCN: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
-    ; GCN: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
-    ; GCN: $vgpr2_vgpr3 = COPY [[REG_SEQUENCE1]]
-    ; GCN: S_ENDPGM 0, implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1072693248, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_]], %subreg.sub0, [[V_MOV_B32_e32_1]], %subreg.sub1
+    ; GCN-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1075838976, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_2]], %subreg.sub0, [[V_MOV_B32_e32_3]], %subreg.sub1
+    ; GCN-NEXT: [[V_MOV_B32_e32_4:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_5:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 -1073741824, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE2:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_4]], %subreg.sub0, [[V_MOV_B32_e32_5]], %subreg.sub1
+    ; GCN-NEXT: [[V_MOV_B32_e32_6:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_7:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 1076101120, implicit $exec
+    ; GCN-NEXT: [[REG_SEQUENCE3:%[0-9]+]]:vreg_64 = REG_SEQUENCE [[V_MOV_B32_e32_6]], %subreg.sub0, [[V_MOV_B32_e32_7]], %subreg.sub1
+    ; GCN-NEXT: $vgpr0_vgpr1 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: $vgpr2_vgpr3 = COPY [[REG_SEQUENCE1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[REG_SEQUENCE2]], implicit [[REG_SEQUENCE3]]
     %0:vgpr(s64) = G_FCONSTANT double 1.0
     %1:vgpr(s64) = G_FCONSTANT double 8.0
     %2:vgpr(s64) = G_FCONSTANT double -2.0
@@ -96,16 +96,16 @@ body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_s_s64
     ; GCN: [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 4607182418800017408
-    ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1075838976
-    ; GCN: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
-    ; GCN: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -4611686018427387904
-    ; GCN: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-    ; GCN: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -1071382528
-    ; GCN: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
-    ; GCN: $sgpr0_sgpr1 = COPY [[S_MOV_B64_]]
-    ; GCN: $sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
-    ; GCN: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_1]], implicit [[REG_SEQUENCE1]]
+    ; GCN-NEXT: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 1075838976
+    ; GCN-NEXT: [[REG_SEQUENCE:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_]], %subreg.sub0, [[S_MOV_B32_1]], %subreg.sub1
+    ; GCN-NEXT: [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -4611686018427387904
+    ; GCN-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+    ; GCN-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 -1071382528
+    ; GCN-NEXT: [[REG_SEQUENCE1:%[0-9]+]]:sreg_64 = REG_SEQUENCE [[S_MOV_B32_2]], %subreg.sub0, [[S_MOV_B32_3]], %subreg.sub1
+    ; GCN-NEXT: $sgpr0_sgpr1 = COPY [[S_MOV_B64_]]
+    ; GCN-NEXT: $sgpr2_sgpr3 = COPY [[REG_SEQUENCE]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B64_]], implicit [[REG_SEQUENCE]], implicit [[S_MOV_B64_1]], implicit [[REG_SEQUENCE1]]
     %0:sgpr(s64) = G_FCONSTANT double 1.0
     %1:sgpr(s64) = G_FCONSTANT double 8.0
     %2:sgpr(s64) = G_FCONSTANT double -2.0
@@ -125,12 +125,12 @@ body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_v_s16
     ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15360, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 18432, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15360, implicit $exec
-    ; GCN: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 18432, implicit $exec
-    ; GCN: $vgpr0 = COPY [[V_MOV_B32_e32_]]
-    ; GCN: $vgpr1 = COPY [[V_MOV_B32_e32_1]]
-    ; GCN: S_ENDPGM 0, implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]]
+    ; GCN-NEXT: [[V_MOV_B32_e32_1:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 18432, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_2:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15360, implicit $exec
+    ; GCN-NEXT: [[V_MOV_B32_e32_3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 18432, implicit $exec
+    ; GCN-NEXT: $vgpr0 = COPY [[V_MOV_B32_e32_]]
+    ; GCN-NEXT: $vgpr1 = COPY [[V_MOV_B32_e32_1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_2]], implicit [[V_MOV_B32_e32_3]]
     %0:vgpr(s16) = G_FCONSTANT half 1.0
     %1:vgpr(s16) = G_FCONSTANT half 8.0
     %2:vgpr(s32) = G_ANYEXT %0
@@ -155,14 +155,14 @@ body: |
   bb.0:
     ; GCN-LABEL: name: fconstant_s_s16
     ; GCN: [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 15360
-    ; GCN: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 18432
-    ; GCN: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
-    ; GCN: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
-    ; GCN: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 15360
-    ; GCN: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 18432
-    ; GCN: $sgpr0 = COPY [[COPY]]
-    ; GCN: $sgpr1 = COPY [[COPY1]]
-    ; GCN: S_ENDPGM 0, implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]]
+    ; GCN-NEXT: [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 18432
+    ; GCN-NEXT: [[COPY:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_]]
+    ; GCN-NEXT: [[COPY1:%[0-9]+]]:vgpr_32 = COPY [[S_MOV_B32_1]]
+    ; GCN-NEXT: [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 15360
+    ; GCN-NEXT: [[S_MOV_B32_3:%[0-9]+]]:sreg_32 = S_MOV_B32 18432
+    ; GCN-NEXT: $sgpr0 = COPY [[COPY]]
+    ; GCN-NEXT: $sgpr1 = COPY [[COPY1]]
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_MOV_B32_2]], implicit [[S_MOV_B32_3]]
     %0:sgpr(s16) = G_FCONSTANT half 1.0
     %1:sgpr(s16) = G_FCONSTANT half 8.0
     %2:vgpr(s32) = G_ANYEXT %0

@@ -85,7 +85,7 @@ inline std::pair<DigitsT, int16_t> getAdjusted(uint64_t Digits,
     return std::make_pair(Digits, Scale);
 
   // Shift right and round.
-  int Shift = 64 - Width - countLeadingZeros(Digits);
+  int Shift = llvm::bit_width(Digits) - Width;
   return getRounded<DigitsT>(Digits >> Shift, Scale + Shift,
                              Digits & (UINT64_C(1) << (Shift - 1)));
 }
@@ -192,7 +192,8 @@ inline std::pair<int32_t, int> getLgImpl(DigitsT Digits, int16_t Scale) {
     return std::make_pair(INT32_MIN, 0);
 
   // Get the floor of the lg of Digits.
-  int32_t LocalFloor = sizeof(Digits) * 8 - countLeadingZeros(Digits) - 1;
+  static_assert(sizeof(Digits) <= sizeof(uint64_t));
+  int32_t LocalFloor = llvm::Log2_64(Digits);
 
   // Get the actual floor.
   int32_t Floor = Scale + LocalFloor;
@@ -304,7 +305,7 @@ int16_t matchScales(DigitsT &LDigits, int16_t &LScale, DigitsT &RDigits,
   }
 
   // Shift LDigits left as much as possible, then shift RDigits right.
-  int32_t ShiftL = std::min<int32_t>(countLeadingZeros(LDigits), ScaleDiff);
+  int32_t ShiftL = std::min<int32_t>(llvm::countl_zero(LDigits), ScaleDiff);
   assert(ShiftL < getWidth<DigitsT>() && "can't shift more than width");
 
   int32_t ShiftR = ScaleDiff - ShiftL;
@@ -425,8 +426,8 @@ public:
                             unsigned Precision);
   static std::string toString(uint64_t D, int16_t E, int Width,
                               unsigned Precision);
-  static int countLeadingZeros32(uint32_t N) { return countLeadingZeros(N); }
-  static int countLeadingZeros64(uint64_t N) { return countLeadingZeros(N); }
+  static int countLeadingZeros32(uint32_t N) { return llvm::countl_zero(N); }
+  static int countLeadingZeros64(uint64_t N) { return llvm::countl_zero(N); }
   static uint64_t getHalf(uint64_t N) { return (N >> 1) + (N & 1); }
 
   static std::pair<uint64_t, bool> splitSigned(int64_t N) {

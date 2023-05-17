@@ -17,8 +17,8 @@
 
 // ===
 // Compile the module.
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
 // RUN: ls -R %t/modules-cache | grep Foo.pcm.timestamp
 // RUN: ls -R %t/modules-cache | grep Bar.pcm.timestamp
 // RUN: ls -R %t/modules-cache-user | grep Foo.pcm.timestamp
@@ -30,8 +30,8 @@
 
 // ===
 // Use it, and make sure that we did not recompile it.
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
 // RUN: ls -R %t/modules-cache | grep Foo.pcm.timestamp
 // RUN: ls -R %t/modules-cache | grep Bar.pcm.timestamp
 // RUN: ls -R %t/modules-cache-user | grep Foo.pcm.timestamp
@@ -54,8 +54,8 @@
 // ===
 // Use the module, and make sure that we did not recompile it if foo.h or
 // module.map are system files, even though the sources changed.
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache-user -fsyntax-only -I %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=1390000000 -fmodules-validate-once-per-build-session %s
 // RUN: ls -R %t/modules-cache | grep Foo.pcm.timestamp
 // RUN: ls -R %t/modules-cache | grep Bar.pcm.timestamp
 // RUN: ls -R %t/modules-cache-user | grep Foo.pcm.timestamp
@@ -73,7 +73,7 @@
 
 // ===
 // Recompile the module if the today's date is before 01 January 2100.
-// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fbuild-session-timestamp=4102441200 -fmodules-validate-once-per-build-session %s
+// RUN: %clang_cc1 -cc1 -fmodules -fimplicit-module-maps -fdisable-module-hash -fmodules-cache-path=%t/modules-cache -fsyntax-only -isystem %t/Inputs -fmodules-validate-system-headers -fbuild-session-timestamp=4102441200 -fmodules-validate-once-per-build-session %s
 // RUN: ls -R %t/modules-cache | grep Foo.pcm.timestamp
 // RUN: ls -R %t/modules-cache | grep Bar.pcm.timestamp
 // RUN: cp %t/modules-cache/Foo.pcm %t/modules-to-compare/Foo-after.pcm

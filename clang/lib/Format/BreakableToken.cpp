@@ -49,10 +49,10 @@ static StringRef getLineCommentIndentPrefix(StringRef Comment,
   if (Style.Language == FormatStyle::LK_TextProto)
     KnownPrefixes = KnownTextProtoPrefixes;
 
-  assert(std::is_sorted(KnownPrefixes.begin(), KnownPrefixes.end(),
-                        [](StringRef Lhs, StringRef Rhs) noexcept {
-                          return Lhs.size() > Rhs.size();
-                        }));
+  assert(
+      llvm::is_sorted(KnownPrefixes, [](StringRef Lhs, StringRef Rhs) noexcept {
+        return Lhs.size() > Rhs.size();
+      }));
 
   for (StringRef KnownPrefix : KnownPrefixes) {
     if (Comment.startswith(KnownPrefix)) {
@@ -590,10 +590,8 @@ unsigned BreakableBlockComment::getContentIndent(unsigned LineIndex) const {
     ContentWithNoDecoration = ContentWithNoDecoration.substr(1).ltrim(Blanks);
   StringRef FirstWord = ContentWithNoDecoration.substr(
       0, ContentWithNoDecoration.find_first_of(Blanks));
-  if (ContentIndentingJavadocAnnotations.find(FirstWord) !=
-      ContentIndentingJavadocAnnotations.end()) {
+  if (ContentIndentingJavadocAnnotations.contains(FirstWord))
     return Style.ContinuationIndentWidth;
-  }
   return 0;
 }
 

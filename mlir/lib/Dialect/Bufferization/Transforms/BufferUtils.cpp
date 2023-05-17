@@ -20,6 +20,7 @@
 #include "mlir/Pass/Pass.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallString.h"
+#include <optional>
 
 using namespace mlir;
 using namespace mlir::bufferization;
@@ -67,7 +68,7 @@ void BufferPlacementAllocs::build(Operation *op) {
         [=](MemoryEffects::EffectInstance &it) {
           Value value = it.getValue();
           return isa<MemoryEffects::Allocate>(it.getEffect()) && value &&
-                 value.isa<OpResult>() &&
+                 isa<OpResult>(value) &&
                  it.getResource() !=
                      SideEffects::AutomaticAllocationScopeResource::get();
         });
@@ -78,9 +79,9 @@ void BufferPlacementAllocs::build(Operation *op) {
     // Get allocation result.
     Value allocValue = allocateResultEffects[0].getValue();
     // Find the associated dealloc value and register the allocation entry.
-    llvm::Optional<Operation *> dealloc = memref::findDealloc(allocValue);
+    std::optional<Operation *> dealloc = memref::findDealloc(allocValue);
     // If the allocation has > 1 dealloc associated with it, skip handling it.
-    if (!dealloc.hasValue())
+    if (!dealloc)
       return;
     allocs.push_back(std::make_tuple(allocValue, *dealloc));
   });
@@ -131,7 +132,7 @@ bool BufferPlacementTransformationBase::isLoop(Operation *op) {
 
   // Start with all entry regions and test whether they induce a loop.
   SmallVector<RegionSuccessor, 2> successorRegions;
-  regionInterface.getSuccessorRegions(/*index=*/llvm::None, successorRegions);
+  regionInterface.getSuccessorRegions(/*index=*/std::nullopt, successorRegions);
   for (RegionSuccessor &regionEntry : successorRegions) {
     if (recurse(regionEntry.getSuccessor()))
       return true;
@@ -146,8 +147,9 @@ bool BufferPlacementTransformationBase::isLoop(Operation *op) {
 //===----------------------------------------------------------------------===//
 
 FailureOr<memref::GlobalOp>
-bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
-  auto type = constantOp.getType().cast<RankedTensorType>();
+bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment,
+                            Attribute memorySpace) {
+  auto type = cast<RankedTensorType>(constantOp.getType());
   auto moduleOp = constantOp->getParentOfType<ModuleOp>();
   if (!moduleOp)
     return failure();
@@ -158,11 +160,10 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
     auto globalOp = dyn_cast<memref::GlobalOp>(&op);
     if (!globalOp)
       continue;
-    if (!globalOp.initial_value().hasValue())
+    if (!globalOp.getInitialValue().has_value())
       continue;
-    uint64_t opAlignment =
-        globalOp.alignment().hasValue() ? globalOp.alignment().getValue() : 0;
-    Attribute initialValue = globalOp.initial_value().getValue();
+    uint64_t opAlignment = globalOp.getAlignment().value_or(0);
+    Attribute initialValue = globalOp.getInitialValue().value();
     if (opAlignment == alignment && initialValue == constantOp.getValue())
       return globalOp;
   }
@@ -184,11 +185,14 @@ bufferization::getGlobalFor(arith::ConstantOp constantOp, uint64_t alignment) {
                     : IntegerAttr();
 
   BufferizeTypeConverter typeConverter;
+  auto memrefType = cast<MemRefType>(typeConverter.convertType(type));
+  if (memorySpace)
+    memrefType = MemRefType::Builder(memrefType).setMemorySpace(memorySpace);
   auto global = globalBuilder.create<memref::GlobalOp>(
       constantOp.getLoc(), (Twine("__constant_") + os.str()).str(),
       /*sym_visibility=*/globalBuilder.getStringAttr("private"),
-      /*type=*/typeConverter.convertType(type).cast<MemRefType>(),
-      /*initial_value=*/constantOp.getValue().cast<ElementsAttr>(),
+      /*type=*/memrefType,
+      /*initial_value=*/cast<ElementsAttr>(constantOp.getValue()),
       /*constant=*/true,
       /*alignment=*/memrefAlignment);
   symbolTable.insert(global);

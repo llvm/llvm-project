@@ -1,0 +1,33 @@
+RUN: llvm-symbolizer --dwp=%p/Inputs/split-dwarf-dwp-invalid.dwp \
+RUN:     --obj=%p/Inputs/split-dwarf-dwp-invalid \
+RUN:     0x0000000000001140 0x0000000000001130 0x0000000000001130 \
+RUN:     2>&1 | FileCheck %s
+
+The test contains a hand-modified dwp file containing an invalid DWARF version
+in the second-queried CU.
+
+This ensures llvm-symbolizer doesn't crash when trying to access the invalid CU
+a second time (the first time works fine, the second fails the sorted search
+because of a null entry that can't be sorted/compared)
+
+One warning rather than two would be good here, but we put the CUs in an
+offset-sorted list, so a null entry in that list makes it impossible to sort
+(since it has no offset), so on failure we don't put anything in the list,
+which means next time it's queried it is parsed again and fails and warns
+again. We could make the list a pair of {offset, pointer} but that'd require
+fixing up a bunch of clients probably (possibly by providing a filter iterator
+that skips the null entries, keeping those only as an implementation detail?) -
+or perhaps just have a separate list of offsets that have failed to parse
+previously?
+
+CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, supported are 2-5
+CHECK: warning: DWARF unit at offset 0x00000000 has unsupported version 255, supported are 2-5
+
+CHECK: other()
+CHECK: /usr/local/google/home/blaikie/dev/scratch{{[/\\]}}other.cpp:1:16
+
+CHECK: main
+CHECK: /usr/local/google/home/blaikie/dev/scratch{{[/\\]}}test.cpp:5:0
+
+CHECK: main
+CHECK: /usr/local/google/home/blaikie/dev/scratch{{[/\\]}}test.cpp:5:0

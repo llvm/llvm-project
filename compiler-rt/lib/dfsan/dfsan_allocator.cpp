@@ -33,8 +33,12 @@ struct DFsanMapUnmapCallback {
   void OnUnmap(uptr p, uptr size) const { dfsan_set_label(0, (void *)p, size); }
 };
 
-static const uptr kAllocatorSpace = 0x700000000000ULL;
-static const uptr kMaxAllowedMallocSize = 8UL << 30;
+#if defined(__aarch64__)
+const uptr kAllocatorSpace = 0xE00000000000ULL;
+#else
+const uptr kAllocatorSpace = 0x700000000000ULL;
+#endif
+const uptr kMaxAllowedMallocSize = 8UL << 30;
 
 struct AP64 {  // Allocator64 parameters. Deliberately using a short name.
   static const uptr kSpaceBeg = kAllocatorSpace;
@@ -170,6 +174,20 @@ void *DFsanCalloc(uptr nmemb, uptr size) {
   return DFsanAllocate(nmemb * size, sizeof(u64), true /*zeroise*/);
 }
 
+static const void *AllocationBegin(const void *p) {
+  if (!p)
+    return nullptr;
+  void *beg = allocator.GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+  Metadata *b = (Metadata *)allocator.GetMetaData(beg);
+  if (!b)
+    return nullptr;
+  if (b->requested_size == 0)
+    return nullptr;
+  return (const void *)beg;
+}
+
 static uptr AllocationSize(const void *p) {
   if (!p)
     return 0;
@@ -289,5 +307,9 @@ uptr __sanitizer_get_unmapped_bytes() { return 1; }
 uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) { return AllocationSize(p) != 0; }
+
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return AllocationBegin(p);
+}
 
 uptr __sanitizer_get_allocated_size(const void *p) { return AllocationSize(p); }

@@ -13,6 +13,6 @@ define <2 x double> @test_fpext() {
   %ret = shufflevector <4 x double> %tmp5, <4 x double> undef, <2 x i32> <i32 0, i32 1>
   %E1 = extractelement <4 x double> %tmp5, i16 undef
   %I2 = insertelement <2 x double> %ret, double 4.940660e-324, i16 undef
-  store double %E1, double* undef, align 8
+  store double %E1, ptr undef, align 8
   ret <2 x double> %I2
 }

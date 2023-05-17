@@ -20,14 +20,14 @@ entry:
   ret i16 %asmtmp
 }
 
-@n = global i32 42                                ; <i32*> [#uses=3]
-@y = common global i32 0                          ; <i32*> [#uses=3]
+@n = global i32 42                                ; <ptr> [#uses=3]
+@y = common global i32 0                          ; <ptr> [#uses=3]
 
 define void @test3() nounwind {
 entry:
 ; CHECK-LABEL: test3:
 ; CHECK: movl _n, %eax
-  call void asm sideeffect "movl ${0:a}, %eax", "ir,~{dirflag},~{fpsr},~{flags},~{eax}"(i32* @n) nounwind
+  call void asm sideeffect "movl ${0:a}, %eax", "ir,~{dirflag},~{fpsr},~{flags},~{eax}"(ptr @n) nounwind
   ret void
 }
 
@@ -36,6 +36,6 @@ entry:
 ; CHECK-LABEL: test4:
 ; CHECK: movl	L_y$non_lazy_ptr, %ecx
 ; CHECK: movl (%ecx), %eax
-  call void asm sideeffect "movl ${0:a}, %eax", "ir,~{dirflag},~{fpsr},~{flags},~{eax}"(i32* @y) nounwind
+  call void asm sideeffect "movl ${0:a}, %eax", "ir,~{dirflag},~{fpsr},~{flags},~{eax}"(ptr @y) nounwind
   ret void
 }

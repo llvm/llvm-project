@@ -363,6 +363,11 @@ static enum BaseType getBaseType(const Value *Val) {
       Worklist.push_back(GCRelocate->getDerivedPtr());
       continue;
     }
+    if (const auto *FI = dyn_cast<FreezeInst>(V)) {
+      // Freeze does not change null-ness or constant-ness of the value.
+      Worklist.push_back(FI->getOperand(0));
+      continue;
+    }
     if (isa<Constant>(V)) {
       // We found at least one base pointer which is non-null, so this derived
       // pointer is not exclusively derived from null.
@@ -480,9 +485,7 @@ public:
                              InstructionVerifier &Verifier);
 
   /// Returns true for reachable and live blocks.
-  bool isMapped(const BasicBlock *BB) const {
-    return BlockMap.find(BB) != BlockMap.end();
-  }
+  bool isMapped(const BasicBlock *BB) const { return BlockMap.contains(BB); }
 
 private:
   /// Returns true if the instruction may be safely skipped during verification.

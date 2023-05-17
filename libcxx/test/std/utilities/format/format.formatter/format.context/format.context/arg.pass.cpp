@@ -13,6 +13,7 @@
 // basic_format_arg<basic_format_context> arg(size_t id) const;
 
 #include <format>
+#include <iterator>
 #include <cassert>
 
 #include "test_basic_format_arg.h"
@@ -28,11 +29,10 @@ void test() {
   std::basic_format_args args = store;
 
   std::basic_string<CharT> output;
-  const std::basic_format_context context =
-      test_format_context_create(OutIt{output}, args);
+  const std::basic_format_context context = test_format_context_create(OutIt{output}, args);
   LIBCPP_ASSERT(args.__size() == 4);
   ASSERT_NOEXCEPT(context.arg(0));
-  for (size_t i = 0, e = args.__size(); i != e; ++i) {
+  for (std::size_t i = 0, e = args.__size(); i != e; ++i) {
     assert(context.arg(i));
   }
   assert(!context.arg(args.__size()));

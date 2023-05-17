@@ -17,7 +17,8 @@ contains
     type(t), allocatable :: a(:)
     type(t), allocatable :: b[:]
     a(1)%p => s
-    !ERROR: Procedure pointer may not be a coindexed object
+    !ERROR: The left-hand side of a pointer assignment is not definable
+    !BECAUSE: Procedure pointer 'p' may not be a coindexed object
     b[1]%p => s
   end
   ! C1028
@@ -74,37 +75,44 @@ contains
 
     p_impure => f_impure1 ! OK, same characteristics
     p_impure => f_pure1 ! OK, target may be pure when pointer is not
-    p_impure => f_elemental1 ! OK, target may be pure elemental
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental1': incompatible procedure attributes: Elemental
+    p_impure => f_elemental1
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impureelemental1': incompatible procedure attributes: Elemental
     p_impure => f_ImpureElemental1 ! OK, target may be elemental
 
     sp_impure => s_impure1 ! OK, same characteristics
     sp_impure => s_pure1 ! OK, target may be pure when pointer is not
-    sp_impure => s_elemental1 ! OK, target may be elemental when pointer is not
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_elemental1': incompatible procedure attributes: Elemental
+    sp_impure => s_elemental1
 
     !ERROR: PURE procedure pointer 'p_pure' may not be associated with non-PURE procedure designator 'f_impure1'
     p_pure => f_impure1
     p_pure => f_pure1 ! OK, same characteristics
-    p_pure => f_elemental1 ! OK, target may be pure
+    !ERROR: Procedure pointer 'p_pure' associated with incompatible procedure designator 'f_elemental1': incompatible procedure attributes: Elemental
+    p_pure => f_elemental1
     !ERROR: PURE procedure pointer 'p_pure' may not be associated with non-PURE procedure designator 'f_impureelemental1'
     p_pure => f_impureElemental1
 
     !ERROR: PURE procedure pointer 'sp_pure' may not be associated with non-PURE procedure designator 's_impure1'
     sp_pure => s_impure1
     sp_pure => s_pure1 ! OK, same characteristics
+    !ERROR: Procedure pointer 'sp_pure' associated with incompatible procedure designator 's_elemental1': incompatible procedure attributes: Elemental
     sp_pure => s_elemental1 ! OK, target may be elemental when pointer is not
 
-    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2'
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_impure2': incompatible dummy argument #1: incompatible dummy data object intents
     p_impure => f_impure2
-    !ERROR: Procedure pointer 'p_pure' associated with incompatible procedure designator 'f_pure2'
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'f_pure2': function results have distinct types: INTEGER(4) vs REAL(4)
     p_pure => f_pure2
-    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2'
+    !ERROR: Function pointer 'p_pure' associated with incompatible function designator 'ccos': function results have distinct types: INTEGER(4) vs COMPLEX(4)
+    p_pure => ccos
+    !ERROR: Procedure pointer 'p_impure' associated with incompatible procedure designator 'f_elemental2': incompatible procedure attributes: Elemental
     p_impure => f_elemental2
 
-    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_impure2'
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_impure2': incompatible procedure attributes: BindC
     sp_impure => s_impure2
-    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_pure2'
+    !ERROR: Procedure pointer 'sp_impure' associated with incompatible procedure designator 's_pure2': incompatible dummy argument #1: incompatible dummy data object intents
     sp_impure => s_pure2
-    !ERROR: Procedure pointer 'sp_pure' associated with incompatible procedure designator 's_elemental2'
+    !ERROR: Procedure pointer 'sp_pure' associated with incompatible procedure designator 's_elemental2': incompatible procedure attributes: Elemental
     sp_pure => s_elemental2
 
     !ERROR: Function pointer 'p_impure' may not be associated with subroutine designator 's_impure1'
@@ -188,9 +196,9 @@ contains
     procedure(real), pointer :: p_f
     p_f => f_external
     p_s => s_external
-    !ERROR: Subroutine pointer 'p_s' may not be associated with function designator 'f_external'
+    !Ok: p_s has no interface
     p_s => f_external
-    !ERROR: Function pointer 'p_f' may not be associated with subroutine designator 's_external'
+    !Ok: s_external has no interface
     p_f => s_external
   end
 
@@ -264,10 +272,10 @@ contains
   end
 
   ! Check is_contiguous, which is usually the same as when pointer bounds
-  ! remapping is used. If it's not simply contiguous it's not constant so
-  ! an error is reported.
+  ! remapping is used.
   subroutine s12
     integer, pointer :: p(:)
+    integer, pointer, contiguous :: pc(:)
     type :: t
       integer :: a(4, 4)
       integer :: b
@@ -275,16 +283,26 @@ contains
     type(t), target :: x
     type(t), target :: y(10,10)
     integer :: v(10)
-    logical, parameter :: l1 = is_contiguous(x%a(:,:))
-    logical, parameter :: l2 = is_contiguous(y(1,1)%a(1,1))
+    logical(kind=merge(1,-1,is_contiguous(x%a(:,:)))) :: l1 ! known true
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(1,1)))) :: l2 ! known true
     !ERROR: Must be a constant value
-    logical, parameter :: l3 = is_contiguous(y(:,1)%a(1,1))
+    logical(kind=merge(-1,-2,is_contiguous(y(:,1)%a(1,1)))) :: l3 ! unknown
     !ERROR: Must be a constant value
-    logical, parameter :: l4 = is_contiguous(x%a(:,v))
+    logical(kind=merge(-1,-2,is_contiguous(y(:,1)%a(1,1)))) :: l4 ! unknown
+    logical(kind=merge(-1,1,is_contiguous(x%a(:,v)))) :: l5 ! known false
     !ERROR: Must be a constant value
-    logical, parameter :: l5 = is_contiguous(y(v,1)%a(1,1))
+    logical(kind=merge(-1,-2,is_contiguous(y(v,1)%a(1,1)))) :: l6 ! unknown
     !ERROR: Must be a constant value
-    logical, parameter :: l6 = is_contiguous(p(:))
+    logical(kind=merge(-1,-2,is_contiguous(p(:)))) :: l7 ! unknown
+    logical(kind=merge(1,-1,is_contiguous(pc(:)))) :: l8 ! known true
+    logical(kind=merge(-1,1,is_contiguous(pc(1:10:2)))) :: l9 ! known false
+    logical(kind=merge(-1,1,is_contiguous(pc(10:1:-1)))) :: l10 ! known false
+    logical(kind=merge(1,-1,is_contiguous(pc(1:10:1)))) :: l11 ! known true
+    logical(kind=merge(-1,1,is_contiguous(pc(10:1:-1)))) :: l12 ! known false
+    !ERROR: Must be a constant value
+    logical(kind=merge(-1,1,is_contiguous(pc(::-1)))) :: l13 ! unknown (could be empty)
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(::-1,1)))) :: l14 ! known true (empty)
+    logical(kind=merge(1,-1,is_contiguous(y(1,1)%a(1,::-1)))) :: l15 ! known true (empty)
   end
   subroutine test3(b)
     integer, intent(inout) :: b(..)
@@ -292,5 +310,18 @@ contains
     integer, parameter :: i = rank(b)
   end subroutine
 
+  subroutine s13
+    external :: s_external
+    procedure(), pointer :: ptr
+    !Ok - don't emit an error about incompatible Subroutine attribute
+    ptr => s_external
+    call ptr
+  end subroutine
 
+  subroutine s14
+    procedure(real), pointer :: ptr
+    sf(x) = x + 1.
+    !ERROR: Statement function 'sf' may not be the target of a pointer assignment
+    ptr => sf
+  end subroutine
 end

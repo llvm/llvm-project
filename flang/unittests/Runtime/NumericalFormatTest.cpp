@@ -280,8 +280,8 @@ TEST(IOApiTests, FormatZeroes) {
   for (auto const &[format, expect] : zeroes) {
     std::string got;
     ASSERT_TRUE(CompareFormatReal(format, 0.0, expect, got))
-        << "Failed to format " << format << ", expected " << expect << ", got "
-        << got;
+        << "Failed to format " << format << ", expected '" << expect
+        << "', got '" << got << "'";
   }
 }
 
@@ -311,8 +311,8 @@ TEST(IOApiTests, FormatOnes) {
   for (auto const &[format, expect] : ones) {
     std::string got;
     ASSERT_TRUE(CompareFormatReal(format, 1.0, expect, got))
-        << "Failed to format " << format << ", expected " << expect << ", got "
-        << got;
+        << "Failed to format " << format << ", expected '" << expect
+        << "', got '" << got << "'";
   }
 }
 
@@ -326,8 +326,8 @@ TEST(IOApiTests, FormatNegativeOnes) {
   for (auto const &[format, expect] : negOnes) {
     std::string got;
     ASSERT_TRUE(CompareFormatReal(format, -1.0, expect, got))
-        << "Failed to format " << format << ", expected " << expect << ", got "
-        << got;
+        << "Failed to format " << format << ", expected '" << expect
+        << "', got '" << got << "'";
   }
 }
 
@@ -394,9 +394,9 @@ TEST(IOApiTests, FormatDoubleValues) {
               {"(E62.55,';')",
                   " 0.1000000000000000055511151231257827021181583404541015625E+"
                   "00;"},
-              {"(E0.0,';')", " 0.E+00;"},
+              {"(E0.0,';')", ".1E+00;"},
               {"(E0.55,';')",
-                  "0.1000000000000000055511151231257827021181583404541015625E+"
+                  ".1000000000000000055511151231257827021181583404541015625E+"
                   "00;"},
               {"(E0,';')", ".1E+00;"},
               {"(F58.55,';')",
@@ -491,7 +491,7 @@ TEST(IOApiTests, FormatDoubleValues) {
                   "701797267771758512566055119913150489110145103786273816725095"
                   "583738973359899366480994116420570263709027924276754456522908"
                   "75386825064197182655334472656250-323;"},
-              {"(G0,';')", ".5-323;"},
+              {"(G0,';')", ".5E-323;"},
               {"(E757.750,';')",
                   " 0."
                   "494065645841246544176568792868221372365059802614324764425585"
@@ -586,7 +586,7 @@ TEST(IOApiTests, FormatDoubleValues) {
                   "408698898317506783884692609277397797285865965494109136909540"
                   "61364675687023986783152906809846172109246253967285156250-"
                   "307;"},
-              {"(G0,';')", ".22250738585072014-307;"},
+              {"(G0,';')", ".22250738585072014E-307;"},
           }},
       {// greatest finite
           0x7fefffffffffffffuLL,
@@ -616,7 +616,7 @@ TEST(IOApiTests, FormatDoubleValues) {
                   "090389328944075868508455133942304583236903222948165808559332"
                   "123348274797826204144723168738177180919299881250404026184124"
                   "8583680000+306;"},
-              {"(G0,';')", ".17976931348623157+309;"},
+              {"(G0,';')", ".17976931348623157E+309;"},
           }},
   };
 
@@ -624,8 +624,8 @@ TEST(IOApiTests, FormatDoubleValues) {
     for (auto const &[format, expect] : cases) {
       std::string got;
       ASSERT_TRUE(CompareFormatReal(format, value, expect, got))
-          << "Failed to format " << format << ", expected " << expect
-          << ", got " << got;
+          << "Failed to format " << format << ", expected '" << expect
+          << "', got '" << got << "'";
     }
   }
 
@@ -669,8 +669,8 @@ TEST(IOApiTests, FormatDoubleValues) {
   for (auto const &[format, value, expect] : individualTestCases) {
     std::string got;
     ASSERT_TRUE(CompareFormatReal(format, value, expect, got))
-        << "Failed to format " << format << ", expected " << expect << ", got "
-        << got;
+        << "Failed to format " << format << ", expected '" << expect
+        << "', got '" << got << "'";
   }
 
   // Problematic EN formatting edge cases with rounding
@@ -688,7 +688,8 @@ TEST(IOApiTests, FormatDoubleValues) {
   for (auto const &[value, expect] : individualENTestCases) {
     std::string got;
     ASSERT_TRUE(CompareFormatReal("(EN10.1)", value, expect, got))
-        << "Failed to format EN10.1, expected " << expect << ", got " << got;
+        << "Failed to format EN10.1, expected '" << expect << "', got '" << got
+        << "'";
   }
 }
 

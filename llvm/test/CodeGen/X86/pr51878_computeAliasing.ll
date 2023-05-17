@@ -2,7 +2,7 @@
 ; RUN: llc -O1 -mtriple i686-unknown-linux-gnu -o - %s | FileCheck %s
 
 @foo = global i16 0, align 1
-@aliasFoo = alias i16, i16 * @foo
+@aliasFoo = alias i16, ptr @foo
 @bar = global i16 0, align 1
 
 ; This used to miscompile due to not realizing that the store to @aliasFoo
@@ -23,11 +23,11 @@ define i16 @main() {
 ; CHECK-NEXT:    addw bar, %ax
 ; CHECK-NEXT:    retl
 entry:
-  store i16 1, i16 * @foo
-  store i16 2, i16 * @bar
-  store i16 4, i16 * @aliasFoo
-  %foo = load i16, i16 * @foo
-  %bar = load i16, i16 * @bar
+  store i16 1, ptr @foo
+  store i16 2, ptr @bar
+  store i16 4, ptr @aliasFoo
+  %foo = load i16, ptr @foo
+  %bar = load i16, ptr @bar
   %res = add i16 %foo, %bar
   ret i16 %res
 }

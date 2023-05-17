@@ -18,11 +18,11 @@ target triple = "bpf"
 %struct.__t = type { i32 }
 
 ; Function Attrs: nounwind readonly
-define dso_local i32 @test(%struct.__t* readonly %arg) local_unnamed_addr #0 !dbg !13 {
+define dso_local i32 @test(ptr readonly %arg) local_unnamed_addr #0 !dbg !13 {
 entry:
-  call void @llvm.dbg.value(metadata %struct.__t* %arg, metadata !18, metadata !DIExpression()), !dbg !19
-  %0 = tail call i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ts(%struct.__t* elementtype(%struct.__t) %arg, i32 0, i32 0), !dbg !20, !llvm.preserve.access.index !4
-  %1 = load i32, i32* %0, align 4, !dbg !20, !tbaa !21
+  call void @llvm.dbg.value(metadata ptr %arg, metadata !18, metadata !DIExpression()), !dbg !19
+  %0 = tail call ptr @llvm.preserve.struct.access.index.p0.p0.__ts(ptr elementtype(%struct.__t) %arg, i32 0, i32 0), !dbg !20, !llvm.preserve.access.index !4
+  %1 = load i32, ptr %0, align 4, !dbg !20, !tbaa !21
   ret i32 %1, !dbg !26
 }
 
@@ -50,7 +50,7 @@ entry:
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: nounwind readnone
-declare i32* @llvm.preserve.struct.access.index.p0i32.p0s_struct.__ts(%struct.__t*, i32, i32) #1
+declare ptr @llvm.preserve.struct.access.index.p0.p0.__ts(ptr, i32, i32) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #2

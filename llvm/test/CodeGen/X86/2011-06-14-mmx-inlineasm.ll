@@ -5,7 +5,7 @@ target triple = "i386-apple-macosx10.6.6"
 
 %0 = type { x86_mmx, x86_mmx, x86_mmx, x86_mmx, x86_mmx, x86_mmx, x86_mmx }
 
-define i32 @pixman_fill_mmx(i32* nocapture %bits, i32 %stride, i32 %bpp, i32 %x, i32 %y, i32 %width, i32 %height, i32 %xor) nounwind ssp {
+define i32 @pixman_fill_mmx(ptr nocapture %bits, i32 %stride, i32 %bpp, i32 %x, i32 %y, i32 %width, i32 %height, i32 %xor) nounwind ssp {
 entry:
   %conv = zext i32 %xor to i64
   %shl = shl nuw i64 %conv, 32
@@ -34,7 +34,7 @@ entry:
 ; CHECK-NEXT: movq {{%mm[0-7]}},
 ; CHECK-NEXT: movq {{%mm[0-7]}},
 ; CHECK-NEXT: movq {{%mm[0-7]}},
-  tail call void asm sideeffect "movq\09$1,\09  ($0)\0Amovq\09$2,\09 8($0)\0Amovq\09$3,\0916($0)\0Amovq\09$4,\0924($0)\0Amovq\09$5,\0932($0)\0Amovq\09$6,\0940($0)\0Amovq\09$7,\0948($0)\0Amovq\09$8,\0956($0)\0A", "r,y,y,y,y,y,y,y,y,~{memory},~{dirflag},~{fpsr},~{flags}"(i8* undef, x86_mmx %0, x86_mmx %asmresult, x86_mmx %asmresult6, x86_mmx %asmresult7, x86_mmx %asmresult8, x86_mmx %asmresult9, x86_mmx %asmresult10, x86_mmx %asmresult11) nounwind, !srcloc !1
+  tail call void asm sideeffect "movq\09$1,\09  ($0)\0Amovq\09$2,\09 8($0)\0Amovq\09$3,\0916($0)\0Amovq\09$4,\0924($0)\0Amovq\09$5,\0932($0)\0Amovq\09$6,\0940($0)\0Amovq\09$7,\0948($0)\0Amovq\09$8,\0956($0)\0A", "r,y,y,y,y,y,y,y,y,~{memory},~{dirflag},~{fpsr},~{flags}"(ptr undef, x86_mmx %0, x86_mmx %asmresult, x86_mmx %asmresult6, x86_mmx %asmresult7, x86_mmx %asmresult8, x86_mmx %asmresult9, x86_mmx %asmresult10, x86_mmx %asmresult11) nounwind, !srcloc !1
   tail call void @llvm.x86.mmx.emms() nounwind
   ret i32 1
 }

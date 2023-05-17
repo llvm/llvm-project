@@ -1,4 +1,4 @@
-; RUN: llc -filetype=obj %s -o %t.o
+; RUN: llc -mcpu=mvp -filetype=obj %s -o %t.o
 ; RUN: yaml2obj %S/Inputs/globals.yaml -o %t_globals.o
 ; RUN: wasm-ld -print-gc-sections -o %t1.wasm %t.o %t_globals.o | \
 ; RUN:     FileCheck %s -check-prefix=PRINT-GC
@@ -15,12 +15,12 @@ target triple = "wasm32-unknown-unknown"
 @used_data = hidden global i32 2, align 4
 
 define hidden i64 @unused_function(i64 %arg) {
-  %1 = load i64, i64* @unused_data, align 4
+  %1 = load i64, ptr @unused_data, align 4
   ret i64 %1
 }
 
 define hidden i32 @used_function() {
-  %1 = load i32, i32* @used_data, align 4
+  %1 = load i32, ptr @used_data, align 4
   ret i32 %1
 }
 

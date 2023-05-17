@@ -13,8 +13,8 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 namespace clang {
@@ -187,13 +187,15 @@ TEST(TypeMatcher, MatchesDeclTypes) {
                       parmVarDecl(hasType(namedDecl(hasName("T"))))));
   // InjectedClassNameType
   EXPECT_TRUE(matches("template <typename T> struct S {"
-                        "  void f(S s);"
-                        "};",
-                      parmVarDecl(hasType(injectedClassNameType()))));
+                      "  void f(S s);"
+                      "};",
+                      parmVarDecl(hasType(elaboratedType(
+                          namesType(injectedClassNameType()))))));
   EXPECT_TRUE(notMatches("template <typename T> struct S {"
-                           "  void g(S<T> s);"
-                           "};",
-                         parmVarDecl(hasType(injectedClassNameType()))));
+                         "  void g(S<T> s);"
+                         "};",
+                         parmVarDecl(hasType(elaboratedType(
+                             namesType(injectedClassNameType()))))));
   // InjectedClassNameType -> CXXRecordDecl
   EXPECT_TRUE(matches("template <typename T> struct S {"
                         "  void f(S s);"
@@ -243,24 +245,28 @@ TEST(HasDeclaration, ElaboratedType) {
 }
 
 TEST(HasDeclaration, HasDeclarationOfTypeWithDecl) {
-  EXPECT_TRUE(matches("typedef int X; X a;",
-                      varDecl(hasName("a"),
-                              hasType(typedefType(hasDeclaration(decl()))))));
+  EXPECT_TRUE(matches(
+      "typedef int X; X a;",
+      varDecl(hasName("a"), hasType(elaboratedType(namesType(
+                                typedefType(hasDeclaration(decl()))))))));
 
   // FIXME: Add tests for other types with getDecl() (e.g. RecordType)
 }
 
 TEST(HasDeclaration, HasDeclarationOfTemplateSpecializationType) {
-  EXPECT_TRUE(matches("template <typename T> class A {}; A<int> a;",
-                      varDecl(hasType(templateSpecializationType(
-                        hasDeclaration(namedDecl(hasName("A"))))))));
-  EXPECT_TRUE(matches("template <typename T> class A {};"
-                      "template <typename T> class B { A<T> a; };",
-                      fieldDecl(hasType(templateSpecializationType(
-                        hasDeclaration(namedDecl(hasName("A"))))))));
-  EXPECT_TRUE(matches("template <typename T> class A {}; A<int> a;",
-                      varDecl(hasType(templateSpecializationType(
-                          hasDeclaration(cxxRecordDecl()))))));
+  EXPECT_TRUE(matches(
+      "template <typename T> class A {}; A<int> a;",
+      varDecl(hasType(elaboratedType(namesType(templateSpecializationType(
+          hasDeclaration(namedDecl(hasName("A"))))))))));
+  EXPECT_TRUE(matches(
+      "template <typename T> class A {};"
+      "template <typename T> class B { A<T> a; };",
+      fieldDecl(hasType(elaboratedType(namesType(templateSpecializationType(
+          hasDeclaration(namedDecl(hasName("A"))))))))));
+  EXPECT_TRUE(matches(
+      "template <typename T> class A {}; A<int> a;",
+      varDecl(hasType(elaboratedType(namesType(
+          templateSpecializationType(hasDeclaration(cxxRecordDecl()))))))));
 }
 
 TEST(HasDeclaration, HasDeclarationOfCXXNewExpr) {
@@ -270,9 +276,10 @@ TEST(HasDeclaration, HasDeclarationOfCXXNewExpr) {
 }
 
 TEST(HasDeclaration, HasDeclarationOfTypeAlias) {
-  EXPECT_TRUE(matches("template <typename T> using C = T; C<int> c;",
-                      varDecl(hasType(templateSpecializationType(
-                          hasDeclaration(typeAliasTemplateDecl()))))));
+  EXPECT_TRUE(matches(
+      "template <typename T> using C = T; C<int> c;",
+      varDecl(hasType(elaboratedType(namesType(templateSpecializationType(
+          hasDeclaration(typeAliasTemplateDecl()))))))));
 }
 
 TEST(HasUnqualifiedDesugaredType, DesugarsUsing) {
@@ -393,9 +400,9 @@ TEST(HasTypeLoc, MatchesCXXBaseSpecifierAndCtorInitializer) {
   )cpp";
 
   EXPECT_TRUE(matches(
-      code, cxxRecordDecl(hasAnyBase(hasTypeLoc(loc(asString("class Foo")))))));
-  EXPECT_TRUE(matches(
-      code, cxxCtorInitializer(hasTypeLoc(loc(asString("class Foo"))))));
+      code, cxxRecordDecl(hasAnyBase(hasTypeLoc(loc(asString("Foo")))))));
+  EXPECT_TRUE(
+      matches(code, cxxCtorInitializer(hasTypeLoc(loc(asString("Foo"))))));
 }
 
 TEST(HasTypeLoc, MatchesCXXFunctionalCastExpr) {
@@ -407,13 +414,13 @@ TEST(HasTypeLoc, MatchesCXXNewExpr) {
   EXPECT_TRUE(matches("auto* x = new int(3);",
                       cxxNewExpr(hasTypeLoc(loc(asString("int"))))));
   EXPECT_TRUE(matches("class Foo{}; auto* x = new Foo();",
-                      cxxNewExpr(hasTypeLoc(loc(asString("class Foo"))))));
+                      cxxNewExpr(hasTypeLoc(loc(asString("Foo"))))));
 }
 
 TEST(HasTypeLoc, MatchesCXXTemporaryObjectExpr) {
   EXPECT_TRUE(
       matches("struct Foo { Foo(int, int); }; auto x = Foo(1, 2);",
-              cxxTemporaryObjectExpr(hasTypeLoc(loc(asString("struct Foo"))))));
+              cxxTemporaryObjectExpr(hasTypeLoc(loc(asString("Foo"))))));
 }
 
 TEST(HasTypeLoc, MatchesCXXUnresolvedConstructExpr) {
@@ -439,9 +446,8 @@ TEST(HasTypeLoc, MatchesDeclaratorDecl) {
                       varDecl(hasName("x"), hasTypeLoc(loc(asString("int"))))));
   EXPECT_TRUE(matches("int x(3);",
                       varDecl(hasName("x"), hasTypeLoc(loc(asString("int"))))));
-  EXPECT_TRUE(
-      matches("struct Foo { Foo(int, int); }; Foo x(1, 2);",
-              varDecl(hasName("x"), hasTypeLoc(loc(asString("struct Foo"))))));
+  EXPECT_TRUE(matches("struct Foo { Foo(int, int); }; Foo x(1, 2);",
+                      varDecl(hasName("x"), hasTypeLoc(loc(asString("Foo"))))));
 
   // Make sure we don't crash on implicit constructors.
   EXPECT_TRUE(notMatches("class X {}; X x;",
@@ -672,6 +678,48 @@ void check_match_co_yield() {
   EXPECT_TRUE(matchesConditionally(CoYieldCode, 
                                    coyieldExpr(isExpansionInMainFile()), 
                                    true, {"-std=c++20", "-I/"}, M));
+
+  StringRef NonCoroCode = R"cpp(
+#include <coro_header>
+void non_coro_function() {
+}
+)cpp";
+
+  EXPECT_TRUE(matchesConditionally(CoReturnCode, coroutineBodyStmt(), true,
+                                   {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoAwaitCode, coroutineBodyStmt(), true,
+                                   {"-std=c++20", "-I/"}, M));
+  EXPECT_TRUE(matchesConditionally(CoYieldCode, coroutineBodyStmt(), true,
+                                   {"-std=c++20", "-I/"}, M));
+
+  EXPECT_FALSE(matchesConditionally(NonCoroCode, coroutineBodyStmt(), true,
+                                    {"-std=c++20", "-I/"}, M));
+
+  StringRef CoroWithDeclCode = R"cpp(
+#include <coro_header>
+void coro() {
+  int thevar;
+  co_return 1;
+}
+)cpp";
+  EXPECT_TRUE(matchesConditionally(
+      CoroWithDeclCode,
+      coroutineBodyStmt(hasBody(compoundStmt(
+          has(declStmt(containsDeclaration(0, varDecl(hasName("thevar")))))))),
+      true, {"-std=c++20", "-I/"}, M));
+
+  StringRef CoroWithTryCatchDeclCode = R"cpp(
+#include <coro_header>
+void coro() try {
+  int thevar;
+  co_return 1;
+} catch (...) {}
+)cpp";
+  EXPECT_TRUE(matchesConditionally(
+      CoroWithTryCatchDeclCode,
+      coroutineBodyStmt(hasBody(compoundStmt(has(cxxTryStmt(has(compoundStmt(has(
+          declStmt(containsDeclaration(0, varDecl(hasName("thevar")))))))))))),
+      true, {"-std=c++20", "-I/"}, M));
 }
 
 TEST(Matcher, isClassMessage) {
@@ -6098,19 +6146,21 @@ TEST(HasReferentLoc, DoesNotBindToParameterWithoutIntReferenceTypeLoc) {
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
-  EXPECT_TRUE(
-      matches("template<typename T> class A {}; A<int> a;",
-              varDecl(hasName("a"), hasTypeLoc(templateSpecializationTypeLoc(
-                                        hasAnyTemplateArgumentLoc(hasTypeLoc(
-                                            loc(asString("int")))))))));
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; A<int> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                  templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+                      hasTypeLoc(loc(asString("int")))))))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
-  EXPECT_TRUE(
-      matches("template<typename T> class A {}; A<double> a;",
-              varDecl(hasName("a"), hasTypeLoc(templateSpecializationTypeLoc(
-                                        hasAnyTemplateArgumentLoc(hasTypeLoc(
-                                            loc(asString("double")))))))));
+  EXPECT_TRUE(matches(
+      "template<typename T> class A {}; A<double> a;",
+      varDecl(hasName("a"),
+              hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                  templateSpecializationTypeLoc(hasAnyTemplateArgumentLoc(
+                      hasTypeLoc(loc(asString("double")))))))))));
 }
 
 TEST(HasAnyTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
@@ -6170,19 +6220,21 @@ TEST(HasAnyTemplateArgumentLoc,
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithIntArgument) {
-  EXPECT_TRUE(matches(
-      "template<typename T> class A {}; A<int> a;",
-      varDecl(hasName("a"),
-              hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                  0, hasTypeLoc(loc(asString("int")))))))));
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; A<int> a;",
+              varDecl(hasName("a"),
+                      hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                          templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                              0, hasTypeLoc(loc(asString("int")))))))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToSpecializationWithDoubleArgument) {
-  EXPECT_TRUE(matches(
-      "template<typename T> class A {}; A<double> a;",
-      varDecl(hasName("a"),
-              hasTypeLoc(templateSpecializationTypeLoc(hasTemplateArgumentLoc(
-                  0, hasTypeLoc(loc(asString("double")))))))));
+  EXPECT_TRUE(
+      matches("template<typename T> class A {}; A<double> a;",
+              varDecl(hasName("a"),
+                      hasTypeLoc(elaboratedTypeLoc(hasNamedTypeLoc(
+                          templateSpecializationTypeLoc(hasTemplateArgumentLoc(
+                              0, hasTypeLoc(loc(asString("double")))))))))));
 }
 
 TEST(HasTemplateArgumentLoc, BindsToExplicitSpecializationWithIntArgument) {
@@ -6320,7 +6372,7 @@ TEST(HasNamedTypeLoc, BindsToElaboratedObjectDeclaration) {
 }
 
 TEST(HasNamedTypeLoc, DoesNotBindToNonElaboratedObjectDeclaration) {
-  EXPECT_TRUE(notMatches(
+  EXPECT_TRUE(matches(
       R"(
       template <typename T>
       class C {};

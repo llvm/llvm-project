@@ -20,11 +20,11 @@
 using namespace clang;
 using namespace clang::targets;
 
-const Builtin::Info SystemZTargetInfo::BuiltinInfo[] = {
+static constexpr Builtin::Info BuiltinInfo[] = {
 #define BUILTIN(ID, TYPE, ATTRS)                                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, nullptr},
+  {#ID, TYPE, ATTRS, nullptr, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #define TARGET_BUILTIN(ID, TYPE, ATTRS, FEATURE)                               \
-  {#ID, TYPE, ATTRS, nullptr, ALL_LANGUAGES, FEATURE},
+  {#ID, TYPE, ATTRS, FEATURE, HeaderDesc::NO_HEADER, ALL_LANGUAGES},
 #include "clang/Basic/BuiltinsSystemZ.def"
 };
 
@@ -46,11 +46,11 @@ const TargetInfo::AddlRegName GCCAddlRegNames[] = {
 };
 
 ArrayRef<const char *> SystemZTargetInfo::getGCCRegNames() const {
-  return llvm::makeArrayRef(GCCRegNames);
+  return llvm::ArrayRef(GCCRegNames);
 }
 
 ArrayRef<TargetInfo::AddlRegName> SystemZTargetInfo::getGCCAddlRegNames() const {
-  return llvm::makeArrayRef(GCCAddlRegNames);
+  return llvm::ArrayRef(GCCAddlRegNames);
 }
 
 bool SystemZTargetInfo::validateAsmConstraint(
@@ -69,7 +69,7 @@ bool SystemZTargetInfo::validateAsmConstraint(
     case 'T': // Likewise, plus an index
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case 'a': // Address register
   case 'd': // Data register (equivalent to 'r')
   case 'f': // Floating-point register
@@ -161,6 +161,6 @@ void SystemZTargetInfo::getTargetDefines(const LangOptions &Opts,
 }
 
 ArrayRef<Builtin::Info> SystemZTargetInfo::getTargetBuiltins() const {
-  return llvm::makeArrayRef(BuiltinInfo, clang::SystemZ::LastTSBuiltin -
-                                             Builtin::FirstTSBuiltin);
+  return llvm::ArrayRef(BuiltinInfo, clang::SystemZ::LastTSBuiltin -
+                                         Builtin::FirstTSBuiltin);
 }

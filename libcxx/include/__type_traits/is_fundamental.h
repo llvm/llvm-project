@@ -20,33 +20,29 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// Before Clang 10, __is_fundamental didn't work for nullptr_t.
-// In C++03 nullptr_t is library-provided but must still count as "fundamental."
-#if __has_keyword(__is_fundamental) &&                                         \
-    !(defined(_LIBCPP_CLANG_VER) && _LIBCPP_CLANG_VER < 1000) &&               \
-    !defined(_LIBCPP_CXX03_LANG)
+#if __has_builtin(__is_fundamental)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_fundamental : _BoolConstant<__is_fundamental(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_fundamental_v = __is_fundamental(_Tp);
 #endif
 
-#else // __has_keyword(__is_fundamental)
+#else // __has_builtin(__is_fundamental)
 
 template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_fundamental
     : public integral_constant<bool, is_void<_Tp>::value        ||
                                      __is_nullptr_t<_Tp>::value ||
                                      is_arithmetic<_Tp>::value> {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_fundamental_v = is_fundamental<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_fundamental)
+#endif // __has_builtin(__is_fundamental)
 
 _LIBCPP_END_NAMESPACE_STD
 

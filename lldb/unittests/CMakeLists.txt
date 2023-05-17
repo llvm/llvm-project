@@ -10,27 +10,6 @@ if (CXX_SUPPORTS_SUGGEST_OVERRIDE_FLAG)
   add_compile_options("-Wno-suggest-override")
 endif()
 
-set(LLDB_GTEST_COMMON_INCLUDE ${CMAKE_CURRENT_SOURCE_DIR}/gtest_common.h)
-if (MSVC)
-  list(APPEND LLVM_COMPILE_FLAGS /FI ${LLDB_GTEST_COMMON_INCLUDE})
-else ()
-  list(APPEND LLVM_COMPILE_FLAGS -include ${LLDB_GTEST_COMMON_INCLUDE})
-endif ()
-
-if (LLDB_BUILT_STANDALONE)
-  # Build the gtest library needed for unittests, if we have LLVM sources
-  # handy.
-  if (EXISTS ${LLVM_MAIN_SRC_DIR}/utils/unittest AND NOT TARGET llvm_gtest)
-    add_subdirectory(${LLVM_MAIN_SRC_DIR}/utils/unittest utils/unittest)
-  endif()
-  # LLVMTestingSupport library is needed for Process/gdb-remote.
-  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
-      AND NOT TARGET LLVMTestingSupport)
-    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
-      lib/Testing/Support)
-  endif()
-endif()
-
 function(add_lldb_unittest test_name)
   cmake_parse_arguments(ARG
     ""

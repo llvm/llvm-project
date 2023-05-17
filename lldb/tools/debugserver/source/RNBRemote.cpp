@@ -499,6 +499,10 @@ void RNBRemote::CreatePacketTable() {
       "Test the maximum speed at which packet can be sent/received."));
   t.push_back(Packet(query_transfer, &RNBRemote::HandlePacket_qXfer, NULL,
                      "qXfer:", "Support the qXfer packet."));
+  t.push_back(Packet(json_query_dyld_process_state,
+                     &RNBRemote::HandlePacket_jGetDyldProcessState, NULL,
+                     "jGetDyldProcessState",
+                     "Query the process state from dyld."));
 }
 
 void RNBRemote::FlushSTDIO() {
@@ -2837,11 +2841,21 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
       InitializeRegisters();
 
     if (g_reg_entries != NULL) {
+      auto interesting_regset = [](int regset) -> bool {
+#if defined(__arm64__) || defined(__aarch64__)
+        // GPRs and exception registers, helpful for debugging
+        // from packet logs.
+        return regset == 1 || regset == 3;
+#else
+        return regset == 1;
+#endif
+      };
+
       DNBRegisterValue reg_value;
       for (uint32_t reg = 0; reg < g_num_reg_entries; reg++) {
         // Expedite all registers in the first register set that aren't
         // contained in other registers
-        if (g_reg_entries[reg].nub_info.set == 1 &&
+        if (interesting_regset(g_reg_entries[reg].nub_info.set) &&
             g_reg_entries[reg].nub_info.value_regs == NULL) {
           if (!DNBThreadGetRegisterValueByID(
                   pid, tid, g_reg_entries[reg].nub_info.set,
@@ -2856,6 +2870,51 @@ rnb_err_t RNBRemote::SendStopReplyPacketForThread(nub_thread_t tid) {
 
     if (did_exec) {
       ostrm << "reason:exec;";
+    } else if (tid_stop_info.reason == eStopTypeWatchpoint) {
+      ostrm << "reason:watchpoint;";
+      ostrm << "description:";
+      std::ostringstream wp_desc;
+      wp_desc << tid_stop_info.details.watchpoint.addr << " ";
+      wp_desc << tid_stop_info.details.watchpoint.hw_idx << " ";
+      wp_desc << tid_stop_info.details.watchpoint.mach_exception_addr;
+      append_hexified_string(ostrm, wp_desc.str());
+      ostrm << ";";
+
+      // Temporarily, print all of the fields we've parsed out of the ESR
+      // on a watchpoint exception.  Normally this is something we would
+      // log for LOG_WATCHPOINTS only, but this was implemented from the
+      // ARM ARM spec and hasn't been exercised on real hardware that can
+      // set most of these fields yet.  It may need to be debugged in the
+      // future, so include all of these purely for debugging by reading
+      // the packet logs; lldb isn't using these fields.
+      ostrm << "watch_addr:" << std::hex
+            << tid_stop_info.details.watchpoint.addr << ";";
+      ostrm << "me_watch_addr:" << std::hex
+            << tid_stop_info.details.watchpoint.mach_exception_addr << ";";
+      ostrm << "wp_hw_idx:" << std::hex
+            << tid_stop_info.details.watchpoint.hw_idx << ";";
+      if (tid_stop_info.details.watchpoint.esr_fields_set) {
+        ostrm << "wp_esr_iss:" << std::hex
+              << tid_stop_info.details.watchpoint.esr_fields.iss << ";";
+        ostrm << "wp_esr_wpt:" << std::hex
+              << tid_stop_info.details.watchpoint.esr_fields.wpt << ";";
+        ostrm << "wp_esr_wptv:"
+              << tid_stop_info.details.watchpoint.esr_fields.wptv << ";";
+        ostrm << "wp_esr_wpf:"
+              << tid_stop_info.details.watchpoint.esr_fields.wpf << ";";
+        ostrm << "wp_esr_fnp:"
+              << tid_stop_info.details.watchpoint.esr_fields.fnp << ";";
+        ostrm << "wp_esr_vncr:"
+              << tid_stop_info.details.watchpoint.esr_fields.vncr << ";";
+        ostrm << "wp_esr_fnv:"
+              << tid_stop_info.details.watchpoint.esr_fields.fnv << ";";
+        ostrm << "wp_esr_cm:" << tid_stop_info.details.watchpoint.esr_fields.cm
+              << ";";
+        ostrm << "wp_esr_wnr:"
+              << tid_stop_info.details.watchpoint.esr_fields.wnr << ";";
+        ostrm << "wp_esr_dfsc:" << std::hex
+              << tid_stop_info.details.watchpoint.esr_fields.dfsc << ";";
+      }
     } else if (tid_stop_info.details.exception.type) {
       ostrm << "metype:" << std::hex << tid_stop_info.details.exception.type
             << ';';
@@ -4781,24 +4840,6 @@ static bool GetHostCPUType(uint32_t &cputype, uint32_t &cpusubtype,
   return g_host_cputype != 0;
 }
 
-static bool GetAddressingBits(uint32_t &addressing_bits) {
-  static uint32_t g_addressing_bits = 0;
-  static bool g_tried_addressing_bits_syscall = false;
-  if (g_tried_addressing_bits_syscall == false) {
-    size_t len = sizeof (uint32_t);
-    if (::sysctlbyname("machdep.virtual_address_size",
-          &g_addressing_bits, &len, NULL, 0) != 0) {
-      g_addressing_bits = 0;
-    }
-  }
-  g_tried_addressing_bits_syscall = true;
-  addressing_bits = g_addressing_bits;
-  if (addressing_bits > 0)
-    return true;
-  else
-    return false;
-}
-
 rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
   std::ostringstream strm;
 
@@ -4812,7 +4853,7 @@ rnb_err_t RNBRemote::HandlePacket_qHostInfo(const char *p) {
   }
 
   uint32_t addressing_bits = 0;
-  if (GetAddressingBits(addressing_bits)) {
+  if (DNBGetAddressingBits(addressing_bits)) {
     strm << "addressing_bits:" << std::dec << addressing_bits << ';';
   }
 
@@ -5274,6 +5315,22 @@ rnb_err_t RNBRemote::HandlePacket_qGDBServerVersion(const char *p) {
   return SendPacket(strm.str());
 }
 
+rnb_err_t RNBRemote::HandlePacket_jGetDyldProcessState(const char *p) {
+  const nub_process_t pid = m_ctx.ProcessID();
+  if (pid == INVALID_NUB_PROCESS)
+    return SendPacket("E87");
+
+  JSONGenerator::ObjectSP dyld_state_sp = DNBGetDyldProcessState(pid);
+  if (dyld_state_sp) {
+    std::ostringstream strm;
+    dyld_state_sp->DumpBinaryEscaped(strm);
+    dyld_state_sp->Clear();
+    if (strm.str().size() > 0)
+      return SendPacket(strm.str());
+  }
+  return SendPacket("E88");
+}
+
 // A helper function that retrieves a single integer value from
 // a one-level-deep JSON dictionary of key-value pairs.  e.g.
 // jThreadExtendedInfo:{"plo_pthread_tsd_base_address_offset":0,"plo_pthread_tsd_base_offset":224,"plo_pthread_tsd_entry_size":8,"thread":144305}]
@@ -5472,6 +5529,20 @@ RNBRemote::GetJSONThreadsInfo(bool threads_with_valid_stop_info_only) {
             thread_dict_sp->AddItem("medata", medata_array_sp);
           }
           break;
+
+        case eStopTypeWatchpoint: {
+          reason_value = "watchpoint";
+          thread_dict_sp->AddIntegerItem("watchpoint",
+                                         tid_stop_info.details.watchpoint.addr);
+          thread_dict_sp->AddIntegerItem(
+              "me_watch_addr",
+              tid_stop_info.details.watchpoint.mach_exception_addr);
+          std::ostringstream wp_desc;
+          wp_desc << tid_stop_info.details.watchpoint.addr << " ";
+          wp_desc << tid_stop_info.details.watchpoint.hw_idx << " ";
+          wp_desc << tid_stop_info.details.watchpoint.mach_exception_addr;
+          thread_dict_sp->AddStringItem("description", wp_desc.str());
+        } break;
 
         case eStopTypeExec:
           reason_value = "exec";
@@ -5856,21 +5927,17 @@ rnb_err_t RNBRemote::HandlePacket_jThreadExtendedInfo(const char *p) {
   return SendPacket("OK");
 }
 
-//  This packet may be called in one of three ways:
-//
-//  jGetLoadedDynamicLibrariesInfos:{"image_count":40,"image_list_address":4295244704}
-//      Look for an array of the old dyld_all_image_infos style of binary infos
-//      at the image_list_address.
-//      This an array of {void* load_addr, void* mod_date, void* pathname}
+//  This packet may be called in one of two ways:
 //
 //  jGetLoadedDynamicLibrariesInfos:{"fetch_all_solibs":true}
-//      Use the new style (macOS 10.12, tvOS 10, iOS 10, watchOS 3) dyld SPI to
-//      get a list of all the
-//      libraries loaded
+//      Use the new dyld SPI to get a list of all the libraries loaded.
+//      If "report_load_commands":false" is present, only the dyld SPI
+//      provided information (load address, filepath) is returned.
+//      lldb can ask for the mach-o header/load command details in a
+//      separate packet.
 //
 //  jGetLoadedDynamicLibrariesInfos:{"solib_addresses":[8382824135,3258302053,830202858503]}
-//      Use the new style (macOS 10.12, tvOS 10, iOS 10, watchOS 3) dyld SPI to
-//      get the information
+//      Use the dyld SPI and Mach-O parsing in memory to get the information
 //      about the libraries loaded at these addresses.
 //
 rnb_err_t
@@ -5893,24 +5960,17 @@ RNBRemote::HandlePacket_jGetLoadedDynamicLibrariesInfos(const char *p) {
 
     std::vector<uint64_t> macho_addresses;
     bool fetch_all_solibs = false;
+    bool report_load_commands = true;
+    get_boolean_value_for_key_name_from_json("report_load_commands", p,
+                                             report_load_commands);
+
     if (get_boolean_value_for_key_name_from_json("fetch_all_solibs", p,
                                                  fetch_all_solibs) &&
         fetch_all_solibs) {
-      json_sp = DNBGetAllLoadedLibrariesInfos(pid);
+      json_sp = DNBGetAllLoadedLibrariesInfos(pid, report_load_commands);
     } else if (get_array_of_ints_value_for_key_name_from_json(
                    "solib_addresses", p, macho_addresses)) {
       json_sp = DNBGetLibrariesInfoForAddresses(pid, macho_addresses);
-    } else {
-      nub_addr_t image_list_address =
-          get_integer_value_for_key_name_from_json("image_list_address", p);
-      nub_addr_t image_count =
-          get_integer_value_for_key_name_from_json("image_count", p);
-
-      if (image_list_address != INVALID_NUB_ADDRESS &&
-          image_count != INVALID_NUB_ADDRESS) {
-        json_sp = DNBGetLoadedDynamicLibrariesInfos(pid, image_list_address,
-                                                    image_count);
-      }
     }
 
     if (json_sp.get()) {
@@ -6276,12 +6336,12 @@ rnb_err_t RNBRemote::HandlePacket_qProcessInfo(const char *p) {
 
         bool is_executable = true;
         uint32_t major_version, minor_version, patch_version;
-        auto *platform =
+        std::optional<std::string> platform =
             DNBGetDeploymentInfo(pid, is_executable, lc, load_command_addr,
                                  major_version, minor_version, patch_version);
         if (platform) {
           os_handled = true;
-          rep << "ostype:" << platform << ";";
+          rep << "ostype:" << *platform << ";";
           break;
         }
         load_command_addr = load_command_addr + lc.cmdsize;

@@ -2582,7 +2582,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
   kmp_proc_bind_t proc_bind = team->t.t_proc_bind;
   if (proc_bind == proc_bind_intel) {
     // Call dynamic affinity settings
-    if (__kmp_affinity_type == affinity_balanced && team->t.t_size_changed) {
+    if (__kmp_affinity.type == affinity_balanced && team->t.t_size_changed) {
       __kmp_balanced_affinity(this_thr, team->t.t_nproc);
     }
   } else if (proc_bind != proc_bind_false) {
@@ -2599,7 +2599,7 @@ void __kmp_fork_barrier(int gtid, int tid) {
   if (__kmp_display_affinity) {
     if (team->t.t_display_affinity
 #if KMP_AFFINITY_SUPPORTED
-        || (__kmp_affinity_type == affinity_balanced && team->t.t_size_changed)
+        || (__kmp_affinity.type == affinity_balanced && team->t.t_size_changed)
 #endif
     ) {
       // NULL means use the affinity-format-var ICV

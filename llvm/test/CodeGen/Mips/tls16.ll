@@ -4,7 +4,7 @@
 
 define i32 @foo() nounwind readonly {
 entry:
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
 ; PIC16:	lw	${{[0-9]+}}, %call16(__tls_get_addr)(${{[0-9]+}})
 ; PIC16:	addiu	${{[0-9]+}}, %tlsgd(a)
   ret i32 %0

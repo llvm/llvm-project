@@ -27,6 +27,7 @@
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/MC/StringTableBuilder.h"
 #include "llvm/Object/Wasm.h"
+#include <optional>
 
 namespace lld {
 namespace wasm {
@@ -223,7 +224,8 @@ class SyntheticMergedChunk : public InputChunk {
 public:
   SyntheticMergedChunk(StringRef name, uint32_t alignment, uint32_t flags)
       : InputChunk(nullptr, InputChunk::MergedChunk, name, alignment, flags),
-        builder(llvm::StringTableBuilder::RAW, 1ULL << alignment) {}
+        builder(llvm::StringTableBuilder::RAW, llvm::Align(1ULL << alignment)) {
+  }
 
   static bool classof(const InputChunk *c) {
     return c->kind() == InputChunk::MergedChunk;
@@ -249,9 +251,9 @@ class InputFunction : public InputChunk {
 public:
   InputFunction(const WasmSignature &s, const WasmFunction *func, ObjFile *f)
       : InputChunk(f, InputChunk::Function, func->SymbolName), signature(s),
-        function(func), exportName(func && func->ExportName.hasValue()
-                                       ? (*func->ExportName).str()
-                                       : llvm::Optional<std::string>()) {
+        function(func),
+        exportName(func && func->ExportName ? (*func->ExportName).str()
+                                            : std::optional<std::string>()) {
     inputSectionOffset = function->CodeSectionOffset;
     rawData =
         file->codeSection->Content.slice(inputSectionOffset, function->Size);
@@ -267,18 +269,18 @@ public:
            c->kind() == InputChunk::SyntheticFunction;
   }
 
-  llvm::Optional<StringRef> getExportName() const {
-    return exportName.hasValue() ? llvm::Optional<StringRef>(*exportName)
-                                 : llvm::Optional<StringRef>();
+  std::optional<StringRef> getExportName() const {
+    return exportName ? std::optional<StringRef>(*exportName)
+                      : std::optional<StringRef>();
   }
   void setExportName(std::string exportName) { this->exportName = exportName; }
   uint32_t getFunctionInputOffset() const { return getInputSectionOffset(); }
   uint32_t getFunctionCodeOffset() const { return function->CodeOffset; }
-  uint32_t getFunctionIndex() const { return functionIndex.getValue(); }
-  bool hasFunctionIndex() const { return functionIndex.hasValue(); }
+  uint32_t getFunctionIndex() const { return *functionIndex; }
+  bool hasFunctionIndex() const { return functionIndex.has_value(); }
   void setFunctionIndex(uint32_t index);
-  uint32_t getTableIndex() const { return tableIndex.getValue(); }
-  bool hasTableIndex() const { return tableIndex.hasValue(); }
+  uint32_t getTableIndex() const { return *tableIndex; }
+  bool hasTableIndex() const { return tableIndex.has_value(); }
   void setTableIndex(uint32_t index);
   void writeCompressed(uint8_t *buf) const;
 
@@ -298,9 +300,9 @@ public:
   const WasmFunction *function;
 
 protected:
-  llvm::Optional<std::string> exportName;
-  llvm::Optional<uint32_t> functionIndex;
-  llvm::Optional<uint32_t> tableIndex;
+  std::optional<std::string> exportName;
+  std::optional<uint32_t> functionIndex;
+  std::optional<uint32_t> tableIndex;
   uint32_t compressedFuncSize = 0;
   uint32_t compressedSize = 0;
 };

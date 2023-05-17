@@ -1,3 +1,4 @@
+import("//bolt/test/bolt_lit_site_cfg_files.gni")
 import("//clang-tools-extra/clangd/test/clangd_lit_site_cfg_files.gni")
 import("//clang-tools-extra/pseudo/test/clang_pseudo_lit_site_cfg_files.gni")
 import("//clang-tools-extra/test/clang_tools_extra_lit_site_cfg_files.gni")
@@ -39,6 +40,14 @@ write_cmake_config("llvm-lit") {
   ]
 
   entries = [
+    [
+      "//bolt/test/lit.cfg.py",
+      bolt_lit_site_cfg_file,
+    ],
+    [
+      "//bolt/test/Unit/lit.cfg.py",
+      bolt_lit_unit_site_cfg_file,
+    ],
     [
       "//clang-tools-extra/test/lit.cfg.py",
       clang_tools_extra_lit_site_cfg_file,

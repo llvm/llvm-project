@@ -192,13 +192,18 @@ This gives the ``DiagnosticConsumer`` information about what the argument means
 without requiring it to use a specific presentation (consider this MVC for
 Clang :).
 
+It is really easy to add format specifiers to the Clang diagnostics system, but
+they should be discussed before they are added.  If you are creating a lot of
+repetitive diagnostics and/or have an idea for a useful formatter, please bring
+it up on the cfe-dev mailing list.
+
 Here are the different diagnostic argument formats currently supported by
 Clang:
 
 **"s" format**
 
 Example:
-  ``"requires %1 parameter%s1"``
+  ``"requires %0 parameter%s0"``
 Class:
   Integers
 Description:
@@ -206,12 +211,15 @@ Description:
   diagnostics.  When the integer is 1, it prints as nothing.  When the integer
   is not 1, it prints as "``s``".  This allows some simple grammatical forms to
   be to be handled correctly, and eliminates the need to use gross things like
-  ``"requires %1 parameter(s)"``.
+  ``"requires %1 parameter(s)"``. Note, this only handles adding a simple
+  "``s``" character, it will not handle situations where pluralization is more
+  complicated such as turning ``fancy`` into ``fancies`` or ``mouse`` into
+  ``mice``. You can use the "plural" format specifier to handle such situations.
 
 **"select" format**
 
 Example:
-  ``"must be a %select{unary|binary|unary or binary}2 operator"``
+  ``"must be a %select{unary|binary|unary or binary}0 operator"``
 Class:
   Integers
 Description:
@@ -219,7 +227,7 @@ Description:
   into one common one, without requiring the difference to be specified as an
   English string argument.  Instead of specifying the string, the diagnostic
   gets an integer argument and the format string selects the numbered option.
-  In this case, the "``%2``" value must be an integer in the range [0..2].  If
+  In this case, the "``%0``" value must be an integer in the range [0..2].  If
   it is 0, it prints "unary", if it is 1 it prints "binary" if it is 2, it
   prints "unary or binary".  This allows other language translations to
   substitute reasonable words (or entire phrases) based on the semantics of the
@@ -229,11 +237,11 @@ Description:
 **"plural" format**
 
 Example:
-  ``"you have %1 %plural{1:mouse|:mice}1 connected to your computer"``
+  ``"you have %0 %plural{1:mouse|:mice}0 connected to your computer"``
 Class:
   Integers
 Description:
-  This is a formatter for complex plural forms.  It is designed to handle even
+  This is a formatter for complex plural forms. It is designed to handle even
   the requirements of languages with very complex plural forms, as many Baltic
   languages have.  The argument consists of a series of expression/form pairs,
   separated by ":", where the first form whose expression evaluates to true is
@@ -245,10 +253,10 @@ Description:
   numeric condition can take one of three forms.
 
   * number: A simple decimal number matches if the argument is the same as the
-    number.  Example: ``"%plural{1:mouse|:mice}4"``
+    number.  Example: ``"%plural{1:mouse|:mice}0"``
   * range: A range in square brackets matches if the argument is within the
     range.  Then range is inclusive on both ends.  Example:
-    ``"%plural{0:none|1:one|[2,5]:some|:many}2"``
+    ``"%plural{0:none|1:one|[2,5]:some|:many}0"``
   * modulo: A modulo operator is followed by a number, and equals sign and
     either a number or a range.  The tests are the same as for plain numbers
     and ranges, but the argument is taken modulo the number first.  Example:
@@ -313,11 +321,6 @@ Description:
   braces before the pipe is printed, with the formatted text replacing the $.
   If tree printing is on, the text after the pipe is printed and a type tree is
   printed after the diagnostic message.
-
-It is really easy to add format specifiers to the Clang diagnostics system, but
-they should be discussed before they are added.  If you are creating a lot of
-repetitive diagnostics and/or have an idea for a useful formatter, please bring
-it up on the cfe-dev mailing list.
 
 **"sub" format**
 
@@ -537,7 +540,7 @@ token.  This concept maps directly to the "spelling location" for the token.
 ``SourceRange`` and ``CharSourceRange``
 ---------------------------------------
 
-.. mostly taken from https://lists.llvm.org/pipermail/cfe-dev/2010-August/010595.html
+.. mostly taken from https://discourse.llvm.org/t/code-ranges-of-tokens-ast-elements/16893/2
 
 Clang represents most source ranges by [first, last], where "first" and "last"
 each point to the beginning of their respective tokens.  For example consider
@@ -2920,7 +2923,7 @@ that is named after the attribute being documented.
 
 If the attribute is not for public consumption, or is an implicitly-created
 attribute that has no visible spelling, the documentation list can specify the
-``Undocumented`` object. Otherwise, the attribute should have its documentation
+``InternalOnly`` object. Otherwise, the attribute should have its documentation
 added to AttrDocs.td.
 
 Documentation derives from the ``Documentation`` tablegen type. All derived
@@ -3265,3 +3268,39 @@ are similar.
      proper visitation for your expression, enabling various IDE features such
      as syntax highlighting, cross-referencing, and so on.  The
      ``c-index-test`` helper program can be used to test these features.
+
+Feature Test Macros
+===================
+Clang implements several ways to test whether a feature is supported or not.
+Some of these feature tests are standardized, like ``__has_cpp_attribute`` or
+``__cpp_lambdas``, while others are Clang extensions, like ``__has_builtin``.
+The common theme among all the various feature tests is that they are a utility
+to tell users that we think a particular feature is complete. However,
+completeness is a difficult property to define because features may still have
+lingering bugs, may only work on some targets, etc. We use the following
+criteria when deciding whether to expose a feature test macro (or particular
+result value for the feature test):
+
+  * Are there known issues where we reject valid code that should be accepted?
+  * Are there known issues where we accept invalid code that should be rejected?
+  * Are there known crashes, failed assertions, or miscompilations?
+  * Are there known issues on a particular relevant target?
+
+If the answer to any of these is "yes", the feature test macro should either
+not be defined or there should be very strong rationale for why the issues
+should not prevent defining it. Note, it is acceptable to define the feature
+test macro on a per-target basis if needed.
+
+When in doubt, being conservative is better than being aggressive. If we don't
+claim support for the feature but it does useful things, users can still use it
+and provide us with useful feedback on what is missing. But if we claim support
+for a feature that has significant bugs, we've eliminated most of the utility
+of having a feature testing macro at all because users are then forced to test
+what compiler version is in use to get a more accurate answer.
+
+The status reported by the feature test macro should always be reflected in the
+language support page for the corresponding feature (`C++
+<https://clang.llvm.org/cxx_status.html>`_, `C
+<https://clang.llvm.org/c_status.html>`_) if applicable. This page can give
+more nuanced information to the user as well, such as claiming partial support
+for a feature and specifying details as to what remains to be done.

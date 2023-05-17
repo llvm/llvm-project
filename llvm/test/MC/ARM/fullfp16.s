@@ -23,6 +23,10 @@
 @ ARM:   vnmul.f16 s0, s1, s0        @ encoding: [0xc0,0x09,0x20,0xee]
 @ THUMB: vnmul.f16 s0, s1, s0        @ encoding: [0x20,0xee,0xc0,0x09]
 
+         vnmul.f16     s0, s1
+@ ARM:   vnmul.f16 s0, s0, s1       @ encoding: [0x60,0x09,0x20,0xee]
+@ THUMB: vnmul.f16 s0, s0, s1       @ encoding: [0x20,0xee,0x60,0x09]
+
          vmla.f16        s1, s2, s0
 @ ARM:   vmla.f16 s1, s2, s0         @ encoding: [0x00,0x09,0x41,0xee]
 @ THUMB: vmla.f16 s1, s2, s0         @ encoding: [0x41,0xee,0x00,0x09]

@@ -14,35 +14,44 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Errc.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/ToolOutputFile.h"
+#include "llvm/Support/WithColor.h"
 
 using namespace llvm;
 using namespace llvm::object;
 
+static cl::OptionCategory Cat("obj2yaml Options");
+
 static cl::opt<std::string>
     InputFilename(cl::Positional, cl::desc("<input file>"), cl::init("-"));
+static cl::opt<std::string> OutputFilename("o", cl::desc("Output filename"),
+                                           cl::value_desc("filename"),
+                                           cl::init("-"), cl::Prefix,
+                                           cl::cat(Cat));
 static cl::bits<RawSegments> RawSegment(
     "raw-segment",
     cl::desc("Mach-O: dump the raw contents of the listed segments instead of "
              "parsing them:"),
-    cl::values(clEnumVal(data, "__DATA"), clEnumVal(linkedit, "__LINKEDIT")));
+    cl::values(clEnumVal(data, "__DATA"), clEnumVal(linkedit, "__LINKEDIT")),
+    cl::cat(Cat));
 
-static Error dumpObject(const ObjectFile &Obj) {
+static Error dumpObject(const ObjectFile &Obj, raw_ostream &OS) {
   if (Obj.isCOFF())
-    return errorCodeToError(coff2yaml(outs(), cast<COFFObjectFile>(Obj)));
+    return errorCodeToError(coff2yaml(OS, cast<COFFObjectFile>(Obj)));
 
   if (Obj.isXCOFF())
-    return xcoff2yaml(outs(), cast<XCOFFObjectFile>(Obj));
+    return xcoff2yaml(OS, cast<XCOFFObjectFile>(Obj));
 
   if (Obj.isELF())
-    return elf2yaml(outs(), Obj);
+    return elf2yaml(OS, Obj);
 
   if (Obj.isWasm())
-    return errorCodeToError(wasm2yaml(outs(), cast<WasmObjectFile>(Obj)));
+    return errorCodeToError(wasm2yaml(OS, cast<WasmObjectFile>(Obj)));
 
   llvm_unreachable("unexpected object file format");
 }
 
-static Error dumpInput(StringRef File) {
+static Error dumpInput(StringRef File, raw_ostream &OS) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(File, /*IsText=*/false,
                                    /*RequiresNullTerminator=*/false);
@@ -52,9 +61,11 @@ static Error dumpInput(StringRef File) {
   MemoryBufferRef MemBuf = Buffer->getMemBufferRef();
   switch (identify_magic(MemBuf.getBuffer())) {
   case file_magic::archive:
-    return archive2yaml(outs(), MemBuf);
+    return archive2yaml(OS, MemBuf);
   case file_magic::dxcontainer_object:
-    return dxcontainer2yaml(outs(), MemBuf);
+    return dxcontainer2yaml(OS, MemBuf);
+  case file_magic::offload_binary:
+    return offload2yaml(OS, MemBuf);
   default:
     break;
   }
@@ -68,11 +79,11 @@ static Error dumpInput(StringRef File) {
   // Universal MachO is not a subclass of ObjectFile, so it needs to be handled
   // here with the other binary types.
   if (Binary.isMachO() || Binary.isMachOUniversalBinary())
-    return macho2yaml(outs(), Binary, RawSegment.getBits());
+    return macho2yaml(OS, Binary, RawSegment.getBits());
   if (ObjectFile *Obj = dyn_cast<ObjectFile>(&Binary))
-    return dumpObject(*Obj);
+    return dumpObject(*Obj, OS);
   if (MinidumpFile *Minidump = dyn_cast<MinidumpFile>(&Binary))
-    return minidump2yaml(outs(), *Minidump);
+    return minidump2yaml(OS, *Minidump);
 
   return Error::success();
 }
@@ -90,12 +101,24 @@ static void reportError(StringRef Input, Error Err) {
 
 int main(int argc, char *argv[]) {
   InitLLVM X(argc, argv);
-  cl::ParseCommandLineOptions(argc, argv);
+  cl::HideUnrelatedOptions(Cat);
+  cl::ParseCommandLineOptions(
+      argc, argv, "Dump a YAML description from an object file", nullptr,
+      nullptr, /*LongOptionsUseDoubleDash=*/true);
 
-  if (Error Err = dumpInput(InputFilename)) {
+  std::error_code EC;
+  std::unique_ptr<ToolOutputFile> Out(
+      new ToolOutputFile(OutputFilename, EC, sys::fs::OF_Text));
+  if (EC) {
+    WithColor::error(errs(), "obj2yaml")
+        << "failed to open '" + OutputFilename + "': " + EC.message() << '\n';
+    return 1;
+  }
+  if (Error Err = dumpInput(InputFilename, Out->os())) {
     reportError(InputFilename, std::move(Err));
     return 1;
   }
+  Out->keep();
 
   return 0;
 }

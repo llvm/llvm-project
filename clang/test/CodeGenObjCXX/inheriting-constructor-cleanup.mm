@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-darwin -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call\ "
+// RUN: %clang_cc1 -triple x86_64-darwin -std=c++11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s --implicit-check-not "call\ "
 // rdar://problem/45805151
 
 struct Strong {
@@ -22,22 +22,22 @@ void f() {
   Inheritor({g()});
 }
 // CHECK-LABEL: define{{.*}} void @_Z1fv
-// CHECK:       %[[TMP:.*]] = call noundef i8* @_Z1gv()
-// CHECK:       {{.*}} = notail call i8* @llvm.objc.retainAutoreleasedReturnValue(i8* %[[TMP]])
-// CHECK:       call void (%struct.Base*, i8*, ...) @_ZN4BaseC2E6Strongz(%struct.Base* {{.*}}, i8* {{.*}})
-// CHECK-NEXT:  call void @_ZN9InheritorD1Ev(%struct.Inheritor* {{.*}})
+// CHECK:       %[[TMP:.*]] = call noundef ptr @_Z1gv()
+// CHECK:       {{.*}} = notail call ptr @llvm.objc.retainAutoreleasedReturnValue(ptr %[[TMP]])
+// CHECK:       call void (ptr, ptr, ...) @_ZN4BaseC2E6Strongz(ptr {{.*}}, ptr {{.*}})
+// CHECK-NEXT:  call void @_ZN9InheritorD1Ev(ptr {{.*}})
 
-// CHECK-LABEL: define linkonce_odr void @_ZN4BaseC2E6Strongz(%struct.Base* {{.*}}, i8* {{.*}}, ...)
-// CHECK:       call void @_ZN6StrongD1Ev(%struct.Strong* {{.*}})
+// CHECK-LABEL: define linkonce_odr void @_ZN4BaseC2E6Strongz(ptr {{.*}}, ptr {{.*}}, ...)
+// CHECK:       call void @_ZN6StrongD1Ev(ptr {{.*}})
 
-// CHECK-LABEL: define linkonce_odr void @_ZN9InheritorD1Ev(%struct.Inheritor* {{.*}})
-// CHECK:       call void @_ZN9InheritorD2Ev(%struct.Inheritor* {{.*}})
+// CHECK-LABEL: define linkonce_odr void @_ZN9InheritorD1Ev(ptr {{.*}})
+// CHECK:       call void @_ZN9InheritorD2Ev(ptr {{.*}})
 
-// CHECK-LABEL: define linkonce_odr void @_ZN6StrongD1Ev(%struct.Strong* {{.*}})
-// CHECK:       call void @_ZN6StrongD2Ev(%struct.Strong* {{.*}})
+// CHECK-LABEL: define linkonce_odr void @_ZN6StrongD1Ev(ptr {{.*}})
+// CHECK:       call void @_ZN6StrongD2Ev(ptr {{.*}})
 
-// CHECK-LABEL: define linkonce_odr void @_ZN6StrongD2Ev(%struct.Strong* {{.*}})
-// CHECK:       call void @llvm.objc.storeStrong(i8** {{.*}}, i8* null)
+// CHECK-LABEL: define linkonce_odr void @_ZN6StrongD2Ev(ptr {{.*}})
+// CHECK:       call void @llvm.objc.storeStrong(ptr {{.*}}, ptr null)
 
-// CHECK-LABEL: define linkonce_odr void @_ZN9InheritorD2Ev(%struct.Inheritor* {{.*}})
-// CHECK:       call void @_ZN14NonTrivialDtorD2Ev(%struct.NonTrivialDtor* {{.*}})
+// CHECK-LABEL: define linkonce_odr void @_ZN9InheritorD2Ev(ptr {{.*}})
+// CHECK:       call void @_ZN14NonTrivialDtorD2Ev(ptr {{.*}})

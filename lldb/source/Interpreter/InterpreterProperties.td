@@ -13,6 +13,10 @@ let Definition = "interpreter" in {
     Global,
     DefaultFalse,
     Desc<"If true, LLDB will save the session's transcripts before quitting.">;
+  def OpenTranscriptInEditor: Property<"open-transcript-in-editor", "Boolean">,
+    Global,
+    DefaultTrue,
+    Desc<"If true, LLDB will open the saved session's transcripts in the external editor.">;
   def SaveSessionDirectory: Property<"save-session-directory", "FileSpec">,
     DefaultStringValue<"">,
     Desc<"A path where LLDB will save the session's transcripts. This is particularly useful when you can't set the session file, for example when using `save-session-on-quit`.">;

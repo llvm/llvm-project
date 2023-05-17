@@ -36,6 +36,18 @@ private:
 
 inline void NORETURN trap() { __builtin_trap(); }
 
+void NORETURN reportSoftRSSLimit(uptr RssLimitMb) {
+  ScopedErrorReport Report;
+  Report.append("Soft RSS limit of %zu MB exhausted, current RSS is %zu MB\n",
+                RssLimitMb, GetRSS() >> 20);
+}
+
+void NORETURN reportHardRSSLimit(uptr RssLimitMb) {
+  ScopedErrorReport Report;
+  Report.append("Hard RSS limit of %zu MB exhausted, current RSS is %zu MB\n",
+                RssLimitMb, GetRSS() >> 20);
+}
+
 // This could potentially be called recursively if a CHECK fails in the reports.
 void NORETURN reportCheckFailed(const char *File, int Line,
                                 const char *Condition, u64 Value1, u64 Value2) {
@@ -98,6 +110,11 @@ void NORETURN reportAllocationSizeTooBig(uptr UserSize, uptr TotalSize,
   Report.append("requested allocation size %zu (%zu after adjustments) exceeds "
                 "maximum supported size of %zu\n",
                 UserSize, TotalSize, MaxSize);
+}
+
+void NORETURN reportOutOfBatchClass() {
+  ScopedErrorReport Report;
+  Report.append("BatchClass region is used up, can't hold any free block\n");
 }
 
 void NORETURN reportOutOfMemory(uptr RequestedSize) {

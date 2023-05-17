@@ -64,7 +64,7 @@ void test_return_type(void *ptr, int i, long l) {
   _Static_assert(check_same_type(void *, result_type_ptr), "Should return void*");
   _Static_assert(check_same_type(int, result_type_int), "Should return int");
   _Static_assert(check_same_type(long, result_type_long), "Should return long");
-  // Check that we can use the alignment builtins on on array types (result should decay)
+  // Check that we can use the alignment builtins on array types (result should decay)
   _Static_assert(check_same_type(char *, result_type_char_array),
                  "Using the builtins on an array should yield the decayed type");
 #endif
@@ -113,8 +113,8 @@ void constant_expression(int x) {
   _Static_assert(__builtin_align_down(33, 32) == 32, "");
 
   // But not if one of the arguments isn't constant:
-  _Static_assert(ALIGN_BUILTIN(33, x) != 100, ""); // expected-error {{static_assert expression is not an integral constant expression}}
-  _Static_assert(ALIGN_BUILTIN(x, 4) != 100, "");  // expected-error {{static_assert expression is not an integral constant expression}}
+  _Static_assert(ALIGN_BUILTIN(33, x) != 100, ""); // expected-error {{static assertion expression is not an integral constant expression}}
+  _Static_assert(ALIGN_BUILTIN(x, 4) != 100, "");  // expected-error {{static assertion expression is not an integral constant expression}}
 }
 
 // Check that it is a constant expression that can be assigned to globals:

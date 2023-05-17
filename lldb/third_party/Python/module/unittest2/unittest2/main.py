@@ -3,7 +3,6 @@
 import sys
 import os
 import types
-import six
 
 from unittest2 import loader, runner
 try:
@@ -77,7 +76,7 @@ class TestProgram(object):
                  argv=None, testRunner=None,
                  testLoader=loader.defaultTestLoader, exit=True,
                  verbosity=1, failfast=None, catchbreak=None, buffer=None):
-        if isinstance(module, six.string_types):
+        if isinstance(module, str):
             self.module = __import__(module)
             for part in module.split('.')[1:]:
                 self.module = getattr(self.module, part)

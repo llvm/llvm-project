@@ -2,7 +2,7 @@
 
 extern "C"
 const char *__lsan_default_options() {
-  // CHECK: Available flags for {{Leak|Address}}Sanitizer:
+  // CHECK: Available flags for {{Leak|Address|HWAddress}}Sanitizer:
   return "verbosity=1 help=1";
 }
 

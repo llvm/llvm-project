@@ -15,7 +15,6 @@
 #define LLVM_MC_MCINSTRANALYSIS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrInfo.h"
@@ -157,19 +156,19 @@ public:
 
   /// Given an instruction tries to get the address of a memory operand. Returns
   /// the address on success.
-  virtual Optional<uint64_t>
+  virtual std::optional<uint64_t>
   evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
                                uint64_t Addr, uint64_t Size) const;
 
   /// Given an instruction with a memory operand that could require relocation,
   /// returns the offset within the instruction of that relocation.
-  virtual Optional<uint64_t>
+  virtual std::optional<uint64_t>
   getMemoryOperandRelocationOffset(const MCInst &Inst, uint64_t Size) const;
 
   /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
   virtual std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 uint64_t GotPltSectionVA, const Triple &TargetTriple) const {
+                 const Triple &TargetTriple) const {
     return {};
   }
 };

@@ -26,9 +26,9 @@ import getopt
 import logging
 import os
 import re
+import shutil
 import subprocess
 import sys
-from distutils.spawn import find_executable
 
 symbolizers = {}
 demangle = False
@@ -50,7 +50,7 @@ def fix_filename(file_name):
 def is_valid_arch(s):
   return s in ["i386", "x86_64", "x86_64h", "arm", "armv6", "armv7", "armv7s",
                "armv7k", "arm64", "powerpc64", "powerpc64le", "s390x", "s390",
-               "riscv64"]
+               "riscv64", "loongarch64"]
 
 def guess_arch(addr):
   # Guess which arch we're running. 10 = len('0x') + 8 hex digits.
@@ -155,7 +155,7 @@ class Addr2LineSymbolizer(Symbolizer):
     addr2line_tool = 'addr2line'
     if binutils_prefix:
       addr2line_tool = binutils_prefix + addr2line_tool
-    logging.debug('addr2line binary is %s' % find_executable(addr2line_tool))
+    logging.debug('addr2line binary is %s' % shutil.which(addr2line_tool))
     cmd = [addr2line_tool, '-fi']
     if demangle:
       cmd += ['--demangle']

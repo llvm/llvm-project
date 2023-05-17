@@ -1,7 +1,7 @@
 
 // RUN: %clang_cc1 -triple wasm32 -fsyntax-only -Wno-unknown-pragmas -Wignored-pragmas -verify %s
 // RUN: %clang_cc1 -triple thumbv7 -fsyntax-only -Wno-unknown-pragmas -Wignored-pragmas -verify %s
-// RUN: %clang_cc1 -triple aarch64 -fsyntax-only -Wno-unknown-pragmas -Wignored-pragmas -verify %s
+// RUN: %clang_cc1 -DEXPOK -triple aarch64 -fsyntax-only -Wno-unknown-pragmas -Wignored-pragmas -verify %s
 // RUN: %clang_cc1 -DEXPOK -triple x86_64 -fsyntax-only -Wno-unknown-pragmas -Wignored-pragmas -verify %s
 // RUN: %clang_cc1 -DEXPOK -triple systemz -fsyntax-only -Wno-unknown-pragmas -Wignored-pragmas -verify %s
 // RUN: %clang_cc1 -DEXPOK -triple powerpc -fsyntax-only -Wno-unknown-pragmas -Wignored-pragmas -verify %s

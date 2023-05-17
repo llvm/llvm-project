@@ -1,4 +1,4 @@
-; RUN: llvm-link -S %s %p/Inputs/type-unique-name.ll | FileCheck %s
+; RUN: llvm-link -opaque-pointers=0 -S %s %p/Inputs/type-unique-name.ll | FileCheck %s
 
 ; Test that we keep the type name
 ; CHECK: %abc = type { i8 }

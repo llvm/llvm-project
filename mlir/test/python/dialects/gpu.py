@@ -11,7 +11,7 @@ def run(f):
 
 def testGPUPass():
   with Context() as context:
-    PassManager.parse('gpu-kernel-outlining')
+    PassManager.parse('any(gpu-kernel-outlining)')
   print('SUCCESS')
 
 # CHECK-LABEL: testGPUPass

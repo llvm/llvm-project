@@ -13,6 +13,7 @@
 
 #include "ReduceInstructionFlagsMIR.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 using namespace llvm;
 
 static void removeFlagsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
@@ -30,6 +31,5 @@ static void removeFlagsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceInstructionFlagsMIRDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Instruction flags...\n";
-  runDeltaPass(Test, removeFlagsFromModule);
+  runDeltaPass(Test, removeFlagsFromModule, "Reducing Instruction Flags");
 }

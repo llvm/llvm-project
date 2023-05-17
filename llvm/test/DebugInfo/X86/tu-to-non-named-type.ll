@@ -33,11 +33,9 @@ define dso_local void @_Z1f3foo3bar(i32 %.coerce) #0 !dbg !7 {
 entry:
   %0 = alloca %struct.foo, align 4
   %1 = alloca %struct.bar, align 1
-  %coerce.dive = getelementptr inbounds %struct.foo, %struct.foo* %0, i32 0, i32 0
-  %2 = bitcast [1 x i32]* %coerce.dive to i32*
-  store i32 %.coerce, i32* %2, align 4
-  call void @llvm.dbg.declare(metadata %struct.foo* %0, metadata !19, metadata !DIExpression()), !dbg !20
-  call void @llvm.dbg.declare(metadata %struct.bar* %1, metadata !21, metadata !DIExpression()), !dbg !22
+  store i32 %.coerce, ptr %0, align 4
+  call void @llvm.dbg.declare(metadata ptr %0, metadata !19, metadata !DIExpression()), !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !21, metadata !DIExpression()), !dbg !22
   ret void, !dbg !23
 }
 

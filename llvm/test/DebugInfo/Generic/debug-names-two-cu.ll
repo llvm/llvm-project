@@ -1,4 +1,4 @@
-; XFAIL: -aix
+; XFAIL: target={{.*}}-aix{{.*}}
 ; RUN: %llc_dwarf -accel-tables=Dwarf -filetype=obj -o %t < %s
 ; RUN: llvm-dwarfdump -debug-names %t | FileCheck %s
 ; RUN: llvm-dwarfdump -debug-names -verify %t | FileCheck --check-prefix=VERIFY %s
@@ -43,13 +43,13 @@
 !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: null, size: 64)
 !3 = !DIFile(filename: "/tmp/cu2.c", directory: "/tmp")
 
-@foobar1 = common dso_local global i8* null, align 8, !dbg !10
+@foobar1 = common dso_local global ptr null, align 8, !dbg !10
 !10 = !DIGlobalVariableExpression(var: !11, expr: !DIExpression())
 !11 = distinct !DIGlobalVariable(name: "foobar1", scope: !12, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
 !12 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0 (trunk 325496) (llvm/trunk 325732)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !15)
 !15 = !{!10}
 
-@foobar2 = common dso_local global i8* null, align 8, !dbg !20
+@foobar2 = common dso_local global ptr null, align 8, !dbg !20
 !20 = !DIGlobalVariableExpression(var: !21, expr: !DIExpression())
 !21 = distinct !DIGlobalVariable(name: "foobar2", scope: !22, file: !3, line: 1, type: !6, isLocal: false, isDefinition: true)
 !22 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, producer: "clang version 7.0.0 (trunk 325496) (llvm/trunk 325732)", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !4, globals: !25)

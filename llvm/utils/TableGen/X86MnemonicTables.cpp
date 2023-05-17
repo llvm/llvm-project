@@ -14,7 +14,7 @@
 #include "CodeGenInstruction.h"
 #include "CodeGenTarget.h"
 #include "X86RecognizableInstr.h"
-#include "llvm/TableGen/Error.h"
+#include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
 
 using namespace llvm;
@@ -87,8 +87,5 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
 
 } // namespace
 
-namespace llvm {
-void EmitX86MnemonicTables(RecordKeeper &RK, raw_ostream &OS) {
-  X86MnemonicTablesEmitter(RK).run(OS);
-}
-} // namespace llvm
+static TableGen::Emitter::OptClass<X86MnemonicTablesEmitter>
+    X("gen-x86-mnemonic-tables", "Generate X86 mnemonic tables");

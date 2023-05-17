@@ -76,6 +76,7 @@ HANDLE_LOAD_COMMAND(LC_NOTE, 0x00000031u, note_command)
 HANDLE_LOAD_COMMAND(LC_BUILD_VERSION, 0x00000032u, build_version_command)
 HANDLE_LOAD_COMMAND(LC_DYLD_EXPORTS_TRIE, 0x80000033u, linkedit_data_command)
 HANDLE_LOAD_COMMAND(LC_DYLD_CHAINED_FIXUPS, 0x80000034u, linkedit_data_command)
+HANDLE_LOAD_COMMAND(LC_FILESET_ENTRY, 0x80000035u, fileset_entry_command)
 
 #endif
 
@@ -114,6 +115,7 @@ LOAD_COMMAND_STRUCT(uuid_command)
 LOAD_COMMAND_STRUCT(version_min_command)
 LOAD_COMMAND_STRUCT(note_command)
 LOAD_COMMAND_STRUCT(build_version_command)
+LOAD_COMMAND_STRUCT(fileset_entry_command)
 
 #endif
 

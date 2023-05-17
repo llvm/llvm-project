@@ -36,6 +36,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Ahmed Bougacha (Apple) [ab]
 * Andy Kaylor (Intel) [andykaylor]
 * Artur Pilipenko (Azul Systems Inc) [apilipenko]
+* Boovaragavan Dasarathan (Nvidia) [mrragava]
 * Dimitry Andric (individual; FreeBSD) [dim]
 * Ed Maste (individual; FreeBSD) [emaste]
 * George Burgess IV (Google) [george.burgess.iv]
@@ -48,7 +49,7 @@ The members of the group represent a wide cross-section of the community, and me
 * Paul Robinson (Sony) [probinson]
 * Peter Smith (ARM) [peter.smith]
 * Pietro Albini (Ferrous Systems; Rust) [pietroalbini]
-* Serge Guelton (RedHat) [serge-sans-paille]
+* Serge Guelton (Mozilla) [serge-sans-paille]
 * Sergey Maslov (Intel) [smaslov-intel]
 * Shayne Hiet-Block (Microsoft) [Shayne]
 * Tim Penge (Sony) [tpenge]
@@ -222,7 +223,7 @@ The security-sensitive parts of the LLVM Project currently are:
 
 The parts of the LLVM Project which are currently treated as non-security sensitive are:
 
-* Language front-ends, such as clang, for which a malicious input file can cause undesirable behavior. For example, a maliciously-crafter C or Rust source file can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been hardened, and compiling untrusted code usually also includes running utilities such as `make` which can more readily perform malicious things.
+* Language front-ends, such as clang, for which a malicious input file can cause undesirable behavior. For example, a maliciously crafted C or Rust source file can cause arbitrary code to execute in LLVM. These parts of LLVM haven't been hardened, and compiling untrusted code usually also includes running utilities such as `make` which can more readily perform malicious things.
 * *FUTURE*: this section will be expanded.
 
 

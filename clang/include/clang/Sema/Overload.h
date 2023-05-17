@@ -26,7 +26,6 @@
 #include "clang/Sema/SemaFixItUtils.h"
 #include "clang/Sema/TemplateDeduction.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -162,6 +161,9 @@ class Sema;
 
     /// Arm SVE Vector conversions
     ICK_SVE_Vector_Conversion,
+
+    /// RISC-V RVV Vector conversions
+    ICK_RVV_Vector_Conversion,
 
     /// A vector splat from an arithmetic type
     ICK_Vector_Splat,
@@ -521,8 +523,12 @@ class Sema;
     /// specifies that there is no conversion from the source type to
     /// the target type.  AmbiguousConversion represents the unique
     /// ambiguous conversion (C++0x [over.best.ics]p10).
+    /// StaticObjectArgumentConversion represents the conversion rules for
+    /// the synthesized first argument of calls to static member functions
+    /// ([over.best.ics.general]p8).
     enum Kind {
       StandardConversion = 0,
+      StaticObjectArgumentConversion,
       UserDefinedConversion,
       AmbiguousConversion,
       EllipsisConversion,
@@ -589,6 +595,8 @@ class Sema;
       switch (ConversionKind) {
       case Uninitialized: break;
       case StandardConversion: Standard = Other.Standard; break;
+      case StaticObjectArgumentConversion:
+        break;
       case UserDefinedConversion: UserDefined = Other.UserDefined; break;
       case AmbiguousConversion: Ambiguous.copyFrom(Other.Ambiguous); break;
       case EllipsisConversion: break;
@@ -622,6 +630,7 @@ class Sema;
     unsigned getKindRank() const {
       switch (getKind()) {
       case StandardConversion:
+      case StaticObjectArgumentConversion:
         return 0;
 
       case UserDefinedConversion:
@@ -640,6 +649,9 @@ class Sema;
 
     bool isBad() const { return getKind() == BadConversion; }
     bool isStandard() const { return getKind() == StandardConversion; }
+    bool isStaticObjectArgument() const {
+      return getKind() == StaticObjectArgumentConversion;
+    }
     bool isEllipsis() const { return getKind() == EllipsisConversion; }
     bool isAmbiguous() const { return getKind() == AmbiguousConversion; }
     bool isUserDefined() const { return getKind() == UserDefinedConversion; }
@@ -665,6 +677,7 @@ class Sema;
     }
 
     void setStandard() { setKind(StandardConversion); }
+    void setStaticObjectArgument() { setKind(StaticObjectArgumentConversion); }
     void setEllipsis() { setKind(EllipsisConversion); }
     void setUserDefined() { setKind(UserDefinedConversion); }
 
@@ -795,6 +808,10 @@ class Sema;
     /// This candidate was not viable because its associated constraints were
     /// not satisfied.
     ovl_fail_constraints_not_satisfied,
+
+    /// This candidate was not viable because it has internal linkage and is
+    /// from a different module unit than the use.
+    ovl_fail_module_mismatched,
   };
 
   /// A list of implicit conversion sequences for the arguments of an
@@ -924,6 +941,8 @@ class Sema;
       return ExplicitCallArguments;
     }
 
+    bool NotValidBecauseConstraintExprHasError() const;
+
   private:
     friend class OverloadCandidateSet;
     OverloadCandidate()
@@ -960,12 +979,16 @@ class Sema;
     /// functions to a candidate set.
     struct OperatorRewriteInfo {
       OperatorRewriteInfo()
-          : OriginalOperator(OO_None), AllowRewrittenCandidates(false) {}
-      OperatorRewriteInfo(OverloadedOperatorKind Op, bool AllowRewritten)
-          : OriginalOperator(Op), AllowRewrittenCandidates(AllowRewritten) {}
+          : OriginalOperator(OO_None), OpLoc(), AllowRewrittenCandidates(false) {}
+      OperatorRewriteInfo(OverloadedOperatorKind Op, SourceLocation OpLoc,
+                          bool AllowRewritten)
+          : OriginalOperator(Op), OpLoc(OpLoc),
+            AllowRewrittenCandidates(AllowRewritten) {}
 
       /// The original operator as written in the source.
       OverloadedOperatorKind OriginalOperator;
+      /// The source location of the operator.
+      SourceLocation OpLoc;
       /// Whether we should include rewritten candidates in the overload set.
       bool AllowRewrittenCandidates;
 
@@ -1001,22 +1024,23 @@ class Sema;
           CRK = OverloadCandidateRewriteKind(CRK | CRK_Reversed);
         return CRK;
       }
-
       /// Determines whether this operator could be implemented by a function
       /// with reversed parameter order.
       bool isReversible() {
         return AllowRewrittenCandidates && OriginalOperator &&
                (getRewrittenOverloadedOperator(OriginalOperator) != OO_None ||
-                shouldAddReversed(OriginalOperator));
+                allowsReversed(OriginalOperator));
       }
 
-      /// Determine whether we should consider looking for and adding reversed
-      /// candidates for operator Op.
-      bool shouldAddReversed(OverloadedOperatorKind Op);
+      /// Determine whether reversing parameter order is allowed for operator
+      /// Op.
+      bool allowsReversed(OverloadedOperatorKind Op);
 
       /// Determine whether we should add a rewritten candidate for \p FD with
       /// reversed parameter order.
-      bool shouldAddReversed(ASTContext &Ctx, const FunctionDecl *FD);
+      /// \param OriginalArgs are the original non reversed arguments.
+      bool shouldAddReversed(Sema &S, ArrayRef<Expr *> OriginalArgs,
+                             FunctionDecl *FD);
     };
 
   private:
@@ -1124,8 +1148,9 @@ class Sema;
 
     /// Add a new candidate with NumConversions conversion sequence slots
     /// to the overload set.
-    OverloadCandidate &addCandidate(unsigned NumConversions = 0,
-                                    ConversionSequenceList Conversions = None) {
+    OverloadCandidate &
+    addCandidate(unsigned NumConversions = 0,
+                 ConversionSequenceList Conversions = std::nullopt) {
       assert((Conversions.empty() || Conversions.size() == NumConversions) &&
              "preallocated conversion sequence has wrong length");
 

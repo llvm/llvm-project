@@ -63,7 +63,7 @@ public:
   bool isUnsigned : 1;
   bool isLong : 1;          // This is *not* set for long long.
   bool isLongLong : 1;
-  bool isSizeT : 1;         // 1z, 1uz (C++2b)
+  bool isSizeT : 1;         // 1z, 1uz (C++23)
   bool isHalf : 1;          // 1.0h
   bool isFloat : 1;         // 1.0f
   bool isImaginary : 1;     // 1.0i
@@ -198,7 +198,7 @@ public:
                     tok::TokenKind kind);
 
   bool hadError() const { return HadError; }
-  bool isAscii() const { return Kind == tok::char_constant; }
+  bool isOrdinary() const { return Kind == tok::char_constant; }
   bool isWide() const { return Kind == tok::wide_char_constant; }
   bool isUTF8() const { return Kind == tok::utf8_char_constant; }
   bool isUTF16() const { return Kind == tok::utf16_char_constant; }
@@ -263,7 +263,7 @@ public:
   /// checking of the string literal and emit errors and warnings.
   unsigned getOffsetOfStringByte(const Token &TheTok, unsigned ByteNo) const;
 
-  bool isAscii() const { return Kind == tok::string_literal; }
+  bool isOrdinary() const { return Kind == tok::string_literal; }
   bool isWide() const { return Kind == tok::wide_string_literal; }
   bool isUTF8() const { return Kind == tok::utf8_string_literal; }
   bool isUTF16() const { return Kind == tok::utf16_string_literal; }

@@ -8,16 +8,28 @@
 
 #include "mlir/Conversion/LinalgToStandard/LinalgToStandard.h"
 
-#include "../PassDetail.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/Pass/Pass.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTLINALGTOSTANDARD
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 using namespace mlir::linalg;
+
+static MemRefType makeStridedLayoutDynamic(MemRefType type) {
+  return MemRefType::Builder(type).setLayout(StridedLayoutAttr::get(
+      type.getContext(), ShapedType::kDynamic,
+      SmallVector<int64_t>(type.getRank(), ShapedType::kDynamic)));
+}
 
 /// Helper function to extract the operand types that are passed to the
 /// generated CallOp. MemRefTypes have their layout canonicalized since the
@@ -30,8 +42,8 @@ static SmallVector<Type, 4> extractOperandTypes(Operation *op) {
     // The underlying descriptor type (e.g. LLVM) does not have layout
     // information. Canonicalizing the type at the level of std when going into
     // a library call avoids needing to introduce DialectCastOp.
-    if (auto memrefType = type.dyn_cast<MemRefType>())
-      result.push_back(eraseStridedLayout(memrefType));
+    if (auto memrefType = dyn_cast<MemRefType>(type))
+      result.push_back(makeStridedLayoutDynamic(memrefType));
     else
       result.push_back(type);
   }
@@ -40,14 +52,12 @@ static SmallVector<Type, 4> extractOperandTypes(Operation *op) {
 
 // Get a SymbolRefAttr containing the library function name for the LinalgOp.
 // If the library function does not exist, insert a declaration.
-static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
-                                                 PatternRewriter &rewriter) {
+static FailureOr<FlatSymbolRefAttr>
+getLibraryCallSymbolRef(Operation *op, PatternRewriter &rewriter) {
   auto linalgOp = cast<LinalgOp>(op);
   auto fnName = linalgOp.getLibraryCallName();
-  if (fnName.empty()) {
-    op->emitWarning("No library call defined for: ") << *op;
-    return {};
-  }
+  if (fnName.empty())
+    return rewriter.notifyMatchFailure(op, "No library call defined for: ");
 
   // fnName is a dynamic std::string, unique it via a SymbolRefAttr.
   FlatSymbolRefAttr fnNameAttr =
@@ -57,9 +67,12 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
     return fnNameAttr;
 
   SmallVector<Type, 4> inputTypes(extractOperandTypes(op));
-  assert(op->getNumResults() == 0 &&
-         "Library call for linalg operation can be generated only for ops that "
-         "have void return types");
+  if (op->getNumResults() != 0) {
+    return rewriter.notifyMatchFailure(
+        op,
+        "Library call for linalg operation can be generated only for ops that "
+        "have void return types");
+  }
   auto libFnType = rewriter.getFunctionType(inputTypes, {});
 
   OpBuilder::InsertionGuard guard(rewriter);
@@ -71,7 +84,8 @@ static FlatSymbolRefAttr getLibraryCallSymbolRef(Operation *op,
   // Insert a function attribute that will trigger the emission of the
   // corresponding `_mlir_ciface_xxx` interface so that external libraries see
   // a normalized ABI. This interface is added during std to llvm conversion.
-  funcOp->setAttr("llvm.emit_c_interface", UnitAttr::get(op->getContext()));
+  funcOp->setAttr(LLVM::LLVMDialect::getEmitCWrapperAttrName(),
+                  UnitAttr::get(op->getContext()));
   funcOp.setPrivate();
   return fnNameAttr;
 }
@@ -82,13 +96,13 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
   SmallVector<Value, 4> res;
   res.reserve(operands.size());
   for (auto op : operands) {
-    auto memrefType = op.getType().dyn_cast<MemRefType>();
+    auto memrefType = dyn_cast<MemRefType>(op.getType());
     if (!memrefType) {
       res.push_back(op);
       continue;
     }
     Value cast =
-        b.create<memref::CastOp>(loc, eraseStridedLayout(memrefType), op);
+        b.create<memref::CastOp>(loc, makeStridedLayoutDynamic(memrefType), op);
     res.push_back(cast);
   }
   return res;
@@ -97,18 +111,17 @@ createTypeCanonicalizedMemRefOperands(OpBuilder &b, Location loc,
 LogicalResult mlir::linalg::LinalgOpToLibraryCallRewrite::matchAndRewrite(
     LinalgOp op, PatternRewriter &rewriter) const {
   auto libraryCallName = getLibraryCallSymbolRef(op, rewriter);
-  if (!libraryCallName)
+  if (failed(libraryCallName))
     return failure();
 
   // TODO: Add support for more complex library call signatures that include
   // indices or captured values.
   rewriter.replaceOpWithNewOp<func::CallOp>(
-      op, libraryCallName.getValue(), TypeRange(),
+      op, libraryCallName->getValue(), TypeRange(),
       createTypeCanonicalizedMemRefOperands(rewriter, op->getLoc(),
                                             op->getOperands()));
   return success();
 }
-
 
 /// Populate the given list with patterns that convert from Linalg to Standard.
 void mlir::linalg::populateLinalgToStandardConversionPatterns(
@@ -120,7 +133,7 @@ void mlir::linalg::populateLinalgToStandardConversionPatterns(
 
 namespace {
 struct ConvertLinalgToStandardPass
-    : public ConvertLinalgToStandardBase<ConvertLinalgToStandardPass> {
+    : public impl::ConvertLinalgToStandardBase<ConvertLinalgToStandardPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -128,7 +141,7 @@ struct ConvertLinalgToStandardPass
 void ConvertLinalgToStandardPass::runOnOperation() {
   auto module = getOperation();
   ConversionTarget target(getContext());
-  target.addLegalDialect<AffineDialect, arith::ArithmeticDialect,
+  target.addLegalDialect<affine::AffineDialect, arith::ArithDialect,
                          func::FuncDialect, memref::MemRefDialect,
                          scf::SCFDialect>();
   target.addLegalOp<ModuleOp, func::FuncOp, func::ReturnOp>();

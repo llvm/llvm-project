@@ -9,6 +9,6 @@ define void @foo() {
   %1 = shufflevector <3 x i8> undef, <3 x i8> undef, <2 x i32> <i32 0, i32 1>
   %2 = shufflevector <2 x i8> %1, <2 x i8> undef, <4 x i32> <i32 0, i32 1, i32 undef, i32 undef>
   %3 = shufflevector <4 x i8> undef, <4 x i8> %2, <4 x i32> <i32 0, i32 1, i32 4, i32 5>
-  store <4 x i8> %3, <4 x i8>* undef
+  store <4 x i8> %3, ptr undef
   ret void
 }

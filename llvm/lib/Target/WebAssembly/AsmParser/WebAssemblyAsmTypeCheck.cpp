@@ -15,10 +15,9 @@
 
 #include "AsmParser/WebAssemblyAsmTypeCheck.h"
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "MCTargetDesc/WebAssemblyMCTypeUtilities.h"
 #include "MCTargetDesc/WebAssemblyTargetStreamer.h"
 #include "TargetInfo/WebAssemblyTargetInfo.h"
-#include "Utils/WebAssemblyTypeUtilities.h"
-#include "Utils/WebAssemblyUtilities.h"
 #include "WebAssembly.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCExpr.h"
@@ -45,16 +44,18 @@ extern StringRef GetMnemonic(unsigned Opc);
 namespace llvm {
 
 WebAssemblyAsmTypeCheck::WebAssemblyAsmTypeCheck(MCAsmParser &Parser,
-                                                 const MCInstrInfo &MII, bool is64)
-    : Parser(Parser), MII(MII), is64(is64) {
-}
+                                                 const MCInstrInfo &MII,
+                                                 bool is64)
+    : Parser(Parser), MII(MII), is64(is64) {}
 
 void WebAssemblyAsmTypeCheck::funcDecl(const wasm::WasmSignature &Sig) {
   LocalTypes.assign(Sig.Params.begin(), Sig.Params.end());
   ReturnTypes.assign(Sig.Returns.begin(), Sig.Returns.end());
+  BrStack.emplace_back(Sig.Returns.begin(), Sig.Returns.end());
 }
 
-void WebAssemblyAsmTypeCheck::localDecl(const SmallVector<wasm::ValType, 4> &Locals) {
+void WebAssemblyAsmTypeCheck::localDecl(
+    const SmallVectorImpl<wasm::ValType> &Locals) {
   LocalTypes.insert(LocalTypes.end(), Locals.begin(), Locals.end());
 }
 
@@ -74,30 +75,27 @@ bool WebAssemblyAsmTypeCheck::typeError(SMLoc ErrorLoc, const Twine &Msg) {
   // which are mostly not helpful.
   if (TypeErrorThisFunction)
     return true;
-  // If we're currently in unreachable code, we surpress errors as well.
+  // If we're currently in unreachable code, we suppress errors completely.
   if (Unreachable)
-    return true;
+    return false;
   TypeErrorThisFunction = true;
   dumpTypeStack("current stack: ");
   return Parser.Error(ErrorLoc, Msg);
 }
 
 bool WebAssemblyAsmTypeCheck::popType(SMLoc ErrorLoc,
-                                      Optional<wasm::ValType> EVT) {
+                                      std::optional<wasm::ValType> EVT) {
   if (Stack.empty()) {
     return typeError(ErrorLoc,
-                      EVT.hasValue()
-                          ? StringRef("empty stack while popping ") +
-                                WebAssembly::typeToString(EVT.getValue())
-                          : StringRef(
-                                    "empty stack while popping value"));
+                     EVT ? StringRef("empty stack while popping ") +
+                               WebAssembly::typeToString(*EVT)
+                         : StringRef("empty stack while popping value"));
   }
   auto PVT = Stack.pop_back_val();
-  if (EVT.hasValue() && EVT.getValue() != PVT) {
-    return typeError(
-        ErrorLoc, StringRef("popped ") + WebAssembly::typeToString(PVT) +
-                                    ", expected " +
-                                    WebAssembly::typeToString(EVT.getValue()));
+  if (EVT && *EVT != PVT) {
+    return typeError(ErrorLoc,
+                     StringRef("popped ") + WebAssembly::typeToString(PVT) +
+                         ", expected " + WebAssembly::typeToString(*EVT));
   }
   return false;
 }
@@ -120,38 +118,63 @@ bool WebAssemblyAsmTypeCheck::getLocal(SMLoc ErrorLoc, const MCInst &Inst,
   auto Local = static_cast<size_t>(Inst.getOperand(0).getImm());
   if (Local >= LocalTypes.size())
     return typeError(ErrorLoc, StringRef("no local type specified for index ") +
-                          std::to_string(Local));
+                                   std::to_string(Local));
   Type = LocalTypes[Local];
   return false;
 }
 
+static std::optional<std::string>
+checkStackTop(const SmallVectorImpl<wasm::ValType> &ExpectedStackTop,
+              const SmallVectorImpl<wasm::ValType> &Got) {
+  for (size_t I = 0; I < ExpectedStackTop.size(); I++) {
+    auto EVT = ExpectedStackTop[I];
+    auto PVT = Got[Got.size() - ExpectedStackTop.size() + I];
+    if (PVT != EVT)
+      return std::string{"got "} + WebAssembly::typeToString(PVT) +
+             ", expected " + WebAssembly::typeToString(EVT);
+  }
+  return std::nullopt;
+}
+
+bool WebAssemblyAsmTypeCheck::checkBr(SMLoc ErrorLoc, size_t Level) {
+  if (Level >= BrStack.size())
+    return typeError(ErrorLoc,
+                     StringRef("br: invalid depth ") + std::to_string(Level));
+  const SmallVector<wasm::ValType, 4> &Expected =
+      BrStack[BrStack.size() - Level - 1];
+  if (Expected.size() > Stack.size())
+    return typeError(ErrorLoc, "br: insufficient values on the type stack");
+  auto IsStackTopInvalid = checkStackTop(Expected, Stack);
+  if (IsStackTopInvalid)
+    return typeError(ErrorLoc, "br " + IsStackTopInvalid.value());
+  return false;
+}
+
 bool WebAssemblyAsmTypeCheck::checkEnd(SMLoc ErrorLoc, bool PopVals) {
+  if (!PopVals)
+    BrStack.pop_back();
   if (LastSig.Returns.size() > Stack.size())
     return typeError(ErrorLoc, "end: insufficient values on the type stack");
-  
+
   if (PopVals) {
     for (auto VT : llvm::reverse(LastSig.Returns)) {
-      if (popType(ErrorLoc, VT)) 
+      if (popType(ErrorLoc, VT))
         return true;
     }
     return false;
   }
-  
-  for (size_t i = 0; i < LastSig.Returns.size(); i++) {
-    auto EVT = LastSig.Returns[i];
-    auto PVT = Stack[Stack.size() - LastSig.Returns.size() + i];
-    if (PVT != EVT)
-      return typeError(
-          ErrorLoc, StringRef("end got ") + WebAssembly::typeToString(PVT) +
-                        ", expected " + WebAssembly::typeToString(EVT));
-  }
+
+  auto IsStackTopInvalid = checkStackTop(LastSig.Returns, Stack);
+  if (IsStackTopInvalid)
+    return typeError(ErrorLoc, "end " + IsStackTopInvalid.value());
   return false;
 }
 
 bool WebAssemblyAsmTypeCheck::checkSig(SMLoc ErrorLoc,
-                                       const wasm::WasmSignature& Sig) {
+                                       const wasm::WasmSignature &Sig) {
   for (auto VT : llvm::reverse(Sig.Params))
-    if (popType(ErrorLoc, VT)) return true;
+    if (popType(ErrorLoc, VT))
+      return true;
   Stack.insert(Stack.end(), Sig.Returns.begin(), Sig.Returns.end());
   return false;
 }
@@ -173,7 +196,7 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
   if (getSymRef(ErrorLoc, Inst, SymRef))
     return true;
   auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
-  switch (WasmSym->getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA)) {
+  switch (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA)) {
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     Type = static_cast<wasm::ValType>(WasmSym->getGlobalType().Type);
     break;
@@ -187,10 +210,10 @@ bool WebAssemblyAsmTypeCheck::getGlobal(SMLoc ErrorLoc, const MCInst &Inst,
     default:
       break;
     }
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   default:
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
-                                    " missing .globaltype");
+                                   " missing .globaltype");
   }
   return false;
 }
@@ -201,7 +224,7 @@ bool WebAssemblyAsmTypeCheck::getTable(SMLoc ErrorLoc, const MCInst &Inst,
   if (getSymRef(ErrorLoc, Inst, SymRef))
     return true;
   auto WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
-  if (WasmSym->getType().getValueOr(wasm::WASM_SYMBOL_TYPE_DATA) !=
+  if (WasmSym->getType().value_or(wasm::WASM_SYMBOL_TYPE_DATA) !=
       wasm::WASM_SYMBOL_TYPE_TABLE)
     return typeError(ErrorLoc, StringRef("symbol ") + WasmSym->getName() +
                                    " missing .tabletype");
@@ -275,22 +298,77 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       return true;
     if (popType(ErrorLoc, wasm::ValType::I32))
       return true;
+  } else if (Name == "memory.fill") {
+    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+  } else if (Name == "memory.copy") {
+    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
+  } else if (Name == "memory.init") {
+    Type = is64 ? wasm::ValType::I64 : wasm::ValType::I32;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (popType(ErrorLoc, Type))
+      return true;
   } else if (Name == "drop") {
     if (popType(ErrorLoc, {}))
       return true;
-  } else if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
-             Name == "else" || Name == "end_try") {
-    if (checkEnd(ErrorLoc, Name == "else"))
+  } else if (Name == "try" || Name == "block" || Name == "loop" ||
+             Name == "if") {
+    if (Name == "if" && popType(ErrorLoc, wasm::ValType::I32))
       return true;
-    if (Name == "end_block")
-      Unreachable = false;
+    if (Name == "loop")
+      BrStack.emplace_back(LastSig.Params.begin(), LastSig.Params.end());
+    else
+      BrStack.emplace_back(LastSig.Returns.begin(), LastSig.Returns.end());
+  } else if (Name == "end_block" || Name == "end_loop" || Name == "end_if" ||
+             Name == "else" || Name == "end_try" || Name == "catch" ||
+             Name == "catch_all" || Name == "delegate") {
+    if (checkEnd(ErrorLoc,
+                 Name == "else" || Name == "catch" || Name == "catch_all"))
+      return true;
+    Unreachable = false;
+    if (Name == "catch") {
+      const MCSymbolRefExpr *SymRef;
+      if (getSymRef(Operands[1]->getStartLoc(), Inst, SymRef))
+        return true;
+      const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
+      const auto *Sig = WasmSym->getSignature();
+      if (!Sig || WasmSym->getType() != wasm::WASM_SYMBOL_TYPE_TAG)
+        return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
+                                                         WasmSym->getName() +
+                                                         " missing .tagtype");
+      // catch instruction pushes values whose types are specified in the tag's
+      // "params" part
+      Stack.insert(Stack.end(), Sig->Params.begin(), Sig->Params.end());
+    }
+  } else if (Name == "br") {
+    const MCOperand &Operand = Inst.getOperand(0);
+    if (!Operand.isImm())
+      return false;
+    if (checkBr(ErrorLoc, static_cast<size_t>(Operand.getImm())))
+      return true;
   } else if (Name == "return") {
     if (endOfFunction(ErrorLoc))
       return true;
   } else if (Name == "call_indirect" || Name == "return_call_indirect") {
     // Function value.
-    if (popType(ErrorLoc, wasm::ValType::I32)) return true;
-    if (checkSig(ErrorLoc, LastSig)) return true;
+    if (popType(ErrorLoc, wasm::ValType::I32))
+      return true;
+    if (checkSig(ErrorLoc, LastSig))
+      return true;
     if (Name == "return_call_indirect" && endOfFunction(ErrorLoc))
       return true;
   } else if (Name == "call" || Name == "return_call") {
@@ -303,22 +381,10 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
       return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
                                                        WasmSym->getName() +
                                                        " missing .functype");
-    if (checkSig(ErrorLoc, *Sig)) return true;
+    if (checkSig(ErrorLoc, *Sig))
+      return true;
     if (Name == "return_call" && endOfFunction(ErrorLoc))
       return true;
-  } else if (Name == "catch") {
-    const MCSymbolRefExpr *SymRef;
-    if (getSymRef(Operands[1]->getStartLoc(), Inst, SymRef))
-      return true;
-    const auto *WasmSym = cast<MCSymbolWasm>(&SymRef->getSymbol());
-    const auto *Sig = WasmSym->getSignature();
-    if (!Sig || WasmSym->getType() != wasm::WASM_SYMBOL_TYPE_TAG)
-      return typeError(Operands[1]->getStartLoc(), StringRef("symbol ") +
-                                                       WasmSym->getName() +
-                                                       " missing .tagtype");
-    // catch instruction pushes values whose types are specified in the tag's
-    // "params" part
-    Stack.insert(Stack.end(), Sig->Params.begin(), Sig->Params.end());
   } else if (Name == "unreachable") {
     Unreachable = true;
   } else if (Name == "ref.is_null") {
@@ -334,7 +400,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     const auto &II = MII.get(RegOpc);
     // First pop all the uses off the stack and check them.
     for (unsigned I = II.getNumOperands(); I > II.getNumDefs(); I--) {
-      const auto &Op = II.OpInfo[I - 1];
+      const auto &Op = II.operands()[I - 1];
       if (Op.OperandType == MCOI::OPERAND_REGISTER) {
         auto VT = WebAssembly::regClassToValType(Op.RegClass);
         if (popType(ErrorLoc, VT))
@@ -343,7 +409,7 @@ bool WebAssemblyAsmTypeCheck::typeCheck(SMLoc ErrorLoc, const MCInst &Inst,
     }
     // Now push all the defs onto the stack.
     for (unsigned I = 0; I < II.getNumDefs(); I++) {
-      const auto &Op = II.OpInfo[I];
+      const auto &Op = II.operands()[I];
       assert(Op.OperandType == MCOI::OPERAND_REGISTER && "Register expected");
       auto VT = WebAssembly::regClassToValType(Op.RegClass);
       Stack.push_back(VT);

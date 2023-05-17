@@ -25,16 +25,16 @@ struct D {
 
 struct X : D {
   // CHECK-LABEL: VFTable for 'test1::D' in 'test1::X' (3 entries).
-  // CHECK-NEXT:   0 | test1::C *test1::X::foo()
+  // CHECK-NEXT:   0 | C *test1::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test1::B *'): 4 non-virtual]
   // CHECK-NEXT:   1 | void test1::D::z()
-  // CHECK-NEXT:   2 | test1::C *test1::X::foo()
+  // CHECK-NEXT:   2 | C *test1::X::foo()
 
-  // CHECK-LABEL: Thunks for 'test1::C *test1::X::foo()' (1 entry).
+  // CHECK-LABEL: Thunks for 'C *test1::X::foo()' (1 entry).
   // CHECK-NEXT:   0 | [return adjustment (to type 'struct test1::B *'): 4 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'test1::X' (1 entry).
-  // CHECK-NEXT:   2 | test1::C *test1::X::foo()
+  // CHECK-NEXT:   2 | C *test1::X::foo()
 
   // MANGLING-DAG: @"??_7X@test1@@6B@"
 
@@ -72,19 +72,19 @@ struct F : C { };
 struct X : E {
   virtual F* foo();
   // CHECK-LABEL: VFTable for 'test2::D' in 'test2::E' in 'test2::X' (4 entries).
-  // CHECK-NEXT:   0 | test2::F *test2::X::foo()
+  // CHECK-NEXT:   0 | F *test2::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test2::B *'): 4 non-virtual]
   // CHECK-NEXT:   1 | void test2::D::z()
-  // CHECK-NEXT:   2 | test2::F *test2::X::foo()
+  // CHECK-NEXT:   2 | F *test2::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test2::C *'): 0 non-virtual]
-  // CHECK-NEXT:   3 | test2::F *test2::X::foo()
+  // CHECK-NEXT:   3 | F *test2::X::foo()
 
-  // CHECK-LABEL: Thunks for 'test2::F *test2::X::foo()' (2 entries).
+  // CHECK-LABEL: Thunks for 'F *test2::X::foo()' (2 entries).
   // CHECK-NEXT:   0 | [return adjustment (to type 'struct test2::C *'): 0 non-virtual]
   // CHECK-NEXT:   1 | [return adjustment (to type 'struct test2::B *'): 4 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'test2::X' (1 entry).
-  // CHECK-NEXT:   3 | test2::F *test2::X::foo()
+  // CHECK-NEXT:   3 | F *test2::X::foo()
 };
 
 void build_vftable(X *obj) { obj->foo(); }
@@ -117,19 +117,19 @@ struct F : A, C { };
 
 struct X : E {
   // CHECK-LABEL: VFTable for 'test3::D' in 'test3::E' in 'test3::X' (4 entries).
-  // CHECK-NEXT:   0 | test3::F *test3::X::foo()
+  // CHECK-NEXT:   0 | F *test3::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test3::B *'): 8 non-virtual]
   // CHECK-NEXT:   1 | void test3::D::z()
-  // CHECK-NEXT:   2 | test3::F *test3::X::foo()
+  // CHECK-NEXT:   2 | F *test3::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test3::C *'): 4 non-virtual]
-  // CHECK-NEXT:   3 | test3::F *test3::X::foo()
+  // CHECK-NEXT:   3 | F *test3::X::foo()
 
-  // CHECK-LABEL: Thunks for 'test3::F *test3::X::foo()' (2 entries).
+  // CHECK-LABEL: Thunks for 'F *test3::X::foo()' (2 entries).
   // CHECK-NEXT:   0 | [return adjustment (to type 'struct test3::C *'): 4 non-virtual]
   // CHECK-NEXT:   1 | [return adjustment (to type 'struct test3::B *'): 8 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'test3::X' (1 entry).
-  // CHECK-NEXT:   3 | test3::F *test3::X::foo()
+  // CHECK-NEXT:   3 | F *test3::X::foo()
 
   virtual F* foo();
 };
@@ -164,27 +164,27 @@ struct F : A, C { };
 
 struct X : D, E {
   // CHECK-LABEL: VFTable for 'test4::D' in 'test4::X' (3 entries).
-  // CHECK-NEXT:   0 | test4::F *test4::X::foo()
+  // CHECK-NEXT:   0 | F *test4::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test4::B *'): 8 non-virtual]
   // CHECK-NEXT:   1 | void test4::D::z()
-  // CHECK-NEXT:   2 | test4::F *test4::X::foo()
+  // CHECK-NEXT:   2 | F *test4::X::foo()
 
-  // CHECK-LABEL: Thunks for 'test4::F *test4::X::foo()' (1 entry).
+  // CHECK-LABEL: Thunks for 'F *test4::X::foo()' (1 entry).
   // CHECK-NEXT:   0 | [return adjustment (to type 'struct test4::B *'): 8 non-virtual]
 
   // CHECK-LABEL: VFTable for 'test4::D' in 'test4::E' in 'test4::X' (4 entries).
-  // CHECK-NEXT:   0 | test4::F *test4::X::foo()
+  // CHECK-NEXT:   0 | F *test4::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test4::B *'): 8 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
   // CHECK-NEXT:   1 | void test4::D::z()
-  // CHECK-NEXT:   2 | test4::F *test4::X::foo()
+  // CHECK-NEXT:   2 | F *test4::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test4::C *'): 4 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
-  // CHECK-NEXT:   3 | test4::F *test4::X::foo()
+  // CHECK-NEXT:   3 | F *test4::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test4::F *'): 0 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
 
-  // CHECK-LABEL: Thunks for 'test4::F *test4::X::foo()' (3 entries).
+  // CHECK-LABEL: Thunks for 'F *test4::X::foo()' (3 entries).
   // CHECK-NEXT:   0 | [return adjustment (to type 'struct test4::F *'): 0 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
   // CHECK-NEXT:   1 | [return adjustment (to type 'struct test4::C *'): 4 non-virtual]
@@ -193,7 +193,7 @@ struct X : D, E {
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'test4::X' (1 entry).
-  // CHECK-NEXT:   2 | test4::F *test4::X::foo()
+  // CHECK-NEXT:   2 | F *test4::X::foo()
 
   virtual F* foo();
 };
@@ -226,17 +226,17 @@ struct X : A, D {
   // CHECK-NEXT:   1 | void test5::A::h()
 
   // CHECK-LABEL: VFTable for 'test5::D' in 'test5::X' (3 entries).
-  // CHECK-NEXT:   0 | test5::C *test5::X::foo()
+  // CHECK-NEXT:   0 | C *test5::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test5::B *'): 4 non-virtual]
   // CHECK-NEXT:   1 | void test5::D::z()
-  // CHECK-NEXT:   2 | test5::C *test5::X::foo()
+  // CHECK-NEXT:   2 | C *test5::X::foo()
 
-  // CHECK-LABEL: Thunks for 'test5::C *test5::X::foo()' (1 entry).
+  // CHECK-LABEL: Thunks for 'C *test5::X::foo()' (1 entry).
   // CHECK-NEXT:   0 | [return adjustment (to type 'struct test5::B *'): 4 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'test5::X' (1 entry).
   // CHECK-NEXT:   via vfptr at offset 4
-  // CHECK-NEXT:   2 | test5::C *test5::X::foo()
+  // CHECK-NEXT:   2 | C *test5::X::foo()
 
   virtual C* foo();
 };
@@ -275,20 +275,20 @@ struct X : E {
   // CHECK-NEXT:   1 | void test6::A::h()
 
   // CHECK-LABEL: VFTable for 'test6::D' in 'test6::E' in 'test6::X' (4 entries).
-  // CHECK-NEXT:   0 | test6::F *test6::X::foo()
+  // CHECK-NEXT:   0 | F *test6::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test6::B *'): 8 non-virtual]
   // CHECK-NEXT:   1 | void test6::D::z()
-  // CHECK-NEXT:   2 | test6::F *test6::X::foo()
+  // CHECK-NEXT:   2 | F *test6::X::foo()
   // CHECK-NEXT:       [return adjustment (to type 'struct test6::C *'): 4 non-virtual]
-  // CHECK-NEXT:   3 | test6::F *test6::X::foo()
+  // CHECK-NEXT:   3 | F *test6::X::foo()
 
-  // CHECK-LABEL: Thunks for 'test6::F *test6::X::foo()' (2 entries).
+  // CHECK-LABEL: Thunks for 'F *test6::X::foo()' (2 entries).
   // CHECK-NEXT:   0 | [return adjustment (to type 'struct test6::C *'): 4 non-virtual]
   // CHECK-NEXT:   1 | [return adjustment (to type 'struct test6::B *'): 8 non-virtual]
 
   // CHECK-LABEL: VFTable indices for 'test6::X' (1 entry).
   // CHECK-NEXT:   -- accessible via vfptr at offset 4 --
-  // CHECK-NEXT:   3 | test6::F *test6::X::foo()
+  // CHECK-NEXT:   3 | F *test6::X::foo()
 
   virtual F* foo();
 };
@@ -310,8 +310,8 @@ struct C : B, A {
   // CHECK-NEXT:   0 | void test7::C::g()
 
   // CHECK-LABEL: VFTable for 'test7::A' in 'test7::C' (2 entries).
-  // CHECK-NEXT:   0 | test7::C *test7::C::f() [pure]
-  // CHECK-NEXT:   1 | test7::C *test7::C::f() [pure]
+  // CHECK-NEXT:   0 | C *test7::C::f() [pure]
+  // CHECK-NEXT:   1 | C *test7::C::f() [pure]
 
   // No return adjusting thunks needed for pure virtual methods.
   // CHECK-NOT: Thunks for 'test7::C *test7::C::f()'
@@ -330,13 +330,13 @@ struct B {
 struct C : A, B {
   virtual C* f();
   // CHECK-LABEL: VFTable for 'pr20444::A' in 'pr20444::C' (1 entry).
-  // CHECK-NEXT:   0 | pr20444::C *pr20444::C::f()
+  // CHECK-NEXT:   0 | C *pr20444::C::f()
 
   // CHECK-LABEL: VFTable for 'pr20444::B' in 'pr20444::C' (2 entries).
-  // CHECK-NEXT:   0 | pr20444::C *pr20444::C::f()
+  // CHECK-NEXT:   0 | C *pr20444::C::f()
   // CHECK-NEXT:       [return adjustment (to type 'struct pr20444::B *'): 4 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
-  // CHECK-NEXT:   1 | pr20444::C *pr20444::C::f()
+  // CHECK-NEXT:   1 | C *pr20444::C::f()
   // CHECK-NEXT:       [return adjustment (to type 'struct pr20444::C *'): 0 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
 };
@@ -346,16 +346,16 @@ void build_vftable(C *obj) { obj->f(); }
 struct D : C {
   virtual D* f();
   // CHECK-LABEL: VFTable for 'pr20444::A' in 'pr20444::C' in 'pr20444::D' (1 entry).
-  // CHECK-NEXT:   0 | pr20444::D *pr20444::D::f()
+  // CHECK-NEXT:   0 | D *pr20444::D::f()
 
   // CHECK-LABEL: VFTable for 'pr20444::B' in 'pr20444::C' in 'pr20444::D' (3 entries).
-  // CHECK-NEXT:   0 | pr20444::D *pr20444::D::f()
+  // CHECK-NEXT:   0 | D *pr20444::D::f()
   // CHECK-NEXT:       [return adjustment (to type 'struct pr20444::B *'): 4 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
-  // CHECK-NEXT:   1 | pr20444::D *pr20444::D::f()
+  // CHECK-NEXT:   1 | D *pr20444::D::f()
   // CHECK-NEXT:       [return adjustment (to type 'struct pr20444::C *'): 0 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
-  // CHECK-NEXT:   2 | pr20444::D *pr20444::D::f()
+  // CHECK-NEXT:   2 | D *pr20444::D::f()
   // CHECK-NEXT:       [return adjustment (to type 'struct pr20444::D *'): 0 non-virtual]
   // CHECK-NEXT:       [this adjustment: -4 non-virtual]
 };

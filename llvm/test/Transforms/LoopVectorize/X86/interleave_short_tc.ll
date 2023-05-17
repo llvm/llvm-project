@@ -2,15 +2,15 @@
 
 ; The loop is expected to be vectorized by 4 and interleaving suppresed due to
 ; short trip count which is controled by "tiny-trip-count-interleave-threshold".
-; RUN: opt  -passes=loop-vectorize -force-vector-width=4 -vectorizer-min-trip-count=4 -S < %s |  FileCheck %s
-; 
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -vectorizer-min-trip-count=4 -S < %s |  FileCheck %s
+;
 ; The loop is expected to be vectorized by 4 and computed interleaving factor is 1.
 ; Thus the resulting step is 4.
-; RUN: opt  -passes=loop-vectorize -force-vector-width=4 -vectorizer-min-trip-count=4 -tiny-trip-count-interleave-threshold=4 -S < %s |  FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=4 -vectorizer-min-trip-count=4 -tiny-trip-count-interleave-threshold=4 -S < %s |  FileCheck %s
 
 ; The loop is expected to be vectorized by 2 and computed interleaving factor is 2.
 ; Thus the resulting step is 4.
-; RUN: opt  -passes=loop-vectorize -force-vector-width=2 -vectorizer-min-trip-count=4 -tiny-trip-count-interleave-threshold=4 -S < %s |  FileCheck %s
+; RUN: opt -passes=loop-vectorize -force-vector-width=2 -vectorizer-min-trip-count=4 -tiny-trip-count-interleave-threshold=4 -S < %s |  FileCheck %s
 
 ; Check that we won't interleave by more than "best known" estimated trip count.
 
@@ -43,14 +43,14 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
 
 for.body:                                         ; preds = %for.body, %for.body.preheader
   %indvars.iv = phi i64 [ 0, %for.body.preheader ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* @b, i64 0, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [5 x i32], ptr @b, i64 0, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
   %1 = trunc i64 %indvars.iv to i32
   %mul = mul nsw i32 %0, %1
-  %arrayidx2 = getelementptr inbounds [5 x i32], [5 x i32]* @a, i64 0, i64 %indvars.iv
-  %2 = load i32, i32* %arrayidx2, align 4
+  %arrayidx2 = getelementptr inbounds [5 x i32], ptr @a, i64 0, i64 %indvars.iv
+  %2 = load i32, ptr %arrayidx2, align 4
   %add = add nsw i32 %2, %mul
-  store i32 %add, i32* %arrayidx2, align 4
+  store i32 %add, ptr %arrayidx2, align 4
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
   br i1 %exitcond, label %for.cond.cleanup.loopexit, label %for.body, !prof !1

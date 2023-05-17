@@ -8,7 +8,7 @@
 
 #include "src/string/strcspn.h"
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStrCSpnTest, ComplementarySpanShouldNotGoPastNullTerminator) {
   const char src[5] = {'a', 'b', '\0', 'c', 'd'};

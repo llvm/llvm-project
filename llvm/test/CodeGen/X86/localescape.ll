@@ -1,27 +1,25 @@
 ; RUN: llc -mtriple=x86_64-windows-msvc < %s | FileCheck %s --check-prefix=X64
 ; RUN: llc -mtriple=i686-windows-msvc < %s | FileCheck %s --check-prefix=X86
 
-declare i8* @llvm.frameaddress(i32)
+declare ptr @llvm.frameaddress(i32)
 declare void @llvm.localescape(...)
-declare i8* @llvm.localaddress()
-declare i8* @llvm.localrecover(i8*, i8*, i32)
-declare i32 @printf(i8*, ...)
+declare ptr @llvm.localaddress()
+declare ptr @llvm.localrecover(ptr, ptr, i32)
+declare i32 @printf(ptr, ...)
 
 @str = internal constant [10 x i8] c"asdf: %d\0A\00"
 
-define void @print_framealloc_from_fp(i8* %fp) {
-  %a.i8 = call i8* @llvm.localrecover(i8* bitcast (void(i32)* @alloc_func to i8*), i8* %fp, i32 0)
-  %a = bitcast i8* %a.i8 to i32*
-  %a.val = load i32, i32* %a
-  call i32 (i8*, ...) @printf(i8* getelementptr ([10 x i8], [10 x i8]* @str, i32 0, i32 0), i32 %a.val)
-  %b.i8 = call i8* @llvm.localrecover(i8* bitcast (void(i32)* @alloc_func to i8*), i8* %fp, i32 1)
-  %b = bitcast i8* %b.i8 to i32*
-  %b.val = load i32, i32* %b
-  call i32 (i8*, ...) @printf(i8* getelementptr ([10 x i8], [10 x i8]* @str, i32 0, i32 0), i32 %b.val)
-  store i32 42, i32* %b
-  %b2 = getelementptr i32, i32* %b, i32 1
-  %b2.val = load i32, i32* %b2
-  call i32 (i8*, ...) @printf(i8* getelementptr ([10 x i8], [10 x i8]* @str, i32 0, i32 0), i32 %b2.val)
+define void @print_framealloc_from_fp(ptr %fp) {
+  %a.i8 = call ptr @llvm.localrecover(ptr @alloc_func, ptr %fp, i32 0)
+  %a.val = load i32, ptr %a.i8
+  call i32 (ptr, ...) @printf(ptr @str, i32 %a.val)
+  %b.i8 = call ptr @llvm.localrecover(ptr @alloc_func, ptr %fp, i32 1)
+  %b.val = load i32, ptr %b.i8
+  call i32 (ptr, ...) @printf(ptr @str, i32 %b.val)
+  store i32 42, ptr %b.i8
+  %b2 = getelementptr i32, ptr %b.i8, i32 1
+  %b2.val = load i32, ptr %b2
+  call i32 (ptr, ...) @printf(ptr @str, i32 %b2.val)
   ret void
 }
 
@@ -60,15 +58,15 @@ define void @print_framealloc_from_fp(i8* %fp) {
 define void @alloc_func(i32 %n) {
   %a = alloca i32
   %b = alloca i32, i32 2
-  call void (...) @llvm.localescape(i32* %a, i32* %b)
-  store i32 42, i32* %a
-  store i32 13, i32* %b
+  call void (...) @llvm.localescape(ptr %a, ptr %b)
+  store i32 42, ptr %a
+  store i32 13, ptr %b
 
   ; Force usage of EBP with a dynamic alloca.
   alloca i8, i32 %n
 
-  %lp = call i8* @llvm.localaddress()
-  call void @print_framealloc_from_fp(i8* %lp)
+  %lp = call ptr @llvm.localaddress()
+  call void @print_framealloc_from_fp(ptr %lp)
   ret void
 }
 
@@ -109,10 +107,10 @@ define i32 @main() {
 define void @alloc_func_no_frameaddr() {
   %a = alloca i32
   %b = alloca i32
-  call void (...) @llvm.localescape(i32* %a, i32* %b)
-  store i32 42, i32* %a
-  store i32 13, i32* %b
-  call void @print_framealloc_from_fp(i8* null)
+  call void (...) @llvm.localescape(ptr %a, ptr %b)
+  store i32 42, ptr %a
+  store i32 13, ptr %b
+  call void @print_framealloc_from_fp(ptr null)
   ret void
 }
 

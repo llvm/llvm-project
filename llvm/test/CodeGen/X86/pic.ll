@@ -2,15 +2,15 @@
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,CHECK-X32
 ; RUN: llc < %s -mcpu=generic -mtriple=x86_64-pc-linux-gnux32 -relocation-model=pic -asm-verbose=false -post-RA-scheduler=false -fast-isel -verify-machineinstrs | FileCheck %s -check-prefixes=CHECK,CHECK-X32
 
-@ptr = external global i32* 
+@ptr = external global ptr 
 @dst = external global i32 
 @src = external global i32 
 
 define void @test0() nounwind {
 entry:
-    store i32* @dst, i32** @ptr
-    %tmp.s = load i32, i32* @src
-    store i32 %tmp.s, i32* @dst
+    store ptr @dst, ptr @ptr
+    %tmp.s = load i32, ptr @src
+    store i32 %tmp.s, ptr @dst
     ret void
     
 ; CHECK-LABEL:	test0:
@@ -28,15 +28,15 @@ entry:
 ; CHECK-X32:	retq
 }
 
-@ptr2 = global i32* null
+@ptr2 = global ptr null
 @dst2 = global i32 0
 @src2 = global i32 0
 
 define void @test1() nounwind {
 entry:
-    store i32* @dst2, i32** @ptr2
-    %tmp.s = load i32, i32* @src2
-    store i32 %tmp.s, i32* @dst2
+    store ptr @dst2, ptr @ptr2
+    %tmp.s = load i32, ptr @src2
+    store i32 %tmp.s, ptr @dst2
     ret void
     
 ; CHECK-LABEL:	test1:
@@ -55,11 +55,11 @@ entry:
 
 }
 
-declare i8* @malloc(i32)
+declare ptr @malloc(i32)
 
 define void @test2() nounwind {
 entry:
-    %ptr = call i8* @malloc(i32 40)
+    %ptr = call ptr @malloc(i32 40)
     ret void
 ; CHECK-LABEL:	test2:
 ; CHECK-I686:	pushl	%ebx
@@ -81,13 +81,13 @@ entry:
 
 }
 
-@pfoo = external global void(...)* 
+@pfoo = external global ptr 
 
 define void @test3() nounwind {
 entry:
-    %tmp = call void(...)*(...) @afoo()
-    store void(...)* %tmp, void(...)** @pfoo
-    %tmp1 = load void(...)*, void(...)** @pfoo
+    %tmp = call ptr(...) @afoo()
+    store ptr %tmp, ptr @pfoo
+    %tmp1 = load ptr, ptr @pfoo
     call void(...) %tmp1()
     ret void
 ; CHECK-LABEL:	test3:
@@ -103,7 +103,7 @@ entry:
 ; CHECK-X32:	callq	*
 }
 
-declare void(...)* @afoo(...)
+declare ptr @afoo(...)
 
 define void @test4() nounwind {
 entry:
@@ -121,15 +121,15 @@ entry:
 declare void @foo(...)
 
 
-@ptr6 = internal global i32* null
+@ptr6 = internal global ptr null
 @dst6 = internal global i32 0
 @src6 = internal global i32 0
 
 define void @test5() nounwind {
 entry:
-    store i32* @dst6, i32** @ptr6
-    %tmp.s = load i32, i32* @src6
-    store i32 %tmp.s, i32* @dst6
+    store ptr @dst6, ptr @ptr6
+    %tmp.s = load i32, ptr @src6
+    store i32 %tmp.s, ptr @dst6
     ret void
     
 ; CHECK-LABEL:	test5:
@@ -254,24 +254,24 @@ declare void @foo4(...)
 declare void @foo5(...)
 
 ;; Check TLS references
-@tlsptrgd = thread_local global i32* null
+@tlsptrgd = thread_local global ptr null
 @tlsdstgd = thread_local global i32 0
 @tlssrcgd = thread_local global i32 0
-@tlsptrld = thread_local(localdynamic) global i32* null
+@tlsptrld = thread_local(localdynamic) global ptr null
 @tlsdstld = thread_local(localdynamic) global i32 0
 @tlssrcld = thread_local(localdynamic) global i32 0
-@tlsptrie = thread_local(initialexec) global i32* null
+@tlsptrie = thread_local(initialexec) global ptr null
 @tlsdstie = thread_local(initialexec) global i32 0
 @tlssrcie = thread_local(initialexec) global i32 0
-@tlsptrle = thread_local(localexec) global i32* null
+@tlsptrle = thread_local(localexec) global ptr null
 @tlsdstle = thread_local(localexec) global i32 0
 @tlssrcle = thread_local(localexec) global i32 0
 
 define void @test8() nounwind {
 entry:
-    store i32* @tlsdstgd, i32** @tlsptrgd
-    %tmp.s = load i32, i32* @tlssrcgd
-    store i32 %tmp.s, i32* @tlsdstgd
+    store ptr @tlsdstgd, ptr @tlsptrgd
+    %tmp.s = load i32, ptr @tlssrcgd
+    store i32 %tmp.s, ptr @tlsdstgd
     ret void
 
 ; CHECK-LABEL:	test8:
@@ -298,9 +298,9 @@ entry:
 
 define void @test9() nounwind {
 entry:
-    store i32* @tlsdstld, i32** @tlsptrld
-    %tmp.s = load i32, i32* @tlssrcld
-    store i32 %tmp.s, i32* @tlsdstld
+    store ptr @tlsdstld, ptr @tlsptrld
+    %tmp.s = load i32, ptr @tlssrcld
+    store i32 %tmp.s, ptr @tlsdstld
     ret void
 
 ; CHECK-LABEL:	test9:
@@ -322,9 +322,9 @@ entry:
 
 define void @test10() nounwind {
 entry:
-    store i32* @tlsdstie, i32** @tlsptrie
-    %tmp.s = load i32, i32* @tlssrcie
-    store i32 %tmp.s, i32* @tlsdstie
+    store ptr @tlsdstie, ptr @tlsptrie
+    %tmp.s = load i32, ptr @tlssrcie
+    store i32 %tmp.s, ptr @tlsdstie
     ret void
 
 ; CHECK-LABEL:	test10:
@@ -354,9 +354,9 @@ entry:
 
 define void @test11() nounwind {
 entry:
-    store i32* @tlsdstle, i32** @tlsptrle
-    %tmp.s = load i32, i32* @tlssrcle
-    store i32 %tmp.s, i32* @tlsdstle
+    store ptr @tlsdstle, ptr @tlsptrle
+    %tmp.s = load i32, ptr @tlssrcle
+    store i32 %tmp.s, ptr @tlsdstle
     ret void
 
 ; CHECK-LABEL:	test11:

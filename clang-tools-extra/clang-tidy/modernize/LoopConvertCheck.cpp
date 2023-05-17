@@ -17,18 +17,17 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <cstring>
+#include <optional>
 #include <utility>
 
 using namespace clang::ast_matchers;
 using namespace llvm;
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 template <> struct OptionEnumMapping<modernize::Confidence::Level> {
   static llvm::ArrayRef<std::pair<modernize::Confidence::Level, StringRef>>
@@ -37,7 +36,7 @@ template <> struct OptionEnumMapping<modernize::Confidence::Level> {
         Mapping[] = {{modernize::Confidence::CL_Reasonable, "reasonable"},
                      {modernize::Confidence::CL_Safe, "safe"},
                      {modernize::Confidence::CL_Risky, "risky"}};
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 
@@ -50,7 +49,7 @@ template <> struct OptionEnumMapping<modernize::VariableNamer::NamingStyle> {
                      {modernize::VariableNamer::NS_CamelBack, "camelBack"},
                      {modernize::VariableNamer::NS_LowerCase, "lower_case"},
                      {modernize::VariableNamer::NS_UpperCase, "UPPER_CASE"}};
-    return makeArrayRef(Mapping);
+    return ArrayRef(Mapping);
   }
 };
 
@@ -252,17 +251,18 @@ StatementMatcher makePseudoArrayLoopMatcher() {
   // functions called begin() and end() taking the container as an argument
   // are also allowed.
   TypeMatcher RecordWithBeginEnd = qualType(anyOf(
-      qualType(
-          isConstQualified(),
-          hasUnqualifiedDesugaredType(recordType(hasDeclaration(cxxRecordDecl(
-              hasMethod(cxxMethodDecl(hasName("begin"), isConst())),
-              hasMethod(cxxMethodDecl(hasName("end"),
-                                      isConst()))))   // hasDeclaration
-                                                 ))), // qualType
+      qualType(isConstQualified(),
+               hasUnqualifiedDesugaredType(recordType(hasDeclaration(
+                   cxxRecordDecl(isSameOrDerivedFrom(cxxRecordDecl(
+                       hasMethod(cxxMethodDecl(hasName("begin"), isConst())),
+                       hasMethod(cxxMethodDecl(hasName("end"),
+                                               isConst())))))) // hasDeclaration
+                                                      ))),     // qualType
       qualType(unless(isConstQualified()),
                hasUnqualifiedDesugaredType(recordType(hasDeclaration(
-                   cxxRecordDecl(hasMethod(hasName("begin")),
-                                 hasMethod(hasName("end"))))))) // qualType
+                   cxxRecordDecl(isSameOrDerivedFrom(cxxRecordDecl(
+                       hasMethod(hasName("begin")),
+                       hasMethod(hasName("end"))))))))) // qualType
       ));
 
   StatementMatcher SizeCallMatcher = cxxMemberCallExpr(
@@ -400,7 +400,7 @@ static bool canBeModified(ASTContext *Context, const Expr *E) {
     return true;
   if (const auto *Cast = Parents[0].get<ImplicitCastExpr>()) {
     if ((Cast->getCastKind() == CK_NoOp &&
-         Cast->getType() == E->getType().withConst()) ||
+         Context->hasSameType(Cast->getType(), E->getType().withConst())) ||
         (Cast->getCastKind() == CK_LValueToRValue &&
          !Cast->getType().isNull() && Cast->getType()->isFundamentalType()))
       return false;
@@ -452,10 +452,6 @@ static bool containerIsConst(const Expr *ContainerExpr, bool Dereference) {
   }
   return false;
 }
-
-LoopConvertCheck::RangeDescriptor::RangeDescriptor()
-    : ContainerNeedsDereference(false), DerefByConstRef(false),
-      DerefByValue(false), NeedsReverseCall(false) {}
 
 LoopConvertCheck::LoopConvertCheck(StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), TUInfo(new TUTrackingInfo),
@@ -672,7 +668,7 @@ void LoopConvertCheck::doConversion(
       CharSourceRange::getTokenRange(ParenRange), Range));
 
   if (Descriptor.NeedsReverseCall && !getReverseHeader().empty()) {
-    if (Optional<FixItHint> Insertion = Inserter.createIncludeInsertion(
+    if (std::optional<FixItHint> Insertion = Inserter.createIncludeInsertion(
             Context->getSourceManager().getFileID(Loop->getBeginLoc()),
             getReverseHeader()))
       FixIts.push_back(*Insertion);
@@ -969,5 +965,4 @@ llvm::StringRef LoopConvertCheck::getReverseHeader() const {
 }
 
 } // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy

@@ -91,7 +91,7 @@
 # NFC-NEXT:  Other: 0
 # NFC-NEXT:  Section: .bss
 
-## Expecting the strong definition from the object file, and the defintions from
+## Expecting the strong definition from the object file, and the definitions from
 ## the archive do not interfere.
 # TEST2-LABEL: Disassembly of section .data:
 # TEST2:         <block>:
@@ -173,19 +173,19 @@ _start:
 
 
 #--- blockdata.ll
-target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 @block = dso_local local_unnamed_addr global [5 x i32] [i32 5, i32 0, i32 0, i32 0, i32 0], align 4
 
 #--- weak.ll
-target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 @block = weak dso_local global [5 x i32] [i32 5, i32 0, i32 0, i32 0, i32 0], align 4
 
 #--- commonblock.ll
-target datalayout = "e-m:e-i64:64-n32:64-S128-v256:256:256-v512:512:512"
+target datalayout = "e-m:e-Fn32-i64:64-n32:64-S128-v256:256:256-v512:512:512"
 target triple = "powerpc64le-unknown-linux-gnu"
 
 @block =  common dso_local local_unnamed_addr global [5 x i32] zeroinitializer, align 4
@@ -193,7 +193,7 @@ target triple = "powerpc64le-unknown-linux-gnu"
 define dso_local i32 @bar(i32 signext %i) local_unnamed_addr {
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds [5 x i32], [5 x i32]* @block, i64 0, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 8
+  %arrayidx = getelementptr inbounds [5 x i32], ptr @block, i64 0, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 8
   ret i32 %0
 }

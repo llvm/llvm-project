@@ -9,14 +9,6 @@
 // Test that headers are not tripped up by the surrounding code defining the
 // min() and max() macros.
 
-// The system-provided <uchar.h> seems to be broken on AIX
-// XFAIL: LIBCXX-AIX-FIXME
-
-// Prevent <ext/hash_map> from generating deprecated warnings for this test.
-#if defined(__DEPRECATED)
-#    undef __DEPRECATED
-#endif
-
 #define TEST_MACROS() static_assert(min() == true && max() == true, "")
 #define min() true
 #define max() true
@@ -95,8 +87,10 @@ TEST_MACROS();
 TEST_MACROS();
 #include <condition_variable>
 TEST_MACROS();
-#include <coroutine>
+#if (defined(__cpp_impl_coroutine) && __cpp_impl_coroutine >= 201902L) || (defined(__cpp_coroutines) && __cpp_coroutines >= 201703L)
+#   include <coroutine>
 TEST_MACROS();
+#endif
 #include <csetjmp>
 TEST_MACROS();
 #include <csignal>
@@ -139,6 +133,8 @@ TEST_MACROS();
 TEST_MACROS();
 #include <execution>
 TEST_MACROS();
+#include <expected>
+TEST_MACROS();
 #include <fenv.h>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_FILESYSTEM_LIBRARY)
@@ -151,7 +147,7 @@ TEST_MACROS();
 TEST_MACROS();
 #include <forward_list>
 TEST_MACROS();
-#if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
+#if !defined(_LIBCPP_HAS_NO_LOCALIZATION) && !defined(_LIBCPP_HAS_NO_FSTREAM)
 #   include <fstream>
 TEST_MACROS();
 #endif
@@ -207,7 +203,11 @@ TEST_MACROS();
 TEST_MACROS();
 #include <math.h>
 TEST_MACROS();
+#include <mdspan>
+TEST_MACROS();
 #include <memory>
+TEST_MACROS();
+#include <memory_resource>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_THREADS)
 #   include <mutex>
@@ -251,6 +251,8 @@ TEST_MACROS();
 #   include <shared_mutex>
 TEST_MACROS();
 #endif
+#include <source_location>
+TEST_MACROS();
 #include <span>
 TEST_MACROS();
 #if !defined(_LIBCPP_HAS_NO_LOCALIZATION)
@@ -330,23 +332,11 @@ TEST_MACROS();
 TEST_MACROS();
 #endif
 #if __cplusplus >= 201103L
-#   include <experimental/algorithm>
-TEST_MACROS();
-#endif
-#if __cplusplus >= 201103L && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_COROUTINES)
-#   include <experimental/coroutine>
-TEST_MACROS();
-#endif
-#if __cplusplus >= 201103L
 #   include <experimental/deque>
 TEST_MACROS();
 #endif
 #if __cplusplus >= 201103L
 #   include <experimental/forward_list>
-TEST_MACROS();
-#endif
-#if __cplusplus >= 201103L
-#   include <experimental/functional>
 TEST_MACROS();
 #endif
 #if __cplusplus >= 201103L
@@ -405,8 +395,4 @@ TEST_MACROS();
 #   include <experimental/vector>
 TEST_MACROS();
 #endif
-#include <ext/hash_map>
-TEST_MACROS();
-#include <ext/hash_set>
-TEST_MACROS();
 // GENERATED-MARKER

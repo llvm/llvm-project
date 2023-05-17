@@ -187,13 +187,13 @@ define i32 @f13(i32 %a, i32 %b, i32 %c) {
 }
 
 ; Check that the shift amount uses an address register.  It cannot be in %r0.
-define i32 @f14(i32 %a, i32 *%ptr) {
+define i32 @f14(i32 %a, ptr %ptr) {
 ; CHECK-LABEL: f14:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    l %r1, 0(%r3)
 ; CHECK-NEXT:    rll %r2, %r2, 0(%r1)
 ; CHECK-NEXT:    br %r14
-  %amt = load i32, i32 *%ptr
+  %amt = load i32, ptr %ptr
   %amtb = sub i32 32, %amt
   %parta = shl i32 %a, %amt
   %partb = lshr i32 %a, %amtb

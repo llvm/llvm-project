@@ -80,29 +80,29 @@ define i8 @t5_commutativity(i8 %x) {
 define i8 @constantexpr(i8 %or) local_unnamed_addr #0 {
 ; CHECK-LABEL: @constantexpr(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[R:%.*]] = xor i8 [[OR:%.*]], xor (i8 ptrtoint (i32* @global_constant to i8), i8 ptrtoint (i32* @global_constant2 to i8))
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[OR:%.*]], xor (i8 ptrtoint (ptr @global_constant to i8), i8 ptrtoint (ptr @global_constant2 to i8))
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
 entry:
-  %r = xor i8 %or, xor (i8 xor (i8 ptrtoint (i32* @global_constant to i8), i8 -1), i8 xor (i8 ptrtoint (i32* @global_constant2 to i8), i8 -1))
+  %r = xor i8 %or, xor (i8 xor (i8 ptrtoint (ptr @global_constant to i8), i8 -1), i8 xor (i8 ptrtoint (ptr @global_constant2 to i8), i8 -1))
   ret i8 %r
 }
 
 @global_constant3 = external global [6 x [1 x i64]], align 1
 @global_constant4 = external global i64, align 1
-@global_constant5 = external global i16*, align 1
+@global_constant5 = external global ptr, align 1
 
 define i16 @constantexpr2() {
 ; CHECK-LABEL: @constantexpr2(
-; CHECK-NEXT:    [[I2:%.*]] = load i16*, i16** @global_constant5, align 1
-; CHECK-NEXT:    [[I3:%.*]] = load i16, i16* [[I2]], align 1
-; CHECK-NEXT:    [[I5:%.*]] = xor i16 [[I3]], xor (i16 zext (i1 icmp ne (i64* getelementptr inbounds ([6 x [1 x i64]], [6 x [1 x i64]]* @global_constant3, i64 0, i64 5, i64 0), i64* @global_constant4) to i16), i16 -1)
+; CHECK-NEXT:    [[I2:%.*]] = load ptr, ptr @global_constant5, align 1
+; CHECK-NEXT:    [[I3:%.*]] = load i16, ptr [[I2]], align 1
+; CHECK-NEXT:    [[I5:%.*]] = xor i16 [[I3]], xor (i16 zext (i1 icmp ne (ptr getelementptr inbounds ([6 x [1 x i64]], ptr @global_constant3, i64 0, i64 5, i64 0), ptr @global_constant4) to i16), i16 -1)
 ; CHECK-NEXT:    ret i16 [[I5]]
 ;
-  %i0 = icmp ne i64* getelementptr inbounds ([6 x [1 x i64]], [6 x [1 x i64]]* @global_constant3, i16 0, i16 5, i16 0), @global_constant4
+  %i0 = icmp ne ptr getelementptr inbounds ([6 x [1 x i64]], ptr @global_constant3, i16 0, i16 5, i16 0), @global_constant4
   %i1 = zext i1 %i0 to i16
-  %i2 = load i16*, i16** @global_constant5, align 1
-  %i3 = load i16, i16* %i2, align 1
+  %i2 = load ptr, ptr @global_constant5, align 1
+  %i3 = load i16, ptr %i2, align 1
   %i4 = xor i16 %i3, %i1
   %i5 = xor i16 %i4, -1
   ret i16 %i5

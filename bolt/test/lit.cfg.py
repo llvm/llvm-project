@@ -80,18 +80,21 @@ tools = [
     ToolSubst('llvm-bolt', unresolved='fatal'),
     ToolSubst('llvm-boltdiff', unresolved='fatal'),
     ToolSubst('llvm-bolt-heatmap', unresolved='fatal'),
+    ToolSubst('llvm-bat-dump', unresolved='fatal'),
     ToolSubst('perf2bolt', unresolved='fatal'),
     ToolSubst('yaml2obj', unresolved='fatal'),
     ToolSubst('llvm-mc', unresolved='fatal'),
     ToolSubst('llvm-nm', unresolved='fatal'),
     ToolSubst('llvm-objdump', unresolved='fatal'),
     ToolSubst('llvm-objcopy', unresolved='fatal'),
+    ToolSubst('llvm-strings', unresolved='fatal'),
     ToolSubst('llvm-strip', unresolved='fatal'),
     ToolSubst('llvm-readelf', unresolved='fatal'),
     ToolSubst('link_fdata', command=sys.executable, unresolved='fatal', extra_args=[link_fdata_cmd]),
     ToolSubst('merge-fdata', unresolved='fatal'),
     ToolSubst('llvm-readobj', unresolved='fatal'),
     ToolSubst('llvm-dwp', unresolved='fatal'),
+    ToolSubst('split-file', unresolved='fatal'),
 ]
 llvm_config.add_tool_substitutions(tools, tool_dirs)
 
@@ -108,4 +111,4 @@ llvm_config.feature_config(
         ('--targets-built', calculate_arch_features)
      ])
 
-config.targets = frozenset(config.targets_to_build.split())
+config.targets = frozenset(config.targets_to_build.split(';'))

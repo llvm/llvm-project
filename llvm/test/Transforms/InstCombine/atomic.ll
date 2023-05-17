@@ -6,27 +6,27 @@ target triple = "x86_64-apple-macosx10.7.0"
 
 ; Check transforms involving atomic operations
 
-define i32 @test1(i32* %p) {
+define i32 @test1(ptr %p) {
 ; CHECK-LABEL: @test1(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[P:%.*]] seq_cst, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[P:%.*]] seq_cst, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = shl i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load atomic i32, i32* %p seq_cst, align 4
-  %y = load i32, i32* %p, align 4
+  %x = load atomic i32, ptr %p seq_cst, align 4
+  %y = load i32, ptr %p, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
 
-define i32 @test2(i32* %p) {
+define i32 @test2(ptr %p) {
 ; CHECK-LABEL: @test2(
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
-; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, i32* [[P]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
+; CHECK-NEXT:    [[Y:%.*]] = load volatile i32, ptr [[P]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load volatile i32, i32* %p, align 4
-  %y = load volatile i32, i32* %p, align 4
+  %x = load volatile i32, ptr %p, align 4
+  %y = load volatile i32, ptr %p, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
@@ -34,27 +34,27 @@ define i32 @test2(i32* %p) {
 ; The exact semantics of mixing volatile and non-volatile on the same
 ; memory location are a bit unclear, but conservatively, we know we don't
 ; want to remove the volatile.
-define i32 @test3(i32* %p) {
+define i32 @test3(ptr %p) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[X:%.*]] = load volatile i32, i32* [[P:%.*]], align 4
+; CHECK-NEXT:    [[X:%.*]] = load volatile i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[Z:%.*]] = shl i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load volatile i32, i32* %p, align 4
-  %y = load i32, i32* %p, align 4
+  %x = load volatile i32, ptr %p, align 4
+  %y = load i32, ptr %p, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
 
 ; Forwarding from a stronger ordered atomic is fine
-define i32 @test4(i32* %p) {
+define i32 @test4(ptr %p) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[P:%.*]] seq_cst, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[P:%.*]] seq_cst, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = shl i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load atomic i32, i32* %p seq_cst, align 4
-  %y = load atomic i32, i32* %p unordered, align 4
+  %x = load atomic i32, ptr %p seq_cst, align 4
+  %y = load atomic i32, ptr %p unordered, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
@@ -62,55 +62,55 @@ define i32 @test4(i32* %p) {
 ; Forwarding from a non-atomic is not.  (The earlier load
 ; could in priciple be promoted to atomic and then forwarded,
 ; but we can't just  drop the atomic from the load.)
-define i32 @test5(i32* %p) {
+define i32 @test5(ptr %p) {
 ; CHECK-LABEL: @test5(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[P:%.*]] unordered, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = shl i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load atomic i32, i32* %p unordered, align 4
-  %y = load i32, i32* %p, align 4
+  %x = load atomic i32, ptr %p unordered, align 4
+  %y = load i32, ptr %p, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
 
 ; Forwarding atomic to atomic is fine
-define i32 @test6(i32* %p) {
+define i32 @test6(ptr %p) {
 ; CHECK-LABEL: @test6(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[P:%.*]] unordered, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = shl i32 [[X]], 1
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load atomic i32, i32* %p unordered, align 4
-  %y = load atomic i32, i32* %p unordered, align 4
+  %x = load atomic i32, ptr %p unordered, align 4
+  %y = load atomic i32, ptr %p unordered, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
 
 ; FIXME: we currently don't do anything for monotonic
-define i32 @test7(i32* %p) {
+define i32 @test7(ptr %p) {
 ; CHECK-LABEL: @test7(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[P:%.*]] seq_cst, align 4
-; CHECK-NEXT:    [[Y:%.*]] = load atomic i32, i32* [[P]] monotonic, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[P:%.*]] seq_cst, align 4
+; CHECK-NEXT:    [[Y:%.*]] = load atomic i32, ptr [[P]] monotonic, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load atomic i32, i32* %p seq_cst, align 4
-  %y = load atomic i32, i32* %p monotonic, align 4
+  %x = load atomic i32, ptr %p seq_cst, align 4
+  %y = load atomic i32, ptr %p monotonic, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
 
 ; FIXME: We could forward in racy code
-define i32 @test8(i32* %p) {
+define i32 @test8(ptr %p) {
 ; CHECK-LABEL: @test8(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[P:%.*]] seq_cst, align 4
-; CHECK-NEXT:    [[Y:%.*]] = load atomic i32, i32* [[P]] acquire, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[P:%.*]] seq_cst, align 4
+; CHECK-NEXT:    [[Y:%.*]] = load atomic i32, ptr [[P]] acquire, align 4
 ; CHECK-NEXT:    [[Z:%.*]] = add i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i32 [[Z]]
 ;
-  %x = load atomic i32, i32* %p seq_cst, align 4
-  %y = load atomic i32, i32* %p acquire, align 4
+  %x = load atomic i32, ptr %p seq_cst, align 4
+  %y = load atomic i32, ptr %p acquire, align 4
   %z = add i32 %x, %y
   ret i32 %z
 }
@@ -119,57 +119,57 @@ define i32 @test8(i32* %p) {
 ; ordering imposed.
 define i32 @test9() {
 ; CHECK-LABEL: @test9(
-; CHECK-NEXT:    store i32 poison, i32* null, align 4294967296
+; CHECK-NEXT:    store i32 poison, ptr null, align 4294967296
 ; CHECK-NEXT:    ret i32 poison
 ;
-  %x = load atomic i32, i32* null unordered, align 4
+  %x = load atomic i32, ptr null unordered, align 4
   ret i32 %x
 }
 
 define i32 @test9_no_null_opt() #0 {
 ; CHECK-LABEL: @test9_no_null_opt(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* null unordered, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null unordered, align 4294967296
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %x = load atomic i32, i32* null unordered, align 4
+  %x = load atomic i32, ptr null unordered, align 4
   ret i32 %x
 }
 
 ; FIXME: Could also fold
 define i32 @test10() {
 ; CHECK-LABEL: @test10(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* null monotonic, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null monotonic, align 4294967296
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %x = load atomic i32, i32* null monotonic, align 4
+  %x = load atomic i32, ptr null monotonic, align 4
   ret i32 %x
 }
 
 define i32 @test10_no_null_opt() #0 {
 ; CHECK-LABEL: @test10_no_null_opt(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* null monotonic, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null monotonic, align 4294967296
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %x = load atomic i32, i32* null monotonic, align 4
+  %x = load atomic i32, ptr null monotonic, align 4
   ret i32 %x
 }
 
 ; Would this be legal to fold?  Probably?
 define i32 @test11() {
 ; CHECK-LABEL: @test11(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* null seq_cst, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null seq_cst, align 4294967296
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %x = load atomic i32, i32* null seq_cst, align 4
+  %x = load atomic i32, ptr null seq_cst, align 4
   ret i32 %x
 }
 
 define i32 @test11_no_null_opt() #0 {
 ; CHECK-LABEL: @test11_no_null_opt(
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* null seq_cst, align 4294967296
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr null seq_cst, align 4294967296
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %x = load atomic i32, i32* null seq_cst, align 4
+  %x = load atomic i32, ptr null seq_cst, align 4
   ret i32 %x
 }
 
@@ -177,57 +177,57 @@ define i32 @test11_no_null_opt() #0 {
 ; ordering imposed.
 define i32 @test12() {
 ; CHECK-LABEL: @test12(
-; CHECK-NEXT:    store atomic i32 poison, i32* null unordered, align 4294967296
+; CHECK-NEXT:    store atomic i32 poison, ptr null unordered, align 4294967296
 ; CHECK-NEXT:    ret i32 0
 ;
-  store atomic i32 0, i32* null unordered, align 4
+  store atomic i32 0, ptr null unordered, align 4
   ret i32 0
 }
 
 define i32 @test12_no_null_opt() #0 {
 ; CHECK-LABEL: @test12_no_null_opt(
-; CHECK-NEXT:    store atomic i32 0, i32* null unordered, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null unordered, align 4294967296
 ; CHECK-NEXT:    ret i32 0
 ;
-  store atomic i32 0, i32* null unordered, align 4
+  store atomic i32 0, ptr null unordered, align 4
   ret i32 0
 }
 
 ; FIXME: Could also fold
 define i32 @test13() {
 ; CHECK-LABEL: @test13(
-; CHECK-NEXT:    store atomic i32 0, i32* null monotonic, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null monotonic, align 4294967296
 ; CHECK-NEXT:    ret i32 0
 ;
-  store atomic i32 0, i32* null monotonic, align 4
+  store atomic i32 0, ptr null monotonic, align 4
   ret i32 0
 }
 
 define i32 @test13_no_null_opt() #0 {
 ; CHECK-LABEL: @test13_no_null_opt(
-; CHECK-NEXT:    store atomic i32 0, i32* null monotonic, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null monotonic, align 4294967296
 ; CHECK-NEXT:    ret i32 0
 ;
-  store atomic i32 0, i32* null monotonic, align 4
+  store atomic i32 0, ptr null monotonic, align 4
   ret i32 0
 }
 
 ; Would this be legal to fold?  Probably?
 define i32 @test14() {
 ; CHECK-LABEL: @test14(
-; CHECK-NEXT:    store atomic i32 0, i32* null seq_cst, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null seq_cst, align 4294967296
 ; CHECK-NEXT:    ret i32 0
 ;
-  store atomic i32 0, i32* null seq_cst, align 4
+  store atomic i32 0, ptr null seq_cst, align 4
   ret i32 0
 }
 
 define i32 @test14_no_null_opt() #0 {
 ; CHECK-LABEL: @test14_no_null_opt(
-; CHECK-NEXT:    store atomic i32 0, i32* null seq_cst, align 4294967296
+; CHECK-NEXT:    store atomic i32 0, ptr null seq_cst, align 4294967296
 ; CHECK-NEXT:    ret i32 0
 ;
-  store atomic i32 0, i32* null seq_cst, align 4
+  store atomic i32 0, ptr null seq_cst, align 4
   ret i32 0
 }
 
@@ -236,37 +236,37 @@ define i32 @test14_no_null_opt() #0 {
 
 define i32 @test15(i1 %cnd) {
 ; CHECK-LABEL: @test15(
-; CHECK-NEXT:    [[A_VAL:%.*]] = load atomic i32, i32* @a unordered, align 4
-; CHECK-NEXT:    [[B_VAL:%.*]] = load atomic i32, i32* @b unordered, align 4
+; CHECK-NEXT:    [[A_VAL:%.*]] = load atomic i32, ptr @a unordered, align 4
+; CHECK-NEXT:    [[B_VAL:%.*]] = load atomic i32, ptr @b unordered, align 4
 ; CHECK-NEXT:    [[X:%.*]] = select i1 [[CND:%.*]], i32 [[A_VAL]], i32 [[B_VAL]]
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %addr = select i1 %cnd, i32* @a, i32* @b
-  %x = load atomic i32, i32* %addr unordered, align 4
+  %addr = select i1 %cnd, ptr @a, ptr @b
+  %x = load atomic i32, ptr %addr unordered, align 4
   ret i32 %x
 }
 
 ; FIXME: This would be legal to transform
 define i32 @test16(i1 %cnd) {
 ; CHECK-LABEL: @test16(
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[CND:%.*]], i32* @a, i32* @b
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[ADDR]] monotonic, align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[CND:%.*]], ptr @a, ptr @b
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[ADDR]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %addr = select i1 %cnd, i32* @a, i32* @b
-  %x = load atomic i32, i32* %addr monotonic, align 4
+  %addr = select i1 %cnd, ptr @a, ptr @b
+  %x = load atomic i32, ptr %addr monotonic, align 4
   ret i32 %x
 }
 
 ; FIXME: This would be legal to transform
 define i32 @test17(i1 %cnd) {
 ; CHECK-LABEL: @test17(
-; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[CND:%.*]], i32* @a, i32* @b
-; CHECK-NEXT:    [[X:%.*]] = load atomic i32, i32* [[ADDR]] seq_cst, align 4
+; CHECK-NEXT:    [[ADDR:%.*]] = select i1 [[CND:%.*]], ptr @a, ptr @b
+; CHECK-NEXT:    [[X:%.*]] = load atomic i32, ptr [[ADDR]] seq_cst, align 4
 ; CHECK-NEXT:    ret i32 [[X]]
 ;
-  %addr = select i1 %cnd, i32* @a, i32* @b
-  %x = load atomic i32, i32* %addr seq_cst, align 4
+  %addr = select i1 %cnd, ptr @a, ptr @b
+  %x = load atomic i32, ptr %addr seq_cst, align 4
   ret i32 %x
 }
 
@@ -279,16 +279,16 @@ define i32 @test22(i1 %cnd) {
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    [[STOREMERGE:%.*]] = phi i32 [ 2, [[BLOCK2]] ], [ 1, [[BLOCK1]] ]
-; CHECK-NEXT:    store atomic i32 [[STOREMERGE]], i32* @a unordered, align 4
+; CHECK-NEXT:    store atomic i32 [[STOREMERGE]], ptr @a unordered, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
   br i1 %cnd, label %block1, label %block2
 
 block1:
-  store atomic i32 1, i32* @a unordered, align 4
+  store atomic i32 1, ptr @a unordered, align 4
   br label %merge
 block2:
-  store atomic i32 2, i32* @a unordered, align 4
+  store atomic i32 2, ptr @a unordered, align 4
   br label %merge
 
 merge:
@@ -300,10 +300,10 @@ define i32 @test23(i1 %cnd) {
 ; CHECK-LABEL: @test23(
 ; CHECK-NEXT:    br i1 [[CND:%.*]], label [[BLOCK1:%.*]], label [[BLOCK2:%.*]]
 ; CHECK:       block1:
-; CHECK-NEXT:    store atomic i32 1, i32* @a monotonic, align 4
+; CHECK-NEXT:    store atomic i32 1, ptr @a monotonic, align 4
 ; CHECK-NEXT:    br label [[MERGE:%.*]]
 ; CHECK:       block2:
-; CHECK-NEXT:    store atomic i32 2, i32* @a monotonic, align 4
+; CHECK-NEXT:    store atomic i32 2, ptr @a monotonic, align 4
 ; CHECK-NEXT:    br label [[MERGE]]
 ; CHECK:       merge:
 ; CHECK-NEXT:    ret i32 0
@@ -311,10 +311,10 @@ define i32 @test23(i1 %cnd) {
   br i1 %cnd, label %block1, label %block2
 
 block1:
-  store atomic i32 1, i32* @a monotonic, align 4
+  store atomic i32 1, ptr @a monotonic, align 4
   br label %merge
 block2:
-  store atomic i32 2, i32* @a monotonic, align 4
+  store atomic i32 2, ptr @a monotonic, align 4
   br label %merge
 
 merge:
@@ -323,101 +323,95 @@ merge:
 
 declare void @clobber()
 
-define i32 @test18(float* %p) {
+define i32 @test18(ptr %p) {
 ; CHECK-LABEL: @test18(
-; CHECK-NEXT:    [[X:%.*]] = load atomic float, float* [[P:%.*]] unordered, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic float, ptr [[P:%.*]] unordered, align 4
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    store atomic float [[X]], float* [[P]] unordered, align 4
+; CHECK-NEXT:    store atomic float [[X]], ptr [[P]] unordered, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
-  %x = load atomic float, float* %p unordered, align 4
+  %x = load atomic float, ptr %p unordered, align 4
   call void @clobber() ;; keep the load around
-  store atomic float %x, float* %p unordered, align 4
+  store atomic float %x, ptr %p unordered, align 4
   ret i32 0
 }
 
 ; TODO: probably also legal in this case
-define i32 @test19(float* %p) {
+define i32 @test19(ptr %p) {
 ; CHECK-LABEL: @test19(
-; CHECK-NEXT:    [[X:%.*]] = load atomic float, float* [[P:%.*]] seq_cst, align 4
+; CHECK-NEXT:    [[X:%.*]] = load atomic float, ptr [[P:%.*]] seq_cst, align 4
 ; CHECK-NEXT:    call void @clobber()
-; CHECK-NEXT:    store atomic float [[X]], float* [[P]] seq_cst, align 4
+; CHECK-NEXT:    store atomic float [[X]], ptr [[P]] seq_cst, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
-  %x = load atomic float, float* %p seq_cst, align 4
+  %x = load atomic float, ptr %p seq_cst, align 4
   call void @clobber() ;; keep the load around
-  store atomic float %x, float* %p seq_cst, align 4
+  store atomic float %x, ptr %p seq_cst, align 4
   ret i32 0
 }
 
-define i32 @test20(i32** %p, i8* %v) {
+define i32 @test20(ptr %p, ptr %v) {
 ; CHECK-LABEL: @test20(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32** [[P:%.*]] to i8**
-; CHECK-NEXT:    store atomic i8* [[V:%.*]], i8** [[TMP1]] unordered, align 4
+; CHECK-NEXT:    store atomic ptr [[V:%.*]], ptr [[P:%.*]] unordered, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
-  %cast = bitcast i8* %v to i32*
-  store atomic i32* %cast, i32** %p unordered, align 4
+  store atomic ptr %v, ptr %p unordered, align 4
   ret i32 0
 }
 
-define i32 @test21(i32** %p, i8* %v) {
+define i32 @test21(ptr %p, ptr %v) {
 ; CHECK-LABEL: @test21(
-; CHECK-NEXT:    [[CAST:%.*]] = bitcast i8* [[V:%.*]] to i32*
-; CHECK-NEXT:    store atomic i32* [[CAST]], i32** [[P:%.*]] monotonic, align 4
+; CHECK-NEXT:    store atomic ptr [[V:%.*]], ptr [[P:%.*]] monotonic, align 4
 ; CHECK-NEXT:    ret i32 0
 ;
-  %cast = bitcast i8* %v to i32*
-  store atomic i32* %cast, i32** %p monotonic, align 4
+  store atomic ptr %v, ptr %p monotonic, align 4
   ret i32 0
 }
 
-define void @pr27490a(i8** %p1, i8** %p2) {
+define void @pr27490a(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @pr27490a(
-; CHECK-NEXT:    [[L:%.*]] = load i8*, i8** [[P1:%.*]], align 8
-; CHECK-NEXT:    store volatile i8* [[L]], i8** [[P2:%.*]], align 8
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    store volatile ptr [[L]], ptr [[P2:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
-  %l = load i8*, i8** %p1
-  store volatile i8* %l, i8** %p2
+  %l = load ptr, ptr %p1
+  store volatile ptr %l, ptr %p2
   ret void
 }
 
-define void @pr27490b(i8** %p1, i8** %p2) {
+define void @pr27490b(ptr %p1, ptr %p2) {
 ; CHECK-LABEL: @pr27490b(
-; CHECK-NEXT:    [[L:%.*]] = load i8*, i8** [[P1:%.*]], align 8
-; CHECK-NEXT:    store atomic i8* [[L]], i8** [[P2:%.*]] seq_cst, align 8
+; CHECK-NEXT:    [[L:%.*]] = load ptr, ptr [[P1:%.*]], align 8
+; CHECK-NEXT:    store atomic ptr [[L]], ptr [[P2:%.*]] seq_cst, align 8
 ; CHECK-NEXT:    ret void
 ;
-  %l = load i8*, i8** %p1
-  store atomic i8* %l, i8** %p2 seq_cst, align 8
+  %l = load ptr, ptr %p1
+  store atomic ptr %l, ptr %p2 seq_cst, align 8
   ret void
 }
 
 ;; At the moment, we can't form atomic vectors by folding since these are
 ;; not representable in the IR.  This was pr29121.  The right long term
 ;; solution is to extend the IR to handle this case.
-define <2 x float> @no_atomic_vector_load(i64* %p) {
+define <2 x float> @no_atomic_vector_load(ptr %p) {
 ; CHECK-LABEL: @no_atomic_vector_load(
-; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i64, i64* [[P:%.*]] unordered, align 8
+; CHECK-NEXT:    [[LOAD:%.*]] = load atomic i64, ptr [[P:%.*]] unordered, align 8
 ; CHECK-NEXT:    [[DOTCAST:%.*]] = bitcast i64 [[LOAD]] to <2 x float>
 ; CHECK-NEXT:    ret <2 x float> [[DOTCAST]]
 ;
-  %load = load atomic i64, i64* %p unordered, align 8
+  %load = load atomic i64, ptr %p unordered, align 8
   %.cast = bitcast i64 %load to <2 x float>
   ret <2 x float> %.cast
 }
 
-define void @no_atomic_vector_store(<2 x float> %p, i8* %p2) {
+define void @no_atomic_vector_store(<2 x float> %p, ptr %p2) {
 ; CHECK-LABEL: @no_atomic_vector_store(
 ; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x float> [[P:%.*]] to i64
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i8* [[P2:%.*]] to i64*
-; CHECK-NEXT:    store atomic i64 [[TMP1]], i64* [[TMP2]] unordered, align 8
+; CHECK-NEXT:    store atomic i64 [[TMP1]], ptr [[P2:%.*]] unordered, align 8
 ; CHECK-NEXT:    ret void
 ;
   %1 = bitcast <2 x float> %p to i64
-  %2 = bitcast i8* %p2 to i64*
-  store atomic i64 %1, i64* %2 unordered, align 8
+  store atomic i64 %1, ptr %p2 unordered, align 8
   ret void
 }
 
@@ -428,7 +422,7 @@ define i32 @atomic_load_from_constant_global() {
 ; CHECK-LABEL: @atomic_load_from_constant_global(
 ; CHECK-NEXT:    ret i32 42
 ;
-  %v = load atomic i32, i32* @c seq_cst, align 4
+  %v = load atomic i32, ptr @c seq_cst, align 4
   ret i32 %v
 }
 
@@ -436,25 +430,25 @@ define i8 @atomic_load_from_constant_global_bitcast() {
 ; CHECK-LABEL: @atomic_load_from_constant_global_bitcast(
 ; CHECK-NEXT:    ret i8 42
 ;
-  %v = load atomic i8, i8* bitcast (i32* @c to i8*) seq_cst, align 1
+  %v = load atomic i8, ptr @c seq_cst, align 1
   ret i8 %v
 }
 
 define void @atomic_load_from_non_constant_global() {
 ; CHECK-LABEL: @atomic_load_from_non_constant_global(
-; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, i32* @g seq_cst, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load atomic i32, ptr @g seq_cst, align 4
 ; CHECK-NEXT:    ret void
 ;
-  load atomic i32, i32* @g seq_cst, align 4
+  load atomic i32, ptr @g seq_cst, align 4
   ret void
 }
 
 define void @volatile_load_from_constant_global() {
 ; CHECK-LABEL: @volatile_load_from_constant_global(
-; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, i32* @c, align 4
+; CHECK-NEXT:    [[TMP1:%.*]] = load volatile i32, ptr @c, align 4
 ; CHECK-NEXT:    ret void
 ;
-  load volatile i32, i32* @c, align 4
+  load volatile i32, ptr @c, align 4
   ret void
 }
 

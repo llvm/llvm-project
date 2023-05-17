@@ -87,26 +87,6 @@ int commaAtEndOfStatement(void) {
   return 0, // expected-error {{';'}}
 }
 
-int noSemiAfterLabel(int n) {
-  switch (n) {
-    default:
-      return n % 4;
-    case 0:
-    case 1:
-    case 2:
-    // CHECK: /*FOO*/ case 3: ;
-    /*FOO*/ case 3: // expected-error {{expected statement}}
-  }
-  switch (n) {
-    case 1:
-    case 2:
-      return 0;
-    // CHECK: /*BAR*/ default: ;
-    /*BAR*/ default: // expected-error {{expected statement}}
-  }
-  return 1;
-}
-
 struct noSemiAfterStruct // expected-error {{expected ';' after struct}}
 struct noSemiAfterStruct {
   int n // expected-warning {{';'}}

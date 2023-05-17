@@ -51,12 +51,6 @@ docs/_build
 .vs
 
 #==============================================================================#
-# Files created in tree by the Go bindings.
-#==============================================================================#
-bindings/go/llvm/llvm_config.go
-bindings/go/llvm/workdir
-
-#==============================================================================#
 # File extensions to be ignored anywhere in the tree.
 # Placed at the end to override any previous ! patterns.
 #==============================================================================#

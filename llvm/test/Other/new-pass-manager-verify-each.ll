@@ -1,7 +1,7 @@
 ; RUN: opt -disable-output -debug-pass-manager -verify-each -passes='no-op-module,verify,cgscc(no-op-cgscc,function(no-op-function,loop(no-op-loop)))' %s 2>&1 | FileCheck %s
 
-; Added manually by opt at beginning
-; CHECK: Running pass: VerifierPass
+; opt already manually verifies input IR
+; CHECK-NOT: Running pass: VerifierPass
 
 ; CHECK: Running pass: NoOpModulePass
 ; CHECK: Verifying module
@@ -23,13 +23,13 @@
 ; Added manually by opt at end
 ; CHECK: Running pass: VerifierPass
 
-define void @foo(i1 %x, i8* %p1, i8* %p2) {
+define void @foo(i1 %x, ptr %p1, ptr %p2) {
 entry:
-  store i8 42, i8* %p1
+  store i8 42, ptr %p1
   br i1 %x, label %loop, label %exit
 
 loop:
-  %tmp1 = load i8, i8* %p2
+  %tmp1 = load i8, ptr %p2
   br label %loop
 
 exit:

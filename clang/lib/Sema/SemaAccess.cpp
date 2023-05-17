@@ -1493,6 +1493,8 @@ void Sema::HandleDelayedAccessCheck(DelayedDiagnostic &DD, Decl *D) {
   } else if (TemplateDecl *TD = dyn_cast<TemplateDecl>(D)) {
     if (isa<DeclContext>(TD->getTemplatedDecl()))
       DC = cast<DeclContext>(TD->getTemplatedDecl());
+  } else if (auto *RD = dyn_cast<RequiresExprBodyDecl>(D)) {
+    DC = RD;
   }
 
   EffectiveContext EC(DC);
@@ -1649,7 +1651,8 @@ Sema::AccessResult Sema::CheckConstructorAccess(SourceLocation UseLoc,
        << Entity.getBaseSpecifier()->getType() << getSpecialMember(Constructor);
     break;
 
-  case InitializedEntity::EK_Member: {
+  case InitializedEntity::EK_Member:
+  case InitializedEntity::EK_ParenAggInitMember: {
     const FieldDecl *Field = cast<FieldDecl>(Entity.getDecl());
     PD = PDiag(diag::err_access_field_ctor);
     PD << Field->getType() << getSpecialMember(Constructor);

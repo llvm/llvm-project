@@ -14,6 +14,7 @@
 #include <__type_traits/is_arithmetic.h>
 #include <__type_traits/is_enum.h>
 #include <__type_traits/is_member_pointer.h>
+#include <__type_traits/is_null_pointer.h>
 #include <__type_traits/is_pointer.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -22,18 +23,17 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-// In C++03 nullptr_t is library-provided but must still count as "scalar."
-#if __has_keyword(__is_scalar) && !defined(_LIBCPP_CXX03_LANG)
+#if __has_builtin(__is_scalar)
 
 template<class _Tp>
 struct _LIBCPP_TEMPLATE_VIS is_scalar : _BoolConstant<__is_scalar(_Tp)> { };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_scalar_v = __is_scalar(_Tp);
 #endif
 
-#else // __has_keyword(__is_scalar)
+#else // __has_builtin(__is_scalar)
 
 template <class _Tp> struct __is_block : false_type {};
 #if defined(_LIBCPP_HAS_EXTENSION_BLOCKS)
@@ -50,12 +50,12 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS is_scalar
 
 template <> struct _LIBCPP_TEMPLATE_VIS is_scalar<nullptr_t> : public true_type {};
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template <class _Tp>
 inline constexpr bool is_scalar_v = is_scalar<_Tp>::value;
 #endif
 
-#endif // __has_keyword(__is_scalar)
+#endif // __has_builtin(__is_scalar)
 
 _LIBCPP_END_NAMESPACE_STD
 

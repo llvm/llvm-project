@@ -11,12 +11,12 @@ target triple = "armv7-eabi"
 
 declare <2 x float> @llvm.arm.neon.vpadd.v2f32(<2 x float>, <2 x float>) nounwind readnone
 
-define arm_aapcs_vfpcc i8 @foo(%struct.fr* nocapture %this, %struct.obb* %box) nounwind {
+define arm_aapcs_vfpcc i8 @foo(ptr nocapture %this, ptr %box) nounwind {
 entry:
-  %val.i.i = load <4 x float>, <4 x float>* undef              ; <<4 x float>> [#uses=1]
-  %val2.i.i = load <4 x float>, <4 x float>* null              ; <<4 x float>> [#uses=1]
-  %elt3.i.i = getelementptr inbounds %struct.obb, %struct.obb* %box, i32 0, i32 0, i32 2, i32 0 ; <<4 x float>*> [#uses=1]
-  %val4.i.i = load <4 x float>, <4 x float>* %elt3.i.i         ; <<4 x float>> [#uses=1]
+  %val.i.i = load <4 x float>, ptr undef              ; <<4 x float>> [#uses=1]
+  %val2.i.i = load <4 x float>, ptr null              ; <<4 x float>> [#uses=1]
+  %elt3.i.i = getelementptr inbounds %struct.obb, ptr %box, i32 0, i32 0, i32 2, i32 0 ; <ptr> [#uses=1]
+  %val4.i.i = load <4 x float>, ptr %elt3.i.i         ; <<4 x float>> [#uses=1]
   %0 = shufflevector <2 x float> undef, <2 x float> zeroinitializer, <4 x i32> <i32 0, i32 1, i32 2, i32 3> ; <<4 x float>> [#uses=1]
   %1 = fadd <4 x float> undef, zeroinitializer    ; <<4 x float>> [#uses=1]
   br label %bb33

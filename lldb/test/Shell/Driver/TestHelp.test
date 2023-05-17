@@ -35,8 +35,6 @@ CHECK: -x
 CHECK: OPTIONS
 CHECK: --arch
 CHECK: -a
-CHECK: --capture-path
-CHECK: --capture
 CHECK: --core
 CHECK: -c
 CHECK: --debug

@@ -31,12 +31,24 @@
 #endif
 
 #if defined(_LIBUNWIND_TARGET_LINUX) &&                                        \
-    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_S390X))
+    (defined(_LIBUNWIND_TARGET_AARCH64) || defined(_LIBUNWIND_TARGET_RISCV) || \
+     defined(_LIBUNWIND_TARGET_S390X))
 #include <sys/syscall.h>
 #include <sys/uio.h>
 #include <unistd.h>
 #define _LIBUNWIND_CHECK_LINUX_SIGRETURN 1
 #endif
+
+#include "AddressSpace.hpp"
+#include "CompactUnwinder.hpp"
+#include "config.h"
+#include "DwarfInstructions.hpp"
+#include "EHHeaderParser.hpp"
+#include "libunwind.h"
+#include "libunwind_ext.h"
+#include "Registers.hpp"
+#include "RWMutex.hpp"
+#include "Unwind-EHABI.h"
 
 #if defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
 // Provide a definition for the DISPATCHER_CONTEXT struct for old (Win7 and
@@ -74,18 +86,6 @@ extern "C" _Unwind_Reason_Code __libunwind_seh_personality(
     struct _Unwind_Context *);
 
 #endif
-
-#include "config.h"
-
-#include "AddressSpace.hpp"
-#include "CompactUnwinder.hpp"
-#include "config.h"
-#include "DwarfInstructions.hpp"
-#include "EHHeaderParser.hpp"
-#include "libunwind.h"
-#include "Registers.hpp"
-#include "RWMutex.hpp"
-#include "Unwind-EHABI.h"
 
 namespace libunwind {
 
@@ -443,7 +443,7 @@ public:
   virtual void setFloatReg(int, unw_fpreg_t) {
     _LIBUNWIND_ABORT("setFloatReg not implemented");
   }
-  virtual int step() { _LIBUNWIND_ABORT("step not implemented"); }
+  virtual int step(bool = false) { _LIBUNWIND_ABORT("step not implemented"); }
   virtual void getInfo(unw_proc_info_t *) {
     _LIBUNWIND_ABORT("getInfo not implemented");
   }
@@ -495,7 +495,7 @@ public:
   virtual bool        validFloatReg(int);
   virtual unw_fpreg_t getFloatReg(int);
   virtual void        setFloatReg(int, unw_fpreg_t);
-  virtual int         step();
+  virtual int         step(bool = false);
   virtual void        getInfo(unw_proc_info_t *);
   virtual void        jumpto();
   virtual bool        isSignalFrame();
@@ -507,10 +507,17 @@ public:
 #endif
 
   DISPATCHER_CONTEXT *getDispatcherContext() { return &_dispContext; }
-  void setDispatcherContext(DISPATCHER_CONTEXT *disp) { _dispContext = *disp; }
+  void setDispatcherContext(DISPATCHER_CONTEXT *disp) {
+    _dispContext = *disp;
+    _info.lsda = reinterpret_cast<unw_word_t>(_dispContext.HandlerData);
+    if (_dispContext.LanguageHandler) {
+      _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
+    } else
+      _info.handler = 0;
+  }
 
   // libunwind does not and should not depend on C++ library which means that we
-  // need our own defition of inline placement new.
+  // need our own definition of inline placement new.
   static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
 
 private:
@@ -569,10 +576,12 @@ UnwindCursor<A, R>::UnwindCursor(unw_context_t *context, A &as)
                 "UnwindCursor<> requires more alignment than unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
+  memset(&_dispContext, 0, sizeof(_dispContext));
   _dispContext.ContextRecord = &_msContext;
   _dispContext.HistoryTable = &_histTable;
   // Initialize MS context from ours.
   R r(context);
+  RtlCaptureContext(&_msContext);
   _msContext.ContextFlags = CONTEXT_CONTROL|CONTEXT_INTEGER|CONTEXT_FLOATING_POINT;
 #if defined(_LIBUNWIND_TARGET_X86_64)
   _msContext.Rax = r.getRegister(UNW_X86_64_RAX);
@@ -670,6 +679,7 @@ UnwindCursor<A, R>::UnwindCursor(CONTEXT *context, A &as)
                 "UnwindCursor<> does not fit in unw_cursor_t");
   memset(&_info, 0, sizeof(_info));
   memset(&_histTable, 0, sizeof(_histTable));
+  memset(&_dispContext, 0, sizeof(_dispContext));
   _dispContext.ContextRecord = &_msContext;
   _dispContext.HistoryTable = &_histTable;
   _msContext = *context;
@@ -680,7 +690,7 @@ template <typename A, typename R>
 bool UnwindCursor<A, R>::validReg(int regNum) {
   if (regNum == UNW_REG_IP || regNum == UNW_REG_SP) return true;
 #if defined(_LIBUNWIND_TARGET_X86_64)
-  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_R15) return true;
+  if (regNum >= UNW_X86_64_RAX && regNum <= UNW_X86_64_RIP) return true;
 #elif defined(_LIBUNWIND_TARGET_ARM)
   if ((regNum >= UNW_ARM_R0 && regNum <= UNW_ARM_R15) ||
       regNum == UNW_ARM_RA_AUTH_CODE)
@@ -695,6 +705,7 @@ template <typename A, typename R>
 unw_word_t UnwindCursor<A, R>::getReg(int regNum) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: return _msContext.Rip;
   case UNW_X86_64_RAX: return _msContext.Rax;
   case UNW_X86_64_RDX: return _msContext.Rdx;
@@ -745,6 +756,7 @@ template <typename A, typename R>
 void UnwindCursor<A, R>::setReg(int regNum, unw_word_t value) {
   switch (regNum) {
 #if defined(_LIBUNWIND_TARGET_X86_64)
+  case UNW_X86_64_RIP:
   case UNW_REG_IP: _msContext.Rip = value; break;
   case UNW_X86_64_RAX: _msContext.Rax = value; break;
   case UNW_X86_64_RDX: _msContext.Rdx = value; break;
@@ -926,7 +938,7 @@ public:
   virtual bool        validFloatReg(int);
   virtual unw_fpreg_t getFloatReg(int);
   virtual void        setFloatReg(int, unw_fpreg_t);
-  virtual int         step();
+  virtual int         step(bool stage2 = false);
   virtual void        getInfo(unw_proc_info_t *);
   virtual void        jumpto();
   virtual bool        isSignalFrame();
@@ -946,7 +958,7 @@ public:
 #endif
 
   // libunwind does not and should not depend on C++ library which means that we
-  // need our own defition of inline placement new.
+  // need our own definition of inline placement new.
   static void *operator new(size_t, UnwindCursor<A, R> *p) { return p; }
 
 private:
@@ -982,6 +994,10 @@ private:
   bool setInfoForSigReturn(Registers_arm64 &);
   int stepThroughSigReturn(Registers_arm64 &);
 #endif
+#if defined(_LIBUNWIND_TARGET_RISCV)
+  bool setInfoForSigReturn(Registers_riscv &);
+  int stepThroughSigReturn(Registers_riscv &);
+#endif
 #if defined(_LIBUNWIND_TARGET_S390X)
   bool setInfoForSigReturn(Registers_s390x &);
   int stepThroughSigReturn(Registers_s390x &);
@@ -1000,22 +1016,21 @@ private:
                          pint_t pc, uintptr_t dso_base);
   bool getInfoFromDwarfSection(pint_t pc, const UnwindInfoSections &sects,
                                             uint32_t fdeSectionOffsetHint=0);
-  int stepWithDwarfFDE() {
-    return DwarfInstructions<A, R>::stepWithDwarf(_addressSpace,
-                                              (pint_t)this->getReg(UNW_REG_IP),
-                                              (pint_t)_info.unwind_info,
-                                              _registers, _isSignalFrame);
+  int stepWithDwarfFDE(bool stage2) {
+    return DwarfInstructions<A, R>::stepWithDwarf(
+        _addressSpace, (pint_t)this->getReg(UNW_REG_IP),
+        (pint_t)_info.unwind_info, _registers, _isSignalFrame, stage2);
   }
 #endif
 
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
   bool getInfoFromCompactEncodingSection(pint_t pc,
                                             const UnwindInfoSections &sects);
-  int stepWithCompactEncoding() {
-  #if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
+  int stepWithCompactEncoding(bool stage2 = false) {
+#if defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
     if ( compactSaysUseDwarf() )
-      return stepWithDwarfFDE();
-  #endif
+      return stepWithDwarfFDE(stage2);
+#endif
     R dummy;
     return stepWithCompactEncoding(dummy);
   }
@@ -1064,6 +1079,10 @@ private:
   int stepWithCompactEncoding(Registers_mips_newabi &) {
     return UNW_EINVAL;
   }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_LOONGARCH)
+  int stepWithCompactEncoding(Registers_loongarch &) { return UNW_EINVAL; }
 #endif
 
 #if defined(_LIBUNWIND_TARGET_SPARC)
@@ -1138,6 +1157,12 @@ private:
 
 #if defined(_LIBUNWIND_TARGET_MIPS_NEWABI)
   bool compactSaysUseDwarf(Registers_mips_newabi &, uint32_t *) const {
+    return true;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_LOONGARCH)
+  bool compactSaysUseDwarf(Registers_loongarch &, uint32_t *) const {
     return true;
   }
 #endif
@@ -1222,6 +1247,12 @@ private:
 
 #if defined (_LIBUNWIND_TARGET_MIPS_NEWABI)
   compact_unwind_encoding_t dwarfEncoding(Registers_mips_newabi &) const {
+    return 0;
+  }
+#endif
+
+#if defined(_LIBUNWIND_TARGET_LOONGARCH)
+  compact_unwind_encoding_t dwarfEncoding(Registers_loongarch &) const {
     return 0;
   }
 #endif
@@ -1964,6 +1995,9 @@ bool UnwindCursor<A, R>::getInfoFromSEH(pint_t pc) {
       uint32_t lastcode = (xdata->CountOfCodes + 1) & ~1;
       const uint32_t *handler = reinterpret_cast<uint32_t *>(&xdata->UnwindCodes[lastcode]);
       _info.lsda = reinterpret_cast<unw_word_t>(handler+1);
+      _dispContext.HandlerData = reinterpret_cast<void *>(_info.lsda);
+      _dispContext.LanguageHandler =
+          reinterpret_cast<EXCEPTION_ROUTINE *>(base + *handler);
       if (*handler) {
         _info.handler = reinterpret_cast<unw_word_t>(__libunwind_seh_personality);
       } else
@@ -2106,6 +2140,11 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
           // using dlopen().
           const char libcxxabi[] = "libc++abi.a(libc++abi.so.1)";
           void *libHandle;
+          // The AIX dlopen() sets errno to 0 when it is successful, which
+          // clobbers the value of errno from the user code. This is an AIX
+          // bug because according to POSIX it should not set errno to 0. To
+          // workaround before AIX fixes the bug, errno is saved and restored.
+          int saveErrno = errno;
           libHandle = dlopen(libcxxabi, RTLD_MEMBER | RTLD_NOW);
           if (libHandle == NULL) {
             _LIBUNWIND_TRACE_UNWINDING("dlopen() failed with errno=%d\n",
@@ -2119,6 +2158,7 @@ bool UnwindCursor<A, R>::getInfoFromTBTable(pint_t pc, R &registers) {
             assert(0 && "dlsym() failed");
           }
           dlclose(libHandle);
+          errno = saveErrno;
         }
       }
       xlcPersonalityV0InitLock.unlock();
@@ -2455,7 +2495,7 @@ int UnwindCursor<A, R>::stepWithTBTable(pint_t pc, tbtable *TBTable,
                              reinterpret_cast<void *>(pc));
 
   // The return address is the address after call site instruction, so
-  // setting IP to that simualates a return.
+  // setting IP to that simulates a return.
   newRegisters.setIP(reinterpret_cast<uintptr_t>(returnAddress));
 
   // Simulate the step by replacing the register set with the new ones.
@@ -2686,6 +2726,60 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_arm64 &) {
        // defined(_LIBUNWIND_TARGET_AARCH64)
 
 #if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
+    defined(_LIBUNWIND_TARGET_RISCV)
+template <typename A, typename R>
+bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_riscv &) {
+  const pint_t pc = static_cast<pint_t>(getReg(UNW_REG_IP));
+  uint32_t instructions[2];
+  struct iovec local_iov = {&instructions, sizeof instructions};
+  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof instructions};
+  long bytesRead =
+      syscall(SYS_process_vm_readv, getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  // Look for the two instructions used in the sigreturn trampoline
+  // __vdso_rt_sigreturn:
+  //
+  // 0x08b00893 li a7,0x8b
+  // 0x00000073 ecall
+  if (bytesRead != sizeof instructions || instructions[0] != 0x08b00893 ||
+      instructions[1] != 0x00000073)
+    return false;
+
+  _info = {};
+  _info.start_ip = pc;
+  _info.end_ip = pc + 4;
+  _isSigReturn = true;
+  return true;
+}
+
+template <typename A, typename R>
+int UnwindCursor<A, R>::stepThroughSigReturn(Registers_riscv &) {
+  // In the signal trampoline frame, sp points to an rt_sigframe[1], which is:
+  //  - 128-byte siginfo struct
+  //  - ucontext_t struct:
+  //     - 8-byte long (__uc_flags)
+  //     - 8-byte pointer (*uc_link)
+  //     - 24-byte uc_stack
+  //     - 8-byte uc_sigmask
+  //     - 120-byte of padding to allow sigset_t to be expanded in the future
+  //     - 8 bytes of padding because sigcontext has 16-byte alignment
+  //     - struct sigcontext uc_mcontext
+  // [1]
+  // https://github.com/torvalds/linux/blob/master/arch/riscv/kernel/signal.c
+  const pint_t kOffsetSpToSigcontext = 128 + 8 + 8 + 24 + 8 + 128;
+
+  const pint_t sigctx = _registers.getSP() + kOffsetSpToSigcontext;
+  _registers.setIP(_addressSpace.get64(sigctx));
+  for (int i = UNW_RISCV_X1; i <= UNW_RISCV_X31; ++i) {
+    uint64_t value = _addressSpace.get64(sigctx + static_cast<pint_t>(i * 8));
+    _registers.setRegister(i, value);
+  }
+  _isSignalFrame = true;
+  return UNW_STEP_SUCCESS;
+}
+#endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
+       // defined(_LIBUNWIND_TARGET_RISCV)
+
+#if defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&                               \
     defined(_LIBUNWIND_TARGET_S390X)
 template <typename A, typename R>
 bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
@@ -2695,8 +2789,14 @@ bool UnwindCursor<A, R>::setInfoForSigReturn(Registers_s390x &) {
   // own restorer function, though, or user-mode QEMU might write a trampoline
   // onto the stack.
   const pint_t pc = static_cast<pint_t>(this->getReg(UNW_REG_IP));
-  const uint16_t inst = _addressSpace.get16(pc);
-  if (inst == 0x0a77 || inst == 0x0aad) {
+  // The PC might contain an invalid address if the unwind info is bad, so
+  // directly accessing it could cause a segfault. Use process_vm_readv to
+  // read the memory safely instead.
+  uint16_t inst;
+  struct iovec local_iov = {&inst, sizeof inst};
+  struct iovec remote_iov = {reinterpret_cast<void *>(pc), sizeof inst};
+  long bytesRead = process_vm_readv(getpid(), &local_iov, 1, &remote_iov, 1, 0);
+  if (bytesRead == sizeof inst && (inst == 0x0a77 || inst == 0x0aad)) {
     _info = {};
     _info.start_ip = pc;
     _info.end_ip = pc + 2;
@@ -2785,8 +2885,8 @@ int UnwindCursor<A, R>::stepThroughSigReturn(Registers_s390x &) {
 #endif // defined(_LIBUNWIND_CHECK_LINUX_SIGRETURN) &&
        // defined(_LIBUNWIND_TARGET_S390X)
 
-template <typename A, typename R>
-int UnwindCursor<A, R>::step() {
+template <typename A, typename R> int UnwindCursor<A, R>::step(bool stage2) {
+  (void)stage2;
   // Bottom of stack is defined is when unwind info cannot be found.
   if (_unwindInfoMissing)
     return UNW_STEP_END;
@@ -2800,13 +2900,13 @@ int UnwindCursor<A, R>::step() {
 #endif
   {
 #if defined(_LIBUNWIND_SUPPORT_COMPACT_UNWIND)
-    result = this->stepWithCompactEncoding();
+    result = this->stepWithCompactEncoding(stage2);
 #elif defined(_LIBUNWIND_SUPPORT_SEH_UNWIND)
     result = this->stepWithSEHData();
 #elif defined(_LIBUNWIND_SUPPORT_TBTAB_UNWIND)
     result = this->stepWithTBTableData();
 #elif defined(_LIBUNWIND_SUPPORT_DWARF_UNWIND)
-    result = this->stepWithDwarfFDE();
+    result = this->stepWithDwarfFDE(stage2);
 #elif defined(_LIBUNWIND_ARM_EHABI)
     result = this->stepWithEHABI();
 #else

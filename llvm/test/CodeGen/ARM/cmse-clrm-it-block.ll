@@ -1,12 +1,12 @@
 ; RUN: llc -mtriple=thumbv8.1m.main -mattr=+8msecext %s -o - | FileCheck %s
 
-define hidden i32 @f(i32 %0, i32 (i32)* nocapture %1) local_unnamed_addr #0 {
+define hidden i32 @f(i32 %0, ptr nocapture %1) local_unnamed_addr #0 {
   %3 = call i32 %1(i32 %0) #2
   %4 = icmp eq i32 %3, 1
   br i1 %4, label %6, label %5
 
 5:                                                ; preds = %2
-  call void bitcast (void (...)* @g to void ()*)() #3
+  call void @g() #3
   unreachable
 
 6:                                                ; preds = %2

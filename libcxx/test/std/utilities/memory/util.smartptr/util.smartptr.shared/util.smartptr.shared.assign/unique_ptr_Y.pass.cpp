@@ -15,6 +15,7 @@
 #include <memory>
 #include <type_traits>
 #include <cassert>
+#include <utility>
 
 #include "test_macros.h"
 
@@ -53,6 +54,16 @@ struct StatefulArrayDeleter {
     delete []ptr;
   }
 };
+
+// https://llvm.org/PR53368
+// Bogus unique_ptr-to-shared_ptr conversions should be forbidden
+#if TEST_STD_VER >= 17
+static_assert( std::is_assignable<std::shared_ptr<A>&,   std::unique_ptr<A>&&>::value, "");
+static_assert( std::is_assignable<std::shared_ptr<A[]>&, std::unique_ptr<A[]>&&>::value, "");
+static_assert(!std::is_assignable<std::shared_ptr<A>&,   std::unique_ptr<A[]>&&>::value, "");
+static_assert(!std::is_assignable<std::shared_ptr<B[]>&, std::unique_ptr<A[]>&&>::value, "");
+static_assert(!std::is_assignable<std::shared_ptr<B>&,   std::unique_ptr<A[]>&&>::value, "");
+#endif
 
 int main(int, char**)
 {
@@ -125,40 +136,6 @@ int main(int, char**)
     assert(B::count == 0);
     assert(A::count == 0);
 
-#ifdef _LIBCPP_VERSION // https://llvm.org/PR53368
-    {
-      std::unique_ptr<A[]> ptr(new A[8]);
-      A* raw_ptr = ptr.get();
-      std::shared_ptr<B> p;
-      p = std::move(ptr);
-      assert(A::count == 8);
-      assert(B::count == 8);
-      assert(p.use_count() == 1);
-      assert(p.get() == raw_ptr);
-      assert(ptr.get() == 0);
-    }
-    assert(A::count == 0);
-    assert(B::count == 0);
-
-    {
-      std::unique_ptr<A[]> ptr(new A[8]);
-      A* raw_ptr = ptr.get();
-      std::shared_ptr<A> p;
-      p = std::move(ptr);
-      assert(A::count == 8);
-      assert(p.use_count() == 1);
-      assert(p.get() == raw_ptr);
-      assert(ptr.get() == 0);
-    }
-    assert(A::count == 0);
-
-    {
-      std::unique_ptr<int[]> ptr(new int[8]);
-      std::shared_ptr<int> p;
-      p = std::move(ptr);
-    }
-#endif // _LIBCPP_VERSION
-
 #if TEST_STD_VER > 14
     {
       StatefulArrayDeleter<A> d;
@@ -170,22 +147,6 @@ int main(int, char**)
     }
     assert(A::count == 0);
     assert(B::count == 0);
-
-#ifdef _LIBCPP_VERSION // https://llvm.org/PR53368
-    {
-      std::unique_ptr<A[]> ptr(new A[8]);
-      A* raw_ptr = ptr.get();
-      std::shared_ptr<B[]> p;
-      p = std::move(ptr);
-      assert(A::count == 8);
-      assert(B::count == 8);
-      assert(p.use_count() == 1);
-      assert(p.get() == raw_ptr);
-      assert(ptr.get() == 0);
-    }
-    assert(A::count == 0);
-    assert(B::count == 0);
-#endif // _LIBCPP_VERSION
 
     {
       std::unique_ptr<A[]> ptr(new A[8]);

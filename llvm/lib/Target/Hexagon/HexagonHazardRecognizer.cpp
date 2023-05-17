@@ -106,7 +106,7 @@ bool HexagonHazardRecognizer::isNewStore(MachineInstr &MI) {
   if (!TII->mayBeNewStore(MI))
     return false;
   MachineOperand &MO = MI.getOperand(MI.getNumOperands() - 1);
-  return (MO.isReg() && RegDefs.count(MO.getReg()) != 0);
+  return MO.isReg() && RegDefs.contains(MO.getReg());
 }
 
 void HexagonHazardRecognizer::EmitInstruction(SUnit *SU) {

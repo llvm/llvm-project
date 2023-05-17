@@ -23,16 +23,16 @@ target triple = "x86_64--linux"
 ; Function Attrs: noinline nounwind uwtable
 define void @use_dbg_declare() #0 !dbg !7 {
 entry:
-  %o = alloca %struct.Foo, align 4
-  call void @llvm.dbg.declare(metadata %struct.Foo* %o, metadata !10, metadata !15), !dbg !16
-  call void @escape_foo(%struct.Foo* %o), !dbg !17
+  %o = alloca %struct.Foo, align 8
+  call void @llvm.dbg.declare(metadata ptr %o, metadata !10, metadata !15), !dbg !16
+  call void @escape_foo(ptr %o), !dbg !17
   ret void, !dbg !18
 }
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
-declare void @escape_foo(%struct.Foo*)
+declare void @escape_foo(ptr)
 
 attributes #0 = { noinline nounwind uwtable }
 attributes #1 = { nounwind readnone speculatable }

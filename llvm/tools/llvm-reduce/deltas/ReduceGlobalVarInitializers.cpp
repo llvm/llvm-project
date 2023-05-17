@@ -18,9 +18,9 @@
 using namespace llvm;
 
 /// Removes all the Initialized GVs that aren't inside the desired Chunks.
-static void extractGVsFromModule(Oracle &O, Module &Program) {
+static void extractGVsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
   // Drop initializers of out-of-chunk GVs
-  for (auto &GV : Program.globals())
+  for (auto &GV : WorkItem.getModule().globals())
     if (GV.hasInitializer() && !O.shouldKeep()) {
       GV.setInitializer(nullptr);
       GV.setLinkage(GlobalValue::LinkageTypes::ExternalLinkage);
@@ -29,6 +29,5 @@ static void extractGVsFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceGlobalsInitializersDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing GVs initializers...\n";
-  runDeltaPass(Test, extractGVsFromModule);
+  runDeltaPass(Test, extractGVsFromModule, "Reducing GV Initializers");
 }

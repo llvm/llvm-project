@@ -31,8 +31,8 @@ entry:
 for.cond:                                         ; preds = %for.cond, %entry
   %b.0 = phi i16 [ 0, %entry ], [ %conv77, %for.cond ]
   %mul18 = mul i16 %b.0, %b.0
-  %arrayidx.real = load double, double* undef, align 1
-  %arrayidx.imag = load double, double* undef, align 1
+  %arrayidx.real = load double, ptr undef, align 1
+  %arrayidx.imag = load double, ptr undef, align 1
   %mul_ac = fmul fast double %arrayidx.real, %arrayidx.real
   %0 = fadd fast double 0.000000e+00, %arrayidx.real
   %sub.r = fsub fast double %mul_ac, %0

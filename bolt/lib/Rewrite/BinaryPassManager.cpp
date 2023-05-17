@@ -12,7 +12,9 @@
 #include "bolt/Passes/AllocCombiner.h"
 #include "bolt/Passes/AsmDump.h"
 #include "bolt/Passes/CMOVConversion.h"
+#include "bolt/Passes/FixRelaxationPass.h"
 #include "bolt/Passes/FrameOptimizer.h"
+#include "bolt/Passes/Hugify.h"
 #include "bolt/Passes/IdenticalCodeFolding.h"
 #include "bolt/Passes/IndirectCallPromotion.h"
 #include "bolt/Passes/Inliner.h"
@@ -31,6 +33,7 @@
 #include "bolt/Passes/TailDuplication.h"
 #include "bolt/Passes/ThreeWayBranch.h"
 #include "bolt/Passes/ValidateInternalCalls.h"
+#include "bolt/Passes/ValidateMemRefs.h"
 #include "bolt/Passes/VeneerElimination.h"
 #include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -177,6 +180,11 @@ static cl::opt<bool>
     PrintStoke("print-stoke", cl::desc("print functions after stoke analysis"),
                cl::cat(BoltOptCategory));
 
+static cl::opt<bool>
+    PrintFixRelaxations("print-fix-relaxations",
+                        cl::desc("print functions after fix relaxations pass"),
+                        cl::cat(BoltOptCategory));
+
 static cl::opt<bool> PrintVeneerElimination(
     "print-veneer-elimination",
     cl::desc("print functions after veneer elimination pass"),
@@ -268,7 +276,7 @@ void BinaryFunctionPassManager::runPasses() {
                        TimerGroupDesc, TimeOpts);
 
     callWithDynoStats([this, &Pass] { Pass->runOnFunctions(BC); }, BFs,
-                      Pass->getName(), opts::DynoStatsAll);
+                      Pass->getName(), opts::DynoStatsAll, BC.isAArch64());
 
     if (opts::VerifyCFG &&
         !std::accumulate(
@@ -296,7 +304,7 @@ void BinaryFunctionPassManager::runPasses() {
       if (!Pass->shouldPrint(Function))
         continue;
 
-      Function.print(outs(), Message, true);
+      Function.print(outs(), Message);
 
       if (opts::DumpDotAll)
         Function.dumpGraphForPass(PassIdName);
@@ -307,13 +315,18 @@ void BinaryFunctionPassManager::runPasses() {
 void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
   BinaryFunctionPassManager Manager(BC);
 
-  const DynoStats InitialDynoStats = getDynoStats(BC.getBinaryFunctions());
+  const DynoStats InitialDynoStats =
+      getDynoStats(BC.getBinaryFunctions(), BC.isAArch64());
 
   Manager.registerPass(std::make_unique<AsmDumpPass>(),
                        opts::AsmDump.getNumOccurrences());
 
-  if (opts::Instrument)
-    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+  if (BC.isAArch64()) {
+    Manager.registerPass(std::make_unique<FixRelaxations>(PrintFixRelaxations));
+
+    Manager.registerPass(
+        std::make_unique<VeneerElimination>(PrintVeneerElimination));
+  }
 
   // Here we manage dependencies/order manually, since passes are run in the
   // order they're registered.
@@ -326,6 +339,13 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<ValidateInternalCalls>(NeverPrint));
 
+  Manager.registerPass(std::make_unique<ValidateMemRefs>(NeverPrint));
+
+  if (opts::Instrument)
+    Manager.registerPass(std::make_unique<Instrumentation>(NeverPrint));
+  else if (opts::Hugify)
+    Manager.registerPass(std::make_unique<HugePage>(NeverPrint));
+
   Manager.registerPass(std::make_unique<ShortenInstructions>(NeverPrint));
 
   Manager.registerPass(std::make_unique<RemoveNops>(NeverPrint));
@@ -337,10 +357,6 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
 
   Manager.registerPass(std::make_unique<IdenticalCodeFolding>(PrintICF),
                        opts::ICF);
-
-  if (BC.isAArch64())
-    Manager.registerPass(
-        std::make_unique<VeneerElimination>(PrintVeneerElimination));
 
   Manager.registerPass(
       std::make_unique<SpecializeMemcpy1>(NeverPrint, opts::SpecializeMemcpy1),
@@ -471,6 +487,10 @@ void BinaryFunctionPassManager::runAllPasses(BinaryContext &BC) {
     Manager.registerPass(std::make_unique<CheckLargeFunctions>(NeverPrint));
 
   Manager.registerPass(std::make_unique<LowerAnnotations>(NeverPrint));
+
+  // Check for dirty state of MCSymbols caused by running calculateEmittedSize
+  // in parallel and restore them
+  Manager.registerPass(std::make_unique<CleanMCState>(NeverPrint));
 
   Manager.runPasses();
 }

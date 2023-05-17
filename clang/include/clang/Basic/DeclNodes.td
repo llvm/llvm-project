@@ -90,10 +90,12 @@ def Named : DeclNode<Decl, "named declarations", 1>;
       def ObjCImplementation : DeclNode<ObjCImpl>;
   def ObjCProperty : DeclNode<Named, "Objective-C properties">;
   def ObjCCompatibleAlias : DeclNode<Named>;
+def ImplicitConceptSpecialization : DeclNode<Decl>;
 def LinkageSpec : DeclNode<Decl>, DeclContext;
 def Export : DeclNode<Decl>, DeclContext;
 def ObjCPropertyImpl : DeclNode<Decl>;
 def FileScopeAsm : DeclNode<Decl>;
+def TopLevelStmt : DeclNode<Decl>;
 def AccessSpec : DeclNode<Decl>;
 def Friend : DeclNode<Decl>;
 def FriendTemplate : DeclNode<Decl>;
@@ -108,4 +110,4 @@ def OMPRequires : DeclNode<Decl>;
 def Empty : DeclNode<Decl>;
 def RequiresExprBody : DeclNode<Decl>, DeclContext;
 def LifetimeExtendedTemporary : DeclNode<Decl>;
-
+def HLSLBuffer : DeclNode<Named, "HLSLBuffer">, DeclContext;

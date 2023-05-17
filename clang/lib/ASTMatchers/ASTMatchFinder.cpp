@@ -429,7 +429,7 @@ public:
   }
 
   void onStartOfTranslationUnit() {
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     for (MatchCallback *MC : Matchers->AllCallbacks) {
       if (EnableCheckProfiling)
@@ -439,7 +439,7 @@ public:
   }
 
   void onEndOfTranslationUnit() {
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     for (MatchCallback *MC : Matchers->AllCallbacks) {
       if (EnableCheckProfiling)
@@ -779,7 +779,7 @@ private:
 
 #define IMPL(Index)                                                            \
   template <typename NodeType>                                                 \
-  typename std::enable_if_t<                                                   \
+  std::enable_if_t<                                                            \
       llvm::is_one_of<const NodeType *, CMD_TYPES_##Index>::value>             \
   SetCallbackAndRawNode(const MatchCallback *CB, const NodeType &N) {          \
     assertEmpty();                                                             \
@@ -788,8 +788,8 @@ private:
   }                                                                            \
                                                                                \
   template <typename T>                                                        \
-  typename std::enable_if_t<                                                   \
-      llvm::is_one_of<const T *, CMD_TYPES_##Index>::value, const T *>         \
+  std::enable_if_t<llvm::is_one_of<const T *, CMD_TYPES_##Index>::value,       \
+                   const T *>                                                  \
   getNode() const {                                                            \
     assertHoldsState();                                                        \
     return Callback.getInt() == (Index) ? Node##Index.dyn_cast<const T *>()    \
@@ -1010,7 +1010,7 @@ private:
   /// Used by \c matchDispatch() below.
   template <typename T, typename MC>
   void matchWithoutFilter(const T &Node, const MC &Matchers) {
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     for (const auto &MP : Matchers) {
       if (EnableCheckProfiling)
@@ -1033,7 +1033,7 @@ private:
     if (Filter.empty())
       return;
 
-    const bool EnableCheckProfiling = Options.CheckProfiling.hasValue();
+    const bool EnableCheckProfiling = Options.CheckProfiling.has_value();
     TimeBucketRegion Timer;
     auto &Matchers = this->Matchers->DeclOrStmt;
     for (unsigned short I : Filter) {
@@ -1562,7 +1562,7 @@ MatchFinder::~MatchFinder() {}
 
 void MatchFinder::addMatcher(const DeclarationMatcher &NodeMatch,
                              MatchCallback *Action) {
-  llvm::Optional<TraversalKind> TK;
+  std::optional<TraversalKind> TK;
   if (Action)
     TK = Action->getCheckTraversalKind();
   if (TK)
@@ -1580,7 +1580,7 @@ void MatchFinder::addMatcher(const TypeMatcher &NodeMatch,
 
 void MatchFinder::addMatcher(const StatementMatcher &NodeMatch,
                              MatchCallback *Action) {
-  llvm::Optional<TraversalKind> TK;
+  std::optional<TraversalKind> TK;
   if (Action)
     TK = Action->getCheckTraversalKind();
   if (TK)
@@ -1685,9 +1685,9 @@ void MatchFinder::registerTestCallbackAfterParsing(
 
 StringRef MatchFinder::MatchCallback::getID() const { return "<unknown>"; }
 
-llvm::Optional<TraversalKind>
+std::optional<TraversalKind>
 MatchFinder::MatchCallback::getCheckTraversalKind() const {
-  return llvm::None;
+  return std::nullopt;
 }
 
 } // end namespace ast_matchers

@@ -27,3 +27,11 @@ RUN: not lld-link /errorlimit:XYZ 01 02 03 04 05 06 07 08 09 10 11 12 13 14 \
 RUN:   15 16 17 18 19 20 21 22 2>&1 | FileCheck -check-prefix=WRONG %s
 
 WRONG:      /errorlimit: number expected, but got XYZ
+
+RUN: not lld-link -lldmingw 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 \
+RUN:   21 22 2>&1 | FileCheck -check-prefix=MINGW-DEFAULT %s
+
+MINGW-DEFAULT:      could not open '01'
+MINGW-DEFAULT:      could not open '20'
+MINGW-DEFAULT-NEXT: too many errors emitted, stopping now (use --error-limit=0 to see all errors)
+MINGW-DEFAULT-NOT:  could not open '21'

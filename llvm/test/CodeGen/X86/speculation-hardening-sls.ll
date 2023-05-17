@@ -24,7 +24,7 @@ if.else:                                          ; preds = %entry
   ret i32 %div1
 }
 
-@__const.indirect_branch.ptr = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@indirect_branch, %return), i8* blockaddress(@indirect_branch, %l2)], align 8
+@__const.indirect_branch.ptr = private unnamed_addr constant [2 x ptr] [ptr blockaddress(@indirect_branch, %return), ptr blockaddress(@indirect_branch, %l2)], align 8
 
 ; Function Attrs: norecurse nounwind readnone
 define dso_local i32 @indirect_branch(i32 %a, i32 %b, i32 %i) {
@@ -40,9 +40,9 @@ define dso_local i32 @indirect_branch(i32 %a, i32 %b, i32 %i) {
 ; IJMP-NOT:      int3
 entry:
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds [2 x i8*], [2 x i8*]* @__const.indirect_branch.ptr, i64 0, i64 %idxprom
-  %0 = load i8*, i8** %arrayidx, align 8
-  indirectbr i8* %0, [label %return, label %l2]
+  %arrayidx = getelementptr inbounds [2 x ptr], ptr @__const.indirect_branch.ptr, i64 0, i64 %idxprom
+  %0 = load ptr, ptr %arrayidx, align 8
+  indirectbr ptr %0, [label %return, label %l2]
 
 l2:                                               ; preds = %entry
   br label %return
@@ -64,7 +64,7 @@ define i32 @asmgoto() {
 ; RET-NEXT:      int3
 ; IJMP-NOT:      int3
 entry:
-  callbr void asm sideeffect "jmp $0", "X"(i8* blockaddress(@asmgoto, %d))
+  callbr void asm sideeffect "jmp $0", "!i"()
             to label %asm.fallthrough [label %d]
      ; The asm goto above produces a direct branch:
 
@@ -75,7 +75,7 @@ d:                             ; preds = %asm.fallthrough, %entry
   ret i32 1
 }
 
-define void @bar(void ()* %0) {
+define void @bar(ptr %0) {
 ; CHECK-LABEL: bar:
 ; CHECK:         jmpq *
 ; RET-NOT:       int3

@@ -70,8 +70,8 @@ define i1 @logical_or_cond_reuse(i1 %a, i1 %b) {
 
 define i1 @logical_and_not_cond_reuse(i1 %a, i1 %b) {
 ; CHECK-LABEL: @logical_and_not_cond_reuse(
-; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_NOT]], i1 true, i1 [[B:%.*]]
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT_A]], i1 true, i1 [[B:%.*]]
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.not = xor i1 %a, true
@@ -81,8 +81,8 @@ define i1 @logical_and_not_cond_reuse(i1 %a, i1 %b) {
 
 define i1 @logical_or_not_cond_reuse(i1 %a, i1 %b) {
 ; CHECK-LABEL: @logical_or_not_cond_reuse(
-; CHECK-NEXT:    [[A_NOT:%.*]] = xor i1 [[A:%.*]], true
-; CHECK-NEXT:    [[RES:%.*]] = select i1 [[A_NOT]], i1 [[B:%.*]], i1 false
+; CHECK-NEXT:    [[NOT_A:%.*]] = xor i1 [[A:%.*]], true
+; CHECK-NEXT:    [[RES:%.*]] = select i1 [[NOT_A]], i1 [[B:%.*]], i1 false
 ; CHECK-NEXT:    ret i1 [[RES]]
 ;
   %a.not = xor i1 %a, true
@@ -431,11 +431,11 @@ define i1 @not_false_not_use3(i1 %x, i1 %y) {
 define i1 @demorgan_select_infloop1(i1 %L) {
 ; CHECK-LABEL: @demorgan_select_infloop1(
 ; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
-; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true), i1 false
+; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 xor (i1 and (i1 icmp eq (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1), i1 icmp ne (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1)), i1 true), i1 false
 ; CHECK-NEXT:    ret i1 [[C15]]
 ;
   %not.L = xor i1 %L, true
-  %C15 = select i1 %not.L, i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true), i1 false
+  %C15 = select i1 %not.L, i1 xor (i1 and (i1 icmp eq (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1), i1 icmp ne (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1)), i1 true), i1 false
   ret i1 %C15
 }
 
@@ -443,11 +443,11 @@ define i1 @demorgan_select_infloop1(i1 %L) {
 define i1 @demorgan_select_infloop2(i1 %L) {
 ; CHECK-LABEL: @demorgan_select_infloop2(
 ; CHECK-NEXT:    [[NOT_L:%.*]] = xor i1 [[L:%.*]], true
-; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 true, i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true)
+; CHECK-NEXT:    [[C15:%.*]] = select i1 [[NOT_L]], i1 true, i1 xor (i1 and (i1 icmp eq (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1), i1 icmp ne (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1)), i1 true)
 ; CHECK-NEXT:    ret i1 [[C15]]
 ;
   %not.L = xor i1 %L, true
-  %C15 = select i1 %not.L, i1 true, i1 xor (i1 and (i1 icmp eq (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1), i1 icmp ne (i16* getelementptr inbounds (i16, i16* @g2, i64 1), i16* @g1)), i1 true)
+  %C15 = select i1 %not.L, i1 true, i1 xor (i1 and (i1 icmp eq (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1), i1 icmp ne (ptr getelementptr inbounds (i16, ptr @g2, i64 1), ptr @g1)), i1 true)
   ret i1 %C15
 }
 

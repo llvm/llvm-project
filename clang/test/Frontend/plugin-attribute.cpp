@@ -1,5 +1,5 @@
 // RUN: split-file %s %t
-// RUN: %clang -cc1 -load %llvmshlibdir/Attribute%pluginext -fsyntax-only -ast-dump -verify %t/good_attr.cpp | FileCheck %s
+// RUN: %clang_cc1 -load %llvmshlibdir/Attribute%pluginext -fsyntax-only -ast-dump -verify %t/good_attr.cpp | FileCheck %s
 // RUN: %clang -fplugin=%llvmshlibdir/Attribute%pluginext -fsyntax-only -Xclang -verify %t/bad_attr.cpp
 // REQUIRES: plugins, examples
 //--- good_attr.cpp

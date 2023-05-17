@@ -11,9 +11,7 @@
 
 #include "SmartPtrArrayMismatchCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Find `std::shared_ptr<T>(new T[...])`, replace it (if applicable) with
 /// `std::shared_ptr<T[]>(new T[...])`.
@@ -28,11 +26,9 @@ public:
   SharedPtrArrayMismatchCheck(StringRef Name, ClangTidyContext *Context);
 
 protected:
-  virtual SmartPtrClassMatcher getSmartPointerClassMatcher() const override;
+  SmartPtrClassMatcher getSmartPointerClassMatcher() const override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_SHAREDPTRARRAYMISMATCHCHECK_H

@@ -19,8 +19,11 @@
 
 #if defined(_WIN32)
 #include <windows.h>
+#include <process.h>
 #define getpid _getpid
+#ifndef __MINGW32__
 typedef int pid_t;
+#endif
 #define gettid GetCurrentThreadId
 #define my_gethostname(buf, sz) GetComputerNameA(buf, &(sz))
 #else

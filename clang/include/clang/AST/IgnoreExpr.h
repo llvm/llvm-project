@@ -23,7 +23,8 @@ namespace detail {
 inline Expr *IgnoreExprNodesImpl(Expr *E) { return E; }
 template <typename FnTy, typename... FnTys>
 Expr *IgnoreExprNodesImpl(Expr *E, FnTy &&Fn, FnTys &&... Fns) {
-  return IgnoreExprNodesImpl(Fn(E), std::forward<FnTys>(Fns)...);
+  return IgnoreExprNodesImpl(std::forward<FnTy>(Fn)(E),
+                             std::forward<FnTys>(Fns)...);
 }
 } // namespace detail
 
@@ -163,6 +164,11 @@ inline Expr *IgnoreParensSingleStep(Expr *E) {
   else if (auto *CE = dyn_cast<ChooseExpr>(E)) {
     if (!CE->isConditionDependent())
       return CE->getChosenSubExpr();
+  }
+
+  else if (auto *PE = dyn_cast<PredefinedExpr>(E)) {
+    if (PE->isTransparent() && PE->getFunctionName())
+      return PE->getFunctionName();
   }
 
   return E;

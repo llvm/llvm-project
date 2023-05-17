@@ -7,19 +7,19 @@ target triple = "aarch64"
 ; When ISel promotes the result of i8 add, the attached dbg.value shouldn't be dropped.
 ; CHECK: DBG_VALUE
 ; Function Attrs: nounwind
-define dso_local i32 @bar(i32*, i32) local_unnamed_addr #0 !dbg !10 {
+define dso_local i32 @bar(ptr, i32) local_unnamed_addr #0 !dbg !10 {
   %3 = trunc i32 %1 to i8, !dbg !20
   %4 = add i8 %3, 97, !dbg !20
   call void @llvm.dbg.value(metadata i8 %4, metadata !17, metadata !DIExpression()), !dbg !21
   %5 = zext i8 %4 to i32, !dbg !22
-  tail call void @foo1(i32* %0, i32 %5) #2, !dbg !23
-  tail call void @foo2(i32* %0, i8 %4) #2, !dbg !24
+  tail call void @foo1(ptr %0, i32 %5) #2, !dbg !23
+  tail call void @foo2(ptr %0, i8 %4) #2, !dbg !24
   ret i32 undef, !dbg !25
 }
 
-declare dso_local void @foo1(i32*, i32) local_unnamed_addr 
+declare dso_local void @foo1(ptr, i32) local_unnamed_addr 
 
-declare dso_local void @foo2(i32*, i8) local_unnamed_addr 
+declare dso_local void @foo2(ptr, i8) local_unnamed_addr 
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #1

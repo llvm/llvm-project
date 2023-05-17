@@ -94,3 +94,17 @@ def testBlockMove():
       block.append_to(realop.operation.regions[0])
       dummy.operation.erase()
     print(module)
+
+
+# CHECK-LABEL: TEST: testBlockHash
+@run
+def testBlockHash():
+  with Context() as ctx, Location.unknown():
+    ctx.allow_unregistered_dialects = True
+    module = Module.create()
+    f32 = F32Type.get()
+    with InsertionPoint(module.body):
+      dummy = Operation.create("dummy", regions=1)
+      block1 = Block.create_at_start(dummy.operation.regions[0], [f32])
+      block2 = Block.create_at_start(dummy.operation.regions[0], [f32])
+      assert hash(block1) != hash(block2)

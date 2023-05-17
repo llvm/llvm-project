@@ -17,10 +17,12 @@
 #include "PPCInstrBuilder.h"
 #include "PPCMachineFunctionInfo.h"
 #include "PPCTargetMachine.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/CodeGen/LiveIntervals.h"
+#include "llvm/CodeGen/MachineCombinerPattern.h"
 #include "llvm/CodeGen/MachineConstantPool.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
@@ -177,7 +179,7 @@ int PPCInstrInfo::getOperandLatency(const InstrItineraryData *ItinData,
   Register Reg = DefMO.getReg();
 
   bool IsRegCR;
-  if (Register::isVirtualRegister(Reg)) {
+  if (Reg.isVirtual()) {
     const MachineRegisterInfo *MRI =
         &DefMI.getParent()->getParent()->getRegInfo();
     IsRegCR = MRI->getRegClass(Reg)->hasSuperClassEq(&PPC::CRRCRegClass) ||
@@ -249,7 +251,10 @@ void PPCInstrInfo::setSpecialOperandAttr(MachineInstr &MI,
 // reduce the critical path. Mostly, this means floating-point operations,
 // because they have high latencies(>=5) (compared to other operations, such as
 // and/or, which are also associative and commutative, but have low latencies).
-bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst) const {
+bool PPCInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                               bool Invert) const {
+  if (Invert)
+    return false;
   switch (Inst.getOpcode()) {
   // Floating point:
   // FP Add:
@@ -310,7 +315,7 @@ static const uint16_t FMAOpIdxInfo[][6] = {
 // Check if an opcode is a FMA instruction. If it is, return the index in array
 // FMAOpIdxInfo. Otherwise, return -1.
 int16_t PPCInstrInfo::getFMAOpIdxInfo(unsigned Opcode) const {
-  for (unsigned I = 0; I < array_lengthof(FMAOpIdxInfo); I++)
+  for (unsigned I = 0; I < std::size(FMAOpIdxInfo); I++)
     if (FMAOpIdxInfo[I][InfoArrayIdxFMAInst] == Opcode)
       return I;
   return -1;
@@ -373,7 +378,7 @@ bool PPCInstrInfo::getFMAPatterns(
 
   auto IsAllOpsVirtualReg = [](const MachineInstr &Instr) {
     for (const auto &MO : Instr.explicit_operands())
-      if (!(MO.isReg() && Register::isVirtualRegister(MO.getReg())))
+      if (!(MO.isReg() && MO.getReg().isVirtual()))
         return false;
     return true;
   };
@@ -475,8 +480,7 @@ bool PPCInstrInfo::getFMAPatterns(
         IsUsedOnceR = true;
       }
 
-      if (!Register::isVirtualRegister(MULRegL) ||
-          !Register::isVirtualRegister(MULRegR))
+      if (!MULRegL.isVirtual() || !MULRegR.isVirtual())
         return false;
 
       MULInstrL = MRI->getVRegDef(MULRegL);
@@ -611,7 +615,7 @@ void PPCInstrInfo::finalizeInsInstrs(
 }
 
 bool PPCInstrInfo::shouldReduceRegisterPressure(
-    MachineBasicBlock *MBB, RegisterClassInfo *RegClassInfo) const {
+    const MachineBasicBlock *MBB, const RegisterClassInfo *RegClassInfo) const {
 
   if (!EnableFMARegPressureReduction)
     return false;
@@ -633,10 +637,11 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
     return false;
 
   const TargetRegisterInfo *TRI = &getRegisterInfo();
-  MachineFunction *MF = MBB->getParent();
-  MachineRegisterInfo *MRI = &MF->getRegInfo();
+  const MachineFunction *MF = MBB->getParent();
+  const MachineRegisterInfo *MRI = &MF->getRegInfo();
 
-  auto GetMBBPressure = [&](MachineBasicBlock *MBB) -> std::vector<unsigned> {
+  auto GetMBBPressure =
+      [&](const MachineBasicBlock *MBB) -> std::vector<unsigned> {
     RegionPressure Pressure;
     RegPressureTracker RPTracker(Pressure);
 
@@ -644,10 +649,7 @@ bool PPCInstrInfo::shouldReduceRegisterPressure(
     RPTracker.init(MBB->getParent(), RegClassInfo, nullptr, MBB, MBB->end(),
                    /*TrackLaneMasks*/ false, /*TrackUntiedDefs=*/true);
 
-    for (MachineBasicBlock::iterator MII = MBB->instr_end(),
-                                     MIE = MBB->instr_begin();
-         MII != MIE; --MII) {
-      MachineInstr &MI = *std::prev(MII);
+    for (const auto &MI : reverse(*MBB)) {
       if (MI.isDebugValue() || MI.isDebugLabel())
         continue;
       RegisterOperands RegOpers;
@@ -745,7 +747,7 @@ PPCInstrInfo::getConstantFromConstantPool(MachineInstr *I) const {
     if (!MO.isReg())
       continue;
     Register Reg = MO.getReg();
-    if (Reg == 0 || !Register::isVirtualRegister(Reg))
+    if (Reg == 0 || !Reg.isVirtual())
       continue;
     // Find the toc address.
     MachineInstr *DefMI = MRI->getVRegDef(Reg);
@@ -1068,11 +1070,7 @@ bool PPCInstrInfo::isCoalescableExtInstr(const MachineInstr &MI,
 
 unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
                                            int &FrameIndex) const {
-  unsigned Opcode = MI.getOpcode();
-  const unsigned *OpcodesForSpill = getLoadOpcodesForSpillArray();
-  const unsigned *End = OpcodesForSpill + SOK_LastOpcodeSpill;
-
-  if (End != std::find(OpcodesForSpill, End, Opcode)) {
+  if (llvm::is_contained(getLoadOpcodesForSpillArray(), MI.getOpcode())) {
     // Check for the operands added by addFrameReference (the immediate is the
     // offset which defaults to 0).
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
@@ -1086,8 +1084,8 @@ unsigned PPCInstrInfo::isLoadFromStackSlot(const MachineInstr &MI,
 
 // For opcodes with the ReMaterializable flag set, this function is called to
 // verify the instruction is really rematable.
-bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
-                                                     AliasAnalysis *AA) const {
+bool PPCInstrInfo::isReallyTriviallyReMaterializable(
+    const MachineInstr &MI) const {
   switch (MI.getOpcode()) {
   default:
     // This function should only be called for opcodes with the ReMaterializable
@@ -1120,6 +1118,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
   case PPC::CRSET:
   case PPC::CRUNSET:
   case PPC::XXSETACCZ:
+  case PPC::XXSETACCZW:
     return true;
   }
   return false;
@@ -1127,11 +1126,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(const MachineInstr &MI,
 
 unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,
                                           int &FrameIndex) const {
-  unsigned Opcode = MI.getOpcode();
-  const unsigned *OpcodesForSpill = getStoreOpcodesForSpillArray();
-  const unsigned *End = OpcodesForSpill + SOK_LastOpcodeSpill;
-
-  if (End != std::find(OpcodesForSpill, End, Opcode)) {
+  if (llvm::is_contained(getStoreOpcodesForSpillArray(), MI.getOpcode())) {
     if (MI.getOperand(1).isImm() && !MI.getOperand(1).getImm() &&
         MI.getOperand(2).isFI()) {
       FrameIndex = MI.getOperand(2).getIndex();
@@ -1545,7 +1540,7 @@ bool PPCInstrInfo::canInsertSelect(const MachineBasicBlock &MBB,
 
   // If the conditional branch uses a physical register, then it cannot be
   // turned into a select.
-  if (Register::isPhysicalRegister(Cond[1].getReg()))
+  if (Cond[1].getReg().isPhysical())
     return false;
 
   // Check register classes.
@@ -1905,6 +1900,10 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
     assert(Subtarget.pairedVectorMemops() &&
            "Register unexpected when paired memops are disabled.");
     OpcodeIndex = SOK_UAccumulatorSpill;
+  } else if (PPC::WACCRCRegClass.hasSubClassEq(RC)) {
+    assert(Subtarget.pairedVectorMemops() &&
+           "Register unexpected when paired memops are disabled.");
+    OpcodeIndex = SOK_WAccumulatorSpill;
   } else if (PPC::VSRpRCRegClass.hasSubClassEq(RC)) {
     assert(Subtarget.pairedVectorMemops() &&
            "Register unexpected when paired memops are disabled.");
@@ -1919,13 +1918,13 @@ unsigned PPCInstrInfo::getSpillIndex(const TargetRegisterClass *RC) const {
 
 unsigned
 PPCInstrInfo::getStoreOpcodeForSpill(const TargetRegisterClass *RC) const {
-  const unsigned *OpcodesForSpill = getStoreOpcodesForSpillArray();
+  ArrayRef<unsigned> OpcodesForSpill = getStoreOpcodesForSpillArray();
   return OpcodesForSpill[getSpillIndex(RC)];
 }
 
 unsigned
 PPCInstrInfo::getLoadOpcodeForSpill(const TargetRegisterClass *RC) const {
-  const unsigned *OpcodesForSpill = getLoadOpcodesForSpillArray();
+  ArrayRef<unsigned> OpcodesForSpill = getLoadOpcodesForSpillArray();
   return OpcodesForSpill[getSpillIndex(RC)];
 }
 
@@ -1971,12 +1970,10 @@ void PPCInstrInfo::storeRegToStackSlotNoUpd(
   NewMIs.back()->addMemOperand(MF, MMO);
 }
 
-void PPCInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
-                                       MachineBasicBlock::iterator MI,
-                                       Register SrcReg, bool isKill,
-                                       int FrameIdx,
-                                       const TargetRegisterClass *RC,
-                                       const TargetRegisterInfo *TRI) const {
+void PPCInstrInfo::storeRegToStackSlot(
+    MachineBasicBlock &MBB, MachineBasicBlock::iterator MI, Register SrcReg,
+    bool isKill, int FrameIdx, const TargetRegisterClass *RC,
+    const TargetRegisterInfo *TRI, Register VReg) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -2035,7 +2032,8 @@ void PPCInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MI,
                                         Register DestReg, int FrameIdx,
                                         const TargetRegisterClass *RC,
-                                        const TargetRegisterInfo *TRI) const {
+                                        const TargetRegisterInfo *TRI,
+                                        Register VReg) const {
   // We need to avoid a situation in which the value from a VRRC register is
   // spilled using an Altivec instruction and reloaded into a VSRC register
   // using a VSX instruction. The issue with this is that the VSX
@@ -2094,7 +2092,7 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
   assert(UseIdx < UseMI.getNumOperands() && "Cannot find Reg in UseMI");
   assert(UseIdx < UseMCID.getNumOperands() && "No operand description for Reg");
 
-  const MCOperandInfo *UseInfo = &UseMCID.OpInfo[UseIdx];
+  const MCOperandInfo *UseInfo = &UseMCID.operands()[UseIdx];
 
   // We can fold the zero if this register requires a GPRC_NOR0/G8RC_NOX0
   // register (which might also be specified as a pointer class kind).
@@ -2122,7 +2120,11 @@ bool PPCInstrInfo::onlyFoldImmediate(MachineInstr &UseMI, MachineInstr &DefMI,
               PPC::ZERO8 : PPC::ZERO;
   }
 
+  LLVM_DEBUG(dbgs() << "Folded immediate zero for: ");
+  LLVM_DEBUG(UseMI.dump());
   UseMI.getOperand(UseIdx).setReg(ZeroReg);
+  LLVM_DEBUG(dbgs() << "Into: ");
+  LLVM_DEBUG(UseMI.dump());
   return true;
 }
 
@@ -2331,7 +2333,7 @@ bool PPCInstrInfo::ClobbersPredicate(MachineInstr &MI,
 
   bool Found = false;
   for (const MachineOperand &MO : MI.operands()) {
-    for (unsigned c = 0; c < array_lengthof(RCs) && !Found; ++c) {
+    for (unsigned c = 0; c < std::size(RCs) && !Found; ++c) {
       const TargetRegisterClass *RC = RCs[c];
       if (MO.isReg()) {
         if (MO.isDef() && RC->contains(MO.getReg())) {
@@ -2423,15 +2425,15 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   bool noSub = false;
   if (isPPC64) {
     if (is32BitSignedCompare) {
-      // We can perform this optimization only if MI is sign-extending.
-      if (isSignExtended(*MI))
+      // We can perform this optimization only if SrcReg is sign-extending.
+      if (isSignExtended(SrcReg, MRI))
         noSub = true;
       else
         return false;
     } else if (is32BitUnsignedCompare) {
-      // We can perform this optimization, equality only, if MI is
+      // We can perform this optimization, equality only, if SrcReg is
       // zero-extending.
-      if (isZeroExtended(*MI)) {
+      if (isZeroExtended(SrcReg, MRI)) {
         noSub = true;
         equalityOnly = true;
       } else
@@ -2537,7 +2539,12 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     else
       return false;
 
-    PredsToUpdate.push_back(std::make_pair(&(UseMI->getOperand(0)), Pred));
+    // Convert the comparison and its user to a compare against zero with the
+    // appropriate predicate on the branch. Zero comparison might provide
+    // optimization opportunities post-RA (see optimization in
+    // PPCPreEmitPeephole.cpp).
+    UseMI->getOperand(0).setImm(Pred);
+    CmpInstr.getOperand(2).setImm(0);
   }
 
   // Search for Sub.
@@ -2733,18 +2740,18 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
     const MCInstrDesc &NewDesc = get(NewOpC);
     MI->setDesc(NewDesc);
 
-    if (NewDesc.ImplicitDefs)
-      for (const MCPhysReg *ImpDefs = NewDesc.getImplicitDefs();
-           *ImpDefs; ++ImpDefs)
-        if (!MI->definesRegister(*ImpDefs))
-          MI->addOperand(*MI->getParent()->getParent(),
-                         MachineOperand::CreateReg(*ImpDefs, true, true));
-    if (NewDesc.ImplicitUses)
-      for (const MCPhysReg *ImpUses = NewDesc.getImplicitUses();
-           *ImpUses; ++ImpUses)
-        if (!MI->readsRegister(*ImpUses))
-          MI->addOperand(*MI->getParent()->getParent(),
-                         MachineOperand::CreateReg(*ImpUses, false, true));
+    for (MCPhysReg ImpDef : NewDesc.implicit_defs()) {
+      if (!MI->definesRegister(ImpDef)) {
+        MI->addOperand(*MI->getParent()->getParent(),
+                       MachineOperand::CreateReg(ImpDef, true, true));
+      }
+    }
+    for (MCPhysReg ImpUse : NewDesc.implicit_uses()) {
+      if (!MI->readsRegister(ImpUse)) {
+        MI->addOperand(*MI->getParent()->getParent(),
+                       MachineOperand::CreateReg(ImpUse, false, true));
+      }
+    }
   }
   assert(MI->definesRegister(PPC::CR0) &&
          "Record-form instruction does not define cr0?");
@@ -2758,6 +2765,85 @@ bool PPCInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   for (unsigned i = 0, e = SubRegsToUpdate.size(); i < e; i++)
     SubRegsToUpdate[i].first->setSubReg(SubRegsToUpdate[i].second);
 
+  return true;
+}
+
+bool PPCInstrInfo::optimizeCmpPostRA(MachineInstr &CmpMI) const {
+  MachineRegisterInfo *MRI = &CmpMI.getParent()->getParent()->getRegInfo();
+  if (MRI->isSSA())
+    return false;
+
+  Register SrcReg, SrcReg2;
+  int64_t CmpMask, CmpValue;
+  if (!analyzeCompare(CmpMI, SrcReg, SrcReg2, CmpMask, CmpValue))
+    return false;
+
+  // Try to optimize the comparison against 0.
+  if (CmpValue || !CmpMask || SrcReg2)
+    return false;
+
+  // The record forms set the condition register based on a signed comparison
+  // with zero (see comments in optimizeCompareInstr). Since we can't do the
+  // equality checks in post-RA, we are more restricted on a unsigned
+  // comparison.
+  unsigned Opc = CmpMI.getOpcode();
+  if (Opc == PPC::CMPLWI || Opc == PPC::CMPLDI)
+    return false;
+
+  // The record forms are always based on a 64-bit comparison on PPC64
+  // (similary, a 32-bit comparison on PPC32), while the CMPWI is a 32-bit
+  // comparison. Since we can't do the equality checks in post-RA, we bail out
+  // the case.
+  if (Subtarget.isPPC64() && Opc == PPC::CMPWI)
+    return false;
+
+  // CmpMI can't be deleted if it has implicit def.
+  if (CmpMI.hasImplicitDef())
+    return false;
+
+  bool SrcRegHasOtherUse = false;
+  MachineInstr *SrcMI = getDefMIPostRA(SrcReg, CmpMI, SrcRegHasOtherUse);
+  if (!SrcMI || !SrcMI->definesRegister(SrcReg))
+    return false;
+
+  MachineOperand RegMO = CmpMI.getOperand(0);
+  Register CRReg = RegMO.getReg();
+  if (CRReg != PPC::CR0)
+    return false;
+
+  // Make sure there is no def/use of CRReg between SrcMI and CmpMI.
+  bool SeenUseOfCRReg = false;
+  bool IsCRRegKilled = false;
+  if (!isRegElgibleForForwarding(RegMO, *SrcMI, CmpMI, false, IsCRRegKilled,
+                                 SeenUseOfCRReg) ||
+      SrcMI->definesRegister(CRReg) || SeenUseOfCRReg)
+    return false;
+
+  int SrcMIOpc = SrcMI->getOpcode();
+  int NewOpC = PPC::getRecordFormOpcode(SrcMIOpc);
+  if (NewOpC == -1)
+    return false;
+
+  LLVM_DEBUG(dbgs() << "Replace Instr: ");
+  LLVM_DEBUG(SrcMI->dump());
+
+  const MCInstrDesc &NewDesc = get(NewOpC);
+  SrcMI->setDesc(NewDesc);
+  MachineInstrBuilder(*SrcMI->getParent()->getParent(), SrcMI)
+      .addReg(CRReg, RegState::ImplicitDefine);
+  SrcMI->clearRegisterDeads(CRReg);
+
+  // Fix up killed/dead flag for SrcReg after transformation.
+  if (SrcRegHasOtherUse || CmpMI.getOperand(1).isKill())
+    fixupIsDeadOrKill(SrcMI, &CmpMI, SrcReg);
+
+  assert(SrcMI->definesRegister(PPC::CR0) &&
+         "Record-form instruction does not define cr0?");
+
+  LLVM_DEBUG(dbgs() << "with: ");
+  LLVM_DEBUG(SrcMI->dump());
+  LLVM_DEBUG(dbgs() << "Delete dead instruction: ");
+  LLVM_DEBUG(CmpMI.dump());
   return true;
 }
 
@@ -2906,7 +2992,7 @@ PPCInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_TLSLD_LO, "ppc-tlsld-lo"},
       {MO_TOC_LO, "ppc-toc-lo"},
       {MO_TLS, "ppc-tls"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 ArrayRef<std::pair<unsigned, const char *>>
@@ -2925,7 +3011,7 @@ PPCInstrInfo::getSerializableBitmaskMachineOperandTargetFlags() const {
       {MO_GOT_TLSGD_PCREL_FLAG, "ppc-got-tlsgd-pcrel"},
       {MO_GOT_TLSLD_PCREL_FLAG, "ppc-got-tlsld-pcrel"},
       {MO_GOT_TPREL_PCREL_FLAG, "ppc-got-tprel-pcrel"}};
-  return makeArrayRef(TargetFlags);
+  return ArrayRef(TargetFlags);
 }
 
 // Expand VSX Memory Pseudo instruction to either a VSX or a FP instruction.
@@ -3022,7 +3108,7 @@ bool PPCInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     // BUILD_UACC is expanded to 4 copies of the underlying vsx registers.
     // So after building the 4 copies, we can replace the BUILD_UACC instruction
     // with a NOP.
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   }
   case PPC::KILL_PAIR: {
     MI.setDesc(get(PPC::UNENCODED_NOP));
@@ -3291,15 +3377,17 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       if (!MI.getOperand(i).isReg())
         continue;
       Register Reg = MI.getOperand(i).getReg();
-      if (!Register::isVirtualRegister(Reg))
+      if (!Reg.isVirtual())
         continue;
       Register TrueReg = TRI->lookThruCopyLike(Reg, MRI);
-      if (Register::isVirtualRegister(TrueReg)) {
-        DefMI = MRI->getVRegDef(TrueReg);
-        if (DefMI->getOpcode() == PPC::LI || DefMI->getOpcode() == PPC::LI8 ||
-            DefMI->getOpcode() == PPC::ADDI ||
-            DefMI->getOpcode() == PPC::ADDI8) {
+      if (TrueReg.isVirtual()) {
+        MachineInstr *DefMIForTrueReg = MRI->getVRegDef(TrueReg);
+        if (DefMIForTrueReg->getOpcode() == PPC::LI ||
+            DefMIForTrueReg->getOpcode() == PPC::LI8 ||
+            DefMIForTrueReg->getOpcode() == PPC::ADDI ||
+            DefMIForTrueReg->getOpcode() == PPC::ADDI8) {
           OpNoForForwarding = i;
+          DefMI = DefMIForTrueReg;
           // The ADDI and LI operand maybe exist in one instruction at same
           // time. we prefer to fold LI operand as LI only has one Imm operand
           // and is more possible to be converted. So if current DefMI is
@@ -3339,7 +3427,7 @@ MachineInstr *PPCInstrInfo::getForwardingDefMI(
       if (MO.isReg() && MO.isUse() && !MO.isImplicit()) {
         Register Reg = MI.getOperand(i).getReg();
         // If we see another use of this reg between the def and the MI,
-        // we want to flat it so the def isn't deleted.
+        // we want to flag it so the def isn't deleted.
         MachineInstr *DefMI = getDefMIPostRA(Reg, MI, SeenIntermediateUse);
         if (DefMI) {
           // Is this register defined by some form of add-immediate (including
@@ -3366,15 +3454,17 @@ unsigned PPCInstrInfo::getSpillTarget() const {
   // With P10, we may need to spill paired vector registers or accumulator
   // registers. MMA implies paired vectors, so we can just check that.
   bool IsP10Variant = Subtarget.isISA3_1() || Subtarget.pairedVectorMemops();
-  return IsP10Variant ? 2 : Subtarget.hasP9Vector() ? 1 : 0;
+  return Subtarget.isISAFuture() ? 3 : IsP10Variant ?
+                                   2 : Subtarget.hasP9Vector() ?
+                                   1 : 0;
 }
 
-const unsigned *PPCInstrInfo::getStoreOpcodesForSpillArray() const {
-  return StoreSpillOpcodesArray[getSpillTarget()];
+ArrayRef<unsigned> PPCInstrInfo::getStoreOpcodesForSpillArray() const {
+  return {StoreSpillOpcodesArray[getSpillTarget()], SOK_LastOpcodeSpill};
 }
 
-const unsigned *PPCInstrInfo::getLoadOpcodesForSpillArray() const {
-  return LoadSpillOpcodesArray[getSpillTarget()];
+ArrayRef<unsigned> PPCInstrInfo::getLoadOpcodesForSpillArray() const {
+  return {LoadSpillOpcodesArray[getSpillTarget()], SOK_LastOpcodeSpill};
 }
 
 void PPCInstrInfo::fixupIsDeadOrKill(MachineInstr *StartMI, MachineInstr *EndMI,
@@ -3761,7 +3851,7 @@ bool PPCInstrInfo::combineRLWINM(MachineInstr &MI,
                                  MachineInstr **ToErase) const {
   MachineRegisterInfo *MRI = &MI.getParent()->getParent()->getRegInfo();
   Register FoldingReg = MI.getOperand(1).getReg();
-  if (!Register::isVirtualRegister(FoldingReg))
+  if (!FoldingReg.isVirtual())
     return false;
   MachineInstr *SrcMI = MRI->getVRegDef(FoldingReg);
   if (SrcMI->getOpcode() != PPC::RLWINM &&
@@ -4259,7 +4349,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFLOADf32:
       III.ImmOpcode = PPC::DFLOADf32;
       break;
@@ -4273,7 +4363,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFLOADf64:
       III.ImmOpcode = PPC::DFLOADf64;
       break;
@@ -4291,7 +4381,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFSTOREf32:
       III.ImmOpcode = PPC::DFSTOREf32;
       break;
@@ -4305,7 +4395,7 @@ bool PPCInstrInfo::instrHasImmForm(unsigned Opc, bool IsVFReg,
         }
         break;
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case PPC::XFSTOREf64:
       III.ImmOpcode = PPC::DFSTOREf64;
       break;
@@ -4420,7 +4510,7 @@ bool PPCInstrInfo::isDefMIElgibleForForwarding(MachineInstr &DefMI,
 bool PPCInstrInfo::isRegElgibleForForwarding(
     const MachineOperand &RegMO, const MachineInstr &DefMI,
     const MachineInstr &MI, bool KillDefMI,
-    bool &IsFwdFeederRegKilled) const {
+    bool &IsFwdFeederRegKilled, bool &SeenIntermediateUse) const {
   // x = addi y, imm
   // ...
   // z = lfdx 0, x   -> z = lfd imm(y)
@@ -4442,6 +4532,8 @@ bool PPCInstrInfo::isRegElgibleForForwarding(
       return false;
     else if (It->killsRegister(Reg, &getRegisterInfo()) && (&*It) != &DefMI)
       IsFwdFeederRegKilled = true;
+    if (It->readsRegister(Reg, &getRegisterInfo()) && (&*It) != &DefMI)
+      SeenIntermediateUse = true;
     // Made it to DefMI without encountering a clobber.
     if ((&*It) == &DefMI)
       break;
@@ -4723,7 +4815,7 @@ bool PPCInstrInfo::simplifyToLI(MachineInstr &MI, MachineInstr &DefMI,
       }
     }
 
-    LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+    LLVM_DEBUG(dbgs() << "Replacing constant instruction:\n");
     LLVM_DEBUG(MI.dump());
     LLVM_DEBUG(dbgs() << "Fed by:\n");
     LLVM_DEBUG(DefMI.dump());
@@ -4809,7 +4901,7 @@ bool PPCInstrInfo::transformToNewImmFormFedByAdd(
     ForwardKilledOperandReg = MI.getOperand(III.OpNoForForwarding).getReg();
 
   // Do the transform
-  LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+  LLVM_DEBUG(dbgs() << "Replacing existing reg+imm instruction:\n");
   LLVM_DEBUG(MI.dump());
   LLVM_DEBUG(dbgs() << "Fed by:\n");
   LLVM_DEBUG(DefMI.dump());
@@ -4881,9 +4973,10 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(
     return false;
 
   bool IsFwdFeederRegKilled = false;
+  bool SeenIntermediateUse = false;
   // Check if the RegMO can be forwarded to MI.
   if (!isRegElgibleForForwarding(*RegMO, DefMI, MI, KillDefMI,
-                                 IsFwdFeederRegKilled))
+                                 IsFwdFeederRegKilled, SeenIntermediateUse))
     return false;
 
   // Get killed info in case fixup needed after transformation.
@@ -4896,7 +4989,7 @@ bool PPCInstrInfo::transformToImmFormFedByAdd(
   // We know that, the MI and DefMI both meet the pattern, and
   // the Imm also meet the requirement with the new Imm-form.
   // It is safe to do the transformation now.
-  LLVM_DEBUG(dbgs() << "Replacing instruction:\n");
+  LLVM_DEBUG(dbgs() << "Replacing indexed instruction:\n");
   LLVM_DEBUG(MI.dump());
   LLVM_DEBUG(dbgs() << "Fed by:\n");
   LLVM_DEBUG(DefMI.dump());
@@ -5031,6 +5124,10 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
   bool RightShift = Opc == PPC::SRW || Opc == PPC::SRW_rec || Opc == PPC::SRD ||
                     Opc == PPC::SRD_rec;
 
+  LLVM_DEBUG(dbgs() << "Replacing reg+reg instruction: ");
+  LLVM_DEBUG(MI.dump());
+  LLVM_DEBUG(dbgs() << "Fed by load-immediate: ");
+  LLVM_DEBUG(DefMI.dump());
   MI.setDesc(get(III.ImmOpcode));
   if (ConstantOpNo == III.OpNoForForwarding) {
     // Converting shifts to immediate form is a bit tricky since they may do
@@ -5099,7 +5196,7 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
       // If operand at III.ZeroIsSpecialNew is physical reg(eg: ZERO/ZERO8), no
       // need to fix up register class.
       Register RegToModify = MI.getOperand(III.ZeroIsSpecialNew).getReg();
-      if (Register::isVirtualRegister(RegToModify)) {
+      if (RegToModify.isVirtual()) {
         const TargetRegisterClass *NewRC =
           MRI.getRegClass(RegToModify)->hasSuperClassEq(&PPC::GPRCRegClass) ?
           &PPC::GPRC_and_GPRC_NOR0RegClass : &PPC::G8RC_and_G8RC_NOX0RegClass;
@@ -5114,6 +5211,10 @@ bool PPCInstrInfo::transformToImmFormFedByLI(MachineInstr &MI,
   // y = XOP reg, ForwardKilledOperandReg(killed)
   if (ForwardKilledOperandReg != ~0U)
     fixupIsDeadOrKill(&DefMI, &MI, ForwardKilledOperandReg);
+
+  LLVM_DEBUG(dbgs() << "With: ");
+  LLVM_DEBUG(MI.dump());
+  LLVM_DEBUG(dbgs() << "\n");
   return true;
 }
 
@@ -5128,51 +5229,87 @@ int PPCInstrInfo::getRecordFormOpcode(unsigned Opcode) {
   return PPC::getRecordFormOpcode(Opcode);
 }
 
-// This function returns true if the machine instruction
-// always outputs a value by sign-extending a 32 bit value,
-// i.e. 0 to 31-th bits are same as 32-th bit.
-static bool isSignExtendingOp(const MachineInstr &MI) {
-  int Opcode = MI.getOpcode();
-  if (Opcode == PPC::LI || Opcode == PPC::LI8 || Opcode == PPC::LIS ||
-      Opcode == PPC::LIS8 || Opcode == PPC::SRAW || Opcode == PPC::SRAW_rec ||
-      Opcode == PPC::SRAWI || Opcode == PPC::SRAWI_rec || Opcode == PPC::LWA ||
-      Opcode == PPC::LWAX || Opcode == PPC::LWA_32 || Opcode == PPC::LWAX_32 ||
-      Opcode == PPC::LHA || Opcode == PPC::LHAX || Opcode == PPC::LHA8 ||
-      Opcode == PPC::LHAX8 || Opcode == PPC::LBZ || Opcode == PPC::LBZX ||
-      Opcode == PPC::LBZ8 || Opcode == PPC::LBZX8 || Opcode == PPC::LBZU ||
-      Opcode == PPC::LBZUX || Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8 ||
-      Opcode == PPC::LHZ || Opcode == PPC::LHZX || Opcode == PPC::LHZ8 ||
-      Opcode == PPC::LHZX8 || Opcode == PPC::LHZU || Opcode == PPC::LHZUX ||
-      Opcode == PPC::LHZU8 || Opcode == PPC::LHZUX8 || Opcode == PPC::EXTSB ||
-      Opcode == PPC::EXTSB_rec || Opcode == PPC::EXTSH ||
-      Opcode == PPC::EXTSH_rec || Opcode == PPC::EXTSB8 ||
-      Opcode == PPC::EXTSH8 || Opcode == PPC::EXTSW ||
-      Opcode == PPC::EXTSW_rec || Opcode == PPC::SETB || Opcode == PPC::SETB8 ||
-      Opcode == PPC::EXTSH8_32_64 || Opcode == PPC::EXTSW_32_64 ||
-      Opcode == PPC::EXTSB8_32_64)
+static bool isOpZeroOfSubwordPreincLoad(int Opcode) {
+  return (Opcode == PPC::LBZU || Opcode == PPC::LBZUX || Opcode == PPC::LBZU8 ||
+          Opcode == PPC::LBZUX8 || Opcode == PPC::LHZU ||
+          Opcode == PPC::LHZUX || Opcode == PPC::LHZU8 ||
+          Opcode == PPC::LHZUX8);
+}
+
+// This function checks for sign extension from 32 bits to 64 bits.
+static bool definedBySignExtendingOp(const unsigned Reg,
+                                     const MachineRegisterInfo *MRI) {
+  if (!Register::isVirtualRegister(Reg))
+    return false;
+
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return false;
+
+  int Opcode = MI->getOpcode();
+  const PPCInstrInfo *TII =
+      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
+  if (TII->isSExt32To64(Opcode))
     return true;
 
-  if (Opcode == PPC::RLDICL && MI.getOperand(3).getImm() >= 33)
+  // The first def of LBZU/LHZU is sign extended.
+  if (isOpZeroOfSubwordPreincLoad(Opcode) && MI->getOperand(0).getReg() == Reg)
     return true;
 
+  // RLDICL generates sign-extended output if it clears at least
+  // 33 bits from the left (MSB).
+  if (Opcode == PPC::RLDICL && MI->getOperand(3).getImm() >= 33)
+    return true;
+
+  // If at least one bit from left in a lower word is masked out,
+  // all of 0 to 32-th bits of the output are cleared.
+  // Hence the output is already sign extended.
   if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINM_rec ||
        Opcode == PPC::RLWNM || Opcode == PPC::RLWNM_rec) &&
-      MI.getOperand(3).getImm() > 0 &&
-      MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
+      MI->getOperand(3).getImm() > 0 &&
+      MI->getOperand(3).getImm() <= MI->getOperand(4).getImm())
     return true;
+
+  // If the most significant bit of immediate in ANDIS is zero,
+  // all of 0 to 32-th bits are cleared.
+  if (Opcode == PPC::ANDIS_rec || Opcode == PPC::ANDIS8_rec) {
+    uint16_t Imm = MI->getOperand(2).getImm();
+    if ((Imm & 0x8000) == 0)
+      return true;
+  }
 
   return false;
 }
 
-// This function returns true if the machine instruction
-// always outputs zeros in higher 32 bits.
-static bool isZeroExtendingOp(const MachineInstr &MI) {
-  int Opcode = MI.getOpcode();
+// This function checks the machine instruction that defines the input register
+// Reg. If that machine instruction always outputs a value that has only zeros
+// in the higher 32 bits then this function will return true.
+static bool definedByZeroExtendingOp(const unsigned Reg,
+                                     const MachineRegisterInfo *MRI) {
+  if (!Register::isVirtualRegister(Reg))
+    return false;
+
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return false;
+
+  int Opcode = MI->getOpcode();
+  const PPCInstrInfo *TII =
+      MI->getMF()->getSubtarget<PPCSubtarget>().getInstrInfo();
+  if (TII->isZExt32To64(Opcode))
+    return true;
+
+  // The first def of LBZU/LHZU/LWZU are zero extended.
+  if ((isOpZeroOfSubwordPreincLoad(Opcode) || Opcode == PPC::LWZU ||
+       Opcode == PPC::LWZUX || Opcode == PPC::LWZU8 || Opcode == PPC::LWZUX8) &&
+      MI->getOperand(0).getReg() == Reg)
+    return true;
+
   // The 16-bit immediate is sign-extended in li/lis.
   // If the most significant bit is zero, all higher bits are zero.
   if (Opcode == PPC::LI  || Opcode == PPC::LI8 ||
       Opcode == PPC::LIS || Opcode == PPC::LIS8) {
-    int64_t Imm = MI.getOperand(1).getImm();
+    int64_t Imm = MI->getOperand(1).getImm();
     if (((uint64_t)Imm & ~0x7FFFuLL) == 0)
       return true;
   }
@@ -5182,44 +5319,18 @@ static bool isZeroExtendingOp(const MachineInstr &MI) {
   if ((Opcode == PPC::RLDICL || Opcode == PPC::RLDICL_rec ||
        Opcode == PPC::RLDCL || Opcode == PPC::RLDCL_rec ||
        Opcode == PPC::RLDICL_32_64) &&
-      MI.getOperand(3).getImm() >= 32)
+      MI->getOperand(3).getImm() >= 32)
     return true;
 
   if ((Opcode == PPC::RLDIC || Opcode == PPC::RLDIC_rec) &&
-      MI.getOperand(3).getImm() >= 32 &&
-      MI.getOperand(3).getImm() <= 63 - MI.getOperand(2).getImm())
+      MI->getOperand(3).getImm() >= 32 &&
+      MI->getOperand(3).getImm() <= 63 - MI->getOperand(2).getImm())
     return true;
 
   if ((Opcode == PPC::RLWINM || Opcode == PPC::RLWINM_rec ||
        Opcode == PPC::RLWNM || Opcode == PPC::RLWNM_rec ||
        Opcode == PPC::RLWINM8 || Opcode == PPC::RLWNM8) &&
-      MI.getOperand(3).getImm() <= MI.getOperand(4).getImm())
-    return true;
-
-  // There are other instructions that clear higher 32-bits.
-  if (Opcode == PPC::CNTLZW || Opcode == PPC::CNTLZW_rec ||
-      Opcode == PPC::CNTTZW || Opcode == PPC::CNTTZW_rec ||
-      Opcode == PPC::CNTLZW8 || Opcode == PPC::CNTTZW8 ||
-      Opcode == PPC::CNTLZD || Opcode == PPC::CNTLZD_rec ||
-      Opcode == PPC::CNTTZD || Opcode == PPC::CNTTZD_rec ||
-      Opcode == PPC::POPCNTD || Opcode == PPC::POPCNTW || Opcode == PPC::SLW ||
-      Opcode == PPC::SLW_rec || Opcode == PPC::SRW || Opcode == PPC::SRW_rec ||
-      Opcode == PPC::SLW8 || Opcode == PPC::SRW8 || Opcode == PPC::SLWI ||
-      Opcode == PPC::SLWI_rec || Opcode == PPC::SRWI ||
-      Opcode == PPC::SRWI_rec || Opcode == PPC::LWZ || Opcode == PPC::LWZX ||
-      Opcode == PPC::LWZU || Opcode == PPC::LWZUX || Opcode == PPC::LWBRX ||
-      Opcode == PPC::LHBRX || Opcode == PPC::LHZ || Opcode == PPC::LHZX ||
-      Opcode == PPC::LHZU || Opcode == PPC::LHZUX || Opcode == PPC::LBZ ||
-      Opcode == PPC::LBZX || Opcode == PPC::LBZU || Opcode == PPC::LBZUX ||
-      Opcode == PPC::LWZ8 || Opcode == PPC::LWZX8 || Opcode == PPC::LWZU8 ||
-      Opcode == PPC::LWZUX8 || Opcode == PPC::LWBRX8 || Opcode == PPC::LHBRX8 ||
-      Opcode == PPC::LHZ8 || Opcode == PPC::LHZX8 || Opcode == PPC::LHZU8 ||
-      Opcode == PPC::LHZUX8 || Opcode == PPC::LBZ8 || Opcode == PPC::LBZX8 ||
-      Opcode == PPC::LBZU8 || Opcode == PPC::LBZUX8 ||
-      Opcode == PPC::ANDI_rec || Opcode == PPC::ANDIS_rec ||
-      Opcode == PPC::ROTRWI || Opcode == PPC::ROTRWI_rec ||
-      Opcode == PPC::EXTLWI || Opcode == PPC::EXTLWI_rec ||
-      Opcode == PPC::MFVSRWZ)
+      MI->getOperand(3).getImm() <= MI->getOperand(4).getImm())
     return true;
 
   return false;
@@ -5242,98 +5353,126 @@ bool PPCInstrInfo::isTOCSaveMI(const MachineInstr &MI) const {
 
 // We limit the max depth to track incoming values of PHIs or binary ops
 // (e.g. AND) to avoid excessive cost.
-const unsigned MAX_DEPTH = 1;
+const unsigned MAX_BINOP_DEPTH = 1;
+// The isSignOrZeroExtended function is recursive. The parameter BinOpDepth
+// does not count all of the recursions. The parameter BinOpDepth is incremented
+// only when isSignOrZeroExtended calls itself more than once. This is done to
+// prevent expontential recursion. There is no parameter to track linear
+// recursion.
+std::pair<bool, bool>
+PPCInstrInfo::isSignOrZeroExtended(const unsigned Reg,
+                                   const unsigned BinOpDepth,
+                                   const MachineRegisterInfo *MRI) const {
+  if (!Register::isVirtualRegister(Reg))
+    return std::pair<bool, bool>(false, false);
 
-bool
-PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
-                                   const unsigned Depth) const {
-  const MachineFunction *MF = MI.getParent()->getParent();
-  const MachineRegisterInfo *MRI = &MF->getRegInfo();
+  MachineInstr *MI = MRI->getVRegDef(Reg);
+  if (!MI)
+    return std::pair<bool, bool>(false, false);
 
-  // If we know this instruction returns sign- or zero-extended result,
-  // return true.
-  if (SignExt ? isSignExtendingOp(MI):
-                isZeroExtendingOp(MI))
-    return true;
+  bool IsSExt = definedBySignExtendingOp(Reg, MRI);
+  bool IsZExt = definedByZeroExtendingOp(Reg, MRI);
 
-  switch (MI.getOpcode()) {
+  // If we know the instruction always returns sign- and zero-extended result,
+  // return here.
+  if (IsSExt && IsZExt)
+    return std::pair<bool, bool>(IsSExt, IsZExt);
+
+  switch (MI->getOpcode()) {
   case PPC::COPY: {
-    Register SrcReg = MI.getOperand(1).getReg();
+    Register SrcReg = MI->getOperand(1).getReg();
 
     // In both ELFv1 and v2 ABI, method parameters and the return value
     // are sign- or zero-extended.
-    if (MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
-      const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
-      // We check the ZExt/SExt flags for a method parameter.
-      if (MI.getParent()->getBasicBlock() ==
-          &MF->getFunction().getEntryBlock()) {
-        Register VReg = MI.getOperand(0).getReg();
-        if (MF->getRegInfo().isLiveIn(VReg))
-          return SignExt ? FuncInfo->isLiveInSExt(VReg) :
-                           FuncInfo->isLiveInZExt(VReg);
-      }
+    const MachineFunction *MF = MI->getMF();
 
-      // For a method return value, we check the ZExt/SExt flags in attribute.
-      // We assume the following code sequence for method call.
-      //   ADJCALLSTACKDOWN 32, implicit dead %r1, implicit %r1
-      //   BL8_NOP @func,...
-      //   ADJCALLSTACKUP 32, 0, implicit dead %r1, implicit %r1
-      //   %5 = COPY %x3; G8RC:%5
-      if (SrcReg == PPC::X3) {
-        const MachineBasicBlock *MBB = MI.getParent();
-        MachineBasicBlock::const_instr_iterator II =
-          MachineBasicBlock::const_instr_iterator(&MI);
-        if (II != MBB->instr_begin() &&
-            (--II)->getOpcode() == PPC::ADJCALLSTACKUP) {
-          const MachineInstr &CallMI = *(--II);
-          if (CallMI.isCall() && CallMI.getOperand(0).isGlobal()) {
-            const Function *CalleeFn =
-              dyn_cast<Function>(CallMI.getOperand(0).getGlobal());
-            if (!CalleeFn)
-              return false;
-            const IntegerType *IntTy =
-              dyn_cast<IntegerType>(CalleeFn->getReturnType());
-            const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
-            if (IntTy && IntTy->getBitWidth() <= 32)
-              return Attrs.hasAttribute(SignExt ? Attribute::SExt :
-                                                  Attribute::ZExt);
-          }
-        }
+    if (!MF->getSubtarget<PPCSubtarget>().isSVR4ABI()) {
+      // If this is a copy from another register, we recursively check source.
+      auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+      return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                   SrcExt.second || IsZExt);
+    }
+
+    // From here on everything is SVR4ABI
+    const PPCFunctionInfo *FuncInfo = MF->getInfo<PPCFunctionInfo>();
+    // We check the ZExt/SExt flags for a method parameter.
+    if (MI->getParent()->getBasicBlock() ==
+        &MF->getFunction().getEntryBlock()) {
+      Register VReg = MI->getOperand(0).getReg();
+      if (MF->getRegInfo().isLiveIn(VReg)) {
+        IsSExt |= FuncInfo->isLiveInSExt(VReg);
+        IsZExt |= FuncInfo->isLiveInZExt(VReg);
+        return std::pair<bool, bool>(IsSExt, IsZExt);
       }
     }
 
-    // If this is a copy from another register, we recursively check source.
-    if (!Register::isVirtualRegister(SrcReg))
-      return false;
-    const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-    if (SrcMI != nullptr)
-      return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
+    if (SrcReg != PPC::X3) {
+      // If this is a copy from another register, we recursively check source.
+      auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+      return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                   SrcExt.second || IsZExt);
+    }
 
-    return false;
+    // For a method return value, we check the ZExt/SExt flags in attribute.
+    // We assume the following code sequence for method call.
+    //   ADJCALLSTACKDOWN 32, implicit dead %r1, implicit %r1
+    //   BL8_NOP @func,...
+    //   ADJCALLSTACKUP 32, 0, implicit dead %r1, implicit %r1
+    //   %5 = COPY %x3; G8RC:%5
+    const MachineBasicBlock *MBB = MI->getParent();
+    std::pair<bool, bool> IsExtendPair = std::pair<bool, bool>(IsSExt, IsZExt);
+    MachineBasicBlock::const_instr_iterator II =
+        MachineBasicBlock::const_instr_iterator(MI);
+    if (II == MBB->instr_begin() || (--II)->getOpcode() != PPC::ADJCALLSTACKUP)
+      return IsExtendPair;
+
+    const MachineInstr &CallMI = *(--II);
+    if (!CallMI.isCall() || !CallMI.getOperand(0).isGlobal())
+      return IsExtendPair;
+
+    const Function *CalleeFn =
+        dyn_cast_if_present<Function>(CallMI.getOperand(0).getGlobal());
+    if (!CalleeFn)
+      return IsExtendPair;
+    const IntegerType *IntTy = dyn_cast<IntegerType>(CalleeFn->getReturnType());
+    if (IntTy && IntTy->getBitWidth() <= 32) {
+      const AttributeSet &Attrs = CalleeFn->getAttributes().getRetAttrs();
+      IsSExt |= Attrs.hasAttribute(Attribute::SExt);
+      IsZExt |= Attrs.hasAttribute(Attribute::ZExt);
+      return std::pair<bool, bool>(IsSExt, IsZExt);
+    }
+
+    return IsExtendPair;
   }
 
-  case PPC::ANDI_rec:
-  case PPC::ANDIS_rec:
+  // OR, XOR with 16-bit immediate does not change the upper 48 bits.
+  // So, we track the operand register as we do for register copy.
   case PPC::ORI:
-  case PPC::ORIS:
   case PPC::XORI:
-  case PPC::XORIS:
-  case PPC::ANDI8_rec:
-  case PPC::ANDIS8_rec:
   case PPC::ORI8:
-  case PPC::ORIS8:
-  case PPC::XORI8:
-  case PPC::XORIS8: {
-    // logical operation with 16-bit immediate does not change the upper bits.
-    // So, we track the operand register as we do for register copy.
-    Register SrcReg = MI.getOperand(1).getReg();
-    if (!Register::isVirtualRegister(SrcReg))
-      return false;
-    const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-    if (SrcMI != nullptr)
-      return isSignOrZeroExtended(*SrcMI, SignExt, Depth);
+  case PPC::XORI8: {
+    Register SrcReg = MI->getOperand(1).getReg();
+    auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+    return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                 SrcExt.second || IsZExt);
+  }
 
-    return false;
+  // OR, XOR with shifted 16-bit immediate does not change the upper
+  // 32 bits. So, we track the operand register for zero extension.
+  // For sign extension when the MSB of the immediate is zero, we also
+  // track the operand register since the upper 33 bits are unchanged.
+  case PPC::ORIS:
+  case PPC::XORIS:
+  case PPC::ORIS8:
+  case PPC::XORIS8: {
+    Register SrcReg = MI->getOperand(1).getReg();
+    auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth, MRI);
+    uint16_t Imm = MI->getOperand(2).getImm();
+    if (Imm & 0x8000)
+      return std::pair<bool, bool>(false, SrcExt.second || IsZExt);
+    else
+      return std::pair<bool, bool>(SrcExt.first || IsSExt,
+                                   SrcExt.second || IsZExt);
   }
 
   // If all incoming values are sign-/zero-extended,
@@ -5342,31 +5481,29 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
   case PPC::OR8:
   case PPC::ISEL:
   case PPC::PHI: {
-    if (Depth >= MAX_DEPTH)
-      return false;
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      return std::pair<bool, bool>(false, false);
 
     // The input registers for PHI are operand 1, 3, ...
     // The input registers for others are operand 1 and 2.
-    unsigned E = 3, D = 1;
-    if (MI.getOpcode() == PPC::PHI) {
-      E = MI.getNumOperands();
-      D = 2;
+    unsigned OperandEnd = 3, OperandStride = 1;
+    if (MI->getOpcode() == PPC::PHI) {
+      OperandEnd = MI->getNumOperands();
+      OperandStride = 2;
     }
 
-    for (unsigned I = 1; I != E; I += D) {
-      if (MI.getOperand(I).isReg()) {
-        Register SrcReg = MI.getOperand(I).getReg();
-        if (!Register::isVirtualRegister(SrcReg))
-          return false;
-        const MachineInstr *SrcMI = MRI->getVRegDef(SrcReg);
-        if (SrcMI == nullptr ||
-            !isSignOrZeroExtended(*SrcMI, SignExt, Depth + 1))
-          return false;
-      }
-      else
-        return false;
+    IsSExt = true;
+    IsZExt = true;
+    for (unsigned I = 1; I != OperandEnd; I += OperandStride) {
+      if (!MI->getOperand(I).isReg())
+        return std::pair<bool, bool>(false, false);
+
+      Register SrcReg = MI->getOperand(I).getReg();
+      auto SrcExt = isSignOrZeroExtended(SrcReg, BinOpDepth + 1, MRI);
+      IsSExt &= SrcExt.first;
+      IsZExt &= SrcExt.second;
     }
-    return true;
+    return std::pair<bool, bool>(IsSExt, IsZExt);
   }
 
   // If at least one of the incoming values of an AND is zero extended
@@ -5374,35 +5511,21 @@ PPCInstrInfo::isSignOrZeroExtended(const MachineInstr &MI, bool SignExt,
   // are sign-extended then the output is also sign extended.
   case PPC::AND:
   case PPC::AND8: {
-    if (Depth >= MAX_DEPTH)
-       return false;
+    if (BinOpDepth >= MAX_BINOP_DEPTH)
+      return std::pair<bool, bool>(false, false);
 
-    assert(MI.getOperand(1).isReg() && MI.getOperand(2).isReg());
-
-    Register SrcReg1 = MI.getOperand(1).getReg();
-    Register SrcReg2 = MI.getOperand(2).getReg();
-
-    if (!Register::isVirtualRegister(SrcReg1) ||
-        !Register::isVirtualRegister(SrcReg2))
-      return false;
-
-    const MachineInstr *MISrc1 = MRI->getVRegDef(SrcReg1);
-    const MachineInstr *MISrc2 = MRI->getVRegDef(SrcReg2);
-    if (!MISrc1 || !MISrc2)
-        return false;
-
-    if(SignExt)
-        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) &&
-               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
-    else
-        return isSignOrZeroExtended(*MISrc1, SignExt, Depth+1) ||
-               isSignOrZeroExtended(*MISrc2, SignExt, Depth+1);
+    Register SrcReg1 = MI->getOperand(1).getReg();
+    Register SrcReg2 = MI->getOperand(2).getReg();
+    auto Src1Ext = isSignOrZeroExtended(SrcReg1, BinOpDepth + 1, MRI);
+    auto Src2Ext = isSignOrZeroExtended(SrcReg2, BinOpDepth + 1, MRI);
+    return std::pair<bool, bool>(Src1Ext.first && Src2Ext.first,
+                                 Src1Ext.second || Src2Ext.second);
   }
 
   default:
     break;
   }
-  return false;
+  return std::pair<bool, bool>(IsSExt, IsZExt);
 }
 
 bool PPCInstrInfo::isBDNZ(unsigned Opcode) const {
@@ -5435,9 +5558,9 @@ public:
     return MI == EndLoop;
   }
 
-  Optional<bool>
-  createTripCountGreaterCondition(int TC, MachineBasicBlock &MBB,
-                                  SmallVectorImpl<MachineOperand> &Cond) override {
+  std::optional<bool> createTripCountGreaterCondition(
+      int TC, MachineBasicBlock &MBB,
+      SmallVectorImpl<MachineOperand> &Cond) override {
     if (TripCount == -1) {
       // Since BDZ/BDZ8 that we will insert will also decrease the ctr by 1,
       // so we don't need to generate any thing here.

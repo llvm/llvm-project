@@ -1,4 +1,4 @@
-; RUN: opt < %s -jump-threading -S -jump-threading-across-loop-headers | FileCheck %s
+; RUN: opt < %s -passes=jump-threading -S -jump-threading-across-loop-headers | FileCheck %s
 
 ; Make sure we correctly distinguish between %tmp15 and %tmp16 when we clone
 ; body2.

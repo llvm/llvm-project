@@ -5,7 +5,7 @@ static_library("Testing") {
   deps = [
     "//clang/lib/Basic",
     "//llvm/lib/Support",
-    "//llvm/utils/unittest:gtest",
+    "//third-party/unittest:gtest",
   ]
   sources = [
     "CommandLineArgs.cpp",

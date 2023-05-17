@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; END.
 
 define void @main() {
@@ -6,12 +6,12 @@ entry:
 	%tmp.14.i19 = icmp eq i32 0, 2		; <i1> [#uses=1]
 	br i1 %tmp.14.i19, label %endif.1.i20, label %read_min.exit
 endif.1.i20:		; preds = %entry
-	%tmp.9.i.i = icmp eq i8* null, null		; <i1> [#uses=1]
+	%tmp.9.i.i = icmp eq ptr null, null		; <i1> [#uses=1]
 	br i1 %tmp.9.i.i, label %then.i12.i, label %then.i.i
 then.i.i:		; preds = %endif.1.i20
 	ret void
 then.i12.i:		; preds = %endif.1.i20
-	%tmp.9.i4.i = icmp eq i8* null, null		; <i1> [#uses=1]
+	%tmp.9.i4.i = icmp eq ptr null, null		; <i1> [#uses=1]
 	br i1 %tmp.9.i4.i, label %endif.2.i33, label %then.i5.i
 then.i5.i:		; preds = %then.i12.i
 	ret void
@@ -58,7 +58,7 @@ then.2.i:		; preds = %endif.1.i, %then.1.i
 getfree.exit:		; preds = %endif.1.i, %then.1.i
 	ret void
 endif.1:		; preds = %read_min.exit
-	%tmp.27.i = getelementptr i32, i32* null, i32 0		; <i32*> [#uses=0]
+	%tmp.27.i = getelementptr i32, ptr null, i32 0		; <ptr> [#uses=0]
 	br i1 false, label %loopexit.0.i15, label %no_exit.0.i14
 no_exit.0.i14:		; preds = %endif.1
 	ret void

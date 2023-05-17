@@ -17,12 +17,11 @@ entry:
   %0 = alloca %TSb, align 1
   %1 = call swiftcc i1 @f(), !dbg !7
   ; CHECK: DBG_VALUE $rcx, $noreg, !8, !DIExpression(),
-  ; INSTRREF: DBG_VALUE $ecx, $noreg, !8, !DIExpression(),
+  ; INSTRREF: DBG_VALUE_LIST !8, !DIExpression(DW_OP_LLVM_arg, 0), $ecx
   call void @llvm.dbg.value(metadata i1 %1, metadata !8, metadata !DIExpression()), !dbg !7
-  %2 = getelementptr inbounds %TSb, %TSb* %0, i32 0, i32 0, !dbg !7
-  store i1 %1, i1* %2, align 1, !dbg !7
-  %3 = zext i1 %1 to i64, !dbg !7
-  call void asm sideeffect "", "r"(i64 %3), !dbg !7
+  store i1 %1, ptr %0, align 1, !dbg !7
+  %2 = zext i1 %1 to i64, !dbg !7
+  call void asm sideeffect "", "r"(i64 %2), !dbg !7
   ret void, !dbg !7
 }
 

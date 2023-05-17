@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 
 class CmdPythonTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test(self):
@@ -20,6 +18,11 @@ class CmdPythonTestCase(TestBase):
 
     def pycmd_tests(self):
         self.runCmd("command source py_import")
+
+        # Test that we did indeed add these commands as user commands:
+        interp = self.dbg.GetCommandInterpreter()
+        self.assertTrue(interp.UserCommandExists("foobar"), "foobar exists")
+        self.assertFalse(interp.CommandExists("foobar"), "It is not a builtin.")
 
         # Test a bunch of different kinds of python callables with
         # both 4 and 5 positional arguments.
@@ -115,7 +118,7 @@ class CmdPythonTestCase(TestBase):
         self.expect("longwait",
                     substrs=['Done; if you saw the delays I am doing OK'])
 
-        self.runCmd("b main")
+        self.runCmd("break set -f main.cpp -l 48")
         self.runCmd("run")
         self.runCmd("mysto 3")
         self.expect("frame variable array",
@@ -165,6 +168,10 @@ class CmdPythonTestCase(TestBase):
         self.runCmd('command script add -f bug11569 bug11569')
         # This should not crash.
         self.runCmd('bug11569', check=False)
+
+        # Make sure that a reference to a non-existent class raises an error:
+        bad_class_name = "LLDBNoSuchModule.LLDBNoSuchClass"
+        self.expect("command script add wont-work --class {0}".format(bad_class_name), error=True, substrs = [bad_class_name])
 
     def test_persistence(self):
         """

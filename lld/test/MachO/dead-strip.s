@@ -46,14 +46,14 @@
 ## Check that dead stripped symbols get listed properly.
 # RUN: FileCheck --check-prefix=MAP %s < %t/map
 
-# MAP: _main
+# MAP:        _main
 # MAP-LABEL: Dead Stripped Symbols
-# MAP: <<dead>> [ 1] _unref_com
-# MAP: <<dead>> [ 1] _unref_data
-# MAP: <<dead>> [ 1] _unref_extern
-# MAP: <<dead>> [ 1] _unref_local
-# MAP: <<dead>> [ 1] _unref_private_extern
-# MAP: <<dead>> [ 1] l_unref_data
+# MAP-DAG:   <<dead>> 0x00000001 [ 2] _unref_com
+# MAP-DAG:   <<dead>> 0x00000008 [ 2] _unref_data
+# MAP-DAG:   <<dead>> 0x00000006 [ 2] _unref_extern
+# MAP-DAG:   <<dead>> 0x00000001 [ 2] _unref_local
+# MAP-DAG:   <<dead>> 0x00000007 [ 2] _unref_private_extern
+# MAP-DAG:   <<dead>> 0x00000008 [ 2] l_unref_data
 
 ## Run dead stripping on code without any dead symbols.
 # RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
@@ -64,10 +64,10 @@
 # RUN: FileCheck --check-prefix=NODEADSYMBOLS %s < %t/no-dead-symbols-map
 
 # NODEADSYMBOLS-LABEL: # Symbols:
-# NODEADSYMBOLS-NEXT: # Address File Name
-# NODEADSYMBOLS-NEXT: _main
+# NODEADSYMBOLS-NEXT:  # Address Size File Name
+# NODEADSYMBOLS-NEXT:  _main
 # NODEADSYMBOLS-LABEL: # Dead Stripped Symbols:
-# NODEADSYMBOLS-NEXT: # Address File Name
+# NODEADSYMBOLS-NEXT:  # Size File Name
 # NODEADSYMBOLS-EMPTY:
 
 # RUN: %lld -dylib -dead_strip -u _ref_private_extern_u %t/basics.o -o %t/basics.dylib
@@ -265,13 +265,13 @@
 # UNWIND-NEXT:   l O __DATA,__data __dyld_private
 # UNWIND-NEXT:   g F __TEXT,__text _main
 # UNWIND-NEXT:   g F __TEXT,__text __mh_execute_header
+# UNWIND-NEXT:   *UND* dyld_stub_binder
 # UNWIND-NEXT:   *UND* ___cxa_allocate_exception
 # UNWIND-NEXT:   *UND* ___cxa_end_catch
 # UNWIND-NEXT:   *UND* __ZTIi
 # UNWIND-NEXT:   *UND* ___cxa_throw
 # UNWIND-NEXT:   *UND* ___gxx_personality_v0
 # UNWIND-NEXT:   *UND* ___cxa_begin_catch
-# UNWIND-NEXT:   *UND* dyld_stub_binder
 # UNWIND-NOT:    GCC_except_table0
 
 ## If a dead stripped function has a strong ref to a dylib symbol but
@@ -318,10 +318,9 @@
 
 # RUN: llvm-mc -g -filetype=obj -triple=x86_64-apple-macos \
 # RUN:     %t/literals.s -o %t/literals.o
-# RUN: %lld -dylib -dead_strip --deduplicate-literals %t/literals.o -o %t/literals
+# RUN: %lld -dylib -dead_strip %t/literals.o -o %t/literals
 # RUN: llvm-objdump --macho --section="__TEXT,__cstring" --section="__DATA,str_ptrs" \
 # RUN:   --section="__TEXT,__literals" %t/literals | FileCheck %s --check-prefix=LIT
-
 # LIT:      Contents of (__TEXT,__cstring) section
 # LIT-NEXT: foobar
 # LIT-NEXT: Contents of (__DATA,str_ptrs) section
@@ -329,6 +328,45 @@
 # LIT-NEXT: __TEXT:__cstring:bar
 # LIT-NEXT: Contents of (__TEXT,__literals) section
 # LIT-NEXT: ef be ad de {{$}}
+
+## Duplicate symbols that will be dead stripped later should not fail when using
+## the --dead-stripped-duplicates flag
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/duplicate1.s -o %t/duplicate1.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64-apple-macos \
+# RUN:     %t/duplicate2.s -o %t/duplicate2.o
+# RUN: %lld -lSystem -dead_strip --dead-strip-duplicates -map %t/stripped-duplicate-map \
+# RUN:     %t/duplicate1.o %t/duplicate2.o -o %t/duplicate
+# RUN: llvm-objdump --syms %t/duplicate | FileCheck %s --check-prefix=DUP
+# DUP-LABEL: SYMBOL TABLE:
+# DUP-NEXT:   g F __TEXT,__text _main
+# DUP-NEXT:   g F __TEXT,__text __mh_execute_header
+# DUP-NEXT:   *UND* dyld_stub_binder
+
+## Check that the duplicate dead stripped symbols get listed properly.
+# RUN: FileCheck --check-prefix=DUPMAP %s < %t/stripped-duplicate-map
+# DUPMAP: _main
+# DUPMAP-LABEL: Dead Stripped Symbols
+# DUPMAP: <<dead>> 0x00000001 [ 3] _foo
+
+#--- duplicate1.s
+.text
+.globl _main, _foo
+_foo:
+  retq
+
+_main:
+  retq
+
+.subsections_via_symbols
+
+#--- duplicate2.s
+.text
+.globl _foo
+_foo:
+  retq
+
+.subsections_via_symbols
 
 #--- basics.s
 .comm _ref_com, 1

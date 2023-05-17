@@ -44,7 +44,7 @@ const CustomOperand<const MCSubtargetInfo &> Msg[] = {
   {{"MSG_SAVEWAVE"},            ID_SAVEWAVE,                isGFX8_GFX9_GFX10},
   {{"MSG_STALL_WAVE_GEN"},      ID_STALL_WAVE_GEN,          isGFX9Plus},
   {{"MSG_HALT_WAVES"},          ID_HALT_WAVES,              isGFX9Plus},
-  {{"MSG_ORDERED_PS_DONE"},     ID_ORDERED_PS_DONE,         isGFX9Plus},
+  {{"MSG_ORDERED_PS_DONE"},     ID_ORDERED_PS_DONE,         isGFX9_GFX10},
   {{"MSG_EARLY_PRIM_DEALLOC"},  ID_EARLY_PRIM_DEALLOC,      isGFX9_GFX10},
   {{"MSG_GS_ALLOC_REQ"},        ID_GS_ALLOC_REQ,            isGFX9Plus},
   {{"MSG_GET_DOORBELL"},        ID_GET_DOORBELL,            isGFX9_GFX10},
@@ -115,9 +115,13 @@ const CustomOperand<const MCSubtargetInfo &> Opr[] = {
   {{"HW_REG_HW_ID2"},        ID_HW_ID2,      isGFX10Plus},
   {{"HW_REG_POPS_PACKER"},   ID_POPS_PACKER, isGFX10},
   {{""}},
-  {{""}},
+  {{"HW_REG_PERF_SNAPSHOT_DATA"}, ID_PERF_SNAPSHOT_DATA, isGFX11Plus},
   {{""}},
   {{"HW_REG_SHADER_CYCLES"}, ID_SHADER_CYCLES, isGFX10_BEncoding},
+
+  // Register numbers reused in GFX11+
+  {{"HW_REG_PERF_SNAPSHOT_PC_LO"}, ID_PERF_SNAPSHOT_PC_LO, isGFX11Plus},
+  {{"HW_REG_PERF_SNAPSHOT_PC_HI"}, ID_PERF_SNAPSHOT_PC_HI, isGFX11Plus},
 
   // GFX940 specific registers
   {{"HW_REG_XCC_ID"},                 ID_XCC_ID,                 isGFX940},

@@ -12,12 +12,13 @@ body: |
 
     ; CHECK-LABEL: name: denorm_mode_not_barrier
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
-    ; CHECK: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
-    ; CHECK: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[GLOBAL_LOAD_DWORD1]], implicit $exec
-    ; CHECK: S_DENORM_MODE 0, implicit-def $mode, implicit $mode
-    ; CHECK: S_ENDPGM 0, implicit [[V_ADD_U32_e32_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[GLOBAL_LOAD_DWORD1]], implicit $exec
+    ; CHECK-NEXT: S_DENORM_MODE 0, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_U32_e32_]]
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32))
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
@@ -35,12 +36,13 @@ body: |
 
     ; CHECK-LABEL: name: round_mode_not_barrier
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
-    ; CHECK: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
-    ; CHECK: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[GLOBAL_LOAD_DWORD1]], implicit $exec
-    ; CHECK: S_ROUND_MODE 0, implicit-def $mode, implicit $mode
-    ; CHECK: S_ENDPGM 0, implicit [[V_ADD_U32_e32_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[GLOBAL_LOAD_DWORD1]], implicit $exec
+    ; CHECK-NEXT: S_ROUND_MODE 0, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_U32_e32_]]
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32))
     S_ROUND_MODE 0, implicit-def $mode, implicit $mode
@@ -58,13 +60,14 @@ body: |
 
     ; CHECK-LABEL: name: denorm_mode_mode_def_use
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
-    ; CHECK: dead %3:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
-    ; CHECK: S_DENORM_MODE 0, implicit-def $mode, implicit $mode
-    ; CHECK: [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 0, [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec
-    ; CHECK: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[V_ADD_F32_e32_]], implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_ADD_F32_e32_]], implicit [[V_ADD_U32_e32_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: dead %3:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: S_DENORM_MODE 0, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 0, [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[V_ADD_F32_e32_]], implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_F32_e32_]], implicit [[V_ADD_U32_e32_]]
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32))
     S_DENORM_MODE 0, implicit-def $mode, implicit $mode
@@ -83,13 +86,14 @@ body: |
 
     ; CHECK-LABEL: name: round_mode_mode_def_use
     ; CHECK: liveins: $vgpr0_vgpr1
-    ; CHECK: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
-    ; CHECK: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
-    ; CHECK: dead %3:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
-    ; CHECK: S_ROUND_MODE 0, implicit-def $mode, implicit $mode
-    ; CHECK: [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 0, [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec
-    ; CHECK: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[V_ADD_F32_e32_]], implicit $exec
-    ; CHECK: S_ENDPGM 0, implicit [[V_ADD_F32_e32_]], implicit [[V_ADD_U32_e32_]]
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:vreg_64 = COPY $vgpr0_vgpr1
+    ; CHECK-NEXT: [[GLOBAL_LOAD_DWORD:%[0-9]+]]:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 0, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: dead %3:vgpr_32 = GLOBAL_LOAD_DWORD [[COPY]], 4, 0, implicit $exec :: (load (s32))
+    ; CHECK-NEXT: S_ROUND_MODE 0, implicit-def $mode, implicit $mode
+    ; CHECK-NEXT: [[V_ADD_F32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_F32_e32 0, [[GLOBAL_LOAD_DWORD]], implicit $mode, implicit $exec
+    ; CHECK-NEXT: [[V_ADD_U32_e32_:%[0-9]+]]:vgpr_32 = V_ADD_U32_e32 [[GLOBAL_LOAD_DWORD]], [[V_ADD_F32_e32_]], implicit $exec
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[V_ADD_F32_e32_]], implicit [[V_ADD_U32_e32_]]
     %0:vreg_64 = COPY $vgpr0_vgpr1
     %1:vgpr_32 = GLOBAL_LOAD_DWORD %0, 0, 0, implicit $exec :: (load (s32))
     S_ROUND_MODE 0, implicit-def $mode, implicit $mode

@@ -98,7 +98,7 @@ protected:
 
   ValueObject *GetValueObjectForChildrenGeneration();
 
-  void PrintChildrenPreamble();
+  void PrintChildrenPreamble(bool value_printed, bool summary_printed);
 
   void PrintChildrenPostamble(bool print_dotdotdot);
 
@@ -120,6 +120,8 @@ protected:
   bool HasReachedMaximumDepth();
 
 private:
+  bool ShouldShowName() const;
+
   ValueObject *m_orig_valobj;
   ValueObject *m_valobj;
   Stream *m_stream;

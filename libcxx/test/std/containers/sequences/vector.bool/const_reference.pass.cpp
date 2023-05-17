@@ -13,7 +13,7 @@
 
 #include "test_macros.h"
 
-bool test() {
+TEST_CONSTEXPR_CXX20 bool test() {
   using CRefT = std::vector<bool>::const_reference;
 #if !defined(_LIBCPP_VERSION) || defined(_LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL)
   ASSERT_SAME_TYPE(CRefT, bool);
@@ -32,6 +32,9 @@ bool test() {
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER > 17
+    static_assert(test());
+#endif
 
   return 0;
 }

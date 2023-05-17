@@ -5,7 +5,7 @@ target datalayout = "e-m:e-p:32:32-i1:8:32-i8:8:32-i16:16:32-f64:32:64-v64:32:64
 target triple = "thumbv7m--linux-gnu"
 
 ; NOTE: When optimising for minimum size, an LDM is expected to be generated
-define void @f(i32 %n, i32* nocapture %a, i32* nocapture readonly %b) optsize minsize {
+define void @f(i32 %n, ptr nocapture %a, ptr nocapture readonly %b) optsize minsize {
 ; CHECK-LABEL: f:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    cmp r0, #1
@@ -24,13 +24,13 @@ define void @f(i32 %n, i32* nocapture %a, i32* nocapture readonly %b) optsize mi
 
 .lr.ph:                                           ; preds = %.lr.ph, %0
   %i.04 = phi i32 [ %6, %.lr.ph ], [ 0, %0 ]
-  %.03 = phi i32* [ %2, %.lr.ph ], [ %b, %0 ]
-  %.012 = phi i32* [ %5, %.lr.ph ], [ %a, %0 ]
-  %2 = getelementptr inbounds i32, i32* %.03, i32 1
-  %3 = load i32, i32* %.03, align 4
+  %.03 = phi ptr [ %2, %.lr.ph ], [ %b, %0 ]
+  %.012 = phi ptr [ %5, %.lr.ph ], [ %a, %0 ]
+  %2 = getelementptr inbounds i32, ptr %.03, i32 1
+  %3 = load i32, ptr %.03, align 4
   %4 = add nsw i32 %3, 3
-  %5 = getelementptr inbounds i32, i32* %.012, i32 1
-  store i32 %4, i32* %.012, align 4
+  %5 = getelementptr inbounds i32, ptr %.012, i32 1
+  store i32 %4, ptr %.012, align 4
   %6 = add nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %6, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph
@@ -40,7 +40,7 @@ define void @f(i32 %n, i32* nocapture %a, i32* nocapture readonly %b) optsize mi
 }
 
 ; NOTE: When not optimising for minimum size, an LDM is expected not to be generated
-define void @f_nominsize(i32 %n, i32* nocapture %a, i32* nocapture readonly %b) optsize {
+define void @f_nominsize(i32 %n, ptr nocapture %a, ptr nocapture readonly %b) optsize {
 ; CHECK-LABEL: f_nominsize:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    cmp r0, #1
@@ -60,13 +60,13 @@ define void @f_nominsize(i32 %n, i32* nocapture %a, i32* nocapture readonly %b) 
 
 .lr.ph:                                           ; preds = %.lr.ph, %0
   %i.04 = phi i32 [ %6, %.lr.ph ], [ 0, %0 ]
-  %.03 = phi i32* [ %2, %.lr.ph ], [ %b, %0 ]
-  %.012 = phi i32* [ %5, %.lr.ph ], [ %a, %0 ]
-  %2 = getelementptr inbounds i32, i32* %.03, i32 1
-  %3 = load i32, i32* %.03, align 4
+  %.03 = phi ptr [ %2, %.lr.ph ], [ %b, %0 ]
+  %.012 = phi ptr [ %5, %.lr.ph ], [ %a, %0 ]
+  %2 = getelementptr inbounds i32, ptr %.03, i32 1
+  %3 = load i32, ptr %.03, align 4
   %4 = add nsw i32 %3, 3
-  %5 = getelementptr inbounds i32, i32* %.012, i32 1
-  store i32 %4, i32* %.012, align 4
+  %5 = getelementptr inbounds i32, ptr %.012, i32 1
+  store i32 %4, ptr %.012, align 4
   %6 = add nsw i32 %i.04, 1
   %exitcond = icmp eq i32 %6, %n
   br i1 %exitcond, label %._crit_edge, label %.lr.ph

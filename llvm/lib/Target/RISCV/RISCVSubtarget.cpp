@@ -1,4 +1,4 @@
-//===-- RISCVSubtarget.cpp - RISCV Subtarget Information ------------------===//
+//===-- RISCVSubtarget.cpp - RISC-V Subtarget Information -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,16 +6,17 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements the RISCV specific subclass of TargetSubtargetInfo.
+// This file implements the RISC-V specific subclass of TargetSubtargetInfo.
 //
 //===----------------------------------------------------------------------===//
 
 #include "RISCVSubtarget.h"
+#include "GISel/RISCVCallLowering.h"
+#include "GISel/RISCVLegalizerInfo.h"
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
-#include "RISCVCallLowering.h"
 #include "RISCVFrameLowering.h"
-#include "RISCVLegalizerInfo.h"
-#include "RISCVRegisterBankInfo.h"
+#include "RISCVMacroFusion.h"
 #include "RISCVTargetMachine.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -29,21 +30,7 @@ using namespace llvm;
 #include "RISCVGenSubtargetInfo.inc"
 
 static cl::opt<bool> EnableSubRegLiveness("riscv-enable-subreg-liveness",
-                                          cl::init(false), cl::Hidden);
-
-static cl::opt<int> RVVVectorBitsMax(
-    "riscv-v-vector-bits-max",
-    cl::desc("Assume V extension vector registers are at most this big, "
-             "with zero meaning no maximum size is assumed."),
-    cl::init(0), cl::Hidden);
-
-static cl::opt<int> RVVVectorBitsMin(
-    "riscv-v-vector-bits-min",
-    cl::desc("Assume V extension vector registers are at least this big, "
-             "with zero meaning no minimum size is assumed. A value of -1 "
-             "means use Zvl*b extension. This is primarily used to enable "
-             "autovectorization with fixed width vectors."),
-    cl::init(0), cl::Hidden);
+                                          cl::init(true), cl::Hidden);
 
 static cl::opt<unsigned> RVVVectorLMULMax(
     "riscv-v-fixed-length-vector-lmul-max",
@@ -88,10 +75,13 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
 RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                StringRef TuneCPU, StringRef FS,
-                               StringRef ABIName, const TargetMachine &TM)
+                               StringRef ABIName, unsigned RVVVectorBitsMin,
+                               unsigned RVVVectorBitsMax,
+                               const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      UserReservedRegister(RISCV::NUM_TARGET_REGS),
-      FrameLowering(initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
+      RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
+      FrameLowering(
+          initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), RegInfo(getHwMode()), TLInfo(TM, *this) {
   CallLoweringInfo.reset(new RISCVCallLowering(*getTargetLowering()));
   Legalizer.reset(new RISCVLegalizerInfo(*this));
@@ -136,64 +126,39 @@ unsigned RISCVSubtarget::getMaxBuildIntsCost() const {
 unsigned RISCVSubtarget::getMaxRVVVectorSizeInBits() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
-  if (RVVVectorBitsMax == 0)
-    return 0;
 
   // ZvlLen specifies the minimum required vlen. The upper bound provided by
   // riscv-v-vector-bits-max should be no less than it.
-  if (RVVVectorBitsMax < (int)ZvlLen)
+  if (RVVVectorBitsMax != 0 && RVVVectorBitsMax < ZvlLen)
     report_fatal_error("riscv-v-vector-bits-max specified is lower "
                        "than the Zvl*b limitation");
 
-  // FIXME: Change to >= 32 when VLEN = 32 is supported
-  assert(
-      RVVVectorBitsMax >= 64 && RVVVectorBitsMax <= 65536 &&
-      isPowerOf2_32(RVVVectorBitsMax) &&
-      "V or Zve* extension requires vector length to be in the range of 64 to "
-      "65536 and a power of 2!");
-  assert(RVVVectorBitsMax >= RVVVectorBitsMin &&
-         "Minimum V extension vector length should not be larger than its "
-         "maximum!");
-  unsigned Max = std::max(RVVVectorBitsMin, RVVVectorBitsMax);
-  return PowerOf2Floor((Max < 64 || Max > 65536) ? 0 : Max);
+  return RVVVectorBitsMax;
 }
 
 unsigned RISCVSubtarget::getMinRVVVectorSizeInBits() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
 
-  if (RVVVectorBitsMin == -1)
+  if (RVVVectorBitsMin == -1U)
     return ZvlLen;
 
   // ZvlLen specifies the minimum required vlen. The lower bound provided by
   // riscv-v-vector-bits-min should be no less than it.
-  if (RVVVectorBitsMin != 0 && RVVVectorBitsMin < (int)ZvlLen)
+  if (RVVVectorBitsMin != 0 && RVVVectorBitsMin < ZvlLen)
     report_fatal_error("riscv-v-vector-bits-min specified is lower "
                        "than the Zvl*b limitation");
 
-  // FIXME: Change to >= 32 when VLEN = 32 is supported
-  assert(
-      (RVVVectorBitsMin == 0 ||
-       (RVVVectorBitsMin >= 64 && RVVVectorBitsMin <= 65536 &&
-        isPowerOf2_32(RVVVectorBitsMin))) &&
-      "V or Zve* extension requires vector length to be in the range of 64 to "
-      "65536 and a power of 2!");
-  assert((RVVVectorBitsMax >= RVVVectorBitsMin || RVVVectorBitsMax == 0) &&
-         "Minimum V extension vector length should not be larger than its "
-         "maximum!");
-  unsigned Min = RVVVectorBitsMin;
-  if (RVVVectorBitsMax != 0)
-    Min = std::min(RVVVectorBitsMin, RVVVectorBitsMax);
-  return PowerOf2Floor((Min < 64 || Min > 65536) ? 0 : Min);
+  return RVVVectorBitsMin;
 }
 
 unsigned RISCVSubtarget::getMaxLMULForFixedLengthVectors() const {
   assert(hasVInstructions() &&
          "Tried to get vector length without Zve or V extension support!");
-  assert(RVVVectorLMULMax <= 8 && isPowerOf2_32(RVVVectorLMULMax) &&
+  assert(RVVVectorLMULMax <= 8 &&
+         llvm::has_single_bit<uint32_t>(RVVVectorLMULMax) &&
          "V extension requires a LMUL to be at most 8 and a power of 2!");
-  return PowerOf2Floor(
-      std::max<unsigned>(std::min<unsigned>(RVVVectorLMULMax, 8), 1));
+  return llvm::bit_floor(std::clamp<unsigned>(RVVVectorLMULMax, 1, 8));
 }
 
 bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
@@ -201,6 +166,12 @@ bool RISCVSubtarget::useRVVForFixedLengthVectors() const {
 }
 
 bool RISCVSubtarget::enableSubRegLiveness() const {
-  // TODO: Enable for for RVV to better handle LMUL>1 and segment load/store.
+  // FIXME: Enable subregister liveness by default for RVV to better handle
+  // LMUL>1 and segment load/store.
   return EnableSubRegLiveness;
+}
+
+void RISCVSubtarget::getPostRAMutations(
+    std::vector<std::unique_ptr<ScheduleDAGMutation>> &Mutations) const {
+  Mutations.push_back(createRISCVMacroFusionDAGMutation());
 }

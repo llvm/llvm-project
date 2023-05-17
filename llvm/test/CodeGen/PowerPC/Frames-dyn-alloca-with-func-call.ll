@@ -28,9 +28,9 @@
 
 define dso_local signext i32 @foo(i32 %n) {
 entry:
-  %ptr0 = alloca i32*
+  %ptr0 = alloca ptr
   %0 = alloca i32, i32 %n
-  store i32* %0, i32** %ptr0
+  store ptr %0, ptr %ptr0
   %1 = alloca i32, i32 %n
   %2 = alloca i32, i32 %n
   %3 = alloca i32, i32 %n
@@ -39,19 +39,19 @@ entry:
   %6 = alloca i32, i32 %n
   %7 = alloca i32, i32 %n
   %8 = alloca i32, i32 %n
-  %9 = load i32*, i32** %ptr0
+  %9 = load ptr, ptr %ptr0
 
-  %call = call i32 @bar(i32* %1, i32* %2, i32* %3, i32* %4, i32* %5, i32* %6, i32* %7, i32* %8, i32* %9)
+  %call = call i32 @bar(ptr %1, ptr %2, ptr %3, ptr %4, ptr %5, ptr %6, ptr %7, ptr %8, ptr %9)
   ret i32 %call
 }
 
-declare i32 @bar(i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*)
+declare i32 @bar(ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
 
 ; PPC32-LINUX-LABEL: foo
 ; PPC32-LINUX: mflr 0
-; PPC32-LINUX: stw 0, 4(1)
 ; PPC32-LINUX: stwu 1, -32(1)
 ; PPC32-LINUX: stw 31, 28(1)
+; PPC32-LINUX: stw 0, 36(1)
 ; PPC32-LINUX: mr 31, 1
 ; PPC32-LINUX: addi 3, 31, 32
 ; PPC32-LINUX: stwux 3, 1, 10
@@ -85,13 +85,13 @@ declare i32 @bar(i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*)
 ; PPC32-LINUX: blr
 
 ; PPC64-LABEL: foo
-; PPC64: mflr 0
-; PPC64: std 31, -8(1)
-; PPC64: std 0, 16(1)
-; PPC64: stdu 1, -160(1)
-; PPC64: mr 31, 1
-; PPC64: addi 3, 31, 160
-; PPC64: stdux 3, 1, 10
+; PPC64:     mflr 0
+; PPC64:     std 31, -8(1)
+; PPC64:     stdu 1, -160(1)
+; PPC64-DAG: mr 31, 1
+; PPC64-DAG: std 0, 176(1)
+; PPC64:     addi 3, 31, 160
+; PPC64:     stdux 3, 1, 10
 
 ; Allocated area is referred by stack pointer.
 ; PPC64: addi 11, 1, 128
@@ -122,9 +122,9 @@ declare i32 @bar(i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*, i32*)
 
 ; PPC32-AIX: mflr 0
 ; PPC32-AIX: stw 31, -4(1)
-; PPC32-AIX: stw 0, 8(1)
 ; PPC32-AIX: stwu 1, -80(1)
 ; PPC32-AIX: mr 31, 1
+; PPC32-AIX: stw 0, 88(1)
 ; PPC32-AIX: addi 3, 31, 80
 ; PPC32-AIX: stwux 3, 1, 10
 

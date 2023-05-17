@@ -28,6 +28,7 @@
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/TrailingObjects.h"
@@ -51,7 +52,6 @@ class Value;
 
 /// Enum used to categorize the alignment types stored by LayoutAlignElem
 enum AlignTypeEnum {
-  INVALID_ALIGN = 0,
   INTEGER_ALIGN = 'i',
   VECTOR_ALIGN = 'v',
   FLOAT_ALIGN = 'f',
@@ -65,20 +65,17 @@ enum AlignTypeEnum {
 
 /// Layout alignment element.
 ///
-/// Stores the alignment data associated with a given alignment type (integer,
-/// vector, float) and type bit width.
+/// Stores the alignment data associated with a given type bit width.
 ///
 /// \note The unusual order of elements in the structure attempts to reduce
 /// padding and make the structure slightly more cache friendly.
 struct LayoutAlignElem {
-  /// Alignment type from \c AlignTypeEnum
-  unsigned AlignType : 8;
-  unsigned TypeBitWidth : 24;
+  uint32_t TypeBitWidth;
   Align ABIAlign;
   Align PrefAlign;
 
-  static LayoutAlignElem get(AlignTypeEnum align_type, Align abi_align,
-                             Align pref_align, uint32_t bit_width);
+  static LayoutAlignElem get(Align ABIAlign, Align PrefAlign,
+                             uint32_t BitWidth);
 
   bool operator==(const LayoutAlignElem &rhs) const;
 };
@@ -146,17 +143,11 @@ private:
 
   /// Primitive type alignment data. This is sorted by type and bit
   /// width during construction.
-  using AlignmentsTy = SmallVector<LayoutAlignElem, 16>;
-  AlignmentsTy Alignments;
-
-  AlignmentsTy::const_iterator
-  findAlignmentLowerBound(AlignTypeEnum AlignType, uint32_t BitWidth) const {
-    return const_cast<DataLayout *>(this)->findAlignmentLowerBound(AlignType,
-                                                                   BitWidth);
-  }
-
-  AlignmentsTy::iterator
-  findAlignmentLowerBound(AlignTypeEnum AlignType, uint32_t BitWidth);
+  using AlignmentsTy = SmallVector<LayoutAlignElem, 4>;
+  AlignmentsTy IntAlignments;
+  AlignmentsTy FloatAlignments;
+  AlignmentsTy VectorAlignments;
+  LayoutAlignElem StructAlignment;
 
   /// The string representation used to create this DataLayout
   std::string StringRepresentation;
@@ -175,8 +166,8 @@ private:
 
   /// Attempts to set the alignment of the given type. Returns an error
   /// description on failure.
-  Error setAlignment(AlignTypeEnum align_type, Align abi_align,
-                     Align pref_align, uint32_t bit_width);
+  Error setAlignment(AlignTypeEnum AlignType, Align ABIAlign, Align PrefAlign,
+                     uint32_t BitWidth);
 
   /// Attempts to set the alignment of a pointer in the given address space.
   /// Returns an error description on failure.
@@ -222,7 +213,10 @@ public:
     DefaultGlobalsAddrSpace = DL.DefaultGlobalsAddrSpace;
     ManglingMode = DL.ManglingMode;
     LegalIntWidths = DL.LegalIntWidths;
-    Alignments = DL.Alignments;
+    IntAlignments = DL.IntAlignments;
+    FloatAlignments = DL.FloatAlignments;
+    VectorAlignments = DL.VectorAlignments;
+    StructAlignment = DL.StructAlignment;
     Pointers = DL.Pointers;
     NonIntegralAddressSpaces = DL.NonIntegralAddressSpaces;
     return *this;
@@ -473,7 +467,7 @@ public:
   /// For example, returns 5 for i36 and 10 for x86_fp80.
   TypeSize getTypeStoreSize(Type *Ty) const {
     TypeSize BaseSize = getTypeSizeInBits(Ty);
-    return {divideCeil(BaseSize.getKnownMinSize(), 8), BaseSize.isScalable()};
+    return {divideCeil(BaseSize.getKnownMinValue(), 8), BaseSize.isScalable()};
   }
 
   /// Returns the maximum number of bits that may be overwritten by
@@ -505,7 +499,7 @@ public:
   /// returns 12 or 16 for x86_fp80, depending on alignment.
   TypeSize getTypeAllocSize(Type *Ty) const {
     // Round up to the next alignment boundary.
-    return alignTo(getTypeStoreSize(Ty), getABITypeAlignment(Ty));
+    return alignTo(getTypeStoreSize(Ty), getABITypeAlign(Ty).value());
   }
 
   /// Returns the offset in bits between successive objects of the
@@ -522,6 +516,7 @@ public:
 
   /// Returns the minimum ABI-required alignment for the specified type.
   /// FIXME: Deprecate this function once migration to Align is over.
+  LLVM_DEPRECATED("use getABITypeAlign instead", "getABITypeAlign")
   uint64_t getABITypeAlignment(Type *Ty) const;
 
   /// Returns the minimum ABI-required alignment for the specified type.
@@ -545,6 +540,7 @@ public:
   ///
   /// This is always at least as good as the ABI alignment.
   /// FIXME: Deprecate this function once migration to Align is over.
+  LLVM_DEPRECATED("use getPrefTypeAlign instead", "getPrefTypeAlign")
   uint64_t getPrefTypeAlignment(Type *Ty) const;
 
   /// Returns the preferred stack/global alignment for the specified
@@ -575,6 +571,11 @@ public:
   /// are set.
   unsigned getLargestLegalIntTypeSizeInBits() const;
 
+  /// Returns the type of a GEP index in AddressSpace.
+  /// If it was not specified explicitly, it will be the integer type of the
+  /// pointer width - IntPtrType.
+  IntegerType *getIndexType(LLVMContext &C, unsigned AddressSpace) const;
+
   /// Returns the type of a GEP index.
   /// If it was not specified explicitly, it will be the integer type of the
   /// pointer width - IntPtrType.
@@ -591,11 +592,11 @@ public:
   /// the result element type and Offset to be the residual offset.
   SmallVector<APInt> getGEPIndicesForOffset(Type *&ElemTy, APInt &Offset) const;
 
-  /// Get single GEP index to access Offset inside ElemTy. Returns None if
-  /// index cannot be computed, e.g. because the type is not an aggregate.
+  /// Get single GEP index to access Offset inside ElemTy. Returns std::nullopt
+  /// if index cannot be computed, e.g. because the type is not an aggregate.
   /// ElemTy is updated to be the result element type and Offset to be the
   /// residual offset.
-  Optional<APInt> getGEPIndexForOffset(Type *&ElemTy, APInt &Offset) const;
+  std::optional<APInt> getGEPIndexForOffset(Type *&ElemTy, APInt &Offset) const;
 
   /// Returns a StructLayout object, indicating the alignment of the
   /// struct, its size, and the offsets of its fields.
@@ -641,12 +642,12 @@ public:
   unsigned getElementContainingOffset(uint64_t Offset) const;
 
   MutableArrayRef<uint64_t> getMemberOffsets() {
-    return llvm::makeMutableArrayRef(getTrailingObjects<uint64_t>(),
+    return llvm::MutableArrayRef(getTrailingObjects<uint64_t>(),
                                      NumElements);
   }
 
   ArrayRef<uint64_t> getMemberOffsets() const {
-    return llvm::makeArrayRef(getTrailingObjects<uint64_t>(), NumElements);
+    return llvm::ArrayRef(getTrailingObjects<uint64_t>(), NumElements);
   }
 
   uint64_t getElementOffset(unsigned Idx) const {
@@ -710,8 +711,12 @@ inline TypeSize DataLayout::getTypeSizeInBits(Type *Ty) const {
     VectorType *VTy = cast<VectorType>(Ty);
     auto EltCnt = VTy->getElementCount();
     uint64_t MinBits = EltCnt.getKnownMinValue() *
-                       getTypeSizeInBits(VTy->getElementType()).getFixedSize();
+                       getTypeSizeInBits(VTy->getElementType()).getFixedValue();
     return TypeSize(MinBits, EltCnt.isScalable());
+  }
+  case Type::TargetExtTyID: {
+    Type *LayoutTy = cast<TargetExtType>(Ty)->getLayoutType();
+    return getTypeSizeInBits(LayoutTy);
   }
   default:
     llvm_unreachable("DataLayout::getTypeSizeInBits(): Unsupported type");

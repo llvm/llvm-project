@@ -9,7 +9,7 @@ target triple = "arm64-apple-ios8.0.0"
 ; The kill flags on the test had to be cleared because the AND was going to read
 ; registers in a BB after the test instruction.
 
-define i32 @test(i32* %ptr) {
+define i32 @test(ptr %ptr) {
 ; CHECK-LABEL: test:
 ; CHECK:       ; %bb.0: ; %bb
 ; CHECK-NEXT:    mov x8, x0
@@ -37,6 +37,6 @@ bb:
   br i1 %tmp342, label %bb343, label %.thread
 
 bb343:                                            ; preds = %.thread
-  store i32 %tmp341, i32* %ptr, align 4
+  store i32 %tmp341, ptr %ptr, align 4
   ret i32 -1
 }

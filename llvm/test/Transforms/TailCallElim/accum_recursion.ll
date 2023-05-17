@@ -109,21 +109,21 @@ declare i32 @test4_helper()
 ; CHECK: %accumulator.ret.tr = add nsw i32 %accumulator.tr, %base
 ; CHECK: ret i32 %accumulator.ret.tr
 
-define i32 @test5_base_case_load(i32* nocapture %A, i32 %n) local_unnamed_addr {
+define i32 @test5_base_case_load(ptr nocapture %A, i32 %n) local_unnamed_addr {
 entry:
   %cmp = icmp eq i32 %n, 0
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  %base = load i32, i32* %A, align 4
+  %base = load i32, ptr %A, align 4
   ret i32 %base
 
 if.end:
   %idxprom = zext i32 %n to i64
-  %arrayidx1 = getelementptr inbounds i32, i32* %A, i64 %idxprom
-  %load = load i32, i32* %arrayidx1, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %A, i64 %idxprom
+  %load = load i32, ptr %arrayidx1, align 4
   %sub = add i32 %n, -1
-  %recurse = tail call i32 @test5_base_case_load(i32* %A, i32 %sub)
+  %recurse = tail call i32 @test5_base_case_load(ptr %A, i32 %sub)
   %accumulate = add i32 %recurse, %load
   ret i32 %accumulate
 }
@@ -166,7 +166,7 @@ declare i32 @test6_helper()
 ; CHECK-LABEL: define i32 @test6_multiple_returns(
 ; CHECK: tailrecurse:
 ; CHECK: %accumulator.tr = phi i32 [ %accumulator.tr, %case99 ], [ 0, %entry ], [ %accumulate, %default ]
-; CHECK: %ret.tr = phi i32 [ undef, %entry ], [ %current.ret.tr, %case99 ], [ %ret.tr, %default ]
+; CHECK: %ret.tr = phi i32 [ poison, %entry ], [ %current.ret.tr, %case99 ], [ %ret.tr, %default ]
 ; CHECK: %ret.known.tr = phi i1 [ false, %entry ], [ true, %case99 ], [ %ret.known.tr, %default ]
 ; CHECK: case0:
 ; CHECK: %accumulator.ret.tr2 = add i32 %accumulator.tr, %helper

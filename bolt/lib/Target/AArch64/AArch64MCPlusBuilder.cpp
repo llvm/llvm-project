@@ -45,8 +45,6 @@ public:
                                  *AArch64ExprB.getSubExpr(), Comp);
   }
 
-  bool hasEVEXEncoding(const MCInst &) const override { return false; }
-
   bool isMacroOpFusionPair(ArrayRef<MCInst> Insts) const override {
     return false;
   }
@@ -61,6 +59,10 @@ public:
 
   bool isADR(const MCInst &Inst) const override {
     return Inst.getOpcode() == AArch64::ADR;
+  }
+
+  bool isAddXri(const MCInst &Inst) const {
+    return Inst.getOpcode() == AArch64::ADDXri;
   }
 
   void getADRReg(const MCInst &Inst, MCPhysReg &RegName) const override {
@@ -219,7 +221,7 @@ public:
     // Look for literal addressing mode (see C1-143 ARM DDI 0487B.a)
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I)
-      if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType == MCOI::OPERAND_PCREL)
         return true;
 
     return false;
@@ -253,7 +255,7 @@ public:
     // Literal addressing mode
     const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
     for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-      if (MCII.OpInfo[I].OperandType != MCOI::OPERAND_PCREL)
+      if (MCII.operands()[I].OperandType != MCOI::OPERAND_PCREL)
         continue;
 
       if (!Inst.getOperand(I).isImm()) {
@@ -263,7 +265,7 @@ public:
         return true;
       }
 
-      DispImm = Inst.getOperand(I).getImm() << 2;
+      DispImm = Inst.getOperand(I).getImm() * 4;
       return true;
     }
     return false;
@@ -289,21 +291,25 @@ public:
     return true;
   }
 
-  bool replaceMemOperandDisp(MCInst &Inst, MCOperand Operand) const override {
+  MCInst::iterator getMemOperandDisp(MCInst &Inst) const override {
     MCInst::iterator OI = Inst.begin();
     if (isADR(Inst) || isADRP(Inst)) {
       assert(MCPlus::getNumPrimeOperands(Inst) >= 2 &&
              "Unexpected number of operands");
-      ++OI;
-    } else {
-      const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
-      for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
-        if (MCII.OpInfo[I].OperandType == MCOI::OPERAND_PCREL)
-          break;
-        ++OI;
-      }
-      assert(OI != Inst.end() && "Literal operand not found");
+      return ++OI;
     }
+    const MCInstrDesc &MCII = Info->get(Inst.getOpcode());
+    for (unsigned I = 0, E = MCII.getNumOperands(); I != E; ++I) {
+      if (MCII.operands()[I].OperandType == MCOI::OPERAND_PCREL)
+        break;
+      ++OI;
+    }
+    assert(OI != Inst.end() && "Literal operand not found");
+    return OI;
+  }
+
+  bool replaceMemOperandDisp(MCInst &Inst, MCOperand Operand) const override {
+    MCInst::iterator OI = getMemOperandDisp(Inst);
     *OI = Operand;
     return true;
   }
@@ -361,12 +367,11 @@ public:
 
     // Auto-select correct operand number
     if (OpNum == 0) {
-      if (isConditionalBranch(Inst) || isADR(Inst) || isADRP(Inst))
+      if (isConditionalBranch(Inst) || isADR(Inst) || isADRP(Inst) ||
+          isMOVW(Inst))
         OpNum = 1;
-      if (isTB(Inst))
+      if (isTB(Inst) || isAddXri(Inst))
         OpNum = 2;
-      if (isMOVW(Inst))
-        OpNum = 1;
     }
 
     return true;
@@ -426,34 +431,6 @@ public:
       return 0;
 
     return getTargetAddend(Op.getExpr());
-  }
-
-  bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
-                      uint64_t &Target) const override {
-    size_t OpNum = 0;
-
-    if (isConditionalBranch(Inst)) {
-      assert(MCPlus::getNumPrimeOperands(Inst) >= 2 &&
-             "Invalid number of operands");
-      OpNum = 1;
-    }
-
-    if (isTB(Inst)) {
-      assert(MCPlus::getNumPrimeOperands(Inst) >= 3 &&
-             "Invalid number of operands");
-      OpNum = 2;
-    }
-
-    if (Info->get(Inst.getOpcode()).OpInfo[OpNum].OperandType !=
-        MCOI::OPERAND_PCREL) {
-      assert((isIndirectBranch(Inst) || isIndirectCall(Inst)) &&
-             "FAILED evaluateBranch");
-      return false;
-    }
-
-    int64_t Imm = Inst.getOperand(OpNum).getImm() << 2;
-    Target = Addr + Imm;
-    return true;
   }
 
   bool replaceBranchTarget(MCInst &Inst, const MCSymbol *TBB,
@@ -1032,17 +1009,17 @@ public:
   ///    ADD   x16, x16, imm
   ///    BR    x16
   ///
-  bool matchLinkerVeneer(InstructionIterator Begin, InstructionIterator End,
-                         uint64_t Address, const MCInst &CurInst,
-                         MCInst *&TargetHiBits, MCInst *&TargetLowBits,
-                         uint64_t &Target) const override {
+  uint64_t matchLinkerVeneer(InstructionIterator Begin, InstructionIterator End,
+                             uint64_t Address, const MCInst &CurInst,
+                             MCInst *&TargetHiBits, MCInst *&TargetLowBits,
+                             uint64_t &Target) const override {
     if (CurInst.getOpcode() != AArch64::BR || !CurInst.getOperand(0).isReg() ||
         CurInst.getOperand(0).getReg() != AArch64::X16)
-      return false;
+      return 0;
 
     auto I = End;
     if (I == Begin)
-      return false;
+      return 0;
 
     --I;
     Address -= 4;
@@ -1051,7 +1028,7 @@ public:
         !I->getOperand(1).isReg() ||
         I->getOperand(0).getReg() != AArch64::X16 ||
         I->getOperand(1).getReg() != AArch64::X16 || !I->getOperand(2).isImm())
-      return false;
+      return 0;
     TargetLowBits = &*I;
     uint64_t Addr = I->getOperand(2).getImm() & 0xFFF;
 
@@ -1060,12 +1037,25 @@ public:
     if (I->getOpcode() != AArch64::ADRP ||
         MCPlus::getNumPrimeOperands(*I) < 2 || !I->getOperand(0).isReg() ||
         !I->getOperand(1).isImm() || I->getOperand(0).getReg() != AArch64::X16)
-      return false;
+      return 0;
     TargetHiBits = &*I;
     Addr |= (Address + ((int64_t)I->getOperand(1).getImm() << 12)) &
             0xFFFFFFFFFFFFF000ULL;
     Target = Addr;
-    return true;
+    return 3;
+  }
+
+  bool matchAdrpAddPair(const MCInst &Adrp, const MCInst &Add) const override {
+    if (!isADRP(Adrp) || !isAddXri(Add))
+      return false;
+
+    assert(Adrp.getOperand(0).isReg() &&
+           "Unexpected operand in ADRP instruction");
+    MCPhysReg AdrpReg = Adrp.getOperand(0).getReg();
+    assert(Add.getOperand(1).isReg() &&
+           "Unexpected operand in ADDXri instruction");
+    MCPhysReg AddReg = Add.getOperand(1).getReg();
+    return AdrpReg == AddReg;
   }
 
   bool replaceImmWithSymbolRef(MCInst &Inst, const MCSymbol *Symbol,
@@ -1099,15 +1089,51 @@ public:
     return true;
   }
 
-  bool isMoveMem2Reg(const MCInst &Inst) const override { return false; }
-
-  bool isLeave(const MCInst &Inst) const override { return false; }
-
-  bool isPop(const MCInst &Inst) const override { return false; }
-
-  bool isPrefix(const MCInst &Inst) const override { return false; }
-
-  bool deleteREPPrefix(MCInst &Inst) const override { return false; }
+  bool shouldRecordCodeRelocation(uint64_t RelType) const override {
+    switch (RelType) {
+    case ELF::R_AARCH64_ABS64:
+    case ELF::R_AARCH64_ABS32:
+    case ELF::R_AARCH64_ABS16:
+    case ELF::R_AARCH64_ADD_ABS_LO12_NC:
+    case ELF::R_AARCH64_ADR_GOT_PAGE:
+    case ELF::R_AARCH64_ADR_PREL_LO21:
+    case ELF::R_AARCH64_ADR_PREL_PG_HI21:
+    case ELF::R_AARCH64_ADR_PREL_PG_HI21_NC:
+    case ELF::R_AARCH64_LD64_GOT_LO12_NC:
+    case ELF::R_AARCH64_LDST8_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST16_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST32_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST64_ABS_LO12_NC:
+    case ELF::R_AARCH64_LDST128_ABS_LO12_NC:
+    case ELF::R_AARCH64_TLSDESC_ADD_LO12:
+    case ELF::R_AARCH64_TLSDESC_ADR_PAGE21:
+    case ELF::R_AARCH64_TLSDESC_ADR_PREL21:
+    case ELF::R_AARCH64_TLSDESC_LD64_LO12:
+    case ELF::R_AARCH64_TLSIE_ADR_GOTTPREL_PAGE21:
+    case ELF::R_AARCH64_TLSIE_LD64_GOTTPREL_LO12_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G0:
+    case ELF::R_AARCH64_MOVW_UABS_G0_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G1:
+    case ELF::R_AARCH64_MOVW_UABS_G1_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G2:
+    case ELF::R_AARCH64_MOVW_UABS_G2_NC:
+    case ELF::R_AARCH64_MOVW_UABS_G3:
+    case ELF::R_AARCH64_PREL16:
+    case ELF::R_AARCH64_PREL32:
+    case ELF::R_AARCH64_PREL64:
+      return true;
+    case ELF::R_AARCH64_CALL26:
+    case ELF::R_AARCH64_JUMP26:
+    case ELF::R_AARCH64_TSTBR14:
+    case ELF::R_AARCH64_CONDBR19:
+    case ELF::R_AARCH64_TLSDESC_CALL:
+    case ELF::R_AARCH64_TLSLE_ADD_TPREL_HI12:
+    case ELF::R_AARCH64_TLSLE_ADD_TPREL_LO12_NC:
+      return false;
+    default:
+      llvm_unreachable("Unexpected AArch64 relocation type in code");
+    }
+  }
 
   bool createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);

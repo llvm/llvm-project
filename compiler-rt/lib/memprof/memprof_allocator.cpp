@@ -23,14 +23,12 @@
 #include "sanitizer_common/sanitizer_allocator_checks.h"
 #include "sanitizer_common/sanitizer_allocator_interface.h"
 #include "sanitizer_common/sanitizer_allocator_report.h"
+#include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_errno.h"
 #include "sanitizer_common/sanitizer_file.h"
 #include "sanitizer_common/sanitizer_flags.h"
 #include "sanitizer_common/sanitizer_internal_defs.h"
-#include "sanitizer_common/sanitizer_list.h"
-#include "sanitizer_common/sanitizer_procmaps.h"
 #include "sanitizer_common/sanitizer_stackdepot.h"
-#include "sanitizer_common/sanitizer_vector.h"
 
 #include <sched.h>
 #include <time.h>
@@ -77,7 +75,7 @@ static int GetCpuId(void) {
   // _memprof_preinit is called via the preinit_array, which subsequently calls
   // malloc. Since this is before _dl_init calls VDSO_SETUP, sched_getcpu
   // will seg fault as the address of __vdso_getcpu will be null.
-  if (!memprof_init_done)
+  if (!memprof_inited)
     return -1;
   return sched_getcpu();
 }
@@ -275,7 +273,7 @@ struct Allocator {
 
   static void PrintCallback(const uptr Key, LockedMemInfoBlock *const &Value,
                             void *Arg) {
-    SpinMutexLock(&Value->mutex);
+    SpinMutexLock l(&Value->mutex);
     Print(Value->mib, Key, bool(Arg));
   }
 
@@ -297,8 +295,10 @@ struct Allocator {
       // memprof_rawprofile.h.
       char *Buffer = nullptr;
 
-      MemoryMappingLayout Layout(/*cache_enabled=*/true);
-      u64 BytesSerialized = SerializeToRawProfile(MIBMap, Layout, Buffer);
+      __sanitizer::ListOfModules List;
+      List.init();
+      ArrayRef<LoadedModule> Modules(List.begin(), List.end());
+      u64 BytesSerialized = SerializeToRawProfile(MIBMap, Modules, Buffer);
       CHECK(Buffer && BytesSerialized && "could not serialize to buffer");
       report_file.Write(Buffer, BytesSerialized);
     }
@@ -447,8 +447,7 @@ struct Allocator {
 
     u64 user_requested_size =
         atomic_exchange(&m->user_requested_size, 0, memory_order_acquire);
-    if (memprof_inited && memprof_init_done &&
-        atomic_load_relaxed(&constructed) &&
+    if (memprof_inited && atomic_load_relaxed(&constructed) &&
         !atomic_load_relaxed(&destructing)) {
       u64 c = GetShadowCount(p, user_requested_size);
       long curtime = GetTimestamp();
@@ -682,6 +681,18 @@ int memprof_posix_memalign(void **memptr, uptr alignment, uptr size,
   return 0;
 }
 
+static const void *memprof_malloc_begin(const void *p) {
+  u64 user_requested_size;
+  MemprofChunk *m =
+      instance.GetMemprofChunkByAddr((uptr)p, user_requested_size);
+  if (!m)
+    return nullptr;
+  if (user_requested_size == 0)
+    return nullptr;
+
+  return (const void *)m->Beg();
+}
+
 uptr memprof_malloc_usable_size(const void *ptr, uptr pc, uptr bp) {
   if (!ptr)
     return 0;
@@ -698,6 +709,10 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 int __sanitizer_get_ownership(const void *p) {
   return memprof_malloc_usable_size(p, 0, 0) != 0;
+}
+
+const void *__sanitizer_get_allocated_begin(const void *p) {
+  return memprof_malloc_begin(p);
 }
 
 uptr __sanitizer_get_allocated_size(const void *p) {

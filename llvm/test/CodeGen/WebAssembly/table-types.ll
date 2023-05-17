@@ -1,10 +1,7 @@
 ; RUN: llc < %s --mtriple=wasm32-unknown-unknown -asm-verbose=false -mattr=+reference-types | FileCheck %s
 
-%extern = type opaque
-%externref = type %extern addrspace(10)* ;; addrspace 10 is nonintegral
-
-%func = type void ()
-%funcref = type %func addrspace(20)* ;; addrspace 20 is nonintegral
+%externref = type ptr addrspace(10) ;; addrspace 10 is nonintegral
+%funcref = type ptr addrspace(20)   ;; addrspace 20 is nonintegral
 
 ; CHECK: .tabletype eref_table, externref
 ; CHECK-NEXT: .globl eref_table

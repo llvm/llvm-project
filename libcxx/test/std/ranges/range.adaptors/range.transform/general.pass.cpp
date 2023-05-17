@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // Some basic examples of how transform_view might be used in the wild. This is a general
 // collection of sample algorithms and functions that try to mock general usage of
@@ -40,7 +39,7 @@ auto toUpper(R range) {
   return std::ranges::transform_view(range, [](char c) { return std::toupper(c); });
 }
 
-template<class E1, class E2, size_t N, class Join = std::plus<E1>>
+template<class E1, class E2, std::size_t N, class Join = std::plus<E1>>
 auto joinArrays(E1 (&a)[N], E2 (&b)[N], Join join = Join()) {
   return std::ranges::transform_view(a, [&a, &b, join](auto& x) {
     auto idx = (&x) - a;

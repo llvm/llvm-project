@@ -4,7 +4,7 @@
 
 # RUN: llvm-mc -filetype=obj -triple=x86_64 %s -o %t.o
 # RUN: ld.lld %t.o -shared -o %t.so
-# RUN: llvm-objdump -d --no-show-raw-insn %t.so | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t.so | FileCheck %s
 
 # CHECK:      leaq    (%rax), %rax
 # CHECK-NEXT: movabsq 0, %rax

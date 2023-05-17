@@ -33,9 +33,9 @@ PatternApplicator::~PatternApplicator() = default;
 #ifndef NDEBUG
 /// Log a message for a pattern that is impossible to match.
 static void logImpossibleToMatch(const Pattern &pattern) {
-    llvm::dbgs() << "Ignoring pattern '" << pattern.getRootKind()
-                 << "' because it is impossible to match or cannot lead "
-                    "to legal IR (by cost model)\n";
+  llvm::dbgs() << "Ignoring pattern '" << pattern.getRootKind()
+               << "' because it is impossible to match or cannot lead "
+                  "to legal IR (by cost model)\n";
 }
 
 /// Log IR after pattern application.
@@ -185,34 +185,47 @@ LogicalResult PatternApplicator::matchAndRewrite(
     // Try to match and rewrite this pattern. The patterns are sorted by
     // benefit, so if we match we can immediately rewrite. For PDL patterns, the
     // match has already been performed, we just need to rewrite.
-    rewriter.setInsertionPoint(op);
+    bool matched = false;
+    op->getContext()->executeAction<ApplyPatternAction>(
+        [&]() {
+          rewriter.setInsertionPoint(op);
 #ifndef NDEBUG
-    // Operation `op` may be invalidated after applying the rewrite pattern.
-    Operation *dumpRootOp = getDumpRootOp(op);
+          // Operation `op` may be invalidated after applying the rewrite
+          // pattern.
+          Operation *dumpRootOp = getDumpRootOp(op);
 #endif
-    if (pdlMatch) {
-      bytecode->rewrite(rewriter, *pdlMatch, *mutableByteCodeState);
-      result = success(!onSuccess || succeeded(onSuccess(*bestPattern)));
-    } else {
-      const auto *pattern = static_cast<const RewritePattern *>(bestPattern);
+          if (pdlMatch) {
+            result =
+                bytecode->rewrite(rewriter, *pdlMatch, *mutableByteCodeState);
+          } else {
+            LLVM_DEBUG(llvm::dbgs() << "Trying to match \""
+                                    << bestPattern->getDebugName() << "\"\n");
 
-      LLVM_DEBUG(llvm::dbgs()
-                 << "Trying to match \"" << pattern->getDebugName() << "\"\n");
-      result = pattern->matchAndRewrite(op, rewriter);
-      LLVM_DEBUG(llvm::dbgs() << "\"" << pattern->getDebugName() << "\" result "
-                              << succeeded(result) << "\n");
+            const auto *pattern =
+                static_cast<const RewritePattern *>(bestPattern);
+            result = pattern->matchAndRewrite(op, rewriter);
 
-      if (succeeded(result) && onSuccess && failed(onSuccess(*pattern)))
-        result = failure();
-    }
-    if (succeeded(result)) {
-      LLVM_DEBUG(logSucessfulPatternApplication(dumpRootOp));
+            LLVM_DEBUG(llvm::dbgs()
+                       << "\"" << bestPattern->getDebugName() << "\" result "
+                       << succeeded(result) << "\n");
+          }
+
+          // Process the result of the pattern application.
+          if (succeeded(result) && onSuccess && failed(onSuccess(*bestPattern)))
+            result = failure();
+          if (succeeded(result)) {
+            LLVM_DEBUG(logSucessfulPatternApplication(dumpRootOp));
+            matched = true;
+            return;
+          }
+
+          // Perform any necessary cleanups.
+          if (onFailure)
+            onFailure(*bestPattern);
+        },
+        {op}, *bestPattern);
+    if (matched)
       break;
-    }
-
-    // Perform any necessary cleanups.
-    if (onFailure)
-      onFailure(*bestPattern);
   } while (true);
 
   if (mutableByteCodeState)

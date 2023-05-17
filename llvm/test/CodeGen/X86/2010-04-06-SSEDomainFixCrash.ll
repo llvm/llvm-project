@@ -5,21 +5,21 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:64-f32:32:32-f64:32:64-v64:64:64-v128:128:128-a0:0:64-f80:128:128-n8:16:32"
 target triple = "i386-apple-darwin10.0"
 
-declare i32 @_ZN11HullLibrary16CreateConvexHullERK8HullDescR10HullResult(i8*, i8* nocapture, i8* nocapture) ssp align 2
+declare i32 @_ZN11HullLibrary16CreateConvexHullERK8HullDescR10HullResult(ptr, ptr nocapture, ptr nocapture) ssp align 2
 
-define void @_ZN17btSoftBodyHelpers4DrawEP10btSoftBodyP12btIDebugDrawi(i8* %psb, i8* %idraw, i32 %drawflags) ssp align 2 personality i32 (...)* @__gxx_personality_v0 {
+define void @_ZN17btSoftBodyHelpers4DrawEP10btSoftBodyP12btIDebugDrawi(ptr %psb, ptr %idraw, i32 %drawflags) ssp align 2 personality ptr @__gxx_personality_v0 {
 entry:
   br i1 undef, label %bb92, label %bb58
 
 bb58:                                             ; preds = %entry
-  %0 = invoke i32 @_ZN11HullLibrary16CreateConvexHullERK8HullDescR10HullResult(i8* undef, i8* undef, i8* undef)
+  %0 = invoke i32 @_ZN11HullLibrary16CreateConvexHullERK8HullDescR10HullResult(ptr undef, ptr undef, ptr undef)
           to label %invcont64 unwind label %lpad159 ; <i32> [#uses=0]
 
 invcont64:                                        ; preds = %bb58
   br i1 undef, label %invcont65, label %bb.i.i
 
 bb.i.i:                                           ; preds = %invcont64
-  %1 = load <4 x float>, <4 x float>* undef, align 16          ; <<4 x float>> [#uses=5]
+  %1 = load <4 x float>, ptr undef, align 16          ; <<4 x float>> [#uses=5]
   br i1 undef, label %bb.nph.i.i, label %invcont65
 
 bb.nph.i.i:                                       ; preds = %bb.i.i
@@ -53,14 +53,14 @@ invcont65:                                        ; preds = %bb2.return.loopexit
 
 bb.i265:                                          ; preds = %bb.i265, %invcont65
   %7 = fsub float 0.000000e+00, %6                ; <float> [#uses=1]
-  store float %7, float* undef, align 4
+  store float %7, ptr undef, align 4
   br label %bb.i265
 
 bb92:                                             ; preds = %entry
   unreachable
 
 lpad159:                                          ; preds = %bb58
-  %exn = landingpad {i8*, i32}
+  %exn = landingpad {ptr, i32}
             cleanup
   unreachable
 }

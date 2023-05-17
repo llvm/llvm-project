@@ -106,8 +106,7 @@ bool DomTreeUpdater::forceFlushDeletedBB() {
     // validateDeleteBB() removes all instructions of DelBB and adds an
     // UnreachableInst as its terminator. So we check whether the BasicBlock to
     // delete only has an UnreachableInst inside.
-    assert(BB->getInstList().size() == 1 &&
-           isa<UnreachableInst>(BB->getTerminator()) &&
+    assert(BB->size() == 1 && isa<UnreachableInst>(BB->getTerminator()) &&
            "DelBB has been modified while awaiting deletion.");
     BB->removeFromParent();
     eraseDelBBNode(BB);
@@ -218,10 +217,10 @@ void DomTreeUpdater::validateDeleteBB(BasicBlock *DelBB) {
   // DelBB is unreachable and all its instructions are dead.
   while (!DelBB->empty()) {
     Instruction &I = DelBB->back();
-    // Replace used instructions with an arbitrary value (undef).
+    // Replace used instructions with an arbitrary value (poison).
     if (!I.use_empty())
-      I.replaceAllUsesWith(llvm::UndefValue::get(I.getType()));
-    DelBB->getInstList().pop_back();
+      I.replaceAllUsesWith(PoisonValue::get(I.getType()));
+    DelBB->back().eraseFromParent();
   }
   // Make sure DelBB has a valid terminator instruction. As long as DelBB is a
   // Child of Function F it must contain valid IR.

@@ -109,16 +109,14 @@ define dso_local i32 @realign_with_csrs() local_unnamed_addr #0 !dbg !8 {
 entry:
   %a = alloca i32, align 4
   %force_alignment = alloca double, align 8
-  %0 = bitcast i32* %a to i8*, !dbg !22
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !14, metadata !DIExpression()), !dbg !22
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !14, metadata !DIExpression()), !dbg !22
   %csr1 = tail call i32 @getval() #4
   %call = tail call i32 @getval() #4, !dbg !22
-  store i32 %call, i32* %a, align 4, !dbg !22, !tbaa !17
-  %1 = bitcast double* %force_alignment to i8*, !dbg !23
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %1) #4, !dbg !23
-  call void @llvm.dbg.declare(metadata double* %force_alignment, metadata !15, metadata !DIExpression()), !dbg !23
-  store double 4.200000e-01, double* %force_alignment, align 8, !dbg !23, !tbaa !24
-  call void @usevals(i32* nonnull %a, i32* nonnull %a, double* nonnull %force_alignment) #4, !dbg !26
+  store i32 %call, ptr %a, align 4, !dbg !22, !tbaa !17
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %force_alignment) #4, !dbg !23
+  call void @llvm.dbg.declare(metadata ptr %force_alignment, metadata !15, metadata !DIExpression()), !dbg !23
+  store double 4.200000e-01, ptr %force_alignment, align 8, !dbg !23, !tbaa !24
+  call void @usevals(ptr nonnull %a, ptr nonnull %a, ptr nonnull %force_alignment) #4, !dbg !26
   call void @usecsrs(i32 %csr1, i32 %csr1)
   ret i32 0
 }
@@ -127,16 +125,16 @@ entry:
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture) #2
 
 declare dso_local i32 @getval() local_unnamed_addr #3
 
-declare dso_local void @usevals(i32*, i32*, double*) local_unnamed_addr #3
+declare dso_local void @usevals(ptr, ptr, ptr) local_unnamed_addr #3
 
 declare dso_local void @usecsrs(i32, i32) local_unnamed_addr #3
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture) #2
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture) #2
 
 attributes #0 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="pentium4" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { nounwind readnone speculatable }

@@ -1,7 +1,6 @@
-; RUN: opt -gvn-sink -S < %s | FileCheck %s
 ; RUN: opt -passes=gvn-sink -S < %s | FileCheck %s
 
-%struct = type {i32, i32}
+%struct = type {i32, i32, i32}
 %struct2 = type { [ 2 x i32], i32 }
 
 ; Struct indices cannot be variant.
@@ -14,15 +13,15 @@ bb:
   br i1 undef, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = getelementptr inbounds %struct, %struct* null, i64 0, i32 1
+  %tmp = getelementptr inbounds %struct, ptr null, i64 0, i32 1
   br label %bb4
 
 bb2:                                              ; preds = %bb
-  %tmp3 = getelementptr inbounds %struct, %struct* null, i64 0, i32 0
+  %tmp3 = getelementptr inbounds %struct, ptr null, i64 0, i32 2
   br label %bb4
 
 bb4:                                              ; preds = %bb2, %bb1
-  %tmp5 = phi i32 [ 1, %bb1 ], [ 0, %bb2 ]
+  %tmp5 = phi i32 [ 1, %bb1 ], [ 2, %bb2 ]
   ret void
 }
 
@@ -36,15 +35,15 @@ bb:
   br i1 undef, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = getelementptr inbounds %struct2, %struct2* null, i64 0, i32 0, i32 1
+  %tmp = getelementptr inbounds %struct2, ptr null, i64 0, i32 0, i32 1
   br label %bb4
 
 bb2:                                              ; preds = %bb
-  %tmp3 = getelementptr inbounds %struct2, %struct2* null, i64 0, i32 0, i32 0
+  %tmp3 = getelementptr inbounds %struct2, ptr null, i64 0, i32 0, i32 2
   br label %bb4
 
 bb4:                                              ; preds = %bb2, %bb1
-  %tmp5 = phi i32 [ 1, %bb1 ], [ 0, %bb2 ]
+  %tmp5 = phi i32 [ 1, %bb1 ], [ 2, %bb2 ]
   ret void
 }
 
@@ -59,14 +58,14 @@ bb:
   br i1 undef, label %bb2, label %bb1
 
 bb1:                                              ; preds = %bb
-  %tmp = getelementptr inbounds %struct, %struct* null, i32 0, i32 0
+  %tmp = getelementptr inbounds %struct, ptr null, i32 1, i32 0
   br label %bb4
 
 bb2:                                              ; preds = %bb
-  %tmp3 = getelementptr inbounds %struct, %struct* null, i32 1, i32 0
+  %tmp3 = getelementptr inbounds %struct, ptr null, i32 2, i32 0
   br label %bb4
 
 bb4:                                              ; preds = %bb2, %bb1
-  %tmp5 = phi i32 [ 0, %bb1 ], [ 1, %bb2 ]
+  %tmp5 = phi i32 [ 1, %bb1 ], [ 2, %bb2 ]
   ret void
 }

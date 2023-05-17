@@ -16,12 +16,7 @@
 
 #include "filesystem_include.h"
 
-#include "test_macros.h"
-
-int main(int, char**)
-{
+void f() {
     fs::path c;
     c.empty(); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

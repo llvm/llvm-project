@@ -42,7 +42,7 @@ public:
   void GetUnsupportedForms(std::set<dw_form_t> &invalid_forms) const;
 
   const DWARFAbbreviationDeclaration *
-  GetAbbreviationDeclaration(dw_uleb128_t abbrCode) const;
+  GetAbbreviationDeclaration(uint32_t abbrCode) const;
 
   /// Unit test accessor functions.
   /// @{

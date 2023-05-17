@@ -5,11 +5,11 @@
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -misched=shuffle | FileCheck %s
 ; REQUIRES: asserts
 
-declare i32 @memcmp(i8* nocapture, i8* nocapture, i64)
+declare i32 @memcmp(ptr nocapture, ptr nocapture, i64)
 
 define i32 @fun() {
 ; CHECK-LABEL: fun
-  %call = call signext i32 @memcmp(i8* nonnull undef, i8* nonnull undef, i64 2048)
+  %call = call signext i32 @memcmp(ptr nonnull undef, ptr nonnull undef, i64 2048)
   %cmp = icmp eq i32 %call, 0
   br i1 %cmp, label %labT, label %labF
 

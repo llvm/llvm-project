@@ -10,9 +10,9 @@
 // <experimental/type_traits>
 //
 //  struct nonesuch;
-//	  nonesuch has no default constructor (C++17 §15.1)
-//    or initializer-list constructor (C++17 §11.6.4),
-//    and is not an aggregate (C++17 §11.6.1).
+//    nonesuch has no default constructor (C++17 section 15.1)
+//    or initializer-list constructor (C++17 section 11.6.4),
+//    and is not an aggregate (C++17 section 11.6.1).
 
 
 #include <experimental/type_traits>

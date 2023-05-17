@@ -95,7 +95,7 @@ bb.2:
 
 After optimisations and code layout complete, information about variable
 values must be translated into variable locations, i.e. registers and stack
-slots. This is performed in the [LiveDebugValues pass][`LiveDebugValues`], where
+slots. This is performed in the [`LiveDebugValues` pass][LiveDebugValues], where
 the debug instructions and machine code are separated out into two independent
 functions:
  * One that assigns values to variable names,

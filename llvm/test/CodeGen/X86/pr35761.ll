@@ -17,20 +17,20 @@ define dso_local void @PR35761(i32 %call) {
 ; CHECK-NEXT:    movb $0, z+2(%rip)
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load i8, i8* @x, align 1
+  %0 = load i8, ptr @x, align 1
   %tobool = trunc i8 %0 to i1
   %conv = zext i1 %tobool to i32
   %or = or i32 32767, %call
   %neg = xor i32 %or, -1
   %neg1 = xor i32 %neg, -1
-  %1 = load i32, i32* @y, align 4
+  %1 = load i32, ptr @y, align 4
   %xor = xor i32 %neg1, %1
   %or2 = or i32 %conv, %xor
   %conv3 = trunc i32 %or2 to i8
-  %bf.load = load i24, i24* @z, align 4
+  %bf.load = load i24, ptr @z, align 4
   %2 = zext i8 %conv3 to i24
   %bf.value = and i24 %2, 4194303
-  store i24 %bf.value, i24* @z, align 2
+  store i24 %bf.value, ptr @z, align 2
   ret void
 }
 

@@ -35,7 +35,7 @@ entry:
 ; HARD-FLOAT:   sdc1    $f0, 0(${{[0-9]+}})
 
   %call = call fp128 @roundl(fp128 %value)
-  store fp128 %call, fp128* @fp128
+  store fp128 %call, ptr @fp128
   ret void
 }
 

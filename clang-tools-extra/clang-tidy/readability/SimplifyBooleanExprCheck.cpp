@@ -11,14 +11,13 @@
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/SaveAndRestore.h"
 
+#include <optional>
 #include <string>
 #include <utility>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 
@@ -297,21 +296,21 @@ public:
   }
 
   // Extracts a bool if an expression is (true|false|!true|!false);
-  static Optional<bool> getAsBoolLiteral(const Expr *E, bool FilterMacro) {
+  static std::optional<bool> getAsBoolLiteral(const Expr *E, bool FilterMacro) {
     if (const auto *Bool = dyn_cast<CXXBoolLiteralExpr>(E)) {
       if (FilterMacro && Bool->getBeginLoc().isMacroID())
-        return llvm::None;
+        return std::nullopt;
       return Bool->getValue();
     }
     if (const auto *UnaryOp = dyn_cast<UnaryOperator>(E)) {
       if (FilterMacro && UnaryOp->getBeginLoc().isMacroID())
-        return None;
+        return std::nullopt;
       if (UnaryOp->getOpcode() == UO_LNot)
-        if (Optional<bool> Res = getAsBoolLiteral(
+        if (std::optional<bool> Res = getAsBoolLiteral(
                 UnaryOp->getSubExpr()->IgnoreImplicit(), FilterMacro))
           return !*Res;
     }
-    return llvm::None;
+    return std::nullopt;
   }
 
   template <typename Node> struct NodeAndBool {
@@ -329,7 +328,7 @@ public:
     const auto *RS = dyn_cast<ReturnStmt>(S);
     if (!RS || !RS->getRetValue())
       return {};
-    if (Optional<bool> Ret =
+    if (std::optional<bool> Ret =
             getAsBoolLiteral(RS->getRetValue()->IgnoreImplicit(), false)) {
       return {RS->getRetValue(), *Ret};
     }
@@ -354,8 +353,9 @@ public:
   }
 
   bool VisitIfStmt(IfStmt *If) {
-    // Skip any if's that have a condition var or an init statement.
-    if (If->hasInitStorage() || If->hasVarStorage())
+    // Skip any if's that have a condition var or an init statement, or are
+    // "if consteval" statements.
+    if (If->hasInitStorage() || If->hasVarStorage() || If->isConsteval())
       return true;
     /*
      * if (true) ThenStmt(); -> ThenStmt();
@@ -363,7 +363,7 @@ public:
      * if (false) ThenStmt(); else ElseStmt() -> ElseStmt();
      */
     Expr *Cond = If->getCond()->IgnoreImplicit();
-    if (Optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
+    if (std::optional<bool> Bool = getAsBoolLiteral(Cond, true)) {
       if (*Bool)
         Check->replaceWithThenStatement(Context, If, Cond);
       else
@@ -398,7 +398,7 @@ public:
           const auto *BO = dyn_cast<BinaryOperator>(S);
           if (!BO || BO->getOpcode() != BO_Assign)
             return {};
-          Optional<bool> RightasBool =
+          std::optional<bool> RightasBool =
               getAsBoolLiteral(BO->getRHS()->IgnoreImplicit(), false);
           if (!RightasBool)
             return {};
@@ -437,9 +437,9 @@ public:
      * Condition ? true : false; -> Condition
      * Condition ? false : true; -> !Condition;
      */
-    if (Optional<bool> Then =
+    if (std::optional<bool> Then =
             getAsBoolLiteral(Cond->getTrueExpr()->IgnoreImplicit(), false)) {
-      if (Optional<bool> Else =
+      if (std::optional<bool> Else =
               getAsBoolLiteral(Cond->getFalseExpr()->IgnoreImplicit(), false)) {
         if (*Then != *Else)
           Check->replaceWithCondition(Context, Cond, *Else);
@@ -467,13 +467,14 @@ public:
          * if (Cond) return false; return true; -> return !Cond;
          */
         auto *If = cast<IfStmt>(*First);
-        if (!If->hasInitStorage() && !If->hasVarStorage()) {
+        if (!If->hasInitStorage() && !If->hasVarStorage() &&
+            !If->isConsteval()) {
           ExprAndBool ThenReturnBool =
               checkSingleStatement(If->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
               ThenReturnBool.Bool != TrailingReturnBool.Bool) {
-            if (Check->ChainedConditionalReturn ||
-                (!PrevIf && If->getElse() == nullptr)) {
+            if ((Check->ChainedConditionalReturn || !PrevIf) &&
+                If->getElse() == nullptr) {
               Check->replaceCompoundReturnWithCondition(
                   Context, cast<ReturnStmt>(*Second), TrailingReturnBool.Bool,
                   If, ThenReturnBool.Item);
@@ -491,7 +492,7 @@ public:
                                     : cast<DefaultStmt>(*First)->getSubStmt();
         auto *SubIf = dyn_cast<IfStmt>(SubStmt);
         if (SubIf && !SubIf->getElse() && !SubIf->hasInitStorage() &&
-            !SubIf->hasVarStorage()) {
+            !SubIf->hasVarStorage() && !SubIf->isConsteval()) {
           ExprAndBool ThenReturnBool =
               checkSingleStatement(SubIf->getThen(), parseReturnLiteralBool);
           if (ThenReturnBool &&
@@ -565,7 +566,7 @@ public:
       if (Check->reportDeMorgan(Context, Op, BinaryOp, !IsProcessing, parent(),
                                 Parens) &&
           !Check->areDiagsSelfContained()) {
-        llvm::SaveAndRestore<bool> RAII(IsProcessing, true);
+        llvm::SaveAndRestore RAII(IsProcessing, true);
         return Base::TraverseUnaryOperator(Op);
       }
     }
@@ -782,16 +783,16 @@ static BinaryOperatorKind getDemorganFlippedOperator(BinaryOperatorKind BO) {
 
 static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
                              const ASTContext &Ctx, const Expr *E,
-                             Optional<BinaryOperatorKind> OuterBO);
+                             std::optional<BinaryOperatorKind> OuterBO);
 
 /// Inverts \p BinOp, Removing \p Parens if they exist and are safe to remove.
 /// returns \c true if there is any issue building the Fixes, \c false
 /// otherwise.
-static bool flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
-                                       const ASTContext &Ctx,
-                                       const BinaryOperator *BinOp,
-                                       Optional<BinaryOperatorKind> OuterBO,
-                                       const ParenExpr *Parens = nullptr) {
+static bool
+flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
+                           const ASTContext &Ctx, const BinaryOperator *BinOp,
+                           std::optional<BinaryOperatorKind> OuterBO,
+                           const ParenExpr *Parens = nullptr) {
   switch (BinOp->getOpcode()) {
   case BO_LAnd:
   case BO_LOr: {
@@ -868,7 +869,7 @@ static bool flipDemorganBinaryOperator(SmallVectorImpl<FixItHint> &Fixes,
 
 static bool flipDemorganSide(SmallVectorImpl<FixItHint> &Fixes,
                              const ASTContext &Ctx, const Expr *E,
-                             Optional<BinaryOperatorKind> OuterBO) {
+                             std::optional<BinaryOperatorKind> OuterBO) {
   if (isa<UnaryOperator>(E) && cast<UnaryOperator>(E)->getOpcode() == UO_LNot) {
     //  if we have a not operator, '!a', just remove the '!'.
     if (cast<UnaryOperator>(E)->getOperatorLoc().isMacroID())
@@ -954,6 +955,4 @@ bool SimplifyBooleanExprCheck::reportDeMorgan(const ASTContext &Context,
   Diag << Fixes;
   return true;
 }
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

@@ -14,7 +14,7 @@
 ; With SSE, folding memory operands into math/logic ops requires 16-byte alignment
 ; unless specially configured on some CPUs such as AMD Family 10H.
 
-define <4 x i32> @test1(<4 x i32>* %p0, <4 x i32> %in1) nounwind {
+define <4 x i32> @test1(ptr %p0, <4 x i32> %in1) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vandps (%rdi), %xmm0, %xmm0
@@ -25,7 +25,7 @@ define <4 x i32> @test1(<4 x i32>* %p0, <4 x i32> %in1) nounwind {
 ; SSE-NEXT:    movups (%rdi), %xmm1
 ; SSE-NEXT:    andps %xmm1, %xmm0
 ; SSE-NEXT:    retq
-  %in0 = load <4 x i32>, <4 x i32>* %p0, align 2
+  %in0 = load <4 x i32>, ptr %p0, align 2
   %a = and <4 x i32> %in0, %in1
   ret <4 x i32> %a
 

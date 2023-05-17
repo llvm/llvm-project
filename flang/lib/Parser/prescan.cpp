@@ -89,7 +89,8 @@ void Prescanner::Prescan(ProvenanceRange range) {
 
 void Prescanner::Statement() {
   TokenSequence tokens;
-  LineClassification line{ClassifyLine(nextLine_)};
+  const char *statementStart{nextLine_};
+  LineClassification line{ClassifyLine(statementStart)};
   switch (line.kind) {
   case LineClassification::Kind::Comment:
     nextLine_ += line.payloadOffset; // advance to '!' or newline
@@ -163,6 +164,11 @@ void Prescanner::Statement() {
   }
 
   while (NextToken(tokens)) {
+  }
+  if (continuationLines_ > 255) {
+    Say(GetProvenance(statementStart),
+        "%d continuation lines is more than the Fortran standard allows"_port_en_US,
+        continuationLines_);
   }
 
   Provenance newlineProvenance{GetCurrentProvenance()};
@@ -263,9 +269,9 @@ void Prescanner::NextLine() {
 }
 
 void Prescanner::LabelField(TokenSequence &token) {
-  const char *bad{nullptr};
   int outCol{1};
   const char *start{at_};
+  std::optional<int> badColumn;
   for (; *at_ != '\n' && column_ <= 6; ++at_) {
     if (*at_ == '\t') {
       ++at_;
@@ -276,18 +282,24 @@ void Prescanner::LabelField(TokenSequence &token) {
         !(*at_ == '0' && column_ == 6)) { // '0' in column 6 becomes space
       EmitChar(token, *at_);
       ++outCol;
-      if (!bad && !IsDecimalDigit(*at_)) {
-        bad = at_;
+      if (!badColumn && (column_ == 6 || !IsDecimalDigit(*at_))) {
+        badColumn = column_;
       }
     }
     ++column_;
   }
-  if (bad && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
-    Say(GetProvenance(bad),
-        "Character in fixed-form label field must be a digit"_warn_en_US);
+  if (badColumn && !preprocessor_.IsNameDefined(token.CurrentOpenToken())) {
+    Say(GetProvenance(start + *badColumn - 1),
+        *badColumn == 6
+            ? "Statement should not begin with a continuation line"_warn_en_US
+            : "Character in fixed-form label field must be a digit"_warn_en_US);
     token.clear();
-    at_ = start;
-    return;
+    if (*badColumn < 6) {
+      at_ = start;
+      column_ = 1;
+      return;
+    }
+    outCol = 1;
   }
   if (outCol == 1) { // empty label field
     // Emit a space so that, if the line is rescanned after preprocessing,
@@ -299,7 +311,7 @@ void Prescanner::LabelField(TokenSequence &token) {
   token.CloseToken();
   SkipToNextSignificantCharacter();
   if (IsDecimalDigit(*at_)) {
-    Say(GetProvenance(at_),
+    Say(GetCurrentProvenance(),
         "Label digit is not in fixed-form label field"_port_en_US);
   }
 }
@@ -406,6 +418,7 @@ void Prescanner::SkipToNextSignificantCharacter() {
       mightNeedSpace = *at_ == '\n';
     }
     for (; Continuation(mightNeedSpace); mightNeedSpace = false) {
+      ++continuationLines_;
       if (MustSkipToEndOfLine()) {
         SkipToEndOfLine();
       }
@@ -493,7 +506,7 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       // Recognize and skip over classic C style /*comments*/ when
       // outside a character literal.
       if (features_.ShouldWarn(LanguageFeature::ClassicCComments)) {
-        Say(GetProvenance(at_),
+        Say(GetCurrentProvenance(),
             "nonstandard usage: C-style comment"_port_en_US);
       }
       SkipCComments();
@@ -581,13 +594,18 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
     preventHollerith_ = false;
   } else if (IsLegalInIdentifier(*at_)) {
-    do {
-    } while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_)));
+    while (IsLegalInIdentifier(EmitCharAndAdvance(tokens, *at_))) {
+    }
+    if (InFixedFormSource()) {
+      SkipSpaces();
+    }
     if ((*at_ == '\'' || *at_ == '"') &&
         tokens.CharAt(tokens.SizeInChars() - 1) == '_') { // kind_"..."
       QuotedCharacterLiteral(tokens, start);
+      preventHollerith_ = false;
+    } else {
+      preventHollerith_ = true; // DO 10 H = ...
     }
-    preventHollerith_ = false;
   } else if (*at_ == '*') {
     if (EmitCharAndAdvance(tokens, '*') == '*') {
       EmitCharAndAdvance(tokens, '*');
@@ -616,6 +634,12 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
       EmitCharAndAdvance(tokens, nch);
     } else if (ch == '/') {
       slashInCurrentStatement_ = true;
+    } else if (ch == ';' && InFixedFormSource()) {
+      SkipSpaces();
+      if (IsDecimalDigit(*at_)) {
+        Say(GetProvenanceRange(at_, at_ + 1),
+            "Label should be in the label field"_port_en_US);
+      }
     }
   }
   tokens.CloseToken();

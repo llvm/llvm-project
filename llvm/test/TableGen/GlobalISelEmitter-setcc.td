@@ -19,6 +19,6 @@ def ICMPEQ : I<(outs GPR32:$dst), (ins GPR32Op:$src0, GPR32:$src1),
                [(set GPR32:$dst, (i32 (setcc i32:$src0, i32:$src1, SETEQ)))]>;
 
 // Check there is an error if not a CondCode operand.
-// ERR: [[FILE]]:[[@LINE+1]]:1: warning: Skipped pattern: Unable to handle CondCode
+// ERR: [[FILE]]:[[@LINE+1]]:5: warning: Skipped pattern: Unable to handle CondCode
 def FCMP_NOTCC : I<(outs GPR32:$dst), (ins FPR32Op:$src0, FPR32:$src1),
                    [(set GPR32:$dst, (i32 (setcc f32:$src0, f32:$src1, i32)))]>;

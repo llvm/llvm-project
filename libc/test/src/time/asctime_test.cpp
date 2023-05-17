@@ -6,9 +6,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/time/asctime.h"
+#include "test/UnitTest/Test.h"
 #include "test/src/time/TmHelper.h"
-#include "utils/UnitTest/Test.h"
 
 static inline char *call_asctime(struct tm *tm_data, int year, int month,
                                  int mday, int hour, int min, int sec, int wday,
@@ -21,68 +22,66 @@ static inline char *call_asctime(struct tm *tm_data, int year, int month,
 TEST(LlvmLibcAsctime, Nullptr) {
   char *result;
   result = __llvm_libc::asctime(nullptr);
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  ASSERT_EQ(EINVAL, libc_errno);
   ASSERT_STREQ(nullptr, result);
 }
 
 // Weekdays are in the range 0 to 6. Test passing invalid value in wday.
 TEST(LlvmLibcAsctime, InvalidWday) {
   struct tm tm_data;
-  char *result;
 
   // Test with wday = -1.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        1,    // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        -1,   // wday
-                        0);   // yday
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  call_asctime(&tm_data,
+               1970, // year
+               1,    // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               -1,   // wday
+               0);   // yday
+  ASSERT_EQ(EINVAL, libc_errno);
 
   // Test with wday = 7.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        1,    // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        7,    // wday
-                        0);   // yday
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  call_asctime(&tm_data,
+               1970, // year
+               1,    // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               7,    // wday
+               0);   // yday
+  ASSERT_EQ(EINVAL, libc_errno);
 }
 
 // Months are from January to December. Test passing invalid value in month.
 TEST(LlvmLibcAsctime, InvalidMonth) {
   struct tm tm_data;
-  char *result;
 
   // Test with month = 0.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        0,    // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        4,    // wday
-                        0);   // yday
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  call_asctime(&tm_data,
+               1970, // year
+               0,    // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               4,    // wday
+               0);   // yday
+  ASSERT_EQ(EINVAL, libc_errno);
 
   // Test with month = 13.
-  result = call_asctime(&tm_data,
-                        1970, // year
-                        13,   // month
-                        1,    // day
-                        0,    // hr
-                        0,    // min
-                        0,    // sec
-                        4,    // wday
-                        0);   // yday
-  ASSERT_EQ(EINVAL, llvmlibc_errno);
+  call_asctime(&tm_data,
+               1970, // year
+               13,   // month
+               1,    // day
+               0,    // hr
+               0,    // min
+               0,    // sec
+               4,    // wday
+               0);   // yday
+  ASSERT_EQ(EINVAL, libc_errno);
 }
 
 TEST(LlvmLibcAsctime, ValidWeekdays) {
@@ -210,6 +209,6 @@ TEST(LlvmLibcAsctime, Max64BitYear) {
                         50,         // sec
                         2,          // wday
                         50);        // yday
-  ASSERT_EQ(EOVERFLOW, llvmlibc_errno);
+  ASSERT_EQ(EOVERFLOW, libc_errno);
   ASSERT_STREQ(nullptr, result);
 }

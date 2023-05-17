@@ -1,7 +1,7 @@
 # REQUIRES: aarch64
 # RUN: llvm-mc -filetype=obj -triple=aarch64-none-linux-gnu %s -o %t.o
 # RUN: ld.lld -shared %t.o -o %tout
-# RUN: llvm-objdump -D --no-show-raw-insn %tout | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -D --no-show-raw-insn %tout | FileCheck %s
 # RUN: llvm-readobj -r %tout | FileCheck %s --check-prefix=CHECK-RELOCS
 
 # Test that when we take the address of a preemptible ifunc in a shared object

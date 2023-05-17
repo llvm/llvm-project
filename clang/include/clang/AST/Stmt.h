@@ -19,8 +19,10 @@
 #include "clang/Basic/CapturedStmt.h"
 #include "clang/Basic/IdentifierTable.h"
 #include "clang/Basic/LLVM.h"
+#include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/Specifiers.h"
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/PointerIntPair.h"
@@ -34,6 +36,7 @@
 #include <cassert>
 #include <cstddef>
 #include <iterator>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -127,6 +130,10 @@ protected:
     friend class CompoundStmt;
 
     unsigned : NumStmtBits;
+
+    /// True if the compound statement has one or more pragmas that set some
+    /// floating-point features.
+    unsigned HasFPFeatures : 1;
 
     unsigned NumStmts;
   };
@@ -357,6 +364,10 @@ protected:
     /// for the predefined identifier.
     unsigned HasFunctionName : 1;
 
+    /// True if this PredefinedExpr should be treated as a StringLiteral (for
+    /// MSVC compatibility).
+    unsigned IsTransparent : 1;
+
     /// The location of this PredefinedExpr.
     SourceLocation Loc;
   };
@@ -384,7 +395,10 @@ protected:
 
     unsigned : NumExprBits;
 
-    unsigned Semantics : 3; // Provides semantics for APFloat construction
+    static_assert(
+        llvm::APFloat::S_MaxSemantics < 16,
+        "Too many Semantics enum values to fit in bitfield of size 4");
+    unsigned Semantics : 4; // Provides semantics for APFloat construction
     unsigned IsExact : 1;
   };
 
@@ -681,6 +695,9 @@ protected:
 
     unsigned : NumExprBits;
 
+    /// Whether this CXXDefaultArgExpr rewrote its argument and stores a copy.
+    unsigned HasRewrittenInit : 1;
+
     /// The location where the default argument expression was used.
     SourceLocation Loc;
   };
@@ -690,6 +707,10 @@ protected:
     friend class CXXDefaultInitExpr;
 
     unsigned : NumExprBits;
+
+    /// Whether this CXXDefaultInitExprBitfields rewrote its argument and stores
+    /// a copy.
+    unsigned HasRewrittenInit : 1;
 
     /// The location where the default initializer expression was used.
     SourceLocation Loc;
@@ -961,7 +982,7 @@ protected:
     SourceLocation RequiresKWLoc;
   };
 
-  //===--- C++ Coroutines TS bitfields classes ---===//
+  //===--- C++ Coroutines bitfields classes ---===//
 
   class CoawaitExprBitfields {
     friend class CoawaitExpr;
@@ -1065,7 +1086,7 @@ protected:
     LambdaExprBitfields LambdaExprBits;
     RequiresExprBitfields RequiresExprBits;
 
-    // C++ Coroutines TS expressions
+    // C++ Coroutines expressions
     CoawaitExprBitfields CoawaitBits;
 
     // Obj-C Expressions
@@ -1398,8 +1419,9 @@ public:
 };
 
 /// CompoundStmt - This represents a group of statements like { stmt stmt }.
-class CompoundStmt final : public Stmt,
-                           private llvm::TrailingObjects<CompoundStmt, Stmt *> {
+class CompoundStmt final
+    : public Stmt,
+      private llvm::TrailingObjects<CompoundStmt, Stmt *, FPOptionsOverride> {
   friend class ASTStmtReader;
   friend TrailingObjects;
 
@@ -1409,26 +1431,48 @@ class CompoundStmt final : public Stmt,
   /// The location of the closing "}".
   SourceLocation RBraceLoc;
 
-  CompoundStmt(ArrayRef<Stmt *> Stmts, SourceLocation LB, SourceLocation RB);
+  CompoundStmt(ArrayRef<Stmt *> Stmts, FPOptionsOverride FPFeatures,
+               SourceLocation LB, SourceLocation RB);
   explicit CompoundStmt(EmptyShell Empty) : Stmt(CompoundStmtClass, Empty) {}
 
   void setStmts(ArrayRef<Stmt *> Stmts);
 
+  /// Set FPOptionsOverride in trailing storage. Used only by Serialization.
+  void setStoredFPFeatures(FPOptionsOverride F) {
+    assert(hasStoredFPFeatures());
+    *getTrailingObjects<FPOptionsOverride>() = F;
+  }
+
+  size_t numTrailingObjects(OverloadToken<Stmt *>) const {
+    return CompoundStmtBits.NumStmts;
+  }
+
 public:
   static CompoundStmt *Create(const ASTContext &C, ArrayRef<Stmt *> Stmts,
-                              SourceLocation LB, SourceLocation RB);
+                              FPOptionsOverride FPFeatures, SourceLocation LB,
+                              SourceLocation RB);
 
   // Build an empty compound statement with a location.
   explicit CompoundStmt(SourceLocation Loc)
       : Stmt(CompoundStmtClass), LBraceLoc(Loc), RBraceLoc(Loc) {
     CompoundStmtBits.NumStmts = 0;
+    CompoundStmtBits.HasFPFeatures = 0;
   }
 
   // Build an empty compound statement.
-  static CompoundStmt *CreateEmpty(const ASTContext &C, unsigned NumStmts);
+  static CompoundStmt *CreateEmpty(const ASTContext &C, unsigned NumStmts,
+                                   bool HasFPFeatures);
 
   bool body_empty() const { return CompoundStmtBits.NumStmts == 0; }
   unsigned size() const { return CompoundStmtBits.NumStmts; }
+
+  bool hasStoredFPFeatures() const { return CompoundStmtBits.HasFPFeatures; }
+
+  /// Get FPOptionsOverride from trailing storage.
+  FPOptionsOverride getStoredFPFeatures() const {
+    assert(hasStoredFPFeatures());
+    return *getTrailingObjects<FPOptionsOverride>();
+  }
 
   using body_iterator = Stmt **;
   using body_range = llvm::iterator_range<body_iterator>;
@@ -1884,7 +1928,7 @@ public:
 
   SourceLocation getAttrLoc() const { return AttributedStmtBits.AttrLoc; }
   ArrayRef<const Attr *> getAttrs() const {
-    return llvm::makeArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
+    return llvm::ArrayRef(getAttrArrayPtr(), AttributedStmtBits.NumAttrs);
   }
 
   Stmt *getSubStmt() { return SubStmt; }
@@ -2052,6 +2096,11 @@ public:
                            : nullptr;
   }
 
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    assert(hasVarStorage());
+    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+  }
+
   Stmt *getInit() {
     return hasInitStorage() ? getTrailingObjects<Stmt *>()[initOffset()]
                             : nullptr;
@@ -2108,9 +2157,9 @@ public:
   }
 
   /// If this is an 'if constexpr', determine which substatement will be taken.
-  /// Otherwise, or if the condition is value-dependent, returns None.
-  Optional<const Stmt*> getNondiscardedCase(const ASTContext &Ctx) const;
-  Optional<Stmt *> getNondiscardedCase(const ASTContext &Ctx);
+  /// Otherwise, or if the condition is value-dependent, returns std::nullopt.
+  std::optional<const Stmt *> getNondiscardedCase(const ASTContext &Ctx) const;
+  std::optional<Stmt *> getNondiscardedCase(const ASTContext &Ctx);
 
   bool isObjCAvailabilityCheck() const;
 
@@ -2284,6 +2333,11 @@ public:
                            : nullptr;
   }
 
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    assert(hasVarStorage());
+    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+  }
+
   SwitchCase *getSwitchCaseList() { return FirstCase; }
   const SwitchCase *getSwitchCaseList() const { return FirstCase; }
   void setSwitchCaseList(SwitchCase *SC) { FirstCase = SC; }
@@ -2447,6 +2501,11 @@ public:
                            : nullptr;
   }
 
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    assert(hasVarStorage());
+    getTrailingObjects<Stmt *>()[varOffset()] = CondVar;
+  }
+
   SourceLocation getWhileLoc() const { return WhileStmtBits.WhileLoc; }
   void setWhileLoc(SourceLocation L) { WhileStmtBits.WhileLoc = L; }
 
@@ -2536,6 +2595,8 @@ public:
 /// the init/cond/inc parts of the ForStmt will be null if they were not
 /// specified in the source.
 class ForStmt : public Stmt {
+  friend class ASTStmtReader;
+
   enum { INIT, CONDVAR, COND, INC, BODY, END_EXPR };
   Stmt* SubExprs[END_EXPR]; // SubExprs[INIT] is an expression or declstmt.
   SourceLocation LParenLoc, RParenLoc;
@@ -2563,8 +2624,16 @@ public:
 
   /// If this ForStmt has a condition variable, return the faux DeclStmt
   /// associated with the creation of that condition variable.
+  DeclStmt *getConditionVariableDeclStmt() {
+    return reinterpret_cast<DeclStmt*>(SubExprs[CONDVAR]);
+  }
+
   const DeclStmt *getConditionVariableDeclStmt() const {
     return reinterpret_cast<DeclStmt*>(SubExprs[CONDVAR]);
+  }
+
+  void setConditionVariableDeclStmt(DeclStmt *CondVar) {
+    SubExprs[CONDVAR] = CondVar;
   }
 
   Expr *getCond() { return reinterpret_cast<Expr*>(SubExprs[COND]); }
@@ -3295,16 +3364,16 @@ public:
   //===--- Other ---===//
 
   ArrayRef<StringRef> getAllConstraints() const {
-    return llvm::makeArrayRef(Constraints, NumInputs + NumOutputs);
+    return llvm::ArrayRef(Constraints, NumInputs + NumOutputs);
   }
 
   ArrayRef<StringRef> getClobbers() const {
-    return llvm::makeArrayRef(Clobbers, NumClobbers);
+    return llvm::ArrayRef(Clobbers, NumClobbers);
   }
 
   ArrayRef<Expr*> getAllExprs() const {
-    return llvm::makeArrayRef(reinterpret_cast<Expr**>(Exprs),
-                              NumInputs + NumOutputs);
+    return llvm::ArrayRef(reinterpret_cast<Expr **>(Exprs),
+                          NumInputs + NumOutputs);
   }
 
   StringRef getClobber(unsigned i) const { return getClobbers()[i]; }

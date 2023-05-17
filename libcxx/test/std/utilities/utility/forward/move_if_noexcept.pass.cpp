@@ -19,6 +19,7 @@
 //     >::type
 //     move_if_noexcept(T& x);
 
+#include <type_traits>
 #include <utility>
 
 #include "test_macros.h"

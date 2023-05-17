@@ -2,9 +2,6 @@
 Test newly added SBSymbol and SBAddress APIs.
 """
 
-from __future__ import print_function
-
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class SymbolAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -24,7 +19,6 @@ class SymbolAPITestCase(TestBase):
         self.line2 = line_number(
             'main.c', '// Find the line number for breakpoint 2 here.')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber='llvm.org/pr21765')
     def test(self):
         """Exercise some SBSymbol and SBAddress APIs."""
         self.build()
@@ -64,8 +58,8 @@ class SymbolAPITestCase(TestBase):
         self.assertEqual(symbol_line1.GetType(), lldb.eSymbolTypeCode)
         addr_line1 = symbol_line1.GetStartAddress()
         # And a section type of code, too.
-        self.assertTrue(addr_line1.GetSection().GetSectionType()
-                        == lldb.eSectionTypeCode)
+        self.assertEqual(addr_line1.GetSection().GetSectionType(),
+                         lldb.eSectionTypeCode)
 
         # Continue the inferior, the breakpoint 2 should be hit.
         process.Continue()
@@ -81,11 +75,11 @@ class SymbolAPITestCase(TestBase):
         self.assertEqual(symbol_line2.GetType(), lldb.eSymbolTypeCode)
         addr_line2 = symbol_line2.GetStartAddress()
         # And a section type of code, too.
-        self.assertTrue(addr_line2.GetSection().GetSectionType()
-                        == lldb.eSectionTypeCode)
+        self.assertEqual(addr_line2.GetSection().GetSectionType(),
+                         lldb.eSectionTypeCode)
 
         # Now verify that both addresses point to the same module.
         if self.TraceOn():
             print("UUID:", addr_line1.GetModule().GetUUIDString())
-        self.assertTrue(addr_line1.GetModule().GetUUIDString()
-                        == addr_line2.GetModule().GetUUIDString())
+        self.assertEqual(addr_line1.GetModule().GetUUIDString(),
+                         addr_line2.GetModule().GetUUIDString())

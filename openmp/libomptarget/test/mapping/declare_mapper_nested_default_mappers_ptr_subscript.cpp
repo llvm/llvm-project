@@ -11,14 +11,14 @@ typedef struct {
   int a;
   double *b;
 } C1;
-#pragma omp declare mapper(C1 s) map(to : s.a) map(from : s.b [0:2])
+#pragma omp declare mapper(C1 s) map(to : s.a) map(from : s.b[0 : 2])
 
 typedef struct {
   int a;
   double *b;
   C1 c;
 } C;
-#pragma omp declare mapper(C s) map(to : s.a, s.c) map(from : s.b [0:2])
+#pragma omp declare mapper(C s) map(to : s.a, s.c) map(from : s.b[0 : 2])
 
 typedef struct {
   int e;

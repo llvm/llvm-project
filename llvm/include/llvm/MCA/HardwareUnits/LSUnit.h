@@ -269,7 +269,7 @@ public:
   bool isLQFull() const { return LQSize && LQSize == UsedLQEntries; }
 
   bool isValidGroupID(unsigned Index) const {
-    return Index && (Groups.find(Index) != Groups.end());
+    return Index && Groups.contains(Index);
   }
 
   /// Check if a peviously dispatched instruction IR is now ready for execution.

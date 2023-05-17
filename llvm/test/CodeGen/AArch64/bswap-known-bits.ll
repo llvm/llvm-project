@@ -95,20 +95,20 @@ define i64 @demand_one_byte3(i64 %x) {
   ret i64 %r
 }
 
-define void @demand_one_loaded_byte(i64* %xp, i32* %yp) {
+define void @demand_one_loaded_byte(ptr %xp, ptr %yp) {
 ; CHECK-LABEL: demand_one_loaded_byte:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ldrb w8, [x0, #4]
 ; CHECK-NEXT:    strb w8, [x1]
 ; CHECK-NEXT:    ret
-  %x = load i64, i64* %xp, align 8
+  %x = load i64, ptr %xp, align 8
   %x_zzzz7654 = lshr i64 %x, 32
   %x_z7654zzz = shl nuw nsw i64 %x_zzzz7654, 24
   %x_4zzz = trunc i64 %x_z7654zzz to i32
-  %y = load i32, i32* %yp, align 4
+  %y = load i32, ptr %yp, align 4
   %y_321z = and i32 %y, -256
   %x_zzz4 = call i32 @llvm.bswap.i32(i32 %x_4zzz)
   %r = or i32 %x_zzz4, %y_321z
-  store i32 %r, i32* %yp, align 4
+  store i32 %r, ptr %yp, align 4
   ret void
 }

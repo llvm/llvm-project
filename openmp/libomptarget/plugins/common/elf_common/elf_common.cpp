@@ -67,22 +67,22 @@ static int32_t withBytesAsElf(char *BytesBegin, char *BytesEnd, F Callback) {
 }
 
 // Check whether an image is valid for execution on target_id
-int32_t elf_check_machine(__tgt_device_image *image, uint16_t target_id) {
-  auto CheckMachine = [target_id](const ELFObjectFileBase *Object) {
-    return target_id == Object->getEMachine();
+int32_t elf_check_machine(__tgt_device_image *Image, uint16_t TargetId) {
+  auto CheckMachine = [TargetId](const ELFObjectFileBase *Object) {
+    return TargetId == Object->getEMachine();
   };
-  return withBytesAsElf(reinterpret_cast<char *>(image->ImageStart),
-                        reinterpret_cast<char *>(image->ImageEnd),
+  return withBytesAsElf(reinterpret_cast<char *>(Image->ImageStart),
+                        reinterpret_cast<char *>(Image->ImageEnd),
                         CheckMachine);
 }
 
-int32_t elf_is_dynamic(__tgt_device_image *image) {
+int32_t elf_is_dynamic(__tgt_device_image *Image) {
   auto CheckDynType = [](const ELFObjectFileBase *Object) {
     uint16_t Type = Object->getEType();
     DP("ELF Type: %d\n", Type);
     return Type == ET_DYN;
   };
-  return withBytesAsElf(reinterpret_cast<char *>(image->ImageStart),
-                        reinterpret_cast<char *>(image->ImageEnd),
+  return withBytesAsElf(reinterpret_cast<char *>(Image->ImageStart),
+                        reinterpret_cast<char *>(Image->ImageEnd),
                         CheckDynType);
 }

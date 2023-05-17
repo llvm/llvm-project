@@ -2,7 +2,7 @@
 
 // CHECK: gpu.module @foo attributes {gpu.binary = "HSACO"}
 gpu.module @foo {
-  llvm.func @kernel(%arg0 : f32, %arg1 : !llvm.ptr<f32>)
+  llvm.func @kernel(%arg0 : f32, %arg1 : !llvm.ptr)
     // CHECK: attributes  {gpu.kernel}
     attributes  { gpu.kernel } {
     llvm.return

@@ -1,6 +1,5 @@
 // RUN: %clang_cc1 -triple i686-unknown-windows-msvc %s -fsyntax-only -verify -fms-extensions -Wunknown-pragmas
 // RUN: not %clang_cc1 -triple i686-unknown-windows-msvc %s -fms-extensions -E | FileCheck %s
-// UNSUPPORTED: ps4
 
 // rdar://6495941
 
@@ -228,7 +227,19 @@ void pragma_function_foo() {
 #pragma optimize("g"      // expected-warning{{expected ',' in '#pragma optimize'}}
 #pragma optimize("g",     // expected-warning{{missing argument to '#pragma optimize'; expected 'on' or 'off'}}
 #pragma optimize("g",xyz  // expected-warning{{unexpected argument 'xyz' to '#pragma optimize'; expected 'on' or 'off'}}
-#pragma optimize("g",on)  // expected-warning{{#pragma optimize' is not supported}}
+#pragma optimize("g",on)  // expected-warning{{unexpected argument 'g' to '#pragma optimize'; expected ""}}
+#pragma optimize("",on)  // no-warning
+#pragma optimize("", on) asdf // expected-warning{{extra tokens at end of '#pragma optimize'}}
+
+void pragma_optimize_foo() {
+#pragma optimize("", on) // expected-error {{'#pragma optimize' can only appear at file scope}}
+}
+
+#pragma managed            // no-warning
+#pragma unmanaged          // no-warning
+#pragma managed(push, on)  // no-warning
+#pragma managed(pop)       // no-warning
+#pragma managed2           // expected-warning{{unknown pragma ignored}}
 
 #pragma execution_character_set                 // expected-warning {{expected '('}}
 #pragma execution_character_set(                // expected-warning {{expected 'push' or 'pop'}}

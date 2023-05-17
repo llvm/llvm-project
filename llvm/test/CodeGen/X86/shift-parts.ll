@@ -4,7 +4,7 @@
 
 %0 = type { i32, i8, [35 x i8] }
 
-@g_144 = external dso_local global %0, align 8              ; <%0*> [#uses=1]
+@g_144 = external dso_local global %0, align 8              ; <ptr> [#uses=1]
 
 define i32 @int87(i32 %uint64p_8, i1 %cond) nounwind {
 ; CHECK-LABEL: int87:
@@ -19,13 +19,13 @@ define i32 @int87(i32 %uint64p_8, i1 %cond) nounwind {
 ; CHECK-NEXT:    testb $64, %dl
 ; CHECK-NEXT:    movq %rcx, %rsi
 ; CHECK-NEXT:    cmovneq %rax, %rsi
-; CHECK-NEXT:    orl $0, %esi
+; CHECK-NEXT:    testl %esi, %esi
 ; CHECK-NEXT:    je .LBB0_1
 ; CHECK-NEXT:  # %bb.2: # %if.then
 ; CHECK-NEXT:    movl $1, %eax
 ; CHECK-NEXT:    retq
 entry:
-  %srcval4 = load i320, i320* bitcast (%0* @g_144 to i320*), align 8 ; <i320> [#uses=1]
+  %srcval4 = load i320, ptr @g_144, align 8 ; <i320> [#uses=1]
   br label %for.cond
 
 for.cond:                                         ; preds = %for.cond, %entry

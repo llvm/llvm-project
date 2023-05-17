@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator.h"
 
 namespace llvm {
 class Init;
@@ -43,13 +44,13 @@ public:
   bool isStatic() const;
 
   // Return the body for this method if it has one.
-  llvm::Optional<StringRef> getBody() const;
+  std::optional<StringRef> getBody() const;
 
   // Return the default implementation for this method if it has one.
-  llvm::Optional<StringRef> getDefaultImplementation() const;
+  std::optional<StringRef> getDefaultImplementation() const;
 
   // Return the description of this method if it has one.
-  llvm::Optional<StringRef> getDescription() const;
+  std::optional<StringRef> getDescription() const;
 
   // Arguments.
   ArrayRef<Argument> getArguments() const;
@@ -72,9 +73,16 @@ private:
 class Interface {
 public:
   explicit Interface(const llvm::Record *def);
+  Interface(const Interface &rhs) : def(rhs.def), methods(rhs.methods) {
+    for (auto &base : rhs.baseInterfaces)
+      baseInterfaces.push_back(std::make_unique<Interface>(*base));
+  }
 
   // Return the name of this interface.
   StringRef getName() const;
+
+  // Returns this interface's name prefixed with namespaces.
+  std::string getFullyQualifiedName() const;
 
   // Return the C++ namespace of this interface.
   StringRef getCppNamespace() const;
@@ -83,20 +91,28 @@ public:
   ArrayRef<InterfaceMethod> getMethods() const;
 
   // Return the description of this method if it has one.
-  llvm::Optional<StringRef> getDescription() const;
+  std::optional<StringRef> getDescription() const;
 
   // Return the interfaces extra class declaration code.
-  llvm::Optional<StringRef> getExtraClassDeclaration() const;
+  std::optional<StringRef> getExtraClassDeclaration() const;
 
   // Return the traits extra class declaration code.
-  llvm::Optional<StringRef> getExtraTraitClassDeclaration() const;
+  std::optional<StringRef> getExtraTraitClassDeclaration() const;
 
   // Return the extra class declaration code shared between the interface and
   // trait classes.
-  llvm::Optional<StringRef> getExtraSharedClassDeclaration() const;
+  std::optional<StringRef> getExtraSharedClassDeclaration() const;
+
+  // Return the extra classof method code.
+  std::optional<StringRef> getExtraClassOf() const;
 
   // Return the verify method body if it has one.
-  llvm::Optional<StringRef> getVerify() const;
+  std::optional<StringRef> getVerify() const;
+
+  // Return the base interfaces of this interface.
+  auto getBaseInterfaces() const {
+    return llvm::make_pointee_range(baseInterfaces);
+  }
 
   // If there's a verify method, return if it needs to access the ops in the
   // regions.
@@ -111,6 +127,9 @@ private:
 
   // The methods of this interface.
   SmallVector<InterfaceMethod, 8> methods;
+
+  // The base interfaces of this interface.
+  SmallVector<std::unique_ptr<Interface>> baseInterfaces;
 };
 
 // An interface that is registered to an Attribute.

@@ -23,6 +23,7 @@
 #include "lldb/Symbol/SymbolVendor.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Symbol/VariableList.h"
+#include "lldb/Target/ABI.h"
 #include "lldb/Target/ExecutionContext.h"
 #include "lldb/Target/Process.h"
 #include "lldb/Target/StackFrame.h"
@@ -34,6 +35,7 @@
 #include "lldb/Utility/Log.h"
 #include "lldb/Utility/StreamString.h"
 
+using namespace lldb;
 using namespace lldb_private;
 
 char LLVMUserExpression::ID;
@@ -48,8 +50,8 @@ LLVMUserExpression::LLVMUserExpression(ExecutionContextScope &exe_scope,
       m_stack_frame_bottom(LLDB_INVALID_ADDRESS),
       m_stack_frame_top(LLDB_INVALID_ADDRESS), m_allow_cxx(false),
       m_allow_objc(false), m_transformed_text(), m_execution_unit_sp(),
-      m_materializer_up(), m_jit_module_wp(), m_can_interpret(false),
-      m_materialized_address(LLDB_INVALID_ADDRESS) {}
+      m_materializer_up(), m_jit_module_wp(), m_target(nullptr),
+      m_can_interpret(false), m_materialized_address(LLDB_INVALID_ADDRESS) {}
 
 LLVMUserExpression::~LLVMUserExpression() {
   if (m_target) {
@@ -333,7 +335,14 @@ bool LLVMUserExpression::PrepareToExecuteJITExpression(
     if (m_can_interpret && m_stack_frame_bottom == LLDB_INVALID_ADDRESS) {
       Status alloc_error;
 
-      const size_t stack_frame_size = 512 * 1024;
+      size_t stack_frame_size = target->GetExprAllocSize();
+      if (stack_frame_size == 0) {
+        ABISP abi_sp;
+        if (process && (abi_sp = process->GetABI()))
+          stack_frame_size = abi_sp->GetStackFrameSize();
+        else
+          stack_frame_size = 512 * 1024;
+      }
 
       const bool zero_memory = false;
 

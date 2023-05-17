@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class LibcxxVectorDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_numbers(self, var_name):
         self.expect("frame variable " + var_name,
                     substrs=[var_name + ' = size=7',
@@ -90,7 +88,7 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                              '[3] = 1234',
                              '}'])
 
-        self.expect("p numbers",
+        self.expect("expression numbers",
                     substrs=['$', 'size=4',
                              '[0] = 1',
                              '[1] = 12',
@@ -137,7 +135,7 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                              'is',
                              'smart'])
 
-        self.expect("p strings",
+        self.expect("expression strings",
                     substrs=['goofy',
                              'is',
                              'smart'])
@@ -151,7 +149,7 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
                              'is',
                              'smart'])
 
-        self.expect("p strings",
+        self.expect("expression strings",
                     substrs=['vector has 3 items',
                              'goofy',
                              'is',
@@ -187,4 +185,4 @@ class LibcxxVectorDataFormatterTestCase(TestBase):
 
         self.expect("frame variable ptr", substrs=['ptr =', ' size=7'])
 
-        self.expect("p ptr", substrs=['$', 'size=7'])
+        self.expect("expression ptr", substrs=['$', 'size=7'])

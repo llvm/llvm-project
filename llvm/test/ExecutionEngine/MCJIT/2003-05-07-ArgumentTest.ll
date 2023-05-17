@@ -1,12 +1,12 @@
 ; RUN: %lli -jit-kind=mcjit %s test
 ; RUN: %lli %s test
 
-declare i32 @puts(i8*)
+declare i32 @puts(ptr)
 
-define i32 @main(i32 %argc.1, i8** %argv.1) {
-	%tmp.5 = getelementptr i8*, i8** %argv.1, i64 1		; <i8**> [#uses=1]
-	%tmp.6 = load i8*, i8** %tmp.5		; <i8*> [#uses=1]
-	%tmp.0 = call i32 @puts( i8* %tmp.6 )		; <i32> [#uses=0]
+define i32 @main(i32 %argc.1, ptr %argv.1) {
+	%tmp.5 = getelementptr ptr, ptr %argv.1, i64 1		; <ptr> [#uses=1]
+	%tmp.6 = load ptr, ptr %tmp.5		; <ptr> [#uses=1]
+	%tmp.0 = call i32 @puts( ptr %tmp.6 )		; <i32> [#uses=0]
 	ret i32 0
 }
 

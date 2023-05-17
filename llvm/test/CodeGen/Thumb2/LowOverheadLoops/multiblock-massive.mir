@@ -2,7 +2,7 @@
 # RUN: llc -mtriple=armv8.1m.main -mattr=+lob -run-pass=arm-low-overhead-loops --verify-machineinstrs %s -o - | FileCheck %s
 
 --- |
-  define void @size_limit(i32* nocapture %a, i32* nocapture readonly %b, i32* nocapture readonly %c, i32 %N) {
+  define void @size_limit(ptr nocapture %a, ptr nocapture readonly %b, ptr nocapture readonly %c, i32 %N) {
   entry:
     %cmp8 = icmp eq i32 %N, 0
     br i1 %cmp8, label %for.cond.cleanup, label %for.body.preheader
@@ -15,28 +15,28 @@
     ret void
 
   for.body:                                         ; preds = %for.end, %for.body.preheader
-    %lsr.iv4 = phi i32* [ %b, %for.body.preheader ], [ %scevgep5, %for.end ]
-    %lsr.iv2 = phi i32* [ %c, %for.body.preheader ], [ %scevgep3, %for.end ]
-    %lsr.iv1 = phi i32* [ %a, %for.body.preheader ], [ %scevgep, %for.end ]
+    %lsr.iv4 = phi ptr [ %b, %for.body.preheader ], [ %scevgep5, %for.end ]
+    %lsr.iv2 = phi ptr [ %c, %for.body.preheader ], [ %scevgep3, %for.end ]
+    %lsr.iv1 = phi ptr [ %a, %for.body.preheader ], [ %scevgep, %for.end ]
     %lsr.iv = phi i32 [ %start, %for.body.preheader ], [ %lsr.iv.next, %for.end ]
     %size = call i32 @llvm.arm.space(i32 3072, i32 undef)
-    %0 = load i32, i32* %lsr.iv4, align 4
-    %1 = load i32, i32* %lsr.iv2, align 4
+    %0 = load i32, ptr %lsr.iv4, align 4
+    %1 = load i32, ptr %lsr.iv2, align 4
     %mul = mul nsw i32 %1, %0
-    store i32 %mul, i32* %lsr.iv1, align 4
+    store i32 %mul, ptr %lsr.iv1, align 4
     %cmp = icmp ne i32 %0, 0
     br i1 %cmp, label %middle.block, label %for.end
 
   middle.block:                                     ; preds = %for.body
     %div = udiv i32 %1, %0
-    store i32 %div, i32* %lsr.iv1, align 4
+    store i32 %div, ptr %lsr.iv1, align 4
     %size.1 = call i32 @llvm.arm.space(i32 1024, i32 undef)
     br label %for.end
 
   for.end:                                          ; preds = %middle.block, %for.body
-    %scevgep = getelementptr i32, i32* %lsr.iv1, i32 1
-    %scevgep3 = getelementptr i32, i32* %lsr.iv2, i32 1
-    %scevgep5 = getelementptr i32, i32* %lsr.iv4, i32 1
+    %scevgep = getelementptr i32, ptr %lsr.iv1, i32 1
+    %scevgep3 = getelementptr i32, ptr %lsr.iv2, i32 1
+    %scevgep5 = getelementptr i32, ptr %lsr.iv4, i32 1
     %lsr.iv.next = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %lsr.iv, i32 1)
     %exitcond = icmp eq i32 %lsr.iv.next, 0
     br i1 %exitcond, label %for.cond.cleanup, label %for.body
@@ -52,7 +52,7 @@
   declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #1
 
   ; Function Attrs: nounwind
-  declare void @llvm.stackprotector(i8*, i8**) #0
+  declare void @llvm.stackprotector(ptr, ptr) #0
 
   attributes #0 = { nounwind }
   attributes #1 = { noduplicate nounwind }

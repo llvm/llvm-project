@@ -12,14 +12,14 @@
 ; Os-NOT: loop1.preheader
 ; Oz-NOT: loop1.preheader
 
-define void @unroll(i32 %iter, i32* %addr1, i32* %addr2) nounwind {
+define void @unroll(i32 %iter, ptr %addr1, ptr %addr2) nounwind {
 entry:
   br label %loop1
 
 loop1:
   %iv1 = phi i32 [ 0, %entry ], [ %inc1, %loop1.latch ]
-  %offset1 = getelementptr i32, i32* %addr1, i32 %iv1
-  store i32 %iv1, i32* %offset1, align 4
+  %offset1 = getelementptr i32, ptr %addr1, i32 %iv1
+  store i32 %iv1, ptr %offset1, align 4
   br label %loop2.header
 
 loop2.header:
@@ -28,8 +28,8 @@ loop2.header:
 
 loop2:
   %iv2 = phi i32 [ 0, %loop2.header ], [ %inc2, %loop2 ]
-  %offset2 = getelementptr i32, i32* %addr2, i32 %iv2
-  store i32 %iv2, i32* %offset2, align 4
+  %offset2 = getelementptr i32, ptr %addr2, i32 %iv2
+  store i32 %iv2, ptr %offset2, align 4
   %inc2 = add i32 %iv2, 1
   %exitcnd2 = icmp uge i32 %inc2, %iter
   br i1 %exitcnd2, label %exit2, label %loop2

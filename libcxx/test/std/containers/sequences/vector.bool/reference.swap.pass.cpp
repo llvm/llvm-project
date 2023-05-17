@@ -16,7 +16,7 @@
 
 #include "test_macros.h"
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
 
     bool a[] = {false, true, false, true};
@@ -36,5 +36,14 @@ int main(int, char**)
     assert( r1);
     assert(!r2);
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

@@ -158,6 +158,8 @@ public:
 
   virtual basic_symbol_iterator symbol_end() const = 0;
 
+  virtual bool is64Bit() const = 0;
+
   // convenience wrappers.
   using basic_symbol_iterator_range = iterator_range<basic_symbol_iterator>;
   basic_symbol_iterator_range symbols() const {

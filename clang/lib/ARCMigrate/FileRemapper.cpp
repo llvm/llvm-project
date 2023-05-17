@@ -251,8 +251,7 @@ const FileEntry *FileRemapper::getOriginalFile(StringRef filePath) {
     I = ToFromMappings.find(file);
   if (I != ToFromMappings.end()) {
     file = I->second;
-    assert(FromToMappings.find(file) != FromToMappings.end() &&
-           "Original file not in mappings!");
+    assert(FromToMappings.contains(file) && "Original file not in mappings!");
   }
   return file;
 }

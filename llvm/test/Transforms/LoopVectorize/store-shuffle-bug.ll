@@ -1,4 +1,4 @@
-; RUN: opt -S -basic-aa -loop-vectorize -force-vector-interleave=1 -force-vector-width=4 -dce -instcombine < %s | FileCheck %s
+; RUN: opt -S -passes=loop-vectorize,dce,instcombine -force-vector-interleave=1 -force-vector-width=4 < %s | FileCheck %s
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
@@ -29,16 +29,16 @@ entry:
 for.body:
   %indvars.iv = phi i64 [ 93, %entry ], [ %indvars.iv.next, %for.body ]
   %0 = add i64 %indvars.iv, 1
-  %arrayidx = getelementptr inbounds [100 x i32], [100 x i32]* @uf, i64 0, i64 %0
-  %arrayidx3 = getelementptr inbounds [100 x i32], [100 x i32]* @xi, i64 0, i64 %0
-  %1 = load i32, i32* %arrayidx3, align 4
-  %2 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [100 x i32], ptr @uf, i64 0, i64 %0
+  %arrayidx3 = getelementptr inbounds [100 x i32], ptr @xi, i64 0, i64 %0
+  %1 = load i32, ptr %arrayidx3, align 4
+  %2 = load i32, ptr %arrayidx, align 4
   %add4 = add nsw i32 %2, %1
-  store i32 %add4, i32* %arrayidx, align 4
-  %arrayidx7 = getelementptr inbounds [100 x i32], [100 x i32]* @q, i64 0, i64 %0
-  %3 = load i32, i32* %arrayidx7, align 4
+  store i32 %add4, ptr %arrayidx, align 4
+  %arrayidx7 = getelementptr inbounds [100 x i32], ptr @q, i64 0, i64 %0
+  %3 = load i32, ptr %arrayidx7, align 4
   %add8 = add nsw i32 %add4, %3
-  store i32 %add8, i32* %arrayidx, align 4
+  store i32 %add8, ptr %arrayidx, align 4
   %indvars.iv.next = add i64 %indvars.iv, -1
   %4 = trunc i64 %indvars.iv.next to i32
   %cmp = icmp ugt i32 %4, 2

@@ -19,7 +19,7 @@ for.cond:                                         ; preds = %for.body, %entry
   br i1 undef, label %for.end, label %for.body
 
 for.body:                                         ; preds = %for.cond
-  %0 = load i16, i16* undef, align 1
+  %0 = load i16, ptr undef, align 1
   br label %for.cond
 
 for.end:                                          ; preds = %for.cond

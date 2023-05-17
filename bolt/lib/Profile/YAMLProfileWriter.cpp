@@ -28,9 +28,13 @@ void convert(const BinaryFunction &BF,
 
   const uint16_t LBRProfile = BF.getProfileFlags() & BinaryFunction::PF_LBR;
 
+  // Prepare function and block hashes
+  BF.computeHash(/*UseDFS=*/true);
+  BF.computeBlockHashes();
+
   YamlBF.Name = BF.getPrintName();
   YamlBF.Id = BF.getFunctionNumber();
-  YamlBF.Hash = BF.computeHash(/*UseDFS=*/true);
+  YamlBF.Hash = BF.getHash();
   YamlBF.NumBasicBlocks = BF.size();
   YamlBF.ExecCount = BF.getKnownExecutionCount();
 
@@ -38,6 +42,7 @@ void convert(const BinaryFunction &BF,
     yaml::bolt::BinaryBasicBlockProfile YamlBB;
     YamlBB.Index = BB->getLayoutIndex();
     YamlBB.NumInstructions = BB->getNumNonPseudos();
+    YamlBB.Hash = BB->getHash();
 
     if (!LBRProfile) {
       YamlBB.EventCount = BB->getKnownExecutionCount();
@@ -53,7 +58,7 @@ void convert(const BinaryFunction &BF,
         continue;
 
       yaml::bolt::CallSiteInfo CSI;
-      Optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
+      std::optional<uint32_t> Offset = BC.MIB->getOffset(Instr);
       if (!Offset || *Offset < BB->getInputOffset())
         continue;
       CSI.Offset = *Offset - BB->getInputOffset();
@@ -106,17 +111,21 @@ void convert(const BinaryFunction &BF,
       }
     }
 
-    std::sort(YamlBB.CallSites.begin(), YamlBB.CallSites.end());
+    llvm::sort(YamlBB.CallSites);
 
     // Skip printing if there's no profile data for non-entry basic block.
     // Include landing pads with non-zero execution count.
     if (YamlBB.CallSites.empty() && !BB->isEntryPoint() &&
         !(BB->isLandingPad() && BB->getKnownExecutionCount() != 0)) {
+      // Include blocks having successors or predecessors with positive counts.
       uint64_t SuccessorExecCount = 0;
       for (const BinaryBasicBlock::BinaryBranchInfo &BranchInfo :
            BB->branch_info())
         SuccessorExecCount += BranchInfo.Count;
-      if (!SuccessorExecCount)
+      uint64_t PredecessorExecCount = 0;
+      for (auto Pred : BB->predecessors())
+        PredecessorExecCount += Pred->getBranchInfo(*BB).Count;
+      if (!SuccessorExecCount && !PredecessorExecCount)
         continue;
     }
 
@@ -154,14 +163,14 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   // Fill out the header info.
   BP.Header.Version = 1;
   BP.Header.FileName = std::string(BC.getFilename());
-  Optional<StringRef> BuildID = BC.getFileBuildID();
+  std::optional<StringRef> BuildID = BC.getFileBuildID();
   BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
   BP.Header.Origin = std::string(RI.getProfileReader()->getReaderName());
 
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {
-    std::string Sep = "";
-    for (const StringMapEntry<NoneType> &EventEntry : EventNames) {
+    std::string Sep;
+    for (const StringMapEntry<std::nullopt_t> &EventEntry : EventNames) {
       BP.Header.EventNames += Sep + EventEntry.first().str();
       Sep = ",";
     }

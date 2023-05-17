@@ -12,8 +12,9 @@
 #include <__concepts/common_reference_with.h>
 #include <__concepts/same_as.h>
 #include <__config>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/make_const_lvalue_ref.h>
 #include <__utility/forward.h>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -21,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 // [concept.assignable]
 
@@ -33,7 +34,7 @@ concept assignable_from =
     { __lhs = _VSTD::forward<_Rhs>(__rhs) } -> same_as<_Lhs>;
   };
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

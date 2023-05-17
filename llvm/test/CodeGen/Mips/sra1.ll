@@ -5,11 +5,11 @@
 
 define i32 @main() nounwind {
 entry:
-  %0 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @i, align 4
   %shr = ashr i32 %0, 3
 ; 16:	sra	${{[0-9]+}}, ${{[0-9]+}}, {{[0-9]+}}
-  %call = call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i32 0, i32 0), i32 %shr)
+  %call = call i32 (ptr, ...) @printf(ptr @.str, i32 %shr)
   ret i32 0
 }
 
-declare i32 @printf(i8*, ...)
+declare i32 @printf(ptr, ...)

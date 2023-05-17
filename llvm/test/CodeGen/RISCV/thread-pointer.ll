@@ -2,13 +2,13 @@
 ; RUN: llc < %s -mtriple=riscv64 | FileCheck %s
 ; RUN: llc < %s -mtriple=riscv32 | FileCheck %s
 
-declare i8* @llvm.thread.pointer()
+declare ptr @llvm.thread.pointer()
 
-define i8* @thread_pointer() nounwind {
+define ptr @thread_pointer() nounwind {
 ; CHECK-LABEL: thread_pointer:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    mv a0, tp
 ; CHECK-NEXT:    ret
-  %1 = tail call i8* @llvm.thread.pointer()
-  ret i8* %1
+  %1 = tail call ptr @llvm.thread.pointer()
+  ret ptr %1
 }

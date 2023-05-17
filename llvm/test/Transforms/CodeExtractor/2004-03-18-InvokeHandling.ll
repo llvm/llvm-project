@@ -1,10 +1,10 @@
-; RUN: opt < %s -loop-simplify -loop-extract -disable-output
+; RUN: opt < %s -passes='function(loop-simplify),loop-extract'  -disable-output
 
 declare i32 @_IO_getc()
 
 declare void @__errno_location()
 
-define void @yylex() personality i32 (...)* @__gcc_personality_v0 {
+define void @yylex() personality ptr @__gcc_personality_v0 {
 entry:
 	switch i32 0, label %label.126 [
 		 i32 0, label %return
@@ -190,8 +190,8 @@ return:		; preds = %entry
 	ret void
 
 LongJmpBlkPre:		; preds = %endif.52, %then.40
-        %exn = landingpad { i8*, i32 }
-                 catch i8* null
+        %exn = landingpad { ptr, i32 }
+                 catch ptr null
 	ret void
 }
 

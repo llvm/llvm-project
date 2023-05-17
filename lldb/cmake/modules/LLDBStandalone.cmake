@@ -1,9 +1,3 @@
-# CMP0116: Ninja generators transform `DEPFILE`s from `add_custom_command()`
-# New in CMake 3.20. https://cmake.org/cmake/help/latest/policy/CMP0116.html
-if(POLICY CMP0116)
-  cmake_policy(SET CMP0116 OLD)
-endif()
-
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)
 endif()
@@ -95,7 +89,26 @@ include(CheckAtomic)
 include(LLVMDistributionSupport)
 
 set(PACKAGE_VERSION "${LLVM_PACKAGE_VERSION}")
-set(LLVM_INCLUDE_TESTS ON CACHE INTERNAL "")
+
+set(CMAKE_INCLUDE_CURRENT_DIR ON)
+include_directories(
+  "${CMAKE_BINARY_DIR}/include"
+  "${LLVM_INCLUDE_DIRS}"
+  "${CLANG_INCLUDE_DIRS}")
+
+if(LLDB_INCLUDE_TESTS)
+  # Build the gtest library needed for unittests, if we have LLVM sources
+  # handy.
+  if (EXISTS ${LLVM_THIRD_PARTY_DIR}/unittest AND NOT TARGET llvm_gtest)
+    add_subdirectory(${LLVM_THIRD_PARTY_DIR}/unittest third-party/unittest)
+  endif()
+  # LLVMTestingSupport library is needed for Process/gdb-remote.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      AND NOT TARGET LLVMTestingSupport)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
+      lib/Testing/Support)
+  endif()
+endif()
 
 option(LLVM_USE_FOLDERS "Enable solution folders in Visual Studio. Disable for Express versions." ON)
 if(LLVM_USE_FOLDERS)
@@ -104,12 +117,6 @@ endif()
 
 set_target_properties(clang-tablegen-targets PROPERTIES FOLDER "lldb misc")
 set_target_properties(intrinsics_gen PROPERTIES FOLDER "lldb misc")
-
-set(CMAKE_INCLUDE_CURRENT_DIR ON)
-include_directories(
-  "${CMAKE_BINARY_DIR}/include"
-  "${LLVM_INCLUDE_DIRS}"
-  "${CLANG_INCLUDE_DIRS}")
 
 if(NOT DEFINED LLVM_COMMON_CMAKE_UTILS)
   set(LLVM_COMMON_CMAKE_UTILS ${CMAKE_CURRENT_SOURCE_DIR}/../cmake)

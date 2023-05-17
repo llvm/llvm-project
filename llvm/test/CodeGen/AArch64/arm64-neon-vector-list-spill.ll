@@ -4,13 +4,13 @@
 ; test case seems very simple and the register pressure is not high. If the
 ; spill/fill algorithm is optimized, this test case may not be triggered. And
 ; then we can delete it.
-define i32 @spill.DPairReg(i32* %arg1, i32 %arg2) {
+define i32 @spill.DPairReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.DPairReg:
 ; CHECK: ld2 { v{{[0-9]+}}.2s, v{{[0-9]+}}.2s }, [{{x[0-9]+|sp}}]
 ; CHECK: st1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 ; CHECK: ld1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 entry:
-  %vld = tail call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2.v2i32.p0i32(i32* %arg1)
+  %vld = tail call { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2.v2i32.p0(ptr %arg1)
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -24,13 +24,13 @@ if.end:
   ret i32 %res
 }
 
-define i16 @spill.DTripleReg(i16* %arg1, i32 %arg2) {
+define i16 @spill.DTripleReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.DTripleReg:
 ; CHECK: ld3 { v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.4h }, [{{x[0-9]+|sp}}]
 ; CHECK: st1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 ; CHECK: ld1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 entry:
-  %vld = tail call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3.v4i16.p0i16(i16* %arg1)
+  %vld = tail call { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3.v4i16.p0(ptr %arg1)
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -44,13 +44,13 @@ if.end:
   ret i16 %res
 }
 
-define i16 @spill.DQuadReg(i16* %arg1, i32 %arg2) {
+define i16 @spill.DQuadReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.DQuadReg:
 ; CHECK: ld4 { v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.4h, v{{[0-9]+}}.4h }, [{{x[0-9]+|sp}}]
 ; CHECK: st1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 ; CHECK: ld1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 entry:
-  %vld = tail call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4.v4i16.p0i16(i16* %arg1)
+  %vld = tail call { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4.v4i16.p0(ptr %arg1)
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -64,13 +64,13 @@ if.end:
   ret i16 %res
 }
 
-define i32 @spill.QPairReg(i32* %arg1, i32 %arg2) {
+define i32 @spill.QPairReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.QPairReg:
 ; CHECK: ld2 { v{{[0-9]+}}.4s, v{{[0-9]+}}.4s }, [{{x[0-9]+|sp}}]
 ; CHECK: st1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 ; CHECK: ld1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 entry:
-  %vld = tail call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2.v4i32.p0i32(i32* %arg1)
+  %vld = tail call { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2.v4i32.p0(ptr %arg1)
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -84,13 +84,13 @@ if.end:
   ret i32 %res
 }
 
-define float @spill.QTripleReg(float* %arg1, i32 %arg2) {
+define float @spill.QTripleReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.QTripleReg:
 ; CHECK: ld3 { v{{[0-9]+}}.4s, v{{[0-9]+}}.4s, v{{[0-9]+}}.4s }, [{{x[0-9]+|sp}}]
 ; CHECK: st1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 ; CHECK: ld1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 entry:
-  %vld3 = tail call { <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld3.v4f32.p0f32(float* %arg1)
+  %vld3 = tail call { <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld3.v4f32.p0(ptr %arg1)
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -104,13 +104,13 @@ if.end:
   ret float %res
 }
 
-define i8 @spill.QQuadReg(i8* %arg1, i32 %arg2) {
+define i8 @spill.QQuadReg(ptr %arg1, i32 %arg2) {
 ; CHECK-LABEL: spill.QQuadReg:
 ; CHECK: ld4 { v{{[0-9]+}}.16b, v{{[0-9]+}}.16b, v{{[0-9]+}}.16b, v{{[0-9]+}}.16b }, [{{x[0-9]+|sp}}]
 ; CHECK: st1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 ; CHECK: ld1 { v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d, v{{[0-9]+}}.2d }, [{{x[0-9]+|sp}}]
 entry:
-  %vld = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0i8(i8* %arg1)
+  %vld = tail call { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0(ptr %arg1)
   %cmp = icmp eq i32 %arg2, 0
   br i1 %cmp, label %if.then, label %if.end
 
@@ -124,12 +124,12 @@ if.end:
   ret i8 %res
 }
 
-declare { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2.v2i32.p0i32(i32*)
-declare { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3.v4i16.p0i16(i16*)
-declare { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4.v4i16.p0i16(i16*)
-declare { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2.v4i32.p0i32(i32*)
-declare { <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld3.v4f32.p0f32(float*)
-declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0i8(i8*)
+declare { <2 x i32>, <2 x i32> } @llvm.aarch64.neon.ld2.v2i32.p0(ptr)
+declare { <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld3.v4i16.p0(ptr)
+declare { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> } @llvm.aarch64.neon.ld4.v4i16.p0(ptr)
+declare { <4 x i32>, <4 x i32> } @llvm.aarch64.neon.ld2.v4i32.p0(ptr)
+declare { <4 x float>, <4 x float>, <4 x float> } @llvm.aarch64.neon.ld3.v4f32.p0(ptr)
+declare { <16 x i8>, <16 x i8>, <16 x i8>, <16 x i8> } @llvm.aarch64.neon.ld4.v16i8.p0(ptr)
 
 declare void @foo()
 
@@ -138,8 +138,8 @@ declare void @foo()
 ; spill/fill algorithm is optimized, this test case may not be triggered. And
 ; then we can delete it.
 ; check the spill for Register Class QPair_with_qsub_0_in_FPR128Lo
-define <8 x i16> @test_2xFPR128Lo(i64 %got, i64* %ptr, <1 x i64> %a) {
-  tail call void @llvm.aarch64.neon.st2lane.v1i64.p0i64(<1 x i64> zeroinitializer, <1 x i64> zeroinitializer, i64 0, i64* %ptr)
+define <8 x i16> @test_2xFPR128Lo(i64 %got, ptr %ptr, <1 x i64> %a) {
+  tail call void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64> zeroinitializer, <1 x i64> zeroinitializer, i64 0, ptr %ptr)
   tail call void @foo()
   %sv = shufflevector <1 x i64> zeroinitializer, <1 x i64> %a, <2 x i32> <i32 0, i32 1>
   %1 = bitcast <2 x i64> %sv to <8 x i16>
@@ -149,8 +149,8 @@ define <8 x i16> @test_2xFPR128Lo(i64 %got, i64* %ptr, <1 x i64> %a) {
 }
 
 ; check the spill for Register Class QTriple_with_qsub_0_in_FPR128Lo
-define <8 x i16> @test_3xFPR128Lo(i64 %got, i64* %ptr, <1 x i64> %a) {
-  tail call void @llvm.aarch64.neon.st3lane.v1i64.p0i64(<1 x i64> zeroinitializer, <1 x i64> zeroinitializer, <1 x i64> zeroinitializer, i64 0, i64* %ptr)
+define <8 x i16> @test_3xFPR128Lo(i64 %got, ptr %ptr, <1 x i64> %a) {
+  tail call void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64> zeroinitializer, <1 x i64> zeroinitializer, <1 x i64> zeroinitializer, i64 0, ptr %ptr)
   tail call void @foo()
   %sv = shufflevector <1 x i64> zeroinitializer, <1 x i64> %a, <2 x i32> <i32 0, i32 1>
   %1 = bitcast <2 x i64> %sv to <8 x i16>
@@ -160,8 +160,8 @@ define <8 x i16> @test_3xFPR128Lo(i64 %got, i64* %ptr, <1 x i64> %a) {
 }
 
 ; check the spill for Register Class QQuad_with_qsub_0_in_FPR128Lo
-define <8 x i16> @test_4xFPR128Lo(i64 %got, i64* %ptr, <1 x i64> %a) {
-  tail call void @llvm.aarch64.neon.st4lane.v1i64.p0i64(<1 x i64> zeroinitializer, <1 x i64> zeroinitializer, <1 x i64> zeroinitializer, <1 x i64> zeroinitializer, i64 0, i64* %ptr)
+define <8 x i16> @test_4xFPR128Lo(i64 %got, ptr %ptr, <1 x i64> %a) {
+  tail call void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64> zeroinitializer, <1 x i64> zeroinitializer, <1 x i64> zeroinitializer, <1 x i64> zeroinitializer, i64 0, ptr %ptr)
   tail call void @foo()
   %sv = shufflevector <1 x i64> zeroinitializer, <1 x i64> %a, <2 x i32> <i32 0, i32 1>
   %1 = bitcast <2 x i64> %sv to <8 x i16>
@@ -170,6 +170,6 @@ define <8 x i16> @test_4xFPR128Lo(i64 %got, i64* %ptr, <1 x i64> %a) {
   ret <8 x i16> %3
 }
 
-declare void @llvm.aarch64.neon.st2lane.v1i64.p0i64(<1 x i64>, <1 x i64>, i64, i64*)
-declare void @llvm.aarch64.neon.st3lane.v1i64.p0i64(<1 x i64>, <1 x i64>, <1 x i64>, i64, i64*)
-declare void @llvm.aarch64.neon.st4lane.v1i64.p0i64(<1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, i64, i64*)
+declare void @llvm.aarch64.neon.st2lane.v1i64.p0(<1 x i64>, <1 x i64>, i64, ptr)
+declare void @llvm.aarch64.neon.st3lane.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>, i64, ptr)
+declare void @llvm.aarch64.neon.st4lane.v1i64.p0(<1 x i64>, <1 x i64>, <1 x i64>, <1 x i64>, i64, ptr)

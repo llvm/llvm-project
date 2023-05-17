@@ -1,18 +1,18 @@
 ; REQUIRES: asserts
-; RUN: opt -stats -function-specialization -S -force-function-specialization < %s 2>&1 | FileCheck %s
+; RUN: opt -stats -passes="ipsccp<func-spec>" -S -force-specialization < %s 2>&1 | FileCheck %s
 
-; CHECK: 2 function-specialization - Number of functions specialized
+; CHECK: 2 function-specialization - Number of specializations created
 
 define i64 @main(i64 %x, i1 %flag) {
 entry:
   br i1 %flag, label %plus, label %minus
 
 plus:
-  %tmp0 = call i64 @compute(i64 %x, i64 (i64)* @plus)
+  %tmp0 = call i64 @compute(i64 %x, ptr @plus)
   br label %merge
 
 minus:
-  %tmp1 = call i64 @compute(i64 %x, i64 (i64)* @minus)
+  %tmp1 = call i64 @compute(i64 %x, ptr @minus)
   br label %merge
 
 merge:
@@ -20,7 +20,7 @@ merge:
   ret i64 %tmp2
 }
 
-define internal i64 @compute(i64 %x, i64 (i64)* %binop) {
+define internal i64 @compute(i64 %x, ptr %binop) {
 entry:
   %tmp0 = call i64 %binop(i64 %x)
   ret i64 %tmp0

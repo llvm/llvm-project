@@ -13,7 +13,6 @@ import tempfile
 import subprocess
 
 # Third-party modules
-import six
 import unittest2
 
 # LLDB modules
@@ -71,7 +70,6 @@ def _check_expected_version(comparison, expected, actual):
         LooseVersion(expected_str))
 
 
-_re_pattern_type = type(re.compile(''))
 def _match_decorator_property(expected, actual):
     if expected is None:
         return True
@@ -82,7 +80,9 @@ def _match_decorator_property(expected, actual):
     if isinstance(expected, no_match):
         return not _match_decorator_property(expected.item, actual)
 
-    if isinstance(expected, (_re_pattern_type,) + six.string_types):
+    # Python 3.6 doesn't declare a `re.Pattern` type, get the dynamic type.
+    pattern_type = type(re.compile(''))
+    if isinstance(expected, (pattern_type, str)):
         return re.search(expected, actual) is not None
 
     if hasattr(expected, "__iter__"):
@@ -131,7 +131,7 @@ def expectedFailureIfFn(expected_fn, bugnumber=None):
     # the first way, the first argument will be the actual function because decorators are
     # weird like that.  So this is basically a check that says "which syntax was the original
     # function decorated with?"
-    if six.callable(bugnumber):
+    if callable(bugnumber):
         return expectedFailure_impl(bugnumber)
     else:
         return expectedFailure_impl
@@ -140,8 +140,10 @@ def expectedFailureIfFn(expected_fn, bugnumber=None):
 def skipTestIfFn(expected_fn, bugnumber=None):
     def skipTestIfFn_impl(func):
         if isinstance(func, type) and issubclass(func, unittest2.TestCase):
-            raise Exception(
-                "@skipTestIfFn can only be used to decorate a test method")
+            reason = expected_fn()
+            # The return value is the reason (or None if we don't skip), so
+            # reason is used for both args.
+            return unittest2.skipIf(condition=reason, reason=reason)(func)
 
         @wraps(func)
         def wrapper(*args, **kwargs):
@@ -162,7 +164,7 @@ def skipTestIfFn(expected_fn, bugnumber=None):
     # the first way, the first argument will be the actual function because decorators are
     # weird like that.  So this is basically a check that says "how was the
     # decorator used"
-    if six.callable(bugnumber):
+    if callable(bugnumber):
         return skipTestIfFn_impl(bugnumber)
     else:
         return skipTestIfFn_impl
@@ -248,8 +250,8 @@ def _decorateTest(mode,
                 reason_str = "{} due to the following parameter(s): {}".format(
                     mode_str, reason_str)
             else:
-                reason_str = "{} unconditionally"
-            if bugnumber is not None and not six.callable(bugnumber):
+                reason_str = "{} unconditionally".format(mode_str)
+            if bugnumber is not None and not callable(bugnumber):
                 reason_str = reason_str + " [" + str(bugnumber) + "]"
         return reason_str
 
@@ -463,7 +465,7 @@ def expectedFlakey(expected_fn, bugnumber=None):
     # the first way, the first argument will be the actual function because decorators are
     # weird like that.  So this is basically a check that says "which syntax was the original
     # function decorated with?"
-    if six.callable(bugnumber):
+    if callable(bugnumber):
         return expectedFailure_impl(bugnumber)
     else:
         return expectedFailure_impl
@@ -697,6 +699,17 @@ def skipIfTargetAndroid(bugnumber=None, api_levels=None, archs=None):
             api_levels,
             archs),
         bugnumber)
+
+def skipUnlessAppleSilicon(func):
+    """Decorate the item to skip tests unless running on Apple Silicon."""
+    def not_apple_silicon(test):
+        if platform.system() != 'Darwin' or test.getArchitecture() not in [
+                'arm64', 'arm64e'
+        ]:
+            return "Test only runs on Apple Silicon"
+        return None
+
+    return skipTestIfFn(not_apple_silicon)(func)
 
 def skipUnlessSupportedTypeAttribute(attr):
     """Decorate the item to skip test unless Clang supports type __attribute__(attr)."""

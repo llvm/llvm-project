@@ -1,6 +1,6 @@
 ; RUN: llc < %s -mtriple=i686--
 
-define i32 @unique(i8* %full, i32 %p, i32 %len, i32 %mode, i32 %verbos, i32 %flags) {
+define i32 @unique(ptr %full, i32 %p, i32 %len, i32 %mode, i32 %verbos, i32 %flags) {
 entry:
 	br i1 false, label %cond_true15, label %cond_next107
 
@@ -19,7 +19,7 @@ bb76.split:		; preds = %bb69.outer.split.split, %bb69.us208
 bb69.outer:		; preds = %bb76.split, %bb98.preheader
 	%from.0.reg2mem.0.ph.rec = phi i32 [ %tmp75.rec, %bb76.split ], [ 0, %bb98.preheader ]		; <i32> [#uses=1]
 	%tmp75.rec = add i32 %from.0.reg2mem.0.ph.rec, 1		; <i32> [#uses=2]
-	%tmp75 = getelementptr i8, i8* null, i32 %tmp75.rec		; <i8*> [#uses=6]
+	%tmp75 = getelementptr i8, ptr null, i32 %tmp75.rec		; <ptr> [#uses=6]
 	br i1 false, label %bb69.us208, label %bb69.outer.split.split
 
 bb69.us208:		; preds = %bb69.outer
@@ -37,7 +37,7 @@ bb69.outer.split.split:		; preds = %bb69.outer
 	]
 
 bb89:		; preds = %bb69.outer.split.split, %bb69.outer.split.split, %bb69.outer.split.split, %bb69.us208, %bb69.us208, %bb69.us208
-	%tmp75.lcssa189 = phi i8* [ %tmp75, %bb69.us208 ], [ %tmp75, %bb69.us208 ], [ %tmp75, %bb69.us208 ], [ %tmp75, %bb69.outer.split.split ], [ %tmp75, %bb69.outer.split.split ], [ %tmp75, %bb69.outer.split.split ]		; <i8*> [#uses=0]
+	%tmp75.lcssa189 = phi ptr [ %tmp75, %bb69.us208 ], [ %tmp75, %bb69.us208 ], [ %tmp75, %bb69.us208 ], [ %tmp75, %bb69.outer.split.split ], [ %tmp75, %bb69.outer.split.split ], [ %tmp75, %bb69.outer.split.split ]		; <ptr> [#uses=0]
 	ret i32 0
 
 bb103:		; preds = %bb76.split, %bb98.preheader

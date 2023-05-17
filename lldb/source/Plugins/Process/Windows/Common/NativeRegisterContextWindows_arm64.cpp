@@ -84,10 +84,10 @@ static_assert(((sizeof g_fpr_regnums_arm64 / sizeof g_fpr_regnums_arm64[0]) -
               "g_fpu_regnums_arm64 has wrong number of register infos");
 
 static const RegisterSet g_reg_sets_arm64[] = {
-    {"General Purpose Registers", "gpr",
-     llvm::array_lengthof(g_gpr_regnums_arm64) - 1, g_gpr_regnums_arm64},
-    {"Floating Point Registers", "fpr",
-     llvm::array_lengthof(g_fpr_regnums_arm64) - 1, g_fpr_regnums_arm64},
+    {"General Purpose Registers", "gpr", std::size(g_gpr_regnums_arm64) - 1,
+     g_gpr_regnums_arm64},
+    {"Floating Point Registers", "fpr", std::size(g_fpr_regnums_arm64) - 1,
+     g_fpr_regnums_arm64},
 };
 
 enum { k_num_register_sets = 2 };

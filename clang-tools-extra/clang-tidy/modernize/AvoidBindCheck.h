@@ -11,16 +11,14 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Replace simple uses of std::bind with a lambda.
 ///
 /// FIXME: Add support for function references and member function references.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-avoid-std-bind.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-bind.html
 class AvoidBindCheck : public ClangTidyCheck {
 public:
   AvoidBindCheck(StringRef Name, ClangTidyContext *Context);
@@ -34,8 +32,6 @@ public:
 private:
   bool PermissiveParameterList = false;
 };
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOID_BIND_H

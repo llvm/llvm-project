@@ -49,8 +49,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ImmutableList.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -62,6 +60,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
+#include <optional>
 #include <utility>
 
 #define DEBUG_TYPE "static-analyzer-call-event"
@@ -288,6 +287,7 @@ ProgramStateRef CallEvent::invalidateRegions(unsigned BlockCount,
 
 ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
                                         const ProgramPointTag *Tag) const {
+
   if (const Expr *E = getOriginExpr()) {
     if (IsPreVisit)
       return PreStmt(E, getLocationContext(), Tag);
@@ -296,11 +296,13 @@ ProgramPoint CallEvent::getProgramPoint(bool IsPreVisit,
 
   const Decl *D = getDecl();
   assert(D && "Cannot get a program point without a statement or decl");
+  assert(ElemRef.getParent() &&
+         "Cannot get a program point without a CFGElementRef");
 
   SourceLocation Loc = getSourceRange().getBegin();
   if (IsPreVisit)
-    return PreImplicitCall(D, Loc, getLocationContext(), Tag);
-  return PostImplicitCall(D, Loc, getLocationContext(), Tag);
+    return PreImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
+  return PostImplicitCall(D, Loc, getLocationContext(), ElemRef, Tag);
 }
 
 SVal CallEvent::getArgSVal(unsigned Index) const {
@@ -424,6 +426,38 @@ static SVal processArgument(SVal Value, const Expr *ArgumentExpr,
   return Value;
 }
 
+/// Cast the argument value to the type of the parameter at the function
+/// declaration.
+/// Returns the argument value if it didn't need a cast.
+/// Or returns the cast argument if it needed a cast.
+/// Or returns 'Unknown' if it would need a cast but the callsite and the
+/// runtime definition don't match in terms of argument and parameter count.
+static SVal castArgToParamTypeIfNeeded(const CallEvent &Call, unsigned ArgIdx,
+                                       SVal ArgVal, SValBuilder &SVB) {
+  const FunctionDecl *RTDecl =
+      Call.getRuntimeDefinition().getDecl()->getAsFunction();
+  const auto *CallExprDecl = dyn_cast_or_null<FunctionDecl>(Call.getDecl());
+
+  if (!RTDecl || !CallExprDecl)
+    return ArgVal;
+
+  // The function decl of the Call (in the AST) will not have any parameter
+  // declarations, if it was 'only' declared without a prototype. However, the
+  // engine will find the appropriate runtime definition - basically a
+  // redeclaration, which has a function body (and a function prototype).
+  if (CallExprDecl->hasPrototype() || !RTDecl->hasPrototype())
+    return ArgVal;
+
+  // Only do this cast if the number arguments at the callsite matches with
+  // the parameters at the runtime definition.
+  if (Call.getNumArgs() != RTDecl->getNumParams())
+    return UnknownVal();
+
+  const Expr *ArgExpr = Call.getArgExpr(ArgIdx);
+  const ParmVarDecl *Param = RTDecl->getParamDecl(ArgIdx);
+  return SVB.evalCast(ArgVal, Param->getType(), ArgExpr->getType());
+}
+
 static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
                                          CallEvent::BindingsTy &Bindings,
                                          SValBuilder &SVB,
@@ -449,12 +483,18 @@ static void addParameterValuesToBindings(const StackFrameContext *CalleeCtx,
     // which makes getArgSVal() fail and return UnknownVal.
     SVal ArgVal = Call.getArgSVal(Idx);
     const Expr *ArgExpr = Call.getArgExpr(Idx);
-    if (!ArgVal.isUnknown()) {
-      Loc ParamLoc = SVB.makeLoc(
-          MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
-      Bindings.push_back(
-          std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
-    }
+
+    if (ArgVal.isUnknown())
+      continue;
+
+    // Cast the argument value to match the type of the parameter in some
+    // edge-cases.
+    ArgVal = castArgToParamTypeIfNeeded(Call, Idx, ArgVal, SVB);
+
+    Loc ParamLoc = SVB.makeLoc(
+        MRMgr.getParamVarRegion(Call.getOriginExpr(), Idx, CalleeCtx));
+    Bindings.push_back(
+        std::make_pair(ParamLoc, processArgument(ArgVal, ArgExpr, *I, SVB)));
   }
 
   // FIXME: Variadic arguments are not handled at all right now.
@@ -477,24 +517,23 @@ const ConstructionContext *CallEvent::getConstructionContext() const {
   return nullptr;
 }
 
-Optional<SVal>
-CallEvent::getReturnValueUnderConstruction() const {
+std::optional<SVal> CallEvent::getReturnValueUnderConstruction() const {
   const auto *CC = getConstructionContext();
   if (!CC)
-    return None;
+    return std::nullopt;
 
   EvalCallOptions CallOpts;
   ExprEngine &Engine = getState()->getStateManager().getOwningEngine();
-  SVal RetVal =
-    Engine.computeObjectUnderConstruction(getOriginExpr(), getState(),
-                                          getLocationContext(), CC, CallOpts);
+  SVal RetVal = Engine.computeObjectUnderConstruction(
+      getOriginExpr(), getState(), &Engine.getBuilderContext(),
+      getLocationContext(), CC, CallOpts);
   return RetVal;
 }
 
 ArrayRef<ParmVarDecl*> AnyFunctionCall::parameters() const {
   const FunctionDecl *D = getDecl();
   if (!D)
-    return None;
+    return std::nullopt;
   return D->parameters();
 }
 
@@ -680,7 +719,7 @@ SVal CXXInstanceCall::getCXXThisVal() const {
     return UnknownVal();
 
   SVal ThisVal = getSVal(Base);
-  assert(ThisVal.isUnknownOrUndef() || ThisVal.getAs<Loc>());
+  assert(ThisVal.isUnknownOrUndef() || isa<Loc>(ThisVal));
   return ThisVal;
 }
 
@@ -770,9 +809,9 @@ void CXXInstanceCall::getInitialStackFrameContents(
       QualType Ty = Ctx.getPointerType(Ctx.getRecordType(Class));
 
       // FIXME: CallEvent maybe shouldn't be directly accessing StoreManager.
-      Optional<SVal> V =
+      std::optional<SVal> V =
           StateMgr.getStoreManager().evalBaseToDerived(ThisVal, Ty);
-      if (!V.hasValue()) {
+      if (!V) {
         // We might have suffered some sort of placement new earlier, so
         // we're constructing in a completely unexpected storage.
         // Fall back to a generic pointer cast for this-value.
@@ -819,7 +858,7 @@ const BlockDataRegion *BlockCall::getBlockRegion() const {
 ArrayRef<ParmVarDecl*> BlockCall::parameters() const {
   const BlockDecl *D = getDecl();
   if (!D)
-    return None;
+    return std::nullopt;
   return D->parameters();
 }
 
@@ -908,7 +947,7 @@ RuntimeDefinition CXXDestructorCall::getRuntimeDefinition() const {
 ArrayRef<ParmVarDecl*> ObjCMethodCall::parameters() const {
   const ObjCMethodDecl *D = getDecl();
   if (!D)
-    return None;
+    return std::nullopt;
   return D->parameters();
 }
 
@@ -1124,7 +1163,7 @@ static const ObjCMethodDecl *findDefiningRedecl(const ObjCMethodDecl *MD) {
 
   // Find the redeclaration that defines the method.
   if (!MD->hasBody()) {
-    for (auto I : MD->redecls())
+    for (auto *I : MD->redecls())
       if (I->hasBody())
         MD = cast<ObjCMethodDecl>(I);
   }
@@ -1185,14 +1224,14 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
   // stays around until clang quits, which also may be bad if we
   // need to release memory.
   using PrivateMethodCache =
-      llvm::DenseMap<PrivateMethodKey, Optional<const ObjCMethodDecl *>>;
+      llvm::DenseMap<PrivateMethodKey, std::optional<const ObjCMethodDecl *>>;
 
   static PrivateMethodCache PMC;
-  Optional<const ObjCMethodDecl *> &Val =
+  std::optional<const ObjCMethodDecl *> &Val =
       PMC[{Interface, LookupSelector, InstanceMethod}];
 
   // Query lookupPrivateMethod() if the cache does not hit.
-  if (!Val.hasValue()) {
+  if (!Val) {
     Val = Interface->lookupPrivateMethod(LookupSelector, InstanceMethod);
 
     if (!*Val) {
@@ -1201,7 +1240,7 @@ lookupRuntimeDefinition(const ObjCInterfaceDecl *Interface,
     }
   }
 
-  return Val.getValue();
+  return *Val;
 }
 
 RuntimeDefinition ObjCMethodCall::getRuntimeDefinition() const {
@@ -1337,23 +1376,24 @@ void ObjCMethodCall::getInitialStackFrameContents(
 
 CallEventRef<>
 CallEventManager::getSimpleCall(const CallExpr *CE, ProgramStateRef State,
-                                const LocationContext *LCtx) {
+                                const LocationContext *LCtx,
+                                CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *MCE = dyn_cast<CXXMemberCallExpr>(CE))
-    return create<CXXMemberCall>(MCE, State, LCtx);
+    return create<CXXMemberCall>(MCE, State, LCtx, ElemRef);
 
   if (const auto *OpCE = dyn_cast<CXXOperatorCallExpr>(CE)) {
     const FunctionDecl *DirectCallee = OpCE->getDirectCallee();
     if (const auto *MD = dyn_cast<CXXMethodDecl>(DirectCallee))
       if (MD->isInstance())
-        return create<CXXMemberOperatorCall>(OpCE, State, LCtx);
+        return create<CXXMemberOperatorCall>(OpCE, State, LCtx, ElemRef);
 
   } else if (CE->getCallee()->getType()->isBlockPointerType()) {
-    return create<BlockCall>(CE, State, LCtx);
+    return create<BlockCall>(CE, State, LCtx, ElemRef);
   }
 
   // Otherwise, it's a normal function call, static member function call, or
   // something we can't reason about.
-  return create<SimpleFunctionCall>(CE, State, LCtx);
+  return create<SimpleFunctionCall>(CE, State, LCtx, ElemRef);
 }
 
 CallEventRef<>
@@ -1361,12 +1401,14 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
                             ProgramStateRef State) {
   const LocationContext *ParentCtx = CalleeCtx->getParent();
   const LocationContext *CallerCtx = ParentCtx->getStackFrame();
+  CFGBlock::ConstCFGElementRef ElemRef = {CalleeCtx->getCallSiteBlock(),
+                                          CalleeCtx->getIndex()};
   assert(CallerCtx && "This should not be used for top-level stack frames");
 
   const Stmt *CallSite = CalleeCtx->getCallSite();
 
   if (CallSite) {
-    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx))
+    if (CallEventRef<> Out = getCall(CallSite, State, CallerCtx, ElemRef))
       return Out;
 
     SValBuilder &SVB = State->getStateManager().getSValBuilder();
@@ -1375,10 +1417,11 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
     SVal ThisVal = State->getSVal(ThisPtr);
 
     if (const auto *CE = dyn_cast<CXXConstructExpr>(CallSite))
-      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx);
+      return getCXXConstructorCall(CE, ThisVal.getAsRegion(), State, CallerCtx,
+                                   ElemRef);
     else if (const auto *CIE = dyn_cast<CXXInheritedCtorInitExpr>(CallSite))
       return getCXXInheritedConstructorCall(CIE, ThisVal.getAsRegion(), State,
-                                            CallerCtx);
+                                            CallerCtx, ElemRef);
     else {
       // All other cases are handled by getCall.
       llvm_unreachable("This is not an inlineable statement");
@@ -1398,28 +1441,30 @@ CallEventManager::getCaller(const StackFrameContext *CalleeCtx,
   SVal ThisVal = State->getSVal(ThisPtr);
 
   const Stmt *Trigger;
-  if (Optional<CFGAutomaticObjDtor> AutoDtor = E.getAs<CFGAutomaticObjDtor>())
+  if (std::optional<CFGAutomaticObjDtor> AutoDtor =
+          E.getAs<CFGAutomaticObjDtor>())
     Trigger = AutoDtor->getTriggerStmt();
-  else if (Optional<CFGDeleteDtor> DeleteDtor = E.getAs<CFGDeleteDtor>())
+  else if (std::optional<CFGDeleteDtor> DeleteDtor = E.getAs<CFGDeleteDtor>())
     Trigger = DeleteDtor->getDeleteExpr();
   else
     Trigger = Dtor->getBody();
 
   return getCXXDestructorCall(Dtor, Trigger, ThisVal.getAsRegion(),
-                              E.getAs<CFGBaseDtor>().hasValue(), State,
-                              CallerCtx);
+                              E.getAs<CFGBaseDtor>().has_value(), State,
+                              CallerCtx, ElemRef);
 }
 
 CallEventRef<> CallEventManager::getCall(const Stmt *S, ProgramStateRef State,
-                                         const LocationContext *LC) {
+                                         const LocationContext *LC,
+                                         CFGBlock::ConstCFGElementRef ElemRef) {
   if (const auto *CE = dyn_cast<CallExpr>(S)) {
-    return getSimpleCall(CE, State, LC);
+    return getSimpleCall(CE, State, LC, ElemRef);
   } else if (const auto *NE = dyn_cast<CXXNewExpr>(S)) {
-    return getCXXAllocatorCall(NE, State, LC);
+    return getCXXAllocatorCall(NE, State, LC, ElemRef);
   } else if (const auto *DE = dyn_cast<CXXDeleteExpr>(S)) {
-    return getCXXDeallocatorCall(DE, State, LC);
+    return getCXXDeallocatorCall(DE, State, LC, ElemRef);
   } else if (const auto *ME = dyn_cast<ObjCMessageExpr>(S)) {
-    return getObjCMethodCall(ME, State, LC);
+    return getObjCMethodCall(ME, State, LC, ElemRef);
   } else {
     return nullptr;
   }

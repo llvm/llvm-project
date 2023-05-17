@@ -8,7 +8,7 @@
 ; CHECK: remark: /tmp/kk.c:3:20: 1 spills 3.187500e+01 total spills cost 1 reloads 3.187500e+01 total reloads cost generated in loop{{$}}
 ; THRESHOLD-NOT: remark
 
-define void @fpr128(<4 x float>* %p) nounwind ssp {
+define void @fpr128(ptr %p) nounwind ssp {
 entry:
   br label %loop, !dbg !8
 

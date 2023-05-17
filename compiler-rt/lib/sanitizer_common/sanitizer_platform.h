@@ -64,9 +64,6 @@
 //   - SANITIZER_DRIVERKIT
 #if defined(__APPLE__)
 #  define SANITIZER_APPLE 1
-// SANITIZER_MAC will be deprecated/removed in the future
-#  define SANITIZER_MAC \
-     error "SANITIZER_MAC will be removed, please use SANITIZER_APPLE"
 #  include <TargetConditionals.h>
 #  if TARGET_OS_OSX
 #    define SANITIZER_OSX 1
@@ -93,15 +90,13 @@
 #  else
 #    define SANITIZER_IOSSIM 0
 #  endif
-#  if TARGET_OS_DRIVERKIT
+#  if defined(TARGET_OS_DRIVERKIT) && TARGET_OS_DRIVERKIT
 #    define SANITIZER_DRIVERKIT 1
 #  else
 #    define SANITIZER_DRIVERKIT 0
 #  endif
 #else
 #  define SANITIZER_APPLE 0
-#  define SANITIZER_MAC \
-     error "SANITIZER_MAC will be removed, please use SANITIZER_APPLE"
 #  define SANITIZER_OSX 0
 #  define SANITIZER_IOS 0
 #  define SANITIZER_WATCHOS 0
@@ -177,7 +172,7 @@
 
 #if defined(__mips__)
 #  define SANITIZER_MIPS 1
-#  if defined(__mips64)
+#  if defined(__mips64) && _MIPS_SIM == _ABI64
 #    define SANITIZER_MIPS32 0
 #    define SANITIZER_MIPS64 1
 #  else
@@ -277,16 +272,21 @@
 #  define SANITIZER_RISCV64 0
 #endif
 
+#if defined(__loongarch_lp64)
+#  define SANITIZER_LOONGARCH64 1
+#else
+#  define SANITIZER_LOONGARCH64 0
+#endif
+
 // By default we allow to use SizeClassAllocator64 on 64-bit platform.
-// But in some cases (e.g. AArch64's 39-bit address space) SizeClassAllocator64
-// does not work well and we need to fallback to SizeClassAllocator32.
+// But in some cases SizeClassAllocator64 does not work well and we need to
+// fallback to SizeClassAllocator32.
 // For such platforms build this code with -DSANITIZER_CAN_USE_ALLOCATOR64=0 or
 // change the definition of SANITIZER_CAN_USE_ALLOCATOR64 here.
 #ifndef SANITIZER_CAN_USE_ALLOCATOR64
-#  if (SANITIZER_ANDROID && defined(__aarch64__)) || SANITIZER_FUCHSIA
-#    define SANITIZER_CAN_USE_ALLOCATOR64 1
-#  elif defined(__mips64) || defined(__aarch64__) || defined(__i386__) || \
-      defined(__arm__) || SANITIZER_RISCV64 || defined(__hexagon__)
+#  if SANITIZER_RISCV64 || SANITIZER_IOS
+#    define SANITIZER_CAN_USE_ALLOCATOR64 0
+#  elif defined(__mips64) || defined(__hexagon__)
 #    define SANITIZER_CAN_USE_ALLOCATOR64 0
 #  else
 #    define SANITIZER_CAN_USE_ALLOCATOR64 (SANITIZER_WORDSIZE == 64)

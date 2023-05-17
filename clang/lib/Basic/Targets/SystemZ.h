@@ -15,15 +15,14 @@
 
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TargetOptions.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Support/Compiler.h"
+#include "llvm/TargetParser/Triple.h"
 
 namespace clang {
 namespace targets {
 
 class LLVM_LIBRARY_VISIBILITY SystemZTargetInfo : public TargetInfo {
 
-  static const Builtin::Info BuiltinInfo[];
   static const char *const GCCRegNames[];
   std::string CPU;
   int ISARevision;
@@ -40,6 +39,7 @@ public:
     TLSSupported = true;
     IntWidth = IntAlign = 32;
     LongWidth = LongLongWidth = LongAlign = LongLongAlign = 64;
+    Int128Align = 64;
     PointerWidth = PointerAlign = 64;
     LongDoubleWidth = 128;
     LongDoubleAlign = 64;
@@ -50,13 +50,13 @@ public:
       // All vector types are default aligned on an 8-byte boundary, even if the
       // vector facility is not available. That is different from Linux.
       MaxVectorAlign = 64;
-      // Compared to Linux/ELF, the data layout differs only in some details:
-      // - name mangling is GOFF
-      // - 128 bit vector types are 64 bit aligned
+      // Compared to Linux/ELF, the data layout differs only in that name
+      // mangling is GOFF.
       resetDataLayout(
           "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64");
     } else
-      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64-a:8:16-n32:64");
+      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
+                      "-v128:64-a:8:16-n32:64");
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     HasStrictFP = true;
   }
@@ -70,7 +70,7 @@ public:
 
   ArrayRef<TargetInfo::GCCRegAlias> getGCCRegAliases() const override {
     // No aliases.
-    return None;
+    return std::nullopt;
   }
 
   ArrayRef<TargetInfo::AddlRegName> getGCCAddlRegNames() const override;
@@ -106,7 +106,7 @@ public:
     return TargetInfo::convertConstraint(Constraint);
   }
 
-  const char *getClobbers() const override {
+  std::string_view getClobbers() const override {
     // FIXME: Is this really right?
     return "";
   }
@@ -122,6 +122,14 @@ public:
   }
 
   void fillValidCPUList(SmallVectorImpl<StringRef> &Values) const override;
+
+  bool isValidTuneCPUName(StringRef Name) const override {
+    return isValidCPUName(Name);
+  }
+
+  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override {
+    fillValidCPUList(Values);
+  }
 
   bool setCPU(const std::string &Name) override {
     CPU = Name;
@@ -162,12 +170,14 @@ public:
     }
     HasVector &= !SoftFloat;
 
-    // If we use the vector ABI, vector types are 64-bit aligned.
-    if (HasVector && !getTriple().isOSzOS()) {
+    // If we use the vector ABI, vector types are 64-bit aligned. The
+    // DataLayout string is always set to this alignment as it is not a
+    // requirement that it follows the alignment emitted by the front end. It
+    // is assumed generally that the Datalayout should reflect only the
+    // target triple and not any specific feature.
+    if (HasVector && !getTriple().isOSzOS())
       MaxVectorAlign = 64;
-      resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
-                      "-v128:64-a:8:16-n32:64");
-    }
+
     return true;
   }
 

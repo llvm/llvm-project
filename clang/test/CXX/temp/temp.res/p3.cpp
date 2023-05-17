@@ -12,9 +12,9 @@ struct X {
   };
 };
 
-template<typename T> A // expected-error {{missing 'typename' prior to dependent type template name 'A<T>::B'}}
+template<typename T> A // expected-warning {{missing 'typename'}}
                       <T>::B<T> f1();
-template<typename T> A<T>::C<T> f2(); // expected-error {{missing 'typename' prior to dependent type template name 'A<T>::C'}}
+template<typename T> A<T>::C<T> f2(); // expected-warning {{missing 'typename'}}
 
 // FIXME: Should these cases really be valid? There doesn't appear to be a rule prohibiting them...
 template<typename T> A<T>::C<X>::X(T) {}
@@ -30,9 +30,6 @@ template<typename T> int A<T>::template C<int>::*f5() {} // expected-error {{has
 template<typename T> template<typename U> struct A<T>::B {
   friend A<T>::C<T> f6(); // ok, same as 'friend T f6();'
 
-  // FIXME: Error recovery here is awful; we decide that the template-id names
-  // a type, and then complain about the rest of the tokens, and then complain
-  // that we didn't get a function declaration.
-  friend A<U>::C<T> f7(); // expected-error {{use 'template' keyword to treat 'C' as a dependent template name}} expected-error 3{{}}
-  friend A<U>::template C<T> f8(); // expected-error 4{{}}
+  friend A<U>::C<T> f7(); // expected-error {{use 'template' keyword to treat 'C' as a dependent template name}} expected-warning {{missing 'typename'}}
+  friend A<U>::template C<T> f8(); // expected-warning {{missing 'typename'}}
 };

@@ -2,7 +2,7 @@
 # RUN: llvm-mc -filetype=obj -triple=arm64-apple-darwin %s -o %t.o
 # RUN: %lld -dylib -arch arm64 -lSystem -o %t %t.o
 # RUN: llvm-objdump --syms %t > %t.objdump
-# RUN: llvm-objdump --macho -d --section=__const %t >> %t.objdump
+# RUN: llvm-objdump --no-print-imm-hex --macho -d --section=__const %t >> %t.objdump
 # RUN: FileCheck %s < %t.objdump
 
 # CHECK-LABEL: SYMBOL TABLE:

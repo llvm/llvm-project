@@ -3,7 +3,7 @@
 
 declare dso_local void @bar()
 
-define dso_local void @test1(i32* nocapture %X) nounwind minsize {
+define dso_local void @test1(ptr nocapture %X) nounwind minsize {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    cmpb $47, (%rdi)
@@ -11,7 +11,7 @@ define dso_local void @test1(i32* nocapture %X) nounwind minsize {
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
-  %tmp1 = load i32, i32* %X, align 4
+  %tmp1 = load i32, ptr %X, align 4
   %and = and i32 %tmp1, 255
   %cmp = icmp eq i32 %and, 47
   br i1 %cmp, label %if.then, label %if.end
@@ -107,7 +107,7 @@ define dso_local void @test5(i32 %X) nounwind minsize {
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
 entry:
-  %bf.load = load i56, i56* bitcast ({ i8, i8, i8, i8, i8, i8, i8, i8 }* @x to i56*), align 4
+  %bf.load = load i56, ptr @x, align 4
   %bf.lshr = lshr i56 %bf.load, 32
   %bf.cast = trunc i56 %bf.lshr to i32
   %cmp = icmp ne i32 %bf.cast, 1

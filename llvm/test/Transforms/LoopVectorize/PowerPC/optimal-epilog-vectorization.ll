@@ -1,5 +1,5 @@
-; RUN: opt < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 -S | FileCheck %s --check-prefix VF-TWO-CHECK
-; RUN: opt < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=4 -S | FileCheck %s --check-prefix VF-FOUR-CHECK
+; RUN: opt -opaque-pointers=0 < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=2 -S | FileCheck %s --check-prefix VF-TWO-CHECK
+; RUN: opt -opaque-pointers=0 < %s -passes='loop-vectorize' -enable-epilogue-vectorization -epilogue-vectorization-force-VF=4 -S | FileCheck %s --check-prefix VF-FOUR-CHECK
 
 target datalayout = "e-m:e-i64:64-n32:64"
 target triple = "powerpc64le-unknown-linux-gnu"
@@ -1003,13 +1003,13 @@ for.end:                                          ; preds = %for.end.loopexit, %
   ret i32 0
 }
 
-; VF-TWO-CHECK-DAG: [[LOOPID_MV]] = distinct !{[[LOOPID_MV]], [[LOOPID_DISABLE_VECT:!.*]]}
-; VF-TWO-CHECK-DAG: [[LOOPID_EV]] = distinct !{[[LOOPID_EV]], [[LOOPID_DISABLE_VECT]], [[LOOPID_DISABLE_UNROLL:!.*]]}
+; VF-TWO-CHECK-DAG: [[LOOPID_MV]] = distinct !{[[LOOPID_MV]], [[LOOPID_DISABLE_VECT:!.*]], [[LOOPID_DISABLE_UNROLL:!.*]]}
+; VF-TWO-CHECK-DAG: [[LOOPID_EV]] = distinct !{[[LOOPID_EV]], [[LOOPID_DISABLE_VECT]], [[LOOPID_DISABLE_UNROLL]]}
 ; VF-TWO-CHECK-DAG: [[LOOPID_DISABLE_VECT]] = [[DISABLE_VECT_STR:!{!"llvm.loop.isvectorized".*}.*]]
 ; VF-TWO-CHECK-DAG: [[LOOPID_DISABLE_UNROLL]] = [[DISABLE_UNROLL_STR:!{!"llvm.loop.unroll.runtime.disable"}.*]]
 ;
-; VF-FOUR-CHECK-DAG: [[LOOPID_MV_CM]] = distinct !{[[LOOPID_MV_CM]], [[LOOPID_DISABLE_VECT_CM:!.*]]}
-; VF-FOUR-CHECK-DAG: [[LOOPID_EV_CM]] = distinct !{[[LOOPID_EV_CM]], [[LOOPID_DISABLE_VECT_CM]], [[LOOPID_DISABLE_UNROLL_CM:!.*]]}
+; VF-FOUR-CHECK-DAG: [[LOOPID_MV_CM]] = distinct !{[[LOOPID_MV_CM]], [[LOOPID_DISABLE_VECT_CM:!.*]], [[LOOPID_DISABLE_UNROLL_CM:!.*]]}
+; VF-FOUR-CHECK-DAG: [[LOOPID_EV_CM]] = distinct !{[[LOOPID_EV_CM]], [[LOOPID_DISABLE_VECT_CM]], [[LOOPID_DISABLE_UNROLL_CM]]}
 ; VF-FOUR-CHECK-DAG: [[LOOPID_DISABLE_VECT_CM]] = [[DISABLE_VECT_STR_CM:!{!"llvm.loop.isvectorized".*}.*]]
 ; VF-FOUR-CHECK-DAG: [[LOOPID_DISABLE_UNROLL_CM]] = [[DISABLE_UNROLL_STR_CM:!{!"llvm.loop.unroll.runtime.disable"}.*]]
 ;

@@ -7,13 +7,15 @@
 # RUN: %lld -lSystem -dylib %t/libfoo.o -o %t/libfoo.dylib
 
 # RUN: %lld -lSystem %t/test.o %t/libfoo.dylib -o %t/test
-# RUN: llvm-objdump --macho --syms --bind %t/test | FileCheck %s --check-prefixes=SYMS,BIND
+# RUN: %lld -fixup_chains -lSystem %t/test.o %t/libfoo.dylib -o %t/chained
+# RUN: llvm-objdump --macho --syms --bind --lazy-bind %t/test | FileCheck %s --check-prefixes=SYMS,BIND
+# RUN: llvm-objdump --macho --syms --dyld-info %t/chained | FileCheck %s --check-prefixes=CHAINED
 ## llvm-objdump doesn't print out all the flags info for lazy & weak bindings,
 ## so we use obj2yaml instead to test them.
 # RUN: obj2yaml %t/test | FileCheck %s --check-prefix=YAML
 
 # RUN: %lld -lSystem %t/libfoo.dylib %t/test.o -o %t/test
-# RUN: llvm-objdump --macho --syms --bind %t/test | FileCheck %s --check-prefixes=SYMS,BIND
+# RUN: llvm-objdump --macho --syms --bind --lazy-bind %t/test | FileCheck %s --check-prefixes=SYMS,BIND
 # RUN: obj2yaml %t/test | FileCheck %s --check-prefix=YAML
 
 # SYMS:     SYMBOL TABLE:
@@ -30,6 +32,18 @@
 # BIND-DAG:  __DATA        __thread_ptrs    0x{{[0-9a-f]+}} pointer       0 libfoo  _foo_tlv (weak_import)
 # BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer       0 libfoo  _weak_foo (weak_import)
 # BIND-DAG:  __DATA        __la_symbol_ptr  0x{{[0-9a-f]+}} pointer       0 libfoo  _weak_foo_fn (weak_import)
+# BIND:      Lazy bind table:
+# BIND-NEXT: segment       section          address                         dylib   symbol
+# BIND-DAG:  __DATA        __la_symbol_ptr  0x{{[0-9a-f]+}}                  libfoo  _foo_fn
+
+# CHAINED:      dyld information:
+# CHAINED-NEXT: segment      section       address pointer type  addend dylib    symbol/vm address
+# CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    libfoo   _foo (weak import)
+# CHAINED-DAG:  __DATA       __data            {{.*}}      bind  0x0    libfoo   _foo (weak import)
+# CHAINED-DAG:  __DATA       __thread_ptrs     {{.*}}      bind  0x0    libfoo   _foo_tlv (weak import)
+# CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    libfoo   _foo_fn (weak import)
+# CHAINED-DAG:  __DATA       __data            {{.*}}      bind  0x0    weak     _weak_foo (weak import)
+# CHAINED-DAG:  __DATA_CONST __got             {{.*}}      bind  0x0    weak     _weak_foo_fn (weak import)
 
 # YAML-LABEL: WeakBindOpcodes:
 # YAML:        - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM
@@ -48,22 +62,34 @@
 ## the reference is to a function symbol or a TLV. I'm not sure if there's a
 ## good reason for that, so I'm deviating here for a simpler implementation.
 # RUN: %lld -lSystem %t/test.o %t/strongref.o %t/libfoo.dylib -o %t/with-strong
+# RUN: %lld -fixup_chains -lSystem %t/test.o %t/strongref.o %t/libfoo.dylib -o %t/with-strong-chained
 # RUN: llvm-objdump --macho --bind %t/with-strong | FileCheck %s --check-prefix=STRONG-BIND
+# RUN: llvm-objdump --macho --dyld-info %t/with-strong-chained | FileCheck %s --check-prefix=STRONG-CHAINED
 # RUN: obj2yaml %t/with-strong | FileCheck %s --check-prefix=STRONG-YAML
 # RUN: %lld -lSystem %t/strongref.o %t/test.o %t/libfoo.dylib -o %t/with-strong
+# RUN: %lld -fixup_chains -lSystem %t/strongref.o %t/test.o %t/libfoo.dylib -o %t/with-strong-chained
 # RUN: llvm-objdump --macho --bind %t/with-strong | FileCheck %s --check-prefix=STRONG-BIND
+# RUN: llvm-objdump --macho --dyld-info %t/with-strong-chained | FileCheck %s --check-prefix=STRONG-CHAINED
 # RUN: obj2yaml %t/with-strong | FileCheck %s --check-prefix=STRONG-YAML
 # RUN: %lld -lSystem %t/libfoo.dylib %t/strongref.o %t/test.o -o %t/with-strong
+# RUN: %lld -fixup_chains -lSystem %t/libfoo.dylib %t/strongref.o %t/test.o -o %t/with-strong-chained
 # RUN: llvm-objdump --macho --bind %t/with-strong | FileCheck %s --check-prefix=STRONG-BIND
+# RUN: llvm-objdump --macho --dyld-info %t/with-strong-chained | FileCheck %s --check-prefix=STRONG-CHAINED
 # RUN: obj2yaml %t/with-strong | FileCheck %s --check-prefix=STRONG-YAML
 # RUN: %lld -lSystem %t/libfoo.dylib %t/test.o %t/strongref.o -o %t/with-strong
+# RUN: %lld -fixup_chains -lSystem %t/libfoo.dylib %t/test.o %t/strongref.o -o %t/with-strong-chained
 # RUN: llvm-objdump --macho --bind %t/with-strong | FileCheck %s --check-prefix=STRONG-BIND
+# RUN: llvm-objdump --macho --dyld-info %t/with-strong-chained | FileCheck %s --check-prefix=STRONG-CHAINED
 # RUN: obj2yaml %t/with-strong | FileCheck %s --check-prefix=STRONG-YAML
 # RUN: %lld -lSystem %t/test.o %t/libfoo.dylib %t/strongref.o -o %t/with-strong
+# RUN: %lld -fixup_chains -lSystem %t/test.o %t/libfoo.dylib %t/strongref.o -o %t/with-strong-chained
 # RUN: llvm-objdump --macho --bind %t/with-strong | FileCheck %s --check-prefix=STRONG-BIND
+# RUN: llvm-objdump --macho --dyld-info %t/with-strong-chained | FileCheck %s --check-prefix=STRONG-CHAINED
 # RUN: obj2yaml %t/with-strong | FileCheck %s --check-prefix=STRONG-YAML
 # RUN: %lld -lSystem %t/strongref.o %t/libfoo.dylib %t/test.o -o %t/with-strong
+# RUN: %lld -fixup_chains -lSystem %t/strongref.o %t/libfoo.dylib %t/test.o -o %t/with-strong-chained
 # RUN: llvm-objdump --macho --bind %t/with-strong | FileCheck %s --check-prefix=STRONG-BIND
+# RUN: llvm-objdump --macho --dyld-info %t/with-strong-chained | FileCheck %s --check-prefix=STRONG-CHAINED
 # RUN: obj2yaml %t/with-strong | FileCheck %s --check-prefix=STRONG-YAML
 
 # STRONG-BIND:      Bind table:
@@ -75,6 +101,17 @@
 # STRONG-BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer         0 libfoo  _weak_foo{{$}}
 # STRONG-BIND-DAG:  __DATA        __data           0x{{[0-9a-f]+}} pointer         0 libfoo  _weak_foo{{$}}
 # STRONG-BIND-DAG:  __DATA        __la_symbol_ptr  0x{{[0-9a-f]+}} pointer         0 libfoo  _weak_foo_fn{{$}}
+
+# STRONG-CHAINED:      dyld information:
+# STRONG-CHAINED-NEXT: segment      section      address pointer type  addend dylib   symbol/vm address
+# STRONG-CHAINED-DAG:  __DATA_CONST __got            {{.*}}      bind  0x0    weak    _weak_foo_fn{{$}}
+# STRONG-CHAINED-DAG:  __DATA_CONST __got            {{.*}}      bind  0x0    libfoo  _foo_fn{{$}}
+# STRONG-CHAINED-DAG:  __DATA_CONST __got            {{.*}}      bind  0x0    libfoo  _foo{{$}}
+# STRONG-CHAINED-DAG:  __DATA       __data           {{.*}}      bind  0x0    libfoo  _foo{{$}}
+# STRONG-CHAINED-DAG:  __DATA       __data           {{.*}}      bind  0x0    libfoo  _foo{{$}}
+# STRONG-CHAINED-DAG:  __DATA       __data           {{.*}}      bind  0x0    weak    _weak_foo{{$}}
+# STRONG-CHAINED-DAG:  __DATA       __data           {{.*}}      bind  0x0    weak    _weak_foo{{$}}
+# STRONG-CHAINED-DAG:  __DATA       __thread_ptrs    {{.*}}      bind  0x0    libfoo  _foo_tlv{{$}}
 
 # STRONG-YAML-LABEL: WeakBindOpcodes:
 # STRONG-YAML:        - Opcode:          BIND_OPCODE_SET_SYMBOL_TRAILING_FLAGS_IMM

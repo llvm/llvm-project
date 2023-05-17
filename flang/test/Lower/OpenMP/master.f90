@@ -10,7 +10,7 @@ subroutine omp_master()
 !OMPDialect: omp.master  {
 !$omp master
 
-    !FIRDialect: fir.call @_QPmaster() : () -> ()
+    !FIRDialect: fir.call @_QPmaster() {{.*}}: () -> ()
     call master()
 
 !OMPDialect: omp.terminator
@@ -24,7 +24,7 @@ subroutine parallel_function_master()
 !OMPDialect: omp.parallel {
 !$omp parallel
 
-    !FIRDialect: fir.call @_QPfoo() : () -> ()
+    !FIRDialect: fir.call @_QPfoo() {{.*}}: () -> ()
     call foo()
 
 !OMPDialect: omp.terminator
@@ -41,13 +41,13 @@ subroutine omp_parallel_master()
 
 !OMPDialect: omp.parallel {
 !$omp parallel
-    !FIRDialect: fir.call @_QPparallel() : () -> ()
+    !FIRDialect: fir.call @_QPparallel() {{.*}}: () -> ()
     call parallel()
 
 !OMPDialect: omp.master {
 !$omp master
 
-    !FIRDialect: fir.call @_QPparallel_master() : () -> ()
+    !FIRDialect: fir.call @_QPparallel_master() {{.*}}: () -> ()
     call parallel_master()
 
 !OMPDialect: omp.terminator
@@ -80,7 +80,7 @@ subroutine omp_master_parallel()
 
 !OMPDialect: omp.parallel {
 !$omp parallel
-        !FIRDialect: fir.call @_QPinside_if_parallel() : () -> ()
+        !FIRDialect: fir.call @_QPinside_if_parallel() {{.*}}: () -> ()
         call inside_if_parallel()
 
 !OMPDialect: omp.terminator

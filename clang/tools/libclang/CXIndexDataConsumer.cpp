@@ -434,7 +434,6 @@ bool CXIndexDataConsumer::isFunctionLocalDecl(const Decl *D) {
     case InternalLinkage:
       return true;
     case VisibleNoLinkage:
-    case ModuleInternalLinkage:
     case UniqueExternalLinkage:
       llvm_unreachable("Not a sema linkage");
     case ModuleLinkage:
@@ -463,10 +462,10 @@ void CXIndexDataConsumer::enteredMainFile(const FileEntry *File) {
 }
 
 void CXIndexDataConsumer::ppIncludedFile(SourceLocation hashLoc,
-                                     StringRef filename,
-                                     Optional<FileEntryRef> File,
-                                     bool isImport, bool isAngled,
-                                     bool isModuleImport) {
+                                         StringRef filename,
+                                         OptionalFileEntryRef File,
+                                         bool isImport, bool isAngled,
+                                         bool isModuleImport) {
   if (!CB.ppIncludedFile)
     return;
 

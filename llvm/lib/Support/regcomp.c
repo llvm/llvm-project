@@ -525,8 +525,8 @@ p_ere_exp(struct parse *p)
 			assert(backrefnum <= p->g->nsub);
 			EMIT(OBACK_, backrefnum);
 			assert(p->pbegin[backrefnum] != 0);
-			assert(OP(p->strip[p->pbegin[backrefnum]]) != OLPAREN);
-			assert(OP(p->strip[p->pend[backrefnum]]) != ORPAREN);
+			assert(OP(p->strip[p->pbegin[backrefnum]]) == OLPAREN);
+			assert(OP(p->strip[p->pend[backrefnum]]) == ORPAREN);
 			(void) dupl(p, p->pbegin[backrefnum]+1, p->pend[backrefnum]);
 			EMIT(O_BACK, backrefnum);
 			p->g->backrefs = 1;

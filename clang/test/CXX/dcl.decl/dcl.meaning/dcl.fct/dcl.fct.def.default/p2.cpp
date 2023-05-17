@@ -14,11 +14,11 @@ namespace move {
   };
 
   struct AssignmentRet1 {
-    AssignmentRet1&& operator=(AssignmentRet1&&) = default; // expected-error {{explicitly-defaulted move assignment operator must return 'move::AssignmentRet1 &'}}
+    AssignmentRet1&& operator=(AssignmentRet1&&) = default; // expected-error {{explicitly-defaulted move assignment operator must return 'AssignmentRet1 &'}}
   };
 
   struct AssignmentRet2 {
-    const AssignmentRet2& operator=(AssignmentRet2&&) = default; // expected-error {{explicitly-defaulted move assignment operator must return 'move::AssignmentRet2 &'}}
+    const AssignmentRet2& operator=(AssignmentRet2&&) = default; // expected-error {{explicitly-defaulted move assignment operator must return 'AssignmentRet2 &'}}
   };
 
   struct ConstAssignment {
@@ -62,11 +62,11 @@ namespace copy {
   };
 
   struct AssignmentRet1 {
-    AssignmentRet1&& operator=(const AssignmentRet1&) = default; // expected-error {{explicitly-defaulted copy assignment operator must return 'copy::AssignmentRet1 &'}}
+    AssignmentRet1&& operator=(const AssignmentRet1&) = default; // expected-error {{explicitly-defaulted copy assignment operator must return 'AssignmentRet1 &'}}
   };
 
   struct AssignmentRet2 {
-    const AssignmentRet2& operator=(const AssignmentRet2&) = default; // expected-error {{explicitly-defaulted copy assignment operator must return 'copy::AssignmentRet2 &'}}
+    const AssignmentRet2& operator=(const AssignmentRet2&) = default; // expected-error {{explicitly-defaulted copy assignment operator must return 'AssignmentRet2 &'}}
   };
 
   struct ConstAssignment {

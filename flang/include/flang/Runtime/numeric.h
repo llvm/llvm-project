@@ -18,90 +18,6 @@
 namespace Fortran::runtime {
 extern "C" {
 
-// AINT
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint4_4)(
-    CppTypeFor<TypeCategory::Real, 4>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint4_8)(
-    CppTypeFor<TypeCategory::Real, 4>);
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint4_10)(
-    CppTypeFor<TypeCategory::Real, 4>);
-#endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Aint4_16)(
-    CppTypeFor<TypeCategory::Real, 4>);
-#endif
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint8_4)(
-    CppTypeFor<TypeCategory::Real, 8>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint8_8)(
-    CppTypeFor<TypeCategory::Real, 8>);
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint8_10)(
-    CppTypeFor<TypeCategory::Real, 8>);
-#endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Aint8_16)(
-    CppTypeFor<TypeCategory::Real, 8>);
-#endif
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint10_4)(
-    CppTypeFor<TypeCategory::Real, 10>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint10_8)(
-    CppTypeFor<TypeCategory::Real, 10>);
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Aint10_10)(
-    CppTypeFor<TypeCategory::Real, 10>);
-#endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Aint16_4)(
-    CppTypeFor<TypeCategory::Real, 16>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Aint16_8)(
-    CppTypeFor<TypeCategory::Real, 16>);
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Aint16_16)(
-    CppTypeFor<TypeCategory::Real, 16>);
-#endif
-
-// ANINT
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint4_4)(
-    CppTypeFor<TypeCategory::Real, 4>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint4_8)(
-    CppTypeFor<TypeCategory::Real, 4>);
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint4_10)(
-    CppTypeFor<TypeCategory::Real, 4>);
-#endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Anint4_16)(
-    CppTypeFor<TypeCategory::Real, 4>);
-#endif
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint8_4)(
-    CppTypeFor<TypeCategory::Real, 8>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint8_8)(
-    CppTypeFor<TypeCategory::Real, 8>);
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint8_10)(
-    CppTypeFor<TypeCategory::Real, 8>);
-#endif
-#if LDBL_MANT_DIG == 113
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Anint8_16)(
-    CppTypeFor<TypeCategory::Real, 8>);
-#endif
-#if LDBL_MANT_DIG == 64
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint10_4)(
-    CppTypeFor<TypeCategory::Real, 10>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint10_8)(
-    CppTypeFor<TypeCategory::Real, 10>);
-CppTypeFor<TypeCategory::Real, 10> RTNAME(Anint10_10)(
-    CppTypeFor<TypeCategory::Real, 10>);
-#endif
-#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
-CppTypeFor<TypeCategory::Real, 4> RTNAME(Anint16_4)(
-    CppTypeFor<TypeCategory::Real, 16>);
-CppTypeFor<TypeCategory::Real, 8> RTNAME(Anint16_8)(
-    CppTypeFor<TypeCategory::Real, 16>);
-CppTypeFor<TypeCategory::Real, 16> RTNAME(Anint16_16)(
-    CppTypeFor<TypeCategory::Real, 16>);
-#endif
-
 // CEILING
 CppTypeFor<TypeCategory::Integer, 1> RTNAME(Ceiling4_1)(
     CppTypeFor<TypeCategory::Real, 4>);
@@ -439,6 +355,14 @@ CppTypeFor<TypeCategory::Real, 16> RTNAME(Scale16)(
     CppTypeFor<TypeCategory::Real, 16>, std::int64_t);
 #endif
 
+// SELECTED_INT_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedIntKind)(
+    const char *, int, void *, int);
+
+// SELECTED_REAL_KIND
+CppTypeFor<TypeCategory::Integer, 4> RTNAME(SelectedRealKind)(
+    const char *, int, void *, int, void *, int, void *, int);
+
 // SPACING
 CppTypeFor<TypeCategory::Real, 4> RTNAME(Spacing4)(
     CppTypeFor<TypeCategory::Real, 4>);
@@ -451,6 +375,40 @@ CppTypeFor<TypeCategory::Real, 10> RTNAME(Spacing10)(
 #if LDBL_MANT_DIG == 113 || HAS_FLOAT128
 CppTypeFor<TypeCategory::Real, 16> RTNAME(Spacing16)(
     CppTypeFor<TypeCategory::Real, 16>);
+#endif
+
+CppTypeFor<TypeCategory::Real, 4> RTNAME(FPow4i)(
+    CppTypeFor<TypeCategory::Real, 4> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+CppTypeFor<TypeCategory::Real, 8> RTNAME(FPow8i)(
+    CppTypeFor<TypeCategory::Real, 8> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTNAME(FPow10i)(
+    CppTypeFor<TypeCategory::Real, 10> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTNAME(FPow16i)(
+    CppTypeFor<TypeCategory::Real, 16> b,
+    CppTypeFor<TypeCategory::Integer, 4> e);
+#endif
+
+CppTypeFor<TypeCategory::Real, 4> RTNAME(FPow4k)(
+    CppTypeFor<TypeCategory::Real, 4> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
+CppTypeFor<TypeCategory::Real, 8> RTNAME(FPow8k)(
+    CppTypeFor<TypeCategory::Real, 8> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
+#if LDBL_MANT_DIG == 64
+CppTypeFor<TypeCategory::Real, 10> RTNAME(FPow10k)(
+    CppTypeFor<TypeCategory::Real, 10> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
+#endif
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+CppTypeFor<TypeCategory::Real, 16> RTNAME(FPow16k)(
+    CppTypeFor<TypeCategory::Real, 16> b,
+    CppTypeFor<TypeCategory::Integer, 8> e);
 #endif
 
 } // extern "C"

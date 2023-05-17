@@ -119,10 +119,10 @@ define i32 @icmp_div(i16 %a, i16 %c) {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[PHI_BO:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[PHI_BO]], [[THEN]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:
@@ -174,10 +174,10 @@ define i32 @icmp_div3(i16 %a, i16 %c) {
 ; CHECK-NEXT:    br i1 [[TOBOOL]], label [[THEN:%.*]], label [[EXIT:%.*]]
 ; CHECK:       then:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i16 [[C:%.*]], 0
-; CHECK-NEXT:    [[PHI_BO:%.*]] = sext i1 [[CMP]] to i32
+; CHECK-NEXT:    [[TMP0:%.*]] = sext i1 [[CMP]] to i32
 ; CHECK-NEXT:    br label [[EXIT]]
 ; CHECK:       exit:
-; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[PHI_BO]], [[THEN]] ]
+; CHECK-NEXT:    [[PHI:%.*]] = phi i32 [ -1, [[ENTRY:%.*]] ], [ [[TMP0]], [[THEN]] ]
 ; CHECK-NEXT:    ret i32 [[PHI]]
 ;
 entry:

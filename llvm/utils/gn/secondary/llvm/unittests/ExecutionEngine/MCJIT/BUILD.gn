@@ -1,4 +1,4 @@
-import("//llvm/utils/unittest/unittest.gni")
+import("//third-party/unittest/unittest.gni")
 
 unittest("MCJITTests") {
   deps = [
@@ -8,12 +8,11 @@ unittest("MCJITTests") {
     "//llvm/lib/ExecutionEngine/RuntimeDyld",
     "//llvm/lib/IR",
     "//llvm/lib/MC",
+    "//llvm/lib/Passes",
     "//llvm/lib/Support",
     "//llvm/lib/Target",
     "//llvm/lib/Target:NativeTarget",
-    "//llvm/lib/Transforms/IPO",
-    "//llvm/lib/Transforms/InstCombine",
-    "//llvm/lib/Transforms/Scalar",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "MCJITCAPITest.cpp",

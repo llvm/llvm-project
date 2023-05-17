@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Find and flag invalid initializer values in folds, e.g. std::accumulate.
 /// Example:
@@ -23,7 +21,7 @@ namespace bugprone {
 /// \endcode
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-fold-init-type.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/fold-init-type.html
 class FoldInitTypeCheck : public ClangTidyCheck {
 public:
   FoldInitTypeCheck(StringRef Name, ClangTidyContext *Context)
@@ -36,8 +34,6 @@ private:
                const ASTContext &Context, const CallExpr &CallNode);
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_FOLD_INIT_TYPE_H

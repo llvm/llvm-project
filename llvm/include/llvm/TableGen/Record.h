@@ -33,6 +33,7 @@
 #include <cstdint>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -141,8 +142,6 @@ public:
   std::string getAsString() const override;
 
   bool typeIsConvertibleTo(const RecTy *RHS) const override;
-
-  bool typeIsA(const RecTy *RHS) const override;
 };
 
 /// 'int' - Represent an integer value of no particular size
@@ -254,7 +253,7 @@ public:
   void Profile(FoldingSetNodeID &ID) const;
 
   ArrayRef<Record *> getClasses() const {
-    return makeArrayRef(getTrailingObjects<Record *>(), NumClasses);
+    return ArrayRef(getTrailingObjects<Record *>(), NumClasses);
   }
 
   using const_record_iterator = Record * const *;
@@ -311,10 +310,10 @@ protected:
     IK_CondOpInit,
     IK_FoldOpInit,
     IK_IsAOpInit,
+    IK_ExistsOpInit,
     IK_AnonymousNameInit,
     IK_StringInit,
     IK_VarInit,
-    IK_VarListElementInit,
     IK_VarBitInit,
     IK_VarDefInit,
     IK_LastTypedInit,
@@ -384,14 +383,6 @@ public:
     return nullptr;
   }
 
-  /// This function is used to implement the list slice
-  /// selection operator.  Given a value, it selects the specified list
-  /// elements, returning them as a new \p Init of type \p list. If it
-  /// is not legal to use the slice operator, null is returned.
-  virtual Init *convertInitListSlice(ArrayRef<unsigned> Elements) const {
-    return nullptr;
-  }
-
   /// This function is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named
   /// field if they are of type record.
@@ -443,7 +434,6 @@ public:
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   Init *convertInitializerBitRange(ArrayRef<unsigned> Bits) const override;
-  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
 
   /// This method is used to implement the FieldInit class.
   /// Implementors of this method should return the type of the named field if
@@ -724,8 +714,6 @@ public:
 
   Record *getElementAsRecord(unsigned i) const;
 
-  Init *convertInitListSlice(ArrayRef<unsigned> Elements) const override;
-
   Init *convertInitializerTo(RecTy *Ty) const override;
 
   /// This method is used by classes that refer to other
@@ -740,7 +728,7 @@ public:
   std::string getAsString() const override;
 
   ArrayRef<Init*> getValues() const {
-    return makeArrayRef(getTrailingObjects<Init *>(), NumValues);
+    return ArrayRef(getTrailingObjects<Init *>(), NumValues);
   }
 
   const_iterator begin() const { return getTrailingObjects<Init *>(); }
@@ -783,7 +771,18 @@ public:
 ///
 class UnOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum UnaryOp : uint8_t { CAST, NOT, HEAD, TAIL, SIZE, EMPTY, GETDAGOP };
+  enum UnaryOp : uint8_t {
+    TOLOWER,
+    TOUPPER,
+    CAST,
+    NOT,
+    HEAD,
+    TAIL,
+    SIZE,
+    EMPTY,
+    GETDAGOP,
+    LOG2
+  };
 
 private:
   Init *LHS;
@@ -832,9 +831,35 @@ public:
 /// !op (X, Y) - Combine two inits.
 class BinOpInit : public OpInit, public FoldingSetNode {
 public:
-  enum BinaryOp : uint8_t { ADD, SUB, MUL, AND, OR, XOR, SHL, SRA, SRL, LISTCONCAT,
-                            LISTSPLAT, STRCONCAT, INTERLEAVE, CONCAT, EQ,
-                            NE, LE, LT, GE, GT, SETDAGOP };
+  enum BinaryOp : uint8_t {
+    ADD,
+    SUB,
+    MUL,
+    DIV,
+    AND,
+    OR,
+    XOR,
+    SHL,
+    SRA,
+    SRL,
+    LISTCONCAT,
+    LISTSPLAT,
+    LISTREMOVE,
+    LISTELEM,
+    LISTSLICE,
+    RANGE,
+    RANGEC,
+    STRCONCAT,
+    INTERLEAVE,
+    CONCAT,
+    EQ,
+    NE,
+    LE,
+    LT,
+    GE,
+    GT,
+    SETDAGOP
+  };
 
 private:
   Init *LHS, *RHS;
@@ -876,6 +901,8 @@ public:
   BinaryOp getOpcode() const { return (BinaryOp)Opc; }
   Init *getLHS() const { return LHS; }
   Init *getRHS() const { return RHS; }
+
+  std::optional<bool> CompareInit(unsigned Opc, Init *LHS, Init *RHS) const;
 
   // Fold - If possible, fold this to a simpler init.  Return this if not
   // possible to fold.
@@ -992,11 +1019,11 @@ public:
   }
 
   ArrayRef<Init *> getConds() const {
-    return makeArrayRef(getTrailingObjects<Init *>(), NumConds);
+    return ArrayRef(getTrailingObjects<Init *>(), NumConds);
   }
 
   ArrayRef<Init *> getVals() const {
-    return makeArrayRef(getTrailingObjects<Init *>()+NumConds, NumConds);
+    return ArrayRef(getTrailingObjects<Init *>() + NumConds, NumConds);
   }
 
   Init *Fold(Record *CurRec) const;
@@ -1095,6 +1122,40 @@ public:
   std::string getAsString() const override;
 };
 
+/// !exists<type>(expr) - Dynamically determine if a record of `type` named
+/// `expr` exists.
+class ExistsOpInit : public TypedInit, public FoldingSetNode {
+private:
+  RecTy *CheckType;
+  Init *Expr;
+
+  ExistsOpInit(RecTy *CheckType, Init *Expr)
+      : TypedInit(IK_ExistsOpInit, IntRecTy::get(CheckType->getRecordKeeper())),
+        CheckType(CheckType), Expr(Expr) {}
+
+public:
+  ExistsOpInit(const ExistsOpInit &) = delete;
+  ExistsOpInit &operator=(const ExistsOpInit &) = delete;
+
+  static bool classof(const Init *I) { return I->getKind() == IK_ExistsOpInit; }
+
+  static ExistsOpInit *get(RecTy *CheckType, Init *Expr);
+
+  void Profile(FoldingSetNodeID &ID) const;
+
+  // Fold - If possible, fold this to a simpler init.  Return this if not
+  // possible to fold.
+  Init *Fold(Record *CurRec, bool IsFinal = false) const;
+
+  bool isComplete() const override { return false; }
+
+  Init *resolveReferences(Resolver &R) const override;
+
+  Init *getBit(unsigned Bit) const override;
+
+  std::string getAsString() const override;
+};
+
 /// 'Opcode' - Represent a reference to an entire variable object.
 class VarInit : public TypedInit {
   Init *VarName;
@@ -1167,39 +1228,6 @@ public:
     assert(B < 1 && "Bit index out of range!");
     return const_cast<VarBitInit*>(this);
   }
-};
-
-/// List[4] - Represent access to one element of a var or
-/// field.
-class VarListElementInit : public TypedInit {
-  TypedInit *TI;
-  unsigned Element;
-
-  VarListElementInit(TypedInit *T, unsigned E)
-      : TypedInit(IK_VarListElementInit,
-                  cast<ListRecTy>(T->getType())->getElementType()),
-        TI(T), Element(E) {
-    assert(T->getType() && isa<ListRecTy>(T->getType()) &&
-           "Illegal VarBitInit expression!");
-  }
-
-public:
-  VarListElementInit(const VarListElementInit &) = delete;
-  VarListElementInit &operator=(const VarListElementInit &) = delete;
-
-  static bool classof(const Init *I) {
-    return I->getKind() == IK_VarListElementInit;
-  }
-
-  static VarListElementInit *get(TypedInit *T, unsigned E);
-
-  TypedInit *getVariable() const { return TI; }
-  unsigned getElementNum() const { return Element; }
-
-  std::string getAsString() const override;
-  Init *resolveReferences(Resolver &R) const override;
-
-  Init *getBit(unsigned Bit) const override;
 };
 
 /// AL - Represent a reference to a 'def' in the description
@@ -1280,7 +1308,7 @@ public:
   size_t         args_size () const { return NumArgs; }
   bool           args_empty() const { return NumArgs == 0; }
 
-  ArrayRef<Init *> args() const { return makeArrayRef(args_begin(), NumArgs); }
+  ArrayRef<Init *> args() const { return ArrayRef(args_begin(), NumArgs); }
 
   Init *getBit(unsigned Bit) const override {
     llvm_unreachable("Illegal bit reference off anonymous def");
@@ -1388,11 +1416,11 @@ public:
   }
 
   ArrayRef<Init *> getArgs() const {
-    return makeArrayRef(getTrailingObjects<Init *>(), NumArgs);
+    return ArrayRef(getTrailingObjects<Init *>(), NumArgs);
   }
 
   ArrayRef<StringInit *> getArgNames() const {
-    return makeArrayRef(getTrailingObjects<StringInit *>(), NumArgNames);
+    return ArrayRef(getTrailingObjects<StringInit *>(), NumArgNames);
   }
 
   Init *resolveReferences(Resolver &R) const override;
@@ -1443,6 +1471,9 @@ private:
   Init *Value;
   bool IsUsed = false;
 
+  /// Reference locations to this record value.
+  SmallVector<SMRange> ReferenceLocs;
+
 public:
   RecordVal(Init *N, RecTy *T, FieldKind K);
   RecordVal(Init *N, SMLoc Loc, RecTy *T, FieldKind K);
@@ -1489,6 +1520,12 @@ public:
   /// Set the value and source location of the field.
   bool setValue(Init *V, SMLoc NewLoc);
 
+  /// Add a reference to this record value.
+  void addReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+
+  /// Return the references of this record value.
+  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
+
   /// Whether this value is used. Useful for reporting warnings, for example
   /// when a template argument is unused.
   void setUsed(bool Used) { IsUsed = Used; }
@@ -1521,8 +1558,11 @@ public:
 private:
   Init *Name;
   // Location where record was instantiated, followed by the location of
-  // multiclass prototypes used.
+  // multiclass prototypes used, and finally by the locations of references to
+  // this record.
   SmallVector<SMLoc, 4> Locs;
+  SmallVector<SMLoc, 0> ForwardDeclarationLocs;
+  SmallVector<SMRange, 0> ReferenceLocs;
   SmallVector<Init *, 0> TemplateArgs;
   SmallVector<RecordVal, 0> Values;
   SmallVector<AssertionInfo, 0> Assertions;
@@ -1579,7 +1619,7 @@ public:
     return Name;
   }
 
-  const std::string getNameInitAsString() const {
+  std::string getNameInitAsString() const {
     return getNameInit()->getAsUnquotedString();
   }
 
@@ -1587,6 +1627,19 @@ public:
 
   ArrayRef<SMLoc> getLoc() const { return Locs; }
   void appendLoc(SMLoc Loc) { Locs.push_back(Loc); }
+
+  ArrayRef<SMLoc> getForwardDeclarationLocs() const {
+    return ForwardDeclarationLocs;
+  }
+
+  /// Add a reference to this record value.
+  void appendReferenceLoc(SMRange Loc) { ReferenceLocs.push_back(Loc); }
+
+  /// Return the references of this record value.
+  ArrayRef<SMRange> getReferenceLocs() const { return ReferenceLocs; }
+
+  // Update a class location when encountering a (re-)definition.
+  void updateClassLoc(SMLoc Loc);
 
   // Make the type that this record should have based on its superclasses.
   RecordRecTy *getType();
@@ -1743,8 +1796,8 @@ public:
 
   /// This method looks up the specified field and returns its value as a
   /// string, throwing an exception if the value is not a string and
-  /// llvm::Optional() if the field does not exist.
-  llvm::Optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
+  /// std::nullopt if the field does not exist.
+  std::optional<StringRef> getValueAsOptionalString(StringRef FieldName) const;
 
   /// This method looks up the specified field and returns its value as a
   /// BitsInit, throwing an exception if the field does not exist or if the

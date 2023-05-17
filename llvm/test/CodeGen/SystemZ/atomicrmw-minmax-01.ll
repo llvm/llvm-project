@@ -12,7 +12,7 @@
 ; - CHECK-SHIFT2 makes sure that %b is shifted into the high part of the word
 ;   before being used, and that the low bits are set to 1.  This sequence is
 ;   independent of the other loop prologue instructions.
-define i8 @f1(i8 *%src, i8 %b) {
+define i8 @f1(ptr %src, i8 %b) {
 ; CHECK-LABEL: f1:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-DAG: sll %r2, 3
@@ -43,12 +43,12 @@ define i8 @f1(i8 *%src, i8 %b) {
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw min i8 *%src, i8 %b seq_cst
+  %res = atomicrmw min ptr %src, i8 %b seq_cst
   ret i8 %res
 }
 
 ; Check signed maximum.
-define i8 @f2(i8 *%src, i8 %b) {
+define i8 @f2(ptr %src, i8 %b) {
 ; CHECK-LABEL: f2:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-DAG: sll %r2, 3
@@ -79,12 +79,12 @@ define i8 @f2(i8 *%src, i8 %b) {
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw max i8 *%src, i8 %b seq_cst
+  %res = atomicrmw max ptr %src, i8 %b seq_cst
   ret i8 %res
 }
 
 ; Check unsigned minimum.
-define i8 @f3(i8 *%src, i8 %b) {
+define i8 @f3(ptr %src, i8 %b) {
 ; CHECK-LABEL: f3:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-DAG: sll %r2, 3
@@ -115,12 +115,12 @@ define i8 @f3(i8 *%src, i8 %b) {
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw umin i8 *%src, i8 %b seq_cst
+  %res = atomicrmw umin ptr %src, i8 %b seq_cst
   ret i8 %res
 }
 
 ; Check unsigned maximum.
-define i8 @f4(i8 *%src, i8 %b) {
+define i8 @f4(ptr %src, i8 %b) {
 ; CHECK-LABEL: f4:
 ; CHECK: risbg [[RISBG:%r[1-9]+]], %r2, 0, 189, 0{{$}}
 ; CHECK-DAG: sll %r2, 3
@@ -151,13 +151,13 @@ define i8 @f4(i8 *%src, i8 %b) {
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: rll
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw umax i8 *%src, i8 %b seq_cst
+  %res = atomicrmw umax ptr %src, i8 %b seq_cst
   ret i8 %res
 }
 
 ; Check the lowest useful signed minimum value.  We need to load 0x81000000
 ; into the source register.
-define i8 @f5(i8 *%src) {
+define i8 @f5(ptr %src) {
 ; CHECK-LABEL: f5:
 ; CHECK: llilh [[SRC2:%r[0-9]+]], 33024
 ; CHECK: crjle [[ROT:%r[0-9]+]], [[SRC2]]
@@ -168,13 +168,13 @@ define i8 @f5(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f5:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw min i8 *%src, i8 -127 seq_cst
+  %res = atomicrmw min ptr %src, i8 -127 seq_cst
   ret i8 %res
 }
 
 ; Check the highest useful signed maximum value.  We need to load 0x7e000000
 ; into the source register.
-define i8 @f6(i8 *%src) {
+define i8 @f6(ptr %src) {
 ; CHECK-LABEL: f6:
 ; CHECK: llilh [[SRC2:%r[0-9]+]], 32256
 ; CHECK: crjhe [[ROT:%r[0-9]+]], [[SRC2]]
@@ -185,13 +185,13 @@ define i8 @f6(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f6:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw max i8 *%src, i8 126 seq_cst
+  %res = atomicrmw max ptr %src, i8 126 seq_cst
   ret i8 %res
 }
 
 ; Check the lowest useful unsigned minimum value.  We need to load 0x01000000
 ; into the source register.
-define i8 @f7(i8 *%src) {
+define i8 @f7(ptr %src) {
 ; CHECK-LABEL: f7:
 ; CHECK: llilh [[SRC2:%r[0-9]+]], 256
 ; CHECK: clrjle [[ROT:%r[0-9]+]], [[SRC2]],
@@ -202,13 +202,13 @@ define i8 @f7(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f7:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw umin i8 *%src, i8 1 seq_cst
+  %res = atomicrmw umin ptr %src, i8 1 seq_cst
   ret i8 %res
 }
 
 ; Check the highest useful unsigned maximum value.  We need to load 0xfe000000
 ; into the source register.
-define i8 @f8(i8 *%src) {
+define i8 @f8(ptr %src) {
 ; CHECK-LABEL: f8:
 ; CHECK: llilh [[SRC2:%r[0-9]+]], 65024
 ; CHECK: clrjhe [[ROT:%r[0-9]+]], [[SRC2]],
@@ -219,6 +219,6 @@ define i8 @f8(i8 *%src) {
 ; CHECK-SHIFT1: br %r14
 ; CHECK-SHIFT2-LABEL: f8:
 ; CHECK-SHIFT2: br %r14
-  %res = atomicrmw umax i8 *%src, i8 254 seq_cst
+  %res = atomicrmw umax ptr %src, i8 254 seq_cst
   ret i8 %res
 }

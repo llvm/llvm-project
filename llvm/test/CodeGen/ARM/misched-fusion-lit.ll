@@ -1,15 +1,15 @@
 ; RUN: llc %s -o - -mtriple=armv8-unknown -mattr=-fuse-literals,+use-misched | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKDONT
 ; RUN: llc %s -o - -mtriple=armv8-unknown -mattr=+fuse-literals,+use-misched | FileCheck %s --check-prefix=CHECK --check-prefix=CHECKFUSE
 
-@g = common global i32* zeroinitializer
+@g = common global ptr zeroinitializer
 
-define i32* @litp(i32 %a, i32 %b) {
+define ptr @litp(i32 %a, i32 %b) {
 entry:
   %add = add nsw i32 %b, %a
-  %ptr = getelementptr i32, i32* bitcast (i32* (i32, i32)* @litp to i32*), i32 %add
-  %res = getelementptr i32, i32* bitcast (i32** @g to i32*), i32 %add
-  store i32* %ptr, i32** @g, align 4
-  ret i32* %res
+  %ptr = getelementptr i32, ptr @litp, i32 %add
+  %res = getelementptr i32, ptr @g, i32 %add
+  store ptr %ptr, ptr @g, align 4
+  ret ptr %res
 
 ; CHECK-LABEL: litp:
 ; CHECK:          movw [[R:r[0-9]+]], :lower16:litp
@@ -25,7 +25,7 @@ entry:
   %add1 = add i32 %adda, %b
   %addb = add i32 %b, 121110837
   %add2 = add i32 %addb, %a
-  store i32 %add1, i32* bitcast (i32** @g to i32*), align 4
+  store i32 %add1, ptr @g, align 4
   ret i32 %add2
 
 ; CHECK-LABEL: liti:

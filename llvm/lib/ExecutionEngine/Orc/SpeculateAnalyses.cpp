@@ -67,7 +67,7 @@ void SpeculateQuery::findCalles(const BasicBlock *BB,
 }
 
 bool SpeculateQuery::isStraightLine(const Function &F) {
-  return llvm::all_of(F.getBasicBlockList(), [](const BasicBlock &BB) {
+  return llvm::all_of(F, [](const BasicBlock &BB) {
     return BB.getSingleSuccessor() != nullptr;
   });
 }
@@ -97,7 +97,7 @@ BlockFreqQuery::ResultTy BlockFreqQuery::operator()(Function &F) {
   auto IBBs = findBBwithCalls(F);
 
   if (IBBs.empty())
-    return None;
+    return std::nullopt;
 
   auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(F);
 
@@ -136,7 +136,7 @@ SequenceBBQuery::BlockListTy
 SequenceBBQuery::rearrangeBB(const Function &F, const BlockListTy &BBList) {
   BlockListTy RearrangedBBSet;
 
-  for (auto &Block : F.getBasicBlockList())
+  for (auto &Block : F)
     if (llvm::is_contained(BBList, &Block))
       RearrangedBBSet.push_back(&Block);
 
@@ -288,14 +288,14 @@ SpeculateQuery::ResultTy SequenceBBQuery::operator()(Function &F) {
 
   CallerBlocks = findBBwithCalls(F);
   if (CallerBlocks.empty())
-    return None;
+    return std::nullopt;
 
   if (isStraightLine(F))
     SequencedBlocks = rearrangeBB(F, CallerBlocks);
   else
     SequencedBlocks = queryCFG(F, CallerBlocks);
 
-  for (auto BB : SequencedBlocks)
+  for (const auto *BB : SequencedBlocks)
     findCalles(BB, Calles);
 
   CallerAndCalles.insert({F.getName(), std::move(Calles)});

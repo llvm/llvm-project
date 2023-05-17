@@ -46,12 +46,6 @@ public:
   void encodeInstruction(const MCInst &MI, raw_ostream &OS,
                          SmallVectorImpl<MCFixup> &Fixups,
                          const MCSubtargetInfo &STI) const override;
-
-private:
-  FeatureBitset computeAvailableFeatures(const FeatureBitset &FB) const;
-  void
-  verifyInstructionPredicates(const MCInst &MI,
-                              const FeatureBitset &AvailableFeatures) const;
 };
 
 } // end anonymous namespace
@@ -67,15 +61,15 @@ using EndianWriter = support::endian::Writer;
 // output register in operand 0. If so, we need to swap operands 0 and 1 so the
 // type comes first in the output, despide coming second in the MCInst.
 static bool hasType(const MCInst &MI, const MCInstrInfo &MII) {
-  MCInstrDesc MCDesc = MII.get(MI.getOpcode());
+  const MCInstrDesc &MCDesc = MII.get(MI.getOpcode());
   // If we define an output, and have at least one other argument.
   if (MCDesc.getNumDefs() == 1 && MCDesc.getNumOperands() >= 2) {
     // Check if we define an ID, and take a type as operand 1.
-    auto DefOpInfo = MCDesc.opInfo_begin();
-    auto FirstArgOpInfo = MCDesc.opInfo_begin() + 1;
-    return (DefOpInfo->RegClass == SPIRV::IDRegClassID ||
-            DefOpInfo->RegClass == SPIRV::ANYIDRegClassID) &&
-           FirstArgOpInfo->RegClass == SPIRV::TYPERegClassID;
+    auto &DefOpInfo = MCDesc.operands()[0];
+    auto &FirstArgOpInfo = MCDesc.operands()[1];
+    return (DefOpInfo.RegClass == SPIRV::IDRegClassID ||
+            DefOpInfo.RegClass == SPIRV::ANYIDRegClassID) &&
+           FirstArgOpInfo.RegClass == SPIRV::TYPERegClassID;
   }
   return false;
 }
@@ -110,9 +104,6 @@ static void emitUntypedInstrOperands(const MCInst &MI, EndianWriter &OSE) {
 void SPIRVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
                                            SmallVectorImpl<MCFixup> &Fixups,
                                            const MCSubtargetInfo &STI) const {
-  auto Features = computeAvailableFeatures(STI.getFeatureBits());
-  verifyInstructionPredicates(MI, Features);
-
   EndianWriter OSE(OS, support::little);
 
   // Encode the first 32 SPIR-V bytes with the number of args and the opcode.
@@ -128,5 +119,4 @@ void SPIRVMCCodeEmitter::encodeInstruction(const MCInst &MI, raw_ostream &OS,
     emitUntypedInstrOperands(MI, OSE);
 }
 
-#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "SPIRVGenMCCodeEmitter.inc"

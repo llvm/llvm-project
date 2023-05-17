@@ -33,5 +33,5 @@ void test_hvx_protos(float a, unsigned int b) {
   HVX_VectorPair c;
   // CHECK-64: call <32 x i32> @llvm.hexagon.V6.v6mpyhubs10
   // CHECK:    call <64 x i32> @llvm.hexagon.V6.v6mpyhubs10.128B
-  c = Q6_Ww_v6mpy_WubWbI_h(c, c, 12);
+  c = Q6_Ww_v6mpy_WubWbI_h(c, c, 2);
 }

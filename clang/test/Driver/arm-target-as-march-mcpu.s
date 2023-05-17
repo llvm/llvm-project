@@ -99,6 +99,6 @@
 
 // TRIPLE-ARMV4: "-triple" "armv4t-unknown-linux-gnueabi"
 // TRIPLE-ARMV7: "-triple" "armv7-unknown-linux-gnueabi"
-// TRIPLE-ARMV8: "-triple" "armv8-unknown-linux-gnueabi"
+// TRIPLE-ARMV8: "-triple" "armv8a-unknown-linux-gnueabi"
 // CPU-A8: "-target-cpu" "cortex-a8"
 // EXT-CRC: "-target-feature" "+crc"

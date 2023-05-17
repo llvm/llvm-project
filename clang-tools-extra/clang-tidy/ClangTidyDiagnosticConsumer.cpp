@@ -22,6 +22,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Attr.h"
+#include "clang/Basic/CharInfo.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/FileManager.h"
@@ -36,6 +37,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Regex.h"
+#include <optional>
 #include <tuple>
 #include <utility>
 #include <vector>
@@ -221,12 +223,30 @@ void ClangTidyContext::setSourceManager(SourceManager *SourceMgr) {
   DiagEngine->setSourceManager(SourceMgr);
 }
 
+static bool parseFileExtensions(llvm::ArrayRef<std::string> AllFileExtensions,
+                                FileExtensionsSet &FileExtensions) {
+  FileExtensions.clear();
+  for (StringRef Suffix : AllFileExtensions) {
+    StringRef Extension = Suffix.trim();
+    if (!llvm::all_of(Extension, isAlphanumeric))
+      return false;
+    FileExtensions.insert(Extension);
+  }
+  return true;
+}
+
 void ClangTidyContext::setCurrentFile(StringRef File) {
   CurrentFile = std::string(File);
   CurrentOptions = getOptionsForFile(CurrentFile);
   CheckFilter = std::make_unique<CachedGlobList>(*getOptions().Checks);
   WarningAsErrorFilter =
       std::make_unique<CachedGlobList>(*getOptions().WarningsAsErrors);
+  if (!parseFileExtensions(*getOptions().HeaderFileExtensions,
+                           HeaderFileExtensions))
+    this->configurationDiag("Invalid header file extensions");
+  if (!parseFileExtensions(*getOptions().ImplementationFileExtensions,
+                           ImplementationFileExtensions))
+    this->configurationDiag("Invalid implementation file extensions");
 }
 
 void ClangTidyContext::setASTContext(ASTContext *Context) {
@@ -255,10 +275,10 @@ void ClangTidyContext::setProfileStoragePrefix(StringRef Prefix) {
   ProfilePrefix = std::string(Prefix);
 }
 
-llvm::Optional<ClangTidyProfiling::StorageParams>
+std::optional<ClangTidyProfiling::StorageParams>
 ClangTidyContext::getProfileStorageParams() const {
   if (ProfilePrefix.empty())
-    return llvm::None;
+    return std::nullopt;
 
   return ClangTidyProfiling::StorageParams(ProfilePrefix, CurrentFile);
 }
@@ -318,8 +338,7 @@ void ClangTidyDiagnosticConsumer::finalizeLastError() {
   LastErrorPassesLineFilter = false;
 }
 
-namespace clang {
-namespace tidy {
+namespace clang::tidy {
 
 const llvm::StringMap<tooling::Replacements> *
 getFixIt(const tooling::Diagnostic &Diagnostic, bool GetFixFromNotes) {
@@ -339,8 +358,7 @@ getFixIt(const tooling::Diagnostic &Diagnostic, bool GetFixFromNotes) {
   return Result;
 }
 
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy
 
 void ClangTidyDiagnosticConsumer::HandleDiagnostic(
     DiagnosticsEngine::Level DiagLevel, const Diagnostic &Info) {
@@ -403,6 +421,8 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
 
     bool IsWarningAsError = DiagLevel == DiagnosticsEngine::Warning &&
                             Context.treatAsError(CheckName);
+    if (IsWarningAsError)
+      Level = ClangTidyError::Error;
     Errors.emplace_back(CheckName, Level, Context.getCurrentBuildDirectory(),
                         IsWarningAsError);
   }

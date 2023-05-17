@@ -5,21 +5,21 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 ; Reductions of pointer types are not supported.
 
-define void @PR49215(i32* %p, i32* %q) {
+define void @PR49215(ptr %p, ptr %q) {
 ; CHECK-LABEL: @PR49215(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[G:%.*]] = phi i32* [ [[P:%.*]], [[ENTRY]] ], [ [[UMIN:%.*]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32* [[Q:%.*]], [[G]]
-; CHECK-NEXT:    [[UMIN]] = select i1 [[CMP2]], i32* [[Q]], i32* [[G]]
+; CHECK-NEXT:    [[G:%.*]] = phi ptr [ [[P:%.*]], [[ENTRY]] ], [ [[UMIN:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult ptr [[Q:%.*]], [[G]]
+; CHECK-NEXT:    [[UMIN]] = select i1 [[CMP2]], ptr [[Q]], ptr [[G]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i64 [[IV]], 1
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i64 [[IV_NEXT]], undef
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[LOOPEXIT:%.*]], label [[FOR_BODY]]
 ; CHECK:       loopexit:
-; CHECK-NEXT:    [[UMIN_LCSSA:%.*]] = phi i32* [ [[UMIN]], [[FOR_BODY]] ]
-; CHECK-NEXT:    [[PHI_CAST:%.*]] = ptrtoint i32* [[UMIN_LCSSA]] to i64
+; CHECK-NEXT:    [[UMIN_LCSSA:%.*]] = phi ptr [ [[UMIN]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[PHI_CAST:%.*]] = ptrtoint ptr [[UMIN_LCSSA]] to i64
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -27,14 +27,14 @@ entry:
 
 for.body:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
-  %g = phi i32* [ %p, %entry ], [ %umin, %for.body ]
-  %cmp2 = icmp ult i32* %q, %g
-  %umin = select i1 %cmp2, i32* %q, i32* %g
+  %g = phi ptr [ %p, %entry ], [ %umin, %for.body ]
+  %cmp2 = icmp ult ptr %q, %g
+  %umin = select i1 %cmp2, ptr %q, ptr %g
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, undef
   br i1 %exitcond, label %loopexit, label %for.body
 
 loopexit:
-  %phi.cast = ptrtoint i32* %umin to i64
+  %phi.cast = ptrtoint ptr %umin to i64
   ret void
 }

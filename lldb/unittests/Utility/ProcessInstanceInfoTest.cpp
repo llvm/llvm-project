@@ -8,6 +8,7 @@
 
 #include "lldb/Target/Process.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -16,16 +17,16 @@ namespace {
 /// for odd ones.
 class DummyUserIDResolver : public UserIDResolver {
 protected:
-  llvm::Optional<std::string> DoGetUserName(id_t uid) override {
+  std::optional<std::string> DoGetUserName(id_t uid) override {
     if (uid % 2)
       return ("user" + llvm::Twine(uid)).str();
-    return llvm::None;
+    return std::nullopt;
   }
 
-  llvm::Optional<std::string> DoGetGroupName(id_t gid) override {
+  std::optional<std::string> DoGetGroupName(id_t gid) override {
     if (gid % 2)
       return ("group" + llvm::Twine(gid)).str();
-    return llvm::None;
+    return std::nullopt;
   }
 };
 } // namespace
@@ -107,61 +108,4 @@ TEST(ProcessInstanceInfoMatch, Name) {
   match.GetProcessInfo().GetExecutableFile() = FileSpec();
   EXPECT_TRUE(match.Matches(info_bar));
   EXPECT_TRUE(match.Matches(info_empty));
-}
-
-TEST(ProcessInstanceInfo, Yaml) {
-  std::string buffer;
-  llvm::raw_string_ostream os(buffer);
-
-  // Serialize.
-  ProcessInstanceInfo info("a.out", ArchSpec("x86_64-pc-linux"), 47);
-  info.SetUserID(1);
-  info.SetEffectiveUserID(2);
-  info.SetGroupID(3);
-  info.SetEffectiveGroupID(4);
-  llvm::yaml::Output yout(os);
-  yout << info;
-  os.flush();
-
-  // Deserialize.
-  ProcessInstanceInfo deserialized;
-  llvm::yaml::Input yin(buffer);
-  yin >> deserialized;
-
-  EXPECT_EQ(deserialized.GetNameAsStringRef(), info.GetNameAsStringRef());
-  EXPECT_EQ(deserialized.GetArchitecture(), info.GetArchitecture());
-  EXPECT_EQ(deserialized.GetUserID(), info.GetUserID());
-  EXPECT_EQ(deserialized.GetGroupID(), info.GetGroupID());
-  EXPECT_EQ(deserialized.GetEffectiveUserID(), info.GetEffectiveUserID());
-  EXPECT_EQ(deserialized.GetEffectiveGroupID(), info.GetEffectiveGroupID());
-}
-
-TEST(ProcessInstanceInfoList, Yaml) {
-  std::string buffer;
-  llvm::raw_string_ostream os(buffer);
-
-  // Serialize.
-  ProcessInstanceInfo info("a.out", ArchSpec("x86_64-pc-linux"), 47);
-  info.SetUserID(1);
-  info.SetEffectiveUserID(2);
-  info.SetGroupID(3);
-  info.SetEffectiveGroupID(4);
-  ProcessInstanceInfoList list;
-  list.push_back(info);
-  llvm::yaml::Output yout(os);
-  yout << list;
-  os.flush();
-
-  // Deserialize.
-  ProcessInstanceInfoList deserialized;
-  llvm::yaml::Input yin(buffer);
-  yin >> deserialized;
-
-  ASSERT_EQ(deserialized.size(), static_cast<size_t>(1));
-  EXPECT_EQ(deserialized[0].GetNameAsStringRef(), info.GetNameAsStringRef());
-  EXPECT_EQ(deserialized[0].GetArchitecture(), info.GetArchitecture());
-  EXPECT_EQ(deserialized[0].GetUserID(), info.GetUserID());
-  EXPECT_EQ(deserialized[0].GetGroupID(), info.GetGroupID());
-  EXPECT_EQ(deserialized[0].GetEffectiveUserID(), info.GetEffectiveUserID());
-  EXPECT_EQ(deserialized[0].GetEffectiveGroupID(), info.GetEffectiveGroupID());
 }

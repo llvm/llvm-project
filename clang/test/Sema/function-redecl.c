@@ -96,7 +96,7 @@ enum e { e1, e2 };
 
 // GNU extension: prototypes and K&R function definitions
 int isroot(short x, // expected-note{{previous declaration is here}}
-           enum e); 
+           enum e);
 
 int isroot(x, y)
      short x; // expected-warning{{promoted type 'int' of K&R function parameter is not compatible with the parameter type 'short' declared in a previous prototype}}
@@ -121,11 +121,11 @@ a x;
 a2 x2; // expected-note{{passing argument to parameter here}}
 void test_x(void) {
   x(5);
-  x2(5); // expected-warning{{incompatible integer to pointer conversion passing 'int' to parameter of type 'int *'}}
+  x2(5); // expected-error{{incompatible integer to pointer conversion passing 'int' to parameter of type 'int *'}}
 }
 
-enum e0 {one}; 
-void f3(); 
+enum e0 {one};
+void f3();
 void f3(enum e0 x) {}
 
 enum incomplete_enum;

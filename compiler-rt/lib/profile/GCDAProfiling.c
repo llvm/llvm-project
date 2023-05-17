@@ -3,9 +3,9 @@
 |* Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 |* See https://llvm.org/LICENSE.txt for license information.
 |* SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
-|* 
+|*
 |*===----------------------------------------------------------------------===*|
-|* 
+|*
 |* This file implements the call back routines for the gcov profiling
 |* instrumentation pass. Link against this library when running code through
 |* the -insert-gcov-profiling LLVM pass.
@@ -65,7 +65,7 @@ static char *filename = NULL;
 
 /*
  * The current file we're outputting.
- */ 
+ */
 static FILE *output_file = NULL;
 
 /*
@@ -264,11 +264,6 @@ static int map_file(void) {
 
 static void unmap_file(void) {
 #if defined(_WIN32)
-  if (!FlushViewOfFile(write_buffer, file_size)) {
-    fprintf(stderr, "profiling: %s: cannot flush mapped view: %lu\n", filename,
-            GetLastError());
-  }
-
   if (!UnmapViewOfFile(write_buffer)) {
     fprintf(stderr, "profiling: %s: cannot unmap mapped view: %lu\n", filename,
             GetLastError());

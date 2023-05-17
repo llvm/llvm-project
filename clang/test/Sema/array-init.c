@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=gnu99 -fsyntax-only -pedantic -verify %s
+// RUN: %clang_cc1 -std=gnu99 -fsyntax-only -pedantic -verify=expected,pedantic %s
 // RUN: %clang_cc1 -std=gnu99 -fsyntax-only -Wgnu -Wc11-extensions -verify %s
 // REQUIRES: LP64
 
@@ -11,7 +11,7 @@ int ary2[] = { x, y, z }; // expected-error{{initializer element is not a compil
 
 extern int fileScopeExtern[3] = { 1, 3, 5 }; // expected-warning{{'extern' variable has an initializer}}
 
-static long ary3[] = { 1, "abc", 3, 4 }; // expected-warning{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[4]'}}
+static long ary3[] = { 1, "abc", 3, 4 }; // expected-error{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[4]'}}
 
 void func(void) {
   int x = 1;
@@ -24,7 +24,7 @@ void func(void) {
 
   int x4 = { 1, 2 }; // expected-warning{{excess elements in scalar initializer}}
 
-  int y[4][3] = { 
+  int y[4][3] = {
     { 1, 3, 5 },
     { 2, 4, 6 },
     { 3, 5, 7 },
@@ -34,7 +34,7 @@ void func(void) {
     1, 3, 5, 2, 4, 6, 3, 5, 7
   };
 
-  int y3[4][3] = {  
+  int y3[4][3] = {
     { 1, 3, 5 },
     { 2, 4, 6 },
     { 3, 5, 7 },
@@ -46,27 +46,27 @@ void func(void) {
     int a,b,c;
   } z = { 1 };
 
-  struct threeElements *p = 7; // expected-warning{{incompatible integer to pointer conversion initializing 'struct threeElements *' with an expression of type 'int'}}
-  
-  extern int blockScopeExtern[3] = { 1, 3, 5 }; // expected-error{{'extern' variable cannot have an initializer}}
-  
+  struct threeElements *p = 7; // expected-error{{incompatible integer to pointer conversion initializing 'struct threeElements *' with an expression of type 'int'}}
+
+  extern int blockScopeExtern[3] = { 1, 3, 5 }; // expected-error{{declaration of block scope identifier with linkage cannot have an initializer}}
+
   static long x2[3] = { 1.0,
-                        "abc", // expected-warning{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[4]'}}
+                        "abc", // expected-error{{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[4]'}}
                          5.8 }; // expected-warning {{implicit conversion from 'double' to 'long' changes value from 5.8 to 5}}
 }
 
 void test(void) {
-  int y1[3] = { 
+  int y1[3] = {
     { 1, 2, 3 } // expected-warning{{excess elements in scalar initializer}}
   };
-  int y3[4][3] = {  
+  int y3[4][3] = {
     { 1, 3, 5 },
     { 2, 4, 6 },
     { 3, 5, 7 },
     { 4, 6, 8 },
-    {  }, // expected-warning{{use of GNU empty initializer extension}} expected-warning{{excess elements in array initializer}}
+    {  }, // pedantic-warning{{use of an empty initializer is a C2x extension}} expected-warning{{excess elements in array initializer}}
   };
-  int y4[4][3] = {  
+  int y4[4][3] = {
     { 1, 3, 5, 2 }, // expected-warning{{excess elements in array initializer}}
     { 4, 6 },
     { 3, 5, 7 },
@@ -86,13 +86,13 @@ void allLegalAndSynonymous(void) {
     { 4, 5, 6 }
   };
   short q3[4][3][2] = {
-    { 
+    {
       { 1 },
     },
-    { 
+    {
       { 2, 3 },
     },
-    { 
+    {
       { 4, 5 },
       { 6 },
     },
@@ -109,8 +109,8 @@ void legal(void) {
 }
 
 unsigned char asso_values[] = { 34 };
-int legal2(void) { 
-  return asso_values[0]; 
+int legal2(void) {
+  return asso_values[0];
 }
 
 void illegal(void) {
@@ -120,13 +120,13 @@ void illegal(void) {
     { 4, 5, 6 }
   };
   short q3[4][3][] = { // expected-error{{array has incomplete element type 'short[]'}}
-    { 
+    {
       { 1 },
     },
-    { 
+    {
       { 2, 3 },
     },
-    { 
+    {
       { 4, 5 },
       { 6 },
     },
@@ -167,15 +167,15 @@ void charArrays(void) {
 
   char c[] = { "Hello" };
   int l[sizeof(c) == 6 ? 1 : -1];
-  
-  int i[] = { "Hello "}; // expected-warning{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[7]'}}
+
+  int i[] = { "Hello "}; // expected-error{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[7]'}}
   char c2[] = { "Hello", "Good bye" }; //expected-warning{{excess elements in char array initializer}}
 
-  int i2[1] = { "Hello" }; //expected-warning{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[6]'}}
+  int i2[1] = { "Hello" }; //expected-error{{incompatible pointer to integer conversion initializing 'int' with an expression of type 'char[6]'}}
   char c3[5] = { "Hello" };
   char c4[4] = { "Hello" }; //expected-warning{{initializer-string for char array is too long}}
 
-  int i3[] = {}; //expected-warning{{zero size arrays are an extension}} expected-warning{{use of GNU empty initializer extension}}
+  int i3[] = {}; //expected-warning{{zero size arrays are an extension}} pedantic-warning{{use of an empty initializer is a C2x extension}}
 }
 
 void variableArrayInit(void) {
@@ -197,21 +197,21 @@ const char r7[] = "zxcv";
 char r8[5] = "5char";
 char r9[5] = "6chars"; //expected-warning{{initializer-string for char array is too long}}
 unsigned char r10[] = __extension__ (_Generic(0, int: (__extension__ "foo" )));
-int r11[0] = {}; //expected-warning{{zero size arrays are an extension}} expected-warning{{use of GNU empty initializer extension}}
+int r11[0] = {}; //expected-warning{{zero size arrays are an extension}} pedantic-warning{{use of an empty initializer is a C2x extension}}
 
 // Some struct tests
 void autoStructTest(void) {
 struct s1 {char a; char b;} t1;
 struct s2 {struct s1 c;} t2 = { t1 };
 // The following is a less than great diagnostic (though it's on par with EDG).
-struct s1 t3[] = {t1, t1, "abc", 0}; //expected-warning{{incompatible pointer to integer conversion initializing 'char' with an expression of type 'char[4]'}}
+struct s1 t3[] = {t1, t1, "abc", 0}; //expected-error{{incompatible pointer to integer conversion initializing 'char' with an expression of type 'char[4]'}}
 int t4[sizeof t3 == 6 ? 1 : -1];
 }
 struct foo { int z; } w;
-int bar (void) { 
+int bar (void) {
   struct foo z = { w }; //expected-error{{initializing 'int' with an expression of incompatible type 'struct foo'}}
-  return z.z; 
-} 
+  return z.z;
+}
 struct s3 {void (*a)(void);} t5 = {autoStructTest};
 struct {int a; int b[];} t6 = {1, {1, 2, 3}}; // expected-warning{{flexible array initialization is a GNU extension}} \
 // expected-note{{initialized flexible array member 'b' is here}}
@@ -221,8 +221,7 @@ int t8[sizeof t7 == (3*sizeof(int)) ? 1 : -1];
 struct bittest{int : 31, a, :21, :12, b;};
 struct bittest bittestvar = {1, 2, 3, 4}; //expected-warning{{excess elements in struct initializer}}
 
-// Not completely sure what should happen here...
-int u1 = {}; //expected-warning{{use of GNU empty initializer extension}} expected-error{{scalar initializer cannot be empty}}
+int u1 = {}; //pedantic-warning{{use of an empty initializer is a C2x extension}}
 int u2 = {{3}}; //expected-warning{{too many braces around scalar initializer}}
 
 // PR2362
@@ -273,7 +272,7 @@ void test_matrix(void) {
     1.0f, 2.0f, 3.0f, 4.0f,
     5.0f, 6.0f, 7.0f, 8.0f,
     9.0f, 10.0f, 11.0f, 12.0f,
-    13.0f, 14.0f, 15.0f, 16.0f 
+    13.0f, 14.0f, 15.0f, 16.0f
   };
 }
 

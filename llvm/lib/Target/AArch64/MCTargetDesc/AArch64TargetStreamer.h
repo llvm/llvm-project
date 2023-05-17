@@ -30,7 +30,7 @@ public:
   /// MCExpr that can be used to refer to the constant pool location.
   const MCExpr *addConstantPoolEntry(const MCExpr *, unsigned Size, SMLoc Loc);
 
-  /// Callback used to implemnt the .ltorg directive.
+  /// Callback used to implement the .ltorg directive.
   /// Emit contents of constant pool for the current section.
   void emitCurrentConstantPool();
 
@@ -67,6 +67,19 @@ public:
   virtual void emitARM64WinCFIMachineFrame() {}
   virtual void emitARM64WinCFIContext() {}
   virtual void emitARM64WinCFIClearUnwoundToCall() {}
+  virtual void emitARM64WinCFIPACSignLR() {}
+  virtual void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegD(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQ(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQP(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegIPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) {}
+  virtual void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) {}
 
 private:
   std::unique_ptr<AssemblerConstantPools> ConstantPools;
@@ -120,6 +133,19 @@ public:
   void emitARM64WinCFIMachineFrame() override;
   void emitARM64WinCFIContext() override;
   void emitARM64WinCFIClearUnwoundToCall() override;
+  void emitARM64WinCFIPACSignLR() override;
+  void emitARM64WinCFISaveAnyRegI(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegD(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQ(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQP(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegIPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegDPX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQX(unsigned Reg, int Offset) override;
+  void emitARM64WinCFISaveAnyRegQPX(unsigned Reg, int Offset) override;
 
 private:
   void emitARM64WinUnwindCode(unsigned UnwindCode, int Reg, int Offset);
@@ -127,6 +153,8 @@ private:
 
 MCTargetStreamer *
 createAArch64ObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI);
+
+MCTargetStreamer *createAArch64NullTargetStreamer(MCStreamer &S);
 
 } // end namespace llvm
 

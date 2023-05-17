@@ -19,7 +19,7 @@ if.end30:                                         ; preds = %entry
 do.body.preheader:                                ; preds = %if.end30
   %idx.ext.i = sext i32 %call24 to i64
   %wide.trip.count.i = zext i32 %call24 to i64
-  %0 = load double*, double** undef, align 8, !tbaa !1
+  %0 = load ptr, ptr undef, align 8, !tbaa !1
   br label %for.body.us.preheader.i
 
 if.then40:                                        ; preds = %if.end30
@@ -34,11 +34,10 @@ for.body.us.i.us:                                 ; preds = %for.body.us.prehead
 for.body.us.i:                                    ; preds = %for.cond2.for.end_crit_edge.us.i, %for.body.us.preheader.i
   %t.1 = phi double [ undef, %for.cond2.for.end_crit_edge.us.i ], [ 0.000000e+00, %for.body.us.preheader.i ]
   %i.05.us.i = phi i32 [ %inc8.us.i, %for.cond2.for.end_crit_edge.us.i ], [ 0, %for.body.us.preheader.i ]
-  %dstp.03.us.i = phi double* [ %add.ptr.us.i, %for.cond2.for.end_crit_edge.us.i ], [ %0, %for.body.us.preheader.i ]
+  %dstp.03.us.i = phi ptr [ %add.ptr.us.i, %for.cond2.for.end_crit_edge.us.i ], [ %0, %for.body.us.preheader.i ]
   %mul.us.i = fmul nsz double %t.1, 0x40A59933FC6A96C1
   %1 = call nsz double @llvm.sin.f64(double %mul.us.i) #2
-  store double %1, double* %dstp.03.us.i, align 8, !tbaa !5
-  %2 = bitcast double* %dstp.03.us.i to i64*
+  store double %1, ptr %dstp.03.us.i, align 8, !tbaa !5
   br label %for.body5.us.for.body5.us_crit_edge.i
 
 for.body5.us.for.body5.us_crit_edge.i:            ; preds = %for.body5.us.for.body5.us_crit_edge.i.for.body5.us.for.body5.us_crit_edge.i_crit_edge, %for.body.us.i
@@ -49,11 +48,11 @@ for.body5.us.for.body5.us_crit_edge.i:            ; preds = %for.body5.us.for.bo
   br i1 %exitcond.i, label %for.cond2.for.end_crit_edge.us.i, label %for.body5.us.for.body5.us_crit_edge.i.for.body5.us.for.body5.us_crit_edge.i_crit_edge
 
 for.body5.us.for.body5.us_crit_edge.i.for.body5.us.for.body5.us_crit_edge.i_crit_edge: ; preds = %for.body5.us.for.body5.us_crit_edge.i
-  %.pre10.i.pre = load i64, i64* %2, align 8, !tbaa !5
+  %.pre10.i.pre = load i64, ptr %dstp.03.us.i, align 8, !tbaa !5
   br label %for.body5.us.for.body5.us_crit_edge.i
 
 for.cond2.for.end_crit_edge.us.i:                 ; preds = %for.body5.us.for.body5.us_crit_edge.i
-  %add.ptr.us.i = getelementptr inbounds double, double* %dstp.03.us.i, i64 %idx.ext.i
+  %add.ptr.us.i = getelementptr inbounds double, ptr %dstp.03.us.i, i64 %idx.ext.i
   %inc8.us.i = add nuw nsw i32 %i.05.us.i, 1
   %exitcond7.i = icmp eq i32 %inc8.us.i, 1024
   br i1 %exitcond7.i, label %fill_samples.exit, label %for.body.us.i

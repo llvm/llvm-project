@@ -3,7 +3,7 @@
 ; TODO: The unrolled pattern is preventing the transform
 ; CHECK-LABEL: mul_v16i8_unroll
 ; CHECK-NOT: call i32 @llvm.arm.vcpt
-define void @mul_v16i8_unroll(i8* noalias nocapture readonly %a, i8* noalias nocapture readonly %b, i8* noalias nocapture %c, i32 %N) {
+define void @mul_v16i8_unroll(ptr noalias nocapture readonly %a, ptr noalias nocapture readonly %b, ptr noalias nocapture %c, i32 %N) {
 entry:
   %cmp8 = icmp eq i32 %N, 0
   %tmp8 = add i32 %N, 15
@@ -33,33 +33,27 @@ vector.body:                                      ; preds = %vector.body, %vecto
   %broadcast.splatinsert = insertelement <16 x i32> undef, i32 %index, i32 0
   %broadcast.splat = shufflevector <16 x i32> %broadcast.splatinsert, <16 x i32> undef, <16 x i32> zeroinitializer
   %induction = add <16 x i32> %broadcast.splat, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %tmp = getelementptr inbounds i8, i8* %a, i32 %index
+  %tmp = getelementptr inbounds i8, ptr %a, i32 %index
   %tmp1 = icmp ule <16 x i32> %induction, %broadcast.splat11
-  %tmp2 = bitcast i8* %tmp to <16 x i8>*
-  %wide.masked.load = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp2, i32 4, <16 x i1> %tmp1, <16 x i8> undef)
-  %tmp3 = getelementptr inbounds i8, i8* %b, i32 %index
-  %tmp4 = bitcast i8* %tmp3 to <16 x i8>*
-  %wide.masked.load2 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp4, i32 4, <16 x i1> %tmp1, <16 x i8> undef)
+  %wide.masked.load = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %tmp, i32 4, <16 x i1> %tmp1, <16 x i8> undef)
+  %tmp3 = getelementptr inbounds i8, ptr %b, i32 %index
+  %wide.masked.load2 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %tmp3, i32 4, <16 x i1> %tmp1, <16 x i8> undef)
   %mul = mul nsw <16 x i8> %wide.masked.load2, %wide.masked.load
-  %tmp6 = getelementptr inbounds i8, i8* %c, i32 %index
-  %tmp7 = bitcast i8* %tmp6 to <16 x i8>*
-  tail call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %mul, <16 x i8>* %tmp7, i32 4, <16 x i1> %tmp1)
+  %tmp6 = getelementptr inbounds i8, ptr %c, i32 %index
+  tail call void @llvm.masked.store.v16i8.p0(<16 x i8> %mul, ptr %tmp6, i32 4, <16 x i1> %tmp1)
   %index.next = add nuw nsw i32 %index, 16
   %niter.nsub = sub i32 %niter, 1
   %broadcast.splatinsert.1 = insertelement <16 x i32> undef, i32 %index.next, i32 0
   %broadcast.splat.1 = shufflevector <16 x i32> %broadcast.splatinsert.1, <16 x i32> undef, <16 x i32> zeroinitializer
   %induction.1 = add <16 x i32> %broadcast.splat.1, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %tmp.1 = getelementptr inbounds i8, i8* %a, i32 %index.next
+  %tmp.1 = getelementptr inbounds i8, ptr %a, i32 %index.next
   %tmp1.1 = icmp ule <16 x i32> %induction.1, %broadcast.splat11
-  %tmp2.1 = bitcast i8* %tmp.1 to <16 x i8>*
-  %wide.masked.load.1 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp2.1, i32 4, <16 x i1> %tmp1.1, <16 x i8> undef)
-  %tmp3.1 = getelementptr inbounds i8, i8* %b, i32 %index.next
-  %tmp4.1 = bitcast i8* %tmp3.1 to <16 x i8>*
-  %wide.masked.load2.1 = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp4.1, i32 4, <16 x i1> %tmp1.1, <16 x i8> undef)
+  %wide.masked.load.1 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %tmp.1, i32 4, <16 x i1> %tmp1.1, <16 x i8> undef)
+  %tmp3.1 = getelementptr inbounds i8, ptr %b, i32 %index.next
+  %wide.masked.load2.1 = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %tmp3.1, i32 4, <16 x i1> %tmp1.1, <16 x i8> undef)
   %mul.1 = mul nsw <16 x i8> %wide.masked.load2.1, %wide.masked.load.1
-  %tmp6.1 = getelementptr inbounds i8, i8* %c, i32 %index.next
-  %tmp7.1 = bitcast i8* %tmp6.1 to <16 x i8>*
-  tail call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %mul.1, <16 x i8>* %tmp7.1, i32 4, <16 x i1> %tmp1.1)
+  %tmp6.1 = getelementptr inbounds i8, ptr %c, i32 %index.next
+  tail call void @llvm.masked.store.v16i8.p0(<16 x i8> %mul.1, ptr %tmp6.1, i32 4, <16 x i1> %tmp1.1)
   %index.next.1 = add i32 %index.next, 16
   %niter.nsub.1 = call i32 @llvm.loop.decrement.reg.i32.i32.i32(i32 %niter.nsub, i32 1)
   %niter.ncmp.1 = icmp ne i32 %niter.nsub.1, 0
@@ -85,17 +79,14 @@ vector.body.epil:                                 ; preds = %vector.body.epil.pr
   %broadcast.splatinsert.epil = insertelement <16 x i32> undef, i32 %index.epil, i32 0
   %broadcast.splat.epil = shufflevector <16 x i32> %broadcast.splatinsert.epil, <16 x i32> undef, <16 x i32> zeroinitializer
   %induction.epil = add <16 x i32> %broadcast.splat.epil, <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
-  %tmp.epil = getelementptr inbounds i8, i8* %a, i32 %index.epil
+  %tmp.epil = getelementptr inbounds i8, ptr %a, i32 %index.epil
   %tmp1.epil = icmp ule <16 x i32> %induction.epil, %broadcast.splat11
-  %tmp2.epil = bitcast i8* %tmp.epil to <16 x i8>*
-  %wide.masked.load.epil = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp2.epil, i32 4, <16 x i1> %tmp1.epil, <16 x i8> undef)
-  %tmp3.epil = getelementptr inbounds i8, i8* %b, i32 %index.epil
-  %tmp4.epil = bitcast i8* %tmp3.epil to <16 x i8>*
-  %wide.masked.load2.epil = tail call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %tmp4.epil, i32 4, <16 x i1> %tmp1.epil, <16 x i8> undef)
+  %wide.masked.load.epil = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %tmp.epil, i32 4, <16 x i1> %tmp1.epil, <16 x i8> undef)
+  %tmp3.epil = getelementptr inbounds i8, ptr %b, i32 %index.epil
+  %wide.masked.load2.epil = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %tmp3.epil, i32 4, <16 x i1> %tmp1.epil, <16 x i8> undef)
   %mul.epil = mul nsw <16 x i8> %wide.masked.load2.epil, %wide.masked.load.epil
-  %tmp6.epil = getelementptr inbounds i8, i8* %c, i32 %index.epil
-  %tmp7.epil = bitcast i8* %tmp6.epil to <16 x i8>*
-  tail call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %mul.epil, <16 x i8>* %tmp7.epil, i32 4, <16 x i1> %tmp1.epil)
+  %tmp6.epil = getelementptr inbounds i8, ptr %c, i32 %index.epil
+  tail call void @llvm.masked.store.v16i8.p0(<16 x i8> %mul.epil, ptr %tmp6.epil, i32 4, <16 x i1> %tmp1.epil)
   %index.next.epil = add i32 %index.epil, 16
   %tmp15.epil = add nuw nsw i32 %tmp14.epil, -1
   %tmp16.epil = icmp ne i32 %tmp15.epil, 0
@@ -111,8 +102,8 @@ for.cond.cleanup:                                 ; preds = %for.cond.cleanup.lo
   ret void
 }
 
-declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>) #1
-declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32 immarg, <16 x i1>) #2
+declare <16 x i8> @llvm.masked.load.v16i8.p0(ptr, i32 immarg, <16 x i1>, <16 x i8>) #1
+declare void @llvm.masked.store.v16i8.p0(<16 x i8>, ptr, i32 immarg, <16 x i1>) #2
 declare i32 @llvm.start.loop.iterations.i32(i32) #3
 declare i32 @llvm.loop.decrement.reg.i32.i32.i32(i32, i32) #3
 

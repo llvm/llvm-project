@@ -3,8 +3,8 @@
 
 %0 = type { i32, i32, i32, i32 }
 
-@boot_cpu_id = external global i32                ; <i32*> [#uses=1]
-@cpu_logical = common global i32 0, align 4       ; <i32*> [#uses=1]
+@boot_cpu_id = external global i32                ; <ptr> [#uses=1]
+@cpu_logical = common global i32 0, align 4       ; <ptr> [#uses=1]
 
 define void @topo_probe_0xb() nounwind ssp {
 entry:
@@ -32,7 +32,7 @@ lor.lhs.false:                                    ; preds = %for.body
   br i1 %cmp16, label %for.end41, label %for.cond17.preheader
 
 for.cond17.preheader:                             ; preds = %lor.lhs.false
-  %tmp24 = load i32, i32* @boot_cpu_id                 ; <i32> [#uses=1]
+  %tmp24 = load i32, ptr @boot_cpu_id                 ; <i32> [#uses=1]
   %shr26 = ashr i32 %tmp24, %and                  ; <i32> [#uses=1]
   br label %for.body20
 
@@ -52,7 +52,7 @@ for.end:                                          ; preds = %for.body20
   br i1 %cmp34, label %if.then35, label %for.inc38
 
 if.then35:                                        ; preds = %for.end
-  store i32 %inc.cnt.1, i32* @cpu_logical
+  store i32 %inc.cnt.1, ptr @cpu_logical
   br label %for.inc38
 
 for.inc38:                                        ; preds = %for.end, %if.then35

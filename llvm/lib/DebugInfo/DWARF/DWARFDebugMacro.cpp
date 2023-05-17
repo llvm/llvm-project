@@ -105,8 +105,8 @@ void DWARFDebugMacro::dump(raw_ostream &OS) const {
 }
 
 Error DWARFDebugMacro::parseImpl(
-    Optional<DWARFUnitVector::compile_unit_range> Units,
-    Optional<DataExtractor> StringExtractor, DWARFDataExtractor Data,
+    std::optional<DWARFUnitVector::compile_unit_range> Units,
+    std::optional<DataExtractor> StringExtractor, DWARFDataExtractor Data,
     bool IsMacro) {
   uint64_t Offset = 0;
   MacroList *M = nullptr;
@@ -115,7 +115,7 @@ Error DWARFDebugMacro::parseImpl(
   if (IsMacro && Data.isValidOffset(Offset)) {
     // Keep a mapping from Macro contribution to CUs, this will
     // be needed while retrieving macro from DW_MACRO_define_strx form.
-    for (const auto &U : Units.getValue())
+    for (const auto &U : *Units)
       if (auto CUDIE = U->getUnitDIE())
         // Skip units which does not contibutes to macro section.
         if (auto MacroOffset = toSectionOffset(CUDIE.find(DW_AT_macros)))

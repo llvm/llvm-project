@@ -364,7 +364,7 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
   LLVM_DEBUG(dbgs() << "generating runtime relocations: " << name
                     << " count=" << relocations.size() << "\n");
 
-  bool is64 = config->is64.getValueOr(false);
+  bool is64 = config->is64.value_or(false);
   unsigned opcode_ptr_const = is64 ? WASM_OPCODE_I64_CONST
                                    : WASM_OPCODE_I32_CONST;
   unsigned opcode_ptr_add = is64 ? WASM_OPCODE_I64_ADD
@@ -384,14 +384,17 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
                       << " addend=" << rel.Addend << " index=" << rel.Index
                       << " output offset=" << offset << "\n");
 
-    // Calculate the address at which to apply the relocations
+    // Calculate the address at which to apply the relocation
     writeU8(os, opcode_ptr_const, "CONST");
     writeSleb128(os, offset, "offset");
 
     // In PIC mode we need to add the __memory_base
     if (config->isPic) {
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
-      writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
+      if (isTLS())
+        writeUleb128(os, WasmSym::tlsBase->getGlobalIndex(), "tls_base");
+      else
+        writeUleb128(os, WasmSym::memoryBase->getGlobalIndex(), "memory_base");
       writeU8(os, opcode_ptr_add, "ADD");
     }
 
@@ -418,6 +421,8 @@ void InputChunk::generateRelocationCode(raw_ostream &os) const {
       if (rel.Type == R_WASM_TABLE_INDEX_I32 ||
           rel.Type == R_WASM_TABLE_INDEX_I64)
         baseSymbol = WasmSym::tableBase;
+      else if (sym->isTLS())
+        baseSymbol = WasmSym::tlsBase;
       writeU8(os, WASM_OPCODE_GLOBAL_GET, "GLOBAL_GET");
       writeUleb128(os, baseSymbol->getGlobalIndex(), "base");
       writeU8(os, opcode_reloc_const, "CONST");

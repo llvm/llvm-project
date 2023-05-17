@@ -11,12 +11,11 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Lex/Preprocessor.h"
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace cppcoreguidelines {
+namespace clang::tidy::cppcoreguidelines {
 
 ProBoundsConstantArrayIndexCheck::ProBoundsConstantArrayIndexCheck(
     StringRef Name, ClangTidyContext *Context)
@@ -61,10 +60,16 @@ void ProBoundsConstantArrayIndexCheck::check(
   const auto *Matched = Result.Nodes.getNodeAs<Expr>("expr");
   const auto *IndexExpr = Result.Nodes.getNodeAs<Expr>("index");
 
+  // This expression can only appear inside ArrayInitLoopExpr, which
+  // is always implicitly generated. ArrayInitIndexExpr is not a
+  // constant, but we shouldn't report a warning for it.
+  if (isa<ArrayInitIndexExpr>(IndexExpr))
+    return;
+
   if (IndexExpr->isValueDependent())
     return; // We check in the specialization.
 
-  Optional<llvm::APSInt> Index =
+  std::optional<llvm::APSInt> Index =
       IndexExpr->getIntegerConstantExpr(*Result.Context);
   if (!Index) {
     SourceRange BaseRange;
@@ -122,6 +127,4 @@ void ProBoundsConstantArrayIndexCheck::check(
   }
 }
 
-} // namespace cppcoreguidelines
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::cppcoreguidelines

@@ -22,7 +22,7 @@ class Twine;
 /// which is implemented by target and object file assembly parser
 /// implementations.
 class MCAsmParserExtension {
-  MCAsmParser *Parser;
+  MCAsmParser *Parser = nullptr;
 
 protected:
   MCAsmParserExtension();

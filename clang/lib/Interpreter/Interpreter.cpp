@@ -29,9 +29,10 @@
 #include "clang/Frontend/TextDiagnosticBuffer.h"
 #include "clang/Lex/PreprocessorOptions.h"
 
+#include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Errc.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang;
 
@@ -77,8 +78,7 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   TextDiagnosticBuffer *DiagsBuffer = new TextDiagnosticBuffer;
   DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagsBuffer);
   bool Success = CompilerInvocation::CreateFromArgs(
-      Clang->getInvocation(), llvm::makeArrayRef(Argv.begin(), Argv.size()),
-      Diags);
+      Clang->getInvocation(), llvm::ArrayRef(Argv.begin(), Argv.size()), Diags);
 
   // Infer the builtin include path if unspecified.
   if (Clang->getHeaderSearchOpts().UseBuiltinIncludes &&
@@ -116,6 +116,9 @@ CreateCI(const llvm::opt::ArgStringList &Argv) {
   // times, reusing the same AST.
   Clang->getCodeGenOpts().ClearASTBeforeBackend = false;
 
+  Clang->getFrontendOpts().DisableFree = false;
+  Clang->getCodeGenOpts().DisableFree = false;
+
   return std::move(Clang);
 }
 
@@ -135,13 +138,11 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   // specified. By prepending we allow users to override the default
   // action and use other actions in incremental mode.
   // FIXME: Print proper driver diagnostics if the driver flags are wrong.
-  ClangArgv.insert(ClangArgv.begin() + 1, "-c");
-
-  if (!llvm::is_contained(ClangArgv, " -x")) {
-    // We do C++ by default; append right after argv[0] if no "-x" given
-    ClangArgv.push_back("-x");
-    ClangArgv.push_back("c++");
-  }
+  // We do C++ by default; append right after argv[0] if no "-x" given
+  ClangArgv.insert(ClangArgv.end(), "-xc++");
+  ClangArgv.insert(ClangArgv.end(), "-Xclang");
+  ClangArgv.insert(ClangArgv.end(), "-fincremental-extensions");
+  ClangArgv.insert(ClangArgv.end(), "-c");
 
   // Put a dummy C++ file on to ensure there's at least one compile job for the
   // driver to construct.
@@ -158,7 +159,7 @@ IncrementalCompilerBuilder::create(std::vector<const char *> &ClangArgv) {
   driver::Driver Driver(/*MainBinaryName=*/ClangArgv[0],
                         llvm::sys::getProcessTriple(), Diags);
   Driver.setCheckInputsExist(false); // the input comes from mem buffers
-  llvm::ArrayRef<const char *> RF = llvm::makeArrayRef(ClangArgv);
+  llvm::ArrayRef<const char *> RF = llvm::ArrayRef(ClangArgv);
   std::unique_ptr<driver::Compilation> Compilation(Driver.BuildCompilation(RF));
 
   if (Compilation->getArgs().hasArg(driver::options::OPT_v))
@@ -180,7 +181,14 @@ Interpreter::Interpreter(std::unique_ptr<CompilerInstance> CI,
                                                    *TSCtx->getContext(), Err);
 }
 
-Interpreter::~Interpreter() {}
+Interpreter::~Interpreter() {
+  if (IncrExecutor) {
+    if (llvm::Error Err = IncrExecutor->cleanUp())
+      llvm::report_fatal_error(
+          llvm::Twine("Failed to clean up IncrementalExecutor: ") +
+          toString(std::move(Err)));
+  }
+}
 
 llvm::Expected<std::unique_ptr<Interpreter>>
 Interpreter::create(std::unique_ptr<CompilerInstance> CI) {
@@ -196,10 +204,13 @@ const CompilerInstance *Interpreter::getCompilerInstance() const {
   return IncrParser->getCI();
 }
 
-const llvm::orc::LLJIT *Interpreter::getExecutionEngine() const {
-  if (IncrExecutor)
-    return IncrExecutor->getExecutionEngine();
-  return nullptr;
+llvm::Expected<llvm::orc::LLJIT &> Interpreter::getExecutionEngine() {
+  if (!IncrExecutor) {
+    if (auto Err = CreateExecutor())
+      return std::move(Err);
+  }
+
+  return IncrExecutor->GetExecutionEngine();
 }
 
 llvm::Expected<PartialTranslationUnit &>
@@ -207,19 +218,26 @@ Interpreter::Parse(llvm::StringRef Code) {
   return IncrParser->Parse(Code);
 }
 
+llvm::Error Interpreter::CreateExecutor() {
+  const clang::TargetInfo &TI =
+      getCompilerInstance()->getASTContext().getTargetInfo();
+  llvm::Error Err = llvm::Error::success();
+  auto Executor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, TI);
+  if (!Err)
+    IncrExecutor = std::move(Executor);
+
+  return Err;
+}
+
 llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   assert(T.TheModule);
   if (!IncrExecutor) {
-    const llvm::Triple &Triple =
-        getCompilerInstance()->getASTContext().getTargetInfo().getTriple();
-    llvm::Error Err = llvm::Error::success();
-    IncrExecutor = std::make_unique<IncrementalExecutor>(*TSCtx, Err, Triple);
-
+    auto Err = CreateExecutor();
     if (Err)
       return Err;
   }
   // FIXME: Add a callback to retain the llvm::Module once the JIT is done.
-  if (auto Err = IncrExecutor->addModule(std::move(T.TheModule)))
+  if (auto Err = IncrExecutor->addModule(T))
     return Err;
 
   if (auto Err = IncrExecutor->runCtors())
@@ -228,7 +246,7 @@ llvm::Error Interpreter::Execute(PartialTranslationUnit &T) {
   return llvm::Error::success();
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 Interpreter::getSymbolAddress(GlobalDecl GD) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -238,7 +256,7 @@ Interpreter::getSymbolAddress(GlobalDecl GD) const {
   return getSymbolAddress(MangledName);
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 Interpreter::getSymbolAddress(llvm::StringRef IRName) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -248,7 +266,7 @@ Interpreter::getSymbolAddress(llvm::StringRef IRName) const {
   return IncrExecutor->getSymbolAddress(IRName, IncrementalExecutor::IRName);
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
   if (!IncrExecutor)
     return llvm::make_error<llvm::StringError>("Operation failed. "
@@ -256,4 +274,39 @@ Interpreter::getSymbolAddressFromLinkerName(llvm::StringRef Name) const {
                                                std::error_code());
 
   return IncrExecutor->getSymbolAddress(Name, IncrementalExecutor::LinkerName);
+}
+
+llvm::Error Interpreter::Undo(unsigned N) {
+
+  std::list<PartialTranslationUnit> &PTUs = IncrParser->getPTUs();
+  if (N > PTUs.size())
+    return llvm::make_error<llvm::StringError>("Operation failed. "
+                                               "Too many undos",
+                                               std::error_code());
+  for (unsigned I = 0; I < N; I++) {
+    if (IncrExecutor) {
+      if (llvm::Error Err = IncrExecutor->removeModule(PTUs.back()))
+        return Err;
+    }
+
+    IncrParser->CleanUpPTU(PTUs.back());
+    PTUs.pop_back();
+  }
+  return llvm::Error::success();
+}
+
+llvm::Error Interpreter::LoadDynamicLibrary(const char *name) {
+  auto EE = getExecutionEngine();
+  if (!EE)
+    return EE.takeError();
+
+  auto &DL = EE->getDataLayout();
+
+  if (auto DLSG = llvm::orc::DynamicLibrarySearchGenerator::Load(
+          name, DL.getGlobalPrefix()))
+    EE->getMainJITDylib().addGenerator(std::move(*DLSG));
+  else
+    return DLSG.takeError();
+
+  return llvm::Error::success();
 }

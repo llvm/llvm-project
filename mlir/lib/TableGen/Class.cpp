@@ -114,6 +114,11 @@ void MethodBody::writeTo(raw_indented_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 void Method::writeDeclTo(raw_indented_ostream &os) const {
+  if (deprecationMessage) {
+    os << "[[deprecated(\"";
+    os.write_escaped(*deprecationMessage);
+    os << "\")]]\n";
+  }
   if (isStatic())
     os << "static ";
   if (properties & ConstexprValue)
@@ -228,6 +233,13 @@ void ParentClass::writeTo(raw_indented_ostream &os) const {
 //===----------------------------------------------------------------------===//
 
 void UsingDeclaration::writeDeclTo(raw_indented_ostream &os) const {
+  if (!templateParams.empty()) {
+    os << "template <";
+    llvm::interleaveComma(templateParams, os, [&](StringRef paramName) {
+      os << "typename " << paramName;
+    });
+    os << ">\n";
+  }
   os << "using " << name;
   if (!value.empty())
     os << " = " << value;
@@ -275,6 +287,13 @@ ParentClass &Class::addParent(ParentClass parent) {
 }
 
 void Class::writeDeclTo(raw_indented_ostream &os) const {
+  if (!templateParams.empty()) {
+    os << "template <";
+    llvm::interleaveComma(templateParams, os,
+                          [&](StringRef param) { os << "typename " << param; });
+    os << ">\n";
+  }
+
   // Declare the class.
   os << (isStruct ? "struct" : "class") << ' ' << className << ' ';
 
@@ -341,7 +360,7 @@ Visibility Class::getLastVisibilityDecl() const {
   });
   return it == reverseDecls.end()
              ? (isStruct ? Visibility::Public : Visibility::Private)
-             : cast<VisibilityDeclaration>(*it).getVisibility();
+             : cast<VisibilityDeclaration>(**it).getVisibility();
 }
 
 Method *insertAndPruneMethods(std::vector<std::unique_ptr<Method>> &methods,

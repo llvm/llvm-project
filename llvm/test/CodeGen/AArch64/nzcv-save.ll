@@ -3,7 +3,7 @@
 
 ; DAG ends up with two uses for the flags from an ADCS node, which means they
 ; must be saved for later.
-define void @f(i256* nocapture %a, i256* nocapture %b, i256* nocapture %cc, i256* nocapture %dd) nounwind uwtable noinline ssp {
+define void @f(ptr nocapture %a, ptr nocapture %b, ptr nocapture %cc, ptr nocapture %dd) nounwind uwtable noinline ssp {
 ; CHECK-LABEL: f:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldp x9, x8, [x2]
@@ -22,12 +22,12 @@ define void @f(i256* nocapture %a, i256* nocapture %b, i256* nocapture %cc, i256
 ; CHECK-NEXT:    stp x9, x8, [x1]
 ; CHECK-NEXT:    ret
 entry:
-  %c = load i256, i256* %cc
-  %d = load i256, i256* %dd
+  %c = load i256, ptr %cc
+  %d = load i256, ptr %dd
   %add = add nsw i256 %c, %d
-  store i256 %add, i256* %a, align 8
+  store i256 %add, ptr %a, align 8
   %or = or i256 %c, 1606938044258990275541962092341162602522202993782792835301376
   %add6 = add nsw i256 %or, %d
-  store i256 %add6, i256* %b, align 8
+  store i256 %add6, ptr %b, align 8
   ret void
 }

@@ -17,12 +17,13 @@
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Sema/ExternalSemaSource.h"
+#include "clang/Tooling/Inclusions/HeaderIncludes.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 namespace clangd {
@@ -33,9 +34,10 @@ namespace clangd {
 class IncludeFixer {
 public:
   IncludeFixer(llvm::StringRef File, std::shared_ptr<IncludeInserter> Inserter,
-               const SymbolIndex &Index, unsigned IndexRequestLimit)
+               const SymbolIndex &Index, unsigned IndexRequestLimit,
+               Symbol::IncludeDirective Directive)
       : File(File), Inserter(std::move(Inserter)), Index(Index),
-        IndexRequestLimit(IndexRequestLimit) {}
+        IndexRequestLimit(IndexRequestLimit), Directive(Directive) {}
 
   /// Returns include insertions that can potentially recover the diagnostic.
   /// If Info is a note and fixes are returned, they should *replace* the note.
@@ -54,8 +56,10 @@ private:
   /// Generates header insertion fixes for all symbols. Fixes are deduplicated.
   std::vector<Fix> fixesForSymbols(const SymbolSlab &Syms) const;
 
-  llvm::Optional<Fix> insertHeader(llvm::StringRef Name,
-                                   llvm::StringRef Symbol = "") const;
+  std::optional<Fix> insertHeader(llvm::StringRef Name,
+                                  llvm::StringRef Symbol = "",
+                                  tooling::IncludeDirective Directive =
+                                      tooling::IncludeDirective::Include) const;
 
   struct UnresolvedName {
     std::string Name;   // E.g. "X" in foo::X.
@@ -77,10 +81,11 @@ private:
   const SymbolIndex &Index;
   const unsigned IndexRequestLimit; // Make at most 5 index requests.
   mutable unsigned IndexRequestCount = 0;
+  const Symbol::IncludeDirective Directive;
 
   // These collect the last unresolved name so that we can associate it with the
   // diagnostic.
-  llvm::Optional<UnresolvedName> LastUnresolvedName;
+  std::optional<UnresolvedName> LastUnresolvedName;
 
   // There can be multiple diagnostics that are caused by the same unresolved
   // name or incomplete type in one parse, especially when code is
@@ -88,10 +93,10 @@ private:
   // index requests.
   mutable llvm::StringMap<SymbolSlab> FuzzyFindCache;
   mutable llvm::DenseMap<SymbolID, SymbolSlab> LookupCache;
-  // Returns None if the number of index requests has reached the limit.
-  llvm::Optional<const SymbolSlab *>
+  // Returns std::nullopt if the number of index requests has reached the limit.
+  std::optional<const SymbolSlab *>
   fuzzyFindCached(const FuzzyFindRequest &Req) const;
-  llvm::Optional<const SymbolSlab *> lookupCached(const SymbolID &ID) const;
+  std::optional<const SymbolSlab *> lookupCached(const SymbolID &ID) const;
 };
 
 } // namespace clangd

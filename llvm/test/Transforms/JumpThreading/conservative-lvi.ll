@@ -1,4 +1,4 @@
-; RUN: opt -jump-threading -S %s | FileCheck %s
+; RUN: opt -passes=jump-threading -S %s | FileCheck %s
 
 ; Check that we thread arg2neg -> checkpos -> end.
 ;

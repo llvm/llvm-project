@@ -1,4 +1,4 @@
-; RUN: opt -basic-aa -loop-vectorize -force-vector-interleave=1 -S -mcpu=core-avx2
+; RUN: opt -passes=loop-vectorize -force-vector-interleave=1 -S -mcpu=core-avx2
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
@@ -25,15 +25,15 @@ entry:
 
 for.body:                                         ; preds = %for.inc, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.inc ]
-  %arrayidx = getelementptr inbounds [256 x i32], [256 x i32]* @b, i64 0, i64 %indvars.iv
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx2 = getelementptr inbounds [256 x i32], [256 x i32]* @a, i64 0, i64 %indvars.iv
-  %1 = load i32, i32* %arrayidx2, align 4
+  %arrayidx = getelementptr inbounds [256 x i32], ptr @b, i64 0, i64 %indvars.iv
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx2 = getelementptr inbounds [256 x i32], ptr @a, i64 0, i64 %indvars.iv
+  %1 = load i32, ptr %arrayidx2, align 4
   %cmp3 = icmp ugt i32 %0, %1
   br i1 %cmp3, label %if.then, label %for.inc
 
 if.then:                                          ; preds = %for.body
-  store i32 %0, i32* %arrayidx2, align 4
+  store i32 %0, ptr %arrayidx2, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body, %if.then

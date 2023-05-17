@@ -5,7 +5,7 @@
 ; CHECK-NOT: mov
 
 declare void @bar()
-define void @test1(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, void()* %arg) nounwind {
+define void @test1(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, ptr %arg) nounwind {
 	call void @bar()
 	call void %arg()
 	ret void
@@ -16,12 +16,11 @@ define void @test1(i32 %i0, i32 %i1, i32 %i2, i32 %i3, i32 %i4, i32 %i5, void()*
 ; CHECK: mov{{.*}} $0, ([[REGISTER:%[a-z]+]])
 ; CHECK-NOT: jmp{{.*}} *([[REGISTER]])
 
-%struct.X = type { void ()* }
-define void @test2(%struct.X* nocapture %x) {
+%struct.X = type { ptr }
+define void @test2(ptr nocapture %x) {
 entry:
-  %f = getelementptr inbounds %struct.X, %struct.X* %x, i64 0, i32 0
-  %0 = load void ()*, void ()** %f
-  store void ()* null, void ()** %f
+  %0 = load ptr, ptr %x
+  store ptr null, ptr %x
   tail call void %0()
   ret void
 }

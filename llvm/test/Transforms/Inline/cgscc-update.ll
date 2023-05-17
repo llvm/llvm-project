@@ -9,8 +9,8 @@
 ; CHECK: declare void @unknown()
 declare void @unknown()
 
-; Basic correctness check: this should get annotated as readnone.
-; CHECK: Function Attrs: nounwind readnone
+; Basic correctness check: this should get annotated as memory(none).
+; CHECK: Function Attrs: nounwind memory(none)
 ; CHECK-NEXT: declare void @readnone()
 declare void @readnone() readnone nounwind
 
@@ -20,23 +20,23 @@ declare void @readnone() readnone nounwind
 
 ; This function should no longer exist.
 ; CHECK-NOT: @test1_f()
-define internal void @test1_f(void()* %p) {
+define internal void @test1_f(ptr %p) {
 entry:
   call void %p()
   ret void
 }
 
-; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
+; This function should have had 'memory(none)' deduced for its SCC.
+; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
 ; CHECK-NEXT: define void @test1_g()
 define void @test1_g() noinline {
 entry:
-  call void @test1_f(void()* @test1_h)
+  call void @test1_f(ptr @test1_h)
   ret void
 }
 
-; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
+; This function should have had 'memory(none)' deduced for its SCC.
+; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
 ; CHECK-NEXT: define void @test1_h()
 define void @test1_h() noinline {
 entry:
@@ -53,23 +53,23 @@ entry:
 
 ; This function should no longer exist.
 ; CHECK-NOT: @test2_f()
-define internal void()* @test2_f() {
+define internal ptr @test2_f() {
 entry:
-  ret void()* @test2_h
+  ret ptr @test2_h
 }
 
-; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
+; This function should have had 'memory(none)' deduced for its SCC.
+; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
 ; CHECK-NEXT: define void @test2_g()
 define void @test2_g() noinline {
 entry:
-  %p = call void()* @test2_f()
+  %p = call ptr @test2_f()
   call void %p()
   ret void
 }
 
-; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
+; This function should have had 'memory(none)' deduced for its SCC.
+; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
 ; CHECK-NEXT: define void @test2_h()
 define void @test2_h() noinline {
 entry:
@@ -151,8 +151,8 @@ exit:
 ; interesting call graph update for the new call edge. Eventually, we still
 ; form a new SCC and should use that can deduce precise function attrs.
 
-; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
+; This function should have had 'memory(none)' deduced for its SCC.
+; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
 ; CHECK-NEXT: define void @test4_f1()
 define void @test4_f1() noinline {
 entry:
@@ -168,17 +168,17 @@ entry:
 }
 
 ; CHECK-NOT: @test4_g
-define internal void @test4_g(void()* %p) {
+define internal void @test4_g(ptr %p) {
 entry:
   call void %p()
   ret void
 }
 
-; This function should have had 'readnone' deduced for its SCC.
-; CHECK: Function Attrs: nofree noinline nosync nounwind readnone
+; This function should have had 'memory(none)' deduced for its SCC.
+; CHECK: Function Attrs: nofree noinline nosync nounwind memory(none)
 ; CHECK-NEXT: define void @test4_h()
 define void @test4_h() noinline {
 entry:
-  call void @test4_g(void()* @test4_f2)
+  call void @test4_g(ptr @test4_f2)
   ret void
 }

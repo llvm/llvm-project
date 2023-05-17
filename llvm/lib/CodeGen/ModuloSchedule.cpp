@@ -116,6 +116,12 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   // a map between register names in the original block and the names created
   // in each stage of the pipelined loop.
   ValueMapTy *VRMap = new ValueMapTy[(MaxStageCount + 1) * 2];
+
+  // The renaming destination by Phis for the registers across stages.
+  // This map is updated during Phis generation to point to the most recent
+  // renaming destination.
+  ValueMapTy *VRMapPhi = new ValueMapTy[(MaxStageCount + 1) * 2];
+
   InstrMapTy InstrMap;
 
   SmallVector<MachineBasicBlock *, 4> PrologBBs;
@@ -151,14 +157,15 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
 
   generateExistingPhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap,
                        InstrMap, MaxStageCount, MaxStageCount, false);
-  generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap, InstrMap,
-               MaxStageCount, MaxStageCount, false);
+  generatePhis(KernelBB, PrologBBs.back(), KernelBB, KernelBB, VRMap, VRMapPhi,
+               InstrMap, MaxStageCount, MaxStageCount, false);
 
   LLVM_DEBUG(dbgs() << "New block\n"; KernelBB->dump(););
 
   SmallVector<MachineBasicBlock *, 4> EpilogBBs;
   // Generate the epilog instructions to complete the pipeline.
-  generateEpilog(MaxStageCount, KernelBB, BB, VRMap, EpilogBBs, PrologBBs);
+  generateEpilog(MaxStageCount, KernelBB, BB, VRMap, VRMapPhi, EpilogBBs,
+                 PrologBBs);
 
   // We need this step because the register allocation doesn't handle some
   // situations well, so we insert copies to help out.
@@ -171,6 +178,7 @@ void ModuloScheduleExpander::generatePipelinedLoop() {
   addBranches(*Preheader, PrologBBs, KernelBB, EpilogBBs, VRMap);
 
   delete[] VRMap;
+  delete[] VRMapPhi;
 }
 
 void ModuloScheduleExpander::cleanup() {
@@ -242,7 +250,8 @@ void ModuloScheduleExpander::generateProlog(unsigned LastStage,
 /// block for each stage that needs to complete.
 void ModuloScheduleExpander::generateEpilog(
     unsigned LastStage, MachineBasicBlock *KernelBB, MachineBasicBlock *OrigBB,
-    ValueMapTy *VRMap, MBBVectorTy &EpilogBBs, MBBVectorTy &PrologBBs) {
+    ValueMapTy *VRMap, ValueMapTy *VRMapPhi, MBBVectorTy &EpilogBBs,
+    MBBVectorTy &PrologBBs) {
   // We need to change the branch from the kernel to the first epilog block, so
   // this call to analyze branch uses the kernel rather than the original BB.
   MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
@@ -296,8 +305,8 @@ void ModuloScheduleExpander::generateEpilog(
     }
     generateExistingPhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap,
                          InstrMap, LastStage, EpilogStage, i == 1);
-    generatePhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap, InstrMap,
-                 LastStage, EpilogStage, i == 1);
+    generatePhis(NewBB, PrologBBs[i - 1], PredBB, KernelBB, VRMap, VRMapPhi,
+                 InstrMap, LastStage, EpilogStage, i == 1);
     PredBB = NewBB;
 
     LLVM_DEBUG({
@@ -593,8 +602,9 @@ void ModuloScheduleExpander::generateExistingPhis(
 /// use in the pipelined sequence.
 void ModuloScheduleExpander::generatePhis(
     MachineBasicBlock *NewBB, MachineBasicBlock *BB1, MachineBasicBlock *BB2,
-    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, InstrMapTy &InstrMap,
-    unsigned LastStageNum, unsigned CurStageNum, bool IsLast) {
+    MachineBasicBlock *KernelBB, ValueMapTy *VRMap, ValueMapTy *VRMapPhi,
+    InstrMapTy &InstrMap, unsigned LastStageNum, unsigned CurStageNum,
+    bool IsLast) {
   // Compute the stage number that contains the initial Phi value, and
   // the Phi from the previous stage.
   unsigned PrologStage = 0;
@@ -614,8 +624,7 @@ void ModuloScheduleExpander::generatePhis(
        BBI != BBE; ++BBI) {
     for (unsigned i = 0, e = BBI->getNumOperands(); i != e; ++i) {
       MachineOperand &MO = BBI->getOperand(i);
-      if (!MO.isReg() || !MO.isDef() ||
-          !Register::isVirtualRegister(MO.getReg()))
+      if (!MO.isReg() || !MO.isDef() || !MO.getReg().isVirtual())
         continue;
 
       int StageScheduled = Schedule.getStage(&*BBI);
@@ -631,26 +640,49 @@ void ModuloScheduleExpander::generatePhis(
       if (!InKernel && (unsigned)StageScheduled > PrologStage)
         continue;
 
-      unsigned PhiOp2 = VRMap[PrevStage][Def];
-      if (MachineInstr *InstOp2 = MRI.getVRegDef(PhiOp2))
-        if (InstOp2->isPHI() && InstOp2->getParent() == NewBB)
-          PhiOp2 = getLoopPhiReg(*InstOp2, BB2);
+      unsigned PhiOp2;
+      if (InKernel) {
+        PhiOp2 = VRMap[PrevStage][Def];
+        if (MachineInstr *InstOp2 = MRI.getVRegDef(PhiOp2))
+          if (InstOp2->isPHI() && InstOp2->getParent() == NewBB)
+            PhiOp2 = getLoopPhiReg(*InstOp2, BB2);
+      }
       // The number of Phis can't exceed the number of prolog stages. The
       // prolog stage number is zero based.
       if (NumPhis > PrologStage + 1 - StageScheduled)
         NumPhis = PrologStage + 1 - StageScheduled;
       for (unsigned np = 0; np < NumPhis; ++np) {
+        // Example for
+        // Org:
+        //   %Org = ... (Scheduled at Stage#0, NumPhi = 2)
+        //
+        // Prolog0 (Stage0):
+        //   %Clone0 = ...
+        // Prolog1 (Stage1):
+        //   %Clone1 = ...
+        // Kernel (Stage2):
+        //   %Phi0 = Phi %Clone1, Prolog1, %Clone2, Kernel
+        //   %Phi1 = Phi %Clone0, Prolog1, %Phi0, Kernel
+        //   %Clone2 = ...
+        // Epilog0 (Stage3):
+        //   %Phi2 = Phi %Clone1, Prolog1, %Clone2, Kernel
+        //   %Phi3 = Phi %Clone0, Prolog1, %Phi0, Kernel
+        // Epilog1 (Stage4):
+        //   %Phi4 = Phi %Clone0, Prolog0, %Phi2, Epilog0
+        //
+        // VRMap = {0: %Clone0, 1: %Clone1, 2: %Clone2}
+        // VRMapPhi (after Kernel) = {0: %Phi1, 1: %Phi0}
+        // VRMapPhi (after Epilog0) = {0: %Phi3, 1: %Phi2}
+
         unsigned PhiOp1 = VRMap[PrologStage][Def];
         if (np <= PrologStage)
           PhiOp1 = VRMap[PrologStage - np][Def];
-        if (MachineInstr *InstOp1 = MRI.getVRegDef(PhiOp1)) {
-          if (InstOp1->isPHI() && InstOp1->getParent() == KernelBB)
-            PhiOp1 = getInitPhiReg(*InstOp1, KernelBB);
-          if (InstOp1->isPHI() && InstOp1->getParent() == NewBB)
-            PhiOp1 = getInitPhiReg(*InstOp1, NewBB);
+        if (!InKernel) {
+          if (PrevStage == LastStageNum && np == 0)
+            PhiOp2 = VRMap[LastStageNum][Def];
+          else
+            PhiOp2 = VRMapPhi[PrevStage - np][Def];
         }
-        if (!InKernel)
-          PhiOp2 = VRMap[PrevStage - np][Def];
 
         const TargetRegisterClass *RC = MRI.getRegClass(Def);
         Register NewReg = MRI.createVirtualRegister(RC);
@@ -672,9 +704,9 @@ void ModuloScheduleExpander::generatePhis(
                                 NewReg);
 
           PhiOp2 = NewReg;
-          VRMap[PrevStage - np - 1][Def] = NewReg;
+          VRMapPhi[PrevStage - np - 1][Def] = NewReg;
         } else {
-          VRMap[CurStageNum - np][Def] = NewReg;
+          VRMapPhi[CurStageNum - np][Def] = NewReg;
           if (np == NumPhis - 1)
             rewriteScheduledInstr(NewBB, InstrMap, CurStageNum, np, &*BBI, Def,
                                   NewReg);
@@ -716,7 +748,7 @@ void ModuloScheduleExpander::removeDeadInstructions(MachineBasicBlock *KernelBB,
           continue;
         Register reg = MO.getReg();
         // Assume physical registers are used, unless they are marked dead.
-        if (Register::isPhysicalRegister(reg)) {
+        if (reg.isPhysical()) {
           used = !MO.isDead();
           if (used)
             break;
@@ -847,10 +879,10 @@ void ModuloScheduleExpander::addBranches(MachineBasicBlock &PreheaderBB,
     MachineBasicBlock *Epilog = EpilogBBs[i];
 
     SmallVector<MachineOperand, 4> Cond;
-    Optional<bool> StaticallyGreater =
+    std::optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(j + 1, *Prolog, Cond);
     unsigned numAdded = 0;
-    if (!StaticallyGreater.hasValue()) {
+    if (!StaticallyGreater) {
       Prolog->addSuccessor(Epilog);
       numAdded = TII->insertBranch(*Prolog, Epilog, LastPro, Cond, DebugLoc());
     } else if (*StaticallyGreater == false) {
@@ -965,17 +997,6 @@ MachineInstr *ModuloScheduleExpander::cloneInstr(MachineInstr *OldMI,
                                                  unsigned CurStageNum,
                                                  unsigned InstStageNum) {
   MachineInstr *NewMI = MF.CloneMachineInstr(OldMI);
-  // Check for tied operands in inline asm instructions. This should be handled
-  // elsewhere, but I'm not sure of the best solution.
-  if (OldMI->isInlineAsm())
-    for (unsigned i = 0, e = OldMI->getNumOperands(); i != e; ++i) {
-      const auto &MO = OldMI->getOperand(i);
-      if (MO.isReg() && MO.isUse())
-        break;
-      unsigned UseIdx;
-      if (OldMI->isRegTiedToUseOperand(i, &UseIdx))
-        NewMI->tieOperands(i, UseIdx);
-    }
   updateMemOperands(*NewMI, *OldMI, CurStageNum - InstStageNum);
   return NewMI;
 }
@@ -1010,7 +1031,7 @@ void ModuloScheduleExpander::updateInstruction(MachineInstr *NewMI,
                                                unsigned InstrStageNum,
                                                ValueMapTy *VRMap) {
   for (MachineOperand &MO : NewMI->operands()) {
-    if (!MO.isReg() || !Register::isVirtualRegister(MO.getReg()))
+    if (!MO.isReg() || !MO.getReg().isVirtual())
       continue;
     Register reg = MO.getReg();
     if (MO.isDef()) {
@@ -1163,8 +1184,17 @@ void ModuloScheduleExpander::rewriteScheduledInstr(
     if (!InProlog && !Phi->isPHI() && StagePhi < StageSched)
       ReplaceReg = NewReg;
     if (ReplaceReg) {
-      MRI.constrainRegClass(ReplaceReg, MRI.getRegClass(OldReg));
-      UseOp.setReg(ReplaceReg);
+      const TargetRegisterClass *NRC =
+          MRI.constrainRegClass(ReplaceReg, MRI.getRegClass(OldReg));
+      if (NRC)
+        UseOp.setReg(ReplaceReg);
+      else {
+        Register SplitReg = MRI.createVirtualRegister(MRI.getRegClass(OldReg));
+        BuildMI(*BB, UseMI, UseMI->getDebugLoc(), TII->get(TargetOpcode::COPY),
+                SplitReg)
+            .addReg(ReplaceReg);
+        UseOp.setReg(SplitReg);
+      }
     }
   }
 }
@@ -1209,8 +1239,12 @@ void EliminateDeadPhis(MachineBasicBlock *MBB, MachineRegisterInfo &MRI,
         MI.eraseFromParent();
         Changed = true;
       } else if (!KeepSingleSrcPhi && MI.getNumExplicitOperands() == 3) {
-        MRI.constrainRegClass(MI.getOperand(1).getReg(),
-                              MRI.getRegClass(MI.getOperand(0).getReg()));
+        const TargetRegisterClass *ConstrainRegClass =
+            MRI.constrainRegClass(MI.getOperand(1).getReg(),
+                                  MRI.getRegClass(MI.getOperand(0).getReg()));
+        assert(ConstrainRegClass &&
+               "Expected a valid constrained register class!");
+        (void)ConstrainRegClass;
         MRI.replaceRegWith(MI.getOperand(0).getReg(),
                            MI.getOperand(1).getReg());
         if (LIS)
@@ -1246,7 +1280,7 @@ class KernelRewriter {
   // Insert a phi that carries LoopReg from the loop body and InitReg otherwise.
   // If InitReg is not given it is chosen arbitrarily. It will either be undef
   // or will be chosen so as to share another phi.
-  Register phi(Register LoopReg, Optional<Register> InitReg = {},
+  Register phi(Register LoopReg, std::optional<Register> InitReg = {},
                const TargetRegisterClass *RC = nullptr);
   // Create an undef register of the given register class.
   Register undef(const TargetRegisterClass *RC);
@@ -1354,7 +1388,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
 
   // First, dive through the phi chain to find the defaults for the generated
   // phis.
-  SmallVector<Optional<Register>, 4> Defaults;
+  SmallVector<std::optional<Register>, 4> Defaults;
   Register LoopReg = Reg;
   auto LoopProducer = Producer;
   while (LoopProducer->isPHI() && LoopProducer->getParent() == BB) {
@@ -1365,7 +1399,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   }
   int LoopProducerStage = S.getStage(LoopProducer);
 
-  Optional<Register> IllegalPhiDefault;
+  std::optional<Register> IllegalPhiDefault;
 
   if (LoopProducerStage == -1) {
     // Do nothing.
@@ -1397,9 +1431,9 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
       // If we need more phis than we have defaults for, pad out with undefs for
       // the earliest phis, which are at the end of the defaults chain (the
       // chain is in reverse order).
-      Defaults.resize(Defaults.size() + StageDiff, Defaults.empty()
-                                                       ? Optional<Register>()
-                                                       : Defaults.back());
+      Defaults.resize(Defaults.size() + StageDiff,
+                      Defaults.empty() ? std::optional<Register>()
+                                       : Defaults.back());
     }
   }
 
@@ -1408,7 +1442,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   while (DefaultI != Defaults.rend())
     LoopReg = phi(LoopReg, *DefaultI++, MRI.getRegClass(Reg));
 
-  if (IllegalPhiDefault.hasValue()) {
+  if (IllegalPhiDefault) {
     // The consumer optionally consumes LoopProducer in the same iteration
     // (because the producer is scheduled at an earlier cycle than the consumer)
     // or the initial value. To facilitate this we create an illegal block here
@@ -1418,7 +1452,7 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
     Register R = MRI.createVirtualRegister(RC);
     MachineInstr *IllegalPhi =
         BuildMI(*BB, MI, DebugLoc(), TII->get(TargetOpcode::PHI), R)
-            .addReg(IllegalPhiDefault.getValue())
+            .addReg(*IllegalPhiDefault)
             .addMBB(PreheaderBB) // Block choice is arbitrary and has no effect.
             .addReg(LoopReg)
             .addMBB(BB); // Block choice is arbitrary and has no effect.
@@ -1431,11 +1465,11 @@ Register KernelRewriter::remapUse(Register Reg, MachineInstr &MI) {
   return LoopReg;
 }
 
-Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
+Register KernelRewriter::phi(Register LoopReg, std::optional<Register> InitReg,
                              const TargetRegisterClass *RC) {
   // If the init register is not undef, try and find an existing phi.
-  if (InitReg.hasValue()) {
-    auto I = Phis.find({LoopReg, InitReg.getValue()});
+  if (InitReg) {
+    auto I = Phis.find({LoopReg, *InitReg});
     if (I != Phis.end())
       return I->second;
   } else {
@@ -1450,15 +1484,18 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
   auto I = UndefPhis.find(LoopReg);
   if (I != UndefPhis.end()) {
     Register R = I->second;
-    if (!InitReg.hasValue())
+    if (!InitReg)
       // Found a phi taking undef as input, and this input is undef so return
       // without any more changes.
       return R;
     // Found a phi taking undef as input, so rewrite it to take InitReg.
     MachineInstr *MI = MRI.getVRegDef(R);
-    MI->getOperand(1).setReg(InitReg.getValue());
-    Phis.insert({{LoopReg, InitReg.getValue()}, R});
-    MRI.constrainRegClass(R, MRI.getRegClass(InitReg.getValue()));
+    MI->getOperand(1).setReg(*InitReg);
+    Phis.insert({{LoopReg, *InitReg}, R});
+    const TargetRegisterClass *ConstrainRegClass =
+        MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
+    assert(ConstrainRegClass && "Expected a valid constrained register class!");
+    (void)ConstrainRegClass;
     UndefPhis.erase(I);
     return R;
   }
@@ -1467,14 +1504,18 @@ Register KernelRewriter::phi(Register LoopReg, Optional<Register> InitReg,
   if (!RC)
     RC = MRI.getRegClass(LoopReg);
   Register R = MRI.createVirtualRegister(RC);
-  if (InitReg.hasValue())
-    MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
+  if (InitReg) {
+    const TargetRegisterClass *ConstrainRegClass =
+        MRI.constrainRegClass(R, MRI.getRegClass(*InitReg));
+    assert(ConstrainRegClass && "Expected a valid constrained register class!");
+    (void)ConstrainRegClass;
+  }
   BuildMI(*BB, BB->getFirstNonPHI(), DebugLoc(), TII->get(TargetOpcode::PHI), R)
-      .addReg(InitReg.hasValue() ? *InitReg : undef(RC))
+      .addReg(InitReg ? *InitReg : undef(RC))
       .addMBB(PreheaderBB)
       .addReg(LoopReg)
       .addMBB(BB);
-  if (!InitReg.hasValue())
+  if (!InitReg)
     UndefPhis[LoopReg] = R;
   else
     Phis[{LoopReg, *InitReg}] = R;
@@ -1921,9 +1962,9 @@ void PeelingModuloScheduleExpander::fixupBranches() {
     MachineBasicBlock *Epilog = *EI;
     SmallVector<MachineOperand, 4> Cond;
     TII->removeBranch(*Prolog);
-    Optional<bool> StaticallyGreater =
+    std::optional<bool> StaticallyGreater =
         LoopInfo->createTripCountGreaterCondition(TC, *Prolog, Cond);
-    if (!StaticallyGreater.hasValue()) {
+    if (!StaticallyGreater) {
       LLVM_DEBUG(dbgs() << "Dynamic: TC > " << TC << "\n");
       // Dynamically branch based on Cond.
       TII->insertBranch(*Prolog, Epilog, Fallthrough, Cond, DebugLoc());

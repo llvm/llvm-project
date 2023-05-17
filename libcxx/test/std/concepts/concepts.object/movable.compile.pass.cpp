@@ -133,5 +133,3 @@ static_assert(std::movable<deleted_assignment_from_const_rvalue>);
 
 // `move_constructible and assignable_from<T&, T>` implies `swappable<T>`,
 // so there's nothing to test for the case of non-swappable.
-
-int main(int, char**) { return 0; }

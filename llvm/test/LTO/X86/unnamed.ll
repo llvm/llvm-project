@@ -7,4 +7,4 @@
 target triple = "x86_64-unknown-linux-gnu"
 
 @0 = private global i32 42
-@foo = constant i32* @0
+@foo = constant ptr @0

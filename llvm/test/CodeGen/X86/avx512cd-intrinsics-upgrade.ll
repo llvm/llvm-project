@@ -181,7 +181,6 @@ define <8 x i64> @test_x86_broadcastmb_512(i8 %a0) {
 ;
 ; X64-LABEL: test_x86_broadcastmb_512:
 ; X64:       # %bb.0:
-; X64-NEXT:    # kill: def $edi killed $edi def $rdi
 ; X64-NEXT:    movzbl %dil, %eax
 ; X64-NEXT:    vpbroadcastq %rax, %zmm0
 ; X64-NEXT:    retq

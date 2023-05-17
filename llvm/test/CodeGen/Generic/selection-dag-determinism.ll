@@ -12,15 +12,15 @@
 
 define void @test(i32 %x) !dbg !4 {
 entry:
-	call void @llvm.dbg.value(metadata void (i32)* @f1, metadata !6, metadata !DIExpression()), !dbg !8
-	call void @llvm.dbg.value(metadata void (i32)* @f2, metadata !7, metadata !DIExpression()), !dbg !8
+	call void @llvm.dbg.value(metadata ptr @f1, metadata !6, metadata !DIExpression()), !dbg !8
+	call void @llvm.dbg.value(metadata ptr @f2, metadata !7, metadata !DIExpression()), !dbg !8
 	%cmp = icmp eq i32 %x, 0, !dbg !8
 	br i1 %cmp, label %cleanup, label %if.end
 
 	if.end:
 	%tobool = icmp eq i32 0, 0
-	%a = select i1 %tobool, void (i32) addrspace(0)* @f1, void (i32)* null, !dbg !8
-	%b = select i1 %tobool, void (i32) addrspace(0)* @f2, void (i32)* null, !dbg !8
+	%a = select i1 %tobool, ptr addrspace(0) @f1, ptr null, !dbg !8
+	%b = select i1 %tobool, ptr addrspace(0) @f2, ptr null, !dbg !8
 	call addrspace(0) void %a(i32 %x)
 	call addrspace(0) void %b(i32 %x)
 	unreachable

@@ -6,24 +6,24 @@
 ; simplified. But that depends on the worklist order, so that is not always
 ; guaranteed.
 
-define i16 @d(i16* %d.a, i16* %d.b) {
+define i16 @d(ptr %d.a, ptr %d.b) {
 ; CHECK-LABEL: @d(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[T0:%.*]] = load i16, i16* [[D_A:%.*]], align 1
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq i16 [[T0]], 0
-; CHECK-NEXT:    br i1 [[TOBOOL]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
+; CHECK-NEXT:    [[T0:%.*]] = load i16, ptr [[D_A:%.*]], align 1
+; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i16 [[T0]], 0
+; CHECK-NEXT:    br i1 [[TOBOOL_NOT]], label [[LAND_END:%.*]], label [[LAND_RHS:%.*]]
 ; CHECK:       land.rhs:
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
 ; CHECK-NEXT:    ret i16 -1
 ;
 entry:
-  %t0 = load i16, i16* %d.a, align 1
+  %t0 = load i16, ptr %d.a, align 1
   %tobool = icmp ne i16 %t0, 0
   br i1 %tobool, label %land.rhs, label %land.end
 
 land.rhs:
-  %t1 = load i16, i16* %d.b, align 1
+  %t1 = load i16, ptr %d.b, align 1
   %cmp = icmp ult i16 %t1, 0
   br label %land.end
 

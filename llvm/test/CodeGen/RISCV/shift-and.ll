@@ -92,9 +92,8 @@ define i32 @test5(i32 %x) {
 ;
 ; RV64I-LABEL: test5:
 ; RV64I:       # %bb.0:
+; RV64I-NEXT:    andi a0, a0, -1024
 ; RV64I-NEXT:    slliw a0, a0, 6
-; RV64I-NEXT:    lui a1, 1048560
-; RV64I-NEXT:    and a0, a0, a1
 ; RV64I-NEXT:    ret
   %a = shl i32 %x, 6
   %b = and i32 %a, -65536

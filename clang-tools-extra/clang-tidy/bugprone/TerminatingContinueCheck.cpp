@@ -14,9 +14,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void TerminatingContinueCheck::registerMatchers(MatchFinder *Finder) {
   const auto DoWithFalse =
@@ -44,6 +42,4 @@ void TerminatingContinueCheck::check(const MatchFinder::MatchResult &Result) {
       << tooling::fixit::createReplacement(*ContStmt, "break");
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -10,10 +10,10 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare void @f()
 
-define void @foo8(i8* %ptr) noinline optnone {
-  %load = load i8, i8* %ptr
+define void @foo8(ptr %ptr) noinline optnone {
+  %load = load i8, ptr %ptr
   ; CHECK: movl $bit_mask8, %ecx
-  %and = and i8 %load, ptrtoint (i8* @bit_mask8 to i8)
+  %and = and i8 %load, ptrtoint (ptr @bit_mask8 to i8)
   %icmp = icmp eq i8 %and, 0
   br i1 %icmp, label %t, label %f
 

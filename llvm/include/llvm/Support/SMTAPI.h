@@ -419,7 +419,7 @@ public:
                                  llvm::APFloat &Float) = 0;
 
   /// Check if the constraints are satisfiable
-  virtual Optional<bool> check() const = 0;
+  virtual std::optional<bool> check() const = 0;
 
   /// Push the current solver state
   virtual void push() = 0;

@@ -1,4 +1,4 @@
-//===- ToolOutputFile.h - Output files for compiler-like tools -----------===//
+//===- ToolOutputFile.h - Output files for compiler-like tools --*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,8 +13,8 @@
 #ifndef LLVM_SUPPORT_TOOLOUTPUTFILE_H
 #define LLVM_SUPPORT_TOOLOUTPUTFILE_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 
 namespace llvm {
 
@@ -43,7 +43,7 @@ class ToolOutputFile {
 
   /// Storage for the stream, if we're owning our own stream. This is
   /// intentionally declared after Installer.
-  Optional<raw_fd_ostream> OSHolder;
+  std::optional<raw_fd_ostream> OSHolder;
 
   /// The actual stream to use.
   raw_fd_ostream *OS;

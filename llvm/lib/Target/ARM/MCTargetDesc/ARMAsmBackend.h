@@ -28,10 +28,10 @@ public:
   }
 
   bool hasNOP(const MCSubtargetInfo *STI) const {
-    return STI->getFeatureBits()[ARM::HasV6T2Ops];
+    return STI->hasFeature(ARM::HasV6T2Ops);
   }
 
-  Optional<MCFixupKind> getFixupKind(StringRef Name) const override;
+  std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
   const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 

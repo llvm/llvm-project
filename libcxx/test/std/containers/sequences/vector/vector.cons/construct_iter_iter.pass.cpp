@@ -25,7 +25,7 @@
 #endif
 
 template <class C, class Iterator>
-void test(Iterator first, Iterator last) {
+TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last) {
   {
     C c(first, last);
     LIBCPP_ASSERT(c.__invariants());
@@ -44,7 +44,7 @@ void test(Iterator first, Iterator last) {
   }
 }
 
-static void basic_test_cases() {
+TEST_CONSTEXPR_CXX20 void basic_test_cases() {
   int a[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 8, 7, 6, 5, 4, 3, 1, 0};
   int* an = a + sizeof(a) / sizeof(a[0]);
   test<std::vector<int> >(cpp17_input_iterator<const int*>(a),
@@ -81,10 +81,17 @@ static void basic_test_cases() {
       random_access_iterator<const int*>(a),
       random_access_iterator<const int*>(an));
   test<std::vector<int> >(a, an);
+  test<std::vector<int, safe_allocator<int> > >(
+      cpp17_input_iterator<const int*>(a), cpp17_input_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(forward_iterator<const int*>(a), forward_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(
+      bidirectional_iterator<const int*>(a), bidirectional_iterator<const int*>(an));
+  test<std::vector<int, safe_allocator<int> > >(
+      random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
 #endif
 }
 
-void emplaceable_concept_tests() {
+TEST_CONSTEXPR_CXX20 void emplaceable_concept_tests() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -160,7 +167,7 @@ struct B2 { int y; };
 struct Der : B1, B2 { int z; };
 
 // Initialize a vector with a different value type.
-void test_ctor_with_different_value_type() {
+TEST_CONSTEXPR_CXX20 void test_ctor_with_different_value_type() {
   {
     // Make sure initialization is performed with each element value, not with
     // a memory blob.
@@ -183,18 +190,26 @@ void test_ctor_with_different_value_type() {
   }
   {
     // Though the types are different, initialization can be done with `memcpy`.
-    int32_t array[1] = { -1 };
-    std::vector<uint32_t> v(array, array + 1);
+    std::int32_t array[1] = { -1 };
+    std::vector<std::uint32_t> v(array, array + 1);
     assert(v[0] == 4294967295U);
   }
 }
 
-
-int main(int, char**) {
+TEST_CONSTEXPR_CXX20 bool tests() {
   basic_test_cases();
   emplaceable_concept_tests(); // See PR34898
-  test_ctor_under_alloc();
   test_ctor_with_different_value_type();
 
-  return 0;
+  return true;
+}
+
+int main(int, char**)
+{
+    tests();
+    test_ctor_under_alloc();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

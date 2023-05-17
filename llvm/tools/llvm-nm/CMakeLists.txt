@@ -8,6 +8,7 @@ set(LLVM_LINK_COMPONENTS
   Object
   Option
   Support
+  TargetParser
   TextAPI
   )
 
@@ -21,7 +22,10 @@ add_llvm_tool(llvm-nm
   DEPENDS
   NmOptsTableGen
   intrinsics_gen
+  GENERATE_DRIVER
   )
+
+setup_host_tool(llvm-nm LLVM_NM llvm_nm_exe llvm_nm_target)
 
 if(LLVM_INSTALL_BINUTILS_SYMLINKS)
   add_llvm_tool_symlink(nm llvm-nm)

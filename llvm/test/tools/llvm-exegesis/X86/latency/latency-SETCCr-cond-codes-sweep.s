@@ -1,5 +1,5 @@
-# RUN: llvm-exegesis -mode=latency -opcode-name=SETCCr --max-configs-per-opcode=1 | FileCheck %s --check-prefix=CHECK
-# RUN: llvm-exegesis -mode=latency -opcode-name=SETCCr --max-configs-per-opcode=256 | FileCheck %s --check-prefix=SWEEP
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=SETCCr --max-configs-per-opcode=1 | FileCheck %s --check-prefix=CHECK
+# RUN: llvm-exegesis -mtriple=x86_64-unknown-unknown -mcpu=x86-64 -mode=latency --benchmark-phase=assemble-measured-code -opcode-name=SETCCr --max-configs-per-opcode=256 | FileCheck %s --check-prefix=SWEEP
 
 CHECK:      ---
 CHECK-NEXT: mode: latency

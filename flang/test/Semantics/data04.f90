@@ -36,7 +36,7 @@ module m
       DATA a /1/
       !C876
       !ERROR: Automatic variable 'b' must not be initialized in a DATA statement
-      DATA b(0) /1/
+      DATA b(1) /1/
       !C876
       !Ok: As charPtr is a pointer, it is not an automatic object
       DATA charPtr / NULL() /

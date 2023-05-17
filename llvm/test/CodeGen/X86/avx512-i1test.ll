@@ -34,7 +34,7 @@ bb56:                                             ; preds = %L_10
   br label %bb33
 
 bb33:                                             ; preds = %bb51, %bb56
-  %r111 = load i64, i64* undef, align 8
+  %r111 = load i64, ptr undef, align 8
   br i1 undef, label %bb51, label %bb35
 
 bb35:                                             ; preds = %bb33
@@ -50,7 +50,7 @@ L_19:                                             ; preds = %bb37, %bb35
   br i1 undef, label %bb51, label %bb42
 
 bb42:                                             ; preds = %L_19
-  %r136 = select i1 %"$V_S25.0", i32* undef, i32* undef
+  %r136 = select i1 %"$V_S25.0", ptr undef, ptr undef
   br label %bb51
 
 bb51:                                             ; preds = %bb42, %L_19, %bb33
@@ -66,10 +66,8 @@ define i64 @func2(i1 zeroext %i, i32 %j) {
 ; CHECK-LABEL: func2:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testl %esi, %esi
-; CHECK-NEXT:    je .LBB1_1
-; CHECK-NEXT:  # %bb.2: # %if.then
-; CHECK-NEXT:    jmp bar # TAILCALL
-; CHECK-NEXT:  .LBB1_1: # %if.end
+; CHECK-NEXT:    jne bar # TAILCALL
+; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    movzbl %dil, %eax
 ; CHECK-NEXT:    orq $-2, %rax
 ; CHECK-NEXT:    retq

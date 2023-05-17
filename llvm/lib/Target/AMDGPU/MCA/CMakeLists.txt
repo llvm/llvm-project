@@ -2,13 +2,15 @@ add_llvm_component_library(LLVMAMDGPUTargetMCA
   AMDGPUCustomBehaviour.cpp
 
   LINK_COMPONENTS
-  MC
-  MCParser
   AMDGPUDesc
   AMDGPUInfo
   AMDGPUUtils
-  Support
+  CodeGenTypes
+  MC
   MCA
+  MCParser
+  Support
+  TargetParser
 
   ADD_TO_COMPONENT
   AMDGPU

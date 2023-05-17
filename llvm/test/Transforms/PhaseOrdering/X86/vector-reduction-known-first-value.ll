@@ -29,7 +29,7 @@ define i16 @test(ptr %ptr) {
 ; CHECK-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[BIN_RDX:%.*]] = add <8 x i16> [[TMP5]], [[TMP4]]
-; CHECK-NEXT:    [[TMP7:%.*]] = call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[BIN_RDX]])
+; CHECK-NEXT:    [[TMP7:%.*]] = tail call i16 @llvm.vector.reduce.add.v8i16(<8 x i16> [[BIN_RDX]])
 ; CHECK-NEXT:    ret i16 [[TMP7]]
 ;
 entry:

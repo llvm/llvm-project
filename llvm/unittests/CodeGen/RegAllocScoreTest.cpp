@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "../lib/CodeGen/RegAllocScore.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -26,6 +25,7 @@
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
@@ -64,7 +64,7 @@ enum MockInstrId {
 
 const std::array<MCInstrDesc, MockInstrId::TotalMockInstrs> MockInstrDescs{{
 #define MOCK_SPEC(IGNORE, OPCODE, FLAGS)                                       \
-  {OPCODE, 0, 0, 0, 0, FLAGS, 0, nullptr, nullptr, nullptr},
+  {OPCODE, 0, 0, 0, 0, 0, 0, 0, 0, FLAGS, 0},
     MOCK_INSTR(MOCK_SPEC)
 #undef MOCK_SPEC
 }};

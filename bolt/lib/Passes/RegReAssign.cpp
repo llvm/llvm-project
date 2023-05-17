@@ -95,7 +95,7 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
                             false)));
         }
       }
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
       case MCCFIInstruction::OpUndefined:
       case MCCFIInstruction::OpDefCfa:
       case MCCFIInstruction::OpOffset:
@@ -108,7 +108,7 @@ void RegReAssign::swap(BinaryFunction &Function, MCPhysReg A, MCPhysReg B) {
         if (CFI->getOperation() != MCCFIInstruction::OpEscape) {
           CFIReg = CFI->getRegister();
         } else {
-          Optional<uint8_t> Reg =
+          std::optional<uint8_t> Reg =
               readDWARFExpressionTargetReg(CFI->getValues());
           // Handle DW_CFA_def_cfa_expression
           if (!Reg)
@@ -146,23 +146,19 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
       const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
 
       // Disallow substituitions involving regs in implicit uses lists
-      const MCPhysReg *ImplicitUses = Desc.getImplicitUses();
-      while (ImplicitUses && *ImplicitUses) {
+      for (MCPhysReg ImplicitUse : Desc.implicit_uses()) {
         const size_t RegEC =
-            BC.MIB->getAliases(*ImplicitUses, false).find_first();
+            BC.MIB->getAliases(ImplicitUse, false).find_first();
         RegScore[RegEC] =
             std::numeric_limits<decltype(RegScore)::value_type>::min();
-        ++ImplicitUses;
       }
 
       // Disallow substituitions involving regs in implicit defs lists
-      const MCPhysReg *ImplicitDefs = Desc.getImplicitDefs();
-      while (ImplicitDefs && *ImplicitDefs) {
+      for (MCPhysReg ImplicitDef : Desc.implicit_defs()) {
         const size_t RegEC =
-            BC.MIB->getAliases(*ImplicitDefs, false).find_first();
+            BC.MIB->getAliases(ImplicitDef, false).find_first();
         RegScore[RegEC] =
             std::numeric_limits<decltype(RegScore)::value_type>::min();
-        ++ImplicitDefs;
       }
 
       for (int I = 0, E = MCPlus::getNumPrimeOperands(Inst); I != E; ++I) {
@@ -197,8 +193,8 @@ void RegReAssign::rankRegisters(BinaryFunction &Function) {
     }
   }
   std::iota(RankedRegs.begin(), RankedRegs.end(), 0); // 0, 1, 2, 3...
-  std::sort(RankedRegs.begin(), RankedRegs.end(),
-            [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
+  llvm::sort(RankedRegs,
+             [&](size_t A, size_t B) { return RegScore[A] > RegScore[B]; });
 
   LLVM_DEBUG({
     for (size_t Reg : RankedRegs) {

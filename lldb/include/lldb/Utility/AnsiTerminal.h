@@ -137,7 +137,7 @@ inline std::string FormatAnsiTerminalCodes(llvm::StringRef format,
 #undef _TO_STR2
   };
   // clang-format on
-  auto codes = llvm::makeArrayRef(g_color_tokens);
+  auto codes = llvm::ArrayRef(g_color_tokens);
 
   static const char tok_hdr[] = "${ansi.";
 

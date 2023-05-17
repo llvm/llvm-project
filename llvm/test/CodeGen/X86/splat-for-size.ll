@@ -400,7 +400,7 @@ define <8 x i64> @pr23259() #1 {
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
 ; AVX2-NEXT:    retq
 entry:
-  %0 = load <4 x i64>, <4 x i64>* bitcast (<3 x i64>* @A to <4 x i64>*), align 32
+  %0 = load <4 x i64>, ptr @A, align 32
   %1 = shufflevector <4 x i64> %0, <4 x i64> undef, <3 x i32> <i32 undef, i32 undef, i32 2>
   %shuffle = shufflevector <3 x i64> <i64 1, i64 undef, i64 undef>, <3 x i64> %1, <8 x i32> <i32 5, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0>
   ret <8 x i64> %shuffle

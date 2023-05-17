@@ -8,6 +8,8 @@
 
 // <locale>
 
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
+
 // wbuffer_convert<Codecvt, Elem, Tr>
 
 // pos_type seekoff(off_type off, ios_base::seekdir way,
@@ -19,12 +21,13 @@
 
 // XFAIL: no-wide-characters
 
+// TODO: Avoid using <fstream> in this test.
+// XFAIL: no-fstream
+
 #include <locale>
 #include <codecvt>
 #include <fstream>
 #include <cassert>
-
-#include "test_macros.h"
 
 class test_codecvt
     : public std::codecvt<wchar_t, char, std::mbstate_t>

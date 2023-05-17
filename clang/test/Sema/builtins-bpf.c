@@ -33,7 +33,7 @@ unsigned invalid2(const int *arg) {
 }
 
 void *invalid3(struct s *arg) {
-  return __builtin_preserve_field_info(arg->a, 1); // expected-warning {{incompatible integer to pointer conversion returning 'unsigned int' from a function with result type 'void *'}}
+  return __builtin_preserve_field_info(arg->a, 1); // expected-error {{incompatible integer to pointer conversion returning 'unsigned int' from a function with result type 'void *'}}
 }
 
 unsigned valid4(struct s *arg) {

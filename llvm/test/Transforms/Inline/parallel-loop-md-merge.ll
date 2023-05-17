@@ -1,4 +1,4 @@
-; RUN: opt -always-inline -globalopt -S < %s | FileCheck %s
+; RUN: opt  -passes=always-inline,globalopt -S < %s | FileCheck %s
 ;
 ; static void __attribute__((always_inline)) callee(long n, double A[static const restrict n], long i) {
 ;   for (long j = 0; j < n; j += 1)
@@ -14,7 +14,7 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define internal void @callee(i64 %n, double* noalias nonnull %A, i64 %i) #0 {
+define internal void @callee(i64 %n, ptr noalias nonnull %A, i64 %i) #0 {
 entry:
   br label %for.cond
 
@@ -26,8 +26,8 @@ for.cond:
 for.body:
   %mul = mul nsw i64 %i, %n
   %add = add nsw i64 %mul, %j.0
-  %arrayidx = getelementptr inbounds double, double* %A, i64 %add
-  store double 4.200000e+01, double* %arrayidx, align 8, !llvm.access.group !6
+  %arrayidx = getelementptr inbounds double, ptr %A, i64 %add
+  store double 4.200000e+01, ptr %arrayidx, align 8, !llvm.access.group !6
   %add1 = add nuw nsw i64 %j.0, 1
   br label %for.cond, !llvm.loop !7
 
@@ -42,7 +42,7 @@ attributes #0 = { alwaysinline }
 !9 = !{!"llvm.loop.parallel_accesses", !6}
 
 
-define void @caller(i64 %n, double* noalias nonnull %A) {
+define void @caller(i64 %n, ptr noalias nonnull %A) {
 entry:
   br label %for.cond
 
@@ -52,7 +52,7 @@ for.cond:
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:
-  call void @callee(i64 %n, double* %A, i64 %i.0), !llvm.access.group !10
+  call void @callee(i64 %n, ptr %A, i64 %i.0), !llvm.access.group !10
   %add = add nuw nsw i64 %i.0, 1
   br label %for.cond, !llvm.loop !11
 

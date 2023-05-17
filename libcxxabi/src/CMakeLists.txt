@@ -99,6 +99,13 @@ else()
   add_link_flags_if_supported(-nodefaultlibs)
 endif()
 
+if (CXX_SUPPORTS_UNWINDLIB_EQ_NONE_FLAG AND LIBCXXABI_USE_LLVM_UNWINDER)
+  # If we're linking directly against the libunwind that we're building
+  # in the same invocation, don't try to link in the toolchain's
+  # default libunwind (which may be missing still).
+  add_link_flags_if_supported(--unwindlib=none)
+endif()
+
 if ( APPLE )
   if (LLVM_USE_SANITIZER)
     if (("${LLVM_USE_SANITIZER}" STREQUAL "Address") OR
@@ -147,12 +154,11 @@ if (LLVM_ENABLE_MODULES)
   string(REPLACE "-Wl,-z,defs" "" CMAKE_SHARED_LINKER_FLAGS "${CMAKE_SHARED_LINKER_FLAGS}")
 endif()
 
-if (NOT TARGET pstl::ParallelSTL)
-  message(STATUS "Could not find ParallelSTL, libc++abi will not attempt to use it but the build may fail if the libc++ in use needs it to be available.")
-endif()
+include(WarningFlags)
 
 # Build the shared library.
 add_library(cxxabi_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
+cxx_add_warning_flags(cxxabi_shared_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
 if (LIBCXXABI_USE_LLVM_UNWINDER)
   if (LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_SHARED_LIBRARY)
     target_link_libraries(cxxabi_shared_objects PUBLIC unwind_shared_objects) # propagate usage requirements
@@ -180,16 +186,24 @@ if (LIBCXXABI_ENABLE_SHARED)
   set_target_properties(cxxabi_shared
     PROPERTIES
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "c++abi"
+      OUTPUT_NAME "${LIBCXXABI_SHARED_OUTPUT_NAME}"
       SOVERSION "1"
       VERSION "${LIBCXXABI_LIBRARY_VERSION}"
   )
+
+  if (ZOS)
+    add_custom_command(TARGET cxxabi_shared POST_BUILD
+      COMMAND
+        ${LIBCXXABI_LIBCXX_PATH}/utils/zos_rename_dll_side_deck.sh
+        $<TARGET_LINKER_FILE_NAME:cxxabi_shared> $<TARGET_FILE_NAME:cxxabi_shared> "${LIBCXXABI_DLL_NAME}"
+      COMMENT "Rename dll name inside the side deck file"
+      WORKING_DIRECTORY $<TARGET_FILE_DIR:cxxabi_shared>
+    )
+  endif ()
+
   target_link_libraries(cxxabi_shared
     PUBLIC cxxabi_shared_objects
     PRIVATE ${LIBCXXABI_SHARED_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-  if (TARGET pstl::ParallelSTL)
-    target_link_libraries(cxxabi_shared PUBLIC pstl::ParallelSTL)
-  endif()
 
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_shared")
   if (LIBCXXABI_INSTALL_SHARED_LIBRARY)
@@ -228,6 +242,7 @@ endif()
 
 # Build the static library.
 add_library(cxxabi_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBCXXABI_SOURCES} ${LIBCXXABI_HEADERS})
+cxx_add_warning_flags(cxxabi_static_objects ${LIBCXXABI_ENABLE_WERROR} ${LIBCXXABI_ENABLE_PEDANTIC})
 if (LIBCXXABI_USE_LLVM_UNWINDER AND LIBCXXABI_STATICALLY_LINK_UNWINDER_IN_STATIC_LIBRARY)
   target_link_libraries(cxxabi_static_objects PUBLIC unwind_static_objects) # propagate usage requirements
   target_sources(cxxabi_static_objects PUBLIC $<TARGET_OBJECTS:unwind_static_objects>)
@@ -267,14 +282,11 @@ if (LIBCXXABI_ENABLE_STATIC)
   set_target_properties(cxxabi_static
     PROPERTIES
       LINK_FLAGS "${LIBCXXABI_LINK_FLAGS}"
-      OUTPUT_NAME "c++abi"
+      OUTPUT_NAME "${LIBCXXABI_STATIC_OUTPUT_NAME}"
     )
   target_link_libraries(cxxabi_static
     PUBLIC cxxabi_static_objects
     PRIVATE ${LIBCXXABI_STATIC_LIBRARIES} ${LIBCXXABI_LIBRARIES})
-  if (TARGET pstl::ParallelSTL)
-    target_link_libraries(cxxabi_static PUBLIC pstl::ParallelSTL)
-  endif()
 
   list(APPEND LIBCXXABI_BUILD_TARGETS "cxxabi_static")
   if (LIBCXXABI_INSTALL_STATIC_LIBRARY)

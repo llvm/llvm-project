@@ -115,8 +115,7 @@ private:
   bool canCompletelyDuplicateBB(MachineBasicBlock &BB);
   bool duplicateSimpleBB(MachineBasicBlock *TailBB,
                          SmallVectorImpl<MachineBasicBlock *> &TDBBs,
-                         const DenseSet<Register> &RegsUsedByPhi,
-                         SmallVectorImpl<MachineInstr *> &Copies);
+                         const DenseSet<Register> &RegsUsedByPhi);
   bool tailDuplicate(bool IsSimple,
                      MachineBasicBlock *TailBB,
                      MachineBasicBlock *ForcedLayoutPred,

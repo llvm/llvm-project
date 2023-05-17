@@ -13,6 +13,7 @@
 /*
     regex synopsis
 
+#include <compare>
 #include <initializer_list>
 
 namespace std
@@ -225,6 +226,8 @@ public:
     int compare(const sub_match& s) const;
     int compare(const string_type& s) const;
     int compare(const value_type* s) const;
+
+    void swap(sub_match& s) noexcept(see below);
 };
 
 typedef sub_match<const char*>             csub_match;
@@ -237,50 +240,54 @@ template <class BiIter>
     operator==(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
 template <class BiIter>
+    auto
+    operator<=>(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs); // Since C++20
+
+ template <class BiIter>                                                     // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(const sub_match<BiIter>& lhs, const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator==(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator!=(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator>(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool operator>=(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                     const sub_match<BiIter>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<=(const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& lhs,
                const sub_match<BiIter>& rhs);
@@ -290,56 +297,62 @@ template <class BiIter, class ST, class SA>
     operator==(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Since C++20
+    auto
+    operator<=>(const sub_match<BiIter>& lhs,
+                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
+
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs,
               const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
-    bool operator>(const sub_match<BiIter>& lhs,
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
+    bool
+    operator>(const sub_match<BiIter>& lhs,
                    const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter, class ST, class SA>
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs,
                const basic_string<typename iterator_traits<BiIter>::value_type, ST, SA>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator==(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator!=(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(typename iterator_traits<BiIter>::value_type const* lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(typename iterator_traits<BiIter>::value_type const* lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(typename iterator_traits<BiIter>::value_type const* lhs,
                const sub_match<BiIter>& rhs);
@@ -349,57 +362,62 @@ template <class BiIter>
     operator==(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Since C++20
+    auto
+    operator<=>(const sub_match<BiIter>& lhs,
+                typename iterator_traits<BiIter>::value_type const* rhs);
+
+template <class BiIter, class ST, class SA>                                  // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const* rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator==(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator!=(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(typename iterator_traits<BiIter>::value_type const& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(typename iterator_traits<BiIter>::value_type const& lhs,
               const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(typename iterator_traits<BiIter>::value_type const& lhs,
                const sub_match<BiIter>& rhs);
@@ -409,27 +427,32 @@ template <class BiIter>
     operator==(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Since C++20
+    auto
+    operator<=>(const sub_match<BiIter>& lhs,
+                typename iterator_traits<BiIter>::value_type const& rhs);
+
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator!=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>(const sub_match<BiIter>& lhs,
               typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator>=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
 
-template <class BiIter>
+template <class BiIter>                                                      // Removed in C++20
     bool
     operator<=(const sub_match<BiIter>& lhs,
                typename iterator_traits<BiIter>::value_type const& rhs);
@@ -766,19 +789,33 @@ typedef regex_token_iterator<wstring::const_iterator> wsregex_token_iterator;
 #include <__algorithm/search.h>
 #include <__assert> // all public C++ headers provide the assertion handler
 #include <__config>
+#include <__iterator/back_insert_iterator.h>
 #include <__iterator/wrap_iter.h>
 #include <__locale>
+#include <__memory_resource/polymorphic_allocator.h>
+#include <__type_traits/is_swappable.h>
 #include <__utility/move.h>
+#include <__utility/pair.h>
 #include <__utility/swap.h>
-#include <compare>
+#include <__verbose_abort>
 #include <deque>
-#include <initializer_list>
-#include <iterator>
-#include <memory>
 #include <stdexcept>
 #include <string>
 #include <vector>
 #include <version>
+
+// standard-mandated includes
+
+// [iterator.range]
+#include <__iterator/access.h>
+#include <__iterator/data.h>
+#include <__iterator/empty.h>
+#include <__iterator/reverse_access.h>
+#include <__iterator/size.h>
+
+// [re.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -817,7 +854,7 @@ enum syntax_option_type
     multiline  = 1 << 10
 };
 
-inline _LIBCPP_CONSTEXPR
+_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR
 syntax_option_type __get_grammar(syntax_option_type __g)
 {
 #ifdef _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
@@ -989,9 +1026,9 @@ class _LIBCPP_EXCEPTION_ABI regex_error
     regex_constants::error_type __code_;
 public:
     explicit regex_error(regex_constants::error_type __ecode);
-    regex_error(const regex_error&) _NOEXCEPT = default;
-    virtual ~regex_error() _NOEXCEPT;
-     _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI regex_error(const regex_error&) _NOEXCEPT = default;
+    ~regex_error() _NOEXCEPT override;
+    _LIBCPP_INLINE_VISIBILITY
     regex_constants::error_type code() const {return __code_;}
 };
 
@@ -999,10 +1036,10 @@ template <regex_constants::error_type _Ev>
 _LIBCPP_NORETURN inline _LIBCPP_INLINE_VISIBILITY
 void __throw_regex_error()
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw regex_error(_Ev);
 #else
-    _VSTD::abort();
+    _LIBCPP_VERBOSE_ABORT("regex_error was thrown in -fno-exceptions mode");
 #endif
 }
 
@@ -1013,7 +1050,7 @@ public:
     typedef _CharT                  char_type;
     typedef basic_string<char_type> string_type;
     typedef locale                  locale_type;
-#ifdef __BIONIC__
+#if defined(__BIONIC__) || defined(_NEWLIB_VERSION)
     // Originally bionic's ctype_base used its own ctype masks because the
     // builtin ctype implementation wasn't in libc++ yet. Bionic's ctype mask
     // was only 8 bits wide and already saturated, so it used a wider type here
@@ -1022,6 +1059,11 @@ public:
     // implementation, but this was not updated to match. Since then Android has
     // needed to maintain a stable libc++ ABI, and this can't be changed without
     // an ABI break.
+    // We also need this workaround for newlib since _NEWLIB_VERSION is not
+    // defined yet inside __config, so we can't set the
+    // _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE macro. Additionally, newlib is
+    // often used for space constrained environments, so it makes sense not to
+    // duplicate the ctype table.
     typedef uint16_t char_class_type;
 #else
     typedef ctype_base::mask        char_class_type;
@@ -1139,8 +1181,8 @@ template <class _CharT>
 void
 regex_traits<_CharT>::__init()
 {
-    __ct_ = &use_facet<ctype<char_type> >(__loc_);
-    __col_ = &use_facet<collate<char_type> >(__loc_);
+    __ct_ = &std::use_facet<ctype<char_type> >(__loc_);
+    __col_ = &std::use_facet<collate<char_type> >(__loc_);
 }
 
 template <class _CharT>
@@ -1215,7 +1257,7 @@ regex_traits<_CharT>::__lookup_collatename(_ForwardIterator __f,
     string_type __r;
     if (!__s.empty())
     {
-        __r = __get_collation_name(__s.c_str());
+        __r = std::__get_collation_name(__s.c_str());
         if (__r.empty() && __s.size() <= 2)
         {
             __r = __col_->transform(__s.data(), __s.data() + __s.size());
@@ -1278,7 +1320,7 @@ regex_traits<_CharT>::__lookup_classname(_ForwardIterator __f,
 {
     string_type __s(__f, __l);
     __ct_->tolower(&__s[0], &__s[0] + __s.size());
-    return __get_classname(__s.c_str(), __icase);
+    return std::__get_classname(__s.c_str(), __icase);
 }
 
 #ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
@@ -1314,9 +1356,9 @@ regex_traits<_CharT>::isctype(char_type __c, char_class_type __m) const
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-bool __is_07(unsigned char c)
+bool __is_07(unsigned char __c)
 {
-    return (c & 0xF8u) ==
+    return (__c & 0xF8u) ==
 #if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
         0xF0;
 #else
@@ -1325,9 +1367,9 @@ bool __is_07(unsigned char c)
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-bool __is_89(unsigned char c)
+bool __is_89(unsigned char __c)
 {
-    return (c & 0xFEu) ==
+    return (__c & 0xFEu) ==
 #if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
         0xF8;
 #else
@@ -1336,12 +1378,12 @@ bool __is_89(unsigned char c)
 }
 
 inline _LIBCPP_INLINE_VISIBILITY
-unsigned char __to_lower(unsigned char c)
+unsigned char __to_lower(unsigned char __c)
 {
 #if defined(__MVS__) && !defined(__NATIVE_ASCII_F)
-    return c & 0xBF;
+    return __c & 0xBF;
 #else
-    return c | 0x20;
+    return __c | 0x20;
 #endif
 }
 
@@ -1428,12 +1470,12 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     __node() {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual ~__node() {}
 
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual void __exec(__state&) const {}
-    _LIBCPP_INLINE_VISIBILITY
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL
     virtual void __exec_split(bool, __state&) const {}
 };
 
@@ -1449,7 +1491,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     __end_state() {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1491,7 +1533,7 @@ public:
     explicit __owns_one_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual ~__owns_one_state();
+    ~__owns_one_state() override;
 };
 
 template <class _CharT>
@@ -1515,7 +1557,7 @@ public:
     explicit __empty_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1541,7 +1583,7 @@ public:
     explicit __empty_non_own_state(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1567,7 +1609,7 @@ public:
     explicit __repeat_one_loop(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1593,7 +1635,7 @@ public:
     explicit __owns_two_states(__node<_CharT>* __s1, base* __s2)
         : base(__s1), __second_(__s2) {}
 
-    virtual ~__owns_two_states();
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual ~__owns_two_states();
 
     _LIBCPP_INLINE_VISIBILITY
     base*  second() const {return __second_;}
@@ -1636,8 +1678,8 @@ public:
           __mexp_begin_(__mexp_begin), __mexp_end_(__mexp_end),
           __greedy_(__greedy) {}
 
-    virtual void __exec(__state& __s) const;
-    virtual void __exec_split(bool __second, __state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec_split(bool __second, __state& __s) const;
 
 private:
     _LIBCPP_INLINE_VISIBILITY
@@ -1729,8 +1771,8 @@ public:
                          __owns_one_state<_CharT>* __s2)
         : base(__s1, __s2) {}
 
-    virtual void __exec(__state& __s) const;
-    virtual void __exec_split(bool __second, __state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state& __s) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec_split(bool __second, __state& __s) const;
 };
 
 template <class _CharT>
@@ -1767,7 +1809,7 @@ public:
     explicit __begin_marked_subexpression(unsigned __mexp, __node<_CharT>* __s)
         : base(__s), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1795,7 +1837,7 @@ public:
     explicit __end_marked_subexpression(unsigned __mexp, __node<_CharT>* __s)
         : base(__s), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1824,7 +1866,7 @@ public:
     explicit __back_ref(unsigned __mexp, __node<_CharT>* __s)
         : base(__s), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -1875,7 +1917,7 @@ public:
                               __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -1930,7 +1972,7 @@ public:
                               __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __mexp_(__mexp) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -1985,7 +2027,7 @@ public:
                              __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __invert_(__invert) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -2041,9 +2083,9 @@ __word_boundary<_CharT, _Traits>::__exec(__state& __s) const
 
 template <class _CharT>
 _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR
-bool __is_eol(_CharT c)
+bool __is_eol(_CharT __c)
 {
-    return c == '\r' || c == '\n';
+    return __c == '\r' || __c == '\n';
 }
 
 template <class _CharT>
@@ -2061,7 +2103,7 @@ public:
     __l_anchor_multiline(bool __multiline, __node<_CharT>* __s)
         : base(__s), __multiline_(__multiline) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2076,7 +2118,7 @@ __l_anchor_multiline<_CharT>::__exec(__state& __s) const
     }
     else if (__multiline_ &&
              !__s.__at_first_ &&
-             __is_eol(*_VSTD::prev(__s.__current_)))
+             std::__is_eol(*_VSTD::prev(__s.__current_)))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
@@ -2105,7 +2147,7 @@ public:
     __r_anchor_multiline(bool __multiline, __node<_CharT>* __s)
         : base(__s), __multiline_(__multiline) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2118,7 +2160,7 @@ __r_anchor_multiline<_CharT>::__exec(__state& __s) const
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
     }
-    else if (__multiline_ && __is_eol(*__s.__current_))
+    else if (__multiline_ && std::__is_eol(*__s.__current_))
     {
         __s.__do_ = __state::__accept_but_not_consume;
         __s.__node_ = this->first();
@@ -2145,7 +2187,7 @@ public:
     __match_any(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2180,7 +2222,7 @@ public:
     __match_any_but_newline(__node<_CharT>* __s)
         : base(__s) {}
 
-    virtual void __exec(__state&) const;
+    void __exec(__state&) const override;
 };
 
 template <> _LIBCPP_FUNC_VIS void __match_any_but_newline<char>::__exec(__state&) const;
@@ -2207,7 +2249,7 @@ public:
     __match_char(_CharT __c, __node<_CharT>* __s)
         : base(__s), __c_(__c) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT>
@@ -2247,7 +2289,7 @@ public:
     __match_char_icase(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __c_(__traits.translate_nocase(__c)) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -2288,7 +2330,7 @@ public:
     __match_char_collate(const _Traits& __traits, _CharT __c, __node<_CharT>* __s)
         : base(__s), __traits_(__traits), __c_(__traits.translate(__c)) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -2343,7 +2385,7 @@ public:
           __negate_(__negate), __icase_(__icase), __collate_(__collate),
           __might_have_digraph_(__traits_.getloc().name() != "C") {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 
     _LIBCPP_INLINE_VISIBILITY
     bool __negated() const {return __negate_;}
@@ -2387,7 +2429,7 @@ public:
                     for (size_t __i = 0; __i < __e.size(); ++__i)
                         __e[__i] = __traits_.translate(__e[__i]);
                 }
-                __ranges_.push_back(make_pair(
+                __ranges_.push_back(std::make_pair(
                                   __traits_.transform(__b.begin(), __b.end()),
                                   __traits_.transform(__e.begin(), __e.end())));
             }
@@ -2400,20 +2442,20 @@ public:
                     __b[0] = __traits_.translate_nocase(__b[0]);
                     __e[0] = __traits_.translate_nocase(__e[0]);
                 }
-                __ranges_.push_back(make_pair(_VSTD::move(__b), _VSTD::move(__e)));
+                __ranges_.push_back(std::make_pair(_VSTD::move(__b), _VSTD::move(__e)));
             }
         }
     _LIBCPP_INLINE_VISIBILITY
     void __add_digraph(_CharT __c1, _CharT __c2)
         {
             if (__icase_)
-                __digraphs_.push_back(make_pair(__traits_.translate_nocase(__c1),
-                                                __traits_.translate_nocase(__c2)));
+                __digraphs_.push_back(std::make_pair(__traits_.translate_nocase(__c1),
+                                                     __traits_.translate_nocase(__c2)));
             else if (__collate_)
-                __digraphs_.push_back(make_pair(__traits_.translate(__c1),
-                                                __traits_.translate(__c2)));
+                __digraphs_.push_back(std::make_pair(__traits_.translate(__c1),
+                                                     __traits_.translate(__c2)));
             else
-                __digraphs_.push_back(make_pair(__c1, __c2));
+                __digraphs_.push_back(std::make_pair(__c1, __c2));
         }
     _LIBCPP_INLINE_VISIBILITY
     void __add_equivalence(const string_type& __s)
@@ -2732,12 +2774,7 @@ public:
 
     template <class _InputIterator>
         _LIBCPP_INLINE_VISIBILITY
-        typename enable_if
-        <
-             __is_cpp17_input_iterator  <_InputIterator>::value &&
-            !__is_cpp17_forward_iterator<_InputIterator>::value,
-            basic_regex&
-        >::type
+        typename enable_if<__is_exactly_cpp17_input_iterator<_InputIterator>::value, basic_regex&>::type
         assign(_InputIterator __first, _InputIterator __last,
                             flag_type __f = regex_constants::ECMAScript)
         {
@@ -2952,7 +2989,7 @@ private:
         __parse_awk_escape(_ForwardIterator __first, _ForwardIterator __last,
                           basic_string<_CharT>* __str = nullptr);
 
-    bool __test_back_ref(_CharT c);
+    bool __test_back_ref(_CharT);
 
     _LIBCPP_INLINE_VISIBILITY
     void __push_l_anchor();
@@ -3140,7 +3177,7 @@ public:
     __lookahead(const basic_regex<_CharT, _Traits>& __exp, bool __invert, __node<_CharT>* __s, unsigned __mexp)
         : base(__s), __exp_(__exp), __mexp_(__mexp), __invert_(__invert) {}
 
-    virtual void __exec(__state&) const;
+    _LIBCPP_HIDE_FROM_ABI_VIRTUAL virtual void __exec(__state&) const;
 };
 
 template <class _CharT, class _Traits>
@@ -4118,9 +4155,9 @@ basic_regex<_CharT, _Traits>::__parse_equivalence_class(_ForwardIterator __first
 {
     // Found [=
     //   This means =] must exist
-    value_type _Equal_close[2] = {'=', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, _Equal_close,
-                                                            _Equal_close+2);
+    value_type __equal_close[2] = {'=', ']'};
+    _ForwardIterator __temp = _VSTD::search(__first, __last, __equal_close,
+                                                            __equal_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [= ... =]
@@ -4160,9 +4197,9 @@ basic_regex<_CharT, _Traits>::__parse_character_class(_ForwardIterator __first,
 {
     // Found [:
     //   This means :] must exist
-    value_type _Colon_close[2] = {':', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, _Colon_close,
-                                                            _Colon_close+2);
+    value_type __colon_close[2] = {':', ']'};
+    _ForwardIterator __temp = _VSTD::search(__first, __last, __colon_close,
+                                                            __colon_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [: ... :]
@@ -4185,9 +4222,9 @@ basic_regex<_CharT, _Traits>::__parse_collating_symbol(_ForwardIterator __first,
 {
     // Found [.
     //   This means .] must exist
-    value_type _Dot_close[2] = {'.', ']'};
-    _ForwardIterator __temp = _VSTD::search(__first, __last, _Dot_close,
-                                                            _Dot_close+2);
+    value_type __dot_close[2] = {'.', ']'};
+    _ForwardIterator __temp = _VSTD::search(__first, __last, __dot_close,
+                                                            __dot_close+2);
     if (__temp == __last)
         __throw_regex_error<regex_constants::error_brack>();
     // [__first, __temp) contains all text in [. ... .]
@@ -4771,9 +4808,9 @@ basic_regex<_CharT, _Traits>::__parse_egrep(_ForwardIterator __first,
 
 template <class _CharT, class _Traits>
 bool
-basic_regex<_CharT, _Traits>::__test_back_ref(_CharT c)
+basic_regex<_CharT, _Traits>::__test_back_ref(_CharT __c)
 {
-    unsigned __val = __traits_.value(c, 10);
+    unsigned __val = __traits_.value(__c, 10);
     if (__val >= 1 && __val <= 9)
     {
         if (__val > mark_count())
@@ -4996,6 +5033,16 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     int compare(const value_type* __s) const
         {return str().compare(__s);}
+
+    _LIBCPP_HIDE_FROM_ABI
+    void swap(sub_match& __s)
+#ifndef _LIBCPP_CXX03_LANG
+    _NOEXCEPT(__is_nothrow_swappable<_BidirectionalIterator>::value)
+#endif // _LIBCPP_CXX03_LANG
+    {
+        this->pair<_BidirectionalIterator, _BidirectionalIterator>::swap(__s);
+        std::swap(matched, __s.matched);
+    }
 };
 
 template <class _BiIter>
@@ -5006,6 +5053,15 @@ operator==(const sub_match<_BiIter>& __x, const sub_match<_BiIter>& __y)
     return __x.compare(__y) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template<class _BiIter>
+using __sub_match_cat = compare_three_way_result_t<basic_string<typename iterator_traits<_BiIter>::value_type>>;
+
+template <class _BiIter>
+_LIBCPP_HIDE_FROM_ABI auto operator<=>(const sub_match<_BiIter>& __x, const sub_match<_BiIter>& __y) {
+    return static_cast<__sub_match_cat<_BiIter>>(__x.compare(__y) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5098,6 +5154,7 @@ operator<=(const basic_string<typename iterator_traits<_BiIter>::value_type, _ST
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _BiIter, class _ST, class _SA>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -5108,6 +5165,14 @@ operator==(const sub_match<_BiIter>& __x,
     return __x.compare(typename sub_match<_BiIter>::string_type(__y.data(), __y.size())) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template <class _BiIter, class _ST, class _SA>
+_LIBCPP_HIDE_FROM_ABI auto operator<=>(
+    const sub_match<_BiIter>& __x, const basic_string<typename iterator_traits<_BiIter>::value_type, _ST, _SA>& __y) {
+    return static_cast<__sub_match_cat<_BiIter>>(
+        __x.compare(typename sub_match<_BiIter>::string_type(__y.data(), __y.size())) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter, class _ST, class _SA>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5205,6 +5270,7 @@ operator<=(typename iterator_traits<_BiIter>::value_type const* __x,
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -5215,6 +5281,13 @@ operator==(const sub_match<_BiIter>& __x,
     return __x.compare(__y) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template <class _BiIter>
+_LIBCPP_HIDE_FROM_ABI auto
+operator<=>(const sub_match<_BiIter>& __x, typename iterator_traits<_BiIter>::value_type const* __y) {
+    return static_cast<__sub_match_cat<_BiIter>>(__x.compare(__y) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5315,6 +5388,7 @@ operator<=(typename iterator_traits<_BiIter>::value_type const& __x,
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -5326,6 +5400,14 @@ operator==(const sub_match<_BiIter>& __x,
     return __x.compare(string_type(1, __y)) == 0;
 }
 
+#if _LIBCPP_STD_VER >= 20
+template <class _BiIter>
+_LIBCPP_HIDE_FROM_ABI auto
+operator<=>(const sub_match<_BiIter>& __x, typename iterator_traits<_BiIter>::value_type const& __y) {
+    using string_type = basic_string<typename iterator_traits<_BiIter>::value_type>;
+    return static_cast<__sub_match_cat<_BiIter>>(__x.compare(string_type(1, __y)) <=> 0);
+}
+#else // _LIBCPP_STD_VER >= 20
 template <class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -5371,6 +5453,7 @@ operator<=(const sub_match<_BiIter>& __x,
 {
     return !(__y < __x);
 }
+#endif // _LIBCPP_STD_VER >= 20
 
 template <class _CharT, class _ST, class _BiIter>
 inline _LIBCPP_INLINE_VISIBILITY
@@ -5510,7 +5593,7 @@ public:
                regex_constants::match_flag_type __flags = regex_constants::format_default) const
         {
             basic_string<char_type, _ST, _SA> __r;
-            format(back_inserter(__r), __fmt.data(), __fmt.data() + __fmt.size(),
+            format(std::back_inserter(__r), __fmt.data(), __fmt.data() + __fmt.size(),
                    __flags);
             return __r;
         }
@@ -5520,7 +5603,7 @@ public:
                regex_constants::match_flag_type __flags = regex_constants::format_default) const
         {
             string_type __r;
-            format(back_inserter(__r), __fmt,
+            format(std::back_inserter(__r), __fmt,
                    __fmt + char_traits<char_type>::length(__fmt), __flags);
             return __r;
         }
@@ -5721,7 +5804,7 @@ match_results<_BidirectionalIterator, _Allocator>::swap(match_results& __m)
 }
 
 template <class _BidirectionalIterator, class _Allocator>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 operator==(const match_results<_BidirectionalIterator, _Allocator>& __x,
            const match_results<_BidirectionalIterator, _Allocator>& __y)
 {
@@ -5848,7 +5931,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
 {
     deque<__state> __states;
     ptrdiff_t __highest_j = 0;
-    ptrdiff_t _Np = _VSTD::distance(__first, __last);
+    ptrdiff_t __np = _VSTD::distance(__first, __last);
     __node* __st = __start_.get();
     if (__st)
     {
@@ -5891,7 +5974,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_nosubs(
                 if (!__matched || __highest_j < __s.__current_ - __s.__first_)
                     __highest_j = __s.__current_ - __s.__first_;
                 __matched = true;
-                if (__highest_j == _Np)
+                if (__highest_j == __np)
                     __states.clear();
                 else
                     __states.pop_back();
@@ -5943,7 +6026,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
     vector<__state> __states;
     __state __best_state;
     ptrdiff_t __highest_j = 0;
-    ptrdiff_t _Np = _VSTD::distance(__first, __last);
+    ptrdiff_t __np = _VSTD::distance(__first, __last);
     __node* __st = __start_.get();
     if (__st)
     {
@@ -5995,7 +6078,7 @@ basic_regex<_CharT, _Traits>::__match_at_start_posix_subs(
                     __best_state = __s;
                 }
                 __matched = true;
-                if (__highest_j == _Np)
+                if (__highest_j == __np)
                     __states.clear();
                 else
                     __states.pop_back();
@@ -6201,7 +6284,7 @@ regex_search(const basic_string<_CharT, _ST, _SA>& __s,
     return __r;
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _ST, class _SA, class _Ap, class _Cp, class _Tp>
 bool
 regex_search(const basic_string<_Cp, _ST, _SA>&& __s,
@@ -6213,7 +6296,7 @@ regex_search(const basic_string<_Cp, _ST, _SA>&& __s,
 // regex_match
 
 template <class _BidirectionalIterator, class _Allocator, class _CharT, class _Traits>
-bool
+_LIBCPP_HIDE_FROM_ABI bool
 regex_match(_BidirectionalIterator __first, _BidirectionalIterator __last,
             match_results<_BidirectionalIterator, _Allocator>& __m,
             const basic_regex<_CharT, _Traits>& __e,
@@ -6264,7 +6347,7 @@ regex_match(const basic_string<_CharT, _ST, _SA>& __s,
     return _VSTD::regex_match(__s.begin(), __s.end(), __m, __e, __flags);
 }
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _ST, class _SA, class _Allocator, class _CharT, class _Traits>
 inline _LIBCPP_INLINE_VISIBILITY
 bool
@@ -6337,7 +6420,7 @@ public:
                    const regex_type& __re,
                    regex_constants::match_flag_type __m
                                               = regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                    const regex_type&& __re,
                    regex_constants::match_flag_type __m
@@ -6469,7 +6552,7 @@ public:
                          const regex_type& __re, int __submatch = 0,
                          regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_token_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                          const regex_type&& __re, int __submatch = 0,
                          regex_constants::match_flag_type __m =
@@ -6480,7 +6563,7 @@ public:
                          const regex_type& __re, const vector<int>& __submatches,
                          regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_token_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                          const regex_type&& __re, const vector<int>& __submatches,
                          regex_constants::match_flag_type __m =
@@ -6494,7 +6577,7 @@ public:
                          regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     regex_token_iterator(_BidirectionalIterator __a, _BidirectionalIterator __b,
                          const regex_type&& __re,
                          initializer_list<int> __submatches,
@@ -6509,7 +6592,7 @@ public:
                              const int (&__submatches)[_Np],
                              regex_constants::match_flag_type __m =
                                                 regex_constants::match_default);
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
     template <size_t _Np>
         regex_token_iterator(_BidirectionalIterator __a,
                              _BidirectionalIterator __b,
@@ -6726,7 +6809,7 @@ regex_token_iterator<_BidirectionalIterator, _CharT, _Traits>::operator++()
 
 template <class _OutputIterator, class _BidirectionalIterator,
           class _Traits, class _CharT>
-_OutputIterator
+_LIBCPP_HIDE_FROM_ABI _OutputIterator
 regex_replace(_OutputIterator __output_iter,
               _BidirectionalIterator __first, _BidirectionalIterator __last,
               const basic_regex<_CharT, _Traits>& __e, const _CharT* __fmt,
@@ -6781,7 +6864,7 @@ regex_replace(const basic_string<_CharT, _ST, _SA>& __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT, _ST, _SA> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s.begin(), __s.end(), __e,
+    _VSTD::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
                         __fmt.c_str(), __flags);
     return __r;
 }
@@ -6794,7 +6877,7 @@ regex_replace(const basic_string<_CharT, _ST, _SA>& __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT, _ST, _SA> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s.begin(), __s.end(), __e,
+    _VSTD::regex_replace(std::back_inserter(__r), __s.begin(), __s.end(), __e,
                         __fmt, __flags);
     return __r;
 }
@@ -6808,7 +6891,7 @@ regex_replace(const _CharT* __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s,
+    _VSTD::regex_replace(std::back_inserter(__r), __s,
                         __s + char_traits<_CharT>::length(__s), __e,
                         __fmt.c_str(), __flags);
     return __r;
@@ -6823,7 +6906,7 @@ regex_replace(const _CharT* __s,
               regex_constants::match_flag_type __flags = regex_constants::match_default)
 {
     basic_string<_CharT> __r;
-    _VSTD::regex_replace(back_inserter(__r), __s,
+    _VSTD::regex_replace(std::back_inserter(__r), __s,
                         __s + char_traits<_CharT>::length(__s), __e,
                         __fmt, __flags);
     return __r;
@@ -6831,6 +6914,35 @@ regex_replace(const _CharT* __s,
 
 _LIBCPP_END_NAMESPACE_STD
 
+#if _LIBCPP_STD_VER >= 17
+_LIBCPP_BEGIN_NAMESPACE_STD
+namespace pmr {
+template <class _BidirT>
+using match_results = std::match_results<_BidirT, polymorphic_allocator<std::sub_match<_BidirT>>>;
+
+using cmatch  = match_results<const char*>;
+using smatch  = match_results<std::pmr::string::const_iterator>;
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+using wcmatch = match_results<const wchar_t*>;
+using wsmatch = match_results<std::pmr::wstring::const_iterator>;
+#endif
+} // namespace pmr
+_LIBCPP_END_NAMESPACE_STD
+#endif
+
 _LIBCPP_POP_MACROS
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <atomic>
+#  include <concepts>
+#  include <cstdlib>
+#  include <iosfwd>
+#  include <iterator>
+#  include <new>
+#  include <type_traits>
+#  include <typeinfo>
+#  include <utility>
+#endif
 
 #endif // _LIBCPP_REGEX

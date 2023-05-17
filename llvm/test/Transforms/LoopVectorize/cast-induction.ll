@@ -28,9 +28,9 @@ entry:
 
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep = getelementptr inbounds [2048 x i32], [2048 x i32]* @a, i64 0, i64 %iv
+  %gep = getelementptr inbounds [2048 x i32], ptr @a, i64 0, i64 %iv
   %iv.trunc = trunc i64 %iv to i32
-  store i32 %iv.trunc, i32* %gep, align 4
+  store i32 %iv.trunc, ptr %gep, align 4
   %iv.next = add i64 %iv, 1
   %iv.next.trunc = trunc i64 %iv.next to i32
   %exitcond = icmp eq i32 %iv.next.trunc, 1024

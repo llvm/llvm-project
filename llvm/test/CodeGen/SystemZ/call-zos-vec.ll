@@ -14,7 +14,7 @@ entry:
 ; CHECK: vaf 1, 1, 27
 ; CHECK: vaf 1, 1, 28
 ; CHECK: vaf 1, 1, 29
-; CHECK: vl  0, 2432(4), 4
+; CHECK: vl  0, 2304(4), 4
 ; CHECK: vaf 1, 1, 30
 ; CHECK: vaf 1, 1, 31
 ; CHECK: vaf 24, 1, 0

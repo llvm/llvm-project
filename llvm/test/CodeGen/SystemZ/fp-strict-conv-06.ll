@@ -32,7 +32,7 @@ define double @f2(i32 %i) #0 {
 }
 
 ; Check i32->f128.
-define void @f3(i32 %i, fp128 *%dst) #0 {
+define void @f3(i32 %i, ptr %dst) #0 {
 ; CHECK-LABEL: f3:
 ; CHECK: llgfr [[REGISTER:%r[0-5]]], %r2
 ; CHECK: cxgbr %f0, [[REGISTER]]
@@ -42,7 +42,7 @@ define void @f3(i32 %i, fp128 *%dst) #0 {
   %conv = call fp128 @llvm.experimental.constrained.uitofp.f128.i32(i32 %i,
                                                metadata !"round.dynamic",
                                                metadata !"fpexcept.strict") #0
-  store fp128 %conv, fp128 *%dst
+  store fp128 %conv, ptr %dst
   ret void
 }
 

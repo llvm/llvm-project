@@ -7,7 +7,7 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt -instrument %t.exe -relocs -o %t.out
+# RUN: llvm-bolt --instrument %t.exe --relocs -o %t.out
 
   .text
   .globl  main

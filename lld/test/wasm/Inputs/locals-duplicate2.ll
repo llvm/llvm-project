@@ -24,28 +24,28 @@ entry:
 }
 
 
-define i32* @get_global1B() {
+define ptr @get_global1B() {
 entry:
-  ret i32* @colliding_global1
+  ret ptr @colliding_global1
 }
-define i32* @get_global2B() {
+define ptr @get_global2B() {
 entry:
-  ret i32* @colliding_global2
+  ret ptr @colliding_global2
 }
-define i32* @get_global3B() {
+define ptr @get_global3B() {
 entry:
-  ret i32* @colliding_global3
+  ret ptr @colliding_global3
 }
 
-define i32 ()* @get_func1B() {
+define ptr @get_func1B() {
 entry:
-  ret i32 ()* @colliding_func1
+  ret ptr @colliding_func1
 }
-define i32 ()* @get_func2B() {
+define ptr @get_func2B() {
 entry:
-  ret i32 ()* @colliding_func2
+  ret ptr @colliding_func2
 }
-define i32 ()* @get_func3B() {
+define ptr @get_func3B() {
 entry:
-  ret i32 ()* @colliding_func3
+  ret ptr @colliding_func3
 }

@@ -15,7 +15,7 @@
 #include <cassert>
 #include <utility>
 
-template <size_t... I>
+template <std::size_t... I>
 constexpr void CreateTuple(std::index_sequence<I...>) {
   std::tuple<decltype(I)...> tuple(I...);
   assert(std::get<0>(tuple) == 0);

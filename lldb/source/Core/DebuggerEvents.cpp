@@ -7,9 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Core/DebuggerEvents.h"
+#include "lldb/Core/Debugger.h"
+#include "lldb/Core/Module.h"
 #include "llvm/Support/WithColor.h"
 
 using namespace lldb_private;
+using namespace lldb;
 
 template <typename T>
 static const T *GetEventDataFromEventImpl(const Event *event_ptr) {
@@ -20,17 +23,18 @@ static const T *GetEventDataFromEventImpl(const Event *event_ptr) {
   return nullptr;
 }
 
-ConstString ProgressEventData::GetFlavorString() {
-  static ConstString g_flavor("ProgressEventData");
-  return g_flavor;
+llvm::StringRef ProgressEventData::GetFlavorString() {
+  return "ProgressEventData";
 }
 
-ConstString ProgressEventData::GetFlavor() const {
+llvm::StringRef ProgressEventData::GetFlavor() const {
   return ProgressEventData::GetFlavorString();
 }
 
 void ProgressEventData::Dump(Stream *s) const {
-  s->Printf(" id = %" PRIu64 ", message = \"%s\"", m_id, m_message.c_str());
+  s->Printf(" id = %" PRIu64 ", title = \"%s\"", m_id, m_title.c_str());
+  if (!m_details.empty())
+    s->Printf(", details = \"%s\"", m_details.c_str());
   if (m_completed == 0 || m_completed == m_total)
     s->Printf(", type = %s", m_completed == 0 ? "start" : "end");
   else
@@ -46,8 +50,31 @@ ProgressEventData::GetEventDataFromEvent(const Event *event_ptr) {
   return GetEventDataFromEventImpl<ProgressEventData>(event_ptr);
 }
 
+StructuredData::DictionarySP
+ProgressEventData::GetAsStructuredData(const Event *event_ptr) {
+  const ProgressEventData *progress_data =
+      ProgressEventData::GetEventDataFromEvent(event_ptr);
+
+  if (!progress_data)
+    return {};
+
+  auto dictionary_sp = std::make_shared<StructuredData::Dictionary>();
+  dictionary_sp->AddStringItem("title", progress_data->GetTitle());
+  dictionary_sp->AddStringItem("details", progress_data->GetDetails());
+  dictionary_sp->AddStringItem("message", progress_data->GetMessage());
+  dictionary_sp->AddIntegerItem("progress_id", progress_data->GetID());
+  dictionary_sp->AddIntegerItem("completed", progress_data->GetCompleted());
+  dictionary_sp->AddIntegerItem("total", progress_data->GetTotal());
+  dictionary_sp->AddBooleanItem("debugger_specific",
+                                progress_data->IsDebuggerSpecific());
+
+  return dictionary_sp;
+}
+
 llvm::StringRef DiagnosticEventData::GetPrefix() const {
   switch (m_type) {
+  case Type::Info:
+    return "info";
   case Type::Warning:
     return "warning";
   case Type::Error:
@@ -66,16 +93,64 @@ void DiagnosticEventData::Dump(Stream *s) const {
   s->Flush();
 }
 
-ConstString DiagnosticEventData::GetFlavorString() {
-  static ConstString g_flavor("DiagnosticEventData");
-  return g_flavor;
+llvm::StringRef DiagnosticEventData::GetFlavorString() {
+  return "DiagnosticEventData";
 }
 
-ConstString DiagnosticEventData::GetFlavor() const {
+llvm::StringRef DiagnosticEventData::GetFlavor() const {
   return DiagnosticEventData::GetFlavorString();
 }
 
 const DiagnosticEventData *
 DiagnosticEventData::GetEventDataFromEvent(const Event *event_ptr) {
   return GetEventDataFromEventImpl<DiagnosticEventData>(event_ptr);
+}
+
+StructuredData::DictionarySP
+DiagnosticEventData::GetAsStructuredData(const Event *event_ptr) {
+  const DiagnosticEventData *diagnostic_data =
+      DiagnosticEventData::GetEventDataFromEvent(event_ptr);
+
+  if (!diagnostic_data)
+    return {};
+
+  auto dictionary_sp = std::make_shared<StructuredData::Dictionary>();
+  dictionary_sp->AddStringItem("message", diagnostic_data->GetMessage());
+  dictionary_sp->AddStringItem("type", diagnostic_data->GetPrefix());
+  dictionary_sp->AddBooleanItem("debugger_specific",
+                                diagnostic_data->IsDebuggerSpecific());
+  return dictionary_sp;
+}
+
+llvm::StringRef SymbolChangeEventData::GetFlavorString() {
+  return "SymbolChangeEventData";
+}
+
+llvm::StringRef SymbolChangeEventData::GetFlavor() const {
+  return SymbolChangeEventData::GetFlavorString();
+}
+
+const SymbolChangeEventData *
+SymbolChangeEventData::GetEventDataFromEvent(const Event *event_ptr) {
+  return GetEventDataFromEventImpl<SymbolChangeEventData>(event_ptr);
+}
+
+void SymbolChangeEventData::DoOnRemoval(Event *event_ptr) {
+  DebuggerSP debugger_sp(m_debugger_wp.lock());
+  if (!debugger_sp)
+    return;
+
+  for (TargetSP target_sp : debugger_sp->GetTargetList().Targets()) {
+    if (ModuleSP module_sp =
+            target_sp->GetImages().FindModule(m_module_spec.GetUUID())) {
+      {
+        std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
+        if (!module_sp->GetSymbolFileFileSpec())
+          module_sp->SetSymbolFileFileSpec(m_module_spec.GetSymbolFileSpec());
+      }
+      ModuleList module_list;
+      module_list.Append(module_sp);
+      target_sp->SymbolsDidLoad(module_list);
+    }
+  }
 }

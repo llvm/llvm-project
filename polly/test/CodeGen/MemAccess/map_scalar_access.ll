@@ -1,7 +1,7 @@
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop-postfix=transformed -polly-print-import-jscop -disable-output < %s | FileCheck %s
 ; RUN: opt %loadPolly -polly-stmt-granularity=bb -polly-import-jscop-postfix=transformed -polly-import-jscop -polly-codegen -S < %s | FileCheck %s --check-prefix=CODEGEN
 
-define void @map_scalar_access(double* noalias nonnull %A) {
+define void @map_scalar_access(ptr noalias nonnull %A) {
 entry:
   br label %outer.for
 
@@ -26,8 +26,8 @@ outer.for:
       br label %reduction.for
 
     reduction.exit:
-      %A_idx = getelementptr inbounds double, double* %A, i32 %j
-      store double %phi, double* %A_idx
+      %A_idx = getelementptr inbounds double, ptr %A, i32 %j
+      store double %phi, ptr %A_idx
       br label %outer.inc
 
 
@@ -115,35 +115,35 @@ return:
 ; CHECK-NEXT: New access function '{ Stmt_reduction_exit[i0] -> MemRef_A[i0] }' detected in JSCOP file
 
 ; CODEGEN:      polly.stmt.outer.for:
-; CODEGEN-NEXT:   %polly.access.A[[R0:[0-9]*]] = getelementptr double, double* %A, i64 %polly.indvar
-; CODEGEN-NEXT:   store double 0.000000e+00, double* %polly.access.A[[R0]]
+; CODEGEN-NEXT:   %polly.access.A[[R0:[0-9]*]] = getelementptr double, ptr %A, i64 %polly.indvar
+; CODEGEN-NEXT:   store double 0.000000e+00, ptr %polly.access.A[[R0]]
 ; CODEGEN-NEXT:   br label %polly.cond
 
 ; CODEGEN:      polly.stmt.reduction.exit:
-; CODEGEN-NEXT:   %polly.access.A[[R1:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   %polly.access.A[[R1]].reload = load double, double* %polly.access.A[[R1]]
-; CODEGEN-NEXT:   %polly.access.A[[R2:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   store double %polly.access.A[[R1]].reload, double* %polly.access.A[[R2]]
+; CODEGEN-NEXT:   %polly.access.A[[R1:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   %polly.access.A[[R1]].reload = load double, ptr %polly.access.A[[R1]]
+; CODEGEN-NEXT:   %polly.access.A[[R2:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   store double %polly.access.A[[R1]].reload, ptr %polly.access.A[[R2]]
 ; CODEGEN-NEXT:   br label %polly.merge
 
 ; CODEGEN:      polly.stmt.reduction.for:
-; CODEGEN-NEXT:   %polly.access.A[[R3:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   %polly.access.A[[R3]].reload = load double, double* %polly.access.A[[R3]]
-; CODEGEN-NEXT:   %polly.access.A[[R4:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   store double %polly.access.A[[R3]].reload, double* %polly.access.A[[R4]]
+; CODEGEN-NEXT:   %polly.access.A[[R3:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   %polly.access.A[[R3]].reload = load double, ptr %polly.access.A[[R3]]
+; CODEGEN-NEXT:   %polly.access.A[[R4:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   store double %polly.access.A[[R3]].reload, ptr %polly.access.A[[R4]]
 ; CODEGEN-NEXT:   br label %polly.cond9
 
 ; CODEGEN:      polly.stmt.body:
-; CODEGEN-NEXT:   %polly.access.A[[R5:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   %polly.access.A[[R5]].reload = load double, double* %polly.access.A[[R5]]
+; CODEGEN-NEXT:   %polly.access.A[[R5:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   %polly.access.A[[R5]].reload = load double, ptr %polly.access.A[[R5]]
 ; CODEGEN-NEXT:   %p_add = fadd double %polly.access.A13.reload, 4.200000e+00
-; CODEGEN-NEXT:   %polly.access.A[[R6:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   store double %p_add, double* %polly.access.A[[R6]]
+; CODEGEN-NEXT:   %polly.access.A[[R6:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   store double %p_add, ptr %polly.access.A[[R6]]
 ; CODEGEN-NEXT:   br label %polly.stmt.reduction.inc
 
 ; CODEGEN:      polly.stmt.reduction.inc:
-; CODEGEN-NEXT:   %polly.access.A[[R7:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   %polly.access.A[[R7]].reload = load double, double* %polly.access.A[[R7]]
-; CODEGEN-NEXT:   %polly.access.A[[R8:[0-9]*]] = getelementptr double, double* %A, i64 0
-; CODEGEN-NEXT:   store double %polly.access.A[[R7]].reload, double* %polly.access.A[[R8]]
+; CODEGEN-NEXT:   %polly.access.A[[R7:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   %polly.access.A[[R7]].reload = load double, ptr %polly.access.A[[R7]]
+; CODEGEN-NEXT:   %polly.access.A[[R8:[0-9]*]] = getelementptr double, ptr %A, i64 0
+; CODEGEN-NEXT:   store double %polly.access.A[[R7]].reload, ptr %polly.access.A[[R8]]
 ; CODEGEN-NEXT:   br label %polly.merge10

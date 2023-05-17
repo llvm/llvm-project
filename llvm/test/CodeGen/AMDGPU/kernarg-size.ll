@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=DOORBELL %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=4 < %s | FileCheck --check-prefix=DOORBELL %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=3 < %s | FileCheck --check-prefix=HSA %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck --check-prefix=DOORBELL %s
+; RUN: sed 's/CODE_OBJECT_VERSION/400/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck --check-prefix=DOORBELL %s
+; RUN: sed 's/CODE_OBJECT_VERSION/300/g' %s | llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 | FileCheck --check-prefix=HSA %s
 
 declare void @llvm.trap() #0
 
@@ -20,10 +20,13 @@ declare void @llvm.trap() #0
 ; DOORBELL-NEXT:     .amdhsa_user_sgpr_private_segment_buffer 1
 ; DOORBELL:      .end_amdhsa_kernel
 
-define amdgpu_kernel void @trap(i32 addrspace(1)* nocapture readonly %arg0) {
-  store volatile i32 1, i32 addrspace(1)* %arg0
+define amdgpu_kernel void @trap(ptr addrspace(1) nocapture readonly %arg0) {
+  store volatile i32 1, ptr addrspace(1) %arg0
   call void @llvm.trap()
   unreachable
-  store volatile i32 2, i32 addrspace(1)* %arg0
+  store volatile i32 2, ptr addrspace(1) %arg0
   ret void
 }
+
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 CODE_OBJECT_VERSION}

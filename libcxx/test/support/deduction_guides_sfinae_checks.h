@@ -9,13 +9,34 @@
 #ifndef TEST_SUPPORT_DEDUCTION_GUIDES_SFINAE_CHECKS_H
 #define TEST_SUPPORT_DEDUCTION_GUIDES_SFINAE_CHECKS_H
 
+#include <cstddef>
 #include <functional>
 #include <initializer_list>
+#include <iterator>
 #include <memory>
 #include <type_traits>
 #include <utility>
 
 #include "test_macros.h"
+#if TEST_STD_VER >= 23
+#include "almost_satisfies_types.h"
+#endif
+
+#if TEST_STD_VER >= 23
+
+template <class T>
+struct RangeT {
+  T* begin();
+  T* end();
+};
+static_assert(std::ranges::input_range<RangeT<int>>);
+
+template <class T>
+using BadRangeT = InputRangeNotDerivedFromGeneric<T>;
+static_assert(std::ranges::range<BadRangeT<int>>);
+static_assert(!std::ranges::input_range<BadRangeT<int>>);
+
+#endif
 
 // `SFINAEs_away` template variable checks whether the template arguments for
 // a given template class `Instantiated` can be deduced from the given
@@ -32,17 +53,20 @@ template<template<typename ...> class Instantiated, class ...CtrArgs>
 constexpr bool SFINAEs_away =
     decltype(SFINAEs_away_impl<Instantiated, CtrArgs...>(0))::value;
 
+struct Empty {};
+
 // For sequence containers the deduction guides should be SFINAE'd away when
 // given:
 // - "bad" input iterators (that is, a type not qualifying as an input
 //   iterator);
-// - a bad allocator.
-template<template<typename ...> class Container, typename InstantiatedContainer>
+// - a bad allocator;
+// - a range not satisfying the `input_range` concept.
+template<template<typename ...> class Container, typename InstantiatedContainer, typename BadAlloc = Empty>
 constexpr void SequenceContainerDeductionGuidesSfinaeAway() {
-  using Alloc = std::allocator<int>;
-  using Iter = int*;
+  using T = typename InstantiatedContainer::value_type;
+  using Alloc = std::allocator<T>;
+  using Iter = T*;
 
-  struct BadAlloc {};
   // Note: the only requirement in the Standard is that integral types cannot be
   // considered input iterators; however, this doesn't work for sequence
   // containers because they have constructors of the form `(size_type count,
@@ -68,6 +92,20 @@ constexpr void SequenceContainerDeductionGuidesSfinaeAway() {
   //
   // Cannot deduce from (alloc)
   static_assert(SFINAEs_away<Container, Alloc>);
+
+#if TEST_STD_VER >= 23
+  using BadRange = BadRangeT<T>;
+
+  // (from_range, range)
+  //
+  // Cannot deduce from (BAD_range)
+  static_assert(SFINAEs_away<Container, std::from_range_t, BadRange>);
+
+  // (from_range, range, alloc)
+  //
+  // Cannot deduce from (range, BAD_alloc)
+  static_assert(SFINAEs_away<Container, std::from_range_t, RangeT<int>, BadAlloc>);
+#endif
 }
 
 // For associative containers the deduction guides should be SFINAE'd away when
@@ -177,30 +215,30 @@ constexpr void UnorderedContainerDeductionGuidesSfinaeAway() {
   // (iter, iter, buckets)
   //
   // Cannot deduce from (BAD_iter, BAD_iter, buckets)
-  static_assert(SFINAEs_away<Container, BadIter, BadIter, size_t>);
-  LIBCPP_STATIC_ASSERT(SFINAEs_away<Container, OutputIter, OutputIter, size_t>);
+  static_assert(SFINAEs_away<Container, BadIter, BadIter, std::size_t>);
+  LIBCPP_STATIC_ASSERT(SFINAEs_away<Container, OutputIter, OutputIter, std::size_t>);
 
   // (iter, iter, buckets, hash)
   //
   // Cannot deduce from (BAD_iter, BAD_iter, buckets, hash)
-  static_assert(SFINAEs_away<Container, BadIter, BadIter, size_t, Hash>);
+  static_assert(SFINAEs_away<Container, BadIter, BadIter, std::size_t, Hash>);
   LIBCPP_STATIC_ASSERT(
-      SFINAEs_away<Container, OutputIter, OutputIter, size_t, Hash>);
+      SFINAEs_away<Container, OutputIter, OutputIter, std::size_t, Hash>);
   // Cannot deduce from (iter, iter, buckets, BAD_hash)
-  static_assert(SFINAEs_away<Container, Iter, Iter, size_t, BadHash>);
+  static_assert(SFINAEs_away<Container, Iter, Iter, std::size_t, BadHash>);
   // Note: (iter, iter, buckets, ALLOC_as_hash) is allowed -- it just calls
   // (iter, iter, buckets, alloc)
 
   // (iter, iter, buckets, hash, pred)
   //
   // Cannot deduce from (BAD_iter, BAD_iter, buckets, hash, pred)
-  static_assert(SFINAEs_away<Container, BadIter, BadIter, size_t, Hash, Pred>);
+  static_assert(SFINAEs_away<Container, BadIter, BadIter, std::size_t, Hash, Pred>);
   LIBCPP_STATIC_ASSERT(
-      SFINAEs_away<Container, OutputIter, OutputIter, size_t, Hash, Pred>);
+      SFINAEs_away<Container, OutputIter, OutputIter, std::size_t, Hash, Pred>);
   // Cannot deduce from (iter, iter, buckets, BAD_hash, pred)
-  static_assert(SFINAEs_away<Container, Iter, Iter, size_t, BadHash, Pred>);
+  static_assert(SFINAEs_away<Container, Iter, Iter, std::size_t, BadHash, Pred>);
   // Cannot deduce from (iter, iter, buckets, ALLOC_as_hash, pred)
-  static_assert(SFINAEs_away<Container, Iter, Iter, size_t, AllocAsHash, Pred>);
+  static_assert(SFINAEs_away<Container, Iter, Iter, std::size_t, AllocAsHash, Pred>);
   // Note: (iter, iter, buckets, hash, ALLOC_as_pred) is allowed -- it just
   // calls (iter, iter, buckets, hash, alloc)
 
@@ -208,28 +246,28 @@ constexpr void UnorderedContainerDeductionGuidesSfinaeAway() {
   //
   // Cannot deduce from (BAD_iter, BAD_iter, buckets, hash, pred, alloc)
   static_assert(
-      SFINAEs_away<Container, BadIter, BadIter, size_t, Hash, Pred, Alloc>);
+      SFINAEs_away<Container, BadIter, BadIter, std::size_t, Hash, Pred, Alloc>);
   LIBCPP_STATIC_ASSERT(SFINAEs_away<Container, OutputIter, OutputIter,
-      size_t, Hash, Pred, Alloc>);
+      std::size_t, Hash, Pred, Alloc>);
   // Cannot deduce from (iter, iter, buckets, BAD_hash, pred, alloc)
   static_assert(
-      SFINAEs_away<Container, Iter, Iter, size_t, BadHash, Pred, Alloc>);
+      SFINAEs_away<Container, Iter, Iter, std::size_t, BadHash, Pred, Alloc>);
   // Cannot deduce from (iter, iter, buckets, ALLOC_as_hash, pred, alloc)
   static_assert(
-      SFINAEs_away<Container, Iter, Iter, size_t, AllocAsHash, Pred, Alloc>);
+      SFINAEs_away<Container, Iter, Iter, std::size_t, AllocAsHash, Pred, Alloc>);
   // Cannot deduce from (iter, iter, buckets, hash, ALLOC_as_pred, alloc)
   static_assert(
-      SFINAEs_away<Container, Iter, Iter, size_t, Hash, AllocAsPred, Alloc>);
+      SFINAEs_away<Container, Iter, Iter, std::size_t, Hash, AllocAsPred, Alloc>);
   // Cannot deduce from (iter, iter, buckets, hash, pred, BAD_alloc)
   static_assert(
-      SFINAEs_away<Container, Iter, Iter, size_t, Hash, Pred, BadAlloc>);
+      SFINAEs_away<Container, Iter, Iter, std::size_t, Hash, Pred, BadAlloc>);
 
   // (iter, iter, buckets, alloc)
   //
   // Cannot deduce from (BAD_iter, BAD_iter, buckets, alloc)
-  static_assert(SFINAEs_away<Container, BadIter, BadIter, size_t, Alloc>);
+  static_assert(SFINAEs_away<Container, BadIter, BadIter, std::size_t, Alloc>);
   LIBCPP_STATIC_ASSERT(
-      SFINAEs_away<Container, OutputIter, OutputIter, size_t, Alloc>);
+      SFINAEs_away<Container, OutputIter, OutputIter, std::size_t, Alloc>);
   // Note: (iter, iter, buckets, BAD_alloc) is interpreted as (iter, iter,
   // buckets, hash), which is valid because the only requirement for the hash
   // parameter is that it's not integral.
@@ -245,14 +283,14 @@ constexpr void UnorderedContainerDeductionGuidesSfinaeAway() {
   // (iter, iter, buckets, hash, alloc)
   //
   // Cannot deduce from (BAD_iter, BAD_iter, buckets, hash, alloc)
-  static_assert(SFINAEs_away<Container, BadIter, BadIter, size_t, Hash, Alloc>);
+  static_assert(SFINAEs_away<Container, BadIter, BadIter, std::size_t, Hash, Alloc>);
   LIBCPP_STATIC_ASSERT(
-      SFINAEs_away<Container, OutputIter, OutputIter, size_t, Hash, Alloc>);
+      SFINAEs_away<Container, OutputIter, OutputIter, std::size_t, Hash, Alloc>);
   // Cannot deduce from (iter, iter, buckets, BAD_hash, alloc)
-  static_assert(SFINAEs_away<Container, Iter, Iter, size_t, BadHash, Alloc>);
+  static_assert(SFINAEs_away<Container, Iter, Iter, std::size_t, BadHash, Alloc>);
   // Cannot deduce from (iter, iter, buckets, ALLOC_as_hash, alloc)
   static_assert(
-      SFINAEs_away<Container, Iter, Iter, size_t, AllocAsHash, Alloc>);
+      SFINAEs_away<Container, Iter, Iter, std::size_t, AllocAsHash, Alloc>);
   // Note: (iter, iter, buckets, hash, BAD_alloc) is interpreted as (iter, iter,
   // buckets, hash, pred), which is valid because there are no requirements for
   // the predicate.
@@ -260,16 +298,16 @@ constexpr void UnorderedContainerDeductionGuidesSfinaeAway() {
   // (init_list, buckets, hash)
   //
   // Cannot deduce from (init_list, buckets, BAD_hash)
-  static_assert(SFINAEs_away<Container, InitList, size_t, BadHash>);
+  static_assert(SFINAEs_away<Container, InitList, std::size_t, BadHash>);
   // Note: (init_list, buckets, ALLOC_as_hash) is interpreted as (init_list,
   // buckets, alloc), which is valid.
 
   // (init_list, buckets, hash, pred)
   //
   // Cannot deduce from (init_list, buckets, BAD_hash, pred)
-  static_assert(SFINAEs_away<Container, InitList, size_t, BadHash, Pred>);
+  static_assert(SFINAEs_away<Container, InitList, std::size_t, BadHash, Pred>);
   // Cannot deduce from (init_list, buckets, ALLOC_as_hash, pred)
-  static_assert(SFINAEs_away<Container, InitList, size_t, AllocAsHash, Pred>);
+  static_assert(SFINAEs_away<Container, InitList, std::size_t, AllocAsHash, Pred>);
   // Note: (init_list, buckets, hash, ALLOC_as_pred) is interpreted as
   // (init_list, buckets, hash, alloc), which is valid.
 
@@ -277,16 +315,16 @@ constexpr void UnorderedContainerDeductionGuidesSfinaeAway() {
   //
   // Cannot deduce from (init_list, buckets, BAD_hash, pred, alloc)
   static_assert(
-      SFINAEs_away<Container, InitList, size_t, BadHash, Pred, Alloc>);
+      SFINAEs_away<Container, InitList, std::size_t, BadHash, Pred, Alloc>);
   // Cannot deduce from (init_list, buckets, ALLOC_as_hash, pred, alloc)
   static_assert(
-      SFINAEs_away<Container, InitList, size_t, AllocAsHash, Pred, Alloc>);
+      SFINAEs_away<Container, InitList, std::size_t, AllocAsHash, Pred, Alloc>);
   // Cannot deduce from (init_list, buckets, hash, ALLOC_as_pred, alloc)
   static_assert(
-      SFINAEs_away<Container, InitList, size_t, Hash, AllocAsPred, Alloc>);
+      SFINAEs_away<Container, InitList, std::size_t, Hash, AllocAsPred, Alloc>);
   // Cannot deduce from (init_list, buckets, hash, pred, BAD_alloc)
   static_assert(
-      SFINAEs_away<Container, InitList, size_t, Hash, Pred, BadAlloc>);
+      SFINAEs_away<Container, InitList, std::size_t, Hash, Pred, BadAlloc>);
 
   // (init_list, buckets, alloc)
   //
@@ -297,9 +335,9 @@ constexpr void UnorderedContainerDeductionGuidesSfinaeAway() {
   // (init_list, buckets, hash, alloc)
   //
   // Cannot deduce from (init_list, buckets, BAD_hash, alloc)
-  static_assert(SFINAEs_away<Container, InitList, size_t, BadHash, Alloc>);
+  static_assert(SFINAEs_away<Container, InitList, std::size_t, BadHash, Alloc>);
   // Cannot deduce from (init_list, buckets, ALLOC_as_hash, alloc)
-  static_assert(SFINAEs_away<Container, InitList, size_t, AllocAsHash, Alloc>);
+  static_assert(SFINAEs_away<Container, InitList, std::size_t, AllocAsHash, Alloc>);
 
   // (init_list, alloc)
   //

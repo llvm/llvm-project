@@ -62,11 +62,11 @@ define void @foo(i1 zeroext, i32) nounwind {
   %4 = phi i32 [ %8, %3 ], [ %1, %2 ]
   %5 = add nsw i32 %4, 1
   %6 = sext i32 %5 to i64
-  %7 = getelementptr inbounds %struct.A, %struct.A* null, i64 %6
-  %8 = tail call i32 @bar(%struct.A* %7)
+  %7 = getelementptr inbounds %struct.A, ptr null, i64 %6
+  %8 = tail call i32 @bar(ptr %7)
   br label %3
 
   ret void
 }
 
-declare i32 @bar(%struct.A*)
+declare i32 @bar(ptr)

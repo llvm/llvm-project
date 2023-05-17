@@ -1,5 +1,5 @@
-; RUN: opt -S -loop-rotate < %s | FileCheck --check-prefix=FULL %s
-; RUN: opt -S -loop-rotate -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
+; RUN: opt -S -passes=loop-rotate < %s | FileCheck --check-prefix=FULL %s
+; RUN: opt -S -passes=loop-rotate -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' < %s | FileCheck --check-prefix=FULL %s
 ; RUN: opt -S -passes='require<targetir>,require<assumptions>,loop(loop-rotate)' -rotation-prepare-for-lto < %s | FileCheck --check-prefix=PREPARE %s
 
@@ -9,7 +9,6 @@ define void @test_prepare_for_lto() {
 ; FULL-LABEL: @test_prepare_for_lto(
 ; FULL-NEXT:  entry:
 ; FULL-NEXT:    %array = alloca [20 x i32], align 16
-; FULL-NEXT:    %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
 ; FULL-NEXT:    call void @may_be_inlined()
 ; FULL-NEXT:    br label %for.body
 ;
@@ -25,12 +24,11 @@ entry:
 for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   %cmp = icmp slt i32 %i.0, 100
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
   call void @may_be_inlined()
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 0, i32* %arrayidx, align 16
+  store i32 0, ptr %array, align 16
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 
@@ -49,14 +47,12 @@ define void @test_prepare_for_lto_intrinsic() !dbg !7 {
 ; FULL-NEXT:  entry:
 ; FULL-NEXT:    %array = alloca [20 x i32], align 16
 ; FULL-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !DIExpression()), !dbg !13
-; FULL-NEXT:    %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
 ; FULL-NEXT:    br label %for.body
 ;
 ; PREPARE-LABEL: @test_prepare_for_lto_intrinsic(
 ; PREPARE-NEXT:  entry:
 ; PREPARE-NEXT:    %array = alloca [20 x i32], align 16
 ; PREPARE-NEXT:    call void @llvm.dbg.value(metadata i32 0, metadata !12, metadata !DIExpression()), !dbg !13
-; PREPARE-NEXT:    %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
 ; PREPARE-NEXT:    br label %for.body
 ;
 entry:
@@ -67,11 +63,10 @@ for.cond:                                         ; preds = %for.body, %entry
   %i.0 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
   call void @llvm.dbg.value(metadata i32 %i.0, metadata !12, metadata !DIExpression()), !dbg !13
   %cmp = icmp slt i32 %i.0, 100
-  %arrayidx = getelementptr inbounds [20 x i32], [20 x i32]* %array, i64 0, i64 0
   br i1 %cmp, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 0, i32* %arrayidx, align 16
+  store i32 0, ptr %array, align 16
   %inc = add nsw i32 %i.0, 1
   br label %for.cond
 

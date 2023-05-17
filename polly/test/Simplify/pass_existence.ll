@@ -6,7 +6,7 @@
 ; for (int j = 0; j < n; j += 1)
 ;   A[0] = 0.0;
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -16,7 +16,7 @@ for:
   br i1 %j.cmp, label %body, label %exit
 
     body:
-      store double 0.0, double* %A
+      store double 0.0, ptr %A
       br label %inc
 
 inc:

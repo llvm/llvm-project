@@ -12,6 +12,7 @@
 #include "atomic_helpers.h"
 #include "list.h"
 #include "mutex.h"
+#include "thread_annotations.h"
 
 #include <string.h>
 
@@ -60,19 +61,19 @@ class GlobalStats : public LocalStats {
 public:
   void init() { LocalStats::init(); }
 
-  void link(LocalStats *S) {
+  void link(LocalStats *S) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
     StatsList.push_back(S);
   }
 
-  void unlink(LocalStats *S) {
+  void unlink(LocalStats *S) EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
     StatsList.remove(S);
     for (uptr I = 0; I < StatCount; I++)
       add(static_cast<StatType>(I), S->get(static_cast<StatType>(I)));
   }
 
-  void get(uptr *S) const {
+  void get(uptr *S) const EXCLUDES(Mutex) {
     ScopedLock L(Mutex);
     for (uptr I = 0; I < StatCount; I++)
       S[I] = LocalStats::get(static_cast<StatType>(I));
@@ -85,15 +86,15 @@ public:
       S[I] = static_cast<sptr>(S[I]) >= 0 ? S[I] : 0;
   }
 
-  void lock() { Mutex.lock(); }
-  void unlock() { Mutex.unlock(); }
+  void lock() ACQUIRE(Mutex) { Mutex.lock(); }
+  void unlock() RELEASE(Mutex) { Mutex.unlock(); }
 
-  void disable() { lock(); }
-  void enable() { unlock(); }
+  void disable() ACQUIRE(Mutex) { lock(); }
+  void enable() RELEASE(Mutex) { unlock(); }
 
 private:
   mutable HybridMutex Mutex;
-  DoublyLinkedList<LocalStats> StatsList;
+  DoublyLinkedList<LocalStats> StatsList GUARDED_BY(Mutex);
 };
 
 } // namespace scudo

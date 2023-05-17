@@ -11,16 +11,16 @@ declare i32 @llvm.amdgcn.workitem.id.x()
 ; GFX9:   v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}} clamp{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_clamp(
-    i32 addrspace(1)* %r,
-    <2 x i16> addrspace(1)* %a,
-    <2 x i16> addrspace(1)* %b,
-    i32 addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x i16>, <2 x i16> addrspace(1)* %a
-  %b.val = load <2 x i16>, <2 x i16> addrspace(1)* %b
-  %c.val = load i32, i32 addrspace(1)* %c
+  %a.val = load <2 x i16>, ptr addrspace(1) %a
+  %b.val = load <2 x i16>, ptr addrspace(1) %b
+  %c.val = load i32, ptr addrspace(1) %c
   %r.val = call i32 @llvm.amdgcn.udot2(<2 x i16> %a.val, <2 x i16> %b.val, i32 %c.val, i1 1)
-  store i32 %r.val, i32 addrspace(1)* %r
+  store i32 %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -28,16 +28,16 @@ entry:
 ; GFX9:   v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}, v{{[0-9]+}}{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, s{{[0-9]+}}, s{{[0-9]+}}, v{{[0-9]+}}{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_no_clamp(
-    i32 addrspace(1)* %r,
-    <2 x i16> addrspace(1)* %a,
-    <2 x i16> addrspace(1)* %b,
-    i32 addrspace(1)* %c) {
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %a,
+    ptr addrspace(1) %b,
+    ptr addrspace(1) %c) {
 entry:
-  %a.val = load <2 x i16>, <2 x i16> addrspace(1)* %a
-  %b.val = load <2 x i16>, <2 x i16> addrspace(1)* %b
-  %c.val = load i32, i32 addrspace(1)* %c
+  %a.val = load <2 x i16>, ptr addrspace(1) %a
+  %b.val = load <2 x i16>, ptr addrspace(1) %b
+  %c.val = load i32, ptr addrspace(1) %c
   %r.val = call i32 @llvm.amdgcn.udot2(<2 x i16> %a.val, <2 x i16> %b.val, i32 %c.val, i1 0)
-  store i32 %r.val, i32 addrspace(1)* %r
+  store i32 %r.val, ptr addrspace(1) %r
   ret void
 }
 
@@ -46,18 +46,18 @@ entry:
 ; GFX940: v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}}{{$}}
 ; GFX10:  v_dot2_u32_u16 v{{[0-9]+}}, 1, v{{[0-9]+}}, s{{[0-9]+}} op_sel:[0,1,0] op_sel_hi:[0,0,1]{{$}}
 define amdgpu_kernel void @test_llvm_amdgcn_udot2_op_sel(
-    i32 addrspace(1)* %r,
-    <2 x i16> addrspace(1)* %b,
+    ptr addrspace(1) %r,
+    ptr addrspace(1) %b,
     i32 %c) {
 entry:
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
-  %b.gep = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %b, i32 %id
-  %b.val = load <2 x i16>, <2 x i16> addrspace(1)* %b.gep
+  %b.gep = getelementptr inbounds <2 x i16>, ptr addrspace(1) %b, i32 %id
+  %b.val = load <2 x i16>, ptr addrspace(1) %b.gep
   %b.elt0 = extractelement <2 x i16> %b.val, i32 0
   %b.elt1 = extractelement <2 x i16> %b.val, i32 1
   %b0 = insertelement <2 x i16> undef, i16 %b.elt1, i32 0
   %b1 = insertelement <2 x i16> %b0, i16 %b.elt0, i32 1
   %r.val = call i32 @llvm.amdgcn.udot2(<2 x i16> <i16 1, i16 1>, <2 x i16> %b1, i32 %c, i1 0)
-  store i32 %r.val, i32 addrspace(1)* %r
+  store i32 %r.val, ptr addrspace(1) %r
   ret void
 }

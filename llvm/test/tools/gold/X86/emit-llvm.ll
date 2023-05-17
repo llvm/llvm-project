@@ -61,7 +61,7 @@ define hidden void @f2() {
   ret void
 }
 
-@llvm.used = appending global [1 x i8*] [ i8* bitcast (void ()* @f2 to i8*)]
+@llvm.used = appending global [1 x ptr] [ ptr @f2]
 
 ; CHECK-DAG: define void @f3()
 ; OPT-DAG: define void @f3()
@@ -81,21 +81,21 @@ define linkonce_odr void @f4() local_unnamed_addr {
 define linkonce_odr void @f5() {
   ret void
 }
-@g9 = global void()* @f5
+@g9 = global ptr @f5
 
 ; CHECK-DAG: define internal void @f6() unnamed_addr
 ; OPT-DAG: define internal void @f6() unnamed_addr
 define linkonce_odr void @f6() unnamed_addr {
   ret void
 }
-@g10 = global void()* @f6
+@g10 = global ptr @f6
 
-define i32* @f7() {
-  ret i32* @g7
+define ptr @f7() {
+  ret ptr @g7
 }
 
-define i32* @f8() {
-  ret i32* @g8
+define ptr @f8() {
+  ret ptr @g8
 }
 
 ;; f9 is not internalized because it is in the llvm.compiler.used list.
@@ -105,7 +105,7 @@ define hidden void @f9() {
   ret void
 }
 
-@llvm.compiler.used = appending global [1 x i8*] [ i8* bitcast (void ()* @f9 to i8*)]
+@llvm.compiler.used = appending global [1 x ptr] [ ptr @f9]
 
 ; RES: .o,f1,pl{{$}}
 ; RES: .o,f2,pl{{$}}

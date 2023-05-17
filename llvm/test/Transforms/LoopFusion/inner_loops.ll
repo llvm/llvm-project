@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s 2>&1 | FileCheck %s
 
 @A = common global [1024 x [1024 x i32]] zeroinitializer, align 16
 @B = common global [1024 x [1024 x i32]] zeroinitializer, align 16
@@ -48,8 +48,8 @@ bb14:                                             ; preds = %bb12
   %tmp17 = mul nsw i32 %tmp, %tmp16
   %tmp18 = trunc i64 %indvars.iv6 to i32
   %tmp19 = srem i32 %tmp17, %tmp18
-  %tmp20 = getelementptr inbounds [1024 x [1024 x i32]], [1024 x [1024 x i32]]* @A, i64 0, i64 %indvars.iv6, i64 %indvars.iv
-  store i32 %tmp19, i32* %tmp20, align 4
+  %tmp20 = getelementptr inbounds [1024 x [1024 x i32]], ptr @A, i64 0, i64 %indvars.iv6, i64 %indvars.iv
+  store i32 %tmp19, ptr %tmp20, align 4
   br label %bb21
 
 bb21:                                             ; preds = %bb14
@@ -68,8 +68,8 @@ bb25:                                             ; preds = %bb23
   %tmp29 = mul nsw i32 %tmp26, %tmp28
   %tmp30 = trunc i64 %indvars.iv6 to i32
   %tmp31 = srem i32 %tmp29, %tmp30
-  %tmp32 = getelementptr inbounds [1024 x [1024 x i32]], [1024 x [1024 x i32]]* @B, i64 0, i64 %indvars.iv6, i64 %indvars.iv3
-  store i32 %tmp31, i32* %tmp32, align 4
+  %tmp32 = getelementptr inbounds [1024 x [1024 x i32]], ptr @B, i64 0, i64 %indvars.iv6, i64 %indvars.iv3
+  store i32 %tmp31, ptr %tmp32, align 4
   br label %bb33
 
 bb33:                                             ; preds = %bb25

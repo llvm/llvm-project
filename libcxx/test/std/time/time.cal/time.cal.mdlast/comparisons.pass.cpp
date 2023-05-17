@@ -29,16 +29,16 @@ int main(int, char**)
     using month          = std::chrono::month;
     using month_day_last = std::chrono::month_day_last;
 
-    AssertComparisons6AreNoexcept<month_day_last>();
-    AssertComparisons6ReturnBool<month_day_last>();
+    AssertComparisonsAreNoexcept<month_day_last>();
+    AssertComparisonsReturnBool<month_day_last>();
 
-    static_assert( testComparisons6Values<month_day_last>(month{1}, month{1}), "");
-    static_assert( testComparisons6Values<month_day_last>(month{1}, month{2}), "");
+    static_assert( testComparisonsValues<month_day_last>(month{1}, month{1}), "");
+    static_assert( testComparisonsValues<month_day_last>(month{1}, month{2}), "");
 
     // same day, different months
     for (unsigned i = 1; i <= 12; ++i)
         for (unsigned j = 1; j <= 12; ++j)
-            assert(testComparisons6Values<month_day_last>(month{i}, month{j}));
+            assert(testComparisonsValues<month_day_last>(month{i}, month{j}));
 
     return 0;
 }

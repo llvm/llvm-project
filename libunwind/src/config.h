@@ -115,7 +115,7 @@
 #if defined(__i386__) || defined(__x86_64__) || defined(__powerpc__) ||        \
     (!defined(__APPLE__) && defined(__arm__)) || defined(__aarch64__) ||       \
     defined(__mips__) || defined(__riscv) || defined(__hexagon__) ||           \
-    defined(__sparc__) || defined(__s390x__)
+    defined(__sparc__) || defined(__s390x__) || defined(__loongarch__)
 #if !defined(_LIBUNWIND_BUILD_SJLJ_APIS)
 #define _LIBUNWIND_BUILD_ZERO_COST_APIS
 #endif
@@ -162,10 +162,14 @@
 #define _LIBUNWIND_LOG0(msg)
 #define _LIBUNWIND_LOG(msg, ...)
 #else
-#define _LIBUNWIND_LOG0(msg)                                               \
-  fprintf(stderr, "libunwind: " msg "\n")
-#define _LIBUNWIND_LOG(msg, ...)                                               \
-  fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__)
+#define _LIBUNWIND_LOG0(msg) do {                                              \
+    fprintf(stderr, "libunwind: " msg "\n");                                   \
+    fflush(stderr);                                                            \
+  } while (0)
+#define _LIBUNWIND_LOG(msg, ...) do {                                          \
+    fprintf(stderr, "libunwind: " msg "\n", __VA_ARGS__);                      \
+    fflush(stderr);                                                            \
+  } while (0)
 #endif
 
 #if defined(NDEBUG)

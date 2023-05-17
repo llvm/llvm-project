@@ -4,7 +4,7 @@
 target datalayout = "e-m:e-p:32:32:32-i64:64:64-i32:32:32-i16:16:16-i1:8:8-f64:64:64-f32:32:32-v64:64:64-v32:32:32-a:0-n16:32"
 target triple = "hexagon"
 
-@x = common global i32* null, align 4
+@x = common global ptr null, align 4
 
 ; Function Attrs: nounwind
 define i32 @inotify_init() #0 {
@@ -15,8 +15,8 @@ entry:
 
 if.then:                                          ; preds = %entry
   %sub = sub nsw i32 0, %0
-  %1 = load i32*, i32** @x, align 4, !tbaa !2
-  store i32 %sub, i32* %1, align 4, !tbaa !6
+  %1 = load ptr, ptr @x, align 4, !tbaa !2
+  store i32 %sub, ptr %1, align 4, !tbaa !6
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

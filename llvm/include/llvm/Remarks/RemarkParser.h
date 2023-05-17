@@ -17,6 +17,7 @@
 #include "llvm/Remarks/RemarkFormat.h"
 #include "llvm/Support/Error.h"
 #include <memory>
+#include <optional>
 
 namespace llvm {
 namespace remarks {
@@ -82,10 +83,10 @@ Expected<std::unique_ptr<RemarkParser>>
 createRemarkParser(Format ParserFormat, StringRef Buf,
                    ParsedStringTable StrTab);
 
-Expected<std::unique_ptr<RemarkParser>>
-createRemarkParserFromMeta(Format ParserFormat, StringRef Buf,
-                           Optional<ParsedStringTable> StrTab = None,
-                           Optional<StringRef> ExternalFilePrependPath = None);
+Expected<std::unique_ptr<RemarkParser>> createRemarkParserFromMeta(
+    Format ParserFormat, StringRef Buf,
+    std::optional<ParsedStringTable> StrTab = std::nullopt,
+    std::optional<StringRef> ExternalFilePrependPath = std::nullopt);
 
 } // end namespace remarks
 } // end namespace llvm

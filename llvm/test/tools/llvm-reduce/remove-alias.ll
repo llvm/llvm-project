@@ -19,20 +19,20 @@
 @g1 = global [ 4 x i32 ] zeroinitializer
 @g2 = global [ 4 x i32 ] zeroinitializer
 
-@"$a1" = alias void (), void ()* @fn1
-@"$a2" = alias void (), void ()* @fn2
-@"$a3" = alias void (), void ()* @fn3
-@"$a4" = alias void (), void ()* @fn4
+@"$a1" = alias void (), ptr @fn1
+@"$a2" = alias void (), ptr @fn2
+@"$a3" = alias void (), ptr @fn3
+@"$a4" = alias void (), ptr @fn4
 
-@"$a5" = alias i64, bitcast (i32* getelementptr ([ 4 x i32 ], [ 4 x i32 ]* @g1, i32 0, i32 1) to i64*)
-@"$a6" = alias i64, bitcast (i32* getelementptr ([ 4 x i32 ], [ 4 x i32 ]* @g2, i32 0, i32 1) to i64*)
+@"$a5" = alias i64, getelementptr ([ 4 x i32 ], ptr @g1, i32 0, i32 1)
+@"$a6" = alias i64, getelementptr ([ 4 x i32 ], ptr @g2, i32 0, i32 1)
 
-@llvm.used = appending global [1 x i8*] [
-   i8* bitcast (i64* @"$a5" to i8*)
+@llvm.used = appending global [1 x ptr] [
+   ptr @"$a5"
 ], section "llvm.metadata"
 
-@llvm.compiler.used = appending global [1 x i8*] [
-   i8* bitcast (i64* @"$a6" to i8*)
+@llvm.compiler.used = appending global [1 x ptr] [
+   ptr @"$a6"
 ], section "llvm.metadata"
 
 define void @fn1() {

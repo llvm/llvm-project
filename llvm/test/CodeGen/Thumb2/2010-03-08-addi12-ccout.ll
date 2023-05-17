@@ -1,19 +1,19 @@
 ; RUN: llc < %s -mtriple=thumbv7-apple-darwin
 
-@.str41196 = external constant [2 x i8], align 4  ; <[2 x i8]*> [#uses=1]
+@.str41196 = external constant [2 x i8], align 4  ; <ptr> [#uses=1]
 
 declare void @syStopraw(i32) nounwind
 
-declare i32 @SyFopen(i8*, i8*) nounwind
+declare i32 @SyFopen(ptr, ptr) nounwind
 
-declare i8* @SyFgets(i8*, i32) nounwind
+declare ptr @SyFgets(ptr, i32) nounwind
 
-define void @SyHelp(i8* nocapture %topic, i32 %fin) nounwind {
+define void @SyHelp(ptr nocapture %topic, i32 %fin) nounwind {
 entry:
-  %line = alloca [256 x i8], align 4              ; <[256 x i8]*> [#uses=1]
-  %secname = alloca [1024 x i8], align 4          ; <[1024 x i8]*> [#uses=0]
-  %last = alloca [256 x i8], align 4              ; <[256 x i8]*> [#uses=1]
-  %last2 = alloca [256 x i8], align 4             ; <[256 x i8]*> [#uses=1]
+  %line = alloca [256 x i8], align 4              ; <ptr> [#uses=1]
+  %secname = alloca [1024 x i8], align 4          ; <ptr> [#uses=0]
+  %last = alloca [256 x i8], align 4              ; <ptr> [#uses=1]
+  %last2 = alloca [256 x i8], align 4             ; <ptr> [#uses=1]
   br i1 undef, label %bb, label %bb2
 
 bb:                                               ; preds = %entry
@@ -70,7 +70,7 @@ bb163:                                            ; preds = %bb162, %bb161
   unreachable
 
 bb224:                                            ; preds = %bb162
-  %0 = call  i32 @SyFopen(i8* undef, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str41196, i32 0, i32 0)) nounwind ; <i32> [#uses=2]
+  %0 = call  i32 @SyFopen(ptr undef, ptr @.str41196) nounwind ; <i32> [#uses=2]
   br i1 false, label %bb297, label %bb300
 
 bb297:                                            ; preds = %bb224
@@ -138,8 +138,8 @@ bb345:                                            ; preds = %bb345, %bb339
   %4 = phi i8 [ %5, %bb345 ], [ undef, %bb339 ]   ; <i8> [#uses=0]
   %indvar670 = phi i32 [ %tmp673, %bb345 ], [ 0, %bb339 ] ; <i32> [#uses=1]
   %tmp673 = add i32 %indvar670, 1                 ; <i32> [#uses=2]
-  %scevgep674 = getelementptr [256 x i8], [256 x i8]* %last, i32 0, i32 %tmp673 ; <i8*> [#uses=1]
-  %5 = load i8, i8* %scevgep674, align 1              ; <i8> [#uses=1]
+  %scevgep674 = getelementptr [256 x i8], ptr %last, i32 0, i32 %tmp673 ; <ptr> [#uses=1]
+  %5 = load i8, ptr %scevgep674, align 1              ; <i8> [#uses=1]
   br i1 undef, label %bb347, label %bb345
 
 bb347:                                            ; preds = %bb345
@@ -166,8 +166,8 @@ bb362:                                            ; preds = %bb361
 bb366:                                            ; preds = %bb366, %bb360
   %indvar662 = phi i32 [ %tmp665, %bb366 ], [ 0, %bb360 ] ; <i32> [#uses=1]
   %tmp665 = add i32 %indvar662, 1                 ; <i32> [#uses=2]
-  %scevgep666 = getelementptr [256 x i8], [256 x i8]* %last2, i32 0, i32 %tmp665 ; <i8*> [#uses=1]
-  %6 = load i8, i8* %scevgep666, align 1              ; <i8> [#uses=0]
+  %scevgep666 = getelementptr [256 x i8], ptr %last2, i32 0, i32 %tmp665 ; <ptr> [#uses=1]
+  %6 = load i8, ptr %scevgep666, align 1              ; <i8> [#uses=0]
   br i1 false, label %bb368, label %bb366
 
 bb368:                                            ; preds = %bb366
@@ -177,8 +177,8 @@ bb369:                                            ; preds = %bb368, %bb356
   br i1 undef, label %bb373, label %bb388
 
 bb373:                                            ; preds = %bb383, %bb369
-  %7 = call  i8* @SyFgets(i8* undef, i32 %0) nounwind ; <i8*> [#uses=1]
-  %8 = icmp eq i8* %7, null                       ; <i1> [#uses=1]
+  %7 = call  ptr @SyFgets(ptr undef, i32 %0) nounwind ; <ptr> [#uses=1]
+  %8 = icmp eq ptr %7, null                       ; <i1> [#uses=1]
   br i1 %8, label %bb375, label %bb383
 
 bb375:                                            ; preds = %bb373
@@ -189,7 +189,7 @@ bb376:                                            ; preds = %bb375
   ret void
 
 bb383:                                            ; preds = %bb373
-  %10 = load i8, i8* undef, align 1                   ; <i8> [#uses=1]
+  %10 = load i8, ptr undef, align 1                   ; <i8> [#uses=1]
   %cond1 = icmp eq i8 %10, 46                     ; <i1> [#uses=1]
   br i1 %cond1, label %bb373, label %bb388
 
@@ -203,7 +203,7 @@ bb390:                                            ; preds = %isdigit1498.exit83,
 
 bb391:                                            ; preds = %bb390, %bb388
   %indvar724 = phi i32 [ %indvar.next725, %bb390 ], [ 0, %bb388 ] ; <i32> [#uses=2]
-  %11 = load i8, i8* undef, align 1                   ; <i8> [#uses=0]
+  %11 = load i8, ptr undef, align 1                   ; <i8> [#uses=0]
   br i1 false, label %bb395, label %bb392
 
 bb392:                                            ; preds = %bb391
@@ -217,7 +217,7 @@ bb394:                                            ; preds = %isdigit1498.exit87
 
 bb395:                                            ; preds = %bb394, %isdigit1498.exit83, %bb391
   %storemerge14.sum = add i32 %indvar724, undef   ; <i32> [#uses=1]
-  %p.26 = getelementptr [256 x i8], [256 x i8]* %line, i32 0, i32 %storemerge14.sum ; <i8*> [#uses=1]
+  %p.26 = getelementptr [256 x i8], ptr %line, i32 0, i32 %storemerge14.sum ; <ptr> [#uses=1]
   br i1 undef, label %bb400, label %isdigit1498.exit87
 
 isdigit1498.exit87:                               ; preds = %bb395
@@ -227,11 +227,11 @@ bb400:                                            ; preds = %isdigit1498.exit87,
   br i1 undef, label %bb402, label %bb403
 
 bb402:                                            ; preds = %bb400
-  %12 = getelementptr inbounds i8, i8* %p.26, i32 undef ; <i8*> [#uses=1]
+  %12 = getelementptr inbounds i8, ptr %p.26, i32 undef ; <ptr> [#uses=1]
   br label %bb403
 
 bb403:                                            ; preds = %bb402, %bb400
-  %p.29 = phi i8* [ %12, %bb402 ], [ undef, %bb400 ] ; <i8*> [#uses=0]
+  %p.29 = phi ptr [ %12, %bb402 ], [ undef, %bb400 ] ; <ptr> [#uses=0]
   br i1 undef, label %bb405, label %bb404
 
 bb404:                                            ; preds = %bb403
@@ -255,7 +255,7 @@ bb428:                                            ; preds = %bb407
   br label %bb440
 
 bb440:                                            ; preds = %bb428, %bb300
-  %13 = call  i8* @SyFgets(i8* undef, i32 %0) nounwind ; <i8*> [#uses=0]
+  %13 = call  ptr @SyFgets(ptr undef, i32 %0) nounwind ; <ptr> [#uses=0]
   br i1 false, label %bb442, label %bb308
 
 bb442:                                            ; preds = %bb440

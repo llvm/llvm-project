@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 /// This check finds cases where `Duration` factories are being called with
 /// floating point arguments, but could be called using integer arguments.
@@ -21,7 +19,7 @@ namespace abseil {
 /// component.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-duration-factory-float.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-factory-float.html
 class DurationFactoryFloatCheck : public ClangTidyCheck {
 public:
   DurationFactoryFloatCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONFACTORYFLOATCHECK_H

@@ -16,11 +16,12 @@ set(CROSS_PROJECT_TESTS_BINARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(CROSS_PROJECT_TEST_DEPS
   FileCheck
+  check-gdb-llvm-support
   count
   llvm-dwarfdump
   llvm-config
   llvm-objdump
-  check-gdb-llvm-support
+  split-file
   not
   )
 
@@ -85,6 +86,13 @@ add_lit_testsuite(check-intrinsic-headers "Running intrinsic header tests"
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
   )
 
+# AMDGPU tests.
+add_lit_testsuite(check-cross-amdgpu "Running AMDGPU cross-project tests"
+  ${CMAKE_CURRENT_BINARY_DIR}/amdgpu
+  EXCLUDE_FROM_CHECK_ALL
+  DEPENDS clang
+  )
+
 # Add check-cross-project-* targets.
 add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
   DEPENDS ${CROSS_PROJECT_TEST_DEPS}
@@ -93,3 +101,4 @@ add_lit_testsuites(CROSS_PROJECT ${CMAKE_CURRENT_SOURCE_DIR}
 set_target_properties(check-cross-project PROPERTIES FOLDER "Tests")
 set_target_properties(check-debuginfo PROPERTIES FOLDER "Tests")
 set_target_properties(check-intrinsic-headers PROPERTIES FOLDER "Tests")
+set_target_properties(check-cross-amdgpu PROPERTIES FOLDER "Tests")

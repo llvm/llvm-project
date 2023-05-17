@@ -19,22 +19,21 @@
 #include "clang/AST/Stmt.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include "clang/Analysis/CFG.h"
 #include "clang/Analysis/FlowSensitive/DataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/MapLattice.h"
-#include "clang/Tooling/Tooling.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/ADT/StringMapEntry.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -58,12 +57,14 @@ struct ValueLattice {
   //  * `Defined` -> top.
   ValueState State;
 
-  // When `None`, the lattice is either at top or bottom, based on `State`.
-  llvm::Optional<int64_t> Value;
+  // When `std::nullopt`, the lattice is either at top or bottom, based on
+  // `State`.
+  std::optional<int64_t> Value;
 
-  constexpr ValueLattice() : State(ValueState::Undefined), Value(llvm::None) {}
+  constexpr ValueLattice()
+      : State(ValueState::Undefined), Value(std::nullopt) {}
   constexpr ValueLattice(int64_t V) : State(ValueState::Defined), Value(V) {}
-  constexpr ValueLattice(ValueState S) : State(S), Value(llvm::None) {}
+  constexpr ValueLattice(ValueState S) : State(S), Value(std::nullopt) {}
 
   static constexpr ValueLattice bottom() {
     return ValueLattice(ValueState::Undefined);
@@ -94,7 +95,7 @@ struct ValueLattice {
 };
 
 std::ostream &operator<<(std::ostream &OS, const ValueLattice &L) {
-  if (L.Value.hasValue())
+  if (L.Value)
     return OS << *L.Value;
   switch (L.State) {
   case ValueLattice::ValueState::Undefined:
@@ -133,8 +134,12 @@ public:
     return ConstantPropagationLattice::bottom();
   }
 
-  void transfer(const Stmt *S, ConstantPropagationLattice &Vars,
+  void transfer(const CFGElement &E, ConstantPropagationLattice &Vars,
                 Environment &Env) {
+    auto CS = E.getAs<CFGStmt>();
+    if (!CS)
+      return;
+    auto S = CS->getStmt();
     auto matcher =
         stmt(anyOf(declStmt(hasSingleDecl(
                        varDecl(decl().bind(kVar), hasType(isInteger()),
@@ -183,7 +188,10 @@ public:
   }
 };
 
-using ::testing::IsEmpty;
+using ::clang::dataflow::test::AnalysisInputs;
+using ::clang::dataflow::test::AnalysisOutputs;
+using ::clang::dataflow::test::checkDataflow;
+using ::llvm::IsStringMapEntry;
 using ::testing::Pair;
 using ::testing::UnorderedElementsAre;
 
@@ -194,9 +202,7 @@ MATCHER_P(Var, name,
   return arg->getName() == name;
 }
 
-MATCHER_P(HasConstantVal, v, "") {
-  return arg.Value.hasValue() && *arg.Value == v;
-}
+MATCHER_P(HasConstantVal, v, "") { return arg.Value && *arg.Value == v; }
 
 MATCHER(Varies, "") { return arg == arg.top(); }
 
@@ -208,40 +214,38 @@ MATCHER_P(HoldsCPLattice, m,
   return ExplainMatchResult(m, arg.Lattice, result_listener);
 }
 
-class MultiVarConstantPropagationTest : public ::testing::Test {
-protected:
-  template <typename Matcher>
-  void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
-    ASSERT_THAT_ERROR(
-        test::checkDataflow<ConstantPropagationAnalysis>(
-            Code, "fun",
-            [](ASTContext &C, Environment &) {
-              return ConstantPropagationAnalysis(C);
-            },
-            [&Expectations](
-                llvm::ArrayRef<std::pair<
-                    std::string, DataflowAnalysisState<
-                                     ConstantPropagationAnalysis::Lattice>>>
-                    Results,
-                ASTContext &) { EXPECT_THAT(Results, Expectations); },
-            {"-fsyntax-only", "-std=c++17"}),
-        llvm::Succeeded());
-  }
-};
+template <typename Matcher>
+void RunDataflow(llvm::StringRef Code, Matcher Expectations) {
+  ASSERT_THAT_ERROR(
+      checkDataflow<ConstantPropagationAnalysis>(
+          AnalysisInputs<ConstantPropagationAnalysis>(
+              Code, hasName("fun"),
+              [](ASTContext &C, Environment &) {
+                return ConstantPropagationAnalysis(C);
+              })
+              .withASTBuildArgs({"-fsyntax-only", "-std=c++17"}),
+          /*VerifyResults=*/
+          [&Expectations](const llvm::StringMap<DataflowAnalysisState<
+                              ConstantPropagationAnalysis::Lattice>> &Results,
+                          const AnalysisOutputs &) {
+            EXPECT_THAT(Results, Expectations);
+          }),
+      llvm::Succeeded());
+}
 
-TEST_F(MultiVarConstantPropagationTest, JustInit) {
+TEST(MultiVarConstantPropagationTest, JustInit) {
   std::string Code = R"(
     void fun() {
       int target = 1;
       // [[p]]
     }
   )";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                      Var("target"), HasConstantVal(1)))))));
+  RunDataflow(Code, UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsCPLattice(UnorderedElementsAre(
+                                 Pair(Var("target"), HasConstantVal(1)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, Assignment) {
+TEST(MultiVarConstantPropagationTest, Assignment) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -250,14 +254,16 @@ TEST_F(MultiVarConstantPropagationTest, Assignment) {
       // [[p2]]
     }
   )";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p1", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1))))),
-                        Pair("p2", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(2)))))));
+  RunDataflow(
+      Code,
+      UnorderedElementsAre(
+          IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(1))))),
+          IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                     Var("target"), HasConstantVal(2)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, AssignmentCall) {
+TEST(MultiVarConstantPropagationTest, AssignmentCall) {
   std::string Code = R"(
     int g();
     void fun() {
@@ -266,12 +272,12 @@ TEST_F(MultiVarConstantPropagationTest, AssignmentCall) {
       // [[p]]
     }
   )";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p", HoldsCPLattice(UnorderedElementsAre(
-                                      Pair(Var("target"), Varies()))))));
+  RunDataflow(Code, UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsCPLattice(UnorderedElementsAre(
+                                 Pair(Var("target"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, AssignmentBinOp) {
+TEST(MultiVarConstantPropagationTest, AssignmentBinOp) {
   std::string Code = R"(
     void fun() {
       int target;
@@ -279,12 +285,12 @@ TEST_F(MultiVarConstantPropagationTest, AssignmentBinOp) {
       // [[p]]
     }
   )";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                      Var("target"), HasConstantVal(5)))))));
+  RunDataflow(Code, UnorderedElementsAre(IsStringMapEntry(
+                        "p", HoldsCPLattice(UnorderedElementsAre(
+                                 Pair(Var("target"), HasConstantVal(5)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, PlusAssignment) {
+TEST(MultiVarConstantPropagationTest, PlusAssignment) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -293,14 +299,15 @@ TEST_F(MultiVarConstantPropagationTest, PlusAssignment) {
       // [[p2]]
     }
   )";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p1", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1))))),
-                        Pair("p2", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies()))))));
+  RunDataflow(
+      Code, UnorderedElementsAre(
+                IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                           Var("target"), HasConstantVal(1))))),
+                IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(
+                                           Pair(Var("target"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranches) {
+TEST(MultiVarConstantPropagationTest, SameAssignmentInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -316,20 +323,21 @@ TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranches) {
       // [[p2]]
     }
   )cc";
-  RunDataflow(Code,
-              UnorderedElementsAre(
-                  Pair("p1", HoldsCPLattice(UnorderedElementsAre(
-                                 Pair(Var("target"), Varies())))),
-                  Pair("pT", HoldsCPLattice(UnorderedElementsAre(
-                                 Pair(Var("target"), HasConstantVal(2))))),
-                  Pair("pF", HoldsCPLattice(UnorderedElementsAre(
-                                 Pair(Var("target"), HasConstantVal(2))))),
-                  Pair("p2", HoldsCPLattice(UnorderedElementsAre(
-                                 Pair(Var("target"), HasConstantVal(2)))))));
+  RunDataflow(
+      Code,
+      UnorderedElementsAre(
+          IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), Varies())))),
+          IsStringMapEntry("pT", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(2))))),
+          IsStringMapEntry("pF", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(2))))),
+          IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                     Var("target"), HasConstantVal(2)))))));
 }
 
 // Verifies that the analysis tracks multiple variables simultaneously.
-TEST_F(MultiVarConstantPropagationTest, TwoVariables) {
+TEST(MultiVarConstantPropagationTest, TwoVariables) {
   std::string Code = R"(
     void fun() {
       int target = 1;
@@ -340,19 +348,20 @@ TEST_F(MultiVarConstantPropagationTest, TwoVariables) {
       // [[p3]]
     }
   )";
-  RunDataflow(Code,
-              UnorderedElementsAre(
-                  Pair("p1", HoldsCPLattice(UnorderedElementsAre(
-                                 Pair(Var("target"), HasConstantVal(1))))),
-                  Pair("p2", HoldsCPLattice(UnorderedElementsAre(
-                                 Pair(Var("target"), HasConstantVal(1)),
-                                 Pair(Var("other"), HasConstantVal(2))))),
-                  Pair("p3", HoldsCPLattice(UnorderedElementsAre(
-                                 Pair(Var("target"), HasConstantVal(3)),
-                                 Pair(Var("other"), HasConstantVal(2)))))));
+  RunDataflow(
+      Code,
+      UnorderedElementsAre(
+          IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(1))))),
+          IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(1)),
+                                     Pair(Var("other"), HasConstantVal(2))))),
+          IsStringMapEntry("p3", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(3)),
+                                     Pair(Var("other"), HasConstantVal(2)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, TwoVariablesInBranches) {
+TEST(MultiVarConstantPropagationTest, TwoVariablesInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -369,22 +378,24 @@ TEST_F(MultiVarConstantPropagationTest, TwoVariablesInBranches) {
       // [[p2]]
     }
   )cc";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p1", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies()),
-                                       Pair(Var("other"), Varies())))),
-                        Pair("pT", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), HasConstantVal(2)),
-                                       Pair(Var("other"), Varies())))),
-                        Pair("pF", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("other"), HasConstantVal(3)),
-                                       Pair(Var("target"), Varies())))),
-                        Pair("p2", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies()),
-                                       Pair(Var("other"), Varies()))))));
+  RunDataflow(
+      Code,
+      UnorderedElementsAre(
+          IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), Varies()),
+                                     Pair(Var("other"), Varies())))),
+          IsStringMapEntry("pT", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(2)),
+                                     Pair(Var("other"), Varies())))),
+          IsStringMapEntry("pF", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("other"), HasConstantVal(3)),
+                                     Pair(Var("target"), Varies())))),
+          IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), Varies()),
+                                     Pair(Var("other"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranch) {
+TEST(MultiVarConstantPropagationTest, SameAssignmentInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target = 1;
@@ -396,14 +407,16 @@ TEST_F(MultiVarConstantPropagationTest, SameAssignmentInBranch) {
       // [[p2]]
     }
   )cc";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p1", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1))))),
-                        Pair("p2", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1)))))));
+  RunDataflow(
+      Code,
+      UnorderedElementsAre(
+          IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(1))))),
+          IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                     Var("target"), HasConstantVal(1)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, NewVarInBranch) {
+TEST(MultiVarConstantPropagationTest, NewVarInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       if (b) {
@@ -419,18 +432,20 @@ TEST_F(MultiVarConstantPropagationTest, NewVarInBranch) {
       }
     }
   )cc";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p1", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies())))),
-                        Pair("p2", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1))))),
-                        Pair("p3", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies())))),
-                        Pair("p4", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1)))))));
+  RunDataflow(
+      Code,
+      UnorderedElementsAre(
+          IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), Varies())))),
+          IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), HasConstantVal(1))))),
+          IsStringMapEntry("p3", HoldsCPLattice(UnorderedElementsAre(
+                                     Pair(Var("target"), Varies())))),
+          IsStringMapEntry("p4", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                     Var("target"), HasConstantVal(1)))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, DifferentAssignmentInBranches) {
+TEST(MultiVarConstantPropagationTest, DifferentAssignmentInBranches) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target;
@@ -446,18 +461,19 @@ TEST_F(MultiVarConstantPropagationTest, DifferentAssignmentInBranches) {
       // [[p2]]
     }
   )cc";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p1", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies())))),
-                        Pair("pT", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1))))),
-                        Pair("pF", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(2))))),
-                        Pair("p2", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies()))))));
+  RunDataflow(
+      Code, UnorderedElementsAre(
+                IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(
+                                           Pair(Var("target"), Varies())))),
+                IsStringMapEntry("pT", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                           Var("target"), HasConstantVal(1))))),
+                IsStringMapEntry("pF", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                           Var("target"), HasConstantVal(2))))),
+                IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(
+                                           Pair(Var("target"), Varies()))))));
 }
 
-TEST_F(MultiVarConstantPropagationTest, DifferentAssignmentInBranch) {
+TEST(MultiVarConstantPropagationTest, DifferentAssignmentInBranch) {
   std::string Code = R"cc(
     void fun(bool b) {
       int target = 1;
@@ -469,11 +485,12 @@ TEST_F(MultiVarConstantPropagationTest, DifferentAssignmentInBranch) {
       // [[p2]]
     }
   )cc";
-  RunDataflow(Code, UnorderedElementsAre(
-                        Pair("p1", HoldsCPLattice(UnorderedElementsAre(Pair(
-                                       Var("target"), HasConstantVal(1))))),
-                        Pair("p2", HoldsCPLattice(UnorderedElementsAre(
-                                       Pair(Var("target"), Varies()))))));
+  RunDataflow(
+      Code, UnorderedElementsAre(
+                IsStringMapEntry("p1", HoldsCPLattice(UnorderedElementsAre(Pair(
+                                           Var("target"), HasConstantVal(1))))),
+                IsStringMapEntry("p2", HoldsCPLattice(UnorderedElementsAre(
+                                           Pair(Var("target"), Varies()))))));
 }
 
 } // namespace

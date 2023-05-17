@@ -59,7 +59,7 @@ attributes #1 = { "frame-pointer"="none" "no-trapping-math"="true" "stack-protec
 !13 = !{!14, !16}
 !14 = !DITemplateTypeParameter(type: !15)
 !15 = !DIBasicType(name: "char", size: 8, encoding: DW_ATE_signed_char)
-!16 = !DITemplateValueParameter(name: "b", type: !17, value: i8 ()* @_Z1av)
+!16 = !DITemplateValueParameter(name: "b", type: !17, value: ptr @_Z1av)
 !17 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !18, size: 32)
 !18 = !DISubroutineType(types: !19)
 !19 = !{!15}

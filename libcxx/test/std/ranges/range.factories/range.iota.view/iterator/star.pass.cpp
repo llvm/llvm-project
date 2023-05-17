@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // constexpr W operator*() const noexcept(is_nothrow_copy_constructible_v<W>);
 
@@ -27,7 +26,7 @@ struct NotNoexceptCopy {
 
   int value_;
   constexpr explicit NotNoexceptCopy(int value = 0) : value_(value) {}
-  NotNoexceptCopy(const NotNoexceptCopy&) noexcept(false) = default;
+  constexpr NotNoexceptCopy(const NotNoexceptCopy& other) noexcept(false) : value_(other.value_) {}
 
   bool operator==(const NotNoexceptCopy&) const = default;
 

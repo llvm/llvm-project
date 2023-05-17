@@ -54,7 +54,7 @@ bool Localizer::isLocalUse(MachineOperand &MOUse, const MachineInstr &Def,
   MachineInstr &MIUse = *MOUse.getParent();
   InsertMBB = MIUse.getParent();
   if (MIUse.isPHI())
-    InsertMBB = MIUse.getOperand(MIUse.getOperandNo(&MOUse) + 1).getMBB();
+    InsertMBB = MIUse.getOperand(MOUse.getOperandNo() + 1).getMBB();
   return InsertMBB == Def.getParent();
 }
 
@@ -99,7 +99,7 @@ bool Localizer::localizeInterBlock(MachineFunction &MF,
       MachineBasicBlock *InsertMBB;
       LLVM_DEBUG(MachineInstr &MIUse = *MOUse.getParent();
                  dbgs() << "Checking use: " << MIUse
-                        << " #Opd: " << MIUse.getOperandNo(&MOUse) << '\n');
+                        << " #Opd: " << MOUse.getOperandNo() << '\n');
       if (isLocalUse(MOUse, MI, InsertMBB)) {
         // Even if we're in the same block, if the block is very large we could
         // still have many long live ranges. Try to do intra-block localization
@@ -181,6 +181,17 @@ bool Localizer::localizeIntraBlock(LocalizedSetVecT &LocalizedInstrs) {
     MI->removeFromParent();
     MBB.insert(II, MI);
     Changed = true;
+
+    // If the instruction (constant) being localized has single user, we can
+    // propagate debug location from user.
+    if (Users.size() == 1) {
+      const auto &DefDL = MI->getDebugLoc();
+      const auto &UserDL = (*Users.begin())->getDebugLoc();
+
+      if ((!DefDL || DefDL.getLine() == 0) && UserDL && UserDL.getLine() != 0) {
+        MI->setDebugLoc(UserDL);
+      }
+    }
   }
   return Changed;
 }

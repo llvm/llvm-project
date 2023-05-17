@@ -9,11 +9,11 @@
 // CHECK-NOT: @sub
 func.func @inlined_if_fn(%arg0: tensor<f32>, %arg1: tensor<f32>, %arg2: tensor<i1>) -> tensor<f32> {
   %0 = "tosa.cond_if"(%arg2, %arg0, %arg1) ({
-  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
     %1 = call @add(%arg3, %arg4) : (tensor<f32>, tensor<f32>) -> tensor<f32>
     "tosa.yield"(%1) : (tensor<f32>) -> ()
   },  {
-  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):  
+  ^bb0(%arg3: tensor<f32>, %arg4: tensor<f32>):
     %1 = call @sub(%arg3, %arg4) : (tensor<f32>, tensor<f32>) -> tensor<f32>
     "tosa.yield"(%1) : (tensor<f32>) -> ()
   }) : (tensor<i1>, tensor<f32>, tensor<f32>) -> tensor<f32>
@@ -35,11 +35,11 @@ func.func @inlined_while_fn(%arg0: tensor<i32>, %arg1: tensor<i32>, %arg2: tenso
   // Check that calls are inlined and functions eliminated:
   // CHECK-NOT: @while
   %1:4 = "tosa.while_loop"(%arg0, %arg1, %arg2, %arg3) ({
-  ^bb0(%arg4: tensor<i32>, %arg5: tensor<i32>, %arg6: tensor<i32>, %arg7: tensor<10xi32>):  
+  ^bb0(%arg4: tensor<i32>, %arg5: tensor<i32>, %arg6: tensor<i32>, %arg7: tensor<10xi32>):
     %2 = call @while_cond_40(%arg4, %arg5, %arg6, %arg7) : (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>) -> tensor<i1>
     "tosa.yield"(%2) : (tensor<i1>) -> ()
   },  {
-  ^bb0(%arg4: tensor<i32>, %arg5: tensor<i32>, %arg6: tensor<i32>, %arg7: tensor<10xi32>):  
+  ^bb0(%arg4: tensor<i32>, %arg5: tensor<i32>, %arg6: tensor<i32>, %arg7: tensor<10xi32>):
     %2:4 = call @while_body_50(%arg4, %arg5, %arg6, %arg7) : (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>)
     "tosa.yield"(%2#0, %2#1, %2#2, %2#3) : (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>) -> ()
   }) : (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>) -> (tensor<i32>, tensor<i32>, tensor<i32>, tensor<10xi32>)

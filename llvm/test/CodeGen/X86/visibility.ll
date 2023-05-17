@@ -8,12 +8,12 @@ define available_externally hidden void @baz() {
 
 define hidden void @foo() nounwind {
 entry:
-  call void @bar(i32* @zed)
+  call void @bar(ptr @zed)
   call void @baz()
   ret void
 }
 
-declare hidden void @bar(i32*)
+declare hidden void @bar(ptr)
 
 ;CHECK: .hidden	zed
 ;CHECK: .hidden	baz

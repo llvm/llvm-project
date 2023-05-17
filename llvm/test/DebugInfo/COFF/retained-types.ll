@@ -7,7 +7,7 @@
 ; C++ source to regenerate:
 ; $ cat /tmp/a.cc
 ; struct S { int x; };
-; int f(void *p) {
+; int f(ptr p) {
 ;   return static_cast<S*>(p)->x;
 ; }
 ; $ clang /tmp/a.cc -S -emit-llvm -g -gcodeview -target x86_64-windows-msvc -o t.ll
@@ -49,16 +49,14 @@ target triple = "x86_64--windows-msvc18.0.0"
 %struct.S = type { i32 }
 
 ; Function Attrs: nounwind uwtable
-define i32 @"\01?f@@YAHPEAX@Z"(i8* %p) #0 !dbg !13 {
+define i32 @"\01?f@@YAHPEAX@Z"(ptr %p) #0 !dbg !13 {
 entry:
-  %p.addr = alloca i8*, align 8
-  store i8* %p, i8** %p.addr, align 8
-  call void @llvm.dbg.declare(metadata i8** %p.addr, metadata !17, metadata !18), !dbg !19
-  %0 = load i8*, i8** %p.addr, align 8, !dbg !20
-  %1 = bitcast i8* %0 to %struct.S*, !dbg !21
-  %x = getelementptr inbounds %struct.S, %struct.S* %1, i32 0, i32 0, !dbg !22
-  %2 = load i32, i32* %x, align 4, !dbg !22
-  ret i32 %2, !dbg !23
+  %p.addr = alloca ptr, align 8
+  store ptr %p, ptr %p.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %p.addr, metadata !17, metadata !18), !dbg !19
+  %0 = load ptr, ptr %p.addr, align 8, !dbg !20
+  %1 = load i32, ptr %0, align 4, !dbg !22
+  ret i32 %1, !dbg !23
 }
 
 ; Function Attrs: nounwind readnone

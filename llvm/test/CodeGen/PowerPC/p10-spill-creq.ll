@@ -15,13 +15,13 @@
 ; bit of any CR field is spilled. We need to test the spilling of a CR bit
 ; other than the LT bit. Hence this test case is rather complex.
 
-%0 = type { i32, %1*, %0*, [1 x i8], i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
-%1 = type { %1*, %0*, i32 }
-%2 = type { [200 x i8], [200 x i8], %3*, %3*, %4*, %4*, %4*, %4*, %4*, i64 }
-%3 = type { i64, i32, %3*, %3*, %3*, %3*, %4*, %4*, %4*, %4*, i64, i32, i32 }
-%4 = type { i32, i64, %3*, %3*, i16, %4*, %4*, i64, i64 }
+%0 = type { i32, ptr, ptr, [1 x i8], ptr, ptr, ptr, ptr, i64, i32, [20 x i8] }
+%1 = type { ptr, ptr, i32 }
+%2 = type { [200 x i8], [200 x i8], ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64 }
+%3 = type { i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, i32, i32 }
+%4 = type { i32, i64, ptr, ptr, i16, ptr, ptr, i64, i64 }
 
-define dso_local double @P10_Spill_CR_EQ(%2* %arg) local_unnamed_addr #0 {
+define dso_local double @P10_Spill_CR_EQ(ptr %arg) local_unnamed_addr #0 {
 ; CHECK-LABEL: P10_Spill_CR_EQ:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    mfcr r12
@@ -29,168 +29,127 @@ define dso_local double @P10_Spill_CR_EQ(%2* %arg) local_unnamed_addr #0 {
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:    ld r4, 0(0)
 ; CHECK-NEXT:    ld r5, 56(0)
-; CHECK-NEXT:    cmpdi cr1, r3, 0
-; CHECK-NEXT:    cmpdi cr4, r4, 0
-; CHECK-NEXT:    cmpdi cr6, r5, 0
-; CHECK-NEXT:    cmpldi r3, 0
-; CHECK-NEXT:    beq cr0, .LBB0_3
+; CHECK-NEXT:    cmpdi r3, 0
+; CHECK-NEXT:    cmpdi cr1, r4, 0
+; CHECK-NEXT:    cmpdi cr5, r5, 0
+; CHECK-NEXT:    cmpldi cr6, r3, 0
+; CHECK-NEXT:    beq cr6, .LBB0_3
 ; CHECK-NEXT:  # %bb.1: # %bb10
 ; CHECK-NEXT:    lwz r3, 0(r3)
-; CHECK-NEXT:    bc 12, 4*cr4+eq, .LBB0_4
+; CHECK-NEXT:    bc 12, 4*cr1+eq, .LBB0_4
 ; CHECK-NEXT:  .LBB0_2: # %bb14
 ; CHECK-NEXT:    lwz r5, 0(r3)
 ; CHECK-NEXT:    b .LBB0_5
 ; CHECK-NEXT:  .LBB0_3:
 ; CHECK-NEXT:    # implicit-def: $r3
-; CHECK-NEXT:    bc 4, 4*cr4+eq, .LBB0_2
+; CHECK-NEXT:    bc 4, 4*cr1+eq, .LBB0_2
 ; CHECK-NEXT:  .LBB0_4:
 ; CHECK-NEXT:    # implicit-def: $r5
 ; CHECK-NEXT:  .LBB0_5: # %bb16
-; CHECK-NEXT:    mfocrf r4, 64
-; CHECK-NEXT:    crnot 4*cr2+un, 4*cr1+eq
-; CHECK-NEXT:    crnot 4*cr5+lt, 4*cr6+eq
-; CHECK-NEXT:    rotlwi r4, r4, 4
-; CHECK-NEXT:    stw r4, -4(r1)
-; CHECK-NEXT:    bc 12, 4*cr6+eq, .LBB0_7
+; CHECK-NEXT:    crnot 4*cr1+lt, eq
+; CHECK-NEXT:    crnot 4*cr5+un, 4*cr5+eq
+; CHECK-NEXT:    bc 12, 4*cr5+eq, .LBB0_7
 ; CHECK-NEXT:  # %bb.6: # %bb18
 ; CHECK-NEXT:    lwz r4, 0(r3)
 ; CHECK-NEXT:    b .LBB0_8
 ; CHECK-NEXT:  .LBB0_7:
 ; CHECK-NEXT:    # implicit-def: $r4
 ; CHECK-NEXT:  .LBB0_8: # %bb20
-; CHECK-NEXT:    cmpwi r3, -1
+; CHECK-NEXT:    cmpwi cr2, r3, -1
 ; CHECK-NEXT:    cmpwi cr3, r4, -1
 ; CHECK-NEXT:    cmpwi cr7, r3, 0
-; CHECK-NEXT:    cmpwi cr1, r4, 0
+; CHECK-NEXT:    cmpwi cr6, r4, 0
 ; CHECK-NEXT:    # implicit-def: $x3
-; CHECK-NEXT:    crand 4*cr5+eq, gt, 4*cr2+un
-; CHECK-NEXT:    crand 4*cr5+gt, 4*cr3+gt, 4*cr5+lt
-; CHECK-NEXT:    setnbc r4, 4*cr5+eq
-; CHECK-NEXT:    stw r4, -20(r1)
-; CHECK-NEXT:    bc 4, 4*cr5+eq, .LBB0_10
+; CHECK-NEXT:    crand 4*cr5+gt, 4*cr2+gt, 4*cr1+lt
+; CHECK-NEXT:    crand 4*cr5+lt, 4*cr3+gt, 4*cr5+un
+; CHECK-NEXT:    bc 4, 4*cr5+gt, .LBB0_10
 ; CHECK-NEXT:  # %bb.9: # %bb34
 ; CHECK-NEXT:    ld r3, 0(r3)
 ; CHECK-NEXT:  .LBB0_10: # %bb36
-; CHECK-NEXT:    mfocrf r4, 2
-; CHECK-NEXT:    cmpwi cr3, r5, 0
-; CHECK-NEXT:    rotlwi r4, r4, 24
-; CHECK-NEXT:    stw r4, -12(r1)
+; CHECK-NEXT:    cmpwi cr2, r5, 0
 ; CHECK-NEXT:    # implicit-def: $x4
-; CHECK-NEXT:    bc 4, 4*cr5+gt, .LBB0_12
+; CHECK-NEXT:    bc 4, 4*cr5+lt, .LBB0_12
 ; CHECK-NEXT:  # %bb.11: # %bb38
 ; CHECK-NEXT:    ld r4, 0(r3)
 ; CHECK-NEXT:  .LBB0_12: # %bb40
-; CHECK-NEXT:    mcrf cr6, cr4
-; CHECK-NEXT:    crnot 4*cr4+eq, 4*cr4+eq
-; CHECK-NEXT:    crand 4*cr4+gt, 4*cr7+lt, 4*cr2+un
-; CHECK-NEXT:    crand 4*cr4+lt, 4*cr1+lt, 4*cr5+lt
+; CHECK-NEXT:    crand 4*cr6+gt, 4*cr7+lt, 4*cr1+lt
+; CHECK-NEXT:    crand 4*cr6+lt, 4*cr6+lt, 4*cr5+un
+; CHECK-NEXT:    crnot 4*cr6+un, 4*cr1+eq
 ; CHECK-NEXT:    # implicit-def: $x6
-; CHECK-NEXT:    bc 4, 4*cr4+lt, .LBB0_14
+; CHECK-NEXT:    bc 4, 4*cr6+lt, .LBB0_14
 ; CHECK-NEXT:  # %bb.13: # %bb48
 ; CHECK-NEXT:    ld r6, 0(r3)
 ; CHECK-NEXT:  .LBB0_14: # %bb50
-; CHECK-NEXT:    cmpwi r5, -1
-; CHECK-NEXT:    crand 4*cr4+un, 4*cr3+lt, 4*cr4+eq
+; CHECK-NEXT:    cmpwi cr3, r5, -1
+; CHECK-NEXT:    crand 4*cr7+lt, 4*cr2+lt, 4*cr6+un
 ; CHECK-NEXT:    # implicit-def: $r5
-; CHECK-NEXT:    bc 4, 4*cr4+gt, .LBB0_16
+; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_16
 ; CHECK-NEXT:  # %bb.15: # %bb52
 ; CHECK-NEXT:    lwz r5, 0(r3)
 ; CHECK-NEXT:  .LBB0_16: # %bb54
-; CHECK-NEXT:    setnbc r7, 4*cr5+gt
-; CHECK-NEXT:    stw r7, -16(r1)
-; CHECK-NEXT:    mfocrf r7, 2
-; CHECK-NEXT:    rotlwi r7, r7, 24
-; CHECK-NEXT:    stw r7, -8(r1)
+; CHECK-NEXT:    mfocrf r7, 128
+; CHECK-NEXT:    stw r7, -4(r1)
 ; CHECK-NEXT:    # implicit-def: $r7
-; CHECK-NEXT:    bc 4, 4*cr4+un, .LBB0_18
+; CHECK-NEXT:    bc 4, 4*cr7+lt, .LBB0_18
 ; CHECK-NEXT:  # %bb.17: # %bb56
 ; CHECK-NEXT:    lwz r7, 0(r3)
 ; CHECK-NEXT:  .LBB0_18: # %bb58
-; CHECK-NEXT:    crand 4*cr5+gt, 4*cr7+eq, 4*cr2+un
-; CHECK-NEXT:    mcrf cr2, cr1
-; CHECK-NEXT:    cmpwi cr1, r5, 1
-; CHECK-NEXT:    crand lt, gt, 4*cr4+eq
-; CHECK-NEXT:    # implicit-def: $x5
-; CHECK-NEXT:    crand 4*cr4+eq, 4*cr3+eq, 4*cr4+eq
-; CHECK-NEXT:    setnbc r8, 4*cr5+gt
-; CHECK-NEXT:    crand 4*cr5+lt, 4*cr2+eq, 4*cr5+lt
-; CHECK-NEXT:    crand gt, 4*cr1+lt, 4*cr4+gt
-; CHECK-NEXT:    stw r8, -24(r1)
-; CHECK-NEXT:    setnbc r8, 4*cr5+lt
-; CHECK-NEXT:    cmpwi cr5, r7, 1
-; CHECK-NEXT:    stw r8, -28(r1)
-; CHECK-NEXT:    crand eq, 4*cr5+lt, 4*cr4+un
 ; CHECK-NEXT:    lwz r6, 92(r6)
-; CHECK-NEXT:    cmpwi cr6, r6, 1
-; CHECK-NEXT:    crand un, 4*cr6+lt, 4*cr4+lt
-; CHECK-NEXT:    bc 4, gt, .LBB0_20
+; CHECK-NEXT:    crand 4*cr7+un, 4*cr3+gt, 4*cr6+un
+; CHECK-NEXT:    cmpwi cr3, r5, 1
+; CHECK-NEXT:    cmpwi cr4, r7, 1
+; CHECK-NEXT:    crand 4*cr7+gt, 4*cr7+eq, 4*cr1+lt
+; CHECK-NEXT:    # implicit-def: $x5
+; CHECK-NEXT:    crand 4*cr6+un, 4*cr2+eq, 4*cr6+un
+; CHECK-NEXT:    crand 4*cr5+un, 4*cr6+eq, 4*cr5+un
+; CHECK-NEXT:    crand 4*cr6+gt, 4*cr3+lt, 4*cr6+gt
+; CHECK-NEXT:    crand 4*cr7+lt, 4*cr4+lt, 4*cr7+lt
+; CHECK-NEXT:    cmpwi r6, 1
+; CHECK-NEXT:    crand 4*cr6+lt, lt, 4*cr6+lt
+; CHECK-NEXT:    bc 4, 4*cr6+gt, .LBB0_20
 ; CHECK-NEXT:  # %bb.19: # %bb68
 ; CHECK-NEXT:    ld r5, 0(r3)
 ; CHECK-NEXT:  .LBB0_20: # %bb70
-; CHECK-NEXT:    lwz r7, -20(r1)
-; CHECK-NEXT:    # implicit-def: $cr5lt
-; CHECK-NEXT:    mfocrf r6, 4
-; CHECK-NEXT:    xxlxor f2, f2, f2
-; CHECK-NEXT:    rlwimi r6, r7, 12, 20, 20
-; CHECK-NEXT:    mtocrf 4, r6
 ; CHECK-NEXT:    ld r6, 0(r3)
-; CHECK-NEXT:    lwz r8, -16(r1)
-; CHECK-NEXT:    crandc 4*cr5+gt, lt, 4*cr3+eq
-; CHECK-NEXT:    # implicit-def: $cr5eq
-; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, 4*cr7+eq
-; CHECK-NEXT:    mfocrf r7, 4
-; CHECK-NEXT:    rlwimi r7, r8, 10, 22, 22
-; CHECK-NEXT:    mtocrf 4, r7
-; CHECK-NEXT:    lwz r7, -24(r1)
-; CHECK-NEXT:    # implicit-def: $cr5un
-; CHECK-NEXT:    lwz r9, -28(r1)
-; CHECK-NEXT:    crandc 4*cr5+eq, 4*cr5+eq, 4*cr2+eq
-; CHECK-NEXT:    isel r3, r3, r5, 4*cr5+lt
-; CHECK-NEXT:    crnor 4*cr5+lt, gt, 4*cr5+lt
-; CHECK-NEXT:    crnor 4*cr5+gt, eq, 4*cr5+gt
-; CHECK-NEXT:    crnor 4*cr5+eq, un, 4*cr5+eq
-; CHECK-NEXT:    mfocrf r5, 4
-; CHECK-NEXT:    rlwimi r5, r7, 9, 23, 23
-; CHECK-NEXT:    setbc r7, 4*cr4+eq
-; CHECK-NEXT:    mtocrf 4, r5
-; CHECK-NEXT:    setbc r5, 4*cr5+un
-; CHECK-NEXT:    # implicit-def: $cr5un
-; CHECK-NEXT:    mfocrf r8, 4
-; CHECK-NEXT:    rlwimi r8, r9, 9, 23, 23
 ; CHECK-NEXT:    lwz r9, -4(r1)
-; CHECK-NEXT:    mtocrf 4, r8
-; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+lt
+; CHECK-NEXT:    crandc 4*cr5+gt, 4*cr5+gt, 4*cr7+eq
+; CHECK-NEXT:    crandc 4*cr7+eq, 4*cr7+un, 4*cr2+eq
+; CHECK-NEXT:    crandc 4*cr5+lt, 4*cr5+lt, 4*cr6+eq
+; CHECK-NEXT:    setbc r7, 4*cr6+un
 ; CHECK-NEXT:    setbc r8, 4*cr5+un
-; CHECK-NEXT:    isel r6, 0, r6, 4*cr5+gt
+; CHECK-NEXT:    lwz r12, 8(r1)
+; CHECK-NEXT:    xxlxor f2, f2, f2
+; CHECK-NEXT:    isel r3, r3, r5, 4*cr5+gt
+; CHECK-NEXT:    setbc r5, 4*cr7+gt
+; CHECK-NEXT:    crnor 4*cr5+gt, 4*cr6+gt, 4*cr5+gt
+; CHECK-NEXT:    crnor 4*cr6+gt, 4*cr7+lt, 4*cr7+eq
+; CHECK-NEXT:    crnor 4*cr5+lt, 4*cr6+lt, 4*cr5+lt
 ; CHECK-NEXT:    add r5, r7, r5
 ; CHECK-NEXT:    add r5, r8, r5
+; CHECK-NEXT:    isel r3, 0, r3, 4*cr5+gt
+; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+lt
+; CHECK-NEXT:    isel r6, 0, r6, 4*cr6+gt
 ; CHECK-NEXT:    mtocrf 128, r9
-; CHECK-NEXT:    lwz r9, -8(r1)
-; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+eq
-; CHECK-NEXT:    iseleq r3, 0, r3
 ; CHECK-NEXT:    mtfprd f0, r5
-; CHECK-NEXT:    xscvsxddp f0, f0
-; CHECK-NEXT:    mtocrf 128, r9
-; CHECK-NEXT:    lwz r9, -12(r1)
-; CHECK-NEXT:    lwz r12, 8(r1)
-; CHECK-NEXT:    iseleq r6, 0, r6
-; CHECK-NEXT:    xsmuldp f0, f0, f2
-; CHECK-NEXT:    mtocrf 128, r9
+; CHECK-NEXT:    isel r4, 0, r4, 4*cr5+eq
 ; CHECK-NEXT:    mtocrf 32, r12
 ; CHECK-NEXT:    mtocrf 16, r12
 ; CHECK-NEXT:    mtocrf 8, r12
-; CHECK-NEXT:    iseleq r4, 0, r4
+; CHECK-NEXT:    iseleq r3, 0, r3
+; CHECK-NEXT:    isel r6, 0, r6, 4*cr1+eq
+; CHECK-NEXT:    xscvsxddp f0, f0
 ; CHECK-NEXT:    add r3, r6, r3
 ; CHECK-NEXT:    add r3, r4, r3
 ; CHECK-NEXT:    mtfprd f1, r3
+; CHECK-NEXT:    xsmuldp f0, f0, f2
 ; CHECK-NEXT:    xscvsxddp f1, f1
 ; CHECK-NEXT:    xsadddp f1, f0, f1
 ; CHECK-NEXT:    blr
 bb:
-  %tmp = getelementptr inbounds %4, %4* null, i64 undef, i32 7
-  %tmp1 = load i64, i64* undef, align 8
-  %tmp2 = load i64, i64* null, align 8
-  %tmp3 = load i64, i64* %tmp, align 8
+  %tmp = getelementptr inbounds %4, ptr null, i64 undef, i32 7
+  %tmp1 = load i64, ptr undef, align 8
+  %tmp2 = load i64, ptr null, align 8
+  %tmp3 = load i64, ptr %tmp, align 8
   %tmp4 = icmp eq i64 %tmp1, 0
   %tmp5 = icmp eq i64 %tmp2, 0
   %tmp6 = icmp eq i64 %tmp3, 0
@@ -200,7 +159,7 @@ bb:
   br i1 %tmp4, label %bb12, label %bb10
 
 bb10:                                             ; preds = %bb
-  %tmp11 = load i32, i32* undef, align 8
+  %tmp11 = load i32, ptr undef, align 8
   br label %bb12
 
 bb12:                                             ; preds = %bb10, %bb
@@ -208,7 +167,7 @@ bb12:                                             ; preds = %bb10, %bb
   br i1 %tmp5, label %bb16, label %bb14
 
 bb14:                                             ; preds = %bb12
-  %tmp15 = load i32, i32* undef, align 8
+  %tmp15 = load i32, ptr undef, align 8
   br label %bb16
 
 bb16:                                             ; preds = %bb14, %bb12
@@ -216,7 +175,7 @@ bb16:                                             ; preds = %bb14, %bb12
   br i1 %tmp6, label %bb20, label %bb18
 
 bb18:                                             ; preds = %bb16
-  %tmp19 = load i32, i32* undef, align 8
+  %tmp19 = load i32, ptr undef, align 8
   br label %bb20
 
 bb20:                                             ; preds = %bb18, %bb16
@@ -236,7 +195,7 @@ bb20:                                             ; preds = %bb18, %bb16
   br i1 %tmp31, label %bb34, label %bb36
 
 bb34:                                             ; preds = %bb20
-  %tmp35 = load i64, i64* undef, align 8
+  %tmp35 = load i64, ptr undef, align 8
   br label %bb36
 
 bb36:                                             ; preds = %bb34, %bb20
@@ -244,7 +203,7 @@ bb36:                                             ; preds = %bb34, %bb20
   br i1 %tmp33, label %bb38, label %bb40
 
 bb38:                                             ; preds = %bb36
-  %tmp39 = load i64, i64* undef, align 8
+  %tmp39 = load i64, ptr undef, align 8
   br label %bb40
 
 bb40:                                             ; preds = %bb38, %bb36
@@ -258,15 +217,15 @@ bb40:                                             ; preds = %bb38, %bb36
   br i1 %tmp47, label %bb48, label %bb50
 
 bb48:                                             ; preds = %bb40
-  %tmp49 = load %3*, %3** undef, align 8
+  %tmp49 = load ptr, ptr undef, align 8
   br label %bb50
 
 bb50:                                             ; preds = %bb48, %bb40
-  %tmp51 = phi %3* [ undef, %bb40 ], [ %tmp49, %bb48 ]
+  %tmp51 = phi ptr [ undef, %bb40 ], [ %tmp49, %bb48 ]
   br i1 %tmp45, label %bb52, label %bb54
 
 bb52:                                             ; preds = %bb50
-  %tmp53 = load i32, i32* undef, align 8
+  %tmp53 = load i32, ptr undef, align 8
   br label %bb54
 
 bb54:                                             ; preds = %bb52, %bb50
@@ -274,13 +233,13 @@ bb54:                                             ; preds = %bb52, %bb50
   br i1 %tmp46, label %bb56, label %bb58
 
 bb56:                                             ; preds = %bb54
-  %tmp57 = load i32, i32* undef, align 8
+  %tmp57 = load i32, ptr undef, align 8
   br label %bb58
 
 bb58:                                             ; preds = %bb56, %bb54
   %tmp59 = phi i32 [ undef, %bb54 ], [ %tmp57, %bb56 ]
-  %tmp60 = getelementptr inbounds %3, %3* %tmp51, i64 0, i32 12
-  %tmp61 = load i32, i32* %tmp60, align 8
+  %tmp60 = getelementptr inbounds %3, ptr %tmp51, i64 0, i32 12
+  %tmp61 = load i32, ptr %tmp60, align 8
   %tmp62 = icmp slt i32 %tmp55, 1
   %tmp63 = icmp slt i32 %tmp59, 1
   %tmp64 = icmp slt i32 %tmp61, 1
@@ -290,12 +249,12 @@ bb58:                                             ; preds = %bb56, %bb54
   br i1 %tmp65, label %bb68, label %bb70
 
 bb68:                                             ; preds = %bb58
-  %tmp69 = load i64, i64* undef, align 8
+  %tmp69 = load i64, ptr undef, align 8
   br label %bb70
 
 bb70:                                             ; preds = %bb68, %bb58
   %tmp71 = phi i64 [ undef, %bb58 ], [ %tmp69, %bb68 ]
-  %tmp72 = load i64, i64* undef, align 8
+  %tmp72 = load i64, ptr undef, align 8
   %tmp73 = xor i1 %tmp25, true
   %tmp74 = xor i1 %tmp26, true
   %tmp75 = xor i1 %tmp27, true

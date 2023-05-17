@@ -47,7 +47,8 @@ def main():
     parser.add_argument('--extra-ssh-args', type=str, required=False)
     parser.add_argument('--extra-scp-args', type=str, required=False)
     parser.add_argument('--codesign_identity', type=str, required=False, default=None)
-    parser.add_argument('--env', type=str, nargs='*', required=False, default=dict())
+    parser.add_argument('--env', type=str, nargs='*', required=False, default=[])
+    parser.add_argument('--prepend_env', type=str, nargs='*', required=False, default=[])
     parser.add_argument("command", nargs=argparse.ONE_OR_MORE)
     args = parser.parse_args()
     commandLine = args.command
@@ -108,8 +109,15 @@ def main():
         # temporary directory on the remote host.
         commandLine = (pathOnRemote(x) if isTestExe(x) else x for x in commandLine)
         remoteCommands.append('cd {}'.format(tmp))
+
+        if args.prepend_env:
+            # We can't sensibly know the original value of the env vars
+            # in order to prepend to them, so just overwrite these variables.
+            args.env.extend(args.prepend_env)
+
         if args.env:
-            remoteCommands.append('export {}'.format(cmd_quote(' '.join(args.env))))
+            env = list(map(cmd_quote, args.env))
+            remoteCommands.append('export {}'.format(' '.join(args.env)))
         remoteCommands.append(subprocess.list2cmdline(commandLine))
 
         # Finally, SSH to the remote host and execute all the commands.

@@ -20,74 +20,138 @@
 
 #include <algorithm>
 #include <cassert>
+#include <functional>
 
-#include "test_macros.h"
 #include "test_iterators.h"
+#include "test_macros.h"
+#include "type_algorithms.h"
 
-#if TEST_STD_VER > 17
-TEST_CONSTEXPR bool test_constexpr() {
-    int ia[] = {1, 3, 6, 7};
-    int ib[] = {1, 3};
-    int ic[] = {1, 3, 5, 7};
-    typedef cpp17_input_iterator<int*>         II;
-    typedef bidirectional_iterator<int*> BI;
+template <class UnderlyingType, class Iter1>
+struct Test {
+  template <class Iter2>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    UnderlyingType a[]  = {0, 1, 2, 3, 4, 5};
+    const unsigned s    = sizeof(a) / sizeof(a[0]);
+    UnderlyingType b[s] = {0, 1, 2, 5, 4, 5};
 
-    return !std::equal(std::begin(ia), std::end(ia), std::begin(ic))
-        && !std::equal(std::begin(ia), std::end(ia), std::begin(ic), std::end(ic))
-        &&  std::equal(std::begin(ib), std::end(ib), std::begin(ic))
-        && !std::equal(std::begin(ib), std::end(ib), std::begin(ic), std::end(ic))
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a)));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b)));
 
-        &&  std::equal(II(std::begin(ib)), II(std::end(ib)), II(std::begin(ic)))
-        && !std::equal(BI(std::begin(ib)), BI(std::end(ib)), BI(std::begin(ic)), BI(std::end(ic)))
-        ;
-    }
-#endif
-
-
-int main(int, char**)
-{
-    int ia[] = {0, 1, 2, 3, 4, 5};
-    const unsigned s = sizeof(ia)/sizeof(ia[0]);
-    int ib[s] = {0, 1, 2, 5, 4, 5};
-    assert(std::equal(cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia+s),
-                      cpp17_input_iterator<const int*>(ia)));
 #if TEST_STD_VER >= 14
-    assert(std::equal(cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia+s),
-                      cpp17_input_iterator<const int*>(ia),
-                      cpp17_input_iterator<const int*>(ia+s)));
-    assert(std::equal(random_access_iterator<const int*>(ia),
-                      random_access_iterator<const int*>(ia+s),
-                      random_access_iterator<const int*>(ia),
-                      random_access_iterator<const int*>(ia+s)));
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), std::equal_to<>()));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), std::equal_to<>()));
+
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s)));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s - 1)));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), Iter2(b + s)));
+
+    assert(std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s), std::equal_to<>()));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(a), Iter2(a + s - 1), std::equal_to<>()));
+    assert(!std::equal(Iter1(a), Iter1(a + s), Iter2(b), Iter2(b + s), std::equal_to<>()));
 #endif
-    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s),
-                       cpp17_input_iterator<const int*>(ib)));
+  }
+};
+
+struct TestNarrowingEqualTo {
+  template <class UnderlyingType>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    UnderlyingType a[] = {
+        UnderlyingType(0x1000),
+        UnderlyingType(0x1001),
+        UnderlyingType(0x1002),
+        UnderlyingType(0x1003),
+        UnderlyingType(0x1004)};
+    UnderlyingType b[] = {
+        UnderlyingType(0x1600),
+        UnderlyingType(0x1601),
+        UnderlyingType(0x1602),
+        UnderlyingType(0x1603),
+        UnderlyingType(0x1604)};
+
+    assert(std::equal(a, a + 5, b, std::equal_to<char>()));
 #if TEST_STD_VER >= 14
-    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s),
-                       cpp17_input_iterator<const int*>(ib),
-                       cpp17_input_iterator<const int*>(ib+s)));
-    assert(!std::equal(random_access_iterator<const int*>(ia),
-                       random_access_iterator<const int*>(ia+s),
-                       random_access_iterator<const int*>(ib),
-                       random_access_iterator<const int*>(ib+s)));
-    assert(!std::equal(cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s),
-                       cpp17_input_iterator<const int*>(ia),
-                       cpp17_input_iterator<const int*>(ia+s-1)));
-    assert(!std::equal(random_access_iterator<const int*>(ia),
-                       random_access_iterator<const int*>(ia+s),
-                       random_access_iterator<const int*>(ia),
-                       random_access_iterator<const int*>(ia+s-1)));
+    assert(std::equal(a, a + 5, b, b + 5, std::equal_to<char>()));
+#endif
+  }
+};
+
+template <class UnderlyingType, class TypeList>
+struct TestIter2 {
+  template <class Iter1>
+  TEST_CONSTEXPR_CXX20 void operator()() {
+    types::for_each(TypeList(), Test<UnderlyingType, Iter1>());
+  }
+};
+
+struct AddressCompare {
+  int i = 0;
+  TEST_CONSTEXPR_CXX20 AddressCompare(int) {}
+
+  operator char() { return static_cast<char>(i); }
+
+  friend TEST_CONSTEXPR_CXX20 bool operator==(const AddressCompare& lhs, const AddressCompare& rhs) {
+    return &lhs == &rhs;
+  }
+
+  friend TEST_CONSTEXPR_CXX20 bool operator!=(const AddressCompare& lhs, const AddressCompare& rhs) {
+    return &lhs != &rhs;
+  }
+};
+
+#if TEST_STD_VER >= 20
+class trivially_equality_comparable {
+public:
+  constexpr trivially_equality_comparable(int i) : i_(i) {}
+  bool operator==(const trivially_equality_comparable&) const = default;
+
+private:
+  int i_;
+};
 
 #endif
 
-#if TEST_STD_VER > 17
-    static_assert(test_constexpr());
+TEST_CONSTEXPR_CXX20 bool test() {
+  types::for_each(types::cpp17_input_iterator_list<int*>(), TestIter2<int, types::cpp17_input_iterator_list<int*> >());
+  types::for_each(
+      types::cpp17_input_iterator_list<char*>(), TestIter2<char, types::cpp17_input_iterator_list<char*> >());
+  types::for_each(types::cpp17_input_iterator_list<AddressCompare*>(),
+                  TestIter2<AddressCompare, types::cpp17_input_iterator_list<AddressCompare*> >());
+
+  types::for_each(types::integral_types(), TestNarrowingEqualTo());
+
+#if TEST_STD_VER >= 20
+  types::for_each(
+      types::cpp17_input_iterator_list<trivially_equality_comparable*>{},
+      TestIter2<trivially_equality_comparable, types::cpp17_input_iterator_list<trivially_equality_comparable*>>{});
 #endif
+
+  return true;
+}
+
+struct Base {};
+struct Derived : virtual Base {};
+
+int main(int, char**) {
+  test();
+#if TEST_STD_VER >= 20
+  static_assert(test());
+#endif
+
+  types::for_each(types::as_pointers<types::cv_qualified_versions<int> >(),
+                  TestIter2<int, types::as_pointers<types::cv_qualified_versions<int> > >());
+  types::for_each(types::as_pointers<types::cv_qualified_versions<char> >(),
+                  TestIter2<char, types::as_pointers<types::cv_qualified_versions<char> > >());
+
+  {
+    Derived d;
+    Derived* a[] = {&d, nullptr};
+    Base* b[]    = {&d, nullptr};
+
+    assert(std::equal(a, a + 2, b));
+#if TEST_STD_VER >= 14
+    assert(std::equal(a, a + 2, b, b + 2));
+#endif
+  }
 
   return 0;
 }

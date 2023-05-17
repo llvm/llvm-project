@@ -13,10 +13,10 @@ target triple = "x86_64-unknown-linux-gnu"
 ; CHECK-LABEL: @test
 ; Checks that the call instruction is promoted to direct call and has
 ; profile count annotated on the direct call.
-define void @test(void ()*) #0 !dbg !7 {
-  %2 = alloca void ()*
-  store void ()* %0, void ()** %2
-  %3 = load void ()*, void ()** %2
+define void @test(ptr) #0 !dbg !7 {
+  %2 = alloca ptr
+  store ptr %0, ptr %2
+  %3 = load ptr, ptr %2
   ; CHECK: call void @bar(),{{.*}}!prof
   call void %3(), !dbg !10
   ret void

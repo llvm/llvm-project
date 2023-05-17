@@ -20,7 +20,7 @@
 #include "asan_testing.h"
 
 template <typename Vec>
-void test ( Vec &v )
+TEST_CONSTEXPR_CXX20 void test(Vec &v)
 {
     v.assign({3, 4, 5, 6});
     assert(v.size() == 4);
@@ -31,8 +31,7 @@ void test ( Vec &v )
     assert(v[3] == 6);
 }
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
     {
     typedef std::vector<int> V;
     V d1;
@@ -50,5 +49,14 @@ int main(int, char**)
     test(d2);
     }
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

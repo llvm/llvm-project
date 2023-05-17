@@ -2,8 +2,6 @@
 Test SBSymbolContext APIs.
 """
 
-from __future__ import print_function
-
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -12,8 +10,6 @@ from lldbsuite.test import lldbutil
 
 class SymbolContextAPITestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -21,7 +17,6 @@ class SymbolContextAPITestCase(TestBase):
         self.line = line_number(
             'main.c', '// Find the line number of function "c" here.')
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24778")
     def test(self):
         """Exercise SBSymbolContext API extensively."""
         self.build()

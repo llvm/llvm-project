@@ -35,6 +35,9 @@ struct GlobalStatus {
   /// can be deleted.
   bool IsLoaded = false;
 
+  /// Number of stores to the global.
+  unsigned NumStores = 0;
+
   /// Keep track of what stores to the global look like.
   enum StoredType {
     /// There is no store to this global.  It can thus be marked constant.

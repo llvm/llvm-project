@@ -1,4 +1,4 @@
-// RUN: mlir-opt -canonicalize %s | FileCheck %s
+// RUN: mlir-opt -canonicalize="test-convergence" %s | FileCheck %s
 
 pdl.pattern @operation_op : benefit(1) {
   %root = operation "foo.op"

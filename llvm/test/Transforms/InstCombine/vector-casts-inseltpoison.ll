@@ -53,8 +53,8 @@ define <2 x i1> @and_cmp_is_trunc_even_with_undef_elts(<2 x i64> %a) {
 define <2 x i64> @test2(<2 x i64> %a) {
 ; CHECK-LABEL: @test2(
 ; CHECK-NEXT:    [[B:%.*]] = lshr <2 x i64> [[A:%.*]], <i64 1, i64 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i64> [[B]], <i64 32767, i64 32767>
-; CHECK-NEXT:    ret <2 x i64> [[TMP1]]
+; CHECK-NEXT:    [[T:%.*]] = and <2 x i64> [[B]], <i64 32767, i64 32767>
+; CHECK-NEXT:    ret <2 x i64> [[T]]
 ;
   %b = and <2 x i64> %a, <i64 65535, i64 65535>
   %t = ashr <2 x i64> %b, <i64 1, i64 1>
@@ -63,8 +63,8 @@ define <2 x i64> @test2(<2 x i64> %a) {
 
 define <2 x i64> @test3(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test3(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp ord <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[AND1:%.*]] = fcmp ord <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = sext <4 x i1> [[AND1]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[AND]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]
 ;
@@ -79,8 +79,8 @@ define <2 x i64> @test3(<4 x float> %a, <4 x float> %b) {
 
 define <2 x i64> @test4(<4 x float> %a, <4 x float> %b) {
 ; CHECK-LABEL: @test4(
-; CHECK-NEXT:    [[TMP1:%.*]] = fcmp uno <4 x float> [[A:%.*]], [[B:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i1> [[TMP1]] to <4 x i32>
+; CHECK-NEXT:    [[OR1:%.*]] = fcmp uno <4 x float> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[OR:%.*]] = sext <4 x i1> [[OR1]] to <4 x i32>
 ; CHECK-NEXT:    [[CONV:%.*]] = bitcast <4 x i32> [[OR]] to <2 x i64>
 ; CHECK-NEXT:    ret <2 x i64> [[CONV]]
 ;
@@ -148,16 +148,16 @@ define <2 x i64> @test7(<4 x float> %a, <4 x float> %b) {
   ret <2 x i64> %conv
 }
 
-define void @convert(<2 x i32>* %dst.addr, <2 x i64> %src) {
+define void @convert(ptr %dst.addr, <2 x i64> %src) {
 ; CHECK-LABEL: @convert(
 ; CHECK-NEXT:    [[VAL:%.*]] = trunc <2 x i64> [[SRC:%.*]] to <2 x i32>
 ; CHECK-NEXT:    [[ADD:%.*]] = add <2 x i32> [[VAL]], <i32 1, i32 1>
-; CHECK-NEXT:    store <2 x i32> [[ADD]], <2 x i32>* [[DST_ADDR:%.*]], align 8
+; CHECK-NEXT:    store <2 x i32> [[ADD]], ptr [[DST_ADDR:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %val = trunc <2 x i64> %src to <2 x i32>
   %add = add <2 x i32> %val, <i32 1, i32 1>
-  store <2 x i32> %add, <2 x i32>* %dst.addr
+  store <2 x i32> %add, ptr %dst.addr
   ret void
 }
 
@@ -259,8 +259,8 @@ define <4 x float> @f(i32 %a) {
   %dim31 = insertelement <4 x i32> %dim30, i32 %a, i32 2
   %dim32 = insertelement <4 x i32> %dim31, i32 %a, i32 3
 
-  %offset_ptr = getelementptr <4 x float>, <4 x float>* null, i32 1
-  %offset_int = ptrtoint <4 x float>* %offset_ptr to i64
+  %offset_ptr = getelementptr <4 x float>, ptr null, i32 1
+  %offset_int = ptrtoint ptr %offset_ptr to i64
   %sizeof32 = trunc i64 %offset_int to i32
 
   %smearinsert33 = insertelement <4 x i32> poison, i32 %sizeof32, i32 0

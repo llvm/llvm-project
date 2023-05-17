@@ -214,3 +214,43 @@ Sections:
     Address:      0x4000
     AddressAlign: 0x1000
     Content:      "c3c3c3c3"
+
+## If .bss is converted to non-SHT_NOBITS, align its new offset. This may affect
+## the output size.
+# RUN: yaml2obj --docnum=7 %s -o %t7
+# RUN: llvm-objcopy -O binary --set-section-flags .bss=alloc,contents %t7 %t7.out
+# RUN: od -A x -t x2 %t7.out | FileCheck %s --check-prefix=FILLNOBITS --ignore-case
+
+# FILLNOBITS:      000000 c3c3 0000 0000 0000 0000 0000 0000 0000
+# FILLNOBITS-NEXT: 000010 0000 00
+# FILLNOBITS-NEXT: 000013
+
+--- !ELF
+FileHeader:
+  Class:   ELFCLASS64
+  Data:    ELFDATA2LSB
+  Type:    ET_EXEC
+  Machine: EM_X86_64
+Sections:
+  - Name:         .text
+    Type:         SHT_PROGBITS
+    Flags:        [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:      0x1000
+    AddressAlign: 0x1000
+    Content:      "c3c3"
+  - Name:         .bss
+    Type:         SHT_NOBITS
+    Flags:        [ SHF_ALLOC ]
+    ## sh_offset is not aligned.
+    ShOffset:     0x1002
+    Size:         0x3
+    AddressAlign: 0x10
+ProgramHeaders:
+  - Type:     PT_LOAD
+    Flags:    [ PF_R, PF_W, PF_X ]
+    Offset:   0x1000
+    VAddr:    0x1000
+    PAddr:    0x1000
+    FileSize: 0x2
+    MemSize:  0x13
+    Align:    0x1000

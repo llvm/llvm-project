@@ -27,7 +27,7 @@ DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
   m_offset = begin_offset;
   Clear();
   DWARFAbbreviationDeclaration abbrevDeclaration;
-  dw_uleb128_t prev_abbr_code = 0;
+  uint32_t prev_abbr_code = 0;
   while (true) {
     llvm::Expected<DWARFEnumState> es =
         abbrevDeclaration.extract(data, offset_ptr);
@@ -50,7 +50,7 @@ DWARFAbbreviationDeclarationSet::extract(const DWARFDataExtractor &data,
 // DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration()
 const DWARFAbbreviationDeclaration *
 DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
-    dw_uleb128_t abbrCode) const {
+    uint32_t abbrCode) const {
   if (m_idx_offset == UINT32_MAX) {
     DWARFAbbreviationDeclarationCollConstIter pos;
     DWARFAbbreviationDeclarationCollConstIter end = m_decls.end();
@@ -65,7 +65,6 @@ DWARFAbbreviationDeclarationSet::GetAbbreviationDeclaration(
   }
   return nullptr;
 }
-
 
 // DWARFAbbreviationDeclarationSet::GetUnsupportedForms()
 void DWARFAbbreviationDeclarationSet::GetUnsupportedForms(

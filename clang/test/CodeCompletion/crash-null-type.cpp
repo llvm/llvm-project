@@ -3,6 +3,6 @@ void test() {
     loopVa
   }
 }
-// RUN: not %clang_cc1 -fsyntax-only -code-completion-at=%s:3:11 %s -o - \
+// RUN: not %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-3):11 %s -o - \
 // RUN:            | FileCheck %s
 // CHECK: COMPLETION: loopVar

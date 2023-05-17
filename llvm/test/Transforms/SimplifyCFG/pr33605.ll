@@ -1,4 +1,4 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 ; Skip simplifying unconditional branches from empty blocks in simplifyCFG,
 ; when it can destroy canonical loop structure.
@@ -28,7 +28,7 @@
 ; CHECK-NOT: br label %for.cond
 ; CHECK: if.end:
 ; CHECK: br label %for.cond
-define i1 @test(i32 %a, i32 %b, i32* %c) {
+define i1 @test(i32 %a, i32 %b, ptr %c) {
 entry:
   br label %for.cond
 
@@ -46,13 +46,13 @@ for.cond.cleanup:                                 ; preds = %for.cond
 for.body:                                         ; preds = %for.cond
   %or = or i32 %a, %b
   %idxprom = sext i32 %dec to i64
-  %arrayidx = getelementptr inbounds i32, i32* %c, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %c, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
   %cmp = icmp eq i32 %or, %0
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:                                          ; preds = %for.body
-  store i32 %or, i32* %arrayidx, align 4
+  store i32 %or, ptr %arrayidx, align 4
   call void @foo()
   br label %if.end
 

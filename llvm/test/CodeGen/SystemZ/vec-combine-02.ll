@@ -140,7 +140,7 @@ define <16 x i8> @f4(<4 x i32> %val0, <4 x i32> %val1,
 ; Check the same operation, but with elements being extracted from the result.
 define void @f5(<4 x i32> %val0, <4 x i32> %val1,
                 <4 x i32> %val2, <4 x i32> %val3,
-                i8 *%base) {
+                ptr %base) {
 ; CHECK-LABEL: f5:
 ; CHECK-DAG: vsteb %v24, 0(%r2), 11
 ; CHECK-DAG: vsteb %v26, 1(%r2), 15
@@ -165,20 +165,19 @@ define void @f5(<4 x i32> %val0, <4 x i32> %val1,
                                    i32 17, i32 19, i32 21, i32 23,
                                    i32 25, i32 27, i32 29, i32 31>
 
-  %ptr0 = getelementptr i8, i8 *%base, i64 0
-  %ptr1 = getelementptr i8, i8 *%base, i64 1
-  %ptr2 = getelementptr i8, i8 *%base, i64 2
-  %ptr3 = getelementptr i8, i8 *%base, i64 3
+  %ptr1 = getelementptr i8, ptr %base, i64 1
+  %ptr2 = getelementptr i8, ptr %base, i64 2
+  %ptr3 = getelementptr i8, ptr %base, i64 3
 
   %byte0 = extractelement <16 x i8> %vec, i32 2
   %byte1 = extractelement <16 x i8> %vec, i32 7
   %byte2 = extractelement <16 x i8> %vec, i32 8
   %byte3 = extractelement <16 x i8> %vec, i32 13
 
-  store i8 %byte0, i8 *%ptr0
-  store i8 %byte1, i8 *%ptr1
-  store i8 %byte2, i8 *%ptr2
-  store i8 %byte3, i8 *%ptr3
+  store i8 %byte0, ptr %base
+  store i8 %byte1, ptr %ptr1
+  store i8 %byte2, ptr %ptr2
+  store i8 %byte3, ptr %ptr3
 
   ret void
 }

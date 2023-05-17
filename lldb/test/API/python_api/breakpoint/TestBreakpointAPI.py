@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class BreakpointAPITestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_breakpoint_is_valid(self):
@@ -63,6 +61,9 @@ class BreakpointAPITestCase(TestBase):
                         VALID_BREAKPOINT)
         location = breakpoint.GetLocationAtIndex(0)
         self.assertTrue(location.IsValid())
+
+        # Test negative index access.
+        self.assertTrue(breakpoint.location[-1].IsValid())
 
         # Make sure the breakpoint's target is right:
         self.assertEqual(target, breakpoint.GetTarget(), "Breakpoint reports its target correctly")

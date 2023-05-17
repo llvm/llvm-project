@@ -1,11 +1,11 @@
 // REQUIRES: powerpc-registered-target
-// RUN: %clang_cc1 -triple powerpc64-unknown-linux-gnu -fsyntax-only \
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64-unknown-linux-gnu -fsyntax-only \
 // RUN:   -target-cpu pwr8 -Wall -Werror -verify %s
-// RUN: %clang_cc1 -triple powerpc64le-unknown-linux-gnu -fsyntax-only \
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64le-unknown-linux-gnu -fsyntax-only \
 // RUN:   -target-cpu pwr8 -Wall -Werror -verify %s
-// RUN: %clang_cc1 -triple powerpc64-unknown-aix -fsyntax-only \
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc64-unknown-aix -fsyntax-only \
 // RUN:   -target-cpu pwr8 -Wall -Werror -verify %s
-// RUN: %clang_cc1 -triple powerpc-unknown-aix -fsyntax-only \
+// RUN: %clang_cc1 -flax-vector-conversions=none -triple powerpc-unknown-aix -fsyntax-only \
 // RUN:   -target-cpu pwr8 -Wall -Werror -verify %s
 
 #include <altivec.h>

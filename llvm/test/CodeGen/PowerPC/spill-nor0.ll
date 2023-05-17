@@ -11,7 +11,7 @@ if.then:                                          ; preds = %entry
   ret void
 
 if.end:                                           ; preds = %entry
-  %0 = call i64 asm sideeffect "mr 3,$1\0A\09mr 4,$2\0A\09rotldi 0,0,3  ; rotldi 0,0,13\0A\09rotldi 0,0,61 ; rotldi 0,0,51\0A\09or 1,1,1\0A\09mr $0,3", "=b,b,b,~{cc},~{memory},~{r3},~{r4}"(i32 0, i64* undef) #0
+  %0 = call i64 asm sideeffect "mr 3,$1\0A\09mr 4,$2\0A\09rotldi 0,0,3  ; rotldi 0,0,13\0A\09rotldi 0,0,61 ; rotldi 0,0,51\0A\09or 1,1,1\0A\09mr $0,3", "=b,b,b,~{cc},~{memory},~{r3},~{r4}"(i32 0, ptr undef) #0
   br i1 undef, label %end0, label %end1 ; need successor blocks to force spill
 
 end0:

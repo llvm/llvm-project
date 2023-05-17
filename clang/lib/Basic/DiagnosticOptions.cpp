@@ -17,7 +17,7 @@
 namespace clang {
 
 raw_ostream &operator<<(raw_ostream &Out, DiagnosticLevelMask M) {
-  using UT = std::underlying_type<DiagnosticLevelMask>::type;
+  using UT = std::underlying_type_t<DiagnosticLevelMask>;
   return Out << static_cast<UT>(M);
 }
 

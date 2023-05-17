@@ -7,8 +7,6 @@ from lldbsuite.test.lldbgdbclient import GDBRemoteTestBase
 
 class TestGDBRemoteLoad(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(archs=["aarch64"], oslist=["freebsd"],
                         bugnumber="llvm.org/pr49414")
     def test_module_load_address(self):

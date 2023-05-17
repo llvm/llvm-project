@@ -1,4 +1,4 @@
-; RUN: opt -loop-unroll -unroll-runtime -unroll-runtime-epilog -S %s | FileCheck %s
+; RUN: opt -passes=loop-unroll -unroll-runtime -unroll-runtime-epilog -S %s | FileCheck %s
 
 ; Test that epilogue is tagged with the same debug information as original loop body rather than original loop exit.
 

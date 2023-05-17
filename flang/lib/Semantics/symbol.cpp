@@ -125,6 +125,9 @@ llvm::raw_ostream &operator<<(
   if (x.moduleInterface_) {
     os << " moduleInterface: " << *x.moduleInterface_;
   }
+  if (x.defaultIgnoreTKR_) {
+    os << " defaultIgnoreTKR";
+  }
   return os;
 }
 
@@ -135,6 +138,9 @@ void EntityDetails::set_type(const DeclTypeSpec &type) {
 
 void AssocEntityDetails::set_rank(int rank) { rank_ = rank; }
 void EntityDetails::ReplaceType(const DeclTypeSpec &type) { type_ = &type; }
+
+ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
+    : EntityDetails(std::move(d)) {}
 
 void ObjectEntityDetails::set_shape(const ArraySpec &shape) {
   CHECK(shape_.empty());
@@ -149,11 +155,8 @@ void ObjectEntityDetails::set_coshape(const ArraySpec &coshape) {
   }
 }
 
-ProcEntityDetails::ProcEntityDetails(EntityDetails &&d) : EntityDetails(d) {
-  if (type()) {
-    interface_.set_type(*type());
-  }
-}
+ProcEntityDetails::ProcEntityDetails(EntityDetails &&d)
+    : EntityDetails(std::move(d)) {}
 
 UseErrorDetails::UseErrorDetails(const UseDetails &useDetails) {
   add_occurrence(useDetails.location(), *GetUsedModule(useDetails).scope());
@@ -174,11 +177,13 @@ void GenericDetails::set_specific(Symbol &specific) {
   CHECK(!derivedType_);
   specific_ = &specific;
 }
+void GenericDetails::clear_specific() { specific_ = nullptr; }
 void GenericDetails::set_derivedType(Symbol &derivedType) {
   CHECK(!specific_);
   CHECK(!derivedType_);
   derivedType_ = &derivedType;
 }
+void GenericDetails::clear_derivedType() { derivedType_ = nullptr; }
 void GenericDetails::AddUse(const Symbol &use) {
   CHECK(use.has<UseDetails>());
   uses_.push_back(use);
@@ -248,9 +253,7 @@ std::string DetailsToString(const Details &details) {
       details);
 }
 
-const std::string Symbol::GetDetailsName() const {
-  return DetailsToString(details_);
-}
+std::string Symbol::GetDetailsName() const { return DetailsToString(details_); }
 
 void Symbol::set_details(Details &&details) {
   CHECK(CanReplaceDetails(details));
@@ -277,6 +280,9 @@ bool Symbol::CanReplaceDetails(const Details &details) const {
               const auto *use{this->detailsIf<UseDetails>()};
               return use && use->symbol() == x.symbol();
             },
+            [&](const HostAssocDetails &) {
+              return this->has<HostAssocDetails>();
+            },
             [](const auto &) { return false; },
         },
         details);
@@ -295,7 +301,7 @@ void Symbol::SetType(const DeclTypeSpec &type) {
                     [&](EntityDetails &x) { x.set_type(type); },
                     [&](ObjectEntityDetails &x) { x.set_type(type); },
                     [&](AssocEntityDetails &x) { x.set_type(type); },
-                    [&](ProcEntityDetails &x) { x.interface().set_type(type); },
+                    [&](ProcEntityDetails &x) { x.set_type(type); },
                     [&](TypeParamDetails &x) { x.set_type(type); },
                     [](auto &) {},
                 },
@@ -322,6 +328,30 @@ void Symbol::SetBindName(std::string &&name) {
       [&](auto &x) {
         if constexpr (HasBindName<decltype(&x)>) {
           x.set_bindName(std::move(name));
+        } else {
+          DIE("bind name not allowed on this kind of symbol");
+        }
+      },
+      details_);
+}
+
+bool Symbol::GetIsExplicitBindName() const {
+  return common::visit(
+      [&](auto &x) -> bool {
+        if constexpr (HasBindName<decltype(&x)>) {
+          return x.isExplicitBindName();
+        } else {
+          return false;
+        }
+      },
+      details_);
+}
+
+void Symbol::SetIsExplicitBindName(bool yes) {
+  common::visit(
+      [&](auto &x) {
+        if constexpr (HasBindName<decltype(&x)>) {
+          x.set_isExplicitBindName(yes);
         } else {
           DIE("bind name not allowed on this kind of symbol");
         }
@@ -361,9 +391,6 @@ bool Symbol::IsFromModFile() const {
       (!owner_->IsTopLevel() && owner_->symbol()->IsFromModFile());
 }
 
-ObjectEntityDetails::ObjectEntityDetails(EntityDetails &&d)
-    : EntityDetails(d) {}
-
 llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const EntityDetails &x) {
   DumpBool(os, "dummy", x.isDummy());
   DumpBool(os, "funcResult", x.isFuncResult());
@@ -383,6 +410,10 @@ llvm::raw_ostream &operator<<(
   if (x.unanalyzedPDTComponentInit()) {
     os << " (has unanalyzedPDTComponentInit)";
   }
+  if (!x.ignoreTKR_.empty()) {
+    os << ' ';
+    x.ignoreTKR_.Dump(os, common::EnumToString);
+  }
   return os;
 }
 
@@ -398,10 +429,10 @@ llvm::raw_ostream &operator<<(
 
 llvm::raw_ostream &operator<<(
     llvm::raw_ostream &os, const ProcEntityDetails &x) {
-  if (auto *symbol{x.interface_.symbol()}) {
-    os << ' ' << symbol->name();
+  if (x.procInterface_) {
+    os << ' ' << x.procInterface_->name();
   } else {
-    DumpType(os, x.interface_.type());
+    DumpType(os, x.type());
   }
   DumpOptional(os, "bindName", x.bindName());
   DumpOptional(os, "passName", x.passName());
@@ -463,6 +494,9 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
               }
               os << ")";
             }
+            if (x.isDefaultPrivate()) {
+              os << " isDefaultPrivate";
+            }
           },
           [&](const SubprogramNameDetails &x) {
             os << ' ' << EnumToString(x.kind());
@@ -484,6 +518,10 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Details &details) {
           [&](const ProcBindingDetails &x) {
             os << " => " << x.symbol().name();
             DumpOptional(os, "passName", x.passName());
+            if (x.numPrivatesNotOverridden() > 0) {
+              os << " numPrivatesNotOverridden: "
+                 << x.numPrivatesNotOverridden();
+            }
           },
           [&](const NamelistDetails &x) {
             os << ':';
@@ -641,7 +679,7 @@ const Symbol *DerivedTypeDetails::GetFinalForRank(int rank) const {
         if (const Symbol * arg{details->dummyArgs().at(0)}) {
           if (const auto *object{arg->detailsIf<ObjectEntityDetails>()}) {
             if (rank == object->shape().Rank() || object->IsAssumedRank() ||
-                symbol.attrs().test(Attr::ELEMENTAL)) {
+                IsElementalProcedure(symbol)) {
               return &symbol;
             }
           }
@@ -669,42 +707,27 @@ bool GenericKind::IsOperator() const {
 std::string GenericKind::ToString() const {
   return common::visit(
       common::visitors {
-        [](const OtherKind &x) { return EnumToString(x); },
-            [](const DefinedIo &x) { return AsFortran(x).ToString(); },
+        [](const OtherKind &x) { return std::string{EnumToString(x)}; },
+            [](const common::DefinedIo &x) { return AsFortran(x).ToString(); },
 #if !__clang__ && __GNUC__ == 7 && __GNUC_MINOR__ == 2
             [](const common::NumericOperator &x) {
-              return common::EnumToString(x);
+              return std::string{common::EnumToString(x)};
             },
             [](const common::LogicalOperator &x) {
-              return common::EnumToString(x);
+              return std::string{common::EnumToString(x)};
             },
             [](const common::RelationalOperator &x) {
-              return common::EnumToString(x);
+              return std::string{common::EnumToString(x)};
             },
 #else
-            [](const auto &x) { return common::EnumToString(x); },
+            [](const auto &x) { return std::string{common::EnumToString(x)}; },
 #endif
       },
       u);
 }
 
-SourceName GenericKind::AsFortran(DefinedIo x) {
-  const char *name{nullptr};
-  switch (x) {
-    SWITCH_COVERS_ALL_CASES
-  case DefinedIo::ReadFormatted:
-    name = "read(formatted)";
-    break;
-  case DefinedIo::ReadUnformatted:
-    name = "read(unformatted)";
-    break;
-  case DefinedIo::WriteFormatted:
-    name = "write(formatted)";
-    break;
-  case DefinedIo::WriteUnformatted:
-    name = "write(unformatted)";
-    break;
-  }
+SourceName GenericKind::AsFortran(common::DefinedIo x) {
+  const char *name{common::AsFortran(x)};
   return {name, std::strlen(name)};
 }
 
@@ -713,7 +736,8 @@ bool GenericKind::Is(GenericKind::OtherKind x) const {
   return y && *y == x;
 }
 
-bool SymbolOffsetCompare::operator()(const SymbolRef &x, const SymbolRef &y) const {
+bool SymbolOffsetCompare::operator()(
+    const SymbolRef &x, const SymbolRef &y) const {
   const Symbol *xCommon{FindCommonBlockContaining(*x)};
   const Symbol *yCommon{FindCommonBlockContaining(*y)};
   if (xCommon) {

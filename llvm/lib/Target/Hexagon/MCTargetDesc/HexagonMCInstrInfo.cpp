@@ -138,7 +138,7 @@ bool canonicalizePacketImpl(MCInstrInfo const &MCII, MCSubtargetInfo const &STI,
   HexagonMCShuffle(Context, false, MCII, STI, MCB);
 
   const SmallVector<DuplexCandidate, 8> possibleDuplexes =
-      (STI.getFeatureBits()[Hexagon::FeatureDuplex])
+      (STI.hasFeature(Hexagon::FeatureDuplex))
           ? HexagonMCInstrInfo::getDuplexPossibilties(MCII, STI, MCB)
           : SmallVector<DuplexCandidate, 8>();
 
@@ -762,7 +762,7 @@ bool HexagonMCInstrInfo::isPredRegister(MCInstrInfo const &MCII,
   MCInstrDesc const &Desc = HexagonMCInstrInfo::getDesc(MCII, Inst);
 
   return Inst.getOperand(I).isReg() &&
-         Desc.OpInfo[I].RegClass == Hexagon::PredRegsRegClassID;
+         Desc.operands()[I].RegClass == Hexagon::PredRegsRegClassID;
 }
 
 /// Return whether the insn can be packaged only with A and X-type insns.
@@ -907,7 +907,7 @@ bool HexagonMCInstrInfo::s27_2_reloc(MCExpr const &Expr) {
 }
 
 unsigned HexagonMCInstrInfo::packetSizeSlots(MCSubtargetInfo const &STI) {
-  const bool IsTiny = STI.getFeatureBits()[Hexagon::ProcTinyCore];
+  const bool IsTiny = STI.hasFeature(Hexagon::ProcTinyCore);
 
   return IsTiny ? (HEXAGON_PACKET_SIZE - 1) : HEXAGON_PACKET_SIZE;
 }
@@ -932,7 +932,7 @@ HexagonMCInstrInfo::predicateInfo(MCInstrInfo const &MCII, MCInst const &MCI) {
     return {0, 0, false};
   MCInstrDesc const &Desc = getDesc(MCII, MCI);
   for (auto I = Desc.getNumDefs(), N = Desc.getNumOperands(); I != N; ++I)
-    if (Desc.OpInfo[I].RegClass == Hexagon::PredRegsRegClassID)
+    if (Desc.operands()[I].RegClass == Hexagon::PredRegsRegClassID)
       return {MCI.getOperand(I).getReg(), I, isPredicatedTrue(MCII, MCI)};
   return {0, 0, false};
 }

@@ -1,7 +1,7 @@
-; RUN: opt < %s -basic-aa -gvn -S | FileCheck %s
+; RUN: opt < %s -passes=gvn -S | FileCheck %s
 ; PR2503
 
-@g_3 = external global i8		; <i8*> [#uses=2]
+@g_3 = external global i8		; <ptr> [#uses=2]
 
 define i8 @func_1(i32 %x, i32 %y) nounwind  {
 entry:
@@ -13,8 +13,8 @@ ifthen:		; preds = %entry
 	br label %ifend
 
 ifelse:		; preds = %entry
-	%tmp3 = load i8, i8* @g_3		; <i8> [#uses=0]
-        store i8 %tmp3, i8* %A
+	%tmp3 = load i8, ptr @g_3		; <i8> [#uses=0]
+        store i8 %tmp3, ptr %A
 	br label %afterfor
 
 forcond:		; preds = %forinc
@@ -27,7 +27,7 @@ forinc:		; preds = %forbody
 	br label %forcond
 
 afterfor:		; preds = %forcond, %forcond.thread
-	%tmp10 = load i8, i8* @g_3		; <i8> [#uses=0]
+	%tmp10 = load i8, ptr @g_3		; <i8> [#uses=0]
 	ret i8 %tmp10
 ; CHECK: ret i8 %tmp3
 

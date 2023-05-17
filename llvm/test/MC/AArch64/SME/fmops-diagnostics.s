@@ -1,4 +1,4 @@
-// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme,+sme-f64 2>&1 < %s| FileCheck %s
+// RUN: not llvm-mc -triple=aarch64 -show-encoding -mattr=+sme,+sme-f64f64 2>&1 < %s| FileCheck %s
 
 // ------------------------------------------------------------------------- //
 // Invalid tile

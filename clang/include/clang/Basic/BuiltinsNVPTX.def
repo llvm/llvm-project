@@ -23,7 +23,13 @@
 #pragma push_macro("SM_75")
 #pragma push_macro("SM_80")
 #pragma push_macro("SM_86")
-#define SM_86 "sm_86"
+#pragma push_macro("SM_87")
+#pragma push_macro("SM_89")
+#pragma push_macro("SM_90")
+#define SM_90 "sm_90"
+#define SM_89 "sm_89|" SM_90
+#define SM_87 "sm_87|" SM_89
+#define SM_86 "sm_86|" SM_87
 #define SM_80 "sm_80|" SM_86
 #define SM_75 "sm_75|" SM_80
 #define SM_72 "sm_72|" SM_75
@@ -45,7 +51,13 @@
 #pragma push_macro("PTX73")
 #pragma push_macro("PTX74")
 #pragma push_macro("PTX75")
-#define PTX75 "ptx75"
+#pragma push_macro("PTX76")
+#pragma push_macro("PTX77")
+#pragma push_macro("PTX78")
+#define PTX78 "ptx78"
+#define PTX77 "ptx77|" PTX78
+#define PTX76 "ptx76|" PTX77
+#define PTX75 "ptx75|" PTX76
 #define PTX74 "ptx74|" PTX75
 #define PTX73 "ptx73|" PTX74
 #define PTX72 "ptx72|" PTX73
@@ -770,7 +782,43 @@ TARGET_BUILTIN(__nvvm_atom_sys_cas_gen_ll, "LLiLLiD*LLiLLi", "n", SM_60)
 BUILTIN(__nvvm_compiler_error, "vcC*4", "n")
 BUILTIN(__nvvm_compiler_warn, "vcC*4", "n")
 
-// __ldg.  This is not implemented as a builtin by nvcc.
+BUILTIN(__nvvm_ldu_c, "ccC*", "")
+BUILTIN(__nvvm_ldu_s, "ssC*", "")
+BUILTIN(__nvvm_ldu_i, "iiC*", "")
+BUILTIN(__nvvm_ldu_l, "LiLiC*", "")
+BUILTIN(__nvvm_ldu_ll, "LLiLLiC*", "")
+
+BUILTIN(__nvvm_ldu_uc, "UcUcC*", "")
+BUILTIN(__nvvm_ldu_us, "UsUsC*", "")
+BUILTIN(__nvvm_ldu_ui, "UiUiC*", "")
+BUILTIN(__nvvm_ldu_ul, "ULiULiC*", "")
+BUILTIN(__nvvm_ldu_ull, "ULLiULLiC*", "")
+
+BUILTIN(__nvvm_ldu_h, "hhC*", "")
+BUILTIN(__nvvm_ldu_f, "ffC*", "")
+BUILTIN(__nvvm_ldu_d, "ddC*", "")
+
+BUILTIN(__nvvm_ldu_c2, "E2cE2cC*", "")
+BUILTIN(__nvvm_ldu_c4, "E4cE4cC*", "")
+BUILTIN(__nvvm_ldu_s2, "E2sE2sC*", "")
+BUILTIN(__nvvm_ldu_s4, "E4sE4sC*", "")
+BUILTIN(__nvvm_ldu_i2, "E2iE2iC*", "")
+BUILTIN(__nvvm_ldu_i4, "E4iE4iC*", "")
+BUILTIN(__nvvm_ldu_ll2, "E2LLiE2LLiC*", "")
+
+BUILTIN(__nvvm_ldu_uc2, "E2UcE2UcC*", "")
+BUILTIN(__nvvm_ldu_uc4, "E4UcE4UcC*", "")
+BUILTIN(__nvvm_ldu_us2, "E2UsE2UsC*", "")
+BUILTIN(__nvvm_ldu_us4, "E4UsE4UsC*", "")
+BUILTIN(__nvvm_ldu_ui2, "E2UiE2UiC*", "")
+BUILTIN(__nvvm_ldu_ui4, "E4UiE4UiC*", "")
+BUILTIN(__nvvm_ldu_ull2, "E2ULLiE2ULLiC*", "")
+
+BUILTIN(__nvvm_ldu_h2, "E2hE2hC*", "")
+BUILTIN(__nvvm_ldu_f2, "E2fE2fC*", "")
+BUILTIN(__nvvm_ldu_f4, "E4fE4fC*", "")
+BUILTIN(__nvvm_ldu_d2, "E2dE2dC*", "")
+
 BUILTIN(__nvvm_ldg_c, "ccC*", "")
 BUILTIN(__nvvm_ldg_s, "ssC*", "")
 BUILTIN(__nvvm_ldg_i, "iiC*", "")
@@ -783,6 +831,7 @@ BUILTIN(__nvvm_ldg_ui, "UiUiC*", "")
 BUILTIN(__nvvm_ldg_ul, "ULiULiC*", "")
 BUILTIN(__nvvm_ldg_ull, "ULLiULLiC*", "")
 
+BUILTIN(__nvvm_ldg_h, "hhC*", "")
 BUILTIN(__nvvm_ldg_f, "ffC*", "")
 BUILTIN(__nvvm_ldg_d, "ddC*", "")
 
@@ -802,6 +851,7 @@ BUILTIN(__nvvm_ldg_ui2, "E2UiE2UiC*", "")
 BUILTIN(__nvvm_ldg_ui4, "E4UiE4UiC*", "")
 BUILTIN(__nvvm_ldg_ull2, "E2ULLiE2ULLiC*", "")
 
+BUILTIN(__nvvm_ldg_h2, "E2hE2hC*", "")
 BUILTIN(__nvvm_ldg_f2, "E2fE2fC*", "")
 BUILTIN(__nvvm_ldg_f4, "E4fE4fC*", "")
 BUILTIN(__nvvm_ldg_d2, "E2dE2dC*", "")
@@ -853,7 +903,7 @@ TARGET_BUILTIN(__hmma_m8n32k16_mma_f16f32, "vi*iC*iC*fC*IiIi", "", AND(SM_70,PTX
 TARGET_BUILTIN(__bmma_m8n8k128_ld_a_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_ld_b_b1, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_ld_c, "vi*iC*UiIi", "", AND(SM_75,PTX63))
-TARGET_BUILTIN(__bmma_m8n8k128_mma_and_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_75,PTX71))
+TARGET_BUILTIN(__bmma_m8n8k128_mma_and_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_80,PTX71))
 TARGET_BUILTIN(__bmma_m8n8k128_mma_xor_popc_b1, "vi*iC*iC*iC*Ii", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__bmma_m8n8k128_st_c_i32, "vi*iC*UiIi", "", AND(SM_75,PTX63))
 TARGET_BUILTIN(__imma_m16n16k16_ld_a_s8, "vi*iC*UiIi", "", AND(SM_72,PTX63))
@@ -944,6 +994,9 @@ TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
 #pragma pop_macro("SM_75")
 #pragma pop_macro("SM_80")
 #pragma pop_macro("SM_86")
+#pragma pop_macro("SM_87")
+#pragma pop_macro("SM_89")
+#pragma pop_macro("SM_90")
 #pragma pop_macro("PTX42")
 #pragma pop_macro("PTX60")
 #pragma pop_macro("PTX61")
@@ -956,3 +1009,6 @@ TARGET_BUILTIN(__nvvm_neg_bf16x2, "ZUiZUi", "", AND(SM_80,PTX70))
 #pragma pop_macro("PTX73")
 #pragma pop_macro("PTX74")
 #pragma pop_macro("PTX75")
+#pragma pop_macro("PTX76")
+#pragma pop_macro("PTX77")
+#pragma pop_macro("PTX78")

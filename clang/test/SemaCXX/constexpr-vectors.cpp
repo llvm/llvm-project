@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++14 -Wno-unused-value %s -disable-llvm-passes -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
+// RUN: %clang_cc1 -std=c++14 -Wno-unused-value %s -disable-llvm-passes -triple x86_64-linux-gnu -emit-llvm -o - | FileCheck %s
 
 // FIXME: Unfortunately there is no good way to validate that our values are
 // correct since Vector types don't have operator [] implemented for constexpr.
@@ -681,33 +681,33 @@ using FourBoolsExtVec __attribute__((ext_vector_type(4))) = bool;
 void BoolVecUsage() {
   constexpr auto a = FourBoolsExtVec{true, false, true, false} <
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %a, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %a, align 1
   constexpr auto b = FourBoolsExtVec{true, false, true, false} <=
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %b, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %b, align 1
   constexpr auto c = FourBoolsExtVec{true, false, true, false} ==
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %c, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %c, align 1
   constexpr auto d = FourBoolsExtVec{true, false, true, false} !=
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %d, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %d, align 1
   constexpr auto e = FourBoolsExtVec{true, false, true, false} >=
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %e, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 true, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %e, align 1
   constexpr auto f = FourBoolsExtVec{true, false, true, false} >
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %f, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %f, align 1
   constexpr auto g = FourBoolsExtVec{true, false, true, false} &
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %g, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 false, i1 true, i1 false, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %g, align 1
   constexpr auto h = FourBoolsExtVec{true, false, true, false} |
                      FourBoolsExtVec{false, false, true, true};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %h, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 true, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %h, align 1
   constexpr auto i = FourBoolsExtVec{true, false, true, false} ^
                      FourBoolsExtVec { false, false, true, true };
-  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %i, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 true, i1 false, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %i, align 1
   constexpr auto j = !FourBoolsExtVec{true, false, true, false};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %j, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %j, align 1
   constexpr auto k = ~FourBoolsExtVec{true, false, true, false};
-  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), i8* %k, align 1
+  // CHECK: store i8 bitcast (<8 x i1> <i1 false, i1 true, i1 false, i1 true, i1 undef, i1 undef, i1 undef, i1 undef> to i8), ptr %k, align 1
 }

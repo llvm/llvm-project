@@ -10,8 +10,12 @@
 # CHECK:   GuardCFCheckFunction: 0x0
 # CHECK:   GuardCFCheckDispatch: 0x0
 # CHECK:   GuardCFFunctionTable: 0x14000{{.*}}
-# CHECK:   GuardCFFunctionCount: 1
-# CHECK:   GuardFlags: 0x400500
+# CHECK:   GuardCFFunctionCount: 4
+# CHECK:   GuardFlags [ (0x400500)
+# CHECK:     CF_FUNCTION_TABLE_PRESENT (0x400)
+# CHECK:     CF_INSTRUMENTED (0x100)
+# CHECK:     EH_CONTINUATION_TABLE_PRESENT (0x400000)
+# CHECK:   ]
 # CHECK:   GuardAddressTakenIatEntryTable: 0x0
 # CHECK:   GuardAddressTakenIatEntryCount: 0
 # CHECK:   GuardEHContinuationTable: 0x14000{{.*}}

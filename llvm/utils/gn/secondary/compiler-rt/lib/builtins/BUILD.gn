@@ -6,6 +6,54 @@ declare_args() {
   compiler_rt_exclude_atomic_builtin = true
 }
 
+lse_targets = []
+
+if (current_cpu == "arm64") {
+  foreach(pat,
+          [
+            "cas",
+            "swp",
+            "ldadd",
+            "ldclr",
+            "ldeor",
+            "ldset",
+          ]) {
+    foreach(size,
+            [
+              "1",
+              "2",
+              "4",
+              "8",
+              "16",
+            ]) {
+      foreach(model,
+              [
+                "1",
+                "2",
+                "3",
+                "4",
+              ]) {
+        if (pat == "cas" || size != "16") {
+          source_set("lse_${pat}_${size}_${model}") {
+            # Assign to sources like this to hide from
+            # sync_source_lists_from_cmake.py which won't find the source file
+            # on the CMake side.
+            lse_file = "aarch64/lse.S"
+            sources = [ lse_file ]
+            include_dirs = [ "." ]
+            defines = [
+              "L_$pat",
+              "SIZE=$size",
+              "MODEL=$model",
+            ]
+          }
+          lse_targets += [ ":lse_${pat}_${size}_${model}" ]
+        }
+      }
+    }
+  }
+}
+
 static_library("builtins") {
   output_dir = crt_current_out_dir
   if (current_os == "mac") {
@@ -232,6 +280,8 @@ static_library("builtins") {
       "i386/fp_mode.c",
       "mulxc3.c",
       "powixf2.c",
+      "truncdfbf2.c",
+      "truncsfbf2.c",
     ]
   }
   if (current_cpu == "x86") {
@@ -475,6 +525,10 @@ static_library("builtins") {
       "hexagon/umodsi3.S",
     ]
   }
+  if (current_cpu == "loongarch" || current_cpu == "loongarch64") {
+    sources -= [ "fp_mode.c" ]
+    sources += [ "loongarch/fp_mode.c" ]
+  }
 
   if (current_cpu == "ppc64") {
     sources += [
@@ -496,6 +550,7 @@ static_library("builtins") {
 
   if (current_cpu == "riscv" || current_cpu == "riscv64") {
     sources += [
+      "riscv/fp_mode.c",
       "riscv/restore.S",
       "riscv/save.S",
     ]
@@ -518,6 +573,8 @@ static_library("builtins") {
   if (!compiler_rt_exclude_atomic_builtin) {
     sources += [ "atomic.c" ]
   }
+
+  deps = lse_targets
 }
 
 # Currently unused but necessary to make sync_source_lists_from_cmake.py happy.

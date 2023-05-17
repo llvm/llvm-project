@@ -13,6 +13,7 @@
 
 #include "ReduceRegisterUses.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 
 using namespace llvm;
@@ -28,8 +29,8 @@ static void removeUsesFromFunction(Oracle &O, MachineFunction &MF) {
 
       int NumOperands = MI.getNumOperands();
       int NumRequiredOps = MI.getNumExplicitOperands() +
-                           MI.getDesc().getNumImplicitDefs() +
-                           MI.getDesc().getNumImplicitUses();
+                           MI.getDesc().implicit_defs().size() +
+                           MI.getDesc().implicit_uses().size();
 
       for (int I = NumOperands - 1; I >= 0; --I) {
         MachineOperand &MO = MI.getOperand(I);
@@ -62,6 +63,5 @@ static void removeUsesFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
 }
 
 void llvm::reduceRegisterUsesMIRDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing register uses...\n";
-  runDeltaPass(Test, removeUsesFromModule);
+  runDeltaPass(Test, removeUsesFromModule, "Reducing register uses");
 }

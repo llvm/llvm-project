@@ -587,3 +587,53 @@ define i32 @addsub_combine_constants_use3(i32 %x, i32 %y) {
   %a2 = add i32 %a1, %s
   ret i32 %a2
 }
+
+define i5 @sub_from_constant(i5 %x, i5 %y) {
+; CHECK-LABEL: @sub_from_constant(
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i5 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i5 [[REASS_SUB]], 10
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %sub = sub i5 10, %x
+  %r = add i5 %sub, %y
+  ret i5 %r
+}
+
+define i5 @sub_from_constant_commute(i5 %x, i5 %p) {
+; CHECK-LABEL: @sub_from_constant_commute(
+; CHECK-NEXT:    [[Y:%.*]] = mul i5 [[P:%.*]], [[P]]
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub i5 [[Y]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add i5 [[REASS_SUB]], 10
+; CHECK-NEXT:    ret i5 [[R]]
+;
+  %y = mul i5 %p, %p  ; thwart complexity-based canonicalization
+  %sub = sub nsw i5 10, %x
+  %r = add nsw i5 %y, %sub
+  ret i5 %r
+}
+
+define <2 x i8> @sub_from_constant_vec(<2 x i8> %x, <2 x i8> %y) {
+; CHECK-LABEL: @sub_from_constant_vec(
+; CHECK-NEXT:    [[REASS_SUB:%.*]] = sub <2 x i8> [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = add <2 x i8> [[REASS_SUB]], <i8 2, i8 -42>
+; CHECK-NEXT:    ret <2 x i8> [[R]]
+;
+  %sub = sub nuw <2 x i8> <i8 2, i8 -42>, %x
+  %r = add nuw <2 x i8> %sub, %y
+  ret <2 x i8> %r
+}
+
+; negative test - don't create extra instructions
+
+define i8 @sub_from_constant_extra_use(i8 %x, i8 %y) {
+; CHECK-LABEL: @sub_from_constant_extra_use(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i8 1, [[X:%.*]]
+; CHECK-NEXT:    call void @use(i8 [[SUB]])
+; CHECK-NEXT:    [[R:%.*]] = add i8 [[SUB]], [[Y:%.*]]
+; CHECK-NEXT:    ret i8 [[R]]
+;
+  %sub = sub i8 1, %x
+  call void @use(i8 %sub)
+  %r = add i8 %sub, %y
+  ret i8 %r
+}

@@ -13,12 +13,31 @@
 ; CHECK-NOT: remark:
 ; CHECK-NOT: llvm-lto:
 
+; Verify that bar is imported 'and' inlined into 'foo'
+; RUN: cat %t.yaml.thin.0.yaml | FileCheck %s -check-prefixes=YAML1,YAML1-NO-ANNOTATE
 
 ; Verify that bar is imported 'and' inlined into 'foo'
-; RUN: cat %t.yaml.thin.0.yaml | FileCheck %s -check-prefix=YAML1
+; RUN: cat %t.yaml.thin.1.yaml | FileCheck %s -check-prefixes=YAML2,YAML2-NO-ANNOTATE
+
+; Run again with -annotate-inline-phase
+
+; RUN: llvm-lto -thinlto-action=run \
+; RUN:          -lto-pass-remarks-output=%t.yaml \
+; RUN:          -annotate-inline-phase \
+; RUN:          -lto-pass-remarks-with-hotness \
+; RUN:          -exported-symbol _func2 \
+; RUN:          -exported-symbol _main %t1.bc %t2.bc 2>&1 | \
+; RUN:     FileCheck %s -allow-empty
+; CHECK-NOT: remark:
+; CHECK-NOT: llvm-lto:
+
+; Verify that pass name is annotated with LTO phase information.
+; RUN: cat %t.yaml.thin.0.yaml | FileCheck %s -check-prefixes=YAML1,YAML1-ANNOTATE
+
 ; YAML1:      --- !Passed
 ; YAML1:      --- !Passed
-; YAML1-NEXT: Pass:            inline
+; YAML1-NO-ANNOTATE-NEXT: Pass: inline
+; YAML1-ANNOTATE-NEXT: Pass:   postlink-cgscc-inline
 ; YAML1-NEXT: Name:            Inlined
 ; YAML1-NEXT: Function:        main
 ; YAML1-NEXT: Hotness:         50
@@ -38,9 +57,10 @@
 
 
 ; Verify that bar is imported 'and' inlined into 'foo'
-; RUN: cat %t.yaml.thin.1.yaml | FileCheck %s -check-prefix=YAML2
+; RUN: cat %t.yaml.thin.1.yaml | FileCheck %s -check-prefixes=YAML2,YAML2-ANNOTATE
 ; YAML2:      --- !Passed
-; YAML2-NEXT: Pass:            inline
+; YAML2-NO-ANNOTATE-NEXT: Pass:            inline
+; YAML2-ANNOTATE-NEXT: Pass:            postlink-cgscc-inline
 ; YAML2-NEXT: Name:            Inlined
 ; YAML2-NEXT: Function:        foo
 ; YAML2-NEXT: Args:

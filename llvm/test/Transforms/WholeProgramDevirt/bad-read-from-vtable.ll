@@ -3,78 +3,61 @@
 target datalayout = "e-p:64:64"
 target triple = "x86_64-unknown-linux-gnu"
 
-@vt1 = constant [2 x i8*] [i8* zeroinitializer, i8* bitcast (void (i8*)* @vf to i8*)], !type !0
-@vt2 = constant i8* bitcast (void (i8*)* @vf to i8*), !type !1
+@vt1 = constant [2 x ptr] [ptr zeroinitializer, ptr @vf], !type !0
+@vt2 = constant ptr @vf, !type !1
 
-define void @vf(i8* %this) {
+define void @vf(ptr %this) {
   ret void
 }
 
 ; CHECK: define void @unaligned1
-define void @unaligned1(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid")
+define void @unaligned1(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr i8, i8* %vtablei8, i32 1
-  %fptrptr_casted = bitcast i8* %fptrptr to i8**
-  %fptr = load i8*, i8** %fptrptr_casted
-  %fptr_casted = bitcast i8* %fptr to void (i8*)*
+  %fptrptr = getelementptr i8, ptr %vtable, i32 1
+  %fptr = load ptr, ptr %fptrptr
   ; CHECK: call void %
-  call void %fptr_casted(i8* %obj)
+  call void %fptr(ptr %obj)
   ret void
 }
 
 ; CHECK: define void @unaligned2
-define void @unaligned2(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid2")
+define void @unaligned2(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid2")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr i8, i8* %vtablei8, i32 1
-  %fptrptr_casted = bitcast i8* %fptrptr to i8**
-  %fptr = load i8*, i8** %fptrptr_casted
-  %fptr_casted = bitcast i8* %fptr to void (i8*)*
+  %fptrptr = getelementptr i8, ptr %vtable, i32 1
+  %fptr = load ptr, ptr %fptrptr
   ; CHECK: call void %
-  call void %fptr_casted(i8* %obj)
+  call void %fptr(ptr %obj)
   ret void
 }
 
 ; CHECK: define void @outofbounds
-define void @outofbounds(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid")
+define void @outofbounds(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr i8, i8* %vtablei8, i32 16
-  %fptrptr_casted = bitcast i8* %fptrptr to i8**
-  %fptr = load i8*, i8** %fptrptr_casted
-  %fptr_casted = bitcast i8* %fptr to void (i8*)*
+  %fptrptr = getelementptr i8, ptr %vtable, i32 16
+  %fptr = load ptr, ptr %fptrptr
   ; CHECK: call void %
-  call void %fptr_casted(i8* %obj)
+  call void %fptr(ptr %obj)
   ret void
 }
 
 ; CHECK: define void @nonfunction
-define void @nonfunction(i8* %obj) {
-  %vtableptr = bitcast i8* %obj to [1 x i8*]**
-  %vtable = load [1 x i8*]*, [1 x i8*]** %vtableptr
-  %vtablei8 = bitcast [1 x i8*]* %vtable to i8*
-  %p = call i1 @llvm.type.test(i8* %vtablei8, metadata !"typeid")
+define void @nonfunction(ptr %obj) {
+  %vtable = load ptr, ptr %obj
+  %p = call i1 @llvm.type.test(ptr %vtable, metadata !"typeid")
   call void @llvm.assume(i1 %p)
-  %fptrptr = getelementptr i8, i8* %vtablei8, i32 0
-  %fptrptr_casted = bitcast i8* %fptrptr to i8**
-  %fptr = load i8*, i8** %fptrptr_casted
-  %fptr_casted = bitcast i8* %fptr to void (i8*)*
+  %fptr = load ptr, ptr %vtable
   ; CHECK: call void %
-  call void %fptr_casted(i8* %obj)
+  call void %fptr(ptr %obj)
   ret void
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
 declare void @llvm.assume(i1)
 
 !0 = !{i32 0, !"typeid"}

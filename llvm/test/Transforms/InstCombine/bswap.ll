@@ -541,8 +541,8 @@ define i8 @PR39793_bswap_u32_as_u16_trunc(i32 %0) {
 
 define i32 @partial_bswap(i32 %x) {
 ; CHECK-LABEL: @partial_bswap(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
-; CHECK-NEXT:    ret i32 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call i32 @llvm.bswap.i32(i32 [[X:%.*]])
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %x3 = shl i32 %x, 24
   %a2 = shl i32 %x, 8
@@ -557,8 +557,8 @@ declare i32 @llvm.bswap.i32(i32)
 
 define <2 x i32> @partial_bswap_vector(<2 x i32> %x) {
 ; CHECK-LABEL: @partial_bswap_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    ret <2 x i32> [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x i32> [[R]]
 ;
   %x3 = shl <2 x i32> %x, <i32 24, i32 24>
   %a2 = shl <2 x i32> %x, <i32 8, i32 8>
@@ -662,14 +662,13 @@ define i32 @shuf_4bytes(<4 x i8> %x) {
   ret i32 %cast
 }
 
-define i32 @shuf_load_4bytes(<4 x i8>* %p) {
+define i32 @shuf_load_4bytes(ptr %p) {
 ; CHECK-LABEL: @shuf_load_4bytes(
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <4 x i8>* [[P:%.*]] to i32*
-; CHECK-NEXT:    [[X1:%.*]] = load i32, i32* [[TMP1]], align 4
+; CHECK-NEXT:    [[X1:%.*]] = load i32, ptr [[P:%.*]], align 4
 ; CHECK-NEXT:    [[CAST:%.*]] = call i32 @llvm.bswap.i32(i32 [[X1]])
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
-  %x = load <4 x i8>, <4 x i8>* %p
+  %x = load <4 x i8>, ptr %p
   %bswap = shufflevector <4 x i8> %x, <4 x i8> undef, <4 x i32> <i32 3, i32 2, i32 undef, i32 0>
   %cast = bitcast <4 x i8> %bswap to i32
   ret i32 %cast
@@ -719,7 +718,7 @@ define i128 @shuf_16bytes(<16 x i8> %x) {
 
 define i32 @shuf_2bytes_widening(<2 x i8> %x) {
 ; CHECK-LABEL: @shuf_2bytes_widening(
-; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 undef, i32 undef>
+; CHECK-NEXT:    [[BSWAP:%.*]] = shufflevector <2 x i8> [[X:%.*]], <2 x i8> undef, <4 x i32> <i32 1, i32 0, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[CAST:%.*]] = bitcast <4 x i8> [[BSWAP]] to i32
 ; CHECK-NEXT:    ret i32 [[CAST]]
 ;
@@ -773,9 +772,9 @@ define i32 @funnel_and(i32 %abcd) {
 }
 
 ; Don't attempt to collectBitParts from >128 bit integers
-define i16 @trunc_bswap_i160(i160* %a0) {
+define i16 @trunc_bswap_i160(ptr %a0) {
 ; CHECK-LABEL: @trunc_bswap_i160(
-; CHECK-NEXT:    [[LOAD:%.*]] = load i160, i160* [[A0:%.*]], align 4
+; CHECK-NEXT:    [[LOAD:%.*]] = load i160, ptr [[A0:%.*]], align 4
 ; CHECK-NEXT:    [[LSHR1:%.*]] = lshr i160 [[LOAD]], 136
 ; CHECK-NEXT:    [[CAST1:%.*]] = trunc i160 [[LSHR1]] to i16
 ; CHECK-NEXT:    [[AND1:%.*]] = and i16 [[CAST1]], 255
@@ -785,7 +784,7 @@ define i16 @trunc_bswap_i160(i160* %a0) {
 ; CHECK-NEXT:    [[OR:%.*]] = or i16 [[AND1]], [[SHL]]
 ; CHECK-NEXT:    ret i16 [[OR]]
 ;
-  %load = load i160, i160* %a0, align 4
+  %load = load i160, ptr %a0, align 4
   %lshr0 = lshr i160 %load, 128
   %lshr1 = lshr i160 %load, 136
   %cast0 = trunc i160 %lshr0 to i16
@@ -930,3 +929,43 @@ define i32 @PR50910(i64 %t0) {
   %t6 = trunc i64 %t5 to i32
   ret i32 %t6
 }
+
+define i64 @PR60690_call_fshl(i64 %result) {
+; CHECK-LABEL: @PR60690_call_fshl(
+; CHECK-NEXT:    [[OR_I12:%.*]] = call i64 @llvm.bswap.i64(i64 [[RESULT:%.*]])
+; CHECK-NEXT:    ret i64 [[OR_I12]]
+;
+  %and.i = lshr i64 %result, 8
+  %shr.i = and i64 %and.i, 71777214294589695
+  %and1.i = shl i64 %result, 8
+  %shl.i = and i64 %and1.i, -71777214294589696
+  %or.i = or i64 %shr.i, %shl.i
+  %and.i7 = shl i64 %or.i, 16
+  %shl.i8 = and i64 %and.i7, -281470681808896
+  %and1.i9 = lshr i64 %or.i, 16
+  %shr.i10 = and i64 %and1.i9, 281470681808895
+  %or.i11 = or i64 %shl.i8, %shr.i10
+  %or.i12 = tail call i64 @llvm.fshl.i64(i64 %or.i11, i64 %or.i11, i64 32)
+  ret i64 %or.i12
+}
+declare i64 @llvm.fshl.i64(i64, i64, i64)
+
+define i64 @PR60690_call_fshr(i64 %result) {
+; CHECK-LABEL: @PR60690_call_fshr(
+; CHECK-NEXT:    [[OR_I12:%.*]] = call i64 @llvm.bswap.i64(i64 [[RESULT:%.*]])
+; CHECK-NEXT:    ret i64 [[OR_I12]]
+;
+  %and.i = lshr i64 %result, 8
+  %shr.i = and i64 %and.i, 71777214294589695
+  %and1.i = shl i64 %result, 8
+  %shl.i = and i64 %and1.i, -71777214294589696
+  %or.i = or i64 %shr.i, %shl.i
+  %and.i7 = shl i64 %or.i, 16
+  %shl.i8 = and i64 %and.i7, -281470681808896
+  %and1.i9 = lshr i64 %or.i, 16
+  %shr.i10 = and i64 %and1.i9, 281470681808895
+  %or.i11 = or i64 %shl.i8, %shr.i10
+  %or.i12 = tail call i64 @llvm.fshr.i64(i64 %or.i11, i64 %or.i11, i64 32)
+  ret i64 %or.i12
+}
+declare i64 @llvm.fshr.i64(i64, i64, i64)

@@ -245,7 +245,7 @@ INITIALIZE_PASS(Thumb2SizeReduce, DEBUG_TYPE, THUMB2_SIZE_REDUCE_NAME, false,
 Thumb2SizeReduce::Thumb2SizeReduce(std::function<bool(const Function &)> Ftor)
     : MachineFunctionPass(ID), PredicateFtor(std::move(Ftor)) {
   OptimizeSize = MinimizeSize = false;
-  for (unsigned i = 0, e = array_lengthof(ReduceTable); i != e; ++i) {
+  for (unsigned i = 0, e = std::size(ReduceTable); i != e; ++i) {
     unsigned FromOpc = ReduceTable[i].WideOpc;
     if (!ReduceOpcodeMap.insert(std::make_pair(FromOpc, i)).second)
       llvm_unreachable("Duplicated entries?");
@@ -253,10 +253,7 @@ Thumb2SizeReduce::Thumb2SizeReduce(std::function<bool(const Function &)> Ftor)
 }
 
 static bool HasImplicitCPSRDef(const MCInstrDesc &MCID) {
-  for (const MCPhysReg *Regs = MCID.getImplicitDefs(); *Regs; ++Regs)
-    if (*Regs == ARM::CPSR)
-      return true;
-  return false;
+  return is_contained(MCID.implicit_defs(), ARM::CPSR);
 }
 
 // Check for a likely high-latency flag def.
@@ -694,7 +691,7 @@ Thumb2SizeReduce::ReduceSpecial(MachineBasicBlock &MBB, MachineInstr *MI,
       case ARM::t2ADDSri:
         if (ReduceTo2Addr(MBB, MI, Entry, LiveCPSR, IsSelfLoop))
           return true;
-        LLVM_FALLTHROUGH;
+        [[fallthrough]];
       case ARM::t2ADDSrr:
         return ReduceToNarrow(MBB, MI, Entry, LiveCPSR, IsSelfLoop);
       }
@@ -839,9 +836,9 @@ Thumb2SizeReduce::ReduceTo2Addr(MachineBasicBlock &MBB, MachineInstr *MI,
   // Transfer the rest of operands.
   unsigned NumOps = MCID.getNumOperands();
   for (unsigned i = 1, e = MI->getNumOperands(); i != e; ++i) {
-    if (i < NumOps && MCID.OpInfo[i].isOptionalDef())
+    if (i < NumOps && MCID.operands()[i].isOptionalDef())
       continue;
-    if (SkipPred && MCID.OpInfo[i].isPredicate())
+    if (SkipPred && MCID.operands()[i].isPredicate())
       continue;
     MIB.add(MI->getOperand(i));
   }
@@ -875,7 +872,7 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
 
   const MCInstrDesc &MCID = MI->getDesc();
   for (unsigned i = 0, e = MCID.getNumOperands(); i != e; ++i) {
-    if (MCID.OpInfo[i].isPredicate())
+    if (MCID.operands()[i].isPredicate())
       continue;
     const MachineOperand &MO = MI->getOperand(i);
     if (MO.isReg()) {
@@ -884,8 +881,7 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
         continue;
       if (Entry.LowRegs1 && !isARMLowRegister(Reg))
         return false;
-    } else if (MO.isImm() &&
-               !MCID.OpInfo[i].isPredicate()) {
+    } else if (MO.isImm() && !MCID.operands()[i].isPredicate()) {
       if (((unsigned)MO.getImm()) > Limit)
         return false;
     }
@@ -946,7 +942,7 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
   // Transfer the rest of operands.
   unsigned NumOps = MCID.getNumOperands();
   for (unsigned i = 1, e = MI->getNumOperands(); i != e; ++i) {
-    if (i < NumOps && MCID.OpInfo[i].isOptionalDef())
+    if (i < NumOps && MCID.operands()[i].isOptionalDef())
       continue;
     if ((MCID.getOpcode() == ARM::t2RSBSri ||
          MCID.getOpcode() == ARM::t2RSBri ||
@@ -956,7 +952,7 @@ Thumb2SizeReduce::ReduceToNarrow(MachineBasicBlock &MBB, MachineInstr *MI,
          MCID.getOpcode() == ARM::t2UXTH) && i == 2)
       // Skip the zero immediate operand, it's now implicit.
       continue;
-    bool isPred = (i < NumOps && MCID.OpInfo[i].isPredicate());
+    bool isPred = (i < NumOps && MCID.operands()[i].isPredicate());
     if (SkipPred && isPred)
         continue;
     const MachineOperand &MO = MI->getOperand(i);

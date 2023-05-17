@@ -192,10 +192,10 @@ define swifttailcc void @fromtail_toC() {
   ret void
 }
 
-declare swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
-define swiftcc i8* @CallSwiftSelf(i8* swiftself %closure, i8* %context) {
+declare swifttailcc ptr @SwiftSelf(ptr swiftasync %context, ptr swiftself %closure)
+define swiftcc ptr @CallSwiftSelf(ptr swiftself %closure, ptr %context) {
 ; CHECK-LABEL: CallSwiftSelf:
 ; CHECK: push{{.*}}r10
-  %res = call swifttailcc i8* @SwiftSelf(i8 * swiftasync %context, i8* swiftself %closure)
-  ret i8* %res
+  %res = call swifttailcc ptr @SwiftSelf(ptr swiftasync %context, ptr swiftself %closure)
+  ret ptr %res
 }

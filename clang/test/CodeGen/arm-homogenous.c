@@ -1,10 +1,10 @@
 // REQUIRES: arm-registered-target
-// RUN: %clang_cc1 -no-opaque-pointers -triple armv7---eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple armv7---eabi -target-abi aapcs -mfloat-abi hard -emit-llvm %s -o - | FileCheck %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-apple-darwin9 -target-abi darwinpcs \
+// RUN: %clang_cc1 -triple arm64-apple-darwin9 -target-abi darwinpcs \
 // RUN:  -ffreestanding -emit-llvm -w -o - %s | FileCheck -check-prefix=CHECK64 %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple arm64-linux-gnu -ffreestanding -emit-llvm -w -o - %s \
+// RUN: %clang_cc1 -triple arm64-linux-gnu -ffreestanding -emit-llvm -w -o - %s \
 // RUN:   | FileCheck --check-prefix=CHECK64 %s
 typedef long long int64_t;
 typedef unsigned int uint32_t;
@@ -27,7 +27,7 @@ void test_union_with_first_floats(void) {
 void test_return_union_with_first_floats(void) {
   g_u_f = returns_union_with_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_first_floats(%union.union_with_first_floats* sret(%union.union_with_first_floats) align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_first_floats(ptr sret(%union.union_with_first_floats) align 4)
 
 /* This is not a homogenous aggregate - fundamental types are different */
 typedef union {
@@ -47,7 +47,7 @@ void test_union_with_non_first_floats(void) {
 void test_return_union_with_non_first_floats(void) {
   g_u_nf_f = returns_union_with_non_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_non_first_floats(%union.union_with_non_first_floats* sret(%union.union_with_non_first_floats) align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_union_with_non_first_floats(ptr sret(%union.union_with_non_first_floats) align 4)
 
 /* This is not a homogenous aggregate - fundamental types are different */
 typedef struct {
@@ -67,7 +67,7 @@ void test_struct_with_union_with_first_floats(void) {
 void test_return_struct_with_union_with_first_floats(void) {
   g_s_f = returns_struct_with_union_with_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_first_floats(%struct.struct_with_union_with_first_floats* sret(%struct.struct_with_union_with_first_floats) align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_first_floats(ptr sret(%struct.struct_with_union_with_first_floats) align 4)
 
 /* This is not a homogenous aggregate - fundamental types are different */
 typedef struct {
@@ -87,7 +87,7 @@ void test_struct_with_union_with_non_first_floats(void) {
 void test_return_struct_with_union_with_non_first_floats(void) {
   g_s_nf_f = returns_struct_with_union_with_non_first_floats();
 }
-// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_non_first_floats(%struct.struct_with_union_with_non_first_floats* sret(%struct.struct_with_union_with_non_first_floats) align 4)
+// CHECK: declare arm_aapcs_vfpcc void @returns_struct_with_union_with_non_first_floats(ptr sret(%struct.struct_with_union_with_non_first_floats) align 4)
 
 /* Plain array is not a homogenous aggregate */
 extern void takes_array_of_floats(float a[4]);
@@ -95,7 +95,7 @@ void test_array_of_floats(void) {
   float a[4] = {1.0, 2.0, 3.0, 4.0};
   takes_array_of_floats(a);
 }
-// CHECK: declare arm_aapcs_vfpcc void @takes_array_of_floats(float* noundef)
+// CHECK: declare arm_aapcs_vfpcc void @takes_array_of_floats(ptr noundef)
 
 /* Struct-type homogenous aggregate */
 typedef struct {

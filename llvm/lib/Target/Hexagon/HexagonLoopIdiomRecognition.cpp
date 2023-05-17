@@ -14,7 +14,6 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/Analysis/AliasAnalysis.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopAnalysisManager.h"
@@ -56,6 +55,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils.h"
 #include "llvm/Transforms/Utils/Local.h"
@@ -192,10 +192,8 @@ private:
 
     void push_back(Value *V) {
       // Do not push back duplicates.
-      if (!S.count(V)) {
+      if (S.insert(V).second)
         Q.push_back(V);
-        S.insert(V);
-      }
     }
 
     Value *pop_front_val() {
@@ -338,7 +336,7 @@ void Simplifier::Context::initialize(Instruction *Exp) {
 
   while (!Q.empty()) {
     Value *V = Q.pop_front_val();
-    if (M.find(V) != M.end())
+    if (M.contains(V))
       continue;
     if (Instruction *U = dyn_cast<Instruction>(V)) {
       if (isa<PHINode>(U) || U->getParent() != Block)
@@ -524,7 +522,7 @@ void Simplifier::Context::link(Instruction *I, BasicBlock *B,
       link(OpI, B, At);
   }
 
-  B->getInstList().insert(At, I);
+  I->insertInto(B, At);
 }
 
 Value *Simplifier::Context::materialize(BasicBlock *B,
@@ -666,7 +664,7 @@ Value *PolynomialMultiplyRecognize::getCountIV(BasicBlock *BB) {
       continue;
 
     if (auto *T = dyn_cast<ConstantInt>(IncV))
-      if (T->getZExtValue() == 1)
+      if (T->isOne())
         return PN;
   }
   return nullptr;
@@ -1139,7 +1137,7 @@ bool PolynomialMultiplyRecognize::findCycle(Value *Out, Value *In,
   auto *BB = cast<Instruction>(Out)->getParent();
   bool HadPhi = false;
 
-  for (auto U : Out->users()) {
+  for (auto *U : Out->users()) {
     auto *I = dyn_cast<Instruction>(&*U);
     if (I == nullptr || I->getParent() != BB)
       continue;
@@ -1152,9 +1150,8 @@ bool PolynomialMultiplyRecognize::findCycle(Value *Out, Value *In,
     if (IsPhi && HadPhi)
       return false;
     HadPhi |= IsPhi;
-    if (Cycle.count(I))
+    if (!Cycle.insert(I))
       return false;
-    Cycle.insert(I);
     if (findCycle(I, In, Cycle))
       break;
     Cycle.remove(I);
@@ -1283,7 +1280,7 @@ bool PolynomialMultiplyRecognize::keepsHighBitsZero(Value *V,
   // Assume that all inputs to the value have the high bits zero.
   // Check if the value itself preserves the zeros in the high bits.
   if (auto *C = dyn_cast<ConstantInt>(V))
-    return C->getValue().countLeadingZeros() >= IterCount;
+    return C->getValue().countl_zero() >= IterCount;
 
   if (auto *I = dyn_cast<Instruction>(V)) {
     switch (I->getOpcode()) {
@@ -2006,8 +2003,7 @@ mayLoopAccessLocation(Value *Ptr, ModRefInfo Access, Loop *L,
   for (auto *B : L->blocks())
     for (auto &I : *B)
       if (Ignored.count(&I) == 0 &&
-          isModOrRefSet(
-              intersectModRef(AA.getModRefInfo(&I, StoreLoc), Access)))
+          isModOrRefSet(AA.getModRefInfo(&I, StoreLoc) & Access))
         return true;
 
   return false;
@@ -2350,7 +2346,7 @@ bool HexagonLoopIdiomRecognize::coverLoop(Loop *L,
         continue;
       if (!Worklist.count(&In) && In.mayHaveSideEffects())
         return false;
-      for (auto K : In.users()) {
+      for (auto *K : In.users()) {
         Instruction *UseI = dyn_cast<Instruction>(K);
         if (!UseI)
           continue;

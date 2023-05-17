@@ -131,17 +131,17 @@ entry:
   br i1 %tobool.not3, label %entry.while.end_crit_edge, label %while.body
 
 entry.while.end_crit_edge:                        ; preds = %entry
-  %.pre = load i32, i32* @thl_x, align 4
+  %.pre = load i32, ptr @thl_x, align 4
   br label %while.end
 
 while.body:                                       ; preds = %entry, %while.body
   %c.addr.04 = phi i32 [ %dec, %while.body ], [ %c, %entry ]
   %dec = add nsw i32 %c.addr.04, -1
-  %0 = load i32, i32* @thl_x2, align 4
+  %0 = load i32, ptr @thl_x2, align 4
   %call = tail call i32 @_Z6gfunc2i(i32 %0)
-  %1 = load i32, i32* @thl_x, align 4
+  %1 = load i32, ptr @thl_x, align 4
   %add = add nsw i32 %1, %call
-  store i32 %add, i32* @thl_x, align 4
+  store i32 %add, ptr @thl_x, align 4
   %tobool.not = icmp eq i32 %dec, 0
   br i1 %tobool.not, label %while.end, label %while.body
 
@@ -273,23 +273,23 @@ while.body:                                       ; preds = %entry, %while.body
   %c.addr.010 = phi i32 [ %dec, %while.body ], [ %c, %entry ]
   %dec = add nsw i32 %c.addr.010, -1
   %call = tail call i32 @_Z5gfuncv()
-  %0 = load i32, i32* @thl_x, align 4
+  %0 = load i32, ptr @thl_x, align 4
   %add = add nsw i32 %0, %call
-  store i32 %add, i32* @thl_x, align 4
+  store i32 %add, ptr @thl_x, align 4
   %call1 = tail call i32 @_Z5gfuncv()
-  %1 = load i8, i8* @_ZZ2f2iE2st.0, align 4
+  %1 = load i8, ptr @_ZZ2f2iE2st.0, align 4
   %2 = trunc i32 %call1 to i8
   %conv5 = add i8 %1, %2
-  store i8 %conv5, i8* @_ZZ2f2iE2st.0, align 4
+  store i8 %conv5, ptr @_ZZ2f2iE2st.0, align 4
   %call6 = tail call i32 @_Z5gfuncv()
-  %3 = load i32, i32* @_ZZ2f2iE2st.1, align 4
+  %3 = load i32, ptr @_ZZ2f2iE2st.1, align 4
   %add7 = add nsw i32 %3, %call6
-  store i32 %add7, i32* @_ZZ2f2iE2st.1, align 4
+  store i32 %add7, ptr @_ZZ2f2iE2st.1, align 4
   %tobool.not = icmp eq i32 %dec, 0
   br i1 %tobool.not, label %while.end, label %while.body
 
 while.end:                                        ; preds = %while.body, %entry
-  %4 = load i32, i32* @thl_x, align 4
+  %4 = load i32, ptr @thl_x, align 4
   ret i32 %4
 }
 
@@ -339,9 +339,9 @@ define i32 @_Z2f3i(i32 %c) local_unnamed_addr #0 {
 ; HOIST2-NEXT:    .cfi_def_cfa_offset 8
 ; HOIST2-NEXT:    retq
 entry:
-  %0 = load i32, i32* @thl_x, align 4
+  %0 = load i32, ptr @thl_x, align 4
   %call = tail call i32 @_Z6gfunc2i(i32 %0)
-  %1 = load i32, i32* @thl_x, align 4
+  %1 = load i32, ptr @thl_x, align 4
   %call1 = tail call i32 @_Z6gfunc2i(i32 %1)
   ret i32 1
 }

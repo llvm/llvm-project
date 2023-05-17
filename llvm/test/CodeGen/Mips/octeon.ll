@@ -187,7 +187,7 @@ entry:
 ; OCTEON: bbit0 $1, 1, [[BB0:(\$|\.L)BB[0-9_]+]]
 ; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
 ; OCTEON-NOT: j  {{[[:space:]].*}}
-  %0 = load i64, i64* @var, align 8
+  %0 = load i64, ptr @var, align 8
   %and = and i64 %0, 2
   %tobool = icmp eq i64 %and, 0
   br i1 %tobool, label %if.end, label %if.then
@@ -208,7 +208,7 @@ entry:
 ; OCTEON: bbit1 $1, 1, [[BB0:(\$|\.L)BB[0-9_]+]]
 ; OCTEON-PIC-NOT: b  {{[[:space:]].*}}
 ; OCTEON-NOT: j  {{[[:space:]].*}}
-  %0 = load i64, i64* @var, align 8
+  %0 = load i64, ptr @var, align 8
   %and = and i64 %0, 2
   %tobool = icmp eq i64 %and, 0
   br i1 %tobool, label %if.then, label %if.end

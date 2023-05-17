@@ -8,7 +8,14 @@
 
 // UNSUPPORTED: c++03
 
+// test_memory_resource requires RTTI for dynamic_cast
+// UNSUPPORTED: no-rtti
+
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/memory_resource>
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 //-----------------------------------------------------------------------------
 // TESTING memory_resource * get_default_resource() noexcept;

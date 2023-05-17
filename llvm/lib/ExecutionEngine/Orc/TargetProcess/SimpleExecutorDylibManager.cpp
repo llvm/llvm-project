@@ -35,24 +35,18 @@ SimpleExecutorDylibManager::open(const std::string &Path, uint64_t Mode) {
     return make_error<StringError>(std::move(ErrMsg), inconvertibleErrorCode());
 
   std::lock_guard<std::mutex> Lock(M);
-  Dylibs[NextId] = std::move(DL);
-  return NextId++;
+  auto H = ExecutorAddr::fromPtr(DL.getOSSpecificHandle());
+  Dylibs.insert(DL.getOSSpecificHandle());
+  return H;
 }
 
 Expected<std::vector<ExecutorAddr>>
 SimpleExecutorDylibManager::lookup(tpctypes::DylibHandle H,
                                    const RemoteSymbolLookupSet &L) {
   std::vector<ExecutorAddr> Result;
-
-  std::lock_guard<std::mutex> Lock(M);
-  auto I = Dylibs.find(H);
-  if (I == Dylibs.end())
-    return make_error<StringError>("No dylib for handle " + formatv("{0:x}", H),
-                                   inconvertibleErrorCode());
-  auto &DL = I->second;
+  auto DL = sys::DynamicLibrary(H.toPtr<void *>());
 
   for (const auto &E : L) {
-
     if (E.Name.empty()) {
       if (E.Required)
         return make_error<StringError>("Required address for empty symbol \"\"",
@@ -85,10 +79,10 @@ SimpleExecutorDylibManager::lookup(tpctypes::DylibHandle H,
 
 Error SimpleExecutorDylibManager::shutdown() {
 
-  DylibsMap DM;
+  DylibSet DS;
   {
     std::lock_guard<std::mutex> Lock(M);
-    std::swap(DM, Dylibs);
+    std::swap(DS, Dylibs);
   }
 
   // There is no removal of dylibs at the moment, so nothing to do here.

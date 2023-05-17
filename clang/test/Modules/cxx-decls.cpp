@@ -1,6 +1,6 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -verify -std=c++11
-// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -I %S/Inputs %s -ast-dump -ast-dump-filter merge -std=c++11 | FileCheck %s
+// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Wno-deprecated-builtins -I %S/Inputs %s -verify -std=c++11
+// RUN: %clang_cc1 -x objective-c++ -fmodules -fimplicit-module-maps -fmodules-cache-path=%t -Wno-deprecated-builtins -I %S/Inputs %s -ast-dump -ast-dump-filter merge -std=c++11 | FileCheck %s
 
 // expected-no-diagnostics
 

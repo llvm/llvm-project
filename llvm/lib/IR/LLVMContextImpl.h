@@ -17,14 +17,12 @@
 #include "ConstantsContext.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Any.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseMapInfo.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -47,6 +45,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -70,6 +69,7 @@ class RemarkStreamer;
 }
 template <typename T> class StringMapEntry;
 class StringRef;
+class TypedPointerType;
 class ValueHandleBase;
 
 using DenseMapAPIntKeyInfo = DenseMapInfo<APInt>;
@@ -186,6 +186,55 @@ struct FunctionTypeKeyInfo {
   }
 
   static bool isEqual(const FunctionType *LHS, const FunctionType *RHS) {
+    return LHS == RHS;
+  }
+};
+
+struct TargetExtTypeKeyInfo {
+  struct KeyTy {
+    StringRef Name;
+    ArrayRef<Type *> TypeParams;
+    ArrayRef<unsigned> IntParams;
+
+    KeyTy(StringRef N, const ArrayRef<Type *> &TP, const ArrayRef<unsigned> &IP)
+        : Name(N), TypeParams(TP), IntParams(IP) {}
+    KeyTy(const TargetExtType *TT)
+        : Name(TT->getName()), TypeParams(TT->type_params()),
+          IntParams(TT->int_params()) {}
+
+    bool operator==(const KeyTy &that) const {
+      return Name == that.Name && TypeParams == that.TypeParams &&
+             IntParams == that.IntParams;
+    }
+    bool operator!=(const KeyTy &that) const { return !this->operator==(that); }
+  };
+
+  static inline TargetExtType *getEmptyKey() {
+    return DenseMapInfo<TargetExtType *>::getEmptyKey();
+  }
+
+  static inline TargetExtType *getTombstoneKey() {
+    return DenseMapInfo<TargetExtType *>::getTombstoneKey();
+  }
+
+  static unsigned getHashValue(const KeyTy &Key) {
+    return hash_combine(
+        Key.Name,
+        hash_combine_range(Key.TypeParams.begin(), Key.TypeParams.end()),
+        hash_combine_range(Key.IntParams.begin(), Key.IntParams.end()));
+  }
+
+  static unsigned getHashValue(const TargetExtType *FT) {
+    return getHashValue(KeyTy(FT));
+  }
+
+  static bool isEqual(const KeyTy &LHS, const TargetExtType *RHS) {
+    if (RHS == getEmptyKey() || RHS == getTombstoneKey())
+      return false;
+    return LHS == KeyTy(RHS);
+  }
+
+  static bool isEqual(const TargetExtType *LHS, const TargetExtType *RHS) {
     return LHS == RHS;
   }
 };
@@ -464,11 +513,20 @@ template <> struct MDNodeKeyImpl<DIStringType> {
 
   bool isKeyOf(const DIStringType *RHS) const {
     return Tag == RHS->getTag() && Name == RHS->getRawName() &&
+           StringLength == RHS->getRawStringLength() &&
+           StringLengthExp == RHS->getRawStringLengthExp() &&
+           StringLocationExp == RHS->getRawStringLocationExp() &&
            SizeInBits == RHS->getSizeInBits() &&
            AlignInBits == RHS->getAlignInBits() &&
            Encoding == RHS->getEncoding();
   }
-  unsigned getHashValue() const { return hash_combine(Tag, Name, Encoding); }
+  unsigned getHashValue() const {
+    // Intentionally computes the hash on a subset of the operands for
+    // performance reason. The subset has to be significant enough to avoid
+    // collision "most of the time". There is no correctness issue in case of
+    // collision because of the full check above.
+    return hash_combine(Tag, Name, StringLength, Encoding);
+  }
 };
 
 template <> struct MDNodeKeyImpl<DIDerivedType> {
@@ -481,7 +539,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   uint64_t SizeInBits;
   uint64_t OffsetInBits;
   uint32_t AlignInBits;
-  Optional<unsigned> DWARFAddressSpace;
+  std::optional<unsigned> DWARFAddressSpace;
   unsigned Flags;
   Metadata *ExtraData;
   Metadata *Annotations;
@@ -489,7 +547,7 @@ template <> struct MDNodeKeyImpl<DIDerivedType> {
   MDNodeKeyImpl(unsigned Tag, MDString *Name, Metadata *File, unsigned Line,
                 Metadata *Scope, Metadata *BaseType, uint64_t SizeInBits,
                 uint32_t AlignInBits, uint64_t OffsetInBits,
-                Optional<unsigned> DWARFAddressSpace, unsigned Flags,
+                std::optional<unsigned> DWARFAddressSpace, unsigned Flags,
                 Metadata *ExtraData, Metadata *Annotations)
       : Tag(Tag), Name(Name), File(File), Line(Line), Scope(Scope),
         BaseType(BaseType), SizeInBits(SizeInBits), OffsetInBits(OffsetInBits),
@@ -666,12 +724,12 @@ template <> struct MDNodeKeyImpl<DISubroutineType> {
 template <> struct MDNodeKeyImpl<DIFile> {
   MDString *Filename;
   MDString *Directory;
-  Optional<DIFile::ChecksumInfo<MDString *>> Checksum;
-  Optional<MDString *> Source;
+  std::optional<DIFile::ChecksumInfo<MDString *>> Checksum;
+  MDString *Source;
 
   MDNodeKeyImpl(MDString *Filename, MDString *Directory,
-                Optional<DIFile::ChecksumInfo<MDString *>> Checksum,
-                Optional<MDString *> Source)
+                std::optional<DIFile::ChecksumInfo<MDString *>> Checksum,
+                MDString *Source)
       : Filename(Filename), Directory(Directory), Checksum(Checksum),
         Source(Source) {}
   MDNodeKeyImpl(const DIFile *N)
@@ -686,8 +744,7 @@ template <> struct MDNodeKeyImpl<DIFile> {
 
   unsigned getHashValue() const {
     return hash_combine(Filename, Directory, Checksum ? Checksum->Kind : 0,
-                        Checksum ? Checksum->Value : nullptr,
-                        Source.getValueOr(nullptr));
+                        Checksum ? Checksum->Value : nullptr, Source);
   }
 };
 
@@ -1383,11 +1440,11 @@ public:
   /// constant.
   ///
   /// If threshold option is not specified, it is disabled (0) by default.
-  Optional<uint64_t> DiagnosticsHotnessThreshold = 0;
+  std::optional<uint64_t> DiagnosticsHotnessThreshold = 0;
 
   /// The percentage of difference between profiling branch weights and
-  // llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
-  Optional<uint64_t> DiagnosticsMisExpectTolerance = 0;
+  /// llvm.expect branch weights to tolerate when emiting MisExpect diagnostics
+  std::optional<uint32_t> DiagnosticsMisExpectTolerance = 0;
   bool MisExpectWarningRequested = false;
 
   /// The specialized remark streamer used by LLVM's OptimizationRemarkEmitter.
@@ -1398,13 +1455,13 @@ public:
 
   DenseMap<const Value *, ValueName *> ValueNames;
 
-  using IntMapTy =
-      DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>;
-  IntMapTy IntConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntZeroConstants;
+  DenseMap<unsigned, std::unique_ptr<ConstantInt>> IntOneConstants;
+  DenseMap<APInt, std::unique_ptr<ConstantInt>, DenseMapAPIntKeyInfo>
+      IntConstants;
 
-  using FPMapTy =
-      DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>;
-  FPMapTy FPConstants;
+  DenseMap<APFloat, std::unique_ptr<ConstantFP>, DenseMapAPFloatKeyInfo>
+      FPConstants;
 
   FoldingSet<AttributeImpl> AttrsSet;
   FoldingSet<AttributeListImpl> AttrsLists;
@@ -1419,7 +1476,7 @@ public:
 #include "llvm/IR/Metadata.def"
 
   // Optional map for looking up composite types by identifier.
-  Optional<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
+  std::optional<DenseMap<const MDString *, DICompositeType *>> DITypeMap;
 
   // MDNodes may be uniqued or not uniqued.  When they're not uniqued, they
   // aren't in the MDNodeSet, but they're still shared between objects, so no
@@ -1439,6 +1496,8 @@ public:
   VectorConstantsTy VectorConstants;
 
   DenseMap<PointerType *, std::unique_ptr<ConstantPointerNull>> CPNConstants;
+
+  DenseMap<TargetExtType *, std::unique_ptr<ConstantTargetNone>> CTNConstants;
 
   DenseMap<Type *, std::unique_ptr<UndefValue>> UVConstants;
 
@@ -1480,10 +1539,15 @@ public:
   StringMap<StructType *> NamedStructTypes;
   unsigned NamedStructTypesUniqueID = 0;
 
+  using TargetExtTypeSet = DenseSet<TargetExtType *, TargetExtTypeKeyInfo>;
+  TargetExtTypeSet TargetExtTypes;
+
   DenseMap<std::pair<Type *, uint64_t>, ArrayType *> ArrayTypes;
   DenseMap<std::pair<Type *, ElementCount>, VectorType *> VectorTypes;
-  DenseMap<Type *, PointerType *> PointerTypes; // Pointers in AddrSpace = 0
-  DenseMap<std::pair<Type *, unsigned>, PointerType *> ASPointerTypes;
+  PointerType *AS0PointerType = nullptr; // AddrSpace = 0
+  DenseMap<unsigned, PointerType *> PointerTypes;
+  DenseMap<std::pair<Type *, unsigned>, PointerType *> LegacyPointerTypes;
+  DenseMap<std::pair<Type *, unsigned>, TypedPointerType *> ASTypedPointerTypes;
 
   /// ValueHandles - This map keeps track of all of the value handles that are
   /// watching a Value*.  The Value::HasValueHandle bit is used to know
@@ -1497,11 +1561,19 @@ public:
   /// Collection of metadata used in this context.
   DenseMap<const Value *, MDAttachments> ValueMetadata;
 
+  /// Map DIAssignID -> Instructions with that attachment.
+  /// Managed by Instruction via Instruction::updateDIAssignIDMapping.
+  /// Query using the at:: functions defined in DebugInfo.h.
+  DenseMap<DIAssignID *, SmallVector<Instruction *, 1>> AssignmentIDToInstrs;
+
   /// Collection of per-GlobalObject sections used in this context.
   DenseMap<const GlobalObject *, StringRef> GlobalObjectSections;
 
   /// Collection of per-GlobalValue partitions used in this context.
   DenseMap<const GlobalValue *, StringRef> GlobalValuePartitions;
+
+  DenseMap<const GlobalValue *, GlobalValue::SanitizerMetadata>
+      GlobalValueSanitizerMetadata;
 
   /// DiscriminatorTable - This table maps file:line locations to an
   /// integer representing the next DWARF path discriminator to assign to
@@ -1565,13 +1637,10 @@ public:
   // TODO: clean up the following after we no longer support non-opaque pointer
   // types.
   bool getOpaquePointers();
-  bool hasOpaquePointersValue();
   void setOpaquePointers(bool OP);
 
-  llvm::Any TargetDataStorage;
-
 private:
-  Optional<bool> OpaquePointers;
+  std::optional<bool> OpaquePointers;
 };
 
 } // end namespace llvm

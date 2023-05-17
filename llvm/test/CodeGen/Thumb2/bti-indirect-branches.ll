@@ -19,20 +19,16 @@ define internal i32 @table_switch(i32 %x) {
 ; CHECK-NEXT:    .byte (.LBB0_7-(.LCPI0_0+4))/2
 ; CHECK-NEXT:    .p2align 1
 ; CHECK-NEXT:  .LBB0_3: @ %bb2
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    movs r0, #2
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_4: @ %sw.epilog
 ; CHECK-NEXT:    movs r0, #0
 ; CHECK-NEXT:  .LBB0_5: @ %return
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_6: @ %bb3
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    movs r0, #3
 ; CHECK-NEXT:    bx lr
 ; CHECK-NEXT:  .LBB0_7: @ %bb4
-; CHECK-NEXT:    bti
 ; CHECK-NEXT:    movs r0, #4
 ; CHECK-NEXT:    bx lr
 entry:
@@ -59,7 +55,7 @@ return:
   ret i32 %ret
 }
 
-@computed_goto_cases = private unnamed_addr constant [2 x i8*] [i8* blockaddress(@computed_goto, %return), i8* blockaddress(@computed_goto, %case_1)], align 4
+@computed_goto_cases = private unnamed_addr constant [2 x ptr] [ptr blockaddress(@computed_goto, %return), ptr blockaddress(@computed_goto, %case_1)], align 4
 
 define internal i32 @computed_goto(i32 %x) {
 ; CHECK-LABEL: computed_goto:
@@ -80,9 +76,9 @@ define internal i32 @computed_goto(i32 %x) {
 ; CHECK-NEXT:    movs r0, #1
 ; CHECK-NEXT:    bx lr
 entry:
-  %arrayidx = getelementptr inbounds [2 x i8*], [2 x i8*]* @computed_goto_cases, i32 0, i32 %x
-  %0 = load i8*, i8** %arrayidx, align 4
-  indirectbr i8* %0, [label %return, label %case_1]
+  %arrayidx = getelementptr inbounds [2 x ptr], ptr @computed_goto_cases, i32 0, i32 %x
+  %0 = load ptr, ptr %arrayidx, align 4
+  indirectbr ptr %0, [label %return, label %case_1]
 
 case_1:
   br label %return
@@ -93,10 +89,10 @@ return:
 }
 
 declare void @may_throw()
-declare void @consume_exception(i8*)
+declare void @consume_exception(ptr)
 declare i32 @__gxx_personality_v0(...)
 
-define internal i32 @exception_handling(i32 %0) personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define internal i32 @exception_handling(i32 %0) personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: exception_handling:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    bti
@@ -119,10 +115,10 @@ entry:
           to label %return unwind label %lpad
 
 lpad:
-  %1 = landingpad { i8*, i32 }
-          catch i8* null
-  %2 = extractvalue { i8*, i32 } %1, 0
-  call void @consume_exception(i8* %2)
+  %1 = landingpad { ptr, i32 }
+          catch ptr null
+  %2 = extractvalue { ptr, i32 } %1, 0
+  call void @consume_exception(ptr %2)
   br label %return
 
 return:

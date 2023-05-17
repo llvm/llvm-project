@@ -27,7 +27,7 @@ define i32 @ubfx2(i32 %a) {
 }
 
 ; rdar://12870177
-define i32 @ubfx_opt(i32* nocapture %ctx, i32 %x) nounwind readonly ssp {
+define i32 @ubfx_opt(ptr nocapture %ctx, i32 %x) nounwind readonly ssp {
 entry:
 ; CHECK: ubfx_opt
 ; CHECK: lsr [[REG1:(lr|r[0-9]+)]], r1, #24
@@ -41,13 +41,13 @@ entry:
   %and1 = lshr i32 %x, 16
   %shr2 = and i32 %and1, 255
   %shr4 = lshr i32 %x, 24
-  %arrayidx = getelementptr inbounds i32, i32* %ctx, i32 %shr4
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx5 = getelementptr inbounds i32, i32* %ctx, i32 %shr2
-  %1 = load i32, i32* %arrayidx5, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %ctx, i32 %shr4
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx5 = getelementptr inbounds i32, ptr %ctx, i32 %shr2
+  %1 = load i32, ptr %arrayidx5, align 4
   %add = add i32 %1, %0
-  %arrayidx6 = getelementptr inbounds i32, i32* %ctx, i32 %shr
-  %2 = load i32, i32* %arrayidx6, align 4
+  %arrayidx6 = getelementptr inbounds i32, ptr %ctx, i32 %shr
+  %2 = load i32, ptr %arrayidx6, align 4
   %add7 = add i32 %add, %2
   ret i32 %add7
 }

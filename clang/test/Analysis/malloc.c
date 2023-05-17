@@ -1,4 +1,4 @@
-// RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -analyzer-store=region -verify %s \
+// RUN: %clang_analyze_cc1 -Wno-strict-prototypes -Wno-error=implicit-int -verify %s \
 // RUN:   -analyzer-checker=core \
 // RUN:   -analyzer-checker=alpha.deadcode.UnreachableCode \
 // RUN:   -analyzer-checker=alpha.core.CastSize \

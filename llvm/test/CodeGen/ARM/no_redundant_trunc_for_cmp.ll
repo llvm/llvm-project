@@ -14,11 +14,11 @@ entry:
   %tobool = icmp eq i16 %x, 0
   br i1 %tobool, label %if.else, label %if.then
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo1 to void ()*)()
+  tail call void @foo1()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo2 to void ()*)()
+  tail call void @foo2()
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -37,11 +37,11 @@ entry:
   %tobool = icmp eq i18 %x, 150
   br i1 %tobool, label %if.else, label %if.then
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo1 to void ()*)()
+  tail call void @foo1()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo2 to void ()*)()
+  tail call void @foo2()
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -61,11 +61,11 @@ entry:
   %tobool = icmp eq i16 %x16, 300
   br i1 %tobool, label %if.else, label %if.then
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo1 to void ()*)()
+  tail call void @foo1()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo2 to void ()*)()
+  tail call void @foo2()
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -86,11 +86,11 @@ entry:
   %tobool = icmp eq i8 %x8, 128
   br i1 %tobool, label %if.else, label %if.then
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo1 to void ()*)()
+  tail call void @foo1()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo2 to void ()*)()
+  tail call void @foo2()
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -109,11 +109,11 @@ entry:
   %tobool = icmp eq i16 %x, 0
   br i1 %tobool, label %if.else, label %if.then
 if.then:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo1 to void ()*)()
+  tail call void @foo1()
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  tail call void bitcast (void (...)* @foo2 to void ()*)()
+  tail call void @foo2()
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then

@@ -27,29 +27,34 @@
 ; TIME-DOUBLE-LICM-DAG:      LICMPass #4
 ; TIME-DOUBLE-LICM-DAG:      LICMPass #5
 ; TIME-DOUBLE-LICM-DAG:      LICMPass #6
-; TIME-PER_RUN-DAG:      LCSSAPass
-; TIME-PER_RUN-DAG:      LoopSimplifyPass
-; TIME-PER_RUN-DAG:      ScalarEvolutionAnalysis
-; TIME-PER_RUN-DAG:      LoopAnalysis
-; TIME-PER_RUN-DAG:      VerifierPass
-; TIME-PER_RUN-DAG:      DominatorTreeAnalysis
-; TIME-PER_RUN-DAG:      TargetLibraryAnalysis
+; TIME-PER-RUN-DAG:      LCSSAPass
+; TIME-PER-RUN-DAG:      LoopSimplifyPass
+; TIME-PER-RUN-DAG:      VerifierPass
 ; TIME-PER-PASS-DAG:   InstCombinePass
 ; TIME-PER-PASS-DAG:   LICMPass
 ; TIME-PER-PASS-DAG:   LCSSAPass
 ; TIME-PER-PASS-DAG:   LoopSimplifyPass
-; TIME-PER-PASS-DAG:   ScalarEvolutionAnalysis
-; TIME-PER-PASS-DAG:   LoopAnalysis
 ; TIME-PER-PASS-DAG:   VerifierPass
-; TIME-PER-PASS-DAG:   DominatorTreeAnalysis
-; TIME-PER-PASS-DAG:   TargetLibraryAnalysis
 ; TIME-PER-PASS-NOT:   InstCombinePass #
 ; TIME-PER-PASS-NOT:   LICMPass #
 ; TIME-PER-PASS-NOT:   LCSSAPass #
 ; TIME-PER-PASS-NOT:   LoopSimplifyPass #
+; TIME-PER-PASS-NOT:   VerifierPass #
+; TIME: Total{{$}}
+
+; TIME: Analysis execution timing report
+; TIME: Total Execution Time:
+; TIME: Name
+; TIME-PER-RUN-DAG:      ScalarEvolutionAnalysis
+; TIME-PER-RUN-DAG:      LoopAnalysis
+; TIME-PER-RUN-DAG:      DominatorTreeAnalysis
+; TIME-PER-RUN-DAG:      TargetLibraryAnalysis
+; TIME-PER-PASS-DAG:   ScalarEvolutionAnalysis
+; TIME-PER-PASS-DAG:   LoopAnalysis
+; TIME-PER-PASS-DAG:   DominatorTreeAnalysis
+; TIME-PER-PASS-DAG:   TargetLibraryAnalysis
 ; TIME-PER-PASS-NOT:   ScalarEvolutionAnalysis #
 ; TIME-PER-PASS-NOT:   LoopAnalysis #
-; TIME-PER-PASS-NOT:   VerifierPass #
 ; TIME-PER-PASS-NOT:   DominatorTreeAnalysis #
 ; TIME-PER-PASS-NOT:   TargetLibraryAnalysis #
 ; TIME: Total{{$}}

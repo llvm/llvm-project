@@ -5,7 +5,12 @@ set(LLVM_LINK_COMPONENTS
   )
 
 if(CLANG_BUILT_STANDALONE)
-  # LLVMTestingSupport library is needed for clangd tests.
+  # LLVMTestingSupport and LLVMTestingAnnotations are needed for clangd tests.
+  if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Annotations
+      AND NOT TARGET LLVMTestingAnnotations)
+    add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Annotations
+      lib/Testing/Annotations)
+  endif()
   if (EXISTS ${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
       AND NOT TARGET LLVMTestingSupport)
     add_subdirectory(${LLVM_MAIN_SRC_DIR}/lib/Testing/Support
@@ -74,8 +79,9 @@ add_unittest(ClangdUnitTests ClangdTests
   PrintASTTests.cpp
   ProjectAwareIndexTests.cpp
   QualityTests.cpp
-  RenameTests.cpp
   RIFFTests.cpp
+  RenameTests.cpp
+  ReplayPeambleTests.cpp
   SelectionTests.cpp
   SemanticHighlightingTests.cpp
   SemanticSelectionTests.cpp
@@ -99,12 +105,13 @@ add_unittest(ClangdUnitTests ClangdTests
 
   support/CancellationTests.cpp
   support/ContextTests.cpp
+  support/FileCacheTests.cpp
   support/FunctionTests.cpp
   support/MarkupTests.cpp
   support/MemoryTreeTests.cpp
   support/PathTests.cpp
-  support/ThreadingTests.cpp
   support/TestTracer.cpp
+  support/ThreadingTests.cpp
   support/TraceTests.cpp
 
   tweaks/AddUsingTests.cpp
@@ -114,7 +121,7 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/DumpASTTests.cpp
   tweaks/DumpRecordLayoutTests.cpp
   tweaks/DumpSymbolTests.cpp
-  tweaks/ExpandAutoTypeTests.cpp
+  tweaks/ExpandDeducedTypeTests.cpp
   tweaks/ExpandMacroTests.cpp
   tweaks/ExtractFunctionTests.cpp
   tweaks/ExtractVariableTests.cpp
@@ -125,6 +132,7 @@ add_unittest(ClangdUnitTests ClangdTests
   tweaks/RawStringLiteralTests.cpp
   tweaks/RemoveUsingNamespaceTests.cpp
   tweaks/ShowSelectionTreeTests.cpp
+  tweaks/SpecialMembersTests.cpp
   tweaks/SwapIfBranchesTests.cpp
   tweaks/TweakTesting.cpp
   tweaks/TweakTests.cpp
@@ -153,15 +161,20 @@ clang_target_link_libraries(ClangdTests
   clangTooling
   clangToolingCore
   clangToolingInclusions
+  clangToolingInclusionsStdlib
   clangToolingRefactoring
   clangToolingSyntax
   )
 target_link_libraries(ClangdTests
   PRIVATE
-  clangDaemon
-  clangdSupport
-  clangTidy
+  LLVMTestingAnnotations
   LLVMTestingSupport
+
+  clangDaemon
+  clangIncludeCleaner
+  clangTesting
+  clangTidy
+  clangdSupport
   )
 
 if (CLANGD_ENABLE_REMOTE)

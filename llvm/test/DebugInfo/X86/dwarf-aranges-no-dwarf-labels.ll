@@ -45,7 +45,7 @@ entry:
   %call = tail call i32 @_Z3fooi(i32 2), !dbg !23
   %call1 = tail call i32 @_Z4foo2i(i32 1), !dbg !23
   %add = add nsw i32 %call1, %call, !dbg !23
-  %0 = load i32, i32* @global, align 4, !dbg !23, !tbaa !24
+  %0 = load i32, ptr @global, align 4, !dbg !23, !tbaa !24
   %add2 = add nsw i32 %add, %0, !dbg !23
   ret i32 %add2, !dbg !23
 }

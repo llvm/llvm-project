@@ -16,12 +16,12 @@
 @g0 = external global i32
 
 ; Function Attrs: noinline nounwind
-define i32 @f0(i32 %a0, i32* nocapture %a1) #0 {
+define i32 @f0(i32 %a0, ptr nocapture %a1) #0 {
 b0:
   %v0 = tail call i32 @f1(i32 %a0)
   %v1 = icmp eq i32 %v0, 0
   %v2 = select i1 %v1, i32 3, i32 %a0
-  store i32 %v2, i32* %a1, align 4
+  store i32 %v2, ptr %a1, align 4
   switch i32 %a0, label %b5 [
     i32 0, label %b1
     i32 1, label %b2
@@ -30,22 +30,22 @@ b0:
   ]
 
 b1:                                               ; preds = %b0
-  store i32 0, i32* %a1, align 4
+  store i32 0, ptr %a1, align 4
   br label %b5
 
 b2:                                               ; preds = %b0
-  %v3 = load i32, i32* @g0, align 4
+  %v3 = load i32, ptr @g0, align 4
   %v4 = icmp sgt i32 %v3, 100
   %v5 = select i1 %v4, i32 0, i32 3
-  store i32 %v5, i32* %a1, align 4
+  store i32 %v5, ptr %a1, align 4
   br label %b5
 
 b3:                                               ; preds = %b0
-  store i32 1, i32* %a1, align 4
+  store i32 1, ptr %a1, align 4
   br label %b5
 
 b4:                                               ; preds = %b0
-  store i32 2, i32* %a1, align 4
+  store i32 2, ptr %a1, align 4
   br label %b5
 
 b5:                                               ; preds = %b4, %b3, %b2, %b1, %b0

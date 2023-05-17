@@ -34,12 +34,11 @@
 
 using namespace llvm;
 
-namespace lld {
-namespace coff {
+namespace lld::coff {
 
 class ICF {
 public:
-  ICF(COFFLinkerContext &c, ICFLevel icfLevel) : icfLevel(icfLevel), ctx(c){};
+  ICF(COFFLinkerContext &c) : ctx(c){};
   void run();
 
 private:
@@ -62,7 +61,6 @@ private:
   std::vector<SectionChunk *> chunks;
   int cnt = 0;
   std::atomic<bool> repeat = {false};
-  ICFLevel icfLevel = ICFLevel::All;
 
   COFFLinkerContext &ctx;
 };
@@ -85,7 +83,7 @@ bool ICF::isEligible(SectionChunk *c) {
     return false;
 
   // Under regular (not safe) ICF, all code sections are eligible.
-  if ((icfLevel == ICFLevel::All) &&
+  if ((ctx.config.doICF == ICFLevel::All) &&
       c->getOutputCharacteristics() & llvm::COFF::IMAGE_SCN_MEM_EXECUTE)
     return true;
 
@@ -233,10 +231,10 @@ void ICF::forEachClass(std::function<void(size_t, size_t)> fn) {
   size_t boundaries[numShards + 1];
   boundaries[0] = 0;
   boundaries[numShards] = chunks.size();
-  parallelForEachN(1, numShards, [&](size_t i) {
+  parallelFor(1, numShards, [&](size_t i) {
     boundaries[i] = findBoundary((i - 1) * step, chunks.size());
   });
-  parallelForEachN(1, numShards + 1, [&](size_t i) {
+  parallelFor(1, numShards + 1, [&](size_t i) {
     if (boundaries[i - 1] < boundaries[i]) {
       forEachClassRange(boundaries[i - 1], boundaries[i], fn);
     }
@@ -318,9 +316,6 @@ void ICF::run() {
 }
 
 // Entry point to ICF.
-void doICF(COFFLinkerContext &ctx, ICFLevel icfLevel) {
-  ICF(ctx, icfLevel).run();
-}
+void doICF(COFFLinkerContext &ctx) { ICF(ctx).run(); }
 
-} // namespace coff
-} // namespace lld
+} // namespace lld::coff

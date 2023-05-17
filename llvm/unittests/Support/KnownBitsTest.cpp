@@ -10,11 +10,115 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/KnownBits.h"
 #include "KnownBitsTest.h"
 #include "gtest/gtest.h"
 
 using namespace llvm;
+
+using UnaryBitsFn = llvm::function_ref<KnownBits(const KnownBits &)>;
+using UnaryIntFn = llvm::function_ref<std::optional<APInt>(const APInt &)>;
+using UnaryCheckFn = llvm::function_ref<bool(const KnownBits &)>;
+
+using BinaryBitsFn =
+    llvm::function_ref<KnownBits(const KnownBits &, const KnownBits &)>;
+using BinaryIntFn =
+    llvm::function_ref<std::optional<APInt>(const APInt &, const APInt &)>;
+using BinaryCheckFn =
+    llvm::function_ref<bool(const KnownBits &, const KnownBits &)>;
+
+static bool checkCorrectnessOnlyUnary(const KnownBits &) { return false; }
+static bool checkCorrectnessOnlyBinary(const KnownBits &, const KnownBits &) {
+  return false;
+}
+
+static testing::AssertionResult isCorrect(const KnownBits &Exact,
+                                          const KnownBits &Computed,
+                                          ArrayRef<KnownBits> Inputs) {
+  if (Computed.Zero.isSubsetOf(Exact.Zero) &&
+      Computed.One.isSubsetOf(Exact.One))
+    return testing::AssertionSuccess();
+
+  testing::AssertionResult Result = testing::AssertionFailure();
+  Result << "Inputs = ";
+  for (const KnownBits &Input : Inputs)
+    Result << Input << ", ";
+  Result << "Computed = " << Computed << ", Exact = " << Exact;
+  return Result;
+}
+
+static testing::AssertionResult isOptimal(const KnownBits &Exact,
+                                          const KnownBits &Computed,
+                                          ArrayRef<KnownBits> Inputs) {
+  if (Computed == Exact)
+    return testing::AssertionSuccess();
+
+  testing::AssertionResult Result = testing::AssertionFailure();
+  Result << "Inputs = ";
+  for (const KnownBits &Input : Inputs)
+    Result << Input << ", ";
+  Result << "Computed = " << Computed << ", Exact = " << Exact;
+  return Result;
+}
+
+static void testUnaryOpExhaustive(
+    UnaryBitsFn BitsFn, UnaryIntFn IntFn,
+    UnaryCheckFn CheckOptimalityFn = [](const KnownBits &) { return true; }) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
+    KnownBits Computed = BitsFn(Known);
+    KnownBits Exact(Bits);
+    Exact.Zero.setAllBits();
+    Exact.One.setAllBits();
+
+    ForeachNumInKnownBits(Known, [&](const APInt &N) {
+      if (std::optional<APInt> Res = IntFn(N)) {
+        Exact.One &= *Res;
+        Exact.Zero &= ~*Res;
+      }
+    });
+
+    EXPECT_TRUE(isCorrect(Exact, Computed, Known));
+    // We generally don't want to return conflicting known bits, even if it is
+    // legal for always poison results.
+    if (CheckOptimalityFn(Known) && !Exact.hasConflict()) {
+      EXPECT_TRUE(isOptimal(Exact, Computed, Known));
+    }
+  });
+}
+
+static void testBinaryOpExhaustive(
+    BinaryBitsFn BitsFn, BinaryIntFn IntFn,
+    BinaryCheckFn CheckOptimalityFn = [](const KnownBits &, const KnownBits &) {
+      return true;
+    }) {
+  unsigned Bits = 4;
+  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
+    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
+      KnownBits Computed = BitsFn(Known1, Known2);
+      KnownBits Exact(Bits);
+      Exact.Zero.setAllBits();
+      Exact.One.setAllBits();
+
+      ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
+        ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
+          if (std::optional<APInt> Res = IntFn(N1, N2)) {
+            Exact.One &= *Res;
+            Exact.Zero &= ~*Res;
+          }
+        });
+      });
+
+      EXPECT_TRUE(isCorrect(Exact, Computed, {Known1, Known2}));
+      // We generally don't want to return conflicting known bits, even if it is
+      // legal for always poison results.
+      if (CheckOptimalityFn(Known1, Known2) && !Exact.hasConflict()) {
+        EXPECT_TRUE(isOptimal(Exact, Computed, {Known1, Known2}));
+      }
+    });
+  });
+}
 
 namespace {
 
@@ -98,213 +202,199 @@ TEST(KnownBitsTest, AddSubExhaustive) {
 }
 
 TEST(KnownBitsTest, BinaryExhaustive) {
-  unsigned Bits = 4;
-  ForeachKnownBits(Bits, [&](const KnownBits &Known1) {
-    ForeachKnownBits(Bits, [&](const KnownBits &Known2) {
-      KnownBits KnownAnd(Bits);
-      KnownAnd.Zero.setAllBits();
-      KnownAnd.One.setAllBits();
-      KnownBits KnownOr(KnownAnd);
-      KnownBits KnownXor(KnownAnd);
-      KnownBits KnownUMax(KnownAnd);
-      KnownBits KnownUMin(KnownAnd);
-      KnownBits KnownSMax(KnownAnd);
-      KnownBits KnownSMin(KnownAnd);
-      KnownBits KnownMul(KnownAnd);
-      KnownBits KnownMulHS(KnownAnd);
-      KnownBits KnownMulHU(KnownAnd);
-      KnownBits KnownUDiv(KnownAnd);
-      KnownBits KnownURem(KnownAnd);
-      KnownBits KnownSRem(KnownAnd);
-      KnownBits KnownShl(KnownAnd);
-      KnownBits KnownLShr(KnownAnd);
-      KnownBits KnownAShr(KnownAnd);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return Known1 & Known2;
+      },
+      [](const APInt &N1, const APInt &N2) { return N1 & N2; });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return Known1 | Known2;
+      },
+      [](const APInt &N1, const APInt &N2) { return N1 | N2; });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return Known1 ^ Known2;
+      },
+      [](const APInt &N1, const APInt &N2) { return N1 ^ N2; });
 
-      ForeachNumInKnownBits(Known1, [&](const APInt &N1) {
-        ForeachNumInKnownBits(Known2, [&](const APInt &N2) {
-          APInt Res;
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::umax(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) { return APIntOps::umax(N1, N2); });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::umin(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) { return APIntOps::umin(N1, N2); });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::smax(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) { return APIntOps::smax(N1, N2); });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::smin(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) { return APIntOps::smin(N1, N2); });
 
-          Res = N1 & N2;
-          KnownAnd.One &= Res;
-          KnownAnd.Zero &= ~Res;
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::udiv(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero())
+          return std::nullopt;
+        return N1.udiv(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::udiv(Known1, Known2, /*Exact*/ true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero() || !N1.urem(N2).isZero())
+          return std::nullopt;
+        return N1.udiv(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::sdiv(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero() || (N1.isMinSignedValue() && N2.isAllOnes()))
+          return std::nullopt;
+        return N1.sdiv(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::sdiv(Known1, Known2, /*Exact*/ true);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero() || (N1.isMinSignedValue() && N2.isAllOnes()) ||
+            !N1.srem(N2).isZero())
+          return std::nullopt;
+        return N1.sdiv(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::urem(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero())
+          return std::nullopt;
+        return N1.urem(N2);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::srem(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.isZero())
+          return std::nullopt;
+        return N1.srem(N2);
+      },
+      checkCorrectnessOnlyBinary);
 
-          Res = N1 | N2;
-          KnownOr.One &= Res;
-          KnownOr.Zero &= ~Res;
-
-          Res = N1 ^ N2;
-          KnownXor.One &= Res;
-          KnownXor.Zero &= ~Res;
-
-          Res = APIntOps::umax(N1, N2);
-          KnownUMax.One &= Res;
-          KnownUMax.Zero &= ~Res;
-
-          Res = APIntOps::umin(N1, N2);
-          KnownUMin.One &= Res;
-          KnownUMin.Zero &= ~Res;
-
-          Res = APIntOps::smax(N1, N2);
-          KnownSMax.One &= Res;
-          KnownSMax.Zero &= ~Res;
-
-          Res = APIntOps::smin(N1, N2);
-          KnownSMin.One &= Res;
-          KnownSMin.Zero &= ~Res;
-
-          Res = N1 * N2;
-          KnownMul.One &= Res;
-          KnownMul.Zero &= ~Res;
-
-          Res = (N1.sext(2 * Bits) * N2.sext(2 * Bits)).extractBits(Bits, Bits);
-          KnownMulHS.One &= Res;
-          KnownMulHS.Zero &= ~Res;
-
-          Res = (N1.zext(2 * Bits) * N2.zext(2 * Bits)).extractBits(Bits, Bits);
-          KnownMulHU.One &= Res;
-          KnownMulHU.Zero &= ~Res;
-
-          if (!N2.isZero()) {
-            Res = N1.udiv(N2);
-            KnownUDiv.One &= Res;
-            KnownUDiv.Zero &= ~Res;
-
-            Res = N1.urem(N2);
-            KnownURem.One &= Res;
-            KnownURem.Zero &= ~Res;
-
-            Res = N1.srem(N2);
-            KnownSRem.One &= Res;
-            KnownSRem.Zero &= ~Res;
-          }
-
-          if (N2.ult(1ULL << N1.getBitWidth())) {
-            Res = N1.shl(N2);
-            KnownShl.One &= Res;
-            KnownShl.Zero &= ~Res;
-
-            Res = N1.lshr(N2);
-            KnownLShr.One &= Res;
-            KnownLShr.Zero &= ~Res;
-
-            Res = N1.ashr(N2);
-            KnownAShr.One &= Res;
-            KnownAShr.Zero &= ~Res;
-          } else {
-            KnownShl.resetAll();
-            KnownLShr.resetAll();
-            KnownAShr.resetAll();
-          }
-        });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::shl(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.shl(N2);
+      });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::lshr(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.lshr(N2);
+      });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::ashr(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) -> std::optional<APInt> {
+        if (N2.uge(N2.getBitWidth()))
+          return std::nullopt;
+        return N1.ashr(N2);
       });
 
-      KnownBits ComputedAnd = Known1 & Known2;
-      EXPECT_EQ(KnownAnd, ComputedAnd);
-
-      KnownBits ComputedOr = Known1 | Known2;
-      EXPECT_EQ(KnownOr, ComputedOr);
-
-      KnownBits ComputedXor = Known1 ^ Known2;
-      EXPECT_EQ(KnownXor, ComputedXor);
-
-      KnownBits ComputedUMax = KnownBits::umax(Known1, Known2);
-      EXPECT_EQ(KnownUMax, ComputedUMax);
-
-      KnownBits ComputedUMin = KnownBits::umin(Known1, Known2);
-      EXPECT_EQ(KnownUMin, ComputedUMin);
-
-      KnownBits ComputedSMax = KnownBits::smax(Known1, Known2);
-      EXPECT_EQ(KnownSMax, ComputedSMax);
-
-      KnownBits ComputedSMin = KnownBits::smin(Known1, Known2);
-      EXPECT_EQ(KnownSMin, ComputedSMin);
-
-      // The following are conservatively correct, but not guaranteed to be
-      // precise.
-      KnownBits ComputedMul = KnownBits::mul(Known1, Known2);
-      EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
-      EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
-
-      KnownBits ComputedMulHS = KnownBits::mulhs(Known1, Known2);
-      EXPECT_TRUE(ComputedMulHS.Zero.isSubsetOf(KnownMulHS.Zero));
-      EXPECT_TRUE(ComputedMulHS.One.isSubsetOf(KnownMulHS.One));
-
-      KnownBits ComputedMulHU = KnownBits::mulhu(Known1, Known2);
-      EXPECT_TRUE(ComputedMulHU.Zero.isSubsetOf(KnownMulHU.Zero));
-      EXPECT_TRUE(ComputedMulHU.One.isSubsetOf(KnownMulHU.One));
-
-      KnownBits ComputedUDiv = KnownBits::udiv(Known1, Known2);
-      EXPECT_TRUE(ComputedUDiv.Zero.isSubsetOf(KnownUDiv.Zero));
-      EXPECT_TRUE(ComputedUDiv.One.isSubsetOf(KnownUDiv.One));
-
-      KnownBits ComputedURem = KnownBits::urem(Known1, Known2);
-      EXPECT_TRUE(ComputedURem.Zero.isSubsetOf(KnownURem.Zero));
-      EXPECT_TRUE(ComputedURem.One.isSubsetOf(KnownURem.One));
-
-      KnownBits ComputedSRem = KnownBits::srem(Known1, Known2);
-      EXPECT_TRUE(ComputedSRem.Zero.isSubsetOf(KnownSRem.Zero));
-      EXPECT_TRUE(ComputedSRem.One.isSubsetOf(KnownSRem.One));
-
-      KnownBits ComputedShl = KnownBits::shl(Known1, Known2);
-      EXPECT_TRUE(ComputedShl.Zero.isSubsetOf(KnownShl.Zero));
-      EXPECT_TRUE(ComputedShl.One.isSubsetOf(KnownShl.One));
-
-      KnownBits ComputedLShr = KnownBits::lshr(Known1, Known2);
-      EXPECT_TRUE(ComputedLShr.Zero.isSubsetOf(KnownLShr.Zero));
-      EXPECT_TRUE(ComputedLShr.One.isSubsetOf(KnownLShr.One));
-
-      KnownBits ComputedAShr = KnownBits::ashr(Known1, Known2);
-      EXPECT_TRUE(ComputedAShr.Zero.isSubsetOf(KnownAShr.Zero));
-      EXPECT_TRUE(ComputedAShr.One.isSubsetOf(KnownAShr.One));
-    });
-  });
-
-  // Also test 'unary' binary cases where the same argument is repeated.
-  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
-    KnownBits KnownMul(Bits);
-    KnownMul.Zero.setAllBits();
-    KnownMul.One.setAllBits();
-
-    ForeachNumInKnownBits(Known, [&](const APInt &N) {
-      APInt Res = N * N;
-      KnownMul.One &= Res;
-      KnownMul.Zero &= ~Res;
-    });
-
-    KnownBits ComputedMul = KnownBits::mul(Known, Known, /*SelfMultiply*/ true);
-    EXPECT_TRUE(ComputedMul.Zero.isSubsetOf(KnownMul.Zero));
-    EXPECT_TRUE(ComputedMul.One.isSubsetOf(KnownMul.One));
-  });
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::mul(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) { return N1 * N2; },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::mulhs(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        unsigned Bits = N1.getBitWidth();
+        return (N1.sext(2 * Bits) * N2.sext(2 * Bits)).extractBits(Bits, Bits);
+      },
+      checkCorrectnessOnlyBinary);
+  testBinaryOpExhaustive(
+      [](const KnownBits &Known1, const KnownBits &Known2) {
+        return KnownBits::mulhu(Known1, Known2);
+      },
+      [](const APInt &N1, const APInt &N2) {
+        unsigned Bits = N1.getBitWidth();
+        return (N1.zext(2 * Bits) * N2.zext(2 * Bits)).extractBits(Bits, Bits);
+      },
+      checkCorrectnessOnlyBinary);
 }
 
 TEST(KnownBitsTest, UnaryExhaustive) {
-  unsigned Bits = 4;
-  ForeachKnownBits(Bits, [&](const KnownBits &Known) {
-    KnownBits KnownAbs(Bits);
-    KnownAbs.Zero.setAllBits();
-    KnownAbs.One.setAllBits();
-    KnownBits KnownAbsPoison(KnownAbs);
+  // TODO: Make optimal for cases that are not known non-negative.
+  testUnaryOpExhaustive(
+      [](const KnownBits &Known) { return Known.abs(); },
+      [](const APInt &N) { return N.abs(); },
+      [](const KnownBits &Known) { return Known.isNonNegative(); });
 
-    ForeachNumInKnownBits(Known, [&](const APInt &N) {
-      APInt Res = N.abs();
-      KnownAbs.One &= Res;
-      KnownAbs.Zero &= ~Res;
+  testUnaryOpExhaustive(
+      [](const KnownBits &Known) { return Known.abs(true); },
+      [](const APInt &N) -> std::optional<APInt> {
+        if (N.isMinSignedValue())
+          return std::nullopt;
+        return N.abs();
+      },
+      [](const KnownBits &Known) { return Known.isNonNegative(); });
 
-      if (!N.isMinSignedValue()) {
-        KnownAbsPoison.One &= Res;
-        KnownAbsPoison.Zero &= ~Res;
-      }
-    });
+  testUnaryOpExhaustive([](const KnownBits &Known) { return Known.blsi(); },
+                        [](const APInt &N) { return N & -N; });
+  testUnaryOpExhaustive([](const KnownBits &Known) { return Known.blsmsk(); },
+                        [](const APInt &N) { return N ^ (N - 1); });
 
-    // abs() is conservatively correct, but not guaranteed to be precise.
-    KnownBits ComputedAbs = Known.abs();
-    EXPECT_TRUE(ComputedAbs.Zero.isSubsetOf(KnownAbs.Zero));
-    EXPECT_TRUE(ComputedAbs.One.isSubsetOf(KnownAbs.One));
+  testUnaryOpExhaustive(
+      [](const KnownBits &Known) {
+        return KnownBits::mul(Known, Known, /*SelfMultiply*/ true);
+      },
+      [](const APInt &N) { return N * N; }, checkCorrectnessOnlyUnary);
+}
 
-    KnownBits ComputedAbsPoison = Known.abs(true);
-    EXPECT_TRUE(ComputedAbsPoison.Zero.isSubsetOf(KnownAbsPoison.Zero));
-    EXPECT_TRUE(ComputedAbsPoison.One.isSubsetOf(KnownAbsPoison.One));
-  });
+TEST(KnownBitsTest, WideShifts) {
+  unsigned BitWidth = 128;
+  KnownBits Unknown(BitWidth);
+  KnownBits AllOnes = KnownBits::makeConstant(APInt::getAllOnes(BitWidth));
+
+  KnownBits ShlResult(BitWidth);
+  ShlResult.makeNegative();
+  EXPECT_EQ(KnownBits::shl(AllOnes, Unknown), ShlResult);
+  KnownBits LShrResult(BitWidth);
+  LShrResult.One.setBit(0);
+  EXPECT_EQ(KnownBits::lshr(AllOnes, Unknown), LShrResult);
+  EXPECT_EQ(KnownBits::ashr(AllOnes, Unknown), AllOnes);
 }
 
 TEST(KnownBitsTest, ICmpExhaustive) {
@@ -347,49 +437,49 @@ TEST(KnownBitsTest, ICmpExhaustive) {
         });
       });
 
-      Optional<bool> KnownEQ = KnownBits::eq(Known1, Known2);
-      Optional<bool> KnownNE = KnownBits::ne(Known1, Known2);
-      Optional<bool> KnownUGT = KnownBits::ugt(Known1, Known2);
-      Optional<bool> KnownUGE = KnownBits::uge(Known1, Known2);
-      Optional<bool> KnownULT = KnownBits::ult(Known1, Known2);
-      Optional<bool> KnownULE = KnownBits::ule(Known1, Known2);
-      Optional<bool> KnownSGT = KnownBits::sgt(Known1, Known2);
-      Optional<bool> KnownSGE = KnownBits::sge(Known1, Known2);
-      Optional<bool> KnownSLT = KnownBits::slt(Known1, Known2);
-      Optional<bool> KnownSLE = KnownBits::sle(Known1, Known2);
+      std::optional<bool> KnownEQ = KnownBits::eq(Known1, Known2);
+      std::optional<bool> KnownNE = KnownBits::ne(Known1, Known2);
+      std::optional<bool> KnownUGT = KnownBits::ugt(Known1, Known2);
+      std::optional<bool> KnownUGE = KnownBits::uge(Known1, Known2);
+      std::optional<bool> KnownULT = KnownBits::ult(Known1, Known2);
+      std::optional<bool> KnownULE = KnownBits::ule(Known1, Known2);
+      std::optional<bool> KnownSGT = KnownBits::sgt(Known1, Known2);
+      std::optional<bool> KnownSGE = KnownBits::sge(Known1, Known2);
+      std::optional<bool> KnownSLT = KnownBits::slt(Known1, Known2);
+      std::optional<bool> KnownSLE = KnownBits::sle(Known1, Known2);
 
-      EXPECT_EQ(AllEQ || NoneEQ, KnownEQ.hasValue());
-      EXPECT_EQ(AllNE || NoneNE, KnownNE.hasValue());
-      EXPECT_EQ(AllUGT || NoneUGT, KnownUGT.hasValue());
-      EXPECT_EQ(AllUGE || NoneUGE, KnownUGE.hasValue());
-      EXPECT_EQ(AllULT || NoneULT, KnownULT.hasValue());
-      EXPECT_EQ(AllULE || NoneULE, KnownULE.hasValue());
-      EXPECT_EQ(AllSGT || NoneSGT, KnownSGT.hasValue());
-      EXPECT_EQ(AllSGE || NoneSGE, KnownSGE.hasValue());
-      EXPECT_EQ(AllSLT || NoneSLT, KnownSLT.hasValue());
-      EXPECT_EQ(AllSLE || NoneSLE, KnownSLE.hasValue());
+      EXPECT_EQ(AllEQ || NoneEQ, KnownEQ.has_value());
+      EXPECT_EQ(AllNE || NoneNE, KnownNE.has_value());
+      EXPECT_EQ(AllUGT || NoneUGT, KnownUGT.has_value());
+      EXPECT_EQ(AllUGE || NoneUGE, KnownUGE.has_value());
+      EXPECT_EQ(AllULT || NoneULT, KnownULT.has_value());
+      EXPECT_EQ(AllULE || NoneULE, KnownULE.has_value());
+      EXPECT_EQ(AllSGT || NoneSGT, KnownSGT.has_value());
+      EXPECT_EQ(AllSGE || NoneSGE, KnownSGE.has_value());
+      EXPECT_EQ(AllSLT || NoneSLT, KnownSLT.has_value());
+      EXPECT_EQ(AllSLE || NoneSLE, KnownSLE.has_value());
 
-      EXPECT_EQ(AllEQ, KnownEQ.hasValue() && KnownEQ.getValue());
-      EXPECT_EQ(AllNE, KnownNE.hasValue() && KnownNE.getValue());
-      EXPECT_EQ(AllUGT, KnownUGT.hasValue() && KnownUGT.getValue());
-      EXPECT_EQ(AllUGE, KnownUGE.hasValue() && KnownUGE.getValue());
-      EXPECT_EQ(AllULT, KnownULT.hasValue() && KnownULT.getValue());
-      EXPECT_EQ(AllULE, KnownULE.hasValue() && KnownULE.getValue());
-      EXPECT_EQ(AllSGT, KnownSGT.hasValue() && KnownSGT.getValue());
-      EXPECT_EQ(AllSGE, KnownSGE.hasValue() && KnownSGE.getValue());
-      EXPECT_EQ(AllSLT, KnownSLT.hasValue() && KnownSLT.getValue());
-      EXPECT_EQ(AllSLE, KnownSLE.hasValue() && KnownSLE.getValue());
+      EXPECT_EQ(AllEQ, KnownEQ.has_value() && *KnownEQ);
+      EXPECT_EQ(AllNE, KnownNE.has_value() && *KnownNE);
+      EXPECT_EQ(AllUGT, KnownUGT.has_value() && *KnownUGT);
+      EXPECT_EQ(AllUGE, KnownUGE.has_value() && *KnownUGE);
+      EXPECT_EQ(AllULT, KnownULT.has_value() && *KnownULT);
+      EXPECT_EQ(AllULE, KnownULE.has_value() && *KnownULE);
+      EXPECT_EQ(AllSGT, KnownSGT.has_value() && *KnownSGT);
+      EXPECT_EQ(AllSGE, KnownSGE.has_value() && *KnownSGE);
+      EXPECT_EQ(AllSLT, KnownSLT.has_value() && *KnownSLT);
+      EXPECT_EQ(AllSLE, KnownSLE.has_value() && *KnownSLE);
 
-      EXPECT_EQ(NoneEQ, KnownEQ.hasValue() && !KnownEQ.getValue());
-      EXPECT_EQ(NoneNE, KnownNE.hasValue() && !KnownNE.getValue());
-      EXPECT_EQ(NoneUGT, KnownUGT.hasValue() && !KnownUGT.getValue());
-      EXPECT_EQ(NoneUGE, KnownUGE.hasValue() && !KnownUGE.getValue());
-      EXPECT_EQ(NoneULT, KnownULT.hasValue() && !KnownULT.getValue());
-      EXPECT_EQ(NoneULE, KnownULE.hasValue() && !KnownULE.getValue());
-      EXPECT_EQ(NoneSGT, KnownSGT.hasValue() && !KnownSGT.getValue());
-      EXPECT_EQ(NoneSGE, KnownSGE.hasValue() && !KnownSGE.getValue());
-      EXPECT_EQ(NoneSLT, KnownSLT.hasValue() && !KnownSLT.getValue());
-      EXPECT_EQ(NoneSLE, KnownSLE.hasValue() && !KnownSLE.getValue());
+      EXPECT_EQ(NoneEQ, KnownEQ.has_value() && !*KnownEQ);
+      EXPECT_EQ(NoneNE, KnownNE.has_value() && !*KnownNE);
+      EXPECT_EQ(NoneUGT, KnownUGT.has_value() && !*KnownUGT);
+      EXPECT_EQ(NoneUGE, KnownUGE.has_value() && !*KnownUGE);
+      EXPECT_EQ(NoneULT, KnownULT.has_value() && !*KnownULT);
+      EXPECT_EQ(NoneULE, KnownULE.has_value() && !*KnownULE);
+      EXPECT_EQ(NoneSGT, KnownSGT.has_value() && !*KnownSGT);
+      EXPECT_EQ(NoneSGE, KnownSGE.has_value() && !*KnownSGE);
+      EXPECT_EQ(NoneSLT, KnownSLT.has_value() && !*KnownSLT);
+      EXPECT_EQ(NoneSLE, KnownSLE.has_value() && !*KnownSLE);
     });
   });
 }
@@ -506,6 +596,31 @@ TEST(KnownBitsTest, CommonBitsSet) {
                 KnownBits::haveNoCommonBitsSet(Known1, Known2));
     });
   });
+}
+
+TEST(KnownBitsTest, ConcatBits) {
+  unsigned Bits = 4;
+  for (unsigned LoBits = 1; LoBits < Bits; ++LoBits) {
+    unsigned HiBits = Bits - LoBits;
+    ForeachKnownBits(LoBits, [&](const KnownBits &KnownLo) {
+      ForeachKnownBits(HiBits, [&](const KnownBits &KnownHi) {
+        KnownBits KnownAll = KnownHi.concat(KnownLo);
+
+        EXPECT_EQ(KnownLo.countMinPopulation() + KnownHi.countMinPopulation(),
+                  KnownAll.countMinPopulation());
+        EXPECT_EQ(KnownLo.countMaxPopulation() + KnownHi.countMaxPopulation(),
+                  KnownAll.countMaxPopulation());
+
+        KnownBits ExtractLo = KnownAll.extractBits(LoBits, 0);
+        KnownBits ExtractHi = KnownAll.extractBits(HiBits, LoBits);
+
+        EXPECT_EQ(KnownLo.One.getZExtValue(), ExtractLo.One.getZExtValue());
+        EXPECT_EQ(KnownHi.One.getZExtValue(), ExtractHi.One.getZExtValue());
+        EXPECT_EQ(KnownLo.Zero.getZExtValue(), ExtractLo.Zero.getZExtValue());
+        EXPECT_EQ(KnownHi.Zero.getZExtValue(), ExtractHi.Zero.getZExtValue());
+      });
+    });
+  }
 }
 
 } // end anonymous namespace

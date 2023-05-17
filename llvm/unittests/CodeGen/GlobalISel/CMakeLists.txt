@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
   CodeGen
+  CodeGenTypes
   Core
   FileCheck
   GlobalISel
@@ -8,6 +9,7 @@ set(LLVM_LINK_COMPONENTS
   MIRParser
   Support
   Target
+  TargetParser
   )
 
 add_llvm_unittest(GlobalISelTests

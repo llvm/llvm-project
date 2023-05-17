@@ -74,7 +74,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:addf [[reg1]], [[reg2]] : f32
+! CHECK:addf [[reg1]], [[reg2]] {{.*}}: f32
 add6_test = x0 + x1
 END FUNCTION
 
@@ -84,7 +84,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:subf [[reg1]], [[reg2]] : f32
+! CHECK:subf [[reg1]], [[reg2]] {{.*}}: f32
 sub7_test = x0 - x1
 END FUNCTION
 
@@ -94,7 +94,7 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:mulf [[reg1]], [[reg2]] : f32
+! CHECK:mulf [[reg1]], [[reg2]] {{.*}}: f32
 mult8_test = x0 * x1
 END FUNCTION
 
@@ -104,6 +104,6 @@ REAL(4) :: x0
 REAL(4) :: x1
 ! CHECK-DAG:[[reg1:%[0-9]+]] = fir.load %arg0
 ! CHECK-DAG:[[reg2:%[0-9]+]] = fir.load %arg1
-! CHECK:divf [[reg1]], [[reg2]] : f32
+! CHECK:divf [[reg1]], [[reg2]] {{.*}}: f32
 div9_test = x0 / x1
 END FUNCTION

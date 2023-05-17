@@ -6,8 +6,8 @@
 
 define void @test() nounwind {
 entry:
-  %0 = load i32, i32* @j, align 4
-  %1 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @j, align 4
+  %1 = load i32, ptr @i, align 4
   %cmp = icmp eq i32 %0, %1
   br i1 %cmp, label %if.then, label %if.end
 ; 16:	cmp	${{[0-9]+}}, ${{[0-9]+}}
@@ -16,7 +16,7 @@ entry:
 ; 16: $[[LABEL]]:
 
 if.then:                                          ; preds = %entry
-  store i32 1, i32* @result, align 4
+  store i32 1, ptr @result, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %entry

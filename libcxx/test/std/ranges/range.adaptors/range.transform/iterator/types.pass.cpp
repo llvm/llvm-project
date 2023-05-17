@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // transform_view::<iterator>::difference_type
 // transform_view::<iterator>::value_type
@@ -38,6 +37,15 @@ constexpr bool test() {
   {
     // Member typedefs for random access iterator.
     using TView = std::ranges::transform_view<RandomAccessView, Increment>;
+    using TIter = std::ranges::iterator_t<TView>;
+    static_assert(std::same_as<typename TIter::iterator_concept, std::random_access_iterator_tag>);
+    static_assert(std::same_as<typename TIter::iterator_category, std::random_access_iterator_tag>);
+    static_assert(std::same_as<typename TIter::value_type, int>);
+    static_assert(std::same_as<typename TIter::difference_type, std::ptrdiff_t>);
+  }
+  {
+    // Member typedefs for random access iterator, LWG3798 rvalue reference.
+    using TView = std::ranges::transform_view<RandomAccessView, IncrementRvalueRef>;
     using TIter = std::ranges::iterator_t<TView>;
     static_assert(std::same_as<typename TIter::iterator_concept, std::random_access_iterator_tag>);
     static_assert(std::same_as<typename TIter::iterator_category, std::random_access_iterator_tag>);

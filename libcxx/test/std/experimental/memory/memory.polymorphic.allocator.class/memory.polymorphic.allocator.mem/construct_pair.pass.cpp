@@ -8,12 +8,16 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/memory_resource>
 
 // template <class T> class polymorphic_allocator
 
 // template <class U1, class U2>
 // void polymorphic_allocator<T>::construct(pair<U1, U2>*)
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

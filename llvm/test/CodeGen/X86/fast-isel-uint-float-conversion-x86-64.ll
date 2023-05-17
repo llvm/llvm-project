@@ -12,24 +12,24 @@ entry:
   ret double %0
 }
 
-define double @long_to_double_rm(i64* %a) {
+define double @long_to_double_rm(ptr %a) {
 ; ALL-LABEL: long_to_double_rm:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtusi2sdq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = uitofp i64 %0 to double
   ret double %1
 }
 
-define double @long_to_double_rm_optsize(i64* %a) optsize {
+define double @long_to_double_rm_optsize(ptr %a) optsize {
 ; ALL-LABEL: long_to_double_rm_optsize:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtusi2sdq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = uitofp i64 %0 to double
   ret double %1
 }
@@ -44,24 +44,24 @@ entry:
   ret float %0
 }
 
-define float @long_to_float_rm(i64* %a) {
+define float @long_to_float_rm(ptr %a) {
 ; ALL-LABEL: long_to_float_rm:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtusi2ssq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = uitofp i64 %0 to float
   ret float %1
 }
 
-define float @long_to_float_rm_optsize(i64* %a) optsize {
+define float @long_to_float_rm_optsize(ptr %a) optsize {
 ; ALL-LABEL: long_to_float_rm_optsize:
 ; ALL:       # %bb.0: # %entry
 ; ALL-NEXT:    vcvtusi2ssq (%rdi), %xmm0, %xmm0
 ; ALL-NEXT:    retq
 entry:
-  %0 = load i64, i64* %a
+  %0 = load i64, ptr %a
   %1 = uitofp i64 %0 to float
   ret float %1
 }

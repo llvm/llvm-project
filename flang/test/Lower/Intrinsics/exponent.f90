@@ -21,21 +21,21 @@ subroutine exponent_test
   
     i1 = exponent(x1)
   ! CHECK: %[[temp0:.*]] = fir.load %[[x0:.*]] : !fir.ref<f32>
-  ! CHECK: %[[result0:.*]] = fir.call @_FortranAExponent4_4(%[[temp0:.*]]) : (f32) -> i32
+  ! CHECK: %[[result0:.*]] = fir.call @_FortranAExponent4_4(%[[temp0:.*]]) {{.*}}: (f32) -> i32
   ! CHECK: fir.store %[[result0:.*]] to %[[i0:.*]] : !fir.ref<i32>
   
     i2 = exponent(x2)
   ! CHECK: %[[temp1:.*]] = fir.load %[[x1:.*]] : !fir.ref<f64>
-  ! CHECK: %[[result1:.*]] = fir.call @_FortranAExponent8_4(%[[temp1:.*]]) : (f64) -> i32
+  ! CHECK: %[[result1:.*]] = fir.call @_FortranAExponent8_4(%[[temp1:.*]]) {{.*}}: (f64) -> i32
   ! CHECK: fir.store %[[result1:.*]] to %[[i1:.*]] : !fir.ref<i32>
   
     i3 = exponent(x3)
   ! CHECK: %[[temp2:.*]] = fir.load %[[x2:.*]] : !fir.ref<f80>
-  ! CHECK: %[[result2:.*]] = fir.call @_FortranAExponent10_4(%[[temp2:.*]]) : (f80) -> i32
+  ! CHECK: %[[result2:.*]] = fir.call @_FortranAExponent10_4(%[[temp2:.*]]) {{.*}}: (f80) -> i32
   ! CHECK: fir.store %[[result2:.*]] to %[[i2:.*]] : !fir.ref<i32>
   
     i4 = exponent(x4)
   ! CHECK: %[[temp3:.*]] = fir.load %[[x3:.*]] : !fir.ref<f128>
-  ! CHECK: %[[result3:.*]] = fir.call @_FortranAExponent16_4(%[[temp3:.*]]) : (f128) -> i32
+  ! CHECK: %[[result3:.*]] = fir.call @_FortranAExponent16_4(%[[temp3:.*]]) {{.*}}: (f128) -> i32
   ! CHECK: fir.store %[[result3:.*]] to %[[i3:.*]] : !fir.ref<i32>
   end subroutine exponent_test

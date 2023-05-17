@@ -79,7 +79,8 @@ static bool IsAcceptableTarget(Instruction *Inst, BasicBlock *SuccToSinkTo,
   if (SuccToSinkTo->getUniquePredecessor() != Inst->getParent()) {
     // We cannot sink a load across a critical edge - there may be stores in
     // other code paths.
-    if (Inst->mayReadFromMemory())
+    if (Inst->mayReadFromMemory() &&
+        !Inst->hasMetadata(LLVMContext::MD_invariant_load))
       return false;
 
     // We don't want to sink across a critical edge if we don't dominate the
@@ -173,9 +174,6 @@ static bool SinkInstruction(Instruction *Inst,
 
 static bool ProcessBlock(BasicBlock &BB, DominatorTree &DT, LoopInfo &LI,
                          AAResults &AA) {
-  // Can't sink anything out of a block that has less than two successors.
-  if (BB.getTerminator()->getNumSuccessors() <= 1) return false;
-
   // Don't bother sinking code out of unreachable blocks. In addition to being
   // unprofitable, it can also lead to infinite looping, because in an
   // unreachable loop there may be nowhere to stop.

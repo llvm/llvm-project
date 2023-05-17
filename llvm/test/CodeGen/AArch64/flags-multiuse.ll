@@ -20,7 +20,7 @@ define i32 @test_multiflag(i32 %n, i32 %m, i32 %o) {
 ; CHECK: mov [[RHSCOPY:w[0-9]+]], [[RHS]]
 ; CHECK: mov [[LHSCOPY:w[0-9]+]], [[LHS]]
 
-  store i32 %val, i32* @var
+  store i32 %val, ptr @var
 
   call void @bar()
 ; CHECK: bl bar

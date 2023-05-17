@@ -3,12 +3,12 @@
 ; RUN: llc -mtriple thumbv7-linux-gnueabi -o - %s | FileCheck %s -check-prefix=CHECK-SOFT
 ; RUN: llc -mtriple thumbv7-linux-gnueabi -mattr=+read-tp-hard -o - %s | FileCheck %s -check-prefix=CHECK-HARD
 
-declare i8* @llvm.thread.pointer()
+declare ptr @llvm.thread.pointer()
 
-define i8* @test() {
+define ptr @test() {
 entry:
-  %tmp1 = call i8* @llvm.thread.pointer()
-  ret i8* %tmp1
+  %tmp1 = call ptr @llvm.thread.pointer()
+  ret ptr %tmp1
 }
 
 ; CHECK-SOFT: bl __aeabi_read_tp

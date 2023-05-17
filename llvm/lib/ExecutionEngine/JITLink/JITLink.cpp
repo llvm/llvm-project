@@ -9,10 +9,10 @@
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 
 #include "llvm/BinaryFormat/Magic.h"
+#include "llvm/ExecutionEngine/JITLink/COFF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/MachO.h"
 #include "llvm/Support/Format.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -41,8 +41,6 @@ public:
   }
 };
 
-static ManagedStatic<JITLinkerErrorCategory> JITLinkerErrorCategory;
-
 } // namespace
 
 namespace llvm {
@@ -53,7 +51,8 @@ char JITLinkError::ID = 0;
 void JITLinkError::log(raw_ostream &OS) const { OS << ErrMsg; }
 
 std::error_code JITLinkError::convertToErrorCode() const {
-  return std::error_code(GenericJITLinkError, *JITLinkerErrorCategory);
+  static JITLinkerErrorCategory TheJITLinkerErrorCategory;
+  return std::error_code(GenericJITLinkError, TheJITLinkerErrorCategory);
 }
 
 const char *getGenericEdgeKindName(Edge::Kind K) {
@@ -87,6 +86,21 @@ const char *getScopeName(Scope S) {
     return "local";
   }
   llvm_unreachable("Unrecognized llvm.jitlink.Scope enum");
+}
+
+bool isCStringBlock(Block &B) {
+  if (B.getSize() == 0) // Empty blocks are not valid C-strings.
+    return false;
+
+  // Zero-fill blocks of size one are valid empty strings.
+  if (B.isZeroFill())
+    return B.getSize() == 1;
+
+  for (size_t I = 0; I != B.getSize() - 1; ++I)
+    if (B.getContent()[I] == '\0')
+      return false;
+
+  return B.getContent()[B.getSize() - 1] == '\0';
 }
 
 raw_ostream &operator<<(raw_ostream &OS, const Block &B) {
@@ -196,7 +210,7 @@ Block &LinkGraph::splitBlock(Block &B, size_t SplitIndex,
     SplitBlockCache LocalBlockSymbolsCache;
     if (!Cache)
       Cache = &LocalBlockSymbolsCache;
-    if (*Cache == None) {
+    if (*Cache == std::nullopt) {
       *Cache = SplitBlockCache::value_type();
       for (auto *Sym : B.getSection().symbols())
         if (&Sym->getBlock() == &B)
@@ -310,14 +324,14 @@ void LinkGraph::dump(raw_ostream &OS) {
   }
 
   OS << "Absolute symbols:\n";
-  if (!llvm::empty(absolute_symbols())) {
+  if (!absolute_symbols().empty()) {
     for (auto *Sym : absolute_symbols())
       OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
   } else
     OS << "  none\n";
 
   OS << "\nExternal symbols:\n";
-  if (!llvm::empty(external_symbols())) {
+  if (!external_symbols().empty()) {
     for (auto *Sym : external_symbols())
       OS << "  " << Sym->getAddress() << ": " << *Sym << "\n";
   } else
@@ -410,6 +424,8 @@ createLinkGraphFromObject(MemoryBufferRef ObjectBuffer) {
     return createLinkGraphFromMachOObject(ObjectBuffer);
   case file_magic::elf_relocatable:
     return createLinkGraphFromELFObject(ObjectBuffer);
+  case file_magic::coff_object:
+    return createLinkGraphFromCOFFObject(ObjectBuffer);
   default:
     return make_error<JITLinkError>("Unsupported file format");
   };
@@ -421,6 +437,8 @@ void link(std::unique_ptr<LinkGraph> G, std::unique_ptr<JITLinkContext> Ctx) {
     return link_MachO(std::move(G), std::move(Ctx));
   case Triple::ELF:
     return link_ELF(std::move(G), std::move(Ctx));
+  case Triple::COFF:
+    return link_COFF(std::move(G), std::move(Ctx));
   default:
     Ctx->notifyFailed(make_error<JITLinkError>("Unsupported object format"));
   };

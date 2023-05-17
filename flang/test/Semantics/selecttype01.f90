@@ -50,6 +50,8 @@ contains
     select type ( a )
       !ERROR: The type specification statement must have LEN type parameter as assumed
       type is ( character(len=10) ) !<-- assumed length-type
+      !ERROR: The type specification statement must have LEN type parameter as assumed
+      type is ( character )
       ! OK
       type is ( character(len=*) )
       !ERROR: The type specification statement must have LEN type parameter as assumed
@@ -274,4 +276,15 @@ subroutine WorkingPolymorphism
     CLASS DEFAULT
       print *, "default"
   end select
+end
+
+subroutine CheckNotProcedure
+  use m1
+  !ERROR: Selector may not be a procedure
+  select type (x=>f)
+  end select
+ contains
+  function f() result(res)
+    class(shape), allocatable :: res
+  end
 end

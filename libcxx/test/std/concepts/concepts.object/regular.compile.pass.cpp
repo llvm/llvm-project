@@ -163,5 +163,3 @@ struct is_equality_comparable {
   bool operator==(is_equality_comparable const&) const = default;
 };
 static_assert(std::regular<is_equality_comparable>);
-
-int main(int, char**) { return 0; }

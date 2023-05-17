@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-linux -verify=norounding -Wno-unknown-pragmas %s
 // RUN: %clang_cc1 -triple x86_64-linux -verify=rounding %s -frounding-math -Wno-unknown-pragmas
+// RUN: %clang_cc1 -triple x86_64-linux -verify=rounding %s -frounding-math -fexperimental-new-constant-interpreter -Wno-unknown-pragmas
 // rounding-no-diagnostics
 
 #define fold(x) (__builtin_constant_p(x) ? (x) : (x))

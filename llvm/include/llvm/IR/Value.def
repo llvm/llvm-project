@@ -95,6 +95,7 @@ HANDLE_CONSTANT(ConstantDataArray)
 HANDLE_CONSTANT(ConstantDataVector)
 HANDLE_CONSTANT(ConstantInt)
 HANDLE_CONSTANT(ConstantFP)
+HANDLE_CONSTANT(ConstantTargetNone)
 HANDLE_CONSTANT(ConstantPointerNull)
 HANDLE_CONSTANT(ConstantTokenNone)
 

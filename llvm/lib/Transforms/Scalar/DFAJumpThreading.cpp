@@ -70,11 +70,8 @@
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/SSAUpdaterBulk.h"
 #include "llvm/Transforms/Utils/ValueMapper.h"
@@ -168,50 +165,7 @@ private:
   OptimizationRemarkEmitter *ORE;
 };
 
-class DFAJumpThreadingLegacyPass : public FunctionPass {
-public:
-  static char ID; // Pass identification
-  DFAJumpThreadingLegacyPass() : FunctionPass(ID) {}
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<AssumptionCacheTracker>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<OptimizationRemarkEmitterWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override {
-    if (skipFunction(F))
-      return false;
-
-    AssumptionCache *AC =
-        &getAnalysis<AssumptionCacheTracker>().getAssumptionCache(F);
-    DominatorTree *DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-    TargetTransformInfo *TTI =
-        &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-    OptimizationRemarkEmitter *ORE =
-        &getAnalysis<OptimizationRemarkEmitterWrapperPass>().getORE();
-
-    return DFAJumpThreading(AC, DT, TTI, ORE).run(F);
-  }
-};
 } // end anonymous namespace
-
-char DFAJumpThreadingLegacyPass::ID = 0;
-INITIALIZE_PASS_BEGIN(DFAJumpThreadingLegacyPass, "dfa-jump-threading",
-                      "DFA Jump Threading", false, false)
-INITIALIZE_PASS_DEPENDENCY(AssumptionCacheTracker)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(TargetTransformInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(OptimizationRemarkEmitterWrapperPass)
-INITIALIZE_PASS_END(DFAJumpThreadingLegacyPass, "dfa-jump-threading",
-                    "DFA Jump Threading", false, false)
-
-// Public interface to the DFA Jump Threading pass
-FunctionPass *llvm::createDFAJumpThreadingPass() {
-  return new DFAJumpThreadingLegacyPass();
-}
 
 namespace {
 
@@ -625,7 +579,7 @@ private:
         continue;
 
       PathsType SuccPaths = paths(Succ, Visited, PathDepth + 1);
-      for (PathType Path : SuccPaths) {
+      for (const PathType &Path : SuccPaths) {
         PathType NewPath(Path);
         NewPath.push_front(BB);
         Res.push_back(NewPath);
@@ -724,7 +678,7 @@ private:
 
     // Make DeterminatorBB the first element in Path.
     PathType Path = TPath.getPath();
-    auto ItDet = std::find(Path.begin(), Path.end(), DeterminatorBB);
+    auto ItDet = llvm::find(Path, DeterminatorBB);
     std::rotate(Path.begin(), ItDet, Path.end());
 
     bool IsDetBBSeen = false;
@@ -798,7 +752,7 @@ private:
 
       // Otherwise update Metrics for all blocks that will be cloned. If any
       // block is already cloned and would be reused, don't double count it.
-      auto DetIt = std::find(PathBBs.begin(), PathBBs.end(), Determinator);
+      auto DetIt = llvm::find(PathBBs, Determinator);
       for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
         BB = *BBIt;
         VisitedBB = getClonedBB(BB, NextState, DuplicateMap);
@@ -840,7 +794,7 @@ private:
       }
     }
 
-    unsigned DuplicationCost = 0;
+    InstructionCost DuplicationCost = 0;
 
     unsigned JumpTableSize = 0;
     TTI->getEstimatedNumberOfCaseClusters(*Switch, JumpTableSize, nullptr,
@@ -851,7 +805,7 @@ private:
       // using binary search, hence the LogBase2().
       unsigned CondBranches =
           APInt(32, Switch->getNumSuccessors()).ceilLogBase2();
-      DuplicationCost = *Metrics.NumInsts.getValue() / CondBranches;
+      DuplicationCost = Metrics.NumInsts / CondBranches;
     } else {
       // Compared with jump tables, the DFA optimizer removes an indirect branch
       // on each loop iteration, thus making branch prediction more precise. The
@@ -859,7 +813,7 @@ private:
       // predictor to make a mistake, and the more benefit there is in the DFA
       // optimizer. Thus, the more branch targets there are, the lower is the
       // cost of the DFA opt.
-      DuplicationCost = *Metrics.NumInsts.getValue() / JumpTableSize;
+      DuplicationCost = Metrics.NumInsts / JumpTableSize;
     }
 
     LLVM_DEBUG(dbgs() << "\nDFA Jump Threading: Cost to jump thread block "
@@ -943,7 +897,7 @@ private:
     if (PathBBs.front() == Determinator)
       PathBBs.pop_front();
 
-    auto DetIt = std::find(PathBBs.begin(), PathBBs.end(), Determinator);
+    auto DetIt = llvm::find(PathBBs, Determinator);
     auto Prev = std::prev(DetIt);
     BasicBlock *PrevBB = *Prev;
     for (auto BBIt = DetIt; BBIt != PathBBs.end(); BBIt++) {
@@ -978,7 +932,7 @@ private:
     SSAUpdaterBulk SSAUpdate;
     SmallVector<Use *, 16> UsesToRename;
 
-    for (auto KV : NewDefs) {
+    for (const auto &KV : NewDefs) {
       Instruction *I = KV.first;
       BasicBlock *BB = I->getParent();
       std::vector<Instruction *> Cloned = KV.second;
@@ -1212,7 +1166,7 @@ private:
         PhiToRemove.push_back(Phi);
       }
       for (PHINode *PN : PhiToRemove) {
-        PN->replaceAllUsesWith(UndefValue::get(PN->getType()));
+        PN->replaceAllUsesWith(PoisonValue::get(PN->getType()));
         PN->eraseFromParent();
       }
       return;

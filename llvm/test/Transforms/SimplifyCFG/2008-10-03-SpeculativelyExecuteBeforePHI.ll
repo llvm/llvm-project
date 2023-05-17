@@ -1,7 +1,7 @@
-; RUN: opt < %s -simplifycfg
+; RUN: opt < %s -passes=simplifycfg
 ; PR2855
 
-define i32 @_Z1fPii(i32* %b, i32 %f) nounwind {
+define i32 @_Z1fPii(ptr %b, i32 %f) nounwind {
 entry:
 	br label %bb
 

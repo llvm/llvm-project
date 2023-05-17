@@ -1,4 +1,4 @@
-; RUN: opt < %s -lcssa -loop-simplify -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=lcssa,loop-simplify,indvars -S | FileCheck %s
 target triple = "x86_64-unknown-linux-gnu"
 
 ; PR28272, PR28825
@@ -90,7 +90,7 @@ bb2:
   br i1 undef, label %bb3, label %bb1
 
 bb3:
-  %b = load i32*, i32** undef
+  %b = load ptr, ptr undef
   br i1 undef, label %bb2, label %bb4
 
 bb4:
@@ -103,7 +103,7 @@ bb6:
   br i1 undef, label %bb_end, label %bb1
 
 bb_end:
-  %x = getelementptr i32, i32* %b
+  %x = getelementptr i32, ptr %b
   br label %bb_end
 }
 
@@ -125,7 +125,7 @@ bb2.loopexit:                                     ; preds = %bb3
 ; CHECK: bb2:
 bb2:                                              ; preds = %bb2.loopexit, %bb2, %bb1
   %i = phi i32 [ 0, %bb1 ], [ %i, %bb2 ], [ %i.ph, %bb2.loopexit ]
-  %x = load i32, i32* undef, align 8
+  %x = load i32, ptr undef, align 8
   br i1 undef, label %bb2, label %bb3.preheader
 
 ; CHECK: bb3.preheader:

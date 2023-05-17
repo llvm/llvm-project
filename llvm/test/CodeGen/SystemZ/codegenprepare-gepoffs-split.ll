@@ -3,7 +3,7 @@
 ;
 ; Test that the big offsets are handled by only one AGFI.
 
-define void @fun(i64* %Src, i64* %Dst) {
+define void @fun(ptr %Src, ptr %Dst) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    agfi %r2, 1048576
@@ -12,13 +12,13 @@ define void @fun(i64* %Src, i64* %Dst) {
 ; CHECK-NEXT:    lg %r0, 8(%r2)
 ; CHECK-NEXT:    stg %r0, 0(%r3)
 ; CHECK-NEXT:    br %r14
-  %S0 = getelementptr i64, i64* %Src, i64 131072
-  %V0 = load i64, i64* %S0
-  store volatile i64 %V0, i64* %Dst
+  %S0 = getelementptr i64, ptr %Src, i64 131072
+  %V0 = load i64, ptr %S0
+  store volatile i64 %V0, ptr %Dst
 
-  %S1 = getelementptr i64, i64* %Src, i64 131073
-  %V1 = load i64, i64* %S1
-  store volatile i64 %V1, i64* %Dst
+  %S1 = getelementptr i64, ptr %Src, i64 131073
+  %V1 = load i64, ptr %S1
+  store volatile i64 %V1, ptr %Dst
 
   ret void
 }

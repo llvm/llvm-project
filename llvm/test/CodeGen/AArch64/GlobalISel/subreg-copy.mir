@@ -28,8 +28,7 @@ body: |
     %8:gpr(s64) = COPY %2:fpr(s64)
     %4:gpr(s64) = G_AND %8:gpr, %3:gpr
     %7:gpr(s32) = G_ICMP intpred(ne), %4:gpr(s64), %5:gpr
-    %6:gpr(s1) = G_TRUNC %7:gpr(s32)
-    G_BRCOND %6:gpr(s1), %bb.1
+    G_BRCOND %7, %bb.1
 
   bb.1:
     RET_ReallyLR
@@ -62,7 +61,6 @@ body: |
     %8:gpr(s64) = COPY %2:fpr(s64)
     %4:gpr(s64) = G_AND %8:gpr, %3:gpr
     %7:gpr(s32) = G_ICMP intpred(ne), %4:gpr(s64), %5:gpr
-    %6:gpr(s1) = G_TRUNC %7:gpr(s32)
-    G_BRCOND %6:gpr(s1), %bb.1
+    G_BRCOND %7, %bb.1
   bb.1:
     RET_ReallyLR

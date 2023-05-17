@@ -37,42 +37,42 @@ entry:
   %t = alloca i32, align 4
   %a = alloca i32, align 4
   %b = alloca i32, align 4
-  store i32 %n, i32* %n.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %n.addr, metadata !11, metadata !DIExpression()), !dbg !12
-  call void @llvm.dbg.declare(metadata i32* %i, metadata !13, metadata !DIExpression()), !dbg !14
-  call void @llvm.dbg.declare(metadata i32* %t, metadata !15, metadata !DIExpression()), !dbg !16
-  call void @llvm.dbg.declare(metadata i32* %a, metadata !17, metadata !DIExpression()), !dbg !18
-  store i32 0, i32* %a, align 4, !dbg !18
-  call void @llvm.dbg.declare(metadata i32* %b, metadata !19, metadata !DIExpression()), !dbg !20
-  store i32 1, i32* %b, align 4, !dbg !20
-  store i32 0, i32* %i, align 4, !dbg !21
+  store i32 %n, ptr %n.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %n.addr, metadata !11, metadata !DIExpression()), !dbg !12
+  call void @llvm.dbg.declare(metadata ptr %i, metadata !13, metadata !DIExpression()), !dbg !14
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !15, metadata !DIExpression()), !dbg !16
+  call void @llvm.dbg.declare(metadata ptr %a, metadata !17, metadata !DIExpression()), !dbg !18
+  store i32 0, ptr %a, align 4, !dbg !18
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !19, metadata !DIExpression()), !dbg !20
+  store i32 1, ptr %b, align 4, !dbg !20
+  store i32 0, ptr %i, align 4, !dbg !21
   br label %for.cond, !dbg !23
 
 for.cond:                                         ; preds = %for.inc, %entry
-  %0 = load i32, i32* %i, align 4, !dbg !24
-  %1 = load i32, i32* %n.addr, align 4, !dbg !26
+  %0 = load i32, ptr %i, align 4, !dbg !24
+  %1 = load i32, ptr %n.addr, align 4, !dbg !26
   %cmp = icmp slt i32 %0, %1, !dbg !27
   br i1 %cmp, label %for.body, label %for.end, !dbg !28
 
 for.body:                                         ; preds = %for.cond
-  %2 = load i32, i32* %a, align 4, !dbg !29
-  %3 = load i32, i32* %b, align 4, !dbg !31
+  %2 = load i32, ptr %a, align 4, !dbg !29
+  %3 = load i32, ptr %b, align 4, !dbg !31
   %add = add nsw i32 %2, %3, !dbg !32
-  store i32 %add, i32* %t, align 4, !dbg !33
-  %4 = load i32, i32* %b, align 4, !dbg !34
-  store i32 %4, i32* %a, align 4, !dbg !35
-  %5 = load i32, i32* %t, align 4, !dbg !36
-  store i32 %5, i32* %b, align 4, !dbg !37
+  store i32 %add, ptr %t, align 4, !dbg !33
+  %4 = load i32, ptr %b, align 4, !dbg !34
+  store i32 %4, ptr %a, align 4, !dbg !35
+  %5 = load i32, ptr %t, align 4, !dbg !36
+  store i32 %5, ptr %b, align 4, !dbg !37
   br label %for.inc, !dbg !38
 
 for.inc:                                          ; preds = %for.body
-  %6 = load i32, i32* %i, align 4, !dbg !39
+  %6 = load i32, ptr %i, align 4, !dbg !39
   %inc = add nsw i32 %6, 1, !dbg !39
-  store i32 %inc, i32* %i, align 4, !dbg !39
+  store i32 %inc, ptr %i, align 4, !dbg !39
   br label %for.cond, !dbg !40, !llvm.loop !41
 
 for.end:                                          ; preds = %for.cond
-  %7 = load i32, i32* %b, align 4, !dbg !43
+  %7 = load i32, ptr %b, align 4, !dbg !43
   ret i32 %7, !dbg !44
 }
 

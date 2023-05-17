@@ -362,7 +362,7 @@ def print_function(addr, size, addrs):
   print_here_tail()
 
 def random_seed():
-  """Generate a seed that can easily be passsed back in via --seed=STRING"""
+  """Generate a seed that can easily be passed back in via --seed=STRING"""
   return ''.join(random.choice(string.ascii_lowercase) for i in range(10))
 
 def generate_sizes(base, megabytes):

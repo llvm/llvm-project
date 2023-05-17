@@ -11,19 +11,19 @@
 
 define i32 @f0(i32 %a0) #0 {
 b0:
-  %v0 = load i32, i32* @g0, align 4
-  %v1 = load i32, i32* @g1, align 4
+  %v0 = load i32, ptr @g0, align 4
+  %v1 = load i32, ptr @g1, align 4
   %v2 = add nsw i32 %v1, %v0
   %v3 = icmp eq i32 %v0, %v1
   br i1 %v3, label %b2, label %b1
 
 b1:                                               ; preds = %b0
-  %v4 = load i32, i32* @g2, align 4
+  %v4 = load i32, ptr @g2, align 4
   br label %b3
 
 b2:                                               ; preds = %b0
   %v5 = add nsw i32 %v2, %v0
-  store i32 %v5, i32* @g2, align 4
+  store i32 %v5, ptr @g2, align 4
   br label %b3
 
 b3:                                               ; preds = %b2, %b1

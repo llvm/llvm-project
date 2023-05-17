@@ -2,6 +2,6 @@
 %t = type {i32, float}
 ; CHECK: define void @foo(<4 x
 ; CHECK: define void @bar(<vscale x 4 x
-define void @bar(<vscale x 4 x %t*> %x) {
+define void @bar(<vscale x 4 x ptr> %x) {
   ret void
 }

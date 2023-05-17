@@ -11,7 +11,7 @@
 ; vXf64
 ;
 
-define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %mask) {
+define void @compressstore_v8f64_v8i1(ptr %base, <8 x double> %V, <8 x i1> %mask) {
 ; SSE-LABEL: compressstore_v8f64_v8i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    psllw $15, %xmm4
@@ -242,11 +242,11 @@ define void @compressstore_v8f64_v8i1(double* %base, <8 x double> %V, <8 x i1> %
 ; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v8f64(<8 x double> %V, double* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8f64(<8 x double> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i1> %mask) {
+define void @compressstore_v16f64_v16i1(ptr %base, <16 x double> %V, <16 x i1> %mask) {
 ; SSE-LABEL: compressstore_v16f64_v16i1:
 ; SSE:       ## %bb.0:
 ; SSE-NEXT:    movdqa {{[0-9]+}}(%rsp), %xmm8
@@ -273,8 +273,8 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; SSE-NEXT:    testb $64, %al
 ; SSE-NEXT:    jne LBB1_13
 ; SSE-NEXT:  LBB1_14: ## %else17
-; SSE-NEXT:    testb $-128, %al
-; SSE-NEXT:    jne LBB1_15
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    js LBB1_15
 ; SSE-NEXT:  LBB1_16: ## %else20
 ; SSE-NEXT:    testl $256, %eax ## imm = 0x100
 ; SSE-NEXT:    jne LBB1_17
@@ -334,8 +334,8 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; SSE-NEXT:  LBB1_13: ## %cond.store16
 ; SSE-NEXT:    movlps %xmm3, (%rdi)
 ; SSE-NEXT:    addq $8, %rdi
-; SSE-NEXT:    testb $-128, %al
-; SSE-NEXT:    je LBB1_16
+; SSE-NEXT:    testb %al, %al
+; SSE-NEXT:    jns LBB1_16
 ; SSE-NEXT:  LBB1_15: ## %cond.store19
 ; SSE-NEXT:    movhps %xmm3, (%rdi)
 ; SSE-NEXT:    addq $8, %rdi
@@ -416,8 +416,8 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX1OR2-NEXT:    vextractf128 $1, %ymm1, %xmm0
 ; AVX1OR2-NEXT:    jne LBB1_13
 ; AVX1OR2-NEXT:  ## %bb.14: ## %else17
-; AVX1OR2-NEXT:    testb $-128, %al
-; AVX1OR2-NEXT:    jne LBB1_15
+; AVX1OR2-NEXT:    testb %al, %al
+; AVX1OR2-NEXT:    js LBB1_15
 ; AVX1OR2-NEXT:  LBB1_16: ## %else20
 ; AVX1OR2-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX1OR2-NEXT:    jne LBB1_17
@@ -472,8 +472,8 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX1OR2-NEXT:  LBB1_13: ## %cond.store16
 ; AVX1OR2-NEXT:    vmovlps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
-; AVX1OR2-NEXT:    testb $-128, %al
-; AVX1OR2-NEXT:    je LBB1_16
+; AVX1OR2-NEXT:    testb %al, %al
+; AVX1OR2-NEXT:    jns LBB1_16
 ; AVX1OR2-NEXT:  LBB1_15: ## %cond.store19
 ; AVX1OR2-NEXT:    vmovhps %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    addq $8, %rdi
@@ -517,21 +517,20 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX512F-NEXT:    vpslld $31, %zmm2, %zmm2
 ; AVX512F-NEXT:    vptestmd %zmm2, %zmm2, %k1
 ; AVX512F-NEXT:    kmovw %k1, %eax
-; AVX512F-NEXT:    movzbl %al, %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl %ecx
-; AVX512F-NEXT:    andl $-43, %ecx
-; AVX512F-NEXT:    subl %ecx, %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512F-NEXT:    shrl $2, %eax
+; AVX512F-NEXT:    movzbl %al, %ecx
+; AVX512F-NEXT:    shrl %eax
+; AVX512F-NEXT:    andl $85, %eax
+; AVX512F-NEXT:    subl %eax, %ecx
+; AVX512F-NEXT:    movl %ecx, %eax
 ; AVX512F-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512F-NEXT:    addl %ecx, %eax
-; AVX512F-NEXT:    movl %eax, %ecx
-; AVX512F-NEXT:    shrl $4, %ecx
+; AVX512F-NEXT:    shrl $2, %ecx
+; AVX512F-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
 ; AVX512F-NEXT:    addl %eax, %ecx
-; AVX512F-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512F-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
+; AVX512F-NEXT:    movl %ecx, %eax
+; AVX512F-NEXT:    shrl $4, %eax
+; AVX512F-NEXT:    addl %ecx, %eax
+; AVX512F-NEXT:    andl $252645135, %eax ## imm = 0xF0F0F0F
+; AVX512F-NEXT:    imull $16843009, %eax, %eax ## imm = 0x1010101
 ; AVX512F-NEXT:    shrl $24, %eax
 ; AVX512F-NEXT:    kshiftrw $8, %k1, %k2
 ; AVX512F-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
@@ -571,28 +570,27 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; AVX512VLBW-NEXT:    vpsllw $7, %xmm2, %xmm2
 ; AVX512VLBW-NEXT:    vpmovb2m %xmm2, %k1
 ; AVX512VLBW-NEXT:    kmovd %k1, %eax
-; AVX512VLBW-NEXT:    movzbl %al, %eax
-; AVX512VLBW-NEXT:    movl %eax, %ecx
-; AVX512VLBW-NEXT:    shrl %ecx
-; AVX512VLBW-NEXT:    andl $-43, %ecx
-; AVX512VLBW-NEXT:    subl %ecx, %eax
-; AVX512VLBW-NEXT:    movl %eax, %ecx
-; AVX512VLBW-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
-; AVX512VLBW-NEXT:    shrl $2, %eax
+; AVX512VLBW-NEXT:    movzbl %al, %ecx
+; AVX512VLBW-NEXT:    shrl %eax
+; AVX512VLBW-NEXT:    andl $85, %eax
+; AVX512VLBW-NEXT:    subl %eax, %ecx
+; AVX512VLBW-NEXT:    movl %ecx, %eax
 ; AVX512VLBW-NEXT:    andl $858993459, %eax ## imm = 0x33333333
-; AVX512VLBW-NEXT:    addl %ecx, %eax
-; AVX512VLBW-NEXT:    movl %eax, %ecx
-; AVX512VLBW-NEXT:    shrl $4, %ecx
+; AVX512VLBW-NEXT:    shrl $2, %ecx
+; AVX512VLBW-NEXT:    andl $858993459, %ecx ## imm = 0x33333333
 ; AVX512VLBW-NEXT:    addl %eax, %ecx
-; AVX512VLBW-NEXT:    andl $252645135, %ecx ## imm = 0xF0F0F0F
-; AVX512VLBW-NEXT:    imull $16843009, %ecx, %eax ## imm = 0x1010101
+; AVX512VLBW-NEXT:    movl %ecx, %eax
+; AVX512VLBW-NEXT:    shrl $4, %eax
+; AVX512VLBW-NEXT:    addl %ecx, %eax
+; AVX512VLBW-NEXT:    andl $252645135, %eax ## imm = 0xF0F0F0F
+; AVX512VLBW-NEXT:    imull $16843009, %eax, %eax ## imm = 0x1010101
 ; AVX512VLBW-NEXT:    shrl $24, %eax
 ; AVX512VLBW-NEXT:    kshiftrw $8, %k1, %k2
 ; AVX512VLBW-NEXT:    vcompresspd %zmm1, (%rdi,%rax,8) {%k2}
 ; AVX512VLBW-NEXT:    vcompresspd %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v16f64(<16 x double> %V, double* %base, <16 x i1> %mask)
+  call void @llvm.masked.compressstore.v16f64(<16 x double> %V, ptr %base, <16 x i1> %mask)
   ret void
 }
 
@@ -600,7 +598,7 @@ define void @compressstore_v16f64_v16i1(double* %base, <16 x double> %V, <16 x i
 ; vXf32
 ;
 
-define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %trigger) {
+define void @compressstore_v2f32_v2i32(ptr %base, <2 x float> %V, <2 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v2f32_v2i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,0,1,1]
@@ -695,11 +693,11 @@ define void @compressstore_v2f32_v2i32(float* %base, <2 x float> %V, <2 x i32> %
 ; AVX512VLBW-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <2 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v2f32(<2 x float> %V, float* %base, <2 x i1> %mask)
+  call void @llvm.masked.compressstore.v2f32(<2 x float> %V, ptr %base, <2 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v4f32_v4i1(float* %base, <4 x float> %V, <4 x i1> %mask) {
+define void @compressstore_v4f32_v4i1(ptr %base, <4 x float> %V, <4 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v4f32_v4i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm1
@@ -837,11 +835,11 @@ define void @compressstore_v4f32_v4i1(float* %base, <4 x float> %V, <4 x i1> %ma
 ; AVX512VLBW-NEXT:    vptestmd %xmm1, %xmm1, %k1
 ; AVX512VLBW-NEXT:    vcompressps %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v4f32(<4 x float> %V, float* %base, <4 x i1> %mask)
+  call void @llvm.masked.compressstore.v4f32(<4 x float> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %mask) {
+define void @compressstore_v8f32_v8i1(ptr %base, <8 x float> %V, <8 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v8f32_v8i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm2
@@ -1158,11 +1156,11 @@ define void @compressstore_v8f32_v8i1(float* %base, <8 x float> %V, <8 x i1> %ma
 ; AVX512VLBW-NEXT:    vcompressps %ymm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v8f32(<8 x float> %V, float* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8f32(<8 x float> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v16f32_const(float* %base, <16 x float> %V) {
+define void @compressstore_v16f32_const(ptr %base, <16 x float> %V) {
 ; SSE2-LABEL: compressstore_v16f32_const:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
@@ -1259,11 +1257,11 @@ define void @compressstore_v16f32_const(float* %base, <16 x float> %V) {
 ; AVX512VLBW-NEXT:    vcompressps %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v16f32(<16 x float> %V, float* %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>)
+  call void @llvm.masked.compressstore.v16f32(<16 x float> %V, ptr %base, <16 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 false, i1 true, i1 true, i1 true, i1 true>)
   ret void
 }
 
-define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i32> %trigger) {
+define void @compressstore_v32f32_v32i32(ptr %base, <32 x float> %V, <32 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v32f32_v32i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm8, %xmm8
@@ -1313,8 +1311,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE2-NEXT:    testb $64, %al
 ; SSE2-NEXT:    jne LBB6_13
 ; SSE2-NEXT:  LBB6_14: ## %else17
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    jne LBB6_15
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    js LBB6_15
 ; SSE2-NEXT:  LBB6_16: ## %else20
 ; SSE2-NEXT:    testl $256, %eax ## imm = 0x100
 ; SSE2-NEXT:    jne LBB6_17
@@ -1337,8 +1335,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE2-NEXT:    testl $16384, %eax ## imm = 0x4000
 ; SSE2-NEXT:    jne LBB6_29
 ; SSE2-NEXT:  LBB6_30: ## %else41
-; SSE2-NEXT:    testl $32768, %eax ## imm = 0x8000
-; SSE2-NEXT:    jne LBB6_31
+; SSE2-NEXT:    testw %ax, %ax
+; SSE2-NEXT:    js LBB6_31
 ; SSE2-NEXT:  LBB6_32: ## %else44
 ; SSE2-NEXT:    testl $65536, %eax ## imm = 0x10000
 ; SSE2-NEXT:    jne LBB6_33
@@ -1431,8 +1429,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm1[1]
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $4, %rdi
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je LBB6_16
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jns LBB6_16
 ; SSE2-NEXT:  LBB6_15: ## %cond.store19
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[3,3,3,3]
 ; SSE2-NEXT:    movss %xmm1, (%rdi)
@@ -1481,8 +1479,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE2-NEXT:    unpckhpd {{.*#+}} xmm0 = xmm0[1],xmm3[1]
 ; SSE2-NEXT:    movss %xmm0, (%rdi)
 ; SSE2-NEXT:    addq $4, %rdi
-; SSE2-NEXT:    testl $32768, %eax ## imm = 0x8000
-; SSE2-NEXT:    je LBB6_32
+; SSE2-NEXT:    testw %ax, %ax
+; SSE2-NEXT:    jns LBB6_32
 ; SSE2-NEXT:  LBB6_31: ## %cond.store43
 ; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[3,3,3,3]
 ; SSE2-NEXT:    movss %xmm3, (%rdi)
@@ -1637,8 +1635,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE42-NEXT:    testb $64, %al
 ; SSE42-NEXT:    jne LBB6_13
 ; SSE42-NEXT:  LBB6_14: ## %else17
-; SSE42-NEXT:    testb $-128, %al
-; SSE42-NEXT:    jne LBB6_15
+; SSE42-NEXT:    testb %al, %al
+; SSE42-NEXT:    js LBB6_15
 ; SSE42-NEXT:  LBB6_16: ## %else20
 ; SSE42-NEXT:    testl $256, %eax ## imm = 0x100
 ; SSE42-NEXT:    jne LBB6_17
@@ -1661,8 +1659,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE42-NEXT:    testl $16384, %eax ## imm = 0x4000
 ; SSE42-NEXT:    jne LBB6_29
 ; SSE42-NEXT:  LBB6_30: ## %else41
-; SSE42-NEXT:    testl $32768, %eax ## imm = 0x8000
-; SSE42-NEXT:    jne LBB6_31
+; SSE42-NEXT:    testw %ax, %ax
+; SSE42-NEXT:    js LBB6_31
 ; SSE42-NEXT:  LBB6_32: ## %else44
 ; SSE42-NEXT:    testl $65536, %eax ## imm = 0x10000
 ; SSE42-NEXT:    jne LBB6_33
@@ -1746,8 +1744,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE42-NEXT:  LBB6_13: ## %cond.store16
 ; SSE42-NEXT:    extractps $2, %xmm1, (%rdi)
 ; SSE42-NEXT:    addq $4, %rdi
-; SSE42-NEXT:    testb $-128, %al
-; SSE42-NEXT:    je LBB6_16
+; SSE42-NEXT:    testb %al, %al
+; SSE42-NEXT:    jns LBB6_16
 ; SSE42-NEXT:  LBB6_15: ## %cond.store19
 ; SSE42-NEXT:    extractps $3, %xmm1, (%rdi)
 ; SSE42-NEXT:    addq $4, %rdi
@@ -1786,8 +1784,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; SSE42-NEXT:  LBB6_29: ## %cond.store40
 ; SSE42-NEXT:    extractps $2, %xmm3, (%rdi)
 ; SSE42-NEXT:    addq $4, %rdi
-; SSE42-NEXT:    testl $32768, %eax ## imm = 0x8000
-; SSE42-NEXT:    je LBB6_32
+; SSE42-NEXT:    testw %ax, %ax
+; SSE42-NEXT:    jns LBB6_32
 ; SSE42-NEXT:  LBB6_31: ## %cond.store43
 ; SSE42-NEXT:    extractps $3, %xmm3, (%rdi)
 ; SSE42-NEXT:    addq $4, %rdi
@@ -1878,12 +1876,12 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX1-NEXT:    vpxor %xmm9, %xmm9, %xmm9
 ; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm8, %xmm8
 ; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm9, %xmm5
-; AVX1-NEXT:    vpackssdw %xmm8, %xmm5, %xmm8
-; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm5
-; AVX1-NEXT:    vpcmpeqd %xmm5, %xmm9, %xmm5
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm5, %xmm5
+; AVX1-NEXT:    vextractf128 $1, %ymm4, %xmm8
+; AVX1-NEXT:    vpcmpeqd %xmm9, %xmm8, %xmm8
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm9, %xmm4
-; AVX1-NEXT:    vpackssdw %xmm5, %xmm4, %xmm4
-; AVX1-NEXT:    vpacksswb %xmm8, %xmm4, %xmm4
+; AVX1-NEXT:    vpackssdw %xmm8, %xmm4, %xmm4
+; AVX1-NEXT:    vpacksswb %xmm5, %xmm4, %xmm4
 ; AVX1-NEXT:    vpmovmskb %xmm4, %ecx
 ; AVX1-NEXT:    vextractf128 $1, %ymm7, %xmm4
 ; AVX1-NEXT:    vpcmpeqd %xmm4, %xmm9, %xmm4
@@ -1922,8 +1920,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX1-NEXT:    testb $64, %al
 ; AVX1-NEXT:    jne LBB6_13
 ; AVX1-NEXT:  LBB6_14: ## %else17
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    jne LBB6_15
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    js LBB6_15
 ; AVX1-NEXT:  LBB6_16: ## %else20
 ; AVX1-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX1-NEXT:    jne LBB6_17
@@ -1950,8 +1948,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX1-NEXT:    testl $16384, %eax ## imm = 0x4000
 ; AVX1-NEXT:    jne LBB6_29
 ; AVX1-NEXT:  LBB6_30: ## %else41
-; AVX1-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX1-NEXT:    jne LBB6_31
+; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    js LBB6_31
 ; AVX1-NEXT:  LBB6_32: ## %else44
 ; AVX1-NEXT:    testl $65536, %eax ## imm = 0x10000
 ; AVX1-NEXT:    jne LBB6_33
@@ -2040,8 +2038,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX1-NEXT:  LBB6_13: ## %cond.store16
 ; AVX1-NEXT:    vextractps $2, %xmm0, (%rdi)
 ; AVX1-NEXT:    addq $4, %rdi
-; AVX1-NEXT:    testb $-128, %al
-; AVX1-NEXT:    je LBB6_16
+; AVX1-NEXT:    testb %al, %al
+; AVX1-NEXT:    jns LBB6_16
 ; AVX1-NEXT:  LBB6_15: ## %cond.store19
 ; AVX1-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; AVX1-NEXT:    addq $4, %rdi
@@ -2076,8 +2074,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX1-NEXT:  LBB6_29: ## %cond.store40
 ; AVX1-NEXT:    vextractps $2, %xmm0, (%rdi)
 ; AVX1-NEXT:    addq $4, %rdi
-; AVX1-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX1-NEXT:    je LBB6_32
+; AVX1-NEXT:    testw %ax, %ax
+; AVX1-NEXT:    jns LBB6_32
 ; AVX1-NEXT:  LBB6_31: ## %cond.store43
 ; AVX1-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; AVX1-NEXT:    addq $4, %rdi
@@ -2194,8 +2192,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX2-NEXT:    testb $64, %al
 ; AVX2-NEXT:    jne LBB6_13
 ; AVX2-NEXT:  LBB6_14: ## %else17
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    jne LBB6_15
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    js LBB6_15
 ; AVX2-NEXT:  LBB6_16: ## %else20
 ; AVX2-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX2-NEXT:    jne LBB6_17
@@ -2222,8 +2220,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX2-NEXT:    testl $16384, %eax ## imm = 0x4000
 ; AVX2-NEXT:    jne LBB6_29
 ; AVX2-NEXT:  LBB6_30: ## %else41
-; AVX2-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX2-NEXT:    jne LBB6_31
+; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    js LBB6_31
 ; AVX2-NEXT:  LBB6_32: ## %else44
 ; AVX2-NEXT:    testl $65536, %eax ## imm = 0x10000
 ; AVX2-NEXT:    jne LBB6_33
@@ -2312,8 +2310,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX2-NEXT:  LBB6_13: ## %cond.store16
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rdi)
 ; AVX2-NEXT:    addq $4, %rdi
-; AVX2-NEXT:    testb $-128, %al
-; AVX2-NEXT:    je LBB6_16
+; AVX2-NEXT:    testb %al, %al
+; AVX2-NEXT:    jns LBB6_16
 ; AVX2-NEXT:  LBB6_15: ## %cond.store19
 ; AVX2-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; AVX2-NEXT:    addq $4, %rdi
@@ -2348,8 +2346,8 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX2-NEXT:  LBB6_29: ## %cond.store40
 ; AVX2-NEXT:    vextractps $2, %xmm0, (%rdi)
 ; AVX2-NEXT:    addq $4, %rdi
-; AVX2-NEXT:    testl $32768, %eax ## imm = 0x8000
-; AVX2-NEXT:    je LBB6_32
+; AVX2-NEXT:    testw %ax, %ax
+; AVX2-NEXT:    jns LBB6_32
 ; AVX2-NEXT:  LBB6_31: ## %cond.store43
 ; AVX2-NEXT:    vextractps $3, %xmm0, (%rdi)
 ; AVX2-NEXT:    addq $4, %rdi
@@ -2452,7 +2450,7 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %mask = icmp eq <32 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v32f32(<32 x float> %V, float* %base, <32 x i1> %mask)
+  call void @llvm.masked.compressstore.v32f32(<32 x float> %V, ptr %base, <32 x i1> %mask)
   ret void
 }
 
@@ -2460,7 +2458,7 @@ define void @compressstore_v32f32_v32i32(float* %base, <32 x float> %V, <32 x i3
 ; vXi64
 ;
 
-define void @compressstore_v2i64_v2i1(i64* %base, <2 x i64> %V, <2 x i1> %mask) {
+define void @compressstore_v2i64_v2i1(ptr %base, <2 x i64> %V, <2 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v2i64_v2i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllq $63, %xmm1
@@ -2546,11 +2544,11 @@ define void @compressstore_v2i64_v2i1(i64* %base, <2 x i64> %V, <2 x i1> %mask) 
 ; AVX512VLBW-NEXT:    vptestmq %xmm1, %xmm1, %k1
 ; AVX512VLBW-NEXT:    vpcompressq %xmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v2i64(<2 x i64> %V, i64* %base, <2 x i1> %mask)
+  call void @llvm.masked.compressstore.v2i64(<2 x i64> %V, ptr %base, <2 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v4i64_v4i1(i64* %base, <4 x i64> %V, <4 x i1> %mask) {
+define void @compressstore_v4i64_v4i1(ptr %base, <4 x i64> %V, <4 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v4i64_v4i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pslld $31, %xmm2
@@ -2721,11 +2719,11 @@ define void @compressstore_v4i64_v4i1(i64* %base, <4 x i64> %V, <4 x i1> %mask) 
 ; AVX512VLBW-NEXT:    vpcompressq %ymm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v4i64(<4 x i64> %V, i64* %base, <4 x i1> %mask)
+  call void @llvm.masked.compressstore.v4i64(<4 x i64> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
 
-define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) {
+define void @compressstore_v8i64_v8i1(ptr %base, <8 x i64> %V, <8 x i1> %mask) {
 ; SSE2-LABEL: compressstore_v8i64_v8i1:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    psllw $15, %xmm4
@@ -3029,7 +3027,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; AVX512VLBW-NEXT:    vpcompressq %zmm0, (%rdi) {%k1}
 ; AVX512VLBW-NEXT:    vzeroupper
 ; AVX512VLBW-NEXT:    retq
-  call void @llvm.masked.compressstore.v8i64(<8 x i64> %V, i64* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8i64(<8 x i64> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
@@ -3037,7 +3035,7 @@ define void @compressstore_v8i64_v8i1(i64* %base, <8 x i64> %V, <8 x i1> %mask) 
 ; vXi32
 ;
 
-define void @compressstore_v4i32_v4i32(i32* %base, <4 x i32> %V, <4 x i32> %trigger) {
+define void @compressstore_v4i32_v4i32(ptr %base, <4 x i32> %V, <4 x i32> %trigger) {
 ; SSE2-LABEL: compressstore_v4i32_v4i32:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -3169,7 +3167,7 @@ define void @compressstore_v4i32_v4i32(i32* %base, <4 x i32> %V, <4 x i32> %trig
 ; AVX512VL-NEXT:    vpcompressd %xmm0, (%rdi) {%k1}
 ; AVX512VL-NEXT:    retq
   %mask = icmp eq <4 x i32> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v4i32(<4 x i32> %V, i32* %base, <4 x i1> %mask)
+  call void @llvm.masked.compressstore.v4i32(<4 x i32> %V, ptr %base, <4 x i1> %mask)
   ret void
 }
 
@@ -3177,7 +3175,7 @@ define void @compressstore_v4i32_v4i32(i32* %base, <4 x i32> %V, <4 x i32> %trig
 ; vXi16
 ;
 
-define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trigger) {
+define void @compressstore_v8i16_v8i16(ptr %base, <8 x i16> %V, <8 x i16> %trigger) {
 ; SSE2-LABEL: compressstore_v8i16_v8i16:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -3610,7 +3608,7 @@ define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trig
 ; AVX512VLBW-NEXT:    vpextrw $7, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <8 x i16> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v8i16(<8 x i16> %V, i16* %base, <8 x i1> %mask)
+  call void @llvm.masked.compressstore.v8i16(<8 x i16> %V, ptr %base, <8 x i1> %mask)
   ret void
 }
 
@@ -3618,7 +3616,7 @@ define void @compressstore_v8i16_v8i16(i16* %base, <8 x i16> %V, <8 x i16> %trig
 ; vXi8
 ;
 
-define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigger) {
+define void @compressstore_v16i8_v16i8(ptr %base, <16 x i8> %V, <16 x i8> %trigger) {
 ; SSE2-LABEL: compressstore_v16i8_v16i8:
 ; SSE2:       ## %bb.0:
 ; SSE2-NEXT:    pxor %xmm2, %xmm2
@@ -3661,8 +3659,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE2-NEXT:    movb %cl, (%rdi)
 ; SSE2-NEXT:    incq %rdi
 ; SSE2-NEXT:  LBB12_14: ## %else17
-; SSE2-NEXT:    testb $-128, %al
-; SSE2-NEXT:    je LBB12_16
+; SSE2-NEXT:    testb %al, %al
+; SSE2-NEXT:    jns LBB12_16
 ; SSE2-NEXT:  ## %bb.15: ## %cond.store19
 ; SSE2-NEXT:    movb %ch, (%rdi)
 ; SSE2-NEXT:    incq %rdi
@@ -3767,8 +3765,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE42-NEXT:    testb $64, %al
 ; SSE42-NEXT:    jne LBB12_13
 ; SSE42-NEXT:  LBB12_14: ## %else17
-; SSE42-NEXT:    testb $-128, %al
-; SSE42-NEXT:    jne LBB12_15
+; SSE42-NEXT:    testb %al, %al
+; SSE42-NEXT:    js LBB12_15
 ; SSE42-NEXT:  LBB12_16: ## %else20
 ; SSE42-NEXT:    testl $256, %eax ## imm = 0x100
 ; SSE42-NEXT:    jne LBB12_17
@@ -3828,8 +3826,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; SSE42-NEXT:  LBB12_13: ## %cond.store16
 ; SSE42-NEXT:    pextrb $6, %xmm0, (%rdi)
 ; SSE42-NEXT:    incq %rdi
-; SSE42-NEXT:    testb $-128, %al
-; SSE42-NEXT:    je LBB12_16
+; SSE42-NEXT:    testb %al, %al
+; SSE42-NEXT:    jns LBB12_16
 ; SSE42-NEXT:  LBB12_15: ## %cond.store19
 ; SSE42-NEXT:    pextrb $7, %xmm0, (%rdi)
 ; SSE42-NEXT:    incq %rdi
@@ -3900,8 +3898,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX1OR2-NEXT:    testb $64, %al
 ; AVX1OR2-NEXT:    jne LBB12_13
 ; AVX1OR2-NEXT:  LBB12_14: ## %else17
-; AVX1OR2-NEXT:    testb $-128, %al
-; AVX1OR2-NEXT:    jne LBB12_15
+; AVX1OR2-NEXT:    testb %al, %al
+; AVX1OR2-NEXT:    js LBB12_15
 ; AVX1OR2-NEXT:  LBB12_16: ## %else20
 ; AVX1OR2-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX1OR2-NEXT:    jne LBB12_17
@@ -3961,8 +3959,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX1OR2-NEXT:  LBB12_13: ## %cond.store16
 ; AVX1OR2-NEXT:    vpextrb $6, %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    incq %rdi
-; AVX1OR2-NEXT:    testb $-128, %al
-; AVX1OR2-NEXT:    je LBB12_16
+; AVX1OR2-NEXT:    testb %al, %al
+; AVX1OR2-NEXT:    jns LBB12_16
 ; AVX1OR2-NEXT:  LBB12_15: ## %cond.store19
 ; AVX1OR2-NEXT:    vpextrb $7, %xmm0, (%rdi)
 ; AVX1OR2-NEXT:    incq %rdi
@@ -4033,8 +4031,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512F-NEXT:    testb $64, %al
 ; AVX512F-NEXT:    jne LBB12_13
 ; AVX512F-NEXT:  LBB12_14: ## %else17
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    jne LBB12_15
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    js LBB12_15
 ; AVX512F-NEXT:  LBB12_16: ## %else20
 ; AVX512F-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX512F-NEXT:    jne LBB12_17
@@ -4094,8 +4092,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512F-NEXT:  LBB12_13: ## %cond.store16
 ; AVX512F-NEXT:    vpextrb $6, %xmm0, (%rdi)
 ; AVX512F-NEXT:    incq %rdi
-; AVX512F-NEXT:    testb $-128, %al
-; AVX512F-NEXT:    je LBB12_16
+; AVX512F-NEXT:    testb %al, %al
+; AVX512F-NEXT:    jns LBB12_16
 ; AVX512F-NEXT:  LBB12_15: ## %cond.store19
 ; AVX512F-NEXT:    vpextrb $7, %xmm0, (%rdi)
 ; AVX512F-NEXT:    incq %rdi
@@ -4166,8 +4164,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512VLDQ-NEXT:    testb $64, %al
 ; AVX512VLDQ-NEXT:    jne LBB12_13
 ; AVX512VLDQ-NEXT:  LBB12_14: ## %else17
-; AVX512VLDQ-NEXT:    testb $-128, %al
-; AVX512VLDQ-NEXT:    jne LBB12_15
+; AVX512VLDQ-NEXT:    testb %al, %al
+; AVX512VLDQ-NEXT:    js LBB12_15
 ; AVX512VLDQ-NEXT:  LBB12_16: ## %else20
 ; AVX512VLDQ-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX512VLDQ-NEXT:    jne LBB12_17
@@ -4227,8 +4225,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512VLDQ-NEXT:  LBB12_13: ## %cond.store16
 ; AVX512VLDQ-NEXT:    vpextrb $6, %xmm0, (%rdi)
 ; AVX512VLDQ-NEXT:    incq %rdi
-; AVX512VLDQ-NEXT:    testb $-128, %al
-; AVX512VLDQ-NEXT:    je LBB12_16
+; AVX512VLDQ-NEXT:    testb %al, %al
+; AVX512VLDQ-NEXT:    jns LBB12_16
 ; AVX512VLDQ-NEXT:  LBB12_15: ## %cond.store19
 ; AVX512VLDQ-NEXT:    vpextrb $7, %xmm0, (%rdi)
 ; AVX512VLDQ-NEXT:    incq %rdi
@@ -4298,8 +4296,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512VLBW-NEXT:    testb $64, %al
 ; AVX512VLBW-NEXT:    jne LBB12_13
 ; AVX512VLBW-NEXT:  LBB12_14: ## %else17
-; AVX512VLBW-NEXT:    testb $-128, %al
-; AVX512VLBW-NEXT:    jne LBB12_15
+; AVX512VLBW-NEXT:    testb %al, %al
+; AVX512VLBW-NEXT:    js LBB12_15
 ; AVX512VLBW-NEXT:  LBB12_16: ## %else20
 ; AVX512VLBW-NEXT:    testl $256, %eax ## imm = 0x100
 ; AVX512VLBW-NEXT:    jne LBB12_17
@@ -4359,8 +4357,8 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512VLBW-NEXT:  LBB12_13: ## %cond.store16
 ; AVX512VLBW-NEXT:    vpextrb $6, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    incq %rdi
-; AVX512VLBW-NEXT:    testb $-128, %al
-; AVX512VLBW-NEXT:    je LBB12_16
+; AVX512VLBW-NEXT:    testb %al, %al
+; AVX512VLBW-NEXT:    jns LBB12_16
 ; AVX512VLBW-NEXT:  LBB12_15: ## %cond.store19
 ; AVX512VLBW-NEXT:    vpextrb $7, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    incq %rdi
@@ -4405,38 +4403,38 @@ define void @compressstore_v16i8_v16i8(i8* %base, <16 x i8> %V, <16 x i8> %trigg
 ; AVX512VLBW-NEXT:    vpextrb $15, %xmm0, (%rdi)
 ; AVX512VLBW-NEXT:    retq
   %mask = icmp eq <16 x i8> %trigger, zeroinitializer
-  call void @llvm.masked.compressstore.v16i8(<16 x i8> %V, i8* %base, <16 x i1> %mask)
+  call void @llvm.masked.compressstore.v16i8(<16 x i8> %V, ptr %base, <16 x i1> %mask)
   ret void
 }
 
-declare void @llvm.masked.compressstore.v16f64(<16 x double>, double*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8f64(<8 x double>, double*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4f64(<4 x double>, double*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2f64(<2 x double>, double*, <2 x i1>)
-declare void @llvm.masked.compressstore.v1f64(<1 x double>, double*, <1 x i1>)
+declare void @llvm.masked.compressstore.v16f64(<16 x double>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8f64(<8 x double>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4f64(<4 x double>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2f64(<2 x double>, ptr, <2 x i1>)
+declare void @llvm.masked.compressstore.v1f64(<1 x double>, ptr, <1 x i1>)
 
-declare void @llvm.masked.compressstore.v32f32(<32 x float>, float*, <32 x i1>)
-declare void @llvm.masked.compressstore.v16f32(<16 x float>, float*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8f32(<8 x float>, float*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4f32(<4 x float>, float*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2f32(<2 x float>, float*, <2 x i1>)
+declare void @llvm.masked.compressstore.v32f32(<32 x float>, ptr, <32 x i1>)
+declare void @llvm.masked.compressstore.v16f32(<16 x float>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8f32(<8 x float>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4f32(<4 x float>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2f32(<2 x float>, ptr, <2 x i1>)
 
-declare void @llvm.masked.compressstore.v8i64(<8 x i64>, i64*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4i64(<4 x i64>, i64*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2i64(<2 x i64>, i64*, <2 x i1>)
-declare void @llvm.masked.compressstore.v1i64(<1 x i64>, i64*, <1 x i1>)
+declare void @llvm.masked.compressstore.v8i64(<8 x i64>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4i64(<4 x i64>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2i64(<2 x i64>, ptr, <2 x i1>)
+declare void @llvm.masked.compressstore.v1i64(<1 x i64>, ptr, <1 x i1>)
 
-declare void @llvm.masked.compressstore.v16i32(<16 x i32>, i32*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8i32(<8 x i32>, i32*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4i32(<4 x i32>, i32*, <4 x i1>)
-declare void @llvm.masked.compressstore.v2i32(<2 x i32>, i32*, <2 x i1>)
+declare void @llvm.masked.compressstore.v16i32(<16 x i32>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8i32(<8 x i32>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4i32(<4 x i32>, ptr, <4 x i1>)
+declare void @llvm.masked.compressstore.v2i32(<2 x i32>, ptr, <2 x i1>)
 
-declare void @llvm.masked.compressstore.v32i16(<32 x i16>, i16*, <32 x i1>)
-declare void @llvm.masked.compressstore.v16i16(<16 x i16>, i16*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8i16(<8 x i16>, i16*, <8 x i1>)
-declare void @llvm.masked.compressstore.v4i16(<4 x i16>, i16*, <4 x i1>)
+declare void @llvm.masked.compressstore.v32i16(<32 x i16>, ptr, <32 x i1>)
+declare void @llvm.masked.compressstore.v16i16(<16 x i16>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8i16(<8 x i16>, ptr, <8 x i1>)
+declare void @llvm.masked.compressstore.v4i16(<4 x i16>, ptr, <4 x i1>)
 
-declare void @llvm.masked.compressstore.v64i8(<64 x i8>, i8*, <64 x i1>)
-declare void @llvm.masked.compressstore.v32i8(<32 x i8>, i8*, <32 x i1>)
-declare void @llvm.masked.compressstore.v16i8(<16 x i8>, i8*, <16 x i1>)
-declare void @llvm.masked.compressstore.v8i8(<8 x i8>, i8*, <8 x i1>)
+declare void @llvm.masked.compressstore.v64i8(<64 x i8>, ptr, <64 x i1>)
+declare void @llvm.masked.compressstore.v32i8(<32 x i8>, ptr, <32 x i1>)
+declare void @llvm.masked.compressstore.v16i8(<16 x i8>, ptr, <16 x i1>)
+declare void @llvm.masked.compressstore.v8i8(<8 x i8>, ptr, <8 x i1>)

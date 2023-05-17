@@ -286,7 +286,7 @@ system_error::~system_error() noexcept
 void
 __throw_system_error(int ev, const char* what_arg)
 {
-#ifndef _LIBCPP_NO_EXCEPTIONS
+#ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw system_error(error_code(ev, system_category()), what_arg);
 #else
     (void)ev;

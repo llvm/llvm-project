@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++98 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++11 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++17 %s
-// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=gnu++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++98 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++11 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=c++17 %s
+// RUN: %clang_cc1 -fcxx-exceptions -fsyntax-only -verify -W -Wall -Wno-deprecated-builtins -Wno-unused-but-set-variable -Wrange-loop-analysis -triple arm64-linux-gnu -target-feature +sve -std=gnu++17 %s
 
 namespace std {
 struct type_info;
@@ -78,7 +78,7 @@ void func(int sel) {
   // Using pointers to sizeless data isn't wrong here, but because the
   // type is incomplete, it doesn't provide any alignment guarantees.
   _Static_assert(__atomic_is_lock_free(1, &local_int8) == __atomic_is_lock_free(1, incomplete_ptr), "");
-  _Static_assert(__atomic_is_lock_free(2, &local_int8) == __atomic_is_lock_free(2, incomplete_ptr), ""); // expected-error {{static_assert expression is not an integral constant expression}}
+  _Static_assert(__atomic_is_lock_free(2, &local_int8) == __atomic_is_lock_free(2, incomplete_ptr), ""); // expected-error {{static assertion expression is not an integral constant expression}}
   _Static_assert(__atomic_always_lock_free(1, &local_int8) == __atomic_always_lock_free(1, incomplete_ptr), "");
 
   local_int8; // expected-warning {{expression result unused}}
@@ -103,7 +103,7 @@ void func(int sel) {
   svint8_t bad_brace_init_int8_1 = {local_int8, 0};    // expected-error {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2 = {0};                // expected-error {{rvalue of type 'int'}}
   svint8_t bad_brace_init_int8_3 = {local_int16};      // expected-error {{lvalue of type 'svint16_t'}}
-  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error {{designator in initializer for indivisible sizeless type 'svint8_t'}} expected-warning {{array designators are a C99 extension}}
+  svint8_t bad_brace_init_int8_4 = {[0] = local_int8}; // expected-error-re {{initialization of non-aggregate type 'svint8_t'{{.*}} with a designated initializer list}} expected-warning {{array designators are a C99 extension}}
   svint8_t bad_brace_init_int8_5 = {{local_int8}};     // expected-warning {{too many braces around initializer}}
   svint8_t bad_brace_init_int8_6 = {{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
 
@@ -199,10 +199,8 @@ void func(int sel) {
   global_int8_ptr -= 1;              // expected-error {{arithmetic on a pointer to sizeless type}}
   global_int8_ptr - global_int8_ptr; // expected-error {{arithmetic on a pointer to sizeless type}}
 
-  +init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   ++init_int8;      // expected-error {{cannot increment value of type 'svint8_t'}}
   init_int8++;      // expected-error {{cannot increment value of type 'svint8_t'}}
-  -init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
   --init_int8;      // expected-error {{cannot decrement value of type 'svint8_t'}}
   init_int8--;      // expected-error {{cannot decrement value of type 'svint8_t'}}
   !init_int8;       // expected-error {{invalid argument type 'svint8_t'}}
@@ -212,23 +210,6 @@ void func(int sel) {
 
   local_int8 &&init_int8;  // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
   local_int8 || init_int8; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
-
-  local_int8 + 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 - 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 * 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 / 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 % 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 & 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 | 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 ^ 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 < 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 <= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 == 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 != 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 >= 0; // expected-error {{invalid operands to binary expression}}
-  local_int8 > 0;  // expected-error {{invalid operands to binary expression}}
-  local_int8 && 0; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
-  local_int8 || 0; // expected-error {{invalid operands to binary expression}} expected-error {{not contextually convertible}}
 
   if (local_int8) { // expected-error {{not contextually convertible to 'bool'}}
   }
@@ -441,7 +422,7 @@ void cxx_only(int sel) {
   svint8_t bad_brace_init_int8_1{local_int8, 0};    // expected-error {{excess elements in initializer for indivisible sizeless type 'svint8_t'}}
   svint8_t bad_brace_init_int8_2{0};                // expected-error {{rvalue of type 'int'}}
   svint8_t bad_brace_init_int8_3{local_int16};      // expected-error {{lvalue of type 'svint16_t'}}
-  svint8_t bad_brace_init_int8_4{[0] = local_int8}; // expected-error {{designator in initializer for indivisible sizeless type 'svint8_t'}} expected-warning {{array designators are a C99 extension}}
+  svint8_t bad_brace_init_int8_4{[0] = local_int8}; // expected-error-re {{initialization of non-aggregate type 'svint8_t'{{.*}} with a designated initializer list}} expected-warning {{array designators are a C99 extension}}
   svint8_t bad_brace_init_int8_5{{local_int8}};     // expected-warning {{too many braces around initializer}}
   svint8_t bad_brace_init_int8_6{{local_int8, 0}};  // expected-warning {{too many braces around initializer}}
   svint8_t wrapper_init_int8{wrapper<svint8_t>()};

@@ -12,7 +12,6 @@
 #include "QuerySession.h"
 #include "clang/ASTMatchers/Dynamic/VariantValue.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/Optional.h"
 #include <string>
 
 namespace clang {

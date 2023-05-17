@@ -85,8 +85,6 @@ class MyResponder(MockGDBServerResponder):
 
 class TestWasm(GDBRemoteTestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipIfAsan
     @skipIfXmlSupportMissing
     def test_load_module_with_embedded_symbols_from_remote(self):

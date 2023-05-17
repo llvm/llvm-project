@@ -64,6 +64,7 @@ class SetupConfigs(unittest.TestCase):
             params={})
 
         self.config = lit.TestingConfig.TestingConfig.fromdefaults(self.litConfig)
+        self.config.environment = dict(os.environ)
         self.config.test_source_root = SOURCE_ROOT
         self.config.test_exec_root = EXEC_PATH
         self.config.recursiveExpansionLimit = 10

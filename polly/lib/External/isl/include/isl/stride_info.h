@@ -5,7 +5,7 @@
 #ifndef ISL_STRIDE_INFO_H
 #define ISL_STRIDE_INFO_H
 
-#include <isl/val.h>
+#include <isl/val_type.h>
 #include <isl/aff_type.h>
 
 #if defined(__cplusplus)

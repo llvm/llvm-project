@@ -226,11 +226,15 @@ template <class T, class Container, class Compare>
 #include <__iterator/iterator_traits.h>
 #include <__memory/uses_allocator.h>
 #include <__utility/forward.h>
-#include <compare>
 #include <deque>
-#include <type_traits>
 #include <vector>
 #include <version>
+
+// standard-mandated includes
+
+// [queue.syn]
+#include <compare>
+#include <initializer_list>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -273,7 +277,7 @@ public:
     _LIBCPP_INLINE_VISIBILITY
     queue(const queue& __q) : c(__q.c) {}
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
     template <class _InputIterator,
               class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
     _LIBCPP_HIDE_FROM_ABI
@@ -358,7 +362,7 @@ public:
     void push(value_type&& __v)      {c.push_back(_VSTD::move(__v));}
     template <class... _Args>
         _LIBCPP_INLINE_VISIBILITY
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
         decltype(auto) emplace(_Args&&... __args)
             { return c.emplace_back(_VSTD::forward<_Args>(__args)...);}
 #else
@@ -377,6 +381,8 @@ public:
         swap(c, __q.c);
     }
 
+    _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
+
     template <class _T1, class _C1>
     friend
     _LIBCPP_INLINE_VISIBILITY
@@ -390,7 +396,7 @@ public:
     operator< (const queue<_T1, _C1>& __x,const queue<_T1, _C1>& __y);
 };
 
-#if _LIBCPP_STD_VER > 14
+#if _LIBCPP_STD_VER >= 17
 template<class _Container,
          class = enable_if_t<!__is_allocator<_Container>::value>
 >
@@ -406,7 +412,7 @@ queue(_Container, _Alloc)
     -> queue<typename _Container::value_type, _Container>;
 #endif
 
-#if _LIBCPP_STD_VER > 20
+#if _LIBCPP_STD_VER >= 23
 template <class _InputIterator,
           class = __enable_if_t<__is_cpp17_input_iterator<_InputIterator>::value>>
 queue(_InputIterator, _InputIterator)
@@ -628,6 +634,8 @@ public:
     void swap(priority_queue& __q)
         _NOEXCEPT_(__is_nothrow_swappable<container_type>::value &&
                    __is_nothrow_swappable<value_compare>::value);
+
+    _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 };
 
 #if _LIBCPP_STD_VER >= 17
@@ -952,5 +960,12 @@ struct _LIBCPP_TEMPLATE_VIS uses_allocator<priority_queue<_Tp, _Container, _Comp
 };
 
 _LIBCPP_END_NAMESPACE_STD
+
+#if !defined(_LIBCPP_REMOVE_TRANSITIVE_INCLUDES) && _LIBCPP_STD_VER <= 20
+#  include <concepts>
+#  include <cstdlib>
+#  include <functional>
+#  include <type_traits>
+#endif
 
 #endif // _LIBCPP_QUEUE

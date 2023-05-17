@@ -149,29 +149,27 @@ define signext i32 @bittest_15_i32(i32 signext %a) nounwind {
 define signext i32 @bittest_16_i32(i32 signext %a) nounwind {
 ; MIPS-LABEL: bittest_16_i32:
 ; MIPS:       # %bb.0:
-; MIPS-NEXT:    srl $1, $4, 16
-; MIPS-NEXT:    not $1, $1
+; MIPS-NEXT:    not $1, $4
+; MIPS-NEXT:    srl $1, $1, 16
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    andi $2, $1, 1
 ;
 ; MIPS32R2-LABEL: bittest_16_i32:
 ; MIPS32R2:       # %bb.0:
-; MIPS32R2-NEXT:    srl $1, $4, 16
-; MIPS32R2-NEXT:    not $1, $1
+; MIPS32R2-NEXT:    not $1, $4
 ; MIPS32R2-NEXT:    jr $ra
-; MIPS32R2-NEXT:    andi $2, $1, 1
+; MIPS32R2-NEXT:    ext $2, $1, 16, 1
 ;
 ; MIPS32R6-LABEL: bittest_16_i32:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    srl $1, $4, 16
-; MIPS32R6-NEXT:    not $1, $1
+; MIPS32R6-NEXT:    not $1, $4
 ; MIPS32R6-NEXT:    jr $ra
-; MIPS32R6-NEXT:    andi $2, $1, 1
+; MIPS32R6-NEXT:    ext $2, $1, 16, 1
 ;
 ; MIPS64-LABEL: bittest_16_i32:
 ; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    srl $1, $4, 16
-; MIPS64-NEXT:    not $1, $1
+; MIPS64-NEXT:    not $1, $4
+; MIPS64-NEXT:    srl $1, $1, 16
 ; MIPS64-NEXT:    andi $1, $1, 1
 ; MIPS64-NEXT:    dsll $1, $1, 32
 ; MIPS64-NEXT:    jr $ra
@@ -179,32 +177,28 @@ define signext i32 @bittest_16_i32(i32 signext %a) nounwind {
 ;
 ; MIPS64R2-LABEL: bittest_16_i32:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    srl $1, $4, 16
-; MIPS64R2-NEXT:    not $1, $1
-; MIPS64R2-NEXT:    andi $1, $1, 1
+; MIPS64R2-NEXT:    not $1, $4
+; MIPS64R2-NEXT:    ext $1, $1, 16, 1
 ; MIPS64R2-NEXT:    jr $ra
 ; MIPS64R2-NEXT:    dext $2, $1, 0, 32
 ;
 ; MIPS64R6-LABEL: bittest_16_i32:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    srl $1, $4, 16
-; MIPS64R6-NEXT:    not $1, $1
-; MIPS64R6-NEXT:    andi $1, $1, 1
+; MIPS64R6-NEXT:    not $1, $4
+; MIPS64R6-NEXT:    ext $1, $1, 16, 1
 ; MIPS64R6-NEXT:    jr $ra
 ; MIPS64R6-NEXT:    dext $2, $1, 0, 32
 ;
 ; MM32R3-LABEL: bittest_16_i32:
 ; MM32R3:       # %bb.0:
-; MM32R3-NEXT:    srl $2, $4, 16
-; MM32R3-NEXT:    not16 $2, $2
-; MM32R3-NEXT:    andi16 $2, $2, 1
-; MM32R3-NEXT:    jrc $ra
+; MM32R3-NEXT:    not16 $2, $4
+; MM32R3-NEXT:    jr $ra
+; MM32R3-NEXT:    ext $2, $2, 16, 1
 ;
 ; MM32R6-LABEL: bittest_16_i32:
 ; MM32R6:       # %bb.0:
-; MM32R6-NEXT:    srl $2, $4, 16
-; MM32R6-NEXT:    not16 $2, $2
-; MM32R6-NEXT:    andi16 $2, $2, 1
+; MM32R6-NEXT:    not16 $2, $4
+; MM32R6-NEXT:    ext $2, $2, 16, 1
 ; MM32R6-NEXT:    jrc $ra
   %shr = lshr i32 %a, 16
   %not = xor i32 %shr, -1
@@ -399,65 +393,59 @@ define i64 @bittest_15_i64(i64 %a) nounwind {
 define i64 @bittest_16_i64(i64 %a) nounwind {
 ; MIPS-LABEL: bittest_16_i64:
 ; MIPS:       # %bb.0:
-; MIPS-NEXT:    srl $1, $5, 16
-; MIPS-NEXT:    not $1, $1
+; MIPS-NEXT:    not $1, $5
+; MIPS-NEXT:    srl $1, $1, 16
 ; MIPS-NEXT:    andi $3, $1, 1
 ; MIPS-NEXT:    jr $ra
 ; MIPS-NEXT:    addiu $2, $zero, 0
 ;
 ; MIPS32R2-LABEL: bittest_16_i64:
 ; MIPS32R2:       # %bb.0:
-; MIPS32R2-NEXT:    srl $1, $5, 16
-; MIPS32R2-NEXT:    not $1, $1
-; MIPS32R2-NEXT:    andi $3, $1, 1
+; MIPS32R2-NEXT:    not $1, $5
+; MIPS32R2-NEXT:    ext $3, $1, 16, 1
 ; MIPS32R2-NEXT:    jr $ra
 ; MIPS32R2-NEXT:    addiu $2, $zero, 0
 ;
 ; MIPS32R6-LABEL: bittest_16_i64:
 ; MIPS32R6:       # %bb.0:
-; MIPS32R6-NEXT:    srl $1, $5, 16
-; MIPS32R6-NEXT:    not $1, $1
-; MIPS32R6-NEXT:    andi $3, $1, 1
+; MIPS32R6-NEXT:    not $1, $5
+; MIPS32R6-NEXT:    ext $3, $1, 16, 1
 ; MIPS32R6-NEXT:    jr $ra
 ; MIPS32R6-NEXT:    addiu $2, $zero, 0
 ;
 ; MIPS64-LABEL: bittest_16_i64:
 ; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    dsrl $1, $4, 16
-; MIPS64-NEXT:    daddiu $2, $zero, -1
-; MIPS64-NEXT:    xor $1, $1, $2
+; MIPS64-NEXT:    daddiu $1, $zero, -1
+; MIPS64-NEXT:    xor $1, $4, $1
+; MIPS64-NEXT:    dsrl $1, $1, 16
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    andi $2, $1, 1
 ;
 ; MIPS64R2-LABEL: bittest_16_i64:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    dsrl $1, $4, 16
-; MIPS64R2-NEXT:    daddiu $2, $zero, -1
-; MIPS64R2-NEXT:    xor $1, $1, $2
+; MIPS64R2-NEXT:    daddiu $1, $zero, -1
+; MIPS64R2-NEXT:    xor $1, $4, $1
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    andi $2, $1, 1
+; MIPS64R2-NEXT:    dext $2, $1, 16, 1
 ;
 ; MIPS64R6-LABEL: bittest_16_i64:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    dsrl $1, $4, 16
-; MIPS64R6-NEXT:    daddiu $2, $zero, -1
-; MIPS64R6-NEXT:    xor $1, $1, $2
+; MIPS64R6-NEXT:    daddiu $1, $zero, -1
+; MIPS64R6-NEXT:    xor $1, $4, $1
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    andi $2, $1, 1
+; MIPS64R6-NEXT:    dext $2, $1, 16, 1
 ;
 ; MM32R3-LABEL: bittest_16_i64:
 ; MM32R3:       # %bb.0:
-; MM32R3-NEXT:    srl $2, $5, 16
-; MM32R3-NEXT:    not16 $2, $2
-; MM32R3-NEXT:    andi16 $3, $2, 1
+; MM32R3-NEXT:    not16 $2, $5
+; MM32R3-NEXT:    ext $3, $2, 16, 1
 ; MM32R3-NEXT:    li16 $2, 0
 ; MM32R3-NEXT:    jrc $ra
 ;
 ; MM32R6-LABEL: bittest_16_i64:
 ; MM32R6:       # %bb.0:
-; MM32R6-NEXT:    srl $2, $5, 16
-; MM32R6-NEXT:    not16 $2, $2
-; MM32R6-NEXT:    andi16 $3, $2, 1
+; MM32R6-NEXT:    not16 $2, $5
+; MM32R6-NEXT:    ext $3, $2, 16, 1
 ; MM32R6-NEXT:    li16 $2, 0
 ; MM32R6-NEXT:    jrc $ra
   %shr = lshr i64 %a, 16
@@ -490,27 +478,25 @@ define i64 @bittest_31_i64(i64 %a) nounwind {
 ;
 ; MIPS64-LABEL: bittest_31_i64:
 ; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    dsrl $1, $4, 31
-; MIPS64-NEXT:    daddiu $2, $zero, -1
-; MIPS64-NEXT:    xor $1, $1, $2
+; MIPS64-NEXT:    daddiu $1, $zero, -1
+; MIPS64-NEXT:    xor $1, $4, $1
+; MIPS64-NEXT:    dsrl $1, $1, 31
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    andi $2, $1, 1
 ;
 ; MIPS64R2-LABEL: bittest_31_i64:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    dsrl $1, $4, 31
-; MIPS64R2-NEXT:    daddiu $2, $zero, -1
-; MIPS64R2-NEXT:    xor $1, $1, $2
+; MIPS64R2-NEXT:    daddiu $1, $zero, -1
+; MIPS64R2-NEXT:    xor $1, $4, $1
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    andi $2, $1, 1
+; MIPS64R2-NEXT:    dext $2, $1, 31, 1
 ;
 ; MIPS64R6-LABEL: bittest_31_i64:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    dsrl $1, $4, 31
-; MIPS64R6-NEXT:    daddiu $2, $zero, -1
-; MIPS64R6-NEXT:    xor $1, $1, $2
+; MIPS64R6-NEXT:    daddiu $1, $zero, -1
+; MIPS64R6-NEXT:    xor $1, $4, $1
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    andi $2, $1, 1
+; MIPS64R6-NEXT:    dext $2, $1, 31, 1
 ;
 ; MM32R3-LABEL: bittest_31_i64:
 ; MM32R3:       # %bb.0:
@@ -555,27 +541,25 @@ define i64 @bittest_32_i64(i64 %a) nounwind {
 ;
 ; MIPS64-LABEL: bittest_32_i64:
 ; MIPS64:       # %bb.0:
-; MIPS64-NEXT:    dsrl $1, $4, 32
-; MIPS64-NEXT:    daddiu $2, $zero, -1
-; MIPS64-NEXT:    xor $1, $1, $2
+; MIPS64-NEXT:    daddiu $1, $zero, -1
+; MIPS64-NEXT:    xor $1, $4, $1
+; MIPS64-NEXT:    dsrl $1, $1, 32
 ; MIPS64-NEXT:    jr $ra
 ; MIPS64-NEXT:    andi $2, $1, 1
 ;
 ; MIPS64R2-LABEL: bittest_32_i64:
 ; MIPS64R2:       # %bb.0:
-; MIPS64R2-NEXT:    dsrl $1, $4, 32
-; MIPS64R2-NEXT:    daddiu $2, $zero, -1
-; MIPS64R2-NEXT:    xor $1, $1, $2
+; MIPS64R2-NEXT:    daddiu $1, $zero, -1
+; MIPS64R2-NEXT:    xor $1, $4, $1
 ; MIPS64R2-NEXT:    jr $ra
-; MIPS64R2-NEXT:    andi $2, $1, 1
+; MIPS64R2-NEXT:    dextu $2, $1, 32, 1
 ;
 ; MIPS64R6-LABEL: bittest_32_i64:
 ; MIPS64R6:       # %bb.0:
-; MIPS64R6-NEXT:    dsrl $1, $4, 32
-; MIPS64R6-NEXT:    daddiu $2, $zero, -1
-; MIPS64R6-NEXT:    xor $1, $1, $2
+; MIPS64R6-NEXT:    daddiu $1, $zero, -1
+; MIPS64R6-NEXT:    xor $1, $4, $1
 ; MIPS64R6-NEXT:    jr $ra
-; MIPS64R6-NEXT:    andi $2, $1, 1
+; MIPS64R6-NEXT:    dextu $2, $1, 32, 1
 ;
 ; MM32R3-LABEL: bittest_32_i64:
 ; MM32R3:       # %bb.0:

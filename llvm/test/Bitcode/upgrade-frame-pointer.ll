@@ -27,7 +27,7 @@ attributes #1 = { readnone "no-frame-pointer-elim"="false" "no-frame-pointer-eli
 
 ;; Other attributes (e.g. readnone) are unaffected.
 ; CHECK: attributes #0 = { "frame-pointer"="all" }
-; CHECK: attributes #1 = { readnone "frame-pointer"="all" }
+; CHECK: attributes #1 = { memory(none) "frame-pointer"="all" }
 ; CHECK: attributes #2 = { "frame-pointer"="non-leaf" }
-; CHECK: attributes #3 = { readnone "frame-pointer"="non-leaf" }
+; CHECK: attributes #3 = { memory(none) "frame-pointer"="non-leaf" }
 ; CHECK: attributes #4 = { "frame-pointer"="none" }

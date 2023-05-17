@@ -24,6 +24,7 @@ class MachineInstr;
 class MachineOperand;
 class MCContext;
 class MCSymbolWasm;
+class TargetRegisterClass;
 class WebAssemblyFunctionInfo;
 class WebAssemblySubtarget;
 
@@ -31,12 +32,6 @@ namespace WebAssembly {
 
 bool isChild(const MachineInstr &MI, const WebAssemblyFunctionInfo &MFI);
 bool mayThrow(const MachineInstr &MI);
-
-// Exception handling / setjmp-longjmp handling command-line options
-extern cl::opt<bool> WasmEnableEmEH;   // asm.js-style EH
-extern cl::opt<bool> WasmEnableEmSjLj; // asm.js-style SjLJ
-extern cl::opt<bool> WasmEnableEH;     // EH using Wasm EH instructions
-extern cl::opt<bool> WasmEnableSjLj;   // SjLj using Wasm EH instructions
 
 // Exception-related function names
 extern const char *const ClangCallTerminateFn;
@@ -64,6 +59,9 @@ getOrCreateFuncrefCallTableSymbol(MCContext &Ctx,
 /// Find a catch instruction from an EH pad. Returns null if no catch
 /// instruction found or the catch is in an invalid location.
 MachineInstr *findCatch(MachineBasicBlock *EHPad);
+
+/// Returns the appropriate copy opcode for the given register class.
+unsigned getCopyOpcodeForRegClass(const TargetRegisterClass *RC);
 
 } // end namespace WebAssembly
 

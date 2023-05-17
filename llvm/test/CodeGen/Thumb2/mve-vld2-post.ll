@@ -3,7 +3,7 @@
 
 ; i32
 
-define <8 x i32> *@vld2_v4i32(<8 x i32> *%src, <4 x i32> *%dst) {
+define ptr @vld2_v4i32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v4i32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
@@ -12,18 +12,18 @@ define <8 x i32> *@vld2_v4i32(<8 x i32> *%src, <4 x i32> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %l1 = load <8 x i32>, <8 x i32>* %src, align 4
+  %l1 = load <8 x i32>, ptr %src, align 4
   %s1 = shufflevector <8 x i32> %l1, <8 x i32> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %s2 = shufflevector <8 x i32> %l1, <8 x i32> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %a = add <4 x i32> %s1, %s2
-  store <4 x i32> %a, <4 x i32> *%dst
-  %ret = getelementptr inbounds <8 x i32>, <8 x i32>* %src, i32 1
-  ret <8 x i32> *%ret
+  store <4 x i32> %a, ptr %dst
+  %ret = getelementptr inbounds <8 x i32>, ptr %src, i32 1
+  ret ptr %ret
 }
 
 ; i16
 
-define <16 x i16> *@vld2_v8i16(<16 x i16> *%src, <8 x i16> *%dst) {
+define ptr @vld2_v8i16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v8i16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
@@ -32,18 +32,18 @@ define <16 x i16> *@vld2_v8i16(<16 x i16> *%src, <8 x i16> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %l1 = load <16 x i16>, <16 x i16>* %src, align 4
+  %l1 = load <16 x i16>, ptr %src, align 4
   %s1 = shufflevector <16 x i16> %l1, <16 x i16> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %s2 = shufflevector <16 x i16> %l1, <16 x i16> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %a = add <8 x i16> %s1, %s2
-  store <8 x i16> %a, <8 x i16> *%dst
-  %ret = getelementptr inbounds <16 x i16>, <16 x i16>* %src, i32 1
-  ret <16 x i16> *%ret
+  store <8 x i16> %a, ptr %dst
+  %ret = getelementptr inbounds <16 x i16>, ptr %src, i32 1
+  ret ptr %ret
 }
 
 ; i8
 
-define <32 x i8> *@vld2_v16i8(<32 x i8> *%src, <16 x i8> *%dst) {
+define ptr @vld2_v16i8(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v16i8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.8 {q0, q1}, [r0]
@@ -52,18 +52,18 @@ define <32 x i8> *@vld2_v16i8(<32 x i8> *%src, <16 x i8> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %l1 = load <32 x i8>, <32 x i8>* %src, align 4
+  %l1 = load <32 x i8>, ptr %src, align 4
   %s1 = shufflevector <32 x i8> %l1, <32 x i8> undef, <16 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14, i32 16, i32 18, i32 20, i32 22, i32 24, i32 26, i32 28, i32 30>
   %s2 = shufflevector <32 x i8> %l1, <32 x i8> undef, <16 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15, i32 17, i32 19, i32 21, i32 23, i32 25, i32 27, i32 29, i32 31>
   %a = add <16 x i8> %s1, %s2
-  store <16 x i8> %a, <16 x i8> *%dst
-  %ret = getelementptr inbounds <32 x i8>, <32 x i8>* %src, i32 1
-  ret <32 x i8> *%ret
+  store <16 x i8> %a, ptr %dst
+  %ret = getelementptr inbounds <32 x i8>, ptr %src, i32 1
+  ret ptr %ret
 }
 
 ; i64
 
-define <4 x i64> *@vld2_v2i64(<4 x i64> *%src, <2 x i64> *%dst) {
+define ptr @vld2_v2i64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v2i64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r4, r5, r6, r7, lr}
@@ -83,18 +83,18 @@ define <4 x i64> *@vld2_v2i64(<4 x i64> *%src, <2 x i64> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
-  %l1 = load <4 x i64>, <4 x i64>* %src, align 4
+  %l1 = load <4 x i64>, ptr %src, align 4
   %s1 = shufflevector <4 x i64> %l1, <4 x i64> undef, <2 x i32> <i32 0, i32 2>
   %s2 = shufflevector <4 x i64> %l1, <4 x i64> undef, <2 x i32> <i32 1, i32 3>
   %a = add <2 x i64> %s1, %s2
-  store <2 x i64> %a, <2 x i64> *%dst
-  %ret = getelementptr inbounds <4 x i64>, <4 x i64>* %src, i32 1
-  ret <4 x i64> *%ret
+  store <2 x i64> %a, ptr %dst
+  %ret = getelementptr inbounds <4 x i64>, ptr %src, i32 1
+  ret ptr %ret
 }
 
 ; f32
 
-define <8 x float> *@vld2_v4f32(<8 x float> *%src, <4 x float> *%dst) {
+define ptr @vld2_v4f32(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v4f32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.32 {q0, q1}, [r0]
@@ -103,18 +103,18 @@ define <8 x float> *@vld2_v4f32(<8 x float> *%src, <4 x float> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %l1 = load <8 x float>, <8 x float>* %src, align 4
+  %l1 = load <8 x float>, ptr %src, align 4
   %s1 = shufflevector <8 x float> %l1, <8 x float> undef, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
   %s2 = shufflevector <8 x float> %l1, <8 x float> undef, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
   %a = fadd <4 x float> %s1, %s2
-  store <4 x float> %a, <4 x float> *%dst
-  %ret = getelementptr inbounds <8 x float>, <8 x float>* %src, i32 1
-  ret <8 x float> *%ret
+  store <4 x float> %a, ptr %dst
+  %ret = getelementptr inbounds <8 x float>, ptr %src, i32 1
+  ret ptr %ret
 }
 
 ; f16
 
-define <16 x half> *@vld2_v8f16(<16 x half> *%src, <8 x half> *%dst) {
+define ptr @vld2_v8f16(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v8f16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vld20.16 {q0, q1}, [r0]
@@ -123,18 +123,18 @@ define <16 x half> *@vld2_v8f16(<16 x half> *%src, <8 x half> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %l1 = load <16 x half>, <16 x half>* %src, align 4
+  %l1 = load <16 x half>, ptr %src, align 4
   %s1 = shufflevector <16 x half> %l1, <16 x half> undef, <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
   %s2 = shufflevector <16 x half> %l1, <16 x half> undef, <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
   %a = fadd <8 x half> %s1, %s2
-  store <8 x half> %a, <8 x half> *%dst
-  %ret = getelementptr inbounds <16 x half>, <16 x half>* %src, i32 1
-  ret <16 x half> *%ret
+  store <8 x half> %a, ptr %dst
+  %ret = getelementptr inbounds <16 x half>, ptr %src, i32 1
+  ret ptr %ret
 }
 
 ; f64
 
-define <4 x double> *@vld2_v2f64(<4 x double> *%src, <2 x double> *%dst) {
+define ptr @vld2_v2f64(ptr %src, ptr %dst) {
 ; CHECK-LABEL: vld2_v2f64:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    vldrw.u32 q0, [r0, #16]
@@ -144,11 +144,11 @@ define <4 x double> *@vld2_v2f64(<4 x double> *%src, <2 x double> *%dst) {
 ; CHECK-NEXT:    vstrw.32 q0, [r1]
 ; CHECK-NEXT:    bx lr
 entry:
-  %l1 = load <4 x double>, <4 x double>* %src, align 4
+  %l1 = load <4 x double>, ptr %src, align 4
   %s1 = shufflevector <4 x double> %l1, <4 x double> undef, <2 x i32> <i32 0, i32 2>
   %s2 = shufflevector <4 x double> %l1, <4 x double> undef, <2 x i32> <i32 1, i32 3>
   %a = fadd <2 x double> %s1, %s2
-  store <2 x double> %a, <2 x double> *%dst
-  %ret = getelementptr inbounds <4 x double>, <4 x double>* %src, i32 1
-  ret <4 x double> *%ret
+  store <2 x double> %a, ptr %dst
+  %ret = getelementptr inbounds <4 x double>, ptr %src, i32 1
+  ret ptr %ret
 }

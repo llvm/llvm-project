@@ -5,33 +5,27 @@ target triple = "x86_64-mingw"
 	%0 = type opaque		; type %0
 	%1 = type opaque		; type %1
 
-define internal fastcc float @computeMipmappingRho(%0* %shaderExecutionStatePtr, i32 %index, <4 x float> %texCoord, <4 x float> %texCoordDX, <4 x float> %texCoordDY) readonly {
+define internal fastcc float @computeMipmappingRho(ptr %shaderExecutionStatePtr, i32 %index, <4 x float> %texCoord, <4 x float> %texCoordDX, <4 x float> %texCoordDY) readonly {
 indexCheckBlock:
 	%indexCmp = icmp ugt i32 %index, 16		; <i1> [#uses=1]
 	br i1 %indexCmp, label %zeroReturnBlock, label %primitiveTextureFetchBlock
 
 primitiveTextureFetchBlock:		; preds = %indexCheckBlock
-	%pointerArithmeticTmp = bitcast %0* %shaderExecutionStatePtr to i8*		; <i8*> [#uses=1]
-	%pointerArithmeticTmp1 = getelementptr i8, i8* %pointerArithmeticTmp, i64 1808		; <i8*> [#uses=1]
-	%pointerArithmeticTmp2 = bitcast i8* %pointerArithmeticTmp1 to %1**		; <%1**> [#uses=1]
-	%primitivePtr = load %1*, %1** %pointerArithmeticTmp2		; <%1*> [#uses=1]
-	%pointerArithmeticTmp3 = bitcast %1* %primitivePtr to i8*		; <i8*> [#uses=1]
-	%pointerArithmeticTmp4 = getelementptr i8, i8* %pointerArithmeticTmp3, i64 19408		; <i8*> [#uses=1]
-	%pointerArithmeticTmp5 = bitcast i8* %pointerArithmeticTmp4 to %1**		; <%1**> [#uses=1]
-	%primitiveTexturePtr = getelementptr %1*, %1** %pointerArithmeticTmp5, i32 %index		; <%1**> [#uses=1]
-	%primitiveTexturePtr6 = load %1*, %1** %primitiveTexturePtr		; <%1*> [#uses=2]
+	%pointerArithmeticTmp1 = getelementptr i8, ptr %shaderExecutionStatePtr, i64 1808		; <ptr> [#uses=1]
+	%primitivePtr = load ptr, ptr %pointerArithmeticTmp1		; <ptr> [#uses=1]
+	%pointerArithmeticTmp4 = getelementptr i8, ptr %primitivePtr, i64 19408		; <ptr> [#uses=1]
+	%primitiveTexturePtr = getelementptr ptr, ptr %pointerArithmeticTmp4, i32 %index		; <ptr> [#uses=1]
+	%primitiveTexturePtr6 = load ptr, ptr %primitiveTexturePtr		; <ptr> [#uses=2]
 	br label %textureCheckBlock
 
 textureCheckBlock:		; preds = %primitiveTextureFetchBlock
-	%texturePtrInt = ptrtoint %1* %primitiveTexturePtr6 to i64		; <i64> [#uses=1]
+	%texturePtrInt = ptrtoint ptr %primitiveTexturePtr6 to i64		; <i64> [#uses=1]
 	%testTextureNULL = icmp eq i64 %texturePtrInt, 0		; <i1> [#uses=1]
 	br i1 %testTextureNULL, label %zeroReturnBlock, label %rhoCalculateBlock
 
 rhoCalculateBlock:		; preds = %textureCheckBlock
-	%pointerArithmeticTmp7 = bitcast %1* %primitiveTexturePtr6 to i8*		; <i8*> [#uses=1]
-	%pointerArithmeticTmp8 = getelementptr i8, i8* %pointerArithmeticTmp7, i64 640		; <i8*> [#uses=1]
-	%pointerArithmeticTmp9 = bitcast i8* %pointerArithmeticTmp8 to <4 x float>*		; <<4 x float>*> [#uses=1]
-	%dimensionsPtr = load <4 x float>, <4 x float>* %pointerArithmeticTmp9, align 1		; <<4 x float>> [#uses=2]
+	%pointerArithmeticTmp8 = getelementptr i8, ptr %primitiveTexturePtr6, i64 640		; <ptr> [#uses=1]
+	%dimensionsPtr = load <4 x float>, ptr %pointerArithmeticTmp8, align 1		; <<4 x float>> [#uses=2]
 	%texDiffDX = fsub <4 x float> %texCoordDX, %texCoord		; <<4 x float>> [#uses=1]
 	%texDiffDY = fsub <4 x float> %texCoordDY, %texCoord		; <<4 x float>> [#uses=1]
 	%ddx = fmul <4 x float> %texDiffDX, %dimensionsPtr		; <<4 x float>> [#uses=2]

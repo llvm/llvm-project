@@ -82,8 +82,8 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
               windows::UTF8ToUTF16(Twine(Name + Ext).str(), U16NameExt))
         return EC;
 
-      Len = ::SearchPathW(Path, c_str(U16NameExt), nullptr,
-                          U16Result.size(), U16Result.data(), nullptr);
+      Len = ::SearchPathW(Path, c_str(U16NameExt), nullptr, U16Result.size(),
+                          U16Result.data(), nullptr);
     } while (Len > U16Result.size());
 
     if (Len == 0)
@@ -92,7 +92,7 @@ ErrorOr<std::string> sys::findProgramByName(StringRef Name,
     U16Result.truncate(Len);
 
     if (std::error_code EC =
-        windows::UTF16ToUTF8(U16Result.data(), U16Result.size(), U8Result))
+            windows::UTF16ToUTF8(U16Result.data(), U16Result.size(), U8Result))
       return EC;
 
     if (sys::fs::can_execute(U8Result))
@@ -127,13 +127,13 @@ bool MakeErrMsg(std::string *ErrMsg, const std::string &prefix) {
   return R != 0;
 }
 
-static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
+static HANDLE RedirectIO(std::optional<StringRef> Path, int fd,
                          std::string *ErrMsg) {
   HANDLE h;
   if (!Path) {
     if (!DuplicateHandle(GetCurrentProcess(), (HANDLE)_get_osfhandle(fd),
-                         GetCurrentProcess(), &h,
-                         0, TRUE, DUPLICATE_SAME_ACCESS))
+                         GetCurrentProcess(), &h, 0, TRUE,
+                         DUPLICATE_SAME_ACCESS))
       return INVALID_HANDLE_VALUE;
     return h;
   }
@@ -162,18 +162,18 @@ static HANDLE RedirectIO(Optional<StringRef> Path, int fd,
                   FILE_SHARE_READ, &sa, fd == 0 ? OPEN_EXISTING : CREATE_ALWAYS,
                   FILE_ATTRIBUTE_NORMAL, NULL);
   if (h == INVALID_HANDLE_VALUE) {
-    MakeErrMsg(ErrMsg, fname + ": Can't open file for " +
-        (fd ? "input" : "output"));
+    MakeErrMsg(ErrMsg,
+               fname + ": Can't open file for " + (fd ? "input" : "output"));
   }
 
   return h;
 }
 
-}
+} // namespace llvm
 
 static bool Execute(ProcessInfo &PI, StringRef Program,
-                    ArrayRef<StringRef> Args, Optional<ArrayRef<StringRef>> Env,
-                    ArrayRef<Optional<StringRef>> Redirects,
+                    ArrayRef<StringRef> Args, std::optional<ArrayRef<StringRef>> Env,
+                    ArrayRef<std::optional<StringRef>> Redirects,
                     unsigned MemoryLimit, std::string *ErrMsg,
                     BitVector *AffinityMask) {
   if (!sys::fs::can_execute(Program)) {
@@ -248,8 +248,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
       // If stdout and stderr should go to the same place, redirect stderr
       // to the handle already open for stdout.
       if (!DuplicateHandle(GetCurrentProcess(), si.hStdOutput,
-                           GetCurrentProcess(), &si.hStdError,
-                           0, TRUE, DUPLICATE_SAME_ACCESS)) {
+                           GetCurrentProcess(), &si.hStdError, 0, TRUE,
+                           DUPLICATE_SAME_ACCESS)) {
         CloseHandle(si.hStdInput);
         CloseHandle(si.hStdOutput);
         MakeErrMsg(ErrMsg, "can't dup stderr to stdout");
@@ -301,8 +301,8 @@ static bool Execute(ProcessInfo &PI, StringRef Program,
   // Now return an error if the process didn't get created.
   if (!rc) {
     SetLastError(err);
-    MakeErrMsg(ErrMsg, std::string("Couldn't execute program '") +
-               Program.str() + "'");
+    MakeErrMsg(ErrMsg,
+               std::string("Couldn't execute program '") + Program.str() + "'");
     return false;
   }
 
@@ -408,24 +408,22 @@ ErrorOr<std::wstring> sys::flattenWindowsCommandLine(ArrayRef<StringRef> Args) {
   return std::wstring(CommandUtf16.begin(), CommandUtf16.end());
 }
 
-ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
-                      bool WaitUntilChildTerminates, std::string *ErrMsg,
-                      Optional<ProcessStatistics> *ProcStat) {
+ProcessInfo sys::Wait(const ProcessInfo &PI,
+                      std::optional<unsigned> SecondsToWait,
+                      std::string *ErrMsg,
+                      std::optional<ProcessStatistics> *ProcStat,
+                      bool Polling) {
   assert(PI.Pid && "invalid pid to wait on, process not started?");
   assert((PI.Process && PI.Process != INVALID_HANDLE_VALUE) &&
          "invalid process handle to wait on, process not started?");
-  DWORD milliSecondsToWait = 0;
-  if (WaitUntilChildTerminates)
-    milliSecondsToWait = INFINITE;
-  else if (SecondsToWait > 0)
-    milliSecondsToWait = SecondsToWait * 1000;
+  DWORD milliSecondsToWait = SecondsToWait ? *SecondsToWait * 1000 : INFINITE;
 
   ProcessInfo WaitResult = PI;
   if (ProcStat)
     ProcStat->reset();
   DWORD WaitStatus = WaitForSingleObject(PI.Process, milliSecondsToWait);
   if (WaitStatus == WAIT_TIMEOUT) {
-    if (SecondsToWait) {
+    if (!Polling && *SecondsToWait > 0) {
       if (!TerminateProcess(PI.Process, 1)) {
         if (ErrMsg)
           MakeErrMsg(ErrMsg, "Failed to terminate timed-out program");
@@ -490,13 +488,13 @@ ProcessInfo sys::Wait(const ProcessInfo &PI, unsigned SecondsToWait,
   return WaitResult;
 }
 
-std::error_code llvm::sys::ChangeStdinMode(sys::fs::OpenFlags Flags){
+std::error_code llvm::sys::ChangeStdinMode(sys::fs::OpenFlags Flags) {
   if (!(Flags & fs::OF_CRLF))
     return ChangeStdinToBinary();
   return std::error_code();
 }
 
-std::error_code llvm::sys::ChangeStdoutMode(sys::fs::OpenFlags Flags){
+std::error_code llvm::sys::ChangeStdoutMode(sys::fs::OpenFlags Flags) {
   if (!(Flags & fs::OF_CRLF))
     return ChangeStdoutToBinary();
   return std::error_code();
@@ -533,8 +531,8 @@ llvm::sys::writeFileWithEncoding(StringRef FileName, StringRef Contents,
     if ((EC = windows::UTF8ToUTF16(Contents, ArgsUTF16)))
       return EC;
 
-    if ((EC = windows::UTF16ToCurCP(
-             ArgsUTF16.data(), ArgsUTF16.size(), ArgsCurCP)))
+    if ((EC = windows::UTF16ToCurCP(ArgsUTF16.data(), ArgsUTF16.size(),
+                                    ArgsCurCP)))
       return EC;
 
     OS.write(ArgsCurCP.data(), ArgsCurCP.size());
@@ -574,4 +572,4 @@ bool llvm::sys::commandLineFitsWithinSystemLimits(StringRef Program,
   assert(!Result.getError());
   return (Result->size() + 1) <= MaxCommandStringLength;
 }
-}
+} // namespace llvm

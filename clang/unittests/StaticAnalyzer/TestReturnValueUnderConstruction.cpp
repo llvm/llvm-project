@@ -14,6 +14,7 @@
 #include "clang/StaticAnalyzer/Frontend/CheckerRegistry.h"
 #include "clang/Tooling/Tooling.h"
 #include "gtest/gtest.h"
+#include <optional>
 
 namespace clang {
 namespace ento {
@@ -32,13 +33,14 @@ public:
     // in an object of type `C` constructed into variable `c`. Thus the
     // return value of `CallEvent::getReturnValueUnderConstruction()` must
     // be non-empty and has to be a `MemRegion`.
-    Optional<SVal> RetVal = Call.getReturnValueUnderConstruction();
+    std::optional<SVal> RetVal = Call.getReturnValueUnderConstruction();
     ASSERT_TRUE(RetVal);
     ASSERT_TRUE(RetVal->getAsRegion());
 
     const auto *RetReg = cast<TypedValueRegion>(RetVal->getAsRegion());
     const Expr *OrigExpr = Call.getOriginExpr();
-    ASSERT_EQ(OrigExpr->getType(), RetReg->getValueType());
+    ASSERT_EQ(OrigExpr->getType()->getCanonicalTypeInternal(),
+              RetReg->getValueType()->getCanonicalTypeInternal());
   }
 };
 

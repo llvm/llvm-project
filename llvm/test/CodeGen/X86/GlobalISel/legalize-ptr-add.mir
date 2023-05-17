@@ -2,23 +2,23 @@
 # RUN: llc -mtriple=x86_64-linux-gnu -run-pass=legalizer %s -o - | FileCheck %s
 
 --- |
-  define void @test_gep_i8(i8* %addr) {
-    %arrayidx = getelementptr i32, i32* undef, i8 5
+  define void @test_gep_i8(ptr %addr) {
+    %arrayidx = getelementptr i32, ptr undef, i8 5
     ret void
   }
 
-  define void @test_gep_i16(i8* %addr) {
-    %arrayidx = getelementptr i32, i32* undef, i16 5
+  define void @test_gep_i16(ptr %addr) {
+    %arrayidx = getelementptr i32, ptr undef, i16 5
     ret void
   }
 
-  define void @test_gep_i32(i8* %addr) {
-    %arrayidx = getelementptr i32, i32* undef, i32 5
+  define void @test_gep_i32(ptr %addr) {
+    %arrayidx = getelementptr i32, ptr undef, i32 5
     ret void
   }
 
-  define void @test_gep_i64(i8* %addr) {
-    %arrayidx = getelementptr i32, i32* undef, i64 5
+  define void @test_gep_i64(ptr %addr) {
+    %arrayidx = getelementptr i32, ptr undef, i64 5
     ret void
   }
 ...

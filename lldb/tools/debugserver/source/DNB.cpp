@@ -599,6 +599,14 @@ size_t DNBGetAllInfos(std::vector<struct kinfo_proc> &proc_infos) {
   return proc_infos.size();
 }
 
+JSONGenerator::ObjectSP DNBGetDyldProcessState(nub_process_t pid) {
+  MachProcessSP procSP;
+  if (GetProcessSP(pid, procSP)) {
+    return procSP->GetDyldProcessState();
+  }
+  return {};
+}
+
 static size_t
 GetAllInfosMatchingName(const char *full_process_name,
                         std::vector<struct kinfo_proc> &matching_proc_infos) {
@@ -785,6 +793,14 @@ DNBProcessAttachWait(RNBContext *ctx, const char *waitfor_process_name,
   if (waitfor_pid != INVALID_NUB_PROCESS) {
     DNBLogThreadedIf(LOG_PROCESS, "Attaching to %s with pid %i...\n",
                      waitfor_process_name, waitfor_pid);
+    // In some cases, we attempt to attach during the transition from
+    // /usr/lib/dyld to the dyld in the shared cache. If that happens, we may
+    // end up in a state where there is no dyld in the process and from there
+    // the debugging session is doomed.
+    // In an attempt to make this scenario much less likely, we sleep
+    // for an additional `waitfor_interval` number of microseconds before
+    // attaching.
+    ::usleep(waitfor_interval);
     waitfor_pid = DNBProcessAttach(waitfor_pid, timeout_abstime,
                                    ctx->GetIgnoredExceptions(), err_str, 
                                    err_len);
@@ -1007,20 +1023,11 @@ DNBGetTSDAddressForThread(nub_process_t pid, nub_thread_t tid,
   return INVALID_NUB_ADDRESS;
 }
 
-JSONGenerator::ObjectSP DNBGetLoadedDynamicLibrariesInfos(
-    nub_process_t pid, nub_addr_t image_list_address, nub_addr_t image_count) {
+JSONGenerator::ObjectSP
+DNBGetAllLoadedLibrariesInfos(nub_process_t pid, bool report_load_commands) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
-    return procSP->GetLoadedDynamicLibrariesInfos(pid, image_list_address,
-                                                  image_count);
-  }
-  return JSONGenerator::ObjectSP();
-}
-
-JSONGenerator::ObjectSP DNBGetAllLoadedLibrariesInfos(nub_process_t pid) {
-  MachProcessSP procSP;
-  if (GetProcessSP(pid, procSP)) {
-    return procSP->GetAllLoadedLibrariesInfos(pid);
+    return procSP->GetAllLoadedLibrariesInfos(pid, report_load_commands);
   }
   return JSONGenerator::ObjectSP();
 }
@@ -1433,12 +1440,11 @@ nub_bool_t DNBProcessSharedLibrariesUpdated(nub_process_t pid) {
   return false;
 }
 
-const char *DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
-                                 const struct load_command &lc,
-                                 uint64_t load_command_address,
-                                 uint32_t &major_version,
-                                 uint32_t &minor_version,
-                                 uint32_t &patch_version) {
+std::optional<std::string>
+DNBGetDeploymentInfo(nub_process_t pid, bool is_executable,
+                     const struct load_command &lc,
+                     uint64_t load_command_address, uint32_t &major_version,
+                     uint32_t &minor_version, uint32_t &patch_version) {
   MachProcessSP procSP;
   if (GetProcessSP(pid, procSP)) {
     // FIXME: This doesn't return the correct result when xctest (a
@@ -1753,10 +1759,8 @@ std::string DNBGetMacCatalystVersionString() {
 void DNBInitialize() {
   DNBLogThreadedIf(LOG_PROCESS, "DNBInitialize ()");
 #if defined(__i386__) || defined(__x86_64__)
-  DNBArchImplI386::Initialize();
   DNBArchImplX86_64::Initialize();
 #elif defined(__arm__) || defined(__arm64__) || defined(__aarch64__)
-  DNBArchMachARM::Initialize();
   DNBArchMachARM64::Initialize();
 #endif
 }
@@ -1823,4 +1827,20 @@ bool DNBDebugserverIsTranslated() {
   if (sysctlbyname("sysctl.proc_translated", &ret, &size, NULL, 0) == -1)
     return false;
   return ret == 1;
+}
+
+bool DNBGetAddressingBits(uint32_t &addressing_bits) {
+  static uint32_t g_addressing_bits = 0;
+  static std::once_flag g_once_flag;
+  std::call_once(g_once_flag, [&](){
+    size_t len = sizeof(uint32_t);
+    if (::sysctlbyname("machdep.virtual_address_size", &g_addressing_bits, &len,
+                       NULL, 0) != 0) {
+      g_addressing_bits = 0;
+    }
+  });
+
+  addressing_bits = g_addressing_bits;
+
+  return addressing_bits > 0;
 }

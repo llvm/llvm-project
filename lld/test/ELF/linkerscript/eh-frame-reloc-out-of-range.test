@@ -10,4 +10,4 @@ SECTIONS { . = 0x10000;
   .text : { *(.text*) } : text
 }
 
-# CHECK: error: {{.*}}:(.eh_frame+0x20): relocation R_X86_64_PC32 out of range: 64424443872 is not in [-2147483648, 2147483647]
+# CHECK: error: {{.*}}:(.eh_frame+0x20): relocation R_X86_64_PC32 out of range: 64424443872 is not in [-2147483648, 2147483647]; references section '.text'

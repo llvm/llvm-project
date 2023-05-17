@@ -127,7 +127,7 @@ namespace multidimensional_array {
 
 namespace array_addressof {
   using T = int[5];
-  T *p = &T{1,2,3,4,5}; // expected-error {{taking the address of a temporary object of type 'array_addressof::T' (aka 'int[5]')}}
+  T *p = &T{1,2,3,4,5}; // expected-error {{taking the address of a temporary object of type 'T' (aka 'int[5]')}}
 }
 
 namespace PR24816 {

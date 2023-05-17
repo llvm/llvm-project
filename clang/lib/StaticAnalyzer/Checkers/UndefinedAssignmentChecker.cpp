@@ -92,7 +92,7 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
     if (const auto *CD =
             dyn_cast<CXXConstructorDecl>(C.getStackFrame()->getDecl())) {
       if (CD->isImplicit()) {
-        for (auto I : CD->inits()) {
+        for (auto *I : CD->inits()) {
           if (I->getInit()->IgnoreImpCasts() == StoreE) {
             OS << "Value assigned to field '" << I->getMember()->getName()
                << "' in implicit constructor is garbage or undefined";

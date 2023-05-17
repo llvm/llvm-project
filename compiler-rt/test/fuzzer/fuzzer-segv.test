@@ -1,3 +1,6 @@
+# Test fail on device (rdar://99981102)
+XFAIL: tvos && !tvossim
+
 RUN: %cpp_compiler %S/NullDerefTest.cpp -o %t-NullDerefTest
 RUN: %env_asan_opts=handle_segv=0 not %run %t-NullDerefTest 2>&1 | FileCheck %s --check-prefix=LIBFUZZER_OWN_SEGV_HANDLER
 LIBFUZZER_OWN_SEGV_HANDLER: == ERROR: libFuzzer: deadly signal

@@ -12,7 +12,7 @@
 // REQUIRES: built-in-llvm-tree
 
 // Not ported.
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 #include "xray/xray_log_interface.h"
 #include <stdio.h>

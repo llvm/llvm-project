@@ -1,8 +1,13 @@
 #ifndef LLVM_TABLEGEN_DIRECTIVEEMITTER_H
 #define LLVM_TABLEGEN_DIRECTIVEEMITTER_H
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/TableGen/Record.h"
+#include <algorithm>
+#include <string>
+#include <vector>
 
 namespace llvm {
 
@@ -174,6 +179,16 @@ public:
   }
 
   bool isImplicit() const { return Def->getValueAsBit("isImplicit"); }
+
+  std::vector<StringRef> getAliases() const {
+    return Def->getValueAsListOfStrings("aliases");
+  }
+
+  StringRef getPrefix() const { return Def->getValueAsString("prefix"); }
+
+  bool isPrefixOptional() const {
+    return Def->getValueAsBit("isPrefixOptional");
+  }
 };
 
 // Wrapper class that contains VersionedClause's information defined in

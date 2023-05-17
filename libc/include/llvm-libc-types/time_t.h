@@ -9,6 +9,6 @@
 #ifndef __LLVM_LIBC_TYPES_TIME_T_H__
 #define __LLVM_LIBC_TYPES_TIME_T_H__
 
-typedef long time_t;
+typedef __INTPTR_TYPE__ time_t;
 
 #endif // __LLVM_LIBC_TYPES_TIME_T_H__

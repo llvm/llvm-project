@@ -1,5 +1,5 @@
-; RUN: opt < %s -extract-blocks -disable-output
-define i32 @foo() personality i32 (...)* @__gcc_personality_v0 {
+; RUN: opt < %s -passes=extract-blocks -disable-output
+define i32 @foo() personality ptr @__gcc_personality_v0 {
         br label %EB
 
 EB:             ; preds = %0
@@ -10,9 +10,9 @@ Cont:           ; preds = %EB
         ret i32 %V
 
 Unw:            ; preds = %EB
-        %exn = landingpad { i8*, i32 }
-                 catch i8* null
-        resume { i8*, i32 } %exn
+        %exn = landingpad { ptr, i32 }
+                 catch ptr null
+        resume { ptr, i32 } %exn
 }
 
 declare i32 @__gcc_personality_v0(...)

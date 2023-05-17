@@ -3,16 +3,16 @@
 ; CHECK-NOT: warning
 ; RUN: verify-uselistorder < %s
 
-@ba1 = constant i8* blockaddress (@bafunc1, %bb)
-@ba2 = constant i8* getelementptr (i8, i8* blockaddress (@bafunc2, %bb), i61 0)
-@ba3 = constant i8* getelementptr (i8, i8* blockaddress (@bafunc2, %bb), i61 0)
+@ba1 = constant ptr blockaddress (@bafunc1, %bb)
+@ba2 = constant ptr getelementptr (i8, ptr blockaddress (@bafunc2, %bb), i61 0)
+@ba3 = constant ptr getelementptr (i8, ptr blockaddress (@bafunc2, %bb), i61 0)
 
-define i8* @babefore() {
-  ret i8* getelementptr (i8, i8* blockaddress (@bafunc2, %bb), i61 0)
+define ptr @babefore() {
+  ret ptr getelementptr (i8, ptr blockaddress (@bafunc2, %bb), i61 0)
 bb1:
-  ret i8* blockaddress (@bafunc1, %bb)
+  ret ptr blockaddress (@bafunc1, %bb)
 bb2:
-  ret i8* blockaddress (@bafunc3, %bb)
+  ret ptr blockaddress (@bafunc3, %bb)
 }
 define void @bafunc1() {
   br label %bb
@@ -29,12 +29,12 @@ define void @bafunc3() {
 bb:
   unreachable
 }
-define i8* @baafter() {
-  ret i8* blockaddress (@bafunc2, %bb)
+define ptr @baafter() {
+  ret ptr blockaddress (@bafunc2, %bb)
 bb1:
-  ret i8* blockaddress (@bafunc1, %bb)
+  ret ptr blockaddress (@bafunc1, %bb)
 bb2:
-  ret i8* blockaddress (@bafunc3, %bb)
+  ret ptr blockaddress (@bafunc3, %bb)
 }
 
 uselistorder_bb @bafunc1, %bb, { 1, 0 }

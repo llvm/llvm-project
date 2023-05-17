@@ -8,20 +8,20 @@ target triple = "x86_64-unknown-linux-gnu"
 %abb = type { %abc }
 %abc = type { [4 x i8] }
 
-declare void @foo(%fum*)
+declare void @foo(%fum)
 
-declare %fum.1** @"llvm.ssa.copy.p0p0s_fum.1s"(%fum.1**)
+declare %fum.1 @"llvm.ssa.copy.s_fum.1s"(%fum.1)
 
-declare %fum** @"llvm.ssa.copy.p0p0s_fums"(%fum**)
+declare %fum @"llvm.ssa.copy.s_fums"(%fum)
 
-define void @foo1(%fum** %a, %fum.1 ** %b) {
-  %b.copy = call %fum.1** @"llvm.ssa.copy.p0p0s_fum.1s"(%fum.1** %b)
-  %a.copy = call %fum** @"llvm.ssa.copy.p0p0s_fums"(%fum** %a)
+define void @foo1(%fum %a, %fum.1 %b) {
+  %b.copy = call %fum.1 @"llvm.ssa.copy.s_fum.1s"(%fum.1 %b)
+  %a.copy = call %fum @"llvm.ssa.copy.s_fums"(%fum %a)
   ret void
 }
 
-define void @foo2(%fum.1 ** %b, %fum** %a) {
-  %a.copy = call %fum** @"llvm.ssa.copy.p0p0s_fums"(%fum** %a)
-  %b.copy = call %fum.1** @"llvm.ssa.copy.p0p0s_fum.1s"(%fum.1** %b)
+define void @foo2(%fum.1 %b, %fum %a) {
+  %a.copy = call %fum @"llvm.ssa.copy.s_fums"(%fum %a)
+  %b.copy = call %fum.1 @"llvm.ssa.copy.s_fum.1s"(%fum.1 %b)
   ret void
 }

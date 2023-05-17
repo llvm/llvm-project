@@ -1,4 +1,4 @@
-// RUN: mlir-opt -convert-scf-to-openmp -split-input-file %s | FileCheck %s
+// RUN: mlir-opt -convert-scf-to-openmp='use-opaque-pointers=1' -split-input-file %s | FileCheck %s
 
 // CHECK: omp.reduction.declare @[[$REDF:.*]] : f32
 
@@ -12,8 +12,8 @@
 // CHECK: omp.yield(%[[RES]] : f32)
 
 // CHECK: atomic
-// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr<f32>, %[[ARG1:.*]]: !llvm.ptr<f32>):
-// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]]
+// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr):
+// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]] : !llvm.ptr -> f32
 // CHECK: llvm.atomicrmw fadd %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction1
@@ -74,6 +74,43 @@ func.func @reduction2(%arg0 : index, %arg1 : index, %arg2 : index,
     ^bb0(%lhs : f32, %rhs: f32):
       %res = arith.mulf %lhs, %rhs : f32
       scf.reduce.return %res : f32
+    }
+  }
+  return
+}
+
+// -----
+
+// Check the generation of declaration for arith.muli.
+// Mostly, the same check as above, except for the types,
+// the name of the op and the init value.
+
+// CHECK: omp.reduction.declare @[[$REDI:.*]] : i32
+
+// CHECK: init
+// CHECK: %[[INIT:.*]] = llvm.mlir.constant(1 : i32)
+// CHECK: omp.yield(%[[INIT]] : i32)
+
+// CHECK: combiner
+// CHECK: ^{{.*}}(%[[ARG0:.*]]: i32, %[[ARG1:.*]]: i32)
+// CHECK: %[[RES:.*]] = arith.muli %[[ARG0]], %[[ARG1]]
+// CHECK: omp.yield(%[[RES]] : i32)
+
+// CHECK-NOT: atomic
+
+// CHECK-LABEL: @reduction_muli
+func.func @reduction_muli(%arg0 : index, %arg1 : index, %arg2 : index,
+                 %arg3 : index, %arg4 : index) {
+  %step = arith.constant 1 : index
+  %one = arith.constant 1 : i32
+  scf.parallel (%i0, %i1) = (%arg0, %arg1) to (%arg2, %arg3)
+                            step (%arg4, %step) init (%one) -> (i32) {
+    // CHECK: omp.reduction
+    %pow2 = arith.constant 2 : i32
+    scf.reduce(%pow2) : i32 {
+    ^bb0(%lhs : i32, %rhs: i32):
+      %res = arith.muli %lhs, %rhs : i32
+      scf.reduce.return %res : i32
     }
   }
   return
@@ -143,8 +180,8 @@ func.func @reduction3(%arg0 : index, %arg1 : index, %arg2 : index,
 // CHECK: omp.yield(%[[RES]] : i64)
 
 // CHECK: atomic
-// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr<i64>, %[[ARG1:.*]]: !llvm.ptr<i64>):
-// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]]
+// CHECK: ^{{.*}}(%[[ARG0:.*]]: !llvm.ptr, %[[ARG1:.*]]: !llvm.ptr):
+// CHECK: %[[RHS:.*]] = llvm.load %[[ARG1]] : !llvm.ptr -> i64
 // CHECK: llvm.atomicrmw max %[[ARG0]], %[[RHS]] monotonic
 
 // CHECK-LABEL: @reduction4
@@ -187,8 +224,8 @@ func.func @reduction4(%arg0 : index, %arg1 : index, %arg2 : index,
     // CHECK: omp.yield
   }
   // CHECK: omp.terminator
-  // CHECK: %[[RES1:.*]] = llvm.load %[[BUF1]]
-  // CHECK: %[[RES2:.*]] = llvm.load %[[BUF2]]
+  // CHECK: %[[RES1:.*]] = llvm.load %[[BUF1]] : !llvm.ptr -> f32
+  // CHECK: %[[RES2:.*]] = llvm.load %[[BUF2]] : !llvm.ptr -> i64
   // CHECK: return %[[RES1]], %[[RES2]]
   return %res#0, %res#1 : f32, i64
 }

@@ -23,20 +23,18 @@ b1:                                               ; preds = %b2
 ; CHECK: }{{[ \t]*}}:endloop
 
 b2:                                               ; preds = %b2, %b0
-  %v0 = phi i32* [ getelementptr inbounds ([400 x i32], [400 x i32]* @g0, i32 0, i32 0), %b0 ], [ %v11, %b2 ]
-  %v1 = phi i32* [ getelementptr inbounds ([400 x i32], [400 x i32]* @g1, i32 0, i32 0), %b0 ], [ %v12, %b2 ]
+  %v0 = phi ptr [ @g0, %b0 ], [ %v11, %b2 ]
+  %v1 = phi ptr [ @g1, %b0 ], [ %v12, %b2 ]
   %v2 = phi i32 [ 0, %b0 ], [ %v9, %b2 ]
-  %v3 = bitcast i32* %v0 to <2 x i32>*
-  %v4 = load <2 x i32>, <2 x i32>* %v3, align 8
+  %v4 = load <2 x i32>, ptr %v0, align 8
   %v5 = mul <2 x i32> %v4, <i32 7, i32 7>
-  %v6 = bitcast i32* %v1 to <2 x i32>*
-  %v7 = load <2 x i32>, <2 x i32>* %v6, align 8
+  %v7 = load <2 x i32>, ptr %v1, align 8
   %v8 = add <2 x i32> %v7, %v5
-  store <2 x i32> %v8, <2 x i32>* %v6, align 8
+  store <2 x i32> %v8, ptr %v1, align 8
   %v9 = add nsw i32 %v2, 2
   %v10 = icmp slt i32 %v2, 398
-  %v11 = getelementptr i32, i32* %v0, i32 2
-  %v12 = getelementptr i32, i32* %v1, i32 2
+  %v11 = getelementptr i32, ptr %v0, i32 2
+  %v12 = getelementptr i32, ptr %v1, i32 2
   br i1 %v10, label %b2, label %b1
 }
 

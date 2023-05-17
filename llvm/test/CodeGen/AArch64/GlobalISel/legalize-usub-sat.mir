@@ -16,9 +16,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $w0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s32) = COPY $w1
-    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s32), [[USUBO1:%[0-9]+]]:_(s32) = G_USUBO [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[USUBO1]](s1), [[C]], [[USUBO]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[USUBO1]], [[C1]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND]](s32), [[C]], [[USUBO]]
     ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %0:_(s32) = COPY $w0
@@ -44,9 +46,11 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s64) = COPY $x0
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x1
-    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s1) = G_USUBO [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: [[USUBO:%[0-9]+]]:_(s64), [[USUBO1:%[0-9]+]]:_(s32) = G_USUBO [[COPY]], [[COPY1]]
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s64) = G_CONSTANT i64 0
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[USUBO1]](s1), [[C]], [[USUBO]]
+    ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s32) = G_AND [[USUBO1]], [[C1]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s64) = G_SELECT [[AND]](s32), [[C]], [[USUBO]]
     ; CHECK-NEXT: $x0 = COPY [[SELECT]](s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %0:_(s64) = COPY $x0
@@ -78,9 +82,10 @@ body:             |
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[AND1]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C]]
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SUB]](s32), [[AND2]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[C1]], [[SUB]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C2]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND3]](s32), [[C1]], [[SUB]]
     ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:_(s32) = COPY $w0
@@ -115,9 +120,10 @@ body:             |
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[AND1]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C]]
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SUB]](s32), [[AND2]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[C1]], [[SUB]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C2]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND3]](s32), [[C1]], [[SUB]]
     ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:_(s32) = COPY $w0
@@ -152,9 +158,10 @@ body:             |
     ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[AND]], [[AND1]]
     ; CHECK-NEXT: [[AND2:%[0-9]+]]:_(s32) = G_AND [[SUB]], [[C]]
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s32) = G_ICMP intpred(ne), [[SUB]](s32), [[AND2]]
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s1) = G_TRUNC [[ICMP]](s32)
     ; CHECK-NEXT: [[C1:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[TRUNC]](s1), [[C1]], [[SUB]]
+    ; CHECK-NEXT: [[C2:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
+    ; CHECK-NEXT: [[AND3:%[0-9]+]]:_(s32) = G_AND [[ICMP]], [[C2]]
+    ; CHECK-NEXT: [[SELECT:%[0-9]+]]:_(s32) = G_SELECT [[AND3]](s32), [[C1]], [[SUB]]
     ; CHECK-NEXT: $w0 = COPY [[SELECT]](s32)
     ; CHECK-NEXT: RET_ReallyLR implicit $w0
     %2:_(s32) = COPY $w0

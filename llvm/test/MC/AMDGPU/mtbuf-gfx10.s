@@ -133,28 +133,28 @@ tbuffer_store_format_x v0, v1, s[0:3] format:0 s0 idxen
 // Negative tests for legacy format syntax.
 //===----------------------------------------------------------------------===//
 
-// GFX10-ERR: error: out of range format
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: out of range format
 tbuffer_load_format_d16_x v0, off, s[0:3], format:-1, 0
 
-// GFX10-ERR: error: out of range format
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: out of range format
 tbuffer_load_format_d16_x v0, off, s[0:3], format:128, s0
 
-// GFX10-ERR: error: too few operands for instruction
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: too few operands for instruction
 tbuffer_load_format_d16_x v0, off, s[0:3], format:127
 
-// GFX10-ERR: error: too few operands for instruction
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: too few operands for instruction
 tbuffer_load_format_d16_x v0, off, s[0:3]
 
-// GFX10-ERR: error: invalid operand for instruction
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: invalid operand for instruction
 tbuffer_load_format_d16_x v0, off, s[0:3] idxen
 
-// GFX10-ERR: error: unknown token in expression
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: unknown token in expression
 tbuffer_load_format_d16_x v0, off, s[0:3], format:1,, s0
 
-// GFX10-ERR: error: unknown token in expression
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: unknown token in expression
 tbuffer_load_format_d16_x v0, off, s[0:3], format:1:, s0
 
-// GFX10-ERR: error: unknown token in expression
+// GFX10-ERR: :[[@LINE+1]]:{{[0-9]+}}: error: unknown token in expression
 tbuffer_load_format_d16_x v0, off, s[0:3],, format:1, s0
 
 //===----------------------------------------------------------------------===//
@@ -243,47 +243,47 @@ tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_NUM_FORMAT_SINT] id
 
 // Unknown format specifier
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Valid but unsupported format specifier (SNORM_OGL is supported for SI/CI only)
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_NUM_FORMAT_SNORM_OGL] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Valid but unsupported format specifier (RESERVED_6 is supported for VI/GFX9 only)
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_NUM_FORMAT_RESERVED_6] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT_32] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT_32_32] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT_32_32_32] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT_32_32_32_32] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT_32_32_32_32, BUF_NUM_FORMAT_UNORM] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT_RESERVED_15] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_NUM_FORMAT_FLOAT] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 // Unsupported format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_DATA_FORMAT_8_8, BUF_NUM_FORMAT_FLOAT] idxen
-// GFX10-ERR: error: unsupported format
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: unsupported format
 
 //===----------------------------------------------------------------------===//
 // Positive tests for unified MTBUF format (GFX10+).
@@ -529,12 +529,12 @@ tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_FMT_32_32_32_32_FLO
 
 // Excessive commas
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_FMT_8_SNORM,] idxen
-// GFX10-ERR: error: expected a closing square bracket
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 
 // Duplicate format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_FMT_8_SNORM,BUF_FMT_8_SNORM] idxen
-// GFX10-ERR: error: expected a closing square bracket
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket
 
 // Duplicate format
 tbuffer_store_format_xyzw v[1:4], v1, s[4:7], s0 format:[BUF_FMT_8_SNORM,BUF_DATA_FORMAT_8] idxen
-// GFX10-ERR: error: expected a closing square bracket
+// GFX10-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: expected a closing square bracket

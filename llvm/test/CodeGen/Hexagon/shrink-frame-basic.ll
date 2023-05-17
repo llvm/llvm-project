@@ -9,19 +9,19 @@ target datalayout = "e-m:e-p:32:32-i1:32-i64:64-a:0-v32:32-n16:32"
 target triple = "hexagon"
 
 ; Function Attrs: nounwind
-define i32 @foo(i32 %n, i32* %p) #0 {
+define i32 @foo(i32 %n, ptr %p) #0 {
 entry:
-  %cmp = icmp eq i32* %p, null
+  %cmp = icmp eq ptr %p, null
   br i1 %cmp, label %if.end, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = load i32, i32* %p, align 4
+  %0 = load i32, ptr %p, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* %p, align 4
+  store i32 %inc, ptr %p, align 4
   br label %return
 
 if.end:                                           ; preds = %entry
-  %call = tail call i32 bitcast (i32 (...)* @bar to i32 (i32)*)(i32 %n) #0
+  %call = tail call i32 @bar(i32 %n) #0
   %add = add nsw i32 %call, 1
   br label %return
 

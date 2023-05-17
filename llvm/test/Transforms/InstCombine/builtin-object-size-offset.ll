@@ -25,34 +25,32 @@ define i32 @foo1(i32 %N) {
 entry:
   %Big = alloca [20 x i8], align 16
   %Small = alloca [10 x i8], align 1
-  %0 = getelementptr inbounds [20 x i8], [20 x i8]* %Big, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 20, i8* %0)
-  %1 = getelementptr inbounds [10 x i8], [10 x i8]* %Small, i64 0, i64 0
-  call void @llvm.lifetime.start.p0i8(i64 10, i8* %1)
+  call void @llvm.lifetime.start.p0(i64 20, ptr %Big)
+  call void @llvm.lifetime.start.p0(i64 10, ptr %Small)
   %tobool = icmp ne i32 %N, 0
-  %add.ptr = getelementptr inbounds [20 x i8], [20 x i8]* %Big, i64 0, i64 10
-  %cond = select i1 %tobool, i8* %add.ptr, i8* %1
-  %2 = call i64 @llvm.objectsize.i64.p0i8(i8* %cond, i1 false)
-  %conv = trunc i64 %2 to i32
-  call void @llvm.lifetime.end.p0i8(i64 10, i8* %1)
-  call void @llvm.lifetime.end.p0i8(i64 20, i8* %0)
+  %add.ptr = getelementptr inbounds [20 x i8], ptr %Big, i64 0, i64 10
+  %cond = select i1 %tobool, ptr %add.ptr, ptr %Small
+  %0 = call i64 @llvm.objectsize.i64.p0(ptr %cond, i1 false)
+  %conv = trunc i64 %0 to i32
+  call void @llvm.lifetime.end.p0(i64 10, ptr %Small)
+  call void @llvm.lifetime.end.p0(i64 20, ptr %Big)
   ret i32 %conv
 ; CHECK: ret i32 10 
 }
 
-declare void @llvm.lifetime.start.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 
-declare i64 @llvm.objectsize.i64.p0i8(i8*, i1)
+declare i64 @llvm.objectsize.i64.p0(ptr, i1)
 
-declare void @llvm.lifetime.end.p0i8(i64, i8* nocapture)
+declare void @llvm.lifetime.end.p0(i64, ptr nocapture)
 
 define void @foo() {
 entry:
   %call = tail call i32 @foo1(i32 0)
   %conv = sext i32 %call to i64
-  %call1 = tail call i32 (i8*, ...) @printf(i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), i64 %conv)
+  %call1 = tail call i32 (ptr, ...) @printf(ptr @.str, i64 %conv)
   ret void
 }
 
-declare i32 @printf(i8* nocapture readonly, ...)
+declare i32 @printf(ptr nocapture readonly, ...)
 

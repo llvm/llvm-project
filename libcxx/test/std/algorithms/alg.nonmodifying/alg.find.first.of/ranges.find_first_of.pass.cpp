@@ -9,7 +9,6 @@
 // <algorithm>
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<input_iterator I1, sentinel_for<I1> S1, forward_iterator I2, sentinel_for<I2> S2,
 //          class Pred = ranges::equal_to, class Proj1 = identity, class Proj2 = identity>
@@ -72,7 +71,7 @@ template <int N1, int N2>
 struct Data {
   std::array<int, N1> input1;
   std::array<int, N2> input2;
-  ptrdiff_t expected;
+  std::ptrdiff_t expected;
 };
 
 template <class Iter1, class Sent1, class Iter2, class Sent2, int N1, int N2>

@@ -32,11 +32,11 @@
 ; IMPORT-NEXT: @_ZL3Obj.llvm.{{.*}} = available_externally hidden constant %struct.S { i32 4, i32 8, ptr @val }
 ; IMPORT-NEXT: @outer = internal local_unnamed_addr global %struct.Q zeroinitializer
 
-; OPT: @outer = internal unnamed_addr global %struct.Q zeroinitializer
+; @outer is a write-only variable that's stored to once, so the store and the global can be removed.
+; OPT-NOT: @outer
 
 ; OPT:      define dso_local i32 @main()
 ; OPT-NEXT: entry:
-; OPT-NEXT:   store ptr null, ptr getelementptr inbounds (%struct.Q, ptr @outer, i64 1, i32 0)
 ; OPT-NEXT:   ret i32 12
 
 ; NOREFS:      @_ZL3Obj.llvm.{{.*}} = external hidden constant %struct.S
@@ -45,17 +45,16 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.S = type { i32, i32, i32* }
+%struct.S = type { i32, i32, ptr }
 
 define dso_local i32 @main() local_unnamed_addr {
 entry:
-  %call = tail call %struct.S* @_Z6getObjv()
-  %d = getelementptr inbounds %struct.S, %struct.S* %call, i64 0, i32 0
-  %0 = load i32, i32* %d, align 8
-  %v = getelementptr inbounds %struct.S, %struct.S* %call, i64 0, i32 1
-  %1 = load i32, i32* %v, align 4
+  %call = tail call ptr @_Z6getObjv()
+  %0 = load i32, ptr %call, align 8
+  %v = getelementptr inbounds %struct.S, ptr %call, i64 0, i32 1
+  %1 = load i32, ptr %v, align 4
   %add = add nsw i32 %1, %0
   ret i32 %add
 }
 
-declare dso_local %struct.S* @_Z6getObjv() local_unnamed_addr
+declare dso_local ptr @_Z6getObjv() local_unnamed_addr

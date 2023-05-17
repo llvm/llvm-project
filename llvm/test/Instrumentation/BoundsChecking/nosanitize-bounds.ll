@@ -6,11 +6,11 @@ define i32 @foo(i32 %i) nosanitize_bounds {
 entry:
   %i.addr = alloca i32, align 4
   %b = alloca [64 x i32], align 16
-  store i32 %i, i32* %i.addr, align 4
-  %0 = load i32, i32* %i.addr, align 4
+  store i32 %i, ptr %i.addr, align 4
+  %0 = load i32, ptr %i.addr, align 4
   %idxprom = sext i32 %0 to i64
-  %arrayidx = getelementptr inbounds [64 x i32], [64 x i32]* %b, i64 0, i64 %idxprom
-  %1 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [64 x i32], ptr %b, i64 0, i64 %idxprom
+  %1 = load i32, ptr %arrayidx, align 4
   ret i32 %1
 ; CHECK-NOT: call void @llvm.trap()
 }

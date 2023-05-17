@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // std::views::counted;
 
@@ -47,7 +46,7 @@ constexpr bool test() {
   {
     static_assert(std::addressof(std::views::counted) == std::addressof(std::ranges::views::counted));
 
-    static_assert( CountedInvocable<int*, size_t>);
+    static_assert( CountedInvocable<int*, std::size_t>);
     static_assert(!CountedInvocable<int*, LvalueConvertible>);
     static_assert( CountedInvocable<int*, LvalueConvertible&>);
     static_assert( CountedInvocable<int*, RvalueConvertible>);
@@ -55,7 +54,7 @@ constexpr bool test() {
     static_assert(!CountedInvocable<int*, OnlyExplicitlyConvertible>);
     static_assert(!CountedInvocable<int*, int*>);
     static_assert(!CountedInvocable<int*>);
-    static_assert(!CountedInvocable<size_t>);
+    static_assert(!CountedInvocable<std::size_t>);
     static_assert(!CountedInvocable<>);
   }
 

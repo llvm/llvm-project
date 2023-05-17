@@ -15,7 +15,7 @@
 // UNSUPPORTED: powerpc64le-target-arch
 
 // Sometimes hangs
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 #include <pthread.h>
 #include <unistd.h>

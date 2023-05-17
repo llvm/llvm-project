@@ -2,7 +2,7 @@
 
 
 define internal i64 @baz() nounwind {
-  %tmp = load i64, i64* @"+x"
+  %tmp = load i64, ptr @"+x"
   ret i64 %tmp
 ; CHECK: _baz:
 ; CHECK:    movl "L_+x$non_lazy_ptr", %ecx

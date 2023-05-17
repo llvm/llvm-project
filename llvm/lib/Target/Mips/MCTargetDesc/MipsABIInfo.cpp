@@ -9,10 +9,10 @@
 #include "MipsABIInfo.h"
 #include "MipsRegisterInfo.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/CodeGen/LowLevelType.h"
 #include "llvm/CodeGen/MachineMemOperand.h"
 #include "llvm/MC/MCTargetOptions.h"
 #include "llvm/Support/CommandLine.h"
-#include "llvm/Support/LowLevelTypeImpl.h"
 
 using namespace llvm;
 
@@ -33,17 +33,17 @@ static const MCPhysReg Mips64IntRegs[8] = {
 
 ArrayRef<MCPhysReg> MipsABIInfo::GetByValArgRegs() const {
   if (IsO32())
-    return makeArrayRef(O32IntRegs);
+    return ArrayRef(O32IntRegs);
   if (IsN32() || IsN64())
-    return makeArrayRef(Mips64IntRegs);
+    return ArrayRef(Mips64IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 
 ArrayRef<MCPhysReg> MipsABIInfo::GetVarArgRegs() const {
   if (IsO32())
-    return makeArrayRef(O32IntRegs);
+    return ArrayRef(O32IntRegs);
   if (IsN32() || IsN64())
-    return makeArrayRef(Mips64IntRegs);
+    return ArrayRef(Mips64IntRegs);
   llvm_unreachable("Unhandled ABI");
 }
 

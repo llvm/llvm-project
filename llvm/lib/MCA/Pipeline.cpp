@@ -38,7 +38,8 @@ Expected<unsigned> Pipeline::run() {
   assert(!Stages.empty() && "Unexpected empty pipeline found!");
 
   do {
-    notifyCycleBegin();
+    if (!isPaused())
+      notifyCycleBegin();
     if (Error Err = runCycle())
       return std::move(Err);
     notifyCycleEnd();
@@ -53,14 +54,24 @@ Error Pipeline::runCycle() {
   // Update stages before we start processing new instructions.
   for (auto I = Stages.rbegin(), E = Stages.rend(); I != E && !Err; ++I) {
     const std::unique_ptr<Stage> &S = *I;
-    Err = S->cycleStart();
+    if (isPaused())
+      Err = S->cycleResume();
+    else
+      Err = S->cycleStart();
   }
+
+  CurrentState = State::Started;
 
   // Now fetch and execute new instructions.
   InstRef IR;
   Stage &FirstStage = *Stages[0];
   while (!Err && FirstStage.isAvailable(IR))
     Err = FirstStage.execute(IR);
+
+  if (Err.isA<InstStreamPause>()) {
+    CurrentState = State::Paused;
+    return Err;
+  }
 
   // Update stages in preparation for a new cycle.
   for (const std::unique_ptr<Stage> &S : Stages) {

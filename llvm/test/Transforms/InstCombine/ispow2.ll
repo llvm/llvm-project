@@ -15,7 +15,7 @@ define i1 @is_pow2or0_negate_op(i32 %x) {
 
 define <2 x i1> @is_pow2or0_negate_op_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @is_pow2or0_negate_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i32> [[TMP1]], <i32 2, i32 2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -39,7 +39,7 @@ define i1 @is_pow2or0_decrement_op(i8 %x) {
 
 define <2 x i1> @is_pow2or0_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2or0_decrement_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult <2 x i8> [[TMP1]], <i8 2, i8 2>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -63,7 +63,7 @@ define i1 @isnot_pow2or0_negate_op(i32 %x) {
 
 define <2 x i1> @isnot_pow2or0_negate_op_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @isnot_pow2or0_negate_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i32> [[TMP1]], <i32 1, i32 1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -87,7 +87,7 @@ define i1 @isnot_pow2or0_decrement_op(i8 %x) {
 
 define <2 x i1> @isnot_pow2or0_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2or0_decrement_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt <2 x i8> [[TMP1]], <i8 1, i8 1>
 ; CHECK-NEXT:    ret <2 x i1> [[CMP]]
 ;
@@ -181,8 +181,8 @@ declare <2 x i8> @llvm.ctpop.v2i8(<2 x i8>)
 define i1 @is_pow2_ctpop(i32 %x) {
 ; CHECK-LABEL: @is_pow2_ctpop(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ult i32 %t0, 2
@@ -194,8 +194,8 @@ define i1 @is_pow2_ctpop(i32 %x) {
 define i1 @is_pow2_ctpop_logical(i32 %x) {
 ; CHECK-LABEL: @is_pow2_ctpop_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ult i32 %t0, 2
@@ -214,8 +214,8 @@ define i1 @is_pow2_ctpop_extra_uses(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ult i32 %t0, 2
@@ -233,8 +233,8 @@ define i1 @is_pow2_ctpop_extra_uses_logical(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ult i32 %t0, 2
@@ -249,9 +249,9 @@ define i1 @is_pow2_ctpop_extra_uses_logical(i32 %x) {
 
 define <2 x i1> @is_pow2_ctpop_commute_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2_ctpop_commute_vec(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq <2 x i8> [[T0]], <i8 1, i8 1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[T0]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp ult <2 x i8> %t0, <i8 2, i8 2>
@@ -282,7 +282,7 @@ define i1 @is_pow2_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 3
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -314,7 +314,7 @@ define i1 @is_pow2_ctpop_wrong_cmp_op2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -346,7 +346,7 @@ define i1 @is_pow2_ctpop_wrong_pred1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 2
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -378,7 +378,7 @@ define i1 @is_pow2_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[T0]], 2
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[CMP2]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP2]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -393,8 +393,8 @@ define i1 @is_pow2_ctpop_wrong_pred2_logical(i32 %x) {
 define i1 @isnot_pow2_ctpop(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2_ctpop(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ugt i32 %t0, 1
@@ -406,8 +406,8 @@ define i1 @isnot_pow2_ctpop(i32 %x) {
 define i1 @isnot_pow2_ctpop_logical(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2_ctpop_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ugt i32 %t0, 1
@@ -425,8 +425,8 @@ define i1 @isnot_pow2_ctpop_extra_uses(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[ISZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ugt i32 %t0, 1
@@ -444,8 +444,8 @@ define i1 @isnot_pow2_ctpop_extra_uses_logical(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[ISZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ugt i32 %t0, 1
@@ -460,9 +460,9 @@ define i1 @isnot_pow2_ctpop_extra_uses_logical(i32 %x) {
 
 define <2 x i1> @isnot_pow2_ctpop_commute_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2_ctpop_commute_vec(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne <2 x i8> [[T0]], <i8 1, i8 1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[T0]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp ugt <2 x i8> %t0, <i8 1, i8 1>
@@ -493,7 +493,7 @@ define i1 @isnot_pow2_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 2
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISZERO]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -525,7 +525,7 @@ define i1 @isnot_pow2_ctpop_wrong_cmp_op2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 1
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 1
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISZERO]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -557,7 +557,7 @@ define i1 @isnot_pow2_ctpop_wrong_pred2_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[T0]], 1
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[CMP2]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP2]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -570,8 +570,8 @@ define i1 @isnot_pow2_ctpop_wrong_pred2_logical(i32 %x) {
 define i1 @is_pow2_negate_op(i32 %x) {
 ; CHECK-LABEL: @is_pow2_negate_op(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i32 0, %x
   %and = and i32 %neg, %x
@@ -584,8 +584,8 @@ define i1 @is_pow2_negate_op(i32 %x) {
 define i1 @is_pow2_negate_op_logical(i32 %x) {
 ; CHECK-LABEL: @is_pow2_negate_op_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i32 0, %x
   %and = and i32 %neg, %x
@@ -597,9 +597,9 @@ define i1 @is_pow2_negate_op_logical(i32 %x) {
 
 define <2 x i1> @is_pow2_negate_op_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @is_pow2_negate_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %neg = sub <2 x i32> zeroinitializer, %x
   %and = and <2 x i32> %neg, %x
@@ -612,8 +612,8 @@ define <2 x i1> @is_pow2_negate_op_vec(<2 x i32> %x) {
 define i1 @is_pow2_decrement_op(i8 %x) {
 ; CHECK-LABEL: @is_pow2_decrement_op(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i8 %x, -1
   %and = and i8 %dec, %x
@@ -626,8 +626,8 @@ define i1 @is_pow2_decrement_op(i8 %x) {
 define i1 @is_pow2_decrement_op_logical(i8 %x) {
 ; CHECK-LABEL: @is_pow2_decrement_op_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i8 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i8 %x, -1
   %and = and i8 %dec, %x
@@ -639,9 +639,9 @@ define i1 @is_pow2_decrement_op_logical(i8 %x) {
 
 define <2 x i1> @is_pow2_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2_decrement_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 1, i8 1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp eq <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
   %and = and <2 x i8> %dec, %x
@@ -654,8 +654,8 @@ define <2 x i1> @is_pow2_decrement_op_vec(<2 x i8> %x) {
 define i1 @isnot_pow2_negate_op(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2_negate_op(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i32 0, %x
   %and = and i32 %neg, %x
@@ -668,8 +668,8 @@ define i1 @isnot_pow2_negate_op(i32 %x) {
 define i1 @isnot_pow2_negate_op_logical(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2_negate_op_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i32 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %neg = sub i32 0, %x
   %and = and i32 %neg, %x
@@ -681,9 +681,9 @@ define i1 @isnot_pow2_negate_op_logical(i32 %x) {
 
 define <2 x i1> @isnot_pow2_negate_op_vec(<2 x i32> %x) {
 ; CHECK-LABEL: @isnot_pow2_negate_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 1, i32 1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X:%.*]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], <i32 1, i32 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %neg = sub <2 x i32> zeroinitializer, %x
   %and = and <2 x i32> %neg, %x
@@ -696,8 +696,8 @@ define <2 x i1> @isnot_pow2_negate_op_vec(<2 x i32> %x) {
 define i1 @isnot_pow2_decrement_op(i8 %x) {
 ; CHECK-LABEL: @isnot_pow2_decrement_op(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i8 %x, -1
   %and = and i8 %dec, %x
@@ -710,8 +710,8 @@ define i1 @isnot_pow2_decrement_op(i8 %x) {
 define i1 @isnot_pow2_decrement_op_logical(i8 %x) {
 ; CHECK-LABEL: @isnot_pow2_decrement_op_logical(
 ; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X:%.*]]), !range [[RNG1]]
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i8 [[TMP1]], 1
-; CHECK-NEXT:    ret i1 [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %dec = add i8 %x, -1
   %and = and i8 %dec, %x
@@ -723,9 +723,9 @@ define i1 @isnot_pow2_decrement_op_logical(i8 %x) {
 
 define <2 x i1> @isnot_pow2_decrement_op_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2_decrement_op_vec(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 1, i8 1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP2]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i8> [[TMP1]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %dec = add <2 x i8> %x, <i8 -1, i8 -1>
   %and = and <2 x i8> %dec, %x
@@ -740,8 +740,8 @@ define <2 x i1> @isnot_pow2_decrement_op_vec(<2 x i8> %x) {
 define i1 @is_pow2or0_ctpop(i32 %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[T0]], 2
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %t0, 1
@@ -753,8 +753,8 @@ define i1 @is_pow2or0_ctpop(i32 %x) {
 define i1 @is_pow2or0_ctpop_swap_cmp(i32 %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_swap_cmp(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[T0]], 2
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %t0, 1
@@ -766,8 +766,8 @@ define i1 @is_pow2or0_ctpop_swap_cmp(i32 %x) {
 define i1 @is_pow2or0_ctpop_logical(i32 %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[T0]], 2
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %t0, 1
@@ -778,9 +778,9 @@ define i1 @is_pow2or0_ctpop_logical(i32 %x) {
 
 define <2 x i1> @is_pow2or0_ctpop_commute_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_commute_vec(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult <2 x i8> [[T0]], <i8 2, i8 2>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult <2 x i8> [[T0]], <i8 2, i8 2>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp eq <2 x i8> %t0, <i8 1, i8 1>
@@ -799,8 +799,8 @@ define i1 @is_pow2or0_ctpop_extra_uses(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[ISZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[T0]], 2
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   call void @use(i32 %t0)
@@ -820,8 +820,8 @@ define i1 @is_pow2or0_ctpop_logical_extra_uses(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[ISZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[T0]], 2
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[T0]], 2
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   call void @use(i32 %t0)
@@ -855,7 +855,7 @@ define i1 @is_pow2or0_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 3
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[ISZERO]], i1 true, i1 [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -867,7 +867,7 @@ define i1 @is_pow2or0_ctpop_wrong_cmp_op1_logical(i32 %x) {
 
 define <2 x i1> @is_pow2or0_ctpop_commute_vec_wrong_cmp_op1(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_commute_vec_wrong_cmp_op1(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[T0]], <i8 -1, i8 1>
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP]], [[ISZERO]]
@@ -897,13 +897,24 @@ define i1 @is_pow2or0_ctpop_wrong_pred1(i32 %x) {
   ret i1 %r
 }
 
-define i1 @is_pow2or0_ctpop_wrong_pred2_logical(i32 %x) {
-; CHECK-LABEL: @is_pow2or0_ctpop_wrong_pred2_logical(
+define i1 @is_pow2or0_ctpop_wrong_pred2(i32 %x) {
+; CHECK-LABEL: @is_pow2or0_ctpop_wrong_pred2(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 1
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    [[R:%.*]] = or i1 [[ISZERO]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp ne i32 %t0, 1
+  %iszero = icmp ne i32 %x, 0
+  %r = or i1 %iszero, %cmp
+  ret i1 %r
+}
+
+define i1 @is_pow2or0_ctpop_wrong_pred2_logical(i32 %x) {
+; CHECK-LABEL: @is_pow2or0_ctpop_wrong_pred2_logical(
+; CHECK-NEXT:    ret i1 true
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %t0, 1
@@ -914,7 +925,7 @@ define i1 @is_pow2or0_ctpop_wrong_pred2_logical(i32 %x) {
 
 define <2 x i1> @is_pow2or0_ctpop_commute_vec_wrong_pred3(<2 x i8> %x) {
 ; CHECK-LABEL: @is_pow2or0_ctpop_commute_vec_wrong_pred3(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq <2 x i8> [[T0]], <i8 1, i8 1>
 ; CHECK-NEXT:    [[ISZERO:%.*]] = icmp eq <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP]], [[ISZERO]]
@@ -932,8 +943,8 @@ define <2 x i1> @is_pow2or0_ctpop_commute_vec_wrong_pred3(<2 x i8> %x) {
 define i1 @isnot_pow2nor0_ctpop(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_ctpop(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %t0, 1
@@ -945,8 +956,8 @@ define i1 @isnot_pow2nor0_ctpop(i32 %x) {
 define i1 @isnot_pow2nor0_ctpop_swap_cmp(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_ctpop_swap_cmp(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %t0, 1
@@ -958,8 +969,8 @@ define i1 @isnot_pow2nor0_ctpop_swap_cmp(i32 %x) {
 define i1 @isnot_pow2nor0_ctpop_logical(i32 %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_ctpop_logical(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp ne i32 %t0, 1
@@ -970,9 +981,9 @@ define i1 @isnot_pow2nor0_ctpop_logical(i32 %x) {
 
 define <2 x i1> @isnot_pow2nor0_ctpop_commute_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_ctpop_commute_vec(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt <2 x i8> [[T0]], <i8 1, i8 1>
-; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i8> [[T0]], <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %t0 = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> %x)
   %cmp = icmp ne <2 x i8> %t0, <i8 1, i8 1>
@@ -991,8 +1002,8 @@ define i1 @isnot_pow2nor0_ctpop_extra_uses(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   call void @use(i32 %t0)
@@ -1012,8 +1023,8 @@ define i1 @isnot_pow2nor0_ctpop_logical_extra_uses(i32 %x) {
 ; CHECK-NEXT:    call void @use_i1(i1 [[CMP]])
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
 ; CHECK-NEXT:    call void @use_i1(i1 [[NOTZERO]])
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[T0]], 1
-; CHECK-NEXT:    ret i1 [[TMP1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[T0]], 1
+; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   call void @use(i32 %t0)
@@ -1047,7 +1058,7 @@ define i1 @isnot_pow2nor0_ctpop_wrong_cmp_op1_logical(i32 %x) {
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[T0]], 5
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne i32 [[X]], 0
-; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[NOTZERO]], i1 [[CMP]], i1 false
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
@@ -1059,7 +1070,7 @@ define i1 @isnot_pow2nor0_ctpop_wrong_cmp_op1_logical(i32 %x) {
 
 define <2 x i1> @isnot_pow2nor0_ctpop_commute_vec_wrong_cmp_op1(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_ctpop_commute_vec_wrong_cmp_op1(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[T0]], <i8 0, i8 -1>
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = and <2 x i1> [[CMP]], [[NOTZERO]]
@@ -1089,13 +1100,24 @@ define i1 @isnot_pow2nor0_ctpop_wrong_pred1(i32 %x) {
   ret i1 %r
 }
 
-define i1 @isnot_pow2nor0_ctpop_wrong_pred2_logical(i32 %x) {
-; CHECK-LABEL: @isnot_pow2nor0_ctpop_wrong_pred2_logical(
+define i1 @isnot_pow2nor0_ctpop_wrong_pred2(i32 %x) {
+; CHECK-LABEL: @isnot_pow2nor0_ctpop_wrong_pred2(
 ; CHECK-NEXT:    [[T0:%.*]] = tail call i32 @llvm.ctpop.i32(i32 [[X:%.*]]), !range [[RNG0]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[T0]], 1
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp eq i32 [[X]], 0
 ; CHECK-NEXT:    [[R:%.*]] = and i1 [[NOTZERO]], [[CMP]]
 ; CHECK-NEXT:    ret i1 [[R]]
+;
+  %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
+  %cmp = icmp eq i32 %t0, 1
+  %notzero = icmp eq i32 %x, 0
+  %r = and i1 %notzero, %cmp
+  ret i1 %r
+}
+
+define i1 @isnot_pow2nor0_ctpop_wrong_pred2_logical(i32 %x) {
+; CHECK-LABEL: @isnot_pow2nor0_ctpop_wrong_pred2_logical(
+; CHECK-NEXT:    ret i1 false
 ;
   %t0 = tail call i32 @llvm.ctpop.i32(i32 %x)
   %cmp = icmp eq i32 %t0, 1
@@ -1106,7 +1128,7 @@ define i1 @isnot_pow2nor0_ctpop_wrong_pred2_logical(i32 %x) {
 
 define <2 x i1> @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @isnot_pow2nor0_wrong_pred3_ctpop_commute_vec(
-; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]])
+; CHECK-NEXT:    [[T0:%.*]] = tail call <2 x i8> @llvm.ctpop.v2i8(<2 x i8> [[X:%.*]]), !range [[RNG1]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ne <2 x i8> [[T0]], <i8 1, i8 1>
 ; CHECK-NEXT:    [[NOTZERO:%.*]] = icmp ne <2 x i8> [[X]], zeroinitializer
 ; CHECK-NEXT:    [[R:%.*]] = or <2 x i1> [[CMP]], [[NOTZERO]]

@@ -17,6 +17,7 @@
 #ifndef LLVM_MC_SUBTARGETFEATURE_H
 #define LLVM_MC_SUBTARGETFEATURE_H
 
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MathExtras.h"
@@ -40,14 +41,11 @@ const unsigned MAX_SUBTARGET_FEATURES = MAX_SUBTARGET_WORDS * 64;
 class FeatureBitset {
   static_assert((MAX_SUBTARGET_FEATURES % 64) == 0,
                 "Should be a multiple of 64!");
-  // This cannot be a std::array, operator[] is not constexpr until C++17.
-  uint64_t Bits[MAX_SUBTARGET_WORDS] = {};
+  std::array<uint64_t, MAX_SUBTARGET_WORDS> Bits{};
 
 protected:
-  constexpr FeatureBitset(const std::array<uint64_t, MAX_SUBTARGET_WORDS> &B) {
-    for (unsigned I = 0; I != B.size(); ++I)
-      Bits[I] = B[I];
-  }
+  constexpr FeatureBitset(const std::array<uint64_t, MAX_SUBTARGET_WORDS> &B)
+      : Bits{B} {}
 
 public:
   constexpr FeatureBitset() = default;
@@ -98,12 +96,12 @@ public:
   size_t count() const {
     size_t Count = 0;
     for (auto B : Bits)
-      Count += countPopulation(B);
+      Count += llvm::popcount(B);
     return Count;
   }
 
   constexpr FeatureBitset &operator^=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = Bits.size(); I != E; ++I) {
       Bits[I] ^= RHS.Bits[I];
     }
     return *this;
@@ -115,7 +113,7 @@ public:
   }
 
   constexpr FeatureBitset &operator&=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = Bits.size(); I != E; ++I) {
       Bits[I] &= RHS.Bits[I];
     }
     return *this;
@@ -127,7 +125,7 @@ public:
   }
 
   constexpr FeatureBitset &operator|=(const FeatureBitset &RHS) {
-    for (unsigned I = 0, E = array_lengthof(Bits); I != E; ++I) {
+    for (unsigned I = 0, E = Bits.size(); I != E; ++I) {
       Bits[I] |= RHS.Bits[I];
     }
     return *this;
@@ -191,6 +189,8 @@ public:
 
   /// Adds Features.
   void AddFeature(StringRef String, bool Enable = true);
+
+  void addFeaturesVector(const ArrayRef<std::string> OtherFeatures);
 
   /// Returns the vector of individual subtarget features.
   const std::vector<std::string> &getFeatures() const { return Features; }

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-compute -x hlsl -o - -fsyntax-only %s -verify
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.0-library -x hlsl -o - -fsyntax-only %s -verify
 
 // expected-error@+1 {{pointers are unsupported in HLSL}}
 typedef int (*fn_int)(int);
@@ -75,7 +75,7 @@ struct Fish {
 int gone_fishing() {
   Fish F;
   int Result = *F; // user-defined dereference operators work
-  // expected-error@+1 {{member reference type 'Fish::Fins' is not a pointer}}
+  // expected-error@+1 {{member reference type 'Fins' is not a pointer}}
   Result += F->Left;
   return Result;
 }

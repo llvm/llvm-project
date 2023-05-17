@@ -10,13 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/Support/DynamicLibrary.h"
+
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
-#include <dlfcn.h>
 #include <ffi.h>
-#include <gelf.h>
 #include <link.h>
 #include <list>
 #include <string>
@@ -24,6 +25,9 @@
 
 #include "Debug.h"
 #include "omptargetplugin.h"
+
+using namespace llvm;
+using namespace llvm::sys;
 
 #ifndef TARGET_NAME
 #define TARGET_NAME Generic ELF - 64bit
@@ -37,17 +41,18 @@
 #include "elf_common.h"
 
 #define NUMBER_OF_DEVICES 4
-#define OFFLOADSECTIONNAME "omp_offloading_entries"
+#define OFFLOAD_SECTION_NAME "omp_offloading_entries"
 
 /// Array of Dynamic libraries loaded for this target.
 struct DynLibTy {
   std::string FileName;
-  void *Handle;
+  std::unique_ptr<DynamicLibrary> DynLib;
 };
 
 /// Keep entries table per device.
 struct FuncOrGblEntryTy {
   __tgt_target_table Table;
+  SmallVector<__tgt_offload_entry> Entries;
 };
 
 /// Class containing all the device information.
@@ -58,26 +63,28 @@ public:
   std::list<DynLibTy> DynLibs;
 
   // Record entry point associated with device.
-  void createOffloadTable(int32_t device_id, __tgt_offload_entry *begin,
-                          __tgt_offload_entry *end) {
-    assert(device_id < (int32_t)FuncGblEntries.size() &&
+  void createOffloadTable(int32_t DeviceId,
+                          SmallVector<__tgt_offload_entry> &&Entries) {
+    assert(DeviceId < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
-    FuncGblEntries[device_id].emplace_back();
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
+    FuncGblEntries[DeviceId].emplace_back();
+    FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
 
-    E.Table.EntriesBegin = begin;
-    E.Table.EntriesEnd = end;
+    E.Entries = Entries;
+    E.Table.EntriesBegin = E.Entries.begin();
+    E.Table.EntriesEnd = E.Entries.end();
   }
 
   // Return true if the entry is associated with device.
-  bool findOffloadEntry(int32_t device_id, void *addr) {
-    assert(device_id < (int32_t)FuncGblEntries.size() &&
+  bool findOffloadEntry(int32_t DeviceId, void *Addr) {
+    assert(DeviceId < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
+    FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
 
-    for (__tgt_offload_entry *i = E.Table.EntriesBegin, *e = E.Table.EntriesEnd;
-         i < e; ++i) {
-      if (i->addr == addr)
+    for (__tgt_offload_entry *I = E.Table.EntriesBegin,
+                             *End = E.Table.EntriesEnd;
+         I < End; ++I) {
+      if (I->addr == Addr)
         return true;
     }
 
@@ -85,23 +92,21 @@ public:
   }
 
   // Return the pointer to the target entries table.
-  __tgt_target_table *getOffloadEntriesTable(int32_t device_id) {
-    assert(device_id < (int32_t)FuncGblEntries.size() &&
+  __tgt_target_table *getOffloadEntriesTable(int32_t DeviceId) {
+    assert(DeviceId < (int32_t)FuncGblEntries.size() &&
            "Unexpected device id!");
-    FuncOrGblEntryTy &E = FuncGblEntries[device_id].back();
+    FuncOrGblEntryTy &E = FuncGblEntries[DeviceId].back();
 
     return &E.Table;
   }
 
-  RTLDeviceInfoTy(int32_t num_devices) { FuncGblEntries.resize(num_devices); }
+  RTLDeviceInfoTy(int32_t NumDevices) { FuncGblEntries.resize(NumDevices); }
 
   ~RTLDeviceInfoTy() {
     // Close dynamic libraries
-    for (auto &lib : DynLibs) {
-      if (lib.Handle) {
-        dlclose(lib.Handle);
-        remove(lib.FileName.c_str());
-      }
+    for (auto &Lib : DynLibs) {
+      if (Lib.DynLib->isValid())
+        remove(Lib.FileName.c_str());
     }
   }
 };
@@ -112,79 +117,28 @@ static RTLDeviceInfoTy DeviceInfo(NUMBER_OF_DEVICES);
 extern "C" {
 #endif
 
-int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *image) {
+int32_t __tgt_rtl_is_valid_binary(__tgt_device_image *Image) {
 // If we don't have a valid ELF ID we can just fail.
 #if TARGET_ELF_ID < 1
   return 0;
 #else
-  return elf_check_machine(image, TARGET_ELF_ID);
+  return elf_check_machine(Image, TARGET_ELF_ID);
 #endif
 }
 
 int32_t __tgt_rtl_number_of_devices() { return NUMBER_OF_DEVICES; }
 
-int32_t __tgt_rtl_init_device(int32_t device_id) { return OFFLOAD_SUCCESS; }
+int32_t __tgt_rtl_init_device(int32_t DeviceId) { return OFFLOAD_SUCCESS; }
 
-__tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
-                                          __tgt_device_image *image) {
+__tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
+                                          __tgt_device_image *Image) {
 
-  DP("Dev %d: load binary from " DPxMOD " image\n", device_id,
-     DPxPTR(image->ImageStart));
+  DP("Dev %d: load binary from " DPxMOD " image\n", DeviceId,
+     DPxPTR(Image->ImageStart));
 
-  assert(device_id >= 0 && device_id < NUMBER_OF_DEVICES && "bad dev id");
+  assert(DeviceId >= 0 && DeviceId < NUMBER_OF_DEVICES && "bad dev id");
 
-  size_t ImageSize = (size_t)image->ImageEnd - (size_t)image->ImageStart;
-  size_t NumEntries = (size_t)(image->EntriesEnd - image->EntriesBegin);
-  DP("Expecting to have %zd entries defined.\n", NumEntries);
-
-  // Is the library version incompatible with the header file?
-  if (elf_version(EV_CURRENT) == EV_NONE) {
-    DP("Incompatible ELF library!\n");
-    return NULL;
-  }
-
-  // Obtain elf handler
-  Elf *e = elf_memory((char *)image->ImageStart, ImageSize);
-  if (!e) {
-    DP("Unable to get ELF handle: %s!\n", elf_errmsg(-1));
-    return NULL;
-  }
-
-  if (elf_kind(e) != ELF_K_ELF) {
-    DP("Invalid Elf kind!\n");
-    elf_end(e);
-    return NULL;
-  }
-
-  // Find the entries section offset
-  Elf_Scn *section = 0;
-  Elf64_Off entries_offset = 0;
-
-  size_t shstrndx;
-
-  if (elf_getshdrstrndx(e, &shstrndx)) {
-    DP("Unable to get ELF strings index!\n");
-    elf_end(e);
-    return NULL;
-  }
-
-  while ((section = elf_nextscn(e, section))) {
-    GElf_Shdr hdr;
-    gelf_getshdr(section, &hdr);
-
-    if (!strcmp(elf_strptr(e, shstrndx, hdr.sh_name), OFFLOADSECTIONNAME)) {
-      entries_offset = hdr.sh_addr;
-      break;
-    }
-  }
-
-  if (!entries_offset) {
-    DP("Entries Section Offset Not Found\n");
-    elf_end(e);
-    return NULL;
-  }
-
-  DP("Offset of entries section is (" DPxMOD ").\n", DPxPTR(entries_offset));
+  size_t ImageSize = (size_t)Image->ImageEnd - (size_t)Image->ImageStart;
 
   // load dynamic library and get the entry points. We use the dl library
   // to do the loading of the library, but we could do it directly to avoid the
@@ -192,148 +146,133 @@ __tgt_target_table *__tgt_rtl_load_binary(int32_t device_id,
   //
   // 1) Create tmp file with the library contents.
   // 2) Use dlopen to load the file and dlsym to retrieve the symbols.
-  char tmp_name[] = "/tmp/tmpfile_XXXXXX";
-  int tmp_fd = mkstemp(tmp_name);
+  char TmpName[] = "/tmp/tmpfile_XXXXXX";
+  int TmpFd = mkstemp(TmpName);
 
-  if (tmp_fd == -1) {
-    elf_end(e);
+  if (TmpFd == -1)
+    return nullptr;
+
+  FILE *Ftmp = fdopen(TmpFd, "wb");
+
+  if (!Ftmp)
+    return nullptr;
+
+  fwrite(Image->ImageStart, ImageSize, 1, Ftmp);
+  fclose(Ftmp);
+
+  std::string ErrMsg;
+  auto DynLib = std::make_unique<sys::DynamicLibrary>(
+      sys::DynamicLibrary::getPermanentLibrary(TmpName, &ErrMsg));
+  DynLibTy Lib = {TmpName, std::move(DynLib)};
+
+  if (!Lib.DynLib->isValid()) {
+    DP("Target library loading error: %s\n", ErrMsg.c_str());
     return NULL;
   }
 
-  FILE *ftmp = fdopen(tmp_fd, "wb");
+  __tgt_offload_entry *HostBegin = Image->EntriesBegin;
+  __tgt_offload_entry *HostEnd = Image->EntriesEnd;
 
-  if (!ftmp) {
-    elf_end(e);
-    return NULL;
+  // Create a new offloading entry list using the device symbol address.
+  SmallVector<__tgt_offload_entry> Entries;
+  for (__tgt_offload_entry *E = HostBegin; E != HostEnd; ++E) {
+    if (!E->addr)
+      return nullptr;
+
+    __tgt_offload_entry Entry = *E;
+
+    void *DevAddr = Lib.DynLib->getAddressOfSymbol(E->name);
+    Entry.addr = DevAddr;
+
+    DP("Entry point " DPxMOD " maps to global %s (" DPxMOD ")\n",
+       DPxPTR(E - HostBegin), E->name, DPxPTR(DevAddr));
+
+    Entries.emplace_back(Entry);
   }
 
-  fwrite(image->ImageStart, ImageSize, 1, ftmp);
-  fclose(ftmp);
+  DeviceInfo.createOffloadTable(DeviceId, std::move(Entries));
+  DeviceInfo.DynLibs.emplace_back(std::move(Lib));
 
-  DynLibTy Lib = {tmp_name, dlopen(tmp_name, RTLD_LAZY)};
-
-  if (!Lib.Handle) {
-    DP("Target library loading error: %s\n", dlerror());
-    elf_end(e);
-    return NULL;
-  }
-
-  DeviceInfo.DynLibs.push_back(Lib);
-
-  struct link_map *libInfo = (struct link_map *)Lib.Handle;
-
-  // The place where the entries info is loaded is the library base address
-  // plus the offset determined from the ELF file.
-  Elf64_Addr entries_addr = libInfo->l_addr + entries_offset;
-
-  DP("Pointer to first entry to be loaded is (" DPxMOD ").\n",
-     DPxPTR(entries_addr));
-
-  // Table of pointers to all the entries in the target.
-  __tgt_offload_entry *entries_table = (__tgt_offload_entry *)entries_addr;
-
-  __tgt_offload_entry *entries_begin = &entries_table[0];
-  __tgt_offload_entry *entries_end = entries_begin + NumEntries;
-
-  if (!entries_begin) {
-    DP("Can't obtain entries begin\n");
-    elf_end(e);
-    return NULL;
-  }
-
-  DP("Entries table range is (" DPxMOD ")->(" DPxMOD ")\n",
-     DPxPTR(entries_begin), DPxPTR(entries_end));
-  DeviceInfo.createOffloadTable(device_id, entries_begin, entries_end);
-
-  elf_end(e);
-
-  return DeviceInfo.getOffloadEntriesTable(device_id);
+  return DeviceInfo.getOffloadEntriesTable(DeviceId);
 }
 
-void __tgt_rtl_print_device_info(int32_t device_id) {
+void __tgt_rtl_print_device_info(int32_t DeviceId) {
   printf("    This is a generic-elf-64bit device\n");
 }
 
 // Sample implementation of explicit memory allocator. For this plugin all kinds
 // are equivalent to each other.
-void *__tgt_rtl_data_alloc(int32_t device_id, int64_t size, void *hst_ptr,
-                           int32_t kind) {
-  void *ptr = NULL;
+void *__tgt_rtl_data_alloc(int32_t DeviceId, int64_t Size, void *HstPtr,
+                           int32_t Kind) {
+  void *Ptr = NULL;
 
-  switch (kind) {
+  switch (Kind) {
   case TARGET_ALLOC_DEVICE:
   case TARGET_ALLOC_HOST:
   case TARGET_ALLOC_SHARED:
   case TARGET_ALLOC_DEFAULT:
-    ptr = malloc(size);
+    Ptr = malloc(Size);
     break;
   default:
     REPORT("Invalid target data allocation kind");
   }
 
-  return ptr;
+  return Ptr;
 }
 
-int32_t __tgt_rtl_data_submit(int32_t device_id, void *tgt_ptr, void *hst_ptr,
-                              int64_t size) {
-  memcpy(tgt_ptr, hst_ptr, size);
+int32_t __tgt_rtl_data_submit(int32_t DeviceId, void *TgtPtr, void *HstPtr,
+                              int64_t Size) {
+  memcpy(TgtPtr, HstPtr, Size);
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_data_retrieve(int32_t device_id, void *hst_ptr, void *tgt_ptr,
-                                int64_t size) {
-  memcpy(hst_ptr, tgt_ptr, size);
+int32_t __tgt_rtl_data_retrieve(int32_t DeviceId, void *HstPtr, void *TgtPtr,
+                                int64_t Size) {
+  memcpy(HstPtr, TgtPtr, Size);
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_data_delete(int32_t device_id, void *tgt_ptr) {
-  free(tgt_ptr);
+int32_t __tgt_rtl_data_delete(int32_t DeviceId, void *TgtPtr, int32_t) {
+  free(TgtPtr);
   return OFFLOAD_SUCCESS;
 }
 
-int32_t __tgt_rtl_run_target_team_region(int32_t device_id, void *tgt_entry_ptr,
-                                         void **tgt_args,
-                                         ptrdiff_t *tgt_offsets,
-                                         int32_t arg_num, int32_t team_num,
-                                         int32_t thread_limit,
-                                         uint64_t loop_tripcount /*not used*/) {
+int32_t __tgt_rtl_launch_kernel(int32_t DeviceId, void *TgtEntryPtr,
+                                void **TgtArgs, ptrdiff_t *TgtOffsets,
+                                KernelArgsTy *KernelArgs,
+                                __tgt_async_info *AsyncInfoPtr) {
+  assert(!KernelArgs->NumTeams[1] && !KernelArgs->NumTeams[2] &&
+         !KernelArgs->ThreadLimit[1] && !KernelArgs->ThreadLimit[2] &&
+         "Only one dimensional kernels supported.");
   // ignore team num and thread limit.
 
   // Use libffi to launch execution.
-  ffi_cif cif;
+  ffi_cif Cif;
 
   // All args are references.
-  std::vector<ffi_type *> args_types(arg_num, &ffi_type_pointer);
-  std::vector<void *> args(arg_num);
-  std::vector<void *> ptrs(arg_num);
+  std::vector<ffi_type *> ArgsTypes(KernelArgs->NumArgs, &ffi_type_pointer);
+  std::vector<void *> Args(KernelArgs->NumArgs);
+  std::vector<void *> Ptrs(KernelArgs->NumArgs);
 
-  for (int32_t i = 0; i < arg_num; ++i) {
-    ptrs[i] = (void *)((intptr_t)tgt_args[i] + tgt_offsets[i]);
-    args[i] = &ptrs[i];
+  for (uint32_t I = 0; I < KernelArgs->NumArgs; ++I) {
+    Ptrs[I] = (void *)((intptr_t)TgtArgs[I] + TgtOffsets[I]);
+    Args[I] = &Ptrs[I];
   }
 
-  ffi_status status = ffi_prep_cif(&cif, FFI_DEFAULT_ABI, arg_num,
-                                   &ffi_type_void, &args_types[0]);
+  ffi_status Status = ffi_prep_cif(&Cif, FFI_DEFAULT_ABI, KernelArgs->NumArgs,
+                                   &ffi_type_void, &ArgsTypes[0]);
 
-  assert(status == FFI_OK && "Unable to prepare target launch!");
+  assert(Status == FFI_OK && "Unable to prepare target launch!");
 
-  if (status != FFI_OK)
+  if (Status != FFI_OK)
     return OFFLOAD_FAIL;
 
-  DP("Running entry point at " DPxMOD "...\n", DPxPTR(tgt_entry_ptr));
+  DP("Running entry point at " DPxMOD "...\n", DPxPTR(TgtEntryPtr));
 
-  void (*entry)(void);
-  *((void **)&entry) = tgt_entry_ptr;
-  ffi_call(&cif, entry, NULL, &args[0]);
+  void (*Entry)(void);
+  *((void **)&Entry) = TgtEntryPtr;
+  ffi_call(&Cif, Entry, NULL, &Args[0]);
   return OFFLOAD_SUCCESS;
-}
-
-int32_t __tgt_rtl_run_target_region(int32_t device_id, void *tgt_entry_ptr,
-                                    void **tgt_args, ptrdiff_t *tgt_offsets,
-                                    int32_t arg_num) {
-  // use one team and one thread.
-  return __tgt_rtl_run_target_team_region(device_id, tgt_entry_ptr, tgt_args,
-                                          tgt_offsets, arg_num, 1, 1, 0);
 }
 
 #ifdef __cplusplus

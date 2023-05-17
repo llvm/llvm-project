@@ -316,7 +316,7 @@ define void @bcast_unfold_mul_v8i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu64 8192(%rdi,%rax), %zmm0
 ; CHECK-NEXT:    vpaddq %zmm0, %zmm0, %zmm1
-; CHECK-NEXT:    vpaddq %zmm1, %zmm0, %zmm0
+; CHECK-NEXT:    vpaddq %zmm0, %zmm1, %zmm0
 ; CHECK-NEXT:    vmovdqu64 %zmm0, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $64, %rax
 ; CHECK-NEXT:    jne .LBB9_1
@@ -351,7 +351,7 @@ define void @bcast_unfold_mul_v4i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %ymm0
 ; CHECK-NEXT:    vpaddq %ymm0, %ymm0, %ymm1
-; CHECK-NEXT:    vpaddq %ymm1, %ymm0, %ymm0
+; CHECK-NEXT:    vpaddq %ymm0, %ymm1, %ymm0
 ; CHECK-NEXT:    vmovdqu %ymm0, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $32, %rax
 ; CHECK-NEXT:    jne .LBB10_1
@@ -386,7 +386,7 @@ define void @bcast_unfold_mul_v2i64(i64* %arg) {
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    vmovdqu 8192(%rdi,%rax), %xmm0
 ; CHECK-NEXT:    vpaddq %xmm0, %xmm0, %xmm1
-; CHECK-NEXT:    vpaddq %xmm1, %xmm0, %xmm0
+; CHECK-NEXT:    vpaddq %xmm0, %xmm1, %xmm0
 ; CHECK-NEXT:    vmovdqu %xmm0, 8192(%rdi,%rax)
 ; CHECK-NEXT:    addq $16, %rax
 ; CHECK-NEXT:    jne .LBB11_1

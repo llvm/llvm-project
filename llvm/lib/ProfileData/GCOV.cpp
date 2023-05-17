@@ -23,6 +23,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
+#include <optional>
 #include <system_error>
 
 using namespace llvm;
@@ -336,10 +337,8 @@ StringRef GCOVFunction::getName(bool demangle) const {
   if (demangled.empty()) {
     do {
       if (Name.startswith("_Z")) {
-        int status = 0;
         // Name is guaranteed to be NUL-terminated.
-        char *res = itaniumDemangle(Name.data(), nullptr, nullptr, &status);
-        if (status == 0) {
+        if (char *res = itaniumDemangle(Name.data())) {
           demangled = res;
           free(res);
           break;
@@ -491,12 +490,12 @@ uint64_t GCOVBlock::getCyclesCount(const BlockVector &blocks) {
   uint64_t count = 0, d;
   for (;;) {
     // Make blocks on the line traversable and try finding a cycle.
-    for (auto b : blocks) {
+    for (const auto *b : blocks) {
       const_cast<GCOVBlock *>(b)->traversable = true;
       const_cast<GCOVBlock *>(b)->incoming = nullptr;
     }
     d = 0;
-    for (auto block : blocks) {
+    for (const auto *block : blocks) {
       auto *b = const_cast<GCOVBlock *>(block);
       if (b->traversable && (d = augmentOneCycle(b, stack)) > 0)
         break;
@@ -507,7 +506,7 @@ uint64_t GCOVBlock::getCyclesCount(const BlockVector &blocks) {
   }
   // If there is no more loop, all traversable bits should have been cleared.
   // This property is needed by subsequent calls.
-  for (auto b : blocks) {
+  for (const auto *b : blocks) {
     assert(!b->traversable);
     (void)b;
   }
@@ -878,7 +877,7 @@ void Context::print(StringRef filename, StringRef gcno, StringRef gcda,
 
     if (options.NoOutput || options.Intermediate)
       continue;
-    Optional<raw_fd_ostream> os;
+    std::optional<raw_fd_ostream> os;
     if (!options.UseStdout) {
       std::error_code ec;
       os.emplace(gcovName, ec, sys::fs::OF_TextWithCRLF);

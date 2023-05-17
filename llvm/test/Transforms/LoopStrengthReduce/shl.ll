@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-reduce -gvn -S | FileCheck %s
+; RUN: opt -opaque-pointers=0 < %s -loop-reduce -gvn -S | FileCheck %s
 
 target datalayout = "e-i64:64-v16:16-v32:32-n16:32:64"
 

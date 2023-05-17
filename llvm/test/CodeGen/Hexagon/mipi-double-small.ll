@@ -13,7 +13,7 @@ b1:                                               ; preds = %b0
 
 b2:                                               ; preds = %b1
   %v0 = tail call <32 x i32> @llvm.hexagon.V6.lo.128B(<64 x i32> undef)
-  store <32 x i32> %v0, <32 x i32>* undef, align 128
+  store <32 x i32> %v0, ptr undef, align 128
   unreachable
 
 b3:                                               ; preds = %b1

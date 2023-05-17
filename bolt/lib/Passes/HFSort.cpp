@@ -86,7 +86,7 @@ namespace {
 
 void freezeClusters(const CallGraph &Cg, std::vector<Cluster> &Clusters) {
   uint32_t TotalSize = 0;
-  std::sort(Clusters.begin(), Clusters.end(), compareClustersDensity);
+  llvm::sort(Clusters, compareClustersDensity);
   for (Cluster &C : Clusters) {
     uint32_t NewSize = TotalSize + C.size();
     if (NewSize > FrozenPages * HugePageSize)
@@ -150,13 +150,12 @@ std::vector<Cluster> clusterize(const CallGraph &Cg) {
   for (Cluster &Cluster : Clusters)
     FuncCluster[Cluster.targets().front()] = &Cluster;
 
-  std::sort(SortedFuncs.begin(), SortedFuncs.end(),
-            [&](const NodeId F1, const NodeId F2) {
-              const CallGraph::Node &Func1 = Cg.getNode(F1);
-              const CallGraph::Node &Func2 = Cg.getNode(F2);
-              return Func1.samples() * Func2.size() > // TODO: is this correct?
-                     Func2.samples() * Func1.size();
-            });
+  llvm::sort(SortedFuncs, [&](const NodeId F1, const NodeId F2) {
+    const CallGraph::Node &Func1 = Cg.getNode(F1);
+    const CallGraph::Node &Func2 = Cg.getNode(F2);
+    return Func1.samples() * Func2.size() > // TODO: is this correct?
+           Func2.samples() * Func1.size();
+  });
 
   // Process each function, and consider merging its cluster with the
   // one containing its most likely predecessor.
@@ -234,8 +233,7 @@ std::vector<Cluster> clusterize(const CallGraph &Cg) {
     Visited.insert(Cluster);
   }
 
-  std::sort(SortedClusters.begin(), SortedClusters.end(),
-            compareClustersDensity);
+  llvm::sort(SortedClusters, compareClustersDensity);
 
   return SortedClusters;
 }
@@ -251,9 +249,9 @@ std::vector<Cluster> randomClusters(const CallGraph &Cg) {
     Clusters.emplace_back(F, Cg.getNode(F));
   }
 
-  std::sort(
-      Clusters.begin(), Clusters.end(),
-      [](const Cluster &A, const Cluster &B) { return A.size() < B.size(); });
+  llvm::sort(Clusters, [](const Cluster &A, const Cluster &B) {
+    return A.size() < B.size();
+  });
 
   auto pickMergeCluster = [&Clusters](const size_t Idx) {
     size_t MaxIdx = Idx + 1;

@@ -22,21 +22,18 @@ define i32 @main() nounwind {
 ; RV32IFD-NEXT:    call test@plt
 ; RV32IFD-NEXT:    sw a0, 0(sp)
 ; RV32IFD-NEXT:    sw a1, 4(sp)
-; RV32IFD-NEXT:    fld ft0, 0(sp)
+; RV32IFD-NEXT:    fld fa5, 0(sp)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_0)
-; RV32IFD-NEXT:    fld ft1, %lo(.LCPI1_0)(a0)
+; RV32IFD-NEXT:    fld fa4, %lo(.LCPI1_0)(a0)
 ; RV32IFD-NEXT:    lui a0, %hi(.LCPI1_1)
-; RV32IFD-NEXT:    fld ft2, %lo(.LCPI1_1)(a0)
-; RV32IFD-NEXT:    flt.d a0, ft0, ft1
-; RV32IFD-NEXT:    not a0, a0
-; RV32IFD-NEXT:    flt.d a1, ft2, ft0
-; RV32IFD-NEXT:    xori a1, a1, 1
-; RV32IFD-NEXT:    and a0, a0, a1
-; RV32IFD-NEXT:    bnez a0, .LBB1_2
+; RV32IFD-NEXT:    fld fa3, %lo(.LCPI1_1)(a0)
+; RV32IFD-NEXT:    flt.d a0, fa5, fa4
+; RV32IFD-NEXT:    flt.d a1, fa3, fa5
+; RV32IFD-NEXT:    or a0, a0, a1
+; RV32IFD-NEXT:    beqz a0, .LBB1_2
 ; RV32IFD-NEXT:  # %bb.1: # %if.then
 ; RV32IFD-NEXT:    call abort@plt
 ; RV32IFD-NEXT:  .LBB1_2: # %if.end
-; RV32IFD-NEXT:    li a0, 0
 ; RV32IFD-NEXT:    call exit@plt
 entry:
   %call = call double @test(double 2.000000e+00)

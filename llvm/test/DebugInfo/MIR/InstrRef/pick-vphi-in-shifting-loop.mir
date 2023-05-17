@@ -12,14 +12,14 @@
 # in block 5.
 #
 # CHECK-LABEL: bb.3:
-# CHECK:       DBG_INSTR_REF 7, 0
-# CHECK-NEXT:  DBG_VALUE $rdx
+# CHECK:       DBG_INSTR_REF {{.+}}, dbg-instr-ref(7, 0)
+# CHECK-NEXT:  DBG_VALUE_LIST {{.+}}, $rdx
 # CHECK-NEXT:  $rcx = MOV64rr $rdx
 # CHECK-LABEL: bb.4:
-# CHECK:       DBG_VALUE $rcx
+# CHECK:       DBG_VALUE_LIST {{.+}}, $rcx
 # CHECK-NEXT:  $rdx = MOV64rr killed $rcx
 # CHECK-LABEL: bb.5:
-# CHEKC-NOT:   DBG_VALUE
+# CHECK-NOT:   DBG_VALUE
 --- |
   target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
   target triple = "x86_64-unknown-linux-gnu"
@@ -77,6 +77,7 @@
 name:            bees
 alignment:       16
 tracksRegLiveness: true
+debugInstrRef: true
 frameInfo:
   maxAlignment:    1
   maxCallFrameSize: 0
@@ -91,7 +92,7 @@ body:             |
     liveins: $rcx, $rdi, $rdx, $eflags
   
     DBG_PHI $rcx, 2
-    DBG_INSTR_REF 2, 0, !18, !DIExpression(), debug-location !22
+    DBG_INSTR_REF !18, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(2, 0), debug-location !22
     JCC_1 %bb.1, 4, implicit $eflags, debug-location !22
   
   bb.2:
@@ -105,7 +106,7 @@ body:             |
     liveins: $rcx, $rdi, $eflags
   
     $rdx = MOV64ri 0, debug-instr-number 7, debug-location !22
-    DBG_INSTR_REF 7, 0, !18, !DIExpression(), debug-location !22
+    DBG_INSTR_REF !18, !DIExpression(DW_OP_LLVM_arg, 0), dbg-instr-ref(7, 0), debug-location !22
     $rcx = MOV64rr $rdx
     JMP_1 %bb.5, debug-location !22
   

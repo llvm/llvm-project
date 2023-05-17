@@ -7,11 +7,11 @@
 
 # RUN: not ld.lld %t.o --defsym=a=-1 --defsym=b=0 -o /dev/null 2>&1 | \
 # RUN:   FileCheck --check-prefix=OVERFLOW1 %s
-# OVERFLOW1: relocation R_386_16 out of range: -32769 is not in [-32768, 65535]; references a
+# OVERFLOW1: relocation R_386_16 out of range: -32769 is not in [-32768, 65535]; references 'a'
 
 # RUN: not ld.lld %t.o --defsym=a=0 --defsym=b=32769 -o /dev/null 2>&1 | \
 # RUN:   FileCheck --check-prefix=OVERFLOW2 %s
-# OVERFLOW2: relocation R_386_16 out of range: 65536 is not in [-32768, 65535]; references b
+# OVERFLOW2: relocation R_386_16 out of range: 65536 is not in [-32768, 65535]; references 'b'
 
 .code16
 .global _start

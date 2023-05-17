@@ -55,11 +55,11 @@ define i64 @test2_PR2274(i32 %x, i32 %v) nounwind {
 define i32 @PR30366(i1 %a) {
 ; CHECK-LABEL: @PR30366(
 ; CHECK-NEXT:    [[Z:%.*]] = zext i1 [[A:%.*]] to i32
-; CHECK-NEXT:    [[D:%.*]] = lshr i32 [[Z]], zext (i16 ptrtoint ([1 x i16]* @b to i16) to i32)
-; CHECK-NEXT:    ret i32 [[D]]
+; CHECK-NEXT:    [[D1:%.*]] = lshr i32 [[Z]], zext (i16 ptrtoint (ptr @b to i16) to i32)
+; CHECK-NEXT:    ret i32 [[D1]]
 ;
   %z = zext i1 %a to i32
-  %d = udiv i32 %z, zext (i16 shl (i16 1, i16 ptrtoint ([1 x i16]* @b to i16)) to i32)
+  %d = udiv i32 %z, zext (i16 shl (i16 1, i16 ptrtoint (ptr @b to i16)) to i32)
   ret i32 %d
 }
 
@@ -79,27 +79,85 @@ define i177 @ossfuzz_4857(i177 %X, i177 %Y) {
   %B22 = add i177 %B9, %B13
   %B1 = udiv i177 %B5, %B6
   %C9 = icmp ult i177 %Y, %B22
-  store i1 %C9, i1* undef
+  store i1 %C9, ptr undef
   ret i177 %B1
 }
 
-define i32 @udiv_demanded(i32 %a) {
-; CHECK-LABEL: @udiv_demanded(
-; CHECK-NEXT:    [[U:%.*]] = udiv i32 [[A:%.*]], 12
-; CHECK-NEXT:    ret i32 [[U]]
+; 2 low bits are not needed because 12 has 2 trailing zeros
+
+define i8 @udiv_demanded_low_bits_set(i8 %a) {
+; CHECK-LABEL: @udiv_demanded_low_bits_set(
+; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A:%.*]], 12
+; CHECK-NEXT:    ret i8 [[U]]
 ;
-  %o = or i32 %a, 3
-  %u = udiv i32 %o, 12
-  ret i32 %u
+  %o = or i8 %a, 3
+  %u = udiv i8 %o, 12
+  ret i8 %u
 }
 
-define i32 @udiv_exact_demanded(i32 %a) {
-; CHECK-LABEL: @udiv_exact_demanded(
-; CHECK-NEXT:    [[O:%.*]] = and i32 [[A:%.*]], -3
-; CHECK-NEXT:    [[U:%.*]] = udiv exact i32 [[O]], 12
-; CHECK-NEXT:    ret i32 [[U]]
+; This can't divide evenly, so it is poison.
+
+define i8 @udiv_exact_demanded_low_bits_set(i8 %a) {
+; CHECK-LABEL: @udiv_exact_demanded_low_bits_set(
+; CHECK-NEXT:    ret i8 poison
 ;
-  %o = and i32 %a, -3
-  %u = udiv exact i32 %o, 12
-  ret i32 %u
+  %o = or i8 %a, 3
+  %u = udiv exact i8 %o, 12
+  ret i8 %u
+}
+
+; All high bits are set, so this simplifies.
+
+define i8 @udiv_demanded_high_bits_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_demanded_high_bits_set(
+; CHECK-NEXT:    ret i8 21
+;
+  %o = or i8 %x, -4
+  %r = udiv i8 %o, 12
+  ret i8 %r
+}
+
+; This should fold the same as above.
+
+define i8 @udiv_exact_demanded_high_bits_set(i8 %x, i8 %y) {
+; CHECK-LABEL: @udiv_exact_demanded_high_bits_set(
+; CHECK-NEXT:    ret i8 21
+;
+  %o = or i8 %x, -4
+  %r = udiv exact i8 %o, 12
+  ret i8 %r
+}
+
+; 2 low bits are not needed because 12 has 2 trailing zeros
+
+define i8 @udiv_demanded_low_bits_clear(i8 %a) {
+; CHECK-LABEL: @udiv_demanded_low_bits_clear(
+; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A:%.*]], 12
+; CHECK-NEXT:    ret i8 [[U]]
+;
+  %o = and i8 %a, -4
+  %u = udiv i8 %o, 12
+  ret i8 %u
+}
+
+; This should fold the same as above.
+
+define i8 @udiv_exact_demanded_low_bits_clear(i8 %a) {
+; CHECK-LABEL: @udiv_exact_demanded_low_bits_clear(
+; CHECK-NEXT:    [[U:%.*]] = udiv i8 [[A:%.*]], 12
+; CHECK-NEXT:    ret i8 [[U]]
+;
+  %o = and i8 %a, -4
+  %u = udiv exact i8 %o, 12
+  ret i8 %u
+}
+
+define <vscale x 1 x i32> @udiv_demanded3(<vscale x 1 x i32> %a) {
+; CHECK-LABEL: @udiv_demanded3(
+; CHECK-NEXT:    [[U:%.*]] = udiv <vscale x 1 x i32> [[A:%.*]], shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+; CHECK-NEXT:    ret <vscale x 1 x i32> [[U]]
+;
+  %o = or <vscale x 1 x i32> %a, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 3, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  %u = udiv <vscale x 1 x i32> %o, shufflevector (<vscale x 1 x i32> insertelement (<vscale x 1 x i32> poison, i32 12, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer)
+  ret <vscale x 1 x i32> %u
 }

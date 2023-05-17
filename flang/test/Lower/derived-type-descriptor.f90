@@ -11,22 +11,22 @@ subroutine foo()
   type(sometype), allocatable, save :: x(:)
 end subroutine
 
-! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.n.num constant : !fir.char<1,3> {
+! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.n.num constant target : !fir.char<1,3> {
 ! CHECK: %[[res:.*]] = fir.string_lit "num"(3) : !fir.char<1,3>
 ! CHECK: fir.has_value %[[res]] : !fir.char<1,3>
-! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.di.sometype.num constant : i32
-! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.n.values constant : !fir.char<1,6> {
+! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.di.sometype.num constant target : i32
+! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.n.values constant target : !fir.char<1,6> {
 ! CHECK: %[[res:.*]] = fir.string_lit "values"(6) : !fir.char<1,6>
 ! CHECK: fir.has_value %[[res]] : !fir.char<1,6>
-! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.n.sometype constant : !fir.char<1,8> {
+! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.n.sometype constant target : !fir.char<1,8> {
 ! CHECK: %[[res:.*]] = fir.string_lit "sometype"(8) : !fir.char<1,8>
 ! CHECK: fir.has_value %[[res]] : !fir.char<1,8>
 
-! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.di.sometype.values constant : !fir.type<_QFfooT.dp.sometype.values{values:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}> {
+! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.di.sometype.values constant target : !fir.type<_QFfooT.dp.sometype.values{values:!fir.box<!fir.ptr<!fir.array<?x?xf32>>>}> {
   ! CHECK: fir.address_of(@_QFfooEinit_values)
 ! CHECK: }
 
-! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.dt.sometype constant {{.*}} {
+! CHECK-LABEL: fir.global linkonce_odr @_QFfooE.dt.sometype constant target {{.*}} {
   !CHECK: fir.address_of(@_QFfooE.n.sometype)
   !CHECK: fir.address_of(@_QFfooE.c.sometype)
 ! CHECK:}
@@ -46,10 +46,10 @@ subroutine char_comp_init()
   type(t) :: a
 end subroutine
 
-! CHECK-LABEL: fir.global linkonce_odr @_QFchar_comp_initE.di.t.name constant : !fir.char<1,8> {
+! CHECK-LABEL: fir.global linkonce_odr @_QFchar_comp_initE.di.t.name constant target : !fir.char<1,8> {
 ! CHECK: %[[res:.*]] = fir.string_lit "Empty   "(8) : !fir.char<1,8>
 ! CHECK: fir.has_value %[[res]] : !fir.char<1,8>
 
-! CHECK-LABEL: fir.global linkonce_odr @_QFchar_comp_initE.c.t constant : {{.*}} {
+! CHECK-LABEL: fir.global linkonce_odr @_QFchar_comp_initE.c.t constant target : {{.*}} {
   ! CHECK: fir.address_of(@_QFchar_comp_initE.di.t.name) : !fir.ref<!fir.char<1,8>>
 ! CHECK: }

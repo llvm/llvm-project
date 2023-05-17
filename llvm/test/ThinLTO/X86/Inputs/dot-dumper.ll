@@ -6,8 +6,8 @@ target triple = "x86_64-unknown-linux-gnu"
 
 ; Function Attrs: norecurse nounwind readonly uwtable
 define i32 @foo() local_unnamed_addr #0 {
-  %1 = load i32, i32* @B, align 4
-  %2 = load i32, i32* @A, align 4
+  %1 = load i32, ptr @B, align 4
+  %2 = load i32, ptr @A, align 4
   %3 = add nsw i32 %2, %1
   ret i32 %3
 }

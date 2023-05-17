@@ -72,8 +72,7 @@ are welcome:
 * macOS debugging for i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS simulator debugging on i386, x86_64 and AArch64
 * iOS, tvOS, and watchOS device debugging on ARM and AArch64
-* Linux user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC64le,
-  s390x
+* Linux user-space debugging for i386, x86_64, ARM, AArch64, PPC64le, s390x
 * FreeBSD user-space debugging for i386, x86_64, ARM, AArch64, MIPS64, PPC
 * NetBSD user-space debugging for i386 and x86_64
 * Windows user-space debugging for i386, x86_64, ARM and AArch64 (*)
@@ -133,6 +132,7 @@ interesting areas to contribute to lldb.
    use/variable
    use/symbolication
    use/symbols
+   use/extensions
    use/python
    use/python-reference
    use/remote
@@ -150,6 +150,7 @@ interesting areas to contribute to lldb.
    resources/contributing
    resources/build
    resources/test
+   resources/fuzzing
    resources/bots
    resources/caveats
 

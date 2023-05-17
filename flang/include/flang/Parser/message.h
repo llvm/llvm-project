@@ -29,9 +29,9 @@
 
 namespace Fortran::parser {
 
-// Use "..."_err_en_US, "..."_warn_en_US, "..."_port_en_US, and "..."_en_US
-// string literals to define the static text and fatality of a message.
-//
+// Use "..."_err_en_US, "..."_warn_en_US, "..."_port_en_US, "..."_because_en_US,
+// "..."_todo_en_US, and "..."_en_US string literals to define the static text
+// and severity of a message or attachment.
 enum class Severity {
   Error, // fatal error that prevents code and module file generation
   Warning, // likely problem
@@ -59,7 +59,7 @@ public:
     severity_ = severity;
     return *this;
   }
-  bool isFatal() const {
+  bool IsFatal() const {
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
 
@@ -81,6 +81,10 @@ constexpr MessageFixedText operator""_port_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Portability};
 }
+constexpr MessageFixedText operator""_because_en_US(
+    const char str[], std::size_t n) {
+  return MessageFixedText{str, n, Severity::Because};
+}
 constexpr MessageFixedText operator""_todo_en_US(
     const char str[], std::size_t n) {
   return MessageFixedText{str, n, Severity::Todo};
@@ -92,9 +96,9 @@ constexpr MessageFixedText operator""_en_US(const char str[], std::size_t n) {
 
 // The construction of a MessageFormattedText uses a MessageFixedText
 // as a vsnprintf() formatting string that is applied to the
-// following arguments.  CharBlock and std::string argument
-// values are also supported; they are automatically converted into
-// char pointers that are suitable for '%s' formatting.
+// following arguments.  CharBlock, std::string, and std::string_view
+// argument values are also supported; they are automatically converted
+// into char pointers that are suitable for '%s' formatting.
 class MessageFormattedText {
 public:
   template <typename... A>
@@ -107,7 +111,7 @@ public:
   MessageFormattedText &operator=(const MessageFormattedText &) = default;
   MessageFormattedText &operator=(MessageFormattedText &&) = default;
   const std::string &string() const { return string_; }
-  bool isFatal() const {
+  bool IsFatal() const {
     return severity_ == Severity::Error || severity_ == Severity::Todo;
   }
   Severity severity() const { return severity_; }
@@ -124,10 +128,6 @@ private:
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return x;
   }
-  template <typename A> A Convert(A &x) {
-    static_assert(!std::is_class_v<std::decay_t<A>>);
-    return x;
-  }
   template <typename A> common::IfNoLvalue<A, A> Convert(A &&x) {
     static_assert(!std::is_class_v<std::decay_t<A>>);
     return std::move(x);
@@ -135,8 +135,9 @@ private:
   const char *Convert(const char *s) { return s; }
   const char *Convert(char *s) { return s; }
   const char *Convert(const std::string &);
-  const char *Convert(std::string &);
   const char *Convert(std::string &&);
+  const char *Convert(const std::string_view &);
+  const char *Convert(std::string_view &&);
   const char *Convert(CharBlock);
   std::intmax_t Convert(std::int64_t x) { return x; }
   std::uintmax_t Convert(std::uint64_t x) { return x; }
@@ -341,6 +342,17 @@ public:
 
   template <typename... A> Message *Say(A &&...args) {
     return Say(at_, std::forward<A>(args)...);
+  }
+
+  Message *Say(Message &&msg) {
+    if (messages_ != nullptr) {
+      if (contextMessage_) {
+        msg.SetContext(contextMessage_.get());
+      }
+      return &messages_->Say(std::move(msg));
+    } else {
+      return nullptr;
+    }
   }
 
 private:

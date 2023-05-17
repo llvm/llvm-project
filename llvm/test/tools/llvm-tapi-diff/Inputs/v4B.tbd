@@ -53,3 +53,4 @@ exports:
     weak-symbols:    [ _symC ]
   - targets:         [ x86_64-ios-simulator ]
     symbols:         [ _symB ]
+...

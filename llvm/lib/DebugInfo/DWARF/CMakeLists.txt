@@ -10,6 +10,7 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   DWARFDebugArangeSet.cpp
   DWARFDebugAranges.cpp
   DWARFDebugFrame.cpp
+  DWARFTypePrinter.cpp
   DWARFDebugInfoEntry.cpp
   DWARFDebugLine.cpp
   DWARFDebugLoc.cpp
@@ -35,6 +36,6 @@ add_llvm_component_library(LLVMDebugInfoDWARF
   LINK_COMPONENTS
   BinaryFormat
   Object
-  MC
   Support
+  TargetParser
   )

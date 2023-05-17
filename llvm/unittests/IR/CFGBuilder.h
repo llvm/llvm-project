@@ -15,12 +15,12 @@
 #define LLVM_UNITTESTS_CFG_BUILDER_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Debug.h"
 
 #include <memory>
+#include <optional>
 #include <set>
 #include <tuple>
 #include <vector>
@@ -72,8 +72,8 @@ public:
              std::vector<Update> Updates);
 
   BasicBlock *getOrAddBlock(StringRef BlockName);
-  Optional<Update> getNextUpdate() const;
-  Optional<Update> applyUpdate();
+  std::optional<Update> getNextUpdate() const;
+  std::optional<Update> applyUpdate();
   void dump(raw_ostream &OS = dbgs()) const;
 
 private:

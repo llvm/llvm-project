@@ -88,6 +88,12 @@ template <typename T> struct TestValues {
   template <typename Base>
   static constexpr T X555TruncZeroOf = TruncZeroOf<X555, Base>; // 0x5555'5600
 
+// Silence 'warning C4309: 'initializing': truncation of constant value'
+//   in RangeSetCastToPromotionConversionTest.
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(push)
+#pragma warning(disable : 4309)
+#endif
   // Numbers for ranges with the same bits in the lowest byte.
   // 0xAAAA'AA2A
   static constexpr T FromA = ClearLowBytes<XAAA, sizeof(T) - 1> + 42;
@@ -95,6 +101,10 @@ template <typename T> struct TestValues {
   // 0x5555'552A
   static constexpr T FromB = ClearLowBytes<X555, sizeof(T) - 1> + 42;
   static constexpr T ToB = FromB + 2; // 0x5555'552C
+
+#if defined(_MSC_VER) && !defined(__clang__)
+#pragma warning(pop)
+#endif
 };
 
 template <typename T>
@@ -714,14 +724,14 @@ using TruncationConversionCastTypes =
                      CastType<int64_t, uint8_t>, CastType<uint64_t, int32_t>,
                      CastType<uint64_t, int16_t>, CastType<uint64_t, int8_t>>;
 
-TYPED_TEST_SUITE(RangeSetCastToNoopTest, NoopCastTypes);
-TYPED_TEST_SUITE(RangeSetCastToPromotionTest, PromotionCastTypes);
-TYPED_TEST_SUITE(RangeSetCastToTruncationTest, TruncationCastTypes);
-TYPED_TEST_SUITE(RangeSetCastToConversionTest, ConversionCastTypes);
+TYPED_TEST_SUITE(RangeSetCastToNoopTest, NoopCastTypes, );
+TYPED_TEST_SUITE(RangeSetCastToPromotionTest, PromotionCastTypes, );
+TYPED_TEST_SUITE(RangeSetCastToTruncationTest, TruncationCastTypes, );
+TYPED_TEST_SUITE(RangeSetCastToConversionTest, ConversionCastTypes, );
 TYPED_TEST_SUITE(RangeSetCastToPromotionConversionTest,
-                 PromotionConversionCastTypes);
+                 PromotionConversionCastTypes, );
 TYPED_TEST_SUITE(RangeSetCastToTruncationConversionTest,
-                 TruncationConversionCastTypes);
+                 TruncationConversionCastTypes, );
 
 TYPED_TEST(RangeSetCastToNoopTest, RangeSetCastToNoopTest) {
   // Just to reduce the verbosity.

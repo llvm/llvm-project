@@ -8,6 +8,6 @@ define void @foo() {
 ; CHECK-LABEL: foo:
 entry:
 ; CHECK: callq
-  %call = call i64* undef(i64* undef, i8* getelementptr inbounds ([2 x i8], [2 x i8]* @.str10, i32 0, i32 0))
+  %call = call ptr undef(ptr undef, ptr @.str10)
   ret void
 }

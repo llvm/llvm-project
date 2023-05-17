@@ -5,8 +5,6 @@
 // RUN: %clang_dfsan -fno-sanitize=dataflow -O2 -fPIE -DCALLBACKS -DORIGINS -c %s -o %t-callbacks-orig.o
 // RUN: %clang_dfsan -fsanitize-ignorelist=%S/Inputs/flags_abilist.txt -O2 -mllvm -dfsan-conditional-callbacks -mllvm -dfsan-track-origins=1 -DORIGINS %s %t-callbacks-orig.o -o %t-orig
 // RUN: %run %t-orig FooBarBaz 2>&1 | FileCheck %s
-//
-// REQUIRES: x86_64-target-arch
 
 // Tests that callbacks are inserted for conditionals when
 // -dfsan-conditional-callbacks is specified.

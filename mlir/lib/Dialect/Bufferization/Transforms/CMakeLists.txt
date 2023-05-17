@@ -1,11 +1,13 @@
 add_mlir_dialect_library(MLIRBufferizationTransforms
-  AllocTensorElimination.cpp
   Bufferize.cpp
   BufferDeallocation.cpp
   BufferOptimizations.cpp
   BufferResultsToOutParams.cpp
   BufferUtils.cpp
+  BufferViewFlowAnalysis.cpp
   DropEquivalentBufferResults.cpp
+  EmptyTensorElimination.cpp
+  EmptyTensorToAllocTensor.cpp
   FuncBufferizableOpInterfaceImpl.cpp
   OneShotAnalysis.cpp
   OneShotModuleBufferize.cpp
@@ -16,16 +18,19 @@ add_mlir_dialect_library(MLIRBufferizationTransforms
 
   DEPENDS
   MLIRBufferizationPassIncGen
+  MLIRBufferizationEnumsIncGen
 
   LINK_LIBS PUBLIC
-  MLIRBufferization
+  MLIRBufferizationDialect
   MLIRControlFlowInterfaces
-  MLIRFunc
+  MLIRFuncDialect
   MLIRInferTypeOpInterface
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
-  MLIRTensor
+  MLIRTensorDialect
+  MLIRSideEffectInterfaces
   MLIRTransforms
+  MLIRViewLikeInterface
 )
 

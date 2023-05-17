@@ -1,6 +1,6 @@
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 --amdhsa-code-object-version=2 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 --amdhsa-code-object-version=2 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
-; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 --amdhsa-code-object-version=2 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx802 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
+; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj -o - < %s | llvm-readelf --notes - | FileCheck --check-prefix=CHECK %s
 
 %opencl.image1d_t = type opaque
 %opencl.image1d_array_t = type opaque
@@ -70,22 +70,24 @@
 ; CHECK:          TypeName:  image3d_t
 ; CHECK:          Size:      8
 ; CHECK:          ValueKind: Image
-define amdgpu_kernel void @test(%opencl.image1d_t addrspace(1)* %a,
-                                %opencl.image1d_array_t addrspace(1)* %b,
-                                %opencl.image1d_buffer_t addrspace(1)* %c,
-                                %opencl.image2d_t addrspace(1)* %d,
-                                %opencl.image2d_array_t addrspace(1)* %e,
-                                %opencl.image2d_array_depth_t addrspace(1)* %f,
-                                %opencl.image2d_array_msaa_t addrspace(1)* %g,
-                                %opencl.image2d_array_msaa_depth_t addrspace(1)* %h,
-                                %opencl.image2d_depth_t addrspace(1)* %i,
-                                %opencl.image2d_msaa_t addrspace(1)* %j,
-                                %opencl.image2d_msaa_depth_t addrspace(1)* %k,
-                                %opencl.image3d_t addrspace(1)* %l)
+define amdgpu_kernel void @test(ptr addrspace(1) %a,
+                                ptr addrspace(1) %b,
+                                ptr addrspace(1) %c,
+                                ptr addrspace(1) %d,
+                                ptr addrspace(1) %e,
+                                ptr addrspace(1) %f,
+                                ptr addrspace(1) %g,
+                                ptr addrspace(1) %h,
+                                ptr addrspace(1) %i,
+                                ptr addrspace(1) %j,
+                                ptr addrspace(1) %k,
+                                ptr addrspace(1) %l)
     !kernel_arg_type !1 !kernel_arg_base_type !1 {
   ret void
 }
 
+!llvm.module.flags = !{!0}
+!0 = !{i32 1, !"amdgpu_code_object_version", i32 200}
 !1 = !{!"image1d_t", !"image1d_array_t", !"image1d_buffer_t",
        !"image2d_t", !"image2d_array_t", !"image2d_array_depth_t",
        !"image2d_array_msaa_t", !"image2d_array_msaa_depth_t",

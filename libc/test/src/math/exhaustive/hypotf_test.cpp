@@ -10,8 +10,8 @@
 #include "src/__support/FPUtil/FPBits.h"
 #include "src/__support/FPUtil/Hypot.h"
 #include "src/math/hypotf.h"
+#include "test/UnitTest/FPMatcher.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include "utils/UnitTest/FPMatcher.h"
 
 using FPBits = __llvm_libc::fputil::FPBits<float>;
 
@@ -48,20 +48,19 @@ struct LlvmLibcHypotfExhaustiveTest : public LlvmLibcExhaustiveTest<uint32_t> {
 // Range of the first input: [2^23, 2^24);
 static constexpr uint32_t START = (23U + 127U) << 23;
 static constexpr uint32_t STOP = ((23U + 127U) << 23) + 1;
-static constexpr int NUM_THREADS = 1;
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, RoundNearestTieToEven) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::Nearest);
+  test_full_range(START, STOP, mpfr::RoundingMode::Nearest);
 }
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, RoundUp) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::Upward);
+  test_full_range(START, STOP, mpfr::RoundingMode::Upward);
 }
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, RoundDown) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::Downward);
+  test_full_range(START, STOP, mpfr::RoundingMode::Downward);
 }
 
 TEST_F(LlvmLibcHypotfExhaustiveTest, RoundTowardZero) {
-  test_full_range(START, STOP, NUM_THREADS, mpfr::RoundingMode::TowardZero);
+  test_full_range(START, STOP, mpfr::RoundingMode::TowardZero);
 }

@@ -9,26 +9,33 @@
 #ifndef LLVM_LIBC_SUPPORT_COMMON_H
 #define LLVM_LIBC_SUPPORT_COMMON_H
 
-#define LIBC_INLINE_ASM __asm__ __volatile__
-
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(x, 0)
-#define UNUSED __attribute__((unused))
+#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/properties/architectures.h"
 
 #ifndef LLVM_LIBC_FUNCTION_ATTR
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
+// GPU targets do not support aliasing.
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && defined(LIBC_TARGET_ARCH_IS_GPU)
+#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
+  LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
+      __##name##_impl__ __asm__(#name);                                        \
+  type __##name##_impl__ arglist
 // MacOS needs to be excluded because it does not support aliasing.
-#if defined(LLVM_LIBC_PUBLIC_PACKAGING) && (!defined(__APPLE__))
-#define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
+#elif defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
+#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \
   decltype(__llvm_libc::name) name [[gnu::alias(#name)]];                      \
   type __##name##_impl__ arglist
 #else
-#define LLVM_LIBC_FUNCTION(type, name, arglist) type name arglist
+#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist) type name arglist
 #endif
+
+// This extra layer of macro allows `name` to be a macro to rename a function.
+#define LLVM_LIBC_FUNCTION(type, name, arglist)                                \
+  LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)
 
 namespace __llvm_libc {
 namespace internal {

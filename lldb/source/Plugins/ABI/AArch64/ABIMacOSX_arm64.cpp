@@ -8,10 +8,11 @@
 
 #include "ABIMacOSX_arm64.h"
 
+#include <optional>
 #include <vector>
 
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/Triple.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
@@ -141,7 +142,7 @@ bool ABIMacOSX_arm64::GetArgumentValues(Thread &thread,
       return false;
 
     CompilerType value_type = value->GetCompilerType();
-    llvm::Optional<uint64_t> bit_size = value_type.GetBitSize(&thread);
+    std::optional<uint64_t> bit_size = value_type.GetBitSize(&thread);
     if (!bit_size)
       return false;
 
@@ -304,7 +305,7 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
             if (byte_size <= 16) {
               if (byte_size <= RegisterValue::GetMaxByteSize()) {
                 RegisterValue reg_value;
-                error = reg_value.SetValueFromData(v0_info, data, 0, true);
+                error = reg_value.SetValueFromData(*v0_info, data, 0, true);
                 if (error.Success()) {
                   if (!reg_ctx->WriteRegister(v0_info, reg_value))
                     error.SetErrorString("failed to write register v0");
@@ -331,7 +332,7 @@ ABIMacOSX_arm64::SetReturnValueObject(lldb::StackFrameSP &frame_sp,
         if (v0_info) {
           if (byte_size <= v0_info->byte_size) {
             RegisterValue reg_value;
-            error = reg_value.SetValueFromData(v0_info, data, 0, true);
+            error = reg_value.SetValueFromData(*v0_info, data, 0, true);
             if (error.Success()) {
               if (!reg_ctx->WriteRegister(v0_info, reg_value))
                 error.SetErrorString("failed to write register v0");
@@ -494,7 +495,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     uint32_t &NGRN,       // NGRN (see ABI documentation)
     uint32_t &NSRN,       // NSRN (see ABI documentation)
     DataExtractor &data) {
-  llvm::Optional<uint64_t> byte_size =
+  std::optional<uint64_t> byte_size =
       value_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
   if (!byte_size || *byte_size == 0)
     return false;
@@ -512,7 +513,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
     if (NSRN < 8 && (8 - NSRN) >= homogeneous_count) {
       if (!base_type)
         return false;
-      llvm::Optional<uint64_t> base_byte_size =
+      std::optional<uint64_t> base_byte_size =
           base_type.GetByteSize(exe_ctx.GetBestExecutionContextScope());
       if (!base_byte_size)
         return false;
@@ -537,8 +538,8 @@ static bool LoadValueFromConsecutiveGPRRegisters(
         // Make sure we have enough room in "heap_data_up"
         if ((data_offset + *base_byte_size) <= heap_data_up->GetByteSize()) {
           const size_t bytes_copied = reg_value.GetAsMemoryData(
-              reg_info, heap_data_up->GetBytes() + data_offset, *base_byte_size,
-              byte_order, error);
+              *reg_info, heap_data_up->GetBytes() + data_offset,
+              *base_byte_size, byte_order, error);
           if (bytes_copied != *base_byte_size)
             return false;
           data_offset += bytes_copied;
@@ -577,7 +578,7 @@ static bool LoadValueFromConsecutiveGPRRegisters(
 
       const size_t curr_byte_size = std::min<size_t>(8, bytes_left);
       const size_t bytes_copied = reg_value.GetAsMemoryData(
-          reg_info, heap_data_up->GetBytes() + data_offset, curr_byte_size,
+          *reg_info, heap_data_up->GetBytes() + data_offset, curr_byte_size,
           byte_order, error);
       if (bytes_copied == 0)
         return false;
@@ -611,9 +612,6 @@ static bool LoadValueFromConsecutiveGPRRegisters(
         return false;
       ++NGRN;
     }
-
-    if (reg_info == nullptr)
-      return false;
 
     const lldb::addr_t value_addr =
         reg_ctx->ReadRegisterAsUnsigned(reg_info, LLDB_INVALID_ADDRESS);
@@ -650,8 +648,7 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
   if (!reg_ctx)
     return return_valobj_sp;
 
-  llvm::Optional<uint64_t> byte_size =
-      return_compiler_type.GetByteSize(&thread);
+  std::optional<uint64_t> byte_size = return_compiler_type.GetByteSize(&thread);
   if (!byte_size)
     return return_valobj_sp;
 
@@ -692,10 +689,10 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
                       reg_ctx->ReadRegister(x1_reg_info, x1_reg_value)) {
                     Status error;
                     if (x0_reg_value.GetAsMemoryData(
-                            x0_reg_info, heap_data_up->GetBytes() + 0, 8,
+                            *x0_reg_info, heap_data_up->GetBytes() + 0, 8,
                             byte_order, error) &&
                         x1_reg_value.GetAsMemoryData(
-                            x1_reg_info, heap_data_up->GetBytes() + 8, 8,
+                            *x1_reg_info, heap_data_up->GetBytes() + 8, 8,
                             byte_order, error)) {
                       DataExtractor data(
                           DataBufferSP(heap_data_up.release()), byte_order,
@@ -788,7 +785,7 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
           RegisterValue reg_value;
           if (reg_ctx->ReadRegister(v0_info, reg_value)) {
             Status error;
-            if (reg_value.GetAsMemoryData(v0_info, heap_data_up->GetBytes(),
+            if (reg_value.GetAsMemoryData(*v0_info, heap_data_up->GetBytes(),
                                           heap_data_up->GetByteSize(),
                                           byte_order, error)) {
               DataExtractor data(DataBufferSP(heap_data_up.release()),
@@ -819,15 +816,12 @@ ValueObjectSP ABIMacOSX_arm64::GetReturnValueObjectImpl(
 
 lldb::addr_t ABIMacOSX_arm64::FixAddress(addr_t pc, addr_t mask) {
   lldb::addr_t pac_sign_extension = 0x0080000000000000ULL;
-  // Darwin systems originally couldn't determine the proper value
-  // dynamically, so the most common value was hardcoded.  This has
-  // largely been cleaned up, but there are still a handful of
-  // environments that assume the default value is set to this value
-  // and there's no dynamic value to correct it.
-  // When no mask is specified, set it to 39 bits of addressing (0..38).
+  // When no mask is specified, clear/set the top byte; preserve
+  // the low 55 bits (00..54) for addressing and bit 55 to indicate
+  // sign.
   if (mask == 0) {
-    // ~((1ULL<<39)-1)
-    mask = 0xffffff8000000000;
+    // ~((1ULL<<55)-1)
+    mask = 0xff80000000000000;
   }
   return (pc & pac_sign_extension) ? pc | mask : pc & (~mask);
 }

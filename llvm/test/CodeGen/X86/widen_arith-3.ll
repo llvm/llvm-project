@@ -6,7 +6,7 @@
 @.str = internal constant [4 x i8] c"%d \00"
 @.str1 = internal constant [2 x i8] c"\0A\00"
 
-define void @update(<3 x i16>* %dst, <3 x i16>* %src, i32 %n) nounwind {
+define void @update(ptr %dst, ptr %src, i32 %n) nounwind {
 ; CHECK-LABEL: update:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %ebp
@@ -40,40 +40,40 @@ define void @update(<3 x i16>* %dst, <3 x i16>* %src, i32 %n) nounwind {
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
 entry:
-	%dst.addr = alloca <3 x i16>*
-	%src.addr = alloca <3 x i16>*
+	%dst.addr = alloca ptr
+	%src.addr = alloca ptr
 	%n.addr = alloca i32
 	%v = alloca <3 x i16>, align 8
 	%i = alloca i32, align 4
-	store <3 x i16>* %dst, <3 x i16>** %dst.addr
-	store <3 x i16>* %src, <3 x i16>** %src.addr
-	store i32 %n, i32* %n.addr
-	store <3 x i16> < i16 1, i16 1, i16 1 >, <3 x i16>* %v
-	store i32 0, i32* %i
+	store ptr %dst, ptr %dst.addr
+	store ptr %src, ptr %src.addr
+	store i32 %n, ptr %n.addr
+	store <3 x i16> < i16 1, i16 1, i16 1 >, ptr %v
+	store i32 0, ptr %i
 	br label %forcond
 
 forcond:
-	%tmp = load i32, i32* %i
-	%tmp1 = load i32, i32* %n.addr
+	%tmp = load i32, ptr %i
+	%tmp1 = load i32, ptr %n.addr
 	%cmp = icmp slt i32 %tmp, %tmp1
 	br i1 %cmp, label %forbody, label %afterfor
 
 forbody:
-	%tmp2 = load i32, i32* %i
-	%tmp3 = load <3 x i16>*, <3 x i16>** %dst.addr
-	%arrayidx = getelementptr <3 x i16>, <3 x i16>* %tmp3, i32 %tmp2
-	%tmp4 = load i32, i32* %i
-	%tmp5 = load <3 x i16>*, <3 x i16>** %src.addr
-	%arrayidx6 = getelementptr <3 x i16>, <3 x i16>* %tmp5, i32 %tmp4
-	%tmp7 = load <3 x i16>, <3 x i16>* %arrayidx6
+	%tmp2 = load i32, ptr %i
+	%tmp3 = load ptr, ptr %dst.addr
+	%arrayidx = getelementptr <3 x i16>, ptr %tmp3, i32 %tmp2
+	%tmp4 = load i32, ptr %i
+	%tmp5 = load ptr, ptr %src.addr
+	%arrayidx6 = getelementptr <3 x i16>, ptr %tmp5, i32 %tmp4
+	%tmp7 = load <3 x i16>, ptr %arrayidx6
 	%add = add <3 x i16> %tmp7, < i16 1, i16 1, i16 1 >
-	store <3 x i16> %add, <3 x i16>* %arrayidx
+	store <3 x i16> %add, ptr %arrayidx
 	br label %forinc
 
 forinc:
-	%tmp8 = load i32, i32* %i
+	%tmp8 = load i32, ptr %i
 	%inc = add i32 %tmp8, 1
-	store i32 %inc, i32* %i
+	store i32 %inc, ptr %i
 	br label %forcond
 
 afterfor:

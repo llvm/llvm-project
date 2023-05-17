@@ -25,20 +25,20 @@ target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f3
 
 define i32 @main() nounwind {
 entry:
-  %A = alloca [20 x i32], align 4                 ; <[20 x i32]*> [#uses=3]
-  %arraydecay = getelementptr inbounds [20 x i32], [20 x i32]* %A, i32 0, i32 0 ; <i32*> [#uses=1]
-  %arrayidx = getelementptr inbounds i32, i32* %arraydecay, i64 0 ; <i32*> [#uses=1]
-  store i32 0, i32* %arrayidx
+  %A = alloca [20 x i32], align 4                 ; <ptr> [#uses=3]
+  %arraydecay = getelementptr inbounds [20 x i32], ptr %A, i32 0, i32 0 ; <ptr> [#uses=1]
+  %arrayidx = getelementptr inbounds i32, ptr %arraydecay, i64 0 ; <ptr> [#uses=1]
+  store i32 0, ptr %arrayidx
   fence seq_cst
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
   %indvar = phi i64 [ %indvar.next, %for.inc ], [ 0, %entry ] ; <i64> [#uses=2]
-  %arrayidx3 = getelementptr [20 x i32], [20 x i32]* %A, i64 0, i64 %indvar ; <i32*> [#uses=1]
+  %arrayidx3 = getelementptr [20 x i32], ptr %A, i64 0, i64 %indvar ; <ptr> [#uses=1]
   br i1 false, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  store i32 1, i32* %arrayidx3
+  store i32 1, ptr %arrayidx3
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body
@@ -47,9 +47,9 @@ for.inc:                                          ; preds = %for.body
 
 for.end:                                          ; preds = %for.cond
   fence seq_cst
-  %arraydecay5 = getelementptr inbounds [20 x i32], [20 x i32]* %A, i32 0, i32 0 ; <i32*> [#uses=1]
-  %arrayidx6 = getelementptr inbounds i32, i32* %arraydecay5, i64 0 ; <i32*> [#uses=1]
-  %tmp7 = load i32, i32* %arrayidx6                    ; <i32> [#uses=1]
+  %arraydecay5 = getelementptr inbounds [20 x i32], ptr %A, i32 0, i32 0 ; <ptr> [#uses=1]
+  %arrayidx6 = getelementptr inbounds i32, ptr %arraydecay5, i64 0 ; <ptr> [#uses=1]
+  %tmp7 = load i32, ptr %arrayidx6                    ; <i32> [#uses=1]
   %cmp8 = icmp eq i32 %tmp7, 0                    ; <i1> [#uses=1]
   br i1 %cmp8, label %if.then, label %if.else
 

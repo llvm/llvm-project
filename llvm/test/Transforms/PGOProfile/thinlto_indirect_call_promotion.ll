@@ -3,7 +3,7 @@
 ; RUN: opt -module-summary %p/Inputs/thinlto_indirect_call_promotion.ll -o %t2.bc
 ; RUN: llvm-lto -thinlto -o %t3 %t.bc %t2.bc
 
-; RUN: opt -function-import -summary-file %t3.thinlto.bc %t.bc -o %t4.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
+; RUN: opt -passes=function-import -summary-file %t3.thinlto.bc %t.bc -o %t4.bc -print-imports 2>&1 | FileCheck %s --check-prefix=IMPORTS
 ; IMPORTS-DAG: Import a
 ; IMPORTS-DAG: Import c
 

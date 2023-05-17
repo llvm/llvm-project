@@ -54,4 +54,7 @@ private:
     decltype(base(std::declval<It>())) base_;
 };
 
+template <class It>
+assignable_sentinel(const It&) -> assignable_sentinel<It>;
+
 #endif // TEST_STD_ITERATORS_ITERATOR_PRIMITIVES_RANGE_ITER_OPS_TYPES_H

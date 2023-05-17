@@ -1,7 +1,6 @@
-// To generate the corresponding EXE/PDB, run:
-// cl /Zi test.cpp
-// To generate the PDB with column numbers, run:
-// clang-cl /Zi -gcolumn-info test.cpp
+// To generate the corresponding EXE/PDB (add -gcolumn-info for line columns):
+// clang -cc1 -triple x86_64-pc-windows-msvc -gcodeview -debug-info-kind=constructor -emit-obj test.cpp
+// lld-link test.obj -debug -entry:main
 
 namespace NS {
 struct Foo {

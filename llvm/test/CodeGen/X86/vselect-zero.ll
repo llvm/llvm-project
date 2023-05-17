@@ -125,7 +125,7 @@ define double @fsel_nonzero_false_val(double %x, double %y, double %z) {
 ; AVX-LABEL: fsel_nonzero_false_val:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
 ; AVX-NEXT:    vblendvpd %xmm0, %xmm2, %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
@@ -153,8 +153,7 @@ define double @fsel_nonzero_true_val(double %x, double %y, double %z) {
 ; AVX-LABEL: fsel_nonzero_true_val:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: fsel_nonzero_true_val:
@@ -180,9 +179,8 @@ define double @fsel_nonzero_constants(double %x, double %y) {
 ; AVX-LABEL: fsel_nonzero_constants:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vcmpeqsd %xmm1, %xmm0, %xmm0
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
-; AVX-NEXT:    vblendvpd %xmm0, %xmm1, %xmm2, %xmm0
+; AVX-NEXT:    vmovapd {{.*#+}} xmm1 = [4.2E+1,4.2E+1]
+; AVX-NEXT:    vblendvpd %xmm0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    retq
 ;
 ; AVX512-LABEL: fsel_nonzero_constants:
@@ -310,8 +308,8 @@ define <4 x i32> @signbit_mask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-LABEL: signbit_mask_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -345,8 +343,8 @@ define <2 x i64> @signbit_mask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 define <2 x i64> @signbit_mask_swap_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-LABEL: signbit_mask_swap_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pand %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -523,11 +521,11 @@ define <8 x i32> @signbit_mask_swap_v8i32(<8 x i32> %a, <8 x i32> %b) {
 define <4 x i64> @signbit_mask_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-LABEL: signbit_mask_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pand %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
@@ -675,8 +673,8 @@ define <4 x i32> @signbit_setmask_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <2 x i64> @signbit_setmask_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; SSE2-LABEL: signbit_setmask_v2i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    por %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
@@ -817,11 +815,11 @@ define <8 x i32> @signbit_setmask_v8i32(<8 x i32> %a, <8 x i32> %b) {
 define <4 x i64> @signbit_setmask_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-LABEL: signbit_setmask_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;
@@ -869,11 +867,11 @@ define <4 x i64> @signbit_setmask_v4i64(<4 x i64> %a, <4 x i64> %b) {
 define <4 x i64> @signbit_setmask_swap_v4i64(<4 x i64> %a, <4 x i64> %b) {
 ; SSE2-LABEL: signbit_setmask_swap_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm0
 ; SSE2-NEXT:    por %xmm2, %xmm0
-; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
+; SSE2-NEXT:    psrad $31, %xmm1
 ; SSE2-NEXT:    por %xmm3, %xmm1
 ; SSE2-NEXT:    retq
 ;

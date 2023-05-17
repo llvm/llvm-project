@@ -12,8 +12,8 @@ b1:                                               ; preds = %b0
 
 b2:                                               ; preds = %b2, %b1
   %v0 = phi i32 [ %v1, %b2 ], [ 1, %b1 ]
-  store i16 0, i16* undef, align 2
-  store i16 0, i16* undef, align 2
+  store i16 0, ptr undef, align 2
+  store i16 0, ptr undef, align 2
   %v1 = add nsw i32 %v0, 4
   %v2 = icmp slt i32 %v1, undef
   br i1 %v2, label %b2, label %b3

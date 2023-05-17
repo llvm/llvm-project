@@ -13,15 +13,24 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
+
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVDialect.h"
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/Dialect/SPIRV/Transforms/Passes.h"
 #include "mlir/Dialect/SPIRV/Utils/LayoutUtils.h"
 #include "mlir/Transforms/DialectConversion.h"
 
+#include "llvm/Support/FormatVariadic.h"
+
 using namespace mlir;
+
+namespace mlir {
+namespace spirv {
+#define GEN_PASS_DEF_SPIRVCOMPOSITETYPELAYOUTPASS
+#include "mlir/Dialect/SPIRV/Transforms/Passes.h.inc"
+} // namespace spirv
+} // namespace mlir
 
 namespace {
 class SPIRVGlobalVariableOpLayoutInfoDecoration
@@ -33,12 +42,13 @@ public:
                                 PatternRewriter &rewriter) const override {
     SmallVector<NamedAttribute, 4> globalVarAttrs;
 
-    auto ptrType = op.type().cast<spirv::PointerType>();
-    auto structType = VulkanLayoutUtils::decorateType(
-        ptrType.getPointeeType().cast<spirv::StructType>());
+    auto ptrType = cast<spirv::PointerType>(op.getType());
+    auto pointeeType = cast<spirv::StructType>(ptrType.getPointeeType());
+    spirv::StructType structType = VulkanLayoutUtils::decorateType(pointeeType);
 
     if (!structType)
-      return failure();
+      return op->emitError(llvm::formatv(
+          "failed to decorate (unsuported pointee type: '{0}')", pointeeType));
 
     auto decoratedType =
         spirv::PointerType::get(structType, ptrType.getStorageClass());
@@ -64,11 +74,11 @@ public:
   LogicalResult matchAndRewrite(spirv::AddressOfOp op,
                                 PatternRewriter &rewriter) const override {
     auto spirvModule = op->getParentOfType<spirv::ModuleOp>();
-    auto varName = op.variableAttr();
+    auto varName = op.getVariableAttr();
     auto varOp = spirvModule.lookupSymbol<spirv::GlobalVariableOp>(varName);
 
     rewriter.replaceOpWithNewOp<spirv::AddressOfOp>(
-        op, varOp.type(), SymbolRefAttr::get(varName.getAttr()));
+        op, varOp.getType(), SymbolRefAttr::get(varName.getAttr()));
     return success();
   }
 };
@@ -99,7 +109,7 @@ static void populateSPIRVLayoutInfoPatterns(RewritePatternSet &patterns) {
 
 namespace {
 class DecorateSPIRVCompositeTypeLayoutPass
-    : public SPIRVCompositeTypeLayoutBase<
+    : public spirv::impl::SPIRVCompositeTypeLayoutPassBase<
           DecorateSPIRVCompositeTypeLayoutPass> {
   void runOnOperation() override;
 };
@@ -114,12 +124,12 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   target.addLegalOp<func::FuncOp>();
   target.addDynamicallyLegalOp<spirv::GlobalVariableOp>(
       [](spirv::GlobalVariableOp op) {
-        return VulkanLayoutUtils::isLegalType(op.type());
+        return VulkanLayoutUtils::isLegalType(op.getType());
       });
 
   // Change the type for the direct users.
   target.addDynamicallyLegalOp<spirv::AddressOfOp>([](spirv::AddressOfOp op) {
-    return VulkanLayoutUtils::isLegalType(op.pointer().getType());
+    return VulkanLayoutUtils::isLegalType(op.getPointer().getType());
   });
 
   // Change the type for the indirect users.
@@ -127,7 +137,8 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
                                spirv::StoreOp>([&](Operation *op) {
     for (Value operand : op->getOperands()) {
       auto addrOp = operand.getDefiningOp<spirv::AddressOfOp>();
-      if (addrOp && !VulkanLayoutUtils::isLegalType(addrOp.pointer().getType()))
+      if (addrOp &&
+          !VulkanLayoutUtils::isLegalType(addrOp.getPointer().getType()))
         return false;
     }
     return true;
@@ -137,9 +148,4 @@ void DecorateSPIRVCompositeTypeLayoutPass::runOnOperation() {
   for (auto spirvModule : module.getOps<spirv::ModuleOp>())
     if (failed(applyFullConversion(spirvModule, target, frozenPatterns)))
       signalPassFailure();
-}
-
-std::unique_ptr<OperationPass<ModuleOp>>
-mlir::spirv::createDecorateSPIRVCompositeTypeLayoutPass() {
-  return std::make_unique<DecorateSPIRVCompositeTypeLayoutPass>();
 }

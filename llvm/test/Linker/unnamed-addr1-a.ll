@@ -16,8 +16,8 @@ define weak void @func-b() unnamed_addr { ret void }
 ; CHECK-DAG: @global-c = common unnamed_addr global i32 0
 @global-d = external global i32
 
-define i32* @use-global-d() {
-  ret i32* @global-d
+define ptr @use-global-d() {
+  ret ptr @global-d
 }
 
 ; CHECK-DAG: @global-d = global i32 42
@@ -27,9 +27,9 @@ define i32* @use-global-d() {
 ; CHECK-DAG: @global-f = global i32 42
 
 @alias-a = weak global i32 42
-; CHECK-DAG: @alias-a = alias i32, i32* @global-f
+; CHECK-DAG: @alias-a = alias i32, ptr @global-f
 @alias-b = weak unnamed_addr global i32 42
-; CHECK-DAG: @alias-b = unnamed_addr alias i32, i32* @global-f
+; CHECK-DAG: @alias-b = unnamed_addr alias i32, ptr @global-f
 
 declare void @func-c()
 define void @use-func-c() {
@@ -54,9 +54,9 @@ define weak void @func-e() unnamed_addr { ret void }
 ; CHECK-DAG: @global-j = global i32 42
 
 @alias-c = weak global i32 42
-; CHECK-DAG: @alias-c = alias i32, i32* @global-f
+; CHECK-DAG: @alias-c = alias i32, ptr @global-f
 @alias-d = weak unnamed_addr global i32 42
-; CHECK-DAG: @alias-d = alias i32, i32* @global-f
+; CHECK-DAG: @alias-d = alias i32, ptr @global-f
 
 
 declare void @func-g()

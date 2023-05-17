@@ -248,9 +248,9 @@ body:             |
   
   bb.9:
     %82 = VLVGP %67.subreg_h64, %67.subreg_h64
-    %82 = VLVGH %82, %58.subreg_hl32, $noreg, 0
-    %82 = VLVGH %82, %80.subreg_hl32, $noreg, 1
-    dead %82 = VLVGH %82, %90.subreg_hl32, $noreg, 2
+    %82 = VLVGH %82, %58.subreg_l32, $noreg, 0
+    %82 = VLVGH %82, %80.subreg_l32, $noreg, 1
+    dead %82 = VLVGH %82, %90.subreg_l32, $noreg, 2
     %96 = AFIMux %96, 1879048192, implicit-def dead $cc
     %96 = SRL %96, $noreg, 31
     dead %11 = VLVGF %11, %96, $noreg, 1

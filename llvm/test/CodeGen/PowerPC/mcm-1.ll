@@ -15,16 +15,16 @@ $fi = comdat any
 
 define signext i32 @test_external() nounwind {
 entry:
-  %0 = load i32, i32* @ei, align 4
+  %0 = load i32, ptr @ei, align 4
   %inc = add nsw i32 %0, 1
-  store i32 %inc, i32* @ei, align 4
+  store i32 %inc, ptr @ei, align 4
   ret i32 %0
 }
 
 define i32 @load() {
 entry:
-  %0 = load i32, i32* @gi, align 4
-  %1 = load i32, i32* @fi, align 4
+  %0 = load i32, ptr @gi, align 4
+  %1 = load i32, ptr @fi, align 4
   %2 = add i32 %0, %1
   ret i32 %2
 }

@@ -43,8 +43,8 @@ define i16 @trunc_bitcast_v2i32_to_i16(<2 x i32> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u16_e32 v0, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load i32, i32 addrspace(1)* undef
-  %load1 = load i32, i32 addrspace(1)* null
+  %load0 = load i32, ptr addrspace(1) undef
+  %load1 = load i32, ptr addrspace(1) null
   %insert.0 = insertelement <2 x i32> undef, i32 %load0, i32 0
   %insert.1 = insertelement <2 x i32> %insert.0, i32 99, i32 1
   %bc = bitcast <2 x i32> %insert.1 to i64
@@ -72,8 +72,8 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_add_u16_e32 v0, 4, v0
 ; VI-NEXT:    s_setpc_b64 s[30:31]
-  %load0 = load float, float addrspace(1)* undef
-  %load1 = load float, float addrspace(1)* null
+  %load0 = load float, ptr addrspace(1) undef
+  %load1 = load float, ptr addrspace(1) null
   %insert.0 = insertelement <2 x float> undef, float %load0, i32 0
   %insert.1 = insertelement <2 x float> %insert.0, float 4.0, i32 1
   %bc = bitcast <2 x float> %insert.1 to i64
@@ -82,7 +82,7 @@ define i16 @trunc_bitcast_v2f32_to_i16(<2 x float> %bar) {
   ret i16 %add
 }
 
-define amdgpu_kernel void @truncate_high_elt_extract_vector(<2 x i16> addrspace(1)* nocapture readonly %arg, <2 x i16> addrspace(1)* nocapture readonly %arg1, <2 x i16> addrspace(1)* nocapture %arg2) local_unnamed_addr {
+define amdgpu_kernel void @truncate_high_elt_extract_vector(ptr addrspace(1) nocapture readonly %arg, ptr addrspace(1) nocapture readonly %arg1, ptr addrspace(1) nocapture %arg2) local_unnamed_addr {
 ; SI-LABEL: truncate_high_elt_extract_vector:
 ; SI:       ; %bb.0: ; %bb
 ; SI-NEXT:    s_load_dwordx4 s[4:7], s[0:1], 0x9
@@ -119,10 +119,10 @@ define amdgpu_kernel void @truncate_high_elt_extract_vector(<2 x i16> addrspace(
 ; VI-NEXT:    flat_store_dword v[0:1], v2
 ; VI-NEXT:    s_endpgm
 bb:
-  %tmp = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %arg, i64 undef
-  %tmp3 = load <2 x i16>, <2 x i16> addrspace(1)* %tmp, align 4
-  %tmp4 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %arg1, i64 undef
-  %tmp5 = load <2 x i16>, <2 x i16> addrspace(1)* %tmp4, align 4
+  %tmp = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg, i64 undef
+  %tmp3 = load <2 x i16>, ptr addrspace(1) %tmp, align 4
+  %tmp4 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg1, i64 undef
+  %tmp5 = load <2 x i16>, ptr addrspace(1) %tmp4, align 4
   %tmp6 = sext <2 x i16> %tmp3 to <2 x i32>
   %tmp7 = sext <2 x i16> %tmp5 to <2 x i32>
   %tmp8 = extractelement <2 x i32> %tmp6, i64 0
@@ -132,8 +132,8 @@ bb:
   %tmp12 = insertelement <2 x i32> %tmp11, i32 undef, i32 1
   %tmp13 = lshr <2 x i32> %tmp12, <i32 16, i32 16>
   %tmp14 = trunc <2 x i32> %tmp13 to <2 x i16>
-  %tmp15 = getelementptr inbounds <2 x i16>, <2 x i16> addrspace(1)* %arg2, i64 undef
-  store <2 x i16> %tmp14, <2 x i16> addrspace(1)* %tmp15, align 4
+  %tmp15 = getelementptr inbounds <2 x i16>, ptr addrspace(1) %arg2, i64 undef
+  store <2 x i16> %tmp14, ptr addrspace(1) %tmp15, align 4
   ret void
 }
 
@@ -144,7 +144,7 @@ define <2 x i16> @trunc_v2i64_arg_to_v2i16(<2 x i64> %arg0) #0 {
 ; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v2
 ; SI-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; SI-NEXT:    v_or_b32_e32 v0, v0, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: trunc_v2i64_arg_to_v2i16:

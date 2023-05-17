@@ -16,7 +16,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ConstantFold.h"
+#include "llvm/IR/ConstantFold.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
@@ -379,7 +379,7 @@ Constant *llvm::ConstantFoldCastInstruction(unsigned opc, Constant *V,
                opc != Instruction::AddrSpaceCast &&
                // Do not fold bitcast (gep) with inrange index, as this loses
                // information.
-               !cast<GEPOperator>(CE)->getInRangeIndex().hasValue() &&
+               !cast<GEPOperator>(CE)->getInRangeIndex() &&
                // Do not fold if the gep type is a vector, as bitcasting
                // operand 0 of a vector gep will result in a bitcast between
                // different sizes.
@@ -593,17 +593,6 @@ Constant *llvm::ConstantFoldSelectInstruction(Constant *Cond,
   if (isa<UndefValue>(V1) && NotPoison(V2)) return V2;
   if (isa<UndefValue>(V2) && NotPoison(V1)) return V1;
 
-  if (ConstantExpr *TrueVal = dyn_cast<ConstantExpr>(V1)) {
-    if (TrueVal->getOpcode() == Instruction::Select)
-      if (TrueVal->getOperand(0) == Cond)
-        return ConstantExpr::getSelect(Cond, TrueVal->getOperand(1), V2);
-  }
-  if (ConstantExpr *FalseVal = dyn_cast<ConstantExpr>(V2)) {
-    if (FalseVal->getOpcode() == Instruction::Select)
-      if (FalseVal->getOperand(0) == Cond)
-        return ConstantExpr::getSelect(Cond, V1, FalseVal->getOperand(2));
-  }
-
   return nullptr;
 }
 
@@ -722,7 +711,7 @@ Constant *llvm::ConstantFoldShuffleVectorInstruction(Constant *V1, Constant *V2,
   Type *EltTy = V1VTy->getElementType();
 
   // Undefined shuffle mask -> undefined value.
-  if (all_of(Mask, [](int Elt) { return Elt == UndefMaskElem; })) {
+  if (all_of(Mask, [](int Elt) { return Elt == PoisonMaskElem; })) {
     return UndefValue::get(VectorType::get(EltTy, MaskEltCount));
   }
 
@@ -848,18 +837,19 @@ Constant *llvm::ConstantFoldUnaryInstruction(unsigned Opcode, Constant *C) {
 
     Type *Ty = IntegerType::get(VTy->getContext(), 32);
     // Fast path for splatted constants.
-    if (Constant *Splat = C->getSplatValue()) {
-      Constant *Elt = ConstantExpr::get(Opcode, Splat);
-      return ConstantVector::getSplat(VTy->getElementCount(), Elt);
-    }
+    if (Constant *Splat = C->getSplatValue())
+      if (Constant *Elt = ConstantFoldUnaryInstruction(Opcode, Splat))
+        return ConstantVector::getSplat(VTy->getElementCount(), Elt);
 
     // Fold each element and create a vector constant from those constants.
     SmallVector<Constant *, 16> Result;
     for (unsigned i = 0, e = VTy->getNumElements(); i != e; ++i) {
       Constant *ExtractIdx = ConstantInt::get(Ty, i);
       Constant *Elt = ConstantExpr::getExtractElement(C, ExtractIdx);
-
-      Result.push_back(ConstantExpr::get(Opcode, Elt));
+      Constant *Res = ConstantFoldUnaryInstruction(Opcode, Elt);
+      if (!Res)
+        return nullptr;
+      Result.push_back(Res);
     }
 
     return ConstantVector::get(Result);
@@ -903,7 +893,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         // Handle undef ^ undef -> 0 special case. This is a common
         // idiom (misuse).
         return Constant::getNullValue(C1->getType());
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::Add:
     case Instruction::Sub:
       return UndefValue::get(C1->getType());
@@ -979,7 +969,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       // -0.0 - undef --> undef (consistent with "fneg undef")
       if (match(C1, m_NegZeroFP()) && isa<UndefValue>(C2))
         return C2;
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::FAdd:
     case Instruction::FMul:
     case Instruction::FDiv:
@@ -1052,7 +1042,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             isa<GlobalValue>(CE1->getOperand(0))) {
           GlobalValue *GV = cast<GlobalValue>(CE1->getOperand(0));
 
-          MaybeAlign GVAlign;
+          Align GVAlign; // defaults to 1
 
           if (Module *TheModule = GV->getParent()) {
             const DataLayout &DL = TheModule->getDataLayout();
@@ -1069,17 +1059,13 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
             // appropriate defaults
             if (isa<Function>(GV) && !DL.getFunctionPtrAlign())
               GVAlign = Align(4);
-          } else if (isa<Function>(GV)) {
-            // Without a datalayout we have to assume the worst case: that the
-            // function pointer isn't aligned at all.
-            GVAlign = llvm::None;
           } else if (isa<GlobalVariable>(GV)) {
-            GVAlign = cast<GlobalVariable>(GV)->getAlign();
+            GVAlign = cast<GlobalVariable>(GV)->getAlign().valueOrOne();
           }
 
-          if (GVAlign && *GVAlign > 1) {
+          if (GVAlign > 1) {
             unsigned DstWidth = CI2->getType()->getBitWidth();
-            unsigned SrcWidth = std::min(DstWidth, Log2(*GVAlign));
+            unsigned SrcWidth = std::min(DstWidth, Log2(GVAlign));
             APInt BitsNotSet(APInt::getLowBitsSet(DstWidth, SrcWidth));
 
             // If checking bits we know are clear, return zero.
@@ -1218,9 +1204,13 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
       if (Instruction::isIntDivRem(Opcode) && C2Splat->isNullValue())
         return PoisonValue::get(VTy);
       if (Constant *C1Splat = C1->getSplatValue()) {
-        return ConstantVector::getSplat(
-            VTy->getElementCount(),
-            ConstantExpr::get(Opcode, C1Splat, C2Splat));
+        Constant *Res =
+            ConstantExpr::isDesirableBinOp(Opcode)
+                ? ConstantExpr::get(Opcode, C1Splat, C2Splat)
+                : ConstantFoldBinaryInstruction(Opcode, C1Splat, C2Splat);
+        if (!Res)
+          return nullptr;
+        return ConstantVector::getSplat(VTy->getElementCount(), Res);
       }
     }
 
@@ -1237,7 +1227,12 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
         if (Instruction::isIntDivRem(Opcode) && RHS->isNullValue())
           return PoisonValue::get(VTy);
 
-        Result.push_back(ConstantExpr::get(Opcode, LHS, RHS));
+        Constant *Res = ConstantExpr::isDesirableBinOp(Opcode)
+                            ? ConstantExpr::get(Opcode, LHS, RHS)
+                            : ConstantFoldBinaryInstruction(Opcode, LHS, RHS);
+        if (!Res)
+          return nullptr;
+        Result.push_back(Res);
       }
 
       return ConstantVector::get(Result);
@@ -1504,7 +1499,7 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
       if (const GlobalValue *GV = dyn_cast<GlobalValue>(CE1Op0))
         if (const GlobalValue *GV2 = dyn_cast<GlobalValue>(V2))
           return areGlobalsPotentiallyEqual(GV, GV2);
-      LLVM_FALLTHROUGH;
+      [[fallthrough]];
     case Instruction::UIToFP:
     case Instruction::SIToFP:
     case Instruction::ZExt:
@@ -1569,6 +1564,25 @@ static ICmpInst::Predicate evaluateICmpRelation(Constant *V1, Constant *V2,
   return ICmpInst::BAD_ICMP_PREDICATE;
 }
 
+static Constant *constantFoldCompareGlobalToNull(CmpInst::Predicate Predicate,
+                                                 Constant *C1, Constant *C2) {
+  const GlobalValue *GV = dyn_cast<GlobalValue>(C2);
+  if (!GV || !C1->isNullValue())
+    return nullptr;
+
+  // Don't try to evaluate aliases.  External weak GV can be null.
+  if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
+      !NullPointerIsDefined(nullptr /* F */,
+                            GV->getType()->getAddressSpace())) {
+    if (Predicate == ICmpInst::ICMP_EQ)
+      return ConstantInt::getFalse(C1->getContext());
+    else if (Predicate == ICmpInst::ICMP_NE)
+      return ConstantInt::getTrue(C1->getContext());
+  }
+
+  return nullptr;
+}
+
 Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
                                                Constant *C1, Constant *C2) {
   Type *ResultTy;
@@ -1608,31 +1622,14 @@ Constant *llvm::ConstantFoldCompareInstruction(CmpInst::Predicate Predicate,
   }
 
   // icmp eq/ne(null,GV) -> false/true
-  if (C1->isNullValue()) {
-    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C2))
-      // Don't try to evaluate aliases.  External weak GV can be null.
-      if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
-          !NullPointerIsDefined(nullptr /* F */,
-                                GV->getType()->getAddressSpace())) {
-        if (Predicate == ICmpInst::ICMP_EQ)
-          return ConstantInt::getFalse(C1->getContext());
-        else if (Predicate == ICmpInst::ICMP_NE)
-          return ConstantInt::getTrue(C1->getContext());
-      }
-  // icmp eq/ne(GV,null) -> false/true
-  } else if (C2->isNullValue()) {
-    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C1)) {
-      // Don't try to evaluate aliases.  External weak GV can be null.
-      if (!isa<GlobalAlias>(GV) && !GV->hasExternalWeakLinkage() &&
-          !NullPointerIsDefined(nullptr /* F */,
-                                GV->getType()->getAddressSpace())) {
-        if (Predicate == ICmpInst::ICMP_EQ)
-          return ConstantInt::getFalse(C1->getContext());
-        else if (Predicate == ICmpInst::ICMP_NE)
-          return ConstantInt::getTrue(C1->getContext());
-      }
-    }
+  if (Constant *Folded = constantFoldCompareGlobalToNull(Predicate, C1, C2))
+    return Folded;
 
+  // icmp eq/ne(GV,null) -> false/true
+  if (Constant *Folded = constantFoldCompareGlobalToNull(Predicate, C2, C1))
+    return Folded;
+
+  if (C2->isNullValue()) {
     // The caller is expected to commute the operands if the constant expression
     // is C2.
     // C1 >= 0 --> true
@@ -1933,13 +1930,13 @@ static bool isInBoundsIndices(ArrayRef<IndexTy> Idxs) {
 static bool isIndexInRangeOfArrayType(uint64_t NumElements,
                                       const ConstantInt *CI) {
   // We cannot bounds check the index if it doesn't fit in an int64_t.
-  if (CI->getValue().getMinSignedBits() > 64)
+  if (CI->getValue().getSignificantBits() > 64)
     return false;
 
   // A negative index or an index past the end of our sequential type is
   // considered out-of-range.
   int64_t IndexVal = CI->getSExtValue();
-  if (IndexVal < 0 || (NumElements > 0 && (uint64_t)IndexVal >= NumElements))
+  if (IndexVal < 0 || (IndexVal != 0 && (uint64_t)IndexVal >= NumElements))
     return false;
 
   // Otherwise, it is in-range.
@@ -2010,9 +2007,9 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
   // The combined GEP normally inherits its index inrange attribute from
   // the inner GEP, but if the inner GEP's last index was adjusted by the
   // outer GEP, any inbounds attribute on that index is invalidated.
-  Optional<unsigned> IRIndex = GEP->getInRangeIndex();
+  std::optional<unsigned> IRIndex = GEP->getInRangeIndex();
   if (IRIndex && *IRIndex == GEP->getNumIndices() - 1)
-    IRIndex = None;
+    IRIndex = std::nullopt;
 
   return ConstantExpr::getGetElementPtr(
       GEP->getSourceElementType(), cast<Constant>(GEP->getPointerOperand()),
@@ -2021,12 +2018,12 @@ static Constant *foldGEPOfGEP(GEPOperator *GEP, Type *PointeeTy, bool InBounds,
 
 Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
                                           bool InBounds,
-                                          Optional<unsigned> InRangeIndex,
+                                          std::optional<unsigned> InRangeIndex,
                                           ArrayRef<Value *> Idxs) {
   if (Idxs.empty()) return C;
 
   Type *GEPTy = GetElementPtrInst::getGEPReturnType(
-      PointeeTy, C, makeArrayRef((Value *const *)Idxs.data(), Idxs.size()));
+      PointeeTy, C, ArrayRef((Value *const *)Idxs.data(), Idxs.size()));
 
   if (isa<PoisonValue>(C))
     return PoisonValue::get(GEPTy);
@@ -2039,6 +2036,10 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
     // For non-opaque pointers having multiple indices will change the result
     // type of the GEP.
     if (!C->getType()->getScalarType()->isOpaquePointerTy() && Idxs.size() != 1)
+      return false;
+
+    // Avoid losing inrange information.
+    if (InRangeIndex)
       return false;
 
     return all_of(Idxs, [](Value *Idx) {
@@ -2186,11 +2187,17 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
       Unknown = true;
       continue;
     }
+
+    // Determine the number of elements in our sequential type.
+    uint64_t NumElements = STy->getArrayNumElements();
+    if (!NumElements) {
+      Unknown = true;
+      continue;
+    }
+
     // It's out of range, but we can factor it into the prior
     // dimension.
     NewIdxs.resize(Idxs.size());
-    // Determine the number of elements in our sequential type.
-    uint64_t NumElements = STy->getArrayNumElements();
 
     // Expand the current index or the previous index to a vector from a scalar
     // if necessary.
@@ -2218,9 +2225,15 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
               : cast<FixedVectorType>(CurrIdx->getType())->getNumElements(),
           Factor);
 
-    NewIdxs[i] = ConstantExpr::getSRem(CurrIdx, Factor);
+    NewIdxs[i] =
+        ConstantFoldBinaryInstruction(Instruction::SRem, CurrIdx, Factor);
 
-    Constant *Div = ConstantExpr::getSDiv(CurrIdx, Factor);
+    Constant *Div =
+        ConstantFoldBinaryInstruction(Instruction::SDiv, CurrIdx, Factor);
+
+    // We're working on either ConstantInt or vectors of ConstantInt,
+    // so these should always fold.
+    assert(NewIdxs[i] != nullptr && Div != nullptr && "Should have folded");
 
     unsigned CommonExtendedWidth =
         std::max(PrevIdx->getType()->getScalarSizeInBits(),
@@ -2258,7 +2271,8 @@ Constant *llvm::ConstantFoldGetElementPtr(Type *PointeeTy, Constant *C,
   // check for the "inbounds" property.
   if (!Unknown && !InBounds)
     if (auto *GV = dyn_cast<GlobalVariable>(C))
-      if (!GV->hasExternalWeakLinkage() && isInBoundsIndices(Idxs))
+      if (!GV->hasExternalWeakLinkage() && GV->getValueType() == PointeeTy &&
+          isInBoundsIndices(Idxs))
         return ConstantExpr::getGetElementPtr(PointeeTy, C, Idxs,
                                               /*InBounds=*/true, InRangeIndex);
 

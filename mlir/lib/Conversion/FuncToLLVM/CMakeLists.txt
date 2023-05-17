@@ -13,11 +13,11 @@ add_mlir_conversion_library(MLIRFuncToLLVM
 
   LINK_LIBS PUBLIC
   MLIRAnalysis
-  MLIRArithmeticToLLVM
+  MLIRArithToLLVM
   MLIRControlFlowToLLVM
   MLIRDataLayoutInterfaces
-  MLIRFunc
+  MLIRFuncDialect
   MLIRLLVMCommonConversion
-  MLIRLLVMIR
+  MLIRLLVMDialect
   MLIRTransformUtils
   )

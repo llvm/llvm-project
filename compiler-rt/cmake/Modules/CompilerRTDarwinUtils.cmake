@@ -116,7 +116,7 @@ function(darwin_test_archs os valid_archs)
   if(NOT TEST_COMPILE_ONLY)
     message(STATUS "Finding valid architectures for ${os}...")
     set(SIMPLE_C ${CMAKE_BINARY_DIR}${CMAKE_FILES_DIRECTORY}/src.c)
-    file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main() { printf(__FILE__); return 0; }\n")
+    file(WRITE ${SIMPLE_C} "#include <stdio.h>\nint main(void) { printf(__FILE__); return 0; }\n")
 
     set(os_linker_flags)
     foreach(flag ${DARWIN_${os}_LINK_FLAGS})
@@ -140,6 +140,16 @@ function(darwin_test_archs os valid_archs)
   # a valid or useful architecture for the iOS simulator we should drop it.
   if(${os} MATCHES "^(iossim|tvossim|watchossim)$")
     list(REMOVE_ITEM archs "x86_64h")
+  endif()
+
+  if(${os} MATCHES "iossim")
+    message(STATUS "Disabling i386 slice for iossim")
+    list(REMOVE_ITEM archs "i386")
+  endif()
+
+  if(${os} MATCHES "^ios$")
+    message(STATUS "Disabling sanitizers armv7* slice for ios")
+    list(FILTER archs EXCLUDE REGEX "armv7.*")
   endif()
 
   set(working_archs)
@@ -304,8 +314,7 @@ macro(darwin_add_builtin_library name suffix)
       "${LIB_OS}" MATCHES "^osx$")
     # Build the macOS builtins with Mac Catalyst support.
     list(APPEND builtin_cflags
-      -target ${LIB_ARCH}-apple-macos${DARWIN_osx_BUILTIN_MIN_VER}
-      -darwin-target-variant ${LIB_ARCH}-apple-ios13.1-macabi)
+      "SHELL:-target ${LIB_ARCH}-apple-macos${DARWIN_osx_BUILTIN_MIN_VER} -darwin-target-variant ${LIB_ARCH}-apple-ios13.1-macabi")
   endif()
 
   set_target_compile_flags(${libname}
@@ -400,12 +409,12 @@ endfunction()
 macro(darwin_add_builtin_libraries)
   set(DARWIN_EXCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Darwin-excludes)
 
-  set(CFLAGS "-fPIC -O3 -fvisibility=hidden -DVISIBILITY_HIDDEN -Wall -fomit-frame-pointer")
+  set(CFLAGS -fPIC -O3 -fvisibility=hidden -DVISIBILITY_HIDDEN -Wall -fomit-frame-pointer)
   set(CMAKE_C_FLAGS "")
   set(CMAKE_CXX_FLAGS "")
   set(CMAKE_ASM_FLAGS "")
 
-  append_string_if(COMPILER_RT_HAS_ASM_LSE " -DHAS_ASM_LSE" CFLAGS)
+  append_list_if(COMPILER_RT_HAS_ASM_LSE -DHAS_ASM_LSE CFLAGS)
 
   set(PROFILE_SOURCES ../profile/InstrProfiling.c
                       ../profile/InstrProfilingBuffer.c
@@ -414,6 +423,12 @@ macro(darwin_add_builtin_libraries)
                       ../profile/InstrProfilingInternal.c
                       ../profile/InstrProfilingVersionVar.c)
   foreach (os ${ARGN})
+    set(macosx_sdk_version 99999)
+    if ("${os}" STREQUAL "osx")
+      find_darwin_sdk_version(macosx_sdk_version "macosx")
+    endif()
+    add_security_warnings(CFLAGS ${macosx_sdk_version})
+
     list_intersect(DARWIN_BUILTIN_ARCHS DARWIN_${os}_BUILTIN_ARCHS BUILTIN_SUPPORTED_ARCH)
 
     if((arm64 IN_LIST DARWIN_BUILTIN_ARCHS OR arm64e IN_LIST DARWIN_BUILTIN_ARCHS) AND NOT TARGET lse_builtin_symlinks)
@@ -515,7 +530,7 @@ macro(darwin_add_embedded_builtin_libraries)
 
     set(MACHO_SYM_DIR ${CMAKE_CURRENT_SOURCE_DIR}/macho_embedded)
 
-    set(CFLAGS "-Oz -Wall -fomit-frame-pointer -ffreestanding")
+    set(CFLAGS -Oz -Wall -fomit-frame-pointer -ffreestanding)
     set(CMAKE_C_FLAGS "")
     set(CMAKE_CXX_FLAGS "")
     set(CMAKE_ASM_FLAGS "")
@@ -534,8 +549,8 @@ macro(darwin_add_embedded_builtin_libraries)
     set(DARWIN_macho_embedded_LIBRARY_INSTALL_DIR
       ${COMPILER_RT_INSTALL_LIBRARY_DIR}/macho_embedded)
       
-    set(CFLAGS_armv7 "-target thumbv7-apple-darwin-eabi")
-    set(CFLAGS_i386 "-march=pentium")
+    set(CFLAGS_armv7 -target thumbv7-apple-darwin-eabi)
+    set(CFLAGS_i386 -march=pentium)
 
     darwin_read_list_from_file(common_FUNCTIONS ${MACHO_SYM_DIR}/common.txt)
     darwin_read_list_from_file(thumb2_FUNCTIONS ${MACHO_SYM_DIR}/thumb2.txt)

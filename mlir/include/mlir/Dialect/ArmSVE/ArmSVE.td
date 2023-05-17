@@ -28,6 +28,8 @@ def ArmSVE_Dialect : Dialect {
     This dialect contains the definitions necessary to target specific Arm SVE
     scalable vector operations.
   }];
+  let usePropertiesForAttributes = 1;
+
 }
 
 //===----------------------------------------------------------------------===//
@@ -94,7 +96,7 @@ class ScalableMaskedIOp<string mnemonic, string op_description,
 }
 
 def SdotOp : ArmSVE_Op<"sdot",
-               [NoSideEffect,
+               [Pure,
                AllTypesMatch<["src1", "src2"]>,
                AllTypesMatch<["acc", "dst"]>,
              ]> {
@@ -125,7 +127,7 @@ def SdotOp : ArmSVE_Op<"sdot",
 }
 
 def SmmlaOp : ArmSVE_Op<"smmla",
-                [NoSideEffect,
+                [Pure,
                 AllTypesMatch<["src1", "src2"]>,
                 AllTypesMatch<["acc", "dst"]>,
               ]> {
@@ -157,7 +159,7 @@ def SmmlaOp : ArmSVE_Op<"smmla",
 }
 
 def UdotOp : ArmSVE_Op<"udot",
-               [NoSideEffect,
+               [Pure,
                AllTypesMatch<["src1", "src2"]>,
                AllTypesMatch<["acc", "dst"]>,
              ]> {
@@ -188,7 +190,7 @@ def UdotOp : ArmSVE_Op<"udot",
 }
 
 def UmmlaOp : ArmSVE_Op<"ummla",
-                [NoSideEffect,
+                [Pure,
                 AllTypesMatch<["src1", "src2"]>,
                 AllTypesMatch<["acc", "dst"]>,
               ]> {

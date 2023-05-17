@@ -10,18 +10,13 @@
 #define MLIR_CONVERSION_FUNCTOLLVM_CONVERTFUNCTOLLVMPASS_H_
 
 #include <memory>
+#include <string>
 
 namespace mlir {
-class LowerToLLVMOptions;
-class ModuleOp;
-template <typename T>
-class OperationPass;
 class Pass;
 
-/// Creates a pass to convert the Func dialect into the LLVMIR dialect.
-std::unique_ptr<OperationPass<ModuleOp>> createConvertFuncToLLVMPass();
-std::unique_ptr<OperationPass<ModuleOp>>
-createConvertFuncToLLVMPass(const LowerToLLVMOptions &options);
+#define GEN_PASS_DECL_CONVERTFUNCTOLLVMPASS
+#include "mlir/Conversion/Passes.h.inc"
 
 } // namespace mlir
 

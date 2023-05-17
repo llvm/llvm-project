@@ -9,10 +9,9 @@
 // test libc++'s implementation of align_val_t, and the relevant new/delete
 // overloads in all dialects when -faligned-allocation is present.
 
-// The dylibs shipped before macosx10.13 do not contain the aligned allocation
-// functions, so trying to force using those with -faligned-allocation results
-// in a link error.
-// XFAIL: use_system_cxx_lib && target={{.+}}-apple-macosx10.{{9|10|11|12}}
+// Some dylibs do not contain the aligned allocation functions, so trying to force
+// using those with -faligned-allocation results in a link error.
+// XFAIL: availability-aligned_allocation-missing
 
 // Libcxx when built for z/OS doesn't contain the aligned allocation functions,
 // nor does the dynamic library shipped with z/OS.
@@ -21,12 +20,40 @@
 // REQUIRES: -faligned-allocation
 // ADDITIONAL_COMPILE_FLAGS: -faligned-allocation
 
-#include <new>
-#include <typeinfo>
-#include <string>
 #include <cassert>
+#include <new>
+#include <string>
+#include <type_traits>
+#include <typeinfo>
 
 #include "test_macros.h"
+
+static void test_allocations(std::size_t size, size_t alignment) {
+  {
+    void* ptr = ::operator new(size, std::align_val_t(alignment));
+    assert(ptr);
+    assert(reinterpret_cast<std::uintptr_t>(ptr) % alignment == 0);
+    ::operator delete(ptr, std::align_val_t(alignment));
+  }
+  {
+    void* ptr = ::operator new(size, std::align_val_t(alignment), std::nothrow);
+    assert(ptr);
+    assert(reinterpret_cast<std::uintptr_t>(ptr) % alignment == 0);
+    ::operator delete(ptr, std::align_val_t(alignment), std::nothrow);
+  }
+  {
+    void* ptr = ::operator new[](size, std::align_val_t(alignment));
+    assert(ptr);
+    assert(reinterpret_cast<std::uintptr_t>(ptr) % alignment == 0);
+    ::operator delete[](ptr, std::align_val_t(alignment));
+  }
+  {
+    void* ptr = ::operator new[](size, std::align_val_t(alignment), std::nothrow);
+    assert(ptr);
+    assert(reinterpret_cast<std::uintptr_t>(ptr) % alignment == 0);
+    ::operator delete[](ptr, std::align_val_t(alignment), std::nothrow);
+  }
+}
 
 int main(int, char**) {
   {
@@ -49,30 +76,24 @@ int main(int, char**) {
     assert(a == std::align_val_t(0));
     assert(b == std::align_val_t(32));
   }
-  {
-    void *ptr = ::operator new(1, std::align_val_t(128));
-    assert(ptr);
-    assert(reinterpret_cast<std::uintptr_t>(ptr) % 128 == 0);
-    ::operator delete(ptr, std::align_val_t(128));
-  }
-  {
-    void *ptr = ::operator new(1, std::align_val_t(128), std::nothrow);
-    assert(ptr);
-    assert(reinterpret_cast<std::uintptr_t>(ptr) % 128 == 0);
-    ::operator delete(ptr, std::align_val_t(128), std::nothrow);
-  }
-  {
-    void *ptr = ::operator new[](1, std::align_val_t(128));
-    assert(ptr);
-    assert(reinterpret_cast<std::uintptr_t>(ptr) % 128 == 0);
-    ::operator delete[](ptr, std::align_val_t(128));
-  }
-  {
-    void *ptr = ::operator new[](1, std::align_val_t(128), std::nothrow);
-    assert(ptr);
-    assert(reinterpret_cast<std::uintptr_t>(ptr) % 128 == 0);
-    ::operator delete[](ptr, std::align_val_t(128), std::nothrow);
-  }
+  // First, check the basic case, a large allocation with alignment==size.
+  test_allocations(64, 64);
+  // Size being a multiple of alignment also needs to be supported.
+  test_allocations(64, 32);
+  // When aligned allocation is implemented using posix_memalign,
+  // that function requires a minimum alignment of sizeof(void*).
+  // Check that we can also create overaligned allocations with
+  // an alignment argument less than sizeof(void*).
+  test_allocations(2, 2);
+  // When implemented using the C11 aligned_alloc() function,
+  // that requires that size be a multiple of alignment.
+  // However, the C++ operator new has no such requirements.
+  // Check that we can create an overaligned allocation that does
+  // adhere to not have this constraint.
+  test_allocations(1, 128);
+  // Finally, test size > alignment, but with size not being
+  // a multiple of alignment.
+  test_allocations(65, 32);
 #ifndef TEST_HAS_NO_RTTI
   {
     // Check that libc++ doesn't define align_val_t in a versioning namespace.

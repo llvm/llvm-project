@@ -79,11 +79,11 @@ class RuntimeDyldELF : public RuntimeDyldImpl {
       return 0;
   }
 
-  unsigned getStubAlignment() override {
+  Align getStubAlignment() override {
     if (Arch == Triple::systemz)
-      return 8;
+      return Align(8);
     else
-      return 1;
+      return Align(1);
   }
 
   void setMipsABI(const ObjectFile &Obj) override;
@@ -158,6 +158,40 @@ private:
   // Map between GOT relocation value and corresponding GOT offset
   std::map<RelocationValueRef, uint64_t> GOTOffsetMap;
 
+  /// The ID of the current IFunc stub section
+  unsigned IFuncStubSectionID = 0;
+  /// The current offset into the IFunc stub section
+  uint64_t IFuncStubOffset = 0;
+
+  /// A IFunc stub and its original symbol
+  struct IFuncStub {
+    /// The offset of this stub in the IFunc stub section
+    uint64_t StubOffset;
+    /// The symbol table entry of the original symbol
+    SymbolTableEntry OriginalSymbol;
+  };
+
+  /// The IFunc stubs
+  SmallVector<IFuncStub, 2> IFuncStubs;
+
+  /// Create the code for the IFunc resolver at the given address. This code
+  /// works together with the stubs created in createIFuncStub() to call the
+  /// resolver function and then jump to the real function address.
+  /// It must not be larger than 64B.
+  void createIFuncResolver(uint8_t *Addr) const;
+  /// Create the code for an IFunc stub for the IFunc that is defined in
+  /// section IFuncSectionID at offset IFuncOffset. The IFunc resolver created
+  /// by createIFuncResolver() is defined in the section IFuncStubSectionID at
+  /// offset IFuncResolverOffset. The code should be written into the section
+  /// with the id IFuncStubSectionID at the offset IFuncStubOffset.
+  void createIFuncStub(unsigned IFuncStubSectionID,
+                       uint64_t IFuncResolverOffset, uint64_t IFuncStubOffset,
+                       unsigned IFuncSectionID, uint64_t IFuncOffset);
+  /// Return the maximum size of a stub created by createIFuncStub()
+  unsigned getMaxIFuncStubSize() const;
+
+  void processNewSymbol(const SymbolRef &ObjSymbol,
+                        SymbolTableEntry &Entry) override;
   bool relocationNeedsGot(const RelocationRef &R) const override;
   bool relocationNeedsStub(const RelocationRef &R) const override;
 

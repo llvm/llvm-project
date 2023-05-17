@@ -3,75 +3,75 @@
 ; RUN: llc < %s -mtriple=arm-eabi -float-abi=soft -mattr=+neon -regalloc=basic | FileCheck %s --check-prefixes=CHECK,BASIC
 
 ;Check the (default) alignment value.
-define <8 x i8> @vld1lanei8(i8* %A, <8 x i8>* %B) nounwind {
+define <8 x i8> @vld1lanei8(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1lanei8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vld1.8 {d16[3]}, [r0]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <8 x i8>, <8 x i8>* %B
-  %tmp2 = load i8, i8* %A, align 8
+  %tmp1 = load <8 x i8>, ptr %B
+  %tmp2 = load i8, ptr %A, align 8
   %tmp3 = insertelement <8 x i8> %tmp1, i8 %tmp2, i32 3
   ret <8 x i8> %tmp3
 }
 
 ;Check the alignment value.  Max for this instruction is 16 bits:
-define <4 x i16> @vld1lanei16(i16* %A, <4 x i16>* %B) nounwind {
+define <4 x i16> @vld1lanei16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1lanei16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vld1.16 {d16[2]}, [r0:16]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <4 x i16>, <4 x i16>* %B
-  %tmp2 = load i16, i16* %A, align 8
+  %tmp1 = load <4 x i16>, ptr %B
+  %tmp2 = load i16, ptr %A, align 8
   %tmp3 = insertelement <4 x i16> %tmp1, i16 %tmp2, i32 2
   ret <4 x i16> %tmp3
 }
 
 ;Check the alignment value.  Max for this instruction is 32 bits:
-define <2 x i32> @vld1lanei32(i32* %A, <2 x i32>* %B) nounwind {
+define <2 x i32> @vld1lanei32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1lanei32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r0:32]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <2 x i32>, <2 x i32>* %B
-  %tmp2 = load i32, i32* %A, align 8
+  %tmp1 = load <2 x i32>, ptr %B
+  %tmp2 = load i32, ptr %A, align 8
   %tmp3 = insertelement <2 x i32> %tmp1, i32 %tmp2, i32 1
   ret <2 x i32> %tmp3
 }
 
 ;Check the alignment value.  Legal values are none or :32.
-define <2 x i32> @vld1lanei32a32(i32* %A, <2 x i32>* %B) nounwind {
+define <2 x i32> @vld1lanei32a32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1lanei32a32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r0:32]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <2 x i32>, <2 x i32>* %B
-  %tmp2 = load i32, i32* %A, align 4
+  %tmp1 = load <2 x i32>, ptr %B
+  %tmp2 = load i32, ptr %A, align 4
   %tmp3 = insertelement <2 x i32> %tmp1, i32 %tmp2, i32 1
   ret <2 x i32> %tmp3
 }
 
-define <2 x float> @vld1lanef(float* %A, <2 x float>* %B) nounwind {
+define <2 x float> @vld1lanef(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1lanef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
 ; CHECK-NEXT:    vld1.32 {d16[1]}, [r0:32]
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <2 x float>, <2 x float>* %B
-  %tmp2 = load float, float* %A, align 4
+  %tmp1 = load <2 x float>, ptr %B
+  %tmp2 = load float, ptr %A, align 4
   %tmp3 = insertelement <2 x float> %tmp1, float %tmp2, i32 1
   ret <2 x float> %tmp3
 }
 
-define <16 x i8> @vld1laneQi8(i8* %A, <16 x i8>* %B) nounwind {
+define <16 x i8> @vld1laneQi8(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1laneQi8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -79,13 +79,13 @@ define <16 x i8> @vld1laneQi8(i8* %A, <16 x i8>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <16 x i8>, <16 x i8>* %B
-  %tmp2 = load i8, i8* %A, align 8
+  %tmp1 = load <16 x i8>, ptr %B
+  %tmp2 = load i8, ptr %A, align 8
   %tmp3 = insertelement <16 x i8> %tmp1, i8 %tmp2, i32 9
   ret <16 x i8> %tmp3
 }
 
-define <8 x i16> @vld1laneQi16(i16* %A, <8 x i16>* %B) nounwind {
+define <8 x i16> @vld1laneQi16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1laneQi16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -93,13 +93,13 @@ define <8 x i16> @vld1laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <8 x i16>, <8 x i16>* %B
-  %tmp2 = load i16, i16* %A, align 8
+  %tmp1 = load <8 x i16>, ptr %B
+  %tmp2 = load i16, ptr %A, align 8
   %tmp3 = insertelement <8 x i16> %tmp1, i16 %tmp2, i32 5
   ret <8 x i16> %tmp3
 }
 
-define <4 x i32> @vld1laneQi32(i32* %A, <4 x i32>* %B) nounwind {
+define <4 x i32> @vld1laneQi32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1laneQi32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -107,13 +107,13 @@ define <4 x i32> @vld1laneQi32(i32* %A, <4 x i32>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <4 x i32>, <4 x i32>* %B
-  %tmp2 = load i32, i32* %A, align 8
+  %tmp1 = load <4 x i32>, ptr %B
+  %tmp2 = load i32, ptr %A, align 8
   %tmp3 = insertelement <4 x i32> %tmp1, i32 %tmp2, i32 3
   ret <4 x i32> %tmp3
 }
 
-define <4 x float> @vld1laneQf(float* %A, <4 x float>* %B) nounwind {
+define <4 x float> @vld1laneQf(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld1laneQf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -121,8 +121,8 @@ define <4 x float> @vld1laneQf(float* %A, <4 x float>* %B) nounwind {
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <4 x float>, <4 x float>* %B
-  %tmp2 = load float, float* %A
+  %tmp1 = load <4 x float>, ptr %B
+  %tmp2 = load float, ptr %A
   %tmp3 = insertelement <4 x float> %tmp1, float %tmp2, i32 0
   ret <4 x float> %tmp3
 }
@@ -137,7 +137,7 @@ define <4 x float> @vld1laneQf(float* %A, <4 x float>* %B) nounwind {
 %struct.__neon_float32x4x2_t = type { <4 x float>, <4 x float> }
 
 ;Check the alignment value.  Max for this instruction is 16 bits:
-define <8 x i8> @vld2lanei8(i8* %A, <8 x i8>* %B) nounwind {
+define <8 x i8> @vld2lanei8(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld2lanei8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -146,8 +146,8 @@ define <8 x i8> @vld2lanei8(i8* %A, <8 x i8>* %B) nounwind {
 ; CHECK-NEXT:    vadd.i8 d16, d16, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <8 x i8>, <8 x i8>* %B
-  %tmp2 = call %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0i8(i8* %A, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 4)
+  %tmp1 = load <8 x i8>, ptr %B
+  %tmp2 = call %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0(ptr %A, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 4)
   %tmp3 = extractvalue %struct.__neon_int8x8x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int8x8x2_t %tmp2, 1
   %tmp5 = add <8 x i8> %tmp3, %tmp4
@@ -155,7 +155,7 @@ define <8 x i8> @vld2lanei8(i8* %A, <8 x i8>* %B) nounwind {
 }
 
 ;Check the alignment value.  Max for this instruction is 32 bits:
-define <4 x i16> @vld2lanei16(i16* %A, <4 x i16>* %B) nounwind {
+define <4 x i16> @vld2lanei16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld2lanei16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -164,16 +164,15 @@ define <4 x i16> @vld2lanei16(i16* %A, <4 x i16>* %B) nounwind {
 ; CHECK-NEXT:    vadd.i16 d16, d16, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i16* %A to i8*
-  %tmp1 = load <4 x i16>, <4 x i16>* %B
-  %tmp2 = call %struct.__neon_int16x4x2_t @llvm.arm.neon.vld2lane.v4i16.p0i8(i8* %tmp0, <4 x i16> %tmp1, <4 x i16> %tmp1, i32 1, i32 8)
+  %tmp1 = load <4 x i16>, ptr %B
+  %tmp2 = call %struct.__neon_int16x4x2_t @llvm.arm.neon.vld2lane.v4i16.p0(ptr %A, <4 x i16> %tmp1, <4 x i16> %tmp1, i32 1, i32 8)
   %tmp3 = extractvalue %struct.__neon_int16x4x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int16x4x2_t %tmp2, 1
   %tmp5 = add <4 x i16> %tmp3, %tmp4
   ret <4 x i16> %tmp5
 }
 
-define <2 x i32> @vld2lanei32(i32* %A, <2 x i32>* %B) nounwind {
+define <2 x i32> @vld2lanei32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld2lanei32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -182,9 +181,8 @@ define <2 x i32> @vld2lanei32(i32* %A, <2 x i32>* %B) nounwind {
 ; CHECK-NEXT:    vadd.i32 d16, d16, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <2 x i32>, <2 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0i8(i8* %tmp0, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
+  %tmp1 = load <2 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0(ptr %A, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 1
   %tmp5 = add <2 x i32> %tmp3, %tmp4
@@ -192,7 +190,7 @@ define <2 x i32> @vld2lanei32(i32* %A, <2 x i32>* %B) nounwind {
 }
 
 ;Check for a post-increment updating load.
-define <2 x i32> @vld2lanei32_update(i32** %ptr, <2 x i32>* %B) nounwind {
+define <2 x i32> @vld2lanei32_update(ptr %ptr, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld2lanei32_update:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vldr d16, [r1]
@@ -219,19 +217,18 @@ define <2 x i32> @vld2lanei32_update(i32** %ptr, <2 x i32>* %B) nounwind {
 ; BASIC-NEXT:    mov r0, r2
 ; BASIC-NEXT:    mov r1, r3
 ; BASIC-NEXT:    mov pc, lr
-  %A = load i32*, i32** %ptr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <2 x i32>, <2 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0i8(i8* %tmp0, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
+  %A = load ptr, ptr %ptr
+  %tmp1 = load <2 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0(ptr %A, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 1
   %tmp5 = add <2 x i32> %tmp3, %tmp4
-  %tmp6 = getelementptr i32, i32* %A, i32 2
-  store i32* %tmp6, i32** %ptr
+  %tmp6 = getelementptr i32, ptr %A, i32 2
+  store ptr %tmp6, ptr %ptr
   ret <2 x i32> %tmp5
 }
 
-define <2 x i32> @vld2lanei32_odd_update(i32** %ptr, <2 x i32>* %B) nounwind {
+define <2 x i32> @vld2lanei32_odd_update(ptr %ptr, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld2lanei32_odd_update:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vldr d16, [r1]
@@ -260,19 +257,18 @@ define <2 x i32> @vld2lanei32_odd_update(i32** %ptr, <2 x i32>* %B) nounwind {
 ; BASIC-NEXT:    mov r0, r2
 ; BASIC-NEXT:    mov r1, r3
 ; BASIC-NEXT:    mov pc, lr
-  %A = load i32*, i32** %ptr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <2 x i32>, <2 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0i8(i8* %tmp0, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
+  %A = load ptr, ptr %ptr
+  %tmp1 = load <2 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0(ptr %A, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x2x2_t %tmp2, 1
   %tmp5 = add <2 x i32> %tmp3, %tmp4
-  %tmp6 = getelementptr i32, i32* %A, i32 3
-  store i32* %tmp6, i32** %ptr
+  %tmp6 = getelementptr i32, ptr %A, i32 3
+  store ptr %tmp6, ptr %ptr
   ret <2 x i32> %tmp5
 }
 
-define <2 x float> @vld2lanef(float* %A, <2 x float>* %B) nounwind {
+define <2 x float> @vld2lanef(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld2lanef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -281,9 +277,8 @@ define <2 x float> @vld2lanef(float* %A, <2 x float>* %B) nounwind {
 ; CHECK-NEXT:    vadd.f32 d16, d16, d17
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast float* %A to i8*
-  %tmp1 = load <2 x float>, <2 x float>* %B
-  %tmp2 = call %struct.__neon_float32x2x2_t @llvm.arm.neon.vld2lane.v2f32.p0i8(i8* %tmp0, <2 x float> %tmp1, <2 x float> %tmp1, i32 1, i32 1)
+  %tmp1 = load <2 x float>, ptr %B
+  %tmp2 = call %struct.__neon_float32x2x2_t @llvm.arm.neon.vld2lane.v2f32.p0(ptr %A, <2 x float> %tmp1, <2 x float> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_float32x2x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_float32x2x2_t %tmp2, 1
   %tmp5 = fadd <2 x float> %tmp3, %tmp4
@@ -291,7 +286,7 @@ define <2 x float> @vld2lanef(float* %A, <2 x float>* %B) nounwind {
 }
 
 ;Check the (default) alignment.
-define <8 x i16> @vld2laneQi16(i16* %A, <8 x i16>* %B) nounwind {
+define <8 x i16> @vld2laneQi16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld2laneQi16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -301,9 +296,8 @@ define <8 x i16> @vld2laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i16* %A to i8*
-  %tmp1 = load <8 x i16>, <8 x i16>* %B
-  %tmp2 = call %struct.__neon_int16x8x2_t @llvm.arm.neon.vld2lane.v8i16.p0i8(i8* %tmp0, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 5, i32 1)
+  %tmp1 = load <8 x i16>, ptr %B
+  %tmp2 = call %struct.__neon_int16x8x2_t @llvm.arm.neon.vld2lane.v8i16.p0(ptr %A, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 5, i32 1)
   %tmp3 = extractvalue %struct.__neon_int16x8x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int16x8x2_t %tmp2, 1
   %tmp5 = add <8 x i16> %tmp3, %tmp4
@@ -311,7 +305,7 @@ define <8 x i16> @vld2laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 }
 
 ;Check the alignment value.  Max for this instruction is 64 bits:
-define <4 x i32> @vld2laneQi32(i32* %A, <4 x i32>* %B) nounwind {
+define <4 x i32> @vld2laneQi32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld2laneQi32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -321,16 +315,15 @@ define <4 x i32> @vld2laneQi32(i32* %A, <4 x i32>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <4 x i32>, <4 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x4x2_t @llvm.arm.neon.vld2lane.v4i32.p0i8(i8* %tmp0, <4 x i32> %tmp1, <4 x i32> %tmp1, i32 2, i32 16)
+  %tmp1 = load <4 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x4x2_t @llvm.arm.neon.vld2lane.v4i32.p0(ptr %A, <4 x i32> %tmp1, <4 x i32> %tmp1, i32 2, i32 16)
   %tmp3 = extractvalue %struct.__neon_int32x4x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x4x2_t %tmp2, 1
   %tmp5 = add <4 x i32> %tmp3, %tmp4
   ret <4 x i32> %tmp5
 }
 
-define <4 x float> @vld2laneQf(float* %A, <4 x float>* %B) nounwind {
+define <4 x float> @vld2laneQf(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld2laneQf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -340,23 +333,22 @@ define <4 x float> @vld2laneQf(float* %A, <4 x float>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast float* %A to i8*
-  %tmp1 = load <4 x float>, <4 x float>* %B
-  %tmp2 = call %struct.__neon_float32x4x2_t @llvm.arm.neon.vld2lane.v4f32.p0i8(i8* %tmp0, <4 x float> %tmp1, <4 x float> %tmp1, i32 1, i32 1)
+  %tmp1 = load <4 x float>, ptr %B
+  %tmp2 = call %struct.__neon_float32x4x2_t @llvm.arm.neon.vld2lane.v4f32.p0(ptr %A, <4 x float> %tmp1, <4 x float> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_float32x4x2_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_float32x4x2_t %tmp2, 1
   %tmp5 = fadd <4 x float> %tmp3, %tmp4
   ret <4 x float> %tmp5
 }
 
-declare %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0i8(i8*, <8 x i8>, <8 x i8>, i32, i32) nounwind readonly
-declare %struct.__neon_int16x4x2_t @llvm.arm.neon.vld2lane.v4i16.p0i8(i8*, <4 x i16>, <4 x i16>, i32, i32) nounwind readonly
-declare %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0i8(i8*, <2 x i32>, <2 x i32>, i32, i32) nounwind readonly
-declare %struct.__neon_float32x2x2_t @llvm.arm.neon.vld2lane.v2f32.p0i8(i8*, <2 x float>, <2 x float>, i32, i32) nounwind readonly
+declare %struct.__neon_int8x8x2_t @llvm.arm.neon.vld2lane.v8i8.p0(ptr, <8 x i8>, <8 x i8>, i32, i32) nounwind readonly
+declare %struct.__neon_int16x4x2_t @llvm.arm.neon.vld2lane.v4i16.p0(ptr, <4 x i16>, <4 x i16>, i32, i32) nounwind readonly
+declare %struct.__neon_int32x2x2_t @llvm.arm.neon.vld2lane.v2i32.p0(ptr, <2 x i32>, <2 x i32>, i32, i32) nounwind readonly
+declare %struct.__neon_float32x2x2_t @llvm.arm.neon.vld2lane.v2f32.p0(ptr, <2 x float>, <2 x float>, i32, i32) nounwind readonly
 
-declare %struct.__neon_int16x8x2_t @llvm.arm.neon.vld2lane.v8i16.p0i8(i8*, <8 x i16>, <8 x i16>, i32, i32) nounwind readonly
-declare %struct.__neon_int32x4x2_t @llvm.arm.neon.vld2lane.v4i32.p0i8(i8*, <4 x i32>, <4 x i32>, i32, i32) nounwind readonly
-declare %struct.__neon_float32x4x2_t @llvm.arm.neon.vld2lane.v4f32.p0i8(i8*, <4 x float>, <4 x float>, i32, i32) nounwind readonly
+declare %struct.__neon_int16x8x2_t @llvm.arm.neon.vld2lane.v8i16.p0(ptr, <8 x i16>, <8 x i16>, i32, i32) nounwind readonly
+declare %struct.__neon_int32x4x2_t @llvm.arm.neon.vld2lane.v4i32.p0(ptr, <4 x i32>, <4 x i32>, i32, i32) nounwind readonly
+declare %struct.__neon_float32x4x2_t @llvm.arm.neon.vld2lane.v4f32.p0(ptr, <4 x float>, <4 x float>, i32, i32) nounwind readonly
 
 %struct.__neon_int8x8x3_t = type { <8 x i8>,  <8 x i8>,  <8 x i8> }
 %struct.__neon_int16x4x3_t = type { <4 x i16>, <4 x i16>, <4 x i16> }
@@ -367,7 +359,7 @@ declare %struct.__neon_float32x4x2_t @llvm.arm.neon.vld2lane.v4f32.p0i8(i8*, <4 
 %struct.__neon_int32x4x3_t = type { <4 x i32>, <4 x i32>, <4 x i32> }
 %struct.__neon_float32x4x3_t = type { <4 x float>, <4 x float>, <4 x float> }
 
-define <8 x i8> @vld3lanei8(i8* %A, <8 x i8>* %B) nounwind {
+define <8 x i8> @vld3lanei8(ptr %A, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld3lanei8:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vldr d16, [r1]
@@ -389,8 +381,8 @@ define <8 x i8> @vld3lanei8(i8* %A, <8 x i8>* %B) nounwind {
 ; BASIC-NEXT:    vadd.i8 d16, d20, d16
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-  %tmp1 = load <8 x i8>, <8 x i8>* %B
-  %tmp2 = call %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3lane.v8i8.p0i8(i8* %A, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 1)
+  %tmp1 = load <8 x i8>, ptr %B
+  %tmp2 = call %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3lane.v8i8.p0(ptr %A, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_int8x8x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int8x8x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int8x8x3_t %tmp2, 2
@@ -400,7 +392,7 @@ define <8 x i8> @vld3lanei8(i8* %A, <8 x i8>* %B) nounwind {
 }
 
 ;Check the (default) alignment value.  VLD3 does not support alignment.
-define <4 x i16> @vld3lanei16(i16* %A, <4 x i16>* %B) nounwind {
+define <4 x i16> @vld3lanei16(ptr %A, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld3lanei16:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vldr d16, [r1]
@@ -422,9 +414,8 @@ define <4 x i16> @vld3lanei16(i16* %A, <4 x i16>* %B) nounwind {
 ; BASIC-NEXT:    vadd.i16 d16, d20, d16
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-  %tmp0 = bitcast i16* %A to i8*
-  %tmp1 = load <4 x i16>, <4 x i16>* %B
-  %tmp2 = call %struct.__neon_int16x4x3_t @llvm.arm.neon.vld3lane.v4i16.p0i8(i8* %tmp0, <4 x i16> %tmp1, <4 x i16> %tmp1, <4 x i16> %tmp1, i32 1, i32 8)
+  %tmp1 = load <4 x i16>, ptr %B
+  %tmp2 = call %struct.__neon_int16x4x3_t @llvm.arm.neon.vld3lane.v4i16.p0(ptr %A, <4 x i16> %tmp1, <4 x i16> %tmp1, <4 x i16> %tmp1, i32 1, i32 8)
   %tmp3 = extractvalue %struct.__neon_int16x4x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int16x4x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int16x4x3_t %tmp2, 2
@@ -433,7 +424,7 @@ define <4 x i16> @vld3lanei16(i16* %A, <4 x i16>* %B) nounwind {
   ret <4 x i16> %tmp7
 }
 
-define <2 x i32> @vld3lanei32(i32* %A, <2 x i32>* %B) nounwind {
+define <2 x i32> @vld3lanei32(ptr %A, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld3lanei32:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vldr d16, [r1]
@@ -455,9 +446,8 @@ define <2 x i32> @vld3lanei32(i32* %A, <2 x i32>* %B) nounwind {
 ; BASIC-NEXT:    vadd.i32 d16, d20, d16
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <2 x i32>, <2 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x2x3_t @llvm.arm.neon.vld3lane.v2i32.p0i8(i8* %tmp0, <2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
+  %tmp1 = load <2 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x2x3_t @llvm.arm.neon.vld3lane.v2i32.p0(ptr %A, <2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_int32x2x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x2x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int32x2x3_t %tmp2, 2
@@ -466,7 +456,7 @@ define <2 x i32> @vld3lanei32(i32* %A, <2 x i32>* %B) nounwind {
   ret <2 x i32> %tmp7
 }
 
-define <2 x float> @vld3lanef(float* %A, <2 x float>* %B) nounwind {
+define <2 x float> @vld3lanef(ptr %A, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld3lanef:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vldr d16, [r1]
@@ -488,9 +478,8 @@ define <2 x float> @vld3lanef(float* %A, <2 x float>* %B) nounwind {
 ; BASIC-NEXT:    vadd.f32 d16, d20, d16
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    mov pc, lr
-  %tmp0 = bitcast float* %A to i8*
-  %tmp1 = load <2 x float>, <2 x float>* %B
-  %tmp2 = call %struct.__neon_float32x2x3_t @llvm.arm.neon.vld3lane.v2f32.p0i8(i8* %tmp0, <2 x float> %tmp1, <2 x float> %tmp1, <2 x float> %tmp1, i32 1, i32 1)
+  %tmp1 = load <2 x float>, ptr %B
+  %tmp2 = call %struct.__neon_float32x2x3_t @llvm.arm.neon.vld3lane.v2f32.p0(ptr %A, <2 x float> %tmp1, <2 x float> %tmp1, <2 x float> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_float32x2x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_float32x2x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_float32x2x3_t %tmp2, 2
@@ -500,7 +489,7 @@ define <2 x float> @vld3lanef(float* %A, <2 x float>* %B) nounwind {
 }
 
 ;Check the (default) alignment value.  VLD3 does not support alignment.
-define <8 x i16> @vld3laneQi16(i16* %A, <8 x i16>* %B) nounwind {
+define <8 x i16> @vld3laneQi16(ptr %A, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld3laneQi16:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -524,9 +513,8 @@ define <8 x i16> @vld3laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-  %tmp0 = bitcast i16* %A to i8*
-  %tmp1 = load <8 x i16>, <8 x i16>* %B
-  %tmp2 = call %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0i8(i8* %tmp0, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 1, i32 8)
+  %tmp1 = load <8 x i16>, ptr %B
+  %tmp2 = call %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0(ptr %A, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 1, i32 8)
   %tmp3 = extractvalue %struct.__neon_int16x8x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int16x8x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int16x8x3_t %tmp2, 2
@@ -536,7 +524,7 @@ define <8 x i16> @vld3laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 }
 
 ;Check for a post-increment updating load with register increment.
-define <8 x i16> @vld3laneQi16_update(i16** %ptr, <8 x i16>* %B, i32 %inc) nounwind {
+define <8 x i16> @vld3laneQi16_update(ptr %ptr, ptr %B, i32 %inc) nounwind {
 ; DEFAULT-LABEL: vld3laneQi16_update:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    .save {r11, lr}
@@ -577,21 +565,20 @@ define <8 x i16> @vld3laneQi16_update(i16** %ptr, <8 x i16>* %B, i32 %inc) nounw
 ; BASIC-NEXT:    mov r3, r12
 ; BASIC-NEXT:    pop {r11, lr}
 ; BASIC-NEXT:    mov pc, lr
-  %A = load i16*, i16** %ptr
-  %tmp0 = bitcast i16* %A to i8*
-  %tmp1 = load <8 x i16>, <8 x i16>* %B
-  %tmp2 = call %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0i8(i8* %tmp0, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 1, i32 8)
+  %A = load ptr, ptr %ptr
+  %tmp1 = load <8 x i16>, ptr %B
+  %tmp2 = call %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0(ptr %A, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 1, i32 8)
   %tmp3 = extractvalue %struct.__neon_int16x8x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int16x8x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int16x8x3_t %tmp2, 2
   %tmp6 = add <8 x i16> %tmp3, %tmp4
   %tmp7 = add <8 x i16> %tmp5, %tmp6
-  %tmp8 = getelementptr i16, i16* %A, i32 %inc
-  store i16* %tmp8, i16** %ptr
+  %tmp8 = getelementptr i16, ptr %A, i32 %inc
+  store ptr %tmp8, ptr %ptr
   ret <8 x i16> %tmp7
 }
 
-define <4 x i32> @vld3laneQi32(i32* %A, <4 x i32>* %B) nounwind {
+define <4 x i32> @vld3laneQi32(ptr %A, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld3laneQi32:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -615,9 +602,8 @@ define <4 x i32> @vld3laneQi32(i32* %A, <4 x i32>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <4 x i32>, <4 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x4x3_t @llvm.arm.neon.vld3lane.v4i32.p0i8(i8* %tmp0, <4 x i32> %tmp1, <4 x i32> %tmp1, <4 x i32> %tmp1, i32 3, i32 1)
+  %tmp1 = load <4 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x4x3_t @llvm.arm.neon.vld3lane.v4i32.p0(ptr %A, <4 x i32> %tmp1, <4 x i32> %tmp1, <4 x i32> %tmp1, i32 3, i32 1)
   %tmp3 = extractvalue %struct.__neon_int32x4x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x4x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int32x4x3_t %tmp2, 2
@@ -626,7 +612,7 @@ define <4 x i32> @vld3laneQi32(i32* %A, <4 x i32>* %B) nounwind {
   ret <4 x i32> %tmp7
 }
 
-define <4 x float> @vld3laneQf(float* %A, <4 x float>* %B) nounwind {
+define <4 x float> @vld3laneQf(ptr %A, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld3laneQf:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -650,9 +636,8 @@ define <4 x float> @vld3laneQf(float* %A, <4 x float>* %B) nounwind {
 ; BASIC-NEXT:    vmov r0, r1, d16
 ; BASIC-NEXT:    vmov r2, r3, d17
 ; BASIC-NEXT:    mov pc, lr
-  %tmp0 = bitcast float* %A to i8*
-  %tmp1 = load <4 x float>, <4 x float>* %B
-  %tmp2 = call %struct.__neon_float32x4x3_t @llvm.arm.neon.vld3lane.v4f32.p0i8(i8* %tmp0, <4 x float> %tmp1, <4 x float> %tmp1, <4 x float> %tmp1, i32 1, i32 1)
+  %tmp1 = load <4 x float>, ptr %B
+  %tmp2 = call %struct.__neon_float32x4x3_t @llvm.arm.neon.vld3lane.v4f32.p0(ptr %A, <4 x float> %tmp1, <4 x float> %tmp1, <4 x float> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_float32x4x3_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_float32x4x3_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_float32x4x3_t %tmp2, 2
@@ -661,14 +646,14 @@ define <4 x float> @vld3laneQf(float* %A, <4 x float>* %B) nounwind {
   ret <4 x float> %tmp7
 }
 
-declare %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3lane.v8i8.p0i8(i8*, <8 x i8>, <8 x i8>, <8 x i8>, i32, i32) nounwind readonly
-declare %struct.__neon_int16x4x3_t @llvm.arm.neon.vld3lane.v4i16.p0i8(i8*, <4 x i16>, <4 x i16>, <4 x i16>, i32, i32) nounwind readonly
-declare %struct.__neon_int32x2x3_t @llvm.arm.neon.vld3lane.v2i32.p0i8(i8*, <2 x i32>, <2 x i32>, <2 x i32>, i32, i32) nounwind readonly
-declare %struct.__neon_float32x2x3_t @llvm.arm.neon.vld3lane.v2f32.p0i8(i8*, <2 x float>, <2 x float>, <2 x float>, i32, i32) nounwind readonly
+declare %struct.__neon_int8x8x3_t @llvm.arm.neon.vld3lane.v8i8.p0(ptr, <8 x i8>, <8 x i8>, <8 x i8>, i32, i32) nounwind readonly
+declare %struct.__neon_int16x4x3_t @llvm.arm.neon.vld3lane.v4i16.p0(ptr, <4 x i16>, <4 x i16>, <4 x i16>, i32, i32) nounwind readonly
+declare %struct.__neon_int32x2x3_t @llvm.arm.neon.vld3lane.v2i32.p0(ptr, <2 x i32>, <2 x i32>, <2 x i32>, i32, i32) nounwind readonly
+declare %struct.__neon_float32x2x3_t @llvm.arm.neon.vld3lane.v2f32.p0(ptr, <2 x float>, <2 x float>, <2 x float>, i32, i32) nounwind readonly
 
-declare %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0i8(i8*, <8 x i16>, <8 x i16>, <8 x i16>, i32, i32) nounwind readonly
-declare %struct.__neon_int32x4x3_t @llvm.arm.neon.vld3lane.v4i32.p0i8(i8*, <4 x i32>, <4 x i32>, <4 x i32>, i32, i32) nounwind readonly
-declare %struct.__neon_float32x4x3_t @llvm.arm.neon.vld3lane.v4f32.p0i8(i8*, <4 x float>, <4 x float>, <4 x float>, i32, i32) nounwind readonly
+declare %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0(ptr, <8 x i16>, <8 x i16>, <8 x i16>, i32, i32) nounwind readonly
+declare %struct.__neon_int32x4x3_t @llvm.arm.neon.vld3lane.v4i32.p0(ptr, <4 x i32>, <4 x i32>, <4 x i32>, i32, i32) nounwind readonly
+declare %struct.__neon_float32x4x3_t @llvm.arm.neon.vld3lane.v4f32.p0(ptr, <4 x float>, <4 x float>, <4 x float>, i32, i32) nounwind readonly
 
 %struct.__neon_int8x8x4_t = type { <8 x i8>,  <8 x i8>,  <8 x i8>,  <8 x i8> }
 %struct.__neon_int16x4x4_t = type { <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16> }
@@ -680,7 +665,7 @@ declare %struct.__neon_float32x4x3_t @llvm.arm.neon.vld3lane.v4f32.p0i8(i8*, <4 
 %struct.__neon_float32x4x4_t = type { <4 x float>, <4 x float>, <4 x float>, <4 x float> }
 
 ;Check the alignment value.  Max for this instruction is 32 bits:
-define <8 x i8> @vld4lanei8(i8* %A, <8 x i8>* %B) nounwind {
+define <8 x i8> @vld4lanei8(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld4lanei8:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -693,8 +678,8 @@ define <8 x i8> @vld4lanei8(i8* %A, <8 x i8>* %B) nounwind {
 ; CHECK-NEXT:    vadd.i8 d16, d16, d20
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp1 = load <8 x i8>, <8 x i8>* %B
-  %tmp2 = call %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4lane.v8i8.p0i8(i8* %A, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 8)
+  %tmp1 = load <8 x i8>, ptr %B
+  %tmp2 = call %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4lane.v8i8.p0(ptr %A, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 8)
   %tmp3 = extractvalue %struct.__neon_int8x8x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int8x8x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int8x8x4_t %tmp2, 2
@@ -706,7 +691,7 @@ define <8 x i8> @vld4lanei8(i8* %A, <8 x i8>* %B) nounwind {
 }
 
 ;Check for a post-increment updating load.
-define <8 x i8> @vld4lanei8_update(i8** %ptr, <8 x i8>* %B) nounwind {
+define <8 x i8> @vld4lanei8_update(ptr %ptr, ptr %B) nounwind {
 ; DEFAULT-LABEL: vld4lanei8_update:
 ; DEFAULT:       @ %bb.0:
 ; DEFAULT-NEXT:    vldr d16, [r1]
@@ -740,9 +725,9 @@ define <8 x i8> @vld4lanei8_update(i8** %ptr, <8 x i8>* %B) nounwind {
 ; BASIC-NEXT:    mov r0, r1
 ; BASIC-NEXT:    mov r1, r2
 ; BASIC-NEXT:    mov pc, lr
-  %A = load i8*, i8** %ptr
-  %tmp1 = load <8 x i8>, <8 x i8>* %B
-  %tmp2 = call %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4lane.v8i8.p0i8(i8* %A, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 8)
+  %A = load ptr, ptr %ptr
+  %tmp1 = load <8 x i8>, ptr %B
+  %tmp2 = call %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4lane.v8i8.p0(ptr %A, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, <8 x i8> %tmp1, i32 1, i32 8)
   %tmp3 = extractvalue %struct.__neon_int8x8x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int8x8x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int8x8x4_t %tmp2, 2
@@ -750,14 +735,14 @@ define <8 x i8> @vld4lanei8_update(i8** %ptr, <8 x i8>* %B) nounwind {
   %tmp7 = add <8 x i8> %tmp3, %tmp4
   %tmp8 = add <8 x i8> %tmp5, %tmp6
   %tmp9 = add <8 x i8> %tmp7, %tmp8
-  %tmp10 = getelementptr i8, i8* %A, i32 4
-  store i8* %tmp10, i8** %ptr
+  %tmp10 = getelementptr i8, ptr %A, i32 4
+  store ptr %tmp10, ptr %ptr
   ret <8 x i8> %tmp9
 }
 
 ;Check that a power-of-two alignment smaller than the total size of the memory
 ;being loaded is ignored.
-define <4 x i16> @vld4lanei16(i16* %A, <4 x i16>* %B) nounwind {
+define <4 x i16> @vld4lanei16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld4lanei16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -770,9 +755,8 @@ define <4 x i16> @vld4lanei16(i16* %A, <4 x i16>* %B) nounwind {
 ; CHECK-NEXT:    vadd.i16 d16, d16, d20
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i16* %A to i8*
-  %tmp1 = load <4 x i16>, <4 x i16>* %B
-  %tmp2 = call %struct.__neon_int16x4x4_t @llvm.arm.neon.vld4lane.v4i16.p0i8(i8* %tmp0, <4 x i16> %tmp1, <4 x i16> %tmp1, <4 x i16> %tmp1, <4 x i16> %tmp1, i32 1, i32 4)
+  %tmp1 = load <4 x i16>, ptr %B
+  %tmp2 = call %struct.__neon_int16x4x4_t @llvm.arm.neon.vld4lane.v4i16.p0(ptr %A, <4 x i16> %tmp1, <4 x i16> %tmp1, <4 x i16> %tmp1, <4 x i16> %tmp1, i32 1, i32 4)
   %tmp3 = extractvalue %struct.__neon_int16x4x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int16x4x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int16x4x4_t %tmp2, 2
@@ -785,7 +769,7 @@ define <4 x i16> @vld4lanei16(i16* %A, <4 x i16>* %B) nounwind {
 
 ;Check the alignment value.  An 8-byte alignment is allowed here even though
 ;it is smaller than the total size of the memory being loaded.
-define <2 x i32> @vld4lanei32(i32* %A, <2 x i32>* %B) nounwind {
+define <2 x i32> @vld4lanei32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld4lanei32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -798,9 +782,8 @@ define <2 x i32> @vld4lanei32(i32* %A, <2 x i32>* %B) nounwind {
 ; CHECK-NEXT:    vadd.i32 d16, d16, d20
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <2 x i32>, <2 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x2x4_t @llvm.arm.neon.vld4lane.v2i32.p0i8(i8* %tmp0, <2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 8)
+  %tmp1 = load <2 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x2x4_t @llvm.arm.neon.vld4lane.v2i32.p0(ptr %A, <2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> %tmp1, <2 x i32> %tmp1, i32 1, i32 8)
   %tmp3 = extractvalue %struct.__neon_int32x2x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x2x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int32x2x4_t %tmp2, 2
@@ -811,7 +794,7 @@ define <2 x i32> @vld4lanei32(i32* %A, <2 x i32>* %B) nounwind {
   ret <2 x i32> %tmp9
 }
 
-define <2 x float> @vld4lanef(float* %A, <2 x float>* %B) nounwind {
+define <2 x float> @vld4lanef(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld4lanef:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vldr d16, [r1]
@@ -824,9 +807,8 @@ define <2 x float> @vld4lanef(float* %A, <2 x float>* %B) nounwind {
 ; CHECK-NEXT:    vadd.f32 d16, d16, d20
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast float* %A to i8*
-  %tmp1 = load <2 x float>, <2 x float>* %B
-  %tmp2 = call %struct.__neon_float32x2x4_t @llvm.arm.neon.vld4lane.v2f32.p0i8(i8* %tmp0, <2 x float> %tmp1, <2 x float> %tmp1, <2 x float> %tmp1, <2 x float> %tmp1, i32 1, i32 1)
+  %tmp1 = load <2 x float>, ptr %B
+  %tmp2 = call %struct.__neon_float32x2x4_t @llvm.arm.neon.vld4lane.v2f32.p0(ptr %A, <2 x float> %tmp1, <2 x float> %tmp1, <2 x float> %tmp1, <2 x float> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_float32x2x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_float32x2x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_float32x2x4_t %tmp2, 2
@@ -838,7 +820,7 @@ define <2 x float> @vld4lanef(float* %A, <2 x float>* %B) nounwind {
 }
 
 ;Check the alignment value.  Max for this instruction is 64 bits:
-define <8 x i16> @vld4laneQi16(i16* %A, <8 x i16>* %B) nounwind {
+define <8 x i16> @vld4laneQi16(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld4laneQi16:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -852,9 +834,8 @@ define <8 x i16> @vld4laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i16* %A to i8*
-  %tmp1 = load <8 x i16>, <8 x i16>* %B
-  %tmp2 = call %struct.__neon_int16x8x4_t @llvm.arm.neon.vld4lane.v8i16.p0i8(i8* %tmp0, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 1, i32 16)
+  %tmp1 = load <8 x i16>, ptr %B
+  %tmp2 = call %struct.__neon_int16x8x4_t @llvm.arm.neon.vld4lane.v8i16.p0(ptr %A, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, <8 x i16> %tmp1, i32 1, i32 16)
   %tmp3 = extractvalue %struct.__neon_int16x8x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int16x8x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int16x8x4_t %tmp2, 2
@@ -866,7 +847,7 @@ define <8 x i16> @vld4laneQi16(i16* %A, <8 x i16>* %B) nounwind {
 }
 
 ;Check the (default) alignment.
-define <4 x i32> @vld4laneQi32(i32* %A, <4 x i32>* %B) nounwind {
+define <4 x i32> @vld4laneQi32(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld4laneQi32:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -880,9 +861,8 @@ define <4 x i32> @vld4laneQi32(i32* %A, <4 x i32>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast i32* %A to i8*
-  %tmp1 = load <4 x i32>, <4 x i32>* %B
-  %tmp2 = call %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4lane.v4i32.p0i8(i8* %tmp0, <4 x i32> %tmp1, <4 x i32> %tmp1, <4 x i32> %tmp1, <4 x i32> %tmp1, i32 2, i32 1)
+  %tmp1 = load <4 x i32>, ptr %B
+  %tmp2 = call %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4lane.v4i32.p0(ptr %A, <4 x i32> %tmp1, <4 x i32> %tmp1, <4 x i32> %tmp1, <4 x i32> %tmp1, i32 2, i32 1)
   %tmp3 = extractvalue %struct.__neon_int32x4x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_int32x4x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_int32x4x4_t %tmp2, 2
@@ -893,7 +873,7 @@ define <4 x i32> @vld4laneQi32(i32* %A, <4 x i32>* %B) nounwind {
   ret <4 x i32> %tmp9
 }
 
-define <4 x float> @vld4laneQf(float* %A, <4 x float>* %B) nounwind {
+define <4 x float> @vld4laneQf(ptr %A, ptr %B) nounwind {
 ; CHECK-LABEL: vld4laneQf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vld1.64 {d16, d17}, [r1]
@@ -907,9 +887,8 @@ define <4 x float> @vld4laneQf(float* %A, <4 x float>* %B) nounwind {
 ; CHECK-NEXT:    vmov r0, r1, d16
 ; CHECK-NEXT:    vmov r2, r3, d17
 ; CHECK-NEXT:    mov pc, lr
-  %tmp0 = bitcast float* %A to i8*
-  %tmp1 = load <4 x float>, <4 x float>* %B
-  %tmp2 = call %struct.__neon_float32x4x4_t @llvm.arm.neon.vld4lane.v4f32.p0i8(i8* %tmp0, <4 x float> %tmp1, <4 x float> %tmp1, <4 x float> %tmp1, <4 x float> %tmp1, i32 1, i32 1)
+  %tmp1 = load <4 x float>, ptr %B
+  %tmp2 = call %struct.__neon_float32x4x4_t @llvm.arm.neon.vld4lane.v4f32.p0(ptr %A, <4 x float> %tmp1, <4 x float> %tmp1, <4 x float> %tmp1, <4 x float> %tmp1, i32 1, i32 1)
   %tmp3 = extractvalue %struct.__neon_float32x4x4_t %tmp2, 0
   %tmp4 = extractvalue %struct.__neon_float32x4x4_t %tmp2, 1
   %tmp5 = extractvalue %struct.__neon_float32x4x4_t %tmp2, 2
@@ -920,14 +899,14 @@ define <4 x float> @vld4laneQf(float* %A, <4 x float>* %B) nounwind {
   ret <4 x float> %tmp9
 }
 
-declare %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4lane.v8i8.p0i8(i8*, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, i32, i32) nounwind readonly
-declare %struct.__neon_int16x4x4_t @llvm.arm.neon.vld4lane.v4i16.p0i8(i8*, <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>, i32, i32) nounwind readonly
-declare %struct.__neon_int32x2x4_t @llvm.arm.neon.vld4lane.v2i32.p0i8(i8*, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, i32, i32) nounwind readonly
-declare %struct.__neon_float32x2x4_t @llvm.arm.neon.vld4lane.v2f32.p0i8(i8*, <2 x float>, <2 x float>, <2 x float>, <2 x float>, i32, i32) nounwind readonly
+declare %struct.__neon_int8x8x4_t @llvm.arm.neon.vld4lane.v8i8.p0(ptr, <8 x i8>, <8 x i8>, <8 x i8>, <8 x i8>, i32, i32) nounwind readonly
+declare %struct.__neon_int16x4x4_t @llvm.arm.neon.vld4lane.v4i16.p0(ptr, <4 x i16>, <4 x i16>, <4 x i16>, <4 x i16>, i32, i32) nounwind readonly
+declare %struct.__neon_int32x2x4_t @llvm.arm.neon.vld4lane.v2i32.p0(ptr, <2 x i32>, <2 x i32>, <2 x i32>, <2 x i32>, i32, i32) nounwind readonly
+declare %struct.__neon_float32x2x4_t @llvm.arm.neon.vld4lane.v2f32.p0(ptr, <2 x float>, <2 x float>, <2 x float>, <2 x float>, i32, i32) nounwind readonly
 
-declare %struct.__neon_int16x8x4_t @llvm.arm.neon.vld4lane.v8i16.p0i8(i8*, <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16>, i32, i32) nounwind readonly
-declare %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4lane.v4i32.p0i8(i8*, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, i32, i32) nounwind readonly
-declare %struct.__neon_float32x4x4_t @llvm.arm.neon.vld4lane.v4f32.p0i8(i8*, <4 x float>, <4 x float>, <4 x float>, <4 x float>, i32, i32) nounwind readonly
+declare %struct.__neon_int16x8x4_t @llvm.arm.neon.vld4lane.v8i16.p0(ptr, <8 x i16>, <8 x i16>, <8 x i16>, <8 x i16>, i32, i32) nounwind readonly
+declare %struct.__neon_int32x4x4_t @llvm.arm.neon.vld4lane.v4i32.p0(ptr, <4 x i32>, <4 x i32>, <4 x i32>, <4 x i32>, i32, i32) nounwind readonly
+declare %struct.__neon_float32x4x4_t @llvm.arm.neon.vld4lane.v4f32.p0(ptr, <4 x float>, <4 x float>, <4 x float>, <4 x float>, i32, i32) nounwind readonly
 
 ; Radar 8776599: If one of the operands to a QQQQ REG_SEQUENCE is a register
 ; in the QPR_VFP2 regclass, it needs to be copied to a QPR regclass because
@@ -966,7 +945,7 @@ define <8 x i16> @test_qqqq_regsequence_subreg([6 x i64] %b) nounwind {
   %tmp65 = shl i128 %tmp64, 64
   %ins67 = or i128 %tmp65, 0
   %tmp78 = bitcast i128 %ins67 to <8 x i16>
-  %vld3_lane = tail call %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0i8(i8* undef, <8 x i16> undef, <8 x i16> undef, <8 x i16> %tmp78, i32 1, i32 2)
+  %vld3_lane = tail call %struct.__neon_int16x8x3_t @llvm.arm.neon.vld3lane.v8i16.p0(ptr undef, <8 x i16> undef, <8 x i16> undef, <8 x i16> %tmp78, i32 1, i32 2)
   %tmp3 = extractvalue %struct.__neon_int16x8x3_t %vld3_lane, 0
   %tmp4 = extractvalue %struct.__neon_int16x8x3_t %vld3_lane, 1
   %tmp5 = extractvalue %struct.__neon_int16x8x3_t %vld3_lane, 2

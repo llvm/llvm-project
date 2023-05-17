@@ -8,7 +8,7 @@
 
 @lds = addrspace(3) global [256 x i32] zeroinitializer
 
-define amdgpu_kernel void @load_zeroinit_lds_global(i32 addrspace(1)* %out, i1 %p) {
+define amdgpu_kernel void @load_zeroinit_lds_global(ptr addrspace(1) %out, i1 %p) {
   ; GCN-LABEL: name: load_zeroinit_lds_global
   ; GCN: bb.0 (%ir-block.0):
   ; GCN:   liveins: $sgpr0_sgpr1
@@ -24,11 +24,11 @@ define amdgpu_kernel void @load_zeroinit_lds_global(i32 addrspace(1)* %out, i1 %
   ; GCN:   SI_INIT_M0 -1, implicit-def $m0
   ; GCN:   [[DS_READ_B32_:%[0-9]+]]:vgpr_32 = DS_READ_B32 killed [[V_MOV_B32_e32_]], 40, 0, implicit $m0, implicit $exec
   ; GFX9:  [[COPY1:%[0-9]+]]:vreg_64 = COPY [[S_LOAD_DWORDX2_IMM]]
-  ; GFX8:  BUFFER_STORE_DWORD_OFFSET killed [[DS_READ_B32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, 0, implicit $exec
+  ; GFX8:  BUFFER_STORE_DWORD_OFFSET killed [[DS_READ_B32_]], killed [[REG_SEQUENCE]], 0, 0, 0, 0, implicit $exec
   ; GFX9:  FLAT_STORE_DWORD killed [[COPY1]], killed [[DS_READ_B32_]], 0, 0, implicit $exec, implicit $flat_scr
   ; GCN:   S_ENDPGM 0
- %gep = getelementptr [256 x i32], [256 x i32] addrspace(3)* @lds, i32 0, i32 10
-  %ld = load i32, i32 addrspace(3)* %gep
-  store i32 %ld, i32 addrspace(1)* %out
+ %gep = getelementptr [256 x i32], ptr addrspace(3) @lds, i32 0, i32 10
+  %ld = load i32, ptr addrspace(3) %gep
+  store i32 %ld, ptr addrspace(1) %out
   ret void
 }

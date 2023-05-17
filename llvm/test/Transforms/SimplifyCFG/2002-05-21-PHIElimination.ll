@@ -4,7 +4,7 @@
 ;
 ; Which is not valid SSA
 ;
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 | llvm-dis
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 | llvm-dis
 
 define void @test() {
 ; <label>:0

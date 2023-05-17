@@ -145,7 +145,25 @@ void GetAllocatorCacheRange(uptr *begin, uptr *end) {
   *end = *begin + sizeof(AllocatorCache);
 }
 
+static const void *GetMallocBegin(const void *p) {
+  if (!p)
+    return nullptr;
+  void *beg = allocator.GetBlockBegin(p);
+  if (!beg)
+    return nullptr;
+  ChunkMetadata *m = Metadata(beg);
+  if (!m)
+    return nullptr;
+  if (!m->allocated)
+    return nullptr;
+  if (m->requested_size == 0)
+    return nullptr;
+  return (const void *)beg;
+}
+
 uptr GetMallocUsableSize(const void *p) {
+  if (!p)
+    return 0;
   ChunkMetadata *m = Metadata(p);
   if (!m) return 0;
   return m->requested_size;
@@ -273,6 +291,10 @@ uptr GetUserBegin(uptr chunk) {
   return chunk;
 }
 
+uptr GetUserAddr(uptr chunk) {
+  return chunk;
+}
+
 LsanMetadata::LsanMetadata(uptr chunk) {
   metadata_ = Metadata(reinterpret_cast<void *>(chunk));
   CHECK(metadata_);
@@ -302,7 +324,7 @@ void ForEachChunk(ForEachChunkCallback callback, void *arg) {
   allocator.ForEachChunk(callback, arg);
 }
 
-IgnoreObjectResult IgnoreObjectLocked(const void *p) {
+IgnoreObjectResult IgnoreObject(const void *p) {
   void *chunk = allocator.GetBlockBegin(p);
   if (!chunk || p < chunk) return kIgnoreObjectInvalid;
   ChunkMetadata *m = Metadata(chunk);
@@ -315,15 +337,6 @@ IgnoreObjectResult IgnoreObjectLocked(const void *p) {
   } else {
     return kIgnoreObjectInvalid;
   }
-}
-
-void GetAdditionalThreadContextPtrs(ThreadContextBase *tctx, void *ptrs) {
-  // This function can be used to treat memory reachable from `tctx` as live.
-  // This is useful for threads that have been created but not yet started.
-
-  // This is currently a no-op because the LSan `pthread_create()` interceptor
-  // blocks until the child thread starts which keeps the thread's `arg` pointer
-  // live.
 }
 
 } // namespace __lsan
@@ -356,6 +369,11 @@ uptr __sanitizer_get_estimated_allocated_size(uptr size) { return size; }
 
 SANITIZER_INTERFACE_ATTRIBUTE
 int __sanitizer_get_ownership(const void *p) { return Metadata(p) != nullptr; }
+
+SANITIZER_INTERFACE_ATTRIBUTE
+const void * __sanitizer_get_allocated_begin(const void *p) {
+  return GetMallocBegin(p);
+}
 
 SANITIZER_INTERFACE_ATTRIBUTE
 uptr __sanitizer_get_allocated_size(const void *p) {

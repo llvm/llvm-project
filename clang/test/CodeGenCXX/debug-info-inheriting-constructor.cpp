@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -debug-info-kind=standalone -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -debug-info-kind=standalone -std=c++11 -triple x86_64-darwin -emit-llvm -o - %s | FileCheck %s
 
 struct A {
   A(int, ...);
@@ -12,7 +12,7 @@ A::A(int i, ...) {}
 // CHECK-NOT: ret void
 // CHECK: call void @llvm.dbg.declare
 // CHECK-NOT: ret void
-// CHECK: call void @llvm.dbg.declare(metadata %{{.*}}** %{{[^,]+}},
+// CHECK: call void @llvm.dbg.declare(metadata ptr %{{[^,]+}},
 // CHECK-SAME: metadata ![[THIS:[0-9]+]], metadata !DIExpression()), !dbg ![[LOC:[0-9]+]]
 // CHECK: ret void, !dbg ![[NOINL:[0-9]+]]
 // CHECK: ![[FOO:.*]] = distinct !DISubprogram(name: "foo"

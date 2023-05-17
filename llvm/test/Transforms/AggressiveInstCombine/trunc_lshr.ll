@@ -87,7 +87,7 @@ define i32 @lshr_check_no_overflow(i32 %x, i16 %amt) {
   ret i32 %trunc
 }
 
-define void @lshr_big_dag(i16* %a, i8 %b, i8 %c) {
+define void @lshr_big_dag(ptr %a, i8 %b, i8 %c) {
 ; CHECK-LABEL: @lshr_big_dag(
 ; CHECK-NEXT:    [[ZEXT1:%.*]] = zext i8 [[B:%.*]] to i16
 ; CHECK-NEXT:    [[ZEXT2:%.*]] = zext i8 [[C:%.*]] to i16
@@ -97,7 +97,7 @@ define void @lshr_big_dag(i16* %a, i8 %b, i8 %c) {
 ; CHECK-NEXT:    [[ADD2:%.*]] = add i16 [[ADD1]], [[SHR1]]
 ; CHECK-NEXT:    [[SFT2:%.*]] = and i16 [[ADD2]], 7
 ; CHECK-NEXT:    [[SHR2:%.*]] = lshr i16 [[ADD2]], [[SFT2]]
-; CHECK-NEXT:    store i16 [[SHR2]], i16* [[A:%.*]], align 2
+; CHECK-NEXT:    store i16 [[SHR2]], ptr [[A:%.*]], align 2
 ; CHECK-NEXT:    ret void
 ;
   %zext1 = zext i8 %b to i32
@@ -109,7 +109,7 @@ define void @lshr_big_dag(i16* %a, i8 %b, i8 %c) {
   %sft2 = and i32 %add2, 7
   %shr2 = lshr i32 %add2, %sft2
   %trunc = trunc i32 %shr2 to i16
-  store i16 %trunc, i16* %a, align 2
+  store i16 %trunc, ptr %a, align 2
   ret void
 }
 

@@ -7,12 +7,12 @@
 
 @GLOBAL = external dso_local global i32
 
-define i32 @test(i32* %P1, i32* %P2, i32* %P3) nounwind {
+define i32 @test(ptr %P1, ptr %P2, ptr %P3) nounwind {
 ; CHECK-LABEL: test:
 entry:
-  %L = load i32, i32* @GLOBAL
-  store i32 12, i32* %P2
-  %Y = load i32, i32* %P3
+  %L = load i32, ptr @GLOBAL
+  store i32 12, ptr %P2
+  %Y = load i32, ptr %P3
   %Z = sub i32 %Y, %L
   ret i32 %Z
 ; CHECK-NOT: {{sub.*GLOBAL}}

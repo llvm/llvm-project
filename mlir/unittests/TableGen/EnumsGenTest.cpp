@@ -13,7 +13,6 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringSwitch.h"
 
 #include "gmock/gmock.h"
 
@@ -55,9 +54,9 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFn) {
 }
 
 TEST(EnumsGenTest, GeneratedStringToSymbolFn) {
-  EXPECT_EQ(llvm::Optional<FooEnum>(FooEnum::CaseA), ConvertToEnum("CaseA"));
-  EXPECT_EQ(llvm::Optional<FooEnum>(FooEnum::CaseB), ConvertToEnum("CaseB"));
-  EXPECT_EQ(llvm::None, ConvertToEnum("X"));
+  EXPECT_EQ(std::optional<FooEnum>(FooEnum::CaseA), ConvertToEnum("CaseA"));
+  EXPECT_EQ(std::optional<FooEnum>(FooEnum::CaseB), ConvertToEnum("CaseB"));
+  EXPECT_EQ(std::nullopt, ConvertToEnum("X"));
 }
 
 TEST(EnumsGenTest, GeneratedUnderlyingType) {
@@ -95,10 +94,10 @@ TEST(EnumsGenTest, GeneratedStringToSymbolForBitEnum) {
   EXPECT_EQ(symbolizeBitEnumWithNone("Bit3|Bit0"),
             BitEnumWithNone::Bit3 | BitEnumWithNone::Bit0);
 
-  EXPECT_EQ(symbolizeBitEnumWithNone("Bit2"), llvm::None);
-  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3 | Bit4"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithNone("Bit2"), std::nullopt);
+  EXPECT_EQ(symbolizeBitEnumWithNone("Bit3 | Bit4"), std::nullopt);
 
-  EXPECT_EQ(symbolizeBitEnumWithoutNone("None"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithoutNone("None"), std::nullopt);
 }
 
 TEST(EnumsGenTest, GeneratedSymbolToStringFnForGroupedBitEnum) {
@@ -116,7 +115,7 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForGroupedBitEnum) {
 TEST(EnumsGenTest, GeneratedStringToSymbolForGroupedBitEnum) {
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit0"), BitEnumWithGroup::Bit0);
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit3"), BitEnumWithGroup::Bit3);
-  EXPECT_EQ(symbolizeBitEnumWithGroup("Bit5"), llvm::None);
+  EXPECT_EQ(symbolizeBitEnumWithGroup("Bit5"), std::nullopt);
   EXPECT_EQ(symbolizeBitEnumWithGroup("Bit3|Bit0"),
             BitEnumWithGroup::Bit3 | BitEnumWithGroup::Bit0);
 }
@@ -142,10 +141,10 @@ TEST(EnumsGenTest, GeneratedSymbolToStringFnForPrimaryGroupBitEnum) {
 }
 
 TEST(EnumsGenTest, GeneratedOperator) {
-  EXPECT_TRUE(bitEnumContains(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3,
-                              BitEnumWithNone::Bit0));
-  EXPECT_FALSE(bitEnumContains(BitEnumWithNone::Bit0 & BitEnumWithNone::Bit3,
-                               BitEnumWithNone::Bit0));
+  EXPECT_TRUE(bitEnumContainsAll(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3,
+                                 BitEnumWithNone::Bit0));
+  EXPECT_FALSE(bitEnumContainsAll(BitEnumWithNone::Bit0 & BitEnumWithNone::Bit3,
+                                  BitEnumWithNone::Bit0));
 }
 
 TEST(EnumsGenTest, GeneratedSymbolToCustomStringFn) {
@@ -176,7 +175,7 @@ TEST(EnumsGenTest, GeneratedIntAttributeClass) {
 
   mlir::Type intType = mlir::IntegerType::get(&ctx, 32);
   mlir::Attribute intAttr = mlir::IntegerAttr::get(intType, 5);
-  EXPECT_TRUE(intAttr.isa<I32EnumAttr>());
+  EXPECT_TRUE(llvm::isa<I32EnumAttr>(intAttr));
   EXPECT_EQ(intAttr, enumAttr);
 }
 
@@ -187,10 +186,10 @@ TEST(EnumsGenTest, GeneratedBitAttributeClass) {
   mlir::Attribute intAttr = mlir::IntegerAttr::get(
       intType,
       static_cast<uint32_t>(BitEnumWithNone::Bit0 | BitEnumWithNone::Bit3));
-  EXPECT_TRUE(intAttr.isa<BitEnumWithNoneAttr>());
-  EXPECT_TRUE(intAttr.isa<BitEnumWithoutNoneAttr>());
+  EXPECT_TRUE(llvm::isa<BitEnumWithNoneAttr>(intAttr));
+  EXPECT_TRUE(llvm::isa<BitEnumWithoutNoneAttr>(intAttr));
 
   intAttr = mlir::IntegerAttr::get(
       intType, static_cast<uint32_t>(BitEnumWithGroup::Bits0To3) | (1u << 6));
-  EXPECT_FALSE(intAttr.isa<BitEnumWithGroupAttr>());
+  EXPECT_FALSE(llvm::isa<BitEnumWithGroupAttr>(intAttr));
 }

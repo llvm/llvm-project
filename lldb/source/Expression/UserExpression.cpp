@@ -98,28 +98,34 @@ bool UserExpression::MatchesContext(ExecutionContext &exe_ctx) {
   return LockAndCheckContext(exe_ctx, target_sp, process_sp, frame_sp);
 }
 
-lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
-                                              ConstString &object_name,
-                                              Status &err) {
+lldb::ValueObjectSP UserExpression::GetObjectPointerValueObject(
+    lldb::StackFrameSP frame_sp, ConstString const &object_name, Status &err) {
   err.Clear();
 
   if (!frame_sp) {
     err.SetErrorStringWithFormat(
         "Couldn't load '%s' because the context is incomplete",
         object_name.AsCString());
-    return LLDB_INVALID_ADDRESS;
+    return {};
   }
 
   lldb::VariableSP var_sp;
   lldb::ValueObjectSP valobj_sp;
 
-  valobj_sp = frame_sp->GetValueForVariableExpressionPath(
+  return frame_sp->GetValueForVariableExpressionPath(
       object_name.GetStringRef(), lldb::eNoDynamicValues,
       StackFrame::eExpressionPathOptionCheckPtrVsMember |
           StackFrame::eExpressionPathOptionsNoFragileObjcIvar |
           StackFrame::eExpressionPathOptionsNoSyntheticChildren |
           StackFrame::eExpressionPathOptionsNoSyntheticArrayRange,
       var_sp, err);
+}
+
+lldb::addr_t UserExpression::GetObjectPointer(lldb::StackFrameSP frame_sp,
+                                              ConstString &object_name,
+                                              Status &err) {
+  auto valobj_sp =
+      GetObjectPointerValueObject(std::move(frame_sp), object_name, err);
 
   if (!err.Success() || !valobj_sp.get())
     return LLDB_INVALID_ADDRESS;
@@ -145,14 +151,30 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
   Log *log(GetLog(LLDBLog::Expressions | LLDBLog::Step));
 
   if (ctx_obj) {
-    static unsigned const ctx_type_mask =
-        lldb::TypeFlags::eTypeIsClass | lldb::TypeFlags::eTypeIsStructUnion;
+    static unsigned const ctx_type_mask = lldb::TypeFlags::eTypeIsClass |
+                                          lldb::TypeFlags::eTypeIsStructUnion |
+                                          lldb::TypeFlags::eTypeIsReference;
     if (!(ctx_obj->GetTypeInfo() & ctx_type_mask)) {
       LLDB_LOG(log, "== [UserExpression::Evaluate] Passed a context object of "
                     "an invalid type, can't run expressions.");
       error.SetErrorString("a context object of an invalid type passed");
       return lldb::eExpressionSetupError;
     }
+  }
+
+  if (ctx_obj && ctx_obj->GetTypeInfo() & lldb::TypeFlags::eTypeIsReference) {
+    Status error;
+    lldb::ValueObjectSP deref_ctx_sp = ctx_obj->Dereference(error);
+    if (!error.Success()) {
+      LLDB_LOG(log, "== [UserExpression::Evaluate] Passed a context object of "
+                    "a reference type that can't be dereferenced, can't run "
+                    "expressions.");
+      error.SetErrorString(
+          "passed context object of an reference type cannot be deferenced");
+      return lldb::eExpressionSetupError;
+    }
+
+    ctx_obj = deref_ctx_sp.get();
   }
 
   lldb_private::ExecutionPolicy execution_policy = options.GetExecutionPolicy();
@@ -172,16 +194,22 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   Process *process = exe_ctx.GetProcessPtr();
 
-  if (process == nullptr || process->GetState() != lldb::eStateStopped) {
-    if (execution_policy == eExecutionPolicyAlways) {
-      LLDB_LOG(log, "== [UserExpression::Evaluate] Expression may not run, but "
-                    "is not constant ==");
+  if (process == nullptr && execution_policy == eExecutionPolicyAlways) {
+    LLDB_LOG(log, "== [UserExpression::Evaluate] No process, but the policy is "
+                  "eExecutionPolicyAlways");
 
-      error.SetErrorString("expression needed to run but couldn't");
+    error.SetErrorString("expression needed to run but couldn't: no process");
 
-      return execution_results;
-    }
+    return execution_results;
   }
+  // Since we might need to call allocate memory and maybe call code to make
+  // the caller, we need to be stopped.
+  if (process != nullptr && process->GetState() != lldb::eStateStopped) {
+    error.SetErrorString("Can't make a function caller while the process is " 
+                          "running");
+    return execution_results;
+  }
+
 
   // Explicitly force the IR interpreter to evaluate the expression when the
   // there is no process that supports running the expression for us. Don't
@@ -396,7 +424,7 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
   lldb::ExpressionResults expr_result = DoExecute(
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
-  if (options.GetResultIsInternal() && result_var && target) {
+  if (options.GetSuppressPersistentResult() && result_var && target) {
     if (auto *persistent_state =
             target->GetPersistentExpressionStateForLanguage(m_language))
       persistent_state->RemovePersistentVariable(result_var);

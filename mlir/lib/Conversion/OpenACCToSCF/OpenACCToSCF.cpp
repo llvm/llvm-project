@@ -6,12 +6,19 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "../PassDetail.h"
 #include "mlir/Conversion/OpenACCToSCF/ConvertOpenACCToSCF.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+
+#include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
-#include "mlir/Dialect/SCF/SCF.h"
+#include "mlir/Dialect/SCF/IR/SCF.h"
+#include "mlir/IR/Matchers.h"
+#include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/DialectConversion.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CONVERTOPENACCTOSCF
+#include "mlir/Conversion/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
@@ -20,8 +27,8 @@ using namespace mlir;
 //===----------------------------------------------------------------------===//
 
 namespace {
-/// Pattern to transform the `ifCond` on operation without region into a scf.if
-/// and move the operation into the `then` region.
+/// Pattern to transform the `getIfCond` on operation without region into a
+/// scf.if and move the operation into the `then` region.
 template <typename OpTy>
 class ExpandIfCondition : public OpRewritePattern<OpTy> {
   using OpRewritePattern<OpTy>::OpRewritePattern;
@@ -29,20 +36,25 @@ class ExpandIfCondition : public OpRewritePattern<OpTy> {
   LogicalResult matchAndRewrite(OpTy op,
                                 PatternRewriter &rewriter) const override {
     // Early exit if there is no condition.
-    if (!op.ifCond())
-      return success();
+    if (!op.getIfCond())
+      return failure();
 
-    // Condition is not a constant.
-    if (!op.ifCond().template getDefiningOp<arith::ConstantOp>()) {
+    IntegerAttr constAttr;
+    if (!matchPattern(op.getIfCond(), m_Constant(&constAttr))) {
       auto ifOp = rewriter.create<scf::IfOp>(op.getLoc(), TypeRange(),
-                                             op.ifCond(), false);
-      rewriter.updateRootInPlace(op, [&]() { op.ifCondMutable().erase(0); });
+                                             op.getIfCond(), false);
+      rewriter.updateRootInPlace(op, [&]() { op.getIfCondMutable().erase(0); });
       auto thenBodyBuilder = ifOp.getThenBodyBuilder();
       thenBodyBuilder.setListener(rewriter.getListener());
       thenBodyBuilder.clone(*op.getOperation());
       rewriter.eraseOp(op);
+    } else {
+      if (constAttr.getInt())
+        rewriter.updateRootInPlace(op,
+                                   [&]() { op.getIfCondMutable().erase(0); });
+      else
+        rewriter.eraseOp(op);
     }
-
     return success();
   }
 };
@@ -56,7 +68,7 @@ void mlir::populateOpenACCToSCFConversionPatterns(RewritePatternSet &patterns) {
 
 namespace {
 struct ConvertOpenACCToSCFPass
-    : public ConvertOpenACCToSCFBase<ConvertOpenACCToSCFPass> {
+    : public impl::ConvertOpenACCToSCFBase<ConvertOpenACCToSCFPass> {
   void runOnOperation() override;
 };
 } // namespace
@@ -73,13 +85,13 @@ void ConvertOpenACCToSCFPass::runOnOperation() {
   target.addLegalDialect<acc::OpenACCDialect>();
 
   target.addDynamicallyLegalOp<acc::EnterDataOp>(
-      [](acc::EnterDataOp op) { return !op.ifCond(); });
+      [](acc::EnterDataOp op) { return !op.getIfCond(); });
 
   target.addDynamicallyLegalOp<acc::ExitDataOp>(
-      [](acc::ExitDataOp op) { return !op.ifCond(); });
+      [](acc::ExitDataOp op) { return !op.getIfCond(); });
 
   target.addDynamicallyLegalOp<acc::UpdateOp>(
-      [](acc::UpdateOp op) { return !op.ifCond(); });
+      [](acc::UpdateOp op) { return !op.getIfCond(); });
 
   if (failed(applyPartialConversion(op, target, std::move(patterns))))
     signalPassFailure();

@@ -5,7 +5,7 @@
 ; through aliases. If GlobalOpt is never run, we do not see direct
 ; calls,
 
-@alias = hidden alias void (), void ()* @aliasee_default
+@alias = hidden alias void (), ptr @aliasee_default
 
 ; ALL-LABEL: {{^}}kernel:
 ; GFX908: .amdhsa_next_free_vgpr 41

@@ -40,7 +40,7 @@
 // CHECK-DAG: private unnamed_addr constant [30 x i8] c"NS::Destructor::~Destructor()\00"
 
 // CHECK-DAG: private unnamed_addr constant [12 x i8] c"Constructor\00"
-// CHECK-DAG: private unnamed_addr constant [41 x i8] c"NS::Constructor::Constructor(NS::Base *)\00"
+// CHECK-DAG: private unnamed_addr constant [37 x i8] c"NS::Constructor::Constructor(Base *)\00"
 // CHECK-DAG: private unnamed_addr constant [34 x i8] c"NS::Constructor::Constructor(int)\00"
 // CHECK-DAG: private unnamed_addr constant [31 x i8] c"NS::Constructor::Constructor()\00"
 
@@ -61,22 +61,22 @@
 // CHECK-DAG: private unnamed_addr constant [37 x i8] c"void NS::Base::constFunction() const\00"
 
 // CHECK-DAG: private unnamed_addr constant [26 x i8] c"functionReturingTemplate2\00"
-// CHECK-DAG: private unnamed_addr constant [64 x i8] c"ClassTemplate<NS::Base *> NS::Base::functionReturingTemplate2()\00"
+// CHECK-DAG: private unnamed_addr constant [60 x i8] c"ClassTemplate<Base *> NS::Base::functionReturingTemplate2()\00"
 
 // CHECK-DAG: private unnamed_addr constant [26 x i8] c"functionReturingTemplate1\00"
 // CHECK-DAG: private unnamed_addr constant [57 x i8] c"ClassTemplate<int> NS::Base::functionReturingTemplate1()\00"
 
 // CHECK-DAG: private unnamed_addr constant [23 x i8] c"withTemplateParameter2\00"
-// CHECK-DAG: private unnamed_addr constant [65 x i8] c"void NS::Base::withTemplateParameter2(ClassTemplate<NS::Base *>)\00"
+// CHECK-DAG: private unnamed_addr constant [61 x i8] c"void NS::Base::withTemplateParameter2(ClassTemplate<Base *>)\00"
 
 // CHECK-DAG: private unnamed_addr constant [23 x i8] c"withTemplateParameter1\00"
 // CHECK-DAG: private unnamed_addr constant [58 x i8] c"void NS::Base::withTemplateParameter1(ClassTemplate<int>)\00"
 
 // CHECK-DAG: private unnamed_addr constant [23 x i8] c"functionReturningClass\00"
-// CHECK-DAG: private unnamed_addr constant [45 x i8] c"NS::Base *NS::Base::functionReturningClass()\00"
+// CHECK-DAG: private unnamed_addr constant [41 x i8] c"Base *NS::Base::functionReturningClass()\00"
 
 // CHECK-DAG: private unnamed_addr constant [23 x i8] c"functionWithParameters\00"
-// CHECK-DAG: private unnamed_addr constant [64 x i8] c"void NS::Base::functionWithParameters(int, float *, NS::Base *)\00"
+// CHECK-DAG: private unnamed_addr constant [60 x i8] c"void NS::Base::functionWithParameters(int, float *, Base *)\00"
 
 // CHECK-DAG: private unnamed_addr constant [17 x i8] c"variadicFunction\00"
 // CHECK-DAG: private unnamed_addr constant [42 x i8] c"void NS::Base::variadicFunction(int, ...)\00"

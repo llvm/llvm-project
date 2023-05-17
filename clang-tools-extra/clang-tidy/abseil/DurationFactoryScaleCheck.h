@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace abseil {
+namespace clang::tidy::abseil {
 
 /// This check finds cases where the incorrect `Duration` factory function is
 /// being used by looking for scaling constants inside the factory argument
@@ -21,7 +19,7 @@ namespace abseil {
 /// case of zero and suggests `ZeroDuration()`.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/abseil-duration-factory-scale.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/abseil/duration-factory-scale.html
 class DurationFactoryScaleCheck : public ClangTidyCheck {
 public:
   DurationFactoryScaleCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace abseil
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::abseil
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_ABSEIL_DURATIONFACTORYSCALECHECK_H

@@ -1,6 +1,6 @@
 set(LLVM_LINK_COMPONENTS
+  Object
   Support
-  Symbolize
   )
 add_llvm_tool(llvm-debuginfod-find
   llvm-debuginfod-find.cpp

@@ -1,21 +1,21 @@
-; RUN: opt -S -mtriple=aarch64 -loop-vectorize -force-vector-width=2 < %s | FileCheck %s
+; RUN: opt -S -mtriple=aarch64 -passes=loop-vectorize -force-vector-width=2 < %s | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
 @b = common local_unnamed_addr global i32 0, align 4
-@a = common local_unnamed_addr global i16* null, align 8
+@a = common local_unnamed_addr global ptr null, align 8
 
 define i32 @fn1() local_unnamed_addr #0 {
 ; We expect the backend to expand all reductions.
 ; CHECK: @llvm.vector.reduce
 entry:
-  %0 = load i32, i32* @b, align 4, !tbaa !1
+  %0 = load i32, ptr @b, align 4, !tbaa !1
   %cmp40 = icmp sgt i32 %0, 0
   br i1 %cmp40, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %entry
-  %1 = load i16*, i16** @a, align 8, !tbaa !5
-  %2 = load i32, i32* @b, align 4, !tbaa !1
+  %1 = load ptr, ptr @a, align 8, !tbaa !5
+  %2 = load i32, ptr @b, align 4, !tbaa !1
   %3 = sext i32 %2 to i64
   br label %for.body
 
@@ -23,8 +23,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %d.043 = phi i16 [ undef, %for.body.lr.ph ], [ %.sink28, %for.body ]
   %c.042 = phi i16 [ undef, %for.body.lr.ph ], [ %c.0., %for.body ]
-  %arrayidx = getelementptr inbounds i16, i16* %1, i64 %indvars.iv
-  %4 = load i16, i16* %arrayidx, align 2, !tbaa !7
+  %arrayidx = getelementptr inbounds i16, ptr %1, i64 %indvars.iv
+  %4 = load i16, ptr %arrayidx, align 2, !tbaa !7
   %cmp2 = icmp sgt i16 %c.042, %4
   %c.0. = select i1 %cmp2, i16 %c.042, i16 %4
   %cmp13 = icmp slt i16 %d.043, %4

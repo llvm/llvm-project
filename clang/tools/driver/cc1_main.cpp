@@ -177,7 +177,8 @@ static int PrintSupportedCPUs(std::string TargetStr) {
   // the target machine will handle the mcpu printing
   llvm::TargetOptions Options;
   std::unique_ptr<llvm::TargetMachine> TheTargetMachine(
-      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options, None));
+      TheTarget->createTargetMachine(TargetStr, "", "+cpuhelp", Options,
+                                     std::nullopt));
   return 0;
 }
 
@@ -212,7 +213,7 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   bool Success = CompilerInvocation::CreateFromArgs(Clang->getInvocation(),
                                                     Argv, Diags, Argv0);
 
-  if (Clang->getFrontendOpts().TimeTrace) {
+  if (!Clang->getFrontendOpts().TimeTracePath.empty()) {
     llvm::timeTraceProfilerInitialize(
         Clang->getFrontendOpts().TimeTraceGranularity, Argv0);
   }
@@ -254,10 +255,21 @@ int cc1_main(ArrayRef<const char *> Argv, const char *Argv0, void *MainAddr) {
   llvm::TimerGroup::clearAll();
 
   if (llvm::timeTraceProfilerEnabled()) {
-    SmallString<128> Path(Clang->getFrontendOpts().OutputFile);
-    llvm::sys::path::replace_extension(Path, "json");
+    // It is possible that the compiler instance doesn't own a file manager here
+    // if we're compiling a module unit. Since the file manager are owned by AST
+    // when we're compiling a module unit. So the file manager may be invalid
+    // here.
+    //
+    // It should be fine to create file manager here since the file system
+    // options are stored in the compiler invocation and we can recreate the VFS
+    // from the compiler invocation.
+    if (!Clang->hasFileManager())
+      Clang->createFileManager(createVFSFromCompilerInvocation(
+          Clang->getInvocation(), Clang->getDiagnostics()));
+
     if (auto profilerOutput = Clang->createOutputFile(
-            Path.str(), /*Binary=*/false, /*RemoveFileOnSignal=*/false,
+            Clang->getFrontendOpts().TimeTracePath, /*Binary=*/false,
+            /*RemoveFileOnSignal=*/false,
             /*useTemporary=*/false)) {
       llvm::timeTraceProfilerWrite(*profilerOutput);
       profilerOutput.reset();

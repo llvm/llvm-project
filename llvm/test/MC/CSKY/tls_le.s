@@ -5,7 +5,7 @@
         lsli32    r2, r31, 0
 	str32.w r0, (r2, r3 << 0)
 
-# CHECK:            0:      	lrw16	r3, 0xc <$d.0>
+# CHECK:            0:      	lrw16	r3, 0xc
 # CHECK-NEXT:       2:      	lsli32    r2, r31, 0
 # CHECK-NEXT:       6:      	str32.w	r0, (r2, r3 << 0)
 # CHECK-NEXT:       a:      	bkpt

@@ -1,10 +1,10 @@
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -disable-output
 ; PR 2777
-@g_103 = common global i32 0		; <i32*> [#uses=1]
+@g_103 = common global i32 0		; <ptr> [#uses=1]
 
 define i32 @func_127(i32 %p_129) nounwind {
 entry:
-	load i32, i32* @g_103, align 4		; <i32>:0 [#uses=1]
+	load i32, ptr @g_103, align 4		; <i32>:0 [#uses=1]
 	icmp eq i32 %0, 0		; <i1>:1 [#uses=2]
 	br i1 %1, label %bb6.preheader, label %entry.return_crit_edge
 

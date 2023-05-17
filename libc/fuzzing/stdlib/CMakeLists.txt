@@ -14,5 +14,65 @@ add_libc_fuzzer(
     StringParserOutputDiff.h
   DEPENDS
     libc.src.stdlib.atof
+  COMPILE_OPTIONS
+    -DLLVM_LIBC_ATOF_DIF_FUZZ_SKIP_GLIBC_HEX_SUBNORMAL_ERR
 )
 
+add_libc_fuzzer(
+  strtofloat_fuzz
+  SRCS
+    strtofloat_fuzz.cpp
+  DEPENDS
+    libc.src.stdlib.atof
+    libc.src.stdlib.strtof
+    libc.src.stdlib.strtod
+    libc.src.stdlib.strtold
+)
+
+add_libc_fuzzer(
+  strtointeger_differential_fuzz
+  SRCS
+    strtointeger_differential_fuzz.cpp
+  HDRS
+    StringParserOutputDiff.h
+  DEPENDS
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
+)
+
+add_libc_fuzzer(
+  strtointeger_differential_fuzz_cleaner
+  SRCS
+    strtointeger_differential_fuzz.cpp
+  HDRS
+    StringParserOutputDiff.h
+  DEPENDS
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
+  COMPILE_OPTIONS
+    -DLIBC_COPT_FUZZ_ATOI_CLEANER_INPUT
+)
+
+add_libc_fuzzer(
+  strtointeger_fuzz
+  SRCS
+    strtointeger_fuzz.cpp
+  DEPENDS
+    libc.src.stdlib.atoi
+    libc.src.stdlib.atol
+    libc.src.stdlib.atoll
+    libc.src.stdlib.strtol
+    libc.src.stdlib.strtoll
+    libc.src.stdlib.strtoul
+    libc.src.stdlib.strtoull
+)

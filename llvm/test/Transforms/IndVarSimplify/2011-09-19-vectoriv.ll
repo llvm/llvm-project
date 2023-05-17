@@ -1,4 +1,4 @@
-; RUN: opt < %s -indvars -S | FileCheck %s
+; RUN: opt < %s -passes=indvars -S | FileCheck %s
 ; PR10946: Vector IVs are not SCEVable.
 ; CHECK-NOT: phi
 define void @test() nounwind {

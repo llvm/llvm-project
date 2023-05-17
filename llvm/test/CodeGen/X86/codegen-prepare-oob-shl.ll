@@ -8,15 +8,15 @@ target datalayout = "e-p:8:8"
 ; shift a variable by that amount during compilation. Intent with the test
 ; case is to verify that this compiles without complaints even if opt is built
 ; with ubsan enabled.
-define dso_local void @main(i32 %a, [3 x { i8, i8 }*]* %p) {
+define dso_local void @main(i32 %a, ptr %p) {
 ; CHECK-LABEL: @main(
 ; CHECK-NEXT:    [[SHL:%.*]] = shl i32 [[A:%.*]], -1229216766
-; CHECK-NEXT:    [[ARRAYIDX926:%.*]] = getelementptr inbounds [3 x { i8, i8 }*], [3 x { i8, i8 }*]* [[P:%.*]], i32 0, i32 [[SHL]]
-; CHECK-NEXT:    [[L0:%.*]] = load { i8, i8 }*, { i8, i8 }** [[ARRAYIDX926]], align 1
+; CHECK-NEXT:    [[ARRAYIDX926:%.*]] = getelementptr inbounds [3 x ptr], ptr [[P:%.*]], i32 0, i32 [[SHL]]
+; CHECK-NEXT:    [[L0:%.*]] = load ptr, ptr [[ARRAYIDX926]], align 1
 ; CHECK-NEXT:    ret void
 ;
   %shl = shl i32 %a, -1229216766
-  %arrayidx926 = getelementptr inbounds [3 x { i8, i8 }*], [3 x { i8, i8 }*]* %p, i32 0, i32 %shl
-  %l0 = load { i8, i8 }*, { i8, i8 }** %arrayidx926, align 1
+  %arrayidx926 = getelementptr inbounds [3 x ptr], ptr %p, i32 0, i32 %shl
+  %l0 = load ptr, ptr %arrayidx926, align 1
   ret void
 }

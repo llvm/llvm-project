@@ -13,10 +13,10 @@ target triple = "i386-apple-macosx10.7.0"
 
 define void @fn2() nounwind optsize ssp {
 entry:
-  store i64 0, i64* bitcast ([2 x [2 x %struct.S0]]* @d to i64*), align 4
-  %0 = load i32, i32* @c, align 4
+  store i64 0, ptr @d, align 4
+  %0 = load i32, ptr @c, align 4
   %tobool2 = icmp eq i32 %0, 0
-  %1 = load i32, i32* @a, align 4
+  %1 = load i32, ptr @a, align 4
   %tobool4 = icmp eq i32 %1, 0
   br label %for.cond
 
@@ -32,7 +32,7 @@ for.body:                                         ; preds = %for.cond
   br i1 %tobool2, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %for.body
-  store i32 1, i32* @e, align 4
+  store i32 1, ptr @e, align 4
   br label %lor.end
 
 lor.end:                                          ; preds = %lor.rhs, %for.body
@@ -44,7 +44,7 @@ lor.end:                                          ; preds = %lor.rhs, %for.body
   %3 = xor i16 %and.i, 1
   %sub.conv.i = sub i16 %conv, %3
   %conv3 = sext i16 %sub.conv.i to i32
-  store i32 %conv3, i32* @b, align 4
+  store i32 %conv3, ptr @b, align 4
   br i1 %tobool4, label %if.end, label %for.end
 
 if.end:                                           ; preds = %lor.end

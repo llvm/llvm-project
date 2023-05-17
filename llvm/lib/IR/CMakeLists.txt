@@ -20,6 +20,7 @@ add_llvm_component_library(LLVMCore
   DiagnosticInfo.cpp
   DiagnosticPrinter.cpp
   Dominators.cpp
+  EHPersonalities.cpp
   FPEnv.cpp
   Function.cpp
   GCStrategy.cpp
@@ -49,6 +50,7 @@ add_llvm_component_library(LLVMCore
   PassRegistry.cpp
   PassTimingInfo.cpp
   PrintPasses.cpp
+  ProfDataUtils.cpp
   SafepointIRVerifier.cpp
   ProfileSummary.cpp
   PseudoProbe.cpp
@@ -56,6 +58,7 @@ add_llvm_component_library(LLVMCore
   Statepoint.cpp
   StructuralHash.cpp
   Type.cpp
+  TypedPointerType.cpp
   TypeFinder.cpp
   Use.cpp
   User.cpp
@@ -75,6 +78,8 @@ add_llvm_component_library(LLVMCore
 
   LINK_COMPONENTS
   BinaryFormat
+  Demangle
   Remarks
   Support
+  TargetParser
   )

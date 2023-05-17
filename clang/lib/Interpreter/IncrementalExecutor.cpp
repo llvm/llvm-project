@@ -12,55 +12,84 @@
 
 #include "IncrementalExecutor.h"
 
+#include "clang/Basic/TargetInfo.h"
+#include "clang/Basic/TargetOptions.h"
+#include "clang/Interpreter/PartialTranslationUnit.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LLJIT.h"
 #include "llvm/ExecutionEngine/Orc/RTDyldObjectLinkingLayer.h"
+#include "llvm/ExecutionEngine/Orc/TargetProcess/JITLoaderGDB.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/TargetSelect.h"
 
+// Force linking some of the runtimes that helps attaching to a debugger.
+LLVM_ATTRIBUTE_USED void linkComponents() {
+  llvm::errs() << (void *)&llvm_orc_registerJITLoaderGDBWrapper
+               << (void *)&llvm_orc_registerJITLoaderGDBAllocAction;
+}
+
 namespace clang {
 
 IncrementalExecutor::IncrementalExecutor(llvm::orc::ThreadSafeContext &TSC,
                                          llvm::Error &Err,
-                                         const llvm::Triple &Triple)
+                                         const clang::TargetInfo &TI)
     : TSCtx(TSC) {
   using namespace llvm::orc;
   llvm::ErrorAsOutParameter EAO(&Err);
 
-  auto JTMB = JITTargetMachineBuilder(Triple);
-  if (auto JitOrErr = LLJITBuilder().setJITTargetMachineBuilder(JTMB).create())
+  auto JTMB = JITTargetMachineBuilder(TI.getTriple());
+  JTMB.addFeatures(TI.getTargetOpts().Features);
+  LLJITBuilder Builder;
+  Builder.setJITTargetMachineBuilder(JTMB);
+  // Enable debugging of JIT'd code (only works on JITLink for ELF and MachO).
+  Builder.setEnableDebuggerSupport(true);
+
+  if (auto JitOrErr = Builder.create())
     Jit = std::move(*JitOrErr);
   else {
     Err = JitOrErr.takeError();
-    return;
-  }
-
-  const char Pref = Jit->getDataLayout().getGlobalPrefix();
-  // Discover symbols from the process as a fallback.
-  if (auto PSGOrErr = DynamicLibrarySearchGenerator::GetForCurrentProcess(Pref))
-    Jit->getMainJITDylib().addGenerator(std::move(*PSGOrErr));
-  else {
-    Err = PSGOrErr.takeError();
     return;
   }
 }
 
 IncrementalExecutor::~IncrementalExecutor() {}
 
-llvm::Error IncrementalExecutor::addModule(std::unique_ptr<llvm::Module> M) {
-  return Jit->addIRModule(llvm::orc::ThreadSafeModule(std::move(M), TSCtx));
+llvm::Error IncrementalExecutor::addModule(PartialTranslationUnit &PTU) {
+  llvm::orc::ResourceTrackerSP RT =
+      Jit->getMainJITDylib().createResourceTracker();
+  ResourceTrackers[&PTU] = RT;
+
+  return Jit->addIRModule(RT, {std::move(PTU.TheModule), TSCtx});
+}
+
+llvm::Error IncrementalExecutor::removeModule(PartialTranslationUnit &PTU) {
+
+  llvm::orc::ResourceTrackerSP RT = std::move(ResourceTrackers[&PTU]);
+  if (!RT)
+    return llvm::Error::success();
+
+  ResourceTrackers.erase(&PTU);
+  if (llvm::Error Err = RT->remove())
+    return Err;
+  return llvm::Error::success();
+}
+
+// Clean up the JIT instance.
+llvm::Error IncrementalExecutor::cleanUp() {
+  // This calls the global dtors of registered modules.
+  return Jit->deinitialize(Jit->getMainJITDylib());
 }
 
 llvm::Error IncrementalExecutor::runCtors() const {
   return Jit->initialize(Jit->getMainJITDylib());
 }
 
-llvm::Expected<llvm::JITTargetAddress>
+llvm::Expected<llvm::orc::ExecutorAddr>
 IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
                                       SymbolNameKind NameKind) const {
   auto Sym = (NameKind == LinkerName) ? Jit->lookupLinkerMangled(Name)
@@ -68,7 +97,7 @@ IncrementalExecutor::getSymbolAddress(llvm::StringRef Name,
 
   if (!Sym)
     return Sym.takeError();
-  return Sym->getValue();
+  return Sym;
 }
 
 } // end namespace clang

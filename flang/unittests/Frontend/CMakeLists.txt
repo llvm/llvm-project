@@ -1,5 +1,6 @@
 set(LLVM_LINK_COMPONENTS
   ${LLVM_TARGETS_TO_BUILD}
+  TargetParser
 )
 
 add_flang_unittest(FlangFrontendTests
@@ -12,6 +13,7 @@ target_link_libraries(FlangFrontendTests
   clangBasic
   flangFrontend
   flangFrontendTool
+  FortranLower
   FortranParser
   FortranSemantics
   FortranCommon

@@ -4,7 +4,7 @@ namespace std {
   typedef decltype(nullptr) nullptr_t;
 }
 
-template<int *ip> struct IP {  // expected-note 5 {{template parameter is declared here}}
+template<int *ip> struct IP {  // expected-note 6 {{template parameter is declared here}}
   IP<ip> *ip2;
 };
 
@@ -28,6 +28,7 @@ IP<nonconst_np> ip5; // expected-error{{non-type template argument of type 'std:
 // expected-note{{read of non-constexpr variable 'nonconst_np' is not allowed in a constant expression}}
 IP<(float*)0> ip6; // expected-error{{null non-type template argument of type 'float *' does not match template parameter of type 'int *'}}
 IP<&tl> ip7; // expected-error{{non-type template argument of type 'int *' is not a constant expression}}
+IP<(int*)1> ip8; // expected-error {{non-type template argument '(int *)1' is invalid}}
 
 IR<tl> ir1; // expected-error{{non-type template argument refers to thread-local object}}
 

@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class TestGdbRemote_QPassSignals(gdbremote_testcase.GdbRemoteTestCaseBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def expect_signal(self, expected_signo):
         self.test_sequence.add_log_lines(["read packet: $vCont;c#a8",
                                           {"direction": "send",

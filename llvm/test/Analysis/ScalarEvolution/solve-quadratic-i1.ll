@@ -18,7 +18,8 @@ define void @f0() {
 ; CHECK-NEXT:    --> (zext i1 {true,+,true,+,true}<%b1> to i16) U: [0,2) S: [0,2) Exits: 0 LoopDispositions: { %b1: Computable }
 ; CHECK-NEXT:  Determining loop execution counts for: @f0
 ; CHECK-NEXT:  Loop %b1: backedge-taken count is 1
-; CHECK-NEXT:  Loop %b1: max backedge-taken count is 1
+; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is 1
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 1
 ; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 1
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %b1: Trip multiple is 2
@@ -41,7 +42,7 @@ b2:                                               ; preds = %b1
 
 @g0 = common dso_local global i16 0, align 2
 @g1 = common dso_local global i32 0, align 4
-@g2 = common dso_local global i32* null, align 8
+@g2 = common dso_local global ptr null, align 8
 
 define void @f1() #0 {
 ; CHECK-LABEL: 'f1'
@@ -64,17 +65,19 @@ define void @f1() #0 {
 ; CHECK-NEXT:    --> {3,+,4,+,1}<%b1> U: full-set S: full-set --> 12 U: [12,13) S: [12,13)
 ; CHECK-NEXT:  Determining loop execution counts for: @f1
 ; CHECK-NEXT:  Loop %b3: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %b3: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %b3: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %b3: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %b3: Unpredictable predicated backedge-taken count.
 ; CHECK-NEXT:  Loop %b1: backedge-taken count is 2
-; CHECK-NEXT:  Loop %b1: max backedge-taken count is 2
+; CHECK-NEXT:  Loop %b1: constant max backedge-taken count is 2
+; CHECK-NEXT:  Loop %b1: symbolic max backedge-taken count is 2
 ; CHECK-NEXT:  Loop %b1: Predicated backedge-taken count is 2
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %b1: Trip multiple is 3
 ;
 b0:
-  store i16 0, i16* @g0, align 2
-  store i32* @g1, i32** @g2, align 8
+  store i16 0, ptr @g0, align 2
+  store ptr @g1, ptr @g2, align 8
   br label %b1
 
 b1:                                               ; preds = %b1, %b0
@@ -90,8 +93,8 @@ b1:                                               ; preds = %b1, %b0
 b2:                                               ; preds = %b1
   %v7 = phi i32 [ %v1, %b1 ]
   %v8 = phi i16 [ %v3, %b1 ]
-  store i32 %v7, i32* @g1, align 4
-  store i16 %v8, i16* @g0, align 2
+  store i32 %v7, ptr @g1, align 4
+  store i16 %v8, ptr @g0, align 2
   br label %b3
 
 b3:                                               ; preds = %b3, %b2

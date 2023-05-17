@@ -8,7 +8,7 @@
 # RUN: llvm-as -o %t/resume.bc %t/resume.ll
 # RUN: ld.lld -shared -o %t/libresume.so -soname libresume.so %t/resume.bc \
 # RUN:   %t/libunwind.so --wrap _Unwind_Resume
-# RUN: llvm-objdump --dynamic-reloc --disassemble %t/libresume.so | \
+# RUN: llvm-objdump --no-print-imm-hex --dynamic-reloc --disassemble %t/libresume.so | \
 # RUN:   FileCheck --check-prefix=UNWIND-DISASM %s
 # RUN: llvm-readelf --dyn-syms %t/libresume.so | \
 # RUN:   FileCheck --check-prefix=UNWIND-DYNSYM %s
@@ -28,11 +28,11 @@
 # RUN: llvm-mc -triple x86_64-elf -filetype=obj -o %t/malloc.o %t/malloc.s
 # RUN: ld.lld -shared -o %t/libmalloc.so -soname libmalloc.so %t/malloc.o
 # RUN: llvm-mc -triple x86_64-elf -filetype=obj -o %t/emutls.o %t/emutls.s
-# RUN: llvm-as -opaque-pointers=1 -o %t/usetls.bc %t/usetls.ll
-# RUN: ld.lld --plugin-opt=opaque-pointers -shared -o %t/libusetls.so \
+# RUN: llvm-as -o %t/usetls.bc %t/usetls.ll
+# RUN: ld.lld -shared -o %t/libusetls.so \
 # RUN:   %t/usetls.bc %t/libmalloc.so \
 # RUN:   --start-lib %t/emutls.o -mllvm -emulated-tls --wrap malloc
-# RUN: llvm-objdump --dynamic-reloc --disassemble %t/libusetls.so | \
+# RUN: llvm-objdump --no-print-imm-hex --dynamic-reloc --disassemble %t/libusetls.so | \
 # RUN:   FileCheck --check-prefix=USETLS-DISASM %s
 # RUN: llvm-readelf --dyn-syms %t/libusetls.so | \
 # RUN:   FileCheck --check-prefix=USETLS-DYNSYM %s
@@ -59,13 +59,13 @@ __wrap__Unwind_Resume:
 #--- resume.ll
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
-define dso_local void @_Z1fv() optnone noinline personality i8* bitcast (void ()* @throw to i8*) {
+define dso_local void @_Z1fv() optnone noinline personality ptr @throw {
   invoke void @throw()
           to label %unreachable unwind label %lpad
 lpad:
-  %1 = landingpad { i8*, i32 }
+  %1 = landingpad { ptr, i32 }
           cleanup
-  resume { i8*, i32 } %1
+  resume { ptr, i32 } %1
 unreachable:
   unreachable
 }

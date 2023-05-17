@@ -5,16 +5,16 @@
 
 ; CHECK: MayAlias: float* %arrayidxA, float* %arrayidxB
 
-define void @fallback_mayalias(float* noalias nocapture %C, i64 %i, i64 %j) local_unnamed_addr {
+define void @fallback_mayalias(ptr noalias nocapture %C, i64 %i, i64 %j) local_unnamed_addr {
 entry:
   %cmp = icmp ne i64 %i, %j
   call void @llvm.assume(i1 %cmp)
 
-  %arrayidxA = getelementptr inbounds float, float* %C, i64 %i
-  store float undef, float* %arrayidxA, align 4
+  %arrayidxA = getelementptr inbounds float, ptr %C, i64 %i
+  store float undef, ptr %arrayidxA, align 4
 
-  %arrayidxB = getelementptr inbounds float, float* %C, i64 %j
-  store float undef, float* %arrayidxB, align 4
+  %arrayidxB = getelementptr inbounds float, ptr %C, i64 %j
+  store float undef, ptr %arrayidxB, align 4
 
   ret void
 }

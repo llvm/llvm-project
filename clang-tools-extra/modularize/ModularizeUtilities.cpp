@@ -346,9 +346,8 @@ bool ModularizeUtilities::collectModuleHeaders(const clang::Module &Mod) {
   DependentsVector UmbrellaDependents;
 
   // Recursively do submodules.
-  for (auto MI = Mod.submodule_begin(), MIEnd = Mod.submodule_end();
-       MI != MIEnd; ++MI)
-    collectModuleHeaders(**MI);
+  for (auto *Submodule : Mod.submodules())
+    collectModuleHeaders(*Submodule);
 
   if (const FileEntry *UmbrellaHeader = Mod.getUmbrellaHeader().Entry) {
     std::string HeaderPath = getCanonicalPath(UmbrellaHeader->getName());

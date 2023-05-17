@@ -735,7 +735,7 @@ require them.
 | register   | NO   |        |          | **?** | **?**   | **?**       | **?**    | **?**      |
 | map        |      |        |          |       |         |             |          |            |
 +------------+------+--------+----------+-------+---------+-------------+----------+------------+
-| \* Derived pointers only pose a hasard to copying collections.                                |
+| \* Derived pointers only pose a hazard to copying collections.                                |
 +------------+------+--------+----------+-------+---------+-------------+----------+------------+
 | **?** denotes a feature which could be utilized if available.                                 |
 +------------+------+--------+----------+-------+---------+-------------+----------+------------+
@@ -940,7 +940,7 @@ a realistic example:
     unsigned IntPtrSize = AP.getPointerSize();
 
     // Put this in the data section.
-    OS.SwitchSection(AP.getObjFileLowering().getDataSection());
+    OS.switchSection(AP.getObjFileLowering().getDataSection());
 
     // For each function...
     for (iterator FI = begin(), FE = end(); FI != FE; ++FI) {

@@ -37,6 +37,7 @@ end module
 
 module m7
   interface
+    !WARNING: The external interface 'null' is not compatible with an earlier definition (incompatible procedure attributes: ImplicitInterface)
     function null() result(p)
       integer, pointer :: p
     end function
@@ -94,4 +95,9 @@ subroutine m12
   integer, target, save :: null(1)
   integer, pointer :: p
   data p/null(j)/ ! ok
+end subroutine
+
+subroutine s13
+  integer, external, pointer :: p1 => null()
+  procedure(), pointer :: p2 => null()
 end subroutine

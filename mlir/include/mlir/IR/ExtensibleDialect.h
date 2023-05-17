@@ -26,6 +26,8 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/Support/ErrorHandling.h"
+#include <optional>
 
 namespace mlir {
 class AsmParser;
@@ -51,7 +53,7 @@ struct DynamicTypeStorage;
 /// extensible dialect (a dialect inheriting ExtensibleDialect). This class
 /// stores the parser, the printer, and the verifier of the attribute. Each
 /// dynamic attribute definition refers to one instance of this class.
-class DynamicAttrDefinition : SelfOwningTypeID {
+class DynamicAttrDefinition : public SelfOwningTypeID {
 public:
   using VerifierFn = llvm::unique_function<LogicalResult(
       function_ref<InFlightDiagnostic()>, ArrayRef<Attribute>) const>;
@@ -68,6 +70,17 @@ public:
   static std::unique_ptr<DynamicAttrDefinition>
   get(StringRef name, ExtensibleDialect *dialect, VerifierFn &&verifier,
       ParserFn &&parser, PrinterFn &&printer);
+
+  /// Sets the verifier function for this attribute. It should emits an error
+  /// message and returns failure if a problem is detected, or returns success
+  /// if everything is ok.
+  void setVerifyFn(VerifierFn &&verify) { verifier = std::move(verify); }
+
+  /// Sets the static hook for parsing this attribute assembly.
+  void setParseFn(ParserFn &&parse) { parser = std::move(parse); }
+
+  /// Sets the static hook for printing this attribute assembly.
+  void setPrintFn(PrinterFn &&print) { printer = std::move(print); }
 
   /// Check that the attribute parameters are valid.
   LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
@@ -196,7 +209,7 @@ public:
 /// extensible dialect (a dialect inheriting ExtensibleDialect). This class
 /// stores the parser, the printer, and the verifier of the type. Each dynamic
 /// type definition refers to one instance of this class.
-class DynamicTypeDefinition : SelfOwningTypeID {
+class DynamicTypeDefinition : public SelfOwningTypeID {
 public:
   using VerifierFn = llvm::unique_function<LogicalResult(
       function_ref<InFlightDiagnostic()>, ArrayRef<Attribute>) const>;
@@ -213,6 +226,17 @@ public:
   static std::unique_ptr<DynamicTypeDefinition>
   get(StringRef name, ExtensibleDialect *dialect, VerifierFn &&verifier,
       ParserFn &&parser, PrinterFn &&printer);
+
+  /// Sets the verifier function for this type. It should emits an error
+  /// message and returns failure if a problem is detected, or returns success
+  /// if everything is ok.
+  void setVerifyFn(VerifierFn &&verify) { verifier = std::move(verify); }
+
+  /// Sets the static hook for parsing this type assembly.
+  void setParseFn(ParserFn &&parse) { parser = std::move(parse); }
+
+  /// Sets the static hook for printing this type assembly.
+  void setPrintFn(PrinterFn &&print) { printer = std::move(print); }
 
   /// Check that the type parameters are valid.
   LogicalResult verify(function_ref<InFlightDiagnostic()> emitError,
@@ -336,12 +360,15 @@ public:
 
 /// The definition of a dynamic op. A dynamic op is an op that is defined at
 /// runtime, and that can be registered at runtime by an extensible dialect (a
-/// dialect inheriting ExtensibleDialect). This class stores the functions that
-/// are in the OperationName class, and in addition defines the TypeID of the op
-/// that will be defined.
-/// Each dynamic operation definition refers to one instance of this class.
-class DynamicOpDefinition {
+/// dialect inheriting ExtensibleDialect). This class implements the method
+/// exposed by the OperationName class, and in addition defines the TypeID of
+/// the op that will be defined. Each dynamic operation definition refers to one
+/// instance of this class.
+class DynamicOpDefinition : public OperationName::Impl {
 public:
+  using GetCanonicalizationPatternsFn =
+      llvm::unique_function<void(RewritePatternSet &, MLIRContext *) const>;
+
   /// Create a new op at runtime. The op is registered only after passing it to
   /// the dialect using registerDynamicOp.
   static std::unique_ptr<DynamicOpDefinition>
@@ -361,8 +388,8 @@ public:
       OperationName::ParseAssemblyFn &&parseFn,
       OperationName::PrintAssemblyFn &&printFn,
       OperationName::FoldHookFn &&foldHookFn,
-      OperationName::GetCanonicalizationPatternsFn
-          &&getCanonicalizationPatternsFn);
+      GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+      OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
 
   /// Returns the op typeID.
   TypeID getTypeID() { return typeID; }
@@ -399,38 +426,94 @@ public:
 
   /// Set the hook returning any canonicalization pattern rewrites that the op
   /// supports, for use by the canonicalization pass.
-  void
-  setGetCanonicalizationPatternsFn(OperationName::GetCanonicalizationPatternsFn
-                                       &&getCanonicalizationPatterns) {
+  void setGetCanonicalizationPatternsFn(
+      GetCanonicalizationPatternsFn &&getCanonicalizationPatterns) {
     getCanonicalizationPatternsFn = std::move(getCanonicalizationPatterns);
   }
 
+  /// Set the hook populating default attributes.
+  void setPopulateDefaultAttrsFn(
+      OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrs) {
+    populateDefaultAttrsFn = std::move(populateDefaultAttrs);
+  }
+
+  LogicalResult foldHook(Operation *op, ArrayRef<Attribute> attrs,
+                         SmallVectorImpl<OpFoldResult> &results) final {
+    return foldHookFn(op, attrs, results);
+  }
+  void getCanonicalizationPatterns(RewritePatternSet &set,
+                                   MLIRContext *context) final {
+    getCanonicalizationPatternsFn(set, context);
+  }
+  bool hasTrait(TypeID id) final { return false; }
+  OperationName::ParseAssemblyFn getParseAssemblyFn() final {
+    return [&](OpAsmParser &parser, OperationState &state) {
+      return parseFn(parser, state);
+    };
+  }
+  void populateDefaultAttrs(const OperationName &name,
+                            NamedAttrList &attrs) final {
+    populateDefaultAttrsFn(name, attrs);
+  }
+  void printAssembly(Operation *op, OpAsmPrinter &printer,
+                     StringRef name) final {
+    printFn(op, printer, name);
+  }
+  LogicalResult verifyInvariants(Operation *op) final { return verifyFn(op); }
+  LogicalResult verifyRegionInvariants(Operation *op) final {
+    return verifyRegionFn(op);
+  }
+
+  /// Implementation for properties (unsupported right now here).
+  std::optional<Attribute> getInherentAttr(Operation *op,
+                                           StringRef name) final {
+    llvm::report_fatal_error("Unsupported getInherentAttr on Dynamic dialects");
+  }
+  void setInherentAttr(Operation *op, StringAttr name, Attribute value) final {
+    llvm::report_fatal_error("Unsupported setInherentAttr on Dynamic dialects");
+  }
+  void populateInherentAttrs(Operation *op, NamedAttrList &attrs) final {}
+  LogicalResult
+  verifyInherentAttrs(OperationName opName, NamedAttrList &attributes,
+                      function_ref<InFlightDiagnostic()> getDiag) final {
+    return success();
+  }
+  int getOpPropertyByteSize() final { return 0; }
+  void initProperties(OperationName opName, OpaqueProperties storage,
+                      OpaqueProperties init) final {}
+  void deleteProperties(OpaqueProperties prop) final {}
+  void populateDefaultProperties(OperationName opName,
+                                 OpaqueProperties properties) final {}
+
+  LogicalResult setPropertiesFromAttr(Operation *op, Attribute attr,
+                                      InFlightDiagnostic *diag) final {
+    return failure();
+  }
+  Attribute getPropertiesAsAttr(Operation *op) final { return {}; }
+  void copyProperties(OpaqueProperties lhs, OpaqueProperties rhs) final {}
+  llvm::hash_code hashProperties(OpaqueProperties prop) final { return {}; }
+
 private:
-  DynamicOpDefinition(StringRef name, ExtensibleDialect *dialect,
-                      OperationName::VerifyInvariantsFn &&verifyFn,
-                      OperationName::VerifyRegionInvariantsFn &&verifyRegionFn,
-                      OperationName::ParseAssemblyFn &&parseFn,
-                      OperationName::PrintAssemblyFn &&printFn,
-                      OperationName::FoldHookFn &&foldHookFn,
-                      OperationName::GetCanonicalizationPatternsFn
-                          &&getCanonicalizationPatternsFn);
-
-  /// Unique identifier for this operation.
-  TypeID typeID;
-
-  /// Name of the operation.
-  /// The name is prefixed with the dialect name.
-  std::string name;
+  DynamicOpDefinition(
+      StringRef name, ExtensibleDialect *dialect,
+      OperationName::VerifyInvariantsFn &&verifyFn,
+      OperationName::VerifyRegionInvariantsFn &&verifyRegionFn,
+      OperationName::ParseAssemblyFn &&parseFn,
+      OperationName::PrintAssemblyFn &&printFn,
+      OperationName::FoldHookFn &&foldHookFn,
+      GetCanonicalizationPatternsFn &&getCanonicalizationPatternsFn,
+      OperationName::PopulateDefaultAttrsFn &&populateDefaultAttrsFn);
 
   /// Dialect defining this operation.
-  ExtensibleDialect *dialect;
+  ExtensibleDialect *getdialect();
 
   OperationName::VerifyInvariantsFn verifyFn;
   OperationName::VerifyRegionInvariantsFn verifyRegionFn;
   OperationName::ParseAssemblyFn parseFn;
   OperationName::PrintAssemblyFn printFn;
   OperationName::FoldHookFn foldHookFn;
-  OperationName::GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
+  GetCanonicalizationPatternsFn getCanonicalizationPatternsFn;
+  OperationName::PopulateDefaultAttrsFn populateDefaultAttrsFn;
 
   friend ExtensibleDialect;
 };
@@ -540,6 +623,30 @@ private:
   /// Owns the TypeID generated at runtime for operations.
   TypeIDAllocator typeIDAllocator;
 };
+
+//===----------------------------------------------------------------------===//
+// Dynamic dialect
+//===----------------------------------------------------------------------===//
+
+/// A dialect that can be defined at runtime. It can be extended with new
+/// operations, types, and attributes at runtime.
+class DynamicDialect : public SelfOwningTypeID, public ExtensibleDialect {
+public:
+  DynamicDialect(StringRef name, MLIRContext *ctx);
+
+  TypeID getTypeID() { return SelfOwningTypeID::getTypeID(); }
+
+  /// Check if the dialect is an extensible dialect.
+  static bool classof(const Dialect *dialect);
+
+  virtual Type parseType(DialectAsmParser &parser) const override;
+  virtual void printType(Type type, DialectAsmPrinter &printer) const override;
+
+  virtual Attribute parseAttribute(DialectAsmParser &parser,
+                                   Type type) const override;
+  virtual void printAttribute(Attribute attr,
+                              DialectAsmPrinter &printer) const override;
+};
 } // namespace mlir
 
 namespace llvm {
@@ -549,6 +656,15 @@ template <>
 struct isa_impl<mlir::ExtensibleDialect, mlir::Dialect> {
   static inline bool doit(const ::mlir::Dialect &dialect) {
     return mlir::ExtensibleDialect::classof(&dialect);
+  }
+};
+
+/// Provide isa functionality for DynamicDialect.
+/// This is to override the isa functionality for Dialect.
+template <>
+struct isa_impl<mlir::DynamicDialect, mlir::Dialect> {
+  static inline bool doit(const ::mlir::Dialect &dialect) {
+    return mlir::DynamicDialect::classof(&dialect);
   }
 };
 } // namespace llvm

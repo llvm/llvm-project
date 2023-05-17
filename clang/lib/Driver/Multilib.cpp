@@ -25,56 +25,16 @@ using namespace clang;
 using namespace driver;
 using namespace llvm::sys;
 
-/// normalize Segment to "/foo/bar" or "".
-static void normalizePathSegment(std::string &Segment) {
-  StringRef seg = Segment;
-
-  // Prune trailing "/" or "./"
-  while (true) {
-    StringRef last = path::filename(seg);
-    if (last != ".")
-      break;
-    seg = path::parent_path(seg);
-  }
-
-  if (seg.empty() || seg == "/") {
-    Segment.clear();
-    return;
-  }
-
-  // Add leading '/'
-  if (seg.front() != '/') {
-    Segment = "/" + seg.str();
-  } else {
-    Segment = std::string(seg);
-  }
-}
-
 Multilib::Multilib(StringRef GCCSuffix, StringRef OSSuffix,
-                   StringRef IncludeSuffix, int Priority)
+                   StringRef IncludeSuffix, const flags_list &Flags)
     : GCCSuffix(GCCSuffix), OSSuffix(OSSuffix), IncludeSuffix(IncludeSuffix),
-      Priority(Priority) {
-  normalizePathSegment(this->GCCSuffix);
-  normalizePathSegment(this->OSSuffix);
-  normalizePathSegment(this->IncludeSuffix);
-}
-
-Multilib &Multilib::gccSuffix(StringRef S) {
-  GCCSuffix = std::string(S);
-  normalizePathSegment(GCCSuffix);
-  return *this;
-}
-
-Multilib &Multilib::osSuffix(StringRef S) {
-  OSSuffix = std::string(S);
-  normalizePathSegment(OSSuffix);
-  return *this;
-}
-
-Multilib &Multilib::includeSuffix(StringRef S) {
-  IncludeSuffix = std::string(S);
-  normalizePathSegment(IncludeSuffix);
-  return *this;
+      Flags(Flags) {
+  assert(GCCSuffix.empty() ||
+         (StringRef(GCCSuffix).front() == '/' && GCCSuffix.size() > 1));
+  assert(OSSuffix.empty() ||
+         (StringRef(OSSuffix).front() == '/' && OSSuffix.size() > 1));
+  assert(IncludeSuffix.empty() ||
+         (StringRef(IncludeSuffix).front() == '/' && IncludeSuffix.size() > 1));
 }
 
 LLVM_DUMP_METHOD void Multilib::dump() const {
@@ -82,7 +42,6 @@ LLVM_DUMP_METHOD void Multilib::dump() const {
 }
 
 void Multilib::print(raw_ostream &OS) const {
-  assert(GCCSuffix.empty() || (StringRef(GCCSuffix).front() == '/'));
   if (GCCSuffix.empty())
     OS << ".";
   else {
@@ -95,22 +54,6 @@ void Multilib::print(raw_ostream &OS) const {
   }
 }
 
-bool Multilib::isValid() const {
-  llvm::StringMap<int> FlagSet;
-  for (unsigned I = 0, N = Flags.size(); I != N; ++I) {
-    StringRef Flag(Flags[I]);
-    llvm::StringMap<int>::iterator SI = FlagSet.find(Flag.substr(1));
-
-    assert(StringRef(Flag).front() == '+' || StringRef(Flag).front() == '-');
-
-    if (SI == FlagSet.end())
-      FlagSet[Flag.substr(1)] = I;
-    else if (Flags[I] != Flags[SI->getValue()])
-      return false;
-  }
-  return true;
-}
-
 bool Multilib::operator==(const Multilib &Other) const {
   // Check whether the flags sets match
   // allowing for the match to be order invariant
@@ -119,7 +62,7 @@ bool Multilib::operator==(const Multilib &Other) const {
     MyFlags.insert(Flag);
 
   for (const auto &Flag : Other.Flags)
-    if (MyFlags.find(Flag) == MyFlags.end())
+    if (!MyFlags.contains(Flag))
       return false;
 
   if (osSuffix() != Other.osSuffix())
@@ -139,147 +82,37 @@ raw_ostream &clang::driver::operator<<(raw_ostream &OS, const Multilib &M) {
   return OS;
 }
 
-MultilibSet &MultilibSet::Maybe(const Multilib &M) {
-  Multilib Opposite;
-  // Negate any '+' flags
-  for (StringRef Flag : M.flags()) {
-    if (Flag.front() == '+')
-      Opposite.flags().push_back(("-" + Flag.substr(1)).str());
-  }
-  return Either(M, Opposite);
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2) {
-  return Either({M1, M2});
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
-                                 const Multilib &M3) {
-  return Either({M1, M2, M3});
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
-                                 const Multilib &M3, const Multilib &M4) {
-  return Either({M1, M2, M3, M4});
-}
-
-MultilibSet &MultilibSet::Either(const Multilib &M1, const Multilib &M2,
-                                 const Multilib &M3, const Multilib &M4,
-                                 const Multilib &M5) {
-  return Either({M1, M2, M3, M4, M5});
-}
-
-static Multilib compose(const Multilib &Base, const Multilib &New) {
-  SmallString<128> GCCSuffix;
-  llvm::sys::path::append(GCCSuffix, "/", Base.gccSuffix(), New.gccSuffix());
-  SmallString<128> OSSuffix;
-  llvm::sys::path::append(OSSuffix, "/", Base.osSuffix(), New.osSuffix());
-  SmallString<128> IncludeSuffix;
-  llvm::sys::path::append(IncludeSuffix, "/", Base.includeSuffix(),
-                          New.includeSuffix());
-
-  Multilib Composed(GCCSuffix, OSSuffix, IncludeSuffix);
-
-  Multilib::flags_list &Flags = Composed.flags();
-
-  Flags.insert(Flags.end(), Base.flags().begin(), Base.flags().end());
-  Flags.insert(Flags.end(), New.flags().begin(), New.flags().end());
-
-  return Composed;
-}
-
-MultilibSet &MultilibSet::Either(ArrayRef<Multilib> MultilibSegments) {
-  multilib_list Composed;
-
-  if (Multilibs.empty())
-    Multilibs.insert(Multilibs.end(), MultilibSegments.begin(),
-                     MultilibSegments.end());
-  else {
-    for (const auto &New : MultilibSegments) {
-      for (const auto &Base : *this) {
-        Multilib MO = compose(Base, New);
-        if (MO.isValid())
-          Composed.push_back(MO);
-      }
-    }
-
-    Multilibs = Composed;
-  }
-
-  return *this;
-}
-
 MultilibSet &MultilibSet::FilterOut(FilterCallback F) {
-  filterInPlace(F, Multilibs);
-  return *this;
-}
-
-MultilibSet &MultilibSet::FilterOut(const char *Regex) {
-  llvm::Regex R(Regex);
-#ifndef NDEBUG
-  std::string Error;
-  if (!R.isValid(Error)) {
-    llvm::errs() << Error;
-    llvm_unreachable("Invalid regex!");
-  }
-#endif
-
-  filterInPlace([&R](const Multilib &M) { return R.match(M.gccSuffix()); },
-                Multilibs);
+  llvm::erase_if(Multilibs, F);
   return *this;
 }
 
 void MultilibSet::push_back(const Multilib &M) { Multilibs.push_back(M); }
 
-void MultilibSet::combineWith(const MultilibSet &Other) {
-  Multilibs.insert(Multilibs.end(), Other.begin(), Other.end());
+MultilibSet::multilib_list
+MultilibSet::select(const Multilib::flags_list &Flags) const {
+  llvm::StringSet<> FlagSet;
+  for (const auto &Flag : Flags)
+    FlagSet.insert(Flag);
+
+  multilib_list Result;
+  llvm::copy_if(Multilibs, std::back_inserter(Result),
+                [&FlagSet](const Multilib &M) {
+                  for (const std::string &F : M.flags())
+                    if (!FlagSet.contains(F))
+                      return false;
+                  return true;
+                });
+  return Result;
 }
 
-static bool isFlagEnabled(StringRef Flag) {
-  char Indicator = Flag.front();
-  assert(Indicator == '+' || Indicator == '-');
-  return Indicator == '+';
-}
-
-bool MultilibSet::select(const Multilib::flags_list &Flags, Multilib &M) const {
-  llvm::StringMap<bool> FlagSet;
-
-  // Stuff all of the flags into the FlagSet such that a true mappend indicates
-  // the flag was enabled, and a false mappend indicates the flag was disabled.
-  for (StringRef Flag : Flags)
-    FlagSet[Flag.substr(1)] = isFlagEnabled(Flag);
-
-  multilib_list Filtered = filterCopy([&FlagSet](const Multilib &M) {
-    for (StringRef Flag : M.flags()) {
-      llvm::StringMap<bool>::const_iterator SI = FlagSet.find(Flag.substr(1));
-      if (SI != FlagSet.end())
-        if (SI->getValue() != isFlagEnabled(Flag))
-          return true;
-    }
+bool MultilibSet::select(const Multilib::flags_list &Flags,
+                         Multilib &Selected) const {
+  multilib_list Result = select(Flags);
+  if (Result.empty())
     return false;
-  }, Multilibs);
-
-  if (Filtered.empty())
-    return false;
-  if (Filtered.size() == 1) {
-    M = Filtered[0];
-    return true;
-  }
-
-  // Sort multilibs by priority and select the one with the highest priority.
-  llvm::sort(Filtered.begin(), Filtered.end(),
-             [](const Multilib &a, const Multilib &b) -> bool {
-               return a.priority() > b.priority();
-             });
-
-  if (Filtered[0].priority() > Filtered[1].priority()) {
-    M = Filtered[0];
-    return true;
-  }
-
-  // TODO: We should consider returning llvm::Error rather than aborting.
-  assert(false && "More than one multilib with the same priority");
-  return false;
+  Selected = Result.back();
+  return true;
 }
 
 LLVM_DUMP_METHOD void MultilibSet::dump() const {
@@ -289,17 +122,6 @@ LLVM_DUMP_METHOD void MultilibSet::dump() const {
 void MultilibSet::print(raw_ostream &OS) const {
   for (const auto &M : *this)
     OS << M << "\n";
-}
-
-MultilibSet::multilib_list MultilibSet::filterCopy(FilterCallback F,
-                                                   const multilib_list &Ms) {
-  multilib_list Copy(Ms);
-  filterInPlace(F, Copy);
-  return Copy;
-}
-
-void MultilibSet::filterInPlace(FilterCallback F, multilib_list &Ms) {
-  llvm::erase_if(Ms, F);
 }
 
 raw_ostream &clang::driver::operator<<(raw_ostream &OS, const MultilibSet &MS) {

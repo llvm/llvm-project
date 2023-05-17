@@ -2,7 +2,7 @@
 
 @var = dso_local global i32 42
 
-define dso_local i32* @foo() {
+define dso_local ptr @foo() {
 ; CHECK:      foo:
 ; CHECK:      ldr     r0, .L[[POOL:.*]]
 ; CHECK-NEXT: .L[[ADDR:.*]]:
@@ -12,7 +12,7 @@ define dso_local i32* @foo() {
 ; CHECK:      .L[[POOL]]:
 ; CHECK-NEXT: .long   var-(.L[[ADDR]]+8)
 
-  ret i32* @var
+  ret ptr @var
 }
 
 !llvm.module.flags = !{!0}

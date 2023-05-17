@@ -13,10 +13,9 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 @common_a = common global [32 x i8] zeroinitializer, align 8, !dbg !13, !dbg !15
 
 define i32 @subr() !dbg !9 {
-    %1 = getelementptr inbounds [32 x i8], [32 x i8]* @common_a, i64 0, i32 8
-    %2 = bitcast i8* %1 to i32*
-    %3 = load i32, i32* %2
-    ret i32 %3
+    %1 = getelementptr inbounds [32 x i8], ptr @common_a, i64 0, i32 8
+    %2 = load i32, ptr %1
+    ret i32 %2
 }
 
 !llvm.dbg.cu = !{!0}

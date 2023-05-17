@@ -180,13 +180,13 @@ source_filename = "test/DebugInfo/X86/generate-odr-hash.ll"
 @_ZN7echidna8capybara8mongoose6animalE = global %"class.echidna::capybara::mongoose::fluffy" zeroinitializer, align 4, !dbg !6
 @w = internal global %"struct.<anonymous namespace>::walrus" zeroinitializer, align 1, !dbg !16
 @wom = global %struct.wombat zeroinitializer, align 4, !dbg !25
-@llvm.global_ctors = appending global [1 x { i32, void ()*, i8* }] [{ i32, void ()*, i8* } { i32 65535, void ()* @_GLOBAL__I_a, i8* null }]
+@llvm.global_ctors = appending global [1 x { i32, ptr, ptr }] [{ i32, ptr, ptr } { i32 65535, ptr @_GLOBAL__I_a, ptr null }]
 
 ; Function Attrs: nounwind uwtable
 define void @_Z3foov() #0 !dbg !40 {
 entry:
   %b = alloca %struct.baz, align 1
-  call void @llvm.dbg.declare(metadata %struct.baz* %b, metadata !43, metadata !45), !dbg !46
+  call void @llvm.dbg.declare(metadata ptr %b, metadata !43, metadata !45), !dbg !46
   ret void, !dbg !47
 }
 
@@ -195,17 +195,17 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 
 define internal void @__cxx_global_var_init() section ".text.startup" !dbg !48 {
 entry:
-  call void @_ZN12_GLOBAL__N_16walrusC2Ev(%"struct.<anonymous namespace>::walrus"* @w), !dbg !49
+  call void @_ZN12_GLOBAL__N_16walrusC2Ev(ptr @w), !dbg !49
   ret void, !dbg !49
 }
 
 ; Function Attrs: nounwind uwtable
-define internal void @_ZN12_GLOBAL__N_16walrusC2Ev(%"struct.<anonymous namespace>::walrus"* %this) unnamed_addr #0 align 2 !dbg !50 {
+define internal void @_ZN12_GLOBAL__N_16walrusC2Ev(ptr %this) unnamed_addr #0 align 2 !dbg !50 {
 entry:
-  %this.addr = alloca %"struct.<anonymous namespace>::walrus"*, align 8
-  store %"struct.<anonymous namespace>::walrus"* %this, %"struct.<anonymous namespace>::walrus"** %this.addr, align 8
-  call void @llvm.dbg.declare(metadata %"struct.<anonymous namespace>::walrus"** %this.addr, metadata !51, metadata !45), !dbg !53
-  %this1 = load %"struct.<anonymous namespace>::walrus"*, %"struct.<anonymous namespace>::walrus"** %this.addr
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  call void @llvm.dbg.declare(metadata ptr %this.addr, metadata !51, metadata !45), !dbg !53
+  %this1 = load ptr, ptr %this.addr
   ret void, !dbg !54
 }
 

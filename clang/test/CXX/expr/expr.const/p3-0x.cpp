@@ -10,6 +10,7 @@ void NonConstF() {
     case nonconst: // expected-error {{case value is not a constant expression}} expected-note {{read of non-const}}
       break;
   }
+  NonConstT<> V; // expected-note {{while checking a default template argument used here}}
   return;
 }
 
@@ -88,7 +89,7 @@ void noexcept_true() noexcept(true);
 Val<decltype(&noexcept_false), &noexcept_true> remove_noexcept;
 Val<decltype(&noexcept_true), &noexcept_false> add_noexcept;
 #if __cplusplus > 201402L
-// expected-error@-2 {{value of type 'void (*)() noexcept(false)' is not implicitly convertible to 'void (*)() noexcept'}}
+// expected-error@-2 {{value of type 'void (*)() noexcept(false)' is not implicitly convertible to 'decltype(&noexcept_true)' (aka 'void (*)() noexcept(true)')}}
 #endif
 
 // (no other conversions are permitted)

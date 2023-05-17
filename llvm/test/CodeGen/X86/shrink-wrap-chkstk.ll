@@ -15,17 +15,16 @@ target triple = "i686-pc-windows-msvc18.0.0"
 define x86_thiscallcc void @call_inalloca(i1 %x) {
 entry:
   %argmem = alloca inalloca <{ %struct.S }>, align 4
-  %argidx1 = getelementptr inbounds <{ %struct.S }>, <{ %struct.S }>* %argmem, i32 0, i32 0, i32 0, i32 0
-  %argidx2 = getelementptr inbounds <{ %struct.S }>, <{ %struct.S }>* %argmem, i32 0, i32 0, i32 0, i32 1
-  store i8 42, i8* %argidx2, align 4
+  %argidx2 = getelementptr inbounds <{ %struct.S }>, ptr %argmem, i32 0, i32 0, i32 0, i32 1
+  store i8 42, ptr %argidx2, align 4
   br i1 %x, label %bb1, label %bb2
 
 bb1:
-  store i8 42, i8* %argidx1, align 4
+  store i8 42, ptr %argmem, align 4
   br label %bb2
 
 bb2:
-  call void @inalloca_params(<{ %struct.S }>* inalloca(<{ %struct.S }>) nonnull %argmem)
+  call void @inalloca_params(ptr inalloca(<{ %struct.S }>) nonnull %argmem)
   ret void
 }
 
@@ -39,9 +38,9 @@ bb2:
 ; CHECK: popl %ebp
 ; CHECK: retl
 
-declare void @inalloca_params(<{ %struct.S }>* inalloca(<{ %struct.S }>))
+declare void @inalloca_params(ptr inalloca(<{ %struct.S }>))
 
-declare i32 @doSomething(i32, i32*)
+declare i32 @doSomething(i32, ptr)
 
 ; In this test case, we force usage of EAX before the prologue, and have to
 ; compensate before calling __chkstk. It would also be valid for us to avoid
@@ -53,8 +52,8 @@ define x86_fastcallcc i32 @use_eax_before_prologue(i32 inreg %a, i32 inreg %b) {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:

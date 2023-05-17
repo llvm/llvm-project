@@ -12,7 +12,7 @@ define void @f() prefix i32 1 {
   ret void
 }
 
-; CHECK: g(){{.*}}prefix i32* @i
-define void @g() prefix i32* @i {
+; CHECK: g(){{.*}}prefix ptr @i
+define void @g() prefix ptr @i {
   ret void
 }

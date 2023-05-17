@@ -19,6 +19,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
@@ -37,15 +38,23 @@ public:
     Pointer,
     Struct,
 
-    // Synthetic boolean values are either atomic values or composites that
-    // represent conjunctions, disjunctions, and negations.
+    // Synthetic boolean values are either atomic values or logical connectives.
+    TopBool,
     AtomicBool,
     Conjunction,
     Disjunction,
-    Negation
+    Negation,
+    Implication,
+    Biconditional,
   };
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
+
+  // Non-copyable because addresses of values are used as their identities
+  // throughout framework and user code. The framework is responsible for
+  // construction and destruction of values.
+  Value(const Value &) = delete;
+  Value &operator=(const Value &) = delete;
 
   virtual ~Value() = default;
 
@@ -64,10 +73,26 @@ public:
     Properties.insert_or_assign(Name, &Val);
   }
 
+  llvm::iterator_range<llvm::StringMap<Value *>::const_iterator>
+  properties() const {
+    return {Properties.begin(), Properties.end()};
+  }
+
 private:
   Kind ValKind;
   llvm::StringMap<Value *> Properties;
 };
+
+/// An equivalence relation for values. It obeys reflexivity, symmetry and
+/// transitivity. It does *not* include comparison of `Properties`.
+///
+/// Computes equivalence for these subclasses:
+/// * ReferenceValue, PointerValue -- pointee locations are equal. Does not
+///   compute deep equality of `Value` at said location.
+/// * TopBoolValue -- both are `TopBoolValue`s.
+///
+/// Otherwise, falls back to pointer equality.
+bool areEquivalentValues(const Value &Val1, const Value &Val2);
 
 /// Models a boolean.
 class BoolValue : public Value {
@@ -75,10 +100,24 @@ public:
   explicit BoolValue(Kind ValueKind) : Value(ValueKind) {}
 
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::AtomicBool ||
+    return Val->getKind() == Kind::TopBool ||
+           Val->getKind() == Kind::AtomicBool ||
            Val->getKind() == Kind::Conjunction ||
            Val->getKind() == Kind::Disjunction ||
-           Val->getKind() == Kind::Negation;
+           Val->getKind() == Kind::Negation ||
+           Val->getKind() == Kind::Implication ||
+           Val->getKind() == Kind::Biconditional;
+  }
+};
+
+/// Models the trivially true formula, which is Top in the lattice of boolean
+/// formulas.
+class TopBoolValue final : public BoolValue {
+public:
+  TopBoolValue() : BoolValue(Kind::TopBool) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::TopBool;
   }
 };
 
@@ -156,6 +195,54 @@ private:
   BoolValue &SubVal;
 };
 
+/// Models a boolean implication.
+///
+/// Equivalent to `!LHS v RHS`.
+class ImplicationValue : public BoolValue {
+public:
+  explicit ImplicationValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Implication), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Implication;
+  }
+
+  /// Returns the left sub-value of the implication.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the implication.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
+/// Models a boolean biconditional.
+///
+/// Equivalent to `(LHS ^ RHS) v (!LHS ^ !RHS)`.
+class BiconditionalValue : public BoolValue {
+public:
+  explicit BiconditionalValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
+      : BoolValue(Kind::Biconditional), LeftSubVal(LeftSubVal),
+        RightSubVal(RightSubVal) {}
+
+  static bool classof(const Value *Val) {
+    return Val->getKind() == Kind::Biconditional;
+  }
+
+  /// Returns the left sub-value of the biconditional.
+  BoolValue &getLeftSubValue() const { return LeftSubVal; }
+
+  /// Returns the right sub-value of the biconditional.
+  BoolValue &getRightSubValue() const { return RightSubVal; }
+
+private:
+  BoolValue &LeftSubVal;
+  BoolValue &RightSubVal;
+};
+
 /// Models an integer.
 class IntegerValue : public Value {
 public:
@@ -170,17 +257,17 @@ public:
 /// in C.
 class ReferenceValue final : public Value {
 public:
-  explicit ReferenceValue(StorageLocation &PointeeLoc)
-      : Value(Kind::Reference), PointeeLoc(PointeeLoc) {}
+  explicit ReferenceValue(StorageLocation &ReferentLoc)
+      : Value(Kind::Reference), ReferentLoc(ReferentLoc) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::Reference;
   }
 
-  StorageLocation &getPointeeLoc() const { return PointeeLoc; }
+  StorageLocation &getReferentLoc() const { return ReferentLoc; }
 
 private:
-  StorageLocation &PointeeLoc;
+  StorageLocation &ReferentLoc;
 };
 
 /// Models a symbolic pointer. Specifically, any value of type `T*`.
@@ -225,9 +312,17 @@ public:
   /// Assigns `Val` as the child value for `D`.
   void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
 
+  llvm::iterator_range<
+      llvm::DenseMap<const ValueDecl *, Value *>::const_iterator>
+  children() const {
+    return {Children.begin(), Children.end()};
+  }
+
 private:
   llvm::DenseMap<const ValueDecl *, Value *> Children;
 };
+
+raw_ostream &operator<<(raw_ostream &OS, const Value &Val);
 
 } // namespace dataflow
 } // namespace clang

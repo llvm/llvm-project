@@ -5,9 +5,9 @@
 # RUN: ld.lld %t1.o %t2.o -o %t
 # RUN: ld.lld %t1.o %t2.so -o %ts
 # RUN: ld.lld %t1.o %t2.o -o %tn --no-pcrel-optimize
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s --check-prefix=CHECK-S
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %ts | FileCheck %s --check-prefix=CHECK-D
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %tn | FileCheck %s --check-prefix=CHECK-D
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=CHECK-S
+# RUN: llvm-objdump -d --no-show-raw-insn %ts | FileCheck %s --check-prefix=CHECK-D
+# RUN: llvm-objdump -d --no-show-raw-insn %tn | FileCheck %s --check-prefix=CHECK-D
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %p/Inputs/ppc64-got-to-pcrel-relaxation-def.s -o %t2.o
@@ -15,9 +15,9 @@
 # RUN: ld.lld %t1.o %t2.o -o %t
 # RUN: ld.lld %t1.o %t2.so -o %ts
 # RUN: ld.lld %t1.o %t2.o -o %tn --no-pcrel-optimize
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s --check-prefix=CHECK-S
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %ts | FileCheck %s --check-prefix=CHECK-D
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %tn | FileCheck %s --check-prefix=CHECK-D
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=CHECK-S
+# RUN: llvm-objdump -d --no-show-raw-insn %ts | FileCheck %s --check-prefix=CHECK-D
+# RUN: llvm-objdump -d --no-show-raw-insn %tn | FileCheck %s --check-prefix=CHECK-D
 
 # CHECK-S-LABEL: <check_LBZ_STB>:
 # CHECK-S-NEXT:    plbz 10

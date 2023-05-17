@@ -11,16 +11,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "PassDetail.h"
+#include "mlir/Transforms/Passes.h"
+
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
-#include "mlir/Transforms/Passes.h"
+
+namespace mlir {
+#define GEN_PASS_DEF_CANONICALIZER
+#include "mlir/Transforms/Passes.h.inc"
+} // namespace mlir
 
 using namespace mlir;
 
 namespace {
 /// Canonicalize operations in nested regions.
-struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
+struct Canonicalizer : public impl::CanonicalizerBase<Canonicalizer> {
   Canonicalizer() = default;
   Canonicalizer(const GreedyRewriteConfig &config,
                 ArrayRef<std::string> disabledPatterns,
@@ -28,6 +33,7 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
     this->topDownProcessingEnabled = config.useTopDownTraversal;
     this->enableRegionSimplification = config.enableRegionSimplification;
     this->maxIterations = config.maxIterations;
+    this->maxNumRewrites = config.maxNumRewrites;
     this->disabledPatterns = disabledPatterns;
     this->enabledPatterns = enabledPatterns;
   }
@@ -50,7 +56,12 @@ struct Canonicalizer : public CanonicalizerBase<Canonicalizer> {
     config.useTopDownTraversal = topDownProcessingEnabled;
     config.enableRegionSimplification = enableRegionSimplification;
     config.maxIterations = maxIterations;
-    (void)applyPatternsAndFoldGreedily(getOperation(), patterns, config);
+    config.maxNumRewrites = maxNumRewrites;
+    LogicalResult converged =
+        applyPatternsAndFoldGreedily(getOperation(), patterns, config);
+    // Canonicalization is best-effort. Non-convergence is not a pass failure.
+    if (testConvergence && failed(converged))
+      signalPassFailure();
   }
 
   FrozenRewritePatternSet patterns;

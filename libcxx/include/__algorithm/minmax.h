@@ -25,9 +25,9 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template<class _Tp, class _Compare>
 _LIBCPP_NODISCARD_EXT inline
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<const _Tp&, const _Tp&>
-minmax(const _Tp& __a, const _Tp& __b, _Compare __comp)
+minmax(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b, _Compare __comp)
 {
     return __comp(__b, __a) ? pair<const _Tp&, const _Tp&>(__b, __a) :
                               pair<const _Tp&, const _Tp&>(__a, __b);
@@ -35,9 +35,9 @@ minmax(const _Tp& __a, const _Tp& __b, _Compare __comp)
 
 template<class _Tp>
 _LIBCPP_NODISCARD_EXT inline
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<const _Tp&, const _Tp&>
-minmax(const _Tp& __a, const _Tp& __b)
+minmax(_LIBCPP_LIFETIMEBOUND const _Tp& __a, _LIBCPP_LIFETIMEBOUND const _Tp& __b)
 {
     return std::minmax(__a, __b, __less<_Tp>());
 }
@@ -45,7 +45,7 @@ minmax(const _Tp& __a, const _Tp& __b)
 #ifndef _LIBCPP_CXX03_LANG
 
 template<class _Tp, class _Compare>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_Tp, _Tp> minmax(initializer_list<_Tp> __t, _Compare __comp) {
     static_assert(__is_callable<_Compare, _Tp, _Tp>::value, "The comparator has to be callable");
     __identity __proj;
@@ -55,7 +55,7 @@ pair<_Tp, _Tp> minmax(initializer_list<_Tp> __t, _Compare __comp) {
 
 template<class _Tp>
 _LIBCPP_NODISCARD_EXT inline
-_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_AFTER_CXX11
+_LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX14
 pair<_Tp, _Tp>
 minmax(initializer_list<_Tp> __t)
 {

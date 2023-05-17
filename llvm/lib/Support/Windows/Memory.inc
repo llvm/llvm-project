@@ -28,13 +28,12 @@ static DWORD getWindowsProtectionFlags(unsigned Flags) {
   case llvm::sys::Memory::MF_WRITE:
     // Note: PAGE_WRITE is not supported by VirtualProtect
     return PAGE_READWRITE;
-  case llvm::sys::Memory::MF_READ|llvm::sys::Memory::MF_WRITE:
+  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE:
     return PAGE_READWRITE;
-  case llvm::sys::Memory::MF_READ|llvm::sys::Memory::MF_EXEC:
+  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_EXEC:
     return PAGE_EXECUTE_READ;
-  case llvm::sys::Memory::MF_READ |
-         llvm::sys::Memory::MF_WRITE |
-         llvm::sys::Memory::MF_EXEC:
+  case llvm::sys::Memory::MF_READ | llvm::sys::Memory::MF_WRITE |
+      llvm::sys::Memory::MF_EXEC:
     return PAGE_EXECUTE_READWRITE;
   case llvm::sys::Memory::MF_EXEC:
     return PAGE_EXECUTE;
@@ -49,7 +48,7 @@ static DWORD getWindowsProtectionFlags(unsigned Flags) {
 // granularity may be larger than a single page (in practice, it is 64K)
 // so mapping less than that will create an unreachable fragment of memory.
 static size_t getAllocationGranularity() {
-  SYSTEM_INFO  Info;
+  SYSTEM_INFO Info;
   ::GetSystemInfo(&Info);
   if (Info.dwPageSize > Info.dwAllocationGranularity)
     return Info.dwPageSize;
@@ -99,8 +98,7 @@ namespace sys {
 
 MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
                                          const MemoryBlock *const NearBlock,
-                                         unsigned Flags,
-                                         std::error_code &EC) {
+                                         unsigned Flags, std::error_code &EC) {
   EC = std::error_code();
   if (NumBytes == 0)
     return MemoryBlock();
@@ -121,8 +119,8 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   size_t NumBlocks = (NumBytes + Granularity - 1) / Granularity;
 
   uintptr_t Start = NearBlock ? reinterpret_cast<uintptr_t>(NearBlock->base()) +
-                                NearBlock->allocatedSize()
-                           : 0;
+                                    NearBlock->allocatedSize()
+                              : 0;
 
   // If the requested address is not aligned to the allocation granularity,
   // round up to get beyond NearBlock. VirtualAlloc would have rounded down.
@@ -132,8 +130,8 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   DWORD Protect = getWindowsProtectionFlags(Flags);
 
   size_t AllocSize = NumBlocks * Granularity;
-  void *PA = ::VirtualAlloc(reinterpret_cast<void *>(Start),
-                            AllocSize, AllocType, Protect);
+  void *PA = ::VirtualAlloc(reinterpret_cast<void *>(Start), AllocSize,
+                            AllocType, Protect);
   if (PA == NULL) {
     if (NearBlock || HugePages) {
       // Try again without the NearBlock hint and without large memory pages
@@ -154,7 +152,7 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   return Result;
 }
 
-  std::error_code Memory::releaseMappedMemory(MemoryBlock &M) {
+std::error_code Memory::releaseMappedMemory(MemoryBlock &M) {
   if (M.Address == 0 || M.AllocatedSize == 0)
     return std::error_code();
 
@@ -167,8 +165,8 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
   return std::error_code();
 }
 
-  std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
-                                       unsigned Flags) {
+std::error_code Memory::protectMappedMemory(const MemoryBlock &M,
+                                            unsigned Flags) {
   if (M.Address == 0 || M.AllocatedSize == 0)
     return std::error_code();
 
@@ -187,8 +185,7 @@ MemoryBlock Memory::allocateMappedMemory(size_t NumBytes,
 /// InvalidateInstructionCache - Before the JIT can run a block of code
 /// that has been emitted it must invalidate the instruction cache on some
 /// platforms.
-void Memory::InvalidateInstructionCache(
-    const void *Addr, size_t Len) {
+void Memory::InvalidateInstructionCache(const void *Addr, size_t Len) {
   FlushInstructionCache(GetCurrentProcess(), Addr, Len);
 }
 

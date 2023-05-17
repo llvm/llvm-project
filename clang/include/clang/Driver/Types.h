@@ -95,6 +95,9 @@ namespace types {
   /// isOpenCL - Is this an "OpenCL" input.
   bool isOpenCL(ID Id);
 
+  /// isHLSL - Is this an HLSL input.
+  bool isHLSL(ID Id);
+
   /// isSrcFile - Is this a source file, i.e. something that still has to be
   /// preprocessed. The logic behind this is the same that decides if the first
   /// compilation phase is a preprocessing one.

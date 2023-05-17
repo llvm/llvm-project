@@ -10,7 +10,7 @@ Introduction
 
 This document describes the architecture of the SYCL compiler and runtime
 library. More details are provided in
-`external document <https://github.com/intel/llvm/blob/sycl/sycl/doc/CompilerAndRuntimeDesign.md>`_\ ,
+`external document <https://github.com/intel/llvm/blob/sycl/sycl/doc/design/CompilerAndRuntimeDesign.md>`_\ ,
 which are going to be added to clang documentation in the future.
 
 Address space handling

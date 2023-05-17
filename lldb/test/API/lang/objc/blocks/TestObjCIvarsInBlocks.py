@@ -8,8 +8,6 @@ from lldbsuite.test import lldbutil
 
 class TestObjCIvarsInBlocks(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -45,6 +43,8 @@ class TestObjCIvarsInBlocks(TestBase):
         self.assertEqual(
             process.GetState(), lldb.eStateStopped,
             "Stopped it too.")
+
+        self.runCmd('settings set target.prefer-dynamic-value no-dynamic-values')
 
         thread_list = lldbutil.get_threads_stopped_at_breakpoint(
             process, breakpoint)

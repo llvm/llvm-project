@@ -11,11 +11,11 @@
 
 define void @llvm_mips_vshf_b_test() nounwind {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @llvm_mips_vshf_b_ARG1
-  %1 = load <16 x i8>, <16 x i8>* @llvm_mips_vshf_b_ARG2
-  %2 = load <16 x i8>, <16 x i8>* @llvm_mips_vshf_b_ARG3
+  %0 = load <16 x i8>, ptr @llvm_mips_vshf_b_ARG1
+  %1 = load <16 x i8>, ptr @llvm_mips_vshf_b_ARG2
+  %2 = load <16 x i8>, ptr @llvm_mips_vshf_b_ARG3
   %3 = tail call <16 x i8> @llvm.mips.vshf.b(<16 x i8> %0, <16 x i8> %1, <16 x i8> %2)
-  store <16 x i8> %3, <16 x i8>* @llvm_mips_vshf_b_RES
+  store <16 x i8> %3, ptr @llvm_mips_vshf_b_RES
   ret void
 }
 
@@ -36,11 +36,11 @@ declare <16 x i8> @llvm.mips.vshf.b(<16 x i8>, <16 x i8>, <16 x i8>) nounwind
 
 define void @llvm_mips_vshf_h_test() nounwind {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @llvm_mips_vshf_h_ARG1
-  %1 = load <8 x i16>, <8 x i16>* @llvm_mips_vshf_h_ARG2
-  %2 = load <8 x i16>, <8 x i16>* @llvm_mips_vshf_h_ARG3
+  %0 = load <8 x i16>, ptr @llvm_mips_vshf_h_ARG1
+  %1 = load <8 x i16>, ptr @llvm_mips_vshf_h_ARG2
+  %2 = load <8 x i16>, ptr @llvm_mips_vshf_h_ARG3
   %3 = tail call <8 x i16> @llvm.mips.vshf.h(<8 x i16> %0, <8 x i16> %1, <8 x i16> %2)
-  store <8 x i16> %3, <8 x i16>* @llvm_mips_vshf_h_RES
+  store <8 x i16> %3, ptr @llvm_mips_vshf_h_RES
   ret void
 }
 
@@ -61,11 +61,11 @@ declare <8 x i16> @llvm.mips.vshf.h(<8 x i16>, <8 x i16>, <8 x i16>) nounwind
 
 define void @llvm_mips_vshf_w_test() nounwind {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @llvm_mips_vshf_w_ARG1
-  %1 = load <4 x i32>, <4 x i32>* @llvm_mips_vshf_w_ARG2
-  %2 = load <4 x i32>, <4 x i32>* @llvm_mips_vshf_w_ARG3
+  %0 = load <4 x i32>, ptr @llvm_mips_vshf_w_ARG1
+  %1 = load <4 x i32>, ptr @llvm_mips_vshf_w_ARG2
+  %2 = load <4 x i32>, ptr @llvm_mips_vshf_w_ARG3
   %3 = tail call <4 x i32> @llvm.mips.vshf.w(<4 x i32> %0, <4 x i32> %1, <4 x i32> %2)
-  store <4 x i32> %3, <4 x i32>* @llvm_mips_vshf_w_RES
+  store <4 x i32> %3, ptr @llvm_mips_vshf_w_RES
   ret void
 }
 
@@ -86,11 +86,11 @@ declare <4 x i32> @llvm.mips.vshf.w(<4 x i32>, <4 x i32>, <4 x i32>) nounwind
 
 define void @llvm_mips_vshf_d_test() nounwind {
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @llvm_mips_vshf_d_ARG1
-  %1 = load <2 x i64>, <2 x i64>* @llvm_mips_vshf_d_ARG2
-  %2 = load <2 x i64>, <2 x i64>* @llvm_mips_vshf_d_ARG3
+  %0 = load <2 x i64>, ptr @llvm_mips_vshf_d_ARG1
+  %1 = load <2 x i64>, ptr @llvm_mips_vshf_d_ARG2
+  %2 = load <2 x i64>, ptr @llvm_mips_vshf_d_ARG3
   %3 = tail call <2 x i64> @llvm.mips.vshf.d(<2 x i64> %0, <2 x i64> %1, <2 x i64> %2)
-  store <2 x i64> %3, <2 x i64>* @llvm_mips_vshf_d_RES
+  store <2 x i64> %3, ptr @llvm_mips_vshf_d_RES
   ret void
 }
 

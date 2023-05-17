@@ -31,13 +31,13 @@
 #include "llvm/Support/Compression.h"
 #include "llvm/Support/FileUtilities.h"
 #include "llvm/Support/FormattedStream.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
 #include "llvm/Support/WithColor.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace llvm;
 
@@ -76,10 +76,8 @@ static cl::opt<DebugCompressionType> CompressDebugSections(
     cl::init(DebugCompressionType::None),
     cl::desc("Choose DWARF debug sections compression:"),
     cl::values(clEnumValN(DebugCompressionType::None, "none", "No compression"),
-               clEnumValN(DebugCompressionType::Z, "zlib",
-                          "Use zlib compression"),
-               clEnumValN(DebugCompressionType::GNU, "zlib-gnu",
-                          "Use zlib-gnu compression (deprecated)")),
+               clEnumValN(DebugCompressionType::Zlib, "zlib", "Use zlib"),
+               clEnumValN(DebugCompressionType::Zstd, "zstd", "Use zstd")),
     cl::cat(MCCategory));
 
 static cl::opt<bool>
@@ -401,15 +399,15 @@ int main(int argc, char **argv) {
   assert(MAI && "Unable to create target asm info!");
 
   MAI->setRelaxELFRelocations(RelaxELFRel);
-
   if (CompressDebugSections != DebugCompressionType::None) {
-    if (!zlib::isAvailable()) {
+    if (const char *Reason = compression::getReasonIfUnsupported(
+            compression::formatFor(CompressDebugSections))) {
       WithColor::error(errs(), ProgName)
-          << "build tools with zlib to enable -compress-debug-sections";
+          << "--compress-debug-sections: " << Reason;
       return 1;
     }
-    MAI->setCompressDebugSections(CompressDebugSections);
   }
+  MAI->setCompressDebugSections(CompressDebugSections);
   MAI->setPreserveAsmComments(PreserveComments);
 
   // Package up features to be passed to target/subtarget

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -ffreestanding -triple i386-apple-darwin9 -O1 -target-cpu corei7 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -ffreestanding -triple i386-apple-darwin9 -O1 -target-cpu corei7 -debug-info-kind=limited -emit-llvm %s -o - | FileCheck %s
 typedef short __v4hi __attribute__ ((__vector_size__ (8)));
 
 void test1(void) {
@@ -78,5 +78,5 @@ vec_int2 lax_vector_compare2(long long x, vec_int2 y) {
   return y;
 }
 
-// CHECK: define{{.*}} void @lax_vector_compare2(<2 x i32>* {{.*sret.*}}, i64 {{.*}}, i64 {{.*}})
+// CHECK: define{{.*}} void @lax_vector_compare2(ptr {{.*sret.*}}, i64 {{.*}}, i64 {{.*}})
 // CHECK: icmp eq <2 x i32>

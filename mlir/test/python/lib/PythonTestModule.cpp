@@ -40,4 +40,7 @@ PYBIND11_MODULE(_mlirPythonTest, m) {
             return cls(mlirPythonTestTestTypeGet(ctx));
           },
           py::arg("cls"), py::arg("context") = py::none());
+  mlir_value_subclass(m, "TestTensorValue",
+                      mlirTypeIsAPythonTestTestTensorValue)
+      .def("is_null", [](MlirValue &self) { return mlirValueIsNull(self); });
 }

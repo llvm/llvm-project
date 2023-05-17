@@ -67,8 +67,8 @@ for.body:
   %p.09 = phi i32 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
   %sext = shl i32 %p.09, 24
   %conv = ashr exact i32 %sext, 24
-  %arrayidx = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx, align 4
   %add = add nsw i32 %conv, %step
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
@@ -115,7 +115,7 @@ for.end:
 ; VF8-NEXT:  [[OFFSET_IDX:%.+]] = mul i64 [[INDEX]], %step
 ; VF8-NEXT:  [[MUL0:%.+]] = mul i64 0, %step
 ; VF8-NEXT:  [[ADD:%.+]] = add i64 [[OFFSET_IDX]], [[MUL0]]
-; VF8:       getelementptr inbounds i32, i32* %in, i64 [[ADD]]
+; VF8:       getelementptr inbounds i32, ptr %in, i64 [[ADD]]
 ; VF8: middle.block:
 
 ; VF1-LABEL: @doit2
@@ -124,7 +124,7 @@ for.end:
 ; VF1: middle.block:
 ;
 
-define void @doit2(i32* nocapture readonly %in, i32* nocapture %out, i64 %size, i64 %step)  {
+define void @doit2(ptr nocapture readonly %in, ptr nocapture %out, i64 %size, i64 %step)  {
 entry:
   %cmp9 = icmp eq i64 %size, 0
   br i1 %cmp9, label %for.cond.cleanup, label %for.body.lr.ph
@@ -143,10 +143,10 @@ for.body:
   %offset.010 = phi i64 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %sext = shl i64 %w_ix.011, 32
   %idxprom = ashr exact i64 %sext, 32
-  %arrayidx = getelementptr inbounds i32, i32* %in, i64 %idxprom
-  %0 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %out, i64 %offset.010
-  store i32 %0, i32* %arrayidx1, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %in, i64 %idxprom
+  %0 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %out, i64 %offset.010
+  store i32 %0, ptr %arrayidx1, align 4
   %add = add i64 %idxprom, %step
   %inc = add nuw i64 %offset.010, 1
   %exitcond = icmp eq i64 %inc, %size
@@ -200,8 +200,8 @@ for.body:
   %indvars.iv = phi i64 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %for.body ]
   %p.09 = phi i32 [ 0, %for.body.lr.ph ], [ %add, %for.body ]
   %conv = and i32 %p.09, 255
-  %arrayidx = getelementptr inbounds [250 x i32], [250 x i32]* @a, i64 0, i64 %indvars.iv
-  store i32 %conv, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [250 x i32], ptr @a, i64 0, i64 %indvars.iv
+  store i32 %conv, ptr %arrayidx, align 4
   %add = add nsw i32 %conv, %step
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   %exitcond = icmp eq i64 %indvars.iv.next, %wide.trip.count
@@ -221,7 +221,7 @@ for.end:
 ; VF8: store <8 x i32> %vec.ind
 ; VF8: middle.block:
 ;
-define void @test_conv_in_latch_block(i32 %n, i32 %step, i32* noalias %A, i32* noalias %B) {
+define void @test_conv_in_latch_block(i32 %n, i32 %step, ptr noalias %A, ptr noalias %B) {
 entry:
   %wide.trip.count = zext i32 %n to i64
   br label %loop
@@ -229,21 +229,21 @@ entry:
 loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %latch ]
   %p.09 = phi i32 [ 0, %entry ], [ %add, %latch ]
-  %B.gep = getelementptr inbounds i32, i32* %B, i64 %iv
-  %l = load i32, i32* %B.gep
+  %B.gep = getelementptr inbounds i32, ptr %B, i64 %iv
+  %l = load i32, ptr %B.gep
   %c = icmp eq i32 %l, 0
   br i1 %c, label %then, label %latch
 
 then:
-  %A.gep = getelementptr inbounds i32, i32* %A, i64 %iv
-  store i32 0, i32* %A.gep
+  %A.gep = getelementptr inbounds i32, ptr %A, i64 %iv
+  store i32 0, ptr %A.gep
   br label %latch
 
 latch:
   %sext = shl i32 %p.09, 24
   %conv = ashr exact i32 %sext, 24
   %add = add nsw i32 %conv, %step
-  store i32 %conv, i32* %B.gep, align 4
+  store i32 %conv, ptr %B.gep, align 4
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %wide.trip.count
   br i1 %exitcond, label %exit, label %loop

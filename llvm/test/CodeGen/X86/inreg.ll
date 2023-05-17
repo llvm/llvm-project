@@ -6,7 +6,7 @@
 define void @g1() nounwind {
 entry:
   %tmp = alloca %struct.s1, align 4
-  call void @f(%struct.s1* inreg sret(%struct.s1) %tmp, i32 inreg 41, i32 inreg 42, i32 43)
+  call void @f(ptr inreg sret(%struct.s1) %tmp, i32 inreg 41, i32 inreg 42, i32 43)
   ret void
   ; DAG-LABEL: g1:
   ; DAG: subl $[[AMT:.*]], %esp
@@ -29,11 +29,11 @@ entry:
   ; FAST: ret
 }
 
-declare void @f(%struct.s1* inreg sret(%struct.s1), i32 inreg, i32 inreg, i32)
+declare void @f(ptr inreg sret(%struct.s1), i32 inreg, i32 inreg, i32)
 
 %struct.s2 = type {}
 
-define void @g2(%struct.s2* inreg sret(%struct.s2) %agg.result) nounwind {
+define void @g2(ptr inreg sret(%struct.s2) %agg.result) nounwind {
 entry:
   ret void
   ; DAG: g2

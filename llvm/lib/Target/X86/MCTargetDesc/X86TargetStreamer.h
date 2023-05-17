@@ -19,15 +19,26 @@ public:
   X86TargetStreamer(MCStreamer &S) : MCTargetStreamer(S) {}
 
   virtual bool emitFPOProc(const MCSymbol *ProcSym, unsigned ParamsSize,
-                           SMLoc L = {}) = 0;
-  virtual bool emitFPOEndPrologue(SMLoc L = {}) = 0;
-  virtual bool emitFPOEndProc(SMLoc L = {}) = 0;
-  virtual bool emitFPOData(const MCSymbol *ProcSym, SMLoc L = {}) = 0;
-  virtual bool emitFPOPushReg(unsigned Reg, SMLoc L = {}) = 0;
-  virtual bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L = {}) = 0;
-  virtual bool emitFPOStackAlign(unsigned Align, SMLoc L = {}) = 0;
-  virtual bool emitFPOSetFrame(unsigned Reg, SMLoc L = {}) = 0;
+                           SMLoc L = {}) {
+    return false;
+  }
+  virtual bool emitFPOEndPrologue(SMLoc L = {}) { return false; }
+  virtual bool emitFPOEndProc(SMLoc L = {}) { return false; };
+  virtual bool emitFPOData(const MCSymbol *ProcSym, SMLoc L = {}) {
+    return false;
+  }
+  virtual bool emitFPOPushReg(unsigned Reg, SMLoc L = {}) { return false; }
+  virtual bool emitFPOStackAlloc(unsigned StackAlloc, SMLoc L = {}) {
+    return false;
+  }
+  virtual bool emitFPOStackAlign(unsigned Align, SMLoc L = {}) { return false; }
+  virtual bool emitFPOSetFrame(unsigned Reg, SMLoc L = {}) { return false; }
 };
+
+/// Implements X86-only null emission.
+inline MCTargetStreamer *createX86NullTargetStreamer(MCStreamer &S) {
+  return new X86TargetStreamer(S);
+}
 
 } // end namespace llvm
 

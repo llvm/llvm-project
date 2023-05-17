@@ -38,29 +38,139 @@ def TransformOpInterface : OpInterface<"TransformOpInterface"> {
         accepts as arguments the object that must be populated with results of
         the current transformation and a transformation state object that can be
         used for queries, e.g., to obtain the list of operations on which the
-        transformation represented by the current op is targeted.
+        transformation represented by the current op is targeted. Returns a
+        special status object indicating whether the transformation succeeded
+        or failed, and, if it failed, whether the failure is recoverable or not.
       }],
-      /*returnType=*/"::mlir::LogicalResult",
+      /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
       /*name=*/"apply",
       /*arguments=*/(ins
           "::mlir::transform::TransformResults &":$transformResults,
           "::mlir::transform::TransformState &":$state
     )>,
+    InterfaceMethod<
+      /*desc=*/[{
+        Indicates whether the op instance allows its handle operands to be
+        associated with the same payload operations.
+      }],
+      /*returnType=*/"bool",
+      /*name=*/"allowsRepeatedHandleOperands",
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 
   let extraSharedClassDeclaration = [{
-    /// Emits a generic transform error for the current transform operation
+    /// Creates the silenceable failure object with a diagnostic located at the
+    /// current operation. Silenceable failure must be suppressed or reported
+    /// explicitly at some later time.
+    DiagnosedSilenceableFailure
+    emitSilenceableError(const ::llvm::Twine &message = {}) {
+      return ::mlir::emitSilenceableFailure($_op, message);
+    }
+
+    /// Creates the definite failure object with a diagnostic located at the
+    /// current operation. Definite failure will be reported when the object
+    /// is destroyed or converted.
+    DiagnosedDefiniteFailure
+    emitDefiniteFailure(const ::llvm::Twine &message = {}) {
+      return ::mlir::emitDefiniteFailure($_op, message);
+    }
+
+    /// Emits a generic definite failure for the current transform operation
     /// targeting the given Payload IR operation and returns failure. Should
     /// be only used as a last resort when the transformation itself provides
     /// no further indication as to the reason of the failure.
-    ::mlir::LogicalResult reportUnknownTransformError(
+    DiagnosedDefiniteFailure emitDefaultDefiniteFailure(
         ::mlir::Operation *target) {
-      ::mlir::InFlightDiagnostic diag = $_op->emitError() << "failed to apply";
+      auto diag = ::mlir::emitDefiniteFailure($_op, "failed to apply");
       diag.attachNote(target->getLoc()) << "attempted to apply to this op";
       return diag;
     }
+
+    /// Creates the default silenceable failure for a transform op that failed
+    /// to properly apply to a target.
+    DiagnosedSilenceableFailure emitDefaultSilenceableFailure(
+        Operation *target) {
+      DiagnosedSilenceableFailure diag = emitSilenceableFailure($_op->getLoc());
+      diag << $_op->getName() << " failed to apply";
+      diag.attachNote(target->getLoc()) << "when applied to this op";
+      return diag;
+    }
+  }];
+
+  let verify = [{
+    return ::mlir::transform::detail::verifyTransformOpInterface($_op);
   }];
 }
+
+class TransformTypeInterfaceBase<string cppClass, string cppObjectType>
+    : TypeInterface<cppClass> {
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Checks if the given associated objects (Payload IR operations or attributes)
+        satisfy the conditions defined by this type. If not, produces a silenceable
+        error at the specified location.
+      }],
+      /*returnType=*/"::mlir::DiagnosedSilenceableFailure",
+      /*name=*/"checkPayload",
+      /*arguments=*/(ins "::mlir::Location":$loc,
+                         "::mlir::ArrayRef<" # cppObjectType # ">":$payload)
+    >
+  ];
+
+  let extraSharedClassDeclaration = [{
+    DiagnosedSilenceableFailure emitSilenceableError(Location loc) const {
+      Diagnostic diag(loc, DiagnosticSeverity::Error);
+      return DiagnosedSilenceableFailure::silenceableFailure(std::move(diag));
+    }
+  }];
+}
+
+def TransformHandleTypeInterface
+    : TransformTypeInterfaceBase<"TransformHandleTypeInterface",
+                                 "::mlir::Operation *"> {
+  let description = [{
+    Types that can be used for the Transform dialect operation handle values.
+    Such types define the properties of Payload IR operations associated with
+    the handle. A user of such a handle can assume that these properties have
+    been verified for any Payload IR operation associated with it.
+  }];
+}
+
+def TransformParamTypeInterface
+    : TransformTypeInterfaceBase<"TransformParamTypeInterface",
+                                 "::mlir::Attribute"> {
+  let description = [{
+    Types that can be used for the Transform dialect parameter values. Such types
+    define the structure of the parameters associated with the value, e.g., their
+    underlying type. A user of the value can assume that the parameter has been
+    verified.
+  }];
+}
+
+def TransformValueHandleTypeInterface
+    : TransformTypeInterfaceBase<"TransformValueHandleTypeInterface",
+                                 "::mlir::Value"> {
+  let description = [{
+    Types that can be used for the Transform dialect handle values pointing to
+    Payload IR values. Such types define the properties of Payload IR values
+    associated with the handle. Users of such a handle can assume that these
+    properties have been verified for any Payload IR value associated with it.
+  }];
+}
+
+def Transform_AnyHandleOrParamType
+  : Type<Or<[TransformParamTypeInterface.predicate,
+             TransformHandleTypeInterface.predicate,
+             TransformValueHandleTypeInterface.predicate]>,
+         "any transform handle or parameter">;
 
 def FunctionalStyleTransformOpTrait
     : NativeOpTrait<"FunctionalStyleTransformOpTrait"> {
@@ -71,7 +181,15 @@ def TransformEachOpTrait : NativeOpTrait<"TransformEachOpTrait"> {
   let cppNamespace = "::mlir::transform";
 }
 
+def TransformWithPatternsOpTrait : NativeOpTrait<"TransformWithPatternsOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
+
 def NavigationTransformOpTrait : NativeOpTrait<"NavigationTransformOpTrait"> {
+  let cppNamespace = "::mlir::transform";
+}
+
+def ParamProducerTransformOpTrait : NativeOpTrait<"ParamProducerTransformOpTrait"> {
   let cppNamespace = "::mlir::transform";
 }
 

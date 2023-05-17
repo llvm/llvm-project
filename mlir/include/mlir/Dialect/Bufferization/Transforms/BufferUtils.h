@@ -14,9 +14,9 @@
 #ifndef MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERUTILS_H
 #define MLIR_DIALECT_BUFFERIZATION_TRANSFORMS_BUFFERUTILS_H
 
-#include "mlir/Analysis/BufferViewFlowAnalysis.h"
 #include "mlir/Analysis/Liveness.h"
-#include "mlir/Dialect/Arithmetic/IR/Arithmetic.h"
+#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Bufferization/Transforms/BufferViewFlowAnalysis.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Dominance.h"
@@ -125,7 +125,8 @@ protected:
 // Globals are created lazily at the top of the enclosing ModuleOp with pretty
 // names. Duplicates are avoided.
 FailureOr<memref::GlobalOp> getGlobalFor(arith::ConstantOp constantOp,
-                                         uint64_t alignment);
+                                         uint64_t alignment,
+                                         Attribute memorySpace = {});
 
 } // namespace bufferization
 } // namespace mlir

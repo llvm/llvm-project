@@ -72,7 +72,7 @@ public:
 
   /// Deallocate space for a sequence of objects without constructing them.
   template <typename T>
-  std::enable_if_t<!std::is_same<std::remove_cv_t<T>, void>::value, void>
+  std::enable_if_t<!std::is_same_v<std::remove_cv_t<T>, void>, void>
   Deallocate(T *Ptr, size_t Num = 1) {
     Deallocate(static_cast<const void *>(Ptr), Num * sizeof(T), alignof(T));
   }
@@ -98,6 +98,28 @@ public:
 
   void PrintStats() const {}
 };
+
+namespace detail {
+
+template <typename Alloc> class AllocatorHolder : Alloc {
+public:
+  AllocatorHolder() = default;
+  AllocatorHolder(const Alloc &A) : Alloc(A) {}
+  AllocatorHolder(Alloc &&A) : Alloc(static_cast<Alloc &&>(A)) {}
+  Alloc &getAllocator() { return *this; }
+  const Alloc &getAllocator() const { return *this; }
+};
+
+template <typename Alloc> class AllocatorHolder<Alloc &> {
+  Alloc &A;
+
+public:
+  AllocatorHolder(Alloc &A) : A(A) {}
+  Alloc &getAllocator() { return A; }
+  const Alloc &getAllocator() const { return A; }
+};
+
+} // namespace detail
 
 } // namespace llvm
 

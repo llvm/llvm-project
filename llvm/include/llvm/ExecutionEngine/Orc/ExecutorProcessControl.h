@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_EXECUTORPROCESSCONTROL_H
 
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
 #include "llvm/ExecutionEngine/Orc/Shared/TargetProcessControlTypes.h"
@@ -23,6 +22,7 @@
 #include "llvm/ExecutionEngine/Orc/TaskDispatch.h"
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
+#include "llvm/TargetParser/Triple.h"
 
 #include <future>
 #include <mutex>
@@ -218,6 +218,33 @@ public:
     return *MemMgr;
   }
 
+  /// Returns the bootstrap map.
+  const StringMap<std::vector<char>> &getBootstrapMap() const {
+    return BootstrapMap;
+  }
+
+  /// Look up and SPS-deserialize a bootstrap map value.
+  ///
+  ///
+  template <typename T, typename SPSTagT>
+  Error getBootstrapMapValue(StringRef Key, std::optional<T> &Val) const {
+    Val = std::nullopt;
+
+    auto I = BootstrapMap.find(Key);
+    if (I == BootstrapMap.end())
+      return Error::success();
+
+    T Tmp;
+    shared::SPSInputBuffer IB(I->second.data(), I->second.size());
+    if (!shared::SPSArgList<SPSTagT>::deserialize(IB, Tmp))
+      return make_error<StringError>("Could not deserialize value for key " +
+                                         Key,
+                                     inconvertibleErrorCode());
+
+    Val = std::move(Tmp);
+    return Error::success();
+  }
+
   /// Returns the bootstrap symbol map.
   const StringMap<ExecutorAddr> &getBootstrapSymbolsMap() const {
     return BootstrapSymbols;
@@ -228,7 +255,7 @@ public:
   /// found. If any symbol is not found then the function returns an error.
   Error getBootstrapSymbols(
       ArrayRef<std::pair<ExecutorAddr &, StringRef>> Pairs) const {
-    for (auto &KV : Pairs) {
+    for (const auto &KV : Pairs) {
       auto I = BootstrapSymbols.find(KV.second);
       if (I == BootstrapSymbols.end())
         return make_error<StringError>("Symbol \"" + KV.second +
@@ -258,6 +285,15 @@ public:
   /// Run function with a main-like signature.
   virtual Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                                       ArrayRef<std::string> Args) = 0;
+
+  // TODO: move this to ORC runtime.
+  /// Run function with a int (*)(void) signature.
+  virtual Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) = 0;
+
+  // TODO: move this to ORC runtime.
+  /// Run function with a int (*)(int) signature.
+  virtual Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr,
+                                             int Arg) = 0;
 
   /// Run a wrapper function in the executor. The given WFRHandler will be
   /// called on the result when it is returned.
@@ -363,6 +399,7 @@ protected:
   JITDispatchInfo JDI;
   MemoryAccess *MemAccess = nullptr;
   jitlink::JITLinkMemoryManager *MemMgr = nullptr;
+  StringMap<std::vector<char>> BootstrapMap;
   StringMap<ExecutorAddr> BootstrapSymbols;
 };
 
@@ -394,6 +431,14 @@ public:
 
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override {
+    llvm_unreachable("Unsupported");
+  }
+
+  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override {
     llvm_unreachable("Unsupported");
   }
 
@@ -434,6 +479,10 @@ public:
   Expected<int32_t> runAsMain(ExecutorAddr MainFnAddr,
                               ArrayRef<std::string> Args) override;
 
+  Expected<int32_t> runAsVoidFunction(ExecutorAddr VoidFnAddr) override;
+
+  Expected<int32_t> runAsIntFunction(ExecutorAddr IntFnAddr, int Arg) override;
+
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         IncomingWFRHandler OnComplete,
                         ArrayRef<char> ArgBuffer) override;
@@ -462,7 +511,6 @@ private:
 
   std::unique_ptr<jitlink::JITLinkMemoryManager> OwnedMemMgr;
   char GlobalManglingPrefix = 0;
-  std::vector<std::unique_ptr<sys::DynamicLibrary>> DynamicLibraries;
 };
 
 } // end namespace orc

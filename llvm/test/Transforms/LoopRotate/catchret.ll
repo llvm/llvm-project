@@ -1,10 +1,10 @@
-; RUN: opt < %s -loop-rotate -verify-memoryssa -S | FileCheck %s
+; RUN: opt < %s -passes=loop-rotate -verify-memoryssa -S | FileCheck %s
 
 target triple = "x86_64-pc-windows-msvc"
 
 declare void @always_throws()
 
-define i32 @test() personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define i32 @test() personality ptr @__CxxFrameHandler3 {
 entry:
   invoke void @always_throws()
           to label %continue unwind label %catch.dispatch
@@ -16,7 +16,7 @@ catch.dispatch:
   %t0 = catchswitch within none [label %catch] unwind to caller
 
 catch:
-  %t1 = catchpad within %t0 [i8* null, i32 64, i8* null]
+  %t1 = catchpad within %t0 [ptr null, i32 64, ptr null]
   catchret from %t1 to label %for.cond
 
 for.cond:

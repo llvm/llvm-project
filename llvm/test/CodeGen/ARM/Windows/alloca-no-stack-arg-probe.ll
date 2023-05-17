@@ -4,11 +4,11 @@ declare arm_aapcs_vfpcc i32 @num_entries()
 
 define arm_aapcs_vfpcc void @test___builtin_alloca() "no-stack-arg-probe" {
 entry:
-  %array = alloca i8*, align 4
+  %array = alloca ptr, align 4
   %call = call arm_aapcs_vfpcc i32 @num_entries()
   %mul = mul i32 4, %call
   %0 = alloca i8, i32 %mul
-  store i8* %0, i8** %array, align 4
+  store ptr %0, ptr %array, align 4
   ret void
 }
 

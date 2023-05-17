@@ -175,7 +175,7 @@ __attribute__((external_source_symbol(language="Swift", defined_in="module", gen
 void TestExternalSourceSymbolAttr2()
 __attribute__((external_source_symbol(defined_in="module", language="Swift")));
 // CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr2
-// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module"{{$}}
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" ""{{$}}
 
 void TestExternalSourceSymbolAttr3()
 __attribute__((external_source_symbol(generated_declaration, language="Objective-C++", defined_in="module")));
@@ -191,6 +191,11 @@ void TestExternalSourceSymbolAttr5()
 __attribute__((external_source_symbol(generated_declaration, defined_in="module", language="Swift")));
 // CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr5
 // CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration
+
+void TestExternalSourceSymbolAttr6()
+__attribute__((external_source_symbol(generated_declaration, defined_in="module", language="Swift", USR="testUSR")));
+// CHECK: FunctionDecl{{.*}} TestExternalSourceSymbolAttr6
+// CHECK-NEXT: ExternalSourceSymbolAttr{{.*}} "Swift" "module" GeneratedDeclaration "testUSR"
 
 namespace TestNoEscape {
   void noescapeFunc(int *p0, __attribute__((noescape)) int *p1) {}

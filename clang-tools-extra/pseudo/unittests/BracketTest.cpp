@@ -9,7 +9,7 @@
 #include "clang-pseudo/Bracket.h"
 #include "clang-pseudo/Token.h"
 #include "clang/Basic/LangOptions.h"
-#include "llvm/Testing/Support/Annotations.h"
+#include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 

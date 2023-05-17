@@ -9,7 +9,15 @@
 #include <sched.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#ifdef __linux__
+#  include <linux/version.h>
+#endif
 
+#if __PPC64__ && RHEL_MAJOR == 7 && RHEL_MINOR == 9
+#  define PPC64_RHEL7_9 1
+#endif
+
+#ifndef PPC64_RHEL7_9
 static int cloned(void *arg) {
   // Unshare can fail for other reasons, e.g. no permissions,
   // so check only the error we are interested in:
@@ -21,8 +29,10 @@ static int cloned(void *arg) {
   exit(0);
   return 0;
 }
+#endif
 
 int main() {
+#ifndef PPC64_RHEL7_9
   char stack[64 << 10] __attribute__((aligned(64)));
   int pid = clone(cloned, stack + sizeof(stack), SIGCHLD, 0);
   if (pid == -1) {
@@ -36,6 +46,7 @@ int main() {
     fprintf(stderr, "child failed: %d\n", status);
     exit(1);
   }
+#endif
   fprintf(stderr, "DONE\n");
 }
 

@@ -31,6 +31,7 @@
       <item> !strconcat </item>
       <item> !cast </item>
       <item> !listconcat </item>
+      <item> !listremove </item>
       <item> !listsplat </item>
       <item> !size </item>
       <item> !foldl </item>
@@ -41,6 +42,8 @@
       <item> !ge </item>
       <item> !gt </item>
       <item> !ne </item>
+      <item> !tolower </item>
+      <item> !toupper </item>
     </list>
     <list name="objects">
       <item> class </item>

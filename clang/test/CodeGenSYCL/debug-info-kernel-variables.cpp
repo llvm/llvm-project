@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -o - -O0 -emit-llvm                                     \
+// RUN: %clang_cc1 %s -o - -O0 -emit-llvm                                     \
 // RUN:            -triple spir64-unknown-unknown                             \
 // RUN:            -aux-triple x86_64-unknown-linux-gnu                       \
 // RUN:            -fsycl-is-device                                           \
@@ -35,12 +35,12 @@ int my_host() {
 // CHECK:        %my_param.addr = alloca i32, align 4
 // CHECK:        %my_local = alloca i32, align 4
 // CHECK:        call void @llvm.dbg.declare(
-// CHECK-SAME:     metadata i32* %my_param.addr,
+// CHECK-SAME:     metadata ptr %my_param.addr,
 // CHECK-SAME:     metadata [[MY_PARAM:![0-9]+]],
 // CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 4, DW_OP_swap, DW_OP_xderef)
 // CHECK-SAME:     )
 // CHECK:        call void @llvm.dbg.declare(
-// CHECK-SAME:     metadata i32* %my_local,
+// CHECK-SAME:     metadata ptr %my_local,
 // CHECK-SAME:     metadata [[MY_LOCAL:![0-9]+]],
 // CHECK-SAME:     metadata !DIExpression(DW_OP_constu, 4, DW_OP_swap, DW_OP_xderef)
 // CHECK-SAME:     )

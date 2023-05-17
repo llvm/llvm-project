@@ -15,21 +15,21 @@ entry:
   %a.addr = alloca i32, align 4
   %b.addr = alloca i32, align 4
   %sum = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  store i32 %b, i32* %b.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  store i32 %b, ptr %b.addr, align 4
   br label %top
 
 top:                                              ; preds = %entry
   call void @llvm.dbg.label(metadata !8), !dbg !9
-  %0 = load i32, i32* %a.addr, align 4
-  %1 = load i32, i32* %b.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
+  %1 = load i32, ptr %b.addr, align 4
   %add = add nsw i32 %0, %1
-  store i32 %add, i32* %sum, align 4
+  store i32 %add, ptr %sum, align 4
   br label %done
 
 done:                                             ; preds = %top
   call void @llvm.dbg.label(metadata !10), !dbg !11
-  %2 = load i32, i32* %sum, align 4
+  %2 = load i32, ptr %sum, align 4
   ret i32 %2
 }
 

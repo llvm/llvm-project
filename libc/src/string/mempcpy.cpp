@@ -15,11 +15,10 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(void *, mempcpy,
-                   (void *__restrict dest, const void *__restrict src,
+                   (void *__restrict dst, const void *__restrict src,
                     size_t count)) {
-  char *result = reinterpret_cast<char *>(dest);
-  inline_memcpy(result, reinterpret_cast<const char *>(src), count);
-  return result + count;
+  inline_memcpy(dst, src, count);
+  return reinterpret_cast<char *>(dst) + count;
 }
 
 } // namespace __llvm_libc

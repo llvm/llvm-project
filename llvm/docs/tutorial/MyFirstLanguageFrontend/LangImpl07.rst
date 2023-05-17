@@ -319,7 +319,7 @@ variables in addition to other user-defined variables. This means that
 these will both need memory locations.
 
 To start our transformation of Kaleidoscope, we'll change the
-NamedValues map so that it maps to AllocaInst\* instead of Value\*. Once
+``NamedValues`` map so that it maps to AllocaInst\* instead of Value\*. Once
 we do this, the C++ compiler will tell us what parts of the code we need
 to update:
 
@@ -339,8 +339,8 @@ the function:
                                               const std::string &VarName) {
       IRBuilder<> TmpB(&TheFunction->getEntryBlock(),
                      TheFunction->getEntryBlock().begin());
-      return TmpB.CreateAlloca(Type::getDoubleTy(TheContext), 0,
-                               VarName.c_str());
+      return TmpB.CreateAlloca(Type::getDoubleTy(*TheContext), nullptr,
+                               VarName);
     }
 
 This funny looking code creates an IRBuilder object that is pointing at
@@ -357,12 +357,12 @@ from the stack slot:
 
     Value *VariableExprAST::codegen() {
       // Look this variable up in the function.
-      Value *V = NamedValues[Name];
-      if (!V)
+      AllocaInst *A = NamedValues[Name];
+      if (!A)
         return LogErrorV("Unknown variable name");
 
       // Load the value.
-      return Builder.CreateLoad(V, Name.c_str());
+      return Builder->CreateLoad(A->getAllocatedType(), A, Name.c_str());
     }
 
 As you can see, this is pretty straightforward. Now we need to update
@@ -372,7 +372,7 @@ the unabridged code):
 
 .. code-block:: c++
 
-      Function *TheFunction = Builder.GetInsertBlock()->getParent();
+      Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
       // Create an alloca for the variable in the entry block.
       AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
@@ -383,7 +383,7 @@ the unabridged code):
         return nullptr;
 
       // Store the value into the alloca.
-      Builder.CreateStore(StartVal, Alloca);
+      Builder->CreateStore(StartVal, Alloca);
       ...
 
       // Compute the end condition.
@@ -393,9 +393,10 @@ the unabridged code):
 
       // Reload, increment, and restore the alloca.  This handles the case where
       // the body of the loop mutates the variable.
-      Value *CurVar = Builder.CreateLoad(Alloca);
-      Value *NextVar = Builder.CreateFAdd(CurVar, StepVal, "nextvar");
-      Builder.CreateStore(NextVar, Alloca);
+      Value *CurVar = Builder->CreateLoad(Alloca->getAllocatedType(), Alloca,
+                                          VarName.c_str());
+      Value *NextVar = Builder->CreateFAdd(CurVar, StepVal, "nextvar");
+      Builder->CreateStore(NextVar, Alloca);
       ...
 
 This code is virtually identical to the code `before we allowed mutable
@@ -410,7 +411,7 @@ them. The code for this is also pretty simple:
 
     Function *FunctionAST::codegen() {
       ...
-      Builder.SetInsertPoint(BB);
+      Builder->SetInsertPoint(BB);
 
       // Record the function arguments in the NamedValues map.
       NamedValues.clear();
@@ -419,10 +420,10 @@ them. The code for this is also pretty simple:
         AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, Arg.getName());
 
         // Store the initial value into the alloca.
-        Builder.CreateStore(&Arg, Alloca);
+        Builder->CreateStore(&Arg, Alloca);
 
         // Add arguments to variable symbol table.
-        NamedValues[Arg.getName()] = Alloca;
+        NamedValues[std::string(Arg.getName())] = Alloca;
       }
 
       if (Value *RetVal = Body->codegen()) {
@@ -577,8 +578,10 @@ implement codegen for the assignment operator. This looks like:
     Value *BinaryExprAST::codegen() {
       // Special case '=' because we don't want to emit the LHS as an expression.
       if (Op == '=') {
-        // Assignment requires the LHS to be an identifier.
-        VariableExprAST *LHSE = dynamic_cast<VariableExprAST*>(LHS.get());
+        // This assume we're building without RTTI because LLVM builds that way by
+        // default. If you build LLVM with RTTI this can be changed to a
+        // dynamic_cast for automatic error checking.
+        VariableExprAST *LHSE = static_cast<VariableExprAST*>(LHS.get());
         if (!LHSE)
           return LogErrorV("destination of '=' must be a variable");
 
@@ -601,7 +604,7 @@ allowed.
         if (!Variable)
           return LogErrorV("Unknown variable name");
 
-        Builder.CreateStore(Val, Variable);
+        Builder->CreateStore(Val, Variable);
         return Val;
       }
       ...
@@ -741,7 +744,7 @@ into the local ``VarNames`` vector.
 
 .. code-block:: c++
 
-      while (1) {
+      while (true) {
         std::string Name = IdentifierStr;
         getNextToken();  // eat identifier.
 
@@ -790,7 +793,7 @@ emission of LLVM IR for it. This code starts out with:
     Value *VarExprAST::codegen() {
       std::vector<AllocaInst *> OldBindings;
 
-      Function *TheFunction = Builder.GetInsertBlock()->getParent();
+      Function *TheFunction = Builder->GetInsertBlock()->getParent();
 
       // Register all variables and emit their initializer.
       for (unsigned i = 0, e = VarNames.size(); i != e; ++i) {
@@ -814,11 +817,11 @@ previous value that we replace in OldBindings.
           if (!InitVal)
             return nullptr;
         } else { // If not specified, use 0.0.
-          InitVal = ConstantFP::get(TheContext, APFloat(0.0));
+          InitVal = ConstantFP::get(*TheContext, APFloat(0.0));
         }
 
         AllocaInst *Alloca = CreateEntryBlockAlloca(TheFunction, VarName);
-        Builder.CreateStore(InitVal, Alloca);
+        Builder->CreateStore(InitVal, Alloca);
 
         // Remember the old variable binding so that we can restore the binding when
         // we unrecurse.

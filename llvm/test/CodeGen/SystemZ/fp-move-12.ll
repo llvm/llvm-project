@@ -20,14 +20,14 @@ define double @f2(double %a, double %b) {
 
 ; Test f128 moves.  Since f128s are passed by reference, we need to force
 ; a copy by other means.
-define void @f3(fp128 *%x) {
+define void @f3(ptr %x) {
 ; CHECK-LABEL: f3:
 ; CHECK: lxr
 ; CHECK: axbr
 ; CHECK: br %r14
-  %val = load volatile fp128, fp128 *%x
+  %val = load volatile fp128, ptr %x
   %sum = fadd fp128 %val, %val
-  store volatile fp128 %sum, fp128 *%x
-  store volatile fp128 %val, fp128 *%x
+  store volatile fp128 %sum, ptr %x
+  store volatile fp128 %val, ptr %x
   ret void
 }

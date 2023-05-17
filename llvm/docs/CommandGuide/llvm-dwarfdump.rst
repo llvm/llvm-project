@@ -109,6 +109,11 @@ OPTIONS
 
             Show the sizes of all debug sections, expressed in bytes.
 
+.. option:: --show-sources
+
+            Print all source files mentioned in the debug information. Absolute
+            paths are given whenever possible.
+
 .. option:: --statistics
 
             Collect debug info quality metrics and print the results

@@ -1,3 +1,6 @@
+#ifndef __TSAN_TEST_H__
+#define __TSAN_TEST_H__
+
 #include <pthread.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -133,3 +136,5 @@ void WTFAnnotateBenignRaceSized(const char *f, int l, const volatile void *mem,
 #else
 #define ASM_SYMBOL(symbol) #symbol
 #endif
+
+#endif // __TSAN_TEST_H__

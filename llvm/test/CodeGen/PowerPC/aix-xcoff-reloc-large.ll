@@ -14,10 +14,10 @@
 
 define i32 @foo() {
 entry:
-  %0 = load i32, i32* @a, align 4
-  %1 = load i32, i32* @b, align 4
+  %0 = load i32, ptr @a, align 4
+  %1 = load i32, ptr @b, align 4
   %add = add nsw i32 %0, %1
-  %2 = load i32, i32* @c, align 4
+  %2 = load i32, ptr @c, align 4
   %add1 = add nsw i32 %add, %2
   ret i32 %add1
 }

@@ -40,7 +40,13 @@ enum class SymbolFlags : uint8_t {
   /// Rexported
   Rexported        = 1U << 4,
 
-  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Rexported),
+  /// Data Segment  
+  Data             = 1U << 5,
+
+  /// Text Segment
+  Text             = 1U << 6,
+  
+  LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/Text),
 };
 
 // clang-format on
@@ -93,6 +99,14 @@ public:
     return (Flags & SymbolFlags::Rexported) == SymbolFlags::Rexported;
   }
 
+  bool isData() const {
+    return (Flags & SymbolFlags::Data) == SymbolFlags::Data;
+  }
+
+  bool isText() const {
+    return (Flags & SymbolFlags::Text) == SymbolFlags::Text;
+  }
+
   using const_target_iterator = TargetList::const_iterator;
   using const_target_range = llvm::iterator_range<const_target_iterator>;
   const_target_range targets() const { return {Targets}; }
@@ -109,10 +123,7 @@ public:
   void dump() const { dump(llvm::errs()); }
 #endif
 
-  bool operator==(const Symbol &O) const {
-    return std::tie(Name, Kind, Targets, Flags) ==
-           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
-  }
+  bool operator==(const Symbol &O) const;
 
   bool operator!=(const Symbol &O) const { return !(*this == O); }
 

@@ -6,4 +6,4 @@ lda:
 lda r0, [r1]
 
 @ CHECK-LABEL:lda
-@ CHECK: 9f 0c 91 e1 lda r0, [r1]
+@ CHECK: e1910c9f    lda r0, [r1]

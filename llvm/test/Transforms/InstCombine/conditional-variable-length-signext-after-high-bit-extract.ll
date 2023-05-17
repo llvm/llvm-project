@@ -81,7 +81,7 @@ define i32 @t1_notrunc_sub(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[LOW_BITS_TO_SKIP:%.*]] = sub i32 32, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = lshr i32 [[DATA:%.*]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i32 [[DATA]], 0
-; CHECK-NEXT:    [[HIGHER_BIT_AFTER_SIGNBIT:%.*]] = shl i32 1, [[NBITS]]
+; CHECK-NEXT:    [[HIGHER_BIT_AFTER_SIGNBIT:%.*]] = shl nuw i32 1, [[NBITS]]
 ; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i32 [[HIGHER_BIT_AFTER_SIGNBIT]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[LOW_BITS_TO_SKIP]])
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED]])
@@ -188,7 +188,7 @@ define i32 @t3_trunc_sub(i64 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED_WIDE:%.*]] = lshr i64 [[DATA:%.*]], [[LOW_BITS_TO_SKIP_WIDE]]
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = trunc i64 [[HIGH_BITS_EXTRACTED_WIDE]] to i32
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i64 [[DATA]], 0
-; CHECK-NEXT:    [[HIGHER_BIT_AFTER_SIGNBIT:%.*]] = shl i32 1, [[NBITS]]
+; CHECK-NEXT:    [[HIGHER_BIT_AFTER_SIGNBIT:%.*]] = shl nuw i32 1, [[NBITS]]
 ; CHECK-NEXT:    call void @use32(i32 [[LOW_BITS_TO_SKIP]])
 ; CHECK-NEXT:    call void @use64(i64 [[LOW_BITS_TO_SKIP_WIDE]])
 ; CHECK-NEXT:    call void @use64(i64 [[HIGH_BITS_EXTRACTED_WIDE]])
@@ -548,7 +548,7 @@ define i32 @t13_sub_zext_of_magic(i32 %data, i8 %nbits) {
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = lshr i32 [[DATA:%.*]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i32 [[DATA]], 0
 ; CHECK-NEXT:    [[NBITS_16BIT:%.*]] = zext i8 [[NBITS]] to i16
-; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl i16 1, [[NBITS_16BIT]]
+; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl nuw i16 1, [[NBITS_16BIT]]
 ; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i16 [[ALL_BITS_EXCEPT_LOW_NBITS]], i16 0
 ; CHECK-NEXT:    [[MAGIC_WIDE:%.*]] = zext i16 [[MAGIC]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[NBITS_32BIT]])
@@ -634,7 +634,7 @@ define i32 @t15_sub_zext_of_shl(i32 %data, i8 %nbits) {
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = lshr i32 [[DATA:%.*]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i32 [[DATA]], 0
 ; CHECK-NEXT:    [[NBITS_16BIT:%.*]] = zext i8 [[NBITS]] to i16
-; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl i16 1, [[NBITS_16BIT]]
+; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl nuw i16 1, [[NBITS_16BIT]]
 ; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS_WIDE:%.*]] = zext i16 [[ALL_BITS_EXCEPT_LOW_NBITS]] to i32
 ; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i32 [[ALL_BITS_EXCEPT_LOW_NBITS_WIDE]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[NBITS_32BIT]])
@@ -708,7 +708,7 @@ define i32 @n17_add(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[LOW_BITS_TO_SKIP:%.*]] = sub i32 32, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = lshr i32 [[DATA:%.*]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i32 [[DATA]], 0
-; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl i32 1, [[NBITS]]
+; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl nuw i32 1, [[NBITS]]
 ; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i32 [[ALL_BITS_EXCEPT_LOW_NBITS]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[LOW_BITS_TO_SKIP]])
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED]])
@@ -933,7 +933,7 @@ define i32 @n24(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[LOW_BITS_TO_SKIP:%.*]] = sub i32 32, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = lshr i32 [[DATA:%.*]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i32 [[DATA]], 0
-; CHECK-NEXT:    [[HIGHER_BIT_AFTER_SIGNBIT:%.*]] = shl i32 1, [[NBITS]]
+; CHECK-NEXT:    [[HIGHER_BIT_AFTER_SIGNBIT:%.*]] = shl nuw i32 1, [[NBITS]]
 ; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i32 [[HIGHER_BIT_AFTER_SIGNBIT]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[LOW_BITS_TO_SKIP]])
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED]])
@@ -1071,7 +1071,7 @@ define i32 @n28_sub_sext_of_magic(i32 %data, i8 %nbits) {
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = lshr i32 [[DATA:%.*]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i32 [[DATA]], 0
 ; CHECK-NEXT:    [[NBITS_16BIT:%.*]] = zext i8 [[NBITS]] to i16
-; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl i16 1, [[NBITS_16BIT]]
+; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl nuw i16 1, [[NBITS_16BIT]]
 ; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i16 [[ALL_BITS_EXCEPT_LOW_NBITS]], i16 0
 ; CHECK-NEXT:    [[MAGIC_WIDE:%.*]] = sext i16 [[MAGIC]] to i32
 ; CHECK-NEXT:    call void @use32(i32 [[NBITS_32BIT]])
@@ -1112,7 +1112,7 @@ define i32 @n290_or_with_wrong_magic(i32 %data, i32 %nbits) {
 ; CHECK-NEXT:    [[LOW_BITS_TO_SKIP:%.*]] = sub i32 32, [[NBITS:%.*]]
 ; CHECK-NEXT:    [[HIGH_BITS_EXTRACTED:%.*]] = lshr i32 [[DATA:%.*]], [[LOW_BITS_TO_SKIP]]
 ; CHECK-NEXT:    [[SHOULD_SIGNEXT:%.*]] = icmp slt i32 [[DATA]], 0
-; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl i32 1, [[NBITS]]
+; CHECK-NEXT:    [[ALL_BITS_EXCEPT_LOW_NBITS:%.*]] = shl nuw i32 1, [[NBITS]]
 ; CHECK-NEXT:    [[MAGIC:%.*]] = select i1 [[SHOULD_SIGNEXT]], i32 [[ALL_BITS_EXCEPT_LOW_NBITS]], i32 0
 ; CHECK-NEXT:    call void @use32(i32 [[LOW_BITS_TO_SKIP]])
 ; CHECK-NEXT:    call void @use32(i32 [[HIGH_BITS_EXTRACTED]])

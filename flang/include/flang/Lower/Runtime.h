@@ -16,10 +16,7 @@
 #ifndef FORTRAN_LOWER_RUNTIME_H
 #define FORTRAN_LOWER_RUNTIME_H
 
-namespace llvm {
-template <typename T>
-class Optional;
-}
+#include <optional>
 
 namespace mlir {
 class Location;
@@ -66,36 +63,14 @@ void genSyncTeamStatement(AbstractConverter &, const parser::SyncTeamStmt &);
 void genUnlockStatement(AbstractConverter &, const parser::UnlockStmt &);
 void genPauseStatement(AbstractConverter &, const parser::PauseStmt &);
 
-mlir::Value genAssociated(fir::FirOpBuilder &, mlir::Location,
-                          mlir::Value pointer, mlir::Value target);
-
-mlir::Value genCpuTime(fir::FirOpBuilder &, mlir::Location);
-void genDateAndTime(fir::FirOpBuilder &, mlir::Location,
-                    llvm::Optional<fir::CharBoxValue> date,
-                    llvm::Optional<fir::CharBoxValue> time,
-                    llvm::Optional<fir::CharBoxValue> zone, mlir::Value values);
-
-void genRandomInit(fir::FirOpBuilder &, mlir::Location, mlir::Value repeatable,
-                   mlir::Value imageDistinct);
-void genRandomNumber(fir::FirOpBuilder &, mlir::Location, mlir::Value harvest);
-void genRandomSeed(fir::FirOpBuilder &, mlir::Location, int argIndex,
-                   mlir::Value argBox);
-
-/// generate runtime call to transfer intrinsic with no size argument
-void genTransfer(fir::FirOpBuilder &builder, mlir::Location loc,
-                 mlir::Value resultBox, mlir::Value sourceBox,
-                 mlir::Value moldBox);
-
-/// generate runtime call to transfer intrinsic with size argument
-void genTransferSize(fir::FirOpBuilder &builder, mlir::Location loc,
-                     mlir::Value resultBox, mlir::Value sourceBox,
-                     mlir::Value moldBox, mlir::Value size);
-
-/// generate system_clock runtime call/s
-/// all intrinsic arguments are optional and may appear here as mlir::Value{}
-void genSystemClock(fir::FirOpBuilder &, mlir::Location, mlir::Value count,
-                    mlir::Value rate, mlir::Value max);
-
+void genPointerAssociate(fir::FirOpBuilder &, mlir::Location,
+                         mlir::Value pointer, mlir::Value target);
+void genPointerAssociateRemapping(fir::FirOpBuilder &, mlir::Location,
+                                  mlir::Value pointer, mlir::Value target,
+                                  mlir::Value bounds);
+void genPointerAssociateLowerBounds(fir::FirOpBuilder &, mlir::Location,
+                                    mlir::Value pointer, mlir::Value target,
+                                    mlir::Value lbounds);
 } // namespace lower
 } // namespace Fortran
 

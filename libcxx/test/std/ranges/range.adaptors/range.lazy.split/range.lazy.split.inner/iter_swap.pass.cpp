@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // friend constexpr void iter_swap(const inner-iterator& x, const inner-iterator& y)
 //   noexcept(noexcept(ranges::iter_swap(x.i_.<current>, y.i_.<current>)))
@@ -25,7 +24,7 @@ namespace adl {
 template <bool IsNoexcept = false>
 struct MaybeNoexceptIterator {
   using value_type = int;
-  using difference_type = ptrdiff_t;
+  using difference_type = std::ptrdiff_t;
 
   value_type* ptr_ = nullptr;
   int* iter_swap_invocations_ = nullptr;

@@ -2,7 +2,7 @@
 --- |
   target triple = "thumbv8m.main-arm-none-eabi"
 
-  define hidden void @foo(void ()* nocapture %baz) local_unnamed_addr #0 {
+  define hidden void @foo(ptr nocapture %baz) local_unnamed_addr #0 {
   entry:
     %call = call i32 @bar() #0
     %tobool = icmp eq i32 %call, 0

@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class FoundationTestCaseNSError(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(archs=["i[3-6]86"], bugnumber="<rdar://problem/28814052>")
     def test_runtime_types(self):
         """Test commands that require runtime types"""
@@ -43,6 +41,6 @@ class FoundationTestCaseNSError(TestBase):
         self.target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
                 self, '// Set break point at this line',
                 lldb.SBFileSpec('main.m', False))
-        self.expect("p [NSError thisMethodIsntImplemented:0]", error=True, patterns=[
+        self.expect("expression [NSError thisMethodIsntImplemented:0]", error=True, patterns=[
                     "no known method", "cast the message send to the method's return type"])
         self.runCmd("process continue")

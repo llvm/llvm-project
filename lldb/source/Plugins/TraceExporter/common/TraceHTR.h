@@ -1,9 +1,8 @@
 //===-- TraceHTR.h --------------------------------------------------------===//
 //
-// Part of the LLVM Project, under the Apache
-// License v2.0 with LLVM Exceptions.// See https://llvm.org/LICENSE.txt for
-// license information.// SPDX-License-Identifier: Apache-2.0 WITH
-// LLVM-exception
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
 
@@ -13,6 +12,7 @@
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/Trace.h"
 
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -58,8 +58,8 @@ public:
   ///
   /// \return
   ///     The name of the function that is called the most from this block or
-  ///     None if no function is called from this block.
-  llvm::Optional<llvm::StringRef> GetMostFrequentlyCalledFunction() const;
+  ///     std::nullopt if no function is called from this block.
+  std::optional<llvm::StringRef> GetMostFrequentlyCalledFunction() const;
 
   /// Get the load address of the first instruction in the block.
   ///
@@ -215,9 +215,9 @@ public:
   ///
   /// \param[in] func_name
   ///     The name of the function the 'call' instruction is calling if it can
-  ///     be determined, None otherwise.
+  ///     be determined, std::nullopt otherwise.
   void AddCallInstructionMetadata(lldb::addr_t load_addr,
-                                  llvm::Optional<ConstString> func_name);
+                                  std::optional<ConstString> func_name);
 
   /// Append the load address of an instruction to the dynamic instruction
   /// trace.
@@ -234,9 +234,9 @@ private:
   // most instructions don't contain useful metadata
 
   // This map contains the load address of all the call instructions.
-  // load address maps to the name of the function it calls (None if function
-  // name can't be determined)
-  std::unordered_map<lldb::addr_t, llvm::Optional<ConstString>> m_call_isns;
+  // load address maps to the name of the function it calls (std::nullopt if
+  // function name can't be determined)
+  std::unordered_map<lldb::addr_t, std::optional<ConstString>> m_call_isns;
 };
 
 /// HTR layer composed of blocks of the trace.

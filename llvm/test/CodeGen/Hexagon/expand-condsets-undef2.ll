@@ -10,7 +10,7 @@ entry:
   br i1 undef, label %cleanup, label %if.end
 
 if.end:
-  %0 = load i32, i32* undef, align 4
+  %0 = load i32, ptr undef, align 4
   %sext = shl i32 %0, 16
   %conv19 = ashr exact i32 %sext, 16
   br i1 undef, label %cleanup, label %for.body.lr.ph

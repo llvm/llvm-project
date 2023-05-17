@@ -105,11 +105,15 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x20;
   if (withDSOLocalPropagation())
     Flags |= 0x40;
+  if (withWholeProgramVisibility())
+    Flags |= 0x80;
+  if (withSupportsHotColdNew())
+    Flags |= 0x100;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0x7f && "Unexpected bits in flag");
+  assert(Flags <= 0x1ff && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -139,6 +143,14 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x40)
     setWithDSOLocalPropagation();
+  // 1 bit: WithWholeProgramVisibility flag.
+  // Set on combined index only.
+  if (Flags & 0x80)
+    setWithWholeProgramVisibility();
+  // 1 bit: WithSupportsHotColdNew flag.
+  // Set on combined index only.
+  if (Flags & 0x100)
+    setWithSupportsHotColdNew();
 }
 
 // Collect for the given module the list of function it defines
@@ -311,7 +323,7 @@ void ModuleSummaryIndex::propagateAttributes(
           }
 }
 
-bool ModuleSummaryIndex::canImportGlobalVar(GlobalValueSummary *S,
+bool ModuleSummaryIndex::canImportGlobalVar(const GlobalValueSummary *S,
                                             bool AnalyzeRefs) const {
   auto HasRefsPreventingImport = [this](const GlobalVarSummary *GVS) {
     // We don't analyze GV references during attribute propagation, so
@@ -564,8 +576,7 @@ void ModuleSummaryIndex::exportToDot(
         " [color=brown]; // call (hotness : Hot)",
         " [style=bold,color=red]; // call (hotness : Critical)"};
 
-    assert(static_cast<size_t>(TypeOrHotness) <
-           sizeof(EdgeAttrs) / sizeof(EdgeAttrs[0]));
+    assert(static_cast<size_t>(TypeOrHotness) < std::size(EdgeAttrs));
     OS << Pfx << NodeId(SrcMod, SrcId) << " -> " << NodeId(DstMod, DstId)
        << EdgeAttrs[TypeOrHotness] << "\n";
   };

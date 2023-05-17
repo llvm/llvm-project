@@ -31,7 +31,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(float* %A, i32 %N) {
+define void @f(ptr %A, i32 %N) {
 bb:
   %tmp = sext i32 %N to i64
   br label %bb1
@@ -46,8 +46,8 @@ bb3:                                              ; preds = %bb1
   br label %bb4
 
 bb4:                                              ; preds = %bb3
-  %tmp5 = getelementptr inbounds float, float* %A, i64 %indvars.iv
-  %tmp6 = load float, float* %tmp5, align 4
+  %tmp5 = getelementptr inbounds float, ptr %A, i64 %indvars.iv
+  %tmp6 = load float, ptr %tmp5, align 4
   %tmp7 = fadd float %tmp.0, %tmp6
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1
   br label %bb1

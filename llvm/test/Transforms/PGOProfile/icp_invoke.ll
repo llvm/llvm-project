@@ -2,9 +2,9 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@foo1 = global void ()* null, align 8
-@foo2 = global i32 ()* null, align 8
-@_ZTIi = external constant i8*
+@foo1 = global ptr null, align 8
+@foo2 = global ptr null, align 8
+@_ZTIi = external constant ptr
 
 define internal void @_ZL4bar1v() !PGOFuncName !0 {
 entry:
@@ -16,10 +16,10 @@ entry:
   ret i32 100
 }
 
-define i32 @_Z3goov() personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @_Z3goov() personality ptr @__gxx_personality_v0 {
 entry:
-  %tmp = load void ()*, void ()** @foo1, align 8
-; ICP:  [[CMP_IC1:%[0-9]+]] = icmp eq void ()* %tmp, @_ZL4bar1v
+  %tmp = load ptr, ptr @foo1, align 8
+; ICP:  [[CMP_IC1:%[0-9]+]] = icmp eq ptr %tmp, @_ZL4bar1v
 ; ICP:  br i1 [[CMP_IC1]], label %[[TRUE_LABEL_IC1:.*]], label %[[FALSE_LABEL_IC1:.*]], !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICP:[[TRUE_LABEL_IC1]]:
 ; ICP:  invoke void @_ZL4bar1v()
@@ -32,22 +32,22 @@ entry:
 ; ICP:  br label %try.cont
 
 lpad:
-  %tmp1 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-  %tmp2 = extractvalue { i8*, i32 } %tmp1, 0
-  %tmp3 = extractvalue { i8*, i32 } %tmp1, 1
-  %tmp4 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+  %tmp1 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
+  %tmp2 = extractvalue { ptr, i32 } %tmp1, 0
+  %tmp3 = extractvalue { ptr, i32 } %tmp1, 1
+  %tmp4 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
   %matches = icmp eq i32 %tmp3, %tmp4
   br i1 %matches, label %catch, label %eh.resume
 
 catch:
-  %tmp5 = tail call i8* @__cxa_begin_catch(i8* %tmp2)
+  %tmp5 = tail call ptr @__cxa_begin_catch(ptr %tmp2)
   tail call void @__cxa_end_catch()
   br label %try.cont
 
 try.cont:
-  %tmp6 = load i32 ()*, i32 ()** @foo2, align 8
-; ICP:  [[CMP_IC2:%[0-9]+]] = icmp eq i32 ()* %tmp6, @_ZL4bar2v
+  %tmp6 = load ptr, ptr @foo2, align 8
+; ICP:  [[CMP_IC2:%[0-9]+]] = icmp eq ptr %tmp6, @_ZL4bar2v
 ; ICP:  br i1 [[CMP_IC2]], label %[[TRUE_LABEL_IC2:.*]], label %[[FALSE_LABEL_IC2:.*]], !prof [[BRANCH_WEIGHT:![0-9]+]]
 ; ICP:[[TRUE_LABEL_IC2]]:
 ; ICP:  [[RESULT_IC2_0:%[0-9]+]] = invoke i32 @_ZL4bar2v()
@@ -62,16 +62,16 @@ try.cont:
 ; ICP:  [[MERGE_PHI:%.+]] = phi i32 [ [[RESULT_IC2_1]], %[[FALSE_LABEL_IC2]] ], [ [[RESULT_IC2_0]], %[[TRUE_LABEL_IC2]] ]
 ; ICP:  br label %try.cont8
 lpad1:
-  %tmp7 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIi to i8*)
-  %tmp8 = extractvalue { i8*, i32 } %tmp7, 0
-  %tmp9 = extractvalue { i8*, i32 } %tmp7, 1
-  %tmp10 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+  %tmp7 = landingpad { ptr, i32 }
+          catch ptr @_ZTIi
+  %tmp8 = extractvalue { ptr, i32 } %tmp7, 0
+  %tmp9 = extractvalue { ptr, i32 } %tmp7, 1
+  %tmp10 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
   %matches5 = icmp eq i32 %tmp9, %tmp10
   br i1 %matches5, label %catch6, label %eh.resume
 
 catch6:
-  %tmp11 = tail call i8* @__cxa_begin_catch(i8* %tmp8)
+  %tmp11 = tail call ptr @__cxa_begin_catch(ptr %tmp8)
   tail call void @__cxa_end_catch()
   br label %try.cont8
 
@@ -82,17 +82,17 @@ try.cont8:
 
 eh.resume:
   %ehselector.slot.0 = phi i32 [ %tmp9, %lpad1 ], [ %tmp3, %lpad ]
-  %exn.slot.0 = phi i8* [ %tmp8, %lpad1 ], [ %tmp2, %lpad ]
-  %lpad.val = insertvalue { i8*, i32 } undef, i8* %exn.slot.0, 0
-  %lpad.val11 = insertvalue { i8*, i32 } %lpad.val, i32 %ehselector.slot.0, 1
-  resume { i8*, i32 } %lpad.val11
+  %exn.slot.0 = phi ptr [ %tmp8, %lpad1 ], [ %tmp2, %lpad ]
+  %lpad.val = insertvalue { ptr, i32 } undef, ptr %exn.slot.0, 0
+  %lpad.val11 = insertvalue { ptr, i32 } %lpad.val, i32 %ehselector.slot.0, 1
+  resume { ptr, i32 } %lpad.val11
 }
 
 declare i32 @__gxx_personality_v0(...)
 
-declare i32 @llvm.eh.typeid.for(i8*)
+declare i32 @llvm.eh.typeid.for(ptr)
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 
 declare void @__cxa_end_catch()
 

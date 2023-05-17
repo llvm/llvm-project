@@ -10,8 +10,8 @@
 ; CHECK-NOT:  call
 define i32 @test_initial_exec() nounwind {
 entry:
-  %0 = load i32, i32* @src_ie, align 4
-  store i32 %0, i32* @dst_ie, align 4
+  %0 = load i32, ptr @src_ie, align 4
+  store i32 %0, ptr @dst_ie, align 4
   ret i32 0
 }
 
@@ -30,8 +30,8 @@ entry:
 
 define i32 @test_dynamic() nounwind {
 entry:
-  %0 = load i32, i32* @src_gd, align 4
-  store i32 %0, i32* @dst_gd, align 4
+  %0 = load i32, ptr @src_gd, align 4
+  store i32 %0, ptr @dst_gd, align 4
   ret i32 0
 }
 

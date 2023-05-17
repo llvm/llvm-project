@@ -1,5 +1,5 @@
 ; RUN: opt -passes='loop(simple-loop-unswitch<nontrivial>),verify<loops>' -simple-loop-unswitch-guards -S < %s | FileCheck %s
-; RUN: opt -simple-loop-unswitch -enable-nontrivial-unswitch -simple-loop-unswitch-guards -S < %s | FileCheck %s
+; RUN: opt -passes='simple-loop-unswitch<nontrivial>' -simple-loop-unswitch-guards -S < %s | FileCheck %s
 ; RUN: opt -passes='loop-mssa(simple-loop-unswitch<nontrivial>),verify<loops>' -simple-loop-unswitch-guards  -verify-memoryssa -S < %s | FileCheck %s
 
 declare void @llvm.experimental.guard(i1, ...)
@@ -219,7 +219,7 @@ exit:
 ; CHECK-LABEL: @test_cleanuppad(
 ; CHECK:       call void (i1, ...) @llvm.experimental.guard(i1 %cond) [ "deopt"() ]
 ; CHECK-NOT:   call void (i1, ...) @llvm.experimental.guard(
-define void @test_cleanuppad(i1 %cond, i32 %N) personality i32 (...)* @__CxxFrameHandler3 {
+define void @test_cleanuppad(i1 %cond, i32 %N) personality ptr @__CxxFrameHandler3 {
 
 entry:
   br label %loop

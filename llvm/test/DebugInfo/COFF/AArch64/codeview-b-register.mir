@@ -1,0 +1,72 @@
+# This test checks that we have a mapping between the B registers and their Codeview numbers.
+# There is no 8 bit float type so this is a modified version of codeview-h-register.mir to
+# have a B register in the location info but not the instructions. Which is incorrect
+# but in ways this test does not care about.
+#
+# RUN: llc %s -mtriple=arm64-windows -filetype=obj -o %t --start-after=unpack-mi-bundles
+# RUN: llvm-readobj --codeview %t | FileCheck %s --check-prefix=OBJ
+#
+# OBJ: LocalSym {
+# OBJ:   Kind: S_LOCAL (0x113E)
+# OBJ:   Type: __half (0x46)
+# OBJ:   Flags [ (0x1)
+# OBJ:     IsParameter (0x1)
+# OBJ:   ]
+# OBJ:   VarName: x
+# OBJ: }
+# OBJ: DefRangeRegisterSym {
+# OBJ:   Kind: S_DEFRANGE_REGISTER (0x1141)
+# OBJ:   Register: ARM64_B0 (0xE6)
+# OBJ:   MayHaveNoName: 0
+# OBJ:   LocalVariableAddrRange {
+# OBJ:     OffsetStart: .text+0x0
+# OBJ:     ISectStart: 0x0
+# OBJ:     Range: 0x4
+# OBJ:   }
+# OBJ: }
+#
+--- |
+  define internal fastcc i1 @test.fn(half %0) !dbg !4 {
+  Entry:
+    call void @llvm.dbg.value(metadata half %0, metadata !11, metadata !DIExpression()), !dbg !13
+    %1 = fcmp une half 0xH0000, %0, !dbg !14
+    ret i1 %1
+  }
+
+  ; Function Attrs: nocallback nofree nosync nounwind readnone speculatable willreturn
+  declare void @llvm.dbg.value(metadata, metadata, metadata) #0
+
+  attributes #0 = { nocallback nofree nosync nounwind readnone speculatable willreturn }
+
+  !llvm.module.flags = !{!0, !1}
+  !llvm.dbg.cu = !{!2}
+
+  !0 = !{i32 2, !"Debug Info Version", i32 3}
+  !1 = !{i32 2, !"CodeView", i32 1}
+  !2 = distinct !DICompileUnit(language: DW_LANG_C99, file: !3, isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug)
+  !3 = !DIFile(filename: "test", directory: ".")
+  !4 = distinct !DISubprogram(name: "fn", linkageName: "test.fn", scope: !5, file: !5, line: 32, type: !6, scopeLine: 32, flags: DIFlagStaticMember, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !2, retainedNodes: !10)
+  !5 = !DIFile(filename: "test.o", directory: ".")
+  !6 = !DISubroutineType(types: !7)
+  !7 = !{!8, !9}
+  !8 = !DIBasicType(name: "bool", size: 1, encoding: DW_ATE_boolean)
+  !9 = !DIBasicType(name: "f16", size: 16, encoding: DW_ATE_float)
+  !10 = !{!11}
+  !11 = !DILocalVariable(name: "x", arg: 1, scope: !12, file: !5, line: 32, type: !9)
+  !12 = distinct !DILexicalBlock(scope: !4, file: !5, line: 32, column: 1)
+  !13 = !DILocation(line: 32, column: 31, scope: !12)
+  !14 = !DILocation(line: 33, column: 5, scope: !15)
+  !15 = distinct !DILexicalBlock(scope: !12, file: !5)
+...
+---
+name: test.fn
+body: |
+  bb.0:
+  liveins: $b0
+  DBG_VALUE $b0, $noreg, !11, !DIExpression(), debug-location !13
+  renamable $s0 = nofpexcept FCVTSHr killed renamable $h0, implicit $fpcr, debug-location !14
+  DBG_VALUE $b0, $noreg, !11, !DIExpression(DW_OP_LLVM_entry_value, 1), debug-location !13
+  nofpexcept FCMPSri killed renamable $s0, implicit-def $nzcv, implicit $fpcr, debug-location !14
+  renamable $w0 = CSINCWr $wzr, $wzr, 0, implicit killed $nzcv, debug-location !14
+  RET undef $lr, implicit killed $w0
+...

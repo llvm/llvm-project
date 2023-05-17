@@ -6,8 +6,8 @@
 
 target triple = "wasm32"
 
-declare void @a(i32*)
-declare void @b(i32*)
+declare void @a(ptr)
+declare void @b(ptr)
 
 ; CHECK-LABEL: switch_in_loop:
 ; CHECK-NEXT: .functype switch_in_loop (i32, i32) -> (i32)
@@ -36,37 +36,36 @@ declare void @b(i32*)
 ; CHECK:    end_block
 ; CHECK:    global.set __stack_pointer
 ; CHECK:    end_function
-define i32 @switch_in_loop(i32* %ops, i32 %len) {
+define i32 @switch_in_loop(ptr %ops, i32 %len) {
 entry:
   %res = alloca i32
-  %0 = bitcast i32* %res to i8*
-  store i32 0, i32* %res
+  store i32 0, ptr %res
   %cmp6 = icmp sgt i32 %len, 0
   br i1 %cmp6, label %for.body, label %for.cond.cleanup
 
 for.cond.cleanup.loopexit:                        ; preds = %sw.epilog
-  %.pre = load i32, i32* %res
+  %.pre = load i32, ptr %res
   br label %for.cond.cleanup
 
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
-  %1 = phi i32 [ %.pre, %for.cond.cleanup.loopexit ], [ 0, %entry ]
-  ret i32 %1
+  %0 = phi i32 [ %.pre, %for.cond.cleanup.loopexit ], [ 0, %entry ]
+  ret i32 %0
 
 for.body:                                         ; preds = %entry, %sw.epilog
   %i.07 = phi i32 [ %inc, %sw.epilog ], [ 0, %entry ]
-  %arrayidx = getelementptr inbounds i32, i32* %ops, i32 %i.07
-  %2 = load i32, i32* %arrayidx
-  switch i32 %2, label %sw.epilog [
+  %arrayidx = getelementptr inbounds i32, ptr %ops, i32 %i.07
+  %1 = load i32, ptr %arrayidx
+  switch i32 %1, label %sw.epilog [
     i32 0, label %sw.bb
     i32 1, label %sw.bb1
   ]
 
 sw.bb:                                            ; preds = %for.body
-  call void @a(i32* nonnull %res)
+  call void @a(ptr nonnull %res)
   br label %sw.epilog
 
 sw.bb1:                                           ; preds = %for.body
-  call void @b(i32* nonnull %res)
+  call void @b(ptr nonnull %res)
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %for.body, %sw.bb1, %sw.bb

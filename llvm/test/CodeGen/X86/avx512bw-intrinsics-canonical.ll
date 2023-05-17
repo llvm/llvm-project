@@ -61,7 +61,7 @@ define <32 x i16> @test_mask_adds_epi16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i
   ret <32 x i16> %3
 }
 
-define <32 x i16> @test_mask_adds_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+define <32 x i16> @test_mask_adds_epi16_rm_512(<32 x i16> %a, ptr %ptr_b) {
 ; AVX512BW-LABEL: test_mask_adds_epi16_rm_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpaddsw (%rdi), %zmm0, %zmm0
@@ -72,12 +72,12 @@ define <32 x i16> @test_mask_adds_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vpaddsw (%eax), %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %1 = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   ret <32 x i16> %1
 }
 
-define <32 x i16> @test_mask_adds_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+define <32 x i16> @test_mask_adds_epi16_rmk_512(<32 x i16> %a, ptr %ptr_b, <32 x i16> %passThru, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_adds_epi16_rmk_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -92,14 +92,14 @@ define <32 x i16> @test_mask_adds_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_
 ; AVX512F-32-NEXT:    vpaddsw (%eax), %zmm0, %zmm1 {%k1}
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %1 = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %2 = bitcast i32 %mask to <32 x i1>
   %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %passThru
   ret <32 x i16> %3
 }
 
-define <32 x i16> @test_mask_adds_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+define <32 x i16> @test_mask_adds_epi16_rmkz_512(<32 x i16> %a, ptr %ptr_b, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_adds_epi16_rmkz_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -112,7 +112,7 @@ define <32 x i16> @test_mask_adds_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpaddsw (%eax), %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %1 = call <32 x i16> @llvm.sadd.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %2 = bitcast i32 %mask to <32 x i1>
   %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> zeroinitializer
@@ -172,7 +172,7 @@ define <32 x i16> @test_mask_subs_epi16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_mask_subs_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+define <32 x i16> @test_mask_subs_epi16_rm_512(<32 x i16> %a, ptr %ptr_b) {
 ; AVX512BW-LABEL: test_mask_subs_epi16_rm_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpsubsw (%rdi), %zmm0, %zmm0
@@ -183,12 +183,12 @@ define <32 x i16> @test_mask_subs_epi16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vpsubsw (%eax), %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %sub = call <32 x i16> @llvm.ssub.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   ret <32 x i16> %sub
 }
 
-define <32 x i16> @test_mask_subs_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+define <32 x i16> @test_mask_subs_epi16_rmk_512(<32 x i16> %a, ptr %ptr_b, <32 x i16> %passThru, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_subs_epi16_rmk_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -203,14 +203,14 @@ define <32 x i16> @test_mask_subs_epi16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_
 ; AVX512F-32-NEXT:    vpsubsw (%eax), %zmm0, %zmm1 {%k1}
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %sub = call <32 x i16> @llvm.ssub.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i16> %sub, <32 x i16> %passThru
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_mask_subs_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+define <32 x i16> @test_mask_subs_epi16_rmkz_512(<32 x i16> %a, ptr %ptr_b, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_subs_epi16_rmkz_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -223,7 +223,7 @@ define <32 x i16> @test_mask_subs_epi16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpsubsw (%eax), %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %sub = call <32 x i16> @llvm.ssub.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i16> %sub, <32 x i16> zeroinitializer
@@ -342,7 +342,7 @@ define <32 x i16> @test_mask_adds_epu16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i
   ret <32 x i16> %3
 }
 
-define <32 x i16> @test_mask_adds_epu16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+define <32 x i16> @test_mask_adds_epu16_rm_512(<32 x i16> %a, ptr %ptr_b) {
 ; AVX512BW-LABEL: test_mask_adds_epu16_rm_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpaddusw (%rdi), %zmm0, %zmm0
@@ -353,12 +353,12 @@ define <32 x i16> @test_mask_adds_epu16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vpaddusw (%eax), %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %1 = call <32 x i16> @llvm.uadd.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   ret <32 x i16> %1
 }
 
-define <32 x i16> @test_mask_adds_epu16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+define <32 x i16> @test_mask_adds_epu16_rmk_512(<32 x i16> %a, ptr %ptr_b, <32 x i16> %passThru, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_adds_epu16_rmk_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -373,14 +373,14 @@ define <32 x i16> @test_mask_adds_epu16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_
 ; AVX512F-32-NEXT:    vpaddusw (%eax), %zmm0, %zmm1 {%k1}
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %1 = call <32 x i16> @llvm.uadd.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %2 = bitcast i32 %mask to <32 x i1>
   %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> %passThru
   ret <32 x i16> %3
 }
 
-define <32 x i16> @test_mask_adds_epu16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+define <32 x i16> @test_mask_adds_epu16_rmkz_512(<32 x i16> %a, ptr %ptr_b, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_adds_epu16_rmkz_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -393,7 +393,7 @@ define <32 x i16> @test_mask_adds_epu16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpaddusw (%eax), %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %1 = call <32 x i16> @llvm.uadd.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %2 = bitcast i32 %mask to <32 x i1>
   %3 = select <32 x i1> %2, <32 x i16> %1, <32 x i16> zeroinitializer
@@ -453,7 +453,7 @@ define <32 x i16> @test_mask_subs_epu16_rrkz_512(<32 x i16> %a, <32 x i16> %b, i
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_mask_subs_epu16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b) {
+define <32 x i16> @test_mask_subs_epu16_rm_512(<32 x i16> %a, ptr %ptr_b) {
 ; AVX512BW-LABEL: test_mask_subs_epu16_rm_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    vpsubusw (%rdi), %zmm0, %zmm0
@@ -464,12 +464,12 @@ define <32 x i16> @test_mask_subs_epu16_rm_512(<32 x i16> %a, <32 x i16>* %ptr_b
 ; AVX512F-32-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; AVX512F-32-NEXT:    vpsubusw (%eax), %zmm0, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %sub = call <32 x i16> @llvm.usub.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   ret <32 x i16> %sub
 }
 
-define <32 x i16> @test_mask_subs_epu16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_b, <32 x i16> %passThru, i32 %mask) {
+define <32 x i16> @test_mask_subs_epu16_rmk_512(<32 x i16> %a, ptr %ptr_b, <32 x i16> %passThru, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_subs_epu16_rmk_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -484,14 +484,14 @@ define <32 x i16> @test_mask_subs_epu16_rmk_512(<32 x i16> %a, <32 x i16>* %ptr_
 ; AVX512F-32-NEXT:    vpsubusw (%eax), %zmm0, %zmm1 {%k1}
 ; AVX512F-32-NEXT:    vmovdqa64 %zmm1, %zmm0
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %sub = call <32 x i16> @llvm.usub.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i16> %sub, <32 x i16> %passThru
   ret <32 x i16> %res
 }
 
-define <32 x i16> @test_mask_subs_epu16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr_b, i32 %mask) {
+define <32 x i16> @test_mask_subs_epu16_rmkz_512(<32 x i16> %a, ptr %ptr_b, i32 %mask) {
 ; AVX512BW-LABEL: test_mask_subs_epu16_rmkz_512:
 ; AVX512BW:       ## %bb.0:
 ; AVX512BW-NEXT:    kmovd %esi, %k1
@@ -504,7 +504,7 @@ define <32 x i16> @test_mask_subs_epu16_rmkz_512(<32 x i16> %a, <32 x i16>* %ptr
 ; AVX512F-32-NEXT:    kmovd {{[0-9]+}}(%esp), %k1
 ; AVX512F-32-NEXT:    vpsubusw (%eax), %zmm0, %zmm0 {%k1} {z}
 ; AVX512F-32-NEXT:    retl
-  %b = load <32 x i16>, <32 x i16>* %ptr_b
+  %b = load <32 x i16>, ptr %ptr_b
   %sub = call <32 x i16> @llvm.usub.sat.v32i16(<32 x i16> %a, <32 x i16> %b)
   %bc = bitcast i32 %mask to <32 x i1>
   %res = select <32 x i1> %bc, <32 x i16> %sub, <32 x i16> zeroinitializer

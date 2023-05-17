@@ -3,7 +3,7 @@
 // RUN: sed -e "s|DIR|%/t|g" %t/compile-commands.json.in > %t/compile-commands.json
 
 // RUN: clang-scan-deps -compilation-database %t/compile-commands.json -j 1 -format experimental-full \
-// RUN:   -mode preprocess-dependency-directives -generate-modules-path-args > %t/output
+// RUN:   -mode preprocess-dependency-directives > %t/output
 // RUN: FileCheck %s < %t/output
 
 // CHECK: "-disable-free",

@@ -62,6 +62,9 @@ call_weak:
 # CHECK-NEXT:       - Name:            __wasm_call_ctors
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Index:           1
+# CHECK-NEXT:       - Name:            __wasm_apply_data_relocs
+# CHECK-NEXT:         Kind:            FUNCTION
+# CHECK-NEXT:         Index:           2
 # CHECK-NEXT:       - Name:            weak_func
 # CHECK-NEXT:         Kind:            FUNCTION
 # CHECK-NEXT:         Index:           3

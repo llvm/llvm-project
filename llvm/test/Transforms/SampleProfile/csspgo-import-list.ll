@@ -1,19 +1,19 @@
 ; Make sure Import GUID list for ThinLTO properly set for CSSPGO
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -sample-profile-even-count-distribution=0 -S | FileCheck %s
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof --sample-profile-even-flow-distribution=0 -S | FileCheck %s
 ; RUN: llvm-profdata merge --sample --extbinary %S/Inputs/csspgo-import-list.prof -o %t.prof
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.prof -sample-profile-even-count-distribution=0 -S | FileCheck %s
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.prof --sample-profile-even-flow-distribution=0 -S | FileCheck %s
 ; RUN: llvm-profdata show --sample -show-sec-info-only %t.prof | FileCheck %s --check-prefix=CHECK-ORDERED
 ; RUN: llvm-profdata merge --sample --extbinary --use-md5 %S/Inputs/csspgo-import-list.prof -o %t.md5
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.md5 -sample-profile-even-count-distribution=0 -S | FileCheck %s
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%t.md5 --sample-profile-even-flow-distribution=0 -S | FileCheck %s
 ; RUN: llvm-profdata show --sample -show-sec-info-only %t.md5 | FileCheck %s --check-prefix=CHECK-ORDERED
 
 ;; Validate that with replay in effect, we import call sites even if they are below the threshold
 ;; Baseline import decisions
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -profile-summary-hot-count=10000 -sample-profile-even-count-distribution=0 -S | FileCheck %s --check-prefix=THRESHOLD
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -profile-summary-hot-count=10000 --sample-profile-even-flow-distribution=0 -S | FileCheck %s --check-prefix=THRESHOLD
 ;; With replay
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -sample-profile-inline-replay=%S/Inputs/csspgo-import-list-replay.txt -sample-profile-inline-replay-scope=Module -profile-summary-hot-count=10000 -sample-profile-even-count-distribution=0 -S | FileCheck %s --check-prefix=THRESHOLD-REPLAY
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list.prof -sample-profile-inline-replay=%S/Inputs/csspgo-import-list-replay.txt -sample-profile-inline-replay-scope=Module -profile-summary-hot-count=10000 --sample-profile-even-flow-distribution=0 -S | FileCheck %s --check-prefix=THRESHOLD-REPLAY
 ;; With replay but no profile information for call to _Z5funcAi. We import _Z5funcAi because it's explicitly in the replay but don't go further to its callee (_Z3fibi) because we lack samples
-; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list-no-funca.prof -sample-profile-inline-replay=%S/Inputs/csspgo-import-list-replay.txt -sample-profile-inline-replay-scope=Module -profile-summary-hot-count=10000 -sample-profile-even-count-distribution=0 -S | FileCheck %s --check-prefix=THRESHOLD-REPLAY-NO-FUNCA
+; RUN: opt < %s -passes='thinlto-pre-link<O2>' -pgo-kind=pgo-sample-use-pipeline -sample-profile-file=%S/Inputs/csspgo-import-list-no-funca.prof -sample-profile-inline-replay=%S/Inputs/csspgo-import-list-replay.txt -sample-profile-inline-replay-scope=Module -profile-summary-hot-count=10000 --sample-profile-even-flow-distribution=0 -S | FileCheck %s --check-prefix=THRESHOLD-REPLAY-NO-FUNCA
 
 declare i32 @_Z5funcBi(i32 %x)
 declare i32 @_Z5funcAi(i32 %x)

@@ -45,8 +45,6 @@
 #include "llvm/Transforms/Scalar/InductiveRangeCheckElimination.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PriorityWorklist.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -74,8 +72,6 @@
 #include "llvm/IR/Use.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 #include "llvm/Support/BranchProbability.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
@@ -83,7 +79,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/Transforms/Scalar.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include "llvm/Transforms/Utils/LoopSimplify.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -93,6 +88,7 @@
 #include <cassert>
 #include <iterator>
 #include <limits>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -146,8 +142,7 @@ class InductiveRangeCheck {
   Use *CheckUse = nullptr;
 
   static bool parseRangeCheckICmp(Loop *L, ICmpInst *ICI, ScalarEvolution &SE,
-                                  Value *&Index, Value *&Length,
-                                  bool &IsSigned);
+                                  const SCEV *&Index, const SCEV *&End);
 
   static void
   extractRangeChecksFromCond(Loop *L, ScalarEvolution &SE, Use &ConditionUse,
@@ -211,9 +206,9 @@ public:
   /// Computes a range for the induction variable (IndVar) in which the range
   /// check is redundant and can be constant-folded away.  The induction
   /// variable is not required to be the canonical {0,+,1} induction variable.
-  Optional<Range> computeSafeIterationSpace(ScalarEvolution &SE,
-                                            const SCEVAddRecExpr *IndVar,
-                                            bool IsLatchSigned) const;
+  std::optional<Range> computeSafeIterationSpace(ScalarEvolution &SE,
+                                                 const SCEVAddRecExpr *IndVar,
+                                                 bool IsLatchSigned) const;
 
   /// Parse out a set of inductive range checks from \p BI and append them to \p
   /// Checks.
@@ -235,7 +230,7 @@ class InductiveRangeCheckElimination {
   LoopInfo &LI;
 
   using GetBFIFunc =
-      llvm::Optional<llvm::function_ref<llvm::BlockFrequencyInfo &()> >;
+      std::optional<llvm::function_ref<llvm::BlockFrequencyInfo &()>>;
   GetBFIFunc GetBFI;
 
   // Returns true if it is profitable to do a transform basing on estimation of
@@ -245,54 +240,22 @@ class InductiveRangeCheckElimination {
 public:
   InductiveRangeCheckElimination(ScalarEvolution &SE,
                                  BranchProbabilityInfo *BPI, DominatorTree &DT,
-                                 LoopInfo &LI, GetBFIFunc GetBFI = None)
+                                 LoopInfo &LI, GetBFIFunc GetBFI = std::nullopt)
       : SE(SE), BPI(BPI), DT(DT), LI(LI), GetBFI(GetBFI) {}
 
   bool run(Loop *L, function_ref<void(Loop *, bool)> LPMAddNewLoop);
 };
 
-class IRCELegacyPass : public FunctionPass {
-public:
-  static char ID;
-
-  IRCELegacyPass() : FunctionPass(ID) {
-    initializeIRCELegacyPassPass(*PassRegistry::getPassRegistry());
-  }
-
-  void getAnalysisUsage(AnalysisUsage &AU) const override {
-    AU.addRequired<BranchProbabilityInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
-    AU.addPreserved<DominatorTreeWrapperPass>();
-    AU.addRequired<LoopInfoWrapperPass>();
-    AU.addPreserved<LoopInfoWrapperPass>();
-    AU.addRequired<ScalarEvolutionWrapperPass>();
-    AU.addPreserved<ScalarEvolutionWrapperPass>();
-  }
-
-  bool runOnFunction(Function &F) override;
-};
-
 } // end anonymous namespace
 
-char IRCELegacyPass::ID = 0;
-
-INITIALIZE_PASS_BEGIN(IRCELegacyPass, "irce",
-                      "Inductive range check elimination", false, false)
-INITIALIZE_PASS_DEPENDENCY(BranchProbabilityInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(ScalarEvolutionWrapperPass)
-INITIALIZE_PASS_END(IRCELegacyPass, "irce", "Inductive range check elimination",
-                    false, false)
-
 /// Parse a single ICmp instruction, `ICI`, into a range check.  If `ICI` cannot
-/// be interpreted as a range check, return false and set `Index` and `Length`
-/// to `nullptr`.  Otherwise set `Index` to the value being range checked, and
-/// set `Length` to the upper limit `Index` is being range checked.
-bool
-InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
-                                         ScalarEvolution &SE, Value *&Index,
-                                         Value *&Length, bool &IsSigned) {
+/// be interpreted as a range check, return false and set `Index` and `End`
+/// to `nullptr`.  Otherwise set `Index` to the SCEV being range checked, and
+/// set `End` to the upper limit `Index` is being range checked.
+bool InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
+                                              ScalarEvolution &SE,
+                                              const SCEV *&Index,
+                                              const SCEV *&End) {
   auto IsLoopInvariant = [&SE, L](Value *V) {
     return SE.isLoopInvariant(SE.getSCEV(V), L);
   };
@@ -301,47 +264,47 @@ InductiveRangeCheck::parseRangeCheckICmp(Loop *L, ICmpInst *ICI,
   Value *LHS = ICI->getOperand(0);
   Value *RHS = ICI->getOperand(1);
 
+  // Canonicalize to the `Index Pred Invariant` comparison
+  if (IsLoopInvariant(LHS)) {
+    std::swap(LHS, RHS);
+    Pred = CmpInst::getSwappedPredicate(Pred);
+  } else if (!IsLoopInvariant(RHS))
+    // Both LHS and RHS are loop variant
+    return false;
+
   switch (Pred) {
   default:
     return false;
 
-  case ICmpInst::ICMP_SLE:
-    std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
   case ICmpInst::ICMP_SGE:
-    IsSigned = true;
     if (match(RHS, m_ConstantInt<0>())) {
-      Index = LHS;
-      return true; // Lower.
+      Index = SE.getSCEV(LHS);
+      return true;
+    }
+    return false;
+
+  case ICmpInst::ICMP_SGT:
+    if (match(RHS, m_ConstantInt<-1>())) {
+      Index = SE.getSCEV(LHS);
+      return true;
     }
     return false;
 
   case ICmpInst::ICMP_SLT:
-    std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
-  case ICmpInst::ICMP_SGT:
-    IsSigned = true;
-    if (match(RHS, m_ConstantInt<-1>())) {
-      Index = LHS;
-      return true; // Lower.
-    }
-
-    if (IsLoopInvariant(LHS)) {
-      Index = RHS;
-      Length = LHS;
-      return true; // Upper.
-    }
-    return false;
-
   case ICmpInst::ICMP_ULT:
-    std::swap(LHS, RHS);
-    LLVM_FALLTHROUGH;
-  case ICmpInst::ICMP_UGT:
-    IsSigned = false;
-    if (IsLoopInvariant(LHS)) {
-      Index = RHS;
-      Length = LHS;
-      return true; // Both lower and upper.
+    Index = SE.getSCEV(LHS);
+    End = SE.getSCEV(RHS);
+    return true;
+
+  case ICmpInst::ICMP_SLE:
+  case ICmpInst::ICMP_ULE:
+    const SCEV *One = SE.getOne(RHS->getType());
+    const SCEV *RHSS = SE.getSCEV(RHS);
+    bool Signed = Pred == ICmpInst::ICMP_SLE;
+    if (SE.willNotOverflow(Instruction::BinaryOps::Add, Signed, RHSS, One)) {
+      Index = SE.getSCEV(LHS);
+      End = SE.getAddExpr(RHSS, One);
+      return true;
     }
     return false;
   }
@@ -370,24 +333,20 @@ void InductiveRangeCheck::extractRangeChecksFromCond(
   if (!ICI)
     return;
 
-  Value *Length = nullptr, *Index;
-  bool IsSigned;
-  if (!parseRangeCheckICmp(L, ICI, SE, Index, Length, IsSigned))
+  const SCEV *End = nullptr, *Index = nullptr;
+  if (!parseRangeCheckICmp(L, ICI, SE, Index, End))
     return;
 
-  const auto *IndexAddRec = dyn_cast<SCEVAddRecExpr>(SE.getSCEV(Index));
+  const auto *IndexAddRec = dyn_cast<SCEVAddRecExpr>(Index);
   bool IsAffineIndex =
       IndexAddRec && (IndexAddRec->getLoop() == L) && IndexAddRec->isAffine();
 
   if (!IsAffineIndex)
     return;
 
-  const SCEV *End = nullptr;
   // We strengthen "0 <= I" to "0 <= I < INT_SMAX" and "I < L" to "0 <= I < L".
   // We can potentially do much better here.
-  if (Length)
-    End = SE.getSCEV(Length);
-  else {
+  if (!End) {
     // So far we can only reach this point for Signed range check. This may
     // change in future. In this case we will need to pick Unsigned max for the
     // unsigned range check.
@@ -503,8 +462,8 @@ struct LoopStructure {
     return Result;
   }
 
-  static Optional<LoopStructure> parseLoopStructure(ScalarEvolution &, Loop &,
-                                                    const char *&);
+  static std::optional<LoopStructure> parseLoopStructure(ScalarEvolution &,
+                                                         Loop &, const char *&);
 };
 
 /// This class is used to constrain loops to run within a given iteration space.
@@ -541,20 +500,20 @@ class LoopConstrainer {
 
   // Calculated subranges we restrict the iteration space of the main loop to.
   // See the implementation of `calculateSubRanges' for more details on how
-  // these fields are computed.  `LowLimit` is None if there is no restriction
-  // on low end of the restricted iteration space of the main loop.  `HighLimit`
-  // is None if there is no restriction on high end of the restricted iteration
-  // space of the main loop.
+  // these fields are computed.  `LowLimit` is std::nullopt if there is no
+  // restriction on low end of the restricted iteration space of the main loop.
+  // `HighLimit` is std::nullopt if there is no restriction on high end of the
+  // restricted iteration space of the main loop.
 
   struct SubRanges {
-    Optional<const SCEV *> LowLimit;
-    Optional<const SCEV *> HighLimit;
+    std::optional<const SCEV *> LowLimit;
+    std::optional<const SCEV *> HighLimit;
   };
 
   // Compute a safe set of limits for the main loop to run in -- effectively the
   // intersection of `Range' and the iteration space of the original loop.
-  // Return None if unable to compute the set of subranges.
-  Optional<SubRanges> calculateSubRanges(bool IsSignedPredicate) const;
+  // Return std::nullopt if unable to compute the set of subranges.
+  std::optional<SubRanges> calculateSubRanges(bool IsSignedPredicate) const;
 
   // Clone `OriginalLoop' and return the result in CLResult.  The IR after
   // running `cloneLoop' is well formed except for the PHI nodes in CLResult --
@@ -623,7 +582,7 @@ class LoopConstrainer {
   // Information about the original loop we started out with.
   Loop &OriginalLoop;
 
-  const SCEV *LatchTakenCount = nullptr;
+  const IntegerType *ExitCountTy = nullptr;
   BasicBlock *OriginalPreheader = nullptr;
 
   // The preheader of the main loop.  This may or may not be different from
@@ -672,8 +631,7 @@ static bool isSafeDecreasingBound(const SCEV *Start,
   LLVM_DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
   LLVM_DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
   LLVM_DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
-  LLVM_DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred)
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "irce: Pred: " << Pred << "\n");
   LLVM_DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
 
   bool IsSigned = ICmpInst::isSigned(Pred);
@@ -720,8 +678,7 @@ static bool isSafeIncreasingBound(const SCEV *Start,
   LLVM_DEBUG(dbgs() << "irce: Start: " << *Start << "\n");
   LLVM_DEBUG(dbgs() << "irce: Step: " << *Step << "\n");
   LLVM_DEBUG(dbgs() << "irce: BoundSCEV: " << *BoundSCEV << "\n");
-  LLVM_DEBUG(dbgs() << "irce: Pred: " << ICmpInst::getPredicateName(Pred)
-                    << "\n");
+  LLVM_DEBUG(dbgs() << "irce: Pred: " << Pred << "\n");
   LLVM_DEBUG(dbgs() << "irce: LatchExitBrIdx: " << LatchBrExitIdx << "\n");
 
   bool IsSigned = ICmpInst::isSigned(Pred);
@@ -747,12 +704,25 @@ static bool isSafeIncreasingBound(const SCEV *Start,
           SE.isLoopEntryGuardedByCond(L, BoundPred, BoundSCEV, Limit));
 }
 
-Optional<LoopStructure>
+/// Returns estimate for max latch taken count of the loop of the narrowest
+/// available type. If the latch block has such estimate, it is returned.
+/// Otherwise, we use max exit count of whole loop (that is potentially of wider
+/// type than latch check itself), which is still better than no estimate.
+static const SCEV *getNarrowestLatchMaxTakenCountEstimate(ScalarEvolution &SE,
+                                                          const Loop &L) {
+  const SCEV *FromBlock =
+      SE.getExitCount(&L, L.getLoopLatch(), ScalarEvolution::SymbolicMaximum);
+  if (isa<SCEVCouldNotCompute>(FromBlock))
+    return SE.getSymbolicMaxBackedgeTakenCount(&L);
+  return FromBlock;
+}
+
+std::optional<LoopStructure>
 LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
                                   const char *&FailureReason) {
   if (!L.isLoopSimplifyForm()) {
     FailureReason = "loop not in LoopSimplify form";
-    return None;
+    return std::nullopt;
   }
 
   BasicBlock *Latch = L.getLoopLatch();
@@ -760,25 +730,25 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
 
   if (Latch->getTerminator()->getMetadata(ClonedLoopTag)) {
     FailureReason = "loop has already been cloned";
-    return None;
+    return std::nullopt;
   }
 
   if (!L.isLoopExiting(Latch)) {
     FailureReason = "no loop latch";
-    return None;
+    return std::nullopt;
   }
 
   BasicBlock *Header = L.getHeader();
   BasicBlock *Preheader = L.getLoopPreheader();
   if (!Preheader) {
     FailureReason = "no preheader";
-    return None;
+    return std::nullopt;
   }
 
   BranchInst *LatchBr = dyn_cast<BranchInst>(Latch->getTerminator());
   if (!LatchBr || LatchBr->isUnconditional()) {
     FailureReason = "latch terminator not conditional branch";
-    return None;
+    return std::nullopt;
   }
 
   unsigned LatchBrExitIdx = LatchBr->getSuccessor(0) == Header ? 1 : 0;
@@ -786,14 +756,17 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   ICmpInst *ICI = dyn_cast<ICmpInst>(LatchBr->getCondition());
   if (!ICI || !isa<IntegerType>(ICI->getOperand(0)->getType())) {
     FailureReason = "latch terminator branch not conditional on integral icmp";
-    return None;
+    return std::nullopt;
   }
 
-  const SCEV *LatchCount = SE.getExitCount(&L, Latch);
-  if (isa<SCEVCouldNotCompute>(LatchCount)) {
+  const SCEV *MaxBETakenCount = getNarrowestLatchMaxTakenCountEstimate(SE, L);
+  if (isa<SCEVCouldNotCompute>(MaxBETakenCount)) {
     FailureReason = "could not compute latch count";
-    return None;
+    return std::nullopt;
   }
+  assert(SE.getLoopDisposition(MaxBETakenCount, &L) ==
+             ScalarEvolution::LoopInvariant &&
+         "loop variant exit count doesn't make sense!");
 
   ICmpInst::Predicate Pred = ICI->getPredicate();
   Value *LeftValue = ICI->getOperand(0);
@@ -811,7 +784,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
       Pred = ICmpInst::getSwappedPredicate(Pred);
     } else {
       FailureReason = "no add recurrences in the icmp";
-      return None;
+      return std::nullopt;
     }
   }
 
@@ -845,20 +818,24 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
   // induction variable satisfies some constraint.
 
   const SCEVAddRecExpr *IndVarBase = cast<SCEVAddRecExpr>(LeftSCEV);
+  if (IndVarBase->getLoop() != &L) {
+    FailureReason = "LHS in cmp is not an AddRec for this loop";
+    return std::nullopt;
+  }
   if (!IndVarBase->isAffine()) {
     FailureReason = "LHS in icmp not induction variable";
-    return None;
+    return std::nullopt;
   }
   const SCEV* StepRec = IndVarBase->getStepRecurrence(SE);
   if (!isa<SCEVConstant>(StepRec)) {
     FailureReason = "LHS in icmp not induction variable";
-    return None;
+    return std::nullopt;
   }
   ConstantInt *StepCI = cast<SCEVConstant>(StepRec)->getValue();
 
   if (ICI->isEquality() && !HasNoSignedWrap(IndVarBase)) {
     FailureReason = "LHS in icmp needs nsw for equality predicates";
-    return None;
+    return std::nullopt;
   }
 
   assert(!StepCI->isZero() && "Zero step?");
@@ -921,19 +898,19 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
 
     if (!FoundExpectedPred) {
       FailureReason = "expected icmp slt semantically, found something else";
-      return None;
+      return std::nullopt;
     }
 
     IsSignedPredicate = ICmpInst::isSigned(Pred);
     if (!IsSignedPredicate && !AllowUnsignedLatchCondition) {
       FailureReason = "unsigned latch conditions are explicitly prohibited";
-      return None;
+      return std::nullopt;
     }
 
     if (!isSafeIncreasingBound(IndVarStart, RightSCEV, Step, Pred,
                                LatchBrExitIdx, &L, SE)) {
       FailureReason = "Unsafe loop bounds";
-      return None;
+      return std::nullopt;
     }
     if (LatchBrExitIdx == 0) {
       // We need to increase the right value unless we have already decreased
@@ -984,7 +961,7 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
 
     if (!FoundExpectedPred) {
       FailureReason = "expected icmp sgt semantically, found something else";
-      return None;
+      return std::nullopt;
     }
 
     IsSignedPredicate =
@@ -992,13 +969,13 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
 
     if (!IsSignedPredicate && !AllowUnsignedLatchCondition) {
       FailureReason = "unsigned latch conditions are explicitly prohibited";
-      return None;
+      return std::nullopt;
     }
 
     if (!isSafeDecreasingBound(IndVarStart, RightSCEV, Step, Pred,
                                LatchBrExitIdx, &L, SE)) {
       FailureReason = "Unsafe bounds";
-      return None;
+      return std::nullopt;
     }
 
     if (LatchBrExitIdx == 0) {
@@ -1013,10 +990,6 @@ LoopStructure::parseLoopStructure(ScalarEvolution &SE, Loop &L,
     }
   }
   BasicBlock *LatchExit = LatchBr->getSuccessor(LatchBrExitIdx);
-
-  assert(SE.getLoopDisposition(LatchCount, &L) ==
-             ScalarEvolution::LoopInvariant &&
-         "loop variant exit count doesn't make sense!");
 
   assert(!L.contains(LatchExit) && "expected an exit block!");
   const DataLayout &DL = Preheader->getModule()->getDataLayout();
@@ -1057,17 +1030,14 @@ static const SCEV *NoopOrExtend(const SCEV *S, Type *Ty, ScalarEvolution &SE,
   return Signed ? SE.getNoopOrSignExtend(S, Ty) : SE.getNoopOrZeroExtend(S, Ty);
 }
 
-Optional<LoopConstrainer::SubRanges>
+std::optional<LoopConstrainer::SubRanges>
 LoopConstrainer::calculateSubRanges(bool IsSignedPredicate) const {
-  IntegerType *Ty = cast<IntegerType>(LatchTakenCount->getType());
-
   auto *RTy = cast<IntegerType>(Range.getType());
-
   // We only support wide range checks and narrow latches.
-  if (!AllowNarrowLatchCondition && RTy != Ty)
-    return None;
-  if (RTy->getBitWidth() < Ty->getBitWidth())
-    return None;
+  if (!AllowNarrowLatchCondition && RTy != ExitCountTy)
+    return std::nullopt;
+  if (RTy->getBitWidth() < ExitCountTy->getBitWidth())
+    return std::nullopt;
 
   LoopConstrainer::SubRanges Result;
 
@@ -1184,6 +1154,7 @@ void LoopConstrainer::cloneLoop(LoopConstrainer::ClonedLoop &Result,
       for (PHINode &PN : SBB->phis()) {
         Value *OldIncoming = PN.getIncomingValueForBlock(OriginalBB);
         PN.addIncoming(GetClonedValue(OldIncoming), ClonedBB);
+        SE.forgetValue(&PN);
       }
     }
   }
@@ -1399,22 +1370,24 @@ Loop *LoopConstrainer::createClonedLoopStructure(Loop *Original, Loop *Parent,
 
 bool LoopConstrainer::run() {
   BasicBlock *Preheader = nullptr;
-  LatchTakenCount = SE.getExitCount(&OriginalLoop, MainLoopStructure.Latch);
+  const SCEV *MaxBETakenCount =
+      getNarrowestLatchMaxTakenCountEstimate(SE, OriginalLoop);
   Preheader = OriginalLoop.getLoopPreheader();
-  assert(!isa<SCEVCouldNotCompute>(LatchTakenCount) && Preheader != nullptr &&
+  assert(!isa<SCEVCouldNotCompute>(MaxBETakenCount) && Preheader != nullptr &&
          "preconditions!");
+  ExitCountTy = cast<IntegerType>(MaxBETakenCount->getType());
 
   OriginalPreheader = Preheader;
   MainLoopPreheader = Preheader;
 
   bool IsSignedPredicate = MainLoopStructure.IsSignedPredicate;
-  Optional<SubRanges> MaybeSR = calculateSubRanges(IsSignedPredicate);
-  if (!MaybeSR.hasValue()) {
+  std::optional<SubRanges> MaybeSR = calculateSubRanges(IsSignedPredicate);
+  if (!MaybeSR) {
     LLVM_DEBUG(dbgs() << "irce: could not compute subranges\n");
     return false;
   }
 
-  SubRanges SR = MaybeSR.getValue();
+  SubRanges SR = *MaybeSR;
   bool Increasing = MainLoopStructure.IndVarIncreasing;
   IntegerType *IVTy =
       cast<IntegerType>(Range.getBegin()->getType());
@@ -1423,13 +1396,13 @@ bool LoopConstrainer::run() {
   Instruction *InsertPt = OriginalPreheader->getTerminator();
 
   // It would have been better to make `PreLoop' and `PostLoop'
-  // `Optional<ClonedLoop>'s, but `ValueToValueMapTy' does not have a copy
+  // `std::optional<ClonedLoop>'s, but `ValueToValueMapTy' does not have a copy
   // constructor.
   ClonedLoop PreLoop, PostLoop;
   bool NeedsPreLoop =
-      Increasing ? SR.LowLimit.hasValue() : SR.HighLimit.hasValue();
+      Increasing ? SR.LowLimit.has_value() : SR.HighLimit.has_value();
   bool NeedsPostLoop =
-      Increasing ? SR.HighLimit.hasValue() : SR.LowLimit.hasValue();
+      Increasing ? SR.HighLimit.has_value() : SR.LowLimit.has_value();
 
   Value *ExitPreLoopAt = nullptr;
   Value *ExitMainLoopAt = nullptr;
@@ -1451,7 +1424,7 @@ bool LoopConstrainer::run() {
       return false;
     }
 
-    if (!isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt, SE)) {
+    if (!Expander.isSafeToExpandAt(ExitPreLoopAtSCEV, InsertPt)) {
       LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
                         << " preloop exit limit " << *ExitPreLoopAtSCEV
                         << " at block " << InsertPt->getParent()->getName()
@@ -1478,7 +1451,7 @@ bool LoopConstrainer::run() {
       return false;
     }
 
-    if (!isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt, SE)) {
+    if (!Expander.isSafeToExpandAt(ExitMainLoopAtSCEV, InsertPt)) {
       LLVM_DEBUG(dbgs() << "irce: could not prove that it is safe to expand the"
                         << " main loop exit limit " << *ExitMainLoopAtSCEV
                         << " at block " << InsertPt->getParent()->getName()
@@ -1534,7 +1507,7 @@ bool LoopConstrainer::run() {
   auto NewBlocksEnd =
       std::remove(std::begin(NewBlocks), std::end(NewBlocks), nullptr);
 
-  addToParentLoopIfNeeded(makeArrayRef(std::begin(NewBlocks), NewBlocksEnd));
+  addToParentLoopIfNeeded(ArrayRef(std::begin(NewBlocks), NewBlocksEnd));
 
   DT.recalculate(F);
 
@@ -1557,7 +1530,7 @@ bool LoopConstrainer::run() {
 
   // This function canonicalizes the loop into Loop-Simplify and LCSSA forms.
   auto CanonicalizeLoop = [&] (Loop *L, bool IsOriginalLoop) {
-    formLCSSARecursively(*L, DT, &LI, &SE);
+    formLCSSARecursively(*L, DT, &LI);
     simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr, true);
     // Pre/post loops are slow paths, we do not need to perform any loop
     // optimizations on them.
@@ -1575,17 +1548,20 @@ bool LoopConstrainer::run() {
 
 /// Computes and returns a range of values for the induction variable (IndVar)
 /// in which the range check can be safely elided.  If it cannot compute such a
-/// range, returns None.
-Optional<InductiveRangeCheck::Range>
-InductiveRangeCheck::computeSafeIterationSpace(
-    ScalarEvolution &SE, const SCEVAddRecExpr *IndVar,
-    bool IsLatchSigned) const {
+/// range, returns std::nullopt.
+std::optional<InductiveRangeCheck::Range>
+InductiveRangeCheck::computeSafeIterationSpace(ScalarEvolution &SE,
+                                               const SCEVAddRecExpr *IndVar,
+                                               bool IsLatchSigned) const {
   // We can deal when types of latch check and range checks don't match in case
   // if latch check is more narrow.
-  auto *IVType = cast<IntegerType>(IndVar->getType());
-  auto *RCType = cast<IntegerType>(getBegin()->getType());
+  auto *IVType = dyn_cast<IntegerType>(IndVar->getType());
+  auto *RCType = dyn_cast<IntegerType>(getBegin()->getType());
+  // Do not work with pointer types.
+  if (!IVType || !RCType)
+    return std::nullopt;
   if (IVType->getBitWidth() > RCType->getBitWidth())
-    return None;
+    return std::nullopt;
   // IndVar is of the form "A + B * I" (where "I" is the canonical induction
   // variable, that may or may not exist as a real llvm::Value in the loop) and
   // this inductive range check is a range check on the "C + D * I" ("C" is
@@ -1607,19 +1583,19 @@ InductiveRangeCheck::computeSafeIterationSpace(
   // to deal with overflown values.
 
   if (!IndVar->isAffine())
-    return None;
+    return std::nullopt;
 
   const SCEV *A = NoopOrExtend(IndVar->getStart(), RCType, SE, IsLatchSigned);
   const SCEVConstant *B = dyn_cast<SCEVConstant>(
       NoopOrExtend(IndVar->getStepRecurrence(SE), RCType, SE, IsLatchSigned));
   if (!B)
-    return None;
+    return std::nullopt;
   assert(!B->isZero() && "Recurrence with zero step?");
 
   const SCEV *C = getBegin();
   const SCEVConstant *D = dyn_cast<SCEVConstant>(getStep());
   if (D != B)
-    return None;
+    return std::nullopt;
 
   assert(!D->getValue()->isZero() && "Recurrence with zero step?");
   unsigned BitWidth = RCType->getBitWidth();
@@ -1702,15 +1678,15 @@ InductiveRangeCheck::computeSafeIterationSpace(
   return InductiveRangeCheck::Range(Begin, End);
 }
 
-static Optional<InductiveRangeCheck::Range>
+static std::optional<InductiveRangeCheck::Range>
 IntersectSignedRange(ScalarEvolution &SE,
-                     const Optional<InductiveRangeCheck::Range> &R1,
+                     const std::optional<InductiveRangeCheck::Range> &R1,
                      const InductiveRangeCheck::Range &R2) {
   if (R2.isEmpty(SE, /* IsSigned */ true))
-    return None;
-  if (!R1.hasValue())
+    return std::nullopt;
+  if (!R1)
     return R2;
-  auto &R1Value = R1.getValue();
+  auto &R1Value = *R1;
   // We never return empty ranges from this function, and R1 is supposed to be
   // a result of intersection. Thus, R1 is never empty.
   assert(!R1Value.isEmpty(SE, /* IsSigned */ true) &&
@@ -1719,27 +1695,27 @@ IntersectSignedRange(ScalarEvolution &SE,
   // TODO: we could widen the smaller range and have this work; but for now we
   // bail out to keep things simple.
   if (R1Value.getType() != R2.getType())
-    return None;
+    return std::nullopt;
 
   const SCEV *NewBegin = SE.getSMaxExpr(R1Value.getBegin(), R2.getBegin());
   const SCEV *NewEnd = SE.getSMinExpr(R1Value.getEnd(), R2.getEnd());
 
-  // If the resulting range is empty, just return None.
+  // If the resulting range is empty, just return std::nullopt.
   auto Ret = InductiveRangeCheck::Range(NewBegin, NewEnd);
   if (Ret.isEmpty(SE, /* IsSigned */ true))
-    return None;
+    return std::nullopt;
   return Ret;
 }
 
-static Optional<InductiveRangeCheck::Range>
+static std::optional<InductiveRangeCheck::Range>
 IntersectUnsignedRange(ScalarEvolution &SE,
-                       const Optional<InductiveRangeCheck::Range> &R1,
+                       const std::optional<InductiveRangeCheck::Range> &R1,
                        const InductiveRangeCheck::Range &R2) {
   if (R2.isEmpty(SE, /* IsSigned */ false))
-    return None;
-  if (!R1.hasValue())
+    return std::nullopt;
+  if (!R1)
     return R2;
-  auto &R1Value = R1.getValue();
+  auto &R1Value = *R1;
   // We never return empty ranges from this function, and R1 is supposed to be
   // a result of intersection. Thus, R1 is never empty.
   assert(!R1Value.isEmpty(SE, /* IsSigned */ false) &&
@@ -1748,15 +1724,15 @@ IntersectUnsignedRange(ScalarEvolution &SE,
   // TODO: we could widen the smaller range and have this work; but for now we
   // bail out to keep things simple.
   if (R1Value.getType() != R2.getType())
-    return None;
+    return std::nullopt;
 
   const SCEV *NewBegin = SE.getUMaxExpr(R1Value.getBegin(), R2.getBegin());
   const SCEV *NewEnd = SE.getUMinExpr(R1Value.getEnd(), R2.getEnd());
 
-  // If the resulting range is empty, just return None.
+  // If the resulting range is empty, just return std::nullopt.
   auto Ret = InductiveRangeCheck::Range(NewBegin, NewEnd);
   if (Ret.isEmpty(SE, /* IsSigned */ false))
-    return None;
+    return std::nullopt;
   return Ret;
 }
 
@@ -1783,7 +1759,7 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
     for (const auto &L : LI) {
       CFGChanged |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
                                  /*PreserveLCSSA=*/false);
-      Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
+      Changed |= formLCSSARecursively(*L, DT, &LI);
     }
     Changed |= CFGChanged;
 
@@ -1818,45 +1794,12 @@ PreservedAnalyses IRCEPass::run(Function &F, FunctionAnalysisManager &AM) {
   return getLoopPassPreservedAnalyses();
 }
 
-bool IRCELegacyPass::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  ScalarEvolution &SE = getAnalysis<ScalarEvolutionWrapperPass>().getSE();
-  BranchProbabilityInfo &BPI =
-      getAnalysis<BranchProbabilityInfoWrapperPass>().getBPI();
-  auto &DT = getAnalysis<DominatorTreeWrapperPass>().getDomTree();
-  auto &LI = getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
-  InductiveRangeCheckElimination IRCE(SE, &BPI, DT, LI);
-
-  bool Changed = false;
-
-  for (const auto &L : LI) {
-    Changed |= simplifyLoop(L, &DT, &LI, &SE, nullptr, nullptr,
-                            /*PreserveLCSSA=*/false);
-    Changed |= formLCSSARecursively(*L, DT, &LI, &SE);
-  }
-
-  SmallPriorityWorklist<Loop *, 4> Worklist;
-  appendLoopsToWorklist(LI, Worklist);
-  auto LPMAddNewLoop = [&](Loop *NL, bool IsSubloop) {
-    if (!IsSubloop)
-      appendLoopsToWorklist(*NL, Worklist);
-  };
-
-  while (!Worklist.empty()) {
-    Loop *L = Worklist.pop_back_val();
-    Changed |= IRCE.run(L, LPMAddNewLoop);
-  }
-  return Changed;
-}
-
 bool
 InductiveRangeCheckElimination::isProfitableToTransform(const Loop &L,
                                                         LoopStructure &LS) {
   if (SkipProfitabilityChecks)
     return true;
-  if (GetBFI.hasValue()) {
+  if (GetBFI) {
     BlockFrequencyInfo &BFI = (*GetBFI)();
     uint64_t hFreq = BFI.getBlockFreq(LS.Header).getFrequency();
     uint64_t phFreq = BFI.getBlockFreq(L.getLoopPreheader()).getFrequency();
@@ -1898,7 +1841,7 @@ bool InductiveRangeCheckElimination::run(
   LLVMContext &Context = Preheader->getContext();
   SmallVector<InductiveRangeCheck, 16> RangeChecks;
 
-  for (auto BBI : L->getBlocks())
+  for (auto *BBI : L->getBlocks())
     if (BranchInst *TBI = dyn_cast<BranchInst>(BBI->getTerminator()))
       InductiveRangeCheck::extractRangeChecksFromBranch(TBI, L, SE, BPI,
                                                         RangeChecks);
@@ -1920,20 +1863,20 @@ bool InductiveRangeCheckElimination::run(
     PrintRecognizedRangeChecks(errs());
 
   const char *FailureReason = nullptr;
-  Optional<LoopStructure> MaybeLoopStructure =
+  std::optional<LoopStructure> MaybeLoopStructure =
       LoopStructure::parseLoopStructure(SE, *L, FailureReason);
-  if (!MaybeLoopStructure.hasValue()) {
+  if (!MaybeLoopStructure) {
     LLVM_DEBUG(dbgs() << "irce: could not parse loop structure: "
                       << FailureReason << "\n";);
     return false;
   }
-  LoopStructure LS = MaybeLoopStructure.getValue();
+  LoopStructure LS = *MaybeLoopStructure;
   if (!isProfitableToTransform(*L, LS))
     return false;
   const SCEVAddRecExpr *IndVar =
       cast<SCEVAddRecExpr>(SE.getMinusSCEV(SE.getSCEV(LS.IndVarBase), SE.getSCEV(LS.IndVarStep)));
 
-  Optional<InductiveRangeCheck::Range> SafeIterRange;
+  std::optional<InductiveRangeCheck::Range> SafeIterRange;
   Instruction *ExprInsertPt = Preheader->getTerminator();
 
   SmallVector<InductiveRangeCheck, 4> RangeChecksToEliminate;
@@ -1948,24 +1891,21 @@ bool InductiveRangeCheckElimination::run(
   for (InductiveRangeCheck &IRC : RangeChecks) {
     auto Result = IRC.computeSafeIterationSpace(SE, IndVar,
                                                 LS.IsSignedPredicate);
-    if (Result.hasValue()) {
-      auto MaybeSafeIterRange =
-          IntersectRange(SE, SafeIterRange, Result.getValue());
-      if (MaybeSafeIterRange.hasValue()) {
-        assert(
-            !MaybeSafeIterRange.getValue().isEmpty(SE, LS.IsSignedPredicate) &&
-            "We should never return empty ranges!");
+    if (Result) {
+      auto MaybeSafeIterRange = IntersectRange(SE, SafeIterRange, *Result);
+      if (MaybeSafeIterRange) {
+        assert(!MaybeSafeIterRange->isEmpty(SE, LS.IsSignedPredicate) &&
+               "We should never return empty ranges!");
         RangeChecksToEliminate.push_back(IRC);
-        SafeIterRange = MaybeSafeIterRange.getValue();
+        SafeIterRange = *MaybeSafeIterRange;
       }
     }
   }
 
-  if (!SafeIterRange.hasValue())
+  if (!SafeIterRange)
     return false;
 
-  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT,
-                     SafeIterRange.getValue());
+  LoopConstrainer LC(*L, LI, LPMAddNewLoop, LS, SE, DT, *SafeIterRange);
   bool Changed = LC.run();
 
   if (Changed) {
@@ -1992,8 +1932,4 @@ bool InductiveRangeCheckElimination::run(
   }
 
   return Changed;
-}
-
-Pass *llvm::createInductiveRangeCheckEliminationPass() {
-  return new IRCELegacyPass();
 }

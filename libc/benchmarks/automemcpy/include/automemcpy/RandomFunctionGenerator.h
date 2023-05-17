@@ -13,8 +13,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <llvm/ADT/ArrayRef.h>
-#include <llvm/ADT/Optional.h>
 #include <llvm/ADT/StringRef.h>
+#include <optional>
 #include <vector>
 #include <z3++.h>
 
@@ -26,8 +26,8 @@ namespace automemcpy {
 struct RandomFunctionGenerator {
   RandomFunctionGenerator();
 
-  // Get the next valid FunctionDescriptor or llvm::None.
-  Optional<FunctionDescriptor> next();
+  // Get the next valid FunctionDescriptor or std::nullopt.
+  std::optional<FunctionDescriptor> next();
 
 private:
   // Returns an expression where `Variable` is forced to be one of the `Values`.

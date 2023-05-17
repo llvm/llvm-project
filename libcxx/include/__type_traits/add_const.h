@@ -21,7 +21,7 @@ template <class _Tp> struct _LIBCPP_TEMPLATE_VIS add_const {
   typedef _LIBCPP_NODEBUG const _Tp type;
 };
 
-#if _LIBCPP_STD_VER > 11
+#if _LIBCPP_STD_VER >= 14
 template <class _Tp> using add_const_t = typename add_const<_Tp>::type;
 #endif
 

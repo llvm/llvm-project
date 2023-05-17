@@ -19,7 +19,7 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[VEC_PHI:%.*]] = phi <2 x i16> [ zeroinitializer, [[VECTOR_PH]] ], [ [[TMP25:%.*]], [[PRED_LOAD_CONTINUE4]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i32 [[INDEX]] to i16
 ; CHECK-NEXT:    [[OFFSET_IDX:%.*]] = sub i16 41, [[TMP0]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i32 0
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <2 x i32> poison, i32 [[INDEX]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <2 x i32> [[BROADCAST_SPLATINSERT1]], <2 x i32> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC_IV:%.*]] = add <2 x i32> [[BROADCAST_SPLAT2]], <i32 0, i32 1>
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp ule <2 x i32> [[VEC_IV]], <i32 40, i32 40>
@@ -28,11 +28,11 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK:       pred.load.if:
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i16 [[OFFSET_IDX]], 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = add nsw i16 [[TMP3]], -1
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 [[TMP4]], i16 0
-; CHECK-NEXT:    [[TMP6:%.*]] = load i16, i16* [[TMP5]], align 1
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[TMP4]], i16 0
+; CHECK-NEXT:    [[TMP6:%.*]] = load i16, ptr [[TMP5]], align 1
 ; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i16> poison, i16 [[TMP6]], i32 0
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 [[TMP4]], i16 3
-; CHECK-NEXT:    [[TMP9:%.*]] = load i16, i16* [[TMP8]], align 1
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[TMP4]], i16 3
+; CHECK-NEXT:    [[TMP9:%.*]] = load i16, ptr [[TMP8]], align 1
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <2 x i16> poison, i16 [[TMP9]], i32 0
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE]]
 ; CHECK:       pred.load.continue:
@@ -43,11 +43,11 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK:       pred.load.if1:
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i16 [[OFFSET_IDX]], -1
 ; CHECK-NEXT:    [[TMP15:%.*]] = add nsw i16 [[TMP14]], -1
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 [[TMP15]], i16 0
-; CHECK-NEXT:    [[TMP17:%.*]] = load i16, i16* [[TMP16]], align 1
+; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[TMP15]], i16 0
+; CHECK-NEXT:    [[TMP17:%.*]] = load i16, ptr [[TMP16]], align 1
 ; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <2 x i16> [[TMP11]], i16 [[TMP17]], i32 1
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 [[TMP15]], i16 3
-; CHECK-NEXT:    [[TMP20:%.*]] = load i16, i16* [[TMP19]], align 1
+; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[TMP15]], i16 3
+; CHECK-NEXT:    [[TMP20:%.*]] = load i16, ptr [[TMP19]], align 1
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x i16> [[TMP12]], i16 [[TMP20]], i32 1
 ; CHECK-NEXT:    br label [[PRED_LOAD_CONTINUE4]]
 ; CHECK:       pred.load.continue2:
@@ -70,10 +70,10 @@ define dso_local i16 @reverse_interleave_load_fold_mask() optsize {
 ; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IVMINUS1:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[SUM:%.*]] = phi i16 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[PREVSUM:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[IVMINUS1]] = add nsw i16 [[IV]], -1
-; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 [[IVMINUS1]], i16 0
-; CHECK-NEXT:    [[TMP29:%.*]] = load i16, i16* [[GEPA0]], align 1
-; CHECK-NEXT:    [[GEPA3:%.*]] = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 [[IVMINUS1]], i16 3
-; CHECK-NEXT:    [[TMP30:%.*]] = load i16, i16* [[GEPA3]], align 1
+; CHECK-NEXT:    [[GEPA0:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[IVMINUS1]], i16 0
+; CHECK-NEXT:    [[TMP29:%.*]] = load i16, ptr [[GEPA0]], align 1
+; CHECK-NEXT:    [[GEPA3:%.*]] = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 [[IVMINUS1]], i16 3
+; CHECK-NEXT:    [[TMP30:%.*]] = load i16, ptr [[GEPA3]], align 1
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[TMP29]], [[TMP30]]
 ; CHECK-NEXT:    [[PREVSUM]] = add nsw i16 [[SUM]], [[ADD]]
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i16 [[IV]], 1
@@ -89,10 +89,10 @@ loop:
   %iv = phi i16 [ 41, %entry ], [ %ivMinus1, %loop ]
   %sum = phi i16 [ 0, %entry ], [ %prevSum, %loop ]
   %ivMinus1 = add nsw i16 %iv, -1
-  %gepA0 = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 %ivMinus1, i16 0
-  %0 = load i16, i16* %gepA0, align 1
-  %gepA3 = getelementptr inbounds [40 x [4 x i16]], [40 x [4 x i16]]* @A, i16 0, i16 %ivMinus1, i16 3
-  %1 = load i16, i16* %gepA3, align 1
+  %gepA0 = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 %ivMinus1, i16 0
+  %0 = load i16, ptr %gepA0, align 1
+  %gepA3 = getelementptr inbounds [40 x [4 x i16]], ptr @A, i16 0, i16 %ivMinus1, i16 3
+  %1 = load i16, ptr %gepA3, align 1
   %add = add nsw i16 %0, %1
   %prevSum = add nsw i16 %sum, %add
   %cmp = icmp ugt i16 %iv, 1

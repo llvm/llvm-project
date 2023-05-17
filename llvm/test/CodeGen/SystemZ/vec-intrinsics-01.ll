@@ -2,9 +2,9 @@
 ;
 ; RUN: llc < %s -mtriple=s390x-linux-gnu -mcpu=z13 | FileCheck %s
 
-declare i32 @llvm.s390.lcbb(i8 *, i32)
-declare <16 x i8> @llvm.s390.vlbb(i8 *, i32)
-declare <16 x i8> @llvm.s390.vll(i32, i8 *)
+declare i32 @llvm.s390.lcbb(ptr, i32)
+declare <16 x i8> @llvm.s390.vlbb(ptr, i32)
+declare <16 x i8> @llvm.s390.vll(i32, ptr)
 declare <2 x i64> @llvm.s390.vpdi(<2 x i64>, <2 x i64>, i32)
 declare <16 x i8> @llvm.s390.vperm(<16 x i8>, <16 x i8>, <16 x i8>)
 declare <16 x i8> @llvm.s390.vpksh(<8 x i16>, <8 x i16>)
@@ -19,7 +19,7 @@ declare <4 x i32> @llvm.s390.vpklsg(<2 x i64>, <2 x i64>)
 declare {<16 x i8>, i32} @llvm.s390.vpklshs(<8 x i16>, <8 x i16>)
 declare {<8 x i16>, i32} @llvm.s390.vpklsfs(<4 x i32>, <4 x i32>)
 declare {<4 x i32>, i32} @llvm.s390.vpklsgs(<2 x i64>, <2 x i64>)
-declare void @llvm.s390.vstl(<16 x i8>, i32, i8 *)
+declare void @llvm.s390.vstl(<16 x i8>, i32, ptr)
 declare <8 x i16> @llvm.s390.vuphb(<16 x i8>)
 declare <4 x i32> @llvm.s390.vuphh(<8 x i16>)
 declare <2 x i64> @llvm.s390.vuphf(<4 x i32>)
@@ -206,128 +206,128 @@ declare {<2 x i64>, i32} @llvm.s390.vftcidb(<2 x double>, i32)
 declare <2 x double> @llvm.s390.vfidb(<2 x double>, i32, i32)
 
 ; LCBB with the lowest M3 operand.
-define i32 @test_lcbb1(i8 *%ptr) {
+define i32 @test_lcbb1(ptr %ptr) {
 ; CHECK-LABEL: test_lcbb1:
 ; CHECK: lcbb %r2, 0(%r2), 0
 ; CHECK: br %r14
-  %res = call i32 @llvm.s390.lcbb(i8 *%ptr, i32 0)
+  %res = call i32 @llvm.s390.lcbb(ptr %ptr, i32 0)
   ret i32 %res
 }
 
 ; LCBB with the highest M3 operand.
-define i32 @test_lcbb2(i8 *%ptr) {
+define i32 @test_lcbb2(ptr %ptr) {
 ; CHECK-LABEL: test_lcbb2:
 ; CHECK: lcbb %r2, 0(%r2), 15
 ; CHECK: br %r14
-  %res = call i32 @llvm.s390.lcbb(i8 *%ptr, i32 15)
+  %res = call i32 @llvm.s390.lcbb(ptr %ptr, i32 15)
   ret i32 %res
 }
 
 ; LCBB with a displacement and index.
-define i32 @test_lcbb3(i8 *%base, i64 %index) {
+define i32 @test_lcbb3(ptr %base, i64 %index) {
 ; CHECK-LABEL: test_lcbb3:
 ; CHECK: lcbb %r2, 4095({{%r2,%r3|%r3,%r2}}), 4
 ; CHECK: br %r14
   %add = add i64 %index, 4095
-  %ptr = getelementptr i8, i8 *%base, i64 %add
-  %res = call i32 @llvm.s390.lcbb(i8 *%ptr, i32 4)
+  %ptr = getelementptr i8, ptr %base, i64 %add
+  %res = call i32 @llvm.s390.lcbb(ptr %ptr, i32 4)
   ret i32 %res
 }
 
 ; LCBB with an out-of-range displacement.
-define i32 @test_lcbb4(i8 *%base) {
+define i32 @test_lcbb4(ptr %base) {
 ; CHECK-LABEL: test_lcbb4:
 ; CHECK: lcbb %r2, 0({{%r[1-5]}}), 5
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  %res = call i32 @llvm.s390.lcbb(i8 *%ptr, i32 5)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  %res = call i32 @llvm.s390.lcbb(ptr %ptr, i32 5)
   ret i32 %res
 }
 
 ; VLBB with the lowest M3 operand.
-define <16 x i8> @test_vlbb1(i8 *%ptr) {
+define <16 x i8> @test_vlbb1(ptr %ptr) {
 ; CHECK-LABEL: test_vlbb1:
 ; CHECK: vlbb %v24, 0(%r2), 0
 ; CHECK: br %r14
-  %res = call <16 x i8> @llvm.s390.vlbb(i8 *%ptr, i32 0)
+  %res = call <16 x i8> @llvm.s390.vlbb(ptr %ptr, i32 0)
   ret <16 x i8> %res
 }
 
 ; VLBB with the highest M3 operand.
-define <16 x i8> @test_vlbb2(i8 *%ptr) {
+define <16 x i8> @test_vlbb2(ptr %ptr) {
 ; CHECK-LABEL: test_vlbb2:
 ; CHECK: vlbb %v24, 0(%r2), 15
 ; CHECK: br %r14
-  %res = call <16 x i8> @llvm.s390.vlbb(i8 *%ptr, i32 15)
+  %res = call <16 x i8> @llvm.s390.vlbb(ptr %ptr, i32 15)
   ret <16 x i8> %res
 }
 
 ; VLBB with a displacement and index.
-define <16 x i8> @test_vlbb3(i8 *%base, i64 %index) {
+define <16 x i8> @test_vlbb3(ptr %base, i64 %index) {
 ; CHECK-LABEL: test_vlbb3:
 ; CHECK: vlbb %v24, 4095({{%r2,%r3|%r3,%r2}}), 4
 ; CHECK: br %r14
   %add = add i64 %index, 4095
-  %ptr = getelementptr i8, i8 *%base, i64 %add
-  %res = call <16 x i8> @llvm.s390.vlbb(i8 *%ptr, i32 4)
+  %ptr = getelementptr i8, ptr %base, i64 %add
+  %res = call <16 x i8> @llvm.s390.vlbb(ptr %ptr, i32 4)
   ret <16 x i8> %res
 }
 
 ; VLBB with an out-of-range displacement.
-define <16 x i8> @test_vlbb4(i8 *%base) {
+define <16 x i8> @test_vlbb4(ptr %base) {
 ; CHECK-LABEL: test_vlbb4:
 ; CHECK: vlbb %v24, 0({{%r[1-5]}}), 5
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  %res = call <16 x i8> @llvm.s390.vlbb(i8 *%ptr, i32 5)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  %res = call <16 x i8> @llvm.s390.vlbb(ptr %ptr, i32 5)
   ret <16 x i8> %res
 }
 
 ; VLL with the lowest in-range displacement.
-define <16 x i8> @test_vll1(i8 *%ptr, i32 %length) {
+define <16 x i8> @test_vll1(ptr %ptr, i32 %length) {
 ; CHECK-LABEL: test_vll1:
 ; CHECK: vll %v24, %r3, 0(%r2)
 ; CHECK: br %r14
-  %res = call <16 x i8> @llvm.s390.vll(i32 %length, i8 *%ptr)
+  %res = call <16 x i8> @llvm.s390.vll(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLL with the highest in-range displacement.
-define <16 x i8> @test_vll2(i8 *%base, i32 %length) {
+define <16 x i8> @test_vll2(ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vll2:
 ; CHECK: vll %v24, %r3, 4095(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4095
-  %res = call <16 x i8> @llvm.s390.vll(i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4095
+  %res = call <16 x i8> @llvm.s390.vll(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLL with an out-of-range displacementa.
-define <16 x i8> @test_vll3(i8 *%base, i32 %length) {
+define <16 x i8> @test_vll3(ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vll3:
 ; CHECK: vll %v24, %r3, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  %res = call <16 x i8> @llvm.s390.vll(i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  %res = call <16 x i8> @llvm.s390.vll(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; Check that VLL doesn't allow an index.
-define <16 x i8> @test_vll4(i8 *%base, i64 %index, i32 %length) {
+define <16 x i8> @test_vll4(ptr %base, i64 %index, i32 %length) {
 ; CHECK-LABEL: test_vll4:
 ; CHECK: vll %v24, %r4, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 %index
-  %res = call <16 x i8> @llvm.s390.vll(i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 %index
+  %res = call <16 x i8> @llvm.s390.vll(i32 %length, ptr %ptr)
   ret <16 x i8> %res
 }
 
 ; VLL with length >= 15 should become VL.
-define <16 x i8> @test_vll5(i8 *%ptr) {
+define <16 x i8> @test_vll5(ptr %ptr) {
 ; CHECK-LABEL: test_vll5:
 ; CHECK: vl %v24, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %res = call <16 x i8> @llvm.s390.vll(i32 15, i8 *%ptr)
+  %res = call <16 x i8> @llvm.s390.vll(i32 15, ptr %ptr)
   ret <16 x i8> %res
 }
 
@@ -387,7 +387,7 @@ define <4 x i32> @test_vpksg(<2 x i64> %a, <2 x i64> %b) {
 }
 
 ; VPKSHS with no processing of the result.
-define <16 x i8> @test_vpkshs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <16 x i8> @test_vpkshs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vpkshs:
 ; CHECK: vpkshs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -397,12 +397,12 @@ define <16 x i8> @test_vpkshs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
   %call = call {<16 x i8>, i32} @llvm.s390.vpkshs(<8 x i16> %a, <8 x i16> %b)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VPKSHS, storing to %ptr if all values were saturated.
-define <16 x i8> @test_vpkshs_all_store(<8 x i16> %a, <8 x i16> %b, i32 *%ptr) {
+define <16 x i8> @test_vpkshs_all_store(<8 x i16> %a, <8 x i16> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vpkshs_all_store:
 ; CHECK: vpkshs %v24, %v24, %v26
 ; CHECK-NEXT: {{bnor|bler}} %r14
@@ -415,7 +415,7 @@ define <16 x i8> @test_vpkshs_all_store(<8 x i16> %a, <8 x i16> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -423,7 +423,7 @@ exit:
 }
 
 ; VPKSFS with no processing of the result.
-define <8 x i16> @test_vpksfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <8 x i16> @test_vpksfs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vpksfs:
 ; CHECK: vpksfs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -433,12 +433,12 @@ define <8 x i16> @test_vpksfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
   %call = call {<8 x i16>, i32} @llvm.s390.vpksfs(<4 x i32> %a, <4 x i32> %b)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VPKSFS, storing to %ptr if any values were saturated.
-define <8 x i16> @test_vpksfs_any_store(<4 x i32> %a, <4 x i32> %b, i32 *%ptr) {
+define <8 x i16> @test_vpksfs_any_store(<4 x i32> %a, <4 x i32> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vpksfs_any_store:
 ; CHECK: vpksfs %v24, %v24, %v26
 ; CHECK-NEXT: {{bher|ber}} %r14
@@ -451,7 +451,7 @@ define <8 x i16> @test_vpksfs_any_store(<4 x i32> %a, <4 x i32> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -459,7 +459,7 @@ exit:
 }
 
 ; VPKSGS with no processing of the result.
-define <4 x i32> @test_vpksgs(<2 x i64> %a, <2 x i64> %b, i32 *%ccptr) {
+define <4 x i32> @test_vpksgs(<2 x i64> %a, <2 x i64> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vpksgs:
 ; CHECK: vpksgs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -469,13 +469,13 @@ define <4 x i32> @test_vpksgs(<2 x i64> %a, <2 x i64> %b, i32 *%ccptr) {
   %call = call {<4 x i32>, i32} @llvm.s390.vpksgs(<2 x i64> %a, <2 x i64> %b)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
 ; VPKSGS, storing to %ptr if no elements were saturated
 define <4 x i32> @test_vpksgs_none_store(<2 x i64> %a, <2 x i64> %b,
-                                         i32 *%ptr) {
+                                         ptr %ptr) {
 ; CHECK-LABEL: test_vpksgs_none_store:
 ; CHECK: vpksgs %v24, %v24, %v26
 ; CHECK-NEXT: {{bnher|bner}} %r14
@@ -488,7 +488,7 @@ define <4 x i32> @test_vpksgs_none_store(<2 x i64> %a, <2 x i64> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -523,7 +523,7 @@ define <4 x i32> @test_vpklsg(<2 x i64> %a, <2 x i64> %b) {
 }
 
 ; VPKLSHS with no processing of the result.
-define <16 x i8> @test_vpklshs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <16 x i8> @test_vpklshs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vpklshs:
 ; CHECK: vpklshs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -533,13 +533,13 @@ define <16 x i8> @test_vpklshs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
   %call = call {<16 x i8>, i32} @llvm.s390.vpklshs(<8 x i16> %a, <8 x i16> %b)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VPKLSHS, storing to %ptr if all values were saturated.
 define <16 x i8> @test_vpklshs_all_store(<8 x i16> %a, <8 x i16> %b,
-                                         i32 *%ptr) {
+                                         ptr %ptr) {
 ; CHECK-LABEL: test_vpklshs_all_store:
 ; CHECK: vpklshs %v24, %v24, %v26
 ; CHECK-NEXT: {{bnor|bler}} %r14
@@ -552,7 +552,7 @@ define <16 x i8> @test_vpklshs_all_store(<8 x i16> %a, <8 x i16> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -560,7 +560,7 @@ exit:
 }
 
 ; VPKLSFS with no processing of the result.
-define <8 x i16> @test_vpklsfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <8 x i16> @test_vpklsfs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vpklsfs:
 ; CHECK: vpklsfs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -570,13 +570,13 @@ define <8 x i16> @test_vpklsfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
   %call = call {<8 x i16>, i32} @llvm.s390.vpklsfs(<4 x i32> %a, <4 x i32> %b)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VPKLSFS, storing to %ptr if any values were saturated.
 define <8 x i16> @test_vpklsfs_any_store(<4 x i32> %a, <4 x i32> %b,
-                                         i32 *%ptr) {
+                                         ptr %ptr) {
 ; CHECK-LABEL: test_vpklsfs_any_store:
 ; CHECK: vpklsfs %v24, %v24, %v26
 ; CHECK-NEXT: {{bher|ber}} %r14
@@ -589,7 +589,7 @@ define <8 x i16> @test_vpklsfs_any_store(<4 x i32> %a, <4 x i32> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -597,7 +597,7 @@ exit:
 }
 
 ; VPKLSGS with no processing of the result.
-define <4 x i32> @test_vpklsgs(<2 x i64> %a, <2 x i64> %b, i32 *%ccptr) {
+define <4 x i32> @test_vpklsgs(<2 x i64> %a, <2 x i64> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vpklsgs:
 ; CHECK: vpklsgs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -607,13 +607,13 @@ define <4 x i32> @test_vpklsgs(<2 x i64> %a, <2 x i64> %b, i32 *%ccptr) {
   %call = call {<4 x i32>, i32} @llvm.s390.vpklsgs(<2 x i64> %a, <2 x i64> %b)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
 ; VPKLSGS, storing to %ptr if no elements were saturated
 define <4 x i32> @test_vpklsgs_none_store(<2 x i64> %a, <2 x i64> %b,
-                                          i32 *%ptr) {
+                                          ptr %ptr) {
 ; CHECK-LABEL: test_vpklsgs_none_store:
 ; CHECK: vpklsgs %v24, %v24, %v26
 ; CHECK-NEXT: {{bnher|bner}} %r14
@@ -626,7 +626,7 @@ define <4 x i32> @test_vpklsgs_none_store(<2 x i64> %a, <2 x i64> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -634,50 +634,50 @@ exit:
 }
 
 ; VSTL with the lowest in-range displacement.
-define void @test_vstl1(<16 x i8> %vec, i8 *%ptr, i32 %length) {
+define void @test_vstl1(<16 x i8> %vec, ptr %ptr, i32 %length) {
 ; CHECK-LABEL: test_vstl1:
 ; CHECK: vstl %v24, %r3, 0(%r2)
 ; CHECK: br %r14
-  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; VSTL with the highest in-range displacement.
-define void @test_vstl2(<16 x i8> %vec, i8 *%base, i32 %length) {
+define void @test_vstl2(<16 x i8> %vec, ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vstl2:
 ; CHECK: vstl %v24, %r3, 4095(%r2)
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4095
-  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4095
+  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; VSTL with an out-of-range displacement.
-define void @test_vstl3(<16 x i8> %vec, i8 *%base, i32 %length) {
+define void @test_vstl3(<16 x i8> %vec, ptr %base, i32 %length) {
 ; CHECK-LABEL: test_vstl3:
 ; CHECK: vstl %v24, %r3, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 4096
-  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 4096
+  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; Check that VSTL doesn't allow an index.
-define void @test_vstl4(<16 x i8> %vec, i8 *%base, i64 %index, i32 %length) {
+define void @test_vstl4(<16 x i8> %vec, ptr %base, i64 %index, i32 %length) {
 ; CHECK-LABEL: test_vstl4:
 ; CHECK: vstl %v24, %r4, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  %ptr = getelementptr i8, i8 *%base, i64 %index
-  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, i8 *%ptr)
+  %ptr = getelementptr i8, ptr %base, i64 %index
+  call void @llvm.s390.vstl(<16 x i8> %vec, i32 %length, ptr %ptr)
   ret void
 }
 
 ; VSTL with length >= 15 should become VST.
-define void @test_vstl5(<16 x i8> %vec, i8 *%ptr) {
+define void @test_vstl5(<16 x i8> %vec, ptr %ptr) {
 ; CHECK-LABEL: test_vstl5:
 ; CHECK: vst %v24, 0({{%r[1-5]}})
 ; CHECK: br %r14
-  call void @llvm.s390.vstl(<16 x i8> %vec, i32 15, i8 *%ptr)
+  call void @llvm.s390.vstl(<16 x i8> %vec, i32 15, ptr %ptr)
   ret void
 }
 
@@ -1719,7 +1719,7 @@ define i32 @test_vtm(<16 x i8> %a, <16 x i8> %b) {
 }
 
 ; VTM, storing to %ptr if all bits are set.
-define void @test_vtm_all_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
+define void @test_vtm_all_store(<16 x i8> %a, <16 x i8> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vtm_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vtm %v24, %v26
@@ -1731,7 +1731,7 @@ define void @test_vtm_all_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -1765,7 +1765,7 @@ define i32 @test_vceqbs_any_bool(<16 x i8> %a, <16 x i8> %b) {
 }
 
 ; VCEQBS, storing to %ptr if any elements are equal.
-define <16 x i8> @test_vceqbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
+define <16 x i8> @test_vceqbs_any_store(<16 x i8> %a, <16 x i8> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vceqbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqbs %v24, %v24, %v26
@@ -1779,7 +1779,7 @@ define <16 x i8> @test_vceqbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -1814,7 +1814,7 @@ define i32 @test_vceqhs_notall_bool(<8 x i16> %a, <8 x i16> %b) {
 
 ; VCEQHS, storing to %ptr if not all elements are equal.
 define <8 x i16> @test_vceqhs_notall_store(<8 x i16> %a, <8 x i16> %b,
-                                           i32 *%ptr) {
+                                           ptr %ptr) {
 ; CHECK-LABEL: test_vceqhs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqhs %v24, %v24, %v26
@@ -1828,7 +1828,7 @@ define <8 x i16> @test_vceqhs_notall_store(<8 x i16> %a, <8 x i16> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -1863,7 +1863,7 @@ define i32 @test_vceqfs_none_bool(<4 x i32> %a, <4 x i32> %b) {
 
 ; VCEQFS, storing to %ptr if no elements are equal.
 define <4 x i32> @test_vceqfs_none_store(<4 x i32> %a, <4 x i32> %b,
-                                         i32 *%ptr) {
+                                         ptr %ptr) {
 ; CHECK-LABEL: test_vceqfs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqfs %v24, %v24, %v26
@@ -1877,7 +1877,7 @@ define <4 x i32> @test_vceqfs_none_store(<4 x i32> %a, <4 x i32> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -1911,7 +1911,7 @@ define i32 @test_vceqgs_all_bool(<2 x i64> %a, <2 x i64> %b) {
 }
 
 ; VCEQGS, storing to %ptr if all elements are equal.
-define <2 x i64> @test_vceqgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
+define <2 x i64> @test_vceqgs_all_store(<2 x i64> %a, <2 x i64> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vceqgs_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vceqgs %v24, %v24, %v26
@@ -1925,7 +1925,7 @@ define <2 x i64> @test_vceqgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -1959,7 +1959,7 @@ define i32 @test_vchbs_any_bool(<16 x i8> %a, <16 x i8> %b) {
 }
 
 ; VCHBS, storing to %ptr if any elements are higher.
-define <16 x i8> @test_vchbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
+define <16 x i8> @test_vchbs_any_store(<16 x i8> %a, <16 x i8> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vchbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vchbs %v24, %v24, %v26
@@ -1973,7 +1973,7 @@ define <16 x i8> @test_vchbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2008,7 +2008,7 @@ define i32 @test_vchhs_notall_bool(<8 x i16> %a, <8 x i16> %b) {
 
 ; VCHHS, storing to %ptr if not all elements are higher.
 define <8 x i16> @test_vchhs_notall_store(<8 x i16> %a, <8 x i16> %b,
-                                          i32 *%ptr) {
+                                          ptr %ptr) {
 ; CHECK-LABEL: test_vchhs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vchhs %v24, %v24, %v26
@@ -2022,7 +2022,7 @@ define <8 x i16> @test_vchhs_notall_store(<8 x i16> %a, <8 x i16> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2056,7 +2056,7 @@ define i32 @test_vchfs_none_bool(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VCHFS, storing to %ptr if no elements are higher.
-define <4 x i32> @test_vchfs_none_store(<4 x i32> %a, <4 x i32> %b, i32 *%ptr) {
+define <4 x i32> @test_vchfs_none_store(<4 x i32> %a, <4 x i32> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vchfs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vchfs %v24, %v24, %v26
@@ -2070,7 +2070,7 @@ define <4 x i32> @test_vchfs_none_store(<4 x i32> %a, <4 x i32> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2104,7 +2104,7 @@ define i32 @test_vchgs_all_bool(<2 x i64> %a, <2 x i64> %b) {
 }
 
 ; VCHGS, storing to %ptr if all elements are higher.
-define <2 x i64> @test_vchgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
+define <2 x i64> @test_vchgs_all_store(<2 x i64> %a, <2 x i64> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vchgs_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vchgs %v24, %v24, %v26
@@ -2118,7 +2118,7 @@ define <2 x i64> @test_vchgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2152,7 +2152,7 @@ define i32 @test_vchlbs_any_bool(<16 x i8> %a, <16 x i8> %b) {
 }
 
 ; VCHLBS, storing to %ptr if any elements are higher.
-define <16 x i8> @test_vchlbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
+define <16 x i8> @test_vchlbs_any_store(<16 x i8> %a, <16 x i8> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vchlbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlbs %v24, %v24, %v26
@@ -2166,7 +2166,7 @@ define <16 x i8> @test_vchlbs_any_store(<16 x i8> %a, <16 x i8> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2201,7 +2201,7 @@ define i32 @test_vchlhs_notall_bool(<8 x i16> %a, <8 x i16> %b) {
 
 ; VCHLHS, storing to %ptr if not all elements are higher.
 define <8 x i16> @test_vchlhs_notall_store(<8 x i16> %a, <8 x i16> %b,
-                                           i32 *%ptr) {
+                                           ptr %ptr) {
 ; CHECK-LABEL: test_vchlhs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlhs %v24, %v24, %v26
@@ -2215,7 +2215,7 @@ define <8 x i16> @test_vchlhs_notall_store(<8 x i16> %a, <8 x i16> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2250,7 +2250,7 @@ define i32 @test_vchlfs_none_bool(<4 x i32> %a, <4 x i32> %b) {
 
 ; VCHLFS, storing to %ptr if no elements are higher.
 define <4 x i32> @test_vchlfs_none_store(<4 x i32> %a, <4 x i32> %b,
-                                         i32 *%ptr) {
+                                         ptr %ptr) {
 ; CHECK-LABEL: test_vchlfs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlfs %v24, %v24, %v26
@@ -2264,7 +2264,7 @@ define <4 x i32> @test_vchlfs_none_store(<4 x i32> %a, <4 x i32> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2298,7 +2298,7 @@ define i32 @test_vchlgs_all_bool(<2 x i64> %a, <2 x i64> %b) {
 }
 
 ; VCHLGS, storing to %ptr if all elements are higher.
-define <2 x i64> @test_vchlgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
+define <2 x i64> @test_vchlgs_all_store(<2 x i64> %a, <2 x i64> %b, ptr %ptr) {
 ; CHECK-LABEL: test_vchlgs_all_store:
 ; CHECK-NOT: %r
 ; CHECK: vchlgs %v24, %v24, %v26
@@ -2312,7 +2312,7 @@ define <2 x i64> @test_vchlgs_all_store(<2 x i64> %a, <2 x i64> %b, i32 *%ptr) {
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -2383,7 +2383,7 @@ define <4 x i32> @test_vfaef(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VFAEBS.
-define <16 x i8> @test_vfaebs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
+define <16 x i8> @test_vfaebs(<16 x i8> %a, <16 x i8> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfaebs:
 ; CHECK: vfaebs %v24, %v24, %v26, 0
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2394,12 +2394,12 @@ define <16 x i8> @test_vfaebs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
                                                   i32 0)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VFAEHS.
-define <8 x i16> @test_vfaehs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <8 x i16> @test_vfaehs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfaehs:
 ; CHECK: vfaehs %v24, %v24, %v26, 4
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2410,12 +2410,12 @@ define <8 x i16> @test_vfaehs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
                                                   i32 4)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VFAEFS.
-define <4 x i32> @test_vfaefs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <4 x i32> @test_vfaefs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfaefs:
 ; CHECK: vfaefs %v24, %v24, %v26, 8
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2426,7 +2426,7 @@ define <4 x i32> @test_vfaefs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
                                                   i32 8)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -2494,7 +2494,7 @@ define <4 x i32> @test_vfaezf(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VFAEZBS.
-define <16 x i8> @test_vfaezbs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
+define <16 x i8> @test_vfaezbs(<16 x i8> %a, <16 x i8> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfaezbs:
 ; CHECK: vfaezbs %v24, %v24, %v26, 0
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2505,12 +2505,12 @@ define <16 x i8> @test_vfaezbs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
                                                    i32 0)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VFAEZHS.
-define <8 x i16> @test_vfaezhs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <8 x i16> @test_vfaezhs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfaezhs:
 ; CHECK: vfaezhs %v24, %v24, %v26, 4
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2521,12 +2521,12 @@ define <8 x i16> @test_vfaezhs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
                                                    i32 4)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VFAEZFS.
-define <4 x i32> @test_vfaezfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <4 x i32> @test_vfaezfs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfaezfs:
 ; CHECK: vfaezfs %v24, %v24, %v26, 8
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2537,7 +2537,7 @@ define <4 x i32> @test_vfaezfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
                                                    i32 8)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -2569,7 +2569,7 @@ define <4 x i32> @test_vfeef(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VFEEBS.
-define <16 x i8> @test_vfeebs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
+define <16 x i8> @test_vfeebs(<16 x i8> %a, <16 x i8> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfeebs:
 ; CHECK: vfeebs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2579,12 +2579,12 @@ define <16 x i8> @test_vfeebs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
   %call = call {<16 x i8>, i32} @llvm.s390.vfeebs(<16 x i8> %a, <16 x i8> %b)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VFEEHS.
-define <8 x i16> @test_vfeehs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <8 x i16> @test_vfeehs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfeehs:
 ; CHECK: vfeehs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2594,12 +2594,12 @@ define <8 x i16> @test_vfeehs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
   %call = call {<8 x i16>, i32} @llvm.s390.vfeehs(<8 x i16> %a, <8 x i16> %b)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VFEEFS.
-define <4 x i32> @test_vfeefs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <4 x i32> @test_vfeefs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfeefs:
 ; CHECK: vfeefs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2609,7 +2609,7 @@ define <4 x i32> @test_vfeefs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
   %call = call {<4 x i32>, i32} @llvm.s390.vfeefs(<4 x i32> %a, <4 x i32> %b)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -2641,7 +2641,7 @@ define <4 x i32> @test_vfeezf(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VFEEZBS.
-define <16 x i8> @test_vfeezbs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
+define <16 x i8> @test_vfeezbs(<16 x i8> %a, <16 x i8> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfeezbs:
 ; CHECK: vfeezbs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2651,12 +2651,12 @@ define <16 x i8> @test_vfeezbs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
   %call = call {<16 x i8>, i32} @llvm.s390.vfeezbs(<16 x i8> %a, <16 x i8> %b)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VFEEZHS.
-define <8 x i16> @test_vfeezhs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <8 x i16> @test_vfeezhs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfeezhs:
 ; CHECK: vfeezhs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2666,12 +2666,12 @@ define <8 x i16> @test_vfeezhs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
   %call = call {<8 x i16>, i32} @llvm.s390.vfeezhs(<8 x i16> %a, <8 x i16> %b)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VFEEZFS.
-define <4 x i32> @test_vfeezfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <4 x i32> @test_vfeezfs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfeezfs:
 ; CHECK: vfeezfs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2681,7 +2681,7 @@ define <4 x i32> @test_vfeezfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
   %call = call {<4 x i32>, i32} @llvm.s390.vfeezfs(<4 x i32> %a, <4 x i32> %b)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -2713,7 +2713,7 @@ define <4 x i32> @test_vfenef(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VFENEBS.
-define <16 x i8> @test_vfenebs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
+define <16 x i8> @test_vfenebs(<16 x i8> %a, <16 x i8> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfenebs:
 ; CHECK: vfenebs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2723,12 +2723,12 @@ define <16 x i8> @test_vfenebs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
   %call = call {<16 x i8>, i32} @llvm.s390.vfenebs(<16 x i8> %a, <16 x i8> %b)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VFENEHS.
-define <8 x i16> @test_vfenehs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <8 x i16> @test_vfenehs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfenehs:
 ; CHECK: vfenehs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2738,12 +2738,12 @@ define <8 x i16> @test_vfenehs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
   %call = call {<8 x i16>, i32} @llvm.s390.vfenehs(<8 x i16> %a, <8 x i16> %b)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VFENEFS.
-define <4 x i32> @test_vfenefs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <4 x i32> @test_vfenefs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfenefs:
 ; CHECK: vfenefs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2753,7 +2753,7 @@ define <4 x i32> @test_vfenefs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
   %call = call {<4 x i32>, i32} @llvm.s390.vfenefs(<4 x i32> %a, <4 x i32> %b)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -2785,7 +2785,7 @@ define <4 x i32> @test_vfenezf(<4 x i32> %a, <4 x i32> %b) {
 }
 
 ; VFENEZBS.
-define <16 x i8> @test_vfenezbs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
+define <16 x i8> @test_vfenezbs(<16 x i8> %a, <16 x i8> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfenezbs:
 ; CHECK: vfenezbs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2795,12 +2795,12 @@ define <16 x i8> @test_vfenezbs(<16 x i8> %a, <16 x i8> %b, i32 *%ccptr) {
   %call = call {<16 x i8>, i32} @llvm.s390.vfenezbs(<16 x i8> %a, <16 x i8> %b)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VFENEZHS.
-define <8 x i16> @test_vfenezhs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
+define <8 x i16> @test_vfenezhs(<8 x i16> %a, <8 x i16> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfenezhs:
 ; CHECK: vfenezhs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2810,12 +2810,12 @@ define <8 x i16> @test_vfenezhs(<8 x i16> %a, <8 x i16> %b, i32 *%ccptr) {
   %call = call {<8 x i16>, i32} @llvm.s390.vfenezhs(<8 x i16> %a, <8 x i16> %b)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VFENEZFS.
-define <4 x i32> @test_vfenezfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
+define <4 x i32> @test_vfenezfs(<4 x i32> %a, <4 x i32> %b, ptr %ccptr) {
 ; CHECK-LABEL: test_vfenezfs:
 ; CHECK: vfenezfs %v24, %v24, %v26
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2825,7 +2825,7 @@ define <4 x i32> @test_vfenezfs(<4 x i32> %a, <4 x i32> %b, i32 *%ccptr) {
   %call = call {<4 x i32>, i32} @llvm.s390.vfenezfs(<4 x i32> %a, <4 x i32> %b)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -2857,7 +2857,7 @@ define <4 x i32> @test_vistrf(<4 x i32> %a) {
 }
 
 ; VISTRBS.
-define <16 x i8> @test_vistrbs(<16 x i8> %a, i32 *%ccptr) {
+define <16 x i8> @test_vistrbs(<16 x i8> %a, ptr %ccptr) {
 ; CHECK-LABEL: test_vistrbs:
 ; CHECK: vistrbs %v24, %v24
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2867,12 +2867,12 @@ define <16 x i8> @test_vistrbs(<16 x i8> %a, i32 *%ccptr) {
   %call = call {<16 x i8>, i32} @llvm.s390.vistrbs(<16 x i8> %a)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VISTRHS.
-define <8 x i16> @test_vistrhs(<8 x i16> %a, i32 *%ccptr) {
+define <8 x i16> @test_vistrhs(<8 x i16> %a, ptr %ccptr) {
 ; CHECK-LABEL: test_vistrhs:
 ; CHECK: vistrhs %v24, %v24
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2882,12 +2882,12 @@ define <8 x i16> @test_vistrhs(<8 x i16> %a, i32 *%ccptr) {
   %call = call {<8 x i16>, i32} @llvm.s390.vistrhs(<8 x i16> %a)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VISTRFS.
-define <4 x i32> @test_vistrfs(<4 x i32> %a, i32 *%ccptr) {
+define <4 x i32> @test_vistrfs(<4 x i32> %a, ptr %ccptr) {
 ; CHECK-LABEL: test_vistrfs:
 ; CHECK: vistrfs %v24, %v24
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2897,7 +2897,7 @@ define <4 x i32> @test_vistrfs(<4 x i32> %a, i32 *%ccptr) {
   %call = call {<4 x i32>, i32} @llvm.s390.vistrfs(<4 x i32> %a)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -2973,7 +2973,7 @@ define <4 x i32> @test_vstrcf(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 
 ; VSTRCBS.
 define <16 x i8> @test_vstrcbs(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
-                               i32 *%ccptr) {
+                               ptr %ccptr) {
 ; CHECK-LABEL: test_vstrcbs:
 ; CHECK: vstrcbs %v24, %v24, %v26, %v28, 0
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -2984,13 +2984,13 @@ define <16 x i8> @test_vstrcbs(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
                                                    <16 x i8> %c, i32 0)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VSTRCHS.
 define <8 x i16> @test_vstrchs(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c,
-                               i32 *%ccptr) {
+                               ptr %ccptr) {
 ; CHECK-LABEL: test_vstrchs:
 ; CHECK: vstrchs %v24, %v24, %v26, %v28, 4
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -3001,13 +3001,13 @@ define <8 x i16> @test_vstrchs(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c,
                                                    <8 x i16> %c, i32 4)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VSTRCFS.
 define <4 x i32> @test_vstrcfs(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c,
-                               i32 *%ccptr) {
+                               ptr %ccptr) {
 ; CHECK-LABEL: test_vstrcfs:
 ; CHECK: vstrcfs %v24, %v24, %v26, %v28, 8
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -3018,7 +3018,7 @@ define <4 x i32> @test_vstrcfs(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c,
                                                    <4 x i32> %c, i32 8)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -3094,7 +3094,7 @@ define <4 x i32> @test_vstrczf(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c) {
 
 ; VSTRCZBS.
 define <16 x i8> @test_vstrczbs(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
-                                i32 *%ccptr) {
+                                ptr %ccptr) {
 ; CHECK-LABEL: test_vstrczbs:
 ; CHECK: vstrczbs %v24, %v24, %v26, %v28, 0
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -3105,13 +3105,13 @@ define <16 x i8> @test_vstrczbs(<16 x i8> %a, <16 x i8> %b, <16 x i8> %c,
                                                     <16 x i8> %c, i32 0)
   %res = extractvalue {<16 x i8>, i32} %call, 0
   %cc = extractvalue {<16 x i8>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <16 x i8> %res
 }
 
 ; VSTRCZHS.
 define <8 x i16> @test_vstrczhs(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c,
-                                i32 *%ccptr) {
+                                ptr %ccptr) {
 ; CHECK-LABEL: test_vstrczhs:
 ; CHECK: vstrczhs %v24, %v24, %v26, %v28, 4
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -3122,13 +3122,13 @@ define <8 x i16> @test_vstrczhs(<8 x i16> %a, <8 x i16> %b, <8 x i16> %c,
                                                     <8 x i16> %c, i32 4)
   %res = extractvalue {<8 x i16>, i32} %call, 0
   %cc = extractvalue {<8 x i16>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <8 x i16> %res
 }
 
 ; VSTRCZFS.
 define <4 x i32> @test_vstrczfs(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c,
-                                i32 *%ccptr) {
+                                ptr %ccptr) {
 ; CHECK-LABEL: test_vstrczfs:
 ; CHECK: vstrczfs %v24, %v24, %v26, %v28, 8
 ; CHECK: ipm [[REG:%r[0-5]]]
@@ -3139,7 +3139,7 @@ define <4 x i32> @test_vstrczfs(<4 x i32> %a, <4 x i32> %b, <4 x i32> %c,
                                                     <4 x i32> %c, i32 8)
   %res = extractvalue {<4 x i32>, i32} %call, 0
   %cc = extractvalue {<4 x i32>, i32} %call, 1
-  store i32 %cc, i32 *%ccptr
+  store i32 %cc, ptr %ccptr
   ret <4 x i32> %res
 }
 
@@ -3173,7 +3173,7 @@ define i32 @test_vfcedbs_any_bool(<2 x double> %a, <2 x double> %b) {
 
 ; VFCEDBS, storing to %ptr if any elements are equal.
 define <2 x i64> @test_vfcedbs_any_store(<2 x double> %a, <2 x double> %b,
-                                         i32 *%ptr) {
+                                         ptr %ptr) {
 ; CHECK-LABEL: test_vfcedbs_any_store:
 ; CHECK-NOT: %r
 ; CHECK: vfcedbs %v24, %v24, %v26
@@ -3188,7 +3188,7 @@ define <2 x i64> @test_vfcedbs_any_store(<2 x double> %a, <2 x double> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -3225,7 +3225,7 @@ define i32 @test_vfchdbs_notall_bool(<2 x double> %a, <2 x double> %b) {
 
 ; VFCHDBS, storing to %ptr if not all elements are higher.
 define <2 x i64> @test_vfchdbs_notall_store(<2 x double> %a, <2 x double> %b,
-                                            i32 *%ptr) {
+                                            ptr %ptr) {
 ; CHECK-LABEL: test_vfchdbs_notall_store:
 ; CHECK-NOT: %r
 ; CHECK: vfchdbs %v24, %v24, %v26
@@ -3240,7 +3240,7 @@ define <2 x i64> @test_vfchdbs_notall_store(<2 x double> %a, <2 x double> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:
@@ -3277,7 +3277,7 @@ define i32 @test_vfchedbs_none_bool(<2 x double> %a, <2 x double> %b) {
 
 ; VFCHEDBS, storing to %ptr if neither element is higher or equal.
 define <2 x i64> @test_vfchedbs_none_store(<2 x double> %a, <2 x double> %b,
-                                           i32 *%ptr) {
+                                           ptr %ptr) {
 ; CHECK-LABEL: test_vfchedbs_none_store:
 ; CHECK-NOT: %r
 ; CHECK: vfchedbs %v24, %v24, %v26
@@ -3292,7 +3292,7 @@ define <2 x i64> @test_vfchedbs_none_store(<2 x double> %a, <2 x double> %b,
   br i1 %cmp, label %store, label %exit
 
 store:
-  store i32 0, i32 *%ptr
+  store i32 0, ptr %ptr
   br label %exit
 
 exit:

@@ -82,6 +82,9 @@ public:
   applyMappingImage(MachineInstr &MI,
                     const OperandsMapper &OpdMapper,
                     MachineRegisterInfo &MRI, int RSrcIdx) const;
+  unsigned setBufferOffsets(MachineIRBuilder &B, Register CombinedOffset,
+                            Register &VOffsetReg, Register &SOffsetReg,
+                            int64_t &InstOffsetVal, Align Alignment) const;
   bool applyMappingSBufferLoad(const OperandsMapper &OpdMapper) const;
 
   bool applyMappingBFE(const OperandsMapper &OpdMapper, bool Signed) const;
@@ -164,6 +167,8 @@ public:
 
 public:
   AMDGPURegisterBankInfo(const GCNSubtarget &STI);
+
+  bool isDivergentRegBank(const RegisterBank *RB) const override;
 
   unsigned copyCost(const RegisterBank &A, const RegisterBank &B,
                     unsigned Size) const override;

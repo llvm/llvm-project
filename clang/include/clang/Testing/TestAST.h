@@ -49,10 +49,17 @@ struct TestInputs {
   /// Keys are plain filenames ("foo.h"), values are file content.
   llvm::StringMap<std::string> ExtraFiles = {};
 
+  /// Filename to use for translation unit. A default will be used when empty.
+  std::string FileName;
+
   /// By default, error diagnostics during parsing are reported as gtest errors.
   /// To suppress this, set ErrorOK or include "error-ok" in a comment in Code.
   /// In either case, all diagnostics appear in TestAST::diagnostics().
   bool ErrorOK = false;
+
+  /// The action used to parse the code.
+  /// By default, a SyntaxOnlyAction is used.
+  std::function<std::unique_ptr<FrontendAction>()> MakeAction;
 };
 
 /// The result of parsing a file specified by TestInputs.
@@ -78,6 +85,7 @@ public:
   SourceManager &sourceManager() { return Clang->getSourceManager(); }
   FileManager &fileManager() { return Clang->getFileManager(); }
   Preprocessor &preprocessor() { return Clang->getPreprocessor(); }
+  FrontendAction &action() { return *Action; }
 
   /// Returns diagnostics emitted during parsing.
   /// (By default, errors cause test failures, see TestInputs::ErrorOK).

@@ -100,13 +100,13 @@ define i32 @test_fcmpgt(float %a, float %b) #0 {
   %c = fcmp ogt float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -137,13 +137,13 @@ define i32 @test_fcmpugt(float %a, float %b) #0 {
   %c = fcmp ugt float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -174,13 +174,13 @@ define i32 @test_fcmple(float %a, float %b) #0 {
   %c = fcmp ole float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -205,13 +205,13 @@ define i32 @test_fcmpule(float %a, float %b) #0 {
   %c = fcmp ule float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -237,13 +237,13 @@ define i32 @test_fcmpeq(float %a, float %b) #0 {
   %c = fcmp oeq float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -345,13 +345,13 @@ define i32 @test_fcmpune(float %a, float %b) #0 {
   %c = fcmp une float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -376,13 +376,13 @@ define i32 @test_fcmplt(float %a, float %b) #0 {
   %c = fcmp olt float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -434,13 +434,13 @@ define i32 @test_fcmpge(float %a, float %b) #0 {
   %c = fcmp oge float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -465,13 +465,13 @@ define i32 @test_fcmpuge(float %a, float %b) #0 {
   %c = fcmp uge float %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -526,8 +526,8 @@ define i32 @test_fasmconst(float %x) #0 {
 ; CHECK-NEXT:    blr
 entry:
   %x.addr = alloca float, align 8
-  store float %x, float* %x.addr, align 8
-  %0 = load float, float* %x.addr, align 8
+  store float %x, ptr %x.addr, align 8
+  %0 = load float, ptr %x.addr, align 8
   %1 = call i32 asm sideeffect "efsctsi $0, $1", "=f,f"(float %0)
   ret i32 %1
 ; Check that it's not loading a double
@@ -547,8 +547,8 @@ define float @test_dtos(double %a) #0 {
 ; EFPU2-LABEL: test_dtos:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __truncdfsf2
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -559,7 +559,7 @@ define float @test_dtos(double %a) #0 {
   ret float %v
 }
 
-define void @test_double_abs(double * %aa) #0 {
+define void @test_double_abs(ptr %aa) #0 {
 ; SPE-LABEL: test_double_abs:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    evldd 4, 0(3)
@@ -574,16 +574,16 @@ define void @test_double_abs(double * %aa) #0 {
 ; EFPU2-NEXT:    stw 4, 0(3)
 ; EFPU2-NEXT:    blr
   entry:
-    %0 = load double, double * %aa
+    %0 = load double, ptr %aa
     %1 = tail call double @llvm.fabs.f64(double %0) #2
-    store double %1, double * %aa
+    store double %1, ptr %aa
     ret void
 }
 
 ; Function Attrs: nounwind readnone
 declare double @llvm.fabs.f64(double) #1
 
-define void @test_dnabs(double * %aa) #0 {
+define void @test_dnabs(ptr %aa) #0 {
 ; SPE-LABEL: test_dnabs:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    evldd 4, 0(3)
@@ -598,10 +598,10 @@ define void @test_dnabs(double * %aa) #0 {
 ; EFPU2-NEXT:    stw 4, 0(3)
 ; EFPU2-NEXT:    blr
   entry:
-    %0 = load double, double * %aa
+    %0 = load double, ptr %aa
     %1 = tail call double @llvm.fabs.f64(double %0) #2
     %sub = fsub double -0.000000e+00, %1
-    store double %sub, double * %aa
+    store double %sub, ptr %aa
     ret void
 }
 
@@ -619,8 +619,8 @@ define double @test_ddiv(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_ddiv:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __divdf3
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -646,8 +646,8 @@ define double @test_dmul(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dmul:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __muldf3
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -672,8 +672,8 @@ define double @test_dadd(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dadd:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __adddf3
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -698,8 +698,8 @@ define double @test_dsub(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dsub:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __subdf3
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -741,8 +741,8 @@ define double @test_stod(float %a) #0 {
 ; EFPU2-LABEL: test_stod:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __extendsfdf2
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -774,8 +774,8 @@ define i1 @test_dcmpuno(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpuno:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __unorddf2
 ; EFPU2-NEXT:    cntlzw 3, 3
 ; EFPU2-NEXT:    not 3, 3
@@ -809,8 +809,8 @@ define i1 @test_dcmpord(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpord:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __unorddf2
 ; EFPU2-NEXT:    cntlzw 3, 3
 ; EFPU2-NEXT:    rlwinm 3, 3, 27, 31, 31
@@ -845,11 +845,11 @@ define i32 @test_dcmpgt(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpgt:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __gtdf2
-; EFPU2-NEXT:    cmpwi 3, 1
-; EFPU2-NEXT:    blt 0, .LBB37_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    ble 0, .LBB37_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB37_3
@@ -867,13 +867,13 @@ define i32 @test_dcmpgt(double %a, double %b) #0 {
   %c = fcmp ogt double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -905,11 +905,11 @@ define i32 @test_dcmpugt(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpugt:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __ledf2
-; EFPU2-NEXT:    cmpwi 3, 1
-; EFPU2-NEXT:    blt 0, .LBB38_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    ble 0, .LBB38_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB38_3
@@ -927,13 +927,13 @@ define i32 @test_dcmpugt(double %a, double %b) #0 {
   %c = fcmp ugt double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -959,8 +959,8 @@ define i32 @test_dcmple(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmple:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __gtdf2
 ; EFPU2-NEXT:    cmpwi 3, 0
 ; EFPU2-NEXT:    bgt 0, .LBB39_2
@@ -981,13 +981,13 @@ define i32 @test_dcmple(double %a, double %b) #0 {
   %c = fcmp ule double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1013,8 +1013,8 @@ define i32 @test_dcmpule(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpule:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __gtdf2
 ; EFPU2-NEXT:    cmpwi 3, 0
 ; EFPU2-NEXT:    bgt 0, .LBB40_2
@@ -1035,13 +1035,13 @@ define i32 @test_dcmpule(double %a, double %b) #0 {
   %c = fcmp ule double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1068,8 +1068,8 @@ define i32 @test_dcmpeq(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpeq:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __nedf2
 ; EFPU2-NEXT:    cmplwi 3, 0
 ; EFPU2-NEXT:    bne 0, .LBB41_2
@@ -1090,13 +1090,13 @@ define i32 @test_dcmpeq(double %a, double %b) #0 {
   %c = fcmp oeq double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1125,9 +1125,9 @@ define i32 @test_dcmpueq(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpueq:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -80(1)
 ; EFPU2-NEXT:    mfcr 12
+; EFPU2-NEXT:    stw 0, 84(1)
 ; EFPU2-NEXT:    stw 12, 76(1)
 ; EFPU2-NEXT:    evstdd 27, 24(1) # 8-byte Folded Spill
 ; EFPU2-NEXT:    mr 27, 3
@@ -1171,13 +1171,13 @@ define i32 @test_dcmpueq(double %a, double %b) #0 {
   %c = fcmp ueq double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1201,9 +1201,9 @@ define i1 @test_dcmpne(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpne:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -80(1)
 ; EFPU2-NEXT:    mfcr 12
+; EFPU2-NEXT:    stw 0, 84(1)
 ; EFPU2-NEXT:    stw 12, 76(1)
 ; EFPU2-NEXT:    evstdd 27, 24(1) # 8-byte Folded Spill
 ; EFPU2-NEXT:    mr 27, 3
@@ -1267,8 +1267,8 @@ define i32 @test_dcmpune(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpune:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __eqdf2
 ; EFPU2-NEXT:    cmplwi 3, 0
 ; EFPU2-NEXT:    beq 0, .LBB44_2
@@ -1289,13 +1289,13 @@ define i32 @test_dcmpune(double %a, double %b) #0 {
   %c = fcmp une double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1321,11 +1321,11 @@ define i32 @test_dcmplt(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmplt:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __ltdf2
-; EFPU2-NEXT:    cmpwi 3, -1
-; EFPU2-NEXT:    bgt 0, .LBB45_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    bge 0, .LBB45_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB45_3
@@ -1343,13 +1343,13 @@ define i32 @test_dcmplt(double %a, double %b) #0 {
   %c = fcmp olt double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1381,11 +1381,11 @@ define i32 @test_dcmpult(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpult:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __gedf2
-; EFPU2-NEXT:    cmpwi 3, -1
-; EFPU2-NEXT:    bgt 0, .LBB46_2
+; EFPU2-NEXT:    cmpwi 3, 0
+; EFPU2-NEXT:    bge 0, .LBB46_2
 ; EFPU2-NEXT:  # %bb.1: # %tr
 ; EFPU2-NEXT:    li 3, 1
 ; EFPU2-NEXT:    b .LBB46_3
@@ -1403,13 +1403,13 @@ define i32 @test_dcmpult(double %a, double %b) #0 {
   %c = fcmp ult double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1422,8 +1422,8 @@ define i1 @test_dcmpge(double %a, double %b) #0 {
 ; SPE-NEXT:    efdcmpeq 0, 4, 4
 ; SPE-NEXT:    efdcmpeq 1, 3, 3
 ; SPE-NEXT:    efdcmplt 5, 3, 4
-; SPE-NEXT:    crand 24, 5, 1
-; SPE-NEXT:    crorc 20, 21, 24
+; SPE-NEXT:    crand 20, 5, 1
+; SPE-NEXT:    crorc 20, 21, 20
 ; SPE-NEXT:    bc 12, 20, .LBB47_2
 ; SPE-NEXT:  # %bb.1: # %entry
 ; SPE-NEXT:    ori 3, 7, 0
@@ -1435,8 +1435,8 @@ define i1 @test_dcmpge(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpge:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __gedf2
 ; EFPU2-NEXT:    not 3, 3
 ; EFPU2-NEXT:    srwi 3, 3, 31
@@ -1471,8 +1471,8 @@ define i32 @test_dcmpuge(double %a, double %b) #0 {
 ; EFPU2-LABEL: test_dcmpuge:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __ltdf2
 ; EFPU2-NEXT:    cmpwi 3, 0
 ; EFPU2-NEXT:    blt 0, .LBB48_2
@@ -1493,13 +1493,13 @@ define i32 @test_dcmpuge(double %a, double %b) #0 {
   %c = fcmp uge double %a, %b
   br i1 %c, label %tr, label %fa
 tr:
-  store i32 1, i32* %r, align 4
+  store i32 1, ptr %r, align 4
   br label %ret
 fa:
-  store i32 0, i32* %r, align 4
+  store i32 0, ptr %r, align 4
   br label %ret
 ret:
-  %0 = load i32, i32* %r, align 4
+  %0 = load i32, ptr %r, align 4
   ret i32 %0
 }
 
@@ -1541,8 +1541,8 @@ define i32 @test_dtoui(double %a) #0 {
 ; EFPU2-LABEL: test_dtoui:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __fixunsdfsi
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -1563,8 +1563,8 @@ define i32 @test_dtosi(double %a) #0 {
 ; EFPU2-LABEL: test_dtosi:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __fixdfsi
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -1587,8 +1587,8 @@ define double @test_dfromui(i32 %a) #0 {
 ; EFPU2-LABEL: test_dfromui:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __floatunsidf
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -1611,8 +1611,8 @@ define double @test_dfromsi(i32 %a) #0 {
 ; EFPU2-LABEL: test_dfromsi:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -16(1)
+; EFPU2-NEXT:    stw 0, 20(1)
 ; EFPU2-NEXT:    bl __floatsidf
 ; EFPU2-NEXT:    lwz 0, 20(1)
 ; EFPU2-NEXT:    addi 1, 1, 16
@@ -1632,21 +1632,20 @@ entry:
   ret void
 }
 
-declare void @test_memset(i8* nocapture writeonly, i8, i32, i1)
+declare void @test_memset(ptr nocapture writeonly, i8, i32, i1)
 @global_var1 = global i32 0, align 4
-define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* %a5) #0 {
+define double @test_spill(double %a, i32 %a1, i64 %a2, ptr %a3, ptr %a4, ptr %a5) #0 {
 ; SPE-LABEL: test_spill:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr 0
-; SPE-NEXT:    stw 0, 4(1)
-; SPE-NEXT:    stwu 1, -272(1)
+; SPE-NEXT:    stwu 1, -288(1)
 ; SPE-NEXT:    li 5, 256
-; SPE-NEXT:    evstddx 30, 1, 5 # 8-byte Folded Spill
-; SPE-NEXT:    li 5, 264
-; SPE-NEXT:    evstddx 31, 1, 5 # 8-byte Folded Spill
-; SPE-NEXT:    li 5, .LCPI55_0@l
+; SPE-NEXT:    stw 0, 292(1)
 ; SPE-NEXT:    lis 6, .LCPI55_0@ha
+; SPE-NEXT:    evstddx 30, 1, 5 # 8-byte Folded Spill
+; SPE-NEXT:    li 5, .LCPI55_0@l
 ; SPE-NEXT:    evlddx 5, 6, 5
+; SPE-NEXT:    stw 31, 284(1) # 4-byte Folded Spill
 ; SPE-NEXT:    evstdd 14, 128(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd 15, 136(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd 16, 144(1) # 8-byte Folded Spill
@@ -1664,7 +1663,7 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; SPE-NEXT:    evstdd 28, 240(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evstdd 29, 248(1) # 8-byte Folded Spill
 ; SPE-NEXT:    evmergelo 3, 3, 4
-; SPE-NEXT:    lwz 4, 280(1)
+; SPE-NEXT:    lwz 4, 296(1)
 ; SPE-NEXT:    efdadd 3, 3, 3
 ; SPE-NEXT:    efdadd 3, 3, 5
 ; SPE-NEXT:    evstdd 3, 24(1) # 8-byte Folded Spill
@@ -1686,13 +1685,11 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; SPE-NEXT:    li 6, 1
 ; SPE-NEXT:    bl test_memset
 ; SPE-NEXT:    evldd 4, 24(1) # 8-byte Folded Reload
-; SPE-NEXT:    li 5, 264
-; SPE-NEXT:    evmergehi 3, 4, 4
-; SPE-NEXT:    evlddx 31, 1, 5 # 8-byte Folded Reload
 ; SPE-NEXT:    li 5, 256
-; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
+; SPE-NEXT:    evmergehi 3, 4, 4
 ; SPE-NEXT:    # kill: def $r4 killed $r4 killed $s4
 ; SPE-NEXT:    evlddx 30, 1, 5 # 8-byte Folded Reload
+; SPE-NEXT:    # kill: def $r3 killed $r3 killed $s3
 ; SPE-NEXT:    evldd 29, 248(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 28, 240(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 27, 232(1) # 8-byte Folded Reload
@@ -1709,18 +1706,19 @@ define double @test_spill(double %a, i32 %a1, i64 %a2, i8 * %a3, i32 *%a4, i32* 
 ; SPE-NEXT:    evldd 16, 144(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 15, 136(1) # 8-byte Folded Reload
 ; SPE-NEXT:    evldd 14, 128(1) # 8-byte Folded Reload
-; SPE-NEXT:    lwz 0, 276(1)
-; SPE-NEXT:    addi 1, 1, 272
+; SPE-NEXT:    lwz 31, 284(1) # 4-byte Folded Reload
+; SPE-NEXT:    lwz 0, 292(1)
+; SPE-NEXT:    addi 1, 1, 288
 ; SPE-NEXT:    mtlr 0
 ; SPE-NEXT:    blr
 ;
 ; EFPU2-LABEL: test_spill:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -144(1)
 ; EFPU2-NEXT:    mr 5, 3
 ; EFPU2-NEXT:    mr 6, 4
+; EFPU2-NEXT:    stw 0, 148(1)
 ; EFPU2-NEXT:    evstdd 27, 104(1) # 8-byte Folded Spill
 ; EFPU2-NEXT:    evstdd 28, 112(1) # 8-byte Folded Spill
 ; EFPU2-NEXT:    evstdd 29, 120(1) # 8-byte Folded Spill
@@ -1765,12 +1763,10 @@ entry:
   %0 = fadd double %a, %a
   call void asm sideeffect "","~{s0},~{s3},~{s4},~{s5},~{s6},~{s7},~{s8},~{s9},~{s10},~{s11},~{s12},~{s13},~{s14},~{s15},~{s16},~{s17},~{s18},~{s19},~{s20},~{s21},~{s22},~{s23},~{s24},~{s25},~{s26},~{s27},~{s28},~{s29},~{s30},~{s31}"() nounwind
   %1 = fadd double %0, 3.14159
-  %2 = bitcast [13 x i32]* %v1 to i8*
-  call void @test_memset(i8* align 4 %2, i8 0, i32 24, i1 true)
-  store i32 0, i32* %a5, align 4
+  call void @test_memset(ptr align 4 %v1, i8 0, i32 24, i1 true)
+  store i32 0, ptr %a5, align 4
   call void @test_func2()
-  %3 = bitcast [11 x i32]* %v2 to i8*
-  call void @test_memset(i8* align 4 %3, i8 0, i32 20, i1 true)
+  call void @test_memset(ptr align 4 %v2, i8 0, i32 20, i1 true)
   br label %return
 
 return:
@@ -1782,12 +1778,12 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-LABEL: test_fma:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    mflr 0
-; CHECK-NEXT:    stw 0, 4(1)
 ; CHECK-NEXT:    stwu 1, -32(1)
-; CHECK-NEXT:    cmpwi 3, 1
+; CHECK-NEXT:    cmpwi 3, 0
+; CHECK-NEXT:    stw 0, 36(1)
 ; CHECK-NEXT:    evstdd 29, 8(1) # 8-byte Folded Spill
 ; CHECK-NEXT:    evstdd 30, 16(1) # 8-byte Folded Spill
-; CHECK-NEXT:    blt 0, .LBB56_3
+; CHECK-NEXT:    ble 0, .LBB56_3
 ; CHECK-NEXT:  # %bb.1: # %for.body.preheader
 ; CHECK-NEXT:    mr 30, 3
 ; CHECK-NEXT:    li 29, 0
@@ -1797,10 +1793,11 @@ define dso_local float @test_fma(i32 %d) local_unnamed_addr #0 {
 ; CHECK-NEXT:    efscfsi 3, 29
 ; CHECK-NEXT:    mr 4, 3
 ; CHECK-NEXT:    bl fmaf
-; CHECK-NEXT:    addi 29, 29, 1
-; CHECK-NEXT:    cmplw 30, 29
+; CHECK-NEXT:    addi 30, 30, -1
 ; CHECK-NEXT:    mr 5, 3
-; CHECK-NEXT:    bne 0, .LBB56_2
+; CHECK-NEXT:    cmplwi 30, 0
+; CHECK-NEXT:    addi 29, 29, 1
+; CHECK-NEXT:    bc 12, 1, .LBB56_2
 ; CHECK-NEXT:    b .LBB56_4
 ; CHECK-NEXT:  .LBB56_3:
 ; CHECK-NEXT:    # implicit-def: $r5
@@ -1839,12 +1836,12 @@ attributes #1 = { nounwind readnone speculatable willreturn }
 
 declare i32 @foo(double)
 
-define void @d(%struct.a* %e, %struct.a* %f) #0 {
+define void @d(ptr %e, ptr %f) #0 {
 ; SPE-LABEL: d:
 ; SPE:       # %bb.0: # %entry
 ; SPE-NEXT:    mflr 0
-; SPE-NEXT:    stw 0, 4(1)
 ; SPE-NEXT:    stwu 1, -48(1)
+; SPE-NEXT:    stw 0, 52(1)
 ; SPE-NEXT:    lwz 4, 0(4)
 ; SPE-NEXT:    lwz 3, 0(3)
 ; SPE-NEXT:    evstdd 29, 24(1) # 8-byte Folded Spill
@@ -1876,8 +1873,8 @@ define void @d(%struct.a* %e, %struct.a* %f) #0 {
 ; EFPU2-LABEL: d:
 ; EFPU2:       # %bb.0: # %entry
 ; EFPU2-NEXT:    mflr 0
-; EFPU2-NEXT:    stw 0, 4(1)
 ; EFPU2-NEXT:    stwu 1, -64(1)
+; EFPU2-NEXT:    stw 0, 68(1)
 ; EFPU2-NEXT:    lwz 3, 0(3)
 ; EFPU2-NEXT:    evstdd 26, 16(1) # 8-byte Folded Spill
 ; EFPU2-NEXT:    evstdd 27, 24(1) # 8-byte Folded Spill
@@ -1916,17 +1913,16 @@ define void @d(%struct.a* %e, %struct.a* %f) #0 {
 ; EFPU2-NEXT:    mtlr 0
 ; EFPU2-NEXT:    blr
 entry:
-  %0 = getelementptr %struct.a, %struct.a* %f, i32 0, i32 0
-  %1 = load float, float* undef
-  %conv = fpext float %1 to double
-  %2 = load float, float* %0
-  %g = fpext float %2 to double
-  %3 = call i32 @foo(double %g)
+  %0 = load float, ptr undef
+  %conv = fpext float %0 to double
+  %1 = load float, ptr %f
+  %g = fpext float %1 to double
+  %2 = call i32 @foo(double %g)
   %h = call i32 @foo(double %conv)
-  %n = sitofp i32 %3 to double
+  %n = sitofp i32 %2 to double
   %k = fmul double %g, %n
   %l = fptrunc double %k to float
-  store float %l, float* undef
+  store float %l, ptr undef
   ret void
 }
 attributes #0 = { nounwind }

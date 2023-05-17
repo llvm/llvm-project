@@ -10,12 +10,12 @@ define <32 x half> @vaddph_512_test(<32 x half> %i, <32 x half> %j) nounwind rea
   ret <32 x half> %x
 }
 
-define <32 x half> @vaddph_512_fold_test(<32 x half> %i, <32 x half>* %j) nounwind {
+define <32 x half> @vaddph_512_fold_test(<32 x half> %i, ptr %j) nounwind {
 ; CHECK-LABEL: vaddph_512_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vaddph (%rdi), %zmm0, %zmm0
 ; CHECK-NEXT:    retq
-  %tmp = load <32 x half>, <32 x half>* %j, align 4
+  %tmp = load <32 x half>, ptr %j, align 4
   %x = fadd  <32 x half> %i, %tmp
   ret <32 x half> %x
 }
@@ -85,7 +85,7 @@ define <32 x half> @vaddph_512_maskz_test(<32 x half> %i, <32 x half> %j, <32 x 
   ret <32 x half> %r
 }
 
-define <32 x half> @vaddph_512_mask_fold_test(<32 x half> %i, <32 x half>* %j.ptr, <32 x half> %mask1) nounwind readnone {
+define <32 x half> @vaddph_512_mask_fold_test(<32 x half> %i, ptr %j.ptr, <32 x half> %mask1) nounwind readnone {
 ; CHECK-LABEL: vaddph_512_mask_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -93,13 +93,13 @@ define <32 x half> @vaddph_512_mask_fold_test(<32 x half> %i, <32 x half>* %j.pt
 ; CHECK-NEXT:    vaddph (%rdi), %zmm0, %zmm0 {%k1}
 ; CHECK-NEXT:    retq
   %mask = fcmp one <32 x half> %mask1, zeroinitializer
-  %j = load <32 x half>, <32 x half>* %j.ptr
+  %j = load <32 x half>, ptr %j.ptr
   %x = fadd  <32 x half> %i, %j
   %r = select <32 x i1> %mask, <32 x half> %x, <32 x half> %i
   ret <32 x half> %r
 }
 
-define <32 x half> @vaddph_512_maskz_fold_test(<32 x half> %i, <32 x half>* %j.ptr, <32 x half> %mask1) nounwind readnone {
+define <32 x half> @vaddph_512_maskz_fold_test(<32 x half> %i, ptr %j.ptr, <32 x half> %mask1) nounwind readnone {
 ; CHECK-LABEL: vaddph_512_maskz_fold_test:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -107,13 +107,13 @@ define <32 x half> @vaddph_512_maskz_fold_test(<32 x half> %i, <32 x half>* %j.p
 ; CHECK-NEXT:    vaddph (%rdi), %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %mask = fcmp one <32 x half> %mask1, zeroinitializer
-  %j = load <32 x half>, <32 x half>* %j.ptr
+  %j = load <32 x half>, ptr %j.ptr
   %x = fadd  <32 x half> %i, %j
   %r = select <32 x i1> %mask, <32 x half> %x, <32 x half> zeroinitializer
   ret <32 x half> %r
 }
 
-define <32 x half> @vaddph_512_maskz_fold_test_2(<32 x half> %i, <32 x half>* %j.ptr, <32 x half> %mask1) nounwind readnone {
+define <32 x half> @vaddph_512_maskz_fold_test_2(<32 x half> %i, ptr %j.ptr, <32 x half> %mask1) nounwind readnone {
 ; CHECK-LABEL: vaddph_512_maskz_fold_test_2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vxorps %xmm2, %xmm2, %xmm2
@@ -121,7 +121,7 @@ define <32 x half> @vaddph_512_maskz_fold_test_2(<32 x half> %i, <32 x half>* %j
 ; CHECK-NEXT:    vaddph (%rdi), %zmm0, %zmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %mask = fcmp one <32 x half> %mask1, zeroinitializer
-  %j = load <32 x half>, <32 x half>* %j.ptr
+  %j = load <32 x half>, ptr %j.ptr
   %x = fadd  <32 x half> %j, %i
   %r = select <32 x i1> %mask, <32 x half> %x, <32 x half> zeroinitializer
   ret <32 x half> %r
@@ -164,75 +164,75 @@ define <32 x half> @vdivph_512_test_fast(<32 x half> %i, <32 x half> %j) nounwin
   ret <32 x half> %x
 }
 
-define half @add_sh(half %i, half %j, half* %x.ptr) nounwind readnone {
+define half @add_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: add_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vaddsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vaddsh (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %x = load half, half* %x.ptr
+  %x = load half, ptr %x.ptr
   %y = fadd  half %i, %j
   %r = fadd  half %x, %y
   ret half %r
 }
 
-define half @sub_sh(half %i, half %j, half* %x.ptr) nounwind readnone {
+define half @sub_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: sub_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovsh (%rdi), %xmm2
 ; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubsh %xmm0, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
-  %x = load half, half* %x.ptr
+  %x = load half, ptr %x.ptr
   %y = fsub  half %i, %j
   %r = fsub  half %x, %y
   ret half %r
 }
 
-define half @sub_sh_2(half %i, half %j, half* %x.ptr) nounwind readnone {
+define half @sub_sh_2(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: sub_sh_2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vsubsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vsubsh (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %x = load half, half* %x.ptr
+  %x = load half, ptr %x.ptr
   %y = fsub  half %i, %j
   %r = fsub  half %y, %x
   ret half %r
 }
 
-define half @mul_sh(half %i, half %j, half* %x.ptr) nounwind readnone {
+define half @mul_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: mul_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmulsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vmulsh (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %x = load half, half* %x.ptr
+  %x = load half, ptr %x.ptr
   %y = fmul  half %i, %j
   %r = fmul  half %x, %y
   ret half %r
 }
 
-define half @div_sh(half %i, half %j, half* %x.ptr) nounwind readnone {
+define half @div_sh(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: div_sh:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vmovsh (%rdi), %xmm2
 ; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vdivsh %xmm0, %xmm2, %xmm0
 ; CHECK-NEXT:    retq
-  %x = load half, half* %x.ptr
+  %x = load half, ptr %x.ptr
   %y = fdiv  half %i, %j
   %r = fdiv  half %x, %y
   ret half %r
 }
 
-define half @div_sh_2(half %i, half %j, half* %x.ptr) nounwind readnone {
+define half @div_sh_2(half %i, half %j, ptr %x.ptr) nounwind readnone {
 ; CHECK-LABEL: div_sh_2:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vdivsh %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vdivsh (%rdi), %xmm0, %xmm0
 ; CHECK-NEXT:    retq
-  %x = load half, half* %x.ptr
+  %x = load half, ptr %x.ptr
   %y = fdiv  half %i, %j
   %r = fdiv  half %y, %x
   ret half %r
@@ -336,6 +336,20 @@ define half @fcopysign(half %x, half %y) {
 }
 declare half @llvm.copysign.f16(half, half)
 
+define half @fround(half %x) {
+; CHECK-LABEL: fround:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vaddsh %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vrndscalesh $11, %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = call half @llvm.round.f16(half %x)
+  ret half %a
+}
+declare half @llvm.round.f16(half)
+
 define <8 x half> @fnegv8f16(<8 x half> %x) {
 ; CHECK-LABEL: fnegv8f16:
 ; CHECK:       ## %bb.0:
@@ -376,6 +390,20 @@ define <8 x half> @fcopysignv8f16(<8 x half> %x, <8 x half> %y) {
   ret <8 x half> %a
 }
 declare <8 x half> @llvm.copysign.v8f16(<8 x half>, <8 x half>)
+
+define <8 x half> @roundv8f16(<8 x half> %x) {
+; CHECK-LABEL: roundv8f16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} xmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %xmm1, %xmm0, %xmm2
+; CHECK-NEXT:    vaddph %xmm2, %xmm0, %xmm0
+; CHECK-NEXT:    vrndscaleph $11, %xmm0, %xmm0
+; CHECK-NEXT:    retq
+  %a = call <8 x half> @llvm.round.v8f16(<8 x half> %x)
+  ret <8 x half> %a
+}
+declare <8 x half> @llvm.round.v8f16(<8 x half>)
 
 define <16 x half> @fnegv16f16(<16 x half> %x) {
 ; CHECK-LABEL: fnegv16f16:
@@ -418,6 +446,20 @@ define <16 x half> @fcopysignv16f16(<16 x half> %x, <16 x half> %y) {
 }
 declare <16 x half> @llvm.copysign.v16f16(<16 x half>, <16 x half>)
 
+define <16 x half> @roundv16f16(<16 x half> %x) {
+; CHECK-LABEL: roundv16f16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} ymm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %ymm1, %ymm0, %ymm2
+; CHECK-NEXT:    vaddph %ymm2, %ymm0, %ymm0
+; CHECK-NEXT:    vrndscaleph $11, %ymm0, %ymm0
+; CHECK-NEXT:    retq
+  %a = call <16 x half> @llvm.round.v16f16(<16 x half> %x)
+  ret <16 x half> %a
+}
+declare <16 x half> @llvm.round.v16f16(<16 x half>)
+
 define <32 x half> @fnegv32f16(<32 x half> %x) {
 ; CHECK-LABEL: fnegv32f16:
 ; CHECK:       ## %bb.0:
@@ -458,6 +500,20 @@ define <32 x half> @fcopysignv32f16(<32 x half> %x, <32 x half> %y) {
   ret <32 x half> %a
 }
 declare <32 x half> @llvm.copysign.v32f16(<32 x half>, <32 x half>)
+
+define <32 x half> @roundv32f16(<32 x half> %x) {
+; CHECK-LABEL: roundv32f16:
+; CHECK:       ## %bb.0:
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} zmm1 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
+; CHECK-NEXT:    vpbroadcastw {{.*#+}} zmm2 = [4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1,4.9976E-1]
+; CHECK-NEXT:    vpternlogq $248, %zmm1, %zmm0, %zmm2
+; CHECK-NEXT:    vaddph %zmm2, %zmm0, %zmm0
+; CHECK-NEXT:    vrndscaleph $11, %zmm0, %zmm0
+; CHECK-NEXT:    retq
+  %a = call <32 x half> @llvm.round.v32f16(<32 x half> %x)
+  ret <32 x half> %a
+}
+declare <32 x half> @llvm.round.v32f16(<32 x half>)
 
 define <8 x half>  @regression_test1(<8 x half> %x, <8 x half> %y) #0 {
 ; CHECK-LABEL: regression_test1:

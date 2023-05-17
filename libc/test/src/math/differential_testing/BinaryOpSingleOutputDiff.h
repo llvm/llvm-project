@@ -7,8 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/__support/FPUtil/FPBits.h"
-#include "utils/testutils/StreamWrapper.h"
-#include "utils/testutils/Timer.h"
+#include "test/src/math/differential_testing/Timer.h"
+
+#include <fstream>
 
 namespace __llvm_libc {
 namespace testing {
@@ -22,9 +23,42 @@ template <typename T> class BinaryOpSingleOutputDiff {
 public:
   typedef T Func(T, T);
 
+  static uint64_t run_diff_in_range(Func myFunc, Func otherFunc,
+                                    UIntType startingBit, UIntType endingBit,
+                                    UIntType N, std::ofstream &log) {
+    uint64_t result = 0;
+    if (endingBit < startingBit) {
+      return result;
+    }
+
+    UIntType step = (endingBit - startingBit) / N;
+    for (UIntType bitsX = startingBit, bitsY = endingBit;;
+         bitsX += step, bitsY -= step) {
+      T x = T(FPBits(bitsX));
+      T y = T(FPBits(bitsY));
+      FPBits myBits = FPBits(myFunc(x, y));
+      FPBits otherBits = FPBits(otherFunc(x, y));
+      if (myBits.uintval() != otherBits.uintval()) {
+        result++;
+        log << "       Input: " << bitsX << ", " << bitsY << " (" << x << ", "
+            << y << ")\n"
+            << "   My result: " << myBits.uintval() << " (" << myBits.get_val()
+            << ")\n"
+            << "Other result: " << otherBits.uintval() << " ("
+            << otherBits.get_val() << ")\n"
+            << '\n';
+      }
+
+      if (endingBit - bitsX < step) {
+        break;
+      }
+    }
+    return result;
+  }
+
   static void run_perf_in_range(Func myFunc, Func otherFunc,
                                 UIntType startingBit, UIntType endingBit,
-                                UIntType N, testutils::OutputFileStream &log) {
+                                UIntType N, std::ofstream &log) {
     auto runner = [=](Func func) {
       volatile T result;
       if (endingBit < startingBit) {
@@ -71,7 +105,7 @@ public:
   }
 
   static void run_perf(Func myFunc, Func otherFunc, const char *logFile) {
-    testutils::OutputFileStream log(logFile);
+    std::ofstream log(logFile);
     log << " Performance tests with inputs in denormal range:\n";
     run_perf_in_range(myFunc, otherFunc, /* startingBit= */ UIntType(0),
                       /* endingBit= */ FPBits::MAX_SUBNORMAL, 1'000'001, log);
@@ -83,6 +117,26 @@ public:
     run_perf_in_range(
         myFunc, otherFunc, /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
         /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), 10'000'001, log);
+  }
+
+  static void run_diff(Func myFunc, Func otherFunc, const char *logFile) {
+    uint64_t diffCount = 0;
+    std::ofstream log(logFile);
+    log << " Diff tests with inputs in denormal range:\n";
+    diffCount += run_diff_in_range(
+        myFunc, otherFunc, /* startingBit= */ UIntType(0),
+        /* endingBit= */ FPBits::MAX_SUBNORMAL, 1'000'001, log);
+    log << "\n Diff tests with inputs in normal range:\n";
+    diffCount += run_diff_in_range(
+        myFunc, otherFunc, /* startingBit= */ FPBits::MIN_NORMAL,
+        /* endingBit= */ FPBits::MAX_NORMAL, 100'000'001, log);
+    log << "\n Diff tests with inputs in normal range with exponents "
+           "close to each other:\n";
+    diffCount += run_diff_in_range(
+        myFunc, otherFunc, /* startingBit= */ FPBits(T(0x1.0p-10)).uintval(),
+        /* endingBit= */ FPBits(T(0x1.0p+10)).uintval(), 10'000'001, log);
+
+    log << "Total number of differing results: " << diffCount << '\n';
   }
 };
 

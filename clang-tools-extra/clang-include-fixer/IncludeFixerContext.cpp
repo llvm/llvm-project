@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "IncludeFixerContext.h"
-#include <algorithm>
+#include "llvm/ADT/STLExtras.h"
 
 namespace clang {
 namespace include_fixer {
@@ -84,11 +84,11 @@ IncludeFixerContext::IncludeFixerContext(
   // QuerySymbolInfos may contain replicated elements. Because CorrectTypo
   // callback doesn't always work as we expected. In somecases, it will be
   // triggered at the same position or unidentified symbol multiple times.
-  std::sort(QuerySymbolInfos.begin(), QuerySymbolInfos.end(),
-            [&](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {
-              return std::make_pair(A.Range.getOffset(), A.Range.getLength()) <
-                     std::make_pair(B.Range.getOffset(), B.Range.getLength());
-            });
+  llvm::sort(QuerySymbolInfos,
+             [&](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {
+               return std::make_pair(A.Range.getOffset(), A.Range.getLength()) <
+                      std::make_pair(B.Range.getOffset(), B.Range.getLength());
+             });
   QuerySymbolInfos.erase(
       std::unique(QuerySymbolInfos.begin(), QuerySymbolInfos.end(),
                   [](const QuerySymbolInfo &A, const QuerySymbolInfo &B) {

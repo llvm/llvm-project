@@ -23,8 +23,9 @@
 #include <__ranges/access.h>
 #include <__ranges/concepts.h>
 #include <__ranges/dangling.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/move.h>
-#include <type_traits>
+#include <new>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -32,7 +33,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
 
@@ -44,7 +45,7 @@ struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator,
             __nothrow_sentinel_for<_ForwardIterator> _Sentinel>
     requires default_initializable<iter_value_t<_ForwardIterator>>
-  _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
+  _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return _VSTD::__uninitialized_default_construct<_ValueType>(
         _VSTD::move(__first), _VSTD::move(__last));
@@ -52,7 +53,7 @@ struct __fn {
 
   template <__nothrow_forward_range _ForwardRange>
     requires default_initializable<range_value_t<_ForwardRange>>
-  borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range) const {
+  _LIBCPP_HIDE_FROM_ABI borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range) const {
     return (*this)(ranges::begin(__range), ranges::end(__range));
   }
 };
@@ -70,7 +71,7 @@ namespace __uninitialized_default_construct_n {
 struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator>
     requires default_initializable<iter_value_t<_ForwardIterator>>
-  _ForwardIterator operator()(_ForwardIterator __first,
+  _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first,
                               iter_difference_t<_ForwardIterator> __n) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return _VSTD::__uninitialized_default_construct_n<_ValueType>(_VSTD::move(__first), __n);
@@ -91,7 +92,7 @@ struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator,
             __nothrow_sentinel_for<_ForwardIterator> _Sentinel>
     requires default_initializable<iter_value_t<_ForwardIterator>>
-  _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
+  _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return _VSTD::__uninitialized_value_construct<_ValueType>(
         _VSTD::move(__first), _VSTD::move(__last));
@@ -99,7 +100,7 @@ struct __fn {
 
   template <__nothrow_forward_range _ForwardRange>
     requires default_initializable<range_value_t<_ForwardRange>>
-  borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range) const {
+  _LIBCPP_HIDE_FROM_ABI borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range) const {
     return (*this)(ranges::begin(__range), ranges::end(__range));
   }
 };
@@ -117,7 +118,7 @@ namespace __uninitialized_value_construct_n {
 struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator>
     requires default_initializable<iter_value_t<_ForwardIterator>>
-  _ForwardIterator operator()(_ForwardIterator __first,
+  _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first,
                               iter_difference_t<_ForwardIterator> __n) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return _VSTD::__uninitialized_value_construct_n<_ValueType>(_VSTD::move(__first), __n);
@@ -139,14 +140,14 @@ struct __fn {
             __nothrow_sentinel_for<_ForwardIterator> _Sentinel,
             class _Tp>
     requires constructible_from<iter_value_t<_ForwardIterator>, const _Tp&>
-  _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last, const _Tp& __x) const {
+  _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first, _Sentinel __last, const _Tp& __x) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
     return _VSTD::__uninitialized_fill<_ValueType>(_VSTD::move(__first), _VSTD::move(__last), __x);
   }
 
   template <__nothrow_forward_range _ForwardRange, class _Tp>
     requires constructible_from<range_value_t<_ForwardRange>, const _Tp&>
-  borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range, const _Tp& __x) const {
+  _LIBCPP_HIDE_FROM_ABI borrowed_iterator_t<_ForwardRange> operator()(_ForwardRange&& __range, const _Tp& __x) const {
     return (*this)(ranges::begin(__range), ranges::end(__range), __x);
   }
 };
@@ -164,7 +165,7 @@ namespace __uninitialized_fill_n {
 struct __fn {
   template <__nothrow_forward_iterator _ForwardIterator, class _Tp>
     requires constructible_from<iter_value_t<_ForwardIterator>, const _Tp&>
-  _ForwardIterator operator()(_ForwardIterator __first,
+  _LIBCPP_HIDE_FROM_ABI _ForwardIterator operator()(_ForwardIterator __first,
                               iter_difference_t<_ForwardIterator> __n,
                               const _Tp& __x) const {
     using _ValueType = remove_reference_t<iter_reference_t<_ForwardIterator>>;
@@ -191,7 +192,7 @@ struct __fn {
             __nothrow_forward_iterator _OutputIterator,
             __nothrow_sentinel_for<_OutputIterator> _Sentinel2>
     requires constructible_from<iter_value_t<_OutputIterator>, iter_reference_t<_InputIterator>>
-  uninitialized_copy_result<_InputIterator, _OutputIterator>
+  _LIBCPP_HIDE_FROM_ABI uninitialized_copy_result<_InputIterator, _OutputIterator>
   operator()(_InputIterator __ifirst, _Sentinel1 __ilast, _OutputIterator __ofirst, _Sentinel2 __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
 
@@ -202,7 +203,7 @@ struct __fn {
 
   template <input_range _InputRange, __nothrow_forward_range _OutputRange>
     requires constructible_from<range_value_t<_OutputRange>, range_reference_t<_InputRange>>
-  uninitialized_copy_result<borrowed_iterator_t<_InputRange>, borrowed_iterator_t<_OutputRange>>
+  _LIBCPP_HIDE_FROM_ABI uninitialized_copy_result<borrowed_iterator_t<_InputRange>, borrowed_iterator_t<_OutputRange>>
   operator()( _InputRange&& __in_range, _OutputRange&& __out_range) const {
     return (*this)(ranges::begin(__in_range), ranges::end(__in_range),
                    ranges::begin(__out_range), ranges::end(__out_range));
@@ -227,7 +228,7 @@ struct __fn {
            __nothrow_forward_iterator _OutputIterator,
            __nothrow_sentinel_for<_OutputIterator> _Sentinel>
     requires constructible_from<iter_value_t<_OutputIterator>, iter_reference_t<_InputIterator>>
-  uninitialized_copy_n_result<_InputIterator, _OutputIterator>
+  _LIBCPP_HIDE_FROM_ABI uninitialized_copy_n_result<_InputIterator, _OutputIterator>
   operator()(_InputIterator __ifirst, iter_difference_t<_InputIterator> __n,
              _OutputIterator __ofirst, _Sentinel __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
@@ -255,8 +256,8 @@ struct __fn {
             sentinel_for<_InputIterator> _Sentinel1,
             __nothrow_forward_iterator _OutputIterator,
             __nothrow_sentinel_for<_OutputIterator> _Sentinel2>
-    requires constructible_from<iter_value_t<_OutputIterator>, iter_reference_t<_InputIterator>>
-  uninitialized_move_result<_InputIterator, _OutputIterator>
+    requires constructible_from<iter_value_t<_OutputIterator>, iter_rvalue_reference_t<_InputIterator>>
+  _LIBCPP_HIDE_FROM_ABI uninitialized_move_result<_InputIterator, _OutputIterator>
   operator()(_InputIterator __ifirst, _Sentinel1 __ilast, _OutputIterator __ofirst, _Sentinel2 __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
     auto __iter_move = [](auto&& __iter) -> decltype(auto) { return ranges::iter_move(__iter); };
@@ -266,8 +267,8 @@ struct __fn {
   }
 
   template <input_range _InputRange, __nothrow_forward_range _OutputRange>
-    requires constructible_from<range_value_t<_OutputRange>, range_reference_t<_InputRange>>
-  uninitialized_move_result<borrowed_iterator_t<_InputRange>, borrowed_iterator_t<_OutputRange>>
+    requires constructible_from<range_value_t<_OutputRange>, range_rvalue_reference_t<_InputRange>>
+  _LIBCPP_HIDE_FROM_ABI uninitialized_move_result<borrowed_iterator_t<_InputRange>, borrowed_iterator_t<_OutputRange>>
   operator()(_InputRange&& __in_range, _OutputRange&& __out_range) const {
     return (*this)(ranges::begin(__in_range), ranges::end(__in_range),
                    ranges::begin(__out_range), ranges::end(__out_range));
@@ -291,8 +292,8 @@ struct __fn {
   template <input_iterator _InputIterator,
            __nothrow_forward_iterator _OutputIterator,
            __nothrow_sentinel_for<_OutputIterator> _Sentinel>
-    requires constructible_from<iter_value_t<_OutputIterator>, iter_reference_t<_InputIterator>>
-  uninitialized_move_n_result<_InputIterator, _OutputIterator>
+    requires constructible_from<iter_value_t<_OutputIterator>, iter_rvalue_reference_t<_InputIterator>>
+  _LIBCPP_HIDE_FROM_ABI uninitialized_move_n_result<_InputIterator, _OutputIterator>
   operator()(_InputIterator __ifirst, iter_difference_t<_InputIterator> __n,
              _OutputIterator __ofirst, _Sentinel __olast) const {
     using _ValueType = remove_reference_t<iter_reference_t<_OutputIterator>>;
@@ -311,7 +312,7 @@ inline namespace __cpo {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

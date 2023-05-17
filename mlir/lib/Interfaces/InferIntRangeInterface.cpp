@@ -8,6 +8,7 @@
 
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/IR/BuiltinTypes.h"
+#include <optional>
 #include "mlir/Interfaces/InferIntRangeInterface.cpp.inc"
 
 using namespace mlir;
@@ -29,14 +30,25 @@ const APInt &ConstantIntRanges::smax() const { return smaxVal; }
 unsigned ConstantIntRanges::getStorageBitwidth(Type type) {
   if (type.isIndex())
     return IndexType::kInternalStorageBitWidth;
-  if (auto integerType = type.dyn_cast<IntegerType>())
+  if (auto integerType = dyn_cast<IntegerType>(type))
     return integerType.getWidth();
   // Non-integer types have their bounds stored in width 0 `APInt`s.
   return 0;
 }
 
-ConstantIntRanges ConstantIntRanges::range(const APInt &min, const APInt &max) {
-  return {min, max, min, max};
+ConstantIntRanges ConstantIntRanges::maxRange(unsigned bitwidth) {
+  return fromUnsigned(APInt::getZero(bitwidth), APInt::getMaxValue(bitwidth));
+}
+
+ConstantIntRanges ConstantIntRanges::constant(const APInt &value) {
+  return {value, value, value, value};
+}
+
+ConstantIntRanges ConstantIntRanges::range(const APInt &min, const APInt &max,
+                                           bool isSigned) {
+  if (isSigned)
+    return fromSigned(min, max);
+  return fromUnsigned(min, max);
 }
 
 ConstantIntRanges ConstantIntRanges::fromSigned(const APInt &smin,
@@ -84,13 +96,30 @@ ConstantIntRanges::rangeUnion(const ConstantIntRanges &other) const {
   return {uminUnion, umaxUnion, sminUnion, smaxUnion};
 }
 
-Optional<APInt> ConstantIntRanges::getConstantValue() const {
+ConstantIntRanges
+ConstantIntRanges::intersection(const ConstantIntRanges &other) const {
+  // "Not an integer" poisons everything and also cannot be fed to comparison
+  // operators.
+  if (umin().getBitWidth() == 0)
+    return *this;
+  if (other.umin().getBitWidth() == 0)
+    return other;
+
+  const APInt &uminIntersect = umin().ugt(other.umin()) ? umin() : other.umin();
+  const APInt &umaxIntersect = umax().ult(other.umax()) ? umax() : other.umax();
+  const APInt &sminIntersect = smin().sgt(other.smin()) ? smin() : other.smin();
+  const APInt &smaxIntersect = smax().slt(other.smax()) ? smax() : other.smax();
+
+  return {uminIntersect, umaxIntersect, sminIntersect, smaxIntersect};
+}
+
+std::optional<APInt> ConstantIntRanges::getConstantValue() const {
   // Note: we need to exclude the trivially-equal width 0 values here.
   if (umin() == umax() && umin().getBitWidth() != 0)
     return umin();
   if (smin() == smax() && smin().getBitWidth() != 0)
     return smin();
-  return None;
+  return std::nullopt;
 }
 
 raw_ostream &mlir::operator<<(raw_ostream &os, const ConstantIntRanges &range) {

@@ -1,4 +1,4 @@
-; RUN: opt < %s -S -indvars -loop-unroll | FileCheck %s
+; RUN: opt < %s -S -passes='loop(indvars),loop-unroll' | FileCheck %s
 ;
 ; loop-unroll fully unrolls the inner loop, creating an interesting
 ; chain of multiplication. indvars forces SCEV to run again on the

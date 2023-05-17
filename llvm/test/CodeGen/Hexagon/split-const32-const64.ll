@@ -14,9 +14,9 @@ define void @test1() nounwind {
 entry:
   br label %block
 block:
-  store i32 12345670, i32* @a, align 4
-  %q = ptrtoint i8* blockaddress (@test1, %block) to i32
-  store i32 %q, i32* @b, align 4
+  store i32 12345670, ptr @a, align 4
+  %q = ptrtoint ptr blockaddress (@test1, %block) to i32
+  store i32 %q, ptr @b, align 4
   ret void
 }
 
@@ -24,7 +24,7 @@ block:
 ; CHECK-NOT: CONST64
 define void @test2() nounwind {
 entry:
-  store i64 1234567890123, i64* @la, align 8
-  store i64 1234567890123, i64* @lb, align 8
+  store i64 1234567890123, ptr @la, align 8
+  store i64 1234567890123, ptr @lb, align 8
   ret void
 }

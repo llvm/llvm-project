@@ -11,20 +11,20 @@
 //
 //===----------------------------------------------------------------------===//
 #include "sanitizer_common/sanitizer_allocator.h"
-#include "sanitizer_common/sanitizer_allocator_internal.h"
-#include "sanitizer_common/sanitizer_common.h"
-
-#include "sanitizer_test_utils.h"
-#include "sanitizer_pthread_wrappers.h"
-
-#include "gtest/gtest.h"
 
 #include <stdio.h>
 #include <stdlib.h>
+
 #include <algorithm>
-#include <vector>
 #include <random>
 #include <set>
+#include <vector>
+
+#include "gtest/gtest.h"
+#include "sanitizer_common/sanitizer_allocator_internal.h"
+#include "sanitizer_common/sanitizer_common.h"
+#include "sanitizer_pthread_wrappers.h"
+#include "sanitizer_test_utils.h"
 
 using namespace __sanitizer;
 

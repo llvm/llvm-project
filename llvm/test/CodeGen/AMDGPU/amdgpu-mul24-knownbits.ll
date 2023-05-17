@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple amdgcn-amd-amdhsa -mcpu=gfx900 < %s | FileCheck --check-prefix=GCN %s
 ; RUN: llc -mtriple amdgcn-amd-amdhsa -mcpu=gfx900 -early-live-intervals -verify-machineinstrs < %s | FileCheck --check-prefix=GCN %s
 
-define weak_odr amdgpu_kernel void @test_mul24_knownbits_kernel(float addrspace(1)* %p) #4 {
+define weak_odr amdgpu_kernel void @test_mul24_knownbits_kernel(ptr addrspace(1) %p) #4 {
 ; GCN-LABEL: test_mul24_knownbits_kernel:
 ; GCN:       ; %bb.0: ; %entry
 ; GCN-NEXT:    v_and_b32_e32 v0, 3, v0
@@ -24,8 +24,8 @@ entry:
   %1 = mul nsw i32 %tid, -5
   %v1 = and i32 %1, -32
   %v2 = sext i32 %v1 to i64
-  %v3 = getelementptr inbounds float, float addrspace(1)* %p, i64 %v2
-  store float 0.000, float addrspace(1)* %v3, align 4
+  %v3 = getelementptr inbounds float, ptr addrspace(1) %p, i64 %v2
+  store float 0.000, ptr addrspace(1) %v3, align 4
   ret void
 }
 

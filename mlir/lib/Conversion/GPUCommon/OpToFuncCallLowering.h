@@ -54,23 +54,23 @@ public:
 
     Type resultType = castedOperands.front().getType();
     Type funcType = getFunctionType(resultType, castedOperands);
-    StringRef funcName = getFunctionName(
-        funcType.cast<LLVM::LLVMFunctionType>().getReturnType());
+    StringRef funcName =
+        getFunctionName(cast<LLVM::LLVMFunctionType>(funcType).getReturnType());
     if (funcName.empty())
       return failure();
 
     LLVMFuncOp funcOp = appendOrGetFuncOp(funcName, funcType, op);
-    auto callOp = rewriter.create<LLVM::CallOp>(
-        op->getLoc(), resultType, SymbolRefAttr::get(funcOp), castedOperands);
+    auto callOp =
+        rewriter.create<LLVM::CallOp>(op->getLoc(), funcOp, castedOperands);
 
     if (resultType == adaptor.getOperands().front().getType()) {
-      rewriter.replaceOp(op, {callOp.getResult(0)});
+      rewriter.replaceOp(op, {callOp.getResult()});
       return success();
     }
 
     Value truncated = rewriter.create<LLVM::FPTruncOp>(
         op->getLoc(), adaptor.getOperands().front().getType(),
-        callOp.getResult(0));
+        callOp.getResult());
     rewriter.replaceOp(op, {truncated});
     return success();
   }
@@ -78,7 +78,7 @@ public:
 private:
   Value maybeCast(Value operand, PatternRewriter &rewriter) const {
     Type type = operand.getType();
-    if (!type.isa<Float16Type>())
+    if (!isa<Float16Type>(type))
       return operand;
 
     return rewriter.create<LLVM::FPExtOp>(
@@ -91,9 +91,9 @@ private:
   }
 
   StringRef getFunctionName(Type type) const {
-    if (type.isa<Float32Type>())
+    if (isa<Float32Type>(type))
       return f32Func;
-    if (type.isa<Float64Type>())
+    if (isa<Float64Type>(type))
       return f64Func;
     return "";
   }
@@ -107,7 +107,7 @@ private:
     if (funcOp)
       return cast<LLVMFuncOp>(*funcOp);
 
-    mlir::OpBuilder b(op->getParentOfType<LLVMFuncOp>());
+    mlir::OpBuilder b(op->getParentOfType<FunctionOpInterface>());
     return b.create<LLVMFuncOp>(op->getLoc(), funcName, funcType);
   }
 

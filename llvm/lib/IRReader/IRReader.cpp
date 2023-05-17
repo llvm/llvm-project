@@ -16,6 +16,7 @@
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/Timer.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <system_error>
 
 using namespace llvm;
@@ -67,14 +68,14 @@ std::unique_ptr<Module> llvm::getLazyIRFileModule(StringRef Filename,
 
 std::unique_ptr<Module> llvm::parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
                                       LLVMContext &Context,
-                                      DataLayoutCallbackTy DataLayoutCallback) {
+                                      ParserCallbacks Callbacks) {
   NamedRegionTimer T(TimeIRParsingName, TimeIRParsingDescription,
                      TimeIRParsingGroupName, TimeIRParsingGroupDescription,
                      TimePassesIsEnabled);
   if (isBitcode((const unsigned char *)Buffer.getBufferStart(),
                 (const unsigned char *)Buffer.getBufferEnd())) {
     Expected<std::unique_ptr<Module>> ModuleOrErr =
-        parseBitcodeFile(Buffer, Context, DataLayoutCallback);
+        parseBitcodeFile(Buffer, Context, Callbacks);
     if (Error E = ModuleOrErr.takeError()) {
       handleAllErrors(std::move(E), [&](ErrorInfoBase &EIB) {
         Err = SMDiagnostic(Buffer.getBufferIdentifier(), SourceMgr::DK_Error,
@@ -85,12 +86,14 @@ std::unique_ptr<Module> llvm::parseIR(MemoryBufferRef Buffer, SMDiagnostic &Err,
     return std::move(ModuleOrErr.get());
   }
 
-  return parseAssembly(Buffer, Err, Context, nullptr, DataLayoutCallback);
+  return parseAssembly(Buffer, Err, Context, nullptr,
+                       Callbacks.DataLayout.value_or(
+                           [](StringRef, StringRef) { return std::nullopt; }));
 }
 
-std::unique_ptr<Module>
-llvm::parseIRFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
-                  DataLayoutCallbackTy DataLayoutCallback) {
+std::unique_ptr<Module> llvm::parseIRFile(StringRef Filename, SMDiagnostic &Err,
+                                          LLVMContext &Context,
+                                          ParserCallbacks Callbacks) {
   ErrorOr<std::unique_ptr<MemoryBuffer>> FileOrErr =
       MemoryBuffer::getFileOrSTDIN(Filename, /*IsText=*/true);
   if (std::error_code EC = FileOrErr.getError()) {
@@ -99,8 +102,7 @@ llvm::parseIRFile(StringRef Filename, SMDiagnostic &Err, LLVMContext &Context,
     return nullptr;
   }
 
-  return parseIR(FileOrErr.get()->getMemBufferRef(), Err, Context,
-                 DataLayoutCallback);
+  return parseIR(FileOrErr.get()->getMemBufferRef(), Err, Context, Callbacks);
 }
 
 //===----------------------------------------------------------------------===//

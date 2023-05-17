@@ -40,7 +40,7 @@ body:             |
     G_BR %bb.2
 
   ; CHECK: bb.1:
-  ; CHECK: %bb2_{{[0-9]+}}__1:_(s32) = G_CONSTANT
+  ; CHECK: %bb2_{{[0-9a-f]+}}__1:_(s32) = G_CONSTANT
   bb.1:
     %tmp4:_(s32) = G_CONSTANT i32 1
     G_STORE %tmp4(s32), %tmp6(p0) :: (store (s32) into %ir.tmp1)
@@ -48,13 +48,13 @@ body:             |
 
 
   ; CHECK: bb.2:
-  ; CHECK: %bb1_{{[0-9]+}}__1:_(s32) = G_CONSTANT
+  ; CHECK: %bb1_{{[0-9a-f]+}}__1:_(s32) = G_CONSTANT
   bb.2:
     %tmp3:_(s32) = G_CONSTANT i32 2
     G_STORE %tmp3(s32), %tmp6(p0) :: (store (s32) into %ir.tmp1)
 
   ; CHECK: bb.3:
-  ; CHECK: %bb3_{{[0-9]+}}__1:_(s32) =  G_LOAD
+  ; CHECK: %bb3_{{[0-9a-f]+}}__1:_(s32) =  G_LOAD
   bb.3:
     %tmp9:_(s32) = G_LOAD %tmp6(p0) :: (load (s32) from %ir.tmp1)
     $eax = COPY %tmp9(s32)

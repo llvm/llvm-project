@@ -3,7 +3,7 @@
 // RUN: not %run %t 2>&1 | FileCheck %s --check-prefix=CHECK
 
 // REQUIRES: stable-runtime
-// REQUIRES: aarch64-target-arch
+// REQUIRES: aarch64-target-arch || riscv64-target-arch
 
 #include <sanitizer/hwasan_interface.h>
 #include <stdio.h>

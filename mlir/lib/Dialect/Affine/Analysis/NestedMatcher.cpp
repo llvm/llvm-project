@@ -17,6 +17,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace mlir;
+using namespace mlir::affine;
 
 llvm::BumpPtrAllocator *&NestedMatch::allocator() {
   thread_local llvm::BumpPtrAllocator *allocator = nullptr;
@@ -56,12 +57,12 @@ void NestedPattern::freeNested() {
 
 NestedPattern::NestedPattern(ArrayRef<NestedPattern> nested,
                              FilterFunctionType filter)
-    : nestedPatterns(), filter(std::move(filter)), skip(nullptr) {
+    : filter(std::move(filter)), skip(nullptr) {
   copyNestedToThis(nested);
 }
 
 NestedPattern::NestedPattern(const NestedPattern &other)
-    : nestedPatterns(), filter(other.filter), skip(other.skip) {
+    : filter(other.filter), skip(other.skip) {
   copyNestedToThis(other.nestedPatterns);
 }
 
@@ -130,6 +131,7 @@ static bool isAffineForOp(Operation &op) { return isa<AffineForOp>(op); }
 static bool isAffineIfOp(Operation &op) { return isa<AffineIfOp>(op); }
 
 namespace mlir {
+namespace affine {
 namespace matcher {
 
 NestedPattern Op(FilterFunctionType filter) {
@@ -176,4 +178,5 @@ bool isLoadOrStore(Operation &op) {
 }
 
 } // namespace matcher
+} // namespace affine
 } // namespace mlir

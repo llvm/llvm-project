@@ -9,6 +9,7 @@
 #include "CommandObjectStats.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Host/OptionParser.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Target/Target.h"
 
@@ -87,7 +88,7 @@ class CommandObjectStatsDump : public CommandObjectParsed {
     }
 
     llvm::ArrayRef<OptionDefinition> GetDefinitions() override {
-      return llvm::makeArrayRef(g_statistics_dump_options);
+      return llvm::ArrayRef(g_statistics_dump_options);
     }
 
     bool m_all_targets = false;

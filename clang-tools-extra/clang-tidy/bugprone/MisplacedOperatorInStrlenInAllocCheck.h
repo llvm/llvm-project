@@ -11,16 +11,14 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// Finds cases where ``1`` is added to the string in the argument to a function
 /// in the ``strlen()`` family instead of the result and value is used as an
 /// argument to a memory allocation function.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-misplaced-operator-in-strlen-in-alloc.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/misplaced-operator-in-strlen-in-alloc.html
 class MisplacedOperatorInStrlenInAllocCheck : public ClangTidyCheck {
 public:
   MisplacedOperatorInStrlenInAllocCheck(StringRef Name, ClangTidyContext *Context)
@@ -29,8 +27,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_MISPLACED_OPERATOR_IN_STRLEN_IN_ALLOC_H

@@ -8,7 +8,7 @@ declare_args() {
 }
 
 # FIXME: Port the remaining targets.
-llvm_all_targets = [
+llvm_all_stable_targets = [
   "AArch64",
   "AMDGPU",
   "ARM",
@@ -16,6 +16,7 @@ llvm_all_targets = [
   "BPF",
   "Hexagon",
   "Lanai",
+  "LoongArch",
   "Mips",
   "NVPTX",
   "PowerPC",
@@ -25,6 +26,10 @@ llvm_all_targets = [
   "WebAssembly",
   "X86",
 ]
+
+llvm_all_experimental_targets = []
+
+llvm_all_targets = llvm_all_stable_targets + llvm_all_experimental_targets
 
 # FIXME: This should be based off target_cpu once cross compiles work.
 if (host_cpu == "arm64") {
@@ -42,6 +47,8 @@ if (host_cpu == "arm64") {
 if (llvm_targets_to_build == "host") {
   llvm_targets_to_build = [ native_target ]
 } else if (llvm_targets_to_build == "all") {
+  llvm_targets_to_build = llvm_all_stable_targets
+} else if (llvm_targets_to_build == "experimental") {
   llvm_targets_to_build = llvm_all_targets
 }
 
@@ -52,8 +59,10 @@ llvm_build_AArch64 = false
 llvm_build_AMDGPU = false
 llvm_build_ARM = false
 llvm_build_BPF = false
+llvm_build_LoongArch = false
 llvm_build_Mips = false
 llvm_build_PowerPC = false
+llvm_build_RISCV = false
 llvm_build_SystemZ = false
 llvm_build_WebAssembly = false
 llvm_build_X86 = false
@@ -70,10 +79,14 @@ foreach(target, llvm_targets_to_build) {
     llvm_build_ARM = true
   } else if (target == "BPF") {
     llvm_build_BPF = true
+  } else if (target == "LoongArch") {
+    llvm_build_LoongArch = true
   } else if (target == "Mips") {
     llvm_build_Mips = true
   } else if (target == "PowerPC") {
     llvm_build_PowerPC = true
+  } else if (target == "RISCV") {
+    llvm_build_RISCV = true
   } else if (target == "SystemZ") {
     llvm_build_SystemZ = true
   } else if (target == "WebAssembly") {
@@ -104,5 +117,11 @@ if (android_ndk_path != "") {
   if (llvm_build_ARM) {
     supported_android_toolchains +=
         [ "//llvm/utils/gn/build/toolchain:stage2_android_arm" ]
+  }
+  if (llvm_build_X86) {
+    supported_android_toolchains += [
+      "//llvm/utils/gn/build/toolchain:stage2_android_x64",
+      "//llvm/utils/gn/build/toolchain:stage2_android_x86",
+    ]
   }
 }

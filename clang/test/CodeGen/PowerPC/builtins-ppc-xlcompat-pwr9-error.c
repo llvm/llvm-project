@@ -44,5 +44,5 @@ int test_test_data_class_f() {
 }
 
 int test_test_data_class_type() {
-  return __test_data_class(ui, 0); // expected-error {{expected a 'float' or 'double' for the first argument}}
+  return __test_data_class(ui, 0); // expected-error {{expected a 'float', 'double' or '__float128' for the first argument}}
 }

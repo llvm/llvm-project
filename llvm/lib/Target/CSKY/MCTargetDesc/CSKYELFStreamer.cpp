@@ -21,9 +21,9 @@
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbolELF.h"
 #include "llvm/Support/CSKYAttributes.h"
-#include "llvm/Support/CSKYTargetParser.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/LEB128.h"
+#include "llvm/TargetParser/CSKYTargetParser.h"
 
 using namespace llvm;
 
@@ -83,12 +83,12 @@ void CSKYTargetELFStreamer::finishAttributeSection() {
     return;
 
   if (AttributeSection) {
-    Streamer.SwitchSection(AttributeSection);
+    Streamer.switchSection(AttributeSection);
   } else {
     MCAssembler &MCA = getStreamer().getAssembler();
     AttributeSection = MCA.getContext().getELFSection(
         ".csky.attributes", ELF::SHT_CSKY_ATTRIBUTES, 0);
-    Streamer.SwitchSection(AttributeSection);
+    Streamer.switchSection(AttributeSection);
     Streamer.emitInt8(ELFAttrs::Format_Version);
   }
 

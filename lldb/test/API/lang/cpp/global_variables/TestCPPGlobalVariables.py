@@ -9,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 class GlobalVariablesCppTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         TestBase.setUp(self)
         self.source = lldb.SBFileSpec('main.cpp')
@@ -46,7 +44,6 @@ class GlobalVariablesCppTestCase(TestBase):
         self.assertEqual(var.GetName(), "abc::(anonymous namespace)::g_anon_namespace_const_int")
         self.assertEqual(var.GetValue(), "100")
 
-    @expectedFailureAll(oslist=["windows"], bugnumber="llvm.org/pr24764")
     def test_access_by_mangled_name(self):
         self.build()
 

@@ -2,13 +2,13 @@
 ; RUN: llc -stop-after=twoaddressinstruction -mtriple=x86_64-- -o - %s | FileCheck %s
 
 
-define dso_local double @twoaddressinstruction() local_unnamed_addr {
+define dso_local double @twoaddressinstruction(i1 %c) local_unnamed_addr {
 for.end:
-  %0 = load i64, i64* undef, align 8
+  %0 = load i64, ptr undef, align 8
   br label %for.body14.preheader
 
 for.body14.preheader:                             ; preds = %for.end
-  br i1 undef, label %for.cond25.preheader.loopexit.unr-lcssa, label %for.body14.preheader.new
+  br i1 %c, label %for.cond25.preheader.loopexit.unr-lcssa, label %for.body14.preheader.new
 
 for.body14.preheader.new:                         ; preds = %for.body14.preheader
   %unroll_iter136 = and i64 %0, -4

@@ -60,7 +60,7 @@ json::Value JSONEmitter::translateInit(const Init &I) {
     return Str->getValue();
   } else if (auto *List = dyn_cast<ListInit>(&I)) {
     json::Array array;
-    for (auto val : *List)
+    for (auto *val : *List)
       array.push_back(translateInit(*val));
     return std::move(array);
   }
@@ -129,13 +129,13 @@ void JSONEmitter::run(raw_ostream &OS) {
   // construct the array for each one.
   std::map<std::string, json::Array> instance_lists;
   for (const auto &C : Records.getClasses()) {
-    auto &Name = C.second->getNameInitAsString();
+    const auto Name = C.second->getNameInitAsString();
     (void)instance_lists[Name];
   }
 
   // Main iteration over the defs.
   for (const auto &D : Records.getDefs()) {
-    auto &Name = D.second->getNameInitAsString();
+    const auto Name = D.second->getNameInitAsString();
     auto &Def = *D.second;
 
     json::Object obj;

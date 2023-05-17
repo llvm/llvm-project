@@ -2,12 +2,12 @@
 ; RUN: llc -mtriple=x86_64-unknown-unknown < %s | FileCheck %s
 ; rdar://7610418
 
-%ptr = type { i8* }
+%ptr = type { ptr }
 %struct.s1 = type { %ptr, %ptr }
-%struct.s2 = type { i32, i8*, i8*, [256 x %struct.s1*], [8 x i32], i64, i8*, i32, i64, i64, i32, %struct.s3*, %struct.s3*, [49 x i64] }
-%struct.s3 = type { %struct.s3*, %struct.s3*, i32, i32, i32 }
+%struct.s2 = type { i32, ptr, ptr, [256 x ptr], [8 x i32], i64, ptr, i32, i64, i64, i32, ptr, ptr, [49 x i64] }
+%struct.s3 = type { ptr, ptr, i32, i32, i32 }
 
-define fastcc i8* @t(i32 %base) nounwind {
+define fastcc ptr @t(i32 %base) nounwind {
 ; CHECK-LABEL: t:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushq %rax
@@ -23,25 +23,25 @@ define fastcc i8* @t(i32 %base) nounwind {
 ; CHECK-NEXT:    callq foo@PLT
 entry:
   %0 = zext i32 %base to i64
-  %1 = getelementptr inbounds %struct.s2, %struct.s2* null, i64 %0
+  %1 = getelementptr inbounds %struct.s2, ptr null, i64 %0
   br i1 undef, label %bb1, label %bb2
 
 bb1:
-  %2 = getelementptr inbounds %struct.s2, %struct.s2* null, i64 %0, i32 0
-  call void @bar(i32* %2) nounwind
+  %2 = getelementptr inbounds %struct.s2, ptr null, i64 %0, i32 0
+  call void @bar(ptr %2) nounwind
   unreachable
 
 bb2:
-  %3 = call fastcc i8* @foo(%struct.s2* %1) nounwind
+  %3 = call fastcc ptr @foo(ptr %1) nounwind
   unreachable
 
 bb3:
-  ret i8* undef
+  ret ptr undef
 }
 
-declare void @bar(i32*)
+declare void @bar(ptr)
 
-declare fastcc i8* @foo(%struct.s2*) nounwind
+declare fastcc ptr @foo(ptr) nounwind
 
 ; rdar://8773371
 
@@ -132,7 +132,7 @@ return:
 }
 
 ; rdar://11393714
-define i8* @bsd_memchr(i8* %s, i32 %a, i32 %c, i64 %n) nounwind ssp {
+define ptr @bsd_memchr(ptr %s, i32 %a, i32 %c, i64 %n) nounwind ssp {
 ; CHECK-LABEL: bsd_memchr:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    testq %rcx, %rcx
@@ -164,19 +164,19 @@ preheader:
 
 do.body:
   %n.addr.0 = phi i64 [ %dec, %do.cond ], [ %n, %preheader ]
-  %p.0 = phi i8* [ %incdec.ptr, %do.cond ], [ %s, %preheader ]
+  %p.0 = phi ptr [ %incdec.ptr, %do.cond ], [ %s, %preheader ]
   %cmp3 = icmp eq i32 %a, %conv2
   br i1 %cmp3, label %return, label %do.cond
 
 do.cond:
-  %incdec.ptr = getelementptr inbounds i8, i8* %p.0, i64 1
+  %incdec.ptr = getelementptr inbounds i8, ptr %p.0, i64 1
   %dec = add i64 %n.addr.0, -1
   %cmp6 = icmp eq i64 %dec, 0
   br i1 %cmp6, label %return, label %do.body
 
 return:
-  %retval.0 = phi i8* [ null, %entry ], [ null, %do.cond ], [ %p.0, %do.body ]
-  ret i8* %retval.0
+  %retval.0 = phi ptr [ null, %entry ], [ null, %do.cond ], [ %p.0, %do.body ]
+  ret ptr %retval.0
 }
 
 ; PR13578
@@ -200,12 +200,12 @@ define i32 @t2() nounwind {
 ; CHECK-NEXT:    xorl %eax, %eax
 ; CHECK-NEXT:    popq %rcx
 ; CHECK-NEXT:    retq
-  store i32 42, i32* @t2_global
+  store i32 42, ptr @t2_global
   %c = call i1 @t2_func()
   br i1 %c, label %a, label %b
 
 a:
-  %l = load i32, i32* @t2_global
+  %l = load i32, ptr @t2_global
   ret i32 %l
 
 b:

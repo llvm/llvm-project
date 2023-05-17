@@ -12,7 +12,6 @@
 #include "llvm/DebugInfo/CodeView/TypeRecord.h"
 #include "llvm/DebugInfo/CodeView/TypeRecordMapping.h"
 #include "llvm/DebugInfo/CodeView/TypeVisitorCallbacks.h"
-#include "llvm/DebugInfo/PDB/Native/RawTypes.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/BinaryByteStream.h"
 #include "llvm/Support/BinaryItemStream.h"
@@ -23,7 +22,6 @@
 
 using namespace llvm;
 using namespace llvm::codeview;
-using namespace llvm::pdb;
 
 namespace llvm {
 namespace codeview {
@@ -224,7 +222,7 @@ TEST_F(RandomAccessVisitorTest, MultipleVisits) {
 
   // 5, 5, 5
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -253,7 +251,7 @@ TEST_F(RandomAccessVisitorTest, DescendingWithinChunk) {
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -282,7 +280,7 @@ TEST_F(RandomAccessVisitorTest, AscendingWithinChunk) {
 
   // 2, 4, 7
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto &I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -313,7 +311,7 @@ TEST_F(RandomAccessVisitorTest, StopPrematurelyInChunk) {
 
   // [0, 2]
   EXPECT_EQ(3u, TestState->Callbacks.count());
-  for (auto I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 
@@ -343,7 +341,7 @@ TEST_F(RandomAccessVisitorTest, InnerChunk) {
 
   // 5, 7
   EXPECT_EQ(2u, TestState->Callbacks.count());
-  for (auto &I : enumerate(IndicesToVisit))
+  for (const auto &I : enumerate(IndicesToVisit))
     EXPECT_TRUE(ValidateVisitedRecord(I.index(), I.value()));
 }
 

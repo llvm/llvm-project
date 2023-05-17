@@ -12,9 +12,9 @@
 // RUN: %not %libomptarget-run-generic 1   2>&1 | %fcheck-generic
 // RUN: %not %libomptarget-run-generic inf 2>&1 | %fcheck-generic
 
+#include <limits.h>
 #include <omp.h>
 #include <stdio.h>
-#include <limits.h>
 #include <string.h>
 
 int main(int argc, char *argv[]) {
@@ -44,16 +44,16 @@ int main(int argc, char *argv[]) {
     }
   } else {
     for (int I = 0; I < DynRef; ++I) {
-      #pragma omp target enter data map(alloc: X)
+#pragma omp target enter data map(alloc : X)
     }
   }
 
   // Disassociate while hold reference count > 0.
   int Status = 0;
-  #pragma omp target data map(ompx_hold,alloc: X)
+#pragma omp target data map(ompx_hold, alloc : X)
 #if HOLD_MORE
-  #pragma omp target data map(ompx_hold,alloc: X)
-  #pragma omp target data map(ompx_hold,alloc: X)
+#pragma omp target data map(ompx_hold, alloc : X)
+#pragma omp target data map(ompx_hold, alloc : X)
 #endif
   {
     //      CHECK: Libomptarget error: Trying to disassociate a pointer with a

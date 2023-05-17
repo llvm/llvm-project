@@ -2,7 +2,10 @@
 add_flag_if_supported("-Werror=global-constructors" WERROR_GLOBAL_CONSTRUCTOR)
 
 add_subdirectory(Analysis)
+add_subdirectory(AsmParser)
+add_subdirectory(Bytecode)
 add_subdirectory(Conversion)
+add_subdirectory(Debug)
 add_subdirectory(Dialect)
 add_subdirectory(IR)
 add_subdirectory(Interfaces)

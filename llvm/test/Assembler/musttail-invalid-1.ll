@@ -5,10 +5,10 @@
 
 %struct.A = type { i32 }
 
-declare i8* @f(i8*, ...)
+declare ptr @f(ptr, ...)
 
-define i8* @f_thunk(i8* %this) {
-  %rv = musttail call i8* (i8*, ...) @f(i8* %this, ...)
+define ptr @f_thunk(ptr %this) {
+  %rv = musttail call ptr (ptr, ...) @f(ptr %this, ...)
 ; CHECK: error: unexpected ellipsis in argument list for musttail call in non-varargs function
-  ret i8* %rv
+  ret ptr %rv
 }

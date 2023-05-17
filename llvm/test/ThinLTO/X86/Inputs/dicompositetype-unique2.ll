@@ -5,16 +5,15 @@ target triple = "x86_64-scei-ps4"
 %struct.Vec = type { i8 }
 %struct.S = type { i8 }
 
-define void @_ZN4CFVSD2Ev(%struct.CFVS* %this) unnamed_addr align 2 !dbg !8 {
+define void @_ZN4CFVSD2Ev(ptr %this) unnamed_addr align 2 !dbg !8 {
 entry:
-  %this.addr = alloca %struct.CFVS*, align 8
-  store %struct.CFVS* %this, %struct.CFVS** %this.addr, align 8
-  %this1 = load %struct.CFVS*, %struct.CFVS** %this.addr, align 8
-  %m_val = getelementptr inbounds %struct.CFVS, %struct.CFVS* %this1, i32 0, i32 0
+  %this.addr = alloca ptr, align 8
+  store ptr %this, ptr %this.addr, align 8
+  %this1 = load ptr, ptr %this.addr, align 8
   ret void
 }
 
-declare dereferenceable(1) %struct.S* @_Z3Getv()
+declare dereferenceable(1) ptr @_Z3Getv()
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4, !5, !6}
@@ -34,7 +33,7 @@ declare dereferenceable(1) %struct.S* @_Z3Getv()
 !13 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "Vec<&Get>", file: !10, line: 4, size: 8, elements: !14, templateParams: !19, identifier: "_ZTS3VecIXadL_Z3GetvEEE")
 !14 = !{!35}
 !19 = !{!20}
-!20 = !DITemplateValueParameter(name: "F", type: !21, value: %struct.S* ()* @_Z3Getv)
+!20 = !DITemplateValueParameter(name: "F", type: !21, value: ptr @_Z3Getv)
 !21 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !22, size: 64)
 !22 = !DIDerivedType(tag: DW_TAG_typedef, name: "Func", file: !10, line: 2, baseType: !23)
 !23 = !DISubroutineType(types: !24)

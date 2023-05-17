@@ -43,6 +43,8 @@ extern "C" void *registers_thread_func(void *arg) {
       "mov x14, %0"
       :
       : "r"(p));
+#elif defined(__loongarch_lp64)
+  asm("move $s8, %0" : : "r"(p));
 #elif defined(__powerpc__)
   asm("mr 30, %0"
       :
@@ -75,4 +77,4 @@ int main() {
 // CHECK: Test alloc: [[ADDR:0x[0-9,a-f]+]]
 // CHECK: LeakSanitizer: detected memory leaks
 // CHECK: [[ADDR]] (1337 bytes)
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:

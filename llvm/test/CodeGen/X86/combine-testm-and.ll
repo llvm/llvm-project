@@ -29,7 +29,7 @@ define i32 @combineTESTM_AND_2(<8 x i64> %a, <8 x i64> %b , i8 %mask) {
   ret i32 %conv
 }
 
-define i32 @combineTESTM_AND_mask_3(<8 x i64> %a, <8 x i64>* %bptr , i8 %mask) {
+define i32 @combineTESTM_AND_mask_3(<8 x i64> %a, ptr %bptr , i8 %mask) {
 ; CHECK-LABEL: combineTESTM_AND_mask_3:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq (%rdi), %zmm0, %k0
@@ -38,14 +38,14 @@ define i32 @combineTESTM_AND_mask_3(<8 x i64> %a, <8 x i64>* %bptr , i8 %mask) {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %b = load <8 x i64>, <8 x i64>* %bptr
+  %b = load <8 x i64>, ptr %bptr
   %and.i = and <8 x i64> %a, %b
   %test.i = tail call i8 @llvm.x86.avx512.ptestm.q.512(<8 x i64> %and.i, <8 x i64> %and.i, i8 %mask)
   %conv = zext i8 %test.i to i32
   ret i32 %conv
 }
 
-define i32 @combineTESTM_AND_mask_4(<8 x i64> %a, <8 x i64>* %bptr , i8 %mask) {
+define i32 @combineTESTM_AND_mask_4(<8 x i64> %a, ptr %bptr , i8 %mask) {
 ; CHECK-LABEL: combineTESTM_AND_mask_4:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    vptestmq (%rdi), %zmm0, %k0
@@ -54,7 +54,7 @@ define i32 @combineTESTM_AND_mask_4(<8 x i64> %a, <8 x i64>* %bptr , i8 %mask) {
 ; CHECK-NEXT:    movzbl %al, %eax
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    retq
-  %b = load <8 x i64>, <8 x i64>* %bptr
+  %b = load <8 x i64>, ptr %bptr
   %and.i = and <8 x i64> %b, %a
   %test.i = tail call i8 @llvm.x86.avx512.ptestm.q.512(<8 x i64> %and.i, <8 x i64> %and.i, i8 %mask)
   %conv = zext i8 %test.i to i32

@@ -6,9 +6,9 @@
 ; RUN: llc -mtriple=x86_64-linux-gnu -x86-use-fsrm-for-memcpy -mcpu=icelake-server < %s | FileCheck %s --check-prefix=FSRM
 ; RUN: llc -mtriple=x86_64-linux-gnu -x86-use-fsrm-for-memcpy -mcpu=znver3 < %s | FileCheck %s --check-prefix=FSRM
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind
 
-define void @test1(i8* %a, i8* %b, i64 %s) nounwind {
+define void @test1(ptr %a, ptr %b, i64 %s) nounwind {
 ; NOFSRM-LABEL: test1:
 ; NOFSRM:       # %bb.0:
 ; NOFSRM-NEXT:    jmp memcpy@PLT # TAILCALL
@@ -18,15 +18,15 @@ define void @test1(i8* %a, i8* %b, i64 %s) nounwind {
 ; FSRM-NEXT:    movq %rdx, %rcx
 ; FSRM-NEXT:    rep;movsb (%rsi), %es:(%rdi)
 ; FSRM-NEXT:    retq
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %a, i8* %b, i64 %s, i1 0)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %a, ptr %b, i64 %s, i1 0)
   ret void
 }
 
 ; Check that we don't crash due to a memcpy size type mismatch error ("Cannot
 ; emit physreg copy instruction") in X86InstrInfo::copyPhysReg.
 %struct = type { [4096 x i8] }
-declare void @foo(%struct* byval(%struct))
-define void @test2(%struct* %x) {
-  call void @foo(%struct* byval(%struct) %x)
+declare void @foo(ptr byval(%struct))
+define void @test2(ptr %x) {
+  call void @foo(ptr byval(%struct) %x)
   ret void
 }

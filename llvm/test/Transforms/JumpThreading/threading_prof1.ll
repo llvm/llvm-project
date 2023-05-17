@@ -1,4 +1,3 @@
-; RUN: opt -jump-threading -S < %s | FileCheck %s
 ; RUN: opt -passes=jump-threading -S < %s | FileCheck %s
 
 define void @test() {
@@ -35,24 +34,24 @@ bb:
   br i1 %tmp1, label %bb5_1, label %bb2
 ; CHECK: br i1 %tmp1,{{.*}} !prof ![[PROF1:[0-9]+]]
 
-bb5_1:                                             
+bb5_1:
   br label %bb5;
 
-bb2:                                              
+bb2:
   %tmp3 = call i32 @b()
   %tmp4 = icmp ne i32 %tmp3, 1
   br label %bb5
 ; CHECK: br i1 %tmp4, {{.*}} !prof ![[PROF2:[0-9]+]]
 
-bb5:                                             
+bb5:
   %tmp6 = phi i1 [ false, %bb5_1 ], [ %tmp4, %bb2 ]
   br i1 %tmp6, label %bb8, label %bb7, !prof !0
 
-bb7:                                            
+bb7:
   call void @bar()
   br label %bb8
 
-bb8:                                           
+bb8:
   ret void
 }
 
@@ -64,27 +63,27 @@ bb:
   br i1 %tmp1, label %bb5_1, label %bb2
 ; CHECK: br i1 %tmp1,{{.*}} !prof ![[PROF1:[0-9]+]]
 
-bb5_1:                                             
+bb5_1:
   br label %bb5_2;
 
-bb5_2:                                             
+bb5_2:
   br label %bb5;
 
-bb2:                          
+bb2:
   %tmp3 = call i32 @b()
   %tmp4 = icmp ne i32 %tmp3, 1
   br label %bb5
 ; CHECK: br i1 %tmp4, {{.*}} !prof ![[PROF2:[0-9]+]]
 
-bb5:                         
+bb5:
   %tmp6 = phi i1 [ false, %bb5_2 ], [ %tmp4, %bb2 ]
   br i1 %tmp6, label %bb8, label %bb7, !prof !0
 
-bb7:                        
+bb7:
   call void @bar()
   br label %bb8
 
-bb8:                       
+bb8:
   ret void
 }
 
@@ -96,4 +95,4 @@ declare i32 @b()
 
 !0 = !{!"branch_weights", i32 2146410443, i32 1073205}
 ;CHECK: ![[PROF1]] = !{!"branch_weights", i32 1073205, i32 2146410443}
-;CHECK: ![[PROF2]] = !{!"branch_weights", i32 2146410443, i32 1073205}
+;CHECK: ![[PROF2]] = !{!"branch_weights", i32 -2147483648, i32 0}

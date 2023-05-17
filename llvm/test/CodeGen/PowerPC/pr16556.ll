@@ -7,7 +7,7 @@ target triple = "powerpc-unknown-linux-gnu"
 
 %core.time.TickDuration.37.125 = type { i64 }
 
-define weak_odr fastcc i64 @_D4core4time12TickDuration30__T2toVAyaa7_7365636f6e6473TlZ2toMxFNaNbNfZl(%core.time.TickDuration.37.125* %.this_arg) {
+define weak_odr fastcc i64 @_D4core4time12TickDuration30__T2toVAyaa7_7365636f6e6473TlZ2toMxFNaNbNfZl(ptr %.this_arg) {
 entry:
   br i1 undef, label %noassert, label %assert
 

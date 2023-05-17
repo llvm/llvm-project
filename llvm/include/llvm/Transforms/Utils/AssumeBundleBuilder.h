@@ -40,7 +40,8 @@ AssumeInst *buildAssumeFromInst(Instruction *I);
 /// become silently be invalid.
 /// The DominatorTree can optionally be provided to enable cross-block
 /// reasoning.
-void salvageKnowledge(Instruction *I, AssumptionCache *AC = nullptr,
+/// This returns if a change was made.
+bool salvageKnowledge(Instruction *I, AssumptionCache *AC = nullptr,
                       DominatorTree *DT = nullptr);
 
 /// Build and return a new assume created from the provided knowledge

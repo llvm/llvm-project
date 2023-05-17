@@ -19,6 +19,7 @@
 namespace llvm {
 class FunctionPass;
 class LanaiTargetMachine;
+class PassRegistry;
 
 // createLanaiISelDag - This pass converts a legalized DAG into a
 // Lanai-specific DAG, ready for instruction scheduling.
@@ -35,6 +36,8 @@ FunctionPass *createLanaiMemAluCombinerPass();
 // createLanaiSetflagAluCombinerPass - This pass combines SET_FLAG and ALU
 // operations.
 FunctionPass *createLanaiSetflagAluCombinerPass();
+
+void initializeLanaiDAGToDAGISelPass(PassRegistry &);
 
 } // namespace llvm
 

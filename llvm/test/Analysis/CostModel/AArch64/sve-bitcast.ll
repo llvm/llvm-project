@@ -1,6 +1,8 @@
-; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes='print<cost-model>' 2>&1 -disable-output < %s | FileCheck %s
+; RUN: opt -mtriple=aarch64-linux-gnu -mattr=+sve -passes="print<cost-model>" 2>&1 -disable-output < %s | FileCheck %s
 
 ; Integer to float bitcasts
+
+target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define <vscale x 2 x double> @test_nxv2f64(<vscale x 2 x i64> %a) {
 ; CHECK-LABEL: test_nxv2f64

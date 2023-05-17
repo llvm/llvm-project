@@ -87,3 +87,19 @@ int g3(void) {
 // PATH: ret i32 1
   return f3(20) + 130725747;
 }
+
+static int f4(void) {
+  struct s5 {
+    int b:1;
+  } x;
+  x.b = 1;
+  return x.b;
+}
+
+int g4(void) {
+// CHECK-LABEL: @g4()
+// CHECK: ret i32 1
+// PATH-LABEL: @g4()
+// PATH: ret i32 1
+  return f4() + 2;
+}

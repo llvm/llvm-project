@@ -224,7 +224,7 @@ entry:
   ret <16 x i8> %s2
 }
 
-define void @vmulh_s8(i8* nocapture readonly %x, i8* nocapture readonly %y, i8* noalias nocapture %z, i32 %n) {
+define void @vmulh_s8(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vmulh_s8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -244,29 +244,26 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i8, i8* %x, i32 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 1
-  %2 = sext <16 x i8> %wide.load to <16 x i16>
-  %3 = getelementptr inbounds i8, i8* %y, i32 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load17 = load <16 x i8>, <16 x i8>* %4, align 1
-  %5 = sext <16 x i8> %wide.load17 to <16 x i16>
-  %6 = mul nsw <16 x i16> %5, %2
-  %7 = lshr <16 x i16> %6, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-  %8 = trunc <16 x i16> %7 to <16 x i8>
-  %9 = getelementptr inbounds i8, i8* %z, i32 %index
-  %10 = bitcast i8* %9 to <16 x i8>*
-  store <16 x i8> %8, <16 x i8>* %10, align 1
+  %0 = getelementptr inbounds i8, ptr %x, i32 %index
+  %wide.load = load <16 x i8>, ptr %0, align 1
+  %1 = sext <16 x i8> %wide.load to <16 x i16>
+  %2 = getelementptr inbounds i8, ptr %y, i32 %index
+  %wide.load17 = load <16 x i8>, ptr %2, align 1
+  %3 = sext <16 x i8> %wide.load17 to <16 x i16>
+  %4 = mul nsw <16 x i16> %3, %1
+  %5 = lshr <16 x i16> %4, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %6 = trunc <16 x i16> %5 to <16 x i8>
+  %7 = getelementptr inbounds i8, ptr %z, i32 %index
+  store <16 x i8> %6, ptr %7, align 1
   %index.next = add i32 %index, 16
-  %11 = icmp eq i32 %index.next, 1024
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, 1024
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vmulh_s16(i16* nocapture readonly %x, i16* nocapture readonly %y, i16* noalias nocapture %z, i32 %n) {
+define void @vmulh_s16(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vmulh_s16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -286,29 +283,26 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i16, i16* %x, i32 %index
-  %1 = bitcast i16* %0 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %1, align 2
-  %2 = sext <8 x i16> %wide.load to <8 x i32>
-  %3 = getelementptr inbounds i16, i16* %y, i32 %index
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.load17 = load <8 x i16>, <8 x i16>* %4, align 2
-  %5 = sext <8 x i16> %wide.load17 to <8 x i32>
-  %6 = mul nsw <8 x i32> %5, %2
-  %7 = lshr <8 x i32> %6, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-  %8 = trunc <8 x i32> %7 to <8 x i16>
-  %9 = getelementptr inbounds i16, i16* %z, i32 %index
-  %10 = bitcast i16* %9 to <8 x i16>*
-  store <8 x i16> %8, <8 x i16>* %10, align 2
+  %0 = getelementptr inbounds i16, ptr %x, i32 %index
+  %wide.load = load <8 x i16>, ptr %0, align 2
+  %1 = sext <8 x i16> %wide.load to <8 x i32>
+  %2 = getelementptr inbounds i16, ptr %y, i32 %index
+  %wide.load17 = load <8 x i16>, ptr %2, align 2
+  %3 = sext <8 x i16> %wide.load17 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %5 = lshr <8 x i32> %4, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %6 = trunc <8 x i32> %5 to <8 x i16>
+  %7 = getelementptr inbounds i16, ptr %z, i32 %index
+  store <8 x i16> %6, ptr %7, align 2
   %index.next = add i32 %index, 8
-  %11 = icmp eq i32 %index.next, 1024
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, 1024
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vmulh_s32(i32* nocapture readonly %x, i32* nocapture readonly %y, i32* noalias nocapture %z, i32 %n) {
+define void @vmulh_s32(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vmulh_s32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -328,29 +322,26 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %x, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = sext <4 x i32> %wide.load to <4 x i64>
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load17 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = sext <4 x i32> %wide.load17 to <4 x i64>
-  %6 = mul nsw <4 x i64> %5, %2
-  %7 = lshr <4 x i64> %6, <i64 32, i64 32, i64 32, i64 32>
-  %8 = trunc <4 x i64> %7 to <4 x i32>
-  %9 = getelementptr inbounds i32, i32* %z, i32 %index
-  %10 = bitcast i32* %9 to <4 x i32>*
-  store <4 x i32> %8, <4 x i32>* %10, align 4
+  %0 = getelementptr inbounds i32, ptr %x, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = sext <4 x i32> %wide.load to <4 x i64>
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  %wide.load17 = load <4 x i32>, ptr %2, align 4
+  %3 = sext <4 x i32> %wide.load17 to <4 x i64>
+  %4 = mul nsw <4 x i64> %3, %1
+  %5 = lshr <4 x i64> %4, <i64 32, i64 32, i64 32, i64 32>
+  %6 = trunc <4 x i64> %5 to <4 x i32>
+  %7 = getelementptr inbounds i32, ptr %z, i32 %index
+  store <4 x i32> %6, ptr %7, align 4
   %index.next = add i32 %index, 4
-  %11 = icmp eq i32 %index.next, 1024
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, 1024
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vmulh_u8(i8* nocapture readonly %x, i8* nocapture readonly %y, i8* noalias nocapture %z, i32 %n) {
+define void @vmulh_u8(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vmulh_u8:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -370,29 +361,26 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i8, i8* %x, i32 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.load = load <16 x i8>, <16 x i8>* %1, align 1
-  %2 = zext <16 x i8> %wide.load to <16 x i16>
-  %3 = getelementptr inbounds i8, i8* %y, i32 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.load17 = load <16 x i8>, <16 x i8>* %4, align 1
-  %5 = zext <16 x i8> %wide.load17 to <16 x i16>
-  %6 = mul nuw <16 x i16> %5, %2
-  %7 = lshr <16 x i16> %6, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-  %8 = trunc <16 x i16> %7 to <16 x i8>
-  %9 = getelementptr inbounds i8, i8* %z, i32 %index
-  %10 = bitcast i8* %9 to <16 x i8>*
-  store <16 x i8> %8, <16 x i8>* %10, align 1
+  %0 = getelementptr inbounds i8, ptr %x, i32 %index
+  %wide.load = load <16 x i8>, ptr %0, align 1
+  %1 = zext <16 x i8> %wide.load to <16 x i16>
+  %2 = getelementptr inbounds i8, ptr %y, i32 %index
+  %wide.load17 = load <16 x i8>, ptr %2, align 1
+  %3 = zext <16 x i8> %wide.load17 to <16 x i16>
+  %4 = mul nuw <16 x i16> %3, %1
+  %5 = lshr <16 x i16> %4, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %6 = trunc <16 x i16> %5 to <16 x i8>
+  %7 = getelementptr inbounds i8, ptr %z, i32 %index
+  store <16 x i8> %6, ptr %7, align 1
   %index.next = add i32 %index, 16
-  %11 = icmp eq i32 %index.next, 1024
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, 1024
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vmulh_u16(i16* nocapture readonly %x, i16* nocapture readonly %y, i16* noalias nocapture %z, i32 %n) {
+define void @vmulh_u16(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vmulh_u16:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -412,29 +400,26 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i16, i16* %x, i32 %index
-  %1 = bitcast i16* %0 to <8 x i16>*
-  %wide.load = load <8 x i16>, <8 x i16>* %1, align 2
-  %2 = zext <8 x i16> %wide.load to <8 x i32>
-  %3 = getelementptr inbounds i16, i16* %y, i32 %index
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.load17 = load <8 x i16>, <8 x i16>* %4, align 2
-  %5 = zext <8 x i16> %wide.load17 to <8 x i32>
-  %6 = mul nuw <8 x i32> %5, %2
-  %7 = lshr <8 x i32> %6, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-  %8 = trunc <8 x i32> %7 to <8 x i16>
-  %9 = getelementptr inbounds i16, i16* %z, i32 %index
-  %10 = bitcast i16* %9 to <8 x i16>*
-  store <8 x i16> %8, <8 x i16>* %10, align 2
+  %0 = getelementptr inbounds i16, ptr %x, i32 %index
+  %wide.load = load <8 x i16>, ptr %0, align 2
+  %1 = zext <8 x i16> %wide.load to <8 x i32>
+  %2 = getelementptr inbounds i16, ptr %y, i32 %index
+  %wide.load17 = load <8 x i16>, ptr %2, align 2
+  %3 = zext <8 x i16> %wide.load17 to <8 x i32>
+  %4 = mul nuw <8 x i32> %3, %1
+  %5 = lshr <8 x i32> %4, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %6 = trunc <8 x i32> %5 to <8 x i16>
+  %7 = getelementptr inbounds i16, ptr %z, i32 %index
+  store <8 x i16> %6, ptr %7, align 2
   %index.next = add i32 %index, 8
-  %11 = icmp eq i32 %index.next, 1024
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, 1024
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
-define void @vmulh_u32(i32* nocapture readonly %x, i32* nocapture readonly %y, i32* noalias nocapture %z, i32 %n) {
+define void @vmulh_u32(ptr nocapture readonly %x, ptr nocapture readonly %y, ptr noalias nocapture %z, i32 %n) {
 ; CHECK-LABEL: vmulh_u32:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -454,30 +439,27 @@ entry:
 
 vector.body:                                      ; preds = %vector.body, %entry
   %index = phi i32 [ 0, %entry ], [ %index.next, %vector.body ]
-  %0 = getelementptr inbounds i32, i32* %x, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.load = load <4 x i32>, <4 x i32>* %1, align 4
-  %2 = zext <4 x i32> %wide.load to <4 x i64>
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.load17 = load <4 x i32>, <4 x i32>* %4, align 4
-  %5 = zext <4 x i32> %wide.load17 to <4 x i64>
-  %6 = mul nuw <4 x i64> %5, %2
-  %7 = lshr <4 x i64> %6, <i64 32, i64 32, i64 32, i64 32>
-  %8 = trunc <4 x i64> %7 to <4 x i32>
-  %9 = getelementptr inbounds i32, i32* %z, i32 %index
-  %10 = bitcast i32* %9 to <4 x i32>*
-  store <4 x i32> %8, <4 x i32>* %10, align 4
+  %0 = getelementptr inbounds i32, ptr %x, i32 %index
+  %wide.load = load <4 x i32>, ptr %0, align 4
+  %1 = zext <4 x i32> %wide.load to <4 x i64>
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  %wide.load17 = load <4 x i32>, ptr %2, align 4
+  %3 = zext <4 x i32> %wide.load17 to <4 x i64>
+  %4 = mul nuw <4 x i64> %3, %1
+  %5 = lshr <4 x i64> %4, <i64 32, i64 32, i64 32, i64 32>
+  %6 = trunc <4 x i64> %5 to <4 x i32>
+  %7 = getelementptr inbounds i32, ptr %z, i32 %index
+  store <4 x i32> %6, ptr %7, align 4
   %index.next = add i32 %index, 4
-  %11 = icmp eq i32 %index.next, 1024
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, 1024
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body
   ret void
 }
 
 
-define void @vmulh_s32_pred(i32* noalias nocapture %d, i32* noalias nocapture readonly %x, i32* noalias nocapture readonly %y, i32 %n) {
+define void @vmulh_s32_pred(ptr noalias nocapture %d, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: vmulh_s32_pred:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -508,29 +490,26 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
-  %0 = getelementptr inbounds i32, i32* %x, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %1, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
-  %2 = sext <4 x i32> %wide.masked.load to <4 x i64>
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.masked.load12 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %4, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
-  %5 = sext <4 x i32> %wide.masked.load12 to <4 x i64>
-  %6 = mul nsw <4 x i64> %5, %2
-  %7 = lshr <4 x i64> %6, <i64 32, i64 32, i64 32, i64 32>
-  %8 = trunc <4 x i64> %7 to <4 x i32>
-  %9 = getelementptr inbounds i32, i32* %d, i32 %index
-  %10 = bitcast i32* %9 to <4 x i32>*
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %8, <4 x i32>* %10, i32 4, <4 x i1> %active.lane.mask)
+  %0 = getelementptr inbounds i32, ptr %x, i32 %index
+  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %0, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
+  %1 = sext <4 x i32> %wide.masked.load to <4 x i64>
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  %wide.masked.load12 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %2, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
+  %3 = sext <4 x i32> %wide.masked.load12 to <4 x i64>
+  %4 = mul nsw <4 x i64> %3, %1
+  %5 = lshr <4 x i64> %4, <i64 32, i64 32, i64 32, i64 32>
+  %6 = trunc <4 x i64> %5 to <4 x i32>
+  %7 = getelementptr inbounds i32, ptr %d, i32 %index
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %6, ptr %7, i32 4, <4 x i1> %active.lane.mask)
   %index.next = add i32 %index, 4
-  %11 = icmp eq i32 %index.next, %n.vec
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
-define void @vmulh_u32_pred(i32* noalias nocapture %d, i32* noalias nocapture readonly %x, i32* noalias nocapture readonly %y, i32 %n) {
+define void @vmulh_u32_pred(ptr noalias nocapture %d, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: vmulh_u32_pred:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -561,29 +540,26 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %active.lane.mask = call <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32 %index, i32 %n)
-  %0 = getelementptr inbounds i32, i32* %x, i32 %index
-  %1 = bitcast i32* %0 to <4 x i32>*
-  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %1, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
-  %2 = zext <4 x i32> %wide.masked.load to <4 x i64>
-  %3 = getelementptr inbounds i32, i32* %y, i32 %index
-  %4 = bitcast i32* %3 to <4 x i32>*
-  %wide.masked.load12 = call <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>* %4, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
-  %5 = zext <4 x i32> %wide.masked.load12 to <4 x i64>
-  %6 = mul nuw <4 x i64> %5, %2
-  %7 = lshr <4 x i64> %6, <i64 32, i64 32, i64 32, i64 32>
-  %8 = trunc <4 x i64> %7 to <4 x i32>
-  %9 = getelementptr inbounds i32, i32* %d, i32 %index
-  %10 = bitcast i32* %9 to <4 x i32>*
-  call void @llvm.masked.store.v4i32.p0v4i32(<4 x i32> %8, <4 x i32>* %10, i32 4, <4 x i1> %active.lane.mask)
+  %0 = getelementptr inbounds i32, ptr %x, i32 %index
+  %wide.masked.load = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %0, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
+  %1 = zext <4 x i32> %wide.masked.load to <4 x i64>
+  %2 = getelementptr inbounds i32, ptr %y, i32 %index
+  %wide.masked.load12 = call <4 x i32> @llvm.masked.load.v4i32.p0(ptr %2, i32 4, <4 x i1> %active.lane.mask, <4 x i32> poison)
+  %3 = zext <4 x i32> %wide.masked.load12 to <4 x i64>
+  %4 = mul nuw <4 x i64> %3, %1
+  %5 = lshr <4 x i64> %4, <i64 32, i64 32, i64 32, i64 32>
+  %6 = trunc <4 x i64> %5 to <4 x i32>
+  %7 = getelementptr inbounds i32, ptr %d, i32 %index
+  call void @llvm.masked.store.v4i32.p0(<4 x i32> %6, ptr %7, i32 4, <4 x i1> %active.lane.mask)
   %index.next = add i32 %index, 4
-  %11 = icmp eq i32 %index.next, %n.vec
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
-define void @vmulh_s16_pred(i16* noalias nocapture %d, i16* noalias nocapture readonly %x, i16* noalias nocapture readonly %y, i32 %n) {
+define void @vmulh_s16_pred(ptr noalias nocapture %d, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: vmulh_s16_pred:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -614,29 +590,26 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %n)
-  %0 = getelementptr inbounds i16, i16* %x, i32 %index
-  %1 = bitcast i16* %0 to <8 x i16>*
-  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %1, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
-  %2 = sext <8 x i16> %wide.masked.load to <8 x i32>
-  %3 = getelementptr inbounds i16, i16* %y, i32 %index
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.masked.load12 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %4, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
-  %5 = sext <8 x i16> %wide.masked.load12 to <8 x i32>
-  %6 = mul nsw <8 x i32> %5, %2
-  %7 = lshr <8 x i32> %6, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-  %8 = trunc <8 x i32> %7 to <8 x i16>
-  %9 = getelementptr inbounds i16, i16* %d, i32 %index
-  %10 = bitcast i16* %9 to <8 x i16>*
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %8, <8 x i16>* %10, i32 2, <8 x i1> %active.lane.mask)
+  %0 = getelementptr inbounds i16, ptr %x, i32 %index
+  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %0, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
+  %1 = sext <8 x i16> %wide.masked.load to <8 x i32>
+  %2 = getelementptr inbounds i16, ptr %y, i32 %index
+  %wide.masked.load12 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %2, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
+  %3 = sext <8 x i16> %wide.masked.load12 to <8 x i32>
+  %4 = mul nsw <8 x i32> %3, %1
+  %5 = lshr <8 x i32> %4, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %6 = trunc <8 x i32> %5 to <8 x i16>
+  %7 = getelementptr inbounds i16, ptr %d, i32 %index
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %6, ptr %7, i32 2, <8 x i1> %active.lane.mask)
   %index.next = add i32 %index, 8
-  %11 = icmp eq i32 %index.next, %n.vec
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
-define void @vmulh_u16_pred(i16* noalias nocapture %d, i16* noalias nocapture readonly %x, i16* noalias nocapture readonly %y, i32 %n) {
+define void @vmulh_u16_pred(ptr noalias nocapture %d, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: vmulh_u16_pred:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -667,29 +640,26 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %n)
-  %0 = getelementptr inbounds i16, i16* %x, i32 %index
-  %1 = bitcast i16* %0 to <8 x i16>*
-  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %1, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
-  %2 = zext <8 x i16> %wide.masked.load to <8 x i32>
-  %3 = getelementptr inbounds i16, i16* %y, i32 %index
-  %4 = bitcast i16* %3 to <8 x i16>*
-  %wide.masked.load12 = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %4, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
-  %5 = zext <8 x i16> %wide.masked.load12 to <8 x i32>
-  %6 = mul nuw <8 x i32> %5, %2
-  %7 = lshr <8 x i32> %6, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
-  %8 = trunc <8 x i32> %7 to <8 x i16>
-  %9 = getelementptr inbounds i16, i16* %d, i32 %index
-  %10 = bitcast i16* %9 to <8 x i16>*
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %8, <8 x i16>* %10, i32 2, <8 x i1> %active.lane.mask)
+  %0 = getelementptr inbounds i16, ptr %x, i32 %index
+  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %0, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
+  %1 = zext <8 x i16> %wide.masked.load to <8 x i32>
+  %2 = getelementptr inbounds i16, ptr %y, i32 %index
+  %wide.masked.load12 = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %2, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
+  %3 = zext <8 x i16> %wide.masked.load12 to <8 x i32>
+  %4 = mul nuw <8 x i32> %3, %1
+  %5 = lshr <8 x i32> %4, <i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16, i32 16>
+  %6 = trunc <8 x i32> %5 to <8 x i16>
+  %7 = getelementptr inbounds i16, ptr %d, i32 %index
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %6, ptr %7, i32 2, <8 x i1> %active.lane.mask)
   %index.next = add i32 %index, 8
-  %11 = icmp eq i32 %index.next, %n.vec
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
-define void @vmulh_s8_pred(i8* noalias nocapture %d, i8* noalias nocapture readonly %x, i8* noalias nocapture readonly %y, i32 %n) {
+define void @vmulh_s8_pred(ptr noalias nocapture %d, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: vmulh_s8_pred:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -720,29 +690,26 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %index, i32 %n)
-  %0 = getelementptr inbounds i8, i8* %x, i32 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.masked.load = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %1, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
-  %2 = sext <16 x i8> %wide.masked.load to <16 x i16>
-  %3 = getelementptr inbounds i8, i8* %y, i32 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.masked.load12 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %4, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
-  %5 = sext <16 x i8> %wide.masked.load12 to <16 x i16>
-  %6 = mul nsw <16 x i16> %5, %2
-  %7 = lshr <16 x i16> %6, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-  %8 = trunc <16 x i16> %7 to <16 x i8>
-  %9 = getelementptr inbounds i8, i8* %d, i32 %index
-  %10 = bitcast i8* %9 to <16 x i8>*
-  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %8, <16 x i8>* %10, i32 1, <16 x i1> %active.lane.mask)
+  %0 = getelementptr inbounds i8, ptr %x, i32 %index
+  %wide.masked.load = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %0, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
+  %1 = sext <16 x i8> %wide.masked.load to <16 x i16>
+  %2 = getelementptr inbounds i8, ptr %y, i32 %index
+  %wide.masked.load12 = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %2, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
+  %3 = sext <16 x i8> %wide.masked.load12 to <16 x i16>
+  %4 = mul nsw <16 x i16> %3, %1
+  %5 = lshr <16 x i16> %4, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %6 = trunc <16 x i16> %5 to <16 x i8>
+  %7 = getelementptr inbounds i8, ptr %d, i32 %index
+  call void @llvm.masked.store.v16i8.p0(<16 x i8> %6, ptr %7, i32 1, <16 x i1> %active.lane.mask)
   %index.next = add i32 %index, 16
-  %11 = icmp eq i32 %index.next, %n.vec
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
-define void @vmulh_u8_pred(i8* noalias nocapture %d, i8* noalias nocapture readonly %x, i8* noalias nocapture readonly %y, i32 %n) {
+define void @vmulh_u8_pred(ptr noalias nocapture %d, ptr noalias nocapture readonly %x, ptr noalias nocapture readonly %y, i32 %n) {
 ; CHECK-LABEL: vmulh_u8_pred:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    .save {r7, lr}
@@ -773,34 +740,65 @@ vector.ph:                                        ; preds = %entry
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
   %active.lane.mask = call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 %index, i32 %n)
-  %0 = getelementptr inbounds i8, i8* %x, i32 %index
-  %1 = bitcast i8* %0 to <16 x i8>*
-  %wide.masked.load = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %1, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
-  %2 = zext <16 x i8> %wide.masked.load to <16 x i16>
-  %3 = getelementptr inbounds i8, i8* %y, i32 %index
-  %4 = bitcast i8* %3 to <16 x i8>*
-  %wide.masked.load12 = call <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>* %4, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
-  %5 = zext <16 x i8> %wide.masked.load12 to <16 x i16>
-  %6 = mul nuw <16 x i16> %5, %2
-  %7 = lshr <16 x i16> %6, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
-  %8 = trunc <16 x i16> %7 to <16 x i8>
-  %9 = getelementptr inbounds i8, i8* %d, i32 %index
-  %10 = bitcast i8* %9 to <16 x i8>*
-  call void @llvm.masked.store.v16i8.p0v16i8(<16 x i8> %8, <16 x i8>* %10, i32 1, <16 x i1> %active.lane.mask)
+  %0 = getelementptr inbounds i8, ptr %x, i32 %index
+  %wide.masked.load = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %0, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
+  %1 = zext <16 x i8> %wide.masked.load to <16 x i16>
+  %2 = getelementptr inbounds i8, ptr %y, i32 %index
+  %wide.masked.load12 = call <16 x i8> @llvm.masked.load.v16i8.p0(ptr %2, i32 1, <16 x i1> %active.lane.mask, <16 x i8> poison)
+  %3 = zext <16 x i8> %wide.masked.load12 to <16 x i16>
+  %4 = mul nuw <16 x i16> %3, %1
+  %5 = lshr <16 x i16> %4, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %6 = trunc <16 x i16> %5 to <16 x i8>
+  %7 = getelementptr inbounds i8, ptr %d, i32 %index
+  call void @llvm.masked.store.v16i8.p0(<16 x i8> %6, ptr %7, i32 1, <16 x i1> %active.lane.mask)
   %index.next = add i32 %index, 16
-  %11 = icmp eq i32 %index.next, %n.vec
-  br i1 %11, label %for.cond.cleanup, label %vector.body
+  %8 = icmp eq i32 %index.next, %n.vec
+  br i1 %8, label %for.cond.cleanup, label %vector.body
 
 for.cond.cleanup:                                 ; preds = %vector.body, %entry
   ret void
 }
 
+
+define arm_aapcs_vfpcc i16 @vmulhs_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vmulhs_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.s8 q0, q0, q1
+; CHECK-NEXT:    vaddv.s8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = sext <16 x i8> %s0 to <16 x i16>
+  %s1s = sext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %s = ashr <16 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+define arm_aapcs_vfpcc i16 @vmulhu_reduce_v16i8(<16 x i8> %s0, <16 x i8> %s1) {
+; CHECK-LABEL: vmulhu_reduce_v16i8:
+; CHECK:       @ %bb.0: @ %entry
+; CHECK-NEXT:    vmulh.u8 q0, q0, q1
+; CHECK-NEXT:    vaddv.s8 r0, q0
+; CHECK-NEXT:    bx lr
+entry:
+  %s0s = zext <16 x i8> %s0 to <16 x i16>
+  %s1s = zext <16 x i8> %s1 to <16 x i16>
+  %m = mul <16 x i16> %s0s, %s1s
+  %s = ashr <16 x i16> %m, <i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8, i16 8>
+  %result = call i16 @llvm.vector.reduce.add.v16i16(<16 x i16> %s)
+  ret i16 %result
+}
+
+declare i16 @llvm.vector.reduce.add.v16i16(<16 x i16>)
+
+
 declare <4 x i1> @llvm.get.active.lane.mask.v4i1.i32(i32, i32)
-declare <4 x i32> @llvm.masked.load.v4i32.p0v4i32(<4 x i32>*, i32 immarg, <4 x i1>, <4 x i32>)
-declare void @llvm.masked.store.v4i32.p0v4i32(<4 x i32>, <4 x i32>*, i32 immarg, <4 x i1>)
+declare <4 x i32> @llvm.masked.load.v4i32.p0(ptr, i32 immarg, <4 x i1>, <4 x i32>)
+declare void @llvm.masked.store.v4i32.p0(<4 x i32>, ptr, i32 immarg, <4 x i1>)
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32)
-declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32 immarg, <8 x i1>, <8 x i16>)
-declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32 immarg, <8 x i1>)
+declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, i32 immarg, <8 x i1>, <8 x i16>)
+declare void @llvm.masked.store.v8i16.p0(<8 x i16>, ptr, i32 immarg, <8 x i1>)
 declare <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32, i32)
-declare <16 x i8> @llvm.masked.load.v16i8.p0v16i8(<16 x i8>*, i32 immarg, <16 x i1>, <16 x i8>)
-declare void @llvm.masked.store.v16i8.p0v16i8(<16 x i8>, <16 x i8>*, i32 immarg, <16 x i1>)
+declare <16 x i8> @llvm.masked.load.v16i8.p0(ptr, i32 immarg, <16 x i1>, <16 x i8>)
+declare void @llvm.masked.store.v16i8.p0(<16 x i8>, ptr, i32 immarg, <16 x i1>)

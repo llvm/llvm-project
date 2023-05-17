@@ -23,7 +23,7 @@
 #endif
 
 
-void test() {
+TEST_CONSTEXPR_CXX20 bool test() {
 #if TEST_STD_VER >= 11
   int arr1[] = {42};
   int arr2[] = {1, 101, 42};
@@ -71,15 +71,20 @@ void test() {
 
     std::vector<int> dst(10);
 
-    size_t n = dst.capacity() * 2;
+    std::size_t n = dst.capacity() * 2;
     std::vector<int> src(n);
 
     dst.assign(It(src.data()), It(src.data() + src.size()));
     assert(dst == src);
   }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER > 17
+  static_assert(test());
+#endif
   return 0;
 }

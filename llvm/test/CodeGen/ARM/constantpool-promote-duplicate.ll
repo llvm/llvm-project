@@ -11,9 +11,9 @@
 ; CHECK-DAG: const2:
 ; CHECK: .fnend
 define void @test1() {
-  %1 = load i32, i32* @const1, align 4
+  %1 = load i32, ptr @const1, align 4
   call void @a(i32 %1)
-  %2 = load i32, i32* @const2, align 4
+  %2 = load i32, ptr @const2, align 4
   call void @a(i32 %2)
   ret void
 }

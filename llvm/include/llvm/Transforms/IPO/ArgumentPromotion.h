@@ -14,7 +14,6 @@
 #include "llvm/IR/PassManager.h"
 
 namespace llvm {
-class TargetTransformInfo;
 
 /// Argument promotion pass.
 ///
@@ -26,9 +25,6 @@ class ArgumentPromotionPass : public PassInfoMixin<ArgumentPromotionPass> {
 
 public:
   ArgumentPromotionPass(unsigned MaxElements = 2u) : MaxElements(MaxElements) {}
-
-  /// Checks if a type could have padding bytes.
-  static bool isDenselyPacked(Type *Ty, const DataLayout &DL);
 
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);

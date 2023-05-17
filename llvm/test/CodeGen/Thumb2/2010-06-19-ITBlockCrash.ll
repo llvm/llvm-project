@@ -3,7 +3,7 @@
 
 declare arm_apcscc i32 @__maskrune(i32, i32)
 
-define arm_apcscc i32 @strncmpic(i8* nocapture %s1, i8* nocapture %s2, i32 %n) nounwind {
+define arm_apcscc i32 @strncmpic(ptr nocapture %s1, ptr nocapture %s2, i32 %n) nounwind {
 entry:
   br i1 undef, label %bb11, label %bb19
 
@@ -18,7 +18,7 @@ bb1.i.i11:                                        ; preds = %bb11
   %1 = tail call arm_apcscc  i32 @__maskrune(i32 %0, i32 32768) nounwind ; <i32> [#uses=1]
   %2 = icmp ne i32 %1, 0                          ; <i1> [#uses=1]
   %3 = zext i1 %2 to i32                          ; <i32> [#uses=1]
-  %.pre = load i8, i8* undef, align 1                 ; <i8> [#uses=1]
+  %.pre = load i8, ptr undef, align 1                 ; <i8> [#uses=1]
   br label %isupper144.exit12
 
 isupper144.exit12:                                ; preds = %bb1.i.i11, %bb.i.i10

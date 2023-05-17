@@ -49,7 +49,7 @@ define void @semiempirical_corrections_mp_gcpcor_() local_unnamed_addr #1 !dbg !
 alloca_1:
   %"var$47" = alloca i64, align 8, !dbg !34
   call void @llvm.dbg.value(metadata i64 7523094288207667809, metadata !12, metadata !DIExpression()), !dbg !40
-  store i64 7523094288207667809, i64* %"var$47", align 8, !dbg !41, !alias.scope !42, !noalias !45
+  store i64 7523094288207667809, ptr %"var$47", align 8, !dbg !41, !alias.scope !42, !noalias !45
   ret void, !dbg !48
 }
 

@@ -10,7 +10,7 @@ int main() {
 
   // Positive tests.
   int32_t t0 = (~((uint32_t)0));
-// CHECK: implicit-conversion
+// CHECK: implicit-conversion by 0x{{[[:xdigit:]]+$}}
 // CHECK-NOT: implicit-conversion
 
   return 0;

@@ -12,12 +12,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/SourceMgr.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
+#include "llvm/TableGen/TableGenBackend.h"
 #include <algorithm>
-#include <string>
 #include <vector>
 using namespace llvm;
 
@@ -27,18 +27,22 @@ namespace {
 
 class Tag {
 private:
-  const std::string *Id;
-  SMLoc Loc;
+  StringRef Id;
+  StringRef BufferIdentifier;
+  unsigned Line;
 public:
-  Tag(const std::string &Name, const SMLoc Location)
-      : Id(&Name), Loc(Location) {}
-  int operator<(const Tag &B) const { return *Id < *B.Id; }
-  void emit(raw_ostream &OS) const {
+  Tag(StringRef Name, const SMLoc Location) : Id(Name) {
     const MemoryBuffer *CurMB =
-        SrcMgr.getMemoryBuffer(SrcMgr.FindBufferContainingLoc(Loc));
-    auto BufferName = CurMB->getBufferIdentifier();
-    std::pair<unsigned, unsigned> LineAndColumn = SrcMgr.getLineAndColumn(Loc);
-    OS << *Id << "\t" << BufferName << "\t" << LineAndColumn.first << "\n";
+        SrcMgr.getMemoryBuffer(SrcMgr.FindBufferContainingLoc(Location));
+    BufferIdentifier = CurMB->getBufferIdentifier();
+    auto LineAndColumn = SrcMgr.getLineAndColumn(Location);
+    Line = LineAndColumn.first;
+  }
+  int operator<(const Tag &B) const {
+    return std::make_tuple(Id, BufferIdentifier, Line) < std::make_tuple(B.Id, B.BufferIdentifier, B.Line);
+  }
+  void emit(raw_ostream &OS) const {
+    OS << Id << "\t" << BufferIdentifier << "\t" << Line << "\n";
   }
 };
 
@@ -67,8 +71,11 @@ void CTagsEmitter::run(raw_ostream &OS) {
   std::vector<Tag> Tags;
   // Collect tags.
   Tags.reserve(Classes.size() + Defs.size());
-  for (const auto &C : Classes)
+  for (const auto &C : Classes) {
     Tags.push_back(Tag(C.first, locate(C.second.get())));
+    for (SMLoc FwdLoc : C.second->getForwardDeclarationLocs())
+      Tags.push_back(Tag(C.first, FwdLoc));
+  }
   for (const auto &D : Defs)
     Tags.push_back(Tag(D.first, locate(D.second.get())));
   // Emit tags.
@@ -79,8 +86,5 @@ void CTagsEmitter::run(raw_ostream &OS) {
     T.emit(OS);
 }
 
-namespace llvm {
-
-void EmitCTags(RecordKeeper &RK, raw_ostream &OS) { CTagsEmitter(RK).run(OS); }
-
-} // End llvm namespace.
+static TableGen::Emitter::OptClass<CTagsEmitter>
+    X("gen-ctags", "Generate ctags-compatible index");

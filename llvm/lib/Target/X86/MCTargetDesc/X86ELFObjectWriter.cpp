@@ -229,23 +229,6 @@ static unsigned getRelocType64(MCContext &Ctx, SMLoc Loc,
 
 enum X86_32RelType { RT32_NONE, RT32_32, RT32_16, RT32_8 };
 
-static X86_32RelType getType32(X86_64RelType T) {
-  switch (T) {
-  case RT64_NONE:
-    return RT32_NONE;
-  case RT64_64:
-    llvm_unreachable("Unimplemented");
-  case RT64_32:
-  case RT64_32S:
-    return RT32_32;
-  case RT64_16:
-    return RT32_16;
-  case RT64_8:
-    return RT32_8;
-  }
-  llvm_unreachable("unexpected relocation type!");
-}
-
 static unsigned getRelocType32(MCContext &Ctx,
                                MCSymbolRefExpr::VariantKind Modifier,
                                X86_32RelType Type, bool IsPCRel,
@@ -339,7 +322,26 @@ unsigned X86ELFObjectWriter::getRelocType(MCContext &Ctx, const MCValue &Target,
 
   assert((getEMachine() == ELF::EM_386 || getEMachine() == ELF::EM_IAMCU) &&
          "Unsupported ELF machine type.");
-  return getRelocType32(Ctx, Modifier, getType32(Type), IsPCRel, Kind);
+
+  X86_32RelType RelType = RT32_NONE;
+  switch (Type) {
+  case RT64_NONE:
+    break;
+  case RT64_64:
+    Ctx.reportError(Fixup.getLoc(), "unsupported relocation type");
+    break;
+  case RT64_32:
+  case RT64_32S:
+    RelType = RT32_32;
+    break;
+  case RT64_16:
+    RelType = RT32_16;
+    break;
+  case RT64_8:
+    RelType = RT32_8;
+    break;
+  }
+  return getRelocType32(Ctx, Modifier, RelType, IsPCRel, Kind);
 }
 
 std::unique_ptr<MCObjectTargetWriter>

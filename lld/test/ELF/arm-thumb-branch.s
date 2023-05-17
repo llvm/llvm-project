@@ -42,26 +42,26 @@ callee_high:
 // CHECK: Disassembly of section .callee1:
 // CHECK-EMPTY:
 // CHECK-NEXT: <callee_low>:
-// CHECK-NEXT:      b4:       70 47   bx      lr
+// CHECK-NEXT:      b4:       4770    bx      lr
 // CHECK-EMPTY:
 // CHECK-NEXT: Disassembly of section .caller:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:   10000:       f0 f7 58 f8     bl      0xb4 <callee_low>
-// CHECK-NEXT:   10004:       f0 f7 56 b8     b.w     0xb4 <callee_low>
-// CHECK-NEXT:   10008:       30 f4 54 a8     beq.w   0xb4 <callee_low>
-// CHECK-NEXT:   1000c:       00 f0 0c f8     bl      0x10028 <callee_high>
-// CHECK-NEXT:   10010:       00 f0 0a b8     b.w     0x10028 <callee_high>
-// CHECK-NEXT:   10014:       40 f0 08 80     bne.w   0x10028 <callee_high>
+// CHECK-NEXT:   10000:       f7f0 f858       bl      0xb4 <callee_low>
+// CHECK-NEXT:   10004:       f7f0 b856       b.w     0xb4 <callee_low>
+// CHECK-NEXT:   10008:       f430 a854       beq.w   0xb4 <callee_low>
+// CHECK-NEXT:   1000c:       f000 f80c       bl      0x10028 <callee_high>
+// CHECK-NEXT:   10010:       f000 b80a       b.w     0x10028 <callee_high>
+// CHECK-NEXT:   10014:       f040 8008       bne.w   0x10028 <callee_high>
 /// far_uncond = 0x101001b
-// CHECK-NEXT:   10018:       ff f3 ff d7     bl      0x101001a
-// CHECK-NEXT:   1001c:       ff f3 fd 97     b.w     0x101001a
+// CHECK-NEXT:   10018:       f3ff d7ff       bl      0x101001a
+// CHECK-NEXT:   1001c:       f3ff 97fd       b.w     0x101001a
 /// far_cond = 0x110023
-// CHECK-NEXT:   10020:       3f f3 ff af     bgt.w   0x110022
-// CHECK-NEXT:   10024:       70 47   bx      lr
+// CHECK-NEXT:   10020:       f33f afff       bgt.w   0x110022
+// CHECK-NEXT:   10024:       4770    bx      lr
 // CHECK-NEXT:   10026:
 // CHECK-EMPTY:
 // CHECK-NEXT: Disassembly of section .callee2:
 // CHECK-EMPTY:
 // CHECK-NEXT: <callee_high>:
-// CHECK-NEXT:   10028:       70 47   bx      lr
+// CHECK-NEXT:   10028:       4770    bx      lr

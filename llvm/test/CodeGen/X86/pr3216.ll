@@ -8,7 +8,7 @@ define i32 @main() nounwind {
 ; CHECK: sar{{.}} $5
 ; CHECK: ret
 
-   %tmp = load i8, i8* @foo
+   %tmp = load i8, ptr @foo
    %bf.lo = lshr i8 %tmp, 5
    %bf.lo.cleared = and i8 %bf.lo, 7
    %1 = shl i8 %bf.lo.cleared, 5

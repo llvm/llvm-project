@@ -9,9 +9,15 @@
 #ifndef MLIR_CONVERSION_ARMNEON2DTOINTR_ARMNEON2DTOINTR_H_
 #define MLIR_CONVERSION_ARMNEON2DTOINTR_ARMNEON2DTOINTR_H_
 
-#include "mlir/Pass/Pass.h"
+#include <memory>
 
 namespace mlir {
+class Pass;
+class RewritePatternSet;
+
+#define GEN_PASS_DECL_CONVERTARMNEON2DTOINTR
+#include "mlir/Conversion/Passes.h.inc"
+
 /// Populates patterns for the lowering of Arm NEON 2D ops to intrinsics.
 /// See createConvertArmNeon2dToIntrPass.
 void populateConvertArmNeon2dToIntrPatterns(RewritePatternSet &patterns);

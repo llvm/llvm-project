@@ -38,7 +38,7 @@ SimpleRemoteEPC::lookupSymbols(ArrayRef<LookupRequest> Request) {
       Result.push_back({});
       Result.back().reserve(R->size());
       for (auto Addr : *R)
-        Result.back().push_back(Addr.getValue());
+        Result.back().push_back(Addr);
     } else
       return R.takeError();
   }
@@ -49,7 +49,24 @@ Expected<int32_t> SimpleRemoteEPC::runAsMain(ExecutorAddr MainFnAddr,
                                              ArrayRef<std::string> Args) {
   int64_t Result = 0;
   if (auto Err = callSPSWrapper<rt::SPSRunAsMainSignature>(
-          RunAsMainAddr, Result, ExecutorAddr(MainFnAddr), Args))
+          RunAsMainAddr, Result, MainFnAddr, Args))
+    return std::move(Err);
+  return Result;
+}
+
+Expected<int32_t> SimpleRemoteEPC::runAsVoidFunction(ExecutorAddr VoidFnAddr) {
+  int32_t Result = 0;
+  if (auto Err = callSPSWrapper<rt::SPSRunAsVoidFunctionSignature>(
+          RunAsVoidFunctionAddr, Result, VoidFnAddr))
+    return std::move(Err);
+  return Result;
+}
+
+Expected<int32_t> SimpleRemoteEPC::runAsIntFunction(ExecutorAddr IntFnAddr,
+                                                    int Arg) {
+  int32_t Result = 0;
+  if (auto Err = callSPSWrapper<rt::SPSRunAsIntFunctionSignature>(
+          RunAsIntFunctionAddr, Result, IntFnAddr, Arg))
     return std::move(Err);
   return Result;
 }
@@ -109,23 +126,22 @@ SimpleRemoteEPC::handleMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
     case SimpleRemoteEPCOpcode::Setup:
       dbgs() << "Setup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Setup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Setup?");
+      assert(!TagAddr && "Non-zero TagAddr for Setup?");
       break;
     case SimpleRemoteEPCOpcode::Hangup:
       dbgs() << "Hangup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Hangup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Hangup?");
+      assert(!TagAddr && "Non-zero TagAddr for Hangup?");
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Result?");
+      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
       break;
     }
-    dbgs() << ", seqno = " << SeqNo
-           << ", tag-addr = " << formatv("{0:x}", TagAddr.getValue())
+    dbgs() << ", seqno = " << SeqNo << ", tag-addr = " << TagAddr
            << ", arg-buffer = " << formatv("{0:x}", ArgBytes.size())
            << " bytes\n";
   });
@@ -210,11 +226,11 @@ Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
     case SimpleRemoteEPCOpcode::Hangup:
       dbgs() << "Hangup";
       assert(SeqNo == 0 && "Non-zero SeqNo for Hangup?");
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Hangup?");
+      assert(!TagAddr && "Non-zero TagAddr for Hangup?");
       break;
     case SimpleRemoteEPCOpcode::Result:
       dbgs() << "Result";
-      assert(TagAddr.getValue() == 0 && "Non-zero TagAddr for Result?");
+      assert(!TagAddr && "Non-zero TagAddr for Result?");
       break;
     case SimpleRemoteEPCOpcode::CallWrapper:
       dbgs() << "CallWrapper";
@@ -222,8 +238,7 @@ Error SimpleRemoteEPC::sendMessage(SimpleRemoteEPCOpcode OpC, uint64_t SeqNo,
     default:
       llvm_unreachable("Invalid opcode");
     }
-    dbgs() << ", seqno = " << SeqNo
-           << ", tag-addr = " << formatv("{0:x}", TagAddr.getValue())
+    dbgs() << ", seqno = " << SeqNo << ", tag-addr = " << TagAddr
            << ", arg-buffer = " << formatv("{0:x}", ArgBytes.size())
            << " bytes\n";
   });
@@ -300,19 +315,27 @@ Error SimpleRemoteEPC::setup(Setup S) {
     dbgs() << "SimpleRemoteEPC received setup message:\n"
            << "  Triple: " << EI->TargetTriple << "\n"
            << "  Page size: " << EI->PageSize << "\n"
-           << "  Bootstrap symbols:\n";
+           << "  Bootstrap map" << (EI->BootstrapMap.empty() ? " empty" : ":")
+           << "\n";
+    for (const auto &KV : EI->BootstrapMap)
+      dbgs() << "    " << KV.first() << ": " << KV.second.size()
+             << "-byte SPS encoded buffer\n";
+    dbgs() << "  Bootstrap symbols"
+           << (EI->BootstrapSymbols.empty() ? " empty" : ":") << "\n";
     for (const auto &KV : EI->BootstrapSymbols)
-      dbgs() << "    " << KV.first() << ": "
-             << formatv("{0:x16}", KV.second.getValue()) << "\n";
+      dbgs() << "    " << KV.first() << ": " << KV.second << "\n";
   });
   TargetTriple = Triple(EI->TargetTriple);
   PageSize = EI->PageSize;
+  BootstrapMap = std::move(EI->BootstrapMap);
   BootstrapSymbols = std::move(EI->BootstrapSymbols);
 
   if (auto Err = getBootstrapSymbols(
           {{JDI.JITDispatchContext, ExecutorSessionObjectName},
            {JDI.JITDispatchFunction, DispatchFnName},
-           {RunAsMainAddr, rt::RunAsMainWrapperName}}))
+           {RunAsMainAddr, rt::RunAsMainWrapperName},
+           {RunAsVoidFunctionAddr, rt::RunAsVoidFunctionWrapperName},
+           {RunAsIntFunctionAddr, rt::RunAsIntFunctionWrapperName}}))
     return Err;
 
   if (auto DM =
@@ -383,7 +406,7 @@ void SimpleRemoteEPC::handleCallWrapper(
                                   ExecutorAddr(), {WFR.data(), WFR.size()}))
                 getExecutionSession().reportError(std::move(Err));
             },
-            TagAddr.getValue(), ArgBytes);
+            TagAddr, ArgBytes);
       },
       "callWrapper task"));
 }

@@ -13,9 +13,7 @@
 using namespace clang;
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace fuchsia {
+namespace clang::tidy::fuchsia {
 
 namespace {
 AST_MATCHER(CXXRecordDecl, hasBases) {
@@ -89,8 +87,8 @@ bool MultipleInheritanceCheck::isInterface(const CXXRecordDecl *Node) {
 
 void MultipleInheritanceCheck::registerMatchers(MatchFinder *Finder) {
   // Match declarations which have bases.
-  Finder->addMatcher(
-      cxxRecordDecl(allOf(hasBases(), isDefinition())).bind("decl"), this);
+  Finder->addMatcher(cxxRecordDecl(hasBases(), isDefinition()).bind("decl"),
+                     this);
 }
 
 void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
@@ -122,6 +120,4 @@ void MultipleInheritanceCheck::check(const MatchFinder::MatchResult &Result) {
   }
 }
 
-}  // namespace fuchsia
-}  // namespace tidy
-}  // namespace clang
+} // namespace clang::tidy::fuchsia

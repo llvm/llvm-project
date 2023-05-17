@@ -26,29 +26,14 @@
 ! RUN: %flang -E -Xflang -fno-reformat -ffixed-line-length-13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
 ! RUN: %flang_fc1 -E -fno-reformat -ffixed-line-length-13 %S/Inputs/fixed-line-length-test.f  2>&1 | FileCheck %s --check-prefix=LENGTH13
 
-!-------------------------------------
-! EXPECTED OUTPUT WITH DEFAULT LENGTH
-!-------------------------------------
 ! The line should be trimmed to 72 characters when reading based on the default value of fixed line length.
 ! DEFAULTLENGTH: program{{(a{58})}}
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITH A NEGATIVE LENGTH
-!-----------------------------------------
 ! NEGATIVELENGTH: invalid value '-2' in 'ffixed-line-length=', value must be 'none' or a positive integer
 
-!-----------------------------------------
-! EXPECTED OUTPUT WITH LENGTH LESS THAN 7
-!-----------------------------------------
 ! INVALIDLENGTH: invalid value '3' in 'ffixed-line-length=', value must be '7' or greater
 
-!---------------------------------------
-! EXPECTED OUTPUT WITH UNLIMITED LENGTH
-!---------------------------------------
 ! The line should not be trimmed and so 73 characters (including spaces) should be read.
 ! UNLIMITEDLENGTH: program{{(a{59})}}
 
-!--------------------------------
-! EXPECTED OUTPUT WITH LENGTH 13
-!--------------------------------
 ! LENGTH13: program

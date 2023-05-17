@@ -128,7 +128,6 @@ body:             |
 ---
 name:            anyext_v2s64_from_v2s32
 alignment:       4
-tracksRegLiveness: true
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true

@@ -14,7 +14,6 @@
 #define LLVM_EXECUTIONENGINE_ORC_TARGETPROCESS_TARGETEXECUTIONUTILS_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include <string>
 
@@ -30,7 +29,10 @@ namespace orc {
 /// many main functions will expect a name argument at least, and will fail
 /// if none is provided.
 int runAsMain(int (*Main)(int, char *[]), ArrayRef<std::string> Args,
-              Optional<StringRef> ProgramName = None);
+              std::optional<StringRef> ProgramName = std::nullopt);
+
+int runAsVoidFunction(int (*Func)(void));
+int runAsIntFunction(int (*Func)(int), int Arg);
 
 } // end namespace orc
 } // end namespace llvm

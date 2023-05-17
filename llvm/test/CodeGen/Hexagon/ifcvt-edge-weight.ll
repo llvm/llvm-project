@@ -32,8 +32,8 @@ if.end2:
 
 if.end:
   %storemerge = phi i32 [ %and, %if.else ], [ %shl, %if.then ]
-  store i32 %storemerge, i32* @a, align 4
-  %0 = load i32, i32* @d, align 4
+  store i32 %storemerge, ptr @a, align 4
+  %0 = load i32, ptr @d, align 4
   %cmp2 = call i1 @pred()
   br i1 %cmp2, label %if.end2, label %if.else2, !prof !2
 

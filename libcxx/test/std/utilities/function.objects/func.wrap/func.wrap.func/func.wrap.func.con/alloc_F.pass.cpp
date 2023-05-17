@@ -7,14 +7,11 @@
 //===----------------------------------------------------------------------===//
 
 // <functional>
-// REQUIRES: c++03 || c++11 || c++14
+// REQUIRES: c++11 || c++14
 
 // class function<R(ArgTypes...)>
 
 // template<class F, class A> function(allocator_arg_t, const A&, F);
-
-// This test runs in C++03, but we have deprecated using std::function in C++03.
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <functional>
 #include <cassert>
@@ -35,6 +32,12 @@ struct LValueCallable {
     void operator()(Args&&...) & {}
 };
 #endif
+
+template <class T>
+struct non_default_test_allocator : test_allocator<T> {
+  non_default_test_allocator() = delete;
+  using test_allocator<T>::test_allocator;
+};
 
 test_allocator_statistics alloc_stats;
 

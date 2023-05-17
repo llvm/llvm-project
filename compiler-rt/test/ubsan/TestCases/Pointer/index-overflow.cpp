@@ -1,9 +1,9 @@
 // RUN: %clangxx -fsanitize=pointer-overflow %s -o %t
-// RUN: %run %t 2 2>&1 | FileCheck %s --implicit-check-not="error:" --check-prefix=ERR2
-// RUN: %run %t 1 2>&1 | FileCheck %s --implicit-check-not="error:" --check-prefix=ERR1
-// RUN: %run %t 0 2>&1 | FileCheck %s --implicit-check-not="error:" --check-prefix=SAFE
-// RUN: %run %t -1 2>&1 | FileCheck %s --implicit-check-not="error:" --check-prefix=SAFE
-// RUN: %run %t -2 2>&1 | FileCheck %s --implicit-check-not="error:" --check-prefix=SAFE
+// RUN: %run %t  2 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=ERR2
+// RUN: %run %t  1 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=ERR1
+// RUN: %run %t  0 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=SAFE
+// RUN: %run %t -1 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=SAFE
+// RUN: %run %t -2 2>&1 | FileCheck %s --implicit-check-not="runtime error:" --check-prefix=SAFE
 
 #include <stdio.h>
 #include <stdint.h>

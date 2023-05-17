@@ -7,7 +7,7 @@
 #include <stdint.h>
 #include <utility>
 
-constexpr std::pair<const char*, uint64_t> floating_point_test_cases_double[] = {
+constexpr std::pair<const char*, std::uint64_t> floating_point_test_cases_double[] = {
     // Verify small exactly-representable integers:
     {"1", 0x3FF0000000000000ULL},
     {"2", 0x4000000000000000ULL},
@@ -202,7 +202,7 @@ constexpr std::pair<const char*, uint64_t> floating_point_test_cases_double[] = 
     {"8.32116e+55", 0x4B8B2628393E02CDULL},
 };
 
-constexpr std::pair<const char*, uint32_t> floating_point_test_cases_float[] = {
+constexpr std::pair<const char*, std::uint32_t> floating_point_test_cases_float[] = {
     // Verify small exactly-representable integers:
     {"1", 0x3F800000U},
     {"2", 0x40000000U},

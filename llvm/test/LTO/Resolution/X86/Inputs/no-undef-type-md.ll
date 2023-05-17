@@ -10,4 +10,4 @@ declare void @a()
 !9 = !{i32 1, !"EnableSplitLTOUnit", i32 1}
 !39 = !{i32 5, !"CG Profile", !40}
 !40 = !{!41}
-!41 = distinct !{null, i32 ()* bitcast (void ()* @a to i32 ()*), i64 2594092}
+!41 = distinct !{null, ptr @a, i64 2594092}

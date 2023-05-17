@@ -39,6 +39,7 @@ list(APPEND BOLT_TEST_DEPS
   llvm-bolt
   llvm-boltdiff
   llvm-bolt-heatmap
+  llvm-bat-dump
   llvm-dwarfdump
   llvm-dwp
   llvm-mc
@@ -46,11 +47,13 @@ list(APPEND BOLT_TEST_DEPS
   llvm-objdump
   llvm-readelf
   llvm-readobj
+  llvm-strings
   llvm-strip
   llvm-objcopy
   merge-fdata
   not
   perf2bolt
+  split-file
   yaml2obj
   )
 

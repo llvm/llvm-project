@@ -18,14 +18,10 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Endian.h"
-#include "llvm/Support/Host.h"
+#include "llvm/Support/SwapByteOrder.h"
 #include <string.h>
 
 using namespace llvm;
-
-#if defined(BYTE_ORDER) && defined(BIG_ENDIAN) && BYTE_ORDER == BIG_ENDIAN
-#define SHA_BIG_ENDIAN
-#endif
 
 static inline uint32_t rol(uint32_t Number, int Bits) {
   return (Number << Bits) | (Number >> (32 - Bits));
@@ -192,11 +188,10 @@ void SHA1::hashBlock() {
 }
 
 void SHA1::addUncounted(uint8_t Data) {
-#ifdef SHA_BIG_ENDIAN
-  InternalState.Buffer.C[InternalState.BufferOffset] = Data;
-#else
-  InternalState.Buffer.C[InternalState.BufferOffset ^ 3] = Data;
-#endif
+  if constexpr (sys::IsBigEndianHost)
+    InternalState.Buffer.C[InternalState.BufferOffset] = Data;
+  else
+    InternalState.Buffer.C[InternalState.BufferOffset ^ 3] = Data;
 
   InternalState.BufferOffset++;
   if (InternalState.BufferOffset == BLOCK_LENGTH) {
@@ -225,7 +220,7 @@ void SHA1::update(ArrayRef<uint8_t> Data) {
   // Fast buffer filling for large inputs.
   while (Data.size() >= BLOCK_LENGTH) {
     assert(InternalState.BufferOffset == 0);
-    static_assert(BLOCK_LENGTH % 4 == 0, "");
+    static_assert(BLOCK_LENGTH % 4 == 0);
     constexpr size_t BLOCK_LENGTH_32 = BLOCK_LENGTH / 4;
     for (size_t I = 0; I < BLOCK_LENGTH_32; ++I)
       InternalState.Buffer.L[I] = support::endian::read32be(&Data[I * 4]);
@@ -267,20 +262,17 @@ void SHA1::final(std::array<uint32_t, HASH_LENGTH / 4> &HashResult) {
   // Pad to complete the last block
   pad();
 
-#ifdef SHA_BIG_ENDIAN
-  // Just copy the current state
-  for (int i = 0; i < 5; i++) {
-    HashResult[i] = InternalState.State[i];
+  if constexpr (sys::IsBigEndianHost) {
+    // Just copy the current state
+    for (int i = 0; i < 5; i++) {
+      HashResult[i] = InternalState.State[i];
+    }
+  } else {
+    // Swap byte order back
+    for (int i = 0; i < 5; i++) {
+      HashResult[i] = sys::getSwappedBytes(InternalState.State[i]);
+    }
   }
-#else
-  // Swap byte order back
-  for (int i = 0; i < 5; i++) {
-    HashResult[i] = (((InternalState.State[i]) << 24) & 0xff000000) |
-                    (((InternalState.State[i]) << 8) & 0x00ff0000) |
-                    (((InternalState.State[i]) >> 8) & 0x0000ff00) |
-                    (((InternalState.State[i]) >> 24) & 0x000000ff);
-  }
-#endif
 }
 
 std::array<uint8_t, 20> SHA1::final() {
@@ -288,7 +280,7 @@ std::array<uint8_t, 20> SHA1::final() {
     std::array<uint32_t, HASH_LENGTH / 4> HashResult;
     std::array<uint8_t, HASH_LENGTH> ReturnResult;
   };
-  static_assert(sizeof(HashResult) == sizeof(ReturnResult), "");
+  static_assert(sizeof(HashResult) == sizeof(ReturnResult));
   final(HashResult);
   return ReturnResult;
 }

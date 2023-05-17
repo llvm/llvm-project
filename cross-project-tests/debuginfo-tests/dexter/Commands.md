@@ -101,13 +101,16 @@ frame.</br>
 
 ---
 ## DexExpectStepOrder
-    DexExpectStepOrder(*order)
+    DexExpectStepOrder(*order [,**on_line])
 
     Arg list:
       order (int): One or more indices.
 
+    Keyword args:
+        on_line (int): Expect this line to be stepped on in the order given.
+
 ### Description
-Expect the line every `DexExpectStepOrder` is found on to be stepped on in
+Expect the line every `DexExpectStepOrder` is found on, or given from `on_line`, to be stepped on in
 `order`. Each instance must have a set of unique ascending indices.
 
 ### Heuristic
@@ -144,7 +147,7 @@ type checked against the list of `types`
 ---
 ## DexExpectWatchValue
     DexExpectWatchValue(expr, *values [,**from_line=1][,**to_line=Max]
-                        [,**on_line][,**require_in_order=True])
+                        [,**on_line][,**require_in_order=True][,**float_range])
 
     Args:
         expr (str): expression to evaluate.
@@ -159,6 +162,9 @@ type checked against the list of `types`
         on_line (int): Only evaluate the expression on this line. If provided,
             this overrides from_line and to_line.
         require_in_order (bool): If False the values can appear in any order.
+        float_range (float): If provided, `values` must be floats, and will
+            match an actual value if they are within `float_range` of each other.
+
 
 ### Description
 Expect the expression `expr` to evaluate to the list of `values`

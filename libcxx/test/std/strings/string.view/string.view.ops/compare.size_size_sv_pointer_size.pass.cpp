@@ -23,8 +23,8 @@
 int sign ( int x ) { return x > 0 ? 1 : ( x < 0 ? -1 : 0 ); }
 
 template<typename CharT>
-void test1 ( std::basic_string_view<CharT> sv1, size_t pos1, size_t n1,
-             const CharT *s2, size_t n2, int expected ) {
+void test1 ( std::basic_string_view<CharT> sv1, std::size_t pos1, size_t n1,
+             const CharT *s2, std::size_t n2, int expected ) {
 #ifdef TEST_HAS_NO_EXCEPTIONS
     if (pos1 <= sv1.size())
         assert(sign(sv1.compare(pos1, n1, s2, n2)) == sign(expected));
@@ -41,8 +41,8 @@ void test1 ( std::basic_string_view<CharT> sv1, size_t pos1, size_t n1,
 
 
 template<typename CharT>
-void test ( const CharT *s1, size_t pos1, size_t n1,
-            const CharT *s2, size_t n2,
+void test ( const CharT *s1, std::size_t pos1, size_t n1,
+            const CharT *s2, std::size_t n2,
             int expected ) {
     typedef std::basic_string_view<CharT> string_view_t;
     string_view_t sv1 ( s1 );
@@ -1315,6 +1315,7 @@ int main(int, char**) {
     test("abcdefghijklmnopqrst", 10, 0, "abcdefghij", 10, -10);
     }
 
+#ifndef TEST_HAS_NO_WIDE_CHARACTERS
     {
     test(L"", 0, 0, L"abcde", 0, 0);
     test(L"", 0, 0, L"abcde", 1, -1);
@@ -1322,6 +1323,7 @@ int main(int, char**) {
     test(L"abcdefghijklmnopqrst", 21, 0, L"abcde", 1, 0);
     test(L"abcdefghijklmnopqrst", 10, 0, L"abcdefghij", 10, -10);
     }
+#endif
 
 #if TEST_STD_VER >= 11
     {

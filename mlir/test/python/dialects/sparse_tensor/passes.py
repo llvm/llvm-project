@@ -16,7 +16,7 @@ def run(f):
 @run
 def testSparseTensorPass():
   with Context() as context:
-    PassManager.parse('sparsification')
-    PassManager.parse('sparse-tensor-conversion')
+    PassManager.parse('any(sparsification)')
+    PassManager.parse('any(sparse-tensor-conversion)')
   # CHECK: SUCCESS
   print('SUCCESS')

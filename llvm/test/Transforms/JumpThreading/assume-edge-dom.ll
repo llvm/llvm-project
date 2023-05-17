@@ -1,6 +1,6 @@
-; RUN: opt -S -jump-threading < %s | FileCheck %s
+; RUN: opt -S -passes=jump-threading < %s | FileCheck %s
 
-declare i8* @escape()
+declare ptr @escape()
 declare void @llvm.assume(i1)
 
 define i1 @test1(i1 %cond) {
@@ -12,13 +12,13 @@ entry:
 ; CHECK: ret i1 true
 
 taken:
-    %res1 = call i8* @escape()
-    %a = icmp eq i8* %res1, null
+    %res1 = call ptr @escape()
+    %a = icmp eq ptr %res1, null
     tail call void @llvm.assume(i1 %a)
     br label %done
 not_taken:
-    %res2 = call i8* @escape()
-    %b = icmp ne i8* %res2, null
+    %res2 = call ptr @escape()
+    %b = icmp ne ptr %res2, null
     tail call void @llvm.assume(i1 %b)
     br label %done
 
@@ -27,8 +27,8 @@ not_taken:
 ; this still can be simplified.
 
 done:
-    %res = phi i8* [ %res1, %taken ], [ %res2, %not_taken ]
-    %cnd = icmp ne i8* %res, null
+    %res = phi ptr [ %res1, %taken ], [ %res2, %not_taken ]
+    %cnd = icmp ne ptr %res, null
     br i1 %cnd, label %yes, label %no
 
 yes:

@@ -32,23 +32,19 @@
 //
 // CUSTOM: Rewriting generic-mode kernel with a customized state machine.
 
-// Hangs
-// UNSUPPORTED: amdgcn-amd-amdhsa
-// UNSUPPORTED: amdgcn-amd-amdhsa-oldDriver
-
 #if ADD_REDUCTION
-# define REDUCTION(...) reduction(__VA_ARGS__)
+#define REDUCTION(...) reduction(__VA_ARGS__)
 #else
-# define REDUCTION(...)
+#define REDUCTION(...)
 #endif
 
 #include <stdio.h>
 int main() {
   int x = 0, y = 1;
-  #pragma omp target teams num_teams(1) map(tofrom:x, y) REDUCTION(+:x)
+#pragma omp target teams num_teams(1) map(tofrom : x, y) REDUCTION(+ : x)
   {
     x += 5;
-    #pragma omp parallel
+#pragma omp parallel
     y = 6;
   }
   // CHECK: 5, 6

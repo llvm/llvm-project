@@ -1,0 +1,482 @@
+# RUN: llvm-mc -triple=aarch64                   -mattr=+the -mattr=+d128 -disassemble %s      | FileCheck %s
+# RUN: llvm-mc -triple=aarch64     -mattr=+v8.9a -mattr=+the -mattr=+d128 -disassemble %s      | FileCheck %s
+# RUN: llvm-mc -triple=aarch64     -mattr=+v9.4a -mattr=+the -mattr=+d128 -disassemble %s      | FileCheck %s
+# RUN: not llvm-mc -triple=aarch64                                          -disassemble %s 2>&1 | FileCheck %s --check-prefix=ERROR-NO-THE
+# RUN: not llvm-mc -triple=aarch64 -mattr=+v8.9a                            -disassemble %s 2>&1 | FileCheck %s --check-prefix=ERROR-NO-THE
+# RUN: not llvm-mc -triple=aarch64 -mattr=+v9.4a                            -disassemble %s 2>&1 | FileCheck %s --check-prefix=ERROR-NO-THE
+# RUN: not llvm-mc -triple=aarch64               -mattr=+the                -disassemble %s 2>&1 | FileCheck %s --check-prefix=ERROR-NO-D128
+# RUN: not llvm-mc -triple=aarch64 -mattr=+v8.9a -mattr=+the                -disassemble %s 2>&1 | FileCheck %s --check-prefix=ERROR-NO-D128
+# RUN: not llvm-mc -triple=aarch64 -mattr=+v9.4a -mattr=+the                -disassemble %s 2>&1 | FileCheck %s --check-prefix=ERROR-NO-D128
+
+[0xc3,0xd0,0x38,0xd5]
+# CHECK: mrs x3, RCWMASK_EL1
+[0xc1,0xd0,0x18,0xd5]
+# CHECK: msr RCWMASK_EL1, x1
+[0x63,0xd0,0x38,0xd5]
+# CHECK: mrs x3, RCWSMASK_EL1
+[0x61,0xd0,0x18,0xd5]
+# CHECK: msr RCWSMASK_EL1, x1
+
+[0x81,0x08,0x20,0x19]
+# CHECK: rcwcas   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x08,0xa0,0x19]
+# CHECK: rcwcasa  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x08,0xe0,0x19]
+# CHECK: rcwcasal x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x08,0x60,0x19]
+# CHECK: rcwcasl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0x23,0x19]
+# CHECK: rcwcas   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0xa3,0x19]
+# CHECK: rcwcasa  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0xe3,0x19]
+# CHECK: rcwcasal x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0x63,0x19]
+# CHECK: rcwcasl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x81,0x08,0x20,0x59]
+# CHECK: rcwscas   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x08,0xa0,0x59]
+# CHECK: rcwscasa  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x08,0xe0,0x59]
+# CHECK: rcwscasal x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x08,0x60,0x59]
+# CHECK: rcwscasl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0x23,0x59]
+# CHECK: rcwscas   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0xa3,0x59]
+# CHECK: rcwscasa  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0xe3,0x59]
+# CHECK: rcwscasal x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x0b,0x63,0x59]
+# CHECK: rcwscasl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x86,0x0c,0x20,0x19]
+# CHECK: rcwcasp   x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x86,0x0c,0xa0,0x19]
+# CHECK: rcwcaspa  x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x86,0x0c,0xe0,0x19]
+# CHECK: rcwcaspal x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x86,0x0c,0x60,0x19]
+# CHECK: rcwcaspl  x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0x24,0x19]
+# CHECK: rcwcasp   x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0xa4,0x19]
+# CHECK: rcwcaspa  x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0xe4,0x19]
+# CHECK: rcwcaspal x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0x64,0x19]
+# CHECK: rcwcaspl  x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+
+[0x86,0x0c,0x20,0x59]
+# CHECK: rcwscasp   x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x86,0x0c,0xa0,0x59]
+# CHECK: rcwscaspa  x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x86,0x0c,0xe0,0x59]
+# CHECK: rcwscaspal x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x86,0x0c,0x60,0x59]
+# CHECK: rcwscaspl  x0, x1, x6, x7, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0x24,0x59]
+# CHECK: rcwscasp   x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0xa4,0x59]
+# CHECK: rcwscaspa  x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0xe4,0x59]
+# CHECK: rcwscaspal x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe6,0x0f,0x64,0x59]
+# CHECK: rcwscaspl  x4, x5, x6, x7, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+
+[0x81,0x90,0x20,0x38]
+# CHECK: rcwclr   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xa0,0x38]
+# CHECK: rcwclra  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xe0,0x38]
+# CHECK: rcwclral x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x90,0x60,0x38]
+# CHECK: rcwclrl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x23,0x38]
+# CHECK: rcwclr   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xa3,0x38]
+# CHECK: rcwclra  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xe3,0x38]
+# CHECK: rcwclral x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x63,0x38]
+# CHECK: rcwclrl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x81,0x90,0x20,0x78]
+# CHECK: rcwsclr   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xa0,0x78]
+# CHECK: rcwsclra  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xe0,0x78]
+# CHECK: rcwsclral x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0x90,0x60,0x78]
+# CHECK: rcwsclrl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x23,0x78]
+# CHECK: rcwsclr   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xa3,0x78]
+# CHECK: rcwsclra  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xe3,0x78]
+# CHECK: rcwsclral x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x63,0x78]
+# CHECK: rcwsclrl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x81,0x90,0x20,0x19]
+# CHECK: rcwclrp   x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xa0,0x19]
+# CHECK: rcwclrpa  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xe0,0x19]
+# CHECK: rcwclrpal x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0x90,0x60,0x19]
+# CHECK: rcwclrpl  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x23,0x19]
+# CHECK: rcwclrp   x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xa3,0x19]
+# CHECK: rcwclrpa  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xe3,0x19]
+# CHECK: rcwclrpal x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x63,0x19]
+# CHECK: rcwclrpl  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+
+[0x81,0x90,0x20,0x59]
+# CHECK: rcwsclrp   x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xa0,0x59]
+# CHECK: rcwsclrpa  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0x90,0xe0,0x59]
+# CHECK: rcwsclrpal x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0x90,0x60,0x59]
+# CHECK: rcwsclrpl  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x23,0x59]
+# CHECK: rcwsclrp   x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xa3,0x59]
+# CHECK: rcwsclrpa  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0xe3,0x59]
+# CHECK: rcwsclrpal x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0x93,0x63,0x59]
+# CHECK: rcwsclrpl  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+
+[0x81,0xb0,0x20,0x38]
+# CHECK: rcwset   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xa0,0x38]
+# CHECK: rcwseta  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xe0,0x38]
+# CHECK: rcwsetal x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0x60,0x38]
+# CHECK: rcwsetl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x23,0x38]
+# CHECK: rcwset   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xa3,0x38]
+# CHECK: rcwseta  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xe3,0x38]
+# CHECK: rcwsetal x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x63,0x38]
+# CHECK: rcwsetl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x81,0xb0,0x20,0x78]
+# CHECK: rcwsset   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xa0,0x78]
+# CHECK: rcwsseta  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xe0,0x78]
+# CHECK: rcwssetal x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0x60,0x78]
+# CHECK: rcwssetl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x23,0x78]
+# CHECK: rcwsset   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xa3,0x78]
+# CHECK: rcwsseta  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xe3,0x78]
+# CHECK: rcwssetal x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x63,0x78]
+# CHECK: rcwssetl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x81,0xb0,0x20,0x19]
+# CHECK: rcwsetp   x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xa0,0x19]
+# CHECK: rcwsetpa  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xe0,0x19]
+# CHECK: rcwsetpal x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0x60,0x19]
+# CHECK: rcwsetpl  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x23,0x19]
+# CHECK: rcwsetp   x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xa3,0x19]
+# CHECK: rcwsetpa  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xe3,0x19]
+# CHECK: rcwsetpal x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x63,0x19]
+# CHECK: rcwsetpl  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+
+[0x81,0xb0,0x20,0x59]
+# CHECK: rcwssetp   x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xa0,0x59]
+# CHECK: rcwssetpa  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0xe0,0x59]
+# CHECK: rcwssetpal x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xb0,0x60,0x59]
+# CHECK: rcwssetpl  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x23,0x59]
+# CHECK: rcwssetp   x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xa3,0x59]
+# CHECK: rcwssetpa  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0xe3,0x59]
+# CHECK: rcwssetpal x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xb3,0x63,0x59]
+# CHECK: rcwssetpl  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+
+[0x81,0xa0,0x20,0x38]
+# CHECK: rcwswp   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xa0,0x38]
+# CHECK: rcwswpa  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xe0,0x38]
+# CHECK: rcwswpal x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0x60,0x38]
+# CHECK: rcwswpl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x23,0x38]
+# CHECK: rcwswp   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xa3,0x38]
+# CHECK: rcwswpa  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xe3,0x38]
+# CHECK: rcwswpal x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x63,0x38]
+# CHECK: rcwswpl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x81,0xa0,0x20,0x78]
+# CHECK: rcwsswp   x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xa0,0x78]
+# CHECK: rcwsswpa  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xe0,0x78]
+# CHECK: rcwsswpal x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0x60,0x78]
+# CHECK: rcwsswpl  x0, x1, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x23,0x78]
+# CHECK: rcwsswp   x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xa3,0x78]
+# CHECK: rcwsswpa  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xe3,0x78]
+# CHECK: rcwsswpal x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x63,0x78]
+# CHECK: rcwsswpl  x3, x5, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+
+[0x81,0xa0,0x20,0x19]
+# CHECK: rcwswpp   x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xa0,0x19]
+# CHECK: rcwswppa  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xe0,0x19]
+# CHECK: rcwswppal x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0x60,0x19]
+# CHECK: rcwswppl  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x23,0x19]
+# CHECK: rcwswpp   x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xa3,0x19]
+# CHECK: rcwswppa  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xe3,0x19]
+# CHECK: rcwswppal x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x63,0x19]
+# CHECK: rcwswppl  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+
+[0x81,0xa0,0x20,0x59]
+# CHECK: rcwsswpp   x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xa0,0x59]
+# CHECK: rcwsswppa  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0xe0,0x59]
+# CHECK: rcwsswppal x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0x81,0xa0,0x60,0x59]
+# CHECK: rcwsswppl  x1, x0, [x4]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x23,0x59]
+# CHECK: rcwsswpp   x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xa3,0x59]
+# CHECK: rcwsswppa  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0xe3,0x59]
+# CHECK: rcwsswppal x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding
+[0xe5,0xa3,0x63,0x59]
+# CHECK: rcwsswppl  x5, x3, [sp]
+# ERROR-NO-THE: [[@LINE-2]]:2: warning: invalid instruction encoding
+# ERROR-NO-D128: [[@LINE-3]]:2: warning: invalid instruction encoding

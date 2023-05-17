@@ -14,6 +14,12 @@
 #include <cstdio>
 #include <vector>
 
+namespace lldb_private {
+namespace python {
+class SWIGBridge;
+}
+} // namespace lldb_private
+
 namespace lldb {
 
 class SBBroadcaster;
@@ -26,10 +32,6 @@ public:
 
   // Make an event that contains a C string.
   SBEvent(uint32_t event, const char *cstr, uint32_t cstr_len);
-
-  SBEvent(lldb::EventSP &event_sp);
-
-  SBEvent(lldb_private::Event *event_sp);
 
   ~SBEvent();
 
@@ -47,7 +49,9 @@ public:
 
   const char *GetBroadcasterClass() const;
 
+#ifndef SWIG
   bool BroadcasterMatchesPtr(const lldb::SBBroadcaster *broadcaster);
+#endif
 
   bool BroadcasterMatchesRef(const lldb::SBBroadcaster &broadcaster);
 
@@ -68,6 +72,12 @@ protected:
   friend class SBTarget;
   friend class SBThread;
   friend class SBWatchpoint;
+
+  friend class lldb_private::python::SWIGBridge;
+
+  SBEvent(lldb::EventSP &event_sp);
+
+  SBEvent(lldb_private::Event *event_sp);
 
   lldb::EventSP &GetSP() const;
 

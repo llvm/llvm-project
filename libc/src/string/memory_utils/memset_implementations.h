@@ -9,125 +9,156 @@
 #ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
 #define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_MEMSET_IMPLEMENTATIONS_H
 
-#include "src/__support/architectures.h"
-#include "src/string/memory_utils/elements.h"
+#include "src/__support/common.h"
+#include "src/__support/macros/optimization.h"
+#include "src/__support/macros/properties/architectures.h"
+#include "src/string/memory_utils/op_aarch64.h"
+#include "src/string/memory_utils/op_builtin.h"
+#include "src/string/memory_utils/op_generic.h"
+#include "src/string/memory_utils/op_x86.h"
 #include "src/string/memory_utils/utils.h"
 
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {
 
-// A general purpose implementation assuming cheap unaligned writes for sizes:
-// 1, 2, 4, 8, 16, 32 and 64 Bytes. Note that some architecture can't store 32
-// or 64 Bytes at a time, the compiler will expand them as needed.
-//
-// This implementation is subject to change as we benchmark more processors. We
-// may also want to customize it for processors with specialized instructions
-// that performs better (e.g. `rep stosb`).
-//
-// A note on the apparent discrepancy in the use of 32 vs 64 Bytes writes.
-// We want to balance two things here:
-//  - The number of redundant writes (when using `SetBlockOverlap`),
-//  - The number of conditionals for sizes <=128 (~90% of memset calls are for
-//    such sizes).
-//
-// For the range 64-128:
-//  - SetBlockOverlap<64> uses no conditionals but always writes 128 Bytes this
-//  is wasteful near 65 but efficient toward 128.
-//  - SetAlignedBlocks<32> would consume between 3 and 4 conditionals and write
-//  96 or 128 Bytes.
-//  - Another approach could be to use an hybrid approach copy<64>+Overlap<32>
-//  for 65-96 and copy<96>+Overlap<32> for 97-128
-//
-// Benchmarks showed that redundant writes were cheap (for Intel X86) but
-// conditional were expensive, even on processor that do not support writing 64B
-// at a time (pre-AVX512F). We also want to favor short functions that allow
-// more hot code to fit in the iL1 cache.
-//
-// Above 128 we have to use conditionals since we don't know the upper bound in
-// advance. SetAlignedBlocks<64> may waste up to 63 Bytes, SetAlignedBlocks<32>
-// may waste up to 31 Bytes. Benchmarks showed that SetAlignedBlocks<64> was not
-// superior for sizes that mattered.
-inline static void inline_memset(char *dst, unsigned char value, size_t count) {
-#if defined(LLVM_LIBC_ARCH_X86)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_X86
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::x86;
-  if (count == 0)
-    return;
-  if (count == 1)
-    return splat_set<_1>(dst, value);
-  if (count == 2)
-    return splat_set<_2>(dst, value);
-  if (count == 3)
-    return splat_set<_3>(dst, value);
-  if (count <= 8)
-    return splat_set<HeadTail<_4>>(dst, value, count);
-  if (count <= 16)
-    return splat_set<HeadTail<_8>>(dst, value, count);
-  if (count <= 32)
-    return splat_set<HeadTail<_16>>(dst, value, count);
-  if (count <= 64)
-    return splat_set<HeadTail<_32>>(dst, value, count);
-  if (count <= 128)
-    return splat_set<HeadTail<_64>>(dst, value, count);
-  return splat_set<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
-  /////////////////////////////////////////////////////////////////////////////
-  // LLVM_LIBC_ARCH_AARCH64
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace __llvm_libc::aarch64_memset;
-  if (count == 0)
-    return;
-  if (count <= 3) {
-    splat_set<_1>(dst, value);
-    if (count > 1)
-      splat_set<Tail<_2>>(dst, value, count);
-    return;
-  }
-  if (count <= 8)
-    return splat_set<HeadTail<_4>>(dst, value, count);
-  if (count <= 16)
-    return splat_set<HeadTail<_8>>(dst, value, count);
-  if (count <= 32)
-    return splat_set<HeadTail<_16>>(dst, value, count);
-  if (count <= 96) {
-    splat_set<_32>(dst, value);
-    if (count <= 64)
-      return splat_set<Tail<_32>>(dst, value, count);
-    splat_set<Skip<32>::Then<_32>>(dst, value);
-    splat_set<Tail<_32>>(dst, value, count);
-    return;
-  }
-  if (count < 448 || value != 0 || !AArch64ZVA(dst, count))
-    return splat_set<Align<_16, Arg::_1>::Then<Loop<_64>>>(dst, value, count);
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_byte_per_byte(Ptr dst, size_t offset, uint8_t value,
+                            size_t count) {
+  LIBC_LOOP_NOUNROLL
+  for (; offset < count; ++offset)
+    generic::Memset<uint8_t>::block(dst + offset, value);
+}
+
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_aligned_access_32bit(Ptr dst, uint8_t value, size_t count) {
+  constexpr size_t kAlign = sizeof(uint32_t);
+  if (count <= 2 * kAlign)
+    return inline_memset_byte_per_byte(dst, 0, value, count);
+  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
+  inline_memset_byte_per_byte(dst, 0, value, bytes_to_dst_align);
+  size_t offset = bytes_to_dst_align;
+  for (; offset < count - kAlign; offset += kAlign)
+    store32_aligned<uint32_t>(generic::splat<uint32_t>(value), dst, offset);
+  inline_memset_byte_per_byte(dst, offset, value, count);
+}
+
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_aligned_access_64bit(Ptr dst, uint8_t value, size_t count) {
+  constexpr size_t kAlign = sizeof(uint64_t);
+  if (count <= 2 * kAlign)
+    return inline_memset_byte_per_byte(dst, 0, value, count);
+  size_t bytes_to_dst_align = distance_to_align_up<kAlign>(dst);
+  inline_memset_byte_per_byte(dst, 0, value, bytes_to_dst_align);
+  size_t offset = bytes_to_dst_align;
+  for (; offset < count - kAlign; offset += kAlign)
+    store64_aligned<uint64_t>(generic::splat<uint64_t>(value), dst, offset);
+  inline_memset_byte_per_byte(dst, offset, value, count);
+}
+
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_x86(Ptr dst, uint8_t value, size_t count) {
+#if defined(__AVX512F__)
+  using uint128_t = uint8x16_t;
+  using uint256_t = uint8x32_t;
+  using uint512_t = uint8x64_t;
+#elif defined(__AVX__)
+  using uint128_t = uint8x16_t;
+  using uint256_t = uint8x32_t;
+  using uint512_t = cpp::array<uint8x32_t, 2>;
+#elif defined(__SSE2__)
+  using uint128_t = uint8x16_t;
+  using uint256_t = cpp::array<uint8x16_t, 2>;
+  using uint512_t = cpp::array<uint8x16_t, 4>;
 #else
-  /////////////////////////////////////////////////////////////////////////////
-  // Default
-  /////////////////////////////////////////////////////////////////////////////
-  using namespace ::__llvm_libc::scalar;
+  using uint128_t = cpp::array<uint64_t, 2>;
+  using uint256_t = cpp::array<uint64_t, 4>;
+  using uint512_t = cpp::array<uint64_t, 8>;
+#endif
 
   if (count == 0)
     return;
   if (count == 1)
-    return splat_set<_1>(dst, value);
+    return generic::Memset<uint8_t>::block(dst, value);
   if (count == 2)
-    return splat_set<_2>(dst, value);
+    return generic::Memset<uint16_t>::block(dst, value);
   if (count == 3)
-    return splat_set<_3>(dst, value);
+    return generic::MemsetSequence<uint16_t, uint8_t>::block(dst, value);
   if (count <= 8)
-    return splat_set<HeadTail<_4>>(dst, value, count);
+    return generic::Memset<uint32_t>::head_tail(dst, value, count);
   if (count <= 16)
-    return splat_set<HeadTail<_8>>(dst, value, count);
+    return generic::Memset<uint64_t>::head_tail(dst, value, count);
   if (count <= 32)
-    return splat_set<HeadTail<_16>>(dst, value, count);
+    return generic::Memset<uint128_t>::head_tail(dst, value, count);
   if (count <= 64)
-    return splat_set<HeadTail<_32>>(dst, value, count);
+    return generic::Memset<uint256_t>::head_tail(dst, value, count);
   if (count <= 128)
-    return splat_set<HeadTail<_64>>(dst, value, count);
-  return splat_set<Align<_32, Arg::Dst>::Then<Loop<_32>>>(dst, value, count);
+    return generic::Memset<uint512_t>::head_tail(dst, value, count);
+  // Aligned loop
+  generic::Memset<uint256_t>::block(dst, value);
+  align_to_next_boundary<32>(dst, count);
+  return generic::Memset<uint256_t>::loop_and_tail(dst, value, count);
+}
+#endif // defined(LIBC_TARGET_ARCH_IS_X86)
+
+#if defined(LIBC_TARGET_ARCH_IS_AARCH64)
+[[maybe_unused]] LIBC_INLINE static void
+inline_memset_aarch64(Ptr dst, uint8_t value, size_t count) {
+  static_assert(aarch64::kNeon, "aarch64 supports vector types");
+  using uint128_t = uint8x16_t;
+  using uint256_t = uint8x32_t;
+  using uint512_t = uint8x64_t;
+  if (count == 0)
+    return;
+  if (count <= 3) {
+    generic::Memset<uint8_t>::block(dst, value);
+    if (count > 1)
+      generic::Memset<uint16_t>::tail(dst, value, count);
+    return;
+  }
+  if (count <= 8)
+    return generic::Memset<uint32_t>::head_tail(dst, value, count);
+  if (count <= 16)
+    return generic::Memset<uint64_t>::head_tail(dst, value, count);
+  if (count <= 32)
+    return generic::Memset<uint128_t>::head_tail(dst, value, count);
+  if (count <= (32 + 64)) {
+    generic::Memset<uint256_t>::block(dst, value);
+    if (count <= 64)
+      return generic::Memset<uint256_t>::tail(dst, value, count);
+    generic::Memset<uint256_t>::block(dst + 32, value);
+    generic::Memset<uint256_t>::tail(dst, value, count);
+    return;
+  }
+  if (count >= 448 && value == 0 && aarch64::neon::hasZva()) {
+    generic::Memset<uint512_t>::block(dst, 0);
+    align_to_next_boundary<64>(dst, count);
+    return aarch64::neon::BzeroCacheLine::loop_and_tail(dst, 0, count);
+  } else {
+    generic::Memset<uint128_t>::block(dst, value);
+    align_to_next_boundary<16>(dst, count);
+    return generic::Memset<uint512_t>::loop_and_tail(dst, value, count);
+  }
+}
+#endif // defined(LIBC_TARGET_ARCH_IS_AARCH64)
+
+LIBC_INLINE static void inline_memset(Ptr dst, uint8_t value, size_t count) {
+#if defined(LIBC_TARGET_ARCH_IS_X86)
+  return inline_memset_x86(dst, value, count);
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
+  return inline_memset_aarch64(dst, value, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+  return inline_memset_aligned_access_64bit(dst, value, count);
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV32)
+  return inline_memset_aligned_access_32bit(dst, value, count);
+#else
+  return inline_memset_byte_per_byte(dst, 0, value, count);
 #endif
+}
+
+LIBC_INLINE static void inline_memset(void *dst, uint8_t value, size_t count) {
+  inline_memset(reinterpret_cast<Ptr>(dst), value, count);
 }
 
 } // namespace __llvm_libc

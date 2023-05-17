@@ -2,10 +2,6 @@
 Test lldb Python API SBValue::Cast(SBType) for C++ types.
 """
 
-from __future__ import print_function
-
-
-import unittest2
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
@@ -13,8 +9,6 @@ from lldbsuite.test import lldbutil
 
 
 class CppValueCastTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(bugnumber="llvm.org/PR36714")
     @add_test_categories(['pyapi'])
@@ -84,8 +78,8 @@ class CppValueCastTestCase(TestBase):
 
         tellerA = frame0.FindVariable('teller', lldb.eNoDynamicValues)
         self.DebugSBValue(tellerA)
-        self.assertTrue(tellerA.GetChildMemberWithName(
-            'm_base_val').GetValueAsUnsigned(error, 0) == 20)
+        self.assertEqual(
+            tellerA.GetChildMemberWithName('m_base_val').GetValueAsUnsigned(error, 0), 20)
 
         if self.TraceOn():
             for child in tellerA:
@@ -113,8 +107,8 @@ class CppValueCastTestCase(TestBase):
 
         tellerB = frame0.FindVariable('teller', lldb.eNoDynamicValues)
         self.DebugSBValue(tellerB)
-        self.assertTrue(tellerB.GetChildMemberWithName(
-            'm_base_val').GetValueAsUnsigned(error, 0) == 12)
+        self.assertEqual(
+            tellerB.GetChildMemberWithName('m_base_val').GetValueAsUnsigned(error, 0), 12)
 
         if self.TraceOn():
             for child in tellerB:

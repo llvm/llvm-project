@@ -10,10 +10,8 @@
 
 // TODO: Some test cases from this file should be moved to other dialects.
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @fill_inplace(
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 // CHECK-NO-LAYOUT-MAP-LABEL: func @fill_inplace(%{{.*}}: memref<?xf32>) {
 func.func @fill_inplace(
     %A : tensor<?xf32> {bufferization.writable = true})
@@ -24,7 +22,7 @@ func.func @fill_inplace(
 
   /// Inplaceable, no alloc
   // CHECK-NOT: alloc
-  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[A]] : memref<?xf32, #[[$map_1d_dyn]]>)
+  //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[A]] : memref<?xf32, strided<[?], offset: ?>>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
   //     CHECK: return
@@ -34,11 +32,9 @@ func.func @fill_inplace(
 
 // -----
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 /// No bufferization.writable flag, must allocate.
 // CHECK-LABEL: func @not_inplace(
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>) -> memref<?xf32> {
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>) -> memref<?xf32> {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?xf32>) -> memref<?xf32>
 func.func @not_inplace(
     %A : tensor<?xf32> {bufferization.writable = false})
@@ -47,8 +43,8 @@ func.func @not_inplace(
   //     CHECK: %[[F0:.*]] = arith.constant 0.000000e+00 : f32
   %f0 = arith.constant 0.0 : f32
 
-  //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, #[[$map_1d_dyn]]>
-  //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 128 : i64} : memref<?xf32>
+  //     CHECK: %[[D0:.*]] = memref.dim %[[A]], {{.*}} : memref<?xf32, strided<[?], offset: ?>>
+  //     CHECK: %[[ALLOC:.*]] = memref.alloc(%[[D0]]) {alignment = 64 : i64} : memref<?xf32>
   //     CHECK: linalg.fill ins(%[[F0]] : f32) outs(%[[ALLOC]] : memref<?xf32>)
   %r = linalg.fill ins(%f0 : f32) outs(%A : tensor<?xf32>) -> tensor<?xf32>
 
@@ -59,10 +55,9 @@ func.func @not_inplace(
 
 // -----
 
-// CHECK-DAG: #[[$map_2d_dyn:.*]] = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 
 // CHECK-LABEL: func @not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, #[[$map_2d_dyn]]>) {
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?x?xf32, strided<[?, ?], offset: ?>>) {
 // CHECK-NO-LAYOUT-MAP-LABEL: func @not_inplace(%{{.*}}: memref<?x?xf32>) {
 func.func @not_inplace(
     %A : tensor<?x?xf32> {bufferization.writable = true})
@@ -120,10 +115,8 @@ func.func @vec_inplace(
 
 // -----
 
-// CHECK-DAG: #[[$map_1d_dyn:.*]] = affine_map<(d0)[s0, s1] -> (d0 * s1 + s0)>
-
 // CHECK-LABEL: func @vec_not_inplace
-//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, #[[$map_1d_dyn]]>
+//  CHECK-SAME:   %[[A:[a-zA-Z0-9]*]]: memref<?xf32, strided<[?], offset: ?>>
 func.func @vec_not_inplace(
     %A : tensor<?xf32> {bufferization.writable = true}, %vec : vector<4xf32>)
   -> (tensor<?xf32>, tensor<?xf32>)
@@ -168,7 +161,8 @@ func.func @matmul(
   %c16 = arith.constant 16 : index
 
   // Hoisted alloc.
-  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 128 : i64} : memref<8x16xf32>
+  // CHECK: %[[ALLOC:.*]] = memref.alloc() {alignment = 64 : i64} : memref<128x192xf32>
+  // CHECK: memref.copy %[[C]], %[[ALLOC]]
 
   // CHECK: scf.for %[[I:.*]] =
   %0 = scf.for %arg3 = %c0 to %c128 step %c8 iter_args(%arg4 = %C) -> (tensor<128x192xf32>) {
@@ -180,12 +174,14 @@ func.func @matmul(
       %3 = tensor.extract_slice %B[0, %arg5] [256, 16] [1, 1] :
         tensor<256x192xf32> to tensor<256x16xf32>
 
-      // %4 does not match an insert_slice, it cannot be bufferized inplace and needs to alloc.
+      // C was already replaced with a copy by preprocessing, so no copy is
+      // needed here.
+      // CHECK: %[[C_SLICE:.*]] = memref.subview %[[ALLOC]]
       %4 = tensor.extract_slice %C[%arg3, %arg5] [8, 16] [1, 1] :
         tensor<128x192xf32> to tensor<8x16xf32>
 
       // linalg.fill is inplace.
-      // CHECK: linalg.fill ins(%{{.*}} : f32) outs(%[[ALLOC]] : memref<8x16xf32>)
+      // CHECK: linalg.fill ins(%{{.*}} : f32) outs(%[[C_SLICE]]
       %5 = linalg.fill ins(%cst : f32) outs(%4 : tensor<8x16xf32>) -> tensor<8x16xf32>
 
       // CHECK: scf.for %[[K:.*]] =
@@ -196,7 +192,7 @@ func.func @matmul(
           tensor<256x16xf32> to tensor<32x16xf32>
 
         // linalg.matmul is inplace as well as the enclosing scf.for.
-        // CHECK: linalg.matmul ins({{.*}} outs(%[[ALLOC]]
+        // CHECK: linalg.matmul ins({{.*}} outs(%[[C_SLICE]]
         %10 = linalg.matmul ins(%8, %9 : tensor<8x32xf32>, tensor<32x16xf32>)
                            outs(%arg8 : tensor<8x16xf32>)
           -> tensor<8x16xf32>
@@ -207,15 +203,16 @@ func.func @matmul(
       // that is not in place. So we must insert a copy of the small buffer into
       // the bigger buffer.
       // CHECK: %[[T:.*]] = memref.subview %[[C]][%[[I]], %[[J]]] [8, 16] [1, 1]
-      // CHECK: memref.copy %[[ALLOC]], %[[T]]
+      // CHECK: memref.copy %[[C_SLICE]], %[[T]]
       %7 = tensor.insert_slice %6 into %arg6[%arg3, %arg5] [8, 16] [1, 1] :
         tensor<8x16xf32> into tensor<128x192xf32>
 
-      // CHECK: memref.dealloc %[[ALLOC]]
       scf.yield %7 : tensor<128x192xf32>
     }
     scf.yield %2 : tensor<128x192xf32>
   }
+
+  // CHECK: memref.dealloc %[[ALLOC]]
   return %0 : tensor<128x192xf32>
 }
 
@@ -276,7 +273,7 @@ func.func @gather_like(
 // -----
 
 // CHECK-LABEL: func @linalg_op_bufferizes_inplace_with_input
-//  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, #{{.*}}>, %[[t2:.*]]: memref<?xf32, #{{.*}}>, %[[t3:.*]]: memref<?x?xf32, #{{.*}}>
+//  CHECK-SAME:     %[[t1:.*]]: memref<?x?xf32, strided{{.*}}>, %[[t2:.*]]: memref<?xf32, strided{{.*}}>, %[[t3:.*]]: memref<?x?xf32, strided{{.*}}>
 func.func @linalg_op_bufferizes_inplace_with_input(
     %t1: tensor<?x?xf32> {bufferization.writable = true},
     %t2: tensor<?xf32> {bufferization.writable = true},
@@ -334,6 +331,69 @@ func.func @op_is_reading_but_following_ops_are_not(
 
   // CHECK: return %[[ALLOC]]
   return %r1 : tensor<?xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @map_binary
+// CHECK-SAME:  %[[LHS:[0-9a-zA-Z]*]]: memref<64xf32
+// CHECK-SAME:  %[[RHS:[0-9a-zA-Z]*]]: memref<64xf32
+func.func @map_binary(%lhs: tensor<64xf32>, %rhs: tensor<64xf32>,
+                      %init: tensor<64xf32>) -> tensor<64xf32> {
+   // CHECK:      linalg.map { arith.addf } ins(%[[LHS]], %[[RHS]] : memref<64xf32
+   %add = linalg.map
+          ins(%lhs, %rhs: tensor<64xf32>, tensor<64xf32>)
+          outs(%init:tensor<64xf32>)
+          (%lhs_elem: f32, %rhs_elem: f32) {
+            %0 = arith.addf %lhs_elem, %rhs_elem: f32
+            linalg.yield %0: f32
+          }
+  func.return %add : tensor<64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @reduce
+// CHECK-SAME:  %[[INPUT:.*]]: memref<16x32x64xf32
+func.func @reduce(%input: tensor<16x32x64xf32>,
+                  %init: tensor<16x64xf32>) -> tensor<16x64xf32> {
+  // CHECK:     linalg.reduce { arith.addf } ins(%[[INPUT]] : memref<16x32x64xf32
+  %reduce = linalg.reduce
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<16x64xf32>)
+      dimensions = [1]
+      (%in: f32, %out: f32) {
+        %0 = arith.addf %out, %in: f32
+        linalg.yield %0: f32
+      }
+  func.return %reduce : tensor<16x64xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @transpose
+// CHECK-SAME:  %[[ARG0:.*]]: memref<16x32x64xf32
+func.func @transpose(%input: tensor<16x32x64xf32>,
+                     %init: tensor<32x64x16xf32>) -> tensor<32x64x16xf32> {
+  // CHECK:      linalg.transpose ins(%[[ARG0]] : memref<16x32x64xf32
+  %transpose = linalg.transpose
+      ins(%input:tensor<16x32x64xf32>)
+      outs(%init:tensor<32x64x16xf32>)
+      permutation = [1, 2, 0]
+  func.return %transpose : tensor<32x64x16xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @broadcast
+// CHECK-SAME:  %[[ARG0:.*]]: memref<8x32xf32
+func.func @broadcast(%input: tensor<8x32xf32>,
+                     %init: tensor<8x16x32xf32>) -> tensor<8x16x32xf32> {
+  %bcast = linalg.broadcast
+      ins(%input:tensor<8x32xf32>)
+      outs(%init:tensor<8x16x32xf32>)
+      dimensions = [1]
+  func.return %bcast : tensor<8x16x32xf32>
 }
 
 // -----

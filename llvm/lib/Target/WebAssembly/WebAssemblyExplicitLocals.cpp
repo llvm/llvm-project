@@ -267,15 +267,42 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
       // Replace tee instructions with local.tee. The difference is that tee
       // instructions have two defs, while local.tee instructions have one def
       // and an index of a local to write to.
+      //
+      // - Before:
+      // TeeReg, Reg = TEE DefReg
+      // INST ..., TeeReg, ...
+      // INST ..., Reg, ...
+      // INST ..., Reg, ...
+      // * DefReg: may or may not be stackified
+      // * Reg: not stackified
+      // * TeeReg: stackified
+      //
+      // - After (when DefReg was already stackified):
+      // TeeReg = LOCAL_TEE LocalId1, DefReg
+      // INST ..., TeeReg, ...
+      // INST ..., Reg, ...
+      // INST ..., Reg, ...
+      // * Reg: mapped to LocalId1
+      // * TeeReg: stackified
+      //
+      // - After (when DefReg was not already stackified):
+      // NewReg = LOCAL_GET LocalId1
+      // TeeReg = LOCAL_TEE LocalId2, NewReg
+      // INST ..., TeeReg, ...
+      // INST ..., Reg, ...
+      // INST ..., Reg, ...
+      // * DefReg: mapped to LocalId1
+      // * Reg: mapped to LocalId2
+      // * TeeReg: stackified
       if (WebAssembly::isTee(MI.getOpcode())) {
         assert(MFI.isVRegStackified(MI.getOperand(0).getReg()));
         assert(!MFI.isVRegStackified(MI.getOperand(1).getReg()));
-        Register OldReg = MI.getOperand(2).getReg();
-        const TargetRegisterClass *RC = MRI.getRegClass(OldReg);
+        Register DefReg = MI.getOperand(2).getReg();
+        const TargetRegisterClass *RC = MRI.getRegClass(DefReg);
 
         // Stackify the input if it isn't stackified yet.
-        if (!MFI.isVRegStackified(OldReg)) {
-          unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
+        if (!MFI.isVRegStackified(DefReg)) {
+          unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, DefReg);
           Register NewReg = MRI.createVirtualRegister(RC);
           unsigned Opc = getLocalGetOpcode(RC);
           BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(Opc), NewReg)
@@ -352,7 +379,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
           unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
           // If this register operand is tied to another operand, we can't
           // change it to an immediate. Untie it first.
-          MI.untieRegOperand(MI.getOperandNo(&MO));
+          MI.untieRegOperand(MO.getOperandNo());
           MO.ChangeToImmediate(LocalId);
           continue;
         }
@@ -369,7 +396,7 @@ bool WebAssemblyExplicitLocals::runOnMachineFunction(MachineFunction &MF) {
         if (MI.isInlineAsm()) {
           unsigned LocalId = getLocalId(Reg2Local, MFI, CurLocal, OldReg);
           // Untie it first if this reg operand is tied to another operand.
-          MI.untieRegOperand(MI.getOperandNo(&MO));
+          MI.untieRegOperand(MO.getOperandNo());
           MO.ChangeToImmediate(LocalId);
           continue;
         }

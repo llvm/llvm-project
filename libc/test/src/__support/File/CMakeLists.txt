@@ -1,13 +1,14 @@
-if(NOT (TARGET libc.src.__support.threads.mutex))
+if(NOT (TARGET libc.src.__support.threads.mutex) OR LIBC_TARGET_ARCHITECTURE_IS_GPU)
   # Not all platforms have a mutex implementation. If mutex is unvailable,
-  # we just skip everything about files.
+  # we just skip everything about files. The GPU does not currently support
+  # files as well.
   return()
 endif()
 
-add_libc_unittest(
+add_libc_test(
   file_test
   SUITE
-    libc_support_unittests
+    libc-support-tests
   SRCS
     file_test.cpp
   LINK_LIBRARIES
@@ -16,14 +17,15 @@ add_libc_unittest(
     libc.include.errno
     libc.include.stdio
     libc.include.stdlib
+    libc.src.__support.CPP.new
     libc.src.__support.File.file
 )
 
 if (TARGET libc.src.__support.File.platform_file)
-  add_libc_unittest(
+  add_libc_test(
     platform_file_test
     SUITE
-      libc_support_unittests
+      libc-support-tests
     SRCS
       platform_file_test.cpp
     DEPENDS

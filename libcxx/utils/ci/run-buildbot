@@ -32,8 +32,29 @@ ${PROGNAME} [options] <BUILDER>
                     them from Green Dragon. This is only relevant at all when
                     running back-deployment testing if one wants to override
                     the old dylibs we use to run the tests with different ones.
+Environment variables
+CC                  The C compiler to use, this value is used by CMake. This
+                    variable is optional.
+CXX                 The C++ compiler to use, this value is used by CMake. This
+                    variable is optional.
+
+CLANG_FORMAT        The clang-format binary to use when generating the format
+                    ignore list.
+
+GIT_CLANG_FORMAT    The git-clang-format binary to use in the 'format' builder.
+                    When the value is omitted, it defaults to
+                    'git-clang-format'. This variable or its fallback must work
+                    when running the 'format' builder.
+
+ENABLE_CLANG_TIDY   Whether to compile and run clang-tidy checks. This variable
+                    is optional.
 EOF
 }
+
+if [[ $# == 0 ]]; then
+   usage
+   exit 0
+fi
 
 while [[ $# -gt 0 ]]; do
     case ${1} in
@@ -75,6 +96,10 @@ function clean() {
     rm -rf "${BUILD_DIR}"
 }
 
+if [ -z "${ENABLE_CLANG_TIDY}" ]; then
+    ENABLE_CLANG_TIDY=Off
+fi
+
 function generate-cmake-base() {
     echo "--- Generating CMake"
     ${CMAKE} \
@@ -86,6 +111,7 @@ function generate-cmake-base() {
           -DLIBCXX_ENABLE_WERROR=YES \
           -DLIBCXXABI_ENABLE_WERROR=YES \
           -DLIBUNWIND_ENABLE_WERROR=YES \
+          -DLIBCXX_ENABLE_CLANG_TIDY=${ENABLE_CLANG_TIDY} \
           -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml --timeout=1500 --time-tests" \
           "${@}"
 }
@@ -105,7 +131,6 @@ function generate-cmake-libcxx-win() {
     # -D_LIBCPP_HAS_NO_INT128 (both when building the library itself and
     # when building tests) to allow enabling filesystem for running tests,
     # even if it uses a non-permanent ABI.
-
     generate-cmake-base \
           -DLLVM_ENABLE_RUNTIMES="libcxx" \
           -DCMAKE_C_COMPILER=clang-cl \
@@ -149,18 +174,21 @@ function check-cxx-benchmarks() {
 ${CMAKE} --version
 ${NINJA} --version
 
+if [ ! -z "${CXX}" ]; then ${CXX} --version; fi
+
 case "${BUILDER}" in
 check-format)
     clean
     echo "+++ Checking formatting"
     # We need to set --extensions so that clang-format checks extensionless files.
     mkdir -p ${BUILD_DIR}
-    git-clang-format \
-        --binary /usr/bin/clang-format --diff \
-        --extensions ',h,hh,hpp,hxx,c,cc,cxx,cpp' HEAD~1 \
-        -- \
-            libcxx/{benchmarks,include,src,test} \
-            libcxxabi/{fuzz,include,src,test} \
+    if [ -z "${GIT_CLANG_FORMAT}" ]; then
+       GIT_CLANG_FORMAT=git-clang-format
+    fi
+    ${GIT_CLANG_FORMAT} \
+        --diff \
+        --extensions ',h,hpp,c,cpp,inc,ipp' HEAD~1 \
+        -- $(find libcxx/{benchmarks,include,src}/ -type f | grep -vf libcxx/utils/data/ignore_format.txt) \
         | tee ${BUILD_DIR}/clang-format.patch
     # Check if the diff is empty, fail otherwise.
     ! grep -q '^--- a' ${BUILD_DIR}/clang-format.patch
@@ -184,13 +212,39 @@ check-generated-output)
         false
     fi
 
+    ${MONOREPO_ROOT}/libcxx/utils/generate_ignore_format.sh
+    git diff | tee ${BUILD_DIR}/generated_output.patch
+    git ls-files -o --exclude-standard | tee ${BUILD_DIR}/generated_output.status
+    ! grep -q '^--- a' ${BUILD_DIR}/generated_output.patch || false
+    if [ -s ${BUILD_DIR}/generated_output.status ]; then
+        echo "It looks like the list of not formatted files has changed."
+        echo "If a file is now properly formatted with clang-format, remove the file name from "
+        echo "libcxx/utils/data/ignore_format.txt. Otherwise you have to fix the"
+        echo "formatting of some of the changed files."
+        false
+    fi
+
     # Reject patches that introduce non-ASCII characters or hard tabs.
     # Depends on LC_COLLATE set at the top of this script.
-    ! grep -rn '[^ -~]' libcxx/include/ || false
+    ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
+           --exclude '*.dat' \
+           --exclude 'escaped_output.*.pass.cpp' \
+           --exclude 'format_tests.h' \
+           --exclude 'format.functions.tests.h' \
+           --exclude 'formatter.*.pass.cpp' \
+           --exclude 'grep.pass.cpp' \
+           --exclude 'locale-specific_form.pass.cpp' \
+           --exclude 'ostream.pass.cpp' \
+           --exclude 'std_format_spec_string_unicode.bench.cpp' \
+           --exclude 'underflow.pass.cpp' \
+           || false
 
-    # Reject patches that introduce dependency cycles in the headers.
-    python3 libcxx/utils/graph_header_deps.py >/dev/null
+    # Reject code with trailing whitespace
+    ! grep -rn '[[:blank:]]$' libcxx/include libcxx/src libcxx/test libcxx/benchmarks || false
 ;;
+#
+# Various Standard modes
+#
 generic-cxx03)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx03.cmake"
@@ -227,62 +281,10 @@ generic-cxx2b)
     check-runtimes
     check-abi-list
 ;;
-generic-assertions)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-assertions.cmake"
-    check-runtimes
-    check-abi-list
-;;
-generic-debug-mode)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
-    check-runtimes
-    check-abi-list
-;;
-generic-noexceptions)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
-    check-runtimes
-    check-abi-list
-;;
-generic-modules)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake"
-    check-runtimes
-    check-abi-list
-;;
-generic-static)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake"
-    check-runtimes
-;;
-generic-merged)
-    clean
-    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-merged.cmake" \
-                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="llvm-libc++abi-merged.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-merged.cfg.in"
-    check-runtimes
-;;
-generic-clang-13)
-    export CC=clang-13
-    export CXX=clang++-13
-    clean
-    generate-cmake
-    check-runtimes
-    check-abi-list
-;;
-generic-clang-14)
-    export CC=clang-14
-    export CXX=clang++-14
-    clean
-    generate-cmake
-    check-runtimes
-    check-abi-list
-;;
+#
+# Other compiler support
+#
 generic-gcc)
-    export CC=gcc-11
-    export CXX=g++-11
     clean
     generate-cmake -DLIBCXX_ENABLE_WERROR=NO \
                    -DLIBCXXABI_ENABLE_WERROR=NO \
@@ -290,8 +292,6 @@ generic-gcc)
     check-runtimes
 ;;
 generic-gcc-cxx11)
-    export CC=gcc-11
-    export CXX=g++-11
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-cxx11.cmake" \
                    -DLIBCXX_ENABLE_WERROR=NO \
@@ -299,6 +299,9 @@ generic-gcc-cxx11)
                    -DLIBUNWIND_ENABLE_WERROR=NO
     check-runtimes
 ;;
+#
+# Sanitizers
+#
 generic-asan)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-asan.cmake"
@@ -319,11 +322,77 @@ generic-ubsan)
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-ubsan.cmake"
     check-runtimes
 ;;
+#
+# Various build configurations
+#
+bootstrapping-build)
+    clean
+
+    echo "--- Generating CMake"
+    ${CMAKE} \
+          -S "${MONOREPO_ROOT}/llvm" \
+          -B "${BUILD_DIR}" \
+          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
+          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
+          -DLLVM_ENABLE_PROJECTS="clang" \
+          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
+          -DLLVM_RUNTIME_TARGETS="$(${CXX} --print-target-triple)" \
+          -DLLVM_TARGETS_TO_BUILD="host" \
+          -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
+          -DLLVM_ENABLE_ASSERTIONS=ON
+
+    echo "+++ Running the libc++ and libc++abi tests"
+    ${NINJA} -C "${BUILD_DIR}" check-runtimes
+
+    echo "--- Installing libc++ and libc++abi to a fake location"
+    ${NINJA} -C "${BUILD_DIR}" install-runtimes
+;;
+generic-static)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-static.cmake"
+    check-runtimes
+;;
+generic-merged)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-merged.cmake" \
+                   -DLIBCXX_TEST_CONFIG="llvm-libc++-shared.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="llvm-libc++abi-merged.cfg.in" \
+                   -DLIBUNWIND_TEST_CONFIG="llvm-libunwind-merged.cfg.in"
+    check-runtimes
+;;
+generic-assertions)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-assertions.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-debug-mode)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-debug-mode.cmake"
+    check-runtimes
+    # We don't check the ABI lists because the debug mode ABI is not stable
+;;
 generic-with_llvm_unwinder)
     clean
     generate-cmake -DLIBCXXABI_USE_LLVM_UNWINDER=ON
     check-runtimes
 ;;
+generic-modules)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules.cmake"
+    check-runtimes
+    check-abi-list
+;;
+generic-modules-lsv)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-modules-lsv.cmake"
+    check-runtimes
+    check-abi-list
+;;
+#
+# Parts removed
+#
 generic-no-threads)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-threads.cmake"
@@ -337,6 +406,11 @@ generic-no-filesystem)
 generic-no-random_device)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-random_device.cmake"
+    check-runtimes
+;;
+generic-no-fstream)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-no-fstream.cmake"
     check-runtimes
 ;;
 generic-no-localization)
@@ -360,6 +434,15 @@ generic-no-experimental)
     check-runtimes
     check-abi-list
 ;;
+generic-noexceptions)
+    clean
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-noexceptions.cmake"
+    check-runtimes
+    check-abi-list
+;;
+#
+# Other miscellaneous jobs
+#
 generic-abi-unstable)
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Generic-abi-unstable.cmake"
@@ -380,6 +463,44 @@ apple-system)
 
     # TODO: It would be better to run the tests against the fake-installed version of libc++ instead
     xcrun --sdk macosx ninja -vC "${BUILD_DIR}/${arch}" check-cxx check-cxxabi check-cxx-abilist
+;;
+apple-system-backdeployment-assertions-*)
+    clean
+
+    if [[ "${OSX_ROOTS}" == "" ]]; then
+        echo "--- Downloading previous macOS dylibs"
+        PREVIOUS_DYLIBS_URL="https://dl.dropboxusercontent.com/s/gmcfxwgl9f9n6pu/libcxx-roots.tar.gz"
+        OSX_ROOTS="${BUILD_DIR}/macos-roots"
+        mkdir -p "${OSX_ROOTS}"
+        curl "${PREVIOUS_DYLIBS_URL}" | tar -xz --strip-components=1 -C "${OSX_ROOTS}"
+    fi
+
+    DEPLOYMENT_TARGET="${BUILDER#apple-system-backdeployment-assertions-}"
+
+    # TODO: On Apple platforms, we never produce libc++abi.1.dylib or libunwind.1.dylib,
+    #       only libc++abi.dylib and libunwind.dylib. Fix that in the build so that the
+    #       tests stop searching for @rpath/libc++abi.1.dylib and @rpath/libunwind.1.dylib.
+    cp "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.dylib" \
+       "${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}/libc++abi.1.dylib"
+    cp "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.dylib" \
+       "${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}/libunwind.1.dylib"
+
+    arch="$(uname -m)"
+    PARAMS="target_triple=${arch}-apple-macosx${DEPLOYMENT_TARGET}"
+    PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
+    PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
+    PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
+    PARAMS+=";enable_assertions=True"
+
+    generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
+                   -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
+                   -DLIBCXXABI_TEST_CONFIG="apple-libc++abi-backdeployment.cfg.in" \
+                   -DLIBUNWIND_TEST_CONFIG="apple-libunwind-backdeployment.cfg.in" \
+                   -DLIBCXX_TEST_PARAMS="${PARAMS}" \
+                   -DLIBCXXABI_TEST_PARAMS="${PARAMS}" \
+                   -DLIBUNWIND_TEST_PARAMS="${PARAMS}"
+
+    check-runtimes
 ;;
 apple-system-backdeployment-*)
     clean
@@ -407,7 +528,6 @@ apple-system-backdeployment-*)
     PARAMS+=";cxx_runtime_root=${OSX_ROOTS}/macOS/libc++/${DEPLOYMENT_TARGET}"
     PARAMS+=";abi_runtime_root=${OSX_ROOTS}/macOS/libc++abi/${DEPLOYMENT_TARGET}"
     PARAMS+=";unwind_runtime_root=${OSX_ROOTS}/macOS/libunwind/${DEPLOYMENT_TARGET}"
-    PARAMS+=";use_system_cxx_lib=True"
 
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/Apple.cmake" \
                    -DLIBCXX_TEST_CONFIG="apple-libc++-backdeployment.cfg.in" \
@@ -430,51 +550,6 @@ documentation)
 
     echo "+++ Generating documentation"
     ${NINJA} -vC "${BUILD_DIR}" docs-libcxx-html
-;;
-bootstrapping-build)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -B "${BUILD_DIR}" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="clang" \
-          -DLLVM_ENABLE_RUNTIMES="libcxx;libcxxabi;libunwind" \
-          -DLLVM_RUNTIME_TARGETS="$(c++ --print-target-triple)" \
-          -DLLVM_TARGETS_TO_BUILD="host" \
-          -DRUNTIMES_BUILD_ALLOW_DARWIN=ON \
-          -DLLVM_ENABLE_ASSERTIONS=ON
-
-    echo "+++ Running the libc++ and libc++abi tests"
-    ${NINJA} -C "${BUILD_DIR}" check-runtimes
-
-    echo "--- Installing libc++ and libc++abi to a fake location"
-    ${NINJA} -C "${BUILD_DIR}" install-runtimes
-;;
-legacy-test-config)
-    clean
-    generate-cmake -DLIBCXX_TEST_CONFIG="legacy.cfg.in" \
-                   -DLIBCXXABI_TEST_CONFIG="${MONOREPO_ROOT}/libcxxabi/test/lit.site.cfg.in" \
-                   -DLIBUNWIND_TEST_CONFIG="${MONOREPO_ROOT}/libunwind/test/lit.site.cfg.in"
-    check-runtimes
-;;
-legacy-project-build)
-    clean
-
-    echo "--- Generating CMake"
-    ${CMAKE} \
-          -S "${MONOREPO_ROOT}/llvm" \
-          -B "${BUILD_DIR}" \
-          -DLLVM_ENABLE_PROJECTS="libcxx;libunwind;libcxxabi" \
-          -GNinja -DCMAKE_MAKE_PROGRAM="${NINJA}" \
-          -DCMAKE_BUILD_TYPE=RelWithDebInfo \
-          -DCMAKE_INSTALL_PREFIX="${INSTALL_DIR}" \
-          -DLLVM_LIT_ARGS="-sv --show-unsupported --xunit-xml-output test-results.xml --timeout=1500" \
-          -DLIBCXX_CXX_ABI=libcxxabi
-    check-runtimes
 ;;
 aarch64)
     clean
@@ -518,13 +593,24 @@ clang-cl-dll)
     # correctly when libc++ visibility attributes indicate dllimport linkage
     # anyway), thus just disable the experimental library. Remove this
     # setting when cmake and the test driver does the right thing automatically.
-    generate-cmake-libcxx-win -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF
+    generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False"
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
 clang-cl-static)
     clean
     generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+clang-cl-no-vcruntime)
+    clean
+    # Building libc++ in the same way as in clang-cl-dll above, but running
+    # tests with -D_HAS_EXCEPTIONS=0, which users might set in certain
+    # translation units while using libc++, even if libc++ is built with
+    # exceptions enabled.
+    generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
+                              -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no-vcruntime-clangcl.cfg.in"
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;
@@ -539,8 +625,7 @@ mingw-dll)
           -DCMAKE_C_COMPILER=x86_64-w64-mingw32-clang \
           -DCMAKE_CXX_COMPILER=x86_64-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
-    echo "+++ Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    check-runtimes
 ;;
 mingw-static)
     clean
@@ -550,8 +635,7 @@ mingw-static)
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake" \
           -DLIBCXX_ENABLE_SHARED=OFF \
           -DLIBUNWIND_ENABLE_SHARED=OFF
-    echo "+++ Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    check-runtimes
 ;;
 mingw-dll-i686)
     clean
@@ -559,17 +643,15 @@ mingw-dll-i686)
           -DCMAKE_C_COMPILER=i686-w64-mingw32-clang \
           -DCMAKE_CXX_COMPILER=i686-w64-mingw32-clang++ \
           -C "${MONOREPO_ROOT}/libcxx/cmake/caches/MinGW.cmake"
-    echo "+++ Running the libc++ tests"
-    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+    check-runtimes
 ;;
 aix)
-    export CC=ibm-clang
-    export CXX=ibm-clang++_r
     clean
     generate-cmake -C "${MONOREPO_ROOT}/libcxx/cmake/caches/AIX.cmake" \
                    -DLIBCXX_TEST_CONFIG="ibm-libc++-shared.cfg.in" \
                    -DLIBCXXABI_TEST_CONFIG="ibm-libc++abi-shared.cfg.in" \
                    -DLIBUNWIND_TEST_CONFIG="ibm-libunwind-shared.cfg.in"
+    check-abi-list
     check-runtimes
 ;;
 #################################################################

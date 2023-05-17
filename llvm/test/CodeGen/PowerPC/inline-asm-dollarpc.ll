@@ -68,18 +68,18 @@ entry:
   %tbu = alloca i32, align 4
   %tbl = alloca i32, align 4
   %temp = alloca i32, align 4
-  store i32 0, i32* %retval, align 4
+  store i32 0, ptr %retval, align 4
   %0 = call { i32, i32, i32 } asm sideeffect "mftbu  $2\0Amftb   $0\0Amftbu  $1\0Acmpw   $2,$1\0Abne    $$-0x10\0A", "=r,=r,=r,~{cc}"()
   %asmresult = extractvalue { i32, i32, i32 } %0, 0
   %asmresult1 = extractvalue { i32, i32, i32 } %0, 1
   %asmresult2 = extractvalue { i32, i32, i32 } %0, 2
-  store i32 %asmresult, i32* %tbl, align 4
-  store i32 %asmresult1, i32* %tbu, align 4
-  store i32 %asmresult2, i32* %temp, align 4
-  %1 = load i32, i32* %tbu, align 4
+  store i32 %asmresult, ptr %tbl, align 4
+  store i32 %asmresult1, ptr %tbu, align 4
+  store i32 %asmresult2, ptr %temp, align 4
+  %1 = load i32, ptr %tbu, align 4
   %conv = zext i32 %1 to i64
   %shl = shl i64 %conv, 32
-  %2 = load i32, i32* %tbl, align 4
+  %2 = load i32, ptr %tbl, align 4
   %conv3 = zext i32 %2 to i64
   %or = or i64 %shl, %conv3
   %conv4 = trunc i64 %or to i32

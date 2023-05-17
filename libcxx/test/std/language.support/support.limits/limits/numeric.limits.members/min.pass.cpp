@@ -47,10 +47,8 @@ int main(int, char**)
 #if TEST_STD_VER > 17 && defined(__cpp_char8_t)
     test<char8_t>(0);
 #endif
-#ifndef TEST_HAS_NO_UNICODE_CHARS
     test<char16_t>(0);
     test<char32_t>(0);
-#endif
     test<short>(SHRT_MIN);
     test<unsigned short>(0);
     test<int>(INT_MIN);

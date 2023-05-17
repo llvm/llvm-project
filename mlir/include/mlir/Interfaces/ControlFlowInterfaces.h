@@ -126,9 +126,9 @@ private:
 
 namespace detail {
 /// Return the `BlockArgument` corresponding to operand `operandIndex` in some
-/// successor if `operandIndex` is within the range of `operands`, or None if
-/// `operandIndex` isn't a successor operand index.
-Optional<BlockArgument>
+/// successor if `operandIndex` is within the range of `operands`, or
+/// std::nullopt if `operandIndex` isn't a successor operand index.
+std::optional<BlockArgument>
 getBranchSuccessorArgument(const SuccessorOperands &operands,
                            unsigned operandIndex, Block *successor);
 
@@ -164,8 +164,10 @@ public:
   RegionSuccessor(Region *region, Block::BlockArgListType regionInputs = {})
       : region(region), inputs(regionInputs) {}
   /// Initialize a successor that branches back to/out of the parent operation.
-  RegionSuccessor(Optional<Operation::result_range> results = {})
-      : inputs(results ? ValueRange(*results) : ValueRange()) {}
+  RegionSuccessor(Operation::result_range results)
+      : inputs(ValueRange(results)) {}
+  /// Constructor with no arguments.
+  RegionSuccessor() : inputs(ValueRange()) {}
 
   /// Return the given region successor. Returns nullptr if the successor is the
   /// parent operation.
@@ -190,7 +192,8 @@ class InvocationBounds {
 public:
   /// Create invocation bounds. The lower bound must be at least 0 and only the
   /// upper bound can be unknown.
-  InvocationBounds(unsigned lb, Optional<unsigned> ub) : lower(lb), upper(ub) {
+  InvocationBounds(unsigned lb, std::optional<unsigned> ub)
+      : lower(lb), upper(ub) {
     assert((!ub || ub >= lb) && "upper bound cannot be less than lower bound");
   }
 
@@ -198,18 +201,18 @@ public:
   unsigned getLowerBound() const { return lower; }
 
   /// Return the upper bound.
-  Optional<unsigned> getUpperBound() const { return upper; }
+  std::optional<unsigned> getUpperBound() const { return upper; }
 
   /// Returns the unknown invocation bounds, i.e., there is no information on
   /// how many times a region may be invoked.
-  static InvocationBounds getUnknown() { return {0, llvm::None}; }
+  static InvocationBounds getUnknown() { return {0, std::nullopt}; }
 
 private:
   /// The minimum number of times the successor region will be invoked.
   unsigned lower;
-  /// The maximum number of times the successor region will be invoked or `None`
-  /// if an upper bound is not known.
-  Optional<unsigned> upper;
+  /// The maximum number of times the successor region will be invoked or
+  /// `std::nullopt` if an upper bound is not known.
+  std::optional<unsigned> upper;
 };
 
 /// Return `true` if `a` and `b` are in mutually exclusive regions as per
@@ -237,20 +240,20 @@ bool isRegionReturnLike(Operation *operation);
 /// Returns the mutable operands that are passed to the region with the given
 /// `regionIndex`. If the operation does not implement the
 /// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
-/// result will be `llvm::None`. In all other cases, the resulting
+/// result will be `std::nullopt`. In all other cases, the resulting
 /// `OperandRange` represents all operands that are passed to the specified
-/// successor region. If `regionIndex` is `llvm::None`, all operands that are
+/// successor region. If `regionIndex` is `std::nullopt`, all operands that are
 /// passed to the parent operation will be returned.
-Optional<MutableOperandRange>
+std::optional<MutableOperandRange>
 getMutableRegionBranchSuccessorOperands(Operation *operation,
-                                        Optional<unsigned> regionIndex);
+                                        std::optional<unsigned> regionIndex);
 
 /// Returns the read only operands that are passed to the region with the given
 /// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
 /// information.
-Optional<OperandRange>
+std::optional<OperandRange>
 getRegionBranchSuccessorOperands(Operation *operation,
-                                 Optional<unsigned> regionIndex);
+                                 std::optional<unsigned> regionIndex);
 
 //===----------------------------------------------------------------------===//
 // ControlFlow Traits

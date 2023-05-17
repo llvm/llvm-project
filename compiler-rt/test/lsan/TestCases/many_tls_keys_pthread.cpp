@@ -9,7 +9,7 @@
 // UNSUPPORTED: arm-linux, armhf-linux
 
 // TSD on NetBSD does not use TLS
-// UNSUPPORTED: netbsd
+// UNSUPPORTED: target={{.*netbsd.*}}
 
 #include <assert.h>
 #include <limits.h>
@@ -74,4 +74,4 @@ int main() {
 }
 
 // CHECK: LeakSanitizer: detected memory leaks
-// CHECK: SUMMARY: {{(Leak|Address)}}Sanitizer:
+// CHECK: SUMMARY: {{.*}}Sanitizer:

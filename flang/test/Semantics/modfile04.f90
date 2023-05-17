@@ -7,7 +7,7 @@ module m1
 contains
 
   pure subroutine Ss(x, y) bind(c)
-    logical x
+    logical(1) x
     intent(inout) y
     intent(in) x
   end subroutine
@@ -53,8 +53,8 @@ end module m3
 !type::t
 !end type
 !contains
-!pure subroutine ss(x,y) bind(c, name="ss")
-!logical(4),intent(in)::x
+!pure subroutine ss(x,y) bind(c)
+!logical(1),intent(in)::x
 !real(4),intent(inout)::y
 !end
 !function f1() result(x)

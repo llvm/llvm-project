@@ -18,107 +18,97 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) n
 ; AVX512-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
 ; AVX512-NEXT:    movw %si, %ax
 ; AVX512-NEXT:    movw %ax, {{[-0-9]+}}(%r{{[sb]}}p) # 2-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rax
-; AVX512-NEXT:    movq %rax, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; AVX512-NEXT:    cmpl $0, %edi
 ; AVX512-NEXT:    je .LBB0_2
 ; AVX512-NEXT:  # %bb.1: # %if.then
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; AVX512-NEXT:    movl $buf, %r9d
-; AVX512-NEXT:    movl $32, %r10d
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    # implicit-def: $al
-; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %si, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    tileloadd (%r9,%r10), %tmm0
-; AVX512-NEXT:    movl $64, %r9d
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    tilestored %tmm0, (%r8,%r9)
-; AVX512-NEXT:    movl $buf, %r8d
-; AVX512-NEXT:    movl $32, %r9d
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    # implicit-def: $al
-; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    # implicit-def: $sil
-; AVX512-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    tileloadd (%r8,%r9), %tmm0
-; AVX512-NEXT:    movl $64, %r8d
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    tilestored %tmm0, (%rdi,%r8)
 ; AVX512-NEXT:    movl $buf, %esi
 ; AVX512-NEXT:    movl $32, %edi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    # implicit-def: $al
+; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    tileloadd (%rsi,%rdi), %tmm0
+; AVX512-NEXT:    movl $64, %edi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    tilestored %tmm0, (%rsi,%rdi)
+; AVX512-NEXT:    movl $buf, %esi
+; AVX512-NEXT:    movl $32, %edi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    # implicit-def: $al
+; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    # implicit-def: $dl
+; AVX512-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    tileloadd (%rsi,%rdi), %tmm0
+; AVX512-NEXT:    movl $64, %edi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    tilestored %tmm0, (%rsi,%rdi)
+; AVX512-NEXT:    movl $buf, %edx
+; AVX512-NEXT:    movl $32, %esi
+; AVX512-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; AVX512-NEXT:    movl $64, %esi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; AVX512-NEXT:    jmp .LBB0_3
 ; AVX512-NEXT:  .LBB0_2: # %if.else
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
 ; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdi # 8-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; AVX512-NEXT:    movl $buf2, %r9d
-; AVX512-NEXT:    movl $32, %r10d
+; AVX512-NEXT:    movl $buf2, %esi
+; AVX512-NEXT:    movl $32, %edi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    # implicit-def: $al
+; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    tileloadd (%rsi,%rdi), %tmm0
+; AVX512-NEXT:    movl $64, %edi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    tilestored %tmm0, (%rsi,%rdi)
+; AVX512-NEXT:    movl $buf2, %esi
+; AVX512-NEXT:    movl $32, %edi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    # implicit-def: $al
+; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    # implicit-def: $dl
+; AVX512-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    tileloadd (%rsi,%rdi), %tmm0
+; AVX512-NEXT:    movl $64, %edi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rsi
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    tilestored %tmm0, (%rsi,%rdi)
+; AVX512-NEXT:    movl $buf2, %edx
+; AVX512-NEXT:    movl $32, %esi
+; AVX512-NEXT:    tileloadd (%rdx,%rsi), %tmm0
+; AVX512-NEXT:    movl $64, %esi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; AVX512-NEXT:    tilestored %tmm0, (%rdx,%rsi)
+; AVX512-NEXT:  .LBB0_3: # %if.end
+; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
+; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
+; AVX512-NEXT:    movl $64, %edi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    movw $8, %si
 ; AVX512-NEXT:    # implicit-def: $al
 ; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movw %si, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    tileloadd (%r9,%r10), %tmm0
-; AVX512-NEXT:    movl $64, %r9d
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    tilestored %tmm0, (%r8,%r9)
-; AVX512-NEXT:    movl $buf2, %r8d
-; AVX512-NEXT:    movl $32, %r9d
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    # implicit-def: $al
-; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    # implicit-def: $sil
-; AVX512-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    tileloadd (%r8,%r9), %tmm0
+; AVX512-NEXT:    tileloadd (%rdx,%rdi), %tmm0
+; AVX512-NEXT:    movabsq $64, %rdx
+; AVX512-NEXT:    tilestored %tmm0, 1024(%rsp,%rdx) # 1024-byte Folded Spill
 ; AVX512-NEXT:    movl $64, %r8d
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    tilestored %tmm0, (%rdi,%r8)
-; AVX512-NEXT:    movl $buf2, %esi
-; AVX512-NEXT:    movl $32, %edi
-; AVX512-NEXT:    tileloadd (%rsi,%rdi), %tmm0
-; AVX512-NEXT:    movl $64, %esi
-; AVX512-NEXT:    tilestored %tmm0, (%rdx,%rsi)
-; AVX512-NEXT:  .LBB0_3: # %if.end
-; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %ax # 2-byte Reload
-; AVX512-NEXT:    movw {{[-0-9]+}}(%r{{[sb]}}p), %cx # 2-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rdx # 8-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %rsi # 8-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r9 # 8-byte Reload
-; AVX512-NEXT:    movq {{[-0-9]+}}(%r{{[sb]}}p), %r8 # 8-byte Reload
-; AVX512-NEXT:    movl $64, %r10d
-; AVX512-NEXT:    movw $8, %di
-; AVX512-NEXT:    # implicit-def: $al
-; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %di, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    tileloadd (%r8,%r10), %tmm0
-; AVX512-NEXT:    movabsq $64, %r8
-; AVX512-NEXT:    tilestored %tmm0, 1024(%rsp,%r8) # 1024-byte Folded Spill
-; AVX512-NEXT:    movl $64, %r10d
-; AVX512-NEXT:    movw $8, %r8w
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdi
+; AVX512-NEXT:    movw $8, %dx
 ; AVX512-NEXT:    # implicit-def: $al
 ; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
@@ -127,24 +117,27 @@ define dso_local void @test_api(i32 %cond, i16 signext %row, i16 signext %col) n
 ; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    # implicit-def: $al
 ; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    movw %di, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    movw %si, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    # implicit-def: $al
 ; AVX512-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    # implicit-def: $r8b
-; AVX512-NEXT:    movb %r8b, {{[0-9]+}}(%rsp)
+; AVX512-NEXT:    # implicit-def: $dl
+; AVX512-NEXT:    movb %dl, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    movw %cx, {{[0-9]+}}(%rsp)
 ; AVX512-NEXT:    ldtilecfg {{[0-9]+}}(%rsp)
-; AVX512-NEXT:    tileloadd (%r9,%r10), %tmm2
-; AVX512-NEXT:    movl $64, %r8d
-; AVX512-NEXT:    tileloadd (%rsi,%r8), %tmm0
-; AVX512-NEXT:    movw $8, %si
-; AVX512-NEXT:    movabsq $64, %r8
-; AVX512-NEXT:    tileloadd 1024(%rsp,%r8), %tmm1 # 1024-byte Folded Reload
+; AVX512-NEXT:    tileloadd (%rdi,%r8), %tmm2
+; AVX512-NEXT:    movl $64, %edi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
+; AVX512-NEXT:    tileloadd (%rdx,%rdi), %tmm0
+; AVX512-NEXT:    movw $8, %dx
+; AVX512-NEXT:    movabsq $64, %rdi
+; AVX512-NEXT:    tileloadd 1024(%rsp,%rdi), %tmm1 # 1024-byte Folded Reload
 ; AVX512-NEXT:    tdpbssd %tmm2, %tmm1, %tmm0
 ; AVX512-NEXT:    movl $64, %esi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    tilestored %tmm0, (%rdx,%rsi)
 ; AVX512-NEXT:    movl $64, %esi
+; AVX512-NEXT:    leaq {{[0-9]+}}(%rsp), %rdx
 ; AVX512-NEXT:    tileloadd (%rdx,%rsi), %tmm0
 ; AVX512-NEXT:    movl $buf, %edx
 ; AVX512-NEXT:    movl $32, %esi
@@ -159,15 +152,15 @@ entry:
   br i1 %tobool.not, label %if.else, label %if.then
 
 if.then:                                          ; preds = %entry
-  %0 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %1 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
-  %2 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32)
+  %0 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 8, ptr @buf, i64 32)
+  %1 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %col, ptr @buf, i64 32)
+  %2 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, ptr @buf, i64 32)
   br label %if.end
 
 if.else:                                          ; preds = %entry
-  %3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 8, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
-  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
-  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf2, i64 0, i64 0), i64 32)
+  %3 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 8, ptr @buf2, i64 32)
+  %4 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 8, i16 %col, ptr @buf2, i64 32)
+  %5 = tail call x86_amx @llvm.x86.tileloadd64.internal(i16 %row, i16 %col, ptr @buf2, i64 32)
   br label %if.end
 
 if.end:                                           ; preds = %if.else, %if.then
@@ -175,10 +168,10 @@ if.end:                                           ; preds = %if.else, %if.then
   %b.sroa.1069.0.in = phi x86_amx [ %4, %if.else ], [ %1, %if.then ]
   %c.sroa.1044.0.in = phi x86_amx [ %5, %if.else ], [ %2, %if.then ]
   %6 = tail call x86_amx @llvm.x86.tdpbssd.internal(i16 %row, i16 %col, i16 8, x86_amx %c.sroa.1044.0.in, x86_amx %a.sroa.1094.0.in, x86_amx %b.sroa.1069.0.in)
-  tail call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, i8* getelementptr inbounds ([1024 x i8], [1024 x i8]* @buf, i64 0, i64 0), i64 32, x86_amx %6)
+  tail call void @llvm.x86.tilestored64.internal(i16 %row, i16 %col, ptr @buf, i64 32, x86_amx %6)
   ret void
 }
 
-declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, i8*, i64)
+declare x86_amx @llvm.x86.tileloadd64.internal(i16, i16, ptr, i64)
 declare x86_amx @llvm.x86.tdpbssd.internal(i16, i16, i16, x86_amx, x86_amx, x86_amx)
-declare void @llvm.x86.tilestored64.internal(i16, i16, i8*, i64, x86_amx)
+declare void @llvm.x86.tilestored64.internal(i16, i16, ptr, i64, x86_amx)

@@ -26,9 +26,9 @@
 ; RUN: -mtriple=powerpc64-ibm-aix-xcoff -frame-pointer=all | FileCheck %s \
 ; RUN: -check-prefix=PPC64-AIX-FP
 
-define i32* @frame_small() {
+define ptr @frame_small() {
         %tmp = alloca i32, i32 95
-        ret i32* %tmp
+        ret ptr %tmp
 }
 
 ; The linkage area, if there is one, is still on the top of the stack after

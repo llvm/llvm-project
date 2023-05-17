@@ -50,7 +50,13 @@ public:
   // The offset from the beginning of the file.
   uint64_t getVA(uint64_t off) const;
   // Return a user-friendly string for use in diagnostics.
+  // Format: /path/to/object.o:(symbol _func+0x123)
   std::string getLocation(uint64_t off) const;
+  // Return the source line corresponding to an address, or the empty string.
+  // Format: Source.cpp:123 (/path/to/Source.cpp:123)
+  std::string getSourceLocation(uint64_t off) const;
+  // Return the relocation at \p off, if it exists. This does a linear search.
+  const Reloc *getRelocAt(uint32_t off) const;
   // Whether the data at \p off in this InputSection is live.
   virtual bool isLive(uint64_t off) const = 0;
   virtual void markLive(uint64_t off) = 0;
@@ -60,11 +66,12 @@ public:
 protected:
   InputSection(Kind kind, const Section &section, ArrayRef<uint8_t> data,
                uint32_t align)
-      : sectionKind(kind), align(align), data(data), section(section) {}
+      : sectionKind(kind), keepUnique(false), hasAltEntry(false), align(align),
+        data(data), section(section) {}
 
   InputSection(const InputSection &rhs)
-      : sectionKind(rhs.sectionKind), align(rhs.align), data(rhs.data),
-        section(rhs.section) {}
+      : sectionKind(rhs.sectionKind), keepUnique(false), hasAltEntry(false),
+        align(rhs.align), data(rhs.data), section(rhs.section) {}
 
   Kind sectionKind;
 
@@ -73,7 +80,10 @@ public:
   bool isFinal = false;
   // keep the address of the symbol(s) in this section unique in the final
   // binary ?
-  bool keepUnique = false;
+  bool keepUnique : 1;
+  // Does this section have symbols at offsets other than zero? (NOTE: only
+  // applies to ConcatInputSections.)
+  bool hasAltEntry : 1;
   uint32_t align = 1;
 
   OutputSection *parent = nullptr;
@@ -85,6 +95,8 @@ public:
 
 protected:
   const Section &section;
+
+  const Defined *getContainingSymbol(uint64_t off) const;
 };
 
 // ConcatInputSections are combined into (Concat)OutputSections through simple
@@ -185,8 +197,10 @@ static_assert(sizeof(StringPiece) == 16, "StringPiece is too big!");
 class CStringInputSection final : public InputSection {
 public:
   CStringInputSection(const Section &section, ArrayRef<uint8_t> data,
-                      uint32_t align)
-      : InputSection(CStringLiteralKind, section, data, align) {}
+                      uint32_t align, bool dedupLiterals)
+      : InputSection(CStringLiteralKind, section, data, align),
+        deduplicateLiterals(dedupLiterals) {}
+
   uint64_t getOffset(uint64_t off) const override;
   bool isLive(uint64_t off) const override { return getStringPiece(off).live; }
   void markLive(uint64_t off) override { getStringPiece(off).live = true; }
@@ -199,16 +213,22 @@ public:
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   StringRef getStringRef(size_t i) const {
     size_t begin = pieces[i].inSecOff;
+    // The endpoint should be *at* the null terminator, not after. This matches
+    // the behavior of StringRef(const char *Str).
     size_t end =
-        (pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff;
+        ((pieces.size() - 1 == i) ? data.size() : pieces[i + 1].inSecOff) - 1;
     return toStringRef(data.slice(begin, end - begin));
+  }
+
+  StringRef getStringRefAtOffset(uint64_t off) const {
+    return getStringRef(getStringPieceIndex(off));
   }
 
   // Returns i'th piece as a CachedHashStringRef. This function is very hot when
   // string merging is enabled, so we want to inline.
   LLVM_ATTRIBUTE_ALWAYS_INLINE
   llvm::CachedHashStringRef getCachedHashStringRef(size_t i) const {
-    assert(config->dedupLiterals);
+    assert(deduplicateLiterals);
     return {getStringRef(i), pieces[i].hash};
   }
 
@@ -216,7 +236,11 @@ public:
     return isec->kind() == CStringLiteralKind;
   }
 
+  bool deduplicateLiterals = false;
   std::vector<StringPiece> pieces;
+
+private:
+  size_t getStringPieceIndex(uint64_t off) const;
 };
 
 class WordLiteralInputSection final : public InputSection {
@@ -273,6 +297,9 @@ inline bool isWordLiteralSection(uint32_t flags) {
 bool isCodeSection(const InputSection *);
 bool isCfStringSection(const InputSection *);
 bool isClassRefsSection(const InputSection *);
+bool isSelRefsSection(const InputSection *);
+bool isEhFrameSection(const InputSection *);
+bool isGccExceptTabSection(const InputSection *);
 
 extern std::vector<ConcatInputSection *> inputSections;
 
@@ -285,13 +312,16 @@ constexpr const char bitcodeBundle[] = "__bundle";
 constexpr const char cString[] = "__cstring";
 constexpr const char cfString[] = "__cfstring";
 constexpr const char cgProfile[] = "__cg_profile";
+constexpr const char chainFixups[] = "__chainfixups";
 constexpr const char codeSignature[] = "__code_signature";
 constexpr const char common[] = "__common";
 constexpr const char compactUnwind[] = "__compact_unwind";
 constexpr const char data[] = "__data";
 constexpr const char debugAbbrev[] = "__debug_abbrev";
 constexpr const char debugInfo[] = "__debug_info";
+constexpr const char debugLine[] = "__debug_line";
 constexpr const char debugStr[] = "__debug_str";
+constexpr const char debugStrOffs[] = "__debug_str_offs";
 constexpr const char ehFrame[] = "__eh_frame";
 constexpr const char gccExceptTab[] = "__gcc_except_tab";
 constexpr const char export_[] = "__export";
@@ -300,6 +330,7 @@ constexpr const char functionStarts[] = "__func_starts";
 constexpr const char got[] = "__got";
 constexpr const char header[] = "__mach_header";
 constexpr const char indirectSymbolTable[] = "__ind_sym_tab";
+constexpr const char initOffsets[] = "__init_offsets";
 constexpr const char const_[] = "__const";
 constexpr const char lazySymbolPtr[] = "__la_symbol_ptr";
 constexpr const char lazyBinding[] = "__lazy_binding";
@@ -311,7 +342,10 @@ constexpr const char objcCatList[] = "__objc_catlist";
 constexpr const char objcClassList[] = "__objc_classlist";
 constexpr const char objcClassRefs[] = "__objc_classrefs";
 constexpr const char objcConst[] = "__objc_const";
-constexpr const char objcImageInfo[] = "__objc_imageinfo";
+constexpr const char objCImageInfo[] = "__objc_imageinfo";
+constexpr const char objcStubs[] = "__objc_stubs";
+constexpr const char objcSelrefs[] = "__objc_selrefs";
+constexpr const char objcMethname[] = "__objc_methname";
 constexpr const char objcNonLazyCatList[] = "__objc_nlcatlist";
 constexpr const char objcNonLazyClassList[] = "__objc_nlclslist";
 constexpr const char objcProtoList[] = "__objc_protolist";

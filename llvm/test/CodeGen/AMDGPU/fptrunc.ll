@@ -4,9 +4,9 @@
 
 ; GCN-LABEL: {{^}}fptrunc_f64_to_f32:
 ; GCN: v_cvt_f32_f64_e32 {{v[0-9]+}}, {{s\[[0-9]+:[0-9]+\]}}
-define amdgpu_kernel void @fptrunc_f64_to_f32(float addrspace(1)* %out, double %in) {
+define amdgpu_kernel void @fptrunc_f64_to_f32(ptr addrspace(1) %out, double %in) {
   %result = fptrunc double %in to float
-  store float %result, float addrspace(1)* %out
+  store float %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -14,19 +14,19 @@ define amdgpu_kernel void @fptrunc_f64_to_f32(float addrspace(1)* %out, double %
 ; GCN-NOT: v_cvt
 ; GCN-UNSAFE: v_cvt_f32_f64_e32 [[F32:v[0-9]+]]
 ; GCN-UNSAFE: v_cvt_f16_f32_e32 v{{[0-9]+}}, [[F32]]
-define amdgpu_kernel void @fptrunc_f64_to_f16(i16 addrspace(1)* %out, double %in) {
+define amdgpu_kernel void @fptrunc_f64_to_f16(ptr addrspace(1) %out, double %in) {
   %result = fptrunc double %in to half
   %result_i16 = bitcast half %result to i16
-  store i16 %result_i16, i16 addrspace(1)* %out
+  store i16 %result_i16, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}fptrunc_v2f64_to_v2f32:
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32
-define amdgpu_kernel void @fptrunc_v2f64_to_v2f32(<2 x float> addrspace(1)* %out, <2 x double> %in) {
+define amdgpu_kernel void @fptrunc_v2f64_to_v2f32(ptr addrspace(1) %out, <2 x double> %in) {
   %result = fptrunc <2 x double> %in to <2 x float>
-  store <2 x float> %result, <2 x float> addrspace(1)* %out
+  store <2 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -34,9 +34,9 @@ define amdgpu_kernel void @fptrunc_v2f64_to_v2f32(<2 x float> addrspace(1)* %out
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32
-define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(<3 x float> addrspace(1)* %out, <3 x double> %in) {
+define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(ptr addrspace(1) %out, <3 x double> %in) {
   %result = fptrunc <3 x double> %in to <3 x float>
-  store <3 x float> %result, <3 x float> addrspace(1)* %out
+  store <3 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -45,9 +45,9 @@ define amdgpu_kernel void @fptrunc_v3f64_to_v3f32(<3 x float> addrspace(1)* %out
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32
-define amdgpu_kernel void @fptrunc_v4f64_to_v4f32(<4 x float> addrspace(1)* %out, <4 x double> %in) {
+define amdgpu_kernel void @fptrunc_v4f64_to_v4f32(ptr addrspace(1) %out, <4 x double> %in) {
   %result = fptrunc <4 x double> %in to <4 x float>
-  store <4 x float> %result, <4 x float> addrspace(1)* %out
+  store <4 x float> %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -60,8 +60,8 @@ define amdgpu_kernel void @fptrunc_v4f64_to_v4f32(<4 x float> addrspace(1)* %out
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32
 ; GCN: v_cvt_f32_f64_e32
-define amdgpu_kernel void @fptrunc_v8f64_to_v8f32(<8 x float> addrspace(1)* %out, <8 x double> %in) {
+define amdgpu_kernel void @fptrunc_v8f64_to_v8f32(ptr addrspace(1) %out, <8 x double> %in) {
   %result = fptrunc <8 x double> %in to <8 x float>
-  store <8 x float> %result, <8 x float> addrspace(1)* %out
+  store <8 x float> %result, ptr addrspace(1) %out
   ret void
 }

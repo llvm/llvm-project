@@ -16,8 +16,7 @@
 ; Function Attrs: nounwind optsize
 define void @f0() #0 {
 b0:
-  %v0 = getelementptr [8 x i16], [8 x i16]* undef, i32 0, i32 7
-  %v1 = bitcast i16* %v0 to [8 x i16]*
+  %v0 = getelementptr [8 x i16], ptr undef, i32 0, i32 7
   br label %b2
 
 b1:                                               ; preds = %b2
@@ -28,12 +27,12 @@ b2:                                               ; preds = %b2, %b0
   %v3 = phi i16 [ 17, %b0 ], [ %v7, %b2 ]
   %v4 = phi i16 [ 18, %b0 ], [ %v3, %b2 ]
   %v5 = sext i16 %v4 to i32
-  %v6 = getelementptr i16, i16* null, i32 -2
-  %v7 = load i16, i16* %v6, align 2
+  %v6 = getelementptr i16, ptr null, i32 -2
+  %v7 = load i16, ptr %v6, align 2
   %v8 = sext i16 %v7 to i32
   %v9 = tail call i32 @llvm.hexagon.A2.subsat(i32 %v5, i32 %v8)
   %v10 = trunc i32 %v9 to i16
-  store i16 %v10, i16* null, align 2
+  store i16 %v10, ptr null, align 2
   %v11 = add nsw i32 %v2, -1
   %v12 = icmp sgt i32 %v11, 1
   br i1 %v12, label %b2, label %b1

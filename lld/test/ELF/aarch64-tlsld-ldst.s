@@ -1,7 +1,7 @@
 // REQUIRES: aarch64
 // RUN: llvm-mc -triple=aarch64-linux-gnu -filetype=obj %s -o %t.o
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 // RUN: llvm-readelf --symbols %t | FileCheck -check-prefix CHECK-SYMS %s
 
         .text

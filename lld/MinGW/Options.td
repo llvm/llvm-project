@@ -31,6 +31,11 @@ multiclass B_disable<string name, string help1, string help2> {
   def disable_ # NAME: Flag<["--", "-"], "disable-" # name>, HelpText<help2>;
 }
 
+multiclass B_enable_disable<string name, string help1, string help2> {
+  def enable_ # NAME: Flag<["--", "-"], "enable-" # name>, HelpText<help1>;
+  def disable_ # NAME: Flag<["--", "-"], "disable-" # name>, HelpText<help2>;
+}
+
 def L: JoinedOrSeparate<["-"], "L">, MetaVarName<"<dir>">,
   HelpText<"Add a directory to the library search path">;
 defm allow_multiple_definition: B<"allow-multiple-definition",
@@ -57,6 +62,8 @@ def enable_stdcall_fixup: F<"enable-stdcall-fixup">,
 defm entry: Eq<"entry", "Name of entry point symbol">, MetaVarName<"<entry>">;
 def exclude_all_symbols: F<"exclude-all-symbols">,
     HelpText<"Don't automatically export any symbols">;
+defm exclude_symbols: Eq<"exclude-symbols",
+    "Exclude symbols from automatic export">, MetaVarName<"<symbol[,symbol,...]>">;
 def export_all_symbols: F<"export-all-symbols">,
     HelpText<"Export all symbols even if a def file or dllexport attributes are used">;
 defm fatal_warnings: B<"fatal-warnings",
@@ -98,6 +105,8 @@ def o: JoinedOrSeparate<["-"], "o">, MetaVarName<"<path>">,
   HelpText<"Path to file to write output">;
 defm out_implib: Eq<"out-implib", "Import library name">;
 defm output_def: Eq<"output-def", "Output def file">;
+defm reloc_section: B_enable_disable<"reloc-section",
+     "Enable base relocations", "Disable base relocations">;
 defm section_alignment: Eq<"section-alignment", "Set section alignment">;
 def shared: F<"shared">, HelpText<"Build a shared object">;
 defm subs: Eq<"subsystem", "Specify subsystem">;
@@ -132,6 +141,13 @@ defm pdb: Eq<"pdb", "Output PDB debug info file, chosen implicitly if the argume
 defm thinlto_cache_dir: EqLong<"thinlto-cache-dir",
   "Path to ThinLTO cached object file directory">;
 defm Xlink : Eq<"Xlink", "Pass <arg> to the COFF linker">, MetaVarName<"<arg>">;
+defm guard_cf : B<"guard-cf", "Enable Control Flow Guard" ,
+  "Do not enable Control Flow Guard (default)">;
+defm guard_longjmp : B<"guard-longjmp",
+  "Enable Control Flow Guard long jump hardening (default for --guard-cf)" ,
+  "Do not enable Control Flow Guard long jump hardening">;
+defm error_limit:
+  EqLong<"error-limit", "Maximum number of errors to emit before stopping (0 = no limit)">;
 
 // Alias
 def alias_Bdynamic_call_shared: Flag<["-"], "call_shared">, Alias<Bdynamic>;

@@ -1023,7 +1023,17 @@
             extswsli. 2, 3, 4
 
 
-# FIXME: BCD assist instructions
+# BCD assist instructions
+
+# CHECK-BE: cdtbcd 2, 7                     # encoding: [0x7c,0xe2,0x02,0x34]
+# CHECK-LE: cdtbcd 2, 7                     # encoding: [0x34,0x02,0xe2,0x7c]
+            cdtbcd 2, 7
+# CHECK-BE: cbcdtd 2, 7                     # encoding: [0x7c,0xe2,0x02,0x74]
+# CHECK-LE: cbcdtd 2, 7                     # encoding: [0x74,0x02,0xe2,0x7c]
+            cbcdtd 2, 7
+# CHECK-BE: addg6s 2, 3, 4                  # encoding: [0x7c,0x43,0x20,0x94]
+# CHECK-LE: addg6s 2, 3, 4                  # encoding: [0x94,0x20,0x43,0x7c]
+            addg6s 2, 3, 4
 
 # Move to/from system register instructions
 

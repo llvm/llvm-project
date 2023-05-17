@@ -9,12 +9,12 @@
 %struct.Spill = type { [12 x i64 ] }
 @GS = external global %struct.Spill, align 4
 
-define i64 @test(%struct.Spill* byval(%struct.Spill) align 4 %s) {
+define i64 @test(ptr byval(%struct.Spill) align 4 %s) {
 entry:
-  %arrayidx_a = getelementptr inbounds %struct.Spill, %struct.Spill* %s, i32 0, i32 0, i32 2
-  %arrayidx_b = getelementptr inbounds %struct.Spill, %struct.Spill* %s, i32 0, i32 0, i32 10
-  %a = load i64, i64* %arrayidx_a
-  %b = load i64, i64* %arrayidx_b
+  %arrayidx_a = getelementptr inbounds %struct.Spill, ptr %s, i32 0, i32 0, i32 2
+  %arrayidx_b = getelementptr inbounds %struct.Spill, ptr %s, i32 0, i32 0, i32 10
+  %a = load i64, ptr %arrayidx_a
+  %b = load i64, ptr %arrayidx_b
   %add = add i64 %a, %b
   ret i64 %add
 }

@@ -1,4 +1,3 @@
-; RUN: opt < %s -simple-loop-unswitch -enable-nontrivial-unswitch -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes='simple-loop-unswitch<nontrivial>' -S 2>&1 | FileCheck %s
 ; RUN: opt < %s -passes='loop-mssa(simple-loop-unswitch<nontrivial>)' -S 2>&1 | FileCheck %s
 ;
@@ -15,7 +14,7 @@ outer:
   br label %inner
 inner:
   %ii = phi i32 [ 0, %outer ], [ %iinc, %continue]
-  call void @foo() 
+  call void @foo()
   switch i32 %0, label %get_out2 [
     i32 0, label %continue
     i32 1, label %case1

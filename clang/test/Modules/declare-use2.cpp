@@ -3,5 +3,5 @@
 
 #include "h.h"
 #include "e.h"
-#include "f.h" // expected-error {{module XH does not depend on a module exporting 'f.h'}}
+#include "f.h" // expected-error {{module XH does not directly depend on a module exporting 'f.h', which is part of indirectly-used module XF}}
 const int h2 = h1+e+f;

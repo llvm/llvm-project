@@ -164,6 +164,9 @@ class MxSize<int num, string id, string full> {
 def MxSize8  : MxSize<8,  "b", "byte">;
 def MxSize16 : MxSize<16, "w", "word">;
 def MxSize32 : MxSize<32, "l", "long">;
+def MxSizeF32 : MxSize<32, "s", "f32">;
+def MxSizeF64 : MxSize<64, "d", "f64">;
+def MxSizeF80 : MxSize<80, "x", "f80">;
 
 class MxOpClass<string name,
                 list<AsmOperandClass> superClasses = []> : AsmOperandClass {
@@ -181,6 +184,8 @@ def MxRegClass : MxOpClass<"Reg">;
 let RenderMethod = "addRegOperands", SuperClasses = [MxRegClass]in {
   def MxARegClass : MxOpClass<"AReg">;
   def MxDRegClass : MxOpClass<"DReg">;
+
+  def MxFPDRegClass : MxOpClass<"FPDReg">;
 }
 
 class MxOperand<ValueType vt, MxSize size, string letter, RegisterClass rc, dag pat = (null_frag)> {
@@ -228,6 +233,13 @@ let ParserMatchClass = MxARegClass in {
 
   def MxARD16_TC : MxRegOp<i16, AR16_TC, MxSize16, "a">;
   def MxARD32_TC : MxRegOp<i32, AR32_TC, MxSize32, "a">;
+}
+
+// FLOATING POINT DATA REGISTER.
+let ParserMatchClass = MxFPDRegClass in {
+  def MxFPR32 : MxRegOp<f32, FPDR32, MxSizeF32, "fp">;
+  def MxFPR64 : MxRegOp<f64, FPDR64, MxSizeF64, "fp">;
+  def MxFPR80 : MxRegOp<f80, FPDR80, MxSizeF80, "fp">;
 }
 
 class MxMemOp<dag ops, MxSize size, string letter,
@@ -429,12 +441,16 @@ def NearData     : Predicate<"TM.getCodeModel() == CodeModel::Small ||"
                              "TM.getCodeModel() == CodeModel::Kernel">;
 def IsPIC        : Predicate<"TM.isPositionIndependent()">;
 def IsNotPIC     : Predicate<"!TM.isPositionIndependent()">;
-def IsM68000     : Predicate<"Subtarget.IsM68000()">;
-def IsM68010     : Predicate<"Subtarget.IsM68010()">;
-def IsM68020     : Predicate<"Subtarget.IsM68020()">;
-def IsM68030     : Predicate<"Subtarget.IsM68030()">;
-def IsM68040     : Predicate<"Subtarget.IsM68040()">;
 
+// ISA versions
+foreach i = [0,1,2,4,6] in
+def AtLeastM680 # i # "0" : Predicate<"Subtarget->atLeastM680"#i#"0()">,
+                            AssemblerPredicate<(all_of
+                                                !cast<SubtargetFeature>("FeatureISA"#i#"0"))>;
+def AtLeastM68881 : Predicate<"Subtarget->atLeastM68881()">,
+                    AssemblerPredicate<(all_of FeatureISA881)>;
+def AtLeastM68882 : Predicate<"Subtarget->atLeastM68882()">,
+                    AssemblerPredicate<(all_of FeatureISA882)>;
 
 //===----------------------------------------------------------------------===//
 // Condition Codes
@@ -522,7 +538,7 @@ def Mxloadi16 : PatFrag<(ops node:$ptr), (i16 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 2 && !LD->isSimple();
+    return LD->getAlign() >= 2 && !LD->isSimple();
   return false;
 }]>;
 
@@ -532,7 +548,7 @@ def Mxloadi32 : PatFrag<(ops node:$ptr), (i32 (unindexedload node:$ptr)), [{
   if (ExtType == ISD::NON_EXTLOAD)
     return true;
   if (ExtType == ISD::EXTLOAD)
-    return LD->getAlignment() >= 4 && !LD->isSimple();
+    return LD->getAlign() >= 4 && !LD->isSimple();
   return false;
 }]>;
 
@@ -707,6 +723,10 @@ foreach size = [16, 32] in {
     : MxOpBundle<size, !cast<MxOperand>("MxXRD"#size), ?>;
 } // foreach size = [16, 32]
 
+foreach size = [32, 64, 80] in
+def MxOp#size#AddrMode_fpr
+  : MxOpBundle<size, !cast<MxOperand>("MxFPR"#size), ?>;
+
 class MxType8Class<string rLet, MxOperand reg>
     : MxType<i8, "b", "", rLet, reg,
              MxARI8,   MxCP_ARI,
@@ -781,5 +801,6 @@ include "M68kInstrShiftRotate.td"
 include "M68kInstrBits.td"
 include "M68kInstrArithmetic.td"
 include "M68kInstrControl.td"
+include "M68kInstrAtomics.td"
 
 include "M68kInstrCompiler.td"

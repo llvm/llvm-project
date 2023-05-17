@@ -645,7 +645,8 @@ SBError SBBreakpoint::SetScriptCallbackBody(const char *callback_body_text) {
         bkpt_sp->GetTarget()
             .GetDebugger()
             .GetScriptInterpreter()
-            ->SetBreakpointCommandCallback(bp_options, callback_body_text);
+            ->SetBreakpointCommandCallback(bp_options, callback_body_text,
+                                           /*is_callback=*/false);
     sb_error.SetError(error);
   } else
     sb_error.SetErrorString("invalid breakpoint");
@@ -835,8 +836,7 @@ public:
     if (bkpt->GetTargetSP() != target_sp)
       return false;
     lldb::break_id_t bp_id = bkpt->GetID();
-    if (find(m_break_ids.begin(), m_break_ids.end(), bp_id) ==
-        m_break_ids.end())
+    if (!llvm::is_contained(m_break_ids, bp_id))
       return false;
 
     m_break_ids.push_back(bkpt->GetID());

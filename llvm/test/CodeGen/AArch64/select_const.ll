@@ -9,8 +9,8 @@
 define i32 @select_0_or_1(i1 %cond) {
 ; CHECK-LABEL: select_0_or_1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    bic w0, w8, w0
 ; CHECK-NEXT:    ret
   %sel = select i1 %cond, i32 0, i32 1
   ret i32 %sel
@@ -28,8 +28,8 @@ define i32 @select_0_or_1_zeroext(i1 zeroext %cond) {
 define i32 @select_0_or_1_signext(i1 signext %cond) {
 ; CHECK-LABEL: select_0_or_1_signext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mvn w8, w0
-; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    mov w8, #1
+; CHECK-NEXT:    bic w0, w8, w0
 ; CHECK-NEXT:    ret
   %sel = select i1 %cond, i32 0, i32 1
   ret i32 %sel

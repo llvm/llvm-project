@@ -7,8 +7,8 @@
 # RUN: link_fdata %s %t.o %t.fdata
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -nostdlib
-# RUN: llvm-bolt %t.exe -o %t.out -data %t.fdata -frame-opt=all -lite=0 \
-# RUN:           -print-fop 2>&1 | FileCheck %s
+# RUN: llvm-bolt %t.exe -o %t.out --data %t.fdata --frame-opt=all --lite=0 \
+# RUN:           --print-fop 2>&1 | FileCheck %s
 
 # Check shrink wrapping results:
 # CHECK: BOLT-INFO: Shrink wrapping moved 0 spills inserting load/stores and 1 spills inserting push/pops

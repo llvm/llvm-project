@@ -1,4 +1,4 @@
-; RUN: opt -S -loop-fusion < %s 2>&1 | FileCheck %s
+; RUN: opt -S -passes=loop-fusion < %s 2>&1 | FileCheck %s
 
 ; Verify that LoopFusion can fuse two triple-loop nests with guarded inner
 ; loops. Loops are in canonical form.
@@ -83,11 +83,11 @@ inner1.ph:
 
 inner1.body:
   %iv112 = phi i64 [ %iv.next113, %inner1.body ], [ 0, %inner1.ph ]
-  %idx12 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @a, i64 0, i64 %iv120, i64 %iv116, i64 %iv112
-  %0 = load i32, i32* %idx12
+  %idx12 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @a, i64 0, i64 %iv120, i64 %iv116, i64 %iv112
+  %0 = load i32, ptr %idx12
   %add = add nsw i32 %0, 2
-  %idx18 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @b, i64 0, i64 %iv120, i64 %iv116, i64 %iv112
-  store i32 %add, i32* %idx18
+  %idx18 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @b, i64 0, i64 %iv120, i64 %iv116, i64 %iv112
+  store i32 %add, ptr %idx18
   %iv.next113 = add nuw nsw i64 %iv112, 1
   %exitcond115 = icmp eq i64 %iv.next113, %wide.trip.count114
   br i1 %exitcond115, label %inner1.exit, label %inner1.body
@@ -127,11 +127,11 @@ inner2.ph:
 
 inner2.body:
   %iv = phi i64 [ %iv.next, %inner2.body ], [ 0, %inner2.ph ]
-  %idx45 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @a, i64 0, i64 %iv108, i64 %iv104, i64 %iv
-  %1 = load i32, i32* %idx45
+  %idx45 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @a, i64 0, i64 %iv108, i64 %iv104, i64 %iv
+  %1 = load i32, ptr %idx45
   %mul = shl nsw i32 %1, 1
-  %idx51 = getelementptr inbounds [10 x [10 x [10 x i32]]], [10 x [10 x [10 x i32]]]* @c, i64 0, i64 %iv108, i64 %iv104, i64 %iv
-  store i32 %mul, i32* %idx51
+  %idx51 = getelementptr inbounds [10 x [10 x [10 x i32]]], ptr @c, i64 0, i64 %iv108, i64 %iv104, i64 %iv
+  store i32 %mul, ptr %idx51
   %iv.next = add nuw nsw i64 %iv, 1
   %exitcond = icmp eq i64 %iv.next, %wide.trip.count114
   br i1 %exitcond, label %inner2.exit, label %inner2.body

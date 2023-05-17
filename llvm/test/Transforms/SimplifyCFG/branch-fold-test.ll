@@ -2,7 +2,7 @@
 ; This test ensures that the simplifycfg pass continues to constant fold
 ; terminator instructions.
 
-; RUN: opt < %s -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
+; RUN: opt < %s -passes=simplifycfg -simplifycfg-require-and-preserve-domtree=1 -S | FileCheck %s
 
 define i32 @test(i32 %A, i32 %B) {
 ; CHECK-LABEL: @test(

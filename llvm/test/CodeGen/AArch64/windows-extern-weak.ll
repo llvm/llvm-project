@@ -19,7 +19,7 @@ define void @func() {
 ; CHECK-NEXT: .seh_endepilogue
 ; CHECK-NEXT: ret
 
-  br i1 icmp ne (void ()* @weakfunc, void ()* null), label %1, label %2
+  br i1 icmp ne (ptr @weakfunc, ptr null), label %1, label %2
 
 1:
   call void @weakfunc()

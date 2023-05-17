@@ -48,7 +48,6 @@
 
 #include "CoverageExporterJson.h"
 #include "CoverageReport.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ThreadPool.h"
@@ -291,8 +290,8 @@ void CoverageExporterJson::renderRoot(ArrayRef<std::string> SourceFiles) {
     const json::Object *ObjB = B.getAsObject();
     assert(ObjA != nullptr && "Value A was not an Object");
     assert(ObjB != nullptr && "Value B was not an Object");
-    const StringRef FilenameA = ObjA->getString("filename").getValue();
-    const StringRef FilenameB = ObjB->getString("filename").getValue();
+    const StringRef FilenameA = *ObjA->getString("filename");
+    const StringRef FilenameB = *ObjB->getString("filename");
     return FilenameA.compare(FilenameB) < 0;
   });
   auto Export = json::Object(

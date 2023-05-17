@@ -1,6 +1,6 @@
 @ PR28647
 @ RUN: llvm-mc < %s -triple=thumbv7a-linux-gnueabi -filetype=obj -o - \
-@ RUN: | llvm-objdump -d --triple=thumbv7a-linux-gnueabi - | FileCheck %s
+@ RUN: | llvm-objdump --no-print-imm-hex -d --triple=thumbv7a-linux-gnueabi - | FileCheck %s
     .text
     .syntax unified
     .balign 2

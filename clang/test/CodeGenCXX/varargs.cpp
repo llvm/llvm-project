@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -emit-llvm %s -o - | FileCheck %s
 
 // rdar://7309675
 // PR4678
@@ -33,11 +33,8 @@ namespace test1 {
   // CHECK-LABEL:    define{{.*}} void @_ZN5test14testEv()
   // CHECK:      [[X:%.*]] = alloca [[A:%.*]], align 4
   // CHECK-NEXT: [[TMP:%.*]] = alloca [[A]], align 4
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[A]]* [[TMP]] to i8*
-  // CHECK-NEXT: [[T1:%.*]] = bitcast [[A]]* [[X]] to i8*
-  // CHECK-NEXT: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 4 [[T0]], i8* align 4 [[T1]], i64 8, i1 false)
-  // CHECK-NEXT: [[T0:%.*]] = bitcast [[A]]* [[TMP]] to i64*
-  // CHECK-NEXT: [[T1:%.*]] = load i64, i64* [[T0]], align 4
+  // CHECK-NEXT: call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[TMP]], ptr align 4 [[X]], i64 8, i1 false)
+  // CHECK-NEXT: [[T1:%.*]] = load i64, ptr [[TMP]], align 4
   // CHECK-NEXT: call void (...) @_ZN5test13fooEz(i64 [[T1]])
   // CHECK-NEXT: ret void
 }

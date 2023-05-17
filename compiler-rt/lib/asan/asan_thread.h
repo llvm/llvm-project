@@ -15,8 +15,8 @@
 #define ASAN_THREAD_H
 
 #include "asan_allocator.h"
-#include "asan_internal.h"
 #include "asan_fake_stack.h"
+#include "asan_internal.h"
 #include "asan_stats.h"
 #include "sanitizer_common/sanitizer_common.h"
 #include "sanitizer_common/sanitizer_libc.h"
@@ -129,7 +129,7 @@ class AsanThread {
 
   void *extra_spill_area() { return &extra_spill_area_; }
 
-  void *get_arg() { return arg_; }
+  void *get_arg() const { return arg_; }
 
  private:
   // NOTE: There is no AsanThread constructor. It is allocated

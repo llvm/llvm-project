@@ -1,0 +1,113 @@
+# RUN: llc -mtriple=avr -mattr=+lpm -mattr=+elpm -mattr=+lpmx -mattr=+elpmx \
+# RUN:     -mattr=+movw -start-before=greedy %s -o - | FileCheck %s
+# RUN: llc -mtriple=avr -mattr=+lpm -mattr=+elpm -mattr=-lpmx -mattr=-elpmx \
+# RUN:     -mattr=+addsubiw -mattr=+movw -start-before=greedy %s -o - \
+# RUN:     | FileCheck --check-prefix=NOX %s
+# RUN: llc -mtriple=avr -mattr=+lpm -mattr=+elpm -mattr=-lpmx -mattr=-elpmx \
+# RUN:     -mattr=-addsubiw -mattr=+movw -start-before=greedy %s -o - \
+# RUN:     | FileCheck --check-prefix=NOADIWNOX %s
+
+# This test checks the expansion of the 16-bit ELPM pseudo instruction and that
+# the register allocator won't use R31R30 as an output register (which would
+# lead to undefined behavior).
+
+--- |
+  target triple = "avr--"
+  define void @test_elpmwrdz() {
+  entry:
+    ret void
+  }
+  define void @test_elpmwrdz_2() {
+  entry:
+    ret void
+  }
+...
+
+---
+name:            test_elpmwrdz
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $r31r30
+
+    ; CHECK-LABEL: test_elpmwrdz
+    ; CHECK:      elpm r24, Z+
+    ; CHECK-NEXT: elpm r25, Z
+    ; CHECK-NEXT: movw r30, r24
+
+    ; NOX-LABEL: test_elpmwrdz
+    ; NOX:       ; %bb.0:
+    ; NOX-NEXT:    ldi r18, 1
+    ; NOX-NEXT:    out
+    ; NOX-NEXT:    elpm
+    ; NOX-NEXT:    mov r24, r0
+    ; NOX-NEXT:    adiw r30, 1
+    ; NOX-NEXT:    elpm
+    ; NOX-NEXT:    mov r25, r0
+    ; NOX-NEXT:    movw r30, r24
+
+    ; NOADIWNOX-LABEL: test_elpmwrdz
+    ; NOADIWNOX:       ; %bb.0:
+    ; NOADIWNOX-NEXT:    ldi r18, 1
+    ; NOADIWNOX-NEXT:    out
+    ; NOADIWNOX-NEXT:    elpm
+    ; NOADIWNOX-NEXT:    mov r24, r0
+    ; NOADIWNOX-NEXT:    subi r30, 255
+    ; NOADIWNOX-NEXT:    sbci r31, 255
+    ; NOADIWNOX-NEXT:    elpm
+    ; NOADIWNOX-NEXT:    mov r25, r0
+    ; NOADIWNOX-NEXT:    movw r30, r24
+
+    %1:zreg = COPY killed $r31r30
+    %2:ld8 = LDIRdK 1
+    %3:dregs = ELPMWRdZ %1, %2, implicit-def dead $r0
+    $r31r30 = COPY %3
+    RET implicit $r31r30
+...
+
+---
+name:            test_elpmwrdz_2
+tracksRegLiveness: true
+body: |
+  bb.0.entry:
+    liveins: $r31r30
+
+    ; CHECK-LABEL: test_elpmwrdz_2
+    ; CHECK:       ; %bb.0:
+    ; CHECK-NEXT:    ldi r24, 1
+    ; CHECK-NEXT:    out 59, r24
+    ; CHECK-NEXT:    elpm r18, Z+
+    ; CHECK-NEXT:    elpm r19, Z
+    ; CHECK-NEXT:    sbiw r30, 1
+    ; CHECK-NEXT:    ret
+
+    ; NOX-LABEL: test_elpmwrdz_2
+    ; NOX:       ; %bb.0:
+    ; NOX-NEXT:    ldi r24, 1
+    ; NOX-NEXT:    out 59, r24
+    ; NOX-NEXT:    elpm
+    ; NOX-NEXT:    mov r18, r0
+    ; NOX-NEXT:    adiw r30, 1
+    ; NOX-NEXT:    elpm
+    ; NOX-NEXT:    mov r19, r0
+    ; NOX-NEXT:    sbiw r30, 1
+    ; NOX-NEXT:    ret
+
+    ; NOADIWNOX-LABEL: test_elpmwrdz_2
+    ; NOADIWNOX:       ; %bb.0:
+    ; NOADIWNOX-NEXT:    ldi r24, 1
+    ; NOADIWNOX-NEXT:    out  59, r24
+    ; NOADIWNOX-NEXT:    elpm
+    ; NOADIWNOX-NEXT:    mov r18, r0
+    ; NOADIWNOX-NEXT:    subi r30, 255
+    ; NOADIWNOX-NEXT:    sbci r31, 255
+    ; NOADIWNOX-NEXT:    elpm
+    ; NOADIWNOX-NEXT:    mov r19, r0
+    ; NOADIWNOX-NEXT:    subi r30, 1
+    ; NOADIWNOX-NEXT:    sbci r31, 0
+
+    %1:zreg = COPY $r31r30
+    %2:ld8 = LDIRdK 1
+    %3:dregs = ELPMWRdZ %1, %2, implicit-def dead $r0
+    RET implicit $r31r30
+...

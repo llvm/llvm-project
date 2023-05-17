@@ -7,5 +7,5 @@
 ; When linked, the globals should be merged, and the result should still 
 ; be named '@G'.
 
-@G = appending global [1 x i32] zeroinitializer		; <[1 x i32]*> [#uses=0]
+@G = appending global [1 x i32] zeroinitializer		; <ptr> [#uses=0]
 

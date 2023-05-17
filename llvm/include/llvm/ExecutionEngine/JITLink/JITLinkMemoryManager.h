@@ -16,9 +16,9 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkDylib.h"
-#include "llvm/ExecutionEngine/JITLink/MemoryFlags.h"
 #include "llvm/ExecutionEngine/Orc/Shared/AllocationActions.h"
 #include "llvm/ExecutionEngine/Orc/Shared/ExecutorAddress.h"
+#include "llvm/ExecutionEngine/Orc/Shared/MemoryFlags.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MSVCErrorWorkarounds.h"
@@ -246,7 +246,7 @@ public:
   };
 
 private:
-  using SegmentMap = AllocGroupSmallMap<Segment>;
+  using SegmentMap = orc::AllocGroupSmallMap<Segment>;
 
 public:
   BasicLayout(LinkGraph &G);
@@ -291,6 +291,9 @@ private:
 /// Segment. Clients can obtain a pointer to the working memory and executor
 /// address of that block using the Segment's AllocGroup. Once memory has been
 /// populated, clients can call finalize to finalize the memory.
+///
+/// Note: Segments with MemLifetimePolicy::NoAlloc are not permitted, since
+/// they would not be useful, and their presence is likely to indicate a bug.
 class SimpleSegmentAlloc {
 public:
   /// Describes a segment to be allocated.
@@ -309,7 +312,7 @@ public:
     MutableArrayRef<char> WorkingMem;
   };
 
-  using SegmentMap = AllocGroupSmallMap<Segment>;
+  using SegmentMap = orc::AllocGroupSmallMap<Segment>;
 
   using OnCreatedFunction = unique_function<void(Expected<SimpleSegmentAlloc>)>;
 
@@ -328,7 +331,7 @@ public:
   ~SimpleSegmentAlloc();
 
   /// Returns the SegmentInfo for the given group.
-  SegmentInfo getSegInfo(AllocGroup AG);
+  SegmentInfo getSegInfo(orc::AllocGroup AG);
 
   /// Finalize all groups (async version).
   void finalize(OnFinalizedFunction OnFinalized) {
@@ -342,11 +345,12 @@ public:
 
 private:
   SimpleSegmentAlloc(
-      std::unique_ptr<LinkGraph> G, AllocGroupSmallMap<Block *> ContentBlocks,
+      std::unique_ptr<LinkGraph> G,
+      orc::AllocGroupSmallMap<Block *> ContentBlocks,
       std::unique_ptr<JITLinkMemoryManager::InFlightAlloc> Alloc);
 
   std::unique_ptr<LinkGraph> G;
-  AllocGroupSmallMap<Block *> ContentBlocks;
+  orc::AllocGroupSmallMap<Block *> ContentBlocks;
   std::unique_ptr<JITLinkMemoryManager::InFlightAlloc> Alloc;
 };
 

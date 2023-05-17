@@ -1,63 +1,100 @@
 add_header_library(
   array
   HDRS
-    Array.h
-)
-
-add_header_library(
-  array_ref
-  HDRS
-    ArrayRef.h
+    array.h
 )
 
 add_header_library(
   bit
   HDRS
-    Bit.h
+    bit.h
+  DEPENDS
+    libc.src.__support.macros.properties.compiler
 )
 
 add_header_library(
   bitset
   HDRS
-    Bitset.h
+    bitset.h
+)
+
+add_header_library(
+  cstddef
+  HDRS
+    cstddef.h
+  DEPENDS
+    .type_traits
 )
 
 add_header_library(
   functional
   HDRS
-    Functional.h
+    functional.h
 )
 
 add_header_library(
   limits
   HDRS
-    Limits.h
+    limits.h
+)
+
+add_header_library(
+  span
+  HDRS
+    span.h
+  DEPENDS
+    .array
+    .type_traits
 )
 
 add_header_library(
   string_view
   HDRS
-    StringView.h
+    string_view.h
+  DEPENDS
+    libc.src.__support.common
+)
+
+add_header_library(
+  string
+  HDRS
+    string.h
+  DEPENDS
+    libc.include.stdlib
+    .string_view
+    libc.src.__support.common
+    libc.src.__support.integer_to_string
+    libc.src.string.memory_utils.memcpy_implementation
+    libc.src.string.memory_utils.memset_implementation
+    libc.src.string.string_utils
+)
+
+add_header_library(
+  stringstream
+  HDRS
+    stringstream.h
+  DEPENDS
+    .span
+    .string_view
+    libc.src.__support.integer_to_string
+)
+
+add_header_library(
+  optional
+  HDRS
+    optional.h
 )
 
 add_header_library(
   type_traits
   HDRS
-    TypeTraits.h
+    type_traits.h
 )
 
 add_header_library(
   utility
   HDRS
-    Utility.h
-)
-
-add_header_library(
-  vector
-  HDRS
-    vector.h
-  DEPENDS
-    libc.include.stdlib
+    utility.h
 )
 
 add_header_library(
@@ -67,21 +104,18 @@ add_header_library(
 )
 
 add_header_library(
-  blockstore
+  expected
   HDRS
-    blockstore.h
+    expected.h
 )
 
-add_header_library(
-  error
+add_object_library(
+  new
+  SRCS
+    new.cpp
   HDRS
-    error.h
-)
-
-add_header_library(
-  uint
-  HDRS
-    UInt.h
+    new.h
   DEPENDS
-    libc.src.__support.CPP.array
+    libc.include.stdlib
+    libc.src.__support.common
 )

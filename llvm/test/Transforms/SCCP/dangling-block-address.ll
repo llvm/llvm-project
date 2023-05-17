@@ -7,11 +7,11 @@
 ; address taken, let other passes replace these "dead" blockaddresses with some
 ; other Constant.
 
-; CHECK: @bar.l = internal constant [2 x i8*] [i8* blockaddress(@bar, %lab0), i8* blockaddress(@bar, %end)]
+; CHECK: @bar.l = internal constant [2 x ptr] [ptr blockaddress(@bar, %lab0), ptr blockaddress(@bar, %end)]
 
 
-@code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4 ; <[5 x i32]*> [#uses=0]
-@bar.l = internal constant [2 x i8*] [i8* blockaddress(@bar, %lab0), i8* blockaddress(@bar, %end)] ; <[2 x i8*]*> [#uses=1]
+@code = global [5 x i32] [i32 0, i32 0, i32 0, i32 0, i32 1], align 4 ; <ptr> [#uses=0]
+@bar.l = internal constant [2 x ptr] [ptr blockaddress(@bar, %lab0), ptr blockaddress(@bar, %end)] ; <ptr> [#uses=1]
 
 define void @foo(i32 %x) nounwind readnone {
 ; CHECK-LABEL: @foo(
@@ -19,12 +19,12 @@ define void @foo(i32 %x) nounwind readnone {
 ; CHECK-NEXT:    unreachable
 ;
 entry:
-  %b = alloca i32, align 4                        ; <i32*> [#uses=1]
-  store volatile i32 -1, i32* %b
+  %b = alloca i32, align 4                        ; <ptr> [#uses=1]
+  store volatile i32 -1, ptr %b
   ret void
 }
 
-define void @bar(i32* nocapture %pc) nounwind readonly {
+define void @bar(ptr nocapture %pc) nounwind readonly {
 ; CHECK-LABEL: @bar(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    unreachable
@@ -45,11 +45,11 @@ end:                                              ; preds = %indirectgoto
 
 indirectgoto:                                     ; preds = %lab0, %entry
   %indvar = phi i32 [ %indvar.next, %lab0 ], [ 0, %entry ] ; <i32> [#uses=2]
-  %pc.addr.0 = getelementptr i32, i32* %pc, i32 %indvar ; <i32*> [#uses=1]
-  %tmp1.pn = load i32, i32* %pc.addr.0                 ; <i32> [#uses=1]
-  %indirect.goto.dest.in = getelementptr inbounds [2 x i8*], [2 x i8*]* @bar.l, i32 0, i32 %tmp1.pn ; <i8**> [#uses=1]
-  %indirect.goto.dest = load i8*, i8** %indirect.goto.dest.in ; <i8*> [#uses=1]
-  indirectbr i8* %indirect.goto.dest, [label %lab0, label %end]
+  %pc.addr.0 = getelementptr i32, ptr %pc, i32 %indvar ; <ptr> [#uses=1]
+  %tmp1.pn = load i32, ptr %pc.addr.0                 ; <i32> [#uses=1]
+  %indirect.goto.dest.in = getelementptr inbounds [2 x ptr], ptr @bar.l, i32 0, i32 %tmp1.pn ; <ptr> [#uses=1]
+  %indirect.goto.dest = load ptr, ptr %indirect.goto.dest.in ; <ptr> [#uses=1]
+  indirectbr ptr %indirect.goto.dest, [label %lab0, label %end]
 }
 
 define i32 @main() nounwind readnone {
@@ -70,19 +70,19 @@ define i32 @test1() {
 ; CHECK:       redirected:
 ; CHECK-NEXT:    unreachable
 ;
-  %1 = bitcast i8* blockaddress(@test1, %redirected) to i64*
-  call void @set_return_addr(i64* %1)
+  %1 = bitcast ptr blockaddress(@test1, %redirected) to ptr
+  call void @set_return_addr(ptr %1)
   ret i32 0
 
 redirected:
   ret i32 0
 }
 
-define internal void @set_return_addr(i64* %addr) {
+define internal void @set_return_addr(ptr %addr) {
 ; CHECK-LABEL: @set_return_addr(
 ; CHECK-NEXT:    unreachable
 ;
-  %addr.addr = alloca i64*, i32 0, align 8
-  store i64* %addr, i64** %addr.addr, align 8
+  %addr.addr = alloca ptr, i32 0, align 8
+  store ptr %addr, ptr %addr.addr, align 8
   ret void
 }

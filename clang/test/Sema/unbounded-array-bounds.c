@@ -84,3 +84,33 @@ void pr50741(void) {
 void func() {
   func + 0xdead000000000000UL; // no crash
 }
+
+struct {
+  int _;
+  char tail[];  // addr16-note {{declared here}} addr32-note {{declared here}}
+} fam;
+
+struct {
+  int _;
+  char tail[0];  // addr16-note {{declared here}} addr32-note {{declared here}}
+} fam0;
+
+struct {
+  int _;
+  char tail[1];  // addr16-note {{declared here}} addr32-note {{declared here}}
+} fam1;
+
+void fam_ily() {
+  ++fam.tail[7073650413200313099];
+  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65536 elements)}}
+  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4294967296 elements)}}
+  // No warning for addr64 because the array index is inbound in that case.
+  ++fam0.tail[7073650413200313099];
+  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65536 elements)}}
+  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4294967296 elements)}}
+  // No warning for addr64 because the array index is inbound in that case.
+  ++fam1.tail[7073650413200313099];
+  // addr16-warning@-1 {{array index 7073650413200313099 refers past the last possible element for an array in 16-bit address space containing 8-bit (1-byte) elements (max possible 65536 elements)}}
+  // addr32-warning@-2 {{array index 7073650413200313099 refers past the last possible element for an array in 32-bit address space containing 8-bit (1-byte) elements (max possible 4294967296 elements)}}
+  // No warning for addr64 because the array index is inbound in that case.
+}

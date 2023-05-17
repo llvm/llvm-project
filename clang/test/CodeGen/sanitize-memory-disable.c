@@ -1,6 +1,7 @@
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s | FileCheck -check-prefixes CHECK,WITHOUT %s
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s -fsanitize=memory | FileCheck -check-prefixes CHECK,MSAN %s
 // RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s -fsanitize=kernel-memory | FileCheck -check-prefixes CHECK,KMSAN %s
+// RUN: %clang -target x86_64-linux-gnu -S -emit-llvm -o - %s -fsanitize=memory -fno-sanitize-memory-param-retval | FileCheck -check-prefixes CHECK,MSAN,RETTLS %s
 
 // Instrumented function.
 // MSan uses memset(addr, -1, size) to poison allocas and stores shadow of the return value in
@@ -15,7 +16,7 @@
 // MSAN: @llvm.memset{{.*}}({{.*}}, i8 -1
 // KMSAN: __msan_poison_alloca
 // WITHOUT-NOT: __msan_retval_tls
-// MSAN: __msan_retval_tls
+// RETTLS: __msan_retval_tls
 // CHECK: ret i32
 int instrumented1(int *a) {
   volatile char buf[8];
@@ -34,7 +35,7 @@ int instrumented1(int *a) {
 // MSAN: @llvm.memset{{.*}}({{.*}}, i8 0
 // KMSAN: __msan_unpoison_alloca
 // WITHOUT-NOT: __msan_retval_tls
-// MSAN: __msan_retval_tls
+// RETTLS: __msan_retval_tls
 // CHECK: ret i32
 __attribute__((no_sanitize("memory"))) __attribute__((no_sanitize("kernel-memory"))) int no_false_positives1(int *a) {
   volatile char buf[8];

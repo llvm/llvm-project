@@ -15,13 +15,13 @@ watchpoint set variable -w write g_32w
 watchpoint set variable -w read_write g_32rw
 # CHECK: Watchpoint created: Watchpoint 4: addr = 0x{{[0-9a-f]*}} size = 4 state = enabled type = rw
 
-print &g_8w
+expression &g_8w
 # CHECK: (uint8_t *) $0 = [[VAR8W:0x[0-9a-f]*]]
-print &g_16rw
+expression &g_16rw
 # CHECK: (uint16_t *) $1 = [[VAR16RW:0x[0-9a-f]*]]
-print &g_32w
+expression &g_32w
 # CHECK: (uint32_t *) $2 = [[VAR32W:0x[0-9a-f]*]]
-print &g_32rw
+expression &g_32rw
 # CHECK: (uint32_t *) $3 = [[VAR64RW:0x[0-9a-f]*]]
 
 register read --all

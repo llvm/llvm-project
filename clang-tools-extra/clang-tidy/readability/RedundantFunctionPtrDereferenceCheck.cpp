@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 void RedundantFunctionPtrDereferenceCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
@@ -32,6 +30,4 @@ void RedundantFunctionPtrDereferenceCheck::check(const MatchFinder::MatchResult 
       << FixItHint::CreateRemoval(Operator->getOperatorLoc());
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

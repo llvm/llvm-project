@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   memset(ZZZ, 0, 10);
   int res = YYY[argc * 10];  // BOOOM
   // CHECK: {{READ of size 1 at}}
-  // CHECK: {{located 0 bytes to the right of global variable}}
+  // CHECK: {{located 0 bytes after global variable}}
   res += XXX[argc] + ZZZ[argc];
   return res;
 }

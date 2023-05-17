@@ -5,10 +5,9 @@
 ;
 ; RUN: opt < %s -passes=adce -S | FileCheck %s
 
-define void @foo(i8* %reg5481) {
-        %cast611 = bitcast i8* %reg5481 to i8**         ; <i8**> [#uses=1]
-        %reg162 = load i8*, i8** %cast611            ; <i8*> [#uses=1]
+define void @foo(ptr %reg5481) {
+        %reg162 = load ptr, ptr %reg5481            ; <ptr> [#uses=1]
 ; CHECK-NOT: ptrtoint
-        ptrtoint i8* %reg162 to i32             ; <i32>:1 [#uses=0]
+        ptrtoint ptr %reg162 to i32             ; <i32>:1 [#uses=0]
         ret void
 }

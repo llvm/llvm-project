@@ -24,9 +24,8 @@ using namespace lldb_private;
 using namespace lldb_private::process_gdb_remote;
 using namespace llvm;
 
-GDBRemoteCommunicationServer::GDBRemoteCommunicationServer(
-    const char *comm_name, const char *listener_name)
-    : GDBRemoteCommunication(comm_name, listener_name), m_exit_now(false) {
+GDBRemoteCommunicationServer::GDBRemoteCommunicationServer()
+    : GDBRemoteCommunication(), m_exit_now(false) {
   RegisterPacketHandler(
       StringExtractorGDBRemote::eServerPacketType_QEnableErrorStrings,
       [this](StringExtractorGDBRemote packet, Status &error, bool &interrupt,

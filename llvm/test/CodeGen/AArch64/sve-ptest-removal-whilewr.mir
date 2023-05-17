@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
+# RUN: llc -mtriple=aarch64--linux-gnu -mattr=+sve2 -run-pass=peephole-opt -verify-machineinstrs %s -o - | FileCheck %s
 
 # Test instruction sequences where PTEST is redundant and thus gets removed.
 ---

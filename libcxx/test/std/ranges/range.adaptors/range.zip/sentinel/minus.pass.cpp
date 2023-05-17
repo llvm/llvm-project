@@ -7,13 +7,12 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template <bool OtherConst>
 // requires(sized_sentinel_for<sentinel_t<maybe-const<Const, Views>>,
 //                             iterator_t<maybe-const<OtherConst, Views>>>&&...)
 // friend constexpr common_type_t<range_difference_t<maybe-const<OtherConst, Views>>...>
-// 	operator-(const iterator<OtherConst>&, const sentinel&)
+//   operator-(const iterator<OtherConst>&, const sentinel&)
 //
 // template <bool OtherConst>
 // requires(sized_sentinel_for<sentinel_t<maybe-const<Const, Views>>,
@@ -35,7 +34,7 @@ struct convertible_forward_sized_iterator {
 
   using iterator_category = std::forward_iterator_tag;
   using value_type = int;
-  using difference_type = intptr_t;
+  using difference_type = std::intptr_t;
 
   convertible_forward_sized_iterator() = default;
   constexpr convertible_forward_sized_iterator(Base it) : it_(it) {}

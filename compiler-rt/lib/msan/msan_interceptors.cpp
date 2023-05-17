@@ -93,8 +93,7 @@ struct DlsymAlloc : public DlSymAllocator<DlsymAlloc> {
     if (__msan::IsInSymbolizerOrUnwider())                        \
       break;                                                      \
     if (__offset >= 0 && __msan::flags()->report_umrs) {          \
-      GET_CALLER_PC_BP_SP;                                        \
-      (void)sp;                                                   \
+      GET_CALLER_PC_BP;                                           \
       ReportUMRInsideAddressRange(__func__, x, n, __offset);      \
       __msan::PrintWarningWithOrigin(                             \
           pc, bp, __msan_get_origin((const char *)x + __offset)); \
@@ -310,9 +309,21 @@ INTERCEPTOR(char *, stpcpy, char *dest, const char *src) {
   CopyShadowAndOrigin(dest, src, n + 1, &stack);
   return res;
 }
-#define MSAN_MAYBE_INTERCEPT_STPCPY INTERCEPT_FUNCTION(stpcpy)
+
+INTERCEPTOR(char *, stpncpy, char *dest, const char *src, SIZE_T n) {
+  ENSURE_MSAN_INITED();
+  GET_STORE_STACK_TRACE;
+  SIZE_T copy_size = Min(n, internal_strnlen(src, n) + 1);
+  char *res = REAL(stpncpy)(dest, src, n);
+  CopyShadowAndOrigin(dest, src, copy_size, &stack);
+  __msan_unpoison(dest + copy_size, n - copy_size);
+  return res;
+}
+#  define MSAN_MAYBE_INTERCEPT_STPCPY INTERCEPT_FUNCTION(stpcpy)
+#  define MSAN_MAYBE_INTERCEPT_STPNCPY INTERCEPT_FUNCTION(stpncpy)
 #else
 #define MSAN_MAYBE_INTERCEPT_STPCPY
+#  define MSAN_MAYBE_INTERCEPT_STPNCPY
 #endif
 
 INTERCEPTOR(char *, strdup, char *src) {
@@ -944,6 +955,22 @@ void __sanitizer_dtor_callback(const void *data, uptr size) {
   }
 }
 
+void __sanitizer_dtor_callback_fields(const void *data, uptr size) {
+  if (flags()->poison_in_dtor) {
+    GET_MALLOC_STACK_TRACE;
+    stack.tag = STACK_TRACE_TAG_FIELDS;
+    PoisonMemory(data, size, &stack);
+  }
+}
+
+void __sanitizer_dtor_callback_vptr(const void *data) {
+  if (flags()->poison_in_dtor) {
+    GET_MALLOC_STACK_TRACE;
+    stack.tag = STACK_TRACE_TAG_VPTR;
+    PoisonMemory(data, sizeof(void *), &stack);
+  }
+}
+
 template <class Mmap>
 static void *mmap_interceptor(Mmap real_mmap, void *addr, SIZE_T length,
                               int prot, int flags, int fd, OFF64_T offset) {
@@ -1085,13 +1112,31 @@ INTERCEPTOR(int, __libc_thr_keycreate, __sanitizer_pthread_key_t *m,
 ALIAS(WRAPPER_NAME(pthread_key_create));
 #endif
 
-INTERCEPTOR(int, pthread_join, void *th, void **retval) {
+INTERCEPTOR(int, pthread_join, void *thread, void **retval) {
   ENSURE_MSAN_INITED();
-  int res = REAL(pthread_join)(th, retval);
+  int res = REAL(pthread_join)(thread, retval);
   if (!res && retval)
     __msan_unpoison(retval, sizeof(*retval));
   return res;
 }
+
+#if SANITIZER_GLIBC
+INTERCEPTOR(int, pthread_tryjoin_np, void *thread, void **retval) {
+  ENSURE_MSAN_INITED();
+  int res = REAL(pthread_tryjoin_np)(thread, retval);
+  if (!res && retval)
+    __msan_unpoison(retval, sizeof(*retval));
+  return res;
+}
+
+INTERCEPTOR(int, pthread_timedjoin_np, void *thread, void **retval,
+            const struct timespec *abstime) {
+  int res = REAL(pthread_timedjoin_np)(thread, retval, abstime);
+  if (!res && retval)
+    __msan_unpoison(retval, sizeof(*retval));
+  return res;
+}
+#endif
 
 DEFINE_REAL_PTHREAD_FUNCTIONS
 
@@ -1670,6 +1715,7 @@ void InitializeInterceptors() {
   INTERCEPT_FUNCTION(wmemmove);
   INTERCEPT_FUNCTION(strcpy);
   MSAN_MAYBE_INTERCEPT_STPCPY;
+  MSAN_MAYBE_INTERCEPT_STPNCPY;
   INTERCEPT_FUNCTION(strdup);
   MSAN_MAYBE_INTERCEPT___STRDUP;
   INTERCEPT_FUNCTION(strncpy);
@@ -1749,6 +1795,10 @@ void InitializeInterceptors() {
 #endif
   INTERCEPT_FUNCTION(pthread_join);
   INTERCEPT_FUNCTION(pthread_key_create);
+#if SANITIZER_GLIBC
+  INTERCEPT_FUNCTION(pthread_tryjoin_np);
+  INTERCEPT_FUNCTION(pthread_timedjoin_np);
+#endif
 
 #if SANITIZER_NETBSD
   INTERCEPT_FUNCTION(__libc_thr_keycreate);

@@ -6,10 +6,10 @@ target triple = "hexagon"
 
 %struct.wms_address_s = type { i32, i32, i32, i32, i8, [48 x i8] }
 
-define zeroext i8 @qmi_wmsi_bin_to_addr(i8* %str, i8 zeroext %len, %struct.wms_address_s* %addr) nounwind optsize {
+define zeroext i8 @qmi_wmsi_bin_to_addr(ptr %str, i8 zeroext %len, ptr %addr) nounwind optsize {
 entry:
-  %cmp = icmp eq i8* %str, null
-  %cmp2 = icmp eq %struct.wms_address_s* %addr, null
+  %cmp = icmp eq ptr %str, null
+  %cmp2 = icmp eq ptr %addr, null
   %or.cond = or i1 %cmp, %cmp2
   br i1 %or.cond, label %if.then12, label %if.then
 
@@ -27,9 +27,9 @@ for.body.lr.ph:                                   ; preds = %if.then
 for.body:                                         ; preds = %for.body.lr.ph, %if.end21
   %indvars.iv = phi i32 [ 0, %for.body.lr.ph ], [ %indvars.iv.next, %if.end21 ]
   %dec630 = phi i8 [ %dec626, %for.body.lr.ph ], [ %dec6, %if.end21 ]
-  %str.pn = phi i8* [ %str, %for.body.lr.ph ], [ %str.addr.029, %if.end21 ]
-  %str.addr.029 = getelementptr inbounds i8, i8* %str.pn, i32 1
-  %0 = load i8, i8* %str.addr.029, align 1, !tbaa !0
+  %str.pn = phi ptr [ %str, %for.body.lr.ph ], [ %str.addr.029, %if.end21 ]
+  %str.addr.029 = getelementptr inbounds i8, ptr %str.pn, i32 1
+  %0 = load i8, ptr %str.addr.029, align 1, !tbaa !0
   %cmp10 = icmp ugt i8 %0, -49
   br i1 %cmp10, label %if.then12.loopexit, label %if.end21
 
@@ -41,8 +41,8 @@ if.then12:                                        ; preds = %if.then12.loopexit,
 
 if.end21:                                         ; preds = %for.body
   %shr24 = lshr i8 %0, 4
-  %arrayidx = getelementptr inbounds %struct.wms_address_s, %struct.wms_address_s* %addr, i32 0, i32 5, i32 %indvars.iv
-  store i8 %shr24, i8* %arrayidx, align 1, !tbaa !0
+  %arrayidx = getelementptr inbounds %struct.wms_address_s, ptr %addr, i32 0, i32 5, i32 %indvars.iv
+  store i8 %shr24, ptr %arrayidx, align 1, !tbaa !0
   %dec6 = add i8 %dec630, -1
   %tobool = icmp eq i8 %dec630, 0
   %indvars.iv.next = add i32 %indvars.iv, 1

@@ -15,18 +15,20 @@ body: |
 
     ; SI-LABEL: name: test_rsq_clamp_flags_ieee_on_f32
     ; SI: liveins: $vgpr0
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[COPY]](s32)
-    ; SI: $vgpr0 = COPY [[INT]](s32)
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[COPY]](s32)
+    ; SI-NEXT: $vgpr0 = COPY [[INT]](s32)
     ; VI-LABEL: name: test_rsq_clamp_flags_ieee_on_f32
     ; VI: liveins: $vgpr0
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
-    ; VI: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM_IEEE [[INT]], [[C]]
-    ; VI: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
-    ; VI: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[C1]]
-    ; VI: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
+    ; VI-NEXT: [[FMINNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM_IEEE [[INT]], [[C]]
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
+    ; VI-NEXT: [[FMAXNUM_IEEE:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM_IEEE [[FMINNUM_IEEE]], [[C1]]
+    ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM_IEEE]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0
     $vgpr0 = COPY %1
@@ -45,18 +47,20 @@ body: |
 
     ; SI-LABEL: name: test_rsq_clamp_flags_ieee_off_f32
     ; SI: liveins: $vgpr0
-    ; SI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; SI: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[COPY]](s32)
-    ; SI: $vgpr0 = COPY [[INT]](s32)
+    ; SI-NEXT: {{  $}}
+    ; SI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; SI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), [[COPY]](s32)
+    ; SI-NEXT: $vgpr0 = COPY [[INT]](s32)
     ; VI-LABEL: name: test_rsq_clamp_flags_ieee_off_f32
     ; VI: liveins: $vgpr0
-    ; VI: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
-    ; VI: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
-    ; VI: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
-    ; VI: [[FMINNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM [[INT]], [[C]]
-    ; VI: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
-    ; VI: [[FMAXNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM [[FMINNUM]], [[C1]]
-    ; VI: $vgpr0 = COPY [[FMAXNUM]](s32)
+    ; VI-NEXT: {{  $}}
+    ; VI-NEXT: [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
+    ; VI-NEXT: [[INT:%[0-9]+]]:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq), [[COPY]](s32)
+    ; VI-NEXT: [[C:%[0-9]+]]:_(s32) = G_FCONSTANT float 0x47EFFFFFE0000000
+    ; VI-NEXT: [[FMINNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMINNUM [[INT]], [[C]]
+    ; VI-NEXT: [[C1:%[0-9]+]]:_(s32) = G_FCONSTANT float 0xC7EFFFFFE0000000
+    ; VI-NEXT: [[FMAXNUM:%[0-9]+]]:_(s32) = nnan ninf nsz G_FMAXNUM [[FMINNUM]], [[C1]]
+    ; VI-NEXT: $vgpr0 = COPY [[FMAXNUM]](s32)
     %0:_(s32) = COPY $vgpr0
     %1:_(s32) = nnan ninf nsz G_INTRINSIC intrinsic(@llvm.amdgcn.rsq.clamp), %0
     $vgpr0 = COPY %1

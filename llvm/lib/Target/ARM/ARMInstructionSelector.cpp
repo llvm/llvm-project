@@ -212,7 +212,7 @@ static bool selectCopy(MachineInstr &I, const TargetInstrInfo &TII,
                        MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
                        const RegisterBankInfo &RBI) {
   Register DstReg = I.getOperand(0).getReg();
-  if (Register::isPhysicalRegister(DstReg))
+  if (DstReg.isPhysical())
     return true;
 
   const TargetRegisterClass *RC = guessRegClass(DstReg, MRI, TRI, RBI);
@@ -861,7 +861,7 @@ bool ARMInstructionSelector::select(MachineInstr &I) {
   switch (I.getOpcode()) {
   case G_SEXT:
     isSExt = true;
-    LLVM_FALLTHROUGH;
+    [[fallthrough]];
   case G_ZEXT: {
     assert(MRI.getType(I.getOperand(0).getReg()).getSizeInBits() <= 32 &&
            "Unsupported destination size for extension");

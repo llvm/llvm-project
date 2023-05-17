@@ -5,7 +5,7 @@
 ; RUN: sed -e 's/SLHATTR/speculative_load_hardening/' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,SLH
 ; RUN: sed -e 's/SLHATTR//' %s | llc -verify-machineinstrs -mtriple=aarch64-none-linux-gnu -fast-isel | FileCheck %s --check-prefixes=CHECK,NOSLH
 
-define i32 @f(i8* nocapture readonly %p, i32 %i, i32 %N) local_unnamed_addr SLHATTR {
+define i32 @f(ptr nocapture readonly %p, i32 %i, i32 %N) local_unnamed_addr SLHATTR {
 ; CHECK-LABEL: f
 entry:
 ; SLH:  cmp sp, #0
@@ -32,8 +32,8 @@ if.then:                                          ; preds = %entry
 ; NOSLH-NOT: csel x16, x16, xzr, {{(lt)|(ge)|(eq)|(ne)}}
 ; SLH-DAG: csel x16, x16, xzr, {{(lt)|(ge)|(eq)|(ne)}}
   %idxprom = sext i32 %i to i64
-  %arrayidx = getelementptr inbounds i8, i8* %p, i64 %idxprom
-  %0 = load i8, i8* %arrayidx, align 1
+  %arrayidx = getelementptr inbounds i8, ptr %p, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
 ; CHECK-DAG:      ldrb [[LOADED:w[0-9]+]],
   %conv = zext i8 %0 to i32
   br label %return
@@ -99,7 +99,7 @@ else:
   ret i32 %6
 }
 
-define i32 @landingpad(i32 %l0, i32 %l1) SLHATTR personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) {
+define i32 @landingpad(i32 %l0, i32 %l1) SLHATTR personality ptr @__gxx_personality_v0 {
 ; CHECK-LABEL: landingpad
 entry:
 ; SLH:  cmp sp, #0
@@ -113,14 +113,14 @@ entry:
 ; SLH:  csetm x16, ne
 
 lpad:
-  %l4 = landingpad { i8*, i32 }
-          catch i8* null
+  %l4 = landingpad { ptr, i32 }
+          catch ptr null
 ; SLH:  cmp sp, #0
 ; SLH:  csetm x16, ne
 ; NOSLH-NOT:  cmp sp, #0
 ; NOSLH-NOT:  csetm x16, ne
-  %l5 = extractvalue { i8*, i32 } %l4, 0
-  %l6 = tail call i8* @__cxa_begin_catch(i8* %l5)
+  %l5 = extractvalue { ptr, i32 } %l4, 0
+  %l6 = tail call ptr @__cxa_begin_catch(ptr %l5)
   %l7 = icmp sgt i32 %l0, %l1
   br i1 %l7, label %then, label %else
 ; GlobalISel lowers the branch to a b.ne sometimes instead of b.ge as expected..
@@ -148,5 +148,5 @@ exit:
 
 declare i32 @__gxx_personality_v0(...)
 declare void @_Z10throwing_fv() local_unnamed_addr
-declare i8* @__cxa_begin_catch(i8*) local_unnamed_addr
+declare ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 declare void @__cxa_end_catch() local_unnamed_addr

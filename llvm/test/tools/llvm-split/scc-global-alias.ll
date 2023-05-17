@@ -16,10 +16,10 @@
 ; CHECK2: @funExternalAlias = alias
 ; CHECK2: define i32 @funExternal
 
-@funInternalAlias = alias i32 (), i32 ()* @funInternal
-@funExternalAlias = alias i32 (), i32 ()* @funExternal
-@funInternal2Alias = alias i32 (), i32 ()* @funInternal2
-@funExternal2Alias = alias i32 (), i32 ()* @funExternal2
+@funInternalAlias = alias i32 (), ptr @funInternal
+@funExternalAlias = alias i32 (), ptr @funExternal
+@funInternal2Alias = alias i32 (), ptr @funInternal2
+@funExternal2Alias = alias i32 (), ptr @funExternal2
 
 define internal i32 @funInternal() {
 entry:

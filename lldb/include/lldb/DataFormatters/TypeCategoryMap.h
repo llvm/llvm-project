@@ -17,6 +17,7 @@
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
+#include "lldb/DataFormatters/FormatClasses.h"
 #include "lldb/DataFormatters/FormattersContainer.h"
 #include "lldb/DataFormatters/TypeCategory.h"
 
@@ -69,7 +70,7 @@ public:
   lldb::TypeCategoryImplSP GetAtIndex(uint32_t);
 
   bool
-  AnyMatches(ConstString type_name,
+  AnyMatches(const FormattersMatchCandidate &candidate_type,
              TypeCategoryImpl::FormatCategoryItems items =
                  TypeCategoryImpl::ALL_ITEM_TYPES,
              bool only_enabled = true, const char **matching_category = nullptr,

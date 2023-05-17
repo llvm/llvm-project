@@ -17,6 +17,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/CallEvent.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/CheckerContext.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/LoopUnrolling.h"
+#include <optional>
 
 using namespace clang;
 using namespace ento;
@@ -24,6 +25,7 @@ using namespace clang::ast_matchers;
 
 static const int MAXIMUM_STEP_UNROLLED = 128;
 
+namespace {
 struct LoopState {
 private:
   enum Kind { Normal, Unrolled } K;
@@ -56,6 +58,7 @@ public:
     ID.AddInteger(maxStep);
   }
 };
+} // namespace
 
 // The tracked stack of loops. The stack indicates that which loops the
 // simulated element contained by. The loops are marked depending if we decided
@@ -175,7 +178,7 @@ static bool isCapturedByReference(ExplodedNode *N, const DeclRefExpr *DR) {
   const CXXRecordDecl *LambdaCXXRec = MD->getParent();
 
   // Lookup the fields of the lambda
-  llvm::DenseMap<const VarDecl *, FieldDecl *> LambdaCaptureFields;
+  llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
   FieldDecl *LambdaThisCaptureField;
   LambdaCXXRec->getCaptureFields(LambdaCaptureFields, LambdaThisCaptureField);
 
@@ -284,7 +287,7 @@ bool madeNewBranch(ExplodedNode *N, const Stmt *LoopStmt) {
       return true;
 
     ProgramPoint P = N->getLocation();
-    if (Optional<BlockEntrance> BE = P.getAs<BlockEntrance>())
+    if (std::optional<BlockEntrance> BE = P.getAs<BlockEntrance>())
       S = BE->getBlock()->getTerminatorStmt();
 
     if (S == LoopStmt)

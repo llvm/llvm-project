@@ -30,10 +30,10 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %I0, i32* %I1, i32* %I2, i32* %V, i64 %p0, i64 %p1, i64 %p2, i64 %p3) {
+define void @f(ptr %I0, ptr %I1, ptr %I2, ptr %V, i64 %p0, i64 %p1, i64 %p2, i64 %p3) {
 entry:
-  %tmp = load i32, i32* %I1, align 4
-  store i32 %tmp, i32* %V, align 4
+  %tmp = load i32, ptr %I1, align 4
+  store i32 %tmp, ptr %V, align 4
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
@@ -42,29 +42,29 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %tmp3 = load i32, i32* %I1, align 4
+  %tmp3 = load i32, ptr %I1, align 4
   %conv = sext i32 %tmp3 to i64
   %mul = mul nsw i64 %conv, %p0
   %conv1 = sext i32 %tmp3 to i64
   %mul2 = mul nsw i64 %conv1, %p1
   %add = add nsw i64 %mul, %mul2
-  %arrayidx = getelementptr inbounds i32, i32* %I0, i64 %add
-  %tmp4 = load i32, i32* %arrayidx, align 4
-  %arrayidx3 = getelementptr inbounds i32, i32* %V, i64 %indvars.iv1
-  store i32 %tmp4, i32* %arrayidx3, align 4
-  %tmp5 = load i32, i32* %I2, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %I0, i64 %add
+  %tmp4 = load i32, ptr %arrayidx, align 4
+  %arrayidx3 = getelementptr inbounds i32, ptr %V, i64 %indvars.iv1
+  store i32 %tmp4, ptr %arrayidx3, align 4
+  %tmp5 = load i32, ptr %I2, align 4
   %conv5 = sext i32 %tmp5 to i64
   %mul6 = mul nsw i64 %conv5, %p0
-  %arrayidx7 = getelementptr inbounds i32, i32* %I2, i64 1
-  %tmp6 = load i32, i32* %arrayidx7, align 4
+  %arrayidx7 = getelementptr inbounds i32, ptr %I2, i64 1
+  %tmp6 = load i32, ptr %arrayidx7, align 4
   %conv8 = sext i32 %tmp6 to i64
   %mul9 = mul nsw i64 %conv8, %p1
-  %arrayidx10 = getelementptr inbounds i32, i32* %I2, i64 2
-  %tmp7 = load i32, i32* %arrayidx10, align 4
+  %arrayidx10 = getelementptr inbounds i32, ptr %I2, i64 2
+  %tmp7 = load i32, ptr %arrayidx10, align 4
   %conv11 = sext i32 %tmp7 to i64
   %mul12 = mul nsw i64 %conv11, %p2
-  %arrayidx13 = getelementptr inbounds i32, i32* %I2, i64 3
-  %tmp8 = load i32, i32* %arrayidx13, align 4
+  %arrayidx13 = getelementptr inbounds i32, ptr %I2, i64 3
+  %tmp8 = load i32, ptr %arrayidx13, align 4
   %conv14 = sext i32 %tmp8 to i64
   %mul15 = mul nsw i64 %conv14, %p3
   br label %do.body
@@ -76,18 +76,18 @@ do.body:                                          ; preds = %do.cond, %for.body
 
 if.then:                                          ; preds = %do.body
   %add18 = add nsw i64 %mul6, %mul12
-  %arrayidx19 = getelementptr inbounds i32, i32* %I1, i64 %add18
-  %tmp9 = load i32, i32* %arrayidx19, align 4
-  %arrayidx21 = getelementptr inbounds i32, i32* %V, i64 %indvars.iv1
-  %tmp10 = load i32, i32* %arrayidx21, align 4
+  %arrayidx19 = getelementptr inbounds i32, ptr %I1, i64 %add18
+  %tmp9 = load i32, ptr %arrayidx19, align 4
+  %arrayidx21 = getelementptr inbounds i32, ptr %V, i64 %indvars.iv1
+  %tmp10 = load i32, ptr %arrayidx21, align 4
   %add22 = add nsw i32 %tmp10, %tmp9
-  store i32 %add22, i32* %arrayidx21, align 4
-  %arrayidx23 = getelementptr inbounds i32, i32* %I1, i64 %add
-  %tmp11 = load i32, i32* %arrayidx23, align 4
-  %arrayidx25 = getelementptr inbounds i32, i32* %V, i64 %indvars.iv1
-  %tmp12 = load i32, i32* %arrayidx25, align 4
+  store i32 %add22, ptr %arrayidx21, align 4
+  %arrayidx23 = getelementptr inbounds i32, ptr %I1, i64 %add
+  %tmp11 = load i32, ptr %arrayidx23, align 4
+  %arrayidx25 = getelementptr inbounds i32, ptr %V, i64 %indvars.iv1
+  %tmp12 = load i32, ptr %arrayidx25, align 4
   %add26 = add nsw i32 %tmp12, %tmp11
-  store i32 %add26, i32* %arrayidx25, align 4
+  store i32 %add26, ptr %arrayidx25, align 4
   br label %if.end
 
 if.end:                                           ; preds = %if.then, %do.body

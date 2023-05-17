@@ -38,21 +38,19 @@
 
 @bigCst = internal constant i82 483673642326615442599424
 
-define void @accessBig(i64* %storage) {
-  %addr = bitcast i64* %storage to i82*
-  %bigLoadedCst = load volatile i82, i82* @bigCst
+define void @accessBig(ptr %storage) {
+  %bigLoadedCst = load volatile i82, ptr @bigCst
   %tmp = add i82 %bigLoadedCst, 1
-  store i82 %tmp, i82* %addr
+  store i82 %tmp, ptr %storage
   ret void
 }
 
 @notSoBigCst = internal constant i57 72057594037927935
 
-define void @accessNotSoBig(i64* %storage) {
-  %addr = bitcast i64* %storage to i57*
-  %bigLoadedCst = load volatile i57, i57* @notSoBigCst
+define void @accessNotSoBig(ptr %storage) {
+  %bigLoadedCst = load volatile i57, ptr @notSoBigCst
   %tmp = add i57 %bigLoadedCst, 1
-  store i57 %tmp, i57* %addr
+  store i57 %tmp, ptr %storage
   ret void
 }
 

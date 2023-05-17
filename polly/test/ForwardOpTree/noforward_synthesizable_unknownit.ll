@@ -2,7 +2,7 @@
 ;
 ; Do not try to forward %i.trunc, it is not synthesizable in %body.
 ;
-define void @func(i32 %n, i32* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -31,7 +31,7 @@ for:
       br i1 %inner.cond, label %body, label %inner.for
 
     body:
-      store i32 %i.trunc, i32* %A
+      store i32 %i.trunc, ptr %A
       br label %inc
 
 

@@ -12,7 +12,6 @@ import tempfile
 import time
 
 from dex.utils.Exceptions import Error
-from dex.utils.Warning import warn
 
 class WorkingDirectory(object):
     def __init__(self, context, *args, **kwargs):
@@ -42,5 +41,5 @@ class WorkingDirectory(object):
             except OSError:
                 time.sleep(0.1)
 
-        warn(self.context, '"{}" left in place (couldn\'t delete)\n'.format(self.path))
+        self.context.logger.warning(f'"{self.path}" left in place (couldn\'t delete)', enable_prefix=True)
         return

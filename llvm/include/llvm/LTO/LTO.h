@@ -78,15 +78,14 @@ namespace lto {
 /// Given the original \p Path to an output file, replace any path
 /// prefix matching \p OldPrefix with \p NewPrefix. Also, create the
 /// resulting directory if it does not yet exist.
-std::string getThinLTOOutputFile(const std::string &Path,
-                                 const std::string &OldPrefix,
-                                 const std::string &NewPrefix);
+std::string getThinLTOOutputFile(StringRef Path, StringRef OldPrefix,
+                                 StringRef NewPrefix);
 
 /// Setup optimization remarks.
 Expected<std::unique_ptr<ToolOutputFile>> setupLLVMOptimizationRemarks(
     LLVMContext &Context, StringRef RemarksFilename, StringRef RemarksPasses,
     StringRef RemarksFormat, bool RemarksWithHotness,
-    Optional<uint64_t> RemarksHotnessThreshold = 0, int Count = -1);
+    std::optional<uint64_t> RemarksHotnessThreshold = 0, int Count = -1);
 
 /// Setups the output file for saving statistics.
 Expected<std::unique_ptr<ToolOutputFile>>
@@ -95,6 +94,11 @@ setupStatsFile(StringRef StatsFilename);
 /// Produces a container ordering for optimal multi-threaded processing. Returns
 /// ordered indices to elements in the input array.
 std::vector<int> generateModulesOrdering(ArrayRef<BitcodeModule *> R);
+
+/// Updates MemProf attributes (and metadata) based on whether the index
+/// has recorded that we are linking with allocation libraries containing
+/// the necessary APIs for downstream transformations.
+void updateMemProfAttributes(Module &Mod, const ModuleSummaryIndex &Index);
 
 class LTO;
 struct SymbolResolution;
@@ -197,7 +201,17 @@ using ThinBackend = std::function<std::unique_ptr<ThinBackendProc>(
 
 /// This ThinBackend runs the individual backend jobs in-process.
 /// The default value means to use one job per hardware core (not hyper-thread).
-ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism);
+/// OnWrite is callback which receives module identifier and notifies LTO user
+/// that index file for the module (and optionally imports file) was created.
+/// ShouldEmitIndexFiles being true will write sharded ThinLTO index files
+/// to the same path as the input module, with suffix ".thinlto.bc"
+/// ShouldEmitImportsFiles is true it also writes a list of imported files to a
+/// similar path with ".imports" appended instead.
+using IndexWriteCallback = std::function<void(const std::string &)>;
+ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism,
+                                       IndexWriteCallback OnWrite = nullptr,
+                                       bool ShouldEmitIndexFiles = false,
+                                       bool ShouldEmitImportsFiles = false);
 
 /// This ThinBackend writes individual module indexes to files, instead of
 /// running the individual backend jobs. This backend is for distributed builds
@@ -209,12 +223,14 @@ ThinBackend createInProcessThinBackend(ThreadPoolStrategy Parallelism);
 /// ShouldEmitImportsFiles is true it also writes a list of imported files to a
 /// similar path with ".imports" appended instead.
 /// LinkedObjectsFile is an output stream to write the list of object files for
-/// the final ThinLTO linking. Can be nullptr.
-/// OnWrite is callback which receives module identifier and notifies LTO user
-/// that index file for the module (and optionally imports file) was created.
-using IndexWriteCallback = std::function<void(const std::string &)>;
+/// the final ThinLTO linking. Can be nullptr.  If LinkedObjectsFile is not
+/// nullptr and NativeObjectPrefix is not empty then it replaces the prefix of
+/// the objects with NativeObjectPrefix instead of NewPrefix. OnWrite is
+/// callback which receives module identifier and notifies LTO user that index
+/// file for the module (and optionally imports file) was created.
 ThinBackend createWriteIndexesThinBackend(std::string OldPrefix,
                                           std::string NewPrefix,
+                                          std::string NativeObjectPrefix,
                                           bool ShouldEmitImportsFiles,
                                           raw_fd_ostream *LinkedObjectsFile,
                                           IndexWriteCallback OnWrite);
@@ -280,7 +296,7 @@ private:
                     const Config &Conf);
     struct CommonResolution {
       uint64_t Size = 0;
-      MaybeAlign Align;
+      Align Alignment;
       /// Record if at least one instance of the common was marked as prevailing
       bool Prevailing = false;
     };
@@ -313,7 +329,7 @@ private:
     // The full set of bitcode modules in input order.
     ModuleMapType ModuleMap;
     // The bitcode modules to compile, if specified by the LTO Config.
-    Optional<ModuleMapType> ModulesToCompile;
+    std::optional<ModuleMapType> ModulesToCompile;
     DenseMap<GlobalValue::GUID, StringRef> PrevailingModuleForGUID;
   } ThinLTO;
 
@@ -406,7 +422,7 @@ private:
   mutable bool CalledGetMaxTasks = false;
 
   // Use Optional to distinguish false from not yet initialized.
-  Optional<bool> EnableSplitLTOUnit;
+  std::optional<bool> EnableSplitLTOUnit;
 
   // Identify symbols exported dynamically, and that therefore could be
   // referenced by a shared library not visible to the linker.

@@ -7,8 +7,8 @@
 # RUN:   %s -o %t.o
 # RUN: %clang %cflags -no-pie %t.o -o %t.exe -Wl,-q
 
-# RUN: llvm-bolt %t.exe -print-cfg \
-# RUN:    -print-only=main -o %t.out | FileCheck %s
+# RUN: llvm-bolt %t.exe --print-cfg \
+# RUN:    --print-only=main -o %t.out | FileCheck %s
 
 	.file	"rust_bug.c"
 	.section	.rodata

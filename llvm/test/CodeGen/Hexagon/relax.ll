@@ -1,4 +1,4 @@
-; RUN: llc -march=hexagon -filetype=obj < %s | llvm-objdump -d -r - | FileCheck %s
+; RUN: llc -march=hexagon -filetype=obj < %s | llvm-objdump --no-print-imm-hex -d -r - | FileCheck %s
 
 declare void @bar()
 

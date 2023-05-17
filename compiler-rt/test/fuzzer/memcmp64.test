@@ -1,4 +1,4 @@
-UNSUPPORTED: freebsd
+UNSUPPORTED: target={{.*freebsd.*}}
 RUN: %cpp_compiler %S/Memcmp64BytesTest.cpp -o %t-Memcmp64BytesTest
 RUN: not %run %t-Memcmp64BytesTest        -seed=1 -runs=1000000   2>&1 | FileCheck %s
 CHECK: BINGO

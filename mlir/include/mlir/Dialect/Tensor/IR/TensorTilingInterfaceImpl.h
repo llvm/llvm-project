@@ -16,6 +16,9 @@
 #include "mlir/IR/Dialect.h"
 
 namespace mlir {
+
+struct TilingResult;
+
 namespace tensor {
 
 class PadOp;
@@ -39,22 +42,27 @@ class PadOp;
 /// to guard against the case that we might take a zero-sized slice from the
 /// original source. For such cases, we `tensor.generate` to generate the
 /// full tensor.
-Operation *bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
-                            ArrayRef<OpFoldResult> offsets,
-                            ArrayRef<OpFoldResult> sizes,
-                            bool generateZeroSliceGuard = true);
+FailureOr<TilingResult> bubbleUpPadSlice(OpBuilder &b, tensor::PadOp padOp,
+                                         ArrayRef<OpFoldResult> offsets,
+                                         ArrayRef<OpFoldResult> sizes,
+                                         bool generateZeroSliceGuard = true);
 
 /// Registers external models for Tiling interface for tensor ops.
 /// Currently, it registers:
 ///
-/// * TilingInterface for `tensor.pad`.
+/// * TilingInterface for `tensor.pad`, `tensor.pack`, and `tensor.unpack`.
 ///
 /// Unfortunately, a "normal" internal registration is not possible at the
 /// moment, because of the dependency of the interface implementation for these
 /// ops on `affine.apply` and Affine dialect already depends on TensorOps. In
 /// order to break the cyclic dependency (TensorOps->AffineOps->TensorOps) the
 /// implementation is moved to a separate library.
-void registerTilingOpInterfaceExternalModels(mlir::DialectRegistry &registry);
+void registerTilingInterfaceExternalModels(mlir::DialectRegistry &registry);
+
+/// Similar to the above registeration, but it is only for `tensor.pack` and
+/// `tensor.unpack` ops.
+void registerTilingInterfaceExternalModelsForPackUnPackOps(
+    DialectRegistry &registry);
 
 } // namespace tensor
 } // namespace mlir

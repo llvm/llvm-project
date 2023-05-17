@@ -13,8 +13,6 @@ from lldbsuite.test import lldbutil
 
 class OrderFileTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @skipUnlessDarwin
     def test(self):
         """Test debug symbols follow the correct order by the order file."""

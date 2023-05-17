@@ -5,9 +5,9 @@
 // RUN: %clang_dfsan -gmlt -mllvm -dfsan-track-origins=1 -mllvm -dfsan-instrument-with-call-threshold=0 %s -o %t && \
 // RUN:     %run %t >%t.out 2>&1
 // RUN: FileCheck %s < %t.out
-//
-// REQUIRES: x86_64-target-arch
 
+#include <assert.h>
+#include <malloc.h>
 #include <sanitizer/dfsan_interface.h>
 #include <stdio.h>
 #include <string.h>
@@ -24,9 +24,7 @@ NOINLINE void bar(int depth, void *addr, int size) {
   }
 }
 
-NOINLINE void baz(int depth, void *addr, int size) {
-  bar(depth, addr, size);
-}
+NOINLINE void baz(int depth, void *addr, int size) { bar(depth, addr, size); }
 
 int main(int argc, char *argv[]) {
   int a = 10;
@@ -39,27 +37,33 @@ int main(int argc, char *argv[]) {
   // CHECK: #0 {{.*}} in main {{.*}}origin_stack_trace.c:[[@LINE-4]]
 
   // CHECK: Origin value: {{.*}}, Taint value was created at
-  // CHECK: #0 {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-19]]
-  // CHECK-COUNT-8: #{{[0-9]+}} {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-22]]
-  // CHECK: #9 {{.*}} in baz.dfsan {{.*}}origin_stack_trace.c:[[@LINE-16]]
+  // CHECK: #0 {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-17]]
+  // CHECK-COUNT-8: #{{[0-9]+}} {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-20]]
+  // CHECK: #9 {{.*}} in baz.dfsan {{.*}}origin_stack_trace.c:[[@LINE-15]]
 
-  char buf[3000];
-  size_t length = dfsan_sprint_origin_trace(&c, NULL, buf, sizeof(buf));
+  // Test logic expects this buffer to be large enough.
+  // String contains current paths, which could vary in length.
+  // Make this buffer much larger than necessary to accomodate variation.
+  const size_t kBufSize = 8192;
+  char *buf = (char *)malloc(kBufSize);
+  size_t length = dfsan_sprint_origin_trace(&c, NULL, buf, kBufSize);
+  assert(kBufSize > length);
 
   printf("==OUTPUT==\n\n%s==EOS==\n", buf);
   // CHECK: ==OUTPUT==
   // CHECK: Taint value 0x1 {{.*}} origin tracking ()
   // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-  // CHECK: #0 {{.*}} in main {{.*}}origin_stack_trace.c:[[@LINE-18]]
+  // CHECK: #0 {{.*}} in main {{.*}}origin_stack_trace.c:[[@LINE-23]]
 
   // CHECK: Origin value: {{.*}}, Taint value was created at
-  // CHECK: #0 {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-33]]
-  // CHECK-COUNT-8: #{{[0-9]+}} {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-36]]
-  // CHECK: #9 {{.*}} in baz.dfsan {{.*}}origin_stack_trace.c:[[@LINE-30]]
+  // CHECK: #0 {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-36]]
+  // CHECK-COUNT-8: #{{[0-9]+}} {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-39]]
+  // CHECK: #9 {{.*}} in baz.dfsan {{.*}}origin_stack_trace.c:[[@LINE-34]]
   // CHECK: ==EOS==
 
   char tinybuf[18];
-  size_t same_length = dfsan_sprint_origin_trace(&c, NULL, tinybuf, sizeof(tinybuf));
+  size_t same_length =
+      dfsan_sprint_origin_trace(&c, NULL, tinybuf, sizeof(tinybuf));
 
   printf("==TRUNCATED OUTPUT==\n\n%s==EOS==\n", tinybuf);
   // CHECK: ==TRUNCATED OUTPUT==
@@ -73,18 +77,20 @@ int main(int argc, char *argv[]) {
   // CHECK: Actual length: [[#LEN]]
   // CHECK: Returned length with truncation: [[#LEN]]
 
-  size_t length_with_desc = dfsan_sprint_origin_trace(&c, "DESCRIPTION", buf, sizeof(buf));
+  size_t length_with_desc =
+      dfsan_sprint_origin_trace(&c, "DESCRIPTION", buf, kBufSize);
+  assert(kBufSize > length_with_desc);
 
   printf("==OUTPUT==\n\n%s==EOS==\n", buf);
   // CHECK: ==OUTPUT==
   // CHECK: Taint value 0x1 {{.*}} origin tracking (DESCRIPTION)
   // CHECK: Origin value: {{.*}}, Taint value was stored to memory at
-  // CHECK: #0 {{.*}} in main {{.*}}origin_stack_trace.c:[[@LINE-47]]
+  // CHECK: #0 {{.*}} in main {{.*}}origin_stack_trace.c:[[@LINE-55]]
 
   // CHECK: Origin value: {{.*}}, Taint value was created at
-  // CHECK: #0 {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-62]]
-  // CHECK-COUNT-8: #{{[0-9]+}} {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-65]]
-  // CHECK: #9 {{.*}} in baz.dfsan {{.*}}origin_stack_trace.c:[[@LINE-59]]
+  // CHECK: #0 {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-68]]
+  // CHECK-COUNT-8: #{{[0-9]+}} {{.*}} in bar.dfsan {{.*}}origin_stack_trace.c:[[@LINE-71]]
+  // CHECK: #9 {{.*}} in baz.dfsan {{.*}}origin_stack_trace.c:[[@LINE-66]]
   // CHECK: ==EOS==
 
   printf("Returned length: %zu\n", length_with_desc);
@@ -97,4 +103,6 @@ int main(int argc, char *argv[]) {
   printf("Returned length: %zu\n", length);
   // CHECK: Output=""
   // CHECK: Returned length: [[#LEN]]
+
+  free(buf);
 }

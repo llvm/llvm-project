@@ -7,8 +7,8 @@
 ;      struct net_device *dev;
 ;    };
 ;    #define _(x) (__builtin_preserve_access_index(x))
-;    static int (*bpf_probe_read)(void *dst, int size, void *unsafe_ptr)
-;        = (void *) 4;
+;    static int (*bpf_probe_read)(ptr dst, int size, ptr unsafe_ptr)
+;        = (ptr) 4;
 ;
 ;    int bpf_prog(struct sk_buff *ctx) {
 ;      struct net_device *dev = 0;
@@ -20,26 +20,24 @@
 
 target triple = "bpf"
 
-%struct.sk_buff = type { i32, %struct.net_device* }
+%struct.sk_buff = type { i32, ptr }
 %struct.net_device = type opaque
 
 ; Function Attrs: nounwind
-define dso_local i32 @bpf_prog(%struct.sk_buff*) local_unnamed_addr #0 !dbg !15 {
-  %2 = alloca %struct.net_device*, align 8
-  call void @llvm.dbg.value(metadata %struct.sk_buff* %0, metadata !26, metadata !DIExpression()), !dbg !28
-  %3 = bitcast %struct.net_device** %2 to i8*, !dbg !29
-  call void @llvm.lifetime.start.p0i8(i64 8, i8* nonnull %3) #4, !dbg !29
-  call void @llvm.dbg.value(metadata %struct.net_device* null, metadata !27, metadata !DIExpression()), !dbg !28
-  store %struct.net_device* null, %struct.net_device** %2, align 8, !dbg !30, !tbaa !31
-  %4 = tail call %struct.net_device** @llvm.preserve.struct.access.index.p0p0s_struct.net_devices.p0s_struct.sk_buffs(%struct.sk_buff* elementtype(%struct.sk_buff) %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !19
-  %5 = bitcast %struct.net_device** %4 to i8*, !dbg !35
-  %6 = call i32 inttoptr (i64 4 to i32 (i8*, i32, i8*)*)(i8* nonnull %3, i32 8, i8* %5) #4, !dbg !36
-  %7 = load %struct.net_device*, %struct.net_device** %2, align 8, !dbg !37, !tbaa !31
-  call void @llvm.dbg.value(metadata %struct.net_device* %7, metadata !27, metadata !DIExpression()), !dbg !28
-  %8 = icmp ne %struct.net_device* %7, null, !dbg !38
-  %9 = zext i1 %8 to i32, !dbg !38
-  call void @llvm.lifetime.end.p0i8(i64 8, i8* nonnull %3) #4, !dbg !39
-  ret i32 %9, !dbg !40
+define dso_local i32 @bpf_prog(ptr) local_unnamed_addr #0 !dbg !15 {
+  %2 = alloca ptr, align 8
+  call void @llvm.dbg.value(metadata ptr %0, metadata !26, metadata !DIExpression()), !dbg !28
+  call void @llvm.lifetime.start.p0(i64 8, ptr nonnull %2) #4, !dbg !29
+  call void @llvm.dbg.value(metadata ptr null, metadata !27, metadata !DIExpression()), !dbg !28
+  store ptr null, ptr %2, align 8, !dbg !30, !tbaa !31
+  %3 = tail call ptr @llvm.preserve.struct.access.index.p0.net_devices.p0.sk_buffs(ptr elementtype(%struct.sk_buff) %0, i32 1, i32 1), !dbg !35, !llvm.preserve.access.index !19
+  %4 = call i32 inttoptr (i64 4 to ptr)(ptr nonnull %2, i32 8, ptr %3) #4, !dbg !36
+  %5 = load ptr, ptr %2, align 8, !dbg !37, !tbaa !31
+  call void @llvm.dbg.value(metadata ptr %5, metadata !27, metadata !DIExpression()), !dbg !28
+  %6 = icmp ne ptr %5, null, !dbg !38
+  %7 = zext i1 %6 to i32, !dbg !38
+  call void @llvm.lifetime.end.p0(i64 8, ptr nonnull %2) #4, !dbg !39
+  ret i32 %7, !dbg !40
 }
 
 ; CHECK:             .section        .BTF,"",@progbits
@@ -124,13 +122,13 @@ define dso_local i32 @bpf_prog(%struct.sk_buff*) local_unnamed_addr #0 !dbg !15 
 ; CHECK-NEXT:        .long   0
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone
-declare %struct.net_device** @llvm.preserve.struct.access.index.p0p0s_struct.net_devices.p0s_struct.sk_buffs(%struct.sk_buff*, i32 immarg, i32 immarg) #2
+declare ptr @llvm.preserve.struct.access.index.p0.net_devices.p0.sk_buffs(ptr, i32 immarg, i32 immarg) #2
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nounwind readnone speculatable
 declare void @llvm.dbg.value(metadata, metadata, metadata) #3

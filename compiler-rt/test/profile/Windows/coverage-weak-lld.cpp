@@ -1,5 +1,6 @@
 // REQUIRES: lld-available
 
+// REQUIRES: target={{.*windows-msvc.*}}
 // RUN: %clang_profgen -fcoverage-mapping -c %s -o %t0.o
 // RUN: %clang_profgen -fcoverage-mapping -c %s -DOBJ_1 -o %t1.o
 // RUN: %clang_profgen -fcoverage-mapping -c %s -DOBJ_2 -o %t2.o

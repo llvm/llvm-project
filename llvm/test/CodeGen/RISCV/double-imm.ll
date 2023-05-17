@@ -3,6 +3,8 @@
 ; RUN:   -target-abi=ilp32d | FileCheck %s
 ; RUN: llc -mtriple=riscv64 -mattr=+d -verify-machineinstrs < %s \
 ; RUN:   -target-abi=lp64d | FileCheck %s
+; RUN: llc -mtriple=riscv64 -mattr=+zdinx -verify-machineinstrs < %s \
+; RUN:   -target-abi=lp64 | FileCheck --check-prefix=CHECKRV64ZDINX %s
 
 define double @double_imm() nounwind {
 ; CHECK-LABEL: double_imm:
@@ -10,6 +12,12 @@ define double @double_imm() nounwind {
 ; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
 ; CHECK-NEXT:    fld fa0, %lo(.LCPI0_0)(a0)
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: double_imm:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    lui a0, %hi(.LCPI0_0)
+; CHECKRV64ZDINX-NEXT:    ld a0, %lo(.LCPI0_0)(a0)
+; CHECKRV64ZDINX-NEXT:    ret
   ret double 3.1415926535897931159979634685441851615905761718750
 }
 
@@ -17,9 +25,16 @@ define double @double_imm_op(double %a) nounwind {
 ; CHECK-LABEL: double_imm_op:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
-; CHECK-NEXT:    fld ft0, %lo(.LCPI1_0)(a0)
-; CHECK-NEXT:    fadd.d fa0, fa0, ft0
+; CHECK-NEXT:    fld fa5, %lo(.LCPI1_0)(a0)
+; CHECK-NEXT:    fadd.d fa0, fa0, fa5
 ; CHECK-NEXT:    ret
+;
+; CHECKRV64ZDINX-LABEL: double_imm_op:
+; CHECKRV64ZDINX:       # %bb.0:
+; CHECKRV64ZDINX-NEXT:    lui a1, %hi(.LCPI1_0)
+; CHECKRV64ZDINX-NEXT:    ld a1, %lo(.LCPI1_0)(a1)
+; CHECKRV64ZDINX-NEXT:    fadd.d a0, a0, a1
+; CHECKRV64ZDINX-NEXT:    ret
   %1 = fadd double %a, 1.0
   ret double %1
 }

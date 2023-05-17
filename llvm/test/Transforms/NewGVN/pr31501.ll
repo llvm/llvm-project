@@ -2,14 +2,14 @@
 ; RUN: opt < %s -passes=newgvn -S | FileCheck %s
 target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 
-%struct.foo = type { %struct.wombat.28*, %struct.zot, %struct.wombat.28* }
+%struct.foo = type { ptr, %struct.zot, ptr }
 %struct.zot = type { i64 }
-%struct.barney = type <{ %struct.wombat.28*, %struct.wibble, %struct.snork, %struct.quux.4, %struct.snork.10, %struct.ham.16*, %struct.wobble.23*, i32, i8, i8, [2 x i8] }>
+%struct.barney = type <{ ptr, %struct.wibble, %struct.snork, %struct.quux.4, %struct.snork.10, ptr, ptr, i32, i8, i8, [2 x i8] }>
 %struct.wibble = type { %struct.pluto, %struct.bar }
 %struct.pluto = type { %struct.quux }
 %struct.quux = type { %struct.eggs }
 %struct.eggs = type { %struct.zot.0, %struct.widget }
-%struct.zot.0 = type { i8*, i8*, i8* }
+%struct.zot.0 = type { ptr, ptr, ptr }
 %struct.widget = type { %struct.barney.1 }
 %struct.barney.1 = type { [8 x i8] }
 %struct.bar = type { [3 x %struct.widget] }
@@ -34,87 +34,81 @@ target datalayout = "e-m:o-i64:64-f80:128-n8:16:32:64-S128"
 %struct.spam.15 = type { i8 }
 %struct.ham.16 = type { %struct.pluto.17, %struct.pluto.17 }
 %struct.pluto.17 = type { %struct.bar.18 }
-%struct.bar.18 = type { %struct.baz*, %struct.zot.20, %struct.barney.22 }
-%struct.baz = type { %struct.wibble.19* }
-%struct.wibble.19 = type <{ %struct.baz, %struct.wibble.19*, %struct.baz*, i8, [7 x i8] }>
+%struct.bar.18 = type { ptr, %struct.zot.20, %struct.barney.22 }
+%struct.baz = type { ptr }
+%struct.wibble.19 = type <{ %struct.baz, ptr, ptr, i8, [7 x i8] }>
 %struct.zot.20 = type { %struct.ham.21 }
 %struct.ham.21 = type { %struct.baz }
 %struct.barney.22 = type { %struct.blam }
 %struct.blam = type { i64 }
-%struct.wobble.23 = type { %struct.spam.24, %struct.barney* }
-%struct.spam.24 = type { %struct.bar.25, %struct.zot.26* }
-%struct.bar.25 = type <{ i32 (...)**, i8, i8 }>
-%struct.zot.26 = type { i32 (...)**, i32, %struct.widget.27* }
-%struct.widget.27 = type { %struct.zot.26, %struct.zot.26* }
-%struct.wombat.28 = type <{ i32 (...)**, i8, i8, [6 x i8] }>
+%struct.wobble.23 = type { %struct.spam.24, ptr }
+%struct.spam.24 = type { %struct.bar.25, ptr }
+%struct.bar.25 = type <{ ptr, i8, i8 }>
+%struct.zot.26 = type { ptr, i32, ptr }
+%struct.widget.27 = type { %struct.zot.26, ptr }
+%struct.wombat.28 = type <{ ptr, i8, i8, [6 x i8] }>
 
 ; Function Attrs: norecurse nounwind ssp uwtable
-define weak_odr hidden %struct.foo* @quux(%struct.barney* %arg, %struct.wombat.28* %arg1) local_unnamed_addr #0 align 2 {
+define weak_odr hidden ptr @quux(ptr %arg, ptr %arg1) local_unnamed_addr #0 align 2 {
 ; CHECK-LABEL: @quux(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds %struct.barney, %struct.barney* %arg, i64 0, i32 3, i32 0, i32 0, i32 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast %struct.spam* [[TMP]] to %struct.foo**
-; CHECK-NEXT:    [[TMP3:%.*]] = load %struct.foo*, %struct.foo** [[TMP2]], align 8, !tbaa !2
-; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds %struct.barney, %struct.barney* %arg, i64 0, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast i8** [[TMP4]] to %struct.foo**
-; CHECK-NEXT:    [[TMP6:%.*]] = load %struct.foo*, %struct.foo** [[TMP5]], align 8, !tbaa !7
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq %struct.foo* [[TMP3]], [[TMP6]]
+; CHECK-NEXT:    [[TMP:%.*]] = getelementptr inbounds %struct.barney, ptr %arg, i64 0, i32 3, i32 0, i32 0, i32 0
+; CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[TMP]], align 8, !tbaa !2
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds %struct.barney, ptr %arg, i64 0, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1
+; CHECK-NEXT:    [[TMP6:%.*]] = load ptr, ptr [[TMP4]], align 8, !tbaa !7
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq ptr [[TMP3]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP7]], label %bb21, label %bb8
 ; CHECK:       bb8:
 ; CHECK-NEXT:    br label %bb11
 ; CHECK:       bb9:
-; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq %struct.foo* [[TMP18:%.*]], [[TMP6]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq ptr [[TMP18:%.*]], [[TMP6]]
 ; CHECK-NEXT:    br i1 [[TMP10]], label %bb19, label %bb11
 ; CHECK:       bb11:
-; CHECK-NEXT:    [[TMP12:%.*]] = phi %struct.foo* [ [[TMP17:%.*]], %bb9 ], [ undef, %bb8 ]
-; CHECK-NEXT:    [[TMP13:%.*]] = phi %struct.foo* [ [[TMP18]], %bb9 ], [ [[TMP3]], %bb8 ]
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds %struct.foo, %struct.foo* [[TMP13]], i64 0, i32 0
-; CHECK-NEXT:    [[TMP15:%.*]] = load %struct.wombat.28*, %struct.wombat.28** [[TMP14]], align 8, !tbaa !8
-; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq %struct.wombat.28* [[TMP15]], %arg1
-; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], %struct.foo* [[TMP13]], %struct.foo* [[TMP12]]
-; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds %struct.foo, %struct.foo* [[TMP13]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = phi ptr [ [[TMP17:%.*]], %bb9 ], [ undef, %bb8 ]
+; CHECK-NEXT:    [[TMP13:%.*]] = phi ptr [ [[TMP18]], %bb9 ], [ [[TMP3]], %bb8 ]
+; CHECK-NEXT:    [[TMP15:%.*]] = load ptr, ptr [[TMP13]], align 8, !tbaa !8
+; CHECK-NEXT:    [[TMP16:%.*]] = icmp eq ptr [[TMP15]], %arg1
+; CHECK-NEXT:    [[TMP17]] = select i1 [[TMP16]], ptr [[TMP13]], ptr [[TMP12]]
+; CHECK-NEXT:    [[TMP18]] = getelementptr inbounds %struct.foo, ptr [[TMP13]], i64 1
 ; CHECK-NEXT:    br i1 [[TMP16]], label %bb19, label %bb9
 ; CHECK:       bb19:
-; CHECK-NEXT:    [[TMP20:%.*]] = phi %struct.foo* [ null, %bb9 ], [ [[TMP17]], %bb11 ]
+; CHECK-NEXT:    [[TMP20:%.*]] = phi ptr [ null, %bb9 ], [ [[TMP17]], %bb11 ]
 ; CHECK-NEXT:    br label %bb21
 ; CHECK:       bb21:
-; CHECK-NEXT:    [[TMP22:%.*]] = phi %struct.foo* [ null, %bb ], [ [[TMP20]], %bb19 ]
-; CHECK-NEXT:    ret %struct.foo* [[TMP22]]
+; CHECK-NEXT:    [[TMP22:%.*]] = phi ptr [ null, %bb ], [ [[TMP20]], %bb19 ]
+; CHECK-NEXT:    ret ptr [[TMP22]]
 ;
 bb:
-  %tmp = getelementptr inbounds %struct.barney, %struct.barney* %arg, i64 0, i32 3, i32 0, i32 0, i32 0
-  %tmp2 = bitcast %struct.spam* %tmp to %struct.foo**
-  %tmp3 = load %struct.foo*, %struct.foo** %tmp2, align 8, !tbaa !2
-  %tmp4 = getelementptr inbounds %struct.barney, %struct.barney* %arg, i64 0, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1
-  %tmp5 = bitcast i8** %tmp4 to %struct.foo**
-  %tmp6 = load %struct.foo*, %struct.foo** %tmp5, align 8, !tbaa !7
-  %tmp7 = icmp eq %struct.foo* %tmp3, %tmp6
+  %tmp = getelementptr inbounds %struct.barney, ptr %arg, i64 0, i32 3, i32 0, i32 0, i32 0
+  %tmp3 = load ptr, ptr %tmp, align 8, !tbaa !2
+  %tmp4 = getelementptr inbounds %struct.barney, ptr %arg, i64 0, i32 3, i32 0, i32 0, i32 0, i32 0, i32 1
+  %tmp6 = load ptr, ptr %tmp4, align 8, !tbaa !7
+  %tmp7 = icmp eq ptr %tmp3, %tmp6
   br i1 %tmp7, label %bb21, label %bb8
 
 bb8:                                              ; preds = %bb
   br label %bb11
 
 bb9:                                              ; preds = %bb11
-  %tmp10 = icmp eq %struct.foo* %tmp18, %tmp6
+  %tmp10 = icmp eq ptr %tmp18, %tmp6
   br i1 %tmp10, label %bb19, label %bb11
 
 bb11:                                             ; preds = %bb9, %bb8
-  %tmp12 = phi %struct.foo* [ %tmp17, %bb9 ], [ undef, %bb8 ]
-  %tmp13 = phi %struct.foo* [ %tmp18, %bb9 ], [ %tmp3, %bb8 ]
-  %tmp14 = getelementptr inbounds %struct.foo, %struct.foo* %tmp13, i64 0, i32 0
-  %tmp15 = load %struct.wombat.28*, %struct.wombat.28** %tmp14, align 8, !tbaa !8
-  %tmp16 = icmp eq %struct.wombat.28* %tmp15, %arg1
-  %tmp17 = select i1 %tmp16, %struct.foo* %tmp13, %struct.foo* %tmp12
-  %tmp18 = getelementptr inbounds %struct.foo, %struct.foo* %tmp13, i64 1
+  %tmp12 = phi ptr [ %tmp17, %bb9 ], [ undef, %bb8 ]
+  %tmp13 = phi ptr [ %tmp18, %bb9 ], [ %tmp3, %bb8 ]
+  %tmp15 = load ptr, ptr %tmp13, align 8, !tbaa !8
+  %tmp16 = icmp eq ptr %tmp15, %arg1
+  %tmp17 = select i1 %tmp16, ptr %tmp13, ptr %tmp12
+  %tmp18 = getelementptr inbounds %struct.foo, ptr %tmp13, i64 1
   br i1 %tmp16, label %bb19, label %bb9
 
 bb19:                                             ; preds = %bb11, %bb9
-  %tmp20 = phi %struct.foo* [ null, %bb9 ], [ %tmp17, %bb11 ]
+  %tmp20 = phi ptr [ null, %bb9 ], [ %tmp17, %bb11 ]
   br label %bb21
 
 bb21:                                             ; preds = %bb19, %bb
-  %tmp22 = phi %struct.foo* [ null, %bb ], [ %tmp20, %bb19 ]
-  ret %struct.foo* %tmp22
+  %tmp22 = phi ptr [ null, %bb ], [ %tmp20, %bb19 ]
+  ret ptr %tmp22
 }
 
 attributes #0 = { norecurse nounwind ssp uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="penryn" "target-features"="+cx16,+fxsr,+mmx,+sse,+sse2,+sse3,+sse4.1,+ssse3,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }

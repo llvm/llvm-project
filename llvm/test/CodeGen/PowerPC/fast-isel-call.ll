@@ -56,7 +56,7 @@ declare zeroext i16 @t6();
 declare signext i8 @t7();
 declare zeroext i8 @t8();
 
-define i32 @t10(i32 %argc, i8** nocapture %argv) nounwind {
+define i32 @t10(i32 %argc, ptr nocapture %argv) nounwind {
 entry:
 ; ELF64: t10
   %call = call i32 @bar(i8 zeroext 0, i8 zeroext -8, i8 zeroext -69, i8 zeroext 28, i8 zeroext 40, i8 zeroext -70)
@@ -79,9 +79,9 @@ define i32 @bar0(i32 %i) nounwind {
 
 ; Function pointers are not yet implemented.
 ;define void @foo3() uwtable {
-;  %fptr = alloca i32 (i32)*, align 8
-;  store i32 (i32)* @bar0, i32 (i32)** %fptr, align 8
-;  %1 = load i32 (i32)*, i32 (i32)** %fptr, align 8
+;  %fptr = alloca ptr, align 8
+;  store ptr @bar0, ptr %fptr, align 8
+;  %1 = load ptr, ptr %fptr, align 8
 ;  %call = call i32 %1(i32 0)
 ;  ret void
 ;}

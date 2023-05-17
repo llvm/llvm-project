@@ -37,7 +37,12 @@ int main() {
 # define PTR_FMT "%p"
 #endif
 
-void __asan_on_error() {
+// Required for dyld macOS 12.0+
+#if (__APPLE__)
+__attribute__((weak))
+#endif
+extern "C" void
+__asan_on_error() {
   int present = __asan_report_present();
   void *pc = __asan_get_report_pc();
   void *bp = __asan_get_report_bp();

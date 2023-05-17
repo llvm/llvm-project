@@ -40,7 +40,7 @@ entry:
   ret i32 %div
 }
 
-define i32 @main() #1 personality i8* bitcast (i32 (...)* @__C_specific_handler to i8*) {
+define i32 @main() #1 personality ptr @__C_specific_handler {
 entry:
   %call = invoke i32 @do_div(i32 1, i32 0) #4
           to label %__try.cont.12 unwind label %catch.dispatch
@@ -54,7 +54,7 @@ invoke.cont.3:                                    ; preds = %__except.2
           to label %__try.cont.12 unwind label %catch.dispatch.7
 
 __except.9:                                       ; preds = %__except.ret
-  %call11 = tail call i32 @puts(i8* nonnull getelementptr inbounds ([7 x i8], [7 x i8]* @"\01??_C@_06IBDBCMGJ@caught?$AA@", i64 0, i64 0))
+  %call11 = tail call i32 @puts(ptr nonnull @"\01??_C@_06IBDBCMGJ@caught?$AA@")
   br label %__try.cont.12
 
 __try.cont.12:                                    ; preds = %invoke.cont.3, %entry, %__except.9
@@ -64,7 +64,7 @@ catch.dispatch:                                   ; preds = %entry
   %cs1 = catchswitch within none [label %__except] unwind label %catch.dispatch.7
 
 __except:                                         ; preds = %catch.dispatch
-  %cp1 = catchpad within %cs1 [i8* null]
+  %cp1 = catchpad within %cs1 [ptr null]
   catchret from %cp1 to label %__except.2
 
 ehcleanup:                                        ; preds = %__except.2
@@ -79,7 +79,7 @@ catch.dispatch.7:
   %cs2 = catchswitch within none [label %__except.ret] unwind to caller
 
 __except.ret:                                     ; preds = %catch.dispatch.7
-  %cp3 = catchpad within %cs2 [i8* bitcast (i32 (i8*, i8*)* @"\01?filt$0@0@main@@" to i8*)]
+  %cp3 = catchpad within %cs2 [ptr @"\01?filt$0@0@main@@"]
   catchret from %cp3 to label %__except.9
 }
 
@@ -164,7 +164,7 @@ __except.ret:                                     ; preds = %catch.dispatch.7
 ; CHECK:         .seh_handlerdata
 ; CHECK:         .seh_endproc
 
-define internal i32 @"\01?filt$0@0@main@@"(i8* nocapture readnone %exception_pointers, i8* nocapture readnone %frame_pointer) #1 {
+define internal i32 @"\01?filt$0@0@main@@"(ptr nocapture readnone %exception_pointers, ptr nocapture readnone %frame_pointer) #1 {
 entry:
   %call = tail call i32 @filt()
   ret i32 %call
@@ -180,12 +180,12 @@ declare i32 @__C_specific_handler(...)
 ; Function Attrs: noinline nounwind
 define internal fastcc void @"\01?fin$0@0@main@@"() #2 {
 entry:
-  %call = tail call i32 @puts(i8* getelementptr inbounds ([8 x i8], [8 x i8]* @"\01??_C@_07MKBLAIAL@finally?$AA@", i64 0, i64 0)) #5
+  %call = tail call i32 @puts(ptr @"\01??_C@_07MKBLAIAL@finally?$AA@") #5
   ret void
 }
 
 ; Function Attrs: nounwind
-declare i32 @puts(i8* nocapture readonly) #3
+declare i32 @puts(ptr nocapture readonly) #3
 
 attributes #0 = { nounwind readnone "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "stack-protector-buffer-size"="8" "target-features"="+sse,+sse2" "unsafe-fp-math"="false" "use-soft-float"="false" }

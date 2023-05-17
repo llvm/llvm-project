@@ -78,8 +78,8 @@ namespace PR7051 {
   enum E { e0 };
   void f() {
     E e;
-    e = 1; // expected-error{{assigning to 'PR7051::E' from incompatible type 'int'}}
-    e |= 1; // expected-error{{assigning to 'PR7051::E' from incompatible type 'int'}}
+    e = 1; // expected-error{{assigning to 'E' from incompatible type 'int'}}
+    e |= 1; // expected-error{{assigning to 'E' from incompatible type 'int'}}
   }
 }
 

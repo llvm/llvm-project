@@ -6,13 +6,13 @@ declare float  @llvm.fabs.f32(float)
 declare double @llvm.fabs.f64(double)
 declare fp128  @llvm.fabs.f128(fp128)
 
-; INFINITY requires loading the constant for _Float16
+; Check if INFINITY for _Float16 is materialized
 define i32 @replace_isinf_call_f16(half %x) {
 ; CHECK-LABEL: replace_isinf_call_f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI0_0
+; CHECK-NEXT:    mov w8, #31744
 ; CHECK-NEXT:    fabs h0, h0
-; CHECK-NEXT:    ldr h1, [x8, :lo12:.LCPI0_0]
+; CHECK-NEXT:    fmov h1, w8
 ; CHECK-NEXT:    fcmp h0, h1
 ; CHECK-NEXT:    cset w0, eq
 ; CHECK-NEXT:    ret

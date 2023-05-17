@@ -1,7 +1,7 @@
 ; Inlining used to break PHI nodes.  This tests that they are correctly updated
 ; when a node is split around the call instruction.  The verifier caught the error.
 ;
-; RUN: opt < %s -inline
+; RUN: opt < %s -passes='cgscc(inline)'
 ;
 
 define i64 @test(i64 %X) {

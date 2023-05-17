@@ -1,19 +1,19 @@
 // RUN: echo "GPU binary would be here" > %t
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -check-prefixes=CHECK,GNU %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux-gnu -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-linux-gnu -emit-llvm %s \
 // RUN:     -fcuda-include-gpubinary %t -o - -x hip\
 // RUN:   | FileCheck -check-prefix=NEG %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
 // RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
 // RUN:     %t -o - -x hip\
 // RUN:   | FileCheck -check-prefixes=CHECK,MSVC %s
 
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-pc-windows-msvc -emit-llvm %s \
+// RUN: %clang_cc1 -triple x86_64-pc-windows-msvc -emit-llvm %s \
 // RUN:     -aux-triple amdgcn-amd-amdhsa -fcuda-include-gpubinary \
 // RUN:     %t -o - -x hip\
 // RUN:   | FileCheck -check-prefix=NEG %s
@@ -22,15 +22,15 @@
 
 // Check kernel handles are emitted for non-MSVC target but not for MSVC target.
 
-// GNU: @[[HCKERN:ckernel]] = constant void ()* @[[CSTUB:__device_stub__ckernel]], align 8
-// GNU: @[[HNSKERN:_ZN2ns8nskernelEv]] = constant void ()* @[[NSSTUB:_ZN2ns23__device_stub__nskernelEv]], align 8
-// GNU: @[[HTKERN:_Z10kernelfuncIiEvv]] = linkonce_odr constant void ()* @[[TSTUB:_Z25__device_stub__kernelfuncIiEvv]], comdat, align 8
-// GNU: @[[HDKERN:_Z11kernel_declv]] = external constant void ()*, align 8
+// GNU: @[[HCKERN:ckernel]] = constant ptr @[[CSTUB:__device_stub__ckernel]], align 8
+// GNU: @[[HNSKERN:_ZN2ns8nskernelEv]] = constant ptr @[[NSSTUB:_ZN2ns23__device_stub__nskernelEv]], align 8
+// GNU: @[[HTKERN:_Z10kernelfuncIiEvv]] = linkonce_odr constant ptr @[[TSTUB:_Z25__device_stub__kernelfuncIiEvv]], comdat, align 8
+// GNU: @[[HDKERN:_Z11kernel_declv]] = external constant ptr, align 8
 
-// MSVC: @[[HCKERN:ckernel]] = dso_local constant void ()* @[[CSTUB:__device_stub__ckernel]], align 8
-// MSVC: @[[HNSKERN:"\?nskernel@ns@@YAXXZ.*"]] = dso_local constant void ()* @[[NSSTUB:"\?__device_stub__nskernel@ns@@YAXXZ"]], align 8
-// MSVC: @[[HTKERN:"\?\?\$kernelfunc@H@@YAXXZ.*"]] = linkonce_odr dso_local constant void ()* @[[TSTUB:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ.*"]], comdat, align 8
-// MSVC: @[[HDKERN:"\?kernel_decl@@YAXXZ.*"]] = external dso_local constant void ()*, align 8
+// MSVC: @[[HCKERN:ckernel]] = dso_local constant ptr @[[CSTUB:__device_stub__ckernel]], align 8
+// MSVC: @[[HNSKERN:"\?nskernel@ns@@YAXXZ.*"]] = dso_local constant ptr @[[NSSTUB:"\?__device_stub__nskernel@ns@@YAXXZ"]], align 8
+// MSVC: @[[HTKERN:"\?\?\$kernelfunc@H@@YAXXZ.*"]] = linkonce_odr dso_local constant ptr @[[TSTUB:"\?\?\$__device_stub__kernelfunc@H@@YAXXZ.*"]], comdat, align 8
+// MSVC: @[[HDKERN:"\?kernel_decl@@YAXXZ.*"]] = external dso_local constant ptr, align 8
 
 extern "C" __global__ void ckernel() {}
 
@@ -104,10 +104,10 @@ extern "C" void fun2() {
 // Check kernel handle is used for assigning a kernel to a function pointer.
 
 // CHECK-LABEL: define{{.*}}@fun3()
-// CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr, align 8
-// CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr, align 8
-// CHECK:  store i8* bitcast (void ()** @[[HCKERN]] to i8*), i8** @void_ptr, align 8
-// CHECK:  store i8* bitcast (void ()** @[[HCKERN]] to i8*), i8** @void_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @void_ptr, align 8
+// CHECK:  store ptr @[[HCKERN]], ptr @void_ptr, align 8
 extern "C" void fun3() {
   kernel_ptr = ckernel;
   kernel_ptr = &ckernel;
@@ -119,11 +119,10 @@ extern "C" void fun3() {
 // used with triple chevron.
 
 // CHECK-LABEL: define{{.*}}@fun4()
-// CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr
 // CHECK:  call noundef i32 @{{.*hipConfigureCall}}
-// CHECK:  %[[HANDLE:.*]] = load void ()*, void ()** @kernel_ptr, align 8
-// CHECK:  %[[CAST:.*]] = bitcast void ()* %[[HANDLE]] to void ()**
-// CHECK:  %[[STUB:.*]] = load void ()*, void ()** %[[CAST]], align 8
+// CHECK:  %[[HANDLE:.*]] = load ptr, ptr @kernel_ptr, align 8
+// CHECK:  %[[STUB:.*]] = load ptr, ptr %[[HANDLE]], align 8
 // CHECK:  call void %[[STUB]]()
 extern "C" void fun4() {
   kernel_ptr = ckernel;
@@ -133,10 +132,9 @@ extern "C" void fun4() {
 // Check kernel handle is passed to a function.
 
 // CHECK-LABEL: define{{.*}}@fun5()
-// CHECK:  store void ()* bitcast (void ()** @[[HCKERN]] to void ()*), void ()** @kernel_ptr
-// CHECK:  %[[HANDLE:.*]] = load void ()*, void ()** @kernel_ptr, align 8
-// CHECK:  %[[CAST:.*]] = bitcast void ()* %[[HANDLE]] to i8*
-// CHECK:  call void @launch(i8* noundef %[[CAST]])
+// CHECK:  store ptr @[[HCKERN]], ptr @kernel_ptr
+// CHECK:  %[[HANDLE:.*]] = load ptr, ptr @kernel_ptr, align 8
+// CHECK:  call void @launch(ptr noundef %[[HANDLE]])
 extern "C" void fun5() {
   kernel_ptr = ckernel;
   launch((void *)kernel_ptr);

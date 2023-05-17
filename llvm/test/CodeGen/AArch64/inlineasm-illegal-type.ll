@@ -17,16 +17,16 @@ entry:
   ret double %0
 }
 
-define void @test_vector_too_large(<8 x float>* nocapture readonly %0) {
+define void @test_vector_too_large(ptr nocapture readonly %0) {
 entry:
-  %m = load <8 x float>, <8 x float>* %0, align 16
+  %m = load <8 x float>, ptr %0, align 16
   tail call void asm sideeffect "fadd.4s v4, v4, $0", "w,~{memory}"(<8 x float> %m)
   ret void
 }
 
-define void @test_vector_no_mvt(<9 x float>* nocapture readonly %0) {
+define void @test_vector_no_mvt(ptr nocapture readonly %0) {
 entry:
-  %m = load <9 x float>, <9 x float>* %0, align 16
+  %m = load <9 x float>, ptr %0, align 16
   tail call void asm sideeffect "fadd.4s v4, v4, $0", "w,~{memory}"(<9 x float> %m)
   ret void
 }

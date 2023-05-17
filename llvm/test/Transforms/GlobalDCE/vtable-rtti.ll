@@ -6,38 +6,36 @@
 
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
-%struct.A = type { i32 (...)** }
+%struct.A = type { ptr }
 
-; CHECK: @_ZTV1A = hidden unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* null] }, align 8, !type !0, !type !1, !vcall_visibility !2
+; CHECK: @_ZTV1A = hidden unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1A, ptr null] }, align 8, !type !0, !type !1, !vcall_visibility !2
 
-@_ZTV1A = hidden unnamed_addr constant { [3 x i8*] } { [3 x i8*] [i8* null, i8* bitcast ({ i8*, i8* }* @_ZTI1A to i8*), i8* bitcast (void (%struct.A*)* @_ZN1A3fooEv to i8*)] }, align 8, !type !0, !type !1, !vcall_visibility !2
+@_ZTV1A = hidden unnamed_addr constant { [3 x ptr] } { [3 x ptr] [ptr null, ptr @_ZTI1A, ptr @_ZN1A3fooEv] }, align 8, !type !0, !type !1, !vcall_visibility !2
 @_ZTS1A = hidden constant [3 x i8] c"1A\00", align 1
-@_ZTI1A = hidden constant { i8*, i8* } { i8* bitcast (i8** getelementptr inbounds (i8*, i8** @_ZTVN10__cxxabiv117__class_type_infoE, i64 2) to i8*), i8* getelementptr inbounds ([3 x i8], [3 x i8]* @_ZTS1A, i32 0, i32 0) }, align 8
+@_ZTI1A = hidden constant { ptr, ptr } { ptr getelementptr inbounds (ptr, ptr @_ZTVN10__cxxabiv117__class_type_infoE, i64 2), ptr @_ZTS1A }, align 8
 
-define internal void @_ZN1AC2Ev(%struct.A* %this) {
+define internal void @_ZN1AC2Ev(ptr %this) {
 entry:
-  %0 = getelementptr inbounds %struct.A, %struct.A* %this, i64 0, i32 0
-  store i32 (...)** bitcast (i8** getelementptr inbounds ({ [3 x i8*] }, { [3 x i8*] }* @_ZTV1A, i64 0, inrange i32 0, i64 2) to i32 (...)**), i32 (...)*** %0, align 8
+  store ptr getelementptr inbounds ({ [3 x ptr] }, ptr @_ZTV1A, i64 0, inrange i32 0, i64 2), ptr %this, align 8
   ret void
 }
 
 ; CHECK-NOT: define {{.*}} @_ZN1A3fooEv(
-define internal void @_ZN1A3fooEv(%struct.A* nocapture %this) {
+define internal void @_ZN1A3fooEv(ptr nocapture %this) {
 entry:
   ret void
 }
 
-define dso_local i8* @_Z6make_Av() {
+define dso_local ptr @_Z6make_Av() {
 entry:
-  %call = tail call i8* @_Znwm(i64 8)
-  %0 = bitcast i8* %call to %struct.A*
-  tail call void @_ZN1AC2Ev(%struct.A* %0)
-  ret i8* %call
+  %call = tail call ptr @_Znwm(i64 8)
+  tail call void @_ZN1AC2Ev(ptr %call)
+  ret ptr %call
 }
 
 
-declare dso_local noalias nonnull i8* @_Znwm(i64)
-@_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global i8*
+declare dso_local noalias nonnull ptr @_Znwm(i64)
+@_ZTVN10__cxxabiv117__class_type_infoE = external dso_local global ptr
 
 !llvm.module.flags = !{!3, !4}
 

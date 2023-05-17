@@ -10,6 +10,7 @@
 #define MLIR_TOOLS_PDLL_AST_DIAGNOSTIC_H
 
 #include <string>
+#include <optional>
 
 #include "mlir/Support/LLVM.h"
 #include "mlir/Support/LogicalResult.h"
@@ -44,11 +45,11 @@ public:
 
   /// Attach a note to this diagnostic.
   Diagnostic &attachNote(const Twine &msg,
-                         Optional<SMRange> noteLoc = llvm::None) {
+                         std::optional<SMRange> noteLoc = std::nullopt) {
     assert(getSeverity() != Severity::DK_Note &&
            "cannot attach a Note to a Note");
     notes.emplace_back(
-        new Diagnostic(Severity::DK_Note, noteLoc.getValueOr(location), msg));
+        new Diagnostic(Severity::DK_Note, noteLoc.value_or(location), msg));
     return *notes.back();
   }
 
@@ -116,7 +117,7 @@ private:
 
   /// Returns true if the diagnostic is still active, i.e. it has a live
   /// diagnostic.
-  bool isActive() const { return impl.hasValue(); }
+  bool isActive() const { return impl.has_value(); }
 
   /// Returns true if the diagnostic is still in flight to be reported.
   bool isInFlight() const { return owner; }
@@ -128,7 +129,7 @@ private:
   DiagnosticEngine *owner = nullptr;
 
   /// The raw diagnostic that is inflight to be reported.
-  Optional<Diagnostic> impl;
+  std::optional<Diagnostic> impl;
 };
 
 //===----------------------------------------------------------------------===//

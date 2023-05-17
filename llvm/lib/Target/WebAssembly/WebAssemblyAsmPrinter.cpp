@@ -70,7 +70,7 @@ MVT WebAssemblyAsmPrinter::getRegType(unsigned RegNo) const {
 
 std::string WebAssemblyAsmPrinter::regToString(const MachineOperand &MO) {
   Register RegNo = MO.getReg();
-  assert(Register::isVirtualRegister(RegNo) &&
+  assert(RegNo.isVirtual() &&
          "Unlowered physical register encountered during assembly printing");
   assert(!MFI->isVRegStackified(RegNo));
   unsigned WAReg = MFI->getWAReg(RegNo);
@@ -211,7 +211,7 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   auto *WasmSym = cast<MCSymbolWasm>(GetExternalSymbolSymbol(Name));
 
   // May be called multiple times, so early out.
-  if (WasmSym->getType().hasValue())
+  if (WasmSym->getType())
     return WasmSym;
 
   const WebAssemblySubtarget &Subtarget = getSubtarget();
@@ -272,11 +272,11 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
 }
 
 void WebAssemblyAsmPrinter::emitSymbolType(const MCSymbolWasm *Sym) {
-  Optional<wasm::WasmSymbolType> WasmTy = Sym->getType();
+  std::optional<wasm::WasmSymbolType> WasmTy = Sym->getType();
   if (!WasmTy)
     return;
 
-  switch (WasmTy.getValue()) {
+  switch (*WasmTy) {
   case wasm::WASM_SYMBOL_TYPE_GLOBAL:
     getTargetStreamer()->emitGlobalType(Sym);
     break;
@@ -430,7 +430,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
       std::string SectionName = (".custom_section." + Name->getString()).str();
       MCSectionWasm *MySection =
           OutContext.getWasmSection(SectionName, SectionKind::getMetadata());
-      OutStreamer->SwitchSection(MySection);
+      OutStreamer->switchSection(MySection);
       OutStreamer->emitBytes(Contents->getString());
       OutStreamer->popSection();
     }
@@ -471,7 +471,7 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     MCSectionWasm *Producers = OutContext.getWasmSection(
         ".custom_section.producers", SectionKind::getMetadata());
     OutStreamer->pushSection();
-    OutStreamer->SwitchSection(Producers);
+    OutStreamer->switchSection(Producers);
     OutStreamer->emitULEB128IntValue(FieldCount);
     for (auto &Producers : {std::make_pair("language", &Languages),
             std::make_pair("processed-by", &Tools)}) {
@@ -544,7 +544,7 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   MCSectionWasm *FeaturesSection = OutContext.getWasmSection(
       ".custom_section.target_features", SectionKind::getMetadata());
   OutStreamer->pushSection();
-  OutStreamer->SwitchSection(FeaturesSection);
+  OutStreamer->switchSection(FeaturesSection);
 
   OutStreamer->emitULEB128IntValue(EmittedFeatures.size());
   for (auto &F : EmittedFeatures) {
@@ -597,6 +597,8 @@ void WebAssemblyAsmPrinter::emitFunctionBodyStart() {
 
 void WebAssemblyAsmPrinter::emitInstruction(const MachineInstr *MI) {
   LLVM_DEBUG(dbgs() << "EmitInstruction: " << *MI << '\n');
+  WebAssembly_MC::verifyInstructionPredicates(MI->getOpcode(),
+                                              Subtarget->getFeatureBits());
 
   switch (MI->getOpcode()) {
   case WebAssembly::ARGUMENT_i32:

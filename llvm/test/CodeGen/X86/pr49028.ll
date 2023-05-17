@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-unknown | FileCheck %s --check-prefix=X86
 ; RUN: llc < %s -mtriple=x86_64-unknown | FileCheck %s --check-prefix=X64
 
-define zeroext i16 @PR49028(i16 zeroext %0, i8* %1) {
+define zeroext i16 @PR49028(i16 zeroext %0, ptr %1) {
 ; X86-LABEL: PR49028:
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
@@ -22,6 +22,6 @@ define zeroext i16 @PR49028(i16 zeroext %0, i8* %1) {
   %3 = lshr i16 %0, 1
   %4 = icmp eq i16 %3, 0
   %5 = zext i1 %4 to i8
-  store i8 %5, i8* %1, align 1
+  store i8 %5, ptr %1, align 1
   ret i16 %3
 }

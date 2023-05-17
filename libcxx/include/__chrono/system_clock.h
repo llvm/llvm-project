@@ -31,14 +31,14 @@ public:
     typedef duration::rep                    rep;
     typedef duration::period                 period;
     typedef chrono::time_point<system_clock> time_point;
-    static _LIBCPP_CONSTEXPR_AFTER_CXX11 const bool is_steady = false;
+    static _LIBCPP_CONSTEXPR_SINCE_CXX14 const bool is_steady = false;
 
     static time_point now() _NOEXCEPT;
     static time_t     to_time_t  (const time_point& __t) _NOEXCEPT;
     static time_point from_time_t(time_t __t) _NOEXCEPT;
 };
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <class _Duration>
 using sys_time    = time_point<system_clock, _Duration>;

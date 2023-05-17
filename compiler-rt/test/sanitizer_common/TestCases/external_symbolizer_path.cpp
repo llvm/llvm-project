@@ -25,7 +25,7 @@
 // UNSUPPORTED: ios, android
 
 // FIXME: Figure out why this fails on certain buildbots and re-enable.
-// UNSUPPORTED: linux
+// UNSUPPORTED: target={{.*linux.*}}
 
 #include <sanitizer/common_interface_defs.h>
 #include <stdio.h>

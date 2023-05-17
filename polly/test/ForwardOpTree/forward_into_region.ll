@@ -12,7 +12,7 @@
 ;     A[0] = val;
 ; }
 ;
-define void @func(i32 %n, double* noalias nonnull %A) {
+define void @func(i32 %n, ptr noalias nonnull %A) {
 entry:
   br label %for
 
@@ -30,7 +30,7 @@ for:
       br i1 %cond, label %bodyB_true, label %bodyB_exit
 
     bodyB_true:
-      store double %val, double* %A
+      store double %val, ptr %A
       br label %bodyB_exit
 
     bodyB_exit:

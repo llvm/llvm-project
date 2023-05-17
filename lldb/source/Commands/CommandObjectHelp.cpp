@@ -8,6 +8,7 @@
 
 #include "CommandObjectHelp.h"
 #include "lldb/Interpreter/CommandInterpreter.h"
+#include "lldb/Interpreter/CommandOptionArgumentTable.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 
 using namespace lldb;
@@ -70,7 +71,7 @@ CommandObjectHelp::~CommandObjectHelp() = default;
 
 llvm::ArrayRef<OptionDefinition>
 CommandObjectHelp::CommandOptions::GetDefinitions() {
-  return llvm::makeArrayRef(g_help_options);
+  return llvm::ArrayRef(g_help_options);
 }
 
 bool CommandObjectHelp::DoExecute(Args &command, CommandReturnObject &result) {

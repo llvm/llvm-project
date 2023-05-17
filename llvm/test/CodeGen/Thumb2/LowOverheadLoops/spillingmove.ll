@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main -mattr=+mve --verify-machineinstrs %s -o - | FileCheck %s
 
 %struct.arm_2d_size_t = type { i16, i16 }
-define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(i16* noalias nocapture %phwTargetBase, i16 signext %iTargetStride, %struct.arm_2d_size_t* noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
+define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(ptr noalias nocapture %phwTargetBase, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) {
 ; CHECK-LABEL: __arm_2d_impl_rgb16_colour_filling_with_alpha:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
@@ -37,12 +37,11 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(i16* noalias nocaptur
 ; CHECK-NEXT:    subs r3, #8
 ; CHECK-NEXT:    movs r4, #1
 ; CHECK-NEXT:    vdup.16 q0, r5
-; CHECK-NEXT:    lsls r1, r1, #1
+; CHECK-NEXT:    vdup.16 q5, r6
 ; CHECK-NEXT:    add.w r3, r4, r3, lsr #3
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
 ; CHECK-NEXT:    vmov.i16 q0, #0xf800
 ; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vdup.16 q5, r6
 ; CHECK-NEXT:    vmov.i16 q7, #0x78
 ; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
 ; CHECK-NEXT:    vstrw.32 q2, [sp, #32] @ 16-byte Spill
@@ -63,7 +62,7 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(i16* noalias nocaptur
 ; CHECK-NEXT:    vshr.u16 q1, q0, #3
 ; CHECK-NEXT:    vand q1, q1, q2
 ; CHECK-NEXT:    vmov q2, q4
-; CHECK-NEXT:    vmla.u16 q2, q1, r2
+; CHECK-NEXT:    vmla.i16 q2, q1, r2
 ; CHECK-NEXT:    vshr.u16 q1, q2, #5
 ; CHECK-NEXT:    vshl.i16 q2, q0, #3
 ; CHECK-NEXT:    vand q3, q1, q5
@@ -74,7 +73,7 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(i16* noalias nocaptur
 ; CHECK-NEXT:    vmov q5, q4
 ; CHECK-NEXT:    vldrw.u32 q4, [sp, #48] @ 16-byte Reload
 ; CHECK-NEXT:    vshr.u16 q0, q0, #9
-; CHECK-NEXT:    vmla.u16 q4, q2, r2
+; CHECK-NEXT:    vmla.i16 q4, q2, r2
 ; CHECK-NEXT:    vshr.u16 q2, q4, #11
 ; CHECK-NEXT:    vmov q4, q5
 ; CHECK-NEXT:    vmov q5, q6
@@ -83,7 +82,7 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(i16* noalias nocaptur
 ; CHECK-NEXT:    vorr q1, q3, q2
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #16] @ 16-byte Reload
 ; CHECK-NEXT:    vand q0, q0, q7
-; CHECK-NEXT:    vmla.u16 q2, q0, r2
+; CHECK-NEXT:    vmla.i16 q2, q0, r2
 ; CHECK-NEXT:    vldrw.u32 q0, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    vand q0, q2, q0
 ; CHECK-NEXT:    vldrw.u32 q2, [sp, #32] @ 16-byte Reload
@@ -94,7 +93,7 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(i16* noalias nocaptur
 ; CHECK-NEXT:  @ %bb.4: @ %for.cond3.for.cond.cleanup7_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB0_2 Depth=1
 ; CHECK-NEXT:    adds r4, #1
-; CHECK-NEXT:    add r0, r1
+; CHECK-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-NEXT:    cmp r4, r12
 ; CHECK-NEXT:    bne .LBB0_2
 ; CHECK-NEXT:  .LBB0_5: @ %for.cond.cleanup
@@ -103,8 +102,8 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha(i16* noalias nocaptur
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
-  %iHeight = getelementptr inbounds %struct.arm_2d_size_t, %struct.arm_2d_size_t* %ptCopySize, i32 0, i32 1
-  %0 = load i16, i16* %iHeight, align 2
+  %iHeight = getelementptr inbounds %struct.arm_2d_size_t, ptr %ptCopySize, i32 0, i32 1
+  %0 = load i16, ptr %iHeight, align 2
   %conv1 = sext i16 %0 to i32
   %and.i = shl i16 %hwColour, 3
   %shl.i = and i16 %and.i, 248
@@ -119,8 +118,7 @@ entry:
   br i1 %cmp61, label %for.cond3.preheader.lr.ph, label %for.cond.cleanup
 
 for.cond3.preheader.lr.ph:                        ; preds = %entry
-  %iWidth = getelementptr inbounds %struct.arm_2d_size_t, %struct.arm_2d_size_t* %ptCopySize, i32 0, i32 0
-  %6 = load i16, i16* %iWidth, align 2
+  %6 = load i16, ptr %ptCopySize, align 2
   %conv4 = sext i16 %6 to i32
   %cmp558 = icmp sgt i16 %6, 0
   br i1 %cmp558, label %for.cond3.preheader.us.preheader, label %for.cond.cleanup
@@ -142,42 +140,40 @@ for.cond3.preheader.us.preheader:                 ; preds = %for.cond3.preheader
   br label %vector.ph
 
 vector.ph:                                        ; preds = %for.cond3.for.cond.cleanup7_crit_edge.us, %for.cond3.preheader.us.preheader
-  %phwTargetBase.addr.063.us = phi i16* [ %add.ptr.us, %for.cond3.for.cond.cleanup7_crit_edge.us ], [ %phwTargetBase, %for.cond3.preheader.us.preheader ]
+  %phwTargetBase.addr.063.us = phi ptr [ %add.ptr.us, %for.cond3.for.cond.cleanup7_crit_edge.us ], [ %phwTargetBase, %for.cond3.preheader.us.preheader ]
   %y.062.us = phi i32 [ %inc32.us, %for.cond3.for.cond.cleanup7_crit_edge.us ], [ 0, %for.cond3.preheader.us.preheader ]
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %next.gep = getelementptr i16, i16* %phwTargetBase.addr.063.us, i32 %index
+  %next.gep = getelementptr i16, ptr %phwTargetBase.addr.063.us, i32 %index
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %conv4)
-  %7 = bitcast i16* %next.gep to <8 x i16>*
-  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %7, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
-  %8 = shl <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-  %9 = and <8 x i16> %8, <i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248>
-  %10 = lshr <8 x i16> %wide.masked.load, <i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9>
-  %11 = and <8 x i16> %10, <i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120>
-  %12 = lshr <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-  %13 = and <8 x i16> %12, <i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252>
-  %14 = mul <8 x i16> %9, %broadcast.splat76
-  %15 = add <8 x i16> %14, %broadcast.splat78
-  %16 = lshr <8 x i16> %15, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
-  %17 = mul <8 x i16> %13, %broadcast.splat76
-  %18 = add <8 x i16> %17, %broadcast.splat80
-  %19 = mul <8 x i16> %11, %broadcast.splat76
-  %20 = add <8 x i16> %19, %broadcast.splat82
-  %21 = lshr <8 x i16> %18, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
-  %22 = and <8 x i16> %21, <i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016>
-  %23 = or <8 x i16> %22, %16
-  %24 = and <8 x i16> %20, <i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048>
-  %25 = or <8 x i16> %23, %24
-  %26 = bitcast i16* %next.gep to <8 x i16>*
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %25, <8 x i16>* %26, i32 2, <8 x i1> %active.lane.mask)
+  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %next.gep, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
+  %7 = shl <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  %8 = and <8 x i16> %7, <i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248>
+  %9 = lshr <8 x i16> %wide.masked.load, <i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9>
+  %10 = and <8 x i16> %9, <i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120>
+  %11 = lshr <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  %12 = and <8 x i16> %11, <i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252>
+  %13 = mul <8 x i16> %8, %broadcast.splat76
+  %14 = add <8 x i16> %13, %broadcast.splat78
+  %15 = lshr <8 x i16> %14, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
+  %16 = mul <8 x i16> %12, %broadcast.splat76
+  %17 = add <8 x i16> %16, %broadcast.splat80
+  %18 = mul <8 x i16> %10, %broadcast.splat76
+  %19 = add <8 x i16> %18, %broadcast.splat82
+  %20 = lshr <8 x i16> %17, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+  %21 = and <8 x i16> %20, <i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016>
+  %22 = or <8 x i16> %21, %15
+  %23 = and <8 x i16> %19, <i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048>
+  %24 = or <8 x i16> %22, %23
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %24, ptr %next.gep, i32 2, <8 x i1> %active.lane.mask)
   %index.next = add i32 %index, 8
-  %27 = icmp eq i32 %index.next, %n.vec
-  br i1 %27, label %for.cond3.for.cond.cleanup7_crit_edge.us, label %vector.body
+  %25 = icmp eq i32 %index.next, %n.vec
+  br i1 %25, label %for.cond3.for.cond.cleanup7_crit_edge.us, label %vector.body
 
 for.cond3.for.cond.cleanup7_crit_edge.us:         ; preds = %vector.body
-  %add.ptr.us = getelementptr inbounds i16, i16* %phwTargetBase.addr.063.us, i32 %conv30
+  %add.ptr.us = getelementptr inbounds i16, ptr %phwTargetBase.addr.063.us, i32 %conv30
   %inc32.us = add nuw nsw i32 %y.062.us, 1
   %exitcond66.not = icmp eq i32 %inc32.us, %conv1
   br i1 %exitcond66.not, label %for.cond.cleanup, label %vector.ph
@@ -185,47 +181,48 @@ for.cond3.for.cond.cleanup7_crit_edge.us:         ; preds = %vector.body
 for.cond.cleanup:                                 ; preds = %for.cond3.for.cond.cleanup7_crit_edge.us, %for.cond3.preheader.lr.ph, %entry
   ret void
 }
-define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(i16* noalias nocapture %phwTargetBase, i16 signext %iTargetStride, %struct.arm_2d_size_t* noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) "target-cpu"="cortex-m55" {
+define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(ptr noalias nocapture %phwTargetBase, i16 signext %iTargetStride, ptr noalias nocapture readonly %ptCopySize, i16 zeroext %hwColour, i32 %chRatio) "target-cpu"="cortex-m55" {
 ; CHECK-LABEL: __arm_2d_impl_rgb16_colour_filling_with_alpha_sched:
 ; CHECK:       @ %bb.0: @ %entry
 ; CHECK-NEXT:    push {r4, r5, r6, r7, lr}
 ; CHECK-NEXT:    sub sp, #4
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11, d12, d13, d14, d15}
-; CHECK-NEXT:    sub sp, #64
+; CHECK-NEXT:    sub sp, #80
 ; CHECK-NEXT:    ldrsh.w r12, [r2, #2]
 ; CHECK-NEXT:    cmp.w r12, #1
 ; CHECK-NEXT:    blt.w .LBB1_6
 ; CHECK-NEXT:  @ %bb.1: @ %for.cond3.preheader.lr.ph
 ; CHECK-NEXT:    ldrsh.w r2, [r2]
 ; CHECK-NEXT:    cmp r2, #1
-; CHECK-NEXT:    blt.w .LBB1_6
+; CHECK-NEXT:    blt .LBB1_6
 ; CHECK-NEXT:  @ %bb.2: @ %for.cond3.preheader.us.preheader
-; CHECK-NEXT:    ldr r7, [sp, #152]
-; CHECK-NEXT:    movs r4, #252
-; CHECK-NEXT:    lsls r6, r3, #3
-; CHECK-NEXT:    and.w r4, r4, r3, lsr #3
-; CHECK-NEXT:    uxtb r6, r6
+; CHECK-NEXT:    ldr r7, [sp, #168]
 ; CHECK-NEXT:    movs r5, #120
-; CHECK-NEXT:    mul lr, r4, r7
+; CHECK-NEXT:    lsls r6, r3, #3
+; CHECK-NEXT:    movs r4, #252
 ; CHECK-NEXT:    and.w r5, r5, r3, lsr #9
+; CHECK-NEXT:    uxtb r6, r6
+; CHECK-NEXT:    and.w r3, r4, r3, lsr #3
 ; CHECK-NEXT:    muls r6, r7, r6
-; CHECK-NEXT:    vmov.i16 q0, #0x78
-; CHECK-NEXT:    rsb.w r3, r7, #256
-; CHECK-NEXT:    muls r5, r7, r5
-; CHECK-NEXT:    lsls r7, r1, #1
-; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
-; CHECK-NEXT:    vdup.16 q4, r6
-; CHECK-NEXT:    mov.w r6, #2016
+; CHECK-NEXT:    mul lr, r3, r7
+; CHECK-NEXT:    vdup.16 q0, r6
+; CHECK-NEXT:    vstrw.32 q0, [sp, #64] @ 16-byte Spill
 ; CHECK-NEXT:    vdup.16 q0, lr
-; CHECK-NEXT:    movs r4, #0
-; CHECK-NEXT:    vmov.i16 q2, #0xf8
-; CHECK-NEXT:    vmov.i16 q5, #0xfc
+; CHECK-NEXT:    muls r5, r7, r5
+; CHECK-NEXT:    vstrw.32 q0, [sp, #48] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i16 q0, #0xfc
+; CHECK-NEXT:    mov.w r6, #2016
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #32] @ 16-byte Spill
 ; CHECK-NEXT:    vdup.16 q0, r5
-; CHECK-NEXT:    vdup.16 q6, r6
-; CHECK-NEXT:    vmov.i16 q3, #0xf800
+; CHECK-NEXT:    rsb.w r3, r7, #256
 ; CHECK-NEXT:    vstrw.32 q0, [sp, #16] @ 16-byte Spill
-; CHECK-NEXT:    vstrw.32 q3, [sp] @ 16-byte Spill
+; CHECK-NEXT:    vdup.16 q0, r6
+; CHECK-NEXT:    vmov.i16 q2, #0xf8
+; CHECK-NEXT:    vmov.i16 q5, #0x78
+; CHECK-NEXT:    vstrw.32 q0, [sp] @ 16-byte Spill
+; CHECK-NEXT:    vmov.i16 q6, #0xf800
+; CHECK-NEXT:    movs r4, #0
+; CHECK-NEXT:    vldrw.u32 q7, [sp] @ 16-byte Reload
 ; CHECK-NEXT:    .p2align 2
 ; CHECK-NEXT:  .LBB1_3: @ %vector.ph
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
@@ -237,54 +234,45 @@ define void @__arm_2d_impl_rgb16_colour_filling_with_alpha_sched(i16* noalias no
 ; CHECK-NEXT:    @ Parent Loop BB1_3 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
 ; CHECK-NEXT:    vldrh.u16 q0, [r5]
+; CHECK-NEXT:    vshl.i16 q1, q0, #3
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #64] @ 16-byte Reload
+; CHECK-NEXT:    vand q1, q1, q2
+; CHECK-NEXT:    vmla.i16 q4, q1, r3
 ; CHECK-NEXT:    vmov.f64 d6, d4
 ; CHECK-NEXT:    vmov.f64 d7, d5
-; CHECK-NEXT:    vshl.i16 q1, q0, #3
-; CHECK-NEXT:    vand q1, q1, q2
-; CHECK-NEXT:    vmov q2, q4
-; CHECK-NEXT:    vmla.u16 q2, q1, r3
-; CHECK-NEXT:    vshr.u16 q1, q0, #3
-; CHECK-NEXT:    vand q1, q1, q5
-; CHECK-NEXT:    vmov.f64 d14, d10
-; CHECK-NEXT:    vmov.f64 d15, d11
-; CHECK-NEXT:    vmov.f64 d10, d8
-; CHECK-NEXT:    vmov.f64 d11, d9
-; CHECK-NEXT:    vldrw.u32 q4, [sp, #32] @ 16-byte Reload
-; CHECK-NEXT:    vshr.u16 q0, q0, #9
-; CHECK-NEXT:    vmla.u16 q4, q1, r3
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #32] @ 16-byte Reload
+; CHECK-NEXT:    vshr.u16 q2, q0, #9
+; CHECK-NEXT:    vshr.u16 q0, q0, #3
 ; CHECK-NEXT:    vand q0, q0, q1
-; CHECK-NEXT:    vldrw.u32 q1, [sp, #16] @ 16-byte Reload
-; CHECK-NEXT:    vmla.u16 q1, q0, r3
-; CHECK-NEXT:    vshr.u16 q0, q2, #11
-; CHECK-NEXT:    vshr.u16 q2, q4, #5
-; CHECK-NEXT:    vand q2, q2, q6
-; CHECK-NEXT:    vorr q0, q2, q0
+; CHECK-NEXT:    vldrw.u32 q1, [sp, #48] @ 16-byte Reload
+; CHECK-NEXT:    vmla.i16 q1, q0, r3
+; CHECK-NEXT:    vand q2, q2, q5
+; CHECK-NEXT:    vshr.u16 q0, q4, #11
+; CHECK-NEXT:    vldrw.u32 q4, [sp, #16] @ 16-byte Reload
+; CHECK-NEXT:    vshr.u16 q1, q1, #5
+; CHECK-NEXT:    vmla.i16 q4, q2, r3
+; CHECK-NEXT:    vand q1, q1, q7
+; CHECK-NEXT:    vorr q0, q1, q0
+; CHECK-NEXT:    vand q1, q4, q6
+; CHECK-NEXT:    vorr q0, q0, q1
+; CHECK-NEXT:    vstrh.16 q0, [r5], #16
 ; CHECK-NEXT:    vmov.f64 d4, d6
 ; CHECK-NEXT:    vmov.f64 d5, d7
-; CHECK-NEXT:    vldrw.u32 q3, [sp] @ 16-byte Reload
-; CHECK-NEXT:    vmov.f64 d8, d10
-; CHECK-NEXT:    vmov.f64 d9, d11
-; CHECK-NEXT:    vand q1, q1, q3
-; CHECK-NEXT:    vorr q0, q0, q1
-; CHECK-NEXT:    vmov.f64 d10, d14
-; CHECK-NEXT:    vmov.f64 d11, d15
-; CHECK-NEXT:    vstrh.16 q0, [r5], #16
 ; CHECK-NEXT:    letp lr, .LBB1_4
 ; CHECK-NEXT:  @ %bb.5: @ %for.cond3.for.cond.cleanup7_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB1_3 Depth=1
+; CHECK-NEXT:    add.w r0, r0, r1, lsl #1
 ; CHECK-NEXT:    adds r4, #1
 ; CHECK-NEXT:    cmp r4, r12
-; CHECK-NEXT:    add r0, r7
 ; CHECK-NEXT:    bne .LBB1_3
 ; CHECK-NEXT:  .LBB1_6: @ %for.cond.cleanup
-; CHECK-NEXT:    add sp, #64
+; CHECK-NEXT:    add sp, #80
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11, d12, d13, d14, d15}
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
 entry:
-  %iHeight = getelementptr inbounds %struct.arm_2d_size_t, %struct.arm_2d_size_t* %ptCopySize, i32 0, i32 1
-  %0 = load i16, i16* %iHeight, align 2
+  %iHeight = getelementptr inbounds %struct.arm_2d_size_t, ptr %ptCopySize, i32 0, i32 1
+  %0 = load i16, ptr %iHeight, align 2
   %conv1 = sext i16 %0 to i32
   %and.i = shl i16 %hwColour, 3
   %shl.i = and i16 %and.i, 248
@@ -299,8 +287,7 @@ entry:
   br i1 %cmp61, label %for.cond3.preheader.lr.ph, label %for.cond.cleanup
 
 for.cond3.preheader.lr.ph:                        ; preds = %entry
-  %iWidth = getelementptr inbounds %struct.arm_2d_size_t, %struct.arm_2d_size_t* %ptCopySize, i32 0, i32 0
-  %6 = load i16, i16* %iWidth, align 2
+  %6 = load i16, ptr %ptCopySize, align 2
   %conv4 = sext i16 %6 to i32
   %cmp558 = icmp sgt i16 %6, 0
   br i1 %cmp558, label %for.cond3.preheader.us.preheader, label %for.cond.cleanup
@@ -322,42 +309,40 @@ for.cond3.preheader.us.preheader:                 ; preds = %for.cond3.preheader
   br label %vector.ph
 
 vector.ph:                                        ; preds = %for.cond3.for.cond.cleanup7_crit_edge.us, %for.cond3.preheader.us.preheader
-  %phwTargetBase.addr.063.us = phi i16* [ %add.ptr.us, %for.cond3.for.cond.cleanup7_crit_edge.us ], [ %phwTargetBase, %for.cond3.preheader.us.preheader ]
+  %phwTargetBase.addr.063.us = phi ptr [ %add.ptr.us, %for.cond3.for.cond.cleanup7_crit_edge.us ], [ %phwTargetBase, %for.cond3.preheader.us.preheader ]
   %y.062.us = phi i32 [ %inc32.us, %for.cond3.for.cond.cleanup7_crit_edge.us ], [ 0, %for.cond3.preheader.us.preheader ]
   br label %vector.body
 
 vector.body:                                      ; preds = %vector.body, %vector.ph
   %index = phi i32 [ 0, %vector.ph ], [ %index.next, %vector.body ]
-  %next.gep = getelementptr i16, i16* %phwTargetBase.addr.063.us, i32 %index
+  %next.gep = getelementptr i16, ptr %phwTargetBase.addr.063.us, i32 %index
   %active.lane.mask = call <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32 %index, i32 %conv4)
-  %7 = bitcast i16* %next.gep to <8 x i16>*
-  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>* %7, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
-  %8 = shl <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-  %9 = and <8 x i16> %8, <i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248>
-  %10 = lshr <8 x i16> %wide.masked.load, <i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9>
-  %11 = and <8 x i16> %10, <i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120>
-  %12 = lshr <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
-  %13 = and <8 x i16> %12, <i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252>
-  %14 = mul <8 x i16> %9, %broadcast.splat76
-  %15 = add <8 x i16> %14, %broadcast.splat78
-  %16 = lshr <8 x i16> %15, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
-  %17 = mul <8 x i16> %13, %broadcast.splat76
-  %18 = add <8 x i16> %17, %broadcast.splat80
-  %19 = mul <8 x i16> %11, %broadcast.splat76
-  %20 = add <8 x i16> %19, %broadcast.splat82
-  %21 = lshr <8 x i16> %18, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
-  %22 = and <8 x i16> %21, <i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016>
-  %23 = or <8 x i16> %22, %16
-  %24 = and <8 x i16> %20, <i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048>
-  %25 = or <8 x i16> %23, %24
-  %26 = bitcast i16* %next.gep to <8 x i16>*
-  call void @llvm.masked.store.v8i16.p0v8i16(<8 x i16> %25, <8 x i16>* %26, i32 2, <8 x i1> %active.lane.mask)
+  %wide.masked.load = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr %next.gep, i32 2, <8 x i1> %active.lane.mask, <8 x i16> poison)
+  %7 = shl <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  %8 = and <8 x i16> %7, <i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248, i16 248>
+  %9 = lshr <8 x i16> %wide.masked.load, <i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9, i16 9>
+  %10 = and <8 x i16> %9, <i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120, i16 120>
+  %11 = lshr <8 x i16> %wide.masked.load, <i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3, i16 3>
+  %12 = and <8 x i16> %11, <i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252, i16 252>
+  %13 = mul <8 x i16> %8, %broadcast.splat76
+  %14 = add <8 x i16> %13, %broadcast.splat78
+  %15 = lshr <8 x i16> %14, <i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11, i16 11>
+  %16 = mul <8 x i16> %12, %broadcast.splat76
+  %17 = add <8 x i16> %16, %broadcast.splat80
+  %18 = mul <8 x i16> %10, %broadcast.splat76
+  %19 = add <8 x i16> %18, %broadcast.splat82
+  %20 = lshr <8 x i16> %17, <i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5, i16 5>
+  %21 = and <8 x i16> %20, <i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016, i16 2016>
+  %22 = or <8 x i16> %21, %15
+  %23 = and <8 x i16> %19, <i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048, i16 -2048>
+  %24 = or <8 x i16> %22, %23
+  call void @llvm.masked.store.v8i16.p0(<8 x i16> %24, ptr %next.gep, i32 2, <8 x i1> %active.lane.mask)
   %index.next = add i32 %index, 8
-  %27 = icmp eq i32 %index.next, %n.vec
-  br i1 %27, label %for.cond3.for.cond.cleanup7_crit_edge.us, label %vector.body
+  %25 = icmp eq i32 %index.next, %n.vec
+  br i1 %25, label %for.cond3.for.cond.cleanup7_crit_edge.us, label %vector.body
 
 for.cond3.for.cond.cleanup7_crit_edge.us:         ; preds = %vector.body
-  %add.ptr.us = getelementptr inbounds i16, i16* %phwTargetBase.addr.063.us, i32 %conv30
+  %add.ptr.us = getelementptr inbounds i16, ptr %phwTargetBase.addr.063.us, i32 %conv30
   %inc32.us = add nuw nsw i32 %y.062.us, 1
   %exitcond66.not = icmp eq i32 %inc32.us, %conv1
   br i1 %exitcond66.not, label %for.cond.cleanup, label %vector.ph
@@ -367,5 +352,5 @@ for.cond.cleanup:                                 ; preds = %for.cond3.for.cond.
 }
 
 declare <8 x i1> @llvm.get.active.lane.mask.v8i1.i32(i32, i32) #1
-declare <8 x i16> @llvm.masked.load.v8i16.p0v8i16(<8 x i16>*, i32 immarg, <8 x i1>, <8 x i16>) #2
-declare void @llvm.masked.store.v8i16.p0v8i16(<8 x i16>, <8 x i16>*, i32 immarg, <8 x i1>) #3
+declare <8 x i16> @llvm.masked.load.v8i16.p0(ptr, i32 immarg, <8 x i1>, <8 x i16>) #2
+declare void @llvm.masked.store.v8i16.p0(<8 x i16>, ptr, i32 immarg, <8 x i1>) #3

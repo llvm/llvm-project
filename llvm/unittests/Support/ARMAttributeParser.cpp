@@ -37,8 +37,8 @@ bool testBuildAttr(unsigned Tag, unsigned Value,
   ARMAttributeParser Parser;
   cantFail(Parser.parse(Bytes, support::little));
 
-  Optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
-  return Attr.hasValue() && Attr.getValue() == ExpectedValue;
+  std::optional<unsigned> Attr = Parser.getAttributeValue(ExpectedTag);
+  return Attr && *Attr == ExpectedValue;
 }
 
 void testParseError(ArrayRef<uint8_t> bytes, const char *msg) {

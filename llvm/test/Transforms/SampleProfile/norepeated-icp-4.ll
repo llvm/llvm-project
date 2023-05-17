@@ -3,7 +3,7 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@p = dso_local global void ()* null, align 8
+@p = dso_local global ptr null, align 8
 
 ; After _Z3goov is inlined into _Z3foov, the value profile of the indirect
 ; call in _Z3goov and _Z3foov need to be scaled. The test is to make sure
@@ -21,7 +21,7 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: uwtable mustprogress
 define dso_local void @_Z3goov() #0 !dbg !11 !prof !23 {
 entry:
-  %t0 = load void ()*, void ()** @p, align 8, !dbg !12, !tbaa !13
+  %t0 = load ptr, ptr @p, align 8, !dbg !12, !tbaa !13
   call void %t0(), !dbg !17, !prof !22
   ret void, !dbg !18
 }

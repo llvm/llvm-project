@@ -16,6 +16,9 @@ using namespace clang::interp;
 
 Pointer::Pointer(Block *Pointee) : Pointer(Pointee, 0, 0) {}
 
+Pointer::Pointer(Block *Pointee, unsigned BaseAndOffset)
+    : Pointer(Pointee, BaseAndOffset, BaseAndOffset) {}
+
 Pointer::Pointer(const Pointer &P) : Pointer(P.Pointee, P.Base, P.Offset) {}
 
 Pointer::Pointer(Pointer &&P)
@@ -100,13 +103,17 @@ APValue Pointer::toAPValue() const {
     if (isUnknownSizeArray()) {
       IsOnePastEnd = false;
       Offset = CharUnits::Zero();
+    } else if (Desc->asExpr()) {
+      // Pointer pointing to a an expression.
+      IsOnePastEnd = false;
+      Offset = CharUnits::Zero();
     } else {
       // TODO: compute the offset into the object.
       Offset = CharUnits::Zero();
 
       // Build the path into the object.
       Pointer Ptr = *this;
-      while (Ptr.isField()) {
+      while (Ptr.isField() || Ptr.isArrayElement()) {
         if (Ptr.isArrayElement()) {
           Path.push_back(APValue::LValuePathEntry::ArrayIndex(Ptr.getIndex()));
           Ptr = Ptr.getArray();
@@ -129,14 +136,21 @@ APValue Pointer::toAPValue() const {
     }
   }
 
+  // We assemble the LValuePath starting from the innermost pointer to the
+  // outermost one. SO in a.b.c, the first element in Path will refer to
+  // the field 'c', while later code expects it to refer to 'a'.
+  // Just invert the order of the elements.
+  std::reverse(Path.begin(), Path.end());
+
   return APValue(Base, Offset, Path, IsOnePastEnd, IsNullPtr);
 }
 
 bool Pointer::isInitialized() const {
   assert(Pointee && "Cannot check if null pointer was initialized");
-  Descriptor *Desc = getFieldDesc();
+  const Descriptor *Desc = getFieldDesc();
+  assert(Desc);
   if (Desc->isPrimitiveArray()) {
-    if (Pointee->IsStatic)
+    if (isStatic() && Base == 0)
       return true;
     // Primitive array field are stored in a bitset.
     InitMap *Map = getInitMap();
@@ -153,19 +167,23 @@ bool Pointer::isInitialized() const {
 
 void Pointer::initialize() const {
   assert(Pointee && "Cannot initialize null pointer");
-  Descriptor *Desc = getFieldDesc();
+  const Descriptor *Desc = getFieldDesc();
+
+  assert(Desc);
   if (Desc->isPrimitiveArray()) {
-    if (!Pointee->IsStatic) {
-      // Primitive array initializer.
-      InitMap *&Map = getInitMap();
-      if (Map == (InitMap *)-1)
-        return;
-      if (Map == nullptr)
-        Map = InitMap::allocate(Desc->getNumElems());
-      if (Map->initialize(getIndex())) {
-        free(Map);
-        Map = (InitMap *)-1;
-      }
+    // Primitive global arrays don't have an initmap.
+    if (isStatic() && Base == 0)
+      return;
+
+    // Primitive array initializer.
+    InitMap *&Map = getInitMap();
+    if (Map == (InitMap *)-1)
+      return;
+    if (Map == nullptr)
+      Map = InitMap::allocate(Desc->getNumElems());
+    if (Map->initialize(getIndex())) {
+      free(Map);
+      Map = (InitMap *)-1;
     }
   } else {
     // Field has its bit in an inline descriptor.
@@ -189,5 +207,5 @@ bool Pointer::hasSameBase(const Pointer &A, const Pointer &B) {
 }
 
 bool Pointer::hasSameArray(const Pointer &A, const Pointer &B) {
-  return A.Base == B.Base && A.getFieldDesc()->IsArray;
+  return hasSameBase(A, B) && A.Base == B.Base && A.getFieldDesc()->IsArray;
 }

@@ -11,8 +11,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Lower/SymbolMap.h"
+#include "flang/Optimizer/Builder/Todo.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Debug.h"
+#include <optional>
 
 #define DEBUG_TYPE "flang-lower-symbol-map"
 
@@ -25,6 +27,7 @@ void Fortran::lower::SymMap::addSymbol(Fortran::semantics::SymbolRef sym,
             [&](const fir::CharArrayBoxValue &v) { makeSym(sym, v, force); },
             [&](const fir::BoxValue &v) { makeSym(sym, v, force); },
             [&](const fir::MutableBoxValue &v) { makeSym(sym, v, force); },
+            [&](const fir::PolymorphicValue &v) { makeSym(sym, v, force); },
             [](auto) {
               llvm::report_fatal_error("value not added to symbol table");
             });
@@ -48,6 +51,25 @@ Fortran::lower::SymbolBox Fortran::lower::SymMap::shallowLookupSymbol(
   auto iter = map.find(&symRef.get().GetUltimate());
   if (iter != map.end())
     return iter->second;
+  return SymbolBox::None{};
+}
+
+/// Skip one level when looking up the symbol. The use case is such as looking
+/// up the host variable symbol box by skipping the associated level in
+/// host-association in OpenMP code.
+Fortran::lower::SymbolBox Fortran::lower::SymMap::lookupOneLevelUpSymbol(
+    Fortran::semantics::SymbolRef symRef) {
+  Fortran::semantics::SymbolRef sym = symRef.get().GetUltimate();
+  auto jmap = symbolMapStack.rbegin();
+  auto jend = symbolMapStack.rend();
+  if (jmap == jend)
+    return SymbolBox::None{};
+  // Skip one level in symbol map stack.
+  for (++jmap; jmap != jend; ++jmap) {
+    auto iter = jmap->find(&*sym);
+    if (iter != jmap->end())
+      return iter->second;
+  }
   return SymbolBox::None{};
 }
 
@@ -79,9 +101,11 @@ Fortran::lower::operator<<(llvm::raw_ostream &os,
   os << "Symbol map:\n";
   for (auto i : llvm::enumerate(symMap.symbolMapStack)) {
     os << " level " << i.index() << "<{\n";
-    for (auto iter : i.value())
+    for (auto iter : i.value()) {
       os << "  symbol @" << static_cast<const void *>(iter.first) << " ["
-         << *iter.first << "] ->\n    " << iter.second;
+         << *iter.first << "] ->\n    ";
+      os << iter.second;
+    }
     os << " }>\n";
   }
   return os;

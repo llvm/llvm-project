@@ -735,6 +735,16 @@ bool generator::is_callback(QualType type)
 	return type->isFunctionType();
 }
 
+/* Is the parameter at position "i" of "fd" a pointer to a function?
+ */
+bool generator::is_callback_arg(FunctionDecl *fd, int i)
+{
+	ParmVarDecl *param = fd->getParamDecl(i);
+	QualType type = param->getOriginalType();
+
+	return is_callback(type);
+}
+
 /* Is "type" that of "char *" of "const char *"?
  */
 bool generator::is_string(QualType type)
@@ -779,6 +789,14 @@ string generator::extract_type(QualType type)
 const FunctionProtoType *generator::extract_prototype(QualType type)
 {
 	return type->getPointeeType()->getAs<FunctionProtoType>();
+}
+
+/* Given the type of a function pointer, return the number of arguments
+ * of the corresponding function prototype.
+ */
+int generator::prototype_n_args(QualType type)
+{
+	return extract_prototype(type)->getNumArgs();
 }
 
 /* Return the function name suffix for the type of "param".

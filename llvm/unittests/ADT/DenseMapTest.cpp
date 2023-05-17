@@ -7,9 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseMapInfo.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <map>
 #include <set>
+#include <utility>
+#include <variant>
 
 using namespace llvm;
 
@@ -118,6 +122,7 @@ TYPED_TEST(DenseMapTest, EmptyIntMapTest) {
 
   // Lookup tests
   EXPECT_FALSE(this->Map.count(this->getKey()));
+  EXPECT_FALSE(this->Map.contains(this->getKey()));
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.end());
   EXPECT_EQ(typename TypeParam::mapped_type(),
             this->Map.lookup(this->getKey()));
@@ -149,9 +154,19 @@ TYPED_TEST(DenseMapTest, SingleEntryMapTest) {
 
   // Lookup tests
   EXPECT_TRUE(this->Map.count(this->getKey()));
+  EXPECT_TRUE(this->Map.contains(this->getKey()));
   EXPECT_TRUE(this->Map.find(this->getKey()) == this->Map.begin());
   EXPECT_EQ(this->getValue(), this->Map.lookup(this->getKey()));
   EXPECT_EQ(this->getValue(), this->Map[this->getKey()]);
+}
+
+TYPED_TEST(DenseMapTest, AtTest) {
+  this->Map[this->getKey(0)] = this->getValue(0);
+  this->Map[this->getKey(1)] = this->getValue(1);
+  this->Map[this->getKey(2)] = this->getValue(2);
+  EXPECT_EQ(this->getValue(0), this->Map.at(this->getKey(0)));
+  EXPECT_EQ(this->getValue(1), this->Map.at(this->getKey(1)));
+  EXPECT_EQ(this->getValue(2), this->Map.at(this->getKey(2)));
 }
 
 // Test clear() method
@@ -442,6 +457,7 @@ TEST(DenseMapCustomTest, InitFromIterator) {
   std::vector<std::pair<int, CountCopyAndMove>> Values;
   // The size is a random value greater than 64 (hardcoded DenseMap min init)
   const int Count = 65;
+  Values.reserve(Count);
   for (int i = 0; i < Count; i++)
     Values.emplace_back(i, CountCopyAndMove());
 
@@ -607,6 +623,15 @@ TEST(DenseMapCustomTest, LargeSmallDenseMapCompaction) {
   EXPECT_TRUE(map.find(0) == map.end());
 }
 
+TEST(DenseMapCustomTest, SmallDenseMapWithNumBucketsNonPowerOf2) {
+  // Is not power of 2.
+  const unsigned NumInitBuckets = 33;
+  // Power of 2 less then NumInitBuckets.
+  constexpr unsigned InlineBuckets = 4;
+  // Constructor should not trigger assert.
+  SmallDenseMap<int, int, InlineBuckets> map(NumInitBuckets);
+}
+
 TEST(DenseMapCustomTest, TryEmplaceTest) {
   DenseMap<int, std::unique_ptr<int>> Map;
   std::unique_ptr<int> P(new int(2));
@@ -669,7 +694,7 @@ struct B : public A {
 
 namespace llvm {
 template <typename T>
-struct DenseMapInfo<T, std::enable_if_t<std::is_base_of<A, T>::value>> {
+struct DenseMapInfo<T, std::enable_if_t<std::is_base_of_v<A, T>>> {
   static inline T getEmptyKey() { return {static_cast<int>(~0)}; }
   static inline T getTombstoneKey() { return {static_cast<int>(~0U - 1)}; }
   static unsigned getHashValue(const T &Val) { return Val.value; }
@@ -697,5 +722,19 @@ TEST(DenseMapCustomTest, SFINAEMapInfo) {
   EXPECT_EQ(Map.find(Keys[0]), Map.end());
   EXPECT_EQ(Map.find(Keys[1]), Map.end());
   EXPECT_EQ(Map.find(Keys[2]), Map.end());
+}
+
+TEST(DenseMapCustomTest, VariantSupport) {
+  using variant = std::variant<int, int>;
+  DenseMap<variant, int> Map;
+  variant Keys[] = {
+      variant(std::in_place_index<0>, 1),
+      variant(std::in_place_index<1>, 1),
+  };
+  Map.try_emplace(Keys[0], 0);
+  Map.try_emplace(Keys[1], 1);
+  EXPECT_THAT(Map, testing::SizeIs(2));
+  EXPECT_NE(DenseMapInfo<variant>::getHashValue(Keys[0]),
+            DenseMapInfo<variant>::getHashValue(Keys[1]));
 }
 } // namespace

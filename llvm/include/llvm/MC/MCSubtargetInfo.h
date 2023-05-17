@@ -14,15 +14,15 @@
 #define LLVM_MC_MCSUBTARGETINFO_H
 
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
 #include "llvm/MC/SubtargetFeature.h"
+#include "llvm/TargetParser/Triple.h"
 #include <cassert>
 #include <cstdint>
+#include <optional>
 #include <string>
 
 namespace llvm {
@@ -230,23 +230,27 @@ public:
     return Found != ProcDesc.end() && StringRef(Found->Key) == CPU;
   }
 
+  ArrayRef<SubtargetSubTypeKV> getAllProcessorDescriptions() const {
+    return ProcDesc;
+  }
+
   virtual unsigned getHwMode() const { return 0; }
 
   /// Return the cache size in bytes for the given level of cache.
   /// Level is zero-based, so a value of zero means the first level of
   /// cache.
   ///
-  virtual Optional<unsigned> getCacheSize(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheSize(unsigned Level) const;
 
   /// Return the cache associatvity for the given level of cache.
   /// Level is zero-based, so a value of zero means the first level of
   /// cache.
   ///
-  virtual Optional<unsigned> getCacheAssociativity(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheAssociativity(unsigned Level) const;
 
   /// Return the target cache line size in bytes at a given level.
   ///
-  virtual Optional<unsigned> getCacheLineSize(unsigned Level) const;
+  virtual std::optional<unsigned> getCacheLineSize(unsigned Level) const;
 
   /// Return the target cache line size in bytes.  By default, return
   /// the line size for the bottom-most level of cache.  This provides
@@ -255,7 +259,7 @@ public:
   /// cache model.
   ///
   virtual unsigned getCacheLineSize() const {
-    Optional<unsigned> Size = getCacheLineSize(0);
+    std::optional<unsigned> Size = getCacheLineSize(0);
     if (Size)
       return *Size;
 
@@ -282,6 +286,9 @@ public:
                                         unsigned NumStridedMemAccesses,
                                         unsigned NumPrefetches,
                                         bool HasCall) const;
+
+  /// \return if target want to issue a prefetch in address space \p AS.
+  virtual bool shouldPrefetchAddressSpace(unsigned AS) const;
 };
 
 } // end namespace llvm

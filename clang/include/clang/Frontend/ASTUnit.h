@@ -31,8 +31,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -42,6 +40,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 #include <vector>
@@ -120,11 +119,13 @@ private:
   std::shared_ptr<PreprocessorOptions>    PPOpts;
   IntrusiveRefCntPtr<ASTReader> Reader;
   bool HadModuleLoaderFatalFailure = false;
+  bool StorePreamblesInMemory = false;
 
   struct ASTWriterData;
   std::unique_ptr<ASTWriterData> WriterData;
 
   FileSystemOptions FileSystemOpts;
+  std::string PreambleStoragePath;
 
   /// The AST consumer that received information about the translation
   /// unit as it was parsed or loaded.
@@ -222,7 +223,7 @@ private:
   llvm::StringMap<SourceLocation> PreambleSrcLocCache;
 
   /// The contents of the preamble.
-  llvm::Optional<PrecompiledPreamble> Preamble;
+  std::optional<PrecompiledPreamble> Preamble;
 
   /// When non-NULL, this is the buffer used to store the contents of
   /// the main file when it has been padded for use with the precompiled
@@ -803,6 +804,13 @@ public:
   ///
   /// \param ResourceFilesPath - The path to the compiler resource files.
   ///
+  /// \param StorePreamblesInMemory - Whether to store PCH in memory. If false,
+  /// PCH are stored in temporary files.
+  ///
+  /// \param PreambleStoragePath - The path to a directory, in which to create
+  /// temporary PCH files. If empty, the default system temporary directory is
+  /// used. This parameter is ignored if \p StorePreamblesInMemory is true.
+  ///
   /// \param ModuleFormat - If provided, uses the specific module format.
   ///
   /// \param ErrAST - If non-null and parsing failed without any AST to return
@@ -821,9 +829,10 @@ public:
       const char **ArgBegin, const char **ArgEnd,
       std::shared_ptr<PCHContainerOperations> PCHContainerOps,
       IntrusiveRefCntPtr<DiagnosticsEngine> Diags, StringRef ResourceFilesPath,
-      bool OnlyLocalDecls = false,
+      bool StorePreamblesInMemory = false,
+      StringRef PreambleStoragePath = StringRef(), bool OnlyLocalDecls = false,
       CaptureDiagsKind CaptureDiagnostics = CaptureDiagsKind::None,
-      ArrayRef<RemappedFile> RemappedFiles = None,
+      ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
       bool RemappedFilesKeepOriginalName = true,
       unsigned PrecompilePreambleAfterNParses = 0,
       TranslationUnitKind TUKind = TU_Complete,
@@ -835,7 +844,7 @@ public:
       bool SingleFileParse = false, bool UserFilesAreVolatile = false,
       bool ForSerialization = false,
       bool RetainExcludedConditionalBlocks = false,
-      llvm::Optional<StringRef> ModuleFormat = llvm::None,
+      std::optional<StringRef> ModuleFormat = std::nullopt,
       std::unique_ptr<ASTUnit> *ErrAST = nullptr,
       IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
@@ -851,7 +860,7 @@ public:
   /// \returns True if a failure occurred that causes the ASTUnit not to
   /// contain any translation-unit information, false otherwise.
   bool Reparse(std::shared_ptr<PCHContainerOperations> PCHContainerOps,
-               ArrayRef<RemappedFile> RemappedFiles = None,
+               ArrayRef<RemappedFile> RemappedFiles = std::nullopt,
                IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS = nullptr);
 
   /// Free data that will be re-generated on the next parse.

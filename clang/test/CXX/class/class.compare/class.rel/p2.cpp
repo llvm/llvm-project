@@ -22,10 +22,10 @@ namespace Rel {
 
   struct B {
     bool operator<=>(B) const = delete; // expected-note 4{{deleted here}} expected-note-re 8{{candidate {{.*}} deleted}}
-    friend bool operator<(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}}
-    friend bool operator<=(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}}
-    friend bool operator>(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}}
-    friend bool operator>=(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}}
+    friend bool operator<(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}} expected-note{{replace 'default'}}
+    friend bool operator<=(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}} expected-note{{replace 'default'}}
+    friend bool operator>(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}} expected-note{{replace 'default'}}
+    friend bool operator>=(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}} expected-note{{replace 'default'}}
   };
   bool b1 = B() < B(); // expected-error {{deleted}}
   bool b2 = B() <= B(); // expected-error {{deleted}}
@@ -36,7 +36,7 @@ namespace Rel {
     friend bool operator<=>(const C&, const C&);
     friend bool operator<(const C&, const C&); // expected-note {{because this non-rewritten comparison function would be the best match}}
 
-    bool operator<(const C&) const = default; // expected-warning {{implicitly deleted}}
+    bool operator<(const C&) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
     bool operator>(const C&) const = default; // OK
   };
 }
@@ -53,7 +53,7 @@ namespace NotEqual {
 
   struct B {
     bool operator==(B) const = delete; // expected-note {{deleted here}} expected-note-re 2{{candidate {{.*}} deleted}}
-    friend bool operator!=(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}}
+    friend bool operator!=(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note {{because it would invoke a deleted comparison}} expected-note-re {{candidate {{.*}} deleted}} expected-note{{replace 'default'}}
   };
   bool b = B() != B(); // expected-error {{deleted}}
 
@@ -61,15 +61,15 @@ namespace NotEqual {
     friend bool operator==(const C&, const C&);
     friend bool operator!=(const C&, const C&); // expected-note {{because this non-rewritten comparison function would be the best match}}
 
-    bool operator!=(const C&) const = default; // expected-warning {{implicitly deleted}}
+    bool operator!=(const C&) const = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
   };
 
   // Ensure we don't go into an infinite loop diagnosing this: the first function
   // is deleted because it calls the second function, which is deleted because it
   // calls the first.
   struct Evil {
-    friend bool operator!=(const Evil&, const Evil&) = default; // expected-warning {{implicitly deleted}} expected-note {{would be the best match}}
-    bool operator!=(const Evil&) const = default; // expected-warning {{implicitly deleted}} expected-note {{would be the best match}}
+    friend bool operator!=(const Evil&, const Evil&) = default; // expected-warning {{implicitly deleted}} expected-note {{would be the best match}} expected-note{{replace 'default'}}
+    bool operator!=(const Evil&) const = default; // expected-warning {{implicitly deleted}} expected-note {{would be the best match}} expected-note{{replace 'default'}}
   };
 }
 
@@ -78,7 +78,7 @@ namespace Access {
     int operator<=>(A) const; // expected-note {{private}}
   };
   struct B : A {
-    friend bool operator<(const B&, const B&) = default; // expected-warning {{implicitly deleted}}
+    friend bool operator<(const B&, const B&) = default; // expected-warning {{implicitly deleted}} expected-note{{replace 'default'}}
     // expected-note@-1 {{defaulted 'operator<' is implicitly deleted because it would invoke a private 'operator<=>' member of 'Access::A'}}
   };
 }

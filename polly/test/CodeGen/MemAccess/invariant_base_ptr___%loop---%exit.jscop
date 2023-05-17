@@ -8,7 +8,7 @@
       {
          "name" : "MemRef_X",
          "sizes" : [ "*" ],
-         "type" : "float*"
+         "type" : "ptr"
       },
       {
          "name" : "MemRef_Base",

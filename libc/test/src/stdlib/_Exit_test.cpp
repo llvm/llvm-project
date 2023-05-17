@@ -9,7 +9,7 @@
 #include "include/stdlib.h"
 #include "src/stdlib/_Exit.h"
 #include "src/stdlib/exit.h"
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 TEST(LlvmLibcStdlib, _Exit) {
   EXPECT_EXITS([] { __llvm_libc::_Exit(1); }, 1);

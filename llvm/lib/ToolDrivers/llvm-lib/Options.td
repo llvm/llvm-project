@@ -22,6 +22,7 @@ def libpath: P<"libpath", "Object file search path">;
 // Can't be called "list" since that's a keyword.
 def lst    : F<"list">, HelpText<"List contents of .lib file on stdout">;
 def out    : P<"out", "Path to file to write output">;
+def deffile : P<"def", "def file to use to generate import library">;
 
 def llvmlibthin : F<"llvmlibthin">,
     HelpText<"Make .lib point to .obj files instead of copying their contents">;
@@ -44,4 +45,8 @@ def help_q : Flag<["/??", "-??", "/?", "-?"], "">, Alias<help>;
 //==============================================================================
 
 def ltcg : F<"ltcg">;
+def nodefaultlib: P<"nodefaultlib", "">;
+def nodefaultlib_all: F<"nodefaultlib">;
 def nologo : F<"nologo">;
+def subsystem : P<"subsystem", "">;
+def verbose : F<"verbose">;

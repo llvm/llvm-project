@@ -6,7 +6,7 @@
 ; RUN: llc -ppc-asm-full-reg-names -verify-machineinstrs < %s -mtriple=powerpc64-- -mcpu=a2    | FileCheck %s --check-prefixes=A2_64
 
 
-define void @STWBRX(i32 %i, i8* %ptr, i32 %off) {
+define void @STWBRX(i32 %i, ptr %ptr, i32 %off) {
 ; X32-LABEL: STWBRX:
 ; X32:       # %bb.0:
 ; X32-NEXT:    stwbrx r3, r4, r5
@@ -29,14 +29,13 @@ define void @STWBRX(i32 %i, i8* %ptr, i32 %off) {
 ; A2_64-NEXT:    extsw r5, r5
 ; A2_64-NEXT:    stwbrx r3, r4, r5
 ; A2_64-NEXT:    blr
-  %tmp1 = getelementptr i8, i8* %ptr, i32 %off
-  %tmp1.upgrd.1 = bitcast i8* %tmp1 to i32*
+  %tmp1 = getelementptr i8, ptr %ptr, i32 %off
   %tmp13 = tail call i32 @llvm.bswap.i32( i32 %i )
-  store i32 %tmp13, i32* %tmp1.upgrd.1
+  store i32 %tmp13, ptr %tmp1
   ret void
 }
 
-define i32 @LWBRX(i8* %ptr, i32 %off) {
+define i32 @LWBRX(ptr %ptr, i32 %off) {
 ; X32-LABEL: LWBRX:
 ; X32:       # %bb.0:
 ; X32-NEXT:    lwbrx r3, r3, r4
@@ -59,14 +58,13 @@ define i32 @LWBRX(i8* %ptr, i32 %off) {
 ; A2_64-NEXT:    extsw r4, r4
 ; A2_64-NEXT:    lwbrx r3, r3, r4
 ; A2_64-NEXT:    blr
-  %tmp1 = getelementptr i8, i8* %ptr, i32 %off
-  %tmp1.upgrd.2 = bitcast i8* %tmp1 to i32*
-  %tmp = load i32, i32* %tmp1.upgrd.2
+  %tmp1 = getelementptr i8, ptr %ptr, i32 %off
+  %tmp = load i32, ptr %tmp1
   %tmp14 = tail call i32 @llvm.bswap.i32( i32 %tmp )
   ret i32 %tmp14
 }
 
-define void @STHBRX(i16 %s, i8* %ptr, i32 %off) {
+define void @STHBRX(i16 %s, ptr %ptr, i32 %off) {
 ; X32-LABEL: STHBRX:
 ; X32:       # %bb.0:
 ; X32-NEXT:    sthbrx r3, r4, r5
@@ -89,14 +87,13 @@ define void @STHBRX(i16 %s, i8* %ptr, i32 %off) {
 ; A2_64-NEXT:    extsw r5, r5
 ; A2_64-NEXT:    sthbrx r3, r4, r5
 ; A2_64-NEXT:    blr
-  %tmp1 = getelementptr i8, i8* %ptr, i32 %off
-  %tmp1.upgrd.3 = bitcast i8* %tmp1 to i16*
+  %tmp1 = getelementptr i8, ptr %ptr, i32 %off
   %tmp5 = call i16 @llvm.bswap.i16( i16 %s )
-  store i16 %tmp5, i16* %tmp1.upgrd.3
+  store i16 %tmp5, ptr %tmp1
   ret void
 }
 
-define i16 @LHBRX(i8* %ptr, i32 %off) {
+define i16 @LHBRX(ptr %ptr, i32 %off) {
 ; X32-LABEL: LHBRX:
 ; X32:       # %bb.0:
 ; X32-NEXT:    lhbrx r3, r3, r4
@@ -119,16 +116,15 @@ define i16 @LHBRX(i8* %ptr, i32 %off) {
 ; A2_64-NEXT:    extsw r4, r4
 ; A2_64-NEXT:    lhbrx r3, r3, r4
 ; A2_64-NEXT:    blr
-  %tmp1 = getelementptr i8, i8* %ptr, i32 %off
-  %tmp1.upgrd.4 = bitcast i8* %tmp1 to i16*
-  %tmp = load i16, i16* %tmp1.upgrd.4
+  %tmp1 = getelementptr i8, ptr %ptr, i32 %off
+  %tmp = load i16, ptr %tmp1
   %tmp6 = call i16 @llvm.bswap.i16( i16 %tmp )
   ret i16 %tmp6
 }
 
 ; TODO: combine the bswap feeding a store on subtargets
 ; that do not have an STDBRX.
-define void @STDBRX(i64 %i, i8* %ptr, i64 %off) {
+define void @STDBRX(i64 %i, ptr %ptr, i64 %off) {
 ; PWR7_32-LABEL: STDBRX:
 ; PWR7_32:       # %bb.0:
 ; PWR7_32-NEXT:    li r6, 4
@@ -163,14 +159,13 @@ define void @STDBRX(i64 %i, i8* %ptr, i64 %off) {
 ; A2_64:       # %bb.0:
 ; A2_64-NEXT:    stdbrx r3, r4, r5
 ; A2_64-NEXT:    blr
-  %tmp1 = getelementptr i8, i8* %ptr, i64 %off
-  %tmp1.upgrd.1 = bitcast i8* %tmp1 to i64*
+  %tmp1 = getelementptr i8, ptr %ptr, i64 %off
   %tmp13 = tail call i64 @llvm.bswap.i64( i64 %i )
-  store i64 %tmp13, i64* %tmp1.upgrd.1
+  store i64 %tmp13, ptr %tmp1
   ret void
 }
 
-define i64 @LDBRX(i8* %ptr, i64 %off) {
+define i64 @LDBRX(ptr %ptr, i64 %off) {
 ; PWR7_32-LABEL: LDBRX:
 ; PWR7_32:       # %bb.0:
 ; PWR7_32-NEXT:    li r5, 4
@@ -198,9 +193,8 @@ define i64 @LDBRX(i8* %ptr, i64 %off) {
 ; A2_64:       # %bb.0:
 ; A2_64-NEXT:    ldbrx r3, r3, r4
 ; A2_64-NEXT:    blr
-  %tmp1 = getelementptr i8, i8* %ptr, i64 %off
-  %tmp1.upgrd.2 = bitcast i8* %tmp1 to i64*
-  %tmp = load i64, i64* %tmp1.upgrd.2
+  %tmp1 = getelementptr i8, ptr %ptr, i64 %off
+  %tmp = load i64, ptr %tmp1
   %tmp14 = tail call i64 @llvm.bswap.i64( i64 %tmp )
   ret i64 %tmp14
 }

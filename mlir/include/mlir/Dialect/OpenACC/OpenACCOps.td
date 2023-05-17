@@ -1,4 +1,4 @@
-//===- OpenACC.td - OpenACC operation definitions ----------*- tablegen -*-===//
+//===- OpenACCOps.td - OpenACC operation definitions -------*- tablegen -*-===//
 //
 // Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,21 +13,14 @@
 #ifndef OPENACC_OPS
 #define OPENACC_OPS
 
+include "mlir/Interfaces/ControlFlowInterfaces.td"
+include "mlir/Interfaces/SideEffectInterfaces.td"
+include "mlir/IR/BuiltinTypes.td"
 include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
-
-def OpenACC_Dialect : Dialect {
-  let name = "acc";
-
-  let summary = "An OpenACC dialect for MLIR.";
-
-  let description = [{
-    This dialect models the construct from the OpenACC 3.1 directive language.
-  }];
-
-  let useDefaultAttributePrinterParser = 1;
-  let cppNamespace = "::mlir::acc";
-}
+include "mlir/Dialect/OpenACC/OpenACCBase.td"
+include "mlir/Dialect/OpenACC/OpenACCOpsTypes.td"
+include "mlir/Dialect/OpenACC/OpenACCTypeInterfaces.td"
 
 // AccCommon requires definition of OpenACC_Dialect.
 include "mlir/Dialect/OpenACC/AccCommon.td"
@@ -37,41 +30,381 @@ class OpenACC_Op<string mnemonic, list<Trait> traits = []> :
   Op<OpenACC_Dialect, mnemonic, traits>;
 
 // Reduction operation enumeration.
-def OpenACC_ReductionOpAdd     : I32EnumAttrCase<"redop_add", 0>;
-def OpenACC_ReductionOpMul     : I32EnumAttrCase<"redop_mul", 1>;
-def OpenACC_ReductionOpMax     : I32EnumAttrCase<"redop_max", 2>;
-def OpenACC_ReductionOpMin     : I32EnumAttrCase<"redop_min", 3>;
-def OpenACC_ReductionOpAnd     : I32EnumAttrCase<"redop_and", 4>;
-def OpenACC_ReductionOpOr      : I32EnumAttrCase<"redop_or", 5>;
-def OpenACC_ReductionOpXor     : I32EnumAttrCase<"redop_xor", 6>;
-def OpenACC_ReductionOpLogEqv  : I32EnumAttrCase<"redop_leqv", 7>;
-def OpenACC_ReductionOpLogNeqv : I32EnumAttrCase<"redop_lneqv", 8>;
-def OpenACC_ReductionOpLogAnd  : I32EnumAttrCase<"redop_land", 9>;
-def OpenACC_ReductionOpLogOr   : I32EnumAttrCase<"redop_lor", 10>;
+def OpenACC_ReductionOperatorAdd     : I32EnumAttrCase<"redop_add", 0>;
+def OpenACC_ReductionOperatorMul     : I32EnumAttrCase<"redop_mul", 1>;
+def OpenACC_ReductionOperatorMax     : I32EnumAttrCase<"redop_max", 2>;
+def OpenACC_ReductionOperatorMin     : I32EnumAttrCase<"redop_min", 3>;
+def OpenACC_ReductionOperatorAnd     : I32EnumAttrCase<"redop_and", 4>;
+def OpenACC_ReductionOperatorOr      : I32EnumAttrCase<"redop_or", 5>;
+def OpenACC_ReductionOperatorXor     : I32EnumAttrCase<"redop_xor", 6>;
+def OpenACC_ReductionOperatorLogEqv  : I32EnumAttrCase<"redop_leqv", 7>;
+def OpenACC_ReductionOperatorLogNeqv : I32EnumAttrCase<"redop_lneqv", 8>;
+def OpenACC_ReductionOperatorLogAnd  : I32EnumAttrCase<"redop_land", 9>;
+def OpenACC_ReductionOperatorLogOr   : I32EnumAttrCase<"redop_lor", 10>;
 
-def OpenACC_ReductionOp : I32EnumAttr<"ReductionOp",
+def OpenACC_ReductionOperator : I32EnumAttr<"ReductionOperator",
     "built-in reduction operations supported by OpenACC",
-    [OpenACC_ReductionOpAdd, OpenACC_ReductionOpMul, OpenACC_ReductionOpMax,
-     OpenACC_ReductionOpMin, OpenACC_ReductionOpAnd, OpenACC_ReductionOpOr,
-     OpenACC_ReductionOpXor, OpenACC_ReductionOpLogEqv,
-     OpenACC_ReductionOpLogNeqv, OpenACC_ReductionOpLogAnd,
-     OpenACC_ReductionOpLogOr
+    [OpenACC_ReductionOperatorAdd, OpenACC_ReductionOperatorMul,
+     OpenACC_ReductionOperatorMax, OpenACC_ReductionOperatorMin,
+     OpenACC_ReductionOperatorAnd, OpenACC_ReductionOperatorOr,
+     OpenACC_ReductionOperatorXor, OpenACC_ReductionOperatorLogEqv,
+     OpenACC_ReductionOperatorLogNeqv, OpenACC_ReductionOperatorLogAnd,
+     OpenACC_ReductionOperatorLogOr
     ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::acc";
 }
-def OpenACC_ReductionOpAttr : EnumAttr<OpenACC_Dialect, OpenACC_ReductionOp,
-                                       "reduction_op">;
+def OpenACC_ReductionOperatorAttr : EnumAttr<OpenACC_Dialect,
+                                             OpenACC_ReductionOperator,
+                                             "reduction_operator">;
 
 // Type used in operation below.
 def IntOrIndex : AnyTypeOf<[AnyInteger, Index]>;
+
+// Simple alias to pointer-like interface to reduce verbosity.
+def OpenACC_PointerLikeType : TypeAlias<OpenACC_PointerLikeTypeInterface,
+	"pointer-like type">;
+
+// Define the OpenACC data clauses. There are a few cases where a modifier
+// is used, like create(zero), copyin(readonly), and copyout(zero). Since in
+// some cases we decompose the original acc data clauses into multiple acc
+// dialect operations, we need to keep track of original clause. Thus even
+// for the clause with modifier, we create separate operation to make this
+// possible.
+def OpenACC_CopyinClause          : I64EnumAttrCase<"acc_copyin", 1>;
+def OpenACC_CopyinReadonlyClause  : I64EnumAttrCase<"acc_copyin_readonly", 2>;
+def OpenACC_CopyClause            : I64EnumAttrCase<"acc_copy", 3>;
+def OpenACC_CopyoutClause         : I64EnumAttrCase<"acc_copyout", 4>;
+def OpenACC_CopyoutZeroClause     : I64EnumAttrCase<"acc_copyout_zero", 5>;
+def OpenACC_PresentClause         : I64EnumAttrCase<"acc_present", 6>;
+def OpenACC_CreateClause          : I64EnumAttrCase<"acc_create", 7>;
+def OpenACC_CreateZeroClause      : I64EnumAttrCase<"acc_create_zero", 8>;
+def OpenACC_DeleteClause          : I64EnumAttrCase<"acc_delete", 9>;
+def OpenACC_AttachClause          : I64EnumAttrCase<"acc_attach", 10>;
+def OpenACC_DetachClause          : I64EnumAttrCase<"acc_detach", 11>;
+def OpenACC_NoCreateClause        : I64EnumAttrCase<"acc_no_create", 12>;
+def OpenACC_PrivateClause         : I64EnumAttrCase<"acc_private", 13>;
+def OpenACC_FirstPrivateClause    : I64EnumAttrCase<"acc_firstprivate", 14>;
+def OpenACC_IsDevicePtrClause     : I64EnumAttrCase<"acc_deviceptr", 15>;
+def OpenACC_GetDevicePtrClause    : I64EnumAttrCase<"acc_getdeviceptr", 16>;
+def OpenACC_UpdateHost            : I64EnumAttrCase<"acc_update_host", 17>;
+def OpenACC_UpdateSelf            : I64EnumAttrCase<"acc_update_self", 18>;
+def OpenACC_UpdateDevice          : I64EnumAttrCase<"acc_update_device", 19>;
+def OpenACC_UseDevice             : I64EnumAttrCase<"acc_use_device", 20>;
+
+def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
+    "data clauses supported by OpenACC",
+    [OpenACC_CopyinClause, OpenACC_CopyinReadonlyClause, OpenACC_CopyClause,
+     OpenACC_CopyoutClause, OpenACC_CopyoutZeroClause, OpenACC_PresentClause,
+     OpenACC_CreateClause, OpenACC_CreateZeroClause, OpenACC_DeleteClause,
+     OpenACC_AttachClause, OpenACC_DetachClause, OpenACC_NoCreateClause,
+     OpenACC_PrivateClause, OpenACC_FirstPrivateClause,
+     OpenACC_IsDevicePtrClause, OpenACC_GetDevicePtrClause, OpenACC_UpdateHost,
+     OpenACC_UpdateSelf, OpenACC_UpdateDevice, OpenACC_UseDevice,
+    ]> {
+  let cppNamespace = "::mlir::acc";
+}
+
+// Used for data specification in data clauses (2.7.1).
+// Either (or both) extent and upperbound must be specified.
+def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
+    [AttrSizedOperandSegments, NoMemoryEffect]> {
+  let summary = "Represents normalized bounds information for acc data clause.";
+
+  let description = [{
+    This operation is used to record bounds used in acc data clause in a
+    normalized fashion (zero-based). This works well with the `PointerLikeType`
+    requirement in data clauses - since a `lowerbound` of 0 means looking
+    at data at the zero offset from pointer.
+
+    The operation must have an `upperbound` or `extent` (or both are allowed -
+    but not checked for consistency). When the source language's arrays are
+    not zero-based, the `startIdx` must specify the zero-position index.
+
+    Examples below show copying a slice of 10-element array except first element.
+    Note that the examples use extent in data clause for C++ and upperbound
+    for Fortran (as per 2.7.1). To simplify examples, the constants are used
+    directly in the acc.bounds operands - this is not the syntax of operation.
+
+    C++:
+    ```
+    int array[10];
+    #pragma acc copy(array[1:9])
+    ```
+    =>
+    ```mlir
+    acc.bounds lb(1) ub(9) extent(9) startIdx(0)
+    ```
+
+    Fortran:
+    ```
+    integer :: array(1:10)
+    !$acc copy(array(2:10))
+    ```
+    =>
+    ```mlir
+    acc.bounds lb(1) ub(9) extent(9) startIdx(1)
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$lowerbound,
+                       Optional<IntOrIndex>:$upperbound,
+                       Optional<IntOrIndex>:$extent,
+                       Optional<IntOrIndex>:$stride,
+                       DefaultValuedAttr<BoolAttr, "false">:$strideInBytes,
+                       Optional<IntOrIndex>:$startIdx);
+  let results = (outs OpenACC_DataBoundsType:$result);
+
+  let assemblyFormat = [{
+    oilist(
+        `lowerbound` `(` $lowerbound `:` type($lowerbound) `)`
+      | `upperbound` `(` $upperbound `:` type($upperbound) `)`
+      | `extent` `(` $extent `:` type($extent) `)`
+      | `stride` `(` $stride `:` type($stride) `)`
+      | `startIdx` `(` $startIdx `:` type($startIdx) `)`
+    ) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+// Data entry operation does not refer to OpenACC spec terminology, but to
+// terminology used in this dialect. It refers to data operations that will
+// appear before data or compute region. It will be used as the base of acc
+// dialect operations for the following OpenACC data clauses: copyin, create,
+// present, attach, deviceptr.
+//
+// The bounds are represented in rank order. Rank 0 (inner-most dimension) is
+// the first.
+class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = []> :
+    OpenACC_Op<mnemonic, !listconcat(traits,
+        [AttrSizedOperandSegments])> {
+  let arguments = (ins OpenACC_PointerLikeTypeInterface:$varPtr,
+                       Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
+                       Variadic<OpenACC_DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
+                       DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
+                       DefaultValuedAttr<BoolAttr, "true">:$structured,
+                       DefaultValuedAttr<BoolAttr, "false">:$implicit,
+                       OptionalAttr<StrAttr>:$name);
+  let results = (outs OpenACC_PointerLikeTypeInterface:$accPtr);
+
+  let description = [{
+    - `varPtr`: The address of variable to copy.
+    - `varPtrPtr`: Specifies the address of varPtr - only used when the variable
+    copied is a field in a struct. This is important for OpenACC due to implicit
+    attach semantics on data clauses (2.6.4).
+    - `bounds`: Used when copying just slice of array or array's bounds are not
+    encoded in type. They are in rank order where rank 0 is inner-most dimension.
+    - `dataClause`: Keeps track of the data clause the user used. This is because
+    the acc operations are decomposed. So a 'copy' clause is decomposed to both 
+    `acc.copyin` and `acc.copyout` operations, but both have dataClause that
+    specifies `acc_copy` in this field.
+    - `structured`: Flag to note whether this is associated with structured region
+    (parallel, kernels, data) or unstructured (enter data, exit data). This is
+    important due to spec specifically calling out structured and dynamic reference
+    counters (2.6.7).
+    - `implicit`: Whether this is an implicitly generated operation, such as copies
+    done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `name`: Holds the name of variable as specified in user clause (including bounds).
+  }];
+
+  let assemblyFormat = [{
+    `varPtr` `(` $varPtr `:` type($varPtr) `)`
+    oilist(
+        `varPtrPtr` `(` $varPtrPtr `:` type($varPtrPtr) `)`
+      | `bounds` `(` $bounds `)`
+    ) `->` type($accPtr) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.4 deviceptr clause
+//===----------------------------------------------------------------------===//
+def OpenACC_DevicePtrOp : OpenACC_DataEntryOp<"deviceptr",
+    "mlir::acc::DataClause::acc_deviceptr"> {
+  let summary = "Specifies that the variable pointer is a device pointer.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.5 present clause
+//===----------------------------------------------------------------------===//
+def OpenACC_PresentOp : OpenACC_DataEntryOp<"present",
+    "mlir::acc::DataClause::acc_present"> {
+  let summary = "Specifies that the variable is already present on device.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.7 copyin clause
+//===----------------------------------------------------------------------===//
+def OpenACC_CopyinOp : OpenACC_DataEntryOp<"copyin",
+    "mlir::acc::DataClause::acc_copyin"> {
+  let summary = "Represents copyin semantics for acc data clauses like acc "
+                "copyin and acc copy.";
+
+  let extraClassDeclaration = [{
+    /// Check if this is a copyin with readonly modifier.
+    bool isCopyinReadonly();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.9 create clause
+//===----------------------------------------------------------------------===//
+def OpenACC_CreateOp : OpenACC_DataEntryOp<"create",
+    "mlir::acc::DataClause::acc_create"> {
+  let summary = "Represents create semantics for acc data clauses like acc "
+                "create and acc copyout.";
+
+  let extraClassDeclaration = [{
+    /// Check if this is a create with zero modifier.
+    bool isCreateZero();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.10 no_create clause
+//===----------------------------------------------------------------------===//
+def OpenACC_NoCreateOp : OpenACC_DataEntryOp<"nocreate",
+    "mlir::acc::DataClause::acc_no_create"> {
+  let summary = "Represents acc no_create semantics.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.12 attach clause
+//===----------------------------------------------------------------------===//
+def OpenACC_AttachOp : OpenACC_DataEntryOp<"attach",
+    "mlir::acc::DataClause::acc_attach"> {
+  let summary = "Represents acc attach semantics which updates a pointer in "
+                "device memory with the corresponding device address of the "
+                "pointee.";
+}
+
+//===----------------------------------------------------------------------===//
+// 3.2.23 acc_deviceptr
+//===----------------------------------------------------------------------===//
+// This is needed to get device address without the additional semantics in
+// acc present.
+// It is also useful for providing the device address for unstructured construct
+// exit_data since unlike structured constructs, there is no matching data entry
+// operation.
+def OpenACC_GetDevicePtrOp : OpenACC_DataEntryOp<"getdeviceptr",
+    "mlir::acc::DataClause::acc_getdeviceptr"> {
+  let summary = "Gets device address from host address if it exists on device.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.14.4 device clause
+//===----------------------------------------------------------------------===//
+def OpenACC_UpdateDeviceOp : OpenACC_DataEntryOp<"update_device",
+    "mlir::acc::DataClause::acc_update_device"> {
+  let summary = "Represents acc update device semantics.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.8 use_device clause
+//===----------------------------------------------------------------------===//
+def OpenACC_UseDeviceOp : OpenACC_DataEntryOp<"use_device",
+    "mlir::acc::DataClause::acc_use_device"> {
+  let summary = "Represents acc use_device semantics.";
+}
+
+// Data exit operation does not refer to OpenACC spec terminology, but to
+// terminology used in this dialect. It refers to data operations that will appear
+// after data or compute region. It will be used as the base of acc dialect
+// operations for the following OpenACC data clauses: copyout, detach, delete.
+class OpenACC_DataExitOp<string mnemonic, string clause, list<Trait> traits = []> :
+    OpenACC_Op<mnemonic, !listconcat(traits,
+        [AttrSizedOperandSegments])> {
+  let arguments = (ins OpenACC_PointerLikeTypeInterface:$accPtr,
+                       Optional<OpenACC_PointerLikeTypeInterface>:$varPtr,
+                       Variadic<OpenACC_DataBoundsType>:$bounds,
+                       DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
+                       DefaultValuedAttr<BoolAttr, "true">:$structured,
+                       DefaultValuedAttr<BoolAttr, "false">:$implicit,
+                       OptionalAttr<StrAttr>:$name);
+
+  let description = [{
+    - `varPtr`: The address of variable to copy back to. This only applies to
+    `acc.copyout`
+    - `accPtr`: The acc address of variable. This is the link from the data-entry
+    operation used.
+    - `bounds`: Used when copying just slice of array or array's bounds are not
+    encoded in type. They are in rank order where rank 0 is inner-most dimension.
+    - `dataClause`: Keeps track of the data clause the user used. This is because
+    the acc operations are decomposed. So a 'copy' clause is decomposed to both 
+    `acc.copyin` and `acc.copyout` operations, but both have dataClause that
+    specifies `acc_copy` in this field.
+    - `structured`: Flag to note whether this is associated with structured region
+    (parallel, kernels, data) or unstructured (enter data, exit data). This is
+    important due to spec specifically calling out structured and dynamic reference
+    counters (2.6.7).
+    - `implicit`: Whether this is an implicitly generated operation, such as copies
+    done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
+    - `name`: Holds the name of variable as specified in user clause (including bounds).
+  }];
+
+  let assemblyFormat = [{
+    `accPtr` `(` $accPtr `:` type($accPtr) `)`
+    oilist(
+        `bounds` `(` $bounds `)`
+      | `to` `varPtr` `(` $varPtr `:` type($varPtr) `)`
+    ) attr-dict
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.8 copyout clause
+//===----------------------------------------------------------------------===//
+def OpenACC_CopyoutOp : OpenACC_DataExitOp<"copyout",
+    "mlir::acc::DataClause::acc_copyout"> {
+  let summary = "Represents acc copyout semantics - reverse of copyin.";
+
+  let extraClassDeclaration = [{
+    /// Check if this is a copyout with zero modifier.
+    bool isCopyoutZero();
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.11 delete clause
+//===----------------------------------------------------------------------===//
+def OpenACC_DeleteOp : OpenACC_DataExitOp<"delete",
+    "mlir::acc::DataClause::acc_delete"> {
+  let summary = "Represents acc delete semantics - reverse of create.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.7.13 detach clause
+//===----------------------------------------------------------------------===//
+def OpenACC_DetachOp : OpenACC_DataExitOp<"detach",
+    "mlir::acc::DataClause::acc_detach"> {
+  let summary = "Represents acc detach semantics - reverse of attach.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.14.4 host clause
+//===----------------------------------------------------------------------===//
+def OpenACC_UpdateHostOp : OpenACC_DataExitOp<"update_host",
+    "mlir::acc::DataClause::acc_update_host"> {
+  let summary = "Represents acc update host semantics.";
+  let extraClassDeclaration = [{
+    /// Check if this is an acc update self.
+    bool isSelf() {
+      return getDataClause() == acc::DataClause::acc_update_self;
+    }
+  }];
+}
 
 //===----------------------------------------------------------------------===//
 // 2.5.1 parallel Construct
 //===----------------------------------------------------------------------===//
 
 def OpenACC_ParallelOp : OpenACC_Op<"parallel",
-    [AttrSizedOperandSegments]> {
+    [AttrSizedOperandSegments, RecursiveMemoryEffects]> {
   let summary = "parallel construct";
   let description = [{
     The "acc.parallel" operation represents a parallel construct block. It has
@@ -97,58 +430,166 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        Optional<I1>:$ifCond,
                        Optional<I1>:$selfCond,
                        UnitAttr:$selfAttr,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
                        Variadic<AnyType>:$reductionOperands,
-                       Variadic<AnyType>:$copyOperands,
-                       Variadic<AnyType>:$copyinOperands,
-                       Variadic<AnyType>:$copyinReadonlyOperands,
-                       Variadic<AnyType>:$copyoutOperands,
-                       Variadic<AnyType>:$copyoutZeroOperands,
-                       Variadic<AnyType>:$createOperands,
-                       Variadic<AnyType>:$createZeroOperands,
-                       Variadic<AnyType>:$noCreateOperands,
-                       Variadic<AnyType>:$presentOperands,
-                       Variadic<AnyType>:$devicePtrOperands,
-                       Variadic<AnyType>:$attachOperands,
                        Variadic<AnyType>:$gangPrivateOperands,
                        Variadic<AnyType>:$gangFirstPrivateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    static StringRef getAsyncKeyword() { return "async"; }
-    static StringRef getAsyncAttrName() { return "asyncAttr"; }
-    static StringRef getWaitKeyword() { return "wait"; }
-    static StringRef getWaitAttrName() { return "waitAttr"; }
-    static StringRef getNumGangsKeyword() { return "num_gangs"; }
-    static StringRef getNumWorkersKeyword() { return "num_workers"; }
-    static StringRef getVectorLengthKeyword() { return "vector_length"; }
-    static StringRef getIfKeyword() { return "if"; }
-    static StringRef getSelfKeyword() { return "self"; }
-    static StringRef getSelfAttrName() { return "selfAttr"; }
-    static StringRef getReductionKeyword() { return "reduction"; }
-    static StringRef getCopyKeyword() { return "copy"; }
-    static StringRef getCopyinKeyword() { return "copyin"; }
-    static StringRef getCopyinReadonlyKeyword() { return "copyin_readonly"; }
-    static StringRef getCopyoutKeyword() { return "copyout"; }
-    static StringRef getCopyoutZeroKeyword() { return "copyout_zero"; }
-    static StringRef getCreateKeyword() { return "create"; }
-    static StringRef getCreateZeroKeyword() { return "create_zero"; }
-    static StringRef getNoCreateKeyword() { return "no_create"; }
-    static StringRef getPresentKeyword() { return "present"; }
-    static StringRef getDevicePtrKeyword() { return "deviceptr"; }
-    static StringRef getAttachKeyword() { return "attach"; }
-    static StringRef getPrivateKeyword() { return "private"; }
-    static StringRef getFirstPrivateKeyword() { return "firstprivate"; }
-
     /// The number of data operands.
     unsigned getNumDataOperands();
 
     /// The i-th data operand passed.
     Value getDataOperand(unsigned i);
   }];
-  let hasCustomAssemblyFormat = 1;
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `async` `(` $async `:` type($async) `)`
+      | `firstprivate` `(` $gangFirstPrivateOperands `:`
+            type($gangFirstPrivateOperands) `)`
+      | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
+      | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
+      | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
+      | `vector_length` `(` $vectorLength `:` type($vectorLength) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `self` `(` $selfCond `)`
+      | `if` `(` $ifCond `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+    )
+    $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.2 serial Construct
+//===----------------------------------------------------------------------===//
+
+def OpenACC_SerialOp : OpenACC_Op<"serial",
+    [AttrSizedOperandSegments, RecursiveMemoryEffects]> {
+  let summary = "serial construct";
+  let description = [{
+    The "acc.serial" operation represents a serial construct block. It has
+    one region to be executed in serial on the current device.
+
+    Example:
+
+    ```mlir
+    acc.serial private(%c : memref<10xf32>) {
+      // serial region
+    }
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$async,
+                       UnitAttr:$asyncAttr,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$waitAttr,
+                       Optional<I1>:$ifCond,
+                       Optional<I1>:$selfCond,
+                       UnitAttr:$selfAttr,
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
+                       Variadic<AnyType>:$reductionOperands,
+                       Variadic<AnyType>:$gangPrivateOperands,
+                       Variadic<AnyType>:$gangFirstPrivateOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
+                       OptionalAttr<DefaultValueAttr>:$defaultAttr);
+
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `async` `(` $async `:` type($async) `)`
+      | `firstprivate` `(` $gangFirstPrivateOperands `:`
+            type($gangFirstPrivateOperands) `)`
+      | `private` `(` $gangPrivateOperands `:` type($gangPrivateOperands) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `self` `(` $selfCond `)`
+      | `if` `(` $ifCond `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+    )
+    $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.1 kernels Construct
+//===----------------------------------------------------------------------===//
+
+def OpenACC_KernelsOp : OpenACC_Op<"kernels",
+    [AttrSizedOperandSegments, RecursiveMemoryEffects]> {
+  let summary = "kernels construct";
+  let description = [{
+    The "acc.kernels" operation represents a kernels construct block. It has
+    one region to be compiled into a sequence of kernels for execution on the
+    current device.
+
+    Example:
+
+    ```mlir
+    acc.kernels num_gangs(%c10) num_workers(%c10)
+        private(%c : memref<10xf32>) {
+      // kernels region
+    }
+    ```
+  }];
+
+  let arguments = (ins Optional<IntOrIndex>:$async,
+                       UnitAttr:$asyncAttr,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$waitAttr,
+                       Optional<IntOrIndex>:$numGangs,
+                       Optional<IntOrIndex>:$numWorkers,
+                       Optional<IntOrIndex>:$vectorLength,
+                       Optional<I1>:$ifCond,
+                       Optional<I1>:$selfCond,
+                       UnitAttr:$selfAttr,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
+                       OptionalAttr<DefaultValueAttr>:$defaultAttr);
+
+  let regions = (region AnyRegion:$region);
+
+  let extraClassDeclaration = [{
+    /// The number of data operands.
+    unsigned getNumDataOperands();
+
+    /// The i-th data operand passed.
+    Value getDataOperand(unsigned i);
+  }];
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `async` `(` $async `:` type($async) `)`
+      | `num_gangs` `(` $numGangs `:` type($numGangs) `)`
+      | `num_workers` `(` $numWorkers `:` type($numWorkers) `)`
+      | `vector_length` `(` $vectorLength `:` type($vectorLength) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `self` `(` $selfCond `)`
+      | `if` `(` $ifCond `)`
+    )
+    $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -156,7 +597,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
 //===----------------------------------------------------------------------===//
 
 def OpenACC_DataOp : OpenACC_Op<"data",
-    [AttrSizedOperandSegments]> {
+    [AttrSizedOperandSegments, RecursiveMemoryEffects]> {
   let summary = "data construct";
 
   let description = [{
@@ -178,17 +619,7 @@ def OpenACC_DataOp : OpenACC_Op<"data",
 
 
   let arguments = (ins Optional<I1>:$ifCond,
-                       Variadic<AnyType>:$copyOperands,
-                       Variadic<AnyType>:$copyinOperands,
-                       Variadic<AnyType>:$copyinReadonlyOperands,
-                       Variadic<AnyType>:$copyoutOperands,
-                       Variadic<AnyType>:$copyoutZeroOperands,
-                       Variadic<AnyType>:$createOperands,
-                       Variadic<AnyType>:$createZeroOperands,
-                       Variadic<AnyType>:$noCreateOperands,
-                       Variadic<AnyType>:$presentOperands,
-                       Variadic<AnyType>:$deviceptrOperands,
-                       Variadic<AnyType>:$attachOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
   let regions = (region AnyRegion:$region);
@@ -202,21 +633,10 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `copy` `(` $copyOperands^ `:` type($copyOperands) `)` )?
-    ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
-    ( `copyin_readonly` `(` $copyinReadonlyOperands^ `:`
-        type($copyinReadonlyOperands) `)` )?
-    ( `copyout` `(` $copyoutOperands^ `:` type($copyoutOperands) `)` )?
-    ( `copyout_zero` `(` $copyoutZeroOperands^ `:`
-        type($copyoutZeroOperands) `)` )?
-    ( `create` `(` $createOperands^ `:` type($createOperands) `)` )?
-    ( `create_zero` `(` $createZeroOperands^ `:`
-        type($createZeroOperands) `)` )?
-    ( `no_create` `(` $noCreateOperands^ `:` type($noCreateOperands) `)` )?
-    ( `present` `(` $presentOperands^ `:` type($presentOperands) `)` )?
-    ( `deviceptr` `(` $deviceptrOperands^ `:` type($deviceptrOperands) `)` )?
-    ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    )
     $region attr-dict-with-keyword
   }];
   let hasVerifier = 1;
@@ -258,10 +678,7 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
                        Optional<IntOrIndex>:$waitDevnum,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$wait,
-                       Variadic<AnyType>:$copyinOperands,
-                       Variadic<AnyType>:$createOperands,
-                       Variadic<AnyType>:$createZeroOperands,
-                       Variadic<AnyType>:$attachOperands);
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
 
   let extraClassDeclaration = [{
     /// The number of data operands.
@@ -272,15 +689,13 @@ def OpenACC_EnterDataOp : OpenACC_Op<"enter_data", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `copyin` `(` $copyinOperands^ `:` type($copyinOperands) `)` )?
-    ( `create` `(` $createOperands^ `:` type($createOperands) `)` )?
-    ( `create_zero` `(` $createZeroOperands^ `:`
-        type($createZeroOperands) `)` )?
-    ( `attach` `(` $attachOperands^ `:` type($attachOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    )
     attr-dict-with-keyword
   }];
 
@@ -311,9 +726,7 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
                        Optional<IntOrIndex>:$waitDevnum,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$wait,
-                       Variadic<AnyType>:$copyoutOperands,
-                       Variadic<AnyType>:$deleteOperands,
-                       Variadic<AnyType>:$detachOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        UnitAttr:$finalize);
 
   let extraClassDeclaration = [{
@@ -325,13 +738,13 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `copyout` `(` $copyoutOperands^ `:` type($copyoutOperands) `)` )?
-    ( `delete` `(` $deleteOperands^ `:` type($deleteOperands) `)` )?
-    ( `detach` `(` $detachOperands^ `:` type($detachOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    )
     attr-dict-with-keyword
   }];
 
@@ -340,12 +753,49 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data", [AttrSizedOperandSegments]> {
 }
 
 //===----------------------------------------------------------------------===//
+// 2.8 Host_Data Construct
+//===----------------------------------------------------------------------===//
+
+def OpenACC_HostDataOp : OpenACC_Op<"host_data", [AttrSizedOperandSegments]> {
+  let summary = "host_data construct";
+
+  let description = [{
+    The "acc.host_data" operation represents the OpenACC host_data construct.
+
+    Example:
+
+    ```mlir
+    %0 = acc.use_device varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+    acc.host_data dataOperands(%0 : !llvm.ptr<f32>) {
+
+    }
+    ```
+  }];
+
+  let arguments = (ins Optional<I1>:$ifCond,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataOperands,
+                       UnitAttr:$ifPresent);
+
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    oilist(
+        `if` `(` $ifCond `)`
+      | `dataOperands` `(` $dataOperands `:` type($dataOperands) `)`
+    )
+    $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+  let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // 2.9 loop Construct
 //===----------------------------------------------------------------------===//
 
 def OpenACC_LoopOp : OpenACC_Op<"loop",
-      [AttrSizedOperandSegments,
-       SingleBlockImplicitTerminator<"acc::YieldOp">]> {
+    [AttrSizedOperandSegments, RecursiveMemoryEffects]> {
   let summary = "loop construct";
 
   let description = [{
@@ -367,7 +817,6 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
     ```
   }];
 
-
   let arguments = (ins OptionalAttr<I64Attr>:$collapse,
                        Optional<IntOrIndex>:$gangNum,
                        Optional<IntOrIndex>:$gangStatic,
@@ -376,38 +825,45 @@ def OpenACC_LoopOp : OpenACC_Op<"loop",
                        UnitAttr:$seq,
                        UnitAttr:$independent,
                        UnitAttr:$auto_,
+                       UnitAttr:$hasGang,
+                       UnitAttr:$hasWorker,
+                       UnitAttr:$hasVector,
                        Variadic<IntOrIndex>:$tileOperands,
                        Variadic<AnyType>:$privateOperands,
-                       OptionalAttr<OpenACC_ReductionOpAttr>:$reductionOp,
-                       Variadic<AnyType>:$reductionOperands,
-                       DefaultValuedAttr<I64Attr, "0">:$exec_mapping);
+                       OptionalAttr<OpenACC_ReductionOperatorAttr>:$reductionOp,
+                       Variadic<AnyType>:$reductionOperands);
 
   let results = (outs Variadic<AnyType>:$results);
 
   let regions = (region AnyRegion:$region);
 
   let extraClassDeclaration = [{
-    static StringRef getCollapseAttrName() { return "collapse"; }
-    static StringRef getSeqAttrName() { return "seq"; }
-    static StringRef getIndependentAttrName() { return "independent"; }
-    static StringRef getAutoAttrName() { return "auto"; }
-    static StringRef getExecutionMappingAttrName() { return "exec_mapping"; }
-    static StringRef getGangKeyword() { return "gang"; }
+    static StringRef getAutoAttrStrName() { return "auto"; }
     static StringRef getGangNumKeyword() { return "num"; }
     static StringRef getGangStaticKeyword() { return "static"; }
-    static StringRef getVectorKeyword() { return "vector"; }
-    static StringRef getWorkerKeyword() { return "worker"; }
-    static StringRef getTileKeyword() { return "tile"; }
-    static StringRef getPrivateKeyword() { return "private"; }
-    static StringRef getReductionKeyword() { return "reduction"; }
   }];
+
   let hasCustomAssemblyFormat = 1;
+  let assemblyFormat = [{
+    oilist(
+        `gang` `` custom<GangClause>($gangNum, type($gangNum), $gangStatic, type($gangStatic), $hasGang)
+      | `worker` `` custom<WorkerClause>($workerNum, type($workerNum), $hasWorker)
+      | `vector` `` custom<VectorClause>($vectorLength, type($vectorLength), $hasVector)
+      | `private` `(` $privateOperands `:` type($privateOperands) `)`
+      | `tile` `(` $tileOperands `:` type($tileOperands) `)`
+      | `reduction` `(` $reductionOperands `:` type($reductionOperands) `)`
+    )
+    $region
+    ( `(` type($results)^ `)` )?
+    attr-dict-with-keyword
+  }];
+
   let hasVerifier = 1;
 }
 
 // Yield operation for the acc.loop and acc.parallel operations.
-def OpenACC_YieldOp : OpenACC_Op<"yield", [Terminator,
-    ParentOneOf<["ParallelOp, LoopOp"]>]> {
+def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
+    ParentOneOf<["ParallelOp, LoopOp, SerialOp"]>]> {
   let summary = "Acc yield and termination operation";
 
   let description = [{
@@ -447,9 +903,11 @@ def OpenACC_InitOp : OpenACC_Op<"init", [AttrSizedOperandSegments]> {
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
-    ( `device_type` `(` $deviceTypeOperands^ `:` type($deviceTypeOperands) `)` )?
-    ( `device_num` `(` $deviceNumOperand^ `:` type($deviceNumOperand) `)` )?
-    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+    oilist(
+        `device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
+      | `device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+      | `if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
 }
@@ -478,9 +936,10 @@ def OpenACC_ShutdownOp : OpenACC_Op<"shutdown", [AttrSizedOperandSegments]> {
                        Optional<I1>:$ifCond);
 
   let assemblyFormat = [{
-    ( `device_type` `(` $deviceTypeOperands^ `:` type($deviceTypeOperands) `)` )?
-    ( `device_num` `(` $deviceNumOperand^ `:` type($deviceNumOperand) `)` )?
-    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+    oilist(`device_type` `(` $deviceTypeOperands `:` type($deviceTypeOperands) `)`
+    |`device_num` `(` $deviceNumOperand `:` type($deviceNumOperand) `)`
+    |`if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
 }
@@ -512,8 +971,7 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
                        UnitAttr:$async,
                        UnitAttr:$wait,
                        Variadic<IntOrIndex>:$deviceTypeOperands,
-                       Variadic<AnyType>:$hostOperands,
-                       Variadic<AnyType>:$deviceOperands,
+                       Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        UnitAttr:$ifPresent);
 
   let extraClassDeclaration = [{
@@ -525,14 +983,15 @@ def OpenACC_UpdateOp : OpenACC_Op<"update", [AttrSizedOperandSegments]> {
   }];
 
   let assemblyFormat = [{
-    ( `if` `(` $ifCond^ `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `device_type` `(` $deviceTypeOperands^ `:`
-        type($deviceTypeOperands) `)` )?
-    ( `wait` `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `host` `(` $hostOperands^ `:` type($hostOperands) `)` )?
-    ( `device` `(` $deviceOperands^ `:` type($deviceOperands) `)` )?
+    oilist(
+        `if` `(` $ifCond `)`
+      | `async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `device_type` `(` $deviceTypeOperands `:`
+          type($deviceTypeOperands) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
+      | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    )
     attr-dict-with-keyword
   }];
 
@@ -567,9 +1026,10 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
 
   let assemblyFormat = [{
     ( `(` $waitOperands^ `:` type($waitOperands) `)` )?
-    ( `async` `(` $asyncOperand^ `:` type($asyncOperand) `)` )?
-    ( `wait_devnum` `(` $waitDevnum^ `:` type($waitDevnum) `)` )?
-    ( `if` `(` $ifCond^ `)` )? attr-dict-with-keyword
+    oilist(`async` `(` $asyncOperand `:` type($asyncOperand) `)`
+      |`wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      |`if` `(` $ifCond `)`
+    ) attr-dict-with-keyword
   }];
   let hasVerifier = 1;
 }

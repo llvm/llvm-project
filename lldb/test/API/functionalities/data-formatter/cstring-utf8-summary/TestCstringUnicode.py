@@ -6,8 +6,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class CstringUnicodeTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     def test_cstring_unicode(self):

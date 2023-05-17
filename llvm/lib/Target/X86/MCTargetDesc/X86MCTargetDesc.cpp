@@ -16,8 +16,8 @@
 #include "X86BaseInfo.h"
 #include "X86IntelInstPrinter.h"
 #include "X86MCAsmInfo.h"
+#include "X86TargetStreamer.h"
 #include "llvm/ADT/APInt.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
 #include "llvm/MC/MCDwarf.h"
 #include "llvm/MC/MCInstrAnalysis.h"
@@ -28,7 +28,8 @@
 #include "llvm/MC/MachineLocation.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/Triple.h"
 
 using namespace llvm;
 
@@ -37,6 +38,7 @@ using namespace llvm;
 
 #define GET_INSTRINFO_MC_DESC
 #define GET_INSTRINFO_MC_HELPERS
+#define ENABLE_INSTR_PREDICATE_VERIFIER
 #include "X86GenInstrInfo.inc"
 
 #define GET_SUBTARGETINFO_MC_DESC
@@ -499,16 +501,14 @@ public:
                             APInt &Mask) const override;
   std::vector<std::pair<uint64_t, uint64_t>>
   findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                 uint64_t GotSectionVA,
                  const Triple &TargetTriple) const override;
 
   bool evaluateBranch(const MCInst &Inst, uint64_t Addr, uint64_t Size,
                       uint64_t &Target) const override;
-  Optional<uint64_t> evaluateMemoryOperandAddress(const MCInst &Inst,
-                                                  const MCSubtargetInfo *STI,
-                                                  uint64_t Addr,
-                                                  uint64_t Size) const override;
-  Optional<uint64_t>
+  std::optional<uint64_t>
+  evaluateMemoryOperandAddress(const MCInst &Inst, const MCSubtargetInfo *STI,
+                               uint64_t Addr, uint64_t Size) const override;
+  std::optional<uint64_t>
   getMemoryOperandRelocationOffset(const MCInst &Inst,
                                    uint64_t Size) const override;
 };
@@ -521,7 +521,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
                                               APInt &Mask) const {
   const MCInstrDesc &Desc = Info->get(Inst.getOpcode());
   unsigned NumDefs = Desc.getNumDefs();
-  unsigned NumImplicitDefs = Desc.getNumImplicitDefs();
+  unsigned NumImplicitDefs = Desc.implicit_defs().size();
   assert(Mask.getBitWidth() == NumDefs + NumImplicitDefs &&
          "Unexpected number of bits in the mask!");
 
@@ -560,7 +560,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
   }
 
   for (unsigned I = 0, E = NumImplicitDefs; I < E; ++I) {
-    const MCPhysReg Reg = Desc.getImplicitDefs()[I];
+    const MCPhysReg Reg = Desc.implicit_defs()[I];
     if (ClearsSuperReg(Reg))
       Mask.setBit(NumDefs + I);
   }
@@ -569,8 +569,7 @@ bool X86MCInstrAnalysis::clearsSuperRegisters(const MCRegisterInfo &MRI,
 }
 
 static std::vector<std::pair<uint64_t, uint64_t>>
-findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-                  uint64_t GotPltSectionVA) {
+findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   // Do a lightweight parsing of PLT entries.
   std::vector<std::pair<uint64_t, uint64_t>> Result;
   for (uint64_t Byte = 0, End = PltContents.size(); Byte + 6 < End; ) {
@@ -578,9 +577,11 @@ findX86PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
     if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0xa3) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
       // address of the base of the .got.plt section plus the immediate.
+      // Set the 1 << 32 bit to let ELFObjectFileBase::getPltEntries convert the
+      // offset to an address. Imm may be a negative int32_t if the GOT entry is
+      // in .got.
       uint32_t Imm = support::endian::read32le(PltContents.data() + Byte + 2);
-      Result.push_back(
-          std::make_pair(PltSectionVA + Byte, GotPltSectionVA + Imm));
+      Result.emplace_back(PltSectionVA + Byte, Imm | (uint64_t(1) << 32));
       Byte += 6;
     } else if (PltContents[Byte] == 0xff && PltContents[Byte + 1] == 0x25) {
       // The jmp instruction at the beginning of each PLT entry jumps to the
@@ -613,35 +614,37 @@ findX86_64PltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents) {
   return Result;
 }
 
-std::vector<std::pair<uint64_t, uint64_t>> X86MCInstrAnalysis::findPltEntries(
-    uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
-    uint64_t GotPltSectionVA, const Triple &TargetTriple) const {
+std::vector<std::pair<uint64_t, uint64_t>>
+X86MCInstrAnalysis::findPltEntries(uint64_t PltSectionVA,
+                                   ArrayRef<uint8_t> PltContents,
+                                   const Triple &TargetTriple) const {
   switch (TargetTriple.getArch()) {
-    case Triple::x86:
-      return findX86PltEntries(PltSectionVA, PltContents, GotPltSectionVA);
-    case Triple::x86_64:
-      return findX86_64PltEntries(PltSectionVA, PltContents);
-    default:
-      return {};
-    }
+  case Triple::x86:
+    return findX86PltEntries(PltSectionVA, PltContents);
+  case Triple::x86_64:
+    return findX86_64PltEntries(PltSectionVA, PltContents);
+  default:
+    return {};
+  }
 }
 
 bool X86MCInstrAnalysis::evaluateBranch(const MCInst &Inst, uint64_t Addr,
                                         uint64_t Size, uint64_t &Target) const {
   if (Inst.getNumOperands() == 0 ||
-      Info->get(Inst.getOpcode()).OpInfo[0].OperandType != MCOI::OPERAND_PCREL)
+      Info->get(Inst.getOpcode()).operands()[0].OperandType !=
+          MCOI::OPERAND_PCREL)
     return false;
   Target = Addr + Size + Inst.getOperand(0).getImm();
   return true;
 }
 
-Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
+std::optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
     const MCInst &Inst, const MCSubtargetInfo *STI, uint64_t Addr,
     uint64_t Size) const {
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
   int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
   if (MemOpStart == -1)
-    return None;
+    return std::nullopt;
   MemOpStart += X86II::getOperandBias(MCID);
 
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
@@ -651,24 +654,24 @@ Optional<uint64_t> X86MCInstrAnalysis::evaluateMemoryOperandAddress(
   const MCOperand &Disp = Inst.getOperand(MemOpStart + X86::AddrDisp);
   if (SegReg.getReg() != 0 || IndexReg.getReg() != 0 || ScaleAmt.getImm() != 1 ||
       !Disp.isImm())
-    return None;
+    return std::nullopt;
 
   // RIP-relative addressing.
   if (BaseReg.getReg() == X86::RIP)
     return Addr + Size + Disp.getImm();
 
-  return None;
+  return std::nullopt;
 }
 
-Optional<uint64_t>
+std::optional<uint64_t>
 X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
                                                      uint64_t Size) const {
   if (Inst.getOpcode() != X86::LEA64r)
-    return None;
+    return std::nullopt;
   const MCInstrDesc &MCID = Info->get(Inst.getOpcode());
   int MemOpStart = X86II::getMemoryOperandNo(MCID.TSFlags);
   if (MemOpStart == -1)
-    return None;
+    return std::nullopt;
   MemOpStart += X86II::getOperandBias(MCID);
   const MCOperand &SegReg = Inst.getOperand(MemOpStart + X86::AddrSegmentReg);
   const MCOperand &BaseReg = Inst.getOperand(MemOpStart + X86::AddrBaseReg);
@@ -678,7 +681,7 @@ X86MCInstrAnalysis::getMemoryOperandRelocationOffset(const MCInst &Inst,
   // Must be a simple rip-relative address.
   if (BaseReg.getReg() != X86::RIP || SegReg.getReg() != 0 ||
       IndexReg.getReg() != 0 || ScaleAmt.getImm() != 1 || !Disp.isImm())
-    return None;
+    return std::nullopt;
   // rip-relative ModR/M immediate is 32 bits.
   assert(Size > 4 && "invalid instruction size for rip-relative lea");
   return Size - 4;
@@ -721,6 +724,9 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
     // Register the asm target streamer.
     TargetRegistry::RegisterAsmTargetStreamer(*T, createX86AsmTargetStreamer);
 
+    // Register the null streamer.
+    TargetRegistry::RegisterNullTargetStreamer(*T, createX86NullTargetStreamer);
+
     TargetRegistry::RegisterCOFFStreamer(*T, createX86WinCOFFStreamer);
 
     // Register the MCInstPrinter.
@@ -737,22 +743,14 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeX86TargetMC() {
                                        createX86_64AsmBackend);
 }
 
-MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
-                                              bool High) {
+MCRegister llvm::getX86SubSuperRegister(MCRegister Reg, unsigned Size,
+                                        bool High) {
   switch (Size) {
-  default: return X86::NoRegister;
+  default: llvm_unreachable("illegal register size");
   case 8:
     if (High) {
       switch (Reg.id()) {
-      default: return getX86SubSuperRegisterOrZero(Reg, 64);
-      case X86::SIL: case X86::SI: case X86::ESI: case X86::RSI:
-        return X86::SI;
-      case X86::DIL: case X86::DI: case X86::EDI: case X86::RDI:
-        return X86::DI;
-      case X86::BPL: case X86::BP: case X86::EBP: case X86::RBP:
-        return X86::BP;
-      case X86::SPL: case X86::SP: case X86::ESP: case X86::RSP:
-        return X86::SP;
+      default: return X86::NoRegister;
       case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
         return X86::AH;
       case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -873,7 +871,7 @@ MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
     }
   case 64:
     switch (Reg.id()) {
-    default: return 0;
+    default: return X86::NoRegister;
     case X86::AH: case X86::AL: case X86::AX: case X86::EAX: case X86::RAX:
       return X86::RAX;
     case X86::DH: case X86::DL: case X86::DX: case X86::EDX: case X86::RDX:
@@ -909,11 +907,3 @@ MCRegister llvm::getX86SubSuperRegisterOrZero(MCRegister Reg, unsigned Size,
     }
   }
 }
-
-MCRegister llvm::getX86SubSuperRegister(MCRegister Reg, unsigned Size, bool High) {
-  MCRegister Res = getX86SubSuperRegisterOrZero(Reg, Size, High);
-  assert(Res != X86::NoRegister && "Unexpected register or VT");
-  return Res;
-}
-
-

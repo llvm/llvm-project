@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/MemoryTagMap.h"
+#include <optional>
 
 using namespace lldb_private;
 
@@ -27,38 +28,38 @@ void MemoryTagMap::InsertTags(lldb::addr_t addr,
 
 bool MemoryTagMap::Empty() const { return m_addr_to_tag.empty(); }
 
-std::vector<llvm::Optional<lldb::addr_t>>
+std::vector<std::optional<lldb::addr_t>>
 MemoryTagMap::GetTags(lldb::addr_t addr, size_t len) const {
   // Addr and len might be unaligned
   addr = m_manager->RemoveTagBits(addr);
   MemoryTagManager::TagRange range(addr, len);
   range = m_manager->ExpandToGranule(range);
 
-  std::vector<llvm::Optional<lldb::addr_t>> tags;
+  std::vector<std::optional<lldb::addr_t>> tags;
   lldb::addr_t end_addr = range.GetRangeEnd();
   addr = range.GetRangeBase();
   bool got_valid_tags = false;
   size_t granule_size = m_manager->GetGranuleSize();
 
   for (; addr < end_addr; addr += granule_size) {
-    llvm::Optional<lldb::addr_t> tag = GetTag(addr);
+    std::optional<lldb::addr_t> tag = GetTag(addr);
     tags.push_back(tag);
     if (tag)
       got_valid_tags = true;
   }
 
-  // To save the caller checking if every item is llvm::None,
+  // To save the caller checking if every item is std::nullopt,
   // we return an empty vector if we got no tags at all.
   if (got_valid_tags)
     return tags;
   return {};
 }
 
-llvm::Optional<lldb::addr_t> MemoryTagMap::GetTag(lldb::addr_t addr) const {
+std::optional<lldb::addr_t> MemoryTagMap::GetTag(lldb::addr_t addr) const {
   // Here we assume that addr is granule aligned, just like when the tags
   // were inserted.
   auto found = m_addr_to_tag.find(addr);
   if (found == m_addr_to_tag.end())
-    return llvm::None;
+    return std::nullopt;
   return found->second;
 }

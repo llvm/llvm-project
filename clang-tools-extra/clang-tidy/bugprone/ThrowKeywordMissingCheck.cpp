@@ -12,9 +12,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 void ThrowKeywordMissingCheck::registerMatchers(MatchFinder *Finder) {
   auto CtorInitializerList =
@@ -44,6 +42,4 @@ void ThrowKeywordMissingCheck::check(const MatchFinder::MatchResult &Result) {
       << TemporaryExpr->getType().getBaseTypeIdentifier()->getName();
 }
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone

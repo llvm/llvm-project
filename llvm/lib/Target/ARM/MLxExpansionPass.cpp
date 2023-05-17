@@ -87,7 +87,7 @@ MachineInstr *MLxExpansion::getAccDefMI(MachineInstr *MI) const {
   // Look past COPY and INSERT_SUBREG instructions to find the
   // real definition MI. This is important for _sfp instructions.
   Register Reg = MI->getOperand(1).getReg();
-  if (Register::isPhysicalRegister(Reg))
+  if (Reg.isPhysical())
     return nullptr;
 
   MachineBasicBlock *MBB = MI->getParent();
@@ -97,13 +97,13 @@ MachineInstr *MLxExpansion::getAccDefMI(MachineInstr *MI) const {
       break;
     if (DefMI->isCopyLike()) {
       Reg = DefMI->getOperand(1).getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         DefMI = MRI->getVRegDef(Reg);
         continue;
       }
     } else if (DefMI->isInsertSubreg()) {
       Reg = DefMI->getOperand(2).getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         DefMI = MRI->getVRegDef(Reg);
         continue;
       }
@@ -115,7 +115,7 @@ MachineInstr *MLxExpansion::getAccDefMI(MachineInstr *MI) const {
 
 unsigned MLxExpansion::getDefReg(MachineInstr *MI) const {
   Register Reg = MI->getOperand(0).getReg();
-  if (Register::isPhysicalRegister(Reg) || !MRI->hasOneNonDBGUse(Reg))
+  if (Reg.isPhysical() || !MRI->hasOneNonDBGUse(Reg))
     return Reg;
 
   MachineBasicBlock *MBB = MI->getParent();
@@ -125,7 +125,7 @@ unsigned MLxExpansion::getDefReg(MachineInstr *MI) const {
 
   while (UseMI->isCopy() || UseMI->isInsertSubreg()) {
     Reg = UseMI->getOperand(0).getReg();
-    if (Register::isPhysicalRegister(Reg) || !MRI->hasOneNonDBGUse(Reg))
+    if (Reg.isPhysical() || !MRI->hasOneNonDBGUse(Reg))
       return Reg;
     UseMI = &*MRI->use_instr_nodbg_begin(Reg);
     if (UseMI->getParent() != MBB)
@@ -139,7 +139,7 @@ unsigned MLxExpansion::getDefReg(MachineInstr *MI) const {
 /// a single-MBB loop.
 bool MLxExpansion::hasLoopHazard(MachineInstr *MI) const {
   Register Reg = MI->getOperand(1).getReg();
-  if (Register::isPhysicalRegister(Reg))
+  if (Reg.isPhysical())
     return false;
 
   MachineBasicBlock *MBB = MI->getParent();
@@ -153,7 +153,7 @@ outer_continue:
       for (unsigned i = 1, e = DefMI->getNumOperands(); i < e; i += 2) {
         if (DefMI->getOperand(i + 1).getMBB() == MBB) {
           Register SrcReg = DefMI->getOperand(i).getReg();
-          if (Register::isVirtualRegister(SrcReg)) {
+          if (SrcReg.isVirtual()) {
             DefMI = MRI->getVRegDef(SrcReg);
             goto outer_continue;
           }
@@ -161,13 +161,13 @@ outer_continue:
       }
     } else if (DefMI->isCopyLike()) {
       Reg = DefMI->getOperand(1).getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         DefMI = MRI->getVRegDef(Reg);
         continue;
       }
     } else if (DefMI->isInsertSubreg()) {
       Reg = DefMI->getOperand(2).getReg();
-      if (Register::isVirtualRegister(Reg)) {
+      if (Reg.isVirtual()) {
         DefMI = MRI->getVRegDef(Reg);
         continue;
       }

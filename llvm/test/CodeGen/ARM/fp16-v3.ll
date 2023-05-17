@@ -17,22 +17,22 @@ target triple = "armv7a--none-eabi"
 ; CHECK-DAG: vmov [[DREG:d[0-9]+]], [[RREG3]], [[RREG2]]
 ; CHECK-DAG: vst1.32 {[[DREG]][0]}, [r0:32]
 ; CHECK-NEXT: bx lr
-define void @test_vec3(<3 x half>* %arr, i32 %i) #0 {
+define void @test_vec3(ptr %arr, i32 %i) #0 {
   %H = sitofp i32 %i to half
   %S = fadd half %H, 0xH4A00
   %1 = insertelement <3 x half> undef, half %S, i32 0
   %2 = insertelement <3 x half> %1, half %S, i32 1
   %3 = insertelement <3 x half> %2, half %S, i32 2
-  store <3 x half> %3, <3 x half>* %arr, align 8
+  store <3 x half> %3, ptr %arr, align 8
   ret void
 }
 
 ; CHECK-LABEL: test_bitcast:
 ; CHECK: pkhbt
 ; CHECK: uxth
-define void @test_bitcast(<3 x half> %inp, <3 x i16>* %arr) #0 {
+define void @test_bitcast(<3 x half> %inp, ptr %arr) #0 {
   %bc = bitcast <3 x half> %inp to <3 x i16>
-  store <3 x i16> %bc, <3 x i16>* %arr, align 8
+  store <3 x i16> %bc, ptr %arr, align 8
   ret void
 }
 

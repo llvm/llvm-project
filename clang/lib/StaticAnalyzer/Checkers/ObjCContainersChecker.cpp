@@ -47,9 +47,6 @@ class ObjCContainersChecker : public Checker< check::PreStmt<CallExpr>,
                    CheckerContext &C) const;
 
 public:
-  /// A tag to id this checker.
-  static void *getTag() { static int Tag; return &Tag; }
-
   void checkPostStmt(const CallExpr *CE, CheckerContext &C) const;
   void checkPreStmt(const CallExpr *CE, CheckerContext &C) const;
   ProgramStateRef checkPointerEscape(ProgramStateRef State,

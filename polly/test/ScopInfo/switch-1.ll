@@ -64,7 +64,7 @@
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f(i32* %A, i32 %N) {
+define void @f(ptr %A, i32 %N) {
 entry:
   %tmp = sext i32 %N to i64
   br label %for.cond
@@ -88,24 +88,24 @@ sw.bb:                                            ; preds = %for.body
   br label %sw.epilog
 
 sw.bb.1:                                          ; preds = %for.body
-  %arrayidx = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp2 = load i32, i32* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp2 = load i32, ptr %arrayidx, align 4
   %add = add nsw i32 %tmp2, 1
-  store i32 %add, i32* %arrayidx, align 4
+  store i32 %add, ptr %arrayidx, align 4
   br label %sw.epilog
 
 sw.bb.2:                                          ; preds = %for.body
-  %arrayidx4 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp3 = load i32, i32* %arrayidx4, align 4
+  %arrayidx4 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp3 = load i32, ptr %arrayidx4, align 4
   %add5 = add nsw i32 %tmp3, 2
-  store i32 %add5, i32* %arrayidx4, align 4
+  store i32 %add5, ptr %arrayidx4, align 4
   br label %sw.epilog
 
 sw.bb.6:                                          ; preds = %for.body
-  %arrayidx8 = getelementptr inbounds i32, i32* %A, i64 %indvars.iv
-  %tmp4 = load i32, i32* %arrayidx8, align 4
+  %arrayidx8 = getelementptr inbounds i32, ptr %A, i64 %indvars.iv
+  %tmp4 = load i32, ptr %arrayidx8, align 4
   %add9 = add nsw i32 %tmp4, 3
-  store i32 %add9, i32* %arrayidx8, align 4
+  store i32 %add9, ptr %arrayidx8, align 4
   br label %sw.epilog
 
 sw.epilog:                                        ; preds = %sw.bb.6, %sw.bb.2, %sw.bb.1, %sw.bb, %for.body

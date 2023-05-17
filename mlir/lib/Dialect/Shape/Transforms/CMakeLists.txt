@@ -1,6 +1,7 @@
 add_mlir_dialect_library(MLIRShapeOpsTransforms
   BufferizableOpInterfaceImpl.cpp
   Bufferize.cpp
+  OutlineShapeComputation.cpp
   RemoveShapeConstraints.cpp
   ShapeToShapeLowering.cpp
 
@@ -13,13 +14,13 @@ add_mlir_dialect_library(MLIRShapeOpsTransforms
 
 target_link_libraries(MLIRShapeOpsTransforms
   PUBLIC
-  MLIRArithmetic
-  MLIRBufferization
+  MLIRArithDialect
+  MLIRBufferizationDialect
   MLIRBufferizationTransforms
   MLIRIR
-  MLIRMemRef
+  MLIRMemRefDialect
   MLIRPass
-  MLIRShape
+  MLIRShapeDialect
   MLIRSupport
   MLIRTransforms
   )

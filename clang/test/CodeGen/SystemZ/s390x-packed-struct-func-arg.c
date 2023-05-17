@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple s390x-linux-gnu -target-cpu z13 -emit-llvm -o - %s \
+// RUN: %clang_cc1 -triple s390x-linux-gnu -target-cpu z13 -emit-llvm -o - %s \
 // RUN:     | FileCheck %s
 
 struct S0 {
@@ -18,6 +18,6 @@ void f(struct S0 arg) {
 void g(void) {
   struct S1 g;
   // CHECK: alloca %struct.S0, align 8
-  // CHECK: call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 {{.*}}, i8* align 1 {{.*}}, i64 16
+  // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 8 {{.*}}, ptr align 1 {{.*}}, i64 16
   f(g.S0_member);
 }

@@ -74,7 +74,7 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
   FileSpec fspec = module_sp->GetSymbolFileFileSpec();
   // Otherwise, try gnu_debuglink, if one exists.
   if (!fspec)
-    fspec = obj_file->GetDebugLink().getValueOr(FileSpec());
+    fspec = obj_file->GetDebugLink().value_or(FileSpec());
 
   LLDB_SCOPED_TIMERF("SymbolVendorPECOFF::CreateInstance (module = %s)",
                      module_sp->GetFileSpec().GetPath().c_str());
@@ -101,8 +101,6 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
 
   // This objfile is for debugging purposes.
   dsym_objfile_sp->SetType(ObjectFile::eTypeDebugInfo);
-
-  SymbolVendorPECOFF *symbol_vendor = new SymbolVendorPECOFF(module_sp);
 
   // Get the module unified section list and add our debug sections to
   // that.
@@ -132,6 +130,7 @@ SymbolVendorPECOFF::CreateInstance(const lldb::ModuleSP &module_sp,
     }
   }
 
+  SymbolVendorPECOFF *symbol_vendor = new SymbolVendorPECOFF(module_sp);
   symbol_vendor->AddSymbolFileRepresentation(dsym_objfile_sp);
   return symbol_vendor;
 }

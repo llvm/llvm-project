@@ -4,9 +4,9 @@
 ; RUN: llc -mtriple=riscv64 -verify-machineinstrs < %s \
 ; RUN:   | FileCheck -check-prefix=RV64I %s
 
-declare void @llvm.prefetch(i8*, i32, i32, i32)
+declare void @llvm.prefetch(ptr, i32, i32, i32)
 
-define void @test_prefetch(i8* %a) nounwind {
+define void @test_prefetch(ptr %a) nounwind {
 ; RV32I-LABEL: test_prefetch:
 ; RV32I:       # %bb.0:
 ; RV32I-NEXT:    ret
@@ -14,6 +14,6 @@ define void @test_prefetch(i8* %a) nounwind {
 ; RV64I-LABEL: test_prefetch:
 ; RV64I:       # %bb.0:
 ; RV64I-NEXT:    ret
-  call void @llvm.prefetch(i8* %a, i32 0, i32 1, i32 2)
+  call void @llvm.prefetch(ptr %a, i32 0, i32 2, i32 1)
   ret void
 }

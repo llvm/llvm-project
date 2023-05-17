@@ -11,7 +11,7 @@
 
 include "mlir/Pass/PassBase.td"
 
-def CheckUses : Pass<"transform-dialect-check-uses"> {
+def CheckUsesPass : Pass<"transform-dialect-check-uses"> {
   let summary = "warn about potential use-after-free in the transform dialect";
   let description = [{
     This pass analyzes operations from the transform dialect and its extensions
@@ -30,7 +30,16 @@ def CheckUses : Pass<"transform-dialect-check-uses"> {
     prior to this pass provided that transform ops implement the relevant
     control flow interfaces.
   }];
-  let constructor = "::mlir::transform::createCheckUsesPass()";
+}
+
+def InferEffectsPass : Pass<"transform-infer-effects"> {
+  let summary = "infer transform side effects for symbols";
+  let description = [{
+    This pass analyzes the definitions of transform dialect callable symbol
+    operations, such as `transform.named_sequence`, and annotates the symbol
+    arguments with attributes indicating the side effects that the nested
+    operations have on them.
+  }];
 }
 
 #endif // MLIR_DIALECT_TRANSFORM_TRANSFORMS_PASSES

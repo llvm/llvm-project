@@ -1,9 +1,9 @@
-; RUN: opt %s -indvars -S -o - | FileCheck %s
+; RUN: opt %s -passes=indvars -S -o - | FileCheck %s
 source_filename = "/Data/llvm/test/Transforms/IndVarSimplify/scev-phi-debug-info.ll"
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-%struct.status = type { i32, i8* }
+%struct.status = type { i32, ptr }
 
 @status = internal unnamed_addr global [32 x %struct.status] zeroinitializer, align 16, !dbg !0
 
@@ -22,8 +22,8 @@ for.cond:                                         ; preds = %for.body, %entry
 
 for.body:                                         ; preds = %for.cond
   %idxprom = sext i32 %i.0 to i64, !dbg !24
-  %value = getelementptr inbounds [32 x %struct.status], [32 x %struct.status]* @status, i64 0, i64 %idxprom, i32 0, !dbg !24
-  store i32 42, i32* %value, align 16, !dbg !24
+  %value = getelementptr inbounds [32 x %struct.status], ptr @status, i64 0, i64 %idxprom, i32 0, !dbg !24
+  store i32 42, ptr %value, align 16, !dbg !24
   tail call void @use(i32 %i.0), !dbg !24
   %inc = add nsw i32 %i.0, 1, !dbg !24
   tail call void @llvm.dbg.value(metadata i32 %inc, metadata !23, metadata !DIExpression()), !dbg !24

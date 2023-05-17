@@ -32,6 +32,7 @@ public:
     TYPE_SIZE,
     ENUM_VALUE_EXISTENCE,
     ENUM_VALUE,
+    TYPE_MATCH,
 
     MAX_FIELD_RELOC_KIND,
   };
@@ -46,6 +47,7 @@ public:
   enum PreserveTypeInfo : uint32_t {
     PRESERVE_TYPE_INFO_EXISTENCE = 0,
     PRESERVE_TYPE_INFO_SIZE,
+    PRESERVE_TYPE_INFO_MATCH,
 
     MAX_PRESERVE_TYPE_INFO_FLAG,
   };

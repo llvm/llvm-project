@@ -40,6 +40,10 @@
 //
 //===----------------------------------------------------------------------===//
 
+#ifndef RVV_TYPE
+#define RVV_TYPE(Name, Id, SingletonId)
+#endif
+
 #ifndef RVV_VECTOR_TYPE
 #define RVV_VECTOR_TYPE(Name, Id, SingletonId, NumEls, ElBits, NF, IsSigned, IsFP)\
   RVV_TYPE(Name, Id, SingletonId)

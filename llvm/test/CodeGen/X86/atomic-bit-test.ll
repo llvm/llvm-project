@@ -23,7 +23,7 @@ define i16 @bts1() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i16* @v16, i16 1 monotonic, align 2
+  %0 = atomicrmw or ptr @v16, i16 1 monotonic, align 2
   %and = and i16 %0, 1
   ret i16 %and
 }
@@ -47,7 +47,7 @@ define i16 @bts2() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i16* @v16, i16 2 monotonic, align 2
+  %0 = atomicrmw or ptr @v16, i16 2 monotonic, align 2
   %and = and i16 %0, 2
   ret i16 %and
 }
@@ -71,7 +71,7 @@ define i16 @bts15() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i16* @v16, i16 32768 monotonic, align 2
+  %0 = atomicrmw or ptr @v16, i16 32768 monotonic, align 2
   %and = and i16 %0, 32768
   ret i16 %and
 }
@@ -93,7 +93,7 @@ define i32 @bts31() nounwind {
 ; X64-NEXT:    shll $31, %eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i32* @v32, i32 2147483648 monotonic, align 4
+  %0 = atomicrmw or ptr @v32, i32 2147483648 monotonic, align 4
   %and = and i32 %0, 2147483648
   ret i32 %and
 }
@@ -129,7 +129,7 @@ define i64 @bts63() nounwind {
 ; X64-NEXT:    shlq $63, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i64* @v64, i64 -9223372036854775808 monotonic, align 8
+  %0 = atomicrmw or ptr @v64, i64 -9223372036854775808 monotonic, align 8
   %and = and i64 %0, -9223372036854775808
   ret i64 %and
 }
@@ -151,7 +151,7 @@ define i16 @btc1() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw xor i16* @v16, i16 1 monotonic, align 2
+  %0 = atomicrmw xor ptr @v16, i16 1 monotonic, align 2
   %and = and i16 %0, 1
   ret i16 %and
 }
@@ -175,7 +175,7 @@ define i16 @btc2() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw xor i16* @v16, i16 2 monotonic, align 2
+  %0 = atomicrmw xor ptr @v16, i16 2 monotonic, align 2
   %and = and i16 %0, 2
   ret i16 %and
 }
@@ -183,23 +183,21 @@ entry:
 define i16 @btc15() nounwind {
 ; X86-LABEL: btc15:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    lock btcw $15, v16
-; X86-NEXT:    setb %al
-; X86-NEXT:    shll $15, %eax
+; X86-NEXT:    movw $-32768, %ax # imm = 0x8000
+; X86-NEXT:    lock xaddw %ax, v16
+; X86-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X86-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: btc15:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    lock btcw $15, v16(%rip)
-; X64-NEXT:    setb %al
-; X64-NEXT:    shll $15, %eax
+; X64-NEXT:    movw $-32768, %ax # imm = 0x8000
+; X64-NEXT:    lock xaddw %ax, v16(%rip)
+; X64-NEXT:    andl $32768, %eax # imm = 0x8000
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw xor i16* @v16, i16 32768 monotonic, align 2
+  %0 = atomicrmw xor ptr @v16, i16 32768 monotonic, align 2
   %and = and i16 %0, 32768
   ret i16 %and
 }
@@ -207,21 +205,19 @@ entry:
 define i32 @btc31() nounwind {
 ; X86-LABEL: btc31:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    xorl %eax, %eax
-; X86-NEXT:    lock btcl $31, v32
-; X86-NEXT:    setb %al
-; X86-NEXT:    shll $31, %eax
+; X86-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X86-NEXT:    lock xaddl %eax, v32
+; X86-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: btc31:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    lock btcl $31, v32(%rip)
-; X64-NEXT:    setb %al
-; X64-NEXT:    shll $31, %eax
+; X64-NEXT:    movl $-2147483648, %eax # imm = 0x80000000
+; X64-NEXT:    lock xaddl %eax, v32(%rip)
+; X64-NEXT:    andl $-2147483648, %eax # imm = 0x80000000
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw xor i32* @v32, i32 2147483648 monotonic, align 4
+  %0 = atomicrmw xor ptr @v32, i32 2147483648 monotonic, align 4
   %and = and i32 %0, 2147483648
   ret i32 %and
 }
@@ -251,13 +247,13 @@ define i64 @btc63() nounwind {
 ;
 ; X64-LABEL: btc63:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    xorl %eax, %eax
-; X64-NEXT:    lock btcq $63, v64(%rip)
-; X64-NEXT:    setb %al
-; X64-NEXT:    shlq $63, %rax
+; X64-NEXT:    movabsq $-9223372036854775808, %rcx # imm = 0x8000000000000000
+; X64-NEXT:    movq %rcx, %rax
+; X64-NEXT:    lock xaddq %rax, v64(%rip)
+; X64-NEXT:    andq %rcx, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw xor i64* @v64, i64 -9223372036854775808 monotonic, align 8
+  %0 = atomicrmw xor ptr @v64, i64 -9223372036854775808 monotonic, align 8
   %and = and i64 %0, -9223372036854775808
   ret i64 %and
 }
@@ -279,7 +275,7 @@ define i16 @btr1() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw and i16* @v16, i16 -2 monotonic, align 2
+  %0 = atomicrmw and ptr @v16, i16 -2 monotonic, align 2
   %and = and i16 %0, 1
   ret i16 %and
 }
@@ -303,7 +299,7 @@ define i16 @btr2() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw and i16* @v16, i16 -3 monotonic, align 2
+  %0 = atomicrmw and ptr @v16, i16 -3 monotonic, align 2
   %and = and i16 %0, 2
   ret i16 %and
 }
@@ -327,7 +323,7 @@ define i16 @btr15() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw and i16* @v16, i16 32767 monotonic, align 2
+  %0 = atomicrmw and ptr @v16, i16 32767 monotonic, align 2
   %and = and i16 %0, 32768
   ret i16 %and
 }
@@ -349,7 +345,7 @@ define i32 @btr31() nounwind {
 ; X64-NEXT:    shll $31, %eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw and i32* @v32, i32 2147483647 monotonic, align 4
+  %0 = atomicrmw and ptr @v32, i32 2147483647 monotonic, align 4
   %and = and i32 %0, 2147483648
   ret i32 %and
 }
@@ -391,7 +387,7 @@ define i64 @btr63() nounwind {
 ; X64-NEXT:    shlq $63, %rax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw and i64* @v64, i64 9223372036854775807 monotonic, align 8
+  %0 = atomicrmw and ptr @v64, i64 9223372036854775807 monotonic, align 8
   %and = and i64 %0, -9223372036854775808
   ret i64 %and
 }
@@ -437,7 +433,7 @@ define i16 @multi_use1() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i16* @v16, i16 1 monotonic, align 2
+  %0 = atomicrmw or ptr @v16, i16 1 monotonic, align 2
   %1 = and i16 %0, 1
   %2 = xor i16 %0, 2
   %3 = or i16 %1, %2
@@ -463,7 +459,7 @@ define i16 @multi_use2() nounwind {
 ; X64-NEXT:    # kill: def $ax killed $ax killed $eax
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i16* @v16, i16 1 monotonic, align 2
+  %0 = atomicrmw or ptr @v16, i16 1 monotonic, align 2
   %1 = and i16 %0, 1
   %2 = shl i16 %1, 1
   %3 = or i16 %1, %2
@@ -521,7 +517,7 @@ define i16 @use_in_diff_bb() nounwind {
 ; X64-NEXT:    popq %rbx
 ; X64-NEXT:    retq
 entry:
-  %0 = atomicrmw or i16* @v16, i16 1 monotonic, align 2
+  %0 = atomicrmw or ptr @v16, i16 1 monotonic, align 2
   br i1 undef, label %1, label %2
 1:
   call void @foo()
@@ -556,7 +552,7 @@ define void @no_and_cmp0_fold() nounwind {
 ; X64-NEXT:    retq
 ; X64-NEXT:  .LBB18_1: # %if.then
 entry:
-  %0 = atomicrmw or i32* @v32, i32 8 monotonic, align 4
+  %0 = atomicrmw or ptr @v32, i32 8 monotonic, align 4
   %and = and i32 %0, 8
   %tobool = icmp ne i32 %and, 0
   br i1 undef, label %if.then, label %if.end
@@ -588,7 +584,7 @@ define i32 @split_hoist_and(i32 %0) nounwind {
 ; X64-NEXT:    shll $3, %eax
 ; X64-NEXT:    testl %edi, %edi
 ; X64-NEXT:    retq
-  %2 = atomicrmw or i32* @v32, i32 8 monotonic, align 4
+  %2 = atomicrmw or ptr @v32, i32 8 monotonic, align 4
   %3 = tail call i32 @llvm.ctlz.i32(i32 %0, i1 false)
   %4 = and i32 %2, 8
   ret i32 %4

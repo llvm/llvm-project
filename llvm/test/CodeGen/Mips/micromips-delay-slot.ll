@@ -7,8 +7,8 @@
 define i32 @foo(i32 signext %a) #0 {
 entry:
   %a.addr = alloca i32, align 4
-  store i32 %a, i32* %a.addr, align 4
-  %0 = load i32, i32* %a.addr, align 4
+  store i32 %a, ptr %a.addr, align 4
+  %0 = load i32, ptr %a.addr, align 4
   %shl = shl i32 %0, 2
   %call = call i32 @bar(i32 signext %shl)
   ret i32 %call

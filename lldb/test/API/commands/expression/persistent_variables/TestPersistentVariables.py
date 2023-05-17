@@ -10,8 +10,6 @@ from lldbsuite.test.lldbtest import *
 
 class PersistentVariablesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_persistent_variables(self):
         """Test that lldb persistent variables works correctly."""
         self.build()

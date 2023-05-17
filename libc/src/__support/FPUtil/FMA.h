@@ -9,29 +9,28 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 #define LLVM_LIBC_SRC_SUPPORT_FPUTIL_FMA_H
 
-#include "src/__support/architectures.h"
+#include "src/__support/macros/properties/architectures.h"
+#include "src/__support/macros/properties/cpu_features.h" // LIBC_TARGET_CPU_HAS_FMA
 
-#if defined(LIBC_TARGET_HAS_FMA)
+#if defined(LIBC_TARGET_CPU_HAS_FMA)
 
-#if defined(LLVM_LIBC_ARCH_X86_64)
+#if defined(LIBC_TARGET_ARCH_IS_X86_64)
 #include "x86_64/FMA.h"
-#elif defined(LLVM_LIBC_ARCH_AARCH64)
+#elif defined(LIBC_TARGET_ARCH_IS_AARCH64)
 #include "aarch64/FMA.h"
+#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#include "riscv64/FMA.h"
 #endif
 
 #else
 // FMA instructions are not available
 #include "generic/FMA.h"
-#include "src/__support/CPP/TypeTraits.h"
+#include "src/__support/CPP/type_traits.h"
 
 namespace __llvm_libc {
 namespace fputil {
 
-// We have a generic implementation available only for single precision fma as
-// we restrict it to float values for now.
-template <typename T>
-static inline cpp::EnableIfType<cpp::IsSame<T, float>::Value, T> fma(T x, T y,
-                                                                     T z) {
+template <typename T> LIBC_INLINE T fma(T x, T y, T z) {
   return generic::fma(x, y, z);
 }
 

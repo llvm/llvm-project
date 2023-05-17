@@ -44,7 +44,7 @@ class FastUnwindTest : public ::testing::Test {
   uhwptr fake_bottom;
   BufferedStackTrace trace;
 
-#if defined(__riscv)
+#if defined(__loongarch__) || defined(__riscv)
   const uptr kFpOffset = 4;
   const uptr kBpOffset = 2;
 #else

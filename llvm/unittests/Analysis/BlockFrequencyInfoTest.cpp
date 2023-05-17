@@ -75,11 +75,11 @@ TEST_F(BlockFrequencyInfoTest, Basic) {
   EXPECT_EQ(BB0Freq, BB1Freq + BB2Freq);
   EXPECT_EQ(BB0Freq, BB3Freq);
 
-  EXPECT_EQ(BFI.getBlockProfileCount(&BB0).getValue(), UINT64_C(100));
-  EXPECT_EQ(BFI.getBlockProfileCount(BB3).getValue(), UINT64_C(100));
-  EXPECT_EQ(BFI.getBlockProfileCount(BB1).getValue(),
+  EXPECT_EQ(*BFI.getBlockProfileCount(&BB0), UINT64_C(100));
+  EXPECT_EQ(*BFI.getBlockProfileCount(BB3), UINT64_C(100));
+  EXPECT_EQ(*BFI.getBlockProfileCount(BB1),
             (100 * BB1Freq + BB0Freq / 2) / BB0Freq);
-  EXPECT_EQ(BFI.getBlockProfileCount(BB2).getValue(),
+  EXPECT_EQ(*BFI.getBlockProfileCount(BB2),
             (100 * BB2Freq + BB0Freq / 2) / BB0Freq);
 
   // Scale the frequencies of BB0, BB1 and BB2 by a factor of two.
@@ -91,7 +91,7 @@ TEST_F(BlockFrequencyInfoTest, Basic) {
   EXPECT_EQ(BFI.getBlockFreq(BB3).getFrequency(), BB3Freq);
 }
 
-static_assert(std::is_trivially_copyable<bfi_detail::BlockMass>::value,
+static_assert(std::is_trivially_copyable_v<bfi_detail::BlockMass>,
               "trivially copyable");
 
 } // end anonymous namespace

@@ -57,9 +57,9 @@ lldb::SBError SBStructuredData::SetFromJSON(lldb::SBStream &stream) {
   LLDB_INSTRUMENT_VA(this, stream);
 
   lldb::SBError error;
-  std::string json_str(stream.GetData());
 
-  StructuredData::ObjectSP json_obj = StructuredData::ParseJSON(json_str);
+  StructuredData::ObjectSP json_obj =
+      StructuredData::ParseJSON(stream.GetData());
   m_impl_up->SetObjectSP(json_obj);
 
   if (!json_obj || json_obj->GetType() != eStructuredDataTypeDictionary)

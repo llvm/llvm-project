@@ -14,8 +14,8 @@ def OpA : NS_Op<"one_normal_operand_op", []> {
 
 // CHECK-LABEL: OpA definitions
 
-// CHECK:      OpAAdaptor::OpAAdaptor
-// CHECK-SAME: odsOperands(values), odsAttrs(attrs)
+// CHECK:      OpAGenericAdaptorBase::OpAGenericAdaptorBase
+// CHECK-SAME: odsAttrs(attrs)
 
 // CHECK:      void OpA::build
 // CHECK:        ::mlir::Value input
@@ -39,20 +39,11 @@ def OpD : NS_Op<"mix_variadic_and_normal_inputs_op", [SameVariadicOperandSize]> 
   let arguments = (ins Variadic<AnyTensor>:$input1, AnyTensor:$input2, Variadic<AnyTensor>:$input3);
 }
 
-// CHECK-LABEL: ::mlir::ValueRange OpDAdaptor::input1
-// CHECK-NEXT:    return getODSOperands(0);
-
-// CHECK-LABEL: ::mlir::Value OpDAdaptor::input2
-// CHECK-NEXT:    return *getODSOperands(1).begin();
-
-// CHECK-LABEL: ::mlir::ValueRange OpDAdaptor::input3
-// CHECK-NEXT:    return getODSOperands(2);
-
-// CHECK-LABEL: ::mlir::Operation::operand_range OpD::input1
+// CHECK-LABEL: ::mlir::Operation::operand_range OpD::getInput1
 // CHECK-NEXT: return getODSOperands(0);
 
-// CHECK-LABEL: ::mlir::Value OpD::input2
-// CHECK-NEXT: return *getODSOperands(1).begin();
+// CHECK-LABEL: ::mlir::TypedValue<::mlir::TensorType> OpD::getInput2
+// CHECK-NEXT: return ::llvm::cast<::mlir::TypedValue<::mlir::TensorType>>(*getODSOperands(1).begin());
 
 // CHECK-LABEL: OpD::build
 // CHECK-NEXT: odsState.addOperands(input1);

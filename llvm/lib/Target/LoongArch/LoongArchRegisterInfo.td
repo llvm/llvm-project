@@ -40,6 +40,7 @@ def RegAliasName : RegAltNameIndex;
 // Integer registers
 
 let RegAltNameIndices = [RegAliasName] in {
+  let isConstant = true in
   def R0  : LoongArchReg<0,  "r0", ["zero"]>, DwarfRegNum<[0]>;
   def R1  : LoongArchReg<1,  "r1", ["ra"]>, DwarfRegNum<[1]>;
   def R2  : LoongArchReg<2,  "r2", ["tp"]>, DwarfRegNum<[2]>;
@@ -97,6 +98,16 @@ def GPR : RegisterClass<"LoongArch", [GRLenVT], 32, (add
   let RegInfos = GRLenRI;
 }
 
+// GPR for indirect tail calls. We can't use callee-saved registers, as they are
+// restored to the saved value before the tail call, which would clobber a call
+// address.
+def GPRT : RegisterClass<"LoongArch", [GRLenVT], 32, (add
+    // a0...a7, t0...t8
+    (sequence "R%u", 4, 20)
+  )> {
+  let RegInfos = GRLenRI;
+}
+
 // Floating point registers
 
 let RegAltNameIndices = [RegAliasName] in {
@@ -148,7 +159,9 @@ def FPR64 : RegisterClass<"LoongArch", [f64], 64, (sequence "F%u_64", 0, 31)>;
 foreach I = 0-7 in
 def FCC#I : LoongArchReg<I, "fcc"#I>;
 
-def CFR : RegisterClass<"LoongArch", [i32], 32, (sequence "FCC%u", 0, 7)>;
+def CFR : RegisterClass<"LoongArch", [GRLenVT], 32, (sequence "FCC%u", 0, 7)> {
+  let RegInfos = GRLenRI;
+}
 
 // Control and status registers
 

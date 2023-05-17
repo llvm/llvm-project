@@ -11,7 +11,7 @@
 
 # RUN: ld.lld %t1.o %t3btipac.o --shared --soname=t.so -o %t.so
 # RUN: llvm-readelf -n %t.so | FileCheck --check-prefix BTIPACPROP %s
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.so | FileCheck --check-prefix BTIPACSO %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.so | FileCheck --check-prefix BTIPACSO %s
 # RUN: llvm-readelf --dynamic-table %t.so | FileCheck --check-prefix BTIPACDYN %s
 
 # BTIPACSO: Disassembly of section .text:
@@ -47,7 +47,7 @@
 
 # RUN: ld.lld %t.o %t3btipac.o %t.so -o %t.exe
 # RUN: llvm-readelf -n %t.exe | FileCheck --check-prefix=BTIPACPROP %s
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX %s
 # RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYNEX %s
 
 # BTIPACEX: Disassembly of section .text:
@@ -81,7 +81,7 @@
 ## Check that combinations of BTI+PAC with 0 properties results in standard PLT
 
 # RUN: ld.lld %t.o %t3.o %t.so -o %t.exe
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix EX %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix EX %s
 # RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix=NODYN %s
 
 # EX: Disassembly of section .text:
@@ -122,7 +122,7 @@
 # FORCE-WARN: aarch64-feature-btipac.s.tmp3.o: -z force-bti: file does not have GNU_PROPERTY_AARCH64_FEATURE_1_BTI property
 
 # RUN: llvm-readelf -n %t.exe | FileCheck --check-prefix=BTIPACPROP %s
-# RUN: llvm-objdump -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX2 %s
+# RUN: llvm-objdump --no-print-imm-hex -d --mattr=+v8.5a --no-show-raw-insn %t.exe | FileCheck --check-prefix BTIPACEX2 %s
 # RUN: llvm-readelf --dynamic-table %t.exe | FileCheck --check-prefix BTIPACDYN2 %s
 .section ".note.gnu.property", "a"
 .long 4

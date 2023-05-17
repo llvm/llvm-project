@@ -20,14 +20,14 @@
 ; M1-NOT: @f()
 define void @f() {
   ; M0: llvm.type.test{{.*}}metadata !"1.f50b51a12bb012bebbeff978335e34cf"
-  %p = call i1 @llvm.type.test(i8* null, metadata !0)
+  %p = call i1 @llvm.type.test(ptr null, metadata !0)
   ; M0: llvm.type.checked.load{{.*}}metadata !"2.f50b51a12bb012bebbeff978335e34cf"
-  %q = call {i8*, i1} @llvm.type.checked.load(i8* null, i32 0, metadata !3)
+  %q = call {ptr, i1} @llvm.type.checked.load(ptr null, i32 0, metadata !3)
   ret void
 }
 
-declare i1 @llvm.type.test(i8*, metadata)
-declare {i8*, i1} @llvm.type.checked.load(i8*, i32, metadata)
+declare i1 @llvm.type.test(ptr, metadata)
+declare {ptr, i1} @llvm.type.checked.load(ptr, i32, metadata)
 
 !0 = distinct !{}
 ; M1: !0 = !{i32 0, !"1.f50b51a12bb012bebbeff978335e34cf"}

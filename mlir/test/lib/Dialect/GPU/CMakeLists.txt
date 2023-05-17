@@ -8,16 +8,16 @@ add_mlir_library(MLIRGPUTestPasses
   EXCLUDE_FROM_LIBMLIR
 
   LINK_LIBS PUBLIC
-  MLIRAffine
-  MLIRFunc
-  MLIRGPUOps
+  MLIRAffineDialect
+  MLIRFuncDialect
+  MLIRGPUDialect
   MLIRGPUToGPURuntimeTransforms
   MLIRLLVMToLLVMIRTranslation
-  MLIRNVVMIR
+  MLIRNVVMDialect
   MLIRNVVMToLLVMIRTranslation
   MLIRPass
-  MLIRROCDLIR
+  MLIRROCDLDialect
   MLIRROCDLToLLVMIRTranslation
-  MLIRSCF
+  MLIRSCFDialect
   MLIRTransformUtils
   )

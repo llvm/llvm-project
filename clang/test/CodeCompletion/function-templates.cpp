@@ -17,11 +17,11 @@ V doSomething(T t, const U &u, V *v) { return V(); }
 void f() {
   std::sort(1, 2);
   Foo().getAs<int>();
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:18:8 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-2):8 %s -o - | FileCheck -check-prefix=CHECK-CC1 %s
   // CHECK-CC1: dyn_cast<<#class X#>>(<#Y *Val#>)
   // CHECK-CC1: sort(<#RandomAccessIterator first#>, <#RandomAccessIterator last#>
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:19:9 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-4):9 %s -o - | FileCheck -check-prefix=CHECK-CC2 %s
   // CHECK-CC2: getAs<<#typename T#>>()
-  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:19:22 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
+  // RUN: %clang_cc1 -fsyntax-only -code-completion-at=%s:%(line-6):22 %s -o - | FileCheck -check-prefix=CHECK-CC3 %s
   // CHECK-CC3: [#V#]doSomething(<#T t#>, <#const U &u#>, <#V *v#>)
 }

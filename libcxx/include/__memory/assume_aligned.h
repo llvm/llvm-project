@@ -12,9 +12,9 @@
 
 #include <__assert>
 #include <__config>
+#include <__type_traits/is_constant_evaluated.h>
 #include <cstddef>
 #include <cstdint>
-#include <type_traits> // for is_constant_evaluated()
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -22,7 +22,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 template <size_t _Np, class _Tp>
 [[nodiscard]]
@@ -39,7 +39,7 @@ constexpr _Tp* assume_aligned(_Tp* __ptr) {
   }
 }
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

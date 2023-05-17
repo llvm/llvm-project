@@ -93,9 +93,6 @@ exclude_patterns = ['_build']
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'friendly'
 
-# A list of ignored prefixes for module index sorting.
-#modindex_common_prefix = []
-
 in_progress_title = "(In-Progress) " if tags.has("PreRelease") else ""
 
 rst_epilog = f"""

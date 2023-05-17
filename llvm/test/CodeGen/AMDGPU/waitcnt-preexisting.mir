@@ -8,13 +8,15 @@ body:             |
     liveins: $vgpr0
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_lgkmcnt_unmodified
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0_vgpr1 = DS_READ2_B32 $vgpr0, 0, 1, 0, implicit $m0, implicit $exec
-    ; GFX9: S_WAITCNT 49279
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_ENDPGM 0
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0_vgpr1 = DS_READ2_B32 $vgpr0, 0, 1, 0, implicit $m0, implicit $exec
+    ; GFX9-NEXT: S_WAITCNT 49279
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = DS_READ2_B32 $vgpr0, 0, 1, 0, implicit $m0, implicit $exec
     S_WAITCNT 49279
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
@@ -29,13 +31,15 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_vmcnt_unmodified
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX9: S_WAITCNT 3952
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_ENDPGM 0
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX9-NEXT: S_WAITCNT 3952
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
     S_WAITCNT 3952
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
@@ -52,13 +56,15 @@ body:             |
     liveins: $vgpr0
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_vmcnt_needs_lgkmcnt
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0_vgpr1 = DS_READ2_B32 $vgpr0, 0, 1, 0, implicit $m0, implicit $exec
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_ENDPGM 0
+    ; GFX9: liveins: $vgpr0
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0_vgpr1 = DS_READ2_B32 $vgpr0, 0, 1, 0, implicit $m0, implicit $exec
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = DS_READ2_B32 $vgpr0, 0, 1, 0, implicit $m0, implicit $exec
     S_WAITCNT 3952
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
@@ -73,13 +79,15 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_lgkmcnt_needs_vmcnt
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_ENDPGM 0
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
     S_WAITCNT 49279
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
@@ -97,14 +105,16 @@ body:             |
     liveins: $vgpr0_vgpr1, $vgpr2
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_apply_all_counters
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX9: $vgpr6_vgpr7 = DS_READ2_B32 $vgpr2, 0, 1, 0, implicit $m0, implicit $exec
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr6 = V_OR_B32_e32 1, killed $vgpr6, implicit $exec
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9: liveins: $vgpr0_vgpr1, $vgpr2
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX9-NEXT: $vgpr6_vgpr7 = DS_READ2_B32 $vgpr2, 0, 1, 0, implicit $m0, implicit $exec
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr6 = V_OR_B32_e32 1, killed $vgpr6, implicit $exec
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr4_vgpr5, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr4_vgpr5 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
     $vgpr6_vgpr7 = DS_READ2_B32 $vgpr2, 0, 1, 0, implicit $m0, implicit $exec
     S_WAITCNT 0
@@ -120,10 +130,12 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_combine_waitcnt
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 0
     S_WAITCNT 0
@@ -141,10 +153,12 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_combine_waitcnt_diff_counters
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 49279
     S_WAITCNT 3952
@@ -161,14 +175,16 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_early_wait
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: S_NOP 0
-    ; GFX9: S_NOP 0
-    ; GFX9: S_NOP 0
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_ENDPGM 0
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: S_NOP 0
+    ; GFX9-NEXT: S_NOP 0
+    ; GFX9-NEXT: S_NOP 0
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_ENDPGM 0
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 0
     S_NOP 0
@@ -185,10 +201,12 @@ body:             |
     liveins: $vgpr0_vgpr1
 
     ; GFX9-LABEL: name: test_waitcnt_preexisting_ignore_kill
-    ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 3952
-    ; GFX9: KILL $vgpr0
+    ; GFX9: liveins: $vgpr0_vgpr1
+    ; GFX9-NEXT: {{  $}}
+    ; GFX9-NEXT: S_WAITCNT 0
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 3952
+    ; GFX9-NEXT: KILL $vgpr0
     $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
     S_WAITCNT 3952
     KILL $vgpr0
@@ -202,8 +220,7 @@ body:             |
   bb.0:
     ; GFX9-LABEL: name: test_waitcnt_preexisting_func_start
     ; GFX9: S_WAITCNT 0
-    ; GFX9-NOT: S_WAITCNT 0
-    ; GFX9: S_ENDPGM 0
+    ; GFX9-NEXT: S_ENDPGM 0
     S_WAITCNT 0
     S_ENDPGM 0
 ...
@@ -216,14 +233,14 @@ body:             |
   bb.0:
     ; GFX9-LABEL: name: test_waitcnt_preexisting_buffer_inv
     ; GFX9: S_WAITCNT 0
-    ; GFX9: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
-    ; GFX9: S_WAITCNT 3952
-    ; GFX9: BUFFER_INVL2 implicit $exec
-    ; GFX9: BUFFER_WBINVL1_VOL implicit $exec
-    ; GFX9: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_WAITCNT 112
-    ; GFX9: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
-    ; GFX9: S_ENDPGM 0
+    ; GFX9-NEXT: $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
+    ; GFX9-NEXT: S_WAITCNT 3952
+    ; GFX9-NEXT: BUFFER_INVL2 implicit $exec
+    ; GFX9-NEXT: BUFFER_WBINVL1_VOL implicit $exec
+    ; GFX9-NEXT: $vgpr0 = FLAT_LOAD_DWORD $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_WAITCNT 112
+    ; GFX9-NEXT: FLAT_STORE_DWORD $vgpr0_vgpr1, $vgpr0, 0, 0, implicit $exec, implicit $flat_scr
+    ; GFX9-NEXT: S_ENDPGM 0
     $vgpr0_vgpr1 = GLOBAL_LOAD_DWORDX2 $vgpr0_vgpr1, 0, 0, implicit $exec
     S_WAITCNT 3952
     BUFFER_INVL2 implicit $exec

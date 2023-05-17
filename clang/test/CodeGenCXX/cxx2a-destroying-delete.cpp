@@ -90,14 +90,13 @@ void delete_D(D *d) { delete d; }
 // For MS, we don't add a new vtable slot to the primary vtable for the virtual
 // destructor. Instead we cast to the VDel base class.
 // CHECK-MSABI: bitcast {{.*}} %[[d]]
-// CHECK-MSABI64-NEXT: getelementptr {{.*}}, i64 8
-// CHECK-MSABI32-NEXT: getelementptr {{.*}}, i32 4
-// CHECK-MSABI-NEXT: %[[d:.*]] = bitcast i8*
+// CHECK-MSABI64-NEXT: %[[d:.*]] = getelementptr {{.*}}, i64 8
+// CHECK-MSABI32-NEXT: %[[d:.*]] = getelementptr {{.*}}, i32 4
 //
 // CHECK: %[[VTABLE:.*]] = load
 // CHECK: %[[DTOR:.*]] = load
 //
-// CHECK: call {{void|noundef i8\*|x86_thiscallcc noundef i8\*}} %[[DTOR]](%{{.*}}* {{[^,]*}} %[[d]]
+// CHECK: call {{void|noundef i8\*|x86_thiscallcc noundef i8\*}} %[[DTOR]]({{.*}}*{{[^,]*}} %[[d]]
 // CHECK-MSABI-SAME: , i32 noundef 1)
 // CHECK-NOT: call
 // CHECK: }

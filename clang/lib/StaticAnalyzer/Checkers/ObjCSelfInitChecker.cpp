@@ -413,7 +413,7 @@ static bool isSelfVar(SVal location, CheckerContext &C) {
   AnalysisDeclContext *analCtx = C.getCurrentAnalysisDeclContext();
   if (!analCtx->getSelfDecl())
     return false;
-  if (!location.getAs<loc::MemRegionVal>())
+  if (!isa<loc::MemRegionVal>(location))
     return false;
 
   loc::MemRegionVal MRV = location.castAs<loc::MemRegionVal>();

@@ -12,6 +12,7 @@
 //===---------------------------------------------------------------------===//
 
 #include "lsan_common.h"
+#include "lsan_thread.h"
 #include "sanitizer_common/sanitizer_platform.h"
 
 #if CAN_SANITIZE_LEAKS && SANITIZER_FUCHSIA
@@ -143,17 +144,13 @@ void LockStuffAndStopTheWorld(StopTheWorldCallback callback,
 
         // We don't use the thread registry at all for enumerating the threads
         // and their stacks, registers, and TLS regions.  So use it separately
-        // just for the allocator cache, and to call ForEachExtraStackRange,
+        // just for the allocator cache, and to call ScanExtraStackRanges,
         // which ASan needs.
         if (flags()->use_stacks) {
-          GetThreadRegistryLocked()->RunCallbackForEachThreadLocked(
-              [](ThreadContextBase *tctx, void *arg) {
-                ForEachExtraStackRange(tctx->os_id, ForEachExtraStackRangeCb,
-                                       arg);
-              },
-              &params->argument->frontier);
+          InternalMmapVector<Range> ranges;
+          GetThreadExtraStackRangesLocked(&ranges);
+          ScanExtraStackRanges(ranges, &params->argument->frontier);
         }
-
         params->callback(SuspendedThreadsListFuchsia(), params->argument);
       },
       &params);

@@ -9,8 +9,6 @@ from lldbsuite.test.lldbtest import *
 
 class MixedLanguagesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def test_language_of_frame(self):
         """Test that the language defaults to the language of the current frame."""
         self.build()

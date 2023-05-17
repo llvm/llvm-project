@@ -1,0 +1,106 @@
+# RUN: llc -o - %s -mtriple=aarch64-windows -run-pass=aarch64-ldst-opt \
+# RUN:   | FileCheck %s
+
+# CHECK: $x0 = LDRXui $sp, 1
+# CHECK: $x19 = frame-destroy LDRXui $sp, 2
+
+--- |
+  target triple = "aarch64-pc-windows-gnu"
+  
+  define dso_local noundef i64 @_Z1fPFvPxEx(ptr nocapture noundef readonly %g, i64 noundef %x) uwtable {
+  entry:
+    %x.addr = alloca i64, align 8
+    store i64 %x, ptr %x.addr, align 8
+    call void %g(ptr noundef nonnull %x.addr)
+    call void asm sideeffect "", "~{x19}"()
+    %0 = load i64, ptr %x.addr, align 8
+    ret i64 %0
+  }
+...
+---
+name:            _Z1fPFvPxEx
+alignment:       4
+exposesReturnsTwice: false
+legalized:       false
+regBankSelected: false
+selected:        false
+failedISel:      false
+tracksRegLiveness: true
+hasWinCFI:       true
+callsEHReturn:   false
+callsUnwindInit: false
+hasEHCatchret:   false
+hasEHScopes:     false
+hasEHFunclets:   false
+failsVerification: false
+tracksDebugUserValues: true
+registers:       []
+liveins:
+  - { reg: '$x0', virtual-reg: '' }
+  - { reg: '$x1', virtual-reg: '' }
+frameInfo:
+  isFrameAddressTaken: false
+  isReturnAddressTaken: false
+  hasStackMap:     false
+  hasPatchPoint:   false
+  stackSize:       32
+  offsetAdjustment: 0
+  maxAlignment:    8
+  adjustsStack:    true
+  hasCalls:        true
+  stackProtector:  ''
+  functionContext: ''
+  maxCallFrameSize: 0
+  cvBytesOfCalleeSavedRegisters: 0
+  hasOpaqueSPAdjustment: false
+  hasVAStart:      false
+  hasMustTailInVarArgFunc: false
+  hasTailCall:     false
+  localFrameSize:  8
+  savePoint:       ''
+  restorePoint:    ''
+fixedStack:      []
+stack:
+  - { id: 0, name: x.addr, type: default, offset: -24, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '', callee-saved-restored: true, 
+      local-offset: -8, debug-info-variable: '', debug-info-expression: '', 
+      debug-info-location: '' }
+  - { id: 1, name: '', type: spill-slot, offset: -8, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$lr', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+  - { id: 2, name: '', type: spill-slot, offset: -16, size: 8, alignment: 8, 
+      stack-id: default, callee-saved-register: '$x19', callee-saved-restored: true, 
+      debug-info-variable: '', debug-info-expression: '', debug-info-location: '' }
+callSites:       []
+debugValueSubstitutions: []
+constants:       []
+machineFunctionInfo:
+  hasRedZone:      false
+body:             |
+  bb.0.entry:
+    liveins: $x0, $x1, $x19, $lr
+  
+    $sp = frame-setup SUBXri $sp, 32, 0
+    frame-setup SEH_StackAlloc 32
+    frame-setup STRXui killed $x19, $sp, 2 :: (store (s64) into %stack.2)
+    frame-setup SEH_SaveReg 19, 16
+    frame-setup STRXui killed $lr, $sp, 3 :: (store (s64) into %stack.1)
+    frame-setup SEH_SaveReg 30, 24
+    frame-setup SEH_PrologEnd
+    renamable $x8 = COPY $x0
+    STRXui killed renamable $x1, $sp, 1 :: (store (s64) into %ir.x.addr)
+    $x0 = ADDXri $sp, 8, 0
+    BLR killed renamable $x8, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit $x0, implicit-def $sp
+    INLINEASM &"", 1 /* sideeffect attdialect */, 12 /* clobber */, implicit-def dead early-clobber $x19
+    renamable $x0 = LDRXui $sp, 1 :: (dereferenceable load (s64) from %ir.x.addr)
+    frame-destroy SEH_EpilogStart
+    $lr = frame-destroy LDRXui $sp, 3 :: (load (s64) from %stack.1)
+    frame-destroy SEH_SaveReg 30, 24
+    $x19 = frame-destroy LDRXui $sp, 2 :: (load (s64) from %stack.2)
+    frame-destroy SEH_SaveReg 19, 16
+    $sp = frame-destroy ADDXri $sp, 32, 0
+    frame-destroy SEH_StackAlloc 32
+    frame-destroy SEH_EpilogEnd
+    RET_ReallyLR implicit $x0
+
+...

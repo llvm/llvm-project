@@ -6,11 +6,12 @@
 // RUN: OMP_TOOL_VERBOSE_INIT=stdout %libomp-run | FileCheck %s -DPARENTPATH=%T
 
 // REQUIRES: ompt
+// XFAIL: darwin
 
 /*
- *  This file contains code for three OMPT shared library tool to be 
- *  loaded and the code for the OpenMP executable. 
- *  No option enables code for the first shared library 
+ *  This file contains code for three OMPT shared library tool to be
+ *  loaded and the code for the OpenMP executable.
+ *  No option enables code for the first shared library
  *  (without an implementation of ompt_start_tool) during compilation
  *  -DTOOL -DSECOND_TOOL enables the code for the second tool during compilation
  *  -DTOOL -DTHIRD_TOOL enables the code for the third tool during compilation
@@ -45,7 +46,7 @@
 
 // Check if libomp supports the callbacks for this test.
 
-// CHECK-NOT: {{^}}0: Could not register callback 
+// CHECK-NOT: {{^}}0: Could not register callback
 // CHECK: {{^}}0: Tool initialized
 // CHECK: {{^}}0: ompt_event_thread_begin
 // CHECK-DAG: {{^}}0: ompt_event_thread_begin
@@ -90,7 +91,7 @@ ompt_start_tool_result_t* ompt_start_tool(
   return NULL;
 }
 #elif defined(THIRD_TOOL)
-// The third tool has an implementation of ompt_start_tool that returns a 
+// The third tool has an implementation of ompt_start_tool that returns a
 // pointer to a valid instance of ompt_start_tool_result_t
 
 static void

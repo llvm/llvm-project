@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs < %s -mtriple=ppc32-- -mcpu=g5
 ; END.
 
-define void @test(i8* %stack) {
+define void @test(ptr %stack) {
 entry:
 	%tmp9 = icmp eq i32 0, 0		; <i1> [#uses=1]
 	%tmp30 = icmp eq i32 0, 0		; <i1> [#uses=1]
@@ -26,7 +26,7 @@ cond_false385:		; preds = %cond_next54
 cond_true389:		; preds = %cond_false385
 	ret void
 cond_next463:		; preds = %cond_false385
-	%tmp1208107 = icmp ugt i8* null, %stack		; <i1> [#uses=1]
+	%tmp1208107 = icmp ugt ptr null, %stack		; <i1> [#uses=1]
 	br i1 %tmp1208107, label %cond_true1209.preheader, label %bb1212
 cond_true498:		; preds = %cond_true1209.preheader
 	ret void

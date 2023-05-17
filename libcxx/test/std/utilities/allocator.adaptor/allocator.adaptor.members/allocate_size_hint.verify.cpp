@@ -16,14 +16,10 @@
 // pointer allocate(size_type n, const_void_pointer hint);
 
 #include <scoped_allocator>
-#include <cassert>
 
 #include "allocators.h"
 
-int main(int, char**)
-{
+void f() {
     std::scoped_allocator_adaptor<A1<int>> a;
     a.allocate(10, (const void*)0); // expected-warning {{ignoring return value of function declared with 'nodiscard' attribute}}
-
-    return 0;
 }

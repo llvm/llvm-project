@@ -133,10 +133,8 @@ struct TypeCloner {
         return S;
       }
       case LLVMArrayTypeKind:
-        return LLVMArrayType(
-          Clone(LLVMGetElementType(Src)),
-          LLVMGetArrayLength(Src)
-        );
+        return LLVMArrayType2(Clone(LLVMGetElementType(Src)),
+                              LLVMGetArrayLength2(Src));
       case LLVMPointerTypeKind:
         if (LLVMPointerTypeIsOpaque(Src))
           return LLVMPointerTypeInContext(Ctx, LLVMGetPointerAddressSpace(Src));
@@ -159,6 +157,8 @@ struct TypeCloner {
         return LLVMX86MMXTypeInContext(Ctx);
       case LLVMTokenTypeKind:
         return LLVMTokenTypeInContext(Ctx);
+      case LLVMTargetExtTypeKind:
+        assert(false && "Implement me");
     }
 
     fprintf(stderr, "%d is not a supported typekind\n", Kind);
@@ -301,25 +301,16 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     return LLVMConstNull(TypeCloner(M).Clone(Cst));
   }
 
-  // Try constant array
-  if (LLVMIsAConstantArray(Cst)) {
-    check_value_kind(Cst, LLVMConstantArrayValueKind);
+  // Try constant array or constant data array
+  if (LLVMIsAConstantArray(Cst) || LLVMIsAConstantDataArray(Cst)) {
+    check_value_kind(Cst, LLVMIsAConstantArray(Cst)
+                              ? LLVMConstantArrayValueKind
+                              : LLVMConstantDataArrayValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
-    unsigned EltCount = LLVMGetArrayLength(Ty);
+    uint64_t EltCount = LLVMGetArrayLength2(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
-    for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
-    return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
-  }
-
-  // Try constant data array
-  if (LLVMIsAConstantDataArray(Cst)) {
-    check_value_kind(Cst, LLVMConstantDataArrayValueKind);
-    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
-    unsigned EltCount = LLVMGetArrayLength(Ty);
-    SmallVector<LLVMValueRef, 8> Elts;
-    for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetElementAsConstant(Cst, i), M));
+    for (uint64_t i = 0; i < EltCount; i++)
+      Elts.push_back(clone_constant(LLVMGetAggregateElement(Cst, i), M));
     return LLVMConstArray(LLVMGetElementType(Ty), Elts.data(), EltCount);
   }
 
@@ -369,25 +360,16 @@ static LLVMValueRef clone_constant_impl(LLVMValueRef Cst, LLVMModuleRef M) {
     report_fatal_error("ConstantFP is not supported");
   }
 
-  // Try ConstantVector
-  if (LLVMIsAConstantVector(Cst)) {
-    check_value_kind(Cst, LLVMConstantVectorValueKind);
+  // Try ConstantVector or ConstantDataVector
+  if (LLVMIsAConstantVector(Cst) || LLVMIsAConstantDataVector(Cst)) {
+    check_value_kind(Cst, LLVMIsAConstantVector(Cst)
+                              ? LLVMConstantVectorValueKind
+                              : LLVMConstantDataVectorValueKind);
     LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
     unsigned EltCount = LLVMGetVectorSize(Ty);
     SmallVector<LLVMValueRef, 8> Elts;
     for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetOperand(Cst, i), M));
-    return LLVMConstVector(Elts.data(), EltCount);
-  }
-
-  // Try ConstantDataVector
-  if (LLVMIsAConstantDataVector(Cst)) {
-    check_value_kind(Cst, LLVMConstantDataVectorValueKind);
-    LLVMTypeRef Ty = TypeCloner(M).Clone(Cst);
-    unsigned EltCount = LLVMGetVectorSize(Ty);
-    SmallVector<LLVMValueRef, 8> Elts;
-    for (unsigned i = 0; i < EltCount; i++)
-      Elts.push_back(clone_constant(LLVMGetElementAsConstant(Cst, i), M));
+      Elts.push_back(clone_constant(LLVMGetAggregateElement(Cst, i), M));
     return LLVMConstVector(Elts.data(), EltCount);
   }
 
@@ -1392,7 +1374,7 @@ NamedMDClone:
   }
 }
 
-int llvm_echo(bool OpaquePointers) {
+int llvm_echo(void) {
   LLVMEnablePrettyStackTrace();
 
   LLVMModuleRef Src = llvm_load_module(false, true);
@@ -1401,8 +1383,6 @@ int llvm_echo(bool OpaquePointers) {
   size_t ModuleIdentLen;
   const char *ModuleName = LLVMGetModuleIdentifier(Src, &ModuleIdentLen);
   LLVMContextRef Ctx = LLVMContextCreate();
-  if (!OpaquePointers)
-    LLVMContextSetOpaquePointers(Ctx, false);
   LLVMModuleRef M = LLVMModuleCreateWithNameInContext(ModuleName, Ctx);
 
   LLVMSetSourceFileName(M, SourceFileName, SourceFileLen);

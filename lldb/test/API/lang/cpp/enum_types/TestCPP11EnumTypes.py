@@ -8,8 +8,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 class CPP11EnumTypesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def check_enum(self, suffix):
         """
         :param suffix The suffix of the enum type name (enum_<suffix>) that

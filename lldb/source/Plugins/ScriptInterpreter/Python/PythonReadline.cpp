@@ -40,7 +40,7 @@ static char *simple_readline(FILE *stdin, FILE *stdout, const char *prompt) {
   char *line = readline(prompt);
   if (!line) {
     char *ret = (char *)PyMem_RawMalloc(1);
-    if (ret != NULL)
+    if (ret != nullptr)
       *ret = '\0';
     return ret;
   }

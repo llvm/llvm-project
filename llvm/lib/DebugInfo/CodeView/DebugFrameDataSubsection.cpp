@@ -52,7 +52,7 @@ Error DebugFrameDataSubsection::commit(BinaryStreamWriter &Writer) const {
   llvm::sort(SortedFrames, [](const FrameData &LHS, const FrameData &RHS) {
     return LHS.RvaStart < RHS.RvaStart;
   });
-  if (auto EC = Writer.writeArray(makeArrayRef(SortedFrames)))
+  if (auto EC = Writer.writeArray(ArrayRef(SortedFrames)))
     return EC;
   return Error::success();
 }

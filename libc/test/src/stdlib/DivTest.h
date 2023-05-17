@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "utils/UnitTest/Test.h"
+#include "test/UnitTest/Test.h"
 
 template <typename IntType, typename ReturnType>
 class DivTest : public __llvm_libc::testing::Test {
@@ -34,4 +34,4 @@ public:
 
 #define LIST_DIV_TESTS(IntType, ReturnType, func)                              \
   using LlvmLibcDivTest = DivTest<IntType, ReturnType>;                        \
-  TEST_F(LlvmLibcDivTest, SimpleTest) { simpleTest(func); }
+  TEST_F(LlvmLibcDivTest, SimpleTest##ReturnType) { simpleTest(func); }

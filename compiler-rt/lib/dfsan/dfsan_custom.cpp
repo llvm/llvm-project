@@ -204,6 +204,57 @@ SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strpbrk(
   return const_cast<char *>(ret);
 }
 
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfsw_strsep(char **s, const char *delim,
+                                                  dfsan_label s_label,
+                                                  dfsan_label delim_label,
+                                                  dfsan_label *ret_label) {
+  dfsan_label base_label = dfsan_read_label(s, sizeof(*s));
+  char *base = *s;
+  char *res = strsep(s, delim);
+  if (res != *s) {
+    char *token_start = res;
+    int token_length = strlen(res);
+    // the delimiter byte has been set to NULL
+    dfsan_set_label(0, token_start + token_length, 1);
+  }
+
+  if (flags().strict_data_dependencies) {
+    *ret_label = res ? base_label : 0;
+  } else {
+    size_t s_bytes_read = (res ? strlen(res) : strlen(base)) + 1;
+    *ret_label = dfsan_union(
+        dfsan_union(base_label, dfsan_read_label(base, sizeof(s_bytes_read))),
+        dfsan_union(dfsan_read_label(delim, strlen(delim) + 1),
+                    dfsan_union(s_label, delim_label)));
+  }
+
+  return res;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE char *__dfso_strsep(
+    char **s, const char *delim, dfsan_label s_label, dfsan_label delim_label,
+    dfsan_label *ret_label, dfsan_origin s_origin, dfsan_origin delim_origin,
+    dfsan_origin *ret_origin) {
+  dfsan_origin base_origin = dfsan_read_origin_of_first_taint(s, sizeof(*s));
+  char *res = __dfsw_strsep(s, delim, s_label, delim_label, ret_label);
+  if (flags().strict_data_dependencies) {
+    if (res)
+      *ret_origin = base_origin;
+  } else {
+    if (*ret_label) {
+      if (base_origin) {
+        *ret_origin = base_origin;
+      } else {
+        dfsan_origin o =
+            dfsan_read_origin_of_first_taint(delim, strlen(delim) + 1);
+        *ret_origin = o ? o : (s_label ? s_origin : delim_origin);
+      }
+    }
+  }
+
+  return res;
+}
+
 static int dfsan_memcmp_bcmp(const void *s1, const void *s2, size_t n,
                              size_t *bytes_read) {
   const char *cs1 = (const char *) s1, *cs2 = (const char *) s2;
@@ -481,6 +532,36 @@ SANITIZER_INTERFACE_ATTRIBUTE size_t __dfso_strlen(const char *s,
   size_t ret = __dfsw_strlen(s, s_label, ret_label);
   if (!flags().strict_data_dependencies)
     *ret_origin = dfsan_read_origin_of_first_taint(s, ret + 1);
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE size_t __dfsw_strnlen(const char *s,
+                                                    size_t maxlen,
+                                                    dfsan_label s_label,
+                                                    dfsan_label maxlen_label,
+                                                    dfsan_label *ret_label) {
+  size_t ret = strnlen(s, maxlen);
+  if (flags().strict_data_dependencies) {
+    *ret_label = 0;
+  } else {
+    size_t full_len = strlen(s);
+    size_t covered_len = maxlen > (full_len + 1) ? (full_len + 1) : maxlen;
+    *ret_label = dfsan_union(maxlen_label, dfsan_read_label(s, covered_len));
+  }
+  return ret;
+}
+
+SANITIZER_INTERFACE_ATTRIBUTE size_t __dfso_strnlen(
+    const char *s, size_t maxlen, dfsan_label s_label, dfsan_label maxlen_label,
+    dfsan_label *ret_label, dfsan_origin s_origin, dfsan_origin maxlen_origin,
+    dfsan_origin *ret_origin) {
+  size_t ret = __dfsw_strnlen(s, maxlen, s_label, maxlen_label, ret_label);
+  if (!flags().strict_data_dependencies) {
+    size_t full_len = strlen(s);
+    size_t covered_len = maxlen > (full_len + 1) ? (full_len + 1) : maxlen;
+    dfsan_origin o = dfsan_read_origin_of_first_taint(s, covered_len);
+    *ret_origin = o ? o : maxlen_origin;
+  }
   return ret;
 }
 

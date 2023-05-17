@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-unknown -mattr=lzcnt | FileCheck %s
 
 ; Make sure we emit opoosite setcc instructions.
-define i64 @pr35399(i64, i8*, i8*) {
+define i64 @pr35399(i64, ptr, ptr) {
 ; CHECK-LABEL: pr35399:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lzcntq %rdi, %rax
@@ -12,10 +12,10 @@ define i64 @pr35399(i64, i8*, i8*) {
   %4 = tail call i64 @llvm.ctlz.i64(i64 %0, i1 false)
   %5 = icmp ne i64 %0, 0
   %6 = zext i1 %5 to i8
-  store i8 %6, i8* %1, align 1
+  store i8 %6, ptr %1, align 1
   %7 = xor i1 %5, true
   %8 = zext i1 %7 to i8
-  store i8 %8, i8* %2, align 1
+  store i8 %8, ptr %2, align 1
   ret i64 %4
 }
 

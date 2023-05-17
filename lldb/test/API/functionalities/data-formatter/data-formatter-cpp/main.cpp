@@ -57,7 +57,22 @@ struct IUseCharStar
 {
 	const char* pointer;
 	IUseCharStar() : pointer("Hello world") {}
+
+        char const *member_func(int) { return ""; }
+        virtual void virt_member_func() {}
 };
+
+void has_local_mem_func_pointers() {
+  const char *IUseCharStar::*member_ptr = &IUseCharStar::pointer;
+  const char *(IUseCharStar::*member_func_ptr)(int) =
+      &IUseCharStar::member_func;
+  auto &ref_to_member_func_ptr = member_func_ptr;
+  
+  void (IUseCharStar::*virt_member_func_ptr)() =
+      &IUseCharStar::virt_member_func;
+
+  ::puts("Break in has_local_mem_func_pointers");
+}
 
 int main (int argc, const char * argv[])
 {
@@ -106,7 +121,9 @@ int main (int argc, const char * argv[])
     char* strptr     = "Hello world!";
     
     i_am_cooler the_coolest_guy(1,2,3.14,6.28,'E','G');
-        
+
+    has_local_mem_func_pointers();
+
     return 0; // Set break point at this line.
 }
 

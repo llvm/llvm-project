@@ -12,6 +12,7 @@ write_cmake_config("features") {
   input = "Features.inc.in"
   output = "$target_gen_dir/Features.inc"
   values = [
+    "CLANGD_DECISION_FOREST=1",
     "CLANGD_ENABLE_REMOTE=0",
     "CLANGD_MALLOC_TRIM=1",
     "CLANGD_TIDY_CHECKS=1",
@@ -42,6 +43,8 @@ static_library("clangd") {
     "//clang-tools-extra/clang-tidy:all-checks",
     "//clang-tools-extra/clang-tidy:clang-tidy-config",
     "//clang-tools-extra/clangd/support",
+    "//clang-tools-extra/include-cleaner/lib",
+    "//clang-tools-extra/pseudo/lib",
     "//clang/lib/AST",
     "//clang/lib/ASTMatchers",
     "//clang/lib/Basic",
@@ -55,14 +58,22 @@ static_library("clangd") {
     "//clang/lib/Tooling",
     "//clang/lib/Tooling/Core",
     "//clang/lib/Tooling/Inclusions",
+    "//clang/lib/Tooling/Inclusions/Stdlib",
     "//clang/lib/Tooling/Refactoring",
     "//clang/lib/Tooling/Syntax",
     "//llvm/lib/Support",
     "//llvm/lib/Target:AllTargetsInfos",
+    "//llvm/lib/TargetParser",
     "//llvm/utils/gn/build/libs/pthread",
   ]
   include_dirs = [
     ".",
+
+    # For "clang-include-cleaner/..." includes.
+    "//clang-tools-extra/include-cleaner/include",
+
+    # For "clang-pseudo/..." includes.
+    "//clang-tools-extra/pseudo/include",
 
     # To pick up the generated inc files.
     "$target_gen_dir/tool",
@@ -81,6 +92,7 @@ static_library("clangd") {
     "ConfigCompile.cpp",
     "ConfigProvider.cpp",
     "ConfigYAML.cpp",
+    "DecisionForest.cpp",
     "Diagnostics.cpp",
     "DraftStore.cpp",
     "DumpAST.cpp",
@@ -107,12 +119,12 @@ static_library("clangd") {
     "Preamble.cpp",
     "Protocol.cpp",
     "Quality.cpp",
-    "QueryDriverDatabase.cpp",
     "RIFF.cpp",
     "Selection.cpp",
     "SemanticHighlighting.cpp",
     "SemanticSelection.cpp",
     "SourceCode.cpp",
+    "SystemIncludeExtractor.cpp",
     "TUScheduler.cpp",
     "TidyProvider.cpp",
     "URI.cpp",

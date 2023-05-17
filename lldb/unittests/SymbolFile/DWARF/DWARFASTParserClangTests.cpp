@@ -9,7 +9,9 @@
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserClang.h"
 #include "Plugins/SymbolFile/DWARF/DWARFCompileUnit.h"
 #include "Plugins/SymbolFile/DWARF/DWARFDIE.h"
+#include "TestingSupport/Symbol/ClangTestUtils.h"
 #include "TestingSupport/Symbol/YAMLModuleTester.h"
+#include "lldb/Core/Debugger.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -18,7 +20,14 @@ using namespace lldb_private;
 using namespace lldb_private::dwarf;
 
 namespace {
-class DWARFASTParserClangTests : public testing::Test {};
+static std::once_flag debugger_initialize_flag;
+
+class DWARFASTParserClangTests : public testing::Test {
+  void SetUp() override {
+    std::call_once(debugger_initialize_flag,
+                   []() { Debugger::Initialize(nullptr); });
+  }
+};
 
 class DWARFASTParserClangStub : public DWARFASTParserClang {
 public:
@@ -93,7 +102,9 @@ DWARF:
   YAMLModuleTester t(yamldata);
   ASSERT_TRUE((bool)t.GetDwarfUnit());
 
-  TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
   DWARFUnit *unit = t.GetDwarfUnit();
@@ -244,7 +255,8 @@ DWARF:
   ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
   DWARFDIE cu_die(unit, cu_entry);
 
-  TypeSystemClang ast_ctx("dummy ASTContext", HostInfoBase::GetTargetTriple());
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
   DWARFASTParserClangStub ast_parser(ast_ctx);
 
   std::vector<std::string> found_function_types;
@@ -272,4 +284,181 @@ DWARF:
       "void ()", // DW_CC_normal -> no attribute
   };
   ASSERT_EQ(found_function_types, expected_function_types);
+}
+
+struct ExtractIntFromFormValueTest : public testing::Test {
+  SubsystemRAII<FileSystem, HostInfo> subsystems;
+  clang_utils::TypeSystemClangHolder holder;
+  TypeSystemClang &ts;
+
+  DWARFASTParserClang parser;
+  ExtractIntFromFormValueTest()
+      : holder("dummy ASTContext"), ts(*holder.GetAST()), parser(ts) {}
+
+  /// Takes the given integer value, stores it in a DWARFFormValue and then
+  /// tries to extract the value back via
+  /// DWARFASTParserClang::ExtractIntFromFormValue.
+  /// Returns the string representation of the extracted value or the error
+  /// that was returned from ExtractIntFromFormValue.
+  llvm::Expected<std::string> Extract(clang::QualType qt, uint64_t value) {
+    DWARFFormValue form_value;
+    form_value.SetUnsigned(value);
+    llvm::Expected<llvm::APInt> result =
+        parser.ExtractIntFromFormValue(ts.GetType(qt), form_value);
+    if (!result)
+      return result.takeError();
+    llvm::SmallString<16> result_str;
+    result->toStringUnsigned(result_str);
+    return std::string(result_str.str());
+  }
+
+  /// Same as ExtractIntFromFormValueTest::Extract but takes a signed integer
+  /// and treats the result as a signed integer.
+  llvm::Expected<std::string> ExtractS(clang::QualType qt, int64_t value) {
+    DWARFFormValue form_value;
+    form_value.SetSigned(value);
+    llvm::Expected<llvm::APInt> result =
+        parser.ExtractIntFromFormValue(ts.GetType(qt), form_value);
+    if (!result)
+      return result.takeError();
+    llvm::SmallString<16> result_str;
+    result->toStringSigned(result_str);
+    return std::string(result_str.str());
+  }
+};
+
+TEST_F(ExtractIntFromFormValueTest, TestBool) {
+  using namespace llvm;
+  clang::ASTContext &ast = ts.getASTContext();
+
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 0), HasValue("0"));
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 1), HasValue("1"));
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 2), Failed());
+  EXPECT_THAT_EXPECTED(Extract(ast.BoolTy, 3), Failed());
+}
+
+TEST_F(ExtractIntFromFormValueTest, TestInt) {
+  using namespace llvm;
+
+  clang::ASTContext &ast = ts.getASTContext();
+
+  // Find the min/max values for 'int' on the current host target.
+  constexpr int64_t int_max = std::numeric_limits<int>::max();
+  constexpr int64_t int_min = std::numeric_limits<int>::min();
+
+  // Check that the bit width of int matches the int width in our type system.
+  ASSERT_EQ(sizeof(int) * 8, ast.getIntWidth(ast.IntTy));
+
+  // Check values around int_min.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min - 2), llvm::Failed());
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min - 1), llvm::Failed());
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min),
+                       HasValue(std::to_string(int_min)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min + 1),
+                       HasValue(std::to_string(int_min + 1)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min + 2),
+                       HasValue(std::to_string(int_min + 2)));
+
+  // Check values around 0.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, -128), HasValue("-128"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, -10), HasValue("-10"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, -1), HasValue("-1"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 0), HasValue("0"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 1), HasValue("1"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 10), HasValue("10"));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, 128), HasValue("128"));
+
+  // Check values around int_max.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max - 2),
+                       HasValue(std::to_string(int_max - 2)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max - 1),
+                       HasValue(std::to_string(int_max - 1)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max),
+                       HasValue(std::to_string(int_max)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max + 1), llvm::Failed());
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max + 5), llvm::Failed());
+
+  // Check some values not near an edge case.
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_max / 2),
+                       HasValue(std::to_string(int_max / 2)));
+  EXPECT_THAT_EXPECTED(ExtractS(ast.IntTy, int_min / 2),
+                       HasValue(std::to_string(int_min / 2)));
+}
+
+TEST_F(ExtractIntFromFormValueTest, TestUnsignedInt) {
+  using namespace llvm;
+
+  clang::ASTContext &ast = ts.getASTContext();
+  constexpr uint64_t uint_max = std::numeric_limits<uint32_t>::max();
+
+  // Check values around 0.
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, 0), HasValue("0"));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, 1), HasValue("1"));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, 1234), HasValue("1234"));
+
+  // Check some values not near an edge case.
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max / 2),
+                       HasValue(std::to_string(uint_max / 2)));
+
+  // Check values around uint_max.
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max - 2),
+                       HasValue(std::to_string(uint_max - 2)));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max - 1),
+                       HasValue(std::to_string(uint_max - 1)));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max),
+                       HasValue(std::to_string(uint_max)));
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max + 1),
+                       llvm::Failed());
+  EXPECT_THAT_EXPECTED(Extract(ast.UnsignedIntTy, uint_max + 2),
+                       llvm::Failed());
+}
+
+TEST_F(DWARFASTParserClangTests, TestDefaultTemplateParamParsing) {
+  // Tests parsing DW_AT_default_value for template parameters.
+  auto BufferOrError = llvm::MemoryBuffer::getFile(
+      GetInputFilePath("DW_AT_default_value-test.yaml"), /*IsText=*/true);
+  ASSERT_TRUE(BufferOrError);
+  YAMLModuleTester t(BufferOrError.get()->getBuffer());
+
+  DWARFUnit *unit = t.GetDwarfUnit();
+  ASSERT_NE(unit, nullptr);
+  const DWARFDebugInfoEntry *cu_entry = unit->DIE().GetDIE();
+  ASSERT_EQ(cu_entry->Tag(), DW_TAG_compile_unit);
+  DWARFDIE cu_die(unit, cu_entry);
+
+  auto holder = std::make_unique<clang_utils::TypeSystemClangHolder>("ast");
+  auto &ast_ctx = *holder->GetAST();
+  DWARFASTParserClangStub ast_parser(ast_ctx);
+
+  llvm::SmallVector<lldb::TypeSP, 2> types;
+  for (DWARFDIE die : cu_die.children()) {
+    if (die.Tag() == DW_TAG_class_type) {
+      SymbolContext sc;
+      bool new_type = false;
+      types.push_back(ast_parser.ParseTypeFromDWARF(sc, die, &new_type));
+    }
+  }
+
+  ASSERT_EQ(types.size(), 3U);
+
+  auto check_decl = [](auto const *decl) {
+    clang::ClassTemplateSpecializationDecl const *ctsd =
+        llvm::dyn_cast_or_null<clang::ClassTemplateSpecializationDecl>(decl);
+    ASSERT_NE(ctsd, nullptr);
+
+    auto const &args = ctsd->getTemplateArgs();
+    ASSERT_GT(args.size(), 0U);
+
+    for (auto const &arg : args.asArray()) {
+      EXPECT_TRUE(arg.getIsDefaulted());
+    }
+  };
+
+  for (auto const &type_sp : types) {
+    ASSERT_NE(type_sp, nullptr);
+    auto const *decl = ClangUtil::GetAsTagDecl(type_sp->GetFullCompilerType());
+    if (decl->getName() == "bar" || decl->getName() == "baz") {
+      check_decl(decl);
+    }
+  }
 }

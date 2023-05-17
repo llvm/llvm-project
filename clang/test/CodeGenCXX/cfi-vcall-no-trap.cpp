@@ -1,6 +1,6 @@
 // Only output llvm.assume(llvm.type.test()) if cfi-vcall is disabled and whole-program-vtables is enabled
-// RUN: %clang_cc1 -flto -fvisibility hidden -fsanitize=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CFI %s
-// RUN: %clang_cc1 -flto -fvisibility hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOCFI %s
+// RUN: %clang_cc1 -flto -fvisibility=hidden -fsanitize=cfi-vcall -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CFI %s
+// RUN: %clang_cc1 -flto -fvisibility=hidden -fwhole-program-vtables -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=NOCFI %s
 
 struct S1 {
   virtual void f();

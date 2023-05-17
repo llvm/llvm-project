@@ -33,7 +33,7 @@ foo4:   .space 4
 // CHECK: Disassembly of section .text:
 // CHECK-EMPTY:
 // CHECK-NEXT: <_start>:
-// CHECK-NEXT:    200d4:        1e ff 2f e1     bx      lr
+// CHECK-NEXT:    200d4:        e12fff1e        bx      lr
 // CHECK:         200d8:        00 00 00 00     .word   0x00000000
 // CHECK-NEXT:    200dc:        04 00 00 00     .word   0x00000004
 // CHECK-NEXT:    200e0:        08 00 00 00     .word   0x00000008

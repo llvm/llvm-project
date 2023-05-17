@@ -10,19 +10,19 @@
 ; at codegen because SCEVExpander would use the original induction variable in
 ; generated code.
 
-%struct.bit_stream_struc.3.43.51.71.83.91.99.107.154 = type { i8*, i32, %struct._IO_FILE.1.41.49.69.81.89.97.105.153*, i8*, i32, i64, i32, i32 }
-%struct._IO_FILE.1.41.49.69.81.89.97.105.153 = type { i32, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, i8*, %struct._IO_marker.0.40.48.68.80.88.96.104.152*, %struct._IO_FILE.1.41.49.69.81.89.97.105.153*, i32, i32, i64, i16, i8, [1 x i8], i8*, i64, i8*, i8*, i8*, i8*, i64, i32, [20 x i8] }
-%struct._IO_marker.0.40.48.68.80.88.96.104.152 = type { %struct._IO_marker.0.40.48.68.80.88.96.104.152*, %struct._IO_FILE.1.41.49.69.81.89.97.105.153*, i32 }
+%struct.bit_stream_struc.3.43.51.71.83.91.99.107.154 = type { ptr, i32, ptr, ptr, i32, i64, i32, i32 }
+%struct._IO_FILE.1.41.49.69.81.89.97.105.153 = type { i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i64, i16, i8, [1 x i8], ptr, i64, ptr, ptr, ptr, ptr, i64, i32, [20 x i8] }
+%struct._IO_marker.0.40.48.68.80.88.96.104.152 = type { ptr, ptr, i32 }
 
-define i32 @copy_buffer(%struct.bit_stream_struc.3.43.51.71.83.91.99.107.154* nocapture %bs) {
+define i32 @copy_buffer(ptr nocapture %bs) {
 entry:
-  %buf_byte_idx5.phi.trans.insert = getelementptr inbounds %struct.bit_stream_struc.3.43.51.71.83.91.99.107.154, %struct.bit_stream_struc.3.43.51.71.83.91.99.107.154* %bs, i64 0, i32 6
+  %buf_byte_idx5.phi.trans.insert = getelementptr inbounds %struct.bit_stream_struc.3.43.51.71.83.91.99.107.154, ptr %bs, i64 0, i32 6
   br i1 undef, label %for.body, label %cleanup
 
 for.body:
   %indvars.iv28 = phi i64 [ %indvars.iv.next29, %for.body ], [ 0, %entry ]
   %indvars.iv.next29 = add nuw nsw i64 %indvars.iv28, 1
-  %0 = load i32, i32* %buf_byte_idx5.phi.trans.insert, align 8
+  %0 = load i32, ptr %buf_byte_idx5.phi.trans.insert, align 8
   %cmp6 = icmp sgt i32 0, %0
   br i1 %cmp6, label %for.body, label %for.end.loopexit
 

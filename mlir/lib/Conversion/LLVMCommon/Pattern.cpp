@@ -48,7 +48,7 @@ Type ConvertToLLVMPattern::getVoidType() const {
 }
 
 Type ConvertToLLVMPattern::getVoidPtrType() const {
-  return LLVM::LLVMPointerType::get(
+  return getTypeConverter()->getPointerType(
       IntegerType::get(&getTypeConverter()->getContext(), 8));
 }
 
@@ -56,8 +56,8 @@ Value ConvertToLLVMPattern::createIndexAttrConstant(OpBuilder &builder,
                                                     Location loc,
                                                     Type resultType,
                                                     int64_t value) {
-  return builder.create<LLVM::ConstantOp>(
-      loc, resultType, builder.getIntegerAttr(builder.getIndexType(), value));
+  return builder.create<LLVM::ConstantOp>(loc, resultType,
+                                          builder.getIndexAttr(value));
 }
 
 Value ConvertToLLVMPattern::createIndexConstant(
@@ -69,25 +69,21 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
     Location loc, MemRefType type, Value memRefDesc, ValueRange indices,
     ConversionPatternRewriter &rewriter) const {
 
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto successStrides = getStridesAndOffset(type, strides, offset);
-  assert(succeeded(successStrides) && "unexpected non-strided memref");
-  (void)successStrides;
+  auto [strides, offset] = getStridesAndOffset(type);
 
   MemRefDescriptor memRefDescriptor(memRefDesc);
-  Value base = memRefDescriptor.alignedPtr(rewriter, loc);
+  // Use a canonical representation of the start address so that later
+  // optimizations have a longer sequence of instructions to CSE.
+  // If we don't do that we would sprinkle the memref.offset in various
+  // position of the different address computations.
+  Value base =
+      memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(), type);
 
   Value index;
-  if (offset != 0) // Skip if offset is zero.
-    index = ShapedType::isDynamicStrideOrOffset(offset)
-                ? memRefDescriptor.offset(rewriter, loc)
-                : createIndexConstant(rewriter, loc, offset);
-
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
     if (strides[i] != 1) { // Skip if stride is 1.
-      Value stride = ShapedType::isDynamicStrideOrOffset(strides[i])
+      Value stride = ShapedType::isDynamic(strides[i])
                          ? memRefDescriptor.stride(rewriter, loc, i)
                          : createIndexConstant(rewriter, loc, strides[i]);
       increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
@@ -97,7 +93,10 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   }
 
   Type elementPtrType = memRefDescriptor.getElementPtrType();
-  return index ? rewriter.create<LLVM::GEPOp>(loc, elementPtrType, base, index)
+  return index ? rewriter.create<LLVM::GEPOp>(
+                     loc, elementPtrType,
+                     getTypeConverter()->convertType(type.getElementType()),
+                     base, index)
                : base;
 }
 
@@ -113,8 +112,10 @@ bool ConvertToLLVMPattern::isConvertibleAndHasIdentityMaps(
 Type ConvertToLLVMPattern::getElementPtrType(MemRefType type) const {
   auto elementType = type.getElementType();
   auto structElementType = typeConverter->convertType(elementType);
-  return LLVM::LLVMPointerType::get(structElementType,
-                                    type.getMemorySpaceAsInt());
+  auto addressSpace = getTypeConverter()->getMemRefAddressSpace(type);
+  if (failed(addressSpace))
+    return {};
+  return getTypeConverter()->getPointerType(structElementType, *addressSpace);
 }
 
 void ConvertToLLVMPattern::getMemRefDescriptorSizes(
@@ -123,14 +124,14 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     SmallVectorImpl<Value> &strides, Value &sizeBytes) const {
   assert(isConvertibleAndHasIdentityMaps(memRefType) &&
          "layout maps must have been normalized away");
-  assert(count(memRefType.getShape(), ShapedType::kDynamicSize) ==
+  assert(count(memRefType.getShape(), ShapedType::kDynamic) ==
              static_cast<ssize_t>(dynamicSizes.size()) &&
          "dynamicSizes size doesn't match dynamic sizes count in memref shape");
 
   sizes.reserve(memRefType.getRank());
   unsigned dynamicIndex = 0;
   for (int64_t size : memRefType.getShape()) {
-    sizes.push_back(size == ShapedType::kDynamicSize
+    sizes.push_back(size == ShapedType::kDynamic
                         ? dynamicSizes[dynamicIndex++]
                         : createIndexConstant(rewriter, loc, size));
   }
@@ -146,14 +147,14 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
     if (size == 0)
       continue;
     bool useSizeAsStride = stride == 1;
-    if (size == ShapedType::kDynamicSize)
-      stride = ShapedType::kDynamicSize;
-    if (stride != ShapedType::kDynamicSize)
+    if (size == ShapedType::kDynamic)
+      stride = ShapedType::kDynamic;
+    if (stride != ShapedType::kDynamic)
       stride *= size;
 
     if (useSizeAsStride)
       runningStride = sizes[i];
-    else if (stride == ShapedType::kDynamicSize)
+    else if (stride == ShapedType::kDynamic)
       runningStride =
           rewriter.create<LLVM::MulOp>(loc, runningStride, sizes[i]);
     else
@@ -161,10 +162,11 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
   }
 
   // Buffer size in bytes.
-  Type elementPtrType = getElementPtrType(memRefType);
+  Type elementType = typeConverter->convertType(memRefType.getElementType());
+  Type elementPtrType = getTypeConverter()->getPointerType(elementType);
   Value nullPtr = rewriter.create<LLVM::NullOp>(loc, elementPtrType);
-  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, nullPtr,
-                                              ArrayRef<Value>{runningStride});
+  Value gepPtr = rewriter.create<LLVM::GEPOp>(loc, elementPtrType, elementType,
+                                              nullPtr, runningStride);
   sizeBytes = rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gepPtr);
 }
 
@@ -175,12 +177,11 @@ Value ConvertToLLVMPattern::getSizeInBytes(
   //   %0 = getelementptr %elementType* null, %indexType 1
   //   %1 = ptrtoint %elementType* %0 to %indexType
   // which is a common pattern of getting the size of a type in bytes.
-  auto convertedPtrType =
-      LLVM::LLVMPointerType::get(typeConverter->convertType(type));
+  Type llvmType = typeConverter->convertType(type);
+  auto convertedPtrType = getTypeConverter()->getPointerType(llvmType);
   auto nullPtr = rewriter.create<LLVM::NullOp>(loc, convertedPtrType);
-  auto gep = rewriter.create<LLVM::GEPOp>(
-      loc, convertedPtrType, nullPtr,
-      ArrayRef<Value>{createIndexConstant(rewriter, loc, 1)});
+  auto gep = rewriter.create<LLVM::GEPOp>(loc, convertedPtrType, llvmType,
+                                          nullPtr, ArrayRef<LLVM::GEPArg>{1});
   return rewriter.create<LLVM::PtrToIntOp>(loc, getIndexType(), gep);
 }
 
@@ -231,22 +232,30 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
          "expected as may original types as operands");
 
   // Find operands of unranked memref type and store them.
-  SmallVector<UnrankedMemRefDescriptor, 4> unrankedMemrefs;
-  for (unsigned i = 0, e = operands.size(); i < e; ++i)
-    if (origTypes[i].isa<UnrankedMemRefType>())
+  SmallVector<UnrankedMemRefDescriptor> unrankedMemrefs;
+  SmallVector<unsigned> unrankedAddressSpaces;
+  for (unsigned i = 0, e = operands.size(); i < e; ++i) {
+    if (auto memRefType = dyn_cast<UnrankedMemRefType>(origTypes[i])) {
       unrankedMemrefs.emplace_back(operands[i]);
+      FailureOr<unsigned> addressSpace =
+          getTypeConverter()->getMemRefAddressSpace(memRefType);
+      if (failed(addressSpace))
+        return failure();
+      unrankedAddressSpaces.emplace_back(*addressSpace);
+    }
+  }
 
   if (unrankedMemrefs.empty())
     return success();
 
   // Compute allocation sizes.
-  SmallVector<Value, 4> sizes;
+  SmallVector<Value> sizes;
   UnrankedMemRefDescriptor::computeSizes(builder, loc, *getTypeConverter(),
-                                         unrankedMemrefs, sizes);
+                                         unrankedMemrefs, unrankedAddressSpaces,
+                                         sizes);
 
   // Get frequently used types.
   MLIRContext *context = builder.getContext();
-  Type voidPtrType = LLVM::LLVMPointerType::get(IntegerType::get(context, 8));
   auto i1Type = IntegerType::get(context, 1);
   Type indexType = getTypeConverter()->getIndexType();
 
@@ -254,9 +263,11 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   auto module = builder.getInsertionPoint()->getParentOfType<ModuleOp>();
   LLVM::LLVMFuncOp freeFunc, mallocFunc;
   if (toDynamic)
-    mallocFunc = LLVM::lookupOrCreateMallocFn(module, indexType);
+    mallocFunc = LLVM::lookupOrCreateMallocFn(
+        module, indexType, getTypeConverter()->useOpaquePointers());
   if (!toDynamic)
-    freeFunc = LLVM::lookupOrCreateFreeFn(module);
+    freeFunc = LLVM::lookupOrCreateFreeFn(
+        module, getTypeConverter()->useOpaquePointers());
 
   // Initialize shared constants.
   Value zero =
@@ -265,7 +276,7 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
   unsigned unrankedMemrefPos = 0;
   for (unsigned i = 0, e = operands.size(); i < e; ++i) {
     Type type = origTypes[i];
-    if (!type.isa<UnrankedMemRefType>())
+    if (!isa<UnrankedMemRefType>(type))
       continue;
     Value allocationSize = sizes[unrankedMemrefPos++];
     UnrankedMemRefDescriptor desc(operands[i]);
@@ -274,8 +285,10 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
     Value memory =
         toDynamic
             ? builder.create<LLVM::CallOp>(loc, mallocFunc, allocationSize)
-                  .getResult(0)
-            : builder.create<LLVM::AllocaOp>(loc, voidPtrType, allocationSize,
+                  .getResult()
+            : builder.create<LLVM::AllocaOp>(loc, getVoidPtrType(),
+                                             IntegerType::get(getContext(), 8),
+                                             allocationSize,
                                              /*alignment=*/0);
     Value source = desc.memRefDescPtr(builder, loc);
     builder.create<LLVM::MemcpyOp>(loc, memory, source, allocationSize, zero);
@@ -309,20 +322,22 @@ LogicalResult ConvertToLLVMPattern::copyUnrankedDescriptors(
 /// and given operands.
 LogicalResult LLVM::detail::oneToOneRewrite(
     Operation *op, StringRef targetOp, ValueRange operands,
-    LLVMTypeConverter &typeConverter, ConversionPatternRewriter &rewriter) {
+    ArrayRef<NamedAttribute> targetAttrs, LLVMTypeConverter &typeConverter,
+    ConversionPatternRewriter &rewriter) {
   unsigned numResults = op->getNumResults();
 
-  Type packedType;
+  SmallVector<Type> resultTypes;
   if (numResults != 0) {
-    packedType = typeConverter.packFunctionResults(op->getResultTypes());
-    if (!packedType)
+    resultTypes.push_back(
+        typeConverter.packOperationResults(op->getResultTypes()));
+    if (!resultTypes.back())
       return failure();
   }
 
   // Create the operation through state since we don't know its C++ type.
   Operation *newOp =
       rewriter.create(op->getLoc(), rewriter.getStringAttr(targetOp), operands,
-                      packedType, op->getAttrs());
+                      resultTypes, targetAttrs);
 
   // If the operation produced 0 or 1 result, return them immediately.
   if (numResults == 0)
@@ -335,9 +350,8 @@ LogicalResult LLVM::detail::oneToOneRewrite(
   SmallVector<Value, 4> results;
   results.reserve(numResults);
   for (unsigned i = 0; i < numResults; ++i) {
-    auto type = typeConverter.convertType(op->getResult(i).getType());
     results.push_back(rewriter.create<LLVM::ExtractValueOp>(
-        op->getLoc(), type, newOp->getResult(0), rewriter.getI64ArrayAttr(i)));
+        op->getLoc(), newOp->getResult(0), i));
   }
   rewriter.replaceOp(op, results);
   return success();

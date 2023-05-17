@@ -4,12 +4,12 @@
 // RUN: ld.lld -shared %t.o -soname=t.so -o %t.so
 // RUN: ld.lld --hash-style=sysv %t1.o %t.so -o %tout
 // RUN: llvm-readobj -r %tout | FileCheck --check-prefix=NORELOC %s
-// RUN: llvm-objdump -d --no-show-raw-insn %tout | FileCheck --check-prefix=DISASM %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %tout | FileCheck --check-prefix=DISASM %s
 
 // NORELOC:      Relocations [
 // NORELOC-NEXT: Section ({{.*}}) .rel.dyn {
-// NORELOC-NEXT:   0x402258 R_386_TLS_TPOFF tlsshared0
-// NORELOC-NEXT:   0x40225C R_386_TLS_TPOFF tlsshared1
+// NORELOC-NEXT:   0x402270 R_386_TLS_TPOFF tlsshared0
+// NORELOC-NEXT:   0x402274 R_386_TLS_TPOFF tlsshared1
 // NORELOC-NEXT:   }
 // NORELOC-NEXT: ]
 
@@ -22,6 +22,10 @@
 // DISASM-NEXT:               addl -4100(%ebx), %eax
 // DISASM-NEXT:               movl %gs:0, %eax
 // DISASM-NEXT:               subl $8, %eax
+// DISASM-NEXT:               movl %gs:0, %eax
+// DISASM-NEXT:               subl $4, %eax
+// DISASM-NEXT:               movl %gs:0, %eax
+// DISASM-NEXT:               addl -4100(%ebx), %eax
 // DISASM-NEXT:               movl %gs:0, %eax
 // DISASM-NEXT:               subl $4, %eax
 
@@ -59,3 +63,9 @@ leal tlsexe1@tlsgd(,%ebx,1),%eax
 call ___tls_get_addr@plt
 leal tlsexe2@tlsgd(,%ebx,1),%eax
 call ___tls_get_addr@plt
+
+// -fno-plt GD->IE and GD->LE
+leal tlsshared1@tlsgd(%edx),%eax
+call *___tls_get_addr@GOT(%edx)
+leal tlsexe2@tlsgd(%edx),%eax
+call *___tls_get_addr@GOT(%edx)

@@ -329,8 +329,6 @@ X86RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
       return CSR_64_Intel_OCL_BI_SaveList;
     break;
   }
-  case CallingConv::HHVM:
-    return CSR_64_HHVM_SaveList;
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
@@ -451,8 +449,6 @@ X86RegisterInfo::getCallPreservedMask(const MachineFunction &MF,
       return CSR_64_Intel_OCL_BI_RegMask;
     break;
   }
-  case CallingConv::HHVM:
-    return CSR_64_HHVM_RegMask;
   case CallingConv::X86_RegCall:
     if (Is64Bit) {
       if (IsWin64) {
@@ -676,6 +672,10 @@ bool X86RegisterInfo::isFixedRegister(const MachineFunction &MF,
   return X86GenRegisterInfo::isFixedRegister(MF, PhysReg);
 }
 
+bool X86RegisterInfo::isTileRegisterClass(const TargetRegisterClass *RC) const {
+  return RC->getID() == X86::TILERegClassID;
+}
+
 void X86RegisterInfo::adjustStackMapLiveOutMask(uint32_t *Mask) const {
   // Check if the EFLAGS register is marked as live-out. This shouldn't happen,
   // because the calling convention defines the EFLAGS register as NOT
@@ -702,6 +702,11 @@ static bool CantUseSP(const MachineFrameInfo &MFI) {
 
 bool X86RegisterInfo::hasBasePointer(const MachineFunction &MF) const {
   const X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
+  // We have a virtual register to reference argument, and don't need base
+  // pointer.
+  if (X86FI->getStackPtrSaveMI() != nullptr)
+    return false;
+
   if (X86FI->hasPreallocatedCall())
     return true;
 
@@ -778,7 +783,46 @@ static bool isFuncletReturnInstr(MachineInstr &MI) {
   llvm_unreachable("impossible");
 }
 
-void
+void X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
+                                          unsigned FIOperandNum,
+                                          Register BaseReg,
+                                          int FIOffset) const {
+  MachineInstr &MI = *II;
+  unsigned Opc = MI.getOpcode();
+  if (Opc == TargetOpcode::LOCAL_ESCAPE) {
+    MachineOperand &FI = MI.getOperand(FIOperandNum);
+    FI.ChangeToImmediate(FIOffset);
+    return;
+  }
+
+  MI.getOperand(FIOperandNum).ChangeToRegister(BaseReg, false);
+
+  // The frame index format for stackmaps and patchpoints is different from the
+  // X86 format. It only has a FI and an offset.
+  if (Opc == TargetOpcode::STACKMAP || Opc == TargetOpcode::PATCHPOINT) {
+    assert(BasePtr == FramePtr && "Expected the FP as base register");
+    int64_t Offset = MI.getOperand(FIOperandNum + 1).getImm() + FIOffset;
+    MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
+    return;
+  }
+
+  if (MI.getOperand(FIOperandNum + 3).isImm()) {
+    // Offset is a 32-bit integer.
+    int Imm = (int)(MI.getOperand(FIOperandNum + 3).getImm());
+    int Offset = FIOffset + Imm;
+    assert((!Is64Bit || isInt<32>((long long)FIOffset + Imm)) &&
+           "Requesting 64-bit offset in 32-bit immediate!");
+    if (Offset != 0)
+      MI.getOperand(FIOperandNum + 3).ChangeToImmediate(Offset);
+  } else {
+    // Offset is symbolic. This is extremely rare.
+    uint64_t Offset =
+        FIOffset + (uint64_t)MI.getOperand(FIOperandNum + 3).getOffset();
+    MI.getOperand(FIOperandNum + 3).setOffset(Offset);
+  }
+}
+
+bool
 X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
                                      int SPAdj, unsigned FIOperandNum,
                                      RegScavenger *RS) const {
@@ -815,7 +859,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
   if (Opc == TargetOpcode::LOCAL_ESCAPE) {
     MachineOperand &FI = MI.getOperand(FIOperandNum);
     FI.ChangeToImmediate(FIOffset);
-    return;
+    return false;
   }
 
   // For LEA64_32r when BasePtr is 32-bits (X32) we can use full-size 64-bit
@@ -839,7 +883,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
     assert(BasePtr == FramePtr && "Expected the FP as base register");
     int64_t Offset = MI.getOperand(FIOperandNum + 1).getImm() + FIOffset;
     MI.getOperand(FIOperandNum + 1).ChangeToImmediate(Offset);
-    return;
+    return false;
   }
 
   if (MI.getOperand(FIOperandNum+3).isImm()) {
@@ -856,6 +900,7 @@ X86RegisterInfo::eliminateFrameIndex(MachineBasicBlock::iterator II,
       (uint64_t)MI.getOperand(FIOperandNum+3).getOffset();
     MI.getOperand(FIOperandNum + 3).setOffset(Offset);
   }
+  return false;
 }
 
 unsigned X86RegisterInfo::findDeadCallerSavedReg(
@@ -887,8 +932,7 @@ unsigned X86RegisterInfo::findDeadCallerSavedReg(
   case X86::EH_RETURN:
   case X86::EH_RETURN64: {
     SmallSet<uint16_t, 8> Uses;
-    for (unsigned I = 0, E = MBBI->getNumOperands(); I != E; ++I) {
-      MachineOperand &MO = MBBI->getOperand(I);
+    for (MachineOperand &MO : MBBI->operands()) {
       if (!MO.isReg() || MO.isDef())
         continue;
       Register Reg = MO.getReg();
@@ -957,6 +1001,9 @@ static ShapeT getTileShape(Register VirtReg, VirtRegMap *VRM,
   case X86::PTDPBUUDV:
   case X86::PTILEZEROV:
   case X86::PTDPBF16PSV:
+  case X86::PTDPFP16PSV:
+  case X86::PTCMMIMFP16PSV:
+  case X86::PTCMMRLFP16PSV:
     MachineOperand &MO1 = MI->getOperand(1);
     MachineOperand &MO2 = MI->getOperand(2);
     ShapeT Shape(&MO1, &MO2, MRI);

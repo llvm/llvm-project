@@ -19,7 +19,7 @@ namespace mlir {
 class TypeRange;
 template <typename ValueRangeT>
 class ValueTypeRange;
-class BlockAndValueMapping;
+class IRMapping;
 
 /// This class contains a list of basic blocks and a link to the parent
 /// operation it is attached to.
@@ -232,10 +232,9 @@ public:
   /// process of cloning, no new uses of 'Value's from outside the region are
   /// created. Using the mapper, it is possible to avoid adding uses to outside
   /// operands by remapping them to 'Value's owned by the caller thread.
-  void cloneInto(Region *dest, BlockAndValueMapping &mapper);
+  void cloneInto(Region *dest, IRMapping &mapper);
   /// Clone this region into 'dest' before the given position in 'dest'.
-  void cloneInto(Region *dest, Region::iterator destPos,
-                 BlockAndValueMapping &mapper);
+  void cloneInto(Region *dest, Region::iterator destPos, IRMapping &mapper);
 
   /// Takes body of another region (that region will have no body after this
   /// operation completes).  The current body of this region is cleared.
@@ -266,38 +265,41 @@ public:
 
   /// Walk the operations in this region. The callback method is called for each
   /// nested region, block or operation, depending on the callback provided.
-  /// Regions, blocks and operations at the same nesting level are visited in
-  /// lexicographical order. The walk order for enclosing regions, blocks and
-  /// operations with respect to their nested ones is specified by 'Order'
+  /// The order in which regions, blocks and operations at the same nesting
+  /// level are visited (e.g., lexicographical or reverse lexicographical order)
+  /// is determined by 'Iterator'. The walk order for enclosing regions, blocks
+  /// and operations with respect to their nested ones is specified by 'Order'
   /// (post-order by default). This method is invoked for void-returning
   /// callbacks. A callback on a block or operation is allowed to erase that
   /// block or operation only if the walk is in post-order. See non-void method
   /// for pre-order erasure. See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<std::is_same<RetT, void>::value, RetT>::type
-  walk(FnT &&callback) {
+  std::enable_if_t<std::is_same<RetT, void>::value, RetT> walk(FnT &&callback) {
     for (auto &block : *this)
-      block.walk<Order>(callback);
+      block.walk<Order, Iterator>(callback);
   }
 
   /// Walk the operations in this region. The callback method is called for each
   /// nested region, block or operation, depending on the callback provided.
-  /// Regions, blocks and operations at the same nesting level are visited in
-  /// lexicographical order. The walk order for enclosing regions, blocks and
-  /// operations with respect to their nested ones is specified by 'Order'
+  /// The order in which regions, blocks and operations at the same nesting
+  /// level are visited (e.g., lexicographical or reverse lexicographical order)
+  /// is determined by 'Iterator'. The walk order for enclosing regions, blocks
+  /// and operations with respect to their nested ones is specified by 'Order'
   /// (post-order by default). This method is invoked for skippable or
   /// interruptible callbacks. A callback on a block or operation is allowed to
   /// erase that block or operation if either:
   ///   * the walk is in post-order,
   ///   * or the walk is in pre-order and the walk is skipped after the erasure.
   /// See Operation::walk for more details.
-  template <WalkOrder Order = WalkOrder::PostOrder, typename FnT,
+  template <WalkOrder Order = WalkOrder::PostOrder,
+            typename Iterator = ForwardIterator, typename FnT,
             typename RetT = detail::walkResultType<FnT>>
-  typename std::enable_if<std::is_same<RetT, WalkResult>::value, RetT>::type
+  std::enable_if_t<std::is_same<RetT, WalkResult>::value, RetT>
   walk(FnT &&callback) {
     for (auto &block : *this)
-      if (block.walk<Order>(callback).wasInterrupted())
+      if (block.walk<Order, Iterator>(callback).wasInterrupted())
         return WalkResult::interrupt();
     return WalkResult::advance();
   }
@@ -339,19 +341,18 @@ class RegionRange
 public:
   using RangeBaseT::RangeBaseT;
 
-  RegionRange(MutableArrayRef<Region> regions = llvm::None);
+  RegionRange(MutableArrayRef<Region> regions = std::nullopt);
 
-  template <typename Arg,
-            typename = typename std::enable_if_t<std::is_constructible<
-                ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
+  template <typename Arg, typename = std::enable_if_t<std::is_constructible<
+                              ArrayRef<std::unique_ptr<Region>>, Arg>::value>>
   RegionRange(Arg &&arg)
       : RegionRange(ArrayRef<std::unique_ptr<Region>>(std::forward<Arg>(arg))) {
   }
   template <typename Arg>
   RegionRange(
       Arg &&arg,
-      typename std::enable_if_t<
-          std::is_constructible<ArrayRef<Region *>, Arg>::value> * = nullptr)
+      std::enable_if_t<std::is_constructible<ArrayRef<Region *>, Arg>::value>
+          * = nullptr)
       : RegionRange(ArrayRef<Region *>(std::forward<Arg>(arg))) {}
   RegionRange(ArrayRef<std::unique_ptr<Region>> regions);
   RegionRange(ArrayRef<Region *> regions);

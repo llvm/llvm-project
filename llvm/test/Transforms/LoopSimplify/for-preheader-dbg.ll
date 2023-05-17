@@ -1,7 +1,7 @@
 ; Confirm that the line number for the for.body.preheader block
 ; branch is the the start of the loop.
 
-; RUN: opt -simplifycfg -simplifycfg-require-and-preserve-domtree=1 -loop-simplify -S <%s | FileCheck %s
+; RUN: opt -passes=simplifycfg,loop-simplify -simplifycfg-require-and-preserve-domtree=1 -S <%s | FileCheck %s
 ;
 ; CHECK: for.body.preheader:
 ; CHECK-NEXT: br label %for.body, !dbg ![[DL:[0-9]+]]
@@ -27,7 +27,7 @@
 ;   return ret;
 ; }
 
-define dso_local i32 @"foo"(i32 %count, i32* nocapture readonly %bar) local_unnamed_addr !dbg !8 {
+define dso_local i32 @"foo"(i32 %count, ptr nocapture readonly %bar) local_unnamed_addr !dbg !8 {
 entry:
   %cmp = icmp sgt i32 %count, 255, !dbg !16
   br i1 %cmp, label %return, label %for.cond.preheader, !dbg !16
@@ -43,8 +43,8 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   %j.08 = phi i32 [ 0, %for.body.lr.ph ], [ %inc, %for.body ]
   %ret.07 = phi i32 [ %count, %for.body.lr.ph ], [ %add2, %for.body ]
   %0 = zext i32 %j.08 to i64, !dbg !22
-  %arrayidx = getelementptr inbounds i32, i32* %bar, i64 %0, !dbg !22
-  %1 = load i32, i32* %arrayidx, align 4, !dbg !22
+  %arrayidx = getelementptr inbounds i32, ptr %bar, i64 %0, !dbg !22
+  %1 = load i32, ptr %arrayidx, align 4, !dbg !22
   %add2 = add nsw i32 %1, %ret.07, !dbg !27
   %inc = add nuw nsw i32 %j.08, 1, !dbg !28
   %cmp1 = icmp slt i32 %inc, %count, !dbg !19

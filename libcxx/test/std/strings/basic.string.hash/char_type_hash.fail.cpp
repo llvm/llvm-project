@@ -33,14 +33,14 @@ struct trait // copied from <__string>
     static inline bool eq(char_type __c1, char_type __c2) { return __c1 == __c2; }
     static inline bool lt(char_type __c1, char_type __c2) { return __c1 < __c2; }
 
-    static int compare(const char_type* __s1, const char_type* __s2, size_t __n);
-    static size_t length(const char_type* __s);
-    static const char_type* find(const char_type* __s, size_t __n,
+    static int compare(const char_type* __s1, const char_type* __s2, std::size_t __n);
+    static std::size_t length(const char_type* __s);
+    static const char_type* find(const char_type* __s, std::size_t __n,
                                  const char_type& __a);
 
-    static char_type* move(char_type* __s1, const char_type* __s2, size_t __n);
-    static char_type* copy(char_type* __s1, const char_type* __s2, size_t __n);
-    static char_type* assign(char_type* __s, size_t __n, char_type __a);
+    static char_type* move(char_type* __s1, const char_type* __s2, std::size_t __n);
+    static char_type* copy(char_type* __s1, const char_type* __s2, std::size_t __n);
+    static char_type* assign(char_type* __s, std::size_t __n, char_type __a);
 
     static inline int_type not_eof(int_type __c) {
         return eq_int_type(__c, eof()) ? ~eof() : __c;

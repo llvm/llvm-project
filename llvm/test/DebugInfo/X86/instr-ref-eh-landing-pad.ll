@@ -20,25 +20,25 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-@_ZTIPi = external dso_local constant i8*
+@_ZTIPi = external dso_local constant ptr
 
-define dso_local void @_Z1av() local_unnamed_addr #0 personality i8* bitcast (i32 (...)* @__gxx_personality_v0 to i8*) !dbg !8 {
+define dso_local void @_Z1av() local_unnamed_addr #0 personality ptr @__gxx_personality_v0 !dbg !8 {
 entry:
   invoke void @_Z1av()
           to label %try.cont unwind label %lpad, !dbg !17
 
 lpad:                                             ; preds = %entry
-  %0 = landingpad { i8*, i32 }
-          catch i8* bitcast (i8** @_ZTIPi to i8*), !dbg !19
-  %1 = extractvalue { i8*, i32 } %0, 1, !dbg !19
-  %2 = tail call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIPi to i8*)) #3, !dbg !20
+  %0 = landingpad { ptr, i32 }
+          catch ptr @_ZTIPi, !dbg !19
+  %1 = extractvalue { ptr, i32 } %0, 1, !dbg !19
+  %2 = tail call i32 @llvm.eh.typeid.for(ptr @_ZTIPi) #3, !dbg !20
   %matches = icmp eq i32 %1, %2, !dbg !20
   br i1 %matches, label %catch, label %eh.resume, !dbg !20
 
 catch:                                            ; preds = %lpad
-  %3 = extractvalue { i8*, i32 } %0, 0, !dbg !19
-  %4 = tail call i8* @__cxa_begin_catch(i8* %3) #3, !dbg !20
-  call void @llvm.dbg.value(metadata i8* %3, metadata !13, metadata !DIExpression(DW_OP_plus_uconst, 32, DW_OP_stack_value)), !dbg !21
+  %3 = extractvalue { ptr, i32 } %0, 0, !dbg !19
+  %4 = tail call ptr @__cxa_begin_catch(ptr %3) #3, !dbg !20
+  call void @llvm.dbg.value(metadata ptr %3, metadata !13, metadata !DIExpression(DW_OP_plus_uconst, 32, DW_OP_stack_value)), !dbg !21
   tail call void @__cxa_end_catch() #3, !dbg !22
   br label %try.cont, !dbg !22
 
@@ -46,15 +46,15 @@ try.cont:                                         ; preds = %entry, %catch
   ret void, !dbg !24
 
 eh.resume:                                        ; preds = %lpad
-  resume { i8*, i32 } %0, !dbg !20
+  resume { ptr, i32 } %0, !dbg !20
 }
 
 declare dso_local i32 @__gxx_personality_v0(...)
 
 ; Function Attrs: nofree nosync nounwind readnone
-declare i32 @llvm.eh.typeid.for(i8*) #1
+declare i32 @llvm.eh.typeid.for(ptr) #1
 
-declare dso_local i8* @__cxa_begin_catch(i8*) local_unnamed_addr
+declare dso_local ptr @__cxa_begin_catch(ptr) local_unnamed_addr
 
 declare dso_local void @__cxa_end_catch() local_unnamed_addr
 

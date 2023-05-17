@@ -9,15 +9,14 @@
 
 
 ; fn_ptr.ll
-%class.A = type { i32 (...)** }
+%class.A = type { ptr }
 
 define i32 @test1() #0 {
   ;ATOM-LABEL: test1:
 entry:
-  %call = tail call %class.A* @_Z3facv()
-  %0 = bitcast %class.A* %call to void (%class.A*)***
-  %vtable = load void (%class.A*)**, void (%class.A*)*** %0, align 8
-  %1 = load void (%class.A*)*, void (%class.A*)** %vtable, align 8
+  %call = tail call ptr @_Z3facv()
+  %vtable = load ptr, ptr %call, align 8
+  %0 = load ptr, ptr %vtable, align 8
   ;ATOM32: movl (%ecx), %ecx
   ;ATOM32: calll *%ecx
   ;ATOM-NOT32: calll *(%ecx)
@@ -28,20 +27,20 @@ entry:
   ;SLM32: calll *%ecx
   ;SLM64: movq (%rcx), %rcx
   ;SLM64: callq *%rcx
-  tail call void %1(%class.A* %call)
+  tail call void %0(ptr %call)
   ret i32 0
 }
 
-declare %class.A* @_Z3facv() #1
+declare ptr @_Z3facv() #1
 
 ; virt_fn.ll
-@p = external dso_local global void (i32)**
+@p = external dso_local global ptr
 
 define i32 @test2() #0 {
   ;ATOM-LABEL: test2:
 entry:
-  %0 = load void (i32)**, void (i32)*** @p, align 8
-  %1 = load void (i32)*, void (i32)** %0, align 8
+  %0 = load ptr, ptr @p, align 8
+  %1 = load ptr, ptr %0, align 8
   ;ATOM32: movl (%eax), %eax
   ;ATOM32: calll *%eax
   ;ATOM-NOT: calll *(%eax)

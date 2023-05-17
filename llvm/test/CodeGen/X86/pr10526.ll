@@ -8,6 +8,6 @@ BB:
   %B85 = sub <8 x i32> %Shuff49, zeroinitializer
   %S242 = icmp eq <8 x i32> zeroinitializer, %B85
   %FC284 = uitofp <8 x i1> %S242 to <8 x float>
-  store <8 x float> %FC284, <8 x float>* undef
+  store <8 x float> %FC284, ptr undef
   ret void
 }

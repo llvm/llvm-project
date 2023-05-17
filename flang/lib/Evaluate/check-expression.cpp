@@ -9,6 +9,7 @@
 #include "flang/Evaluate/check-expression.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/intrinsics.h"
+#include "flang/Evaluate/tools.h"
 #include "flang/Evaluate/traverse.h"
 #include "flang/Evaluate/type.h"
 #include "flang/Semantics/symbol.h"
@@ -98,7 +99,7 @@ template <bool INVARIANT>
 bool IsConstantExprHelper<INVARIANT>::IsConstantStructureConstructorComponent(
     const Symbol &component, const Expr<SomeType> &expr) const {
   if (IsAllocatable(component)) {
-    return IsNullPointer(expr);
+    return IsNullObjectPointer(expr);
   } else if (IsPointer(component)) {
     return IsNullPointer(expr) || IsInitialDataTarget(expr) ||
         IsInitialProcedureTarget(expr);
@@ -172,10 +173,16 @@ struct IsActuallyConstantHelper {
     return common::visit([=](const auto &y) { return (*this)(y); }, x.u);
   }
   bool operator()(const Expr<SomeType> &x) {
-    if (IsNullPointer(x)) {
-      return true;
-    }
     return common::visit([this](const auto &y) { return (*this)(y); }, x.u);
+  }
+  bool operator()(const StructureConstructor &x) {
+    for (const auto &pair : x) {
+      const Expr<SomeType> &y{pair.second.value()};
+      if (!(*this)(y) && !IsNullPointer(y)) {
+        return false;
+      }
+    }
+    return true;
   }
   template <typename A> bool operator()(const A *x) { return x && (*this)(*x); }
   template <typename A> bool operator()(const std::optional<A> &x) {
@@ -190,6 +197,7 @@ template <typename A> bool IsActuallyConstant(const A &x) {
 template bool IsActuallyConstant(const Expr<SomeType> &);
 template bool IsActuallyConstant(const Expr<SomeInteger> &);
 template bool IsActuallyConstant(const Expr<SubscriptInteger> &);
+template bool IsActuallyConstant(const std::optional<Expr<SubscriptInteger>> &);
 
 // Object pointer initialization checking predicate IsInitialDataTarget().
 // This code determines whether an expression is allowable as the static
@@ -358,35 +366,9 @@ bool IsInitialProcedureTarget(const Expr<SomeType> &expr) {
   if (const auto *proc{std::get_if<ProcedureDesignator>(&expr.u)}) {
     return IsInitialProcedureTarget(*proc);
   } else {
-    return IsNullPointer(expr);
+    return IsNullProcedurePointer(expr);
   }
 }
-
-class ArrayConstantBoundChanger {
-public:
-  ArrayConstantBoundChanger(ConstantSubscripts &&lbounds)
-      : lbounds_{std::move(lbounds)} {}
-
-  template <typename A> A ChangeLbounds(A &&x) const {
-    return std::move(x); // default case
-  }
-  template <typename T> Constant<T> ChangeLbounds(Constant<T> &&x) {
-    x.set_lbounds(std::move(lbounds_));
-    return std::move(x);
-  }
-  template <typename T> Expr<T> ChangeLbounds(Parentheses<T> &&x) {
-    return ChangeLbounds(
-        std::move(x.left())); // Constant<> can be parenthesized
-  }
-  template <typename T> Expr<T> ChangeLbounds(Expr<T> &&x) {
-    return common::visit(
-        [&](auto &&x) { return Expr<T>{ChangeLbounds(std::move(x))}; },
-        std::move(x.u)); // recurse until we hit a constant
-  }
-
-private:
-  ConstantSubscripts &&lbounds_;
-};
 
 // Converts, folds, and then checks type, rank, and shape of an
 // initialization expression for a named constant, a non-pointer
@@ -495,6 +477,43 @@ std::optional<Expr<SomeType>> NonPointerInitializationExpr(const Symbol &symbol,
   return std::nullopt;
 }
 
+static bool IsNonLocal(const semantics::Symbol &symbol) {
+  return semantics::IsDummy(symbol) || symbol.has<semantics::UseDetails>() ||
+      symbol.owner().kind() == semantics::Scope::Kind::Module ||
+      semantics::FindCommonBlockContaining(symbol) ||
+      symbol.has<semantics::HostAssocDetails>();
+}
+
+static bool IsPermissibleInquiry(const semantics::Symbol &firstSymbol,
+    const semantics::Symbol &lastSymbol, DescriptorInquiry::Field field,
+    const semantics::Scope &localScope) {
+  if (IsNonLocal(firstSymbol)) {
+    return true;
+  }
+  if (&localScope != &firstSymbol.owner()) {
+    return true;
+  }
+  // Inquiries on local objects may not access a deferred bound or length.
+  // (This code used to be a switch, but it proved impossible to write it
+  // thus without running afoul of bogus warnings from different C++
+  // compilers.)
+  if (field == DescriptorInquiry::Field::Rank) {
+    return true; // always known
+  }
+  const auto *object{lastSymbol.detailsIf<semantics::ObjectEntityDetails>()};
+  if (field == DescriptorInquiry::Field::LowerBound ||
+      field == DescriptorInquiry::Field::Extent ||
+      field == DescriptorInquiry::Field::Stride) {
+    return object && !object->shape().CanBeDeferredShape();
+  }
+  if (field == DescriptorInquiry::Field::Len) {
+    return object && object->type() &&
+        object->type()->category() == semantics::DeclTypeSpec::Character &&
+        !object->type()->characterTypeSpec().length().isDeferred();
+  }
+  return false;
+}
+
 // Specification expression validation (10.1.11(2), C1010)
 class CheckSpecificationExprHelper
     : public AnyTraverse<CheckSpecificationExprHelper,
@@ -579,8 +598,16 @@ public:
     // Many uses of SIZE(), LBOUND(), &c. that are valid in specification
     // expressions will have been converted to expressions over descriptor
     // inquiries by Fold().
-    auto restorer{common::ScopedSet(inInquiry_, true)};
-    return (*this)(x.base());
+    // Catch REAL, ALLOCATABLE :: X(:); REAL :: Y(SIZE(X))
+    if (IsPermissibleInquiry(x.base().GetFirstSymbol(),
+            x.base().GetLastSymbol(), x.field(), scope_)) {
+      auto restorer{common::ScopedSet(inInquiry_, true)};
+      return (*this)(x.base());
+    } else if (IsConstantExpr(x)) {
+      return std::nullopt;
+    } else {
+      return "non-constant descriptor inquiry not allowed for local object";
+    }
   }
 
   Result operator()(const TypeParamInquiry &inq) const {
@@ -624,7 +651,7 @@ public:
       }
       // References to internal functions are caught in expression semantics.
       // TODO: other checks for standard module procedures
-    } else {
+    } else { // intrinsic
       const SpecificIntrinsic &intrin{DEREF(x.proc().GetSpecificIntrinsic())};
       inInquiry = context_.intrinsics().GetIntrinsicClass(intrin.name) ==
           IntrinsicClass::inquiryFunction;
@@ -643,13 +670,44 @@ public:
               " parameter values";
         }
       }
-      if (intrin.name == "present") {
-        // don't bother looking at argument
+      // Type-determined inquiries (DIGITS, HUGE, &c.) will have already been
+      // folded and won't arrive here.  Inquiries that are represented with
+      // DescriptorInquiry operations (LBOUND) are checked elsewhere.  If a
+      // call that makes it to here satisfies the requirements of a constant
+      // expression (as Fortran defines it), it's fine.
+      if (IsConstantExpr(x)) {
         return std::nullopt;
       }
-      if (IsConstantExpr(x)) {
-        // inquiry functions may not need to check argument(s)
-        return std::nullopt;
+      if (intrin.name == "present") {
+        return std::nullopt; // always ok
+      }
+      // Catch CHARACTER(:), ALLOCATABLE :: X; CHARACTER(LEN(X)) :: Y
+      if (inInquiry && x.arguments().size() >= 1) {
+        if (const auto &arg{x.arguments().at(0)}) {
+          if (auto dataRef{ExtractDataRef(*arg, true, true)}) {
+            if (intrin.name == "allocated" || intrin.name == "associated" ||
+                intrin.name == "is_contiguous") { // ok
+            } else if (intrin.name == "len" &&
+                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Len,
+                    scope_)) { // ok
+            } else if (intrin.name == "lbound" &&
+                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                    dataRef->GetLastSymbol(),
+                    DescriptorInquiry::Field::LowerBound, scope_)) { // ok
+            } else if ((intrin.name == "shape" || intrin.name == "size" ||
+                           intrin.name == "sizeof" ||
+                           intrin.name == "storage_size" ||
+                           intrin.name == "ubound") &&
+                IsPermissibleInquiry(dataRef->GetFirstSymbol(),
+                    dataRef->GetLastSymbol(), DescriptorInquiry::Field::Extent,
+                    scope_)) { // ok
+            } else {
+              return "non-constant inquiry function '"s + intrin.name +
+                  "' not allowed for local object";
+            }
+          }
+        }
       }
     }
     auto restorer{common::ScopedSet(inInquiry_, inInquiry)};
@@ -689,14 +747,13 @@ template void CheckSpecificationExpr(
     const std::optional<Expr<SubscriptInteger>> &, const semantics::Scope &,
     FoldingContext &);
 
-// IsSimplyContiguous() -- 9.5.4
-class IsSimplyContiguousHelper
-    : public AnyTraverse<IsSimplyContiguousHelper, std::optional<bool>> {
+// IsContiguous() -- 9.5.4
+class IsContiguousHelper
+    : public AnyTraverse<IsContiguousHelper, std::optional<bool>> {
 public:
   using Result = std::optional<bool>; // tri-state
-  using Base = AnyTraverse<IsSimplyContiguousHelper, Result>;
-  explicit IsSimplyContiguousHelper(FoldingContext &c)
-      : Base{*this}, context_{c} {}
+  using Base = AnyTraverse<IsContiguousHelper, Result>;
+  explicit IsContiguousHelper(FoldingContext &c) : Base{*this}, context_{c} {}
   using Base::operator();
 
   Result operator()(const semantics::Symbol &symbol) const {
@@ -708,101 +765,188 @@ public:
       // simple contiguity to allow their use in contexts like
       // data targets in pointer assignments with remapping.
       return true;
+    } else if (ultimate.has<semantics::AssocEntityDetails>()) {
+      return Base::operator()(ultimate); // use expr
     } else if (semantics::IsPointer(ultimate) ||
-        semantics::IsAssumedShape(ultimate)) {
-      return false;
-    } else if (const auto *details{
-                   ultimate.detailsIf<semantics::ObjectEntityDetails>()}) {
-      return !details->IsAssumedRank();
-    } else if (auto assoc{Base::operator()(ultimate)}) {
-      return assoc;
+        semantics::IsAssumedShape(ultimate) || IsAssumedRank(ultimate)) {
+      return std::nullopt;
+    } else if (ultimate.has<semantics::ObjectEntityDetails>()) {
+      return true;
     } else {
-      return false;
+      return Base::operator()(ultimate);
     }
   }
 
   Result operator()(const ArrayRef &x) const {
-    const auto &symbol{x.GetLastSymbol()};
-    if (!(*this)(symbol).has_value()) {
-      return false;
-    } else if (auto rank{CheckSubscripts(x.subscript())}) {
-      if (x.Rank() == 0) {
-        return true;
-      } else if (*rank > 0) {
-        // a(1)%b(:,:) is contiguous if an only if a(1)%b is contiguous.
-        return (*this)(x.base());
-      } else {
-        // a(:)%b(1,1) is not contiguous.
-        return false;
-      }
+    if (x.Rank() == 0) {
+      return true; // scalars considered contiguous
+    }
+    int subscriptRank{0};
+    auto baseLbounds{GetLBOUNDs(context_, x.base())};
+    auto baseUbounds{GetUBOUNDs(context_, x.base())};
+    auto subscripts{CheckSubscripts(
+        x.subscript(), subscriptRank, &baseLbounds, &baseUbounds)};
+    if (!subscripts.value_or(false)) {
+      return subscripts; // subscripts not known to be contiguous
+    } else if (subscriptRank > 0) {
+      // a(1)%b(:,:) is contiguous if and only if a(1)%b is contiguous.
+      return (*this)(x.base());
     } else {
-      return false;
+      // a(:)%b(1,1) is (probably) not contiguous.
+      return std::nullopt;
     }
   }
   Result operator()(const CoarrayRef &x) const {
-    return CheckSubscripts(x.subscript()).has_value();
+    int rank{0};
+    return CheckSubscripts(x.subscript(), rank).has_value();
   }
   Result operator()(const Component &x) const {
-    return x.base().Rank() == 0 && (*this)(x.GetLastSymbol()).value_or(false);
+    if (x.base().Rank() == 0) {
+      return (*this)(x.GetLastSymbol());
+    } else {
+      // TODO could be true if base contiguous and this is only component, or
+      // if base has only one element?
+      return std::nullopt;
+    }
   }
-  Result operator()(const ComplexPart &) const { return false; }
-  Result operator()(const Substring &) const { return false; }
+  Result operator()(const ComplexPart &x) const {
+    return x.complex().Rank() == 0;
+  }
+  Result operator()(const Substring &) const { return std::nullopt; }
 
   Result operator()(const ProcedureRef &x) const {
     if (auto chars{
             characteristics::Procedure::Characterize(x.proc(), context_)}) {
       if (chars->functionResult) {
         const auto &result{*chars->functionResult};
-        return !result.IsProcedurePointer() &&
-            result.attrs.test(characteristics::FunctionResult::Attr::Pointer) &&
-            result.attrs.test(
-                characteristics::FunctionResult::Attr::Contiguous);
+        if (!result.IsProcedurePointer()) {
+          if (result.attrs.test(
+                  characteristics::FunctionResult::Attr::Contiguous)) {
+            return true;
+          }
+          if (!result.attrs.test(
+                  characteristics::FunctionResult::Attr::Pointer)) {
+            return true;
+          }
+          if (const auto *type{result.GetTypeAndShape()};
+              type && type->Rank() == 0) {
+            return true; // pointer to scalar
+          }
+          // Must be non-CONTIGUOUS pointer to array
+        }
       }
     }
-    return false;
+    return std::nullopt;
   }
 
+  Result operator()(const NullPointer &) const { return true; }
+
 private:
-  // If the subscripts can possibly be on a simply-contiguous array reference,
-  // return the rank.
-  static std::optional<int> CheckSubscripts(
-      const std::vector<Subscript> &subscript) {
+  // Returns "true" for a provably empty or simply contiguous array section;
+  // return "false" for a provably nonempty discontiguous section or for use
+  // of a vector subscript.
+  std::optional<bool> CheckSubscripts(const std::vector<Subscript> &subscript,
+      int &rank, const Shape *baseLbounds = nullptr,
+      const Shape *baseUbounds = nullptr) const {
     bool anyTriplet{false};
-    int rank{0};
+    rank = 0;
+    // Detect any provably empty dimension in this array section, which would
+    // render the whole section empty and therefore vacuously contiguous.
+    std::optional<bool> result;
     for (auto j{subscript.size()}; j-- > 0;) {
       if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
-        if (!triplet->IsStrideOne()) {
+        ++rank;
+        if (auto stride{ToInt64(triplet->stride())}) {
+          const Expr<SubscriptInteger> *lowerBound{triplet->GetLower()};
+          if (!lowerBound && baseLbounds && j < baseLbounds->size()) {
+            lowerBound = common::GetPtrFromOptional(baseLbounds->at(j));
+          }
+          const Expr<SubscriptInteger> *upperBound{triplet->GetUpper()};
+          if (!upperBound && baseUbounds && j < baseUbounds->size()) {
+            upperBound = common::GetPtrFromOptional(baseUbounds->at(j));
+          }
+          std::optional<ConstantSubscript> lowerVal{lowerBound
+                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*lowerBound}))
+                  : std::nullopt};
+          std::optional<ConstantSubscript> upperVal{upperBound
+                  ? ToInt64(Fold(context_, Expr<SubscriptInteger>{*upperBound}))
+                  : std::nullopt};
+          if (lowerVal && upperVal) {
+            if (*lowerVal < *upperVal) {
+              if (*stride < 0) {
+                result = true; // empty dimension
+              } else if (!result && *stride > 1 &&
+                  *lowerVal + *stride <= *upperVal) {
+                result = false; // discontiguous if not empty
+              }
+            } else if (*lowerVal > *upperVal) {
+              if (*stride > 0) {
+                result = true; // empty dimension
+              } else if (!result && *stride < 0 &&
+                  *lowerVal + *stride >= *upperVal) {
+                result = false; // discontiguous if not empty
+              }
+            }
+          }
+        }
+      } else if (subscript[j].Rank() > 0) {
+        ++rank;
+        if (!result) {
+          result = false; // vector subscript
+        }
+      }
+    }
+    if (rank == 0) {
+      result = true; // scalar
+    }
+    if (result) {
+      return result;
+    }
+    // Not provably discontiguous at this point.
+    // Return "true" if simply contiguous, otherwise nullopt.
+    for (auto j{subscript.size()}; j-- > 0;) {
+      if (const auto *triplet{std::get_if<Triplet>(&subscript[j].u)}) {
+        auto stride{ToInt64(triplet->stride())};
+        if (!stride || stride != 1) {
           return std::nullopt;
         } else if (anyTriplet) {
-          if (triplet->lower() || triplet->upper()) {
-            // all triplets before the last one must be just ":"
+          if (triplet->GetLower() || triplet->GetUpper()) {
+            // all triplets before the last one must be just ":" for
+            // simple contiguity
             return std::nullopt;
           }
         } else {
           anyTriplet = true;
         }
         ++rank;
-      } else if (anyTriplet || subscript[j].Rank() > 0) {
+      } else if (anyTriplet) {
         return std::nullopt;
       }
     }
-    return rank;
+    return true; // simply contiguous
   }
 
   FoldingContext &context_;
 };
 
 template <typename A>
-bool IsSimplyContiguous(const A &x, FoldingContext &context) {
+std::optional<bool> IsContiguous(const A &x, FoldingContext &context) {
   if (IsVariable(x)) {
-    auto known{IsSimplyContiguousHelper{context}(x)};
-    return known && *known;
+    return IsContiguousHelper{context}(x);
   } else {
     return true; // not a variable
   }
 }
 
-template bool IsSimplyContiguous(const Expr<SomeType> &, FoldingContext &);
+template std::optional<bool> IsContiguous(
+    const Expr<SomeType> &, FoldingContext &);
+template std::optional<bool> IsContiguous(const ArrayRef &, FoldingContext &);
+template std::optional<bool> IsContiguous(const Substring &, FoldingContext &);
+template std::optional<bool> IsContiguous(const Component &, FoldingContext &);
+template std::optional<bool> IsContiguous(
+    const ComplexPart &, FoldingContext &);
+template std::optional<bool> IsContiguous(const CoarrayRef &, FoldingContext &);
+template std::optional<bool> IsContiguous(const Symbol &, FoldingContext &);
 
 // IsErrorExpr()
 struct IsErrorExprHelper : public AnyTraverse<IsErrorExprHelper, bool> {
@@ -821,5 +965,84 @@ template <typename A> bool IsErrorExpr(const A &x) {
 }
 
 template bool IsErrorExpr(const Expr<SomeType> &);
+
+// C1577
+// TODO: Also check C1579 & C1582 here
+class StmtFunctionChecker
+    : public AnyTraverse<StmtFunctionChecker, std::optional<parser::Message>> {
+public:
+  using Result = std::optional<parser::Message>;
+  using Base = AnyTraverse<StmtFunctionChecker, Result>;
+  StmtFunctionChecker(const Symbol &sf, FoldingContext &context)
+      : Base{*this}, sf_{sf}, context_{context} {}
+  using Base::operator();
+
+  template <typename T> Result operator()(const ArrayConstructor<T> &) const {
+    return parser::Message{sf_.name(),
+        "Statement function '%s' should not contain an array constructor"_port_en_US,
+        sf_.name()};
+  }
+  Result operator()(const StructureConstructor &) const {
+    return parser::Message{sf_.name(),
+        "Statement function '%s' should not contain a structure constructor"_port_en_US,
+        sf_.name()};
+  }
+  Result operator()(const TypeParamInquiry &) const {
+    return parser::Message{sf_.name(),
+        "Statement function '%s' should not contain a type parameter inquiry"_port_en_US,
+        sf_.name()};
+  }
+  Result operator()(const ProcedureDesignator &proc) const {
+    if (const Symbol * symbol{proc.GetSymbol()}) {
+      const Symbol &ultimate{symbol->GetUltimate()};
+      if (const auto *subp{
+              ultimate.detailsIf<semantics::SubprogramDetails>()}) {
+        if (subp->stmtFunction() && &ultimate.owner() == &sf_.owner()) {
+          if (ultimate.name().begin() > sf_.name().begin()) {
+            return parser::Message{sf_.name(),
+                "Statement function '%s' may not reference another statement function '%s' that is defined later"_err_en_US,
+                sf_.name(), ultimate.name()};
+          }
+        }
+      }
+      if (auto chars{
+              characteristics::Procedure::Characterize(proc, context_)}) {
+        if (!chars->CanBeCalledViaImplicitInterface()) {
+          return parser::Message(sf_.name(),
+              "Statement function '%s' should not reference function '%s' that requires an explicit interface"_port_en_US,
+              sf_.name(), symbol->name());
+        }
+      }
+    }
+    if (proc.Rank() > 0) {
+      return parser::Message(sf_.name(),
+          "Statement function '%s' should not reference a function that returns an array"_port_en_US,
+          sf_.name());
+    }
+    return std::nullopt;
+  }
+  Result operator()(const ActualArgument &arg) const {
+    if (const auto *expr{arg.UnwrapExpr()}) {
+      if (auto result{(*this)(*expr)}) {
+        return result;
+      }
+      if (expr->Rank() > 0 && !UnwrapWholeSymbolOrComponentDataRef(*expr)) {
+        return parser::Message(sf_.name(),
+            "Statement function '%s' should not pass an array argument that is not a whole array"_port_en_US,
+            sf_.name());
+      }
+    }
+    return std::nullopt;
+  }
+
+private:
+  const Symbol &sf_;
+  FoldingContext &context_;
+};
+
+std::optional<parser::Message> CheckStatementFunction(
+    const Symbol &sf, const Expr<SomeType> &expr, FoldingContext &context) {
+  return StmtFunctionChecker{sf, context}(expr);
+}
 
 } // namespace Fortran::evaluate

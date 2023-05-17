@@ -18,10 +18,10 @@
 
 static __inline fixint_t __muloXi4(fixint_t a, fixint_t b, int *overflow) {
   const int N = (int)(sizeof(fixint_t) * CHAR_BIT);
-  const fixint_t MIN = (fixint_t)1 << (N - 1);
+  const fixint_t MIN = (fixint_t)((fixuint_t)1 << (N - 1));
   const fixint_t MAX = ~MIN;
   *overflow = 0;
-  fixint_t result = a * b;
+  fixint_t result = (fixuint_t)a * b;
   if (a == MIN) {
     if (b != 0 && b != 1)
       *overflow = 1;

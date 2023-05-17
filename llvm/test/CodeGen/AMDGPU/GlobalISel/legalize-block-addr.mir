@@ -2,11 +2,11 @@
 # RUN: llc -mtriple=amdgcn-mesa-mesa3d -mcpu=fiji -O0 -run-pass=legalizer %s -o - | FileCheck %s
 --- |
 
-  @addr = global i8* null
+  @addr = global ptr null
 
   define void @test_blockaddress() {
-    store i8* blockaddress(@test_blockaddress, %block), i8** @addr
-    indirectbr i8* blockaddress(@test_blockaddress, %block), [label %block]
+    store ptr blockaddress(@test_blockaddress, %block), ptr @addr
+    indirectbr ptr blockaddress(@test_blockaddress, %block), [label %block]
 
   block:
     ret void
@@ -21,7 +21,7 @@ body:             |
   bb.1 (%ir-block.0):
     ; CHECK-LABEL: name: test_blockaddress
     ; CHECK: [[BLOCK_ADDR:%[0-9]+]]:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
-    ; CHECK: S_ENDPGM 0, implicit [[BLOCK_ADDR]](p0)
+    ; CHECK-NEXT: S_ENDPGM 0, implicit [[BLOCK_ADDR]](p0)
     %0:_(p0) = G_BLOCK_ADDR blockaddress(@test_blockaddress, %ir-block.block)
     S_ENDPGM 0, implicit %0
 

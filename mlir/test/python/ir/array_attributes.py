@@ -43,6 +43,7 @@ def testGetDenseElementsSplatInt():
     print(attr)
     # CHECK: is_splat: True
     print("is_splat:", attr.is_splat)
+    assert attr.get_splat_value() == element
 
 
 # CHECK-LABEL: TEST: testGetDenseElementsSplatFloat
@@ -55,6 +56,7 @@ def testGetDenseElementsSplatFloat():
     attr = DenseElementsAttr.get_splat(shaped_type, element)
     # CHECK: dense<1.200000e+00> : tensor<2x3x4xf32>
     print(attr)
+    assert attr.get_splat_value() == element
 
 
 # CHECK-LABEL: TEST: testGetDenseElementsSplatErrors
@@ -98,10 +100,9 @@ def testRepeatedValuesSplat():
     print(attr)
     # CHECK: is_splat: True
     print("is_splat:", attr.is_splat)
-    # TODO: Re-enable this once a solution is found to raising an exception
-    # from buffer protocol.
-    # Reported as https://github.com/pybind/pybind11/issues/3336
-    # print(np.array(attr))
+    # CHECK{LITERAL}: [[1. 1. 1.]
+    # CHECK{LITERAL}:  [1. 1. 1.]]
+    print(np.array(attr))
 
 
 # CHECK-LABEL: TEST: testNonSplat
@@ -363,4 +364,21 @@ def testGetDenseElementsUI64():
     # CHECK: {{\[}}[1 2 3]
     # CHECK: {{\[}}4 5 6]]
     print(np.array(attr))
+
+
+# CHECK-LABEL: TEST: testGetDenseElementsIndex
+@run
+def testGetDenseElementsIndex():
+  with Context(), Location.unknown():
+    idx_type = IndexType.get()
+    array = np.array([[1, 2, 3], [4, 5, 6]], dtype=np.int64)
+    attr = DenseElementsAttr.get(array, type=idx_type)
+    # CHECK: dense<{{\[}}[1, 2, 3], [4, 5, 6]]> : tensor<2x3xindex>
+    print(attr)
+    arr = np.array(attr)
+    # CHECK: {{\[}}[1 2 3]
+    # CHECK: {{\[}}4 5 6]]
+    print(arr)
+    # CHECK: True
+    print(arr.dtype == np.int64)
 

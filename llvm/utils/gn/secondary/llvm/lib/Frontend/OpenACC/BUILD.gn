@@ -1,5 +1,3 @@
-import("//llvm/utils/TableGen/tablegen.gni")
-
 static_library("OpenACC") {
   output_name = "LLVMFrontendOpenACC"
   deps = [ "//llvm/lib/Support" ]

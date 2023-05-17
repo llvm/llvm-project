@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm -o - -verify | FileCheck %s
+// RUN: %clang_cc1 %s -triple i386-unknown-unknown -Wno-strict-prototypes -emit-llvm -o - -verify | FileCheck %s
 
 int g();
 
@@ -52,8 +52,8 @@ void f8_user(void (*callback)(struct Incomplete));
 void f8_test(void) {
   f8_user(&f8_callback);
 // CHECK-LABEL: define{{.*}} void @f8_test()
-// CHECK: call void @f8_user({{.*}}* noundef bitcast (void ()* @f8_callback to {{.*}}*))
-// CHECK: declare void @f8_user({{.*}}* noundef)
+// CHECK: call void @f8_user(ptr noundef @f8_callback)
+// CHECK: declare void @f8_user(ptr noundef)
 // CHECK: declare void @f8_callback()
 }
 

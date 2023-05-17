@@ -17,7 +17,9 @@
 #ifndef FORTRAN_RUNTIME_TRANSFORMATIONAL_H_
 #define FORTRAN_RUNTIME_TRANSFORMATIONAL_H_
 
+#include "flang/Runtime/cpp-type.h"
 #include "flang/Runtime/entry-names.h"
+#include "flang/Runtime/float128.h"
 #include <cinttypes>
 
 namespace Fortran::runtime {
@@ -30,6 +32,98 @@ void RTNAME(Reshape)(Descriptor &result, const Descriptor &source,
     const Descriptor &shape, const Descriptor *pad = nullptr,
     const Descriptor *order = nullptr, const char *sourceFile = nullptr,
     int line = 0);
+
+void RTNAME(BesselJn_2)(Descriptor &result, int32_t n1, int32_t n2, float x,
+    float bn2, float bn2_1, const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselJn_3)(Descriptor &result, int32_t n1, int32_t n2, float x,
+    float bn2, float bn2_1, const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselJn_4)(Descriptor &result, int32_t n1, int32_t n2, float x,
+    float bn2, float bn2_1, const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselJn_8)(Descriptor &result, int32_t n1, int32_t n2, double x,
+    double bn2, double bn2_1, const char *sourceFile = nullptr, int line = 0);
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselJn_10)(Descriptor &result, int32_t n1, int32_t n2,
+    long double x, long double bn2, long double bn2_1,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselJn_16)(Descriptor &result, int32_t n1, int32_t n2,
+    CppFloat128Type x, CppFloat128Type bn2, CppFloat128Type bn2_1,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
+
+void RTNAME(BesselJnX0_2)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselJnX0_3)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselJnX0_4)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselJnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselJnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselJnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
+
+void RTNAME(BesselYn_2)(Descriptor &result, int32_t n1, int32_t n2, float x,
+    float bn1, float bn1_1, const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselYn_3)(Descriptor &result, int32_t n1, int32_t n2, float x,
+    float bn1, float bn1_1, const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselYn_4)(Descriptor &result, int32_t n1, int32_t n2, float x,
+    float bn1, float bn1_1, const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselYn_8)(Descriptor &result, int32_t n1, int32_t n2, double x,
+    double bn1, double bn1_1, const char *sourceFile = nullptr, int line = 0);
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselYn_10)(Descriptor &result, int32_t n1, int32_t n2,
+    long double x, long double bn1, long double bn1_1,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselYn_16)(Descriptor &result, int32_t n1, int32_t n2,
+    CppFloat128Type x, CppFloat128Type bn1, CppFloat128Type bn1_1,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
+
+void RTNAME(BesselYnX0_2)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselYnX0_3)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselYnX0_4)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+void RTNAME(BesselYnX0_8)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+
+#if LDBL_MANT_DIG == 64
+void RTNAME(BesselYnX0_10)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
+
+#if LDBL_MANT_DIG == 113 || HAS_FLOAT128
+void RTNAME(BesselYnX0_16)(Descriptor &result, int32_t n1, int32_t n2,
+    const char *sourceFile = nullptr, int line = 0);
+#endif
 
 void RTNAME(Cshift)(Descriptor &result, const Descriptor &source,
     const Descriptor &shift, int dim = 1, const char *sourceFile = nullptr,

@@ -46,16 +46,16 @@ void test(const C& c)
     assert(c.find(4)->second == "four");
 }
 
-void reserve_invariant(size_t n) // LWG #2156
+void reserve_invariant(std::size_t n) // LWG #2156
 {
-    for (size_t i = 0; i < n; ++i)
+    for (std::size_t i = 0; i < n; ++i)
     {
-        std::unordered_multimap<size_t, size_t> c;
+        std::unordered_multimap<std::size_t, size_t> c;
         c.reserve(n);
-        size_t buckets = c.bucket_count();
-        for (size_t j = 0; j < i; ++j)
+        std::size_t buckets = c.bucket_count();
+        for (std::size_t j = 0; j < i; ++j)
         {
-            c.insert(std::unordered_multimap<size_t, size_t>::value_type(i,i));
+            c.insert(std::unordered_multimap<std::size_t, size_t>::value_type(i,i));
             assert(buckets == c.bucket_count());
         }
     }

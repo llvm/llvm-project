@@ -26,6 +26,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/raw_ostream.h"
+#include <optional>
 #include <sstream>
 
 using namespace llvm;
@@ -289,8 +290,7 @@ static Function *getOrCreateFrameHelper(Module *M, MachineModuleInfo *MMI,
   case FrameHelperType::Prolog:
   case FrameHelperType::PrologFrame: {
     // Compute the remaining SP adjust beyond FP/LR.
-    auto LRIdx = std::distance(
-        Regs.begin(), std::find(Regs.begin(), Regs.end(), AArch64::LR));
+    auto LRIdx = std::distance(Regs.begin(), llvm::find(Regs, AArch64::LR));
 
     // If the register stored to the lowest address is not LR, we must subtract
     // more from SP here.
@@ -508,7 +508,7 @@ bool AArch64LowerHomogeneousPE::lowerProlog(
   DebugLoc DL = MI.getDebugLoc();
   SmallVector<unsigned, 8> Regs;
   int LRIdx = 0;
-  Optional<int> FpOffset;
+  std::optional<int> FpOffset;
   for (auto &MO : MI.operands()) {
     if (MO.isReg()) {
       if (MO.getReg() == AArch64::LR)

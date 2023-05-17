@@ -15,7 +15,9 @@
 #   $ docker run --env-file <secrets> -it $(docker build -q libcxx/utils/ci)
 #
 # The environment variables in `<secrets>` should be the ones necessary
-# to run a BuildKite agent.
+# to run a BuildKite agent:
+#
+#   BUILDKITE_AGENT_TOKEN=<token>
 #
 # If you're only looking to run the Docker image locally for debugging a
 # build bot, see the `run-buildbot-container` script located in this directory.
@@ -33,16 +35,19 @@ FROM ubuntu:jammy
 # Make sure apt-get doesn't try to prompt for stuff like our time zone, etc.
 ENV DEBIAN_FRONTEND=noninteractive
 
-# This dummy command is meant to be edited from time to time, which causes the
-# CI builders to rebuild their copy of the Docker image. This is not a great
-# solution, however without that, the CI builders will keep the same cached
-# Docker image forever.
-RUN echo 6
-
 RUN apt-get update && apt-get install -y bash curl
 
 # Install various tools used by the build or the test suite
-RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils python3-psutil git gdb
+#RUN apt-get update && apt-get install -y ninja-build python3 python3-sphinx python3-distutils python3-psutil git gdb
+# TODO add ninja-build once 1.11 is available in Ubuntu, also remove the manual installation.
+RUN apt-get update && apt-get install -y python3 python3-sphinx python3-distutils python3-psutil git gdb
+RUN apt-get update && apt-get install -y wget && \
+  wget -qO /usr/local/bin/ninja.gz https://github.com/ninja-build/ninja/releases/latest/download/ninja-linux.zip && \
+  gunzip /usr/local/bin/ninja.gz && \
+  chmod a+x /usr/local/bin/ninja
+
+# Install dependencies required to run the LLDB data formatter tests
+RUN apt-get update && apt-get install -y python3 python3-dev libpython3-dev uuid-dev libncurses5-dev swig3.0 libxml2-dev libedit-dev
 
 # Locales for gdb and localization tests
 RUN apt-get update && apt-get install -y language-pack-en language-pack-fr \
@@ -61,39 +66,51 @@ RUN locale-gen
 # LLVM 15, we still need to have Clang 12 in this Docker image because the LLVM
 # 14 release branch CI uses it. The tip-of-trunk CI will never use Clang 12,
 # though.
-ENV LLVM_LATEST_VERSION=14
+ENV LLVM_HEAD_VERSION=17
 RUN apt-get update && apt-get install -y lsb-release wget software-properties-common
 RUN wget https://apt.llvm.org/llvm.sh -O /tmp/llvm.sh
-# TODO Use the apt.llvm.org version after branching to LLVM 15
-RUN apt-get update && apt-get install -y clang-$(($LLVM_LATEST_VERSION - 2))
-#RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 2)) # for CI transitions
-RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION - 1)) # previous release
-RUN bash /tmp/llvm.sh $LLVM_LATEST_VERSION          # latest release
-RUN bash /tmp/llvm.sh $(($LLVM_LATEST_VERSION + 1)) # current ToT
+RUN bash /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 3)) # for CI transitions
+RUN bash /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 2)) # previous release
+RUN bash /tmp/llvm.sh $(($LLVM_HEAD_VERSION - 1)) # latest release
+RUN bash /tmp/llvm.sh $LLVM_HEAD_VERSION          # current ToT
 
-# Make the latest version of Clang the "default" compiler on the system
-# TODO: In the future, all jobs should be using an explicitly-versioned version of Clang instead,
-#       and we can get rid of this entirely.
-RUN ln -fs /usr/bin/clang++-$LLVM_LATEST_VERSION /usr/bin/c++ && [ -e $(readlink /usr/bin/c++) ]
-RUN ln -fs /usr/bin/clang-$LLVM_LATEST_VERSION /usr/bin/cc && [ -e $(readlink /usr/bin/cc) ]
+# Install clang-scan-deps, which is required to build modules; always all supported versions.
+RUN apt-get update && apt-get install -y clang-tools-$(($LLVM_HEAD_VERSION - 3)) \
+                                         clang-tools-$(($LLVM_HEAD_VERSION - 2)) \
+                                         clang-tools-$(($LLVM_HEAD_VERSION - 1)) \
+                                         clang-tools-$LLVM_HEAD_VERSION
 
-# Install clang-format
-RUN apt-get install -y clang-format-$LLVM_LATEST_VERSION
-RUN ln -s /usr/bin/clang-format-$LLVM_LATEST_VERSION /usr/bin/clang-format && [ -e $(readlink /usr/bin/clang-format) ]
-RUN ln -s /usr/bin/git-clang-format-$LLVM_LATEST_VERSION /usr/bin/git-clang-format && [ -e $(readlink /usr/bin/git-clang-format) ]
+# Install clang-format; always use the lastest stable branch.
+RUN apt-get update && apt-get install -y clang-format-$(($LLVM_HEAD_VERSION - 2)) clang-format-$(($LLVM_HEAD_VERSION - 1))
 
 # Install clang-tidy
-RUN apt-get install -y clang-tidy-$LLVM_LATEST_VERSION
-RUN ln -s /usr/bin/clang-tidy-$LLVM_LATEST_VERSION /usr/bin/clang-tidy && [ -e $(readlink /usr/bin/clang-tidy) ]
+# TODO LLVM 17 revert D148831 to only install $(($LLVM_HEAD_VERSION - 1)) and $LLVM_HEAD_VERSION
+# The usage of the ToT version is needed due to module issues with Clang 16
+RUN apt-get update && apt-get install -y clang-tidy-$(($LLVM_HEAD_VERSION - 2)) clang-tidy-$(($LLVM_HEAD_VERSION - 1)) clang-tidy-$LLVM_HEAD_VERSION
+
+# Install llvm-dev and libclang-dev to compile custom clang-tidy checks
+# TODO LLVM 17 revert D148831 to only install $(($LLVM_HEAD_VERSION - 1)) and $LLVM_HEAD_VERSION
+# The usage of the ToT version is needed due to module issues with Clang 16
+RUN apt-get update && apt-get install -y llvm-$(($LLVM_HEAD_VERSION - 2))-dev llvm-$(($LLVM_HEAD_VERSION - 1))-dev     llvm-$LLVM_HEAD_VERSION-dev \
+                                     libclang-$(($LLVM_HEAD_VERSION - 2))-dev libclang-$(($LLVM_HEAD_VERSION - 1))-dev libclang-$LLVM_HEAD_VERSION-dev
 
 # Install the most recent GCC, like clang install the previous version as a transition.
 ENV GCC_LATEST_VERSION=12
 RUN apt-get update && apt install -y gcc-$((GCC_LATEST_VERSION - 1)) g++-$((GCC_LATEST_VERSION - 1))
 RUN apt-get update && apt install -y gcc-$GCC_LATEST_VERSION g++-$GCC_LATEST_VERSION
 
+# Remove all, no longer needed, apt data
+RUN rm -rf /var/lib/apt/lists/*
+
 # Install a recent CMake
 RUN wget https://github.com/Kitware/CMake/releases/download/v3.21.1/cmake-3.21.1-linux-x86_64.sh -O /tmp/install-cmake.sh
 RUN bash /tmp/install-cmake.sh --prefix=/usr --exclude-subdir --skip-license
+RUN rm /tmp/install-cmake.sh
+
+# Install a newer CMake for modules
+# TODO Remove the duplicated installation when all runtimes can be build with CMake 3.26.
+RUN wget https://github.com/Kitware/CMake/releases/download/v3.26.1/cmake-3.26.1-linux-x86_64.sh -O /tmp/install-cmake.sh
+RUN bash /tmp/install-cmake.sh --prefix=/opt --exclude-subdir --skip-license
 RUN rm /tmp/install-cmake.sh
 
 # Change the user to a non-root user, since some of the libc++ tests

@@ -2,17 +2,17 @@
 
 ; CHECK: inalloca mismatch
 
-define void @a(i8* %0) !prof !0 {
+define void @a(ptr %0) !prof !0 {
   ret void
 }
 
-define void @b(void (i64*)** %v, i64* %p) !prof !1 {
+define void @b(ptr %v, ptr %p) !prof !1 {
 ; CHECK-LABEL: @b
 ; CHECK-NEXT: load
-; CHECK-NEXT: call void {{.*}}(i64* inalloca(i64)
+; CHECK-NEXT: call void {{.*}}(ptr inalloca(i64)
 ; CHECK-NEXT: ret void
-  %a = load void (i64*)*, void (i64*)** %v
-  call void %a(i64* inalloca(i64) %p), !prof !2
+  %a = load ptr, ptr %v
+  call void %a(ptr inalloca(i64) %p), !prof !2
   ret void
 }
 

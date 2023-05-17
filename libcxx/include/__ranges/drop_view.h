@@ -6,11 +6,14 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef _LIBCPP___RANGES_DROP_VIEW_H
 #define _LIBCPP___RANGES_DROP_VIEW_H
 
 #include <__algorithm/min.h>
 #include <__assert>
+#include <__concepts/constructible.h>
+#include <__concepts/convertible_to.h>
 #include <__config>
 #include <__functional/bind_back.h>
 #include <__fwd/span.h>
@@ -30,19 +33,26 @@
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/conditional.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_nothrow_constructible.h>
+#include <__type_traits/make_unsigned.h>
+#include <__type_traits/remove_cvref.h>
 #include <__utility/auto_cast.h>
 #include <__utility/forward.h>
 #include <__utility/move.h>
-#include <concepts>
-#include <type_traits>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
   template<view _View>
@@ -61,10 +71,10 @@ namespace ranges {
     _View __base_ = _View();
 
 public:
-    drop_view() requires default_initializable<_View> = default;
+    _LIBCPP_HIDE_FROM_ABI drop_view() requires default_initializable<_View> = default;
 
     _LIBCPP_HIDE_FROM_ABI
-    constexpr drop_view(_View __base, range_difference_t<_View> __count)
+    constexpr _LIBCPP_EXPLICIT_SINCE_CXX23 drop_view(_View __base, range_difference_t<_View> __count)
       : __count_(__count)
       , __base_(std::move(__base))
     {
@@ -250,12 +260,12 @@ struct __fn {
     {
       // Introducing local variables avoids calculating `min` and `distance` twice (at the cost of diverging from the
       // expression used in the `noexcept` clause and the return statement).
-      auto dist = ranges::distance(__rng);
-      auto clamped = std::min<_Dist>(dist, std::forward<_Np>(__n));
+      auto __dist = ranges::distance(__rng);
+      auto __clamped = std::min<_Dist>(__dist, std::forward<_Np>(__n));
       return          _RawRange(
-                              ranges::begin(__rng) + clamped,
+                              ranges::begin(__rng) + __clamped,
                               ranges::end(__rng),
-                              std::__to_unsigned_like(dist - clamped)
+                              std::__to_unsigned_like(__dist - __clamped)
                               );}
 
   // [range.drop.overview]: the "otherwise" case.
@@ -294,8 +304,10 @@ inline namespace __cpo {
 
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___RANGES_DROP_VIEW_H

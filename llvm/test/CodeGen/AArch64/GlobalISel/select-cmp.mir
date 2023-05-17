@@ -424,7 +424,8 @@ body:             |
     ; CHECK-NEXT: %add_rhs:gpr64 = COPY $x2
     ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
     ; CHECK-NEXT: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: %cmp_ext:gpr64 = SUBREG_TO_REG 0, %cmp, %subreg.sub_32
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %cmp, 0
+    ; CHECK-NEXT: %cmp_ext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: %add:gpr64 = ADDXrr %cmp_ext, %add_rhs
     ; CHECK-NEXT: %or:gpr64 = ORRXrr %add, %cmp_ext
     ; CHECK-NEXT: $x0 = COPY %or
@@ -459,7 +460,8 @@ body:             |
     ; CHECK-NEXT: %add_rhs:gpr64 = COPY $x2
     ; CHECK-NEXT: [[SUBSXrr:%[0-9]+]]:gpr64 = SUBSXrr %cmp_lhs, %cmp_rhs, implicit-def $nzcv
     ; CHECK-NEXT: %cmp:gpr32 = CSINCWr $wzr, $wzr, 1, implicit $nzcv
-    ; CHECK-NEXT: %cmp_ext:gpr64 = SUBREG_TO_REG 0, %cmp, %subreg.sub_32
+    ; CHECK-NEXT: [[ORRWrs:%[0-9]+]]:gpr32 = ORRWrs $wzr, %cmp, 0
+    ; CHECK-NEXT: %cmp_ext:gpr64 = SUBREG_TO_REG 0, [[ORRWrs]], %subreg.sub_32
     ; CHECK-NEXT: %add:gpr64 = ADDXrr %cmp_ext, %add_rhs
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
     ; CHECK-NEXT: [[INSERT_SUBREG:%[0-9]+]]:gpr64 = INSERT_SUBREG [[DEF]], %cmp, %subreg.sub_32

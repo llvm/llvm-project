@@ -6,7 +6,7 @@
 ;;;
 ;;; Is either of these sequences ideal? 
 
-define float @foo(i8* nocapture %buf, float %a, float %b) nounwind uwtable {
+define float @foo(ptr nocapture %buf, float %a, float %b) nounwind uwtable {
 ; PRESCOTT-LABEL: foo:
 ; PRESCOTT:       # %bb.0: # %entry
 ; PRESCOTT-NEXT:    movq   .Ltmp0+14(%rip), %rax
@@ -24,7 +24,7 @@ define float @foo(i8* nocapture %buf, float %a, float %b) nounwind uwtable {
 ; NEHALEM-NEXT:    movups %xmm2, (%rdi)
 
 entry:
-  tail call void @llvm.memcpy.p0i8.p0i8.i64(i8* %buf, i8* blockaddress(@foo, %out), i64 22, i1 false)
+  tail call void @llvm.memcpy.p0.p0.i64(ptr %buf, ptr blockaddress(@foo, %out), i64 22, i1 false)
   br label %out
 
 out:                                              ; preds = %entry
@@ -32,4 +32,4 @@ out:                                              ; preds = %entry
   ret float %add
 }
 
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8* nocapture, i8* nocapture, i64, i1) nounwind
+declare void @llvm.memcpy.p0.p0.i64(ptr nocapture, ptr nocapture, i64, i1) nounwind

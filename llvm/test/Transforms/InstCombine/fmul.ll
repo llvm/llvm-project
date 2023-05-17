@@ -372,13 +372,13 @@ define float @unary_neg_mul_multi_use(float %x, float %y) {
 }
 
 ; Don't crash when attempting to cast a constant FMul to an instruction.
-define void @test8(i32* %inout) {
+define void @test8(ptr %inout, i1 %c1) {
 ; CHECK-LABEL: @test8(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
 ; CHECK:       for.cond:
 ; CHECK-NEXT:    [[LOCAL_VAR_7_0:%.*]] = phi <4 x float> [ <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, [[ENTRY:%.*]] ], [ [[TMP0:%.*]], [[FOR_BODY:%.*]] ]
-; CHECK-NEXT:    br i1 undef, label [[FOR_BODY]], label [[FOR_END:%.*]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[FOR_BODY]], label [[FOR_END:%.*]]
 ; CHECK:       for.body:
 ; CHECK-NEXT:    [[TMP0]] = insertelement <4 x float> [[LOCAL_VAR_7_0]], float 0.000000e+00, i64 2
 ; CHECK-NEXT:    br label [[FOR_COND]]
@@ -386,7 +386,7 @@ define void @test8(i32* %inout) {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = load i32, i32* %inout, align 4
+  %0 = load i32, ptr %inout, align 4
   %conv = uitofp i32 %0 to float
   %vecinit = insertelement <4 x float> <float 0.000000e+00, float 0.000000e+00, float 0.000000e+00, float undef>, float %conv, i32 3
   %sub = fsub <4 x float> <float -0.000000e+00, float -0.000000e+00, float -0.000000e+00, float -0.000000e+00>, %vecinit
@@ -396,7 +396,7 @@ entry:
 
 for.cond:                                         ; preds = %for.body, %entry
   %local_var_7.0 = phi <4 x float> [ %mul, %entry ], [ %2, %for.body ]
-  br i1 undef, label %for.body, label %for.end
+  br i1 %c1, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
   %2 = insertelement <4 x float> %local_var_7.0, float 0.000000e+00, i32 2
@@ -665,12 +665,12 @@ define float @fdiv_constant_numerator_fmul(float %x) {
 define float @fdiv_constant_numerator_fmul_extra_use(float %x) {
 ; CHECK-LABEL: @fdiv_constant_numerator_fmul_extra_use(
 ; CHECK-NEXT:    [[DIV:%.*]] = fdiv fast float 1.000000e+00, [[X:%.*]]
-; CHECK-NEXT:    store float [[DIV]], float* @fmul2_external, align 4
+; CHECK-NEXT:    store float [[DIV]], ptr @fmul2_external, align 4
 ; CHECK-NEXT:    [[MUL:%.*]] = fmul fast float [[DIV]], 2.000000e+00
 ; CHECK-NEXT:    ret float [[MUL]]
 ;
   %div = fdiv fast float 1.0, %x
-  store float %div, float* @fmul2_external
+  store float %div, ptr @fmul2_external
   %mul = fmul fast float %div, 2.0
   ret float %mul
 }
@@ -795,7 +795,7 @@ define <2 x float> @fmul_fadd_distribute_vec(<2 x float> %x) {
 define <vscale x 2 x float> @fmul_fadd_distribute_scalablevec(<vscale x 2 x float> %x) {
 ; CHECK-LABEL: @fmul_fadd_distribute_scalablevec(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fmul reassoc <vscale x 2 x float> [[X:%.*]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 6.000000e+03, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer)
-; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.200000e+07, i32 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
+; CHECK-NEXT:    [[T3:%.*]] = fadd reassoc <vscale x 2 x float> [[TMP1]], shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> poison, float 1.200000e+07, i64 0), <vscale x 2 x float> poison, <vscale x 2 x i32> zeroinitializer)
 ; CHECK-NEXT:    ret <vscale x 2 x float> [[T3]]
 ;
   %t1 = fadd <vscale x 2 x float> shufflevector (<vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 2.0e+3, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer), %x
@@ -1051,24 +1051,62 @@ define float @fmul_fdiv_factor_extra_use(float %x, float %y) {
   ret float %mul
 }
 
+define void @fmul_loop_invariant_fdiv(float* %a, float %x) {
+; CHECK-LABEL: @fmul_loop_invariant_fdiv(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK:       for.cond.cleanup:
+; CHECK-NEXT:    ret void
+; CHECK:       for.body:
+; CHECK-NEXT:    [[I_08:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[INC:%.*]], [[FOR_BODY]] ]
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[I_08]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds float, ptr [[A:%.*]], i64 [[IDXPROM]]
+; CHECK-NEXT:    [[F:%.*]] = load float, ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[M:%.*]] = fdiv fast float [[F]], [[X:%.*]]
+; CHECK-NEXT:    store float [[M]], ptr [[ARRAYIDX]], align 4
+; CHECK-NEXT:    [[INC]] = add nuw nsw i32 [[I_08]], 1
+; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[INC]], 1024
+; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
+;
+entry:
+  %d = fdiv fast float 1.0, %x
+  br label %for.body
+
+for.cond.cleanup:
+  ret void
+
+for.body:
+  %i.08 = phi i32 [ 0, %entry ], [ %inc, %for.body ]
+  %idxprom = zext i32 %i.08 to i64
+  %arrayidx = getelementptr inbounds float, float* %a, i64 %idxprom
+  %f = load float, float* %arrayidx, align 4
+  %m = fmul fast float %f, %d
+  store float %m, float* %arrayidx, align 4
+  %inc = add nuw nsw i32 %i.08, 1
+  %cmp.not = icmp eq i32 %inc, 1024
+  br i1 %cmp.not, label %for.cond.cleanup, label %for.body
+}
+
 ; Avoid infinite looping by moving negation out of a constant expression.
 
-@g = external global {[2 x i8*]}, align 1
+@g = external global {[2 x ptr]}, align 1
 
 define double @fmul_negated_constant_expression(double %x) {
 ; CHECK-LABEL: @fmul_negated_constant_expression(
-; CHECK-NEXT:    [[R:%.*]] = fmul double [[X:%.*]], fsub (double -0.000000e+00, double bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double))
+; CHECK-NEXT:    [[FSUB:%.*]] = fneg double bitcast (i64 ptrtoint (ptr getelementptr inbounds ({ [2 x ptr] }, ptr @g, i64 0, inrange i32 0, i64 2) to i64) to double)
+; CHECK-NEXT:    [[R:%.*]] = fmul double [[FSUB]], [[X:%.*]]
 ; CHECK-NEXT:    ret double [[R]]
 ;
-  %r = fmul double %x, fsub (double -0.000000e+00, double bitcast (i64 ptrtoint (i8** getelementptr inbounds ({ [2 x i8*] }, { [2 x i8*] }* @g, i64 0, inrange i32 0, i64 2) to i64) to double))
+  %fsub = fsub double -0.000000e+00, bitcast (i64 ptrtoint (ptr getelementptr inbounds ({ [2 x ptr] }, ptr @g, i64 0, inrange i32 0, i64 2) to i64) to double)
+  %r = fmul double %x, %fsub
   ret double %r
 }
 
 define float @negate_if_true(float %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[COND:%.*]], float [[TMP1]], float [[X]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = select i1 [[COND:%.*]], float [[TMP1]], float [[X]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %sel = select i1 %cond, float -1.0, float 1.0
   %r = fmul float %sel, %x
@@ -1078,8 +1116,8 @@ define float @negate_if_true(float %x, i1 %cond) {
 define float @negate_if_false(float %x, i1 %cond) {
 ; CHECK-LABEL: @negate_if_false(
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg arcp float [[X:%.*]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select arcp i1 [[COND:%.*]], float [[X]], float [[TMP1]]
-; CHECK-NEXT:    ret float [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = select arcp i1 [[COND:%.*]], float [[X]], float [[TMP1]]
+; CHECK-NEXT:    ret float [[R]]
 ;
   %sel = select i1 %cond, float 1.0, float -1.0
   %r = fmul arcp float %sel, %x
@@ -1090,8 +1128,8 @@ define <2 x double> @negate_if_true_commute(<2 x double> %px, i1 %cond) {
 ; CHECK-LABEL: @negate_if_true_commute(
 ; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 4.200000e+01>, [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg ninf <2 x double> [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select ninf i1 [[COND:%.*]], <2 x double> [[TMP1]], <2 x double> [[X]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = select ninf i1 [[COND:%.*]], <2 x double> [[TMP1]], <2 x double> [[X]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %x = fdiv <2 x double> <double 42.0, double 42.0>, %px  ; thwart complexity-based canonicalization
   %sel = select i1 %cond, <2 x double> <double -1.0, double -1.0>, <2 x double> <double 1.0, double 1.0>
@@ -1103,8 +1141,8 @@ define <2 x double> @negate_if_false_commute(<2 x double> %px, <2 x i1> %cond) {
 ; CHECK-LABEL: @negate_if_false_commute(
 ; CHECK-NEXT:    [[X:%.*]] = fdiv <2 x double> <double 4.200000e+01, double 5.100000e+00>, [[PX:%.*]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x double> [[X]]
-; CHECK-NEXT:    [[TMP2:%.*]] = select <2 x i1> [[COND:%.*]], <2 x double> [[X]], <2 x double> [[TMP1]]
-; CHECK-NEXT:    ret <2 x double> [[TMP2]]
+; CHECK-NEXT:    [[R:%.*]] = select <2 x i1> [[COND:%.*]], <2 x double> [[X]], <2 x double> [[TMP1]]
+; CHECK-NEXT:    ret <2 x double> [[R]]
 ;
   %x = fdiv <2 x double> <double 42.0, double 5.1>, %px  ; thwart complexity-based canonicalization
   %sel = select <2 x i1> %cond, <2 x double> <double 1.0, double 1.0>, <2 x double> <double -1.0, double -1.0>
@@ -1197,4 +1235,46 @@ define <vscale x 2 x float> @mul_scalable_splat_zero(<vscale x 2 x float> %z) {
   %shuf = shufflevector <vscale x 2 x float> insertelement (<vscale x 2 x float> undef, float 0.0, i32 0), <vscale x 2 x float> undef, <vscale x 2 x i32> zeroinitializer
   %t3 = fmul fast <vscale x 2 x float> %shuf, %z
   ret <vscale x 2 x float> %t3
+}
+
+define half @mul_zero_nnan(half %x) {
+; CHECK-LABEL: @mul_zero_nnan(
+; CHECK-NEXT:    [[R:%.*]] = call nnan half @llvm.copysign.f16(half 0xH0000, half [[X:%.*]])
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = fmul nnan half %x, 0.0
+  ret half %r
+}
+
+; poison propagates through vector elements
+
+define <2 x float> @mul_zero_nnan_vec_poison(<2 x float> %x) {
+; CHECK-LABEL: @mul_zero_nnan_vec_poison(
+; CHECK-NEXT:    [[R:%.*]] = call nnan <2 x float> @llvm.copysign.v2f32(<2 x float> <float 0.000000e+00, float poison>, <2 x float> [[X:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[R]]
+;
+  %r = fmul nnan <2 x float> %x, <float 0.0, float poison>
+  ret <2 x float> %r
+}
+
+; negative test - must have nnan
+
+define half @mul_zero(half %x) {
+; CHECK-LABEL: @mul_zero(
+; CHECK-NEXT:    [[R:%.*]] = fmul ninf nsz half [[X:%.*]], 0xH0000
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = fmul ninf nsz half %x, 0.0
+  ret half %r
+}
+
+; TODO: This could be fneg+copysign.
+
+define half @mul_negzero_nnan(half %x) {
+; CHECK-LABEL: @mul_negzero_nnan(
+; CHECK-NEXT:    [[R:%.*]] = fmul nnan half [[X:%.*]], 0xH8000
+; CHECK-NEXT:    ret half [[R]]
+;
+  %r = fmul nnan half %x, -0.0
+  ret half %r
 }

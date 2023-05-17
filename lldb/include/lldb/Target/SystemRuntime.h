@@ -77,7 +77,7 @@ public:
   ///
   /// Allow the SystemRuntime plugin to enable logging features in the system
   /// runtime libraries.
-  virtual void ModulesDidLoad(const ModuleList &module_list) override;
+  void ModulesDidLoad(const ModuleList &module_list) override;
 
   /// Called before detaching from a process.
   ///

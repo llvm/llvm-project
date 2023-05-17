@@ -1,9 +1,8 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-
 import argparse
 import os
+import platform
 import shutil
 import signal
 import subprocess
@@ -49,6 +48,18 @@ parser.add_argument('--tools-dir',
                     required=False,
                     action='append',
                     help='If specified, a path to search in addition to PATH when --compiler is not an exact path')
+
+parser.add_argument('--objc-gnustep-dir',
+                    metavar='directory',
+                    dest='objc_gnustep_dir',
+                    required=False,
+                    help='If specified, a path to GNUstep libobjc2 runtime for use on Windows and Linux')
+
+parser.add_argument('--objc-gnustep',
+                    dest='objc_gnustep',
+                    action='store_true',
+                    default=False,
+                    help='Include and link GNUstep libobjc2 (Windows and Linux only)')
 
 if sys.platform == 'darwin':
     parser.add_argument('--apple-sdk',
@@ -110,6 +121,12 @@ parser.add_argument('inputs',
                     metavar='file',
                     nargs='+',
                     help='Source file(s) to compile / object file(s) to link')
+
+parser.add_argument('--std',
+                    metavar='std',
+                    dest='std',
+                    required=False,
+                    help='Specify the C/C++ standard.')
 
 
 args = parser.parse_args(args=sys.argv[1:])
@@ -232,6 +249,11 @@ class Builder(object):
         self.verbose = args.verbose
         self.obj_ext = obj_ext
         self.lib_paths = args.libs_dir
+        self.std = args.std
+        assert not args.objc_gnustep or args.objc_gnustep_dir, \
+               "--objc-gnustep specified without path to libobjc2"
+        self.objc_gnustep_inc = os.path.join(args.objc_gnustep_dir, 'include') if args.objc_gnustep_dir else None
+        self.objc_gnustep_lib = os.path.join(args.objc_gnustep_dir, 'lib') if args.objc_gnustep_dir else None
 
     def _exe_file_name(self):
         assert self.mode != 'compile'
@@ -276,7 +298,7 @@ class MsvcBuilder(Builder):
     def __init__(self, toolchain_type, args):
         Builder.__init__(self, toolchain_type, args, '.obj')
 
-        if os.getenv('PLATFORM') == 'arm64':
+        if platform.uname().machine.lower() == 'arm64':
             self.msvc_arch_str = 'arm' if self.arch == '32' else 'arm64'
         else:
             self.msvc_arch_str = 'x86' if self.arch == '32' else 'x64'
@@ -582,6 +604,9 @@ class MsvcBuilder(Builder):
             args.append('--')
         args.append(source)
 
+        if self.std:
+            args.append('/std:' + self.std)
+
         return ('compiling', [source], obj,
                 self.compile_env,
                 args)
@@ -647,11 +672,19 @@ class GccBuilder(Builder):
             args.append('-static')
         args.append('-c')
 
-        args.extend(['-o', obj])
-        args.append(source)
-
         if sys.platform == 'darwin':
             args.extend(['-isysroot', self.apple_sdk])
+        elif self.objc_gnustep_inc:
+            if source.endswith('.m') or source.endswith('.mm'):
+                args.extend(['-fobjc-runtime=gnustep-2.0', '-I', self.objc_gnustep_inc])
+                if sys.platform == "win32":
+                    args.extend(['-Xclang', '-gcodeview', '-Xclang', '--dependent-lib=msvcrtd'])
+
+        if self.std:
+            args.append('-std={0}'.format(self.std))
+
+        args.extend(['-o', obj])
+        args.append(source)
 
         return ('compiling', [source], obj, None, args)
 
@@ -674,6 +707,12 @@ class GccBuilder(Builder):
 
         if sys.platform == 'darwin':
             args.extend(['-isysroot', self.apple_sdk])
+        elif self.objc_gnustep_lib:
+            args.extend(['-L', self.objc_gnustep_lib, '-lobjc'])
+            if sys.platform == 'linux':
+                args.extend(['-Wl,-rpath,' + self.objc_gnustep_lib])
+            elif sys.platform == 'win32':
+                args.extend(['-fuse-ld=lld-link', '-g', '-Xclang', '--dependent-lib=msvcrtd'])
 
         return ('linking', self._obj_file_names(), self._exe_file_name(), None, args)
 
@@ -790,6 +829,7 @@ if args.verbose:
     print('  Verbose: ' + str(args.verbose))
     print('  Dryrun: ' + str(args.dry))
     print('  Inputs: ' + format_text(args.inputs, 0, 10))
+    print('  C/C++ Standard: ' + str(args.std))
     print('Script Environment:')
     print_environment(os.environ)
 

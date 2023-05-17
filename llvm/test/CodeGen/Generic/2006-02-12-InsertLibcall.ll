@@ -1,5 +1,5 @@
 ; RUN: llc < %s
-@G = external global i32		; <i32*> [#uses=1]
+@G = external global i32		; <ptr> [#uses=1]
 
 define void @encode_one_frame(i64 %tmp.2i) {
 entry:
@@ -42,7 +42,7 @@ then.1.i52:		; preds = %then.0.i40
 	ret void
 
 else.1.i56:		; preds = %then.0.i40
-	%tmp.28.i = load i32, i32* @G		; <i32> [#uses=1]
+	%tmp.28.i = load i32, ptr @G		; <i32> [#uses=1]
 	%tmp.29.i = icmp eq i32 %tmp.28.i, 1		; <i1> [#uses=1]
 	br i1 %tmp.29.i, label %shortcirc_next.i, label %shortcirc_done.i
 

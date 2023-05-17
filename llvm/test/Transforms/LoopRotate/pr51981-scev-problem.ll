@@ -17,22 +17,22 @@
 ; %div2102 to i16).
 ;
 ; CHECK-SCEV: Classifying expressions for: @test_function
-; CHECK-SCEV:   %wide = load i32, i32* @offset, align 1
+; CHECK-SCEV:   %wide = load i32, ptr @offset, align 1
 ; CHECK-SCEV:   -->  %wide U: full-set S: full-set          Exits: <<Unknown>>              LoopDispositions: { %loop.outer.header: Variant, %loop.inner: Invariant }
 ; CHECK-SCEV:   %narrow = trunc i32 %wide to i16
 ; CHECK-SCEV:   -->  (trunc i32 %wide to i16) U: full-set S: full-set               Exits: <<Unknown>>              LoopDispositions: { %loop.outer.header: Variant, %loop.inner: Invariant }
 ; CHECK-SCEV:   %iv = phi i16 [ %narrow, %loop.inner.ph ], [ %iv.plus, %loop.inner ]
-; CHECK-SCEV:   -->  {(trunc i32 %wide to i16),+,1}<%loop.inner> U: full-set S: full-set           Exits: (-1 + (700 umax (1 + (trunc i32 %wide to i16))))               LoopDispositions: { %loop.inner: Computable, %loop.outer.header: Variant }
+; CHECK-SCEV:   -->  {(trunc i32 %wide to i16),+,1}<nw><%loop.inner> U: full-set S: full-set           Exits: (-1 + (700 umax (1 + (trunc i32 %wide to i16))))               LoopDispositions: { %loop.inner: Computable, %loop.outer.header: Variant }
 ;
 ; CHECK-SCEV: Classifying expressions for: @test_function
-; CHECK-SCEV:   %wide1 = load i32, i32* @offset, align 1
+; CHECK-SCEV:   %wide1 = load i32, ptr @offset, align 1
 ; CHECK-SCEV:   -->  %wide1 U: full-set S: full-set
 ; CHECK-SCEV:   %wide2 = phi i32 [ %wide1, %loop.inner.ph.lr.ph ], [ %wide, %loop.outer.latch ]
 ; CHECK-SCEV:   -->  %wide2 U: full-set S: full-set         Exits: <<Unknown>>              LoopDispositions: { %loop.inner.ph: Variant, %loop.inner: Invariant }
 ; CHECK-SCEV:   %narrow = trunc i32 %wide2 to i16
 ; CHECK-SCEV:   -->  (trunc i32 %wide2 to i16) U: full-set S: full-set               Exits: <<Unknown>>              LoopDispositions: { %loop.inner.ph: Variant, %loop.inner: Invariant }
 ; CHECK-SCEV:   %iv = phi i16 [ %narrow, %loop.inner.ph ], [ %iv.plus, %loop.inner ]
-; CHECK-SCEV:   -->  {(trunc i32 %wide2 to i16),+,1}<%loop.inner> U: full-set S: full-set           Exits: (-1 + (700 umax (1 + (trunc i32 %wide2 to i16))))               LoopDispositions: { %loop.inner: Computable, %loop.inner.ph: Variant }
+; CHECK-SCEV:   -->  {(trunc i32 %wide2 to i16),+,1}<nw><%loop.inner> U: full-set S: full-set           Exits: (-1 + (700 umax (1 + (trunc i32 %wide2 to i16))))               LoopDispositions: { %loop.inner: Computable, %loop.inner.ph: Variant }
 
 
 @offset = external dso_local global i32, align 1
@@ -43,7 +43,7 @@ entry:
   br label %loop.outer.header
 
 loop.outer.header:                                ; preds = %loop.outer.latch, %entry
-  %wide = load i32, i32* @offset, align 1
+  %wide = load i32, ptr @offset, align 1
   br i1 %cond, label %exit, label %loop.inner.ph
 
 loop.inner.ph:                                    ; preds = %loop.outer.header
@@ -53,8 +53,8 @@ loop.inner.ph:                                    ; preds = %loop.outer.header
 loop.inner:                                       ; preds = %loop.inner, %loop.inner.ph
   %iv = phi i16 [ %narrow, %loop.inner.ph ], [ %iv.plus, %loop.inner ]
   %iv.promoted = zext i16 %iv to i32
-  %gep = getelementptr inbounds [11263 x i32], [11263 x i32]* @array, i32 0, i32 %iv.promoted
-  store i32 7, i32* %gep, align 1
+  %gep = getelementptr inbounds [11263 x i32], ptr @array, i32 0, i32 %iv.promoted
+  store i32 7, ptr %gep, align 1
   %iv.plus = add i16 %iv, 1
   %cmp = icmp ult i16 %iv.plus, 700
   br i1 %cmp, label %loop.inner, label %loop.outer.latch

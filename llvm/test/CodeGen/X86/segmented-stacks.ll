@@ -32,7 +32,7 @@
 ; X86-FreeBSD: Segmented stacks not supported on FreeBSD i386
 
 ; Just to prevent the alloca from being optimized away
-declare void @dummy_use(i32*, i32)
+declare void @dummy_use(ptr, i32)
 
 define void @test_basic() #0 {
 ; X86-Linux-LABEL: test_basic:
@@ -267,11 +267,11 @@ define void @test_basic() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB0_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
 	ret void
 }
 
-define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
+define i32 @test_nested(ptr nest %closure, i32 %other) #0 {
 ; X86-Linux-LABEL: test_nested:
 ; X86-Linux:       # %bb.0:
 ; X86-Linux-NEXT:    cmpl %gs:48, %esp
@@ -615,10 +615,10 @@ define i32 @test_nested(i32 * nest %closure, i32 %other) #0 {
 ; X64-MinGW-NEXT:    movq %rax, %r10
 ; X64-MinGW-NEXT:    jmp .LBB1_2
 ; X64-MinGW-NEXT:    .seh_endproc
-       %addend = load i32 , i32 * %closure
+       %addend = load i32 , ptr %closure
        %result = add i32 %other, %addend
        %mem = alloca i32, i32 10
-       call void @dummy_use (i32* %mem, i32 10)
+       call void @dummy_use (ptr %mem, i32 10)
        ret i32 %result
 }
 
@@ -869,7 +869,7 @@ define void @test_large() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB2_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 3)
+        call void @dummy_use (ptr %mem, i32 3)
         ret void
 }
 
@@ -1106,7 +1106,7 @@ define fastcc void @test_fastcc() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB3_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10
-        call void @dummy_use (i32* %mem, i32 10)
+        call void @dummy_use (ptr %mem, i32 10)
         ret void
 }
 
@@ -1357,7 +1357,7 @@ define fastcc void @test_fastcc_large() #0 {
 ; X64-MinGW-NEXT:    jmp .LBB4_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 3)
+        call void @dummy_use (ptr %mem, i32 3)
         ret void
 }
 
@@ -1612,7 +1612,7 @@ define fastcc void @test_fastcc_large_with_ecx_arg(i32 %a) #0 {
 ; X64-MinGW-NEXT:    jmp .LBB5_2
 ; X64-MinGW-NEXT:    .seh_endproc
         %mem = alloca i32, i32 10000
-        call void @dummy_use (i32* %mem, i32 %a)
+        call void @dummy_use (ptr %mem, i32 %a)
         ret void
 }
 
@@ -1720,10 +1720,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X86-Linux-LABEL: test_sibling_call_empty_frame:
 ; X86-Linux:       # %bb.0:
 ; X86-Linux-NEXT:    cmpl %gs:48, %esp
-; X86-Linux-NEXT:    jbe .LBB8_1
-; X86-Linux-NEXT:  # %bb.2:
-; X86-Linux-NEXT:    jmp callee@PLT # TAILCALL
-; X86-Linux-NEXT:  .LBB8_1:
+; X86-Linux-NEXT:    ja callee@PLT # TAILCALL
+; X86-Linux-NEXT:  # %bb.1:
 ; X86-Linux-NEXT:    pushl $4
 ; X86-Linux-NEXT:    pushl $0
 ; X86-Linux-NEXT:    calll __morestack
@@ -1733,10 +1731,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-Linux-LABEL: test_sibling_call_empty_frame:
 ; X64-Linux:       # %bb.0:
 ; X64-Linux-NEXT:    cmpq %fs:112, %rsp
-; X64-Linux-NEXT:    jbe .LBB8_1
-; X64-Linux-NEXT:  # %bb.2:
-; X64-Linux-NEXT:    jmp callee@PLT # TAILCALL
-; X64-Linux-NEXT:  .LBB8_1:
+; X64-Linux-NEXT:    ja callee@PLT # TAILCALL
+; X64-Linux-NEXT:  # %bb.1:
 ; X64-Linux-NEXT:    movl $0, %r10d
 ; X64-Linux-NEXT:    movl $0, %r11d
 ; X64-Linux-NEXT:    callq __morestack
@@ -1761,10 +1757,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X32ABI-LABEL: test_sibling_call_empty_frame:
 ; X32ABI:       # %bb.0:
 ; X32ABI-NEXT:    cmpl %fs:64, %esp
-; X32ABI-NEXT:    jbe .LBB8_1
-; X32ABI-NEXT:  # %bb.2:
-; X32ABI-NEXT:    jmp callee@PLT # TAILCALL
-; X32ABI-NEXT:  .LBB8_1:
+; X32ABI-NEXT:    ja callee@PLT # TAILCALL
+; X32ABI-NEXT:  # %bb.1:
 ; X32ABI-NEXT:    movl $0, %r10d
 ; X32ABI-NEXT:    movl $0, %r11d
 ; X32ABI-NEXT:    callq __morestack
@@ -1775,10 +1769,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X86-Darwin:       ## %bb.0:
 ; X86-Darwin-NEXT:    movl $432, %ecx ## imm = 0x1B0
 ; X86-Darwin-NEXT:    cmpl %gs:(%ecx), %esp
-; X86-Darwin-NEXT:    jbe LBB8_1
-; X86-Darwin-NEXT:  ## %bb.2:
-; X86-Darwin-NEXT:    jmp _callee ## TAILCALL
-; X86-Darwin-NEXT:  LBB8_1:
+; X86-Darwin-NEXT:    ja _callee ## TAILCALL
+; X86-Darwin-NEXT:  ## %bb.1:
 ; X86-Darwin-NEXT:    pushl $4
 ; X86-Darwin-NEXT:    pushl $0
 ; X86-Darwin-NEXT:    calll ___morestack
@@ -1788,10 +1780,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-Darwin-LABEL: test_sibling_call_empty_frame:
 ; X64-Darwin:       ## %bb.0:
 ; X64-Darwin-NEXT:    cmpq %gs:816, %rsp
-; X64-Darwin-NEXT:    jbe LBB8_1
-; X64-Darwin-NEXT:  ## %bb.2:
-; X64-Darwin-NEXT:    jmp _callee ## TAILCALL
-; X64-Darwin-NEXT:  LBB8_1:
+; X64-Darwin-NEXT:    ja _callee ## TAILCALL
+; X64-Darwin-NEXT:  ## %bb.1:
 ; X64-Darwin-NEXT:    movl $0, %r10d
 ; X64-Darwin-NEXT:    movl $0, %r11d
 ; X64-Darwin-NEXT:    callq ___morestack
@@ -1801,10 +1791,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X86-MinGW-LABEL: test_sibling_call_empty_frame:
 ; X86-MinGW:       # %bb.0:
 ; X86-MinGW-NEXT:    cmpl %fs:20, %esp
-; X86-MinGW-NEXT:    jbe LBB8_1
-; X86-MinGW-NEXT:  # %bb.2:
-; X86-MinGW-NEXT:    jmp _callee # TAILCALL
-; X86-MinGW-NEXT:  LBB8_1:
+; X86-MinGW-NEXT:    ja _callee # TAILCALL
+; X86-MinGW-NEXT:  # %bb.1:
 ; X86-MinGW-NEXT:    pushl $4
 ; X86-MinGW-NEXT:    pushl $0
 ; X86-MinGW-NEXT:    calll ___morestack
@@ -1814,10 +1802,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-FreeBSD-LABEL: test_sibling_call_empty_frame:
 ; X64-FreeBSD:       # %bb.0:
 ; X64-FreeBSD-NEXT:    cmpq %fs:24, %rsp
-; X64-FreeBSD-NEXT:    jbe .LBB8_1
-; X64-FreeBSD-NEXT:  # %bb.2:
-; X64-FreeBSD-NEXT:    jmp callee@PLT # TAILCALL
-; X64-FreeBSD-NEXT:  .LBB8_1:
+; X64-FreeBSD-NEXT:    ja callee@PLT # TAILCALL
+; X64-FreeBSD-NEXT:  # %bb.1:
 ; X64-FreeBSD-NEXT:    movl $0, %r10d
 ; X64-FreeBSD-NEXT:    movl $0, %r11d
 ; X64-FreeBSD-NEXT:    callq __morestack
@@ -1827,10 +1813,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X86-DFlyBSD-LABEL: test_sibling_call_empty_frame:
 ; X86-DFlyBSD:       # %bb.0:
 ; X86-DFlyBSD-NEXT:    cmpl %fs:16, %esp
-; X86-DFlyBSD-NEXT:    jbe .LBB8_1
-; X86-DFlyBSD-NEXT:  # %bb.2:
-; X86-DFlyBSD-NEXT:    jmp callee@PLT # TAILCALL
-; X86-DFlyBSD-NEXT:  .LBB8_1:
+; X86-DFlyBSD-NEXT:    ja callee@PLT # TAILCALL
+; X86-DFlyBSD-NEXT:  # %bb.1:
 ; X86-DFlyBSD-NEXT:    pushl $4
 ; X86-DFlyBSD-NEXT:    pushl $0
 ; X86-DFlyBSD-NEXT:    calll __morestack
@@ -1840,10 +1824,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-DFlyBSD-LABEL: test_sibling_call_empty_frame:
 ; X64-DFlyBSD:       # %bb.0:
 ; X64-DFlyBSD-NEXT:    cmpq %fs:32, %rsp
-; X64-DFlyBSD-NEXT:    jbe .LBB8_1
-; X64-DFlyBSD-NEXT:  # %bb.2:
-; X64-DFlyBSD-NEXT:    jmp callee@PLT # TAILCALL
-; X64-DFlyBSD-NEXT:  .LBB8_1:
+; X64-DFlyBSD-NEXT:    ja callee@PLT # TAILCALL
+; X64-DFlyBSD-NEXT:  # %bb.1:
 ; X64-DFlyBSD-NEXT:    movl $0, %r10d
 ; X64-DFlyBSD-NEXT:    movl $0, %r11d
 ; X64-DFlyBSD-NEXT:    callq __morestack
@@ -1853,10 +1835,8 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 ; X64-MinGW-LABEL: test_sibling_call_empty_frame:
 ; X64-MinGW:       # %bb.0:
 ; X64-MinGW-NEXT:    cmpq %gs:40, %rsp
-; X64-MinGW-NEXT:    jbe .LBB8_1
-; X64-MinGW-NEXT:  # %bb.2:
-; X64-MinGW-NEXT:    jmp callee # TAILCALL
-; X64-MinGW-NEXT:  .LBB8_1:
+; X64-MinGW-NEXT:    ja callee # TAILCALL
+; X64-MinGW-NEXT:  # %bb.1:
 ; X64-MinGW-NEXT:    movl $0, %r10d
 ; X64-MinGW-NEXT:    movl $32, %r11d
 ; X64-MinGW-NEXT:    callq __morestack
@@ -1868,7 +1848,7 @@ define i32 @test_sibling_call_empty_frame(i32 %x) #0 {
 
 ; Test that unused nested argument doesn't need saving/restoring.
 
-define i32 @test_nested_unused(i32 * nest %unused) #0 {
+define i32 @test_nested_unused(ptr nest %unused) #0 {
 ; X86-Linux-LABEL: test_nested_unused:
 ; X86-Linux:       # %bb.0:
 ; X86-Linux-NEXT:    cmpl %gs:48, %esp
@@ -2117,7 +2097,7 @@ define i32 @test_nested_unused(i32 * nest %unused) #0 {
 ; X64-MinGW-NEXT:    jmp .LBB9_2
 ; X64-MinGW-NEXT:    .seh_endproc
        %mem = alloca i32, i32 10
-       call void @dummy_use (i32* %mem, i32 10)
+       call void @dummy_use (ptr %mem, i32 10)
        ret i32 123
 }
 

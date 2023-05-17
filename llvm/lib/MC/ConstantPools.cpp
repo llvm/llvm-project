@@ -28,7 +28,7 @@ void ConstantPool::emitEntries(MCStreamer &Streamer) {
     return;
   Streamer.emitDataRegion(MCDR_DataRegion);
   for (const ConstantPoolEntry &Entry : Entries) {
-    Streamer.emitValueToAlignment(Entry.Size); // align naturally
+    Streamer.emitValueToAlignment(Align(Entry.Size)); // align naturally
     Streamer.emitLabel(Entry.Label);
     Streamer.emitValue(Entry.Value, Entry.Size, Entry.Loc);
   }
@@ -92,7 +92,7 @@ AssemblerConstantPools::getOrCreateConstantPool(MCSection *Section) {
 static void emitConstantPool(MCStreamer &Streamer, MCSection *Section,
                              ConstantPool &CP) {
   if (!CP.empty()) {
-    Streamer.SwitchSection(Section);
+    Streamer.switchSection(Section);
     CP.emitEntries(Streamer);
   }
 }

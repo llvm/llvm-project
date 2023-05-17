@@ -53,7 +53,7 @@ bb107:                                            ; preds = %bb18
 bb110:                                            ; preds = %bb122, %bb107
   %asmtmp.i.i179 = tail call i16 asm "rev16 $0, $1\0A", "=l,l"(i16 undef) nounwind ; <i16> [#uses=1]
   %asmtmp.i.i178 = tail call i16 asm "rev16 $0, $1\0A", "=l,l"(i16 %asmtmp.i.i179) nounwind ; <i16> [#uses=1]
-  store i16 %asmtmp.i.i178, i16* undef, align 2
+  store i16 %asmtmp.i.i178, ptr undef, align 2
   br i1 undef, label %bb122, label %bb121
 
 bb121:                                            ; preds = %bb110

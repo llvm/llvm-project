@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple i386-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -std=c++11 -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple i386-unknown-unknown -emit-llvm -fexceptions -fcxx-exceptions -std=c++11 -o - %s | FileCheck %s
 
 struct non_trivial {
   non_trivial();
@@ -65,8 +65,8 @@ namespace PR12890 {
   };
   X::X(int) : X() {}
 }
-// CHECK: define {{.*}} @_ZN7PR128901XC1Ei(%"class.PR12890::X"* {{[^,]*}} %this, i32 noundef %0)
-// CHECK: call void @llvm.memset.p0i8.{{i32|i64}}(i8* align 4 {{.*}}, i8 0, {{i32|i64}} 4, i1 false)
+// CHECK: define {{.*}} @_ZN7PR128901XC1Ei(ptr {{[^,]*}} %this, i32 noundef %0)
+// CHECK: call void @llvm.memset.p0.{{i32|i64}}(ptr align 4 {{.*}}, i8 0, {{i32|i64}} 4, i1 false)
 
 namespace PR14588 {
   void other();
@@ -89,7 +89,7 @@ namespace PR14588 {
     virtual void squawk() { other(); }
   };
 
-  // CHECK-LABEL: define{{.*}} void @_ZN7PR145883FooC1Ev(%"class.PR14588::Foo"*
+  // CHECK-LABEL: define{{.*}} void @_ZN7PR145883FooC1Ev(ptr
   // CHECK: call void @_ZN7PR145883FooC1EPKv(
   // CHECK: invoke void @_ZN7PR145885otherEv()
   // CHECK: call void @_ZN7PR145883FooD1Ev

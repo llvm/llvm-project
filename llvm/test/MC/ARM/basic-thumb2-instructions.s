@@ -27,6 +27,8 @@ _func:
         adc r5, r3, #0x87000000
         adc r4, r2, #0x7f800000
         adc r4, r2, #0x00000680
+        adc r0, #1
+        adc r1, #0x7f800000
 
 @ CHECK: adc	r0, r1, #4              @ encoding: [0x41,0xf1,0x04,0x00]
 @ CHECK: adcs	r0, r1, #0              @ encoding: [0x51,0xf1,0x00,0x00]
@@ -37,6 +39,8 @@ _func:
 @ CHECK: adc	r5, r3, #2264924160     @ encoding: [0x43,0xf1,0x07,0x45]
 @ CHECK: adc	r4, r2, #2139095040     @ encoding: [0x42,0xf1,0xff,0x44]
 @ CHECK: adc	r4, r2, #1664           @ encoding: [0x42,0xf5,0xd0,0x64]
+@ CHECK: adc	r0, r0, #1              @ encoding: [0x40,0xf1,0x01,0x00]
+@ CHECK: adc	r1, r1, #2139095040     @ encoding: [0x41,0xf1,0xff,0x41]
 
 @------------------------------------------------------------------------------
 @ ADC (register)
@@ -49,6 +53,10 @@ _func:
         adcs	r0, r1, r3, lsl #7
         adc.w	r0, r1, r3, lsr #31
         adcs.w	r0, r1, r3, asr #32
+        adc r4, r5
+        adc.w r9, r1
+        adc	r0, r1, ror #4
+        adc.w	r0, r1, lsr #31
 
 @ CHECK: adc.w	r4, r5, r6              @ encoding: [0x45,0xeb,0x06,0x04]
 @ CHECK: adcs.w	r4, r5, r6              @ encoding: [0x55,0xeb,0x06,0x04]
@@ -58,6 +66,10 @@ _func:
 @ CHECK: adcs.w	r0, r1, r3, lsl #7      @ encoding: [0x51,0xeb,0xc3,0x10]
 @ CHECK: adc.w	r0, r1, r3, lsr #31     @ encoding: [0x41,0xeb,0xd3,0x70]
 @ CHECK: adcs.w	r0, r1, r3, asr #32     @ encoding: [0x51,0xeb,0x23,0x00]
+@ CHECK: adc.w	r4, r4, r5              @ encoding: [0x44,0xeb,0x05,0x04]
+@ CHECK: adc.w	r9, r9, r1              @ encoding: [0x49,0xeb,0x01,0x09]
+@ CHECK: adc.w	r0, r0, r1, ror #4      @ encoding: [0x40,0xeb,0x31,0x10]
+@ CHECK: adc.w	r0, r0, r1, lsr #31     @ encoding: [0x40,0xeb,0xd1,0x70]
 
 
 @------------------------------------------------------------------------------
@@ -1111,6 +1123,10 @@ adds sp, #-4096
         ldrb lr, [r3], #255
         ldrb r9, [r2], #4
         ldrb r3, [sp], #-4
+        ldrb.w r5, [r5, #-4]
+        ldrb.w r5, [r6, #32]
+        ldrb.w r5, [r8, #255]!
+        ldrb.w r9, [r2], #4
 
 @ CHECK: ldrb	r5, [r5, #-4]           @ encoding: [0x15,0xf8,0x04,0x5c]
 @ CHECK: ldrb.w	r5, [r6, #32]           @ encoding: [0x96,0xf8,0x20,0x50]
@@ -1123,6 +1139,10 @@ adds sp, #-4096
 @ CHECK: ldrb	lr, [r3], #255          @ encoding: [0x13,0xf8,0xff,0xeb]
 @ CHECK: ldrb	r9, [r2], #4            @ encoding: [0x12,0xf8,0x04,0x9b]
 @ CHECK: ldrb	r3, [sp], #-4           @ encoding: [0x1d,0xf8,0x04,0x39]
+@ CHECK: ldrb   r5, [r5, #-4]           @ encoding: [0x15,0xf8,0x04,0x5c]
+@ CHECK: ldrb.w	r5, [r6, #32]           @ encoding: [0x96,0xf8,0x20,0x50]
+@ CHECK: ldrb	r5, [r8, #255]!         @ encoding: [0x18,0xf8,0xff,0x5f]
+@ CHECK: ldrb	r9, [r2], #4            @ encoding: [0x12,0xf8,0x04,0x9b]
 
 
 @------------------------------------------------------------------------------
@@ -1218,6 +1238,10 @@ adds sp, #-4096
         ldrh lr, [r3], #255
         ldrh r9, [r2], #4
         ldrh r3, [sp], #-4
+        ldrh.w r5, [r5, #-4]
+        ldrh.w r5, [r6, #32]
+        ldrh.w r5, [r8, #255]!
+        ldrh.w r9, [r2], #4
 
 @ CHECK: ldrh	r5, [r5, #-4]           @ encoding: [0x35,0xf8,0x04,0x5c]
 @ CHECK: ldrh	r5, [r6, #32]           @ encoding: [0x35,0x8c]
@@ -1230,6 +1254,10 @@ adds sp, #-4096
 @ CHECK: ldrh	lr, [r3], #255          @ encoding: [0x33,0xf8,0xff,0xeb]
 @ CHECK: ldrh	r9, [r2], #4            @ encoding: [0x32,0xf8,0x04,0x9b]
 @ CHECK: ldrh	r3, [sp], #-4           @ encoding: [0x3d,0xf8,0x04,0x39]
+@ CHECK: ldrh	r5, [r5, #-4]           @ encoding: [0x35,0xf8,0x04,0x5c]
+@ CHECK: ldrh.w	r5, [r6, #32]           @ encoding: [0xb6,0xf8,0x20,0x50]
+@ CHECK: ldrh	r5, [r8, #255]!         @ encoding: [0x38,0xf8,0xff,0x5f]
+@ CHECK: ldrh	r9, [r2], #4            @ encoding: [0x32,0xf8,0x04,0x9b]
 
 
 @------------------------------------------------------------------------------
@@ -1283,12 +1311,32 @@ adds sp, #-4096
         ldrsb r5, [r6, #33]
         ldrsb r5, [r6, #257]
         ldrsb.w lr, [r7, #257]
+        ldrsb r5, [r8, #255]!
+        ldrsb r2, [r5, #4]!
+        ldrsb r1, [r4, #-4]!
+        ldrsb lr, [r3], #255
+        ldrsb r9, [r2], #4
+        ldrsb r3, [sp], #-4
+        ldrsb.w r5, [r5, #-4]
+        ldrsb.w r5, [r6, #32]
+        ldrsb.w r5, [r8, #255]!
+        ldrsb.w r9, [r2], #4
 
 @ CHECK: ldrsb	r5, [r5, #-4]            @ encoding: [0x15,0xf9,0x04,0x5c]
 @ CHECK: ldrsb.w r5, [r6, #32]           @ encoding: [0x96,0xf9,0x20,0x50]
 @ CHECK: ldrsb.w r5, [r6, #33]           @ encoding: [0x96,0xf9,0x21,0x50]
 @ CHECK: ldrsb.w r5, [r6, #257]          @ encoding: [0x96,0xf9,0x01,0x51]
 @ CHECK: ldrsb.w lr, [r7, #257]          @ encoding: [0x97,0xf9,0x01,0xe1]
+@ CHECK: ldrsb	r5, [r8, #255]!          @ encoding: [0x18,0xf9,0xff,0x5f]
+@ CHECK: ldrsb	r2, [r5, #4]!            @ encoding: [0x15,0xf9,0x04,0x2f]
+@ CHECK: ldrsb	r1, [r4, #-4]!           @ encoding: [0x14,0xf9,0x04,0x1d]
+@ CHECK: ldrsb	lr, [r3], #255           @ encoding: [0x13,0xf9,0xff,0xeb]
+@ CHECK: ldrsb	r9, [r2], #4             @ encoding: [0x12,0xf9,0x04,0x9b]
+@ CHECK: ldrsb	r3, [sp], #-4            @ encoding: [0x1d,0xf9,0x04,0x39]
+@ CHECK: ldrsb	r5, [r5, #-4]            @ encoding: [0x15,0xf9,0x04,0x5c]
+@ CHECK: ldrsb.w r5, [r6, #32]           @ encoding: [0x96,0xf9,0x20,0x50]
+@ CHECK: ldrsb	r5, [r8, #255]!          @ encoding: [0x18,0xf9,0xff,0x5f]
+@ CHECK: ldrsb  r9, [r2], #4             @ encoding: [0x12,0xf9,0x04,0x9b]
 
 
 @------------------------------------------------------------------------------
@@ -1354,12 +1402,32 @@ adds sp, #-4096
         ldrsh r5, [r6, #33]
         ldrsh r5, [r6, #257]
         ldrsh.w lr, [r7, #257]
+        ldrsh r5, [r8, #255]!
+        ldrsh r2, [r5, #4]!
+        ldrsh r1, [r4, #-4]!
+        ldrsh lr, [r3], #255
+        ldrsh r9, [r2], #4
+        ldrsh r3, [sp], #-4
+        ldrsh.w r5, [r5, #-4]
+        ldrsh.w r5, [r6, #32]
+        ldrsh.w r5, [r8, #255]!
+        ldrsh.w r9, [r2], #4
 
 @ CHECK: ldrsh	r5, [r5, #-4]           @ encoding: [0x35,0xf9,0x04,0x5c]
 @ CHECK: ldrsh.w r5, [r6, #32]          @ encoding: [0xb6,0xf9,0x20,0x50]
 @ CHECK: ldrsh.w r5, [r6, #33]          @ encoding: [0xb6,0xf9,0x21,0x50]
 @ CHECK: ldrsh.w r5, [r6, #257]         @ encoding: [0xb6,0xf9,0x01,0x51]
 @ CHECK: ldrsh.w lr, [r7, #257]         @ encoding: [0xb7,0xf9,0x01,0xe1]
+@ CHECK: ldrsh	r5, [r8, #255]!         @ encoding: [0x38,0xf9,0xff,0x5f]
+@ CHECK: ldrsh	r2, [r5, #4]!           @ encoding: [0x35,0xf9,0x04,0x2f]
+@ CHECK: ldrsh	r1, [r4, #-4]!          @ encoding: [0x34,0xf9,0x04,0x1d]
+@ CHECK: ldrsh	lr, [r3], #255          @ encoding: [0x33,0xf9,0xff,0xeb]
+@ CHECK: ldrsh	r9, [r2], #4            @ encoding: [0x32,0xf9,0x04,0x9b]
+@ CHECK: ldrsh	r3, [sp], #-4           @ encoding: [0x3d,0xf9,0x04,0x39]
+@ CHECK: ldrsh	r5, [r5, #-4]           @ encoding: [0x35,0xf9,0x04,0x5c]
+@ CHECK: ldrsh.w r5, [r6, #32]          @ encoding: [0xb6,0xf9,0x20,0x50]
+@ CHECK: ldrsh	r5, [r8, #255]!         @ encoding: [0x38,0xf9,0xff,0x5f]
+@ CHECK: ldrsh  r9, [r2], #4            @ encoding: [0x32,0xf9,0x04,0x9b]
 
 
 @------------------------------------------------------------------------------
@@ -3054,6 +3122,10 @@ adds sp, #-4096
         strb r3, [sp], #-4
         strb r4, [r8, #-0]!
         strb r1, [r0], #-0
+        strb.w r5, [r5, #-4]
+        strb.w r5, [r6, #32]
+        strb.w r5, [r8, #255]!
+        strb.w r9, [r2], #4
 
 @ CHECK: strb	r5, [r5, #-4]           @ encoding: [0x05,0xf8,0x04,0x5c]
 @ CHECK: strb.w	r5, [r6, #32]           @ encoding: [0x86,0xf8,0x20,0x50]
@@ -3068,6 +3140,10 @@ adds sp, #-4096
 @ CHECK: strb	r3, [sp], #-4           @ encoding: [0x0d,0xf8,0x04,0x39]
 @ CHECK: strb	r4, [r8, #-0]!          @ encoding: [0x08,0xf8,0x00,0x4d]
 @ CHECK: strb	r1, [r0], #-0           @ encoding: [0x00,0xf8,0x00,0x19]
+@ CHECK: strb	r5, [r5, #-4]           @ encoding: [0x05,0xf8,0x04,0x5c]
+@ CHECK: strb.w	r5, [r6, #32]           @ encoding: [0x86,0xf8,0x20,0x50]
+@ CHECK: strb	r5, [r8, #255]!         @ encoding: [0x08,0xf8,0xff,0x5f]
+@ CHECK: strb	r9, [r2], #4            @ encoding: [0x02,0xf8,0x04,0x9b]
 
 
 @------------------------------------------------------------------------------
@@ -3164,6 +3240,10 @@ adds sp, #-4096
         strh lr, [r3], #255
         strh r9, [r2], #4
         strh r3, [sp], #-4
+        strh.w r5, [r5, #-4]
+        strh.w r5, [r6, #32]
+        strh.w r5, [r8, #255]!
+        strh.w r9, [r2], #4
 
 @ CHECK: strh	r5, [r5, #-4]           @ encoding: [0x25,0xf8,0x04,0x5c]
 @ CHECK: strh	r5, [r6, #32]           @ encoding: [0x35,0x84]
@@ -3176,6 +3256,10 @@ adds sp, #-4096
 @ CHECK: strh	lr, [r3], #255          @ encoding: [0x23,0xf8,0xff,0xeb]
 @ CHECK: strh	r9, [r2], #4            @ encoding: [0x22,0xf8,0x04,0x9b]
 @ CHECK: strh	r3, [sp], #-4           @ encoding: [0x2d,0xf8,0x04,0x39]
+@ CHECK: strh	r5, [r5, #-4]           @ encoding: [0x25,0xf8,0x04,0x5c]
+@ CHECK: strh.w	r5, [r6, #32]           @ encoding: [0xa6,0xf8,0x20,0x50]
+@ CHECK: strh	r5, [r8, #255]!         @ encoding: [0x28,0xf8,0xff,0x5f]
+@ CHECK: strh	r9, [r2], #4            @ encoding: [0x22,0xf8,0x04,0x9b]
 
 
 @------------------------------------------------------------------------------

@@ -9,14 +9,13 @@ target triple = "x86_64-unknown-linux-gnu"
 
 define dso_local void @test() !dbg !9 {
   %1 = alloca <6 x float>, align 32
-  call void @llvm.dbg.declare(metadata <6 x float>* %1, metadata !13, metadata !DIExpression()), !dbg !19
-  %2 = bitcast <6 x float>* %1 to i8*, !dbg !20
-  call void @foo(i8* %2), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %1, metadata !13, metadata !DIExpression()), !dbg !19
+  call void @foo(ptr %1), !dbg !21
   ret void, !dbg !22
 }
 
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
-declare dso_local void @foo(i8*)
+declare dso_local void @foo(ptr)
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!5, !6, !7}

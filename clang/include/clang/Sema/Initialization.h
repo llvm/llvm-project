@@ -123,6 +123,10 @@ public:
     /// decomposition declaration.
     EK_Binding,
 
+    /// The entity being initialized is a non-static data member subobject of an
+    /// object initialized via parenthesized aggregate initialization.
+    EK_ParenAggInitMember,
+
     // Note: err_init_conversion_failed in DiagnosticSemaKinds.td uses this
     // enum as an index for its first %select.  When modifying this list,
     // that diagnostic text needs to be updated as well.
@@ -227,8 +231,10 @@ private:
 
   /// Create the initialization entity for a member subobject.
   InitializedEntity(FieldDecl *Member, const InitializedEntity *Parent,
-                    bool Implicit, bool DefaultMemberInit)
-      : Kind(EK_Member), Parent(Parent), Type(Member->getType()),
+                    bool Implicit, bool DefaultMemberInit,
+                    bool IsParenAggInit = false)
+      : Kind(IsParenAggInit ? EK_ParenAggInitMember : EK_Member),
+        Parent(Parent), Type(Member->getType()),
         Variable{Member, Implicit, DefaultMemberInit} {}
 
   /// Create the initialization entity for an array element.
@@ -386,6 +392,14 @@ public:
                    const InitializedEntity *Parent = nullptr,
                    bool Implicit = false) {
     return InitializedEntity(Member->getAnonField(), Parent, Implicit, false);
+  }
+
+  /// Create the initialization entity for a member subobject initialized via
+  /// parenthesized aggregate init.
+  static InitializedEntity InitializeMemberFromParenAggInit(FieldDecl *Member) {
+    return InitializedEntity(Member, /*Parent=*/nullptr, /*Implicit=*/false,
+                             /*DefaultMemberInit=*/false,
+                             /*IsParenAggInit=*/true);
   }
 
   /// Create the initialization entity for a default member initializer.
@@ -923,7 +937,11 @@ public:
     SK_OCLSamplerInit,
 
     /// Initialize an opaque OpenCL type (event_t, queue_t, etc.) with zero
-    SK_OCLZeroOpaqueType
+    SK_OCLZeroOpaqueType,
+
+    /// Initialize an aggreagate with parenthesized list of values.
+    /// This is a C++20 feature.
+    SK_ParenthesizedListInit
   };
 
   /// A single step in the initialization sequence.
@@ -1099,6 +1117,13 @@ public:
 
     /// List-copy-initialization chose an explicit constructor.
     FK_ExplicitConstructor,
+
+    /// Parenthesized list initialization failed at some point.
+    /// This is a C++20 feature.
+    FK_ParenthesizedListInitFailed,
+
+    // A designated initializer was provided for a non-aggregate type.
+    FK_DesignatedInitForNonAggregate,
   };
 
 private:
@@ -1356,6 +1381,8 @@ public:
   /// Add a step to initialzie an OpenCL opaque type (event_t, queue_t, etc.)
   /// from a zero constant.
   void AddOCLZeroOpaqueTypeStep(QualType T);
+
+  void AddParenthesizedListInitStep(QualType T);
 
   /// Add steps to unwrap a initializer list for a reference around a
   /// single element and rewrap it at the end.

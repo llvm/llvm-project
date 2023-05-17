@@ -1,4 +1,4 @@
-; RUN: opt < %s -loop-rotate -verify-dom-info -verify-loop-info -verify-memoryssa -disable-output
+; RUN: opt < %s -passes=loop-rotate -verify-dom-info -verify-loop-info -verify-memoryssa -disable-output
 
 define void @func() {
 bb0:

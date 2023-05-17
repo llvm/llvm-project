@@ -1,8 +1,8 @@
 // RUN: rm -rf %t
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodules-cache-path=%t -fmodule-name=diag_pragma -x c++ %S/Inputs/module.map -fmodules-ts
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -fmodules-ts
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=diag_pragma -x c++ %S/Inputs/module.map -fmodules-ts -o %t/explicit.pcm -Werror=string-plus-int
-// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -fmodules-ts -DEXPLICIT_FLAG -fmodule-file=%t/explicit.pcm
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodules-cache-path=%t -fmodule-name=diag_pragma -x c++ %S/Inputs/module.map -std=c++20
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -std=c++20
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -emit-module -fmodule-name=diag_pragma -x c++ %S/Inputs/module.map -std=c++20 -o %t/explicit.pcm -Werror=string-plus-int
+// RUN: %clang_cc1 -fmodules -fimplicit-module-maps -verify -fmodules-cache-path=%t -I %S/Inputs %s -std=c++20 -DEXPLICIT_FLAG -fmodule-file=%t/explicit.pcm
 
 import diag_pragma;
 
@@ -42,6 +42,7 @@ int foo(int x) {
 
   if (x = DIAG_PRAGMA_MACRO) // expected-warning {{using the result of an assignment as a condition without parentheses}} \
                              // expected-note {{place parentheses}} expected-note {{use '=='}}
+                             // expected-error@-2 {{use of undeclared identifier 'DIAG_PRAGMA_MACRO'}}
     return 0;
   return 1;
 }

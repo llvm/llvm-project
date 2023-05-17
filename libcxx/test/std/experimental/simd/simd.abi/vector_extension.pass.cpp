@@ -42,26 +42,26 @@ static_assert(
     sizeof(ex::simd<char, ex::__simd_abi<ex::_StorageKind::_VecExt, 12>>) == 16,
     "");
 static_assert(
-    sizeof(ex::simd<int32_t, ex::__simd_abi<ex::_StorageKind::_VecExt, 3>>) ==
+    sizeof(ex::simd<std::int32_t, ex::__simd_abi<ex::_StorageKind::_VecExt, 3>>) ==
         16,
     "");
 static_assert(
-    sizeof(ex::simd<int32_t, ex::__simd_abi<ex::_StorageKind::_VecExt, 5>>) ==
+    sizeof(ex::simd<std::int32_t, ex::__simd_abi<ex::_StorageKind::_VecExt, 5>>) ==
         32,
     "");
 static_assert(
-    std::is_same<ex::simd_abi::native<int8_t>,
+    std::is_same<ex::simd_abi::native<std::int8_t>,
                  ex::__simd_abi<ex::_StorageKind::_VecExt, reg_width()>>::value,
     "");
 #else
 static_assert(
-    std::is_same<ex::simd_abi::native<int8_t>,
+    std::is_same<ex::simd_abi::native<std::int8_t>,
                  ex::__simd_abi<ex::_StorageKind::_Array, reg_width()>>::value,
     "");
 
 #endif
 
-static_assert(std::is_same<ex::simd_abi::compatible<int8_t>,
+static_assert(std::is_same<ex::simd_abi::compatible<std::int8_t>,
                            ex::__simd_abi<ex::_StorageKind::_Array, 16>>::value,
               "");
 

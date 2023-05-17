@@ -5,7 +5,7 @@
 ; of debug info. The debug info should not interfere with the
 ; bundling, which could result in an observable codegen change.
 
-define amdgpu_kernel void @dbg_clause(float addrspace(1)* %out, float addrspace(1)* %aptr) !dbg !4 {
+define amdgpu_kernel void @dbg_clause(ptr addrspace(1) %out, ptr addrspace(1) %aptr) !dbg !4 {
 ; GCN-LABEL: dbg_clause:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x24
@@ -20,15 +20,15 @@ define amdgpu_kernel void @dbg_clause(float addrspace(1)* %out, float addrspace(
 ; GCN-NEXT:    global_store_dword v0, v1, s[0:1]
 ; GCN-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
-  %out.gep = getelementptr float, float addrspace(1)* %out, i32 %tid
-  %gep0 = getelementptr float, float addrspace(1)* %aptr, i32 %tid
-  %gep1 = getelementptr float, float addrspace(1)* %gep0, i32 8
-  %a = load float, float addrspace(1)* %gep0, align 4
+  %out.gep = getelementptr float, ptr addrspace(1) %out, i32 %tid
+  %gep0 = getelementptr float, ptr addrspace(1) %aptr, i32 %tid
+  %gep1 = getelementptr float, ptr addrspace(1) %gep0, i32 8
+  %a = load float, ptr addrspace(1) %gep0, align 4
   call void @llvm.dbg.value(metadata float %a, metadata !8, metadata !DIExpression()), !dbg !9
-  %b = load float, float addrspace(1)* %gep1, align 4
+  %b = load float, ptr addrspace(1) %gep1, align 4
   call void @llvm.dbg.value(metadata float %b, metadata !10, metadata !DIExpression()), !dbg !11
   %fadd = fadd float %a, %b
-  store float %fadd, float addrspace(1)* %out.gep, align 4
+  store float %fadd, ptr addrspace(1) %out.gep, align 4
   ret void
 }
 

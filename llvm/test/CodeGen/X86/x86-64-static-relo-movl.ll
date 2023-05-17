@@ -9,10 +9,9 @@
 
 define void @setup() {
   %pending = alloca %struct.MatchInfo, align 8
-  %t = bitcast %struct.MatchInfo* %pending to i8*
-  call void @llvm.memcpy.p0i8.p0i8.i64(i8* align 8 %t, i8* align 8 bitcast (%struct.MatchInfo* @NO_MATCH to i8*), i64 512, i1 false)
-  %u = getelementptr inbounds %struct.MatchInfo, %struct.MatchInfo* %pending, i32 0, i32 2
-  %v = load i64, i64* %u, align 8
+  call void @llvm.memcpy.p0.p0.i64(ptr align 8 %pending, ptr align 8 @NO_MATCH, i64 512, i1 false)
+  %u = getelementptr inbounds %struct.MatchInfo, ptr %pending, i32 0, i32 2
+  %v = load i64, ptr %u, align 8
   br label %done
 done:
   ret void
@@ -21,4 +20,4 @@ done:
 }
 
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i64(i8*, i8*, i64, i1)
+declare void @llvm.memcpy.p0.p0.i64(ptr, ptr, i64, i1)

@@ -95,3 +95,14 @@ subroutine components(n)
     end block
   end associate
 end subroutine
+
+subroutine notObjects
+!ERROR: 'x1' is not an object that can be initialized
+  real, external :: x1 = 1.
+!ERROR: 'x2' is not a pointer but is initialized like one
+  real, external :: x2 => sin
+!ERROR: 'x3' is not an object that can be initialized
+  real, intrinsic :: x3 = 1.
+!ERROR: 'x4' is not a pointer but is initialized like one
+  real, intrinsic :: x4 => cos
+end subroutine

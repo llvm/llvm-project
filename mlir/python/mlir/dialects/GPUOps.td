@@ -10,6 +10,6 @@
 #define PYTHON_BINDINGS_GPU_OPS
 
 include "mlir/Bindings/Python/Attributes.td"
-include "mlir/Dialect/GPU/GPUOps.td"
+include "mlir/Dialect/GPU/IR/GPUOps.td"
 
 #endif

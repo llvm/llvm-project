@@ -173,7 +173,10 @@ namespace test17 {
     };
   }
   template <typename T1, typename T2> void foo() {}
-  template <typename T, T x> void bar() {} // expected-note {{candidate function}}
+  template <typename T, T x> void bar() {}
+#if __cplusplus < 201703L
+  // expected-note@-2 {{candidate function}}
+#endif
   inline void *g() {
     struct L {
     };
@@ -181,7 +184,10 @@ namespace test17 {
     // InternalLinkage in c++11) and VisibleNoLinkage. The correct answer is
     // NoLinkage in both cases. This means that using foo<L, I> as a template
     // argument should fail.
-    return reinterpret_cast<void*>(bar<typeof(foo<L, I>), foo<L, I> >); // expected-error {{reinterpret_cast cannot resolve overloaded function 'bar' to type 'void *}}
+    return reinterpret_cast<void*>(bar<typeof(foo<L, I>), foo<L, I> >);
+#if __cplusplus < 201703L
+    // expected-error@-2 {{reinterpret_cast cannot resolve overloaded function 'bar' to type 'void *}}
+#endif
   }
   void h() {
     g();

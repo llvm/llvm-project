@@ -4,7 +4,7 @@ namespace __1 {
   template <class _Tp> class allocator;
   template <class _Tp, class _Alloc = allocator<_Tp>> class list;
   template <class _VoidPtr> class __list_iterator {
-    //template <class> friend class list; // causes another crash in ASTDeclReader::attachPreviousDecl
+    template <class> friend class list;
     template <class, class> friend class list;
   };
   template <class _Tp, class _Alloc> class __list_imp {};

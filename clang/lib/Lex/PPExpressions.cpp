@@ -323,13 +323,13 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
         PP.Diag(PeekTok, diag::ext_c99_longlong);
     }
 
-    // 'z/uz' literals are a C++2b feature.
+    // 'z/uz' literals are a C++23 feature.
     if (Literal.isSizeT)
       PP.Diag(PeekTok, PP.getLangOpts().CPlusPlus
-                           ? PP.getLangOpts().CPlusPlus2b
+                           ? PP.getLangOpts().CPlusPlus23
                                  ? diag::warn_cxx20_compat_size_t_suffix
-                                 : diag::ext_cxx2b_size_t_suffix
-                           : diag::err_cxx2b_size_t_suffix);
+                                 : diag::ext_cxx23_size_t_suffix
+                           : diag::err_cxx23_size_t_suffix);
 
     // 'wb/uwb' literals are a C2x feature. We explicitly do not support the
     // suffix in C++ as an extension because a library-based UDL that resolves
@@ -869,7 +869,7 @@ static bool EvaluateDirectiveSubExpr(PPValue &LHS, unsigned MinPrec,
 /// to "!defined(X)" return X in IfNDefMacro.
 Preprocessor::DirectiveEvalResult
 Preprocessor::EvaluateDirectiveExpression(IdentifierInfo *&IfNDefMacro) {
-  SaveAndRestore<bool> PPDir(ParsingIfOrElifDirective, true);
+  SaveAndRestore PPDir(ParsingIfOrElifDirective, true);
   // Save the current state of 'DisableMacroExpansion' and reset it to false. If
   // 'DisableMacroExpansion' is true, then we must be in a macro argument list
   // in which case a directive is undefined behavior.  We want macros to be able

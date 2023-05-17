@@ -92,39 +92,22 @@
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-SYSROOT_AND_TOOLCHAIN-1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 
-// Make sure that using -nostdinc does not drop any C++ library include path.
-// This behavior is strange, but it is compatible with the legacy CC1 behavior.
-//
-// RUN: %clang -### %s -fsyntax-only 2>&1 \
-// RUN:     --target=x86_64-apple-darwin16 \
-// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
-// RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
-// RUN:     -stdlib=platform \
-// RUN:     -nostdinc \
-// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
-// RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
-// RUN:               --check-prefix=CHECK-LIBCXX-NOSTDINC-1 %s
-// CHECK-LIBCXX-NOSTDINC-1: "-cc1"
-// CHECK-LIBCXX-NOSTDINC-1-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
-// CHECK-LIBCXX-NOSTDINC-1: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
-//
-// RUN: %clang -### %s -fsyntax-only 2>&1 \
-// RUN:     --target=x86_64-apple-darwin16 \
-// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
-// RUN:     -resource-dir=%S/Inputs/resource_dir \
-// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_no_libcxx \
-// RUN:     -stdlib=platform \
-// RUN:     -nostdinc \
-// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_no_libcxx \
-// RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
-// RUN:               --check-prefix=CHECK-LIBCXX-NOSTDINC-2 %s
-// CHECK-LIBCXX-NOSTDINC-2: "-cc1"
-// CHECK-LIBCXX-NOSTDINC-2: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
-// CHECK-LIBCXX-NOSTDINC-2-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
-
-// Make sure that using -nostdinc++ or -nostdlib will drop both the toolchain
+// Make sure that using -nostdinc, -nostdinc++ or -nostdlib will drop both the toolchain
 // C++ include path and the sysroot one.
+//
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin16 \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr \
+// RUN:     -stdlib=platform \
+// RUN:     -nostdinc \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr \
+// RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain \
+// RUN:               --check-prefix=CHECK-LIBCXX-NOSTDLIBINC %s
+// CHECK-LIBCXX-NOSTDINC: "-cc1"
+// CHECK-LIBCXX-NOSTDINC-NOT: "-internal-isystem" "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
+// CHECK-LIBCXX-NOSTDINC-NOT: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
 // RUN:     --target=x86_64-apple-darwin16 \
@@ -176,3 +159,16 @@
 // RUN:               --check-prefix=CHECK-LIBCXX-MISSING-BOTH %s
 // CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[TOOLCHAIN]]/usr/bin/../include/c++/v1"
 // CHECK-LIBCXX-MISSING-BOTH: ignoring nonexistent directory "[[SYSROOT]]/usr/include/c++/v1"
+
+// Make sure that on Darwin, we use libc++ header search paths by default even when
+// -stdlib= isn't passed.
+//
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-apple-darwin \
+// RUN:     -ccc-install-dir %S/Inputs/basic_darwin_toolchain_no_libcxx/usr/bin \
+// RUN:     -isysroot %S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:   | FileCheck -DSYSROOT=%S/Inputs/basic_darwin_sdk_usr_cxx_v1 \
+// RUN:               -DTOOLCHAIN=%S/Inputs/basic_darwin_toolchain_no_libcxx \
+// RUN:               --check-prefix=CHECK-LIBCXX-STDLIB-UNSPECIFIED %s
+// CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-cc1"
+// CHECK-LIBCXX-STDLIB-UNSPECIFIED: "-internal-isystem" "[[SYSROOT]]/usr/include/c++/v1"

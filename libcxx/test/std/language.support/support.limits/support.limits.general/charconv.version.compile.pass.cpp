@@ -15,8 +15,9 @@
 
 // Test the feature test macros defined by <charconv>
 
-/*  Constant              Value
-    __cpp_lib_to_chars    201611L [C++17]
+/*  Constant                        Value
+    __cpp_lib_constexpr_charconv    202207L [C++2b]
+    __cpp_lib_to_chars              201611L [C++17]
 */
 
 #include <charconv>
@@ -24,17 +25,29 @@
 
 #if TEST_STD_VER < 14
 
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
 # endif
 
 #elif TEST_STD_VER == 14
 
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
+# endif
+
 # ifdef __cpp_lib_to_chars
 #   error "__cpp_lib_to_chars should not be defined before c++17"
 # endif
 
 #elif TEST_STD_VER == 17
+
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
+# endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_to_chars
@@ -51,6 +64,10 @@
 
 #elif TEST_STD_VER == 20
 
+# ifdef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should not be defined before c++2b"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_to_chars
 #     error "__cpp_lib_to_chars should be defined in c++20"
@@ -65,6 +82,13 @@
 # endif
 
 #elif TEST_STD_VER > 20
+
+# ifndef __cpp_lib_constexpr_charconv
+#   error "__cpp_lib_constexpr_charconv should be defined in c++2b"
+# endif
+# if __cpp_lib_constexpr_charconv != 202207L
+#   error "__cpp_lib_constexpr_charconv should have the value 202207L in c++2b"
+# endif
 
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_to_chars

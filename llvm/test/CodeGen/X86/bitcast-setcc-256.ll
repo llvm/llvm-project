@@ -302,7 +302,7 @@ define i4 @v4f64(<4 x double> %a, <4 x double> %b) {
   ret i4 %res
 }
 
-define void @bitcast_32i8_store(i32* %p, <32 x i8> %a0) {
+define void @bitcast_32i8_store(ptr %p, <32 x i8> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_32i8_store:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    pmovmskb %xmm0, %eax
@@ -352,11 +352,11 @@ define void @bitcast_32i8_store(i32* %p, <32 x i8> %a0) {
 ; AVX512BW-NEXT:    retq
   %a1 = icmp slt <32 x i8> %a0, zeroinitializer
   %a2 = bitcast <32 x i1> %a1 to i32
-  store i32 %a2, i32* %p
+  store i32 %a2, ptr %p
   ret void
 }
 
-define void @bitcast_16i16_store(i16* %p, <16 x i16> %a0) {
+define void @bitcast_16i16_store(ptr %p, <16 x i16> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_16i16_store:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    packsswb %xmm1, %xmm0
@@ -400,11 +400,11 @@ define void @bitcast_16i16_store(i16* %p, <16 x i16> %a0) {
 ; AVX512BW-NEXT:    retq
   %a1 = icmp slt <16 x i16> %a0, zeroinitializer
   %a2 = bitcast <16 x i1> %a1 to i16
-  store i16 %a2, i16* %p
+  store i16 %a2, ptr %p
   ret void
 }
 
-define void @bitcast_8i32_store(i8* %p, <8 x i32> %a0) {
+define void @bitcast_8i32_store(ptr %p, <8 x i32> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_8i32_store:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
@@ -428,11 +428,11 @@ define void @bitcast_8i32_store(i8* %p, <8 x i32> %a0) {
 ; AVX512-NEXT:    retq
   %a1 = icmp slt <8 x i32> %a0, zeroinitializer
   %a2 = bitcast <8 x i1> %a1 to i8
-  store i8 %a2, i8* %p
+  store i8 %a2, ptr %p
   ret void
 }
 
-define void @bitcast_4i64_store(i4* %p, <4 x i64> %a0) {
+define void @bitcast_4i64_store(ptr %p, <4 x i64> %a0) {
 ; SSE2-SSSE3-LABEL: bitcast_4i64_store:
 ; SSE2-SSSE3:       # %bb.0:
 ; SSE2-SSSE3-NEXT:    packssdw %xmm1, %xmm0
@@ -466,6 +466,6 @@ define void @bitcast_4i64_store(i4* %p, <4 x i64> %a0) {
 ; AVX512BW-NEXT:    retq
   %a1 = icmp slt <4 x i64> %a0, zeroinitializer
   %a2 = bitcast <4 x i1> %a1 to i4
-  store i4 %a2, i4* %p
+  store i4 %a2, ptr %p
   ret void
 }

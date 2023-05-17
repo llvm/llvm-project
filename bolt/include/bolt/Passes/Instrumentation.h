@@ -19,6 +19,7 @@
 
 #include "bolt/Passes/BinaryPasses.h"
 #include "bolt/Passes/InstrumentationSummary.h"
+#include "llvm/Support/RWMutex.h"
 
 namespace llvm {
 namespace bolt {
@@ -109,7 +110,7 @@ private:
   /// strtab indices in StringTable for each function name
   std::unordered_map<const BinaryFunction *, uint32_t> FuncToStringIdx;
 
-  mutable std::shared_timed_mutex FDMutex;
+  mutable llvm::sys::RWMutex FDMutex;
 
   /// The data generated during Instrumentation pass that needs to
   /// be passed to the Instrument runtime library.

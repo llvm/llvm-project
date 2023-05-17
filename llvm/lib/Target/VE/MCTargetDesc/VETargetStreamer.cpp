@@ -12,6 +12,7 @@
 
 #include "VETargetStreamer.h"
 #include "VEInstPrinter.h"
+#include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
 

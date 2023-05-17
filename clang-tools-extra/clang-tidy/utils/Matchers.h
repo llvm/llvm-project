@@ -10,11 +10,11 @@
 #define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
 
 #include "TypeTraits.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
+#include <optional>
 
-namespace clang {
-namespace tidy {
-namespace matchers {
+namespace clang::tidy::matchers {
 
 AST_MATCHER(BinaryOperator, isRelationalOperator) {
   return Node.isRelationalOp();
@@ -23,7 +23,7 @@ AST_MATCHER(BinaryOperator, isRelationalOperator) {
 AST_MATCHER(BinaryOperator, isEqualityOperator) { return Node.isEqualityOp(); }
 
 AST_MATCHER(QualType, isExpensiveToCopy) {
-  llvm::Optional<bool> IsExpensive =
+  std::optional<bool> IsExpensive =
       utils::type_traits::isExpensiveToCopy(Node, Finder->getASTContext());
   return IsExpensive && *IsExpensive;
 }
@@ -47,6 +47,23 @@ AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isReferenceToConst) {
 AST_MATCHER_FUNCTION(ast_matchers::TypeMatcher, isPointerToConst) {
   using namespace ast_matchers;
   return pointerType(pointee(qualType(isConstQualified())));
+}
+
+AST_MATCHER(Expr, hasUnevaluatedContext) {
+  if (isa<CXXNoexceptExpr>(Node) || isa<RequiresExpr>(Node))
+    return true;
+  if (const auto *UnaryExpr = dyn_cast<UnaryExprOrTypeTraitExpr>(&Node)) {
+    switch (UnaryExpr->getKind()) {
+    case UETT_SizeOf:
+    case UETT_AlignOf:
+      return true;
+    default:
+      return false;
+    }
+  }
+  if (const auto *TypeIDExpr = dyn_cast<CXXTypeidExpr>(&Node))
+    return !TypeIDExpr->isPotentiallyEvaluated();
+  return false;
 }
 
 // A matcher implementation that matches a list of type name regular expressions
@@ -121,8 +138,6 @@ matchesAnyListedName(llvm::ArrayRef<StringRef> NameList) {
       new MatchesAnyListedNameMatcher(NameList));
 }
 
-} // namespace matchers
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::matchers
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H

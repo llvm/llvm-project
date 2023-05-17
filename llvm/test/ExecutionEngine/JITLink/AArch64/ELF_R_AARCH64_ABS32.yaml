@@ -1,0 +1,90 @@
+# Check success and failure cases of R_AARCH64_32 handling.
+# This file contains a single R_AARCH64_ABS32 relocation. We expect the
+# relocation to apply successfully when we assign x an address in the low
+# 32-bits of the address space, and fail if we assign x an address outside that
+# range.
+
+# RUN: yaml2obj -o %t.o %s
+# RUN: llvm-jitlink -abs x=0x12345678 -noexec -check=%s %t.o
+# RUN: not llvm-jitlink -abs x=0x123456789 -noexec %t.o 2>&1 | \
+# RUN:   FileCheck -check-prefix=CHECK-ERROR %s
+
+# jitlink-check: *{8}xptr = x
+
+# CHECK-ERROR: relocation target "x" {{.*}} is out of range of Pointer32 fixup
+
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  Type:            ET_REL
+  Machine:         EM_AARCH64
+  SectionHeaderStringTable: .strtab
+Sections:
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    AddressAlign:    0x4
+    Content:         E0031F2AC0035FD6
+  - Name:            .data
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    AddressAlign:    0x8
+    Content:         '0000000000000000'
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         00636C616E672076657273696F6E2031372E302E30202868747470733A2F2F6769746875622E636F6D2F6C6C766D2F6C6C766D2D70726F6A6563742E67697420333130616161633834363336656336633933383739633138643933653332663537623264383938362900
+  - Name:            .note.GNU-stack
+    Type:            SHT_PROGBITS
+    AddressAlign:    0x1
+  - Name:            .rela.data
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .data
+    Relocations:
+      - Symbol:          x
+        Type:            R_AARCH64_ABS32
+  - Name:            .llvm_addrsig
+    Type:            SHT_LLVM_ADDRSIG
+    Flags:           [ SHF_EXCLUDE ]
+    Link:            .symtab
+    AddressAlign:    0x1
+    Symbols:         [ x ]
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .strtab
+      - Name:            .text
+      - Name:            .data
+      - Name:            .rela.data
+      - Name:            .comment
+      - Name:            .note.GNU-stack
+      - Name:            .llvm_addrsig
+      - Name:            .symtab
+Symbols:
+  - Name:            hw.c
+    Type:            STT_FILE
+    Index:           SHN_ABS
+  - Name:            '$x.0'
+    Section:         .text
+  - Name:            '$d.1'
+    Section:         .data
+  - Name:            '$d.2'
+    Section:         .comment
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Size:            0x8
+  - Name:            xptr
+    Type:            STT_OBJECT
+    Section:         .data
+    Binding:         STB_GLOBAL
+    Size:            0x8
+  - Name:            x
+    Binding:         STB_GLOBAL
+...

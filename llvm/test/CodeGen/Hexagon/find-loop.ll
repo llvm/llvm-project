@@ -11,8 +11,7 @@
 define void @f0() #0 {
 b0:
   %v0 = alloca i64, align 8
-  %v1 = bitcast i64* %v0 to [2 x i32]*
-  %v2 = load i32, i32* @g0, align 4
+  %v2 = load i32, ptr @g0, align 4
   br i1 undef, label %b1, label %b2
 
 b1:                                               ; preds = %b1, %b0
@@ -36,8 +35,8 @@ b5:                                               ; preds = %b5, %b4
   %v8 = phi i32 [ %v19, %b5 ], [ 0, %b4 ]
   %v9 = add nsw i32 %v8, 0
   %v10 = lshr i32 %v9, 5
-  %v11 = getelementptr inbounds [2 x i32], [2 x i32]* %v1, i32 0, i32 %v10
-  %v12 = load i32, i32* %v11, align 4
+  %v11 = getelementptr inbounds [2 x i32], ptr %v0, i32 0, i32 %v10
+  %v12 = load i32, ptr %v11, align 4
   %v13 = and i32 %v9, 31
   %v14 = shl i32 1, %v13
   %v15 = and i32 %v12, %v14

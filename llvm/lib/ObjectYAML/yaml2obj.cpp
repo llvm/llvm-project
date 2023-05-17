@@ -42,6 +42,8 @@ bool convertYAML(yaml::Input &YIn, raw_ostream &Out, ErrorHandler ErrHandler,
       return yaml2macho(Doc, Out, ErrHandler);
     if (Doc.Minidump)
       return yaml2minidump(*Doc.Minidump, Out, ErrHandler);
+    if (Doc.Offload)
+      return yaml2offload(*Doc.Offload, Out, ErrHandler);
     if (Doc.Wasm)
       return yaml2wasm(*Doc.Wasm, Out, ErrHandler);
     if (Doc.Xcoff)

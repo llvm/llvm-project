@@ -13,16 +13,16 @@
 ; Function Attrs: nounwind
 define void @fn3(i32 %el) {
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i32 0, i32 0)
-  %1 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i32 0, i32 1)
-  %2 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i32 0, i32 2)
-  %3 = load i32, i32* getelementptr inbounds ([4 x i32], [4 x i32]* @e, i32 0, i32 3)
+  %0 = load i32, ptr @e
+  %1 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i32 1)
+  %2 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i32 2)
+  %3 = load i32, ptr getelementptr inbounds ([4 x i32], ptr @e, i32 0, i32 3)
   %4 = insertelement <4 x i32> undef, i32 %0, i32 0
   %5 = insertelement <4 x i32> %4, i32 %1, i32 1
   %6 = insertelement <4 x i32> %5, i32 %2, i32 2
   %7 = insertelement <4 x i32> %6, i32 %3, i32 3
   %8 = add <4 x i32> %6, %7
-  store <4 x i32> %8, <4 x i32>* bitcast ([4 x i32]* @f to <4 x i32>*)
+  store <4 x i32> %8, ptr @f
   ret void
 }
 

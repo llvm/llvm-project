@@ -15,8 +15,6 @@
 #define LLVM_IR_OPERATOR_H
 
 #include "llvm/ADT/MapVector.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/FMF.h"
 #include "llvm/IR/Instruction.h"
@@ -24,6 +22,7 @@
 #include "llvm/IR/Value.h"
 #include "llvm/Support/Casting.h"
 #include <cstddef>
+#include <optional>
 
 namespace llvm {
 
@@ -64,6 +63,10 @@ public:
   /// Return true if this operator has flags which may cause this operator
   /// to evaluate to poison despite having non-poison inputs.
   bool hasPoisonGeneratingFlags() const;
+
+  /// Return true if this operator has poison-generating flags or metadata.
+  /// The latter is only possible for instructions.
+  bool hasPoisonGeneratingFlagsOrMetadata() const;
 };
 
 /// Utility class for integer operators which may exhibit overflow - Add, Sub,
@@ -393,10 +396,11 @@ public:
     return SubclassOptionalData & IsInBounds;
   }
 
-  /// Returns the offset of the index with an inrange attachment, or None if
-  /// none.
-  Optional<unsigned> getInRangeIndex() const {
-    if (SubclassOptionalData >> 1 == 0) return None;
+  /// Returns the offset of the index with an inrange attachment, or
+  /// std::nullopt if none.
+  std::optional<unsigned> getInRangeIndex() const {
+    if (SubclassOptionalData >> 1 == 0)
+      return std::nullopt;
     return (SubclassOptionalData >> 1) - 1;
   }
 

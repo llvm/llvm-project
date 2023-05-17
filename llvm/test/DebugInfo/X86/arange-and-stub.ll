@@ -10,14 +10,14 @@
 source_filename = "test/DebugInfo/X86/arange-and-stub.ll"
 target triple = "x86_64-linux-gnu"
 
-@_ZTId = external constant i8*
-@zed = global [1 x void ()*] [void ()* @bar], !dbg !0
+@_ZTId = external constant ptr
+@zed = global [1 x ptr] [ptr @bar], !dbg !0
 
 define void @foo() !dbg !17 {
   ret void
 }
 
-define void @bar() personality i8* bitcast (void ()* @foo to i8*) !dbg !18 {
+define void @bar() personality ptr @foo !dbg !18 {
   invoke void @foo()
           to label %invoke.cont unwind label %lpad, !dbg !19
 
@@ -25,8 +25,8 @@ invoke.cont:                                      ; preds = %0
   ret void
 
 lpad:                                             ; preds = %0
-  %tmp1 = landingpad { i8*, i32 }
-          filter [1 x i8*] [i8* bitcast (i8** @_ZTId to i8*)]
+  %tmp1 = landingpad { ptr, i32 }
+          filter [1 x ptr] [ptr @_ZTId]
   ret void
 }
 

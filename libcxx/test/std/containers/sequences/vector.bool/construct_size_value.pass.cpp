@@ -18,8 +18,7 @@
 #include "min_allocator.h"
 
 template <class C>
-void
-test(typename C::size_type n, const typename C::value_type& x)
+TEST_CONSTEXPR_CXX20 void test(typename C::size_type n, const typename C::value_type& x)
 {
     C c(n, x);
     LIBCPP_ASSERT(c.__invariants());
@@ -28,12 +27,21 @@ test(typename C::size_type n, const typename C::value_type& x)
         assert(*i == x);
 }
 
-int main(int, char**)
+TEST_CONSTEXPR_CXX20 bool tests()
 {
     test<std::vector<bool> >(50, true);
 #if TEST_STD_VER >= 11
     test<std::vector<bool, min_allocator<bool>> >(50, true);
 #endif
 
-  return 0;
+    return true;
+}
+
+int main(int, char**)
+{
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
+    return 0;
 }

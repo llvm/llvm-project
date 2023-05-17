@@ -38,6 +38,7 @@ write_cmake_config("lit_common_configured") {
     # We don't currently support the multiarch runtime layout.
     "LLVM_ENABLE_PER_TARGET_RUNTIME_DIR_PYBOOL=False",
 
+    "LLVM_LIT_TOOLS_DIR=",  # Intentionally empty, matches cmake build.
     "LLVM_TOOLS_DIR=" + rebase_path("$root_build_dir/bin"),
     "LLVM_LIBRARY_OUTPUT_INTDIR=" + rebase_path("$root_build_dir/lib"),
 

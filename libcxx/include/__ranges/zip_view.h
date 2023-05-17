@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef _LIBCPP___RANGES_ZIP_VIEW_H
 #define _LIBCPP___RANGES_ZIP_VIEW_H
 
@@ -29,11 +30,13 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__type_traits/is_nothrow_move_constructible.h>
+#include <__type_traits/make_unsigned.h>
+#include <__utility/declval.h>
 #include <__utility/forward.h>
 #include <__utility/integer_sequence.h>
 #include <__utility/move.h>
 #include <tuple>
-#include <type_traits>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -44,7 +47,7 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#if _LIBCPP_STD_VER >= 23
 
 namespace ranges {
 
@@ -76,7 +79,9 @@ _LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tu
 template <class _Fun, class _Tuple>
 _LIBCPP_HIDE_FROM_ABI constexpr void __tuple_for_each(_Fun&& __f, _Tuple&& __tuple) {
   std::apply(
-      [&]<class... _Types>(_Types&&... __elements) { (std::invoke(__f, std::forward<_Types>(__elements)), ...); },
+      [&]<class... _Types>(_Types&&... __elements) {
+        (static_cast<void>(std::invoke(__f, std::forward<_Types>(__elements))), ...);
+      },
       std::forward<_Tuple>(__tuple));
 }
 
@@ -402,15 +407,15 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   friend constexpr auto iter_move(const __iterator& __i) noexcept(
-      (noexcept(ranges::iter_move(declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) && ...) &&
+      (noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) && ...) &&
       (is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_Const, _Views>>> && ...)) {
     return ranges::__tuple_transform(ranges::iter_move, __i.__current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI
   friend constexpr void iter_swap(const __iterator& __l, const __iterator& __r) noexcept(
-      (noexcept(ranges::iter_swap(declval<const iterator_t<__maybe_const<_Const, _Views>>&>(),
-                                  declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) &&
+      (noexcept(ranges::iter_swap(std::declval<const iterator_t<__maybe_const<_Const, _Views>>&>(),
+                                  std::declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) &&
        ...))
     requires(indirectly_swappable<iterator_t<__maybe_const<_Const, _Views>>> && ...) {
     ranges::__tuple_zip_for_each(ranges::iter_swap, __l.__current_, __r.__current_);
@@ -488,10 +493,10 @@ struct __fn {
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator()() const noexcept { return empty_view<tuple<>>{}; }
 
   template <class... _Ranges>
-  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ranges&&... rs) const
-      noexcept(noexcept(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(rs)...)))
-          -> decltype(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(rs)...)) {
-    return zip_view<all_t<_Ranges>...>(std::forward<_Ranges>(rs)...);
+  _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Ranges&&... __rs) const
+      noexcept(noexcept(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...)))
+          -> decltype(zip_view<all_t<_Ranges&&>...>(std::forward<_Ranges>(__rs)...)) {
+    return zip_view<all_t<_Ranges>...>(std::forward<_Ranges>(__rs)...);
   }
 };
 
@@ -502,7 +507,7 @@ inline namespace __cpo {
 } // namespace views
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_RANGES)
+#endif // _LIBCPP_STD_VER >= 23
 
 _LIBCPP_END_NAMESPACE_STD
 

@@ -1,4 +1,4 @@
-; RUN: opt -S -verify < %s | FileCheck %s
+; RUN: opt -S -passes=verify < %s | FileCheck %s
 target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 target triple = "aarch64--linux-gnu"
 
@@ -222,28 +222,26 @@ define void @alloca() {
   ret void
 }
 
-define <vscale x 2 x double> @load(<vscale x 2 x double>* %ptr) {
+define <vscale x 2 x double> @load(ptr %ptr) {
 ; CHECK-LABEL: @load
-; CHECK: %r = load <vscale x 2 x double>, <vscale x 2 x double>* %ptr
+; CHECK: %r = load <vscale x 2 x double>, ptr %ptr
 ; CHECK-NEXT: ret <vscale x 2 x double> %r
-  %r = load <vscale x 2 x double>, <vscale x 2 x double>* %ptr
+  %r = load <vscale x 2 x double>, ptr %ptr
   ret <vscale x 2 x double> %r
 }
 
-define void @store(<vscale x 4 x i32> %data, <vscale x 4 x i32>* %ptr) {
+define void @store(<vscale x 4 x i32> %data, ptr %ptr) {
 ; CHECK-LABEL: @store
-; CHECK: store <vscale x 4 x i32> %data, <vscale x 4 x i32>* %ptr
+; CHECK: store <vscale x 4 x i32> %data, ptr %ptr
 ; CHECK-NEXT: ret void
-  store <vscale x 4 x i32> %data, <vscale x 4 x i32>* %ptr
+  store <vscale x 4 x i32> %data, ptr %ptr
   ret void
 }
 
-define <vscale x 4 x float>* @getelementptr(<vscale x 4 x float>* %base) {
+define ptr @getelementptr(ptr %base) {
 ; CHECK-LABEL: @getelementptr
-; CHECK: %r = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %base, i64 0
-; CHECK-NEXT: ret <vscale x 4 x float>* %r
-  %r = getelementptr <vscale x 4 x float>, <vscale x 4 x float>* %base, i64 0
-  ret <vscale x 4 x float>* %r
+; CHECK-NEXT: ret ptr %base
+  ret ptr %base
 }
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -322,20 +320,20 @@ define <vscale x 4 x float> @sitofpto(<vscale x 4 x i32> %val) {
   ret <vscale x 4 x float> %r
 }
 
-define <vscale x 2 x i64> @ptrtointto(<vscale x 2 x i32*> %val) {
+define <vscale x 2 x i64> @ptrtointto(<vscale x 2 x ptr> %val) {
 ; CHECK-LABEL: @ptrtointto
-; CHECK: %r = ptrtoint <vscale x 2 x i32*> %val to <vscale x 2 x i64>
+; CHECK: %r = ptrtoint <vscale x 2 x ptr> %val to <vscale x 2 x i64>
 ; CHECK-NEXT: ret <vscale x 2 x i64> %r
-  %r = ptrtoint <vscale x 2 x i32*> %val to <vscale x 2 x i64>
+  %r = ptrtoint <vscale x 2 x ptr> %val to <vscale x 2 x i64>
   ret <vscale x 2 x i64> %r
 }
 
-define <vscale x 2 x i32*> @inttoptrto(<vscale x 2 x i64> %val) {
+define <vscale x 2 x ptr> @inttoptrto(<vscale x 2 x i64> %val) {
 ; CHECK-LABEL: @inttoptrto
-; CHECK: %r = inttoptr <vscale x 2 x i64> %val to <vscale x 2 x i32*>
-; CHECK-NEXT: ret <vscale x 2 x i32*> %r
-  %r = inttoptr <vscale x 2 x i64> %val to <vscale x 2 x i32*>
-  ret <vscale x 2 x i32*> %r
+; CHECK: %r = inttoptr <vscale x 2 x i64> %val to <vscale x 2 x ptr>
+; CHECK-NEXT: ret <vscale x 2 x ptr> %r
+  %r = inttoptr <vscale x 2 x i64> %val to <vscale x 2 x ptr>
+  ret <vscale x 2 x ptr> %r
 }
 
 define <vscale x 2 x i64> @bitcastto(<vscale x 2 x double> %a) {

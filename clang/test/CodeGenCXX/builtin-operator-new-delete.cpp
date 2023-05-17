@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-unknown-unknown %s  \
+// RUN: %clang_cc1 -triple x86_64-unknown-unknown %s  \
 // RUN:     -faligned-allocation -fsized-deallocation -emit-llvm -o - \
 // RUN:    | FileCheck %s
 
@@ -37,30 +37,30 @@ void *operator new[](size_t, void*, bool) throw();
 
 // CHECK-LABEL: define{{.*}} void @test_basic(
 extern "C" void test_basic() {
-  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   // CHECK: call void @_ZdlPv({{.*}}) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
   // CHECK: ret void
   __builtin_operator_delete(__builtin_operator_new(4));
 }
-// CHECK: declare noundef nonnull i8* @_Znwm(i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPv(i8* noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare noundef nonnull ptr @_Znwm(i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
+// CHECK: declare void @_ZdlPv(ptr noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 
 // CHECK-LABEL: define{{.*}} void @test_aligned_alloc(
 extern "C" void test_aligned_alloc() {
-  // CHECK: call noalias noundef nonnull align 4 i8* @_ZnwmSt11align_val_t(i64 noundef 4, i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull align 4 ptr @_ZnwmSt11align_val_t(i64 noundef 4, i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   // CHECK: call void @_ZdlPvSt11align_val_t({{.*}}, i64 noundef 4) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
   __builtin_operator_delete(__builtin_operator_new(4, std::align_val_t(4)), std::align_val_t(4));
 }
-// CHECK: declare noundef nonnull i8* @_ZnwmSt11align_val_t(i64 noundef, i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
-// CHECK: declare void @_ZdlPvSt11align_val_t(i8* noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
+// CHECK: declare noundef nonnull ptr @_ZnwmSt11align_val_t(i64 noundef, i64 noundef) [[ATTR_NOBUILTIN:#[^ ]*]]
+// CHECK: declare void @_ZdlPvSt11align_val_t(ptr noundef, i64 noundef) [[ATTR_NOBUILTIN_NOUNWIND:#[^ ]*]]
 
 // CHECK-LABEL: define{{.*}} void @test_sized_delete(
 extern "C" void test_sized_delete() {
-  // CHECK: call noalias noundef nonnull i8* @_Znwm(i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
+  // CHECK: call noalias noundef nonnull ptr @_Znwm(i64 noundef 4) [[ATTR_BUILTIN_NEW:#[^ ]*]]
   // CHECK: call void @_ZdlPvm({{.*}}, i64 noundef 4) [[ATTR_BUILTIN_DELETE:#[^ ]*]]
   __builtin_operator_delete(__builtin_operator_new(4), 4);
 }
-// CHECK: declare void @_ZdlPvm(i8* noundef, i64 noundef) [[ATTR_NOBUILTIN_UNWIND:#[^ ]*]]
+// CHECK: declare void @_ZdlPvm(ptr noundef, i64 noundef) [[ATTR_NOBUILTIN_UNWIND:#[^ ]*]]
 
 
 // CHECK-DAG: attributes [[ATTR_NOBUILTIN]] = {{[{].*}} nobuiltin {{.*[}]}}

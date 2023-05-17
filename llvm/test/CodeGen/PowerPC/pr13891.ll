@@ -4,14 +4,13 @@ target triple = "powerpc64-unknown-linux-gnu"
 
 %struct.foo = type { i8, i8 }
 
-define void @_Z5check3foos(%struct.foo* nocapture byval(%struct.foo) %f, i16 signext %i) noinline {
+define void @_Z5check3foos(ptr nocapture byval(%struct.foo) %f, i16 signext %i) noinline {
 ; CHECK-LABEL: _Z5check3foos:
 ; CHECK: sth 3, {{[0-9]+}}(1)
 ; CHECK: lbz {{[0-9]+}}, {{[0-9]+}}(1)
 entry:
-  %0 = bitcast %struct.foo* %f to i16*
-  %1 = load i16, i16* %0, align 2
-  %bf.val.sext = ashr i16 %1, 8
+  %0 = load i16, ptr %f, align 2
+  %bf.val.sext = ashr i16 %0, 8
   %cmp = icmp eq i16 %bf.val.sext, %i
   br i1 %cmp, label %if.end, label %if.then
 

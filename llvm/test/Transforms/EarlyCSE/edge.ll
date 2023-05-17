@@ -1,5 +1,5 @@
-; RUN: opt -early-cse -earlycse-debug-hash -S < %s | FileCheck %s
-; RUN: opt -basic-aa -early-cse-memssa -S < %s | FileCheck %s
+; RUN: opt -passes=early-cse -earlycse-debug-hash -S < %s | FileCheck %s
+; RUN: opt -passes='early-cse<memssa>' -S < %s | FileCheck %s
 ; Same as GVN/edge.ll, but updated to reflect EarlyCSE's less powerful
 ; implementation.  EarlyCSE currently doesn't exploit equality comparisons
 ; against constants.

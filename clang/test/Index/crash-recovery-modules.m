@@ -11,7 +11,7 @@
 // RUN: env CINDEXTEST_FAILONERROR=1 c-index-test -test-load-source all -fmodules -fmodules-cache-path=%t -Xclang -fdisable-module-hash -I %S/Inputs/Headers %s > /dev/null
 
 // REQUIRES: crash-recovery
-// UNSUPPORTED: libstdcxx-safe-mode
+// UNSUPPORTED: libstdcxx-safe-mode, hwasan
 
 @import Crash;
 

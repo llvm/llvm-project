@@ -11,14 +11,12 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace modernize {
+namespace clang::tidy::modernize {
 
 /// Find C-style array types and recommend to use std::array<> / std::vector<>.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/modernize-avoid-c-arrays.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/modernize/avoid-c-arrays.html
 class AvoidCArraysCheck : public ClangTidyCheck {
 public:
   AvoidCArraysCheck(StringRef Name, ClangTidyContext *Context)
@@ -30,8 +28,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace modernize
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::modernize
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_MODERNIZE_AVOIDCARRAYSCHECK_H

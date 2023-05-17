@@ -19,8 +19,8 @@
 #include "min_allocator.h"
 #include "asan_testing.h"
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool test() {
+
     {
         std::vector<int> v(100);
         const int lvalue = 1;
@@ -36,7 +36,7 @@ int main(int, char**)
             assert(v[j] == 0);
     }
     {
-        const size_t n = 100;
+        const std::size_t n = 100;
         std::vector<int> v(n);
         v.reserve(n + 1);
         const int lvalue = 1;
@@ -47,7 +47,7 @@ int main(int, char**)
         assert(v.size() == n + 1);
         assert(is_contiguous_container_asan_correct(v));
         assert(it == v.begin() + n);
-        for (size_t i = 0; i < n; ++i) {
+        for (std::size_t i = 0; i < n; ++i) {
             assert(v[i] == 0);
         }
         assert(v[n] == lvalue);
@@ -55,7 +55,7 @@ int main(int, char**)
     {
         std::vector<int> v(100);
         while(v.size() < v.capacity()) v.push_back(0); // force reallocation
-        size_t sz = v.size();
+        std::size_t sz = v.size();
         const int lvalue = 1;
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
         assert(v.size() == sz + 1);
@@ -72,7 +72,7 @@ int main(int, char**)
         std::vector<int> v(100);
         while(v.size() < v.capacity()) v.push_back(0);
         v.pop_back(); v.pop_back(); // force no reallocation
-        size_t sz = v.size();
+        std::size_t sz = v.size();
         const int lvalue = 1;
         std::vector<int>::iterator i = v.insert(v.cbegin() + 10, lvalue);
         assert(v.size() == sz + 1);
@@ -114,6 +114,30 @@ int main(int, char**)
         for (++j; j < 101; ++j)
             assert(v[j] == 0);
     }
+    {
+      std::vector<int, safe_allocator<int>> v(100);
+      const int lvalue                                  = 1;
+      std::vector<int, safe_allocator<int>>::iterator i = v.insert(v.cbegin() + 10, lvalue);
+      assert(v.size() == 101);
+      assert(is_contiguous_container_asan_correct(v));
+      assert(i == v.begin() + 10);
+      int j;
+      for (j = 0; j < 10; ++j)
+        assert(v[j] == 0);
+      assert(v[j] == 1);
+      for (++j; j < 101; ++j)
+        assert(v[j] == 0);
+    }
+#endif
+
+    return true;
+}
+
+int main(int, char**)
+{
+    test();
+#if TEST_STD_VER > 17
+    static_assert(test());
 #endif
 
   return 0;

@@ -1,5 +1,5 @@
 ; RUN: llc --filetype=obj %s -o - | dxil-dis -o - | FileCheck %s
-target triple = "dxil-unknown-unknown"
+target triple = "dxil-unknown-shadermodel6.7-library"
 
 define i64 @test(ptr %p) {
   store i32 0, ptr %p

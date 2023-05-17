@@ -12,7 +12,7 @@ typedef __SIZE_TYPE__ size_t;
                       unsigned int : (int)0,                                   \
                       unsigned short : (short)0,                               \
                       unsigned char : (signed char)0))
-typedef __SSIZE_TYPE__ ssize_t;                         
+typedef __SSIZE_TYPE__ ssize_t;
 
 typedef __PTRDIFF_TYPE__ ptrdiff_t;
 #define __UNSIGNED_PTRDIFF_TYPE__                                              \
@@ -40,9 +40,11 @@ void test(const char *s, int *i) {
   scanf("%0d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%00d", i); // expected-warning{{zero field width in scanf format string is unused}}
   scanf("%d%[asdfasdfd", i, s); // expected-warning{{no closing ']' for '%[' in scanf format string}}
+  scanf("%B", i); // expected-warning{{invalid conversion specifier 'B'}}
 
   unsigned short s_x;
   scanf ("%" "hu" "\n", &s_x); // no-warning
+  scanf("%hb", &s_x);
   scanf("%y", i); // expected-warning{{invalid conversion specifier 'y'}}
   scanf("%%"); // no-warning
   scanf("%%%1$d", i); // no-warning
@@ -57,6 +59,7 @@ void test(const char *s, int *i) {
   scanf("%s", (signed char*)0); // no-warning
   scanf("%s", (unsigned char*)0); // no-warning
   scanf("%hhu", (signed char*)0); // no-warning
+  scanf("%hhb", (signed char*)0); // no-warning
 }
 
 void bad_length_modifiers(char *s, void *p, wchar_t *ws, long double *ld) {
@@ -64,6 +67,11 @@ void bad_length_modifiers(char *s, void *p, wchar_t *ws, long double *ld) {
   scanf("%1$zp", &p); // expected-warning{{length modifier 'z' results in undefined behavior or no effect with 'p' conversion specifier}}
   scanf("%ls", ws); // no-warning
   scanf("%#.2Lf", ld); // expected-warning{{invalid conversion specifier '#'}}
+}
+
+void missing_argument_with_length_modifier() {
+  char buf[30];
+  scanf("%s:%900s", buf); // expected-warning{{more '%' conversions than data arguments}}
 }
 
 // Test that the scanf call site is where the warning is attached.  If the
@@ -193,6 +201,7 @@ void test_qualifiers(const int *cip, volatile int* vip,
 void test_size_types(void) {
   size_t s = 0;
   scanf("%zu", &s); // No warning.
+  scanf("%zb", &s);
 
   double d1 = 0.;
   scanf("%zu", &d1); // expected-warning-re{{format specifies type 'size_t *' (aka '{{.+}}') but the argument has type 'double *'}}
@@ -213,19 +222,20 @@ void test_size_types(void) {
 void test_ptrdiff_t_types(void) {
   __UNSIGNED_PTRDIFF_TYPE__ p1 = 0;
   scanf("%tu", &p1); // No warning.
+  scanf("%tb", &p1);
 
   double d1 = 0.;
   scanf("%tu", &d1); // expected-warning-re{{format specifies type 'unsigned ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 
   ptrdiff_t p2 = 0;
   scanf("%td", &p2); // No warning.
-  
+
   double d2 = 0.;
   scanf("%td", &d2); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 
   ptrdiff_t p3 = 0;
   scanf("%tn", &p3); // No warning.
-  
+
   double d3 = 0.;
   scanf("%tn", &d3); // expected-warning-re{{format specifies type 'ptrdiff_t *' (aka '{{.+}}') but the argument has type 'double *'}}
 }
@@ -240,4 +250,56 @@ void check_conditional_literal(char *s, int *i) {
   scanf(i ? "%d %s" : "%d", i, s); // no warning
   scanf(i ? "%d" : "%d", i, s); // expected-warning{{data argument not used}}
   scanf(i ? "%s" : "%d", s); // expected-warning{{format specifies type 'int *'}}
+}
+
+void test_promotion(void) {
+  // No promotions for *scanf pointers clarified in N2562
+  // https://github.com/llvm/llvm-project/issues/57102
+  // N2562: https://www.open-std.org/jtc1/sc22/wg14/www/docs/n2562.pdf
+  int i;
+  signed char sc;
+  unsigned char uc;
+  short ss;
+  unsigned short us;
+
+  // pointers could not be "promoted"
+  scanf("%hhd", &i); // expected-warning{{format specifies type 'char *' but the argument has type 'int *'}}
+  scanf("%hd", &i); // expected-warning{{format specifies type 'short *' but the argument has type 'int *'}}
+  scanf("%d", &i); // no-warning
+  // char & uchar
+  scanf("%hhd", &sc); // no-warning
+  scanf("%hhd", &uc); // no-warning
+  scanf("%hd", &sc); // expected-warning{{format specifies type 'short *' but the argument has type 'signed char *'}}
+  scanf("%hd", &uc); // expected-warning{{format specifies type 'short *' but the argument has type 'unsigned char *'}}
+  scanf("%d", &sc); // expected-warning{{format specifies type 'int *' but the argument has type 'signed char *'}}
+  scanf("%d", &uc); // expected-warning{{format specifies type 'int *' but the argument has type 'unsigned char *'}}
+  // short & ushort
+  scanf("%hhd", &ss); // expected-warning{{format specifies type 'char *' but the argument has type 'short *'}}
+  scanf("%hhd", &us); // expected-warning{{format specifies type 'char *' but the argument has type 'unsigned short *'}}
+  scanf("%hd", &ss); // no-warning
+  scanf("%hd", &us); // no-warning
+  scanf("%d", &ss); // expected-warning{{format specifies type 'int *' but the argument has type 'short *'}}
+  scanf("%d", &us); // expected-warning{{format specifies type 'int *' but the argument has type 'unsigned short *'}}
+
+  // long types
+  scanf("%ld", &i); // expected-warning{{format specifies type 'long *' but the argument has type 'int *'}}
+  scanf("%lld", &i); // expected-warning{{format specifies type 'long long *' but the argument has type 'int *'}}
+  scanf("%ld", &sc); // expected-warning{{format specifies type 'long *' but the argument has type 'signed char *'}}
+  scanf("%lld", &sc); // expected-warning{{format specifies type 'long long *' but the argument has type 'signed char *'}}
+  scanf("%ld", &uc); // expected-warning{{format specifies type 'long *' but the argument has type 'unsigned char *'}}
+  scanf("%lld", &uc); // expected-warning{{format specifies type 'long long *' but the argument has type 'unsigned char *'}}
+  scanf("%llx", &i); // expected-warning{{format specifies type 'unsigned long long *' but the argument has type 'int *'}}
+
+  // ill-formed floats
+  scanf("%hf", // expected-warning{{length modifier 'h' results in undefined behavior or no effect with 'f' conversion specifier}}
+  &sc);
+
+  // pointers in scanf
+  scanf("%s", i); // expected-warning{{format specifies type 'char *' but the argument has type 'int'}}
+
+  // FIXME: does this match what the C committee allows or should it be pedantically warned on?
+  char c;
+  void *vp;
+  scanf("%hhd", &c); // Pedantic warning?
+  scanf("%hhd", vp); // expected-warning{{format specifies type 'char *' but the argument has type 'void *'}}
 }

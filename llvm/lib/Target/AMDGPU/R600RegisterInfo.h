@@ -47,7 +47,7 @@ struct R600RegisterInfo final : public R600GenRegisterInfo {
   // another.
   bool isPhysRegLiveAcrossClauses(Register Reg) const;
 
-  void eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
+  bool eliminateFrameIndex(MachineBasicBlock::iterator MI, int SPAdj,
                            unsigned FIOperandNum,
                            RegScavenger *RS = nullptr) const override;
 

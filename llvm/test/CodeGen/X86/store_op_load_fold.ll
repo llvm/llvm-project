@@ -3,16 +3,16 @@
 ;
 ; Test the add and load are folded into the store instruction.
 
-@X = internal global i16 0              ; <i16*> [#uses=2]
+@X = internal global i16 0              ; <ptr> [#uses=2]
 
 define void @foo() nounwind {
 ; CHECK-LABEL: foo:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    addw $329, _X ## imm = 0x149
 ; CHECK-NEXT:    retl
-  %tmp.0 = load i16, i16* @X           ; <i16> [#uses=1]
+  %tmp.0 = load i16, ptr @X           ; <i16> [#uses=1]
   %tmp.3 = add i16 %tmp.0, 329            ; <i16> [#uses=1]
-  store i16 %tmp.3, i16* @X
+  store i16 %tmp.3, ptr @X
   ret void
 }
 
@@ -25,8 +25,8 @@ define void @test2() nounwind uwtable ssp {
 ; CHECK-NEXT:    movl L_s2$non_lazy_ptr, %eax
 ; CHECK-NEXT:    andl $-262144, 20(%eax) ## imm = 0xFFFC0000
 ; CHECK-NEXT:    retl
-  %bf.load35 = load i56, i56* bitcast ([7 x i8]* getelementptr inbounds (%struct.S2, %struct.S2* @s2, i32 0, i32 5) to i56*), align 16
+  %bf.load35 = load i56, ptr getelementptr inbounds (%struct.S2, ptr @s2, i32 0, i32 5), align 16
   %bf.clear36 = and i56 %bf.load35, -1125895611875329
-  store i56 %bf.clear36, i56* bitcast ([7 x i8]* getelementptr inbounds (%struct.S2, %struct.S2* @s2, i32 0, i32 5) to i56*), align 16
+  store i56 %bf.clear36, ptr getelementptr inbounds (%struct.S2, ptr @s2, i32 0, i32 5), align 16
   ret void
 }

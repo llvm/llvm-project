@@ -5,16 +5,16 @@ target datalayout =
 target triple = "x86_64-unknown-linux-gnu"
 
 ; CHECK-LABEL: @load_cast_gep
-; GEP: [[CAST:%[0-9]+]] = addrspacecast i64* %base to i8 addrspace(1)*
-; GEP: getelementptr inbounds i8, i8 addrspace(1)* [[CAST]], i64 40
-define void @load_cast_gep(i1 %cond, i64* %base) {
+; GEP: [[CAST:%[0-9]+]] = addrspacecast ptr %base to ptr addrspace(1)
+; GEP: getelementptr inbounds i8, ptr addrspace(1) [[CAST]], i64 40
+define void @load_cast_gep(i1 %cond, ptr %base) {
 entry:
-  %addr = getelementptr inbounds i64, i64* %base, i64 5
-  %casted = addrspacecast i64* %addr to i32 addrspace(1)*
+  %addr = getelementptr inbounds i64, ptr %base, i64 5
+  %casted = addrspacecast ptr %addr to ptr addrspace(1)
   br i1 %cond, label %if.then, label %fallthrough
 
 if.then:
-  %v = load i32, i32 addrspace(1)* %casted, align 4
+  %v = load i32, ptr addrspace(1) %casted, align 4
   br label %fallthrough
 
 fallthrough:
@@ -22,16 +22,16 @@ fallthrough:
 }
 
 ; CHECK-LABEL: @store_gep_cast
-; GEP: [[CAST:%[0-9]+]] = addrspacecast i64* %base to i8 addrspace(1)*
-; GEP: getelementptr inbounds i8, i8 addrspace(1)* [[CAST]], i64 20
-define void @store_gep_cast(i1 %cond, i64* %base) {
+; GEP: [[CAST:%[0-9]+]] = addrspacecast ptr %base to ptr addrspace(1)
+; GEP: getelementptr inbounds i8, ptr addrspace(1) [[CAST]], i64 20
+define void @store_gep_cast(i1 %cond, ptr %base) {
 entry:
-  %casted = addrspacecast i64* %base to i32 addrspace(1)*
-  %addr = getelementptr inbounds i32, i32 addrspace(1)* %casted, i64 5
+  %casted = addrspacecast ptr %base to ptr addrspace(1)
+  %addr = getelementptr inbounds i32, ptr addrspace(1) %casted, i64 5
   br i1 %cond, label %if.then, label %fallthrough
 
 if.then:
-  store i32 0, i32 addrspace(1)* %addr, align 4
+  store i32 0, ptr addrspace(1) %addr, align 4
   br label %fallthrough
 
 fallthrough:

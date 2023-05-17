@@ -9,42 +9,42 @@
 ; CHECK: memb{{.*}} = {{.*}}#4
 ; CHECK: memb{{.*}} = {{.*}}#5
 
-define void @f0(i32* nocapture %a0) #0 {
+define void @f0(ptr nocapture %a0) #0 {
 b0:
-  store i32 0, i32* %a0, align 4
+  store i32 0, ptr %a0, align 4
   ret void
 }
 
-define void @f1(i32* nocapture %a0) #0 {
+define void @f1(ptr nocapture %a0) #0 {
 b0:
-  %v0 = getelementptr inbounds i32, i32* %a0, i32 1
-  store i32 1, i32* %v0, align 4
+  %v0 = getelementptr inbounds i32, ptr %a0, i32 1
+  store i32 1, ptr %v0, align 4
   ret void
 }
 
-define void @f2(i16* nocapture %a0) #0 {
+define void @f2(ptr nocapture %a0) #0 {
 b0:
-  store i16 2, i16* %a0, align 2
+  store i16 2, ptr %a0, align 2
   ret void
 }
 
-define void @f3(i16* nocapture %a0) #0 {
+define void @f3(ptr nocapture %a0) #0 {
 b0:
-  %v0 = getelementptr inbounds i16, i16* %a0, i32 2
-  store i16 3, i16* %v0, align 2
+  %v0 = getelementptr inbounds i16, ptr %a0, i32 2
+  store i16 3, ptr %v0, align 2
   ret void
 }
 
-define void @f4(i8* nocapture %a0) #0 {
+define void @f4(ptr nocapture %a0) #0 {
 b0:
-  store i8 4, i8* %a0, align 1
+  store i8 4, ptr %a0, align 1
   ret void
 }
 
-define void @f5(i8* nocapture %a0) #0 {
+define void @f5(ptr nocapture %a0) #0 {
 b0:
-  %v0 = getelementptr inbounds i8, i8* %a0, i32 2
-  store i8 5, i8* %v0, align 1
+  %v0 = getelementptr inbounds i8, ptr %a0, i32 2
+  store i8 5, ptr %v0, align 1
   ret void
 }
 

@@ -21,6 +21,7 @@
 #include "lldb/Target/Runtime.h"
 #include "lldb/lldb-private.h"
 #include "lldb/lldb-public.h"
+#include <optional>
 
 namespace lldb_private {
 
@@ -150,11 +151,11 @@ public:
   /// from the user interface.
   virtual bool IsAllowedRuntimeValue(ConstString name) { return false; }
 
-  virtual llvm::Optional<CompilerType> GetRuntimeType(CompilerType base_type) {
-    return llvm::None;
+  virtual std::optional<CompilerType> GetRuntimeType(CompilerType base_type) {
+    return std::nullopt;
   }
 
-  virtual void ModulesDidLoad(const ModuleList &module_list) override {}
+  void ModulesDidLoad(const ModuleList &module_list) override {}
 
   // Called by ClangExpressionParser::PrepareForExecution to query for any
   // custom LLVM IR passes that need to be run before an expression is

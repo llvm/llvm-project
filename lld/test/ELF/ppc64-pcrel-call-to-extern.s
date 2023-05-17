@@ -12,7 +12,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 --defsym AUX=1 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t2.o
@@ -21,7 +21,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le --defsym AUX=1 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64le %s -o %t2.o
@@ -30,7 +30,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL-NOP10
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC-NOP10
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL-NOP10
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s --check-prefix=CHECK-NOP10
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=CHECK-NOP10
 
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 --defsym AUX=1 %s -o %t1.o
 # RUN: llvm-mc -filetype=obj -triple=powerpc64 %s -o %t2.o
@@ -39,7 +39,7 @@
 # RUN: llvm-readelf -s %t | FileCheck %s --check-prefix=SYMBOL-NOP10
 # RUN: llvm-readelf -S -d %t | FileCheck %s --check-prefix=SEC-NOP10
 # RUN: llvm-readobj -r %t | FileCheck %s --check-prefix=REL-NOP10
-# RUN: llvm-objdump -d --no-show-raw-insn --mcpu=pwr10 %t | FileCheck %s --check-prefix=CHECK-NOP10
+# RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s --check-prefix=CHECK-NOP10
 
 ## The test is created to check that when a function without TOC access an
 ## external function, a r12 setup stub is inserted.
@@ -115,14 +115,14 @@
 
 ## No P10; branch to next inst to get addr
 # CHECK-NOP10-LABEL: <__plt_pcrel_callee_global_stother0>:
-# CHECK-NOP10:       10010010: mflr 0
-# CHECK-NOP10-NEXT:  10010014: bcl 20, 31, 0x10010018
-# CHECK-NOP10:       10010018: mflr 11
-# CHECK-NOP10:       1001001c: mtlr 12
-# CHECK-NOP10:       10010020: addis 12, 11, -4097
-# CHECK-NOP10:       10010024: addi  12, 12, -24
-# CHECK-NOP10-NEXT:  10010028: mtctr 12
-# CHECK-NOP10-NEXT:  1001002c: bctr
+# CHECK-NOP10:       10010010: mflr 12
+# CHECK-NOP10-NEXT:            bcl 20, 31, 0x10010018
+# CHECK-NOP10-NEXT:  10010018: mflr 11
+# CHECK-NOP10-NEXT:            mtlr 12
+# CHECK-NOP10-NEXT:            addis 12, 11, 2
+# CHECK-NOP10-NEXT:            ld 12, 336(12)
+# CHECK-NOP10-NEXT:            mtctr 12
+# CHECK-NOP10-NEXT:            bctr
 
 # CHECK-LABEL: <caller2>:
 # CHECK:       10020000: bl 0x10020010
@@ -139,15 +139,16 @@
 # CHECK-NEXT:  1002001c: bctr
 
 ## no P10; branch to next inst to get addr
+## .plt[3]-r11 = 0x10030170-0x10020018 = 65536*1+344
 # CHECK-NOP10-LABEL: <__plt_pcrel_callee_global_stother1>:
-# CHECK-NOP10:       10020010: mflr 0
-# CHECK-NOP10-NEXT:  10020014: bcl 20, 31, 0x10020018
+# CHECK-NOP10:       10020010: mflr 12
+# CHECK-NOP10-NEXT:            bcl 20, 31, 0x10020018
 # CHECK-NOP10-NEXT:  10020018: mflr 11
-# CHECK-NOP10-NEXT:  1002001c: mtlr 12
-# CHECK-NOP10-NEXT:  10020020: addis 12, 11, -4098
-# CHECK-NOP10-NEXT:  10020024: addi 12, 12, -24
-# CHECK-NOP10-NEXT:  10020028: mtctr 12
-# CHECK-NOP10-NEXT:  1002002c: bctr
+# CHECK-NOP10-NEXT:            mtlr 12
+# CHECK-NOP10-NEXT:            addis 12, 11, 1
+# CHECK-NOP10-NEXT:            ld 12, 344(12)
+# CHECK-NOP10-NEXT:            mtctr 12
+# CHECK-NOP10-NEXT:            bctr
 
 # CHECK-LABEL: <caller3>:
 # CHECK:       10030000: bl 0x10030010
@@ -164,15 +165,16 @@
 # CHECK-NEXT:  1003001c: bctr
 
 ## no P10; branch to next inst to get addr
+## .plt[4]-r11 = 0x10030178-0x10030018 = 65536*0+352
 # CHECK-NOP10-LABEL: <__plt_pcrel_callee_global_TOC>:
-# CHECK-NOP10-NEXT:  10030010: mflr 0
-# CHECK-NOP10-NEXT:  10030014: bcl 20, 31, 0x10030018
+# CHECK-NOP10-NEXT:  10030010: mflr 12
+# CHECK-NOP10-NEXT:            bcl 20, 31, 0x10030018
 # CHECK-NOP10-NEXT:  10030018: mflr 11
-# CHECK-NOP10-NEXT:  1003001c: mtlr 12
-# CHECK-NOP10-NEXT:  10030020: addis 12, 11, -4099
-# CHECK-NOP10-NEXT:  10030024: addi 12, 12, -24
-# CHECK-NOP10-NEXT:  10030028: mtctr 12
-# CHECK-NOP10-NEXT:  1003002c: bctr
+# CHECK-NOP10-NEXT:            mtlr 12
+# CHECK-NOP10-NEXT:            addis 12, 11, 0
+# CHECK-NOP10-NEXT:            ld 12, 352(12)
+# CHECK-NOP10-NEXT:            mtctr 12
+# CHECK-NOP10-NEXT:            bctr
 
 .ifdef AUX
 .section .text_caller1, "ax", %progbits

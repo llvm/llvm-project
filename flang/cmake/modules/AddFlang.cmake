@@ -7,7 +7,7 @@ macro(set_flang_windows_version_resource_properties name)
       VERSION_MAJOR ${FLANG_VERSION_MAJOR}
       VERSION_MINOR ${FLANG_VERSION_MINOR}
       VERSION_PATCHLEVEL ${FLANG_VERSION_PATCHLEVEL}
-      VERSION_STRING "${FLANG_VERSION} (${BACKEND_PACKAGE_STRING})"
+      VERSION_STRING "${FLANG_VERSION}"
       PRODUCT_NAME "flang")
   endif()
 endmacro()
@@ -16,12 +16,15 @@ macro(add_flang_subdirectory name)
   add_llvm_subdirectory(FLANG TOOL ${name})
 endmacro()
 
-macro(add_flang_library name)
+function(add_flang_library name)
+  set(options SHARED STATIC INSTALL_WITH_TOOLCHAIN)
+  set(multiValueArgs ADDITIONAL_HEADERS CLANG_LIBS)
   cmake_parse_arguments(ARG
-    "SHARED;STATIC"
+    "${options}"
     ""
-    "ADDITIONAL_HEADERS"
+    "${multiValueArgs}"
     ${ARGN})
+
   set(srcs)
   if (MSVC_IDE OR XCODE)
     # Add public headers
@@ -63,9 +66,12 @@ macro(add_flang_library name)
 
   llvm_add_library(${name} ${LIBTYPE} ${ARG_UNPARSED_ARGUMENTS} ${srcs})
 
+  clang_target_link_libraries(${name} PRIVATE ${ARG_CLANG_LIBS})
+
   if (TARGET ${name})
 
-    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libflang")
+    if (NOT LLVM_INSTALL_TOOLCHAIN_ONLY OR ${name} STREQUAL "libflang"
+        OR ARG_INSTALL_WITH_TOOLCHAIN)
       get_target_export_arg(${name} Flang export_to_flangtargets UMBRELLA flang-libraries)
       install(TARGETS ${name}
         COMPONENT ${name}
@@ -90,7 +96,7 @@ macro(add_flang_library name)
 
   set_target_properties(${name} PROPERTIES FOLDER "Flang libraries")
   set_flang_windows_version_resource_properties(${name})
-endmacro(add_flang_library)
+endfunction(add_flang_library)
 
 macro(add_flang_executable name)
   add_llvm_executable(${name} ${ARGN})
@@ -122,8 +128,7 @@ macro(add_flang_tool name)
 endmacro()
 
 macro(add_flang_symlink name dest)
-  add_llvm_tool_symlink(${name} ${dest} ALWAYS_GENERATE)
+  llvm_add_tool_symlink(FLANG ${name} ${dest} ALWAYS_GENERATE)
   # Always generate install targets
-  llvm_install_symlink(${name} ${dest} ALWAYS_GENERATE)
+  llvm_install_symlink(FLANG ${name} ${dest} ALWAYS_GENERATE)
 endmacro()
-

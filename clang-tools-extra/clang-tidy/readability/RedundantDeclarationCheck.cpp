@@ -13,9 +13,7 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 AST_MATCHER(FunctionDecl, doesDeclarationForceExternallyVisibleDefinition) {
   return Node.doesDeclarationForceExternallyVisibleDefinition();
@@ -37,7 +35,8 @@ void RedundantDeclarationCheck::registerMatchers(MatchFinder *Finder) {
                       functionDecl(unless(anyOf(
                           isDefinition(), isDefaulted(),
                           doesDeclarationForceExternallyVisibleDefinition(),
-                          hasAncestor(friendDecl()))))))
+                          hasAncestor(friendDecl()))))),
+                optionally(hasParent(linkageSpecDecl().bind("extern"))))
           .bind("Decl"),
       this);
 }
@@ -80,12 +79,18 @@ void RedundantDeclarationCheck::check(const MatchFinder::MatchResult &Result) {
       D->getSourceRange().getEnd(), 0, SM, Result.Context->getLangOpts());
   {
     auto Diag = diag(D->getLocation(), "redundant %0 declaration") << D;
-    if (!MultiVar && !DifferentHeaders)
-      Diag << FixItHint::CreateRemoval(
-          SourceRange(D->getSourceRange().getBegin(), EndLoc));
+    if (!MultiVar && !DifferentHeaders) {
+      SourceLocation BeginLoc;
+      if (const auto *Extern =
+              Result.Nodes.getNodeAs<LinkageSpecDecl>("extern");
+          Extern && !Extern->hasBraces())
+        BeginLoc = Extern->getExternLoc();
+      else
+        BeginLoc = D->getSourceRange().getBegin();
+
+      Diag << FixItHint::CreateRemoval(SourceRange(BeginLoc, EndLoc));
+    }
   }
   diag(Prev->getLocation(), "previously declared here", DiagnosticIDs::Note);
 }
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

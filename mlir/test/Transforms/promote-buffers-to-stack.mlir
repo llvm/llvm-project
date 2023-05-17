@@ -603,11 +603,11 @@ func.func @indexElementType() {
 // CHECK-LABEL: func @bigIndexElementType
 module attributes { dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<index, 256>>} {
   func.func @bigIndexElementType() {
-    %0 = memref.alloc() : memref<4xindex>
+    %0 = memref.alloc() {alignment = 64 : i64, custom_attr} : memref<4xindex>
     return
   }
 }
-// DEFINDEX-NEXT: memref.alloca()
-// LOWLIMIT-NEXT: memref.alloc()
-// RANK-NEXT: memref.alloca()
+// DEFINDEX-NEXT: memref.alloca() {alignment = 64 : i64, custom_attr}
+// LOWLIMIT-NEXT: memref.alloc() {alignment = 64 : i64, custom_attr}
+// RANK-NEXT: memref.alloca() {alignment = 64 : i64, custom_attr}
 // CHECK-NEXT: return

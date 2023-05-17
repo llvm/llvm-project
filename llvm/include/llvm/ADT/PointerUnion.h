@@ -160,7 +160,7 @@ public:
   /// Returns the current pointer if it is of the specified pointer type,
   /// otherwise returns null.
   template <typename T> inline T dyn_cast() const {
-    return llvm::dyn_cast<T>(*this);
+    return llvm::dyn_cast_if_present<T>(*this);
   }
 
   /// If the union is set to the first pointer type get an address pointing to
@@ -172,9 +172,9 @@ public:
   /// If the union is set to the first pointer type get an address pointing to
   /// it.
   First *getAddrOfPtr1() {
-    assert(is<First>() && "Val is not the first pointer");
+    assert(isa<First>(*this) && "Val is not the first pointer");
     assert(
-        PointerLikeTypeTraits<First>::getAsVoidPointer(get<First>()) ==
+        PointerLikeTypeTraits<First>::getAsVoidPointer(cast<First>(*this)) ==
             this->Val.getPointer() &&
         "Can't get the address because PointerLikeTypeTraits changes the ptr");
     return const_cast<First *>(

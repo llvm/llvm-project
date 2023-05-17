@@ -9,12 +9,12 @@
 #ifndef LLVM_CLANG_TOOLS_EXTRA_CLANGD_PATHMAPPING_H
 #define LLVM_CLANG_TOOLS_EXTRA_CLANGD_PATHMAPPING_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -50,9 +50,9 @@ llvm::Expected<PathMappings> parsePathMappings(llvm::StringRef RawPathMappings);
 
 /// Returns a modified \p S with the first matching path in \p Mappings
 /// substituted, if applicable
-llvm::Optional<std::string> doPathMapping(llvm::StringRef S,
-                                          PathMapping::Direction Dir,
-                                          const PathMappings &Mappings);
+std::optional<std::string> doPathMapping(llvm::StringRef S,
+                                         PathMapping::Direction Dir,
+                                         const PathMappings &Mappings);
 
 /// Applies the \p Mappings to all the file:// URIs in \p Params.
 /// NOTE: The first matching mapping will be applied, otherwise \p Params will

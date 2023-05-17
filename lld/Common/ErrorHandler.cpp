@@ -95,7 +95,7 @@ void lld::exitLld(int val) {
       e.outputBuffer->discard();
   }
 
-  // Re-throw a possible signal or exception once/if it was catched by
+  // Re-throw a possible signal or exception once/if it was caught by
   // safeLldMain().
   CrashRecoveryContext::throwIfCrash(val);
 
@@ -241,6 +241,9 @@ void ErrorHandler::warn(const Twine &msg) {
     error(msg);
     return;
   }
+
+  if (suppressWarnings)
+    return;
 
   std::lock_guard<std::mutex> lock(mu);
   reportDiagnostic(getLocation(msg), Colors::MAGENTA, "warning", msg);

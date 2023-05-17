@@ -1,9 +1,9 @@
 ; RUN: llc < %s -mtriple=thumb-apple-ios | FileCheck %s --check-prefix=CHECK
 ; RUN: llc < %s -mtriple=thumb-none-eabi | FileCheck %s --check-prefix=CHECK
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-apple-ios
-; RUN: llvm-objdump --triple=thumbv6-apple-ios -d %t | FileCheck %s --check-prefix=CHECK
+; RUN: llvm-objdump --no-print-imm-hex --triple=thumbv6-apple-ios -d %t | FileCheck %s --check-prefix=CHECK
 ; RUN: llc < %s -o %t -filetype=obj -mtriple=thumbv6-none-eabi
-; RUN: llvm-objdump --triple=thumbv6-none-eabi -d %t | FileCheck %s --check-prefix=CHECK
+; RUN: llvm-objdump --no-print-imm-hex --triple=thumbv6-none-eabi -d %t | FileCheck %s --check-prefix=CHECK
 
 ; Largest stack for which a single tADDspi/tSUBspi is enough
 define void @test1() {
@@ -74,8 +74,8 @@ define i32 @test3() {
     %retval = alloca i32, align 4
     %tmp = alloca i32, align 4
     %a = alloca [805306369 x i8], align 4
-    store i32 0, i32* %tmp
-    %tmp1 = load i32, i32* %tmp
+    store i32 0, ptr %tmp
+    %tmp1 = load i32, ptr %tmp
     ret i32 %tmp1
 }
 
@@ -90,8 +90,8 @@ define i32 @test3_nofpelim() "frame-pointer"="all" {
     %retval = alloca i32, align 4
     %tmp = alloca i32, align 4
     %a = alloca [805306369 x i8], align 8
-    store i32 0, i32* %tmp
-    %tmp1 = load i32, i32* %tmp
+    store i32 0, ptr %tmp
+    %tmp1 = load i32, ptr %tmp
     ret i32 %tmp1
 }
 
@@ -104,8 +104,8 @@ define i32 @test3_nofpelim() "frame-pointer"="all" {
 define i32 @test4() {
 entry:
   %stack_a = alloca i8, align 1
-  %stack_b = alloca [256 x i32*], align 4
-  %int = ptrtoint i8* %stack_a to i32
+  %stack_b = alloca [256 x ptr], align 4
+  %int = ptrtoint ptr %stack_a to i32
   %add = add i32 %int, 1
   br label %block2
 

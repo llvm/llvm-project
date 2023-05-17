@@ -95,11 +95,11 @@ target datalayout = "e-m:o-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 @local_unnamed_always_const = linkonce_odr local_unnamed_addr constant i8 42
 @local_unnamed_sometimes_const = linkonce_odr local_unnamed_addr constant i8 42
 @local_unnamed = linkonce_odr local_unnamed_addr global i8 42
-@used = hidden constant [6 x i8*] [i8* @global_unnamed,
-  i8* @global_unnamed_sometimes_linkonce, i8* @local_unnamed,
-  i8* @local_unnamed_const, i8* @local_unnamed_always_const,
-  i8* @local_unnamed_sometimes_const]
-@llvm.used = appending global [1 x [6 x i8*]*] [[6 x i8*]* @used]
+@used = hidden constant [6 x ptr] [ptr @global_unnamed,
+  ptr @global_unnamed_sometimes_linkonce, ptr @local_unnamed,
+  ptr @local_unnamed_const, ptr @local_unnamed_always_const,
+  ptr @local_unnamed_sometimes_const]
+@llvm.used = appending global [1 x ptr] [ptr @used]
 
 define void @main() {
   ret void

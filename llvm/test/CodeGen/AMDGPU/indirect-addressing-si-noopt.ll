@@ -13,10 +13,10 @@
 ; CHECK: buffer_store_dwordx4
 ; CHECK: buffer_store_dwordx4
 ; CHECK: buffer_store_dwordx4
-define amdgpu_kernel void @insert_wo_offset(<16 x float> addrspace(1)* %out, i32 %in) {
+define amdgpu_kernel void @insert_wo_offset(ptr addrspace(1) %out, i32 %in) {
 entry:
   %ins = insertelement <16 x float> <float 1.0, float 2.0, float 3.0, float 4.0, float 5.0, float 6.0, float 7.0, float 8.0, float 9.0, float 10.0, float 11.0, float 12.0, float 13.0, float 14.0, float 15.0, float 16.0>, float 17.0, i32 %in
-  store <16 x float> %ins, <16 x float> addrspace(1)* %out
+  store <16 x float> %ins, ptr addrspace(1) %out
   ret void
 }
 
@@ -45,19 +45,19 @@ bb:
   br i1 %tmp, label %bb1, label %bb4
 
 bb1:
-  %tmp2 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp2 = load volatile <4 x float>, ptr addrspace(1) undef
   %tmp3 = extractelement <4 x float> %tmp2, i32 undef
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp2) #0 ; Prevent block optimize out
   br label %bb7
 
 bb4:
-  %tmp5 = load volatile <4 x float>, <4 x float> addrspace(1)* undef
+  %tmp5 = load volatile <4 x float>, ptr addrspace(1) undef
   %tmp6 = extractelement <4 x float> %tmp5, i32 undef
   call void asm sideeffect "; reg use $0", "v"(<4 x float> %tmp5) #0 ; Prevent block optimize out
   br label %bb7
 
 bb7:
   %tmp8 = phi float [ %tmp3, %bb1 ], [ %tmp6, %bb4 ]
-  store volatile float %tmp8, float addrspace(1)* undef
+  store volatile float %tmp8, ptr addrspace(1) undef
   ret void
 }

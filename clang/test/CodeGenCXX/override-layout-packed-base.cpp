@@ -35,6 +35,6 @@ class D : virtual B<0>, virtual B<1> {
 //#pragma pack(pop)
 
 void use_structs() {
-  C cs[sizeof(C)];
-  D ds[sizeof(D)];
+  C cs;
+  D ds;
 }

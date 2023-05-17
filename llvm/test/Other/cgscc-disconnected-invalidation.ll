@@ -24,31 +24,31 @@ entry:
   ret void
 }
 
-define internal void @test_refscc_internal(i1 %flag, i8* %ptr) {
+define internal void @test_refscc_internal(i1 %flag, ptr %ptr) {
 ; CHECK-NOT: @test_refscc_internal
 entry:
   br i1 %flag, label %then, label %else
 
 then:
-  call void @test_refscc_internal(i1 false, i8* bitcast (i8* ()* @test_refscc_external to i8*))
+  call void @test_refscc_internal(i1 false, ptr @test_refscc_external)
   br label %else
 
 else:
   ret void
 }
 
-define i8* @test_refscc_external() {
-; CHECK-LABEL: define i8* @test_refscc_external()
+define ptr @test_refscc_external() {
+; CHECK-LABEL: define ptr @test_refscc_external()
 entry:
   br i1 true, label %then, label %else
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret i8* null
+; CHECK-NEXT:    ret ptr null
 ; CHECK-NEXT:  }
 ; CHECK-NOT: @test_refscc_internal
 
 then:
-  ret i8* null
+  ret ptr null
 
 else:
-  ret i8* bitcast (void (i1, i8*)* @test_refscc_internal to i8*)
+  ret ptr @test_refscc_internal
 }

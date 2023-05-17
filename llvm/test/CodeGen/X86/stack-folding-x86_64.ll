@@ -37,7 +37,7 @@ define i32 @stack_fold_bsf_i32(i32 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    bsfl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Folded Reload
+; CHECK-NEXT:    rep bsfl {{[-0-9]+}}(%r{{[sb]}}p), %eax # 4-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12
@@ -82,7 +82,7 @@ define i64 @stack_fold_bsf_i64(i64 %a0) {
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    nop
 ; CHECK-NEXT:    #NO_APP
-; CHECK-NEXT:    bsfq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
+; CHECK-NEXT:    rep bsfq {{[-0-9]+}}(%r{{[sb]}}p), %rax # 8-byte Folded Reload
 ; CHECK-NEXT:    popq %rbx
 ; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    popq %r12

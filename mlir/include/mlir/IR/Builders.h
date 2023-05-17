@@ -11,11 +11,12 @@
 
 #include "mlir/IR/OpDefinition.h"
 #include "llvm/Support/Compiler.h"
+#include <optional>
 
 namespace mlir {
 
 class AffineExpr;
-class BlockAndValueMapping;
+class IRMapping;
 class UnknownLoc;
 class FileLineColLoc;
 class Type;
@@ -59,6 +60,11 @@ public:
                        Attribute metadata = Attribute());
 
   // Types.
+  FloatType getFloat8E5M2Type();
+  FloatType getFloat8E4M3FNType();
+  FloatType getFloat8E5M2FNUZType();
+  FloatType getFloat8E4M3FNUZType();
+  FloatType getFloat8E4M3B11FNUZType();
   FloatType getBF16Type();
   FloatType getF16Type();
   FloatType getF32Type();
@@ -69,7 +75,10 @@ public:
   IndexType getIndexType();
 
   IntegerType getI1Type();
+  IntegerType getI2Type();
+  IntegerType getI4Type();
   IntegerType getI8Type();
+  IntegerType getI16Type();
   IntegerType getI32Type();
   IntegerType getI64Type();
   IntegerType getIntegerType(unsigned width);
@@ -107,7 +116,7 @@ public:
   // Returns a 0-valued attribute of the given `type`. This function only
   // supports boolean, integer, and 16-/32-/64-bit float types, and vector or
   // ranked tensor of them. Returns null attribute otherwise.
-  Attribute getZeroAttr(Type type);
+  TypedAttr getZeroAttr(Type type);
 
   // Convenience methods for fixed types.
   FloatAttr getF16FloatAttr(float value);
@@ -136,6 +145,15 @@ public:
   DenseIntElementsAttr getI32TensorAttr(ArrayRef<int32_t> values);
   DenseIntElementsAttr getI64TensorAttr(ArrayRef<int64_t> values);
   DenseIntElementsAttr getIndexTensorAttr(ArrayRef<int64_t> values);
+
+  /// Tensor-typed DenseArrayAttr getters.
+  DenseBoolArrayAttr getDenseBoolArrayAttr(ArrayRef<bool> values);
+  DenseI8ArrayAttr getDenseI8ArrayAttr(ArrayRef<int8_t> values);
+  DenseI16ArrayAttr getDenseI16ArrayAttr(ArrayRef<int16_t> values);
+  DenseI32ArrayAttr getDenseI32ArrayAttr(ArrayRef<int32_t> values);
+  DenseI64ArrayAttr getDenseI64ArrayAttr(ArrayRef<int64_t> values);
+  DenseF32ArrayAttr getDenseF32ArrayAttr(ArrayRef<float> values);
+  DenseF64ArrayAttr getDenseF64ArrayAttr(ArrayRef<double> values);
 
   ArrayAttr getAffineMapArrayAttr(ArrayRef<AffineMap> values);
   ArrayAttr getBoolArrayAttr(ArrayRef<bool> values);
@@ -236,10 +254,32 @@ public:
   // Listeners
   //===--------------------------------------------------------------------===//
 
+  /// Base class for listeners.
+  struct ListenerBase {
+    /// The kind of listener.
+    enum class Kind {
+      /// OpBuilder::Listener or user-derived class.
+      OpBuilderListener = 0,
+
+      /// RewriterBase::Listener or user-derived class.
+      RewriterBaseListener = 1
+    };
+
+    Kind getKind() const { return kind; }
+
+  protected:
+    ListenerBase(Kind kind) : kind(kind) {}
+
+  private:
+    const Kind kind;
+  };
+
   /// This class represents a listener that may be used to hook into various
   /// actions within an OpBuilder.
-  struct Listener {
-    virtual ~Listener();
+  struct Listener : public ListenerBase {
+    Listener() : ListenerBase(ListenerBase::Kind::OpBuilderListener) {}
+
+    virtual ~Listener() = default;
 
     /// Notification handler for when an operation is inserted into the builder.
     /// `op` is the operation that was inserted.
@@ -248,6 +288,9 @@ public:
     /// Notification handler for when a block is created using the builder.
     /// `block` is the block that was created.
     virtual void notifyBlockCreated(Block *block) {}
+
+  protected:
+    Listener(Kind kind) : ListenerBase(kind) {}
   };
 
   /// Sets the listener of this builder to the one provided.
@@ -360,7 +403,7 @@ public:
     if (Operation *op = val.getDefiningOp()) {
       setInsertionPointAfter(op);
     } else {
-      auto blockArg = val.cast<BlockArgument>();
+      auto blockArg = llvm::cast<BlockArgument>(val);
       setInsertionPointToStart(blockArg.getOwner());
     }
   }
@@ -376,7 +419,7 @@ public:
   }
 
   /// Return the block the current insertion point belongs to.  Note that the
-  /// the insertion point is not necessarily the end of the block.
+  /// insertion point is not necessarily the end of the block.
   Block *getInsertionBlock() const { return block; }
 
   /// Returns the current insertion point of the builder.
@@ -394,15 +437,15 @@ public:
   /// 'parent'. `locs` contains the locations of the inserted arguments, and
   /// should match the size of `argTypes`.
   Block *createBlock(Region *parent, Region::iterator insertPt = {},
-                     TypeRange argTypes = llvm::None,
-                     ArrayRef<Location> locs = llvm::None);
+                     TypeRange argTypes = std::nullopt,
+                     ArrayRef<Location> locs = std::nullopt);
 
   /// Add new block with 'argTypes' arguments and set the insertion point to the
   /// end of it. The block is placed before 'insertBefore'. `locs` contains the
   /// locations of the inserted arguments, and should match the size of
   /// `argTypes`.
-  Block *createBlock(Block *insertBefore, TypeRange argTypes = llvm::None,
-                     ArrayRef<Location> locs = llvm::None);
+  Block *createBlock(Block *insertBefore, TypeRange argTypes = std::nullopt,
+                     ArrayRef<Location> locs = std::nullopt);
 
   //===--------------------------------------------------------------------===//
   // Operation Creation
@@ -425,7 +468,7 @@ private:
   /// Helper for sanity checking preconditions for create* methods below.
   template <typename OpT>
   RegisteredOperationName getCheckRegisteredInfo(MLIRContext *ctx) {
-    Optional<RegisteredOperationName> opName =
+    std::optional<RegisteredOperationName> opName =
         RegisteredOperationName::lookup(OpT::getOperationName(), ctx);
     if (LLVM_UNLIKELY(!opName)) {
       llvm::report_fatal_error(
@@ -473,8 +516,7 @@ public:
 
   /// Overload to create or fold a single result operation.
   template <typename OpTy, typename... Args>
-  typename std::enable_if<OpTy::template hasTrait<OpTrait::OneResult>(),
-                          Value>::type
+  std::enable_if_t<OpTy::template hasTrait<OpTrait::OneResult>(), Value>
   createOrFold(Location location, Args &&...args) {
     SmallVector<Value, 1> results;
     createOrFold<OpTy>(results, location, std::forward<Args>(args)...);
@@ -483,8 +525,7 @@ public:
 
   /// Overload to create or fold a zero result operation.
   template <typename OpTy, typename... Args>
-  typename std::enable_if<OpTy::template hasTrait<OpTrait::ZeroResults>(),
-                          OpTy>::type
+  std::enable_if_t<OpTy::template hasTrait<OpTrait::ZeroResults>(), OpTy>
   createOrFold(Location location, Args &&...args) {
     auto op = create<OpTy>(location, std::forward<Args>(args)...);
     SmallVector<Value, 0> unused;
@@ -505,13 +546,13 @@ public:
   /// ( leaving them alone if no entry is present).  Replaces references to
   /// cloned sub-operations to the corresponding operation that is copied,
   /// and adds those mappings to the map.
-  Operation *clone(Operation &op, BlockAndValueMapping &mapper);
+  Operation *clone(Operation &op, IRMapping &mapper);
   Operation *clone(Operation &op);
 
   /// Creates a deep copy of this operation but keep the operation regions
   /// empty. Operands are remapped using `mapper` (if present), and `mapper` is
   /// updated to contain the results.
-  Operation *cloneWithoutRegions(Operation &op, BlockAndValueMapping &mapper) {
+  Operation *cloneWithoutRegions(Operation &op, IRMapping &mapper) {
     return insert(op.cloneWithoutRegions(mapper));
   }
   Operation *cloneWithoutRegions(Operation &op) {
@@ -522,14 +563,16 @@ public:
     return cast<OpT>(cloneWithoutRegions(*op.getOperation()));
   }
 
+protected:
+  /// The optional listener for events of this builder.
+  Listener *listener;
+
 private:
   /// The current block this builder is inserting into.
   Block *block = nullptr;
   /// The insertion point within the block that this builder is inserting
   /// before.
   Block::iterator insertPoint;
-  /// The optional listener for events of this builder.
-  Listener *listener;
 };
 
 } // namespace mlir

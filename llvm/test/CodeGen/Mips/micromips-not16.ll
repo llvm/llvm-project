@@ -5,21 +5,21 @@ define i32 @main() {
 entry:
   %retval = alloca i32, align 4
   %x = alloca i64, align 8
-  store i32 0, i32* %retval
-  %0 = load i64, i64* %x, align 8
+  store i32 0, ptr %retval
+  %0 = load i64, ptr %x, align 8
   %cmp = icmp ne i64 %0, 9223372036854775807
   br i1 %cmp, label %if.then, label %if.end
 
 if.then:
-  store i32 1, i32* %retval
+  store i32 1, ptr %retval
   br label %return
 
 if.end:
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   br label %return
 
 return:
-  %1 = load i32, i32* %retval
+  %1 = load i32, ptr %retval
   ret i32 %1
 }
 

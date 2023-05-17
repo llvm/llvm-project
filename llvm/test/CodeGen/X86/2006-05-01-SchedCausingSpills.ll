@@ -4,11 +4,11 @@
 ; END.
 
 
-define i32 @foo(<4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float>* %d) {
-	%tmp44 = load <4 x float>, <4 x float>* %a		; <<4 x float>> [#uses=9]
-	%tmp46 = load <4 x float>, <4 x float>* %b		; <<4 x float>> [#uses=1]
-	%tmp48 = load <4 x float>, <4 x float>* %c		; <<4 x float>> [#uses=1]
-	%tmp50 = load <4 x float>, <4 x float>* %d		; <<4 x float>> [#uses=1]
+define i32 @foo(ptr %a, ptr %b, ptr %c, ptr %d) {
+	%tmp44 = load <4 x float>, ptr %a		; <<4 x float>> [#uses=9]
+	%tmp46 = load <4 x float>, ptr %b		; <<4 x float>> [#uses=1]
+	%tmp48 = load <4 x float>, ptr %c		; <<4 x float>> [#uses=1]
+	%tmp50 = load <4 x float>, ptr %d		; <<4 x float>> [#uses=1]
 	%tmp51 = bitcast <4 x float> %tmp44 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp = shufflevector <4 x i32> %tmp51, <4 x i32> undef, <4 x i32> < i32 3, i32 3, i32 3, i32 3 >		; <<4 x i32>> [#uses=2]
 	%tmp52 = bitcast <4 x i32> %tmp to <4 x float>		; <<4 x float>> [#uses=1]
@@ -23,7 +23,7 @@ define i32 @foo(<4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float>* 
 	%tmp.upgrd.1 = shufflevector <8 x i16> %tmp102, <8 x i16> undef, <8 x i32> < i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 4, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp105 = shufflevector <8 x i16> %tmp.upgrd.1, <8 x i16> undef, <8 x i32> < i32 2, i32 1, i32 0, i32 3, i32 4, i32 5, i32 6, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp105.upgrd.2 = bitcast <8 x i16> %tmp105 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp105.upgrd.2, <4 x float>* %a
+	store <4 x float> %tmp105.upgrd.2, ptr %a
 	%tmp108 = bitcast <4 x float> %tmp46 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp109 = shufflevector <4 x i32> %tmp108, <4 x i32> undef, <4 x i32> < i32 3, i32 3, i32 3, i32 3 >		; <<4 x i32>> [#uses=2]
 	%tmp109.upgrd.3 = bitcast <4 x i32> %tmp109 to <4 x float>		; <<4 x float>> [#uses=1]
@@ -38,7 +38,7 @@ define i32 @foo(<4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float>* 
 	%tmp164 = shufflevector <8 x i16> %tmp163, <8 x i16> undef, <8 x i32> < i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 4, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp166 = shufflevector <8 x i16> %tmp164, <8 x i16> undef, <8 x i32> < i32 2, i32 1, i32 0, i32 3, i32 4, i32 5, i32 6, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp166.upgrd.4 = bitcast <8 x i16> %tmp166 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp166.upgrd.4, <4 x float>* %b
+	store <4 x float> %tmp166.upgrd.4, ptr %b
 	%tmp169 = bitcast <4 x float> %tmp48 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp170 = shufflevector <4 x i32> %tmp169, <4 x i32> undef, <4 x i32> < i32 3, i32 3, i32 3, i32 3 >		; <<4 x i32>> [#uses=2]
 	%tmp170.upgrd.5 = bitcast <4 x i32> %tmp170 to <4 x float>		; <<4 x float>> [#uses=1]
@@ -53,7 +53,7 @@ define i32 @foo(<4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float>* 
 	%tmp225 = shufflevector <8 x i16> %tmp224, <8 x i16> undef, <8 x i32> < i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 4, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp227 = shufflevector <8 x i16> %tmp225, <8 x i16> undef, <8 x i32> < i32 2, i32 1, i32 0, i32 3, i32 4, i32 5, i32 6, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp227.upgrd.6 = bitcast <8 x i16> %tmp227 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp227.upgrd.6, <4 x float>* %c
+	store <4 x float> %tmp227.upgrd.6, ptr %c
 	%tmp230 = bitcast <4 x float> %tmp50 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp231 = shufflevector <4 x i32> %tmp230, <4 x i32> undef, <4 x i32> < i32 3, i32 3, i32 3, i32 3 >		; <<4 x i32>> [#uses=2]
 	%tmp231.upgrd.7 = bitcast <4 x i32> %tmp231 to <4 x float>		; <<4 x float>> [#uses=1]
@@ -68,7 +68,7 @@ define i32 @foo(<4 x float>* %a, <4 x float>* %b, <4 x float>* %c, <4 x float>* 
 	%tmp286 = shufflevector <8 x i16> %tmp285, <8 x i16> undef, <8 x i32> < i32 0, i32 1, i32 2, i32 3, i32 6, i32 5, i32 4, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp288 = shufflevector <8 x i16> %tmp286, <8 x i16> undef, <8 x i32> < i32 2, i32 1, i32 0, i32 3, i32 4, i32 5, i32 6, i32 7 >		; <<8 x i16>> [#uses=1]
 	%tmp288.upgrd.8 = bitcast <8 x i16> %tmp288 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp288.upgrd.8, <4 x float>* %d
+	store <4 x float> %tmp288.upgrd.8, ptr %d
 	ret i32 0
 }
 

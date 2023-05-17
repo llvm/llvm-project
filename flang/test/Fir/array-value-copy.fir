@@ -1,4 +1,4 @@
-// Test for the array-value-copy-pass
+// Test for the array-value-copy pass
 // RUN: fir-opt --split-input-file --array-value-copy %s | FileCheck %s
 
 // Test simple fir.array_load/fir.array_fetch conversion to fir.array_coor

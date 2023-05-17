@@ -405,6 +405,25 @@ LLVM_13 {
   local: *;
 };
 
+LLVM_16 {
+  global:
+    clang_getUnqualifiedType;
+    clang_getNonReferenceType;
+    clang_CXXMethod_isDeleted;
+    clang_CXXMethod_isCopyAssignmentOperator;
+    clang_CXXMethod_isMoveAssignmentOperator;
+    clang_createAPISet;
+    clang_disposeAPISet;
+    clang_getSymbolGraphForCursor;
+    clang_getSymbolGraphForUSR;
+};
+
+LLVM_17 {
+  global:
+    clang_CXXMethod_isExplicit;
+    clang_createIndexWithOptions;
+};
+
 # Example of how to add a new symbol version entry.  If you do add a new symbol
 # version, please update the example to depend on the version you added.
 # LLVM_X {

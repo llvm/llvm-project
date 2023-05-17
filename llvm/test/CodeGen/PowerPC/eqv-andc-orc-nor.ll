@@ -68,26 +68,26 @@ define i32 @NAND1(i32 %X, i32 %Y) nounwind {
 	ret i32 %W
 }
 
-define void @VNOR(<4 x float>* %P, <4 x float>* %Q) nounwind {
-	%tmp = load <4 x float>, <4 x float>* %P		; <<4 x float>> [#uses=1]
+define void @VNOR(ptr %P, ptr %Q) nounwind {
+	%tmp = load <4 x float>, ptr %P		; <<4 x float>> [#uses=1]
 	%tmp.upgrd.1 = bitcast <4 x float> %tmp to <4 x i32>		; <<4 x i32>> [#uses=1]
-	%tmp2 = load <4 x float>, <4 x float>* %Q		; <<4 x float>> [#uses=1]
+	%tmp2 = load <4 x float>, ptr %Q		; <<4 x float>> [#uses=1]
 	%tmp2.upgrd.2 = bitcast <4 x float> %tmp2 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp3 = or <4 x i32> %tmp.upgrd.1, %tmp2.upgrd.2		; <<4 x i32>> [#uses=1]
 	%tmp4 = xor <4 x i32> %tmp3, < i32 -1, i32 -1, i32 -1, i32 -1 >		; <<4 x i32>> [#uses=1]
 	%tmp4.upgrd.3 = bitcast <4 x i32> %tmp4 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp4.upgrd.3, <4 x float>* %P
+	store <4 x float> %tmp4.upgrd.3, ptr %P
 	ret void
 }
 
-define void @VANDC(<4 x float>* %P, <4 x float>* %Q) nounwind {
-	%tmp = load <4 x float>, <4 x float>* %P		; <<4 x float>> [#uses=1]
+define void @VANDC(ptr %P, ptr %Q) nounwind {
+	%tmp = load <4 x float>, ptr %P		; <<4 x float>> [#uses=1]
 	%tmp.upgrd.4 = bitcast <4 x float> %tmp to <4 x i32>		; <<4 x i32>> [#uses=1]
-	%tmp2 = load <4 x float>, <4 x float>* %Q		; <<4 x float>> [#uses=1]
+	%tmp2 = load <4 x float>, ptr %Q		; <<4 x float>> [#uses=1]
 	%tmp2.upgrd.5 = bitcast <4 x float> %tmp2 to <4 x i32>		; <<4 x i32>> [#uses=1]
 	%tmp4 = xor <4 x i32> %tmp2.upgrd.5, < i32 -1, i32 -1, i32 -1, i32 -1 >		; <<4 x i32>> [#uses=1]
 	%tmp3 = and <4 x i32> %tmp.upgrd.4, %tmp4		; <<4 x i32>> [#uses=1]
 	%tmp4.upgrd.6 = bitcast <4 x i32> %tmp3 to <4 x float>		; <<4 x float>> [#uses=1]
-	store <4 x float> %tmp4.upgrd.6, <4 x float>* %P
+	store <4 x float> %tmp4.upgrd.6, ptr %P
 	ret void
 }

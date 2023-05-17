@@ -1,4 +1,4 @@
-; RUN: opt %s -simplifycfg -verify -S -o - | FileCheck %s
+; RUN: opt %s -passes=simplifycfg,verify -S -o - | FileCheck %s
 ;
 ; Verify that SimplifyCFG does not invalidate operands for
 ; llvm.dbg.value intrinsics.
@@ -21,7 +21,7 @@
 ; CHECK-NOT: llvm.dbg.value(metadata !
 ; CHECK: ret void
 
-%class.anon = type { i8*, i8*, i8* }
+%class.anon = type { ptr, ptr, ptr }
 
 ; Function Attrs: nounwind uwtable
 define dso_local void @_Z4testv() local_unnamed_addr !dbg !7 {
@@ -30,38 +30,36 @@ entry:
   %b = alloca i8, align 1
   %c = alloca i8, align 1
   %ref.tmp = alloca %class.anon, align 8
-  call void @llvm.dbg.value(metadata i8* %a, metadata !12, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  call void @llvm.dbg.value(metadata ptr %a, metadata !12, metadata !DIExpression(DW_OP_deref)), !dbg !16
   call void @llvm.dbg.value(metadata i8 0, metadata !12, metadata !DIExpression()), !dbg !16
-  store i8 0, i8* %a, align 1, !dbg !16
-  call void @llvm.dbg.value(metadata i8* %b, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  store i8 0, ptr %a, align 1, !dbg !16
+  call void @llvm.dbg.value(metadata ptr %b, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !16
   call void @llvm.dbg.value(metadata i8 0, metadata !14, metadata !DIExpression()), !dbg !16
-  store i8 0, i8* %b, align 1, !dbg !16
-  call void @llvm.dbg.value(metadata i8* %c, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  store i8 0, ptr %b, align 1, !dbg !16
+  call void @llvm.dbg.value(metadata ptr %c, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
   call void @llvm.dbg.value(metadata i8 0, metadata !15, metadata !DIExpression()), !dbg !16
-  store i8 0, i8* %c, align 1, !dbg !16
-  %0 = bitcast %class.anon* %ref.tmp to i8*, !dbg !16
-  %1 = getelementptr inbounds %class.anon, %class.anon* %ref.tmp, i64 0, i32 0, !dbg !16
-  store i8* %a, i8** %1, align 8, !dbg !16
-  %2 = getelementptr inbounds %class.anon, %class.anon* %ref.tmp, i64 0, i32 1, !dbg !16
-  store i8* %b, i8** %2, align 8, !dbg !16
-  %3 = getelementptr inbounds %class.anon, %class.anon* %ref.tmp, i64 0, i32 2, !dbg !16
-  store i8* %c, i8** %3, align 8, !dbg !16
-  call fastcc void @"_ZZ4testvENK3$_0clEv"(%class.anon* nonnull %ref.tmp), !dbg !16
-  %4 = load i8, i8* %a, align 1, !dbg !17
-  call void @llvm.dbg.value(metadata i8 %4, metadata !12, metadata !DIExpression()), !dbg !16
-  %tobool = icmp eq i8 %4, 0, !dbg !17
+  store i8 0, ptr %c, align 1, !dbg !16
+  store ptr %a, ptr %ref.tmp, align 8, !dbg !16
+  %0 = getelementptr inbounds %class.anon, ptr %ref.tmp, i64 0, i32 1, !dbg !16
+  store ptr %b, ptr %0, align 8, !dbg !16
+  %1 = getelementptr inbounds %class.anon, ptr %ref.tmp, i64 0, i32 2, !dbg !16
+  store ptr %c, ptr %1, align 8, !dbg !16
+  call fastcc void @"_ZZ4testvENK3$_0clEv"(ptr nonnull %ref.tmp), !dbg !16
+  %2 = load i8, ptr %a, align 1, !dbg !17
+  call void @llvm.dbg.value(metadata i8 %2, metadata !12, metadata !DIExpression()), !dbg !16
+  %tobool = icmp eq i8 %2, 0, !dbg !17
   br i1 %tobool, label %lor.lhs.false, label %if.then, !dbg !17
 
 lor.lhs.false:                                    ; preds = %entry
-  %5 = load i8, i8* %b, align 1, !dbg !17
-  call void @llvm.dbg.value(metadata i8 %5, metadata !14, metadata !DIExpression()), !dbg !16
-  %tobool1 = icmp eq i8 %5, 0, !dbg !17
+  %3 = load i8, ptr %b, align 1, !dbg !17
+  call void @llvm.dbg.value(metadata i8 %3, metadata !14, metadata !DIExpression()), !dbg !16
+  %tobool1 = icmp eq i8 %3, 0, !dbg !17
   br i1 %tobool1, label %lor.lhs.false2, label %if.then, !dbg !17
 
 lor.lhs.false2:                                   ; preds = %lor.lhs.false
-  %6 = load i8, i8* %c, align 1, !dbg !17
-  call void @llvm.dbg.value(metadata i8 %6, metadata !15, metadata !DIExpression()), !dbg !16
-  %tobool3 = icmp eq i8 %6, 0, !dbg !17
+  %4 = load i8, ptr %c, align 1, !dbg !17
+  call void @llvm.dbg.value(metadata i8 %4, metadata !15, metadata !DIExpression()), !dbg !16
+  %tobool3 = icmp eq i8 %4, 0, !dbg !17
   br i1 %tobool3, label %if.end, label %if.then, !dbg !16
 
 if.then:                                          ; preds = %lor.lhs.false2, %lor.lhs.false, %entry
@@ -69,19 +67,19 @@ if.then:                                          ; preds = %lor.lhs.false2, %lo
   br label %if.end, !dbg !19
 
 if.end:                                           ; preds = %lor.lhs.false2, %if.then
-  call void @llvm.dbg.value(metadata i8* %c, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
-  call void @llvm.dbg.value(metadata i8* %b, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !16
-  call void @llvm.dbg.value(metadata i8* %a, metadata !12, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  call void @llvm.dbg.value(metadata ptr %c, metadata !15, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  call void @llvm.dbg.value(metadata ptr %b, metadata !14, metadata !DIExpression(DW_OP_deref)), !dbg !16
+  call void @llvm.dbg.value(metadata ptr %a, metadata !12, metadata !DIExpression(DW_OP_deref)), !dbg !16
   ret void, !dbg !16
 }
 
 ; Function Attrs: inlinehint nounwind uwtable
-define internal fastcc void @"_ZZ4testvENK3$_0clEv"(%class.anon* %this) unnamed_addr align 2 !dbg !21 {
+define internal fastcc void @"_ZZ4testvENK3$_0clEv"(ptr %this) unnamed_addr align 2 !dbg !21 {
 entry:
-  call void @llvm.dbg.value(metadata %class.anon* %this, metadata !34, metadata !DIExpression()), !dbg !36
-  %0 = getelementptr inbounds %class.anon, %class.anon* %this, i32 0, i32 1, !dbg !36
-  %1 = load i8*, i8** %0, align 8, !dbg !36
-  store i8 1, i8* %1, align 1, !dbg !36
+  call void @llvm.dbg.value(metadata ptr %this, metadata !34, metadata !DIExpression()), !dbg !36
+  %0 = getelementptr inbounds %class.anon, ptr %this, i32 0, i32 1, !dbg !36
+  %1 = load ptr, ptr %0, align 8, !dbg !36
+  store i8 1, ptr %1, align 1, !dbg !36
   ret void, !dbg !36
 }
 

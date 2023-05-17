@@ -13,11 +13,11 @@
 #include "clang/Basic/Diagnostic.h"
 #include "llvm/ADT/StringSet.h"
 #include <memory>
+#include <optional>
 
 namespace clang {
 class Preprocessor;
-namespace tidy {
-namespace utils {
+namespace tidy::utils {
 
 /// Produces fixes to insert specified includes to source files, if not
 /// yet present.
@@ -69,17 +69,17 @@ public:
   /// Creates a \p Header inclusion directive fixit in the File \p FileID.
   /// When \p Header is enclosed in angle brackets, uses angle brackets in the
   /// inclusion directive, otherwise uses quotes.
-  /// Returns ``llvm::None`` on error or if the inclusion directive already
+  /// Returns ``std::nullopt`` on error or if the inclusion directive already
   /// exists.
-  llvm::Optional<FixItHint> createIncludeInsertion(FileID FileID,
-                                                   llvm::StringRef Header);
+  std::optional<FixItHint> createIncludeInsertion(FileID FileID,
+                                                  llvm::StringRef Header);
 
   /// Creates a \p Header inclusion directive fixit in the main file.
   /// When \p Header is enclosed in angle brackets, uses angle brackets in the
   /// inclusion directive, otherwise uses quotes.
-  /// Returns ``llvm::None`` on error or if the inclusion directive already
+  /// Returns ``std::nullopt`` on error or if the inclusion directive already
   /// exists.
-  llvm::Optional<FixItHint>
+  std::optional<FixItHint>
   createMainFileIncludeInsertion(llvm::StringRef Header);
 
   IncludeSorter::IncludeStyle getStyle() const { return Style; }
@@ -98,7 +98,6 @@ private:
   friend class IncludeInserterCallback;
 };
 
-} // namespace utils
-} // namespace tidy
+} // namespace tidy::utils
 } // namespace clang
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_INCLUDEINSERTER_H

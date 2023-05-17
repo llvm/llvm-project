@@ -29,12 +29,12 @@
 ; GCN: v_div_fixup_f64 [[RESULT:v\[[0-9]+:[0-9]+\]]], [[FMAS]], [[DEN]], [[NUM]]
 ; GCN: buffer_store_dwordx2 [[RESULT]]
 ; GCN: s_endpgm
-define amdgpu_kernel void @fdiv_f64(double addrspace(1)* %out, double addrspace(1)* %in) #0 {
-  %gep.1 = getelementptr double, double addrspace(1)* %in, i32 1
-  %num = load volatile double, double addrspace(1)* %in
-  %den = load volatile double, double addrspace(1)* %gep.1
+define amdgpu_kernel void @fdiv_f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+  %gep.1 = getelementptr double, ptr addrspace(1) %in, i32 1
+  %num = load volatile double, ptr addrspace(1) %in
+  %den = load volatile double, ptr addrspace(1) %gep.1
   %result = fdiv double %num, %den
-  store double %result, double addrspace(1)* %out
+  store double %result, ptr addrspace(1) %out
   ret void
 }
 
@@ -68,69 +68,69 @@ define double @v_rcp_f64_afn(double %x) #0 {
 }
 
 ; GCN-LABEL: {{^}}fdiv_f64_s_v:
-define amdgpu_kernel void @fdiv_f64_s_v(double addrspace(1)* %out, double addrspace(1)* %in, double %num) #0 {
-  %den = load double, double addrspace(1)* %in
+define amdgpu_kernel void @fdiv_f64_s_v(ptr addrspace(1) %out, ptr addrspace(1) %in, double %num) #0 {
+  %den = load double, ptr addrspace(1) %in
   %result = fdiv double %num, %den
-  store double %result, double addrspace(1)* %out
+  store double %result, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}fdiv_f64_v_s:
-define amdgpu_kernel void @fdiv_f64_v_s(double addrspace(1)* %out, double addrspace(1)* %in, double %den) #0 {
-  %num = load double, double addrspace(1)* %in
+define amdgpu_kernel void @fdiv_f64_v_s(ptr addrspace(1) %out, ptr addrspace(1) %in, double %den) #0 {
+  %num = load double, ptr addrspace(1) %in
   %result = fdiv double %num, %den
-  store double %result, double addrspace(1)* %out
+  store double %result, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}fdiv_f64_s_s:
-define amdgpu_kernel void @fdiv_f64_s_s(double addrspace(1)* %out, double %num, double %den) #0 {
+define amdgpu_kernel void @fdiv_f64_s_s(ptr addrspace(1) %out, double %num, double %den) #0 {
   %result = fdiv double %num, %den
-  store double %result, double addrspace(1)* %out
+  store double %result, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_fdiv_v2f64:
-define amdgpu_kernel void @v_fdiv_v2f64(<2 x double> addrspace(1)* %out, <2 x double> addrspace(1)* %in) #0 {
-  %gep.1 = getelementptr <2 x double>, <2 x double> addrspace(1)* %in, i32 1
-  %num = load <2 x double>, <2 x double> addrspace(1)* %in
-  %den = load <2 x double>, <2 x double> addrspace(1)* %gep.1
+define amdgpu_kernel void @v_fdiv_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+  %gep.1 = getelementptr <2 x double>, ptr addrspace(1) %in, i32 1
+  %num = load <2 x double>, ptr addrspace(1) %in
+  %den = load <2 x double>, ptr addrspace(1) %gep.1
   %result = fdiv <2 x double> %num, %den
-  store <2 x double> %result, <2 x double> addrspace(1)* %out
+  store <2 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}s_fdiv_v2f64:
-define amdgpu_kernel void @s_fdiv_v2f64(<2 x double> addrspace(1)* %out, <2 x double> %num, <2 x double> %den) {
+define amdgpu_kernel void @s_fdiv_v2f64(ptr addrspace(1) %out, <2 x double> %num, <2 x double> %den) {
   %result = fdiv <2 x double> %num, %den
-  store <2 x double> %result, <2 x double> addrspace(1)* %out
+  store <2 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}v_fdiv_v4f64:
-define amdgpu_kernel void @v_fdiv_v4f64(<4 x double> addrspace(1)* %out, <4 x double> addrspace(1)* %in) #0 {
-  %gep.1 = getelementptr <4 x double>, <4 x double> addrspace(1)* %in, i32 1
-  %num = load <4 x double>, <4 x double> addrspace(1)* %in
-  %den = load <4 x double>, <4 x double> addrspace(1)* %gep.1
+define amdgpu_kernel void @v_fdiv_v4f64(ptr addrspace(1) %out, ptr addrspace(1) %in) #0 {
+  %gep.1 = getelementptr <4 x double>, ptr addrspace(1) %in, i32 1
+  %num = load <4 x double>, ptr addrspace(1) %in
+  %den = load <4 x double>, ptr addrspace(1) %gep.1
   %result = fdiv <4 x double> %num, %den
-  store <4 x double> %result, <4 x double> addrspace(1)* %out
+  store <4 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}s_fdiv_v4f64:
-define amdgpu_kernel void @s_fdiv_v4f64(<4 x double> addrspace(1)* %out, <4 x double> %num, <4 x double> %den) #0 {
+define amdgpu_kernel void @s_fdiv_v4f64(ptr addrspace(1) %out, <4 x double> %num, <4 x double> %den) #0 {
   %result = fdiv <4 x double> %num, %den
-  store <4 x double> %result, <4 x double> addrspace(1)* %out
+  store <4 x double> %result, ptr addrspace(1) %out
   ret void
 }
 
 ; GCN-LABEL: {{^}}div_fast_2_x_pat_f64:
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, 0.5
 ; GCN: buffer_store_dwordx2 [[MUL]]
-define amdgpu_kernel void @div_fast_2_x_pat_f64(double addrspace(1)* %out) #1 {
-  %x = load double, double addrspace(1)* undef
+define amdgpu_kernel void @div_fast_2_x_pat_f64(ptr addrspace(1) %out) #1 {
+  %x = load double, ptr addrspace(1) undef
   %rcp = fdiv fast double %x, 2.0
-  store double %rcp, double addrspace(1)* %out, align 4
+  store double %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -139,10 +139,10 @@ define amdgpu_kernel void @div_fast_2_x_pat_f64(double addrspace(1)* %out) #1 {
 ; GCN-DAG: v_mov_b32_e32 v[[K_HI:[0-9]+]], 0x3fb99999
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v[[[K_LO]]:[[K_HI]]]
 ; GCN: buffer_store_dwordx2 [[MUL]]
-define amdgpu_kernel void @div_fast_k_x_pat_f64(double addrspace(1)* %out) #1 {
-  %x = load double, double addrspace(1)* undef
+define amdgpu_kernel void @div_fast_k_x_pat_f64(ptr addrspace(1) %out) #1 {
+  %x = load double, ptr addrspace(1) undef
   %rcp = fdiv fast double %x, 10.0
-  store double %rcp, double addrspace(1)* %out, align 4
+  store double %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
 
@@ -151,10 +151,10 @@ define amdgpu_kernel void @div_fast_k_x_pat_f64(double addrspace(1)* %out) #1 {
 ; GCN-DAG: v_mov_b32_e32 v[[K_HI:[0-9]+]], 0xbfb99999
 ; GCN: v_mul_f64 [[MUL:v\[[0-9]+:[0-9]+\]]], s{{\[[0-9]+:[0-9]+\]}}, v[[[K_LO]]:[[K_HI]]]
 ; GCN: buffer_store_dwordx2 [[MUL]]
-define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(double addrspace(1)* %out) #1 {
-  %x = load double, double addrspace(1)* undef
+define amdgpu_kernel void @div_fast_neg_k_x_pat_f64(ptr addrspace(1) %out) #1 {
+  %x = load double, ptr addrspace(1) undef
   %rcp = fdiv fast double %x, -10.0
-  store double %rcp, double addrspace(1)* %out, align 4
+  store double %rcp, ptr addrspace(1) %out, align 4
   ret void
 }
 

@@ -23,10 +23,11 @@
 
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/FMF.h"
+#include "llvm/IR/IRBuilderFolder.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
-#include "llvm/IR/IRBuilderFolder.h"
 
 namespace llvm {
 
@@ -43,14 +44,31 @@ public:
   // Return an existing value or a constant if the operation can be simplified.
   // Otherwise return nullptr.
   //===--------------------------------------------------------------------===//
-  Value *FoldAdd(Value *LHS, Value *RHS, bool HasNUW = false,
-                 bool HasNSW = false) const override {
+
+  Value *FoldBinOp(Instruction::BinaryOps Opc, Value *LHS,
+                   Value *RHS) const override {
     return nullptr;
   }
 
-  Value *FoldAnd(Value *LHS, Value *RHS) const override { return nullptr; }
+  Value *FoldExactBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                        bool IsExact) const override {
+    return nullptr;
+  }
 
-  Value *FoldOr(Value *LHS, Value *RHS) const override { return nullptr; }
+  Value *FoldNoWrapBinOp(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                         bool HasNUW, bool HasNSW) const override {
+    return nullptr;
+  }
+
+  Value *FoldBinOpFMF(Instruction::BinaryOps Opc, Value *LHS, Value *RHS,
+                      FastMathFlags FMF) const override {
+    return nullptr;
+  }
+
+  Value *FoldUnOpFMF(Instruction::UnaryOps Opc, Value *V,
+                     FastMathFlags FMF) const override {
+    return nullptr;
+  }
 
   Value *FoldICmp(CmpInst::Predicate P, Value *LHS, Value *RHS) const override {
     return nullptr;
@@ -75,125 +93,18 @@ public:
     return nullptr;
   }
 
-  //===--------------------------------------------------------------------===//
-  // Binary Operators
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateFAdd(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFAdd(LHS, RHS);
+  Value *FoldExtractElement(Value *Vec, Value *Idx) const override {
+    return nullptr;
   }
 
-  Instruction *CreateSub(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateSub(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
+  Value *FoldInsertElement(Value *Vec, Value *NewElt,
+                           Value *Idx) const override {
+    return nullptr;
   }
 
-  Instruction *CreateFSub(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFSub(LHS, RHS);
-  }
-
-  Instruction *CreateMul(Constant *LHS, Constant *RHS,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateMul(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
-
-  Instruction *CreateFMul(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFMul(LHS, RHS);
-  }
-
-  Instruction *CreateUDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateUDiv(LHS, RHS);
-    return BinaryOperator::CreateExactUDiv(LHS, RHS);
-  }
-
-  Instruction *CreateSDiv(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateSDiv(LHS, RHS);
-    return BinaryOperator::CreateExactSDiv(LHS, RHS);
-  }
-
-  Instruction *CreateFDiv(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFDiv(LHS, RHS);
-  }
-
-  Instruction *CreateURem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateURem(LHS, RHS);
-  }
-
-  Instruction *CreateSRem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateSRem(LHS, RHS);
-  }
-
-  Instruction *CreateFRem(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateFRem(LHS, RHS);
-  }
-
-  Instruction *CreateShl(Constant *LHS, Constant *RHS, bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateShl(LHS, RHS);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
-
-  Instruction *CreateLShr(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateLShr(LHS, RHS);
-    return BinaryOperator::CreateExactLShr(LHS, RHS);
-  }
-
-  Instruction *CreateAShr(Constant *LHS, Constant *RHS,
-                          bool isExact = false) const override {
-    if (!isExact)
-      return BinaryOperator::CreateAShr(LHS, RHS);
-    return BinaryOperator::CreateExactAShr(LHS, RHS);
-  }
-
-  Instruction *CreateXor(Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::CreateXor(LHS, RHS);
-  }
-
-  Instruction *CreateBinOp(Instruction::BinaryOps Opc,
-                           Constant *LHS, Constant *RHS) const override {
-    return BinaryOperator::Create(Opc, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Unary Operators
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateNeg(Constant *C,
-                         bool HasNUW = false,
-                         bool HasNSW = false) const override {
-    BinaryOperator *BO = BinaryOperator::CreateNeg(C);
-    if (HasNUW) BO->setHasNoUnsignedWrap();
-    if (HasNSW) BO->setHasNoSignedWrap();
-    return BO;
-  }
-
-  Instruction *CreateFNeg(Constant *C) const override {
-    return UnaryOperator::CreateFNeg(C);
-  }
-
-  Instruction *CreateNot(Constant *C) const override {
-    return BinaryOperator::CreateNot(C);
-  }
-
-  Instruction *CreateUnOp(Instruction::UnaryOps Opc,
-                          Constant *C) const override {
-    return UnaryOperator::Create(Opc, C);
+  Value *FoldShuffleVector(Value *V1, Value *V2,
+                           ArrayRef<int> Mask) const override {
+    return nullptr;
   }
 
   //===--------------------------------------------------------------------===//
@@ -254,25 +165,6 @@ public:
   Instruction *CreateFCmp(CmpInst::Predicate P,
                           Constant *LHS, Constant *RHS) const override {
     return new FCmpInst(P, LHS, RHS);
-  }
-
-  //===--------------------------------------------------------------------===//
-  // Other Instructions
-  //===--------------------------------------------------------------------===//
-
-  Instruction *CreateExtractElement(Constant *Vec,
-                                    Constant *Idx) const override {
-    return ExtractElementInst::Create(Vec, Idx);
-  }
-
-  Instruction *CreateInsertElement(Constant *Vec, Constant *NewElt,
-                                   Constant *Idx) const override {
-    return InsertElementInst::Create(Vec, NewElt, Idx);
-  }
-
-  Instruction *CreateShuffleVector(Constant *V1, Constant *V2,
-                                   ArrayRef<int> Mask) const override {
-    return new ShuffleVectorInst(V1, V2, Mask);
   }
 };
 

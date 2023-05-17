@@ -13,13 +13,18 @@
 //    vector(InputIterator, InputIterator, Allocator = Allocator())
 //    -> vector<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
+// template<ranges::input_range R, class Allocator = allocator<ranges::range_value_t<R>>>
+//   vector(from_range_t, R&&, Allocator = Allocator())
+//     -> vector<ranges::range_value_t<R>, Allocator>; // C++23
 
-#include <vector>
+#include <algorithm>
+#include <array>
 #include <cassert>
-#include <cstddef>
 #include <climits> // INT_MAX
+#include <cstddef>
 #include <iterator>
 #include <type_traits>
+#include <vector>
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
@@ -28,8 +33,7 @@
 
 struct A {};
 
-int main(int, char**)
-{
+TEST_CONSTEXPR_CXX20 bool tests() {
 
 //  Test the explicit deduction guides
     {
@@ -94,6 +98,20 @@ int main(int, char**)
     assert(vec.size() == 0);
     }
 
+#if TEST_STD_VER >= 23
+    {
+      {
+        std::vector c(std::from_range, std::array<int, 0>());
+        static_assert(std::is_same_v<decltype(c), std::vector<int>>);
+      }
+
+      {
+        using Alloc = test_allocator<int>;
+        std::vector c(std::from_range, std::array<int, 0>(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::vector<int, Alloc>>);
+      }
+    }
+#endif
 
 //  A couple of vector<bool> tests, too!
     {
@@ -143,5 +161,13 @@ int main(int, char**)
 
     SequenceContainerDeductionGuidesSfinaeAway<std::vector, std::vector<int>>();
 
+    return true;
+}
+
+int main(int, char**) {
+    tests();
+#if TEST_STD_VER > 17
+    static_assert(tests());
+#endif
     return 0;
 }

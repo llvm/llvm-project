@@ -22,7 +22,7 @@ target triple = "i686-pc-windows-msvc18.0.0"
 define void @test1() !dbg !5 {
 entry:
   %foo = alloca i16, align 2
-  call void @llvm.dbg.declare(metadata i16* %foo, metadata !8, metadata !11), !dbg !12
+  call void @llvm.dbg.declare(metadata ptr %foo, metadata !8, metadata !11), !dbg !12
   ret void, !dbg !12
 }
 

@@ -55,6 +55,8 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx90a < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX90A %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx90c < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX90C %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx940 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX940 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx941 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX941 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx942 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX942 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1010 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1010 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1011 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1011 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1012 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1012 %s
@@ -66,6 +68,10 @@
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1034 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1034 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1035 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1035 %s
 ; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1036 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1036 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1100 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1100 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1101 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1101 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1102 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1102 %s
+; RUN: llc -filetype=obj -march=amdgcn -mcpu=gfx1103 < %s | llvm-readobj --file-header - | FileCheck --check-prefixes=ALL,ARCH-GCN,GFX1103 %s
 
 ; FIXME: With the default attributes the eflags are not accurate for
 ; xnack and sramecc. Subsequent Target-ID patches will address this.
@@ -118,6 +124,8 @@
 ; GFX90A:        EF_AMDGPU_MACH_AMDGCN_GFX90A (0x3F)
 ; GFX90C:        EF_AMDGPU_MACH_AMDGCN_GFX90C (0x32)
 ; GFX940:        EF_AMDGPU_MACH_AMDGCN_GFX940 (0x40)
+; GFX941:        EF_AMDGPU_MACH_AMDGCN_GFX941 (0x4B)
+; GFX942:        EF_AMDGPU_MACH_AMDGCN_GFX942 (0x4C)
 ; GFX1010:       EF_AMDGPU_MACH_AMDGCN_GFX1010 (0x33)
 ; GFX1011:       EF_AMDGPU_MACH_AMDGCN_GFX1011 (0x34)
 ; GFX1012:       EF_AMDGPU_MACH_AMDGCN_GFX1012 (0x35)
@@ -129,6 +137,10 @@
 ; GFX1034:       EF_AMDGPU_MACH_AMDGCN_GFX1034 (0x3E)
 ; GFX1035:       EF_AMDGPU_MACH_AMDGCN_GFX1035 (0x3D)
 ; GFX1036:       EF_AMDGPU_MACH_AMDGCN_GFX1036 (0x45)
+; GFX1100:       EF_AMDGPU_MACH_AMDGCN_GFX1100 (0x41)
+; GFX1101:       EF_AMDGPU_MACH_AMDGCN_GFX1101 (0x46)
+; GFX1102:       EF_AMDGPU_MACH_AMDGCN_GFX1102 (0x47)
+; GFX1103:       EF_AMDGPU_MACH_AMDGCN_GFX1103 (0x44)
 ; ALL:         ]
 
 define amdgpu_kernel void @elf_header() {

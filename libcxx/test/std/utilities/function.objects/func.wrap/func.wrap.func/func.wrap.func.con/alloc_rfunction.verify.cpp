@@ -18,9 +18,7 @@
 
 #include <functional>
 #include <memory>
-#include <cassert>
-
-#include "test_macros.h"
+#include <utility>
 
 class A
 {
@@ -51,9 +49,7 @@ int A::count = 0;
 
 int g(int) { return 0; }
 
-int main(int, char**)
-{
+void f() {
     std::function<int(int)> f = A();
     std::function<int(int)> f2(std::allocator_arg, std::allocator<A>(), std::move(f)); // expected-error {{no matching constructor for initialization of}}
-    return 0;
 }

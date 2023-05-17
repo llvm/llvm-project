@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=i686-- | FileCheck %s
 ; PR964
 
-define i8* @FindChar(i8* %CurPtr) {
+define ptr @FindChar(ptr %CurPtr) {
 ; CHECK-LABEL: FindChar:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pushl %edi
@@ -45,10 +45,10 @@ bb:             ; preds = %bb, %entry
         %indvar = phi i32 [ 0, %entry ], [ %indvar.next, %bb ]          ; <i32> [#uses=3]
         %CurPtr_addr.0.rec = bitcast i32 %indvar to i32         ; <i32> [#uses=1]
         %gep.upgrd.1 = zext i32 %indvar to i64          ; <i64> [#uses=1]
-        %CurPtr_addr.0 = getelementptr i8, i8* %CurPtr, i64 %gep.upgrd.1            ; <i8*> [#uses=1]
-        %tmp = load i8, i8* %CurPtr_addr.0          ; <i8> [#uses=3]
+        %CurPtr_addr.0 = getelementptr i8, ptr %CurPtr, i64 %gep.upgrd.1            ; <ptr> [#uses=1]
+        %tmp = load i8, ptr %CurPtr_addr.0          ; <i8> [#uses=3]
         %tmp2.rec = add i32 %CurPtr_addr.0.rec, 1               ; <i32> [#uses=1]
-        %tmp2 = getelementptr i8, i8* %CurPtr, i32 %tmp2.rec                ; <i8*> [#uses=1]
+        %tmp2 = getelementptr i8, ptr %CurPtr, i32 %tmp2.rec                ; <ptr> [#uses=1]
         %indvar.next = add i32 %indvar, 1               ; <i32> [#uses=1]
         switch i8 %tmp, label %bb [
                  i8 0, label %bb7
@@ -57,7 +57,7 @@ bb:             ; preds = %bb, %entry
 
 bb7:            ; preds = %bb, %bb
         tail call void @foo( i8 %tmp )
-        ret i8* %tmp2
+        ret ptr %tmp2
 }
 
 declare void @foo(i8)

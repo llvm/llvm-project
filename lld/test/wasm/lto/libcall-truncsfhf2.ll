@@ -11,9 +11,9 @@ target triple = "wasm32-unknown-unknown"
 @g_half = global half 0.0
 
 define void @_start() {
-  %val1 = load float, float* @g_float
+  %val1 = load float, ptr @g_float
   %v0 = fptrunc float %val1 to half
-  store half %v0, half* @g_half
+  store half %v0, ptr @g_half
   ret void
 }
 

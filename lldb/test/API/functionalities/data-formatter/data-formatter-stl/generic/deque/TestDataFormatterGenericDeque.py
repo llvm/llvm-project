@@ -8,8 +8,6 @@ USE_LIBCPP = "USE_LIBCPP"
 
 class GenericDequeDataFormatterTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def findVariable(self, name):
         var = self.frame().FindVariable(name)
         self.assertTrue(var.IsValid())

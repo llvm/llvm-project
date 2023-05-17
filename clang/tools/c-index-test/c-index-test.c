@@ -1,15 +1,18 @@
 /* c-index-test.c */
 
-#include "clang/Config/config.h"
-#include "clang-c/Index.h"
-#include "clang-c/CXCompilationDatabase.h"
 #include "clang-c/BuildSystem.h"
+#include "clang-c/CXCompilationDatabase.h"
+#include "clang-c/CXErrorCode.h"
+#include "clang-c/CXSourceLocation.h"
+#include "clang-c/CXString.h"
 #include "clang-c/Documentation.h"
-#include <ctype.h>
-#include <stdlib.h>
-#include <stdio.h>
-#include <string.h>
+#include "clang-c/Index.h"
+#include "clang/Config/config.h"
 #include <assert.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
 
 #ifdef CLANG_HAVE_LIBXML
 #include <libxml/parser.h>
@@ -64,6 +67,27 @@ char *dirname(char* path)
 extern char *basename(const char *);
 extern char *dirname(char *);
 #endif
+
+CXIndex createIndexWithInvocationEmissionPath(int ExcludeDeclarationsFromPCH,
+                                              int DisplayDiagnostics) {
+    CXIndex Idx;
+
+    CXIndexOptions Opts;
+    memset(&Opts, 0, sizeof(Opts));
+    Opts.Size = sizeof(CXIndexOptions);
+    Opts.ExcludeDeclarationsFromPCH = ExcludeDeclarationsFromPCH;
+    Opts.DisplayDiagnostics = DisplayDiagnostics;
+    Opts.InvocationEmissionPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
+
+    Idx = clang_createIndexWithOptions(&Opts);
+    if (!Idx) {
+        fprintf(stderr,
+                "clang_createIndexWithOptions() failed. "
+                "CINDEX_VERSION_MINOR = %d, sizeof(CXIndexOptions) = %u\n",
+                CINDEX_VERSION_MINOR, Opts.Size);
+    }
+    return Idx;
+}
 
 /** Return the default parsing options. */
 static unsigned getDefaultParsingOptions(void) {
@@ -900,6 +924,8 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (mutable)");
     if (clang_CXXMethod_isDefaulted(Cursor))
       printf(" (defaulted)");
+    if (clang_CXXMethod_isDeleted(Cursor))
+      printf(" (deleted)");
     if (clang_CXXMethod_isStatic(Cursor))
       printf(" (static)");
     if (clang_CXXMethod_isVirtual(Cursor))
@@ -908,6 +934,12 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
       printf(" (const)");
     if (clang_CXXMethod_isPureVirtual(Cursor))
       printf(" (pure)");
+    if (clang_CXXMethod_isCopyAssignmentOperator(Cursor))
+      printf(" (copy-assignment operator)");
+    if (clang_CXXMethod_isMoveAssignmentOperator(Cursor))
+      printf(" (move-assignment operator)");
+    if (clang_CXXMethod_isExplicit(Cursor))
+      printf(" (explicit)");
     if (clang_CXXRecord_isAbstract(Cursor))
       printf(" (abstract)");
     if (clang_EnumDecl_isScoped(Cursor))
@@ -1000,7 +1032,10 @@ static void PrintCursor(CXCursor Cursor, const char *CommentSchemaFile) {
              clang_getCString(Name), line, column);
       clang_disposeString(Name);
 
-      if (Cursor.kind == CXCursor_FunctionDecl) {
+      if (Cursor.kind == CXCursor_FunctionDecl
+          || Cursor.kind == CXCursor_StructDecl
+          || Cursor.kind == CXCursor_ClassDecl
+          || Cursor.kind == CXCursor_ClassTemplatePartialSpecialization) {
         /* Collect the template parameter kinds from the base template. */
         int NumTemplateArgs = clang_Cursor_getNumTemplateArguments(Cursor);
         int I;
@@ -1831,6 +1866,18 @@ static enum CXChildVisitResult PrintManglings(CXCursor cursor, CXCursor p,
   return CXChildVisit_Recurse;
 }
 
+static enum CXChildVisitResult
+PrintSingleSymbolSGFs(CXCursor cursor, CXCursor parent, CXClientData data) {
+  CXString SGFData = clang_getSymbolGraphForCursor(cursor);
+  const char *SGF = clang_getCString(SGFData);
+  if (SGF)
+    printf("%s\n", SGF);
+
+  clang_disposeString(SGFData);
+
+  return CXChildVisit_Recurse;
+}
+
 /******************************************************************************/
 /* Bitwidth testing.                                                          */
 /******************************************************************************/
@@ -2021,18 +2068,17 @@ int perform_test_load_source(int argc, const char **argv,
   int result;
   unsigned Repeats = 0;
   unsigned I;
-  const char *InvocationPath;
 
-  Idx = clang_createIndex(/* excludeDeclsFromPCH */
-                          (!strcmp(filter, "local") ||
-                           !strcmp(filter, "local-display") ||
-                           !strcmp(filter, "local-pretty"))
-                              ? 1
-                              : 0,
-                          /* displayDiagnostics=*/1);
-  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
-  if (InvocationPath)
-    clang_CXIndex_setInvocationEmissionPathOption(Idx, InvocationPath);
+  Idx =
+      createIndexWithInvocationEmissionPath(/* excludeDeclsFromPCH */
+                                            (!strcmp(filter, "local") ||
+                                             !strcmp(filter, "local-display") ||
+                                             !strcmp(filter, "local-pretty"))
+                                                ? 1
+                                                : 0,
+                                            /* displayDiagnostics=*/1);
+  if (!Idx)
+    return -1;
 
   if ((CommentSchemaFile = parse_comments_schema(argc, argv))) {
     argc--;
@@ -2676,7 +2722,6 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
   CXTranslationUnit TU;
   unsigned I, Repeats = 1;
   unsigned completionOptions = clang_defaultCodeCompleteOptions();
-  const char *InvocationPath;
 
   if (getenv("CINDEXTEST_CODE_COMPLETE_PATTERNS"))
     completionOptions |= CXCodeComplete_IncludeCodePatterns;
@@ -2699,10 +2744,9 @@ int perform_code_completion(int argc, const char **argv, int timing_only) {
   if (parse_remapped_files(argc, argv, 2, &unsaved_files, &num_unsaved_files))
     return -1;
 
-  CIdx = clang_createIndex(0, 0);
-  InvocationPath = getenv("CINDEXTEST_INVOCATION_EMISSION_PATH");
-  if (InvocationPath)
-    clang_CXIndex_setInvocationEmissionPathOption(CIdx, InvocationPath);
+  CIdx = createIndexWithInvocationEmissionPath(0, 0);
+  if (!CIdx)
+    return -1;
 
   if (getenv("CINDEXTEST_EDITING"))
     Repeats = 5;
@@ -4782,6 +4826,78 @@ static int perform_print_build_session_timestamp(void) {
   return 0;
 }
 
+static int perform_test_single_symbol_sgf(const char *input, int argc,
+                                          const char *argv[]) {
+  CXIndex Idx;
+  CXTranslationUnit TU;
+  CXAPISet API;
+  struct CXUnsavedFile *unsaved_files = 0;
+  int num_unsaved_files = 0;
+  enum CXErrorCode Err;
+  int result = 0;
+  CXString SGF;
+  const char *usr;
+
+  usr = input + strlen("-single-symbol-sgf-for=");
+
+  Idx = createIndexWithInvocationEmissionPath(/* excludeDeclsFromPCH */ 1,
+                                              /* displayDiagnostics=*/0);
+  if (!Idx)
+    return -1;
+
+  if (parse_remapped_files(argc, argv, 0, &unsaved_files, &num_unsaved_files)) {
+    result = -1;
+    goto dispose_index;
+  }
+
+  Err = clang_parseTranslationUnit2(
+      Idx, 0, argv + num_unsaved_files, argc - num_unsaved_files, unsaved_files,
+      num_unsaved_files, getDefaultParsingOptions(), &TU);
+  if (Err != CXError_Success) {
+    fprintf(stderr, "Unable to load translation unit!\n");
+    describeLibclangFailure(Err);
+    result = 1;
+    goto free_remapped_files;
+  }
+
+  Err = clang_createAPISet(TU, &API);
+  if (Err != CXError_Success) {
+    fprintf(stderr,
+            "Unable to create API Set for API information extraction!\n");
+    result = 2;
+    goto dispose_tu;
+  }
+
+  SGF = clang_getSymbolGraphForUSR(usr, API);
+  printf("%s", clang_getCString(SGF));
+
+  clang_disposeString(SGF);
+  clang_disposeAPISet(API);
+dispose_tu:
+  clang_disposeTranslationUnit(TU);
+free_remapped_files:
+  free_remapped_files(unsaved_files, num_unsaved_files);
+dispose_index:
+  clang_disposeIndex(Idx);
+  return result;
+}
+
+static void inspect_single_symbol_sgf_cursor(CXCursor Cursor) {
+  CXSourceLocation CursorLoc;
+  CXString SGFData;
+  const char *SGF;
+  unsigned line, column;
+  CursorLoc = clang_getCursorLocation(Cursor);
+  clang_getSpellingLocation(CursorLoc, 0, &line, &column, 0);
+
+  SGFData = clang_getSymbolGraphForCursor(Cursor);
+  SGF = clang_getCString(SGFData);
+  if (SGF)
+    printf("%d:%d: %s\n", line, column, SGF);
+
+  clang_disposeString(SGFData);
+}
+
 /******************************************************************************/
 /* Command line processing.                                                   */
 /******************************************************************************/
@@ -4839,6 +4955,10 @@ static void print_usage(void) {
     "       c-index-test -test-print-type-declaration {<args>}*\n"
     "       c-index-test -print-usr [<CursorKind> {<args>}]*\n"
     "       c-index-test -print-usr-file <file>\n");
+  fprintf(stderr,
+          "       c-index-test -single-symbol-sgfs <symbol filter> {<args>*}\n"
+          "       c-index-test -single-symbol-sgf-at=<site> {<args>*}\n"
+          "       c-index-test -single-symbol-sgf-for=<usr> {<args>}*\n");
   fprintf(stderr,
     "       c-index-test -write-pch <file> <compiler arguments>\n"
     "       c-index-test -compilation-db [lookup <filename>] database\n");
@@ -4971,6 +5091,14 @@ int cindextest_main(int argc, const char **argv) {
     return perform_test_compilation_db(argv[argc-1], argc - 3, argv + 2);
   else if (argc == 2 && strcmp(argv[1], "-print-build-session-timestamp") == 0)
     return perform_print_build_session_timestamp();
+  else if (argc > 3 && strcmp(argv[1], "-single-symbol-sgfs") == 0)
+    return perform_test_load_source(argc - 3, argv + 3, argv[2],
+                                    PrintSingleSymbolSGFs, NULL);
+  else if (argc > 2 && strstr(argv[1], "-single-symbol-sgf-at=") == argv[1])
+    return inspect_cursor_at(
+        argc, argv, "-single-symbol-sgf-at=", inspect_single_symbol_sgf_cursor);
+  else if (argc > 2 && strstr(argv[1], "-single-symbol-sgf-for=") == argv[1])
+    return perform_test_single_symbol_sgf(argv[1], argc - 2, argv + 2);
 
   print_usage();
   return 1;

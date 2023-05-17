@@ -76,7 +76,7 @@ define dso_local void @test_ileui_store(i32 zeroext %a, i32 zeroext %b) {
 entry:
   %cmp = icmp ule i32 %a, %b
   %sub = zext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 
@@ -93,7 +93,7 @@ define dso_local void @test_ileui_sext_store(i32 zeroext %a, i32 zeroext %b) {
 entry:
   %cmp = icmp ule i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 
@@ -109,7 +109,7 @@ define dso_local void @test_ileui_z_store(i32 zeroext %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
   %sub = zext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 
@@ -126,7 +126,7 @@ define dso_local void @test_ileui_sext_z_store(i32 zeroext %a) {
 entry:
   %cmp = icmp eq i32 %a, 0
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob
+  store i32 %sub, ptr @glob
   ret void
 }
 

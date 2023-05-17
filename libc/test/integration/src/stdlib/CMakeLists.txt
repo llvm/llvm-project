@@ -7,8 +7,6 @@ add_integration_test(
     stdlib-integration-tests
   SRCS
     getenv_test.cpp
-  LOADER
-    libc.loader.linux.crt1
   DEPENDS
     libc.src.stdlib.getenv
   ENV

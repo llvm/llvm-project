@@ -3,7 +3,7 @@
 
 %struct.DateTime = type { i64, i32, i32, i32, i32, i32, double, i8 }
 
-define void @computeJD(%struct.DateTime*) nounwind {
+define void @computeJD(ptr) nounwind {
 ; CHECK-LABEL: computeJD:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp
@@ -84,13 +84,13 @@ define void @computeJD(%struct.DateTime*) nounwind {
 ; CHECK-NEXT:    popl %ebx
 ; CHECK-NEXT:    popl %ebp
 ; CHECK-NEXT:    retl
-  %2 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 7
-  %3 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 1
-  %4 = load i32, i32* %3, align 4
-  %5 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 2
-  %6 = load i32, i32* %5, align 4
-  %7 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 3
-  %8 = load i32, i32* %7, align 4
+  %2 = getelementptr inbounds %struct.DateTime, ptr %0, i32 0, i32 7
+  %3 = getelementptr inbounds %struct.DateTime, ptr %0, i32 0, i32 1
+  %4 = load i32, ptr %3, align 4
+  %5 = getelementptr inbounds %struct.DateTime, ptr %0, i32 0, i32 2
+  %6 = load i32, ptr %5, align 4
+  %7 = getelementptr inbounds %struct.DateTime, ptr %0, i32 0, i32 3
+  %8 = load i32, ptr %7, align 4
   %9 = icmp slt i32 %6, 3
   %10 = add i32 %6, 12
   %11 = select i1 %9, i32 %10, i32 %6
@@ -113,23 +113,22 @@ define void @computeJD(%struct.DateTime*) nounwind {
   %28 = fadd double %27, -1.524500e+03
   %29 = fmul double %28, 8.640000e+07
   %30 = fptosi double %29 to i64
-  %31 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 0
-  store i8 1, i8* %2, align 4
-  %32 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 4
-  %33 = load i32, i32* %32, align 4
-  %34 = mul i32 %33, 3600000
-  %35 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 5
-  %36 = load i32, i32* %35, align 4
-  %37 = mul i32 %36, 60000
-  %38 = add i32 %37, %34
-  %39 = sext i32 %38 to i64
-  %40 = getelementptr inbounds %struct.DateTime, %struct.DateTime* %0, i32 0, i32 6
-  %41 = load double, double* %40, align 4
-  %42 = fmul double %41, 1.000000e+03
-  %43 = fptosi double %42 to i64
-  %44 = add i64 %39, %43
-  %45 = add i64 %44, %30
-  store i64 %45, i64* %31, align 4
+  store i8 1, ptr %2, align 4
+  %31 = getelementptr inbounds %struct.DateTime, ptr %0, i32 0, i32 4
+  %32 = load i32, ptr %31, align 4
+  %33 = mul i32 %32, 3600000
+  %34 = getelementptr inbounds %struct.DateTime, ptr %0, i32 0, i32 5
+  %35 = load i32, ptr %34, align 4
+  %36 = mul i32 %35, 60000
+  %37 = add i32 %36, %33
+  %38 = sext i32 %37 to i64
+  %39 = getelementptr inbounds %struct.DateTime, ptr %0, i32 0, i32 6
+  %40 = load double, ptr %39, align 4
+  %41 = fmul double %40, 1.000000e+03
+  %42 = fptosi double %41 to i64
+  %43 = add i64 %38, %42
+  %44 = add i64 %43, %30
+  store i64 %44, ptr %0, align 4
   ret void
 }
 

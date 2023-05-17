@@ -12,8 +12,6 @@ from lldbsuite.test import lldbutil
 
 class NamespaceBreakpointTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
     @expectedFailureAll(oslist=["windows"])
     def test_breakpoints_func_auto(self):
@@ -45,6 +43,7 @@ class NamespaceBreakpointTestCase(TestBase):
                 "make sure breakpoint locations are correct for 'func' with eFunctionNameTypeAuto")
 
     @expectedFailureAll(bugnumber="llvm.org/pr28548", compiler="gcc")
+    @expectedFailureAll(oslist=["windows"])
     def test_breakpoints_func_full(self):
         """Test that we can set breakpoints correctly by fullname to find all functions whose fully qualified name is "func"
            (no namespaces)."""
@@ -98,8 +97,6 @@ class NamespaceBreakpointTestCase(TestBase):
 
 
 class NamespaceTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().
@@ -224,8 +221,16 @@ class NamespaceTestCase(TestBase):
         # global namespace qualification with function in anonymous namespace
         self.expect_expr("myanonfunc(4)", result_value="8")
 
-        self.expect("p myanonfunc",
+        self.expect("expression myanonfunc",
                     patterns=['\(anonymous namespace\)::myanonfunc\(int\)'])
 
-        self.expect("p variadic_sum", patterns=[
+        self.expect("expression variadic_sum", patterns=[
                     '\(anonymous namespace\)::variadic_sum\(int, ...\)'])
+
+        self.expect_expr("::B::Bar b; b.x()", result_type="int", result_value="42")
+        self.expect_expr("A::B::Bar b; b.y()", result_type="int", result_value="137")
+        self.expect_expr("::NS1::NS2::Foo{}.bar() == -2 && ::NS2::Foo{}.bar() == -3",
+                         result_type="bool", result_value="true")
+        # FIXME: C++ unqualified namespace lookups currently not supported when instantiating types.
+        self.expect_expr("NS2::Foo{}.bar() == -3", result_type="bool", result_value="false")
+        self.expect_expr("((::B::Bar*)&::B::bar)->x()", result_type="int", result_value="42")

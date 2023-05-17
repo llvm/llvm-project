@@ -9,14 +9,13 @@ target datalayout = "A5"
 ; CHECK: NumAllocaArgs: 1
 ; CHECK: Threshold: 66000
 
-define void @use_private_ptr_arg(float addrspace(5)* nocapture %p) {
+define void @use_private_ptr_arg(ptr addrspace(5) nocapture %p) {
   ret void
 }
 
-define amdgpu_kernel void @test_inliner_pvt_ptr(float addrspace(1)* nocapture %a, i32 %n) {
+define amdgpu_kernel void @test_inliner_pvt_ptr(ptr addrspace(1) nocapture %a, i32 %n) {
 entry:
   %pvt_arr = alloca [64 x float], align 4, addrspace(5)
-  %to.ptr = getelementptr inbounds [64 x float], [64 x float] addrspace(5)* %pvt_arr, i32 0, i32 0
-  call void @use_private_ptr_arg(float addrspace(5)* %to.ptr)
+  call void @use_private_ptr_arg(ptr addrspace(5) %pvt_arr)
   ret void
 }

@@ -1,0 +1,6 @@
+## This test checks the error message diplayed if an incorrect
+## tombstone value is specified.
+
+# RUN: not llvm-dwarfutil --tombstone=unknown - - 2>&1 | FileCheck --check-prefix CHECK %s
+
+# CHECK: error: unknown tombstone value: 'unknown'

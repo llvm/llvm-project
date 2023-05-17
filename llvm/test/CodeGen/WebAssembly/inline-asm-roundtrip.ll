@@ -32,7 +32,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK-NEXT:	i32.const	3
 ; CHECK-NEXT:	i32.ne
 
-define i32 @main(i32 %argc, i8** nocapture readnone %argv) #0 {
+define i32 @main(i32 %argc, ptr nocapture readnone %argv) #0 {
 entry:
   %0 = tail call i32 asm "i32.const\092\0A\09local.get\09$1\0A\09i32.add\0A\09local.set\09$0", "=r,r"(i32 1) #1
   %cmp = icmp ne i32 %0, 3

@@ -7,12 +7,19 @@
 
 // A corrupt string which hits the SSO code path, but has an invalid size.
 static struct {
+#if _LIBCPP_ABI_VERSION == 1
   // Set the size of this short-mode string to 116. Note that in short mode,
   // the size is encoded as `size << 1`.
   unsigned char size = 232;
 
   // 23 garbage bytes for the inline string payload.
   char inline_buf[23] = {0};
+#else  // _LIBCPP_ABI_VERSION == 1
+  // Like above, but data comes first, and use bitfields to indicate size.
+  char inline_buf[23] = {0};
+  unsigned char size : 7 = 116;
+  unsigned char is_long : 1 = 0;
+#endif // #if _LIBCPP_ABI_VERSION == 1
 } garbage_string_short_mode;
 
 // A corrupt libcxx string in long mode with a payload that contains a utf8
@@ -23,9 +30,16 @@ static unsigned char garbage_utf8_payload1[] = {
   250, 250, 250
 };
 static struct {
+#if _LIBCPP_ABI_VERSION == 1
   uint64_t cap = 5;
   uint64_t size = 4;
   unsigned char *data = &garbage_utf8_payload1[0];
+#else  // _LIBCPP_ABI_VERSION == 1
+  unsigned char *data = &garbage_utf8_payload1[0];
+  uint64_t size = 4;
+  uint64_t cap : 63 = 4;
+  uint64_t is_long : 1 = 1;
+#endif // #if _LIBCPP_ABI_VERSION == 1
 } garbage_string_long_mode1;
 
 // A corrupt libcxx string in long mode with a payload that contains a utf8
@@ -36,25 +50,46 @@ static unsigned char garbage_utf8_payload2[] = {
   240
 };
 static struct {
+#if _LIBCPP_ABI_VERSION == 1
   uint64_t cap = 3;
   uint64_t size = 2;
   unsigned char *data = &garbage_utf8_payload2[0];
+#else  // _LIBCPP_ABI_VERSION == 1
+  unsigned char *data = &garbage_utf8_payload2[0];
+  uint64_t size = 2;
+  uint64_t cap : 63 = 3;
+  uint64_t is_long : 1 = 1;
+#endif // #if _LIBCPP_ABI_VERSION == 1
 } garbage_string_long_mode2;
 
 // A corrupt libcxx string which has an invalid size (i.e. a size greater than
 // the capacity of the string).
 static struct {
+#if _LIBCPP_ABI_VERSION == 1
   uint64_t cap = 5;
   uint64_t size = 7;
   const char *data = "foo";
+#else  // _LIBCPP_ABI_VERSION == 1
+  const char *data = "foo";
+  uint64_t size = 7;
+  uint64_t cap : 63 = 5;
+  uint64_t is_long : 1 = 1;
+#endif // #if _LIBCPP_ABI_VERSION == 1
 } garbage_string_long_mode3;
 
 // A corrupt libcxx string in long mode with a payload that would trigger a
 // buffer overflow.
 static struct {
+#if _LIBCPP_ABI_VERSION == 1
   uint64_t cap = 5;
   uint64_t size = 2;
   uint64_t data = 0xfffffffffffffffeULL;
+#else  // _LIBCPP_ABI_VERSION == 1
+  uint64_t data = 0xfffffffffffffffeULL;
+  uint64_t size = 2;
+  uint64_t cap : 63 = 5;
+  uint64_t is_long : 1 = 1;
+#endif // #if _LIBCPP_ABI_VERSION == 1
 } garbage_string_long_mode4;
 
 size_t touch_string(std::string &in_str)
@@ -81,7 +116,6 @@ int main()
     std::basic_string<unsigned char> uchar(5, 'a');
     std::string *null_str = nullptr;
 
-#if _LIBCPP_ABI_VERSION == 1
     std::string garbage1, garbage2, garbage3, garbage4, garbage5;
     if (sizeof(std::string) == sizeof(garbage_string_short_mode))
       memcpy((void *)&garbage1, &garbage_string_short_mode, sizeof(std::string));
@@ -93,9 +127,6 @@ int main()
       memcpy((void *)&garbage4, &garbage_string_long_mode3, sizeof(std::string));
     if (sizeof(std::string) == sizeof(garbage_string_long_mode4))
       memcpy((void *)&garbage5, &garbage_string_long_mode4, sizeof(std::string));
-#else
-#error "Test potentially needs to be updated for a new std::string ABI."
-#endif
 
     S.assign(L"!!!!!"); // Set break point at this line.
     std::string *not_a_string = (std::string *) 0x0;

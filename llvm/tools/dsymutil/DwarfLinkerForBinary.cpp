@@ -18,15 +18,11 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/FoldingSet.h"
 #include "llvm/ADT/Hashing.h"
-#include "llvm/ADT/IntervalMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/Triple.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -44,6 +40,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
 #include "llvm/DebugInfo/DWARF/DWARFFormValue.h"
 #include "llvm/DebugInfo/DWARF/DWARFSection.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"
@@ -85,6 +82,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
 #include <cinttypes>
@@ -95,6 +93,7 @@
 #include <limits>
 #include <map>
 #include <memory>
+#include <optional>
 #include <string>
 #include <system_error>
 #include <tuple>
@@ -107,59 +106,32 @@ static mc::RegisterMCTargetOptionsFlags MOF;
 
 namespace dsymutil {
 
-static Error copySwiftInterfaces(
-    const std::map<std::string, std::string> &ParseableSwiftInterfaces,
-    StringRef Architecture, const LinkOptions &Options) {
-  std::error_code EC;
-  SmallString<128> InputPath;
-  SmallString<128> Path;
-  sys::path::append(Path, *Options.ResourceDir, "Swift", Architecture);
-  if ((EC = sys::fs::create_directories(Path.str(), true,
-                                        sys::fs::perms::all_all)))
-    return make_error<StringError>(
-        "cannot create directory: " + toString(errorCodeToError(EC)), EC);
-  unsigned BaseLength = Path.size();
-
-  for (auto &I : ParseableSwiftInterfaces) {
-    StringRef ModuleName = I.first;
-    StringRef InterfaceFile = I.second;
-    if (!Options.PrependPath.empty()) {
-      InputPath.clear();
-      sys::path::append(InputPath, Options.PrependPath, InterfaceFile);
-      InterfaceFile = InputPath;
-    }
-    sys::path::append(Path, ModuleName);
-    Path.append(".swiftinterface");
-    if (Options.Verbose)
-      outs() << "copy parseable Swift interface " << InterfaceFile << " -> "
-             << Path.str() << '\n';
-
-    // copy_file attempts an APFS clone first, so this should be cheap.
-    if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
-      warn(Twine("cannot copy parseable Swift interface ") + InterfaceFile +
-           ": " + toString(errorCodeToError(EC)));
-    Path.resize(BaseLength);
-  }
-  return Error::success();
-}
-
-/// Report a warning to the user, optionally including information about a
-/// specific \p DIE related to the warning.
-void DwarfLinkerForBinary::reportWarning(const Twine &Warning,
-                                         StringRef Context,
-                                         const DWARFDie *DIE) const {
-
-  warn(Warning, Context);
-
-  if (!Options.Verbose || !DIE)
+static void dumpDIE(const DWARFDie *DIE, bool Verbose) {
+  if (!DIE || !Verbose)
     return;
 
   DIDumpOptions DumpOpts;
   DumpOpts.ChildRecurseDepth = 0;
-  DumpOpts.Verbose = Options.Verbose;
+  DumpOpts.Verbose = Verbose;
 
   WithColor::note() << "    in DIE:\n";
   DIE->dump(errs(), 6 /* Indent */, DumpOpts);
+}
+
+/// Report a warning to the user, optionally including information about a
+/// specific \p DIE related to the warning.
+void DwarfLinkerForBinary::reportWarning(Twine Warning, Twine Context,
+                                         const DWARFDie *DIE) const {
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+  warn(Warning, Context);
+  dumpDIE(DIE, Options.Verbose);
+}
+
+void DwarfLinkerForBinary::reportError(Twine Error, Twine Context,
+                                       const DWARFDie *DIE) const {
+  std::lock_guard<std::mutex> Guard(ErrorHandlerMutex);
+  error(Error, Context);
+  dumpDIE(DIE, Options.Verbose);
 }
 
 bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
@@ -170,10 +142,10 @@ bool DwarfLinkerForBinary::createStreamer(const Triple &TheTriple,
   Streamer = std::make_unique<DwarfStreamer>(
       Options.FileType, OutFile, Options.Translator,
       [&](const Twine &Error, StringRef Context, const DWARFDie *) {
-        error(Error, Context);
+        reportError(Error, Context);
       },
       [&](const Twine &Warning, StringRef Context, const DWARFDie *) {
-        warn(Warning, Context);
+        reportWarning(Warning, Context);
       });
   return Streamer->init(TheTriple, "__DWARF");
 }
@@ -411,7 +383,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
     }
 
     auto CalculateAddressOfSymbolInDwarfSegment =
-        [&]() -> llvm::Optional<int64_t> {
+        [&]() -> std::optional<int64_t> {
       auto Symbol = It->getSymbol();
       auto SymbolAbsoluteAddress = Symbol->getAddress();
       if (!SymbolAbsoluteAddress)
@@ -447,7 +419,7 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
 
     bool ShouldSubtractDwarfVM = false;
     // For the second symbol there are two possibilities.
-    llvm::Optional<int64_t> SecondSymbolAddress;
+    std::optional<int64_t> SecondSymbolAddress;
     auto Sym = It->getSymbol();
     if (Sym != MO->symbol_end()) {
       Expected<StringRef> SymbolName = Sym->getName();
@@ -492,6 +464,40 @@ void DwarfLinkerForBinary::collectRelocationsToApplyToSwiftReflectionSections(
   }
 }
 
+Error DwarfLinkerForBinary::copySwiftInterfaces(StringRef Architecture) const {
+  std::error_code EC;
+  SmallString<128> InputPath;
+  SmallString<128> Path;
+  sys::path::append(Path, *Options.ResourceDir, "Swift", Architecture);
+  if ((EC = sys::fs::create_directories(Path.str(), true,
+                                        sys::fs::perms::all_all)))
+    return make_error<StringError>(
+        "cannot create directory: " + toString(errorCodeToError(EC)), EC);
+  unsigned BaseLength = Path.size();
+
+  for (auto &I : ParseableSwiftInterfaces) {
+    StringRef ModuleName = I.first;
+    StringRef InterfaceFile = I.second;
+    if (!Options.PrependPath.empty()) {
+      InputPath.clear();
+      sys::path::append(InputPath, Options.PrependPath, InterfaceFile);
+      InterfaceFile = InputPath;
+    }
+    sys::path::append(Path, ModuleName);
+    Path.append(".swiftinterface");
+    if (Options.Verbose)
+      outs() << "copy parseable Swift interface " << InterfaceFile << " -> "
+             << Path.str() << '\n';
+
+    // copy_file attempts an APFS clone first, so this should be cheap.
+    if ((EC = sys::fs::copy_file(InterfaceFile, Path.str())))
+      reportWarning(Twine("cannot copy parseable Swift interface ") +
+                    InterfaceFile + ": " + toString(errorCodeToError(EC)));
+    Path.resize(BaseLength);
+  }
+  return Error::success();
+}
+
 void DwarfLinkerForBinary::copySwiftReflectionMetadata(
     const llvm::dsymutil::DebugMapObject *Obj, DwarfStreamer *Streamer,
     std::vector<uint64_t> &SectionToOffsetInDwarf,
@@ -507,7 +513,7 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
   if (auto *MO = dyn_cast<llvm::object::MachOObjectFile>(OF->getBinary())) {
     // Collect the swift reflection sections before emitting them. This is
     // done so we control the order they're emitted.
-    std::array<Optional<object::SectionRef>,
+    std::array<std::optional<object::SectionRef>,
                Swift5ReflectionSectionKind::last + 1>
         SwiftSections;
     for (auto &Section : MO->sections()) {
@@ -544,7 +550,7 @@ void DwarfLinkerForBinary::copySwiftReflectionMetadata(
       // place.
       SectionToOffsetInDwarf[SectionKind] += Section.getSize();
       Streamer->emitSwiftReflectionSection(SectionKind, *SectionContents,
-                                           Section.getAlignment(),
+                                           Section.getAlignment().value(),
                                            Section.getSize());
     }
   }
@@ -579,7 +585,6 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   GeneralLinker.setNoODR(Options.NoODR);
   GeneralLinker.setUpdate(Options.Update);
   GeneralLinker.setNumThreads(Options.Threads);
-  GeneralLinker.setAccelTableKind(Options.TheAccelTableKind);
   GeneralLinker.setPrependPath(Options.PrependPath);
   GeneralLinker.setKeepFunctionForStatic(Options.KeepFunctionForStatic);
   if (Options.Translator)
@@ -589,61 +594,65 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
         reportWarning(Warning, Context, DIE);
       });
   GeneralLinker.setErrorHandler(
-      [&](const Twine &Error, StringRef Context, const DWARFDie *) {
-        error(Error, Context);
+      [&](const Twine &Error, StringRef Context, const DWARFDie *DIE) {
+        reportError(Error, Context, DIE);
       });
-  GeneralLinker.setObjFileLoader(
-      [&DebugMap, &RL, this](StringRef ContainerName,
-                             StringRef Path) -> ErrorOr<DWARFFile &> {
-        auto &Obj = DebugMap.addDebugMapObject(
-            Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
+  GeneralLinker.setInputVerificationHandler([&](const DWARFFile &File) {
+    reportWarning("input verification failed", File.FileName);
+    HasVerificationErrors = true;
+  });
+  objFileLoader Loader = [&DebugMap, &RL,
+                          this](StringRef ContainerName,
+                                StringRef Path) -> ErrorOr<DWARFFile &> {
+    auto &Obj = DebugMap.addDebugMapObject(
+        Path, sys::TimePoint<std::chrono::seconds>(), MachO::N_OSO);
 
-        if (auto ErrorOrObj = loadObject(Obj, DebugMap, RL)) {
-          return *ErrorOrObj;
-        } else {
-          // Try and emit more helpful warnings by applying some heuristics.
-          StringRef ObjFile = ContainerName;
-          bool IsClangModule = sys::path::extension(Path).equals(".pcm");
-          bool IsArchive = ObjFile.endswith(")");
+    if (auto ErrorOrObj = loadObject(Obj, DebugMap, RL)) {
+      return *ErrorOrObj;
+    } else {
+      // Try and emit more helpful warnings by applying some heuristics.
+      StringRef ObjFile = ContainerName;
+      bool IsClangModule = sys::path::extension(Path).equals(".pcm");
+      bool IsArchive = ObjFile.endswith(")");
 
-          if (IsClangModule) {
-            StringRef ModuleCacheDir = sys::path::parent_path(Path);
-            if (sys::fs::exists(ModuleCacheDir)) {
-              // If the module's parent directory exists, we assume that the
-              // module cache has expired and was pruned by clang.  A more
-              // adventurous dsymutil would invoke clang to rebuild the module
-              // now.
-              if (!ModuleCacheHintDisplayed) {
-                WithColor::note()
-                    << "The clang module cache may have expired since "
-                       "this object file was built. Rebuilding the "
-                       "object file will rebuild the module cache.\n";
-                ModuleCacheHintDisplayed = true;
-              }
-            } else if (IsArchive) {
-              // If the module cache directory doesn't exist at all and the
-              // object file is inside a static library, we assume that the
-              // static library was built on a different machine. We don't want
-              // to discourage module debugging for convenience libraries within
-              // a project though.
-              if (!ArchiveHintDisplayed) {
-                WithColor::note()
-                    << "Linking a static library that was built with "
-                       "-gmodules, but the module cache was not found.  "
-                       "Redistributable static libraries should never be "
-                       "built with module debugging enabled.  The debug "
-                       "experience will be degraded due to incomplete "
-                       "debug information.\n";
-                ArchiveHintDisplayed = true;
-              }
-            }
+      if (IsClangModule) {
+        StringRef ModuleCacheDir = sys::path::parent_path(Path);
+        if (sys::fs::exists(ModuleCacheDir)) {
+          // If the module's parent directory exists, we assume that the
+          // module cache has expired and was pruned by clang.  A more
+          // adventurous dsymutil would invoke clang to rebuild the module
+          // now.
+          if (!ModuleCacheHintDisplayed) {
+            WithColor::note()
+                << "The clang module cache may have expired since "
+                   "this object file was built. Rebuilding the "
+                   "object file will rebuild the module cache.\n";
+            ModuleCacheHintDisplayed = true;
           }
-
-          return ErrorOrObj.getError();
+        } else if (IsArchive) {
+          // If the module cache directory doesn't exist at all and the
+          // object file is inside a static library, we assume that the
+          // static library was built on a different machine. We don't want
+          // to discourage module debugging for convenience libraries within
+          // a project though.
+          if (!ArchiveHintDisplayed) {
+            WithColor::note()
+                << "Linking a static library that was built with "
+                   "-gmodules, but the module cache was not found.  "
+                   "Redistributable static libraries should never be "
+                   "built with module debugging enabled.  The debug "
+                   "experience will be degraded due to incomplete "
+                   "debug information.\n";
+            ArchiveHintDisplayed = true;
+          }
         }
+      }
 
-        llvm_unreachable("Unhandled DebugMap object");
-      });
+      return ErrorOrObj.getError();
+    }
+
+    llvm_unreachable("Unhandled DebugMap object");
+  };
   GeneralLinker.setSwiftInterfacesMap(&ParseableSwiftInterfaces);
   bool ReflectionSectionsPresentInBinary = false;
   // If there is no output specified, no point in checking the binary for swift5
@@ -657,10 +666,16 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
   if (!Options.NoOutput && !ReflectionSectionsPresentInBinary) {
     auto SectionToOffsetInDwarf =
         calculateStartOfStrippableReflectionSections(Map);
-    for (const auto &Obj : Map.objects()) 
+    for (const auto &Obj : Map.objects())
       copySwiftReflectionMetadata(Obj.get(), Streamer.get(),
                                   SectionToOffsetInDwarf, RelocationsToApply);
   }
+
+  uint16_t MaxDWARFVersion = 0;
+  std::function<void(const DWARFUnit &Unit)> OnCUDieLoaded =
+      [&MaxDWARFVersion](const DWARFUnit &Unit) {
+        MaxDWARFVersion = std::max(Unit.getVersion(), MaxDWARFVersion);
+      };
 
   for (const auto &Obj : Map.objects()) {
     // N_AST objects (swiftmodule files) should get dumped directly into the
@@ -672,12 +687,12 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
       StringRef File = Obj->getObjectFilename();
       auto ErrorOrMem = MemoryBuffer::getFile(File);
       if (!ErrorOrMem) {
-        warn("Could not open '" + File + "'\n");
+        reportWarning("Could not open '" + File + "'");
         continue;
       }
       sys::fs::file_status Stat;
       if (auto Err = sys::fs::status(File, Stat)) {
-        warn(Err.message());
+        reportWarning(Err.message());
         continue;
       }
       if (!Options.NoTimestamp) {
@@ -703,8 +718,9 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
       continue;
     }
+
     if (auto ErrorOrObj = loadObject(*Obj, Map, RL))
-      GeneralLinker.addObjectFile(*ErrorOrObj);
+      GeneralLinker.addObjectFile(*ErrorOrObj, Loader, OnCUDieLoaded);
     else {
       ObjectsForLinking.push_back(std::make_unique<DWARFFile>(
           Obj->getObjectFilename(), nullptr, nullptr,
@@ -713,8 +729,37 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
     }
   }
 
+  // If we haven't seen any CUs, pick an arbitrary valid Dwarf version anyway.
+  if (MaxDWARFVersion == 0)
+    MaxDWARFVersion = 3;
+
+  if (Error E = GeneralLinker.setTargetDWARFVersion(MaxDWARFVersion))
+    return error(toString(std::move(E)));
+
+  switch (Options.TheAccelTableKind) {
+  case DsymutilAccelTableKind::Apple:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
+    break;
+  case DsymutilAccelTableKind::Dwarf:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
+    break;
+  case DsymutilAccelTableKind::Pub:
+    GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Pub);
+    break;
+  case DsymutilAccelTableKind::Default:
+    if (MaxDWARFVersion >= 5)
+      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::DebugNames);
+    else
+      GeneralLinker.addAccelTableKind(DwarfLinkerAccelTableKind::Apple);
+    break;
+  case DsymutilAccelTableKind::None:
+    // Nothing to do.
+    break;
+  }
+
   // link debug info for loaded object files.
-  GeneralLinker.link();
+  if (Error E = GeneralLinker.link())
+    return error(toString(std::move(E)));
 
   StringRef ArchName = Map.getTriple().getArchName();
   if (Error E = emitRemarks(Options, Map.getBinaryPath(), ArchName, RL))
@@ -725,8 +770,7 @@ bool DwarfLinkerForBinary::link(const DebugMap &Map) {
 
   if (Options.ResourceDir && !ParseableSwiftInterfaces.empty()) {
     StringRef ArchName = Triple::getArchTypeName(Map.getTriple().getArch());
-    if (auto E =
-            copySwiftInterfaces(ParseableSwiftInterfaces, ArchName, Options))
+    if (auto E = copySwiftInterfaces(ArchName))
       return error(toString(std::move(E)));
   }
 
@@ -896,28 +940,28 @@ void DwarfLinkerForBinary::AddressManager::printReloc(const ValidReloc &Reloc) {
                    uint64_t(Mapping.BinaryAddress));
 }
 
-void DwarfLinkerForBinary::AddressManager::fillDieInfo(
-    const ValidReloc &Reloc, CompileUnit::DIEInfo &Info) {
-  Info.AddrAdjust = relocate(Reloc);
+int64_t
+DwarfLinkerForBinary::AddressManager::getRelocValue(const ValidReloc &Reloc) {
+  int64_t AddrAdjust = relocate(Reloc);
   if (Reloc.Mapping->getValue().ObjectAddress)
-    Info.AddrAdjust -= uint64_t(*Reloc.Mapping->getValue().ObjectAddress);
-  Info.InDebugMap = true;
+    AddrAdjust -= uint64_t(*Reloc.Mapping->getValue().ObjectAddress);
+  return AddrAdjust;
 }
 
-bool DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
+std::optional<int64_t>
+DwarfLinkerForBinary::AddressManager::hasValidRelocationAt(
     const std::vector<ValidReloc> &AllRelocs, uint64_t StartOffset,
-    uint64_t EndOffset, CompileUnit::DIEInfo &Info) {
+    uint64_t EndOffset) {
   std::vector<ValidReloc> Relocs =
       getRelocations(AllRelocs, StartOffset, EndOffset);
 
   if (Relocs.size() == 0)
-    return false;
+    return std::nullopt;
 
   if (Linker.Options.Verbose)
     printReloc(Relocs[0]);
-  fillDieInfo(Relocs[0], Info);
 
-  return true;
+  return getRelocValue(Relocs[0]);
 }
 
 /// Get the starting and ending (exclusive) offset for the
@@ -941,58 +985,71 @@ getAttributeOffsets(const DWARFAbbreviationDeclaration *Abbrev, unsigned Idx,
   return std::make_pair(Offset, End);
 }
 
-bool DwarfLinkerForBinary::AddressManager::isLiveVariable(
-    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
-  const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
+std::optional<int64_t>
+DwarfLinkerForBinary::AddressManager::getExprOpAddressRelocAdjustment(
+    DWARFUnit &U, const DWARFExpression::Operation &Op, uint64_t StartOffset,
+    uint64_t EndOffset) {
+  switch (Op.getCode()) {
+  default: {
+    assert(false && "Specified operation does not have address operand");
+  } break;
+  case dwarf::DW_OP_const4u:
+  case dwarf::DW_OP_const8u:
+  case dwarf::DW_OP_const4s:
+  case dwarf::DW_OP_const8s:
+  case dwarf::DW_OP_addr: {
+    return hasValidRelocationAt(ValidDebugInfoRelocs, StartOffset, EndOffset);
+  } break;
+  case dwarf::DW_OP_constx:
+  case dwarf::DW_OP_addrx: {
+    return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset);
+  } break;
+  }
 
-  Optional<uint32_t> LocationIdx =
-      Abbrev->findAttributeIndex(dwarf::DW_AT_location);
-  if (!LocationIdx)
-    return false;
-
-  uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
-  uint64_t LocationOffset, LocationEndOffset;
-  std::tie(LocationOffset, LocationEndOffset) =
-      getAttributeOffsets(Abbrev, *LocationIdx, Offset, *DIE.getDwarfUnit());
-
-  // FIXME: Support relocations debug_addr.
-  return hasValidRelocationAt(ValidDebugInfoRelocs, LocationOffset,
-                              LocationEndOffset, MyInfo);
+  return std::nullopt;
 }
 
-bool DwarfLinkerForBinary::AddressManager::isLiveSubprogram(
-    const DWARFDie &DIE, CompileUnit::DIEInfo &MyInfo) {
+std::optional<int64_t>
+DwarfLinkerForBinary::AddressManager::getSubprogramRelocAdjustment(
+    const DWARFDie &DIE) {
   const auto *Abbrev = DIE.getAbbreviationDeclarationPtr();
 
-  Optional<uint32_t> LowPcIdx = Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
+  std::optional<uint32_t> LowPcIdx =
+      Abbrev->findAttributeIndex(dwarf::DW_AT_low_pc);
   if (!LowPcIdx)
-    return false;
+    return std::nullopt;
 
   dwarf::Form Form = Abbrev->getFormByIndex(*LowPcIdx);
 
-  if (Form == dwarf::DW_FORM_addr) {
+  switch (Form) {
+  case dwarf::DW_FORM_addr: {
     uint64_t Offset = DIE.getOffset() + getULEB128Size(Abbrev->getCode());
     uint64_t LowPcOffset, LowPcEndOffset;
     std::tie(LowPcOffset, LowPcEndOffset) =
         getAttributeOffsets(Abbrev, *LowPcIdx, Offset, *DIE.getDwarfUnit());
     return hasValidRelocationAt(ValidDebugInfoRelocs, LowPcOffset,
-                                LowPcEndOffset, MyInfo);
+                                LowPcEndOffset);
   }
-
-  if (Form == dwarf::DW_FORM_addrx) {
-    Optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
-    if (Optional<uint64_t> AddrOffsetSectionBase =
+  case dwarf::DW_FORM_addrx:
+  case dwarf::DW_FORM_addrx1:
+  case dwarf::DW_FORM_addrx2:
+  case dwarf::DW_FORM_addrx3:
+  case dwarf::DW_FORM_addrx4: {
+    std::optional<DWARFFormValue> AddrValue = DIE.find(dwarf::DW_AT_low_pc);
+    if (std::optional<uint64_t> AddrOffsetSectionBase =
             DIE.getDwarfUnit()->getAddrOffsetSectionBase()) {
       uint64_t StartOffset = *AddrOffsetSectionBase + AddrValue->getRawUValue();
       uint64_t EndOffset =
           StartOffset + DIE.getDwarfUnit()->getAddressByteSize();
-      return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset,
-                                  MyInfo);
-    } else
-      Linker.reportWarning("no base offset for address table", SrcFileName);
-  }
+      return hasValidRelocationAt(ValidDebugAddrRelocs, StartOffset, EndOffset);
+    }
 
-  return false;
+    Linker.reportWarning("no base offset for address table", SrcFileName);
+    return std::nullopt;
+  }
+  default:
+    return std::nullopt;
+  }
 }
 
 uint64_t
@@ -1027,25 +1084,6 @@ bool DwarfLinkerForBinary::AddressManager::applyValidRelocs(
   }
 
   return Relocs.size() > 0;
-}
-
-llvm::Expected<uint64_t>
-DwarfLinkerForBinary::AddressManager::relocateIndexedAddr(uint64_t StartOffset,
-                                                          uint64_t EndOffset) {
-  std::vector<ValidReloc> Relocs =
-      getRelocations(ValidDebugAddrRelocs, StartOffset, EndOffset);
-  if (Relocs.size() == 0)
-    return createStringError(
-        std::make_error_code(std::errc::invalid_argument),
-        "no relocation for offset %llu in debug_addr section", StartOffset);
-
-  return relocate(Relocs[0]);
-}
-
-bool linkDwarf(raw_fd_ostream &OutFile, BinaryHolder &BinHolder,
-               const DebugMap &DM, LinkOptions Options) {
-  DwarfLinkerForBinary Linker(OutFile, BinHolder, std::move(Options));
-  return Linker.link(DM);
 }
 
 } // namespace dsymutil

@@ -15,7 +15,7 @@ from copy import copy
 from pathlib import PurePath
 from collections import defaultdict, OrderedDict
 
-from dex.utils.Exceptions import CommandParseError
+from dex.utils.Exceptions import CommandParseError, NonFloatValueInCommand
 
 from dex.command.CommandBase import CommandBase
 from dex.command.commands.DexCommandLine import DexCommandLine
@@ -307,6 +307,10 @@ def _find_all_commands_in_file(path, file_lines, valid_commands, source_root_dir
                 raise format_parse_err(e.msg, path, file_lines, err_point)
             except TypeError as e:
                 # This err should always point to the end of the command name.
+                err_point = copy(cmd_point)
+                err_point.char += len(command_name)
+                raise format_parse_err(str(e), path, file_lines, err_point)
+            except NonFloatValueInCommand as e:
                 err_point = copy(cmd_point)
                 err_point.char += len(command_name)
                 raise format_parse_err(str(e), path, file_lines, err_point)

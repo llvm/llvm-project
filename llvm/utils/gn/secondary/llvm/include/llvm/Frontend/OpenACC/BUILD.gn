@@ -4,6 +4,7 @@ tablegen("ACC") {
   visibility = [ ":acc_gen" ]
   args = [ "-gen-directive-decl" ]
   output_name = "ACC.h.inc"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
 tablegen("ACCcpp") {
@@ -11,6 +12,7 @@ tablegen("ACCcpp") {
   args = [ "-gen-directive-impl" ]
   output_name = "ACC.inc"
   td_file = "ACC.td"
+  tblgen_target = "//llvm/utils/TableGen:llvm-min-tblgen"
 }
 
 group("acc_gen") {

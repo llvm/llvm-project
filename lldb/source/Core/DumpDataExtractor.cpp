@@ -30,7 +30,6 @@
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 
 #include <limits>
@@ -43,6 +42,7 @@
 #include <cmath>
 
 #include <bitset>
+#include <optional>
 #include <sstream>
 
 using namespace lldb_private;
@@ -50,30 +50,11 @@ using namespace lldb;
 
 #define NON_PRINTABLE_CHAR '.'
 
-static float half2float(uint16_t half) {
-  union {
-    float f;
-    uint32_t u;
-  } u;
-  // Sign extend to 4 byte.
-  int32_t sign_extended = static_cast<int16_t>(half);
-  uint32_t v = static_cast<uint32_t>(sign_extended);
-
-  if (0 == (v & 0x7c00)) {
-    u.u = v & 0x80007FFFU;
-    return u.f * ldexpf(1, 125);
-  }
-
-  v <<= 13;
-  u.u = v | 0x70000000U;
-  return u.f * ldexpf(1, -112);
-}
-
-static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
-                                            lldb::offset_t *offset_ptr,
-                                            lldb::offset_t byte_size) {
+static std::optional<llvm::APInt> GetAPInt(const DataExtractor &data,
+                                           lldb::offset_t *offset_ptr,
+                                           lldb::offset_t byte_size) {
   if (byte_size == 0)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::SmallVector<uint64_t, 2> uint64_array;
   lldb::offset_t bytes_left = byte_size;
@@ -111,15 +92,15 @@ static llvm::Optional<llvm::APInt> GetAPInt(const DataExtractor &data,
     *offset_ptr += byte_size;
     return llvm::APInt(byte_size * 8, llvm::ArrayRef<uint64_t>(uint64_array));
   }
-  return llvm::None;
+  return std::nullopt;
 }
 
 static lldb::offset_t DumpAPInt(Stream *s, const DataExtractor &data,
                                 lldb::offset_t offset, lldb::offset_t byte_size,
                                 bool is_signed, unsigned radix) {
-  llvm::Optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
-  if (apint.hasValue()) {
-    std::string apint_str = toString(apint.getValue(), radix, is_signed);
+  std::optional<llvm::APInt> apint = GetAPInt(data, &offset, byte_size);
+  if (apint) {
+    std::string apint_str = toString(*apint, radix, is_signed);
     switch (radix) {
     case 2:
       s->Write("0b", 2);
@@ -170,10 +151,11 @@ static lldb::offset_t DumpInstructions(const DataExtractor &DE, Stream *s,
         offset += bytes_consumed;
         const bool show_address = base_addr != LLDB_INVALID_ADDRESS;
         const bool show_bytes = true;
+        const bool show_control_flow_kind = true;
         ExecutionContext exe_ctx;
         exe_scope->CalculateExecutionContext(exe_ctx);
-        disassembler_sp->GetInstructionList().Dump(s, show_address, show_bytes,
-                                                   &exe_ctx);
+        disassembler_sp->GetInstructionList().Dump(
+            s, show_address, show_bytes, show_control_flow_kind, &exe_ctx);
       }
     }
   } else
@@ -256,27 +238,27 @@ void DumpFloatingPoint(std::ostringstream &ss, FloatT f) {
   ss << f;
 }
 
-static llvm::Optional<MemoryTagMap>
+static std::optional<MemoryTagMap>
 GetMemoryTags(lldb::addr_t addr, size_t length,
               ExecutionContextScope *exe_scope) {
   assert(addr != LLDB_INVALID_ADDRESS);
 
   if (!exe_scope)
-    return llvm::None;
+    return std::nullopt;
 
   TargetSP target_sp = exe_scope->CalculateTarget();
   if (!target_sp)
-    return llvm::None;
+    return std::nullopt;
 
   ProcessSP process_sp = target_sp->CalculateProcess();
   if (!process_sp)
-    return llvm::None;
+    return std::nullopt;
 
   llvm::Expected<const MemoryTagManager *> tag_manager_or_err =
       process_sp->GetMemoryTagManager();
   if (!tag_manager_or_err) {
     llvm::consumeError(tag_manager_or_err.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
 
   MemoryRegionInfos memory_regions;
@@ -290,10 +272,10 @@ GetMemoryTags(lldb::addr_t addr, size_t length,
   // for an error.
   if (!tagged_ranges_or_err) {
     llvm::consumeError(tagged_ranges_or_err.takeError());
-    return llvm::None;
+    return std::nullopt;
   }
   if (tagged_ranges_or_err->empty())
-    return llvm::None;
+    return std::nullopt;
 
   MemoryTagMap memory_tag_map(*tag_manager_or_err);
   for (const MemoryTagManager::TagRange &range : *tagged_ranges_or_err) {
@@ -307,16 +289,15 @@ GetMemoryTags(lldb::addr_t addr, size_t length,
   }
 
   if (memory_tag_map.Empty())
-    return llvm::None;
+    return std::nullopt;
 
   return memory_tag_map;
 }
 
-static void
-printMemoryTags(const DataExtractor &DE, Stream *s, lldb::addr_t addr,
-                size_t len,
-                const llvm::Optional<MemoryTagMap> &memory_tag_map) {
-  std::vector<llvm::Optional<lldb::addr_t>> tags =
+static void printMemoryTags(const DataExtractor &DE, Stream *s,
+                            lldb::addr_t addr, size_t len,
+                            const std::optional<MemoryTagMap> &memory_tag_map) {
+  std::vector<std::optional<lldb::addr_t>> tags =
       memory_tag_map->GetTags(addr, len);
 
   // Only print if there is at least one tag for this line
@@ -333,6 +314,28 @@ printMemoryTags(const DataExtractor &DE, Stream *s, lldb::addr_t addr,
       s->PutCString(" <no tag>");
   }
   s->PutCString(")");
+}
+
+static const llvm::fltSemantics &GetFloatSemantics(const TargetSP &target_sp,
+                                                   size_t byte_size) {
+  if (target_sp) {
+    auto type_system_or_err =
+      target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
+    if (!type_system_or_err)
+      llvm::consumeError(type_system_or_err.takeError());
+    else if (auto ts = *type_system_or_err)
+      return ts->GetFloatTypeSemantics(byte_size);
+  }
+  // No target, just make a reasonable guess
+  switch(byte_size) {
+    case 2:
+      return llvm::APFloat::IEEEhalf();
+    case 4:
+      return llvm::APFloat::IEEEsingle();
+    case 8:
+      return llvm::APFloat::IEEEdouble();
+  }
+  return llvm::APFloat::Bogus();
 }
 
 lldb::offset_t lldb_private::DumpDataExtractor(
@@ -354,7 +357,7 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
   offset_t offset = start_offset;
 
-  llvm::Optional<MemoryTagMap> memory_tag_map = llvm::None;
+  std::optional<MemoryTagMap> memory_tag_map;
   if (show_memory_tags && base_addr != LLDB_INVALID_ADDRESS)
     memory_tag_map =
         GetMemoryTags(base_addr, DE.GetByteSize() - offset, exe_scope);
@@ -644,70 +647,38 @@ lldb::offset_t lldb_private::DumpDataExtractor(
 
     case eFormatFloat: {
       TargetSP target_sp;
-      bool used_upfloat = false;
       if (exe_scope)
         target_sp = exe_scope->CalculateTarget();
-      if (target_sp) {
-        auto type_system_or_err =
-            target_sp->GetScratchTypeSystemForLanguage(eLanguageTypeC);
-        if (!type_system_or_err) {
-          llvm::consumeError(type_system_or_err.takeError());
-        } else {
-          auto &type_system = *type_system_or_err;
-          llvm::SmallVector<char, 256> sv;
-          // Show full precision when printing float values
-          const unsigned format_precision = 0;
-          const unsigned format_max_padding =
-              target_sp->GetMaxZeroPaddingInFloatFormat();
 
-          const auto &semantics =
-              type_system.GetFloatTypeSemantics(item_byte_size);
+      std::optional<unsigned> format_max_padding;
+      if (target_sp)
+        format_max_padding = target_sp->GetMaxZeroPaddingInFloatFormat();
 
-          // Recalculate the byte size in case of a difference. This is possible
-          // when item_byte_size is 16 (128-bit), because you could get back the
-          // x87DoubleExtended semantics which has a byte size of 10 (80-bit).
-          const size_t semantics_byte_size =
-              (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
-          llvm::Optional<llvm::APInt> apint =
-              GetAPInt(DE, &offset, semantics_byte_size);
-          if (apint.hasValue()) {
-            llvm::APFloat apfloat(semantics, apint.getValue());
-            apfloat.toString(sv, format_precision, format_max_padding);
-            if (!sv.empty()) {
-              s->Printf("%*.*s", (int)sv.size(), (int)sv.size(), sv.data());
-              used_upfloat = true;
-            }
-          }
-        }
-      }
+      // Show full precision when printing float values
+      const unsigned format_precision = 0;
 
-      if (!used_upfloat) {
-        std::ostringstream ss;
-        if (item_byte_size == sizeof(float) || item_byte_size == 2) {
-          float f;
-          if (item_byte_size == 2) {
-            uint16_t half = DE.GetU16(&offset);
-            f = half2float(half);
-          } else {
-            f = DE.GetFloat(&offset);
-          }
-          ss.precision(std::numeric_limits<float>::digits10);
-          DumpFloatingPoint(ss, f);
-        } else if (item_byte_size == sizeof(double)) {
-          ss.precision(std::numeric_limits<double>::digits10);
-          DumpFloatingPoint(ss, DE.GetDouble(&offset));
-        } else if (item_byte_size == sizeof(long double) ||
-                   item_byte_size == 10) {
-          ss.precision(std::numeric_limits<long double>::digits10);
-          DumpFloatingPoint(ss, DE.GetLongDouble(&offset));
-        } else {
-          s->Printf("error: unsupported byte size (%" PRIu64
-                    ") for float format",
-                    (uint64_t)item_byte_size);
-          return offset;
-        }
-        ss.flush();
-        s->Printf("%s", ss.str().c_str());
+      const llvm::fltSemantics &semantics =
+          GetFloatSemantics(target_sp, item_byte_size);
+
+      // Recalculate the byte size in case of a difference. This is possible
+      // when item_byte_size is 16 (128-bit), because you could get back the
+      // x87DoubleExtended semantics which has a byte size of 10 (80-bit).
+      const size_t semantics_byte_size =
+          (llvm::APFloat::getSizeInBits(semantics) + 7) / 8;
+      std::optional<llvm::APInt> apint =
+          GetAPInt(DE, &offset, semantics_byte_size);
+      if (apint) {
+        llvm::APFloat apfloat(semantics, *apint);
+        llvm::SmallVector<char, 256> sv;
+        if (format_max_padding)
+          apfloat.toString(sv, format_precision, *format_max_padding);
+        else
+          apfloat.toString(sv, format_precision);
+        s->AsRawOstream() << sv;
+      } else {
+        s->Format("error: unsupported byte size ({0}) for float format",
+                  item_byte_size);
+        return offset;
       }
     } break;
 

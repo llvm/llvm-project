@@ -9,8 +9,8 @@ define void @store8(i8* %x, i8 %y) {
 
 define void @store16(i16* %x, i16 %y) {
 ; CHECK-LABEL: store16:
-; CHECK: st {{[YZ]}}, r22
 ; CHECK: std {{[YZ]}}+1, r23
+; CHECK: st {{[YZ]}}, r22
   store i16 %y, i16* %x
   ret void
 }
@@ -36,8 +36,8 @@ define void @store8nodisp(i8* %x, i8 %y) {
 
 define void @store16disp(i16* %x, i16 %y) {
 ; CHECK-LABEL: store16disp:
-; CHECK: std {{[YZ]}}+62, r22
 ; CHECK: std {{[YZ]}}+63, r23
+; CHECK: std {{[YZ]}}+62, r22
   %arrayidx = getelementptr inbounds i16, i16* %x, i16 31
   store i16 %y, i16* %arrayidx
   ret void
@@ -48,8 +48,8 @@ define void @store16nodisp(i16* %x, i16 %y) {
 ; CHECK: subi r24, 192
 ; CHECK: sbci r25, 255
 ; CHECK: movw r30, r24
-; CHECK: st {{[YZ]}}, r22
 ; CHECK: std {{[YZ]}}+1, r23
+; CHECK: st {{[YZ]}}, r22
   %arrayidx = getelementptr inbounds i16, i16* %x, i16 32
   store i16 %y, i16* %arrayidx
   ret void
@@ -75,8 +75,8 @@ while.end:                                        ; preds = %while.body, %entry
 
 define void @store16postinc(i16* %x, i16 %y) {
 ; CHECK-LABEL: store16postinc:
-; CHECK: st {{[XYZ]}}+, {{.*}}
-; CHECK: st {{[XYZ]}}+, {{.*}}
+; CHECK: std {{[XYZ]}}+1, {{.*}}
+; CHECK: st  {{[XYZ]}}, {{.*}}
 entry:
   %tobool3 = icmp eq i16 %y, 0
   br i1 %tobool3, label %while.end, label %while.body

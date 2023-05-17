@@ -26,15 +26,15 @@ tstart:
     jsri 0xFFFFFFFE
 
 
-# CHECK:         0:      	jsri32  0x30 <$d.4>
-# CHECK-NEXT:    4:      	jsri32	0x34 <$d.4+0x4>
-# CHECK-NEXT:    8:      	jsri32	0x38 <$d.4+0x8>
+# CHECK:         0:      	jsri32  0x30 
+# CHECK-NEXT:    4:      	jsri32	0x34
+# CHECK-NEXT:    8:      	jsri32	0x38
 
 # CHECK:         c:	        00 1c	.short	0x1c00
 
-# CHECK:         e:      	jsri32	0x3c <$d.4+0xc>
-# CHECK-NEXT:   12:         jsri32	0x40 <$d.4+0x10>
-# CHECK-NEXT:   16:         jsri32	0x44 <$d.4+0x14>
+# CHECK:         e:      	jsri32	0x3c 
+# CHECK-NEXT:   12:         jsri32	0x40
+# CHECK-NEXT:   16:         jsri32	0x44
 
 
 
@@ -42,12 +42,12 @@ tstart:
 # CHECK-NEXT:   1a:         bsr32	0x1a
 
 # CHECK:    <.J2>:
-# CHECK-NEXT:   1e:         bsr32	0xfffff01e <$d.4+0xffffffffffffefee>
+# CHECK-NEXT:   1e:         bsr32	0xfffff01e
 
 # CHECK:    <.J3>:
-# CHECK-NEXT:   22:         bsr32	0x1022 <$d.4+0xff2>
-# CHECK-NEXT:   26:         jsri32	0x54 <$d.4+0x24>
-# CHECK-NEXT:   2a:         jsri32	0x58 <$d.4+0x28>
+# CHECK-NEXT:   22:         bsr32	0x1022
+# CHECK-NEXT:   26:         jsri32	0x54
+# CHECK-NEXT:   2a:         jsri32	0x58
 # CHECK-NEXT:   2e:         bkpt
 
 

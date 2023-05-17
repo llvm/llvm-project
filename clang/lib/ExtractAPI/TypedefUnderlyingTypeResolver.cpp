@@ -11,15 +11,14 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "TypedefUnderlyingTypeResolver.h"
+#include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
 
 using namespace clang;
 using namespace extractapi;
 
-namespace {
-
-const NamedDecl *getUnderlyingTypeDecl(QualType Type) {
+const NamedDecl *
+TypedefUnderlyingTypeResolver::getUnderlyingTypeDecl(QualType Type) const {
   const NamedDecl *TypeDecl = nullptr;
 
   const TypedefType *TypedefTy = Type->getAs<TypedefType>();
@@ -43,8 +42,6 @@ const NamedDecl *getUnderlyingTypeDecl(QualType Type) {
 
   return TypeDecl;
 }
-
-} // namespace
 
 SymbolReference
 TypedefUnderlyingTypeResolver::getSymbolReferenceForType(QualType Type,

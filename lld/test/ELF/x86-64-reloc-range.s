@@ -4,7 +4,7 @@
 // RUN: ld.lld --noinhibit-exec -shared %t.o -o %t 2>&1 | FileCheck %s
 // RUN: ls %t
 
-// CHECK: {{.*}}:(.text+0x3): relocation R_X86_64_PC32 out of range: 2147483648 is not in [-2147483648, 2147483647]
+// CHECK: {{.*}}:(.text+0x3): relocation R_X86_64_PC32 out of range: 2147483648 is not in [-2147483648, 2147483647]; references section '.bss'
 // CHECK-NOT: relocation
 
         lea     foo(%rip), %rax

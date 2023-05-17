@@ -94,22 +94,8 @@ body: |
   bb.0:
     ; CHECK-LABEL: name: widen_v16s1
     ; CHECK: [[DEF:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
-    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY3:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY4:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY5:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY6:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY7:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY8:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY9:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY10:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY11:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY12:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY13:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[COPY14:%[0-9]+]]:_(s8) = COPY [[DEF]](s8)
-    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[COPY]](s8), [[COPY1]](s8), [[COPY2]](s8), [[COPY3]](s8), [[COPY4]](s8), [[COPY5]](s8), [[COPY6]](s8), [[COPY7]](s8), [[COPY8]](s8), [[COPY9]](s8), [[COPY10]](s8), [[COPY11]](s8), [[COPY12]](s8), [[COPY13]](s8), [[COPY14]](s8), [[DEF]](s8)
+    ; CHECK-NEXT: [[DEF1:%[0-9]+]]:_(s8) = G_IMPLICIT_DEF
+    ; CHECK-NEXT: [[BUILD_VECTOR:%[0-9]+]]:_(<16 x s8>) = G_BUILD_VECTOR [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8), [[DEF]](s8), [[DEF1]](s8)
     ; CHECK-NEXT: $q0 = COPY [[BUILD_VECTOR]](<16 x s8>)
     ; CHECK-NEXT: RET_ReallyLR
     %0:_(s1) = G_IMPLICIT_DEF

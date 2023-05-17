@@ -12,6 +12,7 @@
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
+#include "llvm/TargetParser/Host.h"
 
 using namespace clang::driver;
 using namespace clang::driver::tools;
@@ -81,12 +82,14 @@ const char *sparc::getSparcAsmModeForCPU(StringRef Name,
 sparc::FloatABI sparc::getSparcFloatABI(const Driver &D,
                                         const ArgList &Args) {
   sparc::FloatABI ABI = sparc::FloatABI::Invalid;
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_msoft_float,
-                               options::OPT_mhard_float,
+  if (Arg *A = Args.getLastArg(options::OPT_msoft_float, options::OPT_mno_fpu,
+                               options::OPT_mhard_float, options::OPT_mfpu,
                                options::OPT_mfloat_abi_EQ)) {
-    if (A->getOption().matches(clang::driver::options::OPT_msoft_float))
+    if (A->getOption().matches(options::OPT_msoft_float) ||
+        A->getOption().matches(options::OPT_mno_fpu))
       ABI = sparc::FloatABI::Soft;
-    else if (A->getOption().matches(options::OPT_mhard_float))
+    else if (A->getOption().matches(options::OPT_mhard_float) ||
+             A->getOption().matches(options::OPT_mfpu))
       ABI = sparc::FloatABI::Hard;
     else {
       ABI = llvm::StringSwitch<sparc::FloatABI>(A->getValue())
@@ -113,9 +116,76 @@ sparc::FloatABI sparc::getSparcFloatABI(const Driver &D,
   return ABI;
 }
 
+std::string sparc::getSparcTargetCPU(const Driver &D, const ArgList &Args,
+                                     const llvm::Triple &Triple) {
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ)) {
+    D.Diag(diag::err_drv_unsupported_opt_for_target)
+        << A->getSpelling() << Triple.getTriple();
+    return "";
+  }
+
+  if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_mcpu_EQ)) {
+    StringRef CPUName = A->getValue();
+    if (CPUName == "native") {
+      std::string CPU = std::string(llvm::sys::getHostCPUName());
+      if (!CPU.empty() && CPU != "generic")
+        return CPU;
+      return "";
+    }
+    return std::string(CPUName);
+  }
+
+  if (Triple.getArch() == llvm::Triple::sparc && Triple.isOSSolaris())
+    return "v9";
+  return "";
+}
+
 void sparc::getSparcTargetFeatures(const Driver &D, const ArgList &Args,
                                    std::vector<StringRef> &Features) {
   sparc::FloatABI FloatABI = sparc::getSparcFloatABI(D, Args);
   if (FloatABI == sparc::FloatABI::Soft)
     Features.push_back("+soft-float");
+
+  if (Arg *A = Args.getLastArg(options::OPT_mfsmuld, options::OPT_mno_fsmuld)) {
+    if (A->getOption().matches(options::OPT_mfsmuld))
+      Features.push_back("+fsmuld");
+    else
+      Features.push_back("-fsmuld");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mpopc, options::OPT_mno_popc)) {
+    if (A->getOption().matches(options::OPT_mpopc))
+      Features.push_back("+popc");
+    else
+      Features.push_back("-popc");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mvis, options::OPT_mno_vis)) {
+    if (A->getOption().matches(options::OPT_mvis))
+      Features.push_back("+vis");
+    else
+      Features.push_back("-vis");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mvis2, options::OPT_mno_vis2)) {
+    if (A->getOption().matches(options::OPT_mvis2))
+      Features.push_back("+vis2");
+    else
+      Features.push_back("-vis2");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mvis3, options::OPT_mno_vis3)) {
+    if (A->getOption().matches(options::OPT_mvis3))
+      Features.push_back("+vis3");
+    else
+      Features.push_back("-vis3");
+  }
+
+  if (Arg *A = Args.getLastArg(options::OPT_mhard_quad_float,
+                               options::OPT_msoft_quad_float)) {
+    if (A->getOption().matches(options::OPT_mhard_quad_float))
+      Features.push_back("+hard-quad-float");
+    else
+      Features.push_back("-hard-quad-float");
+  }
 }

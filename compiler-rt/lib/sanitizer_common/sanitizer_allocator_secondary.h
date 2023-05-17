@@ -215,7 +215,7 @@ class LargeMmapAllocator {
 
   // This function does the same as GetBlockBegin, but is much faster.
   // Must be called with the allocator locked.
-  void *GetBlockBeginFastLocked(void *ptr) {
+  void *GetBlockBeginFastLocked(const void *ptr) {
     mutex_.CheckLocked();
     uptr p = reinterpret_cast<uptr>(ptr);
     uptr n = n_chunks_;

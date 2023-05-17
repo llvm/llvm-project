@@ -7,7 +7,7 @@
 ; FIXME:
 ; XUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6 %s
 
-define <3 x i32> @v_load_constant_v3i32_align1(<3 x i32> addrspace(4)* %ptr) {
+define <3 x i32> @v_load_constant_v3i32_align1(ptr addrspace(4) %ptr) {
 ; GFX9-UNALIGNED-LABEL: v_load_constant_v3i32_align1:
 ; GFX9-UNALIGNED:       ; %bb.0:
 ; GFX9-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -112,11 +112,11 @@ define <3 x i32> @v_load_constant_v3i32_align1(<3 x i32> addrspace(4)* %ptr) {
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v1, v4, v3
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v2, v6, v5
 ; GFX7-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 1
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 1
   ret <3 x i32> %load
 }
 
-define <3 x i32> @v_load_constant_v3i32_align2(<3 x i32> addrspace(4)* %ptr) {
+define <3 x i32> @v_load_constant_v3i32_align2(ptr addrspace(4) %ptr) {
 ; GFX9-UNALIGNED-LABEL: v_load_constant_v3i32_align2:
 ; GFX9-UNALIGNED:       ; %bb.0:
 ; GFX9-UNALIGNED-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -176,11 +176,11 @@ define <3 x i32> @v_load_constant_v3i32_align2(<3 x i32> addrspace(4)* %ptr) {
 ; GFX7-NOUNALIGNED-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NOUNALIGNED-NEXT:    v_or_b32_e32 v2, v2, v7
 ; GFX7-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 2
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 2
   ret <3 x i32> %load
 }
 
-define <3 x i32> @v_load_constant_v3i32_align4(<3 x i32> addrspace(4)* %ptr) {
+define <3 x i32> @v_load_constant_v3i32_align4(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: v_load_constant_v3i32_align4:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -197,11 +197,11 @@ define <3 x i32> @v_load_constant_v3i32_align4(<3 x i32> addrspace(4)* %ptr) {
 ; GFX7-NEXT:    buffer_load_dwordx3 v[0:2], v[0:1], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 4
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 4
   ret <3 x i32> %load
 }
 
-define i96 @v_load_constant_i96_align8(i96 addrspace(4)* %ptr) {
+define i96 @v_load_constant_i96_align8(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: v_load_constant_i96_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -218,11 +218,11 @@ define i96 @v_load_constant_i96_align8(i96 addrspace(4)* %ptr) {
 ; GFX7-NEXT:    buffer_load_dwordx3 v[0:2], v[0:1], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %load = load i96, i96 addrspace(4)* %ptr, align 8
+  %load = load i96, ptr addrspace(4) %ptr, align 8
   ret i96 %load
 }
 
-define <3 x i32> @v_load_constant_v3i32_align8(<3 x i32> addrspace(4)* %ptr) {
+define <3 x i32> @v_load_constant_v3i32_align8(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: v_load_constant_v3i32_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -239,11 +239,11 @@ define <3 x i32> @v_load_constant_v3i32_align8(<3 x i32> addrspace(4)* %ptr) {
 ; GFX7-NEXT:    buffer_load_dwordx3 v[0:2], v[0:1], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 8
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 8
   ret <3 x i32> %load
 }
 
-define <6 x i16> @v_load_constant_v6i16_align8(<6 x i16> addrspace(4)* %ptr) {
+define <6 x i16> @v_load_constant_v6i16_align8(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: v_load_constant_v6i16_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -266,11 +266,11 @@ define <6 x i16> @v_load_constant_v6i16_align8(<6 x i16> addrspace(4)* %ptr) {
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v7
 ; GFX7-NEXT:    v_mov_b32_e32 v4, v8
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <6 x i16>, <6 x i16> addrspace(4)* %ptr, align 8
+  %load = load <6 x i16>, ptr addrspace(4) %ptr, align 8
   ret <6 x i16> %load
 }
 
-define <12 x i8> @v_load_constant_v12i8_align8(<12 x i8> addrspace(4)* %ptr) {
+define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: v_load_constant_v12i8_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -313,11 +313,11 @@ define <12 x i8> @v_load_constant_v12i8_align8(<12 x i8> addrspace(4)* %ptr) {
 ; GFX7-NEXT:    v_mov_b32_e32 v1, v13
 ; GFX7-NEXT:    v_mov_b32_e32 v2, v12
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <12 x i8>, <12 x i8> addrspace(4)* %ptr, align 8
+  %load = load <12 x i8>, ptr addrspace(4) %ptr, align 8
   ret <12 x i8> %load
 }
 
-define <3 x i32> @v_load_constant_v3i32_align16(<3 x i32> addrspace(4)* %ptr) {
+define <3 x i32> @v_load_constant_v3i32_align16(ptr addrspace(4) %ptr) {
 ; GFX9-LABEL: v_load_constant_v3i32_align16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
@@ -334,11 +334,11 @@ define <3 x i32> @v_load_constant_v3i32_align16(<3 x i32> addrspace(4)* %ptr) {
 ; GFX7-NEXT:    buffer_load_dwordx3 v[0:2], v[0:1], s[4:7], 0 addr64
 ; GFX7-NEXT:    s_waitcnt vmcnt(0)
 ; GFX7-NEXT:    s_setpc_b64 s[30:31]
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 16
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 16
   ret <3 x i32> %load
 }
 
-define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(ptr addrspace(4) inreg %ptr) {
 ; GFX9-UNALIGNED-LABEL: s_load_constant_v3i32_align1:
 ; GFX9-UNALIGNED:       ; %bb.0:
 ; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
@@ -451,11 +451,11 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align1(<3 x i32> addrspace(4)*
 ; GFX7-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX7-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX7-NOUNALIGNED-NEXT:    ; return to shader part epilog
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 1
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 1
   ret <3 x i32> %load
 }
 
-define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(<3 x i32> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(ptr addrspace(4) inreg %ptr) {
 ; GFX9-UNALIGNED-LABEL: s_load_constant_v3i32_align2:
 ; GFX9-UNALIGNED:       ; %bb.0:
 ; GFX9-UNALIGNED-NEXT:    v_mov_b32_e32 v0, 0
@@ -523,11 +523,11 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align2(<3 x i32> addrspace(4)*
 ; GFX7-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX7-NOUNALIGNED-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX7-NOUNALIGNED-NEXT:    ; return to shader part epilog
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 2
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 2
   ret <3 x i32> %load
 }
 
-define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(<3 x i32> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: s_load_constant_v3i32_align4:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -545,11 +545,11 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align4(<3 x i32> addrspace(4)*
 ; GFX7-NEXT:    s_mov_b32 s0, s4
 ; GFX7-NEXT:    s_mov_b32 s1, s5
 ; GFX7-NEXT:    ; return to shader part epilog
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 4
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 4
   ret <3 x i32> %load
 }
 
-define amdgpu_ps i96 @s_load_constant_i96_align8(i96 addrspace(4)* inreg %ptr) {
+define amdgpu_ps i96 @s_load_constant_i96_align8(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: s_load_constant_i96_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -567,11 +567,11 @@ define amdgpu_ps i96 @s_load_constant_i96_align8(i96 addrspace(4)* inreg %ptr) {
 ; GFX7-NEXT:    s_mov_b32 s0, s4
 ; GFX7-NEXT:    s_mov_b32 s1, s5
 ; GFX7-NEXT:    ; return to shader part epilog
-  %load = load i96, i96 addrspace(4)* %ptr, align 8
+  %load = load i96, ptr addrspace(4) %ptr, align 8
   ret i96 %load
 }
 
-define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align8(<3 x i32> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align8(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: s_load_constant_v3i32_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -589,11 +589,11 @@ define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align8(<3 x i32> addrspace(4)*
 ; GFX7-NEXT:    s_mov_b32 s0, s4
 ; GFX7-NEXT:    s_mov_b32 s1, s5
 ; GFX7-NEXT:    ; return to shader part epilog
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 8
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 8
   ret <3 x i32> %load
 }
 
-define amdgpu_ps <3 x i32> @s_load_constant_v6i16_align8(<6 x i16> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <3 x i32> @s_load_constant_v6i16_align8(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: s_load_constant_v6i16_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x0
@@ -611,12 +611,12 @@ define amdgpu_ps <3 x i32> @s_load_constant_v6i16_align8(<6 x i16> addrspace(4)*
 ; GFX7-NEXT:    s_mov_b32 s0, s4
 ; GFX7-NEXT:    s_mov_b32 s1, s5
 ; GFX7-NEXT:    ; return to shader part epilog
-  %load = load <6 x i16>, <6 x i16> addrspace(4)* %ptr, align 8
+  %load = load <6 x i16>, ptr addrspace(4) %ptr, align 8
   %cast = bitcast <6 x i16> %load to <3 x i32>
   ret <3 x i32> %cast
 }
 
-define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(<12 x i8> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(ptr addrspace(4) inreg %ptr) {
 ; GFX9-LABEL: s_load_constant_v12i8_align8:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_load_dwordx2 s[12:13], s[0:1], 0x0
@@ -652,16 +652,16 @@ define amdgpu_ps <12 x i8> @s_load_constant_v12i8_align8(<12 x i8> addrspace(4)*
 ; GFX7-NEXT:    s_mov_b32 s0, s12
 ; GFX7-NEXT:    s_mov_b32 s4, s13
 ; GFX7-NEXT:    ; return to shader part epilog
-  %load = load <12 x i8>, <12 x i8> addrspace(4)* %ptr, align 8
+  %load = load <12 x i8>, ptr addrspace(4) %ptr, align 8
   ret <12 x i8> %load
 }
 
-define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align16(<3 x i32> addrspace(4)* inreg %ptr) {
+define amdgpu_ps <3 x i32> @s_load_constant_v3i32_align16(ptr addrspace(4) inreg %ptr) {
 ; GCN-LABEL: s_load_constant_v3i32_align16:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_load_dwordx4 s[0:3], s[0:1], 0x0
 ; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    ; return to shader part epilog
-  %load = load <3 x i32>, <3 x i32> addrspace(4)* %ptr, align 16
+  %load = load <3 x i32>, ptr addrspace(4) %ptr, align 16
   ret <3 x i32> %load
 }

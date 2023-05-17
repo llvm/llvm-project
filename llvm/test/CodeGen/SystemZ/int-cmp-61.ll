@@ -4,7 +4,7 @@
 ; Test using bitwise logic on icmp operands instead of i1 logic when
 ; possible.
 
-define i32 @fun(i32* %Src) {
+define i32 @fun(ptr %Src) {
 ; CHECK-LABEL: fun:
 ; CHECK:       # %bb.0: # %bb
 ; CHECK-NEXT:    lhi %r0, -2
@@ -15,7 +15,7 @@ define i32 @fun(i32* %Src) {
 ; CHECK-NEXT:    lochilh %r2, 1
 ; CHECK-NEXT:    br %r14
 bb:
-  %i = load i32, i32* %Src
+  %i = load i32, ptr %Src
   %i3 = sub nsw i32 0, %i
   %i4 = icmp ne i32 %i3, 2
   %i5 = icmp ne i32 %i3, 4

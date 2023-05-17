@@ -58,7 +58,7 @@ define dso_local void @test_iltsi_store(i32 signext %a, i32 signext %b) {
 entry:
   %cmp = icmp slt i32 %a, %b
   %conv = zext i1 %cmp to i32
-  store i32 %conv, i32* @glob, align 4
+  store i32 %conv, ptr @glob, align 4
   ret void
 }
 
@@ -74,7 +74,7 @@ define dso_local void @test_iltsi_sext_store(i32 signext %a, i32 signext %b) {
 entry:
   %cmp = icmp slt i32 %a, %b
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob, align 4
+  store i32 %sub, ptr @glob, align 4
   ret void
 }
 
@@ -89,6 +89,6 @@ define dso_local void @test_iltsi_sext_z_store(i32 signext %a) {
 entry:
   %cmp = icmp slt i32 %a, 0
   %sub = sext i1 %cmp to i32
-  store i32 %sub, i32* @glob, align 4
+  store i32 %sub, ptr @glob, align 4
   ret void
 }

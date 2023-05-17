@@ -8,12 +8,16 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/memory_resource>
 
 // template <class T> class polymorphic_allocator
 
 // polymorphic_allocator
 // polymorphic_allocator<T>::select_on_container_copy_construction() const
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/memory_resource>
 #include <type_traits>

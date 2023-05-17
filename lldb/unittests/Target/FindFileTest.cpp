@@ -15,6 +15,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FileUtilities.h"
 #include "gtest/gtest.h"
+#include <optional>
 #include <utility>
 
 using namespace llvm;
@@ -47,16 +48,16 @@ static void TestFileFindings(const PathMappingList &map,
                              llvm::ArrayRef<Matches> matches,
                              llvm::ArrayRef<FileSpec> fails) {
   for (const auto &fail : fails) {
-    SCOPED_TRACE(fail.GetCString());
+    SCOPED_TRACE(fail.GetPath().c_str());
     EXPECT_FALSE(map.FindFile(fail));
   }
 
   for (const auto &match : matches) {
     SCOPED_TRACE(match.original.GetPath() + " -> " + match.remapped);
-    llvm::Optional<FileSpec> remapped;
+    std::optional<FileSpec> remapped;
 
     EXPECT_TRUE(bool(remapped = map.FindFile(match.original)));
-    EXPECT_TRUE(FileSpec(remapped.getValue()).GetPath() ==
+    EXPECT_TRUE(FileSpec(*remapped).GetPath() ==
                 ConstString(match.remapped).GetStringRef());
   }
 }

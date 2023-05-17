@@ -87,7 +87,6 @@
 @end
 
 // rdar://14251387
-#define IBAction void)__attribute__((ibaction)
 
 @interface UIViewController @end
 

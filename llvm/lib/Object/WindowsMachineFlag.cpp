@@ -15,6 +15,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace llvm;
 
@@ -25,6 +26,8 @@ COFF::MachineTypes llvm::getMachineType(StringRef S) {
       .Cases("x86", "i386", COFF::IMAGE_FILE_MACHINE_I386)
       .Case("arm", COFF::IMAGE_FILE_MACHINE_ARMNT)
       .Case("arm64", COFF::IMAGE_FILE_MACHINE_ARM64)
+      .Case("arm64ec", COFF::IMAGE_FILE_MACHINE_ARM64EC)
+      .Case("arm64x", COFF::IMAGE_FILE_MACHINE_ARM64X)
       .Default(COFF::IMAGE_FILE_MACHINE_UNKNOWN);
 }
 
@@ -34,6 +37,10 @@ StringRef llvm::machineToStr(COFF::MachineTypes MT) {
     return "arm";
   case COFF::IMAGE_FILE_MACHINE_ARM64:
     return "arm64";
+  case COFF::IMAGE_FILE_MACHINE_ARM64EC:
+    return "arm64ec";
+  case COFF::IMAGE_FILE_MACHINE_ARM64X:
+    return "arm64x";
   case COFF::IMAGE_FILE_MACHINE_AMD64:
     return "x64";
   case COFF::IMAGE_FILE_MACHINE_I386:

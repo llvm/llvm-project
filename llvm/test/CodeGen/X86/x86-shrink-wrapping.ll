@@ -51,8 +51,8 @@ define i32 @foo(i32 %a, i32 %b) {
   br i1 %tmp2, label %true, label %false
 
 true:
-  store i32 %a, i32* %tmp, align 4
-  %tmp4 = call i32 @doSomething(i32 0, i32* %tmp)
+  store i32 %a, ptr %tmp, align 4
+  %tmp4 = call i32 @doSomething(i32 0, ptr %tmp)
   br label %false
 
 false:
@@ -61,7 +61,7 @@ false:
 }
 
 ; Function Attrs: optsize
-declare i32 @doSomething(i32, i32*)
+declare i32 @doSomething(i32, ptr)
 
 
 ; Check that we do not perform the restore inside the loop whereas the save
@@ -612,31 +612,31 @@ if.end:                                           ; preds = %if.else, %if.then
 declare i32 @someVariadicFunc(i32, ...)
 
 ; Check that we use LEA not to clobber EFLAGS.
-%struct.temp_slot = type { %struct.temp_slot*, %struct.rtx_def*, %struct.rtx_def*, i32, i64, %union.tree_node*, %union.tree_node*, i8, i8, i32, i32, i64, i64 }
+%struct.temp_slot = type { ptr, ptr, ptr, i32, i64, ptr, ptr, i8, i8, i32, i32, i64, i64 }
 %union.tree_node = type { %struct.tree_decl }
-%struct.tree_decl = type { %struct.tree_common, i8*, i32, i32, %union.tree_node*, i48, %union.anon, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %union.tree_node*, %struct.rtx_def*, %struct.rtx_def*, %union.anon.1, %union.tree_node*, %union.tree_node*, %union.tree_node*, i64, %struct.lang_decl* }
-%struct.tree_common = type { %union.tree_node*, %union.tree_node*, i32 }
+%struct.tree_decl = type { %struct.tree_common, ptr, i32, i32, ptr, i48, %union.anon, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, %union.anon.1, ptr, ptr, ptr, i64, ptr }
+%struct.tree_common = type { ptr, ptr, i32 }
 %union.anon = type { i64 }
-%union.anon.1 = type { %struct.function* }
-%struct.function = type { %struct.eh_status*, %struct.stmt_status*, %struct.expr_status*, %struct.emit_status*, %struct.varasm_status*, i8*, %union.tree_node*, %struct.function*, i32, i32, i32, i32, %struct.rtx_def*, %struct.ix86_args, %struct.rtx_def*, %struct.rtx_def*, i8*, %struct.initial_value_struct*, i32, %union.tree_node*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %union.tree_node*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, i64, %union.tree_node*, %union.tree_node*, %struct.rtx_def*, %struct.rtx_def*, i32, %struct.rtx_def**, %struct.temp_slot*, i32, i32, i32, %struct.var_refs_queue*, i32, i32, i8*, %union.tree_node*, %struct.rtx_def*, i32, i32, %struct.machine_function*, i32, i32, %struct.language_function*, %struct.rtx_def*, i24 }
+%union.anon.1 = type { ptr }
+%struct.function = type { ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32, i32, i32, ptr, %struct.ix86_args, ptr, ptr, ptr, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, ptr, i64, ptr, ptr, ptr, ptr, i32, ptr, ptr, i32, i32, i32, ptr, i32, i32, ptr, ptr, ptr, i32, i32, ptr, i32, i32, ptr, ptr, i24 }
 %struct.eh_status = type opaque
 %struct.stmt_status = type opaque
-%struct.expr_status = type { i32, i32, i32, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def*, %struct.rtx_def* }
-%struct.emit_status = type { i32, i32, %struct.rtx_def*, %struct.rtx_def*, %union.tree_node*, %struct.sequence_stack*, i32, i32, i8*, i32, i8*, %union.tree_node**, %struct.rtx_def** }
-%struct.sequence_stack = type { %struct.rtx_def*, %struct.rtx_def*, %union.tree_node*, %struct.sequence_stack* }
+%struct.expr_status = type { i32, i32, i32, ptr, ptr, ptr, ptr }
+%struct.emit_status = type { i32, i32, ptr, ptr, ptr, ptr, i32, i32, ptr, i32, ptr, ptr, ptr }
+%struct.sequence_stack = type { ptr, ptr, ptr, ptr }
 %struct.varasm_status = type opaque
 %struct.ix86_args = type { i32, i32, i32, i32, i32, i32, i32 }
 %struct.initial_value_struct = type opaque
-%struct.var_refs_queue = type { %struct.rtx_def*, i32, i32, %struct.var_refs_queue* }
+%struct.var_refs_queue = type { ptr, i32, i32, ptr }
 %struct.machine_function = type opaque
 %struct.language_function = type opaque
 %struct.lang_decl = type opaque
 %struct.rtx_def = type { i32, [1 x %union.rtunion_def] }
 %union.rtunion_def = type { i64 }
 
-declare hidden fastcc %struct.temp_slot* @find_temp_slot_from_address(%struct.rtx_def* readonly)
+declare hidden fastcc ptr @find_temp_slot_from_address(ptr readonly)
 
-define void @useLEA(%struct.rtx_def* readonly %x) {
+define void @useLEA(ptr readonly %x) {
 ; ENABLE-LABEL: useLEA:
 ; ENABLE:       ## %bb.0: ## %entry
 ; ENABLE-NEXT:    pushq %rax
@@ -711,22 +711,19 @@ define void @useLEA(%struct.rtx_def* readonly %x) {
 ; DISABLE-NEXT:    popq %rax
 ; DISABLE-NEXT:    retq
 entry:
-  %cmp = icmp eq %struct.rtx_def* %x, null
+  %cmp = icmp eq ptr %x, null
   br i1 %cmp, label %cleanup, label %if.end
 
 if.end:                                           ; preds = %entry
-  %tmp = getelementptr inbounds %struct.rtx_def, %struct.rtx_def* %x, i64 0, i32 0
-  %bf.load = load i32, i32* %tmp, align 8
+  %bf.load = load i32, ptr %x, align 8
   %bf.clear = and i32 %bf.load, 65535
   %cmp1 = icmp eq i32 %bf.clear, 66
   br i1 %cmp1, label %lor.lhs.false, label %cleanup
 
 lor.lhs.false:                                    ; preds = %if.end
-  %arrayidx = getelementptr inbounds %struct.rtx_def, %struct.rtx_def* %x, i64 0, i32 1, i64 0
-  %rtx = bitcast %union.rtunion_def* %arrayidx to %struct.rtx_def**
-  %tmp1 = load %struct.rtx_def*, %struct.rtx_def** %rtx, align 8
-  %tmp2 = getelementptr inbounds %struct.rtx_def, %struct.rtx_def* %tmp1, i64 0, i32 0
-  %bf.load2 = load i32, i32* %tmp2, align 8
+  %arrayidx = getelementptr inbounds %struct.rtx_def, ptr %x, i64 0, i32 1, i64 0
+  %tmp1 = load ptr, ptr %arrayidx, align 8
+  %bf.load2 = load i32, ptr %tmp1, align 8
   %bf.clear3 = and i32 %bf.load2, 65535
   switch i32 %bf.clear3, label %if.end.55 [
     i32 67, label %cleanup
@@ -740,13 +737,13 @@ lor.lhs.false:                                    ; preds = %if.end
   ]
 
 if.end.55:                                        ; preds = %lor.lhs.false
-  %call = tail call fastcc %struct.temp_slot* @find_temp_slot_from_address(%struct.rtx_def* %tmp1) #2
-  %cmp59 = icmp eq %struct.temp_slot* %call, null
+  %call = tail call fastcc ptr @find_temp_slot_from_address(ptr %tmp1) #2
+  %cmp59 = icmp eq ptr %call, null
   br i1 %cmp59, label %cleanup, label %if.then.60
 
 if.then.60:                                       ; preds = %if.end.55
-  %addr_taken = getelementptr inbounds %struct.temp_slot, %struct.temp_slot* %call, i64 0, i32 8
-  store i8 1, i8* %addr_taken, align 1
+  %addr_taken = getelementptr inbounds %struct.temp_slot, ptr %call, i64 0, i32 8
+  store i8 1, ptr %addr_taken, align 1
   br label %cleanup
 
 cleanup:                                          ; preds = %if.then.60, %if.end.55, %lor.lhs.false, %lor.lhs.false, %lor.lhs.false, %lor.lhs.false, %lor.lhs.false, %lor.lhs.false, %lor.lhs.false, %lor.lhs.false, %if.end, %entry
@@ -881,7 +878,7 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi i32 [ 0, %if.then ], [ %add, %for.body ]
   %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.03
-  store i32 %add, i32* %ptr
+  store i32 %add, ptr %ptr
   br label %for.body
 
 if.end:
@@ -996,7 +993,7 @@ for.body:                                         ; preds = %for.body, %entry
   %sum.03 = phi i32 [ 0, %if.then ], [ %add, %body1 ], [ 1, %body2]
   %call = tail call i32 asm "movl $$1, $0", "=r,~{ebx}"()
   %add = add nsw i32 %call, %sum.03
-  store i32 %add, i32* %ptr
+  store i32 %add, ptr %ptr
   br i1 undef, label %body1, label %body2
 
 body1:
@@ -1083,21 +1080,19 @@ body:                                             ; preds = %entry
   br i1 undef, label %loop2a, label %end
 
 loop1:                                            ; preds = %loop2a, %loop2b
-  %var.phi = phi i32* [ %next.phi, %loop2b ], [ %var, %loop2a ]
-  %next.phi = phi i32* [ %next.load, %loop2b ], [ %next.var, %loop2a ]
-  %0 = icmp eq i32* %var, null
-  %next.load = load i32*, i32** undef
+  %var.phi = phi ptr [ %next.phi, %loop2b ], [ %var, %loop2a ]
+  %next.phi = phi ptr [ %next.load, %loop2b ], [ %next.var, %loop2a ]
+  %0 = icmp eq ptr %var, null
+  %next.load = load ptr, ptr undef
   br i1 %0, label %loop2a, label %loop2b
 
 loop2a:                                           ; preds = %loop1, %body, %entry
-  %var = phi i32* [ null, %body ], [ null, %entry ], [ %next.phi, %loop1 ]
-  %next.var = phi i32* [ undef, %body ], [ null, %entry ], [ %next.load, %loop1 ]
+  %var = phi ptr [ null, %body ], [ null, %entry ], [ %next.phi, %loop1 ]
+  %next.var = phi ptr [ undef, %body ], [ null, %entry ], [ %next.load, %loop1 ]
   br label %loop1
 
 loop2b:                                           ; preds = %loop1
-  %gep1 = bitcast i32* %var.phi to i32*
-  %next.ptr = bitcast i32* %gep1 to i32**
-  store i32* %next.phi, i32** %next.ptr
+  store ptr %next.phi, ptr %var.phi
   br label %loop1
 
 end:
@@ -1106,7 +1101,7 @@ end:
 
 ; Check that we just don't bail out on RegMask.
 ; In this case, the RegMask does not touch a CSR so we are good to go!
-define i32 @regmask(i32 %a, i32 %b, i32* %addr) {
+define i32 @regmask(i32 %a, i32 %b, ptr %addr) {
 ; ENABLE-LABEL: regmask:
 ; ENABLE:       ## %bb.0:
 ; ENABLE-NEXT:    cmpl %esi, %edi
@@ -1156,11 +1151,11 @@ true:
   ; Clobber a CSR so that we check something on the regmask
   ; of the tail call.
   tail call void asm sideeffect "nop", "~{ebx}"()
-  %tmp4 = call i32 @doSomething(i32 0, i32* %addr)
+  %tmp4 = call i32 @doSomething(i32 0, ptr %addr)
   br label %end
 
 false:
-  %tmp5 = tail call i32 @doSomething(i32 6, i32* %addr)
+  %tmp5 = tail call i32 @doSomething(i32 6, ptr %addr)
   br label %end
 
 end:
@@ -1250,9 +1245,9 @@ define i32 @useLEAForPrologue(i32 %d, i32 %a, i8 %c) #3 {
 ; DISABLE-NEXT:    retq
 entry:
   %tmp = alloca i3
-  %.b = load i1, i1* @b, align 1
+  %.b = load i1, ptr @b, align 1
   %bool = select i1 %.b, i8 0, i8 48
-  store i8 %bool, i8* @c, align 1
+  store i8 %bool, ptr @c, align 1
   br i1 %.b, label %for.body.lr.ph, label %for.end
 
 for.body.lr.ph:                                   ; preds = %entry
@@ -1269,15 +1264,15 @@ for.body:                                         ; preds = %for.body.lr.ph, %fo
   br i1 %cmp, label %for.body, label %for.cond.for.end_crit_edge
 
 for.cond.for.end_crit_edge:                       ; preds = %for.body
-  store i32 %conv3, i32* @a, align 4
+  store i32 %conv3, ptr @a, align 4
   br label %for.end
 
 for.end:                                          ; preds = %for.cond.for.end_crit_edge, %entry
-  %call = tail call i32 (i8*) @varfunc(i8* null)
+  %call = tail call i32 (ptr) @varfunc(ptr null)
   ret i32 0
 }
 
-declare i32 @varfunc(i8* nocapture readonly)
+declare i32 @varfunc(ptr nocapture readonly)
 
 @sum1 = external hidden thread_local global i32, align 4
 
@@ -1288,7 +1283,7 @@ declare i32 @varfunc(i8* nocapture readonly)
 ; TLS calls used to be wrongly model and shrink-wrapping would have inserted
 ; the prologue and epilogue just around the call to doSomething.
 ; PR25820.
-define i32 @tlsCall(i1 %bool1, i32 %arg, i32* readonly dereferenceable(4) %sum1) #3 {
+define i32 @tlsCall(i1 %bool1, i32 %arg, ptr readonly dereferenceable(4) %sum1) #3 {
 ; ENABLE-LABEL: tlsCall:
 ; ENABLE:       ## %bb.0: ## %entry
 ; ENABLE-NEXT:    pushq %rax
@@ -1334,12 +1329,12 @@ entry:
   br i1 %bool1, label %main, label %else
 
 main:
-  %tmp1 = load i32, i32* %sum1, align 4
-  store i32 %tmp1, i32* @sum1, align 4
+  %tmp1 = load i32, ptr %sum1, align 4
+  store i32 %tmp1, ptr @sum1, align 4
   br label %exit
 
 else:
-  %call = call i32 @doSomething(i32 0, i32* null)
+  %call = call i32 @doSomething(i32 0, ptr null)
   br label %exit
 
 exit:
@@ -1453,8 +1448,8 @@ define i32 @irreducibleCFG() #4 {
 ; DISABLE-NEXT:    popq %rbp
 ; DISABLE-NEXT:    retq
 entry:
-  %i0 = load i32, i32* @irreducibleCFGa, align 4
-  %.pr = load i8, i8* @irreducibleCFGf, align 1
+  %i0 = load i32, ptr @irreducibleCFGa, align 4
+  %.pr = load i8, ptr @irreducibleCFGf, align 1
   %bool = icmp eq i8 %.pr, 0
   br i1 %bool, label %split, label %preheader
 
@@ -1462,7 +1457,7 @@ preheader:
   br label %preheader
 
 split:
-  %i1 = load i32, i32* @irreducibleCFGb, align 4
+  %i1 = load i32, ptr @irreducibleCFGb, align 4
   %tobool1.i = icmp ne i32 %i1, 0
   br i1 %tobool1.i, label %for.body4.i, label %for.cond8.i.preheader
 
@@ -1472,7 +1467,7 @@ for.body4.i:
 
 for.cond8:
   %p1 = phi i32 [ %inc18.i, %for.inc ], [ 0, %for.body4.i ]
-  %.pr1.pr = load i32, i32* @irreducibleCFGb, align 4
+  %.pr1.pr = load i32, ptr @irreducibleCFGb, align 4
   br label %for.cond8.i.preheader
 
 for.cond8.i.preheader:
@@ -1552,17 +1547,17 @@ define void @infiniteLoopNoSuccessor() #5 {
 ; DISABLE-NEXT:    xorl %eax, %eax
 ; DISABLE-NEXT:    callq _somethingElse
 ; DISABLE-NEXT:    jmp LBB17_4
-  %1 = load i32, i32* @x, align 4
+  %1 = load i32, ptr @x, align 4
   %2 = icmp ne i32 %1, 0
   br i1 %2, label %3, label %4
 
 ; <label>:3:
-  store i32 0, i32* @x, align 4
+  store i32 0, ptr @x, align 4
   br label %4
 
 ; <label>:4:
   call void (...) @somethingElse()
-  %5 = load i32, i32* @y, align 4
+  %5 = load i32, ptr @y, align 4
   %6 = icmp ne i32 %5, 0
   br i1 %6, label %10, label %7
 

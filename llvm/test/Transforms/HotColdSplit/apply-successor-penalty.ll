@@ -1,5 +1,5 @@
 ; REQUIRES: asserts
-; RUN: opt -hotcoldsplit -debug-only=hotcoldsplit -hotcoldsplit-threshold=2 -S < %s -o /dev/null 2>&1 | FileCheck %s
+; RUN: opt -passes=hotcoldsplit -debug-only=hotcoldsplit -hotcoldsplit-threshold=2 -S < %s -o /dev/null 2>&1 | FileCheck %s
 
 declare void @sink() cold
 

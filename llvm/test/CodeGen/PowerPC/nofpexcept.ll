@@ -69,7 +69,7 @@ entry:
 }
 
 ; Verify nofpexcept is set to constrained conversions when ignoring exceptions
-define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2) {
+define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, ptr %addr1, ptr %addr2) {
   ; CHECK-LABEL: name: fptoint_nofpexcept
   ; CHECK: bb.0.entry:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.2(0x40000000)
@@ -149,18 +149,18 @@ define void @fptoint_nofpexcept(ppc_fp128 %p, fp128 %m, i32* %addr1, i64* %addr2
   ; CHECK-NEXT:   BLR8 implicit $lr8, implicit $rm
 entry:
   %conv1 = tail call i32 @llvm.experimental.constrained.fptosi.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv1, i32* %addr1, align 4
+  store volatile i32 %conv1, ptr %addr1, align 4
   %conv2 = tail call i32 @llvm.experimental.constrained.fptoui.i32.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv2, i32* %addr1, align 4
+  store volatile i32 %conv2, ptr %addr1, align 4
   %conv3 = tail call i64 @llvm.experimental.constrained.fptosi.i64.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i64 %conv3, i64* %addr2, align 8
+  store volatile i64 %conv3, ptr %addr2, align 8
   %conv4 = tail call i64 @llvm.experimental.constrained.fptoui.i64.f128(fp128 %m, metadata !"fpexcept.ignore") #0
-  store volatile i64 %conv4, i64* %addr2, align 8
+  store volatile i64 %conv4, ptr %addr2, align 8
 
   %conv5 = tail call i32 @llvm.experimental.constrained.fptosi.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv5, i32* %addr1, align 4
+  store volatile i32 %conv5, ptr %addr1, align 4
   %conv6 = tail call i32 @llvm.experimental.constrained.fptoui.i32.ppcf128(ppc_fp128 %p, metadata !"fpexcept.ignore") #0
-  store volatile i32 %conv6, i32* %addr1, align 4
+  store volatile i32 %conv6, ptr %addr1, align 4
   ret void
 }
 

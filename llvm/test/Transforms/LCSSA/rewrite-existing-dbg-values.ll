@@ -1,4 +1,4 @@
-; RUN: opt -S -lcssa < %s | FileCheck %s
+; RUN: opt -S -passes=lcssa < %s | FileCheck %s
 
 ; Reproducer for PR39019.
 ;

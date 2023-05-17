@@ -21,7 +21,7 @@ CHECK-BUILD-SYSTEM: {{cmake|gn}}
 CHECK-BUILD-SYSTEM-NOT: error:
 CHECK-BUILD-SYSTEM-NOT: warning
 
-RUN: llvm-config --shared-mode 2>&1 | FileCheck --check-prefix=CHECK-SHARED-MODE %s
+RUN: llvm-config --shared-mode 2>&1 Support | FileCheck --check-prefix=CHECK-SHARED-MODE %s
 CHECK-SHARED-MODE: {{static|shared}}
 CHECK-SHARED-MODE-NOT: error:
 CHECK-SHARED-MODE-NOT: warning

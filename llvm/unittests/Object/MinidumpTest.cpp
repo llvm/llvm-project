@@ -200,7 +200,7 @@ TEST(MinidumpFile, IngoresDummyStreams) {
   ASSERT_EQ(2u, File.streams().size());
   EXPECT_EQ(StreamType::Unused, File.streams()[0].Type);
   EXPECT_EQ(StreamType::Unused, File.streams()[1].Type);
-  EXPECT_EQ(None, File.getRawStream(StreamType::Unused));
+  EXPECT_EQ(std::nullopt, File.getRawStream(StreamType::Unused));
 }
 
 TEST(MinidumpFile, getSystemInfo) {

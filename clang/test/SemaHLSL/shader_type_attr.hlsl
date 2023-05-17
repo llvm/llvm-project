@@ -53,10 +53,11 @@ int forwardDecl() {
 [shader(1)]
 // expected-warning@+1 {{'shader' attribute argument not supported: cs}}
 [shader("cs")]
-
+// expected-warning@+1 {{'shader' attribute argument not supported: library}}
+[shader("library")]
 #endif // END of FAIL
 
-// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:60:2, col:18> Compute
+// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:61:2, col:18> Compute
 [shader("compute")]
 int entry() {
   return 1;
@@ -64,11 +65,11 @@ int entry() {
 
 // Because these two attributes match, they should both appear in the AST
 [shader("compute")]
-// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:66:2, col:18> Compute
+// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:67:2, col:18> Compute
 int secondFn();
 
 [shader("compute")]
-// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:70:2, col:18> Compute
+// CHECK:HLSLShaderAttr 0x{{[0-9a-fA-F]+}} <line:71:2, col:18> Compute
 int secondFn() {
   return 1;
 }

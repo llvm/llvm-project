@@ -46,6 +46,15 @@ define <vscale x 16 x i8> @and_b_zero(<vscale x 16 x i8> %a) {
   ret <vscale x 16 x i8> %res
 }
 
+define <vscale x 1 x i1> @and_pred_q(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
+; CHECK-LABEL: and_pred_q:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    and p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %res = and <vscale x 1 x i1> %a, %b
+  ret <vscale x 1 x i1> %res
+}
+
 define <vscale x 2 x i1> @and_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: and_pred_d:
 ; CHECK:       // %bb.0:
@@ -124,6 +133,17 @@ define <vscale x 16 x i8> @bic_b(<vscale x 16 x i8> %a, <vscale x 16 x i8> %b) {
   %not_b = xor <vscale x 16 x i8> %b, %allones
   %res = and <vscale x 16 x i8> %a, %not_b
   ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 1 x i1> @bic_pred_q(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
+; CHECK-LABEL: bic_pred_q:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    bic p0.b, p0/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %allones = shufflevector <vscale x 1 x i1> insertelement(<vscale x 1 x i1> undef, i1 true, i32 0), <vscale x 1 x i1> undef, <vscale x 1 x i32> zeroinitializer
+  %not_b = xor <vscale x 1 x i1> %b, %allones
+  %res = and <vscale x 1 x i1> %a, %not_b
+  ret <vscale x 1 x i1> %res
 }
 
 define <vscale x 2 x i1> @bic_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
@@ -214,6 +234,15 @@ define <vscale x 16 x i8> @or_b_zero(<vscale x 16 x i8> %a) {
   ret <vscale x 16 x i8> %res
 }
 
+define <vscale x 1 x i1> @or_pred_q(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
+; CHECK-LABEL: or_pred_q:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sel p0.b, p0, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %res = or <vscale x 1 x i1> %a, %b
+  ret <vscale x 1 x i1> %res
+}
+
 define <vscale x 2 x i1> @or_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {
 ; CHECK-LABEL: or_pred_d:
 ; CHECK:       // %bb.0:
@@ -292,6 +321,16 @@ define <vscale x 16 x i8> @xor_b_zero(<vscale x 16 x i8> %a) {
 ; CHECK-NEXT:    ret
   %res = xor <vscale x 16 x i8> %a, zeroinitializer
   ret <vscale x 16 x i8> %res
+}
+
+define <vscale x 1 x i1> @xor_pred_q(<vscale x 1 x i1> %a, <vscale x 1 x i1> %b) {
+; CHECK-LABEL: xor_pred_q:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p2.d
+; CHECK-NEXT:    eor p0.b, p2/z, p0.b, p1.b
+; CHECK-NEXT:    ret
+  %res = xor <vscale x 1 x i1> %a, %b
+  ret <vscale x 1 x i1> %res
 }
 
 define <vscale x 2 x i1> @xor_pred_d(<vscale x 2 x i1> %a, <vscale x 2 x i1> %b) {

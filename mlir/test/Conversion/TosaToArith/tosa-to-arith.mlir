@@ -21,15 +21,9 @@ func.func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
   // CHECK-DAG: %[[C2:.+]] = arith.constant 2 : i32
   // CHECK-DAG: %[[C30:.+]] = arith.constant 30 : i32
   // CHECK-DAG: %[[C32:.+]] = arith.constant 32 : i32
-  // CHECK-DAG: %[[C32L:.+]] = arith.constant 32 : i64
 
   // Compute the high-low values of the matmul in 64-bits.
-  // CHECK-DAG: %[[V64:.+]] = arith.extsi %arg0 : i32 to i64
-  // CHECK-DAG: %[[M64:.+]] = arith.extsi %arg1 : i32 to i64
-  // CHECK-DAG: %[[MUL64:.+]] = arith.muli %[[V64]], %[[M64]]
-  // CHECK-DAG: %[[HI64:.+]] = arith.shrui %[[MUL64]], %[[C32L]]
-  // CHECK-DAG: %[[HI:.+]] = arith.trunci %[[HI64]] : i64 to i32
-  // CHECK-DAG: %[[LOW:.+]] = arith.muli %arg0, %arg1
+  // CHECK-DAG: %[[LOW:.+]], %[[HI:.+]] = arith.mulsi_extended %arg0, %arg1
 
   // Determine whether the high bits need to shift left or right and by how much.
   // CHECK-DAG: %[[OVER31:.+]] = arith.cmpi sge, %[[S32]], %[[C32]]
@@ -68,7 +62,7 @@ func.func @apply_scale_test_i32(%arg0 : i32, %arg1 : i32, %arg2 : i8) -> (i32) {
 
   // Combine hi-low into the final result.
   // CHECK-DAG: %[[HIL:.+]] = arith.shli %[[FHI]], %[[HISHL]]
-  // CHECK-DAG: %[[HIALIGN:.+]] = arith.shrsi %[[HIL:.+]], %[[HISHR]] 
+  // CHECK-DAG: %[[HIALIGN:.+]] = arith.shrsi %[[HIL:.+]], %[[HISHR]]
   // CHECK-DAG: %[[LOR:.+]] = arith.shrui %[[LADD]], %[[S32]]
   // CHECK-DAG: %[[LOWALIGN:.+]] = arith.select %[[OVER31]], %[[C0]], %[[LOR]]
   // CHECK-DAG: %[[RESULT:.+]] = arith.addi %[[LOWALIGN]], %[[HIALIGN]]

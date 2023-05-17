@@ -10,7 +10,6 @@
 #include "llvm/ADT/StringSet.h"
 
 #include "lldb/Breakpoint/Watchpoint.h"
-#include "lldb/Core/FileSpecList.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/DataFormatters/DataVisualization.h"
@@ -27,6 +26,7 @@
 #include "lldb/Target/RegisterContext.h"
 #include "lldb/Target/Thread.h"
 #include "lldb/Utility/FileSpec.h"
+#include "lldb/Utility/FileSpecList.h"
 #include "lldb/Utility/StreamString.h"
 #include "lldb/Utility/TildeExpressionResolver.h"
 
@@ -220,18 +220,15 @@ public:
       function_options.include_inlines = true;
       context.module_sp->FindFunctions(m_regex, function_options, sc_list);
 
-      SymbolContext sc;
       // Now add the functions & symbols to the list - only add if unique:
-      for (uint32_t i = 0; i < sc_list.GetSize(); i++) {
-        if (sc_list.GetContextAtIndex(i, sc)) {
-          ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
-          // Ensure that the function name matches the regex. This is more than
-          // a sanity check. It is possible that the demangled function name
-          // does not start with the prefix, for example when it's in an
-          // anonymous namespace.
-          if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))
-            m_match_set.insert(func_name);
-        }
+      for (const SymbolContext &sc : sc_list) {
+        ConstString func_name = sc.GetFunctionName(Mangled::ePreferDemangled);
+        // Ensure that the function name matches the regex. This is more than
+        // a sanity check. It is possible that the demangled function name
+        // does not start with the prefix, for example when it's in an
+        // anonymous namespace.
+        if (!func_name.IsEmpty() && m_regex.Execute(func_name.GetStringRef()))
+          m_match_set.insert(func_name);
       }
     }
     return Searcher::eCallbackReturnContinue;
@@ -721,10 +718,14 @@ void CommandCompletions::FrameIndexes(CommandInterpreter &interpreter,
     return;
 
   lldb::ThreadSP thread_sp = exe_ctx.GetThreadSP();
+  Debugger &dbg = interpreter.GetDebugger();
   const uint32_t frame_num = thread_sp->GetStackFrameCount();
   for (uint32_t i = 0; i < frame_num; ++i) {
     lldb::StackFrameSP frame_sp = thread_sp->GetStackFrameAtIndex(i);
     StreamString strm;
+    // Dumping frames can be slow, allow interruption.
+    if (dbg.InterruptRequested())
+      break;
     frame_sp->Dump(&strm, false, true);
     request.TryCompleteCurrentArg(std::to_string(i), strm.GetString());
   }

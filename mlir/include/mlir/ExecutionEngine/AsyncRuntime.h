@@ -14,6 +14,7 @@
 #ifndef MLIR_EXECUTIONENGINE_ASYNCRUNTIME_H_
 #define MLIR_EXECUTIONENGINE_ASYNCRUNTIME_H_
 
+#include <cstddef>
 #include <stdint.h>
 
 #ifdef mlir_async_runtime_EXPORTS
@@ -38,7 +39,7 @@ using AsyncGroup = struct AsyncGroup;
 using AsyncValue = struct AsyncValue;
 
 // Async value payload stored in a memory owned by the async.value.
-using ValueStorage = void *;
+using ValueStorage = std::byte *;
 
 // Async runtime uses LLVM coroutines to represent asynchronous tasks. Task
 // function is a coroutine handle and a resume function that continue coroutine

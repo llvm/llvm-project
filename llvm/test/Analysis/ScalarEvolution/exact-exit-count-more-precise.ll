@@ -14,12 +14,14 @@ define void @test_and(i16 %in) {
 ; CHECK-NEXT:    --> (%_tmp10.i umin %exitcond.i) U: full-set S: full-set Exits: true LoopDispositions: { %bb1.i: Variant, %bb2: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_and
 ; CHECK-NEXT:  Loop %bb1.i: backedge-taken count is (1 + (-1 * %in))
-; CHECK-NEXT:  Loop %bb1.i: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %bb1.i: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %bb1.i: symbolic max backedge-taken count is (1 + (-1 * %in))
 ; CHECK-NEXT:  Loop %bb1.i: Predicated backedge-taken count is (1 + (-1 * %in))
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %bb1.i: Trip multiple is 1
 ; CHECK-NEXT:  Loop %bb2: <multiple exits> Unpredictable backedge-taken count.
-; CHECK-NEXT:  Loop %bb2: Unpredictable max backedge-taken count.
+; CHECK-NEXT:  Loop %bb2: Unpredictable constant max backedge-taken count.
+; CHECK-NEXT:  Loop %bb2: Unpredictable symbolic max backedge-taken count.
 ; CHECK-NEXT:  Loop %bb2: Unpredictable predicated backedge-taken count.
 ;
   br label %bb2
@@ -54,7 +56,8 @@ define void @test_or() {
 ; CHECK-NEXT:    --> (%C11 umax %C5) U: full-set S: full-set Exits: false LoopDispositions: { %BB: Variant }
 ; CHECK-NEXT:  Determining loop execution counts for: @test_or
 ; CHECK-NEXT:  Loop %BB: backedge-taken count is undef
-; CHECK-NEXT:  Loop %BB: max backedge-taken count is -1
+; CHECK-NEXT:  Loop %BB: constant max backedge-taken count is -1
+; CHECK-NEXT:  Loop %BB: symbolic max backedge-taken count is undef
 ; CHECK-NEXT:  Loop %BB: Predicated backedge-taken count is undef
 ; CHECK-NEXT:   Predicates:
 ; CHECK:       Loop %BB: Trip multiple is 1

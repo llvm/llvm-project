@@ -5,7 +5,7 @@ target triple = "armv7--linux-gnueabihf"
 
 ; CHECK-LABEL: f:
 ; CHECK: str lr, [r0]
-define void @f(i32* %p) {
-  call void asm sideeffect "str lr, $0", "=*o"(i32* elementtype(i32) %p)
+define void @f(ptr %p) {
+  call void asm sideeffect "str lr, $0", "=*o"(ptr elementtype(i32) %p)
   ret void
 }

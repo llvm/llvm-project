@@ -11,6 +11,7 @@
 
 #include <type_traits>
 #include <cassert>
+#include <initializer_list>
 
 #include "test_macros.h"
 #include "test_workarounds.h"

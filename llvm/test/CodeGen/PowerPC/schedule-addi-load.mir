@@ -7,17 +7,17 @@
 --- |
   target datalayout = "e-m:e-i64:64-n32:64"
   
-  define i64 @foo(i8* %p, i8* %q) {
+  define i64 @foo(ptr %p, ptr %q) {
   entry:
     br label %while.cond6.i
   
   while.cond6.i:                                    
     %n.0 = phi i64 [ 0, %entry ], [ %n.1, %while.cond6.i ]
     %conv = and i64 %n.0, 4294967295
-    %arrayidx = getelementptr inbounds i8, i8* %p, i64 %conv
-    %0 = load i8, i8* %arrayidx, align 1
-    %arrayidx4 = getelementptr inbounds i8, i8* %q, i64 %conv
-    %1 = load i8, i8* %arrayidx4, align 1
+    %arrayidx = getelementptr inbounds i8, ptr %p, i64 %conv
+    %0 = load i8, ptr %arrayidx, align 1
+    %arrayidx4 = getelementptr inbounds i8, ptr %q, i64 %conv
+    %1 = load i8, ptr %arrayidx4, align 1
     %cmp = icmp eq i8 %0, %1
     %n.1 = add i64 %conv, 1
     br i1 %cmp, label %while.cond6.i, label %while.end

@@ -234,8 +234,8 @@ static void dumpCXXData(const ObjectFile *Obj) {
     // Complete object locators in the MS-ABI start with '??_R4'
     else if (SymName.startswith("??_R4")) {
       CompleteObjectLocator COL;
-      COL.Data = makeArrayRef(
-          reinterpret_cast<const little32_t *>(SymContents.data()), 3);
+      COL.Data =
+          ArrayRef(reinterpret_cast<const little32_t *>(SymContents.data()), 3);
       StringRef *I = std::begin(COL.Symbols), *E = std::end(COL.Symbols);
       collectRelocatedSymbols(Obj, Sec, SecAddress, SymAddress, SymSize, I, E);
       COLs[SymName] = COL;
@@ -243,8 +243,8 @@ static void dumpCXXData(const ObjectFile *Obj) {
     // Class hierarchy descriptors in the MS-ABI start with '??_R3'
     else if (SymName.startswith("??_R3")) {
       ClassHierarchyDescriptor CHD;
-      CHD.Data = makeArrayRef(
-          reinterpret_cast<const little32_t *>(SymContents.data()), 3);
+      CHD.Data =
+          ArrayRef(reinterpret_cast<const little32_t *>(SymContents.data()), 3);
       StringRef *I = std::begin(CHD.Symbols), *E = std::end(CHD.Symbols);
       collectRelocatedSymbols(Obj, Sec, SecAddress, SymAddress, SymSize, I, E);
       CHDs[SymName] = CHD;
@@ -259,7 +259,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
     // Base class descriptors in the MS-ABI start with '??_R1'
     else if (SymName.startswith("??_R1")) {
       BaseClassDescriptor BCD;
-      BCD.Data = makeArrayRef(
+      BCD.Data = ArrayRef(
           reinterpret_cast<const little32_t *>(SymContents.data()) + 1, 5);
       StringRef *I = std::begin(BCD.Symbols), *E = std::end(BCD.Symbols);
       collectRelocatedSymbols(Obj, Sec, SecAddress, SymAddress, SymSize, I, E);
@@ -499,7 +499,7 @@ static void dumpCXXData(const ObjectFile *Obj) {
 
 static void dumpArchive(const Archive *Arc) {
   Error Err = Error::success();
-  for (auto &ArcC : Arc->children(Err)) {
+  for (const auto &ArcC : Arc->children(Err)) {
     Expected<std::unique_ptr<Binary>> ChildOrErr = ArcC.getAsBinary();
     if (!ChildOrErr) {
       // Ignore non-object files.

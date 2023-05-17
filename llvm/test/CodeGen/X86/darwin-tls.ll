@@ -19,7 +19,7 @@ entry:
 ; CHECK-NOT: movl {{.*}}, %ecx
 ; CHECK-NOT: movl {{.*}}, %r8d
 ; CHECK: callq
-  %0 = load i32, i32* @a, align 4
+  %0 = load i32, ptr @a, align 4
   %call = tail call i32 @f3(i32 %p1, i32 %p2, i32 %p3, i32 %p4, i32 %p5)
   %add = add nsw i32 %call, %0
   ret i32 %add

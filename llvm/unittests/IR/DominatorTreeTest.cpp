@@ -722,7 +722,7 @@ TEST(DominatorTree, InsertReachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Insert);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -748,7 +748,7 @@ TEST(DominatorTree, InsertReachable2) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
+  std::optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
   EXPECT_TRUE(LastUpdate);
 
   EXPECT_EQ(LastUpdate->Action, Insert);
@@ -776,7 +776,7 @@ TEST(DominatorTree, InsertUnreachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Insert);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -797,7 +797,7 @@ TEST(DominatorTree, InsertFromUnreachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
+  std::optional<CFGBuilder::Update> LastUpdate = B.applyUpdate();
   EXPECT_TRUE(LastUpdate);
 
   EXPECT_EQ(LastUpdate->Action, Insert);
@@ -827,7 +827,7 @@ TEST(DominatorTree, InsertMixed) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Insert);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -857,7 +857,7 @@ TEST(DominatorTree, InsertPermut) {
     PostDominatorTree PDT(*Holder.F);
     EXPECT_TRUE(PDT.verify());
 
-    Optional<CFGBuilder::Update> LastUpdate;
+    std::optional<CFGBuilder::Update> LastUpdate;
     while ((LastUpdate = B.applyUpdate())) {
       EXPECT_EQ(LastUpdate->Action, Insert);
       BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -884,7 +884,7 @@ TEST(DominatorTree, DeleteReachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Delete);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -910,7 +910,7 @@ TEST(DominatorTree, DeleteUnreachable) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     EXPECT_EQ(LastUpdate->Action, Delete);
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
@@ -940,7 +940,7 @@ TEST(DominatorTree, InsertDelete) {
   PostDominatorTree PDT(*Holder.F);
   EXPECT_TRUE(PDT.verify());
 
-  Optional<CFGBuilder::Update> LastUpdate;
+  std::optional<CFGBuilder::Update> LastUpdate;
   while ((LastUpdate = B.applyUpdate())) {
     BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
     BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
@@ -978,7 +978,7 @@ TEST(DominatorTree, InsertDeleteExhaustive) {
     PostDominatorTree PDT(*Holder.F);
     EXPECT_TRUE(PDT.verify());
 
-    Optional<CFGBuilder::Update> LastUpdate;
+    std::optional<CFGBuilder::Update> LastUpdate;
     while ((LastUpdate = B.applyUpdate())) {
       BasicBlock *From = B.getOrAddBlock(LastUpdate->Edge.From);
       BasicBlock *To = B.getOrAddBlock(LastUpdate->Edge.To);
@@ -1099,4 +1099,47 @@ TEST(DominatorTree, ValueDomination) {
     EXPECT_TRUE(DT->dominates(G, U));
     EXPECT_TRUE(DT->dominates(C, U));
   });
+}
+TEST(DominatorTree, CallBrDomination) {
+  StringRef ModuleString = R"(
+define void @x() {
+  %y = alloca i32
+  %w = callbr i32 asm "", "=r,!i"()
+          to label %asm.fallthrough [label %z]
+
+asm.fallthrough:
+  br label %cleanup
+
+z:
+  store i32 %w, ptr %y
+  br label %cleanup
+
+cleanup:
+  ret void
+})";
+
+  LLVMContext Context;
+  std::unique_ptr<Module> M = makeLLVMModule(Context, ModuleString);
+
+  runWithDomTree(
+      *M, "x", [&](Function &F, DominatorTree *DT, PostDominatorTree *PDT) {
+        Function::iterator FI = F.begin();
+
+        BasicBlock *Entry = &*FI++;
+        BasicBlock *ASMFallthrough = &*FI++;
+        BasicBlock *Z = &*FI++;
+
+        EXPECT_TRUE(DT->dominates(Entry, ASMFallthrough));
+        EXPECT_TRUE(DT->dominates(Entry, Z));
+
+        BasicBlock::iterator BBI = Entry->begin();
+        ++BBI;
+        Instruction &I = *BBI;
+        EXPECT_TRUE(isa<CallBrInst>(I));
+        EXPECT_TRUE(isa<Value>(I));
+        for (const User *U : I.users()) {
+          EXPECT_TRUE(isa<Instruction>(U));
+          EXPECT_TRUE(DT->dominates(cast<Value>(&I), cast<Instruction>(U)));
+        }
+      });
 }

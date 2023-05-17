@@ -29,10 +29,10 @@
 @outputVi64 = external local_unnamed_addr global <2 x i64>, align 16
 @ArrayIn = external global [10 x i32], align 4
 @ArrayOut = external local_unnamed_addr global [10 x i32], align 4
-@IntPtrIn = external local_unnamed_addr global i32*, align 8
-@IntPtrOut = external local_unnamed_addr global i32*, align 8
-@FuncPtrIn = external local_unnamed_addr global void (...)*, align 8
-@FuncPtrOut = external local_unnamed_addr global void (...)*, align 8
+@IntPtrIn = external local_unnamed_addr global ptr, align 8
+@IntPtrOut = external local_unnamed_addr global ptr, align 8
+@FuncPtrIn = external local_unnamed_addr global ptr, align 8
+@FuncPtrOut = external local_unnamed_addr global ptr, align 8
 
 define dso_local void @ReadWrite8() local_unnamed_addr #0 {
 ; In this test the stb r3, 0(r4) cannot be optimized because it
@@ -48,8 +48,8 @@ define dso_local void @ReadWrite8() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stb r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i8, i8* @input8, align 1
-  store i8 %0, i8* @output8, align 1
+  %0 = load i8, ptr @input8, align 1
+  store i8 %0, ptr @output8, align 1
   ret void
 }
 
@@ -67,8 +67,8 @@ define dso_local void @ReadWrite16() local_unnamed_addr #0 {
 ; CHECK-NEXT:    sth r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i16, i16* @input16, align 2
-  store i16 %0, i16* @output16, align 2
+  %0 = load i16, ptr @input16, align 2
+  store i16 %0, ptr @output16, align 2
   ret void
 }
 
@@ -83,8 +83,8 @@ define dso_local void @ReadWrite32() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stw r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* @input32, align 4
-  store i32 %0, i32* @output32, align 4
+  %0 = load i32, ptr @input32, align 4
+  store i32 %0, ptr @output32, align 4
   ret void
 }
 
@@ -99,8 +99,8 @@ define dso_local void @ReadWrite64() local_unnamed_addr #0 {
 ; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* @input64, align 8
-  store i64 %0, i64* @output64, align 8
+  %0 = load i64, ptr @input64, align 8
+  store i64 %0, ptr @output64, align 8
   ret void
 }
 
@@ -119,8 +119,8 @@ define dso_local void @ReadWrite128() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i128, i128* @input128, align 16
-  store i128 %0, i128* @output128, align 16
+  %0 = load i128, ptr @input128, align 16
+  store i128 %0, ptr @output128, align 16
   ret void
 }
 
@@ -137,9 +137,9 @@ define dso_local void @ReadWritef32() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stfs f0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load float, float* @inputf32, align 4
+  %0 = load float, ptr @inputf32, align 4
   %add = fadd float %0, 0x400851EB80000000
-  store float %add, float* @outputf32, align 4
+  store float %add, ptr @outputf32, align 4
   ret void
 }
 
@@ -157,9 +157,9 @@ define dso_local void @ReadWritef64() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stfd f0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load double, double* @inputf64, align 8
+  %0 = load double, ptr @inputf64, align 8
   %add = fadd double %0, 6.800000e+00
-  store double %add, double* @outputf64, align 8
+  store double %add, ptr @outputf64, align 8
   ret void
 }
 
@@ -178,9 +178,9 @@ define dso_local void @ReadWriteVi32() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stxv v2, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @inputVi32, align 16
+  %0 = load <4 x i32>, ptr @inputVi32, align 16
   %vecins = insertelement <4 x i32> %0, i32 45, i32 1
-  store <4 x i32> %vecins, <4 x i32>* @outputVi32, align 16
+  store <4 x i32> %vecins, ptr @outputVi32, align 16
   ret void
 }
 
@@ -197,8 +197,8 @@ define dso_local void @ReadWriteVi64() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stxv vs0, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <2 x i64>, <2 x i64>* @inputVi64, align 16
-  store <2 x i64> %0, <2 x i64>* @outputVi64, align 16
+  %0 = load <2 x i64>, ptr @inputVi64, align 16
+  store <2 x i64> %0, ptr @outputVi64, align 16
   ret void
 }
 
@@ -214,9 +214,9 @@ define dso_local void @ReadWriteArray() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stw r3, 8(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ArrayIn, i64 0, i64 7), align 4
+  %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @ArrayIn, i64 0, i64 7), align 4
   %add = add nsw i32 %0, 42
-  store i32 %add, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ArrayOut, i64 0, i64 2), align 4
+  store i32 %add, ptr getelementptr inbounds ([10 x i32], ptr @ArrayOut, i64 0, i64 2), align 4
   ret void
 }
 
@@ -229,9 +229,9 @@ define dso_local void @ReadWriteSameArray() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stw r4, 24(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ArrayIn, i64 0, i64 3), align 4
+  %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @ArrayIn, i64 0, i64 3), align 4
   %add = add nsw i32 %0, 8
-  store i32 %add, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ArrayIn, i64 0, i64 6), align 4
+  store i32 %add, ptr getelementptr inbounds ([10 x i32], ptr @ArrayIn, i64 0, i64 6), align 4
   ret void
 }
 
@@ -252,15 +252,15 @@ define dso_local void @ReadWriteIntPtr() local_unnamed_addr #0 {
 ; CHECK-NEXT:    stw r3, 136(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32*, i32** @IntPtrIn, align 8
-  %arrayidx = getelementptr inbounds i32, i32* %0, i64 54
-  %1 = load i32, i32* %arrayidx, align 4
-  %arrayidx1 = getelementptr inbounds i32, i32* %0, i64 12
-  %2 = load i32, i32* %arrayidx1, align 4
+  %0 = load ptr, ptr @IntPtrIn, align 8
+  %arrayidx = getelementptr inbounds i32, ptr %0, i64 54
+  %1 = load i32, ptr %arrayidx, align 4
+  %arrayidx1 = getelementptr inbounds i32, ptr %0, i64 12
+  %2 = load i32, ptr %arrayidx1, align 4
   %add = add nsw i32 %2, %1
-  %3 = load i32*, i32** @IntPtrOut, align 8
-  %arrayidx2 = getelementptr inbounds i32, i32* %3, i64 34
-  store i32 %add, i32* %arrayidx2, align 4
+  %3 = load ptr, ptr @IntPtrOut, align 8
+  %arrayidx2 = getelementptr inbounds i32, ptr %3, i64 34
+  store i32 %add, ptr %arrayidx2, align 4
   ret void
 }
 
@@ -275,8 +275,8 @@ define dso_local void @ReadWriteFuncPtr() local_unnamed_addr #0 {
 ; CHECK-NEXT:    std r3, 0(r4)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i64, i64* bitcast (void (...)** @FuncPtrIn to i64*), align 8
-  store i64 %0, i64* bitcast (void (...)** @FuncPtrOut to i64*), align 8
+  %0 = load i64, ptr @FuncPtrIn, align 8
+  store i64 %0, ptr @FuncPtrOut, align 8
   ret void
 }
 
@@ -288,7 +288,7 @@ define dso_local void @FuncPtrCopy() local_unnamed_addr #0 {
 ; CHECK-NEXT:    std r4, 0(r3)
 ; CHECK-NEXT:    blr
 entry:
-  store void (...)* @Callee, void (...)** @FuncPtrOut, align 8
+  store ptr @Callee, ptr @FuncPtrOut, align 8
   ret void
 }
 
@@ -305,7 +305,7 @@ define dso_local void @FuncPtrCall() local_unnamed_addr #0 {
 ; CHECK-NEXT:    bctr
 ; CHECK-NEXT:    #TC_RETURNr8 ctr 0
 entry:
-  %0 = load void ()*, void ()** bitcast (void (...)** @FuncPtrIn to void ()**), align 8
+  %0 = load ptr, ptr @FuncPtrIn, align 8
   tail call void %0()
   ret void
 }
@@ -319,7 +319,7 @@ define dso_local signext i32 @ReadVecElement() local_unnamed_addr #0 {
 ; CHECK-NEXT:    lwa r3, 4(r3)
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @inputVi32, align 16
+  %0 = load <4 x i32>, ptr @inputVi32, align 16
   %vecext = extractelement <4 x i32> %0, i32 1
   ret i32 %vecext
 }
@@ -348,14 +348,14 @@ define dso_local signext i32 @VecMultiUse() local_unnamed_addr #0 {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @inputVi32, align 16
-  tail call void bitcast (void (...)* @Callee to void ()*)()
-  %1 = load <4 x i32>, <4 x i32>* @inputVi32, align 16
+  %0 = load <4 x i32>, ptr @inputVi32, align 16
+  tail call void @Callee()
+  %1 = load <4 x i32>, ptr @inputVi32, align 16
   %2 = extractelement <4 x i32> %1, i32 2
   %3 = extractelement <4 x i32> %0, i64 1
   %4 = add nsw i32 %2, %3
-  tail call void bitcast (void (...)* @Callee to void ()*)()
-  %5 = load <4 x i32>, <4 x i32>* @inputVi32, align 16
+  tail call void @Callee()
+  %5 = load <4 x i32>, ptr @inputVi32, align 16
   %vecext2 = extractelement <4 x i32> %5, i32 0
   %add3 = add nsw i32 %4, %vecext2
   ret i32 %add3
@@ -381,22 +381,22 @@ define dso_local signext i32 @UseAddr(i32 signext %a) local_unnamed_addr #0 {
 ; CHECK-NEXT:    mtlr r0
 ; CHECK-NEXT:    blr
 entry:
-  %0 = load i32, i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ArrayIn, i64 0, i64 4), align 4
+  %0 = load i32, ptr getelementptr inbounds ([10 x i32], ptr @ArrayIn, i64 0, i64 4), align 4
   %add = add nsw i32 %0, %a
-  %call = tail call signext i32 @getAddr(i32* getelementptr inbounds ([10 x i32], [10 x i32]* @ArrayIn, i64 0, i64 0))
+  %call = tail call signext i32 @getAddr(ptr @ArrayIn)
   %add1 = add nsw i32 %add, %call
   ret i32 %add1
 }
 
-declare signext i32 @getAddr(i32*) local_unnamed_addr
+declare signext i32 @getAddr(ptr) local_unnamed_addr
 
-define dso_local nonnull i32* @AddrTaken32() local_unnamed_addr #0 {
+define dso_local nonnull ptr @AddrTaken32() local_unnamed_addr #0 {
 ; CHECK-LABEL: AddrTaken32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    pld r3, input32@got@pcrel(0), 1
 ; CHECK-NEXT:    blr
 entry:
-  ret i32* @input32
+  ret ptr @input32
 }
 
 attributes #0 = { nounwind }

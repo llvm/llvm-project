@@ -203,32 +203,6 @@ using ::TestUsingShadowDeclType;
 // CHECK-NEXT:            ]
 // CHECK-NEXT:           }
 // CHECK-NEXT:          ]
-// CHECK-NEXT:         },
-// CHECK-NEXT:         {
-// CHECK-NEXT:          "id": "0x{{.*}}",
-// CHECK-NEXT:          "kind": "ParenType",
-// CHECK-NEXT:          "type": {
-// CHECK-NEXT:           "qualType": "void ()"
-// CHECK-NEXT:          },
-// CHECK-NEXT:          "inner": [
-// CHECK-NEXT:           {
-// CHECK-NEXT:            "id": "0x{{.*}}",
-// CHECK-NEXT:            "kind": "FunctionProtoType",
-// CHECK-NEXT:            "type": {
-// CHECK-NEXT:             "qualType": "void ()"
-// CHECK-NEXT:            },
-// CHECK-NEXT:            "cc": "cdecl",
-// CHECK-NEXT:            "inner": [
-// CHECK-NEXT:             {
-// CHECK-NEXT:              "id": "0x{{.*}}",
-// CHECK-NEXT:              "kind": "BuiltinType",
-// CHECK-NEXT:              "type": {
-// CHECK-NEXT:               "qualType": "void"
-// CHECK-NEXT:              }
-// CHECK-NEXT:             }
-// CHECK-NEXT:            ]
-// CHECK-NEXT:           }
-// CHECK-NEXT:          ]
 // CHECK-NEXT:         }
 // CHECK-NEXT:        ]
 // CHECK-NEXT:       }

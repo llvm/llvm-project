@@ -2,17 +2,16 @@
 ; First example from Doc/Coroutines.rst (two block loop) converted to retcon
 ; RUN: opt < %s -passes='default<O2>' -S | FileCheck %s
 
-define {i8*, i32} @f(i8* %buffer, i32 %n) {
+define {ptr, i32} @f(ptr %buffer, i32 %n) {
 ; CHECK-LABEL: @f(
 ; CHECK-NEXT:  coro.return:
-; CHECK-NEXT:    [[N_VAL_SPILL_ADDR:%.*]] = bitcast i8* [[BUFFER:%.*]] to i32*
-; CHECK-NEXT:    store i32 [[N:%.*]], i32* [[N_VAL_SPILL_ADDR]], align 4
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { i8*, i32 } { i8* bitcast ({ i8*, i32 } (i8*, i8)* @f.resume.0 to i8*), i32 undef }, i32 [[N]], 1
-; CHECK-NEXT:    ret { i8*, i32 } [[TMP0]]
+; CHECK-NEXT:    store i32 [[N:%.*]], ptr [[BUFFER:%.*]], align 4
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } { ptr @f.resume.0, i32 undef }, i32 [[N]], 1
+; CHECK-NEXT:    ret { ptr, i32 } [[TMP0]]
 ;
 entry:
-  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, i8* %buffer, i8* bitcast ({i8*, i32} (i8*, i8)* @prototype to i8*), i8* bitcast (i8* (i32)* @allocate to i8*), i8* bitcast (void (i8*)* @deallocate to i8*))
-  %hdl = call i8* @llvm.coro.begin(token %id, i8* null)
+  %id = call token @llvm.coro.id.retcon(i32 8, i32 4, ptr %buffer, ptr @prototype, ptr @allocate, ptr @deallocate)
+  %hdl = call ptr @llvm.coro.begin(token %id, ptr null)
   br label %loop
 
 loop:
@@ -26,7 +25,7 @@ resume:
   br label %loop
 
 cleanup:
-  call i1 @llvm.coro.end(i8* %hdl, i1 0)
+  call i1 @llvm.coro.end(ptr %hdl, i1 0)
   unreachable
 }
 
@@ -42,40 +41,35 @@ define i32 @main() {
 ;
 entry:
   %0 = alloca [8 x i8], align 4
-  %buffer = bitcast [8 x i8]* %0 to i8*
-  %prepare = call i8* @llvm.coro.prepare.retcon(i8* bitcast ({i8*, i32} (i8*, i32)* @f to i8*))
-  %f = bitcast i8* %prepare to {i8*, i32} (i8*, i32)*
-  %result0 = call {i8*, i32} %f(i8* %buffer, i32 4)
-  %value0 = extractvalue {i8*, i32} %result0, 1
+  %prepare = call ptr @llvm.coro.prepare.retcon(ptr @f)
+  %result0 = call {ptr, i32} %prepare(ptr %0, i32 4)
+  %value0 = extractvalue {ptr, i32} %result0, 1
   call void @print(i32 %value0)
-  %cont0 = extractvalue {i8*, i32} %result0, 0
-  %cont0.cast = bitcast i8* %cont0 to {i8*, i32} (i8*, i8)*
-  %result1 = call {i8*, i32} %cont0.cast(i8* %buffer, i8 zeroext 0)
-  %value1 = extractvalue {i8*, i32} %result1, 1
+  %cont0 = extractvalue {ptr, i32} %result0, 0
+  %result1 = call {ptr, i32} %cont0(ptr %0, i8 zeroext 0)
+  %value1 = extractvalue {ptr, i32} %result1, 1
   call void @print(i32 %value1)
-  %cont1 = extractvalue {i8*, i32} %result1, 0
-  %cont1.cast = bitcast i8* %cont1 to {i8*, i32} (i8*, i8)*
-  %result2 = call {i8*, i32} %cont1.cast(i8* %buffer, i8 zeroext 0)
-  %value2 = extractvalue {i8*, i32} %result2, 1
+  %cont1 = extractvalue {ptr, i32} %result1, 0
+  %result2 = call {ptr, i32} %cont1(ptr %0, i8 zeroext 0)
+  %value2 = extractvalue {ptr, i32} %result2, 1
   call void @print(i32 %value2)
-  %cont2 = extractvalue {i8*, i32} %result2, 0
-  %cont2.cast = bitcast i8* %cont2 to {i8*, i32} (i8*, i8)*
-  call {i8*, i32} %cont2.cast(i8* %buffer, i8 zeroext 1)
+  %cont2 = extractvalue {ptr, i32} %result2, 0
+  call {ptr, i32} %cont2(ptr %0, i8 zeroext 1)
   ret i32 0
 }
 
 ;   Unfortunately, we don't seem to fully optimize this right now due
 ;   to some sort of phase-ordering thing.
 
-declare token @llvm.coro.id.retcon(i32, i32, i8*, i8*, i8*, i8*)
-declare i8* @llvm.coro.begin(token, i8*)
+declare token @llvm.coro.id.retcon(i32, i32, ptr, ptr, ptr, ptr)
+declare ptr @llvm.coro.begin(token, ptr)
 declare i8 @llvm.coro.suspend.retcon.i8(...)
-declare i1 @llvm.coro.end(i8*, i1)
-declare i8* @llvm.coro.prepare.retcon(i8*)
+declare i1 @llvm.coro.end(ptr, i1)
+declare ptr @llvm.coro.prepare.retcon(ptr)
 
-declare {i8*, i32} @prototype(i8*, i8 zeroext)
+declare {ptr, i32} @prototype(ptr, i8 zeroext)
 
-declare noalias i8* @allocate(i32 %size)
-declare void @deallocate(i8* %ptr)
+declare noalias ptr @allocate(i32 %size)
+declare void @deallocate(ptr %ptr)
 
 declare void @print(i32)

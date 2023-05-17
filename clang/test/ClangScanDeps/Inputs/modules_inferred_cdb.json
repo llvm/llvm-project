@@ -1,7 +1,0 @@
-[
-{
-  "directory": "DIR",
-  "command": "clang -E DIR/modules_cdb_input.cpp -FFRAMEWORKS -fmodules -fcxx-modules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps -pedantic -Werror",
-  "file": "DIR/modules_cdb_input.cpp"
-}
-]

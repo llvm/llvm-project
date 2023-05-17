@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
-// RUN: %clang_cc1 -no-opaque-pointers -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s -check-prefix MS
+// RUN: %clang_cc1 -triple %itanium_abi_triple -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple %ms_abi_triple -emit-llvm -o - %s | FileCheck %s -check-prefix MS
 // CHECK-NOT: _ZN1CC1ERK1C
 // CHECK-NOT: _ZN1SC1ERK1S
 // MS-NOT: ?0C@@QAE@ABV0
@@ -56,4 +56,4 @@ extern "C" V f() { return gv1; }
 // Make sure that we obey the destination's alignment requirements when emitting
 // the copy.
 // CHECK-LABEL: define {{.*}} @f(
-// CHECK:   call void @llvm.memcpy.p0i8.p0i8.{{i64|i32}}({{.*}}align 4{{.*}}, i8* align 8 bitcast (%struct.V* @gv1 to i8*), {{i64|i32}} 4, i1 false)
+// CHECK:   call void @llvm.memcpy.p0.p0.{{i64|i32}}({{.*}}align 4{{.*}}, ptr align 8 @gv1, {{i64|i32}} 4, i1 false)

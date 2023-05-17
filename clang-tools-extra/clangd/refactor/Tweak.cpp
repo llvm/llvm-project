@@ -11,7 +11,6 @@
 #include "index/Index.h"
 #include "support/Logger.h"
 #include "support/Path.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
@@ -105,8 +104,9 @@ llvm::Expected<std::pair<Path, Edit>>
 Tweak::Effect::fileEdit(const SourceManager &SM, FileID FID,
                         tooling::Replacements Replacements) {
   Edit Ed(SM.getBufferData(FID), std::move(Replacements));
-  if (auto FilePath = getCanonicalPath(SM.getFileEntryForID(FID), SM))
-    return std::make_pair(*FilePath, std::move(Ed));
+  if (const auto FE = SM.getFileEntryRefForID(FID))
+    if (auto FilePath = getCanonicalPath(*FE, SM))
+      return std::make_pair(*FilePath, std::move(Ed));
   return error("Failed to get absolute path for edited file: {0}",
                SM.getFileEntryRefForID(FID)->getName());
 }

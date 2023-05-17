@@ -11,14 +11,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "CodeGenRegisters.h"
+#include "CodeGenTarget.h"
+#include "InfoByHwMode.h"
 #include "llvm/ADT/BitVector.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
-
-#include "CodeGenRegisters.h"
-#include "CodeGenTarget.h"
 
 #define DEBUG_TYPE "register-bank-emitter"
 
@@ -172,9 +172,8 @@ static void visitRegisterBankClasses(
     SmallPtrSetImpl<const CodeGenRegisterClass *> &VisitedRCs) {
 
   // Make sure we only visit each class once to avoid infinite loops.
-  if (VisitedRCs.count(RC))
+  if (!VisitedRCs.insert(RC).second)
     return;
-  VisitedRCs.insert(RC);
 
   // Visit each explicitly named class.
   VisitFn(RC, Kind.str());
@@ -328,10 +327,5 @@ void RegisterBankEmitter::run(raw_ostream &OS) {
   OS << "#endif // GET_TARGET_REGBANK_IMPL\n";
 }
 
-namespace llvm {
-
-void EmitRegisterBank(RecordKeeper &RK, raw_ostream &OS) {
-  RegisterBankEmitter(RK).run(OS);
-}
-
-} // end namespace llvm
+static TableGen::Emitter::OptClass<RegisterBankEmitter>
+    X("gen-register-bank", "Generate registers bank descriptions");

@@ -50,6 +50,7 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/DebugLoc.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/PrintPasses.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Allocator.h"
@@ -200,10 +201,21 @@ static cl::opt<unsigned> TriangleChainCount(
     cl::init(2),
     cl::Hidden);
 
-extern cl::opt<bool> EnableExtTspBlockPlacement;
-extern cl::opt<bool> ApplyExtTspWithoutProfile;
+// Use case: When block layout is visualized after MBP pass, the basic blocks
+// are labeled in layout order; meanwhile blocks could be numbered in a
+// different order. It's hard to map between the graph and pass output.
+// With this option on, the basic blocks are renumbered in function layout
+// order. For debugging only.
+static cl::opt<bool> RenumberBlocksBeforeView(
+    "renumber-blocks-before-view",
+    cl::desc(
+        "If true, basic blocks are re-numbered before MBP layout is printed "
+        "into a dot graph. Only used when a function is being printed."),
+    cl::init(false), cl::Hidden);
 
 namespace llvm {
+extern cl::opt<bool> EnableExtTspBlockPlacement;
+extern cl::opt<bool> ApplyExtTspWithoutProfile;
 extern cl::opt<unsigned> StaticLikelyProb;
 extern cl::opt<unsigned> ProfileLikelyProb;
 
@@ -341,15 +353,15 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   /// Pair struct containing basic block and taildup profitability
   struct BlockAndTailDupResult {
-    MachineBasicBlock *BB;
+    MachineBasicBlock *BB = nullptr;
     bool ShouldTailDup;
   };
 
   /// Triple struct containing edge weight and the edge.
   struct WeightedEdge {
     BlockFrequency Weight;
-    MachineBasicBlock *Src;
-    MachineBasicBlock *Dest;
+    MachineBasicBlock *Src = nullptr;
+    MachineBasicBlock *Dest = nullptr;
   };
 
   /// work lists of blocks that are ready to be laid out
@@ -360,32 +372,32 @@ class MachineBlockPlacement : public MachineFunctionPass {
   DenseMap<const MachineBasicBlock *, BlockAndTailDupResult> ComputedEdges;
 
   /// Machine Function
-  MachineFunction *F;
+  MachineFunction *F = nullptr;
 
   /// A handle to the branch probability pass.
-  const MachineBranchProbabilityInfo *MBPI;
+  const MachineBranchProbabilityInfo *MBPI = nullptr;
 
   /// A handle to the function-wide block frequency pass.
   std::unique_ptr<MBFIWrapper> MBFI;
 
   /// A handle to the loop info.
-  MachineLoopInfo *MLI;
+  MachineLoopInfo *MLI = nullptr;
 
   /// Preferred loop exit.
   /// Member variable for convenience. It may be removed by duplication deep
   /// in the call stack.
-  MachineBasicBlock *PreferredLoopExit;
+  MachineBasicBlock *PreferredLoopExit = nullptr;
 
   /// A handle to the target's instruction info.
-  const TargetInstrInfo *TII;
+  const TargetInstrInfo *TII = nullptr;
 
   /// A handle to the target's lowering info.
-  const TargetLoweringBase *TLI;
+  const TargetLoweringBase *TLI = nullptr;
 
   /// A handle to the post dominator tree.
-  MachinePostDominatorTree *MPDT;
+  MachinePostDominatorTree *MPDT = nullptr;
 
-  ProfileSummaryInfo *PSI;
+  ProfileSummaryInfo *PSI = nullptr;
 
   /// Duplicator used to duplicate tails during placement.
   ///
@@ -399,7 +411,7 @@ class MachineBlockPlacement : public MachineFunctionPass {
 
   /// True:  use block profile count to compute tail duplication cost.
   /// False: use block frequency to compute tail duplication cost.
-  bool UseProfileCount;
+  bool UseProfileCount = false;
 
   /// Allocator and owner of BlockChain structures.
   ///
@@ -964,7 +976,7 @@ bool MachineBlockPlacement::isTrellis(
 
   for (MachineBasicBlock *Succ : ViableSuccs) {
     int PredCount = 0;
-    for (auto SuccPred : Succ->predecessors()) {
+    for (auto *SuccPred : Succ->predecessors()) {
       // Allow triangle successors, but don't count them.
       if (Successors.count(SuccPred)) {
         // Make sure that it is actually a triangle.
@@ -1062,7 +1074,7 @@ MachineBlockPlacement::getBestTrellisSuccessor(
   // Collect the edge frequencies of all edges that form the trellis.
   SmallVector<WeightedEdge, 8> Edges[2];
   int SuccIndex = 0;
-  for (auto Succ : ViableSuccs) {
+  for (auto *Succ : ViableSuccs) {
     for (MachineBasicBlock *SuccPred : Succ->predecessors()) {
       // Skip any placed predecessors that are not BB
       if (SuccPred != BB)
@@ -2005,7 +2017,7 @@ MachineBlockPlacement::FallThroughGains(
      for (MachineBasicBlock *Succ : BestPred->successors()) {
        if ((Succ == NewTop) || (Succ == BestPred) || !LoopBlockSet.count(Succ))
          continue;
-       if (ComputedEdges.find(Succ) != ComputedEdges.end())
+       if (ComputedEdges.contains(Succ))
          continue;
        BlockChain *SuccChain = BlockToChain[Succ];
        if ((SuccChain && (Succ != *SuccChain->begin())) ||
@@ -2450,7 +2462,7 @@ void MachineBlockPlacement::rotateLoopWithProfile(
   // as the sum of frequencies of exit edges we collect here, excluding the exit
   // edge from the tail of the loop chain.
   SmallVector<std::pair<MachineBasicBlock *, BlockFrequency>, 4> ExitsWithFreq;
-  for (auto BB : LoopChain) {
+  for (auto *BB : LoopChain) {
     auto LargestExitEdgeProb = BranchProbability::getZero();
     for (auto *Succ : BB->successors()) {
       BlockChain *SuccChain = BlockToChain[Succ];
@@ -2560,7 +2572,7 @@ MachineBlockPlacement::collectLoopBlockSet(const MachineLoop &L) {
   // profile data is available.
   if (F->getFunction().hasProfileData() || ForceLoopColdBlock) {
     BlockFrequency LoopFreq(0);
-    for (auto LoopPred : L.getHeader()->predecessors())
+    for (auto *LoopPred : L.getHeader()->predecessors())
       if (!L.contains(LoopPred))
         LoopFreq += MBFI->getBlockFreq(LoopPred) *
                     MBPI->getEdgeProbability(LoopPred, L.getHeader());
@@ -3465,6 +3477,8 @@ bool MachineBlockPlacement::runOnMachineFunction(MachineFunction &MF) {
   if (ViewBlockLayoutWithBFI != GVDT_None &&
       (ViewBlockFreqFuncName.empty() ||
        F->getFunction().getName().equals(ViewBlockFreqFuncName))) {
+    if (RenumberBlocksBeforeView)
+      MF.RenumberBlocks();
     MBFI->view("MBP." + MF.getName(), false);
   }
 
@@ -3487,7 +3501,7 @@ void MachineBlockPlacement::applyExtTsp() {
 
   auto BlockSizes = std::vector<uint64_t>(F->size());
   auto BlockCounts = std::vector<uint64_t>(F->size());
-  DenseMap<std::pair<uint64_t, uint64_t>, uint64_t> JumpCounts;
+  std::vector<EdgeCountT> JumpCounts;
   for (MachineBasicBlock &MBB : *F) {
     // Getting the block frequency.
     BlockFrequency BlockFreq = MBFI->getBlockFreq(&MBB);
@@ -3505,9 +3519,9 @@ void MachineBlockPlacement::applyExtTsp() {
     // Getting jump frequencies.
     for (MachineBasicBlock *Succ : MBB.successors()) {
       auto EP = MBPI->getEdgeProbability(&MBB, Succ);
-      BlockFrequency EdgeFreq = BlockFreq * EP;
-      auto Edge = std::make_pair(BlockIndex[&MBB], BlockIndex[Succ]);
-      JumpCounts[Edge] = EdgeFreq.getFrequency();
+      BlockFrequency JumpFreq = BlockFreq * EP;
+      auto Jump = std::make_pair(BlockIndex[&MBB], BlockIndex[Succ]);
+      JumpCounts.push_back(std::make_pair(Jump, JumpFreq.getFrequency()));
     }
   }
 
@@ -3657,6 +3671,9 @@ INITIALIZE_PASS_END(MachineBlockPlacementStats, "block-placement-stats",
 bool MachineBlockPlacementStats::runOnMachineFunction(MachineFunction &F) {
   // Check for single-block functions and skip them.
   if (std::next(F.begin()) == F.end())
+    return false;
+
+  if (!isFunctionInPrintList(F.getName()))
     return false;
 
   MBPI = &getAnalysis<MachineBranchProbabilityInfo>();

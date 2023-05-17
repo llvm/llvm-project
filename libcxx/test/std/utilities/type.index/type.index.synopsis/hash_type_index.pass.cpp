@@ -9,7 +9,6 @@
 // <typeindex>
 
 // struct hash<type_index>
-//     : public unary_function<type_index, size_t>
 // {
 //     size_t operator()(type_index index) const;
 // };
@@ -27,9 +26,11 @@
 int main(int, char**)
 {
   {
+#if TEST_STD_VER <= 14
     typedef std::hash<std::type_index> H;
     static_assert((std::is_same<typename H::argument_type, std::type_index>::value), "" );
     static_assert((std::is_same<typename H::result_type, std::size_t>::value), "" );
+#endif
   }
 #if TEST_STD_VER >= 11
   {

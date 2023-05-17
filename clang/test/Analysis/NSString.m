@@ -1,7 +1,7 @@
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
-// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -analyzer-config mode=shallow -verify -Wno-objc-root-class %s
-// RUN: %clang_analyze_cc1 -DTEST_64 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
-// RUN: %clang_analyze_cc1 -DOSATOMIC_USE_INLINED -triple i386-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-store=region -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -triple i386-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -analyzer-config mode=shallow -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -DTEST_64 -triple x86_64-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -verify -Wno-objc-root-class %s
+// RUN: %clang_analyze_cc1 -DOSATOMIC_USE_INLINED -triple i386-apple-darwin10 -analyzer-checker=core,osx.cocoa.NilArg,osx.cocoa.RetainCount,alpha.core -verify -Wno-objc-root-class %s
 
 //===----------------------------------------------------------------------===//
 // The following code is reduced using delta-debugging from

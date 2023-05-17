@@ -10,8 +10,6 @@ import lldbsuite.test.lldbutil as lldbutil
 
 
 class ThreadExitTestCase(TestBase):
-
-    mydir = TestBase.compute_mydir(__file__)
     NO_DEBUG_INFO_TESTCASE = True
 
     # Needs os-specific implementation in the inferior
@@ -28,4 +26,5 @@ class ThreadExitTestCase(TestBase):
         self.expect_expr("call_me()", result_value="12345")
 
         self.runCmd("continue")
-        self.assertEquals(self.process().GetExitStatus(), 47)
+        # Exit code depends on the version of the linux kernel
+        self.assertIn(self.process().GetExitStatus(), [42, 47])

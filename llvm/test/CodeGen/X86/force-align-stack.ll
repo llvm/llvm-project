@@ -8,14 +8,14 @@ define void @a() nounwind ssp {
 entry:
 ; CHECK: _a:
 ; CHECK: andl    $-16, %esp
-  %z = alloca <16 x i8>                           ; <<16 x i8>*> [#uses=2]
+  %z = alloca <16 x i8>                           ; <ptr> [#uses=2]
   %"alloca point" = bitcast i32 0 to i32          ; <i32> [#uses=0]
-  store <16 x i8> zeroinitializer, <16 x i8>* %z, align 16
-  call void @b(<16 x i8>* %z) nounwind
+  store <16 x i8> zeroinitializer, ptr %z, align 16
+  call void @b(ptr %z) nounwind
   br label %return
 
 return:                                           ; preds = %entry
   ret void
 }
 
-declare void @b(<16 x i8>*)
+declare void @b(ptr)

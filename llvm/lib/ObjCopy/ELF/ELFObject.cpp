@@ -434,47 +434,38 @@ Error SectionWriter::visit(const OwnedDataSection &Sec) {
   return Error::success();
 }
 
-static constexpr std::array<uint8_t, 4> ZlibGnuMagic = {{'Z', 'L', 'I', 'B'}};
-
-static bool isDataGnuCompressed(ArrayRef<uint8_t> Data) {
-  return Data.size() > ZlibGnuMagic.size() &&
-         std::equal(ZlibGnuMagic.begin(), ZlibGnuMagic.end(), Data.data());
-}
-
-template <class ELFT>
-static std::tuple<uint64_t, uint64_t>
-getDecompressedSizeAndAlignment(ArrayRef<uint8_t> Data) {
-  const bool IsGnuDebug = isDataGnuCompressed(Data);
-  const uint64_t DecompressedSize =
-      IsGnuDebug
-          ? support::endian::read64be(Data.data() + ZlibGnuMagic.size())
-          : reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())->ch_size;
-  const uint64_t DecompressedAlign =
-      IsGnuDebug ? 1
-                 : reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data.data())
-                       ->ch_addralign;
-
-  return std::make_tuple(DecompressedSize, DecompressedAlign);
-}
-
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const DecompressedSection &Sec) {
-  const size_t DataOffset = isDataGnuCompressed(Sec.OriginalData)
-                                ? (ZlibGnuMagic.size() + sizeof(Sec.Size))
-                                : sizeof(Elf_Chdr_Impl<ELFT>);
-
-  StringRef CompressedContent(
-      reinterpret_cast<const char *>(Sec.OriginalData.data()) + DataOffset,
-      Sec.OriginalData.size() - DataOffset);
-
-  SmallVector<char, 128> DecompressedContent;
-  if (Error Err = zlib::uncompress(CompressedContent, DecompressedContent,
-                                   static_cast<size_t>(Sec.Size)))
+  ArrayRef<uint8_t> Compressed =
+      Sec.OriginalData.slice(sizeof(Elf_Chdr_Impl<ELFT>));
+  SmallVector<uint8_t, 128> Decompressed;
+  DebugCompressionType Type;
+  switch (Sec.ChType) {
+  case ELFCOMPRESS_ZLIB:
+    Type = DebugCompressionType::Zlib;
+    break;
+  case ELFCOMPRESS_ZSTD:
+    Type = DebugCompressionType::Zstd;
+    break;
+  default:
     return createStringError(errc::invalid_argument,
-                             "'" + Sec.Name + "': " + toString(std::move(Err)));
+                             "--decompress-debug-sections: ch_type (" +
+                                 Twine(Sec.ChType) + ") of section '" +
+                                 Sec.Name + "' is unsupported");
+  }
+  if (auto *Reason =
+          compression::getReasonIfUnsupported(compression::formatFor(Type)))
+    return createStringError(errc::invalid_argument,
+                             "failed to decompress section '" + Sec.Name +
+                                 "': " + Reason);
+  if (Error E = compression::decompress(Type, Compressed, Decompressed,
+                                        static_cast<size_t>(Sec.Size)))
+    return createStringError(errc::invalid_argument,
+                             "failed to decompress section '" + Sec.Name +
+                                 "': " + toString(std::move(E)));
 
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  std::copy(DecompressedContent.begin(), DecompressedContent.end(), Buf);
+  std::copy(Decompressed.begin(), Decompressed.end(), Buf);
 
   return Error::success();
 }
@@ -519,60 +510,46 @@ Error BinarySectionWriter::visit(const CompressedSection &Sec) {
 template <class ELFT>
 Error ELFSectionWriter<ELFT>::visit(const CompressedSection &Sec) {
   uint8_t *Buf = reinterpret_cast<uint8_t *>(Out.getBufferStart()) + Sec.Offset;
-  if (Sec.CompressionType == DebugCompressionType::None) {
+  Elf_Chdr_Impl<ELFT> Chdr = {};
+  switch (Sec.CompressionType) {
+  case DebugCompressionType::None:
     std::copy(Sec.OriginalData.begin(), Sec.OriginalData.end(), Buf);
     return Error::success();
-  }
-
-  if (Sec.CompressionType == DebugCompressionType::GNU) {
-    const char *Magic = "ZLIB";
-    memcpy(Buf, Magic, strlen(Magic));
-    Buf += strlen(Magic);
-    const uint64_t DecompressedSize =
-        support::endian::read64be(&Sec.DecompressedSize);
-    memcpy(Buf, &DecompressedSize, sizeof(DecompressedSize));
-    Buf += sizeof(DecompressedSize);
-  } else {
-    Elf_Chdr_Impl<ELFT> Chdr;
+  case DebugCompressionType::Zlib:
     Chdr.ch_type = ELF::ELFCOMPRESS_ZLIB;
-    Chdr.ch_size = Sec.DecompressedSize;
-    Chdr.ch_addralign = Sec.DecompressedAlign;
-    memcpy(Buf, &Chdr, sizeof(Chdr));
-    Buf += sizeof(Chdr);
+    break;
+  case DebugCompressionType::Zstd:
+    Chdr.ch_type = ELF::ELFCOMPRESS_ZSTD;
+    break;
   }
+  Chdr.ch_size = Sec.DecompressedSize;
+  Chdr.ch_addralign = Sec.DecompressedAlign;
+  memcpy(Buf, &Chdr, sizeof(Chdr));
+  Buf += sizeof(Chdr);
 
   std::copy(Sec.CompressedData.begin(), Sec.CompressedData.end(), Buf);
   return Error::success();
 }
 
 CompressedSection::CompressedSection(const SectionBase &Sec,
-                                     DebugCompressionType CompressionType)
+                                     DebugCompressionType CompressionType,
+                                     bool Is64Bits)
     : SectionBase(Sec), CompressionType(CompressionType),
       DecompressedSize(Sec.OriginalData.size()), DecompressedAlign(Sec.Align) {
-  zlib::compress(StringRef(reinterpret_cast<const char *>(OriginalData.data()),
-                           OriginalData.size()),
-                 CompressedData);
+  compression::compress(compression::Params(CompressionType), OriginalData,
+                        CompressedData);
 
-  size_t ChdrSize;
-  if (CompressionType == DebugCompressionType::GNU) {
-    Name = ".z" + Sec.Name.substr(1);
-    ChdrSize = sizeof("ZLIB") - 1 + sizeof(uint64_t);
-  } else {
-    Flags |= ELF::SHF_COMPRESSED;
-    ChdrSize =
-        std::max(std::max(sizeof(object::Elf_Chdr_Impl<object::ELF64LE>),
-                          sizeof(object::Elf_Chdr_Impl<object::ELF64BE>)),
-                 std::max(sizeof(object::Elf_Chdr_Impl<object::ELF32LE>),
-                          sizeof(object::Elf_Chdr_Impl<object::ELF32BE>)));
-  }
+  Flags |= ELF::SHF_COMPRESSED;
+  size_t ChdrSize = Is64Bits ? sizeof(object::Elf_Chdr_Impl<object::ELF64LE>)
+                             : sizeof(object::Elf_Chdr_Impl<object::ELF32LE>);
   Size = ChdrSize + CompressedData.size();
   Align = 8;
 }
 
 CompressedSection::CompressedSection(ArrayRef<uint8_t> CompressedData,
-                                     uint64_t DecompressedSize,
+                                     uint32_t ChType, uint64_t DecompressedSize,
                                      uint64_t DecompressedAlign)
-    : CompressionType(DebugCompressionType::None),
+    : ChType(ChType), CompressionType(DebugCompressionType::None),
       DecompressedSize(DecompressedSize), DecompressedAlign(DecompressedAlign) {
   OriginalData = CompressedData;
 }
@@ -1385,7 +1362,7 @@ Expected<std::unique_ptr<Object>> IHexELFBuilder::build() {
 
 template <class ELFT>
 ELFBuilder<ELFT>::ELFBuilder(const ELFObjectFile<ELFT> &ElfObj, Object &Obj,
-                             Optional<StringRef> ExtractPartition)
+                             std::optional<StringRef> ExtractPartition)
     : ElfFile(ElfObj.getELFFile()), Obj(Obj),
       ExtractPartition(ExtractPartition) {
   Obj.IsMips64EL = ElfFile.isMips64EL();
@@ -1727,6 +1704,10 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     else
       return Data.takeError();
   case SHT_SYMTAB: {
+    // Multiple SHT_SYMTAB sections are forbidden by the ELF gABI.
+    if (Obj.SymbolTable != nullptr)
+      return createStringError(llvm::errc::invalid_argument,
+                               "found multiple SHT_SYMTAB sections");
     auto &SymTab = Obj.addSection<SymbolTableSection>();
     Obj.SymbolTable = &SymTab;
     return SymTab;
@@ -1747,15 +1728,11 @@ Expected<SectionBase &> ELFBuilder<ELFT>::makeSection(const Elf_Shdr &Shdr) {
     if (!Name)
       return Name.takeError();
 
-    if (Name->startswith(".zdebug") || (Shdr.sh_flags & ELF::SHF_COMPRESSED)) {
-      uint64_t DecompressedSize, DecompressedAlign;
-      std::tie(DecompressedSize, DecompressedAlign) =
-          getDecompressedSizeAndAlignment<ELFT>(*Data);
-      return Obj.addSection<CompressedSection>(
-          CompressedSection(*Data, DecompressedSize, DecompressedAlign));
-    }
-
-    return Obj.addSection<Section>(*Data);
+    if (!(Shdr.sh_flags & ELF::SHF_COMPRESSED))
+      return Obj.addSection<Section>(*Data);
+    auto *Chdr = reinterpret_cast<const Elf_Chdr_Impl<ELFT> *>(Data->data());
+    return Obj.addSection<CompressedSection>(CompressedSection(
+        *Data, Chdr->ch_type, Chdr->ch_size, Chdr->ch_addralign));
   }
   }
 }
@@ -1903,6 +1880,7 @@ template <class ELFT> Error ELFBuilder<ELFT>::build(bool EnsureSymtab) {
     return HeadersFile.takeError();
 
   const typename ELFFile<ELFT>::Elf_Ehdr &Ehdr = HeadersFile->getHeader();
+  Obj.Is64Bits = Ehdr.e_ident[EI_CLASS] == ELFCLASS64;
   Obj.OSABI = Ehdr.e_ident[EI_OSABI];
   Obj.ABIVersion = Ehdr.e_ident[EI_ABIVERSION];
   Obj.Type = Ehdr.e_type;
@@ -2141,7 +2119,7 @@ Error Object::updateSection(StringRef Name, ArrayRef<uint8_t> Data) {
   if (Data.size() > OldSec->Size && OldSec->ParentSegment)
     return createStringError(errc::invalid_argument,
                              "cannot fit data of size %zu into section '%s' "
-                             "with size %zu that is part of a segment",
+                             "with size %" PRIu64 " that is part of a segment",
                              Data.size(), Name.str().c_str(), OldSec->Size);
 
   if (!OldSec->ParentSegment) {
@@ -2653,9 +2631,12 @@ Error BinaryWriter::finalize() {
   // MinAddr will be skipped.
   uint64_t MinAddr = UINT64_MAX;
   for (SectionBase &Sec : Obj.allocSections()) {
+    // If Sec's type is changed from SHT_NOBITS due to --set-section-flags,
+    // Offset may not be aligned. Align it to max(Align, 1).
     if (Sec.ParentSegment != nullptr)
-      Sec.Addr =
-          Sec.Offset - Sec.ParentSegment->Offset + Sec.ParentSegment->PAddr;
+      Sec.Addr = alignTo(Sec.Offset - Sec.ParentSegment->Offset +
+                             Sec.ParentSegment->PAddr,
+                         std::max(Sec.Align, uint64_t(1)));
     if (Sec.Type != SHT_NOBITS && Sec.Size > 0)
       MinAddr = std::min(MinAddr, Sec.Addr);
   }

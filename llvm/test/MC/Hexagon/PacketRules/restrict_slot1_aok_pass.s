@@ -1,4 +1,4 @@
-# RUN: llvm-mc -arch=hexagon -filetype=obj %s | llvm-objdump -d - | FileCheck %s
+# RUN: llvm-mc -arch=hexagon -filetype=obj %s | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
 
 { r0=sub(#1,r0)
   r1=sub(#1, r0)

@@ -38,12 +38,10 @@ bb18:                                             ; preds = %bb18, %bb12
   %tmp19 = phi i64 [ 0, %bb12 ], [ %tmp27, %bb18 ]
   %tmp20 = add i64 %tmp19, 3
   %tmp21 = add i64 %tmp19, 5
-  %tmp22 = getelementptr inbounds i32, i32 addrspace(1)* undef, i64 %tmp20
-  %tmp23 = bitcast i32 addrspace(1)* %tmp22 to <2 x i32> addrspace(1)*
-  %tmp24 = load <2 x i32>, <2 x i32> addrspace(1)* %tmp23, align 4
-  %tmp25 = getelementptr inbounds i32, i32 addrspace(1)* undef, i64 %tmp21
-  %tmp26 = bitcast i32 addrspace(1)* %tmp25 to <2 x i32> addrspace(1)*
-  store <2 x i32> undef, <2 x i32> addrspace(1)* %tmp26, align 4
+  %tmp22 = getelementptr inbounds i32, ptr addrspace(1) undef, i64 %tmp20
+  %tmp24 = load <2 x i32>, ptr addrspace(1) %tmp22, align 4
+  %tmp25 = getelementptr inbounds i32, ptr addrspace(1) undef, i64 %tmp21
+  store <2 x i32> undef, ptr addrspace(1) %tmp25, align 4
   %tmp27 = add i64 %tmp19, 2
   %tmp28 = icmp eq i64 %tmp27, %tmp17
   br i1 %tmp28, label %bb29, label %bb18

@@ -152,9 +152,9 @@ void HIPSPVToolChain::addClangTargetOptions(
   if (!DriverArgs.hasArg(options::OPT_fvisibility_EQ,
                          options::OPT_fvisibility_ms_compat))
     CC1Args.append(
-        {"-fvisibility", "hidden", "-fapply-global-visibility-to-externs"});
+        {"-fvisibility=hidden", "-fapply-global-visibility-to-externs"});
 
-  llvm::for_each(getHIPDeviceLibs(DriverArgs),
+  llvm::for_each(getDeviceLibs(DriverArgs),
                  [&](const BitCodeLibraryInfo &BCFile) {
                    CC1Args.append({"-mlink-builtin-bitcode",
                                    DriverArgs.MakeArgString(BCFile.Path)});
@@ -206,7 +206,7 @@ void HIPSPVToolChain::AddHIPIncludeArgs(const ArgList &DriverArgs,
 }
 
 llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12>
-HIPSPVToolChain::getHIPDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
+HIPSPVToolChain::getDeviceLibs(const llvm::opt::ArgList &DriverArgs) const {
   llvm::SmallVector<ToolChain::BitCodeLibraryInfo, 12> BCLibs;
   if (DriverArgs.hasArg(options::OPT_nogpulib))
     return {};
@@ -283,10 +283,10 @@ VersionTuple HIPSPVToolChain::computeMSVCVersion(const Driver *D,
 }
 
 void HIPSPVToolChain::adjustDebugInfoKind(
-    codegenoptions::DebugInfoKind &DebugInfoKind,
+    llvm::codegenoptions::DebugInfoKind &DebugInfoKind,
     const llvm::opt::ArgList &Args) const {
   // Debug info generation is disabled for SPIRV-LLVM-Translator
   // which currently aborts on the presence of DW_OP_LLVM_convert.
   // TODO: Enable debug info when the SPIR-V backend arrives.
-  DebugInfoKind = codegenoptions::NoDebugInfo;
+  DebugInfoKind = llvm::codegenoptions::NoDebugInfo;
 }

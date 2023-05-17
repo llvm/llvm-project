@@ -12,27 +12,27 @@ target triple = "x86_64-unknown-linux-gnu"
 ; Function Attrs: norecurse nounwind optsize uwtable
 define i32 @main() local_unnamed_addr #0 {
 entry:
-  %0 = load volatile i32, i32* @c, align 4
+  %0 = load volatile i32, ptr @c, align 4
   %tobool = icmp eq i32 %0, 0
-  %1 = load i16, i16* @a, align 2
+  %1 = load i16, ptr @a, align 2
   br i1 %tobool, label %lor.rhs, label %lor.end
 
 lor.rhs:                                          ; preds = %entry
   %inc = add i16 %1, 1
-  store i16 %inc, i16* @a, align 2
+  store i16 %inc, ptr @a, align 2
   br label %lor.end
 
 lor.end:                                          ; preds = %entry, %lor.rhs
   %2 = phi i16 [ %inc, %lor.rhs ], [ %1, %entry ]
   %dec = add i16 %2, -1
-  store i16 %dec, i16* @a, align 2
-  %3 = load i8, i8* @d, align 1
+  store i16 %dec, ptr @a, align 2
+  %3 = load i8, ptr @d, align 1
   %sub = sub i8 0, %3
   %tobool4 = icmp eq i16 %dec, 0
   br i1 %tobool4, label %land.end, label %land.rhs
 
 land.rhs:                                         ; preds = %lor.end
-  %4 = load volatile i32, i32* @b, align 4
+  %4 = load volatile i32, ptr @b, align 4
   %tobool5 = icmp ne i32 %4, 0
   br label %land.end
 
@@ -40,7 +40,7 @@ land.end:                                         ; preds = %lor.end, %land.rhs
   %5 = phi i1 [ false, %lor.end ], [ %tobool5, %land.rhs ]
   %land.ext = zext i1 %5 to i8
   %or = or i8 %land.ext, %sub
-  store i8 %or, i8* @d, align 1
+  store i8 %or, ptr @d, align 1
   ret i32 0
 }
 

@@ -10,6 +10,7 @@ from .... import func
 from .... import linalg
 from .... import math
 from .... import arith
+from .... import complex
 from ...._ods_common import get_op_result_or_value as _get_op_result_or_value, get_op_results_or_values as _get_op_results_or_values
 
 from .scalar_expr import *
@@ -126,8 +127,10 @@ def prepare_common_structured_op(op_config: LinalgStructuredOpConfig,
   # TODO: Support emission of pure memref form.
   indexing_maps_attr = ArrayAttr.get(
       [AffineMapAttr.get(am) for am in indexing_maps])
-  iterator_types_attr = ArrayAttr.get(
-      [StringAttr.get(s) for s in op_config.iterator_types])
+  iterator_types_attr = ArrayAttr.get([
+      Attribute.parse(f"#linalg.iterator_type<{s}>")
+      for s in op_config.iterator_types
+  ])
 
   # Compute the index attributes used when emitting a named structured op.
   index_attrs = {}  # type: Dict[str, DenseElementAttr]
@@ -179,7 +182,8 @@ def emit_generic_structured_op(op_config: LinalgStructuredOpConfig, *ins: Value,
   # An operation is rank polymorphic if the iteration domain has rank zero.
   if not iterator_types_attr:
     rank = ShapedType(outs[0].type).rank
-    iterator_types_attr = ArrayAttr.get([StringAttr.get("parallel")] * rank)
+    iterator_types_attr = ArrayAttr.get(
+        [Attribute.parse("#linalg.iterator_type<parallel>")] * rank)
     scalar_map = AffineMap.get(rank, 0, [])
     tensor_map = AffineMap.get_identity(rank)
     indexing_maps = []
@@ -392,7 +396,7 @@ class _BodyBuilder:
 
   def _unary_abs(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
-      return math.AbsOp(x).result
+      return math.AbsFOp(x).result
     raise NotImplementedError("Unsupported 'abs' operand: {x}")
 
   def _unary_ceil(self, x: Value) -> Value:
@@ -408,6 +412,8 @@ class _BodyBuilder:
   def _unary_negf(self, x: Value) -> Value:
     if _is_floating_point_type(x.type):
       return arith.NegFOp(x).result
+    if _is_complex_type(x.type):
+      return complex.NegOp(x).result
     raise NotImplementedError("Unsupported 'negf' operand: {x}")
 
   def _binary_add(self, lhs: Value, rhs: Value) -> Value:
@@ -415,6 +421,8 @@ class _BodyBuilder:
       return arith.AddFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.AddIOp(lhs, rhs).result
+    if _is_complex_type(lhs.type):
+      return complex.AddOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'add' operands: {lhs}, {rhs}")
 
   def _binary_sub(self, lhs: Value, rhs: Value) -> Value:
@@ -422,6 +430,8 @@ class _BodyBuilder:
       return arith.SubFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.SubIOp(lhs, rhs).result
+    if _is_complex_type(lhs.type):
+      return complex.SubOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'sub' operands: {lhs}, {rhs}")
 
   def _binary_mul(self, lhs: Value, rhs: Value) -> Value:
@@ -429,6 +439,8 @@ class _BodyBuilder:
       return arith.MulFOp(lhs, rhs).result
     if _is_integer_type(lhs.type) or _is_index_type(lhs.type):
       return arith.MulIOp(lhs, rhs).result
+    if _is_complex_type(lhs.type):
+      return complex.MulOp(lhs, rhs).result
     raise NotImplementedError("Unsupported 'mul' operands: {lhs}, {rhs}")
 
   def _binary_max_signed(self, lhs: Value, rhs: Value) -> Value:
@@ -510,6 +522,10 @@ def _add_type_mapping(operand_config: OperandDefConfig, operand_type: Type,
                        f"{type_mapping[name]} by type {element_or_self_type}")
   type_mapping[name] = element_or_self_type
   block_arg_types.append(element_or_self_type)
+
+
+def _is_complex_type(t: Type) -> bool:
+  return ComplexType.isinstance(t)
 
 
 def _is_floating_point_type(t: Type) -> bool:

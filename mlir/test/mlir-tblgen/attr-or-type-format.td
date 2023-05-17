@@ -2,6 +2,7 @@
 // RUN: mlir-tblgen -gen-typedef-defs -I %S/../../include %s | FileCheck %s --check-prefix=TYPE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 
 /// Test that attribute and type printers and parsers are correctly generated.
@@ -55,8 +56,8 @@ def TypeParamB : TypeParameter<"TestParamD", "a type param D"> {
 // ATTR:   if (odsParser.parseRParen())
 // ATTR:     return {};
 // ATTR:   return TestAAttr::get(odsParser.getContext(),
-// ATTR:                         *_result_value,
-// ATTR:                         *_result_complex);
+// ATTR:                         IntegerAttr((*_result_value)),
+// ATTR:                         TestParamA((*_result_complex)));
 // ATTR: }
 
 // ATTR: void TestAAttr::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -114,8 +115,8 @@ def AttrA : TestAttr<"TestA"> {
 // ATTR:       return {};
 // ATTR:   }
 // ATTR:   return TestBAttr::get(odsParser.getContext(),
-// ATTR:                         *_result_v0,
-// ATTR:                         *_result_v1);
+// ATTR:                         TestParamA((*_result_v0)),
+// ATTR:                         TestParamB((*_result_v1)));
 // ATTR: }
 
 // ATTR: void TestBAttr::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -151,8 +152,8 @@ def AttrB : TestAttr<"TestB"> {
 // ATTR:   if (::mlir::failed(_result_v1))
 // ATTR:     return {};
 // ATTR:   return TestFAttr::get(odsParser.getContext(),
-// ATTR:     *_result_v0,
-// ATTR:     *_result_v1);
+// ATTR:     int((*_result_v0)),
+// ATTR:     int((*_result_v1)));
 // ATTR: }
 
 def AttrC : TestAttr<"TestF"> {
@@ -164,13 +165,51 @@ def AttrC : TestAttr<"TestF"> {
 
 /// Test attribute with self type parameter
 
-// ATTR: TestGAttr::parse
-// ATTR:   return TestGAttr::get
-// ATTR:     odsType
+// ATTR-LABEL: Attribute TestGAttr::parse
+// ATTR: if (odsType)
+// ATTR:   if (auto reqType = odsType.dyn_cast<::mlir::Type>())
+// ATTR:     _result_type = reqType
+// ATTR: TestGAttr::get
+// ATTR-NEXT: *_result_a
+// ATTR-NEXT: _result_type.value_or(::mlir::NoneType::get(
 def AttrD : TestAttr<"TestG"> {
   let parameters = (ins "int":$a, AttributeSelfTypeParameter<"">:$type);
   let mnemonic = "attr_d";
   let assemblyFormat = "$a";
+}
+
+// Check that the self-type parameter can be referenced without being bound.
+
+// ATTR-LABEL: Attribute TestHAttr::parse
+// ATTR: _result_type = reqType
+// ATTR: parseUseType(odsParser,
+// ATTR-NEXT: *_result_type
+
+// ATTR-LABEL: void TestHAttr::print
+// ATTR: printUseType(odsPrinter,
+// ATTR-NEXT: getType()
+
+def AttrE : TestAttr<"TestH"> {
+  let parameters = (ins AttributeSelfTypeParameter<"">:$type);
+  let mnemonic = "attr_e";
+  let assemblyFormat = "custom<UseType>(ref($type))";
+}
+
+def TestEnum : I32EnumAttr<"TestEnum", "TestEnumType", [
+  I32EnumAttrCase<"first", 0>,
+  I32EnumAttrCase<"second", 1>
+]> {
+  let genSpecializedAttr = 0;
+}
+
+// ATTR-LABEL: TestEnumAttr::parse
+// ATTR: parseFoo(odsParser,
+// ATTR-NEXT: _result_value
+// ATTR-LABEL: TestEnumAttr::print
+// ATTR: printFoo(odsPrinter,
+// ATTR-NEXT: getValue()
+def EnumAttrA : EnumAttr<Test_Dialect, TestEnum, "EnumAttrA"> {
+  let assemblyFormat = "custom<Foo>($value)";
 }
 
 /// Test type parser and printer that mix variables and struct are generated
@@ -278,10 +317,10 @@ def TypeA : TestType<"TestC"> {
 // TYPE:   if (::mlir::failed(_result_v3))
 // TYPE:     return {};
 // TYPE:   return TestDType::get(odsParser.getContext(),
-// TYPE:                         *_result_v0,
-// TYPE:                         *_result_v1,
-// TYPE:                         *_result_v2,
-// TYPE:                         *_result_v3);
+// TYPE:                         TestParamC((*_result_v0)),
+// TYPE:                         TestParamD((*_result_v1)),
+// TYPE:                         TestParamC((*_result_v2)),
+// TYPE:                         TestParamD((*_result_v3)));
 // TYPE: }
 
 // TYPE: void TestDType::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -369,10 +408,10 @@ def TypeB : TestType<"TestD"> {
 // TYPE:       return {};
 // TYPE:   }
 // TYPE:   return TestEType::get(odsParser.getContext(),
-// TYPE:     *_result_v0,
-// TYPE:     *_result_v1,
-// TYPE:     *_result_v2,
-// TYPE:     *_result_v3);
+// TYPE:     IntegerAttr((*_result_v0)),
+// TYPE:     IntegerAttr((*_result_v1)),
+// TYPE:     IntegerAttr((*_result_v2)),
+// TYPE:     IntegerAttr((*_result_v3)));
 // TYPE: }
 
 // TYPE: void TestEType::print(::mlir::AsmPrinter &odsPrinter) const {
@@ -402,7 +441,7 @@ def TypeC : TestType<"TestE"> {
 }
 
 // TYPE: ::mlir::Type TestFType::parse(::mlir::AsmParser &odsParser) {
-// TYPE:   _result_a.getValueOr(int())
+// TYPE:   _result_a.value_or(int())
 
 // TYPE: void TestFType::print(::mlir::AsmPrinter &odsPrinter) const {
 // TYPE if (getA()) {
@@ -417,11 +456,11 @@ def TypeD : TestType<"TestF"> {
 // TYPE: ::mlir::Type TestGType::parse(::mlir::AsmParser &odsParser) {
 // TYPE:   if (::mlir::failed(_result_a))
 // TYPE:     return {};
-// TYPE:   if (::mlir::succeeded(_result_a) && *_result_a)
+// TYPE:   if (::mlir::succeeded(_result_a) && !((*_result_a) == int()))
 // TYPE:     if (odsParser.parseComma())
 // TYPE:       return {};
 
-// TYPE: if ((getA()))
+// TYPE: if (!(getA() == int()))
 // TYPE:   odsPrinter.printStrippedAttrOrType(getA());
 // TYPE: odsPrinter << ", ";
 // TYPE: odsPrinter.printStrippedAttrOrType(getB());
@@ -441,7 +480,7 @@ def TypeE : TestType<"TestG"> {
 // TYPE:     return {};
 
 // TYPE: void TestHType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getA())) {
+// TYPE:   if (!(getA() == int())) {
 // TYPE:     odsPrinter << "a = ";
 // TYPE:     odsPrinter.printStrippedAttrOrType(getA());
 // TYPE:     odsPrinter << ", ";
@@ -484,9 +523,9 @@ def TypeG : TestType<"TestI"> {
 // TYPE:     return {};
 
 // TYPE: void TestJType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getB())) {
+// TYPE:   if (!(getB() == int())) {
 // TYPE:     odsPrinter << "(";
-// TYPE:     if ((getB()))
+// TYPE:     if (!(getB() == int()))
 // TYPE:       odsPrinter.printStrippedAttrOrType(getB());
 // TYPE:     odsPrinter << ")";
 // TYPE:   } else {
@@ -501,10 +540,10 @@ def TypeH : TestType<"TestJ"> {
 }
 
 // TYPE: ::mlir::Type TestKType::parse(::mlir::AsmParser &odsParser) {
-// TYPE:   _result_a.getValueOr(10)
+// TYPE:   _result_a.value_or(10)
 
 // TYPE: void TestKType::print(::mlir::AsmPrinter &odsPrinter) const {
-// TYPE:   if ((getA() && !(getA() == 10)))
+// TYPE:   if (!(getA() == 10))
 
 def TypeI : TestType<"TestK"> {
   let parameters = (ins DefaultValuedParameter<"int", "10">:$a);
@@ -534,4 +573,72 @@ def TypeJ : TestType<"TestL"> {
   let parameters = (ins "int":$a, OptionalParameter<"Attribute">:$b);
   let mnemonic = "type_j";
   let assemblyFormat = "custom<A>($a) custom<B>($b, ref($a))";
+}
+
+// TYPE: ::mlir::Type TestMType::parse
+// TYPE: FailureOr<float> _result_a
+// TYPE: return TestMType::get
+// TYPE: static_cast<int>((*_result_a))
+
+def ConvertFromStorageParameter : TypeParameter<"int", ""> {
+  let cppStorageType = "float";
+  let convertFromStorage = "static_cast<int>($_self)";
+}
+
+def TypeK : TestType<"TestM"> {
+  let parameters = (ins ConvertFromStorageParameter:$a);
+  let mnemonic = "type_k";
+  let assemblyFormat = "$a";
+}
+
+// TYPE-LABEL: ::mlir::Type TestNType::parse
+// TYPE: parseFoo(
+// TYPE-NEXT: ::mlir::detail::unwrapForCustomParse(_result_a),
+// TYPE-NEXT: 1);
+
+// TYPE-LABEL: void TestNType::print
+// TYPE: printFoo(
+// TYPE-NEXT: getA(),
+// TYPE-NEXT: 1);
+
+def TypeL : TestType<"TestN"> {
+  let parameters = (ins "int":$a);
+  let mnemonic = "type_l";
+  let assemblyFormat = [{ custom<Foo>($a, "1") }];
+}
+
+// TYPE-LABEL: ::mlir::Type TestOType::parse
+// TYPE: if (odsParser.parseOptionalQuestion())
+// TYPE: _result_a =
+// TYPE: else
+
+// TYPE-LABEL: void TestOType::print
+// TYPE: if (!(!(getA() == int())))
+// TYPE: odsPrinter << ' ' << "?"
+// TYPE: else
+// TYPE: odsPrinter.printStrippedAttrOrType(getA())
+
+def TypeM : TestType<"TestO"> {
+  let parameters = (ins OptionalParameter<"int">:$a);
+  let mnemonic = "type_m";
+  let assemblyFormat = "(`?`) : ($a^)?";
+}
+
+// TYPE-LABEL: ::mlir::Type TestPType::parse
+// TYPE: if (odsParser.parseOptionalQuestion())
+// TYPE: bool _seen_a
+// TYPE: bool _seen_b
+// TYPE: _loop_body(_paramKey))
+// TYPE: else {
+// TYPE-NEXT: }
+
+// TYPE-LABEL: void TestPType::print
+// TYPE: if (!(!(getA() == int()) || !(getB() == int())))
+// TYPE-NEXT: odsPrinter << "?"
+
+def TypeN : TestType<"TestP"> {
+  let parameters = (ins OptionalParameter<"int">:$a,
+                        OptionalParameter<"int">:$b);
+  let mnemonic = "type_n";
+  let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
 }

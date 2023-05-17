@@ -34,7 +34,7 @@
 
 define float @retfloat() nounwind {
 entry:
-        %0 = load volatile float, float* @float
+        %0 = load volatile float, ptr @float
         ret float %0
 }
 
@@ -47,7 +47,7 @@ entry:
 
 define double @retdouble() nounwind {
 entry:
-        %0 = load volatile double, double* @double
+        %0 = load volatile double, ptr @double
         ret double %0
 }
 
@@ -58,7 +58,7 @@ entry:
 
 define { double, double } @retComplexDouble() #0 {
   %retval = alloca { double, double }, align 8
-  %1 = load { double, double }, { double, double }* %retval
+  %1 = load { double, double }, ptr %retval
   ret { double, double } %1
 }
 

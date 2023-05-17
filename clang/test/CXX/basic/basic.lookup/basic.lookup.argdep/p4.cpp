@@ -21,9 +21,9 @@ namespace D {
 }
 
 namespace C {
-  class C {}; // expected-note {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'B::B' to 'const C::C &' for 1st argument}}
+  class C {}; // expected-note {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'B::B' to 'const C &' for 1st argument}}
 #if __cplusplus >= 201103L // C++11 or later
-  // expected-note@-2 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'B::B' to 'C::C &&' for 1st argument}}
+  // expected-note@-2 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'B::B' to 'C &&' for 1st argument}}
 #endif
   void func(C); // expected-note {{'C::func' declared here}} \
                 // expected-note {{passing argument to parameter here}}
@@ -44,7 +44,7 @@ namespace Test {
     // avoid accepting and printing out a typo correction that proves to be
     // incorrect once argument-dependent lookup resolution has occurred.
     func(B::B()); // expected-error {{use of undeclared identifier 'func'; did you mean 'C::func'?}} \
-                  // expected-error {{no viable conversion from 'B::B' to 'C::C'}}
+                  // expected-error {{no viable conversion from 'B::B' to 'C'}}
     func(C::C());
     A::A() + A::A();
     B::B() + B::B();

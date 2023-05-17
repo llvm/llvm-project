@@ -5,10 +5,10 @@
 declare i64 @llvm.riscv.aes64ds(i64, i64);
 
 define i64 @aes64ds(i64 %a, i64 %b) nounwind {
-; RV64ZKND-LABEL: aes64ds
-; RV64ZKND: # %bb.0:
-; RV64ZKND-NEXT: aes64ds a0, a0, a1
-; RV64ZKND-NEXT: ret
+; RV64ZKND-LABEL: aes64ds:
+; RV64ZKND:       # %bb.0:
+; RV64ZKND-NEXT:    aes64ds a0, a0, a1
+; RV64ZKND-NEXT:    ret
     %val = call i64 @llvm.riscv.aes64ds(i64 %a, i64 %b)
     ret i64 %val
 }
@@ -16,10 +16,10 @@ define i64 @aes64ds(i64 %a, i64 %b) nounwind {
 declare i64 @llvm.riscv.aes64dsm(i64, i64);
 
 define i64 @aes64dsm(i64 %a, i64 %b) nounwind {
-; RV64ZKND-LABEL: aes64dsm
-; RV64ZKND: # %bb.0:
-; RV64ZKND-NEXT: aes64dsm a0, a0, a1
-; RV64ZKND-NEXT: ret
+; RV64ZKND-LABEL: aes64dsm:
+; RV64ZKND:       # %bb.0:
+; RV64ZKND-NEXT:    aes64dsm a0, a0, a1
+; RV64ZKND-NEXT:    ret
     %val = call i64 @llvm.riscv.aes64dsm(i64 %a, i64 %b)
     ret i64 %val
 }
@@ -27,10 +27,10 @@ define i64 @aes64dsm(i64 %a, i64 %b) nounwind {
 declare i64 @llvm.riscv.aes64im(i64);
 
 define i64 @aes64im(i64 %a) nounwind {
-; RV64ZKND-LABEL: aes64im
-; RV64ZKND: # %bb.0:
-; RV64ZKND-NEXT: aes64im a0, a0
-; RV64ZKND-NEXT: ret
+; RV64ZKND-LABEL: aes64im:
+; RV64ZKND:       # %bb.0:
+; RV64ZKND-NEXT:    aes64im a0, a0
+; RV64ZKND-NEXT:    ret
     %val = call i64 @llvm.riscv.aes64im(i64 %a)
     ret i64 %val
 }

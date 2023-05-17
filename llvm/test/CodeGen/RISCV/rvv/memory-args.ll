@@ -14,7 +14,7 @@ define <vscale x 64 x i8> @callee(<vscale x 64 x i8> %arg0, <vscale x 64 x i8> %
 ; RV64IV:       # %bb.0:
 ; RV64IV-NEXT:    vl8r.v v24, (a0)
 ; RV64IV-NEXT:    li a0, 1024
-; RV64IV-NEXT:    vsetvli zero, a0, e8, m8, tu, mu
+; RV64IV-NEXT:    vsetvli zero, a0, e8, m8, tu, ma
 ; RV64IV-NEXT:    vmacc.vv v8, v16, v24
 ; RV64IV-NEXT:    ret
   %ret = call <vscale x 64 x i8> @llvm.riscv.vmacc.nxv64i8.nxv64i8(
@@ -55,8 +55,8 @@ define <vscale x 64 x i8> @caller() {
 ; RV64IV-NEXT:    add a0, sp, a0
 ; RV64IV-NEXT:    addi a0, a0, 64
 ; RV64IV-NEXT:    vl8r.v v24, (a0)
-; RV64IV-NEXT:    addi a0, sp, 64
 ; RV64IV-NEXT:    addi a1, sp, 64
+; RV64IV-NEXT:    addi a0, sp, 64
 ; RV64IV-NEXT:    vs8r.v v24, (a1)
 ; RV64IV-NEXT:    call callee@plt
 ; RV64IV-NEXT:    addi sp, s0, -80

@@ -161,14 +161,24 @@ Other useful ``AliasAnalysis`` methods
 Several other tidbits of information are often collected by various alias
 analysis implementations and can be put to good use by various clients.
 
-The ``pointsToConstantMemory`` method
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+The ``getModRefInfoMask`` method
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The ``pointsToConstantMemory`` method returns true if and only if the analysis
-can prove that the pointer only points to unchanging memory locations
-(functions, constant global variables, and the null pointer).  This information
-can be used to refine mod/ref information: it is impossible for an unchanging
-memory location to be modified.
+The ``getModRefInfoMask`` method returns a bound on Mod/Ref information for
+the supplied pointer, based on knowledge about whether the pointer points to
+globally-constant memory (for which it returns ``NoModRef``) or
+locally-invariant memory (for which it returns ``Ref``). Globally-constant
+memory includes functions, constant global variables, and the null pointer.
+Locally-invariant memory is memory that we know is invariant for the lifetime
+of its SSA value, but not necessarily for the life of the program: for example,
+the memory pointed to by ``readonly`` ``noalias`` parameters is known-invariant
+for the duration of the corresponding function call. Given Mod/Ref information
+``MRI`` for a memory location ``Loc``, ``MRI`` can be refined with a statement
+like ``MRI &= AA.getModRefInfoMask(Loc);``. Another useful idiom is
+``isModSet(AA.getModRefInfoMask(Loc))``; this checks to see if the given
+location can be modified at all. For convenience, there is also a method
+``pointsToConstantMemory(Loc)``; this is synonymous with
+``isNoModRef(AA.getModRefInfoMask(Loc))``.
 
 .. _never access memory or only read memory:
 

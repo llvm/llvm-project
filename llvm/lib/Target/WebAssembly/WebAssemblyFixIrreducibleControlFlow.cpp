@@ -222,10 +222,8 @@ private:
       assert(!Enterers.count(MBB));
       if (Blocks.insert(MBB).second) {
         for (auto *Pred : MBB->predecessors()) {
-          if (!AddedToWorkList.count(Pred)) {
+          if (AddedToWorkList.insert(Pred).second)
             WorkList.push_back(Pred);
-            AddedToWorkList.insert(Pred);
-          }
         }
       }
     }
@@ -345,7 +343,7 @@ void WebAssemblyFixIrreducibleControlFlow::makeSingleEntryLoop(
   BlockVector SortedEntries = getSortedEntries(Entries);
 
 #ifndef NDEBUG
-  for (auto Block : SortedEntries)
+  for (auto *Block : SortedEntries)
     assert(Block->getNumber() != -1);
   if (SortedEntries.size() > 1) {
     for (auto I = SortedEntries.begin(), E = SortedEntries.end() - 1; I != E;

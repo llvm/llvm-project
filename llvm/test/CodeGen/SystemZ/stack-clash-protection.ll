@@ -16,9 +16,9 @@ define i32 @fun0() #0 {
 ; CHECK-NEXT:    br %r14
 
   %a = alloca i32, i64 100
-  %b = getelementptr inbounds i32, i32* %a, i64 98
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 98
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -38,9 +38,9 @@ define i32 @fun1() #0 {
 ; CHECK-NEXT:    br %r14
 
   %a = alloca i32, i64 2000
-  %b = getelementptr inbounds i32, i32* %a, i64 200
-  store volatile i32 1, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 200
+  store volatile i32 1, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -69,11 +69,11 @@ define i32 @fun2() #0 {
 ; CHECK-NEXT:    br %r14
 
   %a = alloca i32, i64 18000
-  %b0 = getelementptr inbounds i32, i32* %a, i64 98
-  %b1 = getelementptr inbounds i32, i32* %a, i64 7198
-  store volatile i32 1, i32* %b0
-  store volatile i32 1, i32* %b1
-  %c = load volatile i32, i32* %a
+  %b0 = getelementptr inbounds i32, ptr %a, i64 98
+  %b1 = getelementptr inbounds i32, ptr %a, i64 7198
+  store volatile i32 1, ptr %b0
+  store volatile i32 1, ptr %b1
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -99,10 +99,8 @@ define void @fun3() #0 {
 entry:
   %stack = alloca [7122 x i32], align 4
   %i = alloca i32, align 4
-  %0 = bitcast [7122 x i32]* %stack to i8*
-  %i.0.i.0..sroa_cast = bitcast i32* %i to i8*
-  store volatile i32 0, i32* %i, align 4
-  %i.0.i.0.6 = load volatile i32, i32* %i, align 4
+  store volatile i32 0, ptr %i, align 4
+  %i.0.i.0.6 = load volatile i32, ptr %i, align 4
   ret void
 }
 
@@ -131,10 +129,8 @@ define void @fun4() #0 "stack-probe-size"="8192" {
 entry:
   %stack = alloca [8000 x i32], align 4
   %i = alloca i32, align 4
-  %0 = bitcast [8000 x i32]* %stack to i8*
-  %i.0.i.0..sroa_cast = bitcast i32* %i to i8*
-  store volatile i32 0, i32* %i, align 4
-  %i.0.i.0.6 = load volatile i32, i32* %i, align 4
+  store volatile i32 0, ptr %i, align 4
+  %i.0.i.0.6 = load volatile i32, ptr %i, align 4
   ret void
 }
 
@@ -155,10 +151,8 @@ define void @fun5() #0 "stack-probe-size"="4100" {
 entry:
   %stack = alloca [1000 x i32], align 4
   %i = alloca i32, align 4
-  %0 = bitcast [1000 x i32]* %stack to i8*
-  %i.0.i.0..sroa_cast = bitcast i32* %i to i8*
-  store volatile i32 0, i32* %i, align 4
-  %i.0.i.0.6 = load volatile i32, i32* %i, align 4
+  store volatile i32 0, ptr %i, align 4
+  %i.0.i.0.6 = load volatile i32, ptr %i, align 4
   ret void
 }
 
@@ -184,10 +178,8 @@ define void @fun6() #0 "stack-probe-size"="5" {
 entry:
   %stack = alloca [1000 x i32], align 4
   %i = alloca i32, align 4
-  %0 = bitcast [1000 x i32]* %stack to i8*
-  %i.0.i.0..sroa_cast = bitcast i32* %i to i8*
-  store volatile i32 0, i32* %i, align 4
-  %i.0.i.0.6 = load volatile i32, i32* %i, align 4
+  store volatile i32 0, ptr %i, align 4
+  %i.0.i.0.6 = load volatile i32, ptr %i, align 4
   ret void
 }
 
@@ -207,9 +199,9 @@ define i32 @fun7() #0 {
 ; CHECK-NEXT:    br %r14
   %v = call i32 @foo()
   %a = alloca i32, i64 950
-  %b = getelementptr inbounds i32, i32* %a, i64 98
-  store volatile i32 %v, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 98
+  store volatile i32 %v, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -231,9 +223,9 @@ define i32 @fun8() #0 {
 
   %v = call i32 @foo()
   %a = alloca i32, i64 952
-  %b = getelementptr inbounds i32, i32* %a, i64 200
-  store volatile i32 %v, i32* %b
-  %c = load volatile i32, i32* %a
+  %b = getelementptr inbounds i32, ptr %a, i64 200
+  store volatile i32 %v, ptr %b
+  %c = load volatile i32, ptr %a
   ret i32 %c
 }
 
@@ -260,10 +252,8 @@ define void @fun9() #0 "backchain" {
 entry:
   %stack = alloca [7122 x i32], align 4
   %i = alloca i32, align 4
-  %0 = bitcast [7122 x i32]* %stack to i8*
-  %i.0.i.0..sroa_cast = bitcast i32* %i to i8*
-  store volatile i32 0, i32* %i, align 4
-  %i.0.i.0.6 = load volatile i32, i32* %i, align 4
+  store volatile i32 0, ptr %i, align 4
+  %i.0.i.0.6 = load volatile i32, ptr %i, align 4
   ret void
 }
 

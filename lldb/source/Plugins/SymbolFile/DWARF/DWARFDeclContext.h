@@ -75,15 +75,10 @@ public:
     m_qualified_name.clear();
   }
 
-  lldb::LanguageType GetLanguage() const { return m_language; }
-
-  void SetLanguage(lldb::LanguageType language) { m_language = language; }
-
 protected:
   typedef std::vector<Entry> collection;
   collection m_entries;
   mutable std::string m_qualified_name;
-  lldb::LanguageType m_language = lldb::eLanguageTypeUnknown;
 };
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_DWARFDECLCONTEXT_H

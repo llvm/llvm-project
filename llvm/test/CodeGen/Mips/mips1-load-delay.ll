@@ -5,22 +5,22 @@ target datalayout = "e-m:m-p:32:32-i8:8:32-i16:16:32-i64:64-n32-S64"
 target triple = "mipsel-unknown-unknown-elf"
 
 ; Function Attrs: noinline nounwind optnone
-define dso_local i32 @add_two_pointers(i32* %a, i32* %b) #0 {
+define dso_local i32 @add_two_pointers(ptr %a, ptr %b) #0 {
 entry:
 ; ALL-LABEL: add_two_pointers:
-  %a.addr = alloca i32*, align 4
-  %b.addr = alloca i32*, align 4
-  store i32* %a, i32** %a.addr, align 4
-  store i32* %b, i32** %b.addr, align 4
-  %0 = load i32*, i32** %a.addr, align 4
-  %1 = load i32, i32* %0, align 4
+  %a.addr = alloca ptr, align 4
+  %b.addr = alloca ptr, align 4
+  store ptr %a, ptr %a.addr, align 4
+  store ptr %b, ptr %b.addr, align 4
+  %0 = load ptr, ptr %a.addr, align 4
+  %1 = load i32, ptr %0, align 4
   ; ALL:        lw $1, 4($fp)
   ; MIPS1:      nop
   ; MIPS2-NOT:  nop
   ; MIPS32-NOT: nop
   ; ALL:        lw $1, 0($1)
-  %2 = load i32*, i32** %b.addr, align 4
-  %3 = load i32, i32* %2, align 4
+  %2 = load ptr, ptr %b.addr, align 4
+  %3 = load i32, ptr %2, align 4
   ; ALL:        lw $2, 0($fp)
   ; MIPS1:      nop
   ; MIPS2-NOT:  nop

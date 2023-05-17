@@ -17,19 +17,25 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/TypeOrdering.h"
+#include "clang/Analysis/FlowSensitive/Arena.h"
+#include "clang/Analysis/FlowSensitive/ControlFlowContext.h"
 #include "clang/Analysis/FlowSensitive/Solver.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/Support/Compiler.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace clang {
 namespace dataflow {
+class Logger;
 
 /// Skip past nodes that the CFG does not emit. These nodes are invisible to
 /// flow-sensitive analysis, and should be ignored as they will effectively not
@@ -44,46 +50,53 @@ namespace dataflow {
 const Expr &ignoreCFGOmittedNodes(const Expr &E);
 const Stmt &ignoreCFGOmittedNodes(const Stmt &S);
 
+/// Returns the set of all fields in the type.
+llvm::DenseSet<const FieldDecl *> getObjectFields(QualType Type);
+
+struct ContextSensitiveOptions {
+  /// The maximum depth to analyze. A value of zero is equivalent to disabling
+  /// context-sensitive analysis entirely.
+  unsigned Depth = 2;
+};
+
 /// Owns objects that encompass the state of a program and stores context that
 /// is used during dataflow analysis.
 class DataflowAnalysisContext {
 public:
+  struct Options {
+    /// Options for analyzing function bodies when present in the translation
+    /// unit, or empty to disable context-sensitive analysis. Note that this is
+    /// fundamentally limited: some constructs, such as recursion, are
+    /// explicitly unsupported.
+    std::optional<ContextSensitiveOptions> ContextSensitiveOpts;
+
+    /// If provided, analysis details will be recorded here.
+    /// (This is always non-null within an AnalysisContext, the framework
+    /// provides a fallback no-op logger).
+    Logger *Log = nullptr;
+  };
+
   /// Constructs a dataflow analysis context.
   ///
   /// Requirements:
   ///
   ///  `S` must not be null.
-  DataflowAnalysisContext(std::unique_ptr<Solver> S)
-      : S(std::move(S)), TrueVal(createAtomicBoolValue()),
-        FalseVal(createAtomicBoolValue()) {
-    assert(this->S != nullptr);
-  }
+  DataflowAnalysisContext(std::unique_ptr<Solver> S,
+                          Options Opts = Options{
+                              /*ContextSensitiveOpts=*/std::nullopt,
+                              /*Logger=*/nullptr});
+  ~DataflowAnalysisContext();
 
-  /// Takes ownership of `Loc` and returns a reference to it.
+  /// Returns a new storage location appropriate for `Type`.
   ///
-  /// Requirements:
-  ///
-  ///  `Loc` must not be null.
-  template <typename T>
-  typename std::enable_if<std::is_base_of<StorageLocation, T>::value, T &>::type
-  takeOwnership(std::unique_ptr<T> Loc) {
-    assert(Loc != nullptr);
-    Locs.push_back(std::move(Loc));
-    return *cast<T>(Locs.back().get());
-  }
+  /// A null `Type` is interpreted as the pointee type of `std::nullptr_t`.
+  StorageLocation &createStorageLocation(QualType Type);
 
-  /// Takes ownership of `Val` and returns a reference to it.
-  ///
-  /// Requirements:
-  ///
-  ///  `Val` must not be null.
-  template <typename T>
-  typename std::enable_if<std::is_base_of<Value, T>::value, T &>::type
-  takeOwnership(std::unique_ptr<T> Val) {
-    assert(Val != nullptr);
-    Vals.push_back(std::move(Val));
-    return *cast<T>(Vals.back().get());
-  }
+  /// Returns a stable storage location for `D`.
+  StorageLocation &getStableStorageLocation(const VarDecl &D);
+
+  /// Returns a stable storage location for `E`.
+  StorageLocation &getStableStorageLocation(const Expr &E);
 
   /// Assigns `Loc` as the storage location of `D`.
   ///
@@ -91,7 +104,7 @@ public:
   ///
   ///  `D` must not be assigned a storage location.
   void setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
-    assert(DeclToLoc.find(&D) == DeclToLoc.end());
+    assert(!DeclToLoc.contains(&D));
     DeclToLoc[&D] = &Loc;
   }
 
@@ -109,7 +122,7 @@ public:
   ///  `E` must not be assigned a storage location.
   void setStorageLocation(const Expr &E, StorageLocation &Loc) {
     const Expr &CanonE = ignoreCFGOmittedNodes(E);
-    assert(ExprToLoc.find(&CanonE) == ExprToLoc.end());
+    assert(!ExprToLoc.contains(&CanonE));
     ExprToLoc[&CanonE] = &Loc;
   }
 
@@ -120,54 +133,10 @@ public:
     return It == ExprToLoc.end() ? nullptr : It->second;
   }
 
-  /// Assigns `Loc` as the storage location of the `this` pointee.
-  ///
-  /// Requirements:
-  ///
-  ///  The `this` pointee must not be assigned a storage location.
-  void setThisPointeeStorageLocation(StorageLocation &Loc) {
-    assert(ThisPointeeLoc == nullptr);
-    ThisPointeeLoc = &Loc;
-  }
-
-  /// Returns the storage location assigned to the `this` pointee or null if the
-  /// `this` pointee has no assigned storage location.
-  StorageLocation *getThisPointeeStorageLocation() const {
-    return ThisPointeeLoc;
-  }
-
-  /// Returns a symbolic boolean value that models a boolean literal equal to
-  /// `Value`.
-  AtomicBoolValue &getBoolLiteralValue(bool Value) const {
-    return Value ? TrueVal : FalseVal;
-  }
-
-  /// Creates an atomic boolean value.
-  AtomicBoolValue &createAtomicBoolValue() {
-    return takeOwnership(std::make_unique<AtomicBoolValue>());
-  }
-
-  /// Returns a boolean value that represents the conjunction of `LHS` and
-  /// `RHS`. Subsequent calls with the same arguments, regardless of their
-  /// order, will return the same result. If the given boolean values represent
-  /// the same value, the result will be the value itself.
-  BoolValue &getOrCreateConjunctionValue(BoolValue &LHS, BoolValue &RHS);
-
-  /// Returns a boolean value that represents the disjunction of `LHS` and
-  /// `RHS`. Subsequent calls with the same arguments, regardless of their
-  /// order, will return the same result. If the given boolean values represent
-  /// the same value, the result will be the value itself.
-  BoolValue &getOrCreateDisjunctionValue(BoolValue &LHS, BoolValue &RHS);
-
-  /// Returns a boolean value that represents the negation of `Val`. Subsequent
-  /// calls with the same argument will return the same result.
-  BoolValue &getOrCreateNegationValue(BoolValue &Val);
-
-  /// Creates a fresh flow condition and returns a token that identifies it. The
-  /// token can be used to perform various operations on the flow condition such
-  /// as adding constraints to it, forking it, joining it with another flow
-  /// condition, or checking implications.
-  AtomicBoolValue &makeFlowConditionToken();
+  /// Returns a pointer value that represents a null pointer. Calls with
+  /// `PointeeType` that are canonically equivalent will return the same result.
+  /// A null `PointeeType` can be used for the pointee of `std::nullptr_t`.
+  PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
   /// Adds `Constraint` to the flow condition identified by `Token`.
   void addFlowConditionConstraint(AtomicBoolValue &Token,
@@ -191,20 +160,67 @@ public:
   /// identified by `Token` are always true.
   bool flowConditionIsTautology(AtomicBoolValue &Token);
 
+  /// Returns true if `Val1` is equivalent to `Val2`.
+  /// Note: This function doesn't take into account constraints on `Val1` and
+  /// `Val2` imposed by the flow condition.
+  bool equivalentBoolValues(BoolValue &Val1, BoolValue &Val2);
+
+  LLVM_DUMP_METHOD void dumpFlowCondition(AtomicBoolValue &Token,
+                                          llvm::raw_ostream &OS = llvm::dbgs());
+
+  /// Returns the `ControlFlowContext` registered for `F`, if any. Otherwise,
+  /// returns null.
+  const ControlFlowContext *getControlFlowContext(const FunctionDecl *F);
+
+  const Options &getOptions() { return Opts; }
+
+  Arena &arena() { return *A; }
+
 private:
+  friend class Environment;
+
+  struct NullableQualTypeDenseMapInfo : private llvm::DenseMapInfo<QualType> {
+    static QualType getEmptyKey() {
+      // Allow a NULL `QualType` by using a different value as the empty key.
+      return QualType::getFromOpaquePtr(reinterpret_cast<Type *>(1));
+    }
+
+    using DenseMapInfo::getHashValue;
+    using DenseMapInfo::getTombstoneKey;
+    using DenseMapInfo::isEqual;
+  };
+
+  // Extends the set of modeled field declarations.
+  void addModeledFields(const llvm::DenseSet<const FieldDecl *> &Fields);
+
+  /// Returns the fields of `Type`, limited to the set of fields modeled by this
+  /// context.
+  llvm::DenseSet<const FieldDecl *> getReferencedFields(QualType Type);
+
   /// Adds all constraints of the flow condition identified by `Token` and all
   /// of its transitive dependencies to `Constraints`. `VisitedTokens` is used
   /// to track tokens of flow conditions that were already visited by recursive
   /// calls.
   void addTransitiveFlowConditionConstraints(
       AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
-      llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) const;
+      llvm::DenseSet<AtomicBoolValue *> &VisitedTokens);
+
+  /// Returns the outcome of satisfiability checking on `Constraints`.
+  /// Possible outcomes are:
+  /// - `Satisfiable`: A satisfying assignment exists and is returned.
+  /// - `Unsatisfiable`: A satisfying assignment does not exist.
+  /// - `TimedOut`: The search for a satisfying assignment was not completed.
+  Solver::Result querySolver(llvm::DenseSet<BoolValue *> Constraints);
+
+  /// Returns true if the solver is able to prove that there is no satisfying
+  /// assignment for `Constraints`
+  bool isUnsatisfiable(llvm::DenseSet<BoolValue *> Constraints) {
+    return querySolver(std::move(Constraints)).getStatus() ==
+           Solver::Result::Status::Unsatisfiable;
+  }
 
   std::unique_ptr<Solver> S;
-
-  // Storage for the state of a program.
-  std::vector<std::unique_ptr<StorageLocation>> Locs;
-  std::vector<std::unique_ptr<Value>> Vals;
+  std::unique_ptr<Arena> A;
 
   // Maps from program declarations and statements to storage locations that are
   // assigned to them. These assignments are global (aggregated across all basic
@@ -214,39 +230,39 @@ private:
   llvm::DenseMap<const ValueDecl *, StorageLocation *> DeclToLoc;
   llvm::DenseMap<const Expr *, StorageLocation *> ExprToLoc;
 
-  StorageLocation *ThisPointeeLoc = nullptr;
+  // Null pointer values, keyed by the canonical pointee type.
+  //
+  // FIXME: The pointer values are indexed by the pointee types which are
+  // required to initialize the `PointeeLoc` field in `PointerValue`. Consider
+  // creating a type-independent `NullPointerValue` without a `PointeeLoc`
+  // field.
+  llvm::DenseMap<QualType, PointerValue *, NullableQualTypeDenseMapInfo>
+      NullPointerVals;
 
-  AtomicBoolValue &TrueVal;
-  AtomicBoolValue &FalseVal;
-
-  // Indices that are used to avoid recreating the same composite boolean
-  // values.
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ConjunctionValue *>
-      ConjunctionVals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, DisjunctionValue *>
-      DisjunctionVals;
-  llvm::DenseMap<BoolValue *, NegationValue *> NegationVals;
+  Options Opts;
 
   // Flow conditions are tracked symbolically: each unique flow condition is
   // associated with a fresh symbolic variable (token), bound to the clause that
   // defines the flow condition. Conceptually, each binding corresponds to an
   // "iff" of the form `FC <=> (C1 ^ C2 ^ ...)` where `FC` is a flow condition
   // token (an atomic boolean) and `Ci`s are the set of constraints in the flow
-  // flow condition clause. Internally, we do not record the formula directly as
-  // an "iff". Instead, a flow condition clause is encoded as conjuncts of the
-  // form `(FC v !C1 v !C2 v ...) ^ (C1 v !FC) ^ (C2 v !FC) ^ ...`. The first
-  // conjuct is stored in the `FlowConditionFirstConjuncts` map and the set of
-  // remaining conjuncts are stored in the `FlowConditionRemainingConjuncts`
-  // map, both keyed by the token of the flow condition.
+  // flow condition clause. The set of constraints (C1 ^ C2 ^ ...) are stored in
+  // the `FlowConditionConstraints` map, keyed by the token of the flow
+  // condition.
   //
   // Flow conditions depend on other flow conditions if they are created using
   // `forkFlowCondition` or `joinFlowConditions`. The graph of flow condition
   // dependencies is stored in the `FlowConditionDeps` map.
   llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<AtomicBoolValue *>>
       FlowConditionDeps;
-  llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionFirstConjuncts;
-  llvm::DenseMap<AtomicBoolValue *, llvm::DenseSet<BoolValue *>>
-      FlowConditionRemainingConjuncts;
+  llvm::DenseMap<AtomicBoolValue *, BoolValue *> FlowConditionConstraints;
+
+  llvm::DenseMap<const FunctionDecl *, ControlFlowContext> FunctionContexts;
+
+  // Fields modeled by environments covered by this context.
+  llvm::DenseSet<const FieldDecl *> ModeledFields;
+
+  std::unique_ptr<Logger> LogOwner; // If created via flags.
 };
 
 } // namespace dataflow

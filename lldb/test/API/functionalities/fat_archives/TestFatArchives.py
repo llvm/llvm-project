@@ -11,8 +11,6 @@ from lldbsuite.test import lldbutil
 
 class FatArchiveTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     @skipUnlessDarwin
@@ -52,6 +50,6 @@ class FatArchiveTestCase(TestBase):
             self.assertTrue(
                 line_entry.GetFileSpec(),
                 "Verify breakpoint in fat BSD archive has source file information")
-            self.assertTrue(
-                line_entry.GetLine() != 0,
+            self.assertNotEqual(
+                line_entry.GetLine(), 0,
                 "Verify breakpoint in fat BSD archive has source line information")

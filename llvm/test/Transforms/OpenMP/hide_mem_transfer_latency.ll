@@ -2,10 +2,10 @@
 ; RUN: opt -S -passes=openmp-opt-cgscc -aa-pipeline=basic-aa -openmp-hide-memory-transfer-latency < %s | FileCheck %s
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 
-; CHECK: %struct.__tgt_async_info = type { i8* }
+; CHECK: %struct.__tgt_async_info = type { ptr }
 
-%struct.ident_t = type { i32, i32, i32, i32, i8* }
-%struct.__tgt_offload_entry = type { i8*, i8*, i64, i32, i32 }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.__tgt_offload_entry = type { ptr, ptr, i64, i32, i32 }
 
 @.offload_maptypes = private unnamed_addr constant [1 x i64] [i64 35]
 @.__omp_offloading_heavyComputation1.region_id = weak constant i8 0
@@ -21,7 +21,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 
 @.offload_maptypes.5 = private unnamed_addr constant [1 x i64] [i64 33]
 
-@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 34, i32 0, i32 0, i8* getelementptr inbounds ([23 x i8], [23 x i8]* @.str0, i32 0, i32 0) }, align 8
+@0 = private unnamed_addr global %struct.ident_t { i32 0, i32 34, i32 0, i32 0, ptr @.str0 }, align 8
 @.str0 = private unnamed_addr constant [23 x i8] c";unknown;unknown;0;0;;\00", align 1
 
 ;double heavyComputation1() {
@@ -29,7 +29,7 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 ;  double random = rand();
 ;
 ;  //#pragma omp target data map(a)
-;  void* args[1];
+;  ptr args[1];
 ;  args[0] = &a;
 ;  __tgt_target_data_begin(..., args, ...)
 ;
@@ -43,45 +43,33 @@ target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16
 define dso_local double @heavyComputation1() {
 ; CHECK-LABEL: define {{[^@]+}}@heavyComputation1() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[HANDLE:%.*]] = alloca [[STRUCT___TGT_ASYNC_INFO:%.*]], align 8
 ; CHECK-NEXT:    [[A:%.*]] = alloca double, align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS4:%.*]] = alloca [1 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_PTRS5:%.*]] = alloca [1 x i8*], align 8
-; CHECK-NEXT:    [[TMP0:%.*]] = bitcast double* [[A]] to i8*
+; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS4:%.*]] = alloca [1 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_PTRS5:%.*]] = alloca [1 x ptr], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @rand()
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[CALL]], 777
 ; CHECK-NEXT:    [[CONV:%.*]] = sitofp i32 [[REM]] to double
-; CHECK-NEXT:    store double [[CONV]], double* [[A]], align 8
+; CHECK-NEXT:    store double [[CONV]], ptr [[A]], align 8
 ; CHECK-NEXT:    [[CALL1:%.*]] = tail call i32 (...) @rand()
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [1 x i8*]* [[DOTOFFLOAD_BASEPTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOFFLOAD_PTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [1 x i8*]* [[DOTOFFLOAD_PTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP4]], align 8
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_issue(%struct.ident_t* @[[GLOB0:[0-9]+]], i64 -1, i32 1, i8** [[TMP1]], i8** [[TMP3]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes, i64 0, i64 0), i8** null, i8** null, %struct.__tgt_async_info* [[HANDLE]])
-; CHECK-NEXT:    [[TMP5:%.*]] = bitcast double* [[A]] to i64*
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_wait(i64 -1, %struct.__tgt_async_info* [[HANDLE]])
-; CHECK-NEXT:    [[TMP6:%.*]] = load i64, i64* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOFFLOAD_BASEPTRS4]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP8:%.*]] = bitcast [1 x i8*]* [[DOTOFFLOAD_BASEPTRS4]] to i64*
-; CHECK-NEXT:    store i64 [[TMP6]], i64* [[TMP8]], align 8
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOFFLOAD_PTRS5]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP10:%.*]] = bitcast [1 x i8*]* [[DOTOFFLOAD_PTRS5]] to i64*
-; CHECK-NEXT:    store i64 [[TMP6]], i64* [[TMP10]], align 8
-; CHECK-NEXT:    [[TMP11:%.*]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i8* nonnull @.__omp_offloading_heavyComputation1.region_id, i32 1, i8** nonnull [[TMP7]], i8** nonnull [[TMP9]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.2, i64 0, i64 0), i8** null, i8** null, i32 0, i32 0)
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP11]], 0
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_BASEPTRS]], align 8
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_PTRS]], align 8
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB0:[0-9]+]], i64 -1, i32 1, ptr nonnull [[DOTOFFLOAD_BASEPTRS]], ptr nonnull [[DOTOFFLOAD_PTRS]], ptr @.offload_sizes.1, ptr @.offload_maptypes, ptr null, ptr null)
+; CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[A]], align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[DOTOFFLOAD_BASEPTRS4]], align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[DOTOFFLOAD_PTRS5]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__tgt_target_teams_mapper(ptr @[[GLOB0]], i64 -1, ptr nonnull @.__omp_offloading_heavyComputation1.region_id, i32 1, ptr nonnull [[DOTOFFLOAD_BASEPTRS4]], ptr nonnull [[DOTOFFLOAD_PTRS5]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr null, ptr null, i32 0, i32 0)
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[OMP_OFFLOAD_CONT:%.*]], label [[OMP_OFFLOAD_FAILED:%.*]]
 ; CHECK:       omp_offload.failed:
-; CHECK-NEXT:    call void @heavyComputation1FallBack(i64 [[TMP6]])
+; CHECK-NEXT:    call void @heavyComputation1FallBack(i64 [[TMP0]])
 ; CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 ; CHECK:       omp_offload.cont:
 ; CHECK-NEXT:    [[CONV2:%.*]] = sitofp i32 [[CALL1]] to double
-; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i32 1, i8** nonnull [[TMP1]], i8** nonnull [[TMP3]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes, i64 0, i64 0), i8** null, i8** null)
-; CHECK-NEXT:    [[TMP12:%.*]] = load double, double* [[A]], align 8
-; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP12]], [[CONV2]]
+; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB0]], i64 -1, i32 1, ptr nonnull [[DOTOFFLOAD_BASEPTRS]], ptr nonnull [[DOTOFFLOAD_PTRS]], ptr @.offload_sizes.1, ptr @.offload_maptypes, ptr null, ptr null)
+; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr [[A]], align 8
+; CHECK-NEXT:    [[ADD:%.*]] = fadd double [[TMP2]], [[CONV2]]
 ; CHECK-NEXT:    ret double [[ADD]]
 ;
 
@@ -92,51 +80,41 @@ define dso_local double @heavyComputation1() {
 
 entry:
   %a = alloca double, align 8
-  %.offload_baseptrs = alloca [1 x i8*], align 8
-  %.offload_ptrs = alloca [1 x i8*], align 8
-  %.offload_baseptrs4 = alloca [1 x i8*], align 8
-  %.offload_ptrs5 = alloca [1 x i8*], align 8
+  %.offload_baseptrs = alloca [1 x ptr], align 8
+  %.offload_ptrs = alloca [1 x ptr], align 8
+  %.offload_baseptrs4 = alloca [1 x ptr], align 8
+  %.offload_ptrs5 = alloca [1 x ptr], align 8
 
-  %0 = bitcast double* %a to i8*
   %call = tail call i32 (...) @rand()
   %rem = srem i32 %call, 777
   %conv = sitofp i32 %rem to double
-  store double %conv, double* %a, align 8
+  store double %conv, ptr %a, align 8
 
-  ; FIXME: call to @__tgt_target_data_begin_mapper_issue(%struct.ident_t* @0, ...) should be moved here.
+  ; FIXME: call to @__tgt_target_data_begin_mapper_issue(ptr @0, ...) should be moved here.
   %call1 = tail call i32 (...) @rand()
 
-  %1 = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_baseptrs, i64 0, i64 0
-  %2 = bitcast [1 x i8*]* %.offload_baseptrs to double**
-  store double* %a, double** %2, align 8
-  %3 = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_ptrs, i64 0, i64 0
-  %4 = bitcast [1 x i8*]* %.offload_ptrs to double**
-  store double* %a, double** %4, align 8
-  call void @__tgt_target_data_begin_mapper(%struct.ident_t* @0, i64 -1, i32 1, i8** nonnull %1, i8** nonnull %3, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes, i64 0, i64 0), i8** null, i8** null)
+  store ptr %a, ptr %.offload_baseptrs, align 8
+  store ptr %a, ptr %.offload_ptrs, align 8
+  call void @__tgt_target_data_begin_mapper(ptr @0, i64 -1, i32 1, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr @.offload_sizes.1, ptr @.offload_maptypes, ptr null, ptr null)
 
-  %5 = bitcast double* %a to i64*
-  %6 = load i64, i64* %5, align 8
-  %7 = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_baseptrs4, i64 0, i64 0
-  %8 = bitcast [1 x i8*]* %.offload_baseptrs4 to i64*
-  store i64 %6, i64* %8, align 8
-  %9 = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_ptrs5, i64 0, i64 0
-  %10 = bitcast [1 x i8*]* %.offload_ptrs5 to i64*
-  store i64 %6, i64* %10, align 8
+  %0 = load i64, ptr %a, align 8
+  store i64 %0, ptr %.offload_baseptrs4, align 8
+  store i64 %0, ptr %.offload_ptrs5, align 8
 
   ; FIXME: call to @__tgt_target_data_begin_mapper_wait(...) should be moved here.
-  %11 = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @0, i64 -1, i8* nonnull @.__omp_offloading_heavyComputation1.region_id, i32 1, i8** nonnull %7, i8** nonnull %9, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.2, i64 0, i64 0), i8** null, i8** null, i32 0, i32 0)
-  %.not = icmp eq i32 %11, 0
+  %1 = call i32 @__tgt_target_teams_mapper(ptr @0, i64 -1, ptr nonnull @.__omp_offloading_heavyComputation1.region_id, i32 1, ptr nonnull %.offload_baseptrs4, ptr nonnull %.offload_ptrs5, ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr null, ptr null, i32 0, i32 0)
+  %.not = icmp eq i32 %1, 0
   br i1 %.not, label %omp_offload.cont, label %omp_offload.failed
 
 omp_offload.failed:                               ; preds = %entry
-  call void @heavyComputation1FallBack(i64 %6)
+  call void @heavyComputation1FallBack(i64 %0)
   br label %omp_offload.cont
 
 omp_offload.cont:                                 ; preds = %omp_offload.failed, %entry
   %conv2 = sitofp i32 %call1 to double
-  call void @__tgt_target_data_end_mapper(%struct.ident_t* @0, i64 -1, i32 1, i8** nonnull %1, i8** nonnull %3, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_sizes.1, i64 0, i64 0), i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes, i64 0, i64 0), i8** null, i8** null)
-  %12 = load double, double* %a, align 8
-  %add = fadd double %12, %conv2
+  call void @__tgt_target_data_end_mapper(ptr @0, i64 -1, i32 1, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr @.offload_sizes.1, ptr @.offload_maptypes, ptr null, ptr null)
+  %2 = load double, ptr %a, align 8
+  %add = fadd double %2, %conv2
   ret double %add
 }
 
@@ -151,144 +129,118 @@ entry:
   ret void
 }
 
-;int heavyComputation2(double* a, unsigned size) {
+;int heavyComputation2(ptr a, unsigned size) {
 ;  int random = rand() % 7;
 ;
 ;  //#pragma omp target data map(a[0:size], size)
-;  void* args[2];
+;  ptr args[2];
 ;  args[0] = &a;
 ;  args[1] = &size;
 ;  __tgt_target_data_begin(..., args, ...)
 ;
 ;  #pragma omp target teams
 ;  for (int i = 0; i < size; ++i) {
-;    a[i] = ++a[i] * 3.141624;
+;    a[i] = ++aptr 3.141624;
 ;  }
 ;
 ;  return random;
 ;}
-define dso_local i32 @heavyComputation2(double* %a, i32 %size) {
+define dso_local i32 @heavyComputation2(ptr %a, i32 %size) {
 ; CHECK-LABEL: define {{[^@]+}}@heavyComputation2
-; CHECK-SAME: (double* [[A:%.*]], i32 [[SIZE:%.*]]) {
+; CHECK-SAME: (ptr [[A:%.*]], i32 [[SIZE:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SIZE_ADDR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x i8*], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_SIZES:%.*]] = alloca [2 x i64], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS2:%.*]] = alloca [2 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_PTRS3:%.*]] = alloca [2 x i8*], align 8
-; CHECK-NEXT:    store i32 [[SIZE]], i32* [[SIZE_ADDR]], align 4
+; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS2:%.*]] = alloca [2 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_PTRS3:%.*]] = alloca [2 x ptr], align 8
+; CHECK-NEXT:    store i32 [[SIZE]], ptr [[SIZE_ADDR]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @rand()
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[CONV]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_BASEPTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_PTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[DOTOFFLOAD_SIZES]], i64 0, i64 0
-; CHECK-NEXT:    store i64 [[TMP0]], i64* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to i32**
-; CHECK-NEXT:    store i32* [[SIZE_ADDR]], i32** [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i8** [[TMP8]] to i32**
-; CHECK-NEXT:    store i32* [[SIZE_ADDR]], i32** [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[DOTOFFLOAD_SIZES]], i64 0, i64 1
-; CHECK-NEXT:    store i64 4, i64* [[TMP10]], align 8
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i32 2, i8** nonnull [[TMP1]], i8** nonnull [[TMP3]], i64* nonnull [[TMP5]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[SIZE_ADDR]], align 4
-; CHECK-NEXT:    [[SIZE_CASTED:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS2]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_BASEPTRS2]] to i64*
-; CHECK-NEXT:    store i64 [[SIZE_CASTED]], i64* [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS3]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_PTRS3]] to i64*
-; CHECK-NEXT:    store i64 [[SIZE_CASTED]], i64* [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS2]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i8** [[TMP16]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP17]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS3]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i8** [[TMP18]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i8* nonnull @.__omp_offloading_heavyComputation2.region_id, i32 2, i8** nonnull [[TMP12]], i8** nonnull [[TMP14]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_sizes.2, i64 0, i64 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.4, i64 0, i64 0), i8** null, i8** null, i32 0, i32 0)
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP20]], 0
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_BASEPTRS]], align 8
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_PTRS]], align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[DOTOFFLOAD_SIZES]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[SIZE_ADDR]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[SIZE_ADDR]], ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x i64], ptr [[DOTOFFLOAD_SIZES]], i64 0, i64 1
+; CHECK-NEXT:    store i64 4, ptr [[TMP3]], align 8
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB0]], i64 -1, i32 2, ptr nonnull [[DOTOFFLOAD_BASEPTRS]], ptr nonnull [[DOTOFFLOAD_PTRS]], ptr nonnull [[DOTOFFLOAD_SIZES]], ptr @.offload_maptypes.3, ptr null, ptr null)
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
+; CHECK-NEXT:    [[SIZE_CASTED:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    store i64 [[SIZE_CASTED]], ptr [[DOTOFFLOAD_BASEPTRS2]], align 8
+; CHECK-NEXT:    store i64 [[SIZE_CASTED]], ptr [[DOTOFFLOAD_PTRS3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[A]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[A]], ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @__tgt_target_teams_mapper(ptr @[[GLOB0]], i64 -1, ptr nonnull @.__omp_offloading_heavyComputation2.region_id, i32 2, ptr nonnull [[DOTOFFLOAD_BASEPTRS2]], ptr nonnull [[DOTOFFLOAD_PTRS3]], ptr @.offload_sizes.2, ptr @.offload_maptypes.4, ptr null, ptr null, i32 0, i32 0)
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[OMP_OFFLOAD_CONT:%.*]], label [[OMP_OFFLOAD_FAILED:%.*]]
 ; CHECK:       omp_offload.failed:
-; CHECK-NEXT:    call void @heavyComputation2FallBack(i64 [[SIZE_CASTED]], double* [[A]])
+; CHECK-NEXT:    call void @heavyComputation2FallBack(i64 [[SIZE_CASTED]], ptr [[A]])
 ; CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 ; CHECK:       omp_offload.cont:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[CALL]], 7
-; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i32 2, i8** nonnull [[TMP1]], i8** nonnull [[TMP3]], i64* nonnull [[TMP5]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
+; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB0]], i64 -1, i32 2, ptr nonnull [[DOTOFFLOAD_BASEPTRS]], ptr nonnull [[DOTOFFLOAD_PTRS]], ptr nonnull [[DOTOFFLOAD_SIZES]], ptr @.offload_maptypes.3, ptr null, ptr null)
 ; CHECK-NEXT:    ret i32 [[REM]]
 ;
 
 
 entry:
   %size.addr = alloca i32, align 4
-  %.offload_baseptrs = alloca [2 x i8*], align 8
-  %.offload_ptrs = alloca [2 x i8*], align 8
+  %.offload_baseptrs = alloca [2 x ptr], align 8
+  %.offload_ptrs = alloca [2 x ptr], align 8
   %.offload_sizes = alloca [2 x i64], align 8
-  %.offload_baseptrs2 = alloca [2 x i8*], align 8
-  %.offload_ptrs3 = alloca [2 x i8*], align 8
+  %.offload_baseptrs2 = alloca [2 x ptr], align 8
+  %.offload_ptrs3 = alloca [2 x ptr], align 8
 
-  store i32 %size, i32* %size.addr, align 4
+  store i32 %size, ptr %size.addr, align 4
   %call = tail call i32 (...) @rand()
 
   %conv = zext i32 %size to i64
   %0 = shl nuw nsw i64 %conv, 3
-  %1 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs, i64 0, i64 0
-  %2 = bitcast [2 x i8*]* %.offload_baseptrs to double**
-  store double* %a, double** %2, align 8
-  %3 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs, i64 0, i64 0
-  %4 = bitcast [2 x i8*]* %.offload_ptrs to double**
-  store double* %a, double** %4, align 8
-  %5 = getelementptr inbounds [2 x i64], [2 x i64]* %.offload_sizes, i64 0, i64 0
-  store i64 %0, i64* %5, align 8
-  %6 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs, i64 0, i64 1
-  %7 = bitcast i8** %6 to i32**
-  store i32* %size.addr, i32** %7, align 8
-  %8 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs, i64 0, i64 1
-  %9 = bitcast i8** %8 to i32**
-  store i32* %size.addr, i32** %9, align 8
-  %10 = getelementptr inbounds [2 x i64], [2 x i64]* %.offload_sizes, i64 0, i64 1
-  store i64 4, i64* %10, align 8
-  call void @__tgt_target_data_begin_mapper(%struct.ident_t* @0, i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
+  store ptr %a, ptr %.offload_baseptrs, align 8
+  store ptr %a, ptr %.offload_ptrs, align 8
+  store i64 %0, ptr %.offload_sizes, align 8
+  %1 = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i64 0, i64 1
+  store ptr %size.addr, ptr %1, align 8
+  %2 = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i64 0, i64 1
+  store ptr %size.addr, ptr %2, align 8
+  %3 = getelementptr inbounds [2 x i64], ptr %.offload_sizes, i64 0, i64 1
+  store i64 4, ptr %3, align 8
+  call void @__tgt_target_data_begin_mapper(ptr @0, i64 -1, i32 2, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr nonnull %.offload_sizes, ptr @.offload_maptypes.3, ptr null, ptr null)
 
-  %11 = load i32, i32* %size.addr, align 4
-  %size.casted = zext i32 %11 to i64
-  %12 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs2, i64 0, i64 0
-  %13 = bitcast [2 x i8*]* %.offload_baseptrs2 to i64*
-  store i64 %size.casted, i64* %13, align 8
-  %14 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs3, i64 0, i64 0
-  %15 = bitcast [2 x i8*]* %.offload_ptrs3 to i64*
-  store i64 %size.casted, i64* %15, align 8
-  %16 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs2, i64 0, i64 1
-  %17 = bitcast i8** %16 to double**
-  store double* %a, double** %17, align 8
-  %18 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs3, i64 0, i64 1
-  %19 = bitcast i8** %18 to double**
-  store double* %a, double** %19, align 8
+  %4 = load i32, ptr %size.addr, align 4
+  %size.casted = zext i32 %4 to i64
+  store i64 %size.casted, ptr %.offload_baseptrs2, align 8
+  store i64 %size.casted, ptr %.offload_ptrs3, align 8
+  %5 = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs2, i64 0, i64 1
+  store ptr %a, ptr %5, align 8
+  %6 = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs3, i64 0, i64 1
+  store ptr %a, ptr %6, align 8
 
   ; FIXME: call to @__tgt_target_data_begin_mapper_wait(...) should be moved here.
-  %20 = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @0, i64 -1, i8* nonnull @.__omp_offloading_heavyComputation2.region_id, i32 2, i8** nonnull %12, i8** nonnull %14, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_sizes.2, i64 0, i64 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.4, i64 0, i64 0), i8** null, i8** null, i32 0, i32 0)
-  %.not = icmp eq i32 %20, 0
+  %7 = call i32 @__tgt_target_teams_mapper(ptr @0, i64 -1, ptr nonnull @.__omp_offloading_heavyComputation2.region_id, i32 2, ptr nonnull %.offload_baseptrs2, ptr nonnull %.offload_ptrs3, ptr @.offload_sizes.2, ptr @.offload_maptypes.4, ptr null, ptr null, i32 0, i32 0)
+  %.not = icmp eq i32 %7, 0
   br i1 %.not, label %omp_offload.cont, label %omp_offload.failed
 
 omp_offload.failed:                               ; preds = %entry
-  call void @heavyComputation2FallBack(i64 %size.casted, double* %a)
+  call void @heavyComputation2FallBack(i64 %size.casted, ptr %a)
   br label %omp_offload.cont
 
 omp_offload.cont:                                 ; preds = %omp_offload.failed, %entry
   %rem = srem i32 %call, 7
-  call void @__tgt_target_data_end_mapper(%struct.ident_t* @0, i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
+  call void @__tgt_target_data_end_mapper(ptr @0, i64 -1, i32 2, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr nonnull %.offload_sizes, ptr @.offload_maptypes.3, ptr null, ptr null)
   ret i32 %rem
 }
 
-define internal void @heavyComputation2FallBack(i64 %size, double* %a) {
+define internal void @heavyComputation2FallBack(i64 %size, ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@heavyComputation2FallBack
-; CHECK-SAME: (i64 [[SIZE:%.*]], double* [[A:%.*]]) {
+; CHECK-SAME: (i64 [[SIZE:%.*]], ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
@@ -297,145 +249,119 @@ entry:
   ret void
 }
 
-;int heavyComputation3(double* restrict a, unsigned size) {
+;int heavyComputation3(ptr restrict a, unsigned size) {
 ;  int random = rand() % 7;
 ;
 ;  //#pragma omp target data map(a[0:size], size)
-;  void* args[2];
+;  ptr args[2];
 ;  args[0] = &a;
 ;  args[1] = &size;
 ;  __tgt_target_data_begin(..., args, ...)
 ;
 ;  #pragma omp target teams
 ;  for (int i = 0; i < size; ++i) {
-;    a[i] = ++a[i] * 3.141624;
+;    a[i] = ++aptr 3.141624;
 ;  }
 ;
 ;  return random;
 ;}
-define dso_local i32 @heavyComputation3(double* noalias %a, i32 %size) {
+define dso_local i32 @heavyComputation3(ptr noalias %a, i32 %size) {
 ; CHECK-LABEL: define {{[^@]+}}@heavyComputation3
-; CHECK-SAME: (double* noalias [[A:%.*]], i32 [[SIZE:%.*]]) {
+; CHECK-SAME: (ptr noalias [[A:%.*]], i32 [[SIZE:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[SIZE_ADDR:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x i8*], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [2 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [2 x ptr], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_SIZES:%.*]] = alloca [2 x i64], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS2:%.*]] = alloca [2 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_PTRS3:%.*]] = alloca [2 x i8*], align 8
-; CHECK-NEXT:    store i32 [[SIZE]], i32* [[SIZE_ADDR]], align 4
+; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS2:%.*]] = alloca [2 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_PTRS3:%.*]] = alloca [2 x ptr], align 8
+; CHECK-NEXT:    store i32 [[SIZE]], ptr [[SIZE_ADDR]], align 4
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @rand()
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[CONV]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_BASEPTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_PTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[DOTOFFLOAD_SIZES]], i64 0, i64 0
-; CHECK-NEXT:    store i64 [[TMP0]], i64* [[TMP5]], align 8
-; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP7:%.*]] = bitcast i8** [[TMP6]] to i32**
-; CHECK-NEXT:    store i32* [[SIZE_ADDR]], i32** [[TMP7]], align 8
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP9:%.*]] = bitcast i8** [[TMP8]] to i32**
-; CHECK-NEXT:    store i32* [[SIZE_ADDR]], i32** [[TMP9]], align 8
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds [2 x i64], [2 x i64]* [[DOTOFFLOAD_SIZES]], i64 0, i64 1
-; CHECK-NEXT:    store i64 4, i64* [[TMP10]], align 8
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i32 2, i8** nonnull [[TMP1]], i8** nonnull [[TMP3]], i64* nonnull [[TMP5]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
-; CHECK-NEXT:    [[TMP11:%.*]] = load i32, i32* [[SIZE_ADDR]], align 4
-; CHECK-NEXT:    [[SIZE_CASTED:%.*]] = zext i32 [[TMP11]] to i64
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS2]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_BASEPTRS2]] to i64*
-; CHECK-NEXT:    store i64 [[SIZE_CASTED]], i64* [[TMP13]], align 8
-; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS3]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast [2 x i8*]* [[DOTOFFLOAD_PTRS3]] to i64*
-; CHECK-NEXT:    store i64 [[SIZE_CASTED]], i64* [[TMP15]], align 8
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_BASEPTRS2]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i8** [[TMP16]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP17]], align 8
-; CHECK-NEXT:    [[TMP18:%.*]] = getelementptr inbounds [2 x i8*], [2 x i8*]* [[DOTOFFLOAD_PTRS3]], i64 0, i64 1
-; CHECK-NEXT:    [[TMP19:%.*]] = bitcast i8** [[TMP18]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP19]], align 8
-; CHECK-NEXT:    [[TMP20:%.*]] = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i8* nonnull @.__omp_offloading_heavyComputation3.region_id, i32 2, i8** nonnull [[TMP12]], i8** nonnull [[TMP14]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_sizes.2, i64 0, i64 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.4, i64 0, i64 0), i8** null, i8** null, i32 0, i32 0)
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP20]], 0
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_BASEPTRS]], align 8
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_PTRS]], align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[DOTOFFLOAD_SIZES]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[SIZE_ADDR]], ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[SIZE_ADDR]], ptr [[TMP2]], align 8
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [2 x i64], ptr [[DOTOFFLOAD_SIZES]], i64 0, i64 1
+; CHECK-NEXT:    store i64 4, ptr [[TMP3]], align 8
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper(ptr @[[GLOB0]], i64 -1, i32 2, ptr nonnull [[DOTOFFLOAD_BASEPTRS]], ptr nonnull [[DOTOFFLOAD_PTRS]], ptr nonnull [[DOTOFFLOAD_SIZES]], ptr @.offload_maptypes.3, ptr null, ptr null)
+; CHECK-NEXT:    [[TMP4:%.*]] = load i32, ptr [[SIZE_ADDR]], align 4
+; CHECK-NEXT:    [[SIZE_CASTED:%.*]] = zext i32 [[TMP4]] to i64
+; CHECK-NEXT:    store i64 [[SIZE_CASTED]], ptr [[DOTOFFLOAD_BASEPTRS2]], align 8
+; CHECK-NEXT:    store i64 [[SIZE_CASTED]], ptr [[DOTOFFLOAD_PTRS3]], align 8
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_BASEPTRS2]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[A]], ptr [[TMP5]], align 8
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds [2 x ptr], ptr [[DOTOFFLOAD_PTRS3]], i64 0, i64 1
+; CHECK-NEXT:    store ptr [[A]], ptr [[TMP6]], align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = call i32 @__tgt_target_teams_mapper(ptr @[[GLOB0]], i64 -1, ptr nonnull @.__omp_offloading_heavyComputation3.region_id, i32 2, ptr nonnull [[DOTOFFLOAD_BASEPTRS2]], ptr nonnull [[DOTOFFLOAD_PTRS3]], ptr @.offload_sizes.2, ptr @.offload_maptypes.4, ptr null, ptr null, i32 0, i32 0)
+; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i32 [[TMP7]], 0
 ; CHECK-NEXT:    br i1 [[DOTNOT]], label [[OMP_OFFLOAD_CONT:%.*]], label [[OMP_OFFLOAD_FAILED:%.*]]
 ; CHECK:       omp_offload.failed:
-; CHECK-NEXT:    call void @heavyComputation3FallBack(i64 [[SIZE_CASTED]], double* [[A]])
+; CHECK-NEXT:    call void @heavyComputation3FallBack(i64 [[SIZE_CASTED]], ptr [[A]])
 ; CHECK-NEXT:    br label [[OMP_OFFLOAD_CONT]]
 ; CHECK:       omp_offload.cont:
 ; CHECK-NEXT:    [[REM:%.*]] = srem i32 [[CALL]], 7
-; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i32 2, i8** nonnull [[TMP1]], i8** nonnull [[TMP3]], i64* nonnull [[TMP5]], i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
+; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB0]], i64 -1, i32 2, ptr nonnull [[DOTOFFLOAD_BASEPTRS]], ptr nonnull [[DOTOFFLOAD_PTRS]], ptr nonnull [[DOTOFFLOAD_SIZES]], ptr @.offload_maptypes.3, ptr null, ptr null)
 ; CHECK-NEXT:    ret i32 [[REM]]
 ;
 
 
 entry:
   %size.addr = alloca i32, align 4
-  %.offload_baseptrs = alloca [2 x i8*], align 8
-  %.offload_ptrs = alloca [2 x i8*], align 8
+  %.offload_baseptrs = alloca [2 x ptr], align 8
+  %.offload_ptrs = alloca [2 x ptr], align 8
   %.offload_sizes = alloca [2 x i64], align 8
-  %.offload_baseptrs2 = alloca [2 x i8*], align 8
-  %.offload_ptrs3 = alloca [2 x i8*], align 8
-  store i32 %size, i32* %size.addr, align 4
+  %.offload_baseptrs2 = alloca [2 x ptr], align 8
+  %.offload_ptrs3 = alloca [2 x ptr], align 8
+  store i32 %size, ptr %size.addr, align 4
 
-  ; FIXME: call to @__tgt_target_data_begin_mapper_issue(%struct.ident_t* @0, ...) should be moved here.
+  ; FIXME: call to @__tgt_target_data_begin_mapper_issue(ptr @0, ...) should be moved here.
   %call = tail call i32 (...) @rand()
 
   %conv = zext i32 %size to i64
   %0 = shl nuw nsw i64 %conv, 3
-  %1 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs, i64 0, i64 0
-  %2 = bitcast [2 x i8*]* %.offload_baseptrs to double**
-  store double* %a, double** %2, align 8
-  %3 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs, i64 0, i64 0
-  %4 = bitcast [2 x i8*]* %.offload_ptrs to double**
-  store double* %a, double** %4, align 8
-  %5 = getelementptr inbounds [2 x i64], [2 x i64]* %.offload_sizes, i64 0, i64 0
-  store i64 %0, i64* %5, align 8
-  %6 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs, i64 0, i64 1
-  %7 = bitcast i8** %6 to i32**
-  store i32* %size.addr, i32** %7, align 8
-  %8 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs, i64 0, i64 1
-  %9 = bitcast i8** %8 to i32**
-  store i32* %size.addr, i32** %9, align 8
-  %10 = getelementptr inbounds [2 x i64], [2 x i64]* %.offload_sizes, i64 0, i64 1
-  store i64 4, i64* %10, align 8
-  call void @__tgt_target_data_begin_mapper(%struct.ident_t* @0, i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
+  store ptr %a, ptr %.offload_baseptrs, align 8
+  store ptr %a, ptr %.offload_ptrs, align 8
+  store i64 %0, ptr %.offload_sizes, align 8
+  %1 = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs, i64 0, i64 1
+  store ptr %size.addr, ptr %1, align 8
+  %2 = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i64 0, i64 1
+  store ptr %size.addr, ptr %2, align 8
+  %3 = getelementptr inbounds [2 x i64], ptr %.offload_sizes, i64 0, i64 1
+  store i64 4, ptr %3, align 8
+  call void @__tgt_target_data_begin_mapper(ptr @0, i64 -1, i32 2, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr nonnull %.offload_sizes, ptr @.offload_maptypes.3, ptr null, ptr null)
 
-  %11 = load i32, i32* %size.addr, align 4
-  %size.casted = zext i32 %11 to i64
-  %12 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs2, i64 0, i64 0
-  %13 = bitcast [2 x i8*]* %.offload_baseptrs2 to i64*
-  store i64 %size.casted, i64* %13, align 8
-  %14 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs3, i64 0, i64 0
-  %15 = bitcast [2 x i8*]* %.offload_ptrs3 to i64*
-  store i64 %size.casted, i64* %15, align 8
-  %16 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_baseptrs2, i64 0, i64 1
-  %17 = bitcast i8** %16 to double**
-  store double* %a, double** %17, align 8
-  %18 = getelementptr inbounds [2 x i8*], [2 x i8*]* %.offload_ptrs3, i64 0, i64 1
-  %19 = bitcast i8** %18 to double**
-  store double* %a, double** %19, align 8
+  %4 = load i32, ptr %size.addr, align 4
+  %size.casted = zext i32 %4 to i64
+  store i64 %size.casted, ptr %.offload_baseptrs2, align 8
+  store i64 %size.casted, ptr %.offload_ptrs3, align 8
+  %5 = getelementptr inbounds [2 x ptr], ptr %.offload_baseptrs2, i64 0, i64 1
+  store ptr %a, ptr %5, align 8
+  %6 = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs3, i64 0, i64 1
+  store ptr %a, ptr %6, align 8
 
   ; FIXME: call to @__tgt_target_data_begin_mapper_wait(...) should be moved here.
-  %20 = call i32 @__tgt_target_teams_mapper(%struct.ident_t* @0, i64 -1, i8* nonnull @.__omp_offloading_heavyComputation3.region_id, i32 2, i8** nonnull %12, i8** nonnull %14, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_sizes.2, i64 0, i64 0), i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.4, i64 0, i64 0), i8** null, i8** null, i32 0, i32 0)
-  %.not = icmp eq i32 %20, 0
+  %7 = call i32 @__tgt_target_teams_mapper(ptr @0, i64 -1, ptr nonnull @.__omp_offloading_heavyComputation3.region_id, i32 2, ptr nonnull %.offload_baseptrs2, ptr nonnull %.offload_ptrs3, ptr @.offload_sizes.2, ptr @.offload_maptypes.4, ptr null, ptr null, i32 0, i32 0)
+  %.not = icmp eq i32 %7, 0
   br i1 %.not, label %omp_offload.cont, label %omp_offload.failed
 
 omp_offload.failed:                               ; preds = %entry
-  call void @heavyComputation3FallBack(i64 %size.casted, double* %a)
+  call void @heavyComputation3FallBack(i64 %size.casted, ptr %a)
   br label %omp_offload.cont
 
 omp_offload.cont:                                 ; preds = %omp_offload.failed, %entry
   %rem = srem i32 %call, 7
-  call void @__tgt_target_data_end_mapper(%struct.ident_t* @0, i64 -1, i32 2, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([2 x i64], [2 x i64]* @.offload_maptypes.3, i64 0, i64 0), i8** null, i8** null)
+  call void @__tgt_target_data_end_mapper(ptr @0, i64 -1, i32 2, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr nonnull %.offload_sizes, ptr @.offload_maptypes.3, ptr null, ptr null)
   ret i32 %rem
 }
 
-define internal void @heavyComputation3FallBack(i64 %size, double* %a) {
+define internal void @heavyComputation3FallBack(i64 %size, ptr %a) {
 ; CHECK-LABEL: define {{[^@]+}}@heavyComputation3FallBack
-; CHECK-SAME: (i64 [[SIZE:%.*]], double* [[A:%.*]]) {
+; CHECK-SAME: (i64 [[SIZE:%.*]], ptr [[A:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    ret void
 ;
@@ -444,12 +370,12 @@ entry:
   ret void
 }
 
-;int dataTransferOnly1(double* restrict a, unsigned size) {
+;int dataTransferOnly1(ptr restrict a, unsigned size) {
 ;  // Random computation.
 ;  int random = rand();
 ;
 ;  //#pragma omp target data map(to:a[0:size])
-;  void* args[1];
+;  ptr args[1];
 ;  args[0] = &a;
 ;  __tgt_target_data_begin(..., args, ...)
 ;
@@ -457,29 +383,24 @@ entry:
 ;  random %= size;
 ;  return random;
 ;}
-define dso_local i32 @dataTransferOnly1(double* noalias %a, i32 %size) {
+define dso_local i32 @dataTransferOnly1(ptr noalias %a, i32 %size) {
 ; CHECK-LABEL: define {{[^@]+}}@dataTransferOnly1
-; CHECK-SAME: (double* noalias [[A:%.*]], i32 [[SIZE:%.*]]) {
+; CHECK-SAME: (ptr noalias [[A:%.*]], i32 [[SIZE:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[HANDLE:%.*]] = alloca [[STRUCT___TGT_ASYNC_INFO:%.*]], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x i8*], align 8
-; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x i8*], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [1 x ptr], align 8
+; CHECK-NEXT:    [[DOTOFFLOAD_PTRS:%.*]] = alloca [1 x ptr], align 8
 ; CHECK-NEXT:    [[DOTOFFLOAD_SIZES:%.*]] = alloca [1 x i64], align 8
+; CHECK-NEXT:    [[HANDLE:%.*]] = alloca [[STRUCT___TGT_ASYNC_INFO:%.*]], align 8
 ; CHECK-NEXT:    [[CALL:%.*]] = tail call i32 (...) @rand()
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[SIZE]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = shl nuw nsw i64 [[CONV]], 3
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOFFLOAD_BASEPTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast [1 x i8*]* [[DOTOFFLOAD_BASEPTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP2]], align 8
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x i8*], [1 x i8*]* [[DOTOFFLOAD_PTRS]], i64 0, i64 0
-; CHECK-NEXT:    [[TMP4:%.*]] = bitcast [1 x i8*]* [[DOTOFFLOAD_PTRS]] to double**
-; CHECK-NEXT:    store double* [[A]], double** [[TMP4]], align 8
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [1 x i64], [1 x i64]* [[DOTOFFLOAD_SIZES]], i64 0, i64 0
-; CHECK-NEXT:    store i64 [[TMP0]], i64* [[TMP5]], align 8
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_issue(%struct.ident_t* @[[GLOB0]], i64 -1, i32 1, i8** [[TMP1]], i8** [[TMP3]], i64* [[TMP5]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.5, i64 0, i64 0), i8** null, i8** null, %struct.__tgt_async_info* [[HANDLE]])
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_BASEPTRS]], align 8
+; CHECK-NEXT:    store ptr [[A]], ptr [[DOTOFFLOAD_PTRS]], align 8
+; CHECK-NEXT:    store i64 [[TMP0]], ptr [[DOTOFFLOAD_SIZES]], align 8
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_issue(ptr @[[GLOB0]], i64 -1, i32 1, ptr [[DOTOFFLOAD_BASEPTRS]], ptr [[DOTOFFLOAD_PTRS]], ptr [[DOTOFFLOAD_SIZES]], ptr @.offload_maptypes.5, ptr null, ptr null, ptr [[HANDLE]])
 ; CHECK-NEXT:    [[REM:%.*]] = urem i32 [[CALL]], [[SIZE]]
-; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_wait(i64 -1, %struct.__tgt_async_info* [[HANDLE]])
-; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(%struct.ident_t* @[[GLOB0]], i64 -1, i32 1, i8** nonnull [[TMP1]], i8** nonnull [[TMP3]], i64* nonnull [[TMP5]], i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.5, i64 0, i64 0), i8** null, i8** null)
+; CHECK-NEXT:    call void @__tgt_target_data_begin_mapper_wait(i64 -1, ptr [[HANDLE]])
+; CHECK-NEXT:    call void @__tgt_target_data_end_mapper(ptr @[[GLOB0]], i64 -1, i32 1, ptr nonnull [[DOTOFFLOAD_BASEPTRS]], ptr nonnull [[DOTOFFLOAD_PTRS]], ptr nonnull [[DOTOFFLOAD_SIZES]], ptr @.offload_maptypes.5, ptr null, ptr null)
 ; CHECK-NEXT:    ret i32 [[REM]]
 ;
 
@@ -489,8 +410,8 @@ define dso_local i32 @dataTransferOnly1(double* noalias %a, i32 %size) {
 
 
 entry:
-  %.offload_baseptrs = alloca [1 x i8*], align 8
-  %.offload_ptrs = alloca [1 x i8*], align 8
+  %.offload_baseptrs = alloca [1 x ptr], align 8
+  %.offload_ptrs = alloca [1 x ptr], align 8
   %.offload_sizes = alloca [1 x i64], align 8
 
   ; FIXME: call to @__tgt_target_data_begin_issue_mapper(...) should be moved here.
@@ -498,30 +419,25 @@ entry:
 
   %conv = zext i32 %size to i64
   %0 = shl nuw nsw i64 %conv, 3
-  %1 = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_baseptrs, i64 0, i64 0
-  %2 = bitcast [1 x i8*]* %.offload_baseptrs to double**
-  store double* %a, double** %2, align 8
-  %3 = getelementptr inbounds [1 x i8*], [1 x i8*]* %.offload_ptrs, i64 0, i64 0
-  %4 = bitcast [1 x i8*]* %.offload_ptrs to double**
-  store double* %a, double** %4, align 8
-  %5 = getelementptr inbounds [1 x i64], [1 x i64]* %.offload_sizes, i64 0, i64 0
-  store i64 %0, i64* %5, align 8
-  call void @__tgt_target_data_begin_mapper(%struct.ident_t* @0, i64 -1, i32 1, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.5, i64 0, i64 0), i8** null, i8** null)
+  store ptr %a, ptr %.offload_baseptrs, align 8
+  store ptr %a, ptr %.offload_ptrs, align 8
+  store i64 %0, ptr %.offload_sizes, align 8
+  call void @__tgt_target_data_begin_mapper(ptr @0, i64 -1, i32 1, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr nonnull %.offload_sizes, ptr @.offload_maptypes.5, ptr null, ptr null)
 
   %rem = urem i32 %call, %size
 
-  call void @__tgt_target_data_end_mapper(%struct.ident_t* @0, i64 -1, i32 1, i8** nonnull %1, i8** nonnull %3, i64* nonnull %5, i64* getelementptr inbounds ([1 x i64], [1 x i64]* @.offload_maptypes.5, i64 0, i64 0), i8** null, i8** null)
+  call void @__tgt_target_data_end_mapper(ptr @0, i64 -1, i32 1, ptr nonnull %.offload_baseptrs, ptr nonnull %.offload_ptrs, ptr nonnull %.offload_sizes, ptr @.offload_maptypes.5, ptr null, ptr null)
   ret i32 %rem
 }
 
-declare void @__tgt_target_data_begin_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
-declare i32 @__tgt_target_teams_mapper(%struct.ident_t*, i64, i8*, i32, i8**, i8**, i64*, i64*, i8**, i8**, i32, i32)
-declare void @__tgt_target_data_end_mapper(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**)
+declare void @__tgt_target_data_begin_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
+declare i32 @__tgt_target_teams_mapper(ptr, i64, ptr, i32, ptr, ptr, ptr, ptr, ptr, ptr, i32, i32)
+declare void @__tgt_target_data_end_mapper(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr)
 
 declare dso_local i32 @rand(...)
 
-; CHECK: declare void @__tgt_target_data_begin_mapper_issue(%struct.ident_t*, i64, i32, i8**, i8**, i64*, i64*, i8**, i8**, %struct.__tgt_async_info*)
-; CHECK: declare void @__tgt_target_data_begin_mapper_wait(i64, %struct.__tgt_async_info*)
+; CHECK: declare void @__tgt_target_data_begin_mapper_issue(ptr, i64, i32, ptr, ptr, ptr, ptr, ptr, ptr, ptr)
+; CHECK: declare void @__tgt_target_data_begin_mapper_wait(i64, ptr)
 
 !llvm.module.flags = !{!0}
 

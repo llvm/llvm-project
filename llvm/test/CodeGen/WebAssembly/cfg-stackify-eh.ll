@@ -7,8 +7,8 @@
 
 target triple = "wasm32-unknown-unknown"
 
-@_ZTIi = external constant i8*
-@_ZTId = external constant i8*
+@_ZTIi = external constant ptr
+@_ZTId = external constant ptr
 
 %class.Object = type { i8 }
 %class.MyClass = type { i32 }
@@ -42,7 +42,7 @@ target triple = "wasm32-unknown-unknown"
 ; CHECK:   end_block                                   # label[[L2]]:
 ; CHECK:   rethrow   0                                 # to caller
 ; CHECK: end_try                                       # label[[L1]]:
-define void @test0() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test0() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -51,25 +51,25 @@ catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*), i8* bitcast (i8** @_ZTId to i8*)]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr @_ZTIi, ptr @_ZTId]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
   %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch2, label %catch.fallthrough
 
 catch2:                                           ; preds = %catch.start
-  %5 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %5 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
 catch.fallthrough:                                ; preds = %catch.start
-  %6 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTId to i8*))
+  %6 = call i32 @llvm.eh.typeid.for(ptr @_ZTId)
   %matches1 = icmp eq i32 %3, %6
   br i1 %matches1, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.fallthrough
-  %7 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %7 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
@@ -133,7 +133,7 @@ try.cont:                                         ; preds = %catch, %catch2, %en
 ; CHECK:   end_block                                   # label[[L1]]:
 ; CHECK:   call  __cxa_end_catch
 ; CHECK: end_try
-define void @test1() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test1() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont11 unwind label %catch.dispatch
@@ -142,44 +142,42 @@ catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr @_ZTIi]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
   %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
-  %5 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
-  %6 = bitcast i8* %5 to i32*
-  %7 = load i32, i32* %6, align 4
+  %5 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
+  %6 = load i32, ptr %5, align 4
   invoke void @foo() [ "funclet"(token %1) ]
           to label %try.cont unwind label %catch.dispatch2
 
 catch.dispatch2:                                  ; preds = %catch
-  %8 = catchswitch within %1 [label %catch.start3] unwind label %ehcleanup9
+  %7 = catchswitch within %1 [label %catch.start3] unwind label %ehcleanup9
 
 catch.start3:                                     ; preds = %catch.dispatch2
-  %9 = catchpad within %8 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %10 = call i8* @llvm.wasm.get.exception(token %9)
-  %11 = call i32 @llvm.wasm.get.ehselector(token %9)
-  %12 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*))
-  %matches4 = icmp eq i32 %11, %12
+  %8 = catchpad within %7 [ptr @_ZTIi]
+  %9 = call ptr @llvm.wasm.get.exception(token %8)
+  %10 = call i32 @llvm.wasm.get.ehselector(token %8)
+  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi)
+  %matches4 = icmp eq i32 %10, %11
   br i1 %matches4, label %catch6, label %rethrow5
 
 catch6:                                           ; preds = %catch.start3
-  %13 = call i8* @__cxa_begin_catch(i8* %10) [ "funclet"(token %9) ]
-  %14 = bitcast i8* %13 to i32*
-  %15 = load i32, i32* %14, align 4
-  invoke void @foo() [ "funclet"(token %9) ]
+  %12 = call ptr @__cxa_begin_catch(ptr %9) [ "funclet"(token %8) ]
+  %13 = load i32, ptr %12, align 4
+  invoke void @foo() [ "funclet"(token %8) ]
           to label %invoke.cont8 unwind label %ehcleanup
 
 invoke.cont8:                                     ; preds = %catch6
-  call void @__cxa_end_catch() [ "funclet"(token %9) ]
-  catchret from %9 to label %try.cont
+  call void @__cxa_end_catch() [ "funclet"(token %8) ]
+  catchret from %8 to label %try.cont
 
 rethrow5:                                         ; preds = %catch.start3
-  invoke void @llvm.wasm.rethrow() [ "funclet"(token %9) ]
+  invoke void @llvm.wasm.rethrow() [ "funclet"(token %8) ]
           to label %unreachable unwind label %ehcleanup9
 
 try.cont:                                         ; preds = %invoke.cont8, %catch
@@ -194,14 +192,14 @@ try.cont11:                                       ; preds = %try.cont, %entry
   ret void
 
 ehcleanup:                                        ; preds = %catch6
-  %16 = cleanuppad within %9 []
-  call void @__cxa_end_catch() [ "funclet"(token %16) ]
-  cleanupret from %16 unwind label %ehcleanup9
+  %14 = cleanuppad within %8 []
+  call void @__cxa_end_catch() [ "funclet"(token %14) ]
+  cleanupret from %14 unwind label %ehcleanup9
 
 ehcleanup9:                                       ; preds = %ehcleanup, %rethrow5, %catch.dispatch2
-  %17 = cleanuppad within %1 []
-  call void @__cxa_end_catch() [ "funclet"(token %17) ]
-  cleanupret from %17 unwind to caller
+  %15 = cleanuppad within %1 []
+  call void @__cxa_end_catch() [ "funclet"(token %15) ]
+  cleanupret from %15 unwind to caller
 
 unreachable:                                      ; preds = %rethrow5
   unreachable
@@ -245,7 +243,7 @@ unreachable:                                      ; preds = %rethrow5
 ; CHECK:     br        0                               # 0: up to label[[L0]]
 ; CHECK:   end_loop
 ; CHECK: end_try                                       # label[[L3]]:
-define void @test2() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test2() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
@@ -254,10 +252,10 @@ catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %catch.start
@@ -311,7 +309,7 @@ terminate:                                        ; preds = %ehcleanup
 ; NOOPT:   call      bar
 ; NOOPT: catch     {{.*}}
 ; NOOPT: end_try
-define void @test3() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test3() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   br i1 undef, label %bb1, label %bb2
 
@@ -333,8 +331,8 @@ catch.dispatch:                                   ; preds = %bb4, %bb3
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
@@ -351,13 +349,13 @@ try.cont:                                         ; preds = %catch.start, %bb4, 
 ; CHECK:   catch
 ; CHECK:   end_try
 ; CHECK: end_loop
-define void @test4(i32* %p) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test4(ptr %p) personality ptr @__gxx_wasm_personality_v0 {
 entry:
-  store volatile i32 0, i32* %p
+  store volatile i32 0, ptr %p
   br label %loop
 
 loop:                                             ; preds = %try.cont, %entry
-  store volatile i32 1, i32* %p
+  store volatile i32 1, ptr %p
   invoke void @foo()
           to label %try.cont unwind label %catch.dispatch
 
@@ -365,8 +363,8 @@ catch.dispatch:                                   ; preds = %loop
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
@@ -409,7 +407,7 @@ try.cont:                                         ; preds = %catch.start, %loop
 ; NOSORT: end_try
 ; NOSORT: return
 
-define void @test5() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test5() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -422,8 +420,8 @@ catch.dispatch0:                                  ; preds = %bb0
   %0 = catchswitch within none [label %catch.start0] unwind to caller
 
 catch.start0:                                     ; preds = %catch.dispatch0
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
@@ -431,8 +429,8 @@ catch.dispatch1:                                  ; preds = %bb1
   %4 = catchswitch within none [label %catch.start1] unwind to caller
 
 catch.start1:                                     ; preds = %catch.dispatch1
-  %5 = catchpad within %4 [i8* null]
-  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %5 = catchpad within %4 [ptr null]
+  %6 = call ptr @llvm.wasm.get.exception(token %5)
   %7 = call i32 @llvm.wasm.get.ehselector(token %5)
   catchret from %5 to label %try.cont
 
@@ -464,7 +462,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOSORT:   return
 ; NOSORT: end_try
 
-define void @test6() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test6() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -479,8 +477,8 @@ catch.dispatch0:                                  ; preds = %bb0
   %0 = catchswitch within none [label %catch.start0] unwind to caller
 
 catch.start0:                                     ; preds = %catch.dispatch0
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
@@ -516,7 +514,7 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT: end_try
 ; NOSORT: return
 
-define void @test7() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test7() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -530,8 +528,8 @@ catch.dispatch0:                                  ; preds = %bb0
   %0 = catchswitch within none [label %catch.start0] unwind to caller
 
 catch.start0:                                     ; preds = %catch.dispatch0
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
@@ -539,8 +537,8 @@ catch.dispatch1:                                  ; preds = %bb1
   %4 = catchswitch within none [label %catch.start1] unwind to caller
 
 catch.start1:                                     ; preds = %catch.dispatch1
-  %5 = catchpad within %4 [i8* null]
-  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %5 = catchpad within %4 [ptr null]
+  %6 = call ptr @llvm.wasm.get.exception(token %5)
   %7 = call i32 @llvm.wasm.get.ehselector(token %5)
   catchret from %5 to label %try.cont
 
@@ -571,7 +569,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOSORT:   return
 ; NOSORT: end_try
 
-define i32 @test8() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define i32 @test8() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -584,8 +582,8 @@ catch.dispatch0:                                  ; preds = %bb0
   %1 = catchswitch within none [label %catch.start0] unwind to caller
 
 catch.start0:                                     ; preds = %catch.dispatch0
-  %2 = catchpad within %1 [i8* null]
-  %3 = call i8* @llvm.wasm.get.exception(token %2)
+  %2 = catchpad within %1 [ptr null]
+  %3 = call ptr @llvm.wasm.get.exception(token %2)
   %j = call i32 @llvm.wasm.get.ehselector(token %2)
   catchret from %2 to label %try.cont
 
@@ -597,7 +595,7 @@ try.cont:                                         ; preds = %catch.start0
 ; unstackified in fixCallUnwindMismatches in CFGStackify.
 
 ; NOSORT-LOCALS-LABEL: test9:
-define void @test9(i32 %x) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test9(i32 %x) personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -610,11 +608,11 @@ bb1:                                              ; preds = %bb0
   ; But when we introduce a nested try-delegate in fixCallUnwindMismatches in
   ; CFGStackify, it is possible that we end up unstackifying the first dest
   ; register. In that case, we convert that tee into a copy.
-  %addr = inttoptr i32 %t to i32*
-  %load = load i32, i32* %addr
+  %addr = inttoptr i32 %t to ptr
+  %load = load i32, ptr %addr
   %call = call i32 @baz()
   %add = add i32 %load, %call
-  store i32 %add, i32* %addr
+  store i32 %add, ptr %addr
   ret void
 ; NOSORT-LOCALS:       i32.add
 ; NOSORT-LOCALS-NOT:   local.tee
@@ -624,8 +622,8 @@ catch.dispatch0:                                  ; preds = %bb0
   %0 = catchswitch within none [label %catch.start0] unwind to caller
 
 catch.start0:                                     ; preds = %catch.dispatch0
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
@@ -669,7 +667,7 @@ try.cont:                                         ; preds = %catch.start0
 ; NOSORT: end_try
 ; NOSORT: return
 
-define void @test10() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test10() personality ptr @__gxx_wasm_personality_v0 {
 bb0:
   invoke void @foo()
           to label %bb1 unwind label %catch.dispatch0
@@ -682,10 +680,10 @@ catch.dispatch0:                                  ; preds = %bb0
   %0 = catchswitch within none [label %catch.start0] unwind to caller
 
 catch.start0:                                     ; preds = %catch.dispatch0
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
@@ -693,10 +691,10 @@ catch.dispatch1:                                  ; preds = %bb1
   %5 = catchswitch within none [label %catch.start1] unwind to caller
 
 catch.start1:                                     ; preds = %catch.dispatch1
-  %6 = catchpad within %5 [i8* null]
-  %7 = call i8* @llvm.wasm.get.exception(token %6)
+  %6 = catchpad within %5 [ptr null]
+  %7 = call ptr @llvm.wasm.get.exception(token %6)
   %8 = call i32 @llvm.wasm.get.ehselector(token %6)
-  %9 = call i8* @__cxa_begin_catch(i8* %7) [ "funclet"(token %6) ]
+  %9 = call ptr @__cxa_begin_catch(ptr %7) [ "funclet"(token %6) ]
   call void @__cxa_end_catch() [ "funclet"(token %6) ]
   catchret from %6 to label %try.cont
 
@@ -720,7 +718,7 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ; NOOPT:   call      foo
 ; NOOPT: end_block
 ; NOOPT: return
-define void @test11(i32 %arg) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test11(i32 %arg) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %tobool = icmp ne i32 %arg, 0
   br i1 %tobool, label %if.then, label %if.end
@@ -729,10 +727,10 @@ catch.dispatch:                                   ; preds = %if.then
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %if.end
 
@@ -765,22 +763,22 @@ if.end:                                           ; preds = %cont, %catch.start,
 ; NOSORT: catch_all
 ; NOSORT:   rethrow 0
 ; NOSORT: end_try
-define void @test12(i8* %a, i8* %b) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test12(ptr %a, ptr %b) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %o = alloca %class.Object, align 1
   invoke void @foo()
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %entry
-  call void @llvm.memcpy.p0i8.p0i8.i32(i8* %a, i8* %b, i32 100, i1 false)
-  call void @llvm.memmove.p0i8.p0i8.i32(i8* %a, i8* %b, i32 100, i1 false)
-  call void @llvm.memset.p0i8.i32(i8* %a, i8 0, i32 100, i1 false)
-  %call = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %o)
+  call void @llvm.memcpy.p0.p0.i32(ptr %a, ptr %b, i32 100, i1 false)
+  call void @llvm.memmove.p0.p0.i32(ptr %a, ptr %b, i32 100, i1 false)
+  call void @llvm.memset.p0.i32(ptr %a, i8 0, i32 100, i1 false)
+  %call = call ptr @_ZN6ObjectD2Ev(ptr %o)
   ret void
 
 ehcleanup:                                        ; preds = %entry
   %0 = cleanuppad within none []
-  %call2 = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %o) [ "funclet"(token %0) ]
+  %call2 = call ptr @_ZN6ObjectD2Ev(ptr %o) [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 
@@ -793,7 +791,7 @@ ehcleanup:                                        ; preds = %entry
 ; CHECK: try
 ; CHECK: call      $push{{.*}}=, nothrow_i32
 ; CHECK: call      fun, $pop{{.*}}
-define void @test13() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test13() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %call = call i32 @nothrow_i32()
   invoke void @fun(i32 %call)
@@ -811,7 +809,7 @@ terminate:                                        ; preds = %entry
 ; This crashed on debug mode (= when NDEBUG is not defined) when the logic for
 ; computing the innermost region was not correct, in which a loop region
 ; contains an exception region. This should pass CFGSort without crashing.
-define void @test14() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test14() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %e = alloca %class.MyClass, align 4
   br label %for.cond
@@ -829,25 +827,23 @@ catch.dispatch:                                   ; preds = %for.body
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* bitcast ({ i8*, i8* }* @_ZTI7MyClass to i8*)]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr @_ZTI7MyClass]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast ({ i8*, i8* }* @_ZTI7MyClass to i8*))
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTI7MyClass)
   %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
-  %5 = call i8* @__cxa_get_exception_ptr(i8* %2) [ "funclet"(token %1) ]
-  %6 = bitcast i8* %5 to %class.MyClass*
-  %call = call %class.MyClass* @_ZN7MyClassC2ERKS_(%class.MyClass* %e, %class.MyClass* dereferenceable(4) %6) [ "funclet"(token %1) ]
-  %7 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
-  %x = getelementptr inbounds %class.MyClass, %class.MyClass* %e, i32 0, i32 0
-  %8 = load i32, i32* %x, align 4
-  invoke void @quux(i32 %8) [ "funclet"(token %1) ]
+  %5 = call ptr @__cxa_get_exception_ptr(ptr %2) [ "funclet"(token %1) ]
+  %call = call ptr @_ZN7MyClassC2ERKS_(ptr %e, ptr dereferenceable(4) %5) [ "funclet"(token %1) ]
+  %6 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
+  %7 = load i32, ptr %e, align 4
+  invoke void @quux(i32 %7) [ "funclet"(token %1) ]
           to label %invoke.cont2 unwind label %ehcleanup
 
 invoke.cont2:                                     ; preds = %catch
-  %call3 = call %class.MyClass* @_ZN7MyClassD2Ev(%class.MyClass* %e) [ "funclet"(token %1) ]
+  %call3 = call ptr @_ZN7MyClassD2Ev(ptr %e) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %for.inc
 
@@ -860,20 +856,20 @@ for.inc:                                          ; preds = %invoke.cont2, %for.
   br label %for.cond
 
 ehcleanup:                                        ; preds = %catch
-  %9 = cleanuppad within %1 []
-  %call4 = call %class.MyClass* @_ZN7MyClassD2Ev(%class.MyClass* %e) [ "funclet"(token %9) ]
-  invoke void @__cxa_end_catch() [ "funclet"(token %9) ]
+  %8 = cleanuppad within %1 []
+  %call4 = call ptr @_ZN7MyClassD2Ev(ptr %e) [ "funclet"(token %8) ]
+  invoke void @__cxa_end_catch() [ "funclet"(token %8) ]
           to label %invoke.cont6 unwind label %terminate7
 
 invoke.cont6:                                     ; preds = %ehcleanup
-  cleanupret from %9 unwind to caller
+  cleanupret from %8 unwind to caller
 
 for.end:                                          ; preds = %for.cond
   ret void
 
 terminate7:                                       ; preds = %ehcleanup
-  %10 = cleanuppad within %9 []
-  call void @_ZSt9terminatev() [ "funclet"(token %10) ]
+  %9 = cleanuppad within %8 []
+  call void @_ZSt9terminatev() [ "funclet"(token %9) ]
   unreachable
 }
 
@@ -891,7 +887,7 @@ terminate7:                                       ; preds = %ehcleanup
 ; bb2:            <- Continuation BB
 ;   end
 ; CHECK-LABEL: test15:
-define void @test15(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test15(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %for.body unwind label %catch.dispatch
@@ -917,10 +913,10 @@ catch.dispatch:                                   ; preds = %for.body, %entry
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   call void @__cxa_end_catch() [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont
 
@@ -960,7 +956,7 @@ try.cont:                                         ; preds = %catch.start, %for.e
 ;   end
 ;
 ; CHECK-LABEL: test16:
-define void @test16() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test16() personality ptr @__gxx_wasm_personality_v0 {
 ; CHECK: call foo
 entry:
   invoke void @foo()
@@ -977,10 +973,10 @@ catch.dispatch:                                   ; preds = %invoke.cont
 
 ; CHECK: catch
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   invoke void @__cxa_end_catch() [ "funclet"(token %1) ]
           to label %invoke.cont2 unwind label %catch.dispatch3
 
@@ -988,10 +984,10 @@ catch.dispatch3:                                  ; preds = %catch.start, %catch
   %5 = catchswitch within none [label %catch.start4] unwind to caller
 
 catch.start4:                                     ; preds = %catch.dispatch3
-  %6 = catchpad within %5 [i8* null]
-  %7 = call i8* @llvm.wasm.get.exception(token %6)
+  %6 = catchpad within %5 [ptr null]
+  %7 = call ptr @llvm.wasm.get.exception(token %6)
   %8 = call i32 @llvm.wasm.get.ehselector(token %6)
-  %9 = call i8* @__cxa_begin_catch(i8* %7) [ "funclet"(token %6) ]
+  %9 = call ptr @__cxa_begin_catch(ptr %7) [ "funclet"(token %6) ]
   call void @__cxa_end_catch() [ "funclet"(token %6) ]
   catchret from %6 to label %try.cont8
 
@@ -1012,7 +1008,7 @@ invoke.cont2:                                     ; preds = %catch.start
 ; NOSORT: try
 ; NOSORT: end_try
 ; NOSORT: end_loop
-define void @test17(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test17(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   br label %while.cond
 
@@ -1030,10 +1026,10 @@ catch.dispatch:                                   ; preds = %while.body
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i8* @__cxa_begin_catch(i8* %2) [ "funclet"(token %1) ]
+  %4 = call ptr @__cxa_begin_catch(ptr %2) [ "funclet"(token %1) ]
   invoke void @__cxa_end_catch() [ "funclet"(token %1) ]
           to label %invoke.cont unwind label %ehcleanup
 
@@ -1063,7 +1059,7 @@ while.end:                                        ; preds = %while.body, %while.
 ; NOSORT: catch_all
 ; NOSORT: end_try
 ; NOSORT-NEXT: end_function
-define i32 @test18(i32 %n) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define i32 @test18(i32 %n) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %t = alloca %class.Object, align 1
   br label %for.cond
@@ -1083,7 +1079,7 @@ if.then:                                          ; preds = %for.body
           to label %invoke.cont unwind label %ehcleanup
 
 invoke.cont:                                      ; preds = %if.then
-  %call2 = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %t)
+  %call2 = call ptr @_ZN6ObjectD2Ev(ptr %t)
   ret i32 %call
 
 for.inc:                                          ; preds = %for.body
@@ -1092,7 +1088,7 @@ for.inc:                                          ; preds = %for.body
 
 ehcleanup:                                        ; preds = %if.then
   %0 = cleanuppad within none []
-  %call3 = call %class.Object* @_ZN6ObjectD2Ev(%class.Object* %t) [ "funclet"(token %0) ]
+  %call3 = call ptr @_ZN6ObjectD2Ev(ptr %t) [ "funclet"(token %0) ]
   cleanupret from %0 unwind to caller
 }
 
@@ -1109,7 +1105,7 @@ ehcleanup:                                        ; preds = %if.then
 ; CHECK:    call  quux, $[[RET]]
 ; CHECK: catch_all
 ; CHECK: end_try
-define void @test19() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test19() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   %call = call i32 @baz()
   invoke void @quux(i32 %call)
@@ -1154,7 +1150,7 @@ invoke.cont:                                      ; preds = %entry
 ; NOSORT-LABEL: test20:
 ; NOSORT: try
 ; NOSORT:   br_if   0
-define void @test20(i1 %arg) personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test20(i1 %arg) personality ptr @__gxx_wasm_personality_v0 {
 entry:
   br i1 %arg, label %bb0, label %dest
 
@@ -1170,8 +1166,8 @@ catch.dispatch0:                                  ; preds = %bb0
   %0 = catchswitch within none [label %catch.start0] unwind to caller
 
 catch.start0:                                     ; preds = %catch.dispatch0
-  %1 = catchpad within %0 [i8* null]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr null]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %try.cont
 
@@ -1182,8 +1178,8 @@ catch.dispatch1:                                  ; preds = %bb1
   %4 = catchswitch within none [label %catch.start1] unwind to caller
 
 catch.start1:                                     ; preds = %catch.dispatch1
-  %5 = catchpad within %4 [i8* null]
-  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %5 = catchpad within %4 [ptr null]
+  %6 = call ptr @llvm.wasm.get.exception(token %5)
   %7 = call i32 @llvm.wasm.get.ehselector(token %5)
   catchret from %5 to label %try.cont
 
@@ -1218,20 +1214,20 @@ try.cont:                                         ; preds = %catch.start1, %catc
 ;           <- (b) The br destination should be remapped to here
 ;
 ; The test was reduced by bugpoint and should not crash in CFGStackify.
-define void @test21() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test21() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   br i1 undef, label %if.then, label %if.end12
 
 if.then:                                          ; preds = %entry
-  invoke void @__cxa_throw(i8* null, i8* null, i8* null) #1
+  invoke void @__cxa_throw(ptr null, ptr null, ptr null) #1
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %if.then
   %0 = catchswitch within none [label %catch.start] unwind to caller
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr @_ZTIi]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
   catchret from %1 to label %catchret.dest
 
@@ -1240,15 +1236,15 @@ catchret.dest:                                    ; preds = %catch.start
           to label %invoke.cont unwind label %catch.dispatch4
 
 invoke.cont:                                      ; preds = %catchret.dest
-  invoke void @__cxa_throw(i8* null, i8* null, i8* null) #1
+  invoke void @__cxa_throw(ptr null, ptr null, ptr null) #1
           to label %unreachable unwind label %catch.dispatch4
 
 catch.dispatch4:                                  ; preds = %invoke.cont, %catchret.dest
   %4 = catchswitch within none [label %catch.start5] unwind to caller
 
 catch.start5:                                     ; preds = %catch.dispatch4
-  %5 = catchpad within %4 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %5 = catchpad within %4 [ptr @_ZTIi]
+  %6 = call ptr @llvm.wasm.get.exception(token %5)
   %7 = call i32 @llvm.wasm.get.ehselector(token %5)
   unreachable
 
@@ -1260,8 +1256,8 @@ catch.dispatch16:                                 ; preds = %if.end12
   %8 = catchswitch within none [label %catch.start17] unwind label %ehcleanup
 
 catch.start17:                                    ; preds = %catch.dispatch16
-  %9 = catchpad within %8 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %10 = call i8* @llvm.wasm.get.exception(token %9)
+  %9 = catchpad within %8 [ptr @_ZTIi]
+  %10 = call ptr @llvm.wasm.get.exception(token %9)
   %11 = call i32 @llvm.wasm.get.ehselector(token %9)
   br i1 undef, label %catch20, label %rethrow19
 
@@ -1296,7 +1292,7 @@ unreachable:                                      ; preds = %rethrow19, %invoke.
 ; Regression test for WasmEHFuncInfo's reverse mapping bug. 'UnwindDestToSrc'
 ; should return a vector and not a single BB, which was incorrect.
 ; This was reduced by bugpoint and should not crash in CFGStackify.
-define void @test22() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test22() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %invoke.cont unwind label %catch.dispatch
@@ -1305,18 +1301,18 @@ catch.dispatch:                                   ; preds = %entry
   %0 = catchswitch within none [label %catch.start] unwind label %ehcleanup22
 
 catch.start:                                      ; preds = %catch.dispatch
-  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr @_ZTIi]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  invoke void @__cxa_throw(i8* null, i8* null, i8* null) #1 [ "funclet"(token %1) ]
+  invoke void @__cxa_throw(ptr null, ptr null, ptr null) #1 [ "funclet"(token %1) ]
           to label %unreachable unwind label %catch.dispatch2
 
 catch.dispatch2:                                  ; preds = %catch.start
   %4 = catchswitch within %1 [label %catch.start3] unwind label %ehcleanup
 
 catch.start3:                                     ; preds = %catch.dispatch2
-  %5 = catchpad within %4 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %6 = call i8* @llvm.wasm.get.exception(token %5)
+  %5 = catchpad within %4 [ptr @_ZTIi]
+  %6 = call ptr @llvm.wasm.get.exception(token %5)
   %7 = call i32 @llvm.wasm.get.ehselector(token %5)
   catchret from %5 to label %try.cont
 
@@ -1325,15 +1321,15 @@ try.cont:                                         ; preds = %catch.start3
           to label %invoke.cont8 unwind label %ehcleanup
 
 invoke.cont8:                                     ; preds = %try.cont
-  invoke void @__cxa_throw(i8* null, i8* null, i8* null) #1 [ "funclet"(token %1) ]
+  invoke void @__cxa_throw(ptr null, ptr null, ptr null) #1 [ "funclet"(token %1) ]
           to label %unreachable unwind label %catch.dispatch11
 
 catch.dispatch11:                                 ; preds = %invoke.cont8
   %8 = catchswitch within %1 [label %catch.start12] unwind label %ehcleanup
 
 catch.start12:                                    ; preds = %catch.dispatch11
-  %9 = catchpad within %8 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %10 = call i8* @llvm.wasm.get.exception(token %9)
+  %9 = catchpad within %8 [ptr @_ZTIi]
+  %10 = call ptr @llvm.wasm.get.exception(token %9)
   %11 = call i32 @llvm.wasm.get.ehselector(token %9)
   unreachable
 
@@ -1368,62 +1364,59 @@ unreachable:                                      ; preds = %invoke.cont8, %catc
 ; included in catch.start's exception. Also, after we take catch.start2's
 ; exception out of catch.start's exception, we have to take out try.cont8 out of
 ; catch.start's exception, because it has a predecessor in catch.start2.
-define void @test23() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test23() personality ptr @__gxx_wasm_personality_v0 {
 entry:
-  %exception = call i8* @__cxa_allocate_exception(i32 4) #0
-  %0 = bitcast i8* %exception to i32*
-  store i32 0, i32* %0, align 16
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #1
+  %exception = call ptr @__cxa_allocate_exception(i32 4) #0
+  store i32 0, ptr %exception, align 16
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #1
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %1 = catchswitch within none [label %catch.start] unwind label %catch.dispatch1
+  %0 = catchswitch within none [label %catch.start] unwind label %catch.dispatch1
 
 catch.start:                                      ; preds = %catch.dispatch
-  %2 = catchpad within %1 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %3 = call i8* @llvm.wasm.get.exception(token %2)
-  %4 = call i32 @llvm.wasm.get.ehselector(token %2)
-  %5 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #0
-  %matches = icmp eq i32 %4, %5
+  %1 = catchpad within %0 [ptr @_ZTIi]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
+  %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
-  %6 = call i8* @__cxa_begin_catch(i8* %3) #0 [ "funclet"(token %2) ]
-  %7 = bitcast i8* %6 to i32*
-  %8 = load i32, i32* %7, align 4
-  call void @__cxa_end_catch() #0 [ "funclet"(token %2) ]
-  catchret from %2 to label %catchret.dest
+  %5 = call ptr @__cxa_begin_catch(ptr %2) #0 [ "funclet"(token %1) ]
+  %6 = load i32, ptr %5, align 4
+  call void @__cxa_end_catch() #0 [ "funclet"(token %1) ]
+  catchret from %1 to label %catchret.dest
 
 catchret.dest:                                    ; preds = %catch
   br label %try.cont
 
 rethrow:                                          ; preds = %catch.start
-  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %2) ]
+  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %1) ]
           to label %unreachable unwind label %catch.dispatch1
 
 catch.dispatch1:                                  ; preds = %rethrow, %catch.dispatch
-  %9 = catchswitch within none [label %catch.start2] unwind to caller
+  %7 = catchswitch within none [label %catch.start2] unwind to caller
 
 catch.start2:                                     ; preds = %catch.dispatch1
-  %10 = catchpad within %9 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %11 = call i8* @llvm.wasm.get.exception(token %10)
-  %12 = call i32 @llvm.wasm.get.ehselector(token %10)
-  %13 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #0
-  %matches3 = icmp eq i32 %12, %13
+  %8 = catchpad within %7 [ptr @_ZTIi]
+  %9 = call ptr @llvm.wasm.get.exception(token %8)
+  %10 = call i32 @llvm.wasm.get.ehselector(token %8)
+  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
+  %matches3 = icmp eq i32 %10, %11
   br i1 %matches3, label %catch5, label %rethrow4
 
 catch5:                                           ; preds = %catch.start2
-  %14 = call i8* @__cxa_begin_catch(i8* %11) #0 [ "funclet"(token %10) ]
-  %15 = bitcast i8* %14 to i32*
-  %16 = load i32, i32* %15, align 4
-  call void @__cxa_end_catch() #0 [ "funclet"(token %10) ]
-  catchret from %10 to label %catchret.dest7
+  %12 = call ptr @__cxa_begin_catch(ptr %9) #0 [ "funclet"(token %8) ]
+  %13 = load i32, ptr %12, align 4
+  call void @__cxa_end_catch() #0 [ "funclet"(token %8) ]
+  catchret from %8 to label %catchret.dest7
 
 catchret.dest7:                                   ; preds = %catch5
   br label %try.cont8
 
 rethrow4:                                         ; preds = %catch.start2
-  call void @llvm.wasm.rethrow() #1 [ "funclet"(token %10) ]
+  call void @llvm.wasm.rethrow() #1 [ "funclet"(token %8) ]
   unreachable
 
 try.cont8:                                        ; preds = %try.cont, %catchret.dest7
@@ -1449,8 +1442,7 @@ unreachable:                                      ; preds = %rethrow, %entry
 ; exception first, before taking out catch.start12's exception out of
 ; catch.start4's exception; otherwise we end up with an incorrect relationship
 ; of catch.start's exception > catch.start12's exception.
-define void @test24() personality i8* bitcast (i32 (...)*
-@__gxx_wasm_personality_v0 to i8*) {
+define void @test24() personality ptr @__gxx_wasm_personality_v0 {
 entry:
   invoke void @foo()
           to label %invoke.cont unwind label %catch.dispatch
@@ -1467,17 +1459,16 @@ catch.dispatch11:                                 ; preds = %rethrow6, %catch.di
   %0 = catchswitch within none [label %catch.start12] unwind to caller
 
 catch.start12:                                    ; preds = %catch.dispatch11
-  %1 = catchpad within %0 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %2 = call i8* @llvm.wasm.get.exception(token %1)
+  %1 = catchpad within %0 [ptr @_ZTIi]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
   %3 = call i32 @llvm.wasm.get.ehselector(token %1)
-  %4 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #0
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
   %matches13 = icmp eq i32 %3, %4
   br i1 %matches13, label %catch15, label %rethrow14
 
 catch15:                                          ; preds = %catch.start12
-  %5 = call i8* @__cxa_begin_catch(i8* %2) #0 [ "funclet"(token %1) ]
-  %6 = bitcast i8* %5 to i32*
-  %7 = load i32, i32* %6, align 4
+  %5 = call ptr @__cxa_begin_catch(ptr %2) #0 [ "funclet"(token %1) ]
+  %6 = load i32, ptr %5, align 4
   call void @__cxa_end_catch() #0 [ "funclet"(token %1) ]
   catchret from %1 to label %try.cont18
 
@@ -1486,47 +1477,45 @@ rethrow14:                                        ; preds = %catch.start12
   unreachable
 
 catch.dispatch3:                                  ; preds = %rethrow, %catch.dispatch
-  %8 = catchswitch within none [label %catch.start4] unwind label %catch.dispatch11
+  %7 = catchswitch within none [label %catch.start4] unwind label %catch.dispatch11
 
 catch.start4:                                     ; preds = %catch.dispatch3
-  %9 = catchpad within %8 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %10 = call i8* @llvm.wasm.get.exception(token %9)
-  %11 = call i32 @llvm.wasm.get.ehselector(token %9)
-  %12 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #0
-  %matches5 = icmp eq i32 %11, %12
+  %8 = catchpad within %7 [ptr @_ZTIi]
+  %9 = call ptr @llvm.wasm.get.exception(token %8)
+  %10 = call i32 @llvm.wasm.get.ehselector(token %8)
+  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
+  %matches5 = icmp eq i32 %10, %11
   br i1 %matches5, label %catch7, label %rethrow6
 
 catch7:                                           ; preds = %catch.start4
-  %13 = call i8* @__cxa_begin_catch(i8* %10) #0 [ "funclet"(token %9) ]
-  %14 = bitcast i8* %13 to i32*
-  %15 = load i32, i32* %14, align 4
-  call void @__cxa_end_catch() #0 [ "funclet"(token %9) ]
-  catchret from %9 to label %try.cont18
+  %12 = call ptr @__cxa_begin_catch(ptr %9) #0 [ "funclet"(token %8) ]
+  %13 = load i32, ptr %12, align 4
+  call void @__cxa_end_catch() #0 [ "funclet"(token %8) ]
+  catchret from %8 to label %try.cont18
 
 rethrow6:                                         ; preds = %catch.start4
-  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %9) ]
+  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %8) ]
           to label %unreachable unwind label %catch.dispatch11
 
 catch.dispatch:                                   ; preds = %invoke.cont1, %invoke.cont, %entry
-  %16 = catchswitch within none [label %catch.start] unwind label %catch.dispatch3
+  %14 = catchswitch within none [label %catch.start] unwind label %catch.dispatch3
 
 catch.start:                                      ; preds = %catch.dispatch
-  %17 = catchpad within %16 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %18 = call i8* @llvm.wasm.get.exception(token %17)
-  %19 = call i32 @llvm.wasm.get.ehselector(token %17)
-  %20 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #0
-  %matches = icmp eq i32 %19, %20
+  %15 = catchpad within %14 [ptr @_ZTIi]
+  %16 = call ptr @llvm.wasm.get.exception(token %15)
+  %17 = call i32 @llvm.wasm.get.ehselector(token %15)
+  %18 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #0
+  %matches = icmp eq i32 %17, %18
   br i1 %matches, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
-  %21 = call i8* @__cxa_begin_catch(i8* %18) #0 [ "funclet"(token %17) ]
-  %22 = bitcast i8* %21 to i32*
-  %23 = load i32, i32* %22, align 4
-  call void @__cxa_end_catch() #0 [ "funclet"(token %17) ]
-  catchret from %17 to label %try.cont18
+  %19 = call ptr @__cxa_begin_catch(ptr %16) #0 [ "funclet"(token %15) ]
+  %20 = load i32, ptr %19, align 4
+  call void @__cxa_end_catch() #0 [ "funclet"(token %15) ]
+  catchret from %15 to label %try.cont18
 
 rethrow:                                          ; preds = %catch.start
-  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %17) ]
+  invoke void @llvm.wasm.rethrow() #1 [ "funclet"(token %15) ]
           to label %unreachable unwind label %catch.dispatch3
 
 try.cont18:                                       ; preds = %catch, %catch7, %catch15, %invoke.cont1
@@ -1556,56 +1545,53 @@ unreachable:                                      ; preds = %rethrow, %rethrow6
 ; contained in (a)'s exception. Because (a)'s unwind destination is (b), (b)'s
 ; exception is taken out of (a)'s. But because (c) is reachable from (b), we
 ; should make sure to take out (c)'s exception out of (a)'s exception too.
-define void @test25() personality i8* bitcast (i32 (...)* @__gxx_wasm_personality_v0 to i8*) {
+define void @test25() personality ptr @__gxx_wasm_personality_v0 {
 entry:
-  %exception = call i8* @__cxa_allocate_exception(i32 4) #1
-  %0 = bitcast i8* %exception to i32*
-  store i32 0, i32* %0, align 16
-  invoke void @__cxa_throw(i8* %exception, i8* bitcast (i8** @_ZTIi to i8*), i8* null) #3
+  %exception = call ptr @__cxa_allocate_exception(i32 4) #1
+  store i32 0, ptr %exception, align 16
+  invoke void @__cxa_throw(ptr %exception, ptr @_ZTIi, ptr null) #3
           to label %unreachable unwind label %catch.dispatch
 
 catch.dispatch:                                   ; preds = %entry
-  %1 = catchswitch within none [label %catch.start] unwind label %catch.dispatch1
+  %0 = catchswitch within none [label %catch.start] unwind label %catch.dispatch1
 
 catch.start:                                      ; preds = %catch.dispatch
-  %2 = catchpad within %1 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %3 = call i8* @llvm.wasm.get.exception(token %2)
-  %4 = call i32 @llvm.wasm.get.ehselector(token %2)
-  %5 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #1
-  %matches = icmp eq i32 %4, %5
+  %1 = catchpad within %0 [ptr @_ZTIi]
+  %2 = call ptr @llvm.wasm.get.exception(token %1)
+  %3 = call i32 @llvm.wasm.get.ehselector(token %1)
+  %4 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %matches = icmp eq i32 %3, %4
   br i1 %matches, label %catch, label %rethrow
 
 catch:                                            ; preds = %catch.start
-  %6 = call i8* @__cxa_begin_catch(i8* %3) #1 [ "funclet"(token %2) ]
-  %7 = bitcast i8* %6 to i32*
-  %8 = load i32, i32* %7, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %2) ]
-  catchret from %2 to label %try.cont8
+  %5 = call ptr @__cxa_begin_catch(ptr %2) #1 [ "funclet"(token %1) ]
+  %6 = load i32, ptr %5, align 4
+  call void @__cxa_end_catch() #1 [ "funclet"(token %1) ]
+  catchret from %1 to label %try.cont8
 
 rethrow:                                          ; preds = %catch.start
-  invoke void @llvm.wasm.rethrow() #3 [ "funclet"(token %2) ]
+  invoke void @llvm.wasm.rethrow() #3 [ "funclet"(token %1) ]
           to label %unreachable unwind label %catch.dispatch1
 
 catch.dispatch1:                                  ; preds = %rethrow, %catch.dispatch
-  %9 = catchswitch within none [label %catch.start2] unwind to caller
+  %7 = catchswitch within none [label %catch.start2] unwind to caller
 
 catch.start2:                                     ; preds = %catch.dispatch1
-  %10 = catchpad within %9 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %11 = call i8* @llvm.wasm.get.exception(token %10)
-  %12 = call i32 @llvm.wasm.get.ehselector(token %10)
-  %13 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #1
-  %matches3 = icmp eq i32 %12, %13
+  %8 = catchpad within %7 [ptr @_ZTIi]
+  %9 = call ptr @llvm.wasm.get.exception(token %8)
+  %10 = call i32 @llvm.wasm.get.ehselector(token %8)
+  %11 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %matches3 = icmp eq i32 %10, %11
   br i1 %matches3, label %catch5, label %rethrow4
 
 catch5:                                           ; preds = %catch.start2
-  %14 = call i8* @__cxa_begin_catch(i8* %11) #1 [ "funclet"(token %10) ]
-  %15 = bitcast i8* %14 to i32*
-  %16 = load i32, i32* %15, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %10) ]
-  catchret from %10 to label %try.cont8
+  %12 = call ptr @__cxa_begin_catch(ptr %9) #1 [ "funclet"(token %8) ]
+  %13 = load i32, ptr %12, align 4
+  call void @__cxa_end_catch() #1 [ "funclet"(token %8) ]
+  catchret from %8 to label %try.cont8
 
 rethrow4:                                         ; preds = %catch.start2
-  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %10) ]
+  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %8) ]
   unreachable
 
 try.cont8:                                        ; preds = %catch, %catch5
@@ -1613,25 +1599,24 @@ try.cont8:                                        ; preds = %catch, %catch5
           to label %try.cont16 unwind label %catch.dispatch9
 
 catch.dispatch9:                                  ; preds = %try.cont8
-  %17 = catchswitch within none [label %catch.start10] unwind to caller
+  %14 = catchswitch within none [label %catch.start10] unwind to caller
 
 catch.start10:                                    ; preds = %catch.dispatch9
-  %18 = catchpad within %17 [i8* bitcast (i8** @_ZTIi to i8*)]
-  %19 = call i8* @llvm.wasm.get.exception(token %18)
-  %20 = call i32 @llvm.wasm.get.ehselector(token %18)
-  %21 = call i32 @llvm.eh.typeid.for(i8* bitcast (i8** @_ZTIi to i8*)) #1
-  %matches11 = icmp eq i32 %20, %21
+  %15 = catchpad within %14 [ptr @_ZTIi]
+  %16 = call ptr @llvm.wasm.get.exception(token %15)
+  %17 = call i32 @llvm.wasm.get.ehselector(token %15)
+  %18 = call i32 @llvm.eh.typeid.for(ptr @_ZTIi) #1
+  %matches11 = icmp eq i32 %17, %18
   br i1 %matches11, label %catch13, label %rethrow12
 
 catch13:                                          ; preds = %catch.start10
-  %22 = call i8* @__cxa_begin_catch(i8* %19) #1 [ "funclet"(token %18) ]
-  %23 = bitcast i8* %22 to i32*
-  %24 = load i32, i32* %23, align 4
-  call void @__cxa_end_catch() #1 [ "funclet"(token %18) ]
-  catchret from %18 to label %try.cont16
+  %19 = call ptr @__cxa_begin_catch(ptr %16) #1 [ "funclet"(token %15) ]
+  %20 = load i32, ptr %19, align 4
+  call void @__cxa_end_catch() #1 [ "funclet"(token %15) ]
+  catchret from %15 to label %try.cont16
 
 rethrow12:                                        ; preds = %catch.start10
-  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %18) ]
+  call void @llvm.wasm.rethrow() #3 [ "funclet"(token %15) ]
   unreachable
 
 try.cont16:                                       ; preds = %try.cont8, %catch13
@@ -1657,35 +1642,35 @@ declare void @nothrow(i32) #0
 declare i32 @nothrow_i32() #0
 
 ; Function Attrs: nounwind
-declare %class.Object* @_ZN6ObjectD2Ev(%class.Object* returned) #0
-@_ZTI7MyClass = external constant { i8*, i8* }, align 4
+declare ptr @_ZN6ObjectD2Ev(ptr returned) #0
+@_ZTI7MyClass = external constant { ptr, ptr }, align 4
 ; Function Attrs: nounwind
-declare %class.MyClass* @_ZN7MyClassD2Ev(%class.MyClass* returned) #0
+declare ptr @_ZN7MyClassD2Ev(ptr returned) #0
 ; Function Attrs: nounwind
-declare %class.MyClass* @_ZN7MyClassC2ERKS_(%class.MyClass* returned, %class.MyClass* dereferenceable(4)) #0
+declare ptr @_ZN7MyClassC2ERKS_(ptr returned, ptr dereferenceable(4)) #0
 
 declare i32 @__gxx_wasm_personality_v0(...)
 ; Function Attrs: nounwind
-declare i8* @llvm.wasm.get.exception(token) #0
+declare ptr @llvm.wasm.get.exception(token) #0
 ; Function Attrs: nounwind
 declare i32 @llvm.wasm.get.ehselector(token) #0
-declare i8* @__cxa_allocate_exception(i32) #0
-declare void @__cxa_throw(i8*, i8*, i8*)
+declare ptr @__cxa_allocate_exception(i32) #0
+declare void @__cxa_throw(ptr, ptr, ptr)
 ; Function Attrs: noreturn
 declare void @llvm.wasm.rethrow() #1
 ; Function Attrs: nounwind
-declare i32 @llvm.eh.typeid.for(i8*) #0
+declare i32 @llvm.eh.typeid.for(ptr) #0
 
-declare i8* @__cxa_begin_catch(i8*)
+declare ptr @__cxa_begin_catch(ptr)
 declare void @__cxa_end_catch()
-declare i8* @__cxa_get_exception_ptr(i8*)
+declare ptr @__cxa_get_exception_ptr(ptr)
 declare void @_ZSt9terminatev()
 ; Function Attrs: nounwind
-declare void @llvm.memcpy.p0i8.p0i8.i32(i8* noalias nocapture writeonly, i8* noalias nocapture readonly, i32, i1 immarg) #0
+declare void @llvm.memcpy.p0.p0.i32(ptr noalias nocapture writeonly, ptr noalias nocapture readonly, i32, i1 immarg) #0
 ; Function Attrs: nounwind
-declare void @llvm.memmove.p0i8.p0i8.i32(i8* nocapture, i8* nocapture readonly, i32, i1 immarg) #0
+declare void @llvm.memmove.p0.p0.i32(ptr nocapture, ptr nocapture readonly, i32, i1 immarg) #0
 ; Function Attrs: nounwind
-declare void @llvm.memset.p0i8.i32(i8* nocapture writeonly, i8, i32, i1 immarg) #0
+declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg) #0
 
 attributes #0 = { nounwind }
 attributes #1 = { noreturn }

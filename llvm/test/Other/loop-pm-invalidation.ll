@@ -2,18 +2,18 @@
 ;
 ; Check that we always nuke the LPM stuff when the loops themselves are
 ; invalidated.
-; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=0 -debug-pass-manager -aa-pipeline= %s 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager -aa-pipeline= %s 2>&1 \
 ; RUN:     -passes='loop(no-op-loop),invalidate<loops>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-LOOP-INV
 ;
 ; If we ended up building the standard analyses, their invalidation should nuke
 ; stuff as well.
-; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=0 -debug-pass-manager %s -aa-pipeline= 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0 -debug-pass-manager %s -aa-pipeline= 2>&1 \
 ; RUN:     -passes='loop(no-op-loop),invalidate<scalar-evolution>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SCEV-INV
 ;
 ; Also provide a test that can delete loops after populating analyses for them.
-; RUN: opt -disable-output -disable-verify -verify-cfg-preserved=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
+; RUN: opt -disable-output -disable-verify -verify-analysis-invalidation=0  -debug-pass-manager %s -aa-pipeline= 2>&1 \
 ; RUN:     -passes='loop(no-op-loop,loop-deletion),invalidate<scalar-evolution>,loop(no-op-loop)' \
 ; RUN:     | FileCheck %s --check-prefix=CHECK-SCEV-INV-AFTER-DELETE
 
@@ -44,7 +44,7 @@ entry:
   ret void
 }
 
-define void @one_loop(i1* %ptr) {
+define void @one_loop(ptr %ptr) {
 ; CHECK-LOOP-INV: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: DominatorTreeAnalysis
@@ -93,14 +93,14 @@ entry:
   br label %l0.header
 
 l0.header:
-  %flag0 = load volatile i1, i1* %ptr
+  %flag0 = load volatile i1, ptr %ptr
   br i1 %flag0, label %l0.header, label %exit
 
 exit:
   ret void
 }
 
-define void @nested_loops(i1* %ptr) {
+define void @nested_loops(ptr %ptr) {
 ; CHECK-LOOP-INV: Running pass: LoopSimplifyPass
 ; CHECK-LOOP-INV-NEXT: Running analysis: LoopAnalysis
 ; CHECK-LOOP-INV-NEXT: Running analysis: DominatorTreeAnalysis
@@ -158,11 +158,11 @@ l.0.header:
   br label %l.0.0.header
 
 l.0.0.header:
-  %flag.0.0 = load volatile i1, i1* %ptr
+  %flag.0.0 = load volatile i1, ptr %ptr
   br i1 %flag.0.0, label %l.0.0.header, label %l.0.latch
 
 l.0.latch:
-  %flag.0 = load volatile i1, i1* %ptr
+  %flag.0 = load volatile i1, ptr %ptr
   br i1 %flag.0, label %l.0.header, label %exit
 
 exit:

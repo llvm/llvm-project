@@ -107,6 +107,24 @@ public:
                          CompletionRequest &request) override;
 
 protected:
+  /// Method that can be optionally overriden by subclasses to get notified
+  /// whenever an expression has been evaluated. The params of this method
+  /// include the inputs and outputs of the expression evaluation.
+  ///
+  /// Note: meta commands that start with : are not covered by this method.
+  ///
+  /// \return
+  ///   An \a Error object that, if it is a failure, aborts the regular
+  ///   REPL expression result handling.
+  virtual llvm::Error
+  OnExpressionEvaluated(const ExecutionContext &exe_ctx, llvm::StringRef code,
+                        const EvaluateExpressionOptions &expr_options,
+                        lldb::ExpressionResults execution_results,
+                        const lldb::ValueObjectSP &result_valobj_sp,
+                        const Status &error) {
+    return llvm::Error::success();
+  }
+
   static int CalculateActualIndentation(const StringList &lines);
 
   // Subclasses should override these functions to implement a functional REPL.

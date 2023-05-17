@@ -1,8 +1,30 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{compile} | %{run}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{compile} | %{run}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext --dlopen=%mlir_runner_utils | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #DCSR = #sparse_tensor.encoding<{dimLevelType = ["compressed", "compressed"]}>
 
@@ -35,6 +57,8 @@
 }
 
 module {
+  func.func private @printMemrefF64(%ptr : tensor<*xf64>)
+
   // Scales a sparse matrix into a new sparse matrix.
   func.func @matrix_scale(%arga: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %s = arith.constant 2.0 : f64
@@ -54,8 +78,7 @@ module {
   }
 
   // Scales a sparse matrix in place.
-  func.func @matrix_scale_inplace(%argx: tensor<?x?xf64, #DCSR>
-                             {linalg.inplaceable = true}) -> tensor<?x?xf64, #DCSR> {
+  func.func @matrix_scale_inplace(%argx: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %s = arith.constant 2.0 : f64
     %0 = linalg.generic #trait_scale_inpl
       outs(%argx: tensor<?x?xf64, #DCSR>) {
@@ -68,7 +91,7 @@ module {
 
   // Adds two sparse matrices element-wise into a new sparse matrix.
   func.func @matrix_add(%arga: tensor<?x?xf64, #DCSR>,
-                   %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
+                        %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #DCSR>
@@ -86,7 +109,7 @@ module {
 
   // Multiplies two sparse matrices element-wise into a new sparse matrix.
   func.func @matrix_mul(%arga: tensor<?x?xf64, #DCSR>,
-                   %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
+                        %argb: tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?xf64, #DCSR>
@@ -104,13 +127,9 @@ module {
 
   // Dump a sparse matrix.
   func.func @dump(%arg0: tensor<?x?xf64, #DCSR>) {
-    %d0 = arith.constant 0.0 : f64
-    %c0 = arith.constant 0 : index
     %dm = sparse_tensor.convert %arg0 : tensor<?x?xf64, #DCSR> to tensor<?x?xf64>
-    %0 = bufferization.to_memref %dm : memref<?x?xf64>
-    %1 = vector.transfer_read %0[%c0, %c0], %d0: memref<?x?xf64>, vector<4x8xf64>
-    vector.print %1 : vector<4x8xf64>
-    memref.dealloc %0 : memref<?x?xf64>
+    %u = tensor.cast %dm : tensor<?x?xf64> to tensor<*xf64>
+    call @printMemrefF64(%u) : (tensor<*xf64>) -> ()
     return
   }
 
@@ -129,27 +148,47 @@ module {
          [6.0, 5.0, 4.0, 3.0, 2.0, 1.0 ]
     > : tensor<4x8xf64>
     %sm1 = sparse_tensor.convert %m1 : tensor<4x8xf64> to tensor<?x?xf64, #DCSR>
+    // TODO: Use %sm1 when we support sparse tensor copies.
+    %sm1_dup = sparse_tensor.convert %m1 : tensor<4x8xf64> to tensor<?x?xf64, #DCSR>
     %sm2 = sparse_tensor.convert %m2 : tensor<4x8xf64> to tensor<?x?xf64, #DCSR>
 
     // Call sparse matrix kernels.
     %0 = call @matrix_scale(%sm1)
       : (tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR>
-    %1 = call @matrix_scale_inplace(%sm1)
+    %1 = call @matrix_scale_inplace(%sm1_dup)
       : (tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR>
-    %2 = call @matrix_add(%sm1, %sm2)
+    %2 = call @matrix_add(%1, %sm2)
       : (tensor<?x?xf64, #DCSR>, tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR>
-    %3 = call @matrix_mul(%sm1, %sm2)
+    %3 = call @matrix_mul(%1, %sm2)
       : (tensor<?x?xf64, #DCSR>, tensor<?x?xf64, #DCSR>) -> tensor<?x?xf64, #DCSR>
 
     //
     // Verify the results.
     //
-    // CHECK:      ( ( 2, 4, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 6 ), ( 0, 0, 8, 0, 10, 0, 0, 12 ), ( 14, 0, 16, 18, 0, 0, 0, 0 ) )
-    // CHECK-NEXT: ( ( 6, 0, 0, 0, 0, 0, 0, 5 ), ( 4, 0, 0, 0, 0, 0, 3, 0 ), ( 0, 2, 0, 0, 0, 0, 0, 1 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ) )
-    // CHECK-NEXT: ( ( 2, 4, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 6 ), ( 0, 0, 8, 0, 10, 0, 0, 12 ), ( 14, 0, 16, 18, 0, 0, 0, 0 ) )
-    // CHECK-NEXT: ( ( 2, 4, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 6 ), ( 0, 0, 8, 0, 10, 0, 0, 12 ), ( 14, 0, 16, 18, 0, 0, 0, 0 ) )
-    // CHECK-NEXT: ( ( 8, 4, 0, 0, 0, 0, 0, 5 ), ( 4, 0, 0, 0, 0, 0, 3, 6 ), ( 0, 2, 8, 0, 10, 0, 0, 13 ), ( 14, 0, 16, 18, 0, 0, 0, 0 ) )
-    // CHECK-NEXT: ( ( 12, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ), ( 0, 0, 0, 0, 0, 0, 0, 12 ), ( 0, 0, 0, 0, 0, 0, 0, 0 ) )
+    // CHECK:      {{\[}}[1,   2,   0,   0,   0,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   3],
+    // CHECK-NEXT: [0,   0,   4,   0,   5,   0,   0,   6],
+    // CHECK-NEXT: [7,   0,   8,   9,   0,   0,   0,   0]]
+    // CHECK:      {{\[}}[6,   0,   0,   0,   0,   0,   0,   5],
+    // CHECK-NEXT: [4,   0,   0,   0,   0,   0,   3,   0],
+    // CHECK-NEXT: [0,   2,   0,   0,   0,   0,   0,   1],
+    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   0]]
+    // CHECK:      {{\[}}[2,   4,   0,   0,   0,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   6],
+    // CHECK-NEXT: [0,   0,   8,   0,   10,   0,   0,   12],
+    // CHECK-NEXT: [14,   0,   16,   18,   0,   0,   0,   0]]
+    // CHECK:      {{\[}}[2,   4,   0,   0,   0,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   6],
+    // CHECK-NEXT: [0,   0,   8,   0,   10,   0,   0,   12],
+    // CHECK-NEXT: [14,   0,   16,   18,   0,   0,   0,   0]]
+    // CHECK:      {{\[}}[8,   4,   0,   0,   0,   0,   0,   5],
+    // CHECK-NEXT: [4,   0,   0,   0,   0,   0,   3,   6],
+    // CHECK-NEXT: [0,   2,   8,   0,   10,   0,   0,   13],
+    // CHECK-NEXT: [14,   0,   16,   18,   0,   0,   0,   0]]
+    // CHECK:      {{\[}}[12,   0,   0,   0,   0,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   0],
+    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   12],
+    // CHECK-NEXT: [0,   0,   0,   0,   0,   0,   0,   0]]
     //
     call @dump(%sm1) : (tensor<?x?xf64, #DCSR>) -> ()
     call @dump(%sm2) : (tensor<?x?xf64, #DCSR>) -> ()
@@ -159,11 +198,12 @@ module {
     call @dump(%3) : (tensor<?x?xf64, #DCSR>) -> ()
 
     // Release the resources.
-    sparse_tensor.release %sm1 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %sm2 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %0 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %2 : tensor<?x?xf64, #DCSR>
-    sparse_tensor.release %3 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %sm1 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %sm1_dup : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %sm2 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %0 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %2 : tensor<?x?xf64, #DCSR>
+    bufferization.dealloc_tensor %3 : tensor<?x?xf64, #DCSR>
     return
   }
 }

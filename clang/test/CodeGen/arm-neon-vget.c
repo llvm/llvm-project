@@ -4,7 +4,7 @@
 // RUN:   -mfloat-abi soft \
 // RUN:   -target-feature +soft-float-abi \
 // RUN:   -ffreestanding \
-// RUN:   -disable-O0-optnone -emit-llvm -w -o - %s | opt -S -mem2reg | FileCheck %s
+// RUN:   -disable-O0-optnone -emit-llvm -w -o - %s | opt -S -passes=mem2reg | FileCheck %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target
 

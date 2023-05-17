@@ -86,7 +86,7 @@ struct thread_func_info_t {
 };
 
 // call the void* start_routine(void*);
-static DWORD __thread_func_wrapper(LPVOID lpParameter) {
+static DWORD WINAPI __thread_func_wrapper(LPVOID lpParameter) {
   struct thread_func_info_t* function_information;
   function_information = (struct thread_func_info_t*)lpParameter;
   function_information->start_routine(function_information->arg);
@@ -104,7 +104,8 @@ static int pthread_create(pthread_t *thread, void *attr,
   info->arg = arg;
   pthread = CreateThread(NULL, 0, __thread_func_wrapper, info, 0, NULL);
   if (pthread == NULL) {
-    fprintf(stderr, "CreateThread() failed: Error #%u.\n", GetLastError());
+    fprintf(stderr, "CreateThread() failed: Error #%u.\n",
+            (unsigned) GetLastError());
     exit(1);
   }
   *thread = pthread;
@@ -116,12 +117,13 @@ static int pthread_join(pthread_t thread, void **retval) {
   rc = WaitForSingleObject(thread, INFINITE);
   if (rc == WAIT_FAILED) {
     fprintf(stderr, "WaitForSingleObject() failed: Error #%u.\n",
-            GetLastError());
+            (unsigned) GetLastError());
     exit(1);
   }
   rc = CloseHandle(thread);
   if (rc == 0) {
-    fprintf(stderr, "CloseHandle() failed: Error #%u.\n", GetLastError());
+    fprintf(stderr, "CloseHandle() failed: Error #%u.\n",
+            (unsigned) GetLastError());
     exit(1);
   }
   return 0;

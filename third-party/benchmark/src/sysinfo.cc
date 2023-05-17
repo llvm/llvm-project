@@ -12,6 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#if defined(_MSC_VER)
+// FIXME: This must be defined before any other includes to disable deprecation
+// warnings for use of codecvt from C++17. We should remove our reliance on
+// the deprecated functionality instead.
+#define _SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING
+#endif
+
 #include "internal_macros.h"
 
 #ifdef BENCHMARK_OS_WINDOWS

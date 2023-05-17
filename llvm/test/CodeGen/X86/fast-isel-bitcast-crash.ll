@@ -15,8 +15,7 @@
 define <8 x i16> @bitcast_crash(i32 %arg, <8 x i16> %x, i1 %c) {
 ; CHECK-LABEL: bitcast_crash:
 ; CHECK:       # %bb.0: # %bb
-; CHECK-NEXT:    movl %edi, %eax
-; CHECK-NEXT:    movq %rax, %xmm1
+; CHECK-NEXT:    movd %edi, %xmm1
 ; CHECK-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,1,0,1]
 ; CHECK-NEXT:    testb $1, %sil
 ; CHECK-NEXT:    je .LBB0_2

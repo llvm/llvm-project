@@ -15,10 +15,10 @@ entry:
 ; PPC64-NOT: stdu 1, -{{[0-9]+}}(1)
 ; PPC64: blr
 
-define i8* @smallstack() nounwind {
+define ptr @smallstack() nounwind {
 entry:
  %0 = alloca i8, i32 4
-       ret i8* %0
+       ret ptr %0
 }
 ; PPC32-LABEL: smallstack:
 ; PPC32: stwu 1, -16(1)
@@ -27,10 +27,10 @@ entry:
 ; PPC64-NOT: stdu 1, -{{[0-9]+}}(1)
 ; PPC64: blr
 
-define i8* @bigstack() nounwind {
+define ptr @bigstack() nounwind {
 entry:
  %0 = alloca i8, i32 290
-       ret i8* %0
+       ret ptr %0
 }
 ; PPC32-LABEL: bigstack:
 ; PPC32: stwu 1, -304(1)

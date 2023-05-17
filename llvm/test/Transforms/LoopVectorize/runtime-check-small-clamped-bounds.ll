@@ -10,17 +10,17 @@
 ;        runtime checks.
 
 ; The relevant bounds for %gep.A are [%A, %A+4).
-define void @load_clamped_index(i32* %A, i32* %B, i32 %N) {
+define void @load_clamped_index(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @load_clamped_index(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[A2:%.*]] = ptrtoint i32* [[A:%.*]] to i64
-; CHECK-NEXT:    [[B1:%.*]] = ptrtoint i32* [[B:%.*]] to i64
+; CHECK-NEXT:    [[A2:%.*]] = ptrtoint ptr [[A:%.*]] to i64
+; CHECK-NEXT:    [[B1:%.*]] = ptrtoint ptr [[B:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
-; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 3
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[B1]], [[A2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
@@ -31,20 +31,18 @@ define void @load_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = urem i32 [[TMP13]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[TMP14]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, i32* [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP16]] to <2 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, <2 x i32>* [[TMP17]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[TMP13]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[TMP19]], i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i32* [[TMP20]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP18]], <2 x i32>* [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = urem i32 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -54,14 +52,14 @@ define void @load_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CLAMPED_INDEX:%.*]] = urem i32 [[IV]], 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[CLAMPED_INDEX]]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP_A]], align 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED_INDEX]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LV]], 10
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[IV]]
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[GEP_B]], align 4
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[IV]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP7:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP2:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -71,11 +69,11 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %clamped.index = urem i32 %iv, 4
-  %gep.A = getelementptr inbounds i32, i32* %A, i32 %clamped.index
-  %lv = load i32, i32* %gep.A
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %clamped.index
+  %lv = load i32, ptr %gep.A
   %add = add i32 %lv, 10
-  %gep.B = getelementptr inbounds i32, i32* %B, i32 %iv
-  store i32 %add, i32* %gep.B
+  %gep.B = getelementptr inbounds i32, ptr %B, i32 %iv
+  store i32 %add, ptr %gep.B
   %iv.next = add nuw nsw i32 %iv, 1
   %cond = icmp eq i32 %iv.next, %N
   br i1 %cond, label %exit, label %loop
@@ -85,17 +83,17 @@ exit:
 }
 
 ; The relevant bounds for %gep.A are [%A, %A+4).
-define void @store_clamped_index(i32* %A, i32* %B, i32 %N) {
+define void @store_clamped_index(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @store_clamped_index(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[B2:%.*]] = ptrtoint i32* [[B:%.*]] to i64
-; CHECK-NEXT:    [[A1:%.*]] = ptrtoint i32* [[A:%.*]] to i64
+; CHECK-NEXT:    [[B2:%.*]] = ptrtoint ptr [[B:%.*]] to i64
+; CHECK-NEXT:    [[A1:%.*]] = ptrtoint ptr [[A:%.*]] to i64
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
-; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 3
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_MEMCHECK:%.*]]
 ; CHECK:       vector.memcheck:
 ; CHECK-NEXT:    [[TMP2:%.*]] = sub i64 [[A1]], [[B2]]
 ; CHECK-NEXT:    [[DIFF_CHECK:%.*]] = icmp ult i64 [[TMP2]], 8
@@ -106,20 +104,18 @@ define void @store_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP13:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP14:%.*]] = urem i32 [[TMP13]], 4
-; CHECK-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[TMP13]]
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i32, i32* [[TMP15]], i32 0
-; CHECK-NEXT:    [[TMP17:%.*]] = bitcast i32* [[TMP16]] to <2 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, <2 x i32>* [[TMP17]], align 4
-; CHECK-NEXT:    [[TMP18:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
-; CHECK-NEXT:    [[TMP19:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[TMP14]]
-; CHECK-NEXT:    [[TMP20:%.*]] = getelementptr inbounds i32, i32* [[TMP19]], i32 0
-; CHECK-NEXT:    [[TMP21:%.*]] = bitcast i32* [[TMP20]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP18]], <2 x i32>* [[TMP21]], align 4
+; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP4:%.*]] = urem i32 [[TMP3]], 4
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[TMP5]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP6]], align 4
+; CHECK-NEXT:    [[TMP7:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[TMP4]]
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i32, ptr [[TMP8]], i32 0
+; CHECK-NEXT:    store <2 x i32> [[TMP7]], ptr [[TMP9]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP22:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP22]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP13:![0-9]+]]
+; CHECK-NEXT:    [[TMP10:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP10]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -129,14 +125,14 @@ define void @store_clamped_index(i32* %A, i32* %B, i32 %N) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CLAMPED_INDEX:%.*]] = urem i32 [[IV]], 4
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, i32* [[B]], i32 [[IV]]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP_B]], align 4
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B]], i32 [[IV]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_B]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LV]], 10
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[CLAMPED_INDEX]]
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[GEP_A]], align 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED_INDEX]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP14:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -146,11 +142,11 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %clamped.index = urem i32 %iv, 4
-  %gep.B = getelementptr inbounds i32, i32* %B, i32 %iv
-  %lv = load i32, i32* %gep.B
+  %gep.B = getelementptr inbounds i32, ptr %B, i32 %iv
+  %lv = load i32, ptr %gep.B
   %add = add i32 %lv, 10
-  %gep.A = getelementptr inbounds i32, i32* %A, i32 %clamped.index
-  store i32 %add, i32* %gep.A
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %clamped.index
+  store i32 %add, ptr %gep.A
   %iv.next = add nuw nsw i32 %iv, 1
   %cond = icmp eq i32 %iv.next, %N
   br i1 %cond, label %exit, label %loop
@@ -159,21 +155,21 @@ exit:
   ret void
 }
 
-define void @clamped_index_dependence_non_clamped(i32* %A, i32* %B, i32 %N) {
+define void @clamped_index_dependence_non_clamped(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @clamped_index_dependence_non_clamped(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, i32* [[B:%.*]], i32 [[IV]]
-; CHECK-NEXT:    [[LV:%.*]] = load i32, i32* [[GEP_B]], align 4
-; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[IV]]
-; CHECK-NEXT:    [[LV_A:%.*]] = load i32, i32* [[GEP_A_1]], align 4
+; CHECK-NEXT:    [[GEP_B:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[LV:%.*]] = load i32, ptr [[GEP_B]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[IV]]
+; CHECK-NEXT:    [[LV_A:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LV]], [[LV_A]]
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CLAMPED_INDEX:%.*]] = urem i32 [[IV_NEXT]], 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[CLAMPED_INDEX]]
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[GEP_A]], align 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED_INDEX]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -184,16 +180,16 @@ entry:
 
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
-  %gep.B = getelementptr inbounds i32, i32* %B, i32 %iv
-  %lv = load i32, i32* %gep.B
-  %gep.A.1 = getelementptr inbounds i32, i32* %A, i32 %iv
-  %lv.A = load i32, i32* %gep.A.1
+  %gep.B = getelementptr inbounds i32, ptr %B, i32 %iv
+  %lv = load i32, ptr %gep.B
+  %gep.A.1 = getelementptr inbounds i32, ptr %A, i32 %iv
+  %lv.A = load i32, ptr %gep.A.1
   %add = add i32 %lv, %lv.A
 
   %iv.next = add nuw nsw i32 %iv, 1
   %clamped.index = urem i32 %iv.next, 4
-  %gep.A = getelementptr inbounds i32, i32* %A, i32 %clamped.index
-  store i32 %add, i32* %gep.A
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %clamped.index
+  store i32 %add, ptr %gep.A
   %cond = icmp eq i32 %iv.next, %N
   br i1 %cond, label %exit, label %loop
 
@@ -201,20 +197,20 @@ exit:
   ret void
 }
 
-define void @clamped_index_dependence_clamped_index(i32* %A, i32* %B, i32 %N) {
+define void @clamped_index_dependence_clamped_index(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @clamped_index_dependence_clamped_index(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    br label [[LOOP:%.*]]
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CLAMPED_INDEX_1:%.*]] = urem i32 [[IV]], 4
-; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[CLAMPED_INDEX_1]]
-; CHECK-NEXT:    [[LV_A:%.*]] = load i32, i32* [[GEP_A_1]], align 4
+; CHECK-NEXT:    [[GEP_A_1:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[CLAMPED_INDEX_1]]
+; CHECK-NEXT:    [[LV_A:%.*]] = load i32, ptr [[GEP_A_1]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LV_A]], 10
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
 ; CHECK-NEXT:    [[CLAMPED_INDEX:%.*]] = urem i32 [[IV_NEXT]], 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[CLAMPED_INDEX]]
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[GEP_A]], align 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED_INDEX]]
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N:%.*]]
 ; CHECK-NEXT:    br i1 [[COND]], label [[EXIT:%.*]], label [[LOOP]]
 ; CHECK:       exit:
@@ -226,14 +222,14 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %clamped.index.1 = urem i32 %iv, 4
-  %gep.A.1 = getelementptr inbounds i32, i32* %A, i32 %clamped.index.1
-  %lv.A = load i32, i32* %gep.A.1
+  %gep.A.1 = getelementptr inbounds i32, ptr %A, i32 %clamped.index.1
+  %lv.A = load i32, ptr %gep.A.1
   %add = add i32 %lv.A, 10
 
   %iv.next = add nuw nsw i32 %iv, 1
   %clamped.index = urem i32 %iv.next, 4
-  %gep.A = getelementptr inbounds i32, i32* %A, i32 %clamped.index
-  store i32 %add, i32* %gep.A
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %clamped.index
+  store i32 %add, ptr %gep.A
   %cond = icmp eq i32 %iv.next, %N
   br i1 %cond, label %exit, label %loop
 
@@ -241,33 +237,31 @@ exit:
   ret void
 }
 
-define void @clamped_index_equal_dependence(i32* %A, i32* %B, i32 %N) {
+define void @clamped_index_equal_dependence(ptr %A, ptr %B, i32 %N) {
 ; CHECK-LABEL: @clamped_index_equal_dependence(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[N:%.*]], 2
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
 ; CHECK:       vector.scevcheck:
 ; CHECK-NEXT:    [[TMP0:%.*]] = add i32 [[N]], -1
-; CHECK-NEXT:    [[TMP7:%.*]] = icmp ugt i32 [[TMP0]], 3
-; CHECK-NEXT:    br i1 [[TMP7]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ugt i32 [[TMP0]], 3
+; CHECK-NEXT:    br i1 [[TMP1]], label [[SCALAR_PH]], label [[VECTOR_PH:%.*]]
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i32 [[N]], 2
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i32 [[N]], [[N_MOD_VF]]
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[TMP10:%.*]] = add i32 [[INDEX]], 0
-; CHECK-NEXT:    [[TMP11:%.*]] = urem i32 [[TMP10]], 4
-; CHECK-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i32, i32* [[A:%.*]], i32 [[TMP11]]
-; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i32, i32* [[TMP12]], i32 0
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast i32* [[TMP13]] to <2 x i32>*
-; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, <2 x i32>* [[TMP14]], align 4
-; CHECK-NEXT:    [[TMP15:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
-; CHECK-NEXT:    [[TMP16:%.*]] = bitcast i32* [[TMP13]] to <2 x i32>*
-; CHECK-NEXT:    store <2 x i32> [[TMP15]], <2 x i32>* [[TMP16]], align 4
+; CHECK-NEXT:    [[TMP2:%.*]] = add i32 [[INDEX]], 0
+; CHECK-NEXT:    [[TMP3:%.*]] = urem i32 [[TMP2]], 4
+; CHECK-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i32, ptr [[A:%.*]], i32 [[TMP3]]
+; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i32, ptr [[TMP4]], i32 0
+; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x i32>, ptr [[TMP5]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = add <2 x i32> [[WIDE_LOAD]], <i32 10, i32 10>
+; CHECK-NEXT:    store <2 x i32> [[TMP6]], ptr [[TMP5]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 2
-; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
-; CHECK-NEXT:    br i1 [[TMP17]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP15:![0-9]+]]
+; CHECK-NEXT:    [[TMP7:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]
+; CHECK-NEXT:    br i1 [[TMP7]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP5:![0-9]+]]
 ; CHECK:       middle.block:
 ; CHECK-NEXT:    [[CMP_N:%.*]] = icmp eq i32 [[N]], [[N_VEC]]
 ; CHECK-NEXT:    br i1 [[CMP_N]], label [[EXIT:%.*]], label [[SCALAR_PH]]
@@ -277,13 +271,13 @@ define void @clamped_index_equal_dependence(i32* %A, i32* %B, i32 %N) {
 ; CHECK:       loop:
 ; CHECK-NEXT:    [[IV:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
 ; CHECK-NEXT:    [[CLAMPED_INDEX:%.*]] = urem i32 [[IV]], 4
-; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, i32* [[A]], i32 [[CLAMPED_INDEX]]
-; CHECK-NEXT:    [[LV_A:%.*]] = load i32, i32* [[GEP_A]], align 4
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[CLAMPED_INDEX]]
+; CHECK-NEXT:    [[LV_A:%.*]] = load i32, ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[ADD:%.*]] = add i32 [[LV_A]], 10
 ; CHECK-NEXT:    [[IV_NEXT]] = add nuw nsw i32 [[IV]], 1
-; CHECK-NEXT:    store i32 [[ADD]], i32* [[GEP_A]], align 4
+; CHECK-NEXT:    store i32 [[ADD]], ptr [[GEP_A]], align 4
 ; CHECK-NEXT:    [[COND:%.*]] = icmp eq i32 [[IV_NEXT]], [[N]]
-; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP16:![0-9]+]]
+; CHECK-NEXT:    br i1 [[COND]], label [[EXIT]], label [[LOOP]], !llvm.loop [[LOOP6:![0-9]+]]
 ; CHECK:       exit:
 ; CHECK-NEXT:    ret void
 ;
@@ -293,12 +287,12 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   %clamped.index = urem i32 %iv, 4
-  %gep.A = getelementptr inbounds i32, i32* %A, i32 %clamped.index
-  %lv.A = load i32, i32* %gep.A
+  %gep.A = getelementptr inbounds i32, ptr %A, i32 %clamped.index
+  %lv.A = load i32, ptr %gep.A
   %add = add i32 %lv.A, 10
 
   %iv.next = add nuw nsw i32 %iv, 1
-  store i32 %add, i32* %gep.A
+  store i32 %add, ptr %gep.A
   %cond = icmp eq i32 %iv.next, %N
   br i1 %cond, label %exit, label %loop
 

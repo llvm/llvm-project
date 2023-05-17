@@ -6,7 +6,7 @@
 define i32 @geti() nounwind readonly {
 entry:
 ; CHECK: lw ${{[0-9]+}}, %gp_rel(i)($gp)
-  %0 = load i32, i32* @i, align 4
+  %0 = load i32, ptr @i, align 4
   ret i32 %0
 }
 

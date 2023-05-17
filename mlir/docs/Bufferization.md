@@ -30,40 +30,38 @@ and with aggressive in-place bufferization.
 
 One-Shot Bufferize is:
 
-* **Monolithic**: A single MLIR pass does the entire
-work, whereas the previous bufferization in MLIR was split across multiple
-passes residing in different dialects. In One-Shot Bufferize,
-`BufferizableOpInterface` implementations are spread across different dialects.
+*   **Monolithic**: A single MLIR pass does the entire work, whereas the
+    previous bufferization in MLIR was split across multiple passes residing in
+    different dialects. In One-Shot Bufferize, `BufferizableOpInterface`
+    implementations are spread across different dialects.
 
-* A **whole-function at a time analysis**. In-place bufferization decisions are
-made by analyzing SSA use-def chains on tensors. Op interface implementations
-not only provide the rewrite logic from tensor ops to memref ops, but also
-helper methods for One-Shot Bufferize's analysis to query information about an
-op's bufferization/memory semantics.
+*   A **whole-function at a time analysis**. In-place bufferization decisions
+    are made by analyzing SSA use-def chains on tensors. Op interface
+    implementations not only provide the rewrite logic from tensor ops to memref
+    ops, but also helper methods for One-Shot Bufferize's analysis to query
+    information about an op's bufferization/memory semantics.
 
-* **Extensible** via an op interface: All
-ops that implement `BufferizableOpInterface` can be bufferized.
+*   **Extensible** via an op interface: All ops that implement
+    `BufferizableOpInterface` can be bufferized.
 
-* **2-Pass**:
-Bufferization is internally broken down into 2 steps: First, analyze the entire
-IR and make bufferization decisions. Then, bufferize (rewrite) the IR. The
-analysis has access to exact SSA use-def information. It incrementally builds
-alias and equivalence sets and does not rely on a posteriori-alias analysis from
-preallocated memory.
+*   **2-Pass**: Bufferization is internally broken down into 2 steps: First,
+    analyze the entire IR and make bufferization decisions. Then, bufferize
+    (rewrite) the IR. The analysis has access to exact SSA use-def information.
+    It incrementally builds alias and equivalence sets and does not rely on a
+    posteriori-alias analysis from preallocated memory.
 
-* **Greedy**: Operations are analyzed one-by-one and it is
-decided on the spot whether a tensor OpOperand must be copied or not. Heuristics
-determine the order of analysis.
+*   **Greedy**: Operations are analyzed one-by-one and it is decided on the spot
+    whether a tensor OpOperand must be copied or not. Heuristics determine the
+    order of analysis.
 
-* **Modular**: The current One-Shot Analysis
-can be replaced with a different analysis. The result of the analysis are
-queried by the bufferization via `BufferizationState`, in particular
-`BufferizationState::isInPlace`. Any derived class of `BufferizationState` that
-implements a small number virtual functions can serve as a custom analysis. It
-is even possible to run One-Shot Bufferize without any analysis
-(`AlwaysCopyBufferizationState`), in which case One-Shot Bufferize behaves
-exactly like the old dialect conversion-based bufferization (i.e., copy every
-buffer before writing to it).
+*   **Modular**: The current One-Shot Analysis can be replaced with a different
+    analysis. The result of the analysis are queried by the bufferization via
+    `AnalysisState`, in particular `AnalysisState::isInPlace`. Any derived class
+    of `AnalysisState` that implements a small number virtual functions can
+    serve as a custom analysis. It is even possible to run One-Shot Bufferize
+    without any analysis (`AlwaysCopyAnalysisState`), in which case One-Shot
+    Bufferize behaves exactly like the old dialect conversion-based
+    bufferization (i.e., copy every buffer before writing to it).
 
 To reduce complexity, One-Shot Bufferize should be
 [run after other transformations](https://llvm.discourse.group/t/rfc-linalg-on-tensors-update-and-comprehensive-bufferization-rfc/3373),
@@ -319,10 +317,9 @@ When bufferizing the above IR, One-Shot Bufferize inserts a `to_memref` ops with
 dynamic offset and strides:
 
 ```mlir
-#map = affine_map<(d0, d1)[s0, s1, s2] -> (d0 * s1 + s0 + d1 * s2)>
 %0 = "my_dialect.unbufferizable_op(%t) : (tensor<?x?xf32>) -> (tensor<?x?xf32>)
-%0_m = bufferization.to_memref %0 : memref<?x?xf32, #map>
-%1 = memref.load %0_m[%idx1, %idx2] : memref<?x?xf32, #map>
+%0_m = bufferization.to_memref %0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+%1 = memref.load %0_m[%idx1, %idx2] : memref<?x?xf32, strided<[?, ?], offset: ?>>
 ```
 
 All users of `%0` have fully dynamic layout maps. This ensures that the
@@ -372,9 +369,9 @@ must at least implement the following interface methods.
 *   `bufferRelation`: Return `BufferRelation::Equivalent` if the given OpResult
     is the exact same memref as the aliasing OpOperand after bufferization (in
     case of in-place bufferization). Otherwise, (e.g., they overlap but are not
-    necessarily the exact same memrefs), `BufferRelation::None` should be
+    necessarily the exact same memrefs), `BufferRelation::Unknown` should be
     returned. Additional buffer relations will be added in the future, but
-    `BufferRelation::None` is always safe.
+    `BufferRelation::Unknown` is always safe.
 *   `bufferize`: Rewrite the op with the given rewriter. Ops should be replaced
     with `bufferization::replaceOpWithBufferizedValues`.
 

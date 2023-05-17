@@ -5,7 +5,7 @@
 ; An unreachable default destination is ignored and no compare and branch
 ; is generated for the default values.
 
-define void @foo(i32 %x, i32* %to) {
+define void @foo(i32 %x, ptr %to) {
 ; CHECK-LABEL: foo:
 ; CHECK: movl 4(%esp), [[REG:%e[a-z]{2}]]
 ; CHECK-NEXT: jmpl *.LJTI0_0(,[[REG]],4)
@@ -22,19 +22,19 @@ entry:
     i32 5, label %bb4
   ]
 bb0:
-  store i32 0, i32* %to
+  store i32 0, ptr %to
   br label %exit
 bb1:
-  store i32 1, i32* %to
+  store i32 1, ptr %to
   br label %exit
 bb2:
-  store i32 2, i32* %to
+  store i32 2, ptr %to
   br label %exit
 bb3:
-  store i32 3, i32* %to
+  store i32 3, ptr %to
   br label %exit
 bb4:
-  store i32 4, i32* %to
+  store i32 4, ptr %to
   br label %exit
 exit:
   ret void
@@ -53,7 +53,7 @@ default:
 
 ; Check if branch probabilities are correctly assigned to the jump table.
 
-define void @bar(i32 %x, i32* %to) {
+define void @bar(i32 %x, ptr %to) {
 ; CHECK-JT-PROB-LABEL: bar:
 ; CHECK-JT-PROB: successors: %bb.6(0x12492492), %bb.8(0x6db6db6e)
 ; CHECK-JT-PROB: successors: %bb.1(0x15555555), %bb.2(0x15555555), %bb.3(0x15555555), %bb.4(0x15555555), %bb.5(0x2aaaaaab)
@@ -68,22 +68,22 @@ entry:
     i32 5, label %bb4
   ], !prof !1
 bb0:
-  store i32 0, i32* %to
+  store i32 0, ptr %to
   br label %exit
 bb1:
-  store i32 1, i32* %to
+  store i32 1, ptr %to
   br label %exit
 bb2:
-  store i32 2, i32* %to
+  store i32 2, ptr %to
   br label %exit
 bb3:
-  store i32 3, i32* %to
+  store i32 3, ptr %to
   br label %exit
 bb4:
-  store i32 4, i32* %to
+  store i32 4, ptr %to
   br label %exit
 default:
-  store i32 5, i32* %to
+  store i32 5, ptr %to
   br label %exit
 exit:
   ret void

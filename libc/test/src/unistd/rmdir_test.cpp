@@ -6,13 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "src/errno/libc_errno.h"
 #include "src/sys/stat/mkdir.h"
 #include "src/unistd/rmdir.h"
 #include "test/ErrnoSetterMatcher.h"
-#include "utils/UnitTest/Test.h"
-#include "utils/testutils/FDReader.h"
+#include "test/UnitTest/Test.h"
 
-#include <errno.h>
 #include <fcntl.h>
 
 TEST(LlvmLibcRmdirTest, CreateAndRemove) {

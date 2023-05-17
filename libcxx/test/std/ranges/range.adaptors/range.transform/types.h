@@ -9,6 +9,8 @@
 #ifndef TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TRANSFORM_TYPES_H
 #define TEST_STD_RANGES_RANGE_ADAPTORS_RANGE_TRANSFORM_TYPES_H
 
+#include <cstddef>
+
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "test_range.h"
@@ -106,7 +108,7 @@ constexpr bool operator==(int* lhs, const RandomAccessIter &rhs) { return base(r
 struct SizedSentinelNotConstView : std::ranges::view_base {
   ForwardIter begin() const;
   int *end() const;
-  size_t size();
+  std::size_t size();
 };
 // TODO: remove these bogus operators
 bool operator==(const ForwardIter &lhs, int* rhs);

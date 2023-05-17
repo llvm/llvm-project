@@ -16,7 +16,7 @@
 //  @a = alias i8, i8 *@g  <-- @a is now an alias to base object @g
 //  @b = alias i8, i8 *@g
 //
-// Eventually this file will implement full alias canonicalation, so that
+// Eventually this file will implement full alias canonicalization, so that
 // all aliasees are private anonymous values. E.g.
 //  @a = alias i8, i8 *@g
 //  @g = global i8 0
@@ -31,8 +31,6 @@
 
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/InitializePasses.h"
-#include "llvm/Pass.h"
 
 using namespace llvm;
 
@@ -65,23 +63,6 @@ static bool canonicalizeAliases(Module &M) {
     canonicalizeAlias(&GA, Changed);
   return Changed;
 }
-
-// Legacy pass that canonicalizes aliases.
-class CanonicalizeAliasesLegacyPass : public ModulePass {
-
-public:
-  /// Pass identification, replacement for typeid
-  static char ID;
-
-  /// Specify pass name for debug output
-  StringRef getPassName() const override { return "Canonicalize Aliases"; }
-
-  explicit CanonicalizeAliasesLegacyPass() : ModulePass(ID) {}
-
-  bool runOnModule(Module &M) override { return canonicalizeAliases(M); }
-};
-char CanonicalizeAliasesLegacyPass::ID = 0;
-
 } // anonymous namespace
 
 PreservedAnalyses CanonicalizeAliasesPass::run(Module &M,
@@ -91,14 +72,3 @@ PreservedAnalyses CanonicalizeAliasesPass::run(Module &M,
 
   return PreservedAnalyses::none();
 }
-
-INITIALIZE_PASS_BEGIN(CanonicalizeAliasesLegacyPass, "canonicalize-aliases",
-                      "Canonicalize aliases", false, false)
-INITIALIZE_PASS_END(CanonicalizeAliasesLegacyPass, "canonicalize-aliases",
-                    "Canonicalize aliases", false, false)
-
-namespace llvm {
-ModulePass *createCanonicalizeAliasesPass() {
-  return new CanonicalizeAliasesLegacyPass();
-}
-} // namespace llvm

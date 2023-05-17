@@ -190,3 +190,19 @@ namespace PR10864 {
     test_asm_tied(1.f); // expected-note {{instantiation of}}
   }
 }
+
+namespace TestAsmCleanup {
+struct S {
+  operator int() const { return 1; }
+  ~S();
+};
+
+template <class T>
+void foo() {
+  __asm__ __volatile__("%[i]"
+                       :
+                       : [i] "r"(-S()));
+}
+
+void test() { foo<void>(); }
+} // namespace TestAsmCleanup

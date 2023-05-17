@@ -4,7 +4,7 @@
 target datalayout = "e-p:32:32:32-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:32:32-f32:32:32-f64:32:32-v64:64:64-v128:128:128-a0:0:64"
 target triple = "armv6-elf"
 
-define i32 @file_read_actor(i32* nocapture %desc, i32* %page, i32 %offset, i32 %size) nounwind optsize {
+define i32 @file_read_actor(ptr nocapture %desc, ptr %page, i32 %offset, i32 %size) nounwind optsize {
 entry:
 	br i1 undef, label %fault_in_pages_writeable.exit, label %bb5.i
 
@@ -26,8 +26,8 @@ bb2:		; preds = %fault_in_pages_writeable.exit
 	unreachable
 
 bb3:		; preds = %fault_in_pages_writeable.exit
-	%1 = tail call  i32 @__copy_to_user(i8* undef, i8* undef, i32 undef) nounwind		; <i32> [#uses=0]
+	%1 = tail call  i32 @__copy_to_user(ptr undef, ptr undef, i32 undef) nounwind		; <i32> [#uses=0]
 	unreachable
 }
 
-declare i32 @__copy_to_user(i8*, i8*, i32)
+declare i32 @__copy_to_user(ptr, ptr, i32)

@@ -35,14 +35,25 @@ namespace llvm {
 /// This adapter class provides a way to keep a set of things that also has the
 /// property of a deterministic iteration order. The order of iteration is the
 /// order of insertion.
+///
+/// The key and value types are derived from the Set and Vector types
+/// respectively. This allows the vector-type operations and set-type operations
+/// to have different types. In particular, this is useful when storing pointers
+/// as "Foo *" values but looking them up as "const Foo *" keys.
+///
+/// No constraint is placed on the key and value types, although it is assumed
+/// that value_type can be converted into key_type for insertion. Users must be
+/// aware of any loss of information in this conversion. For example, setting
+/// value_type to float and key_type to int can produce very surprising results,
+/// but it is not explicitly disallowed.
 template <typename T, typename Vector = std::vector<T>,
           typename Set = DenseSet<T>>
 class SetVector {
 public:
-  using value_type = T;
-  using key_type = T;
-  using reference = T&;
-  using const_reference = const T&;
+  using value_type = typename Vector::value_type;
+  using key_type = typename Set::key_type;
+  using reference = value_type &;
+  using const_reference = const value_type &;
   using set_type = Set;
   using vector_type = Vector;
   using iterator = typename vector_type::const_iterator;
@@ -60,7 +71,7 @@ public:
     insert(Start, End);
   }
 
-  ArrayRef<T> getArrayRef() const { return vector_; }
+  ArrayRef<value_type> getArrayRef() const { return vector_; }
 
   /// Clear the SetVector and return the underlying vector.
   Vector takeVector() {
@@ -119,13 +130,13 @@ public:
   }
 
   /// Return the first element of the SetVector.
-  const T &front() const {
+  const value_type &front() const {
     assert(!empty() && "Cannot call front() on empty SetVector!");
     return vector_.front();
   }
 
   /// Return the last element of the SetVector.
-  const T &back() const {
+  const value_type &back() const {
     assert(!empty() && "Cannot call back() on empty SetVector!");
     return vector_.back();
   }
@@ -168,18 +179,11 @@ public:
   /// \returns an iterator pointing to the next element that followed the
   /// element erased. This is the end of the SetVector if the last element is
   /// erased.
-  iterator erase(iterator I) {
+  iterator erase(const_iterator I) {
     const key_type &V = *I;
     assert(set_.count(V) && "Corrupted SetVector instances!");
     set_.erase(V);
-
-    // FIXME: No need to use the non-const iterator when built with
-    // std::vector.erase(const_iterator) as defined in C++11. This is for
-    // compatibility with non-standard libstdc++ up to 4.8 (fixed in 4.9).
-    auto NI = vector_.begin();
-    std::advance(NI, std::distance<iterator>(NI, I));
-
-    return vector_.erase(NI);
+    return vector_.erase(I);
   }
 
   /// Remove items from the set vector based on a predicate function.
@@ -229,8 +233,8 @@ public:
     vector_.pop_back();
   }
 
-  LLVM_NODISCARD T pop_back_val() {
-    T Ret = back();
+  [[nodiscard]] value_type pop_back_val() {
+    value_type Ret = back();
     pop_back();
     return Ret;
   }

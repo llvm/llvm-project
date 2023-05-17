@@ -13,10 +13,9 @@
 ; CHECK:           movq    -16(%rbp), %rax
 ; CHECK:           movb    $0, (%rax)
 
-define i32* @test(i32* %a) personality i8* bitcast (i32 (...)* @__CxxFrameHandler3 to i8*) {
+define ptr @test(ptr %a) personality ptr @__CxxFrameHandler3 {
 entry:
   %call = call i32 @f()
-  %p = bitcast i32* %a to i8*
   br i1 undef, label %if.end, label %if.else
 
 if.else:                                          ; preds = %entry
@@ -36,10 +35,9 @@ catch.dispatch:                                   ; preds = %cond.false.i
   %tmp0 = catchswitch within none [label %catch] unwind label %ehcleanup
 
 catch:                                            ; preds = %catch.dispatch
-  %tmp1 = catchpad within %tmp0 [i8* null, i32 64, i8* null]
-  %p.0 = getelementptr inbounds i8, i8* %p, i64 0
-  store i8 0, i8* %p.0, align 8
-  invoke void @_CxxThrowException(i8* null, %eh.ThrowInfo* null) [ "funclet"(token %tmp1) ]
+  %tmp1 = catchpad within %tmp0 [ptr null, i32 64, ptr null]
+  store i8 0, ptr %a, align 8
+  invoke void @_CxxThrowException(ptr null, ptr null) [ "funclet"(token %tmp1) ]
           to label %noexc unwind label %ehcleanup
 
 noexc:                                            ; preds = %catch
@@ -53,12 +51,11 @@ invoke.cont:                                      ; preds = %cond.false.i, %cond
 
 if.end:                                           ; preds = %invoke.cont, %entry
   %state.0 = phi i32 [ %tmp3, %invoke.cont ], [ 4, %entry ]
-  %p.1 = getelementptr inbounds i8, i8* %p, i64 0
-  invoke void @g(i8* %p.1, i32 %state.0)
+  invoke void @g(ptr %a, i32 %state.0)
           to label %invoke.cont.1 unwind label %ehcleanup
 
 invoke.cont.1:                                    ; preds = %if.end
-  ret i32* %a
+  ret ptr %a
 
 ehcleanup:                                        ; preds = %if.end, %catch, %catch.dispatch
   %tmp4 = cleanuppad within none []
@@ -69,7 +66,7 @@ ehcleanup:                                        ; preds = %if.end, %catch, %ca
 
 declare i32 @__CxxFrameHandler3(...)
 
-declare void @_CxxThrowException(i8*, %eh.ThrowInfo*)
+declare void @_CxxThrowException(ptr, ptr)
 
 declare i32 @f()
-declare void @g(i8*, i32)
+declare void @g(ptr, i32)

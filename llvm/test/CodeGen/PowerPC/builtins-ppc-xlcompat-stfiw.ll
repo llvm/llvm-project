@@ -12,8 +12,8 @@
 ; RUN: llc -verify-machineinstrs -mtriple=powerpc64-unknown-aix \
 ; RUN:   -mcpu=pwr8 < %s | FileCheck %s
 
-declare void @llvm.ppc.stfiw(i8*, double)
-define dso_local void @test_stfiw(i32* %cia, double %da) {
+declare void @llvm.ppc.stfiw(ptr, double)
+define dso_local void @test_stfiw(ptr %cia, double %da) {
 ; CHECK-LABEL: test_stfiw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxsiwx 1, 0, 3
@@ -29,12 +29,11 @@ define dso_local void @test_stfiw(i32* %cia, double %da) {
 ; CHECK-32BIT-NEXT:    stfiwx 1, 0, 3
 ; CHECK-32BIT-NEXT:    blr
 entry:
-  %0 = bitcast i32* %cia to i8*
-  tail call void @llvm.ppc.stfiw(i8* %0, double %da)
+  tail call void @llvm.ppc.stfiw(ptr %cia, double %da)
   ret void
 }
 
-define dso_local void @test_xl_stfiw(i32* %cia, double %da) {
+define dso_local void @test_xl_stfiw(ptr %cia, double %da) {
 ; CHECK-LABEL: test_xl_stfiw:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    stxsiwx 1, 0, 3
@@ -50,7 +49,6 @@ define dso_local void @test_xl_stfiw(i32* %cia, double %da) {
 ; CHECK-32BIT-NEXT:    stfiwx 1, 0, 3
 ; CHECK-32BIT-NEXT:    blr
 entry:
-  %0 = bitcast i32* %cia to i8*
-  tail call void @llvm.ppc.stfiw(i8* %0, double %da)
+  tail call void @llvm.ppc.stfiw(ptr %cia, double %da)
   ret void
 }

@@ -45,27 +45,27 @@
 ; Function Attrs: nounwind
 define void @cfoo() {
 entry:
-  %0 = load <16 x i8>, <16 x i8>* @vc, align 8
+  %0 = load <16 x i8>, ptr @vc, align 8
   %vecinit30 = shufflevector <16 x i8> %0, <16 x i8> undef, <16 x i32> <i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5, i32 5>
-  store <16 x i8> %vecinit30, <16 x i8>* @vcr, align 8
+  store <16 x i8> %vecinit30, ptr @vcr, align 8
   ret void
 }
 
 ; Function Attrs: nounwind
 define void @sfoo() {
 entry:
-  %0 = load <8 x i16>, <8 x i16>* @vs, align 8
+  %0 = load <8 x i16>, ptr @vs, align 8
   %vecinit14 = shufflevector <8 x i16> %0, <8 x i16> undef, <8 x i32> <i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6, i32 6>
-  store <8 x i16> %vecinit14, <8 x i16>* @vsr, align 8
+  store <8 x i16> %vecinit14, ptr @vsr, align 8
   ret void
 }
 
 ; Function Attrs: nounwind
 define void @ifoo() {
 entry:
-  %0 = load <4 x i32>, <4 x i32>* @vi, align 8
+  %0 = load <4 x i32>, ptr @vi, align 8
   %vecinit6 = shufflevector <4 x i32> %0, <4 x i32> undef, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
-  store <4 x i32> %vecinit6, <4 x i32>* @vir, align 8
+  store <4 x i32> %vecinit6, ptr @vir, align 8
   ret void
 }
 

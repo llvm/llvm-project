@@ -9,38 +9,34 @@ target triple = "i686-unknown-linux-gnu"
 %struct.Foo.1 = type { i32 }
 %struct.Foo.2 = type { i32 }
 
-@foo = common global i32 (%struct.Foo.2*)* null, align 8
+@foo = common global ptr null, align 8
 
-define i32 @func4(%struct.Foo.1* byval(%struct.Foo.1) %p) {
+define i32 @func4(ptr byval(%struct.Foo.1) %p) {
 entry:
-  %gep = getelementptr inbounds %struct.Foo.1, %struct.Foo.1* %p, i32 0, i32 0
-  %v = load i32, i32* %gep
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
-define i32 @func5(%struct.Foo.1* byval(%struct.Foo.1) %p) {
+define i32 @func5(ptr byval(%struct.Foo.1) %p) {
 entry:
-  %gep = getelementptr inbounds %struct.Foo.1, %struct.Foo.1* %p, i32 0, i32 0
-  %v = load i32, i32* %gep
+  %v = load i32, ptr %p
   ret i32 %v
 }
 
-define i32 @bar(%struct.Foo.2* %f2) {
+define i32 @bar(ptr %f2) {
 entry:
-  %tmp = load i32 (%struct.Foo.2*)*, i32 (%struct.Foo.2*)** @foo, align 8
-  %call = call i32 %tmp(%struct.Foo.2* byval(%struct.Foo.2) %f2), !prof !1
+  %tmp = load ptr, ptr @foo, align 8
+  %call = call i32 %tmp(ptr byval(%struct.Foo.2) %f2), !prof !1
   ret i32 %call
 }
 
 !1 = !{!"VP", i32 0, i64 3000, i64 7651369219802541373, i64 1000, i64 3667884930908592509, i64 1000}
 
 
-; CHECK: define i32 @bar(%struct.Foo.2* %f2)
-;     Cast %struct.Foo.2* to %struct.Foo.1* and use byval(%struct.Foo.2).
-; CHECK: %[[cast:[^ ]*]] = bitcast %struct.Foo.2* %f2 to %struct.Foo.1*
-; CHECK: call i32 @func4(%struct.Foo.1* byval(%struct.Foo.1) %[[cast]])
+; CHECK: define i32 @bar(ptr %f2)
+;     Use byval(%struct.Foo.2).
+; CHECK: call i32 @func4(ptr byval(%struct.Foo.2) %f2)
 ;     Same but when callee doesn't have explicit byval type.
-; CHECK: %[[cast:[^ ]*]] = bitcast %struct.Foo.2* %f2 to %struct.Foo.1*
-; CHECK: call i32 @func5(%struct.Foo.1* byval(%struct.Foo.1) %[[cast]])
+; CHECK: call i32 @func5(ptr byval(%struct.Foo.2) %f2)
 ;     Original call stays the same.
-; CHECK: call i32 %tmp(%struct.Foo.2* byval(%struct.Foo.2) %f2)
+; CHECK: call i32 %tmp(ptr byval(%struct.Foo.2) %f2)

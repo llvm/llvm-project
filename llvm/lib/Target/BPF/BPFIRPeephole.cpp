@@ -14,6 +14,7 @@
 #include "BPF.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
@@ -56,37 +57,32 @@ static bool BPFIRPeepholeImpl(Function &F) {
         ToErase = nullptr;
       }
 
-      if (auto *Call = dyn_cast<CallInst>(&I)) {
-        if (auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand())) {
-          if (!GV->getName().equals("llvm.stacksave"))
-            continue;
-          if (!Call->hasOneUser())
-            continue;
-          auto *Inst = cast<Instruction>(*Call->user_begin());
-          LLVM_DEBUG(dbgs() << "Remove:"; I.dump());
-          LLVM_DEBUG(dbgs() << "Remove:"; Inst->dump(); dbgs() << '\n');
-          Changed = true;
-          Inst->eraseFromParent();
-          ToErase = &I;
-        }
+      if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
+        if (II->getIntrinsicID() != Intrinsic::stacksave)
+          continue;
+        if (!II->hasOneUser())
+          continue;
+        auto *Inst = cast<Instruction>(*II->user_begin());
+        LLVM_DEBUG(dbgs() << "Remove:"; I.dump());
+        LLVM_DEBUG(dbgs() << "Remove:"; Inst->dump(); dbgs() << '\n');
+        Changed = true;
+        Inst->eraseFromParent();
+        ToErase = &I;
         continue;
       }
 
       if (auto *LD = dyn_cast<LoadInst>(&I)) {
         if (!LD->hasOneUser())
           continue;
-        auto *Call = dyn_cast<CallInst>(*LD->user_begin());
-        if (!Call)
+        auto *II = dyn_cast<IntrinsicInst>(*LD->user_begin());
+        if (!II)
           continue;
-        auto *GV = dyn_cast<GlobalValue>(Call->getCalledOperand());
-        if (!GV)
-          continue;
-        if (!GV->getName().equals("llvm.stackrestore"))
+        if (II->getIntrinsicID() != Intrinsic::stackrestore)
           continue;
         LLVM_DEBUG(dbgs() << "Remove:"; I.dump());
-        LLVM_DEBUG(dbgs() << "Remove:"; Call->dump(); dbgs() << '\n');
+        LLVM_DEBUG(dbgs() << "Remove:"; II->dump(); dbgs() << '\n');
         Changed = true;
-        Call->eraseFromParent();
+        II->eraseFromParent();
         ToErase = &I;
       }
     }

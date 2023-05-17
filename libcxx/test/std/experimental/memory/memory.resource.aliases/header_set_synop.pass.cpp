@@ -8,6 +8,8 @@
 
 // UNSUPPORTED: c++03
 
+// XFAIL: availability-aligned_allocation-missing
+
 // <experimental/set>
 
 // namespace std { namespace experimental { namespace pmr {
@@ -20,6 +22,8 @@
 //     ::std::multiset<V, Compare, polymorphic_allocator<V>>
 //
 // }}} // namespace std::experimental::pmr
+
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_DISABLE_DEPRECATION_WARNINGS
 
 #include <experimental/set>
 #include <experimental/memory_resource>

@@ -9,6 +9,6 @@ define i32 @get_a() {
 ; CHECK-NEXT:    movl a(%rip), %eax
 ; CHECK-NEXT:    retq
 entry:
-	%tmp1 = load i32, i32* @a, align 4
+	%tmp1 = load i32, ptr @a, align 4
 	ret i32 %tmp1
 }

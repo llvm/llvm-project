@@ -13,7 +13,7 @@ define fp128 @get_fp128() {
 ; CHECK-NEXT:    movaps my_fp128(%rip), %xmm0
 ; CHECK-NEXT:    retq
 entry:
-  %0 = load fp128, fp128* @my_fp128, align 16
+  %0 = load fp128, ptr @my_fp128, align 16
   ret fp128 %0
 }
 
@@ -27,8 +27,8 @@ define fp128 @TestLoadExtend(fp128 %x, i32 %n) {
 ; CHECK-NEXT:    jmp __extendsftf2@PLT # TAILCALL
 entry:
   %idxprom = sext i32 %n to i64
-  %arrayidx = getelementptr inbounds [2 x float], [2 x float]* @TestLoadExtend.data, i64 0, i64 %idxprom
-  %0 = load float, float* %arrayidx, align 4
+  %arrayidx = getelementptr inbounds [2 x float], ptr @TestLoadExtend.data, i64 0, i64 %idxprom
+  %0 = load float, ptr %arrayidx, align 4
   %conv = fpext float %0 to fp128
   ret fp128 %conv
 }

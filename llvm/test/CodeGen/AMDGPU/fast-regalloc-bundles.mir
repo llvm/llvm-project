@@ -12,11 +12,11 @@ body: |
   bb.0:
     ; GCN-LABEL: name: fast_regalloc_bundle_handling
     ; GCN: renamable $vgpr0 = IMPLICIT_DEF
-    ; GCN: renamable $vgpr1 = IMPLICIT_DEF
-    ; GCN: renamable $vgpr0 = BUNDLE implicit killed renamable $vgpr0, implicit killed renamable $vgpr1, implicit $exec {
-    ; GCN:   renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
-    ; GCN: }
-    ; GCN: S_ENDPGM 0, implicit killed renamable $vgpr0
+    ; GCN-NEXT: renamable $vgpr1 = IMPLICIT_DEF
+    ; GCN-NEXT: renamable $vgpr0 = BUNDLE implicit killed renamable $vgpr0, implicit killed renamable $vgpr1, implicit $exec {
+    ; GCN-NEXT:   renamable $vgpr0 = V_ADD_U32_e32 $vgpr0, $vgpr1, implicit $exec
+    ; GCN-NEXT: }
+    ; GCN-NEXT: S_ENDPGM 0, implicit killed renamable $vgpr0
     %0 = IMPLICIT_DEF
     %1 = IMPLICIT_DEF
     %2 = BUNDLE implicit %0, implicit %1, implicit $exec {

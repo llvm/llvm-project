@@ -20,7 +20,7 @@ if(Terminfo_LIBRARIES)
   list(APPEND CMAKE_REQUIRED_LIBRARIES ${Terminfo_LIBRARIES})
   check_c_source_compiles("
     int setupterm(char *term, int filedes, int *errret);
-    int main() { return setupterm(0, 0, 0); }"
+    int main(void) { return setupterm(0, 0, 0); }"
     Terminfo_LINKABLE)
   cmake_pop_check_state()
 endif()

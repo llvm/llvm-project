@@ -59,33 +59,33 @@
 ; YAML-NEXT:     DebugLoc:        { File: /tmp/s.c, Line: 2, Column: 10 }
 ; YAML-NEXT: ...
 
-define i32 @arg(i32* %p, i32 %i) {
+define i32 @arg(ptr %p, i32 %i) {
 entry:
-  store i32 %i, i32* %p
-  %load = load i32, i32* %p
+  store i32 %i, ptr %p
+  %load = load i32, ptr %p
   ret i32 %load
 }
 
-define i32 @const(i32* %p) {
+define i32 @const(ptr %p) {
 entry:
-  store i32 4, i32* %p
-  %load = load i32, i32* %p
+  store i32 4, ptr %p
+  %load = load i32, ptr %p
   ret i32 %load
 }
 
-define i32 @inst(i32* %p) {
+define i32 @inst(ptr %p) {
 entry:
-  %load1 = load i32, i32* %p
-  %load = load i32, i32* %p
+  %load1 = load i32, ptr %p
+  %load = load i32, ptr %p
   %add = add i32 %load1, %load
   ret i32 %add
 }
 
-define i32 @may_alias(i32* %p, i32* %r) !dbg !7 {
+define i32 @may_alias(ptr %p, ptr %r) !dbg !7 {
 entry:
-  %load1 = load i32, i32* %p, !tbaa !13, !dbg !9
-  store i32 4, i32* %r, !tbaa !13, !dbg !10
-  %load = load i32, i32* %p, !tbaa !13, !dbg !11
+  %load1 = load i32, ptr %p, !tbaa !13, !dbg !9
+  store i32 4, ptr %r, !tbaa !13, !dbg !10
+  %load = load i32, ptr %p, !tbaa !13, !dbg !11
   %add = add i32 %load1, %load
   ret i32 %add
 }

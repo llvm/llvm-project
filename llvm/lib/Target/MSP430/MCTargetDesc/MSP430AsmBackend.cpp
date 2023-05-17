@@ -81,9 +81,9 @@ public:
       {"fixup_8",             0,  8, 0},
       {"fixup_sym_diff",      0, 32, 0},
     };
-    static_assert((array_lengthof(Infos)) == MSP430::NumTargetFixupKinds,
+    static_assert((std::size(Infos)) == MSP430::NumTargetFixupKinds,
                   "Not all fixup kinds added to Infos array");
-  
+
     if (Kind < FirstTargetFixupKind)
       return MCAsmBackend::getFixupKindInfo(Kind);
   

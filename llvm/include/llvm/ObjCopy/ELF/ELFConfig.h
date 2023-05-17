@@ -9,7 +9,6 @@
 #ifndef LLVM_OBJCOPY_ELF_ELFCONFIG_H
 #define LLVM_OBJCOPY_ELF_ELFCONFIG_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Object/ELFTypes.h"
 #include <vector>

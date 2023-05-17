@@ -90,39 +90,39 @@ test()
     }
 }
 
-constexpr size_t triangle(size_t n) { return n*(n+1)/2; }
+constexpr std::size_t triangle(size_t n) { return n*(n+1)/2; }
 
 //  Basic sanity
 TEST_CONSTEXPR_CXX20 void
 basic_tests()
 {
     {
-    std::array<size_t, 10> v;
+    std::array<std::size_t, 10> v;
     std::fill(v.begin(), v.end(), 3);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, size_t{50});
-    for (size_t i = 0; i < v.size(); ++i)
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, std::size_t{50});
+    for (std::size_t i = 0; i < v.size(); ++i)
         assert(v[i] == 50 + (i + 1) * 4);
     }
 
     {
-    std::array<size_t, 10> v;
+    std::array<std::size_t, 10> v;
     std::iota(v.begin(), v.end(), 0);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, size_t{30});
-    for (size_t i = 0; i < v.size(); ++i)
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, std::size_t{30});
+    for (std::size_t i = 0; i < v.size(); ++i)
         assert(v[i] == 30 + triangle(i) + i + 1);
     }
 
     {
-    std::array<size_t, 10> v;
+    std::array<std::size_t, 10> v;
     std::iota(v.begin(), v.end(), 1);
-    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, size_t{40});
-    for (size_t i = 0; i < v.size(); ++i)
+    std::transform_inclusive_scan(v.begin(), v.end(), v.begin(), std::plus<>(), add_one{}, std::size_t{40});
+    for (std::size_t i = 0; i < v.size(); ++i)
         assert(v[i] == 40 + triangle(i + 1) + i + 1);
     }
 
     {
-    std::array<size_t, 0> v, res;
-    std::transform_inclusive_scan(v.begin(), v.end(), res.begin(), std::plus<>(), add_one{}, size_t{1});
+    std::array<std::size_t, 0> v, res;
+    std::transform_inclusive_scan(v.begin(), v.end(), res.begin(), std::plus<>(), add_one{}, std::size_t{1});
     assert(res.empty());
     }
 
@@ -130,13 +130,13 @@ basic_tests()
     {
     std::array<unsigned char, 10> v;
     std::iota(v.begin(), v.end(), static_cast<unsigned char>(1));
-    std::array<size_t, 10> res;
-    std::transform_inclusive_scan(v.begin(), v.end(), res.begin(), std::multiplies<>(), add_one{}, size_t{1});
+    std::array<std::size_t, 10> res;
+    std::transform_inclusive_scan(v.begin(), v.end(), res.begin(), std::multiplies<>(), add_one{}, std::size_t{1});
 
     assert(res.size() == 10);
-    size_t j = 2;
+    std::size_t j = 2;
     assert(res[0] == 2);
-    for (size_t i = 1; i < res.size(); ++i)
+    for (std::size_t i = 1; i < res.size(); ++i)
     {
         j *= i + 2;
         assert(res[i] == j);

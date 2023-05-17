@@ -1,7 +1,8 @@
-# RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=instructions -mtriple=riscv32 --test %python --test-arg %p/instr-reduce.py %s -o %t
-# RUN: cat %t | FileCheck --match-full-lines %s
-
 # REQUIRES: riscv-registered-target
+# RUN: llvm-reduce -abort-on-invalid-reduction --delta-passes=instructions -mtriple=riscv32 --test FileCheck --test-arg --check-prefix=CHECK-INTERESTINGNESS --test-arg %s --test-arg --input-file %s -o %t
+# RUN: FileCheck --match-full-lines %s < %t
+
+# CHECK-INTERESTINGNESS: %{{[0-9]+}}:gpr = ADDI %{{[0-9]+}}, 5
 
 # Verify that after reduction the following instruction sequence remains. The
 # interestingness-test 'instr-reduce.py' matches a '%[0-9]+:gpr = ADDI %[0-9]+, 5'

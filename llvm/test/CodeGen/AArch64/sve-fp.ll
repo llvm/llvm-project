@@ -494,7 +494,7 @@ define <vscale x 2 x double> @frsqrts_d(<vscale x 2 x double> %a, <vscale x 2 x 
 
 %complex = type { { double, double } }
 
-define void @scalar_to_vector(%complex* %outval, <vscale x 2 x i1> %pred, <vscale x 2 x double> %in1, <vscale x 2 x double> %in2) {
+define void @scalar_to_vector(ptr %outval, <vscale x 2 x i1> %pred, <vscale x 2 x double> %in1, <vscale x 2 x double> %in2) {
 ; CHECK-LABEL: scalar_to_vector:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    faddv d0, p0, z0.d
@@ -502,12 +502,11 @@ define void @scalar_to_vector(%complex* %outval, <vscale x 2 x i1> %pred, <vscal
 ; CHECK-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-NEXT:    str q0, [x0]
 ; CHECK-NEXT:    ret
-  %realp = getelementptr inbounds %complex, %complex* %outval, i64 0, i32 0, i32 0
-  %imagp = getelementptr inbounds %complex, %complex* %outval, i64 0, i32 0, i32 1
+  %imagp = getelementptr inbounds %complex, ptr %outval, i64 0, i32 0, i32 1
   %1 = call double @llvm.aarch64.sve.faddv.nxv2f64(<vscale x 2 x i1> %pred, <vscale x 2 x double> %in1)
   %2 = call double @llvm.aarch64.sve.faddv.nxv2f64(<vscale x 2 x i1> %pred, <vscale x 2 x double> %in2)
-  store double %1, double* %realp, align 8
-  store double %2, double* %imagp, align 8
+  store double %1, ptr %outval, align 8
+  store double %2, ptr %imagp, align 8
   ret void
 }
 

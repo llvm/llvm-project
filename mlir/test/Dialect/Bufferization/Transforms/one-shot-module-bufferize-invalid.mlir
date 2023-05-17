@@ -1,16 +1,5 @@
 // RUN: mlir-opt %s -allow-unregistered-dialect -one-shot-bufferize="bufferize-function-boundaries=1" -split-input-file -verify-diagnostics
 
-func.func private @foo() -> tensor<?xf32>
-
-func.func @bar() -> tensor<?xf32> {
-  %foo = constant @foo : () -> (tensor<?xf32>)
-// expected-error @+1 {{expected a CallOp}}
-  %res = call_indirect %foo() : () -> (tensor<?xf32>)
-  return %res : tensor<?xf32>
-}
-
-// -----
-
 // expected-error @+2 {{cannot bufferize bodiless function that returns a tensor}}
 // expected-error @+1 {{failed to bufferize op}}
 func.func private @foo() -> tensor<?xf32>
@@ -44,10 +33,10 @@ func.func @scf_if_not_equivalent(
   } else {
     // This buffer aliases, but it is not equivalent.
     %t2 = tensor.extract_slice %t1 [%idx] [%idx] [1] : tensor<?xf32> to tensor<?xf32>
-    // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+    // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
     scf.yield %t2 : tensor<?xf32>
   }
-  // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+  // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
   return %r : tensor<?xf32>
 }
 
@@ -61,7 +50,7 @@ func.func @scf_if_not_aliasing(
   } else {
     // This buffer aliases.
     %t2 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
-    // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+    // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
     scf.yield %t2 : tensor<?xf32>
   }
   %f = tensor.extract %r[%idx] : tensor<?xf32>
@@ -158,7 +147,7 @@ func.func @scf_while_non_equiv_yield(%arg0: tensor<5xi1>,
 
 // -----
 
-func.func private @fun_with_side_effects(%A: tensor<?xf32> {bufferization.writable = true})
+func.func private @fun_with_side_effects(%A: tensor<?xf32>)
 
 func.func @foo(%A: tensor<?xf32> {bufferization.writable = true}) -> (tensor<?xf32>) {
   call @fun_with_side_effects(%A) : (tensor<?xf32>) -> ()
@@ -190,7 +179,7 @@ func.func @extract_slice_fun(%A : tensor<?xf32> {bufferization.writable = true})
   //     argument aliasing).
   %r0 = tensor.extract_slice %A[0][4][1] : tensor<?xf32> to tensor<4xf32>
 
-  // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+  // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
   return %r0: tensor<4xf32>
 }
 
@@ -203,7 +192,7 @@ func.func @scf_yield(%b : i1, %A : tensor<4xf32>, %B : tensor<4xf32>) -> tensor<
   } else {
     scf.yield %B : tensor<4xf32>
   }
-  // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+  // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
   return %r: tensor<4xf32>
 }
 
@@ -213,7 +202,7 @@ func.func @unknown_op(%A : tensor<4xf32>) -> tensor<4xf32>
 {
   // expected-error: @+1 {{op was not bufferized}}
   %r = "marklar"(%A) : (tensor<4xf32>) -> (tensor<4xf32>)
-  // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+  // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
   return %r: tensor<4xf32>
 }
 
@@ -223,7 +212,7 @@ func.func @mini_test_case1() -> tensor<10x20xf32> {
   %f0 = arith.constant 0.0 : f32
   %t = bufferization.alloc_tensor() : tensor<10x20xf32>
   %r = linalg.fill ins(%f0 : f32) outs(%t : tensor<10x20xf32>) -> tensor<10x20xf32>
-  // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+  // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
   return %r : tensor<10x20xf32>
 }
 
@@ -232,24 +221,21 @@ func.func @mini_test_case1() -> tensor<10x20xf32> {
 func.func @main() -> tensor<4xi32> {
   %r = scf.execute_region -> tensor<4xi32> {
     %A = arith.constant dense<[1, 2, 3, 4]> : tensor<4xi32>
-    // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+    // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
     scf.yield %A: tensor<4xi32>
   }
 
-  // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+  // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
   return %r: tensor<4xi32>
 }
 
 // -----
 
-func.func @to_memref_op_is_writing(
+func.func @to_memref_op_unsupported(
     %t1: tensor<?xf32> {bufferization.writable = true}, %idx1: index,
     %idx2: index, %idx3: index, %v1: vector<5xf32>) -> (vector<5xf32>, vector<5xf32>) {
-  // This is a RaW conflict because to_memref is an inplace write and %t1 is
-  // read further down. This will likely have to change with partial
-  // bufferization.
 
-  // expected-error @+1 {{input IR has RaW conflict}}
+  // expected-error @+1 {{to_memref ops are not supported by One-Shot Analysis}}
   %0 = bufferization.to_memref %t1 : memref<?xf32>
 
   // Read from both.
@@ -258,6 +244,16 @@ func.func @to_memref_op_is_writing(
   %r2 = vector.transfer_read %0[%idx3], %cst : memref<?xf32>, vector<5xf32>
 
   return %r1, %r2 : vector<5xf32>, vector<5xf32>
+}
+
+// -----
+
+func.func @to_tensor_op_unsupported(%m: memref<?xf32>, %idx: index) -> (f32) {
+  // expected-error @+1 {{to_tensor ops without `restrict` are not supported by One-Shot Analysis}}
+  %0 = bufferization.to_tensor %m : memref<?xf32>
+
+  %1 = tensor.extract %0[%idx] : tensor<?xf32>
+  return %1 : f32
 }
 
 // -----
@@ -275,7 +271,7 @@ func.func @call_to_unknown_tensor_returning_func(%t : tensor<?xf32>) {
 
 func.func @foo(%t : tensor<5xf32>) -> (tensor<5xf32>) {
   %0 = bufferization.alloc_tensor() : tensor<5xf32>
-  // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+  // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
   return %0 : tensor<5xf32>
 }
 
@@ -288,11 +284,11 @@ func.func @call_to_func_returning_non_equiv_tensor(%t : tensor<5xf32>) {
 
 // -----
 
-func.func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
-                                                 %idx2 : index) -> f32 {
+func.func @yield_alloc_dominance_test_1(%cst : f32, %idx : index,
+                                        %idx2 : index) -> f32 {
   %0 = scf.execute_region -> tensor<?xf32> {
     %1 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
-    // expected-error @+1 {{operand #0 of ReturnLike op does not satisfy destination passing style}}
+    // expected-error @+1 {{operand #0 may return/yield a new buffer allocation}}
     scf.yield %1 : tensor<?xf32>
   }
   %2 = tensor.insert %cst into %0[%idx] : tensor<?xf32>
@@ -302,15 +298,43 @@ func.func @destination_passing_style_dominance_test_1(%cst : f32, %idx : index,
 
 // -----
 
-func.func @destination_passing_style_dominance_test_2(%cst : f32, %idx : index,
-                                                 %idx2 : index) -> f32 {
+func.func @yield_alloc_dominance_test_2(%cst : f32, %idx : index,
+                                        %idx2 : index) -> f32 {
   %1 = bufferization.alloc_tensor(%idx) : tensor<?xf32>
 
   %0 = scf.execute_region -> tensor<?xf32> {
-    // This YieldOp is in destination-passing style, thus no error.
+    // This YieldOp returns a value that is defined in a parent block, thus
+    // no error.
     scf.yield %1 : tensor<?xf32>
   }
   %2 = tensor.insert %cst into %0[%idx] : tensor<?xf32>
   %r = tensor.extract %2[%idx2] : tensor<?xf32>
   return %r : f32
+}
+
+// -----
+
+func.func @copy_of_unranked_tensor(%t: tensor<*xf32>) -> tensor<*xf32> {
+  // Unranked tensor OpOperands always bufferize in-place. With this limitation,
+  // there is no way to bufferize this IR correctly.
+  // expected-error @+1 {{input IR has RaW conflict}}
+  func.call @maybe_writing_func(%t) : (tensor<*xf32>) -> ()
+  return %t : tensor<*xf32>
+}
+
+// This function may write to buffer(%ptr).
+func.func private @maybe_writing_func(%ptr : tensor<*xf32>)
+
+// -----
+
+func.func @regression_scf_while() {
+  %false = arith.constant false
+  %8 = bufferization.alloc_tensor() : tensor<10x10xf32>
+  scf.while (%arg0 = %8) : (tensor<10x10xf32>) -> () {
+    scf.condition(%false)
+  } do {
+    // expected-error @+1 {{Yield operand #0 is not equivalent to the corresponding iter bbArg}}
+    scf.yield %8 : tensor<10x10xf32>
+  }
+  return
 }

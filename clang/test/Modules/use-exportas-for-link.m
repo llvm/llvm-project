@@ -1,4 +1,4 @@
-// UNSUPPORTED: -zos, -aix
+// UNSUPPORTED: target={{.*}}-zos{{.*}}, target={{.*}}-aix{{.*}}
 // RUN: rm -rf %t
 // RUN: %clang_cc1 -emit-llvm -o - -fmodules-cache-path=%t -DA -fmodules -fimplicit-module-maps -F %S/Inputs/exportas-link %s | FileCheck --check-prefix=CHECK_A %s
 // CHECK_A: !llvm.linker.options = !{![[MODULE:[0-9]+]]}
@@ -31,15 +31,17 @@
 #endif
 
 // RUN: %clang_cc1 -emit-llvm -o - -fmodules-cache-path=%t -DE -fmodules -fimplicit-module-maps -F %S/Inputs/exportas-link %s | FileCheck --check-prefix=CHECK_E %s
-// CHECK_E: !llvm.linker.options = !{![[MODULE:[0-9]+]]}
-// CHECK_E: ![[MODULE]] = !{!"-framework", !"SomeKitCore"}
+// CHECK_E: !llvm.linker.options = !{![[MODULE1:[0-9]+]], ![[MODULE2:[0-9]+]]}
+// CHECK_E: ![[MODULE1]] = !{!"-framework", !"OtherKit"}
+// CHECK_E: ![[MODULE2]] = !{!"-framework", !"SomeKitCore"}
 #ifdef E
 @import OtherKit;
 #endif
 
 // RUN: %clang_cc1 -emit-llvm -o - -fmodules-cache-path=%t -DF -fmodules -fimplicit-module-maps -F %S/Inputs/exportas-link %s | FileCheck --check-prefix=CHECK_F %s
-// CHECK_F: !llvm.linker.options = !{![[MODULE:[0-9]+]]}
-// CHECK_F: ![[MODULE]] = !{!"-framework", !"SomeKit"}
+// CHECK_F: !llvm.linker.options = !{![[MODULE1:[0-9]+]], ![[MODULE2:[0-9]+]]}
+// CHECK_F: ![[MODULE1]] = !{!"-framework", !"OtherKit"}
+// CHECK_F: ![[MODULE2]] = !{!"-framework", !"SomeKit"}
 #ifdef F
 @import OtherKit;
 #endif

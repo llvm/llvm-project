@@ -13,6 +13,7 @@
 
 #include "ReduceArguments.h"
 #include "Delta.h"
+#include "Utils.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Instructions.h"
@@ -55,7 +56,8 @@ static bool shouldRemoveArguments(const Function &F) {
 
 /// Removes out-of-chunk arguments from functions, and modifies their calls
 /// accordingly. It also removes allocations of out-of-chunk arguments.
-static void extractArgumentsFromModule(Oracle &O, Module &Program) {
+static void extractArgumentsFromModule(Oracle &O, ReducerWorkItem &WorkItem) {
+  Module &Program = WorkItem.getModule();
   std::vector<Argument *> InitArgsToKeep;
   std::vector<Function *> Funcs;
   // Get inside-chunk arguments, as well as their parent function
@@ -79,7 +81,7 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
       if (!ArgsToKeep.count(&A)) {
         // By adding undesired arguments to the VMap, CloneFunction will remove
         // them from the resulting Function
-        VMap[&A] = UndefValue::get(A.getType());
+        VMap[&A] = getDefaultValue(A.getType());
         for (auto *U : A.users())
           if (auto *I = dyn_cast<Instruction>(*&U))
             InstToDelete.push_back(I);
@@ -89,7 +91,7 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
       if (!V)
         continue;
       auto *I = cast<Instruction>(V);
-      I->replaceAllUsesWith(UndefValue::get(I->getType()));
+      I->replaceAllUsesWith(getDefaultValue(I->getType()));
       if (!I->isTerminator())
         I->eraseFromParent();
     }
@@ -99,9 +101,9 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
       continue;
 
     std::set<int> ArgIndexesToKeep;
-    for (auto &Arg : enumerate(F->args()))
-      if (ArgsToKeep.count(&Arg.value()))
-        ArgIndexesToKeep.insert(Arg.index());
+    for (const auto &[Index, Arg] : enumerate(F->args()))
+      if (ArgsToKeep.count(&Arg))
+        ArgIndexesToKeep.insert(Index);
 
     auto *ClonedFunc = CloneFunction(F, VMap);
     // In order to preserve function order, we move Clone after old Function
@@ -118,6 +120,5 @@ static void extractArgumentsFromModule(Oracle &O, Module &Program) {
 }
 
 void llvm::reduceArgumentsDeltaPass(TestRunner &Test) {
-  outs() << "*** Reducing Arguments...\n";
-  runDeltaPass(Test, extractArgumentsFromModule);
+  runDeltaPass(Test, extractArgumentsFromModule, "Reducing Arguments");
 }

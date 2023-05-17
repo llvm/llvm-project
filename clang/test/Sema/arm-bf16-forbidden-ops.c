@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -triple aarch64 -target-feature +bf16 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -triple aarch64 -target-feature -bf16 %s
 
 __bf16 test_cast_from_float(float in) {
   return (__bf16)in; // expected-error {{cannot type-cast to __bf16}}

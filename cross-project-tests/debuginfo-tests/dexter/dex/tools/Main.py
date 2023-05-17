@@ -18,6 +18,7 @@ from dex.utils import PrettyOutput, Timer
 from dex.utils import ExtArgParse as argparse
 from dex.utils import get_root_directory
 from dex.utils.Exceptions import Error, ToolArgumentError
+from dex.utils.Logging import Logger
 from dex.utils.UnitTests import unit_tests_ok
 from dex.utils.Version import version
 from dex.utils import WorkingDirectory
@@ -145,6 +146,11 @@ def tool_main(context, tool, args):
             context.o.green('{}\n'.format(context.version))
             return ReturnCode.OK
 
+        if options.verbose:
+            context.logger.verbosity = 2
+        elif options.no_warnings:
+            context.logger.verbosity = 0
+
         if (options.unittest != 'off' and not unit_tests_ok(context)):
             raise Error('<d>unit test failures</>')
 
@@ -171,6 +177,7 @@ class Context(object):
 
     def __init__(self):
         self.o: PrettyOutput = None
+        self.logger: Logger = None
         self.working_directory: str = None
         self.options: dict = None
         self.version: str = None
@@ -182,6 +189,7 @@ def main() -> ReturnCode:
     context = Context()
 
     with PrettyOutput() as context.o:
+        context.logger = Logger(context.o)
         try:
             context.root_directory = get_root_directory()
             # Flag some strings for auto-highlighting.
@@ -192,8 +200,7 @@ def main() -> ReturnCode:
             module = _import_tool_module(tool_name)
             return tool_main(context, module.Tool(context), args)
         except Error as e:
-            context.o.auto(
-                '\nerror: {}\n'.format(str(e)), stream=PrettyOutput.stderr)
+            context.logger.error(str(e))
             try:
                 if context.options.error_debug:
                     raise

@@ -5,8 +5,8 @@
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-unknown-linux-gnu"
 
-define weak void @foo(i32* %p) {
-  store i32 5, i32* %p, align 4, !tbaa !0
+define weak void @foo(ptr %p) {
+  store i32 5, ptr %p, align 4, !tbaa !0
   ret void
 }
 

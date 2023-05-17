@@ -4,13 +4,13 @@
 ; Don't generate zero extension for the return value.
 ; CHECK-NOT: clrldi
 
-define zeroext i1 @foo(i32 signext %i, i32* %p) {
+define zeroext i1 @foo(i32 signext %i, ptr %p) {
 entry:
   %cmp = icmp eq i32 %i, 0
   br i1 %cmp, label %return, label %if.end
 
 if.end:
-  store i32 %i, i32* %p, align 4
+  store i32 %i, ptr %p, align 4
   br label %return
 
 return:

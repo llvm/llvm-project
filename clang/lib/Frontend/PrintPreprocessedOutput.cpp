@@ -146,7 +146,7 @@ public:
   void InclusionDirective(SourceLocation HashLoc, const Token &IncludeTok,
                           StringRef FileName, bool IsAngled,
                           CharSourceRange FilenameRange,
-                          Optional<FileEntryRef> File, StringRef SearchPath,
+                          OptionalFileEntryRef File, StringRef SearchPath,
                           StringRef RelativePath, const Module *Imported,
                           SrcMgr::CharacteristicKind FileType) override;
   void Ident(SourceLocation Loc, StringRef str) override;
@@ -389,15 +389,9 @@ void PrintPPOutputPPCallbacks::FileChanged(SourceLocation Loc,
 }
 
 void PrintPPOutputPPCallbacks::InclusionDirective(
-    SourceLocation HashLoc,
-    const Token &IncludeTok,
-    StringRef FileName,
-    bool IsAngled,
-    CharSourceRange FilenameRange,
-    Optional<FileEntryRef> File,
-    StringRef SearchPath,
-    StringRef RelativePath,
-    const Module *Imported,
+    SourceLocation HashLoc, const Token &IncludeTok, StringRef FileName,
+    bool IsAngled, CharSourceRange FilenameRange, OptionalFileEntryRef File,
+    StringRef SearchPath, StringRef RelativePath, const Module *Imported,
     SrcMgr::CharacteristicKind FileType) {
   // In -dI mode, dump #include directives prior to dumping their content or
   // interpretation.
@@ -669,7 +663,8 @@ void PrintPPOutputPPCallbacks::HandleWhitespaceBeforeTok(const Token &Tok,
   // them.
   if (Tok.is(tok::eof) ||
       (Tok.isAnnotation() && !Tok.is(tok::annot_header_unit) &&
-       !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end)))
+       !Tok.is(tok::annot_module_begin) && !Tok.is(tok::annot_module_end) &&
+       !Tok.is(tok::annot_repl_input_end)))
     return;
 
   // EmittedDirectiveOnThisLine takes priority over RequireSameLine.
@@ -825,6 +820,9 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
       // -traditional-cpp the lexer keeps /all/ whitespace, including comments.
       PP.Lex(Tok);
       continue;
+    } else if (Tok.is(tok::annot_repl_input_end)) {
+      PP.Lex(Tok);
+      continue;
     } else if (Tok.is(tok::eod)) {
       // Don't print end of directive tokens, since they are typically newlines
       // that mess up our line tracking. These come from unknown pre-processor
@@ -877,7 +875,7 @@ static void PrintPreprocessedTokens(Preprocessor &PP, Token &Tok,
     } else if (Tok.isLiteral() && !Tok.needsCleaning() &&
                Tok.getLiteralData()) {
       OS.write(Tok.getLiteralData(), Tok.getLength());
-    } else if (Tok.getLength() < llvm::array_lengthof(Buffer)) {
+    } else if (Tok.getLength() < std::size(Buffer)) {
       const char *TokPtr = Buffer;
       unsigned Len = PP.getSpelling(Tok, TokPtr);
       OS.write(TokPtr, Len);

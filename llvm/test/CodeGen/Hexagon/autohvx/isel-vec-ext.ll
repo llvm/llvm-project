@@ -6,22 +6,22 @@ target triple = "hexagon"
 ; CHECK-LABEL: danny:
 ; CHECK: vunpack
 ; CHECK-NOT: vinsert
-define void @danny(<16 x i16>* %a0, <16 x i32>* %a1) #0 {
+define void @danny(ptr %a0, ptr %a1) #0 {
 b2:
-  %v16 = load <16 x i16>, <16 x i16>* %a0, align 128
+  %v16 = load <16 x i16>, ptr %a0, align 128
   %v17 = sext <16 x i16> %v16 to <16 x i32>
-  store <16 x i32> %v17, <16 x i32>* %a1, align 128
+  store <16 x i32> %v17, ptr %a1, align 128
   ret void
 }
 
 ; CHECK-LABEL: sammy:
 ; CHECK: vunpack
 ; CHECK-NOT: vinsert
-define void @sammy(<32 x i16>* %a0, <32 x i32>* %a1) #1 {
+define void @sammy(ptr %a0, ptr %a1) #1 {
 b2:
-  %v16 = load <32 x i16>, <32 x i16>* %a0, align 128
+  %v16 = load <32 x i16>, ptr %a0, align 128
   %v17 = sext <32 x i16> %v16 to <32 x i32>
-  store <32 x i32> %v17, <32 x i32>* %a1, align 128
+  store <32 x i32> %v17, ptr %a1, align 128
   ret void
 }
 

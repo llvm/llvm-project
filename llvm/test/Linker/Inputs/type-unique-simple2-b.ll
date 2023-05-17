@@ -1,15 +1,15 @@
 ; ModuleID = 'bar.cpp'
 
-%struct.Base = type { i32, %struct.Base* }
+%struct.Base = type { i32, ptr }
 
 ; Function Attrs: nounwind ssp uwtable
 define void @_Z1gi(i32 %a) #0 !dbg !12 {
 entry:
   %a.addr = alloca i32, align 4
   %t = alloca %struct.Base, align 8
-  store i32 %a, i32* %a.addr, align 4
-  call void @llvm.dbg.declare(metadata i32* %a.addr, metadata !20, metadata !DIExpression()), !dbg !21
-  call void @llvm.dbg.declare(metadata %struct.Base* %t, metadata !22, metadata !DIExpression()), !dbg !23
+  store i32 %a, ptr %a.addr, align 4
+  call void @llvm.dbg.declare(metadata ptr %a.addr, metadata !20, metadata !DIExpression()), !dbg !21
+  call void @llvm.dbg.declare(metadata ptr %t, metadata !22, metadata !DIExpression()), !dbg !23
   ret void, !dbg !24
 }
 
@@ -20,7 +20,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
 define i32 @main() #2 !dbg !16 {
 entry:
   %retval = alloca i32, align 4
-  store i32 0, i32* %retval
+  store i32 0, ptr %retval
   call void @_Z1fi(i32 0), !dbg !25
   call void @_Z1gi(i32 1), !dbg !26
   ret i32 0, !dbg !27

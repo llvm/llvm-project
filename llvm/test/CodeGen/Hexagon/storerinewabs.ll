@@ -9,7 +9,7 @@
 define void @foo(i32 %x) #0 {
 entry:
   %add = add nsw i32 %x, 1
-  store i32 %add, i32* @global, align 4
+  store i32 %add, ptr @global, align 4
   ret void
 }
 

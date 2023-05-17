@@ -1,8 +1,30 @@
-// RUN: mlir-opt %s --sparse-compiler | \
-// RUN: mlir-cpu-runner \
-// RUN:  -e entry -entry-point-result=void  \
-// RUN:  -shared-libs=%mlir_integration_test_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{compile} | %{run}
+//
+// Do the same run, but now with direct IR generation.
+// REDEFINE: %{option} = "enable-runtime-library=false  enable-buffer-initialization=true"
+// RUN: %{compile} | %{run}
+//
+// Do the same run, but now with direct IR generation and vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
+
+// Do the same run, but now with direct IR generation and, if available, VLA
+// vectorization.
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 enable-arm-sve=%ENABLE_VLA"
+// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
+// REDEFINE:   --entry-function=entry_lli \
+// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
+// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
+// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
+// REDEFINE: FileCheck %s
+// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
 
 #SparseMatrix = #sparse_tensor.encoding<{
   dimLevelType = [ "compressed", "compressed" ]
@@ -25,7 +47,7 @@
 module {
   func.func @redsum(%arga: tensor<?x?x?xi32, #SparseTensor>,
                %argb: tensor<?x?x?xi32, #SparseTensor>)
-	           -> tensor<?x?xi32, #SparseMatrix> {
+                   -> tensor<?x?xi32, #SparseMatrix> {
     %c0 = arith.constant 0 : index
     %c1 = arith.constant 1 : index
     %d0 = tensor.dim %arga, %c0 : tensor<?x?x?xi32, #SparseTensor>
@@ -46,7 +68,7 @@ module {
   // Driver method to call and verify tensor kernel.
   func.func @entry() {
     %c0 = arith.constant 0 : index
-    %i0 = arith.constant -1 : i32
+    %i0 = arith.constant 0 : i32
 
     // Setup very sparse 3-d tensors.
     %t1 = arith.constant sparse<
@@ -68,7 +90,7 @@ module {
     //
     // Verify results. Only two entries stored in result. Correct structure.
     //
-    // CHECK: ( 7, 69, -1, -1 )
+    // CHECK: ( 7, 69, 0, 0 )
     // CHECK-NEXT: ( ( 0, 0, 0 ), ( 0, 7, 0 ), ( 0, 0, 69 ) )
     //
     %val = sparse_tensor.values %0
@@ -77,15 +99,13 @@ module {
     vector.print %vv : vector<4xi32>
     %dm = sparse_tensor.convert %0
       : tensor<?x?xi32, #SparseMatrix> to tensor<?x?xi32>
-    %db = bufferization.to_memref %dm : memref<?x?xi32>
-    %vm = vector.transfer_read %db[%c0, %c0], %i0: memref<?x?xi32>, vector<3x3xi32>
+    %vm = vector.transfer_read %dm[%c0, %c0], %i0: tensor<?x?xi32>, vector<3x3xi32>
     vector.print %vm : vector<3x3xi32>
 
     // Release the resources.
-    sparse_tensor.release %st1 : tensor<?x?x?xi32, #SparseTensor>
-    sparse_tensor.release %st2 : tensor<?x?x?xi32, #SparseTensor>
-    sparse_tensor.release %0 : tensor<?x?xi32, #SparseMatrix>
-    memref.dealloc %db : memref<?x?xi32>
+    bufferization.dealloc_tensor %st1 : tensor<?x?x?xi32, #SparseTensor>
+    bufferization.dealloc_tensor %st2 : tensor<?x?x?xi32, #SparseTensor>
+    bufferization.dealloc_tensor %0 : tensor<?x?xi32, #SparseMatrix>
     return
   }
 }

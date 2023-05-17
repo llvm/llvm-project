@@ -118,14 +118,14 @@ struct TypeMemberInfo {
 
 // A virtual call target, i.e. an entry in a particular vtable.
 struct VirtualCallTarget {
-  VirtualCallTarget(Function *Fn, const TypeMemberInfo *TM);
+  VirtualCallTarget(GlobalValue *Fn, const TypeMemberInfo *TM);
 
   // For testing only.
   VirtualCallTarget(const TypeMemberInfo *TM, bool IsBigEndian)
       : Fn(nullptr), TM(TM), IsBigEndian(IsBigEndian), WasDevirt(false) {}
 
-  // The function stored in the vtable.
-  Function *Fn;
+  // The function (or an alias to a function) stored in the vtable.
+  GlobalValue *Fn;
 
   // A pointer to the type identifier member through which the pointer to Fn is
   // accessed.
@@ -239,7 +239,9 @@ struct VTableSlotSummary {
   StringRef TypeID;
   uint64_t ByteOffset;
 };
-
+bool hasWholeProgramVisibility(bool WholeProgramVisibilityEnabledInLTO);
+void updatePublicTypeTestCalls(Module &M,
+                               bool WholeProgramVisibilityEnabledInLTO);
 void updateVCallVisibilityInModule(
     Module &M, bool WholeProgramVisibilityEnabledInLTO,
     const DenseSet<GlobalValue::GUID> &DynamicExportSymbols);

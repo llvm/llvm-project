@@ -348,37 +348,37 @@ public:
   DDGBuilder(DataDependenceGraph &G, DependenceInfo &D,
              const BasicBlockListType &BBs)
       : AbstractDependenceGraphBuilder(G, D, BBs) {}
-  DDGNode &createRootNode() final override {
+  DDGNode &createRootNode() final {
     auto *RN = new RootDDGNode();
     assert(RN && "Failed to allocate memory for DDG root node.");
     Graph.addNode(*RN);
     return *RN;
   }
-  DDGNode &createFineGrainedNode(Instruction &I) final override {
+  DDGNode &createFineGrainedNode(Instruction &I) final {
     auto *SN = new SimpleDDGNode(I);
     assert(SN && "Failed to allocate memory for simple DDG node.");
     Graph.addNode(*SN);
     return *SN;
   }
-  DDGNode &createPiBlock(const NodeListType &L) final override {
+  DDGNode &createPiBlock(const NodeListType &L) final {
     auto *Pi = new PiBlockDDGNode(L);
     assert(Pi && "Failed to allocate memory for pi-block node.");
     Graph.addNode(*Pi);
     return *Pi;
   }
-  DDGEdge &createDefUseEdge(DDGNode &Src, DDGNode &Tgt) final override {
+  DDGEdge &createDefUseEdge(DDGNode &Src, DDGNode &Tgt) final {
     auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::RegisterDefUse);
     assert(E && "Failed to allocate memory for edge");
     Graph.connect(Src, Tgt, *E);
     return *E;
   }
-  DDGEdge &createMemoryEdge(DDGNode &Src, DDGNode &Tgt) final override {
+  DDGEdge &createMemoryEdge(DDGNode &Src, DDGNode &Tgt) final {
     auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::MemoryDependence);
     assert(E && "Failed to allocate memory for edge");
     Graph.connect(Src, Tgt, *E);
     return *E;
   }
-  DDGEdge &createRootedEdge(DDGNode &Src, DDGNode &Tgt) final override {
+  DDGEdge &createRootedEdge(DDGNode &Src, DDGNode &Tgt) final {
     auto *E = new DDGEdge(Tgt, DDGEdge::EdgeKind::Rooted);
     assert(E && "Failed to allocate memory for edge");
     assert(isa<RootDDGNode>(Src) && "Expected root node");
@@ -386,7 +386,7 @@ public:
     return *E;
   }
 
-  const NodeListType &getNodesInPiBlock(const DDGNode &N) final override {
+  const NodeListType &getNodesInPiBlock(const DDGNode &N) final {
     auto *PiNode = dyn_cast<const PiBlockDDGNode>(&N);
     assert(PiNode && "Expected a pi-block node.");
     return PiNode->getNodes();
@@ -394,11 +394,10 @@ public:
 
   /// Return true if the two nodes \pSrc and \pTgt are both simple nodes and
   /// the consecutive instructions after merging belong to the same basic block.
-  bool areNodesMergeable(const DDGNode &Src,
-                         const DDGNode &Tgt) const final override;
-  void mergeNodes(DDGNode &Src, DDGNode &Tgt) final override;
-  bool shouldSimplify() const final override;
-  bool shouldCreatePiBlocks() const final override;
+  bool areNodesMergeable(const DDGNode &Src, const DDGNode &Tgt) const final;
+  void mergeNodes(DDGNode &Src, DDGNode &Tgt) final;
+  bool shouldSimplify() const final;
+  bool shouldCreatePiBlocks() const final;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const DDGNode &N);

@@ -16,14 +16,11 @@
 #include "filesystem_include.h"
 
 #include "test_macros.h"
-#include "rapid-cxx-test.h"
 #include "filesystem_test_helper.h"
 
 using namespace fs;
 
-TEST_SUITE(filesystem_read_symlink_test_suite)
-
-TEST_CASE(test_signatures)
+static void test_signatures()
 {
     const path p; ((void)p);
     std::error_code ec; ((void)ec);
@@ -35,7 +32,7 @@ TEST_CASE(test_signatures)
     ASSERT_NOT_NOEXCEPT(fs::read_symlink(p, ec));
 }
 
-TEST_CASE(test_error_reporting)
+static void test_error_reporting()
 {
     auto checkThrow = [](path const& f, const std::error_code& ec)
     {
@@ -63,14 +60,14 @@ TEST_CASE(test_error_reporting)
     for (path const& p : cases) {
         std::error_code ec;
         const path ret = fs::read_symlink(p, ec);
-        TEST_REQUIRE(ec);
-        TEST_CHECK(ret == path{});
-        TEST_CHECK(checkThrow(p, ec));
+        assert(ec);
+        assert(ret == path{});
+        assert(checkThrow(p, ec));
     }
 
 }
 
-TEST_CASE(basic_symlink_test)
+static void basic_symlink_test()
 {
     scoped_test_env env;
     const path dne = env.make_env_path("dne");
@@ -91,9 +88,15 @@ TEST_CASE(basic_symlink_test)
     for (auto& TC : testCases) {
         std::error_code ec = std::make_error_code(std::errc::address_in_use);
         const path ret = read_symlink(TC.symlink, ec);
-        TEST_CHECK(!ec);
-        TEST_CHECK(ret == TC.expected);
+        assert(!ec);
+        assert(ret == TC.expected);
     }
 }
 
-TEST_SUITE_END()
+int main(int, char**) {
+    test_signatures();
+    test_error_reporting();
+    basic_symlink_test();
+
+    return 0;
+}

@@ -29,8 +29,8 @@ bool isIterator(const CXXRecordDecl *CRD) {
     return false;
 
   const auto Name = CRD->getName();
-  if (!(Name.endswith_insensitive("iterator") ||
-        Name.endswith_insensitive("iter") || Name.endswith_insensitive("it")))
+  if (!(Name.ends_with_insensitive("iterator") ||
+        Name.ends_with_insensitive("iter") || Name.ends_with_insensitive("it")))
     return false;
 
   bool HasCopyCtor = false, HasCopyAssign = true, HasDtor = false,
@@ -308,8 +308,8 @@ bool compare(ProgramStateRef State, NonLoc NL1, NonLoc NL2,
   const auto comparison =
     SVB.evalBinOp(State, Opc, NL1, NL2, SVB.getConditionType());
 
-  assert(comparison.getAs<DefinedSVal>() &&
-    "Symbol comparison must be a `DefinedSVal`");
+  assert(isa<DefinedSVal>(comparison) &&
+         "Symbol comparison must be a `DefinedSVal`");
 
   return !State->assume(comparison.castAs<DefinedSVal>(), false);
 }

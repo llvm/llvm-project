@@ -49,38 +49,38 @@ define signext i32 @unroll_loop_cse() {
 ; CHECK-NEXT:    snez a0, a0
 ; CHECK-NEXT:  .LBB0_6:
 ; CHECK-NEXT:    ret
-  %1 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @x, i64 0, i64 0), align 4
-  %2 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @check, i64 0, i64 0), align 4
+  %1 = load i32, ptr @x, align 4
+  %2 = load i32, ptr @check, align 4
   %3 = icmp eq i32 %1, %2
   br i1 %3, label %4, label %25
 
 4:
-  %5 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @x, i64 0, i64 1), align 4
-  %6 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @check, i64 0, i64 1), align 4
+  %5 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @x, i64 0, i64 1), align 4
+  %6 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @check, i64 0, i64 1), align 4
   %7 = icmp eq i32 %5, %6
   br i1 %7, label %8, label %25
 
 8:
-  %9 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @x, i64 0, i64 2), align 4
-  %10 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @check, i64 0, i64 2), align 4
+  %9 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @x, i64 0, i64 2), align 4
+  %10 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @check, i64 0, i64 2), align 4
   %11 = icmp eq i32 %9, %10
   br i1 %11, label %12, label %25
 
 12:
-  %13 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @x, i64 0, i64 3), align 4
-  %14 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @check, i64 0, i64 3), align 4
+  %13 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @x, i64 0, i64 3), align 4
+  %14 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @check, i64 0, i64 3), align 4
   %15 = icmp eq i32 %13, %14
   br i1 %15, label %16, label %25
 
 16:
-  %17 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @x, i64 0, i64 4), align 4
-  %18 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @check, i64 0, i64 4), align 4
+  %17 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @x, i64 0, i64 4), align 4
+  %18 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @check, i64 0, i64 4), align 4
   %19 = icmp eq i32 %17, %18
   br i1 %19, label %20, label %25
 
 20:
-  %21 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @x, i64 0, i64 5), align 4
-  %22 = load i32, i32* getelementptr inbounds ([6 x i32], [6 x i32]* @check, i64 0, i64 5), align 4
+  %21 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @x, i64 0, i64 5), align 4
+  %22 = load i32, ptr getelementptr inbounds ([6 x i32], ptr @check, i64 0, i64 5), align 4
   %23 = icmp ne i32 %21, %22
   %24 = zext i1 %23 to i32
   br label %25

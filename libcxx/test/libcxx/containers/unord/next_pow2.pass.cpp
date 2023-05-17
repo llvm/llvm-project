@@ -31,7 +31,7 @@ is_power_of_two(unsigned long n)
     return __builtin_popcount(n) == 1;
 }
 
-void test_next_pow2_val(size_t n)
+void test_next_pow2_val(std::size_t n)
 {
         std::size_t npow2 = std::__next_hash_pow2(n);
         assert(is_power_of_two(npow2) && npow2 > n);
@@ -68,7 +68,7 @@ fuzz_unordered_map_reserve(unsigned num_inserts,
                            unsigned num_reserve1,
                            unsigned num_reserve2)
 {
-    std::unordered_map<uint64_t, unsigned long> m;
+    std::unordered_map<std::uint64_t, unsigned long> m;
     m.reserve(num_reserve1);
     for (unsigned I = 0; I < num_inserts; ++I) m[I] = 0;
     m.reserve(num_reserve2);

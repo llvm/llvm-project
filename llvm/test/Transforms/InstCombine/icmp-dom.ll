@@ -34,13 +34,13 @@ lor.end:
   ret void
 }
 
-define void @idom_sign_bit_check_edge_not_dominates(i64 %a) {
+define void @idom_sign_bit_check_edge_not_dominates(i64 %a, i1 %c1) {
 ; CHECK-LABEL: @idom_sign_bit_check_edge_not_dominates(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[A:%.*]], 0
 ; CHECK-NEXT:    br i1 [[CMP]], label [[LAND_LHS_TRUE:%.*]], label [[LOR_RHS:%.*]]
 ; CHECK:       land.lhs.true:
-; CHECK-NEXT:    br i1 undef, label [[LOR_END:%.*]], label [[LOR_RHS]]
+; CHECK-NEXT:    br i1 [[C1:%.*]], label [[LOR_END:%.*]], label [[LOR_RHS]]
 ; CHECK:       lor.rhs:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i64 [[A]], 0
 ; CHECK-NEXT:    br i1 [[CMP2]], label [[LAND_RHS:%.*]], label [[LOR_END]]
@@ -54,7 +54,7 @@ entry:
   br i1 %cmp, label %land.lhs.true, label %lor.rhs
 
 land.lhs.true:
-  br i1 undef, label %lor.end, label %lor.rhs
+  br i1 %c1, label %lor.end, label %lor.rhs
 
 lor.rhs:
   %cmp2 = icmp sgt i64 %a, 0
@@ -351,14 +351,14 @@ f:
 ; This used to infinite loop because of a conflict
 ; with min/max canonicalization.
 
-define i32 @PR48900(i32 %i, i1* %p) {
+define i32 @PR48900(i32 %i, ptr %p) {
 ; CHECK-LABEL: @PR48900(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.umax.i32(i32 [[I:%.*]], i32 1)
-; CHECK-NEXT:    [[I4:%.*]] = icmp sgt i32 [[TMP1]], 0
+; CHECK-NEXT:    [[UMAX:%.*]] = call i32 @llvm.umax.i32(i32 [[I:%.*]], i32 1)
+; CHECK-NEXT:    [[I4:%.*]] = icmp sgt i32 [[UMAX]], 0
 ; CHECK-NEXT:    br i1 [[I4]], label [[TRUELABEL:%.*]], label [[FALSELABEL:%.*]]
 ; CHECK:       truelabel:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.umin.i32(i32 [[TMP1]], i32 2)
-; CHECK-NEXT:    ret i32 [[TMP2]]
+; CHECK-NEXT:    [[SMIN:%.*]] = call i32 @llvm.umin.i32(i32 [[UMAX]], i32 2)
+; CHECK-NEXT:    ret i32 [[SMIN]]
 ; CHECK:       falselabel:
 ; CHECK-NEXT:    ret i32 0
 ;
@@ -379,14 +379,14 @@ falselabel:
 ; This used to infinite loop because of a conflict
 ; with min/max canonicalization.
 
-define i8 @PR48900_alt(i8 %i, i1* %p) {
+define i8 @PR48900_alt(i8 %i, ptr %p) {
 ; CHECK-LABEL: @PR48900_alt(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[I:%.*]], i8 -127)
-; CHECK-NEXT:    [[I4:%.*]] = icmp ugt i8 [[TMP1]], -128
+; CHECK-NEXT:    [[SMAX:%.*]] = call i8 @llvm.smax.i8(i8 [[I:%.*]], i8 -127)
+; CHECK-NEXT:    [[I4:%.*]] = icmp ugt i8 [[SMAX]], -128
 ; CHECK-NEXT:    br i1 [[I4]], label [[TRUELABEL:%.*]], label [[FALSELABEL:%.*]]
 ; CHECK:       truelabel:
-; CHECK-NEXT:    [[TMP2:%.*]] = call i8 @llvm.smin.i8(i8 [[TMP1]], i8 -126)
-; CHECK-NEXT:    ret i8 [[TMP2]]
+; CHECK-NEXT:    [[UMIN:%.*]] = call i8 @llvm.smin.i8(i8 [[SMAX]], i8 -126)
+; CHECK-NEXT:    ret i8 [[UMIN]]
 ; CHECK:       falselabel:
 ; CHECK-NEXT:    ret i8 0
 ;

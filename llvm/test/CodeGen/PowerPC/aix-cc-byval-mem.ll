@@ -22,7 +22,7 @@
 
 define void @call_test_byval_mem1() {
 entry:
-  %call = call zeroext i8 @test_byval_mem1(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S1* byval(%struct_S1) align 1 @gS1)
+  %call = call zeroext i8 @test_byval_mem1(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, ptr byval(%struct_S1) align 1 @gS1)
   ret void
 }
 
@@ -43,10 +43,9 @@ entry:
 ; ASM64BIT:       bl .test_byval_mem1
 ; ASM64BIT:       addi 1, 1, 128
 
-define zeroext  i8 @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S1* byval(%struct_S1) align 1 %s) {
+define zeroext  i8 @test_byval_mem1(i32, i32, i32, i32, i32, i32, i32, i32, ptr byval(%struct_S1) align 1 %s) {
 entry:
-  %gep = getelementptr inbounds %struct_S1, %struct_S1* %s, i32 0, i32 0
-  %load = load i8, i8* %gep, align 1
+  %load = load i8, ptr %s, align 1
   ret i8 %load
 }
 
@@ -73,7 +72,7 @@ entry:
 
 define void @call_test_byval_mem2() {
 entry:
-  %call = call zeroext i8 @test_byval_mem2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, %struct_S256* byval(%struct_S256) align 1 @gS256)
+  %call = call zeroext i8 @test_byval_mem2(i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, ptr byval(%struct_S256) align 1 @gS256)
   ret void
 }
 
@@ -88,7 +87,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %0
 ; 32BIT-DAG:      $r4 = COPY %1
 ; 32BIT-DAG:      $r5 = COPY %2
-; 32BIT-NEXT:     BL_NOP &".memcpy[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &".___memmove[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 312, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -108,7 +107,8 @@ entry:
 ; ASM32BIT-DAG:   addi 3, 1, 56
 ; ASM32BIT-DAG:   lwz 4, L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   li 5, 256
-; ASM32BIT-NEXT:  bl .memcpy[PR]
+; ASM32BIT-DAG:   stw 0, 328(1)
+; ASM32BIT-NEXT:  bl .___memmove[PR]
 ; ASM32BIT:       bl .test_byval_mem2
 ; ASM32BIT:       addi 1, 1, 320
 
@@ -120,7 +120,7 @@ entry:
 ; 64BIT-DAG:      $x3 = COPY %0
 ; 64BIT-DAG:      $x4 = COPY %1
 ; 64BIT-DAG:      $x5 = COPY %2
-; 64BIT-NEXT:     BL8_NOP &".memcpy[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; 64BIT-NEXT:     BL8_NOP &".___memmove64[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT:          ADJCALLSTACKDOWN 368, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:      $x3 = COPY %{{[0-9]+}}
@@ -138,15 +138,16 @@ entry:
 ; ASM64BIT-DAG:   addi 3, 1, 112
 ; ASM64BIT-DAG:   ld 4, L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   li 5, 256
-; ASM64BIT-NEXT:  bl .memcpy[PR]
+; ASM64BIT-DAG:   std 0, 384(1)
+; ASM64BIT-NEXT:  bl .___memmove64[PR]
 ; ASM64BIT:       bl .test_byval_mem2
 ; ASM64BIT:       addi 1, 1, 368
 
 
-define zeroext i8 @test_byval_mem2(i32, i32, i32, i32, i32, i32, i32, i32, %struct_S256* byval(%struct_S256) align 1 %s) {
+define zeroext i8 @test_byval_mem2(i32, i32, i32, i32, i32, i32, i32, i32, ptr byval(%struct_S256) align 1 %s) {
 entry:
-  %gep = getelementptr inbounds %struct_S256, %struct_S256* %s, i32 0, i32 0, i32 255
-  %load = load i8, i8* %gep, align 1
+  %gep = getelementptr inbounds %struct_S256, ptr %s, i32 0, i32 0, i32 255
+  %load = load i8, ptr %gep, align 1
   ret i8 %load
 }
 
@@ -172,7 +173,7 @@ entry:
 
 define void @call_test_byval_mem3() {
 entry:
-  call void @test_byval_mem3(i32 42, float 0x40091EB860000000, %struct_S57* byval(%struct_S57) align 1 @gS57)
+  call void @test_byval_mem3(i32 42, float 0x40091EB860000000, ptr byval(%struct_S57) align 1 @gS57)
   ret void
 }
 
@@ -187,7 +188,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %2
 ; 32BIT-DAG:      $r4 = COPY %1
 ; 32BIT-DAG:      $r5 = COPY %3
-; 32BIT-NEXT:     BL_NOP &".memcpy[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &".___memmove[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 92, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -208,7 +209,7 @@ entry:
 ; ASM32BIT-DAG:   addi 3, 1, 56
 ; ASM32BIT-DAG:   addi 4, [[REG]], 24
 ; ASM32BIT-DAG:   li 5, 33
-; ASM32BIT-NEXT:  bl .memcpy[PR]
+; ASM32BIT-NEXT:  bl .___memmove[PR]
 ; ASM32BIT-DAG:   lwz 5, 0([[REG]])
 ; ASM32BIT-DAG:   lwz 6, 4([[REG]])
 ; ASM32BIT-DAG:   lwz 7, 8([[REG]])
@@ -234,7 +235,7 @@ entry:
 ; ASM64BIT:       bl .test_byval_mem3
 ; ASM64BIT:       addi 1, 1, 128
 
-define void @test_byval_mem3(i32, float, %struct_S57* byval(%struct_S57) align 1 %s) {
+define void @test_byval_mem3(i32, float, ptr byval(%struct_S57) align 1 %s) {
 entry:
   ret void
 }
@@ -288,7 +289,7 @@ entry:
 
 define void @call_test_byval_mem4() {
 entry:
-  call void @test_byval_mem4(i32 42, %struct_S31* byval(%struct_S31) align 1 @gS31, %struct_S256* byval(%struct_S256) align 1 @gS256)
+  call void @test_byval_mem4(i32 42, ptr byval(%struct_S31) align 1 @gS31, ptr byval(%struct_S256) align 1 @gS256)
   ret void
 }
 
@@ -305,7 +306,7 @@ entry:
 ; 32BIT-DAG:      $r3 = COPY %3
 ; 32BIT-DAG:      $r4 = COPY %4
 ; 32BIT-DAG:      $r5 = COPY %5
-; 32BIT-NEXT:     BL_NOP &".memcpy[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
+; 32BIT-NEXT:     BL_NOP &".___memmove[PR]", csr_aix32, implicit-def dead $lr, implicit $rm, implicit $r3, implicit $r4, implicit $r5, implicit $r2, implicit-def $r1, implicit-def $r3
 ; 32BIT-NEXT:     ADJCALLSTACKUP 56, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT:          ADJCALLSTACKDOWN 316, 0, implicit-def dead $r1, implicit $r1
 ; 32BIT-DAG:      $r3 = COPY %{{[0-9]+}}
@@ -320,8 +321,9 @@ entry:
 ; 32BIT-NEXT:     ADJCALLSTACKUP 316, 0, implicit-def dead $r1, implicit $r1
 
 ; ASM32BIT:       stwu 1, -320(1)
-; ASM32BIT-NEXT:  stw [[REG1:[0-9]+]], {{[0-9]+}}(1)
-; ASM32BIT:       lwz [[REG1]], L..C{{[0-9]+}}(2)
+; ASM32BIT-NEXT:  stw 0, 328(1)
+; ASM32BIT-DAG:   stw [[REG1:[0-9]+]], {{[0-9]+}}(1)
+; ASM32BIT-DAG:   lwz [[REG1]], L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   lhz [[REG2:[0-9]+]], 28([[REG1]])
 ; ASM32BIT-DAG:   sth [[REG2]], 56(1)
 ; ASM32BIT-DAG:   lbz [[REG3:[0-9]+]], 30([[REG1]])
@@ -329,7 +331,7 @@ entry:
 ; ASM32BIT-DAG:   addi 3, 1, 60
 ; ASM32BIT-DAG:   lwz 4, L..C{{[0-9]+}}(2)
 ; ASM32BIT-DAG:   li 5, 256
-; ASM32BIT-NEXT:  bl .memcpy[PR]
+; ASM32BIT-NEXT:  bl .___memmove[PR]
 ; ASM32BIT-DAG:   lwz 4, 0([[REG1]])
 ; ASM32BIT-DAG:   lwz 5, 4([[REG1]])
 ; ASM32BIT-DAG:   lwz 6, 8([[REG1]])
@@ -349,7 +351,7 @@ entry:
 ; 64BIT-DAG:      $x3 = COPY %2
 ; 64BIT-DAG:      $x4 = COPY %1
 ; 64BIT-DAG:      $x5 = COPY %3
-; 64BIT-NEXT:     BL8_NOP &".memcpy[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
+; 64BIT-NEXT:     BL8_NOP &".___memmove64[PR]", csr_ppc64, implicit-def dead $lr8, implicit $rm, implicit $x3, implicit $x4, implicit $x5, implicit $x2, implicit-def $r1, implicit-def $x3
 ; 64BIT-NEXT:     ADJCALLSTACKUP 112, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT:          ADJCALLSTACKDOWN 344, 0, implicit-def dead $r1, implicit $r1
 ; 64BIT-DAG:      $x3 = COPY %{{[0-9]+}}
@@ -368,7 +370,7 @@ entry:
 ; ASM64BIT-DAG:   addi 3, 1, 112
 ; ASM64BIT-DAG:   addi 4, [[REG1]], 24
 ; ASM64BIT-DAG:   li 5, 232
-; ASM64BIT-NEXT:  bl .memcpy[PR]
+; ASM64BIT-NEXT:  bl .___memmove64[PR]
 ; ASM64BIT-DAG:   ld [[REG2:[0-9]+]], L..C{{[0-9]+}}(2)
 ; ASM64BIT-DAG:   ld 4, 0([[REG2]])
 ; ASM64BIT-DAG:   ld 5, 8([[REG2]])
@@ -385,7 +387,7 @@ entry:
 ; ASM64BIT:       bl .test_byval_mem4
 ; ASM64BIT:       addi 1, 1, 352
 
-define void @test_byval_mem4(i32, %struct_S31* byval(%struct_S31) align 1, %struct_S256* byval(%struct_S256) align 1 %s) {
+define void @test_byval_mem4(i32, ptr byval(%struct_S31) align 1, ptr byval(%struct_S256) align 1 %s) {
 entry:
   ret void
 }

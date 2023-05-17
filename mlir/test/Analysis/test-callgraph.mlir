@@ -11,7 +11,7 @@ module attributes {test.name = "simple"} {
   func.func private @func_b()
 
   // CHECK: Node{{.*}}func_c
-  // CHECK-NEXT: Call-Edge{{.*}}External-Node
+  // CHECK-NEXT: Call-Edge{{.*}}Unknown-Callee-Node
   func.func @func_c() {
     call @func_b() : () -> ()
     return
@@ -69,3 +69,30 @@ module attributes {test.name = "nested"} {
     return
   }
 }
+
+// -----
+
+// CHECK-LABEL: Testing : "SCC"
+// CHECK: SCCs
+module attributes {test.name = "SCC"} {
+  // CHECK: SCC :
+  // CHECK-NEXT: Node{{.*}}Unknown-Callee-Node
+
+  // CHECK: SCC :
+  // CHECK-NEXT: Node{{.*}}foo
+  func.func @foo(%arg0 : () -> ()) {
+    call_indirect %arg0() : () -> ()
+    return
+  }
+
+  // CHECK: SCC :
+  // CHECK-NEXT: Node{{.*}}bar
+  func.func @bar(%arg1 : () -> ()) {
+    call_indirect %arg1() : () -> ()
+    return
+  }
+
+  // CHECK: SCC :
+  // CHECK-NEXT: Node{{.*}}External-Caller-Node
+}
+

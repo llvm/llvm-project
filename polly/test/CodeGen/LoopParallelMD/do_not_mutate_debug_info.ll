@@ -4,21 +4,21 @@
 ; CHECK-NOT: !7 = !{!7}
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-@A = common global i32* null, align 8
+@A = common global ptr null, align 8
 
 ; Function Attrs: nounwind uwtable
 define void @foo() !dbg !4 {
 entry:
   tail call void @llvm.dbg.value(metadata i32 0, i64 0, metadata !9, metadata !19), !dbg !20
-  %0 = load i32*, i32** @A, align 8, !dbg !21, !tbaa !23
+  %0 = load ptr, ptr @A, align 8, !dbg !21, !tbaa !23
   br label %for.body, !dbg !27
 
 for.body:                                         ; preds = %for.body, %entry
   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
-  %arrayidx = getelementptr inbounds i32, i32* %0, i64 %indvars.iv, !dbg !21
-  %1 = load i32, i32* %arrayidx, align 4, !dbg !21, !tbaa !30
+  %arrayidx = getelementptr inbounds i32, ptr %0, i64 %indvars.iv, !dbg !21
+  %1 = load i32, ptr %arrayidx, align 4, !dbg !21, !tbaa !30
   %add = add nsw i32 %1, 1, !dbg !21
-  store i32 %add, i32* %arrayidx, align 4, !dbg !21, !tbaa !30
+  store i32 %add, ptr %arrayidx, align 4, !dbg !21, !tbaa !30
   %indvars.iv.next = add nuw nsw i64 %indvars.iv, 1, !dbg !27
   %exitcond = icmp eq i64 %indvars.iv, 1, !dbg !27
   br i1 %exitcond, label %for.end, label %for.body, !dbg !27

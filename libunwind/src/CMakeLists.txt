@@ -5,11 +5,6 @@ set(LIBUNWIND_CXX_SOURCES
     Unwind-EHABI.cpp
     Unwind-seh.cpp
     )
-if(APPLE)
-  list(APPEND LIBUNWIND_CXX_SOURCES
-    Unwind_AppleExtras.cpp
-    )
-endif()
 
 if(${CMAKE_SYSTEM_NAME} MATCHES "AIX")
   list(APPEND LIBUNWIND_CXX_SOURCES
@@ -135,8 +130,11 @@ set_property(SOURCE ${LIBUNWIND_C_SOURCES}
 # ease, but does not rely on C++ at runtime.
 set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES "")
 
+include(WarningFlags)
+
 # Build the shared library.
 add_library(unwind_shared_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+cxx_add_warning_flags(unwind_shared_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
 if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
   target_compile_options(unwind_shared_objects PRIVATE /GR-)
 else()
@@ -161,7 +159,7 @@ if (LIBUNWIND_ENABLE_SHARED)
     PROPERTIES
       LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
       LINKER_LANGUAGE C
-      OUTPUT_NAME "unwind"
+      OUTPUT_NAME "${LIBUNWIND_SHARED_OUTPUT_NAME}"
       VERSION "1.0"
       SOVERSION "1"
   )
@@ -174,6 +172,7 @@ endif()
 
 # Build the static library.
 add_library(unwind_static_objects OBJECT EXCLUDE_FROM_ALL ${LIBUNWIND_SOURCES} ${LIBUNWIND_HEADERS})
+cxx_add_warning_flags(unwind_static_objects ${LIBUNWIND_ENABLE_WERROR} ${LIBUNWIND_ENABLE_PEDANTIC})
 if(CMAKE_C_COMPILER_ID STREQUAL MSVC)
   target_compile_options(unwind_static_objects PRIVATE /GR-)
 else()
@@ -201,7 +200,7 @@ if (LIBUNWIND_ENABLE_STATIC)
     PROPERTIES
       LINK_FLAGS "${LIBUNWIND_LINK_FLAGS}"
       LINKER_LANGUAGE C
-      OUTPUT_NAME "unwind"
+      OUTPUT_NAME "${LIBUNWIND_STATIC_OUTPUT_NAME}"
   )
 
   list(APPEND LIBUNWIND_BUILD_TARGETS "unwind_static")

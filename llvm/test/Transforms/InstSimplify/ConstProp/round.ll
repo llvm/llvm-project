@@ -1,4 +1,4 @@
-; RUN: opt -S -early-cse -earlycse-debug-hash < %s | FileCheck %s
+; RUN: opt -S -passes=early-cse -earlycse-debug-hash < %s | FileCheck %s
 
 declare float @roundf(float) #0
 declare float @llvm.round.f32(float)

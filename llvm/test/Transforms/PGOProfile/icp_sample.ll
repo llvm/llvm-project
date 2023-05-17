@@ -1,15 +1,15 @@
 ; RUN: opt -passes=pgo-icall-prom -icp-samplepgo -S < %s | FileCheck %s
 
-define i32* @_Z3fooPi(i32* readnone returned) {
-  ret i32* %0
+define ptr @_Z3fooPi(ptr readnone returned) {
+  ret ptr %0
 }
 
 ; CHECK-LABEL: _Z3barPFPiS_E
 ; CHECK: if.true.direct_targ
-; CHECK:   call i32* @_Z3fooPi
-define i32* @_Z3barPFPiS_E(i32* (i32*)* nocapture) {
-  %2 = tail call i32* %0(i32* null), !prof !33
-  ret i32* %2
+; CHECK:   call ptr @_Z3fooPi
+define ptr @_Z3barPFPiS_E(ptr nocapture) {
+  %2 = tail call ptr %0(ptr null), !prof !33
+  ret ptr %2
 }
 
 !llvm.module.flags = !{!3}

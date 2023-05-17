@@ -2,6 +2,9 @@
 ! Check errors found in folding
 ! TODO: test others emitted from flang/lib/Evaluate
 module m
+  type t
+    real x
+  end type t
  contains
   subroutine s1(a,b)
     real :: a(*), b(:)
@@ -100,10 +103,66 @@ module m
     !CHECK: error: DIM=4 argument to SPREAD must be between 1 and 3
     integer, parameter :: bad3 = spread(matrix, 4, 1)
   end subroutine
+  subroutine s10
+    !CHECK: warning: CHAR(I=-1) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: badc11 = char(-1,kind=1)
+    !CHECK: warning: ACHAR(I=-1) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: bada11 = achar(-1,kind=1)
+    !CHECK: warning: CHAR(I=-1) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: badc21 = char(-1,kind=2)
+    !CHECK: warning: ACHAR(I=-1) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: bada21 = achar(-1,kind=2)
+    !CHECK: warning: CHAR(I=-1) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: badc41 = char(-1,kind=4)
+    !CHECK: warning: ACHAR(I=-1) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: bada41 = achar(-1,kind=4)
+    !CHECK: warning: CHAR(I=256) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: badc12 = char(256,kind=1)
+    !CHECK: warning: ACHAR(I=256) is out of range for CHARACTER(KIND=1)
+    character(kind=1), parameter :: bada12 = achar(256,kind=1)
+    !CHECK: warning: CHAR(I=65536) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: badc22 = char(65536,kind=2)
+    !CHECK: warning: ACHAR(I=65536) is out of range for CHARACTER(KIND=2)
+    character(kind=2), parameter :: bada22 = achar(65536,kind=2)
+    !CHECK: warning: CHAR(I=4294967296) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: badc42 = char(4294967296_8,kind=4)
+    !CHECK: warning: ACHAR(I=4294967296) is out of range for CHARACTER(KIND=4)
+    character(kind=4), parameter :: bada42 = achar(4294967296_8,kind=4)
+  end subroutine
+  subroutine s11
+    character(:), allocatable :: x1
+    !CHECK: error: Invalid specification expression: non-constant inquiry function 'len' not allowed for local object
+    character(len(x1)) :: x2
+    real, allocatable :: x3(:)
+    !CHECK: error: Invalid specification expression: non-constant descriptor inquiry not allowed for local object
+    real :: x4(size(x3))
+  end
+  subroutine s12(x,y)
+    class(t), intent(in) :: x
+    class(*), intent(in) :: y
+    !CHERK: error: Must be a constant value
+    integer, parameter :: bad1 = storage_size(x)
+    !CHERK: error: Must be a constant value
+    integer, parameter :: bad2 = storage_size(y)
+  end subroutine
+  subroutine s13
+    !CHECK: portability: Result of REPEAT() is too large to compute at compilation time (1.1259e+15 characters)
+    print *, repeat(repeat(' ', 2**20), 2**30)
+    !CHECK: error: NCOPIES= argument to REPEAT() should be nonnegative, but is -666
+    print *, repeat(' ', -666)
+  end subroutine
   subroutine warnings
     real, parameter :: ok1 = scale(0.0, 99999) ! 0.0
     real, parameter :: ok2 = scale(1.0, -99999) ! 0.0
     !CHECK: SCALE intrinsic folding overflow
     real, parameter :: bad1 = scale(1.0, 99999)
+    !CHECK: complex ABS intrinsic folding overflow
+    real, parameter :: bad2 = abs(cmplx(huge(0.),huge(0.)))
+    !CHECK: warning: DIM intrinsic folding overflow
+    real, parameter :: bad3 = dim(huge(1.),-.5*huge(1.))
+    !CHECK: warning: DIM intrinsic folding overflow
+    integer, parameter :: bad4 = dim(huge(1),-1)
+    !CHECK: warning: overflow on REAL(8) to REAL(4) conversion
+    x = 1.D40
   end subroutine
 end module

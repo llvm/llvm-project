@@ -6,6 +6,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+
 #ifndef _LIBCPP___RANGES_ACCESS_H
 #define _LIBCPP___RANGES_ACCESS_H
 
@@ -14,8 +15,13 @@
 #include <__iterator/concepts.h>
 #include <__iterator/readable_traits.h>
 #include <__ranges/enable_borrowed_range.h>
+#include <__type_traits/decay.h>
+#include <__type_traits/is_reference.h>
+#include <__type_traits/remove_cvref.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/auto_cast.h>
-#include <type_traits>
+#include <__utility/declval.h>
+#include <cstddef>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -23,7 +29,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER > 17
+#if _LIBCPP_STD_VER >= 20
 
 namespace ranges {
   template <class _Tp>
@@ -99,7 +105,7 @@ inline namespace __cpo {
 
 namespace ranges {
   template <class _Tp>
-  using iterator_t = decltype(ranges::begin(declval<_Tp&>()));
+  using iterator_t = decltype(ranges::begin(std::declval<_Tp&>()));
 } // namespace ranges
 
 // [range.access.end]
@@ -217,7 +223,7 @@ inline namespace __cpo {
 } // namespace __cpo
 } // namespace ranges
 
-#endif // _LIBCPP_STD_VER > 17
+#endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
 

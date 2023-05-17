@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-ranges
 
 // template<class D>
 //   requires is_class_v<D> && same_as<D, remove_cv_t<D>>
@@ -16,6 +15,7 @@
 #include <ranges>
 
 #include <cassert>
+#include <utility>
 #include "test_macros.h"
 #include "test_iterators.h"
 
@@ -95,7 +95,7 @@ struct SizeIsTen : std::ranges::view_interface<SizeIsTen> {
   int buff[8] = {0, 1, 2, 3, 4, 5, 6, 7};
   constexpr ForwardIter begin() const { return ForwardIter(const_cast<int*>(buff)); }
   constexpr ForwardIter end() const { return ForwardIter(const_cast<int*>(buff) + 8); }
-  constexpr size_t size() const { return 10; }
+  constexpr std::size_t size() const { return 10; }
 };
 static_assert(std::ranges::view<SizeIsTen>);
 
@@ -234,12 +234,21 @@ constexpr bool testSize() {
   static_assert(!SizeInvocable<NotSizedSentinel>);
   static_assert( SizeInvocable<ForwardRange>);
 
+  // Test the test.
+  static_assert(std::same_as<decltype(std::declval<ForwardIter>() - std::declval<ForwardIter>()), std::ptrdiff_t>);
+  using UnsignedSize = std::make_unsigned_t<std::ptrdiff_t>;
+  using SignedSize = std::common_type_t<std::ptrdiff_t, std::make_signed_t<UnsignedSize>>;
   ForwardRange forwardRange;
   assert(forwardRange.size() == 8);
   assert(static_cast<ForwardRange const&>(forwardRange).size() == 8);
 
   assert(std::ranges::size(forwardRange) == 8);
+  static_assert(std::same_as<decltype(std::ranges::size(std::declval<ForwardRange>())), UnsignedSize>);
+  static_assert(std::same_as<decltype(std::ranges::ssize(std::declval<ForwardRange>())), SignedSize>);
+
   assert(std::ranges::size(static_cast<ForwardRange const&>(forwardRange)) == 8);
+  static_assert(std::same_as<decltype(std::ranges::size(std::declval<ForwardRange const>())), UnsignedSize>);
+  static_assert(std::same_as<decltype(std::ranges::ssize(std::declval<ForwardRange const>())), SignedSize>);
 
   SizeIsTen sizeTen;
   assert(sizeTen.size() == 10);
@@ -253,7 +262,7 @@ constexpr bool testSize() {
 }
 
 template<class T>
-concept SubscriptInvocable = requires (T const& obj, size_t n) { obj[n]; };
+concept SubscriptInvocable = requires (T const& obj, std::size_t n) { obj[n]; };
 
 constexpr bool testSubscript() {
   static_assert(!SubscriptInvocable<ForwardRange>);

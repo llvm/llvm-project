@@ -2,9 +2,9 @@
 
 ; CHECK: jumpr r{{[0-9]+}}
 
-define i32 @check_indirect_br(i8* %target) nounwind {
+define i32 @check_indirect_br(ptr %target) nounwind {
 entry:
-  indirectbr i8* %target, [label %test_label]
+  indirectbr ptr %target, [label %test_label]
 
 test_label:
   br label %ret

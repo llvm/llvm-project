@@ -60,6 +60,10 @@ FunctionPass *createX86PadShortFunctions();
 /// instructions, in order to eliminate execution delays in some processors.
 FunctionPass *createX86FixupLEAs();
 
+/// Return as pass that replaces equivilent slower instructions with faster
+/// ones.
+FunctionPass *createX86FixupInstTuning();
+
 /// Return a pass that removes redundant LEA instructions and redundant address
 /// recalculations.
 FunctionPass *createX86OptimizeLEAs();
@@ -132,6 +136,9 @@ FunctionPass *createX86EvexToVexInsts();
 /// This pass creates the thunks for the retpoline feature.
 FunctionPass *createX86IndirectThunksPass();
 
+/// This pass replaces ret instructions with jmp's to __x86_return thunk.
+FunctionPass *createX86ReturnThunksPass();
+
 /// This pass ensures instructions featuring a memory operand
 /// have distinctive <LineNumber, Discriminator> (with respect to eachother)
 FunctionPass *createX86DiscriminateMemOpsPass();
@@ -156,35 +163,40 @@ FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 FunctionPass *createX86LoadValueInjectionRetHardeningPass();
 FunctionPass *createX86SpeculativeLoadHardeningPass();
 FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
+FunctionPass *createX86ArgumentStackSlotPass();
 
 void initializeEvexToVexInstPassPass(PassRegistry &);
+void initializeFPSPass(PassRegistry &);
 void initializeFixupBWInstPassPass(PassRegistry &);
 void initializeFixupLEAPassPass(PassRegistry &);
-void initializeFPSPass(PassRegistry &);
+void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
+void initializeX86FixupInstTuningPassPass(PassRegistry &);
 void initializeWinEHStatePassPass(PassRegistry &);
 void initializeX86AvoidSFBPassPass(PassRegistry &);
 void initializeX86AvoidTrailingCallPassPass(PassRegistry &);
 void initializeX86CallFrameOptimizationPass(PassRegistry &);
 void initializeX86CmovConverterPassPass(PassRegistry &);
+void initializeX86DAGToDAGISelPass(PassRegistry &);
 void initializeX86DomainReassignmentPass(PassRegistry &);
 void initializeX86ExecutionDomainFixPass(PassRegistry &);
 void initializeX86ExpandPseudoPass(PassRegistry &);
+void initializeX86FastPreTileConfigPass(PassRegistry &);
+void initializeX86FastTileConfigPass(PassRegistry &);
 void initializeX86FixupSetCCPassPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
 void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
+void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
+void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
+void initializeX86LowerTileCopyPass(PassRegistry &);
 void initializeX86OptimizeLEAPassPass(PassRegistry &);
 void initializeX86PartialReductionPass(PassRegistry &);
-void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
-void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
-void initializeX86PreTileConfigPass(PassRegistry &);
-void initializeX86FastPreTileConfigPass(PassRegistry &);
-void initializeX86FastTileConfigPass(PassRegistry &);
-void initializeX86TileConfigPass(PassRegistry &);
-void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86PreAMXConfigPassPass(PassRegistry &);
-void initializeX86LowerTileCopyPass(PassRegistry &);
-void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
+void initializeX86PreTileConfigPass(PassRegistry &);
+void initializeX86ReturnThunksPass(PassRegistry &);
+void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
+void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
+void initializeX86TileConfigPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

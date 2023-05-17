@@ -1,7 +1,7 @@
 // REQUIRES: arm
 // RUN: llvm-mc --triple=thumbv6m-none-eabi --arm-add-build-attributes -filetype=obj -o %t.o %s
 // RUN: ld.lld %t.o -o %t
-// RUN: llvm-objdump -d --no-show-raw-insn %t | FileCheck %s
+// RUN: llvm-objdump --no-print-imm-hex -d --no-show-raw-insn %t | FileCheck %s
 
 /// Test R_ARM_THM_PC8 as used in the ldr pseudo instruction. Only positive
 /// 4-byte aligned offsets are permitted.

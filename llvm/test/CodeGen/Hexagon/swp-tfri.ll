@@ -14,8 +14,8 @@ b1:                                               ; preds = %b0
   br i1 undef, label %b2, label %b4
 
 b2:                                               ; preds = %b1
-  %v0 = load i16, i16* undef, align 2
-  %v1 = load i16, i16* undef, align 2
+  %v0 = load i16, ptr undef, align 2
+  %v1 = load i16, ptr undef, align 2
   br i1 undef, label %b5, label %b3
 
 b3:                                               ; preds = %b5, %b2

@@ -18,14 +18,12 @@
 define dso_local i32 @test1() #0 !dbg !6 {
 entry:
   %bar = alloca %struct.t, align 4
-  %0 = bitcast %struct.t* %bar to i8*, !dbg !20
-  call void @llvm.lifetime.start.p0i8(i64 4, i8* %0) #5, !dbg !20
-  call void @llvm.dbg.declare(metadata %struct.t* %bar, metadata !11, metadata !DIExpression()), !dbg !21
-  %1 = call %struct.t* @llvm.preserve.array.access.index.p0s_struct.ts.p0s_struct.ts(%struct.t* elementtype(%struct.t) %bar, i32 0, i32 1), !dbg !22, !llvm.preserve.access.index !4
-  %2 = call i32 @llvm.bpf.preserve.field.info.p0s_struct.ts(%struct.t* %1, i64 2), !dbg !23
-  %3 = bitcast %struct.t* %bar to i8*, !dbg !24
-  call void @llvm.lifetime.end.p0i8(i64 4, i8* %3) #5, !dbg !24
-  ret i32 %2, !dbg !25
+  call void @llvm.lifetime.start.p0(i64 4, ptr %bar) #5, !dbg !20
+  call void @llvm.dbg.declare(metadata ptr %bar, metadata !11, metadata !DIExpression()), !dbg !21
+  %0 = call ptr @llvm.preserve.array.access.index.p0.ts.p0.ts(ptr elementtype(%struct.t) %bar, i32 0, i32 1), !dbg !22, !llvm.preserve.access.index !4
+  %1 = call i32 @llvm.bpf.preserve.field.info.p0.ts(ptr %0, i64 2), !dbg !23
+  call void @llvm.lifetime.end.p0(i64 4, ptr %bar) #5, !dbg !24
+  ret i32 %1, !dbg !25
 }
 
 ; CHECK:             r0 = 1
@@ -56,19 +54,19 @@ entry:
 ; CHECK-NEXT:        .long   2
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.start.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture) #1
 
 ; Function Attrs: nofree nosync nounwind readnone speculatable willreturn
 declare void @llvm.dbg.declare(metadata, metadata, metadata) #2
 
 ; Function Attrs: nofree nosync nounwind readnone willreturn
-declare %struct.t* @llvm.preserve.array.access.index.p0s_struct.ts.p0s_struct.ts(%struct.t*, i32 immarg, i32 immarg) #3
+declare ptr @llvm.preserve.array.access.index.p0.ts.p0.ts(ptr, i32 immarg, i32 immarg) #3
 
 ; Function Attrs: nounwind readnone
-declare i32 @llvm.bpf.preserve.field.info.p0s_struct.ts(%struct.t*, i64 immarg) #4
+declare i32 @llvm.bpf.preserve.field.info.p0.ts(ptr, i64 immarg) #4
 
 ; Function Attrs: argmemonly nofree nosync nounwind willreturn
-declare void @llvm.lifetime.end.p0i8(i64 immarg, i8* nocapture) #1
+declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture) #1
 
 attributes #0 = { nounwind "frame-pointer"="all" "min-legal-vector-width"="0" "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 attributes #1 = { argmemonly nofree nosync nounwind willreturn }

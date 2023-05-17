@@ -696,6 +696,10 @@ static __isl_give isl_val *isl_pw_aff_opt_val(__isl_take isl_pw_aff *pa,
 }
 
 #undef TYPE
+#define TYPE isl_pw_aff
+#include "isl_ilp_opt_fn_val_templ.c"
+
+#undef TYPE
 #define TYPE isl_pw_multi_aff
 #include "isl_ilp_opt_multi_val_templ.c"
 
@@ -752,27 +756,9 @@ static __isl_give isl_val *isl_union_pw_aff_opt_val(
 	return data.res;
 }
 
-/* Return the minimum of the integer piecewise affine
- * expression "upa" over its definition domain.
- *
- * Return negative infinity if the optimal value is unbounded and
- * NaN if the domain of the expression is empty.
- */
-__isl_give isl_val *isl_union_pw_aff_min_val(__isl_take isl_union_pw_aff *upa)
-{
-	return isl_union_pw_aff_opt_val(upa, 0);
-}
-
-/* Return the maximum of the integer piecewise affine
- * expression "upa" over its definition domain.
- *
- * Return infinity if the optimal value is unbounded and
- * NaN if the domain of the expression is empty.
- */
-__isl_give isl_val *isl_union_pw_aff_max_val(__isl_take isl_union_pw_aff *upa)
-{
-	return isl_union_pw_aff_opt_val(upa, 1);
-}
+#undef TYPE
+#define TYPE isl_union_pw_aff
+#include "isl_ilp_opt_fn_val_templ.c"
 
 /* Return a list of minima (maxima if "max" is set)
  * for each of the expressions in "mupa" over their domains.

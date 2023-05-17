@@ -10,6 +10,8 @@
     - [3.2.3 Variable Location in Memory](#variable-location-in-memory)
     - [3.2.4 Variable Spread Across Different Locations](#variable-spread-across-different-locations)
     - [3.2.5 Offsetting a Composite Location](#offsetting-a-composite-location)
+    - [3.2.6 Pointer to Member](#pointer-to-member)
+    - [3.2.7 Virtual Base Class](#virtual-base-class)
   - [3.3 Limitations](#limitations)
 - [4. Extension Solution](#extension-solution)
   - [4.1 Location Description](#location-description)
@@ -105,7 +107,7 @@ Other approaches were explored that involved adding specialized operations and
 rules. However, these resulted in the need for more operations that did not
 compose. It also resulted in operations with context sensitive semantics and
 corner cases that had to be defined. The observation was that numerous
-specialized context sensitive operations are harder for both produces and
+specialized context sensitive operations are harder for both producers and
 consumers than a smaller number of general composable operations that have
 consistent semantics regardless of context.
 
@@ -442,6 +444,379 @@ the offset. For example:
 
 This illustrates that operations on stack values are not composable with
 operations on location descriptions.
+
+### 3.2.6 Pointer to Member
+
+> NOTE: Without loss of generality, DWARF 4 is used in this example as full
+> support for DWARF 5 is not present in the versions of the tools used. No
+> feature of DWARF 5 provides a remedy for this issue.
+
+This example highlights the inability of DWARF 5 to describe C++
+pointer-to-member use semantics.
+
+The mechanism DWARF 5 provides for describing pointer-to-member use is
+`DW_AT_use_location`, which is defined as encoding a location description which
+computes the address of the member pointed to by a pointer-to-member, given the
+pointer-to-member object and the address of the containing object.
+
+That is, when a debug agent wishes to evaluate a pointer-to-member access
+operation, it first pushes two values onto the DWARF expression stack:
+
+* The pointer-to-member object
+* The address of the containing object
+
+It then evaluates the location description associated with the
+`DW_AT_use_location` of the pointer-to-member type, and interprets the result
+as the address of the member pointed to by the pointer-to-member.
+
+Consider the following C++ source file `s.cc`:
+
+```cpp
+struct s {
+  int m;
+  int n;
+};
+int s::* p;
+```
+
+When compiled with GCC and inspected with dwarfdump:
+
+```
+$ g++ -gdwarf-5 -O3 -c s.cc
+$ dwarfdump s.o
+< 1><0x0000001e>    DW_TAG_structure_type
+                      DW_AT_name                  s
+                      DW_AT_byte_size             0x00000008
+                      DW_AT_sibling               <0x0000003c>
+< 2><0x00000029>      DW_TAG_member
+                        DW_AT_name                  m
+                        DW_AT_type                  <0x0000003c>
+                        DW_AT_data_member_location  0
+< 2><0x00000032>      DW_TAG_member
+                        DW_AT_name                  n
+                        DW_AT_type                  <0x0000003c>
+                        DW_AT_data_member_location  4
+< 1><0x0000003c>    DW_TAG_base_type
+                      DW_AT_byte_size             0x00000004
+                      DW_AT_encoding              DW_ATE_signed
+                      DW_AT_name                  int
+< 1><0x00000043>    DW_TAG_ptr_to_member_type
+                      DW_AT_containing_type       <0x0000001e>
+                      DW_AT_type                  <0x0000003c>
+                      DW_AT_use_location          len 0x0001: 22: DW_OP_plus
+< 1><0x0000004e>    DW_TAG_variable
+                      DW_AT_name                  p
+                      DW_AT_type                  <0x00000043>
+                      DW_AT_external              yes(1)
+                      DW_AT_location              len 0x0009: 030000000000000000: DW_OP_addr 0x00000000
+```
+
+Note the location description for `DW_AT_use_location` is `DW_OP_plus`, which
+reflects the GCC implementation of the pointer-to-member as an integral byte
+offset within the containing object. For example, the value of `&s::m` in this
+implementation is `offsetof(s, m)` and the value of `&s::n` is `offsetof(s, n)`:
+
+```cpp
+struct s {
+    int m;   // offsetof(s, m) == 0
+    int n;   // offsetof(s, n) == 4
+} o;         // &o == 0xff00
+int s::* p;
+int *i;
+
+p = &s::m;   // p == 0
+i = &(o.*p); // i == 0xff00 + 0
+p = &s::n;   // p == 4
+i = &(o.*p); // i == 0xff00 + 4
+```
+
+The expression `DW_OP_plus` accurately describes this implementation so long as
+the entire containing object resides in memory in the default address space.
+
+However, what if the containing object or the member pointed to are not at any
+default address space address?
+
+The compiler may store the containing object in memory in any address space,
+in a register, recompute its value at each use, or compose any of these in
+arbitrary ways.
+
+The richness of the existing DWARF 5 expression language is a reflection of the
+diversity of possible implementation strategies and optimization choices
+affecting the location of an object in a program, and (modulo address spaces)
+it can describe all of these locations for variables. However, the moment we
+look at a pointer-to-member use we are restricted to only objects residing in a
+contiguous piece of memory in the default address space.
+
+To demonstrate the problem, consider a program which GCC chooses to optimize in
+such a way that the containing object is not in memory at all:
+
+ptm.h:
+```cpp
+struct s {
+    int m;
+    int n;
+};
+void i(int);
+extern int t;
+void f(s x, int s::* p);
+```
+
+ptm.cc:
+```cpp
+#include "ptm.h"
+void f(s x, int s::* p) {
+    for (int a = 0; a < t; ++a) {
+        x.m += a + x.n;
+        i(x.*p);
+    }
+}
+```
+
+main.cc:
+```cpp
+#include "ptm.h"
+int t = 100;
+void i(int) {}
+int main(int argc, char *argv[]) {
+    s x = { 0, 1 };
+    f(x, &s::m);
+}
+```
+
+When compiled and run under GDB:
+
+```
+$ g++-9 -gdwarf-4 -O3 -c main.cc -o main.o
+$ g++-9 -gdwarf-4 -O3 -c ptm.cc -o ptm.o
+$ g++-9 main.o ptm.o -o use_location.out
+$ gdb ./use_location.out
+(gdb) maint set dwarf always-disassemble
+(gdb) b ptm.cc:5
+Breakpoint 1 at 0x119e: file ptm.cc, line 5.
+(gdb) r
+
+Breakpoint 1, f (x=..., p=<optimized out>) at ptm.cc:5
+5               i(x.*p);
+```
+
+Note that the compiler has promoted the entire object `x` into register `rdi`
+for the body of the loop:
+
+```
+(gdb) info addr x
+Symbol "x" is multi-location:
+  Range 0x555555555160-0x5555555551af: a complex DWARF expression:
+     0: DW_OP_reg5 [$rdi]
+
+  Range 0x5555555551af-0x5555555551ba: a complex DWARF expression:
+     0: DW_OP_fbreg -56
+
+.
+(gdb) p $pc
+$1 = (void (*)(void)) 0x55555555519e <f(s, int s::*)+62>
+```
+
+And so it is impossible to interpret `DW_OP_use_location` in this case:
+
+```
+(gdb) p x.*p
+Address requested for identifier "x" which is in register $rdi
+```
+
+With location descriptions on the stack, the definition of `DW_OP_use_location`
+can be modified by replacing every instance of "address" with "location
+description", as is described in [A.5 Type Entries](#a-5-type-entries).
+
+To implement the fully generalized version of this attribute, GCC would only
+need to change the expression from `DW_OP_plus` to `DW_OP_swap,
+DW_OP_LLVM_offset`.
+
+### 3.2.7 Virtual Base Class
+
+> NOTE: Without loss of generality, DWARF 4 is used in this example as full
+> support for DWARF 5 is not present in the versions of the tools used. No
+> feature of DWARF 5 provides a remedy for this issue.
+
+This example highlights the inability of DWARF 5 to describe C++
+virtual inheritance semantics.
+
+The mechanism DWARF 5 provides for describing the location of an inherited
+subobject is `DW_AT_data_member_location`. This attribute is overloaded to
+describe both data member locations and inherited subobject locations, and
+in each case has multiple possible forms:
+
+* If an integral constant form, it encodes the byte offset from the derived
+  object to the data member or subobject.
+* Otherwise, it encodes a location description to compute the address of the
+  data member or subobject given the address of the derived object.
+
+Only the attribute describing a subobject, and only the location description
+form are considered here.
+
+In this case, when a debug agent wishes to locate the subobject, it first
+pushes the address of the derived object onto the DWARF expression stack. It
+then evaluates the location description associated with the
+`DW_AT_data_member_location` of the `DW_TAG_inheritence` DIE corresponding to
+the inherited subobject.
+
+Consider the following C++ source file `ab.cc`:
+
+```cpp
+class A {
+public:
+    char x;
+};
+class B
+: public virtual A {} o;
+```
+
+When compiled with GCC and inspected with dwarfdump:
+
+```
+$ g++ -gdwarf-5 -O3 -c ab.cc
+$ dwarfdump ab.o
+< 1><0x0000002a>    DW_TAG_class_type
+                      DW_AT_name                  A
+                      DW_AT_byte_size             0x00000001
+                      DW_AT_sibling               <0x00000042>
+< 1><0x00000049>    DW_TAG_class_type
+                      DW_AT_name                  B
+                      DW_AT_byte_size             0x00000010
+                      DW_AT_containing_type       <0x00000049>
+                      DW_AT_sibling               <0x000000f9>
+< 2><0x00000058>      DW_TAG_inheritance
+                        DW_AT_type                  <0x0000002a>
+                        DW_AT_data_member_location  len 0x0006: 1206481c0622:
+                          DW_OP_dup DW_OP_deref DW_OP_lit24 DW_OP_minus DW_OP_deref DW_OP_plus
+                        DW_AT_virtuality            DW_VIRTUALITY_virtual
+                        DW_AT_accessibility         DW_ACCESS_public
+```
+
+This `DW_AT_data_member_location` expression describes the dynamic process of
+locating the `A`-in-`B` subobject according to the [Itanium
+ABI](https://refspecs.linuxfoundation.org/cxxabi-1.86.html#layout). A diagram
+of the logical layout of class `B` is:
+
+```
+0: class B
+0:   vptr B
+8:   class A
+8:     A::x
+```
+
+That is, the address of an object of class `B` is equivalent to the address for
+the `vtable` pointer for `B`. As there are no other direct data members of `B`
+the primary base class subobject of class `A` comes next, and there is no
+intervening padding as the subobject alignment requirements are already
+satisfied.
+
+The `vtable` pointer for `B` contains an entry `vbase_offset` for each virtual
+base class. In this case, that table layout is:
+
+```
+-24: vbase_offset[A]=8
+-16: offset_to_top=0
+ -8: B RTTI
+  0: <vtable for B>
+```
+
+That is, to find the `vbase_offset` for the `A`-in-`B` subobject the address
+`vptr B` is offset by the statically determined value `-24`.
+
+Thus, in order to implement `DW_AT_data_member_location` for `A`-in-`B`, the
+expression needs to index to a statically known byte offset of `-24` through
+`vptr B` to lookup `vbase_offset` for `A`-in-`B`. It must then offset the
+location of `B` by the dynamic value of `vbase_offset` (in this case `8`) to
+arrive at the location of the inherited subobject.
+
+This definition shares the same problem as example [3.2.6](#pointer-to-member)
+in that it relies on the address of the derived object and inherited subobject,
+when there is no guarantee either or both have any address at all.
+
+To demonstrate the problem, consider a program which GCC chooses to optimize in
+such a way that the derived object is not in memory at all:
+
+f.h:
+```cpp
+class A {
+public:
+    char x;
+};
+class B
+: public virtual A {};
+void f(B b);
+```
+
+f.cc:
+```cpp
+#include "f.h"
+void f(B b) {}
+```
+
+main.cc:
+```cpp
+#include "f.h"
+int main(int argc, char *argv[]) {
+    B b;
+    b.x = 42;
+    f(b);
+    return b.x;
+}
+```
+
+When compiled and run under GDB:
+
+```
+$ g++-9 -gdwarf-4 -O3 -c main.cc -o main.o
+$ g++-9 -gdwarf-4 -O3 -c f.cc -o f.o
+$ g++-9 main.o f.o -o cpp-vbase.out
+(gdb) maint set dwarf always-disassemble
+(gdb) b main.cc:6
+Breakpoint 1 at 0x1090: file main.cc, line 6.
+(gdb) r
+
+Breakpoint 1, main (argc=<optimized out>, argv=<optimized out>) at main.cc:6
+6           return b.x;
+```
+
+Note that the compiler has elided storage for the entire object `x` in the
+body of `main()`:
+
+```
+(gdb) info addr b
+Symbol "b" is multi-location:
+  Range 0x555555555078-0x5555555550af: a complex DWARF expression:
+     0: DW_OP_piece 8 (bytes)
+     2: DW_OP_const1u 42
+     4: DW_OP_stack_value
+     5: DW_OP_piece 1 (bytes)
+     7: DW_OP_piece 7 (bytes)
+
+.
+(gdb) p $pc
+$1 = (void (*)(void)) 0x555555555090 <main(int, char**)+48>
+```
+
+And so it is impossible to interpret `DW_OP_data_member_location` in this case:
+
+```
+(gdb) p b
+$2 = {<A> = <invalid address>, _vptr.B = <optimized out>}
+```
+
+> NOTE: The `vptr B` which should occupy the first 8 bytes of the object `b`
+> are undefined in the DWARF, but could be described as an implicit value by
+> the compiler. This change would be trivial and would directly expose the
+> issue in DWARF 5 described here.
+
+With location descriptions on the stack, the definition of
+`DW_OP_data_member_location` can be modified by replacing every instance of
+"address" with "location description", as is described in [A.5 Type
+Entries](#a-5-type-entries).
+
+To implement the fully generalized version of this attribute, GCC would only
+need to change the last operation in the expression from `DW_OP_plus` to
+`DW_OP_LLVM_offset`.
 
 ## 3.3 Limitations
 
@@ -1163,8 +1538,13 @@ elements that can be specified are:
 
     If specified:
 
-    - If the current thread is specified, then the current target architecture
-      must be the same as the target architecture of the current thread.
+    - If the current frame is specified, then the current target architecture
+      must be the same as the target architecture of the current frame.
+
+    - If the current frame is specified and is the top frame, and if the current
+      thread is specified, then the current target architecture must be the same
+      as the target architecture of the current thread.
+
     - If the current compilation unit is specified, then the current target
       architecture default address space address size must be the same as the
       `address_size` field in the header of the current compilation unit and any
@@ -1193,7 +1573,7 @@ elements that can be specified are:
     descriptor as the current object when it evaluates its associated
     expression.</i>
 
-    The result is undefined if the location descriptor is invalid (see [3.5.3
+    The result is undefined if the location description is invalid (see [2.5.3
     DWARF Location Description](#dwarf-location-description)).
 
 8.  <i>An initial stack</i>
@@ -1206,7 +1586,7 @@ elements that can be specified are:
     expression value with initial stack entries. In all other cases the initial
     stack is empty.
 
-    The result is undefined if any location descriptors are invalid (see [3.5.3
+    The result is undefined if any location descriptions are invalid (see [2.5.3
     DWARF Location Description](#dwarf-location-description)).
 
 If the evaluation requires a context element that is not specified, then the
@@ -1532,6 +1912,9 @@ expression is ill-formed.
     the stack becomes the third stack entry, the second entry becomes the top of
     the stack, and the third entry becomes the second entry.
 
+<i>Examples illustrating many of these stack operations are found in Appendix
+D.1.2 on page 289.</i>
+
 ##### A.2.5.4.2 Control Flow Operations
 
 > NOTE: This section replaces DWARF Version 5 section 2.5.1.5.
@@ -1580,7 +1963,7 @@ expression.
 5.  `DW_OP_call2, DW_OP_call4, DW_OP_call_ref`
 
     `DW_OP_call2`, `DW_OP_call4`, and `DW_OP_call_ref` perform DWARF procedure
-    calls during evaluation of a DWARF expression.
+    calls during evaluation of a DWARF operation expression.
 
     `DW_OP_call2` and `DW_OP_call4`, have one operand that is, respectively, a
     2-byte or 4-byte unsigned offset DR that represents the byte offset of a
@@ -1865,7 +2248,7 @@ There are these special value operations currently defined:
     > Removing use of the target hook does not cause any test failures in common
     > architectures. If the compiler for a target architecture did want some
     > form of conversion, including a larger result type, it could always
-    > explicitly used the `DW_OP_convert` operation.
+    > explicitly use the `DW_OP_convert` operation.
     >
     > If T is a larger type than the register size, then the default GDB
     > register hook reads bytes from the next register (or reads out of bounds
@@ -2062,7 +2445,7 @@ There are these special value operations currently defined:
     architecture specific base type of T, then the contents of the register are
     retrieved as if a `DW_OP_deref_type DR` operation was performed where DR is
     the offset of a hypothetical debug information entry in the current
-    compilation unit for T. The resulting value V s pushed on the stack.
+    compilation unit for T. The resulting value V is pushed on the stack.
 
     <i>Using `DW_OP_reg*` provides a more compact form for the case where the
     value was in a register on entry to the subprogram.</i>
@@ -2279,7 +2662,7 @@ type.
     corresponding to the executable or shared library containing this DWARF
     expression is used.
 
-    <i>Some implementations of C, C++, Fortran, and other languages support a
+    <i>Some implementations of C, C++, Fortran, and other languages, support a
     thread-local storage class. Variables with this storage class have distinct
     values and addresses in distinct threads, much as automatic variables have
     distinct values and addresses in each subprogram invocation. Typically,
@@ -2441,7 +2824,7 @@ implicit storage value starting at the bit offset.
     `DW_OP_stack_value` pops one stack entry that must be a value V.
 
     An implicit location storage LS is created with the literal value V using
-    the size, encoding, and enianity specified by V's base type.
+    the size, encoding, and endianity specified by V's base type.
 
     It pushes a location description L with one implicit location description SL
     on the stack. SL specifies LS with a bit offset of 0.
@@ -2451,14 +2834,13 @@ implicit storage value starting at the bit offset.
     location description specifies the actual value of the object, rather than
     specifying the memory or register storage that holds the value.</i>
 
-    See [2.5.4.4.5 Implicit Location Description
-    Operations](#implicit-location-description-operations) for special
-    rules concerning implicit pointer values produced by dereferencing implicit
-    location descriptions created by the `DW_OP_implicit_pointer` operation.
+    See `DW_OP_implicit_pointer` (following) for special rules concerning
+    implicit pointer values produced by dereferencing implicit location
+    descriptions created by the `DW_OP_implicit_pointer` operation.
 
-    > NOTE: Since location descriptions are allowed on the stack, the
-    > `DW_OP_stack_value` operation no longer terminates the DWARF operation
-    > expression execution as in DWARF Version 5.
+    Note: Since location descriptions are allowed on the stack, the
+    `DW_OP_stack_value` operation no longer terminates the DWARF operation
+    expression execution as in DWARF Version 5.
 
 3.  `DW_OP_implicit_pointer`
 
@@ -2482,7 +2864,7 @@ implicit storage value starting at the bit offset.
     that contains the current compilation unit. The second operand is a signed
     LEB128 integer that represents a byte displacement B.
 
-    <i>Note that D may not be in the current compilation unit.</i>
+    <i>Note that D might not be in the current compilation unit.</i>
 
     <i>The first operand interpretation is exactly like that for
     `DW_FORM_ref_addr`.</i>
@@ -2509,7 +2891,7 @@ implicit storage value starting at the bit offset.
 
         <i>Note that all bits do not have to come from the same implicit
         location description, as L' may involve composite location
-        descriptors.</i>
+        descriptions.</i>
 
     2.  The bits come from consecutive ascending offsets within their respective
         implicit location storage.
@@ -2870,7 +3252,7 @@ location list expressions.</i>
     elements corresponding to the source language thread of execution upon which
     the user is focused, if any.
 
-    The DWARF is ill-formed if E contains an `DW_OP_fbreg` operation, or the
+    The DWARF is ill-formed if E contains a `DW_OP_fbreg` operation, or the
     resulting location description L is not comprised of one single location
     description SL.
 
@@ -2993,9 +3375,17 @@ location list expressions.</i>
 
 ### A.4.1 Data Object Entries
 
-1.  Any debugging information entry describing a data object (which includes
-    variables and parameters) or common blocks may have a `DW_AT_location`
-    attribute, whose value is a DWARF expression E.
+Program variables, formal parameters and constants are represented by debugging
+information entries with the tags `DW_TAG_variable`, `DW_TAG_formal_parameter`
+and `DW_TAG_constant`, respectively.
+
+*The tag `DW_TAG_constant` is used for languages that have true named constants.*
+
+The debugging information entry for a program variable, formal parameter or
+constant may have the following attributes:
+
+1.  A `DW_AT_location` attribute, whose value is a DWARF expression E that
+    describes the location of a variable or parameter at run-time.
 
     The result of the attribute is obtained by evaluating E with a context that
     has a result kind of a location description, an unspecified object, the
@@ -3032,6 +3422,18 @@ location list expressions.</i>
     > expression. This allows the `DW_OP_call*` operations to be used to push
     > the location description of any variable regardless of how it is
     > optimized.
+
+### A.4.2 Common Block Entries
+
+A common block entry also has a DW_AT_location attribute whose value is a DWARF
+expression E that describes the location of the common block at run-time. The
+result of the attribute is obtained by evaluating E with a context that has a
+result kind of a location description, an unspecified object, the compilation
+unit that contains E, an empty initial stack, and other context elements
+corresponding to the source language thread of execution upon which the user is
+focused, if any. The result of the evaluation is the location description of the
+base of the common block. See 2.5.4.2 Control Flow Operations for special
+evaluation rules used by the DW_OP_call* operations.
 
 ## A.5 Type Entries
 
@@ -3113,7 +3515,9 @@ location list expressions.</i>
     description of the member of the class to which the pointer to member entry
     points.
 
-### A.5.16 Dynamic Type Entries
+### A.5.18 Dynamic Properties of Types
+
+#### A.5.18.1 Data Location
 
 1.  The `DW_AT_data_location` attribute may be used with any type that provides one
     or more levels of hidden indirection and/or run-time parameters in its
@@ -3260,8 +3664,9 @@ The register rules are:
 
 7.  <i>val_expression(E)</i>
 
-    The previous value of this register is the value produced by evaluating the
-    DWARF operation expression E (see [2.5.4 DWARF Operation
+    The previous value of this register is located at the implicit location
+    description created from the value produced by evaluating the DWARF
+    operation expression E (see [2.5.4 DWARF Operation
     Expressions](#dwarf-operation-expressions)).
 
     E is evaluated with the current context, except the result kind is a value,
@@ -3448,17 +3853,17 @@ used in E have the following restrictions:
 
     The `DW_CFA_def_cfa` instruction takes two unsigned LEB128 operands
     representing a register number R and a (non-factored) byte displacement B.
-    The required action is to define the current CFA rule to be the result of
-    evaluating the DWARF operation expression `DW_OP_bregx R, B` as a location
-    description.
+    The required action is to define the current CFA rule to be equivalent to
+    the result of evaluating the DWARF operation expression `DW_OP_bregx R, B`
+    as a location description.
 
 2.  `DW_CFA_def_cfa_sf`
 
     The `DW_CFA_def_cfa_sf` instruction takes two operands: an unsigned LEB128
     value representing a register number R and a signed LEB128 factored byte
     displacement B. The required action is to define the current CFA rule to be
-    the result of evaluating the DWARF operation expression `DW_OP_bregx R, B *
-    data_alignment_factor` as a location description.
+    equivalent to the result of evaluating the DWARF operation expression
+    `DW_OP_bregx R, B * data_alignment_factor` as a location description.
 
     <i>The action is the same as `DW_CFA_def_cfa`, except that the second
     operand is signed and factored.</i>
@@ -3467,9 +3872,9 @@ used in E have the following restrictions:
 
     The `DW_CFA_def_cfa_register` instruction takes a single unsigned LEB128
     operand representing a register number R. The required action is to define
-    the current CFA rule to be the result of evaluating the DWARF operation
-    expression `DW_OP_bregx R, B` as a location description. B is the old CFA
-    byte displacement.
+    the current CFA rule to be equivalent to the result of evaluating the DWARF
+    operation expression `DW_OP_bregx R, B` as a location description. B is the
+    old CFA byte displacement.
 
     If the subprogram has no current CFA rule, or the rule was defined by a
     `DW_CFA_def_cfa_expression` instruction, then the DWARF is ill-formed.
@@ -3478,9 +3883,9 @@ used in E have the following restrictions:
 
     The `DW_CFA_def_cfa_offset` instruction takes a single unsigned LEB128
     operand representing a (non-factored) byte displacement B. The required
-    action is to define the current CFA rule to be the result of evaluating the
-    DWARF operation expression `DW_OP_bregx R, B` as a location description. R
-    is the old CFA register number.
+    action is to define the current CFA rule to be equivalent to the result of
+    evaluating the DWARF operation expression `DW_OP_bregx R, B` as a location
+    description. R is the old CFA register number.
 
     If the subprogram has no current CFA rule, or the rule was defined by a
     `DW_CFA_def_cfa_expression` instruction, then the DWARF is ill-formed.
@@ -3489,8 +3894,8 @@ used in E have the following restrictions:
 
     The `DW_CFA_def_cfa_offset_sf` instruction takes a signed LEB128 operand
     representing a factored byte displacement B. The required action is to
-    define the current CFA rule to be the result of evaluating the DWARF
-    operation expression `DW_OP_bregx R, B * data_alignment_factor` as a
+    define the current CFA rule to be equivalent to the result of evaluating the
+    DWARF operation expression `DW_OP_bregx R, B * data_alignment_factor` as a
     location description. R is the old CFA register number.
 
     If the subprogram has no current CFA rule, or the rule was defined by a
@@ -3503,10 +3908,10 @@ used in E have the following restrictions:
 
     The `DW_CFA_def_cfa_expression` instruction takes a single operand encoded
     as a `DW_FORM_exprloc` value representing a DWARF operation expression E.
-    The required action is to define the current CFA rule to be the result of
-    evaluating E with the current context, except the result kind is a location
-    description, the compilation unit is unspecified, the object is unspecified,
-    and an empty initial stack.
+    The required action is to define the current CFA rule to be equivalent to
+    the result of evaluating E with the current context, except the result kind
+    is a location description, the compilation unit is unspecified, the object
+    is unspecified, and an empty initial stack.
 
     <i>See [6.4.2 Call Frame Instructions](#call-frame-instructions) regarding
     restrictions on the DWARF expression operations that can be used in E.</i>

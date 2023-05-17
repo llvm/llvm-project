@@ -19,16 +19,17 @@
 #include "M68kMachineFunction.h"
 #include "M68kSubtarget.h"
 
-#include "llvm/Analysis/EHPersonalities.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h" // For IDs of passes that are preserved.
+#include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/GlobalValue.h"
 
 using namespace llvm;
 
-#define DEBUG_TYPE "M68k-expand-pseudos"
+#define DEBUG_TYPE "m68k-expand-pseudo"
+#define PASS_NAME "M68k pseudo instruction expansion pass"
 
 namespace {
 class M68kExpandPseudo : public MachineFunctionPass {
@@ -56,16 +57,14 @@ public:
         MachineFunctionProperties::Property::NoVRegs);
   }
 
-  StringRef getPassName() const override {
-    return "M68k pseudo instruction expansion pass";
-  }
-
 private:
   bool ExpandMI(MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI);
   bool ExpandMBB(MachineBasicBlock &MBB);
 };
 char M68kExpandPseudo::ID = 0;
 } // End anonymous namespace.
+
+INITIALIZE_PASS(M68kExpandPseudo, DEBUG_TYPE, PASS_NAME, false, false)
 
 /// If \p MBBI is a pseudo instruction, this method expands
 /// it to the corresponding (sequence of) actual instruction(s).
@@ -160,6 +159,16 @@ bool M68kExpandPseudo::ExpandMI(MachineBasicBlock &MBB,
                                 MVT::i8);
   case M68k::MOVZXd32f16:
     return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16rf), MVT::i32,
+                                MVT::i16);
+
+  case M68k::MOVZXd16q8:
+    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i16,
+                                MVT::i8);
+  case M68k::MOVZXd32q8:
+    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV8dq), MVT::i32,
+                                MVT::i8);
+  case M68k::MOVZXd32q16:
+    return TII->ExpandMOVSZX_RM(MIB, false, TII->get(M68k::MOV16dq), MVT::i32,
                                 MVT::i16);
 
   case M68k::MOV8cd:

@@ -19,11 +19,11 @@ namespace {
 /// Check a callable type of the form `bool(const int &)`.
 template <typename CallableT> struct CheckFunctionTraits {
   static_assert(
-      std::is_same<typename function_traits<CallableT>::result_t, bool>::value,
+      std::is_same_v<typename function_traits<CallableT>::result_t, bool>,
       "expected result_t to be `bool`");
   static_assert(
-      std::is_same<typename function_traits<CallableT>::template arg_t<0>,
-                   const int &>::value,
+      std::is_same_v<typename function_traits<CallableT>::template arg_t<0>,
+                     const int &>,
       "expected arg_t<0> to be `const int &`");
   static_assert(function_traits<CallableT>::num_args == 1,
                 "expected num_args to be 1");
@@ -64,16 +64,3 @@ static_assert(is_detected<has_foo_method_t, HasFooMethod>::value,
 static_assert(!is_detected<has_foo_method_t, NoFooMethod>::value,
               "expected no foo method to be detected");
 } // end anonymous namespace
-
-//===----------------------------------------------------------------------===//
-// is_invocable
-//===----------------------------------------------------------------------===//
-
-void invocable_fn(int);
-
-static_assert(is_invocable<decltype(invocable_fn), int>::value,
-              "expected function to be invocable");
-static_assert(!is_invocable<decltype(invocable_fn), void *>::value,
-              "expected function not to be invocable");
-static_assert(!is_invocable<decltype(invocable_fn), int, int>::value,
-              "expected function not to be invocable");

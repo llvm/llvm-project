@@ -15,7 +15,7 @@
 ; Function Attrs: norecurse nounwind readonly
 define dso_local i32 @test() local_unnamed_addr #0 !dbg !15 {
 entry:
-  %0 = load i32, i32* getelementptr inbounds (%struct.t1, %struct.t1* @global, i64 0, i32 0), align 4, !dbg !18, !tbaa !19
+  %0 = load i32, ptr @global, align 4, !dbg !18, !tbaa !19
   ret i32 %0, !dbg !24
 }
 

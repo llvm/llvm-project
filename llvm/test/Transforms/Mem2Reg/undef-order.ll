@@ -63,7 +63,7 @@ Block4:
 Block5:
   br label %Join
 Store1:
-  store i32 1, i32* %val
+  store i32 1, ptr %val
   br label %Join
 Block6:
   br label %Join
@@ -76,7 +76,7 @@ Block9:
 Block10:
   br label %Join
 Store2:
-  store i32 2, i32* %val
+  store i32 2, ptr %val
   br label %Join
 Block11:
   br label %Join
@@ -92,6 +92,6 @@ Block16:
   br label %Join
 Join:
 ; Phi inserted here should have operands appended deterministically
-  %result = load i32, i32* %val
+  %result = load i32, ptr %val
   ret i32 %result
 }

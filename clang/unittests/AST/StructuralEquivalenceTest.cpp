@@ -4,7 +4,7 @@
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Testing/CommandLineArgs.h"
 #include "clang/Tooling/Tooling.h"
-#include "llvm/Support/Host.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "DeclMatcher.h"
 
@@ -186,7 +186,7 @@ TEST_F(StructuralEquivalenceTest, Char) {
 }
 
 // This test is disabled for now.
-// FIXME Whether this is equivalent is dependendant on the target.
+// FIXME Whether this is equivalent is dependent on the target.
 TEST_F(StructuralEquivalenceTest, DISABLED_CharVsSignedChar) {
   auto Decls = makeNamedDecls("char foo;", "signed char foo;", Lang_CXX03);
   EXPECT_FALSE(testStructuralMatch(Decls));
@@ -460,7 +460,7 @@ TEST_F(StructuralEquivalenceFunctionTest,
   // These attributes may not be available on certain platforms.
   if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
       llvm::Triple::x86_64)
-    return;
+    GTEST_SKIP();
   auto t = makeNamedDecls("__attribute__((preserve_all)) void foo();",
                           "__attribute__((ms_abi))   void foo();", Lang_C99);
   EXPECT_FALSE(testStructuralMatch(t));
@@ -469,7 +469,7 @@ TEST_F(StructuralEquivalenceFunctionTest,
 TEST_F(StructuralEquivalenceFunctionTest, FunctionsWithDifferentSavedRegsAttr) {
   if (llvm::Triple(llvm::sys::getDefaultTargetTriple()).getArch() !=
       llvm::Triple::x86_64)
-    return;
+    GTEST_SKIP();
   auto t = makeNamedDecls(
       "__attribute__((no_caller_saved_registers)) void foo();",
       "                                           void foo();", Lang_C99);
@@ -2123,6 +2123,129 @@ TEST_F(StructuralEquivalenceStmtTest, UnaryOperator) {
 TEST_F(StructuralEquivalenceStmtTest, UnaryOperatorDifferentOps) {
   auto t = makeWrappedStmts("+1", "-1", Lang_CXX03, unaryOperator());
   EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookupDifferentName) {
+  auto t = makeStmts(
+      R"(
+      void f1(int);
+      template <typename T>
+      void f(T t) {
+        f1(t);
+      }
+      void g() { f<int>(1); }
+      )",
+      R"(
+      void f2(int);
+      template <typename T>
+      void f(T t) {
+        f2(t);
+      }
+      void g() { f<int>(1); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookupDifferentQualifier) {
+  auto t = makeStmts(
+      R"(
+      struct X {
+        static void g(int);
+        static void g(char);
+      };
+
+      template <typename T>
+      void f(T t) {
+        X::g(t);
+      }
+
+      void g() { f<int>(1); }
+      )",
+      R"(
+      struct Y {
+        static void g(int);
+        static void g(char);
+      };
+
+      template <typename T>
+      void f(T t) {
+        Y::g(t);
+      }
+
+      void g() { f<int>(1); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest,
+       UnresolvedLookupDifferentTemplateArgument) {
+  auto t = makeStmts(
+      R"(
+      struct A {};
+      template<typename T1, typename T2>
+      void g() {}
+
+      template <typename T>
+      void f() {
+        g<A, T>();
+      }
+
+      void h() { f<int>(); }
+      )",
+      R"(
+      struct B {};
+      template<typename T1, typename T2>
+      void g() {}
+
+      template <typename T>
+      void f() {
+        g<B, T>();
+      }
+
+      void h() { f<int>(); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_FALSE(testStructuralMatch(t));
+}
+
+TEST_F(StructuralEquivalenceStmtTest, UnresolvedLookup) {
+  auto t = makeStmts(
+      R"(
+      struct A {};
+      struct B {
+        template<typename T1, typename T2>
+        static void g(int) {};
+        template<typename T1, typename T2>
+        static void g(char) {};
+      };
+
+      template <typename T1, typename T2>
+      void f(T2 x) {
+        B::g<A, T1>(x);
+      }
+
+      void g() { f<char, int>(1); }
+      )",
+      R"(
+      struct A {};
+      struct B {
+        template<typename T1, typename T2>
+        static void g(int) {};
+        template<typename T1, typename T2>
+        static void g(char) {};
+      };
+
+      template <typename T1, typename T2>
+      void f(T2 x) {
+        B::g<A, T1>(x);
+      }
+
+      void g() { f<char, int>(1); }
+      )",
+      Lang_CXX03, unresolvedLookupExpr());
+  EXPECT_TRUE(testStructuralMatch(t));
 }
 
 } // end namespace ast_matchers

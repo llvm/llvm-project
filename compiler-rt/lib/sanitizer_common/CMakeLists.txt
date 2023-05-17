@@ -37,6 +37,7 @@ set(SANITIZER_SOURCES_NOTERMINATION
   sanitizer_stoptheworld_win.cpp
   sanitizer_suppressions.cpp
   sanitizer_tls_get_addr.cpp
+  sanitizer_thread_arg_retval.cpp
   sanitizer_thread_registry.cpp
   sanitizer_type_traits.cpp
   sanitizer_win.cpp
@@ -190,6 +191,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_syscall_linux_arm.inc
   sanitizer_syscall_linux_x86_64.inc
   sanitizer_syscall_linux_riscv64.inc
+  sanitizer_syscall_linux_loongarch64.inc
   sanitizer_syscalls_netbsd.inc
   sanitizer_thread_registry.h
   sanitizer_thread_safety.h

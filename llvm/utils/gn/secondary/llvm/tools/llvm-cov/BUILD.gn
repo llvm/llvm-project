@@ -1,11 +1,13 @@
 executable("llvm-cov") {
   deps = [
     "//llvm/include/llvm/Config:llvm-config",
+    "//llvm/lib/Debuginfod",
     "//llvm/lib/IR",
     "//llvm/lib/Object",
     "//llvm/lib/ProfileData",
     "//llvm/lib/ProfileData/Coverage",
     "//llvm/lib/Support",
+    "//llvm/lib/TargetParser",
   ]
   sources = [
     "CodeCoverage.cpp",

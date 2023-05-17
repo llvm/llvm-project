@@ -45,11 +45,11 @@ static void testTypeCreation(MlirContext ctx) {
   // CHECK: !llvm.void: 1
   fprintf(stderr, "%s: %d\n", voidt_text, mlirTypeEqual(voidt, voidt_ref));
 
-  const char *i32_4_text = "!llvm.array<4xi32>";
+  const char *i32_4_text = "!llvm.array<4 x i32>";
   MlirType i32_4 = mlirLLVMArrayTypeGet(i32, 4);
   MlirType i32_4_ref =
       mlirTypeParseGet(ctx, mlirStringRefCreateFromCString(i32_4_text));
-  // CHECK: !llvm.array<4xi32>: 1
+  // CHECK: !llvm.array<4 x i32>: 1
   fprintf(stderr, "%s: %d\n", i32_4_text, mlirTypeEqual(i32_4, i32_4_ref));
 
   const char *i8_i32_i64_text = "!llvm.func<i8 (i32, i64)>";
@@ -70,7 +70,7 @@ static void testTypeCreation(MlirContext ctx) {
           mlirTypeEqual(i32_i64_s, i32_i64_s_ref));
 }
 
-int main() {
+int main(void) {
   MlirContext ctx = mlirContextCreate();
   mlirDialectHandleRegisterDialect(mlirGetDialectHandle__llvm__(), ctx);
   mlirContextGetOrLoadDialect(ctx, mlirStringRefCreateFromCString("llvm"));
@@ -78,4 +78,3 @@ int main() {
   mlirContextDestroy(ctx);
   return 0;
 }
-

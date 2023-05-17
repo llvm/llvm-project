@@ -338,6 +338,9 @@ class BTFDebug : public DebugHandlerBase {
   void visitMapDefType(const DIType *Ty, uint32_t &TypeId);
   /// @}
 
+  /// Check whether the type is a forward declaration candidate or not.
+  bool IsForwardDeclCandidate(const DIType *Base);
+
   /// Get the file content for the subprogram. Certain lines of the file
   /// later may be put into string table and referenced by line info.
   std::string populateFileContent(const DISubprogram *SP);
@@ -355,6 +358,10 @@ class BTFDebug : public DebugHandlerBase {
   /// Generate types for decl annotations.
   void processDeclAnnotations(DINodeArray Annotations, uint32_t BaseTypeId,
                               int ComponentId);
+
+  /// Generate types for DISubprogram and it's arguments.
+  uint32_t processDISubprogram(const DISubprogram *SP, uint32_t ProtoTypeId,
+                               uint8_t Scope);
 
   /// Generate BTF type_tag's. If BaseTypeId is nonnegative, the last
   /// BTF type_tag in the chain points to BaseTypeId. Otherwise, it points to

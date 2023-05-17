@@ -17,24 +17,25 @@
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Intrinsics.h"
+#include <optional>
 
 namespace llvm {
 
-Optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
+std::optional<RoundingMode> convertStrToRoundingMode(StringRef RoundingArg) {
   // For dynamic rounding mode, we use round to nearest but we will set the
   // 'exact' SDNodeFlag so that the value will not be rounded.
-  return StringSwitch<Optional<RoundingMode>>(RoundingArg)
+  return StringSwitch<std::optional<RoundingMode>>(RoundingArg)
       .Case("round.dynamic", RoundingMode::Dynamic)
       .Case("round.tonearest", RoundingMode::NearestTiesToEven)
       .Case("round.tonearestaway", RoundingMode::NearestTiesToAway)
       .Case("round.downward", RoundingMode::TowardNegative)
       .Case("round.upward", RoundingMode::TowardPositive)
       .Case("round.towardzero", RoundingMode::TowardZero)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
-Optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
-  Optional<StringRef> RoundingStr = None;
+std::optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
+  std::optional<StringRef> RoundingStr;
   switch (UseRounding) {
   case RoundingMode::Dynamic:
     RoundingStr = "round.dynamic";
@@ -60,18 +61,18 @@ Optional<StringRef> convertRoundingModeToStr(RoundingMode UseRounding) {
   return RoundingStr;
 }
 
-Optional<fp::ExceptionBehavior>
+std::optional<fp::ExceptionBehavior>
 convertStrToExceptionBehavior(StringRef ExceptionArg) {
-  return StringSwitch<Optional<fp::ExceptionBehavior>>(ExceptionArg)
+  return StringSwitch<std::optional<fp::ExceptionBehavior>>(ExceptionArg)
       .Case("fpexcept.ignore", fp::ebIgnore)
       .Case("fpexcept.maytrap", fp::ebMayTrap)
       .Case("fpexcept.strict", fp::ebStrict)
-      .Default(None);
+      .Default(std::nullopt);
 }
 
-Optional<StringRef>
+std::optional<StringRef>
 convertExceptionBehaviorToStr(fp::ExceptionBehavior UseExcept) {
-  Optional<StringRef> ExceptStr = None;
+  std::optional<StringRef> ExceptStr;
   switch (UseExcept) {
   case fp::ebStrict:
     ExceptStr = "fpexcept.strict";

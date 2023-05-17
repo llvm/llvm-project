@@ -11,7 +11,7 @@ bb.i:		; preds = %entry
 	br label %bb51.i.i
 
 bb27.i.i:		; preds = %bb51.i.i
-	%tmp31.i.i = load i16, i16* null, align 2		; <i16> [#uses=2]
+	%tmp31.i.i = load i16, ptr null, align 2		; <i16> [#uses=2]
 	%tmp35.i.i = icmp ult i16 %tmp31.i.i, 1		; <i1> [#uses=1]
 	%tmp41.i.i = icmp ugt i16 %tmp31.i.i, -1		; <i1> [#uses=1]
 	%bothcond.i.i = or i1 %tmp35.i.i, %tmp41.i.i		; <i1> [#uses=1]

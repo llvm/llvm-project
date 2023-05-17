@@ -1,6 +1,7 @@
 set(LLVM_LINK_COMPONENTS
   FrontendOpenMP
   Support
+  TargetParser
   )
 
 add_clang_library(clangStaticAnalyzerCheckers
@@ -40,6 +41,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   DynamicTypePropagation.cpp
   DynamicTypeChecker.cpp
   EnumCastOutOfRangeChecker.cpp
+  ErrnoChecker.cpp
   ErrnoModeling.cpp
   ErrnoTesterChecker.cpp
   ExprInspectionChecker.cpp
@@ -119,6 +121,7 @@ add_clang_library(clangStaticAnalyzerCheckers
   UndefResultChecker.cpp
   UndefinedArraySubscriptChecker.cpp
   UndefinedAssignmentChecker.cpp
+  UndefinedNewArraySizeChecker.cpp
   UninitializedObject/UninitializedObjectChecker.cpp
   UninitializedObject/UninitializedPointee.cpp
   UnixAPIChecker.cpp

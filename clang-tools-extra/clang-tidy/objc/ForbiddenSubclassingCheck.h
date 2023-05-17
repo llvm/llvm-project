@@ -13,15 +13,13 @@
 #include "llvm/ADT/StringRef.h"
 #include <vector>
 
-namespace clang {
-namespace tidy {
-namespace objc {
+namespace clang::tidy::objc {
 
 /// Finds Objective-C classes which have a superclass which is
 /// documented to not support subclassing.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/objc-forbidden-subclassing.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/objc/forbidden-subclassing.html
 class ForbiddenSubclassingCheck : public ClangTidyCheck {
 public:
   ForbiddenSubclassingCheck(StringRef Name, ClangTidyContext *Context);
@@ -36,8 +34,6 @@ private:
   const std::vector<StringRef> ForbiddenSuperClassNames;
 };
 
-} // namespace objc
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::objc
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_OBJC_FORBIDDEN_SUBCLASSING_CHECK_H

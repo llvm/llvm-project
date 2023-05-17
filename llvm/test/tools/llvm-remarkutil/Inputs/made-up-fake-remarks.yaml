@@ -1,0 +1,12 @@
+--- !Analysis
+Pass:            foo0
+Name:            bar0
+Function:        baz0
+Args:
+  - Arg:   'arg'
+--- !Analysis
+Pass:            foo1
+Name:            bar1
+Function:        baz1
+Args:
+  - Arg:   'arg'

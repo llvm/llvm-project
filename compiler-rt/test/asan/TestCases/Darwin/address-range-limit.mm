@@ -38,4 +38,4 @@ int main(int argc, char *argv[]) {
 // CHECK: AddressSanitizer: heap-buffer-overflow
 // CHECK: WRITE of size 1
 // CHECK: {{#0 .* in main}}
-// CHECK: is located 0 bytes to the right of 10-byte region
+// CHECK: is located 0 bytes after 10-byte region

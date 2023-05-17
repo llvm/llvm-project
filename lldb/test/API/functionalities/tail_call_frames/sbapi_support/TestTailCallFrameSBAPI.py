@@ -8,7 +8,6 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 
 class TestTailCallFrameSBAPI(TestBase):
-    mydir = TestBase.compute_mydir(__file__)
 
     @skipIf(compiler="clang", compiler_version=['<', '10.0'])
     @skipIf(dwarf_version=['<', '4'])

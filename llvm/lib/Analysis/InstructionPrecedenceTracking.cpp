@@ -47,9 +47,9 @@ const Instruction *InstructionPrecedenceTracking::getFirstSpecialInstruction(
     validate(BB);
 #endif
 
-  if (FirstSpecialInsts.find(BB) == FirstSpecialInsts.end()) {
+  if (!FirstSpecialInsts.contains(BB)) {
     fill(BB);
-    assert(FirstSpecialInsts.find(BB) != FirstSpecialInsts.end() && "Must be!");
+    assert(FirstSpecialInsts.contains(BB) && "Must be!");
   }
   return FirstSpecialInsts[BB];
 }
@@ -68,7 +68,7 @@ bool InstructionPrecedenceTracking::isPreceededBySpecialInstruction(
 
 void InstructionPrecedenceTracking::fill(const BasicBlock *BB) {
   FirstSpecialInsts.erase(BB);
-  for (auto &I : *BB) {
+  for (const auto &I : *BB) {
     NumInstScanned++;
     if (isSpecialInstruction(&I)) {
       FirstSpecialInsts[BB] = &I;
@@ -101,7 +101,7 @@ void InstructionPrecedenceTracking::validate(const BasicBlock *BB) const {
 
 void InstructionPrecedenceTracking::validateAll() const {
   // Check that for every known block the cached value is correct.
-  for (auto &It : FirstSpecialInsts)
+  for (const auto &It : FirstSpecialInsts)
     validate(It.first);
 }
 #endif

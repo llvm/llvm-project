@@ -78,7 +78,8 @@
 #endif
 
 #if defined(__apple_build_version__)
-#define TEST_APPLE_CLANG_VER (__clang_major__ * 100) + __clang_minor__
+// Given AppleClang XX.Y.Z, TEST_APPLE_CLANG_VER is XXYZ (e.g. AppleClang 14.0.3 => 1403)
+#define TEST_APPLE_CLANG_VER (__apple_build_version__ / 10000)
 #elif defined(__clang_major__)
 #define TEST_CLANG_VER (__clang_major__ * 100) + __clang_minor__
 #elif defined(__GNUC__)
@@ -166,6 +167,12 @@
 # define TEST_CONSTEXPR_CXX20
 #endif
 
+#if TEST_STD_VER >= 23
+#  define TEST_CONSTEXPR_CXX23 constexpr
+#else
+#  define TEST_CONSTEXPR_CXX23
+#endif
+
 #define TEST_ALIGNAS_TYPE(...) TEST_ALIGNAS(TEST_ALIGNOF(__VA_ARGS__))
 
 #if !TEST_HAS_FEATURE(cxx_rtti) && !defined(__cpp_rtti) \
@@ -184,9 +191,10 @@
 #define TEST_HAS_NO_EXCEPTIONS
 #endif
 
-#if TEST_HAS_FEATURE(address_sanitizer) || TEST_HAS_FEATURE(memory_sanitizer) || \
-    TEST_HAS_FEATURE(thread_sanitizer)
+#if TEST_HAS_FEATURE(address_sanitizer) || TEST_HAS_FEATURE(hwaddress_sanitizer) || \
+    TEST_HAS_FEATURE(memory_sanitizer) || TEST_HAS_FEATURE(thread_sanitizer)
 #define TEST_HAS_SANITIZERS
+#define TEST_IS_EXECUTED_IN_A_SLOW_ENVIRONMENT
 #endif
 
 #if defined(_LIBCPP_NORETURN)
@@ -207,11 +215,6 @@
 #define TEST_CONSTINIT _LIBCPP_CONSTINIT
 #else
 #define TEST_CONSTINIT
-#endif
-
-#if !defined(__cpp_impl_three_way_comparison) \
-    && (!defined(_MSC_VER) || defined(__clang__) || _MSC_VER < 1920 || _MSVC_LANG <= 201703L)
-#define TEST_HAS_NO_SPACESHIP_OPERATOR
 #endif
 
 #if TEST_STD_VER < 11
@@ -238,6 +241,12 @@
 #define LIBCPP_ASSERT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ASSERT_NOT_NOEXCEPT(...) static_assert(true, "")
 #define LIBCPP_ONLY(...) static_assert(true, "")
+#endif
+
+#if __has_cpp_attribute(nodiscard)
+#  define TEST_NODISCARD [[nodiscard]]
+#else
+#  define TEST_NODISCARD
 #endif
 
 #define TEST_IGNORE_NODISCARD (void)
@@ -363,10 +372,6 @@ inline void DoNotOptimize(Tp const& value) {
 #   define TEST_HAS_NO_INT128
 #endif
 
-#if defined(_LIBCPP_HAS_NO_UNICODE_CHARS)
-#   define TEST_HAS_NO_UNICODE_CHARS
-#endif
-
 #if defined(_LIBCPP_HAS_NO_LOCALIZATION)
 #  define TEST_HAS_NO_LOCALIZATION
 #endif
@@ -383,8 +388,16 @@ inline void DoNotOptimize(Tp const& value) {
 #  define TEST_HAS_NO_FILESYSTEM_LIBRARY
 #endif
 
+#if defined(_LIBCPP_HAS_NO_FSTREAM)
+#  define TEST_HAS_NO_FSTREAM
+#endif
+
 #if defined(_LIBCPP_HAS_NO_FGETPOS_FSETPOS)
 #  define TEST_HAS_NO_FGETPOS_FSETPOS
+#endif
+
+#if defined(_LIBCPP_HAS_NO_C8RTOMB_MBRTOC8)
+#  define TEST_HAS_NO_C8RTOMB_MBRTOC8
 #endif
 
 #if defined(TEST_COMPILER_CLANG)
@@ -419,6 +432,10 @@ inline void DoNotOptimize(Tp const& value) {
 #define TEST_NO_UNIQUE_ADDRESS [[no_unique_address]]
 #else
 #define TEST_NO_UNIQUE_ADDRESS
+#endif
+
+#ifdef _LIBCPP_SHORT_WCHAR
+#  define TEST_SHORT_WCHAR
 #endif
 
 #endif // SUPPORT_TEST_MACROS_HPP

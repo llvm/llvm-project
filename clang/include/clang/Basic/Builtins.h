@@ -29,7 +29,7 @@ class TargetInfo;
 class IdentifierTable;
 class LangOptions;
 
-enum LanguageID {
+enum LanguageID : uint16_t {
   GNU_LANG = 0x1,            // builtin requires GNU mode.
   C_LANG = 0x2,              // builtin for c only.
   CXX_LANG = 0x4,            // builtin for cplusplus only.
@@ -48,6 +48,18 @@ enum LanguageID {
   ALL_MS_LANGUAGES = ALL_LANGUAGES | MS_LANG     // builtin requires MS mode.
 };
 
+struct HeaderDesc {
+  enum HeaderID : uint16_t {
+#define HEADER(ID, NAME) ID,
+#include "clang/Basic/BuiltinHeaders.def"
+#undef HEADER
+  } ID;
+
+  constexpr HeaderDesc(HeaderID ID) : ID(ID) {}
+
+  const char *getName() const;
+};
+
 namespace Builtin {
 enum ID {
   NotBuiltin  = 0,      // This is not a builtin function.
@@ -57,9 +69,11 @@ enum ID {
 };
 
 struct Info {
-  const char *Name, *Type, *Attributes, *HeaderName;
-  LanguageID Langs;
+  llvm::StringLiteral Name;
+  const char *Type, *Attributes;
   const char *Features;
+  HeaderDesc Header;
+  LanguageID Langs;
 };
 
 /// Holds information about both target-independent and
@@ -86,9 +100,7 @@ public:
 
   /// Return the identifier name for the specified builtin,
   /// e.g. "__builtin_abs".
-  const char *getName(unsigned ID) const {
-    return getRecord(ID).Name;
-  }
+  llvm::StringRef getName(unsigned ID) const { return getRecord(ID).Name; }
 
   /// Get the type descriptor string for the specified builtin.
   const char *getTypeString(unsigned ID) const {
@@ -208,7 +220,7 @@ public:
   /// If this is a library function that comes from a specific
   /// header, retrieve that header name.
   const char *getHeaderName(unsigned ID) const {
-    return getRecord(ID).HeaderName;
+    return getRecord(ID).Header.getName();
   }
 
   /// Determine whether this builtin is like printf in its
@@ -228,11 +240,16 @@ public:
                         llvm::SmallVectorImpl<int> &Encoding) const;
 
   /// Return true if this function has no side effects and doesn't
-  /// read memory, except for possibly errno.
+  /// read memory, except for possibly errno or raising FP exceptions.
   ///
-  /// Such functions can be const when the MathErrno lang option is disabled.
-  bool isConstWithoutErrno(unsigned ID) const {
+  /// Such functions can be const when the MathErrno lang option and FP
+  /// exceptions are disabled.
+  bool isConstWithoutErrnoAndExceptions(unsigned ID) const {
     return strchr(getRecord(ID).Attributes, 'e') != nullptr;
+  }
+
+  bool isConstWithoutExceptions(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'g') != nullptr;
   }
 
   const char *getRequiredFeatures(unsigned ID) const {
@@ -257,6 +274,11 @@ public:
   /// Returns true if this is a builtin that can be redeclared.  Returns true
   /// for non-builtins.
   bool canBeRedeclared(unsigned ID) const;
+
+  /// Return true if this function can be constant evaluated by Clang frontend.
+  bool isConstantEvaluated(unsigned ID) const {
+    return strchr(getRecord(ID).Attributes, 'E') != nullptr;
+  }
 
 private:
   const Info &getRecord(unsigned ID) const;

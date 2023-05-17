@@ -38,13 +38,13 @@ class LLVM_LIBRARY_VISIBILITY NVPTXDAGToDAGISel : public SelectionDAGISel {
   bool useShortPointers() const;
 
 public:
+  static char ID;
+
+  NVPTXDAGToDAGISel() = delete;
+
   explicit NVPTXDAGToDAGISel(NVPTXTargetMachine &tm,
                              CodeGenOpt::Level   OptLevel);
 
-  // Pass Name
-  StringRef getPassName() const override {
-    return "NVPTX DAG->DAG Pattern Instruction Selection";
-  }
   bool runOnMachineFunction(MachineFunction &MF) override;
   const NVPTXSubtarget *Subtarget = nullptr;
 

@@ -23,7 +23,7 @@ entry:
 
 ; This may infinite loop if isNegatibleForFree and getNegatedExpression are conflicted.
 
-define double @negation_propagation(double* %arg, double %arg1, double %arg2) nounwind {
+define double @negation_propagation(ptr %arg, double %arg1, double %arg2) nounwind {
 ; CHECK-LABEL: negation_propagation:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    pushl %ebp

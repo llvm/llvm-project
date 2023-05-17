@@ -63,6 +63,9 @@ public:
              const llvm::opt::ArgList &Args, StringRef Platform,
              const char *EnvVar);
 
+  void
+  AddClangSystemIncludeArgs(const llvm::opt::ArgList &DriverArgs,
+                            llvm::opt::ArgStringList &CC1Args) const override;
   // No support for finding a C++ standard library yet.
   void addLibCxxIncludePaths(const llvm::opt::ArgList &DriverArgs,
                              llvm::opt::ArgStringList &CC1Args) const override {
@@ -111,6 +114,10 @@ public:
 
 protected:
   Tool *buildLinker() const override;
+
+private:
+  // We compute the SDK root dir in the ctor, and use it later.
+  std::string SDKRootDir;
 };
 
 // PS4-specific Toolchain class.

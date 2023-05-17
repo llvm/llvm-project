@@ -16,6 +16,9 @@ class MLIRContext;
 class Pass;
 class RewritePatternSet;
 
+#define GEN_PASS_DECL_CONVERTVECTORTOSCF
+#include "mlir/Conversion/Passes.h.inc"
+
 /// When lowering an N-d vector transfer op to an (N-1)-d vector transfer op,
 /// a temporary buffer is created through which individual (N-1)-d vector are
 /// staged. This pattern can be applied multiple time, until the transfer op
@@ -51,12 +54,6 @@ struct VectorTransferToSCFOptions {
   unsigned targetRank = 1;
   VectorTransferToSCFOptions &setTargetRank(unsigned r) {
     targetRank = r;
-    return *this;
-  }
-  ///
-  bool lowerPermutationMaps = false;
-  VectorTransferToSCFOptions &enableLowerPermutationMaps(bool l = true) {
-    lowerPermutationMaps = l;
     return *this;
   }
   /// Allows vector transfers that operated on tensors to be lowered (this is an

@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -std=c++2b -fsyntax-only -verify=expected                -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
+// RUN: %clang_cc1 -std=c++23 -fsyntax-only -verify=expected                -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
 // RUN: %clang_cc1 -std=c++20 -fsyntax-only -verify=expected                -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify=expected,cxx98_11,cxx11 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
 // RUN: %clang_cc1 -std=c++98 -fsyntax-only -verify=expected,cxx98_11,cxx98 -triple %itanium_abi_triple -Wbind-to-temporary-copy %s
@@ -235,7 +235,7 @@ namespace smart_ptr {
   Y make_Y();
 
   X f() {
-    X x = make_Y(); // expected-error{{no viable conversion from 'smart_ptr::Y' to 'smart_ptr::X'}}
+    X x = make_Y(); // expected-error{{no viable conversion from 'Y' to 'X'}}
     X x2(make_Y());
     return X(Y());
   }
@@ -348,7 +348,7 @@ namespace rdar8018274 {
   };
 
   void test2(UeberDerived ud) {
-    int i = ud; // expected-error{{ambiguous conversion from derived class 'rdar8018274::UeberDerived' to base class 'rdar8018274::Base'}}
+    int i = ud; // expected-error{{ambiguous conversion from derived class 'UeberDerived' to base class 'rdar8018274::Base'}}
   }
 
   struct Base2 {
@@ -452,9 +452,9 @@ namespace PR18234 {
   struct A {
     operator enum E { e } (); // expected-error {{'PR18234::A::E' cannot be defined in a type specifier}}
     operator struct S { int n; } (); // expected-error {{'PR18234::A::S' cannot be defined in a type specifier}}
-    // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const PR18234::A::S &' for 1st argument}}
+    // expected-note@-1 {{candidate constructor (the implicit copy constructor) not viable: no known conversion from 'struct A' to 'const S &' for 1st argument}}
 #if __cplusplus >= 201103L
-  // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'PR18234::A::S &&' for 1st argument}}
+  // expected-note@-3 {{candidate constructor (the implicit move constructor) not viable: no known conversion from 'struct A' to 'S &&' for 1st argument}}
 #endif
   } a;
   A::S s = a; // expected-error {{no viable conversion from 'struct A' to 'A::S'}}
@@ -472,3 +472,16 @@ struct S {
   operator const int() const;
 };
 }
+
+#if __cplusplus >= 201103L
+namespace dependent_conversion_function_id_lookup {
+  template<typename T> struct A {
+    operator T();
+  };
+  template<typename T> struct B : A<T> {
+    template<typename U> using Lookup = decltype(&B::operator U);
+  };
+  using Result = B<int>::Lookup<int>;
+  using Result = int (A<int>::*)();
+}
+#endif

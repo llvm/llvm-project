@@ -221,13 +221,13 @@ struct Z {
 // CHECK-TEMPLPARAM: 55:23 TypeRef=struct X:3:8 Extent=[55:23 - 55:24] Spelling=struct X ([55:23 - 55:24])
 
 // RUN: c-index-test -cursor-at=%s:66:23 %s | FileCheck -check-prefix=CHECK-TEMPLSPEC %s
-// CHECK-TEMPLSPEC: 66:23 ClassDecl=TC:66:23 (Definition) [Specialization of TC:59:7] Extent=[66:1 - 66:31] Spelling=TC ([66:23 - 66:25])
+// CHECK-TEMPLSPEC: 66:23 ClassDecl=TC:66:23 (Definition) [Specialization of TC:59:7] [Template arg 0: kind: 1, type: char] Extent=[66:1 - 66:31] Spelling=TC ([66:23 - 66:25])
 
 // RUN: c-index-test -cursor-at=%s:69:3 -cursor-at=%s:70:11 -cursor-at=%s:73:6 -cursor-at=%s:74:6 -cursor-at=%s:77:8 -cursor-at=%s:78:8 -cursor-at=%s:79:8 -cursor-at=%s:80:8 -cursor-at=%s:81:8 -cursor-at=%s:82:8 -cursor-at=%s:85:6 -cursor-at=%s:86:6 -cursor-at=%s:87:6 -cursor-at=%s:88:6 -cursor-at=%s:91:5 -cursor-at=%s:92:5 -cursor-at=%s:93:5 -cursor-at=%s:94:5 -cursor-at=%s:95:5 -cursor-at=%s:96:5 -cursor-at=%s:97:5 -cursor-at=%s:98:5 -cursor-at=%s:100:5 -cursor-at=%s:101:5 -cursor-at=%s:104:6 -cursor-at=%s:105:6 -cursor-at=%s:106:6 -cursor-at=%s:107:6 -cursor-at=%s:108:6 -cursor-at=%s:109:6 -cursor-at=%s:110:6 -cursor-at=%s:111:6 -cursor-at=%s:113:6 -cursor-at=%s:114:6 -cursor-at=%s:117:8 -cursor-at=%s:118:8 -cursor-at=%s:120:8 -cursor-at=%s:121:8 -cursor-at=%s:122:8 -cursor-at=%s:123:8 -cursor-at=%s:124:8 -cursor-at=%s:125:8 -cursor-at=%s:128:6 -cursor-at=%s:129:6 -cursor-at=%s:130:6 -cursor-at=%s:132:3 -cursor-at=%s:146:15 -cursor-at=%s:149:6 -cursor-at=%s:150:25 -cursor-at=%s:151:6 -cursor-at=%s:152:6 -cursor-at=%s:153:6 -cursor-at=%s:154:6 -cursor-at=%s:155:6 -std=c++11 %s | FileCheck -check-prefix=CHECK-SPELLING %s
 // CHECK-SPELLING: 69:3 CXXConstructor=A:69:3 (default constructor) Extent=[69:3 - 69:6] Spelling=A ([69:3 - 69:4])
 // CHECK-SPELLING: 70:11 CXXDestructor=~A:70:11 (virtual) Extent=[70:3 - 70:15] Spelling=~A ([70:11 - 70:13])
-// CHECK-SPELLING: 73:6 CXXMethod=operator=:73:6 Extent=[73:3 - 73:25] Spelling=operator= ([73:6 - 73:15])
-// CHECK-SPELLING: 74:6 CXXMethod=operator=:74:6 (noexcept) Extent=[74:3 - 74:29] Spelling=operator= ([74:6 - 74:15])
+// CHECK-SPELLING: 73:6 CXXMethod=operator=:73:6 (copy-assignment operator) Extent=[73:3 - 73:25] Spelling=operator= ([73:6 - 73:15])
+// CHECK-SPELLING: 74:6 CXXMethod=operator=:74:6 (move-assignment operator) (noexcept) Extent=[74:3 - 74:29] Spelling=operator= ([74:6 - 74:15])
 // CHECK-SPELLING: 77:8 CXXMethod=operator+:77:8 (const) Extent=[77:3 - 77:25] Spelling=operator+ ([77:8 - 77:17])
 // CHECK-SPELLING: 78:8 CXXMethod=operator-:78:8 (const) Extent=[78:3 - 78:25] Spelling=operator- ([78:8 - 78:17])
 // CHECK-SPELLING: 79:8 CXXMethod=operator~:79:8 (const) Extent=[79:3 - 79:25] Spelling=operator~ ([79:8 - 79:17])
@@ -269,7 +269,7 @@ struct Z {
 // CHECK-SPELLING: 128:6 CXXMethod=operator[]:128:6 Extent=[128:3 - 128:36] Spelling=operator[] ([128:6 - 128:16])
 // CHECK-SPELLING: 129:6 CXXMethod=operator->:129:6 Extent=[129:3 - 129:18] Spelling=operator-> ([129:6 - 129:16])
 // CHECK-SPELLING: 130:6 CXXMethod=operator():130:6 (const) Extent=[130:3 - 130:37] Spelling=operator() ([130:6 - 130:16])
-// CHECK-SPELLING: 132:12 CXXConversion=operator bool:132:12 (const) Extent=[132:3 - 132:33] Spelling=operator bool ([132:12 - 132:25])
+// CHECK-SPELLING: 132:12 CXXConversion=operator bool:132:12 (const) (explicit) Extent=[132:3 - 132:33] Spelling=operator bool ([132:12 - 132:25])
 // CHECK-SPELLING: 146:11 FunctionDecl=operator""_toint:146:11 (Definition) Extent=[146:1 - 146:72] Spelling=operator""_toint ([146:11 - 146:27])
 // CHECK-SPELLING: 149:6 FunctionDecl=f_noexcept:149:6 (noexcept) Extent=[149:1 - 149:27] Spelling=f_noexcept ([149:6 - 149:16])
 // CHECK-SPELLING: 150:25 FunctionTemplate=f_computed_noexcept:150:25 (computed-noexcept) Extent=[150:1 - 150:73] Spelling=f_computed_noexcept ([150:25 - 150:44])

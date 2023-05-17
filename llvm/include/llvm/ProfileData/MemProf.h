@@ -11,6 +11,7 @@
 #include "llvm/Support/raw_ostream.h"
 
 #include <cstdint>
+#include <optional>
 
 namespace llvm {
 namespace memprof {
@@ -144,7 +145,7 @@ struct Frame {
   GlobalValue::GUID Function;
   // The symbol name for the function. Only populated in the Frame by the reader
   // if requested during initialization. This field should not be serialized.
-  llvm::Optional<std::string> SymbolName;
+  std::optional<std::string> SymbolName;
   // The source line offset of the call from the beginning of parent function.
   uint32_t LineOffset;
   // The source column number of the call to help distinguish multiple calls
@@ -221,8 +222,7 @@ struct Frame {
   void printYAML(raw_ostream &OS) const {
     OS << "      -\n"
        << "        Function: " << Function << "\n"
-       << "        SymbolName: "
-       << (SymbolName.hasValue() ? SymbolName.getValue() : "<None>") << "\n"
+       << "        SymbolName: " << SymbolName.value_or("<None>") << "\n"
        << "        LineOffset: " << LineOffset << "\n"
        << "        Column: " << Column << "\n"
        << "        Inline: " << IsInlineFrame << "\n";

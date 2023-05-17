@@ -11,15 +11,13 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallString.h"
 #include <cctype>
+#include <optional>
 
 using namespace clang::ast_matchers;
 
-namespace clang {
-namespace tidy {
-namespace readability {
+namespace clang::tidy::readability {
 
 namespace {
 
@@ -60,32 +58,32 @@ constexpr llvm::StringLiteral FloatingLiteralCheck::Suffixes;
 struct NewSuffix {
   SourceRange LiteralLocation;
   StringRef OldSuffix;
-  llvm::Optional<FixItHint> FixIt;
+  std::optional<FixItHint> FixIt;
 };
 
-llvm::Optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
-                                                     const SourceManager &SM) {
+std::optional<SourceLocation> getMacroAwareLocation(SourceLocation Loc,
+                                                    const SourceManager &SM) {
   // Do nothing if the provided location is invalid.
   if (Loc.isInvalid())
-    return llvm::None;
+    return std::nullopt;
   // Look where the location was *actually* written.
   SourceLocation SpellingLoc = SM.getSpellingLoc(Loc);
   if (SpellingLoc.isInvalid())
-    return llvm::None;
+    return std::nullopt;
   return SpellingLoc;
 }
 
-llvm::Optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
-                                                     const SourceManager &SM) {
-  llvm::Optional<SourceLocation> Begin =
+std::optional<SourceRange> getMacroAwareSourceRange(SourceRange Loc,
+                                                    const SourceManager &SM) {
+  std::optional<SourceLocation> Begin =
       getMacroAwareLocation(Loc.getBegin(), SM);
-  llvm::Optional<SourceLocation> End = getMacroAwareLocation(Loc.getEnd(), SM);
+  std::optional<SourceLocation> End = getMacroAwareLocation(Loc.getEnd(), SM);
   if (!Begin || !End)
-    return llvm::None;
+    return std::nullopt;
   return SourceRange(*Begin, *End);
 }
 
-llvm::Optional<std::string>
+std::optional<std::string>
 getNewSuffix(llvm::StringRef OldSuffix,
              const std::vector<StringRef> &NewSuffixes) {
   // If there is no config, just uppercase the entirety of the suffix.
@@ -100,11 +98,11 @@ getNewSuffix(llvm::StringRef OldSuffix,
   if (NewSuffix != NewSuffixes.end())
     return NewSuffix->str();
   // Nope, I guess we have to keep it as-is.
-  return llvm::None;
+  return std::nullopt;
 }
 
 template <typename LiteralType>
-llvm::Optional<NewSuffix>
+std::optional<NewSuffix>
 shouldReplaceLiteralSuffix(const Expr &Literal,
                            const std::vector<StringRef> &NewSuffixes,
                            const SourceManager &SM, const LangOptions &LO) {
@@ -120,10 +118,10 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
       utils::rangeCanBeFixed(ReplacementDsc.LiteralLocation, &SM);
 
   // The literal may have macro expansion, we need the final expanded src range.
-  llvm::Optional<SourceRange> Range =
+  std::optional<SourceRange> Range =
       getMacroAwareSourceRange(ReplacementDsc.LiteralLocation, SM);
   if (!Range)
-    return llvm::None;
+    return std::nullopt;
 
   if (RangeCanBeFixed)
     ReplacementDsc.LiteralLocation = *Range;
@@ -138,7 +136,7 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
   // Make sure the first character is actually a digit, instead of
   // something else, like a non-type template parameter.
   if (!std::isdigit(static_cast<unsigned char>(LiteralSourceText.front())))
-    return llvm::None;
+    return std::nullopt;
 
   size_t Skip = 0;
 
@@ -161,7 +159,7 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
   // We can't check whether the *Literal has any suffix or not without actually
   // looking for the suffix. So it is totally possible that there is no suffix.
   if (Skip == StringRef::npos)
-    return llvm::None;
+    return std::nullopt;
 
   // Move the cursor in the source range to the beginning of the suffix.
   Range->setBegin(Range->getBegin().getLocWithOffset(Skip));
@@ -171,10 +169,10 @@ shouldReplaceLiteralSuffix(const Expr &Literal,
          "We still should have some chars left.");
 
   // And get the replacement suffix.
-  llvm::Optional<std::string> NewSuffix =
+  std::optional<std::string> NewSuffix =
       getNewSuffix(ReplacementDsc.OldSuffix, NewSuffixes);
   if (!NewSuffix || ReplacementDsc.OldSuffix == *NewSuffix)
-    return llvm::None; // The suffix was already the way it should be.
+    return std::nullopt; // The suffix was already the way it should be.
 
   if (RangeCanBeFixed)
     ReplacementDsc.FixIt = FixItHint::CreateReplacement(*Range, *NewSuffix);
@@ -241,6 +239,4 @@ void UppercaseLiteralSuffixCheck::check(
   checkBoundMatch<FloatingLiteralCheck>(Result);
 }
 
-} // namespace readability
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::readability

@@ -49,8 +49,8 @@ struct AllOrders : EnumValuesAsTuple<AllOrders, Order, 7> {
 // These values are arranged in such a way that they would invoke O(N^2)
 // behavior on any quick sort implementation that satisifies certain conditions.
 // Details are available in the following paper:
-// "A Killer Adversary for Quicksort", M. D. McIlroy, Software—Practice &
-// ExperienceVolume 29 Issue 4 April 10, 1999 pp 341–344.
+// "A Killer Adversary for Quicksort", M. D. McIlroy, Software-Practice &
+// Experience Volume 29 Issue 4 April 10, 1999 pp 341-344.
 // https://dl.acm.org/doi/10.5555/311868.311871.
 template <class T>
 void fillAdversarialQuickSortInput(T& V, size_t N) {

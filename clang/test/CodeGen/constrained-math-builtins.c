@@ -300,10 +300,17 @@ void bar(float f) {
   f * f + f;
   (double)f * f - f;
   (long double)-f * f + f;
+  -(f * f) - f;
+  f + -(f * f);
 
   // CHECK: call float @llvm.experimental.constrained.fmuladd.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: fneg
   // CHECK: call double @llvm.experimental.constrained.fmuladd.f64(double %{{.*}}, double %{{.*}}, double %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
   // CHECK: fneg
   // CHECK: call x86_fp80 @llvm.experimental.constrained.fmuladd.f80(x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, x86_fp80 %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // CHECK: fneg
+  // CHECK: fneg
+  // CHECK: call float @llvm.experimental.constrained.fmuladd.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
+  // CHECK: fneg
+  // CHECK: call float @llvm.experimental.constrained.fmuladd.f32(float %{{.*}}, float %{{.*}}, float %{{.*}}, metadata !"round.tonearest", metadata !"fpexcept.strict")
 };

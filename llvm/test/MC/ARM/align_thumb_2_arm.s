@@ -10,6 +10,6 @@
 foo:
   add r0, r0
 .align 3
-@ THUMB_2_ARM: 4: 00 f0 20 e3    nop
+@ THUMB_2_ARM: 4: e320f000       nop
   add r0, r0
 

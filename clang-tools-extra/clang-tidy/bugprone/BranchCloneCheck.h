@@ -11,9 +11,7 @@
 
 #include "../ClangTidyCheck.h"
 
-namespace clang {
-namespace tidy {
-namespace bugprone {
+namespace clang::tidy::bugprone {
 
 /// A check for detecting if/else if/else chains where two or more branches are
 /// Type I clones of each other (that is, they contain identical code), for
@@ -22,7 +20,7 @@ namespace bugprone {
 /// the true and false expressions are Type I clones of each other.
 ///
 /// For the user-facing documentation see:
-/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone-branch-clone.html
+/// http://clang.llvm.org/extra/clang-tidy/checks/bugprone/branch-clone.html
 class BranchCloneCheck : public ClangTidyCheck {
 public:
   BranchCloneCheck(StringRef Name, ClangTidyContext *Context)
@@ -31,8 +29,6 @@ public:
   void check(const ast_matchers::MatchFinder::MatchResult &Result) override;
 };
 
-} // namespace bugprone
-} // namespace tidy
-} // namespace clang
+} // namespace clang::tidy::bugprone
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_BRANCHCLONECHECK_H

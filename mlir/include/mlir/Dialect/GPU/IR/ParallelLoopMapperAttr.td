@@ -37,7 +37,7 @@ def ProcessorEnum : I64EnumAttr<"Processor", "processor for loop mapping", [
 //       substitution.
 // bound : An affine map that is used to compute the bound of the hardware
 //         id based on an upper bound of the number of iterations.
-def ParallelLoopDimMappingAttr 
+def ParallelLoopDimMappingAttr
     : GPU_Attr<"ParallelLoopDimMapping", "loop_dim_map"> {
   let parameters = (ins
     EnumParameter<ProcessorEnum>:$processor,

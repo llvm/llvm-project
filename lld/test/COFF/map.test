@@ -8,6 +8,14 @@
 # RUN: lld-link /out:%t.exe /entry:main %t.obj %t-dll.lib /map /lldmap:%T/foo-lld.map
 # RUN: FileCheck -check-prefix=MAP -strict-whitespace %s < %t.map
 # RUN: FileCheck -check-prefix=LLDMAP -strict-whitespace %s < %T/foo-lld.map
+# RUN: lld-link /out:%t.dll /dll %t-dll.obj /export:exportfn1 \
+# RUN:   /export:foo=exportfn2 /map /mapinfo:exports
+# RUN: FileCheck -check-prefix=MAPINFO -strict-whitespace %s < %t.map
+# RUN: rm -rf %t && mkdir -p %t && cd %t
+# RUN: cp %t.obj map.test.tmp.obj
+# RUN: cp %t-dll.lib map.test.tmp-dll.lib
+# RUN: lld-link /entry:main map.test.tmp.obj map.test.tmp-dll.lib /map
+# RUN: FileCheck -check-prefix=MAP -strict-whitespace %s < map.test.tmp.map
 
 # MAP: {{.*}}
 # MAP-EMPTY:
@@ -38,3 +46,12 @@
 # LLDMAP-NEXT: 00001000 00000026  4096 .text
 # LLDMAP-NEXT: 00001000 00000008     4         {{.*}}map.test.tmp.obj:(.text)
 # LLDMAP-NEXT: 00001000 00000000     0                 main
+
+# MAPINFO: Exports
+# MAPINFO-EMPTY:
+# MAPINFO-NEXT:  ordinal    name
+# MAPINFO-EMPTY:
+# MAPINFO-NEXT:        1    exportfn1
+# MAPINFO-NEXT:        2    exportfn3
+# MAPINFO-NEXT:        3    exportfn2
+# MAPINFO-NEXT:               exported name: foo

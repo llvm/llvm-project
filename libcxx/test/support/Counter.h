@@ -25,7 +25,7 @@ public:
     Counter& operator=(const Counter& rhs)          { data_ = rhs.data_; return *this; }
 #if TEST_STD_VER >= 11
     Counter(Counter&& rhs) : data_(std::move(rhs.data_))  { ++gConstructed; }
-    Counter& operator=(Counter&& rhs) { ++gConstructed; data_ = std::move(rhs.data_); return *this; }
+    Counter& operator=(Counter&& rhs) { data_ = std::move(rhs.data_); return *this; }
 #endif
     ~Counter() { --gConstructed; }
 

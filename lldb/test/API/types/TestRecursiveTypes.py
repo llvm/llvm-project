@@ -11,8 +11,6 @@ from lldbsuite.test.lldbtest import *
 
 class RecursiveTypesTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
@@ -50,5 +48,5 @@ class RecursiveTypesTestCase(TestBase):
 
         self.runCmd("run", RUN_SUCCEEDED)
 
-        self.runCmd("print tpi")
-        self.runCmd("print *tpi")
+        self.runCmd("expression tpi")
+        self.runCmd("expression *tpi")

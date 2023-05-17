@@ -1251,13 +1251,13 @@ TEST(ExprMutationAnalyzerTest, RangeForArrayByValue) {
   AST =
       buildASTFromCode("void f() { int* x[2]; for (int* e : x) e = nullptr; }");
   Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
-  EXPECT_FALSE(isMutated(Results, AST.get()));
+  EXPECT_TRUE(isMutated(Results, AST.get()));
 
   AST = buildASTFromCode(
       "typedef int* IntPtr;"
       "void f() { int* x[2]; for (IntPtr e : x) e = nullptr; }");
   Results = match(withEnclosingCompound(declRefTo("x")), AST->getASTContext());
-  EXPECT_FALSE(isMutated(Results, AST.get()));
+  EXPECT_TRUE(isMutated(Results, AST.get()));
 }
 
 TEST(ExprMutationAnalyzerTest, RangeForArrayByConstRef) {

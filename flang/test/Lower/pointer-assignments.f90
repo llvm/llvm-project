@@ -1,5 +1,5 @@
 ! Test lowering of pointer assignments
-! RUN: bbc -emit-fir %s -o - | FileCheck %s
+! RUN: bbc --use-desc-for-alloc=false -emit-fir %s -o - | FileCheck %s
 
 
 ! Note that p => NULL() are tested in pointer-disassociate.f90
@@ -65,6 +65,26 @@ subroutine test_array_with_lbs(p, x)
   ! CHECK: %[[box:.*]] = fir.embox %{{.*}}(%[[shape]]) : (!fir.ref<!fir.array<100xf32>>, !fir.shapeshift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
   ! CHECK: fir.store %[[box]] to %[[p]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   p => x
+end subroutine
+
+! Test that the lhs takes the bounds from rhs.
+! CHECK-LABEL: func @_QPtest_pointer_component(
+! CHECK-SAME: %[[temp:.*]]: !fir.ref<!fir.type<_QFtest_pointer_componentTmytype{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>> {fir.bindc_name = "temp"}, %[[temp_ptr:.*]]: !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>> {fir.bindc_name = "temp_ptr"}) {
+subroutine test_pointer_component(temp, temp_ptr)
+  type mytype
+    real, pointer :: ptr(:)
+  end type mytype
+  type(mytype) :: temp
+  real, pointer :: temp_ptr(:)
+  ! CHECK: %[[ptr_addr:.*]] = fir.coordinate_of %[[temp]], %{{.*}} : (!fir.ref<!fir.type<_QFtest_pointer_componentTmytype{ptr:!fir.box<!fir.ptr<!fir.array<?xf32>>>}>>, !fir.field) -> !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[ptr:.*]] = fir.load %[[ptr_addr]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  ! CHECK: %[[dims:.*]]:3 = fir.box_dims %[[ptr]], %{{.*}} : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
+  ! CHECK: %[[shift:.*]] = fir.shift %[[dims]]#0 : (index) -> !fir.shift<1>
+  ! CHECK: %[[arr_box:.*]] = fir.rebox %[[ptr]](%[[shift]]) : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>) -> !fir.box<!fir.array<?xf32>>
+  ! CHECK: %[[shift2:.*]] = fir.shift %[[dims]]#0 : (index) -> !fir.shift<1>
+  ! CHECK: %[[final_box:.*]] = fir.rebox %[[arr_box]](%[[shift2]]) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+  ! CHECK: fir.store %[[final_box]] to %[[temp_ptr]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+  temp_ptr => temp%ptr
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -145,7 +165,6 @@ subroutine test_array_non_contig_rhs_lbs(p, x)
   ! CHECK: %[[c7_idx:.*]] = fir.convert %c7{{.*}} : (i64) -> index
   ! CHECK: %[[shift:.*]] = fir.shift %[[c7_idx]] : (index) -> !fir.shift<1>
   ! CHECK: %[[rebox:.*]] = fir.rebox %[[x]](%[[shift]]) : (!fir.box<!fir.array<?xf32>>, !fir.shift<1>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
-
   ! CHECK: fir.store %[[rebox]] to %[[p]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
   p => x
 end subroutine
@@ -161,8 +180,8 @@ end subroutine
 ! CHECK:         %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
 ! CHECK:         %[[VAL_9:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_10:.*]] = fir.slice %[[VAL_4]], %[[VAL_8]], %[[VAL_6]] : (index, index, index) -> !fir.slice<1>
-! CHECK:         %[[VAL_11:.*]] = fir.embox %[[VAL_1]](%[[VAL_9]]) {{\[}}%[[VAL_10]]] : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:         %[[VAL_12:.*]] = fir.rebox %[[VAL_11]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
+! CHECK:         %[[VAL_11:.*]] = fir.embox %[[VAL_1]](%[[VAL_9]]) {{\[}}%[[VAL_10]]] : (!fir.ref<!fir.array<200xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<51xf32>>
+! CHECK:         %[[VAL_12:.*]] = fir.rebox %[[VAL_11]] : (!fir.box<!fir.array<51xf32>>) -> !fir.box<!fir.ptr<!fir.array<?xf32>>>
 ! CHECK:         fir.store %[[VAL_12]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
 ! CHECK:         return
 ! CHECK:       }
@@ -225,7 +244,7 @@ end subroutine
 ! CHECK:         %[[VAL_12:.*]] = fir.convert %[[VAL_11]] : (i64) -> index
 ! CHECK:         %[[VAL_13:.*]] = fir.shape %[[VAL_2]] : (index) -> !fir.shape<1>
 ! CHECK:         %[[VAL_14:.*]] = fir.slice %[[VAL_8]], %[[VAL_12]], %[[VAL_10]] : (index, index, index) -> !fir.slice<1>
-! CHECK:         %[[VAL_15:.*]] = fir.embox %[[VAL_1]](%[[VAL_13]]) {{\[}}%[[VAL_14]]] : (!fir.ref<!fir.array<400xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:         %[[VAL_15:.*]] = fir.embox %[[VAL_1]](%[[VAL_13]]) {{\[}}%[[VAL_14]]] : (!fir.ref<!fir.array<400xf32>>, !fir.shape<1>, !fir.slice<1>) -> !fir.box<!fir.array<100xf32>>
 ! CHECK:         %[[VAL_16:.*]] = arith.constant 1 : index
 ! CHECK:         %[[VAL_17:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
 ! CHECK:         %[[VAL_18:.*]] = fir.convert %[[VAL_4]] : (i64) -> index
@@ -238,7 +257,7 @@ end subroutine
 ! CHECK:         %[[VAL_25:.*]] = fir.convert %[[VAL_3]] : (i64) -> index
 ! CHECK:         %[[VAL_26:.*]] = fir.convert %[[VAL_5]] : (i64) -> index
 ! CHECK:         %[[VAL_27:.*]] = fir.shape_shift %[[VAL_25]], %[[VAL_20]], %[[VAL_26]], %[[VAL_24]] : (index, index, index, index) -> !fir.shapeshift<2>
-! CHECK:         %[[VAL_28:.*]] = fir.rebox %[[VAL_15]](%[[VAL_27]]) : (!fir.box<!fir.array<?xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
+! CHECK:         %[[VAL_28:.*]] = fir.rebox %[[VAL_15]](%[[VAL_27]]) : (!fir.box<!fir.array<100xf32>>, !fir.shapeshift<2>) -> !fir.box<!fir.ptr<!fir.array<?x?xf32>>>
 ! CHECK:         fir.store %[[VAL_28]] to %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x?xf32>>>>
 ! CHECK:         return
 ! CHECK:       }
@@ -331,10 +350,10 @@ subroutine issue857_char(rhs)
   ! CHECK-DAG: %[[lhs2_len:.*]] = fir.alloca index {uniq_name = "_QFissue857_charElhs2.len"}
   character(:), contiguous,  pointer ::  lhs1(:), lhs2(:, :)
   character(*), target ::  rhs(100)
-  ! CHECK: %[[len:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+  ! CHECK: %[[len:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<50x!fir.char<1,?>>>) -> index
   ! CHECK: fir.store %[[len]] to %[[lhs1_len]] : !fir.ref<index>
   lhs1 => rhs(1:50:1)
-  ! CHECK: %[[len2:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<?x!fir.char<1,?>>>) -> index
+  ! CHECK: %[[len2:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.array<50x!fir.char<1,?>>>) -> index
   ! CHECK: fir.store %[[len2]] to %[[lhs2_len]] : !fir.ref<index>
   lhs2(1:2, 1:25) => rhs(1:50:1)
 end subroutine
@@ -345,7 +364,7 @@ subroutine issue1180(x)
   integer, target :: x
   integer, pointer :: p
   common /some_common/ p
-  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QBsome_common) : !fir.ref<!fir.array<24xi8>>
+  ! CHECK: %[[VAL_1:.*]] = fir.address_of(@_QCsome_common) : !fir.ref<!fir.array<24xi8>>
   ! CHECK: %[[VAL_2:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<!fir.array<24xi8>>) -> !fir.ref<!fir.array<?xi8>>
   ! CHECK: %[[VAL_3:.*]] = arith.constant 0 : index
   ! CHECK: %[[VAL_4:.*]] = fir.coordinate_of %[[VAL_2]], %[[VAL_3]] : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>

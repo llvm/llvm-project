@@ -16,8 +16,6 @@ from lldbsuite.test import lldbutil
 
 class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
 
-    mydir = TestBase.compute_mydir(__file__)
-
     NO_DEBUG_INFO_TESTCASE = True
 
     def setup_test(self):
@@ -155,10 +153,10 @@ class AArch64LinuxNonAddressBitMemoryAccessTestCase(TestBase):
 
         # This should fill the cache by doing a read of buf_with_non_address
         # with the non-address bits removed (which is == buf).
-        self.runCmd("p buf_with_non_address")
+        self.runCmd("expression buf_with_non_address")
         # This will read from the cache since the two pointers point to the
         # same place.
-        self.runCmd("p buf")
+        self.runCmd("expression buf")
 
         # Open log ignoring utf-8 decode errors
         with open(log_file, 'r', errors='ignore') as f:

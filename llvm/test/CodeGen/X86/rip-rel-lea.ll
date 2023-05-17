@@ -6,9 +6,8 @@
 ; it has a smaller encoding.
 
 @a = internal global double 3.4
-define double* @foo() nounwind {
-  %a = getelementptr double, double* @a, i64 0
-  ret double* %a
+define ptr @foo() nounwind {
+  ret ptr @a
   
 ; PIC64:    leaq	a(%rip)
 ; PICX32:   leal	a(%rip)

@@ -146,7 +146,7 @@ subroutine C938_C947(var2, ptr, ptr2, fptr, my_team, srca)
   !ERROR: SOURCE or MOLD expression type must not be C_PTR or C_FUNPTR from ISO_C_BINDING when an allocatable object is a coarray
   allocate(var[5:*], SOURCE=ptr)
   !ERROR: SOURCE or MOLD expression type must not be C_PTR or C_FUNPTR from ISO_C_BINDING when an allocatable object is a coarray
-  allocate(varok, var[5:*], MOLD=ptr2(1))
+  allocate(varok, var[5:*], MOLD=ptr2(2))
   !ERROR: SOURCE or MOLD expression type must not be C_PTR or C_FUNPTR from ISO_C_BINDING when an allocatable object is a coarray
   allocate(var[5:*], MOLD=fptr)
   !ERROR: SOURCE or MOLD expression type must not be TEAM_TYPE from ISO_FORTRAN_ENV when an allocatable object is a coarray

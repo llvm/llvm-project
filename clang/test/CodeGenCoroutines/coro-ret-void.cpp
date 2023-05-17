@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -no-opaque-pointers -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
+// RUN: %clang_cc1 -std=c++20 -triple=x86_64-unknown-linux-gnu -emit-llvm %s -o - -disable-llvm-passes | FileCheck %s
 
 #include "Inputs/coroutine.h"
 
@@ -17,8 +17,8 @@ coro1 f() {
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z1fv(
-// CHECK: call void @_ZNSt13suspend_never12await_resumeEv(%"struct.std::suspend_never"*
-// CHECK: call void @_ZN5coro112promise_type11return_voidEv(%"struct.coro1::promise_type"* {{[^,]*}} %__promise)
+// CHECK: call void @_ZNSt13suspend_never12await_resumeEv(ptr
+// CHECK: call void @_ZN5coro112promise_type11return_voidEv(ptr {{[^,]*}} %__promise)
 
 struct A {
   A();
@@ -30,9 +30,9 @@ coro1 f2() {
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z2f2v(
-// CHECK: call void @_ZN1AC1Ev(%struct.A* {{[^,]*}} %[[AVar:.*]])
-// CHECK-NEXT: call void @_ZN1AD1Ev(%struct.A* {{[^,]*}} %[[AVar]])
-// CHECK-NEXT: call void @_ZN5coro112promise_type11return_voidEv(%"struct.coro1::promise_type"*
+// CHECK: call void @_ZN1AC1Ev(ptr {{[^,]*}} %[[AVar:.*]])
+// CHECK-NEXT: call void @_ZN1AD1Ev(ptr {{[^,]*}} %[[AVar]])
+// CHECK-NEXT: call void @_ZN5coro112promise_type11return_voidEv(ptr
 
 struct coro2 {
   struct promise_type {
@@ -49,5 +49,5 @@ coro2 g() {
 }
 
 // CHECK-LABEL: define{{.*}} void @_Z1gv(
-// CHECK: call void @_ZNSt13suspend_never12await_resumeEv(%"struct.std::suspend_never"*
-// CHECK: call void @_ZN5coro212promise_type12return_valueEi(%"struct.coro2::promise_type"* {{[^,]*}} %__promise, i32 noundef 42)
+// CHECK: call void @_ZNSt13suspend_never12await_resumeEv(ptr
+// CHECK: call void @_ZN5coro212promise_type12return_valueEi(ptr {{[^,]*}} %__promise, i32 noundef 42)

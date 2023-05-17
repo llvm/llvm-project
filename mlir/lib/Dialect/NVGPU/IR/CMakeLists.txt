@@ -1,4 +1,4 @@
-add_mlir_dialect_library(MLIRNVGPU
+add_mlir_dialect_library(MLIRNVGPUDialect
   NVGPUDialect.cpp
 
   ADDITIONAL_HEADER_DIRS
@@ -8,7 +8,7 @@ add_mlir_dialect_library(MLIRNVGPU
   MLIRNVGPUIncGen
 
   LINK_LIBS PUBLIC
-  MLIRGPUOps
+  MLIRGPUDialect
   MLIRIR
   MLIRSideEffectInterfaces
   )

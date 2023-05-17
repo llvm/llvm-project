@@ -1,17 +1,17 @@
-// RUN: %clang_cc1 -no-opaque-pointers %s -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +amx-int8  \
+// RUN: %clang_cc1 %s -ffreestanding -triple=x86_64-unknown-unknown  -target-feature +amx-int8  \
 // RUN: -target-feature +amx-bf16 -emit-llvm -o - -Werror -pedantic | FileCheck %s --check-prefixes=CHECK
 
 #include <immintrin.h>
 
 void test_amx(void *data) {
   //CHECK-LABEL: @test_amx
-  //CHECK: call void @llvm.x86.ldtilecfg(i8* %{{.*}})
-  //CHECK: call void @llvm.x86.sttilecfg(i8* %{{.*}})
+  //CHECK: call void @llvm.x86.ldtilecfg(ptr %{{.*}})
+  //CHECK: call void @llvm.x86.sttilecfg(ptr %{{.*}})
   //CHECK: call void @llvm.x86.tilerelease()
   //CHECK: call void @llvm.x86.tilezero(i8 3)
-  //CHECK: call void @llvm.x86.tileloadd64(i8 4, i8* %{{.*}}, i64 8)
-  //CHECK: call void @llvm.x86.tileloaddt164(i8 0, i8* %{{.*}}, i64 1)
-  //CHECK: call void @llvm.x86.tilestored64(i8 0, i8* %{{.*}}, i64 1)
+  //CHECK: call void @llvm.x86.tileloadd64(i8 4, ptr %{{.*}}, i64 8)
+  //CHECK: call void @llvm.x86.tileloaddt164(i8 0, ptr %{{.*}}, i64 1)
+  //CHECK: call void @llvm.x86.tilestored64(i8 0, ptr %{{.*}}, i64 1)
   //CHECK: call void @llvm.x86.tdpbssd(i8 1, i8 2, i8 3)
   //CHECK: call void @llvm.x86.tdpbsud(i8 1, i8 2, i8 3)
   //CHECK: call void @llvm.x86.tdpbusd(i8 1, i8 2, i8 3)

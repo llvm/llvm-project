@@ -55,13 +55,13 @@ void TpiStreamBuilder::updateTypeIndexOffsets(ArrayRef<uint16_t> Sizes) {
 }
 
 void TpiStreamBuilder::addTypeRecord(ArrayRef<uint8_t> Record,
-                                     Optional<uint32_t> Hash) {
+                                     std::optional<uint32_t> Hash) {
   assert(((Record.size() & 3) == 0) &&
          "The type record's size is not a multiple of 4 bytes which will "
          "cause misalignment in the output TPI stream!");
   assert(Record.size() <= codeview::MaxRecordLength);
   uint16_t OneSize = (uint16_t)Record.size();
-  updateTypeIndexOffsets(makeArrayRef(&OneSize, 1));
+  updateTypeIndexOffsets(ArrayRef(&OneSize, 1));
 
   TypeRecBuffers.push_back(Record);
   // FIXME: Require it.

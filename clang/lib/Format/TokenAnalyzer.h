@@ -46,7 +46,7 @@ public:
 
   FileID getFileID() const { return ID; }
 
-  const SourceManager &getSourceManager() const { return SM; }
+  SourceManager &getSourceManager() const { return SM; }
 
   ArrayRef<CharSourceRange> getCharRanges() const { return CharRanges; }
 
@@ -89,7 +89,8 @@ class TokenAnalyzer : public UnwrappedLineConsumer {
 public:
   TokenAnalyzer(const Environment &Env, const FormatStyle &Style);
 
-  std::pair<tooling::Replacements, unsigned> process();
+  std::pair<tooling::Replacements, unsigned>
+  process(bool SkipAnnotation = false);
 
 protected:
   virtual std::pair<tooling::Replacements, unsigned>

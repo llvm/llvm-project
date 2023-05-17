@@ -12,7 +12,6 @@ import lldbsuite.test.lldbutil as lldbutil
 class Radar9974002DataFormatterTestCase(TestBase):
 
     # test for rdar://problem/9974002 ()
-    mydir = TestBase.compute_mydir(__file__)
 
     def setUp(self):
         # Call super's setUp().

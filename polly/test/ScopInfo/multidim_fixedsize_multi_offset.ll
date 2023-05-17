@@ -36,10 +36,9 @@
 ;
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"
 
-define void @f([2 x i32]* %A) {
+define void @f(ptr %A) {
 entry:
-  %arrayidx3 = getelementptr inbounds [2 x i32], [2 x i32]* %A, i64 1, i64 0
-  %tmp = bitcast i32* %arrayidx3 to [2 x i32]*
+  %arrayidx3 = getelementptr inbounds [2 x i32], ptr %A, i64 1, i64 0
   br label %for.cond
 
 for.cond:                                         ; preds = %for.inc, %entry
@@ -48,14 +47,14 @@ for.cond:                                         ; preds = %for.inc, %entry
   br i1 %exitcond, label %for.body, label %for.end
 
 for.body:                                         ; preds = %for.cond
-  %arrayidx5 = getelementptr inbounds [2 x i32], [2 x i32]* %A, i64 %indvars.iv, i64 0
-  %tmp1 = load i32, i32* %arrayidx5, align 4
+  %arrayidx5 = getelementptr inbounds [2 x i32], ptr %A, i64 %indvars.iv, i64 0
+  %tmp1 = load i32, ptr %arrayidx5, align 4
   %inc = add nsw i32 %tmp1, 1
-  store i32 %inc, i32* %arrayidx5, align 4
-  %arrayidx8 = getelementptr inbounds [2 x i32], [2 x i32]* %tmp, i64 %indvars.iv, i64 0
-  %tmp2 = load i32, i32* %arrayidx8, align 4
+  store i32 %inc, ptr %arrayidx5, align 4
+  %arrayidx8 = getelementptr inbounds [2 x i32], ptr %arrayidx3, i64 %indvars.iv, i64 0
+  %tmp2 = load i32, ptr %arrayidx8, align 4
   %inc9 = add nsw i32 %tmp2, 1
-  store i32 %inc9, i32* %arrayidx8, align 4
+  store i32 %inc9, ptr %arrayidx8, align 4
   br label %for.inc
 
 for.inc:                                          ; preds = %for.body

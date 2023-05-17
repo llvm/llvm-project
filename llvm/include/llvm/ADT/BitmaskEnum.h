@@ -41,6 +41,33 @@
 #define LLVM_MARK_AS_BITMASK_ENUM(LargestValue)                                \
   LLVM_BITMASK_LARGEST_ENUMERATOR = LargestValue
 
+/// LLVM_DECLARE_ENUM_AS_BITMASK can be used to declare an enum type as a bit
+/// set, so that bitwise operation on such enum does not require static_cast.
+///
+/// \code
+///   enum MyEnum { E1 = 1, E2 = 2, E3 = 4, E4 = 8 };
+///   LLVM_DECLARE_ENUM_AS_BITMASK(MyEnum, E4);
+///
+///   void Foo() {
+///     MyEnum A = (E1 | E2) & E3 ^ ~E4; // No static_cast
+///   }
+/// \endcode
+///
+/// The second parameter to LLVM_DECLARE_ENUM_AS_BITMASK specifies the largest
+/// bit value of the enum type.
+///
+/// LLVM_DECLARE_ENUM_AS_BITMASK should be used in llvm namespace.
+///
+/// This a non-intrusive alternative for LLVM_MARK_AS_BITMASK_ENUM. It allows
+/// declaring more than one non-scoped enumerations as bitmask types in the same
+/// scope. Otherwise it provides the same functionality as
+/// LLVM_MARK_AS_BITMASK_ENUM.
+#define LLVM_DECLARE_ENUM_AS_BITMASK(Enum, LargestValue)                       \
+  template <> struct is_bitmask_enum<Enum> : std::true_type {};                \
+  template <> struct largest_bitmask_enum_bit<Enum> {                          \
+    static constexpr std::underlying_type_t<Enum> value = LargestValue;        \
+  }
+
 /// LLVM_ENABLE_BITMASK_ENUMS_IN_NAMESPACE() pulls the operator overloads used
 /// by LLVM_MARK_AS_BITMASK_ENUM into the current namespace.
 ///
@@ -73,6 +100,18 @@ template <typename E>
 struct is_bitmask_enum<
     E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>>
     : std::true_type {};
+
+/// Trait class to determine bitmask enumeration largest bit.
+template <typename E, typename Enable = void> struct largest_bitmask_enum_bit;
+
+template <typename E>
+struct largest_bitmask_enum_bit<
+    E, std::enable_if_t<sizeof(E::LLVM_BITMASK_LARGEST_ENUMERATOR) >= 0>> {
+  using UnderlyingTy = std::underlying_type_t<E>;
+  static constexpr UnderlyingTy value =
+      static_cast<UnderlyingTy>(E::LLVM_BITMASK_LARGEST_ENUMERATOR);
+};
+
 namespace BitmaskEnumDetail {
 
 /// Get a bitmask with 1s in all places up to the high-order bit of E's largest
@@ -80,9 +119,7 @@ namespace BitmaskEnumDetail {
 template <typename E> constexpr std::underlying_type_t<E> Mask() {
   // On overflow, NextPowerOf2 returns zero with the type uint64_t, so
   // subtracting 1 gives us the mask with all bits set, like we want.
-  return NextPowerOf2(static_cast<std::underlying_type_t<E>>(
-             E::LLVM_BITMASK_LARGEST_ENUMERATOR)) -
-         1;
+  return NextPowerOf2(largest_bitmask_enum_bit<E>::value) - 1;
 }
 
 /// Check that Val is in range for E, and return Val cast to E's underlying

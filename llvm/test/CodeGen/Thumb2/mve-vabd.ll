@@ -2,7 +2,7 @@
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve %s -o - | FileCheck %s --check-prefix=CHECK-MVE
 ; RUN: llc -mtriple=thumbv8.1m.main-none-none-eabi -mattr=+mve.fp %s -o - | FileCheck %s --check-prefix=CHECK-MVEFP
 
-define arm_aapcs_vfpcc void @vabd_v4f32(<4 x float> %x, <4 x float> %y, <4 x float>* %z) {
+define arm_aapcs_vfpcc void @vabd_v4f32(<4 x float> %x, <4 x float> %y, ptr %z) {
 ; CHECK-MVE-LABEL: vabd_v4f32:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    .save {r4, r5, r6, r7, r8, r9, lr}
@@ -51,11 +51,11 @@ define arm_aapcs_vfpcc void @vabd_v4f32(<4 x float> %x, <4 x float> %y, <4 x flo
 entry:
   %0 = fsub <4 x float> %x, %y
   %1 = call <4 x float> @llvm.fabs.v4f32(<4 x float> %0)
-  store <4 x float> %1, <4 x float>* %z, align 4
+  store <4 x float> %1, ptr %z, align 4
   ret void
 }
 
-define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>* %z) {
+define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, ptr %z) {
 ; CHECK-MVE-LABEL: vabd_v8f16:
 ; CHECK-MVE:       @ %bb.0: @ %entry
 ; CHECK-MVE-NEXT:    .save {r4, r5, r6, lr}
@@ -159,7 +159,7 @@ define arm_aapcs_vfpcc void @vabd_v8f16(<8 x half> %x, <8 x half> %y, <8 x half>
 entry:
   %0 = fsub <8 x half> %x, %y
   %1 = call <8 x half> @llvm.fabs.v8f16(<8 x half> %0)
-  store <8 x half> %1, <8 x half>* %z
+  store <8 x half> %1, ptr %z
   ret void
 }
 

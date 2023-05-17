@@ -158,6 +158,8 @@ if ( 0 ) {
         $values{ hardware_platform } = "mips";
     } elsif ( $values{ machine } =~ m{\Ariscv64\z} ) {
         $values{ hardware_platform } = "riscv64";
+    } elsif ( $values{ machine } =~ m{\Aloongarch64\z} ) {
+        $values{ hardware_platform } = "loongarch64";
     } else {
         die "Unsupported machine (\"$values{ machine }\") returned by POSIX::uname(); stopped";
     }; # if

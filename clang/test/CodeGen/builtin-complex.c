@@ -1,7 +1,7 @@
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -w -S -o - -emit-llvm -DT=float %s | FileCheck %s --check-prefixes=CHECK,CHECK-FLOAT
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -w -S -o - -emit-llvm -DT=double %s | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -w -S -o - -emit-llvm -DT="long double" %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP80
-// RUN: %clang_cc1 -no-opaque-pointers -triple x86_64-linux -w -S -o - -emit-llvm -DT=__float128 %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP128
+// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT=float %s | FileCheck %s --check-prefixes=CHECK,CHECK-FLOAT
+// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT=double %s | FileCheck %s --check-prefixes=CHECK,CHECK-DOUBLE
+// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT="long double" %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP80
+// RUN: %clang_cc1 -triple x86_64-linux -w -S -o - -emit-llvm -DT=__float128 %s | FileCheck %s --check-prefixes=CHECK,CHECK-FP128
 // FIXME: If we start to support _Complex __fp16 or _Complex _Float16, add tests for them too.
 
 // CHECK-FLOAT: @global ={{.*}} global { [[T:float]], [[T]] } { [[T]] 1.0{{.*}}, [[T]] 2.0{{.*}} }
@@ -13,10 +13,10 @@ _Complex T global = __builtin_complex(1.0, 2.0);
 // CHECK-LABEL: @test
 _Complex T test(T a, T b) {
   return __builtin_complex(a, b);
-  // CHECK: %[[A:.*]] = load [[T]], [[T]]* %a.addr,
-  // CHECK: %[[B:.*]] = load [[T]], [[T]]* %b.addr,
-  // CHECK: %[[RET_RE:.*]] = getelementptr inbounds { [[T]], [[T]] }, { [[T]], [[T]] }* %[[RET:[^,]*]], i32 0, i32 0
-  // CHECK: %[[RET_IM:.*]] = getelementptr inbounds { [[T]], [[T]] }, { [[T]], [[T]] }* %[[RET]], i32 0, i32 1
-  // CHECK: store [[T]] %[[A]], [[T]]* %[[RET_RE]],
-  // CHECK: store [[T]] %[[B]], [[T]]* %[[RET_IM]],
+  // CHECK: %[[A:.*]] = load [[T]], ptr %a.addr,
+  // CHECK: %[[B:.*]] = load [[T]], ptr %b.addr,
+  // CHECK: %[[RET_RE:.*]] = getelementptr inbounds { [[T]], [[T]] }, ptr %[[RET:[^,]*]], i32 0, i32 0
+  // CHECK: %[[RET_IM:.*]] = getelementptr inbounds { [[T]], [[T]] }, ptr %[[RET]], i32 0, i32 1
+  // CHECK: store [[T]] %[[A]], ptr %[[RET_RE]],
+  // CHECK: store [[T]] %[[B]], ptr %[[RET_IM]],
 }

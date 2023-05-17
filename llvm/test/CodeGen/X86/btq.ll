@@ -7,11 +7,9 @@ define void @test1(i64 %foo) nounwind {
 ; CHECK-LABEL: test1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    btq $32, %rdi
-; CHECK-NEXT:    jb .LBB0_2
+; CHECK-NEXT:    jb bar # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB0_2: # %if.then
-; CHECK-NEXT:    jmp bar # TAILCALL
   %and = and i64 %foo, 4294967296
   %tobool = icmp eq i64 %and, 0
   br i1 %tobool, label %if.end, label %if.then
@@ -27,12 +25,10 @@ if.end:
 define void @test2(i64 %foo) nounwind {
 ; CHECK-LABEL: test2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    testl $-2147483648, %edi # imm = 0x80000000
-; CHECK-NEXT:    jne .LBB1_2
+; CHECK-NEXT:    testl %edi, %edi
+; CHECK-NEXT:    js bar # TAILCALL
 ; CHECK-NEXT:  # %bb.1: # %if.end
 ; CHECK-NEXT:    retq
-; CHECK-NEXT:  .LBB1_2: # %if.then
-; CHECK-NEXT:    jmp bar # TAILCALL
   %and = and i64 %foo, 2147483648
   %tobool = icmp eq i64 %and, 0
   br i1 %tobool, label %if.end, label %if.then

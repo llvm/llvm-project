@@ -1,11 +1,9 @@
 ; REQUIRES: x86
 ; RUN: opt -module-summary %s -o %t.o
 
-; Test new-pass-manager and debug-pass-manager option
-; RUN: ld.lld --plugin-opt=new-pass-manager --plugin-opt=debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
-; RUN: ld.lld --plugin-opt=new-pass-manager --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
-; RUN: ld.lld --no-lto-legacy-pass-manager --plugin-opt=debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
-; RUN: ld.lld --no-lto-legacy-pass-manager --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
+; Test debug-pass-manager option
+; RUN: ld.lld --plugin-opt=debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
+; RUN: ld.lld --lto-debug-pass-manager -o /dev/null %t.o 2>&1 | FileCheck %s
 
 ; CHECK: Running pass: GlobalOptPass
 

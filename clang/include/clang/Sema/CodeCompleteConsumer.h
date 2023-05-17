@@ -21,8 +21,6 @@
 #include "clang/Sema/DeclSpec.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/None.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
@@ -30,6 +28,7 @@
 #include "llvm/Support/type_traits.h"
 #include <cassert>
 #include <memory>
+#include <optional>
 #include <string>
 #include <utility>
 
@@ -359,7 +358,7 @@ private:
 
   /// The scope specifier that comes before the completion token e.g.
   /// "a::b::"
-  llvm::Optional<CXXScopeSpec> ScopeSpecifier;
+  std::optional<CXXScopeSpec> ScopeSpecifier;
 
   /// A set of declaration contexts visited by Sema when doing lookup for
   /// code completion.
@@ -368,11 +367,11 @@ private:
 public:
   /// Construct a new code-completion context of the given kind.
   CodeCompletionContext(Kind CCKind)
-      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(None) {}
+      : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(std::nullopt) {}
 
   /// Construct a new code-completion context of the given kind.
   CodeCompletionContext(Kind CCKind, QualType T,
-                        ArrayRef<IdentifierInfo *> SelIdents = None)
+                        ArrayRef<IdentifierInfo *> SelIdents = std::nullopt)
       : CCKind(CCKind), IsUsingDeclaration(false), SelIdents(SelIdents) {
     if (CCKind == CCC_DotMemberAccess || CCKind == CCC_ArrowMemberAccess ||
         CCKind == CCC_ObjCPropertyAccess || CCKind == CCC_ObjCClassMessage ||
@@ -422,14 +421,14 @@ public:
     return VisitedContexts;
   }
 
-  llvm::Optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
+  std::optional<const CXXScopeSpec *> getCXXScopeSpecifier() {
     if (ScopeSpecifier)
-      return ScopeSpecifier.getPointer();
-    return llvm::None;
+      return &*ScopeSpecifier;
+    return std::nullopt;
   }
 };
 
-/// Get string representation of \p Kind, useful for for debugging.
+/// Get string representation of \p Kind, useful for debugging.
 llvm::StringRef getCompletionKindString(CodeCompletionContext::Kind Kind);
 
 /// A "string" used to describe how code completion can
@@ -850,6 +849,12 @@ public:
   /// rather than a use of that entity.
   bool DeclaringEntity : 1;
 
+  /// When completing a function, whether it can be a call. This will usually be
+  /// true, but we have some heuristics, e.g. when a pointer to a non-static
+  /// member function is completed outside of that class' scope, it can never
+  /// be a call.
+  bool FunctionCanBeCall : 1;
+
   /// If the result should have a nested-name-specifier, this is it.
   /// When \c QualifierIsInformative, the nested-name-specifier is
   /// informative rather than required.
@@ -876,7 +881,7 @@ public:
         FixIts(std::move(FixIts)), Hidden(false), InBaseClass(false),
         QualifierIsInformative(QualifierIsInformative),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
-        DeclaringEntity(false), Qualifier(Qualifier) {
+        DeclaringEntity(false), FunctionCanBeCall(true), Qualifier(Qualifier) {
     // FIXME: Add assert to check FixIts range requirements.
     computeCursorKindAndAvailability(Accessible);
   }
@@ -886,7 +891,8 @@ public:
       : Keyword(Keyword), Priority(Priority), Kind(RK_Keyword),
         CursorKind(CXCursor_NotImplemented), Hidden(false), InBaseClass(false),
         QualifierIsInformative(false), StartsNestedNameSpecifier(false),
-        AllParametersAreInformative(false), DeclaringEntity(false) {}
+        AllParametersAreInformative(false), DeclaringEntity(false),
+        FunctionCanBeCall(true) {}
 
   /// Build a result that refers to a macro.
   CodeCompletionResult(const IdentifierInfo *Macro,
@@ -896,7 +902,7 @@ public:
         CursorKind(CXCursor_MacroDefinition), Hidden(false), InBaseClass(false),
         QualifierIsInformative(false), StartsNestedNameSpecifier(false),
         AllParametersAreInformative(false), DeclaringEntity(false),
-        MacroDefInfo(MI) {}
+        FunctionCanBeCall(true), MacroDefInfo(MI) {}
 
   /// Build a result that refers to a pattern.
   CodeCompletionResult(
@@ -908,7 +914,7 @@ public:
         CursorKind(CursorKind), Availability(Availability), Hidden(false),
         InBaseClass(false), QualifierIsInformative(false),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
-        DeclaringEntity(false) {}
+        DeclaringEntity(false), FunctionCanBeCall(true) {}
 
   /// Build a result that refers to a pattern with an associated
   /// declaration.
@@ -917,7 +923,7 @@ public:
       : Declaration(D), Pattern(Pattern), Priority(Priority), Kind(RK_Pattern),
         Hidden(false), InBaseClass(false), QualifierIsInformative(false),
         StartsNestedNameSpecifier(false), AllParametersAreInformative(false),
-        DeclaringEntity(false) {
+        DeclaringEntity(false), FunctionCanBeCall(true) {
     computeCursorKindAndAvailability();
   }
 
@@ -1019,6 +1025,10 @@ public:
       /// for which we only have a function prototype.
       CK_FunctionType,
 
+      /// The candidate is a variable or expression of function type
+      /// for which we have the location of the prototype declaration.
+      CK_FunctionProtoTypeLoc,
+
       /// The candidate is a template, template arguments are being completed.
       CK_Template,
 
@@ -1042,6 +1052,10 @@ public:
       /// The function type that describes the entity being called,
       /// when Kind == CK_FunctionType.
       const FunctionType *Type;
+
+      /// The location of the function prototype that describes the entity being
+      /// called, when Kind == CK_FunctionProtoTypeLoc.
+      FunctionProtoTypeLoc ProtoTypeLoc;
 
       /// The template overload candidate, available when
       /// Kind == CK_Template.
@@ -1068,6 +1082,11 @@ public:
       assert(Type != nullptr);
     }
 
+    OverloadCandidate(FunctionProtoTypeLoc Prototype)
+        : Kind(CK_FunctionProtoTypeLoc), ProtoTypeLoc(Prototype) {
+      assert(!Prototype.isNull());
+    }
+
     OverloadCandidate(const RecordDecl *Aggregate)
         : Kind(CK_Aggregate), AggregateType(Aggregate) {
       assert(Aggregate != nullptr);
@@ -1092,6 +1111,11 @@ public:
     /// Retrieve the function type of the entity, regardless of how the
     /// function is stored.
     const FunctionType *getFunctionType() const;
+
+    /// Retrieve the function ProtoTypeLoc candidate.
+    /// This can be called for any Kind, but returns null for kinds
+    /// other than CK_FunctionProtoTypeLoc.
+    const FunctionProtoTypeLoc getFunctionProtoTypeLoc() const;
 
     const TemplateDecl *getTemplate() const {
       assert(getKind() == CK_Template && "Not a template");

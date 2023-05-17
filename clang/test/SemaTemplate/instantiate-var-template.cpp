@@ -28,10 +28,10 @@ namespace InstantiationDependent {
   template<typename T> constexpr T b = a<sizeof(sizeof(f(T())))>; // expected-error {{invalid application of 'sizeof' to an incomplete type 'void'}}
 
   static_assert(b<int> == 1, "");
-  static_assert(b<char> == 1, ""); // expected-note {{in instantiation of}} expected-error {{not an integral constant}}
+  static_assert(b<char> == 1, ""); // expected-note {{in instantiation of}}
 
   template<typename T> void f() {
-    static_assert(a<sizeof(sizeof(f(T())))> == 0, ""); // expected-error {{static_assert failed due to requirement 'a<sizeof (sizeof (f(type-parameter-0-0())))> == 0'}}
+    int check[a<sizeof(sizeof(f(T())))> == 0 ? 1 : -1]; // expected-error {{array with a negative size}}
   }
 }
 

@@ -1,5 +1,5 @@
-// RUN: %clang_cl_asan -Od %p/dll_host.cpp -Fe%t
-// RUN: %clang_cl_asan -LD -Od %s -Fe%t.dll
+// RUN: %clang_cl_asan %Od %p/dll_host.cpp %Fe%t
+// RUN: %clang_cl_asan %LD %Od %s %Fe%t.dll
 // RUN: not %run %t %t.dll 2>&1 | FileCheck %s
 
 struct C {
@@ -21,7 +21,7 @@ int test_function() {
 // FIXME: Currently it says "4 bytes ... left of 172-byte region",
 //        should be "8 bytes ... left of 168-byte region", see
 //        https://code.google.com/p/address-sanitizer/issues/detail?id=314
-// CHECK: [[ADDR]] is located {{.*}} bytes to the left of {{(172|176)}}-byte region
+// CHECK: [[ADDR]] is located {{.*}} bytes before {{(172|176)}}-byte region
 // FIXME: Should get rid of the malloc/free frames called from the inside of
 // operator new/delete in DLLs when using -MT CRT.
 // FIXME: The operator new frame should have [].

@@ -20,6 +20,7 @@
 
 #include <string>
 #include <cassert>
+#include <new>
 
 #include "test_macros.h"
 #include "min_allocator.h"
@@ -29,7 +30,7 @@ TEST_CONSTEXPR_CXX20 void
 test1(const S& s)
 {
     S s2(s);
-    const size_t sz = s2.max_size() - 1;
+    const std::size_t sz = s2.max_size() - 1;
     try { s2.resize(sz, 'x'); }
     catch ( const std::bad_alloc & ) { return ; }
     assert ( s2.size() ==  sz );
@@ -40,7 +41,7 @@ TEST_CONSTEXPR_CXX20 void
 test2(const S& s)
 {
     S s2(s);
-    const size_t sz = s2.max_size();
+    const std::size_t sz = s2.max_size();
     try { s2.resize(sz, 'x'); }
     catch ( const std::bad_alloc & ) { return ; }
     assert ( s.size() ==  sz );
@@ -55,28 +56,27 @@ test(const S& s)
     test2(s);
 }
 
-void test() {
-  {
-    typedef std::string S;
-    test(S());
-    test(S("123"));
-    test(S("12345678901234567890123456789012345678901234567890"));
-  }
+template <class S>
+TEST_CONSTEXPR_CXX20 void test_string() {
+  test(S());
+  test(S("123"));
+  test(S("12345678901234567890123456789012345678901234567890"));
+}
+
+TEST_CONSTEXPR_CXX20 bool test() {
+  test_string<std::string>();
 #if TEST_STD_VER >= 11
-  {
-    typedef std::basic_string<char, std::char_traits<char>, min_allocator<char>> S;
-    test(S());
-    test(S("123"));
-    test(S("12345678901234567890123456789012345678901234567890"));
-  }
+  test_string<std::basic_string<char, std::char_traits<char>, min_allocator<char>>>();
 #endif
+
+  return true;
 }
 
 #if TEST_STD_VER > 17
 constexpr bool test_constexpr() {
   std::string str;
 
-  size_t size = str.max_size();
+  std::size_t size = str.max_size();
   assert(size > 0);
 
   return true;

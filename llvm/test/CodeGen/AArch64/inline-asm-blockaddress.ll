@@ -5,8 +5,8 @@ define void @foo() {
 entry:
   br label %bar
 bar:
-  call void asm sideeffect "#TEST $0", "i,~{dirflag},~{fpsr},~{flags}"(i8* blockaddress(@foo, %bar))
+  call void asm sideeffect "#TEST $0", "i,~{dirflag},~{fpsr},~{flags}"(ptr blockaddress(@foo, %bar))
   ret void
 indirectgoto:
-  indirectbr i8* undef, [label %bar]
+  indirectbr ptr undef, [label %bar]
 }

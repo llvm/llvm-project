@@ -9,11 +9,11 @@
 #ifndef BOLT_PROFILE_BOLTADDRESSTRANSLATION_H
 #define BOLT_PROFILE_BOLTADDRESSTRANSLATION_H
 
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstdint>
 #include <map>
+#include <optional>
 #include <system_error>
 
 namespace llvm {
@@ -76,28 +76,31 @@ public:
   /// output binary
   static const char *SECTION_NAME;
 
-  BoltAddressTranslation(BinaryContext &BC) : BC(BC) {}
+  BoltAddressTranslation() {}
 
   /// Write the serialized address translation tables for each reordered
   /// function
-  void write(raw_ostream &OS);
+  void write(const BinaryContext &BC, raw_ostream &OS);
 
   /// Read the serialized address translation tables and load them internally
   /// in memory. Return a parse error if failed.
   std::error_code parse(StringRef Buf);
 
+  /// Dump the parsed address translation tables
+  void dump(raw_ostream &OS);
+
   /// If the maps are loaded in memory, perform the lookup to translate LBR
-  /// addresses in \p Func.
-  uint64_t translate(const BinaryFunction &Func, uint64_t Offset,
+  /// addresses in function located at \p FuncAddress.
+  uint64_t translate(uint64_t FuncAddress, uint64_t Offset,
                      bool IsBranchSrc) const;
 
   /// Use the map keys containing basic block addresses to infer fall-throughs
   /// taken in the path started at FirstLBR.To and ending at SecondLBR.From.
-  /// Return NoneType if trace is invalid or the list of fall-throughs
+  /// Return std::nullopt if trace is invalid or the list of fall-throughs
   /// otherwise.
-  Optional<FallthroughListTy> getFallthroughsInTrace(const BinaryFunction &Func,
-                                                     uint64_t From,
-                                                     uint64_t To) const;
+  std::optional<FallthroughListTy> getFallthroughsInTrace(uint64_t FuncAddress,
+                                                          uint64_t From,
+                                                          uint64_t To) const;
 
   /// If available, fetch the address of the hot part linked to the cold part
   /// at \p Address. Return 0 otherwise.
@@ -114,8 +117,6 @@ private:
   /// the location of calls or any instruction that may change control flow.
   void writeEntriesForBB(MapTy &Map, const BinaryBasicBlock &BB,
                          uint64_t FuncAddress);
-
-  BinaryContext &BC;
 
   std::map<uint64_t, MapTy> Maps;
 

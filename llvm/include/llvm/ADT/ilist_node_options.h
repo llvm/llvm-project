@@ -86,7 +86,9 @@ struct extract_tag<ilist_tag<Tag>, Options...> {
 };
 template <class Option1, class... Options>
 struct extract_tag<Option1, Options...> : extract_tag<Options...> {};
-template <> struct extract_tag<> { typedef void type; };
+template <> struct extract_tag<> {
+  typedef void type;
+};
 template <class Tag> struct is_valid_option<ilist_tag<Tag>> : std::true_type {};
 
 /// Check whether options are valid.

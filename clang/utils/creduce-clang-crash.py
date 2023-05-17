@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 """Calls C-Reduce to create a minimal reproducer for clang crashes.
 
 Output files:
@@ -11,6 +11,7 @@ from __future__ import print_function
 from argparse import ArgumentParser, RawTextHelpFormatter
 import os
 import re
+import shutil
 import stat
 import sys
 import subprocess
@@ -18,7 +19,6 @@ import pipes
 import shlex
 import tempfile
 import shutil
-from distutils.spawn import find_executable
 import multiprocessing
 
 verbose = False
@@ -43,12 +43,12 @@ def check_cmd(cmd_name, cmd_dir, cmd_path=None):
   if cmd_path:
     # Make the path absolute so the creduce test can be run from any directory.
     cmd_path = os.path.abspath(cmd_path)
-    cmd = find_executable(cmd_path)
+    cmd = shutil.which(cmd_path)
     if cmd:
       return cmd
     sys.exit("ERROR: executable `%s` not found" % (cmd_path))
 
-  cmd = find_executable(cmd_name, path=cmd_dir)
+  cmd = shutil.which(cmd_name, path=cmd_dir)
   if cmd:
     return cmd
 
@@ -396,8 +396,8 @@ def main():
   parser.add_argument('--creduce', dest='creduce', type=str,
                       help="The path to the `creduce` executable. "
                       "Required if `creduce` is not in PATH environment.")
-  parser.add_argument('--n', dest='core_number', type=int, 
-                      default=max(4, multiprocessing.cpu_count() / 2),
+  parser.add_argument('--n', dest='core_number', type=int,
+                      default=max(4, multiprocessing.cpu_count() // 2),
                       help="Number of cores to use.")
   parser.add_argument('-v', '--verbose', action='store_true')
   args = parser.parse_args()

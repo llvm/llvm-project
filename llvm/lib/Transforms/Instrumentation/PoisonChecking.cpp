@@ -89,9 +89,9 @@ static Value *buildOrChain(IRBuilder<> &B, ArrayRef<Value*> Ops) {
   if (i == Ops.size())
     return B.getFalse();
   Value *Accum = Ops[i++];
-  for (; i < Ops.size(); i++)
-    if (!isConstantFalse(Ops[i]))
-      Accum = B.CreateOr(Accum, Ops[i]);
+  for (Value *Op : llvm::drop_begin(Ops, i))
+    if (!isConstantFalse(Op))
+      Accum = B.CreateOr(Accum, Op);
   return Accum;
 }
 
@@ -276,10 +276,13 @@ static bool rewrite(Function &F) {
 
       // Note: There are many more sources of documented UB, but this pass only
       // attempts to find UB triggered by propagation of poison.
-      SmallPtrSet<const Value *, 4> NonPoisonOps;
+      SmallVector<const Value *, 4> NonPoisonOps;
+      SmallPtrSet<const Value *, 4> SeenNonPoisonOps;
       getGuaranteedNonPoisonOps(&I, NonPoisonOps);
       for (const Value *Op : NonPoisonOps)
-        CreateAssertNot(B, getPoisonFor(ValToPoison, const_cast<Value *>(Op)));
+        if (SeenNonPoisonOps.insert(Op).second)
+          CreateAssertNot(B,
+                          getPoisonFor(ValToPoison, const_cast<Value *>(Op)));
 
       if (LocalCheck)
         if (auto *RI = dyn_cast<ReturnInst>(&I))
@@ -289,9 +292,10 @@ static bool rewrite(Function &F) {
           }
 
       SmallVector<Value*, 4> Checks;
-      if (propagatesPoison(cast<Operator>(&I)))
-        for (Value *V : I.operands())
-          Checks.push_back(getPoisonFor(ValToPoison, V));
+      for (const Use &U : I.operands()) {
+        if (ValToPoison.count(U) && propagatesPoison(U))
+          Checks.push_back(getPoisonFor(ValToPoison, U));
+      }
 
       if (canCreatePoison(cast<Operator>(&I)))
         generateCreationChecks(I, Checks);

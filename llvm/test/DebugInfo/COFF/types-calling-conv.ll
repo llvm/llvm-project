@@ -175,9 +175,9 @@ target triple = "i386-pc-windows-msvc19.0.23918"
 %struct.A = type { i8 }
 
 ; Function Attrs: nounwind readnone
-define x86_thiscallcc void @"\01?thiscallcc@A@@QAEXXZ"(%struct.A* nocapture %this) #0 align 2 !dbg !6 {
+define x86_thiscallcc void @"\01?thiscallcc@A@@QAEXXZ"(ptr nocapture %this) #0 align 2 !dbg !6 {
 entry:
-  tail call void @llvm.dbg.value(metadata %struct.A* %this, metadata !14, metadata !16), !dbg !17
+  tail call void @llvm.dbg.value(metadata ptr %this, metadata !14, metadata !16), !dbg !17
   ret void, !dbg !18
 }
 

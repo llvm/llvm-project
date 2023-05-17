@@ -14,12 +14,12 @@ using namespace llvm;
 using namespace llvm::object;
 using namespace llvm::minidump;
 
-Optional<ArrayRef<uint8_t>>
+std::optional<ArrayRef<uint8_t>>
 MinidumpFile::getRawStream(minidump::StreamType Type) const {
   auto It = StreamMap.find(Type);
   if (It != StreamMap.end())
     return getRawStream(Streams[It->second]);
-  return None;
+  return std::nullopt;
 }
 
 Expected<std::string> MinidumpFile::getString(size_t Offset) const {
@@ -55,7 +55,8 @@ Expected<std::string> MinidumpFile::getString(size_t Offset) const {
 
 Expected<iterator_range<MinidumpFile::MemoryInfoIterator>>
 MinidumpFile::getMemoryInfoList() const {
-  Optional<ArrayRef<uint8_t>> Stream = getRawStream(StreamType::MemoryInfoList);
+  std::optional<ArrayRef<uint8_t>> Stream =
+      getRawStream(StreamType::MemoryInfoList);
   if (!Stream)
     return createError("No such stream");
   auto ExpectedHeader =
@@ -73,7 +74,7 @@ MinidumpFile::getMemoryInfoList() const {
 
 template <typename T>
 Expected<ArrayRef<T>> MinidumpFile::getListStream(StreamType Type) const {
-  Optional<ArrayRef<uint8_t>> Stream = getRawStream(Type);
+  std::optional<ArrayRef<uint8_t>> Stream = getRawStream(Type);
   if (!Stream)
     return createError("No such stream");
   auto ExpectedSize = getDataSliceAs<support::ulittle32_t>(*Stream, 0, 1);

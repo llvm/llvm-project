@@ -22,7 +22,7 @@ define <16 x i8> @combine_vpshufb_as_movzx(<16 x i8> %a0) {
   ret <16 x i8> %res0
 }
 
-define <16 x i8> @PR50049(<48 x i8>* %p1, <48 x i8>* %p2) {
+define <16 x i8> @PR50049(ptr %p1, ptr %p2) {
 ; SSE-LABEL: PR50049:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movdqa (%rdi), %xmm2
@@ -56,8 +56,8 @@ define <16 x i8> @PR50049(<48 x i8>* %p1, <48 x i8>* %p2) {
 ; SSE-NEXT:    pand %xmm5, %xmm1
 ; SSE-NEXT:    packuswb %xmm1, %xmm0
 ; SSE-NEXT:    retq
-  %x1 = load <48 x i8>, <48 x i8>* %p1, align 16
-  %x2 = load <48 x i8>, <48 x i8>* %p2, align 16
+  %x1 = load <48 x i8>, ptr %p1, align 16
+  %x2 = load <48 x i8>, ptr %p2, align 16
   %s1 = shufflevector <48 x i8> %x1, <48 x i8> poison, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45>
   %s2 = shufflevector <48 x i8> %x2, <48 x i8> poison, <16 x i32> <i32 0, i32 3, i32 6, i32 9, i32 12, i32 15, i32 18, i32 21, i32 24, i32 27, i32 30, i32 33, i32 36, i32 39, i32 42, i32 45>
   %r = mul <16 x i8> %s1, %s2

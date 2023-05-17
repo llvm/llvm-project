@@ -7,7 +7,10 @@ lldb_tablegen("CommandOptions") {
 
 static_library("Commands") {
   output_name = "lldbCommands"
-  configs += [ "//llvm/utils/gn/build:lldb_code" ]
+  configs += [
+    "//llvm/utils/gn/build:clang_code",
+    "//llvm/utils/gn/build:lldb_code",
+  ]
   deps = [
     ":CommandOptions",
     "//llvm/lib/Support",
@@ -31,6 +34,8 @@ static_library("Commands") {
     "CommandObjectBreakpoint.cpp",
     "CommandObjectBreakpointCommand.cpp",
     "CommandObjectCommands.cpp",
+    "CommandObjectDWIMPrint.cpp",
+    "CommandObjectDiagnostics.cpp",
     "CommandObjectDisassemble.cpp",
     "CommandObjectExpression.cpp",
     "CommandObjectFrame.cpp",
@@ -47,7 +52,6 @@ static_library("Commands") {
     "CommandObjectQuit.cpp",
     "CommandObjectRegexCommand.cpp",
     "CommandObjectRegister.cpp",
-    "CommandObjectReproducer.cpp",
     "CommandObjectScript.cpp",
     "CommandObjectSession.cpp",
     "CommandObjectSettings.cpp",
@@ -61,6 +65,8 @@ static_library("Commands") {
     "CommandObjectVersion.cpp",
     "CommandObjectWatchpoint.cpp",
     "CommandObjectWatchpointCommand.cpp",
+    "CommandOptionArgumentTable.cpp",
+    "CommandOptionsProcessAttach.cpp",
     "CommandOptionsProcessLaunch.cpp",
   ]
 }

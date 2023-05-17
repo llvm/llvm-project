@@ -70,6 +70,7 @@ struct OpenMPCounterVisitor {
   void Post(const OmpDefaultClause::Type &c);
   void Post(const OmpDefaultmapClause::ImplicitBehavior &c);
   void Post(const OmpDefaultmapClause::VariableCategory &c);
+  void Post(const OmpDeviceTypeClause::Type &c);
   void Post(const OmpScheduleModifierType::ModType &c);
   void Post(const OmpLinearModifier::Type &c);
   void Post(const OmpDependenceType::Type &c);
@@ -80,7 +81,7 @@ struct OpenMPCounterVisitor {
   void Post(const OmpClause &c);
   void PostClauseCommon(const ClauseInfo &ci);
 
-  std::string clauseDetails{""};
+  std::string clauseDetails;
   llvm::SmallVector<LogRecord> constructClauses;
   llvm::SmallVector<OmpWrapperType *> ompWrapperStack;
   llvm::DenseMap<OmpWrapperType *, llvm::SmallVector<ClauseInfo>> clauseStrings;

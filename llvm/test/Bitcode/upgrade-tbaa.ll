@@ -5,9 +5,9 @@
 define void @_Z4testPiPf(i32* nocapture %pI, float* nocapture %pF) #0 {
 entry:
   store i32 0, i32* %pI, align 4, !tbaa !{!"int", !0}
-  ; CHECK: store i32 0, i32* %pI, align 4, !tbaa [[TAG_INT:!.*]]
+  ; CHECK: store i32 0, ptr %pI, align 4, !tbaa [[TAG_INT:!.*]]
   store float 1.000000e+00, float* %pF, align 4, !tbaa !2
-  ; CHECK: store float 1.000000e+00, float* %pF, align 4, !tbaa [[TAG_FLOAT:!.*]]
+  ; CHECK: store float 1.000000e+00, ptr %pF, align 4, !tbaa [[TAG_FLOAT:!.*]]
   ret void
 }
 

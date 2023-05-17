@@ -11,26 +11,26 @@
 
   declare i1 @return_i1()
 
-  declare void @consume(i32 addrspace(1)*)
-  declare void @consume1(i8 addrspace(1)*, i64 addrspace(1)*)
+  declare void @consume(ptr addrspace(1))
+  declare void @consume1(ptr addrspace(1), ptr addrspace(1))
 
-  define i1 @test_relocate(i32 addrspace(1)* %a) gc "statepoint-example" {
+  define i1 @test_relocate(ptr addrspace(1) %a) gc "statepoint-example" {
   entry:
-    %safepoint_token = tail call token (i64, i32, i1 ()*, i32, i32, ...) @llvm.experimental.gc.statepoint.p0f_i1f(i64 0, i32 0, i1 ()* elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(i32 addrspace(1)* %a) ]
-    %rel1 = call i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token %safepoint_token, i32 0, i32 0) ; (%a, %a)
+    %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(ptr addrspace(1) %a) ]
+    %rel1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token, i32 0, i32 0) ; (%a, %a)
     %res1 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
-    call void @consume(i32 addrspace(1)* %rel1)
+    call void @consume(ptr addrspace(1) %rel1)
     ret i1 %res1
   }
 
-  define void @test_duplicate_gcregs(i8 addrspace(1)* %a) gc "statepoint-example" {
+  define void @test_duplicate_gcregs(ptr addrspace(1) %a) gc "statepoint-example" {
     ret void
   }
 
   ; Function Attrs: nounwind readnone
-  declare i32 addrspace(1)* @llvm.experimental.gc.relocate.p1i32(token, i32 immarg, i32 immarg) #0
+  declare ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token, i32 immarg, i32 immarg) #0
 
-  declare token @llvm.experimental.gc.statepoint.p0f_i1f(i64 immarg, i32 immarg, i1 ()*, i32 immarg, i32 immarg, ...)
+  declare token @llvm.experimental.gc.statepoint.p0(i64 immarg, i32 immarg, ptr, i32 immarg, i32 immarg, ...)
 
   ; Function Attrs: nounwind readnone
   declare i1 @llvm.experimental.gc.result.i1(token) #0

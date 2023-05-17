@@ -3,7 +3,7 @@
 func.func @foo() {
   %0 = "test.foo"() : () -> i32
   cf.br ^header
-	
+
 ^header:
   cf.br ^body
 

@@ -28,7 +28,7 @@ define void @func_use_lds_global() {
 ; GFX9-NEXT:    s_trap 2
 ; GFX9-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  store float 0.0, float addrspace(3)* @lds, align 4
+  store float 0.0, ptr addrspace(3) @lds, align 4
   ret void
 }
 
@@ -46,6 +46,6 @@ define void @func_use_lds_global_constexpr_cast() {
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    s_trap 2
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  store i32 ptrtoint (float addrspace(3)* @lds to i32), i32 addrspace(1)* undef, align 4
+  store i32 ptrtoint (ptr addrspace(3) @lds to i32), ptr addrspace(1) undef, align 4
   ret void
 }

@@ -9,8 +9,8 @@ define void @f1(i64 %base) {
 ; CHECK: blah -524288(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, -524288
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*T" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*T" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -21,8 +21,8 @@ define void @f2(i64 %base) {
 ; CHECK: blah 0(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, -524289
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*T" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*T" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -32,8 +32,8 @@ define void @f3(i64 %base) {
 ; CHECK: blah 524287(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, 524287
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*T" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*T" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -44,8 +44,8 @@ define void @f4(i64 %base) {
 ; CHECK: blah 0(%r2)
 ; CHECK: br %r14
   %add = add i64 %base, 524288
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*T" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*T" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -55,8 +55,8 @@ define void @f5(i64 %base, i64 %index) {
 ; CHECK: blah 0(%r3,%r2)
 ; CHECK: br %r14
   %add = add i64 %base, %index
-  %addr = inttoptr i64 %add to i64 *
-  call void asm "blah $0", "=*T" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %add to ptr
+  call void asm "blah $0", "=*T" (ptr elementtype(i64) %addr)
   ret void
 }
 
@@ -67,7 +67,7 @@ define void @f6(i64 %base, i64 %index) {
 ; CHECK: br %r14
   %add = add i64 %base, 524287
   %addi = add i64 %add, %index
-  %addr = inttoptr i64 %addi to i64 *
-  call void asm "blah $0", "=*T" (i64* elementtype(i64) %addr)
+  %addr = inttoptr i64 %addi to ptr
+  call void asm "blah $0", "=*T" (ptr elementtype(i64) %addr)
   ret void
 }

@@ -20,8 +20,8 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
   std::size_t elements{instance.Elements()};
   std::size_t byteStride{instance.ElementBytes()};
   int stat{StatOk};
-  // Initialize data components in each element; the per-element iteration
-  // constitutes the inner loops, not outer
+  // Initialize data components in each element; the per-element iterations
+  // constitute the inner loops, not the outer ones
   std::size_t myComponents{componentDesc.Elements()};
   for (std::size_t k{0}; k < myComponents; ++k) {
     const auto &comp{
@@ -36,7 +36,14 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
         if (comp.genre() == typeInfo::Component::Genre::Automatic) {
           stat = ReturnError(terminator, allocDesc.Allocate(), errMsg, hasStat);
           if (stat == StatOk) {
-            stat = Initialize(allocDesc, derived, terminator, hasStat, errMsg);
+            if (const DescriptorAddendum * addendum{allocDesc.Addendum()}) {
+              if (const auto *derived{addendum->derivedType()}) {
+                if (!derived->noInitializationNeeded()) {
+                  stat = Initialize(
+                      allocDesc, *derived, terminator, hasStat, errMsg);
+                }
+              }
+            }
           }
           if (stat != StatOk) {
             break;
@@ -48,8 +55,18 @@ int Initialize(const Descriptor &instance, const typeInfo::DerivedType &derived,
       // non-allocatable non-automatic components
       std::size_t bytes{comp.SizeInBytes(instance)};
       for (std::size_t j{0}; j < elements; ++j) {
-        char *ptr{instance.OffsetElement<char>(j * byteStride + comp.offset())};
+        char *ptr{instance.ZeroBasedIndexedElement<char>(j) + comp.offset()};
         std::memcpy(ptr, init, bytes);
+      }
+    } else if (comp.genre() == typeInfo::Component::Genre::Pointer) {
+      // Data pointers without explicit initialization are established
+      // so that they are valid right-hand side targets of pointer
+      // assignment statements.
+      for (std::size_t j{0}; j < elements; ++j) {
+        Descriptor &ptrDesc{*instance.OffsetElement<Descriptor>(
+            j * byteStride + comp.offset())};
+        comp.EstablishDescriptor(ptrDesc, instance, terminator);
+        ptrDesc.raw().attribute = CFI_attribute_pointer;
       }
     } else if (comp.genre() == typeInfo::Component::Genre::Data &&
         comp.derivedType() && !comp.derivedType()->noInitializationNeeded()) {
@@ -224,15 +241,18 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   const Descriptor &componentDesc{derived.component()};
   std::size_t myComponents{componentDesc.Elements()};
   std::size_t elements{descriptor.Elements()};
-  std::size_t byteStride{descriptor.ElementBytes()};
+  SubscriptValue at[maxRank];
+  descriptor.GetLowerBounds(at);
   for (std::size_t k{0}; k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
     if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
         comp.genre() == typeInfo::Component::Genre::Automatic) {
       for (std::size_t j{0}; j < elements; ++j) {
-        descriptor.OffsetElement<Descriptor>(j * byteStride + comp.offset())
-            ->Deallocate();
+        Descriptor *d{reinterpret_cast<Descriptor *>(
+            descriptor.Element<char>(at) + comp.offset())};
+        d->Deallocate();
+        descriptor.IncrementSubscripts(at);
       }
     }
   }

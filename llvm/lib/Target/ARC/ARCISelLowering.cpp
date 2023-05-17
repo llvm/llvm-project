@@ -32,7 +32,7 @@
 
 using namespace llvm;
 
-static SDValue lowerCallResult(SDValue Chain, SDValue InFlag,
+static SDValue lowerCallResult(SDValue Chain, SDValue InGlue,
                                const SmallVectorImpl<CCValAssign> &RVLocs,
                                SDLoc dl, SelectionDAG &DAG,
                                SmallVectorImpl<SDValue> &InVals);
@@ -288,7 +288,6 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Get a count of how many bytes are to be pushed on the stack.
   unsigned NumBytes = RetCCInfo.getNextStackOffset();
-  auto PtrVT = getPointerTy(DAG.getDataLayout());
 
   Chain = DAG.getCALLSEQ_START(Chain, NumBytes, 0, dl);
 
@@ -346,7 +345,7 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
 
   // Build a sequence of copy-to-reg nodes chained together with token
   // chain and flag operands which copy the outgoing args into registers.
-  // The InFlag in necessary since all emitted instructions must be
+  // The Glue in necessary since all emitted instructions must be
   // stuck together.
   SDValue Glue;
   for (unsigned i = 0, e = RegsToPass.size(); i != e; ++i) {
@@ -368,7 +367,7 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   // Branch + Link = #chain, #target_address, #opt_in_flags...
   //             = Chain, Callee, Reg#1, Reg#2, ...
   //
-  // Returns a chain & a flag for retval copy to use.
+  // Returns a chain & a glue for retval copy to use.
   SDVTList NodeTys = DAG.getVTList(MVT::Other, MVT::Glue);
   SmallVector<SDValue, 8> Ops;
   Ops.push_back(Chain);
@@ -392,8 +391,7 @@ SDValue ARCTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   Glue = Chain.getValue(1);
 
   // Create the CALLSEQ_END node.
-  Chain = DAG.getCALLSEQ_END(Chain, DAG.getConstant(NumBytes, dl, PtrVT, true),
-                             DAG.getConstant(0, dl, PtrVT, true), Glue, dl);
+  Chain = DAG.getCALLSEQ_END(Chain, NumBytes, 0, Glue, dl);
   Glue = Chain.getValue(1);
 
   // Handle result values, copying them out of physregs into vregs that we
@@ -560,18 +558,17 @@ SDValue ARCTargetLowering::LowerCallArguments(
                                         ARC::R4, ARC::R5, ARC::R6, ARC::R7};
     auto *AFI = MF.getInfo<ARCFunctionInfo>();
     unsigned FirstVAReg = CCInfo.getFirstUnallocated(ArgRegs);
-    if (FirstVAReg < array_lengthof(ArgRegs)) {
+    if (FirstVAReg < std::size(ArgRegs)) {
       int Offset = 0;
       // Save remaining registers, storing higher register numbers at a higher
       // address
-      // There are (array_lengthof(ArgRegs) - FirstVAReg) registers which
+      // There are (std::size(ArgRegs) - FirstVAReg) registers which
       // need to be saved.
-      int VarFI =
-          MFI.CreateFixedObject((array_lengthof(ArgRegs) - FirstVAReg) * 4,
-                                CCInfo.getNextStackOffset(), true);
+      int VarFI = MFI.CreateFixedObject((std::size(ArgRegs) - FirstVAReg) * 4,
+                                        CCInfo.getNextStackOffset(), true);
       AFI->setVarArgsFrameIndex(VarFI);
       SDValue FIN = DAG.getFrameIndex(VarFI, MVT::i32);
-      for (unsigned i = FirstVAReg; i < array_lengthof(ArgRegs); i++) {
+      for (unsigned i = FirstVAReg; i < std::size(ArgRegs); i++) {
         // Move argument from phys reg -> virt reg
         unsigned VReg = RegInfo.createVirtualRegister(&ARC::GPR32RegClass);
         RegInfo.addLiveIn(ArgRegs[i], VReg);
@@ -664,7 +661,7 @@ ARCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
 
   CCInfo.AnalyzeReturn(Outs, RetCC_ARC);
 
-  SDValue Flag;
+  SDValue Glue;
   SmallVector<SDValue, 4> RetOps(1, Chain);
   SmallVector<SDValue, 4> MemOpChains;
   // Handle return values that must be copied to memory.
@@ -701,19 +698,19 @@ ARCTargetLowering::LowerReturn(SDValue Chain, CallingConv::ID CallConv,
     if (!VA.isRegLoc())
       continue;
     // Copy the result values into the output registers.
-    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Flag);
+    Chain = DAG.getCopyToReg(Chain, dl, VA.getLocReg(), OutVals[i], Glue);
 
     // guarantee that all emitted copies are
     // stuck together, avoiding something bad
-    Flag = Chain.getValue(1);
+    Glue = Chain.getValue(1);
     RetOps.push_back(DAG.getRegister(VA.getLocReg(), VA.getLocVT()));
   }
 
   RetOps[0] = Chain; // Update chain.
 
-  // Add the flag if we have it.
-  if (Flag.getNode())
-    RetOps.push_back(Flag);
+  // Add the glue if we have it.
+  if (Glue.getNode())
+    RetOps.push_back(Glue);
 
   // What to do with the RetOps?
   return DAG.getNode(ARCISD::RET, dl, MVT::Other, RetOps);

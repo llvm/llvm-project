@@ -78,7 +78,7 @@ entry:
 
 define void @ptrtoint(i32* %src){
 entry:
-; CHECK: %res1 = ptrtoint i32* %src to i8
+; CHECK: %res1 = ptrtoint ptr %src to i8
   %res1 = ptrtoint i32* %src to i8
   
   ret void
@@ -86,7 +86,7 @@ entry:
 
 define void @inttoptr(i32 %src){
 entry:
-; CHECK: %res1 = inttoptr i32 %src to i32*
+; CHECK: %res1 = inttoptr i32 %src to ptr
   %res1 = inttoptr i32 %src to i32*
   
   ret void
@@ -97,7 +97,7 @@ entry:
 ; CHECK: %res1 = bitcast i32 %src1 to i32
   %res1 = bitcast i32 %src1 to i32
   
-; CHECK: %res2 = bitcast i32* %src2 to i64*
+; CHECK: %res2 = bitcast ptr %src2 to ptr
   %res2 = bitcast i32* %src2 to i64*
   
   ret void
@@ -105,9 +105,9 @@ entry:
 
 define void @ptrtointInstr(i32* %ptr, <4 x i32*> %vecPtr){
 entry:
-; CHECK: %res1 = ptrtoint i32* %ptr to i8
+; CHECK: %res1 = ptrtoint ptr %ptr to i8
   %res1 = ptrtoint i32* %ptr to i8  
-; CHECK-NEXT: %res2 = ptrtoint <4 x i32*> %vecPtr to <4 x i64>
+; CHECK-NEXT: %res2 = ptrtoint <4 x ptr> %vecPtr to <4 x i64>
   %res2 = ptrtoint <4 x i32*> %vecPtr to <4 x i64>
   
   ret void
@@ -115,9 +115,9 @@ entry:
 
 define void @inttoptrInstr(i32 %x, <4 x i32> %vec){
 entry:
-; CHECK: %res1 = inttoptr i32 %x to i64*
+; CHECK: %res1 = inttoptr i32 %x to ptr
   %res1 = inttoptr i32 %x to i64*
-; CHECK-NEXT: inttoptr <4 x i32> %vec to <4 x i8*>
+; CHECK-NEXT: inttoptr <4 x i32> %vec to <4 x ptr>
   %res2 = inttoptr <4 x i32> %vec to <4 x i8*>
   
   ret void

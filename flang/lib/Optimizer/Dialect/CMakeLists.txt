@@ -1,18 +1,23 @@
+add_subdirectory(Support)
+
 add_flang_library(FIRDialect
   FIRAttr.cpp
   FIRDialect.cpp
   FIROps.cpp
   FIRType.cpp
+  FortranVariableInterface.cpp
   Inliner.cpp
 
   DEPENDS
   CanonicalizationPatternsIncGen
-  FIRSupport
+  MLIRIR
   FIROpsIncGen
+  intrinsics_gen
 
   LINK_LIBS
-  FIRSupport
-  MLIRArithmetic
+  FIRDialectSupport
+  MLIRArithDialect
+  MLIRBuiltinToLLVMIRTranslation
   MLIROpenMPToLLVM
   MLIRLLVMToLLVMIRTranslation
   MLIRTargetLLVMIRExport

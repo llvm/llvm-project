@@ -44,7 +44,7 @@ define i32 @select_clz_to_ctz_preserve_flag(i32 %a) {
 
 define <2 x i32> @select_clz_to_ctz_vec(<2 x i32> %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_vec(
-; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[A:%.*]], i1 true)
+; CHECK-NEXT:    [[COND:%.*]] = call <2 x i32> @llvm.cttz.v2i32(<2 x i32> [[A:%.*]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    ret <2 x i32> [[COND]]
 ;
   %sub = sub <2 x i32> zeroinitializer, %a
@@ -60,8 +60,7 @@ define i32 @select_clz_to_ctz_extra_use(i32 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_extra_use(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[A]]
-; CHECK-NEXT:    [[LZ:%.*]] = tail call i32 @llvm.ctlz.i32(i32 [[AND]], i1 true), !range [[RNG0]]
-; CHECK-NEXT:    [[SUB1:%.*]] = xor i32 [[LZ]], 31
+; CHECK-NEXT:    [[SUB1:%.*]] = call i32 @llvm.cttz.i32(i32 [[AND]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    call void @use(i32 [[SUB1]])
 ; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.cttz.i32(i32 [[A]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    ret i32 [[COND]]
@@ -142,6 +141,7 @@ define i32 @select_clz_to_ctz_wrong_sub(i32 %a) {
   ret i32 %cond
 }
 
+; TODO: https://alive2.llvm.org/ce/z/X6QjcB
 define i64 @select_clz_to_ctz_i64_wrong_xor(i64 %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_i64_wrong_xor(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub i64 0, [[A:%.*]]
@@ -203,7 +203,7 @@ define <2 x i32> @select_clz_to_ctz_vec_with_undef(<2 x i32> %a) {
 ; CHECK-LABEL: @select_clz_to_ctz_vec_with_undef(
 ; CHECK-NEXT:    [[SUB:%.*]] = sub <2 x i32> zeroinitializer, [[A:%.*]]
 ; CHECK-NEXT:    [[AND:%.*]] = and <2 x i32> [[SUB]], [[A]]
-; CHECK-NEXT:    [[LZ:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[AND]], i1 true)
+; CHECK-NEXT:    [[LZ:%.*]] = tail call <2 x i32> @llvm.ctlz.v2i32(<2 x i32> [[AND]], i1 true), !range [[RNG0]]
 ; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp eq <2 x i32> [[A]], zeroinitializer
 ; CHECK-NEXT:    [[SUB1:%.*]] = xor <2 x i32> [[LZ]], <i32 31, i32 undef>
 ; CHECK-NEXT:    [[COND:%.*]] = select <2 x i1> [[TOBOOL]], <2 x i32> [[LZ]], <2 x i32> [[SUB1]]
@@ -222,10 +222,10 @@ define i4 @PR45762(i3 %x4) {
 ; CHECK-LABEL: @PR45762(
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2:![0-9]+]]
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
-; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl i4 1, [[T7]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i3 [[X4]], 0
-; CHECK-NEXT:    [[UMUL_23:%.*]] = select i1 [[DOTNOT]], i4 0, i4 [[T7]]
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_23]]
+; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
+; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
+; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[OR_69_NOT]], i4 0, i4 [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)
@@ -251,10 +251,10 @@ define i4 @PR45762_logical(i3 %x4) {
 ; CHECK-LABEL: @PR45762_logical(
 ; CHECK-NEXT:    [[T4:%.*]] = call i3 @llvm.cttz.i3(i3 [[X4:%.*]], i1 false), !range [[RNG2]]
 ; CHECK-NEXT:    [[T7:%.*]] = zext i3 [[T4]] to i4
-; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl i4 1, [[T7]]
-; CHECK-NEXT:    [[DOTNOT:%.*]] = icmp eq i3 [[X4]], 0
-; CHECK-NEXT:    [[UMUL_23:%.*]] = select i1 [[DOTNOT]], i4 0, i4 [[T7]]
-; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_23]]
+; CHECK-NEXT:    [[ONE_HOT_16:%.*]] = shl nuw i4 1, [[T7]]
+; CHECK-NEXT:    [[OR_69_NOT:%.*]] = icmp eq i3 [[X4]], 0
+; CHECK-NEXT:    [[UMUL_231:%.*]] = select i1 [[OR_69_NOT]], i4 0, i4 [[T7]]
+; CHECK-NEXT:    [[SEL_71:%.*]] = shl i4 [[ONE_HOT_16]], [[UMUL_231]]
 ; CHECK-NEXT:    ret i4 [[SEL_71]]
 ;
   %t4 = call i3 @llvm.cttz.i3(i3 %x4, i1 false)

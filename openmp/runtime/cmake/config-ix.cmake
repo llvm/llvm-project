@@ -16,8 +16,8 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
-include(LibompCheckLinkerFlag)
 include(LibompCheckFortranFlag)
+include(LLVMCheckCompilerLinkerFlag)
 
 # Check for versioned symbols
 function(libomp_check_version_symbols retval)
@@ -27,7 +27,7 @@ function(libomp_check_version_symbols retval)
     void func2() { printf(\"World\"); }
     __asm__(\".symver func1, func@VER1\");
     __asm__(\".symver func2, func@VER2\");
-    int main() {
+    int main(void) {
       func1();
       func2();
       return 0;
@@ -48,20 +48,25 @@ function(libomp_check_architecture_flag flag retval)
 endfunction()
 
 # Checking CXX, Linker Flags
+
+# GCC silently accepts any -Wno-<foo> option, but warns about those options
+# being unrecognized only if the compilation triggers other warnings to be
+# printed. Therefore, check for whether the compiler supports options in the
+# form -W<foo>, and if supported, add the corresponding -Wno-<foo> option.
+
 check_cxx_compiler_flag(-fno-exceptions LIBOMP_HAVE_FNO_EXCEPTIONS_FLAG)
 check_cxx_compiler_flag(-fno-rtti LIBOMP_HAVE_FNO_RTTI_FLAG)
-check_cxx_compiler_flag(-Wno-class-memaccess LIBOMP_HAVE_WNO_CLASS_MEMACCESS_FLAG)
-check_cxx_compiler_flag(-Wno-covered-switch-default LIBOMP_HAVE_WNO_COVERED_SWITCH_DEFAULT_FLAG)
-check_cxx_compiler_flag(-Wno-frame-address LIBOMP_HAVE_WNO_FRAME_ADDRESS_FLAG)
-check_cxx_compiler_flag(-Wno-strict-aliasing LIBOMP_HAVE_WNO_STRICT_ALIASING_FLAG)
+check_cxx_compiler_flag(-Wclass-memaccess LIBOMP_HAVE_WCLASS_MEMACCESS_FLAG)
+check_cxx_compiler_flag(-Wcovered-switch-default LIBOMP_HAVE_WCOVERED_SWITCH_DEFAULT_FLAG)
+check_cxx_compiler_flag(-Wframe-address LIBOMP_HAVE_WFRAME_ADDRESS_FLAG)
+check_cxx_compiler_flag(-Wstrict-aliasing LIBOMP_HAVE_WSTRICT_ALIASING_FLAG)
 check_cxx_compiler_flag(-Wstringop-overflow=0 LIBOMP_HAVE_WSTRINGOP_OVERFLOW_FLAG)
-check_cxx_compiler_flag(-Wno-stringop-truncation LIBOMP_HAVE_WNO_STRINGOP_TRUNCATION_FLAG)
-check_cxx_compiler_flag(-Wno-switch LIBOMP_HAVE_WNO_SWITCH_FLAG)
-check_cxx_compiler_flag(-Wno-uninitialized LIBOMP_HAVE_WNO_UNINITIALIZED_FLAG)
-check_cxx_compiler_flag(-Wno-unused-but-set-variable LIBOMP_HAVE_WNO_UNUSED_BUT_SET_VARIABLE_FLAG)
-check_cxx_compiler_flag(-Wno-return-type-c-linkage LIBOMP_HAVE_WNO_RETURN_TYPE_C_LINKAGE_FLAG)
-check_cxx_compiler_flag(-Wno-cast-qual LIBOMP_HAVE_WNO_CAST_QUAL_FLAG)
-check_cxx_compiler_flag(-Wno-int-to-void-pointer-cast LIBOMP_HAVE_WNO_INT_TO_VOID_POINTER_CAST_FLAG)
+check_cxx_compiler_flag(-Wstringop-truncation LIBOMP_HAVE_WSTRINGOP_TRUNCATION_FLAG)
+check_cxx_compiler_flag(-Wswitch LIBOMP_HAVE_WSWITCH_FLAG)
+check_cxx_compiler_flag(-Wuninitialized LIBOMP_HAVE_WUNINITIALIZED_FLAG)
+check_cxx_compiler_flag(-Wreturn-type-c-linkage LIBOMP_HAVE_WRETURN_TYPE_C_LINKAGE_FLAG)
+check_cxx_compiler_flag(-Wcast-qual LIBOMP_HAVE_WCAST_QUAL_FLAG)
+check_cxx_compiler_flag(-Wint-to-void-pointer-cast LIBOMP_HAVE_WINT_TO_VOID_POINTER_CAST_FLAG)
 # check_cxx_compiler_flag(-Wconversion LIBOMP_HAVE_WCONVERSION_FLAG)
 check_cxx_compiler_flag(-msse2 LIBOMP_HAVE_MSSE2_FLAG)
 check_cxx_compiler_flag(-ftls-model=initial-exec LIBOMP_HAVE_FTLS_MODEL_FLAG)
@@ -128,14 +133,13 @@ check_symbol_exists(_aligned_malloc "malloc.h" LIBOMP_HAVE__ALIGNED_MALLOC)
 
 # Check linker flags
 if(WIN32)
-  libomp_check_linker_flag(/SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
+  llvm_check_compiler_linker_flag(C /SAFESEH LIBOMP_HAVE_SAFESEH_FLAG)
 elseif(NOT APPLE)
-  libomp_check_linker_flag(-Wl,-x LIBOMP_HAVE_X_FLAG)
-  libomp_check_linker_flag(-Wl,--warn-shared-textrel LIBOMP_HAVE_WARN_SHARED_TEXTREL_FLAG)
-  libomp_check_linker_flag(-Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
-  libomp_check_linker_flag("-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
-  libomp_check_linker_flag(-static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
-  libomp_check_linker_flag(-Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
+  llvm_check_compiler_linker_flag(C -Wl,-x LIBOMP_HAVE_X_FLAG)
+  llvm_check_compiler_linker_flag(C -Wl,--as-needed LIBOMP_HAVE_AS_NEEDED_FLAG)
+  llvm_check_compiler_linker_flag(C "-Wl,--version-script=${LIBOMP_SRC_DIR}/exports_test_so.txt" LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  llvm_check_compiler_linker_flag(C -static-libgcc LIBOMP_HAVE_STATIC_LIBGCC_FLAG)
+  llvm_check_compiler_linker_flag(C -Wl,-z,noexecstack LIBOMP_HAVE_Z_NOEXECSTACK_FLAG)
 endif()
 
 # Check Intel(R) C Compiler specific flags
@@ -146,8 +150,8 @@ if(CMAKE_C_COMPILER_ID STREQUAL "Intel" OR CMAKE_C_COMPILER_ID STREQUAL "IntelLL
   check_cxx_compiler_flag(-Qoption,cpp,--extended_float_types LIBOMP_HAVE_EXTENDED_FLOAT_TYPES_FLAG)
   check_cxx_compiler_flag(-falign-stack=maintain-16-byte LIBOMP_HAVE_FALIGN_STACK_FLAG)
   check_cxx_compiler_flag("-opt-streaming-stores never" LIBOMP_HAVE_OPT_STREAMING_STORES_FLAG)
-  libomp_check_linker_flag(-static-intel LIBOMP_HAVE_STATIC_INTEL_FLAG)
-  libomp_check_linker_flag(-no-intel-extensions LIBOMP_HAVE_NO_INTEL_EXTENSIONS_FLAG)
+  llvm_check_compiler_linker_flag(C -static-intel LIBOMP_HAVE_STATIC_INTEL_FLAG)
+  llvm_check_compiler_linker_flag(C -no-intel-extensions LIBOMP_HAVE_NO_INTEL_EXTENSIONS_FLAG)
   check_library_exists(irc_pic _intel_fast_memcpy "" LIBOMP_HAVE_IRC_PIC_LIBRARY)
 endif()
 
@@ -242,7 +246,11 @@ endif()
 
 # Checking features
 # Check if version symbol assembler directives are supported
-libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
+if (LIBOMP_HAVE_VERSION_SCRIPT_FLAG)
+  libomp_check_version_symbols(LIBOMP_HAVE_VERSION_SYMBOLS)
+else()
+  set(LIBOMP_HAVE_VERSION_SYMBOLS FALSE)
+endif()
 
 # Check if quad precision types are available
 if(CMAKE_C_COMPILER_ID STREQUAL "GNU")
@@ -321,7 +329,8 @@ else()
       (LIBOMP_ARCH STREQUAL aarch64_a64fx) OR
       (LIBOMP_ARCH STREQUAL ppc64le) OR
       (LIBOMP_ARCH STREQUAL ppc64) OR
-      (LIBOMP_ARCH STREQUAL riscv64))
+      (LIBOMP_ARCH STREQUAL riscv64) OR
+      (LIBOMP_ARCH STREQUAL loongarch64))
      AND # OS supported?
      ((WIN32 AND LIBOMP_HAVE_PSAPI) OR APPLE OR (NOT WIN32 AND LIBOMP_HAVE_WEAK_ATTRIBUTE)))
     set(LIBOMP_HAVE_OMPT_SUPPORT TRUE)
@@ -329,6 +338,8 @@ else()
     set(LIBOMP_HAVE_OMPT_SUPPORT FALSE)
   endif()
 endif()
+
+set(LIBOMP_HAVE_OMPT_SUPPORT ${LIBOMP_HAVE_OMPT_SUPPORT} PARENT_SCOPE)
 
 # Check if HWLOC support is available
 if(${LIBOMP_USE_HWLOC})
