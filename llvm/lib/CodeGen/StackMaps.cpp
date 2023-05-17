@@ -286,21 +286,46 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
 
 
     signed Offset = 0;
-    // Check if there are any mappings for this register in the spillmap. If so,
-    // encode the additional location in the offset field of the stackmap record
-    // (which is unused for register locations). Note that this assumes that
-    // there can only be one additional location for each value, which may turn
-    // out to be false.
+    int RHS = 0;
+    // Check for any additional mappings in the spillmap and add them to his
+    // location to be later encoded into stackmaps. A typical case where we need
+    // to record multiple sources is the following (annotated with SpillMap
+    // info):
+    //
+    // %rcx = load %rbp, -8             // SpillMap[rcx] = -8
+    // %rbx = %rcx                      // SpillMap[rbx] = rcx
+    // STACKMAP(%rbx) or STACKMAP(%rcx)
+    //
+    // First a value is loaded from the stack into %rcx and then immediately
+    // moved into %rbx. This means there are three sources for the same value,
+    // and during deoptimisation we need to make sure we write the value back to
+    // each one of them. Note, that the stackmap may track either of %rbx or
+    // %rcx, resulting in different ways below to retrieve the mappings.
+    int ExtraReg = 0;
     if (MOI->isReg()) {
       Register R = MOI->getReg();
       if (SpillOffsets.count(R) > 0) {
-        Offset = SpillOffsets[R];
+        RHS = SpillOffsets[R];
         assert(SpillOffsets[R] != 0);
-        if (Offset > 0) {
-          // If the additional location is another register encode its DWARF id.
-          // Also temporarily add 1 since 0 is used to mean there is no
-          // additional location.
-          Offset = getDwarfRegNum(Offset, TRI) + 1;
+        if (RHS > 0) {
+          // The additional location is another register: encode its DWARF id.
+          // Also temporarily add 1 since 0 means there is no additional
+          // location.
+          ExtraReg = getDwarfRegNum(RHS, TRI) + 1;
+          // Check if the other register also has a mapping and add it.
+          if (SpillOffsets.count(RHS) > 0) {
+            Offset = SpillOffsets[RHS];
+          }
+        }  else {
+          // The other location is an offset.
+          Offset = RHS;
+          // Find any additional mappings where the current register appears on
+          // the right hand side.
+          for (auto I = SpillOffsets.begin(); I != SpillOffsets.end(); I++) {
+            if (I->second == R) {
+              ExtraReg = getDwarfRegNum(I->first, TRI) + 1;
+            }
+          }
         }
       }
     }
@@ -312,7 +337,7 @@ StackMaps::parseOperand(MachineInstr::const_mop_iterator MOI,
       Offset = TRI->getSubRegIdxOffset(SubRegIdx);
 
     Locs.emplace_back(Location::Register, TRI->getSpillSize(*RC), DwarfRegNum,
-                      Offset);
+                      Offset, ExtraReg);
     return ++MOI;
   }
 
@@ -813,7 +838,7 @@ void StackMaps::emitCallsiteEntries(MCStreamer &OS) {
         OS.emitIntValue(0, 1); // Reserved
         OS.emitInt16(Loc.Size);
         OS.emitInt16(Loc.Reg);
-        OS.emitInt16(0); // Reserved
+        OS.emitInt16(Loc.ExtraReg); // Reserved
         OS.emitInt32(Loc.Offset);
       }
       LiveIdx++;

@@ -231,13 +231,13 @@ public:
     Builder.CreateCall(YKFR, {NewCtrlPointCallInst});
     Builder.CreateUnreachable();
 
-    // To do so we need to first split up the current block and then
-    // insert a conditional branch that either continues or returns.
-
+    // Split up the current block and then insert a conditional branch that
+    // either continues after the control point or invokes frame reconstruction.
     BasicBlock *BB = NewCtrlPointCallInst->getParent();
-    BasicBlock *ContBB = BB->splitBasicBlock(New);
-
+    BasicBlock *ContBB = BB->splitBasicBlock(New->getNextNonDebugInstruction());
     Instruction &OldBr = BB->back();
+    assert(OldBr.getPrevNonDebugInstruction() == New &&
+           "Split block at the wrong spot.");
     OldBr.eraseFromParent();
     Builder.SetInsertPoint(BB);
     // The return value of the control point tells us whether a guard has failed

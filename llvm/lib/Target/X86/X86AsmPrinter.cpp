@@ -97,14 +97,7 @@ void processInstructions(
       const MachineOperand Rhs = Instr.getOperand(1);
       assert(Lhs.isReg() && "Is register.");
       assert(Rhs.isReg() && "Is register.");
-      if (SpillMap.count(Rhs.getReg()) > 0) {
-        // If the RHS has a mapping, apply the same mapping to the new register.
-        // This means, that stack spills moved into one register and then into
-        // another will continued to be tracked.
-        SpillMap[Lhs.getReg()] = SpillMap[Rhs.getReg()];
-      } else {
-        SpillMap[Lhs.getReg()] = Rhs.getReg();
-      }
+      SpillMap[Lhs.getReg()] = Rhs.getReg();
       // YKFIXME: If the `mov` instruction has a killed-flag, remove the
       // register from the map.
 
