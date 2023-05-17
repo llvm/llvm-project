@@ -78,7 +78,7 @@ SRCS="
 	../../sanitizer_common/sanitizer_termination.cpp
 "
 
-if [ "$GOOS" == "linux" ]; then
+if [ "$GOOS" = "linux" ]; then
 	OSCFLAGS="-fPIC -Wno-maybe-uninitialized"
 	OSLDFLAGS="-lpthread -fPIC -fpie"
 	SRCS="
@@ -93,26 +93,26 @@ if [ "$GOOS" == "linux" ]; then
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
 		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 		"
-	if [ "$GOARCH" == "ppc64le" ]; then
+	if [ "$GOARCH" = "ppc64le" ]; then
 		ARCHCFLAGS="-m64 -mcpu=power8 -fno-function-sections"
-	elif [ "$GOARCH" == "amd64" ]; then
+	elif [ "$GOARCH" = "amd64" ]; then
 		if [ "$GOAMD64" = "v3" ]; then
 			ARCHCFLAGS="-m64 -msse4.2"
 		else
 			ARCHCFLAGS="-m64 -msse3"
 		fi
 		OSCFLAGS="$OSCFLAGS -ffreestanding -Wno-unused-const-variable -Wno-unknown-warning-option"
-	elif [ "$GOARCH" == "arm64" ]; then
+	elif [ "$GOARCH" = "arm64" ]; then
 		ARCHCFLAGS=""
-	elif [ "$GOARCH" == "mips64le" ]; then
+	elif [ "$GOARCH" = "mips64le" ]; then
 		ARCHCFLAGS="-mips64 -EL"
-	elif [ "$GOARCH" == "mips64" ]; then
+	elif [ "$GOARCH" = "mips64" ]; then
 		ARCHCFLAGS="-mips64 -EB"
-	elif [ "$GOARCH" == "s390x" ]; then
+	elif [ "$GOARCH" = "s390x" ]; then
 		SRCS="$SRCS ../../sanitizer_common/sanitizer_linux_s390.cpp"
 		ARCHCFLAGS=""
 	fi
-elif [ "$GOOS" == "freebsd" ]; then
+elif [ "$GOOS" = "freebsd" ]; then
 	# The resulting object still depends on libc.
 	# We removed this dependency for Go runtime for other OSes,
 	# and we should remove it for FreeBSD as well, but there is no pressing need.
@@ -132,7 +132,7 @@ elif [ "$GOOS" == "freebsd" ]; then
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
 		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 	"
-elif [ "$GOOS" == "netbsd" ]; then
+elif [ "$GOOS" = "netbsd" ]; then
 	# The resulting object still depends on libc.
 	# We removed this dependency for Go runtime for other OSes,
 	# and we should remove it for NetBSD as well, but there is no pressing need.
@@ -153,7 +153,7 @@ elif [ "$GOOS" == "netbsd" ]; then
 		../../sanitizer_common/sanitizer_stoptheworld_linux_libcdep.cpp
 		../../sanitizer_common/sanitizer_stoptheworld_netbsd_libcdep.cpp
 	"
-elif [ "$GOOS" == "darwin" ]; then
+elif [ "$GOOS" = "darwin" ]; then
 	OSCFLAGS="-fPIC -Wno-unused-const-variable -Wno-unknown-warning-option -mmacosx-version-min=10.7"
 	OSLDFLAGS="-lpthread -fPIC -fpie -mmacosx-version-min=10.7"
 	SRCS="
@@ -165,12 +165,12 @@ elif [ "$GOOS" == "darwin" ]; then
 		../../sanitizer_common/sanitizer_posix_libcdep.cpp
 		../../sanitizer_common/sanitizer_procmaps_mac.cpp
 	"
-	if [ "$GOARCH" == "amd64" ]; then
+	if [ "$GOARCH" = "amd64" ]; then
 		ARCHCFLAGS="-m64"
-	elif [ "$GOARCH" == "arm64" ]; then
+	elif [ "$GOARCH" = "arm64" ]; then
 		ARCHCFLAGS=""
 	fi
-elif [ "$GOOS" == "windows" ]; then
+elif [ "$GOOS" = "windows" ]; then
 	OSCFLAGS="-Wno-error=attributes -Wno-attributes -Wno-unused-const-variable -Wno-unknown-warning-option"
 	ARCHCFLAGS="-m64"
 	OSLDFLAGS=""
@@ -230,7 +230,7 @@ if [ "$DEPENDS_ON_LIBC" != "1" ]; then
 	fi
 fi
 
-if [ "$SKIP_TEST" == "1" ]; then
+if [ "$SKIP_TEST" = "1" ]; then
 	exit 0
 fi
 
