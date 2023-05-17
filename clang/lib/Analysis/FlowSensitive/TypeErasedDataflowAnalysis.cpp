@@ -135,14 +135,8 @@ private:
     // entirety (even if they may share some clauses). So, we need *some* value
     // for the condition expression, even if just an atom.
     if (Val == nullptr) {
-      // FIXME: Consider introducing a helper for this get-or-create pattern.
-      auto *Loc = Env.getStorageLocation(Cond, SkipPast::None);
-      if (Loc == nullptr) {
-        Loc = &Env.createStorageLocation(Cond);
-        Env.setStorageLocation(Cond, *Loc);
-      }
       Val = &Env.makeAtomicBoolValue();
-      Env.setValue(*Loc, *Val);
+      Env.setValueStrict(Cond, *Val);
     }
 
     bool ConditionValue = true;
