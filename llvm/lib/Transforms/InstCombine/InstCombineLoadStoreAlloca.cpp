@@ -1100,9 +1100,8 @@ Instruction *InstCombinerImpl::visitLoadInst(LoadInst &LI) {
     // that this code is not reachable.  We do this instead of inserting
     // an unreachable instruction directly because we cannot modify the
     // CFG.
-    StoreInst *SI = new StoreInst(PoisonValue::get(LI.getType()),
-                                  Constant::getNullValue(Op->getType()), &LI);
-    SI->setDebugLoc(LI.getDebugLoc());
+    Builder.CreateStore(PoisonValue::get(LI.getType()),
+                        Constant::getNullValue(Op->getType()));
     return replaceInstUsesWith(LI, PoisonValue::get(LI.getType()));
   }
 
