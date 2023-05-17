@@ -335,6 +335,38 @@ struct RemoveConstantIfConditionWithRegion : public OpRewritePattern<OpTy> {
 } // namespace
 
 //===----------------------------------------------------------------------===//
+// PrivateRecipeOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::PrivateRecipeOp::verifyRegions() {
+  if (getInitRegion().empty())
+    return emitOpError() << "expects non-empty init region";
+  Block &initBlock = getInitRegion().front();
+  if (initBlock.getNumArguments() != 1 ||
+      initBlock.getArgument(0).getType() != getType())
+    return emitOpError() << "expects init region with one argument of the "
+                         << "privatization type";
+
+  for (YieldOp yieldOp : getInitRegion().getOps<YieldOp>()) {
+    if (yieldOp.getOperands().size() != 1 ||
+        yieldOp.getOperands().getTypes()[0] != getType())
+      return emitOpError() << "expects init region to yield a value "
+                              "of the privatization type";
+  }
+
+  // Destroy region is optional.
+  if (getDestroyRegion().empty())
+    return success();
+
+  Block &destroyBlock = getDestroyRegion().front();
+  if (destroyBlock.getNumArguments() != 1 ||
+      destroyBlock.getArgument(0).getType() != getType())
+    return emitOpError() << "expects destroy region with one argument of the "
+                         << "privatization type";
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ParallelOp
 //===----------------------------------------------------------------------===//
 
