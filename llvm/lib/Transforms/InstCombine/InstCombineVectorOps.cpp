@@ -594,6 +594,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
                   SrcVec, DemandedElts, UndefElts, 0 /* Depth */,
                   true /* AllowMultipleUsers */)) {
             if (V != SrcVec) {
+              Worklist.addValue(SrcVec);
               SrcVec->replaceAllUsesWith(V);
               return &EI;
             }
