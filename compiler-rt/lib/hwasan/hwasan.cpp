@@ -290,14 +290,20 @@ static bool InitializeSingleGlobal(const hwasan_global &global) {
 }
 
 static void InitLoadedGlobals() {
-  dl_iterate_phdr(
-      [](dl_phdr_info *info, size_t /* size */, void * /* data */) -> int {
-        for (const hwasan_global &global : HwasanGlobalsFor(
-                 info->dlpi_addr, info->dlpi_phdr, info->dlpi_phnum))
-          InitializeSingleGlobal(global);
-        return 0;
-      },
-      nullptr);
+  // Fuchsia's libc provides a hook (__sanitizer_module_loaded) that runs on
+  // the startup path which calls into __hwasan_library_loaded on all
+  // initially loaded modules, so explicitly registering the globals here
+  // isn't needed.
+  if constexpr (!SANITIZER_FUCHSIA) {
+    dl_iterate_phdr(
+        [](dl_phdr_info *info, size_t /* size */, void * /* data */) -> int {
+          for (const hwasan_global &global : HwasanGlobalsFor(
+                   info->dlpi_addr, info->dlpi_phdr, info->dlpi_phnum))
+            InitializeSingleGlobal(global);
+          return 0;
+        },
+        nullptr);
+  }
 }
 
 // Prepare to run instrumented code on the main thread.
@@ -364,13 +370,7 @@ __attribute__((constructor(0))) void __hwasan_init() {
   DisableCoreDumperIfNecessary();
 
   InitInstrumentation();
-  if constexpr (!SANITIZER_FUCHSIA) {
-    // Fuchsia's libc provides a hook (__sanitizer_module_loaded) that runs on
-    // the startup path which calls into __hwasan_library_loaded on all
-    // initially loaded modules, so explicitly registering the globals here
-    // isn't needed.
-    InitLoadedGlobals();
-  }
+  InitLoadedGlobals();
 
   // Needs to be called here because flags()->random_tags might not have been
   // initialized when InitInstrumentation() was called.
