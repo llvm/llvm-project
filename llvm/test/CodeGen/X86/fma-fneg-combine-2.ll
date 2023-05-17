@@ -129,14 +129,14 @@ define float @negated_constant(float %x) {
 define <4 x double> @negated_constant_v4f64(<4 x double> %a) {
 ; FMA3-LABEL: negated_constant_v4f64:
 ; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmovapd {{.*#+}} ymm1 = [5.0E-1,2.5E-1,1.25E-1,6.25E-2]
-; FMA3-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem
+; FMA3-NEXT:    vmovapd {{.*#+}} ymm1 = [-5.0E-1,-2.5E-1,-1.25E-1,-6.25E-2]
+; FMA3-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm1 * ymm0) + ymm1
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: negated_constant_v4f64:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovapd {{.*#+}} ymm1 = [5.0E-1,2.5E-1,1.25E-1,6.25E-2]
-; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm1) + mem
+; FMA4-NEXT:    vmovapd {{.*#+}} ymm1 = [-5.0E-1,-2.5E-1,-1.25E-1,-6.25E-2]
+; FMA4-NEXT:    vfnmaddpd {{.*#+}} ymm0 = -(ymm0 * ymm1) + ymm1
 ; FMA4-NEXT:    retq
   %t = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double 5.000000e-01, double 2.5000000e-01, double 1.25000000e-01, double 0.62500000e-01>, <4 x double> <double -5.000000e-01, double -2.5000000e-01, double -1.25000000e-01, double -0.62500000e-01>)
   ret <4 x double> %t
@@ -146,16 +146,18 @@ define <4 x double> @negated_constant_v4f64_2fmas(<4 x double> %a, <4 x double> 
 ; FMA3-LABEL: negated_constant_v4f64_2fmas:
 ; FMA3:       # %bb.0:
 ; FMA3-NEXT:    vmovapd {{.*#+}} ymm2 = <-5.0E-1,u,-2.5E+0,-4.5E+0>
-; FMA3-NEXT:    vfmadd213pd {{.*#+}} ymm2 = (ymm0 * ymm2) + ymm1
-; FMA3-NEXT:    vfmadd231pd {{.*#+}} ymm1 = (ymm0 * mem) + ymm1
-; FMA3-NEXT:    vaddpd %ymm1, %ymm2, %ymm0
+; FMA3-NEXT:    vmovapd %ymm2, %ymm3
+; FMA3-NEXT:    vfmadd213pd {{.*#+}} ymm3 = (ymm0 * ymm3) + ymm1
+; FMA3-NEXT:    vfnmadd213pd {{.*#+}} ymm2 = -(ymm0 * ymm2) + ymm1
+; FMA3-NEXT:    vaddpd %ymm2, %ymm3, %ymm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: negated_constant_v4f64_2fmas:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm2 = (ymm0 * mem) + ymm1
-; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * mem) + ymm1
-; FMA4-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; FMA4-NEXT:    vmovapd {{.*#+}} ymm2 = <-5.0E-1,u,-2.5E+0,-4.5E+0>
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm3 = (ymm0 * ymm2) + ymm1
+; FMA4-NEXT:    vfnmaddpd {{.*#+}} ymm0 = -(ymm0 * ymm2) + ymm1
+; FMA4-NEXT:    vaddpd %ymm0, %ymm3, %ymm0
 ; FMA4-NEXT:    retq
   %t0 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double -5.000000e-01, double undef, double -25.000000e-01, double -45.000000e-01>, <4 x double> %b)
   %t1 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double 5.000000e-01, double undef, double 25.000000e-01, double 45.000000e-01>, <4 x double> %b)
@@ -169,7 +171,7 @@ define <4 x double> @negated_constant_v4f64_fadd(<4 x double> %a) {
 ; FMA3-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [1.5E+0,1.25E-1,1.5E+0,1.25E-1]
 ; FMA3-NEXT:    # ymm1 = mem[0,1,0,1]
 ; FMA3-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; FMA3-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem
+; FMA3-NEXT:    vfmsub213pd {{.*#+}} ymm0 = (ymm1 * ymm0) - ymm1
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: negated_constant_v4f64_fadd:
@@ -177,7 +179,7 @@ define <4 x double> @negated_constant_v4f64_fadd(<4 x double> %a) {
 ; FMA4-NEXT:    vbroadcastf128 {{.*#+}} ymm1 = [1.5E+0,1.25E-1,1.5E+0,1.25E-1]
 ; FMA4-NEXT:    # ymm1 = mem[0,1,0,1]
 ; FMA4-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
-; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm1) + mem
+; FMA4-NEXT:    vfmsubpd {{.*#+}} ymm0 = (ymm0 * ymm1) - ymm1
 ; FMA4-NEXT:    retq
   %t0 = fadd <4 x double> %a, <double 15.000000e-01, double 1.25000000e-01, double 15.000000e-01, double 1.25000000e-01>
   %t1 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %t0, <4 x double> <double 15.000000e-01, double 1.25000000e-01, double 15.000000e-01, double 1.25000000e-01>, <4 x double> <double -15.000000e-01, double -1.25000000e-01, double -15.000000e-01, double -1.25000000e-01>)
@@ -187,19 +189,17 @@ define <4 x double> @negated_constant_v4f64_fadd(<4 x double> %a) {
 define <4 x double> @negated_constant_v4f64_2fma_undefs(<4 x double> %a, <4 x double> %b) {
 ; FMA3-LABEL: negated_constant_v4f64_2fma_undefs:
 ; FMA3:       # %bb.0:
-; FMA3-NEXT:    vmovapd {{.*#+}} ymm2 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
-; FMA3-NEXT:    vfmadd213pd {{.*#+}} ymm2 = (ymm0 * ymm2) + mem
-; FMA3-NEXT:    vmovapd {{.*#+}} ymm0 = <u,5.0E-1,5.0E-1,5.0E-1>
-; FMA3-NEXT:    vfmadd213pd {{.*#+}} ymm0 = (ymm1 * ymm0) + mem
-; FMA3-NEXT:    vaddpd %ymm0, %ymm2, %ymm0
+; FMA3-NEXT:    vmovapd {{.*#+}} ymm2 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; FMA3-NEXT:    vfnmadd213pd {{.*#+}} ymm0 = -(ymm2 * ymm0) + mem
+; FMA3-NEXT:    vfmadd132pd {{.*#+}} ymm1 = (ymm1 * mem) + ymm2
+; FMA3-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; FMA3-NEXT:    retq
 ;
 ; FMA4-LABEL: negated_constant_v4f64_2fma_undefs:
 ; FMA4:       # %bb.0:
-; FMA4-NEXT:    vmovapd {{.*#+}} ymm2 = [5.0E-1,5.0E-1,5.0E-1,5.0E-1]
-; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm0 = (ymm0 * ymm2) + mem
-; FMA4-NEXT:    vmovapd {{.*#+}} ymm2 = <u,5.0E-1,5.0E-1,5.0E-1>
-; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * ymm2) + mem
+; FMA4-NEXT:    vmovapd {{.*#+}} ymm2 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; FMA4-NEXT:    vfnmaddpd {{.*#+}} ymm0 = -(ymm0 * ymm2) + mem
+; FMA4-NEXT:    vfmaddpd {{.*#+}} ymm1 = (ymm1 * mem) + ymm2
 ; FMA4-NEXT:    vaddpd %ymm1, %ymm0, %ymm0
 ; FMA4-NEXT:    retq
   %t0 = tail call <4 x double> @llvm.fma.v4f64(<4 x double> %a, <4 x double> <double 5.000000e-01, double 5.000000e-01, double 5.000000e-01, double 5.000000e-01>, <4 x double> <double -5.000000e-01, double undef, double -5.000000e-01, double -5.000000e-01>)

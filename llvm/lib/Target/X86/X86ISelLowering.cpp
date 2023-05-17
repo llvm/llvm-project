@@ -54523,6 +54523,59 @@ static SDValue combineSext(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Inverting a constant vector is profitable if it can be eliminated and the
+// inverted vector is already present in DAG. Otherwise, it will be loaded
+// anyway.
+//
+// We determine which of the values can be completely eliminated and invert it.
+// If both are eliminable, select a vector with the first negative element.
+static SDValue getInvertedVectorForFMA(SDValue V, SelectionDAG &DAG) {
+  assert(ISD::isBuildVectorOfConstantFPSDNodes(V.getNode()) &&
+         "ConstantFP build vector expected");
+  // Check if we can eliminate V. We assume if a value is only used in FMAs, we
+  // can eliminate it. Since this function is invoked for each FMA with this
+  // vector.
+  auto IsNotFMA = [](SDNode *Use) {
+    return Use->getOpcode() != ISD::FMA && Use->getOpcode() != ISD::STRICT_FMA;
+  };
+  if (llvm::any_of(V->uses(), IsNotFMA))
+    return SDValue();
+
+  SmallVector<SDValue, 8> Ops;
+  EVT VT = V.getValueType();
+  EVT EltVT = VT.getVectorElementType();
+  for (auto Op : V->op_values()) {
+    if (auto *Cst = dyn_cast<ConstantFPSDNode>(Op)) {
+      Ops.push_back(DAG.getConstantFP(-Cst->getValueAPF(), SDLoc(Op), EltVT));
+    } else {
+      assert(Op.isUndef());
+      Ops.push_back(DAG.getUNDEF(EltVT));
+    }
+  }
+
+  SDNode *NV = DAG.getNodeIfExists(ISD::BUILD_VECTOR, DAG.getVTList(VT), Ops);
+  if (!NV)
+    return SDValue();
+
+  // If an inverted version cannot be eliminated, choose it instead of the
+  // original version.
+  if (llvm::any_of(NV->uses(), IsNotFMA))
+    return SDValue(NV, 0);
+
+  // If the inverted version also can be eliminated, we have to consistently
+  // prefer one of the values. We prefer a constant with a negative value on
+  // the first place.
+  // N.B. We need to skip undefs that may precede a value.
+  for (auto op : V->op_values()) {
+    if (auto *Cst = dyn_cast<ConstantFPSDNode>(op)) {
+      if (Cst->isNegative())
+        return SDValue();
+      break;
+    }
+  }
+  return SDValue(NV, 0);
+}
+
 static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
                           TargetLowering::DAGCombinerInfo &DCI,
                           const X86Subtarget &Subtarget) {
@@ -54574,7 +54627,13 @@ static SDValue combineFMA(SDNode *N, SelectionDAG &DAG,
         return true;
       }
     }
-
+    // Lookup if there is an inverted version of constant vector V in DAG.
+    if (ISD::isBuildVectorOfConstantFPSDNodes(V.getNode())) {
+      if (SDValue NegV = getInvertedVectorForFMA(V, DAG)) {
+        V = NegV;
+        return true;
+      }
+    }
     return false;
   };
 
