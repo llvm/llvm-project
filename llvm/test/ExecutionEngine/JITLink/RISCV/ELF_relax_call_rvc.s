@@ -1,3 +1,4 @@
+# REQUIRES: asserts
 # RUN: llvm-mc -triple=riscv32 -mattr=+relax,+c -filetype=obj -o %t.rv32 %s
 # RUN: llvm-jitlink -noexec \
 # RUN:     -slab-allocate 100Kb -slab-address 0x1000 -slab-page-size 4096 \
