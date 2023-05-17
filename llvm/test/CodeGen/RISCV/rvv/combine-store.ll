@@ -31,9 +31,8 @@ define void @combine_zero_stores_4xi8(ptr %p) {
 define void @combine_zero_stores_8xi8(ptr %p) {
 ; RV32-LABEL: combine_zero_stores_8xi8:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: combine_zero_stores_8xi8:
@@ -72,9 +71,8 @@ define void @combine_zero_stores_2xi16(ptr %p) {
 define void @combine_zero_stores_4xi16(ptr %p) {
 ; RV32-LABEL: combine_zero_stores_4xi16:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: combine_zero_stores_4xi16:
@@ -104,9 +102,8 @@ define void @combine_zero_stores_8xi16(ptr %p) {
 ;
 ; RV64-LABEL: combine_zero_stores_8xi16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    sd zero, 0(a0)
+; RV64-NEXT:    sd zero, 8(a0)
 ; RV64-NEXT:    ret
   store i16 zeroinitializer, ptr %p, align 16
   %gep1 = getelementptr i16, ptr %p, i64 1
@@ -129,9 +126,8 @@ define void @combine_zero_stores_8xi16(ptr %p) {
 define void @combine_zero_stores_2xi32(ptr %p) {
 ; RV32-LABEL: combine_zero_stores_2xi32:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vse32.v v8, (a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    sw zero, 4(a0)
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: combine_zero_stores_2xi32:
@@ -154,9 +150,8 @@ define void @combine_zero_stores_4xi32(ptr %p) {
 ;
 ; RV64-LABEL: combine_zero_stores_4xi32:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    sd zero, 0(a0)
+; RV64-NEXT:    sd zero, 8(a0)
 ; RV64-NEXT:    ret
   store i32 zeroinitializer, ptr %p, align 16
   %gep1 = getelementptr i32, ptr %p, i64 1
@@ -201,18 +196,11 @@ define void @combine_zero_stores_8xi32(ptr %p) {
 }
 
 define void @combine_zero_stores_2xi32_unaligned(ptr %p) {
-; RV32-LABEL: combine_zero_stores_2xi32_unaligned:
-; RV32:       # %bb.0:
-; RV32-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 0
-; RV32-NEXT:    vse32.v v8, (a0)
-; RV32-NEXT:    ret
-;
-; RV64-LABEL: combine_zero_stores_2xi32_unaligned:
-; RV64:       # %bb.0:
-; RV64-NEXT:    sw zero, 0(a0)
-; RV64-NEXT:    sw zero, 4(a0)
-; RV64-NEXT:    ret
+; CHECK-LABEL: combine_zero_stores_2xi32_unaligned:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sw zero, 0(a0)
+; CHECK-NEXT:    sw zero, 4(a0)
+; CHECK-NEXT:    ret
   store i32 zeroinitializer, ptr %p
   %gep = getelementptr i8, ptr %p, i64 4
   store i32 zeroinitializer, ptr %gep
@@ -230,9 +218,8 @@ define void @combine_zero_stores_2xi64(ptr %p) {
 ;
 ; RV64-LABEL: combine_zero_stores_2xi64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.i v8, 0
-; RV64-NEXT:    vse64.v v8, (a0)
+; RV64-NEXT:    sd zero, 0(a0)
+; RV64-NEXT:    sd zero, 8(a0)
 ; RV64-NEXT:    ret
   store i64 zeroinitializer, ptr %p
   %gep = getelementptr i8, ptr %p, i64 8
@@ -243,10 +230,8 @@ define void @combine_zero_stores_2xi64(ptr %p) {
 define void @combine_fp_zero_stores_crash(ptr %ptr)  {
 ; CHECK-LABEL: combine_fp_zero_stores_crash:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    addi a0, a0, 4
-; CHECK-NEXT:    vsetivli zero, 2, e32, mf2, ta, ma
-; CHECK-NEXT:    vmv.v.i v8, 0
-; CHECK-NEXT:    vse32.v v8, (a0)
+; CHECK-NEXT:    sw zero, 4(a0)
+; CHECK-NEXT:    sw zero, 8(a0)
 ; CHECK-NEXT:    ret
   %addr1 = getelementptr float, ptr %ptr, i64 1
   %addr2 = getelementptr float, ptr %ptr, i64 2
