@@ -1975,7 +1975,7 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
   // Clang diagnostic.
   if (m_swift_ast_ctx.HasErrors() || m_swift_ast_ctx.HasClangImporterErrors()) {
     diagnostic_manager.PutString(eDiagnosticSeverityRemark,
-                                 "couldn't IRGen expression.");
+                                 "couldn't IRGen expression");
     DiagnoseSwiftASTContextError();
     return ParseResult::unrecoverable_error;
   }
