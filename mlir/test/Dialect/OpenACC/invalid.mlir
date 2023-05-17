@@ -258,3 +258,48 @@ acc.serial dataOperands(%value : memref<10xf32>) {
 acc.kernels dataOperands(%value : memref<10xf32>) {
   acc.yield
 }
+
+// -----
+
+// expected-error@+1 {{expects non-empty init region}}
+acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
+}
+
+// -----
+
+// expected-error@+1 {{expects init region with one argument of the privatization type}}
+acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
+^bb0(%arg0 : !llvm.ptr<f32>):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
+  llvm.store %c0, %0 : !llvm.ptr<i32>
+  acc.yield %0 : !llvm.ptr<i32>
+}
+
+// -----
+
+// expected-error@+1 {{expects init region to yield a value of the privatization type}}
+acc.private.recipe @privatization_i32 : !llvm.ptr<f32> init {
+^bb0(%arg0 : !llvm.ptr<f32>):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
+  llvm.store %c0, %0 : !llvm.ptr<i32>
+  acc.yield %0 : !llvm.ptr<i32>
+}
+
+// -----
+
+// expected-error@+1 {{expects destroy region with one argument of the privatization type}}
+acc.private.recipe @privatization_i32 : !llvm.ptr<i32> init {
+^bb0(%arg0 : !llvm.ptr<i32>):
+  %c1 = arith.constant 1 : i32
+  %c0 = arith.constant 0 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<i32>
+  llvm.store %c0, %0 : !llvm.ptr<i32>
+  acc.yield %0 : !llvm.ptr<i32>
+} destroy {
+^bb0(%arg0 : f32):
+  "test.openacc_dummy_op"(%arg0) : (f32) -> ()
+}
