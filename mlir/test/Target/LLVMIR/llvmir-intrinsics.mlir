@@ -489,6 +489,60 @@ llvm.func @expect_with_probability(%arg0: i16) {
   llvm.return
 }
 
+// CHECK-LABEL: @sadd_sat_test
+llvm.func @sadd_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.sadd.sat.i32
+  "llvm.intr.sadd.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.sadd.sat.v8i32
+  "llvm.intr.sadd.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @uadd_sat_test
+llvm.func @uadd_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.uadd.sat.i32
+  "llvm.intr.uadd.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.uadd.sat.v8i32
+  "llvm.intr.uadd.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @ssub_sat_test
+llvm.func @ssub_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.ssub.sat.i32
+  "llvm.intr.ssub.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.ssub.sat.v8i32
+  "llvm.intr.ssub.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @usub_sat_test
+llvm.func @usub_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.usub.sat.i32
+  "llvm.intr.usub.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.usub.sat.v8i32
+  "llvm.intr.usub.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @sshl_sat_test
+llvm.func @sshl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.sshl.sat.i32
+  "llvm.intr.sshl.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.sshl.sat.v8i32
+  "llvm.intr.sshl.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
+// CHECK-LABEL: @ushl_sat_test
+llvm.func @ushl_sat_test(%arg0: i32, %arg1: i32, %arg2: vector<8xi32>, %arg3: vector<8xi32>) {
+  // CHECK: call i32 @llvm.ushl.sat.i32
+  "llvm.intr.ushl.sat"(%arg0, %arg1) : (i32, i32) -> i32
+  // CHECK: call <8 x i32> @llvm.ushl.sat.v8i32
+  "llvm.intr.ushl.sat"(%arg2, %arg3) : (vector<8xi32>, vector<8xi32>) -> vector<8xi32>
+  llvm.return
+}
+
 // CHECK-LABEL: @coro_id
 llvm.func @coro_id(%arg0: i32, %arg1: !llvm.ptr<i8>) {
   // CHECK: call token @llvm.coro.id
@@ -837,6 +891,18 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.usub.with.overflow.v8i32(<8 x i32>, <8 x i32>)
 // CHECK-DAG: declare { i32, i1 } @llvm.umul.with.overflow.i32(i32, i32)
 // CHECK-DAG: declare { <8 x i32>, <8 x i1> } @llvm.umul.with.overflow.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.sadd.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.sadd.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.uadd.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.uadd.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.ssub.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.ssub.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.usub.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.usub.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.sshl.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.sshl.sat.v8i32(<8 x i32>, <8 x i32>)
+// CHECK-DAG: declare i32 @llvm.ushl.sat.i32(i32, i32)
+// CHECK-DAG: declare <8 x i32> @llvm.ushl.sat.v8i32(<8 x i32>, <8 x i32>)
 // CHECK-DAG: declare i1 @llvm.is.constant.i32(i32)
 // CHECK-DAG: declare i32 @llvm.expect.i32(i32, i32)
 // CHECK-DAG: declare i16 @llvm.expect.with.probability.i16(i16, i16, double immarg)

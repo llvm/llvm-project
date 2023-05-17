@@ -138,7 +138,10 @@ using namespace __hwasan;
     (void)(name);                       \
   } while (false)
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-function"
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
+#pragma clang diagnostic pop
 
 struct ThreadStartArg {
   __sanitizer_sigset_t starting_sigset_;
@@ -412,6 +415,10 @@ namespace __hwasan {
 void InitializeInterceptors() {
   static int inited = 0;
   CHECK_EQ(inited, 0);
+
+  (void)(InitializeCommonInterceptors);
+  (void)(read_iovec);
+  (void)(write_iovec);
 
 #  if HWASAN_WITH_INTERCEPTORS
 #    if defined(__linux__)
