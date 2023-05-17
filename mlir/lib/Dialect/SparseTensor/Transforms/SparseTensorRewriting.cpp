@@ -44,8 +44,7 @@ static bool isZeroValue(Value val) {
 // Helper to detect a sparse tensor type operand.
 static bool isSparseTensor(OpOperand *op) {
   auto enc = getSparseTensorEncoding(op->get().getType());
-  return enc &&
-         llvm::is_contained(enc.getDimLevelType(), DimLevelType::Compressed);
+  return enc && llvm::is_contained(enc.getLvlTypes(), DimLevelType::Compressed);
 }
 
 // Helper method to find zero/uninitialized allocation.

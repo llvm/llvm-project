@@ -19,8 +19,8 @@
 // the AArch64 SVE backend (so the set-up is a bit different to
 // sparse_reducitons.mlir)
 
-#SV = #sparse_tensor.encoding<{ dimLevelType = [ "compressed" ] }>
-#DV = #sparse_tensor.encoding<{ dimLevelType = [ "dense"      ] }>
+#SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
+#DV = #sparse_tensor.encoding<{ lvlTypes = [ "dense"      ] }>
 
 #trait_reduction = {
   indexing_maps = [

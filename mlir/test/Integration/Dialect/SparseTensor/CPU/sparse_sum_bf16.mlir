@@ -20,7 +20,7 @@
 !Filename = !llvm.ptr<i8>
 
 #SparseMatrix = #sparse_tensor.encoding<{
-  dimLevelType = [ "compressed", "compressed" ]
+  lvlTypes = [ "compressed", "compressed" ]
 }>
 
 #trait_sum_reduce = {

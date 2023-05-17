@@ -205,7 +205,7 @@ static Value genLvlTypesBuffer(OpBuilder &builder, Location loc,
                                SparseTensorType stt) {
   SmallVector<Value> lvlTypes;
   lvlTypes.reserve(stt.getLvlRank());
-  for (const auto dlt : stt.getEncoding().getDimLevelType())
+  for (const auto dlt : stt.getEncoding().getLvlTypes())
     lvlTypes.push_back(constantDimLevelTypeEncoding(builder, loc, dlt));
   return allocaBuffer(builder, loc, lvlTypes);
 }
@@ -565,7 +565,7 @@ static void genSparseCOOIterationLoop(
   rewriter.setInsertionPointToStart(after);
 
   const bool hasDenseDim =
-      llvm::any_of(stt.getEncoding().getDimLevelType(), isDenseDLT);
+      llvm::any_of(stt.getEncoding().getLvlTypes(), isDenseDLT);
   if (hasDenseDim) {
     Value elemV = rewriter.create<memref::LoadOp>(loc, elemPtr);
     Value isZero = genIsNonzero(rewriter, loc, elemV);
@@ -880,11 +880,11 @@ public:
         break;
       case SparseToSparseConversionStrategy::kDirect:
         useDirectConversion = true;
-        assert(canUseDirectConversion(dstEnc.getDimLevelType()) &&
+        assert(canUseDirectConversion(dstEnc.getLvlTypes()) &&
                "Unsupported target for direct sparse-to-sparse conversion");
         break;
       case SparseToSparseConversionStrategy::kAuto:
-        useDirectConversion = canUseDirectConversion(dstEnc.getDimLevelType());
+        useDirectConversion = canUseDirectConversion(dstEnc.getLvlTypes());
         break;
       }
       if (useDirectConversion) {
@@ -896,7 +896,7 @@ public:
         // method calls can share most parameters, while still providing
         // the correct sparsity information to either of them.
         const auto mixedEnc = SparseTensorEncodingAttr::get(
-            op->getContext(), dstEnc.getDimLevelType(), dstEnc.getDimOrdering(),
+            op->getContext(), dstEnc.getLvlTypes(), dstEnc.getDimOrdering(),
             dstEnc.getHigherOrdering(), srcEnc.getPosWidth(),
             srcEnc.getCrdWidth());
         // TODO: This is the only place where `kToCOO` (or `kToIterator`)

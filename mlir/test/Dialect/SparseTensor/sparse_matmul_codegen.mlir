@@ -5,7 +5,7 @@
 // RUN:  --canonicalize --cse | FileCheck %s
 
 #CSR = #sparse_tensor.encoding<{
-  dimLevelType = [ "dense", "compressed" ],
+  lvlTypes = [ "dense", "compressed" ],
   dimOrdering = affine_map<(i,j) -> (i,j)>
 }>
 

@@ -266,7 +266,7 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
     ArrayRefParameter<
       "::mlir::sparse_tensor::DimLevelType",
       "level-types"
-      >: $dimLevelType,
+      >: $lvlTypes,
     // A permutation from (higher-ordering)-coordinates to level-coordinates.
     "AffineMap":$dimOrdering,
     // A mapping from dimension-coordinates to (higher-ordering)-coordinates.
@@ -283,12 +283,12 @@ def SparseTensorEncodingAttr : SparseTensor_Attr<"SparseTensorEncoding",
   );
 
   let builders = [
-    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$dimLevelType,
+    AttrBuilder<(ins "ArrayRef<::mlir::sparse_tensor::DimLevelType>":$lvlTypes,
                      "AffineMap":$dimOrdering,
                      "AffineMap":$higherOrdering,
                      "unsigned":$posWidth,
                      "unsigned":$crdWidth), [{
-      return $_get($_ctxt, dimLevelType,
+      return $_get($_ctxt, lvlTypes,
                          dimOrdering,
                          higherOrdering,
                          posWidth,
