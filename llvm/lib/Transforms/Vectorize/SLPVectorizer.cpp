@@ -7028,10 +7028,8 @@ public:
     auto *VecTy = FixedVectorType::get(VL.front()->getType(), VL.size());
     // If the resulting type is scalarized, do not adjust the cost.
     unsigned VecNumParts = TTI.getNumberOfParts(VecTy);
-    if (VecNumParts == VecTy->getNumElements()) {
-      InVectors.assign(1, E);
+    if (VecNumParts == VecTy->getNumElements())
       return nullptr;
-    }
     DenseMap<Value *, int> ExtractVectorsTys;
     for (auto [I, V] : enumerate(VL)) {
       // Ignore non-extractelement scalars.
