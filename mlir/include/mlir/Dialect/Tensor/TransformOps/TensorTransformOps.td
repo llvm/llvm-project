@@ -9,7 +9,6 @@
 #ifndef TENSOR_TRANSFORM_OPS
 #define TENSOR_TRANSFORM_OPS
 
-include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
@@ -49,9 +48,10 @@ def MakeLoopIndependentOp
     This transform op consumes the target handle and produces a result handle.
   }];
 
-  let arguments = (ins PDL_Operation:$target, I64Attr:$num_loops);
-  let results = (outs PDL_Operation:$transformed);
-  let assemblyFormat = "$target attr-dict";
+  let arguments = (ins TransformHandleTypeInterface:$target, I64Attr:$num_loops);
+  let results = (outs TransformHandleTypeInterface:$transformed);
+  let assemblyFormat =
+      "$target attr-dict `:` functional-type($target, $transformed)";
 
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(

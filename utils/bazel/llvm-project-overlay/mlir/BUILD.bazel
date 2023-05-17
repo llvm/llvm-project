@@ -1210,7 +1210,6 @@ cc_library(
         ":AffineUtils",
         ":FuncDialect",
         ":IR",
-        ":PDLDialect",
         ":TransformDialect",
         ":Transforms",
         ":VectorDialect",
@@ -4385,7 +4384,6 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":PDLDialectTdFiles",
         ":TransformDialectTdFiles",
     ],
 )
@@ -4430,7 +4428,6 @@ cc_library(
         ":GPUTransformOpsIncGen",
         ":GPUTransforms",
         ":IR",
-        ":PDLDialect",
         ":Parser",
         ":SCFDialect",
         ":SideEffectInterfaces",
@@ -5920,7 +5917,6 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":PDLDialect",
         ":TransformDialectTdFiles",
     ],
 )
@@ -5953,7 +5949,6 @@ cc_library(
     deps = [
         ":AffineDialect",
         ":IR",
-        ":PDLDialect",
         ":SCFDialect",
         ":TensorDialect",
         ":TensorTransformOpsIncGen",
@@ -10682,7 +10677,6 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":PDLDialect",
         ":TransformDialectTdFiles",
     ],
 )
@@ -10721,7 +10715,6 @@ cc_library(
         ":MemRefTransformOpsIncGen",
         ":MemRefTransforms",
         ":NVGPUDialect",
-        ":PDLDialect",
         ":SCFDialect",
         ":TransformDialect",
         ":TransformUtils",
@@ -10956,7 +10949,6 @@ td_library(
     includes = ["include"],
     deps = [
         ":BufferizationOpsTdFiles",
-        ":PDLDialectTdFiles",
         ":TransformDialectTdFiles",
     ],
 )
@@ -10997,7 +10989,6 @@ cc_library(
         ":BufferizationTransforms",
         ":IR",
         ":MemRefDialect",
-        ":PDLDialect",
         ":Parser",
         ":SideEffectInterfaces",
         ":TensorDialect",

@@ -13,8 +13,6 @@
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
 #include "mlir/Dialect/Bufferization/Transforms/Transforms.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/IR/FunctionInterfaces.h"
@@ -123,8 +121,6 @@ public:
   using Base::Base;
 
   void init() {
-    declareDependentDialect<pdl::PDLDialect>();
-
     declareGeneratedDialect<bufferization::BufferizationDialect>();
     declareGeneratedDialect<memref::MemRefDialect>();
 

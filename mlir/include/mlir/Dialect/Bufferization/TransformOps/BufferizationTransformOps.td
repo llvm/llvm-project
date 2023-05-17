@@ -13,7 +13,6 @@ include "mlir/Dialect/Bufferization/IR/BufferizationEnums.td"
 include "mlir/Dialect/Transform/IR/TransformDialect.td"
 include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 include "mlir/Dialect/Transform/IR/TransformTypes.td"
-include "mlir/Dialect/PDL/IR/PDLTypes.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/OpBase.td"
 
@@ -119,11 +118,11 @@ def EliminateEmptyTensorsOp
     not produce any handle.
   }];
 
-  let arguments = (ins PDL_Operation:$target);
+  let arguments = (ins TransformHandleTypeInterface:$target);
 
   let results = (outs);
 
-  let assemblyFormat = "$target attr-dict";
+  let assemblyFormat = "$target attr-dict `:` type($target)";
 }
 
 //===----------------------------------------------------------------------===//
