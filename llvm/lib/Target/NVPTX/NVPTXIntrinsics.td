@@ -328,39 +328,49 @@ defm CP_ASYNC_MBARRIER_ARRIVE_NOINC :
 defm CP_ASYNC_MBARRIER_ARRIVE_NOINC_SHARED :
   CP_ASYNC_MBARRIER_ARRIVE<".noinc", ".shared", int_nvvm_cp_async_mbarrier_arrive_noinc_shared>;
 
-multiclass CP_ASYNC_CA_SHARED_GLOBAL_I<string cpsize, Intrinsic Intrin> {
+multiclass CP_ASYNC_SHARED_GLOBAL_I<string cc, string cpsize, Intrinsic Intrin, Intrinsic IntrinS> {
   def _32 : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src),
-            !strconcat("cp.async.ca.shared.global [$dst], [$src], ", cpsize, ";"),
+            !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ";"),
             [(Intrin Int32Regs:$dst, Int32Regs:$src)]>,
     Requires<[hasPTX70, hasSM80]>;
   def _64 : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src),
-            !strconcat("cp.async.ca.shared.global [$dst], [$src], ", cpsize, ";"),
+            !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ";"),
             [(Intrin Int64Regs:$dst, Int64Regs:$src)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  // Variant with src_size parameter
+  def _32s : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src, Int32Regs:$src_size),
+             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
+             [(IntrinS Int32Regs:$dst, Int32Regs:$src, Int32Regs:$src_size)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _32si: NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src, i32imm:$src_size),
+             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
+             [(IntrinS Int32Regs:$dst, Int32Regs:$src, imm:$src_size)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64s : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src, Int32Regs:$src_size),
+             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
+             [(IntrinS Int64Regs:$dst, Int64Regs:$src, Int32Regs:$src_size)]>,
+    Requires<[hasPTX70, hasSM80]>;
+  def _64si: NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src, i32imm:$src_size),
+             !strconcat("cp.async.", cc, ".shared.global [$dst], [$src], ", cpsize, ", $src_size;"),
+             [(IntrinS Int64Regs:$dst, Int64Regs:$src, imm:$src_size)]>,
     Requires<[hasPTX70, hasSM80]>;
 }
 
 defm CP_ASYNC_CA_SHARED_GLOBAL_4 :
-  CP_ASYNC_CA_SHARED_GLOBAL_I<"4", int_nvvm_cp_async_ca_shared_global_4>;
+  CP_ASYNC_SHARED_GLOBAL_I<"ca", "4", int_nvvm_cp_async_ca_shared_global_4,
+                                      int_nvvm_cp_async_ca_shared_global_4_s>;
 
 defm CP_ASYNC_CA_SHARED_GLOBAL_8 :
-  CP_ASYNC_CA_SHARED_GLOBAL_I<"8", int_nvvm_cp_async_ca_shared_global_8>;
+  CP_ASYNC_SHARED_GLOBAL_I<"ca", "8", int_nvvm_cp_async_ca_shared_global_8,
+                                      int_nvvm_cp_async_ca_shared_global_8_s>;
 
 defm CP_ASYNC_CA_SHARED_GLOBAL_16 :
-  CP_ASYNC_CA_SHARED_GLOBAL_I<"16", int_nvvm_cp_async_ca_shared_global_16>;
-
-multiclass CP_ASYNC_CG_SHARED_GLOBAL<string cpsize, Intrinsic Intrin> {
-  def _32 : NVPTXInst<(outs), (ins Int32Regs:$dst, Int32Regs:$src),
-            !strconcat("cp.async.cg.shared.global [$dst], [$src], ", cpsize, ";"),
-            [(Intrin Int32Regs:$dst, Int32Regs:$src)]>,
-    Requires<[hasPTX70, hasSM80]>;
-  def _64 : NVPTXInst<(outs), (ins Int64Regs:$dst, Int64Regs:$src),
-            !strconcat("cp.async.cg.shared.global [$dst], [$src], ", cpsize, ";"),
-            [(Intrin Int64Regs:$dst, Int64Regs:$src)]>,
-    Requires<[hasPTX70, hasSM80]>;
-}
+  CP_ASYNC_SHARED_GLOBAL_I<"ca", "16", int_nvvm_cp_async_ca_shared_global_16,
+                                       int_nvvm_cp_async_ca_shared_global_16_s>;
 
 defm CP_ASYNC_CG_SHARED_GLOBAL_16 :
-  CP_ASYNC_CG_SHARED_GLOBAL<"16", int_nvvm_cp_async_cg_shared_global_16>;
+  CP_ASYNC_SHARED_GLOBAL_I<"cg", "16", int_nvvm_cp_async_cg_shared_global_16,
+                                       int_nvvm_cp_async_cg_shared_global_16_s>;
 
 def CP_ASYNC_COMMIT_GROUP :
   NVPTXInst<(outs), (ins), "cp.async.commit_group;", [(int_nvvm_cp_async_commit_group)]>,
