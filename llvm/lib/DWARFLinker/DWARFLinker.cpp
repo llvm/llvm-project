@@ -1208,7 +1208,7 @@ void DWARFLinker::DIECloner::cloneExpression(
         // processed by applyValidRelocs.
         OutputBuffer.push_back(dwarf::DW_OP_addr);
         uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
-        if (!IsLittleEndian)
+        if (IsLittleEndian != sys::IsLittleEndianHost)
           sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
@@ -1242,7 +1242,7 @@ void DWARFLinker::DIECloner::cloneExpression(
         if (OutOperandKind) {
           OutputBuffer.push_back(*OutOperandKind);
           uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
-          if (!IsLittleEndian)
+          if (IsLittleEndian != sys::IsLittleEndianHost)
             sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),
