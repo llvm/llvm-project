@@ -19,11 +19,11 @@
 
 #include "lldb/Breakpoint/BreakpointPrecondition.h"
 #include "lldb/Core/PluginInterface.h"
-#include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/LanguageRuntime.h"
 #include "lldb/Utility/ConstString.h"
+#include "lldb/Utility/ThreadSafeDenseMap.h"
 #include "lldb/lldb-private.h"
 
 class CommandObjectObjC_ClassTable_Dump;
