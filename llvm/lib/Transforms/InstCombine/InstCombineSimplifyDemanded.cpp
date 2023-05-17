@@ -855,14 +855,12 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
     break;
   }
   case Instruction::URem: {
-    KnownBits Known2(BitWidth);
     APInt AllOnes = APInt::getAllOnes(BitWidth);
-    if (SimplifyDemandedBits(I, 0, AllOnes, Known2, Depth + 1) ||
-        SimplifyDemandedBits(I, 1, AllOnes, Known2, Depth + 1))
+    if (SimplifyDemandedBits(I, 0, AllOnes, LHSKnown, Depth + 1) ||
+        SimplifyDemandedBits(I, 1, AllOnes, RHSKnown, Depth + 1))
       return I;
 
-    unsigned Leaders = Known2.countMinLeadingZeros();
-    Known.Zero = APInt::getHighBitsSet(BitWidth, Leaders) & DemandedMask;
+    Known = KnownBits::urem(LHSKnown, RHSKnown);
     break;
   }
   case Instruction::Call: {
