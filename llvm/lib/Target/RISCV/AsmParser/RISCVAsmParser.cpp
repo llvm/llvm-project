@@ -246,6 +246,7 @@ public:
 
   static bool classifySymbolRef(const MCExpr *Expr,
                                 RISCVMCExpr::VariantKind &Kind);
+  static bool isSymbolDiff(const MCExpr *Expr);
 
   RISCVAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
                  const MCInstrInfo &MII, const MCTargetOptions &Options)
@@ -562,8 +563,12 @@ public:
       return true;
     // Given only Imm, ensuring that the actually specified constant is either
     // a signed or unsigned 64-bit number is unfortunately impossible.
-    return IsConstantImm && VK == RISCVMCExpr::VK_RISCV_None &&
-           (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+    if (IsConstantImm) {
+      return VK == RISCVMCExpr::VK_RISCV_None &&
+             (isRV64Imm() || (isInt<32>(Imm) || isUInt<32>(Imm)));
+    }
+
+    return RISCVAsmParser::isSymbolDiff(getImm());
   }
 
   bool isUImmLog2XLen() const {
@@ -2544,6 +2549,16 @@ bool RISCVAsmParser::classifySymbolRef(const MCExpr *Expr,
   MCFixup Fixup;
   if (Expr->evaluateAsRelocatable(Res, nullptr, &Fixup))
     return Res.getRefKind() == RISCVMCExpr::VK_RISCV_None;
+  return false;
+}
+
+bool RISCVAsmParser::isSymbolDiff(const MCExpr *Expr) {
+  MCValue Res;
+  MCFixup Fixup;
+  if (Expr->evaluateAsRelocatable(Res, nullptr, &Fixup)) {
+    return Res.getRefKind() == RISCVMCExpr::VK_RISCV_None && Res.getSymA() &&
+           Res.getSymB();
+  }
   return false;
 }
 
