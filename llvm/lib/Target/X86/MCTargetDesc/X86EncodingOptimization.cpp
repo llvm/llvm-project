@@ -230,6 +230,7 @@ bool X86::optimizeVPCMPWithImmediateOneOrSix(MCInst &MI) {
     FROM_TO(VPCMPWZrmik, VPCMPEQWZrmk, VPCMPGTWZrmk)
     FROM_TO(VPCMPWZrri, VPCMPEQWZrr, VPCMPGTWZrr)
     FROM_TO(VPCMPWZrrik, VPCMPEQWZrrk, VPCMPGTWZrrk)
+#undef FROM_TO
   }
   MCOperand &LastOp = MI.getOperand(MI.getNumOperands() - 1);
   int64_t Imm = LastOp.getImm();
@@ -242,5 +243,26 @@ bool X86::optimizeVPCMPWithImmediateOneOrSix(MCInst &MI) {
     return false;
   MI.setOpcode(NewOpc);
   MI.erase(&LastOp);
+  return true;
+}
+
+bool X86::optimizeMOVSX(MCInst &MI) {
+  unsigned NewOpc;
+#define FROM_TO(FROM, TO, R0, R1)                                              \
+  case X86::FROM:                                                              \
+    if (MI.getOperand(0).getReg() != X86::R0 ||                                \
+        MI.getOperand(1).getReg() != X86::R1)                                  \
+      return false;                                                            \
+    NewOpc = X86::TO;                                                          \
+    break;
+  switch (MI.getOpcode()) {
+  default:
+    return false;
+    FROM_TO(MOVSX16rr8, CBW, AX, AL)     // movsbw %al, %ax   --> cbtw
+    FROM_TO(MOVSX32rr16, CWDE, EAX, AX)  // movswl %ax, %eax  --> cwtl
+    FROM_TO(MOVSX64rr32, CDQE, RAX, EAX) // movslq %eax, %rax --> cltq
+  }
+  MI.clear();
+  MI.setOpcode(NewOpc);
   return true;
 }
