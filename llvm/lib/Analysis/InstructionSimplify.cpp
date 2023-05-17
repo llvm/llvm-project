@@ -4259,9 +4259,11 @@ static Value *simplifyWithOpReplaced(Value *V, Value *Op, Value *RepOp,
           NewOps[0] == NewOps[1])
         return NewOps[0];
 
-      // x - x -> 0. This is non-refining, because x is non-poison by assumption
-      // and this case never wraps, so nowrap flags can be ignored.
-      if (Opcode == Instruction::Sub && NewOps[0] == NewOps[1]) {
+      // x - x -> 0, x ^ x -> 0. This is non-refining, because x is non-poison
+      // by assumption and this case never wraps, so nowrap flags can be
+      // ignored.
+      if ((Opcode == Instruction::Sub || Opcode == Instruction::Xor) &&
+          NewOps[0] == NewOps[1]) {
         assert(NewOps[0] == RepOp && "Precondition for non-poison assumption");
         return Constant::getNullValue(I->getType());
       }

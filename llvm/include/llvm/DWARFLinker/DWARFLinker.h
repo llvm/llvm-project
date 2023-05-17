@@ -713,7 +713,7 @@ private:
     void cloneExpression(DataExtractor &Data, DWARFExpression Expression,
                          const DWARFFile &File, CompileUnit &Unit,
                          SmallVectorImpl<uint8_t> &OutputBuffer,
-                         int64_t AddrRelocAdjustment);
+                         int64_t AddrRelocAdjustment, bool IsLittleEndian);
 
     /// Clone an attribute referencing another DIE and add
     /// it to \p Die.

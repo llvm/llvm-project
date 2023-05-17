@@ -210,9 +210,9 @@ private:
 
 public:
   ELFLinkGraphBuilder_i386(StringRef FileName, const object::ELFFile<ELFT> &Obj,
-                           Triple TT)
-      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), FileName,
-                                  i386::getEdgeKindName) {}
+                           Triple TT, LinkGraph::FeatureVector Features)
+      : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
+                                  FileName, i386::getEdgeKindName) {}
 };
 
 Expected<std::unique_ptr<LinkGraph>>
@@ -226,13 +226,17 @@ createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer) {
   if (!ELFObj)
     return ELFObj.takeError();
 
+  auto Features = (*ELFObj)->getFeatures();
+  if (!Features)
+    return Features.takeError();
+
   assert((*ELFObj)->getArch() == Triple::x86 &&
          "Only i386 (little endian) is supported for now");
 
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
-  return ELFLinkGraphBuilder_i386<object::ELF32LE>((*ELFObj)->getFileName(),
-                                                   ELFObjFile.getELFFile(),
-                                                   (*ELFObj)->makeTriple())
+  return ELFLinkGraphBuilder_i386<object::ELF32LE>(
+             (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
+             (*ELFObj)->makeTriple(), Features->getFeatures())
       .buildGraph();
 }
 

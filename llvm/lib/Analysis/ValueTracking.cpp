@@ -8701,7 +8701,8 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
   case Intrinsic::ctlz:
   case Intrinsic::cttz:
     // Maximum of set/clear bits is the bit width.
-    return ConstantRange(APInt::getZero(Width), APInt(Width, Width + 1));
+    return ConstantRange::getNonEmpty(APInt::getZero(Width),
+                                      APInt(Width, Width + 1));
   case Intrinsic::uadd_sat:
     // uadd.sat(x, C) produces [C, UINT_MAX].
     if (match(II.getOperand(0), m_APInt(C)) ||
@@ -8782,11 +8783,11 @@ static ConstantRange getRangeForIntrinsic(const IntrinsicInst &II) {
     // If abs of SIGNED_MIN is poison, then the result is [0..SIGNED_MAX],
     // otherwise it is [0..SIGNED_MIN], as -SIGNED_MIN == SIGNED_MIN.
     if (match(II.getOperand(1), m_One()))
-      return ConstantRange(APInt::getZero(Width),
-                           APInt::getSignedMaxValue(Width) + 1);
+      return ConstantRange::getNonEmpty(APInt::getZero(Width),
+                                        APInt::getSignedMaxValue(Width) + 1);
 
-    return ConstantRange(APInt::getZero(Width),
-                         APInt::getSignedMinValue(Width) + 1);
+    return ConstantRange::getNonEmpty(APInt::getZero(Width),
+                                      APInt::getSignedMinValue(Width) + 1);
   case Intrinsic::vscale:
     if (!II.getParent() || !II.getFunction())
       break;

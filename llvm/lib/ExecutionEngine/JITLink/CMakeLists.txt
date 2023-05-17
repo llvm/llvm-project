@@ -50,6 +50,7 @@ add_llvm_component_library(LLVMJITLink
 
   LINK_COMPONENTS
   BinaryFormat
+  MC
   Object
   Option
   OrcTargetProcess

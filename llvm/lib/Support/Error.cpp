@@ -149,7 +149,7 @@ void report_fatal_error(Error Err, bool GenCrashDiag) {
     raw_string_ostream ErrStream(ErrMsg);
     logAllUnhandledErrors(std::move(Err), ErrStream);
   }
-  report_fatal_error(Twine(ErrMsg));
+  report_fatal_error(Twine(ErrMsg), GenCrashDiag);
 }
 
 } // end namespace llvm
