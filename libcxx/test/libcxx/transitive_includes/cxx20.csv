@@ -791,6 +791,11 @@ stack version
 stdexcept cstdlib
 stdexcept exception
 stdexcept iosfwd
+stop_token atomic
+stop_token cstddef
+stop_token limits
+stop_token thread
+stop_token version
 streambuf cstdint
 streambuf ios
 streambuf iosfwd

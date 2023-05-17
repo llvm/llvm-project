@@ -1462,11 +1462,17 @@ module std [system] {
     export *
   }
   module stop_token {
+    @requires_LIBCXX_ENABLE_THREADS@
+    header "stop_token"
     export *
     module __stop_token {
       module atomic_unique_lock   { private header "__stop_token/atomic_unique_lock.h" }
       module intrusive_list_view  { private header "__stop_token/intrusive_list_view.h" }
       module intrusive_shared_ptr { private header "__stop_token/intrusive_shared_ptr.h" }
+      module stop_callback        { private header "__stop_token/stop_callback.h" }
+      module stop_source          { private header "__stop_token/stop_source.h" }
+      module stop_state           { private header "__stop_token/stop_state.h" }
+      module stop_token           { private header "__stop_token/stop_token.h" }
     }
   }
   module streambuf {
