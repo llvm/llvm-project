@@ -660,7 +660,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseBits(Value *V, APInt DemandedMask,
         else if (SignBitOne)
           Known.One.setSignBit();
         if (Known.hasConflict())
-          return UndefValue::get(VTy);
+          return PoisonValue::get(VTy);
       }
     } else {
       // This is a variable shift, so we can't shift the demand mask by a known
