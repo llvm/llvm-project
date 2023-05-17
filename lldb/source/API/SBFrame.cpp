@@ -708,24 +708,20 @@ SBThread SBFrame::GetThread() const {
 const char *SBFrame::Disassemble() const {
   LLDB_INSTRUMENT_VA(this);
 
-  const char *disassembly = nullptr;
   std::unique_lock<std::recursive_mutex> lock;
   ExecutionContext exe_ctx(m_opaque_sp.get(), lock);
-
-  StackFrame *frame = nullptr;
   Target *target = exe_ctx.GetTargetPtr();
   Process *process = exe_ctx.GetProcessPtr();
-  if (target && process) {
-    Process::StopLocker stop_locker;
-    if (stop_locker.TryLock(&process->GetRunLock())) {
-      frame = exe_ctx.GetFramePtr();
-      if (frame) {
-        disassembly = frame->Disassemble();
-      }
-    }
+  if (!target || !process)
+    return nullptr;
+
+  Process::StopLocker stop_locker;
+  if (stop_locker.TryLock(&process->GetRunLock())) {
+    if (auto *frame = exe_ctx.GetFramePtr())
+      return ConstString(frame->Disassemble()).GetCString();
   }
 
-  return disassembly;
+  return nullptr;
 }
 
 SBValueList SBFrame::GetVariables(bool arguments, bool locals, bool statics,
