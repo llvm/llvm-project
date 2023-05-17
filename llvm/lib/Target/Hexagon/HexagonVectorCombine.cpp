@@ -246,7 +246,6 @@ private:
   };
 
   Align getAlignFromValue(const Value *V) const;
-  std::optional<MemoryLocation> getLocation(const Instruction &In) const;
   std::optional<AddrInfo> getAddrInfo(Instruction &In) const;
   bool isHvx(const AddrInfo &AI) const;
   // This function is only used for assertions at the moment.
