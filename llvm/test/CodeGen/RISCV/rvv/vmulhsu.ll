@@ -3,6 +3,13 @@
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV32
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v \
 ; RUN:   -verify-machineinstrs | FileCheck %s --check-prefixes=CHECK,RV64
+; RUN: sed 's/iXLen/i32/g' %s | not --crash llc -mtriple=riscv32 \
+; RUN:   -mattr=+zve64d 2>&1 | FileCheck %s --check-prefixes=ZVE64D
+; RUN: sed 's/iXLen/i64/g' %s | not --crash llc -mtriple=riscv64 \
+; RUN:   -mattr=+zve64d 2>&1 | FileCheck %s --check-prefixes=ZVE64D
+
+; ZVE64D: LLVM ERROR: Cannot select: intrinsic %llvm.riscv.vmulhsu
+
 declare <vscale x 1 x i8> @llvm.riscv.vmulhsu.nxv1i8.nxv1i8(
   <vscale x 1 x i8>,
   <vscale x 1 x i8>,
