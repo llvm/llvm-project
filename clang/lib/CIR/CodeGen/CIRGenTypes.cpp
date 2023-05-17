@@ -272,8 +272,9 @@ mlir::Type CIRGenTypes::ConvertFunctionTypeInternal(QualType QFT) {
 
   assert(!SkippedLayout && "Shouldn't have skipped anything yet");
 
-  assert(RecordsBeingLaidOut.empty() && "Deferral NYI");
-  assert(DeferredRecords.empty() && "Deferral NYI");
+  if (RecordsBeingLaidOut.empty())
+    while (!DeferredRecords.empty())
+      convertRecordDeclType(DeferredRecords.pop_back_val());
 
   return ResultType;
 }
