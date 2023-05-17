@@ -34,6 +34,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/raw_ostream.h"
@@ -56,6 +57,8 @@
 using namespace llvm;
 
 namespace {
+cl::opt<bool> AlignFullHvxStores("hvc-align-full-hvx-stores", cl::Hidden);
+
 class HexagonVectorCombine {
 public:
   HexagonVectorCombine(Function &F_, AliasAnalysis &AA_, AssumptionCache &AC_,
@@ -79,10 +82,14 @@ public:
   ConstantInt *getConstInt(int Val, unsigned Width = 32) const;
   // Get the integer value of V, if it exists.
   std::optional<APInt> getIntValue(const Value *Val) const;
-  // Is V a constant 0, or a vector of 0s?
+  // Is Val a constant 0, or a vector of 0s?
   bool isZero(const Value *Val) const;
-  // Is V an undef value?
+  // Is Val an undef value?
   bool isUndef(const Value *Val) const;
+  // Is Val a scalar (i1 true) or a vector of (i1 true)?
+  bool isTrue(const Value *Val) const;
+  // Is Val a scalar (i1 false) or a vector of (i1 false)?
+  bool isFalse(const Value *Val) const;
 
   // Get HVX vector type with the given element type.
   VectorType *getHvxTy(Type *ElemTy, bool Pair = false) const;
@@ -125,7 +132,8 @@ public:
 
   Value *createHvxIntrinsic(IRBuilderBase &Builder, Intrinsic::ID IntID,
                             Type *RetTy, ArrayRef<Value *> Args,
-                            ArrayRef<Type *> ArgTys = std::nullopt) const;
+                            ArrayRef<Type *> ArgTys = std::nullopt,
+                            ArrayRef<Value *> MDSources = std::nullopt) const;
   SmallVector<Value *> splitVectorElements(IRBuilderBase &Builder, Value *Vec,
                                            unsigned ToWidth) const;
   Value *joinVectorElements(IRBuilderBase &Builder, ArrayRef<Value *> Values,
@@ -234,6 +242,7 @@ private:
 
     int size() const { return Blocks.size(); }
     Block &operator[](int i) { return Blocks[i]; }
+    const Block &operator[](int i) const { return Blocks[i]; }
 
     std::vector<Block> Blocks;
 
@@ -259,10 +268,29 @@ private:
                                int Adjust) const;
   Value *createAlignedPointer(IRBuilderBase &Builder, Value *Ptr, Type *ValTy,
                               int Alignment) const;
-  Value *createAlignedLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
-                           int Alignment, Value *Mask, Value *PassThru) const;
-  Value *createAlignedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
-                            int Alignment, Value *Mask) const;
+
+  Value *createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
+                    Value *Predicate, int Alignment, Value *Mask,
+                    Value *PassThru,
+                    ArrayRef<Value *> MDSources = std::nullopt) const;
+  Value *createSimpleLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
+                          int Alignment,
+                          ArrayRef<Value *> MDSources = std::nullopt) const;
+
+  Value *createStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
+                     Value *Predicate, int Alignment, Value *Mask,
+                     ArrayRef<Value *> MDSources = std ::nullopt) const;
+  Value *createSimpleStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
+                           int Alignment,
+                           ArrayRef<Value *> MDSources = std ::nullopt) const;
+
+  Value *createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
+                              Value *Predicate, int Alignment,
+                              ArrayRef<Value *> MDSources = std::nullopt) const;
+  Value *
+  createPredicatedStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
+                        Value *Predicate, int Alignment,
+                        ArrayRef<Value *> MDSources = std::nullopt) const;
 
   DepList getUpwardDeps(Instruction *In, Instruction *Base) const;
   bool createAddressGroups();
@@ -274,6 +302,9 @@ private:
   void realignStoreGroup(IRBuilderBase &Builder, const ByteSpan &VSpan,
                          int ScLen, Value *AlignVal, Value *AlignAddr) const;
   bool realignGroup(const MoveGroup &Move) const;
+
+  Value *makeTestIfUnaligned(IRBuilderBase &Builder, Value *AlignVal,
+                             int Alignment) const;
 
   friend raw_ostream &operator<<(raw_ostream &OS, const AddrInfo &AI);
   friend raw_ostream &operator<<(raw_ostream &OS, const MoveGroup &MG);
@@ -596,26 +627,137 @@ auto AlignVectors::createAlignedPointer(IRBuilderBase &Builder, Value *Ptr,
   return Builder.CreateIntToPtr(And, ValTy->getPointerTo(), "itp");
 }
 
-auto AlignVectors::createAlignedLoad(IRBuilderBase &Builder, Type *ValTy,
-                                     Value *Ptr, int Alignment, Value *Mask,
-                                     Value *PassThru) const -> Value * {
+auto AlignVectors::createLoad(IRBuilderBase &Builder, Type *ValTy, Value *Ptr,
+                              Value *Predicate, int Alignment, Value *Mask,
+                              Value *PassThru,
+                              ArrayRef<Value *> MDSources) const -> Value * {
+  bool HvxHasPredLoad = HVC.HST.useHVXV62Ops();
+  // Predicate is nullptr if not creating predicated load
+  if (Predicate) {
+    assert(!Predicate->getType()->isVectorTy() &&
+           "Expectning scalar predicate");
+    if (HVC.isFalse(Predicate))
+      return UndefValue::get(ValTy);
+    if (!HVC.isTrue(Predicate) && HvxHasPredLoad) {
+      Value *Load = createPredicatedLoad(Builder, ValTy, Ptr, Predicate,
+                                         Alignment, MDSources);
+      return Builder.CreateSelect(Mask, Load, PassThru);
+    }
+    // Predicate == true here.
+  }
   assert(!HVC.isUndef(Mask)); // Should this be allowed?
   if (HVC.isZero(Mask))
     return PassThru;
-  if (Mask == ConstantInt::getTrue(Mask->getType()))
-    return Builder.CreateAlignedLoad(ValTy, Ptr, Align(Alignment), "ald");
-  return Builder.CreateMaskedLoad(ValTy, Ptr, Align(Alignment), Mask, PassThru,
-                                  "mld");
+  if (HVC.isTrue(Mask))
+    return createSimpleLoad(Builder, ValTy, Ptr, Alignment, MDSources);
+
+  Instruction *Load = Builder.CreateMaskedLoad(ValTy, Ptr, Align(Alignment),
+                                               Mask, PassThru, "mld");
+  propagateMetadata(Load, MDSources);
+  return Load;
 }
 
-auto AlignVectors::createAlignedStore(IRBuilderBase &Builder, Value *Val,
-                                      Value *Ptr, int Alignment,
-                                      Value *Mask) const -> Value * {
+auto AlignVectors::createSimpleLoad(IRBuilderBase &Builder, Type *ValTy,
+                                    Value *Ptr, int Alignment,
+                                    ArrayRef<Value *> MDSources) const
+    -> Value * {
+  Instruction *Load =
+      Builder.CreateAlignedLoad(ValTy, Ptr, Align(Alignment), "ald");
+  propagateMetadata(Load, MDSources);
+  return Load;
+}
+
+auto AlignVectors::createPredicatedLoad(IRBuilderBase &Builder, Type *ValTy,
+                                        Value *Ptr, Value *Predicate,
+                                        int Alignment,
+                                        ArrayRef<Value *> MDSources) const
+    -> Value * {
+  assert(HVC.HST.isTypeForHVX(ValTy) &&
+         "Predicates 'scalar' vector loads not yet supported");
+  assert(Predicate);
+  assert(!Predicate->getType()->isVectorTy() && "Expectning scalar predicate");
+  assert(HVC.getSizeOf(ValTy, HVC.Alloc) % Alignment == 0);
+  if (HVC.isFalse(Predicate))
+    return UndefValue::get(ValTy);
+  if (HVC.isTrue(Predicate))
+    return createSimpleLoad(Builder, ValTy, Ptr, Alignment, MDSources);
+
+  auto V6_vL32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vL32b_pred_ai);
+  // FIXME: This may not put the offset from Ptr into the vmem offset.
+  return HVC.createHvxIntrinsic(Builder, V6_vL32b_pred_ai, ValTy,
+                                {Predicate, Ptr, HVC.getConstInt(0)},
+                                std::nullopt, MDSources);
+}
+
+auto AlignVectors::createStore(IRBuilderBase &Builder, Value *Val, Value *Ptr,
+                               Value *Predicate, int Alignment, Value *Mask,
+                               ArrayRef<Value *> MDSources) const -> Value * {
   if (HVC.isZero(Mask) || HVC.isUndef(Val) || HVC.isUndef(Mask))
     return UndefValue::get(Val->getType());
-  if (Mask == ConstantInt::getTrue(Mask->getType()))
-    return Builder.CreateAlignedStore(Val, Ptr, Align(Alignment));
-  return Builder.CreateMaskedStore(Val, Ptr, Align(Alignment), Mask);
+  assert(!Predicate || (!Predicate->getType()->isVectorTy() &&
+                        "Expectning scalar predicate"));
+  if (Predicate) {
+    if (HVC.isFalse(Predicate))
+      return UndefValue::get(Val->getType());
+    if (HVC.isTrue(Predicate))
+      Predicate = nullptr;
+  }
+  // Here both Predicate and Mask are true or unknown.
+
+  if (HVC.isTrue(Mask)) {
+    if (Predicate) { // Predicate unknown
+      return createPredicatedStore(Builder, Val, Ptr, Predicate, Alignment,
+                                   MDSources);
+    }
+    // Predicate is true:
+    return createSimpleStore(Builder, Val, Ptr, Alignment, MDSources);
+  }
+
+  // Mask is unknown
+  if (!Predicate) {
+    Instruction *Store =
+        Builder.CreateMaskedStore(Val, Ptr, Align(Alignment), Mask);
+    propagateMetadata(Store, MDSources);
+    return Store;
+  }
+
+  // Both Predicate and Mask are unknown.
+  // Emulate masked store with predicated-load + mux + predicated-store.
+  Value *PredLoad = createPredicatedLoad(Builder, Val->getType(), Ptr,
+                                         Predicate, Alignment, MDSources);
+  Value *Mux = Builder.CreateSelect(Mask, Val, PredLoad);
+  return createPredicatedStore(Builder, Mux, Ptr, Predicate, Alignment,
+                               MDSources);
+}
+
+auto AlignVectors::createSimpleStore(IRBuilderBase &Builder, Value *Val,
+                                     Value *Ptr, int Alignment,
+                                     ArrayRef<Value *> MDSources) const
+    -> Value * {
+  Instruction *Store = Builder.CreateAlignedStore(Val, Ptr, Align(Alignment));
+  propagateMetadata(Store, MDSources);
+  return Store;
+}
+
+auto AlignVectors::createPredicatedStore(IRBuilderBase &Builder, Value *Val,
+                                         Value *Ptr, Value *Predicate,
+                                         int Alignment,
+                                         ArrayRef<Value *> MDSources) const
+    -> Value * {
+  assert(HVC.HST.isTypeForHVX(Val->getType()) &&
+         "Predicates 'scalar' vector stores not yet supported");
+  assert(Predicate);
+  if (HVC.isFalse(Predicate))
+    return UndefValue::get(Val->getType());
+  if (HVC.isTrue(Predicate))
+    return createSimpleStore(Builder, Val, Ptr, Alignment, MDSources);
+
+  assert(HVC.getSizeOf(Val, HVC.Alloc) % Alignment == 0);
+  auto V6_vS32b_pred_ai = HVC.HST.getIntrinsicId(Hexagon::V6_vS32b_pred_ai);
+  // FIXME: This may not put the offset from Ptr into the vmem offset.
+  return HVC.createHvxIntrinsic(Builder, V6_vS32b_pred_ai, nullptr,
+                                {Predicate, Ptr, HVC.getConstInt(0), Val},
+                                std::nullopt, MDSources);
 }
 
 auto AlignVectors::getUpwardDeps(Instruction *In, Instruction *Base) const
@@ -739,6 +881,11 @@ auto AlignVectors::createLoadGroups(const AddrList &Group) const -> MoveList {
 
   // Erase singleton groups.
   erase_if(LoadGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
+
+  // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
+  if (!HVC.HST.useHVXV62Ops())
+    erase_if(LoadGroups, [](const MoveGroup &G) { return G.IsHvx; });
+
   return LoadGroups;
 }
 
@@ -780,6 +927,25 @@ auto AlignVectors::createStoreGroups(const AddrList &Group) const -> MoveList {
 
   // Erase singleton groups.
   erase_if(StoreGroups, [](const MoveGroup &G) { return G.Main.size() <= 1; });
+
+  // Erase HVX groups on targets < HvxV62 (due to lack of predicated loads).
+  if (!HVC.HST.useHVXV62Ops())
+    erase_if(StoreGroups, [](const MoveGroup &G) { return G.IsHvx; });
+
+  // Erase groups where every store is a full HVX vector. The reason is that
+  // aligning predicated stores generates complex code that may be less
+  // efficient than a sequence of unaligned vector stores.
+  if (!AlignFullHvxStores) {
+    erase_if(StoreGroups, [this](const MoveGroup &G) {
+      return G.IsHvx && llvm::all_of(G.Main, [this](Instruction *S) {
+               auto MaybeInfo = this->getAddrInfo(*S);
+               assert(MaybeInfo.has_value());
+               return HVC.HST.isHVXVectorType(
+                   EVT::getEVT(MaybeInfo->ValTy, false));
+             });
+    });
+  }
+
   return StoreGroups;
 }
 
@@ -901,17 +1067,18 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
   });
 
   auto createLoad = [&](IRBuilderBase &Builder, const ByteSpan &VSpan,
-                        int Index) {
+                        int Index, bool MakePred) {
     Value *Ptr =
         createAdjustedPointer(Builder, AlignAddr, SecTy, Index * ScLen);
-    // FIXME: generate a predicated load?
-    Value *Load = createAlignedLoad(Builder, SecTy, Ptr, ScLen, True, Undef);
+    Value *Predicate =
+        MakePred ? makeTestIfUnaligned(Builder, AlignVal, ScLen) : nullptr;
+
     // If vector shifting is potentially needed, accumulate metadata
     // from source sections of twice the load width.
     int Start = (Index - DoAlign) * ScLen;
     int Width = (1 + DoAlign) * ScLen;
-    propagateMetadata(cast<Instruction>(Load),
-                      VSpan.section(Start, Width).values());
+    Value *Load = this->createLoad(Builder, SecTy, Ptr, Predicate, ScLen, True,
+                                   Undef, VSpan.section(Start, Width).values());
     return cast<Instruction>(Load);
   };
 
@@ -939,7 +1106,8 @@ auto AlignVectors::realignLoadGroup(IRBuilderBase &Builder,
         Index < NumSectors ? EarliestUser[&ASpan[Index]] : nullptr;
     if (auto *Where = std::min(PrevAt, ThisAt, isEarlier)) {
       Builder.SetInsertPoint(Where);
-      Loads[Index] = createLoad(Builder, VSpan, Index);
+      Loads[Index] =
+          createLoad(Builder, VSpan, Index, DoAlign && Index == NumSectors);
       // We know it's safe to put the load at BasePos, but we'd prefer to put
       // it at "Where". To see if the load is safe to be placed at Where, put
       // it there first and then check if it's safe to move it to BasePos.
@@ -1036,10 +1204,11 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
 
   // Create an extra "undef" sector at the beginning and at the end.
   // They will be used as the left/right filler in the vlalign step.
-  for (int i = (DoAlign ? -1 : 0); i != NumSectors + DoAlign; ++i) {
+  for (int Index = (DoAlign ? -1 : 0); Index != NumSectors + DoAlign; ++Index) {
     // For stores, the size of each section is an aligned vector length.
     // Adjust the store offsets relative to the section start offset.
-    ByteSpan VSection = VSpan.section(i * ScLen, ScLen).shift(-i * ScLen);
+    ByteSpan VSection =
+        VSpan.section(Index * ScLen, ScLen).shift(-Index * ScLen);
     Value *AccumV = UndefValue::get(SecTy);
     Value *AccumM = HVC.getNullValue(SecTy);
     for (ByteSpan::Block &S : VSection) {
@@ -1051,35 +1220,43 @@ auto AlignVectors::realignStoreGroup(IRBuilderBase &Builder,
       AccumV = HVC.insertb(Builder, AccumV, HVC.vbytes(Builder, Pay),
                            S.Seg.Start, S.Seg.Size, S.Pos);
     }
-    ASpanV.Blocks.emplace_back(AccumV, ScLen, i * ScLen);
-    ASpanM.Blocks.emplace_back(AccumM, ScLen, i * ScLen);
+    ASpanV.Blocks.emplace_back(AccumV, ScLen, Index * ScLen);
+    ASpanM.Blocks.emplace_back(AccumM, ScLen, Index * ScLen);
   }
 
   // vlalign
   if (DoAlign) {
-    for (int j = 1; j != NumSectors + 2; ++j) {
-      Value *PrevV = ASpanV[j - 1].Seg.Val, *ThisV = ASpanV[j].Seg.Val;
-      Value *PrevM = ASpanM[j - 1].Seg.Val, *ThisM = ASpanM[j].Seg.Val;
+    for (int Index = 1; Index != NumSectors + 2; ++Index) {
+      Value *PrevV = ASpanV[Index - 1].Seg.Val, *ThisV = ASpanV[Index].Seg.Val;
+      Value *PrevM = ASpanM[Index - 1].Seg.Val, *ThisM = ASpanM[Index].Seg.Val;
       assert(isSectorTy(PrevV->getType()) && isSectorTy(PrevM->getType()));
-      ASpanV[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevV, ThisV, AlignVal);
-      ASpanM[j - 1].Seg.Val = HVC.vlalignb(Builder, PrevM, ThisM, AlignVal);
+      ASpanV[Index - 1].Seg.Val = HVC.vlalignb(Builder, PrevV, ThisV, AlignVal);
+      ASpanM[Index - 1].Seg.Val = HVC.vlalignb(Builder, PrevM, ThisM, AlignVal);
     }
   }
 
-  for (int i = 0; i != NumSectors + DoAlign; ++i) {
-    Value *Ptr = createAdjustedPointer(Builder, AlignAddr, SecTy, i * ScLen);
-    Value *Val = ASpanV[i].Seg.Val;
-    Value *Mask = ASpanM[i].Seg.Val; // bytes
-    if (!HVC.isUndef(Val) && !HVC.isZero(Mask)) {
-      Value *Store =
-          createAlignedStore(Builder, Val, Ptr, ScLen, HVC.vlsb(Builder, Mask));
-      // If vector shifting is potentially needed, accumulate metadata
-      // from source sections of twice the store width.
-      int Start = (i - DoAlign) * ScLen;
-      int Width = (1 + DoAlign) * ScLen;
-      propagateMetadata(cast<Instruction>(Store),
-                        VSpan.section(Start, Width).values());
-    }
+  auto createStore = [&](IRBuilderBase &Builder, const ByteSpan &ASpanV,
+                         const ByteSpan &ASpanM, int Index, bool MakePred) {
+    Value *Val = ASpanV[Index].Seg.Val;
+    Value *Mask = ASpanM[Index].Seg.Val; // bytes
+    if (HVC.isUndef(Val) || HVC.isZero(Mask))
+      return;
+    Value *Ptr =
+        createAdjustedPointer(Builder, AlignAddr, SecTy, Index * ScLen);
+    Value *Predicate =
+        MakePred ? makeTestIfUnaligned(Builder, AlignVal, ScLen) : nullptr;
+
+    // If vector shifting is potentially needed, accumulate metadata
+    // from source sections of twice the store width.
+    int Start = (Index - DoAlign) * ScLen;
+    int Width = (1 + DoAlign) * ScLen;
+    this->createStore(Builder, Val, Ptr, Predicate, ScLen,
+                      HVC.vlsb(Builder, Mask),
+                      VSpan.section(Start, Width).values());
+  };
+
+  for (int Index = 0; Index != NumSectors + DoAlign; ++Index) {
+    createStore(Builder, ASpanV, ASpanM, Index, DoAlign && Index == NumSectors);
   }
 }
 
@@ -1207,6 +1384,15 @@ auto AlignVectors::realignGroup(const MoveGroup &Move) const -> bool {
     Inst->eraseFromParent();
 
   return true;
+}
+
+auto AlignVectors::makeTestIfUnaligned(IRBuilderBase &Builder, Value *AlignVal,
+                                       int Alignment) const -> Value * {
+  auto *AlignTy = AlignVal->getType();
+  Value *And =
+      Builder.CreateAnd(AlignVal, ConstantInt::get(AlignTy, Alignment - 1));
+  Value *Zero = ConstantInt::get(AlignTy, 0);
+  return Builder.CreateICmpNE(And, Zero, "isz");
 }
 
 auto AlignVectors::isSectorTy(Type *Ty) const -> bool {
@@ -1859,6 +2045,14 @@ auto HexagonVectorCombine::isUndef(const Value *Val) const -> bool {
   return isa<UndefValue>(Val);
 }
 
+auto HexagonVectorCombine::isTrue(const Value *Val) const -> bool {
+  return Val == ConstantInt::getTrue(Val->getType());
+}
+
+auto HexagonVectorCombine::isFalse(const Value *Val) const -> bool {
+  return isZero(Val);
+}
+
 auto HexagonVectorCombine::getHvxTy(Type *ElemTy, bool Pair) const
     -> VectorType * {
   EVT ETy = EVT::getEVT(ElemTy, false);
@@ -2204,7 +2398,8 @@ auto HexagonVectorCombine::vshuff(IRBuilderBase &Builder, Value *Val0,
 auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
                                               Intrinsic::ID IntID, Type *RetTy,
                                               ArrayRef<Value *> Args,
-                                              ArrayRef<Type *> ArgTys) const
+                                              ArrayRef<Type *> ArgTys,
+                                              ArrayRef<Value *> MDSources) const
     -> Value * {
   auto getCast = [&](IRBuilderBase &Builder, Value *Val,
                      Type *DestTy) -> Value * {
@@ -2242,7 +2437,12 @@ auto HexagonVectorCombine::createHvxIntrinsic(IRBuilderBase &Builder,
       IntrArgs.push_back(A);
     }
   }
-  Value *Call = Builder.CreateCall(IntrFn, IntrArgs, "cup");
+  StringRef MaybeName = !IntrTy->getReturnType()->isVoidTy() ? "cup" : "";
+  CallInst *Call = Builder.CreateCall(IntrFn, IntrArgs, MaybeName);
+
+  MemoryEffects ME = Call->getAttributes().getMemoryEffects();
+  if (!ME.doesNotAccessMemory() && !ME.onlyAccessesInaccessibleMem())
+    propagateMetadata(Call, MDSources);
 
   Type *CallTy = Call->getType();
   if (RetTy == nullptr || CallTy == RetTy)
