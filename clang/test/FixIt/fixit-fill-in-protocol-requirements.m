@@ -82,3 +82,32 @@
 @end
 // CHECK: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"- (void)availableMethod { \n  <#code#>\n}\n\n- (void)deprecatedMethod { \n  <#code#>\n}\n\n"
 // AVAILABLE: fix-it:{{.*}}:{[[@LINE-2]]:1-[[@LINE-2]]:1}:"- (void)availableMethod { \n  <#code#>\n}\n\n- (void)deprecatedMethod { \n  <#code#>\n}\n\n+ (void)notYetAvailableMethod { \n  <#code#>\n}\n\n"
+
+@protocol PReq1
+-(void)reqZ1;
+@end
+
+@protocol PReq2
+-(void)reqZ1;
+-(void)reqA2;
+-(void)reqA1;
+@end
+
+// Ensure optional cannot hide required methods with the same selector.
+@protocol POpt
+@optional
+-(void)reqZ1;
+-(void)reqA2;
+-(void)reqA1;
+@end
+
+@interface MultiReqOpt <PReq1, PReq2, POpt>
+@end
+@implementation MultiReqOpt // expected-warning {{class 'MultiReqOpt' does not conform to protocols 'PReq1' and 'PReq2'}} expected-note {{add stubs}}
+@end
+// CHECK: fix-it:{{.*}}:{[[@LINE-1]]:1-[[@LINE-1]]:1}:"
+// Z1 is first due to being from the first listed protocol, PReq1
+// CHECK-SAME: - (void)reqZ1
+// A1 is before A2 because of secondary sort by name.
+// CHECK-SAME: - (void)reqA1
+// CHECK-SAME: - (void)reqA2

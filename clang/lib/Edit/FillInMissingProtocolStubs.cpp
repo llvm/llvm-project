@@ -145,7 +145,20 @@ public:
       if (Availability == AR_NotYetIntroduced || Availability == AR_Unavailable)
         continue;
       auto &Map = M->isInstanceMethod() ? InstanceMethods : ClassMethods;
-      Map.insert(std::make_pair(M->getSelector(), MethodInfo(M, P, Priority)));
+      MethodInfo MI(M, P, Priority);
+      auto [I, Inserted] = Map.insert(std::make_pair(M->getSelector(), MI));
+      if (Inserted)
+        continue;
+
+      // Prefer a required method so we do not miss fixits, and the lowest
+      // priority so the order of fixits will be deterministic.
+      if (MI.isRequired() != I->second.isRequired()) {
+        if (MI.isRequired())
+          I->second = MI;
+        continue;
+      }
+      if (MI.ProtocolPriority < I->second.ProtocolPriority)
+        I->second = MI;
     }
   }
 
