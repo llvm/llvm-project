@@ -306,7 +306,7 @@ feature_test_macros = [ add_version_header(x) for x in [
     "unimplemented": True,
   }, {
     "name": "__cpp_lib_expected",
-    "values": { "c++2b": 202202 },
+    "values": { "c++2b": 202211 },
     "headers": ["expected"],
   }, {
     "name": "__cpp_lib_filesystem",
