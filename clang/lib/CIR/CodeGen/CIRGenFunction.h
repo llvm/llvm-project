@@ -752,6 +752,9 @@ public:
 
   mlir::Value createLoad(const clang::VarDecl *VD, const char *Name);
 
+  mlir::Value buildScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
+                                       bool isInc, bool isPre);
+
   // Wrapper for function prototype sources. Wraps either a FunctionProtoType or
   // an ObjCMethodDecl.
   struct PrototypeWrapper {

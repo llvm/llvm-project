@@ -747,7 +747,17 @@ LValue CIRGenFunction::buildUnaryOpLValue(const UnaryOperator *E) {
   }
   case UO_PreInc:
   case UO_PreDec: {
-    assert(0 && "not implemented");
+    bool isInc = E->isIncrementOp();
+    bool isPre = E->isPrefix();
+    LValue LV = buildLValue(E->getSubExpr());
+
+    if (E->getType()->isAnyComplexType()) {
+      assert(0 && "not implemented");
+    } else {
+      buildScalarPrePostIncDec(E, LV, isInc, isPre);
+    }
+
+    return LV;
   }
   }
 }
