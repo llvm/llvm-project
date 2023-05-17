@@ -19782,11 +19782,9 @@ bool DAGCombiner::tryStoreMergeOfConstants(
         }
       }
 
-      // We only use vectors if the constant is known to be zero or the
-      // target allows it and the function is not marked with the
-      // noimplicitfloat attribute.
-      if ((!NonZero ||
-           TLI.storeOfVectorConstantIsCheap(MemVT, i + 1, FirstStoreAS)) &&
+      // We only use vectors if the target allows it and the function is not
+      // marked with the noimplicitfloat attribute.
+      if (TLI.storeOfVectorConstantIsCheap(!NonZero, MemVT, i + 1, FirstStoreAS) &&
           AllowVectors) {
         // Find a legal type for the vector store.
         unsigned Elts = (i + 1) * NumMemElts;
