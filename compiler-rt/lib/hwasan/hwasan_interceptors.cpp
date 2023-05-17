@@ -51,50 +51,82 @@ using namespace __hwasan;
 
 #define COMMON_INTERCEPTOR_READ_RANGE(ctx, ptr, size) \
   do {                                                \
+    (void)(ctx);                                      \
+    (void)(ptr);                                      \
+    (void)(size);                                     \
   } while (false)
 
 #define COMMON_INTERCEPTOR_ENTER(ctx, func, ...) \
   do {                                           \
+    (void)(ctx);                                 \
+    (void)(func);                                \
   } while (false)
 
 #define COMMON_INTERCEPTOR_DIR_ACQUIRE(ctx, path) \
-  do {                                           \
+  do {                                            \
+    (void)(ctx);                                  \
+    (void)(path);                                 \
   } while (false)
 
 #define COMMON_INTERCEPTOR_FD_ACQUIRE(ctx, fd) \
   do {                                         \
+    (void)(ctx);                               \
+    (void)(fd);                                \
   } while (false)
 
 #define COMMON_INTERCEPTOR_FD_RELEASE(ctx, fd) \
   do {                                         \
+    (void)(ctx);                               \
+    (void)(fd);                                \
   } while (false)
 
 #define COMMON_INTERCEPTOR_FD_SOCKET_ACCEPT(ctx, fd, newfd) \
   do {                                                      \
+    (void)(ctx);                                            \
+    (void)(fd);                                             \
+    (void)(newfd);                                          \
   } while (false)
 
 #define COMMON_INTERCEPTOR_SET_THREAD_NAME(ctx, name) \
   do {                                                \
+    (void)(ctx);                                      \
+    (void)(name);                                     \
   } while (false)
 
 #define COMMON_INTERCEPTOR_SET_PTHREAD_NAME(ctx, thread, name) \
   do {                                                         \
+    (void)(ctx);                                               \
+    (void)(thread);                                            \
+    (void)(name);                                              \
   } while (false)
 
 #define COMMON_INTERCEPTOR_BLOCK_REAL(name) \
   do {                                      \
+    (void)(name);                           \
   } while (false)
 
 #define COMMON_INTERCEPTOR_MEMMOVE_IMPL(ctx, to, from, size) \
   do {                                                       \
+    (void)(ctx);                                             \
+    (void)(to);                                              \
+    (void)(from);                                            \
+    (void)(size);                                            \
   } while (false)
 
 #define COMMON_INTERCEPTOR_MEMCPY_IMPL(ctx, to, from, size) \
   do {                                                      \
+    (void)(ctx);                                            \
+    (void)(to);                                             \
+    (void)(from);                                           \
+    (void)(size);                                           \
   } while (false)
 
 #define COMMON_INTERCEPTOR_MEMSET_IMPL(ctx, block, c, size) \
   do {                                                      \
+    (void)(ctx);                                            \
+    (void)(block);                                          \
+    (void)(c);                                              \
+    (void)(size);                                           \
   } while (false)
 
 #define COMMON_INTERCEPTOR_STRERROR() \
@@ -103,6 +135,7 @@ using namespace __hwasan;
 
 #define COMMON_INTERCEPT_FUNCTION(name) \
   do {                                  \
+    (void)(name);                       \
   } while (false)
 
 #include "sanitizer_common/sanitizer_common_interceptors.inc"
