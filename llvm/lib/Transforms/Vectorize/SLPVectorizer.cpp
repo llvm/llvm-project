@@ -7396,8 +7396,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       // stay in vectorized code due to uses outside of these scalar
       // loads/stores.
       ScalarCost = TTI->getPointersChainCost(
-          Ptrs, BasePtr, TTI::PointersChainInfo::getKnownUniformStrided(),
-          CostKind);
+          Ptrs, BasePtr, TTI::PointersChainInfo::getUnitStride(), CostKind);
 
       SmallVector<const Value *> PtrsRetainedInVecCode;
       for (Value *V : Ptrs) {
@@ -7423,7 +7422,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       }
       VecCost = TTI->getPointersChainCost(
           PtrsRetainedInVecCode, BasePtr,
-          TTI::PointersChainInfo::getKnownNonUniformStrided(), CostKind);
+          TTI::PointersChainInfo::getKnownStride(), CostKind);
     } else {
       // Case 1: Ptrs are the arguments of loads that we are going to transform
       // into masked gather load intrinsic.
@@ -7436,8 +7435,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                    auto *Ptr = dyn_cast<GetElementPtrInst>(V);
                    return Ptr && !Ptr->hasAllConstantIndices();
                  })
-              ? TTI::PointersChainInfo::getNonUniformStrided()
-              : TTI::PointersChainInfo::getKnownNonUniformStrided();
+              ? TTI::PointersChainInfo::getUnknownStride()
+              : TTI::PointersChainInfo::getKnownStride();
 
       ScalarCost = TTI->getPointersChainCost(Ptrs, BasePtr, PtrsInfo, CostKind);
 
