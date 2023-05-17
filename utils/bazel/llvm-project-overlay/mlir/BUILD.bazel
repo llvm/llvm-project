@@ -8090,7 +8090,7 @@ cc_library(
     ]),
     includes = ["include"],
     deps = [
-        ":ControlFlowInterfacesTdFiles",
+        ":ControlFlowInterfaces",
         ":IR",
         ":LLVMDialect",
         ":MemRefDialect",
