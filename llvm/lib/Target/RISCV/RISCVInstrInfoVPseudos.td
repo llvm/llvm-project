@@ -6178,16 +6178,11 @@ let Predicates = [HasVInstructions] in {
 let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach m = MxList in {
     defvar mx = m.MX;
-    defvar WriteVIMovVX_MX = !cast<SchedWrite>("WriteVIMovVX_" # mx);
-    defvar WriteVIMovXV_MX = !cast<SchedWrite>("WriteVIMovXV_" # mx);
-    defvar ReadVIMovVX_MX = !cast<SchedRead>("ReadVIMovVX_" # mx);
-    defvar ReadVIMovXV_MX = !cast<SchedRead>("ReadVIMovXV_" # mx);
-    defvar ReadVIMovXX_MX = !cast<SchedRead>("ReadVIMovXX_" # mx);
     let VLMul = m.value in {
       let HasSEWOp = 1, BaseInstr = VMV_X_S in
       def PseudoVMV_X_S # "_" # mx:
         Pseudo<(outs GPR:$rd), (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-        Sched<[WriteVIMovVX_MX, ReadVIMovVX_MX]>,
+        Sched<[WriteVIMovVX, ReadVIMovVX]>,
         RISCVVPseudo;
       let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VMV_S_X,
           Constraints = "$rd = $rs1" in
@@ -6195,7 +6190,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
                                              (ins m.vrclass:$rs1, GPR:$rs2,
                                                   AVL:$vl, ixlenimm:$sew),
                                              []>,
-        Sched<[WriteVIMovXV_MX, ReadVIMovXV_MX, ReadVIMovXX_MX]>,
+        Sched<[WriteVIMovXV, ReadVIMovXV, ReadVIMovXX]>,
         RISCVVPseudo;
     }
   }
@@ -6211,17 +6206,12 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
   foreach f = FPList in {
     foreach m = f.MxList in {
       defvar mx = m.MX;
-      defvar WriteVFMovVF_MX = !cast<SchedWrite>("WriteVFMovVF_" # mx);
-      defvar WriteVFMovFV_MX = !cast<SchedWrite>("WriteVFMovFV_" # mx);
-      defvar ReadVFMovVF_MX = !cast<SchedRead>("ReadVFMovVF_" # mx);
-      defvar ReadVFMovFV_MX = !cast<SchedRead>("ReadVFMovFV_" # mx);
-      defvar ReadVFMovFX_MX = !cast<SchedRead>("ReadVFMovFX_" # mx);
       let VLMul = m.value in {
         let HasSEWOp = 1, BaseInstr = VFMV_F_S in
         def "PseudoVFMV_" # f.FX # "_S_" # mx :
           Pseudo<(outs f.fprclass:$rd),
                  (ins m.vrclass:$rs2, ixlenimm:$sew), []>,
-          Sched<[WriteVFMovVF_MX, ReadVFMovVF_MX]>,
+          Sched<[WriteVFMovVF, ReadVFMovVF]>,
           RISCVVPseudo;
         let HasVLOp = 1, HasSEWOp = 1, BaseInstr = VFMV_S_F,
             Constraints = "$rd = $rs1" in
@@ -6230,7 +6220,7 @@ let mayLoad = 0, mayStore = 0, hasSideEffects = 0 in {
                                                  (ins m.vrclass:$rs1, f.fprclass:$rs2,
                                                       AVL:$vl, ixlenimm:$sew),
                                                  []>,
-          Sched<[WriteVFMovFV_MX, ReadVFMovFV_MX, ReadVFMovFX_MX]>,
+          Sched<[WriteVFMovFV, ReadVFMovFV, ReadVFMovFX]>,
           RISCVVPseudo;
       }
     }
