@@ -857,6 +857,20 @@ private:
             },
             [](auto x) -> Fortran::lower::SymbolBox { return x; });
       }
+
+      // Entry character result represented as an argument pair
+      // needs to be represented in the symbol table even before
+      // we can create DeclareOp for it. The temporary mapping
+      // is EmboxCharOp that conveys the address and length information.
+      // After mapSymbolAttributes is done, the mapping is replaced
+      // with the new DeclareOp, and the following table lookups
+      // do not reach here.
+      if (sym.IsFuncResult())
+        if (const Fortran::semantics::DeclTypeSpec *declTy = sym.GetType())
+          if (declTy->category() ==
+              Fortran::semantics::DeclTypeSpec::Category::Character)
+            return symMap->lookupSymbol(sym);
+
       // Procedure dummies are not mapped with an hlfir.declare because
       // they are not "variable" (cannot be assigned to), and it would
       // make hlfir.declare more complex than it needs to to allow this.
