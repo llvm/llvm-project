@@ -62,8 +62,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
       }
 
       if (uniformity == InstructionUniformity::NeverUniform) {
-        if (markDivergent(instr))
-          Worklist.push_back(&instr);
+        markDivergent(instr);
       }
     }
   }
@@ -72,10 +71,10 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::initialize() {
 template <>
 void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
     Register Reg) {
+  assert(isDivergent(Reg));
   const auto &RegInfo = F.getRegInfo();
   for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
-    if (markDivergent(UserInstr))
-      Worklist.push_back(&UserInstr);
+    markDivergent(UserInstr);
   }
 }
 
@@ -86,8 +85,11 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::pushUsers(
   if (Instr.isTerminator())
     return;
   for (const MachineOperand &op : Instr.operands()) {
-    if (op.isReg() && op.isDef() && op.getReg().isVirtual())
-      pushUsers(op.getReg());
+    if (!op.isReg() || !op.isDef())
+      continue;
+    auto Reg = op.getReg();
+    if (isDivergent(Reg))
+      pushUsers(Reg);
   }
 }
 
@@ -128,8 +130,7 @@ void llvm::GenericUniformityAnalysisImpl<MachineSSAContext>::
     for (MachineInstr &UserInstr : RegInfo.use_instructions(Reg)) {
       if (DefCycle.contains(UserInstr.getParent()))
         continue;
-      if (markDivergent(UserInstr))
-        Worklist.push_back(&UserInstr);
+      markDivergent(UserInstr);
     }
   }
 }
