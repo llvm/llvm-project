@@ -22,7 +22,3 @@
 // ADDITIONAL_COMPILE_FLAGS: -fexperimental-library
 
 #include <version>
-
-#ifdef _LIBCPP_HAS_NO_INCOMPLETE_FORMAT
-#   error "-fexperimental-library should enable <format>"
-#endif

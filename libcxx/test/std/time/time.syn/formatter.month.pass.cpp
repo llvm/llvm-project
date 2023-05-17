@@ -9,7 +9,6 @@
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
 // UNSUPPORTED: no-localization
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 
 // TODO FMT Fix this test using GCC, it currently crashes.
 // UNSUPPORTED: gcc-12

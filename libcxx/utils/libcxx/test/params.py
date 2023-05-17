@@ -188,7 +188,6 @@ DEFAULT_PARAMETERS = [
               PrependLinkFlag(lambda cfg: '-llibc++experimental' if _isMSVC(cfg) else '-lc++experimental'),
               AddCompileFlag('-D_LIBCPP_ENABLE_EXPERIMENTAL'),
             ] if experimental else [
-              AddFeature('libcpp-has-no-incomplete-format'),
               AddFeature('libcpp-has-no-incomplete-pstl'),
             ]),
 
