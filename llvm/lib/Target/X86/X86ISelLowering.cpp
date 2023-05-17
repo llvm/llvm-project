@@ -37705,10 +37705,11 @@ X86TargetLowering::emitLongJmpShadowStackFix(MachineInstr &MI,
   fixShadowMBB->addSuccessor(fixShadowLoopPrepareMBB);
 
   // Do a single shift left.
-  unsigned ShlR1Opc = (PVT == MVT::i64) ? X86::SHL64r1 : X86::SHL32r1;
+  unsigned ShlR1Opc = (PVT == MVT::i64) ? X86::SHL64ri : X86::SHL32ri;
   Register SspAfterShlReg = MRI.createVirtualRegister(PtrRC);
   BuildMI(fixShadowLoopPrepareMBB, DL, TII->get(ShlR1Opc), SspAfterShlReg)
-      .addReg(SspSecondShrReg);
+      .addReg(SspSecondShrReg)
+      .addImm(1);
 
   // Save the value 128 to a register (will be used next with incssp).
   Register Value128InReg = MRI.createVirtualRegister(PtrRC);

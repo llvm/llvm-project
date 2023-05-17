@@ -587,12 +587,19 @@ ClangExpressionParser::ClangExpressionParser(
 
   if (process_sp && lang_opts.ObjC) {
     if (auto *runtime = ObjCLanguageRuntime::Get(*process_sp)) {
-      if (runtime->GetRuntimeVersion() ==
-          ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2)
+      switch (runtime->GetRuntimeVersion()) {
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V2:
         lang_opts.ObjCRuntime.set(ObjCRuntime::MacOSX, VersionTuple(10, 7));
-      else
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eObjC_VersionUnknown:
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eAppleObjC_V1:
         lang_opts.ObjCRuntime.set(ObjCRuntime::FragileMacOSX,
                                   VersionTuple(10, 7));
+        break;
+      case ObjCLanguageRuntime::ObjCRuntimeVersions::eGNUstep_libobjc2:
+        lang_opts.ObjCRuntime.set(ObjCRuntime::GNUstep, VersionTuple(2, 0));
+        break;
+      }
 
       if (runtime->HasNewLiteralsAndIndexing())
         lang_opts.DebuggerObjCLiteral = true;

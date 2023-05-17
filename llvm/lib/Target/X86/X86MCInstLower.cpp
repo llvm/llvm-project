@@ -505,6 +505,9 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
   if (X86::optimizeInstFromVEX3ToVEX2(OutMI, MI->getDesc()))
     return;
 
+  if (X86::optimizeShiftRotateWithImmediateOne(OutMI))
+    return;
+
   // Handle a few special cases to eliminate operand modifiers.
   switch (OutMI.getOpcode()) {
   case X86::LEA64_32r:
