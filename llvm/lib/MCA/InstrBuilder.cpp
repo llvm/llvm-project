@@ -511,7 +511,7 @@ Error InstrBuilder::verifyInstrDesc(const InstrDesc &ID,
 
 Expected<const InstrDesc &>
 InstrBuilder::createInstrDescImpl(const MCInst &MCI,
-                                  const SmallVector<SharedInstrument> &IVec) {
+                                  const SmallVector<Instrument *> &IVec) {
   assert(STI.getSchedModel().hasInstrSchedModel() &&
          "Itineraries are not yet supported!");
 
@@ -601,7 +601,7 @@ InstrBuilder::createInstrDescImpl(const MCInst &MCI,
 
 Expected<const InstrDesc &>
 InstrBuilder::getOrCreateInstrDesc(const MCInst &MCI,
-                                   const SmallVector<SharedInstrument> &IVec) {
+                                   const SmallVector<Instrument *> &IVec) {
   // Cache lookup using SchedClassID from Instrumentation
   unsigned SchedClassID = IM.getSchedClassID(MCII, MCI, IVec);
 
@@ -622,7 +622,7 @@ STATISTIC(NumVariantInst, "Number of MCInsts that doesn't have static Desc");
 
 Expected<std::unique_ptr<Instruction>>
 InstrBuilder::createInstruction(const MCInst &MCI,
-                                const SmallVector<SharedInstrument> &IVec) {
+                                const SmallVector<Instrument *> &IVec) {
   Expected<const InstrDesc &> DescOrErr = getOrCreateInstrDesc(MCI, IVec);
   if (!DescOrErr)
     return DescOrErr.takeError();
