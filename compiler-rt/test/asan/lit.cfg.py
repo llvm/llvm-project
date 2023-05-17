@@ -156,8 +156,13 @@ if platform.system() == 'Windows':
     clang_cl_asan_invocation = build_invocation(clang_cl_asan_cxxflags)
     clang_cl_asan_invocation = clang_cl_asan_invocation.replace("clang.exe","clang-cl.exe")
     config.substitutions.append( ("%clang_cl_asan ", clang_cl_asan_invocation) )
+    config.substitutions.append( ("%clang_cl_nocxx_asan ", clang_cl_asan_invocation) )
     config.substitutions.append( ("%Od", "-Od") )
     config.substitutions.append( ("%Fe", "-Fe") )
+    config.substitutions.append( ("%LD", "-LD") )
+    config.substitutions.append( ("%MD", "-MD") )
+    config.substitutions.append( ("%MT", "-MT") )
+    config.substitutions.append( ("%Gw", "-Gw") )
 
     base_lib = os.path.join(config.compiler_rt_libdir, "clang_rt.asan%%s%s.lib" % config.target_suffix)
     config.substitutions.append( ("%asan_lib", base_lib % "") )
@@ -168,8 +173,13 @@ if platform.system() == 'Windows':
     # behaviour for MSVC target, substitute clang-cl flags with gcc-like ones.
     config.substitutions.append( ("%clang_cl ", build_invocation(target_cxxflags)) )
     config.substitutions.append( ("%clang_cl_asan ", build_invocation(clang_asan_cxxflags)) )
+    config.substitutions.append( ("%clang_cl_nocxx_asan ", build_invocation(clang_asan_cflags)) )
     config.substitutions.append( ("%Od", "-O0") )
     config.substitutions.append( ("%Fe", "-o") )
+    config.substitutions.append( ("%LD", "-shared") )
+    config.substitutions.append( ("%MD", "") )
+    config.substitutions.append( ("%MT", "") )
+    config.substitutions.append( ("%Gw", "-fdata-sections") )
 
 # FIXME: De-hardcode this path.
 asan_source_dir = os.path.join(

@@ -159,6 +159,7 @@ class LLVM_OpBase<Dialect dialect, string mnemonic, list<Trait> traits = []> :
   //   - $_op - substituted by a reference to store the newly created MLIR
   //            operation (only for MLIR operations that return no result);
   //   - $_int_attr - substituted by a call to an integer attribute matcher;
+  //   - $_float_attr - substituted by a call to a float attribute matcher;
   //   - $_var_attr - substituted by a call to a variable attribute matcher;
   //   - $_resultType - substituted with the MLIR result type;
   //   - $_location - substituted with the MLIR location;

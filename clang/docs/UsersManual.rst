@@ -574,6 +574,7 @@ output format of the diagnostics that it generates.
                [float != double],
                [...]>>>
 
+
 .. _cl_diag_warning_groups:
 
 Individual Warning Groups

@@ -14,11 +14,10 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Linalg/IR/Linalg.h"
+#include "mlir/Dialect/Linalg/TransformOps/Syntax.h"
 #include "mlir/Dialect/Linalg/Transforms/Hoisting.h"
 #include "mlir/Dialect/Linalg/Transforms/Transforms.h"
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
-#include "mlir/Dialect/PDL/IR/PDL.h"
-#include "mlir/Dialect/PDL/IR/PDLTypes.h"
 #include "mlir/Dialect/SCF/Transforms/TileUsingInterface.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Utils/Utils.h"
@@ -82,7 +81,7 @@ static FailureOr<LinalgOp> tryApply(Operation *operation, Args &&...args) {
 
 /// Assuming that `ofr` is an index attr or a transform dialect handle mapped
 /// to exactly one op with one index result, return that value.
-static DiagnosedSilenceableFailure unpackSingleIndexResultPDLOperations(
+static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
     transform::TransformState &state, TransformOpInterface transformOp,
     SmallVector<OpFoldResult> &result, ArrayRef<OpFoldResult> ofrs) {
   for (OpFoldResult ofr : ofrs) {
@@ -122,7 +121,7 @@ static DiagnosedSilenceableFailure unpackSingleIndexResultPDLOperations(
 // replaced with the first (and only) OpResult of that payload op. (There
 // must be exactly one mapped payload op and it must have exactly one
 // index result.)
-static DiagnosedSilenceableFailure unpackSingleIndexResultPDLOperations(
+static DiagnosedSilenceableFailure unpackSingleIndexResultPayloadOperations(
     transform::TransformState &state, TransformOpInterface transformOp,
     SmallVector<OpFoldResult> &result, Value packedHandle) {
   for (Operation *op : state.getPayloadOps(packedHandle)) {
@@ -259,34 +258,6 @@ static LogicalResult applyTilingToAll(
   return success();
 }
 
-/// Parse a tiling-like operation that returns the tiled op as well as the
-/// created tile loops. The function counts the non-zero tile sizes to compute
-/// the number of results.
-static ParseResult parseTileLikeOp(OpAsmParser &parser, OperationState &result,
-                                   StringRef sizesAttrName) {
-  OpAsmParser::UnresolvedOperand targetOperand;
-  SMLoc opLoc = parser.getCurrentLocation();
-  if (parser.parseOperand(targetOperand) ||
-      parser.parseOptionalAttrDict(result.attributes))
-    return failure();
-  Attribute sizesAttr = result.attributes.get(sizesAttrName);
-  if (!sizesAttr)
-    return parser.emitError(opLoc)
-           << "expected '" << sizesAttrName << "' attribute";
-  auto sizesArrayAttr = dyn_cast<ArrayAttr>(sizesAttr);
-  if (!sizesArrayAttr)
-    return parser.emitError(opLoc)
-           << "'" << sizesAttrName << "' attribute must be an array";
-  Type pdlOpType = parser.getBuilder().getType<pdl::OperationType>();
-  size_t numExpectedLoops =
-      sizesArrayAttr.size() -
-      llvm::count(extractFromI64ArrayAttr(sizesArrayAttr), 0);
-  result.addTypes(SmallVector<Type>(numExpectedLoops + 1, pdlOpType));
-  if (parser.resolveOperand(targetOperand, pdlOpType, result.operands))
-    return failure();
-  return success();
-}
-
 DiagnosedSilenceableFailure
 transform::FuseOp::apply(mlir::transform::TransformResults &transformResults,
                          mlir::transform::TransformState &state) {
@@ -315,15 +286,34 @@ transform::FuseOp::apply(mlir::transform::TransformResults &transformResults,
 
 ParseResult transform::FuseOp::parse(OpAsmParser &parser,
                                      OperationState &result) {
-  return parseTileLikeOp(
-      parser, result,
-      transform::FuseOp::getTileSizesAttrName(result.name).getValue());
+  OpAsmParser::UnresolvedOperand targetOperand;
+  if (parser.parseOperand(targetOperand) ||
+      parser.parseOptionalAttrDict(result.attributes))
+    return failure();
+
+  FunctionType trailingType;
+  SMLoc typeLoc;
+  if (parser.getCurrentLocation(&typeLoc) ||
+      parser.parseColonType(trailingType)) {
+    return failure();
+  }
+  if (trailingType.getNumInputs() != 1)
+    return parser.emitError(typeLoc) << "expected one input type";
+
+  result.addTypes(trailingType.getResults());
+  if (parser.resolveOperand(targetOperand, trailingType.getInput(0),
+                            result.operands))
+    return failure();
+  return success();
 }
 
 void transform::FuseOp::print(OpAsmPrinter &p) {
   p << ' ';
   p << getTarget();
   p.printOptionalAttrDict((*this)->getAttrs());
+  p << " : ";
+  p.printFunctionalType(TypeRange(getOperand().getType()),
+                        getResults().getTypes());
 }
 
 LogicalResult transform::FuseOp::verify() {
@@ -335,6 +325,12 @@ LogicalResult transform::FuseOp::verify() {
     return emitOpError() << "expects interchange to be a permutation, found "
                          << getTileInterchange();
   }
+
+  SmallVector<int64_t> sizes = extractFromI64ArrayAttr(getTileSizes());
+  size_t numExpectedLoops = sizes.size() - llvm::count(sizes, 0);
+  if (numExpectedLoops != getNumResults() - 1)
+    return emitOpError() << "expects " << numExpectedLoops << " loop results";
+
   return success();
 }
 
@@ -347,7 +343,7 @@ void transform::FuseIntoContainingOp::build(OpBuilder &builder,
                                             Value producerOp,
                                             Value containingOp) {
   result.addOperands({producerOp, containingOp});
-  result.addTypes(pdl::OperationType::get(builder.getContext()));
+  result.addTypes(transform::AnyOpType::get(builder.getContext()));
 }
 
 /// Find the first "extract" user of `producerOp` and tile it right before its
@@ -792,7 +788,7 @@ void transform::MatchOp::build(OpBuilder &builder, OperationState &result,
   result.addOperands(target);
   result.addAttribute(MatchOp::getOpsAttrName(result.name),
                       builder.getStrArrayAttr(opNames));
-  result.addTypes(pdl::OperationType::get(builder.getContext()));
+  result.addTypes(transform::AnyOpType::get(builder.getContext()));
 }
 
 void transform::MatchOp::build(OpBuilder &builder, OperationState &result,
@@ -1022,7 +1018,7 @@ transform::PackOp::apply(transform::TransformResults &transformResults,
 
   // Unpack handles to constants or actual SSA index values.
   SmallVector<OpFoldResult> packedSizes;
-  DiagnosedSilenceableFailure status = unpackSingleIndexResultPDLOperations(
+  DiagnosedSilenceableFailure status = unpackSingleIndexResultPayloadOperations(
       state, *this, packedSizes, getMixedPackedSizes());
 
   TrackingListener listener(state, *this);
@@ -2011,7 +2007,7 @@ void transform::SplitReductionOp::build(
     result.addAttribute(SplitReductionOp::getUseAllocAttrName(result.name),
                         builder.getUnitAttr());
   }
-  auto resultType = pdl::OperationType::get(ctx);
+  auto resultType = transform::AnyOpType::get(ctx);
   result.addTypes({resultType, resultType, resultType, resultType});
 }
 
@@ -2053,7 +2049,7 @@ void transform::TileReductionUsingScfOp::build(
   // In the absence of this, horrible bugs ensue.
   // TODO: support mixed static-dynamic (see TileToForallOp).
   MLIRContext *ctx = builder.getContext();
-  auto opTy = pdl::OperationType::get(ctx);
+  auto opTy = transform::AnyOpType::get(ctx);
   auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
   build(builder, result,
         /*resultTypes=*/TypeRange{opTy, opTy, opTy, opTy},
@@ -2094,7 +2090,7 @@ void transform::TileReductionUsingForallOp::build(
   // In the absence of this, horrible bugs ensue.
   // TODO: support mixed static-dynamic (see TileToForallOp).
   MLIRContext *ctx = builder.getContext();
-  auto opTy = pdl::OperationType::get(ctx);
+  auto opTy = transform::AnyOpType::get(ctx);
   auto staticNumThreadsAttr = builder.getDenseI64ArrayAttr(staticNumThreads);
   auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
   build(builder, result,
@@ -2448,7 +2444,7 @@ void transform::TileToForallOp::build(OpBuilder &builder,
   // attributes for multiple variadic operands. In the absence of this,
   // horrible bugs ensue.
   MLIRContext *ctx = builder.getContext();
-  auto operationType = pdl::OperationType::get(ctx);
+  auto operationType = transform::AnyOpType::get(ctx);
   auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
   build(builder, result,
         /*resultTypes=*/TypeRange{operationType, operationType},
@@ -2485,7 +2481,7 @@ void transform::TileToForallOp::build(OpBuilder &builder,
   // attributes for multiple variadic operands. In the absence of this,
   // horrible bugs ensue.
   MLIRContext *ctx = builder.getContext();
-  auto operationType = pdl::OperationType::get(ctx);
+  auto operationType = transform::AnyOpType::get(ctx);
   auto staticNumThreadsAttr = builder.getDenseI64ArrayAttr(staticNumThreads);
   build(builder, result,
         /*resultTypes=*/TypeRange{operationType, operationType},
@@ -2547,17 +2543,17 @@ transform::TileToForallOp::apply(transform::TransformResults &transformResults,
   SmallVector<OpFoldResult> mixedNumThreads;
   DiagnosedSilenceableFailure status =
       getPackedNumThreads()
-          ? unpackSingleIndexResultPDLOperations(
+          ? unpackSingleIndexResultPayloadOperations(
                 state, transformOp, mixedNumThreads, getPackedNumThreads())
-          : unpackSingleIndexResultPDLOperations(
+          : unpackSingleIndexResultPayloadOperations(
                 state, transformOp, mixedNumThreads, getMixedNumThreads());
   if (!status.succeeded())
     return status;
   SmallVector<OpFoldResult> mixedTileSizes;
   status = getPackedTileSizes()
-               ? unpackSingleIndexResultPDLOperations(
+               ? unpackSingleIndexResultPayloadOperations(
                      state, transformOp, mixedTileSizes, getPackedTileSizes())
-               : unpackSingleIndexResultPDLOperations(
+               : unpackSingleIndexResultPayloadOperations(
                      state, transformOp, mixedTileSizes, getMixedTileSizes());
   if (!status.succeeded())
     return status;
@@ -2634,8 +2630,8 @@ void transform::TileToScfForOp::build(OpBuilder &builder,
   auto staticTileSizesAttr = builder.getDenseI64ArrayAttr(staticTileSizes);
   int64_t numExpectedLoops =
       staticTileSizes.size() - llvm::count(staticTileSizes, 0);
-  SmallVector<Type> resultTypes(numExpectedLoops,
-                                pdl::OperationType::get(builder.getContext()));
+  SmallVector<Type> resultTypes(
+      numExpectedLoops, transform::AnyOpType::get(builder.getContext()));
   build(builder, result,
         /*tiled_linalg_op=*/target.getType(),
         /*loops=*/resultTypes,
@@ -2758,20 +2754,43 @@ ParseResult transform::TileToScfForOp::parse(OpAsmParser &parser,
   OpAsmParser::UnresolvedOperand target;
   SmallVector<OpAsmParser::UnresolvedOperand> dynamicSizes;
   DenseI64ArrayAttr staticSizes;
-  auto pdlOperationType = pdl::OperationType::get(parser.getContext());
+  FunctionType trailingType;
+  llvm::SMLoc typeLoc;
   if (parser.parseOperand(target) ||
-      parser.resolveOperand(target, pdlOperationType, result.operands) ||
       parseDynamicIndexList(parser, dynamicSizes, staticSizes) ||
-      parser.resolveOperands(dynamicSizes, pdlOperationType, result.operands))
+      parseOptionalInterchange(parser, result) ||
+      parser.parseOptionalAttrDict(result.attributes) ||
+      parser.getCurrentLocation(&typeLoc) ||
+      parser.parseColonType(trailingType)) {
     return ParseResult::failure();
+  }
 
-  // Parse optional interchange.
-  if (failed(parseOptionalInterchange(parser, result)))
-    return ParseResult::failure();
   result.addAttribute(getStaticSizesAttrName(result.name), staticSizes);
   size_t numExpectedLoops =
       staticSizes.size() - llvm::count(staticSizes.asArrayRef(), 0);
-  result.addTypes(SmallVector<Type>(numExpectedLoops + 1, pdlOperationType));
+
+  unsigned numExpectedInputTypes = 1 + dynamicSizes.size();
+  if (trailingType.getNumInputs() != numExpectedInputTypes) {
+    return parser.emitError(typeLoc)
+           << "expected " << numExpectedInputTypes << " operand types, got "
+           << trailingType.getNumInputs();
+  }
+
+  unsigned numExpectedOutputTypes = 1 + numExpectedLoops;
+  if (trailingType.getNumResults() != numExpectedOutputTypes) {
+    return parser.emitError(typeLoc)
+           << "expected " << numExpectedOutputTypes << " result types, got "
+           << trailingType.getNumResults();
+  }
+
+  if (parser.resolveOperand(target, trailingType.getInput(0),
+                            result.operands) ||
+      parser.resolveOperands(dynamicSizes,
+                             trailingType.getInputs().drop_front(), typeLoc,
+                             result.operands) ||
+      parser.addTypesToList(trailingType.getResults(), result.types)) {
+    return failure();
+  }
   return success();
 }
 
@@ -2779,6 +2798,9 @@ void TileToScfForOp::print(OpAsmPrinter &p) {
   p << ' ' << getTarget();
   printDynamicIndexList(p, getOperation(), getDynamicSizes(), getStaticSizes());
   printOptionalInterchange(p, getInterchange());
+  p.printOptionalAttrDict(getOperation()->getAttrs(), getAttributeNames());
+  p << " : ";
+  p.printFunctionalType(getOperation());
 }
 
 void transform::TileToScfForOp::getEffects(
@@ -2806,7 +2828,7 @@ void transform::VectorizeOp::build(OpBuilder &builder, OperationState &result,
     result.addAttribute(VectorizeOp::getVectorizeNdExtractAttrName(result.name),
                         builder.getUnitAttr());
   }
-  result.addTypes(pdl::OperationType::get(builder.getContext()));
+  result.addTypes(transform::AnyOpType::get(builder.getContext()));
 }
 
 namespace {

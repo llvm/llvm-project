@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(mem2reg))' --split-input-file | FileCheck %s
+// RUN: mlir-opt %s --pass-pipeline='builtin.module(func.func(mem2reg{region-simplify=false}))' --split-input-file | FileCheck %s
 
 // CHECK-LABEL: func.func @basic
 func.func @basic() -> i32 {
@@ -148,20 +148,18 @@ func.func @deny_store_of_alloca(%arg: memref<memref<i32>>) -> i32 {
 
 // CHECK-LABEL: func.func @promotable_nonpromotable_intertwined
 func.func @promotable_nonpromotable_intertwined() -> i32 {
-  // CHECK: %[[VAL:.*]] = arith.constant 5 : i32
-  %0 = arith.constant 5 : i32
   // CHECK: %[[NON_PROMOTED:.*]] = memref.alloca() : memref<i32>
-  %1 = memref.alloca() : memref<i32>
+  %0 = memref.alloca() : memref<i32>
   // CHECK-NOT: = memref.alloca() : memref<memref<i32>>
-  %2 = memref.alloca() : memref<memref<i32>>
-  memref.store %1, %2[] : memref<memref<i32>>
-  %3 = memref.load %2[] : memref<memref<i32>>
+  %1 = memref.alloca() : memref<memref<i32>>
+  memref.store %0, %1[] : memref<memref<i32>>
+  %2 = memref.load %1[] : memref<memref<i32>>
   // CHECK: call @use(%[[NON_PROMOTED]])
-  call @use(%1) : (memref<i32>) -> ()
+  call @use(%0) : (memref<i32>) -> ()
   // CHECK: %[[RES:.*]] = memref.load %[[NON_PROMOTED]][]
-  %4 = memref.load %1[] : memref<i32>
+  %3 = memref.load %0[] : memref<i32>
   // CHECK: return %[[RES]] : i32
-  return %4 : i32
+  return %3 : i32
 }
 
 func.func @use(%arg: memref<i32>) { return }

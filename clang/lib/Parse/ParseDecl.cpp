@@ -2070,6 +2070,7 @@ void Parser::SkipMalformedDecl() {
     case tok::annot_module_begin:
     case tok::annot_module_end:
     case tok::annot_module_include:
+    case tok::annot_repl_input_end:
       return;
 
     default:
@@ -5456,6 +5457,13 @@ Parser::DeclGroupPtrTy Parser::ParseTopLevelStmtDecl() {
 
   SmallVector<Decl *, 2> DeclsInGroup;
   DeclsInGroup.push_back(Actions.ActOnTopLevelStmtDecl(R.get()));
+
+  if (Tok.is(tok::annot_repl_input_end) &&
+      Tok.getAnnotationValue() != nullptr) {
+    ConsumeAnnotationToken();
+    cast<TopLevelStmtDecl>(DeclsInGroup.back())->setSemiMissing();
+  }
+
   // Currently happens for things like  -fms-extensions and use `__if_exists`.
   for (Stmt *S : Stmts)
     DeclsInGroup.push_back(Actions.ActOnTopLevelStmtDecl(S));
@@ -6494,9 +6502,8 @@ void Parser::ParseDirectDeclarator(Declarator &D) {
     // that it's an initializer instead.
     if (D.mayOmitIdentifier() && D.mayBeFollowedByCXXDirectInit()) {
       RevertingTentativeParsingAction PA(*this);
-      if (TryParseDeclarator(true, D.mayHaveIdentifier(), true,
-                             D.getDeclSpec().getTypeSpecType() == TST_auto) ==
-          TPResult::False) {
+      if (TryParseDeclarator(true, D.mayHaveIdentifier(), true) ==
+              TPResult::False) {
         D.SetIdentifier(nullptr, Tok.getLocation());
         goto PastIdentifier;
       }

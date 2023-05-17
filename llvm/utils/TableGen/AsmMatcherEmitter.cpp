@@ -636,7 +636,9 @@ struct MatchableInfo {
     // We use the ID to sort AVX instruction before AVX512 instruction in
     // matching table.
     if (TheDef->isSubClassOf("Instruction") &&
-        TheDef->getValueAsBit("HasPositionOrder"))
+        TheDef->getValueAsBit("HasPositionOrder") &&
+        RHS.TheDef->isSubClassOf("Instruction") &&
+        RHS.TheDef->getValueAsBit("HasPositionOrder"))
       return TheDef->getID() < RHS.TheDef->getID();
 
     // Give matches that require more features higher precedence. This is useful

@@ -9212,16 +9212,21 @@ class sve2p1_pred_as_ctr_to_mask_base<string mnemonic, bits<2> sz, bits<3> opc,
 }
 
 class sve2p1_pred_as_ctr_to_mask<string mnemonic, bits<2> sz, PPRRegOp pprty>
-    : sve2p1_pred_as_ctr_to_mask_base<mnemonic, sz, {0, ?, ?}, pprty, VectorIndexS> {
+    : sve2p1_pred_as_ctr_to_mask_base<mnemonic, sz, {0, ?, ?}, pprty, VectorIndexS32b_timm> {
   bits<2> index;
   let Inst{9-8} = index;
 }
 
-multiclass sve2p1_pred_as_ctr_to_mask<string mnemonic> {
+multiclass sve2p1_pred_as_ctr_to_mask<string mnemonic, SDPatternOperator op> {
  def _B : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b00, PPR8>;
  def _H : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b01, PPR16>;
  def _S : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b10, PPR32>;
  def _D : sve2p1_pred_as_ctr_to_mask<mnemonic, 0b11, PPR64>;
+
+ def : SVE_2_Op_Imm_Pat<nxv16i1, op, aarch64svcount, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _B)>;
+ def : SVE_2_Op_Imm_Pat<nxv8i1,  op, aarch64svcount, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _H)>;
+ def : SVE_2_Op_Imm_Pat<nxv4i1,  op, aarch64svcount, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _S)>;
+ def : SVE_2_Op_Imm_Pat<nxv2i1,  op, aarch64svcount, i32, VectorIndexS32b_timm, !cast<Instruction>(NAME # _D)>;
 }
 
 

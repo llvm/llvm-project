@@ -40,29 +40,30 @@ SmallVector<MemorySlot> memref::AllocaOp::getPromotableSlots() {
 }
 
 Value memref::AllocaOp::getDefaultValue(const MemorySlot &slot,
-                                        OpBuilder &builder) {
+                                        RewriterBase &rewriter) {
   assert(isSupportedElementType(slot.elemType));
   // TODO: support more types.
   return TypeSwitch<Type, Value>(slot.elemType)
       .Case([&](MemRefType t) {
-        return builder.create<memref::AllocaOp>(getLoc(), t);
+        return rewriter.create<memref::AllocaOp>(getLoc(), t);
       })
       .Default([&](Type t) {
-        return builder.create<arith::ConstantOp>(getLoc(), t,
-                                                 builder.getZeroAttr(t));
+        return rewriter.create<arith::ConstantOp>(getLoc(), t,
+                                                  rewriter.getZeroAttr(t));
       });
 }
 
 void memref::AllocaOp::handlePromotionComplete(const MemorySlot &slot,
-                                               Value defaultValue) {
+                                               Value defaultValue,
+                                               RewriterBase &rewriter) {
   if (defaultValue.use_empty())
-    defaultValue.getDefiningOp()->erase();
-  erase();
+    rewriter.eraseOp(defaultValue.getDefiningOp());
+  rewriter.eraseOp(*this);
 }
 
 void memref::AllocaOp::handleBlockArgument(const MemorySlot &slot,
                                            BlockArgument argument,
-                                           OpBuilder &builder) {}
+                                           RewriterBase &rewriter) {}
 
 //===----------------------------------------------------------------------===//
 //  LoadOp/StoreOp interfaces
@@ -86,10 +87,10 @@ bool memref::LoadOp::canUsesBeRemoved(
 
 DeletionKind memref::LoadOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition) {
   // `canUsesBeRemoved` checked this blocking use must be the loaded slot
   // pointer.
-  getResult().replaceAllUsesWith(reachingDefinition);
+  rewriter.replaceAllUsesWith(getResult(), reachingDefinition);
   return DeletionKind::Delete;
 }
 
@@ -113,6 +114,6 @@ bool memref::StoreOp::canUsesBeRemoved(
 
 DeletionKind memref::StoreOp::removeBlockingUses(
     const MemorySlot &slot, const SmallPtrSetImpl<OpOperand *> &blockingUses,
-    OpBuilder &builder, Value reachingDefinition) {
+    RewriterBase &rewriter, Value reachingDefinition) {
   return DeletionKind::Delete;
 }

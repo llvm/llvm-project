@@ -741,6 +741,22 @@ LogicalResult ModuleTranslation::convertGlobals() {
         if (failed(convertOperation(op, builder)) ||
             !isa<llvm::Constant>(lookupValue(op.getResult(0))))
           return emitError(op.getLoc(), "unemittable constant value");
+        // When emitting an LLVM constant, a new constant is created and the old
+        // constant may become dangling and take space. We should remove the
+        // dangling constants to avoid memory explosion especially for constant
+        // arrays whose number of elements is large.
+        // TODO: handle ops other than InsertValueOp with ConstantArray.
+        if (auto ivOp = dyn_cast<LLVM::InsertValueOp>(op)) {
+          Value container = ivOp.getContainer();
+          if (auto cst =
+                  dyn_cast<llvm::ConstantArray>(lookupValue(container))) {
+            // GlobalValue shouldn't be treated like other constants.
+            if (isa<llvm::GlobalValue>(cst))
+              continue;
+            if (cst->hasZeroLiveUses())
+              cst->destroyConstant();
+          }
+        }
       }
       ReturnOp ret = cast<ReturnOp>(initializer->getTerminator());
       llvm::Constant *cst =
@@ -1258,19 +1274,23 @@ SmallVector<llvm::Value *> ModuleTranslation::lookupValues(ValueRange values) {
 llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   if (!ompBuilder) {
     ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
-    ompBuilder->initialize();
 
     bool isDevice = false;
+    llvm::StringRef hostIRFilePath = "";
     if (auto offloadMod =
-            dyn_cast<mlir::omp::OffloadModuleInterface>(mlirModule))
+            dyn_cast<mlir::omp::OffloadModuleInterface>(mlirModule)) {
       isDevice = offloadMod.getIsDevice();
+      hostIRFilePath = offloadMod.getHostIRFilePath();
+    }
+
+    ompBuilder->initialize(hostIRFilePath);
 
     // TODO: set the flags when available
-    llvm::OpenMPIRBuilderConfig Config(
+    llvm::OpenMPIRBuilderConfig config(
         isDevice, /* IsTargetCodegen */ false,
         /* HasRequiresUnifiedSharedMemory */ false,
         /* OpenMPOffloadMandatory */ false);
-    ompBuilder->setConfig(Config);
+    ompBuilder->setConfig(config);
   }
   return ompBuilder.get();
 }

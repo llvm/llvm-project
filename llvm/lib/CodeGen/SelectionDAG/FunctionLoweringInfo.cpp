@@ -505,7 +505,7 @@ void FunctionLoweringInfo::ComputePHILiveOutRegInfo(const PHINode *PN) {
       return;
     }
     DestLOI.NumSignBits = std::min(DestLOI.NumSignBits, SrcLOI->NumSignBits);
-    DestLOI.Known = KnownBits::commonBits(DestLOI.Known, SrcLOI->Known);
+    DestLOI.Known = DestLOI.Known.intersectWith(SrcLOI->Known);
   }
 }
 

@@ -494,10 +494,8 @@ static bool checkRangesForMacroArgExpansion(FullSourceLoc Loc,
   mapDiagnosticRanges(Loc, Ranges, SpellingRanges);
 
   // Count all valid ranges.
-  unsigned ValidCount = 0;
-  for (const auto &Range : Ranges)
-    if (Range.isValid())
-      ValidCount++;
+  unsigned ValidCount =
+      llvm::count_if(Ranges, [](const auto &R) { return R.isValid(); });
 
   if (ValidCount > SpellingRanges.size())
     return false;

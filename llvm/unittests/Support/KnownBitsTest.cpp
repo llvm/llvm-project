@@ -352,6 +352,20 @@ TEST(KnownBitsTest, UnaryExhaustive) {
       [](const APInt &N) { return N * N; }, checkCorrectnessOnlyUnary);
 }
 
+TEST(KnownBitsTest, WideShifts) {
+  unsigned BitWidth = 128;
+  KnownBits Unknown(BitWidth);
+  KnownBits AllOnes = KnownBits::makeConstant(APInt::getAllOnes(BitWidth));
+
+  KnownBits ShlResult(BitWidth);
+  ShlResult.makeNegative();
+  EXPECT_EQ(KnownBits::shl(AllOnes, Unknown), ShlResult);
+  KnownBits LShrResult(BitWidth);
+  LShrResult.One.setBit(0);
+  EXPECT_EQ(KnownBits::lshr(AllOnes, Unknown), LShrResult);
+  EXPECT_EQ(KnownBits::ashr(AllOnes, Unknown), AllOnes);
+}
+
 TEST(KnownBitsTest, ICmpExhaustive) {
   unsigned Bits = 4;
   ForeachKnownBits(Bits, [&](const KnownBits &Known1) {

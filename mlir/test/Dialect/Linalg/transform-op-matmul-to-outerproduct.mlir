@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -test-transform-dialect-interpreter -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -test-transform-dialect-interpreter | FileCheck %s
 
 func.func @outerproduct_matmul(%A: memref<3x3xf32>, %B: memref<3x3xf32>, %C: memref<3x3xf32>) {
   linalg.matmul ins(%A, %B: memref<3x3xf32>, memref<3x3xf32>)
@@ -28,9 +28,9 @@ func.func @outerproduct_matmul(%A: memref<3x3xf32>, %B: memref<3x3xf32>, %C: mem
 // CHECK:         }
 
 transform.sequence failures(propagate) {
-^bb1(%arg1: !pdl.operation):
-  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!pdl.operation) -> !pdl.operation
-  %1 = get_closest_isolated_parent %0 : (!pdl.operation) -> !pdl.operation
-  %2 = transform.structured.vectorize %1
-  transform.vector.lower_contraction %2 lowering_strategy = "outerproduct" : (!pdl.operation) -> !pdl.operation
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+  %2 = transform.structured.vectorize %1 : (!transform.any_op) -> !transform.any_op
+  transform.vector.lower_contraction %2 lowering_strategy = "outerproduct" : (!transform.any_op) -> !transform.any_op
 }

@@ -272,7 +272,12 @@ struct KnownFPClass {
     return isKnownNever(fcSubnormal);
   }
 
-  /// Return true if it's known this can never be a negativesubnormal
+  /// Return true if it's known this can never be a positive subnormal
+  bool isKnownNeverPosSubnormal() const {
+    return isKnownNever(fcPosSubnormal);
+  }
+
+  /// Return true if it's known this can never be a negative subnormal
   bool isKnownNeverNegSubnormal() const {
     return isKnownNever(fcNegSubnormal);
   }
@@ -281,6 +286,11 @@ struct KnownFPClass {
   /// [+-]0, and does not include denormal inputs implicitly treated as [+-]0.
   bool isKnownNeverZero() const {
     return isKnownNever(fcZero);
+  }
+
+  /// Return true if it's known this can never be a literal positive zero.
+  bool isKnownNeverPosZero() const {
+    return isKnownNever(fcPosZero);
   }
 
   /// Return true if it's known this can never be a literal negative zero.
@@ -292,6 +302,12 @@ struct KnownFPClass {
   /// extends isKnownNeverZero to cover the case where the assumed
   /// floating-point mode for the function interprets denormals as zero.
   bool isKnownNeverLogicalZero(const Function &F, Type *Ty) const;
+
+  /// Return true if it's know this can never be interpreted as a negative zero.
+  bool isKnownNeverLogicalNegZero(const Function &F, Type *Ty) const;
+
+  /// Return true if it's know this can never be interpreted as a positive zero.
+  bool isKnownNeverLogicalPosZero(const Function &F, Type *Ty) const;
 
   static constexpr FPClassTest OrderedLessThanZeroMask =
       fcNegSubnormal | fcNegNormal | fcNegInf;

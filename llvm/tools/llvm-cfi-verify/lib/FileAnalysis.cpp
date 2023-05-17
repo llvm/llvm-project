@@ -574,15 +574,15 @@ Error FileAnalysis::parseSymbolTable() {
     }
   }
   if (auto *ElfObject = dyn_cast<object::ELFObjectFileBase>(Object)) {
-    for (const auto &Addr : ElfObject->getPltAddresses()) {
-      if (!Addr.first)
+    for (const auto &Plt : ElfObject->getPltEntries()) {
+      if (!Plt.Symbol)
         continue;
-      object::SymbolRef Sym(*Addr.first, Object);
+      object::SymbolRef Sym(*Plt.Symbol, Object);
       auto SymNameOrErr = Sym.getName();
       if (!SymNameOrErr)
         consumeError(SymNameOrErr.takeError());
       else if (TrapOnFailFunctions.contains(*SymNameOrErr))
-        TrapOnFailFunctionAddresses.insert(Addr.second);
+        TrapOnFailFunctionAddresses.insert(Plt.Address);
     }
   }
   return Error::success();

@@ -18,37 +18,7 @@ struct looks_like_declaration {
 
 using T = looks_like_declaration *;
 void f() { T(&a)->n = 1; }
-void g() { auto(&a)->n = 0; } // cxx23-warning {{before C++23}} \
-                              // cxx20-error {{declaration of variable 'a' with deduced type 'auto (&)' requires an initializer}} \
-                              // cxx20-error {{expected ';' at end of declaration}}
-void h() { auto{&a}->n = 0; } // cxx23-warning {{before C++23}} \
-                              // cxx20-error {{expected unqualified-id}} \
-                              // cxx20-error {{expected expression}}
-
-void e(auto (*p)(int y) -> decltype(y)) {}
-
-struct M;
-struct S{
-    S operator()();
-    S* operator->();
-    int N;
-    int M;
-} s; // expected-note {{here}}
-
-void test() {
-    auto(s)()->N; // cxx23-warning {{expression result unused}} \
-                  // cxx23-warning {{before C++23}} \
-                  // cxx20-error {{unknown type name 'N'}}
-    auto(s)()->M; // expected-error {{redefinition of 's' as different kind of symbol}}
-}
-
-void test_paren() {
-    int a = (auto(0)); // cxx23-warning {{before C++23}} \
-                       // cxx20-error {{expected expression}} \
-                       // cxx20-error {{expected ')'}} \
-                       // cxx20-note  {{to match this '('}}
-    int b = (auto{0}); // cxx23-warning {{before C++23}} \
-                       // cxx20-error {{expected expression}} \
-                       // cxx20-error {{expected ')'}} \
-                       // cxx20-note  {{to match this '('}}
-}
+// FIXME: They should be deemed expressions without breaking function pointer
+//        parameter declarations with trailing return types.
+// void g() { auto(&a)->n = 0; }
+// void h() { auto{&a}->n = 0; }
