@@ -59,7 +59,7 @@ class ELFLinkGraphBuilder : public ELFLinkGraphBuilderBase {
 
 public:
   ELFLinkGraphBuilder(const object::ELFFile<ELFT> &Obj, Triple TT,
-                      StringRef FileName,
+                      LinkGraph::FeatureVector Features, StringRef FileName,
                       LinkGraph::GetEdgeKindNameFunction GetEdgeKindName);
 
   /// Debug sections are included in the graph by default. Use
@@ -195,11 +195,11 @@ protected:
 
 template <typename ELFT>
 ELFLinkGraphBuilder<ELFT>::ELFLinkGraphBuilder(
-    const ELFFile &Obj, Triple TT, StringRef FileName,
-    LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
+    const ELFFile &Obj, Triple TT, LinkGraph::FeatureVector Features,
+    StringRef FileName, LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : ELFLinkGraphBuilderBase(std::make_unique<LinkGraph>(
-          FileName.str(), Triple(std::move(TT)), ELFT::Is64Bits ? 8 : 4,
-          support::endianness(ELFT::TargetEndianness),
+          FileName.str(), Triple(std::move(TT)), std::move(Features),
+          ELFT::Is64Bits ? 8 : 4, support::endianness(ELFT::TargetEndianness),
           std::move(GetEdgeKindName))),
       Obj(Obj) {
   LLVM_DEBUG(
