@@ -77,16 +77,16 @@ def AlternativesOp : TransformDialectOp<"alternatives",
 
     ```mlir
     %result = transform.alternatives %scope {
-    ^bb0(%arg0: !pdl.operation):
+    ^bb0(%arg0: !transform.any_op):
       // Try a fallible transformation.
       %0 = transform.fallible %arg0 // ...
       // If succeeded, yield the the result of the transformation.
-      transform.yield %0 : !pdl.operation
+      transform.yield %0 : !transform.any_op
     }, {
-    ^bb0(%arg0: !pdl.operation):
+    ^bb0(%arg0: !transform.any_op):
       // Otherwise, the second alternative is tried and it always succeeds by
       // returning the original handle.
-      transform.yield %arg0 : !pdl.operation
+      transform.yield %arg0 : !transform.any_op
     }
     ```
   }];
@@ -767,7 +767,7 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
 
     ```mlir
     transform.with_pdl_patterns {
-    ^bb0(%arg0: !pdl.operation):
+    ^bb0(%arg0: !transform.any_op):
       pdl.pattern @my_pattern : benefit(1) {
         %0 = pdl.operation //...
         // Regular PDL goes here.
@@ -775,7 +775,7 @@ def WithPDLPatternsOp : TransformDialectOp<"with_pdl_patterns",
       }
 
       sequence %arg0 failures(propagate) {
-      ^bb0(%arg1: !pdl.operation):
+      ^bb0(%arg1: !transform.any_op):
         %1 = pdl_match @my_pattern in %arg1
         // Use %1 as handle
       }
