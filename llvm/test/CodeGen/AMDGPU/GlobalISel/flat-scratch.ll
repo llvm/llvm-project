@@ -256,7 +256,7 @@ define void @private_ptr_foo(ptr addrspace(5) nocapture %arg) {
 ; GFX940-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX940-NEXT:    v_add_u32_e32 v0, 4, v0
 ; GFX940-NEXT:    v_mov_b32_e32 v1, 0x41200000
-; GFX940-NEXT:    scratch_store_dword v0, v1, off
+; GFX940-NEXT:    scratch_store_dword v0, v1, off sc0 sc1
 ; GFX940-NEXT:    s_waitcnt vmcnt(0)
 ; GFX940-NEXT:    s_setpc_b64 s[30:31]
 ;
