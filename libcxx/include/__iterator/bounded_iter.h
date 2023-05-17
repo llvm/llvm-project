@@ -35,7 +35,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 // Arithmetic operations are allowed and the bounds of the resulting iterator
 // are not checked. Hence, it is possible to create an iterator pointing outside
 // its range, but it is not possible to dereference it.
-template <class _Iterator, class = __enable_if_t< __is_cpp17_contiguous_iterator<_Iterator>::value > >
+template <class _Iterator, class = __enable_if_t< __libcpp_is_contiguous_iterator<_Iterator>::value > >
 struct __bounded_iter {
   using value_type        = typename iterator_traits<_Iterator>::value_type;
   using difference_type   = typename iterator_traits<_Iterator>::difference_type;
@@ -212,7 +212,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __bounded_iter<_It> __make_bounded_iter(
 
 #if _LIBCPP_STD_VER <= 17
 template <class _Iterator>
-struct __is_cpp17_contiguous_iterator<__bounded_iter<_Iterator> > : true_type {};
+struct __libcpp_is_contiguous_iterator<__bounded_iter<_Iterator> > : true_type {};
 #endif
 
 template <class _Iterator>

@@ -395,8 +395,8 @@ inline namespace __cpo {
 template <class _JoinViewIterator>
   requires(_JoinViewIterator::__is_join_view_iterator &&
            ranges::common_range<typename _JoinViewIterator::_Parent> &&
-           __is_cpp17_random_access_iterator<typename _JoinViewIterator::_Outer>::value &&
-           __is_cpp17_random_access_iterator<typename _JoinViewIterator::_Inner>::value)
+           __has_random_access_iterator_category<typename _JoinViewIterator::_Outer>::value &&
+           __has_random_access_iterator_category<typename _JoinViewIterator::_Inner>::value)
 struct __segmented_iterator_traits<_JoinViewIterator> {
 
   using __segment_iterator =
