@@ -20,7 +20,7 @@ entry:
   %2 = load i8, i8* @A
   %3 = zext i8 %2 to i32
   %4 = add i32 %1, %3
-  %5 = load i8, i8* @B
+  %5 = load i8, i8* @C
   %6 = zext i8 %5 to i32
   %7 = sub i32 %4, %6
   ret i32 %7
