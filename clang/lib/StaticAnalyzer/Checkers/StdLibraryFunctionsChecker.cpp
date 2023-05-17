@@ -105,6 +105,11 @@ class StdLibraryFunctionsChecker
   /// Get a string representation of an argument index.
   /// E.g.: (1) -> '1st arg', (2) - > '2nd arg'
   static void printArgDesc(ArgNo, llvm::raw_ostream &Out);
+  /// Print value X of the argument in form " (which is X)",
+  /// if the value is a fixed known value, otherwise print nothing.
+  /// This is used as simple explanation of values if possible.
+  static void printArgValueInfo(ArgNo ArgN, ProgramStateRef State,
+                                const CallEvent &Call, llvm::raw_ostream &Out);
   /// Append textual description of a numeric range [RMin,RMax] to
   /// \p Out.
   static void appendInsideRangeDesc(llvm::APSInt RMin, llvm::APSInt RMax,
@@ -434,6 +439,10 @@ class StdLibraryFunctionsChecker
     void describe(DescriptionKind DK, const CallEvent &Call,
                   ProgramStateRef State, const Summary &Summary,
                   llvm::raw_ostream &Out) const override;
+
+    bool describeArgumentValue(const CallEvent &Call, ProgramStateRef State,
+                               const Summary &Summary,
+                               llvm::raw_ostream &Out) const override;
 
     std::vector<ArgNo> getArgsToTrack() const override {
       std::vector<ArgNo> Result{ArgN};
@@ -870,6 +879,16 @@ void StdLibraryFunctionsChecker::printArgDesc(
   Out << " argument";
 }
 
+void StdLibraryFunctionsChecker::printArgValueInfo(ArgNo ArgN,
+                                                   ProgramStateRef State,
+                                                   const CallEvent &Call,
+                                                   llvm::raw_ostream &Out) {
+  if (const llvm::APSInt *Val =
+          State->getStateManager().getSValBuilder().getKnownValue(
+              State, getArgSVal(Call, ArgN)))
+    Out << " (which is " << *Val << ")";
+}
+
 void StdLibraryFunctionsChecker::appendInsideRangeDesc(llvm::APSInt RMin,
                                                        llvm::APSInt RMax,
                                                        QualType ArgT,
@@ -1179,11 +1198,27 @@ void StdLibraryFunctionsChecker::BufferSizeConstraint::describe(
   } else if (SizeArgN) {
     Out << "the value of the ";
     printArgDesc(*SizeArgN, Out);
+    printArgValueInfo(*SizeArgN, State, Call, Out);
     if (SizeMultiplierArgN) {
       Out << " times the ";
       printArgDesc(*SizeMultiplierArgN, Out);
+      printArgValueInfo(*SizeMultiplierArgN, State, Call, Out);
     }
   }
+}
+
+bool StdLibraryFunctionsChecker::BufferSizeConstraint::describeArgumentValue(
+    const CallEvent &Call, ProgramStateRef State, const Summary &Summary,
+    llvm::raw_ostream &Out) const {
+  SVal BufV = getArgSVal(Call, getArgNo());
+  SVal BufDynSize = getDynamicExtentWithOffset(State, BufV);
+  if (const llvm::APSInt *Val =
+          State->getStateManager().getSValBuilder().getKnownValue(State,
+                                                                  BufDynSize)) {
+    Out << "is a buffer with size " << *Val;
+    return true;
+  }
+  return false;
 }
 
 void StdLibraryFunctionsChecker::checkPreCall(const CallEvent &Call,
