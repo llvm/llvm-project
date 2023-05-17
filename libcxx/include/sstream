@@ -646,7 +646,7 @@ basic_stringbuf<_CharT, _Traits, _Allocator>::seekoff(off_type __off,
     if (__wch & ios_base::out)
     {
         this->setp(this->pbase(), this->epptr());
-        this->pbump(__noff);
+        this->__pbump(__noff);
     }
     return pos_type(__noff);
 }
