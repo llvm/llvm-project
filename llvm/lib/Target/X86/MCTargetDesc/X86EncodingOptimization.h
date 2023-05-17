@@ -18,6 +18,7 @@ class MCInstrDesc;
 namespace X86 {
 bool optimizeInstFromVEX3ToVEX2(MCInst &MI, const MCInstrDesc &Desc);
 bool optimizeShiftRotateWithImmediateOne(MCInst &MI);
+bool optimizeVPCMPWithImmediateOneOrSix(MCInst &MI);
 } // namespace X86
 } // namespace llvm
 #endif
