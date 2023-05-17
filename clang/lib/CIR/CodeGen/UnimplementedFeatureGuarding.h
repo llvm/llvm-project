@@ -86,6 +86,7 @@ struct UnimplementedFeature {
   static bool insertBuiltinUnpredictable() { return false; }
   static bool createLaunderInvariantGroup() { return false; }
   static bool addAutoInitAnnotation() { return false; }
+  static bool addHeapAllocSiteMetadata() { return false; }
 };
 } // namespace cir
 
