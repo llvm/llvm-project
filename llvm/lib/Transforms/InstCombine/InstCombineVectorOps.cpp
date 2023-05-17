@@ -594,6 +594,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
                   SrcVec, DemandedElts, UndefElts, 0 /* Depth */,
                   true /* AllowMultipleUsers */)) {
             if (V != SrcVec) {
+              Worklist.addValue(SrcVec);
               SrcVec->replaceAllUsesWith(V);
               return &EI;
             }
@@ -1249,9 +1250,9 @@ static Instruction *foldInsSequenceIntoSplat(InsertElementInst &InsElt) {
       return nullptr;
 
   // Create the insert + shuffle.
-  Type *Int32Ty = Type::getInt32Ty(InsElt.getContext());
+  Type *Int64Ty = Type::getInt32Ty(InsElt.getContext());
   PoisonValue *PoisonVec = PoisonValue::get(VecTy);
-  Constant *Zero = ConstantInt::get(Int32Ty, 0);
+  Constant *Zero = ConstantInt::get(Int64Ty, 0);
   if (!cast<ConstantInt>(FirstIE->getOperand(2))->isZero())
     FirstIE = InsertElementInst::Create(PoisonVec, SplatVal, Zero, "", &InsElt);
 
@@ -1803,9 +1804,9 @@ static bool canEvaluateShuffled(Value *V, ArrayRef<int> Mask,
 
 /// Rebuild a new instruction just like 'I' but with the new operands given.
 /// In the event of type mismatch, the type of the operands is correct.
-static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
-  // We don't want to use the IRBuilder here because we want the replacement
-  // instructions to appear next to 'I', not the builder's insertion point.
+static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps,
+                       IRBuilderBase &Builder) {
+  Builder.SetInsertPoint(I);
   switch (I->getOpcode()) {
     case Instruction::Add:
     case Instruction::FAdd:
@@ -1827,28 +1828,29 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
     case Instruction::Xor: {
       BinaryOperator *BO = cast<BinaryOperator>(I);
       assert(NewOps.size() == 2 && "binary operator with #ops != 2");
-      BinaryOperator *New =
-          BinaryOperator::Create(cast<BinaryOperator>(I)->getOpcode(),
-                                 NewOps[0], NewOps[1], "", BO);
-      if (isa<OverflowingBinaryOperator>(BO)) {
-        New->setHasNoUnsignedWrap(BO->hasNoUnsignedWrap());
-        New->setHasNoSignedWrap(BO->hasNoSignedWrap());
+      Value *New = Builder.CreateBinOp(cast<BinaryOperator>(I)->getOpcode(),
+                                       NewOps[0], NewOps[1]);
+      if (auto *NewI = dyn_cast<Instruction>(New)) {
+        if (isa<OverflowingBinaryOperator>(BO)) {
+          NewI->setHasNoUnsignedWrap(BO->hasNoUnsignedWrap());
+          NewI->setHasNoSignedWrap(BO->hasNoSignedWrap());
+        }
+        if (isa<PossiblyExactOperator>(BO)) {
+          NewI->setIsExact(BO->isExact());
+        }
+        if (isa<FPMathOperator>(BO))
+          NewI->copyFastMathFlags(I);
       }
-      if (isa<PossiblyExactOperator>(BO)) {
-        New->setIsExact(BO->isExact());
-      }
-      if (isa<FPMathOperator>(BO))
-        New->copyFastMathFlags(I);
       return New;
     }
     case Instruction::ICmp:
       assert(NewOps.size() == 2 && "icmp with #ops != 2");
-      return new ICmpInst(I, cast<ICmpInst>(I)->getPredicate(),
-                          NewOps[0], NewOps[1]);
+      return Builder.CreateICmp(cast<ICmpInst>(I)->getPredicate(), NewOps[0],
+                                NewOps[1]);
     case Instruction::FCmp:
       assert(NewOps.size() == 2 && "fcmp with #ops != 2");
-      return new FCmpInst(I, cast<FCmpInst>(I)->getPredicate(),
-                          NewOps[0], NewOps[1]);
+      return Builder.CreateFCmp(cast<FCmpInst>(I)->getPredicate(), NewOps[0],
+                                NewOps[1]);
     case Instruction::Trunc:
     case Instruction::ZExt:
     case Instruction::SExt:
@@ -1864,27 +1866,26 @@ static Value *buildNew(Instruction *I, ArrayRef<Value*> NewOps) {
           I->getType()->getScalarType(),
           cast<VectorType>(NewOps[0]->getType())->getElementCount());
       assert(NewOps.size() == 1 && "cast with #ops != 1");
-      return CastInst::Create(cast<CastInst>(I)->getOpcode(), NewOps[0], DestTy,
-                              "", I);
+      return Builder.CreateCast(cast<CastInst>(I)->getOpcode(), NewOps[0],
+                                DestTy);
     }
     case Instruction::GetElementPtr: {
       Value *Ptr = NewOps[0];
       ArrayRef<Value*> Idx = NewOps.slice(1);
-      GetElementPtrInst *GEP = GetElementPtrInst::Create(
-          cast<GetElementPtrInst>(I)->getSourceElementType(), Ptr, Idx, "", I);
-      GEP->setIsInBounds(cast<GetElementPtrInst>(I)->isInBounds());
-      return GEP;
+      return Builder.CreateGEP(cast<GEPOperator>(I)->getSourceElementType(),
+                               Ptr, Idx, "",
+                               cast<GEPOperator>(I)->isInBounds());
     }
   }
   llvm_unreachable("failed to rebuild vector instructions");
 }
 
-static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
+static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask,
+                                              IRBuilderBase &Builder) {
   // Mask.size() does not need to be equal to the number of vector elements.
 
   assert(V->getType()->isVectorTy() && "can't reorder non-vector elements");
   Type *EltTy = V->getType()->getScalarType();
-  Type *I32Ty = IntegerType::getInt32Ty(V->getContext());
   if (match(V, m_Undef()))
     return UndefValue::get(FixedVectorType::get(EltTy, Mask.size()));
 
@@ -1938,15 +1939,14 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
         // as well. E.g. GetElementPtr may have scalar operands even if the
         // return value is a vector, so we need to examine the operand type.
         if (I->getOperand(i)->getType()->isVectorTy())
-          V = evaluateInDifferentElementOrder(I->getOperand(i), Mask);
+          V = evaluateInDifferentElementOrder(I->getOperand(i), Mask, Builder);
         else
           V = I->getOperand(i);
         NewOps.push_back(V);
         NeedsRebuild |= (V != I->getOperand(i));
       }
-      if (NeedsRebuild) {
-        return buildNew(I, NewOps);
-      }
+      if (NeedsRebuild)
+        return buildNew(I, NewOps, Builder);
       return I;
     }
     case Instruction::InsertElement: {
@@ -1967,11 +1967,12 @@ static Value *evaluateInDifferentElementOrder(Value *V, ArrayRef<int> Mask) {
       // If element is not in Mask, no need to handle the operand 1 (element to
       // be inserted). Just evaluate values in operand 0 according to Mask.
       if (!Found)
-        return evaluateInDifferentElementOrder(I->getOperand(0), Mask);
+        return evaluateInDifferentElementOrder(I->getOperand(0), Mask, Builder);
 
-      Value *V = evaluateInDifferentElementOrder(I->getOperand(0), Mask);
-      return InsertElementInst::Create(V, I->getOperand(1),
-                                       ConstantInt::get(I32Ty, Index), "", I);
+      Value *V = evaluateInDifferentElementOrder(I->getOperand(0), Mask,
+                                                 Builder);
+      Builder.SetInsertPoint(I);
+      return Builder.CreateInsertElement(V, I->getOperand(1), Index);
     }
   }
   llvm_unreachable("failed to reorder elements of vector instruction!");
@@ -2841,7 +2842,7 @@ Instruction *InstCombinerImpl::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
     return I;
 
   if (match(RHS, m_Undef()) && canEvaluateShuffled(LHS, Mask)) {
-    Value *V = evaluateInDifferentElementOrder(LHS, Mask);
+    Value *V = evaluateInDifferentElementOrder(LHS, Mask, Builder);
     return replaceInstUsesWith(SVI, V);
   }
 
