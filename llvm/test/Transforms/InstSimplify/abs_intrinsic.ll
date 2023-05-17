@@ -292,10 +292,11 @@ define i32 @select_nabs_of_abs_ne(i32 %x) {
   ret i32 %sel
 }
 
-; FIXME: This is a miscompile.
 define i1 @abs_i1_non_poison_eq_false(i1 %x) {
 ; CHECK-LABEL: @abs_i1_non_poison_eq_false(
-; CHECK-NEXT:    ret i1 true
+; CHECK-NEXT:    [[ABS:%.*]] = call i1 @llvm.abs.i1(i1 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i1 [[ABS]], false
+; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %abs = call i1 @llvm.abs.i1(i1 %x, i1 false)
   %cmp = icmp eq i1 %abs, false
