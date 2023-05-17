@@ -1,6 +1,6 @@
 ; This test checks if debug loc is propagated to load/store created by GVN/Instcombine.
-; RUN: opt < %s -passes=gvn -S | FileCheck %s --check-prefixes=ALL,GVN
-; RUN: opt < %s -passes=gvn,instcombine -S | FileCheck %s --check-prefixes=ALL,INSTCOMBINE
+; RUN: opt < %s -passes=gvn -S | FileCheck %s --check-prefixes=ALL
+; RUN: opt < %s -passes=gvn,instcombine -S | FileCheck %s --check-prefixes=ALL
 
 ; struct node {
 ;  int  *v;
@@ -35,10 +35,9 @@ define i32 @test(ptr readonly %desc) local_unnamed_addr #0 !dbg !4 {
 entry:
   %tobool = icmp eq ptr %desc, null
   br i1 %tobool, label %cond.end, label %cond.false, !dbg !9
-; ALL: br i1 %tobool, label %entry.cond.end_crit_edge, label %cond.false, !dbg [[LOC_15_6:![0-9]+]]
-; ALL: entry.cond.end_crit_edge:
-; GVN: %.pre = load ptr, ptr null, align 8, !dbg [[LOC_16_13:![0-9]+]]
-; INSTCOMBINE:store ptr poison, ptr null, align 4294967296, !dbg [[LOC_16_13:![0-9]+]]
+; ALL: %.pre = load ptr, ptr %desc, align 8, !dbg [[LOC_16_13:![0-9]+]]
+; ALL: br i1 %tobool, label %cond.end, label %cond.false, !dbg [[LOC_15_6:![0-9]+]]
+; ALL: cond.false:
 
 cond.false:
   %0 = load ptr, ptr %desc, align 8, !dbg !11
@@ -72,5 +71,5 @@ declare i32 @bar(ptr, ptr) local_unnamed_addr #1
 !11 = !DILocation(line: 15, column: 34, scope: !4)
 
 ;ALL: [[SCOPE:![0-9]+]] = distinct  !DISubprogram(name: "test",{{.*}}
-;ALL: [[LOC_15_6]] = !DILocation(line: 15, column: 6, scope: [[SCOPE]])
 ;ALL: [[LOC_16_13]] = !DILocation(line: 16, column: 13, scope: [[SCOPE]])
+;ALL: [[LOC_15_6]] = !DILocation(line: 15, column: 6, scope: [[SCOPE]])
