@@ -495,6 +495,11 @@ feature_test_macros = [ add_version_header(x) for x in [
     "headers": ["cmath"],
     "unimplemented": True,
   }, {
+    "name": "__cpp_lib_mdspan",
+    "values": { "c++2b": 202207 },
+    "headers": ["mdspan"],
+    "unimplemented": True,
+  }, {
     "name": "__cpp_lib_memory_resource",
     "values": { "c++17": 201603 },
     "headers": ["memory_resource"],

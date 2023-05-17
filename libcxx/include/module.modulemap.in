@@ -1162,6 +1162,16 @@ module std [system] {
     export initializer_list
     export *
   }
+  module mdspan {
+    header "mdspan"
+    export array
+    export span
+    export *
+
+    module __mdspan {
+      module extents                         { private header "__mdspan/extents.h" }
+    }
+  }
   module memory {
     header "memory"
     export *

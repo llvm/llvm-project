@@ -493,6 +493,7 @@ END-SCRIPT
 #include <__iterator/wrap_iter.h> // expected-error@*:* {{use of private header from outside its module: '__iterator/wrap_iter.h'}}
 #include <__locale> // expected-error@*:* {{use of private header from outside its module: '__locale'}}
 #include <__mbstate_t.h> // expected-error@*:* {{use of private header from outside its module: '__mbstate_t.h'}}
+#include <__mdspan/extents.h> // expected-error@*:* {{use of private header from outside its module: '__mdspan/extents.h'}}
 #include <__memory/addressof.h> // expected-error@*:* {{use of private header from outside its module: '__memory/addressof.h'}}
 #include <__memory/align.h> // expected-error@*:* {{use of private header from outside its module: '__memory/align.h'}}
 #include <__memory/aligned_alloc.h> // expected-error@*:* {{use of private header from outside its module: '__memory/aligned_alloc.h'}}
