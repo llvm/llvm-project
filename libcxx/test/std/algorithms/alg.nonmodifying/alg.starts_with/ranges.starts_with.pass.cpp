@@ -58,10 +58,10 @@ static_assert(HasStartsWithR<UncheckedRange<int*>, ForwardRangeNotIncrementable>
 static_assert(!HasStartsWithR<UncheckedRange<int*>, ForwardRangeNotSentinelSemiregular>);
 static_assert(!HasStartsWithR<UncheckedRange<int*>, ForwardRangeNotSentinelEqualityComparableWith>);
 
+// clang-format off
 template <class Iter1, class Sent1 = Iter1, class Iter2, class Sent2 = Iter2>
 constexpr void test_iterators() {
-  // simple tests
-  {
+  {  // simple tests
     {
       int a[] = {1, 2, 3, 4, 5, 6};
       int p[] = {1, 2};
@@ -79,8 +79,7 @@ constexpr void test_iterators() {
     }
   }
 
-  // prefix doesn't match
-  {
+  { // prefix doesn't match
     {
       int a[] = {1, 2, 3, 4, 5, 6};
       int p[] = {4, 5, 6};
@@ -98,8 +97,7 @@ constexpr void test_iterators() {
     }
   }
 
-  // range and prefix are identical
-  {
+  { // range and prefix are identical
     {
       int a[] = {1, 2, 3, 4, 5, 6};
       int p[] = {1, 2, 3, 4, 5, 6};
@@ -117,8 +115,7 @@ constexpr void test_iterators() {
     }
   }
 
-  // prefix is longer than range
-  {
+  { // prefix is longer than range
     {
       int a[] = {1, 2, 3, 4, 5, 6};
       int p[] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -136,8 +133,7 @@ constexpr void test_iterators() {
     }
   }
 
-  // prefix has zero length
-  {
+  { // prefix has zero length
     {
       int a[] = {1, 2, 3, 4, 5, 6};
       int p[] = {};
@@ -155,8 +151,7 @@ constexpr void test_iterators() {
     }
   }
 
-  // range has zero length
-  {
+  { // range has zero length
     {
       int a[] = {};
       int p[] = {1, 2, 3, 4, 5, 6, 7, 8};
@@ -174,8 +169,7 @@ constexpr void test_iterators() {
     }
   }
 
-  // check that the predicate is used
-  {
+  { // check that the predicate is used
     {
       int a[] = {11, 8, 3, 4, 0, 6};
       int p[]                               = {1, 12};
@@ -193,8 +187,7 @@ constexpr void test_iterators() {
     }
   }
 
-  // check that the projections are used
-  {
+  { // check that the projections are used
     {
       int a[]                               = {1, 3, 5, 1, 5, 6};
       int p[]                               = {2, 3, 4};
@@ -221,17 +214,19 @@ constexpr void test_iterators() {
 }
 
 constexpr bool test() {
-  types::for_each(types::forward_iterator_list<int*>{}, []<class I2>() {
-    types::for_each(types::forward_iterator_list<int*>{}, []<class I1>() {
-      test_iterators<I1, I1, I2, I2>();
-      test_iterators<I1, sized_sentinel<I1>, I2, I2>();
-      test_iterators<I1, I1, I2, sized_sentinel<I2>>();
-      test_iterators<I1, sized_sentinel<I1>, I2, sized_sentinel<I2>>();
+  types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iter2>() {
+    types::for_each(types::cpp20_input_iterator_list<int*>{}, []<class Iter1>() {
+      if constexpr (std::forward_iterator<Iter1> && std::forward_iterator<Iter2>)
+        test_iterators<Iter1, Iter1, Iter2, Iter2>();
+      if constexpr (std::forward_iterator<Iter2>)
+        test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, Iter2>();
+      if constexpr (std::forward_iterator<Iter1>)
+        test_iterators<Iter1, Iter1, Iter2, sized_sentinel<Iter2>>();
+      test_iterators<Iter1, sized_sentinel<Iter1>, Iter2, sized_sentinel<Iter2>>();
     });
   });
 
-  // check that std::invoke is used
-  {
+  { // check that std::invoke is used
     struct S {
       int i;
 
@@ -259,5 +254,6 @@ constexpr bool test() {
 int main(int, char**) {
   test();
   static_assert(test());
+
   return 0;
 }
