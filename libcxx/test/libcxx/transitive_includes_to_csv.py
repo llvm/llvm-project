@@ -41,7 +41,8 @@ def parse_line(line: str) -> header:
 # literal level.)
 LIBCXX_HEADER_REGEX = r".*c\+\+(?:/|\\\\)v[0-9]+(?:/|\\\\)(.+)"
 
-def is_libcxx_public_header(header : str) -> bool:
+
+def is_libcxx_public_header(header: str) -> bool:
     """
     Returns whether a header is a C++ public header file.
     """
@@ -62,7 +63,7 @@ def is_libcxx_public_header(header : str) -> bool:
     return True
 
 
-def is_libcxx_header(header : str) -> bool:
+def is_libcxx_header(header: str) -> bool:
     """
     Returns whether a header is a libc++ header, excluding the C-compatibility headers.
     """
@@ -73,7 +74,9 @@ def is_libcxx_header(header : str) -> bool:
 
     # Skip C compatibility headers (in particular, make sure not to skip libc++ detail headers).
     relative = match.group(1)
-    if relative.endswith(".h") and not (relative.startswith("__") or re.search(r"(/|\\\\)__", relative)):
+    if relative.endswith(".h") and not (
+        relative.startswith("__") or re.search(r"(/|\\\\)__", relative)
+    ):
         return False
 
     return True
@@ -130,7 +133,9 @@ def create_include_graph(path: pathlib.Path) -> List[str]:
         # Get actual filenames relative to libc++'s installation directory instead of full paths
         relative = lambda h: re.match(LIBCXX_HEADER_REGEX, h).group(1)
 
-        top_level = relative(next(h.name for h in headers if h.level == 1)) # There should be only one top-level header
+        top_level = relative(
+            next(h.name for h in headers if h.level == 1)
+        )  # There should be only one top-level header
         includes = [relative(h.name) for h in headers if h.level != 1]
 
         # Remove duplicates in all includes.
