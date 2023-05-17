@@ -964,12 +964,13 @@ SomeExpr RuntimeTableBuilder::PackageIntValueExpr(
 
 SymbolVector CollectBindings(const Scope &dtScope) {
   SymbolVector result;
-  std::map<SourceName, const Symbol *> localBindings;
+  std::map<SourceName, Symbol *> localBindings;
   // Collect local bindings
   for (auto pair : dtScope) {
-    const Symbol &symbol{*pair.second};
-    if (symbol.has<ProcBindingDetails>()) {
+    Symbol &symbol{const_cast<Symbol &>(*pair.second)};
+    if (auto *binding{symbol.detailsIf<ProcBindingDetails>()}) {
       localBindings.emplace(symbol.name(), &symbol);
+      binding->set_numPrivatesNotOverridden(0);
     }
   }
   if (const Scope * parentScope{dtScope.GetDerivedTypeParent()}) {
@@ -977,10 +978,20 @@ SymbolVector CollectBindings(const Scope &dtScope) {
     // Apply overrides from the local bindings of the extended type
     for (auto iter{result.begin()}; iter != result.end(); ++iter) {
       const Symbol &symbol{**iter};
-      auto overridden{localBindings.find(symbol.name())};
-      if (overridden != localBindings.end()) {
-        *iter = *overridden->second;
-        localBindings.erase(overridden);
+      auto overriderIter{localBindings.find(symbol.name())};
+      if (overriderIter != localBindings.end()) {
+        Symbol &overrider{*overriderIter->second};
+        if (symbol.attrs().test(Attr::PRIVATE) &&
+            FindModuleContaining(symbol.owner()) !=
+                FindModuleContaining(dtScope)) {
+          // Don't override inaccessible PRIVATE bindings
+          auto &binding{overrider.get<ProcBindingDetails>()};
+          binding.set_numPrivatesNotOverridden(
+              binding.numPrivatesNotOverridden() + 1);
+        } else {
+          *iter = overrider;
+          localBindings.erase(overriderIter);
+        }
       }
     }
   }
