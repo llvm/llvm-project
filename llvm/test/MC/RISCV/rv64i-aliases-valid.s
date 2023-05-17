@@ -1,7 +1,7 @@
 # RUN: llvm-mc %s -triple=riscv64 -riscv-no-aliases \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-INST,CHECK-ASM-NOALIAS %s
 # RUN: llvm-mc %s -triple=riscv64 \
-# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS %s
+# RUN:     | FileCheck -check-prefixes=CHECK-EXPAND,CHECK-ALIAS,CHECK-ASM %s
 # RUN: llvm-mc -filetype=obj -triple riscv64 < %s \
 # RUN:     | llvm-objdump -M no-aliases -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ-NOALIAS,CHECK-EXPAND,CHECK-INST %s
@@ -19,6 +19,10 @@
 
 # Needed for testing valid %pcrel_lo expressions
 .Lpcrel_hi0: auipc a0, %pcrel_hi(foo)
+
+# Needed for testing li with a symbol difference
+.Lbuf: .skip 8
+.Lbuf_end:
 
 # CHECK-INST: addi a0, zero, 0
 # CHECK-ALIAS: li a0, 0
@@ -213,6 +217,12 @@ li a0, CONST
 .equ CONST, 0x654321
 # CHECK-EXPAND: lui a0, 1620
 # CHECK-EXPAND: addiw a0, a0, 801
+li a0, CONST
+
+.equ CONST, .Lbuf_end - .Lbuf
+# CHECK-ASM: li a0, CONST
+# CHECK-ASM-NOALIAS: addi a0, zero, CONST
+# CHECK-OBJ-NOALIAS: addi a0, zero, 8
 li a0, CONST
 
 # CHECK-INST: subw t6, zero, ra
