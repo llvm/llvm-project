@@ -830,15 +830,24 @@ __device__ void nvvm_async_copy(__attribute__((address_space(3))) void* dst, __a
   // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.mbarrier.arrive.noinc.shared
   __nvvm_cp_async_mbarrier_arrive_noinc_shared(sharedAddr);
 
-  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.4
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.4(
   __nvvm_cp_async_ca_shared_global_4(dst, src);
-  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.8
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.8(
   __nvvm_cp_async_ca_shared_global_8(dst, src);
-  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.16
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.16(
   __nvvm_cp_async_ca_shared_global_16(dst, src);
-  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.cg.shared.global.16
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.cg.shared.global.16(
   __nvvm_cp_async_cg_shared_global_16(dst, src);
 
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.4.s({{.*}}, i32 2)
+  __nvvm_cp_async_ca_shared_global_4(dst, src, 2);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.8.s({{.*}}, i32 2)
+  __nvvm_cp_async_ca_shared_global_8(dst, src, 2);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.ca.shared.global.16.s({{.*}}, i32 2)
+  __nvvm_cp_async_ca_shared_global_16(dst, src, 2);
+  // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.cg.shared.global.16.s({{.*}}, i32 2)
+  __nvvm_cp_async_cg_shared_global_16(dst, src, 2);
+  
   // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.commit.group
   __nvvm_cp_async_commit_group();
   // CHECK_PTX70_SM80: call void @llvm.nvvm.cp.async.wait.group(i32 0)
