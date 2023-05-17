@@ -563,6 +563,11 @@ public:
   /// Returns the offset for this symbol within the underlying addressable.
   orc::ExecutorAddrDiff getOffset() const { return Offset; }
 
+  void setOffset(orc::ExecutorAddrDiff NewOffset) {
+    assert(NewOffset < getBlock().getSize() && "Offset out of range");
+    Offset = NewOffset;
+  }
+
   /// Returns the address of this symbol.
   orc::ExecutorAddr getAddress() const { return Base->getAddress() + Offset; }
 
@@ -660,11 +665,6 @@ private:
   }
 
   void setBlock(Block &B) { Base = &B; }
-
-  void setOffset(orc::ExecutorAddrDiff NewOffset) {
-    assert(NewOffset <= MaxOffset && "Offset out of range");
-    Offset = NewOffset;
-  }
 
   static constexpr uint64_t MaxOffset = (1ULL << 59) - 1;
 
