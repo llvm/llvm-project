@@ -68,3 +68,28 @@
 ; TWO-EMPTY:
 ; TWO-NEXT: [001]           {CompileUnit} 'test.cpp'
 ; TWO-NEXT: [004]           {TypeAlias} 'INTEGER' -> 'int'
+
+; Select logical elements by matching linkage names.
+; The following prints all symbols that
+; contain "?foo@@YAHPEBHI_N@Z" in their linkage names, using a tab layout
+; and given the number of matches.
+
+; RUN: llvm-debuginfo-analyzer --attribute=level \
+; RUN:                         --select=?foo@@YAHPEBHI_N@Z \
+; RUN:                         --report=list \
+; RUN:                         --print=symbols \
+; RUN:                         %p/Inputs/test-codeview-clang.o \
+; RUN:                         %p/Inputs/test-codeview-msvc.o 2>&1 | \
+; RUN: FileCheck --strict-whitespace -check-prefix=THREE %s
+
+; THREE:      Logical View:
+; THREE-NEXT: [000]           {File} 'test-codeview-clang.o'
+; THREE-EMPTY:
+; THREE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; THREE-NEXT: [002]           {Function} extern not_inlined 'foo' -> 'int'
+; THREE-EMPTY:
+; THREE:      Logical View:
+; THREE-NEXT: [000]           {File} 'test-codeview-msvc.o'
+; THREE-EMPTY:
+; THREE-NEXT: [001]           {CompileUnit} 'test.cpp'
+; THREE-NEXT: [002]           {Function} extern not_inlined 'foo' -> 'int'
