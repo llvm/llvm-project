@@ -343,34 +343,6 @@ static void SimplifyShortImmForm(MCInst &Inst, unsigned Opcode) {
   Inst.addOperand(Saved);
 }
 
-/// If a movsx instruction has a shorter encoding for the used register
-/// simplify the instruction to use it instead.
-static void SimplifyMOVSX(MCInst &Inst) {
-  unsigned NewOpcode = 0;
-  unsigned Op0 = Inst.getOperand(0).getReg(), Op1 = Inst.getOperand(1).getReg();
-  switch (Inst.getOpcode()) {
-  default:
-    llvm_unreachable("Unexpected instruction!");
-  case X86::MOVSX16rr8: // movsbw %al, %ax   --> cbtw
-    if (Op0 == X86::AX && Op1 == X86::AL)
-      NewOpcode = X86::CBW;
-    break;
-  case X86::MOVSX32rr16: // movswl %ax, %eax  --> cwtl
-    if (Op0 == X86::EAX && Op1 == X86::AX)
-      NewOpcode = X86::CWDE;
-    break;
-  case X86::MOVSX64rr32: // movslq %eax, %rax --> cltq
-    if (Op0 == X86::RAX && Op1 == X86::EAX)
-      NewOpcode = X86::CDQE;
-    break;
-  }
-
-  if (NewOpcode != 0) {
-    Inst = MCInst();
-    Inst.setOpcode(NewOpcode);
-  }
-}
-
 /// Simplify things like MOV32rm to MOV32o32a.
 static void SimplifyShortMoveForm(X86AsmPrinter &Printer, MCInst &Inst,
                                   unsigned Opcode) {
@@ -509,6 +481,9 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     return;
 
   if (X86::optimizeVPCMPWithImmediateOneOrSix(OutMI))
+    return;
+
+  if (X86::optimizeMOVSX(OutMI))
     return;
 
   // Handle a few special cases to eliminate operand modifiers.
@@ -703,14 +678,6 @@ void X86MCInstLower::Lower(const MachineInstr *MI, MCInst &OutMI) const {
     SimplifyShortImmForm(OutMI, NewOpc);
     break;
   }
-
-  // Try to shrink some forms of movsx.
-  case X86::MOVSX16rr8:
-  case X86::MOVSX32rr16:
-  case X86::MOVSX64rr32:
-    SimplifyMOVSX(OutMI);
-    break;
-
   case X86::VCMPPDrri:
   case X86::VCMPPDYrri:
   case X86::VCMPPSrri:
