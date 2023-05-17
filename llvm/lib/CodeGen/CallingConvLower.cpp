@@ -30,7 +30,7 @@ CCState::CCState(CallingConv::ID CC, bool isVarArg, MachineFunction &mf,
     : CallingConv(CC), IsVarArg(isVarArg), MF(mf),
       TRI(*MF.getSubtarget().getRegisterInfo()), Locs(locs), Context(C) {
   // No stack is used.
-  StackOffset = 0;
+  StackSize = 0;
 
   clearByValRegsInfo();
   UsedRegs.resize((TRI.getNumRegs()+31)/32);
@@ -197,7 +197,7 @@ static bool isValueTypeInRegForCC(CallingConv::ID CC, MVT VT) {
 
 void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
                                           MVT VT, CCAssignFn Fn) {
-  unsigned SavedStackOffset = StackOffset;
+  unsigned SavedStackSize = StackSize;
   Align SavedMaxStackArgAlign = MaxStackArgAlign;
   unsigned NumLocs = Locs.size();
 
@@ -229,7 +229,7 @@ void CCState::getRemainingRegParmsForType(SmallVectorImpl<MCPhysReg> &Regs,
   // Clear the assigned values and stack memory. We leave the registers marked
   // as allocated so that future queries don't return the same registers, i.e.
   // when i64 and f64 are both passed in GPRs.
-  StackOffset = SavedStackOffset;
+  StackSize = SavedStackSize;
   MaxStackArgAlign = SavedMaxStackArgAlign;
   Locs.truncate(NumLocs);
 }
