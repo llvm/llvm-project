@@ -30,7 +30,6 @@ static void PrintVersion(raw_ostream &OS) {
   OS << clang::getClangToolFullVersion("amdgpu-arch") << '\n';
 }
 
-#if DYNAMIC_HSA
 typedef enum {
   HSA_STATUS_SUCCESS = 0x0,
 } hsa_status_t;
@@ -80,18 +79,6 @@ llvm::Error loadHSA() {
 #undef DYNAMIC_INIT
   return llvm::Error::success();
 }
-#else
-
-#if defined(__has_include)
-#if __has_include("hsa/hsa.h")
-#include "hsa/hsa.h"
-#elif __has_include("hsa.h")
-#include "hsa.h"
-#endif
-#endif
-
-llvm::Error loadHSA() { return llvm::Error::success(); }
-#endif
 
 static hsa_status_t iterateAgentsCallback(hsa_agent_t Agent, void *Data) {
   hsa_device_type_t DeviceType;
