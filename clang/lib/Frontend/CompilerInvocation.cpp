@@ -1801,7 +1801,7 @@ bool CompilerInvocation::ParseCodeGenArgs(CodeGenOptions &Opts, ArgList &Args,
     Opts.MemoryProfileOutput = MemProfileBasename;
 
   memcpy(Opts.CoverageVersion, "408*", 4);
-  if (Opts.EmitGcovArcs || Opts.EmitGcovNotes) {
+  if (Opts.CoverageNotesFile.size() || Opts.CoverageDataFile.size()) {
     if (Args.hasArg(OPT_coverage_version_EQ)) {
       StringRef CoverageVersion = Args.getLastArgValue(OPT_coverage_version_EQ);
       if (CoverageVersion.size() != 4) {

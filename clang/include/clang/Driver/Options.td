@@ -1388,22 +1388,20 @@ def fno_profile_instr_use : Flag<["-"], "fno-profile-instr-use">,
     HelpText<"Disable using instrumentation data for profile-guided optimization">;
 def fno_profile_use : Flag<["-"], "fno-profile-use">,
     Alias<fno_profile_instr_use>;
-defm profile_arcs : BoolFOption<"profile-arcs",
-  CodeGenOpts<"EmitGcovArcs">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option, LinkOption]>, NegFlag<SetFalse>>;
-defm test_coverage : BoolFOption<"test-coverage",
-  CodeGenOpts<"EmitGcovNotes">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>>;
+def ftest_coverage : Flag<["-"], "ftest-coverage">, Group<f_Group>,
+    HelpText<"Produce gcov notes files (*.gcno)">;
+def fno_test_coverage : Flag<["-"], "fno-test-coverage">, Group<f_Group>;
+def fprofile_arcs : Flag<["-"], "fprofile-arcs">, Group<f_Group>,
+    HelpText<"Instrument code to produce gcov data files (*.gcda)">;
+def fno_profile_arcs : Flag<["-"], "fno-profile-arcs">, Group<f_Group>;
 def fprofile_filter_files_EQ : Joined<["-"], "fprofile-filter-files=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Instrument only functions from files where names match any regex separated by a semi-colon">,
-    MarshallingInfoString<CodeGenOpts<"ProfileFilterFiles">>,
-    ShouldParseIf<!strconcat(fprofile_arcs.KeyPath, "||", ftest_coverage.KeyPath)>;
+    MarshallingInfoString<CodeGenOpts<"ProfileFilterFiles">>;
 def fprofile_exclude_files_EQ : Joined<["-"], "fprofile-exclude-files=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>,
     HelpText<"Instrument only functions from files where names don't match all the regexes separated by a semi-colon">,
-    MarshallingInfoString<CodeGenOpts<"ProfileExcludeFiles">>,
-    ShouldParseIf<!strconcat(fprofile_arcs.KeyPath, "||", ftest_coverage.KeyPath)>;
+    MarshallingInfoString<CodeGenOpts<"ProfileExcludeFiles">>;
 def fprofile_update_EQ : Joined<["-"], "fprofile-update=">,
     Group<f_Group>, Flags<[CC1Option, CoreOption]>, Values<"atomic,prefer-atomic,single">,
     MetaVarName<"<method>">, HelpText<"Set update method of profile counters">,
@@ -5602,14 +5600,12 @@ def fmerge_functions : Flag<["-"], "fmerge-functions">,
   MarshallingInfoFlag<CodeGenOpts<"MergeFunctions">>;
 def coverage_data_file : Separate<["-"], "coverage-data-file">,
   HelpText<"Emit coverage data to this filename.">,
-  MarshallingInfoString<CodeGenOpts<"CoverageDataFile">>,
-  ShouldParseIf<!strconcat(fprofile_arcs.KeyPath, "||", ftest_coverage.KeyPath)>;
+  MarshallingInfoString<CodeGenOpts<"CoverageDataFile">>;
 def coverage_data_file_EQ : Joined<["-"], "coverage-data-file=">,
   Alias<coverage_data_file>;
 def coverage_notes_file : Separate<["-"], "coverage-notes-file">,
   HelpText<"Emit coverage notes to this filename.">,
-  MarshallingInfoString<CodeGenOpts<"CoverageNotesFile">>,
-  ShouldParseIf<!strconcat(fprofile_arcs.KeyPath, "||", ftest_coverage.KeyPath)>;
+  MarshallingInfoString<CodeGenOpts<"CoverageNotesFile">>;
 def coverage_notes_file_EQ : Joined<["-"], "coverage-notes-file=">,
   Alias<coverage_notes_file>;
 def coverage_version_EQ : Joined<["-"], "coverage-version=">,
