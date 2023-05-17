@@ -1,27 +1,27 @@
 // RUN: mlir-opt %s -split-input-file -verify-diagnostics
 
-// expected-error@+1 {{expected a non-empty array for level types}}
+// expected-error@+1 {{expected a non-empty array for lvlTypes}}
 #a = #sparse_tensor.encoding<{lvlTypes = []}>
 func.func private @scalar(%arg0: tensor<f64, #a>) -> ()
 
 // -----
 
 #a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>
-func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> () // expected-error {{expected an array of size 1 for dimension level types}}
+func.func private @tensor_dimlevel_size_mismatch(%arg0: tensor<8xi32, #a>) -> () // expected-error {{expected an array of size 1 for lvlTypes}}
 
 // -----
 
-#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], dimOrdering = affine_map<(i) -> (i)>}> // expected-error {{unexpected mismatch in ordering and dimension level types size}}
+#a = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"], dimOrdering = affine_map<(i) -> (i)>}> // expected-error {{level-rank mismatch between dimOrdering and lvlTypes}}
 func.func private @tensor_sizes_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{lvlTypes = [1]}> // expected-error {{expected a string value in dimension level types}}
+#a = #sparse_tensor.encoding<{lvlTypes = [1]}> // expected-error {{expected a string value in lvlTypes}}
 func.func private @tensor_type_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
 
-#a = #sparse_tensor.encoding<{lvlTypes = ["strange"]}> // expected-error {{unexpected dimension level type: strange}}
+#a = #sparse_tensor.encoding<{lvlTypes = ["strange"]}> // expected-error {{unexpected level-type: strange}}
 func.func private @tensor_value_mismatch(%arg0: tensor<8xi32, #a>) -> ()
 
 // -----
