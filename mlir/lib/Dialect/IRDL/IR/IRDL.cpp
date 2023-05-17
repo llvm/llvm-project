@@ -71,6 +71,8 @@ LogicalResult DialectOp::verify() {
   return success();
 }
 
+#include "mlir/Dialect/IRDL/IR/IRDLInterfaces.cpp.inc"
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/IRDL/IR/IRDLTypesGen.cpp.inc"
 
