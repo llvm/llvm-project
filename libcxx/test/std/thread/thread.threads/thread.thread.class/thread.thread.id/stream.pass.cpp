@@ -34,7 +34,7 @@ static void test() {
   std::basic_ostringstream<CharT> os;
   os << id0;
 
-#if TEST_STD_VER > 20 && !defined(_LIBCPP_HAS_NO_INCOMPLETE_FORMAT)
+#if TEST_STD_VER > 20
   // C++23 added a formatter specialization for thread::id.
   // This changed the requirement of ostream to have a
   // [thread.thread.id]/2

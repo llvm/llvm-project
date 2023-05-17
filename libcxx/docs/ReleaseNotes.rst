@@ -59,6 +59,11 @@ Improvements and New Features
 - `D122780 <https://reviews.llvm.org/D122780>`_ Improved the performance of ``std::sort`` and ``std::ranges::sort``
   by up to 50% for arithmetic types and by approximately 10% for other types.
 
+- The ``<format>`` header is no longer considered experimental. Some
+  ``std::formatter`` specializations are not yet available since the class used
+  in the specialization has not been implemented in libc++. This prevents the
+  feature-test macro to be set.
+
 Deprecations and Removals
 -------------------------
 
