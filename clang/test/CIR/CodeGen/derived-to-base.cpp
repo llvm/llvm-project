@@ -5,6 +5,17 @@ class C1 {
  public:
   virtual ~C1();
   C1(int i);
+
+  struct IE {
+    bool supported = false;
+    unsigned version = 0;
+  };
+
+  struct IEs {
+    IE chain;
+  };
+
+  static IEs availableIEs;
   class Layer {
    public:
     Layer(int d);
@@ -42,6 +53,8 @@ class C3 : public C2 {
 void C3::Layer::Initialize() {
   if (m_C1 == nullptr) {
     return;
+  }
+  if (m_C1->availableIEs.chain.supported) {
   }
 }
 

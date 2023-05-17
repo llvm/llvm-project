@@ -1393,9 +1393,8 @@ bool CIRGenFunction::isWrappedCXXThis(const Expr *Obj) {
 
 LValue CIRGenFunction::buildMemberExpr(const MemberExpr *E) {
   if (DeclRefExpr *DRE = tryToConvertMemberExprToDeclRefExpr(*this, E)) {
-    assert(0 && "enable upon testcase that validates this path");
-    // buildIgnoredExpr(E->getBase());
-    // return buildDeclRefLValue(DRE);
+    buildIgnoredExpr(E->getBase());
+    return buildDeclRefLValue(DRE);
   }
 
   Expr *BaseExpr = E->getBase();
