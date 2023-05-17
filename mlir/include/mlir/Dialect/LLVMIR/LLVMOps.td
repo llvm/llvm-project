@@ -797,7 +797,7 @@ def LLVM_SelectOp
     $res = op;
   }];
 }
-def LLVM_FreezeOp : LLVM_Op<"freeze", [SameOperandsAndResultType]> {
+def LLVM_FreezeOp : LLVM_Op<"freeze", [Pure, SameOperandsAndResultType]> {
   let arguments = (ins LLVM_Type:$val);
   let results = (outs LLVM_Type:$res);
   let builders = [LLVM_OneResultOpBuilder];
