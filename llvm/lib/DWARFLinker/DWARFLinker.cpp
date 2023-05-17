@@ -1142,7 +1142,7 @@ unsigned DWARFLinker::DIECloner::cloneDieReferenceAttribute(
 void DWARFLinker::DIECloner::cloneExpression(
     DataExtractor &Data, DWARFExpression Expression, const DWARFFile &File,
     CompileUnit &Unit, SmallVectorImpl<uint8_t> &OutputBuffer,
-    int64_t AddrRelocAdjustment) {
+    int64_t AddrRelocAdjustment, bool IsLittleEndian) {
   using Encoding = DWARFExpression::Operation::Encoding;
 
   uint8_t OrigAddressByteSize = Unit.getOrigUnit().getAddressByteSize();
@@ -1208,6 +1208,8 @@ void DWARFLinker::DIECloner::cloneExpression(
         // processed by applyValidRelocs.
         OutputBuffer.push_back(dwarf::DW_OP_addr);
         uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
+        if (!IsLittleEndian)
+          sys::swapByteOrder(LinkedAddress);
         ArrayRef<uint8_t> AddressBytes(
             reinterpret_cast<const uint8_t *>(&LinkedAddress),
             OrigAddressByteSize);
@@ -1240,6 +1242,8 @@ void DWARFLinker::DIECloner::cloneExpression(
         if (OutOperandKind) {
           OutputBuffer.push_back(*OutOperandKind);
           uint64_t LinkedAddress = SA->Address + AddrRelocAdjustment;
+          if (!IsLittleEndian)
+            sys::swapByteOrder(LinkedAddress);
           ArrayRef<uint8_t> AddressBytes(
               reinterpret_cast<const uint8_t *>(&LinkedAddress),
               OrigAddressByteSize);
@@ -1294,7 +1298,7 @@ unsigned DWARFLinker::DIECloner::cloneBlockAttribute(
     DWARFExpression Expr(Data, OrigUnit.getAddressByteSize(),
                          OrigUnit.getFormParams().Format);
     cloneExpression(Data, Expr, File, Unit, Buffer,
-                    Unit.getInfo(InputDIE).AddrAdjust);
+                    Unit.getInfo(InputDIE).AddrAdjust, IsLittleEndian);
     Bytes = Buffer;
   }
   for (auto Byte : Bytes)
@@ -2553,7 +2557,8 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
         cloneExpression(Data,
                         DWARFExpression(Data, OrigUnit.getAddressByteSize(),
                                         OrigUnit.getFormParams().Format),
-                        File, *CurrentUnit, OutBytes, RelocAdjustment);
+                        File, *CurrentUnit, OutBytes, RelocAdjustment,
+                        IsLittleEndian);
       };
       Linker.generateUnitLocations(*CurrentUnit, File, ProcessExpr);
     }
