@@ -1243,10 +1243,13 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
   case Intrinsic::aarch64_sve_fmul:
+  case Intrinsic::aarch64_sve_fmul_u:
     return Instruction::BinaryOps::FMul;
   case Intrinsic::aarch64_sve_fadd:
+  case Intrinsic::aarch64_sve_fadd_u:
     return Instruction::BinaryOps::FAdd;
   case Intrinsic::aarch64_sve_fsub:
+  case Intrinsic::aarch64_sve_fsub_u:
     return Instruction::BinaryOps::FSub;
   default:
     return Instruction::BinaryOpsEnd;
@@ -1292,6 +1295,11 @@ static std::optional<Instruction *> instCombineSVEVectorAdd(InstCombiner &IC,
                                                    Intrinsic::aarch64_sve_mad>(
           IC, II, false))
     return MAD;
+  if (auto FMLA_U =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
+                                            Intrinsic::aarch64_sve_fmla_u>(
+              IC, II, true))
+    return FMLA_U;
   return instCombineSVEVectorBinOp(IC, II);
 }
 
@@ -1311,6 +1319,11 @@ static std::optional<Instruction *> instCombineSVEVectorSub(InstCombiner &IC,
                                             Intrinsic::aarch64_sve_fnmsb>(
               IC, II, false))
     return FMSB;
+  if (auto FMLS_U =
+          instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
+                                            Intrinsic::aarch64_sve_fmls_u>(
+              IC, II, true))
+    return FMLS_U;
   return instCombineSVEVectorBinOp(IC, II);
 }
 
@@ -1684,25 +1697,20 @@ AArch64TTIImpl::instCombineIntrinsic(InstCombiner &IC,
     return instCombineSVEPTest(IC, II);
   case Intrinsic::aarch64_sve_mul:
   case Intrinsic::aarch64_sve_fmul:
+  case Intrinsic::aarch64_sve_fmul_u:
     return instCombineSVEVectorMul(IC, II);
   case Intrinsic::aarch64_sve_fadd:
+  case Intrinsic::aarch64_sve_fadd_u:
   case Intrinsic::aarch64_sve_add:
     return instCombineSVEVectorAdd(IC, II);
-  case Intrinsic::aarch64_sve_fadd_u:
-    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
-                                             Intrinsic::aarch64_sve_fmla_u>(
-        IC, II, true);
   case Intrinsic::aarch64_sve_add_u:
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mla_u>(
         IC, II, true);
   case Intrinsic::aarch64_sve_fsub:
+  case Intrinsic::aarch64_sve_fsub_u:
   case Intrinsic::aarch64_sve_sub:
     return instCombineSVEVectorSub(IC, II);
-  case Intrinsic::aarch64_sve_fsub_u:
-    return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_fmul_u,
-                                             Intrinsic::aarch64_sve_fmls_u>(
-        IC, II, true);
   case Intrinsic::aarch64_sve_sub_u:
     return instCombineSVEVectorFuseMulAddSub<Intrinsic::aarch64_sve_mul_u,
                                              Intrinsic::aarch64_sve_mls_u>(
