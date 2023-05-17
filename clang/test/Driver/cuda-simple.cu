@@ -1,7 +1,7 @@
 // Verify that we can parse a simple CUDA file with or without -save-temps
 // http://llvm.org/PR22936
 // RUN: %clang --cuda-path=%S/Inputs/CUDA/usr/local/cuda \
-// RUN:        -nocudainc -nocudalib -Werror -fsyntax-only -c %s
+// RUN:        -nocudainc -nocudalib -Werror -fsyntax-only %s
 //
 // Verify that we pass -x cuda-cpp-output to compiler after
 // preprocessing a CUDA file
