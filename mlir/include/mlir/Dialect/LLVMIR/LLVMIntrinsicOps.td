@@ -251,7 +251,7 @@ def LLVM_LifetimeEndOp : LLVM_LifetimeBaseOp<"lifetime.end"> {
 // Intrinsics with multiple returns.
 
 class LLVM_ArithWithOverflowOp<string mnem>
-    : LLVM_IntrOp<mnem, [0], [], [SameOperandsElementType], 2>,
+    : LLVM_IntrOp<mnem, [0], [], [Pure, SameOperandsElementType], 2>,
       Arguments<(ins LLVM_ScalarOrVectorOf<AnySignlessInteger>,
                  LLVM_ScalarOrVectorOf<AnySignlessInteger>)>;
 
