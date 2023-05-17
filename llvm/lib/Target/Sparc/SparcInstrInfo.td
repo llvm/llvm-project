@@ -72,7 +72,7 @@ def HasFSMULD : Predicate<"!Subtarget->hasNoFSMULD()">;
 // V8, or when it is V9 but the V8 deprecated instructions are efficient enough
 // to use when appropriate.  In either of these cases, the instruction selector
 // will pick deprecated instructions.
-def UseDeprecatedInsts : Predicate<"Subtarget->useDeprecatedV8Instructions()">;
+def UseDeprecatedInsts : Predicate<"Subtarget->useV8DeprecatedInsts()">;
 
 //===----------------------------------------------------------------------===//
 // Instruction Pattern Stuff
